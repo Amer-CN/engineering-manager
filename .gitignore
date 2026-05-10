@@ -1,0 +1,10 @@
+node_modules/
+dist/
+dist-electron/
+release/
+.gstack/
+.workbuddy/
+.claude/agents/
+*.log
+.DS_Store
+Thumbs.db
