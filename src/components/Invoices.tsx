@@ -1,16 +1,4 @@
-/**
- * Invoices.tsx - 发票管理页面
- * 
- * 主入口组件，引用 features/invoices/ 下的拆分组件
- * 
- * 重构说明：
- * - 发票统计使用 InvoiceStats
- * - 发票筛选使用 InvoiceFilters
- * - 发票列表使用 InvoiceList
- * - 发票表单使用 InvoiceForm
- * - 收款记录使用 PaymentList
- * - 收款表单使用 PaymentForm
- */
+// Invoices.tsx - 发票管理页面
 
 import React, { useState, useEffect, useRef } from 'react'
 import * as XLSX from 'xlsx'
@@ -35,9 +23,7 @@ import {
   PaymentStats,
 } from './features/invoices'
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // 常量
-// ═══════════════════════════════════════════════════════════════════════════════
 
 const defaultInvoiceFormData: InvoiceFormData = {
   type: 'invoice_in',
@@ -72,23 +58,17 @@ const defaultPaymentFormData: PaymentFormData = {
   fileType: ''
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // Types
-// ═══════════════════════════════════════════════════════════════════════════════
 
 interface InvoicesProps {
   refresh?: () => void
 }
 
-// ═══════════════════════════════════════════════════════════
 // Component
 // 打印模板/导出 → features/invoices/printExport.ts
-// ═══════════════════════════════════════════════════════════
 
 const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
-  // ═══════════════════════════════════════════════════════════════════════════
   // 状态定义
-  // ═══════════════════════════════════════════════════════════════════════════
   
   const { showToast } = useToastContext()
   const originalFileRef = useRef<Record<number, string>>({})
@@ -119,9 +99,7 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
   const [filterDateStart, setFilterDateStart] = useState('')
   const [filterDateEnd, setFilterDateEnd] = useState('')
 
-  // ═══════════════════════════════════════════════════════════════════════════
   // 数据加载
-  // ═══════════════════════════════════════════════════════════════════════════
   
   const loadData = async () => {
     try {
@@ -155,9 +133,7 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
     loadData()
   }, [])
 
-  // ═══════════════════════════════════════════════════════════════════════════
   // 事件处理
-  // ═══════════════════════════════════════════════════════════════════════════
   
   // 根据发票类型获取文件分类
   const getInvoiceCategory = (type: string) =>
@@ -471,9 +447,7 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
     setPreviewFile({ data: url, type: detectedType, title })
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
   // 筛选
-  // ═══════════════════════════════════════════════════════════════════════════
   
   const filteredInvoices = invoices.filter(inv => {
     if (filterType && inv.type !== filterType) return false
@@ -496,9 +470,7 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
     return true
   })
 
-  // ═══════════════════════════════════════════════════════════════════════════
   // 加载状态
-  // ═══════════════════════════════════════════════════════════════════════════
   
   if (loading) {
     return (
@@ -508,9 +480,7 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
     )
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
   // 表单数据
-  // ═══════════════════════════════════════════════════════════════════════════
   
   const getInvoiceFormData = (): InvoiceFormData => {
     if (editingInvoice) {
@@ -555,9 +525,7 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
     return { ...defaultPaymentFormData }
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
   // 渲染
-  // ═══════════════════════════════════════════════════════════════════════════
   
   return (
     <div className="flex flex-col h-full overflow-hidden">

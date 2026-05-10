@@ -1,7 +1,4 @@
-/**
- * WorkerSection 组件
- * 
- * 农民工管理模块- 包含班组管理和工人管理 */
+// WorkerSection 组件
 
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
@@ -11,41 +8,23 @@ import { MemberCard } from './MemberCard'
 import { getWorkerTypeLabel } from '@/utils'
 import { Empty } from '@/components/ui/Empty'
 
-// ═══════════════════════════════════════════════════════════════════════════════// 类型定义
-// ═══════════════════════════════════════════════════════════════════════════════
 export interface WorkerSectionProps {
-  /** 成员列表 */
-  members: Member[]
-  /** 项目列表 */
-  projects: Array<{ id: number; name: string }>
-  /** 班组列表 */
-  workerTeams: WorkerTeam[]
-  /** 加载状态*/
-  loading: boolean
-  /** 刷新数据回调 */
-  onRefresh: () => void
-  /** 添加工人回调 */
-  onAddWorker: () => void
-  /** 编辑工人回调 */
-  onEditWorker: (worker: Member) => void
-  /** 删除工人回调 */
-  onDeleteWorker: (id: number) => void
-  /** 添加班组回调 */
-  onAddTeam: (name: string, projectId: number, leaderId?: number | null) => Promise<void>
-  /** 编辑班组回调 */
-  onEditTeam: (team: WorkerTeam) => void
-  /** 删除班组回调 */
-  onDeleteTeam: (id: number) => void
-  /** 调组回调 */
-  onTransfer: (worker: Member) => void
-  /** 离场回调 */
-  onLeave: (worker: Member) => void
-  /** 重新入场回调 */
-  onReEntry: (worker: Member) => void
+    members: Member[]
+    projects: Array<{ id: number; name: string }>
+    workerTeams: WorkerTeam[]
+    loading: boolean
+    onRefresh: () => void
+    onAddWorker: () => void
+    onEditWorker: (worker: Member) => void
+    onDeleteWorker: (id: number) => void
+    onAddTeam: (name: string, projectId: number, leaderId?: number | null) => Promise<void>
+    onEditTeam: (team: WorkerTeam) => void
+    onDeleteTeam: (id: number) => void
+    onTransfer: (worker: Member) => void
+    onLeave: (worker: Member) => void
+    onReEntry: (worker: Member) => void
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════// 班组表单类型
-// ═══════════════════════════════════════════════════════════════════════════════
 export interface TeamFormData {
   name: string
   projectId?: number
@@ -58,7 +37,6 @@ export const defaultTeamFormData: TeamFormData = {
   leaderId: undefined
 }
 
-/** 调组表单类型 */
 export interface TransferFormData {
   toTeamId?: number
   toProjectId?: number
@@ -73,7 +51,6 @@ export const defaultTransferFormData: TransferFormData = {
   reason: ''
 }
 
-/** 离场表单类型 */
 export interface LeaveFormData {
   actualLeaveDate: string
   remarks: string
@@ -84,8 +61,6 @@ export const defaultLeaveFormData: LeaveFormData = {
   remarks: ''
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════// 班组卡片组件
-// ═══════════════════════════════════════════════════════════════════════════════
 interface TeamCardProps {
   team: WorkerTeam
   workerCount: number
@@ -127,8 +102,6 @@ function TeamCard({ team, workerCount, onEdit, onDelete }: TeamCardProps) {
   )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════// 班组表单模态框
-// ═══════════════════════════════════════════════════════════════════════════════
 interface TeamFormModalProps {
   visible: boolean
   editingTeam: WorkerTeam | null
@@ -231,8 +204,6 @@ function TeamFormModal({
   )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════// 调组模态框
-// ═══════════════════════════════════════════════════════════════════════════════
 interface TransferModalProps {
   visible: boolean
   worker: Member | null
@@ -338,8 +309,6 @@ function TransferModal({
   )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════// 离场模态框
-// ═══════════════════════════════════════════════════════════════════════════════
 interface LeaveModalProps {
   visible: boolean
   worker: Member | null
@@ -418,10 +387,7 @@ function LeaveModal({
   )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════// 主组件// ═══════════════════════════════════════════════════════════════════════════════
-/**
- * WorkerSection 组件
- */
+// WorkerSection 组件
 export function WorkerSection({
   members,
   projects,
@@ -681,7 +647,6 @@ export function WorkerSection({
 }
 
 // 导出子组件和类型
-
 
 export {
   TeamCard,

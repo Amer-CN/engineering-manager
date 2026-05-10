@@ -1,6 +1,4 @@
-/**
- * PaymentForm.tsx - 收款表单组件
- */
+// PaymentForm.tsx - 收款表单组件
 
 import React, { useState, useEffect, useRef } from 'react'
 import { PaymentRecord, InvoiceType, Project, Partner, IncomeContract, ExpenseContract, Invoice } from '@/types/electron'
@@ -8,9 +6,7 @@ import { formatMoney } from '@/utils/format'
 import { motion } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // 日期解析函数 - 支持多种格式粘贴自动识别
-// ═══════════════════════════════════════════════════════════════════════════════
 
 const parseDateString = (input: string): string | null => {
   if (!input || typeof input !== 'string') return null
@@ -68,9 +64,7 @@ const parseDateString = (input: string): string | null => {
   return null
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // Types
-// ═══════════════════════════════════════════════════════════════════════════════
 
 export interface PaymentFormData {
   type: InvoiceType
@@ -95,9 +89,7 @@ export interface PaymentFormProps {
   onCancel: () => void
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // Component
-// ═══════════════════════════════════════════════════════════════════════════════
 
 export const PaymentForm: React.FC<PaymentFormProps> = ({
   initialData,

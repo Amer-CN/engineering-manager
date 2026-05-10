@@ -100,9 +100,7 @@ export const SettlementForm: React.FC<SettlementFormProps> = ({
   }
   const handleRemoveFile = (index: number) => setFormData(p => ({ ...p, files: p.files.filter((_, i) => i !== index) }))
 
-  // ═══════════════════════════════════════════════════
   // 模板导入（标准格式，零配置直接导入）
-  // ═══════════════════════════════════════════════════
   const templateInputRef = useRef<HTMLInputElement>(null)
 
   const downloadTemplate = async () => {
@@ -176,9 +174,7 @@ export const SettlementForm: React.FC<SettlementFormProps> = ({
     e.target.value = ''
   }
 
-  // ═══════════════════════════════════════════════════
   // 灵活 Excel 导入（预览弹窗模式，非标表格）
-  // ═══════════════════════════════════════════════════
   const excelInputRef = useRef<HTMLInputElement>(null)
   const [importState, setImportState] = React.useState<{
     show: boolean

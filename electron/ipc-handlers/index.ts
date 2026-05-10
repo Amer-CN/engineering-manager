@@ -9,6 +9,7 @@ import './config'
 
 // 用户认证
 import './auth'
+import './roles'
 
 // 项目管理
 import './projects'

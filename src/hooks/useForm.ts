@@ -1,9 +1,4 @@
-/**
- * useForm Hook
- * 
- * 表单状态管理 Hook
- */
-
+// useForm Hook - 表单状态管理
 import { useState, useCallback, useMemo } from 'react'
 import type { Result, VoidResult } from '@/types'
 

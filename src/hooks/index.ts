@@ -23,8 +23,10 @@ export { useFileUpload } from './useFileUpload'
 export type { UseFileUploadOptions, UseFileUploadReturn, UploadedFile } from './useFileUpload'
 
 export { useProjects } from './useProjects'
-export { useMembers, useWorkerTeams, useWorkerTransfers } from './useMembers'
-export { usePartners, useRegions, useSupervisors } from './usePartners'
+export { useMembers } from './useMembers'
+export { useWorkerTeams, useWorkerTransfers } from './useWorkerTeams'
+export { usePartners } from './usePartners'
+export { useRegions, useSupervisors } from './useRegionsAndSupervisors'
 export { useInvoices, usePaymentRecords } from './useInvoices'
 export { useTasks } from './useTasks'
 

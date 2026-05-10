@@ -1,8 +1,4 @@
-/**
- * ContractPage.tsx — 通用合同管理页面
- * 替代 IncomeContracts.tsx + ExpenseContracts.tsx（两个文件 diff 仅类型名和文案不同）
- * 通过 type prop 区分收入/支出合同
- */
+// ContractPage.tsx — 通用合同管理页面
 
 import React, { useState, useEffect, useRef } from 'react'
 import type { IncomeContract, ExpenseContract, Partner, Project, PaymentRecord, Template, TemplateCategory } from '../types/electron'
@@ -27,9 +23,7 @@ const dataUrlToArrayBuffer = (dataUrl: string): ArrayBuffer => {
   return bytes.buffer
 }
 
-// ═══════════════════════════════════════════════════════════
 // 类型
-// ═══════════════════════════════════════════════════════════
 
 type ContractType = 'income' | 'expense'
 type Contract = IncomeContract | ExpenseContract
@@ -44,9 +38,7 @@ interface ContractPageProps {
   onAutoCreateHandled?: () => void
 }
 
-// ═══════════════════════════════════════════════════════════
 // 配置：收入/支出合同的所有差异集中在此
-// ═══════════════════════════════════════════════════════════
 
 interface TypeConfig {
   label: string
@@ -103,9 +95,7 @@ const CONFIG: Record<ContractType, TypeConfig> = {
   },
 }
 
-// ═══════════════════════════════════════════════════════════
 // API 分发
-// ═══════════════════════════════════════════════════════════
 
 function getApi(type: ContractType) {
   const api = window.electronAPI
@@ -124,9 +114,7 @@ function getApi(type: ContractType) {
       }
 }
 
-// ═══════════════════════════════════════════════════════════
 // 组件
-// ═══════════════════════════════════════════════════════════
 
 const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project', onGroupByChange, type, onBack, autoCreate, onAutoCreateHandled }) => {
   const config = CONFIG[type]

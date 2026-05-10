@@ -1,6 +1,4 @@
-/**
- * InvoiceForm.tsx - 发票表单组件
- */
+// InvoiceForm.tsx - 发票表单组件
 
 import React, { useState, useEffect, useRef } from 'react'
 import { Invoice, InvoiceType, InvoiceKind, InvoiceTaxRate, Project, Partner, IncomeContract, ExpenseContract } from '@/types/electron'
@@ -8,9 +6,7 @@ import { formatMoney } from '@/utils/format'
 import { motion } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // 常量
-// ═══════════════════════════════════════════════════════════════════════════════
 
 export const taxRateOptions: { value: InvoiceTaxRate; label: string }[] = [
   { value: 0, label: '不征税' },
@@ -28,9 +24,7 @@ export const invoiceKindOptions: { value: InvoiceKind; label: string }[] = [
   { value: 'electronic_special', label: '电子专票' }
 ]
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // Types
-// ═══════════════════════════════════════════════════════════════════════════════
 
 export interface InvoiceFormData {
   type: InvoiceType
@@ -61,9 +55,7 @@ export interface InvoiceFormProps {
   onCancel: () => void
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // 工具函数
-// ═══════════════════════════════════════════════════════════════════════════════
 
 const calculateFromTaxed = (taxedAmount: number, taxRate: number) => {
   if (taxRate === 0) {
@@ -86,9 +78,7 @@ const calculateFromUntaxed = (untaxedAmount: number, taxRate: number) => {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // Component
-// ═══════════════════════════════════════════════════════════════════════════════
 
 export const InvoiceForm: React.FC<InvoiceFormProps> = ({
   initialData,

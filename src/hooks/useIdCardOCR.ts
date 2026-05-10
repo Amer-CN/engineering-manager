@@ -1,39 +1,9 @@
-/**
- * useIdCardOCR Hook
- * 
- * 身份证 OCR 识别 Hook - 提供统一的 OCR 识别和文件处理逻辑
- */
-
+// useIdCardOCR Hook - 身份证 OCR 识别和文件处理
 import { useState, useCallback, useEffect } from 'react'
 import { recognizeIdCard, getOCRConfig, OCRProvider } from '@/services/ocr'
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Types
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Toast 消息类型
- */
-export interface Toast {
-  message: string
-  type: 'success' | 'error' | 'info'
-}
-
-/**
- * OCR 识别结果
- */
-export interface OCRResult {
-  name?: string
-  idCard?: string
-  gender?: string
-  birthDate?: string
-  ethnicity?: string
-  address?: string
-}
-
-/**
- * useIdCardOCR 返回类型
- */
+export interface Toast { message: string; type: 'success' | 'error' | 'info' }
+export interface OCRResult { name?: string; idCard?: string; gender?: string; birthDate?: string; ethnicity?: string; address?: string }
 export interface UseIdCardOCRReturn {
   // OCR 状态
   loading: boolean

@@ -78,8 +78,7 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
   const [keyword, setKeyword] = useState('')
   
   // 统计
-  const [stats, setStats] = useState<AuditStats | null>(null)
-  const [showStats, setShowStats] = useState(false)
+  const [statsView, setStatsView] = useState<{ data: AuditStats | null; visible: boolean }>({ data: null, visible: false })
   
   // 详情模态框
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null)
@@ -105,8 +104,7 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
   // 加载统计
   const loadStats = async () => {
     const statsData = await getAuditStats(30) // 近30天统计
-    setStats(statsData)
-    setShowStats(true)
+    setStatsView({ data: statsData, visible: true })
   }
 
   useEffect(() => {
@@ -324,12 +322,12 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
   return (
     <>
       {/* 统计面板 */}
-      {showStats && stats && (
+      {statsView.visible && statsView.data && (
         <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-slate-800">近30天操作统计</h3>
             <button
-              onClick={() => setShowStats(false)}
+              onClick={() => setStatsView(prev => ({ ...prev, visible: false }))}
               className="text-slate-400 hover:text-slate-600"
             >
               ✕
@@ -338,19 +336,19 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
           <div className="grid grid-cols-4 gap-4 mb-6">
             <div className="bg-blue-50 rounded-lg p-4">
               <div className="text-sm text-blue-600 mb-1">总操作数</div>
-              <div className="text-2xl font-bold text-blue-700">{stats.totalCount}</div>
+              <div className="text-2xl font-bold text-blue-700">{statsView.data.totalCount}</div>
             </div>
             <div className="bg-green-50 rounded-lg p-4">
               <div className="text-sm text-green-600 mb-1">今日操作</div>
-              <div className="text-2xl font-bold text-green-700">{stats.todayCount}</div>
+              <div className="text-2xl font-bold text-green-700">{statsView.data.todayCount}</div>
             </div>
             <div className="bg-purple-50 rounded-lg p-4">
               <div className="text-sm text-purple-600 mb-1">创建操作</div>
-              <div className="text-2xl font-bold text-purple-700">{stats.actionCounts.create || 0}</div>
+              <div className="text-2xl font-bold text-purple-700">{statsView.data.actionCounts.create || 0}</div>
             </div>
             <div className="bg-orange-50 rounded-lg p-4">
               <div className="text-sm text-orange-600 mb-1">删除操作</div>
-              <div className="text-2xl font-bold text-orange-700">{stats.actionCounts.delete || 0}</div>
+              <div className="text-2xl font-bold text-orange-700">{statsView.data.actionCounts.delete || 0}</div>
             </div>
           </div>
           
@@ -358,7 +356,7 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
             <div>
               <h4 className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">操作类型分布</h4>
               <div className="space-y-2">
-                {Object.entries(stats.actionCounts)
+                {Object.entries(statsView.data.actionCounts)
                   .filter(([, count]) => count > 0)
                   .sort((a, b) => b[1] - a[1])
                   .map(([action, count]) => (
@@ -373,7 +371,7 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
             <div>
               <h4 className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">活跃用户TOP5</h4>
               <div className="space-y-2">
-                {stats.topUsers.slice(0, 5).map((user, index) => (
+                {statsView.data.topUsers.slice(0, 5).map((user, index) => (
                   <div key={user.userId} className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
                       <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${

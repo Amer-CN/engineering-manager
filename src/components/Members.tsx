@@ -1,15 +1,4 @@
-/**
- * Members.tsx - 员工管理页面
- * 
- * 主入口组件，引用 features/members/ 下的拆分组件
- * 
- * 重构说明：
- * - UI 组件已拆分到 features/members/
- * - 表单组件使用 MemberForm
- * - 农民工管理使用 WorkerSection
- * - 管理人员使用 Table 列表展示
- * - 农民工使用卡片展示
- */
+// Members.tsx - 员工管理页面
 
 import React, { useState, useEffect, useRef } from 'react'
 import type { Member, MemberType, WorkerType, WorkerTeam, WorkerStatus } from '../types/electron'
@@ -33,23 +22,17 @@ import {
 } from './features/members'
 import StaffManagementTab from './features/members/StaffManagementTab'
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // 常量（从 features/members 导入，避免重复定义）
-// ═══════════════════════════════════════════════════════════════════════════════
 
 import { staffRoles, workerTypes } from './features/members'
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // Types
-// ═══════════════════════════════════════════════════════════════════════════════
 
 interface MembersProps {
   refresh?: () => void
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // Helper Functions
-// ═══════════════════════════════════════════════════════════════════════════════
 
 function getRoleIcon(role: string, memberType: MemberType) {
   if (memberType === 'worker') return '👷'
@@ -57,14 +40,10 @@ function getRoleIcon(role: string, memberType: MemberType) {
   return found?.icon || '👤'
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // Component
-// ═══════════════════════════════════════════════════════════════════════════════
 
 const Members: React.FC<MembersProps> = ({ refresh }) => {
-  // ═══════════════════════════════════════════════════════════════════════════
   // 状态定义
-  // ═══════════════════════════════════════════════════════════════════════════
   
   // Tab 状态
   const [activeTab, setActiveTab] = useState<'staff' | 'worker'>('staff')
@@ -104,9 +83,7 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
   const [dragOverField, setDragOverField] = useState<string | null>(null)
   const [activeDropZone, setActiveDropZone] = useState<string | null>(null)
 
-  // ═══════════════════════════════════════════════════════════════════════════
   // 工具函数
-  // ═══════════════════════════════════════════════════════════════════════════
   
   const resetStaffForm = () => {
     setStaffFormData(defaultStaffFormData)
@@ -170,9 +147,7 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
     reader.readAsDataURL(file)
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
   // 数据加载
-  // ═══════════════════════════════════════════════════════════════════════════
   
   const loadData = async () => {
     try {
@@ -278,9 +253,7 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
     return () => document.removeEventListener('paste', handlePaste)
   }, [showWorkerModal, showStaffModal, workerFormData, staffFormData])
 
-  // ═══════════════════════════════════════════════════════════════════════════
   // 事件处理
-  // ═══════════════════════════════════════════════════════════════════════════
   
   // 成员操作
   const handleDeleteMember = async (id: number) => {
@@ -637,9 +610,7 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
     }
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
   // 数据过滤
-  // ═══════════════════════════════════════════════════════════════════════════
   
   const staffMembers = members.filter(m => m.memberType !== 'worker' || !m.memberType)
   const workerMembers = members.filter(m => m.memberType === 'worker')
@@ -658,9 +629,7 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
     return true
   })
 
-  // ═══════════════════════════════════════════════════════════
   // 渲染
-  // ═══════════════════════════════════════════════════════════
   
   if (loading) {
     return (
