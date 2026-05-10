@@ -1,0 +1,424 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light;
+  color: #1f2937;
+  background-color: #f8fafc;
+
+  /* Design Tokens */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-tertiary: #f1f5f9;
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-tertiary: #94a3b8;
+  --border-primary: #e2e8f0;
+  --border-secondary: #cbd5e1;
+  --sidebar-bg: #ffffff;
+  --sidebar-border: #e2e8f0;
+  --sidebar-item-hover: #f1f5f9;
+  --sidebar-item-active: #eff6ff;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-dropdown: 0 10px 15px -3px rgba(0,0,0,0.1);
+  --overlay: rgba(0, 0, 0, 0.5);
+}
+
+.dark {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-tertiary: #64748b;
+  --border-primary: #334155;
+  --border-secondary: #475569;
+  --sidebar-bg: #1e293b;
+  --sidebar-border: #334155;
+  --sidebar-item-hover: #334155;
+  --sidebar-item-active: #1e3a5f;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-dropdown: 0 10px 15px -3px rgba(0,0,0,0.4);
+  --overlay: rgba(0, 0, 0, 0.7);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* 按钮样式 */
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2;
+  }
+
+  .btn-primary {
+    @apply bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800 shadow-sm hover:shadow-md;
+  }
+
+  .btn-secondary {
+    @apply bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 active:bg-slate-100 dark:active:bg-slate-600 shadow-sm;
+  }
+
+  .btn-success {
+    @apply bg-success-600 text-white hover:bg-success-700 active:bg-success-800 shadow-sm hover:shadow-md;
+  }
+
+  .btn-danger {
+    @apply bg-danger-500 text-white hover:bg-danger-600 active:bg-danger-700 shadow-sm hover:shadow-md;
+  }
+
+  .btn-warning {
+    @apply bg-warning-500 text-white hover:bg-warning-600 active:bg-warning-700 shadow-sm hover:shadow-md;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-slate-200 dark:active:bg-slate-700;
+  }
+
+  .btn-sm {
+    @apply px-3 py-1.5 text-sm;
+  }
+
+  .btn-lg {
+    @apply px-6 py-3 text-lg;
+  }
+}
+
+/* 卡片样式 */
+@layer components {
+  .card {
+    @apply bg-white dark:bg-slate-800 rounded-xl shadow-card hover:shadow-card-hover transition-all duration-200;
+  }
+
+  .card-header {
+    @apply px-5 py-4 border-b border-slate-100 dark:border-slate-700;
+  }
+
+  .card-body {
+    @apply p-5;
+  }
+}
+
+/* 表单样式 */
+@layer components {
+  .input {
+    @apply w-full px-4 py-2.5 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200
+           placeholder-slate-400 dark:placeholder-slate-500 transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500
+           hover:border-slate-300 dark:hover:border-slate-500;
+  }
+
+  .input-error {
+    @apply border-danger-500 focus:ring-danger-500 focus:border-danger-500;
+  }
+
+  .select {
+    @apply w-full px-4 py-2.5 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200
+           transition-all duration-200 cursor-pointer
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500
+           hover:border-slate-300 dark:hover:border-slate-500;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5;
+  }
+
+  .form-group {
+    @apply mb-4;
+  }
+}
+
+/* 表格样式 */
+@layer components {
+  .table {
+    @apply w-full text-sm;
+  }
+
+  .table th {
+    @apply px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700;
+  }
+
+  .table td {
+    @apply px-4 py-3 border-b border-slate-100 dark:border-slate-700;
+  }
+
+  .table tr:hover td {
+    @apply bg-slate-50 dark:bg-slate-800/50;
+  }
+}
+
+/* 模态框样式 */
+.modal-overlay {
+  @apply fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50;
+}
+
+.modal-content {
+  @apply bg-white rounded-2xl shadow-2xl w-full mx-4 max-h-[90vh] overflow-y-auto;
+  max-width: 32rem;
+}
+
+/* 标签样式 */
+.badge {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+
+.badge-primary {
+  @apply bg-primary-100 text-primary-700;
+}
+
+.badge-success {
+  @apply bg-success-100 text-success-700;
+}
+
+.badge-warning {
+  @apply bg-warning-100 text-warning-700;
+}
+
+.badge-danger {
+  @apply bg-danger-100 text-danger-700;
+}
+
+.badge-gray {
+  @apply bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300;
+}
+
+/* 空状态 */
+.empty-state-title {
+  @apply text-lg font-medium text-slate-700 dark:text-slate-300 mb-2;
+}
+
+.empty-state-description {
+  @apply text-sm text-slate-500 dark:text-slate-400;
+}
+
+.loading-spinner {
+  @apply animate-spin rounded-full border-2 border-slate-200 dark:border-slate-600 border-t-primary-600;
+}
+
+/* 状态指示器 */
+.status-dot {
+  @apply w-2 h-2 rounded-full inline-block;
+}
+
+.status-dot-success {
+  @apply bg-success-500;
+}
+
+.status-dot-warning {
+  @apply bg-warning-500;
+}
+
+.status-dot-danger {
+  @apply bg-danger-500;
+}
+
+/* 按钮禁用样式 */
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* 空状态样式 */
+.empty-state {
+  @apply flex flex-col items-center justify-center py-12 text-center;
+}
+
+.empty-state-icon {
+  @apply text-6xl mb-4 opacity-50;
+}
+
+.empty-state-title {
+  @apply text-lg font-medium text-slate-700 mb-2;
+}
+
+.empty-state-description {
+  @apply text-sm text-slate-500;
+}
+
+/* 加载状态 */
+.loading-spinner {
+  @apply animate-spin rounded-full border-2 border-slate-200 border-t-primary-600;
+}
+
+/* 工具提示 */
+.tooltip {
+  @apply relative;
+}
+
+.tooltip::after {
+  @apply absolute hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap z-50;
+}
+
+/* 快速添加弹窗 */
+.quick-add-modal {
+  @apply fixed inset-0 z-50 flex items-start justify-center pt-24;
+}
+
+.quick-add-backdrop {
+  @apply absolute inset-0 bg-black/30 backdrop-blur-sm;
+}
+
+.quick-add-content {
+  @apply relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden;
+}
+
+/* 现代化表单增强（兼容现有页面使用） */
+.input-modern {
+  @apply w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800
+         placeholder-slate-400 transition-all duration-300
+         focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 focus:bg-white
+         hover:border-slate-300;
+}
+
+.input-modern-lg {
+  @apply w-full px-5 py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl text-slate-800 text-lg
+         placeholder-slate-400 transition-all duration-300
+         focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 focus:bg-white
+         hover:border-slate-300;
+}
+
+.select-modern {
+  @apply w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800
+         transition-all duration-300 cursor-pointer appearance-none
+         focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 focus:bg-white
+         hover:border-slate-300;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 20px;
+  padding-right: 40px;
+}
+
+/* ===== 打印样式 ===== */
+@media print {
+  /* 隐藏不需要打印的元素 */
+  .no-print,
+  .sidebar,
+  .header-actions,
+  .filter-bar,
+  .modal-footer,
+  .btn,
+  button:not(.print-content *) {
+    display: none !important;
+  }
+
+  /* 打印内容样式 */
+  .print-content {
+    width: 100%;
+    padding: 20px;
+    font-size: 12pt;
+    line-height: 1.6;
+  }
+
+  .print-header {
+    text-align: center;
+    border-bottom: 2px solid #333;
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+  }
+
+  .print-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+  }
+
+  .print-table th,
+  .print-table td {
+    border: 1px solid #ddd;
+    padding: 8px 12px;
+    text-align: left;
+  }
+
+  .print-table th {
+    background: #f5f5f5;
+    font-weight: bold;
+  }
+
+  .print-footer {
+    margin-top: 40px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .print-signature {
+    text-align: center;
+    width: 200px;
+  }
+}
+
+/* ═══════════════════════════════════════════
+   Performance-optimized compositor animations
+   CSS @keyframes run on GPU compositor thread
+   — far smoother than JS-driven animations
+   ═══════════════════════════════════════════ */
+@keyframes float-slow {
+  0%, 100% { transform: translate(-100px, -40px); }
+  50% { transform: translate(100px, 60px); }
+}
+@keyframes float-slower {
+  0%, 100% { transform: translate(80px, 20px); }
+  50% { transform: translate(-60px, -80px); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0; transform: scale(0.5); }
+  50% { opacity: 1; transform: scale(2); }
+}
+
+.animate-float-slow {
+  animation: float-slow 12s ease-in-out infinite;
+  will-change: transform;
+}
+.animate-float-slower {
+  animation: float-slower 15s ease-in-out infinite;
+  will-change: transform;
+}
+.animate-fade-in {
+  animation: fade-in 1s ease-out forwards;
+}
+.animate-pulse-glow {
+  animation: pulse-glow 2.5s ease-in-out infinite;
+}
+
+/* GPU compositing hint for large animated elements */
+.gpu {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}

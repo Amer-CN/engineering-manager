@@ -1,0 +1,48 @@
+import {
+  Activity, AlertCircle, AlertTriangle, ArrowLeft, ArrowLeftRight,
+  BadgeCheck, Ban, Banknote, BarChart3, Bookmark, Building2,
+  Calendar, Camera, Check, CheckCircle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ClipboardList, ClipboardPen, Clock, Construction, CreditCard,
+  DollarSign, Download,
+  Edit3, Eye, EyeOff,
+  File, FileText, Filter, FolderKanban,
+  Globe,
+  HardHat, HelpCircle, Home,
+  Image, Inbox, Info,
+  Key,
+  Landmark, LayoutDashboard, Lightbulb, Loader2, Lock, LogOut,
+  Mail, MapPin, Menu, Monitor, Moon, MoreVertical,
+  Package, PaintBucket, Paperclip, Phone, PieChart, Plus, Printer,
+  Receipt, Redo, RefreshCw, RotateCcw, Ruler,
+  Save, ScrollText, Search, Settings, Shield, Sparkles, Stamp, Sun,
+  Trash2, TrendingDown, TrendingUp, Truck,
+  Undo, Upload, UserCheck, UserCircle, Users,
+  Wallet, WifiOff, Wrench,
+  X, XCircle,
+  type LucideIcon,
+} from 'lucide-react'
+
+export const iconMap: Record<string, LucideIcon> = {
+  Activity, AlertCircle, AlertTriangle, ArrowLeft, ArrowLeftRight,
+  BadgeCheck, Ban, Banknote, BarChart3, Building2,
+  Calendar, Camera, Check, CheckCircle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ClipboardFile: ClipboardPen, ClipboardList, ClipboardPen, Clock, Construction, CreditCard,
+  DollarSign, Download,
+  Edit: Edit3, Edit3, Eye, EyeOff,
+  File, FileText, Filter, FolderKanban,
+  Globe,
+  HardHat, HelpCircle, Home,
+  Image, Inbox, Info,
+  Key,
+  Landmark, LayoutDashboard, Lightbulb, Loader2, Lock, LogOut,
+  Mail, MapPin, Menu, Monitor, Moon, MoreVertical,
+  Package, PaintBucket, Palette: PaintBucket, Paperclip, Phone, PieChart, Plus, Printer,
+  Receipt, Redo, RefreshCw, RotateCcw, Ruler,
+  Save, ScrollText, Search, Settings, Shield, Sparkles, Stamp, Sun,
+  Trash2, TrendingDown, TrendingUp, Truck,
+  Undo, Upload, UserCheck, UserCircle, Users,
+  Wallet, WifiOff, Wrench,
+  X, XCircle,
+}
+
+export function getIcon(name: string): LucideIcon | undefined {
+  return iconMap[name]
+}

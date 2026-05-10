@@ -1,0 +1,17 @@
+{
+  "ocrConfig": {
+    "provider": "baidu",
+    "enabled": true,
+    "baidu": {
+      "apiKey": "您的API_KEY",
+      "secretKey": "您的SECRET_KEY"
+    }
+  },
+  "配置说明": {
+    "provider": "OCR提供商: baidu(百度OCR) 或 offline(离线模式)",
+    "enabled": "是否启用OCR功能",
+    "baidu.apiKey": "百度OCR的API Key",
+    "baidu.secretKey": "百度OCR的Secret Key"
+  },
+  "使用说明": "将上方baidu对象中的apiKey和secretKey替换为实际的百度OCR凭证，然后启动应用"
+}

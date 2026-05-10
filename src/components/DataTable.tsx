@@ -1,0 +1,373 @@
+import React, { useState } from 'react'
+
+export type ViewMode = 'card' | 'table'
+
+export interface Column<T> {
+  key: string
+  title: string
+  width?: string
+  sortable?: boolean
+  render?: (item: T, index: number) => React.ReactNode
+}
+
+interface DataTableProps<T> {
+  /** 数据列表 */
+  data: T[]
+  /** 列配置 */
+  columns: Column<T>[]
+  /** 主键字段 */
+  rowKey: keyof T | ((item: T) => string)
+  /** 卡片渲染函数 */
+  renderCard?: (item: T, index: number) => React.ReactNode
+  /** 表格行点击 */
+  onRowClick?: (item: T) => void
+  /** 空状态文案 */
+  emptyText?: string
+  /** 空状态图标 */
+  emptyIcon?: React.ReactNode
+  /** 加载状态 */
+  loading?: boolean
+  /** 额外操作按钮（卡片模式） */
+  extraActions?: React.ReactNode
+  /** 每页条数选项 */
+  pageSizeOptions?: number[]
+  /** 默认每页条数 */
+  defaultPageSize?: number
+}
+
+export function DataTable<T>({
+  data,
+  columns,
+  rowKey,
+  renderCard,
+  onRowClick,
+  emptyText = '暂无数据',
+  emptyIcon = '📭',
+  loading = false,
+  extraActions,
+  pageSizeOptions = [20, 50, 100],
+  defaultPageSize = 20
+}: DataTableProps<T>) {
+  const [viewMode, setViewMode] = useState<ViewMode>('table')
+  const [sortKey, setSortKey] = useState<string | null>(null)
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(defaultPageSize)
+
+  // 获取行唯一标识
+  const getRowKey = (item: T, index: number): string => {
+    if (typeof rowKey === 'function') {
+      return rowKey(item)
+    }
+    return String(item[rowKey] ?? index)
+  }
+
+  // 排序
+  const getSortedData = () => {
+    if (!sortKey) return data
+    return [...data].sort((a, b) => {
+      const aVal = (a as any)[sortKey]
+      const bVal = (b as any)[sortKey]
+      if (aVal == null) return 1
+      if (bVal == null) return -1
+      if (typeof aVal === 'string') {
+        return sortOrder === 'asc'
+          ? aVal.localeCompare(bVal)
+          : bVal.localeCompare(aVal)
+      }
+      return sortOrder === 'asc' ? aVal - bVal : bVal - aVal
+    })
+  }
+
+  // 分页
+  const getPaginatedData = () => {
+    const sortedData = getSortedData()
+    if (pageSize === 0) return sortedData
+    const start = (currentPage - 1) * pageSize
+    return sortedData.slice(start, start + pageSize)
+  }
+
+  // 排序处理
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortKey(key)
+      setSortOrder('asc')
+    }
+  }
+
+  // 总页数
+  const totalPages = pageSize > 0 ? Math.ceil(data.length / pageSize) : 1
+
+  // 重置页码当数据变化时
+  React.useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1)
+    }
+  }, [data.length, totalPages])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-500 border-t-transparent"></div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* 工具栏 */}
+      <div className="flex items-center justify-between mb-4 px-1">
+        <div className="text-sm text-slate-500">
+          共 {data.length} 条数据
+          {pageSize > 0 && `，显示 ${Math.min((currentPage - 1) * pageSize + 1, data.length)}-${Math.min(currentPage * pageSize, data.length)} 条`}
+        </div>
+        <div className="flex items-center gap-3">
+          {extraActions}
+        </div>
+      </div>
+
+      {/* 表格视图 */}
+      {viewMode === 'table' && (
+        <div className="flex-1 overflow-hidden">
+          <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
+            <table className="w-full">
+              <thead className="bg-slate-50 sticky top-0">
+                <tr>
+                  {columns.map(col => (
+                    <th
+                      key={col.key}
+                      className={`px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider ${
+                        col.sortable ? 'cursor-pointer hover:bg-slate-100 select-none' : ''
+                      }`}
+                      style={{ width: col.width }}
+                      onClick={() => col.sortable && handleSort(col.key)}
+                    >
+                      <div className="flex items-center gap-1">
+                        {col.title}
+                        {col.sortable && (
+                          <span className="text-slate-400">
+                            {sortKey === col.key ? (sortOrder === 'asc' ? '↑' : '↓') : '↕'}
+                          </span>
+                        )}
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-100 dark:divide-slate-700">
+                {getPaginatedData().length > 0 ? (
+                  getPaginatedData().map((item, index) => (
+                    <tr
+                      key={getRowKey(item, index)}
+                      onClick={() => onRowClick?.(item)}
+                      className={`${onRowClick ? 'cursor-pointer hover:bg-slate-50' : ''} transition-colors`}
+                    >
+                      {columns.map(col => (
+                        <td key={col.key} className="px-4 py-3 text-sm text-slate-700">
+                          {col.render
+                            ? col.render(item, index)
+                            : String((item as any)[col.key] ?? '-')}
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={columns.length} className="px-4 py-12 text-center text-slate-500">
+                      {emptyIcon && <div className="text-4xl mb-2">{emptyIcon}</div>}
+                      {emptyText}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* 分页 */}
+          {pageSize > 0 && totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4 px-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-slate-500">每页显示</span>
+                <select
+                  value={pageSize}
+                  onChange={e => {
+                    setPageSize(Number(e.target.value))
+                    setCurrentPage(1)
+                  }}
+                  className="px-2 py-1 border border-slate-300 rounded text-sm"
+                >
+                  {pageSizeOptions.map(size => (
+                    <option key={size} value={size}>{size} 条</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className="px-2 py-1 text-sm border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  首页
+                </button>
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-2 py-1 text-sm border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  上一页
+                </button>
+
+                <span className="px-3 py-1 text-sm">
+                  第 {currentPage} / {totalPages} 页
+                </span>
+
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-2 py-1 text-sm border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  下一页
+                </button>
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="px-2 py-1 text-sm border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  末页
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 卡片视图 */}
+      {viewMode === 'card' && (
+        <div className="flex-1 overflow-y-auto">
+          {getPaginatedData().length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {getPaginatedData().map((item, index) => (
+                <div
+                  key={getRowKey(item, index)}
+                  onClick={() => onRowClick?.(item)}
+                  className={`${onRowClick ? 'cursor-pointer' : ''}`}
+                >
+                  {renderCard ? renderCard(item, index) : null}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-64 text-slate-500">
+              {emptyIcon && <div className="text-6xl mb-4">{emptyIcon}</div>}
+              <p>{emptyText}</p>
+            </div>
+          )}
+
+          {/* 卡片模式分页 */}
+          {pageSize > 0 && totalPages > 1 && (
+            <div className="flex items-center justify-center mt-6 gap-2">
+              <button
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-50"
+              >
+                首页
+              </button>
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-50"
+              >
+                上一页
+              </button>
+
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum: number
+                if (totalPages <= 5) {
+                  pageNum = i + 1
+                } else if (currentPage <= 3) {
+                  pageNum = i + 1
+                } else if (currentPage >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i
+                } else {
+                  pageNum = currentPage - 2 + i
+                }
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={`px-3 py-1.5 text-sm rounded ${
+                      currentPage === pageNum
+                        ? 'bg-primary-600 text-white'
+                        : 'border border-slate-300 hover:bg-slate-50'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                )
+              })}
+
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-50"
+              >
+                下一页
+              </button>
+              <button
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-50"
+              >
+                末页
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// 表格单元格组件
+export const TableCell = {
+  Text: ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
+    <span className={className}>{children}</span>
+  ),
+  Badge: ({ children, color = 'primary' }: { children: React.ReactNode; color?: string }) => {
+    const colors: Record<string, string> = {
+      primary: 'bg-primary-100 text-primary-700',
+      green: 'bg-green-100 text-green-700',
+      orange: 'bg-orange-100 text-orange-700',
+      red: 'bg-red-100 text-red-700',
+      gray: 'bg-slate-100 text-slate-700',
+      blue: 'bg-blue-100 text-blue-700'
+    }
+    return (
+      <span className={`inline-block px-2 py-0.5 text-xs rounded-full ${colors[color] || colors.primary}`}>
+        {children}
+      </span>
+    )
+  },
+  Icon: ({ icon }: { icon: string }) => <span className="mr-1">{icon}</span>,
+  Actions: ({ children }: { children: React.ReactNode }) => (
+    <div className="flex items-center gap-1">{children}</div>
+  ),
+  Checkbox: ({
+    checked,
+    onChange
+  }: {
+    checked: boolean
+    onChange: (checked: boolean) => void
+  }) => (
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={e => onChange(e.target.checked)}
+      className="w-4 h-4 text-primary-600 rounded"
+    />
+  )
+}

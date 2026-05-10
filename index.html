@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>工程管家 - 工程项目管理系统</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        background-color: #f3f4f6;
+        overflow: hidden;
+      }
+      #root {
+        width: 100vw;
+        height: 100vh;
+      }
+      /* 加载动画 */
+      .app-loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      }
+      .app-loading h1 {
+        color: white;
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+      }
+      .app-loading p {
+        color: rgba(255,255,255,0.8);
+        font-size: 1rem;
+      }
+      .spinner {
+        width: 50px;
+        height: 50px;
+        border: 4px solid rgba(255,255,255,0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 1.5rem;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <div class="app-loading">
+        <div class="spinner"></div>
+        <h1>工程管家</h1>
+        <p>正在启动应用...</p>
+      </div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,93 @@
+{
+  "name": "engineering-manager",
+  "version": "1.21.0",
+  "description": "工程项目管理系统 - 一站式工程项目管理解决方案",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "check": "node scripts/check-rules.js",
+    "build": "node scripts/check-rules.js && \"D:\\Program Files\\nodejs\\node.exe\" node_modules/typescript/bin/tsc && \"D:\\Program Files\\nodejs\\node.exe\" node_modules/vite/bin/vite.js build && electron-builder",
+    "preview": "vite preview",
+    "electron:dev": "concurrently \"vite\" \"electron .\"",
+    "electron:build": "vite build && electron-builder",
+    "pack": "vite build && electron-builder --dir",
+    "dist": "vite build && electron-builder",
+    "postbuild": "node -e \"require('fs').copyFileSync('public/ocr-config.json', 'dist/ocr-config.json')\"",
+    "version:patch": "node scripts/bump-version.js patch",
+    "version:minor": "node scripts/bump-version.js minor",
+    "version:major": "node scripts/bump-version.js major",
+    "version": "node scripts/bump-version.js patch"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "docxtemplater": "^3.68.7",
+    "electron-log": "^5.0.3",
+    "framer-motion": "^12.38.0",
+    "lucide-react": "^1.14.0",
+    "mammoth": "^1.12.0",
+    "pizzip": "^3.2.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "recharts": "^3.8.1",
+    "sql.js": "^1.9.0",
+    "tesseract.js": "^5.1.1",
+    "uuid": "^9.0.1",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.55",
+    "@types/react-dom": "^18.2.19",
+    "@types/sql.js": "^1.4.7",
+    "@types/uuid": "^9.0.7",
+    "@vitejs/plugin-react": "^4.2.1",
+    "asar": "^3.2.0",
+    "autoprefixer": "^10.4.17",
+    "concurrently": "^8.2.2",
+    "electron": "^28.2.0",
+    "electron-builder": "^24.9.1",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.1.0",
+    "vite-plugin-electron": "^0.28.0",
+    "vite-plugin-electron-renderer": "^0.14.5"
+  },
+  "build": {
+    "appId": "com.engineering.manager",
+    "productName": "工程管家",
+    "directories": {
+      "output": "release",
+      "buildResources": "public"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "extraMetadata": {
+      "main": "dist-electron/main.js"
+    },
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "工程管家"
+    },
+    "publish": null
+  }
+}
