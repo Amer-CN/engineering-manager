@@ -1,9 +1,4 @@
-/**
- * Users.tsx - 用户管理页面
- * 
- * 功能：系统用户管理，包含用户列表、创建、编辑、删除
- * 权限：仅管理员可访问
- */
+// Users.tsx - 用户管理页面
 
 import React, { useState, useEffect } from 'react'
 import { usePermission, RequireAdmin } from '../hooks/usePermission'
@@ -15,7 +10,6 @@ import type { UserInfo } from '../types/electron'
 import { Icon } from './ui/Icon'
 import { Tabs } from './ui/Tabs'
 import { AuditLogsContent } from './AuditLogs'
-
 
 // 角色选项
 const ROLE_OPTIONS = [

@@ -344,8 +344,4 @@ ipcMain.handle('db:contractStats:get', () => {
         expiringSoon: expiringContracts
       }
     }
-  } catch (error: any) {
-    log.error('Failed to get contract stats:', error)
-    return { success: false, error: error.message }
-  }
-})
+  } catch (error: any) { log.error('Failed to get contract stats:', error); return { success: false, error: error.message } } })

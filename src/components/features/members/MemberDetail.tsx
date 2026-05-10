@@ -1,7 +1,4 @@
-/**
- * MemberDetail 组件
- * 
- * 成员详情组件 - 展示成员的完整信息 */
+// MemberDetail 组件
 
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
@@ -10,27 +7,16 @@ import type { Member, WorkerType } from '@/types'
 import { workerTypes, getWorkerTypeLabel, calculateAge } from './memberFormTypes'
 import { readUploadedFile, FILE_CATEGORIES } from '../../../services/fileService'
 
-// ═══════════════════════════════════════════════════════════════════════════════// 类型定义
-// ═══════════════════════════════════════════════════════════════════════════════
 export interface MemberDetailProps {
-  /** 成员数据 */
-  member: Member
-  /** 关闭回调 */
-  onClose: () => void
-  /** 编辑回调 */
-  onEdit?: () => void
-  /** 删除回调 */
-  onDelete?: () => void
-  /** 调组回调（仅农民工） */
-  onTransfer?: () => void
-  /** 离场回调（仅农民工） */
-  onLeave?: () => void
-  /** 重新入场回调（仅农民工） */
-  onReEntry?: () => void
+    member: Member
+    onClose: () => void
+    onEdit?: () => void
+    onDelete?: () => void
+    onTransfer?: () => void
+    onLeave?: () => void
+    onReEntry?: () => void
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════// 预览模态框
-// ═══════════════════════════════════════════════════════════════════════════════
 interface PreviewModalProps {
   data: string
   type: 'image' | 'pdf'
@@ -58,7 +44,6 @@ function PreviewModal({ data, type, title, onClose }: PreviewModalProps) {
   )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════// 文件预览项组件// ═══════════════════════════════════════════════════════════════════════════════
 interface FilePreviewItemProps {
   label: string
   file: string
@@ -84,7 +69,6 @@ function FilePreviewItem({ label, file, fileType, onPreview }: FilePreviewItemPr
   )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════// 信息项组件// ═══════════════════════════════════════════════════════════════════════════════
 interface InfoItemProps {
   icon: string
   label: string
@@ -108,8 +92,6 @@ function InfoItem({ icon, label, value, highlight }: { icon: React.ReactNode; la
   )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════// 标签组件
-// ═══════════════════════════════════════════════════════════════════════════════
 interface TagProps {
   label: string
   variant?: 'success' | 'warning' | 'info' | 'danger'
@@ -130,10 +112,7 @@ function Tag({ label, variant = 'success' }: TagProps) {
   )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════// 主组件// ═══════════════════════════════════════════════════════════════════════════════
-/**
- * MemberDetail 组件
- */
+// MemberDetail 组件
 export function MemberDetail({
   member,
   onClose,

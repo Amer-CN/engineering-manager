@@ -4,8 +4,6 @@ import { Icon } from './ui/Icon'
 import { useTheme } from '../hooks/useTheme'
 import { OCRConfig, OCRProvider, setOCRConfig, getOCRConfig, checkOCRStatus, getProviderName, saveOCRConfig, initialConfig, initializeBuiltInConfig } from '../services/ocr'
 
-
-
 interface SettingsProps {
   refresh?: () => void
 }

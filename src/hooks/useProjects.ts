@@ -1,39 +1,11 @@
-/**
- * useProjects Hook
- * 
- * 项目管理 Hook - 提供项目管理相关的状态和操作
- */
-
+// useProjects Hook - 项目管理状态和操作
 import { useState, useCallback, useEffect } from 'react'
 import type { Project } from '@/types'
 import { handleError, Result, VoidResult, isSuccess } from '@/types'
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Types
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * 项目筛选条件
- */
-export interface ProjectFilters {
-  status?: Project['status']
-  searchTerm?: string
-  managerId?: number
-}
-
-/**
- * 创建项目 DTO
- */
+export interface ProjectFilters { status?: Project['status']; searchTerm?: string; managerId?: number }
 export type CreateProjectDTO = Partial<Omit<Project, 'id' | 'createdAt' | 'updatedAt'>>
-
-/**
- * 更新项目 DTO
- */
 export type UpdateProjectDTO = Partial<Omit<Project, 'createdAt'>>
-
-/**
- * useProjects 返回类型
- */
 export interface UseProjectsReturn {
   // 数据状态
   data: Project[]

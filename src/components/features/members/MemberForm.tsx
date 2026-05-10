@@ -1,7 +1,4 @@
-﻿/**
- * MemberForm 组件
- * 
- * 成员表单组件 - 管理人员和农民工的表单编辑、身份证OCR识别、拖拽上传、粘贴上传 */
+﻿// MemberForm 组件
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import type { Member, WorkerType, MemberType } from '@/types'
@@ -19,17 +16,13 @@ import {
   validateImageFile, validateFile, readFileAsBase64,
 } from './memberFormTypes'
 
-// ═══════════════════════════════════════════════════════════
 // MemberForm — 表单容器（逻辑层）
 // 类型/常量/Helper → memberFormTypes.ts
 // 管理人员表单 UI → StaffForm.tsx
 // 农民工表单 UI → WorkerForm.tsx
 // 上传控件 → FormUploadWidgets.tsx
-// ═══════════════════════════════════════════════════════════
 
-/**
- * MemberForm 组件
- */
+// MemberForm 组件
 export function MemberForm({
   type,
   editingMember,
