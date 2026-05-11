@@ -14,7 +14,7 @@ import { motion } from 'framer-motion'
 import { Icon } from './ui/Icon'
 import { EmptyState } from './ui/EmptyState'
 import { TemplateSelectorModal, TemplateGenerate } from './features/templates'
-import { FileDropZone } from './features/partners/FileDropZone'
+
 import { CONFIG, getApi, getStatusLabel, getStatusColor, getContractPaymentTotal, type ContractType, type Contract } from './features/contracts/contractConfig'
 import { ContractFormModal } from './features/contracts/ContractFormModal'
 
