@@ -69,6 +69,43 @@ export function isValidDate(date: string | Date | null | undefined): boolean {
 }
 
 /**
+ * 解析多种日期格式为 YYYY-MM-DD
+ * 支持: YYYY-MM-DD, YYYY/MM/DD, YYYY.MM.DD, YYYYMMDD, YYYY年MM月DD日
+ */
+export function parseDateString(input: string): string | null {
+  if (!input || typeof input !== 'string') return null
+  const trimmed = input.trim()
+  if (!trimmed) return null
+  const patterns = [
+    { regex: /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/, order: [0, 1, 2] },
+    { regex: /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/, order: [2, 0, 1] },
+    { regex: /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/, order: [2, 1, 0] },
+    { regex: /^(\d{4})年(\d{1,2})月(\d{1,2})日$/, order: [0, 1, 2] },
+    { regex: /^(\d{4})(\d{2})(\d{2})$/, order: [0, 1, 2] },
+  ]
+  for (const p of patterns) {
+    const m = trimmed.match(p.regex)
+    if (m) {
+      const parts = p.order.map(i => parseInt(m[i + 1], 10))
+      const [y, mo, d] = parts
+      if (mo >= 1 && mo <= 12 && d >= 1 && d <= 31) {
+        const dim = new Date(y, mo, 0).getDate()
+        if (d <= dim) {
+          if (p.regex.source.startsWith('(\\d{1,2})[-/](\\d{1,2})[-/](\\d{4})')) {
+            const first = parseInt(m[1], 10)
+            const second = parseInt(m[2], 10)
+            if (first > 12 && second <= 12) return `${y.toString().padStart(4, '0')}-${mo.toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`
+            if (second > 12 && first <= 12) return `${y.toString().padStart(4, '0')}-${d.toString().padStart(2, '0')}-${mo.toString().padStart(2, '0')}`
+          }
+          return `${y.toString().padStart(4, '0')}-${mo.toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`
+        }
+      }
+    }
+  }
+  return null
+}
+
+/**
  * 获取相对时间描述
  */
 export function getRelativeTime(date: string | Date | null | undefined): string {

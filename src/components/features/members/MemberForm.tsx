@@ -1,20 +1,19 @@
 ﻿// MemberForm 组件
 
-import React, { useState, useEffect, useRef, useCallback } from 'react'
-import type { Member, WorkerType, MemberType } from '@/types'
-import { motion } from 'framer-motion'
+import React, { useState, useEffect, useRef } from 'react'
 import { recognizeIdCard, getOCRConfig, OCRProvider } from '@/services/ocr'
 import { readUploadedFile, FILE_CATEGORIES } from '../../../services/fileService'
 import { useToastContext } from '../../../hooks/useToast'
-import { Icon } from '../../ui/Icon'
 import StaffForm from './StaffForm'
 import WorkerForm from './WorkerForm'
 import {
   type StaffFormData, type WorkerFormData, type MemberFormProps,
   defaultStaffFormData, defaultWorkerFormData,
-  cleanFormData, memberToStaffForm, memberToWorkerForm,
+  memberToStaffForm, memberToWorkerForm,
   validateImageFile, validateFile, readFileAsBase64,
 } from './memberFormTypes'
+import { MemberFormLayout } from './MemberFormLayout'
+import { useMemberPasteHandler } from './useMemberPasteHandler'
 
 // MemberForm — 表单容器（逻辑层）
 // 类型/常量/Helper → memberFormTypes.ts
@@ -119,66 +118,6 @@ export function MemberForm({
     initForm()
   }, [editingMember, type, visible])
 
-  // 粘贴事件处理
-  useEffect(() => {
-    if (!visible) return
-
-    const handlePaste = async (e: ClipboardEvent) => {
-      const items = e.clipboardData?.items
-      if (!items) return
-
-      for (const item of items) {
-        if (item.type.startsWith('image/')) {
-          const file = item.getAsFile()
-          if (file) {
-            const error = validateImageFile(file)
-            if (error) {
-              showToast(error, 'error')
-              return
-            }
-            
-            if (type === 'staff') {
-              if (!staffFormData.idCardFront) {
-                await processIdCardFile(file, 'idCardFront', setStaffFormData)
-              } else if (!staffFormData.idCardBack) {
-                await processIdCardFile(file, 'idCardBack', setStaffFormData)
-              }
-            } else {
-              if (!workerFormData.idCardFront) {
-                await processIdCardFile(file, 'idCardFront', setWorkerFormData)
-              } else if (!workerFormData.idCardBack) {
-                await processIdCardFile(file, 'idCardBack', setWorkerFormData)
-              }
-            }
-            e.preventDefault()
-            return
-          }
-        }
-
-        if (item.type === 'application/pdf') {
-          const file = item.getAsFile()
-          if (file) {
-            const error = validateFile(file)
-            if (error) {
-              showToast(error, 'error')
-              return
-            }
-            
-            if (type === 'staff' && !staffFormData.contractFile) {
-              await processUploadFile(file, 'contractFile', setStaffFormData)
-            } else if (type === 'worker' && !workerFormData.contractFile) {
-              await processUploadFile(file, 'contractFile', setWorkerFormData)
-            }
-            e.preventDefault()
-            return
-          }
-        }
-      }
-    }
-
-    document.addEventListener('paste', handlePaste)
-    return () => document.removeEventListener('paste', handlePaste)
-  }, [visible, type, staffFormData.idCardFront, staffFormData.idCardBack, staffFormData.contractFile, workerFormData.idCardFront, workerFormData.idCardBack, workerFormData.contractFile])
 
   // ============ OCR 识别 ============
   const processIdCardFile = async (
@@ -388,113 +327,29 @@ export function MemberForm({
     }
   }
 
-  // ============ 渲染 ============
+  useMemberPasteHandler({ visible, type, staffFormData, workerFormData, setStaffFormData, setWorkerFormData, processIdCardFile, processUploadFile })
   if (!visible) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <motion.div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }}>
-        {/* Toast 提示 */}
-        
-        {/* 头部 */}
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-white dark:bg-slate-800 z-10 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-slate-800">
-            {editingMember ? `编辑${type === 'staff' ? '管理人员' : '工人'}` : `添加${type === 'staff' ? '管理人员' : '工人'}`}
-          </h2>
-          <button onClick={onClose} className="text-slate-500 dark:text-slate-400 hover:text-slate-700">?</button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6">
-          {/* 上传提示 */}
-          <div className={`mb-4 p-3 rounded-lg text-sm ${
-            type === 'staff' ? 'bg-primary-50 text-primary-700' : 'bg-orange-50 text-orange-700'
-          }`}>
-            <Icon name="Lightbulb" size={16} className="inline-block" /> <strong>提示</strong>上传图片或PDF时，可直接<strong>拖拽文件</strong>到上传区域，或在表单内按 <kbd className={`px-1 py-0.5 rounded text-xs ${
-              type === 'staff' ? 'bg-primary-200' : 'bg-orange-200'
-            }`}>Ctrl+V</kbd> 粘贴从聊天记录/文件管理器复制的内容
-          </div>
-
-          {/* OCR 状态指示器 */}
-          <div className="mb-4 flex items-center gap-2">
-            <span className={`text-xs px-2 py-1 rounded-full ${
-              ocrMode === 'baidu' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'
-            }`}>
-              {ocrMode === 'baidu' ? <><Icon name="Globe" size={14} className="inline-block" /> 百度OCR</> : <><Icon name="WifiOff" size={14} className="inline-block" /> 离线OCR</>}
-            </span>
-            {ocrLoading && <span className="text-xs text-primary-600">识别中..</span>}
-          </div>
-
-          {/* 管理人员表单 */}
-          {type === 'staff' && (
-            <StaffForm
-              formData={staffFormData}
-              setFormData={setStaffFormData}
-              editingMember={editingMember}
-              dragOverField={dragOverField}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop as any}
-              onFileChange={handleFileChange as any}
-              onDeleteFile={handleDeleteFile as any}
-              refs={{
-                frontInputRef: staffFrontInputRef,
-                backInputRef: staffBackInputRef,
-                contractInputRef: staffContractInputRef
-              }}
-            />
-          )}
-
-          {/* 农民工表单 */}
-          {type === 'worker' && (
-            <WorkerForm
-              formData={workerFormData}
-              setFormData={setWorkerFormData}
-              projects={projects}
-              workerTeams={workerTeams}
-              editingMember={editingMember}
-              ocrLoading={ocrLoading}
-              dragOverField={dragOverField}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop as any}
-              onFileChange={handleFileChange as any}
-              onDeleteFile={handleDeleteFile as any}
-              refs={{
-                frontInputRef: workerFrontInputRef,
-                backInputRef: workerBackInputRef,
-                contractInputRef: workerContractInputRef,
-                safetyInputRef,
-                healthInputRef,
-                certInputRef
-              }}
-            />
-          )}
-
-          {/* 提交按钮 */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-6 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 rounded-lg transition-colors"
-              disabled={submitting}
-            >
-              取消
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className={`px-6 py-2 text-white rounded-lg transition-colors ${
-                type === 'staff'
-                  ? 'bg-primary-600 hover:bg-primary-700'
-                  : 'bg-orange-600 hover:bg-orange-700'
-              } ${submitting ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              {submitting ? '提交中..' : (editingMember ? '保存' : '添加')}
-            </button>
-          </div>
-        </form>
-      </motion.div>
-    </div>
+    <MemberFormLayout type={type} editingMember={editingMember} ocrMode={ocrMode}
+      ocrLoading={ocrLoading} submitting={submitting} onClose={onClose} onSubmit={handleSubmit}>
+      {type === 'staff' ? (
+        <StaffForm formData={staffFormData} setFormData={setStaffFormData}
+          editingMember={editingMember} dragOverField={dragOverField}
+          onDragOver={handleDragOver} onDragLeave={handleDragLeave}
+          onDrop={handleDrop as any} onFileChange={handleFileChange as any}
+          onDeleteFile={handleDeleteFile as any}
+          refs={{ frontInputRef: staffFrontInputRef, backInputRef: staffBackInputRef, contractInputRef: staffContractInputRef }} />
+      ) : (
+        <WorkerForm formData={workerFormData} setFormData={setWorkerFormData}
+          projects={projects} workerTeams={workerTeams} editingMember={editingMember}
+          ocrLoading={ocrLoading} dragOverField={dragOverField}
+          onDragOver={handleDragOver} onDragLeave={handleDragLeave}
+          onDrop={handleDrop as any} onFileChange={handleFileChange as any}
+          onDeleteFile={handleDeleteFile as any}
+          refs={{ frontInputRef: workerFrontInputRef, backInputRef: workerBackInputRef, contractInputRef: workerContractInputRef, safetyInputRef, healthInputRef, certInputRef }} />
+      )}
+    </MemberFormLayout>
   )
 }
 

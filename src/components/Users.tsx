@@ -1,4 +1,5 @@
 // Users.tsx - 用户管理页面
+import { RolePermissionsTab } from './RolePermissionsTab'
 
 import React, { useState, useEffect } from 'react'
 import { usePermission, RequireAdmin } from '../hooks/usePermission'
@@ -42,106 +43,8 @@ const Users: React.FC = () => {
 
   // Tab 和角色权限编辑
   const [activeTab, setActiveTab] = useState('user_list')
-  const [roles, setRoles] = useState<{ id: string; name: string; description: string; isSystem: boolean; permissions: string[] }[]>([])
-  const [editingRoleId, setEditingRoleId] = useState<string | null>(null)
-  const [editingPermissions, setEditingPermissions] = useState<string[]>([])
-  const [rolesLoading, setRolesLoading] = useState(false)
 
-  // 资源列表（用于权限矩阵）
-  const resourceKeys: PermissionResource[] = ['dashboard', 'projects', 'contracts', 'partners', 'members', 'wages', 'settlement', 'inventory', 'invoices', 'expenses', 'drawings', 'settings', 'users', 'roles', 'audit_logs']
-  const actionKeys: PermissionAction[] = ['read', 'create', 'update', 'delete', 'export', 'import', 'approve']
 
-  // 加载角色列表
-  const loadRoles = async () => {
-    setRolesLoading(true)
-    try {
-      if (window.electronAPI?.getRoles) {
-        const result = await window.electronAPI.getRoles()
-        if (result.success && result.data) {
-          setRoles(result.data)
-        }
-      } else {
-        // 无 IPC 时使用前端 SYSTEM_ROLES
-        setRoles(SYSTEM_ROLES.map(r => ({ ...r })))
-      }
-    } catch (err) {
-      setRoles(SYSTEM_ROLES.map(r => ({ ...r })))
-    } finally {
-      setRolesLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    loadRoles()
-  }, [activeTab])
-
-  // 开始编辑角色权限
-  const startEditRole = (roleId: string) => {
-    const role = roles.find(r => r.id === roleId)
-    if (role) {
-      setEditingRoleId(roleId)
-      setEditingPermissions([...role.permissions])
-    }
-  }
-
-  // 切换权限
-  const togglePermission = (code: PermissionCode) => {
-    setEditingPermissions(prev =>
-      prev.includes(code) ? prev.filter(p => p !== code) : [...prev, code]
-    )
-  }
-
-  // 保存角色权限
-  const handleSavePermissions = async () => {
-    if (!editingRoleId) return
-    try {
-      if (window.electronAPI?.updateRole) {
-        const result = await window.electronAPI.updateRole(editingRoleId, editingPermissions)
-        if (result.success) {
-          showToast('角色权限已保存，用户下次登录时生效', 'success')
-          loadRoles()
-          setEditingRoleId(null)
-        } else {
-          throw new Error(result.error)
-        }
-      } else {
-        // 无 IPC 时直接更新前端
-        const systemRole = SYSTEM_ROLES.find(r => r.id === editingRoleId)
-        if (systemRole) {
-          systemRole.permissions = [...editingPermissions] as any
-          setRoles(SYSTEM_ROLES.map(r => ({ ...r })))
-          showToast('角色权限已保存（仅本地生效）', 'success')
-          setEditingRoleId(null)
-        }
-      }
-    } catch (err: any) {
-      showToast(err.message || '保存失败', 'error')
-    }
-  }
-
-  // 重置角色权限
-  const handleResetRole = async (roleId: string) => {
-    if (!confirm('确定要恢复该角色的默认权限吗？')) return
-    try {
-      if (window.electronAPI?.resetRole) {
-        const result = await window.electronAPI.resetRole(roleId)
-        if (result.success) {
-          showToast('已恢复默认权限', 'success')
-          loadRoles()
-        } else {
-          throw new Error(result.error)
-        }
-      }
-    } catch (err: any) {
-      showToast(err.message || '重置失败', 'error')
-    }
-  }
-
-  // 检查某角色是否有某权限（用于显示）
-  const roleHasPermission = (roleId: string, code: PermissionCode): boolean => {
-    const role = roles.find(r => r.id === roleId)
-    return role?.permissions.includes(code) || false
-  }
 
   // 同步权限用户：如果 AuthContext 中有用户但权限模块中没有，则同步
   useEffect(() => {
@@ -303,7 +206,6 @@ const Users: React.FC = () => {
           onChange={setActiveTab}
           tabs={[
             { key: 'user_list', label: '用户列表', icon: 'Users' },
-            { key: 'role_permissions', label: '角色权限', icon: 'Key' },
             { key: 'audit_logs', label: '操作日志', icon: 'ClipboardList' },
           ]}
         />
@@ -489,146 +391,7 @@ const Users: React.FC = () => {
       </>
       )}
 
-      {/* 角色权限 Tab */}
-      {activeTab === 'role_permissions' && (
-      <>
-      {editingRoleId ? (
-        // 权限编辑视图
-        <div>
-          <div className="flex items-center gap-3 mb-6">
-            <button
-              onClick={() => setEditingRoleId(null)}
-              className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              ← 返回角色列表
-            </button>
-            <h2 className="text-lg font-semibold text-slate-800">
-              编辑权限 - {roles.find(r => r.id === editingRoleId)?.name || editingRoleId}
-            </h2>
-          </div>
-
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden mb-6">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="text-left py-3 px-4 text-sm font-medium text-slate-700 dark:text-slate-200 w-32">资源</th>
-                    {actionKeys.map(action => (
-                      <th key={action} className="text-center py-3 px-2 text-xs font-medium text-slate-600 w-16">
-                        {ACTION_LABELS[action]}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {resourceKeys.map(resource => (
-                    <tr key={resource} className="border-b border-slate-100 hover:bg-slate-50">
-                      <td className="py-3 px-4 text-sm font-medium text-slate-700">
-                        {RESOURCE_LABELS[resource]}
-                      </td>
-                      {actionKeys.map(action => {
-                        const code = `${resource}:${action}` as PermissionCode
-                        const hasIt = editingPermissions.includes(code)
-                        return (
-                          <td key={action} className="text-center py-3 px-2">
-                            <input
-                              type="checkbox"
-                              checked={hasIt}
-                              onChange={() => togglePermission(code)}
-                              className="w-4 h-4 text-primary-600 border-slate-300 rounded focus:ring-primary-500"
-                            />
-                          </td>
-                        )
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div className="flex gap-3">
-            <button
-              onClick={handleSavePermissions}
-              className="px-6 py-2.5 bg-primary-600 hover:bg-primary-500 text-white font-medium rounded-xl transition-colors"
-            >
-              保存权限
-            </button>
-            <button
-              onClick={() => setEditingRoleId(null)}
-              className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-medium rounded-xl transition-colors"
-            >
-              取消
-            </button>
-          </div>
-        </div>
-      ) : (
-        // 角色列表视图
-        <div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {roles.map(role => (
-              <div key={role.id} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h3 className="text-lg font-semibold text-slate-800">{role.name}</h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{role.description}</p>
-                  </div>
-                  <span className={`px-2 py-1 text-xs rounded-full font-medium ${
-                    role.id === 'admin' ? 'bg-red-100 text-red-700' :
-                    role.id === 'manager' ? 'bg-blue-100 text-blue-700' :
-                    role.id === 'accountant' ? 'bg-green-100 text-green-700' :
-                    'bg-slate-100 text-slate-700'
-                  }`}>
-                    {role.isSystem ? '系统角色' : '自定义'}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400 mb-4">
-                  <span>{role.permissions.length} 个权限</span>
-                </div>
-
-                {/* 权限摘要 */}
-                <div className="flex flex-wrap gap-1 mb-4">
-                  {resourceKeys.filter(r => role.permissions.some(p => p.startsWith(r + ':'))).slice(0, 5).map(r => (
-                    <span key={r} className="px-2 py-0.5 text-xs bg-slate-100 text-slate-600 rounded-full">
-                      {RESOURCE_LABELS[r]}
-                    </span>
-                  ))}
-                  {resourceKeys.filter(r => role.permissions.some(p => p.startsWith(r + ':'))).length > 5 && (
-                    <span className="px-2 py-0.5 text-xs bg-slate-100 text-slate-400 rounded-full">
-                      +{resourceKeys.filter(r => role.permissions.some(p => p.startsWith(r + ':'))).length - 5}
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => startEditRole(role.id)}
-                    className="flex-1 px-3 py-2 text-sm text-primary-600 hover:bg-primary-50 rounded-lg transition-colors font-medium"
-                  >
-                    编辑权限
-                  </button>
-                  {role.isSystem && (
-                    <button
-                      onClick={() => handleResetRole(role.id)}
-                      className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400 hover:bg-slate-100 rounded-lg transition-colors"
-                      title="恢复默认"
-                    >
-                      重置
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {rolesLoading && (
-            <div className="text-center py-8 text-slate-400">加载中...</div>
-          )}
-        </div>
-      )}
-      </>
-      )}
+      {activeTab === 'role_permissions' && <RolePermissionsTab />}
 
       {/* 操作日志 Tab */}
       {activeTab === 'audit_logs' && (

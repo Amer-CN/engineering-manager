@@ -3,6 +3,7 @@ import { Partner, Project } from '../../../types/electron'
 import { partnerCategories } from '../../../data/regions'
 import { validateCreditCode, isOnline, queryCompanyByCreditCode, inferTaxTypeFromCreditCode, getTaxTypeLabel } from '../../../services/companyQuery'
 import { Icon } from '../../ui/Icon'
+import { useCompanyQuery } from './useCompanyQuery'
 
 interface PartnerFormProps {
   partner?: Partner | null
@@ -41,7 +42,7 @@ export const PartnerForm: React.FC<PartnerFormProps> = ({
   const [formData, setFormData] = useState(defaultFormData)
   const [licenseDragOver, setLicenseDragOver] = useState(false)
   const [otherFilesDragOver, setOtherFilesDragOver] = useState(false)
-  const [queryLoading, setQueryLoading] = useState(false)
+  const { queryLoading, handleQueryCreditCode } = useCompanyQuery(formData.creditCode, setFormData)
   const licenseInputRef = useRef<HTMLInputElement>(null)
   const otherFilesInputRef = useRef<HTMLInputElement>(null)
 
@@ -142,61 +143,7 @@ export const PartnerForm: React.FC<PartnerFormProps> = ({
     reader.readAsDataURL(file)
   }
 
-  // 通过统一社会信用代码查询企业信息
-  const handleQueryCreditCode = async () => {
-    if (!formData.creditCode) return
-
-    const validation = validateCreditCode(formData.creditCode)
-    if (!validation.valid) {
-      alert(validation.message)
-      return
-    }
-
-    const inferredTaxType = inferTaxTypeFromCreditCode(formData.creditCode)
-    const taxTypeLabel = inferredTaxType ? getTaxTypeLabel(inferredTaxType) : ''
-
-    if (!isOnline()) {
-      if (inferredTaxType) {
-        setFormData(prev => ({ ...prev, taxType: inferredTaxType }))
-        alert(`当前处于离线状态，已根据代码自动判断纳税资质为：${taxTypeLabel}\n注册地址和经营范围请手动填写`)
-      } else {
-        alert('当前处于离线状态，无法联网查询企业信息\n请手动填写注册地址、经营范围和纳税资质')
-      }
-      return
-    }
-
-    setQueryLoading(true)
-    try {
-      const companyInfo = await queryCompanyByCreditCode(formData.creditCode)
-      if (companyInfo) {
-        setFormData(prev => ({
-          ...prev,
-          name: companyInfo.name || prev.name,
-          registeredAddress: companyInfo.registeredAddress || prev.registeredAddress,
-          businessScope: companyInfo.businessScope || prev.businessScope,
-          taxType: companyInfo.taxType || inferredTaxType || prev.taxType
-        }))
-        alert('已自动填充企业信息')
-      } else {
-        if (inferredTaxType) {
-          setFormData(prev => ({ ...prev, taxType: inferredTaxType }))
-          alert(`未查询到完整企业信息，但已根据代码自动判断纳税资质为：${taxTypeLabel}\n请手动填写其他信息`)
-        } else {
-          alert('未查询到企业信息，请手动填写')
-        }
-      }
-    } catch (error) {
-      console.error('查询失败:', error)
-      if (inferredTaxType) {
-        setFormData(prev => ({ ...prev, taxType: inferredTaxType }))
-        alert(`查询失败，但已根据代码自动判断纳税资质为：${taxTypeLabel}\n请手动填写其他信息`)
-      } else {
-        alert('查询失败，请手动填写信息')
-      }
-    } finally {
-      setQueryLoading(false)
-    }
-  }
+  // handleQueryCreditCode extracted to ./useCompanyQuery hook
 
   const toggleProject = (projectId: number) => {
     setFormData(prev => ({

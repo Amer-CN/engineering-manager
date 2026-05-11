@@ -1,12 +1,10 @@
 // Invoices.tsx - 发票管理页面
 
 import React, { useState, useEffect, useRef } from 'react'
-import * as XLSX from 'xlsx'
-import { Invoice, InvoiceType, InvoiceStatus, InvoiceKind, Project, Partner, PaymentRecord, IncomeContract, ExpenseContract } from '../types/electron'
+import { Invoice, InvoiceType, InvoiceStatus, Project, Partner, PaymentRecord, IncomeContract, ExpenseContract } from '../types/electron'
 import { logCreate, logUpdate, logDelete, logApprove } from '../utils/audit'
 import { useToastContext } from '../hooks/useToast'
-import { getStatusLabel, printInvoiceList, printPaymentList, exportInvoiceList, exportPaymentList, handlePrint } from './features/invoices/printExport'
-import { motion } from 'framer-motion'
+import { getStatusLabel, printInvoiceList, printPaymentList, exportInvoiceList, exportPaymentList, handlePrint, printPaymentRecordList, exportPaymentRecordList } from './features/invoices/printExport'
 import { formatMoney } from '../utils/format'
 import { processFileFields, guessFileExt, readUploadedFile, FILE_CATEGORIES, uploadFile } from '../services/fileService'
 
@@ -22,41 +20,8 @@ import {
   PaymentFormData,
   PaymentStats,
 } from './features/invoices'
-
-// 常量
-
-const defaultInvoiceFormData: InvoiceFormData = {
-  type: 'invoice_in',
-  invoiceKind: 'electronic_regular' as InvoiceKind,
-  invoiceNo: '',
-  invoiceCode: '',
-  name: '',
-  amount: 0,
-  priceAmount: 0,
-  taxAmount: 0,
-  taxRate: 0.09 as any,
-  issueDate: new Date().toISOString().split('T')[0],
-  sellerId: '',
-  buyerId: '',
-  projectId: '',
-  contractId: '',
-  remarks: '',
-  fileUrl: '',
-  fileType: ''
-}
-
-const defaultPaymentFormData: PaymentFormData = {
-  type: 'invoice_in' as InvoiceType,
-  amount: 0,
-  recordDate: new Date().toISOString().split('T')[0],
-  projectId: '',
-  partnerId: '',
-  contractId: '',
-  remarks: '',
-  invoiceDetails: [],
-  fileUrl: '',
-  fileType: ''
-}
+import { defaultInvoiceFormData, defaultPaymentFormData, getInvoiceFormData, getPaymentFormData } from './features/invoices/constants'
+import { FilePreviewModal } from './features/invoices/FilePreviewModal'
 
 // Types
 
@@ -320,110 +285,6 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
   }
 
   // 打印收款记录列表
-  const handlePrintPaymentList = () => {
-    const paymentList = filteredPayments
-    if (paymentList.length === 0) {
-      showToast('没有可打印的数据', 'error')
-      return
-    }
-
-    const rows = paymentList.map(p => `
-      <tr>
-        <td>${p.recordDate || '-'}</td>
-        <td>${p.type === 'invoice_out' ? '回款' : '付款'}</td>
-        <td>¥${formatMoney(p.amount)}</td>
-        <td>${p.partnerName || '-'}</td>
-        <td>${p.projectName || '-'}</td>
-        <td>${p.contractName || '-'}</td>
-        <td>${p.remarks || '-'}</td>
-      </tr>
-    `).join('')
-
-    const content = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <title>收款记录列表</title>
-        <style>
-          body { font-family: 'Microsoft YaHei', sans-serif; padding: 20px; }
-          h1 { text-align: center; margin-bottom: 20px; }
-          table { width: 100%; border-collapse: collapse; font-size: 12px; }
-          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-          th { background: #f5f5f5; }
-          .footer { margin-top: 20px; text-align: right; font-size: 12px; color: #666; }
-          @media print { body { padding: 0; } }
-        </style>
-      </head>
-      <body>
-        <h1>收款记录列表</h1>
-        <table>
-          <thead>
-            <tr>
-              <th>日期</th>
-              <th>类型</th>
-              <th>金额</th>
-              <th>单位</th>
-              <th>项目</th>
-              <th>合同</th>
-              <th>备注</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-        <div class="footer">
-          共 ${paymentList.length} 条记录 | 打印时间: ${new Date().toLocaleString()}
-        </div>
-      </body>
-      </html>
-    `
-    handlePrint(content)
-  }
-
-  // 导出收款记录列表为 Excel (XLSX)
-  const handleExportPaymentList = async () => {
-    const paymentList = filteredPayments
-    if (paymentList.length === 0) {
-      showToast('没有可导出的数据', 'error')
-      return
-    }
-
-    try {
-      const exportData = paymentList.map((p, index) => ({
-        '序号': index + 1,
-        '日期': p.recordDate || '',
-        '类型': p.type === 'invoice_out' ? '回款' : '付款',
-        '金额': p.amount,
-        '关联单位': p.partnerName || '',
-        '关联项目': p.projectName || '',
-        '关联合同': p.contractName || '',
-        '备注': p.remarks || '',
-      }))
-
-      const worksheet = XLSX.utils.json_to_sheet(exportData)
-      const colWidths = [
-        { wch: 6 },
-        { wch: 12 },
-        { wch: 8 },
-        { wch: 12 },
-        { wch: 20 },
-        { wch: 20 },
-        { wch: 20 },
-        { wch: 30 },
-      ]
-      worksheet['!cols'] = colWidths
-
-      const workbook = XLSX.utils.book_new()
-      XLSX.utils.book_append_sheet(workbook, worksheet, '收款记录')
-      const timestamp = new Date().toISOString().slice(0, 10)
-      XLSX.writeFile(workbook, `收款记录_${timestamp}.xlsx`)
-    } catch (error) {
-      console.error('导出失败:', error)
-      alert('导出失败，请重试')
-    }
-  }
-
-  // 预览（自动兼容文件名和 data URL）
   const handlePreview = async (data: string, type: 'image' | 'pdf', title: string, category?: string, subCategory?: string, projectName?: string | null, projectId?: number) => {
     let url = data
     let detectedType = type
@@ -480,50 +341,6 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
     )
   }
 
-  // 表单数据
-  
-  const getInvoiceFormData = (): InvoiceFormData => {
-    if (editingInvoice) {
-      return {
-        type: editingInvoice.type,
-        invoiceKind: editingInvoice.invoiceKind || 'paper_regular',
-        invoiceNo: editingInvoice.invoiceNo,
-        invoiceCode: editingInvoice.invoiceCode,
-        name: editingInvoice.name,
-        amount: editingInvoice.amount,
-        priceAmount: editingInvoice.priceAmount,
-        taxAmount: editingInvoice.taxAmount,
-        taxRate: editingInvoice.taxRate,
-        issueDate: editingInvoice.issueDate,
-        sellerId: editingInvoice.sellerId || '',
-        buyerId: editingInvoice.buyerId || '',
-        projectId: editingInvoice.projectId || '',
-        contractId: editingInvoice.contractId || '',
-        remarks: editingInvoice.remarks || '',
-        fileUrl: editingInvoice.fileUrl || '',
-        fileType: editingInvoice.fileType || ''
-      }
-    }
-    return { ...defaultInvoiceFormData }
-  }
-
-  const getPaymentFormData = (): PaymentFormData => {
-    if (editingPayment) {
-      return {
-        type: editingPayment.type,
-        amount: editingPayment.amount,
-        recordDate: editingPayment.recordDate,
-        projectId: editingPayment.projectId || '',
-        partnerId: editingPayment.partnerId || '',
-        contractId: editingPayment.contractId || '',
-        remarks: editingPayment.remarks || '',
-        invoiceDetails: editingPayment.invoiceDetails || [],
-        fileUrl: editingPayment.fileUrl || '',
-        fileType: editingPayment.fileType || ''
-      }
-    }
-    return { ...defaultPaymentFormData }
-  }
 
   // 渲染
   
@@ -605,8 +422,8 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
           onFilterPaymentProjectChange={setFilterPaymentProject}
           onFilterDateStartChange={setFilterDateStart}
           onFilterDateEndChange={setFilterDateEnd}
-          onPrint={activeTab === 'invoices' ? () => printInvoiceList(filteredInvoices) : handlePrintPaymentList}
-          onExportExcel={activeTab === 'invoices' ? () => exportInvoiceList(filteredInvoices) : handleExportPaymentList}
+          onPrint={activeTab === 'invoices' ? () => printInvoiceList(filteredInvoices) : () => printPaymentRecordList(filteredPayments, showToast, formatMoney, handlePrint)}
+          onExportExcel={activeTab === 'invoices' ? () => exportInvoiceList(filteredInvoices) : () => exportPaymentRecordList(filteredPayments, showToast)}
           isPaymentFilter={activeTab === 'payments'}
         />
       </div>
@@ -640,7 +457,7 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
       {/* 发票表单模态框 */}
       {showInvoiceModal && (
         <InvoiceForm
-          initialData={getInvoiceFormData()}
+          initialData={getInvoiceFormData(editingInvoice)}
           projects={projects}
           partners={partners}
           contracts={contracts}
@@ -652,7 +469,7 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
       {/* 收款表单模态框 */}
       {showPaymentModal && (
         <PaymentForm
-          initialData={getPaymentFormData()}
+          initialData={getPaymentFormData(editingPayment)}
           projects={projects}
           partners={partners}
           invoices={invoices}
@@ -664,21 +481,7 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
 
       {/* 预览模态框 */}
       {previewFile && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60]" onClick={() => setPreviewFile(null)}>
-          <motion.div className="bg-white dark:bg-slate-800 rounded-2xl w-[95vw] h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }}>
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
-              <h3 className="text-lg font-semibold text-slate-800">{previewFile.title}</h3>
-              <button onClick={() => setPreviewFile(null)} className="text-slate-400 hover:text-slate-600 text-2xl">✕</button>
-            </div>
-            <div className="flex-1 overflow-auto p-4 bg-slate-100">
-              {previewFile.type === 'pdf' ? (
-                <iframe src={previewFile.data} className="w-full h-full border-0" title="PDF预览" />
-              ) : (
-                <img src={previewFile.data} alt="预览" className="max-w-full max-h-full object-contain mx-auto" />
-              )}
-            </div>
-          </motion.div>
-        </div>
+        <FilePreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />
       )}
     </div>
   )

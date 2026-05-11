@@ -3,68 +3,13 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { PaymentRecord, InvoiceType, Project, Partner, IncomeContract, ExpenseContract, Invoice } from '@/types/electron'
 import { formatMoney } from '@/utils/format'
+import { parseDateString } from '@/utils/date'
 import { motion } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
 
-// 日期解析函数 - 支持多种格式粘贴自动识别
-
-const parseDateString = (input: string): string | null => {
-  if (!input || typeof input !== 'string') return null
-  
-  const trimmed = input.trim()
-  if (!trimmed) return null
-  
-  // 匹配各种日期格式的正则表达式
-  const patterns = [
-    // YYYY-MM-DD 或 YYYY/MM/DD 或 YYYY.MM.DD
-    { regex: /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/, order: [0, 1, 2] },
-    // MM-DD-YYYY 或 MM/DD/YYYY (美国格式)
-    { regex: /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/, order: [2, 0, 1] },
-    // DD-MM-YYYY 或 DD/MM/YYYY (欧洲格式)
-    { regex: /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/, order: [2, 1, 0] },
-    // YYYY年MM月DD日 (中文格式)
-    { regex: /^(\d{4})年(\d{1,2})月(\d{1,2})日$/, order: [0, 1, 2] },
-    // 中文简写: YYYYMMDD
-    { regex: /^(\d{4})(\d{2})(\d{2})$/, order: [0, 1, 2] },
-  ]
-  
-  for (const pattern of patterns) {
-    const match = trimmed.match(pattern.regex)
-    if (match) {
-      const parts = pattern.order.map(i => parseInt(match[i + 1], 10))
-      const year = parts[0]
-      const month = parts[1]
-      const day = parts[2]
-      
-      // 验证日期有效性
-      if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-        // 检查日期是否真实存在 (如 2月30日无效)
-        const daysInMonth = new Date(year, month, 0).getDate()
-        if (day <= daysInMonth) {
-          // 区分美国/欧洲格式：如果月份 > 12，说明月份实际上是日期
-          if (pattern.regex.source.startsWith('(\\d{1,2})[-/](\\d{1,2})[-/](\\d{4})')) {
-            // 再次判断：如果第一部分是 > 12 的数，那它应该是日
-            const first = parseInt(match[1], 10)
-            const second = parseInt(match[2], 10)
-            if (first > 12 && second <= 12) {
-              // 欧洲格式: DD-MM-YYYY
-              return `${parts[0].toString().padStart(4, '0')}-${parts[1].toString().padStart(2, '0')}-${parts[2].toString().padStart(2, '0')}`
-            } else if (second > 12 && first <= 12) {
-              // 美国格式: MM-DD-YYYY，需要交换
-              const [y, m, d] = parts
-              return `${y.toString().padStart(4, '0')}-${d.toString().padStart(2, '0')}-${m.toString().padStart(2, '0')}`
-            }
-          }
-          return `${parts[0].toString().padStart(4, '0')}-${parts[1].toString().padStart(2, '0')}-${parts[2].toString().padStart(2, '0')}`
-        }
-      }
-    }
-  }
-  
-  return null
-}
-
 // Types
+
+import { FilePreviewModal, FilePreviewData } from './FilePreviewModal'
 
 export interface PaymentFormData {
   type: InvoiceType
@@ -102,7 +47,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
 }) => {
   const [formData, setFormData] = useState<PaymentFormData>(initialData)
   const [dragOverFile, setDragOverFile] = useState(false)
-  const [previewFile, setPreviewFile] = useState<{data: string, type: 'image' | 'pdf', title: string} | null>(null)
+  const [previewFile, setPreviewFile] = useState<FilePreviewData | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // 粘贴事件
@@ -446,24 +391,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
         </motion.div>
       </div>
 
-      {/* 预览模态框 */}
-      {previewFile && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60]" onClick={() => setPreviewFile(null)}>
-          <motion.div className="bg-white dark:bg-slate-800 rounded-2xl w-[95vw] h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }}>
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-slate-800">{previewFile.title}</h3>
-              <button onClick={() => setPreviewFile(null)} className="text-slate-400 hover:text-slate-600 text-2xl">✕</button>
-            </div>
-            <div className="flex-1 overflow-auto p-4 bg-slate-100">
-              {previewFile.type === 'pdf' ? (
-                <iframe src={previewFile.data} className="w-full h-full border-0" />
-              ) : (
-                <img src={previewFile.data} alt="预览" className="max-w-full max-h-full object-contain mx-auto" />
-              )}
-            </div>
-          </motion.div>
-        </div>
-      )}
+      {previewFile && <FilePreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />}
     </>
   )
 }
