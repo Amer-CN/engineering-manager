@@ -10,8 +10,7 @@ function renderMarkdownInline(text: string): React.ReactNode {
 }
 
 const versions = [
-    { v: 'v1.21.3', date: '2026-05-11', items: ['版本自动迭代系统加固：PreToolUse hook 确保在 neat-freak 清理前读取最新内容', '版本号全局同步：修复 6 处版本引用不一致', 'Settings 更新日志显示修复：数组缩进从约 500 空格修正为 18 空格', '表格列间距优化：cell padding px-2→px-3', '表头标签优化：对方→往来单位/个人', '项目详情页分类管理修复：管理分类按钮正常弹出', '成本台账分类管理修复：编辑内置分类后名称正确更新，新增自定义分类出现在筛选框'] },
-}
+    { v: 'v1.21.2', date: '2026-05-11', items: ['版本自动迭代系统加固：PreToolUse hook 确保在 neat-freak 清理前读取最新内容', '版本号全局同步：修复 6 处版本引用不一致', 'Settings 更新日志显示修复：数组缩进从约 500 空格修正为 18 空格', '表格列间距优化：cell padding px-2→px-3', '表头标签优化：对方→往来单位/个人', '项目详情页分类管理修复：管理分类按钮正常弹出', '成本台账分类管理修复：编辑内置分类后名称正确更新，新增自定义分类出现在筛选框'] },
   { v: 'v1.21.1', date: '2026-05-11', items: ['check-rules 硬违规清零：7→0，子组件提取 8 文件 + hook 提取 3 个', 'ContractPage 822→405：提取 contractConfig + ContractFormModal', 'SettlementForm 714→314：提取 SettlementItemsTable + SettlementImportModal', 'Members 756→368：提取 useMemberOperations + useTeamOps', 'InvoiceForm 564→325：提取 useInvoiceAmounts + 复用 FileDropZone', 'ContractPage 遗留导入清理（ISSUE-001）', 'EmptyState 组件去重合并（ISSUE-002）', 'EmptyState 组件按 DESIGN.md 规范新建', 'Inter 字体栈修复', 'WorkerSection React.lazy 懒加载'] },
   { v: 'v1.21.0', date: '2026-05-10', items: ['新增自定义分类管理：db.costLedgerCategories集合+5IPC，内置12种种子，用户可增删改', '新增CategoryManager分类管理弹窗：双Tab+行内编辑+内置不可删+恢复默认', '新增useCostLedgerCategories hook：分类统一加载+方向过滤', '新增备注列：CostLedgerList表头10列', '优化列表列宽：基于熊会对账775行Excel实测，border-collapse线框连续，金额font-mono右对齐', '优化CategoryPicker+Analytics动态颜色', '表头标签：对方→往来单位/个人', '修复管理分类按钮在项目详情页无响应'] },
   { v: 'v1.20.1', date: '2026-05-10', items: ['成本台账模块实现：新增 13 文件 + 修改 15 文件 + 删除 Expenses.tsx，级联删除扩展至 8 集合，v1.20.0'] },
