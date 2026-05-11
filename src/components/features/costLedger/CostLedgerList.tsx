@@ -1,8 +1,8 @@
 import { useState, useMemo, useCallback } from 'react'
 import { formatMoney } from '@/utils/format'
-import { DIRECTION_CONFIG, getCategoryLabel } from './config'
+import { DIRECTION_CONFIG, getCategoryLabel, getCategoryDisplayLabel, getLevel1Color, isCategoryMissing, getCategoriesByDirection } from './config'
 import { ColumnFilter } from './ColumnFilter'
-import type { CostLedgerEntry } from '@/types'
+import type { CostLedgerEntry, CostLedgerCategory } from '@/types'
 
 interface CostLedgerListProps {
   entries: CostLedgerEntry[]
@@ -10,9 +10,11 @@ interface CostLedgerListProps {
   loading: boolean
   onEdit: (entry: CostLedgerEntry) => void
   onDelete: (id: number) => void
+  /** 动态分类列表（从数据库加载），用于显示标签和筛选下拉。不传则回退到硬编码常量。 */
+  categories?: CostLedgerCategory[] | null
 }
 
-export function CostLedgerList({ entries, summary, loading, onEdit, onDelete }: CostLedgerListProps) {
+export function CostLedgerList({ entries, summary, loading, onEdit, onDelete, categories }: CostLedgerListProps) {
   const [filter, setFilter] = useState<'all' | 'expense' | 'income'>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [sortField, setSortField] = useState<string>('voucherNo')
@@ -26,6 +28,12 @@ export function CostLedgerList({ entries, summary, loading, onEdit, onDelete }: 
   const [dateTo, setDateTo] = useState('')
   const [amountMin, setAmountMin] = useState('')
   const [amountMax, setAmountMax] = useState('')
+
+  // 分类列显示层级：二级 / 一级切换，localStorage 持久化
+  const [categoryLevel, setCategoryLevel] = useState<'level1' | 'level2'>(() => {
+    const stored = localStorage.getItem('costLedgerCategoryLevel')
+    return stored === 'level1' ? 'level1' : 'level2'
+  })
 
   // Derive unique values
   const colValues = useMemo(() => {
@@ -131,17 +139,41 @@ export function CostLedgerList({ entries, summary, loading, onEdit, onDelete }: 
         <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}
           className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600">
           <option value="all">全部分类</option>
-          {filter !== 'income' && <optgroup label="支出">
-            {['labor','material','equipment','pre_project','business_expense','advance','salary','tax','other'].map(c =>
-              <option key={c} value={c}>{getCategoryLabel(c)}</option>
-            )}
-          </optgroup>}
-          {filter !== 'expense' && <optgroup label="收入">
-            {['shareholder_investment','financing','advance_recovery'].map(c =>
-              <option key={c} value={c}>{getCategoryLabel(c)}</option>
-            )}
-          </optgroup>}
+          {/* 支出分类 — 优先使用动态 categories，回退到硬编码常量 */}
+          {filter !== 'income' && (
+            <optgroup label="支出">
+              {(categories && categories.length > 0
+                ? categories.filter(c => c.direction === 'expense' && c.isEnabled !== false)
+                : getCategoriesByDirection('expense')
+              ).map(c => (
+                <option key={c.code} value={c.code} style={{ color: c.color }}>{c.label}</option>
+              ))}
+            </optgroup>
+          )}
+          {/* 收入分类 */}
+          {filter !== 'expense' && (
+            <optgroup label="收入">
+              {(categories && categories.length > 0
+                ? categories.filter(c => c.direction === 'income' && c.isEnabled !== false)
+                : getCategoriesByDirection('income')
+              ).map(c => (
+                <option key={c.code} value={c.code} style={{ color: c.color }}>{c.label}</option>
+              ))}
+            </optgroup>
+          )}
         </select>
+        {/* 分类列显示层级切换：二级 / 一级 */}
+        <div className="flex gap-0.5 rounded-lg bg-slate-100 p-0.5">
+          {(['level2', 'level1'] as const).map(level => (
+            <button key={level} onClick={() => { setCategoryLevel(level); localStorage.setItem('costLedgerCategoryLevel', level) }}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                categoryLevel === level ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              {level === 'level2' ? '二级' : '一级'}
+            </button>
+          ))}
+        </div>
         {activeFilters > 0 && (
           <button onClick={clearAll} className="text-xs text-blue-600 hover:text-blue-800">清除 {activeFilters} 个筛选</button>
         )}
@@ -213,7 +245,17 @@ export function CostLedgerList({ entries, summary, loading, onEdit, onDelete }: 
                   <td className="px-3 py-2 text-center font-mono font-semibold text-slate-600 truncate">{entry.voucherNo || '-'}</td>
                   <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{entry.date}</td>
                   <td className="px-3 py-2"><span className={`rounded px-1.5 py-0.5 text-xs font-medium ${dir.bg} ${dir.color}`}>{dir.label}</span></td>
-                  <td className="px-3 py-2 text-slate-600 truncate">{getCategoryLabel(entry.category)}</td>
+                  <td className="px-3 py-2 text-slate-600 truncate">
+                    {/* 一级模式：显示彩色圆点 + 一级分类名；二级模式：显示原分类名 */}
+                    {categoryLevel === 'level1' && (
+                      <span className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle" style={{ backgroundColor: getLevel1Color(entry.category, categories) }} />
+                    )}
+                    {getCategoryDisplayLabel(entry.category, categoryLevel, categories)}
+                    {/* 引用的分类已被删除或禁用时，显示警告标记 */}
+                    {isCategoryMissing(entry.category, categories) && (
+                      <span className="ml-1 rounded bg-amber-100 px-1 text-amber-700 text-[10px]" title="分类已删除或禁用">已删</span>
+                    )}
+                  </td>
                   <td className="px-3 py-2 font-medium text-slate-700 truncate">{entry.counterparty}</td>
                   <td className="px-3 py-2 text-xs text-slate-500 truncate" title={entry.channel}>{entry.channel}</td>
                   <td className={`px-3 py-2 text-right font-mono font-medium whitespace-nowrap ${entry.direction === 'expense' ? 'text-red-600' : 'text-emerald-600'}`}>
