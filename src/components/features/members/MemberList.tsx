@@ -7,7 +7,7 @@
 import React from 'react'
 import type { Member } from '@/types'
 import { MemberCard } from './MemberCard'
-import { Empty } from '@/components/ui/Empty'
+import { EmptyState } from '@/components/ui/EmptyState'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Types
@@ -72,7 +72,7 @@ export function MemberList({
   if (members.length === 0) {
     return (
       <div className="card p-12 text-center">
-        <Empty description={`暂无${type === 'staff' ? '管理人员' : '农民工'}`} />
+        <EmptyState title={`暂无${type === 'staff' ? '管理人员' : '农民工'}`} />
         <button
           onClick={onAdd}
           className="btn btn-primary mt-6"

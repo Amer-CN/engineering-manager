@@ -41,8 +41,8 @@ export { Spinner, Skeleton } from './Loading/Loading'
 export type { SpinnerProps, SkeletonProps } from './Loading/Loading'
 
 // 空状态
-export { Empty, EmptyState } from './Empty/Empty'
-export type { EmptyStateProps } from './Empty/Empty'
+export { EmptyState } from './EmptyState'
+export type { EmptyStateProps } from './EmptyState'
 
 // 确认对话框
 export { ConfirmDialog } from './ConfirmDialog/ConfirmDialog'
