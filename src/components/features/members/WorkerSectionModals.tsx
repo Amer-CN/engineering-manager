@@ -63,7 +63,7 @@ interface TeamCardProps {
   onDelete: () => void
 }
 
-function TeamCard({ team, workerCount, onEdit, onDelete }: TeamCardProps) {
+export function TeamCard({ team, workerCount, onEdit, onDelete }: TeamCardProps) {
   return (
     <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:border-orange-300 transition-colors">
       <div className="flex items-center justify-between mb-2">
@@ -108,7 +108,7 @@ interface TeamFormModalProps {
   onClose: () => void
 }
 
-function TeamFormModal({
+export function TeamFormModal({
   visible,
   editingTeam,
   formData,
@@ -209,7 +209,7 @@ interface TransferModalProps {
   onClose: () => void
 }
 
-function TransferModal({
+export function TransferModal({
   visible,
   worker,
   formData,
@@ -313,7 +313,7 @@ interface LeaveModalProps {
   onClose: () => void
 }
 
-function LeaveModal({
+export function LeaveModal({
   visible,
   worker,
   formData,

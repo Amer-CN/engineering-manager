@@ -15,7 +15,8 @@ export { InvoiceList } from './InvoiceList'
 export type { InvoiceListProps } from './InvoiceList'
 
 // 发票表单
-export { InvoiceForm, taxRateOptions, invoiceKindOptions } from './InvoiceForm'
+export { InvoiceForm } from './InvoiceForm'
+export { taxRateOptions, invoiceKindOptions } from './constants'
 export type { InvoiceFormProps, InvoiceFormData } from './InvoiceForm'
 
 // 收款记录列表

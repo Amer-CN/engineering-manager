@@ -8,6 +8,29 @@
 ---
 
 
+## [1.21.1] — 2026-05-11
+
+### 🏗️ 重构
+- **check-rules 硬违规清零**：7→0，子组件提取 8 文件 + hook 提取 3 个（useMemberOperations / useTeamOps / useInvoiceAmounts）
+- **ContractPage 822→405**：提取 contractConfig + ContractFormModal
+- **SettlementForm 714→314**：提取 SettlementItemsTable + SettlementImportModal
+- **Members 756→368**：提取 useMemberOperations + useTeamOps + 复用 useMemberPasteHandler
+- **InvoiceForm 564→325**：提取 useInvoiceAmounts + 复用 FileDropZone/FilePreviewModal/parseDateString
+- **PartnerForm 519→388**：提取 FileDropZone + 合并 processFile
+- **Settings 633→439**：接入 SettingsOcrSection
+
+### 🎨 设计
+- **EmptyState 组件**：按 DESIGN.md 规范新建，接入 ContractPage/Drawings/ContractTemplates/InvoiceList
+- **Inter 字体栈修复**：index.css 根 font-family 补 Inter 优先
+- **WorkerSection 懒加载**：React.lazy + Suspense 拆分 13KB chunk，Members 首屏 80→70KB
+
+### ⚡ 性能
+- **/benchmark 基线**：2.4MB dist / 33 chunks / 9.1s build / Grade A
+
+### 📝 文档
+- **DESIGN.md 设计审计**：源码级审计 9/10 (A)，DESIGN.md 941 行成熟设计系统
+
+
 ## [1.21.0] — 2026-05-10
 
 ### ✨ 新增

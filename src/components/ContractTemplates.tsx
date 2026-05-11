@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from './ui/Icon'
+import { EmptyState } from './ui/EmptyState'
 import { ContractTemplate, TemplateType, TemplateVariable, Project, Partner } from '../types/electron'
 import { useToastContext } from '../hooks/useToast'
 import { ContractTemplateFormModal, templateTypeConfig } from './ContractTemplateFormModal'
@@ -320,17 +321,9 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
           ))}
         </div>
       ) : (
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-12 text-center">
-          <Icon name="FileText" size={48} className="mb-4" />
-          <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100 mb-2">暂无合同模板</h3>
-          <p className="text-slate-500 dark:text-slate-400 mb-6">点击下方按钮创建您的第一个合同模板</p>
-          <button
-            onClick={() => { resetForm(); setShowModal(true) }}
-            className="btn btn-primary"
-          >
-            添加模板
-          </button>
-        </div>
+        <EmptyState icon="FileText" title="暂无合同模板" description="点击下方按钮创建您的第一个合同模板"
+          action={<button onClick={() => { resetForm(); setShowModal(true) }} className="btn btn-primary">添加模板</button>}
+        />
       )}
 
       {showModal && (

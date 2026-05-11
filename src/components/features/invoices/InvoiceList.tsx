@@ -6,6 +6,7 @@ import React, { useState } from 'react'
 import { Invoice, InvoiceType, InvoiceStatus, InvoiceKind, Project } from '@/types/electron'
 import { formatMoney } from '@/utils/format'
 import { Icon } from '../../ui/Icon'
+import { EmptyState } from '../../ui/EmptyState'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 常量配置
@@ -69,11 +70,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
 }) => {
   if (invoices.length === 0) {
     return (
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-12 text-center">
-        <div className="text-6xl mb-4"><Icon name="Receipt" size={48} /></div>
-        <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100 mb-2">暂无发票</h3>
-        <p className="text-slate-500 dark:text-slate-400 mb-6">点击下方按钮创建您的第一张发票</p>
-      </div>
+      <EmptyState icon="Receipt" title="暂无发票" description="点击下方按钮创建您的第一张发票" />
     )
   }
 

@@ -4,6 +4,7 @@ import { partnerCategories } from '../../../data/regions'
 import { validateCreditCode, isOnline, queryCompanyByCreditCode, inferTaxTypeFromCreditCode, getTaxTypeLabel } from '../../../services/companyQuery'
 import { Icon } from '../../ui/Icon'
 import { useCompanyQuery } from './useCompanyQuery'
+import { FileDropZone } from './FileDropZone'
 
 interface PartnerFormProps {
   partner?: Partner | null
@@ -58,7 +59,7 @@ export const PartnerForm: React.FC<PartnerFormProps> = ({
           const file = item.getAsFile()
           if (file) {
             e.preventDefault()
-            processLicenseFile(file)
+            processFile(file, (base64, fileType) => setFormData(prev => ({ ...prev, licenseFile: base64, licenseFileType: fileType })))
             return
           }
         }
@@ -97,49 +98,12 @@ export const PartnerForm: React.FC<PartnerFormProps> = ({
     }
   }, [partner])
 
-  // 处理营业执照上传
-  const processLicenseFile = (file: File) => {
+  const processFile = (file: File, onData: (base64: string, fileType: string) => void) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
-    if (!allowedTypes.includes(file.type)) {
-      alert('只能上传 JPG、PNG、WebP 或 PDF 格式的文件')
-      return
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      alert('文件大小不能超过 10MB')
-      return
-    }
-
+    if (!allowedTypes.includes(file.type)) { alert('只能上传 JPG、PNG、WebP 或 PDF 格式的文件'); return }
+    if (file.size > 10 * 1024 * 1024) { alert('文件大小不能超过 10MB'); return }
     const reader = new FileReader()
-    reader.onload = (e) => {
-      const base64 = e.target?.result as string
-      const fileType = file.type === 'application/pdf' ? 'pdf' : 'image'
-      setFormData(prev => ({ ...prev, licenseFile: base64, licenseFileType: fileType }))
-    }
-    reader.readAsDataURL(file)
-  }
-
-  // 处理其他附件上传
-  const processOtherFiles = (file: File) => {
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
-    if (!allowedTypes.includes(file.type)) {
-      alert('只能上传 JPG、PNG、WebP 或 PDF 格式的文件')
-      return
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      alert('文件大小不能超过 10MB')
-      return
-    }
-
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const base64 = e.target?.result as string
-      const fileType = file.type === 'application/pdf' ? 'pdf' : 'image'
-      setFormData(prev => ({
-        ...prev,
-        otherFiles: prev.otherFiles ? `${prev.otherFiles}|||${base64}` : base64,
-        otherFilesType: prev.otherFilesType ? `${prev.otherFilesType}|||${fileType}` : fileType
-      }))
-    }
+    reader.onload = (e) => onData(e.target?.result as string, file.type === 'application/pdf' ? 'pdf' : 'image')
     reader.readAsDataURL(file)
   }
 
@@ -353,137 +317,42 @@ export const PartnerForm: React.FC<PartnerFormProps> = ({
         </div>
 
         {/* 营业执照上传 */}
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">营业执照</label>
-          <input
-            ref={licenseInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,application/pdf"
-            onChange={e => {
-              const file = e.target.files?.[0]
-              if (file) processLicenseFile(file)
-              e.target.value = ''
-            }}
-            className="hidden"
-          />
-          {formData.licenseFile ? (
-            <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 bg-slate-50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-lg">
-                    {formData.licenseFileType === 'pdf' ? <Icon name="FileText" size={20} /> : <Icon name="Building2" size={20} />}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-slate-700">营业执照已上传</p>
-                    <p className="text-xs text-slate-400">
-                      {formData.licenseFileType === 'pdf' ? 'PDF文件' : '图片文件'}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, licenseFile: '', licenseFileType: '' }))}
-                  className="px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                >
-                  删除
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div
-              className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all ${
-                licenseDragOver
-                  ? 'border-primary-500 bg-primary-50'
-                  : 'border-slate-300 hover:border-primary-400 hover:bg-slate-50'
-              }`}
-              onClick={() => licenseInputRef.current?.click()}
-              onDragOver={(e) => { e.preventDefault(); setLicenseDragOver(true) }}
-              onDragLeave={() => setLicenseDragOver(false)}
-              onDrop={(e) => {
-                e.preventDefault()
-                setLicenseDragOver(false)
-                const files = e.dataTransfer.files
-                if (files.length > 0) processLicenseFile(files[0])
-              }}
-            >
-              <div className="text-slate-400">
-                <div className="text-3xl mb-2"><Icon name="Building2" size={32} /></div>
-                <p className="text-sm font-medium">点击上传 / 拖拽上传 / Ctrl+V 粘贴</p>
-                <p className="text-xs mt-1">支持 JPG、PNG、WebP、PDF 格式，最大 10MB</p>
-              </div>
-            </div>
-          )}
-        </div>
+        <FileDropZone
+          label="营业执照"
+          iconName="Building2"
+          file={formData.licenseFile}
+          fileType={formData.licenseFileType}
+          fileLabel="营业执照已上传"
+          dragOver={licenseDragOver}
+          inputRef={licenseInputRef}
+          iconBgClass="bg-blue-100"
+          onFileSelect={file => processFile(file, (base64, fileType) => setFormData(prev => ({ ...prev, licenseFile: base64, licenseFileType: fileType })))}
+          onRemove={() => setFormData(prev => ({ ...prev, licenseFile: '', licenseFileType: '' }))}
+          onDragOver={(e) => { e.preventDefault(); setLicenseDragOver(true) }}
+          onDragLeave={() => setLicenseDragOver(false)}
+          onDrop={(e) => { e.preventDefault(); setLicenseDragOver(false); const files = e.dataTransfer.files; if (files.length > 0) processFile(files[0], (base64, fileType) => setFormData(prev => ({ ...prev, licenseFile: base64, licenseFileType: fileType }))) }}
+          onClickUpload={() => licenseInputRef.current?.click()}
+        />
 
         {/* 其他附件上传 */}
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">其他公司信息附件</label>
-          <input
-            ref={otherFilesInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,application/pdf"
-            onChange={e => {
-              const file = e.target.files?.[0]
-              if (file) processOtherFiles(file)
-              e.target.value = ''
-            }}
-            className="hidden"
-          />
-          {formData.otherFiles ? (
-            <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 bg-slate-50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center text-lg">
-                    📎
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-slate-700">附件已上传</p>
-                    <p className="text-xs text-slate-400">可上传多个附件</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => otherFilesInputRef.current?.click()}
-                    className="px-3 py-1.5 text-xs text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-                  >
-                    继续添加
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, otherFiles: '', otherFilesType: '' }))}
-                    className="px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    删除
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div
-              className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all ${
-                otherFilesDragOver
-                  ? 'border-primary-500 bg-primary-50'
-                  : 'border-slate-300 hover:border-primary-400 hover:bg-slate-50'
-              }`}
-              onClick={() => otherFilesInputRef.current?.click()}
-              onDragOver={(e) => { e.preventDefault(); setOtherFilesDragOver(true) }}
-              onDragLeave={() => setOtherFilesDragOver(false)}
-              onDrop={(e) => {
-                e.preventDefault()
-                setOtherFilesDragOver(false)
-                const files = e.dataTransfer.files
-                if (files.length > 0) processOtherFiles(files[0])
-              }}
-            >
-              <div className="text-slate-400">
-                <div className="text-3xl mb-2"><Icon name="Paperclip" size={32} /></div>
-                <p className="text-sm font-medium">点击上传 / 拖拽上传 / Ctrl+V 粘贴</p>
-                <p className="text-xs mt-1">支持 JPG、PNG、WebP、PDF 格式，最大 10MB（非必填）</p>
-              </div>
-            </div>
-          )}
-        </div>
+        <FileDropZone
+          label="其他公司信息附件"
+          iconName="Paperclip"
+          file={formData.otherFiles}
+          fileType={formData.otherFilesType}
+          fileLabel="附件已上传"
+          dragOver={otherFilesDragOver}
+          inputRef={otherFilesInputRef}
+          iconBgClass="bg-purple-100"
+          multiple
+          onAddMore={() => otherFilesInputRef.current?.click()}
+          onFileSelect={file => processFile(file, (base64, fileType) => setFormData(prev => ({ ...prev, otherFiles: prev.otherFiles ? `${prev.otherFiles}|||${base64}` : base64, otherFilesType: prev.otherFilesType ? `${prev.otherFilesType}|||${fileType}` : fileType })))}
+          onRemove={() => setFormData(prev => ({ ...prev, otherFiles: '', otherFilesType: '' }))}
+          onDragOver={(e) => { e.preventDefault(); setOtherFilesDragOver(true) }}
+          onDragLeave={() => setOtherFilesDragOver(false)}
+          onDrop={(e) => { e.preventDefault(); setOtherFilesDragOver(false); const files = e.dataTransfer.files; if (files.length > 0) processFile(files[0], (base64, fileType) => setFormData(prev => ({ ...prev, otherFiles: prev.otherFiles ? `${prev.otherFiles}|||${base64}` : base64, otherFilesType: prev.otherFilesType ? `${prev.otherFilesType}|||${fileType}` : fileType }))) }}
+          onClickUpload={() => otherFilesInputRef.current?.click()}
+        />
 
         {/* 备注 */}
         <div>

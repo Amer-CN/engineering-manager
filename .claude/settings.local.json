@@ -185,7 +185,15 @@
       "Skill(context-save)",
       "Bash(git init *)",
       "Skill(health)",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "Bash(sed -n '289,292p' src/components/Invoices.tsx)",
+      "Bash(sed -n '389,393p' src/components/Invoices.tsx)",
+      "Bash(sed -i 's/^function TeamCard/export function TeamCard/' src/components/features/members/WorkerSectionModals.tsx)",
+      "Bash(sed -i 's/^function TeamFormModal/export function TeamFormModal/' src/components/features/members/WorkerSectionModals.tsx)",
+      "Bash(sed -i 's/^function TransferModal/export function TransferModal/' src/components/features/members/WorkerSectionModals.tsx)",
+      "Bash(sed -i 's/^function LeaveModal/export function LeaveModal/' src/components/features/members/WorkerSectionModals.tsx)",
+      "Skill(benchmark)",
+      "Skill(design-review)"
     ],
     "defaultMode": "acceptEdits"
   },

@@ -1,6 +1,22 @@
 import type { InvoiceFormData } from './InvoiceForm'
 import type { PaymentFormData } from './PaymentForm'
-import type { Invoice, InvoiceKind, PaymentRecord } from '../../../types/electron'
+import type { Invoice, InvoiceKind, InvoiceTaxRate, PaymentRecord } from '../../../types/electron'
+
+export const taxRateOptions: { value: InvoiceTaxRate; label: string }[] = [
+  { value: 0, label: '不征税' },
+  { value: 0.01, label: '1%' },
+  { value: 0.03, label: '3%' },
+  { value: 0.06, label: '6%' },
+  { value: 0.09, label: '9%' },
+  { value: 0.13, label: '13%' }
+]
+
+export const invoiceKindOptions: { value: InvoiceKind; label: string }[] = [
+  { value: 'paper_regular', label: '纸质普票' },
+  { value: 'paper_special', label: '纸质专票' },
+  { value: 'electronic_regular', label: '电子普票' },
+  { value: 'electronic_special', label: '电子专票' }
+]
 
 export const defaultInvoiceFormData: InvoiceFormData = {
   type: 'invoice_in',
