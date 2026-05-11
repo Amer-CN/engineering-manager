@@ -8,6 +8,17 @@
 ---
 
 
+## [1.21.3] — 2026-05-11
+
+### 🔧 修订
+- **版本自动迭代系统加固**：PreToolUse hook 确保在 neat-freak 清理前读取 CLAUDE.md 最新内容，bump-version.js 预检和正则匹配更可靠
+- **版本号全局同步**：修复 6 处版本引用（Sidebar/Login/Settings/CLAUDE/CHANGELOG/package.json）不一致，全部统一为 v1.21.3
+- **Settings 更新日志显示修复**：数组缩进从约 500 空格修正为 18 空格，版本历史正确渲染
+- **表格列间距优化**：cell padding 从 px-2 增至 px-3，列间更宽松易读
+- **表头标签优化**：「对方」改为「往来单位/个人」，语义更准确
+- **项目详情页分类管理修复**：点击「管理分类」按钮现在正常弹出 CategoryManager 弹窗
+- **成本台账分类管理修复**：编辑内置分类后列表名称不再卡在旧值，新增自定义分类会出现在筛选下拉框中。已删除的分类在相关条目上显示"已删"徽标
+
 ## [1.21.1] — 2026-05-11
 
 ### 🏗️ 重构
@@ -18,6 +29,10 @@
 - **InvoiceForm 564→325**：提取 useInvoiceAmounts + 复用 FileDropZone/FilePreviewModal/parseDateString
 - **PartnerForm 519→388**：提取 FileDropZone + 合并 processFile
 - **Settings 633→439**：接入 SettingsOcrSection
+
+### 🐛 修复
+- **ContractPage 遗留导入清理**：移除提取后残留的 FileDropZone 导入（ISSUE-001）
+- **EmptyState 组件去重**：合并项目中两处重复的 EmptyState 定义，统一使用 src/components/ui/EmptyState（ISSUE-002）
 
 ### 🎨 设计
 - **EmptyState 组件**：按 DESIGN.md 规范新建，接入 ContractPage/Drawings/ContractTemplates/InvoiceList
