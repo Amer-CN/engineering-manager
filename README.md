@@ -68,6 +68,13 @@ npm run build
 3. 所有数据保存在本地，无需担心数据安全
 4. 支持 Windows 和 Mac 系统
 
+## 📚 文档索引
+
+- **[CLAUDE.md](./CLAUDE.md)** — 项目架构、技术栈、模块说明、开发指南（AI 辅助开发入口）
+- **[DESIGN.md](./DESIGN.md)** — 完整设计系统（色彩、字体、间距、动画、组件规范）
+- **[CHANGELOG.md](./CHANGELOG.md)** — 版本历史（v1.0.0 → 最新）
+- **[docs/](./docs/)** — 架构审查、代码规范、交接文档、OCR 配置指南等
+
 ## 📄 许可证
 
 MIT License
