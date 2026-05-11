@@ -178,3 +178,55 @@ export function exportPaymentList(paymentList: PaymentRecord[]) {
     XLSX.writeFile(workbook, `收款记录_${new Date().toISOString().slice(0, 10)}.xlsx`)
   } catch (error) { console.error('导出失败:', error); alert('导出失败，请重试') }
 }
+
+// 打印收款记录列表（HTML 表格，打印后恢复页面）
+export const printPaymentRecordList = (
+  paymentList: Array<{ recordDate?: string; type?: string; amount: number; partnerName?: string; projectName?: string; contractName?: string; remarks?: string }>,
+  showToast: (msg: string, type: string) => void,
+  formatMoney: (n: number) => string,
+  handlePrint: (content: string) => void,
+) => {
+  if (paymentList.length === 0) { showToast('没有可打印的数据', 'error'); return }
+  const rows = paymentList.map(p => `
+    <tr>
+      <td>${p.recordDate || '-'}</td>
+      <td>${p.type === 'invoice_out' ? '回款' : '付款'}</td>
+      <td>¥${formatMoney(p.amount)}</td>
+      <td>${p.partnerName || '-'}</td>
+      <td>${p.projectName || '-'}</td>
+      <td>${p.contractName || '-'}</td>
+      <td>${p.remarks || '-'}</td>
+    </tr>
+  `).join('')
+  const content = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>收款记录列表</title>
+    <style>body{font-family:'Microsoft YaHei',sans-serif;padding:20px}h1{text-align:center;margin-bottom:20px}
+    table{width:100%;border-collapse:collapse;font-size:12px}th,td{border:1px solid #ddd;padding:8px;text-align:left}
+    th{background:#f5f5f5}.footer{margin-top:20px;text-align:right;font-size:12px;color:#666}
+    @media print{body{padding:0}}</style></head><body>
+    <h1>收款记录列表</h1><table><thead><tr><th>日期</th><th>类型</th><th>金额</th><th>单位</th><th>项目</th><th>合同</th><th>备注</th></tr></thead>
+    <tbody>${rows}</tbody></table><div class="footer">共 ${paymentList.length} 条记录 | 打印时间: ${new Date().toLocaleString()}</div></body></html>`
+  handlePrint(content)
+}
+
+// 导出收款记录列表为 Excel (XLSX)
+export const exportPaymentRecordList = async (
+  paymentList: Array<{ recordDate?: string; type?: string; amount: number; partnerName?: string; projectName?: string; contractName?: string; remarks?: string }>,
+  showToast: (msg: string, type: string) => void,
+) => {
+  if (paymentList.length === 0) { showToast('没有可导出的数据', 'error'); return }
+  try {
+    const XLSX = await import('xlsx')
+    const exportData = paymentList.map((p, index) => ({
+      '序号': index + 1, '日期': p.recordDate || '',
+      '类型': p.type === 'invoice_out' ? '回款' : '付款',
+      '金额': p.amount, '关联单位': p.partnerName || '',
+      '关联项目': p.projectName || '', '关联合同': p.contractName || '',
+      '备注': p.remarks || '',
+    }))
+    const worksheet = XLSX.utils.json_to_sheet(exportData)
+    worksheet['!cols'] = [{wch:6},{wch:12},{wch:8},{wch:12},{wch:20},{wch:20},{wch:20},{wch:30}]
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, '收款记录')
+    XLSX.writeFile(workbook, `收款记录_${new Date().toISOString().slice(0,10)}.xlsx`)
+  } catch (error) { console.error('导出失败:', error); alert('导出失败，请重试') }
+}

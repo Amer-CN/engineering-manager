@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Icon } from '../../ui/Icon'
-import type { Member, WorkerType } from '@/types'
-import { workerTypes, getWorkerTypeLabel, calculateAge } from './memberFormTypes'
+import type { Member } from '@/types'
+import { getWorkerTypeLabel, calculateAge } from './memberFormTypes'
 import { readUploadedFile, FILE_CATEGORIES } from '../../../services/fileService'
+import { PreviewModal, FilePreviewItem, InfoItem, Tag } from './MemberDetailParts'
 
 export interface MemberDetailProps {
     member: Member
@@ -15,101 +15,6 @@ export interface MemberDetailProps {
     onTransfer?: () => void
     onLeave?: () => void
     onReEntry?: () => void
-}
-
-interface PreviewModalProps {
-  data: string
-  type: 'image' | 'pdf'
-  title: string
-  onClose: () => void
-}
-
-function PreviewModal({ data, type, title, onClose }: PreviewModalProps) {
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[100]">
-      <div className="bg-white dark:bg-slate-800 rounded-xl w-full max-w-4xl mx-4 max-h-[90vh] flex flex-col">
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-slate-800">{title}</h2>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-700"><Icon name="X" size={16} /></button>
-        </div>
-        <div className="flex-1 overflow-auto p-4 bg-slate-100 dark:bg-slate-900">
-          {type === 'image' ? (
-            <img src={data} alt={title} className="max-w-full h-auto mx-auto rounded-lg shadow-lg" />
-          ) : (
-            <embed src={data} type="application/pdf" className="w-full h-[70vh] rounded-lg" />
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-interface FilePreviewItemProps {
-  label: string
-  file: string
-  fileType?: string
-  onPreview: () => void
-}
-
-function FilePreviewItem({ label, file, fileType, onPreview }: FilePreviewItemProps) {
-  if (!file) return null
-  
-  const type = fileType === 'pdf' ? 'pdf' : 'image'
-  
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-sm text-slate-600">{label}:</span>
-      <button
-        onClick={onPreview}
-        className="text-primary-600 hover:text-primary-700 text-sm underline"
-      >
-        {type === 'pdf' ? '<Icon name="FileText" size={14} className="inline-block" /> 查看PDF' : '<Icon name="Image" size={14} className="inline-block" />查看图片'}
-      </button>
-    </div>
-  )
-}
-
-interface InfoItemProps {
-  icon: string
-  label: string
-  value?: string | number | null
-  highlight?: boolean
-}
-
-function InfoItem({ icon, label, value, highlight }: { icon: React.ReactNode; label: string; value?: string | number | null; highlight?: boolean }) {
-  if (!value) return null
-  
-  return (
-    <div className="flex items-start">
-      <span className="text-slate-400 mr-2">{icon}</span>
-      <div className="flex-1">
-        <span className="text-sm text-slate-500">{label}: </span>
-        <span className={`text-sm ${highlight ? 'text-green-600 font-medium' : 'text-slate-800'}`}>
-          {value}
-        </span>
-      </div>
-    </div>
-  )
-}
-
-interface TagProps {
-  label: string
-  variant?: 'success' | 'warning' | 'info' | 'danger'
-}
-
-function Tag({ label, variant = 'success' }: TagProps) {
-  const variants = {
-    success: 'bg-green-100 text-green-700',
-    warning: 'bg-orange-100 text-orange-700',
-    info: 'bg-blue-100 text-blue-700',
-    danger: 'bg-red-100 text-red-700'
-  }
-  
-  return (
-    <span className={`px-2 py-1 rounded text-xs ${variants[variant]}`}>
-      {label}
-    </span>
-  )
 }
 
 // MemberDetail 组件
@@ -123,10 +28,8 @@ export function MemberDetail({
   onReEntry
 }: MemberDetailProps) {
   const [previewData, setPreviewData] = useState<{ data: string; type: 'image' | 'pdf'; title: string } | null>(null)
-  // 磁盘文件加载后的 data URL 缓存
   const [fileUrls, setFileUrls] = useState<Record<string, string>>({})
 
-  // 从磁盘加载文件数据
   useEffect(() => {
     const loadFiles = async () => {
       const urls: Record<string, string> = {}
@@ -156,20 +59,6 @@ export function MemberDetail({
   const handlePreview = (data: string, type: 'image' | 'pdf', title: string) => {
     setPreviewData({ data, type, title })
   }
-
-  // 渲染预览模态框
-  const renderPreviewModal = () => {
-    if (!previewData) return null
-    return (
-      <PreviewModal
-        data={previewData.data}
-        type={previewData.type}
-        title={previewData.title}
-        onClose={() => setPreviewData(null)}
-      />
-    )
-  }
-
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
       <motion.div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }}>
@@ -503,9 +392,8 @@ export function MemberDetail({
       </motion.div>
 
       {/* 预览模态框 */}
-      {renderPreviewModal()}
+      {previewData && <PreviewModal data={previewData.data} type={previewData.type} title={previewData.title} onClose={() => setPreviewData(null)} />}
     </div>
   )
 }
 
-export default MemberDetail

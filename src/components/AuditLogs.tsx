@@ -10,9 +10,11 @@ import {
   clearOldLogs,
   AuditStats
 } from '../utils/audit'
-import { formatMoney } from '../utils/format'
 import { usePermission } from '../hooks/usePermission'
 import { Icon } from './ui/Icon'
+import { AuditStatsPanel } from './AuditStatsPanel'
+import { AuditFilterBar } from './AuditFilterBar'
+import { AuditDetailModal } from './AuditDetailModal'
 
 // 操作类型标签配置
 const actionConfig: Record<AuditAction, { label: string; color: string; bgColor: string }> = {
@@ -166,328 +168,36 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
     setSelectedLog(log)
   }
 
-  // 字段名→中文标签映射（按资源类型）
-  const getFieldLabel = (resource: string, field: string): string => {
-    const commonFields: Record<string, string> = {
-      name: '名称', status: '状态', remarks: '备注', amount: '金额',
-      projectId: '关联项目', partnerId: '关联单位', contractNo: '合同编号',
-      signedDate: '签订日期', startDate: '开始日期', endDate: '结束日期',
-      paymentMethod: '付款方式', fileUrl: '附件',
-    }
-    const resourceFields: Record<string, Record<string, string>> = {
-      projects: { description: '描述', budget: '预算', projectManagerId: '项目经理' },
-      members: { phone: '电话', idNumber: '身份证号', position: '职位', entryDate: '入职时间', actualLeaveDate: '离职日期', memberType: '人员类型' },
-      incomeContracts: { partnerLabel: '甲方' },
-      expenseContracts: { partnerLabel: '乙方' },
-      invoices: { invoiceNo: '发票号码', taxAmount: '税额', kind: '发票类型', invoiceDate: '开票日期' },
-      payments: { recordDate: '日期', type: '类型', receivedAmount: '已收金额', contractId: '关联合同', invoiceId: '关联发票' },
-      tasks: { priority: '优先级', assigneeId: '负责人', dueDate: '截止日期' },
-      expenses: { category: '类别', expenseDate: '日期', projectId: '关联项目' },
-      costLedger: { direction: '方向', amount: '金额', category: '分类', date: '日期', counterparty: '对方', channel: '支付渠道', summary: '摘要', projectId: '关联项目' },
-    }
-    return resourceFields[resource]?.[field] || commonFields[field] || field
-  }
-
-  // 格式化单个值为可读文本
-  const formatFieldValue = (resource: string, field: string, value: any): string => {
-    if (value === undefined || value === null) return '（空）'
-    if (typeof value === 'boolean') return value ? '是' : '否'
-    if (typeof value === 'object') {
-      if (Array.isArray(value)) return `[${value.length} 项]`
-      return JSON.stringify(value)
-    }
-    // 金额字段格式化
-    if (field === 'amount' || field === 'budget' || field === 'taxAmount' || field === 'receivedAmount') {
-      const num = Number(value)
-      if (!isNaN(num)) return `¥${formatMoney(num)}`
-    }
-    // 状态值翻译
-    if (field === 'status') {
-      const statusMap: Record<string, string> = {
-        active: '进行中', draft: '草稿', pending: '待审批', expired: '已到期',
-        terminated: '已终止', archived: '已归档', completed: '已完成',
-        paid: '已付清', unpaid: '未付', partially_paid: '部分付款',
-        received: '已收齐', issued: '已开具', cancelled: '已作废',
-      }
-      if (statusMap[String(value)]) return statusMap[String(value)]
-    }
-    return String(value)
-  }
-
-  // 渲染详情信息（人可读格式）
-  const renderDetail = (log: AuditLog) => {
-    const details = log.details
-    if (!details) return <p className="text-slate-500 text-sm">无详细信息</p>
-
-    // 导出/删除等没有 before/after 的操作
-    if (details.count !== undefined && !details.before && !details.after) {
-      return (
-        <div className="space-y-2">
-          {details.count !== undefined && (
-            <div className="text-sm text-slate-600">数量：<span className="font-medium">{details.count}</span> 条</div>
-          )}
-          {details.reason && <div className="text-sm text-slate-600">原因：{details.reason}</div>}
-        </div>
-      )
-    }
-
-    // 审批操作
-    if (details.approved !== undefined) {
-      return (
-        <div className="space-y-2">
-          <div className="text-sm text-slate-600">
-            审批结果：<span className={`font-medium ${details.approved ? 'text-green-600' : 'text-red-600'}`}>{details.approved ? '通过' : '驳回'}</span>
-          </div>
-          {details.reason && <div className="text-sm text-slate-600">原因：{details.reason}</div>}
-        </div>
-      )
-    }
-
-    // 更新操作：before/after 对比
-    if (details.before && details.after) {
-      const allFields = Array.from(new Set([...Object.keys(details.before), ...Object.keys(details.after)]))
-      const changedFields = allFields.filter(f => {
-        const b = details.before[f]
-        const a = details.after[f]
-        return JSON.stringify(b) !== JSON.stringify(a)
-      })
-
-      if (changedFields.length === 0) {
-        return <p className="text-sm text-slate-500">无字段变更</p>
-      }
-
-      return (
-        <div className="overflow-hidden rounded-lg border border-slate-200">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 w-24">字段</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">修改前</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">修改后</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {changedFields.map(field => (
-                <tr key={field}>
-                  <td className="px-3 py-2 text-xs font-medium text-slate-600">{getFieldLabel(log.resource, field)}</td>
-                  <td className="px-3 py-2 text-xs text-slate-500 line-through">{formatFieldValue(log.resource, field, details.before[field])}</td>
-                  <td className="px-3 py-2 text-xs text-slate-800 font-medium">{formatFieldValue(log.resource, field, details.after[field])}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )
-    }
-
-    // 创建操作：仅 after
-    if (details.after && !details.before) {
-      const fields = Object.keys(details.after).filter(k => k !== 'fileUrl' || (typeof details.after[k] === 'string' && details.after[k].length < 100))
-      return (
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium text-slate-600">创建内容</h4>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-            {fields.slice(0, 12).map(field => (
-              <div key={field} className="flex justify-between text-sm">
-                <span className="text-slate-500">{getFieldLabel(log.resource, field)}</span>
-                <span className="text-slate-800 font-medium">{formatFieldValue(log.resource, field, details.after[field])}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )
-    }
-
-    // 删除操作：仅 before
-    if (details.before && !details.after) {
-      const fields = Object.keys(details.before).filter(k => k !== 'fileUrl' || (typeof details.before[k] === 'string' && details.before[k].length < 100))
-      return (
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium text-red-600">已删除内容</h4>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-            {fields.slice(0, 12).map(field => (
-              <div key={field} className="flex justify-between text-sm">
-                <span className="text-slate-500">{getFieldLabel(log.resource, field)}</span>
-                <span className="text-slate-800 font-medium">{formatFieldValue(log.resource, field, details.before[field])}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )
-    }
-
-    return <p className="text-sm text-slate-500">无详细信息</p>
-  }
-
   return (
     <>
       {/* 统计面板 */}
       {statsView.visible && statsView.data && (
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-slate-800">近30天操作统计</h3>
-            <button
-              onClick={() => setStatsView(prev => ({ ...prev, visible: false }))}
-              className="text-slate-400 hover:text-slate-600"
-            >
-              ✕
-            </button>
-          </div>
-          <div className="grid grid-cols-4 gap-4 mb-6">
-            <div className="bg-blue-50 rounded-lg p-4">
-              <div className="text-sm text-blue-600 mb-1">总操作数</div>
-              <div className="text-2xl font-bold text-blue-700">{statsView.data.totalCount}</div>
-            </div>
-            <div className="bg-green-50 rounded-lg p-4">
-              <div className="text-sm text-green-600 mb-1">今日操作</div>
-              <div className="text-2xl font-bold text-green-700">{statsView.data.todayCount}</div>
-            </div>
-            <div className="bg-purple-50 rounded-lg p-4">
-              <div className="text-sm text-purple-600 mb-1">创建操作</div>
-              <div className="text-2xl font-bold text-purple-700">{statsView.data.actionCounts.create || 0}</div>
-            </div>
-            <div className="bg-orange-50 rounded-lg p-4">
-              <div className="text-sm text-orange-600 mb-1">删除操作</div>
-              <div className="text-2xl font-bold text-orange-700">{statsView.data.actionCounts.delete || 0}</div>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <h4 className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">操作类型分布</h4>
-              <div className="space-y-2">
-                {Object.entries(statsView.data.actionCounts)
-                  .filter(([, count]) => count > 0)
-                  .sort((a, b) => b[1] - a[1])
-                  .map(([action, count]) => (
-                    <div key={action} className="flex items-center justify-between text-sm">
-                      <span className="text-slate-600">{actionConfig[action as AuditAction]?.label || action}</span>
-                      <span className="font-medium">{count}</span>
-                    </div>
-                  ))
-                }
-              </div>
-            </div>
-            <div>
-              <h4 className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">活跃用户TOP5</h4>
-              <div className="space-y-2">
-                {statsView.data.topUsers.slice(0, 5).map((user, index) => (
-                  <div key={user.userId} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${
-                        index === 0 ? 'bg-yellow-100 text-yellow-700' :
-                        index === 1 ? 'bg-slate-100 text-slate-700' :
-                        index === 2 ? 'bg-orange-100 text-orange-700' :
-                        'bg-blue-50 text-blue-700'
-                      }`}>
-                        {index + 1}
-                      </span>
-                      <span className="text-slate-600">{user.username}</span>
-                    </div>
-                    <span className="font-medium">{user.count} 次</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+        <AuditStatsPanel
+          statsData={statsView.data}
+          onClose={() => setStatsView(prev => ({ ...prev, visible: false }))}
+          actionConfig={actionConfig}
+        />
       )}
 
       {/* 筛选器 */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-4 mb-6">
-        <div className="grid grid-cols-6 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">开始日期</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={e => setStartDate(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">结束日期</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={e => setEndDate(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">操作类型</label>
-            <select
-              value={filterAction}
-              onChange={e => setFilterAction(e.target.value as AuditAction | '')}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
-            >
-              <option value="">全部</option>
-              <option value="create">创建</option>
-              <option value="update">更新</option>
-              <option value="delete">删除</option>
-              <option value="export">导出</option>
-              <option value="import">导入</option>
-              <option value="approve">审批</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">资源类型</label>
-            <select
-              value={filterResource}
-              onChange={e => setFilterResource(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
-            >
-              <option value="">全部</option>
-              {Object.entries(resourceLabels).map(([key, label]) => (
-                <option key={key} value={key}>{label}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">日志级别</label>
-            <select
-              value={filterLevel}
-              onChange={e => setFilterLevel(e.target.value as AuditLevel | '')}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
-            >
-              <option value="">全部</option>
-              <option value="info">信息</option>
-              <option value="warning">警告</option>
-              <option value="error">错误</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">关键词搜索</label>
-            <input
-              type="text"
-              value={keyword}
-              onChange={e => setKeyword(e.target.value)}
-              placeholder="搜索用户、描述..."
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
-              onKeyPress={e => e.key === 'Enter' && handleSearch()}
-            />
-          </div>
-        </div>
-        <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
-          <span className="text-sm text-slate-500">
-            共找到 <span className="font-medium text-slate-700">{total}</span> 条记录
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleReset}
-              className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
-            >
-              重置
-            </button>
-            <button
-              onClick={handleSearch}
-              className="px-4 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-            >
-              搜索
-            </button>
-          </div>
-        </div>
-      </div>
+      <AuditFilterBar
+        startDate={startDate}
+        endDate={endDate}
+        filterAction={filterAction}
+        filterResource={filterResource}
+        filterLevel={filterLevel}
+        keyword={keyword}
+        total={total}
+        onStartDateChange={setStartDate}
+        onEndDateChange={setEndDate}
+        onFilterActionChange={setFilterAction}
+        onFilterResourceChange={setFilterResource}
+        onFilterLevelChange={setFilterLevel}
+        onKeywordChange={setKeyword}
+        onSearch={handleSearch}
+        onReset={handleReset}
+        resourceLabels={resourceLabels}
+      />
 
       {/* 日志列表 */}
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
@@ -614,65 +324,12 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
 
       {/* 详情模态框 */}
       {selectedLog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setSelectedLog(null)}>
-          <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-slate-800">操作日志详情</h3>
-              <button
-                onClick={() => setSelectedLog(null)}
-                className="text-slate-400 hover:text-slate-600 text-2xl"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-medium text-slate-500">时间</label>
-                  <div className="text-sm text-slate-800 dark:text-slate-100 mt-1">
-                    {new Date(selectedLog.timestamp).toLocaleString('zh-CN')}
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-slate-500">用户</label>
-                  <div className="text-sm text-slate-800 dark:text-slate-100 mt-1">{selectedLog.username}</div>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-slate-500">操作类型</label>
-                  <div className="mt-1">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      actionConfig[selectedLog.action]?.bgColor || 'bg-slate-100'
-                    } ${actionConfig[selectedLog.action]?.color || 'text-slate-700'}`}>
-                      {actionConfig[selectedLog.action]?.label || selectedLog.action}
-                    </span>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-slate-500">资源类型</label>
-                  <div className="text-sm text-slate-800 dark:text-slate-100 mt-1">
-                    {resourceLabels[selectedLog.resource] || selectedLog.resource}
-                  </div>
-                </div>
-                {selectedLog.resourceName && (
-                  <div className="col-span-2">
-                    <label className="text-xs font-medium text-slate-500">资源名称</label>
-                    <div className="text-sm text-slate-800 dark:text-slate-100 mt-1">{selectedLog.resourceName}</div>
-                  </div>
-                )}
-                <div className="col-span-2">
-                  <label className="text-xs font-medium text-slate-500">描述</label>
-                  <div className="text-sm text-slate-800 dark:text-slate-100 mt-1">{selectedLog.description}</div>
-                </div>
-              </div>
-              
-              {/* 详细信息 */}
-              <div className="pt-4 border-t border-slate-100">
-                <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2 block">详细信息</label>
-                {renderDetail(selectedLog)}
-              </div>
-            </div>
-          </div>
-        </div>
+        <AuditDetailModal
+          selectedLog={selectedLog}
+          onClose={() => setSelectedLog(null)}
+          actionConfig={actionConfig}
+          resourceLabels={resourceLabels}
+        />
       )}
     </>
   )
