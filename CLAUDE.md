@@ -1,6 +1,6 @@
 # CLAUDE.md - 工程管家项目约定
 > 项目状态：成本台账模块 + 级联删除加固 + 旧成本管理模块清理 + 模板管理独立模块 + 变量自动识别 + 业务模块模板集成
-> 最后同步：2026-05-10（成本台账分类管理CRUD + 备注列 + 列表列宽真实数据驱动优化 + neat-freak 整理）
+> 最后同步：2026-05-11（check-rules 7→0 硬违规清零 + EmptyState 组件新建 + Inter 字体栈修复 + WorkerSection React.lazy + /benchmark 基线 + 设计审计 A 级）
 
 ## 🌐 gstack 浏览器工具集
 - **Web 浏览**：使用 gstack 的 `/browse` skill 进行所有网页浏览操作，**严禁使用 `mcp__claude-in-chrome__*` 工具**
@@ -139,7 +139,7 @@ uploads/
 - **bump-version.js** 自动同步 6 处：`package.json` / `Sidebar.tsx` / `Login.tsx` / `Settings.tsx` / `CLAUDE.md` / `CHANGELOG.md`
 - 版本历史：`CHANGELOG.md`（1.0.0→1.19.0）+ Settings 更新日志浮窗
 
-### 当前版本：v1.21.0
+### 当前版本：v1.21.1
 
 ## 🎨 UI 规范
 
@@ -212,6 +212,7 @@ Button(variants/sizes/iconOnly) / Input(status+leftSection/rightSection) / Modal
 | 项目管理重设计 | 2026-05-06 | 8 文件 Bento网格+健康环+投资组合横幅+告警区，领导视角驾驶舱 |
 | 考勤每日状态改造 | 2026-05-05 | dailyStatus 字段 + AttendanceDetail 画笔模式日历 + 法定假不计缺勤 |
 | 员工管理表格化 | 2026-05-06 | 管理人员卡片→Table + 内联状态下拉 + 批量删除；农民工保持卡片 |
+| check-rules 清零 | 2026-05-11 | 7 硬违规→0：子组件提取 8 文件 + hook 提取 3 个，ContractPage 822→405，SettlementForm 714→314 |
 
 ### 文件存储演进
 | 变更 | 日期 | 说明 |
@@ -238,6 +239,9 @@ Button(variants/sizes/iconOnly) / Input(status+leftSection/rightSection) / Modal
 | Toast 全局 Context | 2026-05-05 | 11 页面统一 `useToastContext()`，Portal 渲染到 `document.body` |
 | 发票票种细化 | 2026-05-06 | `InvoiceKind` 4 种：纸/电 × 普/专；收付款术语统一（收票→付款/开票→回款） |
 | 金额 formatMoney 全局化 | 2026-05-06 | 53 处 `toLocaleString()`→`formatMoney()`，14 文件补 import |
+| EmptyState 组件 | 2026-05-11 | 按 DESIGN.md 规范新建，接入 ContractPage/Drawings/ContractTemplates/InvoiceList |
+| Inter 字体栈修复 | 2026-05-11 | index.css 根 font-family 补 Inter 优先（DESIGN.md 规范对齐） |
+| WorkerSection 懒加载 | 2026-05-11 | React.lazy + Suspense 拆分 13KB chunk，Members 首屏 80→70KB |
 
 ### 工具链
 | 变更 | 日期 | 说明 |
@@ -246,6 +250,7 @@ Button(variants/sizes/iconOnly) / Input(status+leftSection/rightSection) / Modal
 | check-rules.js 代码规则 | 2026-05-06 | 文件行数上限/禁止复制/useState限制/类型安全/代码分割强制检查 |
 | neat-freak PostToolUse hook | 2026-05-06 | stdin 条件判断脚本 `auto-version-on-neat-freak.js`，自动检测 major/minor/patch 级别（关键词+统计启发） |
 | DB 安全加固 | 2026-05-06 | `initDatabase()` 解析失败先备份再建新库，防止数据丢失 |
+| /benchmark 基线 | 2026-05-11 | 构建产物性能基线：2.4MB dist / 33 chunks / 9.1s build / Grade A |
 
 ## ⚠️ 红线
 - 不得直接修改 `electron/main.ts` 中的 IPC 处理器（已模块化到 `electron/ipc-handlers/`）

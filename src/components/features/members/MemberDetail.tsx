@@ -1,7 +1,6 @@
-// MemberDetail 组件
-
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { Icon } from '../../ui/Icon'
 import type { Member } from '@/types'
 import { getWorkerTypeLabel, calculateAge } from './memberFormTypes'
 import { readUploadedFile, FILE_CATEGORIES } from '../../../services/fileService'

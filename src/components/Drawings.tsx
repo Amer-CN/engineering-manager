@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Drawing, Project } from '../types/electron'
 import { motion } from 'framer-motion'
 import { Icon } from './ui/Icon'
+import { EmptyState } from './ui/EmptyState'
 import { useToastContext } from '../hooks/useToast'
 
 interface DrawingsProps {
@@ -305,20 +306,9 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
           </table>
         </div>
       ) : (
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-12 text-center">
-          <div className="flex justify-center mb-4"><Icon name="Ruler" size={48} className="text-slate-300" /></div>
-          <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100 mb-2">暂无图纸</h3>
-          <p className="text-slate-500 dark:text-slate-400 mb-6">点击下方按钮上传您的第一张图纸</p>
-          <button
-            onClick={() => {
-              resetForm()
-              setShowModal(true)
-            }}
-            className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
-          >
-            上传图纸
-          </button>
-        </div>
+        <EmptyState icon="Ruler" title="暂无图纸" description="点击下方按钮上传您的第一张图纸"
+          action={<button onClick={() => { resetForm(); setShowModal(true) }} className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg font-medium transition-colors">上传图纸</button>}
+        />
       )}
 
       {/* 模态框 */}
