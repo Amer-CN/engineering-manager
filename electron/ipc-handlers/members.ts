@@ -23,6 +23,22 @@ ipcMain.handle('db:members:create', (_, member) => {
     const id = Date.now()
     const newMember = { ...member, id, createdAt: new Date().toISOString() }
     db.members.push(newMember)
+
+    // Auto-create initial salary history entry
+    if (member.baseSalary && Number(member.baseSalary) > 0) {
+      if (!db.salaryHistory) db.salaryHistory = []
+      db.salaryHistory.push({
+        id: Date.now() + 1,
+        memberId: id,
+        effectiveDate: member.entryDate || new Date().toISOString().split('T')[0],
+        baseSalary: Number(member.baseSalary),
+        subsidy: 0,
+        subsidyNote: '',
+        note: '入职初始薪资',
+        createdAt: new Date().toISOString()
+      })
+    }
+
     saveDatabase()
     return { success: true, data: { id } }
   } catch (error: any) {
@@ -123,9 +139,14 @@ ipcMain.handle('db:workerTeams:delete', (_, id) => {
   if (!dbReady) return { success: false, error: 'Database not ready' }
   try {
     // 检查是否有工人属于该班组
-    const workersInTeam = db.members.filter((m: any) =>
-      m.memberType === 'worker' && m.teamId === id
-    )
+    let workersInTeam = 0
+    if (db.projectWorkers) {
+      workersInTeam = db.projectWorkers.filter((pw: any) => pw.teamId === id && pw.status === 'active').length
+    }
+    // Fallback to old check for non-migrated data
+    if (workersInTeam === 0) {
+      workersInTeam = db.members.filter((m: any) => m.memberType === 'worker' && m.teamId === id).length
+    }
     if (workersInTeam.length > 0) {
       return { success: false, error: `该班组下有 ${workersInTeam.length} 名工人，无法删除` }
     }

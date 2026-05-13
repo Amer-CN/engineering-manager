@@ -162,7 +162,7 @@ export function DataTable<T>({
                     <tr
                       key={getRowKey(item, index)}
                       onClick={() => onRowClick?.(item)}
-                      className={`${onRowClick ? 'cursor-pointer hover:bg-slate-50' : ''} transition-colors`}
+                      className={`table-row-hover ${onRowClick ? 'cursor-pointer' : ''}`}
                     >
                       {columns.map(col => (
                         <td key={col.key} className="px-4 py-3 text-sm text-slate-700">

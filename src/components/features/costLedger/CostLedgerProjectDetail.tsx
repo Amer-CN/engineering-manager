@@ -3,6 +3,7 @@ import { CostLedgerList } from './CostLedgerList'
 import { CostLedgerForm } from './CostLedgerForm'
 import { getCategoryLabel } from './config'
 import { formatMoney } from '@/utils/format'
+import { Icon } from '@/components/ui/Icon'
 import type { CostLedgerEntry, CostLedgerSummary, Project, CostLedgerCategory } from '@/types'
 
 interface CostLedgerProjectDetailProps {
@@ -57,26 +58,33 @@ export function CostLedgerProjectDetail({ project, onBack, categories, onManageC
 
   return (
     <div className="flex h-full flex-col">
-      {/* 顶部栏 */}
-      <div className="flex items-center justify-between border-b border-slate-200 px-6 py-3">
-        <div className="flex items-center gap-3">
-          <button onClick={onBack} className="text-slate-400 hover:text-slate-600">← 返回</button>
-          <h2 className="text-base font-semibold text-slate-800">{project.name}</h2>
-          <span className="text-xs text-slate-400">成本台账</span>
+      {/* 头部：返回 + 项目名 */}
+      <div className="flex items-center gap-4 px-6 py-4 border-b border-slate-200">
+        <button onClick={onBack}
+          className="flex items-center gap-1.5 px-3 py-2 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors">
+          <Icon name="ArrowLeft" size={16} />
+          <span>返回台账总览</span>
+        </button>
+        <span className="w-1.5 h-8 rounded-full bg-amber-500" />
+        <div>
+          <h2 className="text-lg font-semibold text-slate-800">{project.name}</h2>
+          <p className="text-sm text-slate-500">成本台账</p>
         </div>
+        <div className="flex-1" />
         <button onClick={() => { setEditing(null); setShowForm(true) }} className="rounded-lg bg-blue-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-blue-700">
-          + 新增
+          + 新增台账
         </button>
       </div>
 
       {/* 内容区 */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 min-h-0 flex flex-col">
         <CostLedgerList
           entries={entries}
           summary={summary}
           loading={loading}
           onEdit={(e) => { setEditing(e); setShowForm(true) }}
           onDelete={handleDelete}
+          categories={categories}
         />
       </div>
 

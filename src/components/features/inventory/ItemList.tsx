@@ -45,7 +45,7 @@ export const ItemList: React.FC<ItemListProps> = ({
         </thead>
         <tbody className="divide-y divide-slate-100">
           {filteredItems.map(item => (
-            <tr key={item.id} className="hover:bg-slate-50">
+            <tr key={item.id} className="table-row-hover">
               <td className="px-4 py-3 text-sm font-mono text-slate-600">{item.code}</td>
               <td className="px-4 py-3">
                 <div className="font-medium text-slate-800">{item.name}</div>

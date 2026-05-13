@@ -23,6 +23,8 @@ export type PageId =
   | 'contracts'
   | 'partners'
   | 'members'
+  | 'hr'
+  | 'labor'
   | 'expenses'
   | 'costLedger'
   | 'drawings'
@@ -101,8 +103,23 @@ export const routes: RouteMeta[] = [
     icon: 'Users',
     shortcut: 'G M',
     description: '管理人员与农民工',
+    showInSidebar: false,  // v2.6.0: 已拆分为人事管理和工人管理，保留重定向
   },
-  
+  {
+    id: 'hr',
+    label: '人事管理',
+    icon: 'UserCog',
+    shortcut: 'G H',
+    description: '人员档案·考勤·薪酬·部门',
+  },
+  {
+    id: 'labor',
+    label: '工人管理',
+    icon: 'HardHat',
+    shortcut: 'G L',
+    description: '工人信息·班组·工资',
+  },
+
   // ─────────────────────────────────────────────────────────────────────────────
   // 财务模块
   // ─────────────────────────────────────────────────────────────────────────────
@@ -112,6 +129,7 @@ export const routes: RouteMeta[] = [
     icon: 'Wallet',
     shortcut: 'G W',
     description: '农民工工资核算与发放',
+    showInSidebar: false,  // v2.6.0: 工人工资通过工人管理模块入口访问
   },
   {
     id: 'settlement',
@@ -218,6 +236,8 @@ const SIDEBAR_RESOURCE_MAP: Record<string, string> = {
   contracts: 'contracts',
   partners: 'partners',
   members: 'members',
+  hr: 'hr',
+  labor: 'labor',
   wages: 'wages',
   settlement: 'settlement',
   templates: 'templates',

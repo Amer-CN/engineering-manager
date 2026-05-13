@@ -24,8 +24,11 @@ import { useTeamOps } from './features/members/useTeamOps'
 import { useMemberPasteHandler } from './features/members/useMemberPasteHandler'
 
 import { staffRoles, workerTypes } from './features/members'
+import { useWorkerImport } from './features/members/useWorkerImport'
 
 const WorkerSection = React.lazy(() => import('./features/members/WorkerSection'))
+const WorkerImportModal = React.lazy(() => import('./features/members/WorkerImportModal').then(m => ({ default: m.WorkerImportModal })))
+const WorkerPickerModal = React.lazy(() => import('./features/members/WorkerPickerModal').then(m => ({ default: m.WorkerPickerModal })))
 
 // Types
 
@@ -65,6 +68,11 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
   // 详情模态框
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [selectedMember, setSelectedMember] = useState<Member | null>(null)
+
+  // WorkerPickerModal
+  const [showWorkerPicker, setShowWorkerPicker] = useState(false)
+  const [pickerProjectId, setPickerProjectId] = useState<number>(0)
+  const [pickerExistingWorkerIds, setPickerExistingWorkerIds] = useState<Set<number>>(new Set())
   
   // 筛选状态
   const [filterProject, setFilterProject] = useState<number | null>(null)
@@ -83,6 +91,17 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
   // 拖拽状态
   const [dragOverField, setDragOverField] = useState<string | null>(null)
   const [activeDropZone, setActiveDropZone] = useState<string | null>(null)
+
+  // Excel导入状态
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const existingIdCards = new Set(
+    members.filter(m => m.memberType === 'worker' && m.idCard).map(m => m.idCard!)
+  )
+  const {
+    importState, progress, result, phase, error: importError,
+    parseFile, switchSheet, setHeaderRow, setMapping, getConfidence,
+    executeImport, saveCurrentMappingAsPreset, reset: resetImport,
+  } = useWorkerImport(workerTeams, existingIdCards)
 
   // 工具函数
   
@@ -123,8 +142,23 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
     reader.readAsDataURL(file)
   }
 
+  // WorkerPicker 批量添加处理器
+  const handleBatchAddWorkers = async (entries: Partial<import('../types/electron').ProjectWorker>[]) => {
+    try {
+      const result = await window.electronAPI.batchCreateProjectWorkers(entries as any[])
+      if (result.success) {
+        showToast(`成功添加 ${entries.length} 名工人`, 'success')
+        loadData()
+      } else {
+        showToast(result.error || '添加失败', 'error')
+      }
+    } catch (err: any) {
+      showToast(err.message || '添加失败', 'error')
+    }
+  }
+
   // 数据加载
-  
+
   const loadData = async () => {
     try {
       setLoading(true)
@@ -319,12 +353,61 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
             onAddTeam={handleCreateTeam}
             onEditTeam={handleUpdateTeam}
             onDeleteTeam={handleDeleteTeam}
-            onTransfer={(worker: any) => handleWorkerTransfer(worker, worker.teamId || 0, worker.projectId || 0, new Date().toISOString().split('T')[0], '', workerTeams)}
-            onLeave={handleWorkerLeave as any}
+            onTransfer={(worker, toTeamId, toProjectId, transferDate, reason) => handleWorkerTransfer(worker as any, toTeamId, toProjectId, transferDate, reason, workerTeams)}
+            onLeave={(worker, actualLeaveDate, remarks) => handleWorkerLeave(worker as any, actualLeaveDate, remarks)}
             onReEntry={handleWorkerReEntry as any}
+            onImportClick={() => fileInputRef.current?.click()}
+            onFileDrop={(file) => parseFile(file)}
+            onAddFromPool={(projectId: number, existingIds: Set<number>) => {
+              setPickerProjectId(projectId)
+              setPickerExistingWorkerIds(existingIds)
+              setShowWorkerPicker(true)
+            }}
           />
         </Suspense>
       )}
+
+      {/* 隐藏文件选择器 + Excel导入模态框 */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".xlsx,.xls,.csv"
+        className="hidden"
+        onChange={e => { const f = e.target.files?.[0]; if (f) parseFile(f); e.target.value = '' }}
+      />
+      <Suspense fallback={null}>
+        <WorkerImportModal
+          show={phase !== 'idle' || !!importError}
+          importState={importState}
+          progress={progress}
+          result={result}
+          phase={phase}
+          error={importError}
+          workerTeams={workerTeams}
+          onClose={() => { resetImport() }}
+          onSetHeaderRow={setHeaderRow}
+          onSwitchSheet={switchSheet}
+          onSetMapping={setMapping}
+          onGetConfidence={getConfidence}
+          onExecuteImport={() => executeImport(
+            (_data) => Promise.resolve({ success: true, data: { id: 0 } }),
+            () => loadData()
+          )}
+          onSavePreset={saveCurrentMappingAsPreset}
+        />
+      </Suspense>
+
+      {/* WorkerPickerModal — 从全局工人库批量添加 */}
+      <Suspense fallback={null}>
+        <WorkerPickerModal
+          show={showWorkerPicker}
+          projectId={pickerProjectId}
+          workerTeams={workerTeams}
+          existingWorkerIds={pickerExistingWorkerIds}
+          onClose={() => setShowWorkerPicker(false)}
+          onConfirm={handleBatchAddWorkers}
+        />
+      </Suspense>
 
       {/* 管理人员表单模态框 */}
       {showStaffModal && (

@@ -142,33 +142,6 @@ API 速查表、环境变量表、术语表是高频查询的结构化信息，*
 
 只列有实际变更的条目。没改的不写。
 
-### 第六步：自动版本迭代（工程管家项目专属）
-
-**仅在当前项目根目录存在 `scripts/bump-version.js` 时执行。** 其他项目跳过此步。
-
-在所有文档和记忆修改完成、第五步摘要输出之后，执行版本自动迭代：
-
-1. **判定版本级别**（参考 `CLAUDE.md` 中"本次会话"段落的实际变更内容）：
-   - `major` — 架构重构、全面重设计、breaking change、数据模型重大变更
-   - `minor` — 新增模块/功能/系统/路由、独立模块
-   - `patch` — Bug修复、小优化、UI调整（无特征时默认回退到此）
-
-2. **执行版本迭代**：
-   ```bash
-   node scripts/bump-version.js <major|minor|patch>
-   ```
-   此脚本自动同步 6 处：`package.json` / `Sidebar.tsx` / `Login.tsx` / `Settings.tsx` / `CLAUDE.md` / `CHANGELOG.md`
-
-3. **在第五步摘要中追加一行**：
-   ```
-   ### 版本迭代
-   - vX.Y.Z → vX.Y.Z+1 (<level>) — 自动同步 6 处版本引用 + CHANGELOG
-   ```
-
-**重要**：这一步必须在所有文档和记忆修改完成**之后**执行，因为 `bump-version.js` 会读取 CLAUDE.md 的"本次会话"段落来填充 CHANGELOG。如果先跑版本迭代再改 CLAUDE.md，CHANGELOG 里的变更摘要就是空的。
-
-> **为什么不用 hook？** PostToolUse hook 在 Skill 工具加载指令时就触发，而非整理工作完成后触发，时机完全错误。嵌入 skill 流程是唯一正确的做法。
-
 ## 特殊情况
 
 **项目还没有 README 或 CLAUDE.md/AGENTS.md**：判断项目是不是到了"有可运行代码"的阶段。是 → 创建。还在 vibe 阶段 → 跳过，但在摘要里提一句。

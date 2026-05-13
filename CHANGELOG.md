@@ -7,12 +7,231 @@
 
 ---
 
+## [2.6.3] — 2026-05-13
+
+### 🐛 修复
+- **工人管理数据管线**：`loadData()` 从 `getMembers()` 切换为 `getProjectWorkers(projectId)`，解决 v2.5.0 迁移后工人列表为空、班组计数为 0 的问题
+- **ID 命名空间不匹配**：从工人库添加按钮 `m.id` → `m.workerId`，修复"隐藏已在项目的"过滤失效
+- **WorkerPickerModal 默认 teamId**：新增 `defaultTeamId` prop，从 TeamWorkerModal 打开时预选当前班组
+
+### ✨ 新增
+- **三Tab统一**：班组管理 / 工人库 / 工资管理 三个子Tab内联，工资管理嵌入为第三个Tab不再独立跳转
+- **班组工人管理弹窗**：`TeamWorkerModal.tsx`，查看班组下所有工人表格，支持内联编辑工种+日工资、调组（hover下拉）、移除（确认）、底部从工人库添加入口
+- **WorkerPickerModal 批量设置**：右侧面板顶部新增批量设置区域，班组/工种/日工资一键"应用到全部已选"
+- **工人库简化表单**：`WorkerPoolForm.tsx`，仅身份字段（姓名/电话/身份证号+OCR双面上传/性别/民族/出生日期/住址/银行卡/开户行），走 `createWorker`/`updateWorker` IPC
+- **薪资历史回填迁移**：`migrateSalaryHistoryBackfill()`，为已有 staff 成员自动创建初始 salaryHistory 记录，`_migrations.salaryHistoryBackfillV1` 防重复
+
+### 🔧 改进
+- **工人管理**：页面标题按钮移除，工资管理改为子Tab；工人列表改名工人库；从工人库添加按钮移至班组管理Tab
+- **工人库表格**：编辑/删除操作改为走 Worker 全局池 API（`updateWorker`/`deleteWorker`），删除确认弹窗
+- **数据映射增强**：loadData 新增 birthDate/ethnicity/address/bankAccount/bankName 字段
+
+---
+
+## [2.6.2] — 2026-05-13
+
+### ✨ 新增
+- **考勤时间线子页面**：`AttendanceTimeline.tsx`，按年分组显示所有考勤月份，年度汇总（出勤天数/缺勤天数/全勤率），年份筛选 pill，点击月份进入日历画笔模式
+- **薪资历史系统**：`db.salaryHistory` 集合 + 4 个 IPC 通道（list/create/delete/getEffective）+ `SalaryHistoryModal.tsx` 弹窗管理，新建成员自动创建首条记录，薪酬计算按月份匹配对应时段薪资
+- **入职日期感知考勤**：`computeAttendanceSummary()` 新增 `startDay` 参数，AttendanceDetail 日历入职前日期灰色不可操作，薪酬计算对月中入职永远按比例
+- **考勤详情删除按钮**：AttendanceDetail 顶栏新增删除按钮（Trash2 图标），确认后删除整条记录并返回
+
+### 🔧 改进
+- **考勤历史列**：flat month pills → `N年 · M个月` 紧凑链接，点击进入时间线子页面，彻底解决长工龄溢出
+- **薪酬守卫松耦合**：未打考勤自动跳过而非阻止全部生成，工具栏显示"未打考勤者自动跳过"
+- **薪酬计算修正**：月中入职按 `baseSalary / 月天数 × 实际出勤天数` 计算，不适用全勤免扣规则
+- **入职日期修复**：考勤/薪酬/看板的入职守卫从 `createdAt` 改为 `entryDate`（回退 `createdAt.split('T')[0]`）
+- **薪酬表格**：奖金列改为补助列（只读，数据来自薪资历史），`netSalary` 已含补助
+- **职位编辑器**：精简为单行输入+添加按钮+token 移除
+
+### 🐛 修复
+- **薪资历史补助输入框吞值**：`type="number"` → `type="text" inputMode="numeric"`
+- **薪资历史无编辑**：新增编辑模式，复用新增表单预填当前值
+
+
+## [2.6.1] — 2026-05-13
+
+### 🐛 修复
+- **薪酬计算出错**：StaffPayroll.attendanceDays() 读取不存在字段 a.date，所有员工出勤天数永远为 0
+- **无考勤可生成薪酬**：generatePayroll() 缺少考勤存在性检查
+- **考勤保存失败无提示**：applyDay() 的 catch {} 为空块
+- **OCR 识别不自动填入**：StaffList.tsx 读 res.data（实为 res.idCard）和 d.idCard（实为 d.number），if 永远 false
+- **未入职可打考勤**：考勤/薪酬列表未按入职日期过滤
+
+### 🔧 改进
+- **考勤 UX 重设计**：摘要列表优先 → 点击编辑进入 AttendanceDetail 子页面
+- **复用 AttendanceDetail**：删除 AttendanceDetailModal.tsx，改用已有紧凑日历组件
+- **生成默认考勤**：替换创建考勤记录为一键全勤+个别调整模式
+- **考勤操作增强**：新增清空/删除/批量删除
+- **薪酬流水线守卫**：就绪指示器+未就绪禁用生成
+- **看板增强**：今日在岗 KPI + 月度薪酬实际值
+- **共享常量**：src/constants/attendance.ts
+
+
+## [2.6.0] — 2026-05-12
+
+### ✨ 新增
+- **人事管理模块**：新建顶级模块 `/hr`（侧边栏「核心业务」分组），5 个 Tab：看板/人员档案/考勤管理/薪酬管理/部门管理
+- **人事看板**：4 KPI 卡片（在编人数/本月入职/本月离职/月度薪酬）+ 部门分布饼图 + 最近入职列表
+- **部门管理系统**：`db.departments` 独立数据表，部门 CRUD + 人数统计 + 删除守卫（有人员时阻止删除）
+- **人员档案增强**：新增 `departmentId`（部门归属）和 `position`（职位）字段，按部门/状态下拉筛选
+- **管理人员考勤**：独立 StaffAttendance 组件，月份选择 + 月历网格 + 5 状态画笔（出勤/法定假/病假/事假/缺勤），遵循现有 `Record<number, DayStatus>` 数据模型
+- **管理人员薪酬**：独立 StaffPayroll 组件，月薪制（全勤=休假≤4天全薪），生成/奖金/扣款/实发/差额，遵循现有 wages IPC
+- **迁移向导**：首次访问人事模块时，检测无部门的 staff → 黄色横幅提示 + 批量分配部门弹窗
+- **工人管理模块**：原「员工管理」改名为「工人管理」(`/labor`)，图标 HardHat，仅保留工人/班组/导入功能
+- **旧路由兼容**：`/members` 保留为 PageId 但隐藏侧边栏（showInSidebar: false），作为重定向过渡 1 版本
+
+### 🔧 改进
+- **模块架构重构**：员工管理拆分为人事管理（管理人员）+ 工人管理（农民工）两个独立顶级模块，向部门化架构迈第一步
+- **工资管理降级**：WageManagement.tsx 保留不删，侧边栏隐藏，通过工人管理模块入口访问
+- **数据流分离**：人事模块的考勤/薪酬走 memberId 路径且仅处理 memberType='staff'，工人模块的考勤/薪酬走 projectWorkerId 路径不受影响
+- **10 个新建文件**：HRManagement.tsx（74行）+ 5 个 features/hr/* 组件 + departments IPC（60行）+ useDepartments hook + LaborManagement.tsx（~170行）
+
+### 🐛 修复
+- 图纸上传后界面不显示：React state 同引用 bailout 修复（`[...drawings]` 展开 + uploadDrawing 返回值检查 + reader.onerror 处理）
+- 图纸 IPC handler 数组引用突变修复（`[...drawings].sort()` 替代 `drawings.sort()`）
+
+### ⚠️ 已知待办
+- 人事/工人模块的权限映射（`hr:read` / `labor:read`）需在 roles handler 中注册
+- 部门 CRUD 的审计日志接入
+- 人事模块接入全局 DataProvider（铁律三）
+
+---
+
+## [2.5.0] — 2026-05-12
+
+### ✨ 新增
+- **全局工人信息库**：db.workers（纯身份）+ db.projectWorkers（用工关系）双表分离，一个工人可同时在多个项目，不同项目里工种/日工资独立
+- **WorkerPickerModal**：班组管理新增「从工人库添加」按钮，搜索+批量勾选+逐行编辑工种日工资，已在本项目的工人自动置灰
+- **导入去重增强**：Excel 导入时自动检测身份证号是否已在 db.workers 中存在，已存在→蓝色标记，跳过 Worker 创建但仍可创建 ProjectWorker
+- **导入逻辑优化**：班组/日工资改为可选列——只填姓名+身份证号即可导入工人库，填了班组才同时分配项目
+- **导入表头行切换**：修复表头行下拉框无 onChange 导致无法选择其他行，新增 parseBuffer 支持切换表头行/工作表后重新解析
+- **工人跨项目统计**：全局工人库 Tab 表格展示每个工人的项目数、总薪资
+- **5 步自动迁移脚本**：旧 Member(worker) → Worker + ProjectWorker，含工资/考勤回填+审计标记，幂等跳过
+- **10 个新 IPC 通道**：db:workers:* (5) + db:projectWorkers:* (5)，含 batchCreate 事务性校验
+
+### 🔧 改进
+- wage-calc.ts generateProjectWages 重写：worker 走 projectWorkers（按 projectWorker.dailyWage 独立计算），staff 路径不变
+- attendance.ts 新增 generateDefaultsV2：worker 考勤通过 projectWorkerId 生成，status='left' 的工人自动跳过
+- members.ts 班组删除守卫改为查 db.projectWorkers（旧 db.members 查询因 worker 迁移后为空而失效）
+- WorkerPicker 搜索框 200ms debounce 防抖
+- KPI 卡片左侧 3px 领域色条（slate/emerald/blue/amber）区分设计
+- 工人状态交互覆盖矩阵：WorkerPicker/导入/统计面板的 loading/empty/error/success/partial 5 种状态全部定义
+
+### 🐛 修复
+- 首页发票状态饼图 tooltip + 图例英文→中文翻译
+- WorkerImport useWorkerImport toLowerCase on undefined 崩溃（加 String() 防御包装）
+
+---
+
+## [2.4.0] — 2026-05-12
+
+### ✨ 新增
+- 工人 Excel 批量导入：WorkerImportModal 支持智能列映射（关键词自动匹配+手动下拉调整）、表头行选择、工作表切换、数据预览（前10行，错误行红色高亮）、分批导入（50条/批）、进度条、结果汇总（成功/跳过/失败统计+失败详情）
+- 列映射记忆：保存为命名预设到 localStorage，下次同表头自动套用并提示「检测到 '{预设名}'」
+- 拖拽上传区：WorkerSection 工人列表子Tab 紧凑单行拖拽区，支持拖入 .xlsx/.xls/.csv 直接解析
+- CSV 编码自动检测：UTF-8 → GBK → GB2312 → GB18030 回退链
+- 文件约束检查：10MB 上限、10,000 行上限、加密文件/空文件提示
+- 工人列表卡片→表格：9列表格（姓名/身份证号/性别/班组/工种/日工资/进场日期/状态/操作），同屏可见数十个工人
+- 身份证号去重：导入时自动跳过已存在的身份证号，重上传安全
+
+### 🐛 修复
+- 添加工人/编辑工人弹窗「创建成功」但未实际创建：handleSubmitWorker/handleSubmitStaff 未检查 createMember/updateMember 返回值即显示成功并关闭模态框
+- 班组编辑按钮点击不弹编辑框直接显示更新成功：WorkerSection 编辑按钮直接调用 handleUpdateTeam，改为打开 TeamFormModal
+- 工人调组按钮点击不弹调组框直接显示调组成功：WorkerSection 调组按钮直接调用 handleWorkerTransfer，改为打开 TransferModal
+- Excel 拖拽/点击无反应：parseFile 中所有异常被静默吞掉且错误路径调用 setPhase('idle') 关闭模态框
+
+### 🔧 改进
+- 拖拽上传区从大横幅改为紧凑单行（p-8→px-4 py-2.5），不占工人列表空间
+- 调组/离场模态框在 WorkerSection 内部管理状态，数据通过 onTransfer/onLeave 回调传递
+- FileReader onerror 处理 + GBK 编码回退链 + 空文件检测
+
+## [2.3.0] — 2026-05-12
+
+### 🔥 移除
+- 任务模块完整移除：删除 Tasks.tsx（437行）/ useTasks.ts（193行）/ tasks.ts IPC（68行），独立页面从未接入路由，Dashboard 和项目详情的任务区域始终为空
+
+### ✨ 重设计
+- Dashboard 首页任务区域替换为发票+结算摘要：Hero 任务完成率→待办结算数，KPI 任务总数→待办结算卡，饼图任务分布→发票状态分布，最近任务→最近发票列表
+- 项目详情 7 Tab→6 Tab（移除任务管理）
+- 项目指挥中心：KPI 行任务完成→待处理发票，任务进度卡片→发票概览，告警区逾期任务→待处理发票
+
+### 🔧 修复
+- 项目成本结构数据管线接通：ProjectDetail 接入 getCostLedger 加载台账条目，expenseByCategory 从台账实算，成本结构环形图（人材机）不再显示空数据
+- costTotal / otherT 计算修正：otherT 改为独立计算不匹配人材机关键词的剩余分类之和，百分比始终归 100%
+- 健康度评分公式调整：4 维→3 维（移除任务进度 30%，预算控制 40%+合同执行 30%+发票管理 30%）
+
+### 📄 文件
+- 删除：`src/components/Tasks.tsx`、`src/hooks/useTasks.ts`、`electron/ipc-handlers/tasks.ts`
+- 修改：`src/types/electron.d.ts`、`src/types/index.ts`、`src/types/guards.ts`、`src/hooks/index.ts`、`electron/ipc-handlers/index.ts`、`electron/ipc-handlers/stats.ts`、`electron/preload.ts`、`electron/database.ts`、`src/components/Dashboard.tsx`、`src/components/features/projects/ProjectDetail.tsx`、`src/components/features/projects/ProjectDetailTabs.tsx`、`src/components/features/projects/ProjectStats.tsx`、`src/components/features/projects/ProjectCommandCenter.tsx`、`src/utils/projectHealth.ts`
+
+---
+
+## [2.2.3] — 2026-05-12
+
+### ✨ 新增
+- 成本台账导出 Excel：工具栏「导出Excel」按钮，按当前筛选结果导出 10 列 xlsx（序号/凭证号/日期/方向/分类/往来单位/渠道/金额/摘要/备注），列宽优化
+- 成本台账打印：工具栏「打印」按钮，生成独立打印窗口，A4 横版表格 + 底部收支汇总（经营支出/资金收入/净流入流出）
+- 凭证附件预览：FileUploader 每条附件新增预览按钮，图片文件弹窗大图查看，非图片文件（PDF/Word等）调用系统默认程序打开
+
+### 📄 文件
+- 新增：`src/components/features/costLedger/printExport.ts` — 打印模板生成 + xlsx 导出
+- 修改：`src/components/features/costLedger/CostLedgerList.tsx` — 工具栏新增打印/导出Excel按钮
+- 修改：`src/components/features/costLedger/FileUploader.tsx` — 新增预览/打开按钮 + 图片弹窗预览
+
+---
+
+## [2.2.2] — 2026-05-11
+
+### 🔧 修订
+- 表格行悬停高亮统一：全站 16 处 `<tr>` 列表从硬编码 `hover:bg-slate-50` 替换为 `table-row-hover` CSS 类，通过 `var(--row-hover-opacity)` 自定义属性驱动
+- 系统设置新增悬停强度调节：外观主题卡片新增滑块（10%-100%，步长 5），实时调节所有数据表格行悬停淡蓝高亮的透明度
+- 新增 `useRowHoverOpacity` hook：读写 localStorage + 同步 CSS 变量到 `document.documentElement`，默认 60%
+- 覆盖模块：成本台账、单位管理、操作日志、合同台账、图纸管理、用户管理、工资表/考勤/发放记录、发票/收付款、仓库物料/材料、结算办理/导入、项目详情、角色权限矩阵、通用 Table 组件
+
+---
+
+## [2.2.1] — 2026-05-11
+
+### 🔧 修订
+- 成本台账列表合计行固定底部：CostLedgerList 改用 flex 列布局替代 `h-full`（CSS 百分比高度在 flex item 内无法解析），CostLedgerTab/CostLedgerProjectDetail 包装层加 `flex flex-col` 传递 flex 链，表格区 `flex-1 overflow-auto` 自行滚动，合计行自然沉底
+- 支出分类标签两行显示：CostLedgerAnalytics 饼图图例 `truncate` → `line-clamp-2`（外裹 `flex-1 min-w-0` 防 -webkit-box 塌缩）；CostLedgerList 分类列 `truncate` on td → `line-clamp-2` on inner span（避免 -webkit-box 覆盖 table-cell）
+- Dashboard 支出分类柱状图 X 轴刻度两行显示：自定义 `CategoryTick` 组件，SVG `<tspan>` 拆分 >4 字分类名，`interval={0}` 强制全显示，`dy={6}` 文字置轴线下方，`bottom` margin 扩至 32
+
+---
+
+## [2.2.0] — 2026-05-11
+
+### ✨ 次版本
+- 成本台账金额列筛选精度修复：`Math.round` → `toFixed(2)`，保留分位精度（财务一分钱不能错），colValues.amounts 和 filter matching 两处同步修改
+- 日期列筛选年月树形折叠：新增 `DateFilterTree.tsx` 组件（188 行），年→月→日三级层级，分组复选框三态（全选/部分选中的横线态/未选），折叠箭头，计数 badge；搜索时自动切平铺模式；快捷按钮（本月/近3月/本年）保留
+- ColumnFilter.tsx 日期逻辑提取为 DateFilterTree，自身从 428→245 行通过 400 行硬上限
+
+---
+
+## [2.1.0] — 2026-05-11
+
+### ✨ 次版本
+- 成本台账筛选系统全面升级：7 列表头统一为搜索+勾选 Excel 风格（搜索框过滤→勾选筛选，全选/清除），替代旧的文本搜索/区间输入；ColumnFilter 重构为通用 CheckMeta 模式（resolveCheckMeta 统一 7 种列元数据）；分类筛选联动一级/二级切换按钮；备注列补筛选项；Dashboard/ProjectDetail 英文标签修复
+
+---
+
+## [2.0.0] — 2026-05-11
+
+### 🚀 主版本
+- 成本台账一二级分类全面重构：支出 5 组 18 码（业务费/直接工程费/现场管理费/对公服务及前期投入费/财务及其他费）+ 收入 4 组 7 码（投资款/项目回款/退款/其他收入）；CATEGORY_HIERARCHY 新增 direction 字段；CategoryPicker 从扁平下拉→一级→二级联动选择器；CategoryManager 重写为双级管理 UI（一级分组卡片+二级子项列表+新建/编辑/删除）；CostLedgerList 筛选下拉按一级分组 optgroup 显示；CostLedgerCategory 类型新增 level1? 字段；getLevel1Groups(direction)/getLevel1GroupsMerged(categories,direction) 方向感知；getLevel1ForCode 优先 DB level1→回退 hierarchy；ensureCategories() 自动迁移旧扁平分类到新层级
+
 
 ## [1.21.3] — 2026-05-11
 
+### ✨ 新增
+- **成本台账分类列二级/一级切换**：新增 `CATEGORY_HIERARCHY` 常量（18 个二级分类→5 个一级分组），表格工具栏新增「二级 | 一级」分段按钮，切换后分类列显示对应层级标签，一级模式带彩色圆点区分分组。localStorage 持久化偏好。收入分类与用户自定义分类不受影响
+
+## [1.21.2] — 2026-05-11
+
 ### 🔧 修订
 - **版本自动迭代系统加固**：PreToolUse hook 确保在 neat-freak 清理前读取 CLAUDE.md 最新内容，bump-version.js 预检和正则匹配更可靠
-- **版本号全局同步**：修复 6 处版本引用（Sidebar/Login/Settings/CLAUDE/CHANGELOG/package.json）不一致，全部统一为 v1.21.3
+- **版本号全局同步**：修复 6 处版本引用（Sidebar/Login/Settings/CLAUDE/CHANGELOG/package.json）不一致，全部统一为 v1.21.2
 - **Settings 更新日志显示修复**：数组缩进从约 500 空格修正为 18 空格，版本历史正确渲染
 - **表格列间距优化**：cell padding 从 px-2 增至 px-3，列间更宽松易读
 - **表头标签优化**：「对方」改为「往来单位/个人」，语义更准确

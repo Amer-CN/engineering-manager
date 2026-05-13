@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { CostLedgerList } from './CostLedgerList'
 import { CostLedgerForm } from './CostLedgerForm'
+import { useCostLedgerCategories } from '@/hooks/useCostLedgerCategories'
 import type { CostLedgerEntry, CostLedgerSummary } from '@/types'
 
 interface CostLedgerTabProps {
@@ -9,6 +10,7 @@ interface CostLedgerTabProps {
 }
 
 export function CostLedgerTab({ projectId, projectName }: CostLedgerTabProps) {
+  const { categories } = useCostLedgerCategories()
   const [entries, setEntries] = useState<CostLedgerEntry[]>([])
   const [summary, setSummary] = useState<CostLedgerSummary | null>(null)
   const [loading, setLoading] = useState(true)
@@ -62,8 +64,8 @@ export function CostLedgerTab({ projectId, projectName }: CostLedgerTabProps) {
           + 新增
         </button>
       </div>
-      <div className="flex-1 overflow-auto">
-        <CostLedgerList entries={entries} summary={summary} loading={loading} onEdit={openEdit} onDelete={handleDelete} />
+      <div className="flex-1 min-h-0 flex flex-col">
+        <CostLedgerList entries={entries} summary={summary} loading={loading} onEdit={openEdit} onDelete={handleDelete} categories={categories} />
       </div>
       {showForm && (
         <CostLedgerForm
@@ -72,6 +74,7 @@ export function CostLedgerTab({ projectId, projectName }: CostLedgerTabProps) {
           initial={editing}
           onSave={handleSave}
           onClose={() => { setShowForm(false); setEditing(null) }}
+          categories={categories}
         />
       )}
     </div>

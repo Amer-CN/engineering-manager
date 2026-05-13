@@ -66,48 +66,7 @@ export interface UseFormReturn<T extends Record<string, unknown>, R = void> {
 // Hook Implementation
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/**
- * 表单 Hook
- * 
- * @param options - 配置选项
- * @param options.initialValues - 初始值
- * @param options.validate - 验证函数 (可选)
- * @param options.onSubmit - 提交处理函数
- * 
- * @example
- * ```tsx
- * function ContactForm() {
- *   const form = useForm({
- *     initialValues: { name: '', email: '', message: '' },
- *     validate: (values) => {
- *       const errors: FormErrors<typeof values> = {}
- *       if (!values.name) errors.name = '姓名不能为空'
- *       if (!values.email) errors.email = '邮箱不能为空'
- *       if (!values.email.includes('@')) errors.email = '邮箱格式不正确'
- *       return errors
- *     },
- *     onSubmit: async (values) => {
- *       await api.sendContact(values)
- *       return { success: true }
- *     }
- *   })
- *   
- *   return (
- *     <form onSubmit={form.handleSubmit}>
- *       <input {...form.getFieldProps('name')} />
- *       {form.touched.name && form.errors.name && <span>{form.errors.name}</span>}
- *       
- *       <input {...form.getFieldProps('email')} />
- *       {form.touched.email && form.errors.email && <span>{form.errors.email}</span>}
- *       
- *       <button type="submit" disabled={form.isSubmitting}>
- *         {form.isSubmitting ? '提交中...' : '提交'}
- *       </button>
- *     </form>
- *   )
- * }
- * ```
- */
+/** 通用表单 Hook — initialValues + validate + onSubmit */
 export function useForm<
   T extends Record<string, unknown>,
   R = void

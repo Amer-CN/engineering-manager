@@ -45,11 +45,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getWorkerTransferRecords: (workerId?: number) => ipcRenderer.invoke('db:workerTransferRecords:getAll', workerId),
   createWorkerTransfer: (record: any) => ipcRenderer.invoke('db:workerTransferRecords:create', record),
 
-  // 任务
-  getTasks: (projectId?: number) => ipcRenderer.invoke('db:tasks:getAll', projectId),
-  createTask: (task: any) => ipcRenderer.invoke('db:tasks:create', task),
-  updateTask: (task: any) => ipcRenderer.invoke('db:tasks:update', task),
-  deleteTask: (id: number) => ipcRenderer.invoke('db:tasks:delete', id),
+  // 全局工人信息库
+  getWorkers: (search?: string, workerType?: string) => ipcRenderer.invoke('db:workers:getAll', search, workerType),
+  createWorker: (worker: any) => ipcRenderer.invoke('db:workers:create', worker),
+  updateWorker: (worker: any) => ipcRenderer.invoke('db:workers:update', worker),
+  deleteWorker: (id: number) => ipcRenderer.invoke('db:workers:delete', id),
+  getWorkerStats: (workerId: number) => ipcRenderer.invoke('db:workers:getStats', workerId),
+
+  // 项目用工关系
+  getProjectWorkers: (projectId: number) => ipcRenderer.invoke('db:projectWorkers:getAll', projectId),
+  createProjectWorker: (pw: any) => ipcRenderer.invoke('db:projectWorkers:create', pw),
+  updateProjectWorker: (pw: any) => ipcRenderer.invoke('db:projectWorkers:update', pw),
+  deleteProjectWorker: (id: number) => ipcRenderer.invoke('db:projectWorkers:delete', id),
+  batchCreateProjectWorkers: (entries: any[]) => ipcRenderer.invoke('db:projectWorkers:batchCreate', entries),
 
   // 材料
   getMaterials: (projectId?: number) => ipcRenderer.invoke('db:materials:getAll', projectId),
@@ -74,6 +82,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   updateCostLedgerCategory: (id: number, changes: any) => ipcRenderer.invoke('db:costLedgerCategories:update', id, changes),
   deleteCostLedgerCategory: (id: number) => ipcRenderer.invoke('db:costLedgerCategories:delete', id),
   resetCostLedgerCategories: () => ipcRenderer.invoke('db:costLedgerCategories:reset'),
+
+  // 部门
+  getDepartments: () => ipcRenderer.invoke('db:departments:getAll'),
+  createDepartment: (data: { name: string; managerId?: number; positions?: string[] }) => ipcRenderer.invoke('db:departments:create', data),
+  updateDepartment: (data: { id: number; name?: string; managerId?: number | null; positions?: string[] }) => ipcRenderer.invoke('db:departments:update', data),
+  deleteDepartment: (id: number) => ipcRenderer.invoke('db:departments:delete', id),
 
   // 图纸
   getDrawings: (projectId?: number) => ipcRenderer.invoke('db:drawings:getAll', projectId),
@@ -192,8 +206,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   createAttendance: (record: any) => ipcRenderer.invoke('db:attendances:create', record),
   updateAttendance: (record: any) => ipcRenderer.invoke('db:attendances:update', record),
   generateDefaultAttendances: (projectId: number, yearMonth: string, memberIds: number[]) => ipcRenderer.invoke('db:attendances:generateDefaults', projectId, yearMonth, memberIds),
+  generateDefaultAttendancesV2: (projectId: number, yearMonth: string, projectWorkerIds: number[]) => ipcRenderer.invoke('db:attendances:generateDefaultsV2', projectId, yearMonth, projectWorkerIds),
   deleteAttendance: (id: number) => ipcRenderer.invoke('db:attendances:delete', id),
   batchDeleteAttendances: (ids: number[]) => ipcRenderer.invoke('db:attendances:batchDelete', ids),
+
+  // ============ 薪资历史 ============
+  getSalaryHistory: (memberId: number) => ipcRenderer.invoke('db:salaryHistory:list', memberId),
+  createSalaryHistory: (record: any) => ipcRenderer.invoke('db:salaryHistory:create', record),
+  deleteSalaryHistory: (id: number) => ipcRenderer.invoke('db:salaryHistory:delete', id),
+  getEffectiveSalary: (memberId: number, yearMonth: string) => ipcRenderer.invoke('db:salaryHistory:getEffective', memberId, yearMonth),
 
   // ============ 工资管理 ============
   getWages: (projectId?: number, yearMonth?: string, memberId?: number) => ipcRenderer.invoke('db:wages:getAll', projectId, yearMonth, memberId),

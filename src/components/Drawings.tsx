@@ -38,8 +38,8 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
         window.electronAPI.getProjects()
       ])
 
-      if (drawingsResult.success && drawingsResult.data) setDrawings(drawingsResult.data)
-      if (projectsResult.success && projectsResult.data) setProjects(projectsResult.data)
+      if (drawingsResult.success && drawingsResult.data) setDrawings([...drawingsResult.data])
+      if (projectsResult.success && projectsResult.data) setProjects([...projectsResult.data])
     } catch (error) {
       console.error('加载数据失败:', error)
     } finally {
@@ -82,23 +82,36 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
       } else if (formData.file) {
         const reader = new FileReader()
         reader.onload = async (event) => {
-          const base64 = event.target?.result as string
-          const base64Data = base64.split(',')[1]
+          try {
+            const base64 = event.target?.result as string
+            const base64Data = base64.split(',')[1]
 
-          await window.electronAPI.uploadDrawing({
-            projectId: formData.projectId as number,
-            name: formData.name,
-            category: formData.category,
-            remarks: formData.remarks,
-            fileName: formData.file!.name,
-            fileData: base64Data
-          })
+            const result = await window.electronAPI.uploadDrawing({
+              projectId: formData.projectId as number,
+              name: formData.name,
+              category: formData.category,
+              remarks: formData.remarks,
+              fileName: formData.file!.name,
+              fileData: base64Data
+            })
 
-          loadData()
-          setShowModal(false)
-          resetForm()
-          refresh?.()
-          showToast('图纸上传成功', 'success')
+            if (!result.success) {
+              showToast(result.error || '上传失败', 'error')
+              return
+            }
+
+            await loadData()
+            setShowModal(false)
+            resetForm()
+            refresh?.()
+            showToast('图纸上传成功', 'success')
+          } catch (error: any) {
+            console.error('上传图纸失败:', error)
+            showToast(error?.message || '上传失败', 'error')
+          }
+        }
+        reader.onerror = () => {
+          showToast('文件读取失败，请重试', 'error')
         }
         reader.readAsDataURL(formData.file)
         return
@@ -269,7 +282,7 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredDrawings.map(drawing => (
-                <tr key={drawing.id} className="hover:bg-slate-50">
+                <tr key={drawing.id} className="table-row-hover">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <Icon name={categoryIcons[drawing.category || ''] || 'File'} size={18} className="text-slate-400" />

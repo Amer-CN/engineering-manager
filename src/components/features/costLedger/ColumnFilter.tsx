@@ -1,64 +1,100 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
+import { DateFilterTree } from './DateFilterTree'
 
 export interface ColValues {
   counterparties: string[]
   channels: string[]
+  voucherNos: string[]
+  summaries: string[]
+  notesList: string[]
+  dates: string[]
+  amounts: string[]
 }
 
 interface ColumnFilterProps {
   col: string
   colValues: ColValues
-  // State
+  // Checked sets
   checkedCounterparties: Set<string>
   checkedChannels: Set<string>
-  searchVoucherNo: string
-  searchSummary: string
-  dateFrom: string
-  dateTo: string
-  amountMin: string
-  amountMax: string
-  // Setters
+  checkedVoucherNos: Set<string>
+  checkedSummaries: Set<string>
+  checkedNotesSet: Set<string>
+  checkedDates: Set<string>
+  checkedAmounts: Set<string>
+  // Toggle
   onToggleCounterparty: (v: string) => void
   onToggleChannel: (v: string) => void
+  onToggleVoucherNo: (v: string) => void
+  onToggleSummary: (v: string) => void
+  onToggleNote: (v: string) => void
+  onToggleDate: (v: string) => void
+  onToggleAmount: (v: string) => void
+  // Set all
   onSetAllCounterparties: (v: string[]) => void
   onSetAllChannels: (v: string[]) => void
+  onSetAllVoucherNos: (v: string[]) => void
+  onSetAllSummaries: (v: string[]) => void
+  onSetAllNotes: (v: string[]) => void
+  onSetAllDates: (v: string[]) => void
+  onSetAllAmounts: (v: string[]) => void
+  // Clear
   onClearCounterparties: () => void
   onClearChannels: () => void
-  onSearchVoucherNo: (v: string) => void
-  onSearchSummary: (v: string) => void
-  onDateFrom: (v: string) => void
-  onDateTo: (v: string) => void
-  onAmountMin: (v: string) => void
-  onAmountMax: (v: string) => void
+  onClearVoucherNos: () => void
+  onClearSummaries: () => void
+  onClearNotes: () => void
+  onClearDates: () => void
+  onClearAmounts: () => void
 }
 
-export function ColumnFilter({
-  col, colValues,
-  checkedCounterparties, checkedChannels,
-  searchVoucherNo, searchSummary,
-  dateFrom, dateTo, amountMin, amountMax,
-  onToggleCounterparty, onToggleChannel,
-  onSetAllCounterparties, onSetAllChannels,
-  onClearCounterparties, onClearChannels,
-  onSearchVoucherNo, onSearchSummary,
-  onDateFrom, onDateTo, onAmountMin, onAmountMax,
-}: ColumnFilterProps) {
+type CheckColumn = 'counterparty' | 'channel' | 'voucherNo' | 'summary' | 'notes' | 'date' | 'amount'
+
+interface CheckMeta {
+  values: string[]
+  checked: Set<string>
+  toggle: (v: string) => void
+  setAll: (vals: string[]) => void
+  clear: () => void
+}
+
+function resolveCheckMeta(col: CheckColumn, props: ColumnFilterProps): CheckMeta {
+  const cv = props.colValues
+  switch (col) {
+    case 'counterparty':
+      return { values: cv.counterparties, checked: props.checkedCounterparties, toggle: props.onToggleCounterparty, setAll: props.onSetAllCounterparties, clear: props.onClearCounterparties }
+    case 'channel':
+      return { values: cv.channels, checked: props.checkedChannels, toggle: props.onToggleChannel, setAll: props.onSetAllChannels, clear: props.onClearChannels }
+    case 'voucherNo':
+      return { values: cv.voucherNos, checked: props.checkedVoucherNos, toggle: props.onToggleVoucherNo, setAll: props.onSetAllVoucherNos, clear: props.onClearVoucherNos }
+    case 'summary':
+      return { values: cv.summaries, checked: props.checkedSummaries, toggle: props.onToggleSummary, setAll: props.onSetAllSummaries, clear: props.onClearSummaries }
+    case 'notes':
+      return { values: cv.notesList, checked: props.checkedNotesSet, toggle: props.onToggleNote, setAll: props.onSetAllNotes, clear: props.onClearNotes }
+    case 'date':
+      return { values: cv.dates, checked: props.checkedDates, toggle: props.onToggleDate, setAll: props.onSetAllDates, clear: props.onClearDates }
+    case 'amount':
+      return { values: cv.amounts, checked: props.checkedAmounts, toggle: props.onToggleAmount, setAll: props.onSetAllAmounts, clear: props.onClearAmounts }
+  }
+}
+
+export function ColumnFilter(props: ColumnFilterProps) {
+  const { col } = props
+
   const [open, setOpen] = useState(false)
   const [pos, setPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 })
+  const [checkSearch, setCheckSearch] = useState('')
   const btnRef = useRef<HTMLButtonElement>(null)
   const popRef = useRef<HTMLDivElement>(null)
 
+  const checkCols: CheckColumn[] = ['counterparty', 'channel', 'voucherNo', 'summary', 'notes', 'date', 'amount']
+
   const isActive = (() => {
-    switch (col) {
-      case 'counterparty': return checkedCounterparties.size > 0
-      case 'channel': return checkedChannels.size > 0
-      case 'voucherNo': return !!searchVoucherNo
-      case 'date': return !!(dateFrom || dateTo)
-      case 'amount': return !!(amountMin || amountMax)
-      case 'summary': return !!searchSummary
-      default: return false
+    if (checkCols.includes(col as CheckColumn)) {
+      return resolveCheckMeta(col as CheckColumn, props).checked.size > 0
     }
+    return false
   })()
 
   const updatePos = useCallback(() => {
@@ -69,11 +105,10 @@ export function ColumnFilter({
   }, [])
 
   const handleToggle = useCallback(() => {
-    if (!open) { updatePos(); setOpen(true) }
+    if (!open) { setCheckSearch(''); updatePos(); setOpen(true) }
     else setOpen(false)
-  }, [open])
+  }, [open, updatePos])
 
-  // Close on outside click
   useEffect(() => {
     if (!open) return
     const h = (e: MouseEvent) => {
@@ -86,109 +121,105 @@ export function ColumnFilter({
     return () => document.removeEventListener('mousedown', h)
   }, [open])
 
-  // Recalculate position on scroll
   useEffect(() => {
     if (!open) return
     const h = () => updatePos()
     window.addEventListener('scroll', h, true)
     return () => window.removeEventListener('scroll', h, true)
-  }, [open])
+  }, [open, updatePos])
 
   const renderContent = () => {
-    switch (col) {
-      case 'counterparty':
-      case 'channel': {
-        const values = col === 'counterparty' ? colValues.counterparties : colValues.channels
-        const checked = col === 'counterparty' ? checkedCounterparties : checkedChannels
-        const toggle = col === 'counterparty' ? onToggleCounterparty : onToggleChannel
-        const setAll = col === 'counterparty' ? () => onSetAllCounterparties(values) : () => onSetAllChannels(values)
-        const clear = col === 'counterparty' ? onClearCounterparties : onClearChannels
-        return (
-          <div className="max-h-56 overflow-y-auto p-1">
-            {values.length === 0 ? (
-              <p className="px-2 py-1 text-xs text-slate-400">无可用值</p>
-            ) : (
-              <>
-                <div className="flex gap-1 border-b border-slate-100 px-1 pb-1 mb-1">
-                  <button type="button" onClick={setAll} className="text-[10px] text-blue-600 hover:text-blue-800">全选</button>
-                  <button type="button" onClick={clear} className="text-[10px] text-slate-400 hover:text-slate-600">清除</button>
-                </div>
-                {values.map(v => (
+    if (!checkCols.includes(col as CheckColumn)) return null
+
+    const meta = resolveCheckMeta(col as CheckColumn, props)
+    const q = checkSearch.trim().toLowerCase()
+    const isDate = col === 'date'
+
+    // Date quick select helpers
+    const selectDateRange = (dates: string[]) => {
+      meta.setAll(dates)
+    }
+    const getThisMonthDates = () => {
+      const now = new Date()
+      const y = now.getFullYear(); const m = now.getMonth()
+      const start = `${y}-${String(m+1).padStart(2,'0')}-01`
+      const end = `${y}-${String(m+1).padStart(2,'0')}-${String(new Date(y, m+1, 0).getDate()).padStart(2,'0')}`
+      return meta.values.filter(d => d >= start && d <= end)
+    }
+    const getLast3MonthDates = () => {
+      const d = new Date(); d.setMonth(d.getMonth() - 3)
+      const from = d.toISOString().slice(0, 10)
+      return meta.values.filter(d => d >= from)
+    }
+    const getThisYearDates = () => {
+      const y = new Date().getFullYear()
+      return meta.values.filter(d => d.startsWith(`${y}-`))
+    }
+
+    // Flat checkbox list (non-date columns, or date column with search)
+    const renderFlatList = () => {
+      const filteredValues = q ? meta.values.filter(v => v.toLowerCase().includes(q)) : meta.values
+
+      return (
+        <div className="max-h-48 overflow-y-auto p-1">
+          {meta.values.length === 0 ? (
+            <p className="px-2 py-1 text-xs text-slate-400">无可用值</p>
+          ) : (
+            <>
+              <div className="flex gap-1 border-b border-slate-100 px-1 pb-1 mb-1">
+                <button type="button" onClick={() => meta.setAll(meta.values)} className="text-[10px] text-blue-600 hover:text-blue-800">全选</button>
+                <button type="button" onClick={meta.clear} className="text-[10px] text-slate-400 hover:text-slate-600">清除</button>
+                {checkSearch.trim() && (
+                  <span className="ml-auto text-[10px] text-slate-400">{filteredValues.length}/{meta.values.length}</span>
+                )}
+              </div>
+              {filteredValues.length === 0 ? (
+                <p className="px-2 py-1 text-xs text-slate-400">无匹配结果</p>
+              ) : (
+                filteredValues.map(v => (
                   <label key={v} className="flex items-center gap-1.5 cursor-pointer rounded px-1 py-0.5 text-xs text-slate-600 hover:bg-slate-50">
-                    <input type="checkbox" checked={checked.has(v)} onChange={() => toggle(v)} className="h-3 w-3 rounded border-slate-300" />
+                    <input type="checkbox" checked={meta.checked.has(v)} onChange={() => meta.toggle(v)}
+                      className="h-3 w-3 rounded border-slate-300 shrink-0" />
                     <span className="truncate">{v}</span>
                   </label>
-                ))}
-              </>
-            )}
-          </div>
-        )
-      }
-      case 'voucherNo':
-        return (
-          <div className="p-2">
-            <input autoFocus type="text" value={searchVoucherNo} onChange={e => onSearchVoucherNo(e.target.value)}
-              placeholder="凭证号搜索..." className="w-full rounded border border-slate-200 px-2 py-1 text-xs text-slate-600 focus:border-blue-400 focus:outline-none" />
-          </div>
-        )
-      case 'date': {
-        const thisMonth = (() => {
-          const d = new Date()
-          return {
-            from: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`,
-            to: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(new Date(d.getFullYear(), d.getMonth()+1, 0).getDate()).padStart(2,'0')}`,
-          }
-        })()
-        const last3m = (() => {
-          const d = new Date(); d.setMonth(d.getMonth() - 3)
-          return { from: d.toISOString().slice(0, 10), to: new Date().toISOString().slice(0, 10) }
-        })()
-        const thisYear = { from: `${new Date().getFullYear()}-01-01`, to: `${new Date().getFullYear()}-12-31` }
-        return (
-          <div className="space-y-2 p-2">
-            <div className="flex gap-1">
-              {[{ label: '本月', ...thisMonth }, { label: '近3月', ...last3m }, { label: '本年', ...thisYear }].map(p => (
-                <button key={p.label} type="button" onClick={() => { onDateFrom(p.from); onDateTo(p.to) }}
-                  className="rounded border border-slate-200 px-1.5 py-0.5 text-[10px] text-slate-500 hover:bg-slate-50">{p.label}</button>
-              ))}
-            </div>
-            <div className="flex items-center gap-1">
-              <input type="text" value={dateFrom} onChange={e => onDateFrom(e.target.value)} placeholder="从 YYYY-MM-DD"
-                className="flex-1 rounded border border-slate-200 px-1.5 py-1 text-[10px] text-slate-600 focus:border-blue-400 focus:outline-none" />
-              <span className="text-[10px] text-slate-300">—</span>
-              <input type="text" value={dateTo} onChange={e => onDateTo(e.target.value)} placeholder="至 YYYY-MM-DD"
-                className="flex-1 rounded border border-slate-200 px-1.5 py-1 text-[10px] text-slate-600 focus:border-blue-400 focus:outline-none" />
-            </div>
-            {(dateFrom || dateTo) && (
-              <button type="button" onClick={() => { onDateFrom(''); onDateTo('') }} className="text-[10px] text-blue-600 hover:text-blue-800">清除日期</button>
-            )}
-          </div>
-        )
-      }
-      case 'amount':
-        return (
-          <div className="space-y-1.5 p-2">
-            <div className="flex items-center gap-1">
-              <input type="number" value={amountMin} onChange={e => onAmountMin(e.target.value)} placeholder="≥ 最低"
-                className="w-full rounded border border-slate-200 px-1.5 py-1 text-[10px] text-slate-600 focus:border-blue-400 focus:outline-none" style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }} />
-              <span className="text-[10px] text-slate-300">—</span>
-              <input type="number" value={amountMax} onChange={e => onAmountMax(e.target.value)} placeholder="≤ 最高"
-                className="w-full rounded border border-slate-200 px-1.5 py-1 text-[10px] text-slate-600 focus:border-blue-400 focus:outline-none" style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }} />
-            </div>
-            {(amountMin || amountMax) && (
-              <button type="button" onClick={() => { onAmountMin(''); onAmountMax('') }} className="text-[10px] text-blue-600 hover:text-blue-800">清除金额</button>
-            )}
-          </div>
-        )
-      case 'summary':
-        return (
-          <div className="p-2">
-            <input autoFocus type="text" value={searchSummary} onChange={e => onSearchSummary(e.target.value)}
-              placeholder="搜索摘要内容..." className="w-full rounded border border-slate-200 px-2 py-1 text-xs text-slate-600 focus:border-blue-400 focus:outline-none" />
-          </div>
-        )
-      default: return null
+                ))
+              )}
+            </>
+          )}
+        </div>
+      )
     }
+
+    return (
+      <div className="w-52">
+        {/* 搜索框 */}
+        <div className="p-1.5 border-b border-slate-100">
+          <input autoFocus type="text" value={checkSearch}
+            onChange={e => setCheckSearch(e.target.value)}
+            placeholder="搜索..."
+            className="w-full rounded border border-slate-200 px-2 py-1 text-xs text-slate-600 focus:border-blue-400 focus:outline-none"
+          />
+        </div>
+        {/* 日期快捷按钮 */}
+        {isDate && (
+          <div className="flex gap-1 border-b border-slate-100 px-1.5 py-1.5">
+            {[
+              { label: '本月', getDates: getThisMonthDates },
+              { label: '近3月', getDates: getLast3MonthDates },
+              { label: '本年', getDates: getThisYearDates },
+            ].map(p => (
+              <button key={p.label} type="button" onClick={() => selectDateRange(p.getDates())}
+                className="rounded border border-slate-200 px-1.5 py-0.5 text-[10px] text-slate-500 hover:bg-slate-50">{p.label}</button>
+            ))}
+          </div>
+        )}
+        {/* 内容区：日期无搜索→树形，其他→平铺 */}
+        {isDate && !checkSearch.trim()
+          ? <DateFilterTree values={meta.values} checked={meta.checked} toggle={meta.toggle} setAll={meta.setAll} clear={meta.clear} />
+          : renderFlatList()
+        }
+      </div>
+    )
   }
 
   return (

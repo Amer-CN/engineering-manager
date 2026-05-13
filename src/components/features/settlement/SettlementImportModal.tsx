@@ -143,7 +143,7 @@ export const SettlementImportModal: React.FC<Props> = ({ show, onClose, onImport
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {state.previewRows.map((row, ri) => (
-                    <tr key={ri} className="hover:bg-slate-50">
+                    <tr key={ri} className="table-row-hover">
                       {state.headers.map((_, ci) => <td key={ci} className="px-3 py-1.5 text-slate-700 whitespace-nowrap">{row[ci] !== undefined && row[ci] !== null ? String(row[ci]) : ''}</td>)}
                     </tr>
                   ))}

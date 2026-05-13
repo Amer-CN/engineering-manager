@@ -4,7 +4,7 @@
  * Bento Grid layout with alerts, charts, and data cards.
  */
 import React from 'react'
-import type { Project, Member, Task, Expense, Partner, IncomeContract, ExpenseContract, WorkerTeam, Invoice, Material, Settlement, PaymentRecord } from '@/types'
+import type { Project, Member, Partner, IncomeContract, ExpenseContract, WorkerTeam, Invoice, Material, Settlement, PaymentRecord } from '@/types'
 import { ProjectStatsData } from './ProjectStats'
 import { calculateHealthScore, getHealthLevel } from '@/utils/projectHealth'
 import { motion } from 'framer-motion'
@@ -14,7 +14,7 @@ import { formatMoney } from '@/utils/format'
 
 export interface ProjectCommandCenterProps {
   project: Project; stats: ProjectStatsData; expenseByCategory: Record<string, number>
-  tasks: Task[]; expenses: Expense[]; materials: Material[]
+  materials: Material[]
   incomeContracts: IncomeContract[]; expenseContracts: ExpenseContract[]
   invoices: Invoice[]; partners: Partner[]; paymentRecords: PaymentRecord[]
   settlements: Settlement[]; members: Member[]; workerTeams: WorkerTeam[]
@@ -51,7 +51,7 @@ function EmptyState({ text }: { text: string }) {
   return <div className="flex flex-col items-center justify-center py-12 text-slate-400"><Icon name="Inbox" size={32} className="mb-2 opacity-40" /><p className="text-sm">{text}</p></div>
 }
 
-export function ProjectCommandCenter({ project, stats, expenseByCategory, tasks, materials, incomeContracts, expenseContracts, invoices, partners, paymentRecords }: ProjectCommandCenterProps) {
+export function ProjectCommandCenter({ project, stats, expenseByCategory, materials, incomeContracts, expenseContracts, invoices, partners, paymentRecords }: ProjectCommandCenterProps) {
   const healthScore = calculateHealthScore(project, stats)
   const healthLevel = getHealthLevel(healthScore)
   const status = statusConfig[project.status] || statusConfig.planning
@@ -62,7 +62,8 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, tasks,
   const laborT = Object.entries(expenseByCategory).filter(([c]) => laborCats.some(l => c.includes(l))).reduce((s, [, v]) => s + v, 0)
   const materialCT = Object.entries(expenseByCategory).filter(([c]) => materialCats.some(l => c.includes(l))).reduce((s, [, v]) => s + v, 0)
   const machineryT = Object.entries(expenseByCategory).filter(([c]) => machineryCats.some(l => c.includes(l))).reduce((s, [, v]) => s + v, 0)
-  const otherT = stats.totalExpenses - laborT - materialCT - machineryT
+  const allCats = [...laborCats, ...materialCats, ...machineryCats]
+  const otherT = Object.entries(expenseByCategory).filter(([c]) => !allCats.some(k => c.includes(k))).reduce((s, [, v]) => s + v, 0)
   const costTotal = laborT + materialCT + machineryT + otherT
   const collectionRate = stats.incomeTotal > 0 ? Math.round(stats.receivedOutTotal / stats.incomeTotal * 100) : 0
 
@@ -74,7 +75,8 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, tasks,
   const healthGauge = [{ name: '健康度', value: healthScore, fill: healthScore >= 80 ? '#10b981' : healthScore >= 60 ? '#3b82f6' : healthScore >= 40 ? '#f59e0b' : '#ef4444' }]
   const materialTotalAmt = materials.reduce((s, m) => s + m.price * m.quantity, 0)
   const partnerStats = partners.map(p => ({ ...p, incAmt: incomeContracts.filter(c => c.partnerId === p.id).reduce((s, c) => s + c.amount, 0), expAmt: expenseContracts.filter(c => c.partnerId === p.id).reduce((s, c) => s + c.amount, 0) }))
-  const hasAlerts = stats.overdueTasks > 0 || (project.budget > 0 && stats.totalExpenses > project.budget * 0.85)
+  const unpaidInvoices = invoices.filter(i => i.status === 'partially_paid' || i.status === 'issued').length
+  const hasAlerts = unpaidInvoices > 0 || (project.budget > 0 && stats.totalExpenses > project.budget * 0.85)
 
   return (
     <motion.div initial="hidden" animate="visible" variants={{ visible: { transition: { staggerChildren: 0.07 } } }}>
@@ -82,6 +84,15 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, tasks,
       {/* ═══ 1. Hero ═══ */}
       <motion.section variants={sectionV} className="relative overflow-hidden rounded-2xl mb-6 bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 text-white p-6">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.1),transparent_50%)]" />
+        {/* 装饰光点 */}
+        <motion.div className="absolute top-3 right-12 w-1 h-1 rounded-full bg-emerald-400"
+          animate={{ opacity: [0, 1, 0], scale: [0.5, 2, 0.5] }}
+          transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 3 }}
+        />
+        <motion.div className="absolute bottom-4 right-24 w-1.5 h-1.5 rounded-full bg-cyan-400"
+          animate={{ opacity: [0, 1, 0], scale: [0.5, 1.8, 0.5] }}
+          transition={{ duration: 3, repeat: Infinity, repeatDelay: 4, delay: 1 }}
+        />
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center"><Icon name="Building2" size={28} /></div>
@@ -96,7 +107,7 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, tasks,
           </div>
         </div>
         <div className="relative z-10 grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
-          {[{ l: '合同总额', v: `¥${project.budget > 0 ? (project.budget / 10000).toFixed(1) : '-'}万` }, { l: '工期进度', v: `${stats.timeProgress}%`, s: `${stats.daysElapsed}/${stats.totalDays}天` }, { l: '任务完成', v: `${stats.taskProgress}%`, s: `${stats.completedTasks}/${tasks.length}个` }, { l: '净利润', v: `${stats.netProfit >= 0 ? '+' : ''}¥${(stats.netProfit / 10000).toFixed(1)}万`, a: stats.netProfit >= 0 ? 'text-emerald-300' : 'text-red-300' }].map((k, i) => (
+          {[{ l: '合同总额', v: `¥${project.budget > 0 ? (project.budget / 10000).toFixed(1) : '-'}万` }, { l: '工期进度', v: `${stats.timeProgress}%`, s: `${stats.daysElapsed}/${stats.totalDays}天` }, { l: '待处理', v: `${unpaidInvoices}项`, s: `发票待付/待收` }, { l: '净利润', v: `${stats.netProfit >= 0 ? '+' : ''}¥${(stats.netProfit / 10000).toFixed(1)}万`, a: stats.netProfit >= 0 ? 'text-emerald-300' : 'text-red-300' }].map((k, i) => (
             <div key={i} className="p-3 rounded-xl bg-white/10"><p className="text-xs text-white/60">{k.l}</p><p className={`text-lg font-bold mt-0.5 ${(k as any).a || ''}`}>{k.v}</p>{(k as any).s && <p className="text-xs text-white/40">{(k as any).s}</p>}</div>
           ))}
         </div>
@@ -109,7 +120,7 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, tasks,
             <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0"><Icon name="AlertTriangle" size={16} className="text-amber-600" /></div>
             <div className="flex-1 space-y-1">
               <p className="font-semibold text-amber-700 text-sm">需要关注</p>
-              {stats.overdueTasks > 0 && <p className="text-sm text-slate-600">{stats.overdueTasks} 个任务已逾期，请及时处理</p>}
+              {unpaidInvoices > 0 && <p className="text-sm text-slate-600">{unpaidInvoices} 张发票待处理（未付款/部分付款），请及时跟进</p>}
               {project.budget > 0 && stats.totalExpenses > project.budget * 0.85 && <p className="text-sm text-slate-600">预算使用率 {Math.round(stats.totalExpenses / project.budget * 100)}%，接近超支</p>}
               {stats.incomeTotal > 0 && collectionRate < 40 && <p className="text-sm text-slate-600">收款率仅 {collectionRate}%，资金回笼偏慢</p>}
             </div>
@@ -175,12 +186,12 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, tasks,
         <div className="space-y-3">
           <StatCard icon={<Icon name="DollarSign" size={16} className="text-blue-500" />} accent="bg-blue-50" label="合同总额" value={`¥${(stats.incomeTotal / 10000).toFixed(1)}万`} />
           <StatCard icon={<Icon name="TrendingUp" size={16} className="text-emerald-500" />} accent="bg-emerald-50" label="已回款" value={`¥${(stats.receivedOutTotal / 10000).toFixed(1)}万`} sub={`回款率 ${collectionRate}%`} />
-          <StatCard icon={<Icon name="LayoutDashboard" size={16} className="text-purple-500" />} accent="bg-purple-50" label="任务进度" value={`${stats.taskProgress}%`} sub={stats.overdueTasks > 0 ? `${stats.overdueTasks}个逾期` : `${stats.completedTasks}个完成`} />
+          <StatCard icon={<Icon name="Receipt" size={16} className="text-purple-500" />} accent="bg-purple-50" label="待处理发票" value={`${unpaidInvoices}张`} sub={unpaidInvoices > 0 ? '需要跟进' : '全部已处理'} />
           <StatCard icon={<Icon name="Construction" size={16} className="text-amber-500" />} accent="bg-amber-50" label="在岗人员" value={`${stats.workerCountTotal}人`} sub={`${stats.staffCount}管理 + ${stats.workerCount}工人`} />
         </div>
       </motion.section>
 
-      {/* ═══ 5. Partners + Tasks + Materials ═══ */}
+      {/* ═══ 5. Partners + Invoices + Materials ═══ */}
       <motion.section variants={sectionV} className="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-6">
         <div className={`${CARD} p-4`}>
           <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2"><Icon name="Building2" size={14} /> 关联单位 ({stats.partnerCount})</h3>
@@ -196,30 +207,22 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, tasks,
           ) : <EmptyState text="暂无关联单位" />}
         </div>
         <div className={`${CARD} p-4`}>
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2"><Icon name="ClipboardList" size={14} /> 任务进度</h3>
-          <div className="flex items-center gap-3 mb-3">
-            <span className="text-2xl font-bold text-blue-500">{stats.taskProgress}%</span>
-            <div className="flex-1">
-              <div className="flex justify-between text-xs text-slate-400 mb-1"><span>{stats.completedTasks}/{tasks.length}个</span>{stats.overdueTasks > 0 && <span className="text-red-500">{stats.overdueTasks}逾期</span>}</div>
-              <div className="h-2 rounded-full bg-slate-200 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-blue-400 transition-all" style={{ width: `${stats.taskProgress}%` }} /></div>
-            </div>
-          </div>
-          {tasks.length > 0 ? (
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2"><Icon name="Receipt" size={14} /> 发票概览</h3>
+          {invoices.length > 0 ? (
             <div className="space-y-1 max-h-[220px] overflow-y-auto">
-              {tasks.slice(0, 6).map(t => {
-                const overdue = t.status !== 'completed' && t.dueDate && new Date(t.dueDate) < new Date()
-                const bar = t.status === 'completed' ? 'bg-emerald-500' : overdue ? 'bg-red-500' : t.status === 'in_progress' ? 'bg-blue-500' : 'bg-slate-300'
-                const pct = t.progress || (t.status === 'completed' ? 100 : t.status === 'in_progress' ? 50 : 0)
+              {invoices.slice(0, 6).map(inv => {
+                const statusColors: Record<string, string> = { '已付清': 'bg-emerald-100 text-emerald-700', '已收齐': 'bg-emerald-100 text-emerald-700', '部分付款': 'bg-amber-100 text-amber-700', '部分收款': 'bg-amber-100 text-amber-700', '已收票': 'bg-blue-100 text-blue-700', '已开具': 'bg-blue-100 text-blue-700' }
+                const sc = statusColors[inv.status] || 'bg-slate-100 text-slate-500'
                 return (
-                  <div key={t.id} className={`flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-50 transition-colors ${overdue ? 'border-l-2 border-l-red-400' : ''}`}>
-                    <span className="text-xs text-slate-700 truncate flex-1 min-w-0">{t.title}</span>
-                    <div className="w-16 h-1.5 rounded-full bg-slate-200 overflow-hidden flex-shrink-0"><div className={`h-full rounded-full ${bar} transition-all`} style={{ width: `${pct}%` }} /></div>
-                    <span className="text-[10px] text-slate-400 w-7 text-right">{pct}%</span>
+                  <div key={inv.id} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-50 transition-colors">
+                    <span className="text-xs text-slate-700 truncate flex-1 min-w-0">{inv.invoiceNo || '无号'}</span>
+                    <span className="text-[10px] text-slate-500 flex-shrink-0">¥{formatMoney(inv.amount)}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${sc}`}>{inv.status}</span>
                   </div>
                 )
               })}
             </div>
-          ) : <EmptyState text="暂无任务" />}
+          ) : <EmptyState text="暂无发票" />}
         </div>
         <div className={`${CARD} p-4`}>
           <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2"><Icon name="Package" size={14} /> 材料使用</h3>

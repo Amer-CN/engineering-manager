@@ -5,12 +5,15 @@ import { NAV_ITEMS, PAGE_IDS, getFilteredSidebarRoutes } from './routes'
 import { usePermission, RequirePermission, RequireAdmin } from './hooks/usePermission'
 import { useAuth, AuthProvider } from './hooks/useAuth'
 import { ToastProvider } from './hooks/useToast'
+import { useRowHoverOpacity } from './hooks/useRowHoverOpacity'
 
 // ── 路由级代码分割：每个页面独立 chunk ──
 const Dashboard = lazy(() => import('./components/Dashboard'))
 const Projects = lazy(() => import('./components/Projects'))
 const Contracts = lazy(() => import('./components/Contracts'))
 const Members = lazy(() => import('./components/Members'))
+const HRManagement = lazy(() => import('./components/HRManagement'))
+const LaborManagement = lazy(() => import('./components/LaborManagement'))
 const CostLedger = lazy(() => import('./components/CostLedger'))
 const Drawings = lazy(() => import('./components/Drawings'))
 const Partners = lazy(() => import('./components/Partners'))
@@ -35,6 +38,7 @@ type Page = typeof PAGE_IDS[number]
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, isLocked, currentUser, logout, lock } = useAuth()
+  useRowHoverOpacity() // 初始化表格行悬停 CSS 变量
 
   const [currentPage, setCurrentPage] = useState<Page>('dashboard')
   const [refreshTrigger, setRefreshTrigger] = useState(0)
@@ -62,6 +66,8 @@ const AppContent: React.FC = () => {
       case 'projects': return <Projects {...props} />
       case 'contracts': return <Contracts {...props} />
       case 'members': return <Members {...props} />
+      case 'hr': return <HRManagement />
+      case 'labor': return <LaborManagement {...props} />
       case 'expenses': return <CostLedger />
       case 'costLedger': return <CostLedger />
       case 'drawings': return <Drawings {...props} />

@@ -206,6 +206,7 @@ const Users: React.FC = () => {
           onChange={setActiveTab}
           tabs={[
             { key: 'user_list', label: '用户列表', icon: 'Users' },
+            { key: 'role_permissions', label: '角色权限', icon: 'Shield' },
             { key: 'audit_logs', label: '操作日志', icon: 'ClipboardList' },
           ]}
         />
@@ -332,7 +333,7 @@ const Users: React.FC = () => {
               </thead>
               <tbody>
                 {users.map(user => (
-                  <tr key={user.id} className="border-b border-slate-100 hover:bg-slate-50">
+                  <tr key={user.id} className="border-b border-slate-100 table-row-hover">
                     <td className="py-4 px-6 font-medium text-slate-800">{user.username}</td>
                     <td className="py-4 px-6">{user.displayName}</td>
                     <td className="py-4 px-6">

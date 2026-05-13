@@ -73,7 +73,7 @@ export default function WageManagement() {
         window.electronAPI.getWorkerTeams(),
       ])
       if (projectsRes.success && projectsRes.data) setProjects(projectsRes.data.filter((p: Project) => p.status !== 'archived'))
-      if (membersRes.success && membersRes.data) setMembers(membersRes.data)
+      if (membersRes.success && membersRes.data) setMembers((membersRes.data as Member[]).filter(m => m.memberType === 'worker'))
       if (teamsRes.success && teamsRes.data) setWorkerTeams(teamsRes.data)
     } catch (error) { console.error('加载基础数据失败:', error) }
     finally { setLoading(false) }

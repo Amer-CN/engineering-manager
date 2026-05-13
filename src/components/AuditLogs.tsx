@@ -1,22 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { 
-  AuditLog, 
-  AuditAction, 
-  AuditLevel, 
-  queryAuditLogs, 
-  getAuditStats,
-  exportAuditLogsToJson,
-  exportAuditLogsToCsv,
-  clearOldLogs,
-  AuditStats
+import {
+  AuditLog, AuditAction, AuditLevel,
+  queryAuditLogs, getAuditStats, exportAuditLogsToJson,
+  exportAuditLogsToCsv, clearOldLogs, AuditStats
 } from '../utils/audit'
 import { usePermission } from '../hooks/usePermission'
+import { useAuditLogFilters } from '../hooks/useAuditLogFilters'
 import { Icon } from './ui/Icon'
 import { AuditStatsPanel } from './AuditStatsPanel'
 import { AuditFilterBar } from './AuditFilterBar'
 import { AuditDetailModal } from './AuditDetailModal'
 
-// 操作类型标签配置
+const PAGE_SIZE = 20
+
 const actionConfig: Record<AuditAction, { label: string; color: string; bgColor: string }> = {
   create: { label: '创建', color: 'text-green-700', bgColor: 'bg-green-100' },
   read: { label: '查看', color: 'text-blue-700', bgColor: 'bg-blue-100' },
@@ -31,175 +27,68 @@ const actionConfig: Record<AuditAction, { label: string; color: string; bgColor:
   unlock: { label: '解锁', color: 'text-slate-700', bgColor: 'bg-slate-100' },
 }
 
-// 资源类型中文映射
 const resourceLabels: Record<string, string> = {
-  projects: '项目',
-  members: '人员',
-  tasks: '任务',
-  materials: '材料',
-  expenses: '费用',
-  costLedger: '成本台账',
-  incomeContracts: '收入合同',
-  expenseContracts: '支出合同',
-  partners: '合作单位',
-  invoices: '发票',
-  payments: '收款记录',
-  settlements: '结算单',
-  drawings: '图纸',
-  workerTeams: '班组',
+  projects: '项目', members: '人员', tasks: '任务', materials: '材料',
+  expenses: '费用', costLedger: '成本台账', incomeContracts: '收入合同',
+  expenseContracts: '支出合同', partners: '合作单位', invoices: '发票',
+  payments: '收款记录', settlements: '结算单', drawings: '图纸', workerTeams: '班组',
 }
 
-// 格式化时间戳
 const formatTimestamp = (timestamp: string) => {
   const date = new Date(timestamp)
-  return {
-    date: date.toLocaleDateString('zh-CN'),
-    time: date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-  }
+  return { date: date.toLocaleDateString('zh-CN'), time: date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) }
 }
 
-interface AuditLogsProps {
-  refresh?: () => void
-  embedded?: boolean
-}
+interface AuditLogsProps { refresh?: () => void; embedded?: boolean }
 
 export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }) => {
   const { can } = usePermission()
-  const [logs, setLogs] = useState<AuditLog[]>([])
-  const [total, setTotal] = useState(0)
-  const [page, setPage] = useState(1)
-  const [pageSize] = useState(20)
-  const [totalPages, setTotalPages] = useState(1)
-  
-  // 筛选条件
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
-  const [filterAction, setFilterAction] = useState<AuditAction | ''>('')
-  const [filterResource, setFilterResource] = useState('')
-  const [filterLevel, setFilterLevel] = useState<AuditLevel | ''>('')
-  const [keyword, setKeyword] = useState('')
-  
-  // 统计
+  const f = useAuditLogFilters()
+  const [pagedData, setPagedData] = useState({ logs: [] as AuditLog[], total: 0, totalPages: 1 })
   const [statsView, setStatsView] = useState<{ data: AuditStats | null; visible: boolean }>({ data: null, visible: false })
-  
-  // 详情模态框
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null)
 
-  // 加载日志
   const loadLogs = useCallback(async () => {
-    const result = await queryAuditLogs({
-      startDate: startDate || undefined,
-      endDate: endDate || undefined,
-      action: filterAction || undefined,
-      resource: filterResource || undefined,
-      level: filterLevel || undefined,
-      keyword: keyword || undefined,
-      page,
-      pageSize,
-    })
+    const result = await queryAuditLogs({ ...f.filterParams, page: f.page, pageSize: PAGE_SIZE })
+    setPagedData({ logs: result.items, total: result.total, totalPages: result.totalPages })
+  }, [f.page, f.filterParams])
 
-    setLogs(result.items)
-    setTotal(result.total)
-    setTotalPages(result.totalPages)
-  }, [startDate, endDate, filterAction, filterResource, filterLevel, keyword, page, pageSize])
+  useEffect(() => { loadLogs() }, [loadLogs])
 
-  // 加载统计
-  const loadStats = async () => {
-    const statsData = await getAuditStats(30) // 近30天统计
-    setStatsView({ data: statsData, visible: true })
-  }
+  const handleSearch = () => { f.setPage(1); loadLogs() }
 
-  useEffect(() => {
-    loadLogs()
-  }, [loadLogs])
-
-  // 搜索
-  const handleSearch = () => {
-    setPage(1)
-    loadLogs()
-  }
-
-  // 重置筛选
-  const handleReset = () => {
-    setStartDate('')
-    setEndDate('')
-    setFilterAction('')
-    setFilterResource('')
-    setFilterLevel('')
-    setKeyword('')
-    setPage(1)
-  }
-
-  // 导出
   const handleExport = async (format: 'json' | 'csv') => {
-    if (!can('audit_logs:export')) {
-      alert('您没有导出权限')
-      return
-    }
-
-    if (format === 'json') {
-      await exportAuditLogsToJson({
-        startDate: startDate || undefined,
-        endDate: endDate || undefined,
-        action: filterAction || undefined,
-        resource: filterResource || undefined,
-      })
-    } else {
-      await exportAuditLogsToCsv({
-        startDate: startDate || undefined,
-        endDate: endDate || undefined,
-        action: filterAction || undefined,
-        resource: filterResource || undefined,
-      })
-    }
+    if (!can('audit_logs:export')) { alert('您没有导出权限'); return }
+    if (format === 'json') await exportAuditLogsToJson(f.filterParams)
+    else await exportAuditLogsToCsv(f.filterParams)
   }
 
-  // 清理旧日志
   const handleClearOld = async () => {
     if (!confirm('确定要清理90天前的日志吗？此操作不可恢复。')) return
-
     const removed = await clearOldLogs(90)
     alert(`已清理 ${removed} 条旧日志`)
     loadLogs()
   }
 
-  // 查看详情
-  const handleViewDetail = (log: AuditLog) => {
-    setSelectedLog(log)
-  }
+  const { logs, total, totalPages } = pagedData
+  const { page } = f
 
   return (
     <>
-      {/* 统计面板 */}
       {statsView.visible && statsView.data && (
-        <AuditStatsPanel
-          statsData={statsView.data}
-          onClose={() => setStatsView(prev => ({ ...prev, visible: false }))}
-          actionConfig={actionConfig}
-        />
+        <AuditStatsPanel statsData={statsView.data} onClose={() => setStatsView(prev => ({ ...prev, visible: false }))} actionConfig={actionConfig} />
       )}
 
-      {/* 筛选器 */}
       <AuditFilterBar
-        startDate={startDate}
-        endDate={endDate}
-        filterAction={filterAction}
-        filterResource={filterResource}
-        filterLevel={filterLevel}
-        keyword={keyword}
+        startDate={f.startDate} endDate={f.endDate} filterAction={f.filterAction}
+        filterResource={f.filterResource} filterLevel={f.filterLevel} keyword={f.keyword}
         total={total}
-        onStartDateChange={setStartDate}
-        onEndDateChange={setEndDate}
-        onFilterActionChange={setFilterAction}
-        onFilterResourceChange={setFilterResource}
-        onFilterLevelChange={setFilterLevel}
-        onKeywordChange={setKeyword}
-        onSearch={handleSearch}
-        onReset={handleReset}
-        resourceLabels={resourceLabels}
+        onStartDateChange={v => f.set('startDate', v)} onEndDateChange={v => f.set('endDate', v)}
+        onFilterActionChange={v => f.set('filterAction', v)} onFilterResourceChange={v => f.set('filterResource', v)}
+        onFilterLevelChange={v => f.set('filterLevel', v)} onKeywordChange={v => f.set('keyword', v)}
+        onSearch={handleSearch} onReset={f.reset} resourceLabels={resourceLabels}
       />
 
-      {/* 日志列表 */}
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
         {logs.length === 0 ? (
           <div className="p-12 text-center">
@@ -213,66 +102,34 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
               <table className="w-full">
                 <thead className="bg-slate-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">时间</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">用户</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">操作</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">资源</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">描述</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">级别</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">操作</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">时间</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">用户</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">操作</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">资源</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">描述</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">级别</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">操作</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {logs.map(log => {
                     const { date, time } = formatTimestamp(log.timestamp)
                     const action = actionConfig[log.action] || { label: log.action, color: 'text-slate-700', bgColor: 'bg-slate-100' }
-                    const resourceLabel = resourceLabels[log.resource] || log.resource
-                    
                     return (
-                      <tr key={log.id} className="hover:bg-slate-50">
+                      <tr key={log.id} className="table-row-hover">
+                        <td className="px-4 py-3"><div className="text-sm text-slate-800">{date}</div><div className="text-xs text-slate-400">{time}</div></td>
                         <td className="px-4 py-3">
-                          <div className="text-sm text-slate-800">{date}</div>
-                          <div className="text-xs text-slate-400">{time}</div>
+                          <div className="flex items-center gap-2"><div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-sm font-medium text-primary-700">{log.username.charAt(0).toUpperCase()}</div><span className="text-sm text-slate-700">{log.username}</span></div>
                         </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-sm font-medium text-primary-700">
-                              {log.username.charAt(0).toUpperCase()}
-                            </div>
-                            <span className="text-sm text-slate-700">{log.username}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${action.bgColor} ${action.color}`}>
-                            {action.label}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-slate-600">
-                          {resourceLabel}
-                          {log.resourceName && (
-                            <div className="text-xs text-slate-400">{log.resourceName}</div>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-200 max-w-xs truncate">
-                          {log.description}
-                        </td>
+                        <td className="px-4 py-3"><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${action.bgColor} ${action.color}`}>{action.label}</span></td>
+                        <td className="px-4 py-3 text-sm text-slate-600">{resourceLabels[log.resource] || log.resource}{log.resourceName && <div className="text-xs text-slate-400">{log.resourceName}</div>}</td>
+                        <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-200 max-w-xs truncate">{log.description}</td>
                         <td className="px-4 py-3 text-center">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                            log.level === 'error' ? 'bg-red-100 text-red-700' :
-                            log.level === 'warning' ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-blue-100 text-blue-700'
-                          }`}>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${log.level === 'error' ? 'bg-red-100 text-red-700' : log.level === 'warning' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'}`}>
                             {log.level === 'error' ? '错误' : log.level === 'warning' ? '警告' : '信息'}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-center">
-                          <button
-                            onClick={() => handleViewDetail(log)}
-                            className="px-3 py-1 text-xs text-primary-600 hover:bg-primary-50 rounded"
-                          >
-                            详情
-                          </button>
-                        </td>
+                        <td className="px-4 py-3 text-center"><button onClick={() => setSelectedLog(log)} className="px-3 py-1 text-xs text-primary-600 hover:bg-primary-50 rounded">详情</button></td>
                       </tr>
                     )
                   })}
@@ -280,73 +137,33 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
               </table>
             </div>
 
-            {/* 分页 */}
             <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between">
-              <div className="text-sm text-slate-500">
-                第 <span className="font-medium">{page}</span> / <span className="font-medium">{totalPages}</span> 页
-              </div>
+              <div className="text-sm text-slate-500">第 <span className="font-medium">{page}</span> / <span className="font-medium">{totalPages}</span> 页</div>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page <= 1}
-                  className="px-3 py-1 text-sm border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  上一页
-                </button>
+                <button onClick={() => f.setPage(Math.max(1, page - 1))} disabled={page <= 1} className="px-3 py-1 text-sm border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">上一页</button>
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                   const pageNum = Math.max(1, Math.min(totalPages - 4, page - 2)) + i
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setPage(pageNum)}
-                      className={`w-8 h-8 text-sm rounded ${
-                        pageNum === page
-                          ? 'bg-primary-600 text-white'
-                          : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100'
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  )
+                  return <button key={pageNum} onClick={() => f.setPage(pageNum)} className={`w-8 h-8 text-sm rounded ${pageNum === page ? 'bg-primary-600 text-white' : 'text-slate-700 hover:bg-slate-100'}`}>{pageNum}</button>
                 })}
-                <button
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  disabled={page >= totalPages}
-                  className="px-3 py-1 text-sm border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  下一页
-                </button>
+                <button onClick={() => f.setPage(Math.min(totalPages, page + 1))} disabled={page >= totalPages} className="px-3 py-1 text-sm border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">下一页</button>
               </div>
             </div>
           </>
         )}
       </div>
 
-      {/* 详情模态框 */}
-      {selectedLog && (
-        <AuditDetailModal
-          selectedLog={selectedLog}
-          onClose={() => setSelectedLog(null)}
-          actionConfig={actionConfig}
-          resourceLabels={resourceLabels}
-        />
-      )}
+      {selectedLog && <AuditDetailModal selectedLog={selectedLog} onClose={() => setSelectedLog(null)} actionConfig={actionConfig} resourceLabels={resourceLabels} />}
     </>
   )
 }
 
-const AuditLogs: React.FC<AuditLogsProps> = ({ refresh }) => {
-  return (
-    <div className="max-w-[1400px] mx-auto p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">操作日志</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">查看系统所有操作记录，追踪谁在什么时间做了什么</p>
-        </div>
-      </div>
-      <AuditLogsContent refresh={refresh} />
+const AuditLogs: React.FC<AuditLogsProps> = ({ refresh }) => (
+  <div className="max-w-[1400px] mx-auto p-6">
+    <div className="flex items-center justify-between mb-6">
+      <div><h1 className="text-2xl font-bold text-slate-800">操作日志</h1><p className="text-slate-500 dark:text-slate-400 mt-1">查看系统所有操作记录，追踪谁在什么时间做了什么</p></div>
     </div>
-  )
-}
+    <AuditLogsContent refresh={refresh} />
+  </div>
+)
 
 export default AuditLogs

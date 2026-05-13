@@ -35,20 +35,27 @@ function generateDailyStatus(yearMonth: string, _isStaff: boolean): Record<numbe
  */
 function computeFromDailyStatus(
   dailyStatus: Record<number, DayStatus>,
-  daysInMonth: number
-): { workDays: number; daysOff: number; isFullAttendance: boolean } {
+  daysInMonth: number,
+  startDay: number = 1
+): { workDays: number; daysOff: number; isFullAttendance: boolean; applicableDays: number } {
   let workDays = 0
   let daysOff = 0
-  for (let d = 1; d <= daysInMonth; d++) {
+  for (let d = startDay; d <= daysInMonth; d++) {
     const s = dailyStatus[d] || 'work'
-    if (s === 'work' || s === 'holiday') {
-      workDays++  // 出勤 + 法定节假日都算带薪
-    }
-    if (s === 'sick_leave' || s === 'personal_leave' || s === 'absent') {
-      daysOff++   // 只有病假/事假/缺勤才算缺勤
-    }
+    if (s === 'work' || s === 'holiday') workDays++
+    if (s === 'sick_leave' || s === 'personal_leave' || s === 'absent') daysOff++
   }
-  return { workDays, daysOff, isFullAttendance: daysOff <= 4 }
+  const applicableDays = daysInMonth - startDay + 1
+  return { workDays, daysOff, isFullAttendance: daysOff <= 4, applicableDays }
+}
+
+function getEntryDay(memberId: number, yearMonth: string): number {
+  if (!db.members) return 1
+  const member = db.members.find((m: any) => m.id === memberId)
+  if (!member?.entryDate) return 1
+  const [ey, em, ed2] = member.entryDate.split('-').map(Number)
+  const [cy, cm] = yearMonth.split('-').map(Number)
+  return (ey === cy && em === cm) ? ed2 : 1
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -170,7 +177,8 @@ ipcMain.handle('db:attendances:update', (_, record) => {
       let isFullAttendance = record.isFullAttendance ?? existing.isFullAttendance
 
       if (record.dailyStatus) {
-        const computed = computeFromDailyStatus(record.dailyStatus, daysInMonth)
+        const startDay = getEntryDay(existing.memberId, record.yearMonth || existing.yearMonth)
+        const computed = computeFromDailyStatus(record.dailyStatus, daysInMonth, startDay)
         workDays = computed.workDays
         daysOff = computed.daysOff
         isFullAttendance = computed.isFullAttendance
@@ -253,7 +261,8 @@ ipcMain.handle('db:attendances:generateDefaults', (_, projectId: number, yearMon
       const member = db.members.find((m: any) => m.id === memberId)
       const isStaff = member?.memberType === 'staff'
       const dailyStatus = generateDailyStatus(yearMonth, isStaff)
-      const computed = computeFromDailyStatus(dailyStatus, daysInMonth)
+      const startDay = getEntryDay(memberId, yearMonth)
+      const computed = computeFromDailyStatus(dailyStatus, daysInMonth, startDay)
 
       db.attendances.push({
         id: Date.now() + created,
@@ -274,6 +283,55 @@ ipcMain.handle('db:attendances:generateDefaults', (_, projectId: number, yearMon
     return { success: true, data: { count: created } }
   } catch (error: any) {
     log.error('Failed to generate default attendances:', error)
+    return { success: false, error: error.message }
+  }
+})
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 生成默认考勤 V2（支持 projectWorkerId — worker 专用）
+// ═══════════════════════════════════════════════════════════════════════════════
+
+ipcMain.handle('db:attendances:generateDefaultsV2', (_, projectId: number, yearMonth: string, projectWorkerIds: number[]) => {
+  if (!dbReady) return { success: false, error: 'Database not ready' }
+  try {
+    if (!db.attendances) db.attendances = []; if (!db.projectWorkers) db.projectWorkers = []
+    const daysInMonth = getDaysInMonth(yearMonth)
+    const now = new Date().toISOString()
+    let created = 0
+
+    for (const pwId of projectWorkerIds) {
+      const pw = db.projectWorkers.find((p: any) => p.id === pwId)
+      if (!pw || pw.status === 'left') continue
+
+      const exists = db.attendances.some(
+        (a: any) => a.projectWorkerId === pwId && a.yearMonth === yearMonth
+      )
+      if (exists) continue
+
+      const dailyStatus = generateDailyStatus(yearMonth, false)
+      const startDay = pw.workerId ? getEntryDay(pw.workerId, yearMonth) : 1
+      const computed = computeFromDailyStatus(dailyStatus, daysInMonth, startDay)
+
+      db.attendances.push({
+        id: Date.now() + created,
+        memberId: undefined,
+        projectWorkerId: pwId,
+        projectId,
+        yearMonth,
+        workDays: computed.workDays,
+        daysOff: computed.daysOff,
+        isFullAttendance: computed.isFullAttendance,
+        dailyStatus,
+        createdAt: now,
+        updatedAt: now
+      })
+      created++
+    }
+
+    if (created > 0) saveDatabase()
+    return { success: true, data: { count: created } }
+  } catch (error: any) {
+    log.error('Failed to generate default attendances V2:', error)
     return { success: false, error: error.message }
   }
 })

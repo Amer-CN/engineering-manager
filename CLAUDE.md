@@ -1,6 +1,6 @@
 # CLAUDE.md - 工程管家项目约定
-> 项目状态：成本台账模块 + 级联删除加固 + 旧成本管理模块清理 + 模板管理独立模块 + 变量自动识别 + 业务模块模板集成
-> 最后同步：2026-05-11（check-rules 7→0 硬违规清零 + EmptyState 组件新建 + Inter 字体栈修复 + WorkerSection React.lazy + /benchmark 基线 + 设计审计 A 级）
+> 项目状态：人事管理+工人管理部门化拆分（v2.6.3 考勤时间线+薪资历史+入职感知+工人管理数据管线修复）
+> 最后同步：2026-05-13（工人管理数据管线接通 getProjectWorkers、三Tab统一、班组工人管理、WorkerPoolForm、薪资历史回填迁移）
 
 ## 🌐 gstack 浏览器工具集
 - **Web 浏览**：使用 gstack 的 `/browse` skill 进行所有网页浏览操作，**严禁使用 `mcp__claude-in-chrome__*` 工具**
@@ -19,10 +19,41 @@
 
 ## 📁 核心模块架构
 
-### 员工管理
-- 以「班组」为中心，支持人员流动；班组必须关联项目
-- 工人状态：active / left；调动记录自动创建
-- 管理人员表格视图（7列），状态下拉直切；农民工卡片视图
+### 人事管理（v2.6.3 — 考勤时间线+薪资历史+入职感知）
+- **模块位置**：侧边栏「核心业务」分组，路由 `/hr`，图标 UserCog
+- **职能范围**：公司管理人员（memberType='staff'）的档案、考勤、月薪薪酬
+- **5 个 Tab**：看板（5 KPI 含今日在岗+实际薪酬）→ 人员档案（部门+职位字段，按部门/状态筛选，OCR 自动填入身份证信息，薪资历史弹窗）→ 考勤管理（摘要列表优先+AttendanceDetail 子页面+考勤时间线子页面+5状态画笔+入职守卫+删除/批量删除+生成默认考勤+导出Excel）→ 薪酬管理（月薪制+考勤→薪酬流水线+就绪指示器+入职守卫+补助列）→ 部门管理（CRUD + 人数统计 + 删除守卫+PositionEditor）
+- **考勤 UX 模式**：摘要列表 → 点击姓名 → AttendanceTimeline 子页面（年度分组时间线，年份筛选，月度卡片网格，年度汇总统计）；点击「编辑」→ AttendanceDetail 子页面（紧凑 7 列日历网格，入职前日期灰底禁操作，Shift+点击批量涂色，右键循环切换，附件上传/预览/删除，删除按钮）
+- **考勤时间线**：`AttendanceTimeline.tsx`（212行），按年分组显示所有考勤月份，每年展开显示月度卡片+出勤/缺勤/全勤率汇总，年份筛选 pill，点击月份进入 AttendanceDetail，无记录自动创建默认考勤
+- **入职日期感知**：`computeAttendanceSummary()` 新增 `startDay` 参数，考勤统计只计入职日后的天数；AttendanceDetail 日历上入职前日期灰色不可操作；薪酬计算对月中入职永远按比例（不适用全勤免扣）
+- **薪酬守卫**：松耦合——已打考勤者正常生成，未打考勤者自动跳过（不再阻止全部），工具栏显示"考勤就绪: N/M（未打考勤者自动跳过）"
+- **薪资历史**：`db.salaryHistory` 集合（memberId/effectiveDate/baseSalary/subsidy/subsidyNote/note），`salary-history.ts` IPC（list/create/delete/getEffective），`SalaryHistoryModal.tsx` 弹窗查看/新增/编辑/删除，新建成员 IPC 层自动创建首条记录，薪酬计算 `getEffectiveSalary(memberId, yearMonth)` 按月份匹配对应时段的薪资
+- **入职守卫**：`entryDate`（优先）或 `createdAt.split('T')[0]`（回退）晚于选中月份最后一天的员工不显示
+- **职位编辑器**：`PositionEditor.tsx`（63行），单行输入+添加按钮+token 移除，去掉了拖拽/重命名/预设/批量
+- **数据模型**：`db.departments`（部门 CRUD，含 memberCount 计算），`db.salaryHistory`（薪资变动记录），`db.members.departmentId` + `db.members.position` + `db.members.entryDate`
+- **共享常量**：`src/constants/attendance.ts` — STATUS_META / summaryDot / summaryLabel / computeAttendanceSummary()，HR 和工人模块统一导入
+- **考勤/薪酬**：走 memberId 路径，数据源过滤 memberType='staff'，独立于工人考勤/薪酬
+- **迁移向导**：首次访问若存在无部门的 staff → 黄色横幅提示 + 批量分配弹窗
+- **核心文件**：`HRManagement.tsx`（页面容器），`features/hr/HRDashboard.tsx`, `StaffList.tsx`, `StaffAttendance.tsx`, `StaffPayroll.tsx`, `DepartmentManager.tsx`, `PositionEditor.tsx`, `AttendanceTimeline.tsx`, `SalaryHistoryModal.tsx`, `config.tsx`，`src/constants/attendance.ts`（共享），`AttendanceDetail.tsx`，`electron/ipc-handlers/salary-history.ts`，`electron/ipc-handlers/attendance.ts`，`hooks/useDepartments.ts`，`departments.ts`（IPC）
+- **设计 Token**：indigo-600 主色（区别于项目模块的 blue 色系）
+
+### 工人管理（原「员工管理」改名，v2.6.0）
+- **模块位置**：侧边栏「核心业务」分组，路由 `/labor`，图标 HardHat
+- **职能范围**：农民工班组/档案/导入/调组/离场，工人工资入口（跳转旧 `/wages` 页面）
+- **页面容器**：`LaborManagement.tsx`（~170行，从 Members.tsx 剥离管理人员 Tab，仅保留 WorkerSection + Excel 导入 + WorkerPicker 入口）
+- **保持不变**：WorkerSection.tsx 及其子组件、导入逻辑、班组操作、调动/离场流程
+- **原 `/members` 路由**：保留 PageId 但隐藏侧边栏（showInSidebar: false），作为重定向兼容过渡 1 版本
+
+### 全局工人信息库（v2.5.0 新增）
+- **双表分离**：`db.workers`（纯身份——name/idCard/gender/birthDate/ethnicity/phone/address）+ `db.projectWorkers`（用工关系——workerId/projectId/teamId/dailyWage/workerType/entryDate/status）
+- 同一工人可在多个项目并行，不同项目里工种/日工资独立
+- **WorkerPickerModal**：班组管理「从工人库添加」→ 搜索+批量勾选+逐行编辑工种日工资
+- **导入去重**：身份证号自动检测 `db.workers` → 已存在蓝色标记 → 跳过 Worker 创建仍可创建 ProjectWorker
+- **导入逻辑**：班组/日工资为可选项——只填姓名+身份证号即入库，填班组才分配项目
+- **10 个 IPC 通道**：`db:workers:*` (5) + `db:projectWorkers:*` (5)，含 batchCreate 事务校验
+- **5 步自动迁移**：`migrateDatabase()` 中旧 Member(worker)→Worker+ProjectWorker，含工资/考勤回填+审计标记
+- **工资计算双路径**：staff 走 memberId，worker 走 projectWorkerId；`generateProjectWages` 重写
+- 核心文件：`workers.ts`（IPC）, `WorkerPickerModal.tsx`, `useWorkerImport.ts`, `useMemberOperations.ts`, `WorkerSection.tsx` 
 
 ### 发票管理
 - **票种**（`InvoiceKind`）：`paper_regular` / `paper_special` / `electronic_regular` / `electronic_special`
@@ -38,10 +69,10 @@
 
 ### 项目管理
 - 项目列表：投资组合概览横幅（深色渐变+4 KPI）+ 项目卡片网格（含 SVG 健康环）
-- 详情页 7 Tab：总览（指挥中心）、合同台账、发票、人员、任务、费用明细（成本台账分析看板）、关联单位
-- **项目指挥中心**：Bento网格，RadialBarChart健康度+4KPI+告警区（逾期/超支/收款率低）+收支BarChart+成本PieChart
+- 详情页 6 Tab：总览（指挥中心）、合同台账、发票、人员、费用明细（成本台账分析看板）、关联单位
+- **项目指挥中心**：Bento网格，RadialBarChart健康度+4KPI+告警区（待处理发票/超支/收款率低）+收支BarChart+成本结构PieChart（人材机，数据来自成本台账）
 - **人员管理 Tab**：从 `db.projectMembers` 多对多关联表管理，支持添加/移除
-- 领域色系统：收入=emerald / 支出=red / 任务=blue / 合作方=violet
+- 领域色系统：收入=emerald / 支出=red / 合作方=violet
 
 ### 结算办理
 - **状态**：未办理 → 已办理（自动核验付款+发票）→ 已归档；旧状态自动迁移
@@ -58,29 +89,31 @@
 - **编辑模式**：下载→编辑→上传；文件走统一文件服务 `uploads/模板/文件/`
 - 核心文件：`Templates.tsx`, `TemplateDashboard.tsx`, `TemplateList.tsx`, `TemplateForm.tsx`, `TemplateCard.tsx`, `TemplatePreview.tsx`, `TemplateGenerate.tsx`, `TemplateSelectorModal.tsx`, `config.tsx`, `templates.ts`（IPC）
 
-### 工资管理
-- **架构**：Dashboard（统计+项目卡片）→ WageCycleDetail（考勤管理/项目工资表/工资发放记录 3 Tab）
-- **考勤系统**：按月生成，5 种日状态（出勤/法定假/病假/事假/缺勤），AttendanceDetail 画笔模式日历（选状态→点日期涂色，Shift批量，右键循环）
-- **计算规则**：工人日薪制 `日薪×出勤天数+奖金-扣款`；管理人员月薪制（全勤=休假≤4天），社保公积金 `companyCoversSocial`=true 时公司承担
-- **成员来源**：管理人员从 `db.projectMembers` + 项目经理单独加入，工人通过班组→项目链
+### 工资管理（v2.6.0 — 降级为工人专用入口）
+- **侧边栏**：隐藏（showInSidebar: false），通过工人管理模块按钮跳转或直接 URL `/wages`
+- **职能范围**：仅工人日薪制工资/考勤（管理人员月薪制已移至人事管理模块）
+- **架构不变**：Dashboard（统计+项目卡片）→ WageCycleDetail（考勤管理/项目工资表/工资发放记录 3 Tab）
+- **考勤系统**：按月生成，5 种日状态，AttendanceDetail 画笔模式日历
+- **计算规则**：工人日薪制 `日薪×出勤天数+奖金-扣款`
 - **工资发放记录**：应发工资(只读) + 实发金额/发放日期(手动) + 差额(自动)
-- 数据表：`db.wages` / `db.attendances` / `db.projectMembers`
-- 核心文件：`WageManagement.tsx`, `WageCycleDetail.tsx`, `AttendanceTab.tsx`, `WageTableTab.tsx`, `WageRecordsTab.tsx`, `attendance.ts`, `wages.ts`, `members.ts`
+- 数据表：`db.wages`（projectWorkerId 路径）/ `db.attendances` / `db.projectWorkers`
+- 核心文件：`WageManagement.tsx`, `WageCycleDetail.tsx`, `AttendanceTab.tsx`, `WageTableTab.tsx`, `WageRecordsTab.tsx`, `attendance.ts`, `wages.ts`
 
 ### 成本台账（独立顶级模块）
 - **目的**：追踪挂靠施工项目的真实资金流（含灰色支出、垫资、股东融资等明面账不覆盖的资金流）
 - **架构**：双入口，角色分离 — 侧边栏独立页面供财务人员录入/查账（Dashboard→项目详情→列表+新增/编辑/删除+Excel级筛选）；ProjectDetail"费用明细"Tab 供领导查看只读分析看板（KPI+饼图+月度趋势柱状图+TOP10排名，无数据录入）
-- **数据模型**：`db.costLedger`（台账条目）+ `db.costLedgerCategories`（用户自定义分类），条目字段含 voucherNo(按项目自增凭证号)、direction(expense/income)、category(分类code)、counterparty(往来单位/个人)、channel、linkedInvoiceId(可选)、notes(备注)、attachments
-- **分类系统**：内置 12 种分类（9支出+3收入）+ 用户可自定义增删改；`CategoryManager.tsx` 双Tab管理弹窗（内置不可删/自定义CRUD/恢复默认）；`useCostLedgerCategories` hook 统一加载；饼图颜色动态读取分类色值
+- **UI 设计**：首页 Dashboard 对标项目管理看板（Hero 横幅+framer-motion 动画+CountUp 弹簧加速+KPI 卡片+CARD token），项目子页面头部对标合同管理（ArrowLeft 图标返回+amber 竖条色标+双行标题），项目卡片三层信息结构（方向色条+收支双栏+净额汇总底条）
+- **数据模型**：`db.costLedger`（台账条目）+ `db.costLedgerCategories`（分类，含 `level1?` 一级归属），条目字段含 voucherNo(按项目自增凭证号)、direction(expense/income)、category(分类code)、counterparty(往来单位/个人)、channel、linkedInvoiceId(可选)、notes(备注)、attachments
+- **分类系统**：二级层级：支出 5 组 18 码（业务费/直接工程费/现场管理费/对公服务及前期投入费/财务及其他费）+ 收入 4 组 7 码（投资款/项目回款/退款/其他收入）+ 用户可自定义增删改；`CATEGORY_HIERARCHY`（含 `direction` 字段）定义完整二级→一级映射；`getLevel1Groups(direction)`/`getLevel1GroupsMerged(categories,direction)` 方向感知分组；`getLevel1ForCode(code,categories)` 优先 DB `level1`→回退 hierarchy；`HIERARCHY_GROUP_NAMES` 内置分组名常量；`CategoryManager.tsx` 双级管理 UI（一级分组卡片+二级子项+新建一级/二级+编辑删除）；`CategoryPicker.tsx` 一级→二级联动选择器；`ensureCategories()` 自动迁移旧扁平分类；列表工具栏「二级/一级」切换+localStorage 持久化
 - **业主回款不出现在成本台账中**（业主回款是明面账工程款）
 - **渠道标签**：按方向动态切换 — 支出→支付渠道，收入→收入渠道
 - **IPC 通道**：11 个 — 台账条目 6 个（`:list` / `:create` / `:update` / `:delete` / `:summary` / `:deleteByProject`）+ 分类管理 5 个（`:categories:list` / `:create` / `:update` / `:delete` / `:reset`）
 - **级联删除**：项目删除时自动清理关联台账记录（`db:costLedger:deleteByProject`）
-- **列表布局**：10 列表格（凭证号/日期/方向/分类/往来单位个人/渠道/金额/摘要/备注/操作），`table-fixed border-collapse` 线框连续，窄列定宽+宽列均分剩余空间不留白，列宽基于真实 Excel 数据（熊会对账775行）实测调优
-- **筛选系统**：Excel 风格列头漏斗弹出面板（`ColumnFilter.tsx`，Portal 渲染防遮挡），对方/渠道 checkbox 多选(全选/清除)，日期快捷按钮(本月/近3月/本年)+区间，金额区间，凭证号/摘要文本搜索，多列 AND 组合，筛选汇总跟随结果
-- **表单子组件**：CategoryPicker（方向驱动+自定义分类+管理入口）/ ChannelInput（最近使用缓存+方向感知 placeholder）/ InvoiceLinker（发票搜索）/ FileUploader（延后补传）；日期字段支持粘贴多种格式（YYYY-MM-DD / YYYY/MM/DD / YYYY.MM.DD / YYYYMMDD / 中文年月日）
+- **列表布局**：10 列表格（凭证号/日期/方向/分类/往来单位个人/渠道/金额/摘要/备注/操作），`table-fixed border-collapse` 线框连续，窄列定宽+宽列均分剩余空间不留白，列宽基于真实 Excel 数据（熊会对账775行）实测调优；工具栏「打印」按钮→新窗口打印（A4横版+底部收支汇总），「导出Excel」按钮→xlsx 导出（10列+列宽优化，按当前筛选结果）
+- **筛选系统**：7 列统一 Excel 风格搜索+勾选（`ColumnFilter.tsx`，Portal 渲染防遮挡，通用 CheckMeta 模式），搜索框实时过滤选项列表→勾选筛选（全选/清除），日期保留快捷按钮（本月/近3月/本年）勾选对应日期，分类筛选联动一级/二级切换按钮，多列 AND 组合，筛选汇总跟随结果
+- **表单子组件**：CategoryPicker（方向驱动+自定义分类+管理入口）/ ChannelInput（最近使用缓存+方向感知 placeholder）/ InvoiceLinker（发票搜索）/ FileUploader（延后补传+预览：图片弹窗大图查看，PDF等调用系统默认程序）；日期字段支持粘贴多种格式
 - **文件存储**：`uploads/<项目名>/成本台账/凭证/`
-- 核心文件：`CostLedger.tsx`, `CostLedgerDashboard.tsx`, `CostLedgerList.tsx`, `CostLedgerForm.tsx`, `ColumnFilter.tsx`, `CostLedgerAnalytics.tsx`, `CostLedgerTab.tsx`, `CostLedgerProjectDetail.tsx`, `CategoryPicker.tsx`, `CategoryManager.tsx`, `useCostLedgerCategories.ts`, `cost-ledger.ts`（IPC）
+- 核心文件：`CostLedger.tsx`, `CostLedgerDashboard.tsx`, `CostLedgerList.tsx`, `CostLedgerForm.tsx`, `ColumnFilter.tsx`, `CostLedgerAnalytics.tsx`, `CostLedgerTab.tsx`, `CostLedgerProjectDetail.tsx`, `CategoryPicker.tsx`, `CategoryManager.tsx`, `printExport.ts`（打印+导出Excel）, `useCostLedgerCategories.ts`, `cost-ledger.ts`（IPC）, `cost-ledger-categories-data.ts`（内置分类种子数据）
 
 ### 其他模块
 - **仓库管理**：物料库 / 出入库记录 / 项目材料（整合材料管理）
@@ -124,7 +157,7 @@ uploads/
 | `electron/database.ts` | `migrateFileStorageV1()` 迁移旧 base64 → 磁盘 |
 
 ## 🧰 工具函数与常量
-- **常量** (`src/constants/`)：`member.ts`(工种/角色/性别)、`regions.ts`(省市区)、`permissions.ts`(角色/权限标签)
+- **常量** (`src/constants/`)：`member.ts`(工种/角色/性别)、`attendance.ts`(考勤状态/色标/摘要计算)、`regions.ts`(省市区)、`permissions.ts`(角色/权限标签)
 - **工具** (`src/utils/`)：`date.ts`(日期)、`format.ts`(金额/ID)、`validate.ts`(手机/身份证/邮箱)、`audit.ts`(审计)、`export-import.ts`(导入导出)、`projectHealth.ts`(健康度评分)
 - 使用规范：常量从 `src/constants/` 导入，工具从 `src/utils/` 导入
 
@@ -135,11 +168,11 @@ uploads/
 
 ## 🔢 版本管理
 - **语义化版本**：patch(Bug修复) / minor(新功能模块) / major(架构级变更)
-- **自动迭代**：neat-freak PostToolUse hook → `scripts/auto-version-on-neat-freak.js`（stdin 条件判断 + 自动检测 major/minor/patch 级别）→ `bump-version.js`
-- **bump-version.js** 自动同步 6 处：`package.json` / `Sidebar.tsx` / `Login.tsx` / `Settings.tsx` / `CLAUDE.md` / `CHANGELOG.md`
-- 版本历史：`CHANGELOG.md`（1.0.0→1.19.0）+ Settings 更新日志浮窗
+- **手动迭代**：由开发者在使用 neat-freak 整理后手动更新版本号和 CHANGELOG.md
+- 版本号引用位置：`package.json` / `Sidebar.tsx` / `Login.tsx` / `Settings.tsx` / `SettingsChangelog.tsx` / `CLAUDE.md` / `CHANGELOG.md`
+- 版本历史：`CHANGELOG.md`（1.0.0→2.3.0）+ Settings 更新日志浮窗
 
-### 当前版本：v1.21.1
+### 当前版本：v2.6.1
 
 ## 🎨 UI 规范
 
@@ -156,7 +189,7 @@ Button(variants/sizes/iconOnly) / Input(status+leftSection/rightSection) / Modal
 - **原则**：spring 物理优先（stiffness≤200）、大元素禁 scale、装饰动画走 CSS @keyframes（合成器线程）、GPU 加速
 - **Sidebar**：入场 slide-in + layoutId 激活态弹簧滑动(spring 500/30) + nav stagger(0.03s) + whileHover 右移4px
 - **Login**：品牌区 stagger + 浮动光斑 CSS @keyframes + 表单卡片 fade-up + 错误 shake
-- **Dashboard**：CountUp(useMotionValue+useSpring stiffness:40) + KPI stagger+whileHover + recharts animationDuration=1200
+- **Dashboard**：CountUp(useMotionValue+useSpring stiffness:100) + KPI stagger+whileHover + recharts animationDuration=1200；KPI 卡片 6 列（项目/待办结算/成员/支出/发票/库存）；发票状态饼图 + 最近发票列表
 - **页面切换**：AnimatePresence mode="wait"、opacity 纯透明度（无 scale 防重绘）、duration 0.2s
 - **全局交互**：Button whileHover(1.03)+whileTap(0.97) / Card y:-3+boxShadow / Badge dot 呼吸脉冲 / DropdownMenu scale 0.95→1 / Toast spring 入场
 
@@ -200,19 +233,33 @@ Button(variants/sizes/iconOnly) / Input(status+leftSection/rightSection) / Modal
 | `db.templates` 模板集合 | 2026-05-07 | 模板管理独立模块，5 个 IPC handler（`db:templates:*`） |
 | `db.wages` + `db.attendances` | 2026-05-04 | 工资计算引擎 + 考勤系统（dailyStatus 五种日状态） |
 | `db.auditLogs` + `db.roles` | 2026-05-05 | 审计日志 IPC 持久化 + 角色权限编辑器 |
-| `ensureDatabaseFields()` 26 集合防御 | 2026-05-06 | 覆盖全部 `db.*` 集合，旧数据库缺字段时不再崩溃 |
+| `ensureDatabaseFields()` 27 集合防御 | 2026-05-06 | 覆盖全部 `db.*` 集合，旧数据库缺字段时不再崩溃 |
+| `db.salaryHistory` 薪资历史表 | 2026-05-13 | memberId/effectiveDate/baseSalary/subsidy/subsidyNote/note，追踪薪资变动，薪酬计算按月份匹配 |
+| `db.departments` 部门表 | 2026-05-12 | 部门 CRUD（名称+负责人），memberCount 计算字段，member.departmentId + member.position 新增 |
+| `migrateSalaryHistoryBackfill` | 2026-05-13 | 为已有 staff 成员自动创建初始 salaryHistory 记录，`_migrations.salaryHistoryBackfillV1` 防重复 |
 
 ### 模块架构变更
 | 变更 | 日期 | 说明 |
 |------|------|------|
+| 工人管理数据管线修复 | 2026-05-13 | loadData 改为 getProjectWorkers（不再用 getMembers），数据映射兼容旧 Member shape |
+| 工人管理三Tab统一 | 2026-05-13 | 班组管理/工人库/工资管理 三Tab内联，工资管理嵌入为子Tab |
+| 班组工人管理弹窗 | 2026-05-13 | TeamWorkerModal 查看/编辑/调组/移除班组内工人，WorkerPickerModal 批量设置 |
+| 工人库简化表单 | 2026-05-13 | WorkerPoolForm 仅身份字段，调用 createWorker/updateWorker，不涉及项目/班组 |
 | 模板管理独立顶级路由 | 2026-05-07 | 7 种分类 + 变量自动检测（mammoth 服务端）+ TemplateSelectorModal 业务集成 |
 | 工资管理重构 | 2026-05-06 | 对标 Projects→ProjectDetail 模式，Dashboard+WageCycleDetail(3 Tab) |
 | 结算办理重设计 | 2026-05-07 | 6 种细分类别 + 自动核验付款发票 + Excel 模板/灵活导入 + 多文件凭证 |
 | 合同看板重构 | 2026-05-07 | 看板首页+子页面模式，收支数据改用 paymentRecords |
 | 项目管理重设计 | 2026-05-06 | 8 文件 Bento网格+健康环+投资组合横幅+告警区，领导视角驾驶舱 |
 | 考勤每日状态改造 | 2026-05-05 | dailyStatus 字段 + AttendanceDetail 画笔模式日历 + 法定假不计缺勤 |
+| 全局工人信息库 | 2026-05-12 | db.workers + db.projectWorkers 双表分离，WorkerPickerModal，导入去重，工资考勤双路径 |
+| 人事+工人管理部门化拆分 | 2026-05-12 | 员工管理拆为 HRManagement + LaborManagement 双模块，新增 db.departments 部门管理，Members→Labor 改名，WageManagement 降级隐藏 |
 | 员工管理表格化 | 2026-05-06 | 管理人员卡片→Table + 内联状态下拉 + 批量删除；农民工保持卡片 |
+| 成本台账一二级分类重构 | 2026-05-11 | 支出 5 组 18 码 + 收入 4 组 7 码，CategoryPicker 联动选择器，CategoryManager 双级管理，DB 自动迁移 |
+| 成本台账筛选系统升级 | 2026-05-11 | 7 列统一搜索+勾选 Excel 风格，ColumnFilter CheckMeta 重构，分类筛选联动层级切换，Dashboard 英文标签修复 |
 | check-rules 清零 | 2026-05-11 | 7 硬违规→0：子组件提取 8 文件 + hook 提取 3 个，ContractPage 822→405，SettlementForm 714→314 |
+| 任务功能完整移除 | 2026-05-12 | 删除 Tasks.tsx / useTasks.ts / tasks.ts IPC；Dashboard 任务区域替换为发票+结算摘要；项目详情 7 Tab→6 Tab |
+| 项目成本结构数据管线修复 | 2026-05-12 | ProjectDetail 接入 getCostLedger，expenseByCategory 从台账实算；otherT 独立计算不依赖外部 total |
+| 健康度评分公式调整 | 2026-05-12 | 移除任务进度维度，预算控制 40% + 合同执行 30% + 发票管理 30% |
 
 ### 文件存储演进
 | 变更 | 日期 | 说明 |
@@ -242,15 +289,17 @@ Button(variants/sizes/iconOnly) / Input(status+leftSection/rightSection) / Modal
 | EmptyState 组件 | 2026-05-11 | 按 DESIGN.md 规范新建，接入 ContractPage/Drawings/ContractTemplates/InvoiceList |
 | Inter 字体栈修复 | 2026-05-11 | index.css 根 font-family 补 Inter 优先（DESIGN.md 规范对齐） |
 | WorkerSection 懒加载 | 2026-05-11 | React.lazy + Suspense 拆分 13KB chunk，Members 首屏 80→70KB |
+| 分类标签两行显示 + 合计行固定底部 | 2026-05-11 | CostLedgerList flex 链重构（flex-1 替代 h-full）；CostLedgerAnalytics/CostLedgerList line-clamp-2 防 -webkit-box 塌缩；Dashboard BarChart CategoryTick SVG tspan 两行 |
+| Hero 横幅装饰光点统一 | 2026-05-11 | 6 页 hero banner 统一呼吸光点动画（radial-gradient + 2×motion.div opacity/scale infinite），ContractDashboard / ProjectCommandCenter / ProjectDetail / ProjectList 补齐 |
+| Dashboard CountUp 弹簧加速 | 2026-05-11 | stiffness 40→100（2.5×）+ damping 25→20，数字滚动更快到位 |
 
 ### 工具链
 | 变更 | 日期 | 说明 |
 |------|------|------|
-| bump-version.js 自动迭代 | 2026-05-06 | patch/minor/major 三级，自动同步 6 处版本引用 + CLAUDE.md 去重 |
 | check-rules.js 代码规则 | 2026-05-06 | 文件行数上限/禁止复制/useState限制/类型安全/代码分割强制检查 |
-| neat-freak PostToolUse hook | 2026-05-06 | stdin 条件判断脚本 `auto-version-on-neat-freak.js`，自动检测 major/minor/patch 级别（关键词+统计启发） |
 | DB 安全加固 | 2026-05-06 | `initDatabase()` 解析失败先备份再建新库，防止数据丢失 |
 | /benchmark 基线 | 2026-05-11 | 构建产物性能基线：2.4MB dist / 33 chunks / 9.1s build / Grade A |
+| Superpowers skill 体系修复 | 2026-05-11 | 15 个 sub-skill 从 `superpowers/skills/` 嵌套提取到 `~/.claude/skills/` 根级（Claude Code 只扫描一层），同步到 CC Switch；清理失效 superpowers git repo |
 
 ## ⚠️ 红线
 - 不得直接修改 `electron/main.ts` 中的 IPC 处理器（已模块化到 `electron/ipc-handlers/`）
@@ -311,20 +360,6 @@ Button(variants/sizes/iconOnly) / Input(status+leftSection/rightSection) / Modal
 - [ ] 新页面是否用了 `React.lazy` 动态导入？
 - [ ] `npm run build` 是否通过？（含 `check-rules.js`）
 
-## 📋 本次会话
-<!-- bump-version.js 从此段落提取变更摘要到 CHANGELOG。每行一条，以 "- " 开头。会话结束后由 neat-freak 触发自动提取。 -->
-- 新增自定义分类管理模块：db.costLedgerCategories集合 + 5 IPC(list/create/update/delete/reset) + 内置12种种子 + 用户可增删改
-- 新增 CategoryManager 分类管理弹窗：双Tab(支出/收入) + 行内编辑名称颜色 + 内置不可删 + 恢复默认
-- 新增 useCostLedgerCategories hook：分类数据统一加载 + 方向过滤 + label/color查询
-- 新增备注列：CostLedgerList表头新增备注列，10列表格
-- 优化列表列宽：基于熊会对账775行真实Excel数据实测调优，窄列定宽(凭证96/日期84/方向60/分类96/渠道96/金额136/操作52)+宽列均分剩余(往来单位个人/摘要/备注)，border-collapse线框连续，金额font-mono右对齐
-- 优化 CategoryPicker：支持动态分类列表+内置/自定义分组+"管理分类..."入口
-- 优化 CostLedgerAnalytics：饼图颜色从分类数据动态读取
-- 优化 cell padding：px-2→px-3 列间呼吸感
-- 优化表头标签：对方→往来单位/个人
-- 修复"管理分类"按钮在项目详情页无响应（CategoryManager modal遗漏detail分支渲染）
-
----
 
 ## Skill routing
 

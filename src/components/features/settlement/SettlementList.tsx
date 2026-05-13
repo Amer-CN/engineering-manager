@@ -49,7 +49,7 @@ export const SettlementList: React.FC<SettlementListProps> = ({
         </thead>
         <tbody className="divide-y divide-slate-100">
           {settlements.map(s => (
-            <tr key={s.id} className="hover:bg-slate-50">
+            <tr key={s.id} className="table-row-hover">
               <td className="px-4 py-3">
                 <div className="flex items-center gap-2">
                   <span className={s.type === 'income' ? 'text-emerald-500' : 'text-red-500'}>

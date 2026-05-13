@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 统计 IPC 处理器
  */
 
@@ -14,15 +14,21 @@ ipcMain.handle('db:stats:getDashboard', () => {
   if (!dbReady) return { success: false, error: 'Database not ready' }
   try {
     const projectsCount = db.projects.length
-    const tasksCount = db.tasks.length
-    const tasksCompleted = db.tasks.filter((t: any) => t.status === 'completed').length
     const membersCount = db.members.length
     const materialsCount = db.materials.length
     const totalExpenses = (db.costLedger || []).filter((e: any) => e.direction === 'expense').reduce((sum: number, e: any) => sum + (e.amount || 0), 0)
+    const resolveCategoryLabel = (code: string): string => {
+      if (db.costLedgerCategories) {
+        const cat = db.costLedgerCategories.find((c: any) => c.code === code && c.isEnabled !== false)
+        if (cat) return cat.label
+      }
+      return code
+    }
     const expenseByCategory: Record<string, number> = {}
     for (const e of (db.costLedger || [])) {
       if (e.direction === 'expense') {
-        expenseByCategory[e.category || '其他'] = (expenseByCategory[e.category || '其他'] || 0) + (e.amount || 0)
+        const label = resolveCategoryLabel(e.category || '其他')
+        expenseByCategory[label] = (expenseByCategory[label] || 0) + (e.amount || 0)
       }
     }
     const settlementsCount = db.settlements?.length || 0
@@ -34,26 +40,10 @@ ipcMain.handle('db:stats:getDashboard', () => {
       .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, 5)
 
-    const recentTasks = [...db.tasks]
-      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 5)
-      .map((task: any) => {
-        const project = db.projects.find((p: any) => p.id === task.projectId)
-        const member = db.members.find((m: any) => m.id === task.assigneeId)
-        return {
-          ...task,
-          projectName: project?.name || '',
-          assigneeName: member?.name || ''
-        }
-      })
-
     return {
       success: true,
       data: {
         projectsCount,
-        tasksCount,
-        tasksCompleted,
-        taskCompletionRate: tasksCount > 0 ? Math.round((tasksCompleted / tasksCount) * 100) : 0,
         membersCount,
         materialsCount,
         totalExpenses,
@@ -62,8 +52,7 @@ ipcMain.handle('db:stats:getDashboard', () => {
         invoicesCount,
         inventoryItemsCount,
         inProgressProjects,
-        recentProjects,
-        recentTasks
+        recentProjects
       }
     }
   } catch (error: any) {

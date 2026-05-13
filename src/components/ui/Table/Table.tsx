@@ -119,7 +119,7 @@ export function Table<T extends Record<string, unknown>>({
                 <tr
                   key={getRowKey(record, index)}
                   className={`
-                    ${hoverable ? 'hover:bg-slate-50:bg-slate-700/50' : ''}
+                    ${hoverable ? 'table-row-hover' : ''}
                     ${onRowClick ? 'cursor-pointer' : ''}
                     transition-colors
                   `}

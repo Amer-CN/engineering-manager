@@ -92,7 +92,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
         </thead>
         <tbody className="divide-y divide-slate-100">
           {invoices.map(invoice => (
-            <tr key={invoice.id} className="hover:bg-slate-50">
+            <tr key={invoice.id} className="table-row-hover">
               <td className="px-4 py-3">
                 <div className="font-medium text-slate-800">{invoice.issueDate}</div>
                 <div className="flex items-center gap-1 mt-1">

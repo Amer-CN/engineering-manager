@@ -1,8 +1,6 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Icon } from '../../ui/Icon'
-import type { Member, WorkerTeam, WorkerType, WorkerStatus } from '@/types'
-
+import { Icon } from '../../ui/Icon'; import type { Member, WorkerTeam, WorkerType, WorkerStatus } from '@/types'
 export interface WorkerSectionProps {
     members: Member[]
     projects: Array<{ id: number; name: string }>
@@ -15,9 +13,16 @@ export interface WorkerSectionProps {
     onAddTeam: (name: string, projectId: number, leaderId?: number | null) => Promise<void>
     onEditTeam: (team: WorkerTeam) => void
     onDeleteTeam: (id: number) => void
-    onTransfer: (worker: Member) => void
-    onLeave: (worker: Member) => void
+    onTransfer: (worker: Member, toTeamId: number, toProjectId: number, transferDate: string, reason: string) => void
+    onLeave: (worker: Member, actualLeaveDate: string, remarks: string) => void
     onReEntry: (worker: Member) => void
+    onImportClick: () => void
+    onFileDrop: (file: File) => void
+    onAddFromPool?: (projectId: number, existingWorkerIds: Set<number>) => void
+    wageContent?: React.ReactNode
+    onManageWorkers?: (teamId: number, teamName: string, projectId: number) => void
+    onUpdateWorker?: (pwId: number, data: Record<string, any>) => void
+    onRemoveFromTeam?: (pwId: number) => void
 }
 
 export interface TeamFormData {
@@ -61,9 +66,10 @@ interface TeamCardProps {
   workerCount: number
   onEdit: () => void
   onDelete: () => void
+  onManageWorkers?: (teamId: number, teamName: string, projectId: number) => void
 }
 
-export function TeamCard({ team, workerCount, onEdit, onDelete }: TeamCardProps) {
+export function TeamCard({ team, workerCount, onEdit, onDelete, onManageWorkers }: TeamCardProps) {
   return (
     <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:border-orange-300 transition-colors">
       <div className="flex items-center justify-between mb-2">
@@ -80,6 +86,14 @@ export function TeamCard({ team, workerCount, onEdit, onDelete }: TeamCardProps)
       <div className="text-sm text-slate-500 dark:text-slate-400 mb-3">
         工人: {workerCount} 人      </div>
       <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+        {onManageWorkers && (
+          <button
+            onClick={() => onManageWorkers(team.id, team.name, team.projectId)}
+            className="flex-1 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors"
+          >
+            管理工人
+          </button>
+        )}
         <button
           onClick={onEdit}
           className="flex-1 px-3 py-1.5 text-sm text-orange-600 hover:bg-orange-50 rounded transition-colors"

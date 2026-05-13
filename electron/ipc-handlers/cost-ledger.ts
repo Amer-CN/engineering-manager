@@ -7,6 +7,7 @@
 
 import { ipcMain } from 'electron'
 import { db, dbReady, saveDatabase } from '../database'
+import { ensureCategories, seedBuiltinCategories } from './cost-ledger-categories-data'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // db:costLedger:list — 按项目列出台账记录（含发票状态解析）
@@ -164,45 +165,6 @@ ipcMain.handle('db:costLedger:deleteByProject', (_, projectId: number) => {
 })
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 内置分类种子数据
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const BUILTIN_CATEGORIES = [
-  { code: 'labor',             label: '人工',         direction: 'expense', color: '#f97316', sortOrder: 1 },
-  { code: 'material',          label: '材料',         direction: 'expense', color: '#3b82f6', sortOrder: 2 },
-  { code: 'equipment',         label: '机械',         direction: 'expense', color: '#8b5cf6', sortOrder: 3 },
-  { code: 'pre_project',       label: '前期费用',     direction: 'expense', color: '#6b7280', sortOrder: 4 },
-  { code: 'business_expense',  label: '业务费用',     direction: 'expense', color: '#ec4899', sortOrder: 5 },
-  { code: 'advance',           label: '垫资支出',     direction: 'expense', color: '#ef4444', sortOrder: 6 },
-  { code: 'salary',            label: '管理人员工资', direction: 'expense', color: '#14b8a6', sortOrder: 7 },
-  { code: 'tax',               label: '税金',         direction: 'expense', color: '#a855f7', sortOrder: 8 },
-  { code: 'other',             label: '其他',         direction: 'expense', color: '#9ca3af', sortOrder: 9 },
-  { code: 'shareholder_investment', label: '股东投资', direction: 'income', color: '#059669', sortOrder: 1 },
-  { code: 'financing',              label: '融资款',   direction: 'income', color: '#0891b2', sortOrder: 2 },
-  { code: 'advance_recovery',       label: '垫资回收', direction: 'income', color: '#2563eb', sortOrder: 3 },
-]
-
-function seedBuiltinCategories() {
-  if (!db.costLedgerCategories) db.costLedgerCategories = []
-  const now = Date.now()
-  return BUILTIN_CATEGORIES.map((c, i) => ({
-    ...c,
-    id: now + i,
-    isBuiltin: true,
-    isEnabled: true,
-  }))
-}
-
-function ensureCategories(): any[] {
-  if (!db.costLedgerCategories) db.costLedgerCategories = []
-  if (db.costLedgerCategories.length === 0) {
-    db.costLedgerCategories = seedBuiltinCategories()
-    saveDatabase()
-  }
-  return db.costLedgerCategories
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
 // db:costLedgerCategories:list — 列出所有分类（可按方向过滤）
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -225,11 +187,11 @@ ipcMain.handle('db:costLedgerCategories:list', (_, direction?: string) => {
 // db:costLedgerCategories:create — 新建自定义分类
 // ═══════════════════════════════════════════════════════════════════════════════
 
-ipcMain.handle('db:costLedgerCategories:create', (_, data: { label: string; direction: string; color?: string }) => {
+ipcMain.handle('db:costLedgerCategories:create', (_, data: { label: string; direction: string; color?: string; level1?: string }) => {
   if (!dbReady) return { success: false, error: 'Database not ready' }
   try {
     ensureCategories()
-    const { label, direction } = data
+    const { label, direction, level1 } = data
     if (!label || !label.trim()) return { success: false, error: '分类名称不能为空' }
     if (direction !== 'expense' && direction !== 'income') return { success: false, error: '方向无效' }
     if (label.length > 20) return { success: false, error: '分类名称不超过20字' }
@@ -243,7 +205,7 @@ ipcMain.handle('db:costLedgerCategories:create', (_, data: { label: string; dire
       .filter((c: any) => c.direction === direction)
       .reduce((max: number, c: any) => Math.max(max, c.sortOrder || 0), 0)
 
-    const newCat = {
+    const newCat: any = {
       id: Date.now(),
       code: `custom_${Date.now()}`,
       label: label.trim(),
@@ -253,6 +215,7 @@ ipcMain.handle('db:costLedgerCategories:create', (_, data: { label: string; dire
       isEnabled: true,
       sortOrder: maxOrder + 1,
     }
+    if (level1) newCat.level1 = level1
     db.costLedgerCategories.push(newCat)
     saveDatabase()
     return { success: true, data: newCat }

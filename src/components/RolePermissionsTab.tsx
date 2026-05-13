@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { useToastContext } from '../hooks/useToast'
-import { SYSTEM_ROLES, RESOURCE_LABELS, ACTION_LABELS } from '../types/permissions'
+import { SYSTEM_ROLES, RESOURCE_LABELS, ACTION_LABELS, getPermissionLabel } from '../types/permissions'
 import type { PermissionResource, PermissionAction, PermissionCode } from '../types/permissions'
 import { Icon } from './ui/Icon'
 
-const resourceKeys: PermissionResource[] = ['dashboard', 'projects', 'contracts', 'partners', 'members', 'wages', 'settlement', 'inventory', 'invoices', 'expenses', 'drawings', 'settings', 'users', 'roles', 'audit_logs']
+const resourceKeys: PermissionResource[] = ['dashboard', 'projects', 'contracts', 'partners', 'members', 'wages', 'settlement', 'inventory', 'invoices', 'costLedger', 'drawings', 'settings', 'users', 'roles', 'audit_logs']
 const actionKeys: PermissionAction[] = ['read', 'create', 'update', 'delete', 'export', 'import', 'approve']
 
 export const RolePermissionsTab: React.FC = () => {
@@ -68,7 +68,7 @@ export const RolePermissionsTab: React.FC = () => {
           <thead><tr className="border-b border-slate-200"><th className="px-3 py-2 text-left text-xs font-medium text-slate-500">资源</th>{actionKeys.map(a => <th key={a} className="px-2 py-2 text-center text-xs font-medium text-slate-500">{ACTION_LABELS[a] || a}</th>)}</tr></thead>
           <tbody className="divide-y divide-slate-100">
             {resourceKeys.map(resource => (
-              <tr key={resource} className="hover:bg-slate-50"><td className="px-3 py-2 text-sm font-medium text-slate-700">{RESOURCE_LABELS[resource] || resource}</td>
+              <tr key={resource} className="table-row-hover"><td className="px-3 py-2 text-sm font-medium text-slate-700">{RESOURCE_LABELS[resource] || resource}</td>
                 {actionKeys.map(action => {
                   const code = `${resource}:${action}` as PermissionCode
                   return (<td key={action} className="px-2 py-2 text-center"><input type="checkbox" checked={editingPermissions.includes(code)} onChange={() => togglePermission(code)} className="w-4 h-4 text-primary-600 rounded" /></td>)
@@ -92,7 +92,7 @@ export const RolePermissionsTab: React.FC = () => {
       {roles.map(role => (
         <div key={role.id} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-5 hover:shadow-md transition-all">
           <div className="flex items-start justify-between mb-3"><div><h4 className="font-semibold text-slate-800 dark:text-slate-100">{role.name}</h4><p className="text-xs text-slate-500 mt-0.5">{role.description}</p></div>{role.isSystem && <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-xs rounded-full">系统</span>}</div>
-          <div className="flex flex-wrap gap-1 mb-4">{role.permissions.slice(0, 8).map(p => <span key={p} className="px-2 py-0.5 bg-primary-50 dark:bg-primary-500/10 text-primary-700 dark:text-primary-400 text-xs rounded">{p}</span>)}{role.permissions.length > 8 && <span className="px-2 py-0.5 bg-slate-50 dark:bg-slate-700 text-slate-500 text-xs rounded">+{role.permissions.length - 8}</span>}</div>
+          <div className="flex flex-wrap gap-1 mb-4">{role.permissions.slice(0, 8).map(p => <span key={p} className="px-2 py-0.5 bg-primary-50 dark:bg-primary-500/10 text-primary-700 dark:text-primary-400 text-xs rounded">{getPermissionLabel(p as PermissionCode)}</span>)}{role.permissions.length > 8 && <span className="px-2 py-0.5 bg-slate-50 dark:bg-slate-700 text-slate-500 text-xs rounded">+{role.permissions.length - 8}</span>}</div>
           <div className="flex items-center gap-2 pt-3 border-t border-slate-100"><button onClick={() => startEditRole(role.id)} className="flex-1 px-3 py-1.5 text-xs font-medium bg-primary-600 text-white rounded-lg hover:bg-primary-700">编辑权限</button>{role.isSystem && <button onClick={() => handleResetRole(role.id)} className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg">重置</button>}</div>
         </div>
       ))}

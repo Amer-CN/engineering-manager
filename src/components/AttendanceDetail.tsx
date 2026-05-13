@@ -58,11 +58,24 @@ export default function AttendanceDetail({
 }: AttendanceDetailProps) {
   const { showToast } = useToastContext()
 
+  // 入职日：若 member.entryDate 落在当前月份内，取其日号；否则从1号开始
+  const [year, month] = yearMonth.split('-').map(Number)
+  const entryDay = (() => {
+    if (!member?.entryDate) return 1
+    const ed = member.entryDate // e.g. "2022-11-20"
+    const [ey, em, ed2] = ed.split('-').map(Number)
+    if (ey === year && em === month) return ed2
+    return 1
+  })()
+
   // 本地编辑状态
   const [dailyStatus, setDailyStatus] = useState<Record<number, DayStatus>>(() => {
     const existing = record.dailyStatus || {}
     const filled: Record<number, DayStatus> = {}
-    for (let d = 1; d <= daysInMonth; d++) filled[d] = existing[d] || 'work'
+    for (let d = 1; d <= daysInMonth; d++) {
+      if (d < entryDay) { filled[d] = existing[d] || 'work'; continue }
+      filled[d] = existing[d] || 'work'
+    }
     return filled
   })
   const [activeStatus, setActiveStatus] = useState<DayStatus>('work')
@@ -70,7 +83,6 @@ export default function AttendanceDetail({
   const [uploading, setUploading] = useState(false)
 
   // 当月第一天周几
-  const [year, month] = yearMonth.split('-').map(Number)
   const firstDow = new Date(year, month - 1, 1).getDay()
   const leadingBlanks = firstDow === 0 ? 6 : firstDow - 1
 
@@ -78,18 +90,20 @@ export default function AttendanceDetail({
   const today = new Date()
   const todayNum = (today.getFullYear() === year && today.getMonth() === month - 1) ? today.getDate() : null
 
-  // 统计
+  // 统计（仅计算入职日及之后的天数）
   const counts: Record<DayStatus, number> = { work: 0, holiday: 0, sick_leave: 0, personal_leave: 0, absent: 0 }
-  for (let d = 1; d <= daysInMonth; d++) counts[dailyStatus[d] || 'work']++
+  for (let d = entryDay; d <= daysInMonth; d++) counts[dailyStatus[d] || 'work']++
 
-  // 画笔：左键涂 activeStatus，右键循环切换
+  // 画笔：左键涂 activeStatus，右键循环切换（入职日前不可操作）
   const paintDay = (day: number) => {
+    if (day < entryDay) return
     setDailyStatus(prev => ({ ...prev, [day]: activeStatus }))
   }
 
   const paintRange = (from: number, to: number) => {
-    const start = Math.min(from, to)
+    const start = Math.max(Math.min(from, to), entryDay)
     const end = Math.max(from, to)
+    if (start > end) return
     setDailyStatus(prev => {
       const next = { ...prev }
       for (let d = start; d <= end; d++) next[d] = activeStatus
@@ -98,6 +112,7 @@ export default function AttendanceDetail({
   }
 
   const cycleDay = (day: number) => {
+    if (day < entryDay) return
     setDailyStatus(prev => {
       const current = prev[day] || 'work'
       const idx = CYCLE.indexOf(current)
@@ -108,6 +123,7 @@ export default function AttendanceDetail({
   const [shiftAnchor, setShiftAnchor] = useState<number | null>(null)
 
   const handleDayClick = (day: number, e: React.MouseEvent) => {
+    if (day < entryDay) return
     if (e.shiftKey && shiftAnchor !== null) {
       paintRange(shiftAnchor, day)
     } else {
@@ -189,9 +205,21 @@ export default function AttendanceDetail({
           </span>
           <span className="text-xs text-slate-400">{teamName}</span>
         </div>
-        <button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors">
-          {saving ? '保存中...' : '保存'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={async () => {
+            if (!confirm(`确认删除 ${record.memberName || member?.name || '该员工'} ${yearMonth} 的考勤记录吗？此操作不可撤销。`)) return
+            try {
+              const result = await window.electronAPI.deleteAttendance(record.id)
+              if (result.success) { showToast('已删除', 'success'); onSaved(); onBack() }
+              else showToast(result.error || '删除失败', 'error')
+            } catch (e: any) { showToast(e?.message || '删除失败', 'error') }
+          }} className="px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg text-sm transition-colors" title="删除此考勤记录">
+            <Icon name="Trash2" size={16} />
+          </button>
+          <button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors">
+            {saving ? '保存中...' : '保存'}
+          </button>
+        </div>
       </div>
 
       {/* 主体卡片 */}
@@ -248,25 +276,25 @@ export default function AttendanceDetail({
             {Array.from({ length: leadingBlanks }, (_, i) => <div key={`b-${i}`} />)}
             {Array.from({ length: daysInMonth }, (_, i) => {
               const day = i + 1
+              const isBeforeEntry = day < entryDay
               const status = dailyStatus[day] || 'work'
-              const col = CELL[status]
+              const col = isBeforeEntry ? { bg: 'bg-slate-100', text: 'text-slate-300', ring: 'ring-slate-200' } : CELL[status]
               const dow = (leadingBlanks + day - 1) % 7
               const isWeekend = dow >= 5
-              const isToday = day === todayNum
-              const isAnchor = day === shiftAnchor
+              const isToday = day === todayNum && !isBeforeEntry
+              const isAnchor = day === shiftAnchor && !isBeforeEntry
               return (
                 <button
                   key={day}
                   onClick={e => handleDayClick(day, e)}
                   onContextMenu={e => handleDayContextMenu(day, e)}
-                  className={`h-9 rounded-md text-sm font-medium transition-all cursor-pointer border
-                    ${col.bg} ${col.text} ${isAnchor ? `ring-2 ${col.ring}` : 'border-transparent'}
-                    ${isWeekend ? 'bg-opacity-70' : ''}
-                    ${isToday ? 'ring-1 ring-slate-400 shadow-sm' : ''}
-                    hover:scale-105 hover:shadow-sm`}
-                  title={`${day}日 ${LABEL[status]}${isToday ? ' (今天)' : ''}${isAnchor ? ' — Shift+点击其他日期批量涂色' : ''}\n右键: 循环切换`}
+                  disabled={isBeforeEntry}
+                  className={`h-9 rounded-md text-sm font-medium transition-all border
+                    ${isBeforeEntry ? 'bg-slate-100 text-slate-300 cursor-not-allowed border-slate-100' : `cursor-pointer ${col.bg} ${col.text} ${isAnchor ? `ring-2 ${col.ring}` : 'border-transparent'} ${isWeekend ? 'bg-opacity-70' : ''} hover:scale-105 hover:shadow-sm`}
+                    ${isToday ? 'ring-1 ring-slate-400 shadow-sm' : ''}`}
+                  title={isBeforeEntry ? '入职前，不计入考勤' : `${day}日 ${LABEL[status]}${isToday ? ' (今天)' : ''}${isAnchor ? ' — Shift+点击其他日期批量涂色' : ''}\n右键: 循环切换`}
                 >
-                  {day}
+                  {isBeforeEntry ? <span className="text-[10px]">-</span> : day}
                 </button>
               )
             })}
