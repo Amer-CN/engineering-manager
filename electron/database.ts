@@ -11,6 +11,13 @@ import fs from 'fs'
 import crypto from 'crypto'
 import { isDataUrl, guessExtFromDataUrl, saveFile } from './file-service'
 
+function getSeedDataPath(): string {
+  if (fs.existsSync(path.join(__dirname, '..', 'public', 'seed-data.json'))) {
+    return path.join(__dirname, '..', 'public', 'seed-data.json')
+  }
+  return path.join(process.resourcesPath, 'seed-data.json')
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Types
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -65,6 +72,11 @@ export interface Database {
   projectMembers: any[]
   auditLogs: any[]
   roles: any[]
+  workers: any[]
+  projectWorkers: any[]
+  costLedgerCategories: any[]
+  departments: any[]
+  salaryHistory: any[]
   _migrations?: {
     fileStorageV1?: boolean
   }
@@ -273,6 +285,34 @@ function initDefaultData() {
   }
 }
 
+/**
+ * 加载种子示例数据（首次启动时复制到用户数据目录）
+ */
+function loadSeedData() {
+  try {
+    const seedPath = getSeedDataPath()
+    if (!fs.existsSync(seedPath)) {
+      log.info('No seed data file found at:', seedPath)
+      return
+    }
+    const seedJson = fs.readFileSync(seedPath, 'utf8')
+    const seed = JSON.parse(seedJson)
+    // 将种子数据合并到空数据库中（只合并非空集合）
+    let merged = 0
+    for (const [key, value] of Object.entries(seed)) {
+      if (Array.isArray(value) && value.length > 0) {
+        if (Array.isArray((db as any)[key]) && (db as any)[key].length === 0) {
+          (db as any)[key] = value
+          merged++
+        }
+      }
+    }
+    log.info(`Seed data loaded: ${merged} collections populated from ${seedPath}`)
+  } catch (e) {
+    log.error('Failed to load seed data:', e)
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // 数据库操作
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -318,7 +358,12 @@ export function initializeDatabase(): Database {
     attendances: [],
     projectMembers: [],
     auditLogs: [],
-    roles: []
+    roles: [],
+    workers: [],
+    projectWorkers: [],
+    costLedgerCategories: [],
+    salaryHistory: [],
+    departments: []
   }
 }
 
@@ -355,6 +400,7 @@ export async function initDatabase(): Promise<void> {
         ensureDatabaseFields()
         initDefaultData()
         migrateDatabase()
+        migrateSalaryHistoryBackfill()
         // 文件存储迁移（将旧 base64 数据写出为磁盘文件）
         migrateFileStorageV1()
         saveDatabase()
@@ -382,6 +428,7 @@ export async function initDatabase(): Promise<void> {
       log.info('Creating new database:', dbPath)
       db = initializeDatabase()
       initDefaultData()
+      loadSeedData()
       saveDatabase()
     }
     
@@ -398,7 +445,6 @@ function ensureDatabaseFields() {
   let changed = false
   if (!db.projects) { db.projects = []; changed = true }
   if (!db.members) { db.members = []; changed = true }
-  if (!db.tasks) { db.tasks = []; changed = true }
   if (!db.materials) { db.materials = []; changed = true }
   if (!db.expenses) { db.expenses = []; changed = true }
   if (!db.costLedger) { db.costLedger = []; changed = true }
@@ -425,6 +471,10 @@ function ensureDatabaseFields() {
   if (!db.templates) { db.templates = []; changed = true }
   if (!db.inventoryItems) { db.inventoryItems = []; changed = true }
   if (!db.inventoryTransactions) { db.inventoryTransactions = []; changed = true }
+  if (!db.workers) { db.workers = []; changed = true }
+  if (!db.projectWorkers) { db.projectWorkers = []; changed = true }
+  if (!db.departments) { db.departments = []; changed = true }
+  if (!db.salaryHistory) { db.salaryHistory = []; changed = true }
   if (!db.users) {
     db.users = []
     initDefaultData()
@@ -481,6 +531,160 @@ function migrateDatabase() {
       createdAt: e.createdAt || (e.id ? new Date(e.id).toISOString() : new Date().toISOString()),
       date: e.date || (e.id ? new Date(e.id).toISOString().split('T')[0] : '')
     }))
+  }
+
+  // 迁移全局工人库 — memberType='worker' → db.workers + db.projectWorkers
+  if ((!db.workers || db.workers.length === 0) && db.members) {
+    const workerMembers = db.members.filter((m: any) => m.memberType === 'worker')
+    if (workerMembers.length > 0) {
+      console.log(`[Migration] Migrating ${workerMembers.length} worker members to db.workers...`)
+      if (!db.workers) db.workers = []
+      if (!db.projectWorkers) db.projectWorkers = []
+
+      // Step 1: 按身份证号分组去重，创建 Worker 记录
+      const idCardMap = new Map<string, any>()
+      for (const m of workerMembers) {
+        const idCard = (m.idCard || '').trim()
+        if (!idCard) continue
+        if (!idCardMap.has(idCard)) {
+          const worker: any = {
+            id: Date.now() + idCardMap.size,
+            name: m.name || '',
+            idCard,
+            gender: m.gender || undefined,
+            birthDate: m.birthDate || undefined,
+            ethnicity: m.ethnicity || undefined,
+            phone: m.phone || undefined,
+            address: m.idCardAddress || m.address || undefined,
+            bankAccount: m.wageBankAccount || undefined,
+            bankName: m.wageBankName || undefined,
+            createdAt: m.createdAt || new Date().toISOString()
+          }
+          db.workers!.push(worker)
+          idCardMap.set(idCard, { worker, members: [m] })
+        } else {
+          idCardMap.get(idCard)!.members.push(m)
+        }
+      }
+
+      // Step 2: 为每个旧 worker member 创建 ProjectWorker
+      for (const [, entry] of idCardMap) {
+        const worker = entry.worker
+        for (const m of entry.members) {
+          let projectId = m.projectId
+          if (!projectId && m.teamId && db.workerTeams) {
+            const team = db.workerTeams.find((t: any) => t.id === m.teamId)
+            projectId = team?.projectId
+          }
+          if (!projectId) continue
+
+          const pw: any = {
+            id: Date.now() + db.projectWorkers!.length,
+            workerId: worker.id,
+            projectId,
+            teamId: m.teamId || undefined,
+            dailyWage: m.dailyWage || 0,
+            workerType: m.workerType || 'other',
+            entryDate: m.entryDate || m.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
+            status: m.status || 'active',
+            remarks: m.remarks || undefined,
+            createdAt: new Date().toISOString()
+          }
+          db.projectWorkers!.push(pw)
+        }
+      }
+
+      // Step 3: 回填 db.wages 的 projectWorkerId
+      if (db.wages) {
+        for (const w of db.wages) {
+          if (!w.projectWorkerId && w.memberId) {
+            const member = db.members.find((m: any) => m.id === w.memberId)
+            if (member?.memberType === 'worker' && member.idCard) {
+              const entry = idCardMap.get(member.idCard.trim())
+              if (entry) {
+                const pw = db.projectWorkers!.find(
+                  (p: any) => p.workerId === entry.worker.id && p.projectId === w.projectId
+                )
+                if (pw) w.projectWorkerId = pw.id
+              }
+            }
+          }
+        }
+      }
+
+      // Step 3b: 回填 db.attendances 的 projectWorkerId
+      if (db.attendances) {
+        for (const a of db.attendances) {
+          if (!a.projectWorkerId && a.memberId) {
+            const member = db.members.find((m: any) => m.id === a.memberId)
+            if (member?.memberType === 'worker' && member.idCard) {
+              const entry = idCardMap.get(member.idCard.trim())
+              if (entry) {
+                const pw = db.projectWorkers!.find(
+                  (p: any) => p.workerId === entry.worker.id && p.projectId === a.projectId
+                )
+                if (pw) a.projectWorkerId = pw.id
+              }
+            }
+          }
+        }
+      }
+
+      // Step 4: 审计日志中追加 migratedToWorkerId 标记
+      if (db.auditLogs) {
+        for (const log of db.auditLogs) {
+          if (log.memberId && !log.migratedToWorkerId) {
+            const member = db.members.find((m: any) => m.id === log.memberId)
+            if (member?.memberType === 'worker' && member.idCard) {
+              const entry = idCardMap.get(member.idCard.trim())
+              if (entry) log.migratedToWorkerId = entry.worker.id
+            }
+          }
+        }
+      }
+
+      // Step 5: 从 db.members 移除已迁移的 worker 记录
+      db.members = db.members.filter((m: any) => m.memberType !== 'worker')
+
+      console.log(`[Migration] Worker migration complete. Workers: ${db.workers!.length}, ProjectWorkers: ${db.projectWorkers!.length}`)
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 薪资历史回填迁移（为已有 staff 成员创建初始 salaryHistory）
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function migrateSalaryHistoryBackfill() {
+  if (db._migrations?.salaryHistoryBackfillV1) return
+  if (!db.salaryHistory) db.salaryHistory = []
+  if (!db.members) return
+
+  let backfilled = 0
+  for (const member of db.members) {
+    if (member.memberType !== 'staff') continue
+    if (!member.baseSalary || Number(member.baseSalary) <= 0) continue
+
+    const exists = db.salaryHistory.some((sh: any) => sh.memberId === member.id)
+    if (exists) continue
+
+    db.salaryHistory.push({
+      id: Date.now() + backfilled + 1,
+      memberId: member.id,
+      effectiveDate: member.entryDate || member.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
+      baseSalary: Number(member.baseSalary),
+      subsidy: 0,
+      subsidyNote: '',
+      note: '入职初始薪资',
+      createdAt: new Date().toISOString()
+    })
+    backfilled++
+  }
+
+  if (backfilled > 0) {
+    if (!db._migrations) db._migrations = {}
+    db._migrations.salaryHistoryBackfillV1 = true
+    log.info(`[Migration] Salary history backfill complete: ${backfilled} entries created`)
   }
 }
 

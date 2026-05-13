@@ -1,7 +1,9 @@
 import React from 'react'
-import type { Member, Project, WorkerTeam, AttendanceRecord, DayStatus } from '@/types'
+import type { Member, Project, WorkerTeam, AttendanceRecord } from '@/types'
 import { Icon } from '../../ui/Icon'
 import { FILE_CATEGORIES, uploadFile, readUploadedFile, deleteUploadedFile, readFileAsDataUrl } from '../../../services/fileService'
+import { summaryDot, summaryLabel } from '../../../constants/attendance'
+import type { DayStatus } from '../../../types/electron'
 
 interface AttendanceTabProps {
   selectedProject: Project | null
@@ -24,14 +26,6 @@ interface AttendanceTabProps {
   onFilePreview: (record: AttendanceRecord) => void
   onBatchDelete: () => void
   loading: boolean
-}
-
-const summaryDot: Record<DayStatus, string> = {
-  work: 'bg-emerald-500', holiday: 'bg-blue-500', sick_leave: 'bg-amber-500',
-  personal_leave: 'bg-orange-500', absent: 'bg-red-500',
-}
-const summaryLabel: Record<DayStatus, string> = {
-  work: '出勤', holiday: '法定假', sick_leave: '病假', personal_leave: '事假', absent: '缺勤',
 }
 
 export default function AttendanceTab({
@@ -118,7 +112,7 @@ export default function AttendanceTab({
                 ] as SummaryItem[]).filter(item => item.count > 0)
 
                 return (
-                  <tr key={a.id} className="border-t border-slate-100 hover:bg-slate-50">
+                  <tr key={a.id} className="border-t border-slate-100 table-row-hover">
                     <td className="px-3 py-3">
                       <input type="checkbox" checked={selectedIds.has(a.id)}
                         onChange={() => toggleSelect(a.id)} className="rounded" />

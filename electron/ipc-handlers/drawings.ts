@@ -19,7 +19,7 @@ ipcMain.handle('db:drawings:getAll', (_, projectId?: number) => {
   if (projectId) {
     drawings = drawings.filter((d: any) => d.projectId === projectId)
   }
-  return { success: true, data: drawings.sort((a: any, b: any) => 
+  return { success: true, data: [...drawings].sort((a: any, b: any) =>
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   )}
 })

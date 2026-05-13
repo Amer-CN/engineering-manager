@@ -48,7 +48,7 @@ export const MaterialList: React.FC<MaterialListProps> = ({
         </thead>
         <tbody className="divide-y divide-slate-100">
           {filteredMaterials.map(material => (
-            <tr key={material.id} className="hover:bg-slate-50">
+            <tr key={material.id} className="table-row-hover">
               <td className="px-4 py-3">
                 <div className="font-medium text-slate-800">{material.name}</div>
               </td>

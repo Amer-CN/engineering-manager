@@ -49,7 +49,7 @@ export const PaymentList: React.FC<PaymentListProps> = ({
         </thead>
         <tbody className="divide-y divide-slate-100">
           {records.map(record => (
-            <tr key={record.id} className="hover:bg-slate-50">
+            <tr key={record.id} className="table-row-hover">
               <td className="px-4 py-3">
                 <div className="font-medium text-slate-800">{record.recordDate || (record as any).date || '-'}</div>
               </td>

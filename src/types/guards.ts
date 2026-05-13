@@ -7,7 +7,6 @@
 import type {
   Project,
   Member,
-  Task,
   Material,
   Expense,
   Drawing,
@@ -77,22 +76,6 @@ export function isMember(val: unknown): val is Member {
     isNumber(m.id) &&
     isString(m.name) &&
     ['staff', 'worker'].includes(m.memberType as string)
-  )
-}
-
-/**
- * Task 类型守卫
- */
-export function isTask(val: unknown): val is Task {
-  if (!isObject(val)) return false
-  const t = val as Record<string, unknown>
-  
-  return (
-    isNumber(t.id) &&
-    isNumber(t.projectId) &&
-    isString(t.title) &&
-    ['high', 'medium', 'low'].includes(t.priority as string) &&
-    ['todo', 'in_progress', 'completed'].includes(t.status as string)
   )
 }
 
@@ -235,10 +218,6 @@ export function isMemberArray(val: unknown): val is Member[] {
   return isArray(val, isMember)
 }
 
-export function isTaskArray(val: unknown): val is Task[] {
-  return isArray(val, isTask)
-}
-
 export function isExpenseArray(val: unknown): val is Expense[] {
   return isArray(val, isExpense)
 }
@@ -283,7 +262,6 @@ export const Guards = {
   // 实体
   isProject,
   isMember,
-  isTask,
   isMaterial,
   isExpense,
   isDrawing,
@@ -297,7 +275,6 @@ export const Guards = {
   // 数组
   isProjectArray,
   isMemberArray,
-  isTaskArray,
   isExpenseArray,
   isPartnerArray,
   isInvoiceArray,

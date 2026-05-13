@@ -55,7 +55,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           className="relative z-10"
         >
           <h1 className="text-base font-bold text-white leading-tight">工程管家</h1>
-          <p className="text-[10px] text-white/60 leading-tight">v1.21.0</p>
+          <p className="text-[10px] text-white/60 leading-tight">v2.6.3</p>
         </motion.div>
       </div>
 

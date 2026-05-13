@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import type { Project, Member, Task, Partner, IncomeContract, ExpenseContract, WorkerTeam, Invoice } from '@/types'
+import type { Project, Member, Partner, IncomeContract, ExpenseContract, WorkerTeam, Invoice } from '@/types'
 import { ProjectStatsData } from './ProjectStats'
 import { Badge } from '@/components/ui/Badge'
 import { Icon } from '../../ui/Icon'
@@ -100,7 +100,7 @@ export function InvoicesTab({ invoices, stats }: { invoices: Invoice[]; stats: P
             <thead><tr className="border-b border-slate-100">{['发票号', '类型', '名称', '金额', '已收/已付', '状态'].map(h => <th key={h} className={`px-4 py-2.5 text-xs text-slate-500 font-medium ${h === '金额' || h === '收款' ? 'text-right' : h === '状态' ? 'text-center' : 'text-left'}`}>{h}</th>)}</tr></thead>
             <tbody className="divide-y divide-slate-50">
               {invoices.map(invoice => (
-                <tr key={invoice.id} className="hover:bg-slate-50 transition-colors">
+                <tr key={invoice.id} className="table-row-hover">
                   <td className="px-4 py-2.5 text-sm font-mono text-slate-700">{invoice.invoiceNo}</td>
                   <td className="px-4 py-2.5"><Badge variant={invoice.type === 'invoice_in' ? 'success' : 'info'}>{invoice.type === 'invoice_in' ? '进项' : '销项'}</Badge></td>
                   <td className="px-4 py-2.5 text-sm text-slate-700">{invoice.name}</td>
@@ -217,41 +217,6 @@ function AddMemberModal({ members, onAdd, onClose }: {
           ))}
         </div>
       </div>
-    </div>
-  )
-}
-
-export function TasksTab({ tasks, stats }: { tasks: Task[]; stats: ProjectStatsData }) {
-  return (
-    <div>
-      <div className={`${CARD} p-5 mb-6`}>
-        <div className="flex items-center gap-4 mb-3">
-          <span className="text-3xl font-bold text-blue-500">{stats.taskProgress}%</span>
-          <div className="flex-1">
-            <div className="flex items-center justify-between text-xs text-slate-500 mb-1"><span>任务完成进度</span><span>{stats.completedTasks}/{tasks.length} 个</span></div>
-            <div className="h-2.5 rounded-full bg-slate-200 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-blue-400 transition-all duration-500" style={{ width: `${stats.taskProgress}%` }} /></div>
-          </div>
-        </div>
-        {stats.overdueTasks > 0 && (
-          <div className="flex items-center gap-2 p-2 rounded-lg bg-red-50 border border-red-200"><Icon name="AlertCircle" size={14} className="text-red-500" /><span className="text-xs text-red-600">{stats.overdueTasks} 个任务已逾期</span></div>
-        )}
-      </div>
-      {tasks.length > 0 ? (
-        <div className="space-y-2">
-          {tasks.map(t => {
-            const overdue = t.status !== 'completed' && t.dueDate && new Date(t.dueDate) < new Date()
-            const cfg = { completed: { icon: 'Check', bg: 'bg-emerald-100', color: 'text-emerald-600' }, in_progress: { icon: 'RefreshCw', bg: 'bg-blue-100', color: 'text-blue-600' }, todo: { icon: 'ClipboardList', bg: 'bg-slate-100', color: 'text-slate-400' } }
-            const c = cfg[t.status as keyof typeof cfg] || cfg.todo
-            return (
-              <div key={t.id} className={`${CARD} p-3 flex items-center gap-3 ${overdue ? 'border-l-2 border-l-red-400' : ''}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${c.bg} ${c.color}`}><Icon name={c.icon} size={15} /></div>
-                <div className="flex-1 min-w-0"><p className={`text-sm font-medium truncate ${t.status === 'completed' ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{t.title}</p>{t.description && <p className="text-xs text-slate-400 truncate">{t.description}</p>}</div>
-                <div className="text-right flex-shrink-0">{t.dueDate && <p className={`text-xs ${overdue ? 'text-red-500 font-medium' : 'text-slate-400'}`}>截止: {t.dueDate}</p>}</div>
-              </div>
-            )
-          })}
-        </div>
-      ) : <EmptyState text="暂无任务" />}
     </div>
   )
 }

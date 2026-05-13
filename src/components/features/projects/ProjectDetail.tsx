@@ -1,17 +1,18 @@
 /**
  * ProjectDetail - 项目详情页
  *
- * Glass header, animated tab bar, 7 tabs with clean card design.
+ * Glass header, animated tab bar, 6 tabs with clean card design.
  */
-import React, { useState, useEffect } from 'react'
-import type { Project, Member, Task, Partner, IncomeContract, ExpenseContract, WorkerTeam, Invoice, Material, Settlement, PaymentRecord } from '@/types'
+import React, { useState, useEffect, useMemo } from 'react'
+import type { Project, Member, Partner, IncomeContract, ExpenseContract, WorkerTeam, Invoice, Material, Settlement, PaymentRecord, CostLedgerEntry } from '@/types'
 import { ProjectStats, ProjectStatsData } from './ProjectStats'
 import { ProjectCommandCenter } from './ProjectCommandCenter'
 import { CostLedgerAnalytics } from '../costLedger/CostLedgerAnalytics'
+import { useCostLedgerCategories } from '@/hooks/useCostLedgerCategories'
 import { motion, AnimatePresence } from 'framer-motion'
 import PageContainer from '../../ui/PageContainer'
 import { Icon } from '../../ui/Icon'
-import { ContractsTab, InvoicesTab, MembersTab, TasksTab, PartnersTab } from './ProjectDetailTabs'
+import { ContractsTab, InvoicesTab, MembersTab, PartnersTab } from './ProjectDetailTabs'
 
 const statusLabels: Record<string, { text: string; color: string; dot: string }> = {
   planning: { text: '筹备中', color: 'bg-blue-50 text-blue-700', dot: 'bg-blue-500' },
@@ -20,7 +21,7 @@ const statusLabels: Record<string, { text: string; color: string; dot: string }>
   archived: { text: '已归档', color: 'bg-amber-50 text-amber-700', dot: 'bg-amber-500' },
 }
 
-type DetailTab = 'overview' | 'contracts' | 'invoices' | 'members' | 'tasks' | 'expenses' | 'partners'
+type DetailTab = 'overview' | 'contracts' | 'invoices' | 'members' | 'expenses' | 'partners'
 
 export interface ProjectDetailProps {
   project: Project; members: Member[]; allMembers?: Member[]
@@ -28,9 +29,9 @@ export interface ProjectDetailProps {
 }
 
 export function ProjectDetail({ project, members, allMembers, onBack, onEdit }: ProjectDetailProps) {
+  const { categories } = useCostLedgerCategories()
   const [detailTab, setDetailTab] = useState<DetailTab>('overview')
   const [loading, setLoading] = useState(true)
-  const [tasks, setTasks] = useState<Task[]>([])
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [incomeContracts, setIncomeContracts] = useState<IncomeContract[]>([])
   const [expenseContracts, setExpenseContracts] = useState<ExpenseContract[]>([])
@@ -39,20 +40,20 @@ export function ProjectDetail({ project, members, allMembers, onBack, onEdit }: 
   const [materials, setMaterials] = useState<Material[]>([])
   const [settlements, setSettlements] = useState<Settlement[]>([])
   const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>([])
+  const [costLedgerEntries, setCostLedgerEntries] = useState<CostLedgerEntry[]>([])
 
   useEffect(() => { loadProjectDetail() }, [project.id])
 
   const loadProjectDetail = async () => {
     setLoading(true)
     try {
-      const [tasksR, invoicesR, incomeR, expenseR, partnersR, teamsR, materialsR, settlementsR, paymentsR] = await Promise.all([
-        window.electronAPI.getTasks(project.id),
+      const [invoicesR, incomeR, expenseR, partnersR, teamsR, materialsR, settlementsR, paymentsR, costLedgerR] = await Promise.all([
         window.electronAPI.getInvoices(), window.electronAPI.getIncomeContracts(project.id),
         window.electronAPI.getExpenseContracts(project.id), window.electronAPI.getPartners(),
         window.electronAPI.getWorkerTeams(), window.electronAPI.getMaterials(project.id),
         window.electronAPI.getSettlements(project.id), window.electronAPI.getPaymentRecords(),
+        window.electronAPI.getCostLedger(project.id),
       ])
-      if (tasksR.success) setTasks(tasksR.data || [])
       if (invoicesR.success) setInvoices((invoicesR.data || []).filter((i: Invoice) => i.projectId === project.id))
       if (incomeR.success) setIncomeContracts(incomeR.data || [])
       if (expenseR.success) setExpenseContracts(expenseR.data || [])
@@ -61,6 +62,7 @@ export function ProjectDetail({ project, members, allMembers, onBack, onEdit }: 
       if (materialsR.success) setMaterials(materialsR.data || [])
       if (settlementsR.success) setSettlements((settlementsR.data || []).filter((s: Settlement) => s.projectId === project.id))
       if (paymentsR.success) setPaymentRecords((paymentsR.data || []).filter((p: PaymentRecord) => p.projectId === project.id))
+      if (costLedgerR.success) setCostLedgerEntries(costLedgerR.data || [])
     } catch (e) { console.error('加载项目详情失败:', e) }
     finally { setLoading(false) }
   }
@@ -68,7 +70,7 @@ export function ProjectDetail({ project, members, allMembers, onBack, onEdit }: 
   const materialTotal = materials.reduce((s, m) => s + m.price * m.quantity, 0)
   const totalRevenue = incomeContracts.reduce((s, c) => s + c.amount, 0)
   const expenseContractTotal = expenseContracts.reduce((s, c) => s + c.amount, 0)
-  const totalExpensesCalc = 0
+  const totalExpensesCalc = costLedgerEntries.filter(e => e.direction === 'expense').reduce((s, e) => s + e.amount, 0)
   const totalCost = expenseContractTotal + materialTotal
   const workerCount = workerTeams.reduce((s, t) => s + members.filter(m => m.memberType === 'worker' && m.teamId === t.id).length, 0)
 
@@ -78,11 +80,8 @@ export function ProjectDetail({ project, members, allMembers, onBack, onEdit }: 
   const totalDays = startDate && endDate ? Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) : 1
   const daysElapsed = startDate ? Math.ceil((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) : 0
   const timeProgress = Math.min(100, Math.max(0, Math.round((daysElapsed / totalDays) * 100)))
-  const overdueTasks = tasks.filter(t => t.status !== 'completed' && t.dueDate && new Date(t.dueDate) < now).length
-
   const stats: ProjectStatsData = {
-    totalExpenses: totalExpensesCalc, completedTasks: tasks.filter(t => t.status === 'completed').length,
-    taskProgress: tasks.length > 0 ? Math.round((tasks.filter(t => t.status === 'completed').length / tasks.length) * 100) : 0,
+    totalExpenses: totalExpensesCalc,
     incomeTotal: totalRevenue, expenseTotal: expenseContractTotal,
     invoiceInTotal: invoices.filter(i => i.type === 'invoice_in').reduce((s, i) => s + i.amount, 0),
     invoiceOutTotal: invoices.filter(i => i.type === 'invoice_out').reduce((s, i) => s + i.amount, 0),
@@ -92,12 +91,21 @@ export function ProjectDetail({ project, members, allMembers, onBack, onEdit }: 
     materialTotal, settlementIncomeTotal: settlements.filter(s => s.type === 'income').reduce((s, s2) => s + s2.amount, 0),
     settlementExpenseTotal: settlements.filter(s => s.type === 'expense').reduce((s, s2) => s + s2.amount, 0),
     totalRevenue, totalCost, netProfit: totalRevenue - totalCost,
-    daysElapsed: Math.max(0, daysElapsed), totalDays, timeProgress, overdueTasks,
+    daysElapsed: Math.max(0, daysElapsed), totalDays, timeProgress,
     partnerCount: partners.length, materialCount: materials.length,
     workerCountTotal: members.filter(m => m.memberType === 'staff').length + workerCount,
   }
 
-  const expenseByCategory: Record<string, number> = {}
+  const expenseByCategory = useMemo(() => {
+    const result: Record<string, number> = {}
+    const catMap = new Map(categories.map(c => [c.code, c.label]))
+    for (const entry of costLedgerEntries) {
+      if (entry.direction !== 'expense') continue
+      const label = catMap.get(entry.category) || entry.category
+      result[label] = (result[label] || 0) + entry.amount
+    }
+    return result
+  }, [costLedgerEntries, categories])
   const staffMembers = members.filter(m => m.memberType === 'staff')
   const allStaffMembers = (allMembers || members).filter(m => m.memberType === 'staff')
   const status = statusLabels[project.status] || { text: project.status, color: 'bg-slate-100 text-slate-600', dot: 'bg-slate-400' }
@@ -107,7 +115,6 @@ export function ProjectDetail({ project, members, allMembers, onBack, onEdit }: 
     { id: 'contracts' as DetailTab, label: '合同台账', icon: 'FileText' },
     { id: 'invoices' as DetailTab, label: '发票管理', icon: 'Receipt' },
     { id: 'members' as DetailTab, label: '人员管理', icon: 'Users' },
-    { id: 'tasks' as DetailTab, label: '任务管理', icon: 'ClipboardList' },
     { id: 'expenses' as DetailTab, label: '费用明细', icon: 'DollarSign' },
     { id: 'partners' as DetailTab, label: '关联单位', icon: 'Building2' },
   ]
@@ -118,6 +125,15 @@ export function ProjectDetail({ project, members, allMembers, onBack, onEdit }: 
         {/* ── Header ── */}
         <div className="relative overflow-hidden rounded-2xl mb-6 bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 text-white p-5 lg:p-6">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.08),transparent_50%)]" />
+          {/* 装饰光点 */}
+          <motion.div className="absolute top-3 right-12 w-1 h-1 rounded-full bg-emerald-400"
+            animate={{ opacity: [0, 1, 0], scale: [0.5, 2, 0.5] }}
+            transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 3 }}
+          />
+          <motion.div className="absolute bottom-4 right-24 w-1.5 h-1.5 rounded-full bg-amber-400"
+            animate={{ opacity: [0, 1, 0], scale: [0.5, 1.8, 0.5] }}
+            transition={{ duration: 3, repeat: Infinity, repeatDelay: 4, delay: 1 }}
+          />
           <div className="relative z-10 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button onClick={onBack} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors">
@@ -165,12 +181,11 @@ export function ProjectDetail({ project, members, allMembers, onBack, onEdit }: 
         ) : (
           <AnimatePresence mode="wait">
             <motion.div key={detailTab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
-              {detailTab === 'overview' && <ProjectCommandCenter project={project} stats={stats} expenseByCategory={expenseByCategory} tasks={tasks} expenses={[]} materials={materials} incomeContracts={incomeContracts} expenseContracts={expenseContracts} invoices={invoices} partners={partners} paymentRecords={paymentRecords} settlements={settlements} members={members} workerTeams={workerTeams} />}
+              {detailTab === 'overview' && <ProjectCommandCenter project={project} stats={stats} expenseByCategory={expenseByCategory} materials={materials} incomeContracts={incomeContracts} expenseContracts={expenseContracts} invoices={invoices} partners={partners} paymentRecords={paymentRecords} settlements={settlements} members={members} workerTeams={workerTeams} />}
               {detailTab === 'contracts' && <ContractsTab incomeContracts={incomeContracts} expenseContracts={expenseContracts} stats={stats} />}
               {detailTab === 'invoices' && <InvoicesTab invoices={invoices} stats={stats} />}
               {detailTab === 'members' && <MembersTab project={project} staffMembers={staffMembers} allStaffMembers={allStaffMembers} workerTeams={workerTeams} members={members} stats={stats} />}
-              {detailTab === 'tasks' && <TasksTab tasks={tasks} stats={stats} />}
-              {detailTab === 'expenses' && <CostLedgerAnalytics projectId={project.id} projectName={project.name} />}
+              {detailTab === 'expenses' && <CostLedgerAnalytics projectId={project.id} projectName={project.name} categories={categories} />}
               {detailTab === 'partners' && <PartnersTab partners={partners} />}
             </motion.div>
           </AnimatePresence>

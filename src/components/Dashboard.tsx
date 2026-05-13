@@ -4,7 +4,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
 } from 'recharts'
-import { DashboardStats } from '../types/electron'
+import { DashboardStats, Invoice } from '../types/electron'
 import { useAuth } from '../hooks/useAuth'
 import { Icon } from './ui/Icon'
 import { formatMoney } from '@/utils/format'
@@ -14,9 +14,9 @@ const CHART_COLORS = ['#3b82f6', '#10b981', '#f97316', '#8b5cf6', '#06b6d4', '#f
 
 const statCards = [
   { key: 'projects', label: '项目总数', icon: 'FolderKanban', color: 'bg-blue-50 text-blue-600' },
-  { key: 'tasks', label: '任务总数', icon: 'ClipboardList', color: 'bg-emerald-50 text-emerald-600' },
+  { key: 'settlements', label: '待办结算', icon: 'ClipboardList', color: 'bg-amber-50 text-amber-600' },
   { key: 'members', label: '团队成员', icon: 'Users', color: 'bg-violet-50 text-violet-600' },
-  { key: 'costLedger', label: '总支出', icon: 'Wallet', color: 'bg-amber-50 text-amber-600' },
+  { key: 'costLedger', label: '总支出', icon: 'Wallet', color: 'bg-emerald-50 text-emerald-600' },
   { key: 'invoices', label: '发票记录', icon: 'Receipt', color: 'bg-teal-50 text-teal-600' },
   { key: 'inventory', label: '库存物料', icon: 'Package', color: 'bg-orange-50 text-orange-600' },
 ]
@@ -31,7 +31,7 @@ function formatCurrency(n: number): string {
 // CountUp: 数字滚动动画组件
 const CountUp: React.FC<{ value: number; duration?: number; suffix?: string; prefix?: string; decimals?: number }> = ({ value, duration = 1.2, suffix = '', prefix = '', decimals = 0 }) => {
   const motionVal = useMotionValue(0)
-  const springVal = useSpring(motionVal, { stiffness: 40, damping: 25 })
+  const springVal = useSpring(motionVal, { stiffness: 100, damping: 20 })
   const [display, setDisplay] = useState('0')
   const prevValue = useRef(0)
 
@@ -50,6 +50,23 @@ const CountUp: React.FC<{ value: number; duration?: number; suffix?: string; pre
   return <span>{display}</span>
 }
 
+// SVG 自定义刻度：分类名超过 4 个字自动拆成两行，避免 recharts 隐藏重叠标签
+const CategoryTick = (props: any) => {
+  const { x, y, payload } = props
+  const text: string = payload?.value ?? ''
+  if (!text) return null
+  if (text.length <= 4) {
+    return <text x={x} y={y} dy={6} textAnchor="middle" fill="#94a3b8" fontSize={11}>{text}</text>
+  }
+  const mid = Math.ceil(text.length / 2)
+  return (
+    <text x={x} y={y} textAnchor="middle" fill="#94a3b8" fontSize={11}>
+      <tspan x={x} dy={6}>{text.slice(0, mid)}</tspan>
+      <tspan x={x} dy={13}>{text.slice(mid)}</tspan>
+    </text>
+  )
+}
+
 interface StatValue { primary: string; secondary: string; progress?: number; raw?: number }
 
 const Dashboard: React.FC = () => {
@@ -59,8 +76,9 @@ const Dashboard: React.FC = () => {
   const [error, setError] = useState('')
   const [chartData, setChartData] = useState<{
     expenseByCategory: { name: string; amount: number }[]
-    taskDistribution: { name: string; value: number; color: string }[]
-  }>({ expenseByCategory: [], taskDistribution: [] })
+    invoiceStatus: { name: string; value: number; color: string }[]
+  }>({ expenseByCategory: [], invoiceStatus: [] })
+  const [recentInvoices, setRecentInvoices] = useState<Invoice[]>([])
 
   const loadStats = async () => {
     try {
@@ -79,29 +97,36 @@ const Dashboard: React.FC = () => {
     } catch (err: any) { setError(err.message || '加载统计失败') }
   }
 
-  const loadChartData = async () => {
+  const loadInvoiceData = async () => {
     try {
-      const taskRes = await window.electronAPI.getTasks()
-      let todo = 0, inProgress = 0, completed = 0
-      if (taskRes.success && taskRes.data) {
-        for (const t of taskRes.data) { if (t.status === 'completed') completed++; else if (t.status === 'in_progress') inProgress++; else todo++ }
+      const res = await window.electronAPI.getInvoices()
+      if (res.success && res.data) {
+        const invoices = res.data
+        setRecentInvoices(invoices.slice(0, 5))
+        const statusCounts: Record<string, number> = {}
+        for (const inv of invoices) {
+          const s = inv.status || '其他'
+          statusCounts[s] = (statusCounts[s] || 0) + 1
+        }
+        const colorMap: Record<string, string> = {
+          'received': '#10b981', 'partially_paid': '#f59e0b', 'issued': '#3b82f6',
+          'cancelled': '#94a3b8', 'red_flushed': '#ef4444',
+        }
+        const invoiceStatus = Object.entries(statusCounts)
+          .map(([name, value]) => ({ name, value, color: colorMap[name] || '#94a3b8' }))
+          .filter(d => d.value > 0)
+        setChartData(prev => ({ ...prev, invoiceStatus }))
       }
-      const taskDistribution = [
-        { name: '已完成', value: completed, color: '#10b981' },
-        { name: '进行中', value: inProgress, color: '#3b82f6' },
-        { name: '待处理', value: todo, color: '#94a3b8' },
-      ].filter(d => d.value > 0)
-      setChartData(prev => ({ ...prev, taskDistribution }))
     } catch { /* charts silently degrade */ }
   }
 
-  useEffect(() => { Promise.all([loadStats(), loadChartData()]).finally(() => setLoading(false)) }, [])
+  useEffect(() => { Promise.all([loadStats(), loadInvoiceData()]).finally(() => setLoading(false)) }, [])
 
   const getStatValue = (key: string): StatValue => {
     if (!stats) return { primary: '0', secondary: '', raw: 0 }
     switch (key) {
       case 'projects': return { primary: String(stats.projectsCount), secondary: `${stats.inProgressProjects} 个进行中`, progress: stats.projectsCount ? Math.round((stats.inProgressProjects / stats.projectsCount) * 100) : 0, raw: stats.projectsCount }
-      case 'tasks': return { primary: `${stats.taskCompletionRate}%`, secondary: `${stats.tasksCompleted} / ${stats.tasksCount} 已完成`, progress: stats.taskCompletionRate, raw: stats.taskCompletionRate }
+      case 'settlements': return { primary: String(stats.settlementsCount), secondary: '待办结算', raw: stats.settlementsCount }
       case 'members': return { primary: String(stats.membersCount), secondary: '管理人员 + 农民工', raw: stats.membersCount }
       case 'costLedger': return { primary: formatCurrency(stats.totalExpenses), secondary: '累计成本', raw: stats.totalExpenses }
       case 'invoices': return { primary: String(stats.invoicesCount), secondary: '收票 / 开票', raw: stats.invoicesCount }
@@ -116,10 +141,13 @@ const Dashboard: React.FC = () => {
     completed: { text: '已完成', color: 'bg-slate-100 text-slate-700', dot: 'bg-slate-400' },
     archived: { text: '已归档', color: 'bg-amber-100 text-amber-700', dot: 'bg-amber-500' },
   }
-  const taskStatusLabels: Record<string, { text: string; color: string; dot: string }> = {
-    todo: { text: '待处理', color: 'bg-slate-100 text-slate-700', dot: 'bg-slate-400' },
-    in_progress: { text: '进行中', color: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500' },
-    completed: { text: '已完成', color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' },
+  const invoiceStatusLabels: Record<string, { text: string; color: string; dot: string }> = {
+    'received': { text: '已收齐', color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' },
+    'partially_paid': { text: '部分收付', color: 'bg-amber-100 text-amber-700', dot: 'bg-amber-500' },
+    'issued': { text: '已开具', color: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500' },
+    'cancelled': { text: '已作废', color: 'bg-slate-100 text-slate-700', dot: 'bg-slate-400' },
+    'red_flushed': { text: '已红冲', color: 'bg-red-100 text-red-700', dot: 'bg-red-500' },
+    '其他': { text: '其他', color: 'bg-slate-100 text-slate-700', dot: 'bg-slate-400' },
   }
 
   const hour = new Date().getHours()
@@ -150,7 +178,7 @@ const Dashboard: React.FC = () => {
           <h3 className="text-lg font-medium text-slate-700 mb-2">加载失败</h3>
           <p className="text-slate-500 mb-4">{error}</p>
           <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
-            onClick={() => { setLoading(true); setError(''); Promise.all([loadStats(), loadChartData()]).finally(() => setLoading(false)) }}
+            onClick={() => { setLoading(true); setError(''); Promise.all([loadStats(), loadInvoiceData()]).finally(() => setLoading(false)) }}
             className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-500 text-sm">重试</motion.button>
         </motion.div>
       </div>
@@ -192,8 +220,8 @@ const Dashboard: React.FC = () => {
               </div>
               <div className="w-px h-10 bg-white/20" />
               <div className="text-right">
-                <p className="text-3xl font-bold text-blue-300"><CountUp value={stats?.taskCompletionRate || 0} suffix="%" /></p>
-                <p className="text-xs text-blue-300/80">任务完成率</p>
+                <p className="text-3xl font-bold text-amber-300"><CountUp value={stats?.settlementsCount || 0} /></p>
+                <p className="text-xs text-amber-300/80">待办结算</p>
               </div>
             </motion.div>
           </div>
@@ -252,9 +280,9 @@ const Dashboard: React.FC = () => {
                 <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3, duration: 0.4 }}
                   className="h-72">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData.expenseByCategory} margin={{ top: 4, right: 4, left: -16, bottom: 0 }} barSize={28}>
+                    <BarChart data={chartData.expenseByCategory} margin={{ top: 4, right: 4, left: -16, bottom: 32 }} barSize={28}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                      <XAxis dataKey="name" tick={CategoryTick} interval={0} axisLine={false} tickLine={false} />
                       <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => v >= 10000 ? `${(v / 10000).toFixed(0)}万` : String(v)} />
                       <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} formatter={(value: number) => [formatCurrency(value), '金额']} />
                       <Bar dataKey="amount" radius={[5, 5, 0, 0]} animationDuration={1200} animationEasing="ease-out">
@@ -271,48 +299,48 @@ const Dashboard: React.FC = () => {
             </div>
           </motion.div>
 
-          {/* PieChart */}
+          {/* Invoice Status PieChart */}
           <motion.div className={CARD} whileHover={{ y: -2, boxShadow: '0 8px 25px rgba(0,0,0,0.08)' }}>
             <div className="px-5 py-4 border-b border-slate-100">
               <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                <Icon name="PieChart" size={14} /> 任务分布
+                <Icon name="PieChart" size={14} /> 发票状态
               </h3>
             </div>
             <div className="p-5">
-              {chartData.taskDistribution.length > 0 ? (
+              {chartData.invoiceStatus.length > 0 ? (
                 <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.4, duration: 0.4 }}
                   className="flex items-center h-72">
                   <div className="flex-1 h-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
-                        <Pie data={chartData.taskDistribution} cx="50%" cy="50%" innerRadius={48} outerRadius={72} paddingAngle={3} dataKey="value" strokeWidth={0}
+                        <Pie data={chartData.invoiceStatus} cx="50%" cy="50%" innerRadius={48} outerRadius={72} paddingAngle={3} dataKey="value" strokeWidth={0}
                           animationDuration={1200} animationEasing="ease-out">
-                          {chartData.taskDistribution.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                          {chartData.invoiceStatus.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                         </Pie>
-                        <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} formatter={(value: number, name: string) => [value, name]} />
+                        <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} formatter={(value: number, name: string) => [value, invoiceStatusLabels[name]?.text || name]} />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
                   <div className="w-36 space-y-3 pl-2">
-                    {chartData.taskDistribution.map((entry, i) => (
+                    {chartData.invoiceStatus.map((entry, i) => (
                       <motion.div key={entry.name} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 + i * 0.1 }}
                         className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
-                        <div className="flex-1 min-w-0"><div className="text-xs text-slate-500 truncate">{entry.name}</div><div className="text-sm font-semibold text-slate-800">{entry.value}</div></div>
+                        <div className="flex-1 min-w-0"><div className="text-xs text-slate-500 truncate">{invoiceStatusLabels[entry.name]?.text || entry.name}</div><div className="text-sm font-semibold text-slate-800">{entry.value}</div></div>
                       </motion.div>
                     ))}
                   </div>
                 </motion.div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-12 text-slate-400">
-                  <Icon name="ClipboardList" size={32} className="mb-2 opacity-40" /><p className="text-sm">暂无任务数据</p>
+                  <Icon name="Receipt" size={32} className="mb-2 opacity-40" /><p className="text-sm">暂无发票数据</p>
                 </div>
               )}
             </div>
           </motion.div>
         </motion.section>
 
-        {/* ═══ Recent Projects & Tasks ═══ */}
+        {/* ═══ Recent Projects & Invoices ═══ */}
         <motion.section variants={sectionV} className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <div className={CARD}>
             <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
@@ -358,15 +386,15 @@ const Dashboard: React.FC = () => {
           <div className={CARD}>
             <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
               <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                <Icon name="ClipboardList" size={14} /> 最近任务
+                <Icon name="Receipt" size={14} /> 最近发票
               </h3>
-              {stats?.tasksCount ? <span className="text-xs text-slate-400">{stats.tasksCount} 总计</span> : null}
+              {stats?.invoicesCount ? <span className="text-xs text-slate-400">{stats.invoicesCount} 总计</span> : null}
             </div>
             <div className="p-5">
-              {stats?.recentTasks && stats.recentTasks.length > 0 ? (
+              {recentInvoices.length > 0 ? (
                 <div className="space-y-3">
-                  {stats.recentTasks.map((task, index) => (
-                    <motion.div key={task.id}
+                  {recentInvoices.map((inv, index) => (
+                    <motion.div key={inv.id}
                       initial={{ opacity: 0, x: -12 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.2 + index * 0.06 }}
@@ -374,34 +402,34 @@ const Dashboard: React.FC = () => {
                       className="p-3 rounded-xl bg-slate-50 transition-colors"
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <p className="font-medium text-slate-800 text-sm truncate">{task.title}</p>
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ml-2 ${taskStatusLabels[task.status]?.color || 'bg-slate-100 text-slate-700'}`}>
+                        <p className="font-medium text-slate-800 text-sm truncate">{inv.invoiceNo || '无号'}</p>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ml-2 ${invoiceStatusLabels[inv.status]?.color || 'bg-slate-100 text-slate-700'}`}>
                           <motion.span animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 2, repeat: Infinity }}
-                            className={`inline-block w-1.5 h-1.5 rounded-full ${taskStatusLabels[task.status]?.dot} mr-1 align-middle`} />{taskStatusLabels[task.status]?.text || task.status}
+                            className={`inline-block w-1.5 h-1.5 rounded-full ${invoiceStatusLabels[inv.status]?.dot || 'bg-slate-400'} mr-1 align-middle`} />{invoiceStatusLabels[inv.status]?.text || inv.status}
                         </span>
                       </div>
                       <div className="flex items-center gap-3 text-xs text-slate-500 mb-2">
-                        <span className="flex items-center gap-1"><Icon name="FolderKanban" size={12} />{task.projectName || '未分配'}</span>
+                        <span className="flex items-center gap-1"><Icon name="Building2" size={12} />{inv.buyerName || inv.sellerName || '未知单位'}</span>
                         <span className="text-slate-300">|</span>
-                        <span className="flex items-center gap-1"><Icon name="UserCircle" size={12} />{task.assigneeName || '未分配'}</span>
+                        <span className="flex items-center gap-1"><Icon name="DollarSign" size={12} />{formatMoney(inv.amount)}</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden">
                           <motion.div
                             className="h-full bg-primary-500 rounded-full"
                             initial={{ width: 0 }}
-                            animate={{ width: `${task.progress || 0}%` }}
+                            animate={{ width: `${inv.amount > 0 ? Math.round(inv.receivedAmount / inv.amount * 100) : 0}%` }}
                             transition={{ duration: 0.8, delay: 0.3 + index * 0.1, ease: 'easeOut' }}
                           />
                         </div>
-                        <span className="text-xs text-slate-500 font-medium w-8 text-right">{task.progress || 0}%</span>
+                        <span className="text-xs text-slate-500 font-medium w-8 text-right">{inv.amount > 0 ? Math.round(inv.receivedAmount / inv.amount * 100) : 0}%</span>
                       </div>
                     </motion.div>
                   ))}
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-12 text-slate-400">
-                  <Icon name="ClipboardList" size={32} className="mb-2 opacity-40" /><p className="text-sm">暂无任务</p>
+                  <Icon name="Receipt" size={32} className="mb-2 opacity-40" /><p className="text-sm">暂无发票</p>
                 </div>
               )}
             </div>

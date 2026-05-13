@@ -126,7 +126,7 @@ export default function WageRecordsTab({
                 const diffSign = diff > 0.01 ? '+' : ''
 
                 return (
-                  <tr key={w.id} className="border-t border-slate-100 hover:bg-slate-50">
+                  <tr key={w.id} className="border-t border-slate-100 table-row-hover">
                     <td className="px-3 py-3">
                       <input type="checkbox" checked={selectedIds.has(w.id)}
                         onChange={() => toggleSelect(w.id)} className="rounded" />

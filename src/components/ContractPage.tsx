@@ -259,7 +259,7 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
                   const paymentTotal = getContractPaymentTotal(contract.id, paymentRecords, config)
                   const partner = partners.find(p => p.id === contract.partnerId)
                   return (
-                    <tr key={contract.id} className="hover:bg-slate-50">
+                    <tr key={contract.id} className="table-row-hover">
                       <td className="px-4 py-3"><div className="font-medium text-slate-800">{contract.name}</div></td>
                       <td className="px-4 py-3 text-sm text-slate-500">{contract.contractNo}</td>
                       <td className="px-4 py-3 text-sm text-slate-600">{partner?.name || '-'}</td>

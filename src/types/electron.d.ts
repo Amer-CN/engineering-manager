@@ -82,6 +82,40 @@ export interface WorkerTransferRecord {
 // ============ 农民工状态枚举 ============
 export type WorkerStatus = 'active' | 'left'  // 在职/离场
 
+// ============ 全局工人信息库（纯身份） ============
+export interface Worker {
+  id: number
+  name: string
+  idCard: string                   // 身份证号（唯一）
+  gender?: string                  // 男/女
+  birthDate?: string               // YYYY-MM-DD
+  ethnicity?: string               // 民族
+  phone?: string
+  address?: string
+  bankAccount?: string             // 工资卡号
+  bankName?: string                // 开户行
+  createdAt: string
+}
+
+// ============ 项目用工关系（Worker ↔ Project many-to-many） ============
+export interface ProjectWorker {
+  id: number
+  workerId: number
+  projectId: number
+  teamId?: number                  // 班组ID
+  dailyWage: number                // 日工资（元/天）
+  workerType: WorkerType | string  // 工种
+  entryDate: string                // 进场日期
+  status: WorkerStatus             // 'active' | 'left'
+  remarks?: string
+  createdAt: string
+  // 关联查询附加
+  workerName?: string
+  workerIdCard?: string
+  projectName?: string
+  teamName?: string
+}
+
 // ============ 人员管理 ============
 export interface Member {
   // 基础信息
@@ -138,22 +172,20 @@ export interface Member {
   projectId?: number               // 当前所属项目ID
   projectName?: string             // 当前项目名称
   isTeamLeader?: boolean           // 是否为班组长
+
+  // 部门与职位（管理人员专属，v2.6.0 新增）
+  departmentId?: number            // 所属部门 ID → db.departments.id
+  position?: string                // 职位名称（如"部门经理""工程师""会计"）
 }
 
-export interface Task {
+// ============ 部门管理 ============
+export interface Department {
   id: number
-  projectId: number
-  title: string
-  description: string
-  assigneeId: number | null
-  priority: 'high' | 'medium' | 'low'
-  status: 'todo' | 'in_progress' | 'completed'
-  progress: number
-  dueDate: string
+  name: string                     // 部门名称
+  managerId: number | null         // 部门负责人 member.id
+  memberCount: number              // 部门人数（查询时计算，不持久化）
+  positions: string[]              // 该部门可选的职位列表
   createdAt: string
-  updatedAt: string
-  projectName?: string
-  assigneeName?: string
 }
 
 export interface Material {
@@ -212,6 +244,8 @@ export interface CostLedgerCategory {
   isBuiltin: boolean
   isEnabled: boolean
   sortOrder: number
+  /** 一级分类名（内置分类从 CATEGORY_HIERARCHY 派生，自定义分类创建时选定） */
+  level1?: string
 }
 
 export interface Drawing {
@@ -408,9 +442,6 @@ export interface ContractExpiringItem {
 
 export interface DashboardStats {
   projectsCount: number
-  tasksCount: number
-  tasksCompleted: number
-  taskCompletionRate: number
   membersCount: number
   materialsCount: number
   totalExpenses: number
@@ -419,7 +450,6 @@ export interface DashboardStats {
   inventoryItemsCount: number
   inProgressProjects: number
   recentProjects: Project[]
-  recentTasks: Task[]
   expenseByCategory?: Record<string, number>
 }
 
@@ -650,6 +680,17 @@ export interface AttendanceRecord {
 }
 
 // ============ 工资管理 ============
+export interface SalaryHistoryEntry {
+  id: number
+  memberId: number
+  effectiveDate: string            // "YYYY-MM-DD" 生效日期
+  baseSalary: number
+  subsidy: number                  // 补助金额
+  subsidyNote: string              // 补助说明
+  note: string                     // 变动备注
+  createdAt: string
+}
+
 export interface WageRecord {
   id: number
   projectId: number
@@ -740,11 +781,19 @@ export interface ElectronAPI {
   getWorkerTransferRecords: (workerId: number) => Promise<{ success: boolean; data?: WorkerTransferRecord[]; error?: string }>
   createWorkerTransfer: (record: Partial<WorkerTransferRecord>) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
 
-  // 任务
-  getTasks: (projectId?: number) => Promise<{ success: boolean; data?: Task[]; error?: string }>
-  createTask: (task: Partial<Task>) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
-  updateTask: (task: Task) => Promise<{ success: boolean; error?: string }>
-  deleteTask: (id: number) => Promise<{ success: boolean; error?: string }>
+  // 全局工人信息库
+  getWorkers: (search?: string, workerType?: string) => Promise<{ success: boolean; data?: Worker[]; error?: string }>
+  createWorker: (worker: Partial<Worker>) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
+  updateWorker: (worker: Worker) => Promise<{ success: boolean; data?: Worker; error?: string }>
+  deleteWorker: (id: number) => Promise<{ success: boolean; error?: string }>
+  getWorkerStats: (workerId: number) => Promise<{ success: boolean; data?: { projectCount: number; totalEarnings: number; projectBreakdown: { projectId: number; projectName: string; total: number }[] }; error?: string }>
+
+  // 项目用工关系
+  getProjectWorkers: (projectId: number) => Promise<{ success: boolean; data?: (ProjectWorker & { worker?: Worker })[]; error?: string }>
+  createProjectWorker: (pw: Partial<ProjectWorker>) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
+  updateProjectWorker: (pw: ProjectWorker) => Promise<{ success: boolean; data?: ProjectWorker; error?: string }>
+  deleteProjectWorker: (id: number) => Promise<{ success: boolean; error?: string }>
+  batchCreateProjectWorkers: (entries: Partial<ProjectWorker>[]) => Promise<{ success: boolean; data?: { ids: number[] }; error?: string }>
 
   // 材料
   getMaterials: (projectId?: number) => Promise<{ success: boolean; data?: Material[]; error?: string }>
@@ -771,6 +820,12 @@ export interface ElectronAPI {
   resetCostLedgerCategories: () => Promise<{ success: boolean; data?: CostLedgerCategory[]; error?: string }>
 
   // 图纸
+  // 部门管理
+  getDepartments: () => Promise<{ success: boolean; data?: Department[]; error?: string }>
+  createDepartment: (data: { name: string; managerId?: number; positions?: string[] }) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
+  updateDepartment: (data: { id: number; name?: string; managerId?: number | null; positions?: string[] }) => Promise<{ success: boolean; error?: string }>
+  deleteDepartment: (id: number) => Promise<{ success: boolean; error?: string }>
+  // 图纸管理
   getDrawings: (projectId?: number) => Promise<{ success: boolean; data?: Drawing[]; error?: string }>
   uploadDrawing: (options: {
     projectId: number
@@ -896,6 +951,12 @@ export interface ElectronAPI {
   generateDefaultAttendances: (projectId: number, yearMonth: string, memberIds: number[]) => Promise<{ success: boolean; data?: { count: number }; error?: string }>
   deleteAttendance: (id: number) => Promise<{ success: boolean; error?: string }>
   batchDeleteAttendances: (ids: number[]) => Promise<{ success: boolean; data?: { deleted: number }; error?: string }>
+
+  // ============ 薪资历史 ============
+  getSalaryHistory: (memberId: number) => Promise<{ success: boolean; data?: SalaryHistoryEntry[]; error?: string }>
+  createSalaryHistory: (record: Partial<SalaryHistoryEntry>) => Promise<{ success: boolean; data?: SalaryHistoryEntry; error?: string }>
+  deleteSalaryHistory: (id: number) => Promise<{ success: boolean; error?: string }>
+  getEffectiveSalary: (memberId: number, yearMonth: string) => Promise<{ success: boolean; data?: { baseSalary: number; subsidy: number; effectiveDate: string }; error?: string }>
 
   // ============ 工资管理 ============
   getWages: (projectId?: number, yearMonth?: string, memberId?: number) => Promise<{ success: boolean; data?: WageRecord[]; error?: string }>

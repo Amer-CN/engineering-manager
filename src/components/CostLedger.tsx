@@ -75,10 +75,6 @@ export default function CostLedger() {
 
   return (
     <div className="mx-auto max-w-[1400px] p-6">
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-slate-800">成本台账</h1>
-        <p className="mt-1 text-sm text-slate-500">真实资金流追踪 — 经营支出、垫资进出、股东融资</p>
-      </div>
       <CostLedgerDashboard
         projects={projects}
         summaries={summaries}

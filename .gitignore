@@ -8,3 +8,16 @@ release/
 *.log
 .DS_Store
 Thumbs.db
+
+# 真实数据文件 (包含 API Key、项目数据、人员身份信息等敏感内容)
+public/ocr-config.json
+public/seed-data.json
+
+# Claude Code 本地设置 (含个人权限配置和路径)
+.claude/settings.local.json
+
+# MCP 配置 (含第三方 API Token)
+.mcp.json
+
+# 意外生成的空目录
+BRANCH=master/

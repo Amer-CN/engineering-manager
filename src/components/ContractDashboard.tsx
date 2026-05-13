@@ -78,6 +78,15 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
       {/* Hero Banner */}
       <motion.div variants={sectionV} className="relative bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 text-white p-6 rounded-2xl mb-8 overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.1),transparent_50%)]" />
+        {/* 装饰光点 */}
+        <motion.div className="absolute top-3 right-12 w-1 h-1 rounded-full bg-emerald-400"
+          animate={{ opacity: [0, 1, 0], scale: [0.5, 2, 0.5] }}
+          transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 3 }}
+        />
+        <motion.div className="absolute bottom-4 right-24 w-1.5 h-1.5 rounded-full bg-blue-400"
+          animate={{ opacity: [0, 1, 0], scale: [0.5, 1.8, 0.5] }}
+          transition={{ duration: 3, repeat: Infinity, repeatDelay: 4, delay: 1 }}
+        />
         <div className="relative z-10 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">合同看板</h1>

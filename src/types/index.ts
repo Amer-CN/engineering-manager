@@ -11,7 +11,6 @@
 export type {
   // 项目管理
   Project,
-  Task,
   Material,
   Expense,
   CostLedgerEntry,
@@ -26,6 +25,11 @@ export type {
   WorkerTeam,
   WorkerTransferRecord,
   WorkerStatus,
+  Worker,
+  ProjectWorker,
+
+  // 部门管理
+  Department,
   
   // 合作单位
   Partner,
@@ -129,7 +133,6 @@ export {
   isObject,
   isProject,
   isMember,
-  isTask,
   isMaterial,
   isExpense,
   isDrawing,
@@ -141,7 +144,6 @@ export {
   isInventoryItem,
   isProjectArray,
   isMemberArray,
-  isTaskArray,
   isExpenseArray,
   isPartnerArray,
   isInvoiceArray,

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- rounded square background -->
+  <rect x="24" y="24" width="464" height="464" rx="104" ry="104" fill="url(#bg)"/>
+
+  <!-- hard hat (centered, large) -->
+  <g transform="translate(256, 258)" fill="white">
+    <!-- hat brim -->
+    <ellipse cx="0" cy="28" rx="120" ry="26"/>
+    <!-- lower brim shadow -->
+    <rect x="-120" y="22" width="240" height="18" rx="4" opacity="0.15"/>
+    <!-- hat dome -->
+    <path d="M-100 12 Q-100 -90 0 -110 Q100 -90 100 12 Z"/>
+    <!-- hat ridge top -->
+    <rect x="-10" y="-105" width="20" height="72" rx="10"/>
+    <!-- center line on dome -->
+    <line x1="0" y1="-100" x2="0" y2="5" stroke="#bfdbfe" stroke-width="3" opacity="0.35"/>
+  </g>
+</svg>

@@ -49,7 +49,7 @@ export function CostLedgerAnalytics({ projectId, projectName, categories }: Cost
 
     // Category pie data
     const pieData = Object.entries(byCategory)
-      .map(([cat, amt]) => ({ name: getCategoryLabel(cat), value: amt, code: cat }))
+      .map(([cat, amt]) => ({ name: getCategoryLabel(cat, categories), value: amt, code: cat }))
       .sort((a, b) => b.value - a.value)
 
     // Monthly trend (sorted by month, last 12)
@@ -129,10 +129,12 @@ export function CostLedgerAnalytics({ projectId, projectName, categories }: Cost
               </div>
               <div className="flex-1 space-y-1 min-w-0">
                 {stats.pieData.map((d: any, i) => (
-                  <div key={d.code} className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: getCategoryColor(d.code, categories as any) || FALLBACK_COLORS[i % FALLBACK_COLORS.length] }} />
-                      <span className="text-slate-600 truncate">{d.name}</span>
+                  <div key={d.code} className="flex items-start justify-between text-xs">
+                    <div className="flex items-start gap-1.5 min-w-0">
+                      <span className="h-2 w-2 shrink-0 rounded-full mt-1" style={{ backgroundColor: getCategoryColor(d.code, categories as any) || FALLBACK_COLORS[i % FALLBACK_COLORS.length] }} />
+                      <span className="flex-1 min-w-0">
+                        <span className="text-slate-600 line-clamp-2 leading-tight">{d.name}</span>
+                      </span>
                     </div>
                     <span className="font-mono text-slate-500 ml-2 shrink-0">{formatMoney(d.value)}</span>
                   </div>

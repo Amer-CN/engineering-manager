@@ -1,6 +1,6 @@
 {
   "name": "engineering-manager",
-  "version": "1.21.0",
+  "version": "2.6.3",
   "description": "工程项目管理系统 - 一站式工程项目管理解决方案",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -12,11 +12,7 @@
     "electron:build": "vite build && electron-builder",
     "pack": "vite build && electron-builder --dir",
     "dist": "vite build && electron-builder",
-    "postbuild": "node -e \"require('fs').copyFileSync('public/ocr-config.json', 'dist/ocr-config.json')\"",
-    "version:patch": "node scripts/bump-version.js patch",
-    "version:minor": "node scripts/bump-version.js minor",
-    "version:major": "node scripts/bump-version.js major",
-    "version": "node scripts/bump-version.js patch"
+    "postbuild": "node -e \"require('fs').copyFileSync('public/ocr-config.json', 'dist/ocr-config.json')\""
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -46,6 +42,7 @@
     "electron": "^28.2.0",
     "electron-builder": "^24.9.1",
     "postcss": "^8.4.35",
+    "sharp": "^0.34.5",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.3.3",
     "vite": "^5.1.0",
@@ -66,6 +63,12 @@
     "extraMetadata": {
       "main": "dist-electron/main.js"
     },
+    "extraResources": [
+      {
+        "from": "public/seed-data.json",
+        "to": "seed-data.json"
+      }
+    ],
     "asar": true,
     "win": {
       "target": [

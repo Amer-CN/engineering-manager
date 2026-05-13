@@ -17,8 +17,8 @@ import './projects'
 // 成员管理（包含农民工班组、调动记录）
 import './members'
 
-// 任务管理
-import './tasks'
+// 全局工人信息库 + 项目用工关系
+import './workers'
 
 // 材料与费用
 import './materials'
@@ -37,6 +37,9 @@ import './templates'
 
 // 图纸管理
 import './drawings'
+
+// 部门管理
+import './departments'
 
 // 进销存
 import './inventory'
@@ -61,3 +64,6 @@ import './cost-ledger'
 
 // 审计日志
 import './audit'
+
+// 薪资历史
+import './salary-history'

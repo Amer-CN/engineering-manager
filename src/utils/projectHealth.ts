@@ -4,37 +4,33 @@
 
 /**
  * 计算项目健康度评分 (0-100)
- * 维度：任务进度(30%) + 预算控制(30%) + 合同执行(20%) + 发票管理(20%)
+ * 维度：预算控制(40%) + 合同执行(30%) + 发票管理(30%)
  */
 export function calculateHealthScore(
   project: { budget: number },
   stats: {
-    taskProgress: number
     totalExpenses: number
     incomeTotal: number
     receivedInTotal: number
     invoiceInTotal: number
   }
 ): number {
-  // 1. 任务进度得分 (0-100)
-  const taskScore = stats.taskProgress
-
-  // 2. 预算控制得分 (预算使用率越低得分越高)
+  // 1. 预算控制得分 (预算使用率越低得分越高)
   const budgetUsage = stats.totalExpenses / (project.budget || 1)
   const budgetScore = Math.max(0, Math.min(100, 100 - budgetUsage * 100))
 
-  // 3. 合同执行得分 (收入合同执行率)
-  const contractScore = stats.incomeTotal > 0 
+  // 2. 合同执行得分 (收入合同执行率)
+  const contractScore = stats.incomeTotal > 0
     ? Math.min(100, (stats.receivedInTotal / stats.incomeTotal) * 100)
     : 100
 
-  // 4. 发票管理得分 (发票核销率)
+  // 3. 发票管理得分 (发票核销率)
   const invoiceScore = stats.invoiceInTotal > 0
     ? Math.min(100, (stats.receivedInTotal / stats.invoiceInTotal) * 100)
     : 100
 
   // 加权计算
-  const score = taskScore * 0.3 + budgetScore * 0.3 + contractScore * 0.2 + invoiceScore * 0.2
+  const score = budgetScore * 0.4 + contractScore * 0.3 + invoiceScore * 0.3
   return Math.round(score)
 }
 
