@@ -1,9 +1,0 @@
-{
-  "provider": "baidu",
-  "enabled": true,
-  "baidu": {
-    "apiKey": "3ctkvORt4loNBTjnXZj7cBrh",
-    "secretKey": "nXFQ0nHoxOhKI7uSIKz0GPHqcxf74mDZ"
-  },
-  "_note": "这是预置配置文件，安装后会自动加载。"
-}
