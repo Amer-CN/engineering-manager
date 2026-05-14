@@ -6,9 +6,9 @@ import { FileDropZone } from '../partners/FileDropZone'
 import { logCreate, logUpdate } from '../../../utils/audit'
 import { useToastContext } from '../../../hooks/useToast'
 import { paymentMethods, contractStatuses } from '../../../data/regions'
-import type { Project, Partner } from '../../../types/electron'
+import type { Project, Partner, AgreementSubType } from '../../../types/electron'
 import type { Contract, ContractType, TypeConfig } from './contractConfig'
-import { getStatusLabel, getStatusColor, CONFIG } from './contractConfig'
+import { getStatusLabel, getStatusColor, CONFIG, AGREEMENT_SUB_TYPE_LABELS } from './contractConfig'
 
 interface Props {
   show: boolean
@@ -25,7 +25,8 @@ interface Props {
 const emptyForm = {
   projectId: 0, partnerId: 0, contractNo: '', name: '', amount: 0,
   signedDate: '', startDate: '', endDate: '', status: 'draft' as Contract['status'],
-  paymentMethod: 'by_progress' as Contract['paymentMethod'], remarks: '',
+  paymentMethod: 'by_progress' as 'one_time' | 'monthly' | 'by_progress' | 'by_stage', remarks: '',
+  agreementType: 'cooperation' as AgreementSubType,
   fileUrl: '', fileType: undefined as 'pdf' | 'image' | 'word' | 'excel' | undefined,
 }
 
@@ -39,14 +40,16 @@ export const ContractFormModal: React.FC<Props> = ({ show, type, editingContract
 
   useEffect(() => {
     if (editingContract) {
+      const agreementContract = editingContract as any
       setFormData({
         projectId: editingContract.projectId, partnerId: editingContract.partnerId || 0,
         contractNo: editingContract.contractNo, name: editingContract.name,
-        amount: editingContract.amount, signedDate: editingContract.signedDate,
+        amount: editingContract.amount || 0, signedDate: editingContract.signedDate,
         startDate: editingContract.startDate, endDate: editingContract.endDate,
-        status: editingContract.status, paymentMethod: editingContract.paymentMethod,
+        status: editingContract.status, paymentMethod: (editingContract as any).paymentMethod || 'by_progress',
         remarks: editingContract.remarks || '', fileUrl: editingContract.fileUrl || '',
         fileType: editingContract.fileType,
+        agreementType: agreementContract.agreementType || 'cooperation',
       })
     } else setFormData(emptyForm)
   }, [editingContract, show])
@@ -74,13 +77,14 @@ export const ContractFormModal: React.FC<Props> = ({ show, type, editingContract
     e.preventDefault()
     if (!formData.name.trim()) { showToast('请输入合同名称', 'error'); return }
     if (!formData.projectId) { showToast('请选择关联项目', 'error'); return }
-    if (!formData.amount || formData.amount <= 0) { showToast('请输入有效的合同金额', 'error'); return }
+    if (type !== 'agreement' && (!formData.amount || formData.amount <= 0)) { showToast('请输入有效的合同金额', 'error'); return }
     try {
       let fileUrl = formData.fileUrl
       if (fileUrl && fileUrl.startsWith('data:')) {
         const ext = formData.fileType === 'pdf' ? 'pdf' : formData.fileType === 'word' ? 'docx' : formData.fileType === 'excel' ? 'xlsx' : 'png'
+        const amountSuffix = type === 'agreement' ? (formData.amount ? `_${formData.amount}元` : '') : `_${formData.amount}元`
         const saveResult = await window.electronAPI.saveContractFile({
-          fileData: fileUrl, fileName: `${formData.name}_${formData.amount}元.${ext}`,
+          fileData: fileUrl, fileName: `${formData.name}${amountSuffix}.${ext}`,
           subCategory: config.subCategory,
           projectName: projects.find(p => p.id === formData.projectId)?.name || null,
         })
@@ -117,7 +121,7 @@ export const ContractFormModal: React.FC<Props> = ({ show, type, editingContract
                 <Icon name="FileText" size={14} /> 从模板生成
               </button>
             )}
-            <span className={`px-3 py-1 rounded-full text-xs font-medium ${type === 'income' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{config.label}</span>
+            <span className={`px-3 py-1 rounded-full text-xs font-medium ${type === 'income' ? 'bg-emerald-100 text-emerald-700' : type === 'expense' ? 'bg-red-100 text-red-700' : 'bg-sky-100 text-sky-700'}`}>{config.label}</span>
           </div>
         </div>
         <form onSubmit={handleSubmit} className="p-6">
@@ -126,9 +130,14 @@ export const ContractFormModal: React.FC<Props> = ({ show, type, editingContract
             <div><label className="block text-sm font-medium text-slate-700 mb-1">关联项目 *</label><select value={formData.projectId} onChange={e => setFormData({ ...formData, projectId: parseInt(e.target.value) })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500" required><option value="">选择项目</option>{projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
             <div><label className="block text-sm font-medium text-slate-700 mb-1">{config.partnerLabel}</label><PartnerSelect partners={partners} value={formData.partnerId || null} onChange={(partnerId) => setFormData({ ...formData, partnerId: partnerId || 0 })} placeholder={config.partnerPlaceholder} /></div>
             <div><label className="block text-sm font-medium text-slate-700 mb-1">合同编号</label><input type="text" value={formData.contractNo} onChange={e => setFormData({ ...formData, contractNo: e.target.value })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500" /></div>
-            <div><label className="block text-sm font-medium text-slate-700 mb-1">合同金额 *</label><input type="number" value={formData.amount} onChange={e => setFormData({ ...formData, amount: parseFloat(e.target.value) })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500" required /></div>
+            <div><label className="block text-sm font-medium text-slate-700 mb-1">合同金额{type !== 'agreement' ? ' *' : ''}</label><input type="number" value={formData.amount || ''} onChange={e => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500" required={type !== 'agreement'} /></div>
             <div><label className="block text-sm font-medium text-slate-700 mb-1">签订日期</label><input type="date" value={formData.signedDate} onChange={e => setFormData({ ...formData, signedDate: e.target.value })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500" /></div>
-            <div><label className="block text-sm font-medium text-slate-700 mb-1">付款方式</label><select value={formData.paymentMethod} onChange={e => setFormData({ ...formData, paymentMethod: e.target.value as any })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500">{paymentMethods.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}</select></div>
+            {type !== 'agreement' && (
+              <div><label className="block text-sm font-medium text-slate-700 mb-1">付款方式</label><select value={formData.paymentMethod} onChange={e => setFormData({ ...formData, paymentMethod: e.target.value as any })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500">{paymentMethods.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}</select></div>
+            )}
+            {type === 'agreement' && (
+              <div><label className="block text-sm font-medium text-slate-700 mb-1">协议类型</label><select value={formData.agreementType} onChange={e => setFormData({ ...formData, agreementType: e.target.value as AgreementSubType })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500">{Object.entries(AGREEMENT_SUB_TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
+            )}
             <div><label className="block text-sm font-medium text-slate-700 mb-1">开始日期</label><input type="date" value={formData.startDate} onChange={e => setFormData({ ...formData, startDate: e.target.value })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500" /></div>
             <div><label className="block text-sm font-medium text-slate-700 mb-1">结束日期</label><input type="date" value={formData.endDate} onChange={e => setFormData({ ...formData, endDate: e.target.value })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500" /></div>
             <div><label className="block text-sm font-medium text-slate-700 mb-1">合同状态</label><select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value as any })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500">{contractStatuses.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}</select></div>

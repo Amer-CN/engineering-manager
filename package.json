@@ -1,6 +1,6 @@
 {
   "name": "engineering-manager",
-  "version": "2.6.3",
+  "version": "2.8.2",
   "description": "工程项目管理系统 - 一站式工程项目管理解决方案",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -89,7 +89,8 @@
       "allowElevation": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "工程管家"
+      "shortcutName": "工程管家",
+      "include": "public/installer.nsh"
     },
     "publish": null
   }

@@ -6,57 +6,7 @@
 import { ipcMain } from 'electron'
 import log from 'electron-log'
 import { db, dbReady, saveDatabase } from '../database'
-
-function getDaysInMonth(yearMonth: string): number {
-  const [year, month] = yearMonth.split('-').map(Number)
-  return new Date(year, month, 0).getDate()
-}
-
-type DayStatus = 'work' | 'holiday' | 'sick_leave' | 'personal_leave' | 'absent'
-
-/**
- * 生成默认每日考勤状态
- * 管理人员：前4天默认"法定节假日"（近似周末），其余"出勤"
- * 工人：全部默认"出勤"
- */
-function generateDailyStatus(yearMonth: string, _isStaff: boolean): Record<number, DayStatus> {
-  const daysInMonth = getDaysInMonth(yearMonth)
-  const status: Record<number, DayStatus> = {}
-  for (let d = 1; d <= daysInMonth; d++) {
-    status[d] = 'work'
-  }
-  return status
-}
-
-/**
- * 从每日状态计算汇总数据
- * 法定节假日不算缺勤（法定带薪），只计病假/事假/缺勤为"休假"
- * workDays 包含出勤+法定节假日（均为带薪日）
- */
-function computeFromDailyStatus(
-  dailyStatus: Record<number, DayStatus>,
-  daysInMonth: number,
-  startDay: number = 1
-): { workDays: number; daysOff: number; isFullAttendance: boolean; applicableDays: number } {
-  let workDays = 0
-  let daysOff = 0
-  for (let d = startDay; d <= daysInMonth; d++) {
-    const s = dailyStatus[d] || 'work'
-    if (s === 'work' || s === 'holiday') workDays++
-    if (s === 'sick_leave' || s === 'personal_leave' || s === 'absent') daysOff++
-  }
-  const applicableDays = daysInMonth - startDay + 1
-  return { workDays, daysOff, isFullAttendance: daysOff <= 4, applicableDays }
-}
-
-function getEntryDay(memberId: number, yearMonth: string): number {
-  if (!db.members) return 1
-  const member = db.members.find((m: any) => m.id === memberId)
-  if (!member?.entryDate) return 1
-  const [ey, em, ed2] = member.entryDate.split('-').map(Number)
-  const [cy, cm] = yearMonth.split('-').map(Number)
-  return (ey === cy && em === cm) ? ed2 : 1
-}
+import { getDaysInMonth, generateDailyStatus, computeFromDailyStatus, getEntryDay, DayStatus } from './attendance-utils'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 获取考勤列表
@@ -73,12 +23,23 @@ ipcMain.handle('db:attendances:getAll', (_, projectId?: number, yearMonth?: stri
     records = records.filter((a: any) => a.yearMonth === yearMonth)
   }
   const result = records.map((a: any) => {
-    const member = db.members.find((m: any) => m.id === a.memberId)
-    return {
-      ...a,
-      memberName: member?.name || '',
-      memberType: member?.memberType || 'worker'
+    let memberName = ''; let memberType = 'worker'; let teamName = ''
+    if (a.memberId) {
+      const member = db.members.find((m: any) => m.id === a.memberId)
+      memberName = member?.name || ''
+      memberType = member?.memberType || 'worker'
+      const team = db.workerTeams.find((t: any) => t.id === member?.teamId)
+      teamName = team?.name || ''
+    } else if (a.projectWorkerId && db.projectWorkers) {
+      const pw = db.projectWorkers.find((p: any) => p.id === a.projectWorkerId)
+      if (pw && db.workers) {
+        const worker = db.workers.find((w: any) => w.id === pw.workerId)
+        memberName = worker?.name || ''
+        const team = db.workerTeams?.find((t: any) => t.id === pw.teamId)
+        teamName = team?.name || ''
+      }
     }
+    return { ...a, memberName, memberType, teamName }
   })
   return { success: true, data: result.sort((a: any, b: any) =>
     new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
@@ -177,7 +138,7 @@ ipcMain.handle('db:attendances:update', (_, record) => {
       let isFullAttendance = record.isFullAttendance ?? existing.isFullAttendance
 
       if (record.dailyStatus) {
-        const startDay = getEntryDay(existing.memberId, record.yearMonth || existing.yearMonth)
+        const startDay = getEntryDay(existing.memberId, record.yearMonth || existing.yearMonth, db.members)
         const computed = computeFromDailyStatus(record.dailyStatus, daysInMonth, startDay)
         workDays = computed.workDays
         daysOff = computed.daysOff
@@ -261,7 +222,7 @@ ipcMain.handle('db:attendances:generateDefaults', (_, projectId: number, yearMon
       const member = db.members.find((m: any) => m.id === memberId)
       const isStaff = member?.memberType === 'staff'
       const dailyStatus = generateDailyStatus(yearMonth, isStaff)
-      const startDay = getEntryDay(memberId, yearMonth)
+      const startDay = getEntryDay(memberId, yearMonth, db.members)
       const computed = computeFromDailyStatus(dailyStatus, daysInMonth, startDay)
 
       db.attendances.push({
@@ -309,7 +270,7 @@ ipcMain.handle('db:attendances:generateDefaultsV2', (_, projectId: number, yearM
       if (exists) continue
 
       const dailyStatus = generateDailyStatus(yearMonth, false)
-      const startDay = pw.workerId ? getEntryDay(pw.workerId, yearMonth) : 1
+      const startDay = pw.workerId ? getEntryDay(pw.workerId, yearMonth, db.members) : 1
       const computed = computeFromDailyStatus(dailyStatus, daysInMonth, startDay)
 
       db.attendances.push({

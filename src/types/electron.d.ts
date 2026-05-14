@@ -94,6 +94,9 @@ export interface Worker {
   address?: string
   bankAccount?: string             // 工资卡号
   bankName?: string                // 开户行
+  bankLineNo?: string              // 联行号
+  workerType?: string              // 默认工种
+  dailyWage?: number               // 默认日工资
   createdAt: string
 }
 
@@ -417,6 +420,35 @@ export interface ExpenseRecord {
   createdAt: string
 }
 
+// ============ 其他协议 ============
+export type AgreementSubType = 'cooperation' | 'framework' | 'settlement' | 'compensation' | 'personal' | 'other'
+
+export interface AgreementContract {
+  id: number
+  projectId: number
+  partnerId: number
+  contractNo: string
+  name: string
+  agreementType: AgreementSubType   // 协议子类型
+  amount?: number                   // 合同金额（可选，框架协议等可能无金额）
+  signedDate: string
+  startDate: string
+  endDate: string
+  status: ContractStatus
+  remarks: string
+  createdAt: string
+  updatedAt: string
+  // 结算相关
+  finalAmount?: number
+  settlementId?: number
+  // 合同附件
+  fileUrl?: string
+  fileType?: 'pdf' | 'image' | 'word' | 'excel'
+  // 关联查询时附带
+  projectName?: string
+  partnerName?: string
+}
+
 // ============ 合同看板统计 ============
 export interface ContractStats {
   incomeCount: number
@@ -425,6 +457,7 @@ export interface ContractStats {
   expenseCount: number
   expenseTotal: number
   expensePaid: number
+  agreementCount: number
   netIncome: number
   netReceived: number
   expiringSoon: ContractExpiringItem[]
@@ -432,7 +465,7 @@ export interface ContractStats {
 
 export interface ContractExpiringItem {
   id: number
-  type: 'income' | 'expense'
+  type: 'income' | 'expense' | 'agreement'
   name: string
   contractNo: string
   amount: number
@@ -694,38 +727,48 @@ export interface SalaryHistoryEntry {
 export interface WageRecord {
   id: number
   projectId: number
-  memberId: number
+  memberId?: number
+  projectWorkerId?: number
   yearMonth: string               // "YYYY-MM"
-  baseSalary: number
   dailyWage: number
-  socialSecurityCompany: number
-  housingFund: number
-  housingFundPersonal: number       // 公积金个人部分
-  socialSecurityPersonal: number    // 社保个人部分
-  companyCoversSocial: boolean      // 公司是否承担个人部分
-  otherAllowances: number
   workDays: number
-  daysOff: number
-  isFullAttendance: boolean
   bonus: number
   deduction: number
   actualWage: number
   paidAmount?: number              // 实发金额（可能不同于应发）
   paidDate?: string                // 发放日期 "YYYY-MM-DD"
+  bankReceiptPath?: string        // 银行回单凭证文件路径
+  paymentLocked?: boolean          // 是否已归档（锁定实发金额/日期）
   memberName?: string
-  memberType?: 'staff' | 'worker'
+  memberType?: 'worker'
   projectName?: string
   teamName?: string
+  bankAccount?: string             // 银行卡号，用于回单匹配
   createdAt: string
   updatedAt: string
 }
 
 export interface WageStats {
   totalWage: number
-  staffWage: number
-  workerWage: number
   count: number
   projectBreakdown: { projectId: number; projectName: string; total: number; percentage: number }[]
+}
+
+export interface BankReceiptItem {
+  name: string
+  amount: number
+  status: string
+  account?: string                 // 收款账号（银行卡号），用于精确匹配
+}
+
+export interface ParsedBankReceipt {
+  date: string
+  totalAmount: number
+  successAmount: number
+  failCount: number
+  items: BankReceiptItem[]
+  receiptPath: string
+  rawTextSnippet?: string  // 提取文本前500字符（调试用）
 }
 
 
@@ -878,6 +921,12 @@ export interface ElectronAPI {
   createExpenseRecord: (record: Partial<ExpenseRecord>) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
   deleteExpenseRecord: (id: number) => Promise<{ success: boolean; error?: string }>
 
+  // 其他协议
+  getAgreementContracts: (projectId?: number) => Promise<{ success: boolean; data?: AgreementContract[]; error?: string }>
+  createAgreementContract: (contract: Partial<AgreementContract>) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
+  updateAgreementContract: (contract: AgreementContract) => Promise<{ success: boolean; error?: string }>
+  deleteAgreementContract: (id: number) => Promise<{ success: boolean; error?: string }>
+
   // 合同统计
   getContractStats: () => Promise<{ success: boolean; data?: ContractStats; error?: string }>
 
@@ -949,6 +998,8 @@ export interface ElectronAPI {
   createAttendance: (record: Partial<AttendanceRecord>) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
   updateAttendance: (record: AttendanceRecord) => Promise<{ success: boolean; error?: string }>
   generateDefaultAttendances: (projectId: number, yearMonth: string, memberIds: number[]) => Promise<{ success: boolean; data?: { count: number }; error?: string }>
+  generateDefaultAttendancesV2: (projectId: number, yearMonth: string, projectWorkerIds: number[]) => Promise<{ success: boolean; data?: { count: number }; error?: string }>
+  batchImportAttendances: (projectId: number, yearMonth: string, records: { projectWorkerId: number; workDays: number }[]) => Promise<{ success: boolean; data?: { created: number; updated: number }; error?: string }>
   deleteAttendance: (id: number) => Promise<{ success: boolean; error?: string }>
   batchDeleteAttendances: (ids: number[]) => Promise<{ success: boolean; data?: { deleted: number }; error?: string }>
 
@@ -966,7 +1017,10 @@ export interface ElectronAPI {
   batchSaveWages: (records: WageRecord[]) => Promise<{ success: boolean; error?: string }>
   deleteWage: (id: number) => Promise<{ success: boolean; error?: string }>
   batchDeleteWages: (ids: number[]) => Promise<{ success: boolean; data?: { deleted: number }; error?: string }>
+  batchClearPayments: (ids: number[]) => Promise<{ success: boolean; data?: { cleared: number }; error?: string }>
+  batchArchivePayments: (ids: number[]) => Promise<{ success: boolean; data?: { archived: number }; error?: string }>
   getWageStats: (yearMonth?: string, projectId?: number) => Promise<{ success: boolean; data?: WageStats; error?: string }>
+  parseBankReceipt: (sourcePath: string, projectName?: string) => Promise<{ success: boolean; data?: ParsedBankReceipt; error?: string }>
 
   // ============ 审计日志 ============
   auditLog: (log: any) => Promise<{ success: boolean; error?: string }>

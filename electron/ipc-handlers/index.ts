@@ -55,6 +55,7 @@ import './stats'
 
 // 考勤管理
 import './attendance'
+import './attendance-batch-import'
 
 // 工资管理
 import './wages'

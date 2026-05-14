@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
-import type { WorkerTeam } from '@/types'
 import {
   WORKER_IMPORT_FIELDS, type ImportState, type ImportProgress, type ImportResult,
 } from './useWorkerImport'
@@ -13,7 +12,6 @@ interface Props {
   result: ImportResult | null
   phase: 'idle' | 'mapping' | 'importing' | 'done'
   error?: string | null
-  workerTeams: WorkerTeam[]
   onClose: () => void
   onSwitchSheet?: (name: string) => void
   onSetMapping: (key: string, colIdx: number) => void
@@ -24,7 +22,7 @@ interface Props {
 }
 
 export function WorkerImportModal({
-  show, importState, progress, result, phase, error, workerTeams,
+  show, importState, progress, result, phase, error,
   onClose, onSwitchSheet, onSetHeaderRow, onSetMapping, onGetConfidence, onExecuteImport, onSavePreset,
 }: Props) {
   const [showPresetInput, setShowPresetInput] = useState(false)
@@ -54,7 +52,6 @@ export function WorkerImportModal({
     const errors: string[] = []
     const nameIdx = mapping['name']
     const idCardIdx = mapping['idCard']
-    const wageIdx = mapping['dailyWage']
 
     if (nameIdx >= 0) {
       const name = String(row[nameIdx] || '').trim()
@@ -64,13 +61,6 @@ export function WorkerImportModal({
       const idCard = String(row[idCardIdx] || '').trim()
       if (!idCard) errors.push('缺身份证号')
       else if (idCard.length !== 18 || !/^\d{17}[\dXx]$/.test(idCard)) errors.push('身份证号格式错误')
-    }
-    if (wageIdx >= 0) {
-      const wage = String(row[wageIdx] || '').trim()
-      const teamIdx = mapping['teamName']
-      const hasTeam = teamIdx >= 0 && String(row[teamIdx] || '').trim()
-      // Only validate wage if team is also specified
-      if (hasTeam && (!wage || isNaN(Number(wage)) || Number(wage) <= 0)) errors.push('日工资无效')
     }
     return { valid: errors.length === 0, errors }
   }
@@ -248,10 +238,14 @@ export function WorkerImportModal({
                   <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">导入完成（部分成功）</h3>
                 </>
               )}
-              <div className="grid grid-cols-3 gap-4 w-full max-w-md">
+              <div className="grid grid-cols-4 gap-4 w-full max-w-lg">
                 <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 text-center">
                   <div className="text-2xl font-bold text-emerald-600">{result.success}</div>
-                  <div className="text-xs text-slate-500 mt-1">成功</div>
+                  <div className="text-xs text-slate-500 mt-1">新增</div>
+                </div>
+                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 text-center">
+                  <div className="text-2xl font-bold text-blue-600">{result.updated}</div>
+                  <div className="text-xs text-slate-500 mt-1">更新</div>
                 </div>
                 <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 text-center">
                   <div className="text-2xl font-bold text-amber-500">{result.skipped}</div>
@@ -262,6 +256,25 @@ export function WorkerImportModal({
                   <div className="text-xs text-slate-500 mt-1">失败</div>
                 </div>
               </div>
+              {result.warnings && result.warnings.length > 0 && (
+                <details className="w-full max-w-md" open>
+                  <summary className="text-sm text-amber-600 cursor-pointer hover:text-amber-700 font-medium">
+                    警告（{result.warnings.length} 条）
+                  </summary>
+                  <div className="mt-2 max-h-40 overflow-y-auto border border-amber-200 dark:border-amber-700 rounded-lg">
+                    <table className="w-full text-xs">
+                      <thead className="bg-amber-50 dark:bg-amber-900/20 sticky top-0">
+                        <tr><th className="px-3 py-1.5 text-left font-medium text-amber-600">行号</th><th className="px-3 py-1.5 text-left font-medium text-amber-600">姓名</th><th className="px-3 py-1.5 text-left font-medium text-amber-600">说明</th></tr>
+                      </thead>
+                      <tbody className="divide-y divide-amber-100 dark:divide-amber-800">
+                        {result.warnings.map((w, i) => (
+                          <tr key={i}><td className="px-3 py-1.5 text-slate-700 dark:text-slate-300">{w.row}</td><td className="px-3 py-1.5 text-slate-700 dark:text-slate-300">{w.name}</td><td className="px-3 py-1.5 text-amber-600">{w.message}</td></tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
+              )}
               {result.failures.length > 0 && (
                 <details className="w-full max-w-md">
                   <summary className="text-sm text-slate-500 cursor-pointer hover:text-slate-700">

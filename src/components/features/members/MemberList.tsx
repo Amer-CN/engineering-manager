@@ -1,7 +1,8 @@
 /**
  * MemberList 组件
- * 
+ *
  * 成员列表组件 - 展示所有成员的列表
+ * @deprecated 此组件已废弃，工人管理模块已改用 LaborWorkerList
  */
 
 import React from 'react'

@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
 import * as XLSX from 'xlsx'
-import type { WorkerTeam } from '@/types'
 
 export interface WorkerImportRow {
   name: string
@@ -9,11 +8,12 @@ export interface WorkerImportRow {
   birthDate?: string
   ethnicity?: string
   phone?: string
-  teamName?: string
-  dailyWage?: number
-  entryDate?: string
-  workerType?: string
   address?: string
+  bankAccount?: string
+  bankName?: string
+  bankLineNo?: string
+  workerType?: string
+  dailyWage?: string
 }
 
 export interface ImportField {
@@ -28,12 +28,13 @@ export const WORKER_IMPORT_FIELDS: ImportField[] = [
   { key: 'idCard', label: '身份证号', required: true, keywords: ['身份证', '身份证号', '身份证号码', '证件号', 'ID'] },
   { key: 'gender', label: '性别', required: false, keywords: ['性别', 'gender'] },
   { key: 'phone', label: '手机号', required: false, keywords: ['手机', '电话', '手机号', '联系电话', 'phone'] },
-  { key: 'teamName', label: '班组', required: false, keywords: ['班组', '队伍', '所属班组', '施工队'] },
-  { key: 'dailyWage', label: '日工资', required: false, keywords: ['日薪', '日工资', '工资', '薪资', '单价'] },
-  { key: 'entryDate', label: '进场日期', required: false, keywords: ['进场', '进场日期', '入场日期', '入职日期', '日期'] },
-  { key: 'workerType', label: '工种', required: false, keywords: ['工种', '类型', '岗位'] },
   { key: 'address', label: '地址', required: false, keywords: ['地址', '住址', '身份证地址', '户籍'] },
   { key: 'ethnicity', label: '民族', required: false, keywords: ['民族', 'ethnicity'] },
+  { key: 'bankAccount', label: '工资卡号', required: false, keywords: ['工资卡', '卡号', '银行卡', '工资卡号', 'bankAccount'] },
+  { key: 'bankName', label: '开户行', required: false, keywords: ['开户行', '开户银行', '银行', 'bankName'] },
+  { key: 'bankLineNo', label: '联行号', required: false, keywords: ['联行号', '行号', '银行联行号', 'bankLineNo'] },
+  { key: 'workerType', label: '工种', required: false, keywords: ['工种', '工人类别', 'workerType'] },
+  { key: 'dailyWage', label: '日工资', required: false, keywords: ['日工资', '日薪', '单价', '日单价', 'dailyWage'] },
 ]
 
 interface Preset {
@@ -63,9 +64,11 @@ export interface ImportProgress {
 
 export interface ImportResult {
   success: number
+  updated: number
   skipped: number
   failed: number
   failures: { row: number; reason: string }[]
+  warnings: { row: number; name: string; message: string }[]
 }
 
 function computeHeaderSignature(headers: string[]): string {
@@ -102,6 +105,28 @@ function confidenceForField(key: string, headers: string[]): number {
     if (headers.some(h => String(h || '').toLowerCase().trim().includes(kwLower))) matched++
   }
   return Math.round((matched / field.keywords.length) * 100)
+}
+
+/** 过滤 null/空 headers 并对齐数据行（修复合并单元格列索引错位） */
+function alignColumns(rawHeaders: any[], dataRows: any[][]): { headers: string[]; rows: any[][] } {
+  // 找出有效（非空）表头的列索引
+  const validColIndices: number[] = []
+  const filteredHeaders: string[] = []
+  const maxCols = Math.max(rawHeaders.length, ...dataRows.map(r => r.length))
+  for (let i = 0; i < maxCols; i++) {
+    const h = i < rawHeaders.length ? String(rawHeaders[i] || '').trim() : ''
+    if (h) {
+      validColIndices.push(i)
+      filteredHeaders.push(h)
+    }
+  }
+  if (validColIndices.length === rawHeaders.length) {
+    // 无空列，直接返回
+    return { headers: rawHeaders.map((h: any) => String(h || '').trim()), rows: dataRows }
+  }
+  // 按有效列索引对齐数据
+  const alignedRows = dataRows.map(row => validColIndices.map(i => row[i]))
+  return { headers: filteredHeaders, rows: alignedRows }
 }
 
 function detectCSVEncoding(buffer: ArrayBuffer): string {
@@ -158,6 +183,57 @@ function matchPreset(headers: string[]): Preset | null {
   return presets.find(p => p.headerSignature === sig) || null
 }
 
+const WORKER_TYPE_MAP: Record<string, string> = {
+  // 基础 12 种
+  '砌筑工': 'bricklayer', '混凝土工': 'concreter', '钢筋工': 'steel',
+  '模板工': 'formwork', '木工': 'carpenter', '油漆工': 'painter',
+  '水暖工': 'plumber', '电工': 'electrician', '焊工': 'welder',
+  '起重工': 'rigger', '驾驶员': 'driver', '机械工': 'mechanic', '其他': 'other',
+  // 常见扩展
+  '架子工': 'rigger', '防水工': 'other', '抹灰工': 'bricklayer',
+  '涂料工': 'painter', '镶贴工': 'bricklayer', '管工': 'plumber',
+  '通风工': 'other', '测量工': 'other', '桩机工': 'mechanic',
+  '爆破工': 'other', '养护工': 'other', '石作业工': 'bricklayer',
+  '金属工': 'steel', '电焊工': 'welder', '氩弧焊工': 'welder',
+  '钢筋制作工': 'steel', '钢筋绑扎工': 'steel', '模板木工': 'formwork',
+  '普通工': 'other', '杂工': 'other', '力工': 'other',
+  '塔吊司机': 'driver', '挖掘机司机': 'driver', '装载机司机': 'driver',
+  '吊车司机': 'driver', '叉车司机': 'driver',
+  '信号工': 'rigger', '司索工': 'rigger',
+  '幕墙工': 'other', '保温工': 'other', '隔热工': 'other',
+  '装饰装修工': 'other',
+}
+
+// 模糊匹配：关键词 → code
+const WORKER_TYPE_FUZZY: [string, string][] = [
+  ['钢筋', 'steel'], ['模板', 'formwork'], ['砌筑', 'bricklayer'],
+  ['混凝土', 'concreter'], ['水泥', 'concreter'],
+  ['木', 'carpenter'], ['油漆', 'painter'], ['涂料', 'painter'],
+  ['水暖', 'plumber'], ['管', 'plumber'],
+  ['电', 'electrician'], ['焊', 'welder'],
+  ['起重', 'rigger'], ['架子', 'rigger'],
+  ['驾驶', 'driver'], ['司机', 'driver'],
+  ['机械', 'mechanic'], ['桩机', 'mechanic'],
+  ['抹灰', 'bricklayer'], ['砌', 'bricklayer'],
+  ['防水', 'other'], ['保温', 'other'], ['通风', 'other'],
+  ['测量', 'other'], ['爆破', 'other'],
+  ['金属', 'steel'], ['装饰', 'other'], ['安装', 'other'],
+]
+
+function resolveWorkerType(raw: string): string {
+  const trimmed = raw.trim()
+  if (!trimmed) return 'other'
+  // 精确匹配
+  if (WORKER_TYPE_MAP[trimmed]) return WORKER_TYPE_MAP[trimmed]
+  // 已经是 code
+  if (Object.values(WORKER_TYPE_MAP).includes(trimmed)) return trimmed
+  // 模糊匹配（按顺序，第一个命中即返回）
+  for (const [keyword, code] of WORKER_TYPE_FUZZY) {
+    if (trimmed.includes(keyword)) return code
+  }
+  return 'other'
+}
+
 function extractBirthDate(idCard: string): string | undefined {
   if (idCard.length !== 18) return undefined
   const birth = idCard.substring(6, 14)
@@ -170,7 +246,7 @@ function extractGender(idCard: string): string | undefined {
   return genderCode % 2 === 0 ? '女' : '男'
 }
 
-export function useWorkerImport(workerTeams: WorkerTeam[], existingIdCards: Set<string>) {
+export function useWorkerImport(existingIdCards: Set<string>) {
   const [importState, setImportState] = useState<ImportState | null>(null)
   const [progress, setProgress] = useState<ImportProgress | null>(null)
   const [result, setResult] = useState<ImportResult | null>(null)
@@ -178,6 +254,8 @@ export function useWorkerImport(workerTeams: WorkerTeam[], existingIdCards: Set<
 
   const [error, setError] = useState<string | null>(null)
   const storedBufferRef = useRef<{ buf: ArrayBuffer; fileName: string; fileType: 'xlsx' | 'csv' } | null>(null)
+  // 按字段名记录用户设为"不导入"的字段（不存列索引，跨表安全）
+  const unmappedFields = useRef<Set<string>>(new Set())
 
   // Shared parser: re-parse stored buffer with new headerRow/sheetName
   const parseBuffer = useCallback((headerRow: number, sheetName?: string) => {
@@ -196,10 +274,13 @@ export function useWorkerImport(workerTeams: WorkerTeam[], existingIdCards: Set<
         const headers = headerRow < rows.length ? rows[headerRow] : []
         const dataRows = rows.slice(headerRow + 1).filter((r) => r.some(c => c !== ''))
         const match = matchPreset(headers)
+        const mapping = match ? { ...match.fieldMapping } : autoMap(headers)
+        // 用户设为"不导入"的字段，强制 -1
+        for (const key of unmappedFields.current) { mapping[key] = -1 }
         setImportState({
           sheetNames: [], activeSheet: '', headerRow,
           headers, previewRows: dataRows.slice(0, 10), allRows: dataRows,
-          mapping: match ? match.fieldMapping : autoMap(headers),
+          mapping,
           fileName: stored.fileName, detectedPreset: match?.name || null,
         })
         return
@@ -209,14 +290,19 @@ export function useWorkerImport(workerTeams: WorkerTeam[], existingIdCards: Set<
       const sName = sheetName || wb.SheetNames[0]
       const ws = wb.Sheets[sName]
       const rows = XLSX.utils.sheet_to_json(ws, { header: 1 })
-      const headers = headerRow < rows.length ? rows[headerRow].map((h) => String(h || '').trim()) : []
-      const dataRows = rows.slice(headerRow + 1).filter((r) => r.some(c => c !== undefined && c !== null && String(c).trim() !== ''))
-      const match = matchPreset(headers)
+      const rawHeaders: any[] = headerRow < rows.length ? rows[headerRow] as any[] : []
+      const rawDataRows = rows.slice(headerRow + 1).filter((r: any[]) => r.some(c => c !== undefined && c !== null && String(c).trim() !== '')) as any[][]
+      // 过滤 null 表头并对齐数据列（修复合并单元格列索引错位）
+      const { headers, rows: dataRows } = alignColumns(rawHeaders, rawDataRows)
+      const match2 = matchPreset(headers)
+      const mapping2 = match2 ? { ...match2.fieldMapping } : autoMap(headers)
+      // 用户设为"不导入"的字段，强制 -1
+      for (const key of unmappedFields.current) { mapping2[key] = -1 }
       setImportState({
         sheetNames: wb.SheetNames, activeSheet: sName, headerRow,
         headers, previewRows: dataRows.slice(0, 10), allRows: dataRows,
-        mapping: match ? match.fieldMapping : autoMap(headers),
-        fileName: stored.fileName, detectedPreset: match?.name || null,
+        mapping: mapping2,
+        fileName: stored.fileName, detectedPreset: match2?.name || null,
       })
     } catch (err) {
       console.error('[WorkerImport] Re-parse error:', err)
@@ -235,6 +321,7 @@ export function useWorkerImport(workerTeams: WorkerTeam[], existingIdCards: Set<
     setResult(null)
     setProgress(null)
     setError(null)
+    unmappedFields.current = new Set()
 
     const reader = new FileReader()
     reader.onerror = () => {
@@ -265,10 +352,11 @@ export function useWorkerImport(workerTeams: WorkerTeam[], existingIdCards: Set<
           const headers = rows.length > 0 ? rows[0] : []
           const dataRows = rows.slice(1).filter((r: string[]) => r.some(c => c !== ''))
           const match = matchPreset(headers)
+          const initialMapping = match ? match.fieldMapping : autoMap(headers)
           setImportState({
             sheetNames: [], activeSheet: '', headerRow: 0,
             headers, previewRows: dataRows.slice(0, 10), allRows: dataRows,
-            mapping: match ? match.fieldMapping : autoMap(headers),
+            mapping: initialMapping,
             fileName: file.name, detectedPreset: match?.name || null,
           })
           storedBufferRef.current = { buf, fileName: file.name, fileType: 'csv' }
@@ -279,13 +367,16 @@ export function useWorkerImport(workerTeams: WorkerTeam[], existingIdCards: Set<
         const sheetName = wb.SheetNames[0]
         const ws = wb.Sheets[sheetName]
         const rows = XLSX.utils.sheet_to_json<any>(ws, { header: 1 }) as any[][]
-        const headers = rows.length > 0 ? rows[0].map((h: any) => String(h || '').trim()) : []
-        const dataRows = rows.slice(1).filter((r: any[]) => r.some(c => c !== undefined && c !== null && String(c).trim() !== ''))
+        const rawHeaders = rows.length > 0 ? rows[0] : []
+        const rawDataRows = rows.slice(1).filter((r: any[]) => r.some(c => c !== undefined && c !== null && String(c).trim() !== ''))
+        // 过滤 null 表头并对齐数据列（修复合并单元格列索引错位）
+        const { headers, rows: dataRows } = alignColumns(rawHeaders, rawDataRows)
         const match = matchPreset(headers)
+        const initialMapping = match ? match.fieldMapping : autoMap(headers)
         setImportState({
           sheetNames: wb.SheetNames, activeSheet: sheetName, headerRow: 0,
           headers, previewRows: dataRows.slice(0, 10), allRows: dataRows,
-          mapping: match ? match.fieldMapping : autoMap(headers),
+          mapping: initialMapping,
           fileName: file.name, detectedPreset: match?.name || null,
         })
         storedBufferRef.current = { buf, fileName: file.name, fileType: 'xlsx' }
@@ -319,6 +410,9 @@ export function useWorkerImport(workerTeams: WorkerTeam[], existingIdCards: Set<
   }, [importState?.activeSheet, parseBuffer])
 
   const setMapping = useCallback((key: string, colIdx: number) => {
+    // 记录用户设为"不导入"的字段（按字段名，跨表安全）
+    if (colIdx === -1) unmappedFields.current.add(key)
+    else unmappedFields.current.delete(key)
     setImportState(prev => prev ? { ...prev, mapping: { ...prev.mapping, [key]: colIdx } } : null)
   }, [])
 
@@ -335,7 +429,7 @@ export function useWorkerImport(workerTeams: WorkerTeam[], existingIdCards: Set<
     setPhase('importing')
     setProgress({ completed: 0, total: importState.allRows.length, percent: 0, currentName: '' })
 
-    const resultAcc: ImportResult = { success: 0, skipped: 0, failed: 0, failures: [] }
+    const resultAcc: ImportResult = { success: 0, updated: 0, skipped: 0, failed: 0, failures: [], warnings: [] }
 
     for (let i = 0; i < importState.allRows.length; i += 50) {
       const batch = importState.allRows.slice(i, i + 50)
@@ -351,6 +445,9 @@ export function useWorkerImport(workerTeams: WorkerTeam[], existingIdCards: Set<
           }
         }
 
+        // Skip completely empty rows (blank/summary rows in Excel)
+        if (!rowData.name && !rowData.idCard) return { ok: true, skipped: true, name: '', row: rowIdx }
+
         // Validate required
         if (!rowData.name) return { ok: false, row: rowIdx, reason: '缺少姓名' }
         if (!rowData.idCard) return { ok: false, row: rowIdx, reason: '缺少身份证号' }
@@ -358,80 +455,76 @@ export function useWorkerImport(workerTeams: WorkerTeam[], existingIdCards: Set<
           return { ok: false, row: rowIdx, reason: '身份证号格式错误: ' + rowData.idCard }
         }
 
-        // Team/dailyWage are optional — only needed when assigning to a project team
-        const teamName = rowData.teamName || ''
-        let team: any = null
-        let hasTeamInfo = false
-        if (teamName) {
-          team = workerTeams.find(t => t.name.toLowerCase().trim() === teamName.toLowerCase().trim())
-          if (!team) {
-            return { ok: false, row: rowIdx, reason: '班组不存在: "' + teamName + '"' }
-          }
-          if (rowData.dailyWage && !isNaN(Number(rowData.dailyWage)) && Number(rowData.dailyWage) > 0) {
-            hasTeamInfo = true
-          }
-        }
-
-// Auto-extract from ID card
+        // Auto-extract from ID card
         const gender = rowData.gender || extractGender(rowData.idCard)
         const birthDate = rowData.birthDate || extractBirthDate(rowData.idCard)
 
-        let workerId: number
-        let isExistingWorker = false
+        // Build field values from this row
+        const rowFields: Record<string, any> = {
+          gender, birthDate,
+          ethnicity: rowData.ethnicity || undefined,
+          phone: rowData.phone || undefined,
+          address: rowData.address || undefined,
+          bankAccount: rowData.bankAccount || undefined,
+          bankName: rowData.bankName || undefined,
+          bankLineNo: rowData.bankLineNo || undefined,
+          workerType: rowData.workerType ? rowData.workerType.trim() : undefined,
+          dailyWage: rowData.dailyWage ? Number(rowData.dailyWage) || undefined : undefined,
+        }
 
         // Check if worker already exists in global pool
         try {
           const workerRes = await window.electronAPI.getWorkers(rowData.idCard)
           if (workerRes.success && workerRes.data && workerRes.data.length > 0) {
-            workerId = workerRes.data[0].id
-            isExistingWorker = true
-          } else {
-            // Create new Worker in global pool
-            const newWorkerRes = await window.electronAPI.createWorker({
-              name: rowData.name,
-              idCard: rowData.idCard,
-              gender,
-              birthDate,
-              ethnicity: rowData.ethnicity || undefined,
-              phone: rowData.phone || undefined,
-              address: rowData.address || undefined
-            })
-            if (!newWorkerRes.success) {
-              return { ok: false, row: rowIdx, reason: newWorkerRes.error || '创建工人失败' }
+            const existing = workerRes.data[0]
+            // Build update: only overwrite fields that have new non-empty values
+            const update: Record<string, any> = { id: existing.id }
+            let hasChanges = false
+            for (const [key, val] of Object.entries(rowFields)) {
+              if (val !== undefined && val !== '' && val !== null) {
+                update[key] = val
+                hasChanges = true
+              }
             }
-            workerId = newWorkerRes.data!.id
-            existingIdCards.add(rowData.idCard!)
+            if (hasChanges) {
+              const updRes = await window.electronAPI.updateWorker(update as any)
+              if (!updRes.success) {
+                return { ok: false, row: rowIdx, reason: updRes.error || '更新工人失败' }
+              }
+              return { ok: true, name: rowData.name, isUpdated: true }
+            }
+            return { ok: true, name: rowData.name, isExistingWorker: true }
           }
         } catch {
           return { ok: false, row: rowIdx, reason: '工人库查询失败' }
         }
 
-        // Create ProjectWorker only if team info is provided
-        if (hasTeamInfo && team) {
-          try {
-            const pwRes = await window.electronAPI.createProjectWorker({
-              workerId,
-              projectId: team.projectId,
-              teamId: team.id,
-              dailyWage: Number(rowData.dailyWage),
-              workerType: rowData.workerType || 'other',
-              entryDate: rowData.entryDate || new Date().toISOString().split('T')[0],
-              status: 'active' as const
-            })
-            if (!pwRes.success) {
-              return { ok: false, row: rowIdx, reason: pwRes.error || '添加工人失败' }
-            }
-          } catch {
-            return { ok: false, row: rowIdx, reason: '创建用工关系失败' }
-          }
+        // Create new Worker in global pool
+        const newWorkerRes = await window.electronAPI.createWorker({
+          name: rowData.name,
+          idCard: rowData.idCard,
+          ...rowFields
+        })
+        if (!newWorkerRes.success) {
+          return { ok: false, row: rowIdx, reason: newWorkerRes.error || '创建工人失败' }
         }
-        return { ok: true, name: rowData.name, isExistingWorker }
+        existingIdCards.add(rowData.idCard!)
+        return { ok: true, name: rowData.name, isExistingWorker: false }
       }))
 
       for (const r of batchResults) {
-        if (r.ok) resultAcc.success++
-        else if ((r as any).skipped) resultAcc.skipped++
-        else { resultAcc.failed++; resultAcc.failures.push({ row: r.row, reason: r.reason }) }
+        if ((r as any).skipped) {
+          continue // skip blank/summary rows silently
+        } else if (r.ok) {
+          if ((r as any).isUpdated) {
+            resultAcc.updated++
+          } else {
+            resultAcc.success++
+          }
+          if ((r as any).warning) {
+            resultAcc.warnings.push({ row: r.row, name: (r as any).name, message: (r as any).warning })
+          }
+        } else { resultAcc.failed++; resultAcc.failures.push({ row: r.row, reason: r.reason }) }
       }
 
       const completed = Math.min(i + 50, importState.allRows.length)
@@ -445,7 +538,7 @@ export function useWorkerImport(workerTeams: WorkerTeam[], existingIdCards: Set<
     setResult(resultAcc)
     setPhase('done')
     onComplete()
-  }, [importState, workerTeams, existingIdCards])
+  }, [importState, existingIdCards])
 
   const saveCurrentMappingAsPreset = useCallback((name: string): boolean => {
     if (!importState) return false
@@ -458,6 +551,7 @@ export function useWorkerImport(workerTeams: WorkerTeam[], existingIdCards: Set<
     setResult(null)
     setError(null)
     setPhase('idle')
+    unmappedFields.current = new Set()
   }, [])
 
   return {

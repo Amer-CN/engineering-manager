@@ -1,7 +1,6 @@
 import React from 'react'
-import type { Member, Project, WorkerTeam, AttendanceRecord } from '@/types'
+import type { Project, WorkerTeam, AttendanceRecord } from '@/types'
 import { Icon } from '../../ui/Icon'
-import { FILE_CATEGORIES, uploadFile, readUploadedFile, deleteUploadedFile, readFileAsDataUrl } from '../../../services/fileService'
 import { summaryDot, summaryLabel } from '../../../constants/attendance'
 import type { DayStatus } from '../../../types/electron'
 
@@ -9,30 +8,27 @@ interface AttendanceTabProps {
   selectedProject: Project | null
   selectedMonth: string
   daysInMonth: number
-  members: Member[]
   workerTeams: WorkerTeam[]
   attendances: AttendanceRecord[]
   projectMemberCount: number
-  uploadingFileId: number | null
-  setUploadingFileId: (id: number | null) => void
   selectedIds: Set<number>
   toggleSelect: (id: number) => void
   toggleAll: () => void
   onGenerateAttendance: () => void
   onOpenDetail: (record: AttendanceRecord) => void
   onDelete: (record: AttendanceRecord) => void
-  onFileUpload: (record: AttendanceRecord, file: File) => void
-  onFileDelete: (record: AttendanceRecord) => void
-  onFilePreview: (record: AttendanceRecord) => void
   onBatchDelete: () => void
   loading: boolean
+  onImportAttendance: () => void
+  onChangeMonth: (month: string) => void
 }
 
 export default function AttendanceTab({
-  selectedProject, selectedMonth, daysInMonth, members, workerTeams,
-  attendances, projectMemberCount, uploadingFileId, setUploadingFileId,
+  selectedProject, selectedMonth, daysInMonth, workerTeams,
+  attendances, projectMemberCount,
   selectedIds, toggleSelect, toggleAll, onGenerateAttendance, onOpenDetail,
-  onDelete, onFileUpload, onFileDelete, onFilePreview, onBatchDelete, loading,
+  onDelete, onBatchDelete, loading,
+  onImportAttendance, onChangeMonth,
 }: AttendanceTabProps) {
   if (!selectedProject) {
     return (
@@ -47,8 +43,10 @@ export default function AttendanceTab({
     <div className="p-4">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
+          <input type="month" value={selectedMonth} onChange={e => onChangeMonth(e.target.value)}
+            className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500" />
           <div className="text-slate-500">
-            {projectMemberCount} 名成员 | 当月天数: {daysInMonth} 天
+            {projectMemberCount} 名工人 | 当月天数: {daysInMonth} 天
           </div>
           {selectedIds.size > 0 && (
             <button onClick={onBatchDelete}
@@ -58,8 +56,12 @@ export default function AttendanceTab({
           )}
         </div>
         <div className="flex gap-2">
+          <button onClick={onImportAttendance}
+            className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+            导入考勤
+          </button>
           <button onClick={onGenerateAttendance} disabled={loading}
-            className="bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+            className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
             生成默认考勤
           </button>
         </div>
@@ -69,7 +71,7 @@ export default function AttendanceTab({
         <div className="text-center py-12 text-slate-400">
           <Icon name="ClipboardFile" size={48} className="mx-auto mb-4" />
           <p>暂无考勤记录</p>
-          <p className="text-sm mt-1">点击"生成默认考勤"为项目成员创建考勤</p>
+          <p className="text-sm mt-1">点击"生成默认考勤"为项目工人创建考勤</p>
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -82,24 +84,23 @@ export default function AttendanceTab({
                     onChange={toggleAll} className="rounded" />
                 </th>
                 <th className="px-4 py-3 font-medium text-slate-600">姓名</th>
-                <th className="px-4 py-3 font-medium text-slate-600">类型</th>
                 <th className="px-4 py-3 font-medium text-slate-600">班组</th>
                 <th className="px-4 py-3 font-medium text-slate-600">考勤摘要</th>
-                <th className="px-4 py-3 font-medium text-slate-600">状态</th>
-                <th className="px-4 py-3 font-medium text-slate-600">考勤附件</th>
                 <th className="px-4 py-3 font-medium text-slate-600">操作</th>
               </tr>
             </thead>
             <tbody>
               {attendances.map(a => {
-                const member = members.find(m => m.id === a.memberId)
-                const team = workerTeams.find(t => t.id === member?.teamId)
+                const team = (a as any).teamName ? { name: (a as any).teamName } : undefined
+                // 使用已持久化的 workDays（backend update/batchImport 均保持同步）
+                // 不再从 dailyStatus 逐天计，避免未标记天数默认'work'导致膨胀
+                const workCount = a.workDays || 0
+                let holidayCount = 0, sickCount = 0, personalCount = 0, absentCount = 0
                 const dailyStatus = a.dailyStatus || {}
-                let workCount = 0, holidayCount = 0, sickCount = 0, personalCount = 0, absentCount = 0
                 for (let d = 1; d <= daysInMonth; d++) {
-                  const s = dailyStatus[d] || 'work'
-                  if (s === 'work') workCount++
-                  else if (s === 'holiday') holidayCount++
+                  const s = dailyStatus[d]
+                  if (!s) continue // 未标记日不计数
+                  if (s === 'holiday') holidayCount++
                   else if (s === 'sick_leave') sickCount++
                   else if (s === 'personal_leave') personalCount++
                   else if (s === 'absent') absentCount++
@@ -117,13 +118,7 @@ export default function AttendanceTab({
                       <input type="checkbox" checked={selectedIds.has(a.id)}
                         onChange={() => toggleSelect(a.id)} className="rounded" />
                     </td>
-                    <td className="px-4 py-3 font-medium">{a.memberName || member?.name || '-'}</td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        member?.memberType === 'staff' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
-                        {member?.memberType === 'staff' ? '管理' : '工人'}
-                      </span>
-                    </td>
+                    <td className="px-4 py-3 font-medium">{a.memberName || '-'}</td>
                     <td className="px-4 py-3 text-slate-500">{team?.name || '-'}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2 flex-wrap text-xs">
@@ -134,47 +129,6 @@ export default function AttendanceTab({
                             <span className="font-medium text-slate-700">{item.count}天</span>
                           </span>
                         ))}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      {member?.memberType === 'worker' ? (
-                        <span className="px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-600">日薪制</span>
-                      ) : a.isFullAttendance ? (
-                        <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-100 text-emerald-700">全勤</span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700">缺勤</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        {!a.fileUrl ? (
-                          <button
-                            onClick={() => document.getElementById(`att-file-${a.id}`)?.click()}
-                            disabled={uploadingFileId === a.id}
-                            className="p-1.5 text-slate-400 hover:text-blue-600 rounded transition-colors" title="上传考勤附件">
-                            <Icon name={uploadingFileId === a.id ? 'Loader2' : 'Paperclip'} size={15} />
-                          </button>
-                        ) : (
-                          <div className="flex items-center gap-1 max-w-[120px]">
-                            <button onClick={() => onFilePreview(a)}
-                              className="text-blue-600 hover:text-blue-800 text-xs underline flex items-center gap-1 truncate" title={a.fileName || '预览'}>
-                              {a.fileName?.match(/\.(xlsx?)$/i) ? <Icon name="File" size={14} /> :
-                               a.fileName?.match(/\.pdf$/i) ? <Icon name="FileText" size={14} /> :
-                               <Icon name="Image" size={14} />}
-                              <span className="truncate">{a.fileName}</span>
-                            </button>
-                            <button onClick={() => onFileDelete(a)}
-                              className="p-1 text-red-400 hover:text-red-600 rounded flex-shrink-0" title="删除附件">
-                              <Icon name="X" size={14} />
-                            </button>
-                          </div>
-                        )}
-                        <input type="file" id={`att-file-${a.id}`} accept="image/*,.xlsx,.xls,.pdf" className="hidden"
-                          onChange={e => {
-                            const file = e.target.files?.[0]
-                            if (file) onFileUpload(a, file)
-                            e.target.value = ''
-                          }} />
                       </div>
                     </td>
                     <td className="px-4 py-3">

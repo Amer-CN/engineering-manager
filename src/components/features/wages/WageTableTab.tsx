@@ -1,11 +1,10 @@
 import React from 'react'
-import type { Member, Project, WorkerTeam, WageRecord } from '@/types'
+import type { Project, WorkerTeam, WageRecord } from '@/types'
 import { Icon } from '../../ui/Icon'
 
 interface WageTableTabProps {
   selectedProject: Project | null
   selectedMonth: string
-  members: Member[]
   workerTeams: WorkerTeam[]
   wageRecords: WageRecord[]
   attendancesCount: number
@@ -18,17 +17,13 @@ interface WageTableTabProps {
   onBonusDeductionChange: (recordId: number, field: 'bonus' | 'deduction', value: number) => void
   onBatchDelete: () => void
   loading: boolean
-}
-
-function getDaysInMonth(yearMonth: string): number {
-  const [year, month] = yearMonth.split('-').map(Number)
-  return new Date(year, month, 0).getDate()
+  onChangeMonth: (month: string) => void
 }
 
 export default function WageTableTab({
-  selectedProject, selectedMonth, members, workerTeams, wageRecords,
+  selectedProject, selectedMonth, workerTeams, wageRecords,
   attendancesCount, editingWages, selectedIds, toggleSelect, toggleAll,
-  onGenerate, onSave, onBonusDeductionChange, onBatchDelete, loading,
+  onGenerate, onSave, onBonusDeductionChange, onBatchDelete, loading, onChangeMonth,
 }: WageTableTabProps) {
   if (!selectedProject) {
     return (
@@ -39,10 +34,19 @@ export default function WageTableTab({
     )
   }
 
+  const calcWage = (w: WageRecord) => {
+    const edit = editingWages.get(w.id)
+    const bonus = edit?.bonus ?? w.bonus
+    const deduction = edit?.deduction ?? w.deduction
+    return Math.round(((w.dailyWage || 0) * (w.workDays || 0) + bonus - deduction) * 100) / 100
+  }
+
   return (
     <div className="p-4">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
+          <input type="month" value={selectedMonth} onChange={e => onChangeMonth(e.target.value)}
+            className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500" />
           <div className="text-slate-500">
             工资记录: {wageRecords.length} 条
             {attendancesCount === 0 && (
@@ -87,14 +91,12 @@ export default function WageTableTab({
                     onChange={toggleAll} className="rounded" />
                 </th>
                 <th className="px-3 py-3 font-medium text-slate-600">姓名</th>
-                <th className="px-3 py-3 font-medium text-slate-600">类型</th>
                 <th className="px-3 py-3 font-medium text-slate-600">班组</th>
                 <th className="px-3 py-3 font-medium text-slate-600">出勤</th>
-                <th className="px-3 py-3 font-medium text-slate-600">日薪/月薪</th>
+                <th className="px-3 py-3 font-medium text-slate-600">日薪</th>
                 <th className="px-3 py-3 font-medium text-slate-600">奖金</th>
                 <th className="px-3 py-3 font-medium text-slate-600">扣款</th>
                 <th className="px-3 py-3 font-medium text-slate-600">实发工资</th>
-                <th className="px-3 py-3 font-medium text-slate-600">状态</th>
               </tr>
             </thead>
             <tbody>
@@ -102,25 +104,7 @@ export default function WageTableTab({
                 const edit = editingWages.get(w.id)
                 const bonus = edit?.bonus ?? w.bonus
                 const deduction = edit?.deduction ?? w.deduction
-                const member = members.find(m => m.id === w.memberId)
-                let previewWage = w.actualWage
-                if (edit) {
-                  const dim = getDaysInMonth(selectedMonth)
-                  if (member?.memberType === 'worker') {
-                    previewWage = Math.round(((w.dailyWage || 0) * (w.workDays || 0) + bonus - deduction) * 100) / 100
-                  } else {
-                    const baseSalary = w.baseSalary || 0
-                    const otherAllowances = w.otherAllowances || 0
-                    let grossWage: number
-                    if (w.isFullAttendance) { grossWage = baseSalary + otherAllowances }
-                    else { grossWage = (baseSalary / dim) * (w.workDays || 0) + otherAllowances }
-                    let personalDeduction = 0
-                    if (!(w.companyCoversSocial ?? false)) {
-                      personalDeduction += (w.socialSecurityPersonal || 0) + (w.housingFundPersonal || 0)
-                    }
-                    previewWage = Math.round((grossWage + bonus - personalDeduction - deduction) * 100) / 100
-                  }
-                }
+                const previewWage = calcWage(w)
                 const changed = edit && previewWage !== w.actualWage
 
                 return (
@@ -129,18 +113,10 @@ export default function WageTableTab({
                       <input type="checkbox" checked={selectedIds.has(w.id)}
                         onChange={() => toggleSelect(w.id)} className="rounded" />
                     </td>
-                    <td className="px-3 py-3 font-medium">{w.memberName || member?.name || '-'}</td>
-                    <td className="px-3 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        w.memberType === 'staff' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
-                        {w.memberType === 'staff' ? '管理' : '工人'}
-                      </span>
-                    </td>
+                    <td className="px-3 py-3 font-medium">{w.memberName || '-'}</td>
                     <td className="px-3 py-3 text-slate-500">{w.teamName || '-'}</td>
                     <td className="px-3 py-3">{w.workDays} 天</td>
-                    <td className="px-3 py-3">
-                      {w.memberType === 'worker' ? <span>¥{w.dailyWage}/天</span> : <span>¥{w.baseSalary}/月</span>}
-                    </td>
+                    <td className="px-3 py-3">¥{w.dailyWage}/天</td>
                     <td className="px-3 py-3">
                       <input type="number" min={0} step={0.01} value={bonus}
                         onChange={e => onBonusDeductionChange(w.id, 'bonus', parseFloat(e.target.value) || 0)}
@@ -151,49 +127,18 @@ export default function WageTableTab({
                         onChange={e => onBonusDeductionChange(w.id, 'deduction', parseFloat(e.target.value) || 0)}
                         className="w-20 px-2 py-1 border border-slate-300 rounded text-center" />
                     </td>
-                    <td className={`px-3 py-3 font-bold ${changed ? 'text-orange-600' : 'text-green-600'}`}>
+                    <td className={`px-3 py-3 font-bold ${changed ? 'text-amber-600' : 'text-green-600'}`}>
                       ¥{previewWage.toFixed(2)}
-                      {changed && <span className="text-xs text-orange-500 ml-1">*</span>}
-                    </td>
-                    <td className="px-3 py-3">
-                      {w.memberType === 'worker' ? (
-                        <span className="px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-600">日薪</span>
-                      ) : w.isFullAttendance ? (
-                        <span className="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700">全勤</span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700">缺勤</span>
-                      )}
+                      {changed && <span className="text-xs text-amber-500 ml-1">*</span>}
                     </td>
                   </tr>
                 )
               })}
               {/* 汇总行 */}
               <tr className="border-t-2 border-slate-300 bg-slate-50 font-bold">
-                <td className="px-3 py-3" colSpan={7}>合计</td>
+                <td className="px-3 py-3" colSpan={6}>合计</td>
                 <td className="px-3 py-3 text-green-600">
-                  ¥{wageRecords.reduce((sum, w) => {
-                    const edit = editingWages.get(w.id)
-                    const bonus = edit?.bonus ?? w.bonus
-                    const deduction = edit?.deduction ?? w.deduction
-                    const member = members.find(m => m.id === w.memberId)
-                    let wage = w.actualWage
-                    if (edit) {
-                      const dim = getDaysInMonth(selectedMonth)
-                      if (member?.memberType === 'worker') {
-                        wage = Math.round(((w.dailyWage || 0) * (w.workDays || 0) + bonus - deduction) * 100) / 100
-                      } else {
-                        const baseSalary = w.baseSalary || 0
-                        const otherAllowances = w.otherAllowances || 0
-                        const grossWage = w.isFullAttendance ? baseSalary + otherAllowances : (baseSalary / dim) * (w.workDays || 0) + otherAllowances
-                        let personalDeduction = 0
-                        if (!(w.companyCoversSocial ?? false)) {
-                          personalDeduction += (w.socialSecurityPersonal || 0) + (w.housingFundPersonal || 0)
-                        }
-                        wage = Math.round((grossWage + bonus - personalDeduction - deduction) * 100) / 100
-                      }
-                    }
-                    return sum + wage
-                  }, 0).toFixed(2)}
+                  ¥{wageRecords.reduce((sum, w) => sum + calcWage(w), 0).toFixed(2)}
                 </td>
                 <td></td>
               </tr>

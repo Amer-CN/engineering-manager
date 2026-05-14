@@ -75,7 +75,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             <Icon name="HardHat" size={48} className="text-white" />
           </motion.div>
           <motion.h1 variants={fadeUp as any} className="text-4xl font-bold text-white mb-3">工程管家</motion.h1>
-          <motion.p variants={fadeUp as any} className="text-slate-400 text-lg">工程项目管理系统 v2.6.3</motion.p>
+          <motion.p variants={fadeUp as any} className="text-slate-400 text-lg">工程项目管理系统 v2.8.2</motion.p>
           <motion.div variants={stagger as any} className="mt-12 flex items-center justify-center gap-8 text-slate-500 text-sm">
             {features.map((f, i) => (
               <motion.div key={f} variants={{ initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0, transition: { delay: 0.4 + i * 0.2, duration: 0.35 } } }} className="flex items-center gap-2 cursor-default">
@@ -166,7 +166,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               </>
             )}
           </motion.div>
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.1 }} className="text-center text-slate-400 text-sm mt-6">v2.6.3 - 工程管理系统</motion.p>
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.1 }} className="text-center text-slate-400 text-sm mt-6">v2.8.2 - 工程管理系统</motion.p>
         </motion.div>
       </div>
     </div>

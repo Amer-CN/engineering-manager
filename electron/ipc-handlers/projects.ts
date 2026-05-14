@@ -68,6 +68,7 @@ ipcMain.handle('db:projects:delete', (_, id) => {
     if (db.invoices) db.invoices = db.invoices.filter((inv: any) => inv.projectId !== id)
     if (db.incomeContracts) db.incomeContracts = db.incomeContracts.filter((c: any) => c.projectId !== id)
     if (db.expenseContracts) db.expenseContracts = db.expenseContracts.filter((c: any) => c.projectId !== id)
+    if (db.agreementContracts) db.agreementContracts = db.agreementContracts.filter((c: any) => c.projectId !== id)
     if (db.wages) db.wages = db.wages.filter((w: any) => w.projectId !== id)
     if (db.attendances) db.attendances = db.attendances.filter((a: any) => a.projectId !== id)
     if (db.projectMembers) db.projectMembers = db.projectMembers.filter((m: any) => m.projectId !== id)

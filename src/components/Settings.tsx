@@ -141,7 +141,7 @@ const Settings: React.FC<SettingsProps> = ({ refresh }) => {
               <div className="text-sm text-slate-600 dark:text-slate-300 space-y-3">
                 <div className="flex items-center gap-3">
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 flex items-center justify-center text-white text-3xl shadow-lg shadow-slate-500/20"><Icon name="HardHat" size={32} /></div>
-                  <div><p className="text-xl font-bold text-slate-800 dark:text-slate-100">工程管家</p><p className="text-slate-500 dark:text-slate-400">Version 2.6.1</p></div>
+                  <div><p className="text-xl font-bold text-slate-800 dark:text-slate-100">工程管家</p><p className="text-slate-500 dark:text-slate-400">Version 2.8.2</p></div>
                 </div>
                 <p className="text-slate-600 dark:text-slate-300">工程项目管理系统 · 本地数据存储</p>
                 <div className="flex gap-3">

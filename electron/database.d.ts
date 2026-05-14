@@ -31,6 +31,7 @@ export interface Database {
     incomeRecords: any[];
     expenseContracts: any[];
     expenseRecords: any[];
+    agreementContracts: any[];
     workerTeams: any[];
     workerTransferRecords: any[];
     settlements: any[];

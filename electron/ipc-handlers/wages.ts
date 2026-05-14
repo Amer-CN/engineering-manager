@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron'
 import log from 'electron-log'
 import { db, dbReady, saveDatabase } from '../database'
-import { getDaysInMonth, calculateActualWage, getPersonalDeduction, generateProjectWages } from './wage-calc'
+import { getDaysInMonth, calculateActualWage, generateProjectWages, parseBankReceipt } from './wage-calc'
 
 // 获取工资列表
 
@@ -19,16 +19,25 @@ ipcMain.handle('db:wages:getAll', (_, projectId?: number, yearMonth?: string, me
     records = records.filter((w: any) => w.memberId === memberId)
   }
   const result = records.map((w: any) => {
-    const member = db.members.find((m: any) => m.id === w.memberId)
-    const project = db.projects.find((p: any) => p.id === w.projectId)
-    const team = db.workerTeams.find((t: any) => t.id === member?.teamId)
-    return {
-      ...w,
-      memberName: member?.name || '',
-      memberType: member?.memberType || 'worker',
-      projectName: project?.name || '',
-      teamName: team?.name || ''
+    let memberName = ''; let memberType = 'worker'; let teamName = ''; let bankAccount = ''
+    if (w.memberId) {
+      const member = db.members.find((m: any) => m.id === w.memberId)
+      memberName = member?.name || ''
+      memberType = member?.memberType || 'worker'
+      const team = db.workerTeams.find((t: any) => t.id === member?.teamId)
+      teamName = team?.name || ''
+    } else if (w.projectWorkerId && db.projectWorkers) {
+      const pw = db.projectWorkers.find((p: any) => p.id === w.projectWorkerId)
+      if (pw && db.workers) {
+        const worker = db.workers.find((wk: any) => wk.id === pw.workerId)
+        memberName = worker?.name || ''
+        bankAccount = worker?.bankAccount || ''
+        const team = db.workerTeams?.find((t: any) => t.id === pw.teamId)
+        teamName = team?.name || ''
+      }
     }
+    const project = db.projects.find((p: any) => p.id === w.projectId)
+    return { ...w, memberName, memberType, projectName: project?.name || '', teamName, bankAccount }
   })
   return { success: true, data: result.sort((a: any, b: any) =>
     new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
@@ -72,25 +81,13 @@ ipcMain.handle('db:wages:update', (_, record) => {
     const index = db.wages.findIndex((w: any) => w.id === record.id)
     if (index !== -1) {
       const existing = db.wages[index]
-      const member = db.members.find((m: any) => m.id === existing.memberId)
-      if (member) {
-        // 重新计算实发工资
-        const actualWage = calculateActualWage(member, {
-          yearMonth: record.yearMonth || existing.yearMonth,
-          workDays: record.workDays ?? existing.workDays,
-          daysOff: record.daysOff ?? existing.daysOff,
-          isFullAttendance: record.isFullAttendance ?? existing.isFullAttendance
-        }, record.bonus ?? existing.bonus, record.deduction ?? existing.deduction)
+      const dailyWage = record.dailyWage ?? existing.dailyWage ?? 0
+      const workDays = record.workDays ?? existing.workDays ?? 0
+      const bonus = record.bonus ?? existing.bonus ?? 0
+      const deduction = record.deduction ?? existing.deduction ?? 0
+      const actualWage = calculateActualWage(dailyWage, workDays, bonus, deduction)
 
-        db.wages[index] = {
-          ...existing,
-          ...record,
-          actualWage,
-          updatedAt: new Date().toISOString()
-        }
-      } else {
-        db.wages[index] = { ...existing, ...record, updatedAt: new Date().toISOString() }
-      }
+      db.wages[index] = { ...existing, ...record, actualWage, updatedAt: new Date().toISOString() }
       saveDatabase()
     }
     return { success: true }
@@ -153,6 +150,53 @@ ipcMain.handle('db:wages:batchDelete', (_, ids: number[]) => {
   }
 })
 
+// 批量清除工资发放记录（仅清空发放字段，不删除工资记录本身）
+ipcMain.handle('db:wages:batchClearPayments', (_, ids: number[]) => {
+  if (!dbReady) return { success: false, error: 'Database not ready' }
+  if (!db.wages) db.wages = []
+  try {
+    const idSet = new Set(ids)
+    let cleared = 0
+    for (const w of db.wages) {
+      if (idSet.has(w.id)) {
+        w.paidAmount = 0
+        w.paidDate = ''
+        w.bankReceiptPath = undefined
+        w.paymentLocked = false          // 清除发放记录时同时解除归档
+        w.updatedAt = new Date().toISOString()
+        cleared++
+      }
+    }
+    saveDatabase()
+    return { success: true, data: { cleared } }
+  } catch (error: any) {
+    log.error('Failed to batch clear payments:', error)
+    return { success: false, error: error.message }
+  }
+})
+
+// 批量归档工资发放记录（锁定实发金额和发放日期，禁止修改）
+ipcMain.handle('db:wages:batchArchivePayments', (_, ids: number[]) => {
+  if (!dbReady) return { success: false, error: 'Database not ready' }
+  if (!db.wages) db.wages = []
+  try {
+    const idSet = new Set(ids)
+    let archived = 0
+    for (const w of db.wages) {
+      if (idSet.has(w.id)) {
+        w.paymentLocked = true
+        w.updatedAt = new Date().toISOString()
+        archived++
+      }
+    }
+    saveDatabase()
+    return { success: true, data: { archived } }
+  } catch (error: any) {
+    log.error('Failed to batch archive payments:', error)
+    return { success: false, error: error.message }
+  }
+})
+
 // 工资统计
 
 ipcMain.handle('db:wages:getStats', (_, yearMonth?: string, projectId?: number) => {
@@ -167,28 +211,24 @@ ipcMain.handle('db:wages:getStats', (_, yearMonth?: string, projectId?: number) 
       records = records.filter((w: any) => w.projectId === projectId)
     }
 
-    const memberIds = [...new Set(records.map((w: any) => w.memberId))]
-    const members = db.members.filter((m: any) => memberIds.includes(m.id))
-    const memberMap = new Map(members.map((m: any) => [m.id, m]))
+    // 过滤无效记录：projectWorkerId 必须对应存在的 projectWorker
+    if (db.projectWorkers) {
+      const validPWIds = new Set(db.projectWorkers.map((pw: any) => pw.id))
+      records = records.filter((w: any) => {
+        if (w.projectWorkerId) return validPWIds.has(w.projectWorkerId)
+        if (w.memberId) return db.members?.some((m: any) => m.id === w.memberId)
+        return false
+      })
+    }
 
     let totalWage = 0
-    let staffWage = 0
-    let workerWage = 0
     const projectMap = new Map<number, { projectId: number; projectName: string; total: number }>()
 
     for (const record of records) {
-      const member = memberMap.get(record.memberId)
       totalWage += record.actualWage || 0
 
-      if (member?.memberType === 'staff') {
-        staffWage += record.actualWage || 0
-      } else {
-        workerWage += record.actualWage || 0
-      }
-
-      // 项目分布
       if (!projectMap.has(record.projectId)) {
-        const project = db.projects.find((p: any) => p.id === record.projectId)
+        const project = db.projects?.find((p: any) => p.id === record.projectId)
         projectMap.set(record.projectId, {
           projectId: record.projectId,
           projectName: project?.name || '未知项目',
@@ -198,7 +238,6 @@ ipcMain.handle('db:wages:getStats', (_, yearMonth?: string, projectId?: number) 
       projectMap.get(record.projectId)!.total += record.actualWage || 0
     }
 
-    // 计算百分比
     const projectBreakdown = Array.from(projectMap.values()).map(p => ({
       ...p,
       total: Math.round(p.total * 100) / 100,
@@ -209,14 +248,25 @@ ipcMain.handle('db:wages:getStats', (_, yearMonth?: string, projectId?: number) 
       success: true,
       data: {
         totalWage: Math.round(totalWage * 100) / 100,
-        staffWage: Math.round(staffWage * 100) / 100,
-        workerWage: Math.round(workerWage * 100) / 100,
         count: records.length,
         projectBreakdown
       }
     }
   } catch (error: any) {
     log.error('Failed to get wage stats:', error)
+    return { success: false, error: error.message }
+  }
+})
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 银行回单解析
+// ══════════════════════════════════════════════════════════════════════════════
+
+ipcMain.handle('db:wages:parseBankReceipt', async (_, sourcePath: string, projectName?: string) => {
+  try {
+    return await parseBankReceipt(sourcePath, projectName)
+  } catch (error: any) {
+    log.error('Failed to parse bank receipt:', error)
     return { success: false, error: error.message }
   }
 })

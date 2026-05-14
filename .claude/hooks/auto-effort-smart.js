@@ -1,11 +1,14 @@
 /**
- * Auto-Effort Smart Hook — UserPromptSubmit
+ * Auto-Effort Smart Hook — UserPromptSubmit (Dual-Model)
  *
- * 每次用户发送 prompt 时，用轻量模型分类复杂度，
+ * 根据 ANTHROPIC_BASE_URL 自动选择分类模型：
+ *   xiaomimimo.com → MiMo-v2.5（轻量快速）
+ *   deepseek.com   → DeepSeek flash（原逻辑）
+ *   其他           → 关键词兜底
+ *
  * 输出 JSON 设置 thinking.budget_tokens：
  *   low → 1024   medium → 2048   high → 4096
  *
- * 回退链：AI 分类（3s 超时）→ 关键词规则 → "medium"
  * 日志文件：~/.claude/effort-log.jsonl
  */
 
@@ -17,16 +20,42 @@ const os = require("os");
 const BUDGET_MAP = { low: 1024, medium: 2048, high: 4096 };
 const LOG_FILE = path.join(os.homedir(), ".claude", "effort-log.jsonl");
 
-function logClassification(prompt, effort, method) {
+function logClassification(prompt, effort, method, provider) {
   try {
     const entry = {
       ts: new Date().toISOString(),
       effort,
       method,
+      provider,
       prompt: prompt.replace(/\n/g, " ").slice(0, 120),
     };
     fs.appendFileSync(LOG_FILE, JSON.stringify(entry) + "\n", "utf8");
   } catch {}
+}
+
+// ── Provider detection ──
+function detectProvider() {
+  const baseURL = (process.env.ANTHROPIC_BASE_URL || "").toLowerCase();
+  if (baseURL.includes("xiaomimimo")) return "mimo";
+  if (baseURL.includes("deepseek")) return "deepseek";
+  return "unknown";
+}
+
+// ── Model selection per provider ──
+function getClassifyModel(provider) {
+  switch (provider) {
+    case "mimo":
+      return "mimo-v2.5";
+    case "deepseek":
+      return process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL || "deepseek-v4-flash";
+    default:
+      return process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL || "claude-3-5-haiku-20241022";
+  }
+}
+
+// ── Timeout per provider (MiMo may need more time) ──
+function getTimeout(provider) {
+  return provider === "mimo" ? 5000 : 3000;
 }
 
 // ── Classification prompt ──
@@ -110,19 +139,20 @@ function extractLastUserMessage(request) {
   return "";
 }
 
-// ── AI classifier (3s timeout) ──
-async function classifyWithAI(text, apiKey) {
+// ── AI classifier (adaptive timeout) ──
+async function classifyWithAI(text, apiKey, provider) {
   if (!text || text.length < 4) return null;
 
   const baseURL = process.env.ANTHROPIC_BASE_URL || "https://api.anthropic.com";
   const client = new Anthropic({ apiKey, baseURL });
   const truncated = text.length > 2000 ? text.slice(0, 2000) : text;
 
+  const timeoutMs = getTimeout(provider);
   const timeout = new Promise((_, reject) =>
-    setTimeout(() => reject(new Error("classify_timeout")), 3000)
+    setTimeout(() => reject(new Error("classify_timeout")), timeoutMs)
   );
 
-  const model = process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL || "claude-3-5-haiku-20241022";
+  const model = getClassifyModel(provider);
   const apiCall = client.messages.create({
     model,
     max_tokens: 50,
@@ -142,16 +172,6 @@ async function classifyWithAI(text, apiKey) {
   } catch {
     return null;
   }
-}
-
-// ── Classify a prompt: AI first, fallback to keywords ──
-async function classify(prompt) {
-  const apiKey = process.env.ANTHROPIC_AUTH_TOKEN;
-  if (apiKey) {
-    const aiResult = await classifyWithAI(prompt, apiKey);
-    if (aiResult) return { effort: aiResult, method: "ai" };
-  }
-  return { effort: classifyByKeywords(prompt), method: "keyword" };
 }
 
 // ── Read stdin with a 5-second safety timeout ──
@@ -188,13 +208,14 @@ async function main() {
   }
 
   const userText = extractLastUserMessage(request);
+  const provider = detectProvider();
 
   let effort = "medium";
   let method = "default";
   if (userText) {
     const apiKey = process.env.ANTHROPIC_AUTH_TOKEN;
     if (apiKey) {
-      const aiResult = await classifyWithAI(userText, apiKey);
+      const aiResult = await classifyWithAI(userText, apiKey, provider);
       if (aiResult) {
         effort = aiResult;
         method = "ai";
@@ -208,7 +229,7 @@ async function main() {
     }
   }
 
-  logClassification(userText, effort, method);
+  logClassification(userText, effort, method, provider);
 
   console.log(
     JSON.stringify({

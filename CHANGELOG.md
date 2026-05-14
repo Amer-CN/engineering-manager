@@ -7,6 +7,153 @@
 
 ---
 
+## [2.8.2] — 2026-05-15
+
+### ✨ 新增
+- **工人管理4-Tab重构**：看板（5 KPI + 饼图 + 班组列表）→ 工人库 → 班组管理 → 工资管理，参考人事管理模块简洁设计
+- **琥珀色系主题**：工人管理统一使用 amber 色系，与人事管理的 indigo 色系区分
+- **useConfirm Hook**：声明式确认对话框，替代原生 `confirm()`，包装现有 ConfirmDialog 组件
+- **看板Tab**：工人总数/在场/已离场/超龄/班组数量 5个KPI + 项目分布饼图 + 班组概览列表
+- **状态管理Hook**：useLaborData（数据加载）、useLaborModals（模态框状态收敛）、useLaborOperations（操作整合）
+- **WorkerPoolForm切换链接**：底部增加"填写完整信息→"切换到MemberForm完整编辑
+
+### 🔧 优化
+- **月份选择器内嵌Tab**：从WageCycleDetail头部移除，考勤管理和项目工资表各嵌入独立月份选择器，工资发放记录使用原有年/月/姓名筛选
+- **attendance.ts拆分**：428行→298行，工具函数→attendance-utils.ts，批量导入→attendance-batch-import.ts
+- **Tab导航升级**：下划线样式 + framer-motion layoutId滑动指示器 + localStorage持久化
+- **WorkerSection标记废弃**：@deprecated 标记，被 LaborWorkerList + LaborTeamManager 替代
+
+### 📄 涉及文件
+- 新增：`src/components/features/labor/LaborDashboard.tsx`、`LaborWorkerList.tsx`、`LaborTeamManager.tsx`、`theme.ts`、`hooks/useLaborData.ts`、`hooks/useLaborModals.ts`、`hooks/useLaborOperations.ts`、`src/hooks/useConfirm.ts`、`electron/ipc-handlers/attendance-utils.ts`、`electron/ipc-handlers/attendance-batch-import.ts`
+- 重写：`src/components/LaborManagement.tsx`（366行→~280行4-Tab容器）
+- 修改：`src/components/features/wages/WageCycleDetail.tsx`（移除头部月份选择器）、`AttendanceTab.tsx`（增加月份选择器）、`WageTableTab.tsx`（增加月份选择器）、`WageManagement.tsx`（useConfirm替换confirm）、`electron/ipc-handlers/attendance.ts`（拆分+导入utils）、`electron/ipc-handlers/index.ts`（新增attendance-batch-import导入）
+- 主题色统一：`WorkerSection.tsx`、`WorkerPoolForm.tsx`、`WorkerSectionModals.tsx`、`MemberFormLayout.tsx`、`MemberCard.tsx`、`WageStatsTab.tsx`、`WageTableTab.tsx`、`WageRecordsTab.tsx`、`AttendanceTab.tsx`（orange→amber）
+
+---
+
+## [2.8.1] — 2026-05-14
+
+### ✨ 新增
+- **银行回单 PDF 解析**：上传银行代发回单 PDF，自动提取交易日期/总金额/成功金额/明细行，按「姓名+银行卡号」双重匹配填入实发金额和发放日期
+- **多银行格式兼容**：正则支持工行/农行/建行/农商行/中行等常见回单格式（表头/日期/金额标签差异）
+- **回单内容查看**：解析为 0 条时，界面显示「查看提取内容」按钮，可展开 pypdf 提取的原始文本辅助诊断
+- **发放记录归档**：「🔒 归档」按钮锁定实发金额/日期（输入框变灰禁用），「清除发放记录」同步解除归档
+- **银行卡号双重匹配**：回单解析提取收款账号，匹配时先用姓名模糊匹配，再用银行卡号精确确认，解决同名工人误匹配问题
+
+### 🔧 优化
+- **实发金额输入修复**：`<input type="number">` → `type="text" inputMode="decimal"`，`paidAmount` 类型 `number` → `string`，解决无法输入小数点问题
+- **发放记录删除逻辑修正**：发放记录 Tab「删除选中」只清空发放字段（paidAmount/paidDate/bankReceiptPath），不再删除工资记录本身；项目工资表 Tab「删除选中」仍为彻底删除
+
+### 🐛 修复
+- **中文 Windows 编码乱码**：Python `print()` 默认输出 GBK → Node.js `exec` UTF-8 解码导致中文全部变为乱码。修复：Python 脚本加 `sys.stdout.reconfigure(encoding='utf-8')` + exec 环境设 `PYTHONIOENCODING=utf-8`
+- **Python 命令回退**：优先 `python` → `python3` → `py` → `py -3`，解决不同系统 Python 命令名不一致问题
+- **扫描件误判静默失败**：pypdf 对扫描图片 PDF 返回空字符串/页码垃圾 → 新增 `hasCJK()` 中文内容检查，无中文返回明确错误提示，不再静默显示「0 条」
+
+### 📄 涉及文件
+- IPC：`electron/ipc-handlers/wages.ts`（新增 `batchClearPayments` / `batchArchivePayments` / `bankAccount` 查询关联）、`wage-calc.ts`（重写正则匹配、多格式兼容、编码修复、CJK 检查、多命令回退）
+- 预加载：`electron/preload.ts`（暴露 `batchClearPayments` / `batchArchivePayments`）
+- 类型：`src/types/electron.d.ts`（`WageRecord.paymentLocked` / `WageRecord.bankAccount` / `BankReceiptItem.account` / 新增 API 签名）
+- UI：`src/components/WageManagement.tsx`（姓名+卡号双重匹配、归档处理、`paidAmount` string 类型）、`WageCycleDetail.tsx`、`WageRecordsTab.tsx`（归档按钮、锁定UI、输入框修复、查看提取内容）
+
+---
+
+## [2.8.0] — 2026-05-14
+
+### ✨ 新增
+- **合同管理新增「其他协议」类型**：收入/支出合同之外增加第三种合同类型，覆盖框架协议、合作协议、和解协议、赔偿协议、个人协议等 6 种子类型，适用于不涉及具体金额收支或仅约定分配比例的真实经营场景
+- 协议合同金额可选（框架协议可填 0 或不填），无付款方式/付款记录字段
+- 看板新增蓝色系「其他协议」导航卡片（收入→支出→其他，位于最右侧），饼图增加第三扇区
+- 新增 `agreementContracts` 数据库表，4 个 IPC 通道，导入/导出支持
+- **工人考勤 Excel 导入**：上传工资表/花名册，autoMap 自动识别姓名+身份证号+出勤天数三列，身份证号优先匹配（精准避免同名混淆），仅导入出勤天数不标记缺勤
+- **工资周期月份选择器**：考勤管理页面新增 `<input type="month">`，可切换月份查看/导入考勤数据
+
+### 📄 涉及文件
+- 新增类型：`src/types/electron.d.ts` (AgreementContract, AgreementSubType)
+- 数据层：`electron/database.ts`, `electron/database.d.ts`
+- IPC：`electron/ipc-handlers/contracts.ts`, `electron/preload.ts`
+- UI：`src/components/Contracts.tsx`, `ContractDashboard.tsx`, `ContractPage.tsx`, `features/contracts/ContractFormModal.tsx`
+- 配置：`src/components/features/contracts/contractConfig.ts`
+- 导出：`src/utils/export-import.ts`
+- 考勤导入：`src/components/features/wages/AttendanceImportModal.tsx`、`electron/ipc-handlers/attendance.ts`（batchImportAttendances）、`electron/preload.ts`、`src/types/electron.d.ts`
+- 考勤 UI：`src/components/features/wages/AttendanceTab.tsx`、`WageCycleDetail.tsx`、`src/components/WageManagement.tsx`
+
+---
+
+## [2.7.3] — 2026-05-14
+
+### 🐛 修复
+- **工人导入合并单元格列索引对齐**：新增 `alignColumns()` 过滤 null 表头并按有效列裁剪数据行，修复 Excel 合并单元格导致工种/银行卡等字段读到错误列的数据
+- **工种直接存原始中文名**：移除 `resolveWorkerType()` 有损 code 转换（"安装工"不再被映射成"其他工种"），`getWorkerTypeLabel()` 兼容 code 和中文名，新增 `workerTypeToCode()` 给表单/Picker 下拉框用
+- **"不导入"设置按字段名记忆**：`unmappedFields` ref 存字段名而非列索引，切换工作表时重新 autoMap 后只对"不导入"字段强制 -1
+- **LaborManagement 数据源修复**：`loadData` 优先取 `pw.worker?.workerType/dailyWage`（工人库最新值），不取 `pw.workerType`（projectWorkers 旧值）
+- **WageStats 按月过滤+脏数据过滤**：`getWageStats` 按 yearMonth 过滤无效记录，Dashboard 传入 selectedMonth
+- **WorkerPickerModal 行数合规**：复用 `memberFormTypes.ts` 的 `workerTypes` 常量，411→395 行
+- **WorkerSection 补 import**：TransferModal/LeaveModal 缺失导致构建报错
+
+### 📄 涉及文件
+- 修改：`useWorkerImport.ts`、`memberFormTypes.ts`、`WorkerPoolForm.tsx`、`WorkerPickerModal.tsx`、`WorkerSection.tsx`、`LaborManagement.tsx`、`wages.ts`、`WageStatsTab.tsx`、`WageManagement.tsx`
+
+---
+
+## [2.7.2] — 2026-05-14
+
+### ✨ 新增
+- **工人库年龄+银行卡号列**：从身份证提取年龄，超 60 岁红色高亮；新增银行卡号列；去掉班组/状态/进场日期列
+- **导入字段扩展**：新增工资卡号/开户行/联行号/工种/日工资
+- **Worker 类型扩展**：`db.workers` 新增 bankAccount/bankName/bankLineNo/workerType/dailyWage 默认值字段
+- **WorkerPoolForm 扩展**：新增联行号、默认工种、默认日工资输入
+
+### 🔄 改进
+- **导入有则更新**：已存在的工人（身份证匹配）不再跳过，用新非空字段覆盖更新，支持跨工作表补充信息
+- **导入结果 4 列统计**：新增/更新/跳过/失败
+- **WorkerPickerModal 流程简化**：从班组进入时自动锁定班组+隐藏右侧面板；底部批量默认值栏；整行可点击；优先用工人库默认值
+- **工人库数据源修复**：`loadData()` 同时读取全局工人库（`getWorkers()`）+ 项目工人（`getProjectWorkers()`），导入后立即可见
+- **默认 Tab 改为工人库**：导入后不再跳到班组管理页面
+
+### 🗑️ 移除
+- **工人库清理**：去掉调组/离场/重新入场按钮及 TransferModal/LeaveModal 死代码，去掉状态筛选器
+
+### 📄 涉及文件
+- 修改：`electron.d.ts`、`WorkerSection.tsx`、`WorkerSectionModals.tsx`、`WorkerPickerModal.tsx`、`WorkerPoolForm.tsx`、`useWorkerImport.ts`、`WorkerImportModal.tsx`、`LaborManagement.tsx`
+
+---
+
+## [2.7.1] — 2026-05-14
+
+### 🐛 修复
+- **工人导入精简**：导入字段从 10 个缩减为 6 个身份字段（姓名/身份证/性别/手机/地址/民族），去掉班组/日工资/工种/进场日期，只创建工人库记录不再创建 ProjectWorker 用工关系
+- **导入空行跳过**：姓名和身份证都为空的行静默跳过，不再报"缺少姓名"错误
+
+### 🔧 工具
+- **Auto-Effort Hook 双模型自适应**：根据 `ANTHROPIC_BASE_URL` 自动选择分类模型（MiMo→`mimo-v2.5` / DeepSeek→`deepseek-v4-flash`），切换 API 无需修改 hook 文件
+
+### 📄 涉及文件
+- 修改：`useWorkerImport.ts`、`WorkerImportModal.tsx`、`LaborManagement.tsx`、`Members.tsx`、`auto-effort-smart.js`
+
+---
+
+## [2.7.0] — 2026-05-14
+
+### 🔧 重构
+- **工资管理纯工人化 v3.0**：代码级清理所有管理人员薪资逻辑
+  - `calculateActualWage` 签名从 `(member, attendance, bonus, deduction)` 简化为 `(dailyWage, workDays, bonus, deduction)`
+  - `generateProjectWages` 去掉 staff/projectManager/legacy 分支，仅处理活跃 projectWorkers
+  - `WageRecord` 类型精简：移除 9 个 staff 专属字段（baseSalary/socialSecurity*/housingFund*/otherAllowances/companyCoversSocial/isFullAttendance/daysOff），新增 projectWorkerId
+  - `WageStats` 类型精简：移除 staffWage/workerWage 区分
+  - `WageManagement.tsx`：移除 members 状态、staff 考勤生成分支、月薪计算逻辑、projectMembers 查询
+  - `AttendanceTab.tsx`：移除"类型"列和 members prop，全部显示为工人
+  - `WageTableTab.tsx`：移除"类型"列、月薪/全勤/社保计算，简化为 7 列纯日薪表
+  - `WageStatsTab.tsx`：4 KPI→2 KPI（工资总额+记录条数），移除管理人员工资卡
+  - `wage-calc.ts`：60 行精简，移除 getPersonalDeduction
+
+### 🎨 UI
+- **工人库 Excel 拖拽框移除**：WorkerSection 工人列表 Tab 删除虚线拖拽上传区，保留工具栏"导入Excel"按钮，释放列表显示空间
+
+### 📄 涉及文件
+- 修改：`WageManagement.tsx`、`WageCycleDetail.tsx`、`AttendanceTab.tsx`、`WageTableTab.tsx`、`WageStatsTab.tsx`、`WorkerSection.tsx`、`WorkerSectionModals.tsx`、`LaborManagement.tsx`、`wage-calc.ts`、`wages.ts`、`electron.d.ts`
+
+---
+
 ## [2.6.3] — 2026-05-13
 
 ### 🐛 修复
