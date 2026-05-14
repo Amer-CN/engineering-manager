@@ -1,6 +1,11 @@
 # CLAUDE.md - 工程管家项目约定
-> 项目状态：人事管理+工人管理部门化拆分（v2.6.3 考勤时间线+薪资历史+入职感知+工人管理数据管线修复）
-> 最后同步：2026-05-13（工人管理数据管线接通 getProjectWorkers、三Tab统一、班组工人管理、WorkerPoolForm、薪资历史回填迁移）
+> 项目状态：工人管理UX重构 + 月份选择器内嵌Tab + attendance.ts拆分（v2.8.2）
+> 最后同步：2026-05-15（工人管理4-Tab重构·琥珀色系·useConfirm·月份选择器内嵌）
+
+## 🗣️ 输出语言
+- **默认中文输出**：所有解释、描述、分析、提问、总结等文字内容使用中文
+- **保持英文的部分**：代码（变量名/函数名/注释）、命令行、技术术语（如 IPC/hook/CRUD/SSR）、文件路径、git commit message、PR 描述
+- **不要强行中文化**：代码标识符、API 名称、配置键名等保持英文原样
 
 ## 🌐 gstack 浏览器工具集
 - **Web 浏览**：使用 gstack 的 `/browse` skill 进行所有网页浏览操作，**严禁使用 `mcp__claude-in-chrome__*` 工具**
@@ -19,7 +24,7 @@
 
 ## 📁 核心模块架构
 
-### 人事管理（v2.6.3 — 考勤时间线+薪资历史+入职感知）
+### 人事管理（v2.7.0 — 考勤时间线+薪资历史+入职感知）
 - **模块位置**：侧边栏「核心业务」分组，路由 `/hr`，图标 UserCog
 - **职能范围**：公司管理人员（memberType='staff'）的档案、考勤、月薪薪酬
 - **5 个 Tab**：看板（5 KPI 含今日在岗+实际薪酬）→ 人员档案（部门+职位字段，按部门/状态筛选，OCR 自动填入身份证信息，薪资历史弹窗）→ 考勤管理（摘要列表优先+AttendanceDetail 子页面+考勤时间线子页面+5状态画笔+入职守卫+删除/批量删除+生成默认考勤+导出Excel）→ 薪酬管理（月薪制+考勤→薪酬流水线+就绪指示器+入职守卫+补助列）→ 部门管理（CRUD + 人数统计 + 删除守卫+PositionEditor）
@@ -37,23 +42,32 @@
 - **核心文件**：`HRManagement.tsx`（页面容器），`features/hr/HRDashboard.tsx`, `StaffList.tsx`, `StaffAttendance.tsx`, `StaffPayroll.tsx`, `DepartmentManager.tsx`, `PositionEditor.tsx`, `AttendanceTimeline.tsx`, `SalaryHistoryModal.tsx`, `config.tsx`，`src/constants/attendance.ts`（共享），`AttendanceDetail.tsx`，`electron/ipc-handlers/salary-history.ts`，`electron/ipc-handlers/attendance.ts`，`hooks/useDepartments.ts`，`departments.ts`（IPC）
 - **设计 Token**：indigo-600 主色（区别于项目模块的 blue 色系）
 
-### 工人管理（原「员工管理」改名，v2.6.0）
+### 工人管理（v2.8.2 — 4-Tab重构+琥珀色系）
 - **模块位置**：侧边栏「核心业务」分组，路由 `/labor`，图标 HardHat
-- **职能范围**：农民工班组/档案/导入/调组/离场，工人工资入口（跳转旧 `/wages` 页面）
-- **页面容器**：`LaborManagement.tsx`（~170行，从 Members.tsx 剥离管理人员 Tab，仅保留 WorkerSection + Excel 导入 + WorkerPicker 入口）
-- **保持不变**：WorkerSection.tsx 及其子组件、导入逻辑、班组操作、调动/离场流程
-- **原 `/members` 路由**：保留 PageId 但隐藏侧边栏（showInSidebar: false），作为重定向兼容过渡 1 版本
+- **职能范围**：农民工班组/档案/导入/工资管理，一级Tab直接访问工资数据
+- **页面容器**：`LaborManagement.tsx`（~280行，4-Tab容器，参考HRManagement.tsx简洁模式）
+- **4个Tab**：看板（5 KPI + 饼图 + 班组列表）→ 工人库（表格：姓名/身份证/年龄/性别/工种/日工资/银行卡号/操作）→ 班组管理（按项目分组卡片网格）→ 工资管理（直接渲染WageManagement）
+- **Tab导航**：下划线样式（border-b），琥珀色系(amber)，localStorage持久化 `labor_active_tab`，framer-motion layoutId="labor-tab-indicator" 滑动指示器
+- **状态管理**：3个Hook收敛——useLaborData（数据加载）、useLaborModals（~10个模态框状态）、useLaborOperations（整合useMemberOperations+useTeamOps+PoolWorker操作）
+- **表单统一**：WorkerPoolForm（快速添加）底部增加"填写完整信息→"切换到MemberForm（完整编辑）
+- **主题色**：琥珀色系(amber)，与人事管理的靛蓝色系(indigo)区分，`theme.ts` 导出常量
+- **确认对话框**：useConfirm Hook 替代原生 confirm()，包装现有 ConfirmDialog 组件
+- **核心文件**：`LaborManagement.tsx`（主容器），`features/labor/LaborDashboard.tsx`（看板），`features/labor/LaborWorkerList.tsx`（工人库），`features/labor/LaborTeamManager.tsx`（班组管理），`features/labor/theme.ts`（主题常量），`features/labor/hooks/useLaborData.ts`，`features/labor/hooks/useLaborModals.ts`，`features/labor/hooks/useLaborOperations.ts`，`hooks/useConfirm.ts`
+- **废弃文件**（标记@deprecated）：`WorkerSection.tsx`，`MemberCard.tsx`，`MemberList.tsx`
+- **原 `/members` 路由**：保留 PageId 但隐藏侧边栏（showInSidebar: false），作为重定向兼容过渡
 
-### 全局工人信息库（v2.5.0 新增）
-- **双表分离**：`db.workers`（纯身份——name/idCard/gender/birthDate/ethnicity/phone/address）+ `db.projectWorkers`（用工关系——workerId/projectId/teamId/dailyWage/workerType/entryDate/status）
-- 同一工人可在多个项目并行，不同项目里工种/日工资独立
-- **WorkerPickerModal**：班组管理「从工人库添加」→ 搜索+批量勾选+逐行编辑工种日工资
-- **导入去重**：身份证号自动检测 `db.workers` → 已存在蓝色标记 → 跳过 Worker 创建仍可创建 ProjectWorker
-- **导入逻辑**：班组/日工资为可选项——只填姓名+身份证号即入库，填班组才分配项目
+### 全局工人信息库（v2.5.0 新增，v2.7.2 扩展）
+- **双表分离**：`db.workers`（身份+默认值——name/idCard/gender/birthDate/ethnicity/phone/address/bankAccount/bankName/bankLineNo/workerType/dailyWage）+ `db.projectWorkers`（用工关系——workerId/projectId/teamId/dailyWage/workerType/entryDate/status）
+- 同一工人可在多个项目并行，不同项目里工种/日工资独立；Worker 上的 workerType/dailyWage 作为"默认值"
+- **WorkerPickerModal**：从特定班组进入时自动锁定班组，无需逐人选择；底部批量默认值栏（工种+日工资）；勾选时优先用工人库自带的 workerType/dailyWage，无则回退批量默认值；全选/取消全选；整行可点击
+- **导入更新**：身份证匹配已存在工人 → 用新非空字段覆盖更新（不跳过），支持跨工作表补充信息（表1导入身份证+电话，表2导入工种+工资）
+- **导入字段**（9 字段）：姓名/身份证（必填）+ 性别/手机/地址/民族/工资卡号/开户行/联行号/工种/日工资（可选，有就导入）；工种直接存原始中文名（不做 code 转换），`alignColumns()` 修复合并单元格 null 表头列索引错位
+- **工种显示**：`getWorkerTypeLabel()` 兼容 code（'welder'）和中文名（'焊工'），表单/Picker 用 `workerTypeToCode()` 转 code 匹配下拉框
+- **导入结果**：4 列统计（新增/更新/跳过/失败）
 - **10 个 IPC 通道**：`db:workers:*` (5) + `db:projectWorkers:*` (5)，含 batchCreate 事务校验
 - **5 步自动迁移**：`migrateDatabase()` 中旧 Member(worker)→Worker+ProjectWorker，含工资/考勤回填+审计标记
 - **工资计算双路径**：staff 走 memberId，worker 走 projectWorkerId；`generateProjectWages` 重写
-- 核心文件：`workers.ts`（IPC）, `WorkerPickerModal.tsx`, `useWorkerImport.ts`, `useMemberOperations.ts`, `WorkerSection.tsx` 
+- 核心文件：`workers.ts`（IPC）, `WorkerPickerModal.tsx`, `useWorkerImport.ts`, `useMemberOperations.ts`（被 useLaborOperations 整合）
 
 ### 发票管理
 - **票种**（`InvoiceKind`）：`paper_regular` / `paper_special` / `electronic_regular` / `electronic_special`
@@ -63,8 +77,10 @@
 - 收票按销售方关联支出合同，开票按购买方关联收入合同
 
 ### 合同管理
-- 收入合同 / 支出合同；已收款统计从 `paymentRecords` 表
-- 附件走统一文件服务 `uploads/<项目名>/合同/收入|支出/`，文件名：`合同名_金额元.ext`
+- 收入合同 / 支出合同 / 其他协议（框架、合作、和解、赔偿、个人等 6 种子类型）
+- 协议合同金额可选，无付款方式/付款记录
+- 已收款统计从 `paymentRecords` 表（仅收入/支出合同适用）
+- 附件走统一文件服务 `uploads/<项目名>/合同/收入|支出|协议/`，文件名：`合同名[_金额元].ext`
 - .docx 用 mammoth 转 HTML iframe 预览；`contract-file:///` 自定义协议支持中英文路径
 
 ### 项目管理
@@ -89,15 +105,20 @@
 - **编辑模式**：下载→编辑→上传；文件走统一文件服务 `uploads/模板/文件/`
 - 核心文件：`Templates.tsx`, `TemplateDashboard.tsx`, `TemplateList.tsx`, `TemplateForm.tsx`, `TemplateCard.tsx`, `TemplatePreview.tsx`, `TemplateGenerate.tsx`, `TemplateSelectorModal.tsx`, `config.tsx`, `templates.ts`（IPC）
 
-### 工资管理（v2.6.0 — 降级为工人专用入口）
-- **侧边栏**：隐藏（showInSidebar: false），通过工人管理模块按钮跳转或直接 URL `/wages`
-- **职能范围**：仅工人日薪制工资/考勤（管理人员月薪制已移至人事管理模块）
-- **架构不变**：Dashboard（统计+项目卡片）→ WageCycleDetail（考勤管理/项目工资表/工资发放记录 3 Tab）
-- **考勤系统**：按月生成，5 种日状态，AttendanceDetail 画笔模式日历
-- **计算规则**：工人日薪制 `日薪×出勤天数+奖金-扣款`
-- **工资发放记录**：应发工资(只读) + 实发金额/发放日期(手动) + 差额(自动)
+### 工资管理（v3.2 — 月份选择器内嵌Tab）
+- **侧边栏**：隐藏（showInSidebar: false），通过工人管理模块「工资管理」Tab 直接访问，或直接 URL `/wages`
+- **职能范围**：仅工人日薪制工资/考勤，管理人员薪资逻辑已彻底移除（v3.0 代码级清理）
+- **架构**：Dashboard（2 KPI 统计+项目卡片）→ WageCycleDetail（考勤管理/项目工资表/工资发放记录 3 Tab）
+- **月份选择器**：从 WageCycleDetail 头部移除，嵌入各 Tab 内部——考勤管理和项目工资表各有一个 `<input type="month">`，工资发放记录使用独立的年/月/姓名筛选
+- **考勤系统**：按月生成，5 种日状态，AttendanceDetail 画笔模式日历，支持 Excel 导入（出勤天数），走 `generateDefaultAttendancesV2` / `batchImportAttendances` 两条路径
+- **计算规则**：`日薪 × 出勤天数 + 奖金 - 扣款`（`calculateActualWage(dailyWage, workDays, bonus, deduction)`）
+- **工资发放记录**：应发工资(只读) + 实发金额/发放日期(手动，`type="text" inputMode="decimal"` 支持精确小数输入) + 差额(自动)
+- **银行回单解析**：上传 PDF → Python pypdf 提取文字 → 正则解析（兼容多银行格式）→ 姓名+银行卡号双重匹配 → 填入实发金额/日期
+- **归档功能**：发放记录 Tab「归档」按钮锁定实发金额/日期，useConfirm 确认对话框
+- **提交级操作**：项目工资表「删除选中」→ `batchDeleteWages` 彻底删除；发放记录「删除选中」→ `batchClearPayments` 仅清空发放字段
+- **IPC 拆分**：`attendance.ts`（298行）+ `attendance-utils.ts`（工具函数）+ `attendance-batch-import.ts`（批量导入），满足 check-rules 350行上限
 - 数据表：`db.wages`（projectWorkerId 路径）/ `db.attendances` / `db.projectWorkers`
-- 核心文件：`WageManagement.tsx`, `WageCycleDetail.tsx`, `AttendanceTab.tsx`, `WageTableTab.tsx`, `WageRecordsTab.tsx`, `attendance.ts`, `wages.ts`
+- 核心文件：`WageManagement.tsx`, `WageCycleDetail.tsx`, `WageRecordsTab.tsx`, `AttendanceTab.tsx`（含月份选择器）, `WageTableTab.tsx`（含月份选择器）, `attendance.ts`, `attendance-utils.ts`, `attendance-batch-import.ts`, `wages.ts`, `wage-calc.ts`
 
 ### 成本台账（独立顶级模块）
 - **目的**：追踪挂靠施工项目的真实资金流（含灰色支出、垫资、股东融资等明面账不覆盖的资金流）
@@ -172,7 +193,7 @@ uploads/
 - 版本号引用位置：`package.json` / `Sidebar.tsx` / `Login.tsx` / `Settings.tsx` / `SettingsChangelog.tsx` / `CLAUDE.md` / `CHANGELOG.md`
 - 版本历史：`CHANGELOG.md`（1.0.0→2.3.0）+ Settings 更新日志浮窗
 
-### 当前版本：v2.6.1
+### 当前版本：v2.8.2
 
 ## 🎨 UI 规范
 
@@ -237,12 +258,26 @@ Button(variants/sizes/iconOnly) / Input(status+leftSection/rightSection) / Modal
 | `db.salaryHistory` 薪资历史表 | 2026-05-13 | memberId/effectiveDate/baseSalary/subsidy/subsidyNote/note，追踪薪资变动，薪酬计算按月份匹配 |
 | `db.departments` 部门表 | 2026-05-12 | 部门 CRUD（名称+负责人），memberCount 计算字段，member.departmentId + member.position 新增 |
 | `migrateSalaryHistoryBackfill` | 2026-05-13 | 为已有 staff 成员自动创建初始 salaryHistory 记录，`_migrations.salaryHistoryBackfillV1` 防重复 |
+| `db.workers` 扩展默认值字段 | 2026-05-14 | Worker 类型新增 bankAccount/bankName/bankLineNo/workerType/dailyWage，导入+表单+Picker 全链路适配 |
 
 ### 模块架构变更
 | 变更 | 日期 | 说明 |
 |------|------|------|
+| 工人管理UX重构 v2.8.2 | 2026-05-15 | LaborManagement 重写为4-Tab容器（看板/工人库/班组管理/工资管理），琥珀色系(amber)，useConfirm替代原生confirm，attendance.ts拆分（428→298行），3个Hook收敛状态管理（useLaborData/useLaborModals/useLaborOperations），WorkerPoolForm增加"填写完整信息"切换链接
+| 工资管理月份选择器内嵌 | 2026-05-15 | 从WageCycleDetail头部移除月份选择器，嵌入考勤管理和项目工资表Tab内部，工资发放记录使用独立年/月/姓名筛选
+| 工资管理纯工人化 v3.0 | 2026-05-14 | 代码级清理所有管理人员薪资逻辑：calculateActualWage 从 (member, attendance, bonus, deduction) 简化为 (dailyWage, workDays, bonus, deduction)；generateProjectWages 去掉 staff/projectManager/legacy 分支仅保留 projectWorkers；WageRecord 类型精简（移除 9 个 staff 字段）；WageStats 移除 staffWage/workerWage；AttendanceTab/WageTableTab 移除类型列和 members prop；WageStatsTab 4→2 KPI |
+| WorkerSection Excel 拖拽框移除 | 2026-05-14 | 工人库 Tab 删除虚线拖拽上传区（~10 行），保留工具栏"导入Excel"按钮，拖拽逻辑移至 LaborManagement 隐藏 input |
+| 工人导入精简 | 2026-05-14 | 导入字段从 10 个缩减为 6 个身份字段（去掉 teamName/dailyWage/entryDate/workerType），不再创建 ProjectWorker；useWorkerImport 去掉 workerTeams 参数；空行静默跳过 |
 | 工人管理数据管线修复 | 2026-05-13 | loadData 改为 getProjectWorkers（不再用 getMembers），数据映射兼容旧 Member shape |
 | 工人管理三Tab统一 | 2026-05-13 | 班组管理/工人库/工资管理 三Tab内联，工资管理嵌入为子Tab |
+| 工人库表格精简+年龄高亮 | 2026-05-14 | 去掉班组/状态/进场日期列，新增年龄（超60红色）/银行卡号列；默认Tab改workers；清理调组/离场/重新入场死代码 |
+| WorkerPickerModal 流程简化 | 2026-05-14 | 有defaultTeamId时自动锁定班组+隐藏右侧面板；底部批量默认值栏；整行可点击；全选；优先用工人库默认值 |
+| 导入逻辑改为有则更新 | 2026-05-14 | 身份证匹配的工人不再跳过，用新非空字段覆盖更新；支持跨工作表补充信息；结果统计4列（新增/更新/跳过/失败） |
+| 工人导入合并单元格列对齐 | 2026-05-14 | `alignColumns()` 过滤 null 表头+按有效列裁剪数据行，修复 Excel 合并单元格导致的列索引偏移 |
+| 工种直接存中文名 | 2026-05-14 | 移除 `resolveWorkerType()` 有损 code 转换，导入存原始中文；`getWorkerTypeLabel` 兼容 code+中文；新增 `workerTypeToCode()` |
+| 工人导入"不导入"按字段名记忆 | 2026-05-14 | `unmappedFields` ref 存字段名（不存列索引），切换工作表时 autoMap 后强制 -1 |
+| LaborManagement 数据源修复 | 2026-05-14 | loadData 优先取 `pw.worker?.workerType/dailyWage`（工人库最新值），不取 `pw.workerType`（projectWorkers 旧值） |
+| WageStats 按月过滤+脏数据过滤 | 2026-05-14 | getWageStats 按 yearMonth 过滤+过滤 projectWorkerId 不存在的记录，Dashboard 传入 selectedMonth |
 | 班组工人管理弹窗 | 2026-05-13 | TeamWorkerModal 查看/编辑/调组/移除班组内工人，WorkerPickerModal 批量设置 |
 | 工人库简化表单 | 2026-05-13 | WorkerPoolForm 仅身份字段，调用 createWorker/updateWorker，不涉及项目/班组 |
 | 模板管理独立顶级路由 | 2026-05-07 | 7 种分类 + 变量自动检测（mammoth 服务端）+ TemplateSelectorModal 业务集成 |

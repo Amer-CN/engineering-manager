@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useRef, useState } from 'react'
 import type { WageRecord } from '@/types'
 import { Icon } from '../../ui/Icon'
 
@@ -10,23 +10,28 @@ interface WageRecordsTabProps {
   filterMonth: string
   filterMemberName: string
   selectedIds: Set<number>
-  paymentEdits: Map<number, { paidAmount: number; paidDate: string }>
+  paymentEdits: Map<number, { paidAmount: string; paidDate: string; bankReceiptPath?: string }>
   onFilterYearChange: (val: string) => void
   onFilterMonthChange: (val: string) => void
   onFilterNameChange: (val: string) => void
   onPaymentChange: (recordId: number, field: 'paidAmount' | 'paidDate', value: string | number) => void
   onSavePayments: () => void
+  onBankReceiptUpload: (pdfPath: string) => void
+  receiptParsing: boolean
+  receiptResult: { matched: number; failed: number; totalItems: number; date: string; receiptPath: string; totalAmount?: number; successAmount?: number; rawTextSnippet?: string } | null
   toggleSelect: (id: number) => void
   toggleAll: () => void
   onBatchDelete: () => void
+  onBatchArchive: () => void
 }
 
-function getEditPaidAmount(record: WageRecord, edits: Map<number, { paidAmount: number; paidDate: string }>) {
+function getEditPaidAmount(record: WageRecord, edits: Map<number, { paidAmount: string; paidDate: string }>) {
   const edit = edits.get(record.id)
-  return edit?.paidAmount ?? record.paidAmount ?? record.actualWage
+  if (edit !== undefined) return edit.paidAmount
+  return record.paidAmount != null ? String(record.paidAmount) : ''
 }
 
-function getEditPaidDate(record: WageRecord, edits: Map<number, { paidAmount: number; paidDate: string }>) {
+function getEditPaidDate(record: WageRecord, edits: Map<number, { paidAmount: string; paidDate: string }>) {
   const edit = edits.get(record.id)
   return edit?.paidDate ?? record.paidDate ?? ''
 }
@@ -36,8 +41,11 @@ export default function WageRecordsTab({
   selectedIds, paymentEdits,
   onFilterYearChange, onFilterMonthChange, onFilterNameChange,
   onPaymentChange, onSavePayments,
-  toggleSelect, toggleAll, onBatchDelete,
+  onBankReceiptUpload, receiptParsing, receiptResult,
+  toggleSelect, toggleAll, onBatchDelete, onBatchArchive,
 }: WageRecordsTabProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [showRawText, setShowRawText] = useState(false)
   const filtered = allWageRecords.filter(w => {
     if (filterMemberName && !(w.memberName || '').includes(filterMemberName)) return false
     if (filterYear && filterYear !== '全部' && !w.yearMonth.startsWith(filterYear)) return false
@@ -84,6 +92,33 @@ export default function WageRecordsTab({
             保存发放 ({changedCount})
           </button>
         )}
+        <button onClick={onBatchArchive}
+          className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
+        >
+          <Icon name="Lock" size={14} />
+          归档
+        </button>
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={receiptParsing}
+          className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
+        >
+          <Icon name="Upload" size={14} />
+          {receiptParsing ? '解析中...' : '上传银行回单'}
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf"
+          className="hidden"
+          onChange={e => {
+            const file = e.target.files?.[0]
+            if (file && (file as any).path) {
+              onBankReceiptUpload((file as any).path)
+            }
+            e.target.value = ''
+          }}
+        />
         {selectedIds.size > 0 && (
           <button onClick={onBatchDelete}
             className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
@@ -91,6 +126,34 @@ export default function WageRecordsTab({
           </button>
         )}
       </div>
+
+      {/* 回单解析结果 */}
+      {receiptResult && (
+        <div className="mb-4">
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm flex items-center gap-4 flex-wrap">
+            <span className="font-medium text-blue-800">回单解析结果</span>
+            <span className="text-blue-600">日期: {receiptResult.date || '未识别'}</span>
+            <span className="text-slate-500">总金额: ¥{(receiptResult.totalAmount ?? 0).toFixed(2)}</span>
+            <span className="text-slate-500">成功金额: ¥{(receiptResult.successAmount ?? 0).toFixed(2)}</span>
+            <span className="text-slate-500">明细行: {receiptResult.totalItems} 条</span>
+            <span className="text-green-600 font-medium">✓ 匹配 {receiptResult.matched} 条</span>
+            {receiptResult.failed > 0 && (
+              <span className="text-amber-600">⚠ 未匹配 {receiptResult.failed} 条</span>
+            )}
+            {receiptResult.totalItems === 0 && receiptResult.rawTextSnippet && (
+              <button onClick={() => setShowRawText(!showRawText)}
+                className="text-blue-700 underline hover:text-blue-900 text-xs ml-auto">
+                {showRawText ? '收起提取内容' : '查看提取内容'}
+              </button>
+            )}
+          </div>
+          {showRawText && receiptResult.rawTextSnippet && (
+            <div className="mt-1 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-xs font-mono whitespace-pre-wrap break-all max-h-48 overflow-auto text-slate-700">
+              {receiptResult.rawTextSnippet}
+            </div>
+          )}
+        </div>
+      )}
 
       {filtered.length === 0 ? (
         <div className="text-center py-12 text-slate-400">
@@ -121,8 +184,8 @@ export default function WageRecordsTab({
               {filtered.map(w => {
                 const paidAmount = getEditPaidAmount(w, paymentEdits)
                 const paidDate = getEditPaidDate(w, paymentEdits)
-                const diff = paidAmount - w.actualWage
-                const diffColor = diff > 0.01 ? 'text-red-600' : diff < -0.01 ? 'text-orange-600' : 'text-green-600'
+                const diff = (parseFloat(paidAmount) || 0) - w.actualWage
+                const diffColor = diff > 0.01 ? 'text-red-600' : diff < -0.01 ? 'text-amber-600' : 'text-green-600'
                 const diffSign = diff > 0.01 ? '+' : ''
 
                 return (
@@ -136,14 +199,22 @@ export default function WageRecordsTab({
                     <td className="px-3 py-3">{w.workDays} 天</td>
                     <td className="px-3 py-3 font-medium">¥{w.actualWage.toFixed(2)}</td>
                     <td className="px-3 py-3">
-                      <input type="number" min={0} step={0.01} value={paidAmount}
-                        onChange={e => onPaymentChange(w.id, 'paidAmount', parseFloat(e.target.value) || 0)}
-                        className="w-24 px-2 py-1 border border-slate-300 rounded text-center text-sm" />
+                      <input type="text" inputMode="decimal" value={paidAmount}
+                        placeholder="0.00"
+                        onChange={e => onPaymentChange(w.id, 'paidAmount', e.target.value)}
+                        disabled={!!w.paymentLocked}
+                        className={`w-24 px-2 py-1 border rounded text-center text-sm ${w.paymentLocked ? 'bg-slate-100 border-slate-200 text-slate-500 cursor-not-allowed' : 'border-slate-300'}`} />
                     </td>
                     <td className="px-3 py-3">
-                      <input type="date" value={paidDate}
-                        onChange={e => onPaymentChange(w.id, 'paidDate', e.target.value)}
-                        className="w-32 px-2 py-1 border border-slate-300 rounded text-sm" />
+                      <div className="flex items-center gap-1">
+                        <input type="date" value={paidDate}
+                          onChange={e => onPaymentChange(w.id, 'paidDate', e.target.value)}
+                          disabled={!!w.paymentLocked}
+                          className={`w-32 px-2 py-1 border rounded text-sm ${w.paymentLocked ? 'bg-slate-100 border-slate-200 text-slate-500 cursor-not-allowed' : 'border-slate-300'}`} />
+                        {w.bankReceiptPath && (
+                          <span className="text-green-500 text-xs" title={`凭证: ${w.bankReceiptPath}`}>📎</span>
+                        )}
+                      </div>
                     </td>
                     <td className={`px-3 py-3 font-medium ${diffColor}`}>
                       {diffSign}¥{diff.toFixed(2)}

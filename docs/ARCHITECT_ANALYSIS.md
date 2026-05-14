@@ -198,7 +198,7 @@ electron/
 |------|----------|----------|
 | 项目管理 | 1 | Project |
 | 人员管理 | 4 | Member, WorkerTeam, WorkerTransferRecord, WorkerType |
-| 合同管理 | 6 | IncomeContract, ExpenseContract, ContractTemplate, etc. |
+| 合同管理 | 7 | IncomeContract, ExpenseContract, AgreementContract, ContractTemplate, etc. |
 | 结算办理 | 2 | Settlement, SettlementItem |
 | 发票管理 | 3 | Invoice, InvoiceItem, PaymentRecord |
 | 进销存 | 2 | InventoryItem, InventoryTransaction |

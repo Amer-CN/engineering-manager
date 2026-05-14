@@ -13,11 +13,13 @@ import { saveFile, readFile } from '../file-service'
 // 合同 CRUD 工厂 — 消除收入/支出合同 7 组重复 handler
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function registerContractHandlers(type: 'income' | 'expense') {
-  const cKey = type === 'income' ? 'incomeContracts' : 'expenseContracts'
-  const rKey = type === 'income' ? 'incomeRecords' : 'expenseRecords'
+function registerContractHandlers(type: 'income' | 'expense' | 'agreement') {
+  const isAgreement = type === 'agreement'
+  const cKey = isAgreement ? 'agreementContracts' : type === 'income' ? 'incomeContracts' : 'expenseContracts'
+  const rKey = isAgreement ? '' : type === 'income' ? 'incomeRecords' : 'expenseRecords'
   const amountLabel = type === 'income' ? 'receivedAmount' : 'paidAmount'
 
+  // getAll
   ipcMain.handle(`db:${cKey}:getAll`, (_, projectId?: number) => {
     if (!dbReady) return { success: false, error: 'Database not ready' }
     let contracts = (db as any)[cKey] as any[]
@@ -25,13 +27,17 @@ function registerContractHandlers(type: 'income' | 'expense') {
     const result = contracts.map((c: any) => {
       const project = db.projects.find((p: any) => p.id === c.projectId)
       const partner = db.partners.find((p: any) => p.id === c.partnerId)
-      const records = (db as any)[rKey].filter((r: any) => r.contractId === c.id)
-      const amount = records.reduce((sum: number, r: any) => sum + (r.amount || 0), 0)
-      return { ...c, projectName: project?.name || '', partnerName: partner?.name || '', [amountLabel]: amount }
+      const enriched: any = { ...c, projectName: project?.name || '', partnerName: partner?.name || '' }
+      if (!isAgreement) {
+        const records = (db as any)[rKey].filter((r: any) => r.contractId === c.id)
+        enriched[amountLabel] = records.reduce((sum: number, r: any) => sum + (r.amount || 0), 0)
+      }
+      return enriched
     })
     return { success: true, data: result.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) }
   })
 
+  // create
   ipcMain.handle(`db:${cKey}:create`, (_, contract) => {
     if (!dbReady) return { success: false, error: 'Database not ready' }
     try {
@@ -43,6 +49,7 @@ function registerContractHandlers(type: 'income' | 'expense') {
     } catch (error: any) { log.error(`Failed to create ${type} contract:`, error); return { success: false, error: error.message } }
   })
 
+  // update
   ipcMain.handle(`db:${cKey}:update`, (_, contract) => {
     if (!dbReady) return { success: false, error: 'Database not ready' }
     try {
@@ -55,51 +62,59 @@ function registerContractHandlers(type: 'income' | 'expense') {
     } catch (error: any) { log.error(`Failed to update ${type} contract:`, error); return { success: false, error: error.message } }
   })
 
+  // delete
   ipcMain.handle(`db:${cKey}:delete`, (_, id) => {
     if (!dbReady) return { success: false, error: 'Database not ready' }
     try {
       (db as any)[cKey] = (db as any)[cKey].filter((c: any) => c.id !== id)
-      ;(db as any)[rKey] = (db as any)[rKey].filter((r: any) => r.contractId !== id)
+      if (!isAgreement) {
+        ;(db as any)[rKey] = (db as any)[rKey].filter((r: any) => r.contractId !== id)
+      }
       saveDatabase()
       return { success: true }
     } catch (error: any) { log.error(`Failed to delete ${type} contract:`, error); return { success: false, error: error.message } }
   })
 
-  ipcMain.handle(`db:${rKey}:getAll`, (_, contractId: number) => {
-    if (!dbReady) return { success: false, error: 'Database not ready' }
-    return { success: true, data: (db as any)[rKey].filter((r: any) => r.contractId === contractId) }
-  })
+  // Records handlers (income/expense only)
+  if (!isAgreement) {
+    ipcMain.handle(`db:${rKey}:getAll`, (_, contractId: number) => {
+      if (!dbReady) return { success: false, error: 'Database not ready' }
+      return { success: true, data: (db as any)[rKey].filter((r: any) => r.contractId === contractId) }
+    })
 
-  ipcMain.handle(`db:${rKey}:create`, (_, record) => {
-    if (!dbReady) return { success: false, error: 'Database not ready' }
-    try {
-      const id = Date.now()
-      const newRecord = { ...record, id, createdAt: new Date().toISOString() };
-      (db as any)[rKey].push(newRecord)
-      saveDatabase()
-      return { success: true, data: { id } }
-    } catch (error: any) { log.error(`Failed to create ${type} record:`, error); return { success: false, error: error.message } }
-  })
+    ipcMain.handle(`db:${rKey}:create`, (_, record) => {
+      if (!dbReady) return { success: false, error: 'Database not ready' }
+      try {
+        const id = Date.now()
+        const newRecord = { ...record, id, createdAt: new Date().toISOString() };
+        (db as any)[rKey].push(newRecord)
+        saveDatabase()
+        return { success: true, data: { id } }
+      } catch (error: any) { log.error(`Failed to create ${type} record:`, error); return { success: false, error: error.message } }
+    })
 
-  ipcMain.handle(`db:${rKey}:delete`, (_, id) => {
-    if (!dbReady) return { success: false, error: 'Database not ready' }
-    try {
-      (db as any)[rKey] = (db as any)[rKey].filter((r: any) => r.id !== id)
-      saveDatabase()
-      return { success: true }
-    } catch (error: any) { log.error(`Failed to delete ${type} record:`, error); return { success: false, error: error.message } }
-  })
+    ipcMain.handle(`db:${rKey}:delete`, (_, id) => {
+      if (!dbReady) return { success: false, error: 'Database not ready' }
+      try {
+        (db as any)[rKey] = (db as any)[rKey].filter((r: any) => r.id !== id)
+        saveDatabase()
+        return { success: true }
+      } catch (error: any) { log.error(`Failed to delete ${type} record:`, error); return { success: false, error: error.message } }
+    })
+  }
 }
 
 registerContractHandlers('income')
 registerContractHandlers('expense')
+registerContractHandlers('agreement')
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 合同附件文件存储
 // ═══════════════════════════════════════════════════════════════════════════════
 
 ipcMain.handle('db:contracts:saveFile', async (_, options: { fileData: string; fileName: string; subCategory?: string; projectName?: string | null }) => {
-  const subCategory = options.subCategory === 'expense' ? 'expense' : 'income'
+  const sub = options.subCategory || 'income'
+  const subCategory = sub === 'expense' ? 'expense' : sub === 'agreement' ? 'agreement' : 'income'
   return saveFile('contracts', subCategory, { fileData: options.fileData, fileName: options.fileName }, options.projectName)
 })
 
@@ -112,7 +127,7 @@ const MIME_MAP: Record<string, string> = {
 
 ipcMain.handle('db:contracts:readFile', async (_, fileName: string, subCategory?: string, projectName?: string | null) => {
   if (!fileName) return { success: false, error: '文件名为空' }
-  const subCats = subCategory ? [subCategory] : ['income', 'expense']
+  const subCats = subCategory ? [subCategory] : ['income', 'expense', 'agreement']
   for (const sub of subCats) {
     const result = readFile('contracts', sub, fileName, projectName)
     if (result.success) return result
@@ -162,11 +177,13 @@ ipcMain.handle('db:contractStats:get', () => {
     const expiringContracts: any[] = []
     pushExpiring(db.incomeContracts, 'income', now, thirtyDaysLater, expiringContracts)
     pushExpiring(db.expenseContracts, 'expense', now, thirtyDaysLater, expiringContracts)
+    pushExpiring(db.agreementContracts, 'agreement', now, thirtyDaysLater, expiringContracts)
     expiringContracts.sort((a: any, b: any) => a.daysLeft - b.daysLeft)
 
     return { success: true, data: {
       incomeCount: db.incomeContracts.length, incomeTotal, incomeReceived,
       expenseCount: db.expenseContracts.length, expenseTotal, expensePaid,
+      agreementCount: db.agreementContracts.length,
       netIncome: incomeTotal - expenseTotal, netReceived: incomeReceived - expensePaid,
       expiringSoon: expiringContracts,
     }}

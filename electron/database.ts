@@ -57,6 +57,7 @@ export interface Database {
   incomeRecords: any[]
   expenseContracts: any[]
   expenseRecords: any[]
+  agreementContracts: any[]
   workerTeams: any[]
   workerTransferRecords: any[]
   settlements: any[]
@@ -94,7 +95,7 @@ export let dbReady = false
 // 常量
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export const defaultUserDataPath = app.getPath('userData')
+export const defaultUserDataPath = 'D:\\Company Database'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 路径函数
@@ -344,6 +345,7 @@ export function initializeDatabase(): Database {
     incomeRecords: [],
     expenseContracts: [],
     expenseRecords: [],
+    agreementContracts: [],
     workerTeams: [],
     workerTransferRecords: [],
     settlements: [],
@@ -457,6 +459,7 @@ function ensureDatabaseFields() {
   if (!db.incomeRecords) { db.incomeRecords = []; changed = true }
   if (!db.expenseContracts) { db.expenseContracts = []; changed = true }
   if (!db.expenseRecords) { db.expenseRecords = []; changed = true }
+  if (!db.agreementContracts) { db.agreementContracts = []; changed = true }
   if (!db.workerTeams) { db.workerTeams = []; changed = true }
   if (!db.workerTransferRecords) { db.workerTransferRecords = []; changed = true }
   if (!db.invoices) { db.invoices = []; changed = true }

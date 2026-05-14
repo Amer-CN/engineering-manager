@@ -7,7 +7,7 @@ import React, { useState } from 'react'
 import type { AttendanceRecord, Member, DayStatus } from '@/types'
 import { useToastContext } from '../hooks/useToast'
 import { Icon } from './ui/Icon'
-import { FILE_CATEGORIES, uploadFile, readUploadedFile, deleteUploadedFile, readFileAsDataUrl } from '../services/fileService'
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 常量
@@ -68,19 +68,13 @@ export default function AttendanceDetail({
     return 1
   })()
 
-  // 本地编辑状态
+  // 本地编辑状态：只取已录入的 dailyStatus，不默认填'work'
   const [dailyStatus, setDailyStatus] = useState<Record<number, DayStatus>>(() => {
     const existing = record.dailyStatus || {}
-    const filled: Record<number, DayStatus> = {}
-    for (let d = 1; d <= daysInMonth; d++) {
-      if (d < entryDay) { filled[d] = existing[d] || 'work'; continue }
-      filled[d] = existing[d] || 'work'
-    }
-    return filled
+    return { ...existing }
   })
   const [activeStatus, setActiveStatus] = useState<DayStatus>('work')
   const [saving, setSaving] = useState(false)
-  const [uploading, setUploading] = useState(false)
 
   // 当月第一天周几
   const firstDow = new Date(year, month - 1, 1).getDay()
@@ -92,7 +86,10 @@ export default function AttendanceDetail({
 
   // 统计（仅计算入职日及之后的天数）
   const counts: Record<DayStatus, number> = { work: 0, holiday: 0, sick_leave: 0, personal_leave: 0, absent: 0 }
-  for (let d = entryDay; d <= daysInMonth; d++) counts[dailyStatus[d] || 'work']++
+  for (let d = entryDay; d <= daysInMonth; d++) {
+    const s = dailyStatus[d]
+    if (s) counts[s]++
+  }
 
   // 画笔：左键涂 activeStatus，右键循环切换（入职日前不可操作）
   const paintDay = (day: number) => {
@@ -146,44 +143,6 @@ export default function AttendanceDetail({
       else showToast(result.error || '保存失败', 'error')
     } catch (e: any) { showToast(e?.message || '保存失败', 'error') }
     finally { setSaving(false) }
-  }
-
-  // 附件
-  const handleFileUpload = async (file: File) => {
-    setUploading(true)
-    try {
-      const dataUrl = await readFileAsDataUrl(file)
-      const storedName = await uploadFile(FILE_CATEGORIES.ATTENDANCE_FILE.category, FILE_CATEGORIES.ATTENDANCE_FILE.subCategory, dataUrl, file.name, projectName)
-      await window.electronAPI.updateAttendance({ ...record, dailyStatus, fileUrl: storedName, fileName: file.name })
-      showToast('附件已上传', 'success')
-      onSaved()
-    } catch (e: any) { showToast(e?.message || '上传失败', 'error') }
-    finally { setUploading(false) }
-  }
-
-  const handlePreview = async () => {
-    if (!record.fileUrl) return
-    try {
-      const dataUrl = await readUploadedFile(FILE_CATEGORIES.ATTENDANCE_FILE.category, FILE_CATEGORIES.ATTENDANCE_FILE.subCategory, record.fileUrl, projectName)
-      if (!dataUrl) { showToast('无法读取文件', 'error'); return }
-      const isImage = record.fileName ? /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(record.fileName) : false
-      if (isImage) {
-        const win = window.open('', '_blank')
-        if (win) { win.document.write(`<img src="${dataUrl}" style="max-width:100%;max-height:100vh;display:block;margin:auto;" />`); win.document.title = record.fileName || '预览' }
-      } else {
-        const a = document.createElement('a'); a.href = dataUrl; a.download = record.fileName || '考勤附件'; a.click()
-      }
-    } catch { showToast('文件读取失败', 'error') }
-  }
-
-  const handleDeleteFile = async () => {
-    if (!record.fileUrl) return
-    try {
-      await deleteUploadedFile(FILE_CATEGORIES.ATTENDANCE_FILE.category, FILE_CATEGORIES.ATTENDANCE_FILE.subCategory, record.fileUrl, projectName)
-      await window.electronAPI.updateAttendance({ ...record, dailyStatus, fileUrl: '', fileName: '' })
-      showToast('附件已删除', 'success')
-      onSaved()
-    } catch (e: any) { showToast(e?.message || '删除失败', 'error') }
   }
 
   // ════════════════════════════════════════════════════════════════════
@@ -277,8 +236,8 @@ export default function AttendanceDetail({
             {Array.from({ length: daysInMonth }, (_, i) => {
               const day = i + 1
               const isBeforeEntry = day < entryDay
-              const status = dailyStatus[day] || 'work'
-              const col = isBeforeEntry ? { bg: 'bg-slate-100', text: 'text-slate-300', ring: 'ring-slate-200' } : CELL[status]
+              const status = dailyStatus[day]
+              const col = isBeforeEntry ? { bg: 'bg-slate-100', text: 'text-slate-300', ring: 'ring-slate-200' } : (status ? CELL[status] : { bg: 'bg-white', text: 'text-slate-400', ring: 'ring-slate-300' })
               const dow = (leadingBlanks + day - 1) % 7
               const isWeekend = dow >= 5
               const isToday = day === todayNum && !isBeforeEntry
@@ -301,38 +260,12 @@ export default function AttendanceDetail({
           </div>
         </div>
 
-        {/* 底部：附件 + 汇总 */}
-        <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-          {/* 附件 */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400">凭证：</span>
-            {record.fileUrl ? (
-              <div className="flex items-center gap-1.5 text-xs bg-slate-50 rounded-lg px-2 py-1">
-                {record.fileName?.match(/\.(xlsx?)$/i) ? <Icon name="File" size={14} className="text-emerald-600" /> :
-                 record.fileName?.match(/\.pdf$/i) ? <Icon name="FileText" size={14} className="text-red-500" /> :
-                 <Icon name="Image" size={14} className="text-blue-500" />}
-                <span className="text-slate-600 max-w-[120px] truncate">{record.fileName}</span>
-                <button onClick={handlePreview} className="text-blue-600 hover:text-blue-800 ml-1">预览</button>
-                <button onClick={handleDeleteFile} className="text-red-400 hover:text-red-600">删除</button>
-              </div>
-            ) : (
-              <>
-                <button onClick={() => document.getElementById('att-file')?.click()} disabled={uploading}
-                  className="flex items-center gap-1 text-xs text-slate-400 hover:text-blue-500 transition-colors">
-                  <Icon name={uploading ? 'Loader2' : 'Paperclip'} size={13} />
-                  {uploading ? '上传中...' : '上传'}
-                </button>
-                <input type="file" id="att-file" accept="image/*,.xlsx,.xls,.pdf" className="hidden"
-                  onChange={e => { const f = e.target.files?.[0]; if (f) handleFileUpload(f); e.target.value = '' }} />
-              </>
-            )}
-          </div>
-
-          {/* 汇总 */}
+        {/* 底部：汇总 */}
+        <div className="flex items-center justify-end pt-3 border-t border-slate-100">
           <div className="text-xs text-slate-500">
-            应出勤 <span className="font-medium text-slate-700">{daysInMonth - counts.holiday}</span> 天
-            &nbsp;·&nbsp; 实出勤 <span className="font-medium text-emerald-600">{counts.work}</span> 天
-            &nbsp;·&nbsp; 休假 <span className="font-medium text-slate-700">{daysInMonth - counts.work}</span> 天
+            已标记 <span className="font-medium text-emerald-600">{counts.work + counts.holiday + counts.sick_leave + counts.personal_leave + counts.absent}</span> 天
+            &nbsp;·&nbsp; 出勤 <span className="font-medium text-emerald-600">{counts.work}</span> 天
+            &nbsp;·&nbsp; 未标记 <span className="font-medium text-slate-400">{daysInMonth - (counts.work + counts.holiday + counts.sick_leave + counts.personal_leave + counts.absent)}</span> 天
           </div>
         </div>
       </div>

@@ -13,7 +13,7 @@ const stagger = { visible: { transition: { staggerChildren: 0.08 } } }
 
 interface ContractDashboardProps {
   refresh?: () => void
-  onNavigate?: (view: 'income' | 'expense', opts?: { createNew?: boolean }) => void
+  onNavigate?: (view: 'income' | 'expense' | 'agreement', opts?: { createNew?: boolean }) => void
 }
 
 const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNavigate }) => {
@@ -71,6 +71,7 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
   const pieData = [
     { name: '收入合同', value: stats?.incomeCount || 0, color: '#10b981' },
     { name: '支出合同', value: stats?.expenseCount || 0, color: '#ef4444' },
+    { name: '其他协议', value: stats?.agreementCount || 0, color: '#0ea5e9' },
   ].filter(d => d.value > 0)
 
   return (
@@ -95,7 +96,7 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
           <div className="flex items-center gap-6">
             <div className="text-right">
               <p className="text-sm text-slate-400">合同总数</p>
-              <p className="text-2xl font-bold">{(stats?.incomeCount || 0) + (stats?.expenseCount || 0)}</p>
+              <p className="text-2xl font-bold">{(stats?.incomeCount || 0) + (stats?.expenseCount || 0) + (stats?.agreementCount || 0)}</p>
             </div>
             <div className="text-right">
               <p className="text-sm text-slate-400">收支差额</p>
@@ -150,6 +151,29 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
               <p className="text-sm text-slate-500 mt-0.5">总额 ¥{formatCurrency(stats?.expenseTotal || 0)}</p>
             </div>
             <span className="text-sm text-red-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+              查看详情 <Icon name="ChevronRight" size={14} />
+            </span>
+          </div>
+        </button>
+
+        {/* 其他协议入口 */}
+        <button onClick={() => onNavigate?.('agreement')}
+          className={`${CARD} p-6 text-left cursor-pointer hover:shadow-lg hover:border-sky-300 hover:-translate-y-1 transition-all duration-200 group`}>
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-12 h-12 rounded-xl bg-sky-100 flex items-center justify-center group-hover:bg-sky-200 transition-colors">
+              <Icon name="FileText" size={24} className="text-sky-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-800">其他协议</h3>
+              <p className="text-xs text-slate-400">框架/合作协议</p>
+            </div>
+          </div>
+          <div className="flex items-end justify-between">
+            <div>
+              <p className="text-3xl font-bold text-slate-800">{stats?.agreementCount || 0}</p>
+              <p className="text-sm text-slate-500 mt-0.5">协议合同</p>
+            </div>
+            <span className="text-sm text-sky-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
               查看详情 <Icon name="ChevronRight" size={14} />
             </span>
           </div>
@@ -312,7 +336,7 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
       </motion.div>
 
       {/* Empty State */}
-      {(!stats || (stats.incomeCount === 0 && stats.expenseCount === 0)) && (
+      {(!stats || (stats.incomeCount === 0 && stats.expenseCount === 0 && stats.agreementCount === 0)) && (
         <motion.div variants={sectionV} className={`${CARD} p-12 text-center`}>
           <Icon name="BarChart3" size={56} className="text-slate-300 dark:text-slate-600 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100 mb-2">暂无合同数据</h3>

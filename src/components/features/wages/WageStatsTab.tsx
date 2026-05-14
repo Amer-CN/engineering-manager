@@ -4,9 +4,10 @@ import { Icon } from '../../ui/Icon'
 
 interface WageStatsTabProps {
   wageStats: WageStats | null
+  selectedMonth?: string
 }
 
-export default function WageStatsTab({ wageStats }: WageStatsTabProps) {
+export default function WageStatsTab({ wageStats, selectedMonth }: WageStatsTabProps) {
   return (
     <div>
       {!wageStats || wageStats.count === 0 ? (
@@ -17,22 +18,14 @@ export default function WageStatsTab({ wageStats }: WageStatsTabProps) {
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div className="bg-white rounded-xl border border-slate-200 p-5 text-center shadow-sm">
-              <div className="text-3xl font-bold text-blue-600">¥{wageStats.totalWage.toFixed(0)}</div>
-              <div className="text-sm text-slate-500 mt-1">工资总额</div>
-            </div>
-            <div className="bg-white rounded-xl border border-slate-200 p-5 text-center shadow-sm">
-              <div className="text-3xl font-bold text-indigo-600">¥{wageStats.staffWage.toFixed(0)}</div>
-              <div className="text-sm text-slate-500 mt-1">管理人员工资</div>
-            </div>
-            <div className="bg-white rounded-xl border border-slate-200 p-5 text-center shadow-sm">
-              <div className="text-3xl font-bold text-orange-600">¥{wageStats.workerWage.toFixed(0)}</div>
-              <div className="text-sm text-slate-500 mt-1">工人工资</div>
+              <div className="text-3xl font-bold text-amber-600">¥{wageStats.totalWage.toFixed(0)}</div>
+              <div className="text-sm text-slate-500 mt-1">{selectedMonth ? `${selectedMonth} 工资总额` : '工资总额'}</div>
             </div>
             <div className="bg-white rounded-xl border border-slate-200 p-5 text-center shadow-sm">
               <div className="text-3xl font-bold text-green-600">{wageStats.count}</div>
-              <div className="text-sm text-slate-500 mt-1">记录条数</div>
+              <div className="text-sm text-slate-500 mt-1">{selectedMonth ? `${selectedMonth} 记录条数` : '记录条数'}</div>
             </div>
           </div>
 

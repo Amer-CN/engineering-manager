@@ -19,6 +19,7 @@ export const FILE_CATEGORIES = {
   INVOICE_OUT:        { category: 'invoices', subCategory: 'invoice_out' },
   PAYMENT_IN:         { category: 'payments', subCategory: 'payment_in' },
   PAYMENT_OUT:        { category: 'payments', subCategory: 'payment_out' },
+  WAGE_BANK_RECEIPT:  { category: 'wages', subCategory: 'bank-receipts' },
   PARTNER_LICENSE:    { category: 'partners', subCategory: 'licenses' },
   PARTNER_ATTACHMENT: { category: 'partners', subCategory: 'attachments' },
   CONTRACT_INCOME:    { category: 'contracts', subCategory: 'income' },

@@ -1,7 +1,7 @@
 // ContractPage.tsx — 通用合同管理页面
 
 import React, { useState, useEffect, useRef } from 'react'
-import type { IncomeContract, ExpenseContract, Partner, Project, PaymentRecord, Template, TemplateCategory } from '../types/electron'
+import type { IncomeContract, ExpenseContract, AgreementContract, Partner, Project, PaymentRecord, Template, TemplateCategory } from '../types/electron'
 import { paymentMethods, partnerCategories, contractStatuses } from '../data/regions'
 import { logCreate, logUpdate, logDelete, logExport } from '../utils/audit'
 import { usePermission } from '../hooks/usePermission'
@@ -15,7 +15,7 @@ import { Icon } from './ui/Icon'
 import { EmptyState } from './ui/EmptyState'
 import { TemplateSelectorModal, TemplateGenerate } from './features/templates'
 
-import { CONFIG, getApi, getStatusLabel, getStatusColor, getContractPaymentTotal, type ContractType, type Contract } from './features/contracts/contractConfig'
+import { CONFIG, getApi, getStatusLabel, getStatusColor, getContractPaymentTotal, AGREEMENT_SUB_TYPE_LABELS, type ContractType, type Contract } from './features/contracts/contractConfig'
 import { ContractFormModal } from './features/contracts/ContractFormModal'
 
 const dataUrlToArrayBuffer = (dataUrl: string): ArrayBuffer => {
@@ -168,11 +168,11 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
           </button>
         )}
         <div className="flex items-center gap-3">
-          <span className={`w-1.5 h-8 rounded-full ${type === 'income' ? 'bg-emerald-500' : 'bg-red-500'}`} />
+          <span className={`w-1.5 h-8 rounded-full ${type === 'income' ? 'bg-emerald-500' : type === 'expense' ? 'bg-red-500' : 'bg-sky-500'}`} />
           <div>
             <h2 className="text-lg font-semibold text-slate-800">{config.label}管理</h2>
             <p className="text-sm text-slate-500">
-              {type === 'income' ? '记录和管理所有收入相关合同' : '记录和管理所有支出相关合同（分包、采购等）'}
+              {type === 'income' ? '记录和管理所有收入相关合同' : type === 'expense' ? '记录和管理所有支出相关合同（分包、采购等）' : '记录和管理所有协议类合同（框架、合作、赔偿等）'}
             </p>
           </div>
         </div>
@@ -190,7 +190,7 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
               </button>
               <button onClick={() => onGroupByChange('role')}
                 className={`px-3 py-1.5 text-sm rounded-md transition-colors ${groupBy === 'role' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}>
-                {type === 'income' ? '按甲方' : '按乙方'}
+                {type === 'agreement' ? '按协议方' : type === 'income' ? '按甲方' : '按乙方'}
               </button>
               <button onClick={() => onGroupByChange('status')}
                 className={`px-3 py-1.5 text-sm rounded-md transition-colors ${groupBy === 'status' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}>
@@ -236,7 +236,7 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
               <span className="text-sm font-normal text-slate-400">({groupContracts.length} 份合同)</span>
             </h3>
             <span className="text-sm text-slate-500">
-              合计: ¥ {formatMoney(groupContracts.reduce((sum, c) => sum + c.amount, 0))}
+              合计: ¥ {formatMoney(groupContracts.reduce((sum, c) => sum + (c.amount || 0), 0))}
             </span>
           </div>
 
@@ -248,7 +248,9 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
                   <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">合同编号</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">{config.partnerCategoryDefault}方</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">合同金额</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">{config.paymentColumnLabel}</th>
+                  {type !== 'agreement' && (
+                    <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">{config.paymentColumnLabel}</th>
+                  )}
                   <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">状态</th>
                   <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">到期日期</th>
                   <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">操作</th>
@@ -260,18 +262,30 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
                   const partner = partners.find(p => p.id === contract.partnerId)
                   return (
                     <tr key={contract.id} className="table-row-hover">
-                      <td className="px-4 py-3"><div className="font-medium text-slate-800">{contract.name}</div></td>
-                      <td className="px-4 py-3 text-sm text-slate-500">{contract.contractNo}</td>
-                      <td className="px-4 py-3 text-sm text-slate-600">{partner?.name || '-'}</td>
-                      <td className="px-4 py-3 text-right font-medium text-slate-800">¥ {formatMoney(contract.amount)}</td>
-                      <td className="px-4 py-3 text-right">
-                        <div className={`font-medium ${paymentTotal >= contract.amount ? 'text-green-600' : 'text-slate-800'}`}>
-                          ¥ {formatMoney(paymentTotal)}
-                        </div>
-                        <div className="text-xs text-slate-400">
-                          {contract.amount > 0 ? ((paymentTotal / contract.amount) * 100).toFixed(0) + '%' : '0%'}
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-slate-800">{contract.name}
+                          {type === 'agreement' && (contract as AgreementContract).agreementType && (
+                            <span className="ml-2 px-1.5 py-0.5 text-xs rounded bg-sky-50 text-sky-600 border border-sky-200">
+                              {AGREEMENT_SUB_TYPE_LABELS[(contract as AgreementContract).agreementType] || '协议'}
+                            </span>
+                          )}
                         </div>
                       </td>
+                      <td className="px-4 py-3 text-sm text-slate-500">{contract.contractNo}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600">{partner?.name || '-'}</td>
+                      <td className="px-4 py-3 text-right font-medium text-slate-800">
+                        {type === 'agreement' ? (contract.amount ? `¥ ${formatMoney(contract.amount)}` : '—') : `¥ ${formatMoney(contract.amount)}`}
+                      </td>
+                      {type !== 'agreement' && (
+                        <td className="px-4 py-3 text-right">
+                          <div className={`font-medium ${paymentTotal >= contract.amount ? 'text-green-600' : 'text-slate-800'}`}>
+                            ¥ {formatMoney(paymentTotal)}
+                          </div>
+                          <div className="text-xs text-slate-400">
+                            {contract.amount > 0 ? ((paymentTotal / contract.amount) * 100).toFixed(0) + '%' : '0%'}
+                          </div>
+                        </td>
+                      )}
                       <td className="px-4 py-3 text-center">
                         <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(contract.status)}`}>
                           {getStatusLabel(contract.status)}

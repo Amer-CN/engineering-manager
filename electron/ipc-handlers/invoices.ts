@@ -33,7 +33,8 @@ ipcMain.handle('db:invoices:getAll', (_, type?: string) => {
     if (i.contractId) {
       const incomeContract = db.incomeContracts.find((c: any) => c.id === i.contractId)
       const expenseContract = db.expenseContracts.find((c: any) => c.id === i.contractId)
-      contractName = incomeContract?.name || expenseContract?.name || ''
+      const agreementContract = db.agreementContracts.find((c: any) => c.id === i.contractId)
+      contractName = incomeContract?.name || expenseContract?.name || agreementContract?.name || ''
     }
     // 根据实际收款金额同步状态
     let syncedStatus = i.status
@@ -145,7 +146,8 @@ ipcMain.handle('db:paymentRecords:getAll', (_, type?: string) => {
     if (r.contractId) {
       const incomeContract = db.incomeContracts.find((c: any) => c.id === r.contractId)
       const expenseContract = db.expenseContracts.find((c: any) => c.id === r.contractId)
-      contractName = incomeContract?.name || expenseContract?.name || ''
+      const agreementContract = db.agreementContracts.find((c: any) => c.id === r.contractId)
+      contractName = incomeContract?.name || expenseContract?.name || agreementContract?.name || ''
     }
     // 获取关联发票信息
     const invoiceInfos = (r.invoiceDetails || []).map((d: any) => {

@@ -1,15 +1,15 @@
-import type { IncomeContract, ExpenseContract, Partner, Project, PaymentRecord } from '../../../types/electron'
+import type { IncomeContract, ExpenseContract, AgreementContract, AgreementSubType, Partner, Project, PaymentRecord } from '../../../types/electron'
 import { contractStatuses } from '../../../data/regions'
 
-export type ContractType = 'income' | 'expense'
-export type Contract = IncomeContract | ExpenseContract
+export type ContractType = 'income' | 'expense' | 'agreement'
+export type Contract = IncomeContract | ExpenseContract | AgreementContract
 
 export interface TypeConfig {
   label: string; auditResource: string; partnerLabel: string; partnerPlaceholder: string
   partnerCategoryDefault: string; paymentColumnLabel: string; paymentRecordType: string
   accentColor: string; accentTextColor: string; accentBgLight: string
   emptyTitle: string; emptyDesc: string; modalCreateTitle: string
-  subCategory: 'income' | 'expense'; exportType: string
+  subCategory: 'income' | 'expense' | 'agreement'; exportType: string
 }
 
 export const CONFIG: Record<ContractType, TypeConfig> = {
@@ -29,13 +29,30 @@ export const CONFIG: Record<ContractType, TypeConfig> = {
     emptyTitle: '暂无支出合同', emptyDesc: '点击上方按钮添加您的第一份支出合同',
     modalCreateTitle: '新增支出合同', subCategory: 'expense', exportType: 'expense',
   },
+  agreement: {
+    label: '其他协议', auditResource: 'agreementContracts', partnerLabel: '协议方',
+    partnerPlaceholder: '选择协议方', partnerCategoryDefault: '协议方',
+    paymentColumnLabel: '', paymentRecordType: '',
+    accentColor: 'bg-sky-500', accentTextColor: 'text-sky-600', accentBgLight: 'bg-sky-100',
+    emptyTitle: '暂无其他协议', emptyDesc: '点击上方按钮添加第一份协议合同',
+    modalCreateTitle: '新增协议合同', subCategory: 'agreement', exportType: 'agreement',
+  },
+}
+
+export const AGREEMENT_SUB_TYPE_LABELS: Record<AgreementSubType, string> = {
+  cooperation: '合作协议', framework: '框架协议', settlement: '和解协议',
+  compensation: '赔偿协议', personal: '个人协议', other: '其他协议',
 }
 
 export function getApi(type: ContractType) {
   const api = window.electronAPI
-  return type === 'income'
-    ? { getContracts: () => api.getIncomeContracts(), createContract: (d: any) => api.createIncomeContract(d), updateContract: (d: any) => api.updateIncomeContract(d), deleteContract: (id: number) => api.deleteIncomeContract(id) }
-    : { getContracts: () => api.getExpenseContracts(), createContract: (d: any) => api.createExpenseContract(d), updateContract: (d: any) => api.updateExpenseContract(d), deleteContract: (id: number) => api.deleteExpenseContract(id) }
+  if (type === 'income') {
+    return { getContracts: () => api.getIncomeContracts(), createContract: (d: any) => api.createIncomeContract(d), updateContract: (d: any) => api.updateIncomeContract(d), deleteContract: (id: number) => api.deleteIncomeContract(id) }
+  }
+  if (type === 'expense') {
+    return { getContracts: () => api.getExpenseContracts(), createContract: (d: any) => api.createExpenseContract(d), updateContract: (d: any) => api.updateExpenseContract(d), deleteContract: (id: number) => api.deleteExpenseContract(id) }
+  }
+  return { getContracts: () => api.getAgreementContracts(), createContract: (d: any) => api.createAgreementContract(d), updateContract: (d: any) => api.updateAgreementContract(d), deleteContract: (id: number) => api.deleteAgreementContract(id) }
 }
 
 export function getStatusLabel(status: string) { return contractStatuses.find(s => s.value === status)?.label || status }

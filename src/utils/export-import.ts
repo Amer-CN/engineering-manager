@@ -67,6 +67,7 @@ export interface BackupData {
     members?: any[]
     incomeContracts?: any[]
     expenseContracts?: any[]
+    agreementContracts?: any[]
     invoices?: any[]
     settlements?: any[]
     inventoryItems?: any[]
@@ -194,8 +195,8 @@ export function exportMembers(members: any[], options?: Partial<ExportOptions>):
 /**
  * 导出合同列表
  */
-export function exportContracts(contracts: any[], type: 'income' | 'expense', options?: Partial<ExportOptions>): void {
-  const prefix = type === 'income' ? '收入合同' : '支出合同'
+export function exportContracts(contracts: any[], type: 'income' | 'expense' | 'agreement', options?: Partial<ExportOptions>): void {
+  const prefix = type === 'income' ? '收入合同' : type === 'expense' ? '支出合同' : '其他协议'
   exportToExcel(
     contracts,
     [

@@ -135,6 +135,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   createExpenseRecord: (record: any) => ipcRenderer.invoke('db:expenseRecords:create', record),
   deleteExpenseRecord: (id: number) => ipcRenderer.invoke('db:expenseRecords:delete', id),
 
+  // 其他协议
+  getAgreementContracts: (projectId?: number) => ipcRenderer.invoke('db:agreementContracts:getAll', projectId),
+  createAgreementContract: (contract: any) => ipcRenderer.invoke('db:agreementContracts:create', contract),
+  updateAgreementContract: (contract: any) => ipcRenderer.invoke('db:agreementContracts:update', contract),
+  deleteAgreementContract: (id: number) => ipcRenderer.invoke('db:agreementContracts:delete', id),
+
   // 合同统计
   getContractStats: () => ipcRenderer.invoke('db:contractStats:get'),
 
@@ -207,6 +213,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   updateAttendance: (record: any) => ipcRenderer.invoke('db:attendances:update', record),
   generateDefaultAttendances: (projectId: number, yearMonth: string, memberIds: number[]) => ipcRenderer.invoke('db:attendances:generateDefaults', projectId, yearMonth, memberIds),
   generateDefaultAttendancesV2: (projectId: number, yearMonth: string, projectWorkerIds: number[]) => ipcRenderer.invoke('db:attendances:generateDefaultsV2', projectId, yearMonth, projectWorkerIds),
+  batchImportAttendances: (projectId: number, yearMonth: string, records: { projectWorkerId: number; workDays: number }[]) => ipcRenderer.invoke('db:attendances:batchImport', projectId, yearMonth, records),
   deleteAttendance: (id: number) => ipcRenderer.invoke('db:attendances:delete', id),
   batchDeleteAttendances: (ids: number[]) => ipcRenderer.invoke('db:attendances:batchDelete', ids),
 
@@ -224,7 +231,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   batchSaveWages: (records: any[]) => ipcRenderer.invoke('db:wages:batchSave', records),
   deleteWage: (id: number) => ipcRenderer.invoke('db:wages:delete', id),
   batchDeleteWages: (ids: number[]) => ipcRenderer.invoke('db:wages:batchDelete', ids),
+  batchClearPayments: (ids: number[]) => ipcRenderer.invoke('db:wages:batchClearPayments', ids),
+  batchArchivePayments: (ids: number[]) => ipcRenderer.invoke('db:wages:batchArchivePayments', ids),
   getWageStats: (yearMonth?: string, projectId?: number) => ipcRenderer.invoke('db:wages:getStats', yearMonth, projectId),
+  parseBankReceipt: (sourcePath: string, projectName?: string) => ipcRenderer.invoke('db:wages:parseBankReceipt', sourcePath, projectName),
 
   // ============ 审计日志 ============
   auditLog: (log: any) => ipcRenderer.invoke('audit:log', log),

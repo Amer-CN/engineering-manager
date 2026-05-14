@@ -164,7 +164,7 @@ const HRDashboard: React.FC = () => {
                       <span className="text-sm font-medium text-slate-800">{s.name}</span>
                       <span className="text-xs text-slate-400 ml-2">{dept?.name || ''}{s.position ? ` · ${s.position}` : ''}</span>
                     </div>
-                    <span className="text-xs text-slate-400">{s.entryDate || s.createdAt?.split('T')[0]}</span>
+                    <span className="text-xs text-slate-400">{(s as any).entryDate || s.createdAt?.split('T')[0]}</span>
                   </div>
                 )
               })}

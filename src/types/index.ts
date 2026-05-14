@@ -45,6 +45,8 @@ export type {
   IncomeRecord,
   ExpenseContract,
   ExpenseRecord,
+  AgreementSubType,
+  AgreementContract,
   ContractStats,
   ContractExpiringItem,
   
@@ -88,6 +90,8 @@ export type {
   // 工资管理
   WageRecord,
   WageStats,
+  BankReceiptItem,
+  ParsedBankReceipt,
 
   // Electron API
   ElectronAPI,

@@ -1,7 +1,8 @@
 /**
  * MemberCard 组件
- * 
+ *
  * 成员卡片组件 - 用于在列表中展示单个成员
+ * @deprecated 此组件已废弃，工人管理模块已改用表格视图
  */
 
 import React from 'react'
@@ -123,7 +124,7 @@ export function MemberCard({
         {/* 头像 */}
         <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl shadow-sm ${
           isWorker
-            ? 'bg-gradient-to-br from-orange-100 to-orange-200'
+            ? 'bg-gradient-to-br from-amber-100 to-amber-200'
             : 'bg-gradient-to-br from-primary-100 to-primary-200'
         }`}>
           <Icon name={iconName} size={24} />
@@ -244,7 +245,7 @@ export function MemberCard({
             <>
               <button
                 onClick={() => onEdit(member)}
-                className="flex-1 px-3 py-2 text-sm text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                className="flex-1 px-3 py-2 text-sm text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
               >
                 编辑
               </button>
@@ -288,7 +289,7 @@ export function MemberCard({
             <>
               <button
                 onClick={() => onEdit(member)}
-                className="flex-1 px-3 py-2 text-sm text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                className="flex-1 px-3 py-2 text-sm text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
               >
                 编辑
               </button>

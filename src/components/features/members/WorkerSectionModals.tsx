@@ -13,12 +13,8 @@ export interface WorkerSectionProps {
     onAddTeam: (name: string, projectId: number, leaderId?: number | null) => Promise<void>
     onEditTeam: (team: WorkerTeam) => void
     onDeleteTeam: (id: number) => void
-    onTransfer: (worker: Member, toTeamId: number, toProjectId: number, transferDate: string, reason: string) => void
-    onLeave: (worker: Member, actualLeaveDate: string, remarks: string) => void
-    onReEntry: (worker: Member) => void
     onImportClick: () => void
-    onFileDrop: (file: File) => void
-    onAddFromPool?: (projectId: number, existingWorkerIds: Set<number>) => void
+    onAddFromPool?: () => void
     wageContent?: React.ReactNode
     onManageWorkers?: (teamId: number, teamName: string, projectId: number) => void
     onUpdateWorker?: (pwId: number, data: Record<string, any>) => void
@@ -71,14 +67,14 @@ interface TeamCardProps {
 
 export function TeamCard({ team, workerCount, onEdit, onDelete, onManageWorkers }: TeamCardProps) {
   return (
-    <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:border-orange-300 transition-colors">
+    <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:border-amber-300 transition-colors">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center">
           <Icon name="Users" size={20} className="mr-2" />
           <span className="font-medium text-slate-800">{team.name}</span>
         </div>
         {team.leaderId && team.leaderName && (
-          <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded-full">
+          <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full">
             组长: {team.leaderName}
           </span>
         )}
@@ -96,7 +92,7 @@ export function TeamCard({ team, workerCount, onEdit, onDelete, onManageWorkers 
         )}
         <button
           onClick={onEdit}
-          className="flex-1 px-3 py-1.5 text-sm text-orange-600 hover:bg-orange-50 rounded transition-colors"
+          className="flex-1 px-3 py-1.5 text-sm text-amber-600 hover:bg-amber-50 rounded transition-colors"
         >
           编辑
         </button>
@@ -156,7 +152,7 @@ export function TeamFormModal({
               type="text"
               value={formData.name}
               onChange={e => onChange({ name: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
               placeholder="如：钢筋班、木工班"
               required
             />
@@ -167,7 +163,7 @@ export function TeamFormModal({
             <select
               value={formData.projectId || ''}
               onChange={e => onChange({ projectId: e.target.value ? Number(e.target.value) : undefined })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
               required
             >
               <option value="">请选择项目</option>
@@ -182,7 +178,7 @@ export function TeamFormModal({
             <select
               value={formData.leaderId ?? ''}
               onChange={e => onChange({ leaderId: e.target.value ? Number(e.target.value) : null })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
             >
               <option value="">暂无班组长</option>
               {availableLeaders.map(w => (
@@ -202,7 +198,7 @@ export function TeamFormModal({
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors"
+              className="px-6 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors"
             >
               {editingTeam ? '保存' : '添加'}
             </button>

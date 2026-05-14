@@ -30,8 +30,8 @@ export const workerTypes = [
   { value: 'plumber', label: '水暖工' },
   { value: 'electrician', label: '电工' },
   { value: 'welder', label: '焊工' },
-  { value: 'rigger', label: '起重工' },
-  { value: 'driver', label: '驾驶员' },
+  { value: 'rigger', label: '起重工/架子工' },
+  { value: 'driver', label: '驾驶员/司机' },
   { value: 'mechanic', label: '机械工' },
   { value: 'other', label: '其他工种' },
 ]
@@ -130,7 +130,20 @@ export const defaultWorkerFormData: WorkerFormData = {
 // ═══════════════════════════════════════════════════════════
 
 export function getWorkerTypeLabel(type: string): string {
-  return workerTypes.find(w => w.value === type)?.label || type
+  if (!type) return ''
+  // 先按 code 匹配，再按中文名匹配，都没有则直接返回原文
+  return workerTypes.find(w => w.value === type)?.label
+    || workerTypes.find(w => w.label === type)?.label
+    || type
+}
+
+/** 中文工种名 → code（用于表单下拉框匹配） */
+export function workerTypeToCode(type: string): string {
+  if (!type) return 'other'
+  // 已经是 code
+  if (workerTypes.some(w => w.value === type)) return type
+  // 中文名 → code
+  return workerTypes.find(w => w.label === type)?.value || 'other'
 }
 
 export function calculateAge(birthDate: string): string {
@@ -176,7 +189,7 @@ export function memberToStaffForm(member: Member): StaffFormData {
 export function memberToWorkerForm(member: Member): WorkerFormData {
   return {
     name: member.name || '', phone: member.phone || '',
-    idCard: member.idCard || '', workerType: member.workerType || 'other',
+    idCard: member.idCard || '', workerType: workerTypeToCode(member.workerType as any) as WorkerType,
     idCardFront: member.idCardFront || '', idCardBack: member.idCardBack || '',
     gender: member.gender || '', ethnicity: member.ethnicity || '',
     birthDate: member.birthDate || '', idCardAddress: member.idCardAddress || '',

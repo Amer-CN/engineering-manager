@@ -79,6 +79,7 @@ export function useMemberOperations({
       } else {
         // Create Worker in global pool, then ProjectWorker
         try {
+          const d = data as any
           const workerRes = await window.electronAPI.createWorker({
             name: data.name,
             idCard: data.idCard,
@@ -87,8 +88,8 @@ export function useMemberOperations({
             ethnicity: data.ethnicity,
             phone: data.phone,
             address: data.idCardAddress,
-            bankAccount: data.wageBankAccount,
-            bankName: data.wageBankName
+            bankAccount: d.wageBankAccount,
+            bankName: d.wageBankName
           })
           if (!workerRes.success || !workerRes.data) {
             showToast(workerRes.error || '创建工人失败', 'error')
@@ -97,10 +98,10 @@ export function useMemberOperations({
           const workerId = workerRes.data.id
           const pwRes = await window.electronAPI.createProjectWorker({
             workerId,
-            projectId: data.projectId || 0,
-            teamId: data.teamId,
-            dailyWage: Number(data.dailyWage) || 0,
-            workerType: data.workerType || 'other',
+            projectId: d.projectId || 0,
+            teamId: d.teamId,
+            dailyWage: Number(d.dailyWage) || 0,
+            workerType: d.workerType || 'other',
             entryDate: data.entryDate || new Date().toISOString().split('T')[0],
             status: 'active' as WorkerStatus
           })
@@ -171,25 +172,25 @@ export function useMemberOperations({
     try {
       const toTeam = workerTeams.find((t: WorkerTeam) => t.id === toTeamId)
       if (!toTeam) { showToast('找不到目标班组', 'error'); return }
-      await (window.electronAPI as any).createWorkerTransfer({ workerId: worker.id, fromTeamId: worker.teamId, toTeamId, fromProjectId: worker.projectId, toProjectId, transferDate, reason })
-      await window.electronAPI.updateMember({ ...worker, teamId: toTeamId, projectId: toProjectId, status: 'active' })
-      logUpdate('members', worker.name, worker.id, { action: 'transfer', toTeam: toTeam.name, reason })
+      await (window.electronAPI as any).createWorkerTransfer({ workerId: (worker as any).workerId || worker.id, fromTeamId: worker.teamId, toTeamId, fromProjectId: worker.projectId, toProjectId, transferDate, reason })
+      await (window.electronAPI as any).updateProjectWorker({ id: worker.id, teamId: toTeamId, projectId: toProjectId, status: 'active' })
+      logUpdate('workers', worker.name, worker.id, { action: 'transfer', toTeam: toTeam.name, reason })
       loadData(); showToast('调组成功', 'success')
     } catch (error) { showToast('调组失败', 'error') }
   }
 
   const handleWorkerLeave = async (worker: Member, actualLeaveDate: string, remarks: string) => {
     try {
-      await window.electronAPI.updateMember({ ...worker, status: 'left', actualLeaveDate, remarks })
-      logUpdate('members', worker.name, worker.id, { action: 'leave', leaveDate: actualLeaveDate, remarks })
+      await (window.electronAPI as any).updateProjectWorker({ id: worker.id, status: 'left' })
+      logUpdate('workers', worker.name, worker.id, { action: 'leave', leaveDate: actualLeaveDate, remarks })
       loadData(); showToast('工人已离场', 'success')
     } catch (error) { showToast('离场失败', 'error') }
   }
 
-  const handleWorkerReEntry = async (worker: Member, teamId: number, projectId: number) => {
+  const handleWorkerReEntry = async (worker: Member) => {
     try {
-      await window.electronAPI.updateMember({ ...worker, teamId, projectId, status: 'active', entryDate: new Date().toISOString().split('T')[0], actualLeaveDate: undefined })
-      logUpdate('members', worker.name, worker.id, { action: 'reentry' })
+      await (window.electronAPI as any).updateProjectWorker({ id: worker.id, status: 'active', entryDate: new Date().toISOString().split('T')[0] })
+      logUpdate('workers', worker.name, worker.id, { action: 'reentry' })
       loadData(); showToast('工人已重新入场', 'success')
     } catch (error) { showToast('重新入场失败', 'error') }
   }

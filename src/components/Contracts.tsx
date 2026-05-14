@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import ContractDashboard from './ContractDashboard'
 import ContractPage from './ContractPage'
 
-type ContractView = 'dashboard' | 'income' | 'expense'
+type ContractView = 'dashboard' | 'income' | 'expense' | 'agreement'
 type GroupBy = 'project' | 'role' | 'status'
 
 interface ContractsProps {
@@ -19,6 +19,7 @@ const Contracts: React.FC<ContractsProps> = ({ refresh }) => {
   const [view, setView] = useState<ContractView>('dashboard')
   const [incomeGroupBy, setIncomeGroupBy] = useState<GroupBy>('project')
   const [expenseGroupBy, setExpenseGroupBy] = useState<GroupBy>('project')
+  const [agreementGroupBy, setAgreementGroupBy] = useState<GroupBy>('project')
   const [autoCreate, setAutoCreate] = useState(false)
 
   const handleNavigate = (target: ContractView, opts?: { createNew?: boolean }) => {
@@ -35,10 +36,10 @@ const Contracts: React.FC<ContractsProps> = ({ refresh }) => {
     return <ContractDashboard refresh={refresh} onNavigate={handleNavigate} />
   }
 
-  // Income or Expense sub-page
-  const type = view as 'income' | 'expense'
-  const groupBy = type === 'income' ? incomeGroupBy : expenseGroupBy
-  const setGroupBy = type === 'income' ? setIncomeGroupBy : setExpenseGroupBy
+  // Income / Expense / Agreement sub-page
+  const type = view as 'income' | 'expense' | 'agreement'
+  const groupBy = type === 'income' ? incomeGroupBy : type === 'expense' ? expenseGroupBy : agreementGroupBy
+  const setGroupBy = type === 'income' ? setIncomeGroupBy : type === 'expense' ? setExpenseGroupBy : setAgreementGroupBy
 
   return (
     <ContractPage
