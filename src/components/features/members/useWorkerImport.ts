@@ -1,5 +1,4 @@
 import { useState, useCallback, useRef } from 'react'
-import * as XLSX from 'xlsx'
 
 export interface WorkerImportRow {
   name: string
@@ -258,7 +257,7 @@ export function useWorkerImport(existingIdCards: Set<string>) {
   const unmappedFields = useRef<Set<string>>(new Set())
 
   // Shared parser: re-parse stored buffer with new headerRow/sheetName
-  const parseBuffer = useCallback((headerRow: number, sheetName?: string) => {
+  const parseBuffer = useCallback(async (headerRow: number, sheetName?: string) => {
     const stored = storedBufferRef.current
     if (!stored) return
     setPhase('mapping')
@@ -286,12 +285,13 @@ export function useWorkerImport(existingIdCards: Set<string>) {
         return
       }
 
+      const XLSX = await import('xlsx')
       const wb = XLSX.read(stored.buf, { type: 'array' })
       const sName = sheetName || wb.SheetNames[0]
       const ws = wb.Sheets[sName]
       const rows = XLSX.utils.sheet_to_json(ws, { header: 1 })
       const rawHeaders: any[] = headerRow < rows.length ? rows[headerRow] as any[] : []
-      const rawDataRows = rows.slice(headerRow + 1).filter((r: any[]) => r.some(c => c !== undefined && c !== null && String(c).trim() !== '')) as any[][]
+      const rawDataRows = (rows.slice(1).filter((r) => (r as any[]).some((c: any) => c !== undefined && c !== null && String(c).trim() !== ''))) as any[][]
       // 过滤 null 表头并对齐数据列（修复合并单元格列索引错位）
       const { headers, rows: dataRows } = alignColumns(rawHeaders, rawDataRows)
       const match2 = matchPreset(headers)
@@ -328,7 +328,7 @@ export function useWorkerImport(existingIdCards: Set<string>) {
       console.error('[WorkerImport] FileReader error:', reader.error)
       setError('文件读取失败，请重试')
     }
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       try {
         const buf = ev.target?.result as ArrayBuffer
         if (!buf || buf.byteLength === 0) {
@@ -339,7 +339,7 @@ export function useWorkerImport(existingIdCards: Set<string>) {
         // Store buffer for re-parsing
         storedBufferRef.current = { buf, fileName: file.name, fileType: file.name.endsWith('.csv') ? 'csv' : 'xlsx' }
 
-        let wb: XLSX.WorkBook
+        let wb: any
 
         if (file.name.endsWith('.csv')) {
           const encoding = detectCSVEncoding(buf)
@@ -363,6 +363,7 @@ export function useWorkerImport(existingIdCards: Set<string>) {
           return
         }
 
+        const XLSX = await import('xlsx')
         wb = XLSX.read(buf, { type: 'array' })
         const sheetName = wb.SheetNames[0]
         const ws = wb.Sheets[sheetName]
@@ -522,9 +523,9 @@ export function useWorkerImport(existingIdCards: Set<string>) {
             resultAcc.success++
           }
           if ((r as any).warning) {
-            resultAcc.warnings.push({ row: r.row, name: (r as any).name, message: (r as any).warning })
+            resultAcc.warnings.push({ row: r.row!, name: (r as any).name, message: (r as any).warning })
           }
-        } else { resultAcc.failed++; resultAcc.failures.push({ row: r.row, reason: r.reason }) }
+        } else { resultAcc.failed++; resultAcc.failures.push({ row: r.row ?? 0, reason: r.reason ?? '未知错误' }) }
       }
 
       const completed = Math.min(i + 50, importState.allRows.length)

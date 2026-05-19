@@ -71,7 +71,7 @@ export function WorkerPickerModal({ show, projectId, workerTeams, existingWorker
           worker,
           teamId: defaultTeamId ?? null,
           dailyWage: worker.dailyWage ?? bulkDailyWage,
-          workerType: workerTypeToCode(worker.workerType) || bulkWorkerType
+          workerType: (workerTypeToCode(worker.workerType!) ?? bulkWorkerType) as string
         })
       }
       return next
@@ -89,7 +89,7 @@ export function WorkerPickerModal({ show, projectId, workerTeams, existingWorker
             worker: w,
             teamId: defaultTeamId ?? null,
             dailyWage: w.dailyWage ?? bulkDailyWage,
-            workerType: workerTypeToCode(w.workerType) || bulkWorkerType
+            workerType: (workerTypeToCode(w.workerType!) ?? bulkWorkerType) as string
           })
         }
       }

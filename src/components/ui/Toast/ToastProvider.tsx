@@ -9,7 +9,7 @@ export interface ToastItem {
 }
 
 interface ToastContextValue {
-  showToast: (message: string, type?: ToastItem['type'], duration?: number) => void
+  showToast: (message: string, type?: string, duration?: number) => void
   success: (message: string) => void
   error: (message: string) => void
   info: (message: string) => void
@@ -54,9 +54,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     setToasts(prev => prev.filter(t => t.id !== id))
   }, [])
 
-  const showToast = useCallback((message: string, type: ToastItem['type'] = 'info', duration: number = 3000) => {
+  const showToast = useCallback((message: string, type: ToastItem['type'] | string = 'info', duration: number = 3000) => {
     const id = ++idRef.current
-    setToasts(prev => [...prev, { id, message, type }])
+    setToasts(prev => [...prev, { id, message, type: type as ToastItem['type'] }])
     setTimeout(() => removeToast(id), duration)
   }, [removeToast])
 
