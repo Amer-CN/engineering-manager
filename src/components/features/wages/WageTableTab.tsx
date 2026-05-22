@@ -1,4 +1,4 @@
-import React from 'react'
+// React not needed with new JSX transform
 import type { Project, WorkerTeam, WageRecord } from '@/types'
 import { Icon } from '../../ui/Icon'
 

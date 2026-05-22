@@ -4,9 +4,8 @@
  * Cycle 视图：WageCycleDetail（考勤/工资表/发放记录 3 Tab）
  */
 
-import React, { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
-import { FILE_CATEGORIES, uploadFile, readUploadedFile, deleteUploadedFile, readFileAsDataUrl } from '../services/fileService'
 import type { Project, WorkerTeam, AttendanceRecord, WageRecord, WageStats } from '@/types'
 import { useToastContext } from '../hooks/useToast'
 import { useConfirm } from '../hooks/useConfirm'
@@ -290,7 +289,7 @@ export default function WageManagement() {
     if (!ok) return
     try {
       const result = await window.electronAPI.batchArchivePayments(toArchive)
-      if (result.success) {
+      if (result.success && result.data) {
         showToast(`已归档 ${result.data?.archived ?? toArchive.length} 条发放记录`, 'success')
         setSelectedWageIds(new Set())
         await loadAllRecords()
@@ -300,7 +299,7 @@ export default function WageManagement() {
   }
 
   // ── 工资发放编辑 ──
-  const handlePaymentChange = (recordId: number, field: 'paidAmount' | 'paidDate', value: string) => {
+  const handlePaymentChange = (recordId: number, field: 'paidAmount' | 'paidDate', value: string | number) => {
     setPaymentEdits(prev => {
       const next = new Map(prev)
       const record = allWageRecords.find(w => w.id === recordId)
@@ -446,7 +445,7 @@ export default function WageManagement() {
           setLoading(true)
           try {
             const result = await window.electronAPI.batchImportAttendances(selectedProject.id, selectedMonth, data)
-            if (result.success) {
+            if (result.success && result.data) {
               showToast(`导入成功！新增 ${result.data.created} 条，更新 ${result.data.updated} 条`, 'success')
               await loadAttendances()
             } else {
