@@ -5,8 +5,8 @@
  */
 
 import { useState, useCallback, useEffect } from 'react'
-import type { Member, MemberType, WorkerType, WorkerStatus, WorkerTeam, WorkerTransferRecord } from '@/types'
-import { handleError, Result, VoidResult, isSuccess } from '@/types'
+import type { Member, MemberType, WorkerType, WorkerStatus } from '@/types'
+import { handleError, Result, VoidResult } from '@/types'
 
 // Types
 

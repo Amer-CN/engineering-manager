@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Invoice, InvoiceType, InvoiceStatus, Project, Partner, PaymentRecord, IncomeContract, ExpenseContract } from '../types/electron'
 import { logCreate, logUpdate, logDelete, logApprove } from '../utils/audit'
 import { processFileFields, guessFileExt, readUploadedFile, FILE_CATEGORIES } from '../services/fileService'
+import { useToastStore } from '@/store/toastStore'
 
 const getInvoiceCategory = (type: string) =>
   type === 'invoice_out' ? FILE_CATEGORIES.INVOICE_OUT : FILE_CATEGORIES.INVOICE_IN
@@ -9,7 +10,8 @@ const getInvoiceCategory = (type: string) =>
 const getPaymentCategory = (type: string) =>
   type === 'invoice_out' ? FILE_CATEGORIES.PAYMENT_IN : FILE_CATEGORIES.PAYMENT_OUT
 
-export function useInvoicePage(showToast: (msg: string, type: 'success' | 'error') => void, refresh?: () => void) {
+export function useInvoicePage(refresh?: () => void) {
+  const showToast = useToastStore(state => state.showToast)
   const originalFileRef = useRef<Record<number, string>>({})
   const originalPaymentFileRef = useRef<Record<number, string>>({})
 
@@ -39,7 +41,7 @@ export function useInvoicePage(showToast: (msg: string, type: 'success' | 'error
     try {
       const [invRes, payRes, projRes, partRes, incRes, expRes] = await Promise.all([
         window.electronAPI.getInvoices(),
-        window.electronAPI.getPaymentRecords(),
+        window.electronAPI.getWagePaymentRecords(),
         window.electronAPI.getProjects(),
         window.electronAPI.getPartners(),
         window.electronAPI.getIncomeContracts(),

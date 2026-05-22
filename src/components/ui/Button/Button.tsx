@@ -18,17 +18,17 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    'bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800 shadow-sm hover:shadow-md:bg-primary-600',
+    'bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800 shadow-sm hover:shadow-md',
   secondary:
-    'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 active:bg-slate-100 shadow-sm:bg-slate-700',
+    'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 active:bg-slate-100 shadow-sm',
   danger:
-    'bg-danger-500 text-white hover:bg-danger-600 active:bg-danger-700 shadow-sm hover:shadow-md:bg-danger-700',
+    'bg-danger-500 text-white hover:bg-danger-600 active:bg-danger-700 shadow-sm hover:shadow-md',
   ghost:
-    'bg-transparent text-slate-600 hover:bg-slate-100 active:bg-slate-200:bg-slate-700',
+    'bg-transparent text-slate-600 hover:bg-slate-100 dark:active:bg-slate-200 dark:bg-slate-700',
   link:
-    'bg-transparent text-primary-600 hover:text-primary-700 hover:underline shadow-none p-0:text-primary-300',
+    'bg-transparent text-primary-600 hover:text-primary-700 hover:underline shadow-none dark:text-primary-300',
   outline:
-    'bg-transparent text-primary-600 border border-primary-300 hover:bg-primary-50 active:bg-primary-100:bg-primary-900/20',
+    'bg-transparent text-primary-600 border border-primary-300 hover:bg-primary-50 active:bg-primary-100 dark:active:bg-primary-900/20',
 }
 
 const sizeStyles: Record<ButtonSize, string> = {

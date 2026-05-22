@@ -5,7 +5,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react'
-import { handleError, Result, VoidResult } from '@/types'
+import { handleError, Result } from '@/types'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Types

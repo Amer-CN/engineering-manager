@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { InventoryItem, InventoryTransaction, Project, Partner, Material } from '../types/electron'
 import { logCreate, logUpdate, logDelete } from '../utils/audit'
+import { useToastStore } from '@/store/toastStore'
 
 export function useInventoryPage(
-  showToast: (msg: string, type: 'success' | 'error') => void,
   can: (perm: string) => boolean,
   refresh?: () => void,
 ) {
+  const showToast = useToastStore(state => state.showToast)
   const [activeTab, setActiveTab] = useState<'items' | 'transactions' | 'projectMaterials'>('items')
   const [items, setItems] = useState<InventoryItem[]>([])
   const [transactions, setTransactions] = useState<InventoryTransaction[]>([])

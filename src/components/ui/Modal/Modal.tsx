@@ -134,7 +134,7 @@ export function Modal({
                   <button
                     type="button"
                     onClick={onClose}
-                    className="p-2 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600:bg-slate-700:text-slate-300 transition-colors"
+                    className="p-2 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300 transition-colors"
                     aria-label="关闭"
                   >
                     <Icon name="X" size={18} />

@@ -1,7 +1,7 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 
-export type BadgeVariant = 'primary' | 'success' | 'warning' | 'danger' | 'gray' | 'info' | 'purple' | 'orange' | 'teal'
+export type BadgeVariant = 'primary' | 'success' | 'warning' | 'danger' | 'gray' | 'info' | 'purple' | 'orange' | 'cyan'
 export type BadgeSize = 'sm' | 'md' | 'lg'
 
 export interface BadgeProps {
@@ -23,7 +23,7 @@ const variantStyles: Record<BadgeVariant, string> = {
   info: 'bg-blue-100 text-blue-700',
   purple: 'bg-purple-100 text-purple-700',
   orange: 'bg-orange-100 text-orange-700',
-  teal: 'bg-teal-100 text-teal-700',
+  cyan: 'bg-cyan-100 text-cyan-700',
 }
 
 const outlinedStyles: Record<BadgeVariant, string> = {
@@ -35,7 +35,7 @@ const outlinedStyles: Record<BadgeVariant, string> = {
   info: 'border border-blue-300 text-blue-700',
   purple: 'border border-purple-300 text-purple-700',
   orange: 'border border-orange-300 text-orange-700',
-  teal: 'border border-teal-300 text-teal-700',
+  cyan: 'border border-cyan-300 text-cyan-700',
 }
 
 const dotVariantStyles: Record<BadgeVariant, string> = {
@@ -47,7 +47,7 @@ const dotVariantStyles: Record<BadgeVariant, string> = {
   info: 'bg-blue-500',
   purple: 'bg-purple-500',
   orange: 'bg-orange-500',
-  teal: 'bg-teal-500',
+  cyan: 'bg-cyan-500',
 }
 
 const sizeStyles: Record<BadgeSize, string> = {

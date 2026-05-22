@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react"
-import type { Member, WorkerTeam, WorkerTransferRecord } from "@/types"
+import type { WorkerTeam, WorkerTransferRecord } from "@/types"
 import { handleError, Result, VoidResult } from "@/types"
 
 /**
@@ -188,7 +188,7 @@ export function useWorkerTransfers(): UseWorkerTransfersReturn {
     setError(null)
     
     try {
-      const result = await window.electronAPI.getWorkerTransferRecords(workerId)
+      const result = await window.electronAPI.getWorkerTransferRecords(workerId ?? 0)
       
       if (result.success && result.data) {
         setRecords(result.data)

@@ -6,5 +6,5 @@
  * 这是为了安全考虑，防止他人未经授权访问
  */
 
-// 重新导出 AuthContext 的 useAuth
-export { useAuth, AuthProvider, type StoredAuth } from './AuthContext'
+// 从 Zustand store 重新导出
+export { useAuth, useAuthStore, type StoredAuth } from '@/store/authStore'
