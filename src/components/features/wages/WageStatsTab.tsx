@@ -1,4 +1,3 @@
-import React from 'react'
 import type { WageStats } from '@/types'
 import { Icon } from '../../ui/Icon'
 

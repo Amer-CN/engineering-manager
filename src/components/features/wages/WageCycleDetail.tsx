@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import type { Project, WorkerTeam, AttendanceRecord, WageRecord } from '@/types'
 import { Icon } from '../../ui/Icon'
@@ -43,7 +43,7 @@ interface WageCycleDetailProps {
   // Payment records
   allWageRecords: WageRecord[]
   paymentEdits: Map<number, { paidAmount: string; paidDate: string; bankReceiptPath?: string }>
-  onPaymentChange: (recordId: number, field: 'paidAmount' | 'paidDate', value: string) => void
+  onPaymentChange: (recordId: number, field: 'paidAmount' | 'paidDate', value: string | number) => void
   onSavePayments: () => void
   onBatchDeleteWages: () => void
   onBatchArchivePayments: () => void

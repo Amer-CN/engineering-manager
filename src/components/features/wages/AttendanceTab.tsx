@@ -1,8 +1,7 @@
-import React from 'react'
+import { useState, useMemo, useRef } from 'react'
 import type { Project, WorkerTeam, AttendanceRecord } from '@/types'
 import { Icon } from '../../ui/Icon'
-import { summaryDot, summaryLabel } from '../../../constants/attendance'
-import type { DayStatus } from '../../../types/electron'
+import { AttendanceTabRow } from './AttendanceTabRow'
 
 interface AttendanceTabProps {
   selectedProject: Project | null
@@ -19,7 +18,8 @@ interface AttendanceTabProps {
   onDelete: (record: AttendanceRecord) => void
   onBatchDelete: () => void
   loading: boolean
-  onImportAttendance: () => void
+  onOpenHistory?: (projectWorkerId: number, workerName: string, teamName: string) => void
+  onImportAttendance: (data: { projectWorkerId: number; workDays: number; workerName: string }[]) => void
   onChangeMonth: (month: string) => void
 }
 
@@ -28,8 +28,15 @@ export default function AttendanceTab({
   attendances, projectMemberCount,
   selectedIds, toggleSelect, toggleAll, onGenerateAttendance, onOpenDetail,
   onDelete, onBatchDelete, loading,
-  onImportAttendance, onChangeMonth,
+  onOpenHistory, onImportAttendance, onChangeMonth,
 }: AttendanceTabProps) {
+  const [filterTeamId, setFilterTeamId] = useState<number | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const filteredAttendances = useMemo(() => {
+    if (!filterTeamId) return attendances
+    return attendances.filter(a => (a as any).teamId === filterTeamId)
+  }, [attendances, filterTeamId])
+
   if (!selectedProject) {
     return (
       <div className="p-4 text-center py-12 text-slate-400">
@@ -40,13 +47,20 @@ export default function AttendanceTab({
   }
 
   return (
-    <div className="p-4">
-      <div className="flex items-center justify-between mb-4">
+    <div className="p-4 flex flex-col max-h-[calc(100vh-380px)]">
+      <div className="shrink-0 flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <input type="month" value={selectedMonth} onChange={e => onChangeMonth(e.target.value)}
             className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500" />
+          <select value={filterTeamId ?? ''} onChange={e => setFilterTeamId(e.target.value ? Number(e.target.value) : null)}
+            className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500">
+            <option value="">全部班组</option>
+            {workerTeams.filter(t => t.projectId === selectedProject.id).map(t => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
           <div className="text-slate-500">
-            {projectMemberCount} 名工人 | 当月天数: {daysInMonth} 天
+            {filteredAttendances.length} / {attendances.length} 人 | 当月天数: {daysInMonth} 天
           </div>
           {selectedIds.size > 0 && (
             <button onClick={onBatchDelete}
@@ -56,10 +70,38 @@ export default function AttendanceTab({
           )}
         </div>
         <div className="flex gap-2">
-          <button onClick={onImportAttendance}
-            className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-            导入考勤
-          </button>
+          <input
+            type="file"
+            accept=".csv,.xlsx,.xls"
+            style={{ display: 'none' }}
+            ref={fileInputRef}
+            onChange={async (e) => {
+              const file = e.target.files?.[0]
+              if (!file) return
+              try {
+                const text = await file.text()
+                const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
+                const header = lines[0].split(',').map(h => h.trim())
+                const pIdx = header.findIndex(h => h.includes('pwId') || h.includes('projectWorkerId') || h.includes('id'))
+                const dIdx = header.findIndex(h => h.includes('workDays') || h.includes('days'))
+                const nameIdx = header.findIndex(h => h.includes('name') || h.includes('worker'))
+                const result: { projectWorkerId: number; workDays: number; workerName: string }[] = []
+                for (let i = 1; i < lines.length; i++) {
+                  const cols = lines[i].split(',').map(c => c.trim())
+                  result.push({
+                    projectWorkerId: pIdx >= 0 ? Number(cols[pIdx]) : 0,
+                    workDays: dIdx >= 0 ? Number(cols[dIdx]) : 0,
+                    workerName: nameIdx >= 0 ? cols[nameIdx] : '',
+                  })
+                }
+                onImportAttendance(result)
+              } catch (err) { console.error('解析考勤文件失败:', err) }
+            }}
+          />
+          <button
+            onClick={() => { fileInputRef.current?.click() }}
+            className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+          >导入考勤</button>
           <button onClick={onGenerateAttendance} disabled={loading}
             className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
             生成默认考勤
@@ -67,20 +109,20 @@ export default function AttendanceTab({
         </div>
       </div>
 
-      {attendances.length === 0 ? (
+      {filteredAttendances.length === 0 ? (
         <div className="text-center py-12 text-slate-400">
           <Icon name="ClipboardFile" size={48} className="mx-auto mb-4" />
           <p>暂无考勤记录</p>
           <p className="text-sm mt-1">点击"生成默认考勤"为项目工人创建考勤</p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="flex-1 overflow-y-auto min-h-0">
           <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-slate-50 text-left">
+            <thead className="sticky top-0 z-10 bg-slate-50">
+              <tr className="text-left">
                 <th className="px-3 py-3 w-10">
                   <input type="checkbox"
-                    checked={selectedIds.size === attendances.length && attendances.length > 0}
+                    checked={selectedIds.size === filteredAttendances.length && filteredAttendances.length > 0}
                     onChange={toggleAll} className="rounded" />
                 </th>
                 <th className="px-4 py-3 font-medium text-slate-600">姓名</th>
@@ -90,58 +132,18 @@ export default function AttendanceTab({
               </tr>
             </thead>
             <tbody>
-              {attendances.map(a => {
-                const team = (a as any).teamName ? { name: (a as any).teamName } : undefined
-                // 使用已持久化的 workDays（backend update/batchImport 均保持同步）
-                // 不再从 dailyStatus 逐天计，避免未标记天数默认'work'导致膨胀
-                const workCount = a.workDays || 0
-                let holidayCount = 0, sickCount = 0, personalCount = 0, absentCount = 0
-                const dailyStatus = a.dailyStatus || {}
-                for (let d = 1; d <= daysInMonth; d++) {
-                  const s = dailyStatus[d]
-                  if (!s) continue // 未标记日不计数
-                  if (s === 'holiday') holidayCount++
-                  else if (s === 'sick_leave') sickCount++
-                  else if (s === 'personal_leave') personalCount++
-                  else if (s === 'absent') absentCount++
-                }
-                type SummaryItem = { status: DayStatus; count: number }
-                const summaryItems: SummaryItem[] = ([
-                  { status: 'work' as DayStatus, count: workCount }, { status: 'holiday' as DayStatus, count: holidayCount },
-                  { status: 'sick_leave' as DayStatus, count: sickCount }, { status: 'personal_leave' as DayStatus, count: personalCount },
-                  { status: 'absent' as DayStatus, count: absentCount },
-                ] as SummaryItem[]).filter(item => item.count > 0)
-
-                return (
-                  <tr key={a.id} className="border-t border-slate-100 table-row-hover">
-                    <td className="px-3 py-3">
-                      <input type="checkbox" checked={selectedIds.has(a.id)}
-                        onChange={() => toggleSelect(a.id)} className="rounded" />
-                    </td>
-                    <td className="px-4 py-3 font-medium">{a.memberName || '-'}</td>
-                    <td className="px-4 py-3 text-slate-500">{team?.name || '-'}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2 flex-wrap text-xs">
-                        {summaryItems.map(item => (
-                          <span key={item.status} className="inline-flex items-center gap-1 whitespace-nowrap">
-                            <span className={`w-2 h-2 rounded-full ${summaryDot[item.status]}`}></span>
-                            <span className="text-slate-600">{summaryLabel[item.status]}</span>
-                            <span className="font-medium text-slate-700">{item.count}天</span>
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => onOpenDetail(a)}
-                          className="text-blue-600 hover:text-blue-800 text-sm font-medium">编辑</button>
-                        <button onClick={() => onDelete(a)}
-                          className="text-red-400 hover:text-red-600 text-sm" title="删除考勤">删除</button>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
+              {filteredAttendances.map(a => (
+                <AttendanceTabRow
+                  key={a.id}
+                  a={a}
+                  isSelected={selectedIds.has(a.id)}
+                  daysInMonth={daysInMonth}
+                  onToggleSelect={toggleSelect}
+                  onOpenDetail={onOpenDetail}
+                  onOpenHistory={onOpenHistory}
+                  onDelete={onDelete}
+                />
+              ))}
             </tbody>
           </table>
         </div>

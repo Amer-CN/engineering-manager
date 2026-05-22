@@ -1,6 +1,22 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
 import { Icon } from '../../ui/Icon'
-import * as XLSX from 'xlsx'
+
+// 拖拽上传区域（render props 模式）
+function DropZone({ onFile, children }: { onFile: (f: File) => void; children: (dragging: boolean) => React.ReactNode }) {
+  const [dragging, setDragging] = useState(false)
+  const handleDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); setDragging(true) }, [])
+  const handleDragLeave = useCallback(() => setDragging(false), [])
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault(); setDragging(false)
+    const file = e.dataTransfer.files[0]
+    if (file) onFile(file)
+  }, [onFile])
+  return (
+    <div onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
+      {children(dragging)}
+    </div>
+  )
+}
 
 interface MatchedRow {
   name: string
@@ -62,7 +78,8 @@ export const AttendanceImportModal: React.FC<Props> = ({ show, projectId, yearMo
   const [state, setState] = useState<ImportState>(defaultState)
   const [wbBuffer, setWbBuffer] = useState<ArrayBuffer | null>(null)
 
-  const loadSheet = (wb: XLSX.WorkBook, sheetName: string, hRow?: number) => {
+  const loadSheet = async (wb: any, sheetName: string, hRow?: number) => {
+    const XLSX = await import('xlsx')
     const headerRow = hRow ?? 0
     const ws = wb.Sheets[sheetName]
     const rows = XLSX.utils.sheet_to_json<any>(ws, { header: 1 }) as any[][]
@@ -77,10 +94,11 @@ export const AttendanceImportModal: React.FC<Props> = ({ show, projectId, yearMo
     const file = e.target.files?.[0]
     if (!file) return
     const reader = new FileReader()
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       try {
         const buf = ev.target?.result as ArrayBuffer
         setWbBuffer(buf)
+        const XLSX = await import('xlsx')
         const wb = XLSX.read(buf, { type: 'array' })
         setState({ ...defaultState, sheetNames: wb.SheetNames })
         if (wb.SheetNames.length > 0) loadSheet(wb, wb.SheetNames[0])
@@ -90,14 +108,14 @@ export const AttendanceImportModal: React.FC<Props> = ({ show, projectId, yearMo
     e.target.value = ''
   }
 
-  const switchSheet = (name: string) => {
+  const switchSheet = async (name: string) => {
     if (!wbBuffer) return
-    try { const wb = XLSX.read(wbBuffer, { type: 'array' }); loadSheet(wb, name, state.headerRow) } catch {}
+    try { const XLSX = await import('xlsx'); const wb = XLSX.read(wbBuffer, { type: 'array' }); loadSheet(wb, name, state.headerRow) } catch {}
   }
 
-  const changeHeaderRow = (row: number) => {
+  const changeHeaderRow = async (row: number) => {
     if (!wbBuffer) return
-    try { const wb = XLSX.read(wbBuffer, { type: 'array' }); loadSheet(wb, state.activeSheet, row) } catch {}
+    try { const XLSX = await import('xlsx'); const wb = XLSX.read(wbBuffer, { type: 'array' }); loadSheet(wb, state.activeSheet, row) } catch {}
   }
 
   // Match rows against project worker list (ID card first, then name)
@@ -165,17 +183,36 @@ export const AttendanceImportModal: React.FC<Props> = ({ show, projectId, yearMo
 
         {/* Body */}
         <div className="p-6 overflow-y-auto flex-1 space-y-4">
-          {/* File picker */}
+          {/* File picker with drag-drop */}
           {state.sheetNames.length === 0 ? (
-            <div className="border-2 border-dashed border-slate-300 rounded-xl p-12 text-center">
-              <Icon name="Upload" size={40} className="text-slate-300 mx-auto mb-3" />
-              <p className="text-slate-500 mb-3">选择 Excel 文件（.xlsx / .xls）</p>
-              <label className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2 rounded-lg font-medium cursor-pointer inline-block transition-colors">
-                选择文件
-                <input type="file" accept=".xlsx,.xls" onChange={handleFile} className="hidden" />
-              </label>
-              <p className="text-xs text-slate-400 mt-3">表格需包含"姓名"和"出勤天数"列，身份证号列可提高匹配精度</p>
-            </div>
+            <DropZone onFile={(file) => {
+              const reader = new FileReader()
+              reader.onload = async (ev) => {
+                try {
+                  const buf = ev.target?.result as ArrayBuffer
+                  setWbBuffer(buf)
+                  const XLSX = await import('xlsx')
+                  const wb = XLSX.read(buf, { type: 'array' })
+                  setState({ ...defaultState, sheetNames: wb.SheetNames })
+                  if (wb.SheetNames.length > 0) loadSheet(wb, wb.SheetNames[0])
+                } catch (err) { console.error('Excel读取失败:', err) }
+              }
+              reader.readAsArrayBuffer(file)
+            }}>
+              {(dragging) => (
+                <div className={`border-2 border-dashed rounded-xl p-12 text-center transition-colors ${
+                  dragging ? 'border-primary-500 bg-primary-50' : 'border-slate-300'
+                }`}>
+                  <Icon name="Upload" size={40} className="text-slate-300 mx-auto mb-3" />
+                  <p className="text-slate-500 mb-3">{dragging ? '松开鼠标导入文件' : '拖拽 Excel 文件到此处，或点击选择'}</p>
+                  <label className={`${dragging ? 'bg-primary-500' : 'bg-primary-600 hover:bg-primary-700'} text-white px-6 py-2 rounded-lg font-medium cursor-pointer inline-block transition-colors`}>
+                    选择文件
+                    <input type="file" accept=".xlsx,.xls" onChange={handleFile} className="hidden" />
+                  </label>
+                  <p className="text-xs text-slate-400 mt-3">表格需包含"姓名"和"出勤天数"列，身份证号列可提高匹配精度</p>
+                </div>
+              )}
+            </DropZone>
           ) : (
             <>
               {/* Controls */}

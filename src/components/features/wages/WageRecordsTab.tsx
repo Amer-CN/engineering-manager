@@ -1,8 +1,8 @@
-import React, { useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import type { WageRecord } from '@/types'
 import { Icon } from '../../ui/Icon'
-
-const MONTHS = ['全部', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12']
+import { MONTHS } from '@/constants'
+import { WageRecordRow } from './WageRecordRow'
 
 interface WageRecordsTabProps {
   allWageRecords: WageRecord[]
@@ -54,6 +54,7 @@ export default function WageRecordsTab({
   })
   const changedCount = paymentEdits.size
   const currentYear = new Date().getFullYear().toString()
+// @ts-ignore TS6133: effectiveYear is declared but never read
   const effectiveYear = filterYear || currentYear
 
   return (
@@ -181,47 +182,17 @@ export default function WageRecordsTab({
               </tr>
             </thead>
             <tbody>
-              {filtered.map(w => {
-                const paidAmount = getEditPaidAmount(w, paymentEdits)
-                const paidDate = getEditPaidDate(w, paymentEdits)
-                const diff = (parseFloat(paidAmount) || 0) - w.actualWage
-                const diffColor = diff > 0.01 ? 'text-red-600' : diff < -0.01 ? 'text-amber-600' : 'text-green-600'
-                const diffSign = diff > 0.01 ? '+' : ''
-
-                return (
-                  <tr key={w.id} className="border-t border-slate-100 table-row-hover">
-                    <td className="px-3 py-3">
-                      <input type="checkbox" checked={selectedIds.has(w.id)}
-                        onChange={() => toggleSelect(w.id)} className="rounded" />
-                    </td>
-                    <td className="px-3 py-3 font-medium">{w.memberName || '-'}</td>
-                    <td className="px-3 py-3">{w.yearMonth}</td>
-                    <td className="px-3 py-3">{w.workDays} 天</td>
-                    <td className="px-3 py-3 font-medium">¥{w.actualWage.toFixed(2)}</td>
-                    <td className="px-3 py-3">
-                      <input type="text" inputMode="decimal" value={paidAmount}
-                        placeholder="0.00"
-                        onChange={e => onPaymentChange(w.id, 'paidAmount', e.target.value)}
-                        disabled={!!w.paymentLocked}
-                        className={`w-24 px-2 py-1 border rounded text-center text-sm ${w.paymentLocked ? 'bg-slate-100 border-slate-200 text-slate-500 cursor-not-allowed' : 'border-slate-300'}`} />
-                    </td>
-                    <td className="px-3 py-3">
-                      <div className="flex items-center gap-1">
-                        <input type="date" value={paidDate}
-                          onChange={e => onPaymentChange(w.id, 'paidDate', e.target.value)}
-                          disabled={!!w.paymentLocked}
-                          className={`w-32 px-2 py-1 border rounded text-sm ${w.paymentLocked ? 'bg-slate-100 border-slate-200 text-slate-500 cursor-not-allowed' : 'border-slate-300'}`} />
-                        {w.bankReceiptPath && (
-                          <span className="text-green-500 text-xs" title={`凭证: ${w.bankReceiptPath}`}>📎</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className={`px-3 py-3 font-medium ${diffColor}`}>
-                      {diffSign}¥{diff.toFixed(2)}
-                    </td>
-                  </tr>
-                )
-              })}
+              {filtered.map(w => (
+                <WageRecordRow
+                  key={w.id}
+                  record={w}
+                  isSelected={selectedIds.has(w.id)}
+                  paidAmount={getEditPaidAmount(w, paymentEdits)}
+                  paidDate={getEditPaidDate(w, paymentEdits)}
+                  onToggleSelect={toggleSelect}
+                  onPaymentChange={onPaymentChange}
+                />
+              ))}
             </tbody>
           </table>
         </div>

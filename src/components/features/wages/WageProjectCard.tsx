@@ -18,7 +18,7 @@ interface WageProjectCardProps {
   onClick: (projectId: number) => void
 }
 
-export function WageProjectCard({ data, selectedMonth, onClick }: WageProjectCardProps) {
+export const WageProjectCard = React.memo(function WageProjectCard({ data, selectedMonth, onClick }: WageProjectCardProps) {
   return (
     <div
       onClick={() => onClick(data.projectId)}
@@ -61,4 +61,4 @@ export function WageProjectCard({ data, selectedMonth, onClick }: WageProjectCar
       <Icon name="ChevronRight" size={16} className="text-slate-300 group-hover:text-slate-500 transition-colors flex-shrink-0" />
     </div>
   )
-}
+})
