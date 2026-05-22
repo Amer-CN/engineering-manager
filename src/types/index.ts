@@ -14,6 +14,8 @@ export type {
   Material,
   Expense,
   CostLedgerEntry,
+  CostLedgerBatch,
+  CostLedgerMatchRule,
   CostLedgerSummary,
   CostLedgerCategory,
   Drawing,
@@ -90,8 +92,12 @@ export type {
   // 工资管理
   WageRecord,
   WageStats,
+  OverdueStats,
+  OverdueRecord,
   BankReceiptItem,
   ParsedBankReceipt,
+  BatchParseResult,
+  BankReceiptMatch,
 
   // Electron API
   ElectronAPI,

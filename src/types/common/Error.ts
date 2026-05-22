@@ -42,8 +42,11 @@ export class AppError extends Error {
     super(message)
     this.name = 'AppError'
     
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, AppError)
+    // Node.js 特有功能，captureStackTrace 用于优化堆栈跟踪
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const NodeError = Error as any
+    if (NodeError.captureStackTrace) {
+      NodeError.captureStackTrace(this, AppError)
     }
   }
 

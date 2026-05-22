@@ -7,7 +7,7 @@ export function useCostLedgerCategories() {
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
-    const api = (window as any).electronAPI
+    const api = window.electronAPI
     if (!api?.getCostLedgerCategories) return
     setLoading(true)
     try {

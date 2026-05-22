@@ -2,7 +2,7 @@
  * AuthContext - 认证状态 Context
  */
 
-import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react'
 import { setCurrentUser as setPermissionsUser, type AuthContext as PermissionsAuthContext } from '../types/permissions'
 import { setCurrentAuditUser, logAudit } from '../utils/audit'
 
@@ -67,6 +67,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setPermissionsUser(permissionsUser)
         // 接通审计用户
         setCurrentAuditUser(userData.userId, userData.username)
+        // 同步 session 到主进程（用于 IPC 权限校验）
+        window.electronAPI?.setSession?.({
+          userId: userData.userId,
+          username: userData.username,
+          roleId: userData.roleId,
+          permissions: userData.permissions
+        }).catch((err: any) => console.warn('同步 session 到主进程失败:', err))
       } catch (e) {
         console.error('恢复登录状态失败:', e)
         localStorage.removeItem(AUTH_STORAGE_KEY)
@@ -91,6 +98,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPermissionsUser(permissionsUser)
     // 接通审计用户 + 记录登录
     setCurrentAuditUser(userData.userId, userData.username)
+    // 同步 session 到主进程（用于 IPC 权限校验）
+    window.electronAPI?.setSession?.({
+      userId: userData.userId,
+      username: userData.username,
+      roleId: userData.roleId,
+      permissions: userData.permissions
+    }).catch((err: any) => console.warn('同步 session 到主进程失败:', err))
     logAudit('login', 'auth', `用户登录: ${userData.username}`, { resourceName: userData.username })
   }, [])
 
@@ -107,6 +121,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPermissionsUser(null)
     // 清除审计用户
     setCurrentAuditUser(null, null)
+    // 清除主进程 session
+    window.electronAPI?.clearSession?.().catch((err: any) => console.warn('清除主进程 session 失败:', err))
   }, [currentUser])
 
   const lock = useCallback(() => {

@@ -5,7 +5,7 @@
  */
 
 import { useState, useCallback, useEffect } from 'react'
-import type { Invoice, InvoiceType, InvoiceStatus, PaymentRecord } from '@/types'
+import type { Invoice, InvoiceType, InvoiceStatus } from '@/types'
 import { handleError, Result, VoidResult } from '@/types'
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -60,7 +60,7 @@ export function useInvoices(filters?: InvoiceFilters): UseInvoicesReturn {
     setError(null)
     
     try {
-      const result = await window.electronAPI.getInvoices(type as InvoiceType)
+      const result = await window.electronAPI.getInvoices(undefined, type as InvoiceType)
       
       if (result.success && result.data) {
         let filteredData = result.data

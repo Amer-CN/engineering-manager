@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useCallback, useRef } from 'react'
+import React, { createContext, useContext } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Icon } from '../Icon'
+import { useToastStore } from '@/store/toastStore'
 
 export interface ToastItem {
   id: number
@@ -21,12 +22,15 @@ const ToastContext = createContext<ToastContextValue | null>(null)
 export function useToastContext(): ToastContextValue {
   const ctx = useContext(ToastContext)
   if (!ctx) {
+    //  fallback 到 Zustand store
     return {
-      showToast: () => {},
-      success: () => {},
-      error: () => {},
-      info: () => {},
-      warning: () => {},
+      showToast: (message: string, type?: string, duration?: number) => {
+        useToastStore.getState().showToast(message, type as ToastItem['type'], duration)
+      },
+      success: (message: string) => useToastStore.getState().success(message),
+      error: (message: string) => useToastStore.getState().error(message),
+      info: (message: string) => useToastStore.getState().info(message),
+      warning: (message: string) => useToastStore.getState().warning(message),
     }
   }
   return ctx
@@ -47,42 +51,37 @@ const colorMap: Record<string, string> = {
 }
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const [toasts, setToasts] = useState<ToastItem[]>([])
-  const idRef = useRef(0)
-
-  const removeToast = useCallback((id: number) => {
-    setToasts(prev => prev.filter(t => t.id !== id))
-  }, [])
-
-  const showToast = useCallback((message: string, type: ToastItem['type'] | string = 'info', duration: number = 3000) => {
-    const id = ++idRef.current
-    setToasts(prev => [...prev, { id, message, type: type as ToastItem['type'] }])
-    setTimeout(() => removeToast(id), duration)
-  }, [removeToast])
-
-  const success = useCallback((message: string) => showToast(message, 'success'), [showToast])
-  const error = useCallback((message: string) => showToast(message, 'error', 5000), [showToast])
-  const info = useCallback((message: string) => showToast(message, 'info'), [showToast])
-  const warning = useCallback((message: string) => showToast(message, 'warning', 4000), [showToast])
+  // 从 Zustand store 读取 toasts
+  const toasts = useToastStore(state => state.toasts)
+  const removeToast = useToastStore(state => state.removeToast)
 
   return (
-    <ToastContext.Provider value={{ showToast, success, error, info, warning }}>
+    <ToastContext.Provider value={{
+      showToast: (message: string, type?: string, duration?: number) => {
+        useToastStore.getState().showToast(message, type as ToastItem['type'], duration)
+      },
+      success: (message: string) => useToastStore.getState().success(message),
+      error: (message: string) => useToastStore.getState().error(message),
+      info: (message: string) => useToastStore.getState().info(message),
+      warning: (message: string) => useToastStore.getState().warning(message),
+    }}>
       {children}
 
       {/* Toast 容器 */}
       <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[9999] flex flex-col items-center gap-2 pointer-events-none" aria-live="polite">
         <AnimatePresence>
-          {toasts.map((toast, i) => (
+          {toasts.map((toast, _i) => (
             <motion.div
               key={toast.id}
-              initial={{ opacity: 0, y: -24, scale: 0.9 }}
+              initial={{ opacity: 0, y: -16, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, x: 40, scale: 0.9 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 25, delay: i * 0.05 }}
+              exit={{ opacity: 0, y: -16, scale: 0.95 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 25, delay: _i * 0.05 }}
               className={`${colorMap[toast.type]} text-white px-5 py-3 rounded-xl shadow-2xl pointer-events-auto`}
               role="alert"
+              onClick={() => removeToast(toast.id)}
             >
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2">
                 <Icon name={iconMap[toast.type]} size={18} />
                 <span className="font-medium text-sm">{toast.message}</span>
               </div>

@@ -4,9 +4,9 @@
  * 提供统一的操作结果类型，用于替代 throw/catch 模式
  */
 
-export type Result<T, E = string> = 
-  | { success: true; data: T }
-  | { success: false; error: E }
+export type Result<T, E = string> =
+  | { success: true; data: T; warning?: string }
+  | { success: false; error: E; warning?: string }
 
 export type VoidResult<E = string> = 
   | { success: true }

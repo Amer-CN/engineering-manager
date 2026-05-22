@@ -1,6 +1,6 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
-import type { UploadedFile, Toast, UseFileUploadOptions, UseFileUploadReturn } from './useFileUpload.types'
-export type { UploadedFile, Toast, UseFileUploadOptions, UseFileUploadReturn } from './useFileUpload.types'
+import { useState, useCallback, useRef } from 'react'
+import type { UploadedFile, UseFileUploadOptions, UseFileUploadReturn } from './useFileUpload.types'
+export type { UploadedFile, UseFileUploadOptions, UseFileUploadReturn } from './useFileUpload.types'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 工具函数
@@ -128,7 +128,7 @@ export function useFileUpload(options: UseFileUploadOptions = {}): UseFileUpload
     } finally {
       setIsUploading(false)
     }
-  }, [validateFile, showToast, onSuccess, onError, multiple])
+  }, [validateFile, onSuccess, onError, multiple])
 
   // ═══════════════════════════════════════════════════════════════════════════
   // 移除文件

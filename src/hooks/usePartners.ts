@@ -5,7 +5,7 @@
  */
 
 import { useState, useCallback, useEffect } from 'react'
-import type { Partner, PartnerCategory, Region, Supervisor, SupervisorCategory } from '@/types'
+import type { Partner } from '@/types'
 import { handleError, Result, VoidResult } from '@/types'
 
 // ═══════════════════════════════════════════════════════════════════════════════

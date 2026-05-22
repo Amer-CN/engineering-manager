@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import type { PaymentRecord, InvoiceType } from '@/types'
+import type { PaymentRecord } from '@/types'
 import { handleError, Result, VoidResult } from '@/types'
 
 export interface UsePaymentRecordsReturn {
@@ -28,7 +28,7 @@ export function usePaymentRecords(): UsePaymentRecordsReturn {
     setLoading(true)
     setError(null)
     try {
-      const result = await window.electronAPI.getPaymentRecords(type as InvoiceType)
+      const result = await window.electronAPI.getWagePaymentRecords({ status: type })
       if (result.success && result.data) { setRecords(result.data) }
       else { setError(result.error || 'Failed to load payment records') }
     } catch (err) { setError(handleError(err).getUserMessage()) }

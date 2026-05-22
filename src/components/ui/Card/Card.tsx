@@ -52,7 +52,7 @@ export function Card({
 }: CardProps) {
   return (
     <motion.div
-      whileHover={hoverable || onClick ? { y: -3, boxShadow: '0 12px 30px rgba(0,0,0,0.08)' } : undefined}
+      whileHover={hoverable || onClick ? { y: -3, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)' } : undefined}
       transition={{ duration: 0.2 }}
       className={`
         rounded-xl
