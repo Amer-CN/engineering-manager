@@ -1,8 +1,9 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
+import { CostLedgerRow } from '@/components/features/costLedger/CostLedgerRow'
 import { formatMoney } from '@/utils/format'
-import { DIRECTION_CONFIG, getCategoryDisplayLabel, getLevel1Color, getLevel1ForCode, isCategoryMissing, getCategoriesByDirection, getLevel1GroupsMerged, getCategoryColor } from './config'
-import { ColumnFilter } from './ColumnFilter'
-import { printCostLedgerList, exportCostLedgerList } from './printExport'
+import { DIRECTION_CONFIG, getLevel1ForCode, getCategoriesByDirection, getLevel1GroupsMerged, getCategoryColor } from '@/components/features/costLedger/config'
+import { ColumnFilter } from '@/components/features/costLedger/ColumnFilter'
+import { printCostLedgerList, exportCostLedgerList } from '@/components/features/costLedger/printExport'
 import type { CostLedgerEntry, CostLedgerCategory } from '@/types'
 
 interface CostLedgerListProps {
@@ -20,6 +21,26 @@ export function CostLedgerList({ entries, summary, loading, onEdit, onDelete, ca
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [sortField, setSortField] = useState<string>('voucherNo')
   const [sortAsc, setSortAsc] = useState(true)
+  const zoomRef = useRef(parseFloat(localStorage.getItem('costLedgerZoom') || '1.1'))
+  const tableRef = useRef<HTMLDivElement>(null)
+  const [zoom, setZoom] = useState(zoomRef.current)
+
+  useEffect(() => {
+    const el = tableRef.current
+    if (!el) return
+    let timer: any
+    const handler = (e: WheelEvent) => {
+      if (!e.ctrlKey) return
+      e.preventDefault()
+      const next = Math.max(0.5, Math.min(2, +(zoomRef.current - e.deltaY * 0.005).toFixed(2)))
+      zoomRef.current = next
+      el.style.zoom = String(next)
+      clearTimeout(timer)
+      timer = setTimeout(() => { setZoom(next); localStorage.setItem('costLedgerZoom', String(next)) }, 120)
+    }
+    el.addEventListener('wheel', handler, { passive: false })
+    return () => el.removeEventListener('wheel', handler)
+  }, [])
 
   const [checkedCounterparties, setCheckedCounterparties] = useState<Set<string>>(new Set())
   const [checkedChannels, setCheckedChannels] = useState<Set<string>>(new Set())
@@ -43,7 +64,7 @@ export function CostLedgerList({ entries, summary, loading, onEdit, onDelete, ca
     return {
       counterparties: [...new Set(base.map(e => e.counterparty).filter(Boolean))].sort() as string[],
       channels: [...new Set(base.map(e => e.channel).filter(Boolean))].sort() as string[],
-      voucherNos: [...new Set(base.map(e => String(e.voucherNo)).filter(Boolean))].sort((a, b) => Number(a) - Number(b)) as string[],
+      voucherNos: [...new Set(base.map(e => String(e.voucherNo)).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'zh-CN', { numeric: true })) as string[],
       summaries: [...new Set(base.map(e => e.summary).filter(Boolean))].sort() as string[],
       notesList: [...new Set(base.map(e => e.notes).filter(Boolean))].sort() as string[],
       dates: [...new Set(base.map(e => e.date).filter(Boolean))].sort() as string[],
@@ -63,7 +84,7 @@ export function CostLedgerList({ entries, summary, loading, onEdit, onDelete, ca
   }, [])
 
   const filtered = useMemo(() => {
-    return entries
+    const list = entries
       .filter(e => filter === 'all' || e.direction === filter)
       .filter(e => {
         if (categoryFilter === 'all') return true
@@ -79,12 +100,14 @@ export function CostLedgerList({ entries, summary, loading, onEdit, onDelete, ca
       .filter(e => checkedNotesSet.size === 0 || checkedNotesSet.has(e.notes || ''))
       .filter(e => checkedDates.size === 0 || checkedDates.has(e.date))
       .filter(e => checkedAmounts.size === 0 || checkedAmounts.has(e.amount.toFixed(2)))
-      .sort((a: any, b: any) => {
-        const va = a[sortField]; const vb = b[sortField]
-        if (typeof va === 'number') return sortAsc ? va - vb : vb - va
-        return sortAsc ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va))
-      })
-  }, [entries, filter, categoryFilter, checkedVoucherNos, checkedCounterparties, checkedChannels, checkedSummaries, checkedNotesSet, checkedDates, checkedAmounts, sortField, sortAsc])
+    return [...list].sort((a: any, b: any) => {
+      const va = a[sortField]; const vb = b[sortField]
+      if (va == null) return sortAsc ? 1 : -1
+      if (vb == null) return sortAsc ? -1 : 1
+      if (typeof va === 'number' && typeof vb === 'number') return sortAsc ? va - vb : vb - va
+      return sortAsc ? String(va).localeCompare(String(vb), 'zh-CN', { numeric: true }) : String(vb).localeCompare(String(va), 'zh-CN', { numeric: true })
+    })
+  }, [entries, filter, categoryFilter, checkedVoucherNos, checkedCounterparties, checkedChannels, checkedSummaries, checkedNotesSet, checkedDates, checkedAmounts, sortField, sortAsc, categories])
 
   const filterSummary = useMemo(() => {
     let totalExpense = 0, totalIncome = 0
@@ -208,6 +231,19 @@ export function CostLedgerList({ entries, summary, loading, onEdit, onDelete, ca
           >
             导出Excel
           </button>
+          <div className="flex items-center gap-1 border-l border-slate-200 pl-3">
+            <button onClick={() => {
+              const n = Math.max(0.5, +(zoomRef.current - 0.1).toFixed(1))
+              zoomRef.current = n; localStorage.setItem('costLedgerZoom', String(n)); setZoom(n)
+              if (tableRef.current) tableRef.current.style.zoom = String(n)
+            }} className="rounded px-1.5 py-0.5 text-xs text-slate-500 hover:bg-slate-100" title="缩小">−</button>
+            <span className="text-xs text-slate-500 w-8 text-center font-mono">{Math.round(zoom * 100)}%</span>
+            <button onClick={() => {
+              const n = Math.min(2, +(zoomRef.current + 0.1).toFixed(1))
+              zoomRef.current = n; localStorage.setItem('costLedgerZoom', String(n)); setZoom(n)
+              if (tableRef.current) tableRef.current.style.zoom = String(n)
+            }} className="rounded px-1.5 py-0.5 text-xs text-slate-500 hover:bg-slate-100" title="放大">+</button>
+          </div>
           <span className="text-xs text-slate-400">
             {filtered.length === entries.length ? `共 ${entries.length} 条` : `筛选 ${filtered.length} / ${entries.length} 条`}
           </span>
@@ -215,7 +251,7 @@ export function CostLedgerList({ entries, summary, loading, onEdit, onDelete, ca
       </div>
 
       {/* 表格 */}
-      <div className="flex-1 overflow-auto min-h-0">
+      <div ref={tableRef} className="flex-1 overflow-auto min-h-0" style={{ zoom }}>
         <table className="w-full table-fixed border-collapse">
           <thead className="sticky top-0 z-10 bg-slate-50 text-xs">
             <tr>
@@ -282,67 +318,38 @@ export function CostLedgerList({ entries, summary, loading, onEdit, onDelete, ca
                   无匹配结果，请调整筛选条件
                 </td>
               </tr>
-            ) : filtered.map(entry => {
-              const dir = DIRECTION_CONFIG[entry.direction]
-              return (
-                <tr key={entry.id} className="border-b border-slate-100 text-sm table-row-hover">
-                  <td className="px-3 py-2 text-center font-mono font-semibold text-slate-600 truncate">{entry.voucherNo || '-'}</td>
-                  <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{entry.date}</td>
-                  <td className="px-3 py-2"><span className={`rounded px-1.5 py-0.5 text-xs font-medium ${dir.bg} ${dir.color}`}>{dir.label}</span></td>
-                  <td className="px-3 py-2 text-slate-600 align-top">
-                    <span className="line-clamp-2">
-                      {/* 一级模式：显示彩色圆点 + 一级分类名；二级模式：显示原分类名 */}
-                      {categoryLevel === 'level1' && (
-                        <span className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle" style={{ backgroundColor: getLevel1Color(entry.category, categories) }} />
-                      )}
-                      {getCategoryDisplayLabel(entry.category, categoryLevel, categories)}
-                    </span>
-                    {/* 引用的分类已被删除或禁用时，显示警告标记 */}
-                    {isCategoryMissing(entry.category, categories) && (
-                      <span className="ml-1 rounded bg-amber-100 px-1 text-amber-700 text-[10px]" title="分类已删除或禁用">已删</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 font-medium text-slate-700 truncate">{entry.counterparty}</td>
-                  <td className="px-3 py-2 text-xs text-slate-500 truncate" title={entry.channel}>{entry.channel}</td>
-                  <td className={`px-3 py-2 text-right font-mono font-medium whitespace-nowrap ${entry.direction === 'expense' ? 'text-red-600' : 'text-emerald-600'}`}>
-                    {entry.direction === 'expense' ? '-' : '+'}{formatMoney(entry.amount)}
-                  </td>
-                  <td className="px-3 py-2 text-xs text-slate-500 truncate" title={entry.summary}>
-                    {entry.summary}
-                    {entry.linkedInvoiceStatus === 'deleted' && <span className="ml-1 rounded bg-amber-100 px-1 text-amber-700 text-[10px]">已删发票</span>}
-                  </td>
-                  <td className="px-3 py-2 text-xs text-slate-500 truncate" title={entry.notes || ''}>
-                    {entry.notes || '-'}
-                  </td>
-                  <td className="px-3 py-2 text-right whitespace-nowrap">
-                    <button onClick={() => onEdit(entry)} className="mr-1 text-xs text-blue-600 hover:text-blue-800">编辑</button>
-                    <button onClick={() => onDelete(entry.id)} className="text-xs text-red-500 hover:text-red-700">删除</button>
-                  </td>
-                </tr>
-              )
-            })}
+            ) : filtered.map(entry => (
+              <CostLedgerRow
+                key={entry.id}
+                entry={entry}
+                categoryLevel={categoryLevel}
+                categories={categories}
+                onEdit={onEdit}
+                onDelete={onDelete}
+              />
+            ))}
           </tbody>
         </table>
       </div>
 
       {/* 汇总行 */}
       <div className="sticky bottom-0 border-t-2 border-slate-300 bg-white">
-        <div className="flex items-center justify-between px-6 py-3 text-sm">
-          <span className="text-xs text-slate-400">
+        <div className="flex items-center justify-between px-6 py-4 text-sm">
+          <span className="text-sm text-slate-600">
             {activeFilters > 0 ? `筛选结果: ${filterSummary.count} 条` : `合计 ${entries.length} 条`}
           </span>
-          <div className="flex gap-6 font-mono">
+          <div className="flex gap-8 font-mono">
             <div className="text-right">
-              <div className="text-xs text-slate-400">经营支出</div>
-              <div className="font-semibold text-red-600">{formatMoney(filterSummary.totalExpense)}</div>
+              <div className="text-xs text-slate-600">经营支出</div>
+              <div className="text-lg font-bold text-red-600">{formatMoney(filterSummary.totalExpense)}</div>
             </div>
             <div className="text-right">
-              <div className="text-xs text-slate-400">资金收入</div>
-              <div className="font-semibold text-emerald-600">{formatMoney(filterSummary.totalIncome)}</div>
+              <div className="text-xs text-slate-600">资金收入</div>
+              <div className="text-lg font-bold text-emerald-600">{formatMoney(filterSummary.totalIncome)}</div>
             </div>
             <div className="text-right">
-              <div className="text-xs text-slate-400">净{filterSummary.totalIncome - filterSummary.totalExpense >= 0 ? '流入' : '流出'}</div>
-              <div className={`font-semibold ${filterSummary.totalIncome - filterSummary.totalExpense >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+              <div className="text-xs text-slate-600">净{filterSummary.totalIncome - filterSummary.totalExpense >= 0 ? '流入' : '流出'}</div>
+              <div className={`text-lg font-bold ${filterSummary.totalIncome - filterSummary.totalExpense >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                 {formatMoney(filterSummary.totalIncome - filterSummary.totalExpense)}
               </div>
             </div>
