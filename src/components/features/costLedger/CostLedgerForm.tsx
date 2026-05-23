@@ -3,6 +3,7 @@ import { CategoryPicker } from './CategoryPicker'
 import { ChannelInput } from './ChannelInput'
 import { InvoiceLinker } from './InvoiceLinker'
 import { FileUploader } from './FileUploader'
+import { Input } from '@/components/ui/Input'
 import { DIRECTION_CONFIG, getCategoriesByDirection, emptyEntry } from './config'
 import type { CostLedgerEntry, CostLedgerCategory } from '@/types'
 
@@ -45,8 +46,8 @@ export function CostLedgerForm({ projectId, projectName, initial, onSave, onClos
     const t = text.trim()
     // 已经是标准格式
     if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t
-    // 2024/12/17 或 2024.12.17
-    const m = t.match(/^(\d{4})[/.](\d{1,2})[/.](\d{1,2})$/)
+    // 2024/12/17 或 2024.12.17 或 2024-12-17 或 2025.4,10（逗号容错）
+    const m = t.match(/^(\d{4})[.,\-\/](\d{1,2})[.,\-\/](\d{1,2})$/)
     if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`
     // 20241217
     const m2 = t.match(/^(\d{4})(\d{2})(\d{2})$/)
@@ -62,8 +63,7 @@ export function CostLedgerForm({ projectId, projectName, initial, onSave, onClos
     if (!form.date) errs.date = '请选择日期'
     else if (!/^\d{4}-\d{2}-\d{2}$/.test(form.date)) errs.date = '日期格式应为 YYYY-MM-DD'
     if (!form.amount || form.amount <= 0) errs.amount = '请输入有效金额'
-    if (!form.summary.trim()) errs.summary = '请输入摘要'
-    else if (form.summary.length > 200) errs.summary = '摘要不超过200字'
+    if (form.summary && form.summary.length > 200) errs.summary = '摘要不超过200字'
     if (!form.counterparty.trim()) errs.counterparty = '请输入对方名称'
     if (!form.channel.trim()) errs.channel = `请输入${channelLabel}`
     else if (form.channel.length > 100) errs.channel = '渠道不超过100字'
@@ -112,20 +112,20 @@ export function CostLedgerForm({ projectId, projectName, initial, onSave, onClos
           <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="mb-1 block text-xs font-medium text-slate-600">凭证号</label>
-              <input type="number" min="1" step="1" value={form.voucherNo || ''} onChange={e => set('voucherNo', parseInt(e.target.value) || 0)}
-                placeholder="自动" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
-              <p className="mt-0.5 text-xs text-slate-400">留空自动递增</p>
+              <Input type="text" value={form.voucherNo ?? ''} onChange={e => set('voucherNo', e.target.value)}
+                placeholder="自动" className="font-mono" size="sm" />
+              <p className="mt-0.5 text-xs text-slate-400">留空表示无凭证</p>
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-slate-600">日期 *</label>
-              <input type="text" value={form.date} onChange={e => set('date', parseDateText(e.target.value))}
-                placeholder="YYYY-MM-DD，可粘贴" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+              <Input type="text" value={form.date} onChange={e => set('date', parseDateText(e.target.value))}
+                placeholder="YYYY-MM-DD，可粘贴" size="sm" />
               {errors.date && <p className="mt-0.5 text-xs text-red-500">{errors.date}</p>}
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-slate-600">金额（元）*</label>
-              <input type="number" step="0.01" min="0" value={form.amount || ''} onChange={e => set('amount', parseFloat(e.target.value) || 0)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+              <Input type="number" step="0.01" min="0" value={form.amount || ''} onChange={e => set('amount', parseFloat(e.target.value) || 0)}
+                size="sm" />
               {errors.amount && <p className="mt-0.5 text-xs text-red-500">{errors.amount}</p>}
             </div>
           </div>
@@ -138,10 +138,10 @@ export function CostLedgerForm({ projectId, projectName, initial, onSave, onClos
 
           {/* 摘要 */}
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">摘要 *</label>
-            <input type="text" value={form.summary} onChange={e => set('summary', e.target.value)}
+            <label className="mb-1 block text-xs font-medium text-slate-600">摘要</label>
+            <Input type="text" value={form.summary} onChange={e => set('summary', e.target.value)}
               placeholder={'如"付涂敏备用金"'} maxLength={200}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+              size="sm" />
             {errors.summary && <p className="mt-0.5 text-xs text-red-500">{errors.summary}</p>}
           </div>
 
@@ -149,8 +149,8 @@ export function CostLedgerForm({ projectId, projectName, initial, onSave, onClos
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="mb-1 block text-xs font-medium text-slate-600">往来单位/个人 *</label>
-              <input type="text" value={form.counterparty} onChange={e => set('counterparty', e.target.value)}
-                placeholder={'如"孙家英"'} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+              <Input type="text" value={form.counterparty} onChange={e => set('counterparty', e.target.value)}
+                placeholder={'如"孙家英"'} size="sm" />
               {errors.counterparty && <p className="mt-0.5 text-xs text-red-500">{errors.counterparty}</p>}
             </div>
             <div>
