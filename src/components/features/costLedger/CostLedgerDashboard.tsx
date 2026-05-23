@@ -11,7 +11,7 @@ const cardHover = { y: -4, boxShadow: '0 12px 30px rgba(0,0,0,0.1)', transition:
 
 const CountUp: React.FC<{ value: number; suffix?: string; prefix?: string; decimals?: number }> = ({ value, suffix = '', prefix = '', decimals = 0 }) => {
   const motionVal = useMotionValue(0)
-  const springVal = useSpring(motionVal, { stiffness: 120, damping: 22 })
+  const springVal = useSpring(motionVal, { stiffness: 40, damping: 25 })
   const [display, setDisplay] = useState('0')
 
   useEffect(() => { motionVal.set(value) }, [value])
