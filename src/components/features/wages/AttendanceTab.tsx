@@ -51,9 +51,9 @@ export default function AttendanceTab({
       <div className="shrink-0 flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <input type="month" value={selectedMonth} onChange={e => onChangeMonth(e.target.value)}
-            className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500" />
+            className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500" />
           <select value={filterTeamId ?? ''} onChange={e => setFilterTeamId(e.target.value ? Number(e.target.value) : null)}
-            className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500">
+            className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500">
             <option value="">全部班组</option>
             {workerTeams.filter(t => t.projectId === selectedProject.id).map(t => (
               <option key={t.id} value={t.id}>{t.name}</option>
