@@ -132,7 +132,7 @@ export default function WageCycleDetail(props: WageCycleDetailProps) {
               activeTab === tab.id ? 'text-white' : 'text-slate-600 hover:text-slate-800'}`}>
             {activeTab === tab.id && (
               <motion.div layoutId="wage-cycle-tab" className="absolute inset-0 bg-primary-600 rounded-xl shadow-md"
-                transition={{ type: 'spring', stiffness: 500, damping: 30 }} />
+                transition={{ type: 'spring', stiffness: 40, damping: 25 }} />
             )}
             <span className="relative z-10 flex items-center gap-1.5"><Icon name={tab.icon} size={14} />{tab.label}</span>
           </button>
