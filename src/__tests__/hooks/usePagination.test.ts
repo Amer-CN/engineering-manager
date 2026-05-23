@@ -1,5 +1,3 @@
-// @ts-nocheck
-import { describe, it, expect, afterEach } from 'vitest'
 import { renderHook, act, cleanup } from '@testing-library/react'
 import { usePagination } from '../../hooks/usePagination'
 

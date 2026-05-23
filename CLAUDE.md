@@ -1,6 +1,6 @@
 # CLAUDE.md - 工程管家项目约定
-> 项目状态：工人管理UX重构 + 月份选择器内嵌Tab + attendance.ts拆分（v2.8.2）
-> 最后同步：2026-05-15（工人管理4-Tab重构·琥珀色系·useConfirm·月份选择器内嵌）
+> 项目状态：成本台账大改（凭证号string+AI分类学习+版本功能增强+缩放）（v2.9.0）
+> 最后同步：2026-05-18（成本台账全面升级）
 
 ## 🗣️ 输出语言
 - **默认中文输出**：所有解释、描述、分析、提问、总结等文字内容使用中文
@@ -124,17 +124,17 @@
 - **目的**：追踪挂靠施工项目的真实资金流（含灰色支出、垫资、股东融资等明面账不覆盖的资金流）
 - **架构**：双入口，角色分离 — 侧边栏独立页面供财务人员录入/查账（Dashboard→项目详情→列表+新增/编辑/删除+Excel级筛选）；ProjectDetail"费用明细"Tab 供领导查看只读分析看板（KPI+饼图+月度趋势柱状图+TOP10排名，无数据录入）
 - **UI 设计**：首页 Dashboard 对标项目管理看板（Hero 横幅+framer-motion 动画+CountUp 弹簧加速+KPI 卡片+CARD token），项目子页面头部对标合同管理（ArrowLeft 图标返回+amber 竖条色标+双行标题），项目卡片三层信息结构（方向色条+收支双栏+净额汇总底条）
-- **数据模型**：`db.costLedger`（台账条目）+ `db.costLedgerCategories`（分类，含 `level1?` 一级归属），条目字段含 voucherNo(按项目自增凭证号)、direction(expense/income)、category(分类code)、counterparty(往来单位/个人)、channel、linkedInvoiceId(可选)、notes(备注)、attachments
+- **数据模型**：`db.costLedger`（台账条目）+ `db.costLedgerCategories`（分类，含 `level1?` 一级归属），条目字段含 voucherNo(string，支持"3-1""税-12"等，空=无凭证)、direction(expense/income)、category(分类code)、counterparty(往来单位/个人)、channel、linkedInvoiceId(可选)、notes(备注)、attachments
 - **分类系统**：二级层级：支出 5 组 18 码（业务费/直接工程费/现场管理费/对公服务及前期投入费/财务及其他费）+ 收入 4 组 7 码（投资款/项目回款/退款/其他收入）+ 用户可自定义增删改；`CATEGORY_HIERARCHY`（含 `direction` 字段）定义完整二级→一级映射；`getLevel1Groups(direction)`/`getLevel1GroupsMerged(categories,direction)` 方向感知分组；`getLevel1ForCode(code,categories)` 优先 DB `level1`→回退 hierarchy；`HIERARCHY_GROUP_NAMES` 内置分组名常量；`CategoryManager.tsx` 双级管理 UI（一级分组卡片+二级子项+新建一级/二级+编辑删除）；`CategoryPicker.tsx` 一级→二级联动选择器；`ensureCategories()` 自动迁移旧扁平分类；列表工具栏「二级/一级」切换+localStorage 持久化
 - **业主回款不出现在成本台账中**（业主回款是明面账工程款）
 - **渠道标签**：按方向动态切换 — 支出→支付渠道，收入→收入渠道
-- **IPC 通道**：11 个 — 台账条目 6 个（`:list` / `:create` / `:update` / `:delete` / `:summary` / `:deleteByProject`）+ 分类管理 5 个（`:categories:list` / `:create` / `:update` / `:delete` / `:reset`）
+- **IPC 通道**：14 个 — 台账条目 6 个（`:list` / `:create` / `:update` / `:delete` / `:summary` / `:deleteByProject`）+ 分类管理 5 个（`:categories:list` / `:create` / `:update` / `:delete` / `:reset`）+ 版本管理 4 个（`:batches:list` / `:batches:create` / `:batches:copy` / `:batches:rename` / `:batches:delete`）+ 规则学习 2 个（`:matchRules:list` / `:matchRules:save`）
 - **级联删除**：项目删除时自动清理关联台账记录（`db:costLedger:deleteByProject`）
-- **列表布局**：10 列表格（凭证号/日期/方向/分类/往来单位个人/渠道/金额/摘要/备注/操作），`table-fixed border-collapse` 线框连续，窄列定宽+宽列均分剩余空间不留白，列宽基于真实 Excel 数据（熊会对账775行）实测调优；工具栏「打印」按钮→新窗口打印（A4横版+底部收支汇总），「导出Excel」按钮→xlsx 导出（10列+列宽优化，按当前筛选结果）
+- **列表布局**：10 列表格（凭证号/日期/方向/分类/往来单位个人/渠道/金额/摘要/备注/操作），`table-fixed border-collapse` 线框连续；Ctrl+滚轮缩放（50-200%），默认110%，工具栏+/-按钮；汇总行独立加大字号深色；日期归一化为YYYY-MM-DD
 - **筛选系统**：7 列统一 Excel 风格搜索+勾选（`ColumnFilter.tsx`，Portal 渲染防遮挡，通用 CheckMeta 模式），搜索框实时过滤选项列表→勾选筛选（全选/清除），日期保留快捷按钮（本月/近3月/本年）勾选对应日期，分类筛选联动一级/二级切换按钮，多列 AND 组合，筛选汇总跟随结果
 - **表单子组件**：CategoryPicker（方向驱动+自定义分类+管理入口）/ ChannelInput（最近使用缓存+方向感知 placeholder）/ InvoiceLinker（发票搜索）/ FileUploader（延后补传+预览：图片弹窗大图查看，PDF等调用系统默认程序）；日期字段支持粘贴多种格式
 - **文件存储**：`uploads/<项目名>/成本台账/凭证/`
-- 核心文件：`CostLedger.tsx`, `CostLedgerDashboard.tsx`, `CostLedgerList.tsx`, `CostLedgerForm.tsx`, `ColumnFilter.tsx`, `CostLedgerAnalytics.tsx`, `CostLedgerTab.tsx`, `CostLedgerProjectDetail.tsx`, `CategoryPicker.tsx`, `CategoryManager.tsx`, `printExport.ts`（打印+导出Excel）, `useCostLedgerCategories.ts`, `cost-ledger.ts`（IPC）, `cost-ledger-categories-data.ts`（内置分类种子数据）
+- 核心文件：`CostLedger.tsx`, `CostLedgerDashboard.tsx`, `CostLedgerList.tsx`, `CostLedgerForm.tsx`, `ColumnFilter.tsx`, `CostLedgerAnalytics.tsx`, `CostLedgerTab.tsx`, `CostLedgerProjectDetail.tsx`, `CategoryPicker.tsx`, `CategoryManager.tsx`, `CostLedgerBatchBar.tsx`, `CostLedgerCompareModal.tsx`, `CostLedgerImportModal.tsx`, `printExport.ts`（打印+导出Excel）, `useCostLedgerCategories.ts`, `useCostLedgerBatches.ts`, `cost-ledger.ts`（IPC）, `cost-ledger-categories-data.ts`（内置分类种子数据）
 
 ### 其他模块
 - **仓库管理**：物料库 / 出入库记录 / 项目材料（整合材料管理）
@@ -385,6 +385,19 @@ Button(variants/sizes/iconOnly) / Input(status+leftSection/rightSection) / Modal
 | 表单 onChange 逐字段展开 `...prev` | 通用 `useForm` hook 批量处理 |
 | `catch (error: any)` 然后 `showToast(error?.message)` | `handleError(err).getUserMessage()` |
 | 页面组件在 App.tsx 顶层 `import` | `React.lazy(() => import('./components/XPage'))` |
+
+## 🕸️ Graphify 知识图谱
+
+`graphify-out/graph.json` 是项目的代码知识图谱（2754节点，4653边，222社区），AI 自动用于：
+- **社区定位**：按聚类锁定相关文件范围，避免全文扫描
+- **依赖查询**：通过边找调用链/依赖链
+- **中心节点**：快速识别核心模块（Icon()、CostLedger、Contracts 等）
+
+### 更新方式
+- **轻量更新（无需 API）**：`graphify update .`（AST + 依赖关系）
+- **完整重建（需 API Key）**：`graphify extract . --backend <key>`（含语义分析）
+- **检查更新**：`graphify check-update .`
+- 安装：`graphify 0.8.14`（全局 CLI）
 
 ## AI 辅助开发自检清单
 - [ ] 新增文件是否超过行数上限？

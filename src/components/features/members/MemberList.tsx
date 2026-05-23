@@ -5,7 +5,6 @@
  * @deprecated 此组件已废弃，工人管理模块已改用 LaborWorkerList
  */
 
-import React from 'react'
 import type { Member } from '@/types'
 import { MemberCard } from './MemberCard'
 import { EmptyState } from '@/components/ui/EmptyState'

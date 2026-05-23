@@ -1,0 +1,82 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`BankReceiptBatch > 快照匹配 1`] = `
+<div>
+  <div
+    class="space-y-6"
+  >
+    <div
+      class="flex items-center justify-between"
+    >
+      <h2
+        class="text-2xl font-bold text-gray-900"
+      >
+        银行回单批量解析
+      </h2>
+      <button
+        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+      >
+        返回
+      </button>
+    </div>
+    <div
+      class="
+          relative border-2 border-dashed rounded-lg p-12 text-center cursor-pointer
+          transition-colors duration-200
+          border-gray-300 bg-gray-50 hover:bg-gray-100
+        "
+    >
+      <input
+        accept=".jpg,.jpeg,.png,.pdf"
+        class="hidden"
+        multiple=""
+        type="file"
+      />
+      <div
+        class="space-y-4"
+      >
+        <div
+          class="text-6xl"
+        >
+          📄
+        </div>
+        <div>
+          <p
+            class="text-lg font-medium text-gray-900"
+          >
+            拖拽文件到此处，或 
+            <span
+              class="text-blue-600"
+            >
+              点击选择
+            </span>
+          </p>
+          <p
+            class="text-sm text-gray-500 mt-1"
+          >
+            支持 jpg、png、pdf 格式，可多选
+          </p>
+        </div>
+      </div>
+    </div>
+    <div
+      class="flex justify-end space-x-4"
+    >
+      <button
+        class="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+      >
+        取消
+      </button>
+      <button
+        class="
+            px-6 py-2 text-sm font-medium text-white rounded-md
+            bg-gray-400 cursor-not-allowed
+          "
+        disabled=""
+      >
+        开始解析
+      </button>
+    </div>
+  </div>
+</div>
+`;

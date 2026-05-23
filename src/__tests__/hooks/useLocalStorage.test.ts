@@ -1,5 +1,3 @@
-// @ts-nocheck
-import { describe, it, expect, afterEach } from 'vitest'
 import { renderHook, act, cleanup } from '@testing-library/react'
 import { useLocalStorage, useLocalStorageSync } from '../../hooks/useLocalStorage'
 
@@ -31,7 +29,7 @@ describe('useLocalStorage', () => {
   it('setValue 应支持对象', () => {
     const { result } = renderHook(() => useLocalStorage('obj-key', { a: 1 }))
 
-    act(() => { result.current[1]({ a: 2, b: 3 }) })
+    act(() => { result.current[1]({ a: 2, b: 3 } as any) })
     expect(result.current[0]).toEqual({ a: 2, b: 3 })
   })
 

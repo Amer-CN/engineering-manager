@@ -1,9 +1,8 @@
 import React, { useState } from 'react'
-import { PaymentRecord, InvoiceType, Project, Partner, IncomeContract, ExpenseContract, Invoice } from '@/types/electron'
+import { InvoiceType, Project, Partner, IncomeContract, ExpenseContract, Invoice } from '@/types/electron'
 import { formatMoney } from '@/utils/format'
 import { parseDateString } from '@/utils/date'
 import { motion } from 'framer-motion'
-import { Icon } from '../../ui/Icon'
 import { PaymentFileUpload } from './PaymentFileUpload'
 
 export interface PaymentFormData {

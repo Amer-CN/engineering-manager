@@ -13,10 +13,6 @@ import {
   educationLevels,
   ethnicities
 } from '../constants/member'
-import type {
-  WorkerType,
-  StaffRole
-} from '../constants/member'
 
 /**
  * 获取工人类型标签

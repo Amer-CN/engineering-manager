@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react'
-import type { CostLedgerCategory } from '@/types'
-import { getLevel1GroupsMerged, getLevel1ForCode, HIERARCHY_GROUP_NAMES } from './config'
+import { useState, useMemo, useEffect } from 'react'
+import type { CostLedgerCategory, CostLedgerMatchRule } from '@/types'
+import { getLevel1GroupsMerged, HIERARCHY_GROUP_NAMES } from './config'
 
 interface CategoryManagerProps {
   categories: CostLedgerCategory[]
@@ -19,11 +19,20 @@ type AddState =
 
 export function CategoryManager({ categories, onClose, onRefresh }: CategoryManagerProps) {
   const [tab, setTab] = useState<'expense' | 'income'>('expense')
+  const [viewRules, setViewRules] = useState(false)
   const [edit, setEdit] = useState<EditState>(null)
   const [add, setAdd] = useState<AddState>(null)
   const [error, setError] = useState('')
+  const [rules, setRules] = useState<CostLedgerMatchRule[]>([])
 
-  const api = (window as any).electronAPI
+  useEffect(() => {
+    const api = window.electronAPI
+    api?.getCostLedgerMatchRules?.().then((r: any) => {
+      if (r?.success) setRules(r.data || [])
+    })
+  }, [])
+
+  const api = window.electronAPI
   const filtered = categories.filter(c => c.direction === tab && c.isEnabled !== false)
   const customs = filtered.filter(c => !c.isBuiltin)
 
@@ -137,7 +146,7 @@ export function CategoryManager({ categories, onClose, onRefresh }: CategoryMana
         <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: cat.color }} />
         {isEditingL2 ? (
           <>
-            <input value={edit.name} onChange={e => setEdit({ ...edit, name: e.target.value })}
+            <input value={edit.name} onChange={e => setEdit(prev => prev && prev.type === 'l2' ? { ...prev, name: e.target.value } : prev)}
               className="flex-1 rounded border border-slate-200 px-2 py-0.5 text-xs" autoFocus />
             <input type="color" value={edit.color} onChange={e => setEdit({ ...edit, color: e.target.value })}
               className="h-5 w-6 rounded border border-slate-200 p-0 cursor-pointer" />
@@ -158,6 +167,7 @@ export function CategoryManager({ categories, onClose, onRefresh }: CategoryMana
     )
   }
 
+// @ts-ignore TS6133: tabLabel is declared but never read
   const tabLabel = tab === 'expense' ? '支出分类' : '收入分类'
 
   return (
@@ -172,21 +182,26 @@ export function CategoryManager({ categories, onClose, onRefresh }: CategoryMana
         {/* Tabs */}
         <div className="flex border-b border-slate-200">
           {(['expense', 'income'] as const).map(t => (
-            <button key={t} onClick={() => { setTab(t); clearAll() }}
+            <button key={t} onClick={() => { setViewRules(false); setTab(t); clearAll() }}
               className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
-                tab === t ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500 hover:text-slate-700'
+                !viewRules && tab === t ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500 hover:text-slate-700'
               }`}
             >
               {t === 'expense' ? '支出分类' : '收入分类'}
             </button>
           ))}
+          <button onClick={async () => { setViewRules(true); const api = window.electronAPI; const r = await api?.getCostLedgerMatchRules?.(); if (r?.success) setRules(r.data || []) }}
+            className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
+              viewRules ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >学习规则 ({rules.length})</button>
         </div>
 
-        {/* Body — two-level management for both tabs */}
+        {/* Body */}
         <div className="px-5 py-4 space-y-3 max-h-[440px] overflow-y-auto">
           {error && <p className="rounded bg-red-50 px-3 py-1.5 text-xs text-red-600">{error}</p>}
 
-          {mergedGroups.length > 0 && (
+          {!viewRules && mergedGroups.length > 0 && (
             <div className="space-y-2">
               {mergedGroups.map(group => {
                 const groupCats = filtered.filter(c => group.codes.includes(c.code))
@@ -200,7 +215,7 @@ export function CategoryManager({ categories, onClose, onRefresh }: CategoryMana
                     {isEditingL1 ? (
                       <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border-b border-slate-200">
                         <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: edit.color }} />
-                        <input value={edit.name} onChange={e => setEdit({ ...edit, name: e.target.value })}
+                        <input value={edit.name} onChange={e => setEdit(prev => prev && prev.type === 'l1' ? { ...prev, name: e.target.value } : prev)}
                           className="flex-1 rounded border border-slate-300 px-2 py-0.5 text-sm font-medium" autoFocus />
                         <input type="color" value={edit.color} onChange={e => setEdit({ ...edit, color: e.target.value })}
                           className="h-5 w-6 rounded border border-slate-200 p-0 cursor-pointer" />
@@ -231,7 +246,7 @@ export function CategoryManager({ categories, onClose, onRefresh }: CategoryMana
                     {/* Add level2 */}
                     {add?.type === 'l2' && add.group === group.name ? (
                       <div className="flex items-center gap-2 px-3 py-2 border-t border-slate-100 bg-blue-50/30">
-                        <input value={add.label} onChange={e => setAdd({ ...add, label: e.target.value })}
+                        <input value={add.label} onChange={e => setAdd(prev => prev && prev.type === 'l2' ? { ...prev, label: e.target.value } : prev)}
                           placeholder="二级分类名" className="flex-1 rounded border border-slate-200 px-2 py-1 text-xs" autoFocus />
                         <input type="color" value={add.color} onChange={e => setAdd({ ...add, color: e.target.value })}
                           className="h-5 w-6 rounded border border-slate-200 p-0 cursor-pointer" />
@@ -252,19 +267,60 @@ export function CategoryManager({ categories, onClose, onRefresh }: CategoryMana
             </div>
           )}
 
+          {/* ── 学习规则视图 ── */}
+          {viewRules && (
+            <div className="space-y-1">
+              {rules.length === 0 ? (
+                <p className="py-8 text-center text-sm text-slate-400">暂无学习规则</p>
+              ) : (
+                <div className="space-y-0.5">
+                  {rules.map((rule, i) => {
+                    const cat = categories.find(c => c.code === rule.category && c.direction === rule.direction)
+                    return (
+                      <div key={i} className="flex items-center gap-2 rounded-lg border border-slate-100 px-3 py-2 text-xs hover:bg-slate-50">
+                        <span className="font-mono text-slate-800 min-w-[80px]">{rule.keyword}</span>
+                        <span className="text-slate-300">→</span>
+                        <span className={`rounded px-1.5 py-0.5 font-medium ${rule.direction === 'expense' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                          {cat?.label || rule.category}
+                        </span>
+                        <span className="text-slate-300 ml-auto">命中 {rule.hitCount} 次</span>
+                        <button onClick={async () => {
+                          const api = window.electronAPI
+                          const remaining = rules.filter((_, j) => j !== i)
+                          const res = await api.saveCostLedgerMatchRules(remaining)
+                          if (res?.success) setRules(remaining)
+                        }} className="text-red-400 hover:text-red-600 hover:bg-red-50 rounded px-1 py-0.5">✕</button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              {rules.length > 0 && (
+                <button onClick={async () => {
+                  if (!confirm('确定清空所有学习规则？')) return
+                  const api = window.electronAPI
+                  const res = await api.saveCostLedgerMatchRules([])
+                  if (res?.success) setRules([])
+                }}
+                  className="mt-3 w-full rounded-lg border border-dashed border-red-200 px-3 py-2 text-xs text-red-400 hover:border-red-400 hover:text-red-600 transition-colors"
+                >清空所有学习规则</button>
+              )}
+            </div>
+          )}
+
           {/* Create level1 group */}
-          {add?.type === 'l1' ? (
+          {!viewRules && (add?.type === 'l1' ? (
             <div className="space-y-2 rounded-lg border border-blue-300 bg-blue-50/50 px-3 py-2.5">
               <div className="flex items-center gap-2">
                 <span className="text-[10px] text-slate-500 w-8">一级</span>
-                <input value={add.groupName} onChange={e => setAdd({ ...add, groupName: e.target.value })}
+                <input value={add.groupName} onChange={e => setAdd(prev => prev && prev.type === 'l1' ? { ...prev, groupName: e.target.value } : prev)}
                   placeholder="一级分类名" className="flex-1 rounded border border-slate-200 px-2 py-1 text-xs" autoFocus />
                 <input type="color" value={add.groupColor} onChange={e => setAdd({ ...add, groupColor: e.target.value })}
                   className="h-5 w-6 rounded border border-slate-200 p-0 cursor-pointer" />
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] text-slate-500 w-8">二级</span>
-                <input value={add.label} onChange={e => setAdd({ ...add, label: e.target.value })}
+                <input value={add.label} onChange={e => setAdd(prev => prev && prev.type === 'l1' ? { ...prev, label: e.target.value } : prev)}
                   placeholder="第一个二级分类名" className="flex-1 rounded border border-slate-200 px-2 py-1 text-xs" />
                 <input type="color" value={add.color} onChange={e => setAdd({ ...add, color: e.target.value })}
                   className="h-5 w-6 rounded border border-slate-200 p-0 cursor-pointer" />
@@ -279,7 +335,7 @@ export function CategoryManager({ categories, onClose, onRefresh }: CategoryMana
             >
               + 新建一级分类
             </button>
-          )}
+          ))}
         </div>
 
         {/* Footer */}

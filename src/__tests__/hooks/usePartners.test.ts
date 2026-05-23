@@ -1,12 +1,10 @@
-// @ts-nocheck
 /**
  * usePartners Hook 测试
  * 测试合作单位管理 CRUD
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 
-const mockPartners = [
+const mockPartners: any[] = [
   { id: 1, name: '供应商A', type: 'supplier', contactPerson: '张经理', phone: '13800000001' },
   { id: 2, name: '分包商B', type: 'subcontractor', contactPerson: '李经理', phone: '13800000002' },
 ]
@@ -45,7 +43,7 @@ describe('usePartners', () => {
     await act(async () => {
       const res = await result.current.create({ name: '新伙伴' })
       expect(res.success).toBe(true)
-      expect(res.data?.id).toBe(3)
+      expect((res as any).data?.id).toBe(3)
     })
   })
 

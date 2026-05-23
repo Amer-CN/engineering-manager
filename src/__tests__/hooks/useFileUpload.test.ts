@@ -1,9 +1,7 @@
-// @ts-nocheck
 /**
  * useFileUpload Hook 测试
  * 测试文件上传、验证、拖拽处理
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 
 // Mock FileReader
@@ -171,7 +169,7 @@ describe('useFileUpload', () => {
     const { result } = renderHook(() => useFileUpload())
     const mockClick = vi.fn()
     // Set up the ref's current
-    result.current.inputRef.current = { click: mockClick } as any
+    ;(result.current.inputRef as any).current = { click: mockClick } as any
     act(() => { result.current.openFileDialog() })
     expect(mockClick).toHaveBeenCalled()
   })

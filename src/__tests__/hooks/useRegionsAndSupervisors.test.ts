@@ -1,5 +1,3 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -83,7 +81,7 @@ describe('useRegions', () => {
     })
 
     await act(async () => {
-      const res = await result.current.create({ name: '云南' })
+      const res = await result.current.create({ name: '云南' } as any)
       expect(res.success).toBe(true)
     })
 
@@ -106,7 +104,7 @@ describe('useRegions', () => {
     })
 
     await act(async () => {
-      const res = await result.current.create({ name: '云南' })
+      const res = await result.current.create({ name: '云南' } as any)
       expect(res.success).toBe(false)
     })
   })

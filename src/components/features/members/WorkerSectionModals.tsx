@@ -1,6 +1,9 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { motion } from 'framer-motion'
-import { Icon } from '../../ui/Icon'; import type { Member, WorkerTeam, WorkerType, WorkerStatus } from '@/types'
+import { Icon } from '../../ui/Icon'; import type { Member, WorkerTeam } from '@/types'
+import { defaultLeaveFormData } from './LeaveModal'
+export type { LeaveFormData } from './LeaveModal'
+export { defaultLeaveFormData }
 export interface WorkerSectionProps {
     members: Member[]
     projects: Array<{ id: number; name: string }>
@@ -47,25 +50,17 @@ export const defaultTransferFormData: TransferFormData = {
   reason: ''
 }
 
-export interface LeaveFormData {
-  actualLeaveDate: string
-  remarks: string
-}
-
-export const defaultLeaveFormData: LeaveFormData = {
-  actualLeaveDate: new Date().toISOString().split('T')[0],
-  remarks: ''
-}
-
 interface TeamCardProps {
   team: WorkerTeam
   workerCount: number
   onEdit: () => void
   onDelete: () => void
   onManageWorkers?: (teamId: number, teamName: string, projectId: number) => void
+  onTeamWages?: (teamId: number, teamName: string, projectId: number, projectName: string) => void
 }
 
-export function TeamCard({ team, workerCount, onEdit, onDelete, onManageWorkers }: TeamCardProps) {
+export function TeamCard({ team, workerCount, onEdit, onDelete, onManageWorkers, onTeamWages }: TeamCardProps) {
+  const projectName = (team as any).projectName || ''
   return (
     <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:border-amber-300 transition-colors">
       <div className="flex items-center justify-between mb-2">
@@ -88,6 +83,14 @@ export function TeamCard({ team, workerCount, onEdit, onDelete, onManageWorkers 
             className="flex-1 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors"
           >
             管理工人
+          </button>
+        )}
+        {onTeamWages && (
+          <button
+            onClick={() => onTeamWages(team.id, team.name, team.projectId, projectName)}
+            className="flex-1 px-3 py-1.5 text-sm text-green-600 hover:bg-green-50 rounded transition-colors"
+          >
+            工资汇总
           </button>
         )}
         <button
@@ -128,9 +131,11 @@ export function TeamFormModal({
   onSubmit,
   onClose
 }: TeamFormModalProps) {
-  // 过滤可用的班组长
+  // 过滤可用的班组长：只能从本班组工人中选
   const availableLeaders = workers.filter(
-    w => w.status !== 'left' && (!formData.projectId || w.projectId === formData.projectId)
+    w => w.status !== 'left'
+      && (!formData.projectId || w.projectId === formData.projectId)
+      && (editingTeam ? w.teamId === editingTeam.id : true)
   )
 
   if (!visible) return null
@@ -152,7 +157,7 @@ export function TeamFormModal({
               type="text"
               value={formData.name}
               onChange={e => onChange({ name: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
               placeholder="如：钢筋班、木工班"
               required
             />
@@ -163,7 +168,7 @@ export function TeamFormModal({
             <select
               value={formData.projectId || ''}
               onChange={e => onChange({ projectId: e.target.value ? Number(e.target.value) : undefined })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
               required
             >
               <option value="">请选择项目</option>
@@ -178,7 +183,7 @@ export function TeamFormModal({
             <select
               value={formData.leaderId ?? ''}
               onChange={e => onChange({ leaderId: e.target.value ? Number(e.target.value) : null })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
             >
               <option value="">暂无班组长</option>
               {availableLeaders.map(w => (
@@ -303,7 +308,7 @@ export function TransferModal({
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              className="px-6 py-2 bg-primary-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
             >
               确认调组
             </button>
@@ -314,82 +319,5 @@ export function TransferModal({
   )
 }
 
-interface LeaveModalProps {
-  visible: boolean
-  worker: Member | null
-  formData: LeaveFormData
-  onChange: (data: Partial<LeaveFormData>) => void
-  onSubmit: (e: React.FormEvent) => void
-  onClose: () => void
-}
-
-export function LeaveModal({
-  visible,
-  worker,
-  formData,
-  onChange,
-  onSubmit,
-  onClose
-}: LeaveModalProps) {
-  if (!visible || !worker) return null
-
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <motion.div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md mx-4" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }}>
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-100">工人离场</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><Icon name="X" size={16} /></button>
-        </div>
-
-        <form onSubmit={onSubmit} className="p-6">
-          <div className="mb-4 p-3 bg-slate-50 rounded-lg">
-            <div className="font-medium text-slate-800">{worker.name}</div>
-            <div className="text-sm text-slate-500">
-              进场日期: {worker.entryDate || '未知'}
-            </div>
-          </div>
-
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">实际离场日期 *</label>
-            <input
-              type="date"
-              value={formData.actualLeaveDate}
-              onChange={e => onChange({ actualLeaveDate: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500"
-              required
-            />
-          </div>
-
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">备注（离场原因等？</label>
-            <textarea
-              value={formData.remarks}
-              onChange={e => onChange({ remarks: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500"
-              rows={3}
-              placeholder="如：项目完工、个人原因等"
-            />
-          </div>
-
-          <div className="flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-6 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              取消
-            </button>
-            <button
-              type="submit"
-              className="px-6 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition-colors"
-            >
-              确认离场
-            </button>
-          </div>
-        </form>
-      </motion.div>
-    </div>
-  )
-}
 
 // WorkerSection 组件

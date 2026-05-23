@@ -1,7 +1,6 @@
 import React from 'react'
-import type { Member, WorkerType } from '@/types'
-import { Icon } from '../../ui/Icon'
-import { workerTypes, calculateAge, getWorkerTypeLabel, type WorkerFormData } from './memberFormTypes'
+import type { Member } from '@/types'
+import { calculateAge, inferGenderFromIdCard, type WorkerFormData } from './memberFormTypes'
 import { IdCardUploadArea, FileUploadArea as _FileUploadArea, SmallFileUpload as _SmallFileUpload } from './FormUploadWidgets'
 const FileUploadArea = _FileUploadArea as any
 const SmallFileUpload = _SmallFileUpload as any
@@ -29,6 +28,14 @@ interface WorkerFormProps {
 export default function WorkerForm({ formData, setFormData, projects, workerTeams, editingMember, ocrLoading, dragOverField, onDragOver, onDragLeave, onDrop, onFileChange, onDeleteFile, refs }: WorkerFormProps) {
   const availableTeams = workerTeams.filter(t => !formData.projectId || t.projectId === formData.projectId)
 
+  // 身份证号变化时自动推断性别
+  React.useEffect(() => {
+    const gender = inferGenderFromIdCard(formData.idCard)
+    if (gender && formData.gender !== gender) {
+      setFormData(prev => ({ ...prev, gender }))
+    }
+  }, [formData.idCard])
+
   return (
     <>
       <div className="grid grid-cols-2 gap-4 mb-4">
@@ -43,14 +50,12 @@ export default function WorkerForm({ formData, setFormData, projects, workerTeam
             className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">工种 *</label>
-          <select value={formData.workerType} onChange={e => setFormData(prev => ({ ...prev, workerType: e.target.value as WorkerType }))}
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500">
-            {workerTypes.map(type => <option key={type.value} value={type.value}>{type.label}</option>)}
-          </select>
+          <label className="block text-sm font-medium text-slate-700 mb-1">工种</label>
+          <input type="text" value={formData.workerType} onChange={e => setFormData(prev => ({ ...prev, workerType: e.target.value }))}
+            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500" placeholder="如：钢筋工、木工" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">所属项目*</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">所属项目</label>
           <select value={formData.projectId || ''}
             onChange={e => { const newProjectId = e.target.value ? Number(e.target.value) : undefined; setFormData(prev => ({ ...prev, projectId: newProjectId, teamId: undefined })) }}
             className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500" required>
@@ -59,13 +64,13 @@ export default function WorkerForm({ formData, setFormData, projects, workerTeam
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">日工资*</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">日工资</label>
           <input type="number" value={formData.dailyWage || ''}
             onChange={e => setFormData(prev => ({ ...prev, dailyWage: e.target.value ? Number(e.target.value) : undefined }))}
             className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500" placeholder="0.00" required />
         </div>
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-slate-700 mb-1">所属班组*</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">所属班组</label>
           <select value={formData.teamId || ''}
             onChange={e => setFormData(prev => ({ ...prev, teamId: e.target.value ? Number(e.target.value) : undefined }))}
             className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 ${!formData.projectId ? 'border-slate-200 bg-slate-100 cursor-not-allowed' : 'border-slate-300'}`}
@@ -80,7 +85,11 @@ export default function WorkerForm({ formData, setFormData, projects, workerTeam
 
       <div className="mb-4">
         <label className="block text-sm font-medium text-slate-700 mb-2">身份证号</label>
-        <input type="text" value={formData.idCard} onChange={e => setFormData(prev => ({ ...prev, idCard: e.target.value }))}
+        <input type="text" value={formData.idCard} onChange={e => {
+          const v = e.target.value
+          const gender = inferGenderFromIdCard(v)
+          setFormData(prev => ({ ...prev, idCard: v, gender: gender || prev.gender }))
+        }}
           className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500" placeholder="18位身份证号" maxLength={18} />
         <div className="grid grid-cols-2 gap-4 mt-4">
           <IdCardUploadArea label={ocrLoading ? '人像面 - 识别中..' : '人像面 - 支持拖拽/粘贴上传'} image={formData.idCardFront} field="idCardFront"
@@ -120,7 +129,7 @@ export default function WorkerForm({ formData, setFormData, projects, workerTeam
         <FileUploadArea file={formData.contractFile} fileType={formData.contractFileType} field="contractFile"
           dragOverField={dragOverField} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
           onFileChange={onFileChange as any} onDelete={() => onDeleteFile('contractFile', setFormData as any)}
-          inputRef={refs.contractInputRef} onInputChange={e => (onFileChange as any)(e, 'contractFile', setFormData, false, refs.contractInputRef)} />
+          inputRef={refs.contractInputRef} onInputChange={((e: any) => (onFileChange as any)(e, 'contractFile', setFormData, false, refs.contractInputRef))} />
       </div>
 
       <div className="grid grid-cols-2 gap-4 mb-4">
@@ -133,10 +142,10 @@ export default function WorkerForm({ formData, setFormData, projects, workerTeam
       </div>
 
       <div className="grid grid-cols-2 gap-4 mb-4">
-        <div><label className="block text-sm font-medium text-slate-700 mb-1">工资卡号</label>
+        <div><label className="block text-sm font-medium text-slate-700 mb-1">银行卡号</label>
           <input type="text" value={formData.wageBankAccount} onChange={e => setFormData(prev => ({ ...prev, wageBankAccount: e.target.value }))}
             className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500" /></div>
-        <div><label className="block text-sm font-medium text-slate-700 mb-1">工资开户行</label>
+        <div><label className="block text-sm font-medium text-slate-700 mb-1">开户行</label>
           <input type="text" value={formData.wageBankName} onChange={e => setFormData(prev => ({ ...prev, wageBankName: e.target.value }))}
             className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500" placeholder="如：XX银行XX支行" /></div>
       </div>
@@ -154,15 +163,15 @@ export default function WorkerForm({ formData, setFormData, projects, workerTeam
         <SmallFileUpload label="安全培训记录" file={formData.safetyTrainingFile} field="safetyTrainingFile"
           dragOverField={dragOverField} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
           onFileChange={onFileChange as any} onDelete={() => onDeleteFile('safetyTrainingFile', setFormData)}
-          inputRef={refs.safetyInputRef} onInputChange={e => (onFileChange as any)(e, 'safetyTrainingFile', setFormData, false, refs.safetyInputRef)} />
+          inputRef={refs.safetyInputRef} onInputChange={((e: any) => (onFileChange as any)(e, 'safetyTrainingFile', setFormData, false, refs.safetyInputRef))} />
         <SmallFileUpload label="健康报告" file={formData.healthReportFile} field="healthReportFile"
           dragOverField={dragOverField} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
           onFileChange={onFileChange as any} onDelete={() => onDeleteFile('healthReportFile', setFormData)}
-          inputRef={refs.healthInputRef} onInputChange={e => (onFileChange as any)(e, 'healthReportFile', setFormData, false, refs.healthInputRef)} />
+          inputRef={refs.healthInputRef} onInputChange={((e: any) => (onFileChange as any)(e, 'healthReportFile', setFormData, false, refs.healthInputRef))} />
         <SmallFileUpload label="特种作业证" file={formData.specialCertificateFile} field="specialCertificateFile"
           dragOverField={dragOverField} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
           onFileChange={onFileChange as any} onDelete={() => onDeleteFile('specialCertificateFile', setFormData)}
-          inputRef={refs.certInputRef} onInputChange={e => (onFileChange as any)(e, 'specialCertificateFile', setFormData, false, refs.certInputRef)} />
+          inputRef={refs.certInputRef} onInputChange={((e: any) => (onFileChange as any)(e, 'specialCertificateFile', setFormData, false, refs.certInputRef))} />
       </div>
     </>
   )

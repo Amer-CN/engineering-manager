@@ -1,0 +1,183 @@
+src/App.tsx(5,10): error TS6133: 'usePermission' is declared but its value is never read.
+src/components/AuditLogs.tsx(3,26): error TS6133: 'AuditLevel' is declared but its value is never read.
+src/components/AuditLogs.tsx(4,19): error TS6133: 'getAuditStats' is declared but its value is never read.
+src/components/AuditLogs.tsx(60,9): error TS6133: 'handleExport' is declared but its value is never read.
+src/components/AuditLogs.tsx(66,9): error TS6133: 'handleClearOld' is declared but its value is never read.
+src/components/ContractDashboard.tsx(9,7): error TS6133: 'CHART_COLORS' is declared but its value is never read.
+src/components/ContractPage.tsx(3,38): error TS6133: 'useRef' is declared but its value is never read.
+src/components/ContractPage.tsx(4,15): error TS6196: 'IncomeContract' is declared but never used.
+src/components/ContractPage.tsx(4,31): error TS6196: 'ExpenseContract' is declared but never used.
+src/components/ContractPage.tsx(4,110): error TS6196: 'TemplateCategory' is declared but never used.
+src/components/ContractPage.tsx(6,10): error TS6133: 'logCreate' is declared but its value is never read.
+src/components/ContractPage.tsx(6,21): error TS6133: 'logUpdate' is declared but its value is never read.
+src/components/ContractPage.tsx(10,1): error TS6133: 'PartnerSelect' is declared but its value is never read.
+src/components/ContractPage.tsx(120,9): error TS6133: 'getPaymentLabel' is declared but its value is never read.
+src/components/Contracts.tsx(7,1): error TS6192: All imports in import declaration are unused.
+src/components/ContractTemplateFormModal.tsx(1,17): error TS6133: 'useRef' is declared but its value is never read.
+src/components/ContractTemplates.tsx(17,10): error TS6133: 'projects' is declared but its value is never read.
+src/components/ContractTemplates.tsx(18,10): error TS6133: 'partners' is declared but its value is never read.
+src/components/DataTable.tsx(51,20): error TS6133: 'setViewMode' is declared but its value is never read.
+src/components/DrawingsUploadForm.tsx(5,8): error TS6133: 'React' is declared but its value is never read.
+src/components/features/contracts/contractConfig.ts(1,85): error TS6196: 'Partner' is declared but never used.
+src/components/features/contracts/contractConfig.ts(1,94): error TS6196: 'Project' is declared but never used.
+src/components/features/contracts/ContractFormModal.tsx(10,39): error TS6196: 'TypeConfig' is declared but never used.
+src/components/features/contracts/ContractFormModal.tsx(11,10): error TS6133: 'getStatusLabel' is declared but its value is never read.
+src/components/features/contracts/ContractFormModal.tsx(11,26): error TS6133: 'getStatusColor' is declared but its value is never read.
+src/components/features/costLedger/CategoryManager.tsx(3,33): error TS6133: 'getLevel1ForCode' is declared but its value is never read.
+src/components/features/costLedger/CategoryManager.tsx(170,9): error TS6133: 'tabLabel' is declared but its value is never read.
+src/components/features/costLedger/CostLedgerImportModal.tsx(11,1): error TS6192: All imports in import declaration are unused.
+src/components/features/costLedger/CostLedgerImportModal.tsx(20,7): error TS6133: 'IMPORT_FIELDS' is declared but its value is never read.
+src/components/features/costLedger/CostLedgerImportModal.tsx(189,9): error TS6133: 'categorySummary' is declared but its value is never read.
+src/components/features/costLedger/CostLedgerProjectDetail.tsx(6,1): error TS6133: 'useCostLedgerCategories' is declared but its value is never read.
+src/components/features/costLedger/CostLedgerProjectDetail.tsx(8,1): error TS6133: 'getCategoryLabel' is declared but its value is never read.
+src/components/features/costLedger/CostLedgerProjectDetail.tsx(9,1): error TS6133: 'formatMoney' is declared but its value is never read.
+src/components/features/costLedger/importComponents/ImportMappingStep.tsx(5,8): error TS6133: 'React' is declared but its value is never read.
+src/components/features/costLedger/importComponents/ImportMappingStep.tsx(128,21): error TS6133: 'currentCat' is declared but its value is never read.
+src/components/features/hr/AttendanceTimeline.tsx(4,1): error TS6133: 'Button' is declared but its value is never read.
+src/components/features/hr/AttendanceTimeline.tsx(7,36): error TS6133: 'summaryDot' is declared but its value is never read.
+src/components/features/hr/AttendanceTimeline.tsx(7,48): error TS6133: 'STATUS_META' is declared but its value is never read.
+src/components/features/hr/AttendanceTimeline.tsx(8,15): error TS6196: 'DayStatus' is declared but never used.
+src/components/features/hr/DepartmentManager.tsx(1,38): error TS6133: 'useCallback' is declared but its value is never read.
+src/components/features/hr/DepartmentManager.tsx(3,1): error TS6133: 'Icon' is declared but its value is never read.
+src/components/features/hr/DepartmentManager.tsx(5,1): error TS6133: 'Modal' is declared but its value is never read.
+src/components/features/hr/StaffList.tsx(6,32): error TS6133: 'logDelete' is declared but its value is never read.
+src/components/features/hr/StaffList.tsx(37,19): error TS6133: 'setOcrMode' is declared but its value is never read.
+src/components/features/hr/StaffPayroll.tsx(2,1): error TS6133: 'Icon' is declared but its value is never read.
+src/components/features/hr/StaffPayroll.tsx(13,3): error TS6133: 'computeWorkDays' is declared but its value is never read.
+src/components/features/hr/StaffPayroll.tsx(53,9): error TS6133: 'workDays' is declared but its value is never read.
+src/components/features/hr/StaffPayrollTable.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/components/features/hr/StaffPayrollTable.tsx(23,9): error TS6133: 'getDeptName' is declared but its value is never read.
+src/components/features/invoices/InvoiceList.tsx(5,17): error TS6133: 'useState' is declared but its value is never read.
+src/components/features/invoices/InvoiceList.tsx(6,60): error TS6133: 'Project' is declared but its value is never read.
+src/components/features/invoices/PaymentForm.tsx(2,10): error TS6133: 'PaymentRecord' is declared but its value is never read.
+src/components/features/invoices/PaymentForm.tsx(6,1): error TS6133: 'Icon' is declared but its value is never read.
+src/components/features/invoices/PaymentList.tsx(6,25): error TS6133: 'Invoice' is declared but its value is never read.
+src/components/features/labor/LaborWorkerFilterPopup.tsx(5,28): error TS6133: 'useRef' is declared but its value is never read.
+src/components/features/labor/TeamWageModal.tsx(3,8): error TS6133: 'React' is declared but its value is never read.
+src/components/features/labor/WorkerWageHistoryModal.tsx(3,8): error TS6133: 'React' is declared but its value is never read.
+src/components/features/labor/WorkerWageHistoryModal.tsx(4,1): error TS6133: 'Icon' is declared but its value is never read.
+src/components/features/labor/WorkerWageModal.tsx(3,8): error TS6133: 'React' is declared but its value is never read.
+src/components/features/members/MemberCard.tsx(8,1): error TS6133: 'React' is declared but its value is never read.
+src/components/features/members/MemberDetail.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/components/features/members/MemberFilters.tsx(7,1): error TS6133: 'React' is declared but its value is never read.
+src/components/features/members/MemberFilters.tsx(8,15): error TS6196: 'Member' is declared but never used.
+src/components/features/members/memberFormTypes.ts(1,23): error TS6196: 'WorkerType' is declared but never used.
+src/components/features/members/MemberList.tsx(8,1): error TS6133: 'React' is declared but its value is never read.
+src/components/features/members/StaffManagementTab.tsx(1,1): error TS6133: 'React' is declared but its value is never read.
+src/components/features/members/TeamWorkerModal.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/components/features/members/useMemberOperations.ts(1,23): error TS6196: 'WorkerTeam' is declared but never used.
+src/components/features/members/useMemberOperations.ts(50,11): error TS6133: 'staffData' is declared but its value is never read.
+src/components/features/members/useWorkerImport.ts(222,10): error TS6133: 'resolveWorkerType' is declared but its value is never read.
+src/components/features/members/WorkerForm.tsx(2,23): error TS6196: 'WorkerType' is declared but never used.
+src/components/features/members/WorkerForm.tsx(3,1): error TS6133: 'Icon' is declared but its value is never read.
+src/components/features/members/WorkerForm.tsx(4,10): error TS6133: 'workerTypes' is declared but its value is never read.
+src/components/features/members/WorkerForm.tsx(4,37): error TS6133: 'getWorkerTypeLabel' is declared but its value is never read.
+src/components/features/members/WorkerImportModal.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/components/features/members/WorkerImportModal.tsx(1,27): error TS6133: 'useMemo' is declared but its value is never read.
+src/components/features/members/WorkerImportModal.tsx(2,18): error TS6133: 'AnimatePresence' is declared but its value is never read.
+src/components/features/members/WorkerImportModal.tsx(68,9): error TS6133: 'requiredFields' is declared but its value is never read.
+src/components/features/members/WorkerSection.tsx(4,8): error TS6133: 'React' is declared but its value is never read.
+src/components/features/members/WorkerSection.tsx(7,15): error TS6196: 'Member' is declared but never used.
+src/components/features/members/WorkerSection.tsx(11,43): error TS6133: 'LeaveFormData' is declared but its value is never read.
+src/components/features/members/WorkerSection.tsx(11,58): error TS6133: 'defaultLeaveFormData' is declared but its value is never read.
+src/components/features/members/WorkerSectionModals.tsx(1,17): error TS6133: 'useState' is declared but its value is never read.
+src/components/features/members/WorkerSectionModals.tsx(3,73): error TS6196: 'WorkerType' is declared but never used.
+src/components/features/members/WorkerSectionModals.tsx(3,85): error TS6196: 'WorkerStatus' is declared but never used.
+src/components/features/members/WorkerSectionModals.tsx(4,10): error TS6133: 'LeaveModal' is declared but its value is never read.
+src/components/features/members/WorkerSectionModals.tsx(4,22): error TS6133: 'LeaveFormData' is declared but its value is never read.
+src/components/features/partners/PartnerForm.tsx(4,10): error TS6133: 'validateCreditCode' is declared but its value is never read.
+src/components/features/partners/PartnerForm.tsx(4,30): error TS6133: 'isOnline' is declared but its value is never read.
+src/components/features/partners/PartnerForm.tsx(4,40): error TS6133: 'queryCompanyByCreditCode' is declared but its value is never read.
+src/components/features/partners/PartnerForm.tsx(5,1): error TS6133: 'Icon' is declared but its value is never read.
+src/components/features/partners/PartnerSelect.tsx(8,8): error TS6133: 'React' is declared but its value is never read.
+src/components/features/partners/PartnerSelect.tsx(10,1): error TS6133: 'Badge' is declared but its value is never read.
+src/components/features/projects/ProjectCard.tsx(5,1): error TS6133: 'React' is declared but its value is never read.
+src/components/features/projects/ProjectCommandCenter.tsx(24,7): error TS6133: 'CHART_COLORS' is declared but its value is never read.
+src/components/features/projects/ProjectDetail.tsx(6,8): error TS6133: 'React' is declared but its value is never read.
+src/components/features/projects/ProjectDetailTabs.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/components/features/projects/ProjectDetailTabs.tsx(189,9): error TS6133: 'pastStaff' is declared but its value is never read.
+src/components/features/projects/ProjectFilters.tsx(4,1): error TS6133: 'React' is declared but its value is never read.
+src/components/features/projects/ProjectList.tsx(4,1): error TS6133: 'React' is declared but its value is never read.
+src/components/features/settlement/SettlementDashboard.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/components/features/settlement/SettlementForm.tsx(4,1): error TS6133: 'formatMoney' is declared but its value is never read.
+src/components/features/settlement/SettlementForm.tsx(106,9): error TS6133: 'excelInputRef' is declared but its value is never read.
+src/components/features/settlement/SettlementImportModal.tsx(56,9): error TS6133: 'handleFile' is declared but its value is never read.
+src/components/features/settlement/SettlementPrintTemplate.tsx(3,1): error TS6133: 'Icon' is declared but its value is never read.
+src/components/features/settlement/SettlementProjectCard.tsx(1,1): error TS6133: 'React' is declared but its value is never read.
+src/components/features/settlement/SettlementProjectCard.tsx(2,1): error TS6133: 'SettlementData' is declared but its value is never read.
+src/components/features/settlement/SettlementProjectDetail.tsx(2,102): error TS6133: 'TemplateCategory' is declared but its value is never read.
+src/components/features/settlement/SettlementProjectDetail.tsx(7,1): error TS6133: 'statusConfig' is declared but its value is never read.
+src/components/features/templates/config.tsx(1,1): error TS6133: 'React' is declared but its value is never read.
+src/components/features/templates/TemplateCard.tsx(1,1): error TS6133: 'React' is declared but its value is never read.
+src/components/features/templates/TemplateDashboard.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/components/features/templates/TemplateGenerate.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/components/features/templates/TemplateList.tsx(1,1): error TS6192: All imports in import declaration are unused.
+src/components/features/templates/TemplatePreview.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/components/features/templates/TemplateSelectorModal.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/components/features/wages/AttendanceTab.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/components/features/wages/FileImportDialog.tsx(1,27): error TS6133: 'useRef' is declared but its value is never read.
+src/components/features/wages/WageCycleDetail.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/components/features/wages/WageDetailTab.tsx(6,8): error TS6133: 'React' is declared but its value is never read.
+src/components/features/wages/WageDetailTab.tsx(6,47): error TS6133: 'useCallback' is declared but its value is never read.
+src/components/features/wages/WageDetailTab.tsx(114,9): error TS6133: 'allSelected' is declared but its value is never read.
+src/components/features/wages/WageDetailTab.tsx(122,9): error TS6133: 'header' is declared but its value is never read.
+src/components/features/wages/WageDetailTable.tsx(1,1): error TS6192: All imports in import declaration are unused.
+src/components/features/wages/WageDetailTable.tsx(2,1): error TS6133: 'Icon' is declared but its value is never read.
+src/components/features/wages/WageDetailTable.tsx(3,1): error TS6133: 'WageRecord' is declared but its value is never read.
+src/components/features/wages/WageProjectCard.tsx(1,1): error TS6133: 'React' is declared but its value is never read.
+src/components/features/wages/WageProjectList.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/components/features/wages/WageRecordsTab.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/components/features/wages/WageRecordsTab.tsx(56,9): error TS6133: 'effectiveYear' is declared but its value is never read.
+src/components/features/wages/WageStatsTab.tsx(1,1): error TS6133: 'React' is declared but its value is never read.
+src/components/features/wages/WageSummaryTab.tsx(3,8): error TS6133: 'React' is declared but its value is never read.
+src/components/HRManagement.tsx(1,27): error TS6133: 'useEffect' is declared but its value is never read.
+src/components/HRManagement.tsx(4,1): error TS6133: 'Department' is declared but its value is never read.
+src/components/Inventory.tsx(19,9): error TS6133: 'showToast' is declared but its value is never read.
+src/components/Invoices.tsx(4,65): error TS6133: 'exportPaymentList' is declared but its value is never read.
+src/components/LaborManagement.tsx(65,10): error TS6133: 'workerFormData' is declared but its value is never read.
+src/components/LaborManagement.tsx(67,9): error TS6133: 'resetWorkerForm' is declared but its value is never read.
+src/components/LaborManagement.tsx(71,9): error TS6133: 'handleEditWorker' is declared but its value is never read.
+src/components/Members.tsx(4,35): error TS6196: 'WorkerType' is declared but never used.
+src/components/Members.tsx(8,1): error TS6192: All imports in import declaration are unused.
+src/components/Members.tsx(27,22): error TS6133: 'workerTypes' is declared but its value is never read.
+src/components/Members.tsx(42,10): error TS6133: 'getRoleIcon' is declared but its value is never read.
+src/components/Members.tsx(55,10): error TS6133: 'workerSubTab' is declared but its value is never read.
+src/components/Members.tsx(55,24): error TS6133: 'setWorkerSubTab' is declared but its value is never read.
+src/components/Members.tsx(79,25): error TS6133: 'setFilterProject' is declared but its value is never read.
+src/components/Members.tsx(80,22): error TS6133: 'setFilterTeam' is declared but its value is never read.
+src/components/Members.tsx(93,10): error TS6133: 'dragOverField' is declared but its value is never read.
+src/components/Members.tsx(93,25): error TS6133: 'setDragOverField' is declared but its value is never read.
+src/components/Members.tsx(94,10): error TS6133: 'activeDropZone' is declared but its value is never read.
+src/components/Members.tsx(94,26): error TS6133: 'setActiveDropZone' is declared but its value is never read.
+src/components/Members.tsx(240,20): error TS6133: 'LaborConfirmDialog' is declared but its value is never read.
+src/components/SnapshotsTab.tsx(7,1): error TS6133: 'motion' is declared but its value is never read.
+src/components/ui/Pagination/Pagination.tsx(1,1): error TS6133: 'React' is declared but its value is never read.
+src/components/ui/ProgressBar/ProgressBar.tsx(1,1): error TS6133: 'React' is declared but its value is never read.
+src/components/ui/Tabs/Tabs.tsx(1,1): error TS6133: 'React' is declared but its value is never read.
+src/components/ui/Toast/ToastProvider.tsx(1,44): error TS6133: 'useCallback' is declared but its value is never read.
+src/components/Users.tsx(5,25): error TS6133: 'RequireAdmin' is declared but its value is never read.
+src/components/Users.tsx(8,26): error TS6133: 'SYSTEM_ROLES' is declared but its value is never read.
+src/components/Users.tsx(8,40): error TS6133: 'RESOURCE_LABELS' is declared but its value is never read.
+src/components/Users.tsx(8,57): error TS6133: 'ACTION_LABELS' is declared but its value is never read.
+src/components/Users.tsx(9,1): error TS6192: All imports in import declaration are unused.
+src/components/Users.tsx(31,11): error TS6133: 'can' is declared but its value is never read.
+src/components/WageManagement.tsx(7,8): error TS6133: 'React' is declared but its value is never read.
+src/components/WageManagement.tsx(9,1): error TS6192: All imports in import declaration are unused.
+src/hooks/AuthContext.tsx(5,8): error TS6133: 'React' is declared but its value is never read.
+src/hooks/useAsync.ts(8,31): error TS6133: 'VoidResult' is declared but its value is never read.
+src/hooks/useFileUpload.ts(1,41): error TS6133: 'useEffect' is declared but its value is never read.
+src/hooks/useFileUpload.ts(2,29): error TS6196: 'Toast' is declared but never used.
+src/hooks/useInvoices.ts(8,52): error TS6196: 'PaymentRecord' is declared but never used.
+src/hooks/useLocalStorage.ts(117,10): error TS6133: 'error' is declared but its value is never read.
+src/hooks/useMembers.ts(8,61): error TS6196: 'WorkerTeam' is declared but never used.
+src/hooks/useMembers.ts(8,73): error TS6196: 'WorkerTransferRecord' is declared but never used.
+src/hooks/useMembers.ts(9,43): error TS6133: 'isSuccess' is declared but its value is never read.
+src/hooks/usePagination.ts(78,11): error TS6133: 'paginatedItems' is declared but its value is never read.
+src/hooks/usePartners.ts(8,24): error TS6196: 'PartnerCategory' is declared but never used.
+src/hooks/usePartners.ts(8,41): error TS6196: 'Region' is declared but never used.
+src/hooks/usePartners.ts(8,49): error TS6196: 'Supervisor' is declared but never used.
+src/hooks/usePartners.ts(8,61): error TS6196: 'SupervisorCategory' is declared but never used.
+src/hooks/useProjects.ts(4,43): error TS6133: 'isSuccess' is declared but its value is never read.
+src/hooks/useWorkerTeams.ts(2,15): error TS6196: 'Member' is declared but never used.
+src/utils/iconMap.ts(3,41): error TS6133: 'Bookmark' is declared but its value is never read.
+src/utils/member.ts(16,1): error TS6192: All imports in import declaration are unused.

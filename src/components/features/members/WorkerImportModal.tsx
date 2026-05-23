@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useState } from 'react'
+import { motion } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
 import {
   WORKER_IMPORT_FIELDS, type ImportState, type ImportProgress, type ImportResult,
@@ -65,6 +65,7 @@ export function WorkerImportModal({
     return { valid: errors.length === 0, errors }
   }
 
+// @ts-ignore TS6133: requiredFields is declared but never read
   const requiredFields = WORKER_IMPORT_FIELDS.filter(f => f.required)
 
   return (
@@ -208,7 +209,7 @@ export function WorkerImportModal({
               <div className="w-full max-w-md">
                 <div className="bg-slate-100 dark:bg-slate-700 rounded-full h-3 overflow-hidden">
                   <motion.div
-                    className="bg-blue-600 h-full rounded-full"
+                    className="bg-primary-600 h-full rounded-full"
                     initial={{ width: 0 }}
                     animate={{ width: `${progress.percent}%` }}
                     transition={{ duration: 0.3, ease: 'easeOut' }}
@@ -307,7 +308,7 @@ export function WorkerImportModal({
                 <button onClick={onClose} className="px-6 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
                   取消
                 </button>
-                <button onClick={onExecuteImport} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium">
+                <button onClick={onExecuteImport} className="px-6 py-2 bg-primary-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium">
                   确认导入
                 </button>
               </div>
@@ -340,7 +341,7 @@ export function WorkerImportModal({
                           setPresetName('')
                         }
                       }}
-                      className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors"
+                      className="px-4 py-1.5 bg-primary-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors"
                     >
                       保存
                     </button>

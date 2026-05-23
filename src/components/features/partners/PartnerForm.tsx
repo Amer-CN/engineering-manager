@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Partner, Project } from '../../../types/electron'
 import { partnerCategories } from '../../../data/regions'
-import { validateCreditCode, isOnline, queryCompanyByCreditCode, inferTaxTypeFromCreditCode, getTaxTypeLabel } from '../../../services/companyQuery'
-import { Icon } from '../../ui/Icon'
+import { inferTaxTypeFromCreditCode, getTaxTypeLabel } from '../../../services/companyQuery'
 import { useCompanyQuery } from './useCompanyQuery'
 import { FileDropZone } from './FileDropZone'
 

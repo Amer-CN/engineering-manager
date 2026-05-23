@@ -43,7 +43,7 @@ export const FOLDER_MAP: Record<string, Record<string, string>> = {
     expense: '合同/支出',
   },
   drawings: {
-    files: '图纸/文件',
+    files: '图纸',
   },
   attendance: {
     files: '考勤/记录',
@@ -216,6 +216,7 @@ export function isDataUrl(value: string): boolean {
 export interface SaveFileOptions {
   fileData: string
   fileName: string
+  subDir?: string
 }
 
 export interface SaveFileResult {
@@ -252,7 +253,10 @@ export function saveFile(
     const base64Data = extractBase64Data(options.fileData)
     const buffer = Buffer.from(base64Data, 'base64')
     const storedName = generateStoredFileName(options.fileName)
-    const dir = getCategoryDir(category, subCategory, projectName)
+    let dir = getCategoryDir(category, subCategory, projectName)
+    if (options.subDir) {
+      dir = path.join(dir, options.subDir)
+    }
 
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true })

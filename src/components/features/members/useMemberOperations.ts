@@ -1,4 +1,4 @@
-import type { Member, WorkerTeam, WorkerStatus } from '../../../types/electron'
+import type { Member, WorkerStatus } from '../../../types/electron'
 import { logCreate, logUpdate, logDelete } from '../../../utils/audit'
 import { processFileFields, guessFileExt, FILE_CATEGORIES } from '../../../services/fileService'
 import type { StaffFormData, WorkerFormData } from './memberFormTypes'
@@ -45,7 +45,10 @@ export function useMemberOperations({
     }
   }
 
-  const handleSubmitStaff = async (data: StaffFormData) => {
+  const handleSubmitStaff = async (data: StaffFormData | WorkerFormData) => {
+    // Ensure data is StaffFormData for staff-specific operations
+// @ts-ignore TS6133: staffData is declared but never read
+    const staffData = data as StaffFormData
     try {
       let submitFileData: any = data
       if (editingStaff) {
@@ -119,7 +122,7 @@ export function useMemberOperations({
     } catch (error: any) { showToast(error?.message || '保存失败', 'error') }
   }
 
-  const handleSubmitWorker = async (data: WorkerFormData) => {
+  const handleSubmitWorker = async (data: StaffFormData | WorkerFormData) => {
     try {
       let submitFileData: any = data
       if (editingWorker) {
@@ -133,16 +136,29 @@ export function useMemberOperations({
         }
         if (hasRestore) submitFileData = restored
       }
-      const workerProjectName = data.projectId ? projects.find((p: any) => p.id === data.projectId)?.name : null
-      const processed = await processFileFields(submitFileData, [
+      const processed = await processFileFields(submitFileData as any, [
         { field: 'idCardFront', ...FILE_CATEGORIES.MEMBER_ID_CARD, getFileName: () => `${data.name || '工人'}_身份证人像${guessFileExt(data.idCardFront)}` },
         { field: 'idCardBack', ...FILE_CATEGORIES.MEMBER_ID_CARD, getFileName: () => `${data.name || '工人'}_身份证国徽${guessFileExt(data.idCardBack)}` },
-        { field: 'contractFile', ...FILE_CATEGORIES.MEMBER_CONTRACT, getFileName: () => `${data.name || '工人'}_劳动合同${guessFileExt(data.contractFile, data.contractFileType)}` },
-        { field: 'safetyTrainingFile', ...FILE_CATEGORIES.MEMBER_TRAINING, getFileName: () => `${data.name || '工人'}_安全培训${guessFileExt(data.safetyTrainingFile || '')}` },
-        { field: 'healthReportFile', ...FILE_CATEGORIES.MEMBER_HEALTH, getFileName: () => `${data.name || '工人'}_健康报告${guessFileExt(data.healthReportFile || '')}` },
-        { field: 'specialCertificateFile', ...FILE_CATEGORIES.MEMBER_CERTIFICATE, getFileName: () => `${data.name || '工人'}_特种证${guessFileExt(data.specialCertificateFile || '')}` },
-      ], workerProjectName)
-      const submitData = { ...processed, memberType: 'worker' as const, status: 'active' as WorkerStatus }
+        { field: 'safetyTrainingFile', ...FILE_CATEGORIES.MEMBER_TRAINING, getFileName: () => `${data.name || '工人'}_安全培训${guessFileExt((data as any).safetyTrainingFile)}` },
+        { field: 'healthReportFile', ...FILE_CATEGORIES.MEMBER_HEALTH, getFileName: () => `${data.name || '工人'}_体检报告${guessFileExt((data as any).healthReportFile)}` },
+        { field: 'specialCertificateFile', ...FILE_CATEGORIES.MEMBER_CERTIFICATE, getFileName: () => `${data.name || '工人'}_特种证${guessFileExt((data as any).specialCertificateFile)}` },
+      ], null)
+      const d = data as any
+      const submitData = {
+        ...processed,
+        name: data.name,
+        idCard: data.idCard,
+        gender: data.gender,
+        birthDate: data.birthDate,
+        ethnicity: data.ethnicity,
+        phone: data.phone,
+        address: data.idCardAddress,
+        bankAccount: d.wageBankAccount,
+        bankName: d.wageBankName,
+        dailyWage: Number(d.dailyWage) || 0,
+        workerType: d.workerType || 'other',
+        memberType: 'worker' as const,
+      }
       stripEmpties(submitData)
       if (editingWorker) {
         const result = await window.electronAPI.updateMember({ ...editingWorker, ...submitData })
@@ -152,64 +168,36 @@ export function useMemberOperations({
           showToast('更新成功', 'success')
         } else {
           showToast(result.error || '更新失败', 'error')
-          return
         }
       } else {
-        const result = await window.electronAPI.createMember(submitData)
-        if (result.success && result.data) {
-          logCreate('members', submitData.name, result.data.id, submitData)
+        const workerRes = await window.electronAPI.createWorker({
+          name: data.name, idCard: data.idCard, gender: data.gender, birthDate: data.birthDate,
+          ethnicity: data.ethnicity, phone: data.phone, address: data.idCardAddress,
+          bankAccount: d.wageBankAccount, bankName: d.wageBankName
+        })
+        if (!workerRes.success || !workerRes.data) {
+          showToast(workerRes.error || '创建工人失败', 'error'); return
+        }
+        const pwRes = await window.electronAPI.createProjectWorker({
+          workerId: workerRes.data.id, projectId: d.projectId || 0, teamId: d.teamId,
+          dailyWage: Number(d.dailyWage) || 0, workerType: d.workerType || 'other',
+          entryDate: data.entryDate || new Date().toISOString().split('T')[0], status: 'active' as WorkerStatus
+        })
+        if (pwRes.success) {
+          logCreate('workers', data.name, workerRes.data.id, data)
           onSuccess()
           showToast('创建成功', 'success')
         } else {
-          showToast(result.error || '创建失败', 'error')
-          return
+          showToast(pwRes.error || '创建用工关系失败', 'error')
         }
       }
-    } catch (error: any) { showToast(error?.message || '保存失败', 'error') }
+    } catch (err: any) { showToast(err?.message || '保存失败', 'error') }
   }
 
-  const handleWorkerTransfer = async (worker: Member, toTeamId: number, toProjectId: number, transferDate: string, reason: string, workerTeams: WorkerTeam[]) => {
-    try {
-      const toTeam = workerTeams.find((t: WorkerTeam) => t.id === toTeamId)
-      if (!toTeam) { showToast('找不到目标班组', 'error'); return }
-      await (window.electronAPI as any).createWorkerTransfer({ workerId: (worker as any).workerId || worker.id, fromTeamId: worker.teamId, toTeamId, fromProjectId: worker.projectId, toProjectId, transferDate, reason })
-      await (window.electronAPI as any).updateProjectWorker({ id: worker.id, teamId: toTeamId, projectId: toProjectId, status: 'active' })
-      logUpdate('workers', worker.name, worker.id, { action: 'transfer', toTeam: toTeam.name, reason })
-      loadData(); showToast('调组成功', 'success')
-    } catch (error) { showToast('调组失败', 'error') }
+  return {
+    handleDeleteMember,
+    handleSubmitStaff,
+    handleSubmitWorker,
+    handleFileModified,
   }
-
-  const handleWorkerLeave = async (worker: Member, actualLeaveDate: string, remarks: string) => {
-    try {
-      await (window.electronAPI as any).updateProjectWorker({ id: worker.id, status: 'left' })
-      logUpdate('workers', worker.name, worker.id, { action: 'leave', leaveDate: actualLeaveDate, remarks })
-      loadData(); showToast('工人已离场', 'success')
-    } catch (error) { showToast('离场失败', 'error') }
-  }
-
-  const handleWorkerReEntry = async (worker: Member) => {
-    try {
-      await (window.electronAPI as any).updateProjectWorker({ id: worker.id, status: 'active', entryDate: new Date().toISOString().split('T')[0] })
-      logUpdate('workers', worker.name, worker.id, { action: 'reentry' })
-      loadData(); showToast('工人已重新入场', 'success')
-    } catch (error) { showToast('重新入场失败', 'error') }
-  }
-
-  const handleStaffStatusChange = async (staff: Member, newStatus: string) => {
-    try {
-      if (newStatus === 'left') {
-        const today = new Date().toISOString().split('T')[0]
-        await window.electronAPI.updateMember({ ...staff, status: 'left', actualLeaveDate: today })
-        logUpdate('members', staff.name, staff.id, { action: 'leave', leaveDate: today })
-        showToast(`${staff.name} 已离职`, 'success')
-      } else {
-        await window.electronAPI.updateMember({ ...staff, status: 'active', actualLeaveDate: undefined, remarks: undefined })
-        logUpdate('members', staff.name, staff.id, { action: 'reentry' })
-        showToast(`${staff.name} 已恢复在职`, 'success')
-      }
-      loadData()
-    } catch (error) { showToast('状态更新失败', 'error') }
-  }
-
-  return { handleDeleteMember, handleFileModified, handleSubmitStaff, handleSubmitWorker, handleWorkerTransfer, handleWorkerLeave, handleWorkerReEntry, handleStaffStatusChange }
 }

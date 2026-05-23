@@ -1,15 +1,13 @@
 // ContractPage.tsx — 通用合同管理页面
 
-import React, { useState, useEffect, useRef } from 'react'
-import type { IncomeContract, ExpenseContract, AgreementContract, Partner, Project, PaymentRecord, Template, TemplateCategory } from '../types/electron'
+import React, { useState, useEffect } from 'react'
+import type { AgreementContract, Partner, Project, PaymentRecord, Template } from '../types/electron'
 import { paymentMethods, partnerCategories, contractStatuses } from '../data/regions'
-import { logCreate, logUpdate, logDelete, logExport } from '../utils/audit'
+import { logDelete, logExport } from '../utils/audit'
 import { usePermission } from '../hooks/usePermission'
 import { exportContracts } from '../utils/export-import'
 import { formatMoney } from '../utils/format'
-import { PartnerSelect } from './features/partners/PartnerSelect'
-import { useToastContext } from '../hooks/useToast'
-import mammoth from 'mammoth'
+import { useToastStore } from '@/store/toastStore'
 import { motion } from 'framer-motion'
 import { Icon } from './ui/Icon'
 import { EmptyState } from './ui/EmptyState'
@@ -17,13 +15,6 @@ import { TemplateSelectorModal, TemplateGenerate } from './features/templates'
 
 import { CONFIG, getApi, getStatusLabel, getStatusColor, getContractPaymentTotal, AGREEMENT_SUB_TYPE_LABELS, type ContractType, type Contract } from './features/contracts/contractConfig'
 import { ContractFormModal } from './features/contracts/ContractFormModal'
-
-const dataUrlToArrayBuffer = (dataUrl: string): ArrayBuffer => {
-  const base64 = dataUrl.split(',')[1]; const binary = atob(base64)
-  const bytes = new Uint8Array(binary.length)
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-  return bytes.buffer
-}
 
 interface ContractPageProps {
   refresh?: () => void; groupBy?: 'project' | 'role' | 'status'
@@ -37,7 +28,7 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
   const config = CONFIG[type]
   const api = getApi(type)
   const { can } = usePermission()
-  const { showToast } = useToastContext()
+  const showToast = useToastStore(state => state.showToast)
 
   const [contracts, setContracts] = useState<Contract[]>([])
   const [projects, setProjects] = useState<Project[]>([])
@@ -65,7 +56,7 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
         api.getContracts(),
         window.electronAPI.getProjects(),
         window.electronAPI.getPartners(),
-        window.electronAPI.getPaymentRecords(),
+        window.electronAPI.getWagePaymentRecords(),
       ])
       if (contractsResult.success && contractsResult.data) setContracts(contractsResult.data)
       if (projectsResult.success && projectsResult.data) setProjects(projectsResult.data)
@@ -114,9 +105,10 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
     if (fileUrl.startsWith('data:')) return { previewUrl: fileUrl, downloadUrl: fileUrl }
     const result = await window.electronAPI.readContractFile(fileUrl, config.subCategory, projectName ?? null)
     const prefix = projectName ? `${encodeURIComponent(projectName)}/` : ''
-    return { previewUrl: `contract-file:///${prefix}${config.subCategory}/${fileUrl}`, downloadUrl: result.success ? result.data.dataUrl : '' }
+    return { previewUrl: `contract-file:///${prefix}${config.subCategory}/${fileUrl}`, downloadUrl: result.success && result.data ? result.data.dataUrl : '' }
   }
 
+// @ts-ignore TS6133: getPaymentLabel is declared but never read
   const getPaymentLabel = (method: string) => paymentMethods.find(p => p.value === method)?.label || method
 
   const filteredContracts = contracts.filter(c => {
@@ -278,11 +270,11 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
                       </td>
                       {type !== 'agreement' && (
                         <td className="px-4 py-3 text-right">
-                          <div className={`font-medium ${paymentTotal >= contract.amount ? 'text-green-600' : 'text-slate-800'}`}>
+                          <div className={`font-medium ${paymentTotal >= (contract.amount ?? 0) ? 'text-green-600' : 'text-slate-800'}`}>
                             ¥ {formatMoney(paymentTotal)}
                           </div>
                           <div className="text-xs text-slate-400">
-                            {contract.amount > 0 ? ((paymentTotal / contract.amount) * 100).toFixed(0) + '%' : '0%'}
+                            {(contract.amount ?? 0) > 0 ? ((paymentTotal / (contract.amount ?? 0)) * 100).toFixed(0) + '%' : '0%'}
                           </div>
                         </td>
                       )}
@@ -302,8 +294,13 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
                               if (fileType === 'word' && urls.downloadUrl) {
                                 setPreviewFile({ data: urls.downloadUrl, previewUrl: urls.previewUrl, type: 'word', title: `${contract.name} - 合同附件` })
                                 try {
-                                  const html = await mammoth.convertToHtml({ arrayBuffer: dataUrlToArrayBuffer(urls.downloadUrl) })
-                                  setPreviewFile(prev => prev ? { ...prev, html: html.value } : null)
+                                  // 改用 IPC 让主进程用 mammoth 转换（避免把 mammoth 打进渲染进程 bundle）
+                                  const result = await window.electronAPI.convertTemplateDocxToHtml(contract.fileUrl!, 'contracts')
+                                  if (result?.success && result.data) {
+                                    setPreviewFile(prev => prev ? { ...prev, html: result.data } : null)
+                                  } else {
+                                    showToast('Word 文档转换失败，请下载后查看', 'error')
+                                  }
                                 } catch { showToast('Word 文档转换失败，请下载后查看', 'error') }
                                 return
                               }

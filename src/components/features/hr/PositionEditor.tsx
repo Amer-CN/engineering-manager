@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react'
-import { useToastContext } from '../../../hooks/useToast'
+import { useToastStore } from '@/store/toastStore'
 
 interface PositionEditorProps {
   positions: string[]
@@ -10,7 +10,7 @@ const MAX_POSITIONS = 30
 const MAX_CHAR = 20
 
 const PositionEditor: React.FC<PositionEditorProps> = ({ positions, onChange }) => {
-  const { showToast } = useToastContext()
+  const showToast = useToastStore(state => state.showToast)
   const [inputValue, setInputValue] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 

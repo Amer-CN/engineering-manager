@@ -1,16 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Template } from '../../../types/electron'
 import { Icon } from '../../ui/Icon'
-import { useToastContext } from '../../../hooks/useToast'
-import mammoth from 'mammoth'
-
-const dataUrlToArrayBuffer = (dataUrl: string): ArrayBuffer => {
-  const base64 = dataUrl.split(',')[1]
-  const binary = atob(base64)
-  const bytes = new Uint8Array(binary.length)
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-  return bytes.buffer
-}
+import { useToastStore } from '@/store/toastStore'
 
 interface TemplateGenerateProps {
   template: Template
@@ -18,7 +9,7 @@ interface TemplateGenerateProps {
 }
 
 export default function TemplateGenerate({ template, onClose }: TemplateGenerateProps) {
-  const { showToast } = useToastContext()
+  const showToast = useToastStore(state => state.showToast)
   const [values, setValues] = useState<Record<string, string>>({})
   const [previewHtml, setPreviewHtml] = useState('')
   const [loading, setLoading] = useState(false)
@@ -38,26 +29,23 @@ export default function TemplateGenerate({ template, onClose }: TemplateGenerate
   }, [values, template])
 
   const loadAndRender = async () => {
+    if (template.fileType !== 'docx') {
+      setPreviewHtml(`<p style="text-align:center;color:#94a3b8;padding:40px;">Excel 模板请下载后填写变量值</p>`)
+      return
+    }
+
     setLoading(true)
     try {
-      const result = await window.electronAPI.readFile({
-        category: 'templates',
-        subCategory: 'files',
-        fileName: template.storedFileName,
-        projectName: null,
-      })
+      // 调用主进程用 mammoth 转换 docx → HTML
+      const result = await window.electronAPI.convertTemplateDocxToHtml(template.storedFileName)
       if (result.success && result.data) {
-        const { dataUrl } = result.data
-        if (template.fileType === 'docx') {
-          const mammothResult = await mammoth.convertToHtml({ arrayBuffer: dataUrlToArrayBuffer(dataUrl) })
-          let html = mammothResult.value
-          for (const [key, val] of Object.entries(values)) {
-            html = html.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), val || `【${key}】`)
-          }
-          setPreviewHtml(html)
-        } else {
-          setPreviewHtml(`<p style="text-align:center;color:#94a3b8;padding:40px;">Excel 模板请下载后填写变量值</p>`)
+        let html = result.data
+        for (const [key, val] of Object.entries(values)) {
+          html = html.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), val || `【${key}】`)
         }
+        setPreviewHtml(html)
+      } else {
+        setPreviewHtml(`<p style="text-align:center;color:#ef4444;padding:40px;">转换模板失败：${result.error || '未知错误'}</p>`)
       }
     } catch (e) {
       console.error('Template render failed:', e)

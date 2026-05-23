@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Template, TemplateCategory } from '../../../types/electron'
 import { categoryConfig } from './config'
 import { Icon } from '../../ui/Icon'

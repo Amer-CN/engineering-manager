@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Dashboard.tsx 组件测试
  *
@@ -95,7 +94,6 @@ Object.defineProperty(window, 'electronAPI', {
 // Imports
 // ═══════════════════════════════════════════════════════════════════════
 
-import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import React from 'react'
 

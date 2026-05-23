@@ -1,15 +1,13 @@
-// @ts-nocheck
 /**
  * useProjects Hook 测试
  * 测试项目管理 CRUD + 筛选
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 
-const mockProjects = [
-  { id: 1, name: '项目A', status: 'active', description: '安岳县农田项目', projectManagerId: 10, createdAt: '2024-01-01', updatedAt: '2024-01-01' },
+const mockProjects: any[] = [
+  { id: 1, name: '项目A', status: 'in_progress', description: '安岳县农田项目', projectManagerId: 10, createdAt: '2024-01-01', updatedAt: '2024-01-01' },
   { id: 2, name: '项目B', status: 'completed', description: '写字楼装修', projectManagerId: 20, createdAt: '2024-02-01', updatedAt: '2024-06-01' },
-  { id: 3, name: '项目C', status: 'active', description: '道路施工', projectManagerId: 10, createdAt: '2024-03-01', updatedAt: '2024-03-01' },
+  { id: 3, name: '项目C', status: 'in_progress', description: '道路施工', projectManagerId: 10, createdAt: '2024-03-01', updatedAt: '2024-03-01' },
 ]
 
 describe('useProjects', () => {
@@ -33,10 +31,10 @@ describe('useProjects', () => {
 
   it('按 status 筛选', async () => {
     const { useProjects } = await import('@/hooks/useProjects')
-    const { result } = renderHook(() => useProjects({ status: 'active' }))
+    const { result } = renderHook(() => useProjects({ status: 'in_progress' }))
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.data).toHaveLength(2)
-    expect(result.current.data.every(p => p.status === 'active')).toBe(true)
+    expect(result.current.data.every((p: any) => p.status === 'in_progress')).toBe(true)
   })
 
   it('按 searchTerm 筛选', async () => {
@@ -60,7 +58,7 @@ describe('useProjects', () => {
     const { result } = renderHook(() => useProjects())
     await waitFor(() => expect(result.current.loading).toBe(false))
     await act(async () => {
-      const res = await result.current.create({ name: '新项目' })
+      const res = await result.current.create({ name: '新项目' } as any)
       expect(res.success).toBe(true)
     })
   })
@@ -71,7 +69,7 @@ describe('useProjects', () => {
     const { result } = renderHook(() => useProjects())
     await waitFor(() => expect(result.current.loading).toBe(false))
     await act(async () => {
-      const res = await result.current.create({ name: '新项目' })
+      const res = await result.current.create({ name: '新项目' } as any)
       expect(res.success).toBe(false)
     })
     expect(result.current.error).toBe('创建失败')
@@ -84,7 +82,7 @@ describe('useProjects', () => {
     act(() => { result.current.setSelectedItem(mockProjects[0]) })
     const updated = { ...mockProjects[0], name: '项目A更新' }
     await act(async () => {
-      const res = await result.current.update(updated)
+      const res = await result.current.update(updated as any)
       expect(res.success).toBe(true)
     })
     expect(result.current.selectedItem?.name).toBe('项目A更新')
@@ -100,7 +98,7 @@ describe('useProjects', () => {
       expect(res.success).toBe(true)
     })
     expect(result.current.selectedItem).toBeNull()
-    expect(result.current.data.find(p => p.id === 1)).toBeUndefined()
+    expect(result.current.data.find((p: any) => p.id === 1)).toBeUndefined()
   })
 
   it('加载失败设置 error', async () => {

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { Icon } from './ui/Icon'
 import { EmptyState } from './ui/EmptyState'
 import { ContractTemplate, TemplateType, TemplateVariable, Project, Partner } from '../types/electron'
-import { useToastContext } from '../hooks/useToast'
+import { useToastStore } from '@/store/toastStore'
 import { ContractTemplateFormModal, templateTypeConfig } from './ContractTemplateFormModal'
 
 interface ContractTemplatesProps {
@@ -12,9 +12,11 @@ interface ContractTemplatesProps {
 }
 
 const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }) => {
-  const { showToast } = useToastContext()
+  const showToast = useToastStore(state => state.showToast)
   const [templates, setTemplates] = useState<ContractTemplate[]>([])
+// @ts-ignore TS6133: projects is declared but never read
   const [projects, setProjects] = useState<Project[]>([])
+// @ts-ignore TS6133: partners is declared but never read
   const [partners, setPartners] = useState<Partner[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)

@@ -2,15 +2,15 @@
 import { RolePermissionsTab } from './RolePermissionsTab'
 
 import React, { useState, useEffect } from 'react'
-import { usePermission, RequireAdmin } from '../hooks/usePermission'
+import { usePermission } from '../hooks/usePermission'
 import { useAuth } from '../hooks/useAuth'
-import { useToastContext } from '../hooks/useToast'
-import { setCurrentUser, SYSTEM_ROLES, RESOURCE_LABELS, ACTION_LABELS } from '../types/permissions'
-import type { PermissionResource, PermissionAction, PermissionCode } from '../types/permissions'
+import { useToastStore } from '@/store/toastStore'
+import { setCurrentUser } from '../types/permissions'
 import type { UserInfo } from '../types/electron'
 import { Icon } from './ui/Icon'
 import { Tabs } from './ui/Tabs'
 import { AuditLogsContent } from './AuditLogs'
+import { SnapshotsTab } from './SnapshotsTab'
 
 // 角色选项
 const ROLE_OPTIONS = [
@@ -27,9 +27,10 @@ const STATUS_OPTIONS = [
 ]
 
 const Users: React.FC = () => {
+// @ts-ignore TS6133: can is declared but never read
   const { can, isAdmin } = usePermission()
   const auth = useAuth()
-  const { showToast } = useToastContext()
+  const showToast = useToastStore(state => state.showToast)
   const [users, setUsers] = useState<UserInfo[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateForm, setShowCreateForm] = useState(false)
@@ -208,6 +209,7 @@ const Users: React.FC = () => {
             { key: 'user_list', label: '用户列表', icon: 'Users' },
             { key: 'role_permissions', label: '角色权限', icon: 'Shield' },
             { key: 'audit_logs', label: '操作日志', icon: 'ClipboardList' },
+            { key: 'snapshots', label: '数据回滚', icon: 'RotateCcw' },
           ]}
         />
       </div>
@@ -397,6 +399,11 @@ const Users: React.FC = () => {
       {/* 操作日志 Tab */}
       {activeTab === 'audit_logs' && (
         <AuditLogsContent refresh={undefined} />
+      )}
+
+      {/* 数据回滚 Tab */}
+      {activeTab === 'snapshots' && (
+        <SnapshotsTab />
       )}
     </div>
   )

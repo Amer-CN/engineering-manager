@@ -1,12 +1,13 @@
 /**
- * 考勤 IPC 处理器
+ * 考勤 IPC 处理器（双写模式）
  * 支持每日考勤状态（出勤/法定节假日/病假/事假/缺勤）
  */
 
 import { ipcMain } from 'electron'
 import log from 'electron-log'
 import { db, dbReady, saveDatabase } from '../database'
-import { getDaysInMonth, generateDailyStatus, computeFromDailyStatus, getEntryDay, DayStatus } from './attendance-utils'
+import { getDaysInMonth, generateDailyStatus, computeFromDailyStatus, getEntryDay, enrichAttendance, DayStatus } from './attendance-utils'
+import { useSqliteRead, useSqliteWrite, shouldFallbackToJson, attendanceQueries } from '../sqlite/queries'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 获取考勤列表
@@ -14,33 +15,26 @@ import { getDaysInMonth, generateDailyStatus, computeFromDailyStatus, getEntryDa
 
 ipcMain.handle('db:attendances:getAll', (_, projectId?: number, yearMonth?: string) => {
   if (!dbReady) return { success: false, error: 'Database not ready' }
+
+  // SQLite 优先
+  if (useSqliteRead()) {
+    const data = attendanceQueries.listAttendances(projectId, yearMonth)
+    if (data) {
+      // 富化名称信息（SQLite 读取的行不含这些字段）
+      const enriched = data.map(a => enrichAttendance(a, db))
+      return { success: true, data: enriched.sort((a: any, b: any) =>
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      )}
+    }
+  }
+
+  // JSON 回退
+  if (!shouldFallbackToJson()) return { success: false, error: 'SQLite read failed (sqlite-primary mode)' }
   if (!db.attendances) db.attendances = []
   let records = db.attendances
-  if (projectId) {
-    records = records.filter((a: any) => a.projectId === projectId)
-  }
-  if (yearMonth) {
-    records = records.filter((a: any) => a.yearMonth === yearMonth)
-  }
-  const result = records.map((a: any) => {
-    let memberName = ''; let memberType = 'worker'; let teamName = ''
-    if (a.memberId) {
-      const member = db.members.find((m: any) => m.id === a.memberId)
-      memberName = member?.name || ''
-      memberType = member?.memberType || 'worker'
-      const team = db.workerTeams.find((t: any) => t.id === member?.teamId)
-      teamName = team?.name || ''
-    } else if (a.projectWorkerId && db.projectWorkers) {
-      const pw = db.projectWorkers.find((p: any) => p.id === a.projectWorkerId)
-      if (pw && db.workers) {
-        const worker = db.workers.find((w: any) => w.id === pw.workerId)
-        memberName = worker?.name || ''
-        const team = db.workerTeams?.find((t: any) => t.id === pw.teamId)
-        teamName = team?.name || ''
-      }
-    }
-    return { ...a, memberName, memberType, teamName }
-  })
+  if (projectId) records = records.filter((a: any) => a.projectId === projectId)
+  if (yearMonth) records = records.filter((a: any) => a.yearMonth === yearMonth)
+  const result = records.map((a: any) => enrichAttendance(a, db))
   return { success: true, data: result.sort((a: any, b: any) =>
     new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
   )}
@@ -52,11 +46,16 @@ ipcMain.handle('db:attendances:getAll', (_, projectId?: number, yearMonth?: stri
 
 ipcMain.handle('db:attendances:getByMember', (_, memberId: number, yearMonth?: string) => {
   if (!dbReady) return { success: false, error: 'Database not ready' }
+
+  if (useSqliteRead()) {
+    const data = attendanceQueries.listAttendancesByMember(memberId, yearMonth)
+    if (data) return { success: true, data }
+  }
+
+  if (!shouldFallbackToJson()) return { success: false, error: 'SQLite read failed (sqlite-primary mode)' }
   if (!db.attendances) db.attendances = []
   let records = db.attendances.filter((a: any) => a.memberId === memberId)
-  if (yearMonth) {
-    records = records.filter((a: any) => a.yearMonth === yearMonth)
-  }
+  if (yearMonth) records = records.filter((a: any) => a.yearMonth === yearMonth)
   return { success: true, data: records }
 })
 
@@ -69,14 +68,16 @@ ipcMain.handle('db:attendances:create', (_, record) => {
   if (!db.attendances) db.attendances = []
   try {
     const id = Date.now()
-    const newRecord = {
-      ...record,
-      id,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
+    const now = new Date().toISOString()
+    const newRecord = { ...record, id, createdAt: now, updatedAt: now }
     db.attendances.push(newRecord)
     saveDatabase()
+
+    // SQLite 双写
+    if (useSqliteWrite()) {
+      attendanceQueries.createAttendance(newRecord)
+    }
+
     return { success: true, data: { id } }
   } catch (error: any) {
     log.error('Failed to create attendance:', error)
@@ -94,6 +95,9 @@ ipcMain.handle('db:attendances:delete', (_, id: number) => {
   try {
     db.attendances = db.attendances.filter((a: any) => a.id !== id)
     saveDatabase()
+
+    if (useSqliteWrite()) attendanceQueries.deleteAttendance(id)
+
     return { success: true }
   } catch (error: any) {
     log.error('Failed to delete attendance:', error)
@@ -112,6 +116,9 @@ ipcMain.handle('db:attendances:batchDelete', (_, ids: number[]) => {
     const idSet = new Set(ids)
     db.attendances = db.attendances.filter((a: any) => !idSet.has(a.id))
     saveDatabase()
+
+    if (useSqliteWrite()) attendanceQueries.batchDeleteAttendances(ids)
+
     return { success: true, data: { deleted: ids.length } }
   } catch (error: any) {
     log.error('Failed to batch delete attendances:', error)
@@ -132,7 +139,6 @@ ipcMain.handle('db:attendances:update', (_, record) => {
       const existing = db.attendances[index]
       const daysInMonth = getDaysInMonth(record.yearMonth || existing.yearMonth)
 
-      // 如果传入了 dailyStatus，从它计算 workDays/daysOff/isFullAttendance
       let workDays = record.workDays ?? existing.workDays
       let daysOff = record.daysOff ?? existing.daysOff
       let isFullAttendance = record.isFullAttendance ?? existing.isFullAttendance
@@ -154,13 +160,19 @@ ipcMain.handle('db:attendances:update', (_, record) => {
         updatedAt: new Date().toISOString()
       }
 
-      // 确保 dailyStatus 合并（而非全量替换丢失旧数据）
       if (record.dailyStatus) {
-        updated.dailyStatus = { ...(existing.dailyStatus || {}), ...record.dailyStatus }
+        updated.dailyStatus = record.dailyStatus
       }
 
       db.attendances[index] = updated
       saveDatabase()
+
+      // SQLite 双写
+      if (useSqliteWrite()) {
+        const changes: any = { ...record, workDays, daysOff, isFullAttendance }
+        if (record.dailyStatus) changes.dailyStatus = record.dailyStatus
+        attendanceQueries.updateAttendance(record.id, changes)
+      }
     }
     return { success: true }
   } catch (error: any) {
@@ -180,17 +192,26 @@ ipcMain.handle('db:attendances:batchCreate', (_, records: any[]) => {
     const now = new Date().toISOString()
     let created = 0
     for (const record of records) {
-      const exists = db.attendances.some(
-        (a: any) => a.memberId === record.memberId && a.projectId === record.projectId && a.yearMonth === record.yearMonth
-      )
-      if (exists) continue
+      // 检查去重
+      if (useSqliteRead()) {
+        const exists = attendanceQueries.existsAttendance(record.memberId, record.projectWorkerId, record.projectId, record.yearMonth)
+        if (exists === true) continue
+      } else {
+        const exists = db.attendances.some(
+          (a: any) => a.memberId === record.memberId && a.projectId === record.projectId && a.yearMonth === record.yearMonth
+        )
+        if (exists) continue
+      }
+
       const id = Date.now() + created
-      db.attendances.push({
-        ...record,
-        id,
-        createdAt: now,
-        updatedAt: now
-      })
+      const newRecord = { ...record, id, createdAt: now, updatedAt: now }
+      db.attendances.push(newRecord)
+
+      // SQLite 双写
+      if (useSqliteWrite()) {
+        attendanceQueries.createAttendance(newRecord)
+      }
+
       created++
     }
     if (created > 0) saveDatabase()
@@ -214,10 +235,16 @@ ipcMain.handle('db:attendances:generateDefaults', (_, projectId: number, yearMon
     let created = 0
 
     for (const memberId of memberIds) {
-      const exists = db.attendances.some(
-        (a: any) => a.memberId === memberId && a.projectId === projectId && a.yearMonth === yearMonth
-      )
-      if (exists) continue
+      // 去重检查
+      if (useSqliteRead()) {
+        const exists = attendanceQueries.existsAttendance(memberId, null, projectId, yearMonth)
+        if (exists === true) continue
+      } else {
+        const exists = db.attendances.some(
+          (a: any) => a.memberId === memberId && a.projectId === projectId && a.yearMonth === yearMonth
+        )
+        if (exists) continue
+      }
 
       const member = db.members.find((m: any) => m.id === memberId)
       const isStaff = member?.memberType === 'staff'
@@ -225,7 +252,7 @@ ipcMain.handle('db:attendances:generateDefaults', (_, projectId: number, yearMon
       const startDay = getEntryDay(memberId, yearMonth, db.members)
       const computed = computeFromDailyStatus(dailyStatus, daysInMonth, startDay)
 
-      db.attendances.push({
+      const newRecord = {
         id: Date.now() + created,
         memberId,
         projectId,
@@ -236,7 +263,14 @@ ipcMain.handle('db:attendances:generateDefaults', (_, projectId: number, yearMon
         dailyStatus,
         createdAt: now,
         updatedAt: now
-      })
+      }
+      db.attendances.push(newRecord)
+
+      // SQLite 双写
+      if (useSqliteWrite()) {
+        attendanceQueries.createAttendance(newRecord)
+      }
+
       created++
     }
 
@@ -264,16 +298,22 @@ ipcMain.handle('db:attendances:generateDefaultsV2', (_, projectId: number, yearM
       const pw = db.projectWorkers.find((p: any) => p.id === pwId)
       if (!pw || pw.status === 'left') continue
 
-      const exists = db.attendances.some(
-        (a: any) => a.projectWorkerId === pwId && a.yearMonth === yearMonth
-      )
-      if (exists) continue
+      // 去重检查
+      if (useSqliteRead()) {
+        const exists = attendanceQueries.existsAttendance(null, pwId, projectId, yearMonth)
+        if (exists === true) continue
+      } else {
+        const exists = db.attendances.some(
+          (a: any) => a.projectWorkerId === pwId && a.yearMonth === yearMonth
+        )
+        if (exists) continue
+      }
 
       const dailyStatus = generateDailyStatus(yearMonth, false)
       const startDay = pw.workerId ? getEntryDay(pw.workerId, yearMonth, db.members) : 1
       const computed = computeFromDailyStatus(dailyStatus, daysInMonth, startDay)
 
-      db.attendances.push({
+      const newRecord = {
         id: Date.now() + created,
         memberId: undefined,
         projectWorkerId: pwId,
@@ -285,7 +325,14 @@ ipcMain.handle('db:attendances:generateDefaultsV2', (_, projectId: number, yearM
         dailyStatus,
         createdAt: now,
         updatedAt: now
-      })
+      }
+      db.attendances.push(newRecord)
+
+      // SQLite 双写
+      if (useSqliteWrite()) {
+        attendanceQueries.createAttendance(newRecord)
+      }
+
       created++
     }
 

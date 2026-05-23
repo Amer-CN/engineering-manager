@@ -1,9 +1,7 @@
-// LaborManagement.tsx - 工人管理页面（重构版：4-Tab容器）
-
+// LaborManagement.tsx - ���������ҳ�棨�� Tab ������
 import React, { useState, useCallback, useRef, Suspense } from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from './ui/Icon'
-import { useToastContext } from '../hooks/useToast'
 import { useLaborData } from './features/labor/hooks/useLaborData'
 import { useLaborModals } from './features/labor/hooks/useLaborModals'
 import { useLaborOperations } from './features/labor/hooks/useLaborOperations'
@@ -21,17 +19,16 @@ const WageManagement = React.lazy(() => import('./WageManagement'))
 const WorkerImportModal = React.lazy(() => import('./features/members/WorkerImportModal').then(m => ({ default: m.WorkerImportModal })))
 const WorkerPickerModal = React.lazy(() => import('./features/members/WorkerPickerModal').then(m => ({ default: m.WorkerPickerModal })))
 const TeamWorkerModal = React.lazy(() => import('./features/members/TeamWorkerModal'))
-const WorkerPoolForm = React.lazy(() => import('./features/members/WorkerPoolForm'))
+const FileImportDialog = React.lazy(() => import('./features/wages/FileImportDialog').then(m => ({ default: m.FileImportDialog })))
 
 const TABS = [
   { id: 'dashboard', label: '看板', icon: 'LayoutDashboard' },
-  { id: 'workers', label: '工人库', icon: 'Construction' },
+  { id: 'workers', label: '人员�?', icon: 'Construction' },
   { id: 'teams', label: '班组管理', icon: 'Building2' },
-  { id: 'wages', label: '工资管理', icon: 'Wallet' },
+  { id: 'wages', label: '赖资管理', icon: 'Wallet' },
 ]
 
 const LaborManagement: React.FC = () => {
-  const { showToast } = useToastContext()
 
   // Tab state with localStorage persistence
   const [activeTab, setActiveTab] = useState(() => localStorage.getItem(LABOR_TAB_KEY) || 'dashboard')
@@ -52,6 +49,7 @@ const LaborManagement: React.FC = () => {
     projects,
     workerTeams,
     loadData,
+    editingWorker: modals.editingWorker,
     onSuccess: () => {
       modals.closeWorkerModal()
       modals.closePoolForm()
@@ -59,17 +57,16 @@ const LaborManagement: React.FC = () => {
   })
 
   // Worker import
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [showFileDialog, setShowFileDialog] = useState(false)
   const existingIdCards = new Set(members.filter(m => m.memberType === 'worker' && m.idCard).map(m => m.idCard!))
   const { importState, progress, result, phase, error: importError, parseFile, switchSheet, setHeaderRow, setMapping, getConfidence, executeImport, saveCurrentMappingAsPreset, reset: resetImport } = useWorkerImport(existingIdCards)
 
   // Worker form state
+// @ts-ignore TS6133: workerFormData and setWorkerFormData are declared but never read
   const [workerFormData, setWorkerFormData] = useState<WorkerFormData>(defaultWorkerFormData)
   const originalMemberFileRef = useRef<Record<number, Record<string, string>>>({})
-  const resetWorkerForm = () => {
-    setWorkerFormData(defaultWorkerFormData)
-  }
 
+// @ts-ignore TS6133: handleEditWorker is declared but never read
   const handleEditWorker = (worker: any) => {
     const formData = memberToWorkerForm(worker)
     originalMemberFileRef.current[worker.id] = {}
@@ -152,10 +149,10 @@ const LaborManagement: React.FC = () => {
               projects={projects}
               workerTeams={workerTeams}
               onRefresh={loadData}
-              onAddWorker={() => modals.openPoolForm()}
-              onEditWorker={(worker) => modals.openPoolForm(worker)}
+              onAddWorker={() => modals.openWorkerModal()}
+              onEditWorker={(worker) => modals.openWorkerModal(worker)}
               onDeleteWorker={ops.handleDeletePoolWorker}
-              onImportClick={() => fileInputRef.current?.click()}
+              onImportClick={() => setShowFileDialog(true)}
             />
           )}
 
@@ -178,18 +175,21 @@ const LaborManagement: React.FC = () => {
         </Suspense>
       </motion.div>
 
-      {/* Hidden file input for Excel import */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".xlsx,.xls,.csv"
-        className="hidden"
-        onChange={e => {
-          const f = e.target.files?.[0]
-          if (f) parseFile(f)
-          e.target.value = ''
-        }}
-      />
+      {/* File import dialog (shared) */}
+      <Suspense fallback={null}>
+        <FileImportDialog
+          show={showFileDialog}
+          title="导入 Excel"
+          description="选择工人信息�?Excel 文件，支�?.xlsx / .xls / .csv 格式"
+          accept=".xlsx,.xls,.csv"
+          acceptText="Excel 表格 (.xlsx, .xls, .csv)"
+          onFile={(file) => {
+            setShowFileDialog(false)
+            parseFile(file)
+          }}
+          onClose={() => setShowFileDialog(false)}
+        />
+      </Suspense>
 
       {/* Modals */}
       <Suspense fallback={null}>
@@ -238,19 +238,7 @@ const LaborManagement: React.FC = () => {
           onRemoveWorker={ops.handleDeleteProjectWorker}
           onTransferWorker={ops.handleTeamWorkerTransfer}
           onAddWorkers={handleTeamAddWorkers}
-        />
-      </Suspense>
-
-      <Suspense fallback={null}>
-        <WorkerPoolForm
-          visible={modals.showPoolForm}
-          editing={modals.editingPoolWorker}
-          onClose={modals.closePoolForm}
-          onSubmit={(formData) => ops.handleSubmitPoolWorker(formData, modals.editingPoolWorker)}
-          onSwitchToFull={(worker) => {
-            modals.closePoolForm()
-            handleEditWorker(worker)
-          }}
+          onWageUpdated={() => loadData(true)}
         />
       </Suspense>
 
@@ -262,7 +250,7 @@ const LaborManagement: React.FC = () => {
           workerTeams={workerTeams}
           visible={modals.showWorkerModal}
           onClose={modals.closeWorkerModal}
-          onSubmit={ops.handleSubmitWorker}
+          onSubmit={ops.handleSubmitWorker as any}
           onFileModified={ops.handleFileModified}
         />
       )}
@@ -275,10 +263,13 @@ const LaborManagement: React.FC = () => {
           workerTeams={workerTeams}
           visible={modals.showDetailModal}
           onClose={modals.closeDetailModal}
-          onSubmit={ops.handleSubmitWorker}
+          onSubmit={ops.handleSubmitWorker as any}
           onFileModified={ops.handleFileModified}
         />
       )}
+
+      {/* 确认对话�?(工人管理) */}
+      {ops.ConfirmDialog}
     </div>
   )
 }

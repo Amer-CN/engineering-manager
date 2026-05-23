@@ -1,9 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { CostLedgerList } from './CostLedgerList'
 import { CostLedgerForm } from './CostLedgerForm'
-import { getCategoryLabel } from './config'
-import { formatMoney } from '@/utils/format'
+import { CostLedgerBatchBar } from './CostLedgerBatchBar'
+import { CostLedgerCompareModal } from './CostLedgerCompareModal'
+import { useCostLedgerBatches } from '@/hooks/useCostLedgerBatches'
 import { Icon } from '@/components/ui/Icon'
+import { useToastStore } from '@/store/toastStore'
+import { CostLedgerImportModal, learnFromEdit } from './CostLedgerImportModal'
 import type { CostLedgerEntry, CostLedgerSummary, Project, CostLedgerCategory } from '@/types'
 
 interface CostLedgerProjectDetailProps {
@@ -14,38 +17,65 @@ interface CostLedgerProjectDetailProps {
 }
 
 export function CostLedgerProjectDetail({ project, onBack, categories, onManageCategories }: CostLedgerProjectDetailProps) {
+  const showToast = useToastStore(state => state.showToast)
+  const { batches, createBatch, copyBatch, renameBatch, deleteBatch } = useCostLedgerBatches(project.id)
+  // 默认取最新有数据的版本（非初始版），后端 getLatestBatch 决定
+  const [batchId, setBatchId] = useState<number>(0)
   const [entries, setEntries] = useState<CostLedgerEntry[]>([])
   const [summary, setSummary] = useState<CostLedgerSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [showImport, setShowImport] = useState(false)
+  const [showCompare, setShowCompare] = useState(false)
   const [editing, setEditing] = useState<CostLedgerEntry | null>(null)
 
-  const api = (window as any).electronAPI
+  const api = window.electronAPI
+
+  // 版本列表加载后，自动切换到最新非初始版（仅首次）
+  useEffect(() => {
+    if (batches.length > 0 && batchId === 0) {
+      const latest = [...batches].sort((a, b) => b.id - a.id).find(b => b.id > 0)
+      if (latest) setBatchId(latest.id)
+    }
+  }, [batches])
 
   const load = useCallback(async () => {
     if (!api?.getCostLedger) return
     setLoading(true)
     const [listRes, summaryRes] = await Promise.all([
-      api.getCostLedger(project.id),
-      api.getCostLedgerSummary(project.id),
+      api.getCostLedger(project.id, batchId),
+      api.getCostLedgerSummary(project.id, batchId),
     ])
     if (listRes?.success) setEntries(listRes.data || [])
     if (summaryRes?.success) setSummary(summaryRes.data || null)
     setLoading(false)
-  }, [project.id])
+  }, [project.id, batchId])
 
   useEffect(() => { load() }, [load])
 
   const handleSave = async (data: any) => {
     if (editing) {
       const res = await api.updateCostLedger(editing.id, data)
-      if (res?.success) { setShowForm(false); setEditing(null); load() }
+      if (res?.success) {
+        // 分类改变时自动学习
+        if (editing.category !== data.category) {
+          const n = await learnFromEdit(data.summary || '', data.counterparty || '', data.notes || '', data.category, data.direction)
+          if (n > 0) showToast(`已学习 ${n} 条分类规则`, 'success')
+        } else {
+          showToast('台账已保存', 'success')
+        }
+        setShowForm(false); setEditing(null); load()
+      } else {
+        showToast(res?.error || '保存失败', 'error')
+      }
     } else {
-      const res = await api.createCostLedger(data)
+      const res = await api.createCostLedger({ ...data, batchId })
       if (res?.success) {
         if (res.warning) alert(res.warning)
         setShowForm(false)
         load()
+      } else {
+        showToast(res?.error || '创建失败', 'error')
       }
     }
   }
@@ -71,14 +101,29 @@ export function CostLedgerProjectDetail({ project, onBack, categories, onManageC
           <p className="text-sm text-slate-500">成本台账</p>
         </div>
         <div className="flex-1" />
-        <button onClick={() => { setEditing(null); setShowForm(true) }} className="rounded-lg bg-blue-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-blue-700">
+        <CostLedgerBatchBar
+          batches={batches}
+          currentBatchId={batchId}
+          onChangeBatch={setBatchId}
+          onCreateBatch={createBatch}
+          onCopyBatch={async (sourceBatchId, name) => {
+            const b = await copyBatch(sourceBatchId, name)
+            if (b) setBatchId(b.id)
+            return b
+          }}
+          onRenameBatch={renameBatch}
+          onDeleteBatch={deleteBatch}
+          onImport={() => setShowImport(true)}
+          onCompare={() => setShowCompare(true)}
+        />
+        <button onClick={() => { setEditing(null); setShowForm(true) }} className="rounded-lg bg-primary-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-blue-700">
           + 新增台账
         </button>
       </div>
 
       {/* 内容区 */}
       <div className="flex-1 min-h-0 flex flex-col">
-        <CostLedgerList
+        <CostLedgerList key={batchId}
           entries={entries}
           summary={summary}
           loading={loading}
@@ -99,6 +144,23 @@ export function CostLedgerProjectDetail({ project, onBack, categories, onManageC
           onManageCategories={onManageCategories}
         />
       )}
+      {showImport && <CostLedgerImportModal
+        show={true}
+        projectId={project.id}
+        projectName={project.name}
+        batchId={batchId}
+        batches={batches}
+        categories={categories || []}
+        onClose={() => setShowImport(false)}
+        onImported={load}
+      />}
+      <CostLedgerCompareModal
+        show={showCompare}
+        projectId={project.id}
+        batches={batches}
+        categories={categories}
+        onClose={() => setShowCompare(false)}
+      />
     </div>
   )
 }

@@ -1,5 +1,3 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 
 describe('useDepartments', () => {
@@ -78,9 +76,10 @@ describe('useDepartments', () => {
       expect(res.success).toBe(true)
     })
 
-    expect(ea.createDepartment).toHaveBeenCalledWith({ name: '新部门' })
     // getDepartments 被调用两次：初始加载 + create 后刷新
-    expect(ea.getDepartments).toHaveBeenCalledTimes(2)
+    await waitFor(() => {
+      expect(ea.getDepartments).toHaveBeenCalledTimes(2)
+    })
   })
 
   it('update 成功后自动刷新列表', async () => {

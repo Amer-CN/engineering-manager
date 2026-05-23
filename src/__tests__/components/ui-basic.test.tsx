@@ -1,8 +1,6 @@
-// @ts-nocheck
 /**
  * UI 组件测试：Button、Badge、EmptyState
  */
-import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
@@ -134,7 +132,7 @@ describe('Badge', () => {
   })
 
   it('all 9 variants render without error', () => {
-    const variants = ['primary', 'success', 'warning', 'danger', 'gray', 'info', 'purple', 'orange', 'teal'] as const
+    const variants = ['primary', 'success', 'warning', 'danger', 'gray', 'info', 'purple', 'orange', 'cyan'] as const
     for (const v of variants) {
       const { container } = render(<Badge variant={v}>{v}</Badge>)
       expect(container.querySelector('span')).toBeInTheDocument()

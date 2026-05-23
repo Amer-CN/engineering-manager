@@ -1,0 +1,1165 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for src/components/features/hr/StaffPayroll.tsx</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../../../prettify.css" />
+    <link rel="stylesheet" href="../../../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../../../index.html">All files</a> / <a href="index.html">src/components/features/hr</a> StaffPayroll.tsx</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/198</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/200</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/40</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/163</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a>
+<a name='L96'></a><a href='#L96'>96</a>
+<a name='L97'></a><a href='#L97'>97</a>
+<a name='L98'></a><a href='#L98'>98</a>
+<a name='L99'></a><a href='#L99'>99</a>
+<a name='L100'></a><a href='#L100'>100</a>
+<a name='L101'></a><a href='#L101'>101</a>
+<a name='L102'></a><a href='#L102'>102</a>
+<a name='L103'></a><a href='#L103'>103</a>
+<a name='L104'></a><a href='#L104'>104</a>
+<a name='L105'></a><a href='#L105'>105</a>
+<a name='L106'></a><a href='#L106'>106</a>
+<a name='L107'></a><a href='#L107'>107</a>
+<a name='L108'></a><a href='#L108'>108</a>
+<a name='L109'></a><a href='#L109'>109</a>
+<a name='L110'></a><a href='#L110'>110</a>
+<a name='L111'></a><a href='#L111'>111</a>
+<a name='L112'></a><a href='#L112'>112</a>
+<a name='L113'></a><a href='#L113'>113</a>
+<a name='L114'></a><a href='#L114'>114</a>
+<a name='L115'></a><a href='#L115'>115</a>
+<a name='L116'></a><a href='#L116'>116</a>
+<a name='L117'></a><a href='#L117'>117</a>
+<a name='L118'></a><a href='#L118'>118</a>
+<a name='L119'></a><a href='#L119'>119</a>
+<a name='L120'></a><a href='#L120'>120</a>
+<a name='L121'></a><a href='#L121'>121</a>
+<a name='L122'></a><a href='#L122'>122</a>
+<a name='L123'></a><a href='#L123'>123</a>
+<a name='L124'></a><a href='#L124'>124</a>
+<a name='L125'></a><a href='#L125'>125</a>
+<a name='L126'></a><a href='#L126'>126</a>
+<a name='L127'></a><a href='#L127'>127</a>
+<a name='L128'></a><a href='#L128'>128</a>
+<a name='L129'></a><a href='#L129'>129</a>
+<a name='L130'></a><a href='#L130'>130</a>
+<a name='L131'></a><a href='#L131'>131</a>
+<a name='L132'></a><a href='#L132'>132</a>
+<a name='L133'></a><a href='#L133'>133</a>
+<a name='L134'></a><a href='#L134'>134</a>
+<a name='L135'></a><a href='#L135'>135</a>
+<a name='L136'></a><a href='#L136'>136</a>
+<a name='L137'></a><a href='#L137'>137</a>
+<a name='L138'></a><a href='#L138'>138</a>
+<a name='L139'></a><a href='#L139'>139</a>
+<a name='L140'></a><a href='#L140'>140</a>
+<a name='L141'></a><a href='#L141'>141</a>
+<a name='L142'></a><a href='#L142'>142</a>
+<a name='L143'></a><a href='#L143'>143</a>
+<a name='L144'></a><a href='#L144'>144</a>
+<a name='L145'></a><a href='#L145'>145</a>
+<a name='L146'></a><a href='#L146'>146</a>
+<a name='L147'></a><a href='#L147'>147</a>
+<a name='L148'></a><a href='#L148'>148</a>
+<a name='L149'></a><a href='#L149'>149</a>
+<a name='L150'></a><a href='#L150'>150</a>
+<a name='L151'></a><a href='#L151'>151</a>
+<a name='L152'></a><a href='#L152'>152</a>
+<a name='L153'></a><a href='#L153'>153</a>
+<a name='L154'></a><a href='#L154'>154</a>
+<a name='L155'></a><a href='#L155'>155</a>
+<a name='L156'></a><a href='#L156'>156</a>
+<a name='L157'></a><a href='#L157'>157</a>
+<a name='L158'></a><a href='#L158'>158</a>
+<a name='L159'></a><a href='#L159'>159</a>
+<a name='L160'></a><a href='#L160'>160</a>
+<a name='L161'></a><a href='#L161'>161</a>
+<a name='L162'></a><a href='#L162'>162</a>
+<a name='L163'></a><a href='#L163'>163</a>
+<a name='L164'></a><a href='#L164'>164</a>
+<a name='L165'></a><a href='#L165'>165</a>
+<a name='L166'></a><a href='#L166'>166</a>
+<a name='L167'></a><a href='#L167'>167</a>
+<a name='L168'></a><a href='#L168'>168</a>
+<a name='L169'></a><a href='#L169'>169</a>
+<a name='L170'></a><a href='#L170'>170</a>
+<a name='L171'></a><a href='#L171'>171</a>
+<a name='L172'></a><a href='#L172'>172</a>
+<a name='L173'></a><a href='#L173'>173</a>
+<a name='L174'></a><a href='#L174'>174</a>
+<a name='L175'></a><a href='#L175'>175</a>
+<a name='L176'></a><a href='#L176'>176</a>
+<a name='L177'></a><a href='#L177'>177</a>
+<a name='L178'></a><a href='#L178'>178</a>
+<a name='L179'></a><a href='#L179'>179</a>
+<a name='L180'></a><a href='#L180'>180</a>
+<a name='L181'></a><a href='#L181'>181</a>
+<a name='L182'></a><a href='#L182'>182</a>
+<a name='L183'></a><a href='#L183'>183</a>
+<a name='L184'></a><a href='#L184'>184</a>
+<a name='L185'></a><a href='#L185'>185</a>
+<a name='L186'></a><a href='#L186'>186</a>
+<a name='L187'></a><a href='#L187'>187</a>
+<a name='L188'></a><a href='#L188'>188</a>
+<a name='L189'></a><a href='#L189'>189</a>
+<a name='L190'></a><a href='#L190'>190</a>
+<a name='L191'></a><a href='#L191'>191</a>
+<a name='L192'></a><a href='#L192'>192</a>
+<a name='L193'></a><a href='#L193'>193</a>
+<a name='L194'></a><a href='#L194'>194</a>
+<a name='L195'></a><a href='#L195'>195</a>
+<a name='L196'></a><a href='#L196'>196</a>
+<a name='L197'></a><a href='#L197'>197</a>
+<a name='L198'></a><a href='#L198'>198</a>
+<a name='L199'></a><a href='#L199'>199</a>
+<a name='L200'></a><a href='#L200'>200</a>
+<a name='L201'></a><a href='#L201'>201</a>
+<a name='L202'></a><a href='#L202'>202</a>
+<a name='L203'></a><a href='#L203'>203</a>
+<a name='L204'></a><a href='#L204'>204</a>
+<a name='L205'></a><a href='#L205'>205</a>
+<a name='L206'></a><a href='#L206'>206</a>
+<a name='L207'></a><a href='#L207'>207</a>
+<a name='L208'></a><a href='#L208'>208</a>
+<a name='L209'></a><a href='#L209'>209</a>
+<a name='L210'></a><a href='#L210'>210</a>
+<a name='L211'></a><a href='#L211'>211</a>
+<a name='L212'></a><a href='#L212'>212</a>
+<a name='L213'></a><a href='#L213'>213</a>
+<a name='L214'></a><a href='#L214'>214</a>
+<a name='L215'></a><a href='#L215'>215</a>
+<a name='L216'></a><a href='#L216'>216</a>
+<a name='L217'></a><a href='#L217'>217</a>
+<a name='L218'></a><a href='#L218'>218</a>
+<a name='L219'></a><a href='#L219'>219</a>
+<a name='L220'></a><a href='#L220'>220</a>
+<a name='L221'></a><a href='#L221'>221</a>
+<a name='L222'></a><a href='#L222'>222</a>
+<a name='L223'></a><a href='#L223'>223</a>
+<a name='L224'></a><a href='#L224'>224</a>
+<a name='L225'></a><a href='#L225'>225</a>
+<a name='L226'></a><a href='#L226'>226</a>
+<a name='L227'></a><a href='#L227'>227</a>
+<a name='L228'></a><a href='#L228'>228</a>
+<a name='L229'></a><a href='#L229'>229</a>
+<a name='L230'></a><a href='#L230'>230</a>
+<a name='L231'></a><a href='#L231'>231</a>
+<a name='L232'></a><a href='#L232'>232</a>
+<a name='L233'></a><a href='#L233'>233</a>
+<a name='L234'></a><a href='#L234'>234</a>
+<a name='L235'></a><a href='#L235'>235</a>
+<a name='L236'></a><a href='#L236'>236</a>
+<a name='L237'></a><a href='#L237'>237</a>
+<a name='L238'></a><a href='#L238'>238</a>
+<a name='L239'></a><a href='#L239'>239</a>
+<a name='L240'></a><a href='#L240'>240</a>
+<a name='L241'></a><a href='#L241'>241</a>
+<a name='L242'></a><a href='#L242'>242</a>
+<a name='L243'></a><a href='#L243'>243</a>
+<a name='L244'></a><a href='#L244'>244</a>
+<a name='L245'></a><a href='#L245'>245</a>
+<a name='L246'></a><a href='#L246'>246</a>
+<a name='L247'></a><a href='#L247'>247</a>
+<a name='L248'></a><a href='#L248'>248</a>
+<a name='L249'></a><a href='#L249'>249</a>
+<a name='L250'></a><a href='#L250'>250</a>
+<a name='L251'></a><a href='#L251'>251</a>
+<a name='L252'></a><a href='#L252'>252</a>
+<a name='L253'></a><a href='#L253'>253</a>
+<a name='L254'></a><a href='#L254'>254</a>
+<a name='L255'></a><a href='#L255'>255</a>
+<a name='L256'></a><a href='#L256'>256</a>
+<a name='L257'></a><a href='#L257'>257</a>
+<a name='L258'></a><a href='#L258'>258</a>
+<a name='L259'></a><a href='#L259'>259</a>
+<a name='L260'></a><a href='#L260'>260</a>
+<a name='L261'></a><a href='#L261'>261</a>
+<a name='L262'></a><a href='#L262'>262</a>
+<a name='L263'></a><a href='#L263'>263</a>
+<a name='L264'></a><a href='#L264'>264</a>
+<a name='L265'></a><a href='#L265'>265</a>
+<a name='L266'></a><a href='#L266'>266</a>
+<a name='L267'></a><a href='#L267'>267</a>
+<a name='L268'></a><a href='#L268'>268</a>
+<a name='L269'></a><a href='#L269'>269</a>
+<a name='L270'></a><a href='#L270'>270</a>
+<a name='L271'></a><a href='#L271'>271</a>
+<a name='L272'></a><a href='#L272'>272</a>
+<a name='L273'></a><a href='#L273'>273</a>
+<a name='L274'></a><a href='#L274'>274</a>
+<a name='L275'></a><a href='#L275'>275</a>
+<a name='L276'></a><a href='#L276'>276</a>
+<a name='L277'></a><a href='#L277'>277</a>
+<a name='L278'></a><a href='#L278'>278</a>
+<a name='L279'></a><a href='#L279'>279</a>
+<a name='L280'></a><a href='#L280'>280</a>
+<a name='L281'></a><a href='#L281'>281</a>
+<a name='L282'></a><a href='#L282'>282</a>
+<a name='L283'></a><a href='#L283'>283</a>
+<a name='L284'></a><a href='#L284'>284</a>
+<a name='L285'></a><a href='#L285'>285</a>
+<a name='L286'></a><a href='#L286'>286</a>
+<a name='L287'></a><a href='#L287'>287</a>
+<a name='L288'></a><a href='#L288'>288</a>
+<a name='L289'></a><a href='#L289'>289</a>
+<a name='L290'></a><a href='#L290'>290</a>
+<a name='L291'></a><a href='#L291'>291</a>
+<a name='L292'></a><a href='#L292'>292</a>
+<a name='L293'></a><a href='#L293'>293</a>
+<a name='L294'></a><a href='#L294'>294</a>
+<a name='L295'></a><a href='#L295'>295</a>
+<a name='L296'></a><a href='#L296'>296</a>
+<a name='L297'></a><a href='#L297'>297</a>
+<a name='L298'></a><a href='#L298'>298</a>
+<a name='L299'></a><a href='#L299'>299</a>
+<a name='L300'></a><a href='#L300'>300</a>
+<a name='L301'></a><a href='#L301'>301</a>
+<a name='L302'></a><a href='#L302'>302</a>
+<a name='L303'></a><a href='#L303'>303</a>
+<a name='L304'></a><a href='#L304'>304</a>
+<a name='L305'></a><a href='#L305'>305</a>
+<a name='L306'></a><a href='#L306'>306</a>
+<a name='L307'></a><a href='#L307'>307</a>
+<a name='L308'></a><a href='#L308'>308</a>
+<a name='L309'></a><a href='#L309'>309</a>
+<a name='L310'></a><a href='#L310'>310</a>
+<a name='L311'></a><a href='#L311'>311</a>
+<a name='L312'></a><a href='#L312'>312</a>
+<a name='L313'></a><a href='#L313'>313</a>
+<a name='L314'></a><a href='#L314'>314</a>
+<a name='L315'></a><a href='#L315'>315</a>
+<a name='L316'></a><a href='#L316'>316</a>
+<a name='L317'></a><a href='#L317'>317</a>
+<a name='L318'></a><a href='#L318'>318</a>
+<a name='L319'></a><a href='#L319'>319</a>
+<a name='L320'></a><a href='#L320'>320</a>
+<a name='L321'></a><a href='#L321'>321</a>
+<a name='L322'></a><a href='#L322'>322</a>
+<a name='L323'></a><a href='#L323'>323</a>
+<a name='L324'></a><a href='#L324'>324</a>
+<a name='L325'></a><a href='#L325'>325</a>
+<a name='L326'></a><a href='#L326'>326</a>
+<a name='L327'></a><a href='#L327'>327</a>
+<a name='L328'></a><a href='#L328'>328</a>
+<a name='L329'></a><a href='#L329'>329</a>
+<a name='L330'></a><a href='#L330'>330</a>
+<a name='L331'></a><a href='#L331'>331</a>
+<a name='L332'></a><a href='#L332'>332</a>
+<a name='L333'></a><a href='#L333'>333</a>
+<a name='L334'></a><a href='#L334'>334</a>
+<a name='L335'></a><a href='#L335'>335</a>
+<a name='L336'></a><a href='#L336'>336</a>
+<a name='L337'></a><a href='#L337'>337</a>
+<a name='L338'></a><a href='#L338'>338</a>
+<a name='L339'></a><a href='#L339'>339</a>
+<a name='L340'></a><a href='#L340'>340</a>
+<a name='L341'></a><a href='#L341'>341</a>
+<a name='L342'></a><a href='#L342'>342</a>
+<a name='L343'></a><a href='#L343'>343</a>
+<a name='L344'></a><a href='#L344'>344</a>
+<a name='L345'></a><a href='#L345'>345</a>
+<a name='L346'></a><a href='#L346'>346</a>
+<a name='L347'></a><a href='#L347'>347</a>
+<a name='L348'></a><a href='#L348'>348</a>
+<a name='L349'></a><a href='#L349'>349</a>
+<a name='L350'></a><a href='#L350'>350</a>
+<a name='L351'></a><a href='#L351'>351</a>
+<a name='L352'></a><a href='#L352'>352</a>
+<a name='L353'></a><a href='#L353'>353</a>
+<a name='L354'></a><a href='#L354'>354</a>
+<a name='L355'></a><a href='#L355'>355</a>
+<a name='L356'></a><a href='#L356'>356</a>
+<a name='L357'></a><a href='#L357'>357</a>
+<a name='L358'></a><a href='#L358'>358</a>
+<a name='L359'></a><a href='#L359'>359</a>
+<a name='L360'></a><a href='#L360'>360</a>
+<a name='L361'></a><a href='#L361'>361</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import React, { useState, useEffect, useCallback } from 'react'
+import { DropdownMenu } from '../../ui/DropdownMenu/DropdownMenu'
+import { Button } from '../../ui/Button'
+import { EmptyState } from '../../ui/EmptyState'
+import { useToastStore } from '@/store/toastStore'
+import { MONTHS } from '@/constants'
+import { computeAttendanceSummary } from '../../../constants/attendance'
+import {
+  filteredStaffForGenerate,
+  getAttendanceForMember,
+  isAttendanceReady,
+// @ts-ignore TS6133: computeWorkDays is declared but never read
+  computeWorkDays,
+  getEntryDate,
+} from '../../../utils/staff-payroll-utils'
+import { StaffPayrollTable } from './StaffPayrollTable'
+&nbsp;
+const <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >StaffPayroll: React.FC = () =&gt; {</span></span>
+  const <span class="cstat-no" title="statement not covered" >showToast = <span class="fstat-no" title="function not covered" >useToastStore(s</span>tate =&gt; <span class="cstat-no" title="statement not covered" >state.showToast)</span></span>
+  const now = <span class="cstat-no" title="statement not covered" >new Date()</span>
+  const [filterYear, <span class="cstat-no" title="statement not covered" >setFilterYear] = useState&lt;string&gt;('全部')</span>
+  const [filterMonth, <span class="cstat-no" title="statement not covered" >setFilterMonth] = useState&lt;string&gt;('全部')</span>
+  const [filterMemberName, <span class="cstat-no" title="statement not covered" >setFilterMemberName] = useState('')</span>
+  const [staff, <span class="cstat-no" title="statement not covered" >setStaff] = useState&lt;any[]&gt;([])</span>
+  const [departments, <span class="cstat-no" title="statement not covered" >setDepartments] = useState&lt;any[]&gt;([])</span>
+  const [filterDept, <span class="cstat-no" title="statement not covered" >setFilterDept] = useState&lt;number | ''&gt;('')</span>
+  const [projects, <span class="cstat-no" title="statement not covered" >setProjects] = useState&lt;any[]&gt;([])</span>
+  const [filterProject, <span class="cstat-no" title="statement not covered" >setFilterProject] = useState&lt;string&gt;('全部')</span>
+  const [allWages, <span class="cstat-no" title="statement not covered" >setAllWages] = useState&lt;any[]&gt;([])</span>
+  const [attendances, <span class="cstat-no" title="statement not covered" >setAttendances] = useState&lt;any[]&gt;([])</span>
+  const [loading, <span class="cstat-no" title="statement not covered" >setLoading] = useState(true)</span>
+  const [generating, <span class="cstat-no" title="statement not covered" >setGenerating] = useState(false)</span>
+&nbsp;
+  // ── 可选年份：从工资记录中提取 ──
+  const yearOptions = <span class="cstat-no" title="statement not covered" >React.<span class="fstat-no" title="function not covered" >useMemo(() =&gt; {</span></span>
+    const s = <span class="cstat-no" title="statement not covered" >new Set&lt;string&gt;()</span>
+<span class="cstat-no" title="statement not covered" >    for (const w of allWages) {</span>
+<span class="cstat-no" title="statement not covered" >      if (w.yearMonth) <span class="cstat-no" title="statement not covered" >s.add(w.yearMonth.slice(0, 4))</span></span>
+    }
+    const y = <span class="cstat-no" title="statement not covered" >now.getFullYear()</span>
+    // 兜底：近 10 年
+<span class="cstat-no" title="statement not covered" >    if (s.size === 0) {</span>
+<span class="cstat-no" title="statement not covered" >      for (let i = <span class="cstat-no" title="statement not covered" >y - 9; i</span> &lt;= y; i++) <span class="cstat-no" title="statement not covered" >s.add(String(i))</span></span>
+    }
+<span class="cstat-no" title="statement not covered" >    return Array.from(s).sort()</span>
+  }, [allWages])
+&nbsp;
+  // ── 当前生效的年月（用于生成动作） ──
+  const effectiveYearMonth = <span class="cstat-no" title="statement not covered" >filterYear !== '全部' &amp;&amp; filterMonth !== '全部'</span>
+    ? `${filterYear}-${filterMonth}`
+    : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+&nbsp;
+// @ts-ignore TS6133: workDays is declared but never read
+  const workDays = <span class="cstat-no" title="statement not covered" >new Date(</span>
+    Number(effectiveYearMonth.split('-')[0]),
+    Number(effectiveYearMonth.split('-')[1]),
+    0
+  ).getDate()
+&nbsp;
+  // ── 数据加载：全量 staff 工资 + 考勤 ──
+  const <span class="cstat-no" title="statement not covered" >loadData = useCallback(<span class="fstat-no" title="function not covered" >async () =&gt; {</span></span>
+<span class="cstat-no" title="statement not covered" >    setLoading(true)</span>
+<span class="cstat-no" title="statement not covered" >    try {</span>
+      const [memRes, wageRes, attRes, deptRes, projRes] = <span class="cstat-no" title="statement not covered" >await Promise.all([</span>
+        window.electronAPI.getMembers(),
+        window.electronAPI.getWages(undefined, undefined),  // 全量：不限月份
+        window.electronAPI.getAttendances(undefined, undefined), // 全量考勤
+        window.electronAPI.getDepartments(),
+        window.electronAPI.getProjects()
+      ])
+<span class="cstat-no" title="statement not covered" >      if (memRes.success) {</span>
+<span class="cstat-no" title="statement not covered" >        setStaff((memRes.data || []).<span class="fstat-no" title="function not covered" >filter(</span></span>
+          (m: any) =&gt; <span class="cstat-no" title="statement not covered" >m.memberType === 'staff' || m.memberType === undefined</span>
+        ))
+      }
+<span class="cstat-no" title="statement not covered" >      if (wageRes.success) {</span>
+        // 只保留 staff 的工资记录（非 worker）
+        const staffIds = <span class="cstat-no" title="statement not covered" >new Set(</span>
+          (memRes.data || [])
+            .<span class="fstat-no" title="function not covered" >filter((m</span>: any) =&gt; <span class="cstat-no" title="statement not covered" >m.memberType === 'staff' || m.memberType === undefined)</span>
+            .<span class="fstat-no" title="function not covered" >map((m</span>: any) =&gt; <span class="cstat-no" title="statement not covered" >m.id)</span>
+        )
+<span class="cstat-no" title="statement not covered" >        setAllWages((wageRes.data || []).<span class="fstat-no" title="function not covered" >filter((w</span>: any) =&gt; <span class="cstat-no" title="statement not covered" >staffIds.has(w.memberId))</span>)</span>
+      }
+<span class="cstat-no" title="statement not covered" >      if (attRes.success) <span class="cstat-no" title="statement not covered" >setAttendances(attRes.data || [])</span></span>
+<span class="cstat-no" title="statement not covered" >      if (deptRes.success) <span class="cstat-no" title="statement not covered" >setDepartments(deptRes.data || [])</span></span>
+<span class="cstat-no" title="statement not covered" >      if (projRes.success) <span class="cstat-no" title="statement not covered" >setProjects((projRes.data || []).<span class="fstat-no" title="function not covered" >filter((p</span>: any) =&gt; <span class="cstat-no" title="statement not covered" >p.status !== 'archived')</span>)</span></span>
+    } catch (e) { <span class="cstat-no" title="statement not covered" >console.error(e) }</span>
+    finally { <span class="cstat-no" title="statement not covered" >setLoading(false) }</span>
+  }, [])
+&nbsp;
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >  useEffect(() =&gt; {</span> <span class="cstat-no" title="statement not covered" >loadData() }</span>, [loadData])</span>
+&nbsp;
+  // ── 客户端过滤 ──
+  const filteredWages = <span class="cstat-no" title="statement not covered" >React.<span class="fstat-no" title="function not covered" >useMemo(() =&gt; {</span></span>
+<span class="cstat-no" title="statement not covered" >    return allWages.<span class="fstat-no" title="function not covered" >filter((w</span>: any) =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >      if (filterYear !== '全部' &amp;&amp; w.yearMonth?.slice(0, 4) !== filterYear) <span class="cstat-no" title="statement not covered" >return false</span></span>
+<span class="cstat-no" title="statement not covered" >      if (filterMonth !== '全部' &amp;&amp; w.yearMonth?.slice(5, 7) !== filterMonth) <span class="cstat-no" title="statement not covered" >return false</span></span>
+<span class="cstat-no" title="statement not covered" >      if (filterMemberName &amp;&amp; !(w.memberName || '').includes(filterMemberName)) <span class="cstat-no" title="statement not covered" >return false</span></span>
+<span class="cstat-no" title="statement not covered" >      if (filterDept) {</span>
+        const s = <span class="cstat-no" title="statement not covered" >staff.<span class="fstat-no" title="function not covered" >find((m</span>: any) =&gt; <span class="cstat-no" title="statement not covered" >m.id === w.memberId)</span></span>
+<span class="cstat-no" title="statement not covered" >        if (s &amp;&amp; s.departmentId !== filterDept) <span class="cstat-no" title="statement not covered" >return false</span></span>
+      }
+      // 项目筛选：null（全公司）始终显示；有 projectId 的按实际项目匹配
+<span class="cstat-no" title="statement not covered" >      if (filterProject !== '全部') {</span>
+<span class="cstat-no" title="statement not covered" >        if (w.projectId != null &amp;&amp; w.projectId !== Number(filterProject)) <span class="cstat-no" title="statement not covered" >return false</span></span>
+        // projectId == null 的视为全公司通用，在所有项目下都显示
+      }
+<span class="cstat-no" title="statement not covered" >      return true</span>
+    })
+  }, [allWages, filterYear, filterMonth, filterMemberName, filterDept, staff])
+&nbsp;
+  // ── 汇总统计 ──
+  const summaryTotals = <span class="cstat-no" title="statement not covered" >React.<span class="fstat-no" title="function not covered" >useMemo(() =&gt; {</span></span>
+    const totalNet = <span class="cstat-no" title="statement not covered" >filteredWages.<span class="fstat-no" title="function not covered" >reduce((s</span>, w) =&gt; <span class="cstat-no" title="statement not covered" >s + ((w.netSalary || 0) - (w.deduction || 0)), 0</span>)</span>
+    const totalPaid = <span class="cstat-no" title="statement not covered" >filteredWages.<span class="fstat-no" title="function not covered" >reduce((s</span>, w) =&gt; <span class="cstat-no" title="statement not covered" >s + (Number(w.paidAmount) || 0), 0</span>)</span>
+<span class="cstat-no" title="statement not covered" >    return { totalNet, totalPaid, totalDiff: totalNet - totalPaid }</span>
+  }, [filteredWages])
+&nbsp;
+  // ── 生成薪酬的辅助函数 ──
+&nbsp;
+  // ── 生成本月薪酬 ──
+  const generatePayroll = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >async () =&gt; {</span></span>
+<span class="cstat-no" title="statement not covered" >    if (filterYear === '全部' || filterMonth === '全部') {</span>
+<span class="cstat-no" title="statement not covered" >      showToast('请选择具体的年份和月份', 'warning')</span>
+<span class="cstat-no" title="statement not covered" >      return</span>
+    }
+    const ym = <span class="cstat-no" title="statement not covered" >effectiveYearMonth</span>
+    const wd = <span class="cstat-no" title="statement not covered" >new Date(Number(ym.split('-')[0]), Number(ym.split('-')[1]), 0).getDate()</span>
+<span class="cstat-no" title="statement not covered" >    setGenerating(true)</span>
+    let successCount = <span class="cstat-no" title="statement not covered" >0</span>
+    let skipCount = <span class="cstat-no" title="statement not covered" >0</span>
+    let failCount = <span class="cstat-no" title="statement not covered" >0</span>
+<span class="cstat-no" title="statement not covered" >    try {</span>
+      const <span class="cstat-no" title="statement not covered" >candidates = filteredStaffForGenerate(staff, filterDept, ym)</span>
+<span class="cstat-no" title="statement not covered" >      for (const s of candidates) {</span>
+<span class="cstat-no" title="statement not covered" >        if (!isAttendanceReady(s.id, ym, attendances)) { <span class="cstat-no" title="statement not covered" >skipCount++; <span class="cstat-no" title="statement not covered" >c</span>ontinue }</span></span>
+<span class="cstat-no" title="statement not covered" >        try {</span>
+          const <span class="cstat-no" title="statement not covered" >att = getAttendanceForMember(attendances, s.id, ym)</span>
+          const <span class="cstat-no" title="statement not covered" >ed = getEntryDate(s)</span>
+          const <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >entryDay = (() =&gt; {</span></span>
+<span class="cstat-no" title="statement not covered" >            if (!ed) <span class="cstat-no" title="statement not covered" >return 1</span></span>
+            const [ey, em, ed2] = <span class="cstat-no" title="statement not covered" >ed.split('-').map(Number)</span>
+            const [cy, cm] = <span class="cstat-no" title="statement not covered" >ym.split('-').map(Number)</span>
+<span class="cstat-no" title="statement not covered" >            return (ey === cy &amp;&amp; em === cm) ? ed2 : 1</span>
+          })()
+          const <span class="cstat-no" title="statement not covered" >summary = computeAttendanceSummary(att?.dailyStatus, wd, entryDay)</span>
+          const attWorkDays = <span class="cstat-no" title="statement not covered" >summary.workDays</span>
+          const attDaysOff = <span class="cstat-no" title="statement not covered" >summary.daysOff</span>
+          const effSalary = <span class="cstat-no" title="statement not covered" >await window.electronAPI.getEffectiveSalary(s.id, ym)</span>
+          const <span class="cstat-no" title="statement not covered" >baseSalary = (effSalary.success ? effSalary.data?.baseSalary : s.baseSalary) || 0</span>
+          const <span class="cstat-no" title="statement not covered" >subsidy = (effSalary.success ? effSalary.data?.subsidy : 0) || 0</span>
+          const totalSalary = <span class="cstat-no" title="statement not covered" >baseSalary + subsidy</span>
+          const isPartialMonth = <span class="cstat-no" title="statement not covered" >entryDay &gt; 1</span>
+          const netSalary = <span class="cstat-no" title="statement not covered" >isPartialMonth</span>
+            ? Math.round(totalSalary * (attWorkDays / wd))
+            : attDaysOff &lt;= 4 ? totalSalary : Math.round(totalSalary * (attWorkDays / wd))
+          const record: any = <span class="cstat-no" title="statement not covered" >{</span>
+            memberId: s.id, projectId: null, yearMonth: ym, baseSalary, subsidy,
+            attendanceDays: attWorkDays, bonus: 0, deduction: 0, netSalary,
+            paidAmount: null, paidDate: null,
+          }
+          // upsert: 检查是否已有同人同月记录
+          const existing = <span class="cstat-no" title="statement not covered" >allWages.<span class="fstat-no" title="function not covered" >find((w</span>: any) =&gt; <span class="cstat-no" title="statement not covered" >w.memberId === s.id &amp;&amp; w.yearMonth === ym)</span></span>
+<span class="cstat-no" title="statement not covered" >          if (existing) {</span>
+<span class="cstat-no" title="statement not covered" >            await window.electronAPI.updateWage({ ...existing, ...record, id: existing.id })</span>
+          } else {
+<span class="cstat-no" title="statement not covered" >            await window.electronAPI.createWage(record)</span>
+          }
+<span class="cstat-no" title="statement not covered" >          successCount++</span>
+        } catch { <span class="cstat-no" title="statement not covered" >failCount++ }</span>
+      }
+<span class="cstat-no" title="statement not covered" >      await loadData()</span>
+      const parts = <span class="cstat-no" title="statement not covered" >[]</span>
+<span class="cstat-no" title="statement not covered" >      if (successCount &gt; 0) <span class="cstat-no" title="statement not covered" >parts.push(`${successCount} 条成功`)</span></span>
+<span class="cstat-no" title="statement not covered" >      if (skipCount &gt; 0) <span class="cstat-no" title="statement not covered" >parts.push(`${skipCount} 人无考勤已跳过`)</span></span>
+<span class="cstat-no" title="statement not covered" >      if (failCount &gt; 0) <span class="cstat-no" title="statement not covered" >parts.push(`${failCount} 条失败`)</span></span>
+<span class="cstat-no" title="statement not covered" >      showToast(parts.join('，'), failCount &gt; 0 ? 'error' : skipCount &gt; 0 ? 'info' : 'success')</span>
+    } catch (e: any) { <span class="cstat-no" title="statement not covered" >showToast(e?.message || '生成失败', 'error') }</span>
+    finally { <span class="cstat-no" title="statement not covered" >setGenerating(false) }</span>
+  }
+&nbsp;
+  // ── 删除 ──
+  const handleDeleteWage = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >async (w</span>age: any) =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    if (!confirm(`确认删除 ${wage.memberName || ''} ${wage.yearMonth} 的薪酬记录？此操作不可撤销。`)) <span class="cstat-no" title="statement not covered" >return</span></span>
+<span class="cstat-no" title="statement not covered" >    try {</span>
+      const result = <span class="cstat-no" title="statement not covered" >await window.electronAPI.deleteWage(wage.id)</span>
+<span class="cstat-no" title="statement not covered" >      if (result.success) {</span>
+<span class="cstat-no" title="statement not covered" >        showToast('薪酬记录已删除', 'success')</span>
+<span class="cstat-no" title="statement not covered" >        loadData()</span>
+      } else {
+<span class="cstat-no" title="statement not covered" >        showToast(result.error || '删除失败', 'error')</span>
+      }
+    } catch (e: any) { <span class="cstat-no" title="statement not covered" >showToast(e?.message || '删除失败', 'error') }</span>
+  }
+&nbsp;
+  const handleExportExcel = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >async () =&gt; {</span></span>
+<span class="cstat-no" title="statement not covered" >    try {</span>
+      const XLSX = <span class="cstat-no" title="statement not covered" >await import('xlsx')</span>
+      const staffMapLocal = <span class="cstat-no" title="statement not covered" >new Map(staff.<span class="fstat-no" title="function not covered" >map((s</span>: any) =&gt; <span class="cstat-no" title="statement not covered" >[s.id, s])</span>)</span>
+      const <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >getDeptNameLocal = (i</span>d?: number) =&gt; <span class="cstat-no" title="statement not covered" >departments.<span class="fstat-no" title="function not covered" >find((d</span>: any) =&gt; <span class="cstat-no" title="statement not covered" >d.id === id)</span>?.name || '-'</span></span>
+      const rows = <span class="cstat-no" title="statement not covered" >filteredWages.<span class="fstat-no" title="function not covered" >map((w</span>: any) =&gt; {</span>
+        const s = <span class="cstat-no" title="statement not covered" >staffMapLocal.get(w.memberId)</span>
+<span class="cstat-no" title="statement not covered" >        return {</span>
+          '姓名': w.memberName || s?.name || '',
+          '部门': getDeptNameLocal(s?.departmentId),
+          '月份': w.yearMonth || '',
+          '基本工资': w.baseSalary || 0,
+          '出勤天数': w.attendanceDays || 0,
+          '补助': w.subsidy || 0,
+          '扣款': w.deduction || 0,
+          '应发工资': (w.netSalary || 0) - (w.deduction || 0),
+          '实发金额': w.paidAmount || 0,
+          '发放日期': w.paidDate || '',
+          '差额': (w.netSalary || 0) - (w.deduction || 0) - (w.paidAmount || 0),
+        }
+      })
+      const wb = <span class="cstat-no" title="statement not covered" >XLSX.utils.book_new()</span>
+<span class="cstat-no" title="statement not covered" >      wb.SheetNames.push('薪酬汇总')</span>
+<span class="cstat-no" title="statement not covered" >      wb.Sheets['薪酬汇总'] = XLSX.utils.json_to_sheet(rows)</span>
+      const label = <span class="cstat-no" title="statement not covered" >filterYear !== '全部' &amp;&amp; filterMonth !== '全部'</span>
+        ? `薪酬汇总_${filterYear}-${filterMonth}`
+        : `薪酬汇总_全部`
+<span class="cstat-no" title="statement not covered" >      XLSX.writeFile(wb, `${label}.xlsx`)</span>
+<span class="cstat-no" title="statement not covered" >      showToast('导出成功', 'success')</span>
+    } catch (e: any) { <span class="cstat-no" title="statement not covered" >showToast(e?.message || '导出失败', 'error') }</span>
+  }
+&nbsp;
+  const handleDeleteAllMonth = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >async () =&gt; {</span></span>
+<span class="cstat-no" title="statement not covered" >    if (filterYear === '全部' || filterMonth === '全部') {</span>
+<span class="cstat-no" title="statement not covered" >      showToast('请选择具体的年份和月份', 'warning')</span>
+<span class="cstat-no" title="statement not covered" >      return</span>
+    }
+<span class="cstat-no" title="statement not covered" >    if (!confirm(`确认删除 ${effectiveYearMonth} 所有薪酬记录？此操作不可撤销。`)) <span class="cstat-no" title="statement not covered" >return</span></span>
+<span class="cstat-no" title="statement not covered" >    try {</span>
+      const ids = <span class="cstat-no" title="statement not covered" >filteredWages.<span class="fstat-no" title="function not covered" >map((w</span>: any) =&gt; <span class="cstat-no" title="statement not covered" >w.id)</span></span>
+<span class="cstat-no" title="statement not covered" >      if (ids.length === 0) { <span class="cstat-no" title="statement not covered" >showToast('没有可删除的记录', 'info'); <span class="cstat-no" title="statement not covered" >r</span>eturn }</span></span>
+      const result = <span class="cstat-no" title="statement not covered" >await window.electronAPI.batchDeleteWages(ids)</span>
+<span class="cstat-no" title="statement not covered" >      if (result.success) {</span>
+<span class="cstat-no" title="statement not covered" >        showToast(`已删除 ${ids.length} 条记录`, 'success')</span>
+<span class="cstat-no" title="statement not covered" >        loadData()</span>
+      } else { <span class="cstat-no" title="statement not covered" >showToast(result.error || '批量删除失败', 'error') }</span>
+    } catch (e: any) { <span class="cstat-no" title="statement not covered" >showToast(e?.message || '删除失败', 'error') }</span>
+  }
+&nbsp;
+  const handlePaidChange = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >async (w</span>age: any, field: string, value: any) =&gt; {</span>
+    const updated = <span class="cstat-no" title="statement not covered" >{ ...wage, [field]: value }</span>
+<span class="cstat-no" title="statement not covered" >    await window.electronAPI.updateWage(updated)</span>
+<span class="cstat-no" title="statement not covered" >    loadData()</span>
+<span class="cstat-no" title="statement not covered" >    showToast('已更新', 'success')</span>
+  }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >  if (loading) {</span>
+<span class="cstat-no" title="statement not covered" >    return (</span>
+      &lt;div className="flex justify-center py-12"&gt;
+        &lt;div className="animate-spin rounded-full h-8 w-8 border-4 border-indigo-500 border-t-transparent" /&gt;
+      &lt;/div&gt;
+    )
+  }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >  return (</span>
+    &lt;div className="flex-1 flex flex-col overflow-hidden"&gt;
+      {/* 筛选工具栏 */}
+      &lt;div className="bg-white rounded-xl shadow-sm px-5 py-3 flex items-center gap-4 flex-wrap flex-shrink-0"&gt;
+        &lt;div className="flex items-center gap-2"&gt;
+          &lt;label className="text-sm font-medium text-slate-600"&gt;年份&lt;/label&gt;
+          &lt;select value={filterYear}
+<span class="fstat-no" title="function not covered" >            onChange={e</span> =&gt; { <span class="cstat-no" title="statement not covered" >setFilterYear(e.target.value); <span class="cstat-no" title="statement not covered" >s</span>etFilterMonth('全部') }</span>}
+            className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm"&gt;
+            &lt;option value="全部"&gt;全部&lt;/option&gt;
+            {yearOptions.<span class="fstat-no" title="function not covered" >map(y</span> =&gt; <span class="cstat-no" title="statement not covered" >&lt;option key={y} value={y}&gt;{y}年&lt;/option&gt;)</span>}
+          &lt;/select&gt;
+        &lt;/div&gt;
+        &lt;div className="flex items-center gap-2"&gt;
+          &lt;label className="text-sm font-medium text-slate-600"&gt;月份&lt;/label&gt;
+          &lt;select value={filterMonth}
+<span class="fstat-no" title="function not covered" >            onChange={e</span> =&gt; <span class="cstat-no" title="statement not covered" >setFilterMonth(e.target.value)}</span>
+            className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm"&gt;
+            {MONTHS.<span class="fstat-no" title="function not covered" >map(m</span> =&gt; <span class="cstat-no" title="statement not covered" >&lt;option key={m} value={m}&gt;{m === '全部' ? '全部' : `${m}月`}&lt;/option&gt;)</span>}
+          &lt;/select&gt;
+        &lt;/div&gt;
+        &lt;div className="flex items-center gap-2"&gt;
+          &lt;label className="text-sm font-medium text-slate-600"&gt;姓名&lt;/label&gt;
+          &lt;input type="text" placeholder="搜索姓名..."
+            value={filterMemberName}
+<span class="fstat-no" title="function not covered" >            onChange={e</span> =&gt; <span class="cstat-no" title="statement not covered" >setFilterMemberName(e.target.value)}</span>
+            className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm w-36 focus:ring-2 focus:ring-indigo-500" /&gt;
+        &lt;/div&gt;
+        &lt;div className="flex items-center gap-2"&gt;
+          &lt;label className="text-sm font-medium text-slate-600"&gt;部门&lt;/label&gt;
+          &lt;select value={filterDept} <span class="fstat-no" title="function not covered" >onChange={e</span> =&gt; <span class="cstat-no" title="statement not covered" >setFilterDept(e.target.value ? Number(e.target.value) : '')}</span>
+            className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm"&gt;
+            &lt;option value=""&gt;全部&lt;/option&gt;
+            {departments.<span class="fstat-no" title="function not covered" >map((d</span>: any) =&gt; <span class="cstat-no" title="statement not covered" >&lt;option key={d.id} value={d.id}&gt;{d.name}&lt;/option&gt;)</span>}
+          &lt;/select&gt;
+        &lt;/div&gt;
+        &lt;div className="flex items-center gap-2"&gt;
+          &lt;label className="text-sm font-medium text-slate-600"&gt;项目&lt;/label&gt;
+          &lt;select value={filterProject} <span class="fstat-no" title="function not covered" >onChange={e</span> =&gt; <span class="cstat-no" title="statement not covered" >setFilterProject(e.target.value)}</span>
+            className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm"&gt;
+            &lt;option value="全部"&gt;全部&lt;/option&gt;
+            {projects.<span class="fstat-no" title="function not covered" >map((p</span>: any) =&gt; <span class="cstat-no" title="statement not covered" >&lt;option key={p.id} value={p.id}&gt;{p.name}&lt;/option&gt;)</span>}
+          &lt;/select&gt;
+        &lt;/div&gt;
+        {filterYear !== '全部' &amp;&amp; filterMonth !== <span class="fstat-no" title="function not covered" >'全部' &amp;&amp; (() =&gt; {</span>
+          const <span class="cstat-no" title="statement not covered" >candidates = filteredStaffForGenerate(staff, filterDept, effectiveYearMonth)</span>
+          const ready = <span class="cstat-no" title="statement not covered" >candidates.<span class="fstat-no" title="function not covered" >filter(<span class="cstat-no" title="statement not covered" >s</span> =&gt; isAttendanceReady(s.id, effectiveYearMonth, attendances))</span>.length</span>
+<span class="cstat-no" title="statement not covered" >          return ready &lt; candidates.length ? (</span>
+            &lt;span className="text-xs text-amber-500"&gt;考勤{ready}/{candidates.length}&lt;/span&gt;
+          ) : null
+        })()}
+        &lt;div className="flex-1" /&gt;
+        &lt;Button onClick={generatePayroll}
+          disabled={generating || staff.length === 0 || filterYear === '全部' || filterMonth === '全部'}
+          size="sm"
+          title={filterYear === '全部' || filterMonth === '全部' ? '请先选择具体年份和月份' : undefined}&gt;
+          {generating ? '计算中...' : `生成${filterYear !== '全部' &amp;&amp; filterMonth !== '全部' ? effectiveYearMonth : ''}`}
+        &lt;/Button&gt;
+        {filteredWages.length &gt; 0 &amp;&amp; filterYear !== '全部' &amp;&amp; filterMonth !== '全部' &amp;&amp; (
+          &lt;Button onClick={handleDeleteAllMonth} size="sm" variant="danger"&gt;
+            删除本月
+          &lt;/Button&gt;
+        )}
+        {filteredWages.length &gt; 0 &amp;&amp; (
+          &lt;DropdownMenu
+            trigger={&lt;button className="px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition-colors"&gt;更多 ▾&lt;/button&gt;}
+            items={[
+              { key: 'export', label: '导出Excel', onClick: handleExportExcel },
+              { key: 'print', label: '打印', <span class="fstat-no" title="function not covered" >onClick: () =&gt; <span class="cstat-no" title="statement not covered" >w</span>indow.print() }</span>,
+            ]}
+            align="end"
+          /&gt;
+        )}
+      &lt;/div&gt;
+&nbsp;
+      {/* 内容区 */}
+      {filteredWages.length === 0 ? (
+        &lt;div className="bg-white rounded-xl shadow-sm flex-1 mt-4 flex items-center justify-center"&gt;
+          {allWages.length === 0 ? (
+            &lt;EmptyState icon="Calculator" title="未生成薪酬"
+              description="请选择具体年份和月份后点击「生成薪酬」开始计算" /&gt;
+          ) : (
+            &lt;EmptyState icon="Banknote" title="暂无符合筛选条件的记录" description="请调整筛选条件" /&gt;
+          )}
+        &lt;/div&gt;
+      ) : (
+        &lt;StaffPayrollTable
+          filteredWages={filteredWages}
+          staff={staff}
+          departments={departments}
+          summaryTotals={summaryTotals}
+          onDeleteWage={handleDeleteWage}
+          onPaidChange={handlePaidChange}
+        /&gt;
+      )}
+    &lt;/div&gt;
+  )
+}
+&nbsp;
+export default StaffPayroll
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-05-22T20:17:08.901Z
+            </div>
+        <script src="../../../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../../../sorter.js"></script>
+        <script src="../../../../block-navigation.js"></script>
+    </body>
+</html>
+    

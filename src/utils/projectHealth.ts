@@ -47,7 +47,7 @@ export function getHealthLevel(score: number): { label: string; color: string; b
 /**
  * 人材机成本分类
  */
-const LABOR_CATEGORIES = ['人工费', '工资', '劳务费', '管理人员薪酬', '社保', '公积金']
+const LABOR_CATEGORIES = ['人工费', '工资', '劳务费', '管理人员薪酬', '社保', '公积金', '现场管理费']
 const MATERIAL_CATEGORIES = ['材料费', '材料采购', '建材', '石材', '钢材', '水泥']
 const MACHINERY_CATEGORIES = ['机械费', '设备租赁', '机械租赁', '台班费']
 
@@ -75,9 +75,19 @@ export function calculateCostBreakdown(expenseByCategory: Record<string, number>
     total: 0
   }
 
+  const typeToKey: Record<string, keyof CostBreakdown> = {
+    '人': 'labor',
+    '材': 'material',
+    '机': 'machinery',
+    '其他': 'other'
+  }
+
   Object.entries(expenseByCategory).forEach(([category, amount]) => {
     const type = categorizeExpense(category)
-    result[type] += amount
+    const key = typeToKey[type]
+    if (key && key !== 'total') {
+      result[key] += amount
+    }
     result.total += amount
   })
 

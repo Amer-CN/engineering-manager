@@ -1,9 +1,7 @@
-// @ts-nocheck
 /**
  * useIdCardOCR Hook 测试
  * 测试身份证 OCR 识别和文件处理
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 
 // Mock OCR service
@@ -106,7 +104,10 @@ describe('useIdCardOCR', () => {
     const { useIdCardOCR } = await import('@/hooks/useIdCardOCR')
     const { result } = renderHook(() => useIdCardOCR())
     const file = new File(['x'], 'test.txt', { type: 'text/plain' })
-    const res = await result.current.processIdCardFile(file)
+    let res: any = null
+    await act(async () => {
+      res = await result.current.processIdCardFile(file)
+    })
     expect(res).toBeNull()
   })
 
@@ -173,7 +174,10 @@ describe('useIdCardOCR', () => {
     const { useIdCardOCR } = await import('@/hooks/useIdCardOCR')
     const { result } = renderHook(() => useIdCardOCR())
     const file = new File(['x'], 'test.txt', { type: 'text/plain' })
-    const res = await result.current.processUploadFile(file)
+    let res: any = null
+    await act(async () => {
+      res = await result.current.processUploadFile(file)
+    })
     expect(res).toBeNull()
   })
 

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import { useMemo } from 'react'
 import { Settlement as SettlementData, Project } from '../../../types/electron'
 import { SettlementProjectCard, type SettlementProjectSummary } from './SettlementProjectCard'
 import { formatMoney } from '../../../utils/format'

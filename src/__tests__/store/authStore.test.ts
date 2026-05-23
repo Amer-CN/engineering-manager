@@ -1,5 +1,3 @@
-// @ts-nocheck
-import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useAuthStore } from '../../store/authStore'
 
 // 模拟依赖模块（authStore 依赖 permissions 和 audit）

@@ -1,11 +1,9 @@
-// @ts-nocheck
 /**
  * MemberCard 组件测试
  * - 展示成员信息（姓名、角色、电话、状态）
  * - 操作按钮（编辑、删除、调组、离场/重新入场）
  * - 农民工 vs 管理人员 不同展示
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { Member } from '@/types'
@@ -42,8 +40,10 @@ describe('MemberCard', () => {
     phone: '13800138000',
     idCard: '510101199001011234',
     idCardFront: '',
-    bankAccount: '',
-    bankName: '',
+    idCardBack: '',
+    email: '',
+    contractFile: '',
+    contractFileType: '',
     entryDate: '2024-01-15',
     status: 'active',
     isTeamLeader: false,
@@ -55,9 +55,7 @@ describe('MemberCard', () => {
     projectName: '',
     dailyWage: 0,
     threeLevelEducation: false,
-    contractFile: '',
     createdAt: '2024-01-15',
-    updatedAt: '2024-01-15',
   }
 
   it('renders staff member name and role', async () => {
@@ -205,7 +203,7 @@ describe('MemberCard', () => {
   const baseWorker: Member = {
     ...baseStaff,
     memberType: 'worker',
-    workerType: '木工',
+    workerType: 'carpenter',
     dailyWage: 350,
     status: 'active',
     entryDate: '2024-03-01',

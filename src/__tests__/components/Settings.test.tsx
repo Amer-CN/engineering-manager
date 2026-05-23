@@ -1,5 +1,3 @@
-// @ts-nocheck
-import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 
 // Mock all hooks used by Settings.tsx

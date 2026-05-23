@@ -1,7 +1,6 @@
 /**
  * ProjectList - 投资组合仪表盘 + 项目卡片网格
  */
-import React from 'react'
 import type { Project, Member } from '@/types'
 import { ProjectCard } from './ProjectCard'
 import { EmptyState } from '@/components/ui/EmptyState'

@@ -1,9 +1,3 @@
-﻿// @ts-nocheck
-/**
- * useInvoicePage Hook 测试
- * 测试发票管理页面状态、筛选、预览
- */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 
 // Mock dependencies
@@ -30,7 +24,7 @@ vi.mock('@/services/fileService', () => ({
 
 const mockInvoices = [
   { id: 1, name: '发票1', type: 'invoice_in', status: 'issued', projectId: 10, amount: 10000, issueDate: '2024-01-15', invoiceNo: 'INV001', sellerName: '供应商A', buyerName: '我方' },
-  { id: 2, name: '发票2', type: 'invoice_out', status: 'paid', projectId: 20, amount: 20000, issueDate: '2024-02-15', invoiceNo: 'INV002', sellerName: '我方', buyerName: '客户B' },
+  { id: 2, name: '发票2', type: 'invoice_out', status: 'received', projectId: 20, amount: 20000, issueDate: '2024-02-15', invoiceNo: 'INV002', sellerName: '我方', buyerName: '客户B' },
 ]
 const mockPayments = [
   { id: 1, type: 'invoice_in', amount: 5000, recordDate: '2024-01-20', projectId: 10 },
@@ -96,9 +90,9 @@ describe('useInvoicePage', () => {
     const { useInvoicePage } = await import('@/hooks/useInvoicePage')
     const { result } = renderHook(() => useInvoicePage())
     await waitFor(() => expect(result.current.loading).toBe(false))
-    act(() => { result.current.setFilterStatus('paid') })
+    act(() => { result.current.setFilterStatus('received') })
     expect(result.current.filteredInvoices).toHaveLength(1)
-    expect(result.current.filteredInvoices[0].status).toBe('paid')
+    expect(result.current.filteredInvoices[0].status).toBe('received')
   })
 
   it('filteredInvoices 按 projectId 筛选', async () => {
@@ -147,9 +141,9 @@ describe('useInvoicePage', () => {
     const { result } = renderHook(() => useInvoicePage())
     await waitFor(() => expect(result.current.loading).toBe(false))
     await act(async () => {
-      await result.current.handleStatusChange(1, 'paid')
+      await result.current.handleStatusChange(1, 'received')
     })
-    expect(ea.updateInvoiceStatus).toHaveBeenCalledWith(1, 'paid')
+    expect(ea.updateInvoiceStatus).toHaveBeenCalledWith(1, 'received')
   })
 
   it('setActiveTab 切换', async () => {
@@ -157,7 +151,7 @@ describe('useInvoicePage', () => {
     const { result } = renderHook(() => useInvoicePage())
     expect(result.current.activeTab).toBe('invoices')
     act(() => { result.current.setActiveTab('payments') })
-    expect(result.current.activeTab).toBe('payments')
+    await waitFor(() => expect(result.current.activeTab).toBe('payments'))
   })
 
   it('setPreview 设置预览', async () => {

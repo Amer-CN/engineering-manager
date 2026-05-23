@@ -1,9 +1,7 @@
-// @ts-nocheck
 /**
  * useOCRConfig Hook 测试
  * 测试 OCR 配置管理
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 
 const mockInitialConfig = {
@@ -22,21 +20,21 @@ const mockInitializeBuiltInConfig = vi.fn(() => Promise.resolve())
 const mockGetProviderName = vi.fn((p: string) => p === 'baidu' ? '百度OCR' : '离线Tesseract.js')
 
 vi.mock('@/services/ocr', () => ({
-  getOCRConfig: (...args: any[]) => mockGetOCRConfig(...args),
-  setOCRConfig: (...args: any[]) => mockSetOCRConfig(...args),
-  checkOCRStatus: (...args: any[]) => mockCheckOCRStatus(...args),
-  getProviderName: (...args: any[]) => mockGetProviderName(...args),
-  saveOCRConfig: (...args: any[]) => mockSaveOCRConfig(...args),
+  getOCRConfig: mockGetOCRConfig,
+  setOCRConfig: mockSetOCRConfig,
+  checkOCRStatus: mockCheckOCRStatus,
+  getProviderName: mockGetProviderName,
+  saveOCRConfig: mockSaveOCRConfig,
   initialConfig: mockInitialConfig,
-  initializeBuiltInConfig: (...args: any[]) => mockInitializeBuiltInConfig(...args),
-}))
+  initializeBuiltInConfig: mockInitializeBuiltInConfig,
+} as any))
 
 describe('useOCRConfig', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     // Reset to default implementations
     mockCheckOCRStatus.mockImplementation(() => Promise.resolve({ online: true, provider: 'offline', configured: true }))
-    mockGetOCRConfig.mockImplementation(() => mockInitialConfig)
+    mockGetOCRConfig.mockImplementation(() => ({ ...mockInitialConfig } as any))
   })
 
   it('初始加载配置和状态', async () => {
@@ -56,7 +54,7 @@ describe('useOCRConfig', () => {
     await waitFor(() => expect(result.current.ocrConfig).toBeDefined())
     // hook returns setOcrConfig (mapped from setOcrConfigState)
     act(() => {
-      result.current.setOcrConfig({ ...result.current.ocrConfig, baiduApiKey: 'new-key' })
+      result.current.setOcrConfig({ ...result.current.ocrConfig!, baiduApiKey: 'new-key' } as any)
     })
     await act(async () => {
       result.current.handleSaveOCRConfig()
@@ -82,7 +80,7 @@ describe('useOCRConfig', () => {
   })
 
   it('handleTestOCR 离线状态', async () => {
-    // Override mock BEFORE mounting - loadOCRConfig in useEffect will also use this
+    // Override mock BEFORE mounting
     mockCheckOCRStatus.mockImplementation(() => Promise.resolve({ online: false, provider: 'offline', configured: true }))
     const { useOCRConfig } = await import('@/hooks/useOCRConfig')
     const { result } = renderHook(() => useOCRConfig())
@@ -98,7 +96,6 @@ describe('useOCRConfig', () => {
   })
 
   it('handleTestOCR 异常', async () => {
-    // For mount: succeed, then for testOCR: fail
     let callCount = 0
     mockCheckOCRStatus.mockImplementation(() => {
       callCount++
@@ -123,7 +120,7 @@ describe('useOCRConfig', () => {
     const { result } = renderHook(() => useOCRConfig())
     await waitFor(() => expect(result.current.ocrConfig).toBeDefined())
     act(() => {
-      result.current.setOcrConfig({ ...result.current.ocrConfig, provider: 'baidu' })
+      result.current.setOcrConfig({ ...result.current.ocrConfig!, provider: 'baidu' } as any)
     })
     expect(result.current.ocrConfig.provider).toBe('baidu')
   })

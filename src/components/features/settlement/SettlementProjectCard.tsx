@@ -1,5 +1,4 @@
-import React from 'react'
-import { Settlement as SettlementData } from '../../../types/electron'
+
 import { Icon } from '../../ui/Icon'
 import { formatMoney } from '@/utils/format'
 

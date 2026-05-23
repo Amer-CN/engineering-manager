@@ -1,6 +1,6 @@
-import { useCallback, useRef } from 'react'
-import type { Member, WorkerTeam } from '../../../../types/electron'
-import { useToastContext } from '../../../../hooks/useToast'
+import { useCallback, useRef, type ReactNode } from 'react'
+import type { Member, WorkerTeam, WorkerStatus } from '../../../../types/electron'
+import { useToastStore } from '@/store/toastStore'
 import { useConfirm } from '../../../../hooks/useConfirm'
 import { useMemberOperations } from '../../members/useMemberOperations'
 import { useTeamOps } from '../../members/useTeamOps'
@@ -11,17 +11,19 @@ interface UseLaborOperationsOptions {
   projects: any[]
   workerTeams: WorkerTeam[]
   loadData: () => Promise<void>
+  editingWorker?: any | null
   onSuccess?: () => void
 }
 
 interface UseLaborOperationsReturn {
   // Member operations
   handleDeleteMember: (id: number) => Promise<void>
-  handleSubmitWorker: (data: WorkerFormData) => Promise<void>
+  handleSubmitWorker: (data: WorkerFormData | import('../../members/memberFormTypes').StaffFormData) => Promise<void>
   handleFileModified: (field: string) => void
   handleWorkerTransfer: (worker: Member, toTeamId: number, toProjectId: number, transferDate: string, reason: string, workerTeams: WorkerTeam[]) => Promise<void>
   handleWorkerLeave: (worker: Member, actualLeaveDate: string, remarks: string) => Promise<void>
   handleWorkerReEntry: (worker: Member) => Promise<void>
+  handleStaffStatusChange: (member: Member, status: string) => Promise<void>
 
   // Team operations
   handleCreateTeam: (name: string, projectId: number, leaderId?: number | null) => Promise<void>
@@ -37,6 +39,8 @@ interface UseLaborOperationsReturn {
   handleUpdateProjectWorker: (pwId: number, data: Record<string, any>) => Promise<void>
   handleDeleteProjectWorker: (pwId: number) => Promise<void>
   handleTeamWorkerTransfer: (pwId: number, toTeamId: number) => Promise<void>
+  /** 确认对话框 JSX，需要在调用方渲染 */
+  ConfirmDialog: ReactNode
 }
 
 /**
@@ -48,9 +52,10 @@ export function useLaborOperations({
   projects,
   workerTeams,
   loadData,
+  editingWorker,
   onSuccess,
 }: UseLaborOperationsOptions): UseLaborOperationsReturn {
-  const { showToast } = useToastContext()
+  const showToast = useToastStore(state => state.showToast)
   const { confirm, ConfirmDialog } = useConfirm()
   const originalMemberFileRef = useRef<Record<number, Record<string, string>>>({})
 
@@ -59,12 +64,9 @@ export function useLaborOperations({
     handleDeleteMember: originalHandleDeleteMember,
     handleSubmitWorker: originalHandleSubmitWorker,
     handleFileModified,
-    handleWorkerTransfer,
-    handleWorkerLeave,
-    handleWorkerReEntry,
   } = useMemberOperations({
     editingStaff: null,
-    editingWorker: null,
+    editingWorker,
     projects,
     originalMemberFileRef,
     loadData,
@@ -93,8 +95,8 @@ export function useLaborOperations({
   }, [members, originalHandleDeleteMember, confirm])
 
   // Wrap submit worker
-  const handleSubmitWorker = useCallback(async (data: WorkerFormData) => {
-    await originalHandleSubmitWorker(data)
+  const handleSubmitWorker = useCallback(async (data: WorkerFormData | import('../../members/memberFormTypes').StaffFormData) => {
+    await originalHandleSubmitWorker(data as WorkerFormData)
   }, [originalHandleSubmitWorker])
 
   // Pool worker operations
@@ -123,6 +125,7 @@ export function useLaborOperations({
         if (result.success) {
           showToast('工人信息已更新', 'success')
           await loadData()
+          if (onSuccess) onSuccess()
         } else {
           showToast(result.error || '更新失败', 'error')
         }
@@ -131,6 +134,7 @@ export function useLaborOperations({
         if (result.success) {
           showToast('工人已添加', 'success')
           await loadData()
+          if (onSuccess) onSuccess()
         } else {
           showToast(result.error || '添加失败', 'error')
         }
@@ -219,6 +223,104 @@ export function useLaborOperations({
     }
   }, [loadData, showToast])
 
+  // 工人调动
+  const handleWorkerTransfer = useCallback(async (
+    worker: Member,
+    toTeamId: number,
+    toProjectId: number,
+    transferDate: string,
+    reason: string,
+    workerTeams: WorkerTeam[]
+  ) => {
+    try {
+      const pwId = (worker as any).projectWorkerId || worker.id
+      const result = await window.electronAPI.updateProjectWorker({
+        id: pwId,
+        teamId: toTeamId,
+        projectId: toProjectId,
+      } as any)
+      if (result.success) {
+        await window.electronAPI.createWorkerTransfer({
+          workerId: worker.id,
+          fromTeamId: worker.teamId || 0,
+          toTeamId,
+          fromProjectId: worker.projectId || 0,
+          toProjectId,
+          transferDate,
+          reason,
+        })
+        showToast('调转成功', 'success')
+        await loadData()
+      } else {
+        showToast(result.error || '调转失败', 'error')
+      }
+    } catch (err: any) {
+      showToast(err.message || '调转失败', 'error')
+    }
+  }, [loadData, showToast])
+
+  // 工人离场
+  const handleWorkerLeave = useCallback(async (
+    worker: Member,
+    actualLeaveDate: string,
+    remarks: string
+  ) => {
+    try {
+      const result = await window.electronAPI.updateMember({
+        ...worker,
+        status: 'left' as WorkerStatus,
+        actualLeaveDate,
+        remarks,
+      } as any)
+      if (result.success) {
+        showToast('已办理离场', 'success')
+        await loadData()
+      } else {
+        showToast(result.error || '操作失败', 'error')
+      }
+    } catch (err: any) {
+      showToast(err.message || '操作失败', 'error')
+    }
+  }, [loadData, showToast])
+
+  // 工人重新入职
+  const handleWorkerReEntry = useCallback(async (worker: Member) => {
+    try {
+      const result = await window.electronAPI.updateMember({
+        ...worker,
+        status: 'active' as WorkerStatus,
+        actualLeaveDate: undefined,
+        reentryDate: new Date().toISOString().split('T')[0],
+      } as any)
+      if (result.success) {
+        showToast('已办理重新入职', 'success')
+        await loadData()
+      } else {
+        showToast(result.error || '操作失败', 'error')
+      }
+    } catch (err: any) {
+      showToast(err.message || '操作失败', 'error')
+    }
+  }, [loadData, showToast])
+
+  // 员工状态变更
+  const handleStaffStatusChange = useCallback(async (member: Member, status: string) => {
+    try {
+      const result = await window.electronAPI.updateMember({
+        ...member,
+        status: status as any,
+      } as any)
+      if (result.success) {
+        showToast('状态已更新', 'success')
+        await loadData()
+      } else {
+        showToast(result.error || '操作失败', 'error')
+      }
+    } catch (err: any) {
+      showToast(err.message || '操作失败', 'error')
+    }
+  }, [loadData, showToast])
+
   return {
     handleDeleteMember,
     handleSubmitWorker,
@@ -235,5 +337,7 @@ export function useLaborOperations({
     handleUpdateProjectWorker,
     handleDeleteProjectWorker,
     handleTeamWorkerTransfer,
+    ConfirmDialog,
+    handleStaffStatusChange,
   }
 }

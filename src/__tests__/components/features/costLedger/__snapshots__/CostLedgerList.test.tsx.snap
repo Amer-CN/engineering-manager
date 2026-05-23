@@ -1,0 +1,340 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`CostLedgerList > 快照匹配 1`] = `
+<div>
+  <div
+    class="flex-1 flex flex-col min-h-0"
+  >
+    <div
+      class="flex items-center gap-3 border-b border-slate-200 px-6 py-3"
+    >
+      <div
+        class="flex gap-1 rounded-lg bg-slate-100 p-0.5"
+      >
+        <button
+          class="rounded-md px-3 py-1 text-xs font-medium transition-colors bg-white text-slate-800 shadow-sm"
+        >
+          全部
+        </button>
+        <button
+          class="rounded-md px-3 py-1 text-xs font-medium transition-colors text-slate-500 hover:text-slate-700"
+        >
+          支出
+        </button>
+        <button
+          class="rounded-md px-3 py-1 text-xs font-medium transition-colors text-slate-500 hover:text-slate-700"
+        >
+          收入
+        </button>
+      </div>
+      <div
+        class="flex gap-0.5 rounded-lg bg-slate-100 p-0.5"
+      >
+        <button
+          class="rounded-md px-2.5 py-1 text-xs font-medium transition-colors text-slate-500 hover:text-slate-700"
+        >
+          一级
+        </button>
+        <button
+          class="rounded-md px-2.5 py-1 text-xs font-medium transition-colors bg-white text-slate-800 shadow-sm"
+        >
+          二级
+        </button>
+      </div>
+      <select
+        class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 max-w-[160px]"
+      >
+        <option
+          value="all"
+        >
+          全部分类
+        </option>
+        <optgroup
+          label="支出 · 直接工程费"
+        >
+          <option
+            style="color: rgb(59, 130, 246);"
+            value="material"
+          >
+            材料费
+          </option>
+        </optgroup>
+      </select>
+      <div
+        class="ml-auto flex items-center gap-2"
+      >
+        <button
+          class="rounded-lg border border-slate-200 px-2.5 py-1 text-xs text-slate-500 hover:border-slate-300 hover:text-slate-700 hover:bg-slate-50 transition-colors"
+        >
+          打印
+        </button>
+        <button
+          class="rounded-lg border border-slate-200 px-2.5 py-1 text-xs text-slate-500 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+        >
+          导出Excel
+        </button>
+        <div
+          class="flex items-center gap-1 border-l border-slate-200 pl-3"
+        >
+          <button
+            class="rounded px-1.5 py-0.5 text-xs text-slate-500 hover:bg-slate-100"
+            title="缩小"
+          >
+            −
+          </button>
+          <span
+            class="text-xs text-slate-500 w-8 text-center font-mono"
+          >
+            100
+            %
+          </span>
+          <button
+            class="rounded px-1.5 py-0.5 text-xs text-slate-500 hover:bg-slate-100"
+            title="放大"
+          >
+            +
+          </button>
+        </div>
+        <span
+          class="text-xs text-slate-400"
+        >
+          共 2 条
+        </span>
+      </div>
+    </div>
+    <div
+      class="flex-1 overflow-auto min-h-0"
+      style="zoom: 1;"
+    >
+      <table
+        class="w-full table-fixed border-collapse"
+      >
+        <thead
+          class="sticky top-0 z-10 bg-slate-50 text-xs"
+        >
+          <tr>
+            <th
+              class="border-b border-slate-200 px-3 py-2 text-slate-500 w-[96px] text-center"
+            >
+              <div
+                class="flex items-center"
+              >
+                <span
+                  class="cursor-pointer hover:text-slate-700 select-none"
+                >
+                  凭证号
+                   ↑
+                </span>
+                <div
+                  data-testid="filter"
+                />
+              </div>
+            </th>
+            <th
+              class="border-b border-slate-200 px-3 py-2 text-slate-500 w-[84px]"
+            >
+              <div
+                class="flex items-center"
+              >
+                <span
+                  class="cursor-pointer hover:text-slate-700 select-none"
+                >
+                  日期
+                </span>
+                <div
+                  data-testid="filter"
+                />
+              </div>
+            </th>
+            <th
+              class="border-b border-slate-200 px-3 py-2 text-slate-500 w-[60px]"
+            >
+              <div
+                class="flex items-center"
+              >
+                <span
+                  class="cursor-pointer hover:text-slate-700 select-none"
+                >
+                  方向
+                </span>
+              </div>
+            </th>
+            <th
+              class="border-b border-slate-200 px-3 py-2 text-slate-500 w-[96px]"
+            >
+              <div
+                class="flex items-center"
+              >
+                <span
+                  class="cursor-pointer hover:text-slate-700 select-none"
+                >
+                  分类
+                </span>
+              </div>
+            </th>
+            <th
+              class="border-b border-slate-200 px-3 py-2 text-slate-500 "
+            >
+              <div
+                class="flex items-center"
+              >
+                <span
+                  class="cursor-pointer hover:text-slate-700 select-none"
+                >
+                  往来单位/个人
+                </span>
+                <div
+                  data-testid="filter"
+                />
+              </div>
+            </th>
+            <th
+              class="border-b border-slate-200 px-3 py-2 text-slate-500 w-[96px]"
+            >
+              <div
+                class="flex items-center"
+              >
+                <span
+                  class="cursor-pointer hover:text-slate-700 select-none"
+                >
+                  渠道
+                </span>
+                <div
+                  data-testid="filter"
+                />
+              </div>
+            </th>
+            <th
+              class="border-b border-slate-200 px-3 py-2 text-slate-500 w-[136px] text-right"
+            >
+              <div
+                class="flex items-center"
+              >
+                <span
+                  class="cursor-pointer hover:text-slate-700 select-none"
+                >
+                  金额
+                </span>
+                <div
+                  data-testid="filter"
+                />
+              </div>
+            </th>
+            <th
+              class="border-b border-slate-200 px-3 py-2 text-slate-500 "
+            >
+              <div
+                class="flex items-center"
+              >
+                <span
+                  class="cursor-pointer hover:text-slate-700 select-none"
+                >
+                  摘要
+                </span>
+                <div
+                  data-testid="filter"
+                />
+              </div>
+            </th>
+            <th
+              class="border-b border-slate-200 px-3 py-2 text-slate-500 "
+            >
+              <div
+                class="flex items-center"
+              >
+                <span
+                  class="cursor-pointer hover:text-slate-700 select-none"
+                >
+                  备注
+                </span>
+                <div
+                  data-testid="filter"
+                />
+              </div>
+            </th>
+            <th
+              class="border-b border-slate-200 px-3 py-2 text-right text-slate-500 w-[64px]"
+            >
+              操作
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <div
+            data-id="1"
+            data-testid="row"
+          >
+            测试摘要1
+          </div>
+          <div
+            data-id="2"
+            data-testid="row"
+          >
+            测试摘要2
+          </div>
+        </tbody>
+      </table>
+    </div>
+    <div
+      class="sticky bottom-0 border-t-2 border-slate-300 bg-white"
+    >
+      <div
+        class="flex items-center justify-between px-6 py-4 text-sm"
+      >
+        <span
+          class="text-sm text-slate-600"
+        >
+          合计 2 条
+        </span>
+        <div
+          class="flex gap-8 font-mono"
+        >
+          <div
+            class="text-right"
+          >
+            <div
+              class="text-xs text-slate-600"
+            >
+              经营支出
+            </div>
+            <div
+              class="text-lg font-bold text-red-600"
+            >
+              ¥2000.00
+            </div>
+          </div>
+          <div
+            class="text-right"
+          >
+            <div
+              class="text-xs text-slate-600"
+            >
+              资金收入
+            </div>
+            <div
+              class="text-lg font-bold text-emerald-600"
+            >
+              ¥0.00
+            </div>
+          </div>
+          <div
+            class="text-right"
+          >
+            <div
+              class="text-xs text-slate-600"
+            >
+              净
+              流出
+            </div>
+            <div
+              class="text-lg font-bold text-red-600"
+            >
+              ¥-2000.00
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;

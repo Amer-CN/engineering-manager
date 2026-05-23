@@ -1,10 +1,9 @@
-// @ts-nocheck
 /**
  * 测试用 Mock 数据工厂
  * 集中管理所有组件的 mock 数据，避免重复定义
  */
 import type {
-  Project, Partner, Member, Invoice,
+  Project, Partner, Member, Invoice, InvoiceTaxRate,
   CostLedgerEntry, CostLedgerCategory, Worker, ProjectWorker, Department
 } from '@/types/electron'
 
@@ -100,21 +99,17 @@ export function createMockMember(overrides?: Partial<Member>): Member {
 // Invoice
 // ═══════════════════════════════════════════
 
-export function createMockInvoice(overrides?: Partial<Invoice>): Invoice {
+export function createMockInvoice(overrides?: Partial<Invoice>): any {
   return {
     id: 1,
     projectId: 1,
-    type: 'output',
-    number: 'SX20250001',
-    date: '2025-03-01',
+    type: 'invoice_out',
+    invoiceNo: 'SX20250001',
+    issueDate: '2025-03-01',
     amount: 100000,
-    taxRate: 9,
+    taxRate: 9 as InvoiceTaxRate,
     taxAmount: 9000,
-    totalAmount: 109000,
-    partnerId: 1,
-    partnerName: '成都金图腾建筑劳务有限公司',
     status: 'issued',
-    linkedPaymentId: null,
     remarks: '',
     createdAt: '2025-03-01T00:00:00Z',
     ...overrides,
@@ -138,8 +133,8 @@ export function createMockCostLedgerEntry(overrides?: Partial<CostLedgerEntry>):
     summary: '3月农民工工资',
     counterparty: '成都金图腾建筑劳务有限公司',
     channel: '银行转账',
-    linkedInvoiceId: null,
-    linkedInvoiceStatus: null,
+    linkedInvoiceId: undefined,
+    linkedInvoiceStatus: undefined,
     notes: '',
     attachments: [],
     createdAt: '2025-03-15T00:00:00Z',

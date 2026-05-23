@@ -1,4 +1,3 @@
-import * as XLSX from 'xlsx'
 import { formatMoney } from '@/utils/format'
 import { DIRECTION_CONFIG, getCategoryDisplayLabel } from './config'
 import type { CostLedgerEntry, CostLedgerCategory } from '@/types'
@@ -75,13 +74,14 @@ export function printCostLedgerList(
 // 导出 Excel
 // ═══════════════════════════════════════════════════════════
 
-export function exportCostLedgerList(
+export async function exportCostLedgerList(
   entries: CostLedgerEntry[],
   categories: CostLedgerCategory[] | null | undefined,
   categoryLevel: 'level1' | 'level2',
 ) {
   if (entries.length === 0) { alert('没有可导出的数据'); return }
   try {
+    const XLSX = await import('xlsx')
     const data = entries.map((e, i) => ({
       '序号': i + 1,
       '凭证号': e.voucherNo || '',

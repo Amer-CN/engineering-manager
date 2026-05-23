@@ -1,0 +1,35 @@
+[mcp_servers.qcc-company]
+url = "https://agent.qcc.com/mcp/company/stream"
+
+[mcp_servers.qcc-company.http_headers]
+Authorization = "Bearer MXvEMlF4LR5dWmud67j7lvZ7SDPPXp8HudJ692ETc1irr2eH"
+
+[mcp_servers.qcc-executive]
+url = "https://agent.qcc.com/mcp/executive/stream"
+
+[mcp_servers.qcc-executive.http_headers]
+Authorization = "Bearer MXvEMlF4LR5dWmud67j7lvZ7SDPPXp8HudJ692ETc1irr2eH"
+
+[mcp_servers.qcc-history]
+url = "https://agent.qcc.com/mcp/history/stream"
+
+[mcp_servers.qcc-history.http_headers]
+Authorization = "Bearer MXvEMlF4LR5dWmud67j7lvZ7SDPPXp8HudJ692ETc1irr2eH"
+
+[mcp_servers.qcc-ipr]
+url = "https://agent.qcc.com/mcp/ipr/stream"
+
+[mcp_servers.qcc-ipr.http_headers]
+Authorization = "Bearer MXvEMlF4LR5dWmud67j7lvZ7SDPPXp8HudJ692ETc1irr2eH"
+
+[mcp_servers.qcc-operation]
+url = "https://agent.qcc.com/mcp/operation/stream"
+
+[mcp_servers.qcc-operation.http_headers]
+Authorization = "Bearer MXvEMlF4LR5dWmud67j7lvZ7SDPPXp8HudJ692ETc1irr2eH"
+
+[mcp_servers.qcc-risk]
+url = "https://agent.qcc.com/mcp/risk/stream"
+
+[mcp_servers.qcc-risk.http_headers]
+Authorization = "Bearer MXvEMlF4LR5dWmud67j7lvZ7SDPPXp8HudJ692ETc1irr2eH"

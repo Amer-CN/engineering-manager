@@ -156,13 +156,13 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
               </div>
             </div>
           ) : <EmptyState text="暂无费用数据" />}
-        </div>
+        </Card>
       </motion.section>
 
       {/* ═══ 4. Contracts + KPIs ═══ */}
       <motion.section variants={sectionV} className="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-6">
         <div className="xl:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4">
+          <Card bordered={false} className="border border-slate-200 p-4" padding="none">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-2"><Icon name="TrendingUp" size={14} className="text-emerald-500" /> 收入合同</h3>
             <p className="text-xl font-bold text-emerald-600 mb-3">¥{stats.incomeTotal > 0 ? (stats.incomeTotal / 10000).toFixed(1) : '0'}万</p>
             {incP.length > 0 ? <div className="space-y-2">{incP.slice(0, 4).map(c => (
@@ -171,8 +171,8 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
                 <div className="flex items-center gap-2"><div className="flex-1 h-1 rounded-full bg-slate-200 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all" style={{ width: `${c.progress}%` }} /></div><span className="text-[10px] text-slate-400 w-12 text-right">已回款 ¥{formatMoney(c.received)}</span></div>
               </div>
             ))}</div> : <EmptyState text="暂无" />}
-          </div>
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4">
+          </Card>
+          <Card bordered={false} className="border border-slate-200 p-4" padding="none">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-2"><Icon name="TrendingDown" size={14} className="text-red-500" /> 支出合同</h3>
             <p className="text-xl font-bold text-red-500 mb-3">¥{stats.expenseTotal > 0 ? (stats.expenseTotal / 10000).toFixed(1) : '0'}万</p>
             {expP.length > 0 ? <div className="space-y-2">{expP.slice(0, 4).map(c => (
@@ -181,7 +181,7 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
                 <div className="flex items-center gap-2"><div className="flex-1 h-1 rounded-full bg-slate-200 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-red-500 to-red-400 transition-all" style={{ width: `${c.progress}%` }} /></div><span className="text-[10px] text-slate-400 w-12 text-right">已付款 ¥{formatMoney(c.received)}</span></div>
               </div>
             ))}</div> : <EmptyState text="暂无" />}
-          </div>
+          </Card>
         </div>
         <div className="space-y-3">
           <StatCard icon={<Icon name="DollarSign" size={16} className="text-blue-500" />} accent="bg-blue-50" label="合同总额" value={`¥${(stats.incomeTotal / 10000).toFixed(1)}万`} />

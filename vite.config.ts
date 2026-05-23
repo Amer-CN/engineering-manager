@@ -3,6 +3,33 @@ import react from '@vitejs/plugin-react'
 import electron from 'vite-plugin-electron'
 import renderer from 'vite-plugin-electron-renderer'
 import path from 'path'
+import fs from 'fs'
+
+// 读取 package.json 版本号，注入到渲染进程
+const pkgPath = new URL('./package.json', import.meta.url)
+const appVersion = JSON.parse(fs.readFileSync(pkgPath, 'utf-8')).version
+
+// 移除 vendor-charts 的 modulepreload 标签，让它真正按需加载
+function removeChartsPreloadPlugin() {
+  return {
+    name: 'remove-vendor-charts-preload',
+    // writeBundle 在 dist/ 写入完成后触发
+    writeBundle: () => {
+      const htmlPath = path.resolve('dist/index.html')
+      if (fs.existsSync(htmlPath)) {
+        const html = fs.readFileSync(htmlPath, 'utf-8')
+        const cleaned = html.replace(
+          /<link[^>]+rel=["']modulepreload["'][^>]*href=["'][^"']*vendor-charts[^"']*["'][^>]*>\s*\n?/gi,
+          ''
+        )
+        if (cleaned !== html) {
+          fs.writeFileSync(htmlPath, cleaned, 'utf-8')
+          console.log('✓ 已移除 vendor-charts 的 preload 标签')
+        }
+      }
+    }
+  }
+}
 
 export default defineConfig({
   plugins: [
@@ -11,14 +38,14 @@ export default defineConfig({
       {
         entry: 'electron/main.ts',
         onstart(options) {
-          // 启动 Electron 并传递开发服务器 URL
+          delete process.env.NODE_OPTIONS
           options.startup()
         },
         vite: {
           build: {
             outDir: 'dist-electron',
             rollupOptions: {
-              external: ['better-sqlite3', 'electron']
+              external: ['better-sqlite3']
             }
           }
         }
@@ -26,7 +53,6 @@ export default defineConfig({
       {
         entry: 'electron/preload.ts',
         onstart(options) {
-          // 通知渲染进程重新加载（连接到开发服务器）
           options.reload()
         },
         vite: {
@@ -39,7 +65,8 @@ export default defineConfig({
         }
       }
     ]),
-    renderer()
+    renderer(),
+    removeChartsPreloadPlugin(),
   ],
   resolve: {
     alias: {
@@ -51,15 +78,55 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom'],
-          'vendor-animation': ['framer-motion'],
-          'vendor-charts': ['recharts'],
-          'vendor-icons': ['lucide-react'],
-          'vendor-xlsx': ['xlsx'],
-          'vendor-ocr': ['tesseract.js'],
+        manualChunks(id) {
+          if (id.includes('node_modules/react-dom') || id.includes('node_modules/react/')) {
+            return 'vendor-react'
+          }
+          if (id.includes('node_modules/framer-motion')) {
+            return 'vendor-animation'
+          }
+          if (id.includes('node_modules/recharts')) {
+            return 'vendor-charts'
+          }
+          if (id.includes('node_modules/lucide-react')) {
+            return 'vendor-icons'
+          }
+          if (id.includes('node_modules')) {
+            const match = id.match(/node_modules\/([^/]+)/)
+            if (match) {
+              return `vendor-${match[1]}`
+            }
+          }
         },
       },
     },
+    minify: 'terser',
+  },
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./src/test-setup.ts'],
+    alias: {
+      '@': path.resolve(__dirname, 'src')
+    },
+    globals: true,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      reportsDirectory: 'E:/eg-coverage',
+      include: [
+        'src/utils/**',
+        'src/types/guards',
+        'src/types/permissions.ts',
+        'src/store/**',
+        'src/components/features/**',
+        'electron/sqlite/queries/**',
+      ],
+    },
+    exclude: ['node_modules/**', 'dist/**', 'dist-electron/**', 'electron/ipc-handlers/**', 'electron/sqlite/db-init.ts', 'electron/sqlite/migrate.ts', 'electron/sqlite/index.ts'],
+    server: {
+      deps: {
+        inline: ['@testing-library/user-event']
+      }
+    }
   }
 })

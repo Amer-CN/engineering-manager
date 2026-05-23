@@ -1,9 +1,11 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
+import type { ConfirmDialogProps } from '../../components/ui/ConfirmDialog/ConfirmDialog'
 
 // Mock ConfirmDialog component (useConfirm calls it as a function)
-const mockConfirmDialog = vi.fn(() => null)
+// 正确类型化 vi.fn，使 mock.calls 有正确的元组类型
+const mockConfirmDialog = vi.fn<(props: ConfirmDialogProps) => React.ReactElement>(
+  () => null as unknown as React.ReactElement,
+)
 vi.mock('../../components/ui/ConfirmDialog/ConfirmDialog', () => ({
   ConfirmDialog: mockConfirmDialog,
 }))
@@ -25,9 +27,12 @@ describe('useConfirm', () => {
   it('confirm 返回 Promise', async () => {
     const { useConfirm } = await import('../../hooks/useConfirm')
     const { result } = renderHook(() => useConfirm())
-    const promise = result.current.confirm({ content: '确认操作？' })
-    expect(promise).toBeInstanceOf(Promise)
-    promise.catch(() => {})
+    let promise: Promise<boolean> | undefined
+    act(() => {
+      promise = result.current.confirm({ content: '确认操作？' })
+    })
+    expect(promise!).toBeInstanceOf(Promise)
+    promise!.catch(() => {})
   })
 
   it('confirm 调用后 ConfirmDialog 接收 isOpen=true', async () => {

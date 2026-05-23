@@ -1,7 +1,5 @@
-// @ts-nocheck
 import { renderHook, act, cleanup, waitFor } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { CRUDAPI, UseCRUDBaseOptions } from '../../hooks/useCRUDBase.types'
+import type { CRUDAPI } from '../../hooks/useCRUDBase.types'
 
 afterEach(cleanup)
 

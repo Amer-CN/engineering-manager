@@ -6,7 +6,7 @@
  * - ipc-handlers/: 按业务模块拆分的 IPC 处理器
  */
 
-import { app, BrowserWindow, globalShortcut, session, protocol, net } from 'electron'
+import { app, BrowserWindow, globalShortcut, protocol, net } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import log from 'electron-log'
@@ -27,10 +27,19 @@ import {
   saveDatabase,
   getUploadsPath,
   db,
+  config,
 } from './database'
 import { ensureUnclassifiedDirs } from './file-service'
 
-// 注册自定义协议（必须在 app ready 之前）
+// ═══════════════════════════════════════════════════════════════════════════════
+// IPC 权限守卫（必须在导入 IPC handlers 之前安装）
+// ═══════════════════════════════════════════════════════════════════════════════
+import { installIpcGuard } from './ipc-guard'
+installIpcGuard()
+
+// SQLite 模块（可选，不影响 JSON 存储正常运行）
+import { initSqliteDb, closeSqliteDb, loadPersistedReadMode } from './sqlite'
+
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'contract-file',
@@ -62,19 +71,7 @@ function createWindow() {
   }
 
   log.info('Creating main window...')
-  
-  // 配置允许跨域访问百度API
-  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-    callback({
-      responseHeaders: {
-        ...details.responseHeaders,
-        'Access-Control-Allow-Origin': ['*'],
-        'Access-Control-Allow-Methods': ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-        'Access-Control-Allow-Headers': ['*']
-      }
-    })
-  })
-  
+
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -84,7 +81,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      webSecurity: false  // 关闭web安全策略，允许跨域请求（用于百度OCR）
+      webSecurity: true   // 保持安全策略开启（OCR 已移至主进程 IPC）
     },
     title: '工程管家',
     show: false
@@ -205,6 +202,22 @@ app.whenReady().then(async () => {
   })
 
   await initDatabase()
+
+  // ── 可选：初始化 SQLite 数据库 ────────────────────────────────────────────
+  // SQLite 与 JSON 并行运行，不强制迁移，仅作为渐进式替代的基础设施准备
+  // Phase 7.2：自动初始化，失败不影响应用正常启动
+  try {
+    if (config?.dataPath) {
+      initSqliteDb(config.dataPath)
+      loadPersistedReadMode() // 从配置表恢复上次的读取模式
+      log.info('[SQLite] 初始化成功，路径:', config.dataPath)
+    } else {
+      log.warn('[SQLite] 跳过初始化：dataPath 未就绪')
+    }
+  } catch (err) {
+    log.warn('[SQLite] 初始化失败（不影响应用运行）:', err)
+  }
+  // ────────────────────────────────────────────────────────────────────────────
 
   // rename old English folders to Chinese under 未分类/ if they still exist
   const uploadsBase = getUploadsPath()
@@ -361,4 +374,10 @@ app.on('activate', () => {
 app.on('before-quit', () => {
   log.info('App quitting')
   saveDatabase()
+  // 关闭 SQLite（WAL checkpoint + 连接释放）
+  try {
+    closeSqliteDb()
+  } catch (err) {
+    log.warn('[SQLite] 关闭时异常（忽略）:', err)
+  }
 })

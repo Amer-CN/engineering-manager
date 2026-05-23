@@ -1,15 +1,18 @@
 // WorkerSection 组件
 // @deprecated 此组件已废弃，工人管理模块已改用 LaborWorkerList + LaborTeamManager
 
-import React, { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
-import type { Member, WorkerTeam } from '@/types'
+import type { WorkerTeam } from '@/types'
 import { getWorkerTypeLabel } from '@/utils'
 import {
   WorkerSectionProps, TeamFormData, defaultTeamFormData,
-  TeamCard, TeamFormModal, TransferModal, LeaveModal
+// @ts-ignore TS6133: defaultLeaveFormData is declared but never read
+// @ts-ignore TS6133: LeaveFormData is declared but never read
+  TeamCard, TeamFormModal, TransferModal, LeaveFormData, defaultLeaveFormData
 } from './WorkerSectionModals'
+import { LeaveModal } from './LeaveModal'
 function calcAge(birthDate: string): number {
   const birth = new Date(birthDate)
   if (isNaN(birth.getTime())) return 0
@@ -52,16 +55,17 @@ export function WorkerSection({
 
 
   // 农民工列表
-  const workerMembers = members.filter(m => m.memberType === 'worker')
+  const workerMembers = useMemo(() => members.filter(m => m.memberType === 'worker'), [members])
 
   // 筛选后的工人
-  const filteredWorkers = workerMembers.filter(w => {
+  const filteredWorkers = useMemo(() => workerMembers.filter(w => {
     if (filterProject && w.projectId !== filterProject) return false
     if (filterTeam && w.teamId !== filterTeam) return false
     return true
-  })
+  }), [workerMembers, filterProject, filterTeam])
+
   // 按项目分组班组
-  const teamsByProject = workerTeams.reduce((acc, team) => {
+  const teamsByProject = useMemo(() => workerTeams.reduce((acc, team) => {
     if (!acc[team.projectId]) {
       acc[team.projectId] = {
         projectName: team.projectName || projects.find(p => p.id === team.projectId)?.name || '未知项目',
@@ -71,7 +75,7 @@ export function WorkerSection({
     }
     acc[team.projectId].teams.push(team)
     return acc
-  }, {} as Record<number, { projectName: string; projectId: number; teams: WorkerTeam[] }>)
+  }, {} as Record<number, { projectName: string; projectId: number; teams: WorkerTeam[] }>), [workerTeams, projects])
   // 获取班组工人数量
   const getTeamWorkerCount = (teamId: number) => {
     return workerMembers.filter(w => w.teamId === teamId).length
@@ -183,7 +187,7 @@ export function WorkerSection({
             <select
               value={filterProject || ''}
               onChange={e => { setFilterProject(e.target.value ? Number(e.target.value) : null); setFilterTeam(null) }}
-              className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+              className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
             >
               <option value="">全部项目</option>
               {projects.map(p => (
@@ -193,7 +197,7 @@ export function WorkerSection({
             <select
               value={filterTeam || ''}
               onChange={e => setFilterTeam(e.target.value ? Number(e.target.value) : null)}
-              className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+              className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
               disabled={!filterProject}
             >
               <option value="">全部班组</option>
@@ -204,7 +208,7 @@ export function WorkerSection({
             <button onClick={onAddWorker} className="ml-auto bg-amber-600 hover:bg-amber-700 text-white px-5 py-2 rounded-lg font-medium transition-colors flex items-center">
               <Icon name="Plus" size={18} className="mr-1" />添加工人
             </button>
-            <button onClick={onImportClick} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium transition-colors flex items-center">
+            <button onClick={onImportClick} className="bg-primary-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium transition-colors flex items-center">
               <Icon name="Upload" size={18} className="mr-1" />导入Excel
             </button>
           </div>

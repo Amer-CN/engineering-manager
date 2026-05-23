@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { Icon } from '../../ui/Icon'
 import type { Member, WorkerTeam } from '../../../types/electron'
 import { TeamCard, TeamFormModal, TeamFormData, defaultTeamFormData } from '../members/WorkerSectionModals'
+import { TeamWageModal } from './TeamWageModal'
 
 interface LaborTeamManagerProps {
   members: Member[]
@@ -29,6 +30,9 @@ const LaborTeamManager: React.FC<LaborTeamManagerProps> = ({
   const [showTeamModal, setShowTeamModal] = useState(false)
   const [editingTeam, setEditingTeam] = useState<WorkerTeam | null>(null)
   const [teamFormData, setTeamFormData] = useState<TeamFormData>(defaultTeamFormData)
+
+  // Team wage modal state
+  const [wageModal, setWageModal] = useState<{ teamId: number; teamName: string; projectId: number; projectName: string } | null>(null)
 
   // 按项目分组班组
   const teamsByProject = workerTeams.reduce((acc, team) => {
@@ -128,6 +132,7 @@ const LaborTeamManager: React.FC<LaborTeamManagerProps> = ({
                       onEdit={() => handleEditTeam(team)}
                       onDelete={() => onDeleteTeam(team.id)}
                       onManageWorkers={onManageWorkers}
+                      onTeamWages={(tid, tname, pid, pname) => setWageModal({ teamId: tid, teamName: tname, projectId: pid, projectName: pname })}
                     />
                   ))}
                 </div>
@@ -147,6 +152,18 @@ const LaborTeamManager: React.FC<LaborTeamManagerProps> = ({
             添加班组
           </button>
         </div>
+      )}
+
+      {/* Team wage modal */}
+      {wageModal && (
+        <TeamWageModal
+          show={!!wageModal}
+          teamId={wageModal.teamId}
+          teamName={wageModal.teamName}
+          projectId={wageModal.projectId}
+          projectName={wageModal.projectName}
+          onClose={() => setWageModal(null)}
+        />
       )}
 
       {/* Team form modal */}

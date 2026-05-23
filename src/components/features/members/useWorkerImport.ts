@@ -219,6 +219,7 @@ const WORKER_TYPE_FUZZY: [string, string][] = [
   ['金属', 'steel'], ['装饰', 'other'], ['安装', 'other'],
 ]
 
+// @ts-ignore TS6133: resolveWorkerType is declared but never read
 function resolveWorkerType(raw: string): string {
   const trimmed = raw.trim()
   if (!trimmed) return 'other'

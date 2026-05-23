@@ -37,7 +37,7 @@ function HealthRing({ score, size = 44 }: { score: number; size?: number }) {
   )
 }
 
-export function ProjectCard({ project, members, index, onClick, onEdit, onDelete }: ProjectCardProps) {
+export const ProjectCard = React.memo(function ProjectCard({ project, members, index, onClick, onEdit, onDelete }: ProjectCardProps) {
   const { can } = usePermission()
 
   const getManagerName = () => {
@@ -112,4 +112,4 @@ export function ProjectCard({ project, members, index, onClick, onEdit, onDelete
       </div>
     </div>
   )
-}
+})

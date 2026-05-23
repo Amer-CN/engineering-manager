@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useToastContext } from '../../../hooks/useToast'
+import { useToastStore } from '@/store/toastStore'
 import { validateImageFile, validateFile } from './memberFormTypes'
 import type { StaffFormData, WorkerFormData } from './memberFormTypes'
 
@@ -10,7 +10,7 @@ export function useMemberPasteHandler({ visible, type, staffFormData, workerForm
   processIdCardFile: (file: File, field: 'idCardFront' | 'idCardBack', setter: any) => Promise<void>
   processUploadFile: (file: File, field: string, setter: any) => Promise<void>
 }) {
-  const { showToast } = useToastContext()
+  const showToast = useToastStore(state => state.showToast)
   useEffect(() => {
     if (!visible) return
     const handler = async (e: ClipboardEvent) => {

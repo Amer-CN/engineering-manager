@@ -1,4 +1,3 @@
-import React, { useState } from 'react'
 import { Template, TemplateCategory } from '../../../types/electron'
 import { categoryConfig } from './config'
 import { TemplateCard } from './TemplateCard'

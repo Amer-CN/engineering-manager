@@ -17,6 +17,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   createUser: (userData: any) => ipcRenderer.invoke('auth:createUser', userData),
   updateUser: (userId: string, updates: any) => ipcRenderer.invoke('auth:updateUser', userId, updates),
   deleteUser: (userId: string) => ipcRenderer.invoke('auth:deleteUser', userId),
+  setSession: (session: { userId: string; username: string; roleId: string; permissions: string[] }) =>
+    ipcRenderer.invoke('auth:setSession', session),
+  clearSession: () => ipcRenderer.invoke('auth:clearSession'),
 
   // 项目
   getProjects: () => ipcRenderer.invoke('db:projects:getAll'),
@@ -30,9 +33,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   updateMember: (member: any) => ipcRenderer.invoke('db:members:update', member),
   deleteMember: (id: number) => ipcRenderer.invoke('db:members:delete', id),
 
-  // 项目成员关联
+  // 项目成员关联（含时间维度）
   getProjectMembers: (projectId: number) => ipcRenderer.invoke('db:projectMembers:getAll', projectId),
-  addProjectMember: (projectId: number, memberId: number) => ipcRenderer.invoke('db:projectMembers:add', projectId, memberId),
+  addProjectMember: (projectId: number, memberId: number, joinedAt?: string) => ipcRenderer.invoke('db:projectMembers:add', projectId, memberId, joinedAt),
+  updateProjectMember: (id: number, updates: { leftAt?: string; joinedAt?: string }) => ipcRenderer.invoke('db:projectMembers:update', id, updates),
   removeProjectMember: (id: number) => ipcRenderer.invoke('db:projectMembers:remove', id),
 
   // 农民工班组
@@ -51,6 +55,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   updateWorker: (worker: any) => ipcRenderer.invoke('db:workers:update', worker),
   deleteWorker: (id: number) => ipcRenderer.invoke('db:workers:delete', id),
   getWorkerStats: (workerId: number) => ipcRenderer.invoke('db:workers:getStats', workerId),
+  getTeamWages: (projectId: number, teamId: number) => ipcRenderer.invoke('db:workers:getTeamWages', projectId, teamId),
+  fixWorkerData: () => ipcRenderer.invoke('db:workers:fixData'),
 
   // 项目用工关系
   getProjectWorkers: (projectId: number) => ipcRenderer.invoke('db:projectWorkers:getAll', projectId),
@@ -72,11 +78,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
   deleteExpense: (id: number) => ipcRenderer.invoke('db:expenses:delete', id),
 
   // 成本台账
-  getCostLedger: (projectId: number) => ipcRenderer.invoke('db:costLedger:list', projectId),
+  getCostLedger: (projectId: number, batchId?: number) => ipcRenderer.invoke('db:costLedger:list', projectId, batchId),
   createCostLedger: (entry: any) => ipcRenderer.invoke('db:costLedger:create', entry),
+  batchCreateCostLedger: (projectId: number, entries: any[], batchId: number) => ipcRenderer.invoke('db:costLedger:batchCreate', projectId, entries, batchId),
   updateCostLedger: (id: number, changes: any) => ipcRenderer.invoke('db:costLedger:update', id, changes),
   deleteCostLedger: (id: number) => ipcRenderer.invoke('db:costLedger:delete', id),
-  getCostLedgerSummary: (projectId: number) => ipcRenderer.invoke('db:costLedger:summary', projectId),
+  getCostLedgerSummary: (projectId: number, batchId?: number) => ipcRenderer.invoke('db:costLedger:summary', projectId, batchId),
+  getCostLedgerBatches: (projectId: number) => ipcRenderer.invoke('db:costLedgerBatches:list', projectId),
+  createCostLedgerBatch: (projectId: number, name: string) => ipcRenderer.invoke('db:costLedgerBatches:create', projectId, name),
+  copyCostLedgerBatch: (projectId: number, sourceBatchId: number, name: string) => ipcRenderer.invoke('db:costLedgerBatches:copy', projectId, sourceBatchId, name),
+  renameCostLedgerBatch: (projectId: number, batchId: number, name: string) => ipcRenderer.invoke('db:costLedgerBatches:rename', projectId, batchId, name),
+  deleteCostLedgerBatch: (projectId: number, batchId: number) => ipcRenderer.invoke('db:costLedgerBatches:delete', projectId, batchId),
+  getCostLedgerMatchRules: () => ipcRenderer.invoke('db:costLedgerMatchRules:list'),
+  saveCostLedgerMatchRules: (rules: any[]) => ipcRenderer.invoke('db:costLedgerMatchRules:save', rules),
   getCostLedgerCategories: (direction?: string) => ipcRenderer.invoke('db:costLedgerCategories:list', direction),
   createCostLedgerCategory: (data: { label: string; direction: string; color?: string }) => ipcRenderer.invoke('db:costLedgerCategories:create', data),
   updateCostLedgerCategory: (id: number, changes: any) => ipcRenderer.invoke('db:costLedgerCategories:update', id, changes),
@@ -184,6 +198,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getTemplateStats: () => ipcRenderer.invoke('db:templates:getStats'),
   fillTemplateDocx: (storedFileName: string, values: Record<string, string>) =>
     ipcRenderer.invoke('templates:fill-docx', storedFileName, values),
+  convertTemplateDocxToHtml: (storedFileName: string, category?: string) =>
+    ipcRenderer.invoke('templates:convert-docx-to-html', storedFileName, category),
 
   // ============ 进销存 ============
   getInventoryItems: () => ipcRenderer.invoke('db:inventoryItems:getAll'),
@@ -223,6 +239,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   deleteSalaryHistory: (id: number) => ipcRenderer.invoke('db:salaryHistory:delete', id),
   getEffectiveSalary: (memberId: number, yearMonth: string) => ipcRenderer.invoke('db:salaryHistory:getEffective', memberId, yearMonth),
 
+  // ============ 工人日工资历史 ============
+  getWageHistory: (projectWorkerId: number) => ipcRenderer.invoke('db:wageHistory:list', projectWorkerId),
+  saveWageHistory: (record: { projectWorkerId: number; yearMonth: string; dailyWage: number; note?: string }) => ipcRenderer.invoke('db:wageHistory:save', record),
+  deleteWageHistory: (id: number) => ipcRenderer.invoke('db:wageHistory:delete', id),
+  getEffectiveWage: (projectWorkerId: number, yearMonth: string) => ipcRenderer.invoke('db:wageHistory:getEffective', projectWorkerId, yearMonth),
+
   // ============ 工资管理 ============
   getWages: (projectId?: number, yearMonth?: string, memberId?: number) => ipcRenderer.invoke('db:wages:getAll', projectId, yearMonth, memberId),
   generateProjectWages: (projectId: number, yearMonth: string) => ipcRenderer.invoke('db:wages:generateForProject', projectId, yearMonth),
@@ -234,7 +256,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   batchClearPayments: (ids: number[]) => ipcRenderer.invoke('db:wages:batchClearPayments', ids),
   batchArchivePayments: (ids: number[]) => ipcRenderer.invoke('db:wages:batchArchivePayments', ids),
   getWageStats: (yearMonth?: string, projectId?: number) => ipcRenderer.invoke('db:wages:getStats', yearMonth, projectId),
-  parseBankReceipt: (sourcePath: string, projectName?: string) => ipcRenderer.invoke('db:wages:parseBankReceipt', sourcePath, projectName),
+  parseBankReceipt: (sourcePath: string, projectName?: string, yearMonth?: string) => ipcRenderer.invoke('db:wages:parseBankReceipt', sourcePath, projectName, yearMonth),
+  batchParseBankReceipts: (filePaths: string[], projectId?: number, yearMonth?: string) => ipcRenderer.invoke('db:wages:batchParseBankReceipts', filePaths, projectId, yearMonth),
+  batchConfirmMatches: (matches: any[], yearMonth?: string) => ipcRenderer.invoke('db:wages:batchConfirmMatches', matches, yearMonth),
+
+  // ============ 工资发放记录（A3） ============
+  getWagePaymentRecords: (filters?: { projectId?: number; yearMonth?: string; status?: string }) =>
+    ipcRenderer.invoke('db:wages:getWagePaymentRecords', filters),
+  getWageOverdueStats: () => ipcRenderer.invoke('db:wages:getWageOverdueStats'),
+  getWageOverdueList: () => ipcRenderer.invoke('db:wages:getWageOverdueList'),
 
   // ============ 审计日志 ============
   auditLog: (log: any) => ipcRenderer.invoke('audit:log', log),
@@ -242,8 +272,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getAuditStats: (days?: number) => ipcRenderer.invoke('audit:stats', days),
   clearAuditLogs: (daysToKeep: number) => ipcRenderer.invoke('audit:clear', daysToKeep),
 
+  // ============ 快照管理 ============
+  getSnapshots: () => ipcRenderer.invoke('db:snapshots:list'),
+  createSnapshot: (label?: string) => ipcRenderer.invoke('db:snapshots:create', label),
+  restoreSnapshot: (timestamp: string) => ipcRenderer.invoke('db:snapshots:restore', timestamp),
+  deleteSnapshot: (timestamp: string) => ipcRenderer.invoke('db:snapshots:delete', timestamp),
+  setMaxSnapshots: (count: number) => ipcRenderer.invoke('db:snapshots:setMaxCount', count),
+  getMaxSnapshots: () => ipcRenderer.invoke('db:snapshots:getMaxCount'),
+
   // ============ 角色权限 ============
   getRoles: () => ipcRenderer.invoke('roles:getAll'),
   updateRole: (roleId: string, permissions: string[]) => ipcRenderer.invoke('roles:update', roleId, permissions),
-  resetRole: (roleId: string) => ipcRenderer.invoke('roles:reset', roleId)
+  resetRole: (roleId: string) => ipcRenderer.invoke('roles:reset', roleId),
+
+  // ============ SQLite 状态管理 ============
+  getSqliteStatus: () => ipcRenderer.invoke('sqlite:status'),
+  enableSqlite: () => ipcRenderer.invoke('sqlite:enable'),
+  migrateToSqlite: (force?: boolean) => ipcRenderer.invoke('sqlite:migrate', force),
+  getSqliteReadMode: () => ipcRenderer.invoke('sqlite:getReadMode'),
+  setSqliteReadMode: (mode: string) => ipcRenderer.invoke('sqlite:setReadMode', mode),
 })

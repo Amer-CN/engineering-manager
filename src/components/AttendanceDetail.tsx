@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react'
 import type { AttendanceRecord, Member, DayStatus } from '@/types'
-import { useToastContext } from '../hooks/useToast'
+import { useToastStore } from '@/store/toastStore'
 import { Icon } from './ui/Icon'
 
 
@@ -13,10 +13,10 @@ import { Icon } from './ui/Icon'
 // 常量
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const CYCLE: DayStatus[] = ['work', 'holiday', 'sick_leave', 'personal_leave', 'absent']
+const CYCLE: DayStatus[] = ['work', 'holiday', 'sick_leave', 'personal_leave']
 
 const LABEL: Record<DayStatus, string> = {
-  work: '出勤', holiday: '法定假', sick_leave: '病假', personal_leave: '事假', absent: '缺勤',
+  work: '出勤', holiday: '法定假', sick_leave: '病假', personal_leave: '事假',
 }
 
 const CELL: Record<DayStatus, { bg: string; text: string; ring: string }> = {
@@ -24,12 +24,11 @@ const CELL: Record<DayStatus, { bg: string; text: string; ring: string }> = {
   holiday:   { bg: 'bg-blue-50 hover:bg-blue-100',       text: 'text-blue-700',    ring: 'ring-blue-400' },
   sick_leave:{ bg: 'bg-amber-50 hover:bg-amber-100',     text: 'text-amber-700',   ring: 'ring-amber-400' },
   personal_leave: { bg: 'bg-orange-50 hover:bg-orange-100', text: 'text-orange-700', ring: 'ring-orange-400' },
-  absent:    { bg: 'bg-red-50 hover:bg-red-100',         text: 'text-red-700',     ring: 'ring-red-400' },
 }
 
 const DOT: Record<DayStatus, string> = {
   work: 'bg-emerald-500', holiday: 'bg-blue-500', sick_leave: 'bg-amber-500',
-  personal_leave: 'bg-orange-500', absent: 'bg-red-500',
+  personal_leave: 'bg-orange-500',
 }
 
 const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日']
@@ -56,7 +55,7 @@ export interface AttendanceDetailProps {
 export default function AttendanceDetail({
   record, member, teamName, yearMonth, daysInMonth, projectName, onBack, onSaved,
 }: AttendanceDetailProps) {
-  const { showToast } = useToastContext()
+  const showToast = useToastStore(state => state.showToast)
 
   // 入职日：若 member.entryDate 落在当前月份内，取其日号；否则从1号开始
   const [year, month] = yearMonth.split('-').map(Number)
@@ -73,7 +72,7 @@ export default function AttendanceDetail({
     const existing = record.dailyStatus || {}
     return { ...existing }
   })
-  const [activeStatus, setActiveStatus] = useState<DayStatus>('work')
+  const [activeStatus, setActiveStatus] = useState<DayStatus | null>('work')
   const [saving, setSaving] = useState(false)
 
   // 当月第一天周几
@@ -85,16 +84,23 @@ export default function AttendanceDetail({
   const todayNum = (today.getFullYear() === year && today.getMonth() === month - 1) ? today.getDate() : null
 
   // 统计（仅计算入职日及之后的天数）
-  const counts: Record<DayStatus, number> = { work: 0, holiday: 0, sick_leave: 0, personal_leave: 0, absent: 0 }
+  const counts: Record<DayStatus, number> = { work: 0, holiday: 0, sick_leave: 0, personal_leave: 0 }
   for (let d = entryDay; d <= daysInMonth; d++) {
     const s = dailyStatus[d]
-    if (s) counts[s]++
+    if (s && s in counts) counts[s as DayStatus]++
   }
 
   // 画笔：左键涂 activeStatus，右键循环切换（入职日前不可操作）
   const paintDay = (day: number) => {
     if (day < entryDay) return
-    setDailyStatus(prev => ({ ...prev, [day]: activeStatus }))
+    setDailyStatus(prev => {
+      if (activeStatus === null) {
+        const next = { ...prev }
+        delete next[day]
+        return next
+      }
+      return { ...prev, [day]: activeStatus }
+    })
   }
 
   const paintRange = (from: number, to: number) => {
@@ -103,7 +109,10 @@ export default function AttendanceDetail({
     if (start > end) return
     setDailyStatus(prev => {
       const next = { ...prev }
-      for (let d = start; d <= end; d++) next[d] = activeStatus
+      for (let d = start; d <= end; d++) {
+        if (activeStatus === null) delete next[d]
+        else next[d] = activeStatus
+      }
       return next
     })
   }
@@ -175,7 +184,7 @@ export default function AttendanceDetail({
           }} className="px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg text-sm transition-colors" title="删除此考勤记录">
             <Icon name="Trash2" size={16} />
           </button>
-          <button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors">
+          <button onClick={handleSave} disabled={saving} className="bg-primary-600 hover:bg-blue-700 disabled:opacity-50 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors">
             {saving ? '保存中...' : '保存'}
           </button>
         </div>
@@ -187,23 +196,32 @@ export default function AttendanceDetail({
         {/* 画笔工具栏 */}
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
-            {CYCLE.map(s => {
-              const isActive = s === activeStatus
-              return (
-                <button
-                  key={s}
-                  onClick={() => setActiveStatus(s)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                    isActive
-                      ? 'bg-white dark:bg-slate-800 shadow text-slate-800 dark:text-slate-100 ring-1 ring-slate-200'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'
-                  }`}
-                >
-                  <span className={`w-3 h-3 rounded-sm ${DOT[s]}`}></span>
-                  {LABEL[s]}
-                </button>
-              )
-            })}
+            {CYCLE.map(s => (
+              <button
+                key={s}
+                onClick={() => setActiveStatus(s)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                  s === activeStatus
+                    ? 'bg-white shadow text-slate-800 ring-1 ring-slate-200'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <span className={`w-2 h-2 rounded-full ${DOT[s]}`} />
+                {LABEL[s]}
+              </button>
+            ))}
+            <div className="w-px h-5 bg-slate-200 mx-0.5" />
+            <button
+              onClick={() => setActiveStatus(null)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                activeStatus === null
+                  ? 'bg-white shadow text-slate-800 ring-1 ring-slate-200'
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full border border-slate-300 bg-white" />
+              清除
+            </button>
           </div>
           <div className="flex items-center gap-3 text-xs text-slate-500">
             {CYCLE.map(s => (
@@ -237,7 +255,11 @@ export default function AttendanceDetail({
               const day = i + 1
               const isBeforeEntry = day < entryDay
               const status = dailyStatus[day]
-              const col = isBeforeEntry ? { bg: 'bg-slate-100', text: 'text-slate-300', ring: 'ring-slate-200' } : (status ? CELL[status] : { bg: 'bg-white', text: 'text-slate-400', ring: 'ring-slate-300' })
+              const col = isBeforeEntry 
+                ? { bg: 'bg-slate-100', text: 'text-slate-300', ring: 'ring-slate-200' } 
+                : (status && CELL[status as DayStatus] 
+                    ? CELL[status as DayStatus] 
+                    : { bg: 'bg-white', text: 'text-slate-400', ring: 'ring-slate-300' })
               const dow = (leadingBlanks + day - 1) % 7
               const isWeekend = dow >= 5
               const isToday = day === todayNum && !isBeforeEntry
@@ -251,7 +273,7 @@ export default function AttendanceDetail({
                   className={`h-9 rounded-md text-sm font-medium transition-all border
                     ${isBeforeEntry ? 'bg-slate-100 text-slate-300 cursor-not-allowed border-slate-100' : `cursor-pointer ${col.bg} ${col.text} ${isAnchor ? `ring-2 ${col.ring}` : 'border-transparent'} ${isWeekend ? 'bg-opacity-70' : ''} hover:scale-105 hover:shadow-sm`}
                     ${isToday ? 'ring-1 ring-slate-400 shadow-sm' : ''}`}
-                  title={isBeforeEntry ? '入职前，不计入考勤' : `${day}日 ${LABEL[status]}${isToday ? ' (今天)' : ''}${isAnchor ? ' — Shift+点击其他日期批量涂色' : ''}\n右键: 循环切换`}
+                  title={isBeforeEntry ? '入职前，不计入考勤' : `${day}日 ${(status && LABEL[status as DayStatus]) || '未设'}${isToday ? ' (今天)' : ''}${isAnchor ? ' — Shift+点击其他日期批量涂色' : ''}\n右键: 循环切换`}
                 >
                   {isBeforeEntry ? <span className="text-[10px]">-</span> : day}
                 </button>
@@ -263,9 +285,9 @@ export default function AttendanceDetail({
         {/* 底部：汇总 */}
         <div className="flex items-center justify-end pt-3 border-t border-slate-100">
           <div className="text-xs text-slate-500">
-            已标记 <span className="font-medium text-emerald-600">{counts.work + counts.holiday + counts.sick_leave + counts.personal_leave + counts.absent}</span> 天
+            已标记 <span className="font-medium text-emerald-600">{counts.work + counts.holiday + counts.sick_leave + counts.personal_leave}</span> 天
             &nbsp;·&nbsp; 出勤 <span className="font-medium text-emerald-600">{counts.work}</span> 天
-            &nbsp;·&nbsp; 未标记 <span className="font-medium text-slate-400">{daysInMonth - (counts.work + counts.holiday + counts.sick_leave + counts.personal_leave + counts.absent)}</span> 天
+            &nbsp;·&nbsp; 未标记 <span className="font-medium text-slate-400">{daysInMonth - (counts.work + counts.holiday + counts.sick_leave + counts.personal_leave)}</span> 天
           </div>
         </div>
       </div>

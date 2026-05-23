@@ -1,5 +1,5 @@
 /**
- * 考勤批量导入 IPC 处理器
+ * 考勤批量导入 IPC 处理器（双写模式）
  * 从 attendance.ts 拆分
  */
 
@@ -7,6 +7,7 @@ import { ipcMain } from 'electron'
 import log from 'electron-log'
 import { db, dbReady, saveDatabase } from '../database'
 import { getDaysInMonth, DayStatus } from './attendance-utils'
+import { useSqliteRead, useSqliteWrite, attendanceQueries } from '../sqlite/queries'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 批量导入考勤（Excel 导入 — 按出勤天数生成 dailyStatus）
@@ -28,7 +29,7 @@ ipcMain.handle('db:attendances:batchImport', (_, projectId: number, yearMonth: s
 
       const workDays = Math.min(Math.max(0, rec.workDays), daysInMonth)
 
-      // Build dailyStatus: only set imported work days, don't mark remaining days
+      // Build dailyStatus
       const dailyStatus: Record<number, DayStatus> = {}
       for (let d = 1; d <= workDays; d++) {
         dailyStatus[d] = 'work'
@@ -46,7 +47,7 @@ ipcMain.handle('db:attendances:batchImport', (_, projectId: number, yearMonth: s
           if (status !== 'work') merged[Number(day)] = status as string
         }
         for (let d = 1; d <= workDays; d++) merged[d] = 'work'
-        db.attendances[existingIdx] = {
+        const updatedRecord = {
           ...existing,
           dailyStatus: merged,
           workDays,
@@ -54,10 +55,22 @@ ipcMain.handle('db:attendances:batchImport', (_, projectId: number, yearMonth: s
           isFullAttendance: false,
           updatedAt: now,
         }
+        db.attendances[existingIdx] = updatedRecord
+
+        // SQLite 双写
+        if (useSqliteWrite()) {
+          attendanceQueries.updateAttendance(existing.id, {
+            dailyStatus: merged,
+            workDays,
+            daysOff: 0,
+            isFullAttendance: false,
+          })
+        }
+
         updated++
       } else {
         const id = Date.now() + created
-        db.attendances.push({
+        const newRecord = {
           id,
           memberId: undefined,
           projectWorkerId: rec.projectWorkerId,
@@ -69,7 +82,14 @@ ipcMain.handle('db:attendances:batchImport', (_, projectId: number, yearMonth: s
           dailyStatus,
           createdAt: now,
           updatedAt: now,
-        })
+        }
+        db.attendances.push(newRecord)
+
+        // SQLite 双写
+        if (useSqliteWrite()) {
+          attendanceQueries.createAttendance(newRecord)
+        }
+
         created++
       }
     }

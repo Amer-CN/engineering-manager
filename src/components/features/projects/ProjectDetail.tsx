@@ -3,7 +3,7 @@
  *
  * Glass header, animated tab bar, 6 tabs with clean card design.
  */
-import React, { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import type { Project, Member, Partner, IncomeContract, ExpenseContract, WorkerTeam, Invoice, Material, Settlement, PaymentRecord, CostLedgerEntry } from '@/types'
 import { ProjectStats, ProjectStatsData } from './ProjectStats'
 import { ProjectCommandCenter } from './ProjectCommandCenter'
@@ -37,6 +37,7 @@ export function ProjectDetail({ project, members, allMembers, onBack, onEdit }: 
   const [expenseContracts, setExpenseContracts] = useState<ExpenseContract[]>([])
   const [partners, setPartners] = useState<Partner[]>([])
   const [workerTeams, setWorkerTeams] = useState<WorkerTeam[]>([])
+  const [projectWorkers, setProjectWorkers] = useState<any[]>([])
   const [materials, setMaterials] = useState<Material[]>([])
   const [settlements, setSettlements] = useState<Settlement[]>([])
   const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>([])
@@ -47,11 +48,12 @@ export function ProjectDetail({ project, members, allMembers, onBack, onEdit }: 
   const loadProjectDetail = async () => {
     setLoading(true)
     try {
-      const [invoicesR, incomeR, expenseR, partnersR, teamsR, materialsR, settlementsR, paymentsR, costLedgerR] = await Promise.all([
+      const [invoicesR, incomeR, expenseR, partnersR, teamsR, projectWorkersR, materialsR, settlementsR, paymentsR, costLedgerR] = await Promise.all([
         window.electronAPI.getInvoices(), window.electronAPI.getIncomeContracts(project.id),
         window.electronAPI.getExpenseContracts(project.id), window.electronAPI.getPartners(),
-        window.electronAPI.getWorkerTeams(), window.electronAPI.getMaterials(project.id),
-        window.electronAPI.getSettlements(project.id), window.electronAPI.getPaymentRecords(),
+        window.electronAPI.getWorkerTeams(), window.electronAPI.getProjectWorkers(project.id),
+        window.electronAPI.getMaterials(project.id),
+        window.electronAPI.getSettlements(project.id), window.electronAPI.getWagePaymentRecords(),
         window.electronAPI.getCostLedger(project.id),
       ])
       if (invoicesR.success) setInvoices((invoicesR.data || []).filter((i: Invoice) => i.projectId === project.id))
@@ -59,6 +61,7 @@ export function ProjectDetail({ project, members, allMembers, onBack, onEdit }: 
       if (expenseR.success) setExpenseContracts(expenseR.data || [])
       if (partnersR.success) setPartners((partnersR.data || []).filter((p: Partner) => p.projectIds?.includes(project.id)))
       if (teamsR.success) setWorkerTeams((teamsR.data || []).filter((t: WorkerTeam) => t.projectId === project.id))
+      if (projectWorkersR.success) setProjectWorkers(projectWorkersR.data || [])
       if (materialsR.success) setMaterials(materialsR.data || [])
       if (settlementsR.success) setSettlements((settlementsR.data || []).filter((s: Settlement) => s.projectId === project.id))
       if (paymentsR.success) setPaymentRecords((paymentsR.data || []).filter((p: PaymentRecord) => p.projectId === project.id))
@@ -72,7 +75,7 @@ export function ProjectDetail({ project, members, allMembers, onBack, onEdit }: 
   const expenseContractTotal = expenseContracts.reduce((s, c) => s + c.amount, 0)
   const totalExpensesCalc = costLedgerEntries.filter(e => e.direction === 'expense').reduce((s, e) => s + e.amount, 0)
   const totalCost = expenseContractTotal + materialTotal
-  const workerCount = workerTeams.reduce((s, t) => s + members.filter(m => m.memberType === 'worker' && m.teamId === t.id).length, 0)
+  const workerCount = workerTeams.reduce((s, t) => s + projectWorkers.filter((pw: any) => pw.teamId === t.id).length, 0)
 
   const now = new Date()
   const startDate = project.startDate ? new Date(project.startDate) : null

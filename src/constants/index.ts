@@ -8,5 +8,8 @@ export * from './member'
 // 考勤相关常量
 export * from './attendance'
 
+// 日期相关常量
+export * from './date'
+
 // 地区数据常量
 export * from '../data/regions'

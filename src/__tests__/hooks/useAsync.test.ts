@@ -1,5 +1,3 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, cleanup } from '@testing-library/react'
 import { useAsync, useAsyncSimple } from '../../hooks/useAsync'
 

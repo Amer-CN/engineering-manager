@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * ColumnFilter 组件测试
  * - 渲染筛选按钮
@@ -6,7 +5,6 @@
  * - 搜索过滤
  * - 全选/清除
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, cleanup, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 

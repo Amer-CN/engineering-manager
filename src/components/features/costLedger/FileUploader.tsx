@@ -40,7 +40,7 @@ export function FileUploader({ files, onChange, projectName }: FileUploaderProps
       } catch { /* ignore read errors */ }
     } else {
       // 非图片文件用系统默认程序打开
-      const api = (window as any).electronAPI
+      const api = window.electronAPI
       if (api?.openExternalFile) {
         api.openExternalFile({
           category: FILE_CATEGORIES.COST_LEDGER_FILE.category,

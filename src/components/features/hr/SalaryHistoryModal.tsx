@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
-import { useToastContext } from '../../../hooks/useToast'
+import { useToastStore } from '@/store/toastStore'
+import { logCreate, logDelete } from '../../../utils/audit'
 
 interface Props {
   member: any
@@ -17,7 +18,7 @@ const emptyEntry = (defaultSalary: number) => ({
 })
 
 const SalaryHistoryModal: React.FC<Props> = ({ member, onClose }) => {
-  const { showToast } = useToastContext()
+  const showToast = useToastStore(state => state.showToast)
   const [history, setHistory] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
@@ -51,6 +52,11 @@ const SalaryHistoryModal: React.FC<Props> = ({ member, onClose }) => {
     }
     const res = await window.electronAPI.createSalaryHistory(payload)
     if (res.success) {
+      logCreate('members', `${member.name} 薪资记录`, member.id, { baseSalary: form.baseSalary, effectiveDate: form.effectiveDate })
+      // B→A 同步：如果修改的是入职日期的初始薪资，回写到 member.baseSalary
+      if (form.effectiveDate === member.entryDate) {
+        await window.electronAPI.updateMember({ ...member, baseSalary: Number(form.baseSalary) })
+      }
       showToast(editingId ? '已更新' : '已添加', 'success')
       setHistory(prev => [res.data!, ...prev].sort((a, b) => b.effectiveDate.localeCompare(a.effectiveDate)))
       setShowAdd(false)
@@ -81,8 +87,18 @@ const SalaryHistoryModal: React.FC<Props> = ({ member, onClose }) => {
 
   const handleDelete = async (id: number) => {
     if (!confirm('确定删除该薪资记录吗？')) return
+    // 删除前记录一下被删条目的信息
+    const deletedEntry = history.find(h => h.id === id)
     const res = await window.electronAPI.deleteSalaryHistory(id)
     if (res.success) {
+      logDelete('members', `${member.name} 薪资记录 #${id}`, id, { baseSalary: deletedEntry?.baseSalary })
+      // B→A 同步：如果删除了入职日期的初始薪资，更新 member.baseSalary
+      if (deletedEntry && deletedEntry.effectiveDate === member.entryDate) {
+        // 找剩下的最早的薪资条目回写，没有则置 0
+        const remaining = history.filter(h => h.id !== id)
+        const earliest = remaining.sort((a, b) => a.effectiveDate.localeCompare(b.effectiveDate))[0]
+        await window.electronAPI.updateMember({ ...member, baseSalary: earliest ? earliest.baseSalary : 0 })
+      }
       showToast('已删除', 'success')
       setHistory(prev => prev.filter(h => h.id !== id))
     } else showToast(res.error || '删除失败', 'error')

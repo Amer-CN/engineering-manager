@@ -103,7 +103,7 @@ export default function StaffForm({ formData, setFormData, editingMember, dragOv
         <FileUploadArea file={formData.contractFile} fileType={formData.contractFileType} field="contractFile"
           dragOverField={dragOverField} onDragOver={onDragOver as any} onDragLeave={onDragLeave as any} onDrop={onDrop as any}
           onFileChange={onFileChange as any} onDelete={(() => onDeleteFile('contractFile', setFormData)) as any}
-          inputRef={refs.contractInputRef as any} onInputChange={(e => onFileChange(e as any, 'contractFile', setFormData, false, refs.contractInputRef)) as any} />
+          inputRef={refs.contractInputRef as any} onInputChange={((e: any) => onFileChange(e as any, 'contractFile', setFormData, false, refs.contractInputRef)) as any} />
       </div>
 
       <div className="mb-6 p-4 bg-blue-50 rounded-lg">

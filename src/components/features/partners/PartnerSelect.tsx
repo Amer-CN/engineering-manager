@@ -5,9 +5,8 @@
  * 适用场景：收入/支出合同、发票等单位选择
  */
 
-import React, { useState, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import type { Partner, PartnerCategory } from '@/types'
-import { Badge } from '@/components/ui/Badge'
 import { Icon } from '../../ui/Icon'
 
 const categoryLabels: Record<PartnerCategory | string, string> = {

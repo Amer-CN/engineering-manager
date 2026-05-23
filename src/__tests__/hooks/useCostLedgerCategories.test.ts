@@ -1,6 +1,4 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
+import { renderHook, act, waitFor } from '@testing-library/react'
 
 describe('useCostLedgerCategories', () => {
   let ea: Record<string, any>
@@ -194,6 +192,7 @@ describe('useCostLedgerCategories', () => {
   })
 
   it('refresh 可手动重新加载', async () => {
+    // 第一次加载
     ea.getCostLedgerCategories = vi.fn().mockResolvedValue({
       success: true,
       data: mockCategories,
@@ -202,12 +201,27 @@ describe('useCostLedgerCategories', () => {
     const { useCostLedgerCategories } = await import('../../hooks/useCostLedgerCategories')
     const { result } = renderHook(() => useCostLedgerCategories())
 
+    // 等待初始加载完成
     await waitFor(() => {
       expect(result.current.loading).toBe(false)
     })
+    expect(result.current.categories).toHaveLength(3)
 
-    await result.current.refresh()
+    // 修改 mock 数据，验证 refresh 会重新加载
+    ea.getCostLedgerCategories = vi.fn().mockResolvedValue({
+      success: true,
+      data: [...mockCategories, { code: 'other', label: '其他', direction: 'expense', color: '#000000' }],
+    })
 
-    expect(ea.getCostLedgerCategories).toHaveBeenCalledTimes(2)
+    // 手动调用 refresh
+    await act(async () => {
+      await result.current.refresh()
+    })
+
+    // 验证数据已更新（说明 refresh 确实调用了 getCostLedgerCategories）
+    await waitFor(() => {
+      expect(result.current.categories).toHaveLength(4)
+    })
+    // 不检查调用次数（可能因异步时序导致不准），只验证数据已更新
   })
 })

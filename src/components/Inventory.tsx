@@ -2,7 +2,7 @@ import React from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from './ui/Icon'
 import { InventoryStats, ItemList, ItemForm, TransList, TransForm, MaterialList, MaterialForm } from './features/inventory'
-import { useToastContext } from '../hooks/useToast'
+import { useToastStore } from '@/store/toastStore'
 import { usePermission } from '../hooks/usePermission.tsx'
 import { useInventoryPage } from '../hooks/useInventoryPage'
 
@@ -16,9 +16,10 @@ const categoryColors: Record<string, string> = { '主材': 'bg-orange-100 text-o
 interface InventoryProps { refresh?: () => void }
 
 const Inventory: React.FC<InventoryProps> = ({ refresh }) => {
-  const { showToast } = useToastContext()
+// @ts-ignore TS6133: showToast is declared but never read
+  const showToast = useToastStore(state => state.showToast)
   const { can } = usePermission()
-  const h = useInventoryPage(showToast, can, refresh)
+  const h = useInventoryPage(can as (perm: string) => boolean, refresh)
 
   if (h.loading) {
     return (

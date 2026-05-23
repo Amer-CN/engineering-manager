@@ -1,5 +1,3 @@
-// @ts-nocheck
-import { describe, it, expect, vi, afterEach } from 'vitest'
 import { renderHook, act, cleanup } from '@testing-library/react'
 import { useForm } from '../../hooks/useForm'
 
@@ -7,6 +5,7 @@ interface FormValues {
   name: string
   email: string
   age: number
+  [key: string]: unknown
 }
 
 const initialValues: FormValues = { name: '', email: '', age: 0 }

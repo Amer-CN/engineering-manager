@@ -1,9 +1,7 @@
-// @ts-nocheck
 /**
  * useInventoryPage Hook 测试
  * 测试库存管理页面状态和操作
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 
 // Mock dependencies
@@ -79,7 +77,7 @@ describe('useInventoryPage', () => {
     const { useInventoryPage } = await import('@/hooks/useInventoryPage')
     const { result } = renderHook(() => useInventoryPage(can))
     await waitFor(() => expect(result.current.loading).toBe(false))
-    act(() => { result.current.handleEditItem(mockItems[0]) })
+    act(() => { result.current.handleEditItem(mockItems[0] as any) })
     expect(result.current.editingItem).toEqual(mockItems[0])
     expect(result.current.showItemModal).toBe(true)
   })
@@ -89,7 +87,7 @@ describe('useInventoryPage', () => {
     const { result } = renderHook(() => useInventoryPage(can))
     await waitFor(() => expect(result.current.loading).toBe(false))
     await act(async () => {
-      await result.current.handleItemSubmit({ name: '新物料', category: '建材' })
+      await result.current.handleItemSubmit({ name: '新物料', category: '建材' } as any)
     })
     expect(ea.createInventoryItem).toHaveBeenCalled()
     expect(result.current.showItemModal).toBe(false)
@@ -99,9 +97,9 @@ describe('useInventoryPage', () => {
     const { useInventoryPage } = await import('@/hooks/useInventoryPage')
     const { result } = renderHook(() => useInventoryPage(can))
     await waitFor(() => expect(result.current.loading).toBe(false))
-    act(() => { result.current.handleEditItem(mockItems[0]) })
+    act(() => { result.current.handleEditItem(mockItems[0] as any) })
     await act(async () => {
-      await result.current.handleItemSubmit({ name: '水泥更新', category: '建材' })
+      await result.current.handleItemSubmit({ name: '水泥更新', category: '建材' } as any)
     })
     expect(ea.updateInventoryItem).toHaveBeenCalled()
   })
@@ -120,7 +118,7 @@ describe('useInventoryPage', () => {
     const { useInventoryPage } = await import('@/hooks/useInventoryPage')
     const { result } = renderHook(() => useInventoryPage(can))
     await waitFor(() => expect(result.current.loading).toBe(false))
-    act(() => { result.current.handleTransItem(mockItems[0]) })
+    act(() => { result.current.handleTransItem(mockItems[0] as any) })
     expect(result.current.transItem).toEqual(mockItems[0])
     expect(result.current.showTransModal).toBe(true)
   })
@@ -139,7 +137,7 @@ describe('useInventoryPage', () => {
     const { useInventoryPage } = await import('@/hooks/useInventoryPage')
     const { result } = renderHook(() => useInventoryPage(can))
     await waitFor(() => expect(result.current.loading).toBe(false))
-    act(() => { result.current.handleEditMaterial(mockMaterials[0]) })
+    act(() => { result.current.handleEditMaterial(mockMaterials[0] as any) })
     expect(result.current.editingMaterial).toEqual(mockMaterials[0])
     expect(result.current.showMaterialModal).toBe(true)
   })
@@ -149,7 +147,7 @@ describe('useInventoryPage', () => {
     const { result } = renderHook(() => useInventoryPage(can))
     expect(result.current.activeTab).toBe('items')
     act(() => { result.current.setActiveTab('transactions') })
-    expect(result.current.activeTab).toBe('transactions')
+    await waitFor(() => expect(result.current.activeTab).toBe('transactions'))
   })
 
   it('filterCategory 和 filterProject 状态', async () => {

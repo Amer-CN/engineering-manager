@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { Member, WorkerTeam } from '../../../../types/electron'
-import { useToastContext } from '../../../../hooks/useToast'
+import { useToastStore } from '@/store/toastStore'
 
 interface UseLaborDataOptions {
   refresh?: () => void
@@ -11,7 +11,7 @@ interface UseLaborDataReturn {
   projects: any[]
   workerTeams: WorkerTeam[]
   loading: boolean
-  loadData: () => Promise<void>
+  loadData: (silent?: boolean) => Promise<void>
 }
 
 /**
@@ -23,11 +23,11 @@ export function useLaborData({ refresh }: UseLaborDataOptions = {}): UseLaborDat
   const [projects, setProjects] = useState<any[]>([])
   const [workerTeams, setWorkerTeams] = useState<WorkerTeam[]>([])
   const [loading, setLoading] = useState(true)
-  const { showToast } = useToastContext()
+  const showToast = useToastStore(state => state.showToast)
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (silent?: boolean) => {
     try {
-      setLoading(true)
+      if (!silent) setLoading(true)
       const [projectsRes, teamsRes, globalWorkersRes] = await Promise.all([
         window.electronAPI.getProjects(),
         window.electronAPI.getWorkerTeams(),
@@ -66,7 +66,7 @@ export function useLaborData({ refresh }: UseLaborDataOptions = {}): UseLaborDat
                 teamName: pw.teamName,
                 projectId: pw.projectId,
                 projectName: pw.projectName,
-                dailyWage: pw.worker?.dailyWage || pw.dailyWage,
+                dailyWage: pw.dailyWage || pw.worker?.dailyWage || 0,
                 workerType: pw.worker?.workerType || pw.workerType,
                 entryDate: pw.entryDate,
                 status: pw.status || 'active',

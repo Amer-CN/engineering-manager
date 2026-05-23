@@ -2,9 +2,10 @@
  * 在线OCR服务模块
  * 支持百度在线OCR + Tesseract.js离线OCR
  * 在线识别失败时自动回退到离线模式
+ * 
+ * 重要：百度 OCR HTTP 请求通过主进程 IPC 代理，
+ * 不需要关闭 webSecurity，保持安全策略开启。
  */
-
-import Tesseract from 'tesseract.js'
 
 // ============ 类型定义 ============
 
@@ -87,7 +88,7 @@ let configLoaded = false
 export async function loadBuiltInConfig(): Promise<OCRConfig | null> {
   try {
     // 尝试从打包的资源中加载配置
-    const response = await fetch('/ocr-config.json')
+    const response = await fetch('./ocr-config.json')
     if (response.ok) {
       const config = await response.json()
       console.log('成功加载预置OCR配置:', config)
@@ -119,35 +120,22 @@ export const initialConfig: OCRConfig = storedConfig || builtInOCRConfig
 // ============ OCR服务实现 ============
 
 /**
- * 检查网络连接
+ * 检查网络连接（通过主进程 IPC，不受浏览器同源策略影响）
  */
 async function checkNetwork(): Promise<boolean> {
-  // 先检查浏览器在线状态
-  if (!navigator.onLine) {
-    return false
-  }
-  
-  // 尝试连接百度验证实际网络（使用首页而非 API 域名，避免 403）
   try {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 3000)
-
-    await fetch('https://www.baidu.com/favicon.ico', {
-      mode: 'no-cors',
-      cache: 'no-store',
-      signal: controller.signal
-    })
-
-    clearTimeout(timeoutId)
-    return true
+    return await window.electronAPI.ocrCheckNetwork()
   } catch {
-    return false
+    // IPC 失败时回退到浏览器 API
+    return navigator.onLine
   }
 }
 
 /**
- * 百度OCR识别
- * 文档: https://cloud.baidu.com/doc/OCR/OCR-API.html
+ * 百度OCR识别（通过主进程 IPC 代理）
+ * 
+ * HTTP 请求在主进程发起，不受浏览器同源策略限制，
+ * 因此不需要关闭 webSecurity。
  */
 async function baiduOCR(imageBase64: string, config: OCRConfig): Promise<OCRResult> {
   if (!config.baidu?.apiKey || !config.baidu?.secretKey) {
@@ -155,84 +143,16 @@ async function baiduOCR(imageBase64: string, config: OCRConfig): Promise<OCRResu
   }
 
   try {
-    console.log('开始百度OCR识别...')
-    
-    // Step 1: 获取access_token
-    const tokenUrl = `https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id=${config.baidu.apiKey}&client_secret=${config.baidu.secretKey}`
-    console.log('获取Token URL:', tokenUrl.substring(0, 80) + '...')
-    
-    const tokenResponse = await fetch(tokenUrl, { 
-      method: 'POST',
-      signal: AbortSignal.timeout(10000)
+    console.log('[渲染进程] 通过 IPC 调用主进程百度OCR...')
+    const result = await window.electronAPI.ocrBaiduIdCard(imageBase64, {
+      apiKey: config.baidu.apiKey,
+      secretKey: config.baidu.secretKey
     })
-    const tokenData = await tokenResponse.json()
-    console.log('Token响应:', tokenData)
-
-    if (tokenData.error) {
-      return { success: false, error: `获取Token失败: ${tokenData.error_description || tokenData.error}` }
-    }
-
-    const accessToken = tokenData.access_token
-    console.log('获取Token成功:', accessToken ? '是' : '否')
-
-    // Step 2: 调用身份证识别API
-    const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '')
-    console.log('图片Base64长度:', base64Data.length)
-    
-    const ocrUrl = `https://aip.baidubce.com/rest/2.0/ocr/v1/idcard?access_token=${accessToken}`
-    console.log('OCR请求URL:', ocrUrl.substring(0, 100) + '...')
-    
-    const formData = new FormData()
-    formData.append('id_card_side', 'front') // 人像面
-    formData.append('image', base64Data)
-
-    console.log('发送OCR请求...')
-    const ocrResponse = await fetch(ocrUrl, {
-      method: 'POST',
-      body: formData,
-      signal: AbortSignal.timeout(15000)
-    })
-    console.log('OCR响应状态:', ocrResponse.status)
-    
-    const ocrData = await ocrResponse.json()
-    console.log('OCR响应数据:', JSON.stringify(ocrData).substring(0, 200))
-
-    if (ocrData.error_code) {
-      return { success: false, error: `百度OCR错误: ${ocrData.error_msg || ocrData.error_code}` }
-    }
-
-    // 解析结果
-    const words = ocrData.words_result || {}
-    
-    return {
-      success: true,
-      text: JSON.stringify(words),
-      idCard: {
-        number: words?.公民身份号码?.words || '',
-        name: words?.姓名?.words,
-        gender: words?.性别?.words,
-        ethnicity: words?.民族?.words,
-        birthDate: formatBirthDate(words?.出生?.words),
-        address: words?.住址?.words,
-        issueAuthority: words?.签发机关?.words,
-        validDate: words?.有效期限?.words
-      }
-    }
+    return result as OCRResult
   } catch (error: any) {
-    console.error('百度OCR详细错误:', error)
-    if (error.name === 'AbortError') {
-      return { success: false, error: '百度OCR请求超时，请检查网络连接' }
-    }
+    console.error('[渲染进程] 百度OCR IPC 调用失败:', error)
     return { success: false, error: `百度OCR请求失败: ${error.message || '未知错误'}` }
   }
-}
-
-/**
- * 格式化出生日期 (YYYYMMDD -> YYYY-MM-DD)
- */
-function formatBirthDate(birth: string | undefined): string | undefined {
-  if (!birth || birth.length !== 8) return birth
-  return `${birth.slice(0, 4)}-${birth.slice(4, 6)}-${birth.slice(6, 8)}`
 }
 
 /**
@@ -253,6 +173,7 @@ async function offlineOCR(imageBase64: string): Promise<OCRResult> {
     console.log('[离线OCR] 图片URL创建成功:', imageUrl.substring(0, 50))
 
     try {
+      const Tesseract = await import('tesseract.js')
       const result = await Tesseract.recognize(imageUrl, 'chi_sim+eng', {
         logger: (m) => {
           if (m.status === 'recognizing text') {
@@ -344,6 +265,8 @@ export function setOCRConfig(config: Partial<OCRConfig>) {
 export function saveOCRConfig(config: OCRConfig) {
   currentConfig = config
   saveConfigToStorage(config)
+  // 配置变更时清除主进程的 Token 缓存
+  window.electronAPI.ocrClearTokenCache().catch(() => {})
 }
 
 /**

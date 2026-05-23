@@ -1,9 +1,7 @@
-// @ts-nocheck
 /**
  * SupervisorForm.test.tsx - SupervisorForm 组件测试
  * 测试监管单位表单组件的渲染、输入、三级联动地区和提交
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 
 // Mock regions data

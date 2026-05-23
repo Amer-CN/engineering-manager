@@ -1,5 +1,5 @@
 /**
- * 模板管理 IPC 处理器
+ * 模板管理 IPC 处理器（双写模式）
  */
 import { ipcMain } from 'electron'
 import path from 'path'
@@ -9,6 +9,7 @@ import Docxtemplater from 'docxtemplater'
 import PizZip from 'pizzip'
 import { db, dbReady, saveDatabase } from '../database'
 import { deleteFile, getCategoryDir } from '../file-service'
+import { useSqliteRead, useSqliteWrite, shouldFallbackToJson, templateDrawingQueries } from '../sqlite/queries'
 
 // Auto-detect {{变量}} from a .docx file on disk
 async function detectVariables(storedFileName: string): Promise<any[]> {
@@ -38,6 +39,15 @@ async function detectVariables(storedFileName: string): Promise<any[]> {
 // 获取全部模板（可选 category 过滤）
 ipcMain.handle('db:templates:getAll', (_, category?: string) => {
   if (!dbReady) return { success: false, error: 'Database not ready' }
+
+  // SQLite 优先
+  if (useSqliteRead()) {
+    const data = templateDrawingQueries.listTemplates(category)
+    if (data) return { success: true, data }
+  }
+
+  // JSON 回退
+  if (!shouldFallbackToJson()) return { success: false, error: 'SQLite read failed (sqlite-primary mode)' }
   if (!db.templates) db.templates = []
   let list = db.templates
   if (category) list = list.filter((t: any) => t.category === category)
@@ -65,6 +75,12 @@ ipcMain.handle('db:templates:create', async (_, template) => {
     }
     db.templates.push(newTemplate)
     saveDatabase()
+
+    // SQLite 双写
+    if (useSqliteWrite()) {
+      templateDrawingQueries.createTemplate({ ...newTemplate, variables })
+    }
+
     return { success: true, data: { id, variables } }
   } catch (error: any) {
     return { success: false, error: error.message }
@@ -84,6 +100,11 @@ ipcMain.handle('db:templates:update', async (_, template) => {
     if (index !== -1) {
       db.templates[index] = { ...db.templates[index], ...template, variables, updatedAt: new Date().toISOString() }
       saveDatabase()
+
+      // SQLite 双写
+      if (useSqliteWrite()) {
+        templateDrawingQueries.updateTemplate(template.id, { ...template, variables })
+      }
     }
     return { success: true }
   } catch (error: any) {
@@ -104,6 +125,12 @@ ipcMain.handle('db:templates:delete', async (_, id) => {
     }
     db.templates = db.templates.filter((t: any) => t.id !== id)
     saveDatabase()
+
+    // SQLite 双写
+    if (useSqliteWrite()) {
+      templateDrawingQueries.deleteTemplate(id)
+    }
+
     return { success: true }
   } catch (error: any) {
     return { success: false, error: error.message }
@@ -113,6 +140,15 @@ ipcMain.handle('db:templates:delete', async (_, id) => {
 // 按分类统计
 ipcMain.handle('db:templates:getStats', () => {
   if (!dbReady) return { success: false, error: 'Database not ready' }
+
+  // SQLite 优先
+  if (useSqliteRead()) {
+    const data = templateDrawingQueries.getTemplateStats()
+    if (data) return { success: true, data }
+  }
+
+  // JSON 回退
+  if (!shouldFallbackToJson()) return { success: false, error: 'SQLite read failed (sqlite-primary mode)' }
   if (!db.templates) db.templates = []
   const stats: Record<string, number> = { total: db.templates.length }
   for (const t of db.templates) {
@@ -121,7 +157,23 @@ ipcMain.handle('db:templates:getStats', () => {
   return { success: true, data: stats }
 })
 
-// 用 docxtemplater 填充 .docx 模板变量，保留全部 Word 格式
+// 用 mammoth 将 .docx 转为 HTML（供渲染进程预览用，不双写）
+ipcMain.handle('templates:convert-docx-to-html', async (_, storedFileName: string, category?: string) => {
+  try {
+    const dir = getCategoryDir(category || 'templates', 'files', null)
+    const filePath = path.join(dir, storedFileName)
+    if (!fs.existsSync(filePath)) {
+      return { success: false, error: '模板文件不存在' }
+    }
+    const result = await mammoth.convertToHtml({ path: filePath })
+    return { success: true, data: result.value }
+  } catch (error: any) {
+    console.error('mammoth convert failed:', error)
+    return { success: false, error: error.message || '文档转换失败' }
+  }
+})
+
+// 用 docxtemplater 填充 .docx 模板变量，保留全部 Word 格式（文件操作，不双写）
 ipcMain.handle('templates:fill-docx', async (_, storedFileName: string, values: Record<string, string>) => {
   try {
     const dir = getCategoryDir('templates', 'files', null)
@@ -138,7 +190,6 @@ ipcMain.handle('templates:fill-docx', async (_, storedFileName: string, values: 
       delimiters: { start: '{{', end: '}}' },
     })
 
-    // 填充变量 — docxtemplater 直接操作 .docx 内部 XML，格式完全保留
     doc.render(values)
 
     const output = doc.getZip().generate({ type: 'nodebuffer', compression: 'DEFLATE' })

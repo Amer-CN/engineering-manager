@@ -1,7 +1,6 @@
 /**
  * ProjectFilters - 项目筛选栏
  */
-import React from 'react'
 import type { Member } from '@/types'
 import { usePermission } from '@/hooks/usePermission.tsx'
 import { Icon } from '../../ui/Icon'

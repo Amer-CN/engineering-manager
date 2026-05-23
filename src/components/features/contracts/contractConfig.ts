@@ -1,4 +1,4 @@
-import type { IncomeContract, ExpenseContract, AgreementContract, AgreementSubType, Partner, Project, PaymentRecord } from '../../../types/electron'
+import type { IncomeContract, ExpenseContract, AgreementContract, AgreementSubType, PaymentRecord } from '../../../types/electron'
 import { contractStatuses } from '../../../data/regions'
 
 export type ContractType = 'income' | 'expense' | 'agreement'

@@ -1,4 +1,4 @@
-import type { Member, WorkerType } from '@/types'
+import type { Member } from '@/types'
 
 // ═══════════════════════════════════════════════════════════
 // 常量
@@ -68,7 +68,7 @@ export interface WorkerFormData {
   name: string
   phone: string
   idCard: string
-  workerType: WorkerType
+  workerType: string
   idCardFront: string
   idCardBack: string
   gender: string
@@ -187,21 +187,33 @@ export function memberToStaffForm(member: Member): StaffFormData {
 }
 
 export function memberToWorkerForm(member: Member): WorkerFormData {
+  // 从身份证自动推断性别（如果未设置）
+  const idCard = (member as any).idCard || member.idCard || ''
+  const autoGender = member.gender || inferGenderFromIdCard(idCard)
   return {
     name: member.name || '', phone: member.phone || '',
-    idCard: member.idCard || '', workerType: workerTypeToCode(member.workerType as any) as WorkerType,
+    idCard: member.idCard || '', workerType: member.workerType || '',
     idCardFront: member.idCardFront || '', idCardBack: member.idCardBack || '',
-    gender: member.gender || '', ethnicity: member.ethnicity || '',
+    gender: autoGender, ethnicity: member.ethnicity || '',
     birthDate: member.birthDate || '', idCardAddress: member.idCardAddress || '',
     contractFile: member.contractFile || '', contractFileType: member.contractFileType || '',
     projectId: member.projectId, teamId: member.teamId, dailyWage: member.dailyWage,
     entryDate: member.entryDate || '', expectedLeaveDate: member.expectedLeaveDate || '',
-    wageBankAccount: member.wageBankAccount || '', wageBankName: member.wageBankName || '',
+    wageBankAccount: (member as any).bankAccount || member.wageBankAccount || '', wageBankName: (member as any).bankName || member.wageBankName || '',
     threeLevelEducation: member.threeLevelEducation || false,
     safetyTrainingFile: member.safetyTrainingFile || '',
     healthReportFile: member.healthReportFile || '',
     specialCertificateFile: member.specialCertificateFile || '',
   }
+}
+
+/** 从身份证号推断性别（15/18 位，第 17/15 位奇数=男，偶数=女） */
+export function inferGenderFromIdCard(idCard: string): string {
+  if (!idCard || idCard.length < 15) return ''
+  const idx = idCard.length === 15 ? 14 : 16
+  const digit = parseInt(idCard[idx])
+  if (isNaN(digit)) return ''
+  return digit % 2 === 1 ? 'male' : 'female'
 }
 
 export function validateImageFile(file: File): string | null {

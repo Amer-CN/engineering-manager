@@ -1,8 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from './ui/Icon'
-import { useToastContext } from '../hooks/useToast'
-import { Department } from '../types/electron'
 import HRDashboard from './features/hr/HRDashboard'
 import StaffList from './features/hr/StaffList'
 import StaffAttendance from './features/hr/StaffAttendance'
@@ -27,7 +25,7 @@ const HRManagement: React.FC = () => {
   }, [])
 
   return (
-    <div className="p-6 max-w-[1400px] mx-auto">
+    <div className="p-6 max-w-[1400px] mx-auto h-full flex flex-col">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-800">人事管理</h1>
         <p className="text-slate-500 mt-1">管理人员档案、考勤、薪酬与部门架构</p>
@@ -61,7 +59,7 @@ const HRManagement: React.FC = () => {
       </div>
 
       {/* Tab 内容 */}
-      <motion.div key={activeTab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }}>
+      <motion.div key={activeTab} className="flex-1 overflow-hidden flex flex-col" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }}>
         {activeTab === 'dashboard' && <HRDashboard />}
         {activeTab === 'staff' && <StaffList />}
         {activeTab === 'attendance' && <StaffAttendance />}

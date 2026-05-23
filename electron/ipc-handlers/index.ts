@@ -1,4 +1,4 @@
-﻿/**
+/**
  * IPC 处理器汇总
  * 
  * 导入并注册所有业务模块的 IPC 处理器
@@ -59,12 +59,32 @@ import './attendance-batch-import'
 
 // 工资管理
 import './wages'
+// 工资 batch 操作
+import './wages-batch'
+// 工资查询
+import './wages-queries'
+
+// 银行回单批量解析
+import './wage-bank-receipt-batch'
 
 // 成本台账
 import './cost-ledger'
+import './cost-ledger-categories'
+import './cost-ledger-batches'
+import './cost-ledger-match-rules'
 
 // 审计日志
 import './audit'
 
+// 快照管理
+import './snapshots'
+
 // 薪资历史
 import './salary-history'
+import './wage-history'
+
+// OCR（百度在线识别，通过主进程代理 HTTP 请求）
+import './ocr'
+
+// SQLite 状态管理（可选功能，查询/启用/迁移）
+import './sqlite-status'

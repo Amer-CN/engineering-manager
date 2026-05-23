@@ -1,5 +1,3 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, cleanup, act } from '@testing-library/react'
 import { useDebounce, useDebouncedCallback, useDebouncedFn } from '../../hooks/useDebounce'
 
