@@ -1,6 +1,7 @@
 // React not needed with new JSX transform
 import type { Project, WorkerTeam, WageRecord } from '@/types'
 import { Icon } from '../../ui/Icon'
+import { Input } from '@/components/ui/Input'
 
 interface WageTableTabProps {
   selectedProject: Project | null
@@ -46,7 +47,7 @@ export default function WageTableTab({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <input type="month" value={selectedMonth} onChange={e => onChangeMonth(e.target.value)}
-            className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500" />
+            className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500" />
           <div className="text-slate-500">
             工资记录: {wageRecords.length} 条
             {attendancesCount === 0 && (
@@ -62,7 +63,7 @@ export default function WageTableTab({
         </div>
         <div className="flex gap-2">
           <button onClick={onGenerate} disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+            className="bg-primary-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
             生成工资表
           </button>
           {editingWages.size > 0 && (
@@ -118,12 +119,12 @@ export default function WageTableTab({
                     <td className="px-3 py-3">{w.workDays} 天</td>
                     <td className="px-3 py-3">¥{w.dailyWage}/天</td>
                     <td className="px-3 py-3">
-                      <input type="number" min={0} step={0.01} value={bonus}
+                      <Input type="number" min={0} step={0.01} value={bonus}
                         onChange={e => onBonusDeductionChange(w.id, 'bonus', parseFloat(e.target.value) || 0)}
                         className="w-20 px-2 py-1 border border-slate-300 rounded text-center" />
                     </td>
                     <td className="px-3 py-3">
-                      <input type="number" min={0} step={0.01} value={deduction}
+                      <Input type="number" min={0} step={0.01} value={deduction}
                         onChange={e => onBonusDeductionChange(w.id, 'deduction', parseFloat(e.target.value) || 0)}
                         className="w-20 px-2 py-1 border border-slate-300 rounded text-center" />
                     </td>
