@@ -9,6 +9,7 @@ import { ProjectStatsData } from './ProjectStats'
 import { calculateHealthScore, getHealthLevel } from '@/utils/projectHealth'
 import { motion } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
+import { Card } from '../../ui/Card'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, RadialBarChart, RadialBar } from 'recharts'
 import { formatMoney } from '@/utils/format'
 
@@ -20,7 +21,6 @@ export interface ProjectCommandCenterProps {
   settlements: Settlement[]; members: Member[]; workerTeams: WorkerTeam[]
 }
 
-const CARD = 'bg-white border border-slate-200 rounded-xl shadow-sm'
 const CHART_COLORS = ['#3b82f6', '#10b981', '#f97316', '#8b5cf6', '#06b6d4', '#f59e0b']
 
 const partnerRoleLabels: Record<string, string> = {
@@ -39,11 +39,11 @@ const sectionV = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, t
 
 function StatCard({ icon, accent, label, value, sub }: { icon: React.ReactNode; accent: string; label: string; value: string; sub?: string }) {
   return (
-    <div className={`${CARD} p-3 hover:shadow-md transition-all duration-200`}>
+    <Card bordered={false} className="border border-slate-200 p-3 hover:shadow-md transition-all duration-200" padding="none">
       <div className="flex items-center gap-2 mb-1"><span className={`w-7 h-7 rounded-lg flex items-center justify-center ${accent}`}>{icon}</span><span className="text-xs text-slate-400">{label}</span></div>
       <p className="text-lg font-bold text-slate-800">{value}</p>
       {sub && <p className="text-xs text-slate-400">{sub}</p>}
-    </div>
+    </Card>
   )
 }
 
@@ -130,21 +130,21 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
 
       {/* ═══ 3. Finance + Cost ═══ */}
       <motion.section variants={sectionV} className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
-        <div className={`${CARD} p-5`}>
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2"><Icon name="BarChart3" size={14} /> 收支对比</h3>
+        <Card bordered={false} className="border border-slate-200 p-5" padding="none">
           <p className={`text-xl font-bold mb-2 ${stats.netProfit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{stats.netProfit >= 0 ? '盈利' : '亏损'} ¥{formatMoney(Math.abs(stats.netProfit))}</p>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={financeBar} margin={{ top: 4, right: 4, left: -16, bottom: 0 }} barSize={28}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
               <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `¥${(v / 10000).toFixed(0)}万`} />
-              <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} formatter={(v: number) => [`¥${formatMoney(v)}`, '']} />
+              <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+                // @ts-ignore - Recharts formatter type mismatch
+                formatter={(v: any) => [`¥${formatMoney(v as number)}`, '']} />
               <Bar dataKey="value" radius={[5, 5, 0, 0]} animationDuration={1200} animationEasing="ease-out">{financeBar.map((e, i) => <Cell key={i} fill={e.color} />)}</Bar>
             </BarChart>
           </ResponsiveContainer>
-        </div>
-        <div className={`${CARD} p-5`}>
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2"><Icon name="PieChart" size={14} /> 成本结构</h3>
+        </Card>
+        <Card bordered={false} className="border border-slate-200 p-5" padding="none">
           {costDonut.length > 0 ? (
             <div className="flex items-center gap-4">
               <div className="w-[160px] h-[160px] flex-shrink-0"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={costDonut} cx="50%" cy="50%" innerRadius={48} outerRadius={72} paddingAngle={3} dataKey="value" strokeWidth={0} animationDuration={1200} animationEasing="ease-out">{costDonut.map((d, i) => <Cell key={i} fill={d.color} />)}</Pie></PieChart></ResponsiveContainer></div>
@@ -162,7 +162,7 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
       {/* ═══ 4. Contracts + KPIs ═══ */}
       <motion.section variants={sectionV} className="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-6">
         <div className="xl:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className={`${CARD} p-4`}>
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-2"><Icon name="TrendingUp" size={14} className="text-emerald-500" /> 收入合同</h3>
             <p className="text-xl font-bold text-emerald-600 mb-3">¥{stats.incomeTotal > 0 ? (stats.incomeTotal / 10000).toFixed(1) : '0'}万</p>
             {incP.length > 0 ? <div className="space-y-2">{incP.slice(0, 4).map(c => (
@@ -172,7 +172,7 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
               </div>
             ))}</div> : <EmptyState text="暂无" />}
           </div>
-          <div className={`${CARD} p-4`}>
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-2"><Icon name="TrendingDown" size={14} className="text-red-500" /> 支出合同</h3>
             <p className="text-xl font-bold text-red-500 mb-3">¥{stats.expenseTotal > 0 ? (stats.expenseTotal / 10000).toFixed(1) : '0'}万</p>
             {expP.length > 0 ? <div className="space-y-2">{expP.slice(0, 4).map(c => (
@@ -193,7 +193,7 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
 
       {/* ═══ 5. Partners + Invoices + Materials ═══ */}
       <motion.section variants={sectionV} className="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-6">
-        <div className={`${CARD} p-4`}>
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4">
           <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2"><Icon name="Building2" size={14} /> 关联单位 ({stats.partnerCount})</h3>
           {partnerStats.length > 0 ? (
             <div className="space-y-2 max-h-[260px] overflow-y-auto">
@@ -206,7 +206,7 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
             </div>
           ) : <EmptyState text="暂无关联单位" />}
         </div>
-        <div className={`${CARD} p-4`}>
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4">
           <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2"><Icon name="Receipt" size={14} /> 发票概览</h3>
           {invoices.length > 0 ? (
             <div className="space-y-1 max-h-[220px] overflow-y-auto">
@@ -224,7 +224,7 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
             </div>
           ) : <EmptyState text="暂无发票" />}
         </div>
-        <div className={`${CARD} p-4`}>
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4">
           <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2"><Icon name="Package" size={14} /> 材料使用</h3>
           <div className="flex items-center gap-3 mb-3 text-xs"><span className="text-slate-400">{stats.materialCount}种</span><span className="w-px h-3 bg-slate-200" /><span className="font-bold text-violet-600">¥{formatMoney(materialTotalAmt)}</span></div>
           {materials.length > 0 ? (
@@ -247,14 +247,14 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
           { l: '应付未付', v: `¥${formatMoney(Math.max(0, stats.invoiceInTotal - stats.receivedInTotal))}`, s: '已收票，尚未付款', cls: 'border-amber-200 bg-amber-50' },
           { l: '应收未收', v: `¥${formatMoney(Math.max(0, stats.invoiceOutTotal - stats.receivedOutTotal))}`, s: '发票已开尚未收款', cls: 'border-red-200 bg-red-50' },
         ].map((card, i) => (
-          <div key={i} className={`${CARD} p-3 border ${card.cls}`}>
+          <div key={i} className={`bg-white border border-slate-200 rounded-xl shadow-sm p-3 border ${card.cls}`}>
             <p className="text-xs text-slate-400 mb-1">{card.l}</p><p className="text-lg font-bold text-slate-800">{card.v}</p><p className="text-xs text-slate-400">{card.s}</p>
           </div>
         ))}
       </motion.section>
 
       {/* ═══ 7. Info Footer ═══ */}
-      <motion.section variants={sectionV} className={`${CARD} p-5`}>
+      <motion.section variants={sectionV} className="bg-white border border-slate-200 rounded-xl shadow-sm p-5">
         <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2"><Icon name="ClipboardList" size={14} /> 项目基本信息</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           {[{ l: '项目负责人', v: project.projectManagerName || '-' }, { l: '开工日期', v: project.startDate || '-' }, { l: '竣工日期', v: project.endDate || '-' }, { l: '项目周期', v: project.startDate && project.endDate ? `${Math.ceil((new Date(project.endDate).getTime() - new Date(project.startDate).getTime()) / (1000 * 60 * 60 * 24))}天` : '-' }].map((item, i) => (

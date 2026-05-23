@@ -5,11 +5,10 @@ import {
   PieChart, Pie, Cell,
 } from 'recharts'
 import { DashboardStats, Invoice } from '../types/electron'
-import { useAuth } from '../hooks/useAuth'
+import { useAuth } from '@/hooks/useAuth'
 import { Icon } from './ui/Icon'
 import { formatMoney } from '@/utils/format'
-
-const CARD = 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm'
+import { Card } from '@/components/ui/Card'
 const CHART_COLORS = ['#3b82f6', '#10b981', '#f97316', '#8b5cf6', '#06b6d4', '#f59e0b']
 
 const statCards = [
@@ -237,7 +236,7 @@ const Dashboard: React.FC = () => {
                 variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { delay: i * 0.05 } } }}
                 whileHover={cardHover}
                 whileTap={{ scale: 0.98 }}
-                className={`${CARD} p-3 transition-shadow duration-200 cursor-default`}
+                className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm p-3 transition-shadow duration-200 cursor-default"
               >
                 <div className="flex items-center gap-2 mb-1">
                   <span className={`w-7 h-7 rounded-lg flex items-center justify-center ${card.color}`}><Icon name={card.icon} size={14} /></span>
@@ -269,13 +268,7 @@ const Dashboard: React.FC = () => {
         {/* ═══ Charts Row ═══ */}
         <motion.section variants={sectionV} className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
           {/* BarChart */}
-          <motion.div className={CARD} whileHover={{ y: -2, boxShadow: '0 8px 25px rgba(0,0,0,0.08)' }}>
-            <div className="px-5 py-4 border-b border-slate-100">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                <Icon name="BarChart3" size={14} /> 支出分类
-              </h3>
-            </div>
-            <div className="p-5">
+          <Card title={<span className="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2"><Icon name="BarChart3" size={14} /> 支出分类</span>} headerDivider className="hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] transition-shadow">
               {chartData.expenseByCategory.length > 0 ? (
                 <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3, duration: 0.4 }}
                   className="h-72">
@@ -284,7 +277,7 @@ const Dashboard: React.FC = () => {
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                       <XAxis dataKey="name" tick={CategoryTick} interval={0} axisLine={false} tickLine={false} />
                       <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => v >= 10000 ? `${(v / 10000).toFixed(0)}万` : String(v)} />
-                      <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} formatter={(value: number) => [formatCurrency(value), '金额']} />
+                      <Tooltip /* @ts-ignore */ contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} formatter={(value: any) => [formatCurrency(value ?? 0), '金额']} />
                       <Bar dataKey="amount" radius={[5, 5, 0, 0]} animationDuration={1200} animationEasing="ease-out">
                         {chartData.expenseByCategory.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                       </Bar>
@@ -296,17 +289,10 @@ const Dashboard: React.FC = () => {
                   <Icon name="Wallet" size={32} className="mb-2 opacity-40" /><p className="text-sm">暂无支出数据</p>
                 </div>
               )}
-            </div>
-          </motion.div>
+            </Card>
 
           {/* Invoice Status PieChart */}
-          <motion.div className={CARD} whileHover={{ y: -2, boxShadow: '0 8px 25px rgba(0,0,0,0.08)' }}>
-            <div className="px-5 py-4 border-b border-slate-100">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                <Icon name="PieChart" size={14} /> 发票状态
-              </h3>
-            </div>
-            <div className="p-5">
+          <Card title={<span className="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2"><Icon name="PieChart" size={14} /> 发票状态</span>} headerDivider className="hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] transition-shadow">
               {chartData.invoiceStatus.length > 0 ? (
                 <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.4, duration: 0.4 }}
                   className="flex items-center h-72">
@@ -317,7 +303,7 @@ const Dashboard: React.FC = () => {
                           animationDuration={1200} animationEasing="ease-out">
                           {chartData.invoiceStatus.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                         </Pie>
-                        <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} formatter={(value: number, name: string) => [value, invoiceStatusLabels[name]?.text || name]} />
+                        <Tooltip /* @ts-ignore */ contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} formatter={(value: any, name: any) => [value, invoiceStatusLabels[name ?? '']?.text || name]} />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
@@ -336,20 +322,16 @@ const Dashboard: React.FC = () => {
                   <Icon name="Receipt" size={32} className="mb-2 opacity-40" /><p className="text-sm">暂无发票数据</p>
                 </div>
               )}
-            </div>
-          </motion.div>
+            </Card>
         </motion.section>
 
         {/* ═══ Recent Projects & Invoices ═══ */}
         <motion.section variants={sectionV} className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <div className={CARD}>
-            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                <Icon name="FolderKanban" size={14} /> 最近项目
-              </h3>
-              {stats?.projectsCount ? <span className="text-xs text-slate-400">{stats.projectsCount} 总计</span> : null}
-            </div>
-            <div className="p-5">
+          <Card 
+            title={<span className="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2"><Icon name="FolderKanban" size={14} /> 最近项目</span>}
+            extra={stats?.projectsCount ? <span className="text-xs text-slate-400">{stats.projectsCount} 总计</span> : null}
+            headerDivider
+          >
               {stats?.recentProjects && stats.recentProjects.length > 0 ? (
                 <div className="space-y-2">
                   {stats.recentProjects.map((project, index) => (
@@ -380,17 +362,13 @@ const Dashboard: React.FC = () => {
                   <Icon name="FolderKanban" size={32} className="mb-2 opacity-40" /><p className="text-sm">暂无项目</p>
                 </div>
               )}
-            </div>
-          </div>
+            </Card>
 
-          <div className={CARD}>
-            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                <Icon name="Receipt" size={14} /> 最近发票
-              </h3>
-              {stats?.invoicesCount ? <span className="text-xs text-slate-400">{stats.invoicesCount} 总计</span> : null}
-            </div>
-            <div className="p-5">
+          <Card 
+            title={<span className="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2"><Icon name="Receipt" size={14} /> 最近发票</span>}
+            extra={stats?.invoicesCount ? <span className="text-xs text-slate-400">{stats.invoicesCount} 总计</span> : null}
+            headerDivider
+          >
               {recentInvoices.length > 0 ? (
                 <div className="space-y-3">
                   {recentInvoices.map((inv, index) => (
@@ -432,8 +410,7 @@ const Dashboard: React.FC = () => {
                   <Icon name="Receipt" size={32} className="mb-2 opacity-40" /><p className="text-sm">暂无发票</p>
                 </div>
               )}
-            </div>
-          </div>
+            </Card>
         </motion.section>
 
       </motion.div>
