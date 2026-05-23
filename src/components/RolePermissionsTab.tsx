@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useToastContext } from '../hooks/useToast'
+import { useToastStore } from '@/store/toastStore'
 import { SYSTEM_ROLES, RESOURCE_LABELS, ACTION_LABELS, getPermissionLabel } from '../types/permissions'
 import type { PermissionResource, PermissionAction, PermissionCode } from '../types/permissions'
 import { Icon } from './ui/Icon'
@@ -8,7 +8,7 @@ const resourceKeys: PermissionResource[] = ['dashboard', 'projects', 'contracts'
 const actionKeys: PermissionAction[] = ['read', 'create', 'update', 'delete', 'export', 'import', 'approve']
 
 export const RolePermissionsTab: React.FC = () => {
-  const { showToast } = useToastContext()
+  const showToast = useToastStore(state => state.showToast)
   const [roles, setRoles] = useState<{ id: string; name: string; description: string; isSystem: boolean; permissions: string[] }[]>([])
   const [editingRoleId, setEditingRoleId] = useState<string | null>(null)
   const [editingPermissions, setEditingPermissions] = useState<string[]>([])

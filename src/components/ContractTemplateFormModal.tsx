@@ -1,4 +1,4 @@
-import React, { useRef } from 'react'
+import React from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from './ui/Icon'
 import { ContractTemplate, TemplateType, TemplateVariable } from '../types/electron'

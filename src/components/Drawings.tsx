@@ -1,16 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Drawing, Project } from '../types/electron'
 import { motion } from 'framer-motion'
 import { Icon } from './ui/Icon'
 import { EmptyState } from './ui/EmptyState'
-import { useToastContext } from '../hooks/useToast'
+import { useToastStore } from '@/store/toastStore'
+import { logCreate, logUpdate, logDelete } from '../utils/audit'
+import { DrawingUploadForm } from './DrawingsUploadForm'
 
 interface DrawingsProps {
   refresh?: () => void
 }
 
 const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
-  const { showToast } = useToastContext()
+  const showToast = useToastStore(state => state.showToast)
   const [drawings, setDrawings] = useState<Drawing[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
@@ -18,14 +20,17 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
   const [editingDrawing, setEditingDrawing] = useState<Drawing | null>(null)
   const [filterProject, setFilterProject] = useState<number | ''>('')
   const [filterCategory, setFilterCategory] = useState<string>('')
+  const [filterPosition, setFilterPosition] = useState<string>('')
   const [formData, setFormData] = useState({
     projectId: '' as number | '',
     name: '',
     category: '',
     remarks: '',
-    file: null as File | null
+    position: '',
+    files: [] as File[]
   })
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 })
 
   useEffect(() => {
     loadData()
@@ -47,20 +52,26 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
     }
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      setFormData({ ...formData, file })
-      if (!formData.name && file) {
-        setFormData({ ...formData, name: file.name.replace(/\.[^/.]+$/, ''), file })
-      }
-    }
+  const handleFilesAdd = (newFiles: FileList | File[]) => {
+    const list = Array.from(newFiles)
+    setFormData(prev => ({
+      ...prev,
+      files: [...prev.files, ...list],
+      name: prev.name || (list[0]?.name || ''),
+    }))
+  }
+
+  const handleFileRemove = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      files: prev.files.filter((_, i) => i !== index),
+    }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!editingDrawing && !formData.file) {
+    if (!editingDrawing && formData.files.length === 0) {
       showToast('请选择要上传的文件', 'error')
       return
     }
@@ -72,48 +83,69 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
           projectId: formData.projectId as number,
           name: formData.name,
           category: formData.category,
-          remarks: formData.remarks
+          remarks: formData.remarks,
+          position: formData.position
         })
+        logUpdate('drawings', formData.name, editingDrawing!.id, { position: formData.position })
         loadData()
         setShowModal(false)
         resetForm()
         refresh?.()
         showToast('图纸更新成功', 'success')
-      } else if (formData.file) {
-        const reader = new FileReader()
-        reader.onload = async (event) => {
+      } else if (formData.files.length > 0) {
+        setUploading(true)
+        const total = formData.files.length
+        let successCount = 0
+        let failCount = 0
+
+        for (let i = 0; i < total; i++) {
+          const file = formData.files[i]
+          setUploadProgress({ current: i + 1, total })
+
           try {
-            const base64 = event.target?.result as string
+            const base64 = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader()
+              reader.onload = () => resolve(reader.result as string)
+              reader.onerror = () => reject(new Error('文件读取失败'))
+              reader.readAsDataURL(file)
+            })
             const base64Data = base64.split(',')[1]
 
             const result = await window.electronAPI.uploadDrawing({
               projectId: formData.projectId as number,
-              name: formData.name,
+              name: formData.files.length === 1 ? formData.name : file.name,
               category: formData.category,
               remarks: formData.remarks,
-              fileName: formData.file!.name,
+              position: formData.position,
+              fileName: file.name,
               fileData: base64Data
             })
 
-            if (!result.success) {
-              showToast(result.error || '上传失败', 'error')
-              return
+            if (result.success) {
+              successCount++
+              logCreate('drawings', file.name, result.data?.id, { projectId: formData.projectId, category: formData.category, position: formData.position })
+            } else {
+              failCount++
             }
-
-            await loadData()
-            setShowModal(false)
-            resetForm()
-            refresh?.()
-            showToast('图纸上传成功', 'success')
           } catch (error: any) {
-            console.error('上传图纸失败:', error)
-            showToast(error?.message || '上传失败', 'error')
+            failCount++
           }
         }
-        reader.onerror = () => {
-          showToast('文件读取失败，请重试', 'error')
+
+        setUploading(false)
+        setUploadProgress({ current: 0, total: 0 })
+        await loadData()
+        setShowModal(false)
+        resetForm()
+        refresh?.()
+
+        if (successCount > 0 && failCount === 0) {
+          showToast(`${successCount} 个图纸上传成功`, 'success')
+        } else if (successCount > 0) {
+          showToast(`${successCount} 个上传成功，${failCount} 个失败`, 'warning')
+        } else {
+          showToast('上传失败', 'error')
         }
-        reader.readAsDataURL(formData.file)
         return
       }
     } catch (error: any) {
@@ -129,7 +161,8 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
       name: drawing.name,
       category: drawing.category || '',
       remarks: drawing.remarks || '',
-      file: null
+      position: drawing.position || '',
+      files: []
     })
     setShowModal(true)
   }
@@ -137,7 +170,9 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
   const handleDelete = async (id: number) => {
     if (confirm('确定要删除这张图纸吗？')) {
       try {
+        const drawing = drawings.find(d => d.id === id)
         await window.electronAPI.deleteDrawing(id)
+        logDelete('drawings', drawing?.name || '图纸', id, { projectId: drawing?.projectId })
         loadData()
         refresh?.()
       } catch (error) {
@@ -153,16 +188,15 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
       name: '',
       category: '',
       remarks: '',
-      file: null
+      position: '',
+      files: []
     })
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
   }
 
   const filteredDrawings = drawings.filter(drawing => {
     if (filterProject && drawing.projectId !== filterProject) return false
     if (filterCategory && drawing.category !== filterCategory) return false
+    if (filterPosition && !(drawing.position || '').includes(filterPosition)) return false
     return true
   })
 
@@ -264,6 +298,16 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
             ))}
           </select>
         </div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-slate-600">筛选部位</label>
+          <input
+            type="text"
+            value={filterPosition}
+            onChange={e => setFilterPosition(e.target.value)}
+            className="px-3 py-2 border border-slate-300 rounded-lg text-sm w-36 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            placeholder="输入部位名称..."
+          />
+        </div>
       </div>
 
       {/* 图纸列表 */}
@@ -275,6 +319,7 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase bg-slate-50">图纸名称</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase bg-slate-50">所属项目</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase bg-slate-50">图纸类型</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase bg-slate-50">部位</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase bg-slate-50">备注</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase bg-slate-50">上传日期</th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase bg-slate-50">操作</th>
@@ -295,6 +340,7 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
                       {drawing.category || '其他'}
                     </span>
                   </td>
+                  <td className="px-4 py-3 text-sm text-slate-600">{drawing.position || '-'}</td>
                   <td className="px-4 py-3 text-sm text-slate-600 max-w-xs truncate">{drawing.remarks || '-'}</td>
                   <td className="px-4 py-3 text-sm text-slate-500">{new Date(drawing.createdAt).toLocaleDateString('zh-CN')}</td>
                   <td className="px-4 py-3 text-center">
@@ -377,16 +423,28 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
-                    {editingDrawing ? '替换文件 (可选' : '选择文件 *'}
+                    {editingDrawing ? '替换文件 (可选)' : '选择文件 *'}
                   </label>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".jpg,.jpeg,.png,.pdf,.dwg,.dxf"
-                    onChange={handleFileChange}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  <DrawingUploadForm
+                    files={formData.files}
+                    uploading={uploading}
+                    uploadProgress={uploadProgress}
+                    editingMode={!!editingDrawing}
+                    onFilesAdd={handleFilesAdd}
+                    onFileRemove={handleFileRemove}
                   />
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">支持 JPG、PNG、PDF、DWG、DXF 格式</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">部位 *</label>
+                  <input
+                    type="text"
+                    value={formData.position}
+                    onChange={e => setFormData({ ...formData, position: e.target.value })}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="请输入图纸所属部位..."
+                    required
+                  />
                 </div>
 
                 <div>
@@ -405,18 +463,21 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
                 <button
                   type="button"
                   onClick={() => {
+                    if (uploading) return
                     setShowModal(false)
                     resetForm()
                   }}
-                  className="px-6 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 rounded-lg transition-colors"
+                  disabled={uploading}
+                  className="px-6 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 disabled:opacity-50 rounded-lg transition-colors"
                 >
                   取消
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
+                  disabled={uploading}
+                  className="px-6 py-2 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
                 >
-                  {editingDrawing ? '保存' : '上传'}
+                  {uploading ? `上传中 ${uploadProgress.current}/${uploadProgress.total}...` : editingDrawing ? '保存' : formData.files.length > 1 ? `上传 (${formData.files.length})` : '上传'}
                 </button>
               </div>
             </form>

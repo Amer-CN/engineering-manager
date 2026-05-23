@@ -1,10 +1,8 @@
-// @ts-nocheck
 /**
  * SettingsChangelog.tsx 组件测试
  * Phase 5 Stage 3：零依赖展示组件
  */
 
-import { describe, test, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import React from 'react'
 

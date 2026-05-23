@@ -5,7 +5,7 @@ import { Partner, Supervisor, Project } from '../types/electron'
 import { PartnerList, PartnerForm, SupervisorList, SupervisorForm } from './features/partners'
 import { logCreate, logUpdate, logDelete } from '../utils/audit'
 import { guessFileExt, readUploadedFile, deleteUploadedFile, uploadFile, FILE_CATEGORIES } from '../services/fileService'
-import { useToastContext } from '../hooks/useToast'
+import { useToastStore } from '@/store/toastStore'
 import PageContainer from './ui/PageContainer'
 
 interface PartnersProps {
@@ -16,7 +16,7 @@ interface PartnersProps {
 type UnitType = 'partner' | 'supervisor'
 
 const Partners: React.FC<PartnersProps> = ({ refresh }) => {
-  const { showToast } = useToastContext()
+  const showToast = useToastStore(state => state.showToast)
   const [activeTab, setActiveTab] = useState<UnitType>('partner')
   const [partners, setPartners] = useState<Partner[]>([])
   const [supervisors, setSupervisors] = useState<Supervisor[]>([])

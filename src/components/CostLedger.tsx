@@ -17,20 +17,20 @@ export default function CostLedger() {
 
   const { categories, refresh: refreshCategories } = useCostLedgerCategories()
 
-  const api = (window as any).electronAPI
+  const api = window.electronAPI
 
   const loadDashboard = useCallback(async () => {
     if (!api?.getProjects) return
     setLoading(true)
     const projRes = await api.getProjects()
-    const projectList = (projRes?.success ? projRes.data : projRes) || []
+    const projectList = projRes?.success ? projRes.data || [] : []
     setProjects(projectList)
 
     const sums: Record<number, CostLedgerSummary> = {}
     if (api.getCostLedgerSummary) {
       await Promise.all(projectList.map(async (p: Project) => {
         const r = await api.getCostLedgerSummary(p.id)
-        if (r?.success) sums[p.id] = r.data
+        if (r?.success && r.data) sums[p.id] = r.data
       }))
     }
     setSummaries(sums)

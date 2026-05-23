@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { describe, it, expect, vi } from 'vitest'
+import React from 'react'
 import { iconMap, getIcon } from '../../utils/iconMap'
 
 // Mock lucide-react 以避免加载大量图标组件
@@ -31,7 +30,7 @@ vi.mock('lucide-react', () => {
 
   return {
     ...icons,
-    LucideIcon: undefined as unknown as typeof React.FC,
+    LucideIcon: undefined as any,
   }
 })
 

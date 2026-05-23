@@ -1,19 +1,20 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { Icon } from '../../ui/Icon'
 import { Button } from '../../ui/Button'
 import { EmptyState } from '../../ui/EmptyState'
-import { useToastContext } from '../../../hooks/useToast'
-import { HR_STATUS_LABELS, HR_STATUS_COLORS } from './config'
-import { processFileFields, FILE_CATEGORIES, guessFileExt } from '../../../services/fileService'
+import { useToastStore } from '@/store/toastStore'
+import { logCreate, logUpdate } from '../../../utils/audit'
+import { processFileFields, FILE_CATEGORIES, guessFileExt, readUploadedFile } from '../../../services/fileService'
 import { recognizeIdCard, getOCRConfig } from '../../../services/ocr'
 import StaffFormModal, { type StaffFormData } from './StaffFormModal'
 import BatchDeptAssignModal from './BatchDeptAssignModal'
 import SalaryHistoryModal from './SalaryHistoryModal'
+import { StaffListRow } from './StaffListRow'
 
 const emptyForm: StaffFormData = {
   name: '', phone: '', email: '', idCard: '', gender: '男', ethnicity: '',
   birthDate: '', idCardAddress: '', departmentId: '',
-  position: '', entryDate: '', baseSalary: '', status: 'active',
+  position: '', entryDate: '', baseSalary: '', status: 'active', leaveDate: '', reentryDate: '',
   idCardFront: '', idCardBack: '', contractFile: '', contractFileType: '',
 }
 
@@ -21,7 +22,7 @@ const readFileAsDataURL = (file: File): Promise<string> =>
   new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(r.result as string); r.onerror = reject; r.readAsDataURL(file) })
 
 const StaffList: React.FC = () => {
-  const { showToast } = useToastContext()
+  const showToast = useToastStore(state => state.showToast)
   const [members, setMembers] = useState<any[]>([])
   const [departments, setDepartments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -31,7 +32,9 @@ const StaffList: React.FC = () => {
   const [editing, setEditing] = useState<any>(null)
   const [formData, setFormData] = useState<StaffFormData>({ ...emptyForm })
   const [dragOver, setDragOver] = useState<string | null>(null)
+  const [fileDirty, setFileDirty] = useState<Set<string>>(new Set())
   const [ocrLoading, setOcrLoading] = useState(false)
+// @ts-ignore TS6133: setOcrMode is declared but never read
   const [ocrMode, setOcrMode] = useState(getOCRConfig().provider)
   const [showBatchModal, setShowBatchModal] = useState(false)
   const [salaryHistoryMember, setSalaryHistoryMember] = useState<any | null>(null)
@@ -53,22 +56,31 @@ const StaffList: React.FC = () => {
 
   useEffect(() => { loadData() }, [loadData])
 
-  const orphans = members.filter((m: any) => !m.departmentId)
+  const orphans = useMemo(() => members.filter((m: any) => !m.departmentId), [members])
 
   const resetForm = () => {
     setEditing(null)
     setFormData({ ...emptyForm })
+    setFileDirty(new Set())
     setShowForm(false)
   }
 
-  const openEdit = (m: any) => {
+  const openEdit = async (m: any) => {
     setEditing(m)
+    // 从磁盘读取已有文件用于预览
+    const [frontUrl, backUrl, contractUrl] = await Promise.all([
+      m.idCardFront ? readUploadedFile(FILE_CATEGORIES.MEMBER_ID_CARD.category, FILE_CATEGORIES.MEMBER_ID_CARD.subCategory, m.idCardFront) : Promise.resolve(''),
+      m.idCardBack ? readUploadedFile(FILE_CATEGORIES.MEMBER_ID_CARD.category, FILE_CATEGORIES.MEMBER_ID_CARD.subCategory, m.idCardBack) : Promise.resolve(''),
+      m.contractFile ? readUploadedFile(FILE_CATEGORIES.MEMBER_CONTRACT.category, FILE_CATEGORIES.MEMBER_CONTRACT.subCategory, m.contractFile) : Promise.resolve(''),
+    ])
     setFormData({
       name: m.name || '', phone: m.phone || '', email: m.email || '', idCard: m.idCard || '',
       gender: m.gender || '男', ethnicity: m.ethnicity || '', birthDate: m.birthDate || '',
       idCardAddress: m.idCardAddress || '', departmentId: m.departmentId || '',
       position: m.position || '', entryDate: m.entryDate || '', baseSalary: m.baseSalary || '',
-      status: m.status || 'active', idCardFront: '', idCardBack: '', contractFile: '', contractFileType: '',
+      status: m.status || 'active', leaveDate: m.leaveDate || '', reentryDate: m.reentryDate || '',
+      idCardFront: frontUrl, idCardBack: backUrl,
+      contractFile: contractUrl, contractFileType: m.contractFileType || '',
     })
     setShowForm(true)
   }
@@ -77,6 +89,7 @@ const StaffList: React.FC = () => {
     if (file.size > 10 * 1024 * 1024) { showToast('文件不能超过10MB', 'error'); return }
     const url = await readFileAsDataURL(file)
     setFormData(prev => ({ ...prev, [field]: url, [`${field}Type`]: file.type === 'application/pdf' ? 'pdf' : 'image' }))
+    setFileDirty(prev => new Set(prev).add(field))
     // OCR: only recognize front side (人像面), not back side (国徽面)
     if (field === 'idCardFront') {
       const cfg = getOCRConfig()
@@ -124,7 +137,9 @@ const StaffList: React.FC = () => {
         departmentId: formData.departmentId || undefined,
         position: formData.position.trim() || undefined,
         baseSalary: formData.baseSalary || undefined,
-        memberType: 'staff', status: formData.status,
+        leaveDate: formData.leaveDate || undefined,
+        reentryDate: formData.reentryDate || undefined,
+        memberType: 'staff', status: (formData.leaveDate && !formData.reentryDate) ? 'left' : 'active',
         idCardFront: formData.idCardFront, idCardBack: formData.idCardBack,
         contractFile: formData.contractFile, contractFileType: formData.contractFileType,
       }
@@ -136,44 +151,70 @@ const StaffList: React.FC = () => {
         { field: 'contractFile' as const, ...FILE_CATEGORIES.MEMBER_CONTRACT,
           getFileName: () => `${formData.name}_劳动合同${guessFileExt(payload.contractFile, payload.contractFileType)}` },
       ]
-      payload = await processFileFields(payload, fieldConfigs as any, null)
-      // Preserve existing file references when editing and no new file was uploaded
+      // 只处理用户新拖入/修改的文件字段，未修改的保留原文件名
+      const dirtyConfigs = fieldConfigs.filter(c => fileDirty.has(c.field))
+      payload = await processFileFields(payload, dirtyConfigs as any, null)
+      // 未修改的文件字段保留原引用，无原引用时删除
       for (const f of ['idCardFront', 'idCardBack', 'contractFile'] as const) {
-        if (!payload[f]) {
-          if (editing?.[f]) payload[f] = editing[f]
-          else delete payload[f]
+        if (!fileDirty.has(f)) {
+          if (editing?.[f] && editing[f] !== '') payload[f] = editing[f]
+          else if (!payload[f]) delete payload[f]
+        } else if (!payload[f]) {
+          delete payload[f]
         }
       }
       const result = editing
         ? await window.electronAPI.updateMember({ ...payload, id: editing.id })
         : await window.electronAPI.createMember(payload)
       if (result.success) {
+        // A→B 同步：月基本工资变动时同步到薪资历史（入职初始薪资）
+        const memberId = editing ? editing.id : (result as any).data?.id
+        if (memberId && formData.baseSalary && formData.entryDate) {
+          const changed = !editing || Number(editing.baseSalary) !== Number(formData.baseSalary)
+          if (changed) {
+            const historyRes = await window.electronAPI.getSalaryHistory(memberId)
+            if (historyRes.success) {
+              const existing = (historyRes.data || []).find((h: any) => h.effectiveDate === formData.entryDate)
+              if (existing) await window.electronAPI.deleteSalaryHistory(existing.id)
+              await window.electronAPI.createSalaryHistory({
+                memberId,
+                effectiveDate: formData.entryDate,
+                baseSalary: Number(formData.baseSalary),
+                subsidy: 0,
+                subsidyNote: '',
+                note: '入职初始薪资',
+              })
+            }
+          }
+        }
         showToast(editing ? '人员信息已更新' : '人员已创建', 'success')
+        if (editing) logUpdate('members', formData.name, editing.id, { staff: true })
+        else logCreate('members', formData.name, (result as any)?.data?.id, { staff: true })
         resetForm(); loadData()
       } else { showToast(result.error || '操作失败', 'error') }
     } catch (e: any) { showToast(e?.message || '保存失败', 'error') }
   }
 
-  const handleStatusChange = async (member: any, newStatus: string) => {
+  const handleStatusChange = useCallback(async (member: any, newStatus: string) => {
     await window.electronAPI.updateMember({ ...member, status: newStatus })
     loadData()
     showToast('状态已更新', 'success')
-  }
+  }, [loadData, showToast])
 
-  const filtered = members.filter((m: any) => {
+  const filtered = useMemo(() => members.filter((m: any) => {
     if (filterDept && m.departmentId !== filterDept) return false
     if (filterStatus && m.status !== filterStatus) return false
     return true
-  })
+  }), [members, filterDept, filterStatus])
 
-  const getDeptName = (id?: number) => departments.find((d: any) => d.id === id)?.name || '-'
+  const getDeptName = useCallback((id?: number) => departments.find((d: any) => d.id === id)?.name || '-', [departments])
 
   if (loading) {
     return <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-4 border-indigo-500 border-t-transparent" /></div>
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex-1 flex flex-col overflow-hidden">
       {orphans.length > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg px-5 py-3 flex items-center justify-between">
           <span className="text-sm text-amber-800">
@@ -212,44 +253,34 @@ const StaffList: React.FC = () => {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm py-12">
+        <div className="bg-white rounded-xl shadow-sm flex-1 py-12">
           <EmptyState icon="Users" title="暂无人员" description="点击上方按钮添加第一位管理人员" />
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm">
+        <div className="bg-white rounded-xl shadow-sm flex-1 overflow-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50">
+              <tr className="border-b border-slate-200 bg-slate-50 sticky top-0">
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">姓名</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">部门</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">职位</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">手机</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">状态</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">入职日期</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">离职日期</th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filtered.map((m: any) => (
-                <tr key={m.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 font-medium text-slate-800">{m.name}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{getDeptName(m.departmentId)}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{m.position || '-'}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{m.phone || '-'}</td>
-                  <td className="px-4 py-3">
-                    <select value={m.status || 'active'} onChange={e => handleStatusChange(m, e.target.value)}
-                      className={`px-2 py-1 rounded-full text-xs font-medium border-0 ${HR_STATUS_COLORS[m.status || 'active'] || 'bg-slate-100 text-slate-600'}`}>
-                      {Object.entries(HR_STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                    </select>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-slate-500">{m.entryDate || '-'}</td>
-                  <td className="px-4 py-3 text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      <button onClick={() => openEdit(m)} className="px-3 py-1 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg">编辑</button>
-                      <button onClick={() => setSalaryHistoryMember(m)} className="px-2 py-1 text-xs text-amber-600 hover:bg-amber-50 rounded-lg" title="薪资历史">薪资</button>
-                    </div>
-                  </td>
-                </tr>
+                <StaffListRow
+                  key={m.id}
+                  m={m}
+                  deptName={getDeptName(m.departmentId)}
+                  onEdit={openEdit}
+                  onStatusChange={handleStatusChange}
+                  onSalaryHistory={setSalaryHistoryMember}
+                />
               ))}
             </tbody>
           </table>

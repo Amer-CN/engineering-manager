@@ -184,7 +184,7 @@ export function CostLedgerForm({ projectId, projectName, initial, onSave, onClos
             <button type="button" onClick={onClose} className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
               取消
             </button>
-            <button type="submit" className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+            <button type="submit" className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
               {initial ? '保存修改' : '保存'}
             </button>
           </div>

@@ -1,8 +1,6 @@
-// @ts-nocheck
 /**
  * UI 组件测试：FormField、Spinner、Skeleton、Loading、PageContainer
  */
-import { describe, it, expect, afterEach } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 import { FormField } from '../../components/ui/FormField'
 import { Spinner, Skeleton, Loading } from '../../components/ui/Loading'

@@ -1,5 +1,3 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 使用 vi.hoisted() 确保 mock 函数在 vi.mock() factory 中可用

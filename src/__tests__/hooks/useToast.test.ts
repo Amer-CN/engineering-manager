@@ -1,6 +1,4 @@
-// @ts-nocheck
 import { renderHook, act, cleanup } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
 
 afterEach(cleanup)
 

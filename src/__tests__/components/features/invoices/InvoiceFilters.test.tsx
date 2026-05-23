@@ -1,9 +1,7 @@
-// @ts-nocheck
 /**
  * InvoiceFilters.test.tsx - InvoiceFilters 组件测试
  * 测试发票/收款筛选器组件的渲染、筛选交互和按钮点击
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import React from 'react'
 

@@ -1,0 +1,573 @@
+/**
+ * 工资管理模块 — 容器组件（v3.0 纯工人日薪制）
+ * Dashboard 视图：工资统计看板
+ * Cycle 视图：WageCycleDetail（考勤/工资表/发放记录 3 Tab）
+ * Batch 视图：银行回单批量解析
+ */
+
+import { useState, useEffect, useCallback } from 'react'
+
+import type { Project, WorkerTeam, AttendanceRecord, WageRecord } from '@/types'
+import { useToastStore } from '@/store/toastStore'
+import { useConfirm } from '../hooks/useConfirm'
+import { logCreate, logUpdate, logDelete } from '../utils/audit'
+import WageCycleDetail from './features/wages/WageCycleDetail'
+import WageProjectList from './features/wages/WageProjectList'
+import { useBankReceiptBatch } from '../hooks/useBankReceiptBatch'
+import type { BatchParseResult, BankReceiptMatch } from '@/types'
+
+type ViewMode = 'dashboard' | 'cycle' | 'batch' | 'batch-confirm'
+
+export default function WageManagement() {
+  const showToast = useToastStore(state => state.showToast)
+  const { confirm, ConfirmDialog } = useConfirm()
+
+  // ── 基础数据 ──
+  const [projects, setProjects] = useState<Project[]>([])
+  const [workerTeams, setWorkerTeams] = useState<WorkerTeam[]>([])
+
+  // ── UI 状态 ──
+  const [view, setView] = useState<ViewMode>('dashboard')
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null)
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  })
+  const [loading, setLoading] = useState(false)
+
+  // ── 批量解析状态（使用 Hook） ──
+  const {
+    batchResult,
+    handleBatchParseComplete,
+    handleBatchCancel,
+    handleBatchBack,
+    handleBatchConfirm,
+  } = useBankReceiptBatch({
+    selectedMonth,
+    loadWages,
+    loadAllRecords,
+  })
+
+  // ── 考勤数据 ──
+  const [attendances, setAttendances] = useState<AttendanceRecord[]>([])
+  const [allProjectAttendances, setAllProjectAttendances] = useState<AttendanceRecord[]>([])
+  const [attendanceDetailRecord, setAttendanceDetailRecord] = useState<AttendanceRecord | null>(null)
+
+  // ── 工资表数据 ──
+  const [wageRecords, setWageRecords] = useState<WageRecord[]>([])
+
+  // ── 工资发放编辑 ──
+  const [paymentEdits, setPaymentEdits] = useState<Map<number, { paidAmount: string; paidDate: string; bankReceiptPath?: string }>>(new Map())
+
+  // ── 记录和统计 ──
+  const [allWageRecords, setAllWageRecords] = useState<WageRecord[]>([])
+
+
+  // ── 批量选中 ──
+  const [selectedAttendanceIds, setSelectedAttendanceIds] = useState<Set<number>>(new Set())
+  const [selectedWageIds, setSelectedWageIds] = useState<Set<number>>(new Set())
+
+  // ── 项目工人数据 ──
+  const [projectWorkerList, setProjectWorkerList] = useState<{ pwId: number; name: string; teamName: string; idCard: string }[]>([])
+  const [workerPwIds, setWorkerPwIds] = useState<number[]>([])
+
+  // ══════════════════════════════════════════════════════
+  // 数据加载
+  // ══════════════════════════════════════════════════════
+
+  const loadBaseData = useCallback(async () => {
+    setLoading(true)
+    try {
+      const [projectsRes, teamsRes] = await Promise.all([
+        window.electronAPI.getProjects(),
+        window.electronAPI.getWorkerTeams(),
+      ])
+      if (projectsRes.success && projectsRes.data) setProjects(projectsRes.data.filter((p: Project) => p.status !== 'archived'))
+      if (teamsRes.success && teamsRes.data) setWorkerTeams(teamsRes.data)
+    } catch (error) { console.error('加载基础数据失败:', error) }
+    finally { setLoading(false) }
+  }, [])
+
+  const loadAttendances = useCallback(async () => {
+    if (!selectedProject) return
+    try {
+      const result = await window.electronAPI.getAttendances(selectedProject.id, selectedMonth)
+      if (result.success && result.data) setAttendances(result.data)
+    } catch (error) { console.error('加载考勤失败:', error) }
+  }, [selectedProject, selectedMonth])
+
+  const loadAllProjectAttendances = useCallback(async () => {
+    if (!selectedProject) return
+    try {
+      const result = await window.electronAPI.getAttendances(selectedProject.id, undefined)
+      if (result.success && result.data) setAllProjectAttendances(result.data)
+    } catch (error) { console.error('加载全部考勤失败:', error) }
+  }, [selectedProject])
+
+  const loadWages = useCallback(async () => {
+    if (!selectedProject) return
+    try {
+      const result = await window.electronAPI.getWages(selectedProject.id, selectedMonth)
+      if (result.success && result.data) setWageRecords(result.data)
+    } catch (error) { console.error('加载工资数据失败:', error) }
+  }, [selectedProject, selectedMonth])
+
+  const loadAllRecords = useCallback(async () => {
+    try {
+      const projectId = view === 'cycle' ? selectedProject?.id : undefined
+      const result = await window.electronAPI.getWages(projectId, undefined)
+      if (result.success && result.data) setAllWageRecords(result.data)
+    } catch (error) { console.error('加载工资记录失败:', error) }
+  }, [selectedProject, view])
+
+  useEffect(() => { loadBaseData() }, [loadBaseData])
+  useEffect(() => { loadAttendances() }, [loadAttendances])
+  useEffect(() => { loadWages() }, [loadWages])
+  useEffect(() => { loadAllRecords() }, [loadAllRecords])
+
+  // ══════════════════════════════════════════════════════
+  // 加载项目下活跃工人
+  // ══════════════════════════════════════════════════════
+
+  const loadProjectWorkers = useCallback(async () => {
+    if (!selectedProject) { setProjectWorkerList([]); setWorkerPwIds([]); return }
+    const list: { pwId: number; name: string; teamName: string; idCard: string }[] = []
+    const pwIds: number[] = []
+
+    try {
+      const [pwResult, workersResult] = await Promise.all([
+        window.electronAPI.getProjectWorkers(selectedProject.id),
+        window.electronAPI.getWorkers(),
+      ])
+      // Build workerId → idCard map
+      const idCardMap = new Map<number, string>()
+      if (workersResult.success && workersResult.data) {
+        for (const w of workersResult.data) idCardMap.set(w.id, w.idCard || '')
+      }
+      if (pwResult.success && pwResult.data) {
+        for (const pw of pwResult.data) {
+          if (pw.status !== 'active') continue
+          pwIds.push(pw.id)
+          const teamName = workerTeams.find((t: WorkerTeam) => t.id === pw.teamId)?.name || '-'
+          const idCard = idCardMap.get(pw.workerId) || ''
+          list.push({ pwId: pw.id, name: pw.workerName || '', teamName, idCard })
+        }
+      }
+    } catch (e) { console.error('获取项目工人失败:', e) }
+
+    setProjectWorkerList(list)
+    setWorkerPwIds(pwIds)
+  }, [selectedProject, workerTeams])
+
+  useEffect(() => { loadProjectWorkers() }, [loadProjectWorkers])
+  useEffect(() => { if (selectedProject) loadAllProjectAttendances() }, [selectedProject, loadAllProjectAttendances])
+
+  // ══════════════════════════════════════════════════════
+  // 考勤操作
+  // ══════════════════════════════════════════════════════
+
+  const handleGenerateAttendance = async () => {
+    if (!selectedProject) return
+    if (workerPwIds.length === 0) {
+      showToast('该项目没有活跃工人，请先在项目详情页→人员管理中添加工人班组', 'warning'); return
+    }
+    setLoading(true)
+    try {
+      const r = await window.electronAPI.generateDefaultAttendancesV2(selectedProject.id, selectedMonth, workerPwIds)
+      if (r.success && r.data && r.data.count > 0) { showToast(`已为 ${r.data.count} 名工人生成考勤记录`, 'success'); await loadAttendances(); logCreate('attendances', `${selectedMonth} 考勤`, selectedProject.id, { projectId: selectedProject.id, month: selectedMonth, count: r.data.count }) }
+      else showToast('所有工人已有考勤记录', 'info')
+    } catch (error: any) { showToast(error?.message || '生成考勤失败', 'error') }
+    finally { setLoading(false) }
+  }
+
+  const handleDeleteAttendance = async (record: AttendanceRecord) => {
+    const ok = await confirm({
+      title: '确认删除',
+      content: `确认删除 ${record.memberName || '该工人'} 的考勤记录吗？`,
+      confirmVariant: 'danger',
+    })
+    if (!ok) return
+    try {
+      const result = await window.electronAPI.deleteAttendance(record.id)
+      if (result.success) { showToast('考勤记录已删除', 'success'); await loadAttendances(); logDelete('attendances', record.memberName || '考勤', record.id, { projectId: selectedProject?.id }) }
+      else showToast(result.error || '删除失败', 'error')
+    } catch (error: any) { showToast(error?.message || '删除失败', 'error') }
+  }
+
+  // ══════════════════════════════════════════════════════
+  // 工资表操作
+  // ══════════════════════════════════════════════════════
+
+  const handleGenerateWages = async () => {
+    if (!selectedProject) return
+    setLoading(true)
+    try {
+      const result = await window.electronAPI.generateProjectWages(selectedProject.id, selectedMonth)
+      if (result.success && result.data) {
+        const newWages = result.newCount ?? result.data.length
+        const archivedWages = result.archivedSkipped ?? 0
+        const msg = archivedWages > 0
+          ? `已生成 ${newWages} 条工资记录（${archivedWages} 条已归档跳过）`
+          : `已生成 ${newWages} 条工资记录`
+        showToast(msg, 'success')
+        await loadWages(); await loadAllRecords()
+        logCreate('wages', `${selectedMonth} 工资表`, selectedProject.id, { projectId: selectedProject?.id, month: selectedMonth })
+      }
+      else showToast(result.error || '生成工资表失败', 'error')
+    } catch (error: any) { showToast(error?.message || '生成工资表失败', 'error') }
+    finally { setLoading(false) }
+  }
+
+  // ══════════════════════════════════════════════════════
+  // 批量删除
+  // ══════════════════════════════════════════════════════
+
+  const handleBatchDeleteAttendances = async () => {
+    if (selectedAttendanceIds.size === 0) return
+    const ok = await confirm({
+      title: '确认删除',
+      content: `确认删除选中的 ${selectedAttendanceIds.size} 条考勤记录吗？`,
+      confirmVariant: 'danger',
+    })
+    if (!ok) return
+    try {
+      const result = await window.electronAPI.batchDeleteAttendances(Array.from(selectedAttendanceIds))
+      if (result.success) { showToast(`已删除 ${selectedAttendanceIds.size} 条考勤记录`, 'success'); setSelectedAttendanceIds(new Set()); await loadAttendances(); logDelete('attendances', `${selectedAttendanceIds.size} 条考勤`, 0, { projectId: selectedProject?.id }) }
+      else showToast(result.error || '批量删除失败', 'error')
+    } catch (error: any) { showToast(error?.message || '批量删除失败', 'error') }
+  }
+
+  const handleBatchDeleteWages = async () => {
+    if (selectedWageIds.size === 0) return
+    const ok = await confirm({
+      title: '确认删除',
+      content: `确认删除选中的 ${selectedWageIds.size} 条工资记录吗？（将删除整条记录，可通过生成工资表重建）`,
+      confirmVariant: 'danger',
+    })
+    if (!ok) return
+    try {
+      const result = await window.electronAPI.batchDeleteWages(Array.from(selectedWageIds))
+      if (result.success) {
+        showToast(`已删除 ${selectedWageIds.size} 条工资记录`, 'success')
+        logDelete('wages', `${selectedWageIds.size} 条工资`, 0, { projectId: selectedProject?.id })
+        setSelectedWageIds(new Set())
+        setPaymentEdits(prev => {
+          const next = new Map(prev)
+          for (const id of selectedWageIds) next.delete(id)
+          return next
+        })
+        await loadAllRecords()
+        await loadWages()
+      } else showToast(result.error || '删除失败', 'error')
+    } catch (error: any) { showToast(error?.message || '删除失败', 'error') }
+  }
+
+  const handleBatchArchivePayments = async () => {
+    const scopeData = view === 'cycle' ? wageRecords : allWageRecords
+    const toArchive = selectedWageIds.size > 0
+      ? Array.from(selectedWageIds)
+      : scopeData.filter((w: any) => !w.paymentLocked).map((w: any) => w.id)
+    if (toArchive.length === 0) { showToast('没有可归档的记录', 'info'); return }
+    const prompt = selectedWageIds.size > 0
+      ? `确认归档选中的 ${selectedWageIds.size} 条发放记录吗？归档后实发金额与日期将不能修改。`
+      : `确认归档当前显示的 ${toArchive.length} 条发放记录吗？`
+    const ok = await confirm({
+      title: '确认归档',
+      content: prompt,
+      confirmVariant: 'primary',
+    })
+    if (!ok) return
+    // 归档前先保存未提交的实发金额/日期
+    if (paymentEdits.size > 0) {
+      const updated = allWageRecords.map(w => {
+        const edit = paymentEdits.get(w.id)
+        if (!edit) return w
+        return { ...w, paidAmount: parseFloat(edit.paidAmount) || 0, paidDate: edit.paidDate, bankReceiptPath: edit.bankReceiptPath ?? w.bankReceiptPath, updatedAt: new Date().toISOString() }
+      })
+      await window.electronAPI.batchSaveWages(updated)
+    }
+    try {
+      const result = await window.electronAPI.batchArchivePayments(toArchive)
+      if (result.success) {
+        showToast(`已归档 ${result.data?.archived ?? toArchive.length} 条发放记录`, 'success')
+        logUpdate('wages', `${toArchive.length} 条归档`, selectedProject?.id || 0, { count: toArchive.length })
+        setSelectedWageIds(new Set())
+        await loadAllRecords()
+        await loadWages()
+        setPaymentEdits(new Map())
+      } else showToast(result.error || '归档失败', 'error')
+    } catch (error: any) { showToast(error?.message || '归档失败', 'error') }
+  }
+
+  // ── 工资发放编辑 ──
+  const handlePaymentChange = (recordId: number, field: 'paidAmount' | 'paidDate', value: string) => {
+    setPaymentEdits(prev => {
+      const next = new Map(prev)
+      const record = allWageRecords.find(w => w.id === recordId)
+      const current = next.get(recordId) || { paidAmount: record?.paidAmount != null ? String(record.paidAmount) : '', paidDate: record?.paidDate ?? '', bankReceiptPath: record?.bankReceiptPath }
+      next.set(recordId, { ...current, [field]: value })
+      return next
+    })
+  }
+
+  const handleSavePayments = async () => {
+    if (paymentEdits.size === 0) { showToast('没有需要保存的修改', 'info'); return }
+    setLoading(true)
+    try {
+      const updated = allWageRecords.map(w => {
+        const edit = paymentEdits.get(w.id)
+        if (!edit) return w
+        return { ...w, paidAmount: parseFloat(edit.paidAmount) || 0, paidDate: edit.paidDate, bankReceiptPath: edit.bankReceiptPath ?? w.bankReceiptPath, updatedAt: new Date().toISOString() }
+      })
+      const result = await window.electronAPI.batchSaveWages(updated)
+      if (result.success) { showToast('发放记录已保存', 'success'); setPaymentEdits(new Map()); await loadAllRecords(); await loadWages(); logUpdate('wages', '发放记录', selectedProject?.id || 0, { edits: paymentEdits.size }) }
+      else showToast(result.error || '保存失败', 'error')
+    } catch (error: any) { showToast(error?.message || '保存失败', 'error') }
+    finally { setLoading(false) }
+  }
+
+  // ── 上传银行回单并自动填入 ──
+  const [receiptParsing, setReceiptParsing] = useState(false)
+  const [receiptResult, setReceiptResult] = useState<{
+    matched: number; failed: number; skippedArchived: number; totalItems: number; date: string; receiptPath: string;
+    totalAmount?: number; successAmount?: number; rawTextSnippet?: string
+  } | null>(null)
+
+  // ── 批量解析回调 ──
+  const handleBatchParseComplete = useCallback((result: BatchParseResult) => {
+    setBatchResult(result)
+    setView('batch-confirm')
+  }, [])
+
+  const handleBatchCancel = useCallback(() => {
+    setBatchResult(null)
+    setView('cycle')
+  }, [])
+
+  const handleBatchBack = useCallback(() => {
+    setBatchResult(null)
+    setView('cycle')
+  }, [])
+
+  const handleBatchConfirm = useCallback(async (confirmedMatches: BankReceiptMatch[]) => {
+    try {
+      const result = await window.electronAPI.batchConfirmMatches(confirmedMatches, selectedMonth)
+      if (result.success) {
+        showToast(`成功确认 ${result.data?.updated || 0} 条工资记录`, 'success')
+        // 刷新工资数据
+        await loadWages()
+        await loadAllRecords()
+        // 返回 cycle 视图
+        setBatchResult(null)
+        setView('cycle')
+      } else {
+        showToast(result.error || '确认失败', 'error')
+      }
+    } catch (error: any) {
+      showToast(error?.message || '确认失败', 'error')
+    }
+  }, [selectedMonth, showToast, loadWages, loadAllRecords])
+
+  const handleBankReceiptUpload = async (pdfPath: string) => {
+    setReceiptParsing(true)
+    setReceiptResult(null)
+    try {
+      const result = await window.electronAPI.parseBankReceipt(pdfPath, selectedProject?.name || undefined, selectedMonth)
+      if (!result.success || !result.data) {
+        showToast(result.error || '回单解析失败', 'error')
+        return
+      }
+      const { date, items, receiptPath } = result.data
+      const newEdits = new Map(paymentEdits)
+      let matched = 0
+      let failed = 0
+      let skippedArchived = 0
+
+      for (const item of items) {
+        // 检查是否已归档（无论处理状态）
+        const archivedMatch = allWageRecords.find(w =>
+          w.paymentLocked && ((w.memberName || '').includes(item.name) || item.name.includes(w.memberName || ''))
+        )
+        if (archivedMatch) {
+          skippedArchived++
+          continue
+        }
+        // 只填入处理成功的记录，且金额>0
+        if (!/(成功|Success)/i.test(item.status) || item.amount <= 0) {
+          failed++
+          continue
+        }
+        // 在未归档的记录中匹配
+        const candidates = allWageRecords.filter(w =>
+          !w.paymentLocked && ((w.memberName || '').includes(item.name) || item.name.includes(w.memberName || ''))
+        )
+        const record = item.account
+          ? candidates.find(w => w.bankAccount === item.account)
+          : candidates.length === 1 ? candidates[0]
+          : candidates[0]
+        if (record) {
+          newEdits.set(record.id, {
+            paidAmount: String(item.amount),
+            paidDate: date || newEdits.get(record.id)?.paidDate || '',
+            bankReceiptPath: receiptPath,
+          })
+          matched++
+        } else {
+          failed++
+        }
+      }
+
+      console.debug('[bankReceipt]', { matched, failed, skippedArchived, totalItems: items.length })
+      setPaymentEdits(newEdits)
+      setReceiptResult({ matched, failed, skippedArchived, totalItems: items.length, date, receiptPath, totalAmount: result.data.totalAmount, successAmount: result.data.successAmount, rawTextSnippet: result.data.rawTextSnippet })
+      const parts = [`匹配 ${matched} 人`]
+      if (skippedArchived > 0) parts.push(`${skippedArchived} 人已归档跳过`)
+      if (failed > 0) parts.push(`${failed} 人未匹配`)
+      showToast(`回单解析完成：${parts.join('，')}`, matched > 0 ? 'success' : 'warning')
+      logCreate('wages', '银行回单', selectedProject?.id || 0, { matched, failed, skippedArchived, path: receiptPath })
+    } catch (error: any) {
+      showToast(error?.message || '回单解析失败', 'error')
+    } finally {
+      setReceiptParsing(false)
+    }
+  }
+
+  // ══════════════════════════════════════════════════════
+  // 选中切换
+  // ══════════════════════════════════════════════════════
+
+  const toggleAttendanceSelect = (id: number) => setSelectedAttendanceIds(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next })
+  const toggleAllAttendances = () => setSelectedAttendanceIds(prev => prev.size === attendances.length ? new Set() : new Set(attendances.map(a => a.id)))
+  const toggleWageSelect = (id: number) => setSelectedWageIds(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next })
+  const toggleAllWages = (visibleIds?: number[]) => {
+    const ids = visibleIds ?? allWageRecords.map(w => w.id)
+    setSelectedWageIds(prev => prev.size === ids.length ? new Set() : new Set(ids))
+  }
+
+  // ══════════════════════════════════════════════════════
+  // Cycle 子页面：工资周期详情（考勤/工资表/发放记录）
+  // ══════════════════════════════════════════════════════
+
+  // ── 批量回单解析入口（在 cycle 视图顶部添加按钮）──
+  if (view === 'cycle' && selectedProject) {
+    return (
+      <>
+        {/* 批量回单解析按钮 */}
+        <div className="mb-4 flex justify-end">
+          <button
+            onClick={() => setView('batch')}
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+          >
+            📄 批量解析银行回单
+          </button>
+        </div>
+
+        <WageCycleDetail
+        selectedProject={selectedProject} selectedMonth={selectedMonth}
+        workerTeams={workerTeams}
+        attendances={attendances} allProjectAttendances={allProjectAttendances} attendancesCount={projectWorkerList.length}
+        attendanceDetailRecord={attendanceDetailRecord}
+        setAttendanceDetailRecord={setAttendanceDetailRecord}
+        onGenerateAttendance={handleGenerateAttendance}
+        onRefreshAttendance={loadAttendances}
+        onRefreshAllAttendance={loadAllProjectAttendances}
+        onDeleteAttendance={handleDeleteAttendance}
+        onBatchDeleteAttendances={handleBatchDeleteAttendances}
+        selectedAttendanceIds={selectedAttendanceIds}
+        toggleAttendanceSelect={toggleAttendanceSelect}
+        toggleAllAttendances={toggleAllAttendances}
+        allWageRecords={allWageRecords}
+        paymentEdits={paymentEdits}
+        onPaymentChange={handlePaymentChange} onSavePayments={handleSavePayments}
+        onGenerateWages={handleGenerateWages}
+        onBankReceiptUpload={handleBankReceiptUpload}
+        receiptParsing={receiptParsing} receiptResult={receiptResult}
+        onBatchDeleteWages={handleBatchDeleteWages}
+        onBatchArchivePayments={handleBatchArchivePayments}
+        selectedWageIds={selectedWageIds}
+        toggleWageSelect={toggleWageSelect} toggleAllWages={toggleAllWages}
+        loading={loading}
+        onChangeMonth={setSelectedMonth}
+        onBack={() => { setView('dashboard'); setAttendanceDetailRecord(null) }}
+        projectWorkerList={projectWorkerList.map(p => ({ id: p.pwId, name: p.name, teamName: p.teamName, idCard: p.idCard }))}
+        onImportAttendance={async (data) => {
+          if (!selectedProject) return
+          setLoading(true)
+          try {
+            const result = await window.electronAPI.batchImportAttendances(selectedProject.id, selectedMonth, data)
+            if (result.success) {
+              showToast(`导入成功！新增 ${result.data?.created ?? 0} 条，更新 ${result.data?.updated ?? 0} 条`, 'success')
+              await loadAttendances()
+            } else {
+              showToast(result.error || '导入失败', 'error')
+            }
+          } catch (e: any) { showToast(e?.message || '导入失败', 'error') }
+          finally { setLoading(false) }
+        }}
+      />
+      {/* 确认对话框 (cycle 视图也需要) */}
+      {ConfirmDialog}
+    </>
+    )
+  }
+
+  // ══════════════════════════════════════════════════════
+  // Batch 视图：批量上传银行回单
+  // ══════════════════════════════════════════════════════
+
+  if (view === 'batch' && selectedProject) {
+    return (
+      <BankReceiptBatch
+        projectId={selectedProject.id}
+        projectName={selectedProject.name}
+        yearMonth={selectedMonth}
+        onParseComplete={handleBatchParseComplete}
+        onCancel={handleBatchCancel}
+      />
+    )
+  }
+
+  // ══════════════════════════════════════════════════════
+  // Batch Confirm 视图：确认匹配结果
+  // ══════════════════════════════════════════════════════
+
+  if (view === 'batch-confirm' && batchResult) {
+    return (
+      <BankReceiptMatchConfirm
+        parseResult={batchResult}
+        workers={[]}  /* TODO: 传递实际的工人列表 */
+        wageRecords={allWageRecords}
+        projectId={selectedProject?.id}
+        yearMonth={selectedMonth}
+        onConfirm={handleBatchConfirm}
+        onBack={handleBatchBack}
+        onCancel={handleBatchCancel}
+      />
+    )
+  }
+
+  // ══════════════════════════════════════════════════════
+  // Dashboard 首页：工资统计看板
+  // ══════════════════════════════════════════════════════
+
+  const handleProjectClick = (project: Project) => {
+    setSelectedProject(project)
+    setView('cycle')
+  }
+
+  return (
+    <div className="p-6 max-w-[1400px] mx-auto space-y-6">
+      {/* 项目工资列表 */}
+      <WageProjectList
+        allWageRecords={allWageRecords}
+        projects={projects}
+        selectedMonth={selectedMonth}
+        onProjectClick={handleProjectClick}
+      />
+
+      {/* 确认对话框 */}
+      {ConfirmDialog}
+    </div>
+  )
+
+}

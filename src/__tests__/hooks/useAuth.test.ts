@@ -1,9 +1,7 @@
-// @ts-nocheck
 /**
  * useAuth Hook 测试
  * 测试认证状态管理（Zustand store re-export）
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 
 // Mock dependencies before import

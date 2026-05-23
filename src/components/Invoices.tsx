@@ -1,7 +1,7 @@
 import React from 'react'
-import { useToastContext } from '../hooks/useToast'
+import { useToastStore } from '@/store/toastStore'
 import { useInvoicePage } from '../hooks/useInvoicePage'
-import { printInvoiceList, printPaymentList, exportInvoiceList, exportPaymentList, handlePrint, printPaymentRecordList, exportPaymentRecordList } from './features/invoices/printExport'
+import { printInvoiceList, printPaymentList, exportInvoiceList, handlePrint, printPaymentRecordList, exportPaymentRecordList } from './features/invoices/printExport'
 import { formatMoney } from '../utils/format'
 import {
   InvoiceStats, InvoiceFilters, InvoiceList, InvoiceForm,
@@ -13,8 +13,8 @@ import { FilePreviewModal } from './features/invoices/FilePreviewModal'
 interface InvoicesProps { refresh?: () => void }
 
 const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
-  const { showToast } = useToastContext()
-  const h = useInvoicePage(showToast, refresh)
+  const showToast = useToastStore(state => state.showToast)
+  const h = useInvoicePage(refresh)
 
   if (h.loading) {
     return (
@@ -63,8 +63,8 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
           onFilterProjectChange={h.setFilterProject} onFilterPaymentTypeChange={h.setFilterPaymentType}
           onFilterPaymentProjectChange={h.setFilterPaymentProject}
           onFilterDateStartChange={h.setFilterDateStart} onFilterDateEndChange={h.setFilterDateEnd}
-          onPrint={h.activeTab === 'invoices' ? () => printInvoiceList(h.filteredInvoices) : () => printPaymentRecordList(h.filteredPayments, showToast, formatMoney, handlePrint)}
-          onExportExcel={h.activeTab === 'invoices' ? () => exportInvoiceList(h.filteredInvoices) : () => exportPaymentRecordList(h.filteredPayments, showToast)}
+          onPrint={h.activeTab === 'invoices' ? () => printInvoiceList(h.filteredInvoices) : () => printPaymentRecordList(h.filteredPayments, showToast as any, formatMoney, handlePrint)}
+          onExportExcel={h.activeTab === 'invoices' ? () => exportInvoiceList(h.filteredInvoices) : () => exportPaymentRecordList(h.filteredPayments, showToast as any)}
           isPaymentFilter={h.activeTab === 'payments'}
         />
       </div>

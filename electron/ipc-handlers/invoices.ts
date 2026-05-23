@@ -1,10 +1,12 @@
-﻿/**
+/**
  * 发票 IPC 处理器
+ * 双写：SQLite（invoices、payment_records 两张表）
  */
 
 import { ipcMain } from 'electron'
 import log from 'electron-log'
 import { db, dbReady, saveDatabase, recalculateInvoiceStatus } from '../database'
+import { useSqliteRead, shouldFallbackToJson, invoiceQueries } from '../sqlite/queries'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 发票 CRUD
@@ -12,6 +14,17 @@ import { db, dbReady, saveDatabase, recalculateInvoiceStatus } from '../database
 
 ipcMain.handle('db:invoices:getAll', (_, type?: string) => {
   if (!dbReady) return { success: false, error: 'Database not ready' }
+  // SQLite 优先
+  if (useSqliteRead()) {
+    const data = invoiceQueries.listInvoices(type)
+    if (data !== null) {
+      // SQLite 版发票状态由 payment_records 的 invoice_details 决定，
+      // 但 getAll 的副作用（自动修正状态+saveDatabase）在 SQLite 模式下由读路径处理
+      return { success: true, data }
+    }
+  }
+  if (!shouldFallbackToJson()) return { success: false, error: 'SQLite read failed (sqlite-primary mode)' }
+  // JSON 回退
   let invoices = db.invoices
   if (type) {
     invoices = invoices.filter((i: any) => i.type === type)
@@ -79,6 +92,8 @@ ipcMain.handle('db:invoices:create', (_, invoice) => {
     }
     db.invoices.push(newInvoice)
     saveDatabase()
+    // SQLite 双写
+    invoiceQueries.createInvoice(newInvoice)
     return { success: true, data: { id } }
   } catch (error: any) {
     log.error('Failed to create invoice:', error)
@@ -93,6 +108,8 @@ ipcMain.handle('db:invoices:update', (_, invoice) => {
     if (index !== -1) {
       db.invoices[index] = { ...db.invoices[index], ...invoice, updatedAt: new Date().toISOString() }
       saveDatabase()
+      // SQLite 双写
+      invoiceQueries.updateInvoice(db.invoices[index])
     }
     return { success: true }
   } catch (error: any) {
@@ -106,6 +123,8 @@ ipcMain.handle('db:invoices:delete', (_, id) => {
   try {
     db.invoices = db.invoices.filter((i: any) => i.id !== id)
     saveDatabase()
+    // SQLite 双写
+    invoiceQueries.deleteInvoice(id)
     return { success: true }
   } catch (error: any) {
     log.error('Failed to delete invoice:', error)
@@ -121,6 +140,8 @@ ipcMain.handle('db:invoices:updateStatus', (_, id, status) => {
       db.invoices[index].status = status
       db.invoices[index].updatedAt = new Date().toISOString()
       saveDatabase()
+      // SQLite 双写
+      invoiceQueries.updateInvoiceStatus(id, status)
     }
     return { success: true }
   } catch (error: any) {
@@ -135,6 +156,13 @@ ipcMain.handle('db:invoices:updateStatus', (_, id, status) => {
 
 ipcMain.handle('db:paymentRecords:getAll', (_, type?: string) => {
   if (!dbReady) return { success: false, error: 'Database not ready' }
+  // SQLite 优先
+  if (useSqliteRead()) {
+    const data = invoiceQueries.listPaymentRecords(type)
+    if (data !== null) return { success: true, data }
+  }
+  if (!shouldFallbackToJson()) return { success: false, error: 'SQLite read failed (sqlite-primary mode)' }
+  // JSON 回退
   let records = db.paymentRecords
   if (type) {
     records = records.filter((r: any) => r.type === type)
@@ -239,6 +267,17 @@ ipcMain.handle('db:paymentRecords:create', (_, record) => {
     }
 
     saveDatabase()
+
+    // SQLite 双写：收款记录
+    invoiceQueries.createPaymentRecord(newRecord)
+    // SQLite 双写：更新关联发票的 receivedAmount 和 status
+    for (const detail of invoiceDetails) {
+      const inv = db.invoices.find((i: any) => i.id === detail.invoiceId)
+      if (inv) {
+        invoiceQueries.updateInvoiceReceived(inv.id, inv.receivedAmount, inv.status)
+      }
+    }
+
     return { success: true, data: { id } }
   } catch (error: any) {
     log.error('Failed to create payment record:', error)
@@ -257,6 +296,11 @@ ipcMain.handle('db:paymentRecords:update', (_, record) => {
       // 重新计算所有关联发票的状态
       recalculateInvoiceStatus()
       saveDatabase()
+
+      // SQLite 双写
+      invoiceQueries.updatePaymentRecord(db.paymentRecords[index])
+      // 重算 SQLite 发票状态
+      invoiceQueries.recalculateInvoiceStatusSqlite()
     }
     return { success: true }
   } catch (error: any) {
@@ -272,6 +316,9 @@ ipcMain.handle('db:paymentRecords:delete', (_, id) => {
     // 删除后重新计算所有关联发票的状态
     recalculateInvoiceStatus()
     saveDatabase()
+    // SQLite 双写
+    invoiceQueries.deletePaymentRecord(id)
+    invoiceQueries.recalculateInvoiceStatusSqlite()
     return { success: true }
   } catch (error: any) {
     log.error('Failed to delete payment record:', error)

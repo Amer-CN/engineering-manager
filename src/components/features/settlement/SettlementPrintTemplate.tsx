@@ -1,6 +1,5 @@
 import React from 'react'
 import { Settlement as SettlementData, Project, Partner } from '../../../types/electron'
-import { Icon } from '../../ui/Icon'
 import { formatMoney } from '@/utils/format'
 
 interface PrintContentProps {

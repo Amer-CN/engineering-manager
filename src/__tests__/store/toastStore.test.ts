@@ -1,5 +1,3 @@
-// @ts-nocheck
-import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useToastStore } from '../../store/toastStore'
 
 describe('toastStore', () => {

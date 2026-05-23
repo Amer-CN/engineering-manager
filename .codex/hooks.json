@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node 'E:\\测试\\.codex\\hooks\\auto-effort-smart.js'",
+            "timeout": 120
+          }
+        ]
+      }
+    ]
+  }
+}

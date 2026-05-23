@@ -1,5 +1,3 @@
-// @ts-nocheck
-import { describe, it, expect, beforeEach } from 'vitest'
 import type { PermissionCode, AuthContext } from '../../types/permissions'
 import {
   setCurrentUser,

@@ -4,11 +4,11 @@ import { Icon } from '../../ui/Icon'
 import { PartnerSelect } from '../partners/PartnerSelect'
 import { FileDropZone } from '../partners/FileDropZone'
 import { logCreate, logUpdate } from '../../../utils/audit'
-import { useToastContext } from '../../../hooks/useToast'
+import { useToastStore } from '@/store/toastStore'
 import { paymentMethods, contractStatuses } from '../../../data/regions'
 import type { Project, Partner, AgreementSubType } from '../../../types/electron'
-import type { Contract, ContractType, TypeConfig } from './contractConfig'
-import { getStatusLabel, getStatusColor, CONFIG, AGREEMENT_SUB_TYPE_LABELS } from './contractConfig'
+import type { Contract, ContractType } from './contractConfig'
+import { CONFIG, AGREEMENT_SUB_TYPE_LABELS } from './contractConfig'
 
 interface Props {
   show: boolean
@@ -32,7 +32,7 @@ const emptyForm = {
 
 export const ContractFormModal: React.FC<Props> = ({ show, type, editingContract, projects, partners, api, onClose, onSuccess, onShowTemplateSelector }) => {
   const config = CONFIG[type]
-  const { showToast } = useToastContext()
+  const showToast = useToastStore(state => state.showToast)
   const [formData, setFormData] = useState(emptyForm)
   const [dragOverFile, setDragOverFile] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -88,7 +88,7 @@ export const ContractFormModal: React.FC<Props> = ({ show, type, editingContract
           subCategory: config.subCategory,
           projectName: projects.find(p => p.id === formData.projectId)?.name || null,
         })
-        if (saveResult.success) fileUrl = saveResult.data.fileName
+        if (saveResult.success) fileUrl = saveResult?.data?.fileName ?? ''
         else { showToast(saveResult.error || '文件保存失败', 'error'); return }
       }
       const submissionData = { ...formData, fileUrl }

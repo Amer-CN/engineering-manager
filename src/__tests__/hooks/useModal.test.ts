@@ -1,5 +1,3 @@
-// @ts-nocheck
-import { describe, it, expect, vi, afterEach } from 'vitest'
 import { renderHook, act, cleanup } from '@testing-library/react'
 import { useModal, useConfirm } from '../../hooks/useModal'
 

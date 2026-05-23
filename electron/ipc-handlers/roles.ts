@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron'
 import log from 'electron-log'
 import { db, saveDatabase } from '../database'
+import { useSqliteRead, useSqliteWrite, shouldFallbackToJson, roleQueries } from '../sqlite/queries'
 
 const SYSTEM_ROLE_NAMES: Record<string, string> = {
   admin: '管理员', manager: '项目经理', accountant: '财务人员', worker: '普通员工',
@@ -58,12 +59,26 @@ const SYSTEM_ROLE_DEFAULTS: Record<string, string[]> = {
 }
 
 export function getRoleName(roleId: string): string {
+  // SQLite 优先
+  if (useSqliteRead()) {
+    const roles = roleQueries.listRoles()
+    if (roles) {
+      const customRole = roles.find(r => r.id === roleId)
+      if (customRole) return customRole.name
+    }
+  }
   const customRole = db.roles?.find(r => r.id === roleId)
   if (customRole) return customRole.name
   return SYSTEM_ROLE_NAMES[roleId] || roleId
 }
 
 export function getRolePermissions(roleId: string): string[] {
+  // SQLite 优先
+  if (useSqliteRead()) {
+    const perms = roleQueries.getRolePermissions(roleId)
+    if (perms !== null) return perms
+  }
+
   const customRole = db.roles?.find(r => r.id === roleId)
   if (customRole?.permissions) return customRole.permissions
   return SYSTEM_ROLE_DEFAULTS[roleId] || []
@@ -72,6 +87,14 @@ export function getRolePermissions(roleId: string): string[] {
 ipcMain.handle('roles:getAll', async () => {
   try {
     if (!db.roles) db.roles = []
+
+    // SQLite 优先
+    if (useSqliteRead()) {
+      const data = roleQueries.listRoles()
+      if (data) return { success: true, data }
+    }
+
+    if (!shouldFallbackToJson()) return { success: false, error: 'SQLite read failed (sqlite-primary mode)' }
     return { success: true, data: db.roles }
   } catch (error: any) { log.error('roles:getAll error:', error); return { success: false, error: error.message } }
 })
@@ -83,6 +106,12 @@ ipcMain.handle('roles:update', async (_event, roleId: string, permissions: strin
     if (!role) return { success: false, error: 'Role not found' }
     role.permissions = permissions
     saveDatabase()
+
+    // SQLite 双写
+    if (useSqliteWrite()) {
+      roleQueries.updateRolePermissions(roleId, permissions)
+    }
+
     return { success: true }
   } catch (error: any) { log.error('roles:update error:', error); return { success: false, error: error.message } }
 })
@@ -96,6 +125,12 @@ ipcMain.handle('roles:reset', async (_event, roleId: string) => {
     if (!role) return { success: false, error: 'Role not found' }
     role.permissions = [...defaults]
     saveDatabase()
+
+    // SQLite 双写
+    if (useSqliteWrite()) {
+      roleQueries.resetRolePermissions(roleId, [...defaults])
+    }
+
     return { success: true, data: { permissions: [...defaults] } }
   } catch (error: any) { log.error('roles:reset error:', error); return { success: false, error: error.message } }
 })

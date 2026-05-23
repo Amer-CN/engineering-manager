@@ -93,7 +93,7 @@ export default function WagePaymentRecords() {
       <div className="ml-auto">
         <button
           onClick={exportToExcel}
-          className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-1"
+          className="px-4 py-1.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-blue-700 flex items-center gap-1"
         >
           <Icon name="Download" size={14} />
           导出 Excel
@@ -180,7 +180,7 @@ export default function WagePaymentRecords() {
           <button
             onClick={() => { setViewMode('all'); loadPaymentRecords() }}
             className={`px-4 py-2 text-sm font-medium rounded-lg ${
-              viewMode === 'all' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600 border border-slate-300'
+              viewMode === 'all' ? 'bg-primary-600 text-white' : 'bg-white text-slate-600 border border-slate-300'
             }`}
           >
             全部记录

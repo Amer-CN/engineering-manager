@@ -1,0 +1,1123 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for src/components/features/wages/WageDetailTab.tsx</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../../../prettify.css" />
+    <link rel="stylesheet" href="../../../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../../../index.html">All files</a> / <a href="index.html">src/components/features/wages</a> WageDetailTab.tsx</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/75</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/112</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/29</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/62</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a>
+<a name='L96'></a><a href='#L96'>96</a>
+<a name='L97'></a><a href='#L97'>97</a>
+<a name='L98'></a><a href='#L98'>98</a>
+<a name='L99'></a><a href='#L99'>99</a>
+<a name='L100'></a><a href='#L100'>100</a>
+<a name='L101'></a><a href='#L101'>101</a>
+<a name='L102'></a><a href='#L102'>102</a>
+<a name='L103'></a><a href='#L103'>103</a>
+<a name='L104'></a><a href='#L104'>104</a>
+<a name='L105'></a><a href='#L105'>105</a>
+<a name='L106'></a><a href='#L106'>106</a>
+<a name='L107'></a><a href='#L107'>107</a>
+<a name='L108'></a><a href='#L108'>108</a>
+<a name='L109'></a><a href='#L109'>109</a>
+<a name='L110'></a><a href='#L110'>110</a>
+<a name='L111'></a><a href='#L111'>111</a>
+<a name='L112'></a><a href='#L112'>112</a>
+<a name='L113'></a><a href='#L113'>113</a>
+<a name='L114'></a><a href='#L114'>114</a>
+<a name='L115'></a><a href='#L115'>115</a>
+<a name='L116'></a><a href='#L116'>116</a>
+<a name='L117'></a><a href='#L117'>117</a>
+<a name='L118'></a><a href='#L118'>118</a>
+<a name='L119'></a><a href='#L119'>119</a>
+<a name='L120'></a><a href='#L120'>120</a>
+<a name='L121'></a><a href='#L121'>121</a>
+<a name='L122'></a><a href='#L122'>122</a>
+<a name='L123'></a><a href='#L123'>123</a>
+<a name='L124'></a><a href='#L124'>124</a>
+<a name='L125'></a><a href='#L125'>125</a>
+<a name='L126'></a><a href='#L126'>126</a>
+<a name='L127'></a><a href='#L127'>127</a>
+<a name='L128'></a><a href='#L128'>128</a>
+<a name='L129'></a><a href='#L129'>129</a>
+<a name='L130'></a><a href='#L130'>130</a>
+<a name='L131'></a><a href='#L131'>131</a>
+<a name='L132'></a><a href='#L132'>132</a>
+<a name='L133'></a><a href='#L133'>133</a>
+<a name='L134'></a><a href='#L134'>134</a>
+<a name='L135'></a><a href='#L135'>135</a>
+<a name='L136'></a><a href='#L136'>136</a>
+<a name='L137'></a><a href='#L137'>137</a>
+<a name='L138'></a><a href='#L138'>138</a>
+<a name='L139'></a><a href='#L139'>139</a>
+<a name='L140'></a><a href='#L140'>140</a>
+<a name='L141'></a><a href='#L141'>141</a>
+<a name='L142'></a><a href='#L142'>142</a>
+<a name='L143'></a><a href='#L143'>143</a>
+<a name='L144'></a><a href='#L144'>144</a>
+<a name='L145'></a><a href='#L145'>145</a>
+<a name='L146'></a><a href='#L146'>146</a>
+<a name='L147'></a><a href='#L147'>147</a>
+<a name='L148'></a><a href='#L148'>148</a>
+<a name='L149'></a><a href='#L149'>149</a>
+<a name='L150'></a><a href='#L150'>150</a>
+<a name='L151'></a><a href='#L151'>151</a>
+<a name='L152'></a><a href='#L152'>152</a>
+<a name='L153'></a><a href='#L153'>153</a>
+<a name='L154'></a><a href='#L154'>154</a>
+<a name='L155'></a><a href='#L155'>155</a>
+<a name='L156'></a><a href='#L156'>156</a>
+<a name='L157'></a><a href='#L157'>157</a>
+<a name='L158'></a><a href='#L158'>158</a>
+<a name='L159'></a><a href='#L159'>159</a>
+<a name='L160'></a><a href='#L160'>160</a>
+<a name='L161'></a><a href='#L161'>161</a>
+<a name='L162'></a><a href='#L162'>162</a>
+<a name='L163'></a><a href='#L163'>163</a>
+<a name='L164'></a><a href='#L164'>164</a>
+<a name='L165'></a><a href='#L165'>165</a>
+<a name='L166'></a><a href='#L166'>166</a>
+<a name='L167'></a><a href='#L167'>167</a>
+<a name='L168'></a><a href='#L168'>168</a>
+<a name='L169'></a><a href='#L169'>169</a>
+<a name='L170'></a><a href='#L170'>170</a>
+<a name='L171'></a><a href='#L171'>171</a>
+<a name='L172'></a><a href='#L172'>172</a>
+<a name='L173'></a><a href='#L173'>173</a>
+<a name='L174'></a><a href='#L174'>174</a>
+<a name='L175'></a><a href='#L175'>175</a>
+<a name='L176'></a><a href='#L176'>176</a>
+<a name='L177'></a><a href='#L177'>177</a>
+<a name='L178'></a><a href='#L178'>178</a>
+<a name='L179'></a><a href='#L179'>179</a>
+<a name='L180'></a><a href='#L180'>180</a>
+<a name='L181'></a><a href='#L181'>181</a>
+<a name='L182'></a><a href='#L182'>182</a>
+<a name='L183'></a><a href='#L183'>183</a>
+<a name='L184'></a><a href='#L184'>184</a>
+<a name='L185'></a><a href='#L185'>185</a>
+<a name='L186'></a><a href='#L186'>186</a>
+<a name='L187'></a><a href='#L187'>187</a>
+<a name='L188'></a><a href='#L188'>188</a>
+<a name='L189'></a><a href='#L189'>189</a>
+<a name='L190'></a><a href='#L190'>190</a>
+<a name='L191'></a><a href='#L191'>191</a>
+<a name='L192'></a><a href='#L192'>192</a>
+<a name='L193'></a><a href='#L193'>193</a>
+<a name='L194'></a><a href='#L194'>194</a>
+<a name='L195'></a><a href='#L195'>195</a>
+<a name='L196'></a><a href='#L196'>196</a>
+<a name='L197'></a><a href='#L197'>197</a>
+<a name='L198'></a><a href='#L198'>198</a>
+<a name='L199'></a><a href='#L199'>199</a>
+<a name='L200'></a><a href='#L200'>200</a>
+<a name='L201'></a><a href='#L201'>201</a>
+<a name='L202'></a><a href='#L202'>202</a>
+<a name='L203'></a><a href='#L203'>203</a>
+<a name='L204'></a><a href='#L204'>204</a>
+<a name='L205'></a><a href='#L205'>205</a>
+<a name='L206'></a><a href='#L206'>206</a>
+<a name='L207'></a><a href='#L207'>207</a>
+<a name='L208'></a><a href='#L208'>208</a>
+<a name='L209'></a><a href='#L209'>209</a>
+<a name='L210'></a><a href='#L210'>210</a>
+<a name='L211'></a><a href='#L211'>211</a>
+<a name='L212'></a><a href='#L212'>212</a>
+<a name='L213'></a><a href='#L213'>213</a>
+<a name='L214'></a><a href='#L214'>214</a>
+<a name='L215'></a><a href='#L215'>215</a>
+<a name='L216'></a><a href='#L216'>216</a>
+<a name='L217'></a><a href='#L217'>217</a>
+<a name='L218'></a><a href='#L218'>218</a>
+<a name='L219'></a><a href='#L219'>219</a>
+<a name='L220'></a><a href='#L220'>220</a>
+<a name='L221'></a><a href='#L221'>221</a>
+<a name='L222'></a><a href='#L222'>222</a>
+<a name='L223'></a><a href='#L223'>223</a>
+<a name='L224'></a><a href='#L224'>224</a>
+<a name='L225'></a><a href='#L225'>225</a>
+<a name='L226'></a><a href='#L226'>226</a>
+<a name='L227'></a><a href='#L227'>227</a>
+<a name='L228'></a><a href='#L228'>228</a>
+<a name='L229'></a><a href='#L229'>229</a>
+<a name='L230'></a><a href='#L230'>230</a>
+<a name='L231'></a><a href='#L231'>231</a>
+<a name='L232'></a><a href='#L232'>232</a>
+<a name='L233'></a><a href='#L233'>233</a>
+<a name='L234'></a><a href='#L234'>234</a>
+<a name='L235'></a><a href='#L235'>235</a>
+<a name='L236'></a><a href='#L236'>236</a>
+<a name='L237'></a><a href='#L237'>237</a>
+<a name='L238'></a><a href='#L238'>238</a>
+<a name='L239'></a><a href='#L239'>239</a>
+<a name='L240'></a><a href='#L240'>240</a>
+<a name='L241'></a><a href='#L241'>241</a>
+<a name='L242'></a><a href='#L242'>242</a>
+<a name='L243'></a><a href='#L243'>243</a>
+<a name='L244'></a><a href='#L244'>244</a>
+<a name='L245'></a><a href='#L245'>245</a>
+<a name='L246'></a><a href='#L246'>246</a>
+<a name='L247'></a><a href='#L247'>247</a>
+<a name='L248'></a><a href='#L248'>248</a>
+<a name='L249'></a><a href='#L249'>249</a>
+<a name='L250'></a><a href='#L250'>250</a>
+<a name='L251'></a><a href='#L251'>251</a>
+<a name='L252'></a><a href='#L252'>252</a>
+<a name='L253'></a><a href='#L253'>253</a>
+<a name='L254'></a><a href='#L254'>254</a>
+<a name='L255'></a><a href='#L255'>255</a>
+<a name='L256'></a><a href='#L256'>256</a>
+<a name='L257'></a><a href='#L257'>257</a>
+<a name='L258'></a><a href='#L258'>258</a>
+<a name='L259'></a><a href='#L259'>259</a>
+<a name='L260'></a><a href='#L260'>260</a>
+<a name='L261'></a><a href='#L261'>261</a>
+<a name='L262'></a><a href='#L262'>262</a>
+<a name='L263'></a><a href='#L263'>263</a>
+<a name='L264'></a><a href='#L264'>264</a>
+<a name='L265'></a><a href='#L265'>265</a>
+<a name='L266'></a><a href='#L266'>266</a>
+<a name='L267'></a><a href='#L267'>267</a>
+<a name='L268'></a><a href='#L268'>268</a>
+<a name='L269'></a><a href='#L269'>269</a>
+<a name='L270'></a><a href='#L270'>270</a>
+<a name='L271'></a><a href='#L271'>271</a>
+<a name='L272'></a><a href='#L272'>272</a>
+<a name='L273'></a><a href='#L273'>273</a>
+<a name='L274'></a><a href='#L274'>274</a>
+<a name='L275'></a><a href='#L275'>275</a>
+<a name='L276'></a><a href='#L276'>276</a>
+<a name='L277'></a><a href='#L277'>277</a>
+<a name='L278'></a><a href='#L278'>278</a>
+<a name='L279'></a><a href='#L279'>279</a>
+<a name='L280'></a><a href='#L280'>280</a>
+<a name='L281'></a><a href='#L281'>281</a>
+<a name='L282'></a><a href='#L282'>282</a>
+<a name='L283'></a><a href='#L283'>283</a>
+<a name='L284'></a><a href='#L284'>284</a>
+<a name='L285'></a><a href='#L285'>285</a>
+<a name='L286'></a><a href='#L286'>286</a>
+<a name='L287'></a><a href='#L287'>287</a>
+<a name='L288'></a><a href='#L288'>288</a>
+<a name='L289'></a><a href='#L289'>289</a>
+<a name='L290'></a><a href='#L290'>290</a>
+<a name='L291'></a><a href='#L291'>291</a>
+<a name='L292'></a><a href='#L292'>292</a>
+<a name='L293'></a><a href='#L293'>293</a>
+<a name='L294'></a><a href='#L294'>294</a>
+<a name='L295'></a><a href='#L295'>295</a>
+<a name='L296'></a><a href='#L296'>296</a>
+<a name='L297'></a><a href='#L297'>297</a>
+<a name='L298'></a><a href='#L298'>298</a>
+<a name='L299'></a><a href='#L299'>299</a>
+<a name='L300'></a><a href='#L300'>300</a>
+<a name='L301'></a><a href='#L301'>301</a>
+<a name='L302'></a><a href='#L302'>302</a>
+<a name='L303'></a><a href='#L303'>303</a>
+<a name='L304'></a><a href='#L304'>304</a>
+<a name='L305'></a><a href='#L305'>305</a>
+<a name='L306'></a><a href='#L306'>306</a>
+<a name='L307'></a><a href='#L307'>307</a>
+<a name='L308'></a><a href='#L308'>308</a>
+<a name='L309'></a><a href='#L309'>309</a>
+<a name='L310'></a><a href='#L310'>310</a>
+<a name='L311'></a><a href='#L311'>311</a>
+<a name='L312'></a><a href='#L312'>312</a>
+<a name='L313'></a><a href='#L313'>313</a>
+<a name='L314'></a><a href='#L314'>314</a>
+<a name='L315'></a><a href='#L315'>315</a>
+<a name='L316'></a><a href='#L316'>316</a>
+<a name='L317'></a><a href='#L317'>317</a>
+<a name='L318'></a><a href='#L318'>318</a>
+<a name='L319'></a><a href='#L319'>319</a>
+<a name='L320'></a><a href='#L320'>320</a>
+<a name='L321'></a><a href='#L321'>321</a>
+<a name='L322'></a><a href='#L322'>322</a>
+<a name='L323'></a><a href='#L323'>323</a>
+<a name='L324'></a><a href='#L324'>324</a>
+<a name='L325'></a><a href='#L325'>325</a>
+<a name='L326'></a><a href='#L326'>326</a>
+<a name='L327'></a><a href='#L327'>327</a>
+<a name='L328'></a><a href='#L328'>328</a>
+<a name='L329'></a><a href='#L329'>329</a>
+<a name='L330'></a><a href='#L330'>330</a>
+<a name='L331'></a><a href='#L331'>331</a>
+<a name='L332'></a><a href='#L332'>332</a>
+<a name='L333'></a><a href='#L333'>333</a>
+<a name='L334'></a><a href='#L334'>334</a>
+<a name='L335'></a><a href='#L335'>335</a>
+<a name='L336'></a><a href='#L336'>336</a>
+<a name='L337'></a><a href='#L337'>337</a>
+<a name='L338'></a><a href='#L338'>338</a>
+<a name='L339'></a><a href='#L339'>339</a>
+<a name='L340'></a><a href='#L340'>340</a>
+<a name='L341'></a><a href='#L341'>341</a>
+<a name='L342'></a><a href='#L342'>342</a>
+<a name='L343'></a><a href='#L343'>343</a>
+<a name='L344'></a><a href='#L344'>344</a>
+<a name='L345'></a><a href='#L345'>345</a>
+<a name='L346'></a><a href='#L346'>346</a>
+<a name='L347'></a><a href='#L347'>347</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">/**
+ * WageDetailTab — 工资明细（合并项目工资表 + 工资发放记录）
+ * 作用域切换：当前项目 / 全部项目，一次表格完成计算→发放全流程
+ */
+&nbsp;
+import { useState, useEffect, useMemo } from 'react'
+import type { Project, WorkerTeam, WageRecord } from '@/types'
+import { Icon } from '../../ui/Icon'
+import { DropdownMenu } from '../../ui/DropdownMenu/DropdownMenu'
+import { FileImportDialog } from './FileImportDialog'
+import { MONTHS } from '@/constants'
+import { exportWageDetailToExcel, printWageDetail } from '@/utils/wage-export'
+import { WageDetailTable } from './WageDetailTable'
+&nbsp;
+type DetailScope = 'project' | 'all'
+&nbsp;
+interface WageDetailTabProps {
+  selectedProject: Project | null
+  workerTeams: WorkerTeam[]
+  // 数据源
+  allWageRecords: WageRecord[]    // 全量
+  // 支付编辑
+  paymentEdits: Map&lt;number, { paidAmount: string; paidDate: string; bankReceiptPath?: string }&gt;
+  onPaymentChange: (recordId: number, field: 'paidAmount' | 'paidDate', value: string) =&gt; void
+  onSavePayments: () =&gt; void
+  // 选中
+  selectedIds: Set&lt;number&gt;
+  toggleSelect: (id: number) =&gt; void
+  toggleAll: (visibleIds?: number[]) =&gt; void
+  // 操作
+  onGenerateWages: () =&gt; void
+  onBatchDelete: () =&gt; void
+  onBatchArchive: () =&gt; void
+  // 银行回单
+  onBankReceiptUpload: (pdfPath: string) =&gt; void
+  receiptParsing: boolean
+  receiptResult: { matched: number; failed: number; skippedArchived?: number; totalItems: number; date: string; receiptPath: string; totalAmount?: number; successAmount?: number; rawTextSnippet?: string } | null
+  // 通用
+  loading: boolean
+  onChangeMonth: (month: string) =&gt; void
+  onBack: () =&gt; void
+}
+&nbsp;
+export default function <span class="fstat-no" title="function not covered" >WageDetailTab({</span>
+  selectedProject,
+  workerTeams,
+  allWageRecords,
+  paymentEdits, onPaymentChange, onSavePayments,
+  selectedIds, toggleSelect, toggleAll,
+  onGenerateWages, onBatchDelete, onBatchArchive,
+  onBankReceiptUpload, receiptParsing, receiptResult,
+  loading, onChangeMonth, onBack,
+}: WageDetailTabProps) {
+  const [scope, <span class="cstat-no" title="statement not covered" >setScope] = useState&lt;DetailScope&gt;('project')</span>
+  const [showFileDialog, <span class="cstat-no" title="statement not covered" >setShowFileDialog] = useState(false)</span>
+  const [showRawText, <span class="cstat-no" title="statement not covered" >setShowRawText] = useState(false)</span>
+&nbsp;
+  // 统一的年月筛选（两个模式共用）
+  const [filterYear, <span class="cstat-no" title="statement not covered" >setFilterYear] = useState&lt;string&gt;('全部')</span>
+  const [filterMonth, <span class="cstat-no" title="statement not covered" >setFilterMonth] = useState&lt;string&gt;('全部')</span>
+  const [filterMemberName, <span class="cstat-no" title="statement not covered" >setFilterMemberName] = useState('')</span>
+  const [filterTeamName, <span class="cstat-no" title="statement not covered" >setFilterTeamName] = useState&lt;string&gt;('全部')</span>
+&nbsp;
+  // 可选年份列表（取有数据的年份 + 前后各 3 年兜底）
+  const <span class="cstat-no" title="statement not covered" >yearOptions = <span class="fstat-no" title="function not covered" >useMemo(() =&gt; {</span></span>
+    const s = <span class="cstat-no" title="statement not covered" >new Set&lt;string&gt;()</span>
+<span class="cstat-no" title="statement not covered" >    for (const w of allWageRecords) <span class="cstat-no" title="statement not covered" >s.add(w.yearMonth.slice(0, 4))</span></span>
+    // 如果没有数据，兜底显示近 5 年
+<span class="cstat-no" title="statement not covered" >    if (s.size === 0) {</span>
+      const y = <span class="cstat-no" title="statement not covered" >new Date().getFullYear()</span>
+<span class="cstat-no" title="statement not covered" >      for (let i = <span class="cstat-no" title="statement not covered" >y - 4; i</span> &lt;= y; i++) <span class="cstat-no" title="statement not covered" >s.add(String(i))</span></span>
+    }
+<span class="cstat-no" title="statement not covered" >    return Array.from(s).sort()</span>
+  }, [allWageRecords])
+&nbsp;
+  // 数据源：两个模式都用 allWageRecords，项目模式加项目过滤
+  // 班组列表：取所有班组（全部项目模式）或指定项目下所有班组
+  const <span class="cstat-no" title="statement not covered" >teamOptions = <span class="fstat-no" title="function not covered" >useMemo(() =&gt; {</span></span>
+<span class="cstat-no" title="statement not covered" >    if (scope === 'project' &amp;&amp; selectedProject) {</span>
+<span class="cstat-no" title="statement not covered" >      return workerTeams.<span class="fstat-no" title="function not covered" >filter(t</span> =&gt; <span class="cstat-no" title="statement not covered" >t.projectId === selectedProject.id)</span>.<span class="fstat-no" title="function not covered" >map(t</span> =&gt; <span class="cstat-no" title="statement not covered" >t.name)</span>.sort()</span>
+    }
+    // 全部项目模式：所有项目的班组
+<span class="cstat-no" title="statement not covered" >    return Array.from(new Set(workerTeams.<span class="fstat-no" title="function not covered" >map(t</span> =&gt; <span class="cstat-no" title="statement not covered" >t.name)</span>)).sort()</span>
+  }, [scope, selectedProject, workerTeams])
+&nbsp;
+  const scopeData = <span class="cstat-no" title="statement not covered" >allWageRecords.<span class="fstat-no" title="function not covered" >filter(w</span> =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    if (scope === 'project' &amp;&amp; w.projectId !== selectedProject?.id) <span class="cstat-no" title="statement not covered" >return false</span></span>
+<span class="cstat-no" title="statement not covered" >    if (filterMemberName &amp;&amp; !(w.memberName || '').includes(filterMemberName)) <span class="cstat-no" title="statement not covered" >return false</span></span>
+<span class="cstat-no" title="statement not covered" >    if (filterYear &amp;&amp; filterYear !== '全部' &amp;&amp; w.yearMonth.slice(0, 4) !== filterYear) <span class="cstat-no" title="statement not covered" >return false</span></span>
+<span class="cstat-no" title="statement not covered" >    if (filterMonth &amp;&amp; filterMonth !== '全部' &amp;&amp; w.yearMonth.slice(5, 7) !== filterMonth) <span class="cstat-no" title="statement not covered" >return false</span></span>
+<span class="cstat-no" title="statement not covered" >    if (filterTeamName !== '全部' &amp;&amp; w.teamName !== filterTeamName) <span class="cstat-no" title="statement not covered" >return false</span></span>
+<span class="cstat-no" title="statement not covered" >    return true</span>
+  })
+&nbsp;
+  // 项目模式下，选定具体月份时同步到父级（用于工资生成/考勤切换）
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >  useEffect(() =&gt; {</span></span>
+<span class="cstat-no" title="statement not covered" >    if (scope === 'project' &amp;&amp; filterYear !== '全部' &amp;&amp; filterMonth !== '全部') {</span>
+<span class="cstat-no" title="statement not covered" >      onChangeMonth(`${filterYear}-${filterMonth}`)</span>
+    }
+  }, [scope, filterYear, filterMonth])
+&nbsp;
+  const changedCount = <span class="cstat-no" title="statement not covered" >paymentEdits.size</span>
+&nbsp;
+  const <span class="cstat-no" title="statement not covered" >summaryTotals = <span class="fstat-no" title="function not covered" >useMemo(() =&gt; {</span></span>
+    const actual = <span class="cstat-no" title="statement not covered" >scopeData.<span class="fstat-no" title="function not covered" >reduce((s</span>, w) =&gt; <span class="cstat-no" title="statement not covered" >s + (w.actualWage || 0), 0</span>)</span>
+    const paid = <span class="cstat-no" title="statement not covered" >scopeData.<span class="fstat-no" title="function not covered" >reduce((s</span>, w) =&gt; {</span>
+      const edit = <span class="cstat-no" title="statement not covered" >paymentEdits.get(w.id)</span>
+      const paidAmount = <span class="cstat-no" title="statement not covered" >edit !== undefined ? edit.paidAmount : (w.paidAmount != null ? String(w.paidAmount) : '0')</span>
+<span class="cstat-no" title="statement not covered" >      return s + (Number(paidAmount) || 0)</span>
+    }, 0)
+<span class="cstat-no" title="statement not covered" >    return { totalActual: actual, totalPaid: paid, totalDiff: actual - paid }</span>
+  }, [scopeData, paymentEdits])
+&nbsp;
+// @ts-ignore TS6133: allSelected is declared but never read
+  const allSelected = <span class="cstat-no" title="statement not covered" >scopeData.length &gt; 0 &amp;&amp; selectedIds.size === scopeData.length</span>
+&nbsp;
+  // ── 文件上传（回单） ──
+  const <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >handleReceiptFile = (f</span>ile: File) =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    onBankReceiptUpload((file as any).path || file.name)</span>
+  }
+&nbsp;
+  // ── 返回 + 标题 ──
+// @ts-ignore TS6133: header is declared but never read
+  const header = (
+<span class="cstat-no" title="statement not covered" >    &lt;div className="flex items-center gap-4 mb-4"&gt;</span>
+      &lt;button onClick={onBack}
+        className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors"&gt;
+        &lt;Icon name="ChevronLeft" size={18} /&gt;
+      &lt;/button&gt;
+      &lt;div&gt;
+        &lt;h1 className="text-2xl font-bold text-slate-800"&gt;
+          {scope === 'project' ? selectedProject?.name : '全部项目'}
+        &lt;/h1&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  )
+&nbsp;
+  // ── 作用域切换 + 操作栏 ──
+  const toolbar = (
+<span class="cstat-no" title="statement not covered" >    &lt;div className="flex items-center justify-between mb-4 flex-wrap gap-3"&gt;</span>
+      &lt;div className="flex items-center gap-3 flex-wrap"&gt;
+        {/* 作用域切换 */}
+        &lt;div className="flex bg-slate-100 rounded-lg p-0.5"&gt;
+          &lt;button <span class="fstat-no" title="function not covered" >onClick={() =&gt; <span class="cstat-no" title="statement not covered" >s</span>etScope('project')}</span>
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${scope === 'project' ? 'bg-white shadow-sm text-amber-700' : 'text-slate-500 hover:text-slate-700'}`}&gt;
+            当前项目
+          &lt;/button&gt;
+          &lt;button <span class="fstat-no" title="function not covered" >onClick={() =&gt; <span class="cstat-no" title="statement not covered" >s</span>etScope('all')}</span>
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${scope === 'all' ? 'bg-white shadow-sm text-amber-700' : 'text-slate-500 hover:text-slate-700'}`}&gt;
+            全部项目
+          &lt;/button&gt;
+        &lt;/div&gt;
+&nbsp;
+        {/* 统一筛选：年份 + 月份 + 姓名 */}
+        &lt;div className="flex items-center gap-2"&gt;
+          &lt;label className="text-sm font-medium text-slate-600"&gt;年份&lt;/label&gt;
+          &lt;select value={filterYear}
+<span class="fstat-no" title="function not covered" >            onChange={e</span> =&gt; { <span class="cstat-no" title="statement not covered" >setFilterYear(e.target.value); <span class="cstat-no" title="statement not covered" >s</span>etFilterMonth('全部') }</span>}
+            className="px-3 py-2 border border-slate-300 rounded-lg text-sm"&gt;
+            &lt;option value="全部"&gt;全部&lt;/option&gt;
+            {yearOptions.length &gt; 0 ? yearOptions.<span class="fstat-no" title="function not covered" >map(y</span> =&gt; <span class="cstat-no" title="statement not covered" >&lt;option key={y} value={y}&gt;{y}年&lt;/option&gt;)</span>
+              : Array.from({ length: 21 <span class="fstat-no" title="function not covered" >}, (_</span>, i) =&gt; {
+                const <span class="cstat-no" title="statement not covered" >y = (new Date().getFullYear() - 10 + i).toString()</span>
+<span class="cstat-no" title="statement not covered" >                return &lt;option key={y} value={y}&gt;{y}年&lt;/option&gt;</span>
+              })}
+          &lt;/select&gt;
+        &lt;/div&gt;
+        &lt;div className="flex items-center gap-2"&gt;
+          &lt;label className="text-sm font-medium text-slate-600"&gt;月份&lt;/label&gt;
+          &lt;select value={filterMonth}
+<span class="fstat-no" title="function not covered" >            onChange={e</span> =&gt; <span class="cstat-no" title="statement not covered" >setFilterMonth(e.target.value)}</span>
+            className="px-3 py-2 border border-slate-300 rounded-lg text-sm"&gt;
+            {MONTHS.<span class="fstat-no" title="function not covered" >map(m</span> =&gt; <span class="cstat-no" title="statement not covered" >&lt;option key={m} value={m}&gt;{m === '全部' ? '全部' : `${m}月`}&lt;/option&gt;)</span>}
+          &lt;/select&gt;
+        &lt;/div&gt;
+        &lt;input type="text" placeholder="搜索姓名..." value={filterMemberName}
+<span class="fstat-no" title="function not covered" >          onChange={e</span> =&gt; <span class="cstat-no" title="statement not covered" >setFilterMemberName(e.target.value)}</span>
+          className="px-3 py-2 border border-slate-300 rounded-lg text-sm w-40 focus:ring-2 focus:ring-amber-500" /&gt;
+        &lt;div className="flex items-center gap-2"&gt;
+          &lt;label className="text-sm font-medium text-slate-600"&gt;班组&lt;/label&gt;
+          &lt;select value={filterTeamName} <span class="fstat-no" title="function not covered" >onChange={e</span> =&gt; <span class="cstat-no" title="statement not covered" >setFilterTeamName(e.target.value)}</span>
+            className="px-3 py-2 border border-slate-300 rounded-lg text-sm"&gt;
+            &lt;option value="全部"&gt;全部班组&lt;/option&gt;
+            {teamOptions.<span class="fstat-no" title="function not covered" >map(t</span> =&gt; <span class="cstat-no" title="statement not covered" >&lt;option key={t} value={t}&gt;{t}&lt;/option&gt;)</span>}
+          &lt;/select&gt;
+        &lt;/div&gt;
+&nbsp;
+        {/* 记录数 */}
+        &lt;span className="text-sm text-slate-500"&gt;
+          {scopeData.length} 条记录
+          {scope === 'project' &amp;&amp; scopeData.length === 0 &amp;&amp; (
+            &lt;span className="text-amber-600 ml-2"&gt;（提示：点击"生成工资表"）&lt;/span&gt;
+          )}
+        &lt;/span&gt;
+      &lt;/div&gt;
+&nbsp;
+      {/* 右侧操作按钮组 */}
+      &lt;div className="flex items-center gap-2 flex-wrap"&gt;
+        {/* 项目模式：生成工资表 */}
+        {scope === 'project' &amp;&amp; (
+          &lt;button onClick={onGenerateWages}
+            disabled={loading || filterYear === '全部' || filterMonth === '全部'}
+            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"&gt;
+            生成工资表
+          &lt;/button&gt;
+        )}
+&nbsp;
+        {/* 导入回单 */}
+        {scope === 'project' &amp;&amp; (
+          &lt;button <span class="fstat-no" title="function not covered" >onClick={() =&gt; <span class="cstat-no" title="statement not covered" >s</span>etShowFileDialog(true)}</span>
+            disabled={receiptParsing || filterYear === '全部' || filterMonth === '全部'}
+            className="bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"&gt;
+            {receiptParsing ? '解析中…' : '导入回单'}
+          &lt;/button&gt;
+        )}
+&nbsp;
+        {/* 归档（仅项目模式下可用） */}
+        {scope === 'project' &amp;&amp; (
+          &lt;button onClick={onBatchArchive}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"&gt;
+            归档{selectedIds.size &gt; 0 ? `选中 (${selectedIds.size})` : '全部'}
+          &lt;/button&gt;
+        )}
+&nbsp;
+        {/* 保存发放 */}
+        {changedCount &gt; 0 &amp;&amp; (
+          &lt;button onClick={onSavePayments} disabled={loading}
+            className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"&gt;
+            保存发放 ({changedCount})
+          &lt;/button&gt;
+        )}
+&nbsp;
+        {/* 删除选中 */}
+        {selectedIds.size &gt; 0 &amp;&amp; (
+          &lt;button onClick={onBatchDelete}
+            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"&gt;
+            删除选中 ({selectedIds.size})
+          &lt;/button&gt;
+        )}
+&nbsp;
+        {/* 更多：导出/打印 */}
+        &lt;DropdownMenu
+          trigger={&lt;button className="px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition-colors"&gt;更多 ▾&lt;/button&gt;}
+          items={[
+            { key: 'export', label: '导出Excel', <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >onClick: () =&gt; e</span>xportWageDetailToExcel(scopeData) }</span>,
+            { key: 'print', label: '打印', <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >onClick: () =&gt; p</span>rintWageDetail(scopeData, scope === 'project' ? selectedProject?.name || '' : '全部项目') }</span>,
+          ]}
+          align="end"
+        /&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  )
+&nbsp;
+  // ── 银行回单解析结果提示 ──
+  const receiptBanner = <span class="cstat-no" title="statement not covered" >receiptResult &amp;&amp; (</span>
+    &lt;div className={`mb-4 p-3 rounded-lg text-sm ${receiptResult.failed &gt; 0 ? 'bg-amber-50 border border-amber-200' : 'bg-green-50 border border-green-200'}`}&gt;
+      &lt;div className="flex items-center justify-between"&gt;
+        &lt;div className="flex items-center gap-3"&gt;
+          &lt;span className="font-medium"&gt;{receiptResult.date} 回单解析完成&lt;/span&gt;
+          &lt;span className="text-green-600"&gt;✓ 匹配 {receiptResult.matched} 人&lt;/span&gt;
+          {receiptResult?.skippedArchived != null &amp;&amp; receiptResult?.skippedArchived &gt; 0 &amp;&amp; &lt;span className="text-slate-500"&gt;⏭ {receiptResult?.skippedArchived} 人已归档&lt;/span&gt;}
+          {receiptResult.failed &gt; 0 &amp;&amp; &lt;span className="text-amber-600"&gt;✗ 未匹配 {receiptResult.failed} 人&lt;/span&gt;}
+          &lt;span className="text-slate-500"&gt;共 {receiptResult.totalItems} 笔&lt;/span&gt;
+          {receiptResult.totalAmount &amp;&amp; &lt;span className="font-mono text-slate-600"&gt;总额 ¥{receiptResult.totalAmount.toFixed(2)}&lt;/span&gt;}
+        &lt;/div&gt;
+        &lt;div className="flex gap-2"&gt;
+          {receiptResult.rawTextSnippet &amp;&amp; (
+            &lt;button <span class="fstat-no" title="function not covered" >onClick={() =&gt; <span class="cstat-no" title="statement not covered" >s</span>etShowRawText(!showRawText)}</span>
+              className="text-xs text-slate-400 hover:text-slate-600 underline"&gt;查看原文&lt;/button&gt;
+          )}
+          &lt;button <span class="fstat-no" title="function not covered" >onClick={() =&gt; <span class="cstat-no" title="statement not covered" >o</span>nSavePayments()}</span>
+            className="text-xs text-blue-600 hover:text-blue-800 font-medium"&gt;保存发放&lt;/button&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      {showRawText &amp;&amp; receiptResult.rawTextSnippet &amp;&amp; (
+        &lt;pre className="mt-2 p-2 bg-slate-50 rounded text-xs text-slate-500 max-h-32 overflow-y-auto"&gt;{receiptResult.rawTextSnippet}&lt;/pre&gt;
+      )}
+    &lt;/div&gt;
+  )
+&nbsp;
+  // ── 空状态 ──
+  const emptyState = (
+<span class="cstat-no" title="statement not covered" >    &lt;div className="text-center py-12 text-slate-400"&gt;</span>
+      &lt;Icon name="FileText" size={48} className="mx-auto mb-4" /&gt;
+      &lt;p&gt;暂无工资记录&lt;/p&gt;
+      {scope === 'project' &amp;&amp; (
+        &lt;p className="text-sm mt-1"&gt;点击"生成工资表"根据考勤数据自动计算&lt;/p&gt;
+      )}
+    &lt;/div&gt;
+  )
+&nbsp;
+<span class="cstat-no" title="statement not covered" >  return (</span>
+    &lt;div className="p-4 flex flex-col max-h-[calc(100vh-380px)]"&gt;
+      {/* 工具栏固定 */}
+      &lt;div className="shrink-0"&gt;{toolbar}&lt;/div&gt;
+      {receiptBanner &amp;&amp; &lt;div className="shrink-0"&gt;{receiptBanner}&lt;/div&gt;}
+      {/* 表格独立滚动 */}
+      &lt;div className="flex-1 overflow-auto min-h-0 mt-3"&gt;
+        {scopeData.length &gt; 0 ? (
+          &lt;WageDetailTable
+            scopeData={scopeData}
+            selectedIds={selectedIds}
+            scope={scope}
+            paymentEdits={paymentEdits}
+            onToggleSelect={toggleSelect}
+<span class="fstat-no" title="function not covered" >            onToggleAll={(i</span>ds) =&gt; <span class="cstat-no" title="statement not covered" >toggleAll(ids)}</span>
+            onPaymentChange={onPaymentChange}
+          /&gt;
+        ) : emptyState}
+      &lt;/div&gt;
+      {/* 底部汇总条 */}
+      {scopeData.length &gt; 0 &amp;&amp; (
+        &lt;div className="shrink-0 flex items-center justify-end gap-6 px-4 py-2.5 bg-white border-t border-slate-200 text-sm"&gt;
+          &lt;div className="flex items-center gap-1.5"&gt;
+            &lt;span className="text-slate-400"&gt;应发&lt;/span&gt;
+            &lt;span className="font-semibold text-slate-800"&gt;¥{summaryTotals.totalActual.toFixed(2)}&lt;/span&gt;
+          &lt;/div&gt;
+          &lt;div className="flex items-center gap-1.5"&gt;
+            &lt;span className="text-slate-400"&gt;实发&lt;/span&gt;
+            &lt;span className="font-semibold text-green-700"&gt;¥{summaryTotals.totalPaid.toFixed(2)}&lt;/span&gt;
+          &lt;/div&gt;
+          &lt;div className="flex items-center gap-1.5"&gt;
+            &lt;span className="text-slate-400"&gt;差额&lt;/span&gt;
+            &lt;span className={`font-semibold ${summaryTotals.totalDiff &gt;= 0 ? 'text-amber-600' : 'text-green-600'}`}&gt;
+              {summaryTotals.totalDiff &gt;= 0 ? '未发' : '多发'}¥{Math.abs(summaryTotals.totalDiff).toFixed(2)}
+            &lt;/span&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      )}
+&nbsp;
+      {/* 导入回单弹窗 */}
+      &lt;FileImportDialog
+        show={showFileDialog}
+        title="导入银行回单"
+        description="选择 PDF 格式的银行回单文件"
+        accept=".pdf"
+        acceptText="PDF 回单 (.pdf)"
+        onFile={handleReceiptFile}
+<span class="fstat-no" title="function not covered" >        onClose={() =&gt; <span class="cstat-no" title="statement not covered" >s</span>etShowFileDialog(false)}</span>
+        parsing={receiptParsing}
+      /&gt;
+    &lt;/div&gt;
+  )
+}
+&nbsp;
+// 导出 &amp; 打印逻辑 → src/utils/wage-export.ts
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-05-22T20:17:08.901Z
+            </div>
+        <script src="../../../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../../../sorter.js"></script>
+        <script src="../../../../block-navigation.js"></script>
+    </body>
+</html>
+    

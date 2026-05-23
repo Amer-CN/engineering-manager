@@ -11,7 +11,7 @@ interface TemplateCardProps {
   onGenerate: (t: Template) => void
 }
 
-export function TemplateCard({ template, onEdit, onDelete, onPreview, onGenerate }: TemplateCardProps) {
+export const TemplateCard = React.memo(function TemplateCard({ template, onEdit, onDelete, onPreview, onGenerate }: TemplateCardProps) {
   const config = categoryConfig[template.category]
 
   return (
@@ -71,6 +71,6 @@ export function TemplateCard({ template, onEdit, onDelete, onPreview, onGenerate
       </div>
     </div>
   )
-}
+})
 
 export default TemplateCard

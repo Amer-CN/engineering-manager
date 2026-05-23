@@ -330,6 +330,8 @@ components:
     padding-lg: "8px 12px"
     dot-animation-duration: 2s
     dot-animation-easing: "easeInOut"
+    variants: "primary | success | warning | danger | gray | info | purple | orange | cyan"
+    rounded-levels: "none | sm | md | lg | full"
 
   tabs:
     container-bg: "{colors.neutral-bg-tertiary}"
@@ -410,6 +412,7 @@ components:
     max-width-default: 1400px
     max-width-wide: 1600px
     max-width-narrow: 896px
+    max-width-full: 100%
     padding: 24px
     horizontal-center: true
 
@@ -595,6 +598,7 @@ Every content page is wrapped in `PageContainer`, which enforces:
 - `max-width: 1400px` for standard pages (lists, forms)
 - `max-width: 1600px` for data-dense pages (dashboard, wide tables)
 - `max-width: 896px` (4xl) for narrow form pages
+- `max-width: 100%` (`full`) for pages that need the full content width
 - `padding: 24px` on all sides
 - Horizontally centered via `mx-auto`
 
@@ -705,6 +709,8 @@ Five sizes: `xs` through `xl`. All buttons share:
 - Focus-visible ring (2px primary-500, 2px offset)
 - `disabled:opacity-50 disabled:cursor-not-allowed`
 - Loading state replaces children with a spinning `Loader2` icon
+- `block` prop — makes the button full-width (`w-full`)
+- `iconOnly` prop — removes horizontal padding, uses square aspect ratio
 
 **Variant-specific:**
 - **Primary** — filled blue-600, white text, `shadow-sm`, hover darkens to
@@ -730,6 +736,8 @@ The fundamental content container. Variants controlled by props:
 - `glass` — switches to frosted glass background
 - `shadow` — four levels: `none | sm | md | lg`
 - `padding` — `none | sm | md | lg`
+- `headerDivider` (default true) — shows divider between header and body
+- `footerDivider` (default true) — shows divider between body and footer
 
 Cards have three optional zones: **header** (title + subtitle + extra actions,
 with divider), **body** (children, padded), **footer** (right-aligned actions,
@@ -742,6 +750,8 @@ Rendered via `createPortal` to `document.body`. Features:
 - Escape key dismiss
 - Scroll lock on body while open
 - `closeOnOverlay` click (configurable)
+- `centered` prop — vertically centers the modal content
+- `showOverlay` prop — controls overlay visibility
 - Spring animation on content panel
 - Header with title + X close button, divider
 - Footer with right-aligned action buttons, slate-50 bg
@@ -758,6 +768,7 @@ The `Input` component wraps a native `<input>` with:
 - Error message with animated entrance (`AnimatePresence`, fade + y slide)
 - Help text below the input
 - `aria-invalid` and `aria-describedby` for accessibility
+- `containerClassName` prop — applies styles to the outer wrapper div
 
 The "modern" variant (`.input-modern`) uses `bg-slate-50 rounded-xl` for a
 softer, inset appearance — used on the login form and settings pages.
@@ -772,6 +783,7 @@ Custom dropdown select with:
 - Selected state: `bg-primary-50 text-primary-700`
 - Hover: `bg-slate-50`
 - Click-outside dismiss
+- `clearable` prop — shows an X button to clear the selected value
 
 ### Table
 
@@ -784,6 +796,8 @@ Data tables with:
 - Optional row click handler
 - Column alignment (left/center/right)
 - Custom cell render functions
+- `sortable` prop — enables column header sorting with sort indicators
+- `bordered` prop — adds outer border to the table
 
 Tables always wrap in `rounded-xl border border-slate-200` for a card-like
 appearance. Headers use the Overline typography token (10px, uppercase,
@@ -792,17 +806,20 @@ tracking-wider, slate-600).
 ### Badge
 
 Small inline status indicators. Nine color variants: `primary | success |
-warning | danger | gray | info | purple | orange | teal`. Optional `dot`
+warning | danger | gray | info | purple | orange | cyan`. Optional `dot`
 prop adds a pulsing circle (CSS animation, 2s easeInOut, opacity 0.4→1→0.4).
 
-Badges default to `rounded-full` (pill shape). Sizes: `sm | md | lg`.
+Badges default to `rounded-full` (pill shape). The `rounded` prop offers
+five levels: `none | sm | md | lg | full`. Sizes: `sm | md | lg`.
 `outlined` variant swaps the filled background for a colored border + text.
 
 ### Tabs
 
 Horizontal pill-style tab bar. The container is `bg-slate-100 rounded-xl p-1`
 with buttons inside. The active tab gets `bg-white shadow-sm text-primary-600`;
-inactive tabs are `text-slate-500`. Optional badge count on each tab.
+inactive tabs are `text-slate-500`. Supports:
+- Optional badge count on each tab
+- Optional icon (lucide icon name) on each tab
 
 ### Sidebar
 
@@ -821,6 +838,8 @@ The sidebar is a permanent 256px left panel. Structure:
 
 Portal-based popup menu with:
 - `AnimatePresence` entrance (opacity + y: -4 + scale 0.95→1)
+- Rendered via `createPortal` to `document.body`
+- Dynamic position calculation (side + align props)
 - Min width 160px
 - Divider support between item groups
 - Danger items in red with red hover background
@@ -828,10 +847,11 @@ Portal-based popup menu with:
 
 ### Toast
 
-Fixed-position toast at top-center (`top-20`, z-9999). Three types:
+Fixed-position toast at top-center (`top-20`, z-9999). Four types:
 - **Success** — emerald-500 background
 - **Error** — red-500 background
 - **Info** — slate-700 background
+- **Warning** — amber-500 background
 
 Enters with spring (y: -16→0, scale 0.95→1), exits with fade+slide. White
 text, rounded-xl, shadow-2xl. Auto-dismisses after a timeout set by the
@@ -849,8 +869,9 @@ Animated horizontal bar with:
 ### Tooltip
 
 Simple hover tooltip with 300ms delay. Dark background (`bg-slate-800`),
-white text, downward-pointing arrow (CSS triangle via rotated square). Used
-sparingly — primarily for icon-only buttons that need a text label.
+white text, arrow indicator. Rendered via `createPortal` to `document.body`
+with dynamic position calculation. Four positions: `top | bottom | left | right`.
+Supports `maxWidth` (default 240px) and configurable `delay`.
 
 ### Loading States
 
@@ -865,19 +886,50 @@ Two loading patterns:
 
 Centered column with: large muted icon (opacity-50), title in
 `text-lg font-medium text-slate-700`, description in `text-sm text-slate-500`.
-Vertical padding `py-12`.
+Vertical padding `py-12`. Optional `action` prop renders a CTA button below
+the description.
 
 ### Pagination
 
 Row of page buttons + prev/next arrows. Active page: `bg-primary-600
 text-white`. Inactive: `bg-white border border-slate-200 text-slate-600`.
-`rounded-md` buttons with hover darkening.
+`rounded-md` buttons with hover darkening. Supports:
+- `showTotal` prop — displays total item count
+- `showQuickJumper` prop — adds a page number jump input
+- `simple` mode — compact pagination with just prev/next
 
 ### Scrollbar
 
 Custom 8px scrollbar: track = `bg-slate-100`, thumb = `bg-slate-300`,
 thumb:hover = `bg-slate-400`. All `rounded` (4px). Applied globally via
 `::-webkit-scrollbar` pseudo-elements.
+
+### ConfirmDialog
+
+Built on top of the Modal component for destructive action confirmation:
+- `confirmVariant` prop — defaults to `primary`, set to `danger` for delete actions
+- `confirmText` / `cancelText` props — customizable button labels
+- `showCancel` prop — controls whether the cancel button is shown
+- Loading state on the confirm button while async action is in progress
+- Uses Modal's backdrop, escape dismiss, and spring animation
+
+### Icon
+
+Wrapper around Lucide React icons:
+- `name` prop — string matching a Lucide icon name (e.g., `"Edit"`, `"Trash2"`)
+- `size` prop — number (default 20) or named size (`sm: 16`, `md: 20`, `lg: 24`)
+- `className` prop — passes through to the SVG element
+- Falls back to a `?` placeholder if the icon name is not found
+- Registered via `src/utils/iconMap.ts` for centralized icon management
+
+### DropZone
+
+File upload drag-and-drop area:
+- Visual feedback on drag-over (border color change + background tint)
+- `accept` prop — restricts file types (e.g., `.csv,.xlsx,.xls`)
+- `multiple` prop — allows multiple file selection
+- `onFilesSelected` callback — receives the selected `FileList`
+- Uses dashed border + icon + description text for the empty state
 
 ## Hero Banner
 

@@ -180,14 +180,13 @@ body {
   }
 }
 
-/* 表格行悬停高亮（透明度可调） */
-@layer components {
-  .table-row-hover {
-    transition: background-color 200ms;
-  }
-  .table-row-hover:hover {
-    background-color: rgb(239 246 255 / var(--row-hover-opacity, 0.6));
-  }
+/* 全局表格行悬停高亮（透明度可调，由外观主题设置控制）
+   默认对所有表格行生效，新增表格无需额外处理 */
+table tbody tr {
+  transition: background-color 200ms;
+}
+table tbody tr:hover {
+  background-color: rgb(239 246 255 / var(--row-hover-opacity, 0.6));
 }
 
 /* 模态框样式 */

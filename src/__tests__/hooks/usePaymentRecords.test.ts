@@ -1,5 +1,3 @@
-// @ts-nocheck
-import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 
 describe('usePaymentRecords', () => {
@@ -104,7 +102,7 @@ describe('usePaymentRecords', () => {
     await act(async () => {
       const res = await result.current.create({ amount: 1000 })
       expect(res.success).toBe(true)
-      expect(res.data!.id).toBe(3)
+      expect((res as any).data!.id).toBe(3)
     })
 
     expect(ea.createPaymentRecord).toHaveBeenCalled()
@@ -138,7 +136,7 @@ describe('usePaymentRecords', () => {
     const { result } = renderHook(() => usePaymentRecords())
 
     await act(async () => {
-      const res = await result.current.update({ ...mockRecords[0], amount: 6000 })
+      const res = await result.current.update({ ...mockRecords[0], amount: 6000 } as any)
       expect(res.success).toBe(true)
     })
 

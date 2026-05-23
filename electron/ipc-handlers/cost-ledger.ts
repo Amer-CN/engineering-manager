@@ -1,25 +1,64 @@
 /**
- * 成本台账 IPC 处理器
+ * 成本台账核心 IPC 处理器
  *
- * 5 个通道：list / create / update / delete / summary
+ * 7 个通道：list / create / batchCreate / update / delete / summary / deleteByProject
  * 数据集合：db.costLedger
+ *
+ * 🔀 双写策略（Phase 7.3）：
+ *   读：SQLite 已就绪+已迁移 → 从 SQLite 读取；否则从 JSON 读取
+ *   写：SQLite 已就绪 → 写入 JSON + SQLite 双写；否则仅 JSON
+ *   前端无需任何改动
+ *
+ * 其他分类/版本/匹配规则通道 → 独立文件：
+ *   cost-ledger-categories.ts   — 分类管理（5个通道）
+ *   cost-ledger-batches.ts     — 版本管理（5个通道）
+ *   cost-ledger-match-rules.ts — 匹配规则（2个通道）
+ *   cost-ledger-helpers.ts     — 共享工具函数
  */
 
 import { ipcMain } from 'electron'
+import log from 'electron-log'
 import { db, dbReady, saveDatabase } from '../database'
-import { ensureCategories, seedBuiltinCategories } from './cost-ledger-categories-data'
+import { ensureBatchesInit, getLatestBatch } from './cost-ledger-helpers'
+import { useSqliteRead, shouldFallbackToJson, costLedgerQueries } from '../sqlite/queries'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // db:costLedger:list — 按项目列出台账记录（含发票状态解析）
 // ═══════════════════════════════════════════════════════════════════════════════
 
-ipcMain.handle('db:costLedger:list', (_, projectId: number) => {
+ipcMain.handle('db:costLedger:list', (_, projectId: number, batchId?: number) => {
   if (!dbReady) return { success: false, error: 'Database not ready' }
   try {
+    // ── SQLite 读路径 ──
+    if (useSqliteRead()) {
+      // 需要计算 targetBatch（不传 batchId 时默认取最新版本）
+      let targetBatch = batchId
+      if (targetBatch === undefined) {
+        const latestBatch = costLedgerQueries.getLatestBatch(projectId)
+        targetBatch = latestBatch ?? 0
+      }
+      const entries = costLedgerQueries.listEntries(projectId, targetBatch)
+      if (entries !== null) {
+        return { success: true, data: entries }
+      }
+      // SQLite 读取失败，fallthrough 到 JSON
+      log.warn('[DualWrite] costLedger.list SQLite read failed, falling back to JSON')
+    }
+
+    if (!shouldFallbackToJson()) return { success: false, error: 'SQLite read failed (sqlite-primary mode)' }
+
+    // ── JSON 读路径（原有逻辑） ──
     if (!db.costLedger) db.costLedger = []
+    ensureBatchesInit()
+    const targetBatch = batchId ?? getLatestBatch(projectId)
     const entries = db.costLedger
-      .filter((e: any) => e.projectId === projectId)
-      .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .filter((e: any) => e.projectId === projectId && (e.batchId || 0) === targetBatch)
+      .sort((a: any, b: any) => {
+        const ta = new Date(a.date).getTime()
+        const tb = new Date(b.date).getTime()
+        return (isNaN(tb) ? new Date(b.date.replace(/[,，]/g, '.')).getTime() : tb)
+             - (isNaN(ta) ? new Date(a.date.replace(/[,，]/g, '.')).getTime() : ta)
+      })
       .map((e: any) => {
         let linkedInvoiceStatus: 'active' | 'deleted' | null = null
         if (e.linkedInvoiceId != null && db.invoices) {
@@ -43,13 +82,10 @@ ipcMain.handle('db:costLedger:create', (_, entry: any) => {
   try {
     if (!db.costLedger) db.costLedger = []
 
-    // 凭证号自动递增（按项目）
-    let voucherNo = entry.voucherNo
-    if (!voucherNo || voucherNo <= 0) {
-      const projectEntries = db.costLedger.filter((e: any) => e.projectId === entry.projectId)
-      const maxNo = projectEntries.reduce((max: number, e: any) => Math.max(max, e.voucherNo || 0), 0)
-      voucherNo = maxNo + 1
-    }
+    // 凭证号：保留原始值，不自动填充（无凭证号 = 该笔无凭证）
+    const voucherNo = (entry.voucherNo && String(entry.voucherNo).trim())
+      ? String(entry.voucherNo).trim()
+      : ''
 
     // 发票存在性校验（仅警告，不阻塞）
     let linkedInvoiceWarning: string | null = null
@@ -62,14 +98,63 @@ ipcMain.handle('db:costLedger:create', (_, entry: any) => {
     const newEntry = {
       ...entry,
       id: Date.now(),
+      projectId: entry.projectId,
+      batchId: entry.batchId || 0,
       voucherNo,
       attachments: entry.attachments || [],
       createdAt: now,
       updatedAt: now,
     }
+
+    // ── JSON 写（原有逻辑） ──
     db.costLedger.push(newEntry)
     saveDatabase()
+
+    // ── SQLite 双写 ──
+    costLedgerQueries.createEntry(newEntry)
+
     return { success: true, data: newEntry, warning: linkedInvoiceWarning }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+})
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// db:costLedger:batchCreate — 批量创建台账记录（导入用）
+// ═══════════════════════════════════════════════════════════════════════════════
+
+ipcMain.handle('db:costLedger:batchCreate', (_, projectId: number, entries: any[], batchId: number) => {
+  if (!dbReady) return { success: false, error: 'Database not ready' }
+  try {
+    if (!db.costLedger) db.costLedger = []
+
+    const now = new Date().toISOString()
+    let counter = 0
+    const newEntries = entries.map((entry) => {
+      const voucherNo = (entry.voucherNo && String(entry.voucherNo).trim())
+        ? String(entry.voucherNo).trim()
+        : ''
+      counter++
+      return {
+        ...entry,
+        id: Date.now() + counter,
+        projectId,
+        batchId,
+        voucherNo,
+        attachments: entry.attachments || [],
+        createdAt: now,
+        updatedAt: now,
+      }
+    })
+
+    // ── JSON 写（原有逻辑） ──
+    db.costLedger.push(...newEntries)
+    saveDatabase()
+
+    // ── SQLite 双写 ──
+    costLedgerQueries.batchCreateEntries(newEntries)
+
+    return { success: true, count: newEntries.length }
   } catch (error: any) {
     return { success: false, error: error.message }
   }
@@ -99,8 +184,14 @@ ipcMain.handle('db:costLedger:update', (_, id: number, changes: any) => {
       id: db.costLedger[idx].id, // 不可变更 id
       updatedAt: new Date().toISOString(),
     }
+
+    // ── JSON 写（原有逻辑） ──
     db.costLedger[idx] = updated
     saveDatabase()
+
+    // ── SQLite 双写 ──
+    costLedgerQueries.updateEntry(id, updated)
+
     return { success: true, data: updated, warning: linkedInvoiceWarning }
   } catch (error: any) {
     return { success: false, error: error.message }
@@ -115,8 +206,14 @@ ipcMain.handle('db:costLedger:delete', (_, id: number) => {
   if (!dbReady) return { success: false, error: 'Database not ready' }
   try {
     if (!db.costLedger) db.costLedger = []
+
+    // ── JSON 写（原有逻辑） ──
     db.costLedger = db.costLedger.filter((e: any) => e.id !== id)
     saveDatabase()
+
+    // ── SQLite 双写 ──
+    costLedgerQueries.deleteEntry(id)
+
     return { success: true }
   } catch (error: any) {
     return { success: false, error: error.message }
@@ -127,11 +224,31 @@ ipcMain.handle('db:costLedger:delete', (_, id: number) => {
 // db:costLedger:summary — 按项目汇总（总支出/总收入/分类小计）
 // ═══════════════════════════════════════════════════════════════════════════════
 
-ipcMain.handle('db:costLedger:summary', (_, projectId: number) => {
+ipcMain.handle('db:costLedger:summary', (_, projectId: number, batchId?: number) => {
   if (!dbReady) return { success: false, error: 'Database not ready' }
   try {
+    // ── SQLite 读路径 ──
+    if (useSqliteRead()) {
+      let targetBatch = batchId
+      if (targetBatch === undefined) {
+        const latestBatch = costLedgerQueries.getLatestBatch(projectId)
+        targetBatch = latestBatch ?? 0
+      }
+      const result = costLedgerQueries.summary(projectId, targetBatch)
+      if (result !== null) {
+        return { success: true, data: result }
+      }
+      log.warn('[DualWrite] costLedger.summary SQLite read failed, falling back to JSON')
+    }
+
+    if (!shouldFallbackToJson()) return { success: false, error: 'SQLite read failed (sqlite-primary mode)' }
+
+    // ── JSON 读路径（原有逻辑） ──
     if (!db.costLedger) db.costLedger = []
-    const entries = db.costLedger.filter((e: any) => e.projectId === projectId && e.amount > 0)
+    const targetBatch = batchId ?? getLatestBatch(projectId)
+    const entries = db.costLedger.filter(
+      (e: any) => e.projectId === projectId && e.amount > 0 && (e.batchId || 0) === targetBatch
+    )
     let totalExpense = 0
     let totalIncome = 0
     const byCategory: Record<string, number> = {}
@@ -156,155 +273,15 @@ ipcMain.handle('db:costLedger:deleteByProject', (_, projectId: number) => {
   if (!dbReady) return { success: false, error: 'Database not ready' }
   try {
     if (!db.costLedger) { db.costLedger = []; return { success: true } }
+
+    // ── JSON 写（原有逻辑） ──
     db.costLedger = db.costLedger.filter((e: any) => e.projectId !== projectId)
     saveDatabase()
+
+    // ── SQLite 双写 ──
+    costLedgerQueries.deleteByProject(projectId)
+
     return { success: true }
-  } catch (error: any) {
-    return { success: false, error: error.message }
-  }
-})
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// db:costLedgerCategories:list — 列出所有分类（可按方向过滤）
-// ═══════════════════════════════════════════════════════════════════════════════
-
-ipcMain.handle('db:costLedgerCategories:list', (_, direction?: string) => {
-  if (!dbReady) return { success: false, error: 'Database not ready' }
-  try {
-    const categories = ensureCategories()
-    let result = categories.filter((c: any) => c.isEnabled !== false)
-    if (direction && (direction === 'expense' || direction === 'income')) {
-      result = result.filter((c: any) => c.direction === direction)
-    }
-    result.sort((a: any, b: any) => a.sortOrder - b.sortOrder)
-    return { success: true, data: result }
-  } catch (error: any) {
-    return { success: false, error: error.message }
-  }
-})
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// db:costLedgerCategories:create — 新建自定义分类
-// ═══════════════════════════════════════════════════════════════════════════════
-
-ipcMain.handle('db:costLedgerCategories:create', (_, data: { label: string; direction: string; color?: string; level1?: string }) => {
-  if (!dbReady) return { success: false, error: 'Database not ready' }
-  try {
-    ensureCategories()
-    const { label, direction, level1 } = data
-    if (!label || !label.trim()) return { success: false, error: '分类名称不能为空' }
-    if (direction !== 'expense' && direction !== 'income') return { success: false, error: '方向无效' }
-    if (label.length > 20) return { success: false, error: '分类名称不超过20字' }
-
-    const existing = db.costLedgerCategories.find((c: any) =>
-      c.label === label.trim() && c.direction === direction && c.isEnabled !== false
-    )
-    if (existing) return { success: false, error: `分类"${label}"已存在` }
-
-    const maxOrder = db.costLedgerCategories
-      .filter((c: any) => c.direction === direction)
-      .reduce((max: number, c: any) => Math.max(max, c.sortOrder || 0), 0)
-
-    const newCat: any = {
-      id: Date.now(),
-      code: `custom_${Date.now()}`,
-      label: label.trim(),
-      direction,
-      color: data.color || '#6b7280',
-      isBuiltin: false,
-      isEnabled: true,
-      sortOrder: maxOrder + 1,
-    }
-    if (level1) newCat.level1 = level1
-    db.costLedgerCategories.push(newCat)
-    saveDatabase()
-    return { success: true, data: newCat }
-  } catch (error: any) {
-    return { success: false, error: error.message }
-  }
-})
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// db:costLedgerCategories:update — 更新分类
-// ═══════════════════════════════════════════════════════════════════════════════
-
-ipcMain.handle('db:costLedgerCategories:update', (_, id: number, changes: any) => {
-  if (!dbReady) return { success: false, error: 'Database not ready' }
-  try {
-    ensureCategories()
-    const idx = db.costLedgerCategories.findIndex((c: any) => c.id === id)
-    if (idx === -1) return { success: false, error: '分类不存在' }
-
-    const cat = db.costLedgerCategories[idx]
-
-    // 检查名称重复
-    if (changes.label) {
-      const dup = db.costLedgerCategories.find((c: any) =>
-        c.id !== id && c.label === changes.label && c.direction === cat.direction && c.isEnabled !== false
-      )
-      if (dup) return { success: false, error: `分类"${changes.label}"已存在` }
-    }
-
-    // 内置分类仅允许改 label/color/isEnabled
-    if (cat.isBuiltin) {
-      const allowed: any = {}
-      if (changes.label !== undefined) allowed.label = changes.label
-      if (changes.color !== undefined) allowed.color = changes.color
-      if (changes.isEnabled !== undefined) allowed.isEnabled = changes.isEnabled
-      db.costLedgerCategories[idx] = { ...cat, ...allowed }
-    } else {
-      db.costLedgerCategories[idx] = { ...cat, ...changes, id: cat.id }
-    }
-
-    saveDatabase()
-    return { success: true, data: db.costLedgerCategories[idx] }
-  } catch (error: any) {
-    return { success: false, error: error.message }
-  }
-})
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// db:costLedgerCategories:delete — 删除分类（内置不可删除）
-// ═══════════════════════════════════════════════════════════════════════════════
-
-ipcMain.handle('db:costLedgerCategories:delete', (_, id: number) => {
-  if (!dbReady) return { success: false, error: 'Database not ready' }
-  try {
-    ensureCategories()
-    const idx = db.costLedgerCategories.findIndex((c: any) => c.id === id)
-    if (idx === -1) return { success: false, error: '分类不存在' }
-
-    if (db.costLedgerCategories[idx].isBuiltin) {
-      return { success: false, error: '内置分类不可删除' }
-    }
-
-    const code = db.costLedgerCategories[idx].code
-    // 检查是否被条目引用
-    if (db.costLedger) {
-      const refCount = db.costLedger.filter((e: any) => e.category === code).length
-      if (refCount > 0) {
-        return { success: false, error: `该分类被 ${refCount} 条台账记录引用，不能删除`, warning: `refs:${refCount}` }
-      }
-    }
-
-    db.costLedgerCategories.splice(idx, 1)
-    saveDatabase()
-    return { success: true }
-  } catch (error: any) {
-    return { success: false, error: error.message }
-  }
-})
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// db:costLedgerCategories:reset — 恢复默认分类
-// ═══════════════════════════════════════════════════════════════════════════════
-
-ipcMain.handle('db:costLedgerCategories:reset', () => {
-  if (!dbReady) return { success: false, error: 'Database not ready' }
-  try {
-    db.costLedgerCategories = seedBuiltinCategories()
-    saveDatabase()
-    return { success: true, data: db.costLedgerCategories }
   } catch (error: any) {
     return { success: false, error: error.message }
   }

@@ -1,0 +1,722 @@
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+[2m03:18:03[22m [33m[1m[vite][22m[39m [33mwarning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.[39m
+[2m03:18:03[22m [33m[1m[vite][22m[39m [33mwarning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.[39m
+[33m`resolve.alias` contains an alias with `customResolver` option. This is deprecated and will be removed in Vite 9. Please use a custom plugin with a resolveId hook and `enforce: 'pre'` instead.[39m
+[33mBoth esbuild and oxc options were set. oxc options will be used and esbuild options will be ignored.[39m The following esbuild options were set: `{ jsx: 'automatic', jsxImportSource: undefined }`
+(node:17036) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///E:/%E6%B5%8B%E8%AF%95/postcss.config.js?t=1779477483881 is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to E:\测试\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.6 [39m[90mE:/测试[39m
+      [2mCoverage enabled with [22m[33mv8[39m
+
+[90mstderr[2m | src/__tests__/components/features/costLedger/CategoryManager.test.tsx[2m > [22m[2mCategoryManager[2m > [22m[2m渲染：支出分类 tab 默认选中
+[22m[39mWarning: An update to CategoryManager inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at CategoryManager (E:/测试/src/components/features/costLedger/CategoryManager.tsx:9:28)
+
+[90mstderr[2m | src/__tests__/components/features/projects/ProjectDetailTabs.test.tsx[2m > [22m[2mProjectDetailTabs[2m > [22m[2mMembersTab[2m > [22m[2mrenders project manager info
+[22m[39mWarning: An update to MembersTab inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at MembersTab (E:/测试/src/components/features/projects/ProjectDetailTabs.tsx:545:23)
+Warning: An update to MembersTab inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at MembersTab (E:/测试/src/components/features/projects/ProjectDetailTabs.tsx:545:23)
+Warning: An update to MembersTab inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at MembersTab (E:/测试/src/components/features/projects/ProjectDetailTabs.tsx:545:23)
+Warning: An update to MembersTab inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at MembersTab (E:/测试/src/components/features/projects/ProjectDetailTabs.tsx:545:23)
+
+[90mstderr[2m | src/__tests__/components/features/projects/ProjectDetailTabs.test.tsx[2m > [22m[2mProjectDetailTabs[2m > [22m[2mMembersTab[2m > [22m[2mrenders worker teams section
+[22m[39mWarning: An update to MembersTab inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at MembersTab (E:/测试/src/components/features/projects/ProjectDetailTabs.tsx:545:23)
+Warning: An update to MembersTab inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at MembersTab (E:/测试/src/components/features/projects/ProjectDetailTabs.tsx:545:23)
+Warning: An update to MembersTab inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at MembersTab (E:/测试/src/components/features/projects/ProjectDetailTabs.tsx:545:23)
+Warning: An update to MembersTab inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at MembersTab (E:/测试/src/components/features/projects/ProjectDetailTabs.tsx:545:23)
+
+[90mstderr[2m | src/__tests__/components/features/projects/ProjectDetailTabs.test.tsx[2m > [22m[2mProjectDetailTabs[2m > [22m[2mMembersTab[2m > [22m[2mshows empty state for worker teams
+[22m[39mWarning: An update to MembersTab inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at MembersTab (E:/测试/src/components/features/projects/ProjectDetailTabs.tsx:545:23)
+Warning: An update to MembersTab inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at MembersTab (E:/测试/src/components/features/projects/ProjectDetailTabs.tsx:545:23)
+Warning: An update to MembersTab inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at MembersTab (E:/测试/src/components/features/projects/ProjectDetailTabs.tsx:545:23)
+Warning: An update to MembersTab inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at MembersTab (E:/测试/src/components/features/projects/ProjectDetailTabs.tsx:545:23)
+
+[90mstderr[2m | src/__tests__/components/features/costLedger/CategoryManager.test.tsx[2m > [22m[2mCategoryManager[2m > [22m[2m渲染一级分组名称
+[22m[39mWarning: An update to CategoryManager inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at CategoryManager (E:/测试/src/components/features/costLedger/CategoryManager.tsx:9:28)
+
+[90mstderr[2m | src/__tests__/components/features/costLedger/CategoryManager.test.tsx[2m > [22m[2mCategoryManager[2m > [22m[2m渲染二级分类标签
+[22m[39mWarning: An update to CategoryManager inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at CategoryManager (E:/测试/src/components/features/costLedger/CategoryManager.tsx:9:28)
+
+ [32m✓[39m src/__tests__/hooks/useInvoices.test.ts [2m([22m[2m13 tests[22m[2m)[22m[33m 1067[2mms[22m[39m
+ [32m✓[39m src/__tests__/hooks/useRegionsAndSupervisors.test.ts [2m([22m[2m17 tests[22m[2m)[22m[33m 1459[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/projects/ProjectDetailTabs.test.tsx [2m([22m[2m19 tests[22m[2m)[22m[33m 702[2mms[22m[39m
+[90mstderr[2m | src/__tests__/components/features/costLedger/CategoryManager.test.tsx[2m > [22m[2mCategoryManager[2m > [22m[2m快照匹配
+[22m[39mWarning: An update to CategoryManager inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at CategoryManager (E:/测试/src/components/features/costLedger/CategoryManager.tsx:9:28)
+
+ [32m✓[39m src/__tests__/components/features/costLedger/ColumnFilter.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[33m 925[2mms[22m[39m
+     [33m[2m✓[22m[39m renders filter button [33m 334[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/costLedger/CategoryManager.test.tsx [2m([22m[2m10 tests[22m[2m | [22m[33m1 skipped[39m[2m)[22m[33m 868[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/contracts/ContractFormModal.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 1345[2mms[22m[39m
+     [33m[2m✓[22m[39m 不渲染当 show=false [33m 651[2mms[22m[39m
+     [33m[2m✓[22m[39m 点击取消按钮调用 onClose [33m 449[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/members/MemberCard.test.tsx [2m([22m[2m14 tests[22m[2m)[22m[33m 1576[2mms[22m[39m
+     [33m[2m✓[22m[39m renders staff member name and role [33m 685[2mms[22m[39m
+     [33m[2m✓[22m[39m calls onClick when card is clicked [33m 420[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/partners/PartnerSelect.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[33m 1412[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/partners/PartnerForm.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 2071[2mms[22m[39m
+     [33m[2m✓[22m[39m renders in add mode [33m 450[2mms[22m[39m
+     [33m[2m✓[22m[39m updates form fields on user input [33m 644[2mms[22m[39m
+     [33m[2m✓[22m[39m submits form with required fields [33m 546[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/invoices/InvoiceForm.test.tsx [2m([22m[2m10 tests[22m[2m)[22m[33m 3096[2mms[22m[39m
+     [33m[2m✓[22m[39m renders in create mode [33m 697[2mms[22m[39m
+     [33m[2m✓[22m[39m updates form fields on user input [33m 1035[2mms[22m[39m
+     [33m[2m✓[22m[39m calls onSubmit with form data when form is submitted [33m 760[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/projects/ProjectForm.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[33m 3373[2mms[22m[39m
+     [33m[2m✓[22m[39m renders in create mode [33m 704[2mms[22m[39m
+     [33m[2m✓[22m[39m updates form fields on user input [33m 939[2mms[22m[39m
+     [33m[2m✓[22m[39m submits form with valid data [33m 580[2mms[22m[39m
+     [33m[2m✓[22m[39m submits edit form with updated data [33m 435[2mms[22m[39m
+ [32m✓[39m src/__tests__/hooks/useCRUDBase.test.ts [2m([22m[2m20 tests[22m[2m)[22m[33m 1127[2mms[22m[39m
+ [32m✓[39m src/__tests__/hooks/useCostLedgerCategories.test.ts [2m([22m[2m12 tests[22m[2m)[22m[33m 1315[2mms[22m[39m
+     [33m[2m✓[22m[39m 挂载时自动加载分类列表 [33m 302[2mms[22m[39m
+ [32m✓[39m src/__tests__/hooks/useInvoicePage.test.ts [2m([22m[2m11 tests[22m[2m)[22m[33m 960[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/invoices/InvoiceRow.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[33m 1127[2mms[22m[39m
+     [33m[2m✓[22m[39m renders invoice date and type [33m 413[2mms[22m[39m
+     [33m[2m✓[22m[39m calls onEdit when edit button clicked [33m 384[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/ContractPage.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[33m 1016[2mms[22m[39m
+     [33m[2m✓[22m[39m 收入类型应渲染页面标题 [33m 627[2mms[22m[39m
+ [32m✓[39m src/__tests__/hooks/useInventoryPage.test.ts [2m([22m[2m11 tests[22m[2m)[22m[33m 1049[2mms[22m[39m
+ [32m✓[39m src/__tests__/hooks/usePartners.test.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 900[2mms[22m[39m
+ [32m✓[39m src/__tests__/hooks/useProjects.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 1036[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/SettingsChangelog.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[33m 1296[2mms[22m[39m
+     [33m[2m✓[22m[39m 应显示标题更新日志 [33m 448[2mms[22m[39m
+ [32m✓[39m src/__tests__/hooks/useCostLedgerBatches.test.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 1156[2mms[22m[39m
+     [33m[2m✓[22m[39m 挂载时自动加载批次列表 [33m 371[2mms[22m[39m
+[90mstderr[2m | src/__tests__/hooks/useDepartments.test.ts[2m > [22m[2museDepartments[2m > [22m[2m加载异常时仍结束 loading
+[22m[39mFailed to load departments: Error: 网络异常
+    at E:/测试/src/__tests__/hooks/useDepartments.test.ts:49:51
+    at [90mfile:///E:/%E6%B5%8B%E8%AF%95/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact.js:302:11
+    at [90mfile:///E:/%E6%B5%8B%E8%AF%95/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact.js:1903:26
+    at [90mfile:///E:/%E6%B5%8B%E8%AF%95/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact.js:2326:20
+    at new Promise (<anonymous>)
+    at runWithCancel [90m(file:///E:/%E6%B5%8B%E8%AF%95/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact.js:2323:10[90m)[39m
+    at [90mfile:///E:/%E6%B5%8B%E8%AF%95/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact.js:2305:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///E:/%E6%B5%8B%E8%AF%95/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact.js:2272:10[90m)[39m
+    at [90mfile:///E:/%E6%B5%8B%E8%AF%95/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact.js:2955:64
+
+ [32m✓[39m src/__tests__/hooks/useToast.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 901[2mms[22m[39m
+     [33m[2m✓[22m[39m 初始状态 toast 应为 null [33m 880[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/partners/FileDropZone.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[33m 872[2mms[22m[39m
+     [33m[2m✓[22m[39m calls onClickUpload when upload zone clicked [33m 412[2mms[22m[39m
+ [32m✓[39m src/__tests__/hooks/useDepartments.test.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 732[2mms[22m[39m
+[90mstderr[2m | src/__tests__/hooks/useWagePaymentRecords.test.ts[2m > [22m[2museWagePaymentRecords[2m > [22m[2mgetWagePaymentRecords 失败时不应崩溃
+[22m[39m加载工资发放记录失败: Error: 网络错误
+    at E:/测试/src/__tests__/hooks/useWagePaymentRecords.test.ts:65:74
+    at [90mfile:///E:/%E6%B5%8B%E8%AF%95/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact.js:302:11
+    at [90mfile:///E:/%E6%B5%8B%E8%AF%95/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact.js:1903:26
+    at [90mfile:///E:/%E6%B5%8B%E8%AF%95/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact.js:2326:20
+    at new Promise (<anonymous>)
+    at runWithCancel [90m(file:///E:/%E6%B5%8B%E8%AF%95/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact.js:2323:10[90m)[39m
+    at [90mfile:///E:/%E6%B5%8B%E8%AF%95/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact.js:2305:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///E:/%E6%B5%8B%E8%AF%95/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact.js:2272:10[90m)[39m
+    at [90mfile:///E:/%E6%B5%8B%E8%AF%95/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact.js:2955:64
+
+ [32m✓[39m src/__tests__/hooks/useDataPath.test.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 937[2mms[22m[39m
+[90mstderr[2m | src/__tests__/components/WageManagement.test.tsx[2m > [22m[2mWageManagement[2m > [22m[2mIPC 调用[2m > [22m[2mgetProjects 失败时应静默处理（不崩溃）
+[22m[39m加载基础数据失败: Error: 网络错误
+    at E:/测试/src/__tests__/components/WageManagement.test.tsx:223:53
+    at [90mfile:///E:/%E6%B5%8B%E8%AF%95/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact.js:302:11
+    at [90mfile:///E:/%E6%B5%8B%E8%AF%95/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact.js:1903:26
+    at [90mfile:///E:/%E6%B5%8B%E8%AF%95/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact.js:2326:20
+    at new Promise (<anonymous>)
+    at runWithCancel [90m(file:///E:/%E6%B5%8B%E8%AF%95/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact.js:2323:10[90m)[39m
+    at [90mfile:///E:/%E6%B5%8B%E8%AF%95/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact.js:2305:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///E:/%E6%B5%8B%E8%AF%95/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact.js:2272:10[90m)[39m
+    at [90mfile:///E:/%E6%B5%8B%E8%AF%95/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact.js:2955:64
+
+ [32m✓[39m src/__tests__/components/ui-advanced.test.tsx [2m([22m[2m25 tests[22m[2m)[22m[33m 811[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/WageManagement.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[33m 1163[2mms[22m[39m
+       [33m[2m✓[22m[39m 应渲染 dashboard 视图（WageProjectList） [33m 773[2mms[22m[39m
+ [32m✓[39m src/__tests__/hooks/useWagePaymentRecords.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 795[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/Dashboard.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[33m 768[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/Select.test.tsx [2m([22m[2m17 tests[22m[2m)[22m[33m 989[2mms[22m[39m
+     [33m[2m✓[22m[39m renders with placeholder [33m 301[2mms[22m[39m
+ [32m✓[39m src/__tests__/hooks/useWorkerTeams.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 681[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/ui-more.test.tsx [2m([22m[2m36 tests[22m[2m)[22m[33m 600[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/settlement/SettlementItemsTable.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[33m 480[2mms[22m[39m
+ [32m✓[39m src/__tests__/hooks/useMembers.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 658[2mms[22m[39m
+[90mstderr[2m | src/__tests__/components/features/wages/WageDetailRow.test.tsx[2m > [22m[2mWageDetailRow.tsx[2m > [22m[2m应显示工人姓名
+[22m[39mWarning: validateDOMNesting(...): <tr> cannot appear as a child of <div>.
+    at tr
+    at WageDetailRow (E:/测试/src/components/features/wages/WageDetailRow.tsx:7:83)
+
+ [32m✓[39m src/__tests__/components/features/members/WorkerForm.test.tsx [2m([22m[2m19 tests[22m[2m)[22m[33m 698[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/Input.test.tsx [2m([22m[2m21 tests[22m[2m)[22m[33m 507[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/wages/BankReceiptBatch.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 666[2mms[22m[39m
+     [33m[2m✓[22m[39m 渲染正常（smoke test） [33m 415[2mms[22m[39m
+[90mstderr[2m | src/__tests__/components/features/hr/StaffAttendanceRow.test.tsx[2m > [22m[2mStaffAttendanceRow[2m > [22m[2m应渲染员工姓名
+[22m[39mWarning: validateDOMNesting(...): <tr> cannot appear as a child of <div>.
+    at tr
+    at StaffAttendanceRow (E:/测试/src/components/features/hr/StaffAttendanceRow.tsx:9:93)
+
+ [32m✓[39m src/__tests__/components/features/wages/WageDetailRow.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[33m 527[2mms[22m[39m
+     [33m[2m✓[22m[39m 勾选复选框应调用 onToggleSelect [33m 359[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/Settings.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[33m 514[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/invoices/InvoiceFilters.test.tsx [2m([22m[2m10 tests[22m[2m)[22m[33m 835[2mms[22m[39m
+     [33m[2m✓[22m[39m 发票模式：渲染筛选器 [33m 409[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/hr/StaffAttendanceRow.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[33m 623[2mms[22m[39m
+     [33m[2m✓[22m[39m 勾选框状态应与 isSelected 一致 [33m 363[2mms[22m[39m
+[90mstderr[2m | src/__tests__/components/features/wages/WageRecordRow.test.tsx[2m > [22m[2mWageRecordRow[2m > [22m[2m应渲染工人姓名和月份
+[22m[39mWarning: validateDOMNesting(...): <tr> cannot appear as a child of <div>.
+    at tr
+    at WageRecordRow (E:/测试/src/components/features/wages/WageRecordRow.tsx:7:83)
+
+[90mstderr[2m | src/__tests__/components/features/wages/AttendanceTabRow.test.tsx[2m > [22m[2mAttendanceTabRow[2m > [22m[2m应渲染工人姓名
+[22m[39mWarning: validateDOMNesting(...): <tr> cannot appear as a child of <div>.
+    at tr
+    at AttendanceTabRow (E:/测试/src/components/features/wages/AttendanceTabRow.tsx:9:89)
+
+ [32m✓[39m src/__tests__/components/features/wages/WageRecordRow.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[33m 416[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/wages/AttendanceTabRow.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[33m 468[2mms[22m[39m
+     [33m[2m✓[22m[39m 勾选框应触发 onToggleSelect [33m 343[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/ui-extra.test.tsx [2m([22m[2m28 tests[22m[2m)[22m[33m 512[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/templates/TemplateList.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[33m 563[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/settlement/SettlementPrintTemplate.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 402[2mms[22m[39m
+[90mstderr[2m | src/__tests__/components/features/labor/LaborWorkerRow.test.tsx[2m > [22m[2mLaborWorkerRow[2m > [22m[2m应渲染工人基本信息
+[22m[39mWarning: validateDOMNesting(...): <tr> cannot appear as a child of <div>.
+    at tr
+    at LaborWorkerRow (E:/测试/src/components/features/labor/LaborWorkerRow.tsx:18:85)
+
+ [32m✓[39m src/__tests__/hooks/useSqliteSettings.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 436[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/partners/SupervisorForm.test.tsx [2m([22m[2m12 tests[22m[2m)[22m[33m 581[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/labor/LaborWorkerRow.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[33m 550[2mms[22m[39m
+     [33m[2m✓[22m[39m 年龄不超过 60 时正常显示 [33m 309[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/settlement/SettlementList.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[33m 403[2mms[22m[39m
+[90mstderr[2m | src/__tests__/components/features/costLedger/CostLedgerList.test.tsx[2m > [22m[2mCostLedgerList[2m > [22m[2m渲染正常（smoke test）
+[22m[39mWarning: validateDOMNesting(...): <div> cannot appear as a child of <tbody>.
+    at div
+    at Mock (file:///E:/%E6%B5%8B%E8%AF%95/node_modules/@vitest/spy/dist/index.js:332:34)
+    at tbody
+    at table
+    at div
+    at div
+    at CostLedgerList (E:/测试/src/components/features/costLedger/CostLedgerList.tsx:17:27)
+
+ [32m✓[39m src/__tests__/components/features/inventory/ItemForm.test.tsx [2m([22m[2m10 tests[22m[2m)[22m[33m 786[2mms[22m[39m
+     [33m[2m✓[22m[39m 新增模式：渲染空表单 [33m 363[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/costLedger/CostLedgerList.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 632[2mms[22m[39m
+     [33m[2m✓[22m[39m 渲染正常（smoke test） [33m 412[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/templates/TemplateCard.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[33m 350[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/projects/ProjectCard.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[32m 233[2mms[22m[39m
+ [32m✓[39m src/__tests__/hooks/useFileUpload.test.ts [2m([22m[2m13 tests[22m[2m)[22m[33m 402[2mms[22m[39m
+[90mstderr[2m | src/__tests__/components/DropdownMenu.test.tsx[2m > [22m[2mDropdownMenu[2m > [22m[2mopens menu when trigger clicked
+[22m[39mWarning: [object Object]: `ref` is not a prop. Trying to access it will result in `undefined` being returned. If you need to access the same value within the child component, you should pass it as a different prop. (https://reactjs.org/link/special-props)
+    at PopChild (file:///E:/%E6%B5%8B%E8%AF%95/node_modules/framer-motion/dist/es/components/AnimatePresence/PopChild.mjs:43:21)
+    at PresenceChild (file:///E:/%E6%B5%8B%E8%AF%95/node_modules/framer-motion/dist/es/components/AnimatePresence/PresenceChild.mjs:9:26)
+    at AnimatePresence (file:///E:/%E6%B5%8B%E8%AF%95/node_modules/framer-motion/dist/es/components/AnimatePresence/index.mjs:44:28)
+    at div
+    at DropdownMenu (E:/测试/src/components/ui/DropdownMenu/DropdownMenu.tsx:13:25)
+
+ [32m✓[39m src/__tests__/components/Table.test.tsx [2m([22m[2m14 tests[22m[2m)[22m[32m 299[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/DropdownMenu.test.tsx [2m([22m[2m10 tests[22m[2m)[22m[33m 604[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/labor/TeamWageModal.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 387[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/AuditLogs.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 243[2mms[22m[39m
+ [32m✓[39m src/__tests__/hooks/useWageManagement.test.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 332[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/labor/WorkerWageModal.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[33m 374[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/templates/TemplatePreview.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[33m 376[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/projects/ProjectFilters.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[32m 183[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/invoices/PaymentList.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 171[2mms[22m[39m
+[90mstdout[2m | src/__tests__/hooks/useIdCardOCR.test.ts[2m > [22m[2museIdCardOCR[2m > [22m[2mprocessIdCardFile OCR 成功
+[22m[39m[OCR] 识别结果: {
+  "success": true,
+  "idCard": {
+    "number": "510000199001011234",
+    "gender": "男",
+    "birthDate": "1990-01-01",
+    "name": "张三",
+    "ethnicity": "汉",
+    "address": "四川省"
+  }
+}
+
+[90mstdout[2m | src/__tests__/hooks/useIdCardOCR.test.ts[2m > [22m[2museIdCardOCR[2m > [22m[2mprocessIdCardFile OCR 失败仍返回 base64
+[22m[39m[OCR] 识别结果: {
+  "success": false,
+  "error": "识别失败"
+}
+
+ [32m✓[39m src/__tests__/hooks/useIdCardOCR.test.ts [2m([22m[2m15 tests[22m[2m)[22m[33m 301[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/ui-basic.test.tsx [2m([22m[2m25 tests[22m[2m)[22m[33m 324[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/projects/ProjectList.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[32m 212[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/inventory/MaterialList.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 211[2mms[22m[39m
+[90mstderr[2m | src/__tests__/components/features/costLedger/CostLedgerRow.test.tsx[2m > [22m[2mCostLedgerRow[2m > [22m[2m应渲染支出方向行
+[22m[39mWarning: validateDOMNesting(...): <tr> cannot appear as a child of <div>.
+    at tr
+    at CostLedgerRow (E:/测试/src/components/features/costLedger/CostLedgerRow.tsx:13:83)
+
+ [32m✓[39m src/__tests__/components/features/templates/TemplateDashboard.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 311[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/inventory/InventoryStats.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 193[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/inventory/ItemList.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 245[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/costLedger/CostLedgerRow.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 174[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/wages/WageDetailTable.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 196[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/members/MemberFilters.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[32m 137[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/inventory/TransList.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 108[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/costLedger/CostLedgerBatchBar.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[32m 242[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/invoices/PaymentStats.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 277[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/settlement/SettlementDashboard.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[33m 379[2mms[22m[39m
+     [33m[2m✓[22m[39m 应渲染统计卡片 [33m 329[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/costLedger/InvoiceLinker.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 418[2mms[22m[39m
+[90mstderr[2m | src/__tests__/components/features/hr/StaffListRow.test.tsx[2m > [22m[2mStaffListRow.tsx[2m > [22m[2m应显示姓名
+[22m[39mWarning: validateDOMNesting(...): <tr> cannot appear as a child of <div>.
+    at tr
+    at StaffListRow (E:/测试/src/components/features/hr/StaffListRow.tsx:9:81)
+
+ [32m✓[39m src/__tests__/hooks/useOCRConfig.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 174[2mms[22m[39m
+[90mstderr[2m | src/__tests__/components/features/hr/StaffPayrollRow.test.tsx[2m > [22m[2mStaffPayrollRow[2m > [22m[2m应渲染员工薪酬行
+[22m[39mWarning: validateDOMNesting(...): <tr> cannot appear as a child of <div>.
+    at tr
+    at StaffPayrollRow (E:/测试/src/components/features/hr/StaffPayrollRow.tsx:9:87)
+
+ [32m✓[39m src/__tests__/components/features/hr/StaffListRow.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[32m 272[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/hr/StaffPayrollRow.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[33m 416[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/invoices/FilePreviewModal.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 230[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/Tabs.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[32m 140[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/settlement/SettlementProjectCard.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 203[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/wages/WageProjectCard.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 78[2mms[22m[39m
+ [32m✓[39m src/__tests__/hooks/useConfirm.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 242[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/invoices/InvoiceStats.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 119[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/projects/ProjectStats.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 251[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/invoices/InvoiceList.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 64[2mms[22m[39m
+ [32m✓[39m src/__tests__/hooks/usePaymentRecords.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 65[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/wages/OverdueBanner.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 119[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/members/WorkerPickerItem.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[32m 91[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/wages/WageStatsTab.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 85[2mms[22m[39m
+ [32m✓[39m src/__tests__/hooks/usePagination.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+[90mstdout[2m | src/__tests__/hooks/useAuth.test.ts[2m > [22m[2museAuth[2m > [22m[2mlogin 设置认证状态
+[22m[39m🔵 设置登录状态: admin
+
+[90mstdout[2m | src/__tests__/hooks/useAuth.test.ts[2m > [22m[2museAuth[2m > [22m[2mlogin 写入 localStorage
+[22m[39m🔵 设置登录状态: admin
+
+[90mstdout[2m | src/__tests__/hooks/useAuth.test.ts[2m > [22m[2museAuth[2m > [22m[2mlogout 清除认证状态
+[22m[39m🔵 设置登录状态: admin
+
+[90mstdout[2m | src/__tests__/hooks/useAuth.test.ts[2m > [22m[2museAuth[2m > [22m[2m从 localStorage 恢复登录状态
+[22m[39m🔵 从 localStorage 恢复登录状态: admin
+
+ [32m✓[39m src/__tests__/hooks/useAuth.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 235[2mms[22m[39m
+[90mstderr[2m | src/__tests__/hooks/useLocalStorage.test.ts[2m > [22m[2museLocalStorage[2m > [22m[2mlocalStorage 数据损坏时应返回默认值
+[22m[39mError reading localStorage key "bad-json": SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+    at JSON.parse (<anonymous>)
+    at getItem (E:/测试/src/hooks/useLocalStorage.ts:38:25)
+    at E:/测试/src/hooks/useLocalStorage.ts:115:12
+    at mountState [90m(E:\测试\[39mnode_modules\[4mreact-dom[24m\cjs\react-dom.development.js:16167:20[90m)[39m
+    at Object.useState [90m(E:\测试\[39mnode_modules\[4mreact-dom[24m\cjs\react-dom.development.js:16880:16[90m)[39m
+    at useState [90m(E:\测试\[39mnode_modules\[4mreact[24m\cjs\react.development.js:1622:21[90m)[39m
+    at useLocalStorage (E:/测试/src/hooks/useLocalStorage.ts:114:34)
+    at E:/测试/src/__tests__/hooks/useLocalStorage.test.ts:49:41
+    at TestComponent [90m(E:\测试\[39mnode_modules\[4m@testing-library\react[24m\dist\pure.js:330:27[90m)[39m
+    at renderWithHooks [90m(E:\测试\[39mnode_modules\[4mreact-dom[24m\cjs\react-dom.development.js:15486:18[90m)[39m
+
+ [32m✓[39m src/__tests__/hooks/useLocalStorage.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 51[2mms[22m[39m
+ [32m✓[39m src/__tests__/hooks/useDebounce.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 55[2mms[22m[39m
+ [32m✓[39m src/__tests__/hooks/useFilters.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 78[2mms[22m[39m
+ [32m✓[39m src/__tests__/hooks/useTheme.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 82[2mms[22m[39m
+ [32m✓[39m src/__tests__/hooks/useForm.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 58[2mms[22m[39m
+ [32m✓[39m src/__tests__/utils/export-import.test.ts [2m([22m[2m31 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+ [32m✓[39m src/__tests__/hooks/useModal.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 53[2mms[22m[39m
+ [32m✓[39m src/__tests__/hooks/useAsync.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 48[2mms[22m[39m
+ [32m✓[39m src/__tests__/hooks/usePermission.test.tsx [2m([22m[2m14 tests[22m[2m)[22m[32m 64[2mms[22m[39m
+ [32m✓[39m src/__tests__/hooks/useRowHoverOpacity.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 153[2mms[22m[39m
+ [32m✓[39m src/__tests__/utils/date.test.ts [2m([22m[2m35 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+ [32m✓[39m src/__tests__/hooks/useAuditLogFilters.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 188[2mms[22m[39m
+ [32m✓[39m src/__tests__/utils/wage-export.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 36[2mms[22m[39m
+ [32m✓[39m src/__tests__/hooks/useBankReceiptBatch.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 50[2mms[22m[39m
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+ [32m✓[39m src/__tests__/utils/format.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+ [32m✓[39m src/__tests__/types/guards.test.ts [2m([22m[2m36 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m src/__tests__/utils/member.test.ts [2m([22m[2m36 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+ [32m✓[39m src/__tests__/utils/audit.test.ts [2m([22m[2m30 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m src/__tests__/store/toastStore.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m src/__tests__/utils/validate.test.ts [2m([22m[2m34 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m src/__tests__/utils/staff-payroll-utils.test.ts [2m([22m[2m27 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+[90mstdout[2m | src/__tests__/store/authStore.test.ts[2m > [22m[2mauthStore[2m > [22m[2mlogin[2m > [22m[2m应设置登录状态
+[22m[39m🔵 设置登录状态: admin
+
+ [32m✓[39m src/__tests__/types/permissions.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+[90mstdout[2m | src/__tests__/store/authStore.test.ts[2m > [22m[2mauthStore[2m > [22m[2mlogin[2m > [22m[2m应将用户数据存入 localStorage
+[22m[39m🔵 设置登录状态: admin
+
+[90mstdout[2m | src/__tests__/store/authStore.test.ts[2m > [22m[2mauthStore[2m > [22m[2mlogout[2m > [22m[2m应清除登录状态
+[22m[39m🔵 设置登录状态: admin
+
+[90mstdout[2m | src/__tests__/store/authStore.test.ts[2m > [22m[2mauthStore[2m > [22m[2mlogout[2m > [22m[2m应清除 localStorage
+[22m[39m🔵 设置登录状态: admin
+
+[90mstdout[2m | src/__tests__/store/authStore.test.ts[2m > [22m[2mauthStore[2m > [22m[2mlock / unlock[2m > [22m[2mlock 应设置锁定状态
+[22m[39m🔵 设置登录状态: admin
+
+ [32m✓[39m src/__tests__/store/authStore.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m src/__tests__/utils/projectHealth.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/contracts/contractConfig.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/templates/config.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m src/__tests__/utils/iconMap.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m src/__tests__/components/features/hr/config.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m124 passed[39m[22m[90m (124)[39m
+[2m      Tests [22m [1m[32m1319 passed[39m[22m[2m | [22m[33m1 skipped[39m[90m (1320)[39m
+[2m   Start at [22m 03:18:04
+[2m   Duration [22m 39.15s[2m (transform 30.49s, setup 20.48s, import 49.24s, tests 61.09s, environment 195.24s)[22m
+
+[34m % [39m[2mCoverage report from [22m[33mv8[39m
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |      21 |    18.87 |   23.01 |   22.74 |                   
+ ...ures/contracts |   22.22 |    23.48 |   23.52 |   29.03 |                   
+  ...FormModal.tsx |   18.01 |    19.65 |   18.75 |      24 | ...39-142,144-154 
+  ...ractConfig.ts |   36.36 |    53.33 |   31.57 |      50 | 48-55,62,64,66    
+ ...res/costLedger |   22.21 |    20.15 |   24.74 |   24.04 |                   
+  ...ryManager.tsx |   34.31 |    28.99 |   33.87 |   38.33 | ...49-251,278-325 
+  ...oryPicker.tsx |       0 |        0 |       0 |       0 | 14-65             
+  ChannelInput.tsx |       0 |        0 |       0 |       0 | 3-50              
+  ColumnFilter.tsx |   67.81 |    68.88 |   60.71 |   71.42 | ...55-156,170,181 
+  ...Analytics.tsx |       0 |        0 |       0 |       0 | 7-179             
+  ...rBatchBar.tsx |   17.64 |    18.75 |   16.66 |      25 | ...,67-87,106-128 
+  ...pareModal.tsx |       0 |        0 |       0 |       0 | 17-126            
+  ...Dashboard.tsx |       0 |        0 |       0 |       0 | 7-173             
+  ...edgerForm.tsx |       0 |        0 |       0 |       0 | 20-178            
+  ...portModal.tsx |       0 |        0 |       0 |       0 | 20-285            
+  ...edgerList.tsx |   59.74 |    52.54 |   67.24 |   71.55 | ...91,223-244,271 
+  ...ectDetail.tsx |       0 |        0 |       0 |       0 | 20-162            
+  ...LedgerRow.tsx |     100 |     87.5 |     100 |     100 | 29,40             
+  ...LedgerTab.tsx |       0 |        0 |       0 |       0 | 19-147            
+  ...ilterTree.tsx |       0 |        0 |       0 |       0 | 16-182            
+  FileUploader.tsx |       0 |        0 |       0 |       0 | 10-102            
+  ...iceLinker.tsx |   88.23 |    70.58 |      80 |   92.85 | 64                
+  config.tsx       |   36.95 |    22.22 |   20.83 |   41.17 | ...22,228,236-294 
+  index.ts         |       0 |        0 |       0 |       0 |                   
+  printExport.ts   |       0 |        0 |       0 |       0 | 6-105             
+ ...portComponents |       0 |        0 |       0 |       0 |                   
+  ...tDoneStep.tsx |       0 |        0 |       0 |       0 | 12                
+  ...tFileStep.tsx |       0 |        0 |       0 |       0 | 17-28             
+  ...ppingStep.tsx |       0 |        0 |       0 |       0 | 47-306            
+  ...gressStep.tsx |       0 |        0 |       0 |       0 | 9                 
+  importHelpers.ts |       0 |        0 |       0 |       0 | 10-155            
+  importLogic.ts   |       0 |        0 |       0 |       0 | 17-111            
+ ...ts/features/hr |    2.29 |     3.97 |    3.88 |    2.73 |                   
+  ...eTimeline.tsx |       0 |        0 |       0 |       0 | 11-206            
+  ...signModal.tsx |       0 |        0 |       0 |       0 | 14-69             
+  ...ntManager.tsx |       0 |        0 |       0 |       0 | 9-139             
+  HRDashboard.tsx  |       0 |        0 |       0 |       0 | 18-161            
+  ...ionEditor.tsx |       0 |        0 |       0 |       0 | 9-55              
+  ...toryModal.tsx |       0 |        0 |       0 |       0 | 12-186            
+  ...ttendance.tsx |       0 |        0 |       0 |       0 | 13-342            
+  ...ndanceRow.tsx |   76.47 |    93.33 |   66.66 |   73.33 | 45,86,100-104     
+  ...FormModal.tsx |       0 |        0 |       0 |       0 | 7-221             
+  StaffList.tsx    |       0 |        0 |       0 |       0 | 14-311            
+  StaffListRow.tsx |      50 |    57.14 |      40 |      50 | 26,35-36          
+  StaffPayroll.tsx |       0 |        0 |       0 |       0 | 18-329            
+  ...ayrollRow.tsx |   66.66 |    48.48 |      40 |   66.66 | 27-38             
+  ...rollTable.tsx |       0 |        0 |       0 |       0 | 17-48             
+  config.tsx       |     100 |      100 |     100 |     100 |                   
+ ...ures/inventory |   55.85 |       50 |   53.62 |    53.6 |                   
+  ...toryStats.tsx |     100 |      100 |     100 |     100 |                   
+  ItemForm.tsx     |   84.61 |       75 |   77.77 |   84.61 | 123,144-165       
+  ItemList.tsx     |     100 |    91.66 |     100 |     100 | 57                
+  MaterialForm.tsx |       0 |        0 |       0 |       0 | 13-125            
+  MaterialList.tsx |   91.66 |       55 |     100 |     100 | 27-30,57-61       
+  TransForm.tsx    |       0 |        0 |       0 |       0 | 14-156            
+  TransList.tsx    |     100 |    79.16 |     100 |     100 | 31-33,56          
+  index.ts         |       0 |        0 |       0 |       0 |                   
+ ...tures/invoices |   32.85 |     24.5 |   37.64 |    39.3 |                   
+  ...viewModal.tsx |     100 |      100 |     100 |     100 |                   
+  ...ceFilters.tsx |   95.45 |    88.46 |    90.9 |   95.45 | 92                
+  InvoiceForm.tsx  |   35.71 |     37.5 |   39.53 |   46.03 | ...18,236,250-320 
+  InvoiceList.tsx  |     100 |      100 |     100 |     100 |                   
+  InvoiceRow.tsx   |   77.27 |       60 |      70 |   80.95 | 113-116,139       
+  InvoiceStats.tsx |     100 |    83.33 |     100 |     100 | 26-28             
+  ...ileUpload.tsx |       0 |        0 |       0 |       0 | 13-82             
+  PaymentForm.tsx  |       0 |        0 |       0 |       0 | 22-142            
+  PaymentList.tsx  |   80.95 |    53.84 |   55.55 |      80 | 104-133           
+  PaymentStats.tsx |     100 |       75 |     100 |     100 | 28-30             
+  constants.ts     |      40 |        0 |       0 |      50 | 55-79             
+  index.ts         |       0 |        0 |       0 |       0 |                   
+  printExport.ts   |       0 |        0 |       0 |       0 | 5-232             
+  ...iceAmounts.ts |      25 |        0 |   14.28 |    25.8 | ...47,51-53,57-59 
+ ...features/labor |   12.18 |    13.56 |   12.82 |   12.12 |                   
+  ...Dashboard.tsx |       0 |        0 |       0 |       0 | 15-175            
+  ...amManager.tsx |       0 |        0 |       0 |       0 | 20-177            
+  ...lterPopup.tsx |       0 |        0 |       0 |       0 | 11-202            
+  ...orkerList.tsx |       0 |        0 |       0 |       0 | 23-302            
+  ...WorkerRow.tsx |    87.5 |    66.66 |     100 |     100 | ...33-34,37,39-50 
+  ...WageModal.tsx |   88.23 |      100 |   71.42 |   84.61 | 27,35             
+  ...toryModal.tsx |       0 |        0 |       0 |       0 | 24-182            
+  ...WageModal.tsx |   88.23 |      100 |   71.42 |   84.61 | 25,33             
+  theme.ts         |       0 |      100 |     100 |       0 | 5-21              
+ ...es/labor/hooks |       0 |        0 |       0 |       0 |                   
+  useLaborData.ts  |       0 |        0 |       0 |       0 | 22-132            
+  ...aborModals.ts |       0 |        0 |       0 |       0 | 46-127            
+  ...Operations.ts |       0 |        0 |       0 |       0 | 58-324            
+ ...atures/members |    3.85 |     6.93 |    7.21 |    4.41 |                   
+  ...adWidgets.tsx |       0 |        0 |       0 |       0 | 15-81             
+  LeaveModal.tsx   |       0 |        0 |       0 |       0 | 11-62             
+  MemberCard.tsx   |   60.71 |       72 |   46.66 |   61.53 | 49-51,238-282,298 
+  MemberDetail.tsx |       0 |        0 |       0 |       0 | 29-394            
+  ...tailParts.tsx |       0 |        0 |       0 |       0 | 5-47              
+  ...erFilters.tsx |   71.42 |       75 |   71.42 |   71.42 | 99,115            
+  MemberForm.tsx   |       0 |        0 |       0 |       0 | 36-322            
+  ...ormLayout.tsx |       0 |        0 |       0 |       0 | 12-13             
+  MemberList.tsx   |       0 |        0 |       0 |       0 | 60-90             
+  StaffForm.tsx    |       0 |        0 |       0 |       0 | 6-130             
+  ...gementTab.tsx |       0 |        0 |       0 |       0 | 16-73             
+  ...rkerModal.tsx |       0 |        0 |       0 |       0 | 26-152            
+  WorkerForm.tsx   |   42.37 |    67.74 |      34 |    57.5 | ...31-149,165-174 
+  ...portModal.tsx |       0 |        0 |       0 |       0 | 28-348            
+  ...ickerItem.tsx |      50 |       80 |   33.33 |      50 | 25-31             
+  ...ckerModal.tsx |       0 |        0 |       0 |       0 | 26-326            
+  ...rPoolForm.tsx |       0 |        0 |       0 |       0 | 15-236            
+  ...erSection.tsx |       0 |        0 |       0 |       0 | 17-296            
+  ...ionModals.tsx |       0 |        0 |       0 |       0 | 33-294            
+  index.ts         |       0 |        0 |       0 |       0 |                   
+  ...rFormTypes.ts |       0 |        0 |       0 |       0 | 7-238             
+  ...Operations.ts |       0 |        0 |       0 |       0 | 17-197            
+  ...steHandler.ts |       0 |        0 |       0 |       0 | 13-37             
+  useTeamOps.ts    |       0 |        0 |       0 |       0 | 11-37             
+  ...rkerImport.ts |       0 |        0 |       0 |       0 | 25-559            
+ ...tures/partners |   37.03 |    35.86 |    33.8 |   45.77 |                   
+  FileDropZone.tsx |   33.33 |       80 |      50 |   66.66 | 35                
+  ...loadField.tsx |       0 |        0 |       0 |       0 | 19-42             
+  PartnerForm.tsx  |   33.01 |    43.42 |   21.15 |   45.33 | ...88-211,248-361 
+  PartnerList.tsx  |       0 |        0 |       0 |       0 | 20-171            
+  ...nerSelect.tsx |   94.87 |     87.5 |    87.5 |   94.59 | 123,212           
+  ...visorForm.tsx |    92.3 |    63.33 |   91.66 |   96.96 | 191               
+  ...visorList.tsx |       0 |        0 |       0 |       0 | 18-159            
+  index.ts         |       0 |        0 |       0 |       0 |                   
+  ...mpanyQuery.ts |       0 |        0 |       0 |       0 | 5-22              
+ ...tures/projects |   38.97 |    29.72 |   32.95 |   46.18 |                   
+  ProjectCard.tsx  |   73.52 |    70.73 |   55.55 |   88.46 | 105-108           
+  ...andCenter.tsx |       0 |        0 |       0 |       0 | 23-264            
+  ...ectDetail.tsx |       0 |        0 |       0 |       0 | 17-166            
+  ...etailTabs.tsx |   58.67 |    41.79 |   46.55 |   64.28 | ...47,351-354,362 
+  ...ctFilters.tsx |      80 |    66.66 |   66.66 |      80 | 48,51             
+  ProjectForm.tsx  |    90.9 |    73.07 |   81.25 |   88.88 | 113-117,130       
+  ProjectList.tsx  |     100 |       75 |     100 |     100 | 51-75             
+  ProjectStats.tsx |     100 |       75 |     100 |     100 | 26                
+  index.ts         |       0 |        0 |       0 |       0 |                   
+ ...res/settlement |   13.21 |    18.75 |    15.6 |   14.08 |                   
+  ...Dashboard.tsx |   83.67 |     72.5 |   88.88 |   94.11 | 44,124            
+  ...ementForm.tsx |       0 |        0 |       0 |       0 | 16-310            
+  ...portModal.tsx |       0 |        0 |       0 |       0 | 22-156            
+  ...temsTable.tsx |   41.66 |    81.25 |   36.36 |   41.66 | 42-43,71-75       
+  ...ementList.tsx |   58.33 |       50 |   44.44 |   58.33 | 77-98             
+  ...tTemplate.tsx |     100 |    57.89 |     100 |     100 | 19-20,61-72       
+  ...ojectCard.tsx |     100 |      100 |     100 |     100 |                   
+  ...ectDetail.tsx |       0 |        0 |       0 |       0 | 22-363            
+  config.tsx       |       0 |      100 |     100 |       0 | 6-18              
+  index.ts         |       0 |        0 |       0 |       0 |                   
+ ...ures/templates |   19.31 |    20.35 |   21.25 |   21.28 |                   
+  TemplateCard.tsx |   77.77 |    81.81 |   83.33 |    87.5 | 68                
+  ...Dashboard.tsx |    90.9 |    91.66 |   83.33 |    90.9 | 52                
+  TemplateForm.tsx |       0 |        0 |       0 |       0 | 14-220            
+  ...eGenerate.tsx |       0 |        0 |       0 |       0 | 12-148            
+  TemplateList.tsx |     100 |       75 |     100 |     100 | 31                
+  ...tePreview.tsx |   79.16 |    61.11 |      75 |   79.16 | 29,43-48,56       
+  ...ctorModal.tsx |       0 |        0 |       0 |       0 | 14-95             
+  config.tsx       |     100 |      100 |     100 |     100 |                   
+  index.ts         |       0 |        0 |       0 |       0 |                   
+ ...features/wages |    9.84 |    10.03 |    8.88 |   10.47 |                   
+  ...portModal.tsx |       0 |        0 |       0 |       0 | 6-325             
+  ...ndanceTab.tsx |       0 |        0 |       0 |       0 | 33-136            
+  ...nceTabRow.tsx |   96.15 |    63.63 |     100 |     100 | 24-27,33-64       
+  ...eiptBatch.tsx |   21.34 |       15 |    9.52 |   21.17 | ...66-198,224-352 
+  ...chConfirm.tsx |       0 |        0 |       0 |       0 | 33-328            
+  ...ortDialog.tsx |       0 |        0 |       0 |       0 | 16-90             
+  ...dueBanner.tsx |     100 |      100 |     100 |     100 |                   
+  ...atchViews.tsx |       0 |        0 |       0 |       0 | 25-86             
+  ...cleDetail.tsx |       0 |        0 |       0 |       0 | 14-164            
+  ...DetailRow.tsx |      80 |       75 |      50 |      80 | 39-46             
+  ...DetailTab.tsx |       0 |        0 |       0 |       0 | 54-339            
+  ...tailTable.tsx |   72.72 |    81.81 |   66.66 |   88.88 | 37                
+  ...ntRecords.tsx |       0 |        0 |       0 |       0 | 21-181            
+  ...ojectCard.tsx |     100 |      100 |     100 |     100 |                   
+  ...ojectList.tsx |       0 |        0 |       0 |       0 | 13-126            
+  ...RecordRow.tsx |      75 |     62.5 |      50 |      75 | 34-41             
+  ...ecordsTab.tsx |       0 |        0 |       0 |       0 | 29-186            
+  WageStatsTab.tsx |     100 |      100 |     100 |     100 |                   
+  ...ummaryTab.tsx |       0 |        0 |       0 |       0 | 14-201            
+  WageTableTab.tsx |       0 |        0 |       0 |       0 | 28-141            
+ store             |   93.54 |    83.33 |     100 |   94.82 |                   
+  authStore.ts     |   91.48 |       80 |     100 |   93.47 | 64-65,134         
+  toastStore.ts    |     100 |      100 |     100 |     100 |                   
+ types             |    95.4 |     92.1 |     100 |     100 |                   
+  guards.ts        |   96.72 |    96.87 |     100 |     100 | 72,157            
+  permissions.ts   |    92.3 |    66.66 |     100 |     100 | 214-222,292       
+ utils             |   83.67 |     80.6 |   86.71 |   84.66 |                   
+  audit.ts         |   57.51 |    62.19 |    65.9 |   59.25 | ...47,420-522,550 
+  date.ts          |   83.67 |    72.52 |     100 |   88.57 | ...19-122,151-153 
+  export-import.ts |   97.72 |    90.62 |   92.59 |   97.67 | 355,476           
+  format.ts        |     100 |    95.83 |     100 |     100 | 82                
+  iconMap.ts       |     100 |      100 |     100 |     100 |                   
+  index.ts         |       0 |        0 |       0 |       0 |                   
+  member.ts        |     100 |      100 |     100 |     100 |                   
+  projectHealth.ts |     100 |    95.45 |     100 |     100 | 88                
+  ...roll-utils.ts |     100 |      100 |     100 |     100 |                   
+  validate.ts      |     100 |      100 |     100 |     100 |                   
+  wage-export.ts   |   88.57 |    76.19 |     100 |   92.85 | 33-34             
+-------------------|---------|----------|---------|---------|-------------------

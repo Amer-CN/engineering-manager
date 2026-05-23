@@ -1,5 +1,3 @@
-// @ts-nocheck
-import { describe, test, expect, beforeEach, afterEach } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 import React from 'react'
 import { WageDetailTable } from '@/components/features/wages/WageDetailTable'

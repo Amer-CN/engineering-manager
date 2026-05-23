@@ -3,7 +3,7 @@
  */
 
 import React from 'react'
-import { PaymentRecord, Invoice } from '@/types/electron'
+import { PaymentRecord } from '@/types/electron'
 import { formatMoney } from '@/utils/format'
 import { Icon } from '../../ui/Icon'
 
@@ -101,7 +101,7 @@ export const PaymentList: React.FC<PaymentListProps> = ({
                 <div className="flex items-center justify-center gap-1">
                   {record.fileUrl && (
                     <button
-                      onClick={() => onPreview(record.fileUrl!, record.fileType === 'pdf' ? 'pdf' : 'image', `${record.recordDate} - ${record.type === 'invoice_out' ? '回款' : '付款'}凭证`, 'payments', record.type === 'invoice_out' ? 'payment_in' : 'payment_out', record.projectName, record.projectId)}
+                      onClick={() => onPreview(record.fileUrl!, record.fileType === 'pdf' ? 'pdf' : 'image', `${record.recordDate} - ${record.type === 'invoice_out' ? '回款' : '付款'}凭证`, 'payments', record.type === 'invoice_out' ? 'payment_in' : 'payment_out', record.projectName, record.projectId ?? undefined)}
                       className="p-1.5 text-slate-500 dark:text-slate-400 hover:bg-slate-100 rounded transition-colors"
                       title="预览凭证"
                     >

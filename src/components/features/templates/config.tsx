@@ -1,4 +1,3 @@
-import React from 'react'
 import { TemplateCategory, TemplateVariable } from '../../../types/electron'
 
 export interface CategoryConfig {

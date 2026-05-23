@@ -2,9 +2,8 @@ import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import Sidebar from './components/Sidebar'
 import { NAV_ITEMS, PAGE_IDS, getFilteredSidebarRoutes } from './routes'
-import { usePermission, RequirePermission, RequireAdmin } from './hooks/usePermission'
-import { useAuth, AuthProvider } from './hooks/useAuth'
-import { ToastProvider } from './hooks/useToast'
+import { RequirePermission, RequireAdmin } from './hooks/usePermission'
+import { useAuth } from './hooks/useAuth'
 import { useRowHoverOpacity } from './hooks/useRowHoverOpacity'
 
 // ── 路由级代码分割：每个页面独立 chunk ──
@@ -113,13 +112,7 @@ const AppContent: React.FC = () => {
 }
 
 function App() {
-  return (
-    <AuthProvider>
-      <ToastProvider>
-        <AppContent />
-      </ToastProvider>
-    </AuthProvider>
-  )
+  return <AppContent />
 }
 
 export default App

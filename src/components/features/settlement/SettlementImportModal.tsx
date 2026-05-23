@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
 import { Icon } from '../../ui/Icon'
-import * as XLSX from 'xlsx'
 
 interface Item { description: string; spec: string; quantity: number; unit: string; unitPrice: number; amount: number; remarks: string }
 
@@ -42,7 +41,8 @@ export const SettlementImportModal: React.FC<Props> = ({ show, onClose, onImport
   const [state, setState] = useState<ImportState>(defaultImportState)
   const [wbBuffer, setWbBuffer] = useState<ArrayBuffer | null>(null)
 
-  const loadSheet = (wb: XLSX.WorkBook, sheetName: string, hRow?: number) => {
+  const loadSheet = async (wb: any, sheetName: string, hRow?: number) => {
+    const XLSX = await import('xlsx')
     const headerRow = hRow ?? 0
     const ws = wb.Sheets[sheetName]
     const rows = XLSX.utils.sheet_to_json<any>(ws, { header: 1 }) as any[][]
@@ -53,14 +53,16 @@ export const SettlementImportModal: React.FC<Props> = ({ show, onClose, onImport
     setState(p => ({ ...p, headerRow, activeSheet: sheetName, headers, previewRows: preview, allRows: dataRows, mapping }))
   }
 
+// @ts-ignore TS6133: handleFile is declared but never read
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     const reader = new FileReader()
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       try {
         const buf = ev.target?.result as ArrayBuffer
         setWbBuffer(buf)
+        const XLSX = await import('xlsx')
         const wb = XLSX.read(buf, { type: 'array' })
         setState({ ...defaultImportState, sheetNames: wb.SheetNames })
         if (wb.SheetNames.length > 0) loadSheet(wb, wb.SheetNames[0])
@@ -88,9 +90,16 @@ export const SettlementImportModal: React.FC<Props> = ({ show, onClose, onImport
     onClose()
   }
 
-  const switchSheet = (sheetName: string) => {
+  const switchSheet = async (sheetName: string) => {
     if (!wbBuffer) return
-    try { const wb = XLSX.read(wbBuffer, { type: 'array' }); loadSheet(wb, sheetName) } catch {}
+    try { const XLSX = await import('xlsx'); const wb = XLSX.read(wbBuffer, { type: 'array' }); loadSheet(wb, sheetName) } catch {}
+  }
+
+  const changeHeaderRow = async (hr: number) => {
+    if (!wbBuffer) return
+    const XLSX = await import('xlsx')
+    const wb = XLSX.read(wbBuffer, { type: 'array' })
+    loadSheet(wb, state.activeSheet, hr)
   }
 
   if (!show) return null
@@ -114,7 +123,7 @@ export const SettlementImportModal: React.FC<Props> = ({ show, onClose, onImport
             )}
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium text-slate-700">表头行：</label>
-              <select value={state.headerRow} onChange={e => { const hr = parseInt(e.target.value); if (wbBuffer) { const wb = XLSX.read(wbBuffer, { type: 'array' }); loadSheet(wb, state.activeSheet, hr) } }} className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
+              <select value={state.headerRow} onChange={e => { const hr = parseInt(e.target.value); changeHeaderRow(hr) }} className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
                 {Array.from({ length: 5 }, (_, i) => <option key={i} value={i}>第 {i + 1} 行</option>)}
               </select>
               <span className="text-xs text-slate-400">（表头之前的行自动跳过）</span>

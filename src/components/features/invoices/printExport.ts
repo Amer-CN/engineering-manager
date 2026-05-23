@@ -1,5 +1,4 @@
 import type { Invoice, PaymentRecord } from '@/types'
-import * as XLSX from 'xlsx'
 import { formatMoney } from '@/utils/format'
 
 function escapeHtml(s: string): string {
@@ -140,9 +139,10 @@ export function printPaymentList(paymentList: PaymentRecord[]) {
   handlePrint(content)
 }
 
-export function exportInvoiceList(invoiceList: Invoice[]) {
+export async function exportInvoiceList(invoiceList: Invoice[]) {
   if (invoiceList.length === 0) { alert('没有可导出的数据'); return }
   try {
+    const XLSX = await import('xlsx')
     const exportData = invoiceList.map((inv, index) => ({
       '序号': index + 1, '开票日期': inv.issueDate || '',
       '发票类型': inv.type === 'invoice_in' ? '收票' : '开票',
@@ -161,9 +161,10 @@ export function exportInvoiceList(invoiceList: Invoice[]) {
   } catch (error) { console.error('导出失败:', error); alert('导出失败，请重试') }
 }
 
-export function exportPaymentList(paymentList: PaymentRecord[]) {
+export async function exportPaymentList(paymentList: PaymentRecord[]) {
   if (paymentList.length === 0) { alert('没有可导出的数据'); return }
   try {
+    const XLSX = await import('xlsx')
     const exportData = paymentList.map((p, index) => ({
       '序号': index + 1, '日期': p.recordDate || '',
       '类型': p.type === 'invoice_out' ? '回款' : '付款',
@@ -182,7 +183,7 @@ export function exportPaymentList(paymentList: PaymentRecord[]) {
 // 打印收款记录列表（HTML 表格，打印后恢复页面）
 export const printPaymentRecordList = (
   paymentList: Array<{ recordDate?: string; type?: string; amount: number; partnerName?: string; projectName?: string; contractName?: string; remarks?: string }>,
-  showToast: (msg: string, type: string) => void,
+  showToast: (msg: string, type?: string, duration?: number) => void,
   formatMoney: (n: number) => string,
   handlePrint: (content: string) => void,
 ) => {
@@ -211,7 +212,7 @@ export const printPaymentRecordList = (
 // 导出收款记录列表为 Excel (XLSX)
 export const exportPaymentRecordList = async (
   paymentList: Array<{ recordDate?: string; type?: string; amount: number; partnerName?: string; projectName?: string; contractName?: string; remarks?: string }>,
-  showToast: (msg: string, type: string) => void,
+  showToast: (msg: string, type?: string, duration?: number) => void,
 ) => {
   if (paymentList.length === 0) { showToast('没有可导出的数据', 'error'); return }
   try {

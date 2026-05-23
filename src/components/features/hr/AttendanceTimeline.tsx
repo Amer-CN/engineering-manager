@@ -1,11 +1,10 @@
 import React, { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
-import { Button } from '../../ui/Button'
 import { EmptyState } from '../../ui/EmptyState'
-import { useToastContext } from '../../../hooks/useToast'
-import { computeAttendanceSummary, summaryDot, STATUS_META } from '../../../constants/attendance'
-import type { DayStatus, AttendanceRecord } from '../../../types/electron'
+import { useToastStore } from '@/store/toastStore'
+import { computeAttendanceSummary } from '../../../constants/attendance'
+import type { AttendanceRecord } from '../../../types/electron'
 import AttendanceDetail from '../../AttendanceDetail'
 
 function getDaysInMonth(yearMonth: string): number {
@@ -39,7 +38,7 @@ function durationStr(entryDate: string | null): string {
 }
 
 const AttendanceTimeline: React.FC<Props> = ({ member, attendances, deptName, onBack, onSaved }) => {
-  const { showToast } = useToastContext()
+  const showToast = useToastStore(state => state.showToast)
   const [expandedYears, setExpandedYears] = useState<Set<string>>(() => {
     // Expand current year by default
     const thisYear = String(new Date().getFullYear())

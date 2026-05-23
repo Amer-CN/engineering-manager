@@ -1,9 +1,7 @@
-// @ts-nocheck
 /**
  * PartnerSelect 组件测试
  * - 搜索、分组、选择回调
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { PartnerSelect } from '@/components/features/partners/PartnerSelect'

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import { useMemo } from 'react'
 import { Template, TemplateCategory } from '../../../types/electron'
 import { categoryConfig, categoryColors } from './config'
 import { Icon } from '../../ui/Icon'

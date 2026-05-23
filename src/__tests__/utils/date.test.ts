@@ -1,5 +1,3 @@
-// @ts-nocheck
-import { describe, it, expect } from 'vitest'
 import {
   formatDate,
   normalizeDate,
@@ -99,6 +97,17 @@ describe('date.ts', () => {
       expect(age).toBe(30)
     })
 
+    it('生日未到本年时应减 1 岁', () => {
+      // 固定"今天"为 2026-05-23，生日为 06-15（未到）
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-05-23'))
+
+      const age = calculateAge('1990-06-15')
+      expect(age).toBe(35) // 2026-1990=36, 但未过生日 → 35
+
+      vi.useRealTimers()
+    })
+
     it('应处理 null/undefined', () => {
       expect(calculateAge(null)).toBe(0)
       expect(calculateAge(undefined)).toBe(0)
@@ -170,6 +179,20 @@ describe('date.ts', () => {
     it('应处理空字符串', () => {
       expect(parseDateString('')).toBeNull()
     })
+
+    it('应解析 DD/MM/YYYY 格式（日>12 无歧义）', () => {
+      // 15日，不可能是月份，应识别为 DD/MM/YYYY
+      expect(parseDateString('15/03/2025')).toBe('2025-03-15')
+    })
+
+    it('应解析 MM/DD/YYYY 格式（月>12 不可能，走 DD/MM 路径）', () => {
+      // 13不可能为月份，应识别为 DD/MM/YYYY
+      expect(parseDateString('13/03/2025')).toBe('2025-03-13')
+    })
+
+    it('应拒绝无效日期（日超出月份最大天数）', () => {
+      expect(parseDateString('31/02/2025')).toBeNull() // 2月没有31日
+    })
   })
 
   // ─── getRelativeTime ───────────────────────────────────────
@@ -192,6 +215,21 @@ describe('date.ts', () => {
     it('应对过去的天数返回"X天前"', () => {
       const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
       expect(getRelativeTime(threeDaysAgo)).toBe('3天前')
+    })
+
+    it('应对过去的周数返回"X周前"', () => {
+      const tenDaysAgo = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString()
+      expect(getRelativeTime(tenDaysAgo)).toBe('1周前')
+    })
+
+    it('应对过去的月数返回"X月前"', () => {
+      const twoMonthsAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString()
+      expect(getRelativeTime(twoMonthsAgo)).toBe('2月前')
+    })
+
+    it('应对过去的年数返回"X年前"', () => {
+      const twoYearsAgo = new Date(Date.now() - 400 * 24 * 60 * 60 * 1000).toISOString()
+      expect(getRelativeTime(twoYearsAgo)).toBe('1年前')
     })
 
     it('应处理 null/undefined', () => {

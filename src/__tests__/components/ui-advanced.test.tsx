@@ -1,8 +1,6 @@
-// @ts-nocheck
 /**
  * UI 组件测试：Modal、Toast、Pagination
  */
-import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import { Modal } from '../../components/ui/Modal'
 import Toast from '../../components/ui/Toast'

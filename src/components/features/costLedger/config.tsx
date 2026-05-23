@@ -293,7 +293,7 @@ export function getLevel1Color(
 export function emptyEntry(projectId: number): Omit<CostLedgerEntry, 'id' | 'createdAt' | 'updatedAt'> {
   return {
     projectId,
-    voucherNo: 0,
+    voucherNo: '',
     date: new Date().toISOString().slice(0, 10),
     direction: 'expense',
     amount: 0,

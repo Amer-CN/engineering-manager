@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
 import { workerTypeToCode } from './memberFormTypes'
+import { recognizeIdCard } from '@/services/ocr'
 
 export interface WorkerPoolFormData {
   name: string; phone: string; idCard: string
@@ -57,23 +58,21 @@ export function WorkerPoolForm({ visible, editing, onClose, onSubmit, onSwitchTo
     reader.onload = (ev) => {
       const dataUrl = ev.target?.result as string
       update({ [field]: dataUrl })
-      // OCR: recognize ID card
-      if ((window as any).electronAPI?.recognizeIdCard) {
-        setOcrBusy(true)
-        ;(window as any).electronAPI.recognizeIdCard(dataUrl).then((res: any) => {
-          if (res?.success && res.data) {
-            const d = res.data
-            update({
-              gender: d.gender || form.gender,
-              ethnicity: d.ethnicity || form.ethnicity,
-              birthDate: d.birthDate || form.birthDate,
-              idCardAddress: d.address || form.idCardAddress,
-              idCard: d.idCard || form.idCard,
-              name: d.name || form.name
-            })
-          }
-        }).catch(() => {}).finally(() => setOcrBusy(false))
-      }
+      // OCR: 身份证识别（通过 ocr.ts 调用主进程 IPC）
+      setOcrBusy(true)
+      recognizeIdCard(dataUrl).then((res) => {
+        if (res?.success && res.idCard) {
+          const d = res.idCard
+          update({
+            gender: d.gender || form.gender,
+            ethnicity: d.ethnicity || form.ethnicity,
+            birthDate: d.birthDate || form.birthDate,
+            idCardAddress: d.address || form.idCardAddress,
+            idCard: d.number || form.idCard,
+            name: d.name || form.name
+          })
+        }
+      }).catch(() => {}).finally(() => setOcrBusy(false))
     }
     reader.readAsDataURL(file)
   }
@@ -105,18 +104,18 @@ export function WorkerPoolForm({ visible, editing, onClose, onSubmit, onSwitchTo
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">姓名 *</label>
               <input type="text" value={form.name} onChange={e => update({ name: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500" required />
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500" required />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">联系电话</label>
               <input type="text" value={form.phone} onChange={e => update({ phone: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500" />
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500" />
             </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">身份证号</label>
             <input type="text" value={form.idCard} onChange={e => update({ idCard: e.target.value })} maxLength={18}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 font-mono" />
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 font-mono" />
           </div>
 
           {/* ID Card upload */}
@@ -156,28 +155,28 @@ export function WorkerPoolForm({ visible, editing, onClose, onSubmit, onSwitchTo
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">性别</label>
               <select value={form.gender} onChange={e => update({ gender: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500">
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500">
                 <option value="">未知</option><option value="男">男</option><option value="女">女</option>
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">民族</label>
               <input type="text" value={form.ethnicity} onChange={e => update({ ethnicity: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500" />
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">出生日期</label>
               <input type="date" value={form.birthDate} onChange={e => update({ birthDate: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500" />
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500" />
             </div>
             <div />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">身份证住址</label>
             <input type="text" value={form.idCardAddress} onChange={e => update({ idCardAddress: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 text-sm" />
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 text-sm" />
           </div>
 
           {/* Bank info */}
@@ -185,17 +184,17 @@ export function WorkerPoolForm({ visible, editing, onClose, onSubmit, onSwitchTo
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">工资卡号</label>
               <input type="text" value={form.bankAccount} onChange={e => update({ bankAccount: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 font-mono text-sm" />
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 font-mono text-sm" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">开户行</label>
               <input type="text" value={form.bankName} onChange={e => update({ bankName: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500" />
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">联行号</label>
               <input type="text" value={form.bankLineNo} onChange={e => update({ bankLineNo: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 font-mono text-sm" />
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 font-mono text-sm" />
             </div>
           </div>
 
@@ -204,7 +203,7 @@ export function WorkerPoolForm({ visible, editing, onClose, onSubmit, onSwitchTo
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">默认工种</label>
               <select value={form.workerType} onChange={e => update({ workerType: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500">
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500">
                 <option value="">未设置</option>
                 <option value="bricklayer">砌筑工</option>
                 <option value="concreter">混凝土工</option>
@@ -224,7 +223,7 @@ export function WorkerPoolForm({ visible, editing, onClose, onSubmit, onSwitchTo
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">默认日工资</label>
               <input type="number" value={form.dailyWage} onChange={e => update({ dailyWage: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500" min={0} placeholder="元/天" />
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500" min={0} placeholder="元/天" />
             </div>
           </div>
         </form>

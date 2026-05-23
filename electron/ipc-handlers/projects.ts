@@ -1,10 +1,12 @@
-﻿/**
+/**
  * 项目 IPC 处理器
+ * 双写：SQLite（projects 表 + 级联删除 9 张关联表）
  */
 
 import { ipcMain } from 'electron'
 import log from 'electron-log'
 import { db, dbReady, saveDatabase } from '../database'
+import { useSqliteRead, shouldFallbackToJson, projectQueries } from '../sqlite/queries'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 项目 CRUD
@@ -12,6 +14,13 @@ import { db, dbReady, saveDatabase } from '../database'
 
 ipcMain.handle('db:projects:getAll', () => {
   if (!dbReady) return { success: false, error: 'Database not ready' }
+  // SQLite 优先
+  if (useSqliteRead()) {
+    const data = projectQueries.listProjects()
+    if (data !== null) return { success: true, data }
+  }
+  // JSON 回退
+  if (!shouldFallbackToJson()) return { success: false, error: 'SQLite read failed (sqlite-primary mode)' }
   const result = db.projects.map((p: any) => {
     const manager = p.projectManagerId ? db.members.find((m: any) => m.id === p.projectManagerId) : null
     return {
@@ -36,6 +45,8 @@ ipcMain.handle('db:projects:create', (_, project) => {
     }
     db.projects.push(newProject)
     saveDatabase()
+    // SQLite 双写
+    projectQueries.createProject(newProject)
     return { success: true, data: { id } }
   } catch (error: any) {
     log.error('Failed to create project:', error)
@@ -50,6 +61,8 @@ ipcMain.handle('db:projects:update', (_, project) => {
     if (index !== -1) {
       db.projects[index] = { ...db.projects[index], ...project, updatedAt: new Date().toISOString() }
       saveDatabase()
+      // SQLite 双写
+      projectQueries.updateProject(db.projects[index])
     }
     return { success: true }
   } catch (error: any) {
@@ -73,6 +86,8 @@ ipcMain.handle('db:projects:delete', (_, id) => {
     if (db.attendances) db.attendances = db.attendances.filter((a: any) => a.projectId !== id)
     if (db.projectMembers) db.projectMembers = db.projectMembers.filter((m: any) => m.projectId !== id)
     saveDatabase()
+    // SQLite 双写（含级联删除）
+    projectQueries.deleteProject(id)
     return { success: true }
   } catch (error: any) {
     log.error('Failed to delete project:', error)

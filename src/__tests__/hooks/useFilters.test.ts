@@ -1,5 +1,3 @@
-// @ts-nocheck
-import { describe, it, expect, afterEach } from 'vitest'
 import { renderHook, act, cleanup } from '@testing-library/react'
 import { useFilters } from '../../hooks/useFilters'
 
@@ -9,6 +7,7 @@ interface TestItem {
   category: string
   status: string
   tags: string[]
+  [key: string]: unknown
 }
 
 const mockItems: TestItem[] = [

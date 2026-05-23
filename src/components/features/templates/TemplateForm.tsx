@@ -3,7 +3,7 @@ import { Template, TemplateCategory, TemplateVariable } from '../../../types/ele
 import { categoryConfig } from './config'
 import { Icon } from '../../ui/Icon'
 import { FILE_CATEGORIES, uploadFile } from '../../../services/fileService'
-import { useToastContext } from '../../../hooks/useToast'
+import { useToastStore } from '@/store/toastStore'
 
 interface TemplateFormProps {
   template?: Template | null
@@ -23,7 +23,7 @@ const defaultFormData = {
 }
 
 export default function TemplateForm({ template, onSubmit, onCancel }: TemplateFormProps) {
-  const { showToast } = useToastContext()
+  const showToast = useToastStore(state => state.showToast)
   const [formData, setFormData] = useState(defaultFormData)
   const [dragOver, setDragOver] = useState(false)
 

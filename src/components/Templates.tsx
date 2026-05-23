@@ -3,7 +3,7 @@
  */
 import React, { useState, useEffect, useCallback } from 'react'
 import type { Template, TemplateCategory } from '../types/electron'
-import { useToastContext } from '../hooks/useToast'
+import { useToastStore } from '@/store/toastStore'
 import { TemplateDashboard, TemplateList, TemplateForm, TemplatePreview, TemplateGenerate } from './features/templates'
 import { logCreate, logUpdate, logDelete } from '../utils/audit'
 import { motion } from 'framer-motion'
@@ -12,7 +12,7 @@ import { Icon } from './ui/Icon'
 type ViewMode = 'dashboard' | 'detail'
 
 const Templates: React.FC = () => {
-  const { showToast } = useToastContext()
+  const showToast = useToastStore(state => state.showToast)
   const [templates, setTemplates] = useState<Template[]>([])
   const [stats, setStats] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)

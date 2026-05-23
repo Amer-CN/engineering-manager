@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { recognizeIdCard, getOCRConfig, OCRProvider } from '@/services/ocr'
 import { readUploadedFile, FILE_CATEGORIES } from '../../../services/fileService'
-import { useToastContext } from '../../../hooks/useToast'
+import { useToastStore } from '@/store/toastStore'
 import StaffForm from './StaffForm'
 import WorkerForm from './WorkerForm'
 import {
@@ -39,7 +39,7 @@ export function MemberForm({
   const [ocrMode, setOcrMode] = useState<OCRProvider>('offline')
   const [dragOverField, setDragOverField] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const { showToast } = useToastContext()
+  const showToast = useToastStore(state => state.showToast)
 
   // 文件上传 Refs
   const staffFrontInputRef = useRef<HTMLInputElement>(null)
@@ -308,18 +308,7 @@ export function MemberForm({
           showToast('请输入姓名', 'error')
           return
         }
-        if (!workerFormData.projectId) {
-          showToast('请选择项目', 'error')
-          return
-        }
-        if (!workerFormData.teamId) {
-          showToast('请选择班组', 'error')
-          return
-        }
-        if (!workerFormData.dailyWage) {
-          showToast('请输入日工资', 'error')
-          return
-        }
+        // 项目/班组/日工资不再强制必填（工人库只存基本信息）
         await onSubmit(workerFormData)
       }
     } finally {

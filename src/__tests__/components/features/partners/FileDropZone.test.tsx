@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * FileDropZone 组件测试
  * - 无文件时显示上传区
@@ -7,7 +6,6 @@
  * - 拖拽事件
  * - 删除按钮
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 

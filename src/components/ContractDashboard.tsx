@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 
 const CARD = 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm'
+// @ts-ignore TS6133: CHART_COLORS is declared but never read
 const CHART_COLORS = ['#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6', '#06b6d4']
 
 const sectionV = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4 } } }
@@ -233,7 +234,7 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrency(v)} />
-                <Tooltip formatter={(value: number) => [`¥${formatCurrency(value)}`, '']} />
+                <Tooltip /* @ts-ignore */ formatter={(value: any) => [`¥${formatCurrency(value ?? 0)}`, '']} />
                 <Bar dataKey="amount" radius={[8, 8, 0, 0]}>
                   {barData.map((entry, idx) => (
                     <Cell key={idx} fill={entry.fill} />
@@ -257,7 +258,7 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
                     <Cell key={idx} fill={entry.color} stroke="none" />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value: number) => [`${value} 份`, '']} />
+                <Tooltip /* @ts-ignore */ formatter={(value: any) => [`${value ?? 0} 份`, '']} />
               </PieChart>
             </ResponsiveContainer>
           ) : (

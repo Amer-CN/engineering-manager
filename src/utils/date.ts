@@ -13,6 +13,30 @@ export function formatDate(date: string | Date | null | undefined): string {
 }
 
 /**
+ * 安全归一化日期显示 — 对已存库的各种脏数据容错
+ * - 先用 parseDateString 尝试标准格式
+ * - 再尝试宽松匹配（处理逗号代替点/多种混合分隔符）
+ * - 仍失败则返回原值，不阻断显示
+ */
+export function normalizeDate(date: string | null | undefined): string {
+  if (!date) return ''
+  // 已经是标准格式
+  if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date
+  const parsed = parseDateString(date)
+  if (parsed) return parsed
+  // 宽松匹配：各种分隔符混用（如 2025.4,10）
+  const loose = String(date).trim().match(/^(\d{4})\s*[.,/\- ]\s*(\d{1,2})\s*[.,/\- ]\s*(\d{1,2})$/)
+  if (loose) {
+    const y = loose[1], mo = loose[2].padStart(2, '0'), d = loose[3].padStart(2, '0')
+    const mNum = parseInt(mo), dNum = parseInt(d)
+    if (mNum >= 1 && mNum <= 12 && dNum >= 1 && dNum <= 31) {
+      return `${y}-${mo}-${d}`
+    }
+  }
+  return date
+}
+
+/**
  * 格式化日期时间为 YYYY-MM-DD HH:mm:ss
  */
 export function formatDateTime(date: string | Date | null | undefined): string {
@@ -77,9 +101,9 @@ export function parseDateString(input: string): string | null {
   const trimmed = input.trim()
   if (!trimmed) return null
   const patterns = [
-    { regex: /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/, order: [0, 1, 2] },
-    { regex: /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/, order: [2, 0, 1] },
-    { regex: /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/, order: [2, 1, 0] },
+    { regex: /^(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})$/, order: [0, 1, 2] },
+    { regex: /^(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{4})$/, order: [2, 0, 1] },
+    { regex: /^(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{4})$/, order: [2, 1, 0] },
     { regex: /^(\d{4})年(\d{1,2})月(\d{1,2})日$/, order: [0, 1, 2] },
     { regex: /^(\d{4})(\d{2})(\d{2})$/, order: [0, 1, 2] },
   ]
@@ -91,7 +115,8 @@ export function parseDateString(input: string): string | null {
       if (mo >= 1 && mo <= 12 && d >= 1 && d <= 31) {
         const dim = new Date(y, mo, 0).getDate()
         if (d <= dim) {
-          if (p.regex.source.startsWith('(\\d{1,2})[-/](\\d{1,2})[-/](\\d{4})')) {
+          // 仅对 DD/MM/YYYY 或 MM/DD/YYYY 模式做歧义消除（order[0]===2 表示年份是第一个捕获组）
+          if (p.order[0] === 2) {
             const first = parseInt(m[1], 10)
             const second = parseInt(m[2], 10)
             if (first > 12 && second <= 12) return `${y.toString().padStart(4, '0')}-${mo.toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`

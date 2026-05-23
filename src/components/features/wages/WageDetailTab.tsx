@@ -175,7 +175,7 @@ export default function WageDetailTab({
         </div>
         <input type="text" placeholder="搜索姓名..." value={filterMemberName}
           onChange={e => setFilterMemberName(e.target.value)}
-          className="px-3 py-2 border border-slate-300 rounded-lg text-sm w-40 focus:ring-2 focus:ring-amber-500" />
+          className="px-3 py-2 border border-slate-300 rounded-lg text-sm w-40 focus:ring-2 focus:ring-primary-500" />
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-slate-600">班组</label>
           <select value={filterTeamName} onChange={e => setFilterTeamName(e.target.value)}
@@ -200,7 +200,7 @@ export default function WageDetailTab({
         {scope === 'project' && (
           <button onClick={onGenerateWages}
             disabled={loading || filterYear === '全部' || filterMonth === '全部'}
-            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+            className="bg-primary-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
             生成工资表
           </button>
         )}

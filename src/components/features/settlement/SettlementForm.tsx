@@ -1,9 +1,7 @@
 import React, { useRef } from 'react'
 import { Settlement as SettlementData, Project, Partner } from '../../../types/electron'
 import { Icon } from '../../ui/Icon'
-import { formatMoney } from '@/utils/format'
 import { subTypeConfig } from './config'
-import * as XLSX from 'xlsx'
 import { SettlementItemsTable } from './SettlementItemsTable'
 import { SettlementImportModal } from './SettlementImportModal'
 
@@ -104,6 +102,7 @@ export const SettlementForm: React.FC<SettlementFormProps> = ({
 
   // 模板导入
   const templateInputRef = useRef<HTMLInputElement>(null)
+// @ts-ignore TS6133: excelInputRef is declared but never read
   const excelInputRef = useRef<HTMLInputElement>(null)
   const [showImportModal, setShowImportModal] = React.useState(false)
 
@@ -118,6 +117,7 @@ export const SettlementForm: React.FC<SettlementFormProps> = ({
         }
       }
     } catch (e) {}
+    const XLSX = await import('xlsx')
     const headers = ['材料名称', '规格型号', '单位', '数量', '单价(元)']
     const sampleRows = [['示例：水泥PO42.5', '50kg/袋', '吨', 100, 420], ['示例：钢筋HRB400', 'Φ12mm', '吨', 50, 3850]]
     const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleRows])
@@ -129,8 +129,9 @@ export const SettlementForm: React.FC<SettlementFormProps> = ({
   const handleTemplateUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return
     const reader = new FileReader()
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       try {
+        const XLSX = await import('xlsx')
         const wb = XLSX.read(ev.target?.result, { type: 'array' })
         const rows = XLSX.utils.sheet_to_json<any>(wb.Sheets[wb.SheetNames[0]], { header: 1 }) as any[][]
         if (rows.length < 2) return

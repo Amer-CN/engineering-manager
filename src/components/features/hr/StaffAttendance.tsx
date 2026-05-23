@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { Button } from '../../ui/Button'
 import { EmptyState } from '../../ui/EmptyState'
-import { useToastContext } from '../../../hooks/useToast'
-import { STATUS_META, summaryDot, computeAttendanceSummary } from '../../../constants/attendance'
-import type { DayStatus, AttendanceRecord } from '../../../types/electron'
+import { useToastStore } from '@/store/toastStore'
+import { logCreate, logDelete } from '../../../utils/audit'
+import { STATUS_META, computeAttendanceSummary } from '../../../constants/attendance'
+import type { AttendanceRecord } from '../../../types/electron'
 import AttendanceDetail from '../../AttendanceDetail'
 import AttendanceTimeline from './AttendanceTimeline'
+import { StaffAttendanceRow } from './StaffAttendanceRow'
 
 function getDaysInMonth(yearMonth: string): number {
   const [y, m] = yearMonth.split('-').map(Number)
@@ -24,7 +26,7 @@ function formatMonthLabel(ym: string): string {
 }
 
 const StaffAttendance: React.FC = () => {
-  const { showToast } = useToastContext()
+  const showToast = useToastStore(state => state.showToast)
   const now = new Date()
   const [yearMonth, setYearMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`)
   const [staff, setStaff] = useState<any[]>([])
@@ -42,7 +44,7 @@ const StaffAttendance: React.FC = () => {
   const [detailMember, setDetailMember] = useState<any | null>(null)
   const [detailYearMonth, setDetailYearMonth] = useState('')
 
-  const daysInMonth = getDaysInMonth(yearMonth)
+  const daysInMonth = useMemo(() => getDaysInMonth(yearMonth), [yearMonth])
 
   // Reset selection when filters change
   useEffect(() => { setSelectedIds(new Set()) }, [yearMonth, filterDept])
@@ -82,37 +84,55 @@ const StaffAttendance: React.FC = () => {
     return map
   }, [allAttendances])
 
-  // Filter: only staff who joined on or before end of selected month
+  // Filter: only staff who joined on or before end of selected month, and haven't left before this month
   const monthEnd = getLastDayOfMonth(yearMonth)
-  const getEntryDate = (s: any) => s.entryDate || (s.createdAt ? s.createdAt.split('T')[0] : null)
-  const filterableStaff = staff.filter((s: any) => {
+  const monthStart = `${yearMonth}-01`
+  const getEntryDate = useCallback((s: any) => s.entryDate || (s.createdAt ? s.createdAt.split('T')[0] : null), [])
+
+  const filterableStaff = useMemo(() => staff.filter((s: any) => {
     const ed = getEntryDate(s)
     if (!ed) return true
-    return ed <= monthEnd
-  })
+    if (ed > monthEnd) return false
+    if (s.leaveDate && !s.reentryDate && s.leaveDate < monthStart) return false
+    if (s.leaveDate && s.reentryDate && s.leaveDate < monthStart && s.reentryDate > monthEnd) return false
+    return true
+  }), [staff, monthEnd, monthStart, getEntryDate])
 
-  const filteredStaff = filterableStaff.filter((s: any) => {
+  const filteredStaff = useMemo(() => filterableStaff.filter((s: any) => {
     if (filterDept && s.departmentId !== filterDept) return false
     return true
-  })
+  }), [filterableStaff, filterDept])
 
-  const getAttendanceForMember = (memberId: number) =>
-    currentMonthAttendances.find((a: any) => a.memberId === memberId)
+  const getAttendanceForMember = useCallback((memberId: number) =>
+    currentMonthAttendances.find((a: any) => a.memberId === memberId),
+    [currentMonthAttendances]
+  )
 
-  const getAttendanceForMemberMonth = (memberId: number, ym: string) =>
-    allAttendances.find((a: any) => a.memberId === memberId && a.yearMonth === ym)
+  const getAttendanceForMemberMonth = useCallback((memberId: number, ym: string) =>
+    allAttendances.find((a: any) => a.memberId === memberId && a.yearMonth === ym),
+    [allAttendances]
+  )
 
-  const hasAttendance = (memberId: number): boolean => {
+  const hasAttendance = useCallback((memberId: number): boolean => {
     const att = getAttendanceForMember(memberId)
     return !!(att && att.dailyStatus && Object.keys(att.dailyStatus).length > 0)
-  }
+  }, [getAttendanceForMember])
 
-  const getDeptName = (id?: number) => departments.find((d: any) => d.id === id)?.name || '-'
+  const getDeptName = useCallback((id?: number) => departments.find((d: any) => d.id === id)?.name || '-', [departments])
+
+  // Pre-compute entry day for a staff member in the current month
+  const getEntryDay = useCallback((s: any) => {
+    const ed = getEntryDate(s)
+    if (!ed) return 1
+    const [ey, em, ed2] = ed.split('-').map(Number)
+    const [cy, cm] = yearMonth.split('-').map(Number)
+    return (ey === cy && em === cm) ? ed2 : 1
+  }, [getEntryDate, yearMonth])
 
   // Batch select
-  const toggleSelect = (id: number) => {
+  const toggleSelect = useCallback((id: number) => {
     setSelectedIds(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next })
-  }
+  }, [])
   const toggleAll = () => {
     const recordIds = filteredStaff.map(s => getAttendanceForMember(s.id)).filter(Boolean).map((a: any) => a.id)
     if (recordIds.length === 0) return
@@ -133,6 +153,7 @@ const StaffAttendance: React.FC = () => {
       }
       await loadData()
       showToast(created > 0 ? `已为 ${created} 人生成考勤（默认全部出勤）` : '所有人员已有考勤记录', created > 0 ? 'success' : 'info')
+      if (created > 0) logCreate('attendances', `${yearMonth} 员工考勤`, 0, { members: filteredStaff.length, created })
     } catch (e: any) { showToast(e?.message || '生成失败', 'error') }
     finally { setGenerating(false) }
   }
@@ -141,7 +162,7 @@ const StaffAttendance: React.FC = () => {
     if (!confirm(`确定删除 ${record.memberName || '该员工'} ${formatMonthLabel(record.yearMonth || '')} 的考勤记录吗？此操作不可撤销。`)) return
     try {
       const result = await window.electronAPI.deleteAttendance(record.id)
-      if (result.success) { showToast('已删除', 'success'); loadData() }
+      if (result.success) { showToast('已删除', 'success'); loadData(); logDelete('attendances', record.memberName || '考勤', record.id, {}) }
       else showToast(result.error || '删除失败', 'error')
     } catch (e: any) { showToast(e?.message || '删除失败', 'error') }
   }
@@ -150,7 +171,7 @@ const StaffAttendance: React.FC = () => {
     if (selectedIds.size === 0 || !confirm(`确认删除选中的 ${selectedIds.size} 条考勤记录吗？此操作不可撤销。`)) return
     try {
       const result = await window.electronAPI.batchDeleteAttendances(Array.from(selectedIds))
-      if (result.success) { showToast(`已删除 ${selectedIds.size} 条`, 'success'); setSelectedIds(new Set()); loadData() }
+      if (result.success) { showToast(`已删除 ${selectedIds.size} 条`, 'success'); setSelectedIds(new Set()); loadData(); logDelete('attendances', `${selectedIds.size} 条考勤`, 0, {}) }
       else showToast(result.error || '批量删除失败', 'error')
     } catch (e: any) { showToast(e?.message || '批量删除失败', 'error') }
   }
@@ -163,7 +184,7 @@ const StaffAttendance: React.FC = () => {
         const att = getAttendanceForMember(s.id)
         const s2 = computeAttendanceSummary(att?.dailyStatus, daysInMonth, (() => { const ed = getEntryDate(s); if (!ed) return 1; const [ey, em, ed2] = ed.split('-').map(Number); const [cy, cm] = yearMonth.split('-').map(Number); return (ey === cy && em === cm) ? ed2 : 1 })())
         const dept = departments.find((d: any) => d.id === s.departmentId)
-        return { '姓名': s.name, '部门': dept?.name || '', '职位': s.position || '', '出勤': s2.counts.work, '法定假': s2.counts.holiday, '病假': s2.counts.sick_leave, '事假': s2.counts.personal_leave, '缺勤': s2.counts.absent, '状态': hasAttendance(s.id) ? (s2.daysOff <= 4 ? '全勤' : '缺勤') : '无考勤' }
+        return { '姓名': s.name, '部门': dept?.name || '', '职位': s.position || '', '出勤': s2.counts.work, '法定假': s2.counts.holiday, '病假': s2.counts.sick_leave, '事假': s2.counts.personal_leave, '状态': hasAttendance(s.id) ? (s2.daysOff <= 4 ? '全勤' : '缺勤') : '无考勤' }
       })
       const wb = XLSX.utils.book_new(); wb.SheetNames.push('考勤汇总'); wb.Sheets['考勤汇总'] = XLSX.utils.json_to_sheet(rows)
       XLSX.writeFile(wb, `考勤汇总_${yearMonth}.xlsx`)
@@ -171,7 +192,7 @@ const StaffAttendance: React.FC = () => {
     } catch (e: any) { showToast(e?.message || '导出失败', 'error') }
   }
 
-  const openHistoryMonth = async (memberId: number, ym: string) => {
+  const openHistoryMonth = useCallback(async (memberId: number, ym: string) => {
     const member = staff.find(s => s.id === memberId)
     if (!member) { showToast('人员不存在', 'error'); return }
     const record = getAttendanceForMemberMonth(memberId, ym)
@@ -190,7 +211,17 @@ const StaffAttendance: React.FC = () => {
       return
     }
     setDetailRecord(record); setDetailMember(member); setDetailYearMonth(ym)
-  }
+  }, [staff, allAttendances, getAttendanceForMemberMonth, showToast, loadData])
+
+  // Pre-compute row data to stabilize StaffAttendanceRow props
+  const rows = useMemo(() => filteredStaff.map(s => {
+    const att = getAttendanceForMember(s.id)
+    const isSelected = !!att && selectedIds.has(att.id)
+    const deptName = getDeptName(s.departmentId)
+    const entryDay = getEntryDay(s)
+    const historyMonths = historyMap.get(s.id) || []
+    return { s, att, isSelected, deptName, entryDay, historyMonths }
+  }), [filteredStaff, getAttendanceForMember, selectedIds, getDeptName, getEntryDay, historyMap])
 
   // Show timeline sub-page for attendance history
   if (timelineMember) {
@@ -222,14 +253,14 @@ const StaffAttendance: React.FC = () => {
     )
   }
 
-  const joinedAfter = staff.filter((s: any) => { const ed = getEntryDate(s); return ed && ed > monthEnd }).length
+  const joinedAfter = useMemo(() => staff.filter((s: any) => { const ed = getEntryDate(s); return ed && ed > monthEnd }).length, [staff, getEntryDate, monthEnd])
 
   if (loading) {
     return <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-4 border-indigo-500 border-t-transparent" /></div>
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex-1 flex flex-col overflow-hidden">
       {/* Toolbar */}
       <div className="bg-white rounded-xl shadow-sm px-5 py-3 flex items-center gap-4 flex-wrap">
         <div className="flex items-center gap-2">
@@ -260,15 +291,15 @@ const StaffAttendance: React.FC = () => {
 
       {/* Summary list */}
       {filteredStaff.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm py-12">
+        <div className="bg-white rounded-xl shadow-sm flex-1 py-12">
           <EmptyState icon="Calendar" title="暂无符合条件的人员"
             description={staff.length === 0 ? '请先在人员档案中添加管理人员' : '请调整筛选条件'} />
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm overflow-x-auto">
+        <div className="bg-white rounded-xl shadow-sm flex-1 overflow-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50">
+              <tr className="border-b border-slate-200 bg-slate-50 sticky top-0">
                 <th className="px-3 py-3 w-10">
                   <input type="checkbox"
                     checked={selectedIds.size > 0 && (() => { const ids = filteredStaff.map(s => getAttendanceForMember(s.id)).filter(Boolean).map((a: any) => a.id); return ids.length > 0 && ids.every((id: number) => selectedIds.has(id)) })()}
@@ -283,87 +314,23 @@ const StaffAttendance: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredStaff.map(s => {
-                const att = getAttendanceForMember(s.id)
-                const summary = computeAttendanceSummary(att?.dailyStatus, daysInMonth, (() => { const ed = getEntryDate(s); if (!ed) return 1; const [ey, em, ed2] = ed.split('-').map(Number); const [cy, cm] = yearMonth.split('-').map(Number); return (ey === cy && em === cm) ? ed2 : 1 })())
-                const ready = hasAttendance(s.id)
-                const summaryItems = (STATUS_META.filter(x => x.key !== undefined) as { key: DayStatus; label: string; color: string }[])
-                  .map(st => ({ ...st, count: summary.counts[st.key] }))
-                  .filter(item => item.count > 0)
-                const historyMonths = historyMap.get(s.id) || []
-                const historyYears = [...new Set(historyMonths.map((ym: string) => ym.slice(0, 4)))].sort()
-
-                return (
-                  <tr key={s.id} className="hover:bg-slate-50">
-                    <td className="px-3 py-3">
-                      {att && <input type="checkbox" checked={selectedIds.has(att.id)}
-                        onChange={() => toggleSelect(att.id)} className="rounded" />}
-                    </td>
-                    <td className="px-4 py-3">
-                      <button onClick={() => setTimelineMember(s)}
-                        className="text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:underline text-left">
-                        {s.name}
-                      </button>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-slate-500">{getDeptName(s.departmentId)}</td>
-                    <td className="px-4 py-3">
-                      {ready ? (
-                        <div className="flex items-center gap-2 flex-wrap text-xs">
-                          {summaryItems.map(item => (
-                            <span key={item.key} className="inline-flex items-center gap-1 whitespace-nowrap">
-                              <span className={`w-2 h-2 rounded-full ${summaryDot[item.key]}`} />
-                              <span className="text-slate-600">{item.label}</span>
-                              <span className="font-medium text-slate-700">{item.count}天</span>
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-slate-400">未标记</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {ready ? (
-                        summary.daysOff <= 4 ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-emerald-100 text-emerald-700">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />全勤
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700">
-                            <span className="w-1.5 h-1.5 rounded-full bg-red-500" />缺勤
-                          </span>
-                        )
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-500">未标记</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      {historyMonths.length > 0 ? (
-                        <button onClick={() => setTimelineMember(s)}
-                          className="text-xs text-indigo-600 hover:text-indigo-800 hover:underline">
-                          {historyYears.length}年 · {historyMonths.length}个月
-                        </button>
-                      ) : (
-                        <span className="text-xs text-slate-300">-</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        {att ? (
-                          <>
-                            <button onClick={() => openHistoryMonth(s.id, yearMonth)}
-                              className="text-indigo-600 hover:text-indigo-800 text-sm font-medium">编辑</button>
-                            <button onClick={() => handleDelete(att)}
-                              className="text-red-400 hover:text-red-600 text-sm" title="删除本月考勤">删除</button>
-                          </>
-                        ) : (
-                          <button onClick={() => openHistoryMonth(s.id, yearMonth)}
-                            className="text-indigo-600 hover:text-indigo-800 text-sm">创建</button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
+              {rows.map(({ s, att, isSelected, deptName, entryDay, historyMonths }) => (
+                  <StaffAttendanceRow
+                    key={s.id}
+                    s={s}
+                    att={att}
+                    isSelected={isSelected}
+                    daysInMonth={daysInMonth}
+                    yearMonth={yearMonth}
+                    historyMonths={historyMonths}
+                    deptName={deptName}
+                    entryDay={entryDay}
+                    onToggleSelect={toggleSelect}
+                    onTimeline={setTimelineMember}
+                    onEdit={openHistoryMonth}
+                    onDelete={handleDelete}
+                  />
+              ))}
             </tbody>
           </table>
         </div>

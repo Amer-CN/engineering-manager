@@ -1,10 +1,13 @@
 /**
- * 统计 IPC 处理器
+ * 统计 IPC 处理器 — SQLite 优先读取版
+ *
+ * 仪表盘统计接口，SQLite 优先聚合，JSON 回退。
  */
-
 import { ipcMain } from 'electron'
 import log from 'electron-log'
 import { db, dbReady } from '../database'
+import { useSqliteRead, shouldFallbackToJson } from '../sqlite'
+import { statsQueries } from '../sqlite/queries'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 统计接口
@@ -12,6 +15,26 @@ import { db, dbReady } from '../database'
 
 ipcMain.handle('db:stats:getDashboard', () => {
   if (!dbReady) return { success: false, error: 'Database not ready' }
+
+  // SQLite 优先读取
+  if (useSqliteRead()) {
+    try {
+      const stats = statsQueries.getDashboard()
+      if (stats) {
+        // 补充 recentProjects 的完整字段（SQLite 查询只返回基本字段）
+        const recentProjects = stats.recentProjects.map((p: any) => {
+          const fullProject = db.projects.find((fp: any) => fp.id === p.id)
+          return fullProject || p
+        })
+        return { success: true, data: { ...stats, recentProjects } }
+      }
+    } catch (err) {
+      log.warn('[stats:getDashboard] SQLite read failed, falling back to JSON:', err)
+    }
+  }
+
+  // JSON 回退
+  if (!shouldFallbackToJson()) return { success: false, error: 'SQLite read failed (sqlite-primary mode)' }
   try {
     const projectsCount = db.projects.length
     const membersCount = db.members.length
@@ -20,7 +43,7 @@ ipcMain.handle('db:stats:getDashboard', () => {
     const resolveCategoryLabel = (code: string): string => {
       if (db.costLedgerCategories) {
         const cat = db.costLedgerCategories.find((c: any) => c.code === code && c.isEnabled !== false)
-        if (cat) return cat.label
+        if (cat) return cat.level1 || cat.label
       }
       return code
     }

@@ -4,8 +4,7 @@
  * 成员筛选组件
  */
 
-import React from 'react'
-import type { Member, WorkerStatus } from '@/types'
+import type { WorkerStatus } from '@/types'
 import { Icon } from '../../ui/Icon'
 
 // ═══════════════════════════════════════════════════════════════════════════════

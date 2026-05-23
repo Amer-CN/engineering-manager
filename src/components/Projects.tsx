@@ -6,12 +6,12 @@ import type { Project, Member } from '../types/electron'
 import { logCreate, logUpdate, logDelete, logExport } from '../utils/audit'
 import { usePermission } from '../hooks/usePermission.tsx'
 import { exportProjects } from '../utils/export-import'
-import { useToastContext } from '../hooks/useToast'
+import { useToastStore } from '@/store/toastStore'
 import { ProjectList, ProjectForm, ProjectDetail, ProjectFilters, ProjectFormData } from './features/projects'
 
 const Projects: React.FC<{ refresh?: () => void }> = ({ refresh }) => {
   const { can } = usePermission()
-  const { showToast } = useToastContext()
+  const showToast = useToastStore(state => state.showToast)
   const [projects, setProjects] = useState<Project[]>([])
   const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(true)

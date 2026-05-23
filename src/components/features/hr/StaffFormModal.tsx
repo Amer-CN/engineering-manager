@@ -17,7 +17,7 @@ export interface StaffFormData {
   name: string; phone: string; email: string; idCard: string; gender: string
   ethnicity: string; birthDate: string; idCardAddress: string
   departmentId: number | ''; position: string; entryDate: string
-  baseSalary: number | ''; status: string; idCardFront: string
+  baseSalary: number | ''; status: string; leaveDate: string; reentryDate: string; idCardFront: string
   idCardBack: string; contractFile: string; contractFileType: string
 }
 
@@ -46,6 +46,14 @@ const StaffFormModal: React.FC<Props> = ({
       if (dept?.positions?.length && !dept.positions.includes(next.position)) {
         next.position = ''
       }
+    }
+    // 状态自动推导：
+    //   有离职日期 且 无重新入职 → 离职
+    //   其他情况 → 在职（包括未填离职、或已填离职+重新入职）
+    if ('leaveDate' in patch || 'reentryDate' in patch) {
+      const ld = 'leaveDate' in patch ? patch.leaveDate : formData.leaveDate
+      const rd = 'reentryDate' in patch ? patch.reentryDate : formData.reentryDate
+      next.status = (ld && !rd) ? 'left' : 'active'
     }
     onChange(next)
   }
@@ -157,12 +165,28 @@ const StaffFormModal: React.FC<Props> = ({
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="元/月" />
             </div>
             {editing && (
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">状态</label>
-                <select value={formData.status} onChange={e => set({ status: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
-                  <option value="active">在职</option><option value="left">离职</option>
-                </select>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    离职日期
+                    {formData.leaveDate && !formData.reentryDate && (
+                      <span className="ml-2 text-xs text-amber-600">已离职</span>
+                    )}
+                    {formData.leaveDate && formData.reentryDate && (
+                      <span className="ml-2 text-xs text-emerald-600">已重新入职</span>
+                    )}
+                  </label>
+                  <input type="date" value={formData.leaveDate} onChange={e => set({ leaveDate: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                </div>
+                {formData.leaveDate && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">重新入职日期</label>
+                    <input type="date" value={formData.reentryDate} onChange={e => set({ reentryDate: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                      placeholder="填写此日期表示该员工已重新入职" />
+                  </div>
+                )}
               </div>
             )}
           </div>

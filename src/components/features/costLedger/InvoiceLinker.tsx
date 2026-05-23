@@ -11,8 +11,8 @@ export function InvoiceLinker({ projectId, value, onChange }: InvoiceLinkerProps
   const [search, setSearch] = useState('')
 
   useEffect(() => {
-    if (projectId && (window as any).electronAPI?.getInvoices) {
-      (window as any).electronAPI.getInvoices(projectId).then((r: any) => {
+    if (projectId && window.electronAPI?.getInvoices) {
+      window.electronAPI.getInvoices(projectId).then((r: any) => {
         if (r.success) setInvoices(r.data || [])
       }).catch(() => {})
     }

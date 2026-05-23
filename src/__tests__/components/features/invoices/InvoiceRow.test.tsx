@@ -1,11 +1,9 @@
-// @ts-nocheck
 /**
  * InvoiceRow 组件测试
  * - 渲染发票行数据（日期、类型、编号、金额）
  * - 状态选择器
  * - 操作按钮（预览、打印、编辑、删除）
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { Invoice } from '@/types'
@@ -37,7 +35,7 @@ describe('InvoiceRow', () => {
     cleanup()
   })
 
-  const baseInvoice: Invoice = {
+  const baseInvoice = {
     id: 1,
     projectId: 10,
     projectName: '测试项目',
@@ -51,13 +49,19 @@ describe('InvoiceRow', () => {
     amount: 10900,
     taxAmount: 981.13,
     receivedAmount: 5000,
-    status: 'issued',
+    status: 'issued' as const,
     fileUrl: 'data:image/png;base64,abc123',
     fileType: 'image',
     issueDate: '2025-05-01',
     createdAt: '2025-05-01',
     updatedAt: '2025-05-01',
-  }
+    invoiceCode: '',
+    priceAmount: 0,
+    sellerId: 0,
+    buyerId: 0,
+    isRet: false,
+    remark: '',
+  } as any as Invoice
 
   it('renders invoice date and type', async () => {
     const { InvoiceRow } = await importModule()

@@ -1,7 +1,8 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
 import { getWorkerTypeLabel } from '@/utils'
+import { WorkerWageHistoryModal } from '../labor/WorkerWageHistoryModal'
 
 interface TeamWorkerModalProps {
   show: boolean
@@ -15,30 +16,18 @@ interface TeamWorkerModalProps {
   onRemoveWorker: (pwId: number) => void
   onTransferWorker: (pwId: number, toTeamId: number) => void
   onAddWorkers: (teamId: number, projectId: number) => void
+  onWageUpdated?: () => void
 }
 
 export function TeamWorkerModal({
   show, teamId, teamName, projectId, members, workerTeams,
-  onClose, onUpdateWorker, onRemoveWorker, onTransferWorker, onAddWorkers
+  onClose, onUpdateWorker, onRemoveWorker, onTransferWorker, onAddWorkers, onWageUpdated
 }: TeamWorkerModalProps) {
-  const [editingId, setEditingId] = useState<number | null>(null)
-  const [editDailyWage, setEditDailyWage] = useState('')
-  const [editWorkerType, setEditWorkerType] = useState('')
   const [confirmRemove, setConfirmRemove] = useState<number | null>(null)
+  const [wageHistoryWorker, setWageHistoryWorker] = useState<{ id: number; name: string; dailyWage: number } | null>(null)
 
   const teamWorkers = members.filter((w: any) => w.teamId === teamId)
   const otherTeams = workerTeams.filter(t => t.id !== teamId && t.projectId === projectId)
-
-  const startEdit = (worker: any) => {
-    setEditingId(worker.id)
-    setEditDailyWage(String(worker.dailyWage || ''))
-    setEditWorkerType(worker.workerType || '')
-  }
-
-  const saveEdit = (pwId: number) => {
-    onUpdateWorker(pwId, { dailyWage: Number(editDailyWage), workerType: editWorkerType })
-    setEditingId(null)
-  }
 
   if (!show) return null
 
@@ -82,16 +71,10 @@ export function TeamWorkerModal({
                         <td className="px-4 py-2.5 font-medium text-slate-800 dark:text-slate-200">{worker.name}</td>
                         <td className="px-4 py-2.5 text-slate-500 font-mono text-xs">{worker.idCard || '-'}</td>
                         <td className="px-4 py-2.5 text-slate-600 dark:text-slate-400">
-                          {editingId === worker.id ? (
-                            <input value={editWorkerType} onChange={e => setEditWorkerType(e.target.value)}
-                              className="w-24 px-2 py-1 border border-slate-300 rounded text-sm" />
-                          ) : (worker.workerType ? getWorkerTypeLabel(worker.workerType as any) : '-')}
+                          {worker.workerType ? getWorkerTypeLabel(worker.workerType as any) : '-'}
                         </td>
                         <td className="px-4 py-2.5 text-right text-slate-700 dark:text-slate-300">
-                          {editingId === worker.id ? (
-                            <input value={editDailyWage} onChange={e => setEditDailyWage(e.target.value)}
-                              className="w-20 px-2 py-1 border border-slate-300 rounded text-sm text-right" />
-                          ) : (worker.dailyWage ? `¥${worker.dailyWage}` : '-')}
+                          {worker.dailyWage ? `¥${worker.dailyWage}` : '-'}
                         </td>
                         <td className="px-4 py-2.5 text-slate-500 text-xs">{worker.entryDate || '-'}</td>
                         <td className="px-4 py-2.5 text-center">
@@ -103,37 +86,29 @@ export function TeamWorkerModal({
                         </td>
                         <td className="px-4 py-2.5">
                           <div className="flex items-center justify-end gap-1">
-                            {editingId === worker.id ? (
-                              <>
-                                <button onClick={() => saveEdit(worker.id)} className="px-2 py-1 text-xs text-emerald-600 hover:bg-emerald-50 rounded">保存</button>
-                                <button onClick={() => setEditingId(null)} className="px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 rounded">取消</button>
-                              </>
+                            <button onClick={() => setWageHistoryWorker({ id: worker.id, name: worker.name, dailyWage: worker.dailyWage || 0 })}
+                              className="px-2 py-1 text-xs text-amber-600 hover:bg-amber-50 rounded">薪资</button>
+                            {otherTeams.length > 0 && (
+                              <div className="relative group">
+                                <button className="px-2 py-1 text-xs text-amber-600 hover:bg-amber-50 rounded">调组</button>
+                                <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg py-1 hidden group-hover:block z-10 min-w-[120px]">
+                                  {otherTeams.map(t => (
+                                    <button key={t.id} onClick={() => onTransferWorker(worker.id, t.id)}
+                                      className="block w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50">
+                                      {t.name}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {confirmRemove === worker.id ? (
+                              <span className="flex items-center gap-1">
+                                <span className="text-xs text-red-500">确认?</span>
+                                <button onClick={() => { onRemoveWorker(worker.id); setConfirmRemove(null) }} className="px-1.5 py-0.5 text-xs bg-red-500 text-white rounded">是</button>
+                                <button onClick={() => setConfirmRemove(null)} className="px-1.5 py-0.5 text-xs bg-slate-200 rounded">否</button>
+                              </span>
                             ) : (
-                              <>
-                                <button onClick={() => startEdit(worker)} className="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded">编辑</button>
-                                {otherTeams.length > 0 && (
-                                  <div className="relative group">
-                                    <button className="px-2 py-1 text-xs text-amber-600 hover:bg-amber-50 rounded">调组</button>
-                                    <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg py-1 hidden group-hover:block z-10 min-w-[120px]">
-                                      {otherTeams.map(t => (
-                                        <button key={t.id} onClick={() => onTransferWorker(worker.id, t.id)}
-                                          className="block w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50">
-                                          {t.name}
-                                        </button>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                                {confirmRemove === worker.id ? (
-                                  <span className="flex items-center gap-1">
-                                    <span className="text-xs text-red-500">确认?</span>
-                                    <button onClick={() => { onRemoveWorker(worker.id); setConfirmRemove(null) }} className="px-1.5 py-0.5 text-xs bg-red-500 text-white rounded">是</button>
-                                    <button onClick={() => setConfirmRemove(null)} className="px-1.5 py-0.5 text-xs bg-slate-200 rounded">否</button>
-                                  </span>
-                                ) : (
-                                  <button onClick={() => setConfirmRemove(worker.id)} className="px-2 py-1 text-xs text-red-500 hover:bg-red-50 rounded">移除</button>
-                                )}
-                              </>
+                              <button onClick={() => setConfirmRemove(worker.id)} className="px-2 py-1 text-xs text-red-500 hover:bg-red-50 rounded">移除</button>
                             )}
                           </div>
                         </td>
@@ -167,6 +142,17 @@ export function TeamWorkerModal({
           </div>
         </motion.div>
       </div>
+      {/* Wage history modal */}
+      {wageHistoryWorker && (
+        <WorkerWageHistoryModal
+          show={!!wageHistoryWorker}
+          projectWorkerId={wageHistoryWorker.id}
+          workerName={wageHistoryWorker.name}
+          currentDailyWage={wageHistoryWorker.dailyWage}
+          onClose={() => setWageHistoryWorker(null)}
+          onSaved={onWageUpdated}
+        />
+      )}
     </AnimatePresence>
   )
 }

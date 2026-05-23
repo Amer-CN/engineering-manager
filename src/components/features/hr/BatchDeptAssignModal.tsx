@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
-import { useToastContext } from '../../../hooks/useToast'
+import { useToastStore } from '@/store/toastStore'
+import { logUpdate } from '../../../utils/audit'
 
 interface Props {
   orphans: any[]
@@ -11,7 +12,7 @@ interface Props {
 }
 
 const BatchDeptAssignModal: React.FC<Props> = ({ orphans, departments, onClose, onDone }) => {
-  const { showToast } = useToastContext()
+  const showToast = useToastStore(state => state.showToast)
   const [batchDeptId, setBatchDeptId] = useState<number | ''>('')
   const [selected, setSelected] = useState<Set<number>>(new Set(orphans.map((m: any) => m.id)))
 
@@ -28,6 +29,7 @@ const BatchDeptAssignModal: React.FC<Props> = ({ orphans, departments, onClose, 
         }
       }
       showToast(`已将 ${count} 名人员分配到目标部门`, 'success')
+      logUpdate('members', `${count} 名员工批量调部门`, 0, { departmentId: batchDeptId, count })
       onDone()
     } catch (e: any) { showToast(e?.message || '批量分配失败', 'error') }
   }

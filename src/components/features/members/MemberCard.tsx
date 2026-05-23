@@ -2,7 +2,7 @@
  * MemberCard 组件
  *
  * 成员卡片组件 - 用于在列表中展示单个成员
- * @deprecated 此组件已废弃，工人管理模块已改用表格视图
+ * 使用 React.memo 避免列表中不必要的重渲染
  */
 
 import React from 'react'
@@ -96,7 +96,7 @@ export function getRoleIcon(role: string, memberType: string): string {
  * />
  * ```
  */
-export function MemberCard({
+export const MemberCard = React.memo(function MemberCard({
   member,
   type,
   onClick,
@@ -313,4 +313,4 @@ export function MemberCard({
       </div>
     </div>
   )
-}
+})

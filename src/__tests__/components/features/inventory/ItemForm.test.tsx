@@ -1,9 +1,7 @@
-// @ts-nocheck
 /**
  * ItemForm.test.tsx - ItemForm 组件测试
  * 测试物料表单组件的渲染、输入、提交和编辑模式
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 
 // Mock types

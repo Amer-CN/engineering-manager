@@ -1,9 +1,7 @@
-// @ts-nocheck
 /**
  * WageManagement.tsx 组件测试
  * @vitest-environment jsdom
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, cleanup, fireEvent, waitFor, act } from '@testing-library/react'
 import React from 'react'
 
@@ -83,6 +81,8 @@ const createMockElectronAPI = () => ({
   batchSaveWages: vi.fn().mockResolvedValue({ success: true }),
   parseBankReceipt: vi.fn().mockResolvedValue({ success: false, error: 'not implemented' }),
   batchImportAttendances: vi.fn().mockResolvedValue({ success: true, data: { created: 0, updated: 0 } }),
+  getWageStats: vi.fn().mockResolvedValue({ success: true, data: null }),
+  getWageOverdueStats: vi.fn().mockResolvedValue({ success: true, data: null }),
 })
 
 let mockElectronAPI: ReturnType<typeof createMockElectronAPI>

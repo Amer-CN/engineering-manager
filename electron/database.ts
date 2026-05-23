@@ -78,6 +78,7 @@ export interface Database {
   costLedgerCategories: any[]
   departments: any[]
   salaryHistory: any[]
+  wageHistory: any[]
   _migrations?: {
     fileStorageV1?: boolean
   }
@@ -95,7 +96,10 @@ export let dbReady = false
 // 常量
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export const defaultUserDataPath = 'D:\\Company Database'
+export const defaultUserDataPath = app.getPath('userData')
+
+// 打包后默认数据存储路径（安装时可让用户自定义）
+export const defaultDataPath = app.isPackaged ? 'D:\\Company Database' : app.getPath('userData')
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 路径函数
@@ -113,6 +117,164 @@ export function getUploadsPath(): string {
   return path.join(config.dataPath, 'uploads')
 }
 
+export function getSnapshotsDir(): string {
+  const dir = path.join(config.dataPath, 'db-snapshots')
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true })
+  }
+  return dir
+}
+
+export interface SnapshotInfo {
+  timestamp: string
+  fileSize: number
+  dbSummary: Record<string, number>
+  label?: string
+}
+
+export function getSnapshotIndexPath(): string {
+  return path.join(getSnapshotsDir(), 'index.json')
+}
+
+let maxSnapshots = 200
+
+export function setMaxSnapshots(n: number) {
+  maxSnapshots = Math.max(50, Math.min(1000, n))
+}
+
+export function getMaxSnapshots(): number {
+  return maxSnapshots
+}
+
+export function getSnapshotIndex(): SnapshotInfo[] {
+  try {
+    const indexPath = getSnapshotIndexPath()
+    if (fs.existsSync(indexPath)) {
+      return JSON.parse(fs.readFileSync(indexPath, 'utf8'))
+    }
+  } catch (e) {
+    log.warn('Failed to read snapshot index, starting fresh:', e)
+  }
+  return []
+}
+
+export function saveSnapshotIndex(index: SnapshotInfo[]) {
+  fs.writeFileSync(getSnapshotIndexPath(), JSON.stringify(index, null, 2), 'utf8')
+}
+
+/**
+ * 获取当前数据库中各表的数据量概况
+ */
+function getDbSummary(): Record<string, number> {
+  const tables = [
+    'projects', 'members', 'materials', 'expenses', 'costLedger',
+    'drawings', 'partners', 'incomeContracts', 'expenseContracts',
+    'workerTeams', 'settlements', 'templates', 'inventoryItems', 'invoices',
+    'paymentRecords', 'workerTransferRecords', 'auditLogs'
+  ]
+  const summary: Record<string, number> = {}
+  for (const table of tables) {
+    if (Array.isArray((db as any)[table])) {
+      summary[table] = (db as any)[table].length
+    }
+  }
+  return summary
+}
+
+/**
+ * 创建快照：在 saveDatabase 覆盖写入前调用
+ */
+export function createSnapshot(label?: string): SnapshotInfo | null {
+  try {
+    const dbPath = getDbPath()
+    if (!fs.existsSync(dbPath)) return null
+
+    const timestamp = new Date().toISOString().replace(/[:]/g, '-')
+    const snapshotDir = getSnapshotsDir()
+    const snapshotFile = path.join(snapshotDir, `${timestamp}.json`)
+
+    fs.copyFileSync(dbPath, snapshotFile)
+
+    const info: SnapshotInfo = {
+      timestamp,
+      fileSize: fs.statSync(snapshotFile).size,
+      dbSummary: getDbSummary(),
+      label: label || undefined,
+    }
+
+    // 更新索引
+    const index = getSnapshotIndex()
+    index.push(info)
+    saveSnapshotIndex(index)
+
+    return info
+  } catch (error) {
+    log.error('Failed to create snapshot:', error)
+    return null
+  }
+}
+
+/**
+ * 清理旧快照：保留最近 N 个
+ */
+export function cleanOldSnapshots() {
+  try {
+    const index = getSnapshotIndex()
+    if (index.length <= maxSnapshots) return
+
+    const toRemove = index.slice(0, index.length - maxSnapshots)
+    const keep = index.slice(index.length - maxSnapshots)
+
+    const snapshotDir = getSnapshotsDir()
+    for (const snap of toRemove) {
+      const filePath = path.join(snapshotDir, `${snap.timestamp}.json`)
+      try {
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
+      } catch (e) {
+        log.warn(`Failed to delete old snapshot: ${filePath}`, e)
+      }
+    }
+
+    saveSnapshotIndex(keep)
+    log.info(`Cleaned ${toRemove.length} old snapshots, kept ${keep.length}`)
+  } catch (error) {
+    log.error('Failed to clean old snapshots:', error)
+  }
+}
+
+/**
+ * 获取快照列表
+ */
+export function listSnapshots(): SnapshotInfo[] {
+  return getSnapshotIndex().reverse() // 最新的在前
+}
+
+/**
+ * 还原到指定时间点的快照
+ */
+export function restoreSnapshot(timestamp: string): boolean {
+  try {
+    const snapshotDir = getSnapshotsDir()
+    const snapshotFile = path.join(snapshotDir, `${timestamp}.json`)
+    if (!fs.existsSync(snapshotFile)) return false
+
+    // 还原前先自动备份当前状态
+    createSnapshot('pre-restore')
+
+    // 原子还原：先写临时文件，再 rename 覆盖
+    const dbPath = getDbPath()
+    const tmpPath = dbPath + '.tmp'
+    fs.copyFileSync(snapshotFile, tmpPath)
+    fs.renameSync(tmpPath, dbPath)
+
+    log.info(`Database restored to snapshot: ${timestamp}`)
+    return true
+  } catch (error) {
+    log.error('Failed to restore snapshot:', error)
+    return false
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // 配置管理
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -126,7 +288,7 @@ export function loadConfig(): AppConfig {
       log.info('Config loaded:', configPath)
       // 确保路径有效
       if (!cfg.dataPath || !fs.existsSync(cfg.dataPath)) {
-        cfg.dataPath = defaultUserDataPath
+        cfg.dataPath = defaultDataPath
         saveConfig(cfg)
       }
       return cfg
@@ -134,9 +296,9 @@ export function loadConfig(): AppConfig {
       log.warn('Failed to load config, using default:', e)
     }
   }
-  // 默认配置
+  // 默认配置（首次启动）
   const defaultConfig: AppConfig = {
-    dataPath: defaultUserDataPath
+    dataPath: defaultDataPath
   }
   saveConfig(defaultConfig)
   return defaultConfig
@@ -155,7 +317,7 @@ export function saveConfig(cfg: AppConfig) {
 // 密码哈希函数
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const DEFAULT_ADMIN_PASSWORD = crypto.randomBytes(16).toString('hex')
+const DEFAULT_ADMIN_PASSWORD = 'admin123'
 
 // 默认角色权限定义（与 auth.ts 中 SYSTEM_ROLE_DEFAULTS 保持一致）
 const DEFAULT_ADMIN_PERMISSIONS = [
@@ -244,7 +406,7 @@ function createDefaultAdmin(): User {
   // Write initial password to a file so admin can find it
   try {
     const pwFile = path.join(app.getPath('userData'), 'admin-initial-password.txt')
-    fs.writeFileSync(pwFile, `工程管家初始管理员密码\n用户名: admin\n密码: ${DEFAULT_ADMIN_PASSWORD}\n请首次登录后立即修改密码。\n此文件可安全删除。\n`, 'utf-8')
+    fs.writeFileSync(pwFile, `工程管家初始管理员密码\n用户名: admin\n密码: ${DEFAULT_ADMIN_PASSWORD}\n此文件可安全删除。\n`, 'utf-8')
     log.info('Initial admin password written to:', pwFile)
   } catch (e) {
     log.error('Failed to write initial password file:', e)
@@ -260,7 +422,7 @@ function createDefaultAdmin(): User {
     displayName: '系统管理员',
     createdAt: new Date().toISOString(),
     lastLoginAt: null,
-    mustChangePassword: true
+    mustChangePassword: true  // 强制首次登录修改密码
   }
 }
 
@@ -318,13 +480,57 @@ function loadSeedData() {
 // 数据库操作
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export function saveDatabase() {
+export function saveDatabase(): boolean {
   try {
     const dbPath = getDbPath()
-    fs.writeFileSync(dbPath, JSON.stringify(db, null, 2), 'utf8')
+    const dataToWrite = JSON.stringify(db, null, 2)
+    const writeSize = dataToWrite.length
+
+    // ── 数据完整性防护 ─────────────────────────────────────────────
+    // 如果 db 对象明显为空（所有关键数组都为空），
+    // 但磁盘上的已有文件较大（含真实数据），拒绝写入并创建紧急备份
+    const hasRealData =
+      (db.projects && db.projects.length > 0) ||
+      (db.members && db.members.length > 0) ||
+      (db.costLedger && db.costLedger.length > 0) ||
+      (db.workers && db.workers.length > 0) ||
+      (db.wages && db.wages.length > 0)
+
+    if (!hasRealData && fs.existsSync(dbPath)) {
+      const existingStats = fs.statSync(dbPath)
+      // 现有文件 > 10KB 说明里面有真实数据，但当前 db 对象为空——拒绝覆盖
+      if (existingStats.size > 10240) {
+        log.error(
+          '【数据保护】拒绝保存：当前内存数据为空，但磁盘文件有 ' +
+          existingStats.size + ' 字节真实数据。已创建紧急备份。'
+        )
+        const emergencyBackup = dbPath + '.EMERGENCY-' + Date.now() + '.bak'
+        try {
+          fs.copyFileSync(dbPath, emergencyBackup)
+          log.info('紧急备份已创建：', emergencyBackup)
+        } catch (e) {
+          log.error('创建紧急备份失败：', e)
+        }
+        return false  // ← 关键：拒绝写入
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────
+
+    // 1. 创建快照（在覆盖写入之前）
+    createSnapshot()
+
+    // 2. 原子写入：先写临时文件，再 rename 覆盖
+    const tmpPath = dbPath + '.tmp'
+    fs.writeFileSync(tmpPath, dataToWrite, 'utf8')
+    fs.renameSync(tmpPath, dbPath)
     log.info('Database saved to:', dbPath)
+
+    // 3. 清理旧快照
+    cleanOldSnapshots()
+    return true
   } catch (error) {
     log.error('Failed to save database:', error)
+    return false
   }
 }
 
@@ -363,8 +569,8 @@ export function initializeDatabase(): Database {
     roles: [],
     workers: [],
     projectWorkers: [],
-    costLedgerCategories: [],
     salaryHistory: [],
+    wageHistory: [],
     departments: []
   }
 }
@@ -383,7 +589,16 @@ export async function initDatabase(): Promise<void> {
     
     // 确保数据目录存在
     if (!fs.existsSync(config.dataPath)) {
-      fs.mkdirSync(config.dataPath, { recursive: true })
+      try {
+        fs.mkdirSync(config.dataPath, { recursive: true })
+      } catch (e) {
+        log.warn('无法创建数据目录，回退到默认用户数据路径:', e)
+        config.dataPath = app.getPath('userData')
+        saveConfig(config)
+        if (!fs.existsSync(config.dataPath)) {
+          fs.mkdirSync(config.dataPath, { recursive: true })
+        }
+      }
     }
     
     // 确保上传目录存在
@@ -409,21 +624,66 @@ export async function initDatabase(): Promise<void> {
         log.info('Database loaded:', dbPath)
       } catch (e) {
         log.error('Failed to load/migrate database:', e)
-        // 备份损坏/出错的数据库文件，避免覆盖
+
+        // 1. 备份当前文件
         const backupPath = dbPath + '.corrupted.' + Date.now() + '.bak'
         try {
           fs.copyFileSync(dbPath, backupPath)
           log.info('Corrupted database backed up to:', backupPath)
         } catch (_) {}
-        // 如果 db 已解析成功（迁移步骤出错），保留内存中的数据
-        // 只有 JSON 解析失败时才回退到空库
-        if (!db || !db.projects) {
-          log.warn('Database unreadable, starting fresh')
-          db = initializeDatabase()
-          saveDatabase()
-        } else {
-          log.warn('Database loaded but migration had errors — keeping loaded data')
-          saveDatabase()
+
+        // 2. 【数据保护】尝试从最新快照恢复，而不是直接回退到空库
+        const snapshotDir = path.join(config.dataPath, 'db-snapshots')
+        let restored = false
+        if (fs.existsSync(snapshotDir)) {
+          try {
+            const snapshots = fs.readdirSync(snapshotDir)
+              .filter((f: string) => f.endsWith('.json') && f !== 'index.json')
+              .sort()
+              .reverse()
+            if (snapshots.length > 0) {
+              const latest = path.join(snapshotDir, snapshots[0])
+              log.warn('检测到数据库异常，尝试从快照恢复:', snapshots[0])
+              const snapData = JSON.parse(fs.readFileSync(latest, 'utf8'))
+              const snapHasData =
+                (snapData.projects && snapData.projects.length > 0) ||
+                (snapData.members && snapData.members.length > 0) ||
+                (snapData.costLedger && snapData.costLedger.length > 0)
+              if (snapHasData) {
+                db = snapData
+                ensureDatabaseFields()
+                if (!db._migrations) db._migrations = {}
+                db._migrations.fileStorageV1 = true
+                db._migrations.salaryHistoryBackfillV1 = true
+                saveDatabase()
+                log.info('从快照恢复成功，成员数:', db.members?.length)
+                restored = true
+              }
+            }
+          } catch (snapErr) {
+            log.error('从快照恢复失败:', snapErr)
+          }
+        }
+
+        // 3. 快照恢复失败，才回退到空库
+        if (!restored) {
+          if (!db || !db.projects) {
+            log.warn('Database unreadable, starting fresh')
+            db = initializeDatabase()
+            initDefaultData()
+            saveDatabase()
+          } else {
+            log.warn('Database loaded but migration had errors — keeping loaded data')
+            // 检查数据是否有效再保存
+            const hasData =
+              (db.projects && db.projects.length > 0) ||
+              (db.members && db.members.length > 0)
+            if (hasData) {
+              saveDatabase()
+            } else {
+              log.error('【数据保护】加载的数据为空，拒绝保存')
+            }
+          }
         }
       }
     } else {
@@ -478,6 +738,7 @@ function ensureDatabaseFields() {
   if (!db.projectWorkers) { db.projectWorkers = []; changed = true }
   if (!db.departments) { db.departments = []; changed = true }
   if (!db.salaryHistory) { db.salaryHistory = []; changed = true }
+  if (!db.wageHistory) { db.wageHistory = []; changed = true }
   if (!db.users) {
     db.users = []
     initDefaultData()
@@ -793,10 +1054,11 @@ function migrateFileStorageV1() {
     }
   }
 
-  // 5. 标记迁移完成
+  // 5. 标记迁移完成（由 initDatabase() 统一调用 saveDatabase()，此处不再重复保存）
   if (!db._migrations) db._migrations = {}
   db._migrations.fileStorageV1 = true
-  saveDatabase()
+  // 不再调用 saveDatabase()，避免重复写入和潜在的数据覆盖风险
+  // initDatabase() 在第 623 行会统一调用 saveDatabase()
 
   log.info(`File storage migration complete. Migrated ${migratedCount} files.`)
 }

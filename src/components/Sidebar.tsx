@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Icon } from './ui/Icon'
 import { DropdownMenu } from './ui/DropdownMenu'
 import { type PageId } from '../routes'
+// APP_VERSION 从 window.__APP_VERSION__ 读取（由 index.html 注入）
 
 export interface NavItem {
   id: PageId
@@ -55,7 +56,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           className="relative z-10"
         >
           <h1 className="text-base font-bold text-white leading-tight">工程管家</h1>
-          <p className="text-[10px] text-white/60 leading-tight">v2.8.2</p>
+          <p className="text-[10px] text-white/60 leading-tight">v{(window as any).__APP_VERSION__ || '3.0.0'}</p>
         </motion.div>
       </div>
 

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * PartnerForm 组件测试
  * - 表单渲染（新增/编辑模式）
@@ -6,7 +5,6 @@
  * - 表单提交（提交数据）
  * - 取消按钮
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, cleanup, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { Partner, Project } from '@/types/electron'

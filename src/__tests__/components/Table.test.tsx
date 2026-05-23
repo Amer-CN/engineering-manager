@@ -1,5 +1,3 @@
-// @ts-nocheck
-import { describe, it, expect } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { Table, TableColumn } from '../../components/ui/Table'
 
@@ -7,6 +5,7 @@ interface TestRecord {
   id: number
   name: string
   age: number
+  [key: string]: unknown
 }
 
 const mockColumns: TableColumn<TestRecord>[] = [

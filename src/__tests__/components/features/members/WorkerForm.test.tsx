@@ -1,9 +1,7 @@
-// @ts-nocheck
 /**
  * WorkerForm.test.tsx - WorkerForm 组件测试
  * 测试工人表单组件的渲染、输入、身份证识别和联动选择
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import React from 'react'
 

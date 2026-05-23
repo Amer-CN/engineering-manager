@@ -1,15 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Icon } from '../../ui/Icon'
 import { Button } from '../../ui/Button'
-import { Modal } from '../../ui/Modal'
 import { EmptyState } from '../../ui/EmptyState'
-import { useToastContext } from '../../../hooks/useToast'
+import { useToastStore } from '@/store/toastStore'
 import { useDepartments } from '../../../hooks/useDepartments'
 import PositionEditor from './PositionEditor'
 
 const DepartmentManager: React.FC = () => {
-  const { showToast } = useToastContext()
+  const showToast = useToastStore(state => state.showToast)
   const { departments, loading, create, update, remove } = useDepartments()
   const [members, setMembers] = useState<any[]>([])
   const [showForm, setShowForm] = useState(false)

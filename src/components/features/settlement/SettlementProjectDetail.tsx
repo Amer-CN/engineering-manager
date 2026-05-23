@@ -1,10 +1,9 @@
 import React, { useState, useRef } from 'react'
-import { Settlement as SettlementData, SettlementStatus, SettlementType, Project, Partner, Template, TemplateCategory } from '../../../types/electron'
-import { useToastContext } from '../../../hooks/useToast'
+import { Settlement as SettlementData, SettlementStatus, SettlementType, Project, Partner, Template } from '../../../types/electron'
+import { useToastStore } from '@/store/toastStore'
 import { SettlementList } from './SettlementList'
 import { SettlementForm } from './SettlementForm'
 import { PrintContent } from './SettlementPrintTemplate'
-import { statusConfig } from './config'
 import { logCreate, logUpdate, logDelete } from '../../../utils/audit'
 import { usePermission } from '../../../hooks/usePermission.tsx'
 import { formatMoney } from '../../../utils/format'
@@ -27,7 +26,7 @@ const SettlementProjectDetail: React.FC<SettlementProjectDetailProps> = ({
   onBack,
   onDataChange,
 }) => {
-  const { showToast } = useToastContext()
+  const showToast = useToastStore(state => state.showToast)
   const { can } = usePermission()
 
   const [showModal, setShowModal] = useState(false)
@@ -72,7 +71,7 @@ const SettlementProjectDetail: React.FC<SettlementProjectDetailProps> = ({
             projectName: project.name,
           })
           if (saveResult.success) {
-            savedFiles.push({ url: saveResult.data.fileName, name: f.name, type: f.type })
+            savedFiles.push({ url: saveResult?.data?.fileName ?? '', name: f.name, type: f.type })
           } else {
             showToast(saveResult.error || '凭证保存失败', 'error')
             return

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
 import type { Worker, ProjectWorker, WorkerTeam } from '@/types'
 import { workerTypes, workerTypeToCode } from './memberFormTypes'
+import { WorkerPickerItem } from './WorkerPickerItem'
 
 interface Props {
   show: boolean
@@ -246,48 +247,15 @@ export function WorkerPickerModal({ show, projectId, workerTeams, existingWorker
                     {selected.size > 0 && <span className="text-blue-600 ml-2">已选 {selected.size} 人</span>}
                   </span>
                 </div>
-                {filtered.map(w => {
-                  const isExisting = existingWorkerIds.has(w.id)
-                  const isSelected = selected.has(w.id)
-                  return (
-                    <div
-                      key={w.id}
-                      className={`flex items-center px-6 py-3 cursor-pointer transition-colors ${
-                        isExisting
-                          ? 'bg-slate-50 dark:bg-slate-800/50 opacity-60'
-                          : isSelected
-                          ? 'bg-blue-50 dark:bg-blue-900/20'
-                          : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                      }`}
-                      onClick={() => !isExisting && toggleWorker(w)}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        disabled={isExisting}
-                        onChange={() => toggleWorker(w)}
-                        className="rounded mr-3 pointer-events-none"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{w.name}</span>
-                          <span className="text-xs text-slate-400">{w.gender}</span>
-                        </div>
-                        <div className="text-xs text-slate-400 mt-0.5">{w.idCard}</div>
-                      </div>
-                      <div className="flex items-center gap-3 text-xs text-slate-500">
-                        {w.projectCount > 0 && (
-                          <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 rounded-full">{w.projectCount} 个项目</span>
-                        )}
-                        {isExisting && (
-                          <span className="px-2 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-full text-xs font-medium">
-                            已加入
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
+                {filtered.map(w => (
+                  <WorkerPickerItem
+                    key={w.id}
+                    w={w}
+                    isExisting={existingWorkerIds.has(w.id)}
+                    isSelected={selected.has(w.id)}
+                    onToggle={toggleWorker}
+                  />
+                ))}
               </div>
             )}
           </div>
@@ -319,7 +287,7 @@ export function WorkerPickerModal({ show, projectId, workerTeams, existingWorker
                       updateEntry(id, 'workerType', bulkWorkerType)
                       updateEntry(id, 'dailyWage', bulkDailyWage)
                     }
-                  }} className="w-full px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded font-medium transition-colors">
+                  }} className="w-full px-3 py-1.5 text-xs bg-primary-600 hover:bg-blue-700 text-white rounded font-medium transition-colors">
                     应用到全部已选 ({selected.size}人)
                   </button>
                 </div>
@@ -383,7 +351,7 @@ export function WorkerPickerModal({ show, projectId, workerTeams, existingWorker
             <button
               onClick={handleConfirm}
               disabled={selected.size === 0}
-              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium"
+              className="px-5 py-2 bg-primary-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium"
             >
               确认添加{selected.size > 0 ? ` ${selected.size} 人到「${teamName ?? '项目'}」` : ''}
             </button>

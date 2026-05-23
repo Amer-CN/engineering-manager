@@ -1,10 +1,11 @@
 ﻿/**
- * 结算 IPC 处理器
+ * 结算 IPC 处理器（双写模式）
  */
 
 import { ipcMain } from 'electron'
 import log from 'electron-log'
 import { db, dbReady, saveDatabase } from '../database'
+import { useSqliteRead, useSqliteWrite, shouldFallbackToJson, settlementQueries } from '../sqlite/queries'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 结算办理
@@ -12,6 +13,15 @@ import { db, dbReady, saveDatabase } from '../database'
 
 ipcMain.handle('db:settlements:getAll', (_, projectId?: number) => {
   if (!dbReady) return { success: false, error: 'Database not ready' }
+
+  // SQLite 优先
+  if (useSqliteRead()) {
+    const data = settlementQueries.listSettlements(projectId)
+    if (data) return { success: true, data }
+  }
+
+  // JSON 回退
+  if (!shouldFallbackToJson()) return { success: false, error: 'SQLite read failed (sqlite-primary mode)' }
   if (!db.settlements) db.settlements = []
   let settlements = db.settlements
   if (projectId) {
@@ -20,15 +30,9 @@ ipcMain.handle('db:settlements:getAll', (_, projectId?: number) => {
   const result = settlements.map((s: any) => {
     const project = db.projects.find((p: any) => p.id === s.projectId)
     const partner = db.partners.find((p: any) => p.id === s.partnerId)
-    // 旧状态迁移：draft/approved/paid → 新状态
     let status = s.status
     if (status === 'draft' || status === 'approved' || status === 'paid' || !status) status = 'pending'
-    return {
-      ...s,
-      status,
-      projectName: project?.name || '',
-      partnerName: partner?.name || ''
-    }
+    return { ...s, status, projectName: project?.name || '', partnerName: partner?.name || '' }
   })
   return { success: true, data: result.sort((a: any, b: any) =>
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -49,6 +53,12 @@ ipcMain.handle('db:settlements:create', (_, settlement) => {
     }
     db.settlements.push(newSettlement)
     saveDatabase()
+
+    // SQLite 双写
+    if (useSqliteWrite()) {
+      settlementQueries.createSettlement(newSettlement)
+    }
+
     return { success: true, data: { id } }
   } catch (error: any) {
     log.error('Failed to create settlement:', error)
@@ -64,6 +74,11 @@ ipcMain.handle('db:settlements:update', (_, settlement) => {
     if (index !== -1) {
       db.settlements[index] = { ...db.settlements[index], ...settlement, updatedAt: new Date().toISOString() }
       saveDatabase()
+
+      // SQLite 双写
+      if (useSqliteWrite()) {
+        settlementQueries.updateSettlement(settlement.id, settlement)
+      }
     }
     return { success: true }
   } catch (error: any) {
@@ -78,6 +93,12 @@ ipcMain.handle('db:settlements:delete', (_, id) => {
   try {
     db.settlements = db.settlements.filter((s: any) => s.id !== id)
     saveDatabase()
+
+    // SQLite 双写
+    if (useSqliteWrite()) {
+      settlementQueries.deleteSettlement(id)
+    }
+
     return { success: true }
   } catch (error: any) {
     log.error('Failed to delete settlement:', error)
@@ -98,13 +119,8 @@ ipcMain.handle('db:settlements:process', (_, id) => {
     const settlementAmount = settlement.amount || 0
     const partnerId = settlement.partnerId
 
-    // 根据结算类型确定发票方向
-    // 收入结算 → 我们开票给对方(invoice_out) → 对方回款(payment type=invoice_out)
-    // 支出结算 → 对方开票给我们(invoice_in) → 我们付款(payment type=invoice_in)
     const invoiceType = settlement.type === 'income' ? 'invoice_out' : 'invoice_in'
 
-    // 收入结算 → 开票给对方(buyerId=partnerId) → 对方回款
-    // 支出结算 → 对方开票给我们(sellerId=partnerId) → 我们付款
     const linkedInvoices = db.invoices.filter((inv: any) => {
       if (inv.type !== invoiceType) return false
       if (settlement.type === 'income') return inv.buyerId === partnerId
@@ -112,7 +128,6 @@ ipcMain.handle('db:settlements:process', (_, id) => {
     })
     const invoiceTotal = linkedInvoices.reduce((sum: number, inv: any) => sum + (inv.amount || 0), 0)
 
-    // 按关联发票的付款记录汇总（paymentRecords 通过 invoiceDetails 关联发票）
     const linkedInvoiceIds = new Set(linkedInvoices.map((inv: any) => inv.id))
     let paidTotal = 0
     for (const r of db.paymentRecords) {
@@ -134,31 +149,39 @@ ipcMain.handle('db:settlements:process', (_, id) => {
       const diffPaid = settlementAmount - paidTotal
       const diffInvoice = settlementAmount - invoiceTotal
       if (Math.abs(diffPaid) > 0.01) {
-        if (diffPaid > 0) {
-          warnings.push(`付款不足，差¥${fmt(diffPaid)}`)
-        } else {
-          warnings.push(`付款超出¥${fmt(-diffPaid)}`)
-        }
+        if (diffPaid > 0) warnings.push(`付款不足，差¥${fmt(diffPaid)}`)
+        else warnings.push(`付款超出¥${fmt(-diffPaid)}`)
       }
       if (Math.abs(diffInvoice) > 0.01) {
-        if (diffInvoice > 0) {
-          warnings.push(`发票不足，缺¥${fmt(diffInvoice)}`)
-        } else {
-          warnings.push(`发票超出¥${fmt(-diffInvoice)}`)
-        }
+        if (diffInvoice > 0) warnings.push(`发票不足，缺¥${fmt(diffInvoice)}`)
+        else warnings.push(`发票超出¥${fmt(-diffInvoice)}`)
       }
     }
 
+    const now = new Date().toISOString()
+    const changes: Record<string, any> = {}
     if (warnings.length > 0) {
       db.settlements[index].status = 'completed'
       db.settlements[index].warnings = warnings
-      db.settlements[index].completedAt = new Date().toISOString()
+      db.settlements[index].completedAt = now
+      changes.status = 'completed'
+      changes.warnings = warnings
+      changes.completedAt = now
     } else {
       db.settlements[index].status = 'archived'
       db.settlements[index].warnings = undefined
-      db.settlements[index].archivedAt = new Date().toISOString()
+      db.settlements[index].archivedAt = now
+      changes.status = 'archived'
+      changes.warnings = undefined
+      changes.archivedAt = now
     }
     saveDatabase()
+
+    // SQLite 双写
+    if (useSqliteWrite()) {
+      settlementQueries.updateSettlement(id, changes)
+    }
+
     return { success: true, warnings: warnings.length > 0 ? warnings : undefined }
   } catch (error: any) {
     log.error('Failed to process settlement:', error)
@@ -175,6 +198,11 @@ ipcMain.handle('db:settlements:unarchive', (_, id) => {
       db.settlements[index].status = 'completed'
       db.settlements[index].warnings = undefined
       saveDatabase()
+
+      // SQLite 双写
+      if (useSqliteWrite()) {
+        settlementQueries.updateSettlement(id, { status: 'completed', warnings: undefined })
+      }
     }
     return { success: true }
   } catch (error: any) {
@@ -189,6 +217,15 @@ ipcMain.handle('db:settlements:unarchive', (_, id) => {
 
 ipcMain.handle('db:contractTemplates:getAll', () => {
   if (!dbReady) return { success: false, error: 'Database not ready' }
+
+  // SQLite 优先
+  if (useSqliteRead()) {
+    const data = settlementQueries.listContractTemplates()
+    if (data) return { success: true, data }
+  }
+
+  // JSON 回退
+  if (!shouldFallbackToJson()) return { success: false, error: 'SQLite read failed (sqlite-primary mode)' }
   if (!db.contractTemplates) db.contractTemplates = []
   return { success: true, data: db.contractTemplates.sort((a: any, b: any) =>
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -208,6 +245,12 @@ ipcMain.handle('db:contractTemplates:create', (_, template) => {
     }
     db.contractTemplates.push(newTemplate)
     saveDatabase()
+
+    // SQLite 双写
+    if (useSqliteWrite()) {
+      settlementQueries.createContractTemplate(newTemplate)
+    }
+
     return { success: true, data: { id } }
   } catch (error: any) {
     log.error('Failed to create template:', error)
@@ -223,6 +266,11 @@ ipcMain.handle('db:contractTemplates:update', (_, template) => {
     if (index !== -1) {
       db.contractTemplates[index] = { ...db.contractTemplates[index], ...template, updatedAt: new Date().toISOString() }
       saveDatabase()
+
+      // SQLite 双写
+      if (useSqliteWrite()) {
+        settlementQueries.updateContractTemplate(template.id, template)
+      }
     }
     return { success: true }
   } catch (error: any) {
@@ -237,6 +285,12 @@ ipcMain.handle('db:contractTemplates:delete', (_, id) => {
   try {
     db.contractTemplates = db.contractTemplates.filter((t: any) => t.id !== id)
     saveDatabase()
+
+    // SQLite 双写
+    if (useSqliteWrite()) {
+      settlementQueries.deleteContractTemplate(id)
+    }
+
     return { success: true }
   } catch (error: any) {
     log.error('Failed to delete template:', error)

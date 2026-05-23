@@ -1,5 +1,6 @@
 /**
  * 合同 IPC 处理器
+ * 双写：SQLite（income_contracts/records、expense_contracts/records、agreement_contracts 五张表）
  */
 
 import { ipcMain } from 'electron'
@@ -8,6 +9,7 @@ import path from 'path'
 import log from 'electron-log'
 import { db, dbReady, saveDatabase, getUploadsPath } from '../database'
 import { saveFile, readFile } from '../file-service'
+import { useSqliteRead, shouldFallbackToJson, contractQueries } from '../sqlite/queries'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 合同 CRUD 工厂 — 消除收入/支出合同 7 组重复 handler
@@ -22,6 +24,13 @@ function registerContractHandlers(type: 'income' | 'expense' | 'agreement') {
   // getAll
   ipcMain.handle(`db:${cKey}:getAll`, (_, projectId?: number) => {
     if (!dbReady) return { success: false, error: 'Database not ready' }
+    // SQLite 优先
+    if (useSqliteRead()) {
+      const data = contractQueries.listContracts(type, projectId)
+      if (data !== null) return { success: true, data }
+    }
+    if (!shouldFallbackToJson()) return { success: false, error: 'SQLite read failed (sqlite-primary mode)' }
+    // JSON 回退
     let contracts = (db as any)[cKey] as any[]
     if (projectId) contracts = contracts.filter((c: any) => c.projectId === projectId)
     const result = contracts.map((c: any) => {
@@ -45,6 +54,8 @@ function registerContractHandlers(type: 'income' | 'expense' | 'agreement') {
       const newContract = { ...contract, id, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
       (db as any)[cKey].push(newContract)
       saveDatabase()
+      // SQLite 双写
+      contractQueries.createContract(type, newContract)
       return { success: true, data: { id } }
     } catch (error: any) { log.error(`Failed to create ${type} contract:`, error); return { success: false, error: error.message } }
   })
@@ -57,6 +68,8 @@ function registerContractHandlers(type: 'income' | 'expense' | 'agreement') {
       if (idx !== -1) {
         (db as any)[cKey][idx] = { ...(db as any)[cKey][idx], ...contract, updatedAt: new Date().toISOString() }
         saveDatabase()
+        // SQLite 双写
+        contractQueries.updateContract(type, (db as any)[cKey][idx])
       }
       return { success: true }
     } catch (error: any) { log.error(`Failed to update ${type} contract:`, error); return { success: false, error: error.message } }
@@ -71,6 +84,8 @@ function registerContractHandlers(type: 'income' | 'expense' | 'agreement') {
         ;(db as any)[rKey] = (db as any)[rKey].filter((r: any) => r.contractId !== id)
       }
       saveDatabase()
+      // SQLite 双写（含级联删除记录）
+      contractQueries.deleteContract(type, id)
       return { success: true }
     } catch (error: any) { log.error(`Failed to delete ${type} contract:`, error); return { success: false, error: error.message } }
   })
@@ -79,6 +94,13 @@ function registerContractHandlers(type: 'income' | 'expense' | 'agreement') {
   if (!isAgreement) {
     ipcMain.handle(`db:${rKey}:getAll`, (_, contractId: number) => {
       if (!dbReady) return { success: false, error: 'Database not ready' }
+      // SQLite 优先
+      if (useSqliteRead()) {
+        const data = contractQueries.listRecords(type as 'income' | 'expense', contractId)
+        if (data !== null) return { success: true, data }
+      }
+      if (!shouldFallbackToJson()) return { success: false, error: 'SQLite read failed (sqlite-primary mode)' }
+      // JSON 回退
       return { success: true, data: (db as any)[rKey].filter((r: any) => r.contractId === contractId) }
     })
 
@@ -89,6 +111,8 @@ function registerContractHandlers(type: 'income' | 'expense' | 'agreement') {
         const newRecord = { ...record, id, createdAt: new Date().toISOString() };
         (db as any)[rKey].push(newRecord)
         saveDatabase()
+        // SQLite 双写
+        contractQueries.createRecord(type as 'income' | 'expense', newRecord)
         return { success: true, data: { id } }
       } catch (error: any) { log.error(`Failed to create ${type} record:`, error); return { success: false, error: error.message } }
     })
@@ -98,6 +122,8 @@ function registerContractHandlers(type: 'income' | 'expense' | 'agreement') {
       try {
         (db as any)[rKey] = (db as any)[rKey].filter((r: any) => r.id !== id)
         saveDatabase()
+        // SQLite 双写
+        contractQueries.deleteRecord(type as 'income' | 'expense', id)
         return { success: true }
       } catch (error: any) { log.error(`Failed to delete ${type} record:`, error); return { success: false, error: error.message } }
     })
@@ -109,7 +135,7 @@ registerContractHandlers('expense')
 registerContractHandlers('agreement')
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 合同附件文件存储
+// 合同附件文件存储（文件系统操作，无需 SQLite 双写）
 // ═══════════════════════════════════════════════════════════════════════════════
 
 ipcMain.handle('db:contracts:saveFile', async (_, options: { fileData: string; fileName: string; subCategory?: string; projectName?: string | null }) => {
@@ -165,6 +191,13 @@ function pushExpiring(contracts: any[], type: string, now: Date, thirtyDaysLater
 
 ipcMain.handle('db:contractStats:get', () => {
   if (!dbReady) return { success: false, error: 'Database not ready' }
+  // SQLite 优先
+  if (useSqliteRead()) {
+    const data = contractQueries.getContractStats()
+    if (data !== null) return { success: true, data }
+  }
+  if (!shouldFallbackToJson()) return { success: false, error: 'SQLite read failed (sqlite-primary mode)' }
+  // JSON 回退
   try {
     if (!db.paymentRecords) db.paymentRecords = []
     const incomeTotal = db.incomeContracts.reduce((sum: number, c: any) => sum + (c.finalAmount ?? c.amount ?? 0), 0)
