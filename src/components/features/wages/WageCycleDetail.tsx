@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
 import type { Project, WorkerTeam, AttendanceRecord, WageRecord } from '@/types'
 import { Icon } from '../../ui/Icon'
+import { Tabs } from '../../ui/Tabs'
 import AttendanceTab from './AttendanceTab'
 import WageTableTab from './WageTableTab'
 import WageRecordsTab from './WageRecordsTab'
@@ -124,76 +124,71 @@ export default function WageCycleDetail(props: WageCycleDetailProps) {
         </div>
       </div>
 
-      {/* Tab Bar */}
-      <div className="flex items-center gap-1 mb-6 bg-white border border-slate-200 p-1 rounded-2xl w-fit shadow-sm">
-        {cycleTabs.map(tab => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-            className={`relative px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-1.5 ${
-              activeTab === tab.id ? 'text-white' : 'text-slate-600 hover:text-slate-800'}`}>
-            {activeTab === tab.id && (
-              <motion.div layoutId="wage-cycle-tab" className="absolute inset-0 bg-primary-600 rounded-xl shadow-md"
-                transition={{ type: 'spring', stiffness: 40, damping: 25 }} />
-            )}
-            <span className="relative z-10 flex items-center gap-1.5"><Icon name={tab.icon} size={14} />{tab.label}</span>
-          </button>
-        ))}
-      </div>
+      {/* Tab Bar (统一 Tabs 组件) */}
+      <Tabs
+        value={activeTab}
+        onChange={(value: string) => setActiveTab(value as CycleTab)}
+        tabs={cycleTabs.map(tab => ({ key: tab.id, label: tab.label, icon: tab.icon }))}
+        animated={true}
+      >
+        {/* Attendance Import Modal */}
+        {showImportModal && (
+          <AttendanceImportModal
+            show={showImportModal}
+            projectId={selectedProject?.id ? Number(selectedProject.id) : 0}
+            yearMonth={selectedMonth}
+            workerList={projectWorkerList}
+            onClose={() => setShowImportModal(false)}
+            onImport={onImportAttendance}
+          />
+        )}
 
-      {/* Attendance Import Modal */}
-      <AttendanceImportModal
-        show={showImportModal}
-        projectId={selectedProject.id}
-        yearMonth={selectedMonth}
-        workerList={projectWorkerList}
-        onClose={() => setShowImportModal(false)}
-        onImport={onImportAttendance}
-      />
-
-      {/* Tab Content */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-        {activeTab === 'attendance' && (
-          <AttendanceTab
-            selectedProject={selectedProject} selectedMonth={selectedMonth}
-            daysInMonth={daysInMonth} workerTeams={workerTeams}
-            attendances={attendances} projectMemberCount={attendancesCount}
-            selectedIds={selectedAttendanceIds} toggleSelect={toggleAttendanceSelect}
-            toggleAll={toggleAllAttendances} onGenerateAttendance={onGenerateAttendance}
-            onOpenDetail={setAttendanceDetailRecord} onDelete={onDeleteAttendance}
-            onBatchDelete={onBatchDeleteAttendances}
-            loading={loading}
-            onImportAttendance={() => setShowImportModal(true)}
-            onChangeMonth={onChangeMonth}
-          />
-        )}
-        {activeTab === 'wagetable' && (
-          <WageTableTab
-            selectedProject={selectedProject} selectedMonth={selectedMonth}
-            workerTeams={workerTeams} wageRecords={wageRecords}
-            attendancesCount={attendances.length} editingWages={editingWages}
-            selectedIds={selectedWageTableIds} toggleSelect={toggleWageTableSelect}
-            toggleAll={toggleAllWageTable} onGenerate={onGenerateWages}
-            onSave={onSaveWages} onBonusDeductionChange={onBonusDeductionChange}
-            onBatchDelete={onBatchDeleteWageTable} loading={loading}
-            onChangeMonth={onChangeMonth}
-          />
-        )}
-        {activeTab === 'records' && (
-          <WageRecordsTab
-            allWageRecords={allWageRecords}
-            filterYear={filterYear} filterMonth={filterMonth}
-            filterMemberName={filterMemberName}
-            selectedIds={selectedWageIds}
-            paymentEdits={paymentEdits}
-            onFilterYearChange={setFilterYear} onFilterMonthChange={setFilterMonth}
-            onFilterNameChange={setFilterMemberName}
-            onPaymentChange={onPaymentChange} onSavePayments={onSavePayments}
-            onBankReceiptUpload={onBankReceiptUpload}
-            receiptParsing={receiptParsing} receiptResult={receiptResult}
-            toggleSelect={toggleWageSelect} toggleAll={toggleAllWages}
-            onBatchDelete={onBatchDeleteWages} onBatchArchive={onBatchArchivePayments}
-          />
-        )}
-      </div>
+        {/* Tab Content */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+          {activeTab === 'attendance' && (
+            <AttendanceTab
+              selectedProject={selectedProject} selectedMonth={selectedMonth}
+              daysInMonth={daysInMonth} workerTeams={workerTeams}
+              attendances={attendances} projectMemberCount={attendancesCount}
+              selectedIds={selectedAttendanceIds} toggleSelect={toggleAttendanceSelect}
+              toggleAll={toggleAllAttendances} onGenerateAttendance={onGenerateAttendance}
+              onOpenDetail={setAttendanceDetailRecord} onDelete={onDeleteAttendance}
+              onBatchDelete={onBatchDeleteAttendances}
+              loading={loading}
+              onImportAttendance={() => setShowImportModal(true)}
+              onChangeMonth={onChangeMonth}
+            />
+          )}
+          {activeTab === 'wagetable' && (
+            <WageTableTab
+              selectedProject={selectedProject} selectedMonth={selectedMonth}
+              workerTeams={workerTeams} wageRecords={wageRecords}
+              attendancesCount={attendances.length} editingWages={editingWages}
+              selectedIds={selectedWageTableIds} toggleSelect={toggleWageTableSelect}
+              toggleAll={toggleAllWageTable} onGenerate={onGenerateWages}
+              onSave={onSaveWages} onBonusDeductionChange={onBonusDeductionChange}
+              onBatchDelete={onBatchDeleteWageTable} loading={loading}
+              onChangeMonth={onChangeMonth}
+            />
+          )}
+          {activeTab === 'records' && (
+            <WageRecordsTab
+              allWageRecords={allWageRecords}
+              filterYear={filterYear} filterMonth={filterMonth}
+              filterMemberName={filterMemberName}
+              selectedIds={selectedWageIds}
+              paymentEdits={paymentEdits}
+              onFilterYearChange={setFilterYear} onFilterMonthChange={setFilterMonth}
+              onFilterNameChange={setFilterMemberName}
+              onPaymentChange={onPaymentChange} onSavePayments={onSavePayments}
+              onBankReceiptUpload={onBankReceiptUpload}
+              receiptParsing={receiptParsing} receiptResult={receiptResult}
+              toggleSelect={toggleWageSelect} toggleAll={toggleAllWages}
+              onBatchDelete={onBatchDeleteWages} onBatchArchive={onBatchArchivePayments}
+            />
+          )}
+        </div>
+      </Tabs>
     </div>
   )
 }

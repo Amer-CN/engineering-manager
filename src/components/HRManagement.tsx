@@ -1,6 +1,5 @@
 import React, { useState, useCallback } from 'react'
-import { motion } from 'framer-motion'
-import { Icon } from './ui/Icon'
+import { Tabs } from './ui/Tabs'
 import HRDashboard from './features/hr/HRDashboard'
 import StaffList from './features/hr/StaffList'
 import StaffAttendance from './features/hr/StaffAttendance'
@@ -31,41 +30,22 @@ const HRManagement: React.FC = () => {
         <p className="text-slate-500 mt-1">管理人员档案、考勤、薪酬与部门架构</p>
       </div>
 
-      {/* Tab 导航 */}
-      <div className="flex gap-1 mb-6 border-b border-slate-200">
-        {TABS.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setTab(tab.id)}
-            className={`relative px-5 py-3 text-sm font-medium transition-colors ${
-              activeTab === tab.id
-                ? 'text-indigo-600'
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            <span className="flex items-center gap-2">
-              <Icon name={tab.icon} size={16} />
-              {tab.label}
-            </span>
-            {activeTab === tab.id && (
-              <motion.div
-                layoutId="hr-tab-indicator"
-                className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"
-                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-              />
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* Tab 内容 */}
-      <motion.div key={activeTab} className="flex-1 overflow-hidden flex flex-col" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.15 }}>
-        {activeTab === 'dashboard' && <HRDashboard />}
-        {activeTab === 'staff' && <StaffList />}
-        {activeTab === 'attendance' && <StaffAttendance />}
-        {activeTab === 'payroll' && <StaffPayroll />}
-        {activeTab === 'departments' && <DepartmentManager />}
-      </motion.div>
+      {/* Tab 导航 (统一 Tabs 组件) */}
+      <Tabs
+        value={activeTab}
+        onChange={setTab}
+        tabs={TABS.map(tab => ({ key: tab.id, label: tab.label, icon: tab.icon }))}
+        animated={true}
+      >
+        {/* Tab 内容 */}
+        <div className="flex-1 overflow-hidden flex flex-col">
+          {activeTab === 'dashboard' && <HRDashboard />}
+          {activeTab === 'staff' && <StaffList />}
+          {activeTab === 'attendance' && <StaffAttendance />}
+          {activeTab === 'payroll' && <StaffPayroll />}
+          {activeTab === 'departments' && <DepartmentManager />}
+        </div>
+      </Tabs>
     </div>
   )
 }
