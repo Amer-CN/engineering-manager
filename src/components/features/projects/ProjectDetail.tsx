@@ -9,9 +9,10 @@ import { ProjectStats, ProjectStatsData } from './ProjectStats'
 import { ProjectCommandCenter } from './ProjectCommandCenter'
 import { CostLedgerAnalytics } from '../costLedger/CostLedgerAnalytics'
 import { useCostLedgerCategories } from '@/hooks/useCostLedgerCategories'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import PageContainer from '../../ui/PageContainer'
 import { Icon } from '../../ui/Icon'
+import { Tabs } from '../../ui/Tabs'
 import { ContractsTab, InvoicesTab, MembersTab, PartnersTab } from './ProjectDetailTabs'
 
 const statusLabels: Record<string, { text: string; color: string; dot: string }> = {
@@ -160,39 +161,28 @@ export function ProjectDetail({ project, members, allMembers, onBack, onEdit }: 
 
         <ProjectStats budget={project.budget} stats={stats} />
 
-        {/* ── Tab Bar ── */}
-        <div className="flex items-center gap-1 mb-6 bg-white border border-slate-200 p-1 rounded-2xl w-fit overflow-x-auto shadow-sm">
-          {tabs.map(tab => (
-            <button key={tab.id} onClick={() => setDetailTab(tab.id)}
-              className={`relative px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-1.5 ${
-                detailTab === tab.id ? 'text-white' : 'text-slate-600 hover:text-slate-800'
-              }`}>
-              {detailTab === tab.id && (
-                <motion.div layoutId="active-tab" className="absolute inset-0 bg-primary-600 rounded-xl shadow-md"
-                  transition={{ type: 'spring', stiffness: 500, damping: 30 }} />
-              )}
-              <span className="relative z-10 flex items-center gap-1.5"><Icon name={tab.icon} size={14} />{tab.label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* ── Tab Content ── */}
-        {loading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-10 w-10 border-4 border-slate-200 border-t-primary-600" />
-          </div>
-        ) : (
-          <AnimatePresence mode="wait">
-            <motion.div key={detailTab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
+        {/* ── Tab Bar (统一 Tabs 组件) ── */}
+        <Tabs
+          value={detailTab}
+          onChange={(value: string) => setDetailTab(value as DetailTab)}
+          tabs={tabs.map(tab => ({ key: tab.id, label: tab.label, icon: tab.icon }))}
+          animated={true}
+        >
+          {loading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-10 w-10 border-4 border-slate-200 border-t-primary-600" />
+            </div>
+          ) : (
+            <>
               {detailTab === 'overview' && <ProjectCommandCenter project={project} stats={stats} expenseByCategory={expenseByCategory} materials={materials} incomeContracts={incomeContracts} expenseContracts={expenseContracts} invoices={invoices} partners={partners} paymentRecords={paymentRecords} settlements={settlements} members={members} workerTeams={workerTeams} />}
               {detailTab === 'contracts' && <ContractsTab incomeContracts={incomeContracts} expenseContracts={expenseContracts} stats={stats} />}
               {detailTab === 'invoices' && <InvoicesTab invoices={invoices} stats={stats} />}
               {detailTab === 'members' && <MembersTab project={project} staffMembers={staffMembers} allStaffMembers={allStaffMembers} workerTeams={workerTeams} members={members} stats={stats} />}
               {detailTab === 'expenses' && <CostLedgerAnalytics projectId={project.id} projectName={project.name} categories={categories} />}
               {detailTab === 'partners' && <PartnersTab partners={partners} />}
-            </motion.div>
-          </AnimatePresence>
-        )}
+            </>
+          )}
+        </Tabs>
       </motion.div>
     </PageContainer>
   )
