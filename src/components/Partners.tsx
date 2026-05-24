@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { Icon } from './ui/Icon'
+import { Tabs } from './ui/Tabs'
 import { Partner, Supervisor, Project } from '../types/electron'
 import { PartnerList, PartnerForm, SupervisorList, SupervisorForm } from './features/partners'
 import { logCreate, logUpdate, logDelete } from '../utils/audit'
@@ -272,102 +273,108 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
         </button>
       </div>
 
-      {/* Spring-animated Tab Bar */}
-      <div className="flex items-center gap-1 mb-5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-1 rounded-2xl w-fit shadow-sm">
-        {[
-          { id: 'partner' as UnitType, label: '合作单位', icon: 'Building2' as const },
-          { id: 'supervisor' as UnitType, label: '监管单位', icon: 'Shield' as const },
-        ].map(tab => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-            className={`relative px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-1.5 ${
-              activeTab === tab.id ? 'text-white' : 'text-slate-600 hover:text-slate-800'
-            }`}>
-            {activeTab === tab.id && (
-              <motion.div layoutId="partner-tab" className="absolute inset-0 bg-primary-600 rounded-xl shadow-md"
-                transition={{ type: 'spring', stiffness: 500, damping: 30 }} />
-            )}
-            <span className="relative z-10 flex items-center gap-1.5"><Icon name={tab.icon} size={14} />{tab.label}</span>
-          </button>
-        ))}
-      </div>
+      {/* 统一 Tabs 组件 */}
+      <Tabs
+        value={activeTab}
+        onChange={(value: string) => setActiveTab(value as UnitType)}
+        tabs={[
+          { key: 'partner', label: '合作单位', icon: 'Building2' },
+          { key: 'supervisor', label: '监管单位', icon: 'Shield' },
+        ]}
+        animated={true}
+      >
+        <AnimatePresence mode="wait">
+          {/* ==================== 合作单位内容 ==================== */}
+          {activeTab === 'partner' && (
+            <motion.div
+              key="partner"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.15 }}
+            >
+              <PartnerList
+                partners={partners}
+                projects={projects}
+                search={partnerSearch}
+                filterCategory={partnerFilterCategory}
+                filterProject={partnerFilterProject}
+                onSearchChange={setPartnerSearch}
+                onCategoryChange={setPartnerFilterCategory}
+                onProjectChange={setPartnerFilterProject}
+                onEdit={handlePartnerEdit}
+                onDelete={handlePartnerDelete}
+              />
 
-      {/* ==================== 合作单位内容 ==================== */}
-      {activeTab === 'partner' && (
-        <>
-          <PartnerList
-            partners={partners}
-            projects={projects}
-            search={partnerSearch}
-            filterCategory={partnerFilterCategory}
-            filterProject={partnerFilterProject}
-            onSearchChange={setPartnerSearch}
-            onCategoryChange={setPartnerFilterCategory}
-            onProjectChange={setPartnerFilterProject}
-            onEdit={handlePartnerEdit}
-            onDelete={handlePartnerDelete}
-          />
-
-          {/* 合作单位模态框 */}
-          {showPartnerModal && (
-            <motion.div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
-              <div className="modal-content max-h-[90vh] overflow-y-auto">
-                <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-white">
-                  <h2 className="text-xl font-semibold text-slate-800">
-                    {editingPartner ? '编辑单位' : '添加单位'}
-                  </h2>
-                </div>
-                <PartnerForm
-                  partner={editingPartner}
-                  projects={projects}
-                  onSubmit={handlePartnerSubmit}
-                  onCancel={() => {
-                    setShowPartnerModal(false)
-                    setEditingPartner(null)
-                  }}
-                />
-              </div>
+              {/* 合作单位模态框 */}
+              {showPartnerModal && (
+                <motion.div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+                  <div className="modal-content max-h-[90vh] overflow-y-auto">
+                    <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-white">
+                      <h2 className="text-xl font-semibold text-slate-800">
+                        {editingPartner ? '编辑单位' : '添加单位'}
+                      </h2>
+                    </div>
+                    <PartnerForm
+                      partner={editingPartner}
+                      projects={projects}
+                      onSubmit={handlePartnerSubmit}
+                      onCancel={() => {
+                        setShowPartnerModal(false)
+                        setEditingPartner(null)
+                      }}
+                    />
+                  </div>
+                </motion.div>
+              )}
             </motion.div>
           )}
-        </>
-      )}
 
-      {/* ==================== 监管单位内容 ==================== */}
-      {activeTab === 'supervisor' && (
-        <>
-          <SupervisorList
-            supervisors={supervisors}
-            projects={projects}
-            search={supervisorSearch}
-            filterCategory={supervisorFilterCategory}
-            onSearchChange={setSupervisorSearch}
-            onCategoryChange={setSupervisorFilterCategory}
-            onEdit={handleSupervisorEdit}
-            onDelete={handleSupervisorDelete}
-          />
+          {/* ==================== 监管单位内容 ==================== */}
+          {activeTab === 'supervisor' && (
+            <motion.div
+              key="supervisor"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.15 }}
+            >
+              <SupervisorList
+                supervisors={supervisors}
+                projects={projects}
+                search={supervisorSearch}
+                filterCategory={supervisorFilterCategory}
+                onSearchChange={setSupervisorSearch}
+                onCategoryChange={setSupervisorFilterCategory}
+                onEdit={handleSupervisorEdit}
+                onDelete={handleSupervisorDelete}
+              />
 
-          {/* 监管单位模态框 */}
-          {showSupervisorModal && (
-            <motion.div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
-              <div className="modal-content max-h-[90vh] overflow-y-auto">
-                <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-white">
-                  <h2 className="text-xl font-semibold text-slate-800">
-                    {editingSupervisor ? '编辑单位' : '添加单位'}
-                  </h2>
-                </div>
-                <SupervisorForm
-                  supervisor={editingSupervisor}
-                  projects={projects}
-                  onSubmit={handleSupervisorSubmit}
-                  onCancel={() => {
-                    setShowSupervisorModal(false)
-                    setEditingSupervisor(null)
-                  }}
-                />
-              </div>
+              {/* 监管单位模态框 */}
+              {showSupervisorModal && (
+                <motion.div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+                  <div className="modal-content max-h-[90vh] overflow-y-auto">
+                    <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-white">
+                      <h2 className="text-xl font-semibold text-slate-800">
+                        {editingSupervisor ? '编辑单位' : '添加单位'}
+                      </h2>
+                    </div>
+                    <SupervisorForm
+                      supervisor={editingSupervisor}
+                      projects={projects}
+                      onSubmit={handleSupervisorSubmit}
+                      onCancel={() => {
+                        setShowSupervisorModal(false)
+                        setEditingSupervisor(null)
+                      }}
+                    />
+                  </div>
+                </motion.div>
+              )}
             </motion.div>
           )}
-        </>
-      )}
+        </AnimatePresence>
+      </Tabs>
           </motion.div>
     </PageContainer>
   )

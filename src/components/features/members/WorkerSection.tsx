@@ -2,8 +2,8 @@
 // @deprecated 此组件已废弃，工人管理模块已改用 LaborWorkerList + LaborTeamManager
 
 import { useState, useMemo } from 'react'
-import { motion } from 'framer-motion'
-import { Icon } from '../../ui/Icon'
+import { AnimatePresence, motion } from 'framer-motion'
+import { Tabs } from '../../ui/Tabs'
 import type { WorkerTeam } from '@/types'
 import { getWorkerTypeLabel } from '@/utils'
 import {
@@ -94,187 +94,201 @@ export function WorkerSection({
 
   return (
     <div className="p-6">
-      {/* 子Tab */}
-      <div className="flex items-center gap-1 mb-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-1 rounded-2xl w-fit shadow-sm">
-        {([
-          { key: 'teams' as const, icon: 'Building2', label: '班组管理', count: workerTeams.length },
-          { key: 'workers' as const, icon: 'Construction', label: '工人库', count: filteredWorkers.length },
-          { key: 'wages' as const, icon: 'Wallet', label: '工资管理' },
-        ]).map(tab => (
-          <button key={tab.key} onClick={() => setSubTab(tab.key)}
-            className={`relative px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-              subTab === tab.key ? 'text-white' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-            {subTab === tab.key && (
-              <motion.div layoutId="worker-tab" className="absolute inset-0 bg-amber-600 rounded-xl shadow-md"
-                transition={{ type: 'spring', stiffness: 500, damping: 30 }} />
-            )}
-            <span className="relative z-10 flex items-center gap-1.5">
-              <Icon name={tab.icon as any} size={14} />{tab.label}{tab.count !== undefined ? ` (${tab.count})` : ''}
-            </span>
-          </button>
-        ))}
-      </div>
+      {/* 统一 Tabs 组件 */}
+      <Tabs
+        value={subTab}
+        onChange={(value: string) => setSubTab(value as 'teams' | 'workers' | 'wages')}
+        tabs={[
+          { key: 'teams', label: '班组管理', icon: 'Building2', badge: workerTeams.length },
+          { key: 'workers', label: '工人库', icon: 'Construction', badge: filteredWorkers.length },
+          { key: 'wages', label: '工资管理', icon: 'Wallet' },
+        ]}
+        animated={true}
+      >
+        {/* 班组管理 */}
+        <AnimatePresence mode="wait">
+          {subTab === 'teams' && (
+            <motion.div
+              key="teams"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.15 }}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div className="text-slate-500">
+                  按项目分类管理班组，共{workerTeams.length} 个班组                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => { setEditingTeam(null); setTeamFormData(defaultTeamFormData); setShowTeamModal(true) }}
+                    className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center"
+                  >
+                    <span className="mr-2">+</span>
+                    添加班组
+                  </button>
+                </div>
+              </div>
 
-      {/* 班组管理 */}
-      {subTab === 'teams' && (
-        <>
-          <div className="flex items-center justify-between mb-6">
-            <div className="text-slate-500">
-              按项目分类管理班组，共{workerTeams.length} 个班组            </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => { setEditingTeam(null); setTeamFormData(defaultTeamFormData); setShowTeamModal(true) }}
-                className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center"
-              >
-                <Icon name="Plus" size={20} className="mr-2" />
-                添加班组
-              </button>
-            </div>
-          </div>
+              {Object.keys(teamsByProject).length > 0 ? (
+                <div className="space-y-6">
+                  {Object.values(teamsByProject).map(projectGroup => (
+                    <div key={projectGroup.projectId} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
+                      <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                        <div className="flex items-center">
+                          <span className="mr-2">📁</span>
+                          <span className="font-medium text-slate-800">{projectGroup.projectName}</span>
+                        </div>
+                        <span className="text-sm text-slate-500">{projectGroup.teams.length} 个班组</span>
+                      </div>
+                      <div className="p-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {projectGroup.teams.map(team => (
+                            <TeamCard
+                              key={team.id}
+                              team={team}
+                              workerCount={getTeamWorkerCount(team.id)}
+                              onEdit={() => { setEditingTeam(team); setTeamFormData({ name: team.name, projectId: team.projectId, leaderId: team.leaderId }); setShowTeamModal(true) }}
+                              onDelete={() => onDeleteTeam(team.id)}
+                              onManageWorkers={onManageWorkers}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-12 text-center">
+                  <div className="text-6xl mb-4">🏗️</div>
+                  <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100 mb-2">暂无班组</h3>
+                  <p className="text-slate-500 dark:text-slate-400 mb-6">请先添加项目，然后创建班组</p>
+                  <button
+                    onClick={() => { setEditingTeam(null); setTeamFormData(defaultTeamFormData); setShowTeamModal(true) }}
+                    className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                  >
+                    添加班组
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          )}
 
-          {Object.keys(teamsByProject).length > 0 ? (
-            <div className="space-y-6">
-              {Object.values(teamsByProject).map(projectGroup => (
-                <div key={projectGroup.projectId} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
-                  <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-                    <div className="flex items-center">
-                      <Icon name="FolderKanban" size={18} className="mr-2" />
-                      <span className="font-medium text-slate-800">{projectGroup.projectName}</span>
-                    </div>
-                    <span className="text-sm text-slate-500">{projectGroup.teams.length} 个班组</span>
-                  </div>
-                  <div className="p-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {projectGroup.teams.map(team => (
-                        <TeamCard
-                          key={team.id}
-                          team={team}
-                          workerCount={getTeamWorkerCount(team.id)}
-                          onEdit={() => { setEditingTeam(team); setTeamFormData({ name: team.name, projectId: team.projectId, leaderId: team.leaderId }); setShowTeamModal(true) }}
-                          onDelete={() => onDeleteTeam(team.id)}
-                          onManageWorkers={onManageWorkers}
-                        />
-                      ))}
-                    </div>
+          {/* 工人列表 */}
+          {subTab === 'workers' && (
+            <motion.div
+              key="workers"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.15 }}
+            >
+              {/* 筛选器 */}
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-4 mb-6 flex flex-wrap items-center gap-4">
+                <span className="text-slate-600 font-medium">筛选：</span>
+                <select
+                  value={filterProject || ''}
+                  onChange={e => { setFilterProject(e.target.value ? Number(e.target.value) : null); setFilterTeam(null) }}
+                  className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">全部项目</option>
+                  {projects.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+                <select
+                  value={filterTeam || ''}
+                  onChange={e => setFilterTeam(e.target.value ? Number(e.target.value) : null)}
+                  className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  disabled={!filterProject}
+                >
+                  <option value="">全部班组</option>
+                  {workerTeams.filter(t => !filterProject || t.projectId === filterProject).map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+                <button onClick={onAddWorker} className="ml-auto bg-amber-600 hover:bg-amber-700 text-white px-5 py-2 rounded-lg font-medium transition-colors flex items-center">
+                  <span className="mr-1">+</span>添加工人
+                </button>
+                <button onClick={onImportClick} className="bg-primary-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium transition-colors flex items-center">
+                  <span className="mr-1">↑</span>导入Excel
+                </button>
+              </div>
+
+              {filteredWorkers.length > 0 ? (
+                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase">姓名</th>
+                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase">身份证号</th>
+                          <th className="px-3 py-2.5 text-center text-xs font-semibold text-slate-500 uppercase">年龄</th>
+                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase">性别</th>
+                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase">工种</th>
+                          <th className="px-3 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase">日工资</th>
+                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase">银行卡号</th>
+                          <th className="px-3 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase">操作</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                        {filteredWorkers.map(worker => {
+                          const age = worker.birthDate ? calcAge(worker.birthDate) : null
+                          const isOverage = age !== null && age > 60
+                          return (
+                          <tr key={worker.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                            <td className="px-3 py-2.5 font-medium text-slate-800 dark:text-slate-200">{worker.name}</td>
+                            <td className="px-3 py-2.5 text-slate-500 font-mono text-xs">{worker.idCard || '-'}</td>
+                            <td className={`px-3 py-2.5 text-center text-sm font-medium ${isOverage ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-400'}`}>
+                              {age !== null ? age : '-'}
+                            </td>
+                            <td className="px-3 py-2.5 text-slate-600 dark:text-slate-400">{worker.gender || '-'}</td>
+                            <td className="px-3 py-2.5 text-slate-600 dark:text-slate-400">{worker.workerType ? getWorkerTypeLabel(worker.workerType as any) : '-'}</td>
+                            <td className="px-3 py-2.5 text-right text-slate-700 dark:text-slate-300 font-medium">{worker.dailyWage ? `¥${worker.dailyWage}` : '-'}</td>
+                            <td className="px-3 py-2.5 text-slate-500 font-mono text-xs">{(worker as any).bankAccount || '-'}</td>
+                            <td className="px-3 py-2.5">
+                              <div className="flex items-center justify-end gap-1">
+                                <button onClick={() => onEditWorker(worker)} className="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded">编辑</button>
+                                <button onClick={() => onDeleteWorker((worker as any).workerId)} className="px-2 py-1 text-xs text-red-500 hover:bg-red-50 rounded">删除</button>
+                              </div>
+                            </td>
+                          </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-12 text-center">
-              <div className="text-6xl mb-4"><Icon name="Building2" size={48} /></div>
-              <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100 mb-2">暂无班组</h3>
-              <p className="text-slate-500 dark:text-slate-400 mb-6">请先添加项目，然后创建班组</p>
-              <button
-                onClick={() => { setEditingTeam(null); setTeamFormData(defaultTeamFormData); setShowTeamModal(true) }}
-                className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
-              >
-                添加班组
-              </button>
-            </div>
+              ) : (
+                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-12 text-center">
+                  <div className="text-6xl mb-4">🚧</div>
+                  <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100 mb-2">暂无工人</h3>
+                  <p className="text-slate-500 dark:text-slate-400 mb-6">请先在班组管理中从工人库添加，或导入 Excel</p>
+                  <button
+                    onClick={onAddWorker}
+                    className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                  >
+                    添加工人
+                  </button>
+                </div>
+              )}
+            </motion.div>
           )}
-        </>
-      )}
 
-      {/* 工人列表 */}
-      {subTab === 'workers' && (
-        <>
-          {/* 筛选器 */}
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-4 mb-6 flex flex-wrap items-center gap-4">
-            <span className="text-slate-600 font-medium">筛选：</span>
-            <select
-              value={filterProject || ''}
-              onChange={e => { setFilterProject(e.target.value ? Number(e.target.value) : null); setFilterTeam(null) }}
-              className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+          {/* 工资管理 */}
+          {subTab === 'wages' && (
+            <motion.div
+              key="wages"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.15 }}
+              className="min-h-[600px]"
             >
-              <option value="">全部项目</option>
-              {projects.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-            <select
-              value={filterTeam || ''}
-              onChange={e => setFilterTeam(e.target.value ? Number(e.target.value) : null)}
-              className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              disabled={!filterProject}
-            >
-              <option value="">全部班组</option>
-              {workerTeams.filter(t => !filterProject || t.projectId === filterProject).map(t => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </select>
-            <button onClick={onAddWorker} className="ml-auto bg-amber-600 hover:bg-amber-700 text-white px-5 py-2 rounded-lg font-medium transition-colors flex items-center">
-              <Icon name="Plus" size={18} className="mr-1" />添加工人
-            </button>
-            <button onClick={onImportClick} className="bg-primary-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium transition-colors flex items-center">
-              <Icon name="Upload" size={18} className="mr-1" />导入Excel
-            </button>
-          </div>
-
-          {filteredWorkers.length > 0 ? (
-            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-50 border-b border-slate-200">
-                    <tr>
-                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase">姓名</th>
-                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase">身份证号</th>
-                      <th className="px-3 py-2.5 text-center text-xs font-semibold text-slate-500 uppercase">年龄</th>
-                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase">性别</th>
-                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase">工种</th>
-                      <th className="px-3 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase">日工资</th>
-                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase">银行卡号</th>
-                      <th className="px-3 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase">操作</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                    {filteredWorkers.map(worker => {
-                      const age = worker.birthDate ? calcAge(worker.birthDate) : null
-                      const isOverage = age !== null && age > 60
-                      return (
-                      <tr key={worker.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-                        <td className="px-3 py-2.5 font-medium text-slate-800 dark:text-slate-200">{worker.name}</td>
-                        <td className="px-3 py-2.5 text-slate-500 font-mono text-xs">{worker.idCard || '-'}</td>
-                        <td className={`px-3 py-2.5 text-center text-sm font-medium ${isOverage ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-400'}`}>
-                          {age !== null ? age : '-'}
-                        </td>
-                        <td className="px-3 py-2.5 text-slate-600 dark:text-slate-400">{worker.gender || '-'}</td>
-                        <td className="px-3 py-2.5 text-slate-600 dark:text-slate-400">{worker.workerType ? getWorkerTypeLabel(worker.workerType as any) : '-'}</td>
-                        <td className="px-3 py-2.5 text-right text-slate-700 dark:text-slate-300 font-medium">{worker.dailyWage ? `¥${worker.dailyWage}` : '-'}</td>
-                        <td className="px-3 py-2.5 text-slate-500 font-mono text-xs">{(worker as any).bankAccount || '-'}</td>
-                        <td className="px-3 py-2.5">
-                          <div className="flex items-center justify-end gap-1">
-                            <button onClick={() => onEditWorker(worker)} className="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded">编辑</button>
-                            <button onClick={() => onDeleteWorker((worker as any).workerId)} className="px-2 py-1 text-xs text-red-500 hover:bg-red-50 rounded">删除</button>
-                          </div>
-                        </td>
-                      </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-12 text-center">
-              <div className="text-6xl mb-4"><Icon name="Construction" size={48} /></div>
-              <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100 mb-2">暂无工人</h3>
-              <p className="text-slate-500 dark:text-slate-400 mb-6">请先在班组管理中从工人库添加，或导入 Excel</p>
-              <button
-                onClick={onAddWorker}
-                className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
-              >
-                添加工人
-              </button>
-            </div>
+              {wageContent}
+            </motion.div>
           )}
-        </>
-      )}
-
-      {/* 工资管理 */}
-      {subTab === 'wages' && <div className="min-h-[600px]">{wageContent}</div>}
+        </AnimatePresence>
+      </Tabs>
 
       {/* 班组表单模态框 */}
       {showTeamModal && (

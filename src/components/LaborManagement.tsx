@@ -1,7 +1,7 @@
-// LaborManagement.tsx - ���������ҳ�棨�� Tab ������
+// LaborManagement.tsx - 工人管理主页面（使用统一 Tabs 组件）
 import React, { useState, useCallback, useRef, Suspense } from 'react'
-import { motion } from 'framer-motion'
-import { Icon } from './ui/Icon'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Tabs } from './ui/Tabs'
 import { useLaborData } from './features/labor/hooks/useLaborData'
 import { useLaborModals } from './features/labor/hooks/useLaborModals'
 import { useLaborOperations } from './features/labor/hooks/useLaborOperations'
@@ -100,80 +100,87 @@ const LaborManagement: React.FC = () => {
         <p className="text-slate-500 mt-1">管理农民工信息、班组与工资</p>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="flex gap-1 mb-6 border-b border-slate-200">
-        {TABS.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setTab(tab.id)}
-            className={`relative px-5 py-3 text-sm font-medium transition-colors ${
-              activeTab === tab.id
-                ? 'text-amber-600'
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            <span className="flex items-center gap-2">
-              <Icon name={tab.icon} size={16} />
-              {tab.label}
-            </span>
-            {activeTab === tab.id && (
-              <motion.div
-                layoutId="labor-tab-indicator"
-                className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-600"
-                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-              />
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* Tab Content */}
-      <motion.div
-        key={activeTab}
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.15 }}
+      {/* 统一 Tabs 组件 */}
+      <Tabs
+        value={activeTab}
+        onChange={(value: string) => setTab(value)}
+        tabs={TABS.map(tab => ({ key: tab.id, label: tab.label, icon: tab.icon }))}
+        animated={true}
       >
-        <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-4 border-slate-200 border-t-amber-500" /></div>}>
+        <AnimatePresence mode="wait">
           {activeTab === 'dashboard' && (
-            <LaborDashboard
-              members={workerMembers}
-              projects={projects}
-              workerTeams={workerTeams}
-            />
+            <motion.div
+              key="dashboard"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.15 }}
+            >
+              <LaborDashboard
+                members={workerMembers}
+                projects={projects}
+                workerTeams={workerTeams}
+              />
+            </motion.div>
           )}
 
           {activeTab === 'workers' && (
-            <LaborWorkerList
-              members={workerMembers}
-              projects={projects}
-              workerTeams={workerTeams}
-              onRefresh={loadData}
-              onAddWorker={() => modals.openWorkerModal()}
-              onEditWorker={(worker) => modals.openWorkerModal(worker)}
-              onDeleteWorker={ops.handleDeletePoolWorker}
-              onImportClick={() => setShowFileDialog(true)}
-            />
+            <motion.div
+              key="workers"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.15 }}
+            >
+              <LaborWorkerList
+                members={workerMembers}
+                projects={projects}
+                workerTeams={workerTeams}
+                onRefresh={loadData}
+                onAddWorker={() => modals.openWorkerModal()}
+                onEditWorker={(worker) => modals.openWorkerModal(worker)}
+                onDeleteWorker={ops.handleDeletePoolWorker}
+                onImportClick={() => setShowFileDialog(true)}
+              />
+            </motion.div>
           )}
 
           {activeTab === 'teams' && (
-            <LaborTeamManager
-              members={workerMembers}
-              projects={projects}
-              workerTeams={workerTeams}
-              onRefresh={loadData}
-              onAddTeam={ops.handleCreateTeam}
-              onEditTeam={ops.handleUpdateTeam}
-              onDeleteTeam={ops.handleDeleteTeam}
-              onManageWorkers={(teamId, teamName, projectId) => {
-                modals.openTeamWorkerModal(teamId, teamName, projectId)
-              }}
-            />
+            <motion.div
+              key="teams"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.15 }}
+            >
+              <LaborTeamManager
+                members={workerMembers}
+                projects={projects}
+                workerTeams={workerTeams}
+                onRefresh={loadData}
+                onAddTeam={ops.handleCreateTeam}
+                onEditTeam={ops.handleUpdateTeam}
+                onDeleteTeam={ops.handleDeleteTeam}
+                onManageWorkers={(teamId, teamName, projectId) => {
+                  modals.openTeamWorkerModal(teamId, teamName, projectId)
+                }}
+              />
+            </motion.div>
           )}
 
-          {activeTab === 'wages' && <WageManagement />}
-        </Suspense>
-      </motion.div>
+          {activeTab === 'wages' && (
+            <motion.div
+              key="wages"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.15 }}
+            >
+              <WageManagement />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </Tabs>
 
       {/* File import dialog (shared) */}
       <Suspense fallback={null}>
