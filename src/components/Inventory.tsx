@@ -1,6 +1,7 @@
 import React from 'react'
-import { motion } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { Icon } from './ui/Icon'
+import { Tabs } from './ui/Tabs'
 import { InventoryStats, ItemList, ItemForm, TransList, TransForm, MaterialList, MaterialForm } from './features/inventory'
 import { useToastStore } from '@/store/toastStore'
 import { usePermission } from '../hooks/usePermission.tsx'
@@ -51,61 +52,98 @@ const Inventory: React.FC<InventoryProps> = ({ refresh }) => {
 
       <InventoryStats totalItems={h.stats.totalItems} lowStock={h.stats.lowStock} totalValue={h.stats.totalValue} totalMaterials={h.stats.totalMaterials} />
 
-      <div className="flex items-center gap-1 mb-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-1 rounded-2xl w-fit shadow-sm">
-        {[
+      {/* 统一 Tabs 组件 */}
+      <Tabs
+        value={h.activeTab}
+        onChange={(value: string) => h.setActiveTab(value as any)}
+        tabs={[
           { key: 'items', label: '物料库', icon: 'Package' },
           { key: 'transactions', label: '出入库记录', icon: 'ArrowLeftRight' },
           { key: 'projectMaterials', label: '项目材料', icon: 'ClipboardList' },
-        ].map(tab => (
-          <button key={tab.key} onClick={() => h.setActiveTab(tab.key as any)}
-            className={`relative px-4 py-2 rounded-xl text-sm font-medium transition-colors ${h.activeTab === tab.key ? 'text-white' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}>
-            {h.activeTab === tab.key && (
-              <motion.div layoutId="inventory-tab" className="absolute inset-0 bg-primary-600 rounded-xl shadow-md"
-                transition={{ type: 'spring', stiffness: 500, damping: 30 }} />
-            )}
-            <span className="relative z-10 flex items-center gap-1.5"><Icon name={tab.icon} size={14} />{tab.label}</span>
-          </button>
-        ))}
-      </div>
-
-      <div className={`${CARD} mb-6`}>
-        <div className="p-6">
-          <div className="flex items-center gap-4 mb-6">
-            {h.activeTab !== 'items' && (
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-slate-600">关联项目:</label>
-                <select value={h.filterProject} onChange={e => h.setFilterProject(e.target.value ? Number(e.target.value) : '')} className="select text-sm">
-                  <option value="">全部</option>
-                  {h.projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-              </div>
-            )}
-            {h.activeTab === 'items' && (
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-slate-600">物料类别:</label>
-                <select value={h.filterCategory} onChange={e => h.setFilterCategory(e.target.value)} className="select text-sm">
-                  <option value="">全部</option>
-                  {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                </select>
-              </div>
-            )}
-          </div>
-
+        ]}
+        animated={true}
+      >
+        <AnimatePresence mode="wait">
+          {/* 物料库 */}
           {h.activeTab === 'items' && (
-            <ItemList items={h.items} partners={h.partners} filterCategory={h.filterCategory} categories={categories}
-              onEdit={h.handleEditItem} onDelete={h.handleDeleteItem} onTrans={h.handleTransItem} />
+            <motion.div
+              key="items"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.15 }}
+              className={`${CARD} mb-6`}
+            >
+              <div className="p-6">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-slate-600">物料类别:</label>
+                    <select value={h.filterCategory} onChange={e => h.setFilterCategory(e.target.value)} className="select text-sm">
+                      <option value="">全部</option>
+                      {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <ItemList items={h.items} partners={h.partners} filterCategory={h.filterCategory} categories={categories}
+                  onEdit={h.handleEditItem} onDelete={h.handleDeleteItem} onTrans={h.handleTransItem} />
+              </div>
+            </motion.div>
           )}
+
+          {/* 出入库记录 */}
           {h.activeTab === 'transactions' && (
-            <TransList transactions={h.transactions} items={h.items} projects={h.projects} partners={h.partners}
-              filterProject={h.filterProject} onDelete={() => {}} />
+            <motion.div
+              key="transactions"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.15 }}
+              className={`${CARD} mb-6`}
+            >
+              <div className="p-6">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-slate-600">关联项目:</label>
+                    <select value={h.filterProject} onChange={e => h.setFilterProject(e.target.value ? Number(e.target.value) : '')} className="select text-sm">
+                      <option value="">全部</option>
+                      {h.projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <TransList transactions={h.transactions} items={h.items} projects={h.projects} partners={h.partners}
+                  filterProject={h.filterProject} onDelete={() => {}} />
+              </div>
+            </motion.div>
           )}
+
+          {/* 项目材料 */}
           {h.activeTab === 'projectMaterials' && (
-            <MaterialList materials={h.projectMaterials} projects={h.projects} filterProject={h.filterProject}
-              materialCategories={materialCategories} categoryIcons={categoryIcons} categoryColors={categoryColors}
-              onEdit={h.handleEditMaterial} onDelete={h.handleDeleteMaterial} />
+            <motion.div
+              key="projectMaterials"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.15 }}
+              className={`${CARD} mb-6`}
+            >
+              <div className="p-6">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-slate-600">关联项目:</label>
+                    <select value={h.filterProject} onChange={e => h.setFilterProject(e.target.value ? Number(e.target.value) : '')} className="select text-sm">
+                      <option value="">全部</option>
+                      {h.projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <MaterialList materials={h.projectMaterials} projects={h.projects} filterProject={h.filterProject}
+                  materialCategories={materialCategories} categoryIcons={categoryIcons} categoryColors={categoryColors}
+                  onEdit={h.handleEditMaterial} onDelete={h.handleDeleteMaterial} />
+              </div>
+            </motion.div>
           )}
-        </div>
-      </div>
+        </AnimatePresence>
+      </Tabs>
 
       {h.showItemModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
