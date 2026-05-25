@@ -163,13 +163,13 @@ export const PartnerList: React.FC<PartnerListProps> = ({
                 <TableCell.Actions>
                   <button
                     onClick={(e) => { e.stopPropagation(); onEdit(partner) }}
-                    className="px-3 py-1 text-xs text-primary-600 hover:bg-primary-50 rounded"
+                    className="btn btn-ghost btn-sm"
                   >
                     编辑
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); onDelete(partner.id) }}
-                    className="px-3 py-1 text-xs text-red-600 hover:bg-red-50 rounded"
+                    className="btn btn-danger btn-sm"
                   >
                     删除
                   </button>

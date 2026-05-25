@@ -122,7 +122,7 @@ export const PaymentList: React.FC<PaymentListProps> = ({
                   </button>
                   <button
                     onClick={() => onEdit(record)}
-                    className="p-1.5 text-primary-600 hover:bg-primary-50 rounded transition-colors"
+                    className="btn btn-ghost btn-sm"
                     title="编辑"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -131,7 +131,7 @@ export const PaymentList: React.FC<PaymentListProps> = ({
                   </button>
                   <button
                     onClick={() => onDelete(record.id)}
-                    className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                    className="btn btn-danger btn-sm"
                     title="删除"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

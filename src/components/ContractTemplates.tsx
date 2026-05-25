@@ -313,7 +313,7 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
                   </button>
                   <button
                     onClick={() => handleDelete(template.id)}
-                    className="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg"
+                    className="btn btn-danger btn-sm"
                   >
                     删除
                   </button>

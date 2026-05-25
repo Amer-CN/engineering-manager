@@ -372,7 +372,7 @@ const Users: React.FC = () => {
                         {user.roleId !== 'admin' && (
                           <button
                             onClick={() => handleDelete(user.id)}
-                            className="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            className="btn btn-danger btn-sm"
                           >
                             删除
                           </button>
