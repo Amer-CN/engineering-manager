@@ -1,5 +1,5 @@
 import React from 'react'
-import { motion } from 'framer-motion'
+
 import { Icon } from '../Icon'
 
 export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'link' | 'outline'
@@ -84,12 +84,9 @@ export function Button({
   const iconSize = { xs: 14, sm: 16, md: 18, lg: 20, xl: 22 }[size]
 
   return (
-    <motion.button
+    <button
       className={baseClasses}
       disabled={isDisabled}
-      whileHover={isDisabled ? undefined : { scale: 1.03 }}
-      whileTap={isDisabled ? undefined : { scale: 0.97 }}
-      transition={{ type: 'spring', stiffness: 400, damping: 17 }}
       {...(props as any)}
     >
       {loading ? (
@@ -101,6 +98,6 @@ export function Button({
           {renderIcon(rightIcon, iconSize)}
         </>
       )}
-    </motion.button>
+    </button>
   )
 }
