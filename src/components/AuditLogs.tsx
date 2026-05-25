@@ -133,7 +133,7 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
                             {log.level === 'error' ? '错误' : log.level === 'warning' ? '警告' : '信息'}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-center"><button onClick={() => setSelectedLog(log)} className="px-3 py-1 text-xs text-primary-600 hover:bg-primary-50 rounded">详情</button></td>
+                        <td className="px-4 py-3 text-center"><button onClick={() => setSelectedLog(log)} className="btn btn-ghost btn-sm text-primary-600">详情</button></td>
                       </tr>
                     )
                   })}
@@ -144,12 +144,12 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
             <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between">
               <div className="text-sm text-slate-500">第 <span className="font-medium">{page}</span> / <span className="font-medium">{totalPages}</span> 页</div>
               <div className="flex items-center gap-2">
-                <button onClick={() => f.setPage(Math.max(1, page - 1))} disabled={page <= 1} className="px-3 py-1 text-sm border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">上一页</button>
+                <button onClick={() => f.setPage(Math.max(1, page - 1))} disabled={page <= 1} className="btn btn-secondary btn-sm disabled:opacity-50 disabled:cursor-not-allowed">上一页</button>
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                   const pageNum = Math.max(1, Math.min(totalPages - 4, page - 2)) + i
-                  return <button key={pageNum} onClick={() => f.setPage(pageNum)} className={`w-8 h-8 text-sm rounded ${pageNum === page ? 'bg-primary-600 text-white' : 'text-slate-700 hover:bg-slate-100'}`}>{pageNum}</button>
+                  return <button key={pageNum} onClick={() => f.setPage(pageNum)} className={`btn btn-sm ${pageNum === page ? 'btn-primary' : 'btn-ghost text-slate-700'}`}>{pageNum}</button>
                 })}
-                <button onClick={() => f.setPage(Math.min(totalPages, page + 1))} disabled={page >= totalPages} className="px-3 py-1 text-sm border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">下一页</button>
+                <button onClick={() => f.setPage(Math.min(totalPages, page + 1))} disabled={page >= totalPages} className="btn btn-secondary btn-sm disabled:opacity-50 disabled:cursor-not-allowed">下一页</button>
               </div>
             </div>
           </>

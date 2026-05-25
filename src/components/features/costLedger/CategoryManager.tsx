@@ -289,7 +289,7 @@ export function CategoryManager({ categories, onClose, onRefresh }: CategoryMana
                           const remaining = rules.filter((_, j) => j !== i)
                           const res = await api.saveCostLedgerMatchRules(remaining)
                           if (res?.success) setRules(remaining)
-                        }} className="text-red-400 hover:text-red-600 hover:bg-red-50 rounded px-1 py-0.5">✕</button>
+                        }} className="btn btn-danger btn-sm">✕</button>
                       </div>
                     )
                   })}

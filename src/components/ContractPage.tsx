@@ -312,8 +312,8 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
                               </svg>
                             </button>
                           )}
-                          <button onClick={() => handleEdit(contract)} className="px-2 py-1 text-xs text-primary-600 hover:bg-primary-50 rounded">编辑</button>
-                          <button onClick={() => handleDelete(contract.id)} className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded">删除</button>
+                          <button onClick={() => handleEdit(contract)} className="btn btn-ghost btn-sm text-primary-600">编辑</button>
+                          <button onClick={() => handleDelete(contract.id)} className="btn btn-danger btn-sm">删除</button>
                         </div>
                       </td>
                     </tr>
