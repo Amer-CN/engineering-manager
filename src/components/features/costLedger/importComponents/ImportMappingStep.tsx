@@ -172,11 +172,11 @@ function PreviewTable({ previewRows, categories, rowOverrides, onRowOverrideChan
       {previewRows.totalPages > 1 && (
         <div className="flex items-center justify-center gap-3 mt-3">
           <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
-            className="px-3 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-30">上一页</button>
+            className="btn btn-secondary btn-sm disabled:opacity-30">上一页</button>
           <span className="text-xs text-slate-500">第 {page + 1} / {previewRows.totalPages} 页</span>
           <button onClick={() => setPage(p => Math.min(previewRows.totalPages - 1, p + 1))}
             disabled={page >= previewRows.totalPages - 1}
-            className="px-3 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-30">下一页</button>
+            className="btn btn-secondary btn-sm disabled:opacity-30">下一页</button>
         </div>
       )}
     </div>

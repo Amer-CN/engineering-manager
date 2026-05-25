@@ -143,8 +143,8 @@ const DepartmentManager: React.FC = () => {
               <PositionEditor positions={positions} onChange={setPositions} />
 
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={resetForm} className="px-5 py-2 text-slate-600 hover:bg-slate-100 rounded-lg">取消</button>
-                <button type="submit" className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg">{editing ? '保存' : '创建'}</button>
+                <button type="button" onClick={resetForm} className="btn btn-secondary">取消</button>
+                <button type="submit" className="px-5 py-2 btn btn-primary">{editing ? '保存' : '创建'}</button>
               </div>
             </form>
           </motion.div>

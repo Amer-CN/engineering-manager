@@ -176,7 +176,7 @@ export function CategoryManager({ categories, onClose, onRefresh }: CategoryMana
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
           <h2 className="text-base font-semibold text-slate-800">管理分类</h2>
-          <button onClick={onClose} className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">✕</button>
+          <button onClick={onClose} className="btn btn-ghost p-1">✕</button>
         </div>
 
         {/* Tabs */}

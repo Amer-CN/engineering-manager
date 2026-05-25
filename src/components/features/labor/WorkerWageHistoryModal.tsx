@@ -149,8 +149,8 @@ export function WorkerWageHistoryModal({ show, projectWorkerId, workerName, curr
                   className="w-full px-3 py-1.5 border border-slate-300 rounded text-sm" placeholder="如：本月施工难度大，上调单价" />
               </div>
               <div className="flex justify-end gap-2">
-                <button onClick={cancelForm} className="px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-100 rounded">取消</button>
-                <button onClick={handleSave} className="px-3 py-1.5 text-sm bg-amber-600 text-white rounded hover:bg-amber-700">
+                <button onClick={cancelForm} className="btn btn-secondary btn-sm">取消</button>
+                <button onClick={handleSave} className="btn btn-warning btn-sm">
                   {editingId ? '更新' : '保存'}
                 </button>
               </div>

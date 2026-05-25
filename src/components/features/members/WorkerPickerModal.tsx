@@ -345,7 +345,7 @@ export function WorkerPickerModal({ show, projectId, workerTeams, existingWorker
             {selected.size > 0 && <span className="text-blue-600 ml-1">· 已选 {selected.size} 人</span>}
           </span>
           <div className="flex items-center gap-3">
-            <button onClick={onClose} className="px-5 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors text-sm">
+            <button onClick={onClose} className="btn btn-secondary text-sm">
               取消
             </button>
             <button

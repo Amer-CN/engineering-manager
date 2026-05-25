@@ -113,7 +113,7 @@ const SalaryHistoryModal: React.FC<Props> = ({ member, onClose }) => {
             <h2 className="text-lg font-semibold text-slate-800">{member.name} - 薪资历史</h2>
             <p className="text-xs text-slate-400 mt-0.5">薪酬计算按月份自动匹配对应时段的薪资标准</p>
           </div>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-slate-100"><Icon name="X" size={18} /></button>
+          <button onClick={onClose} className="btn btn-ghost p-1"><Icon name="X" size={18} /></button>
         </div>
 
         <div className="p-6">
@@ -155,8 +155,8 @@ const SalaryHistoryModal: React.FC<Props> = ({ member, onClose }) => {
                   className="w-full px-3 py-1.5 border border-slate-300 rounded text-sm" placeholder="如：表现优秀调薪" />
               </div>
               <div className="flex justify-end gap-2">
-                <button onClick={cancelForm} className="px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-100 rounded">取消</button>
-                <button onClick={handleSave} className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700">{editingId ? '更新' : '保存'}</button>
+                <button onClick={cancelForm} className="btn btn-secondary btn-sm">取消</button>
+                <button onClick={handleSave} className="btn btn-primary btn-sm">{editingId ? '更新' : '保存'}</button>
               </div>
             </div>
           )}

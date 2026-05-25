@@ -44,7 +44,7 @@ export function TeamWorkerModal({
               <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">{teamName} — 班组工人管理</h2>
               <p className="text-sm text-slate-500 mt-0.5">共 {teamWorkers.length} 名工人</p>
             </div>
-            <button onClick={onClose} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
+            <button onClick={onClose} className="btn btn-ghost p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
               <Icon name="X" size={20} />
             </button>
           </div>

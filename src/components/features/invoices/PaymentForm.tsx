@@ -145,7 +145,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ initialData, projects,
 
           <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
             <button type="button" onClick={onCancel} className="btn btn-secondary">取消</button>
-            <button type="submit" className="btn bg-amber-500 hover:bg-amber-600 text-white">{isEditing ? '保存' : '登记'}</button>
+            <button type="submit" className="btn btn btn-warning">{isEditing ? '保存' : '登记'}</button>
           </div>
         </form>
       </motion.div>

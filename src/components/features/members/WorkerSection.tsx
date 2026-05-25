@@ -206,7 +206,7 @@ export function WorkerSection({
                     <option key={t.id} value={t.id}>{t.name}</option>
                   ))}
                 </select>
-                <button onClick={onAddWorker} className="ml-auto bg-amber-600 hover:bg-amber-700 text-white px-5 py-2 rounded-lg font-medium transition-colors flex items-center">
+                <button onClick={onAddWorker} className="btn btn-warning flex items-center">
                   <span className="mr-1">+</span>添加工人
                 </button>
                 <button onClick={onImportClick} className="btn btn-primary px-5 py-2 flex items-center">

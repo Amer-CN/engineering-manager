@@ -241,9 +241,9 @@ export function WorkerPoolForm({ visible, editing, onClose, onSubmit, onSwitchTo
             )}
           </div>
           <div className="flex gap-3">
-            <button onClick={onClose} className="px-5 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm">取消</button>
+            <button onClick={onClose} className="btn btn-secondary text-sm">取消</button>
             <button onClick={handleSubmit} disabled={submitting || !form.name.trim()}
-              className="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-medium disabled:opacity-50">
+              className="btn btn-warning text-sm disabled:opacity-50">
               {submitting ? '提交中...' : editing ? '保存修改' : '添加'}
             </button>
           </div>
