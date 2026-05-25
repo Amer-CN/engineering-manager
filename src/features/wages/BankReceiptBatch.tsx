@@ -381,7 +381,7 @@ export default function BankReceiptBatch({
             px-6 py-2 text-sm font-medium text-white rounded-md
             ${(files.length === 0 || status === 'parsing')
               ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-primary-600 hover:bg-blue-700'
+              : 'bg-primary-600 hover:bg-primary-700'
             }
           `}
         >

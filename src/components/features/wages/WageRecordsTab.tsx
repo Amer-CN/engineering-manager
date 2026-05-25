@@ -102,7 +102,7 @@ export default function WageRecordsTab({
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={receiptParsing}
-          className="bg-primary-600 hover:bg-blue-700 disabled:bg-slate-400 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
+          className="bg-primary-600 hover:bg-primary-700 disabled:bg-slate-400 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
         >
           <Icon name="Upload" size={14} />
           {receiptParsing ? '解析中...' : '上传银行回单'}

@@ -308,7 +308,7 @@ export function WorkerImportModal({
                 <button onClick={onClose} className="px-6 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
                   取消
                 </button>
-                <button onClick={onExecuteImport} className="px-6 py-2 bg-primary-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium">
+                <button onClick={onExecuteImport} className="btn btn-primary">
                   确认导入
                 </button>
               </div>
@@ -341,7 +341,7 @@ export function WorkerImportModal({
                           setPresetName('')
                         }
                       }}
-                      className="px-4 py-1.5 bg-primary-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors"
+                      className="btn btn-primary text-sm"
                     >
                       保存
                     </button>

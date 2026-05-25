@@ -212,7 +212,7 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
             </button>
           )}
           <button onClick={() => { setEditingContract(null); setShowModal(true) }}
-            className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2 rounded-lg font-medium transition-colors flex items-center">
+            className="btn btn-primary px-5 py-2 flex items-center">
             <span className="text-lg mr-1">+</span>新增合同
           </button>
         </div>
@@ -349,7 +349,7 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
                 {previewFile.type !== 'image' && (
                   <a href={previewFile.data}
                     download={`合同附件.${previewFile.type === 'pdf' ? 'pdf' : previewFile.type === 'word' ? 'docx' : 'xlsx'}`}
-                    className="px-3 py-1.5 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700">下载文件</a>
+                    className="btn btn-primary btn-sm">下载文件</a>
                 )}
                 <button onClick={() => setPreviewFile(null)} className="text-slate-400 hover:text-slate-600">
                   <Icon name="X" size={20} />

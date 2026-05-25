@@ -63,7 +63,7 @@ export default function WageTableTab({
         </div>
         <div className="flex gap-2">
           <button onClick={onGenerate} disabled={loading}
-            className="bg-primary-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+            className="bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
             生成工资表
           </button>
           {editingWages.size > 0 && (

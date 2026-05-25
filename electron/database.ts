@@ -422,7 +422,7 @@ function createDefaultAdmin(): User {
     displayName: '系统管理员',
     createdAt: new Date().toISOString(),
     lastLoginAt: null,
-    mustChangePassword: true  // 强制首次登录修改密码
+    mustChangePassword: false  // 不强制修改密码，用户可自行在用户管理中修改
   }
 }
 

@@ -184,7 +184,7 @@ export default function AttendanceDetail({
           }} className="px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg text-sm transition-colors" title="删除此考勤记录">
             <Icon name="Trash2" size={16} />
           </button>
-          <button onClick={handleSave} disabled={saving} className="bg-primary-600 hover:bg-blue-700 disabled:opacity-50 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors">
+          <button onClick={handleSave} disabled={saving} className="btn btn-primary text-sm px-5 py-2 disabled:opacity-50">
             {saving ? '保存中...' : '保存'}
           </button>
         </div>

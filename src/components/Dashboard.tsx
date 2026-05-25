@@ -178,7 +178,7 @@ const Dashboard: React.FC = () => {
           <p className="text-slate-500 mb-4">{error}</p>
           <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
             onClick={() => { setLoading(true); setError(''); Promise.all([loadStats(), loadInvoiceData()]).finally(() => setLoading(false)) }}
-            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-500 text-sm">重试</motion.button>
+            className="btn btn-primary text-sm">重试</motion.button>
         </motion.div>
       </div>
     )

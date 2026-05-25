@@ -83,12 +83,12 @@ export function CostLedgerBatchBar({ batches, currentBatchId, onChangeBatch, onC
             placeholder="版本名称"
             className="w-36 px-2 py-1 border border-slate-300 rounded-lg text-sm"
           />
-          <button onClick={handleCreate} className="px-2 py-1 text-xs bg-primary-600 text-white rounded-lg hover:bg-blue-700">确定</button>
-          <button onClick={() => { setShowNewInput(false); setNewName('') }} className="px-2 py-1 text-xs text-slate-500 hover:text-slate-700">取消</button>
+          <button onClick={handleCreate} className="btn btn-primary px-2 py-1 text-xs">确定</button>
+          <button onClick={() => { setShowNewInput(false); setNewName('') }} className="btn btn-secondary btn-sm">取消</button>
         </div>
       ) : (
         <button onClick={() => setShowNewInput(true)}
-          className="px-3 py-1 text-xs border border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50"
+          className="btn btn-secondary btn-sm"
         >+ 新建版本</button>
       )}
 
@@ -121,12 +121,12 @@ export function CostLedgerBatchBar({ batches, currentBatchId, onChangeBatch, onC
               <button onClick={async () => {
                 const ok = await onDeleteBatch(currentBatchId)
                 if (ok) { onChangeBatch(0); setConfirmDelete(null) }
-              }} className="px-2 py-0.5 text-xs bg-red-500 text-white rounded hover:bg-red-600">确认删除</button>
-              <button onClick={() => setConfirmDelete(null)} className="px-2 py-0.5 text-xs text-slate-500 hover:text-slate-700">取消</button>
+              }} className="btn btn-danger btn-sm">确认删除</button>
+              <button onClick={() => setConfirmDelete(null)} className="btn btn-secondary btn-sm">取消</button>
             </div>
           ) : (
             <button onClick={() => setConfirmDelete(currentBatchId)}
-              className="px-2 py-1 text-xs text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+              className="btn btn-ghost btn-sm text-red-500 hover:text-red-700"
               title="删除此版本及数据"
             >
               <svg className="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>

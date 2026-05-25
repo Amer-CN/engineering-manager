@@ -200,7 +200,7 @@ export default function WageDetailTab({
         {scope === 'project' && (
           <button onClick={onGenerateWages}
             disabled={loading || filterYear === '全部' || filterMonth === '全部'}
-            className="bg-primary-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+            className="bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
             生成工资表
           </button>
         )}

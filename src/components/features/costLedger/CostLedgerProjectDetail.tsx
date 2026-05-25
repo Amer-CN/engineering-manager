@@ -116,7 +116,7 @@ export function CostLedgerProjectDetail({ project, onBack, categories, onManageC
           onImport={() => setShowImport(true)}
           onCompare={() => setShowCompare(true)}
         />
-        <button onClick={() => { setEditing(null); setShowForm(true) }} className="rounded-lg bg-primary-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-blue-700">
+        <button onClick={() => { setEditing(null); setShowForm(true) }} className="btn btn-primary btn-sm">
           + 新增台账
         </button>
       </div>

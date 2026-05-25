@@ -113,7 +113,7 @@ export const AuditFilterBar: React.FC<AuditFilterBarProps> = ({
           </button>
           <button
             onClick={onSearch}
-            className="px-4 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+            className="btn btn-primary text-sm"
           >
             搜索
           </button>
