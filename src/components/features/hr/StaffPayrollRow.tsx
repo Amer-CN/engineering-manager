@@ -43,7 +43,7 @@ export const StaffPayrollRow = React.memo(function StaffPayrollRow({
       </td>
       <td className="px-4 py-3 text-center">
         <button onClick={() => onDeleteWage(wage)}
-          className="px-2 py-1 text-xs text-red-500 hover:bg-red-50 rounded" title="删除此记录">
+          className="btn btn-danger btn-sm" title="删除此记录">
           <Icon name="Trash2" size={14} />
         </button>
       </td>

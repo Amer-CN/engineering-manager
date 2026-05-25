@@ -49,12 +49,12 @@ export const FileDropZone: React.FC<FileDropZoneProps> = ({
           </div>
           <div className="flex items-center gap-2">
             {multiple && onAddMore && (
-              <button type="button" onClick={onAddMore} className="px-3 py-1.5 text-xs text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">继续添加</button>
+              <button type="button" onClick={onAddMore} className="btn btn-ghost btn-sm text-primary-600">继续添加</button>
             )}
             {onPreview && (
-              <button type="button" onClick={onPreview} className="px-3 py-1.5 text-xs text-primary-600 hover:bg-primary-50 rounded-lg">预览</button>
+              <button type="button" onClick={onPreview} className="btn btn-ghost btn-sm text-primary-600">预览</button>
             )}
-            <button type="button" onClick={onRemove} className="px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded-lg transition-colors">删除</button>
+            <button type="button" onClick={onRemove} className="btn btn-danger btn-sm">删除</button>
           </div>
         </div>
       </div>

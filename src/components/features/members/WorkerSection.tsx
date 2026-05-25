@@ -247,8 +247,8 @@ export function WorkerSection({
                             <td className="px-3 py-2.5 text-slate-500 font-mono text-xs">{(worker as any).bankAccount || '-'}</td>
                             <td className="px-3 py-2.5">
                               <div className="flex items-center justify-end gap-1">
-                                <button onClick={() => onEditWorker(worker)} className="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded">编辑</button>
-                                <button onClick={() => onDeleteWorker((worker as any).workerId)} className="px-2 py-1 text-xs text-red-500 hover:bg-red-50 rounded">删除</button>
+                                <button onClick={() => onEditWorker(worker)} className="btn btn-ghost btn-sm text-blue-600">编辑</button>
+                                <button onClick={() => onDeleteWorker((worker as any).workerId)} className="btn btn-danger btn-sm">删除</button>
                               </div>
                             </td>
                           </tr>

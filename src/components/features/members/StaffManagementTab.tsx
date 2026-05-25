@@ -42,8 +42,8 @@ const staffTableColumns = (
     key: 'actions' as keyof Member, title: '操作', width: 110, align: 'center' as const,
     render: (_value, record) => (
       <div className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
-        <button onClick={() => onEdit(record)} className="px-2 py-1 text-xs text-primary-600 hover:bg-primary-50 rounded transition-colors">编辑</button>
-        <button onClick={() => onDelete(record.id)} className="px-2 py-1 text-xs text-red-500 hover:bg-red-50 rounded transition-colors">删除</button>
+        <button onClick={() => onEdit(record)} className="btn btn-ghost btn-sm text-primary-600">编辑</button>
+        <button onClick={() => onDelete(record.id)} className="btn btn-danger btn-sm">删除</button>
       </div>
     ),
   },

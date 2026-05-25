@@ -87,14 +87,14 @@ export function TeamWorkerModal({
                         <td className="px-4 py-2.5">
                           <div className="flex items-center justify-end gap-1">
                             <button onClick={() => setWageHistoryWorker({ id: worker.id, name: worker.name, dailyWage: worker.dailyWage || 0 })}
-                              className="px-2 py-1 text-xs text-amber-600 hover:bg-amber-50 rounded">薪资</button>
+                              className="btn btn-ghost btn-sm text-amber-600">薪资</button>
                             {otherTeams.length > 0 && (
                               <div className="relative group">
-                                <button className="px-2 py-1 text-xs text-amber-600 hover:bg-amber-50 rounded">调组</button>
+                                <button className="btn btn-ghost btn-sm text-amber-600">调组</button>
                                 <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg py-1 hidden group-hover:block z-10 min-w-[120px]">
                                   {otherTeams.map(t => (
                                     <button key={t.id} onClick={() => onTransferWorker(worker.id, t.id)}
-                                      className="block w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50">
+                                      className="btn btn-secondary btn-sm w-full text-left">
                                       {t.name}
                                     </button>
                                   ))}
@@ -104,11 +104,11 @@ export function TeamWorkerModal({
                             {confirmRemove === worker.id ? (
                               <span className="flex items-center gap-1">
                                 <span className="text-xs text-red-500">确认?</span>
-                                <button onClick={() => { onRemoveWorker(worker.id); setConfirmRemove(null) }} className="px-1.5 py-0.5 text-xs bg-red-500 text-white rounded">是</button>
-                                <button onClick={() => setConfirmRemove(null)} className="px-1.5 py-0.5 text-xs bg-slate-200 rounded">否</button>
+                                <button onClick={() => { onRemoveWorker(worker.id); setConfirmRemove(null) }} className="btn btn-danger btn-sm">是</button>
+                                <button onClick={() => setConfirmRemove(null)} className="btn btn-secondary btn-sm">否</button>
                               </span>
                             ) : (
-                              <button onClick={() => setConfirmRemove(worker.id)} className="px-2 py-1 text-xs text-red-500 hover:bg-red-50 rounded">移除</button>
+                              <button onClick={() => setConfirmRemove(worker.id)} className="btn btn-danger btn-sm">移除</button>
                             )}
                           </div>
                         </td>

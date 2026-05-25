@@ -236,12 +236,12 @@ export function MembersTab({ project, staffMembers, allStaffMembers, workerTeams
                     </p>}
                   </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => openTransfer(rec)} className="px-2 py-1 text-xs text-amber-600 hover:bg-amber-50 rounded-lg border border-amber-200 transition-colors">调离</button>
+                    <button onClick={() => openTransfer(rec)} className="btn btn-ghost btn-sm text-amber-600 border border-amber-200">调离</button>
                     <button onClick={() => {
                       if (confirm(`确认将 ${m.name} 从项目中删除？此操作不可撤销。`)) {
                         window.electronAPI.removeProjectMember(rec.id).then(() => loadProjectMembers())
                       }
-                    }} className="px-2 py-1 text-xs text-red-400 hover:bg-red-50 rounded-lg border border-slate-200 transition-colors">删除</button>
+                    }} className="btn btn-danger btn-sm border border-slate-200">删除</button>
                   </div>
                 </div>
               )
@@ -269,7 +269,7 @@ export function MembersTab({ project, staffMembers, allStaffMembers, workerTeams
                   <button onClick={() => {
                     window.electronAPI.updateProjectMember(rec.id, { leftAt: '' })
                       .then(() => loadProjectMembers())
-                  }} className="px-2 py-1 text-xs text-indigo-600 hover:bg-indigo-50 rounded-lg border border-indigo-200 transition-colors">恢复</button>
+                  }} className="btn btn-ghost btn-sm text-indigo-600 border border-indigo-200">恢复</button>
                 </div>
               ))}
             </div>

@@ -71,19 +71,19 @@ export const ItemList: React.FC<ItemListProps> = ({
                 <div className="flex items-center justify-center gap-2">
                   <button
                     onClick={() => onTrans(item)}
-                    className="px-2 py-1 text-xs text-primary-600 hover:bg-primary-50 rounded"
+                    className="btn btn-ghost btn-sm text-primary-600"
                   >
                     出入库
                   </button>
                   <button
                     onClick={() => onEdit(item)}
-                    className="px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 rounded"
+                    className="btn btn-secondary btn-sm"
                   >
                     编辑
                   </button>
                   <button
                     onClick={() => onDelete(item.id)}
-                    className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded"
+                    className="btn btn-danger btn-sm"
                   >
                     删除
                   </button>

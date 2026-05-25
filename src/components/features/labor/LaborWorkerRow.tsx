@@ -54,7 +54,7 @@ export const LaborWorkerRow = React.memo(function LaborWorkerRow({
           </button>
           <button
             onClick={() => onDelete((worker as any).workerId)}
-            className="px-2 py-1 text-xs text-red-500 hover:bg-red-50 rounded"
+            className="btn btn-danger btn-sm"
           >
             删除
           </button>

@@ -102,7 +102,7 @@ export const SettlementList: React.FC<SettlementListProps> = ({
                   <button onClick={() => onEdit(s)} className="p-1.5 text-primary-500 hover:bg-primary-50 rounded" title="编辑">
                     <Icon name="Edit3" size={14} />
                   </button>
-                  <button onClick={() => onDelete(s.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded" title="删除">
+                  <button onClick={() => onDelete(s.id)} className="btn btn-danger btn-sm" title="删除">
                     <Icon name="Trash2" size={14} />
                   </button>
                 </div>
