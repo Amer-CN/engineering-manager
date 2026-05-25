@@ -236,13 +236,13 @@ export function CostLedgerList({ entries, summary, loading, onEdit, onDelete, ca
               const n = Math.max(0.5, +(zoomRef.current - 0.1).toFixed(1))
               zoomRef.current = n; localStorage.setItem('costLedgerZoom', String(n)); setZoom(n)
               if (tableRef.current) tableRef.current.style.zoom = String(n)
-            }} className="rounded px-1.5 py-0.5 text-xs text-slate-500 hover:bg-slate-100" title="缩小">−</button>
+            }} className="btn btn-secondary btn-sm" title="缩小">−</button>
             <span className="text-xs text-slate-500 w-8 text-center font-mono">{Math.round(zoom * 100)}%</span>
             <button onClick={() => {
               const n = Math.min(2, +(zoomRef.current + 0.1).toFixed(1))
               zoomRef.current = n; localStorage.setItem('costLedgerZoom', String(n)); setZoom(n)
               if (tableRef.current) tableRef.current.style.zoom = String(n)
-            }} className="rounded px-1.5 py-0.5 text-xs text-slate-500 hover:bg-slate-100" title="放大">+</button>
+            }} className="btn btn-secondary btn-sm" title="放大">+</button>
           </div>
           <span className="text-xs text-slate-400">
             {filtered.length === entries.length ? `共 ${entries.length} 条` : `筛选 ${filtered.length} / ${entries.length} 条`}

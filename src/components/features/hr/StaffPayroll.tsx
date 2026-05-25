@@ -323,7 +323,7 @@ const StaffPayroll: React.FC = () => {
         )}
         {filteredWages.length > 0 && (
           <DropdownMenu
-            trigger={<button className="px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition-colors">更多 ▾</button>}
+            trigger={<button className="btn btn-secondary text-sm">更多 ▾</button>}
             items={[
               { key: 'export', label: '导出Excel', onClick: handleExportExcel },
               { key: 'print', label: '打印', onClick: () => window.print() },

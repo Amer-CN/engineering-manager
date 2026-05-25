@@ -55,8 +55,8 @@ const PositionEditor: React.FC<PositionEditorProps> = ({ positions, onChange }) 
           onChange={e => setInputValue(e.target.value)} onKeyDown={handleKeyDown}
           className="flex-1 px-3 py-1.5 border border-slate-300 rounded-lg text-sm"
           placeholder="输入职位名称，如：部门经理" maxLength={MAX_CHAR} />
-        <button type="button" onClick={handleAdd}
-          className="px-3 py-1.5 bg-indigo-100 text-indigo-700 text-sm rounded-lg hover:bg-indigo-200 whitespace-nowrap">添加</button>
+          <button type="button" onClick={handleAdd}
+            className="btn btn-ghost btn-sm text-indigo-600 whitespace-nowrap">添加</button>
       </div>
     </div>
   )

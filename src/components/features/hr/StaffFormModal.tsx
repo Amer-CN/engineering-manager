@@ -64,7 +64,7 @@ const StaffFormModal: React.FC<Props> = ({
         initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }}>
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-slate-800">{editing ? '编辑人员' : '添加人员'}</h2>
-          <button onClick={onRemove} className="p-1 rounded-lg hover:bg-slate-100"><Icon name="X" size={18} /></button>
+          <button onClick={onRemove} className="btn btn-ghost p-1"><Icon name="X" size={18} /></button>
         </div>
         <form onSubmit={onSubmit} className="p-6 space-y-5">
 

@@ -305,7 +305,7 @@ export function WorkerImportModal({
             <>
               <span className="text-sm text-slate-500">将导入 {importState.allRows.length} 人</span>
               <div className="flex items-center gap-3">
-                <button onClick={onClose} className="px-6 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
+                <button onClick={onClose} className="btn btn-secondary">
                   取消
                 </button>
                 <button onClick={onExecuteImport} className="btn btn-primary">
