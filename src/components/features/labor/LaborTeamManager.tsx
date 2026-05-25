@@ -103,7 +103,7 @@ const LaborTeamManager: React.FC<LaborTeamManagerProps> = ({
         </div>
         <button
           onClick={handleAddTeam}
-          className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center"
+          className="btn btn-warning flex items-center"
         >
           <Icon name="Plus" size={20} className="mr-2" />
           添加班组
@@ -147,7 +147,7 @@ const LaborTeamManager: React.FC<LaborTeamManagerProps> = ({
           <p className="text-slate-500 mb-6">请先添加项目，然后创建班组</p>
           <button
             onClick={handleAddTeam}
-            className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+            className="btn btn-warning"
           >
             添加班组
           </button>

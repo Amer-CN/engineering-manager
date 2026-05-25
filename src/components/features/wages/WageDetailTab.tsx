@@ -217,7 +217,7 @@ export default function WageDetailTab({
         {/* 归档（仅项目模式下可用） */}
         {scope === 'project' && (
           <button onClick={onBatchArchive}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+            className="btn btn-success btn-sm">
             归档{selectedIds.size > 0 ? `选中 (${selectedIds.size})` : '全部'}
           </button>
         )}
@@ -225,7 +225,7 @@ export default function WageDetailTab({
         {/* 保存发放 */}
         {changedCount > 0 && (
           <button onClick={onSavePayments} disabled={loading}
-            className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+            className="btn btn-success btn-sm">
             保存发放 ({changedCount})
           </button>
         )}
@@ -233,14 +233,14 @@ export default function WageDetailTab({
         {/* 删除选中 */}
         {selectedIds.size > 0 && (
           <button onClick={onBatchDelete}
-            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
+            className="btn btn-danger btn-sm">
             删除选中 ({selectedIds.size})
           </button>
         )}
 
         {/* 更多：导出/打印 */}
         <DropdownMenu
-          trigger={<button className="px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition-colors">更多 ▾</button>}
+          trigger={<button className="btn btn-secondary btn-sm">更多 ▾</button>}
           items={[
             { key: 'export', label: '导出Excel', onClick: () => exportWageDetailToExcel(scopeData) },
             { key: 'print', label: '打印', onClick: () => printWageDetail(scopeData, scope === 'project' ? selectedProject?.name || '' : '全部项目') },

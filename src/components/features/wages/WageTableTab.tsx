@@ -56,19 +56,19 @@ export default function WageTableTab({
           </div>
           {selectedIds.size > 0 && (
             <button onClick={onBatchDelete}
-              className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
+              className="btn btn-danger btn-sm">
               删除选中 ({selectedIds.size})
             </button>
           )}
         </div>
         <div className="flex gap-2">
           <button onClick={onGenerate} disabled={loading}
-            className="bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+            className="btn btn-primary btn-sm">
             生成工资表
           </button>
           {editingWages.size > 0 && (
             <button onClick={onSave} disabled={loading}
-              className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+              className="btn btn-success btn-sm">
               保存修改 ({editingWages.size})
             </button>
           )}

@@ -204,7 +204,7 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
         )}
         <button
           onClick={onAddWorker}
-          className="ml-auto bg-amber-600 hover:bg-amber-700 text-white px-5 py-2 rounded-lg font-medium transition-colors flex items-center"
+          className="ml-auto btn btn-warning flex items-center"
         >
           <Icon name="Plus" size={18} className="mr-1" />添加工人
         </button>
@@ -271,7 +271,7 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
           <p className="text-slate-500 mb-6">请先在班组管理中从工人库添加，或导入 Excel</p>
           <button
             onClick={onAddWorker}
-            className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+            className="btn btn-warning"
           >
             添加工人
           </button>
