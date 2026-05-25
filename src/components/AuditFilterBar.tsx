@@ -107,7 +107,7 @@ export const AuditFilterBar: React.FC<AuditFilterBarProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={onReset}
-            className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
+            className="btn btn-secondary btn-sm"
           >
             重置
           </button>

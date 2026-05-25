@@ -468,7 +468,7 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
                     resetForm()
                   }}
                   disabled={uploading}
-                  className="px-6 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 disabled:opacity-50 rounded-lg transition-colors"
+                  className="btn btn-secondary disabled:opacity-50"
                 >
                   取消
                 </button>

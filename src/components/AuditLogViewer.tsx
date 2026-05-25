@@ -205,14 +205,14 @@ const AuditLogViewer: React.FC<AuditLogViewerProps> = ({ maxVisible = 100 }) => 
             <button
               type="button"
               onClick={() => handleExport('csv')}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm hover:bg-slate-50"
+              className="btn btn-secondary btn-sm"
             >
               导出 CSV
             </button>
             <button
               type="button"
               onClick={() => handleExport('json')}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm hover:bg-slate-50"
+              className="btn btn-secondary btn-sm"
             >
               导出 JSON
             </button>

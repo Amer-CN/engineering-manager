@@ -154,7 +154,7 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
       <div className="flex items-center gap-4 mb-6">
         {onBack && (
           <button onClick={onBack}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors">
+            className="btn btn-ghost btn-sm flex items-center gap-1.5">
             <Icon name="ArrowLeft" size={16} />
             <span>返回看板</span>
           </button>
@@ -207,7 +207,7 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
         <div className="flex items-center gap-3">
           {can('contracts:export') && (
             <button onClick={handleExport}
-              className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-medium transition-colors flex items-center">
+              className="btn btn-secondary flex items-center gap-2">
               <Icon name="Download" size={16} /> 导出
             </button>
           )}
@@ -305,7 +305,7 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
                                 return
                               }
                               setPreviewFile({ data: urls.downloadUrl || urls.previewUrl, previewUrl: urls.previewUrl, type: fileType, title: `${contract.name} - 合同附件` })
-                            }} className="p-1.5 text-slate-500 hover:bg-slate-100 rounded transition-colors" title="预览附件">
+                            }} className="btn btn-ghost btn-sm" title="预览附件">
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
