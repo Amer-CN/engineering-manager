@@ -63,7 +63,7 @@ const Inventory: React.FC<InventoryProps> = ({ refresh }) => {
         ]}
         animated={true}
       >
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="sync">
           {/* 物料库 */}
           {h.activeTab === 'items' && (
             <motion.div
