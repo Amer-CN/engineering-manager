@@ -163,7 +163,8 @@ export default function AttendanceDetail({
       {/* 顶部栏 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button onClick={onBack} className="flex items-center gap-1 px-2 py-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200 hover:bg-slate-100 rounded-lg transition-colors">
+          <button onClick={onBack} className="btn btn-ghost text-sm flex items-center gap-1">
+            <Icon name="ChevronLeft" size={18} /><span className="text-sm">返回</span>
             <Icon name="ChevronLeft" size={18} /><span className="text-sm">返回</span>
           </button>
           <h2 className="text-lg font-bold text-slate-800">{record.memberName || member?.name || '-'}</h2>
