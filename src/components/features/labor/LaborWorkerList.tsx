@@ -221,7 +221,7 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
         <div className="bg-white rounded-xl border border-slate-200 overflow-auto">
           <div className="min-w-[900px]">
             <table className="w-full text-sm">
-              <thead className="sticky top-0 z-10 bg-slate-50">
+              <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                 <tr>
                   <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase cursor-pointer select-none hover:text-slate-700"
                     onClick={() => toggleSort('name')}>

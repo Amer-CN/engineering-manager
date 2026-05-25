@@ -298,8 +298,8 @@ const StaffAttendance: React.FC = () => {
       ) : (
         <div className="bg-white rounded-xl shadow-sm flex-1 overflow-auto">
           <table className="w-full">
-            <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 sticky top-0">
+            <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
+              <tr className="">
                 <th className="px-3 py-3 w-10">
                   <input type="checkbox"
                     checked={selectedIds.size > 0 && (() => { const ids = filteredStaff.map(s => getAttendanceForMember(s.id)).filter(Boolean).map((a: any) => a.id); return ids.length > 0 && ids.every((id: number) => selectedIds.has(id)) })()}

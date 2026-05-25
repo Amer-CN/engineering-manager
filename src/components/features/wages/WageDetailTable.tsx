@@ -30,7 +30,7 @@ export function WageDetailTable({
   return (
     <div className="min-w-[900px]">
       <table className="w-full text-sm">
-        <thead className="sticky top-0 z-10 bg-slate-50">
+        <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200">
           <tr className="text-left">
             <th className="px-3 py-3 w-10">
               <input type="checkbox" checked={allSelected}

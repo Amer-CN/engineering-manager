@@ -104,7 +104,7 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-slate-50">
+                <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">时间</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">用户</th>

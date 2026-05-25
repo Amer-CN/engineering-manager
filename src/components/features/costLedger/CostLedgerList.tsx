@@ -253,7 +253,7 @@ export function CostLedgerList({ entries, summary, loading, onEdit, onDelete, ca
       {/* 表格 */}
       <div ref={tableRef} className="flex-1 overflow-auto min-h-0" style={{ zoom }}>
         <table className="w-full table-fixed border-collapse">
-          <thead className="sticky top-0 z-10 bg-slate-50 text-xs">
+          <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10 text-xs">
             <tr>
               {[
                 ['voucherNo', '凭证号', 'w-[96px] text-center'],

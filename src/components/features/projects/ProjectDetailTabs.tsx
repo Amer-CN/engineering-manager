@@ -97,7 +97,7 @@ export function InvoicesTab({ invoices, stats }: { invoices: Invoice[]; stats: P
       {invoices.length > 0 ? (
         <div className={`${CARD} overflow-hidden`}>
           <table className="w-full">
-            <thead><tr className="border-b border-slate-100">{['发票号', '类型', '名称', '金额', '已收/已付', '状态'].map(h => <th key={h} className={`px-4 py-2.5 text-xs text-slate-500 font-medium ${h === '金额' || h === '收款' ? 'text-right' : h === '状态' ? 'text-center' : 'text-left'}`}>{h}</th>)}</tr></thead>
+            <thead className="bg-slate-50 border-b border-slate-200"><tr>{['发票号', '类型', '名称', '金额', '已收/已付', '状态'].map(h => <th key={h} className={`px-4 py-2.5 text-xs text-slate-500 font-medium ${h === '金额' || h === '收款' ? 'text-right' : h === '状态' ? 'text-center' : 'text-left'}`}>{h}</th>)}</tr></thead>
             <tbody className="divide-y divide-slate-50">
               {invoices.map(invoice => (
                 <tr key={invoice.id} className="table-row-hover">

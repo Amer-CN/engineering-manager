@@ -41,8 +41,8 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
   return (
     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm">
       <table className="w-full border-separate border-spacing-0">
-        <thead className="sticky top-0 z-10">
-          <tr className="bg-slate-50 border-b border-slate-200">
+        <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
+          <tr className="">
             <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase bg-slate-50">开票日期</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase bg-slate-50">发票名称</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase bg-slate-50">销售方</th>

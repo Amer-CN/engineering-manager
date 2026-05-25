@@ -147,7 +147,7 @@ export const SettlementImportModal: React.FC<Props> = ({ show, onClose, onImport
             <label className="text-sm font-medium text-slate-700 block mb-2">数据预览（前 {state.previewRows.length} 行，共 {state.allRows.length} 行）</label>
             <div className="border border-slate-200 rounded-xl overflow-hidden max-h-60 overflow-y-auto">
               <table className="w-full text-xs">
-                <thead className="bg-slate-50 sticky top-0">
+                <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
                   <tr>{state.headers.map((h, i) => <th key={i} className="px-3 py-2 text-left font-medium text-slate-500 whitespace-nowrap">{h || `列${i + 1}`}</th>)}</tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">

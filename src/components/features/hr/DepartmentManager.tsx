@@ -92,8 +92,8 @@ const DepartmentManager: React.FC = () => {
         </div>
       ) : (
         <table className="w-full">
-          <thead>
-            <tr className="border-b border-slate-200 bg-slate-50">
+          <thead className="bg-slate-50 border-b border-slate-200">
+            <tr className="">
               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">部门名称</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">人数</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">负责人</th>

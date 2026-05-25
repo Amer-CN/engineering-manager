@@ -65,7 +65,7 @@ export const RolePermissionsTab: React.FC = () => {
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm border-collapse">
-          <thead><tr className="border-b border-slate-200"><th className="px-3 py-2 text-left text-xs font-medium text-slate-500">资源</th>{actionKeys.map(a => <th key={a} className="px-2 py-2 text-center text-xs font-medium text-slate-500">{ACTION_LABELS[a] || a}</th>)}</tr></thead>
+          <thead className="bg-slate-50 border-b border-slate-200"><tr><th className="px-3 py-2 text-left text-xs font-medium text-slate-500">资源</th>{actionKeys.map(a => <th key={a} className="px-2 py-2 text-center text-xs font-medium text-slate-500">{ACTION_LABELS[a] || a}</th>)}</tr></thead>
           <tbody className="divide-y divide-slate-100">
             {resourceKeys.map(resource => (
               <tr key={resource} className="table-row-hover"><td className="px-3 py-2 text-sm font-medium text-slate-700">{RESOURCE_LABELS[resource] || resource}</td>

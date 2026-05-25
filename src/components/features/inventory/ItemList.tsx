@@ -30,7 +30,7 @@ export const ItemList: React.FC<ItemListProps> = ({
   return filteredItems.length > 0 ? (
     <div className="overflow-x-auto">
       <table className="w-full">
-        <thead className="bg-slate-50">
+        <thead className="bg-slate-50 border-b border-slate-200">
           <tr>
             <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">编码</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">名称</th>
