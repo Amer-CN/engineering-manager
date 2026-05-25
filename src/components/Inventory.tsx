@@ -68,10 +68,10 @@ const Inventory: React.FC<InventoryProps> = ({ refresh }) => {
           {h.activeTab === 'items' && (
             <motion.div
               key="items"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.15 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.1 }}
               className={`${CARD} mb-6`}
             >
               <div className="p-6">
@@ -94,10 +94,10 @@ const Inventory: React.FC<InventoryProps> = ({ refresh }) => {
           {h.activeTab === 'transactions' && (
             <motion.div
               key="transactions"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.15 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.1 }}
               className={`${CARD} mb-6`}
             >
               <div className="p-6">
@@ -120,10 +120,10 @@ const Inventory: React.FC<InventoryProps> = ({ refresh }) => {
           {h.activeTab === 'projectMaterials' && (
             <motion.div
               key="projectMaterials"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.15 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.1 }}
               className={`${CARD} mb-6`}
             >
               <div className="p-6">

@@ -111,10 +111,10 @@ const LaborManagement: React.FC = () => {
           {activeTab === 'dashboard' && (
             <motion.div
               key="dashboard"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.15 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.1 }}
             >
               <LaborDashboard
                 members={workerMembers}
@@ -127,10 +127,10 @@ const LaborManagement: React.FC = () => {
           {activeTab === 'workers' && (
             <motion.div
               key="workers"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.15 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.1 }}
             >
               <LaborWorkerList
                 members={workerMembers}
@@ -148,10 +148,10 @@ const LaborManagement: React.FC = () => {
           {activeTab === 'teams' && (
             <motion.div
               key="teams"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.15 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.1 }}
             >
               <LaborTeamManager
                 members={workerMembers}
@@ -171,10 +171,10 @@ const LaborManagement: React.FC = () => {
           {activeTab === 'wages' && (
             <motion.div
               key="wages"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.15 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.1 }}
             >
               <WageManagement />
             </motion.div>

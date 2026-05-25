@@ -288,10 +288,10 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
           {activeTab === 'partner' && (
             <motion.div
               key="partner"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.15 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.1 }}
             >
               <PartnerList
                 partners={partners}
@@ -334,10 +334,10 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
           {activeTab === 'supervisor' && (
             <motion.div
               key="supervisor"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.15 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.1 }}
             >
               <SupervisorList
                 supervisors={supervisors}

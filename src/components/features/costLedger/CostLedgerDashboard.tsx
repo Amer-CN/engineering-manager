@@ -51,7 +51,7 @@ export function CostLedgerDashboard({ projects, summaries, loading, onSelectProj
 
   if (projects.length === 0) {
     return (
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center justify-center py-16 text-slate-400">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-16 text-slate-400">
         <Icon name="FolderKanban" size={48} className="mb-3 opacity-30" />
         <p className="text-lg font-medium text-slate-500">暂无项目</p>
         <p className="mt-1 text-sm">请先在项目管理中创建项目</p>
@@ -109,7 +109,7 @@ export function CostLedgerDashboard({ projects, summaries, loading, onSelectProj
 
       {/* ═══ KPI Stat Cards ═══ */}
       <motion.section variants={sectionV} className="grid grid-cols-3 gap-3 mb-6">
-        <motion.div variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { delay: 0 } } }}
+        <motion.div variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { delay: 0 } } }}
           whileHover={cardHover} whileTap={{ scale: 0.98 }}
           className={`${CARD} p-3 transition-shadow duration-200 cursor-default`}>
           <div className="flex items-center gap-2 mb-1">
@@ -120,7 +120,7 @@ export function CostLedgerDashboard({ projects, summaries, loading, onSelectProj
           <p className="text-xs text-slate-400">总支出金额</p>
         </motion.div>
 
-        <motion.div variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { delay: 0.05 } } }}
+        <motion.div variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { delay: 0.05 } } }}
           whileHover={cardHover} whileTap={{ scale: 0.98 }}
           className={`${CARD} p-3 transition-shadow duration-200 cursor-default`}>
           <div className="flex items-center gap-2 mb-1">
@@ -131,7 +131,7 @@ export function CostLedgerDashboard({ projects, summaries, loading, onSelectProj
           <p className="text-xs text-slate-400">总收入金额</p>
         </motion.div>
 
-        <motion.div variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { delay: 0.1 } } }}
+        <motion.div variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { delay: 0.1 } } }}
           whileHover={cardHover} whileTap={{ scale: 0.98 }}
           className={`${CARD} p-3 transition-shadow duration-200 cursor-default`}>
           <div className="flex items-center gap-2 mb-1">
@@ -167,7 +167,7 @@ export function CostLedgerDashboard({ projects, summaries, loading, onSelectProj
           return (
             <motion.button
               key={project.id}
-              variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { delay: i * 0.05 } } }}
+              variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { delay: i * 0.03 } } }}
               whileHover={{ y: -3, boxShadow: '0 8px 25px rgba(0,0,0,0.08)' }}
               whileTap={{ scale: 0.98 }}
               onClick={() => onSelectProject(project.id)}

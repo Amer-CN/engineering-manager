@@ -158,7 +158,7 @@ const Dashboard: React.FC = () => {
         <div className="rounded-2xl bg-slate-100 animate-pulse h-32" />
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
-            <motion.div key={i} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }} className="rounded-xl bg-slate-100 animate-pulse h-28" />
+            <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }} className="rounded-xl bg-slate-100 animate-pulse h-28" />
           ))}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -233,7 +233,7 @@ const Dashboard: React.FC = () => {
             return (
               <motion.div
                 key={card.key}
-                variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { delay: i * 0.05 } } }}
+                variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { delay: i * 0.03 } } }}
                 whileHover={cardHover}
                 whileTap={{ scale: 0.98 }}
                 className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm p-3 transition-shadow duration-200 cursor-default"

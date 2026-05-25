@@ -87,9 +87,9 @@ const LaborDashboard: React.FC<LaborDashboardProps> = ({ members, projects, work
         {kpiCards.map((kpi, index) => (
           <motion.div
             key={kpi.label}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: index * 0.03 }}
             className="bg-white rounded-xl border border-slate-200 shadow-sm p-5"
           >
             <div className="flex items-center justify-between mb-3">
@@ -110,9 +110,9 @@ const LaborDashboard: React.FC<LaborDashboardProps> = ({ members, projects, work
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Project Distribution Pie Chart */}
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.15 }}
           className="bg-white rounded-xl border border-slate-200 shadow-sm p-6"
         >
           <h3 className="text-lg font-semibold text-slate-800 mb-4">工人分布</h3>
@@ -162,9 +162,9 @@ const LaborDashboard: React.FC<LaborDashboardProps> = ({ members, projects, work
 
         {/* Team Overview List */}
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
           className="bg-white rounded-xl border border-slate-200 shadow-sm p-6"
         >
           <h3 className="text-lg font-semibold text-slate-800 mb-4">班组概览</h3>
