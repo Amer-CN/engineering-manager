@@ -273,8 +273,8 @@ export default function BankReceiptBatch({
               {files.map((file, index) => (
                 <motion.div
                   key={`${file.name}-${index}`}
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
                   exit={{ opacity: 0, x: 100 }}
                   className="flex items-center justify-between p-3 bg-gray-50 rounded-md"
                 >
