@@ -97,10 +97,10 @@ const AppContent: React.FC = () => {
         {isLocked && <LockScreen />}
       </AnimatePresence>
       <main className="flex-1 overflow-auto">
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="sync">
           <motion.div key={currentPage} className="h-full"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}>
+            transition={{ duration: 0.15, ease: 'easeOut' }}>
             <Suspense fallback={<PageLoader />}>
               {renderPage()}
             </Suspense>
