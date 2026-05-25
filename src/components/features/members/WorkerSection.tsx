@@ -121,7 +121,7 @@ export function WorkerSection({
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => { setEditingTeam(null); setTeamFormData(defaultTeamFormData); setShowTeamModal(true) }}
-                    className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center"
+                    className="btn btn-warning"
                   >
                     <span className="mr-2">+</span>
                     添加班组
@@ -164,7 +164,7 @@ export function WorkerSection({
                   <p className="text-slate-500 dark:text-slate-400 mb-6">请先添加项目，然后创建班组</p>
                   <button
                     onClick={() => { setEditingTeam(null); setTeamFormData(defaultTeamFormData); setShowTeamModal(true) }}
-                    className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                    className="btn btn-warning"
                   >
                     添加班组
                   </button>
@@ -265,7 +265,7 @@ export function WorkerSection({
                   <p className="text-slate-500 dark:text-slate-400 mb-6">请先在班组管理中从工人库添加，或导入 Excel</p>
                   <button
                     onClick={onAddWorker}
-                    className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                    className="btn btn-warning"
                   >
                     添加工人
                   </button>

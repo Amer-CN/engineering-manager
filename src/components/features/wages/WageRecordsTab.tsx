@@ -89,12 +89,12 @@ export default function WageRecordsTab({
         <span className="text-sm text-slate-400">{filtered.length} 条记录</span>
         {changedCount > 0 && (
           <button onClick={onSavePayments}
-            className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
+            className="btn btn-success btn-sm">
             保存发放 ({changedCount})
           </button>
         )}
         <button onClick={onBatchArchive}
-          className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
+          className="btn btn-warning btn-sm flex items-center gap-1"
         >
           <Icon name="Lock" size={14} />
           归档
@@ -102,7 +102,7 @@ export default function WageRecordsTab({
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={receiptParsing}
-          className="bg-primary-600 hover:bg-primary-700 disabled:bg-slate-400 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
+          className="btn btn-primary btn-sm flex items-center gap-1"
         >
           <Icon name="Upload" size={14} />
           {receiptParsing ? '解析中...' : '上传银行回单'}
@@ -122,7 +122,7 @@ export default function WageRecordsTab({
         />
         {selectedIds.size > 0 && (
           <button onClick={onBatchDelete}
-            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
+            className="btn btn-danger btn-sm">
             删除选中 ({selectedIds.size})
           </button>
         )}

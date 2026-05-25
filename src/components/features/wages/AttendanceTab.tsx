@@ -64,7 +64,7 @@ export default function AttendanceTab({
           </div>
           {selectedIds.size > 0 && (
             <button onClick={onBatchDelete}
-              className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
+              className="btn btn-danger btn-sm">
               删除选中 ({selectedIds.size})
             </button>
           )}
@@ -100,10 +100,9 @@ export default function AttendanceTab({
           />
           <button
             onClick={() => { fileInputRef.current?.click() }}
-            className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-          >导入考勤</button>
+            className="btn btn-primary btn-sm">导入考勤</button>
           <button onClick={onGenerateAttendance} disabled={loading}
-            className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+            className="btn btn-warning btn-sm">
             生成默认考勤
           </button>
         </div>
