@@ -182,7 +182,7 @@ export default function AttendanceDetail({
               if (result.success) { showToast('已删除', 'success'); onSaved(); onBack() }
               else showToast(result.error || '删除失败', 'error')
             } catch (e: any) { showToast(e?.message || '删除失败', 'error') }
-          }} className="px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg text-sm transition-colors" title="删除此考勤记录">
+          }} className="btn btn-danger btn-sm" title="删除此考勤记录">
             <Icon name="Trash2" size={16} />
           </button>
           <button onClick={handleSave} disabled={saving} className="btn btn-primary text-sm px-5 py-2 disabled:opacity-50">

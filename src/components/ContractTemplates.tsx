@@ -220,7 +220,7 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
         <div className="flex items-center gap-4">
           {onBack && (
             <button onClick={onBack}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors">
+              className="btn btn-ghost btn-sm flex items-center gap-1.5">
               <Icon name="ArrowLeft" size={16} />
               <span>返回看板</span>
             </button>
@@ -307,7 +307,7 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
                   </button>
                   <button
                     onClick={() => handleEdit(template)}
-                    className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
+                    className="btn btn-secondary btn-sm"
                   >
                     编辑
                   </button>
