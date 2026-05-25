@@ -52,20 +52,13 @@ function TabsTrigger({
         ${tabPadding[size]}
         ${fullWidth ? 'flex-1' : ''}
         ${isActive
-          ? 'text-primary-600 shadow-sm'
+          ? 'text-primary-600 bg-white dark:bg-slate-800 shadow-sm rounded-md'
           : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
         }
         ${tab.disabled ? 'opacity-50 cursor-not-allowed' : ''}
       `}
     >
-      {isActive && (
-        <motion.div
-          layoutId="active-tab"
-          className="absolute inset-0 bg-white dark:bg-slate-800 rounded-md shadow-sm"
-          transition={{ type: 'spring', stiffness: 40, damping: 25 }}
-        />
-      )}
-      <span className="relative z-10 flex items-center justify-center gap-2">
+      <span className={`relative z-10 flex items-center justify-center gap-2 ${isActive ? 'text-primary-600' : ''}`}>
         {tab.icon && <Icon name={tab.icon} size={14} />}
         {tab.label}
         {tab.badge !== undefined && (
