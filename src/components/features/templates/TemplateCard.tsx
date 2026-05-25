@@ -55,17 +55,17 @@ export const TemplateCard = React.memo(function TemplateCard({ template, onEdit,
 
       {/* Actions */}
       <div className="flex items-center gap-1 pt-3 border-t border-slate-100">
-        <button onClick={() => onPreview(template)} className="btn-sm text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg px-2 py-1 text-xs" title="预览">
+        <button onClick={() => onPreview(template)} className="btn btn-secondary btn-sm" title="预览">
           <Icon name="Eye" size={14} /> 预览
         </button>
-        <button onClick={() => onGenerate(template)} className="btn-sm text-primary-500 hover:text-primary-700 hover:bg-primary-50 rounded-lg px-2 py-1 text-xs" title="生成文档">
+        <button onClick={() => onGenerate(template)} className="btn btn-ghost btn-sm text-primary-600" title="生成文档">
           <Icon name="FileText" size={14} /> 生成
         </button>
         <div className="flex-1" />
-        <button onClick={() => onEdit(template)} className="p-1.5 text-slate-400 hover:text-primary-500 hover:bg-slate-50 rounded" title="编辑">
+        <button onClick={() => onEdit(template)} className="btn btn-ghost btn-sm text-slate-500" title="编辑">
           <Icon name="Edit3" size={14} />
         </button>
-        <button onClick={() => { if (confirm('确定删除此模板？')) onDelete(template.id) }} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded" title="删除">
+        <button onClick={() => { if (confirm('确定删除此模板？')) onDelete(template.id) }} className="btn btn-danger btn-sm" title="删除">
           <Icon name="Trash2" size={14} />
         </button>
       </div>

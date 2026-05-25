@@ -68,13 +68,13 @@ export const MaterialList: React.FC<MaterialListProps> = ({
                 <div className="flex items-center justify-center gap-2">
                   <button
                     onClick={() => onEdit(material)}
-                    className="px-2 py-1 text-xs text-primary-600 hover:bg-primary-50 rounded"
+                    className="btn btn-ghost btn-sm text-primary-600"
                   >
                     编辑
                   </button>
                   <button
                     onClick={() => onDelete(material.id)}
-                    className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded"
+                    className="btn btn-danger btn-sm"
                   >
                     删除
                   </button>
