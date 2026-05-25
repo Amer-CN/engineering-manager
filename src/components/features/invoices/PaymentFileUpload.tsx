@@ -64,7 +64,7 @@ export const PaymentFileUpload: React.FC<Props> = ({ fileUrl, fileType, typeLabe
               </div>
               <div className="flex items-center gap-2">
                 <button type="button" onClick={() => setPreviewFile({ data: fileUrl, type: fileType === 'pdf' ? 'pdf' : 'image', title: '凭证预览' })} className="px-3 py-1.5 text-xs text-amber-600 hover:bg-amber-50 rounded-lg">预览</button>
-                <button type="button" onClick={onFileRemove} className="px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded-lg">删除</button>
+                <button type="button" onClick={onFileRemove} className="btn btn-danger btn-sm">删除</button>
               </div>
             </div>
           </div>

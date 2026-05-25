@@ -108,8 +108,8 @@ const DepartmentManager: React.FC = () => {
                 <td className="px-6 py-3 text-sm text-slate-600">{getManagerName(dept.managerId)}</td>
                 <td className="px-6 py-3 text-center">
                   <div className="flex items-center justify-center gap-2">
-                    <button onClick={() => openEdit(dept)} className="px-3 py-1 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg">编辑</button>
-                    <button onClick={() => handleDelete(dept)} className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded-lg">删除</button>
+                    <button onClick={() => openEdit(dept)} className="btn btn-ghost btn-sm text-indigo-600">编辑</button>
+                    <button onClick={() => handleDelete(dept)} className="btn btn-danger btn-sm">删除</button>
                   </div>
                 </td>
               </tr>
