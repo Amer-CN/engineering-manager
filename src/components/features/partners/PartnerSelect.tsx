@@ -196,7 +196,7 @@ export function PartnerSelect({
                   onChange(null)
                   setIsOpen(false)
                 }}
-                className="w-full py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                className="btn btn-danger w-full"
               >
                 清空选择
               </button>

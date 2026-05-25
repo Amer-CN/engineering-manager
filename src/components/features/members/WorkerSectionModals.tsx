@@ -101,7 +101,7 @@ export function TeamCard({ team, workerCount, onEdit, onDelete, onManageWorkers,
         </button>
         <button
           onClick={onDelete}
-          className="flex-1 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
+          className="btn btn-danger btn-sm flex-1"
         >
           删除
         </button>

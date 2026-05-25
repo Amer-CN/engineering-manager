@@ -347,13 +347,13 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
                     <div className="flex items-center justify-center gap-2">
                       <button
                         onClick={() => handleEdit(drawing)}
-                        className="px-3 py-1 text-sm text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                        className="btn btn-ghost btn-sm"
                       >
                         编辑
                       </button>
                       <button
                         onClick={() => handleDelete(drawing.id)}
-                        className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        className="btn btn-danger btn-sm"
                       >
                         删除
                       </button>

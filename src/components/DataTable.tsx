@@ -240,14 +240,14 @@ export function DataTable<T>({
               <button
                 onClick={() => setCurrentPage(1)}
                 disabled={currentPage === 1}
-                className="px-2 py-1 text-sm border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn btn-secondary btn-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 首页
               </button>
               <button
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="px-2 py-1 text-sm border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn btn-secondary btn-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 上一页
               </button>
@@ -259,14 +259,14 @@ export function DataTable<T>({
               <button
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="px-2 py-1 text-sm border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn btn-secondary btn-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 下一页
               </button>
               <button
                 onClick={() => setCurrentPage(totalPages)}
                 disabled={currentPage === totalPages}
-                className="px-2 py-1 text-sm border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn btn-secondary btn-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 末页
               </button>

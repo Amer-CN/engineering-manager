@@ -144,14 +144,14 @@ export const InvoiceRow = React.memo(function InvoiceRow({
           </button>
           <button
             onClick={() => onEdit(invoice)}
-            className="p-1.5 text-primary-600 hover:bg-primary-50 rounded transition-colors"
+            className="btn btn-ghost btn-sm"
             title="编辑"
           >
             <Icon name="Edit" size={14} />
           </button>
           <button
             onClick={() => onDelete(invoice.id)}
-            className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+            className="btn btn-danger btn-sm"
             title="删除"
           >
             <Icon name="Trash2" size={14} />
