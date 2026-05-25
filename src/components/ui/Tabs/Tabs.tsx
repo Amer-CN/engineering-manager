@@ -116,7 +116,7 @@ export function Tabs({
       {children && (
         <div className="mt-4">
           {animated ? (
-            <AnimatePresence mode="wait">
+            <AnimatePresence mode="sync">
               <motion.div
                 key={value}
                 initial={{ opacity: 0, y: 8 }}

@@ -283,7 +283,7 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
         ]}
         animated={true}
       >
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="sync">
           {/* ==================== 合作单位内容 ==================== */}
           {activeTab === 'partner' && (
             <motion.div

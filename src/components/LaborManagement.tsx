@@ -107,7 +107,7 @@ const LaborManagement: React.FC = () => {
         tabs={TABS.map(tab => ({ key: tab.id, label: tab.label, icon: tab.icon }))}
         animated={true}
       >
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="sync">
           {activeTab === 'dashboard' && (
             <motion.div
               key="dashboard"

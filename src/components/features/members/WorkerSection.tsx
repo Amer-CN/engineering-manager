@@ -106,7 +106,7 @@ export function WorkerSection({
         animated={true}
       >
         {/* 班组管理 */}
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="sync">
           {subTab === 'teams' && (
             <motion.div
               key="teams"
