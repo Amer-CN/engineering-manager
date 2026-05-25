@@ -287,7 +287,7 @@ export function WorkerPickerModal({ show, projectId, workerTeams, existingWorker
                       updateEntry(id, 'workerType', bulkWorkerType)
                       updateEntry(id, 'dailyWage', bulkDailyWage)
                     }
-                  }} className="w-full px-3 py-1.5 text-xs bg-primary-600 hover:bg-blue-700 text-white rounded font-medium transition-colors">
+                  }} className="w-full px-3 py-1.5 text-xs bg-primary-600 hover:bg-primary-700 text-white rounded font-medium transition-colors">
                     应用到全部已选 ({selected.size}人)
                   </button>
                 </div>
@@ -351,7 +351,7 @@ export function WorkerPickerModal({ show, projectId, workerTeams, existingWorker
             <button
               onClick={handleConfirm}
               disabled={selected.size === 0}
-              className="px-5 py-2 bg-primary-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium"
+              className="btn btn-primary text-sm disabled:bg-slate-300 disabled:cursor-not-allowed"
             >
               确认添加{selected.size > 0 ? ` ${selected.size} 人到「${teamName ?? '项目'}」` : ''}
             </button>

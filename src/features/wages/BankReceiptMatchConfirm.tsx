@@ -221,7 +221,7 @@ export default function BankReceiptMatchConfirm({
           <button
             onClick={handleConfirmAll}
             disabled={confirming}
-            className="px-6 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-blue-700 disabled:bg-slate-400"
+            className="px-6 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:bg-slate-400"
           >
             {confirming ? '确认中...' : '确认所有已匹配'}
           </button>
@@ -361,7 +361,7 @@ export default function BankReceiptMatchConfirm({
         <button
           onClick={handleConfirmAll}
           disabled={confirming}
-          className="px-6 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-blue-700 disabled:bg-slate-400"
+          className="px-6 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:bg-slate-400"
         >
           {confirming ? '确认中...' : '确认并提交'}
         </button>

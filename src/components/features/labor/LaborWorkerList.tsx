@@ -210,7 +210,7 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
         </button>
         <button
           onClick={onImportClick}
-          className="bg-primary-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium transition-colors flex items-center"
+          className="btn btn-primary px-5 py-2 flex items-center"
         >
           <Icon name="Upload" size={18} className="mr-1" />导入Excel
         </button>

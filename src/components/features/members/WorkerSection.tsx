@@ -209,7 +209,7 @@ export function WorkerSection({
                 <button onClick={onAddWorker} className="ml-auto bg-amber-600 hover:bg-amber-700 text-white px-5 py-2 rounded-lg font-medium transition-colors flex items-center">
                   <span className="mr-1">+</span>添加工人
                 </button>
-                <button onClick={onImportClick} className="bg-primary-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium transition-colors flex items-center">
+                <button onClick={onImportClick} className="btn btn-primary px-5 py-2 flex items-center">
                   <span className="mr-1">↑</span>导入Excel
                 </button>
               </div>

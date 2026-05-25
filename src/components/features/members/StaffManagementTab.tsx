@@ -75,7 +75,7 @@ export default function StaffManagementTab({ filteredStaff, filterStatus, onFilt
         <div className="bg-white rounded-xl shadow-sm p-12 text-center border border-slate-200">
           <p className="text-slate-400 mb-4">暂无管理人员</p>
           <button onClick={onAdd}
-            className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors text-sm">+ 添加管理人员</button>
+            className="btn btn-primary text-sm px-5 py-2.5">+ 添加管理人员</button>
         </div>
       )}
     </>

@@ -93,7 +93,7 @@ export default function WagePaymentRecords() {
       <div className="ml-auto">
         <button
           onClick={exportToExcel}
-          className="px-4 py-1.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-blue-700 flex items-center gap-1"
+          className="px-4 py-1.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 flex items-center gap-1"
         >
           <Icon name="Download" size={14} />
           导出 Excel

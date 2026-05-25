@@ -157,7 +157,7 @@ export const ContractFormModal: React.FC<Props> = ({ show, type, editingContract
           </div>
           <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-slate-200">
             <button type="button" onClick={onClose} className="px-6 py-2 text-slate-700 hover:bg-slate-100 rounded-lg">取消</button>
-            <button type="submit" className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg">{isEditing ? '保存' : '添加'}</button>
+            <button type="submit" className="btn btn-primary">{isEditing ? '保存' : '添加'}</button>
           </div>
         </form>
       </motion.div>
