@@ -322,8 +322,8 @@ const Users: React.FC = () => {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
                   <th className="text-left py-4 px-6 text-slate-700 dark:text-slate-200 font-medium">用户名</th>
                   <th className="text-left py-4 px-6 text-slate-700 dark:text-slate-200 font-medium">显示名称</th>
                   <th className="text-left py-4 px-6 text-slate-700 dark:text-slate-200 font-medium">角色</th>

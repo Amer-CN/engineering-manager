@@ -75,8 +75,8 @@ export function TeamWageModal({ show, teamId, teamName, projectId, projectName, 
               <h4 className="text-sm font-medium text-slate-600 mb-2">人员明细</h4>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-slate-50 text-left">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr className="text-left">
                       <th className="px-3 py-2 font-medium text-slate-600">姓名</th>
                       <th className="px-3 py-2 font-medium text-slate-600 text-center">月数</th>
                       <th className="px-3 py-2 font-medium text-slate-600 text-center">出勤天</th>

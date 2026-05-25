@@ -28,8 +28,8 @@ export function StaffPayrollTable({
     <div className="bg-white rounded-xl shadow-sm flex-1 mt-4 flex flex-col overflow-hidden">
       <div className="flex-1 overflow-auto min-h-0">
         <table className="w-full">
-          <thead>
-            <tr className="border-b border-slate-200 bg-slate-50 sticky top-0">
+          <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
+            <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">姓名</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">月份</th>
               <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">基本工资</th>

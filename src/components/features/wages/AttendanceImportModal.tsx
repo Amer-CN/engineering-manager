@@ -272,7 +272,7 @@ export const AttendanceImportModal: React.FC<Props> = ({ show, projectId, yearMo
                   </label>
                   <div className="border border-slate-200 rounded-xl overflow-hidden max-h-48 overflow-y-auto">
                     <table className="w-full text-xs">
-                      <thead className="bg-slate-50 sticky top-0">
+                      <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
                         <tr>
                           {state.headers.map((h, i) => (
                             <th key={i} className={`px-3 py-2 text-left font-medium whitespace-nowrap ${
@@ -312,12 +312,12 @@ export const AttendanceImportModal: React.FC<Props> = ({ show, projectId, yearMo
                   </label>
                   <div className="border border-slate-200 rounded-xl overflow-hidden max-h-60 overflow-y-auto">
                     <table className="w-full text-xs">
-                      <thead className="bg-slate-50 sticky top-0">
+                      <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
                         <tr>
-                          <th className="px-3 py-2 text-left font-medium text-slate-500">Excel姓名</th>
-                          <th className="px-3 py-2 text-left font-medium text-slate-500">身份证号</th>
-                          <th className="px-3 py-2 text-right font-medium text-slate-500">出勤天数</th>
-                          <th className="px-3 py-2 text-left font-medium text-slate-500">匹配结果</th>
+                          <th className="px-3 py-2 text-left font-medium whitespace-nowrap">Excel姓名</th>
+                          <th className="px-3 py-2 text-left font-medium whitespace-nowrap">身份证号</th>
+                          <th className="px-3 py-2 text-right font-medium whitespace-nowrap">出勤天数</th>
+                          <th className="px-3 py-2 text-left font-medium whitespace-nowrap">匹配结果</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">

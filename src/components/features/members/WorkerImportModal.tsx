@@ -165,7 +165,7 @@ export function WorkerImportModal({
                 </label>
                 <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden max-h-60 overflow-y-auto">
                   <table className="w-full text-xs">
-                    <thead className="bg-slate-50 dark:bg-slate-800 sticky top-0">
+                    <thead className="bg-slate-50 border-b border-slate-200 dark:bg-slate-800 sticky top-0">
                       <tr>
                         <th className="px-2 py-2 text-left font-medium text-slate-500 w-8">#</th>
                         {importState.headers.map((h, i) => (
@@ -283,7 +283,7 @@ export function WorkerImportModal({
                   </summary>
                   <div className="mt-2 max-h-40 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-lg">
                     <table className="w-full text-xs">
-                      <thead className="bg-slate-50 dark:bg-slate-800 sticky top-0">
+                      <thead className="bg-slate-50 border-b border-slate-200 dark:bg-slate-800 sticky top-0">
                         <tr><th className="px-3 py-1.5 text-left font-medium text-slate-500">行号</th><th className="px-3 py-1.5 text-left font-medium text-slate-500">原因</th></tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-700">

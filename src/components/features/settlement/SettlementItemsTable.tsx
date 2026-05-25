@@ -46,7 +46,7 @@ export const SettlementItemsTable: React.FC<Props> = ({
     {items.length > 0 ? (
       <div className="border border-slate-200 rounded-xl overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50">
+          <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
               {isMaterial ? <>
                 <th className="px-3 py-3 text-left text-xs font-medium text-slate-500">材料名称</th>

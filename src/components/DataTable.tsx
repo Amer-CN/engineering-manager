@@ -170,7 +170,7 @@ export function DataTable<T>({
       <div className="flex-1 overflow-hidden">
         <div className="h-full overflow-auto border border-slate-200 dark:border-slate-700 rounded-lg">
           <table className="w-full">
-            <thead className="bg-slate-50 sticky top-0">
+            <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
               <tr>
                 {columns.map(col => (
                   <th

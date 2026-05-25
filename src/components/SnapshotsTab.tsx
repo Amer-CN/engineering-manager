@@ -167,8 +167,8 @@ export const SnapshotsTab: React.FC = () => {
       ) : (
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
           <table className="w-full border-separate border-spacing-0">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">时间</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">大小</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">数据概况</th>

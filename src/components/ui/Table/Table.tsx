@@ -74,7 +74,7 @@ export function Table<T extends Record<string, unknown>>({
     <div className={`overflow-hidden rounded-xl ${bordered ? 'border border-slate-200' : 'border border-slate-200'} ${className}`}>
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className={`bg-slate-50 ${stickyHeader ? 'sticky top-0 z-10' : ''}`}>
+          <thead className={`bg-slate-50 border-b border-slate-200 ${stickyHeader ? 'sticky top-0 z-10' : ''}`}>
             <tr>
               {columns.map((column) => (
                 <th

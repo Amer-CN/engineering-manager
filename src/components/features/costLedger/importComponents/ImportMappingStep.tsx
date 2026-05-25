@@ -107,8 +107,8 @@ function PreviewTable({ previewRows, categories, rowOverrides, onRowOverrideChan
       </label>
       <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
         <table className="w-full text-xs">
-          <thead>
-            <tr className="bg-slate-50 dark:bg-slate-800">
+          <thead className="bg-slate-50 border-b border-slate-200">
+            <tr className="">
               <th className="px-2 py-1.5 text-left text-slate-500">行</th>
               <th className="px-2 py-1.5 text-left text-slate-500">日期</th>
               <th className="px-2 py-1.5 text-left text-slate-500">摘要</th>

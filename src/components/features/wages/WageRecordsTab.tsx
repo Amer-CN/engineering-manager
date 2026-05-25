@@ -165,8 +165,8 @@ export default function WageRecordsTab({
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-slate-50 text-left">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr className="text-left">
                 <th className="px-3 py-3 w-10">
                   <input type="checkbox"
                     checked={selectedIds.size === filtered.length && filtered.length > 0}

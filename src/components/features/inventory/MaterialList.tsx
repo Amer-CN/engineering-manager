@@ -34,7 +34,7 @@ export const MaterialList: React.FC<MaterialListProps> = ({
   return filteredMaterials.length > 0 ? (
     <div className="overflow-x-auto">
       <table className="w-full">
-        <thead className="bg-slate-50">
+        <thead className="bg-slate-50 border-b border-slate-200">
           <tr>
             <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">材料名称</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">所属项目</th>

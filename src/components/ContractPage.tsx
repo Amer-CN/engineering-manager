@@ -234,7 +234,7 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
 
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             <table className="w-full">
-              <thead className="bg-slate-50">
+              <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">合同名称</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">合同编号</th>
