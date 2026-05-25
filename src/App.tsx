@@ -98,7 +98,7 @@ const AppContent: React.FC = () => {
       </AnimatePresence>
       <main className="flex-1 overflow-auto">
         <AnimatePresence mode="sync">
-          <motion.div key={currentPage} className="h-full"
+          <motion.div key={currentPage} className="min-h-full"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}>
             <Suspense fallback={<PageLoader />}>

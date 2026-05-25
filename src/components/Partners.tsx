@@ -249,8 +249,8 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
   }
 
   return (
-    <PageContainer className="h-full flex flex-col">
-      <motion.div className="h-full flex flex-col" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+    <PageContainer className="min-h-full flex flex-col">
+      <motion.div className="min-h-full flex flex-col" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
       {/* 页面标题 */}
       <div className="flex items-center justify-between mb-5">
         <div>

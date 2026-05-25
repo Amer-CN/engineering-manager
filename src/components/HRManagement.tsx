@@ -24,7 +24,7 @@ const HRManagement: React.FC = () => {
   }, [])
 
   return (
-    <div className="p-6 max-w-[1400px] mx-auto h-full flex flex-col">
+    <div className="p-6 max-w-[1400px] mx-auto min-h-full flex flex-col">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-800">人事管理</h1>
         <p className="text-slate-500 mt-1">管理人员档案、考勤、薪酬与部门架构</p>
