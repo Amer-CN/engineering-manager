@@ -93,10 +93,10 @@ export function Tabs({
   fullWidth = false,
 }: TabsProps) {
   return (
-    <div className={`w-fit ${fullWidth ? 'w-full' : ''} ${className}`}>
+    <div className={`${fullWidth ? 'w-full' : ''} ${className}`}>
       {/* Tab 按钮容器 */}
       <div
-        className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-1"
+        className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-1 w-fit"
         role="tablist"
         aria-orientation="horizontal"
       >
