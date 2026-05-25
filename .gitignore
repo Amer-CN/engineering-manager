@@ -19,6 +19,9 @@ public/seed-data.json
 # MCP 配置 (含第三方 API Token)
 .mcp.json
 
+# Graphify 知识图谱 (自动生成，无需版本控制)
+graphify-out/
+
 # 意外生成的空目录
 BRANCH=master/
 nul

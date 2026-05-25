@@ -21,12 +21,12 @@ function StatCard({ icon, label, value, accent, valueColor }: {
   icon: React.ReactNode; label: string; value: string; accent?: string; valueColor?: string
 }) {
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
+    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 min-w-0">
       <div className="flex items-center gap-3">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${accent || 'bg-slate-100'}`}>{icon}</div>
-        <div>
-          <p className="text-xs text-slate-400">{label}</p>
-          <p className={`text-lg font-bold ${valueColor || 'text-slate-800'}`}>{value}</p>
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${accent || 'bg-slate-100'} shrink-0`}>{icon}</div>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs text-slate-400 truncate">{label}</p>
+          <p className={`text-lg font-bold ${valueColor || 'text-slate-800'} truncate`} title={value}>{value}</p>
         </div>
       </div>
     </div>
