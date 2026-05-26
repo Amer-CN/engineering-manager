@@ -138,7 +138,6 @@ export function useIdCardOCR(options?: {
     setLoading(true)
     try {
       const result = await recognizeIdCard(base64)
-      console.log('[OCR] 识别结果:', JSON.stringify(result, null, 2))
 
       if (result.success && result.idCard) {
         const { number, gender, birthDate, name, ethnicity, address } = result.idCard

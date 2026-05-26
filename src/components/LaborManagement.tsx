@@ -1,5 +1,5 @@
 // LaborManagement.tsx - 工人管理主页面（使用统一 Tabs 组件）
-import React, { useState, useCallback, useRef, Suspense } from 'react'
+import React, { useState, useCallback, Suspense } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Tabs } from './ui/Tabs'
 import { useLaborData } from './features/labor/hooks/useLaborData'
@@ -7,7 +7,7 @@ import { useLaborModals } from './features/labor/hooks/useLaborModals'
 import { useLaborOperations } from './features/labor/hooks/useLaborOperations'
 import { LABOR_TAB_KEY } from './features/labor/theme'
 import { useWorkerImport } from './features/members/useWorkerImport'
-import { MemberForm, WorkerFormData, defaultWorkerFormData, memberToWorkerForm } from './features/members'
+import { MemberForm } from './features/members'
 
 // Lazy load tab content components
 const LaborDashboard = React.lazy(() => import('./features/labor/LaborDashboard'))
@@ -62,21 +62,6 @@ const LaborManagement: React.FC = () => {
   const { importState, progress, result, phase, error: importError, parseFile, switchSheet, setHeaderRow, setMapping, getConfidence, executeImport, saveCurrentMappingAsPreset, reset: resetImport } = useWorkerImport(existingIdCards)
 
   // Worker form state
-// @ts-ignore TS6133: workerFormData and setWorkerFormData are declared but never read
-  const [workerFormData, setWorkerFormData] = useState<WorkerFormData>(defaultWorkerFormData)
-  const originalMemberFileRef = useRef<Record<number, Record<string, string>>>({})
-
-// @ts-ignore TS6133: handleEditWorker is declared but never read
-  const handleEditWorker = (worker: any) => {
-    const formData = memberToWorkerForm(worker)
-    originalMemberFileRef.current[worker.id] = {}
-    for (const key of ['idCardFront', 'idCardBack', 'contractFile', 'safetyTrainingFile', 'healthReportFile', 'specialCertificateFile']) {
-      const val = (formData as any)[key]
-      if (val && !val.startsWith('data:')) originalMemberFileRef.current[worker.id][key] = val
-    }
-    modals.openWorkerModal(worker)
-  }
-
   const handleTeamAddWorkers = (teamId: number, projectId: number) => {
     const existingIds = new Set(members.filter((w: any) => w.projectId === projectId).map((w: any) => w.workerId))
     modals.openWorkerPicker(projectId, existingIds, teamId)
@@ -187,7 +172,7 @@ const LaborManagement: React.FC = () => {
         <FileImportDialog
           show={showFileDialog}
           title="导入 Excel"
-          description="选择工人信息�?Excel 文件，支�?.xlsx / .xls / .csv 格式"
+          description="选择工人信息 Excel 文件，支持 .xlsx / .xls / .csv 格式"
           accept=".xlsx,.xls,.csv"
           acceptText="Excel 表格 (.xlsx, .xls, .csv)"
           onFile={(file) => {

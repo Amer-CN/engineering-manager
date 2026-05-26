@@ -277,7 +277,7 @@ const Dashboard: React.FC = () => {
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                       <XAxis dataKey="name" tick={CategoryTick} interval={0} axisLine={false} tickLine={false} />
                       <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => v >= 10000 ? `${(v / 10000).toFixed(0)}万` : String(v)} />
-                      <Tooltip /* @ts-ignore */ contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} formatter={(value: any) => [formatCurrency(value ?? 0), '金额']} />
+                      <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} formatter={((value: any) => [formatCurrency(value ?? 0), '金额']) as any} />
                       <Bar dataKey="amount" radius={[5, 5, 0, 0]} animationDuration={1200} animationEasing="ease-out">
                         {chartData.expenseByCategory.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                       </Bar>
@@ -303,7 +303,7 @@ const Dashboard: React.FC = () => {
                           animationDuration={1200} animationEasing="ease-out">
                           {chartData.invoiceStatus.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                         </Pie>
-                        <Tooltip /* @ts-ignore */ contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} formatter={(value: any, name: any) => [value, invoiceStatusLabels[name ?? '']?.text || name]} />
+                        <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} formatter={((value: any, name: any) => [value, invoiceStatusLabels[name ?? '']?.text || name]) as any} />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>

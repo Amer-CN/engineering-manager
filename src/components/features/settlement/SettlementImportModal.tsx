@@ -39,7 +39,7 @@ const autoMap = (headers: string[]) => {
 
 export const SettlementImportModal: React.FC<Props> = ({ show, onClose, onImport }) => {
   const [state, setState] = useState<ImportState>(defaultImportState)
-  const [wbBuffer, setWbBuffer] = useState<ArrayBuffer | null>(null)
+  const [wbBuffer] = useState<ArrayBuffer | null>(null)
 
   const loadSheet = async (wb: any, sheetName: string, hRow?: number) => {
     const XLSX = await import('xlsx')
@@ -51,25 +51,6 @@ export const SettlementImportModal: React.FC<Props> = ({ show, onClose, onImport
     const preview = dataRows.slice(0, 10)
     const mapping = autoMap(headers)
     setState(p => ({ ...p, headerRow, activeSheet: sheetName, headers, previewRows: preview, allRows: dataRows, mapping }))
-  }
-
-// @ts-ignore TS6133: handleFile is declared but never read
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = async (ev) => {
-      try {
-        const buf = ev.target?.result as ArrayBuffer
-        setWbBuffer(buf)
-        const XLSX = await import('xlsx')
-        const wb = XLSX.read(buf, { type: 'array' })
-        setState({ ...defaultImportState, sheetNames: wb.SheetNames })
-        if (wb.SheetNames.length > 0) loadSheet(wb, wb.SheetNames[0])
-      } catch (err) { console.error('Excel读取失败:', err) }
-    }
-    reader.readAsArrayBuffer(file)
-    e.target.value = ''
   }
 
   const confirmImport = () => {

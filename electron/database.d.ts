@@ -60,6 +60,7 @@ export interface Database {
     wageHistory: any[];
     _migrations?: {
         fileStorageV1?: boolean;
+        salaryHistoryBackfillV1?: boolean;
     };
 }
 export declare let config: AppConfig;

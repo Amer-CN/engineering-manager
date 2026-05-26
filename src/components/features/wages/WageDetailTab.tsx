@@ -111,29 +111,10 @@ export default function WageDetailTab({
     return { totalActual: actual, totalPaid: paid, totalDiff: actual - paid }
   }, [scopeData, paymentEdits])
 
-// @ts-ignore TS6133: allSelected is declared but never read
-  const allSelected = scopeData.length > 0 && selectedIds.size === scopeData.length
-
   // ── 文件上传（回单） ──
   const handleReceiptFile = (file: File) => {
     onBankReceiptUpload((file as any).path || file.name)
   }
-
-  // ── 返回 + 标题 ──
-// @ts-ignore TS6133: header is declared but never read
-  const header = (
-    <div className="flex items-center gap-4 mb-4">
-      <button onClick={onBack}
-        className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors">
-        <Icon name="ChevronLeft" size={18} />
-      </button>
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800">
-          {scope === 'project' ? selectedProject?.name : '全部项目'}
-        </h1>
-      </div>
-    </div>
-  )
 
   // ── 作用域切换 + 操作栏 ──
   const toolbar = (

@@ -10,23 +10,22 @@ import { Icon } from '@/components/ui/Icon'
 import type { CostLedgerCategory, CostLedgerMatchRule } from '@/types'
 import { executeBatchImport, learnFromOverrides as doLearnFromOverrides, buildImportEntries } from './importComponents/importLogic'
 import { ImportFileStep } from './importComponents/ImportFileStep'
-import { ImportMappingStep, parseAllRows, buildCategorySummary } from './importComponents/ImportMappingStep'
+import { ImportMappingStep, parseAllRows } from './importComponents/ImportMappingStep'
 import { ImportProgressStep } from './importComponents/ImportProgressStep'
 import { ImportDoneStep } from './importComponents/ImportDoneStep'
 
 // ── 接口 ──
-interface ImportField { key: string; label: string; required?: boolean }
-// @ts-ignore TS6133: IMPORT_FIELDS is declared but never read
-const IMPORT_FIELDS: ImportField[] = [
-  { key: 'date', label: '日期', required: true },
-  { key: 'voucherNo', label: '凭证号' },
-  { key: 'summary', label: '摘要' },
-  { key: 'counterparty', label: '往来单位', required: true },
-  { key: 'channel', label: '部门/渠道' },
-  { key: 'incomeAmount', label: '收入金额' },
-  { key: 'expenseAmount', label: '支出金额' },
-  { key: 'notes', label: '备注' },
-]
+// -- IMPORT_FIELDS: 保留供参考 --
+// const IMPORT_FIELDS: ImportField[] = [
+//   { key: 'date', label: '日期', required: true },
+//   { key: 'voucherNo', label: '凭证号' },
+//   { key: 'summary', label: '摘要' },
+//   { key: 'counterparty', label: '往来单位', required: true },
+//   { key: 'channel', label: '部门/渠道' },
+//   { key: 'incomeAmount', label: '收入金额' },
+//   { key: 'expenseAmount', label: '支出金额' },
+//   { key: 'notes', label: '备注' },
+// ]
 
 interface ParsedRow {
   date: string; voucherNo: string; summary: string; counterparty: string
@@ -185,12 +184,6 @@ export function CostLedgerImportModal({
     if (previewPage >= totalPages) setPreviewPage(0)
     return { valid, skipped, total: rows.length, validCount: valid.filter(r => r.counterparty && r.date).length, totalPages }
   }, [doParseAllRows, previewPage])
-
-// @ts-ignore TS6133: categorySummary is declared but never read
-  const categorySummary = useMemo(
-    () => buildCategorySummary(doParseAllRows(), categories, categoryOverrides),
-    [doParseAllRows, categories, categoryOverrides]
-  )
 
   // ── 执行导入 ──
   const executeImport = useCallback(async () => {

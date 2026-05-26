@@ -65,9 +65,6 @@ export function WorkerImportModal({
     return { valid: errors.length === 0, errors }
   }
 
-// @ts-ignore TS6133: requiredFields is declared but never read
-  const requiredFields = WORKER_IMPORT_FIELDS.filter(f => f.required)
-
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[70]" onClick={onClose}>
       <motion.div

@@ -123,7 +123,7 @@ export function CostLedgerAnalytics({ projectId, projectName, categories }: Cost
                         <Cell key={i} fill={getCategoryColor(d.code, categories as any) || FALLBACK_COLORS[i % FALLBACK_COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip /* @ts-ignore */ formatter={(v: any) => formatMoney(v ?? 0)} />
+                    <Tooltip formatter={((v: any) => formatMoney(v ?? 0)) as any} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -157,7 +157,7 @@ export function CostLedgerAnalytics({ projectId, projectName, categories }: Cost
                   <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false}
                     tickFormatter={(v: number) => v >= 10000 ? `${(v/10000).toFixed(0)}万` : String(v)} />
-                  <Tooltip /* @ts-ignore */ formatter={(v: any) => formatMoney(v ?? 0)} />
+                  <Tooltip formatter={((v: any) => formatMoney(v ?? 0)) as any} />
                   <Bar dataKey="支出" fill="#ef4444" radius={[3,3,0,0]} />
                   <Bar dataKey="收入" fill="#10b981" radius={[3,3,0,0]} />
                 </BarChart>

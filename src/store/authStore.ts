@@ -45,7 +45,6 @@ export const useAuthStore = create<AuthState>((set, get) => {
   if (stored) {
     try {
       const userData = JSON.parse(stored)
-      console.log('🔵 从 localStorage 恢复登录状态:', userData.username)
       initialAuthenticated = true
       initialUser = userData
       
@@ -72,7 +71,6 @@ export const useAuthStore = create<AuthState>((set, get) => {
     currentUser: initialUser,
     
     login: (userData: StoredAuth) => {
-      console.log('🔵 设置登录状态:', userData.username)
       set({
         currentUser: userData,
         isAuthenticated: true,

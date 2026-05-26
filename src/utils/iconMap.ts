@@ -1,7 +1,6 @@
 import {
-  Activity, AlertCircle, AlertTriangle, ArrowDownCircle, ArrowLeft, ArrowLeftRight, ArrowUpCircle,
-// @ts-ignore TS6133: Bookmark is declared but never read
-  BadgeCheck, Ban, Banknote, BarChart3, Bookmark, Building2,
+  Activity, AlertCircle, AlertTriangle, ArrowDownCircle, ArrowLeft, ArrowLeftRight, ArrowRightLeft, ArrowUpCircle,
+  BadgeCheck, Ban, Banknote, BarChart3, Building2,
   Calendar, CalendarCheck, Camera, Check, CheckCircle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ClipboardList, ClipboardPen, Clock, Construction, CreditCard,
   Database, DollarSign, Download, Droplets,
   Edit3, Eye, EyeOff,
@@ -12,7 +11,7 @@ import {
   Key,
   Landmark, LayoutDashboard, Lightbulb, Loader, Loader2, Lock, LogOut,
   Mail, MapPin, Menu, Monitor, Moon, MoreVertical,
-  Package, PaintBucket, Paperclip, Phone, PieChart, Plus, Printer,
+  Package, PaintBucket, Paperclip, Phone, PieChart, Plus, Power, Printer,
   Receipt, Redo, RefreshCw, RotateCcw, Ruler,
   Save, ScrollText, Search, Settings, Shield, Snowflake, Sparkles, Stamp, Sun,
   Trash2, TrendingDown, TrendingUp, Truck,
@@ -23,7 +22,7 @@ import {
 } from 'lucide-react'
 
 export const iconMap: Record<string, LucideIcon> = {
-  Activity, AlertCircle, AlertTriangle, ArrowDownCircle, ArrowLeft, ArrowLeftRight, ArrowUpCircle,
+  Activity, AlertCircle, AlertTriangle, ArrowDownCircle, ArrowLeft, ArrowLeftRight, ArrowRightLeft, ArrowUpCircle,
   BadgeCheck, Ban, Banknote, BarChart3, Building2,
   Calendar, CalendarCheck, Camera, Check, CheckCircle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ClipboardFile: ClipboardPen, ClipboardList, ClipboardPen, Clock, Construction, CreditCard,
   Database, DollarSign, Download, Droplets,
@@ -35,7 +34,7 @@ export const iconMap: Record<string, LucideIcon> = {
   Key,
   Landmark, LayoutDashboard, Lightbulb, Loader, Loader2, Lock, LogOut,
   Mail, MapPin, Menu, Monitor, Moon, MoreVertical,
-  Package, PaintBucket, Palette: PaintBucket, Paperclip, Phone, PieChart, Plus, Printer,
+  Package, PaintBucket, Palette: PaintBucket, Paperclip, Phone, PieChart, Plus, Power, Printer,
   Receipt, Redo, RefreshCw, RotateCcw, Ruler,
   Save, ScrollText, Search, Settings, Shield, Snowflake, Sparkles, Stamp, Sun,
   Trash2, TrendingDown, TrendingUp, Truck,

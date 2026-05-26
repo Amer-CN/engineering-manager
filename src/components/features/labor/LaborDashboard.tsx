@@ -134,8 +134,7 @@ const LaborDashboard: React.FC<LaborDashboardProps> = ({ members, projects, work
                     ))}
                   </Pie>
                   <Tooltip
-                    // @ts-ignore - Recharts formatter type mismatch
-                    formatter={(value: any, name: any) => [`${value ?? 0} 人`, name ?? '']}
+                    formatter={((value: any, name: any) => [`${value ?? 0} 人`, name ?? '']) as any}
                     contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }}
                   />
                 </PieChart>

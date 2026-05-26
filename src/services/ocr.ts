@@ -91,11 +91,11 @@ export async function loadBuiltInConfig(): Promise<OCRConfig | null> {
     const response = await fetch('./ocr-config.json')
     if (response.ok) {
       const config = await response.json()
-      console.log('成功加载预置OCR配置:', config)
+      console.debug('成功加载预置OCR配置:', config)
       return config as OCRConfig
     }
   } catch (error) {
-    console.log('加载预置OCR配置失败，使用默认值:', error)
+    console.debug('加载预置OCR配置失败，使用默认值:', error)
   }
   return null
 }
@@ -143,7 +143,7 @@ async function baiduOCR(imageBase64: string, config: OCRConfig): Promise<OCRResu
   }
 
   try {
-    console.log('[渲染进程] 通过 IPC 调用主进程百度OCR...')
+    console.debug('[渲染进程] 通过 IPC 调用主进程百度OCR...')
     const result = await window.electronAPI.ocrBaiduIdCard(imageBase64, {
       apiKey: config.baidu.apiKey,
       secretKey: config.baidu.secretKey
@@ -160,7 +160,7 @@ async function baiduOCR(imageBase64: string, config: OCRConfig): Promise<OCRResu
  */
 async function offlineOCR(imageBase64: string): Promise<OCRResult> {
   try {
-    console.log('[离线OCR] 开始识别...')
+    console.debug('[离线OCR] 开始识别...')
 
     // Tesseract.js 需要图片URL或File对象
     // 将base64转换为Blob URL
@@ -170,22 +170,22 @@ async function offlineOCR(imageBase64: string): Promise<OCRResult> {
     // 创建临时URL
     const imageUrl = URL.createObjectURL(blob)
 
-    console.log('[离线OCR] 图片URL创建成功:', imageUrl.substring(0, 50))
+    console.debug('[离线OCR] 图片URL创建成功:', imageUrl.substring(0, 50))
 
     try {
       const Tesseract = await import('tesseract.js')
       const result = await Tesseract.recognize(imageUrl, 'chi_sim+eng', {
         logger: (m) => {
           if (m.status === 'recognizing text') {
-            console.log(`[离线OCR] 识别进度: ${Math.round(m.progress * 100)}%`)
+            console.debug(`[离线OCR] 识别进度: ${Math.round(m.progress * 100)}%`)
           }
         }
       })
 
-      console.log('[离线OCR] 原始识别文本:', result.data.text.substring(0, 200))
+      console.debug('[离线OCR] 原始识别文本:', result.data.text.substring(0, 200))
 
       const text = result.data.text.replace(/\s+/g, '').trim()
-      console.log('[离线OCR] 清理后文本:', text.substring(0, 100))
+      console.debug('[离线OCR] 清理后文本:', text.substring(0, 100))
 
       // 提取身份证号 - 多种正则匹配
       const patterns = [
@@ -199,7 +199,7 @@ async function offlineOCR(imageBase64: string): Promise<OCRResult> {
         const match = text.match(pattern)
         if (match) {
           idCard = match[1].toUpperCase()
-          console.log('[离线OCR] 匹配到身份证号:', idCard)
+          console.debug('[离线OCR] 匹配到身份证号:', idCard)
           break
         }
       }
@@ -207,12 +207,12 @@ async function offlineOCR(imageBase64: string): Promise<OCRResult> {
       if (!idCard) {
         // 最后尝试：搜索所有17-18位数字组合
         const allNumbers = text.match(/\d{15,18}/g)
-        console.log('[离线OCR] 所有15-18位数字:', allNumbers)
+        console.debug('[离线OCR] 所有15-18位数字:', allNumbers)
         return { success: false, error: '未能识别到身份证号' }
       }
 
       const parsed = parseIdCard(idCard)
-      console.log('[离线OCR] 解析结果:', parsed)
+      console.debug('[离线OCR] 解析结果:', parsed)
 
       return {
         success: true,
@@ -292,12 +292,12 @@ export async function recognizeIdCard(imageBase64: string): Promise<OCRResult> {
 
   // 离线模式或离线网络
   if (provider === 'offline' || !isOnline) {
-    console.log('使用离线OCR识别')
+    console.debug('使用离线OCR识别')
     return offlineOCR(imageBase64)
   }
 
   // 使用百度OCR
-  console.log('使用百度OCR识别')
+  console.debug('使用百度OCR识别')
   const result = await baiduOCR(imageBase64, currentConfig)
 
   // 在线识别失败，尝试离线备选
@@ -305,7 +305,7 @@ export async function recognizeIdCard(imageBase64: string): Promise<OCRResult> {
     console.warn(`百度OCR失败: ${result.error}，尝试离线OCR...`)
     const fallbackResult = await offlineOCR(imageBase64)
     if (fallbackResult.success) {
-      console.log('离线OCR备选成功')
+      console.debug('离线OCR备选成功')
       return { 
         ...fallbackResult, 
         error: `百度OCR失败，已使用本地识别: ${result.error}` 

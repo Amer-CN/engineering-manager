@@ -1,6 +1,6 @@
 # AGENTS.md - 工程管家项目约定
-> 项目状态：UI 全面改造 — frameless 窗口 + 自定义标题栏 + 多主题系统（Graphite/Sandstone）+ 侧边栏折叠
-> 最后同步：2026-05-27（UI 改造 + 数据修复 + 版本 0.56.0）
+> 项目状态：代码质量全面治理 — 零 @ts-ignore + 零 console.log + 零编码损坏 + 图标体系完善
+> 最后同步：2026-05-27（代码质量大检查 + 图纸类型图标改进 + 版本 0.57.0）
 
 ## 🗣️ 输出语言
 - **默认中文输出**：所有解释、描述、分析、提问、总结等文字内容使用中文
@@ -12,7 +12,7 @@
 - **可用 skills**：`/office-hours` `/plan-ceo-review` `/plan-eng-review` `/plan-design-review` `/design-consultation` `/design-shotgun` `/design-html` `/review` `/ship` `/land-and-deploy` `/canary` `/benchmark` `/browse` `/connect-chrome` `/qa` `/qa-only` `/design-review` `/setup-browser-cookies` `/setup-deploy` `/setup-gbrain` `/retro` `/investigate` `/document-release` `/codex` `/cso` `/autoplan` `/plan-devex-review` `/devex-review` `/careful` `/freeze` `/guard` `/unfreeze` `/gstack-upgrade` `/learn`
 
 ## 🛠️ 技术栈
-- **Electron 28** - 跨平台桌面应用框架
+- **Electron 38** - 跨平台桌面应用框架
 - **React 18 + TypeScript 5** - 类型安全的 UI 开发
 - **Vite 5** - 极速构建工具
 - **TailwindCSS** - 实用优先的样式框架
@@ -192,9 +192,9 @@ uploads/
 - **手动迭代**：由开发者在使用 neat-freak 整理后手动更新版本号和 CHANGELOG.md
 - 版本号引用位置：`package.json` / `Sidebar.tsx` / `Login.tsx` / `Settings.tsx` / `SettingsChangelog.tsx` / `AGENTS.md` / `CHANGELOG.md`
 - 版本规则详情：见 `SettingsChangelog.tsx` 顶部注释
-- 版本历史：CHANGELOG.md + SettingsChangelog 更新日志浮窗（从 v1.0.0 到 v0.56.0 累计 56 个版本）
+- 版本历史：CHANGELOG.md + SettingsChangelog 更新日志浮窗（从 v1.0.0 到 v0.57.0 累计 57 个版本）
 
-### 当前版本：v0.56.0
+### 当前版本：v0.57.0
 
 ## 🎨 UI 规范
 
@@ -402,6 +402,20 @@ Button(variants/sizes/iconOnly) / Input(status+leftSection/rightSection) / Modal
 - **完整重建（需 API Key）**：`graphify extract . --backend <key>`（含语义分析）
 - **检查更新**：`graphify check-update .`
 - 安装：`graphify 0.8.14`（全局 CLI）
+
+### 图纸管理
+- **模块位置**：侧边栏「项目」分组，路由 `/drawings`，图标 Ruler
+- **7 种类型**：建筑图 / 结构图 / 电气图 / 给排水图 / 暖通图 / 装饰图 / 其他
+- **类型图标映射**：`categoryIcons` — 每个类型独立图标（Building2/Ruler/Zap/Droplets/Wrench/PaintBucket/File），配合颜色标签区分
+- **批量上传**：支持多文件同时上传，共用元数据（项目/类型/部位/备注），逐文件提交 IPC
+- **筛选器**：按项目 / 类型 / 部位文本三种筛选
+- **数据模型**：`db.drawings` 集合，含 projectId/name/category/position/remarks/filePath/createdAt
+- **核心文件**：`Drawings.tsx`（~490 行主页面），`DrawingsUploadForm.tsx`（拖拽上传组件）
+
+## 📐 代码质量约定
+- **零 @ts-ignore**：`src/` 中严禁使用 `@ts-ignore`，类型问题必须用正确类型或 `as any` 显式断言
+- **零 console.log**：业务代码不得包含 `console.log`；调试信息用 `console.debug`，错误用 `console.error`
+- **图标统一注册**：所有 lucide-react 图标必须在 `iconMap.ts` 中注册，不得在组件中直接 import
 
 ## AI 辅助开发自检清单
 - [ ] 新增文件是否超过行数上限？

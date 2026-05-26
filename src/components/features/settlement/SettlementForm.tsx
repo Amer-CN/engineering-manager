@@ -102,8 +102,6 @@ export const SettlementForm: React.FC<SettlementFormProps> = ({
 
   // 模板导入
   const templateInputRef = useRef<HTMLInputElement>(null)
-// @ts-ignore TS6133: excelInputRef is declared but never read
-  const excelInputRef = useRef<HTMLInputElement>(null)
   const [showImportModal, setShowImportModal] = React.useState(false)
 
   const downloadTemplate = async () => {

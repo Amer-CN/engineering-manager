@@ -1,6 +1,32 @@
 # 工程管家 - 更新日志
 
-## v0.56.0（2026-05-27）— UI 全面改造 + 数据修复 + 图标修复
+## v0.57.0（2026-05-27）— 代码质量全面治理
+
+### ♻️ @ts-ignore 全面清除
+- 清除 `src/` 中全部 33+ 处 `@ts-ignore`（TS6133 未用变量 + Recharts Tooltip 类型）
+- 未用变量直接删除，Recharts Tooltip 改用 `as any` 显式断言
+- 新增代码质量约定：**严禁 `@ts-ignore`**
+
+### 🧹 console.log 治理
+- 移除所有业务 `console.log`（Auth 调试日志、OCR 结果日志等）
+- OCR 服务 14 处日志改为 `console.debug`，生产环境不输出
+
+### 🔧 类型修复
+- `electron/database.d.ts` + `database.ts` — 新增 `_migrations.salaryHistoryBackfillV1` 字段
+- `electron/file-service.ts` — 修复 `FileCategoryKey` 类型名拼写错误
+- `src/test-utils/db-helpers.ts` — `db.contracts` 改为 `db.incomeContracts` / `db.expenseContracts` / `db.agreementContracts`
+
+### 🎨 图标完善
+- 注册缺失图标：`Power`、`ArrowRightLeft`
+- 图纸管理类型图标改进：结构图→`Ruler`、电气图→`Zap`、暖通图→`Wrench`、装饰图→`PaintBucket`
+
+### 📄 文档
+- AGENTS.md 新增图纸管理章节 + 代码质量约定
+- 项目状态更新为"代码质量全面治理"
+
+---
+
+## v0.56.0（2026-05-27）— UI 全面改造 + 数据修复 + 图标修复（2026-05-27）— UI 全面改造 + 数据修复 + 图标修复
 
 ### ✨ 全新 UI 框架
 - **frameless 窗口**：去掉原生窗口边框和菜单栏（File/Edit/View），改用自绘标题栏

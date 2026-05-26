@@ -167,9 +167,6 @@ export function CategoryManager({ categories, onClose, onRefresh }: CategoryMana
     )
   }
 
-// @ts-ignore TS6133: tabLabel is declared but never read
-  const tabLabel = tab === 'expense' ? '支出分类' : '收入分类'
-
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 p-6 pt-16">
       <div className="w-full max-w-lg rounded-xl bg-white shadow-xl" onClick={e => e.stopPropagation()}>

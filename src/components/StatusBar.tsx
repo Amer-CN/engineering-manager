@@ -6,7 +6,7 @@ import React from 'react'
  * - 右侧：数据存储模式指示器
  */
 const StatusBar: React.FC = () => {
-  const version = (window as any).__APP_VERSION__ || '0.56.0'
+  const version = (window as any).__APP_VERSION__ || '0.57.0'
 
   return (
     <div
