@@ -1,6 +1,6 @@
 {
   "name": "engineering-manager",
-  "version": "3.1.0",
+  "version": "0.56.0",
   "description": "工程项目管理系统 - 一站式工程项目管理解决方案",
   "main": "dist-electron/main.js",
   "scripts": {

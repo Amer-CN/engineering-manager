@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from '@/components/ui/Icon'
-import { useTheme } from '@/hooks/useTheme'
+import { useTheme, ThemeScheme } from '@/hooks/useTheme'
 import { useDataPath } from '@/hooks/useDataPath'
 // APP_VERSION 从 window.__APP_VERSION__ 读取（由 index.html 注入）
 import { useOCRConfig } from '@/hooks/useOCRConfig'
@@ -14,7 +14,7 @@ import SettingsChangelog from '@/components/SettingsChangelog'
 interface SettingsProps { refresh?: () => void }
 
 const Settings: React.FC<SettingsProps> = ({ refresh }) => {
-  const { theme, setTheme } = useTheme()
+  const { scheme, setScheme, isDark, toggleDark } = useTheme()
   const rh = useRowHoverOpacity()
   const dp = useDataPath(refresh)
   const ocr = useOCRConfig()
@@ -104,19 +104,33 @@ const Settings: React.FC<SettingsProps> = ({ refresh }) => {
           <div className="card">
             <div className="card-header"><h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2"><Icon name="Palette" size={20} /> 外观主题</h2></div>
             <div className="card-body">
-              <p className="text-sm text-slate-600 mb-4">选择您喜欢的界面主题，浅色和深色两种可选。</p>
-              <div className="grid grid-cols-2 gap-4">
-                <button onClick={() => setTheme('light')} className={`p-4 rounded-xl border-2 transition-all ${theme === 'light' ? 'border-primary-500 bg-primary-50 shadow-md' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 bg-white'}`}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center"><Icon name="Sun" size={22} className="text-amber-500" /></div>
-                    <div className="text-left"><div className="text-base font-semibold text-slate-800">浅色模式</div><div className="text-sm text-slate-500">明亮清爽</div></div>
-                  </div>
-                </button>
-                <button onClick={() => setTheme('dark')} className={`p-4 rounded-xl border-2 transition-all ${theme === 'dark' ? 'border-primary-500 bg-primary-50 shadow-md' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 bg-white'}`}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-slate-700 flex items-center justify-center"><Icon name="Moon" size={22} className="text-slate-200" /></div>
-                    <div className="text-left"><div className="text-base font-semibold text-slate-800">深色模式</div><div className="text-sm text-slate-500">护眼舒适</div></div>
-                  </div>
+              {/* 主题色板选择 */}
+              <p className="text-sm text-slate-600 mb-3">选择一套主题色板</p>
+              <div className="grid grid-cols-2 gap-3 mb-5">
+                {([
+                  { id: 'graphite' as ThemeScheme, name: 'Graphite', desc: '冷灰 · 青蓝', icon: '🌊', bar: 'bg-gradient-to-r from-slate-700 via-slate-500 to-teal-400' },
+                  { id: 'sandstone' as ThemeScheme, name: 'Sandstone', desc: '暖灰 · 琥珀', icon: '🏜️', bar: 'bg-gradient-to-r from-stone-700 via-stone-500 to-amber-400' },
+                ]).map(s => (
+                  <button key={s.id} onClick={() => setScheme(s.id)}
+                    className={`p-3 rounded-xl border-2 transition-all text-left ${scheme === s.id ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 shadow-md' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800'}`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg">{s.icon}</span>
+                      <div>
+                        <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">{s.name}</div>
+                        <div className="text-[11px] text-slate-400">{s.desc}</div>
+                      </div>
+                    </div>
+                    <div className={`h-1.5 rounded-full ${s.bar}`} />
+                  </button>
+                ))}
+              </div>
+
+              {/* 深色 / 浅色开关 */}
+              <div className="flex items-center justify-between py-2">
+                <span className="text-sm text-slate-700 dark:text-slate-300">深色模式</span>
+                <button onClick={toggleDark}
+                  className={`relative w-11 h-6 rounded-full transition-colors ${isDark ? 'bg-primary-600' : 'bg-slate-300 dark:bg-slate-600'}`}>
+                  <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${isDark ? 'translate-x-5' : 'translate-x-0.5'}`} />
                 </button>
               </div>
               <div className="mt-5 pt-4 border-t border-slate-100">
@@ -146,8 +160,8 @@ const Settings: React.FC<SettingsProps> = ({ refresh }) => {
             <div className="card-body">
               <p className="text-sm text-slate-600 mb-4">打开开发者控制台查看日志和调试信息，用于排查问题。</p>
               <div className="flex flex-wrap gap-3">
-                <button onClick={async () => { try { await window.electronAPI.openDevTools() } catch (e) { console.log('快捷键提示 Ctrl+Shift+I') } }} className="btn btn-secondary"><Icon name="Monitor" size={16} />打开控制台</button>
-                <span className="text-sm text-slate-400 self-center">或按 <kbd className="px-2 py-1 bg-slate-100 rounded text-xs font-mono border border-slate-200">Ctrl+Shift+I</kbd></span>
+                <button onClick={async () => { try { await window.electronAPI.openDevTools() } catch (e) { console.log('快捷键提示 F12') } }} className="btn btn-secondary"><Icon name="Monitor" size={16} />打开控制台</button>
+                <span className="text-sm text-slate-400 self-center">或按 <kbd className="px-2 py-1 bg-slate-100 rounded text-xs font-mono border border-slate-200">F12</kbd></span>
               </div>
             </div>
           </div>
@@ -158,7 +172,7 @@ const Settings: React.FC<SettingsProps> = ({ refresh }) => {
               <div className="text-sm text-slate-600 dark:text-slate-300 space-y-3">
                 <div className="flex items-center gap-3">
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 flex items-center justify-center text-white text-3xl shadow-lg shadow-slate-500/20"><Icon name="HardHat" size={32} /></div>
-                  <div><p className="text-xl font-bold text-slate-800 dark:text-slate-100">工程管家</p><p className="text-slate-500 dark:text-slate-400">Version {(window as any).__APP_VERSION__ || '3.0.0'}</p></div>
+                  <div><p className="text-xl font-bold text-slate-800 dark:text-slate-100">工程管家</p><p className="text-slate-500 dark:text-slate-400">Version {(window as any).__APP_VERSION__ || '0.56.0'}</p></div>
                 </div>
                 <p className="text-slate-600 dark:text-slate-300">工程项目管理系统 · 本地数据存储</p>
                 <div className="flex gap-3">

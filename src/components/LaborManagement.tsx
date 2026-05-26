@@ -23,9 +23,9 @@ const FileImportDialog = React.lazy(() => import('./features/wages/FileImportDia
 
 const TABS = [
   { id: 'dashboard', label: '看板', icon: 'LayoutDashboard' },
-  { id: 'workers', label: '人员�?', icon: 'Construction' },
+  { id: 'workers', label: '人员', icon: 'Construction' },
   { id: 'teams', label: '班组管理', icon: 'Building2' },
-  { id: 'wages', label: '赖资管理', icon: 'Wallet' },
+  { id: 'wages', label: '薪资管理', icon: 'Wallet' },
 ]
 
 const LaborManagement: React.FC = () => {
@@ -275,7 +275,7 @@ const LaborManagement: React.FC = () => {
         />
       )}
 
-      {/* 确认对话�?(工人管理) */}
+      {/* 确认对话框(工人管理) */}
       {ops.ConfirmDialog}
     </div>
   )

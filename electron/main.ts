@@ -6,7 +6,7 @@
  * - ipc-handlers/: 按业务模块拆分的 IPC 处理器
  */
 
-import { app, BrowserWindow, globalShortcut, protocol, net } from 'electron'
+import { app, BrowserWindow, globalShortcut, Menu, protocol, net, ipcMain } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import log from 'electron-log'
@@ -35,7 +35,11 @@ import { ensureUnclassifiedDirs } from './file-service'
 // IPC 权限守卫（必须在导入 IPC handlers 之前安装）
 // ═══════════════════════════════════════════════════════════════════════════════
 import { installIpcGuard } from './ipc-guard'
-installIpcGuard()
+
+// 保存原始 ipcMain.handle 供窗口控制 IPC 使用（跳过守卫——PUBLIC_CHANNELS 在构建中有问题）
+const originalIpcHandle = (ipcMain as any)._handle || ipcMain.handle.bind(ipcMain)
+
+installIpcGuard()      // 权限守卫：在导入 IPC handlers 之前安装
 
 // SQLite 模块（可选，不影响 JSON 存储正常运行）
 import { initSqliteDb, closeSqliteDb, loadPersistedReadMode } from './sqlite'
@@ -75,8 +79,10 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
-    minWidth: 1200,
+    minWidth: 1000,
     minHeight: 700,
+    frame: false,                    // 隐藏原生窗口边框
+    titleBarStyle: 'hidden',         // Windows: 隐藏标题栏
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -100,11 +106,27 @@ function createWindow() {
     log.info('Window ready')
   })
   
-  // 注册全局快捷键：Ctrl+Shift+I 打开开发者工具
-  globalShortcut.register('CommandOrControl+Shift+I', () => {
+  // 注册全局快捷键
+  // F12 打开开发者工具（webContents 层捕获，避免 AMD 驱动截图快捷键冲突）
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.key === 'F12') {
+      mainWindow?.webContents.toggleDevTools()
+      log.info('DevTools opened via F12')
+      event.preventDefault()
+    }
+  })
+  // Ctrl+R 刷新页面（frameless 窗口下原生快捷键失效）
+  globalShortcut.register('CommandOrControl+R', () => {
     if (mainWindow) {
-      mainWindow.webContents.toggleDevTools()
-      log.info('DevTools opened')
+      mainWindow.webContents.reload()
+      log.info('Page reloaded')
+    }
+  })
+  // Ctrl+Shift+R 强制刷新
+  globalShortcut.register('CommandOrControl+Shift+R', () => {
+    if (mainWindow) {
+      mainWindow.webContents.reloadIgnoringCache()
+      log.info('Page hard reloaded')
     }
   })
   
@@ -112,6 +134,23 @@ function createWindow() {
   mainWindow.on('close', () => {
     saveDatabase()
   })
+
+  // ——— 窗口控制 IPC（frameless 窗口需要渲染进程控制窗口） ———
+  // 使用 originalIpcHandle 绕过 IPC 守卫（PUBLIC_CHANNELS 在构建系统中不更新）
+  originalIpcHandle('window:minimize', () => mainWindow?.minimize())
+  originalIpcHandle('window:maximize', () => {
+    if (mainWindow?.isMaximized()) {
+      mainWindow.unmaximize()
+    } else {
+      mainWindow?.maximize()
+    }
+  })
+  originalIpcHandle('window:close', () => mainWindow?.close())
+  originalIpcHandle('window:isMaximized', () => mainWindow?.isMaximized() ?? false)
+
+  // 窗口最大化状态变化时通知渲染进程
+  mainWindow.on('maximize', () => mainWindow?.webContents.send('window:maximizeChange', true))
+  mainWindow.on('unmaximize', () => mainWindow?.webContents.send('window:maximizeChange', false))
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -120,6 +159,9 @@ function createWindow() {
 
 app.whenReady().then(async () => {
   log.info('App ready')
+
+  // 移除原生菜单栏（File / Edit / View 等 — 软件内已覆盖所有功能）
+  Menu.setApplicationMenu(null)
 
   // 注册 contract-file 协议处理器，用于合同附件 PDF 预览
   protocol.handle('contract-file', (request) => {

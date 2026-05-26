@@ -1,6 +1,6 @@
 # AGENTS.md - 工程管家项目约定
-> 项目状态：成本台账大改（凭证号string+AI分类学习+版本功能增强+缩放）（v2.9.0）
-> 最后同步：2026-05-18（成本台账全面升级）
+> 项目状态：UI 全面改造 — frameless 窗口 + 自定义标题栏 + 多主题系统（Graphite/Sandstone）+ 侧边栏折叠
+> 最后同步：2026-05-27（UI 改造 + 数据修复 + 版本 0.56.0）
 
 ## 🗣️ 输出语言
 - **默认中文输出**：所有解释、描述、分析、提问、总结等文字内容使用中文
@@ -188,20 +188,21 @@ uploads/
 - 打包脚本：`build.js`、`build-nsis.js`、`一键打包.bat`；signAndEditExecutable: false
 
 ## 🔢 版本管理
-- **语义化版本**：patch(Bug修复) / minor(新功能模块) / major(架构级变更)
+- **语义化版本**（SemVer 2.0.0）：当前处于 **0.y.z 开发阶段**，每次发布递增 MINOR
 - **手动迭代**：由开发者在使用 neat-freak 整理后手动更新版本号和 CHANGELOG.md
 - 版本号引用位置：`package.json` / `Sidebar.tsx` / `Login.tsx` / `Settings.tsx` / `SettingsChangelog.tsx` / `AGENTS.md` / `CHANGELOG.md`
-- 版本历史：`CHANGELOG.md`（1.0.0→2.3.0）+ Settings 更新日志浮窗
+- 版本规则详情：见 `SettingsChangelog.tsx` 顶部注释
+- 版本历史：CHANGELOG.md + SettingsChangelog 更新日志浮窗（从 v1.0.0 到 v0.56.0 累计 56 个版本）
 
-### 当前版本：v2.8.2
+### 当前版本：v0.56.0
 
 ## 🎨 UI 规范
 
 ### 设计 Token
-- **图标**：lucide-react `<Icon name="IconName" />`，`iconMap.ts` 注册
-- **中性色**：slate 色系；语义色：primary(蓝)/success(绿)/warning(琥)/danger(红)/info(天蓝)
-- **暗黑模式**：Settings→外观主题切换 Tailwind `darkMode: 'class'`
-- **CSS Token**：`src/index.css` 中 `:root` / `.dark` 定义
+- **图标**：lucide-react `<Icon name="IconName" />`，`iconMap.ts` 注册（约 95 个图标）
+- **中性色**：默认 slate 色系；Graphite 主题 slate 系 + teal 主色；Sandstone 主题 stone 系 + amber 主色
+- **多主题系统**：Settings→外观主题选择 Graphite/Sandstone，`data-theme` 属性切换，深色/浅色独立 toggle
+- **CSS Token**：`src/index.css` 中 6 套主题变量（default/graphite/sandstone × light/dark）
 
 ### 组件库（`src/components/ui/`）
 Button(variants/sizes/iconOnly) / Input(status+leftSection/rightSection) / Modal(AnimatePresence+centered) / Card(padding+glass+hover) / Badge(variants+dot脉冲) / Select(下拉动画+clearable) / Table(stickyHeader+sizes) / Pagination / DropdownMenu(Portal+AnimatePresence) / Tabs(layoutId弹簧指示器+badge) / Tooltip(延迟300ms+箭头) / ProgressBar(variants+animated width) / FormField(label/error/helpText) / Toast(Context管理+AnimatePresence堆叠+spring) / Loading(Spinner+Skeleton) / EmptyState / PageContainer(`max-w-[1400px] mx-auto p-6`, wide/narrow/full)
@@ -215,7 +216,10 @@ Button(variants/sizes/iconOnly) / Input(status+leftSection/rightSection) / Modal
 - **全局交互**：Button whileHover(1.03)+whileTap(0.97) / Card y:-3+boxShadow / Badge dot 呼吸脉冲 / DropdownMenu scale 0.95→1 / Toast spring 入场
 
 ### 页面布局
-- **侧边栏**：固定 w-64、深色渐变Logo区、圆角药丸导航+左侧激活指示条；底部头像弹出菜单（DropdownMenu，类 Windows 开始菜单），收纳用户管理/系统设置/锁定屏幕/退出登录
+- **窗口框架**：frameless 窗口（`frame: false`），自定义标题栏（h-9，左侧折叠按钮+图标+名称，右侧窗口按钮），底部状态栏（h-6，版本号+SQLite 指示器），四边 resize 手柄
+- **侧边栏**：可折叠（Ctrl+B 切换），展开 w-64（深色渐变Logo区+圆角药丸导航+左侧激活指示条），折叠 w-14 只显图标（hover tooltip）；底部头像弹出菜单
+- **标题栏折叠按钮**：左侧面板图标（矩形+左侧竖线），展开时竖线居左，折叠时贴边
+- **多主题架构**：`data-theme` = graphite|sandstone，`class="dark"` 控制深色/浅色，4 种组合
 - **登录页**：双列布局（左侧品牌区+右侧表单卡片）
 - **内容页**：统一 `PageContainer`，仪表板1600px/其他1400px/设置双列网格
 - **图纸管理**：支持 JPG/PNG/PDF/DWG/DXF 格式

@@ -5,6 +5,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 系统
   openDevTools: () => ipcRenderer.invoke('app:openDevTools'),
 
+  // 窗口控制（frameless 自定义标题栏）
+  minimizeWindow: () => ipcRenderer.invoke('window:minimize'),
+  toggleMaximize: () => ipcRenderer.invoke('window:maximize'),
+  closeWindow: () => ipcRenderer.invoke('window:close'),
+  isMaximized: () => ipcRenderer.invoke('window:isMaximized'),
+  onMaximizeChange: (callback: (isMaximized: boolean) => void) => {
+    const handler = (_event: any, isMaximized: boolean) => callback(isMaximized)
+    ipcRenderer.on('window:maximizeChange', handler)
+    return () => ipcRenderer.removeListener('window:maximizeChange', handler)
+  },
+
   // 配置
   getConfig: () => ipcRenderer.invoke('config:get'),
   setDataPath: (path: string) => ipcRenderer.invoke('config:setDataPath', path),

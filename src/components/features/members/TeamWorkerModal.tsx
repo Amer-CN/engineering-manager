@@ -103,7 +103,7 @@ export function TeamWorkerModal({
                             )}
                             {confirmRemove === worker.id ? (
                               <span className="flex items-center gap-1">
-                                <span className="text-xs text-red-500">确认?</span>
+                                <span className="text-xs text-red-500">确认？</span>
                                 <button onClick={() => { onRemoveWorker(worker.id); setConfirmRemove(null) }} className="btn btn-danger btn-sm">是</button>
                                 <button onClick={() => setConfirmRemove(null)} className="btn btn-secondary btn-sm">否</button>
                               </span>
