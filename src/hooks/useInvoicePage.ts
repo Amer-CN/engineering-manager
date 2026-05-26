@@ -38,26 +38,25 @@ export function useInvoicePage(refresh?: () => void) {
   const [filterDateEnd, setFilterDateEnd] = useState('')
 
   const loadData = useCallback(async () => {
-    try {
-      const [invRes, payRes, projRes, partRes, incRes, expRes] = await Promise.all([
-        window.electronAPI.getInvoices(),
-        window.electronAPI.getWagePaymentRecords(),
-        window.electronAPI.getProjects(),
-        window.electronAPI.getPartners(),
-        window.electronAPI.getIncomeContracts(),
-        window.electronAPI.getExpenseContracts(),
-      ])
-      if (invRes.success && invRes.data) setInvoices(invRes.data)
-      if (payRes.success && payRes.data) setPaymentRecords(payRes.data)
-      if (projRes.success && projRes.data) setProjects(projRes.data)
-      if (partRes.success && partRes.data) setPartners(partRes.data)
-      if (incRes.success && incRes.data) setContracts(prev => ({ ...prev, income: incRes.data || [] }))
-      if (expRes.success && expRes.data) setContracts(prev => ({ ...prev, expense: expRes.data || [] }))
-    } catch (error) {
-      console.error('加载数据失败:', error)
-    } finally {
-      setLoading(false)
+    // 每个请求独立 try/catch，一个失败不影响其他数据加载
+    const safeLoad = async <T>(loader: () => Promise<{ success: boolean; data?: T }>, setter: (data: T) => void) => {
+      try {
+        const res = await loader()
+        if (res.success && res.data) setter(res.data)
+      } catch (err) {
+        console.error('加载数据失败:', err)
+      }
     }
+
+    await Promise.all([
+      safeLoad(() => window.electronAPI.getInvoices(), (d) => setInvoices(d)),
+      safeLoad(() => window.electronAPI.getPaymentRecords(), (d) => setPaymentRecords(d)),
+      safeLoad(() => window.electronAPI.getProjects(), (d) => setProjects(d)),
+      safeLoad(() => window.electronAPI.getPartners(), (d) => setPartners(d)),
+      safeLoad(() => window.electronAPI.getIncomeContracts(), (d) => setContracts(prev => ({ ...prev, income: d || [] }))),
+      safeLoad(() => window.electronAPI.getExpenseContracts(), (d) => setContracts(prev => ({ ...prev, expense: d || [] }))),
+    ])
+    setLoading(false)
   }, [])
 
   useEffect(() => { loadData() }, [loadData])

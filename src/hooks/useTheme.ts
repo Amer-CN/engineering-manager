@@ -1,36 +1,74 @@
 import { useState, useEffect, useCallback } from 'react'
 
-type Theme = 'light' | 'dark'
+export type ThemeScheme = 'default' | 'graphite' | 'sandstone'
 
-const STORAGE_KEY = 'app-theme'
+const SCHEME_KEY = 'app-scheme'
+const DARK_KEY = 'app-dark'
+const OLD_KEY = 'app-theme' // 旧版兼容
 
-function getInitialTheme(): Theme {
-  if (typeof window === 'undefined') return 'light'
-  const stored = localStorage.getItem(STORAGE_KEY)
-  if (stored === 'dark' || stored === 'light') return stored
-  return 'light'
+function getInitialScheme(): ThemeScheme {
+  if (typeof window === 'undefined') return 'default'
+
+  // 新版 key 优先
+  const scheme = localStorage.getItem(SCHEME_KEY)
+  if (scheme === 'default' || scheme === 'graphite' || scheme === 'sandstone') return scheme
+
+  // 旧版兼容：'app-theme' = 'light'|'dark' → scheme='default'
+  const old = localStorage.getItem(OLD_KEY)
+  if (old === 'light' || old === 'dark') {
+    localStorage.removeItem(OLD_KEY) // 迁移后清理
+  }
+
+  return 'default'
+}
+
+function getInitialDark(): boolean {
+  if (typeof window === 'undefined') return false
+
+  // 新版 key 优先
+  const stored = localStorage.getItem(DARK_KEY)
+  if (stored !== null) return stored === 'true'
+
+  // 旧版兼容
+  const old = localStorage.getItem(OLD_KEY)
+  if (old === 'dark') return true
+
+  return false
 }
 
 export function useTheme() {
-  const [theme, setThemeState] = useState<Theme>(getInitialTheme)
+  const [scheme, setSchemeState] = useState<ThemeScheme>(getInitialScheme)
+  const [isDark, setIsDarkState] = useState<boolean>(getInitialDark)
 
+  // 同步到 DOM
   useEffect(() => {
     const root = document.documentElement
-    if (theme === 'dark') {
+
+    // 设置 data-theme 属性
+    root.setAttribute('data-theme', scheme)
+
+    // 切换 dark class
+    if (isDark) {
       root.classList.add('dark')
     } else {
       root.classList.remove('dark')
     }
-    localStorage.setItem(STORAGE_KEY, theme)
-  }, [theme])
 
-  const setTheme = useCallback((t: Theme) => {
-    setThemeState(t)
+    localStorage.setItem(SCHEME_KEY, scheme)
+    localStorage.setItem(DARK_KEY, String(isDark))
+  }, [scheme, isDark])
+
+  const setScheme = useCallback((s: ThemeScheme) => {
+    setSchemeState(s)
   }, [])
 
-  const toggleTheme = useCallback(() => {
-    setThemeState(prev => prev === 'light' ? 'dark' : 'light')
+  const toggleDark = useCallback(() => {
+    setIsDarkState(prev => !prev)
   }, [])
 
-  return { theme, setTheme, toggleTheme, isDark: theme === 'dark' }
+  const setDark = useCallback((d: boolean) => {
+    setIsDarkState(d)
+  }, [])
+
+  return { scheme, setScheme, isDark, setDark, toggleDark }
 }

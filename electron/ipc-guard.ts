@@ -302,6 +302,12 @@ const IPC_PERMISSIONS: Record<string, string> = {
  * 这些通道在认证之前就需要被调用。
  */
 const PUBLIC_CHANNELS = new Set([
+  // v2 — ADDED window control channels
+  'window:minimize',     // frameless 窗口最小化
+  'window:maximize',     // frameless 窗口最大化/还原
+  'window:close',        // frameless 窗口关闭
+  'window:isMaximized',  // 查询窗口最大化状态
+  'window:maximizeChange', // 窗口最大化状态变化通知
   'auth:login',          // 登录本身
   'auth:setSession',     // 设置 session（登录后同步）
   'auth:clearSession',   // 清除 session（登出时同步）

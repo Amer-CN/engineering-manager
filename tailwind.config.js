@@ -1,5 +1,20 @@
 /** @type {import('tailwindcss').Config} */
-export default {
+
+/**
+ * 辅助：创建引用 CSS 变量并支持 alpha 通道的色阶
+ * CSS 变量格式为 "R G B"（空格分隔，无逗号），例如：
+ *   --color-primary-500: 59 130 246;
+ * 用法：
+ *   bg-primary-500         → rgb(var(--color-primary-500) / 1)
+ *   bg-primary-500/20      → rgb(var(--color-primary-500) / 0.2)
+ *
+ * <alpha-value> 是 Tailwind 识别的占位符，构建时自动替换。
+ */
+function colorVar(vName) {
+  return `rgb(var(${vName}) / <alpha-value>)`
+}
+
+module.exports = {
   darkMode: 'class',
   content: [
     "./index.html",
@@ -9,64 +24,64 @@ export default {
     extend: {
       colors: {
         primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
+          50: colorVar('--color-primary-50'),
+          100: colorVar('--color-primary-100'),
+          200: colorVar('--color-primary-200'),
+          300: colorVar('--color-primary-300'),
+          400: colorVar('--color-primary-400'),
+          500: colorVar('--color-primary-500'),
+          600: colorVar('--color-primary-600'),
+          700: colorVar('--color-primary-700'),
+          800: colorVar('--color-primary-800'),
+          900: colorVar('--color-primary-900'),
         },
         success: {
-          50: '#f0fdf4',
-          100: '#dcfce7',
-          200: '#bbf7d0',
-          300: '#86efac',
-          400: '#4ade80',
-          500: '#22c55e',
-          600: '#16a34a',
-          700: '#15803d',
-          800: '#166534',
-          900: '#14532d',
+          50: colorVar('--color-success-50'),
+          100: colorVar('--color-success-100'),
+          200: colorVar('--color-success-200'),
+          300: colorVar('--color-success-300'),
+          400: colorVar('--color-success-400'),
+          500: colorVar('--color-success-500'),
+          600: colorVar('--color-success-600'),
+          700: colorVar('--color-success-700'),
+          800: colorVar('--color-success-800'),
+          900: colorVar('--color-success-900'),
         },
         warning: {
-          50: '#fffbeb',
-          100: '#fef3c7',
-          200: '#fde68a',
-          300: '#fcd34d',
-          400: '#fbbf24',
-          500: '#f59e0b',
-          600: '#d97706',
-          700: '#b45309',
-          800: '#92400e',
-          900: '#78350f',
+          50: colorVar('--color-warning-50'),
+          100: colorVar('--color-warning-100'),
+          200: colorVar('--color-warning-200'),
+          300: colorVar('--color-warning-300'),
+          400: colorVar('--color-warning-400'),
+          500: colorVar('--color-warning-500'),
+          600: colorVar('--color-warning-600'),
+          700: colorVar('--color-warning-700'),
+          800: colorVar('--color-warning-800'),
+          900: colorVar('--color-warning-900'),
         },
         danger: {
-          50: '#fef2f2',
-          100: '#fee2e2',
-          200: '#fecaca',
-          300: '#fca5a5',
-          400: '#f87171',
-          500: '#ef4444',
-          600: '#dc2626',
-          700: '#b91c1c',
-          800: '#991b1b',
-          900: '#7f1d1d',
+          50: colorVar('--color-danger-50'),
+          100: colorVar('--color-danger-100'),
+          200: colorVar('--color-danger-200'),
+          300: colorVar('--color-danger-300'),
+          400: colorVar('--color-danger-400'),
+          500: colorVar('--color-danger-500'),
+          600: colorVar('--color-danger-600'),
+          700: colorVar('--color-danger-700'),
+          800: colorVar('--color-danger-800'),
+          900: colorVar('--color-danger-900'),
         },
         info: {
-          50: '#f0f9ff',
-          100: '#e0f2fe',
-          200: '#bae6fd',
-          300: '#7dd3fc',
-          400: '#38bdf8',
-          500: '#0ea5e9',
-          600: '#0284c7',
-          700: '#0369a1',
-          800: '#075985',
-          900: '#0c4a6e',
+          50: colorVar('--color-info-50'),
+          100: colorVar('--color-info-100'),
+          200: colorVar('--color-info-200'),
+          300: colorVar('--color-info-300'),
+          400: colorVar('--color-info-400'),
+          500: colorVar('--color-info-500'),
+          600: colorVar('--color-info-600'),
+          700: colorVar('--color-info-700'),
+          800: colorVar('--color-info-800'),
+          900: colorVar('--color-info-900'),
         },
       },
       borderRadius: {

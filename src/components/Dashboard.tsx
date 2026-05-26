@@ -28,9 +28,9 @@ function formatCurrency(n: number): string {
 }
 
 // CountUp: 数字滚动动画组件
-const CountUp: React.FC<{ value: number; duration?: number; suffix?: string; prefix?: string; decimals?: number }> = ({ value, duration = 1.2, suffix = '', prefix = '', decimals = 0 }) => {
+const CountUp: React.FC<{ value: number; duration?: number; suffix?: string; prefix?: string; decimals?: number }> = ({ value, duration = 0.5, suffix = '', prefix = '', decimals = 0 }) => {
   const motionVal = useMotionValue(0)
-  const springVal = useSpring(motionVal, { stiffness: 40, damping: 25 })
+  const springVal = useSpring(motionVal, { stiffness: 250, damping: 35 })
   const [display, setDisplay] = useState('0')
   const prevValue = useRef(0)
 

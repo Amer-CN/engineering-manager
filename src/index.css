@@ -2,6 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ═══════════════════════════════════════════════════════════════
+   多主题系统 — CSS 变量定义
+
+   色彩层级：
+   - 氛围层：bg/text/border/sidebar/shadow/overlay  随主题切换
+   - 语义层：primary/success/warning/danger/info     primary 随主题，其余不变
+   - 领域层：indigo/amber/emerald/violet 等硬编码    不动
+
+   主题变体 = theme × mode = 6 种组合：
+     default-light / default-dark
+     graphite-light / graphite-dark
+     sandstone-light / sandstone-dark
+
+   颜色调色板使用 RGB 格式（空格分隔），供 tailwind rgba() 使用。
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── 默认主题（Blue · Slate 氛围）── */
 :root {
   font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   line-height: 1.5;
@@ -10,7 +27,59 @@
   color: #1f2937;
   background-color: #f8fafc;
 
-  /* Design Tokens */
+  /* 语义色 — Blue palette */
+  --color-primary-50: 239 246 255;
+  --color-primary-100: 219 234 254;
+  --color-primary-200: 191 219 254;
+  --color-primary-300: 147 197 253;
+  --color-primary-400: 96 165 250;
+  --color-primary-500: 59 130 246;
+  --color-primary-600: 37 99 235;
+  --color-primary-700: 29 78 216;
+  --color-primary-800: 30 64 175;
+  --color-primary-900: 30 58 138;
+  --color-success-50: 240 253 244;
+  --color-success-100: 220 252 231;
+  --color-success-200: 187 247 208;
+  --color-success-300: 134 239 172;
+  --color-success-400: 74 222 128;
+  --color-success-500: 34 197 94;
+  --color-success-600: 22 163 74;
+  --color-success-700: 21 128 61;
+  --color-success-800: 22 101 52;
+  --color-success-900: 20 83 45;
+  --color-warning-50: 255 251 235;
+  --color-warning-100: 254 243 199;
+  --color-warning-200: 253 230 138;
+  --color-warning-300: 252 211 77;
+  --color-warning-400: 251 191 36;
+  --color-warning-500: 245 158 11;
+  --color-warning-600: 217 119 6;
+  --color-warning-700: 180 83 9;
+  --color-warning-800: 146 64 14;
+  --color-warning-900: 120 53 15;
+  --color-danger-50: 254 242 242;
+  --color-danger-100: 254 226 226;
+  --color-danger-200: 254 202 202;
+  --color-danger-300: 252 165 165;
+  --color-danger-400: 248 113 113;
+  --color-danger-500: 239 68 68;
+  --color-danger-600: 220 38 38;
+  --color-danger-700: 185 28 28;
+  --color-danger-800: 153 27 27;
+  --color-danger-900: 127 29 29;
+  --color-info-50: 240 249 255;
+  --color-info-100: 224 242 254;
+  --color-info-200: 186 230 253;
+  --color-info-300: 125 211 252;
+  --color-info-400: 56 189 248;
+  --color-info-500: 14 165 233;
+  --color-info-600: 2 132 199;
+  --color-info-700: 3 105 161;
+  --color-info-800: 7 89 133;
+  --color-info-900: 12 74 110;
+
+  /* 氛围层 — Slate（默认） */
   --bg-primary: #ffffff;
   --bg-secondary: #f8fafc;
   --bg-tertiary: #f1f5f9;
@@ -28,6 +97,7 @@
   --overlay: rgba(0, 0, 0, 0.5);
 }
 
+/* ── 默认主题 · 深色 ── */
 .dark {
   --bg-primary: #0f172a;
   --bg-secondary: #1e293b;
@@ -41,6 +111,106 @@
   --sidebar-border: #334155;
   --sidebar-item-hover: #334155;
   --sidebar-item-active: #1e3a5f;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-dropdown: 0 10px 15px -3px rgba(0,0,0,0.4);
+  --overlay: rgba(0, 0, 0, 0.7);
+}
+
+/* ── Graphite 主题（Teal 主色 · Slate 氛围 · 冷调现代工具感）── */
+[data-theme="graphite"] {
+  /* 语义色 — Teal palette */
+  --color-primary-50: 240 253 250;
+  --color-primary-100: 204 251 241;
+  --color-primary-200: 153 246 228;
+  --color-primary-300: 94 234 212;
+  --color-primary-400: 45 212 191;
+  --color-primary-500: 20 184 166;
+  --color-primary-600: 13 148 136;
+  --color-primary-700: 15 118 110;
+  --color-primary-800: 17 94 89;
+  --color-primary-900: 19 78 74;
+
+  /* 氛围层 — Slate（冷灰） */
+  --bg-primary: #f8fafc;
+  --bg-secondary: #f1f5f9;
+  --bg-tertiary: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-tertiary: #94a3b8;
+  --border-primary: #e2e8f0;
+  --border-secondary: #cbd5e1;
+  --sidebar-bg: #ffffff;
+  --sidebar-border: #e2e8f0;
+  --sidebar-item-hover: #f1f5f9;
+  --sidebar-item-active: #f0fdfa;
+  --shadow-card: 0 1px 3px rgba(15,23,42,0.08);
+  --shadow-dropdown: 0 10px 15px -3px rgba(15,23,42,0.1);
+  --overlay: rgba(15, 23, 42, 0.5);
+}
+
+[data-theme="graphite"].dark {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-tertiary: #64748b;
+  --border-primary: #334155;
+  --border-secondary: #475569;
+  --sidebar-bg: #111827;
+  --sidebar-border: #1e293b;
+  --sidebar-item-hover: #1e293b;
+  --sidebar-item-active: #134e4a;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-dropdown: 0 10px 15px -3px rgba(0,0,0,0.4);
+  --overlay: rgba(0, 0, 0, 0.7);
+}
+
+/* ── Sandstone 主题（Amber 主色 · Stone 氛围 · 暖调工程感）── */
+[data-theme="sandstone"] {
+  /* 语义色 — Amber/Orange palette */
+  --color-primary-50: 255 247 237;
+  --color-primary-100: 255 237 213;
+  --color-primary-200: 254 215 170;
+  --color-primary-300: 253 186 116;
+  --color-primary-400: 251 146 60;
+  --color-primary-500: 249 115 22;
+  --color-primary-600: 234 88 12;
+  --color-primary-700: 194 65 12;
+  --color-primary-800: 154 52 18;
+  --color-primary-900: 67 20 7;
+
+  /* 氛围层 — Stone（暖灰） */
+  --bg-primary: #fafaf9;
+  --bg-secondary: #f5f5f4;
+  --bg-tertiary: #e7e5e4;
+  --text-primary: #1c1917;
+  --text-secondary: #57534e;
+  --text-tertiary: #a8a29e;
+  --border-primary: #e7e5e4;
+  --border-secondary: #d6d3d1;
+  --sidebar-bg: #fafaf9;
+  --sidebar-border: #e7e5e4;
+  --sidebar-item-hover: #f5f5f4;
+  --sidebar-item-active: #fff7ed;
+  --shadow-card: 0 1px 3px rgba(28,25,23,0.08);
+  --shadow-dropdown: 0 10px 15px -3px rgba(28,25,23,0.1);
+  --overlay: rgba(28, 25, 23, 0.5);
+}
+
+[data-theme="sandstone"].dark {
+  --bg-primary: #1c1917;
+  --bg-secondary: #292524;
+  --bg-tertiary: #44403c;
+  --text-primary: #fafaf9;
+  --text-secondary: #a8a29e;
+  --text-tertiary: #78716c;
+  --border-primary: #44403c;
+  --border-secondary: #57534e;
+  --sidebar-bg: #1c1917;
+  --sidebar-border: #292524;
+  --sidebar-item-hover: #292524;
+  --sidebar-item-active: #431407;
   --shadow-card: 0 1px 3px rgba(0,0,0,0.3);
   --shadow-dropdown: 0 10px 15px -3px rgba(0,0,0,0.4);
   --overlay: rgba(0, 0, 0, 0.7);
