@@ -43,7 +43,7 @@ export function useWageBatchViews({
 
   const handleBatchConfirm = async (confirmedMatches: any[]) => {
     // 这里应该调用 IPC 更新工资记录
-    console.log('Confirming matches:', confirmedMatches)
+    // TODO: 调用 IPC 更新工资记录
     // 确认后返回 cycle 视图
     setBatchResult(null)
     setView('batch')
@@ -69,7 +69,7 @@ export function useWageBatchViews({
       return (
         <BankReceiptMatchConfirm
           parseResult={batchResult}
-          workers={[]}  // TODO: 传递实际的工人列表
+          workers={[] /* TODO: 从父组件传入项目工人列表 */}
           wageRecords={allWageRecords}
           projectId={selectedProject?.id}
           yearMonth={selectedMonth}

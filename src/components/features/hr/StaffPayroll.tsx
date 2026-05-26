@@ -9,8 +9,6 @@ import {
   filteredStaffForGenerate,
   getAttendanceForMember,
   isAttendanceReady,
-// @ts-ignore TS6133: computeWorkDays is declared but never read
-  computeWorkDays,
   getEntryDate,
 } from '../../../utils/staff-payroll-utils'
 import { StaffPayrollTable } from './StaffPayrollTable'
@@ -50,12 +48,6 @@ const StaffPayroll: React.FC = () => {
     ? `${filterYear}-${filterMonth}`
     : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 
-// @ts-ignore TS6133: workDays is declared but never read
-  const workDays = new Date(
-    Number(effectiveYearMonth.split('-')[0]),
-    Number(effectiveYearMonth.split('-')[1]),
-    0
-  ).getDate()
 
   // ── 数据加载：全量 staff 工资 + 考勤 ──
   const loadData = useCallback(async () => {

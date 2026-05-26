@@ -1,12 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import {
-// @ts-ignore TS6133: AuditLevel is declared but never read
-  AuditLog, AuditAction, AuditLevel,
-// @ts-ignore TS6133: getAuditStats is declared but never read
-  queryAuditLogs, getAuditStats, exportAuditLogsToJson,
-  exportAuditLogsToCsv, clearOldLogs, AuditStats
+  AuditLog, AuditAction,
+  queryAuditLogs, AuditStats
 } from '@/utils/audit'
-import { usePermission } from '@/hooks/usePermission'
 import { useAuditLogFilters } from '@/hooks/useAuditLogFilters'
 import { Icon } from './ui/Icon'
 import { AuditStatsPanel } from './AuditStatsPanel'
@@ -44,7 +40,6 @@ const formatTimestamp = (timestamp: string) => {
 interface AuditLogsProps { refresh?: () => void; embedded?: boolean }
 
 export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }) => {
-  const { can } = usePermission()
   const f = useAuditLogFilters()
   const [pagedData, setPagedData] = useState({ logs: [] as AuditLog[], total: 0, totalPages: 1 })
   const [statsView, setStatsView] = useState<{ data: AuditStats | null; visible: boolean }>({ data: null, visible: false })
@@ -58,21 +53,6 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
   useEffect(() => { loadLogs() }, [loadLogs])
 
   const handleSearch = () => { f.setPage(1); loadLogs() }
-
-// @ts-ignore TS6133: handleExport is declared but never read
-  const handleExport = async (format: 'json' | 'csv') => {
-    if (!can('audit_logs:export')) { alert('您没有导出权限'); return }
-    if (format === 'json') await exportAuditLogsToJson(f.filterParams)
-    else await exportAuditLogsToCsv(f.filterParams)
-  }
-
-// @ts-ignore TS6133: handleClearOld is declared but never read
-  const handleClearOld = async () => {
-    if (!confirm('确定要清理90天前的日志吗？此操作不可恢复。')) return
-    const removed = await clearOldLogs(90)
-    alert(`已清理 ${removed} 条旧日志`)
-    loadLogs()
-  }
 
   const { logs, total, totalPages } = pagedData
   const { page } = f

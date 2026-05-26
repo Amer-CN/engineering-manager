@@ -114,8 +114,7 @@ export function useLocalStorage<T>(
   const [value, setValueState] = useState<T>(() => {
     return getItem(key, defaultValue).value
   })
-// @ts-ignore TS6133: error is declared but never read
-  const [error, setError] = useState<Error | null>(null)
+  const [_error, setError] = useState<Error | null>(null)
 
   // 设置值
   const setValue = useCallback((newValue: T) => {

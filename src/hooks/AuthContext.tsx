@@ -43,7 +43,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const pendingLogin = localStorage.getItem(PENDING_LOGIN_KEY)
     if (pendingLogin === 'true') {
-      console.log('🔵 发现待处理登录，清除标记')
       localStorage.removeItem(PENDING_LOGIN_KEY)
     }
     
@@ -52,7 +51,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (stored) {
       try {
         const userData = JSON.parse(stored)
-        console.log('🔵 从 localStorage 恢复登录状态:', userData.username)
         setCurrentUser(userData)
         setIsAuthenticated(true)
         
@@ -82,7 +80,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = useCallback((userData: StoredAuth) => {
-    console.log('🔵 设置登录状态:', userData.username)
     setCurrentUser(userData)
     setIsAuthenticated(true)
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userData))

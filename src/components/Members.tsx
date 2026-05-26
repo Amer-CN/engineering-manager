@@ -1,7 +1,7 @@
 // Members.tsx - 员工管理页面
 
 import React, { useState, useEffect, useRef, Suspense } from 'react'
-import type { Member, MemberType, WorkerTeam, WorkerStatus } from '../types/electron'
+import type { Member, WorkerTeam, WorkerStatus } from '../types/electron'
 import { recognizeIdCard, OCRProvider, getOCRConfig } from '../services/ocr'
 import { useToastStore } from '@/store/toastStore'
 import { Icon } from './ui/Icon'
@@ -23,7 +23,7 @@ import { useTeamOps } from './features/members/useTeamOps'
 import { useLaborOperations } from './features/labor/hooks/useLaborOperations'
 import { useMemberPasteHandler } from './features/members/useMemberPasteHandler'
 
-import { staffRoles } from './features/members'
+// import { staffRoles } from './features/members'
 import { useWorkerImport } from './features/members/useWorkerImport'
 
 const WorkerSection = React.lazy(() => import('./features/members/WorkerSection'))
@@ -38,13 +38,6 @@ interface MembersProps {
 
 // Helper Functions
 
-// @ts-ignore TS6133: getRoleIcon is declared but never read
-function getRoleIcon(role: string, memberType: MemberType) {
-  if (memberType === 'worker') return '👷'
-  const found = staffRoles.find(r => r.value === role)
-  return found?.icon || '👤'
-}
-
 // Component
 
 const Members: React.FC<MembersProps> = ({ refresh }) => {
@@ -52,10 +45,7 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
   
   // Tab 状态
   const [activeTab, setActiveTab] = useState<'staff' | 'worker'>('staff')
-// @ts-ignore TS6133: setWorkerSubTab is declared but never read
-// @ts-ignore TS6133: workerSubTab is declared but never read
-  const [workerSubTab, setWorkerSubTab] = useState<'teams' | 'workers'>('teams')
-  
+
   // 数据状态
   const [members, setMembers] = useState<Member[]>([])
   const [projects, setProjects] = useState<any[]>([])
@@ -78,10 +68,6 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
   const [pickerExistingWorkerIds, setPickerExistingWorkerIds] = useState<Set<number>>(new Set())
   
   // 筛选状态
-// @ts-ignore TS6133: setFilterProject is declared but never read
-  const [filterProject, setFilterProject] = useState<number | null>(null)
-// @ts-ignore TS6133: setFilterTeam is declared but never read
-  const [filterTeam, setFilterTeam] = useState<number | null>(null)
   const [filterStatus, setFilterStatus] = useState<WorkerStatus | 'all'>('all')
 
   // UI 状态
@@ -94,12 +80,6 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
   const [workerFormData, setWorkerFormData] = useState<WorkerFormData>(defaultWorkerFormData)
   
   // 拖拽状态
-// @ts-ignore TS6133: setDragOverField is declared but never read
-// @ts-ignore TS6133: dragOverField is declared but never read
-  const [dragOverField, setDragOverField] = useState<string | null>(null)
-// @ts-ignore TS6133: setActiveDropZone is declared but never read
-// @ts-ignore TS6133: activeDropZone is declared but never read
-  const [activeDropZone, setActiveDropZone] = useState<string | null>(null)
 
   // Excel导入状态
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -245,8 +225,7 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
     handleWorkerLeave,
     handleWorkerReEntry,
     handleStaffStatusChange,
-// @ts-ignore TS6133: LaborConfirmDialog is declared but never read
-    ConfirmDialog: LaborConfirmDialog,
+
   } = useLaborOperations({
     members,
     projects,
@@ -294,8 +273,6 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
   })
 
   const filteredWorkers = workerMembers.filter(w => {
-    if (filterProject && w.projectId !== filterProject) return false
-    if (filterTeam && w.teamId !== filterTeam) return false
     const status = w.status || 'active'
     if (filterStatus !== 'all' && status !== filterStatus) return false
     return true

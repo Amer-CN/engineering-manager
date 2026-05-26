@@ -208,11 +208,11 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
   const categories = ['建筑图', '结构图', '电气图', '给排水图', '暖通图', '装饰图', '其他']
   const categoryIcons: Record<string, string> = {
     '建筑图': 'Building2',
-    '结构图': 'HardHat',
-    '电气图': 'Settings',
+    '结构图': 'Ruler',
+    '电气图': 'Zap',
     '给排水图': 'Droplets',
-    '暖通图': 'Snowflake',
-    '装饰图': 'Palette',
+    '暖通图': 'Wrench',
+    '装饰图': 'PaintBucket',
     '其他': 'File'
   }
 

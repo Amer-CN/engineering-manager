@@ -27,8 +27,7 @@ const STATUS_OPTIONS = [
 ]
 
 const Users: React.FC = () => {
-// @ts-ignore TS6133: can is declared but never read
-  const { can, isAdmin } = usePermission()
+  const { isAdmin } = usePermission()
   const auth = useAuth()
   const showToast = useToastStore(state => state.showToast)
   const [users, setUsers] = useState<UserInfo[]>([])
@@ -51,7 +50,6 @@ const Users: React.FC = () => {
   useEffect(() => {
     if (auth.currentUser && !isAdmin()) {
       // 当前已登录用户，但权限模块中未设置，尝试同步
-      console.log('🔄 同步权限用户数据:', auth.currentUser.username)
       const permissionsUser = {
         userId: auth.currentUser.userId,
         username: auth.currentUser.username,

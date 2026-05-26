@@ -1,6 +1,6 @@
 {
   "name": "engineering-manager",
-  "version": "0.56.0",
+  "version": "0.57.0",
   "description": "工程项目管理系统 - 一站式工程项目管理解决方案",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -50,7 +50,7 @@
     "asar": "^3.2.0",
     "autoprefixer": "^10.4.17",
     "concurrently": "^8.2.2",
-    "electron": "^28.2.0",
+    "electron": "^38.8.6",
     "electron-builder": "^24.9.1",
     "jimp": "^1.6.1",
     "jsdom": "^29.1.1",
@@ -62,7 +62,7 @@
     "typescript": "^5.3.3",
     "vite": "^5.1.0",
     "vite-plugin-electron": "^0.29.1",
-    "vite-plugin-electron-renderer": "^0.14.5",
+    "vite-plugin-electron-renderer": "^0.14.7",
     "vitest": "^4.1.6"
   },
   "build": {

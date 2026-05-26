@@ -86,7 +86,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               className="relative z-10 flex-1"
             >
               <h1 className="text-base font-bold text-white leading-tight">工程管家</h1>
-              <p className="text-[10px] text-white/60 leading-tight">v{(window as any).__APP_VERSION__ || '0.56.0'}</p>
+              <p className="text-[10px] text-white/60 leading-tight">v{(window as any).__APP_VERSION__ || '0.57.0'}</p>
             </motion.div>
             {/* 折叠/展开按钮已移到 TitleBar */}
           </motion.div>

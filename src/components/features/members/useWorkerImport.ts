@@ -182,44 +182,10 @@ function matchPreset(headers: string[]): Preset | null {
   return presets.find(p => p.headerSignature === sig) || null
 }
 
-const WORKER_TYPE_MAP: Record<string, string> = {
-  // 基础 12 种
-  '砌筑工': 'bricklayer', '混凝土工': 'concreter', '钢筋工': 'steel',
-  '模板工': 'formwork', '木工': 'carpenter', '油漆工': 'painter',
-  '水暖工': 'plumber', '电工': 'electrician', '焊工': 'welder',
-  '起重工': 'rigger', '驾驶员': 'driver', '机械工': 'mechanic', '其他': 'other',
-  // 常见扩展
-  '架子工': 'rigger', '防水工': 'other', '抹灰工': 'bricklayer',
-  '涂料工': 'painter', '镶贴工': 'bricklayer', '管工': 'plumber',
-  '通风工': 'other', '测量工': 'other', '桩机工': 'mechanic',
-  '爆破工': 'other', '养护工': 'other', '石作业工': 'bricklayer',
-  '金属工': 'steel', '电焊工': 'welder', '氩弧焊工': 'welder',
-  '钢筋制作工': 'steel', '钢筋绑扎工': 'steel', '模板木工': 'formwork',
-  '普通工': 'other', '杂工': 'other', '力工': 'other',
-  '塔吊司机': 'driver', '挖掘机司机': 'driver', '装载机司机': 'driver',
-  '吊车司机': 'driver', '叉车司机': 'driver',
-  '信号工': 'rigger', '司索工': 'rigger',
-  '幕墙工': 'other', '保温工': 'other', '隔热工': 'other',
-  '装饰装修工': 'other',
-}
+// WORKER_TYPE_MAP and WORKER_TYPE_FUZZY removed — only used by resolveWorkerType (no longer called)
+// See git history if needed for restoration
 
-// 模糊匹配：关键词 → code
-const WORKER_TYPE_FUZZY: [string, string][] = [
-  ['钢筋', 'steel'], ['模板', 'formwork'], ['砌筑', 'bricklayer'],
-  ['混凝土', 'concreter'], ['水泥', 'concreter'],
-  ['木', 'carpenter'], ['油漆', 'painter'], ['涂料', 'painter'],
-  ['水暖', 'plumber'], ['管', 'plumber'],
-  ['电', 'electrician'], ['焊', 'welder'],
-  ['起重', 'rigger'], ['架子', 'rigger'],
-  ['驾驶', 'driver'], ['司机', 'driver'],
-  ['机械', 'mechanic'], ['桩机', 'mechanic'],
-  ['抹灰', 'bricklayer'], ['砌', 'bricklayer'],
-  ['防水', 'other'], ['保温', 'other'], ['通风', 'other'],
-  ['测量', 'other'], ['爆破', 'other'],
-  ['金属', 'steel'], ['装饰', 'other'], ['安装', 'other'],
-]
-
-// @ts-ignore TS6133: resolveWorkerType is declared but never read
+/*
 function resolveWorkerType(raw: string): string {
   const trimmed = raw.trim()
   if (!trimmed) return 'other'
@@ -233,6 +199,7 @@ function resolveWorkerType(raw: string): string {
   }
   return 'other'
 }
+*/
 
 function extractBirthDate(idCard: string): string | undefined {
   if (idCard.length !== 18) return undefined

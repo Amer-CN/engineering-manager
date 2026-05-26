@@ -20,10 +20,6 @@ export function StaffPayrollTable({
     return m
   }, [staff])
 
-// @ts-ignore TS6133: getDeptName is declared but never read
-  const getDeptName = (id?: number) =>
-    departments.find((d: any) => d.id === id)?.name || '-'
-
   return (
     <div className="bg-white rounded-xl shadow-sm flex-1 mt-4 flex flex-col overflow-hidden">
       <div className="flex-1 overflow-auto min-h-0">

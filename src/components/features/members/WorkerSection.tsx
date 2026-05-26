@@ -8,9 +8,7 @@ import type { WorkerTeam } from '@/types'
 import { getWorkerTypeLabel } from '@/utils'
 import {
   WorkerSectionProps, TeamFormData, defaultTeamFormData,
-// @ts-ignore TS6133: defaultLeaveFormData is declared but never read
-// @ts-ignore TS6133: LeaveFormData is declared but never read
-  TeamCard, TeamFormModal, TransferModal, LeaveFormData, defaultLeaveFormData
+  TeamCard, TeamFormModal, TransferModal
 } from './WorkerSectionModals'
 import { LeaveModal } from './LeaveModal'
 function calcAge(birthDate: string): number {

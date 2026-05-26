@@ -4,7 +4,7 @@
  * 提供测试所需的数据库 setup/cleanup 功能
  */
 
-import { db, dbReady, saveDatabase } from '../../electron/database'
+import { db, saveDatabase } from '../../electron/database'
 
 /**
  * 设置测试数据库
@@ -16,7 +16,9 @@ export function setupTestDB(): void {
   db.members = []
   db.workers = []
   db.projectWorkers = []
-  db.contracts = []
+  db.incomeContracts = []
+  db.expenseContracts = []
+  db.agreementContracts = []
   db.invoices = []
   db.costLedger = []
   db.attendances = []
@@ -40,7 +42,9 @@ export function cleanupTestDB(): void {
   db.members = []
   db.workers = []
   db.projectWorkers = []
-  db.contracts = []
+  db.incomeContracts = []
+  db.expenseContracts = []
+  db.agreementContracts = []
   db.invoices = []
   db.costLedger = []
   db.attendances = []

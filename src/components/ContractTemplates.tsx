@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from './ui/Icon'
 import { EmptyState } from './ui/EmptyState'
-import { ContractTemplate, TemplateType, TemplateVariable, Project, Partner } from '../types/electron'
+import { ContractTemplate, TemplateType, TemplateVariable } from '../types/electron'
 import { useToastStore } from '@/store/toastStore'
 import { ContractTemplateFormModal, templateTypeConfig } from './ContractTemplateFormModal'
 
@@ -14,10 +14,7 @@ interface ContractTemplatesProps {
 const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }) => {
   const showToast = useToastStore(state => state.showToast)
   const [templates, setTemplates] = useState<ContractTemplate[]>([])
-// @ts-ignore TS6133: projects is declared but never read
-  const [projects, setProjects] = useState<Project[]>([])
-// @ts-ignore TS6133: partners is declared but never read
-  const [partners, setPartners] = useState<Partner[]>([])
+
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [showGenerateModal, setShowGenerateModal] = useState(false)
@@ -42,15 +39,11 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
 
   const loadData = async () => {
     try {
-      const [templatesResult, projectsResult, partnersResult] = await Promise.all([
-        window.electronAPI.getContractTemplates(),
-        window.electronAPI.getProjects(),
-        window.electronAPI.getPartners()
+      const [templatesResult] = await Promise.all([
+        window.electronAPI.getContractTemplates()
       ])
       
       if (templatesResult.success && templatesResult.data) setTemplates(templatesResult.data)
-      if (projectsResult.success && projectsResult.data) setProjects(projectsResult.data)
-      if (partnersResult.success && partnersResult.data) setPartners(partnersResult.data)
     } catch (error) {
       console.error('加载数据失败:', error)
     } finally {

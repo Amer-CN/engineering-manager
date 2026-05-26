@@ -61,7 +61,7 @@ export const FOLDER_MAP: Record<string, Record<string, string>> = {
     'bank-receipts': '工资/银行回单',
   },
 }
-export type FileCategoryKeyFileCategoryKey = keyof typeof FOLDER_MAP
+export type FileCategoryKey = keyof typeof FOLDER_MAP
 export type FileSubCategoryKey<C extends FileCategoryKey> = keyof typeof FOLDER_MAP[C]
 
 // ═══════════════════════════════════════════════════════════════════════════════

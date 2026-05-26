@@ -125,8 +125,8 @@ function PreviewTable({ previewRows, categories, rowOverrides, onRowOverrideChan
               const code = (r as any)._matchedCode as string
               const overrideCode = rowOverrides[idx]
               const currentCode = overrideCode || code
-// @ts-ignore TS6133: currentCat is declared but never read
-              const currentCat = categories.find(c => c.code === currentCode)
+              // currentCat computed below if needed
+              // const currentCat = categories.find(c => c.code === currentCode)
               return (
                 <tr key={i} className="border-t border-slate-100 dark:border-slate-700">
                   <td className="px-2 py-1 text-slate-400">{r.rowNum}</td>

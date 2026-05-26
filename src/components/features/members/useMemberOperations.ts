@@ -46,9 +46,6 @@ export function useMemberOperations({
   }
 
   const handleSubmitStaff = async (data: StaffFormData | WorkerFormData) => {
-    // Ensure data is StaffFormData for staff-specific operations
-// @ts-ignore TS6133: staffData is declared but never read
-    const staffData = data as StaffFormData
     try {
       let submitFileData: any = data
       if (editingStaff) {

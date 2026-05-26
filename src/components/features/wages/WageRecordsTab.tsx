@@ -54,8 +54,6 @@ export default function WageRecordsTab({
   })
   const changedCount = paymentEdits.size
   const currentYear = new Date().getFullYear().toString()
-// @ts-ignore TS6133: effectiveYear is declared but never read
-  const effectiveYear = filterYear || currentYear
 
   return (
     <div className="p-4">

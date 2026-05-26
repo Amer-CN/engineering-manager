@@ -21,8 +21,6 @@ export interface ProjectCommandCenterProps {
   settlements: Settlement[]; members: Member[]; workerTeams: WorkerTeam[]
 }
 
-const CHART_COLORS = ['#3b82f6', '#10b981', '#f97316', '#8b5cf6', '#06b6d4', '#f59e0b']
-
 const partnerRoleLabels: Record<string, string> = {
   owner: '建设单位', general_contract: '总承包', professional: '专业分包',
   labor: '劳务分包', material: '材料供应', equipment: '设备租赁',
@@ -138,8 +136,7 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
               <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `¥${(v / 10000).toFixed(0)}万`} />
               <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
-                // @ts-ignore - Recharts formatter type mismatch
-                formatter={(v: any) => [`¥${formatMoney(v as number)}`, '']} />
+                formatter={((v: any) => [`¥${formatMoney(v as number)}`, '']) as any} />
               <Bar dataKey="value" radius={[5, 5, 0, 0]} animationDuration={1200} animationEasing="ease-out">{financeBar.map((e, i) => <Cell key={i} fill={e.color} />)}</Bar>
             </BarChart>
           </ResponsiveContainer>

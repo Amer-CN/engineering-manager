@@ -185,12 +185,6 @@ export function MembersTab({ project, staffMembers, allStaffMembers, workerTeams
   const projectStaff = staffMembers.filter(m =>
     activeRecords.some((r: any) => r.memberId === m.id)
   )
-  // 已调离成员：排除已在当前活跃的人员（防止重新添加后重复显示）
-// @ts-ignore TS6133: pastStaff is declared but never read
-  const pastStaff = staffMembers.filter(m =>
-    pastRecords.some((r: any) => r.memberId === m.id) &&
-    !activeRecords.some((r: any) => r.memberId === m.id)
-  )
   const available = allStaffMembers.filter(m =>
     !projectRecords.some((r: any) => r.memberId === m.id && !r.leftAt) &&
     m.id !== project.projectManagerId

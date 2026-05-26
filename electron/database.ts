@@ -81,6 +81,7 @@ export interface Database {
   wageHistory: any[]
   _migrations?: {
     fileStorageV1?: boolean
+    salaryHistoryBackfillV1?: boolean
   }
 }
 
@@ -484,8 +485,6 @@ export function saveDatabase(): boolean {
   try {
     const dbPath = getDbPath()
     const dataToWrite = JSON.stringify(db, null, 2)
-    const writeSize = dataToWrite.length
-
     // ── 数据完整性防护 ─────────────────────────────────────────────
     // 如果 db 对象明显为空（所有关键数组都为空），
     // 但磁盘上的已有文件较大（含真实数据），拒绝写入并创建紧急备份

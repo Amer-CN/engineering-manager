@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import type { AgreementContract, Partner, Project, PaymentRecord, Template } from '../types/electron'
-import { paymentMethods, partnerCategories, contractStatuses } from '../data/regions'
+import { partnerCategories, contractStatuses } from '../data/regions'
 import { logDelete, logExport } from '../utils/audit'
 import { usePermission } from '../hooks/usePermission'
 import { exportContracts } from '../utils/export-import'
@@ -108,8 +108,6 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
     return { previewUrl: `contract-file:///${prefix}${config.subCategory}/${fileUrl}`, downloadUrl: result.success && result.data ? result.data.dataUrl : '' }
   }
 
-// @ts-ignore TS6133: getPaymentLabel is declared but never read
-  const getPaymentLabel = (method: string) => paymentMethods.find(p => p.value === method)?.label || method
 
   const filteredContracts = contracts.filter(c => {
     if (filterStatus && c.status !== filterStatus) return false

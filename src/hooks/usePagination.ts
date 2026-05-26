@@ -75,8 +75,6 @@ export function usePagination<T>(items: T[], defaultPageSize = 10): UsePaginatio
     const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages)
     const startIndex = (safeCurrentPage - 1) * pageSize
     const endIndex = Math.min(startIndex + pageSize, totalItems)
-// @ts-ignore TS6133: paginatedItems is declared but never read
-    const paginatedItems = items.slice(startIndex, endIndex)
 
     return {
       totalItems,

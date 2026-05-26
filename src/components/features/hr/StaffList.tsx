@@ -34,8 +34,7 @@ const StaffList: React.FC = () => {
   const [dragOver, setDragOver] = useState<string | null>(null)
   const [fileDirty, setFileDirty] = useState<Set<string>>(new Set())
   const [ocrLoading, setOcrLoading] = useState(false)
-// @ts-ignore TS6133: setOcrMode is declared but never read
-  const [ocrMode, setOcrMode] = useState(getOCRConfig().provider)
+  const [ocrMode] = useState(getOCRConfig().provider)
   const [showBatchModal, setShowBatchModal] = useState(false)
   const [salaryHistoryMember, setSalaryHistoryMember] = useState<any | null>(null)
 
