@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>工程管家 · Logo Showcase</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #0c0e14;
+    color: #a1a7b5;
+    min-height: 100vh;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    padding: 60px 24px 40px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #f0f2f5;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+  }
+  .header p {
+    font-size: 14px;
+    color: #6b7280;
+    max-width: 480px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  /* Grid */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* Card */
+  .card {
+    background: #12141c;
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 12px;
+    padding: 32px 24px 24px;
+    text-align: center;
+    transition: background 0.25s ease, border-color 0.25s ease;
+    cursor: pointer;
+    position: relative;
+  }
+  .card:hover {
+    background: #181b25;
+    border-color: rgba(232,112,26,0.25);
+  }
+  .card.selected {
+    border-color: rgba(232,112,26,0.6);
+    box-shadow: 0 0 0 1px rgba(232,112,26,0.3);
+  }
+  .card .num {
+    position: absolute;
+    top: 12px;
+    left: 16px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #3a3f4d;
+    letter-spacing: 0.08em;
+  }
+
+  /* Logo display */
+  .logo-area {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1a1d27;
+    border-radius: 16px;
+    padding: 20px;
+    transition: transform 0.3s ease;
+  }
+  .card:hover .logo-area { transform: scale(1.04); }
+  .logo-area svg {
+    width: 100%;
+    height: 100%;
+    color: #E8701A;
+  }
+
+  /* Size row */
+  .sizes {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .sizes .s-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .sizes .s-icon {
+    background: #1a1d27;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+  }
+  .sizes .s-icon svg { color: #E8701A; }
+  .sizes .s-label { font-size: 9px; color: #4b5163; font-weight: 500; }
+
+  /* Title bar preview */
+  .title-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 30px;
+    padding: 0 10px;
+    background: #1e2130;
+    border-radius: 6px;
+    margin-bottom: 12px;
+  }
+  .title-bar svg { width: 16px; height: 16px; color: #E8701A; }
+  .title-bar span { font-size: 11px; font-weight: 500; color: #6b7280; }
+
+  /* With text preview */
+  .with-text {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px;
+    background: #1a1d27;
+    border-radius: 8px;
+  }
+  .with-text svg { width: 28px; height: 28px; color: #E8701A; }
+  .with-text .name { font-size: 15px; font-weight: 700; color: #f0f2f5; letter-spacing: -0.01em; }
+  .with-text .sub { font-size: 10px; color: #4b5163; }
+
+  /* Description */
+  .card .desc {
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+  .card .tag {
+    display: inline-block;
+    padding: 3px 8px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #E8701A;
+    background: rgba(232,112,26,0.08);
+    border-radius: 4px;
+    letter-spacing: 0.04em;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding: 24px;
+    font-size: 12px;
+    color: #3a3f4d;
+    border-top: 1px solid rgba(255,255,255,0.04);
+  }
+
+  @media (max-width: 800px) {
+    .grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 500px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>工程管家 · Logo Concepts</h1>
+  <p>金融管理 + 科技感 · 6 个方向，每个展示多尺寸 + 标题栏模拟 + 文字组合</p>
+</div>
+
+<div class="grid">
+
+  <!-- V1: ¥ Data Flow -->
+  <div class="card" onclick="this.classList.toggle('selected')">
+    <span class="num">01</span>
+    <div class="logo-area">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <g fill="none" stroke="currentColor" stroke-linecap="round">
+          <path d="M 18 28 Q 38 35, 50 50" stroke-width="3"/>
+          <path d="M 18 50 Q 35 50, 50 50" stroke-width="2.5"/>
+          <path d="M 18 72 Q 38 65, 50 50" stroke-width="3"/>
+          <path d="M 50 50 Q 62 35, 82 28" stroke-width="2"/>
+          <path d="M 50 50 Q 65 50, 82 50" stroke-width="1.5" opacity="0.5"/>
+          <path d="M 50 50 Q 62 65, 82 72" stroke-width="2"/>
+          <line x1="35" y1="50" x2="65" y2="50" stroke-width="3"/>
+          <path d="M 50 32 L 38 50" stroke-width="2.5"/>
+          <path d="M 50 32 L 62 50" stroke-width="2.5"/>
+        </g>
+        <circle cx="50" cy="50" r="5" fill="currentColor"/>
+      </svg>
+    </div>
+    <p class="desc">数据流向心汇聚，隐含 ¥ 轮廓。<br>多源数据汇聚到财务核心。</p>
+    <span class="tag">DATA FLOW</span>
+    <div class="sizes">
+      <div class="s-item"><div class="s-icon"><svg viewBox="0 0 100 100" width="48" height="48"><g fill="none" stroke="currentColor" stroke-linecap="round"><path d="M 18 28 Q 38 35, 50 50" stroke-width="3"/><path d="M 18 50 Q 35 50, 50 50" stroke-width="2.5"/><path d="M 18 72 Q 38 65, 50 50" stroke-width="3"/><path d="M 50 50 Q 62 35, 82 28" stroke-width="2"/><path d="M 50 50 Q 65 50, 82 50" stroke-width="1.5" opacity="0.5"/><path d="M 50 50 Q 62 65, 82 72" stroke-width="2"/><line x1="35" y1="50" x2="65" y2="50" stroke-width="3"/><path d="M 50 32 L 38 50" stroke-width="2.5"/><path d="M 50 32 L 62 50" stroke-width="2.5"/></g><circle cx="50" cy="50" r="5" fill="currentColor"/></svg></div><span class="s-label">48px</span></div>
+      <div class="s-item"><div class="s-icon"><svg viewBox="0 0 100 100" width="28" height="28"><g fill="none" stroke="currentColor" stroke-linecap="round"><path d="M 18 28 Q 38 35, 50 50" stroke-width="3"/><path d="M 18 50 Q 35 50, 50 50" stroke-width="2.5"/><path d="M 18 72 Q 38 65, 50 50" stroke-width="3"/><path d="M 50 50 Q 62 35, 82 28" stroke-width="2"/><path d="M 50 50 Q 65 50, 82 50" stroke-width="1.5" opacity="0.5"/><path d="M 50 50 Q 62 65, 82 72" stroke-width="2"/><line x1="35" y1="50" x2="65" y2="50" stroke-width="3"/><path d="M 50 32 L 38 50" stroke-width="2.5"/><path d="M 50 32 L 62 50" stroke-width="2.5"/></g><circle cx="50" cy="50" r="5" fill="currentColor"/></svg></div><span class="s-label">28px</span></div>
+      <div class="s-item"><div class="s-icon"><svg viewBox="0 0 100 100" width="16" height="16"><g fill="none" stroke="currentColor" stroke-linecap="round"><path d="M 18 28 Q 38 35, 50 50" stroke-width="3"/><path d="M 18 50 Q 35 50, 50 50" stroke-width="2.5"/><path d="M 18 72 Q 38 65, 50 50" stroke-width="3"/><path d="M 50 50 Q 62 35, 82 28" stroke-width="2"/><path d="M 50 50 Q 65 50, 82 50" stroke-width="1.5" opacity="0.5"/><path d="M 50 50 Q 62 65, 82 72" stroke-width="2"/><line x1="35" y1="50" x2="65" y2="50" stroke-width="3"/><path d="M 50 32 L 38 50" stroke-width="2.5"/><path d="M 50 32 L 62 50" stroke-width="2.5"/></g><circle cx="50" cy="50" r="5" fill="currentColor"/></svg></div><span class="s-label">16px</span></div>
+    </div>
+    <div class="title-bar">
+      <svg viewBox="0 0 100 100"><g fill="none" stroke="currentColor" stroke-linecap="round"><path d="M 18 28 Q 38 35, 50 50" stroke-width="3"/><path d="M 18 50 Q 35 50, 50 50" stroke-width="2.5"/><path d="M 18 72 Q 38 65, 50 50" stroke-width="3"/><path d="M 50 50 Q 62 35, 82 28" stroke-width="2"/><line x1="35" y1="50" x2="65" y2="50" stroke-width="3"/><path d="M 50 32 L 38 50" stroke-width="2.5"/><path d="M 50 32 L 62 50" stroke-width="2.5"/></g><circle cx="50" cy="50" r="5" fill="currentColor"/></svg>
+      <span>工程管家</span>
+    </div>
+    <div class="with-text">
+      <svg viewBox="0 0 100 100"><g fill="none" stroke="currentColor" stroke-linecap="round"><path d="M 18 28 Q 38 35, 50 50" stroke-width="3"/><path d="M 18 50 Q 35 50, 50 50" stroke-width="2.5"/><path d="M 18 72 Q 38 65, 50 50" stroke-width="3"/><path d="M 50 50 Q 62 35, 82 28" stroke-width="2"/><line x1="35" y1="50" x2="65" y2="50" stroke-width="3"/><path d="M 50 32 L 38 50" stroke-width="2.5"/><path d="M 50 32 L 62 50" stroke-width="2.5"/></g><circle cx="50" cy="50" r="5" fill="currentColor"/></svg>
+      <div><div class="name">工程管家</div><div class="sub">Engineering Manager</div></div>
+    </div>
+  </div>
+
+  <!-- V2: Arc Gauge -->
+  <div class="card" onclick="this.classList.toggle('selected')">
+    <span class="num">02</span>
+    <div class="logo-area">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <g fill="none" stroke="currentColor" stroke-linecap="round">
+          <path d="M 50 14 A 36 36 0 1 1 14 50" stroke-width="3"/>
+          <path d="M 72 50 A 22 22 0 1 1 28 50" stroke-width="2.5" opacity="0.6"/>
+          <line x1="50" y1="14" x2="50" y2="22" stroke-width="2.5"/>
+          <line x1="86" y1="50" x2="78" y2="50" stroke-width="2.5"/>
+          <line x1="50" y1="86" x2="50" y2="78" stroke-width="2.5"/>
+          <line x1="50" y1="50" x2="70" y2="26" stroke-width="2.5"/>
+        </g>
+        <circle cx="50" cy="50" r="4" fill="currentColor"/>
+      </svg>
+    </div>
+    <p class="desc">仪表盘刻度，指向 75% 位置。<br>财务指标监控，精准掌控。</p>
+    <span class="tag">GAUGE</span>
+    <div class="sizes">
+      <div class="s-item"><div class="s-icon"><svg viewBox="0 0 100 100" width="48" height="48"><g fill="none" stroke="currentColor" stroke-linecap="round"><path d="M 50 14 A 36 36 0 1 1 14 50" stroke-width="3"/><path d="M 72 50 A 22 22 0 1 1 28 50" stroke-width="2.5" opacity="0.6"/><line x1="50" y1="14" x2="50" y2="22" stroke-width="2.5"/><line x1="86" y1="50" x2="78" y2="50" stroke-width="2.5"/><line x1="50" y1="86" x2="50" y2="78" stroke-width="2.5"/><line x1="50" y1="50" x2="70" y2="26" stroke-width="2.5"/></g><circle cx="50" cy="50" r="4" fill="currentColor"/></svg></div><span class="s-label">48px</span></div>
+      <div class="s-item"><div class="s-icon"><svg viewBox="0 0 100 100" width="28" height="28"><g fill="none" stroke="currentColor" stroke-linecap="round"><path d="M 50 14 A 36 36 0 1 1 14 50" stroke-width="3"/><path d="M 72 50 A 22 22 0 1 1 28 50" stroke-width="2.5" opacity="0.6"/><line x1="50" y1="14" x2="50" y2="22" stroke-width="2.5"/><line x1="86" y1="50" x2="78" y2="50" stroke-width="2.5"/><line x1="50" y1="86" x2="50" y2="78" stroke-width="2.5"/><line x1="50" y1="50" x2="70" y2="26" stroke-width="2.5"/></g><circle cx="50" cy="50" r="4" fill="currentColor"/></svg></div><span class="s-label">28px</span></div>
+      <div class="s-item"><div class="s-icon"><svg viewBox="0 0 100 100" width="16" height="16"><g fill="none" stroke="currentColor" stroke-linecap="round"><path d="M 50 14 A 36 36 0 1 1 14 50" stroke-width="3"/><line x1="50" y1="50" x2="70" y2="26" stroke-width="2.5"/></g><circle cx="50" cy="50" r="4" fill="currentColor"/></svg></div><span class="s-label">16px</span></div>
+    </div>
+    <div class="title-bar">
+      <svg viewBox="0 0 100 100"><g fill="none" stroke="currentColor" stroke-linecap="round"><path d="M 50 14 A 36 36 0 1 1 14 50" stroke-width="3"/><line x1="50" y1="50" x2="70" y2="26" stroke-width="2.5"/></g><circle cx="50" cy="50" r="4" fill="currentColor"/></svg>
+      <span>工程管家</span>
+    </div>
+    <div class="with-text">
+      <svg viewBox="0 0 100 100"><g fill="none" stroke="currentColor" stroke-linecap="round"><path d="M 50 14 A 36 36 0 1 1 14 50" stroke-width="3"/><line x1="50" y1="50" x2="70" y2="26" stroke-width="2.5"/></g><circle cx="50" cy="50" r="4" fill="currentColor"/></svg>
+      <div><div class="name">工程管家</div><div class="sub">Engineering Manager</div></div>
+    </div>
+  </div>
+
+  <!-- V3: Hex Cutout -->
+  <div class="card" onclick="this.classList.toggle('selected')">
+    <span class="num">03</span>
+    <div class="logo-area">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <clipPath id="yen-cut-v"><text x="50" y="58" text-anchor="middle" font-family="Inter, sans-serif" font-size="32" font-weight="700">¥</text></clipPath>
+        </defs>
+        <polygon points="50,14 82,30 82,70 50,86 18,70 18,30" fill="currentColor" clip-path="url(#yen-cut-v)" opacity="0.9"/>
+        <polygon points="50,14 82,30 82,70 50,86 18,70 18,30" fill="none" stroke="currentColor" stroke-width="2.5"/>
+        <circle cx="50" cy="14" r="3" fill="currentColor"/>
+        <circle cx="82" cy="30" r="3" fill="currentColor"/>
+        <circle cx="18" cy="30" r="3" fill="currentColor"/>
+      </svg>
+    </div>
+    <p class="desc">六边形科技盾牌，¥ 以负空间呈现。<br>安全 + 金融 + 科技三重隐喻。</p>
+    <span class="tag">HEX CUTOUT</span>
+    <div class="sizes">
+      <div class="s-item"><div class="s-icon"><svg viewBox="0 0 100 100" width="48" height="48"><defs><clipPath id="yc2"><text x="50" y="58" text-anchor="middle" font-family="Inter,sans-serif" font-size="32" font-weight="700">¥</text></clipPath></defs><polygon points="50,14 82,30 82,70 50,86 18,70 18,30" fill="currentColor" clip-path="url(#yc2)" opacity="0.9"/><polygon points="50,14 82,30 82,70 50,86 18,70 18,30" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="50" cy="14" r="3" fill="currentColor"/><circle cx="82" cy="30" r="3" fill="currentColor"/><circle cx="18" cy="30" r="3" fill="currentColor"/></svg></div><span class="s-label">48px</span></div>
+      <div class="s-item"><div class="s-icon"><svg viewBox="0 0 100 100" width="28" height="28"><polygon points="50,14 82,30 82,70 50,86 18,70 18,30" fill="currentColor" opacity="0.9"/><polygon points="50,14 82,30 82,70 50,86 18,70 18,30" fill="none" stroke="currentColor" stroke-width="2.5"/></svg></div><span class="s-label">28px</span></div>
+      <div class="s-item"><div class="s-icon"><svg viewBox="0 0 100 100" width="16" height="16"><polygon points="50,14 82,30 82,70 50,86 18,70 18,30" fill="currentColor"/></svg></div><span class="s-label">16px</span></div>
+    </div>
+    <div class="title-bar">
+      <svg viewBox="0 0 100 100"><polygon points="50,14 82,30 82,70 50,86 18,70 18,30" fill="currentColor" opacity="0.9"/><polygon points="50,14 82,30 82,70 50,86 18,70 18,30" fill="none" stroke="currentColor" stroke-width="2.5"/></svg>
+      <span>工程管家</span>
+    </div>
+    <div class="with-text">
+      <svg viewBox="0 0 100 100"><polygon points="50,14 82,30 82,70 50,86 18,70 18,30" fill="currentColor" opacity="0.9"/><polygon points="50,14 82,30 82,70 50,86 18,70 18,30" fill="none" stroke="currentColor" stroke-width="2.5"/></svg>
+      <div><div class="name">工程管家</div><div class="sub">Engineering Manager</div></div>
+    </div>
+  </div>
+
+  <!-- V4: Neural ¥ -->
+  <div class="card" onclick="this.classList.toggle('selected')">
+    <span class="num">04</span>
+    <div class="logo-area">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <g>
+          <line x1="25" y1="30" x2="50" y2="50" stroke="currentColor" stroke-width="1.5" opacity="0.3"/>
+          <line x1="25" y1="70" x2="50" y2="50" stroke="currentColor" stroke-width="1.5" opacity="0.3"/>
+          <line x1="50" y1="50" x2="75" y2="30" stroke="currentColor" stroke-width="1.5" opacity="0.3"/>
+          <line x1="50" y1="50" x2="75" y2="70" stroke="currentColor" stroke-width="1.5" opacity="0.3"/>
+          <line x1="25" y1="30" x2="25" y2="70" stroke="currentColor" stroke-width="1" opacity="0.15"/>
+          <line x1="75" y1="30" x2="75" y2="70" stroke="currentColor" stroke-width="1" opacity="0.15"/>
+          <circle cx="25" cy="30" r="6" fill="none" stroke="currentColor" stroke-width="2"/>
+          <circle cx="25" cy="70" r="6" fill="none" stroke="currentColor" stroke-width="2"/>
+          <circle cx="75" cy="30" r="6" fill="none" stroke="currentColor" stroke-width="2"/>
+          <circle cx="75" cy="70" r="6" fill="none" stroke="currentColor" stroke-width="2"/>
+          <circle cx="50" cy="50" r="14" fill="currentColor"/>
+        </g>
+        <text x="50" y="56" text-anchor="middle" font-family="Inter, sans-serif" font-size="18" font-weight="700" fill="#1E293B">¥</text>
+      </svg>
+    </div>
+    <p class="desc">AI 神经网络节点，中心 ¥ 核心。<br>智能财务管理，四端数据接入。</p>
+    <span class="tag">NEURAL</span>
+    <div class="sizes">
+      <div class="s-item"><div class="s-icon"><svg viewBox="0 0 100 100" width="48" height="48"><g><line x1="25" y1="30" x2="50" y2="50" stroke="currentColor" stroke-width="1.5" opacity="0.3"/><line x1="25" y1="70" x2="50" y2="50" stroke="currentColor" stroke-width="1.5" opacity="0.3"/><line x1="50" y1="50" x2="75" y2="30" stroke="currentColor" stroke-width="1.5" opacity="0.3"/><line x1="50" y1="50" x2="75" y2="70" stroke="currentColor" stroke-width="1.5" opacity="0.3"/><circle cx="25" cy="30" r="6" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="25" cy="70" r="6" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="75" cy="30" r="6" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="75" cy="70" r="6" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="50" cy="50" r="14" fill="currentColor"/></g><text x="50" y="56" text-anchor="middle" font-family="Inter,sans-serif" font-size="18" font-weight="700" fill="#1E293B">¥</text></svg></div><span class="s-label">48px</span></div>
+      <div class="s-item"><div class="s-icon"><svg viewBox="0 0 100 100" width="28" height="28"><g><line x1="25" y1="30" x2="50" y2="50" stroke="currentColor" stroke-width="1.5" opacity="0.3"/><line x1="25" y1="70" x2="50" y2="50" stroke="currentColor" stroke-width="1.5" opacity="0.3"/><line x1="50" y1="50" x2="75" y2="30" stroke="currentColor" stroke-width="1.5" opacity="0.3"/><line x1="50" y1="50" x2="75" y2="70" stroke="currentColor" stroke-width="1.5" opacity="0.3"/><circle cx="25" cy="30" r="6" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="25" cy="70" r="6" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="75" cy="30" r="6" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="75" cy="70" r="6" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="50" cy="50" r="14" fill="currentColor"/></g></svg></div><span class="s-label">28px</span></div>
+      <div class="s-item"><div class="s-icon"><svg viewBox="0 0 100 100" width="16" height="16"><circle cx="50" cy="50" r="14" fill="currentColor"/></svg></div><span class="s-label">16px</span></div>
+    </div>
+    <div class="title-bar">
+      <svg viewBox="0 0 100 100"><g><line x1="25" y1="30" x2="50" y2="50" stroke="currentColor" stroke-width="1.5" opacity="0.3"/><line x1="25" y1="70" x2="50" y2="50" stroke="currentColor" stroke-width="1.5" opacity="0.3"/><line x1="50" y1="50" x2="75" y2="30" stroke="currentColor" stroke-width="1.5" opacity="0.3"/><line x1="50" y1="50" x2="75" y2="70" stroke="currentColor" stroke-width="1.5" opacity="0.3"/><circle cx="25" cy="30" r="6" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="25" cy="70" r="6" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="75" cy="30" r="6" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="75" cy="70" r="6" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="50" cy="50" r="14" fill="currentColor"/></g></svg>
+      <span>工程管家</span>
+    </div>
+    <div class="with-text">
+      <svg viewBox="0 0 100 100"><g><line x1="25" y1="30" x2="50" y2="50" stroke="currentColor" stroke-width="1.5" opacity="0.3"/><line x1="25" y1="70" x2="50" y2="50" stroke="currentColor" stroke-width="1.5" opacity="0.3"/><circle cx="25" cy="30" r="6" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="25" cy="70" r="6" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="75" cy="30" r="6" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="75" cy="70" r="6" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="50" cy="50" r="14" fill="currentColor"/></g></svg>
+      <div><div class="name">工程管家</div><div class="sub">Engineering Manager</div></div>
+    </div>
+  </div>
+
+  <!-- V5: Rising Bars -->
+  <div class="card" onclick="this.classList.toggle('selected')">
+    <span class="num">05</span>
+    <div class="logo-area">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <g fill="currentColor">
+          <rect x="15" y="68" width="10" height="20" rx="2"/>
+          <rect x="28" y="56" width="10" height="32" rx="2"/>
+          <rect x="41" y="44" width="10" height="44" rx="2"/>
+          <rect x="54" y="34" width="10" height="54" rx="2"/>
+          <rect x="67" y="22" width="10" height="66" rx="2"/>
+        </g>
+        <path d="M 20 66 L 33 54 L 46 42 L 59 32 L 72 20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="72" cy="20" r="4" fill="currentColor"/>
+      </svg>
+    </div>
+    <p class="desc">递增柱状图 + 趋势线。<br>财务增长可视化，直觉有力。</p>
+    <span class="tag">GROWTH</span>
+    <div class="sizes">
+      <div class="s-item"><div class="s-icon"><svg viewBox="0 0 100 100" width="48" height="48"><g fill="currentColor"><rect x="15" y="68" width="10" height="20" rx="2"/><rect x="28" y="56" width="10" height="32" rx="2"/><rect x="41" y="44" width="10" height="44" rx="2"/><rect x="54" y="34" width="10" height="54" rx="2"/><rect x="67" y="22" width="10" height="66" rx="2"/></g><path d="M 20 66 L 33 54 L 46 42 L 59 32 L 72 20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="72" cy="20" r="4" fill="currentColor"/></svg></div><span class="s-label">48px</span></div>
+      <div class="s-item"><div class="s-icon"><svg viewBox="0 0 100 100" width="28" height="28"><g fill="currentColor"><rect x="15" y="68" width="10" height="20" rx="2"/><rect x="28" y="56" width="10" height="32" rx="2"/><rect x="41" y="44" width="10" height="44" rx="2"/><rect x="54" y="34" width="10" height="54" rx="2"/><rect x="67" y="22" width="10" height="66" rx="2"/></g><path d="M 20 66 L 33 54 L 46 42 L 59 32 L 72 20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span class="s-label">28px</span></div>
+      <div class="s-item"><div class="s-icon"><svg viewBox="0 0 100 100" width="16" height="16"><g fill="currentColor"><rect x="15" y="68" width="10" height="20" rx="2"/><rect x="41" y="44" width="10" height="44" rx="2"/><rect x="67" y="22" width="10" height="66" rx="2"/></g></svg></div><span class="s-label">16px</span></div>
+    </div>
+    <div class="title-bar">
+      <svg viewBox="0 0 100 100"><g fill="currentColor"><rect x="15" y="68" width="10" height="20" rx="2"/><rect x="28" y="56" width="10" height="32" rx="2"/><rect x="41" y="44" width="10" height="44" rx="2"/><rect x="54" y="34" width="10" height="54" rx="2"/><rect x="67" y="22" width="10" height="66" rx="2"/></g></svg>
+      <span>工程管家</span>
+    </div>
+    <div class="with-text">
+      <svg viewBox="0 0 100 100"><g fill="currentColor"><rect x="15" y="68" width="10" height="20" rx="2"/><rect x="28" y="56" width="10" height="32" rx="2"/><rect x="41" y="44" width="10" height="44" rx="2"/><rect x="54" y="34" width="10" height="54" rx="2"/><rect x="67" y="22" width="10" height="66" rx="2"/></g></svg>
+      <div><div class="name">工程管家</div><div class="sub">Engineering Manager</div></div>
+    </div>
+  </div>
+
+  <!-- V6: Chip Core -->
+  <div class="card" onclick="this.classList.toggle('selected')">
+    <span class="num">06</span>
+    <div class="logo-area">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <g fill="currentColor">
+          <rect x="30" y="30" width="40" height="40" rx="6" fill="none" stroke="currentColor" stroke-width="2.5"/>
+          <rect x="40" y="20" width="3" height="10" rx="1.5"/>
+          <rect x="49" y="20" width="3" height="10" rx="1.5"/>
+          <rect x="58" y="20" width="3" height="10" rx="1.5"/>
+          <rect x="40" y="70" width="3" height="10" rx="1.5"/>
+          <rect x="49" y="70" width="3" height="10" rx="1.5"/>
+          <rect x="58" y="70" width="3" height="10" rx="1.5"/>
+          <rect x="20" y="40" width="10" height="3" rx="1.5"/>
+          <rect x="20" y="49" width="10" height="3" rx="1.5"/>
+          <rect x="20" y="58" width="10" height="3" rx="1.5"/>
+          <rect x="70" y="40" width="10" height="3" rx="1.5"/>
+          <rect x="70" y="49" width="10" height="3" rx="1.5"/>
+          <rect x="70" y="58" width="10" height="3" rx="1.5"/>
+        </g>
+        <text x="50" y="56" text-anchor="middle" font-family="Inter, sans-serif" font-size="20" font-weight="700" fill="currentColor">¥</text>
+      </svg>
+    </div>
+    <p class="desc">AI 芯片架构，¥ 为核心处理器。<br>智能财务引擎，精密可靠。</p>
+    <span class="tag">CHIP</span>
+    <div class="sizes">
+      <div class="s-item"><div class="s-icon"><svg viewBox="0 0 100 100" width="48" height="48"><g fill="currentColor"><rect x="30" y="30" width="40" height="40" rx="6" fill="none" stroke="currentColor" stroke-width="2.5"/><rect x="40" y="20" width="3" height="10" rx="1.5"/><rect x="49" y="20" width="3" height="10" rx="1.5"/><rect x="58" y="20" width="3" height="10" rx="1.5"/><rect x="40" y="70" width="3" height="10" rx="1.5"/><rect x="49" y="70" width="3" height="10" rx="1.5"/><rect x="58" y="70" width="3" height="10" rx="1.5"/><rect x="20" y="40" width="10" height="3" rx="1.5"/><rect x="20" y="49" width="10" height="3" rx="1.5"/><rect x="20" y="58" width="10" height="3" rx="1.5"/><rect x="70" y="40" width="10" height="3" rx="1.5"/><rect x="70" y="49" width="10" height="3" rx="1.5"/><rect x="70" y="58" width="10" height="3" rx="1.5"/></g><text x="50" y="56" text-anchor="middle" font-family="Inter,sans-serif" font-size="20" font-weight="700" fill="currentColor">¥</text></svg></div><span class="s-label">48px</span></div>
+      <div class="s-item"><div class="s-icon"><svg viewBox="0 0 100 100" width="28" height="28"><g fill="currentColor"><rect x="30" y="30" width="40" height="40" rx="6" fill="none" stroke="currentColor" stroke-width="2.5"/><rect x="40" y="20" width="3" height="10" rx="1.5"/><rect x="49" y="20" width="3" height="10" rx="1.5"/><rect x="58" y="20" width="3" height="10" rx="1.5"/><rect x="40" y="70" width="3" height="10" rx="1.5"/><rect x="49" y="70" width="3" height="10" rx="1.5"/><rect x="58" y="70" width="3" height="10" rx="1.5"/><rect x="20" y="40" width="10" height="3" rx="1.5"/><rect x="20" y="49" width="10" height="3" rx="1.5"/><rect x="20" y="58" width="10" height="3" rx="1.5"/><rect x="70" y="40" width="10" height="3" rx="1.5"/><rect x="70" y="49" width="10" height="3" rx="1.5"/><rect x="70" y="58" width="10" height="3" rx="1.5"/></g></svg></div><span class="s-label">28px</span></div>
+      <div class="s-item"><div class="s-icon"><svg viewBox="0 0 100 100" width="16" height="16"><rect x="30" y="30" width="40" height="40" rx="6" fill="currentColor"/></svg></div><span class="s-label">16px</span></div>
+    </div>
+    <div class="title-bar">
+      <svg viewBox="0 0 100 100"><g fill="currentColor"><rect x="30" y="30" width="40" height="40" rx="6" fill="none" stroke="currentColor" stroke-width="2.5"/><rect x="40" y="20" width="3" height="10" rx="1.5"/><rect x="49" y="20" width="3" height="10" rx="1.5"/><rect x="58" y="20" width="3" height="10" rx="1.5"/><rect x="40" y="70" width="3" height="10" rx="1.5"/><rect x="49" y="70" width="3" height="10" rx="1.5"/><rect x="58" y="70" width="3" height="10" rx="1.5"/><rect x="20" y="40" width="10" height="3" rx="1.5"/><rect x="20" y="49" width="10" height="3" rx="1.5"/><rect x="20" y="58" width="10" height="3" rx="1.5"/><rect x="70" y="40" width="10" height="3" rx="1.5"/><rect x="70" y="49" width="10" height="3" rx="1.5"/><rect x="70" y="58" width="10" height="3" rx="1.5"/></g></svg>
+      <span>工程管家</span>
+    </div>
+    <div class="with-text">
+      <svg viewBox="0 0 100 100"><g fill="currentColor"><rect x="30" y="30" width="40" height="40" rx="6" fill="none" stroke="currentColor" stroke-width="2.5"/><rect x="40" y="20" width="3" height="10" rx="1.5"/><rect x="49" y="20" width="3" height="10" rx="1.5"/><rect x="58" y="20" width="3" height="10" rx="1.5"/><rect x="20" y="40" width="10" height="3" rx="1.5"/><rect x="20" y="49" width="10" height="3" rx="1.5"/><rect x="70" y="40" width="10" height="3" rx="1.5"/><rect x="70" y="49" width="10" height="3" rx="1.5"/></g></svg>
+      <div><div class="name">工程管家</div><div class="sub">Engineering Manager</div></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">点击卡片选中 · 内联 SVG 着色 · 使用 currentColor 支持 CSS color 控制</div>
+
+</body>
+</html>

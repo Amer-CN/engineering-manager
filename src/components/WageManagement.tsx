@@ -65,12 +65,13 @@ export default function WageManagement() {
   const loadBaseData = useCallback(async () => {
     setLoading(true)
     try {
-      const [projectsRes, teamsRes] = await Promise.all([
+      const [projectsRes, teamsRes] = await Promise.allSettled([
         window.electronAPI.getProjects(),
         window.electronAPI.getWorkerTeams(),
       ])
-      if (projectsRes.success && projectsRes.data) setProjects(projectsRes.data.filter((p: Project) => p.status !== 'archived'))
-      if (teamsRes.success && teamsRes.data) setWorkerTeams(teamsRes.data)
+      const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
+      setProjects(get(projectsRes).filter((p: Project) => p.status !== 'archived'))
+      setWorkerTeams(get(teamsRes))
     } catch (error) { console.error('加载基础数据失败:', error) }
     finally { setLoading(false) }
   }, [])
@@ -122,17 +123,18 @@ export default function WageManagement() {
     const pwIds: number[] = []
 
     try {
-      const [pwResult, workersResult] = await Promise.all([
+      const [pwResult, workersResult] = await Promise.allSettled([
         window.electronAPI.getProjectWorkers(selectedProject.id),
         window.electronAPI.getWorkers(),
       ])
+      const getVal = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
+      const pwData = getVal(pwResult)
+      const workersData = getVal(workersResult)
       // Build workerId → idCard map
       const idCardMap = new Map<number, string>()
-      if (workersResult.success && workersResult.data) {
-        for (const w of workersResult.data) idCardMap.set(w.id, w.idCard || '')
-      }
-      if (pwResult.success && pwResult.data) {
-        for (const pw of pwResult.data) {
+      for (const w of workersData) idCardMap.set(w.id, w.idCard || '')
+      if (pwData.length > 0) {
+        for (const pw of pwData) {
           if (pw.status !== 'active') continue
           pwIds.push(pw.id)
           const teamName = workerTeams.find((t: WorkerTeam) => t.id === pw.teamId)?.name || '-'

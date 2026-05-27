@@ -6,7 +6,7 @@ import type { Project, CostLedgerSummary } from '@/types'
 
 const CARD = 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm'
 
-const sectionV = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4 } } }
+const sectionV = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { duration: 0.3, ease: 'easeOut' } } }
 const cardHover = { y: -4, boxShadow: '0 12px 30px rgba(0,0,0,0.1)', transition: { duration: 0.2 } }
 
 const CountUp: React.FC<{ value: number; suffix?: string; prefix?: string; decimals?: number }> = ({ value, suffix = '', prefix = '', decimals = 0 }) => {
@@ -72,7 +72,7 @@ export function CostLedgerDashboard({ projects, summaries, loading, onSelectProj
 
       {/* ═══ Hero Banner ═══ */}
       <motion.section variants={sectionV} className="relative overflow-hidden rounded-2xl mb-6 bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 text-white p-6">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(251,146,60,0.1),transparent_50%)]" />
+        <div className="hero-overlay absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(251,146,60,0.1),transparent_50%)]" />
         <motion.div className="absolute top-3 right-12 w-1 h-1 rounded-full bg-amber-400"
           animate={{ opacity: [0, 1, 0], scale: [0.5, 2, 0.5] }}
           transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 3 }}

@@ -53,30 +53,25 @@ const StaffPayroll: React.FC = () => {
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const [memRes, wageRes, attRes, deptRes, projRes] = await Promise.all([
+      const [memRes, wageRes, attRes, deptRes, projRes] = await Promise.allSettled([
         window.electronAPI.getMembers(),
         window.electronAPI.getWages(undefined, undefined),  // 全量：不限月份
         window.electronAPI.getAttendances(undefined, undefined), // 全量考勤
         window.electronAPI.getDepartments(),
         window.electronAPI.getProjects()
       ])
-      if (memRes.success) {
-        setStaff((memRes.data || []).filter(
-          (m: any) => m.memberType === 'staff' || m.memberType === undefined
-        ))
-      }
-      if (wageRes.success) {
-        // 只保留 staff 的工资记录（非 worker）
-        const staffIds = new Set(
-          (memRes.data || [])
-            .filter((m: any) => m.memberType === 'staff' || m.memberType === undefined)
-            .map((m: any) => m.id)
-        )
-        setAllWages((wageRes.data || []).filter((w: any) => staffIds.has(w.memberId)))
-      }
-      if (attRes.success) setAttendances(attRes.data || [])
-      if (deptRes.success) setDepartments(deptRes.data || [])
-      if (projRes.success) setProjects((projRes.data || []).filter((p: any) => p.status !== 'archived'))
+      const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
+      const membersData = get(memRes)
+      const staffOnly = membersData.filter(
+        (m: any) => m.memberType === 'staff' || m.memberType === undefined
+      )
+      setStaff(staffOnly)
+      // 只保留 staff 的工资记录（非 worker）
+      const staffIds = new Set(staffOnly.map((m: any) => m.id))
+      setAllWages(get(wageRes).filter((w: any) => staffIds.has(w.memberId)))
+      setAttendances(get(attRes))
+      setDepartments(get(deptRes))
+      setProjects(get(projRes).filter((p: any) => p.status !== 'archived'))
     } catch (e) { console.error(e) }
     finally { setLoading(false) }
   }, [])

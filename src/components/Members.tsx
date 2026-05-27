@@ -151,44 +151,42 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
   const loadData = async () => {
     try {
       setLoading(true)
-      const [membersRes, projectsRes, teamsRes] = await Promise.all([
+      const [membersRes, projectsRes, teamsRes] = await Promise.allSettled([
         window.electronAPI.getMembers(),
         window.electronAPI.getProjects(),
         window.electronAPI.getWorkerTeams()
       ])
+      const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
+      const membersData = get(membersRes)
+      const projectsData = get(projectsRes)
+      const teamsData = get(teamsRes)
 
-      if (membersRes.success) {
-        const membersWithRelations = (membersRes.data || []).map((m: Member) => {
-          if (m.memberType === 'worker' && m.teamId) {
-            const team = (teamsRes.data || []).find((t: WorkerTeam) => t.id === m.teamId)
-            return {
-              ...m,
-              teamName: team?.name,
-              projectId: team?.projectId,
-              projectName: team?.projectName,
-            }
-          }
-          return m
-        })
-        setMembers(membersWithRelations)
-      }
-
-      if (projectsRes.success) {
-        setProjects(projectsRes.data || [])
-      }
-
-      if (teamsRes.success) {
-        const teamsWithRelations = (teamsRes.data || []).map((t: WorkerTeam) => {
-          const project = (projectsRes.data || []).find((p: any) => p.id === t.projectId)
-          const leader = (membersRes.data || []).find((m: Member) => m.id === t.leaderId)
+      const membersWithRelations = membersData.map((m: Member) => {
+        if (m.memberType === 'worker' && m.teamId) {
+          const team = teamsData.find((t: WorkerTeam) => t.id === m.teamId)
           return {
-            ...t,
-            projectName: project?.name,
-            leaderName: leader?.name,
+            ...m,
+            teamName: team?.name,
+            projectId: team?.projectId,
+            projectName: team?.projectName,
           }
-        })
-        setWorkerTeams(teamsWithRelations)
-      }
+        }
+        return m
+      })
+      setMembers(membersWithRelations)
+
+      setProjects(projectsData)
+
+      const teamsWithRelations = teamsData.map((t: WorkerTeam) => {
+        const project = projectsData.find((p: any) => p.id === t.projectId)
+        const leader = membersData.find((m: Member) => m.id === t.leaderId)
+        return {
+          ...t,
+          projectName: project?.name,
+          leaderName: leader?.name,
+        }
+      })
+      setWorkerTeams(teamsWithRelations)
     } catch (error) {
       console.error('加载数据失败:', error)
       showToast('加载数据失败', 'error')

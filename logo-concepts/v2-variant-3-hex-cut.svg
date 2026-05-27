@@ -1,0 +1,18 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Variant 3: Hex Cutout — ¥ in negative space, security + finance -->
+  <defs>
+    <clipPath id="yen-cut">
+      <text x="50" y="58" text-anchor="middle" font-family="Inter, sans-serif" font-size="32" font-weight="700">¥</text>
+    </clipPath>
+  </defs>
+  <!-- Hexagon with ¥ cutout -->
+  <polygon points="50,14 82,30 82,70 50,86 18,70 18,30"
+    fill="currentColor" clip-path="url(#yen-cut)" opacity="0.9"/>
+  <!-- Hexagon outline -->
+  <polygon points="50,14 82,30 82,70 50,86 18,70 18,30"
+    fill="none" stroke="currentColor" stroke-width="2.5"/>
+  <!-- Corner accent dots -->
+  <circle cx="50" cy="14" r="3" fill="currentColor"/>
+  <circle cx="82" cy="30" r="3" fill="currentColor"/>
+  <circle cx="18" cy="30" r="3" fill="currentColor"/>
+</svg>

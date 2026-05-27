@@ -1,0 +1,17 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Variant 2: Arc Gauge — Financial precision, data dashboard feel -->
+  <g fill="none" stroke="currentColor" stroke-linecap="round">
+    <!-- Outer arc: 270 degrees -->
+    <path d="M 50 14 A 36 36 0 1 1 14 50" stroke-width="3"/>
+    <!-- Inner arc: 180 degrees, offset -->
+    <path d="M 72 50 A 22 22 0 1 1 28 50" stroke-width="2.5" opacity="0.6"/>
+    <!-- Tick marks at key positions -->
+    <line x1="50" y1="14" x2="50" y2="22" stroke-width="2.5"/>
+    <line x1="86" y1="50" x2="78" y2="50" stroke-width="2.5"/>
+    <line x1="50" y1="86" x2="50" y2="78" stroke-width="2.5"/>
+    <!-- Needle pointing to ~75% -->
+    <line x1="50" y1="50" x2="70" y2="26" stroke-width="2.5"/>
+  </g>
+  <!-- Center pivot -->
+  <circle cx="50" cy="50" r="4" fill="currentColor"/>
+</svg>

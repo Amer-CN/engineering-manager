@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { AnimatePresence, motion } from 'framer-motion'
 import { Icon } from '../Icon'
 
 export interface DropdownMenuItem {
@@ -117,45 +116,46 @@ export function DropdownMenu({
       <div onClick={() => setIsOpen(!isOpen)}>{trigger}</div>
       {isOpen &&
         createPortal(
-          <AnimatePresence>
-            <motion.div
-              ref={menuRef}
-              role="menu"
-              className="fixed z-[9999] min-w-[160px] bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 overflow-hidden"
-              style={{ top: position.top, left: position.left }}
-              initial={{ opacity: 0, y: -4, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -4, scale: 0.95 }}
-              transition={{ duration: 0.15, ease: 'easeOut' }}
-            >
-              <div className="py-1">
-                {items.map((item) => (
-                  <React.Fragment key={item.key}>
-                    {item.divider && <div className="my-1 border-t border-slate-100 dark:border-slate-700" />}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!item.disabled) {
-                          item.onClick?.()
-                          setIsOpen(false)
-                        }
-                      }}
-                      disabled={item.disabled}
-                      className={`
-                        w-full flex items-center gap-2 px-4 py-2 text-sm text-left
-                        transition-colors
-                        ${item.danger ? 'text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'}
-                        ${item.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-                      `}
-                    >
-                      {item.icon && <Icon name={item.icon} size={16} />}
-                      {item.label}
-                    </button>
-                  </React.Fragment>
-                ))}
-              </div>
-            </motion.div>
-          </AnimatePresence>,
+          <div
+            ref={menuRef}
+            role="menu"
+            className="fixed z-[9999] min-w-[160px] rounded-lg shadow-lg overflow-hidden"
+            style={{
+              top: position.top, left: position.left,
+              background: 'var(--card)', border: '1px solid var(--border)',
+              opacity: 1, transform: 'translateY(0) scale(1)',
+              animation: 'dropdown-in 0.15s ease-out',
+            }}
+          >
+            <style>{`@keyframes dropdown-in { from { opacity: 0; transform: translateY(-4px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }`}</style>
+            <div className="py-1">
+              {items.map((item) => (
+                <React.Fragment key={item.key}>
+                  {item.divider && <div className="my-1 border-t" style={{ borderColor: 'var(--border)' }} />}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!item.disabled) {
+                        item.onClick?.()
+                        setIsOpen(false)
+                      }
+                    }}
+                    disabled={item.disabled}
+                    style={{ color: item.danger ? 'var(--danger)' : 'var(--fg)' }}
+                    className={`
+                      w-full flex items-center gap-2 px-4 py-2 text-sm text-left
+                      transition-colors
+                      ${item.danger ? 'hover:bg-red-50' : 'hover:bg-slate-50'}
+                      ${item.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                    `}
+                  >
+                    {item.icon && <Icon name={item.icon} size={16} />}
+                    {item.label}
+                  </button>
+                </React.Fragment>
+              ))}
+            </div>
+          </div>,
           document.body,
         )}
     </div>

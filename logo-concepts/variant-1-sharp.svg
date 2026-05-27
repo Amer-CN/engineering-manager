@@ -1,0 +1,9 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- 方案 1 锐角版：3 条直线汇聚，更像三角形 -->
+  <g fill="none" stroke="currentColor" stroke-linecap="round">
+    <line x1="18" y1="24" x2="50" y2="50" stroke-width="3.5"/>
+    <line x1="18" y1="50" x2="50" y2="50" stroke-width="3"/>
+    <line x1="18" y1="76" x2="50" y2="50" stroke-width="3.5"/>
+  </g>
+  <circle cx="50" cy="50" r="6" fill="currentColor"/>
+</svg>

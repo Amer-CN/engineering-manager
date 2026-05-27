@@ -1,74 +1,49 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useCallback, useSyncExternalStore } from 'react'
 
-export type ThemeScheme = 'default' | 'graphite' | 'sandstone'
+export type ThemeScheme = 'white' | 'graphite' | 'sandstone'
 
-const SCHEME_KEY = 'app-scheme'
-const DARK_KEY = 'app-dark'
-const OLD_KEY = 'app-theme' // 旧版兼容
+const KEY = 'app-theme'
 
-function getInitialScheme(): ThemeScheme {
-  if (typeof window === 'undefined') return 'default'
-
-  // 新版 key 优先
-  const scheme = localStorage.getItem(SCHEME_KEY)
-  if (scheme === 'default' || scheme === 'graphite' || scheme === 'sandstone') return scheme
-
-  // 旧版兼容：'app-theme' = 'light'|'dark' → scheme='default'
-  const old = localStorage.getItem(OLD_KEY)
-  if (old === 'light' || old === 'dark') {
-    localStorage.removeItem(OLD_KEY) // 迁移后清理
-  }
-
-  return 'default'
+function readScheme(): ThemeScheme {
+  if (typeof window === 'undefined') return 'white'
+  const stored = localStorage.getItem(KEY)
+  if (stored === 'white' || stored === 'graphite' || stored === 'sandstone') return stored
+  const old = localStorage.getItem('app-scheme')
+  if (old === 'white' || old === 'graphite' || old === 'sandstone') return old
+  return 'white'
 }
 
-function getInitialDark(): boolean {
-  if (typeof window === 'undefined') return false
+// 全局 store — 所有 useTheme 实例共享同一份状态
+let _scheme: ThemeScheme = readScheme()
+let _listeners: Set<() => void> = new Set()
 
-  // 新版 key 优先
-  const stored = localStorage.getItem(DARK_KEY)
-  if (stored !== null) return stored === 'true'
+function subscribe(listener: () => void) {
+  _listeners.add(listener)
+  return () => { _listeners.delete(listener) }
+}
+function getSnapshot() { return _scheme }
+function getServerSnapshot(): ThemeScheme { return 'white' }
 
-  // 旧版兼容
-  const old = localStorage.getItem(OLD_KEY)
-  if (old === 'dark') return true
+function setGlobalScheme(s: ThemeScheme) {
+  if (s === _scheme) return
+  _scheme = s
+  localStorage.setItem(KEY, s)
+  document.documentElement.setAttribute('data-theme', s)
+  _listeners.forEach(fn => fn())
+}
 
-  return false
+// 模块加载时同步设置（早于 React 渲染）
+if (typeof document !== 'undefined') {
+  document.documentElement.setAttribute('data-theme', _scheme)
+  localStorage.setItem(KEY, _scheme)
 }
 
 export function useTheme() {
-  const [scheme, setSchemeState] = useState<ThemeScheme>(getInitialScheme)
-  const [isDark, setIsDarkState] = useState<boolean>(getInitialDark)
-
-  // 同步到 DOM
-  useEffect(() => {
-    const root = document.documentElement
-
-    // 设置 data-theme 属性
-    root.setAttribute('data-theme', scheme)
-
-    // 切换 dark class
-    if (isDark) {
-      root.classList.add('dark')
-    } else {
-      root.classList.remove('dark')
-    }
-
-    localStorage.setItem(SCHEME_KEY, scheme)
-    localStorage.setItem(DARK_KEY, String(isDark))
-  }, [scheme, isDark])
+  const scheme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
 
   const setScheme = useCallback((s: ThemeScheme) => {
-    setSchemeState(s)
+    setGlobalScheme(s)
   }, [])
 
-  const toggleDark = useCallback(() => {
-    setIsDarkState(prev => !prev)
-  }, [])
-
-  const setDark = useCallback((d: boolean) => {
-    setIsDarkState(d)
-  }, [])
-
-  return { scheme, setScheme, isDark, setDark, toggleDark }
+  return { scheme, setScheme }
 }

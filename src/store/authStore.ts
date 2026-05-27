@@ -37,38 +37,14 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set, get) => {
-  // 初始化时从 localStorage 恢复登录状态
-  const stored = localStorage.getItem(AUTH_STORAGE_KEY)
-  let initialAuthenticated = false
-  let initialUser = null
-  
-  if (stored) {
-    try {
-      const userData = JSON.parse(stored)
-      initialAuthenticated = true
-      initialUser = userData
-      
-      // 同步到权限模块
-      const permissionsUser: PermissionsAuthContext = {
-        userId: userData.userId,
-        username: userData.username,
-        roleId: userData.roleId,
-        roleName: userData.roleName,
-        permissions: userData.permissions as any
-      }
-      setPermissionsUser(permissionsUser)
-      // 接通审计用户
-      setCurrentAuditUser(userData.userId, userData.username)
-    } catch (e) {
-      console.error('恢复登录状态失败:', e)
-      localStorage.removeItem(AUTH_STORAGE_KEY)
-    }
-  }
-  
+  // 每次打开应用都需要重新登录，不从 localStorage 恢复会话
+  // 自动登录由 Login.tsx 通过保存的凭据 + electronAPI.login() 实现
+  localStorage.removeItem(AUTH_STORAGE_KEY)
+
   return {
-    isAuthenticated: initialAuthenticated,
+    isAuthenticated: false,
     isLocked: false,
-    currentUser: initialUser,
+    currentUser: null,
     
     login: (userData: StoredAuth) => {
       set({
@@ -103,6 +79,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         isAuthenticated: false,
       })
       localStorage.removeItem(AUTH_STORAGE_KEY)
+      localStorage.removeItem('login-auto')
       
       // 同步到权限模块
       setPermissionsUser(null)

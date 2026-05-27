@@ -40,15 +40,14 @@ const StaffList: React.FC = () => {
 
   const loadData = useCallback(async () => {
     try {
-      const [memRes, deptRes] = await Promise.all([
+      const [memRes, deptRes] = await Promise.allSettled([
         window.electronAPI.getMembers(),
         window.electronAPI.getDepartments()
       ])
-      if (memRes.success) {
-        const staff = (memRes.data || []).filter((m: any) => m.memberType === 'staff' || m.memberType === undefined)
-        setMembers(staff)
-      }
-      if (deptRes.success) setDepartments(deptRes.data || [])
+      const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
+      const membersData = get(memRes)
+      setMembers(membersData.filter((m: any) => m.memberType === 'staff' || m.memberType === undefined))
+      setDepartments(get(deptRes))
     } catch (e) { console.error(e) }
     finally { setLoading(false) }
   }, [])
@@ -67,11 +66,15 @@ const StaffList: React.FC = () => {
   const openEdit = async (m: any) => {
     setEditing(m)
     // 从磁盘读取已有文件用于预览
-    const [frontUrl, backUrl, contractUrl] = await Promise.all([
+    const [r0, r1, r2] = await Promise.allSettled([
       m.idCardFront ? readUploadedFile(FILE_CATEGORIES.MEMBER_ID_CARD.category, FILE_CATEGORIES.MEMBER_ID_CARD.subCategory, m.idCardFront) : Promise.resolve(''),
       m.idCardBack ? readUploadedFile(FILE_CATEGORIES.MEMBER_ID_CARD.category, FILE_CATEGORIES.MEMBER_ID_CARD.subCategory, m.idCardBack) : Promise.resolve(''),
       m.contractFile ? readUploadedFile(FILE_CATEGORIES.MEMBER_CONTRACT.category, FILE_CATEGORIES.MEMBER_CONTRACT.subCategory, m.contractFile) : Promise.resolve(''),
     ])
+    const getFileUrl = (r: PromiseSettledResult<string>) => r.status === 'fulfilled' ? r.value || '' : ''
+    const frontUrl = getFileUrl(r0)
+    const backUrl = getFileUrl(r1)
+    const contractUrl = getFileUrl(r2)
     setFormData({
       name: m.name || '', phone: m.phone || '', email: m.email || '', idCard: m.idCard || '',
       gender: m.gender || '男', ethnicity: m.ethnicity || '', birthDate: m.birthDate || '',

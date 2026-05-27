@@ -2,7 +2,6 @@
 // @deprecated 此组件已废弃，工人管理模块已改用 LaborWorkerList + LaborTeamManager
 
 import { useState, useMemo } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
 import { Tabs } from '../../ui/Tabs'
 import type { WorkerTeam } from '@/types'
 import { getWorkerTypeLabel } from '@/utils'
@@ -103,17 +102,9 @@ export function WorkerSection({
         ]}
         animated={true}
       >
-        {/* 班组管理 */}
-        <AnimatePresence mode="sync">
-          {subTab === 'teams' && (
-            <motion.div
-              key="teams"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.1 }}
-            >
-              <div className="flex items-center justify-between mb-6">
+        {subTab === 'teams' && (
+          <>
+            <div className="flex items-center justify-between mb-6">
                 <div className="text-slate-500">
                   按项目分类管理班组，共{workerTeams.length} 个班组                </div>
                 <div className="flex items-center gap-3">
@@ -168,18 +159,10 @@ export function WorkerSection({
                   </button>
                 </div>
               )}
-            </motion.div>
-          )}
-
-          {/* 工人列表 */}
-          {subTab === 'workers' && (
-            <motion.div
-              key="workers"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.1 }}
-            >
+          </>
+        )}
+        {subTab === 'workers' && (
+          <>
               {/* 筛选器 */}
               <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-4 mb-6 flex flex-wrap items-center gap-4">
                 <span className="text-slate-600 font-medium">筛选：</span>
@@ -269,23 +252,11 @@ export function WorkerSection({
                   </button>
                 </div>
               )}
-            </motion.div>
-          )}
-
-          {/* 工资管理 */}
-          {subTab === 'wages' && (
-            <motion.div
-              key="wages"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.1 }}
-              className="min-h-[600px]"
-            >
-              {wageContent}
-            </motion.div>
-          )}
-        </AnimatePresence>
+          </>
+        )}
+        {subTab === 'wages' && (
+          <div className="min-h-[600px]">{wageContent}</div>
+        )}
       </Tabs>
 
       {/* 班组表单模态框 */}

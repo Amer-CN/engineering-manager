@@ -135,7 +135,7 @@ const LaborDashboard: React.FC<LaborDashboardProps> = ({ members, projects, work
                   </Pie>
                   <Tooltip
                     formatter={((value: any, name: any) => [`${value ?? 0} 人`, name ?? '']) as any}
-                    contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                    contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--fg)' }}
                   />
                 </PieChart>
               </ResponsiveContainer>

@@ -1,6 +1,6 @@
 {
   "name": "engineering-manager",
-  "version": "0.57.0",
+  "version": "0.58.0",
   "description": "工程项目管理系统 - 一站式工程项目管理解决方案",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -26,7 +26,7 @@
     "better-sqlite3": "^12.10.0",
     "docxtemplater": "^3.68.7",
     "electron-log": "^5.0.3",
-    "framer-motion": "^12.38.0",
+    "framer-motion": "^12.40.0",
     "lucide-react": "^1.14.0",
     "mammoth": "^1.12.0",
     "pizzip": "^3.2.0",
@@ -92,6 +92,7 @@
     ],
     "asar": true,
     "win": {
+      "icon": "public/installer-assets/app-icon.ico",
       "target": [
         {
           "target": "nsis",

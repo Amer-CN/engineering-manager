@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Concept A: 屋顶 + 数据网格 — 建筑感 + 管理感 -->
+  <defs>
+    <linearGradient id="grad-a" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E8701A"/>
+      <stop offset="100%" stop-color="#F59E0B"/>
+    </linearGradient>
+  </defs>
+  <!-- 屋顶三角 -->
+  <polygon points="100,24 30,90 170,90" fill="url(#grad-a)" opacity="0.95"/>
+  <!-- 墙体 -->
+  <rect x="45" y="90" width="110" height="70" rx="4" fill="#1E293B" opacity="0.9"/>
+  <!-- 窗口网格（数据管理感） -->
+  <rect x="55" y="100" width="22" height="18" rx="2" fill="#E8701A" opacity="0.6"/>
+  <rect x="83" y="100" width="22" height="18" rx="2" fill="#E8701A" opacity="0.4"/>
+  <rect x="111" y="100" width="22" height="18" rx="2" fill="#E8701A" opacity="0.7"/>
+  <rect x="55" y="124" width="22" height="18" rx="2" fill="#E8701A" opacity="0.4"/>
+  <rect x="83" y="124" width="22" height="18" rx="2" fill="#E8701A" opacity="0.7"/>
+  <rect x="111" y="124" width="22" height="18" rx="2" fill="#E8701A" opacity="0.5"/>
+  <!-- 门 -->
+  <rect x="83" y="140" width="22" height="20" rx="2" fill="#F59E0B" opacity="0.8"/>
+</svg>

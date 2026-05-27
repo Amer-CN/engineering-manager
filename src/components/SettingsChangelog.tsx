@@ -25,23 +25,38 @@ function renderMarkdownInline(text: string): React.ReactNode {
 // 从最初的 v1.0.0（2026-05-01 第 1 个版本）开始累计，
 // 54 个历史版本从 v1.0.0（0.1.0）到 v3.1.0（0.54.0）
 // 本次版本号方案变更为第 55 次发布，对应为 0.55.0
-// 2026-05-27: 0.55.0 → 0.56.0 — 图标修复 + 数据修复 + 动画加速
+// 2026-05-28: 0.57.0 → 0.58.0 — 三主题全面覆盖 + 登录页重设计 + 柱状图重写
 // ═══════════════════════════════════════════════════════════════════
 const versions = [
+  { v: 'v0.58.0', date: '2026-05-28', items: [
+    '全新登录界面：小巧窗口 + 记住密码 + 自动登录，再也不用每次输入账号密码',
+    '三个主题全面修复：深色/暖色/浅色主题下，按钮、输入框、表格、弹窗的文字都能看清了',
+    '图表悬停提示框适配主题色，不再出现白底白字看不见的问题',
+    '首页柱状图去掉了悬停时的多余背景色，视觉更干净',
+    '切换主题不再闪烁，打开设置不再自动跳到其他主题',
+    '页面切换动画更平滑，去掉了从底部弹起的突兀感',
+    '统一了软件图标，标题栏、任务栏、桌面快捷方式图标一致',
+    '修复登录时每次都强制改密码的问题',
+    '修复下拉菜单在深色主题下的文字颜色',
+  ]},
+  { v: 'v0.57.0', date: '2026-05-27', items: [
+    '代码质量大扫除：清理了 30 多处临时标记，代码更干净',
+    '去掉了调试日志，运行更安静',
+    '修复了几个数据类型的小问题',
+    '新增了几个缺失的图标（电源、收支切换）',
+    '图纸分类图标更直观（结构图、电气图、暖通图、装饰图各有专属图标）',
+  ]},
   { v: 'v0.56.0', date: '2026-05-27', items: [
-    '全新 frameless 窗口：去掉了原生窗口边框，改用自绘标题栏',
-    '自定义标题栏：左侧面板图标折叠按钮 + 右侧窗口按钮（最小化/最大化/关闭）',
-    '底部状态栏：显示版本号和数据引擎状态（SQLite）',
-    '多主题系统：支持 Graphite（冷灰·青蓝）和 Sandstone（暖灰·琥珀）切换',
-    '侧边栏可折叠：点击标题栏左侧图标或 Ctrl+B 切换，折叠后只显示图标',
-    '修复发票管理模块回款/付款数据显示不全的问题',
-    '修复多处图标缺失导致显示问号的问题',
-    '修复工人管理模块文字编码损坏（人员�? → 人员，赖资管理 → 薪资管理）',
-    '修复图纸管理分类图标缺失（Droplets、Snowflake）',
-    '修复窗口按钮无法点击（IPC 守卫拦截已绕过）',
-    '修复自定义标题栏快捷键 F12 无效问题',
-    '加速全局金额滚动动画速度（stiffness 250，体验提升）',
-    '发票页面数据加载改为独立 try/catch，单请求失败不影响其他数据',
+    '全新窗口外观：去掉了系统原生边框，标题栏更简洁美观',
+    '新增三种主题：明亮（White）、深灰（Graphite）、暖灰（Sandstone），在设置里切换',
+    '侧边栏可以折叠了（点左上角图标或按 Ctrl+B），给内容区更多空间',
+    '底部状态栏显示版本号和数据存储状态',
+    '修复发票回款/付款显示不全的问题',
+    '修复多处图标显示为问号的问题',
+    '修复工人管理页面文字乱码的问题',
+    '修复窗口按钮偶尔点不动的问题',
+    '金额数字滚动动画更快更流畅',
+    '发票加载更稳定，单条数据出错不影响其他',
   ]},
   { v: 'v0.55.0', date: '2026-05-27', items: [
     '版本号方案大升级：从 1.x/2.x/3.x 改为遵循 SemVer 2.0.0 规范的 0.y.z',
@@ -371,22 +386,22 @@ interface Props { onClose: () => void }
 const SettingsChangelog: React.FC<Props> = ({ onClose }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
     <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-    <div className="relative bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-lg max-h-[70vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-      <div className="sticky top-0 bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl px-6 py-4 border-b border-slate-200 dark:border-slate-700 rounded-t-2xl flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2"><Icon name="Clock" size={18} /> 更新日志</h3>
-        <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700"><Icon name="X" size={18} /></button>
+    <div className="relative rounded-2xl shadow-2xl w-full max-w-lg max-h-[70vh] overflow-y-auto" style={{ backgroundColor: 'var(--card)' }} onClick={e => e.stopPropagation()}>
+      <div className="sticky top-0 px-6 py-4 rounded-t-2xl flex items-center justify-between" style={{ backgroundColor: 'var(--card)', borderBottom: '1px solid var(--border)' }}>
+        <h3 className="text-lg font-semibold flex items-center gap-2" style={{ color: 'var(--fg)' }}><Icon name="Clock" size={18} /> 更新日志</h3>
+        <button onClick={onClose} className="p-1 rounded-lg transition-colors" style={{ color: 'var(--muted)' }} onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--panel-2)')} onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}><Icon name="X" size={18} /></button>
       </div>
       <div className="px-6 py-5 space-y-6">
         {versions.map(ver => (
           <div key={ver.v}>
             <div className="flex items-center gap-2 mb-2">
-              <span className="px-2 py-0.5 text-xs font-bold bg-primary-100 dark:bg-primary-500/20 text-primary-700 dark:text-primary-400 rounded-md">{ver.v}</span>
-              <span className="text-xs text-slate-400">{ver.date}</span>
+              <span className="px-2 py-0.5 text-xs font-bold rounded-md" style={{ backgroundColor: 'var(--accent-soft)', color: 'var(--accent)' }}>{ver.v}</span>
+              <span className="text-xs" style={{ color: 'var(--muted)' }}>{ver.date}</span>
             </div>
             <ul className="space-y-1.5">
               {ver.items.map((item, i) => (
-                <li key={i} className="text-sm text-slate-600 dark:text-slate-400 flex items-start gap-2">
-                  <span className="text-slate-300 dark:text-slate-600 mt-0.5 flex-shrink-0">•</span>
+                <li key={i} className="text-sm flex items-start gap-2" style={{ color: 'var(--fg-2)' }}>
+                  <span className="mt-0.5 flex-shrink-0" style={{ color: 'var(--muted-2)' }}>•</span>
                   <span>{renderMarkdownInline(item)}</span>
                 </li>
               ))}

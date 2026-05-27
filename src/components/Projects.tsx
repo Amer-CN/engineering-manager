@@ -26,9 +26,10 @@ const Projects: React.FC<{ refresh?: () => void }> = ({ refresh }) => {
   const loadData = async () => {
     setLoading(true)
     try {
-      const [projR, memR] = await Promise.all([window.electronAPI.getProjects(), window.electronAPI.getMembers()])
-      if (projR.success && projR.data) setProjects(projR.data)
-      if (memR.success && memR.data) setMembers(memR.data)
+      const [projR, memR] = await Promise.allSettled([window.electronAPI.getProjects(), window.electronAPI.getMembers()])
+      const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
+      setProjects(get(projR))
+      setMembers(get(memR))
     } catch (e) { console.error('加载失败:', e) }
     finally { setLoading(false) }
   }

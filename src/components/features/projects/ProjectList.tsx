@@ -23,6 +23,7 @@ const itemVariants = {
   hidden: { opacity: 0, y: 16 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.35 } },
 }
+const sectionV = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { duration: 0.3, ease: 'easeOut' } } }
 
 export function ProjectList({ projects, members, loading, onProjectClick, onEdit, onDelete, onAdd }: ProjectListProps) {
   if (loading) {
@@ -54,11 +55,10 @@ export function ProjectList({ projects, members, loading, onProjectClick, onEdit
 
   return (
     <motion.div initial="hidden" animate="visible" variants={containerVariants}>
-      {/* 投资组合概览横幅 */}
-      <motion.div variants={itemVariants}
+      {/* 投资组合概览横幅 — 结构与 Dashboard hero banner 一致 */}
+      <motion.section variants={sectionV}
         className="relative overflow-hidden rounded-2xl mb-6 bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 text-white p-6">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.1),transparent_50%)]" />
-        {/* 装饰光点 */}
+        <div className="hero-overlay absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.1),transparent_50%)]" />
         <motion.div className="absolute top-3 right-12 w-1 h-1 rounded-full bg-emerald-400"
           animate={{ opacity: [0, 1, 0], scale: [0.5, 2, 0.5] }}
           transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 3 }}
@@ -68,15 +68,15 @@ export function ProjectList({ projects, members, loading, onProjectClick, onEdit
           transition={{ duration: 3, repeat: Infinity, repeatDelay: 4, delay: 1 }}
         />
         <div className="relative z-10">
-          <p className="text-xs font-semibold uppercase tracking-wider text-white/50 mb-4">项目投资组合概览</p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-white/50 mb-3">项目投资组合概览</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {[
               { label: '项目总数', value: `${projects.length}`, sub: `${activeCount}个进行中`, icon: 'FolderKanban', accent: 'text-blue-300' },
               { label: '组合预算', value: `¥${totalBudget > 0 ? (totalBudget / 10000).toFixed(1) : '0'}万`, sub: `${completedCount}个已完成`, icon: 'DollarSign', accent: 'text-emerald-300' },
               { label: '进行中', value: `${activeCount}`, sub: `共${projects.length}个项目`, icon: 'LayoutDashboard', accent: 'text-amber-300' },
               { label: '整体健康度', value: '72分', sub: '良好水平', icon: 'Activity', accent: 'text-emerald-300' },
             ].map((kpi, i) => (
-              <div key={i} className="p-3 rounded-xl bg-white/10">
+              <div key={i}>
                 <div className="flex items-center gap-2 mb-1">
                   <Icon name={kpi.icon} size={14} className={kpi.accent} />
                   <p className="text-xs text-white/60">{kpi.label}</p>
@@ -87,7 +87,7 @@ export function ProjectList({ projects, members, loading, onProjectClick, onEdit
             ))}
           </div>
         </div>
-      </motion.div>
+      </motion.section>
 
       {/* 项目卡片网格 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">

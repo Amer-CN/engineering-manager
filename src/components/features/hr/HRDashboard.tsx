@@ -28,16 +28,17 @@ const HRDashboard: React.FC = () => {
   useEffect(() => {
     (async () => {
       try {
-        const [deptRes, memberRes, wageRes, attRes] = await Promise.all([
+        const [deptRes, memberRes, wageRes, attRes] = await Promise.allSettled([
           window.electronAPI.getDepartments(),
           window.electronAPI.getMembers(),
           window.electronAPI.getWages(undefined, `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`),
           window.electronAPI.getAttendances(undefined, `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`)
         ])
-        const deptList = deptRes.success ? deptRes.data || [] : []
-        const members = memberRes.success ? memberRes.data || [] : []
-        const wages = wageRes.success ? wageRes.data || [] : []
-        const attendances = attRes.success ? attRes.data || [] : []
+        const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
+        const deptList = get(deptRes)
+        const members = get(memberRes)
+        const wages = get(wageRes)
+        const attendances = get(attRes)
         const staff = members.filter((m: any) => m.memberType === 'staff' || !m.memberType)
         const now = new Date()
         const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
@@ -137,7 +138,7 @@ const HRDashboard: React.FC = () => {
                 <Pie data={data.deptDistribution} cx="50%" cy="50%" innerRadius={55} outerRadius={95} paddingAngle={3} dataKey="value">
                   {data.deptDistribution.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                 </Pie>
-                <Tooltip />
+                <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, boxShadow: 'var(--shadow-md)', color: 'var(--fg)' }} />
               </PieChart>
             </ResponsiveContainer>
           ) : (

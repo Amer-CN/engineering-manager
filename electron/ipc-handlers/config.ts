@@ -16,15 +16,7 @@ import {
 // 配置管理
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// 打开开发者工具
-ipcMain.handle('app:openDevTools', (event) => {
-  const { webContents } = event.sender
-  if (webContents) {
-    webContents.toggleDevTools()
-    return { success: true }
-  }
-  return { success: false, error: '窗口未初始化' }
-})
+// app:openDevTools 已移至 main.ts（与窗口控制 IPC 一起，绕过守卫）
 
 ipcMain.handle('config:get', () => {
   return {

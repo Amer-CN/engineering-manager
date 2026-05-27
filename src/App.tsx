@@ -7,6 +7,7 @@ import { NAV_ITEMS, PAGE_IDS, getFilteredSidebarRoutes } from './routes'
 import { RequirePermission, RequireAdmin } from './hooks/usePermission'
 import { useAuth } from './hooks/useAuth'
 import { useRowHoverOpacity } from './hooks/useRowHoverOpacity'
+import { useTheme } from './hooks/useTheme'
 
 // ── 路由级代码分割：每个页面独立 chunk ──
 const Dashboard = lazy(() => import('./components/Dashboard'))
@@ -39,7 +40,15 @@ type Page = typeof PAGE_IDS[number]
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, isLocked, currentUser, logout, lock } = useAuth()
+  useTheme() // 启动时从 localStorage 读取并设置 data-theme
   useRowHoverOpacity() // 初始化表格行悬停 CSS 变量
+
+  // 登录成功后放大窗口
+  useEffect(() => {
+    if (isAuthenticated) {
+      (window as any).electronAPI?.resizeForApp?.()
+    }
+  }, [isAuthenticated])
 
   const [currentPage, setCurrentPage] = useState<Page>('dashboard')
   const [refreshTrigger, setRefreshTrigger] = useState(0)
@@ -111,9 +120,8 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50 dark:bg-slate-950 relative overflow-hidden"
+    <div className="h-screen relative overflow-hidden select-none flex flex-col bg-slate-50"
          style={{
-           // frameless 窗口阴影（Windows 下原生阴影消失后用 box-shadow 模拟）
            boxShadow: '0 0 0 1px rgba(0,0,0,0.08), 0 0 20px rgba(0,0,0,0.08)',
          } as React.CSSProperties}>
       <TitleBar collapsed={!sidebarOpen} onToggleCollapse={() => setSidebarOpen(v => !v)} />
@@ -129,7 +137,7 @@ const AppContent: React.FC = () => {
           {isLocked && <LockScreen />}
         </AnimatePresence>
         <main className="flex-1 overflow-auto">
-          <AnimatePresence mode="sync">
+          <AnimatePresence mode="wait">
             <motion.div key={currentPage} className="min-h-full"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               transition={{ duration: 0.15, ease: 'easeOut' }}>
@@ -142,8 +150,8 @@ const AppContent: React.FC = () => {
       </div>
       <StatusBar />
 
-      {/* 窗口边缘 resize 手柄（frameless 后需手动实现） */}
-      <div className="absolute top-0 left-0 right-0 h-1 cursor-n-resize" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties} />
+      {/* 窗口边缘 resize 手柄 */}
+      <div className="absolute top-0 left-0 right-0 h-1 cursor-n-resize" />
       <div className="absolute bottom-0 left-0 right-0 h-1 cursor-s-resize" />
       <div className="absolute top-0 left-0 bottom-0 w-1 cursor-w-resize" />
       <div className="absolute top-0 right-0 bottom-0 w-1 cursor-e-resize" />

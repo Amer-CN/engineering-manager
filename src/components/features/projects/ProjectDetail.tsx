@@ -48,27 +48,44 @@ export function ProjectDetail({ project, members, allMembers, onBack, onEdit }: 
 
   const loadProjectDetail = async () => {
     setLoading(true)
-    try {
-      const [invoicesR, incomeR, expenseR, partnersR, teamsR, projectWorkersR, materialsR, settlementsR, paymentsR, costLedgerR] = await Promise.all([
-        window.electronAPI.getInvoices(), window.electronAPI.getIncomeContracts(project.id),
-        window.electronAPI.getExpenseContracts(project.id), window.electronAPI.getPartners(),
-        window.electronAPI.getWorkerTeams(), window.electronAPI.getProjectWorkers(project.id),
-        window.electronAPI.getMaterials(project.id),
-        window.electronAPI.getSettlements(project.id), window.electronAPI.getWagePaymentRecords(),
-        window.electronAPI.getCostLedger(project.id),
-      ])
-      if (invoicesR.success) setInvoices((invoicesR.data || []).filter((i: Invoice) => i.projectId === project.id))
-      if (incomeR.success) setIncomeContracts(incomeR.data || [])
-      if (expenseR.success) setExpenseContracts(expenseR.data || [])
-      if (partnersR.success) setPartners((partnersR.data || []).filter((p: Partner) => p.projectIds?.includes(project.id)))
-      if (teamsR.success) setWorkerTeams((teamsR.data || []).filter((t: WorkerTeam) => t.projectId === project.id))
-      if (projectWorkersR.success) setProjectWorkers(projectWorkersR.data || [])
-      if (materialsR.success) setMaterials(materialsR.data || [])
-      if (settlementsR.success) setSettlements((settlementsR.data || []).filter((s: Settlement) => s.projectId === project.id))
-      if (paymentsR.success) setPaymentRecords((paymentsR.data || []).filter((p: PaymentRecord) => p.projectId === project.id))
-      if (costLedgerR.success) setCostLedgerEntries(costLedgerR.data || [])
-    } catch (e) { console.error('加载项目详情失败:', e) }
-    finally { setLoading(false) }
+    const pid = project.id
+    const results = await Promise.allSettled([
+      window.electronAPI.getInvoices(),               // 0
+      window.electronAPI.getIncomeContracts(pid),      // 1
+      window.electronAPI.getExpenseContracts(pid),     // 2
+      window.electronAPI.getPartners(),                // 3
+      window.electronAPI.getWorkerTeams(),             // 4
+      window.electronAPI.getProjectWorkers(pid),       // 5
+      window.electronAPI.getMaterials(pid),            // 6
+      window.electronAPI.getSettlements(pid),          // 7
+      window.electronAPI.getWagePaymentRecords(),      // 8
+      window.electronAPI.getCostLedger(pid),           // 9
+    ])
+
+    const res = (i: number) => {
+      const r = results[i]
+      if (r.status === 'rejected') { console.error(`[ProjectDetail] API #${i} rejected:`, r.reason); return null }
+      const val = r.value as any
+      if (!val?.success) { console.warn(`[ProjectDetail] API #${i} failed:`, val?.error); return null }
+      return val.data || []
+    }
+
+    const invoicesData = res(0) || []
+    setInvoices(invoicesData.filter((i: Invoice) => i.projectId == pid))
+    setIncomeContracts(res(1) || [])
+    setExpenseContracts(res(2) || [])
+    const partnersData = res(3) || []
+    setPartners(partnersData.filter((p: Partner) => p.projectIds?.some((id: any) => id == pid)))
+    const teamsData = res(4) || []
+    setWorkerTeams(teamsData.filter((t: WorkerTeam) => t.projectId == pid))
+    setProjectWorkers(res(5) || [])
+    setMaterials(res(6) || [])
+    const settlementsData = res(7) || []
+    setSettlements(settlementsData.filter((s: Settlement) => s.projectId == pid))
+    const paymentsData = res(8) || []
+    setPaymentRecords(paymentsData.filter((p: PaymentRecord) => p.projectId == pid))
+    setCostLedgerEntries(res(9) || [])
+    setLoading(false)
   }
 
   const materialTotal = materials.reduce((s, m) => s + m.price * m.quantity, 0)
@@ -128,7 +145,7 @@ export function ProjectDetail({ project, members, allMembers, onBack, onEdit }: 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
         {/* ── Header ── */}
         <div className="relative overflow-hidden rounded-2xl mb-6 bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 text-white p-5 lg:p-6">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.08),transparent_50%)]" />
+          <div className="hero-overlay absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.08),transparent_50%)]" />
           {/* 装饰光点 */}
           <motion.div className="absolute top-3 right-12 w-1 h-1 rounded-full bg-emerald-400"
             animate={{ opacity: [0, 1, 0], scale: [0.5, 2, 0.5] }}

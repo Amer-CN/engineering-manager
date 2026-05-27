@@ -1,6 +1,5 @@
 // LaborManagement.tsx - 工人管理主页面（使用统一 Tabs 组件）
 import React, { useState, useCallback, Suspense } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { Tabs } from './ui/Tabs'
 import { useLaborData } from './features/labor/hooks/useLaborData'
 import { useLaborModals } from './features/labor/hooks/useLaborModals'
@@ -92,79 +91,42 @@ const LaborManagement: React.FC = () => {
         tabs={TABS.map(tab => ({ key: tab.id, label: tab.label, icon: tab.icon }))}
         animated={true}
       >
-        <AnimatePresence mode="sync">
-          {activeTab === 'dashboard' && (
-            <motion.div
-              key="dashboard"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.1 }}
-            >
-              <LaborDashboard
-                members={workerMembers}
-                projects={projects}
-                workerTeams={workerTeams}
-              />
-            </motion.div>
-          )}
-
-          {activeTab === 'workers' && (
-            <motion.div
-              key="workers"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.1 }}
-            >
-              <LaborWorkerList
-                members={workerMembers}
-                projects={projects}
-                workerTeams={workerTeams}
-                onRefresh={loadData}
-                onAddWorker={() => modals.openWorkerModal()}
-                onEditWorker={(worker) => modals.openWorkerModal(worker)}
-                onDeleteWorker={ops.handleDeletePoolWorker}
-                onImportClick={() => setShowFileDialog(true)}
-              />
-            </motion.div>
-          )}
-
-          {activeTab === 'teams' && (
-            <motion.div
-              key="teams"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.1 }}
-            >
-              <LaborTeamManager
-                members={workerMembers}
-                projects={projects}
-                workerTeams={workerTeams}
-                onRefresh={loadData}
-                onAddTeam={ops.handleCreateTeam}
-                onEditTeam={ops.handleUpdateTeam}
-                onDeleteTeam={ops.handleDeleteTeam}
-                onManageWorkers={(teamId, teamName, projectId) => {
-                  modals.openTeamWorkerModal(teamId, teamName, projectId)
-                }}
-              />
-            </motion.div>
-          )}
-
-          {activeTab === 'wages' && (
-            <motion.div
-              key="wages"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.1 }}
-            >
-              <WageManagement />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {activeTab === 'dashboard' && (
+          <LaborDashboard
+            members={workerMembers}
+            projects={projects}
+            workerTeams={workerTeams}
+          />
+        )}
+        {activeTab === 'workers' && (
+          <LaborWorkerList
+            members={workerMembers}
+            projects={projects}
+            workerTeams={workerTeams}
+            onRefresh={loadData}
+            onAddWorker={() => modals.openWorkerModal()}
+            onEditWorker={(worker) => modals.openWorkerModal(worker)}
+            onDeleteWorker={ops.handleDeletePoolWorker}
+            onImportClick={() => setShowFileDialog(true)}
+          />
+        )}
+        {activeTab === 'teams' && (
+          <LaborTeamManager
+            members={workerMembers}
+            projects={projects}
+            workerTeams={workerTeams}
+            onRefresh={loadData}
+            onAddTeam={ops.handleCreateTeam}
+            onEditTeam={ops.handleUpdateTeam}
+            onDeleteTeam={ops.handleDeleteTeam}
+            onManageWorkers={(teamId, teamName, projectId) => {
+              modals.openTeamWorkerModal(teamId, teamName, projectId)
+            }}
+          />
+        )}
+        {activeTab === 'wages' && (
+          <WageManagement />
+        )}
       </Tabs>
 
       {/* File import dialog (shared) */}

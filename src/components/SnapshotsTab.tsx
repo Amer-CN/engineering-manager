@@ -37,12 +37,12 @@ export const SnapshotsTab: React.FC = () => {
   const loadSnapshots = async () => {
     setLoading(true)
     try {
-      const [listRes, maxRes] = await Promise.all([
+      const [listRes, maxRes] = await Promise.allSettled([
         window.electronAPI.getSnapshots(),
         window.electronAPI.getMaxSnapshots(),
       ])
-      if (listRes.success && listRes.data) setSnapshots(listRes.data)
-      if (maxRes.success && maxRes.data) setMaxCount(maxRes.data.maxCount)
+      if (listRes.status === 'fulfilled' && listRes.value?.success) setSnapshots(listRes.value.data || [])
+      if (maxRes.status === 'fulfilled' && maxRes.value?.success) setMaxCount(maxRes.value.data?.maxCount ?? 200)
     } catch (error) {
       console.error('加载快照失败:', error)
     } finally {

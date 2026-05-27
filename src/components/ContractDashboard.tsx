@@ -3,10 +3,11 @@ import { ContractStats } from '../types/electron'
 import { formatMoney } from '../utils/format'
 import { Icon } from './ui/Icon'
 import { motion } from 'framer-motion'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { SimpleBarChart } from './ui/SimpleBarChart'
 
 const CARD = 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm'
-const sectionV = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4 } } }
+const sectionV = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { duration: 0.3, ease: 'easeOut' } } }
 const stagger = { visible: { transition: { staggerChildren: 0.08 } } }
 
 interface ContractDashboardProps {
@@ -76,7 +77,7 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
     <motion.div className="p-6 max-w-[1400px] mx-auto" initial="hidden" animate="visible" variants={stagger}>
       {/* Hero Banner */}
       <motion.div variants={sectionV} className="relative bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 text-white p-6 rounded-2xl mb-8 overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.1),transparent_50%)]" />
+        <div className="hero-overlay absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.1),transparent_50%)]" />
         {/* 装饰光点 */}
         <motion.div className="absolute top-3 right-12 w-1 h-1 rounded-full bg-emerald-400"
           animate={{ opacity: [0, 1, 0], scale: [0.5, 2, 0.5] }}
@@ -226,19 +227,11 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
         <div className={`${CARD} p-6`}>
           <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-4">收支对比</h3>
           {stats ? (
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={barData} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrency(v)} />
-                <Tooltip formatter={((value: any) => [`¥${formatCurrency(value ?? 0)}`, '']) as any} />
-                <Bar dataKey="amount" radius={[8, 8, 0, 0]}>
-                  {barData.map((entry, idx) => (
-                    <Cell key={idx} fill={entry.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <SimpleBarChart
+              data={barData.map(d => ({ name: d.name, amount: d.amount }))}
+              colors={barData.map(d => d.fill)}
+              formatValue={(v) => `¥${formatMoney(v)}`}
+            />
           ) : (
             <div className="flex items-center justify-center h-[280px] text-slate-400">暂无数据</div>
           )}
@@ -255,7 +248,7 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
                     <Cell key={idx} fill={entry.color} stroke="none" />
                   ))}
                 </Pie>
-                <Tooltip formatter={((value: any) => [`${value ?? 0} 份`, '']) as any} />
+                <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, boxShadow: 'var(--shadow-md)', color: 'var(--fg)' }} formatter={((value: any) => [`${value ?? 0} 份`, '']) as any} />
               </PieChart>
             </ResponsiveContainer>
           ) : (

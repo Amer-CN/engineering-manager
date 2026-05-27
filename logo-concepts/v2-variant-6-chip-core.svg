@@ -1,0 +1,25 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Variant 6: Chip Core — AI processor with financial center -->
+  <g fill="currentColor">
+    <!-- Chip body (rounded rect) -->
+    <rect x="30" y="30" width="40" height="40" rx="6" fill="none" stroke="currentColor" stroke-width="2.5"/>
+    <!-- Pins: top -->
+    <rect x="40" y="20" width="3" height="10" rx="1.5"/>
+    <rect x="49" y="20" width="3" height="10" rx="1.5"/>
+    <rect x="58" y="20" width="3" height="10" rx="1.5"/>
+    <!-- Pins: bottom -->
+    <rect x="40" y="70" width="3" height="10" rx="1.5"/>
+    <rect x="49" y="70" width="3" height="10" rx="1.5"/>
+    <rect x="58" y="70" width="3" height="10" rx="1.5"/>
+    <!-- Pins: left -->
+    <rect x="20" y="40" width="10" height="3" rx="1.5"/>
+    <rect x="20" y="49" width="10" height="3" rx="1.5"/>
+    <rect x="20" y="58" width="10" height="3" rx="1.5"/>
+    <!-- Pins: right -->
+    <rect x="70" y="40" width="10" height="3" rx="1.5"/>
+    <rect x="70" y="49" width="10" height="3" rx="1.5"/>
+    <rect x="70" y="58" width="10" height="3" rx="1.5"/>
+  </g>
+  <!-- Inner ¥ symbol -->
+  <text x="50" y="56" text-anchor="middle" font-family="Inter, sans-serif" font-size="20" font-weight="700" fill="currentColor">¥</text>
+</svg>

@@ -18,14 +18,15 @@ const Settlement: React.FC<{ refresh?: () => void }> = ({ refresh }) => {
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const [settlementsResult, projectsResult, partnersResult] = await Promise.all([
+      const [settlementsResult, projectsResult, partnersResult] = await Promise.allSettled([
         window.electronAPI.getSettlements(),
         window.electronAPI.getProjects(),
         window.electronAPI.getPartners(),
       ])
-      if (settlementsResult.success && settlementsResult.data) setSettlements(settlementsResult.data)
-      setProjects(Array.isArray(projectsResult.data) ? projectsResult.data : [])
-      setPartners(Array.isArray(partnersResult.data) ? partnersResult.data : [])
+      const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
+      setSettlements(get(settlementsResult))
+      setProjects(get(projectsResult))
+      setPartners(get(partnersResult))
     } catch (error) {
       console.error('加载数据失败:', error)
     } finally {

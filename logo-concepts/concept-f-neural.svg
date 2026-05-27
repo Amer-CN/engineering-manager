@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Concept F: 神经网络节点 — AI 感 -->
+  <defs>
+    <linearGradient id="grad-f" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#E8701A"/>
+    </linearGradient>
+  </defs>
+  <!-- 连线 -->
+  <line x1="50" y1="60" x2="100" y2="90" stroke="#E8701A" stroke-width="1.5" opacity="0.3"/>
+  <line x1="50" y1="100" x2="100" y2="90" stroke="#E8701A" stroke-width="1.5" opacity="0.3"/>
+  <line x1="50" y1="140" x2="100" y2="110" stroke="#E8701A" stroke-width="1.5" opacity="0.3"/>
+  <line x1="100" y1="90" x2="150" y2="70" stroke="#E8701A" stroke-width="1.5" opacity="0.3"/>
+  <line x1="100" y1="90" x2="150" y2="110" stroke="#E8701A" stroke-width="1.5" opacity="0.3"/>
+  <line x1="100" y1="110" x2="150" y2="110" stroke="#E8701A" stroke-width="1.5" opacity="0.3"/>
+  <line x1="100" y1="110" x2="150" y2="140" stroke="#E8701A" stroke-width="1.5" opacity="0.3"/>
+  <line x1="50" y1="60" x2="100" y2="110" stroke="#E8701A" stroke-width="1" opacity="0.15"/>
+  <line x1="50" y1="140" x2="100" y2="90" stroke="#E8701A" stroke-width="1" opacity="0.15"/>
+  <!-- 左层节点 -->
+  <circle cx="50" cy="60" r="8" fill="#1E293B" stroke="#E8701A" stroke-width="2"/>
+  <circle cx="50" cy="100" r="8" fill="#1E293B" stroke="#E8701A" stroke-width="2"/>
+  <circle cx="50" cy="140" r="8" fill="#1E293B" stroke="#E8701A" stroke-width="2"/>
+  <!-- 中心节点（高亮） -->
+  <circle cx="100" cy="90" r="10" fill="url(#grad-f)" opacity="0.9"/>
+  <circle cx="100" cy="110" r="10" fill="url(#grad-f)" opacity="0.7"/>
+  <!-- 右层节点 -->
+  <circle cx="150" cy="70" r="8" fill="#1E293B" stroke="#E8701A" stroke-width="2"/>
+  <circle cx="150" cy="110" r="8" fill="#1E293B" stroke="#E8701A" stroke-width="2"/>
+  <circle cx="150" cy="140" r="8" fill="#1E293B" stroke="#E8701A" stroke-width="2"/>
+  <!-- 中心 ¥ -->
+  <text x="100" y="105" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="700" fill="#0f172a">¥</text>
+</svg>

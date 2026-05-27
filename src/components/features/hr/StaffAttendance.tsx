@@ -52,14 +52,15 @@ const StaffAttendance: React.FC = () => {
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const [memRes, attRes, deptRes] = await Promise.all([
+      const [memRes, attRes, deptRes] = await Promise.allSettled([
         window.electronAPI.getMembers(),
         window.electronAPI.getAttendances(undefined, undefined),
         window.electronAPI.getDepartments()
       ])
-      if (memRes.success) setStaff((memRes.data || []).filter((m: any) => m.memberType === 'staff' || m.memberType === undefined))
-      if (attRes.success) setAllAttendances(attRes.data || [])
-      if (deptRes.success) setDepartments(deptRes.data || [])
+      const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
+      setStaff(get(memRes).filter((m: any) => m.memberType === 'staff' || m.memberType === undefined))
+      setAllAttendances(get(attRes))
+      setDepartments(get(deptRes))
     } catch (e) { console.error(e) }
     finally { setLoading(false) }
   }, [])

@@ -1,5 +1,5 @@
 import React from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { Icon } from './ui/Icon'
 import { Tabs } from './ui/Tabs'
 import { InventoryStats, ItemList, ItemForm, TransList, TransForm, MaterialList, MaterialForm } from './features/inventory'
@@ -60,86 +60,58 @@ const Inventory: React.FC<InventoryProps> = ({ refresh }) => {
         ]}
         animated={true}
       >
-        <AnimatePresence mode="sync">
-          {/* 物料库 */}
-          {h.activeTab === 'items' && (
-            <motion.div
-              key="items"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.1 }}
-              className={`${CARD} mb-6`}
-            >
-              <div className="p-6">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm text-slate-600">物料类别:</label>
-                    <select value={h.filterCategory} onChange={e => h.setFilterCategory(e.target.value)} className="select text-sm">
-                      <option value="">全部</option>
-                      {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                    </select>
-                  </div>
+        {h.activeTab === 'items' && (
+          <div className={`${CARD} mb-6`}>
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-slate-600">物料类别:</label>
+                  <select value={h.filterCategory} onChange={e => h.setFilterCategory(e.target.value)} className="select text-sm">
+                    <option value="">全部</option>
+                    {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                  </select>
                 </div>
-                <ItemList items={h.items} partners={h.partners} filterCategory={h.filterCategory} categories={categories}
-                  onEdit={h.handleEditItem} onDelete={h.handleDeleteItem} onTrans={h.handleTransItem} />
               </div>
-            </motion.div>
-          )}
-
-          {/* 出入库记录 */}
-          {h.activeTab === 'transactions' && (
-            <motion.div
-              key="transactions"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.1 }}
-              className={`${CARD} mb-6`}
-            >
-              <div className="p-6">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm text-slate-600">关联项目:</label>
-                    <select value={h.filterProject} onChange={e => h.setFilterProject(e.target.value ? Number(e.target.value) : '')} className="select text-sm">
-                      <option value="">全部</option>
-                      {h.projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
-                  </div>
+              <ItemList items={h.items} partners={h.partners} filterCategory={h.filterCategory} categories={categories}
+                onEdit={h.handleEditItem} onDelete={h.handleDeleteItem} onTrans={h.handleTransItem} />
+            </div>
+          </div>
+        )}
+        {h.activeTab === 'transactions' && (
+          <div className={`${CARD} mb-6`}>
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-slate-600">关联项目:</label>
+                  <select value={h.filterProject} onChange={e => h.setFilterProject(e.target.value ? Number(e.target.value) : '')} className="select text-sm">
+                    <option value="">全部</option>
+                    {h.projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
                 </div>
-                <TransList transactions={h.transactions} items={h.items} projects={h.projects} partners={h.partners}
-                  filterProject={h.filterProject} onDelete={() => {}} />
               </div>
-            </motion.div>
-          )}
-
-          {/* 项目材料 */}
-          {h.activeTab === 'projectMaterials' && (
-            <motion.div
-              key="projectMaterials"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.1 }}
-              className={`${CARD} mb-6`}
-            >
-              <div className="p-6">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm text-slate-600">关联项目:</label>
-                    <select value={h.filterProject} onChange={e => h.setFilterProject(e.target.value ? Number(e.target.value) : '')} className="select text-sm">
-                      <option value="">全部</option>
-                      {h.projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
-                  </div>
+              <TransList transactions={h.transactions} items={h.items} projects={h.projects} partners={h.partners}
+                filterProject={h.filterProject} onDelete={() => {}} />
+            </div>
+          </div>
+        )}
+        {h.activeTab === 'projectMaterials' && (
+          <div className={`${CARD} mb-6`}>
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-slate-600">关联项目:</label>
+                  <select value={h.filterProject} onChange={e => h.setFilterProject(e.target.value ? Number(e.target.value) : '')} className="select text-sm">
+                    <option value="">全部</option>
+                    {h.projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
                 </div>
-                <MaterialList materials={h.projectMaterials} projects={h.projects} filterProject={h.filterProject}
-                  materialCategories={materialCategories} categoryIcons={categoryIcons} categoryColors={categoryColors}
-                  onEdit={h.handleEditMaterial} onDelete={h.handleDeleteMaterial} />
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              <MaterialList materials={h.projectMaterials} projects={h.projects} filterProject={h.filterProject}
+                materialCategories={materialCategories} categoryIcons={categoryIcons} categoryColors={categoryColors}
+                onEdit={h.handleEditMaterial} onDelete={h.handleDeleteMaterial} />
+            </div>
+          </div>
+        )}
       </Tabs>
 
       {h.showItemModal && (
