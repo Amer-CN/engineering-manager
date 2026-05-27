@@ -1,0 +1,20 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Variant 1: ¥ Data Flow — Abstract yen formed by converging data streams -->
+  <g fill="none" stroke="currentColor" stroke-linecap="round">
+    <!-- Left data streams converging -->
+    <path d="M 18 28 Q 38 35, 50 50" stroke-width="3"/>
+    <path d="M 18 50 Q 35 50, 50 50" stroke-width="2.5"/>
+    <path d="M 18 72 Q 38 65, 50 50" stroke-width="3"/>
+    <!-- Right data streams diverging -->
+    <path d="M 50 50 Q 62 35, 82 28" stroke-width="2"/>
+    <path d="M 50 50 Q 65 50, 82 50" stroke-width="1.5" opacity="0.5"/>
+    <path d="M 50 50 Q 62 65, 82 72" stroke-width="2"/>
+    <!-- Horizontal bar (yen crossbar) -->
+    <line x1="35" y1="50" x2="65" y2="50" stroke-width="3"/>
+    <!-- V stroke of yen -->
+    <path d="M 50 32 L 38 50" stroke-width="2.5"/>
+    <path d="M 50 32 L 62 50" stroke-width="2.5"/>
+  </g>
+  <!-- Center node -->
+  <circle cx="50" cy="50" r="5" fill="currentColor"/>
+</svg>

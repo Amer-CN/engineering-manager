@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>三角形 · Reasonix 风格</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: #0c0e14; color: #a1a7b5; padding: 40px; display: flex; flex-direction: column; align-items: center; }
+  h1 { font-size: 18px; color: #f0f2f5; margin-bottom: 32px; font-weight: 600; }
+  .row { display: flex; gap: 32px; flex-wrap: wrap; justify-content: center; }
+  .item { text-align: center; width: 200px; }
+  .item .label { font-size: 13px; color: #6b7280; margin-bottom: 12px; font-weight: 500; }
+  .preview { width: 120px; height: 120px; background: #1a1d27; border-radius: 16px; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; }
+  .preview svg { overflow: visible; }
+  .sizes { display: flex; gap: 8px; align-items: flex-end; justify-content: center; margin-top: 8px; }
+  .sizes .s { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .sizes .s span { font-size: 9px; color: #4b5163; }
+  .titlebar { display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; background: #1e2130; border-radius: 6px; margin-top: 10px; }
+  .titlebar svg { overflow: visible; }
+  .titlebar span { font-size: 12px; color: #6b7280; }
+  .desc { font-size: 11px; color: #4b5163; margin-top: 8px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<h1>三角形 · 参考 Reasonix 嵌套菱形风格</h1>
+<div class="row">
+
+  <!-- A: 嵌套三角形（外框 + 内实心） -->
+  <div class="item">
+    <div class="label">A · 嵌套三角</div>
+    <div class="preview">
+      <svg width="60" height="60" viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="ga" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#E8701A"/>
+            <stop offset="100%" stop-color="#F59E0B"/>
+          </linearGradient>
+        </defs>
+        <!-- 外框三角 -->
+        <path d="M10 85 L50 15 L90 85 Z" stroke="url(#ga)" stroke-width="3" stroke-linejoin="round" opacity="0.35">
+          <animate attributeName="stroke-width" values="3;4.5;3" dur="2.4s" repeatCount="indefinite"/>
+        </path>
+        <!-- 中框三角 -->
+        <path d="M22 78 L50 28 L78 78 Z" stroke="url(#ga)" stroke-width="2" stroke-linejoin="round" opacity="0.6">
+          <animate attributeName="opacity" values="0.4;0.8;0.4" dur="2.4s" begin="0.8s" repeatCount="indefinite"/>
+        </path>
+        <!-- 内实心三角 -->
+        <path d="M34 72 L50 40 L66 72 Z" fill="url(#ga)">
+          <animate attributeName="opacity" values="0.75;1;0.75" dur="2.4s" repeatCount="indefinite"/>
+        </path>
+      </svg>
+    </div>
+    <div class="sizes">
+      <div class="s"><svg width="40" height="40" viewBox="0 0 100 100" fill="none"><path d="M10 85 L50 15 L90 85 Z" stroke="#E8701A" stroke-width="3" stroke-linejoin="round" opacity="0.35"/><path d="M22 78 L50 28 L78 78 Z" stroke="#E8701A" stroke-width="2" stroke-linejoin="round" opacity="0.6"/><path d="M34 72 L50 40 L66 72 Z" fill="#E8701A"/></svg><span>40</span></div>
+      <div class="s"><svg width="24" height="24" viewBox="0 0 100 100" fill="none"><path d="M10 85 L50 15 L90 85 Z" stroke="#E8701A" stroke-width="3.5" stroke-linejoin="round" opacity="0.35"/><path d="M22 78 L50 28 L78 78 Z" stroke="#E8701A" stroke-width="2.5" stroke-linejoin="round" opacity="0.6"/><path d="M34 72 L50 40 L66 72 Z" fill="#E8701A"/></svg><span>24</span></div>
+    </div>
+    <div class="titlebar">
+      <svg width="20" height="20" viewBox="0 0 100 100" fill="none"><path d="M10 85 L50 15 L90 85 Z" stroke="#E8701A" stroke-width="3" stroke-linejoin="round" opacity="0.35"/><path d="M22 78 L50 28 L78 78 Z" stroke="#E8701A" stroke-width="2" stroke-linejoin="round" opacity="0.6"/><path d="M34 72 L50 40 L66 72 Z" fill="#E8701A"/></svg>
+      <span>工程管家</span>
+    </div>
+    <div class="desc">三层嵌套：外框淡 + 中框半透 + 内实心<br>带呼吸动画</div>
+  </div>
+
+  <!-- B: 嵌套三角 + 基座线 -->
+  <div class="item">
+    <div class="label">B · 嵌套三角 + 基座</div>
+    <div class="preview">
+      <svg width="60" height="60" viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="gb" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#E8701A"/>
+            <stop offset="100%" stop-color="#F59E0B"/>
+          </linearGradient>
+        </defs>
+        <path d="M10 82 L50 12 L90 82 Z" stroke="url(#gb)" stroke-width="3" stroke-linejoin="round" opacity="0.3">
+          <animate attributeName="stroke-width" values="3;4.5;3" dur="2.4s" repeatCount="indefinite"/>
+        </path>
+        <path d="M22 76 L50 25 L78 76 Z" stroke="url(#gb)" stroke-width="2" stroke-linejoin="round" opacity="0.55">
+          <animate attributeName="opacity" values="0.35;0.7;0.35" dur="2.4s" begin="0.8s" repeatCount="indefinite"/>
+        </path>
+        <path d="M34 70 L50 38 L66 70 Z" fill="url(#gb)">
+          <animate attributeName="opacity" values="0.75;1;0.75" dur="2.4s" repeatCount="indefinite"/>
+        </path>
+        <line x1="8" y1="88" x2="92" y2="88" stroke="#E8701A" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
+      </svg>
+    </div>
+    <div class="sizes">
+      <div class="s"><svg width="40" height="40" viewBox="0 0 100 100" fill="none"><path d="M10 82 L50 12 L90 82 Z" stroke="#E8701A" stroke-width="3" stroke-linejoin="round" opacity="0.3"/><path d="M22 76 L50 25 L78 76 Z" stroke="#E8701A" stroke-width="2" stroke-linejoin="round" opacity="0.55"/><path d="M34 70 L50 38 L66 70 Z" fill="#E8701A"/><line x1="8" y1="88" x2="92" y2="88" stroke="#E8701A" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/></svg><span>40</span></div>
+      <div class="s"><svg width="24" height="24" viewBox="0 0 100 100" fill="none"><path d="M10 82 L50 12 L90 82 Z" stroke="#E8701A" stroke-width="3.5" stroke-linejoin="round" opacity="0.3"/><path d="M34 70 L50 38 L66 70 Z" fill="#E8701A"/><line x1="8" y1="88" x2="92" y2="88" stroke="#E8701A" stroke-width="3" stroke-linecap="round" opacity="0.6"/></svg><span>24</span></div>
+    </div>
+    <div class="titlebar">
+      <svg width="20" height="20" viewBox="0 0 100 100" fill="none"><path d="M10 82 L50 12 L90 82 Z" stroke="#E8701A" stroke-width="3" stroke-linejoin="round" opacity="0.3"/><path d="M34 70 L50 38 L66 70 Z" fill="#E8701A"/><line x1="8" y1="88" x2="92" y2="88" stroke="#E8701A" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/></svg>
+      <span>工程管家</span>
+    </div>
+    <div class="desc">三层嵌套 + 底部基座线（保留原版三角的基座元素）</div>
+  </div>
+
+  <!-- C: 嵌套三角旋转 -->
+  <div class="item">
+    <div class="label">C · 嵌套三角 + 旋转</div>
+    <div class="preview">
+      <svg width="60" height="60" viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="gc" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#E8701A"/>
+            <stop offset="100%" stop-color="#F59E0B"/>
+          </linearGradient>
+        </defs>
+        <g transform="translate(50,50)">
+          <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="18s" repeatCount="indefinite"/>
+          <path d="M-40 35 L0 -45 L40 35 Z" stroke="url(#gc)" stroke-width="3" stroke-linejoin="round" fill="none" opacity="0.3">
+            <animate attributeName="stroke-width" values="3;4.5;3" dur="2.4s" repeatCount="indefinite"/>
+          </path>
+          <path d="M-28 28 L0 -30 L28 28 Z" stroke="url(#gc)" stroke-width="2" stroke-linejoin="round" fill="none" opacity="0.55">
+            <animate attributeName="opacity" values="0.35;0.7;0.35" dur="2.4s" begin="0.8s" repeatCount="indefinite"/>
+          </path>
+          <path d="M-16 18 L0 -12 L16 18 Z" fill="url(#gc)">
+            <animate attributeName="opacity" values="0.75;1;0.75" dur="2.4s" repeatCount="indefinite"/>
+          </path>
+        </g>
+      </svg>
+    </div>
+    <div class="sizes">
+      <div class="s"><svg width="40" height="40" viewBox="0 0 100 100" fill="none"><g transform="translate(50,50)"><path d="M-40 35 L0 -45 L40 35 Z" stroke="#E8701A" stroke-width="3" stroke-linejoin="round" fill="none" opacity="0.3"/><path d="M-28 28 L0 -30 L28 28 Z" stroke="#E8701A" stroke-width="2" stroke-linejoin="round" fill="none" opacity="0.55"/><path d="M-16 18 L0 -12 L16 18 Z" fill="#E8701A"/></g></svg><span>40</span></div>
+      <div class="s"><svg width="24" height="24" viewBox="0 0 100 100" fill="none"><g transform="translate(50,50)"><path d="M-40 35 L0 -45 L40 35 Z" stroke="#E8701A" stroke-width="3.5" stroke-linejoin="round" fill="none" opacity="0.3"/><path d="M-16 18 L0 -12 L16 18 Z" fill="#E8701A"/></g></svg><span>24</span></div>
+    </div>
+    <div class="titlebar">
+      <svg width="20" height="20" viewBox="0 0 100 100" fill="none"><g transform="translate(50,50)"><path d="M-40 35 L0 -45 L40 35 Z" stroke="#E8701A" stroke-width="3" stroke-linejoin="round" fill="none" opacity="0.3"/><path d="M-16 18 L0 -12 L16 18 Z" fill="#E8701A"/></g></svg>
+      <span>工程管家</span>
+    </div>
+    <div class="desc">完全复刻 Reasonix 菱形的逻辑：三层嵌套 + 18s 缓慢旋转 + 呼吸动画</div>
+  </div>
+
+  <!-- D: 简约双层 -->
+  <div class="item">
+    <div class="label">D · 双层三角</div>
+    <div class="preview">
+      <svg width="60" height="60" viewBox="0 0 100 100" fill="none">
+        <path d="M12 85 L50 15 L88 85 Z" stroke="#E8701A" stroke-width="3" stroke-linejoin="round" opacity="0.35"/>
+        <path d="M30 75 L50 35 L70 75 Z" fill="#E8701A"/>
+      </svg>
+    </div>
+    <div class="sizes">
+      <div class="s"><svg width="40" height="40" viewBox="0 0 100 100" fill="none"><path d="M12 85 L50 15 L88 85 Z" stroke="#E8701A" stroke-width="3" stroke-linejoin="round" opacity="0.35"/><path d="M30 75 L50 35 L70 75 Z" fill="#E8701A"/></svg><span>40</span></div>
+      <div class="s"><svg width="24" height="24" viewBox="0 0 100 100" fill="none"><path d="M12 85 L50 15 L88 85 Z" stroke="#E8701A" stroke-width="3.5" stroke-linejoin="round" opacity="0.35"/><path d="M30 75 L50 35 L70 75 Z" fill="#E8701A"/></svg><span>24</span></div>
+    </div>
+    <div class="titlebar">
+      <svg width="20" height="20" viewBox="0 0 100 100" fill="none"><path d="M12 85 L50 15 L88 85 Z" stroke="#E8701A" stroke-width="3" stroke-linejoin="round" opacity="0.35"/><path d="M30 75 L50 35 L70 75 Z" fill="#E8701A"/></svg>
+      <span>工程管家</span>
+    </div>
+    <div class="desc">最简版：外框 + 内实心，两层就够了</div>
+  </div>
+
+</div>
+</body>
+</html>

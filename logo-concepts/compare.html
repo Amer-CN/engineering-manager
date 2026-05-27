@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>Logo 对比</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: #0c0e14; color: #a1a7b5; padding: 40px; display: flex; flex-direction: column; align-items: center; }
+  h1 { font-size: 18px; color: #f0f2f5; margin-bottom: 32px; font-weight: 600; }
+  .row { display: flex; gap: 40px; margin-bottom: 40px; }
+  .item { text-align: center; }
+  .item .label { font-size: 12px; color: #6b7280; margin-bottom: 12px; }
+  .preview { width: 140px; height: 140px; background: #1a1d27; border-radius: 16px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; }
+  .preview svg { color: #E8701A; }
+  .sizes { display: flex; gap: 8px; align-items: flex-end; justify-content: center; margin-top: 12px; }
+  .sizes .s { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .sizes .s span { font-size: 9px; color: #4b5163; }
+  .titlebar { display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; background: #1e2130; border-radius: 6px; margin-top: 12px; }
+  .titlebar svg { color: #E8701A; }
+  .titlebar span { font-size: 12px; color: #6b7280; }
+</style>
+</head>
+<body>
+<h1>三角形 vs 方案1 简化版</h1>
+<div class="row">
+
+  <!-- 当前三角形 -->
+  <div class="item">
+    <div class="label">当前标题栏三角形</div>
+    <div class="preview">
+      <svg width="60" height="60" viewBox="0 0 20 20" fill="none">
+        <path d="M3.5 15 L10 3.5 L16.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="4" y1="16" x2="16" y2="16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="sizes">
+      <div class="s"><svg width="48" height="48" viewBox="0 0 20 20" fill="none"><path d="M3.5 15 L10 3.5 L16.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="4" y1="16" x2="16" y2="16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>48</span></div>
+      <div class="s"><svg width="28" height="28" viewBox="0 0 20 20" fill="none"><path d="M3.5 15 L10 3.5 L16.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="4" y1="16" x2="16" y2="16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>28</span></div>
+      <div class="s"><svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M3.5 15 L10 3.5 L16.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="4" y1="16" x2="16" y2="16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>16</span></div>
+    </div>
+    <div class="titlebar">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3.5 15 L10 3.5 L16.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="4" y1="16" x2="16" y2="16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span>工程管家</span>
+    </div>
+  </div>
+
+  <!-- 方案 1 弧线版 -->
+  <div class="item">
+    <div class="label">方案1 弧线汇聚</div>
+    <div class="preview">
+      <svg width="60" height="60" viewBox="0 0 100 100" fill="none">
+        <g stroke="currentColor" stroke-linecap="round">
+          <path d="M 18 25 Q 35 32, 50 50" stroke-width="3.5"/>
+          <path d="M 18 50 Q 34 50, 50 50" stroke-width="3"/>
+          <path d="M 18 75 Q 35 68, 50 50" stroke-width="3.5"/>
+        </g>
+        <circle cx="50" cy="50" r="6" fill="currentColor"/>
+      </svg>
+    </div>
+    <div class="sizes">
+      <div class="s"><svg width="48" height="48" viewBox="0 0 100 100" fill="none"><g stroke="currentColor" stroke-linecap="round"><path d="M 18 25 Q 35 32, 50 50" stroke-width="3.5"/><path d="M 18 50 Q 34 50, 50 50" stroke-width="3"/><path d="M 18 75 Q 35 68, 50 50" stroke-width="3.5"/></g><circle cx="50" cy="50" r="6" fill="currentColor"/></svg><span>48</span></div>
+      <div class="s"><svg width="28" height="28" viewBox="0 0 100 100" fill="none"><g stroke="currentColor" stroke-linecap="round"><path d="M 18 25 Q 35 32, 50 50" stroke-width="3.5"/><path d="M 18 50 Q 34 50, 50 50" stroke-width="3"/><path d="M 18 75 Q 35 68, 50 50" stroke-width="3.5"/></g><circle cx="50" cy="50" r="6" fill="currentColor"/></svg><span>28</span></div>
+      <div class="s"><svg width="16" height="16" viewBox="0 0 100 100" fill="none"><g stroke="currentColor" stroke-linecap="round"><path d="M 18 25 Q 35 32, 50 50" stroke-width="3.5"/><path d="M 18 50 Q 34 50, 50 50" stroke-width="3"/><path d="M 18 75 Q 35 68, 50 50" stroke-width="3.5"/></g><circle cx="50" cy="50" r="6" fill="currentColor"/></svg><span>16</span></div>
+    </div>
+    <div class="titlebar">
+      <svg width="20" height="20" viewBox="0 0 100 100" fill="none"><g stroke="currentColor" stroke-linecap="round"><path d="M 18 25 Q 35 32, 50 50" stroke-width="3.5"/><path d="M 18 50 Q 34 50, 50 50" stroke-width="3"/><path d="M 18 75 Q 35 68, 50 50" stroke-width="3.5"/></g><circle cx="50" cy="50" r="6" fill="currentColor"/></svg>
+      <span>工程管家</span>
+    </div>
+  </div>
+
+  <!-- 方案 1 直线版 -->
+  <div class="item">
+    <div class="label">方案1 直线汇聚</div>
+    <div class="preview">
+      <svg width="60" height="60" viewBox="0 0 100 100" fill="none">
+        <g stroke="currentColor" stroke-linecap="round">
+          <line x1="18" y1="24" x2="50" y2="50" stroke-width="3.5"/>
+          <line x1="18" y1="50" x2="50" y2="50" stroke-width="3"/>
+          <line x1="18" y1="76" x2="50" y2="50" stroke-width="3.5"/>
+        </g>
+        <circle cx="50" cy="50" r="6" fill="currentColor"/>
+      </svg>
+    </div>
+    <div class="sizes">
+      <div class="s"><svg width="48" height="48" viewBox="0 0 100 100" fill="none"><g stroke="currentColor" stroke-linecap="round"><line x1="18" y1="24" x2="50" y2="50" stroke-width="3.5"/><line x1="18" y1="50" x2="50" y2="50" stroke-width="3"/><line x1="18" y1="76" x2="50" y2="50" stroke-width="3.5"/></g><circle cx="50" cy="50" r="6" fill="currentColor"/></svg><span>48</span></div>
+      <div class="s"><svg width="28" height="28" viewBox="0 0 100 100" fill="none"><g stroke="currentColor" stroke-linecap="round"><line x1="18" y1="24" x2="50" y2="50" stroke-width="3.5"/><line x1="18" y1="50" x2="50" y2="50" stroke-width="3"/><line x1="18" y1="76" x2="50" y2="50" stroke-width="3.5"/></g><circle cx="50" cy="50" r="6" fill="currentColor"/></svg><span>28</span></div>
+      <div class="s"><svg width="16" height="16" viewBox="0 0 100 100" fill="none"><g stroke="currentColor" stroke-linecap="round"><line x1="18" y1="24" x2="50" y2="50" stroke-width="3.5"/><line x1="18" y1="50" x2="50" y2="50" stroke-width="3"/><line x1="18" y1="76" x2="50" y2="50" stroke-width="3.5"/></g><circle cx="50" cy="50" r="6" fill="currentColor"/></svg><span>16</span></div>
+    </div>
+    <div class="titlebar">
+      <svg width="20" height="20" viewBox="0 0 100 100" fill="none"><g stroke="currentColor" stroke-linecap="round"><line x1="18" y1="24" x2="50" y2="50" stroke-width="3.5"/><line x1="18" y1="50" x2="50" y2="50" stroke-width="3"/><line x1="18" y1="76" x2="50" y2="50" stroke-width="3.5"/></g><circle cx="50" cy="50" r="6" fill="currentColor"/></svg>
+      <span>工程管家</span>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

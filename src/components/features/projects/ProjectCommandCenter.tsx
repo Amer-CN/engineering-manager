@@ -10,7 +10,8 @@ import { calculateHealthScore, getHealthLevel } from '@/utils/projectHealth'
 import { motion } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
 import { Card } from '../../ui/Card'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, RadialBarChart, RadialBar } from 'recharts'
+import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell, RadialBarChart, RadialBar } from 'recharts'
+import { SimpleBarChart } from '../../ui/SimpleBarChart'
 import { formatMoney } from '@/utils/format'
 
 export interface ProjectCommandCenterProps {
@@ -33,7 +34,7 @@ const statusConfig: Record<string, { text: string; color: string }> = {
   completed: { text: '已完成', color: 'bg-slate-400' }, archived: { text: '已归档', color: 'bg-amber-500' },
 }
 
-const sectionV = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4 } } }
+const sectionV = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { duration: 0.3, ease: 'easeOut' } } }
 
 function StatCard({ icon, accent, label, value, sub }: { icon: React.ReactNode; accent: string; label: string; value: string; sub?: string }) {
   return (
@@ -81,7 +82,7 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
 
       {/* ═══ 1. Hero ═══ */}
       <motion.section variants={sectionV} className="relative overflow-hidden rounded-2xl mb-6 bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 text-white p-6">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.1),transparent_50%)]" />
+        <div className="hero-overlay absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.1),transparent_50%)]" />
         {/* 装饰光点 */}
         <motion.div className="absolute top-3 right-12 w-1 h-1 rounded-full bg-emerald-400"
           animate={{ opacity: [0, 1, 0], scale: [0.5, 2, 0.5] }}
@@ -130,16 +131,11 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
       <motion.section variants={sectionV} className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
         <Card bordered={false} className="border border-slate-200 p-5" padding="none">
           <p className={`text-xl font-bold mb-2 ${stats.netProfit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{stats.netProfit >= 0 ? '盈利' : '亏损'} ¥{formatMoney(Math.abs(stats.netProfit))}</p>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={financeBar} margin={{ top: 4, right: 4, left: -16, bottom: 0 }} barSize={28}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `¥${(v / 10000).toFixed(0)}万`} />
-              <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
-                formatter={((v: any) => [`¥${formatMoney(v as number)}`, '']) as any} />
-              <Bar dataKey="value" radius={[5, 5, 0, 0]} animationDuration={1200} animationEasing="ease-out">{financeBar.map((e, i) => <Cell key={i} fill={e.color} />)}</Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          <SimpleBarChart
+            data={financeBar.map(d => ({ name: d.name, amount: d.value }))}
+            colors={financeBar.map(d => d.color)}
+            formatValue={(v) => `¥${formatMoney(v)}`}
+          />
         </Card>
         <Card bordered={false} className="border border-slate-200 p-5" padding="none">
           {costDonut.length > 0 ? (
@@ -208,13 +204,17 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
           {invoices.length > 0 ? (
             <div className="space-y-1 max-h-[220px] overflow-y-auto">
               {invoices.slice(0, 6).map(inv => {
-                const statusColors: Record<string, string> = { '已付清': 'bg-emerald-100 text-emerald-700', '已收齐': 'bg-emerald-100 text-emerald-700', '部分付款': 'bg-amber-100 text-amber-700', '部分收款': 'bg-amber-100 text-amber-700', '已收票': 'bg-blue-100 text-blue-700', '已开具': 'bg-blue-100 text-blue-700' }
-                const sc = statusColors[inv.status] || 'bg-slate-100 text-slate-500'
+                const statusMap: Record<string, { label: string; color: string }> = {
+                  received: { label: '已收齐', color: 'bg-emerald-100 text-emerald-700' },
+                  partially_paid: { label: '部分收款', color: 'bg-amber-100 text-amber-700' },
+                  issued: { label: '已开具', color: 'bg-blue-100 text-blue-700' },
+                }
+                const si = statusMap[inv.status] || { label: inv.status || '未知', color: 'bg-slate-100 text-slate-500' }
                 return (
                   <div key={inv.id} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-50 transition-colors">
                     <span className="text-xs text-slate-700 truncate flex-1 min-w-0">{inv.invoiceNo || '无号'}</span>
                     <span className="text-[10px] text-slate-500 flex-shrink-0">¥{formatMoney(inv.amount)}</span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${sc}`}>{inv.status}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${si.color}`}>{si.label}</span>
                   </div>
                 )
               })}

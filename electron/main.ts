@@ -77,12 +77,11 @@ function createWindow() {
   log.info('Creating main window...')
 
   mainWindow = new BrowserWindow({
-    width: 1400,
-    height: 900,
-    minWidth: 1000,
-    minHeight: 700,
-    frame: false,                    // 隐藏原生窗口边框
-    titleBarStyle: 'hidden',         // Windows: 隐藏标题栏
+    width: 300,
+    height: 400,
+    backgroundColor: '#1a1d27',
+    frame: false,
+    icon: path.join(__dirname, '../public/installer-assets/app-icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -137,6 +136,22 @@ function createWindow() {
 
   // ——— 窗口控制 IPC（frameless 窗口需要渲染进程控制窗口） ———
   // 使用 originalIpcHandle 绕过 IPC 守卫（PUBLIC_CHANNELS 在构建系统中不更新）
+  originalIpcHandle('app:openDevTools', () => {
+    try {
+      if (!mainWindow || mainWindow.isDestroyed()) {
+        return { success: false, error: '窗口未初始化' }
+      }
+      if (mainWindow.webContents.isDevToolsOpened()) {
+        mainWindow.webContents.closeDevTools()
+      } else {
+        mainWindow.webContents.openDevTools({ mode: 'detach' })
+      }
+      return { success: true }
+    } catch (err: any) {
+      log.error('openDevTools error:', err)
+      return { success: false, error: err?.message || String(err) }
+    }
+  })
   originalIpcHandle('window:minimize', () => mainWindow?.minimize())
   originalIpcHandle('window:maximize', () => {
     if (mainWindow?.isMaximized()) {
@@ -147,6 +162,22 @@ function createWindow() {
   })
   originalIpcHandle('window:close', () => mainWindow?.close())
   originalIpcHandle('window:isMaximized', () => mainWindow?.isMaximized() ?? false)
+  originalIpcHandle('window:resizeLogin', () => {
+    if (!mainWindow) return
+    mainWindow.setResizable(false)
+    mainWindow.setMaximizable(false)
+    mainWindow.setMinimumSize(300, 400)
+    mainWindow.setSize(300, 400, true)
+    mainWindow.center()
+  })
+  originalIpcHandle('window:resizeApp', () => {
+    if (!mainWindow) return
+    mainWindow.setResizable(true)
+    mainWindow.setMaximizable(true)
+    mainWindow.setMinimumSize(1000, 700)
+    mainWindow.setSize(1400, 900, true)
+    mainWindow.center()
+  })
 
   // 窗口最大化状态变化时通知渲染进程
   mainWindow.on('maximize', () => mainWindow?.webContents.send('window:maximizeChange', true))

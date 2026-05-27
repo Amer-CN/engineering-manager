@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>三角形 + 数据汇聚</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: #0c0e14; color: #a1a7b5; padding: 40px; display: flex; flex-direction: column; align-items: center; }
+  h1 { font-size: 18px; color: #f0f2f5; margin-bottom: 32px; font-weight: 600; }
+  .row { display: flex; gap: 32px; flex-wrap: wrap; justify-content: center; }
+  .item { text-align: center; width: 180px; }
+  .item .label { font-size: 12px; color: #6b7280; margin-bottom: 12px; }
+  .preview { width: 120px; height: 120px; background: #1a1d27; border-radius: 16px; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; }
+  .preview svg { color: #E8701A; }
+  .sizes { display: flex; gap: 8px; align-items: flex-end; justify-content: center; margin-top: 8px; }
+  .sizes .s { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .sizes .s span { font-size: 9px; color: #4b5163; }
+  .titlebar { display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; background: #1e2130; border-radius: 6px; margin-top: 10px; }
+  .titlebar svg { color: #E8701A; }
+  .titlebar span { font-size: 12px; color: #6b7280; }
+</style>
+</head>
+<body>
+<h1>保留三角形 + 加数据汇聚元素</h1>
+<div class="row">
+
+  <!-- A: 三角形 + 顶点发光点 -->
+  <div class="item">
+    <div class="label">A · 顶点节点</div>
+    <div class="preview">
+      <svg width="60" height="60" viewBox="0 0 20 20" fill="none">
+        <path d="M3.5 15 L10 3.5 L16.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="4" y1="16" x2="16" y2="16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        <circle cx="10" cy="3.5" r="2" fill="currentColor"/>
+      </svg>
+    </div>
+    <div class="sizes">
+      <div class="s"><svg width="40" height="40" viewBox="0 0 20 20" fill="none"><path d="M3.5 15 L10 3.5 L16.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="4" y1="16" x2="16" y2="16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="10" cy="3.5" r="2" fill="currentColor"/></svg><span>40</span></div>
+      <div class="s"><svg width="24" height="24" viewBox="0 0 20 20" fill="none"><path d="M3.5 15 L10 3.5 L16.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="4" y1="16" x2="16" y2="16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="10" cy="3.5" r="2" fill="currentColor"/></svg><span>24</span></div>
+    </div>
+    <div class="titlebar">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3.5 15 L10 3.5 L16.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="4" y1="16" x2="16" y2="16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="10" cy="3.5" r="2" fill="currentColor"/></svg>
+      <span>工程管家</span>
+    </div>
+  </div>
+
+  <!-- B: 三角形 + 底边中心向上汇聚线 -->
+  <div class="item">
+    <div class="label">B · 底边汇聚</div>
+    <div class="preview">
+      <svg width="60" height="60" viewBox="0 0 20 20" fill="none">
+        <path d="M3.5 15 L10 3.5 L16.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="4" y1="16" x2="16" y2="16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="6" y1="16" x2="10" y2="9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/>
+        <line x1="14" y1="16" x2="10" y2="9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/>
+      </svg>
+    </div>
+    <div class="sizes">
+      <div class="s"><svg width="40" height="40" viewBox="0 0 20 20" fill="none"><path d="M3.5 15 L10 3.5 L16.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="4" y1="16" x2="16" y2="16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="6" y1="16" x2="10" y2="9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/><line x1="14" y1="16" x2="10" y2="9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/></svg><span>40</span></div>
+      <div class="s"><svg width="24" height="24" viewBox="0 0 20 20" fill="none"><path d="M3.5 15 L10 3.5 L16.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="4" y1="16" x2="16" y2="16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>24</span></div>
+    </div>
+    <div class="titlebar">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3.5 15 L10 3.5 L16.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="4" y1="16" x2="16" y2="16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="6" y1="16" x2="10" y2="9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/><line x1="14" y1="16" x2="10" y2="9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/></svg>
+      <span>工程管家</span>
+    </div>
+  </div>
+
+  <!-- C: 三角形 + 左侧数据流线 -->
+  <div class="item">
+    <div class="label">C · 左侧流入</div>
+    <div class="preview">
+      <svg width="60" height="60" viewBox="0 0 20 20" fill="none">
+        <path d="M3.5 15 L10 3.5 L16.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="4" y1="16" x2="16" y2="16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        <path d="M0.5 8 Q3 9, 5.5 10.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.45"/>
+        <path d="M0.5 12 Q3 12.5, 5.5 13" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.35"/>
+      </svg>
+    </div>
+    <div class="sizes">
+      <div class="s"><svg width="40" height="40" viewBox="0 0 20 20" fill="none"><path d="M3.5 15 L10 3.5 L16.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="4" y1="16" x2="16" y2="16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M0.5 8 Q3 9, 5.5 10.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.45"/><path d="M0.5 12 Q3 12.5, 5.5 13" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.35"/></svg><span>40</span></div>
+      <div class="s"><svg width="24" height="24" viewBox="0 0 20 20" fill="none"><path d="M3.5 15 L10 3.5 L16.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="4" y1="16" x2="16" y2="16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>24</span></div>
+    </div>
+    <div class="titlebar">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3.5 15 L10 3.5 L16.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="4" y1="16" x2="16" y2="16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M0.5 8 Q3 9, 5.5 10.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.45"/><path d="M0.5 12 Q3 12.5, 5.5 13" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.35"/></svg>
+      <span>工程管家</span>
+    </div>
+  </div>
+
+  <!-- D: 三角形 + 顶部 ¥ 横杠 -->
+  <div class="item">
+    <div class="label">D · ¥ 横杠</div>
+    <div class="preview">
+      <svg width="60" height="60" viewBox="0 0 20 20" fill="none">
+        <path d="M3.5 15 L10 3.5 L16.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="4" y1="16" x2="16" y2="16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="6.5" y1="10" x2="13.5" y2="10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity="0.55"/>
+      </svg>
+    </div>
+    <div class="sizes">
+      <div class="s"><svg width="40" height="40" viewBox="0 0 20 20" fill="none"><path d="M3.5 15 L10 3.5 L16.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="4" y1="16" x2="16" y2="16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="6.5" y1="10" x2="13.5" y2="10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity="0.55"/></svg><span>40</span></div>
+      <div class="s"><svg width="24" height="24" viewBox="0 0 20 20" fill="none"><path d="M3.5 15 L10 3.5 L16.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="4" y1="16" x2="16" y2="16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>24</span></div>
+    </div>
+    <div class="titlebar">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3.5 15 L10 3.5 L16.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="4" y1="16" x2="16" y2="16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="6.5" y1="10" x2="13.5" y2="10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity="0.55"/></svg>
+      <span>工程管家</span>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

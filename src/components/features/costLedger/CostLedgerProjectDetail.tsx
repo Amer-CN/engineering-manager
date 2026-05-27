@@ -42,12 +42,12 @@ export function CostLedgerProjectDetail({ project, onBack, categories, onManageC
   const load = useCallback(async () => {
     if (!api?.getCostLedger) return
     setLoading(true)
-    const [listRes, summaryRes] = await Promise.all([
+    const [listRes, summaryRes] = await Promise.allSettled([
       api.getCostLedger(project.id, batchId),
       api.getCostLedgerSummary(project.id, batchId),
     ])
-    if (listRes?.success) setEntries(listRes.data || [])
-    if (summaryRes?.success) setSummary(summaryRes.data || null)
+    if (listRes.status === 'fulfilled' && listRes.value?.success) setEntries(listRes.value.data || [])
+    if (summaryRes.status === 'fulfilled' && summaryRes.value?.success) setSummary(summaryRes.value.data || null)
     setLoading(false)
   }, [project.id, batchId])
 

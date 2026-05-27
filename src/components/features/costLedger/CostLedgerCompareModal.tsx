@@ -26,12 +26,13 @@ export function CostLedgerCompareModal({ show, projectId, batches, categories, o
   const loadCompare = async () => {
     if (!api) return
     setLoading(true)
-    const [ra, rb] = await Promise.all([
+    const [ra, rb] = await Promise.allSettled([
       api.getCostLedgerSummary(projectId, aId),
       api.getCostLedgerSummary(projectId, bId),
     ])
-    setSummaryA(ra?.success ? ra?.data ?? null : null)
-    setSummaryB(rb?.success ? rb?.data ?? null : null)
+    const getSummary = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data ?? null : null
+    setSummaryA(getSummary(ra))
+    setSummaryB(getSummary(rb))
     setCompared(true)
     setLoading(false)
   }

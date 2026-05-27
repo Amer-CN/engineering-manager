@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
+import { SimpleGroupedBarChart } from '../../ui/SimpleBarChart'
 import { formatMoney } from '@/utils/format'
 import { getCategoryLabel, getCategoryColor } from './config'
 import type { CostLedgerEntry, CostLedgerCategory } from '@/types'
@@ -123,7 +124,7 @@ export function CostLedgerAnalytics({ projectId, projectName, categories }: Cost
                         <Cell key={i} fill={getCategoryColor(d.code, categories as any) || FALLBACK_COLORS[i % FALLBACK_COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={((v: any) => formatMoney(v ?? 0)) as any} />
+                    <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, boxShadow: 'var(--shadow-md)', color: 'var(--fg)' }} formatter={((v: any) => formatMoney(v ?? 0)) as any} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -150,19 +151,16 @@ export function CostLedgerAnalytics({ projectId, projectName, categories }: Cost
         <div className="rounded-xl border border-slate-200 bg-white p-5">
           <h3 className="text-sm font-semibold text-slate-700 mb-4">月度收支趋势</h3>
           {stats.trendData.length > 0 ? (
-            <div style={{ height: 220 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.trendData} barGap={2}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false}
-                    tickFormatter={(v: number) => v >= 10000 ? `${(v/10000).toFixed(0)}万` : String(v)} />
-                  <Tooltip formatter={((v: any) => formatMoney(v ?? 0)) as any} />
-                  <Bar dataKey="支出" fill="#ef4444" radius={[3,3,0,0]} />
-                  <Bar dataKey="收入" fill="#10b981" radius={[3,3,0,0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <SimpleGroupedBarChart
+              data={stats.trendData.map((d: any) => ({
+                name: d.month,
+                values: [
+                  { label: '支出', amount: d['支出'] || 0, color: '#ef4444' },
+                  { label: '收入', amount: d['收入'] || 0, color: '#10b981' },
+                ],
+              }))}
+              formatValue={(v) => formatMoney(v)}
+            />
           ) : (
             <p className="text-sm text-slate-400">无月度数据</p>
           )}

@@ -18,14 +18,45 @@
    颜色调色板使用 RGB 格式（空格分隔），供 tailwind rgba() 使用。
    ═══════════════════════════════════════════════════════════════ */
 
-/* ── 默认主题（Blue · Slate 氛围）── */
-:root {
+/* ── White 主题（当前浅色模式 ── 保留现有配色）── */
+:root,
+[data-theme="white"] {
   font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
   color-scheme: light;
   color: #1f2937;
   background-color: #f8fafc;
+
+  /* Reasonix-style shell tokens (映射到现有色值) */
+  --bg: #f8fafc;
+  --bg-2: #f1f5f9;
+  --panel: #ffffff;
+  --panel-2: #f1f5f9;
+  --card: #ffffff;
+  --card-hover: #f8fafc;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --fg: #0f172a;
+  --fg-2: #475569;
+  --muted: #94a3b8;
+  --muted-2: #64748b;
+  --accent: #2563eb;
+  --accent-soft: rgba(37, 99, 235, 0.12);
+  --accent-strong: #1d4ed8;
+  --success: #16a34a;
+  --success-soft: rgba(22, 163, 74, 0.12);
+  --warning: #d97706;
+  --warning-soft: rgba(217, 119, 6, 0.12);
+  --danger: #dc2626;
+  --danger-soft: rgba(220, 38, 38, 0.12);
+  --violet: #8b5cf6;
+  --violet-soft: rgba(139, 92, 246, 0.12);
+  --shadow-sm: 0 1px 0 rgba(0,0,0,0.04);
+  --shadow-md: 0 8px 24px -10px rgba(0,0,0,0.1);
+  --shadow-lg: 0 24px 60px -20px rgba(0,0,0,0.18);
+  --radius: 8px;
+  --radius-lg: 12px;
 
   /* 语义色 — Blue palette */
   --color-primary-50: 239 246 255;
@@ -79,7 +110,7 @@
   --color-info-800: 7 89 133;
   --color-info-900: 12 74 110;
 
-  /* 氛围层 — Slate（默认） */
+  /* 向后兼容 — 现有组件使用的变量 */
   --bg-primary: #ffffff;
   --bg-secondary: #f8fafc;
   --bg-tertiary: #f1f5f9;
@@ -97,78 +128,148 @@
   --overlay: rgba(0, 0, 0, 0.5);
 }
 
-/* ── 默认主题 · 深色 ── */
-.dark {
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-tertiary: #334155;
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-tertiary: #64748b;
-  --border-primary: #334155;
-  --border-secondary: #475569;
-  --sidebar-bg: #1e293b;
-  --sidebar-border: #334155;
-  --sidebar-item-hover: #334155;
-  --sidebar-item-active: #1e3a5f;
-  --shadow-card: 0 1px 3px rgba(0,0,0,0.3);
-  --shadow-dropdown: 0 10px 15px -3px rgba(0,0,0,0.4);
-  --overlay: rgba(0, 0, 0, 0.7);
-}
-
-/* ── Graphite 主题（Teal 主色 · Slate 氛围 · 冷调现代工具感）── */
+/* ── Graphite 主题（深色 — Reasonix 原版 OKLCH 色值）── */
 [data-theme="graphite"] {
-  /* 语义色 — Teal palette */
-  --color-primary-50: 240 253 250;
-  --color-primary-100: 204 251 241;
-  --color-primary-200: 153 246 228;
-  --color-primary-300: 94 234 212;
-  --color-primary-400: 45 212 191;
-  --color-primary-500: 20 184 166;
-  --color-primary-600: 13 148 136;
-  --color-primary-700: 15 118 110;
-  --color-primary-800: 17 94 89;
-  --color-primary-900: 19 78 74;
+  /* Reasonix-style shell tokens */
+  --bg: oklch(17% 0.005 280);
+  --bg-2: oklch(20% 0.006 275);
+  --panel: oklch(21.5% 0.007 275);
+  --panel-2: oklch(24.5% 0.008 275);
+  --card: oklch(23.5% 0.007 275);
+  --card-hover: oklch(26.5% 0.008 275);
+  --border: oklch(30% 0.008 275);
+  --border-strong: oklch(38% 0.01 275);
+  --fg: oklch(96% 0.004 280);
+  --fg-2: oklch(81% 0.005 280);
+  --muted: oklch(63% 0.006 280);
+  --muted-2: oklch(49% 0.006 280);
+  --accent: oklch(68% 0.16 38);
+  --accent-soft: oklch(68% 0.16 38 / 0.15);
+  --accent-strong: oklch(72% 0.18 36);
+  --success: oklch(70% 0.14 145);
+  --success-soft: oklch(70% 0.14 145 / 0.14);
+  --warning: oklch(78% 0.14 85);
+  --warning-soft: oklch(78% 0.14 85 / 0.16);
+  --danger: oklch(66% 0.18 25);
+  --danger-soft: oklch(66% 0.18 25 / 0.16);
+  --violet: oklch(72% 0.14 295);
+  --violet-soft: oklch(72% 0.14 295 / 0.16);
+  --shadow-sm: 0 1px 0 oklch(0% 0 0 / 0.35);
+  --shadow-md: 0 8px 24px -8px oklch(0% 0 0 / 0.5);
+  --shadow-lg: 0 24px 60px -16px oklch(0% 0 0 / 0.65);
+  --radius: 8px;
+  --radius-lg: 12px;
 
-  /* 氛围层 — Slate（冷灰） */
-  --bg-primary: #f8fafc;
-  --bg-secondary: #f1f5f9;
-  --bg-tertiary: #e2e8f0;
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-tertiary: #94a3b8;
-  --border-primary: #e2e8f0;
-  --border-secondary: #cbd5e1;
-  --sidebar-bg: #ffffff;
-  --sidebar-border: #e2e8f0;
-  --sidebar-item-hover: #f1f5f9;
-  --sidebar-item-active: #f0fdfa;
-  --shadow-card: 0 1px 3px rgba(15,23,42,0.08);
-  --shadow-dropdown: 0 10px 15px -3px rgba(15,23,42,0.1);
-  --overlay: rgba(15, 23, 42, 0.5);
-}
+  background-color: var(--bg);
+  color: var(--fg);
+  color-scheme: dark;
 
-[data-theme="graphite"].dark {
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-tertiary: #334155;
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-tertiary: #64748b;
-  --border-primary: #334155;
-  --border-secondary: #475569;
-  --sidebar-bg: #111827;
-  --sidebar-border: #1e293b;
-  --sidebar-item-hover: #1e293b;
-  --sidebar-item-active: #134e4a;
-  --shadow-card: 0 1px 3px rgba(0,0,0,0.3);
-  --shadow-dropdown: 0 10px 15px -3px rgba(0,0,0,0.4);
+  /* 语义色 — 深色模式用主题色搭配 */
+  --color-primary-50: 40 25 15;
+  --color-primary-100: 60 38 20;
+  --color-primary-200: 85 55 30;
+  --color-primary-300: 115 75 45;
+  --color-primary-400: 150 100 60;
+  --color-primary-500: 200 128 55;
+  --color-primary-600: 215 115 42;
+  --color-primary-700: 190 95 30;
+  --color-primary-800: 160 75 20;
+  --color-primary-900: 130 55 10;
+  --color-success-50: 10 35 20;
+  --color-success-100: 15 60 35;
+  --color-success-200: 20 85 50;
+  --color-success-300: 30 115 65;
+  --color-success-400: 40 140 80;
+  --color-success-500: 50 165 95;
+  --color-success-600: 70 190 115;
+  --color-success-700: 100 210 140;
+  --color-success-800: 140 230 175;
+  --color-success-900: 190 245 215;
+  --color-warning-50: 45 30 8;
+  --color-warning-100: 70 50 12;
+  --color-warning-200: 95 70 18;
+  --color-warning-300: 125 95 25;
+  --color-warning-400: 155 120 35;
+  --color-warning-500: 185 145 50;
+  --color-warning-600: 210 170 75;
+  --color-warning-700: 230 195 110;
+  --color-warning-800: 245 220 155;
+  --color-warning-900: 250 240 200;
+  --color-danger-50: 55 15 15;
+  --color-danger-100: 80 22 20;
+  --color-danger-200: 110 30 28;
+  --color-danger-300: 140 40 38;
+  --color-danger-400: 170 52 48;
+  --color-danger-500: 195 68 62;
+  --color-danger-600: 220 90 82;
+  --color-danger-700: 235 125 118;
+  --color-danger-800: 245 168 162;
+  --color-danger-900: 250 210 207;
+  --color-info-50: 9 34 54;
+  --color-info-100: 12 58 94;
+  --color-info-200: 16 85 135;
+  --color-info-300: 22 108 168;
+  --color-info-400: 32 133 198;
+  --color-info-500: 42 151 213;
+  --color-info-600: 76 171 226;
+  --color-info-700: 118 196 237;
+  --color-info-800: 168 219 245;
+  --color-info-900: 208 236 251;
+
+  /* 向后兼容 */
+  --bg-primary: oklch(17% 0.005 280);
+  --bg-secondary: oklch(20% 0.006 275);
+  --bg-tertiary: oklch(24.5% 0.008 275);
+  --text-primary: oklch(96% 0.004 280);
+  --text-secondary: oklch(81% 0.005 280);
+  --text-tertiary: oklch(63% 0.006 280);
+  --border-primary: oklch(30% 0.008 275);
+  --border-secondary: oklch(38% 0.01 275);
+  --sidebar-bg: oklch(21.5% 0.007 275);
+  --sidebar-border: oklch(30% 0.008 275);
+  --sidebar-item-hover: oklch(24.5% 0.008 275);
+  --sidebar-item-active: oklch(26% 0.04 38);
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.35);
+  --shadow-dropdown: 0 10px 15px -3px rgba(0,0,0,0.5);
   --overlay: rgba(0, 0, 0, 0.7);
 }
 
-/* ── Sandstone 主题（Amber 主色 · Stone 氛围 · 暖调工程感）── */
+/* ── Sandstone 主题（暖浅色 — Reasonix 原版 OKLCH 色值）── */
 [data-theme="sandstone"] {
-  /* 语义色 — Amber/Orange palette */
+  /* Reasonix-style shell tokens */
+  --bg: oklch(97.5% 0.008 80);
+  --bg-2: oklch(95.5% 0.011 78);
+  --panel: oklch(98.5% 0.005 80);
+  --panel-2: oklch(93.5% 0.014 76);
+  --card: oklch(99.5% 0.003 80);
+  --card-hover: oklch(96.5% 0.009 78);
+  --border: oklch(88% 0.016 76);
+  --border-strong: oklch(78% 0.020 72);
+  --fg: oklch(22% 0.014 55);
+  --fg-2: oklch(36% 0.013 55);
+  --muted: oklch(53% 0.011 60);
+  --muted-2: oklch(67% 0.010 65);
+  --accent: oklch(60% 0.19 38);
+  --accent-soft: oklch(60% 0.19 38 / 0.1);
+  --accent-strong: oklch(54% 0.21 36);
+  --success: oklch(48% 0.14 155);
+  --success-soft: oklch(48% 0.14 155 / 0.1);
+  --warning: oklch(58% 0.14 75);
+  --warning-soft: oklch(58% 0.14 75 / 0.12);
+  --danger: oklch(54% 0.2 22);
+  --danger-soft: oklch(54% 0.2 22 / 0.1);
+  --violet: oklch(62% 0.16 52);
+  --violet-soft: oklch(62% 0.16 52 / 0.10);
+  --shadow-sm: 0 1px 0 oklch(30% 0.05 50 / 0.05);
+  --shadow-md: 0 8px 24px -10px oklch(30% 0.05 50 / 0.13);
+  --shadow-lg: 0 24px 60px -20px oklch(30% 0.05 50 / 0.20);
+  --radius: 8px;
+  --radius-lg: 12px;
+
+  background-color: var(--bg);
+  color: var(--fg);
+
+  /* 语义色 */
   --color-primary-50: 255 247 237;
   --color-primary-100: 255 237 213;
   --color-primary-200: 254 215 170;
@@ -179,42 +280,524 @@
   --color-primary-700: 194 65 12;
   --color-primary-800: 154 52 18;
   --color-primary-900: 67 20 7;
+  --color-success-50: 240 253 244;
+  --color-success-100: 220 252 231;
+  --color-success-200: 187 247 208;
+  --color-success-300: 134 239 172;
+  --color-success-400: 74 222 128;
+  --color-success-500: 34 197 94;
+  --color-success-600: 22 163 74;
+  --color-success-700: 21 128 61;
+  --color-success-800: 22 101 52;
+  --color-success-900: 20 83 45;
+  --color-warning-50: 255 251 235;
+  --color-warning-100: 254 243 199;
+  --color-warning-200: 253 230 138;
+  --color-warning-300: 252 211 77;
+  --color-warning-400: 251 191 36;
+  --color-warning-500: 245 158 11;
+  --color-warning-600: 217 119 6;
+  --color-warning-700: 180 83 9;
+  --color-warning-800: 146 64 14;
+  --color-warning-900: 120 53 15;
+  --color-danger-50: 254 242 242;
+  --color-danger-100: 254 226 226;
+  --color-danger-200: 254 202 202;
+  --color-danger-300: 252 165 165;
+  --color-danger-400: 248 113 113;
+  --color-danger-500: 239 68 68;
+  --color-danger-600: 220 38 38;
+  --color-danger-700: 185 28 28;
+  --color-danger-800: 153 27 27;
+  --color-danger-900: 127 29 29;
+  --color-info-50: 240 249 255;
+  --color-info-100: 224 242 254;
+  --color-info-200: 186 230 253;
+  --color-info-300: 125 211 252;
+  --color-info-400: 56 189 248;
+  --color-info-500: 14 165 233;
+  --color-info-600: 2 132 199;
+  --color-info-700: 3 105 161;
+  --color-info-800: 7 89 133;
+  --color-info-900: 12 74 110;
 
-  /* 氛围层 — Stone（暖灰） */
-  --bg-primary: #fafaf9;
-  --bg-secondary: #f5f5f4;
-  --bg-tertiary: #e7e5e4;
-  --text-primary: #1c1917;
-  --text-secondary: #57534e;
-  --text-tertiary: #a8a29e;
-  --border-primary: #e7e5e4;
-  --border-secondary: #d6d3d1;
-  --sidebar-bg: #fafaf9;
-  --sidebar-border: #e7e5e4;
-  --sidebar-item-hover: #f5f5f4;
-  --sidebar-item-active: #fff7ed;
-  --shadow-card: 0 1px 3px rgba(28,25,23,0.08);
-  --shadow-dropdown: 0 10px 15px -3px rgba(28,25,23,0.1);
-  --overlay: rgba(28, 25, 23, 0.5);
+  /* 向后兼容 */
+  --bg-primary: oklch(98.5% 0.005 80);
+  --bg-secondary: oklch(95.5% 0.011 78);
+  --bg-tertiary: oklch(93.5% 0.014 76);
+  --text-primary: oklch(22% 0.014 55);
+  --text-secondary: oklch(36% 0.013 55);
+  --text-tertiary: oklch(53% 0.011 60);
+  --border-primary: oklch(88% 0.016 76);
+  --border-secondary: oklch(78% 0.020 72);
+  --sidebar-bg: oklch(98.5% 0.005 80);
+  --sidebar-border: oklch(88% 0.016 76);
+  --sidebar-item-hover: oklch(95.5% 0.011 78);
+  --sidebar-item-active: oklch(88% 0.06 55);
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-dropdown: 0 10px 15px -3px rgba(0,0,0,0.1);
+  --overlay: rgba(0, 0, 0, 0.4);
 }
 
-[data-theme="sandstone"].dark {
-  --bg-primary: #1c1917;
-  --bg-secondary: #292524;
-  --bg-tertiary: #44403c;
-  --text-primary: #fafaf9;
-  --text-secondary: #a8a29e;
-  --text-tertiary: #78716c;
-  --border-primary: #44403c;
-  --border-secondary: #57534e;
-  --sidebar-bg: #1c1917;
-  --sidebar-border: #292524;
-  --sidebar-item-hover: #292524;
-  --sidebar-item-active: #431407;
-  --shadow-card: 0 1px 3px rgba(0,0,0,0.3);
-  --shadow-dropdown: 0 10px 15px -3px rgba(0,0,0,0.4);
-  --overlay: rgba(0, 0, 0, 0.7);
+/* ── Tailwind 通用类覆盖（随主题切换，影响所有页面内容）── */
+
+/* White 主题 — 全面覆盖（值与 Tailwind 默认接近，但确保走 CSS 变量） */
+[data-theme="white"] .bg-white,
+[data-theme="white"] .card { background-color: var(--card); }
+[data-theme="white"] .bg-slate-50,
+[data-theme="white"] .bg-slate-100 { background-color: var(--bg); }
+[data-theme="white"] .bg-slate-200 { background-color: var(--panel-2); }
+[data-theme="white"] .bg-slate-700 { background-color: var(--border-strong); }
+[data-theme="white"] .bg-slate-800,
+[data-theme="white"] .dark\:bg-slate-800 { background-color: var(--card); }
+[data-theme="white"] .bg-slate-900 { background-color: var(--card); }
+[data-theme="white"] .text-slate-200,
+[data-theme="white"] .text-slate-300,
+[data-theme="white"] .text-slate-400 { color: var(--muted); }
+[data-theme="white"] .text-slate-500 { color: var(--muted); }
+[data-theme="white"] .text-slate-600 { color: var(--fg-2); }
+[data-theme="white"] .text-slate-700,
+[data-theme="white"] .text-slate-800,
+[data-theme="white"] .text-slate-900 { color: var(--fg); }
+[data-theme="white"] .border-slate-100,
+[data-theme="white"] .border-slate-200 { border-color: var(--border); }
+[data-theme="white"] .border-slate-300,
+[data-theme="white"] .border-slate-400 { border-color: var(--border-strong); }
+[data-theme="white"] .border-slate-600,
+[data-theme="white"] .border-slate-700 { border-color: var(--border-strong); }
+[data-theme="white"] .divide-slate-100 > :not([hidden]) ~ :not([hidden]) { border-color: var(--border); }
+[data-theme="white"] .active\:bg-slate-100:active { background-color: var(--panel-2); }
+[data-theme="white"] .hover\:bg-white:hover,
+[data-theme="white"] .hover\:bg-slate-50:hover,
+[data-theme="white"] .hover\:bg-slate-100:hover { background-color: var(--card-hover); }
+[data-theme="white"] .hover\:bg-slate-200:hover { background-color: var(--panel-2); }
+[data-theme="white"] .hover\:text-slate-700:hover { color: var(--fg-2); }
+[data-theme="white"] .hover\:text-red-600:hover { color: var(--danger); }
+[data-theme="white"] .hover\:bg-red-50:hover { background-color: var(--danger-soft); }
+[data-theme="white"] table tbody tr { transition: background-color 200ms ease; }
+[data-theme="white"] table tbody tr:hover { background-color: var(--card-hover) !important; }
+
+[data-theme="white"] .hover\:bg-amber-50:hover,
+[data-theme="white"] .hover\:bg-blue-50:hover,
+[data-theme="white"] .hover\:bg-green-50:hover,
+[data-theme="white"] .hover\:bg-emerald-50:hover {
+  background-color: var(--accent-soft);
 }
+[data-theme="white"] .hover\:bg-gray-50:hover,
+[data-theme="white"] .hover\:bg-gray-100:hover {
+  background-color: var(--card-hover);
+}
+
+[data-theme="white"] .btn-warning { color: var(--bg); }
+
+[data-theme="graphite"] .bg-white,
+[data-theme="graphite"] .card { background-color: var(--card); }
+
+[data-theme="sandstone"] .bg-white,
+[data-theme="sandstone"] .card { background-color: var(--card); }
+[data-theme="sandstone"] .bg-slate-50,
+[data-theme="sandstone"] .bg-slate-100 { background-color: var(--bg); }
+[data-theme="sandstone"] .text-slate-800,
+[data-theme="sandstone"] .text-slate-700 { color: var(--fg); }
+[data-theme="sandstone"] .text-slate-600 { color: var(--fg-2); }
+[data-theme="sandstone"] .text-slate-500 { color: var(--muted); }
+[data-theme="sandstone"] .text-slate-400 { color: var(--muted-2); }
+[data-theme="sandstone"] .border-slate-200,
+[data-theme="sandstone"] .border-slate-100 { border-color: var(--border); }
+
+/* ── 组件层覆盖（卡片/按钮/输入框/表格）── */
+[data-theme="graphite"] .card,
+[data-theme="graphite"] .modal-content { background-color: var(--card); }
+[data-theme="graphite"] .card-header { border-color: var(--border); }
+[data-theme="graphite"] .btn-secondary {
+  background-color: var(--panel);
+  border-color: var(--border);
+  color: var(--fg);
+}
+[data-theme="graphite"] .btn-secondary:hover { background-color: var(--panel-2); }
+[data-theme="graphite"] .input,
+[data-theme="graphite"] .select {
+  background-color: var(--panel);
+  border-color: var(--border);
+  color: var(--fg);
+}
+[data-theme="graphite"] .input:focus,
+[data-theme="graphite"] .select:focus {
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+[data-theme="graphite"] .label { color: var(--fg-2); }
+[data-theme="graphite"] .table th {
+  background-color: var(--bg-2);
+  color: var(--fg-2);
+  border-color: var(--border);
+}
+[data-theme="graphite"] .table td { border-color: var(--border); }
+[data-theme="graphite"] .badge-gray {
+  background-color: var(--panel-2);
+  color: var(--fg-2);
+}
+/* Graphite primary 色统一到 accent 体系 */
+[data-theme="graphite"] .bg-primary-50 { background-color: var(--accent-soft); }
+[data-theme="graphite"] .bg-primary-100 { background-color: var(--accent-soft); }
+[data-theme="graphite"] .bg-primary-500 { background-color: var(--accent); }
+[data-theme="graphite"] .bg-primary-600 { background-color: var(--accent); }
+[data-theme="graphite"] .hover\:bg-primary-500:hover { background-color: var(--accent-strong); }
+[data-theme="graphite"] .hover\:bg-primary-700:hover { background-color: var(--accent-strong); }
+[data-theme="graphite"] .text-primary-600 { color: var(--accent); }
+[data-theme="graphite"] .text-primary-700 { color: var(--accent); }
+[data-theme="graphite"] .border-primary-200 { border-color: var(--accent-soft); }
+[data-theme="graphite"] .border-primary-300 { border-color: var(--accent-strong); }
+[data-theme="graphite"] .border-primary-400 { border-color: var(--accent-strong); }
+[data-theme="graphite"] .ring-primary-500 { --tw-ring-color: var(--accent); }
+[data-theme="graphite"] .focus\:ring-primary-500:focus { --tw-ring-color: var(--accent); }
+[data-theme="graphite"] .focus\:border-primary-500:focus { border-color: var(--accent-strong); }
+[data-theme="graphite"] .shadow-primary-500\/25 { --tw-shadow-color: var(--accent); opacity: 0.25; }
+
+/* 白色装饰/进度条调暗 */
+[data-theme="graphite"] .bg-white\/20,
+[data-theme="graphite"] .bg-white\/10 { opacity: 0.3; }
+
+/* gray 系 hover 修复 */
+[data-theme="graphite"] .hover\:bg-gray-50:hover,
+[data-theme="graphite"] .hover\:bg-gray-100:hover {
+  background-color: var(--card-hover);
+}
+
+/* 彩色浅色 hover 修复 */
+[data-theme="graphite"] .hover\:bg-amber-50:hover,
+[data-theme="graphite"] .hover\:bg-blue-50:hover,
+[data-theme="graphite"] .hover\:bg-green-50:hover,
+[data-theme="graphite"] .hover\:bg-emerald-50:hover {
+  background-color: var(--accent-soft);
+}
+
+/* Graphite 主题 — Tailwind slate 类全面覆盖 */
+[data-theme="graphite"] .bg-white,
+[data-theme="graphite"] .card { background-color: var(--card); }
+[data-theme="graphite"] .bg-slate-50,
+[data-theme="graphite"] .bg-slate-100 { background-color: var(--bg); }
+[data-theme="graphite"] .bg-slate-200 { background-color: var(--panel-2); }
+[data-theme="graphite"] .bg-slate-700 { background-color: var(--border-strong); }
+[data-theme="graphite"] aside nav .bg-slate-700 { background-color: var(--accent); }
+[data-theme="graphite"] .bg-slate-800 { background-color: var(--card); }
+[data-theme="graphite"] .dark\:bg-slate-800 { background-color: var(--card); }
+[data-theme="graphite"] .text-slate-300,
+[data-theme="graphite"] .text-slate-400 { color: var(--muted); }
+[data-theme="graphite"] .text-slate-500 { color: var(--muted-2); }
+[data-theme="graphite"] .text-slate-600 { color: var(--fg-2); }
+[data-theme="graphite"] .text-slate-700,
+[data-theme="graphite"] .text-slate-800,
+[data-theme="graphite"] .text-slate-900 { color: var(--fg); }
+[data-theme="graphite"] .text-slate-200 { color: var(--border); }
+[data-theme="graphite"] .border-slate-100,
+[data-theme="graphite"] .border-slate-200 { border-color: var(--border); }
+[data-theme="graphite"] .border-slate-300 { border-color: var(--border-strong); }
+[data-theme="graphite"] .divide-slate-100 > :not([hidden]) ~ :not([hidden]) { border-color: var(--border); }
+[data-theme="graphite"] .active\:bg-slate-100:active { background-color: var(--panel-2); }
+[data-theme="graphite"] .hover\:bg-white:hover,
+[data-theme="graphite"] .hover\:bg-slate-50:hover,
+[data-theme="graphite"] .hover\:bg-slate-100:hover { background-color: var(--card-hover); }
+[data-theme="graphite"] .hover\:bg-slate-200:hover { background-color: var(--panel-2); }
+[data-theme="graphite"] .hover\:text-slate-700:hover { color: var(--fg-2); }
+[data-theme="graphite"] .hover\:text-red-600:hover { color: var(--danger); }
+[data-theme="graphite"] .hover\:bg-red-50:hover { background-color: var(--danger-soft); }
+
+/* Graphite 彩色浅色背景 → 深色版本（图标/文字用浅色时可读） */
+[data-theme="graphite"] .bg-blue-50,
+[data-theme="graphite"] .bg-blue-100 { background-color: oklch(28% 0.06 260); }
+[data-theme="graphite"] .bg-red-50,
+[data-theme="graphite"] .bg-red-100 { background-color: oklch(28% 0.06 25); }
+[data-theme="graphite"] .bg-green-50,
+[data-theme="graphite"] .bg-green-100 { background-color: oklch(28% 0.06 155); }
+[data-theme="graphite"] .bg-emerald-50,
+[data-theme="graphite"] .bg-emerald-100 { background-color: oklch(28% 0.06 160); }
+[data-theme="graphite"] .bg-amber-50,
+[data-theme="graphite"] .bg-amber-100 { background-color: oklch(28% 0.06 80); }
+[data-theme="graphite"] .bg-orange-50,
+[data-theme="graphite"] .bg-orange-100 { background-color: oklch(28% 0.06 60); }
+[data-theme="graphite"] .bg-purple-50,
+[data-theme="graphite"] .bg-purple-100 { background-color: oklch(28% 0.06 300); }
+[data-theme="graphite"] .bg-violet-50,
+[data-theme="graphite"] .bg-violet-100 { background-color: oklch(28% 0.06 295); }
+[data-theme="graphite"] .bg-teal-50,
+[data-theme="graphite"] .bg-teal-100 { background-color: oklch(28% 0.06 175); }
+[data-theme="graphite"] .bg-sky-50,
+[data-theme="graphite"] .bg-sky-100 { background-color: oklch(28% 0.06 240); }
+[data-theme="graphite"] .bg-indigo-50,
+[data-theme="graphite"] .bg-indigo-100 { background-color: oklch(28% 0.06 275); }
+[data-theme="graphite"] .bg-pink-50,
+[data-theme="graphite"] .bg-pink-100 { background-color: oklch(28% 0.06 350); }
+[data-theme="graphite"] .bg-rose-50,
+[data-theme="graphite"] .bg-rose-100 { background-color: oklch(28% 0.06 15); }
+[data-theme="graphite"] .bg-yellow-50,
+[data-theme="graphite"] .bg-yellow-100 { background-color: oklch(28% 0.06 95); }
+[data-theme="graphite"] .bg-cyan-50,
+[data-theme="graphite"] .bg-cyan-100 { background-color: oklch(28% 0.06 200); }
+[data-theme="graphite"] .bg-fuchsia-50,
+[data-theme="graphite"] .bg-fuchsia-100 { background-color: oklch(28% 0.06 330); }
+[data-theme="graphite"] .bg-lime-50,
+[data-theme="graphite"] .bg-lime-100 { background-color: oklch(28% 0.06 130); }
+
+/* ── Hero Banner 三主题适配 ── */
+
+/* White: 保持原样（深色横幅 + 浅色页面，对比鲜明） */
+
+/* Graphite: hero banner 直接设背景色（不走渐变变量覆盖，更可靠） */
+[data-theme="graphite"] .from-slate-800 { background: oklch(28% 0.006 275) !important; }
+[data-theme="graphite"] .from-slate-800 .text-white { color: var(--fg) !important; }
+[data-theme="graphite"] .from-slate-800 .text-white\/50 { color: var(--muted) !important; }
+[data-theme="graphite"] .from-slate-800 .text-white\/60 { color: var(--muted) !important; }
+[data-theme="graphite"] .from-slate-800 .text-white\/40 { color: var(--muted-2) !important; }
+[data-theme="graphite"] .from-slate-800 .bg-white\/10 { background: oklch(35% 0.008 275) !important; }
+[data-theme="graphite"] .from-slate-800 .bg-white\/20 { background: oklch(40% 0.008 275) !important; }
+[data-theme="graphite"] .from-slate-800 .text-emerald-300 { color: var(--success) !important; }
+[data-theme="graphite"] .from-slate-800 .text-emerald-300\/80 { color: var(--success) !important; opacity: 0.8; }
+[data-theme="graphite"] .from-slate-800 .text-amber-300 { color: var(--accent) !important; }
+[data-theme="graphite"] .from-slate-800 .text-amber-300\/80 { color: var(--accent) !important; opacity: 0.8; }
+[data-theme="graphite"] .from-slate-800 .text-blue-300 { color: oklch(72% 0.12 240) !important; }
+[data-theme="graphite"] .hero-overlay { display: none !important; }
+
+/* Sandstone: 深暖棕底横幅（浅色文字，统一适配全部模块） */
+[data-theme="sandstone"] .from-slate-800 { background: oklch(35% 0.04 45) !important; }
+[data-theme="sandstone"] .from-slate-800 .text-white { color: oklch(96% 0.004 80) !important; }
+[data-theme="sandstone"] .from-slate-800 .text-white\/50 { color: oklch(72% 0.018 55) !important; }
+[data-theme="sandstone"] .from-slate-800 .text-white\/60 { color: oklch(78% 0.015 60) !important; }
+[data-theme="sandstone"] .from-slate-800 .text-white\/40 { color: oklch(60% 0.02 55) !important; }
+[data-theme="sandstone"] .from-slate-800 .bg-white\/10 { background: oklch(39% 0.04 45 / 0.5) !important; }
+[data-theme="sandstone"] .from-slate-800 .bg-white\/20 { background: oklch(43% 0.04 45 / 0.4) !important; }
+[data-theme="sandstone"] .from-slate-800 .text-emerald-300 { color: oklch(72% 0.12 148) !important; }
+[data-theme="sandstone"] .from-slate-800 .text-emerald-300\/80 { color: oklch(72% 0.12 148) !important; opacity: 0.8; }
+[data-theme="sandstone"] .from-slate-800 .text-amber-300 { color: oklch(78% 0.14 45) !important; }
+[data-theme="sandstone"] .from-slate-800 .text-amber-300\/80 { color: oklch(78% 0.14 45) !important; opacity: 0.8; }
+[data-theme="sandstone"] .from-slate-800 .text-blue-300 { color: oklch(75% 0.10 245) !important; }
+[data-theme="sandstone"] .hero-overlay { opacity: 0 !important; }
+
+/* Graphite 图标在彩色背景容器内 → 深色文字 */
+[data-theme="graphite"] .bg-blue-100 span,
+[data-theme="graphite"] .bg-red-100 span,
+[data-theme="graphite"] .bg-green-100 span,
+[data-theme="graphite"] .bg-emerald-100 span,
+[data-theme="graphite"] .bg-amber-100 span,
+[data-theme="graphite"] .bg-orange-100 span,
+[data-theme="graphite"] .bg-purple-100 span,
+[data-theme="graphite"] .bg-violet-100 span,
+[data-theme="graphite"] .bg-teal-100 span,
+[data-theme="graphite"] .bg-sky-100 span,
+[data-theme="graphite"] .bg-indigo-100 span,
+[data-theme="graphite"] .bg-pink-100 span,
+[data-theme="graphite"] .bg-rose-100 span {
+  color: oklch(90% 0.04 260) !important;
+}
+[data-theme="graphite"] table tbody tr { background-color: transparent; transition: background-color 200ms ease; }
+[data-theme="graphite"] table tbody tr:hover { background-color: var(--card-hover) !important; }
+
+/* 彩色浅色 hover 修复 */
+[data-theme="graphite"] .hover\:bg-amber-50:hover,
+[data-theme="graphite"] .hover\:bg-blue-50:hover,
+[data-theme="graphite"] .hover\:bg-green-50:hover,
+[data-theme="graphite"] .hover\:bg-emerald-50:hover {
+  background-color: var(--accent-soft);
+}
+
+/* gray 系 hover 修复 */
+[data-theme="graphite"] .hover\:bg-gray-50:hover,
+[data-theme="graphite"] .hover\:bg-gray-100:hover {
+  background-color: var(--card-hover);
+}
+
+/* 白色装饰调暗（仅背景，不动文字） */
+[data-theme="graphite"] .bg-white\/20,
+[data-theme="graphite"] .bg-white\/10 { background-color: rgb(255 255 255 / 0.03) !important; }
+
+/* warning 按钮文字修复 */
+[data-theme="graphite"] .btn-warning { color: var(--bg); }
+
+/* 表单控件全面覆盖（含未用 .input/.select 类的原生 Tailwind 写法） */
+[data-theme="graphite"] input:not([type="color"]):not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+[data-theme="graphite"] textarea {
+  background-color: var(--panel);
+  color: var(--fg);
+  border-color: var(--border);
+}
+[data-theme="graphite"] input:not([type="color"]):not([type="range"]):not([type="checkbox"]):not([type="radio"])::placeholder,
+[data-theme="graphite"] textarea::placeholder {
+  color: var(--muted);
+}
+[data-theme="graphite"] select {
+  background-color: var(--panel);
+  color: var(--fg);
+  border-color: var(--border);
+  color-scheme: dark;
+}
+[data-theme="graphite"] select option {
+  background-color: var(--panel);
+  color: var(--fg);
+}
+
+/* Recharts Tooltip 文字全面覆盖（内联 style 不继承 contentStyle 的 color） */
+[data-theme="graphite"] .recharts-tooltip-wrapper .recharts-tooltip-item-value,
+[data-theme="graphite"] .recharts-tooltip-wrapper .recharts-tooltip-item-name,
+[data-theme="graphite"] .recharts-tooltip-wrapper .recharts-tooltip-label,
+[data-theme="graphite"] .recharts-tooltip-wrapper .recharts-tooltip-item-separator {
+  color: var(--fg) !important;
+}
+
+/* 侧边栏活跃项 — sidebar 专属变量覆盖（比全局 .bg-slate-100 更精确） */
+[data-theme="graphite"] aside nav button.bg-slate-100 { background-color: var(--sidebar-item-active); }
+[data-theme="graphite"] aside nav button.hover\:bg-slate-50:hover { background-color: var(--sidebar-item-hover); }
+[data-theme="graphite"] aside nav button.hover\:bg-slate-100:hover { background-color: var(--sidebar-item-hover); }
+[data-theme="graphite"] aside nav button.bg-slate-700\/50 { background-color: var(--sidebar-item-active); }
+
+/* 滚动条 Graphite 适配 */
+[data-theme="graphite"] ::-webkit-scrollbar-track { background: var(--bg-2); }
+[data-theme="graphite"] ::-webkit-scrollbar-thumb { background: var(--border-strong); }
+[data-theme="graphite"] ::-webkit-scrollbar-thumb:hover { background: var(--muted-2); }
+[data-theme="graphite"] .animate-float-slow,
+[data-theme="graphite"] .animate-float-slower {
+  opacity: 0.15;
+}
+[data-theme="graphite"] button:disabled {
+  opacity: 0.3;
+}
+
+/* Recharts Tooltip 文字覆盖 — Sandstone */
+[data-theme="sandstone"] .recharts-tooltip-wrapper .recharts-tooltip-item-value,
+[data-theme="sandstone"] .recharts-tooltip-wrapper .recharts-tooltip-item-name,
+[data-theme="sandstone"] .recharts-tooltip-wrapper .recharts-tooltip-label,
+[data-theme="sandstone"] .recharts-tooltip-wrapper .recharts-tooltip-item-separator {
+  color: var(--fg) !important;
+}
+
+[data-theme="sandstone"] .card,
+[data-theme="sandstone"] .modal-content { background-color: var(--card); }
+[data-theme="sandstone"] .card-header { border-color: var(--border); }
+[data-theme="sandstone"] .btn-secondary {
+  background-color: var(--panel);
+  border-color: var(--border);
+  color: var(--fg);
+}
+[data-theme="sandstone"] .btn-secondary:hover { background-color: var(--panel-2); }
+[data-theme="sandstone"] .input,
+[data-theme="sandstone"] .select {
+  background-color: var(--panel);
+  border-color: var(--border);
+  color: var(--fg);
+}
+[data-theme="sandstone"] .label { color: var(--fg-2); }
+[data-theme="sandstone"] .table th {
+  background-color: var(--bg-2);
+  color: var(--fg-2);
+  border-color: var(--border);
+}
+[data-theme="sandstone"] .table td { border-color: var(--border); }
+[data-theme="sandstone"] .badge-gray {
+  background-color: var(--panel-2);
+  color: var(--fg-2);
+}
+
+/* Sandstone 主题 — Tailwind slate 类全面覆盖 */
+[data-theme="sandstone"] .bg-white,
+[data-theme="sandstone"] .card { background-color: var(--card); }
+[data-theme="sandstone"] .bg-slate-50,
+[data-theme="sandstone"] .bg-slate-100 { background-color: var(--bg); }
+[data-theme="sandstone"] .bg-slate-200 { background-color: var(--panel-2); }
+[data-theme="sandstone"] .bg-slate-700 { background-color: var(--border-strong); }
+[data-theme="sandstone"] .bg-slate-800,
+[data-theme="sandstone"] .dark\:bg-slate-800 { background-color: var(--card); }
+[data-theme="sandstone"] .bg-slate-900 { background-color: var(--card); }
+[data-theme="sandstone"] .text-slate-200,
+[data-theme="sandstone"] .text-slate-300,
+[data-theme="sandstone"] .text-slate-400 { color: var(--muted); }
+[data-theme="sandstone"] .text-slate-500 { color: var(--muted-2); }
+[data-theme="sandstone"] .text-slate-600 { color: var(--fg-2); }
+[data-theme="sandstone"] .text-slate-700,
+[data-theme="sandstone"] .text-slate-800,
+[data-theme="sandstone"] .text-slate-900 { color: var(--fg); }
+[data-theme="sandstone"] .border-slate-100,
+[data-theme="sandstone"] .border-slate-200 { border-color: var(--border); }
+[data-theme="sandstone"] .border-slate-300,
+[data-theme="sandstone"] .border-slate-400 { border-color: var(--border-strong); }
+[data-theme="sandstone"] .border-slate-600,
+[data-theme="sandstone"] .border-slate-700 { border-color: var(--border-strong); }
+[data-theme="sandstone"] .divide-slate-100 > :not([hidden]) ~ :not([hidden]) { border-color: var(--border); }
+[data-theme="sandstone"] .active\:bg-slate-100:active { background-color: var(--panel-2); }
+[data-theme="sandstone"] .hover\:bg-white:hover,
+[data-theme="sandstone"] .hover\:bg-slate-50:hover,
+[data-theme="sandstone"] .hover\:bg-slate-100:hover { background-color: var(--card-hover); }
+[data-theme="sandstone"] .hover\:bg-slate-200:hover { background-color: var(--panel-2); }
+[data-theme="sandstone"] .hover\:text-slate-700:hover { color: var(--fg-2); }
+[data-theme="sandstone"] .hover\:text-red-600:hover { color: var(--danger); }
+[data-theme="sandstone"] .hover\:bg-red-50:hover { background-color: var(--danger-soft); }
+[data-theme="sandstone"] table tbody tr { background-color: transparent; transition: background-color 200ms ease; }
+[data-theme="sandstone"] table tbody tr:hover { background-color: var(--card-hover) !important; }
+
+[data-theme="sandstone"] .hover\:bg-amber-50:hover,
+[data-theme="sandstone"] .hover\:bg-blue-50:hover,
+[data-theme="sandstone"] .hover\:bg-green-50:hover,
+[data-theme="sandstone"] .hover\:bg-emerald-50:hover {
+  background-color: var(--accent-soft);
+}
+[data-theme="sandstone"] .hover\:bg-gray-50:hover,
+[data-theme="sandstone"] .hover\:bg-gray-100:hover {
+  background-color: var(--card-hover);
+}
+
+/* Sandstone 表单控件 */
+[data-theme="sandstone"] input:not([type="color"]):not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+[data-theme="sandstone"] textarea {
+  background-color: var(--panel);
+  color: var(--fg);
+  border-color: var(--border);
+}
+[data-theme="sandstone"] input::placeholder,
+[data-theme="sandstone"] textarea::placeholder {
+  color: var(--muted);
+}
+[data-theme="sandstone"] select {
+  background-color: var(--panel);
+  color: var(--fg);
+  border-color: var(--border);
+}
+[data-theme="sandstone"] select option {
+  background-color: var(--panel);
+  color: var(--fg);
+}
+
+[data-theme="sandstone"] .btn-warning { color: var(--bg); }
+
+/* Sandstone primary 色暖化 — 按钮/徽章/标签/焦点环全部走暖橙 */
+[data-theme="sandstone"] .bg-primary-50 { background-color: rgb(var(--color-primary-50)); }
+[data-theme="sandstone"] .bg-primary-100 { background-color: rgb(var(--color-primary-100)); }
+[data-theme="sandstone"] .bg-primary-500 { background-color: rgb(var(--color-primary-500)); }
+[data-theme="sandstone"] .bg-primary-600 { background-color: rgb(var(--color-primary-600)); }
+[data-theme="sandstone"] .hover\:bg-primary-500:hover { background-color: rgb(var(--color-primary-500)); }
+[data-theme="sandstone"] .hover\:bg-primary-700:hover { background-color: rgb(var(--color-primary-700)); }
+[data-theme="sandstone"] .text-primary-600 { color: rgb(var(--color-primary-600)); }
+[data-theme="sandstone"] .text-primary-700 { color: rgb(var(--color-primary-700)); }
+[data-theme="sandstone"] .border-primary-200 { border-color: rgb(var(--color-primary-200)); }
+[data-theme="sandstone"] .border-primary-300 { border-color: rgb(var(--color-primary-300)); }
+[data-theme="sandstone"] .border-primary-400 { border-color: rgb(var(--color-primary-400)); }
+[data-theme="sandstone"] .ring-primary-500 { --tw-ring-color: rgb(var(--color-primary-500)); }
+[data-theme="sandstone"] .focus\:ring-primary-500:focus { --tw-ring-color: rgb(var(--color-primary-500)); }
+[data-theme="sandstone"] .focus\:border-primary-500:focus { border-color: rgb(var(--color-primary-500)); }
+[data-theme="sandstone"] .shadow-primary-500\/25 { --tw-shadow-color: rgb(var(--color-primary-500) / 0.25); }
+
+/* Sandstone 侧边栏活跃项 */
+[data-theme="sandstone"] aside nav button.bg-slate-100 { background-color: var(--sidebar-item-active); }
+[data-theme="sandstone"] aside nav button.hover\:bg-slate-50:hover,
+[data-theme="sandstone"] aside nav button.hover\:bg-slate-100:hover { background-color: var(--sidebar-item-hover); }
+[data-theme="sandstone"] aside nav button.bg-slate-700\/50 { background-color: var(--sidebar-item-active); }
+[data-theme="sandstone"] aside nav .bg-slate-700 { background-color: var(--accent); }
+
+/* Sandstone 进度条轨道 / 骨架屏 / 徽章 */
+[data-theme="sandstone"] .bg-slate-200 { background-color: var(--panel-2); }
+[data-theme="sandstone"] .hover\:bg-slate-200:hover { background-color: var(--panel-2); }
+
+/* Sandstone 滚动条 */
+[data-theme="sandstone"] ::-webkit-scrollbar-track { background: var(--bg-2); }
+[data-theme="sandstone"] ::-webkit-scrollbar-thumb { background: var(--border-strong); }
+[data-theme="sandstone"] ::-webkit-scrollbar-thumb:hover { background: var(--muted-2); }
 
 * {
   margin: 0;

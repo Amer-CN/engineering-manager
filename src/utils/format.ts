@@ -3,11 +3,18 @@
  */
 
 /**
- * 格式化金额（添加千分位）
+ * 格式化金额（中文格式：千分位 + 去尾零）
+ * 例：1234500 → "1,234,500"，1234.50 → "1,234.5"，1234.56 → "1,234.56"
  */
 export function formatMoney(amount: number | null | undefined, decimals: number = 2): string {
-  if (amount === null || amount === undefined) return '0.00'
-  return amount.toFixed(decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  if (amount === null || amount === undefined) return '0'
+  const fixed = amount.toFixed(decimals)
+  // 去掉尾部多余的 0 和小数点
+  const trimmed = fixed.replace(/\.?0+$/, '')
+  // 添加千分位
+  const [int, dec] = trimmed.split('.')
+  const formatted = int.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  return dec ? `${formatted}.${dec}` : formatted
 }
 
 /**

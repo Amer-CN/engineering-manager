@@ -38,13 +38,13 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
 
   const loadData = async () => {
     try {
-      const [drawingsResult, projectsResult] = await Promise.all([
+      const [r0, r1] = await Promise.allSettled([
         window.electronAPI.getDrawings(),
         window.electronAPI.getProjects()
       ])
-
-      if (drawingsResult.success && drawingsResult.data) setDrawings([...drawingsResult.data])
-      if (projectsResult.success && projectsResult.data) setProjects([...projectsResult.data])
+      const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
+      setDrawings([...get(r0)])
+      setProjects([...get(r1)])
     } catch (error) {
       console.error('加载数据失败:', error)
     } finally {

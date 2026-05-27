@@ -26,12 +26,14 @@ const Templates: React.FC = () => {
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const [tResult, sResult] = await Promise.all([
+      const [tResult, sResult] = await Promise.allSettled([
         window.electronAPI.getTemplates(),
         window.electronAPI.getTemplateStats(),
       ])
-      if (tResult.success && tResult.data) setTemplates(tResult.data)
-      if (sResult.success && sResult.data) setStats(sResult.data)
+      const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
+      setTemplates(get(tResult))
+      const statsData = sResult.status === 'fulfilled' && sResult.value?.success ? sResult.value.data || {} : {}
+      setStats(statsData)
     } catch (error) {
       console.error('加载模板数据失败:', error)
     } finally {

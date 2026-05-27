@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Concept C: 等距立方体 — 工程感 + 立体感 -->
+  <defs>
+    <linearGradient id="grad-c1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#E8701A"/>
+    </linearGradient>
+    <linearGradient id="grad-c2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#D97706"/>
+      <stop offset="100%" stop-color="#B45309"/>
+    </linearGradient>
+  </defs>
+  <!-- 顶面 -->
+  <polygon points="100,30 160,60 100,90 40,60" fill="url(#grad-c1)"/>
+  <!-- 左面 -->
+  <polygon points="40,60 100,90 100,150 40,120" fill="#1E293B"/>
+  <!-- 右面 -->
+  <polygon points="160,60 100,90 100,150 160,120" fill="url(#grad-c2)" opacity="0.85"/>
+  <!-- 表面网格线（蓝图感） -->
+  <line x1="70" y1="45" x2="70" y2="75" stroke="#fff" stroke-width="0.8" opacity="0.3"/>
+  <line x1="100" y1="60" x2="100" y2="90" stroke="#fff" stroke-width="0.8" opacity="0.3"/>
+  <line x1="130" y1="45" x2="130" y2="75" stroke="#fff" stroke-width="0.8" opacity="0.3"/>
+  <line x1="70" y1="60" x2="130" y2="60" stroke="#fff" stroke-width="0.8" opacity="0.3"/>
+  <line x1="85" y1="45" x2="85" y2="75" stroke="#fff" stroke-width="0.5" opacity="0.2"/>
+  <line x1="115" y1="45" x2="115" y2="75" stroke="#fff" stroke-width="0.5" opacity="0.2"/>
+</svg>

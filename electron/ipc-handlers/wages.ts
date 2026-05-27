@@ -11,7 +11,7 @@ import { db, dbReady, saveDatabase } from '../database'
 import { generateProjectWages, parseBankReceipt } from './wage-calc'
 import { useSqliteRead, useSqliteWrite, shouldFallbackToJson } from '../sqlite'
 import { wageQueries } from '../sqlite/queries'
-import { enrichWage, deduWages } from './wage-utils'
+import { enrichWage, dedupWages } from './wage-utils'
 
 // ══════════════════════════════════════
 // generateForProject（JSON-only，复杂计算）

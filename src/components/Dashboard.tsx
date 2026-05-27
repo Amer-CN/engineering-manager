@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, useMotionValue, useSpring } from 'framer-motion'
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
 } from 'recharts'
 import { DashboardStats, Invoice } from '../types/electron'
@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { Icon } from './ui/Icon'
 import { formatMoney } from '@/utils/format'
 import { Card } from '@/components/ui/Card'
+import { SimpleBarChart } from '@/components/ui/SimpleBarChart'
 const CHART_COLORS = ['#3b82f6', '#10b981', '#f97316', '#8b5cf6', '#06b6d4', '#f59e0b']
 
 const statCards = [
@@ -20,7 +21,7 @@ const statCards = [
   { key: 'inventory', label: '库存物料', icon: 'Package', color: 'bg-orange-50 text-orange-600' },
 ]
 
-const sectionV = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4 } } }
+const sectionV = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { duration: 0.3, ease: 'easeOut' } } }
 const cardHover = { y: -4, boxShadow: '0 12px 30px rgba(0,0,0,0.1)', transition: { duration: 0.2 } }
 
 function formatCurrency(n: number): string {
@@ -47,23 +48,6 @@ const CountUp: React.FC<{ value: number; duration?: number; suffix?: string; pre
   }, [springVal, prefix, suffix, decimals])
 
   return <span>{display}</span>
-}
-
-// SVG 自定义刻度：分类名超过 4 个字自动拆成两行，避免 recharts 隐藏重叠标签
-const CategoryTick = (props: any) => {
-  const { x, y, payload } = props
-  const text: string = payload?.value ?? ''
-  if (!text) return null
-  if (text.length <= 4) {
-    return <text x={x} y={y} dy={6} textAnchor="middle" fill="#94a3b8" fontSize={11}>{text}</text>
-  }
-  const mid = Math.ceil(text.length / 2)
-  return (
-    <text x={x} y={y} textAnchor="middle" fill="#94a3b8" fontSize={11}>
-      <tspan x={x} dy={6}>{text.slice(0, mid)}</tspan>
-      <tspan x={x} dy={13}>{text.slice(mid)}</tspan>
-    </text>
-  )
 }
 
 interface StatValue { primary: string; secondary: string; progress?: number; raw?: number }
@@ -190,7 +174,7 @@ const Dashboard: React.FC = () => {
 
         {/* ═══ Hero Banner ═══ */}
         <motion.section variants={sectionV} className="relative overflow-hidden rounded-2xl mb-6 bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 text-white p-6">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.1),transparent_50%)]" />
+          <div className="hero-overlay absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.1),transparent_50%)]" />
           {/* 装饰光点 */}
           <motion.div className="absolute top-3 right-12 w-1 h-1 rounded-full bg-emerald-400"
             animate={{ opacity: [0, 1, 0], scale: [0.5, 2, 0.5] }}
@@ -267,23 +251,10 @@ const Dashboard: React.FC = () => {
 
         {/* ═══ Charts Row ═══ */}
         <motion.section variants={sectionV} className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
-          {/* BarChart */}
+          {/* BarChart — 原生 SVG，无 Recharts hover 干扰 */}
           <Card title={<span className="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2"><Icon name="BarChart3" size={14} /> 支出分类</span>} headerDivider className="hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] transition-shadow">
               {chartData.expenseByCategory.length > 0 ? (
-                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3, duration: 0.4 }}
-                  className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData.expenseByCategory} margin={{ top: 4, right: 4, left: -16, bottom: 32 }} barSize={28}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                      <XAxis dataKey="name" tick={CategoryTick} interval={0} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => v >= 10000 ? `${(v / 10000).toFixed(0)}万` : String(v)} />
-                      <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} formatter={((value: any) => [formatCurrency(value ?? 0), '金额']) as any} />
-                      <Bar dataKey="amount" radius={[5, 5, 0, 0]} animationDuration={1200} animationEasing="ease-out">
-                        {chartData.expenseByCategory.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </motion.div>
+                <SimpleBarChart data={chartData.expenseByCategory} colors={CHART_COLORS} formatValue={formatCurrency} />
               ) : (
                 <div className="flex flex-col items-center justify-center py-12 text-slate-400">
                   <Icon name="Wallet" size={32} className="mb-2 opacity-40" /><p className="text-sm">暂无支出数据</p>
@@ -303,7 +274,7 @@ const Dashboard: React.FC = () => {
                           animationDuration={1200} animationEasing="ease-out">
                           {chartData.invoiceStatus.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                         </Pie>
-                        <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} formatter={((value: any, name: any) => [value, invoiceStatusLabels[name ?? '']?.text || name]) as any} />
+                        <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, boxShadow: 'var(--shadow-md)', color: 'var(--fg)' }} formatter={((value: any, name: any) => [value, invoiceStatusLabels[name ?? '']?.text || name]) as any} />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
@@ -339,14 +310,16 @@ const Dashboard: React.FC = () => {
                       initial={{ opacity: 0, x: -12 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.2 + index * 0.06 }}
-                      whileHover={{ x: 4, backgroundColor: 'rgb(248 250 252)' }}
+                      whileHover={{ x: 4, backgroundColor: 'var(--card-hover)' }}
                       className="flex items-center justify-between p-3 rounded-xl transition-colors group cursor-pointer"
                       onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: 'projects' }))}
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 flex-shrink-0">{index + 1}</div>
+                        <div className="w-8 h-8 rounded-lg" style={{ background: 'var(--panel-2)' }}>
+                          <span className="flex items-center justify-center w-full h-full text-xs font-bold" style={{ color: 'var(--muted)' }}>{index + 1}</span>
+                        </div>
                         <div className="min-w-0">
-                          <p className="font-medium text-slate-800 text-sm truncate group-hover:text-primary-600 transition-colors">{project.name}</p>
+                          <p className="font-medium text-sm truncate group-hover:text-primary-600 transition-colors" style={{ color: 'var(--fg)' }}>{project.name}</p>
                           <p className="text-xs text-slate-400 truncate mt-0.5">{project.address || '暂无地址'}</p>
                         </div>
                       </div>
@@ -376,8 +349,9 @@ const Dashboard: React.FC = () => {
                       initial={{ opacity: 0, x: -12 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.2 + index * 0.06 }}
-                      whileHover={{ x: 4, backgroundColor: 'rgb(248 250 252)' }}
-                      className="p-3 rounded-xl bg-slate-50 transition-colors"
+                      whileHover={{ x: 4, backgroundColor: 'var(--card-hover)' }}
+                      className="p-3 rounded-xl transition-colors"
+                      style={{ background: 'var(--bg)' }}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <p className="font-medium text-slate-800 text-sm truncate">{inv.invoiceNo || '无号'}</p>

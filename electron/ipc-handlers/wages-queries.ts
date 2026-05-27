@@ -8,7 +8,7 @@ import { db, dbReady, saveDatabase } from '../database'
 import { generateProjectWages, parseBankReceipt } from './wage-calc'
 import { useSqliteRead, useSqliteWrite, shouldFallbackToJson } from '../sqlite'
 import { wageQueries } from '../sqlite/queries'
-import { enrichWage, deduWages, computeWageStats } from './wage-utils'
+import { enrichWage, dedupWages, computeWageStats } from './wage-utils'
 
 // ════════════════════════════════════════════════════
 // 1. 获取工资列表（SQLite 优先读取 + JSON 回退）
@@ -22,7 +22,7 @@ ipcMain.handle('db:wages:getAll', (_, projectId?: number, yearMonth?: string, me
     try {
       const sqliteRecords = wageQueries.listWages({ projectId, yearMonth, memberId })
       if (sqliteRecords.length > 0 || (projectId || yearMonth || memberId)) {
-        const deduped = deduWages(sqliteRecords)
+        const deduped = dedupWages(sqliteRecords)
         const enriched = deduped.map((w: any) => enrichWage(w, db))
         return {
           success: true,
@@ -44,7 +44,7 @@ ipcMain.handle('db:wages:getAll', (_, projectId?: number, yearMonth?: string, me
   if (yearMonth) records = records.filter((w: any) => w.yearMonth === yearMonth)
   if (memberId) records = records.filter((w: any) => w.memberId === memberId)
 
-  const deduped = deduWages(records)
+  const deduped = dedupWages(records)
   const result = deduped.map((w: any) => enrichWage(w, db))
   return {
     success: true,

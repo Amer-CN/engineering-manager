@@ -1,5 +1,54 @@
 # 工程管家 - 更新日志
 
+## v0.58.0（2026-05-28）— 三主题系统全面覆盖 + 登录页重设计
+
+### 🎨 三主题 CSS 全面覆盖
+- White / Graphite / Sandstone 三个主题的 Tailwind 类覆盖完全一致
+- `bg-slate-50~900`、`text-slate-200~900`、`border-slate-100~700`、`hover/active/divide` 全系列覆盖
+- 彩色背景（`bg-blue-100` 等）在 Graphite 下改为深色版本，图标文字强制浅色
+- 表单控件（input/select/textarea）全局覆盖 + `color-scheme: dark`
+- Recharts Tooltip 文字三主题适配
+- `bg-primary-*` 三主题覆盖（White 保持蓝、Graphite 走 accent、Sandstone 走暖橙）
+
+### 🔐 登录页重设计
+- 窗口 300×400 frameless，登录时固定大小，登录后放大到 1400×900
+- 居中紧凑布局：Logo + 用户名 + 密码 + 记住密码 + 自动登录 + 登录按钮
+- 记住密码：base64 编码存 localStorage
+- 自动登录：启动时自动登录，退出登录时自动清除标志
+- 去掉登录时强制改密码逻辑
+- 右上角最小化 + 关闭按钮
+
+### 📊 柱状图重写
+- Recharts BarChart 替换为 `SimpleBarChart`（纯 CSS div 实现，无 hover 背景问题）
+- 新增 `SimpleGroupedBarChart`（双柱变体，用于成本台账月度趋势）
+- 共享组件：`src/components/ui/SimpleBarChart.tsx`
+- 柱子入场动画（从 0 生长到目标高度，每根间隔 60ms）
+
+### 🏠 Logo 全局替换
+- 标题栏/登录页/关于页统一使用三角形渐变 mark（accent → violet）
+- `app-icon.ico` + `app-icon.png` 重新生成
+- Electron 窗口 + exe 文件 + favicon 全部指向新图标
+
+### 🔧 主题系统重构
+- `useTheme` 改为全局单例（`useSyncExternalStore`），解决多组件主题不同步
+- 模块加载时同步设置 `data-theme`（早于 React 渲染，无闪烁）
+- 修复 White 主题点设置跳到 Sandstone 的 bug
+
+### ✨ 动画优化
+- Tab 切换：去掉双层 AnimatePresence，改为单层 `mode="wait"`
+- 页面区块：`sectionV` 去掉 `y: 20` 弹跳，改为纯 opacity 淡入
+- DropdownMenu：framer-motion 改为 CSS `@keyframes`（修复 React 19 ref 警告）
+- 页面切换：`AnimatePresence mode="sync"` → `mode="wait"`
+- framer-motion 升级 12.38.0 → 12.40.0
+
+### 🛠️ 其他修复
+- OCR 配置区域：`blue-*` 硬编码类改为 CSS 变量
+- 侧边栏活跃项：用 `--sidebar-item-active` 变量替代 `bg-slate-100`
+- Hero banner：Graphite 渐变色修正、Sandstone 暖色适配、装饰层按主题控制
+- `text-slate-900` 补入三主题覆盖
+
+---
+
 ## v0.57.0（2026-05-27）— 代码质量全面治理
 
 ### ♻️ @ts-ignore 全面清除

@@ -1,5 +1,5 @@
 import React from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { Icon } from './ui/Icon'
 import { DropdownMenu } from './ui/DropdownMenu'
 import { type PageId } from '../routes'
@@ -44,54 +44,10 @@ const Sidebar: React.FC<SidebarProps> = ({
       initial={false}
       animate={{ width: sidebarW }}
       transition={{ duration: 0.2, ease: 'easeInOut' }}
-      className="bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 flex flex-col relative z-20 overflow-hidden shrink-0"
+      className="flex flex-col relative z-20 overflow-hidden shrink-0"
+      style={{ background: 'var(--panel)', borderRight: '1px solid var(--border)' } as React.CSSProperties}
     >
-      {/* ── Logo 区域 ── */}
-      <AnimatePresence mode="wait">
-        {collapsed ? (
-          <motion.div
-            key="logo-collapsed"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="h-12 flex items-center justify-center border-b border-slate-100 dark:border-slate-700/50 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800"
-          >
-            <motion.div
-              whileHover={{ rotate: 8, scale: 1.1 }}
-              transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-              className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center"
-            >
-              <Icon name="HardHat" size={16} className="text-white" />
-            </motion.div>
-            {/* 折叠/展开按钮已移到 TitleBar */}
-          </motion.div>
-        ) : (
-          <motion.div
-            key="logo-expanded"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="h-16 flex items-center px-5 border-b border-slate-100 dark:border-slate-700/50 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 overflow-hidden relative"
-          >
-            <motion.div
-              whileHover={{ rotate: 8, scale: 1.08 }}
-              transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-              className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center mr-3 relative z-10"
-            >
-              <Icon name="HardHat" size={20} className="text-white" />
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="relative z-10 flex-1"
-            >
-              <h1 className="text-base font-bold text-white leading-tight">工程管家</h1>
-              <p className="text-[10px] text-white/60 leading-tight">v{(window as any).__APP_VERSION__ || '0.57.0'}</p>
-            </motion.div>
-            {/* 折叠/展开按钮已移到 TitleBar */}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* ── Logo 区域已合并到 TitleBar ── */}
 
       {/* ── 导航区域 ── */}
       <nav className="flex-1 py-3 overflow-y-auto">

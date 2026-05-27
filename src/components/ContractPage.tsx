@@ -51,22 +51,24 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
   }, [autoCreate])
 
   const loadData = async () => {
-    try {
-      const [contractsResult, projectsResult, partnersResult, paymentResult] = await Promise.all([
-        api.getContracts(),
-        window.electronAPI.getProjects(),
-        window.electronAPI.getPartners(),
-        window.electronAPI.getWagePaymentRecords(),
-      ])
-      if (contractsResult.success && contractsResult.data) setContracts(contractsResult.data)
-      if (projectsResult.success && projectsResult.data) setProjects(projectsResult.data)
-      if (partnersResult.success && partnersResult.data) setPartners(partnersResult.data)
-      if (paymentResult.success && paymentResult.data) setPaymentRecords(paymentResult.data)
-    } catch (error) {
-      console.error('加载数据失败:', error)
-    } finally {
-      setLoading(false)
+    const results = await Promise.allSettled([
+      api.getContracts(),                          // 0
+      window.electronAPI.getProjects(),             // 1
+      window.electronAPI.getPartners(),             // 2
+      window.electronAPI.getWagePaymentRecords(),   // 3
+    ])
+    const res = (i: number) => {
+      const r = results[i]
+      if (r.status === 'rejected') { console.error(`[ContractPage] API #${i} rejected:`, r.reason); return null }
+      const val = r.value as any
+      if (!val?.success) { console.warn(`[ContractPage] API #${i} failed:`, val?.error); return null }
+      return val.data || []
     }
+    setContracts(res(0) || [])
+    setProjects(res(1) || [])
+    setPartners(res(2) || [])
+    setPaymentRecords(res(3) || [])
+    setLoading(false)
   }
 
   const handleEdit = (contract: Contract) => { setEditingContract(contract); setShowModal(true) }

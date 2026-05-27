@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Concept H: 六边形科技盾牌 + ¥ — 安全 + 金融 + 科技 -->
+  <defs>
+    <linearGradient id="grad-h" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#E8701A"/>
+    </linearGradient>
+  </defs>
+  <!-- 外六边形 -->
+  <polygon points="100,24 162,56 162,120 100,152 38,120 38,56" fill="none" stroke="#E8701A" stroke-width="2" opacity="0.3"/>
+  <!-- 中六边形 -->
+  <polygon points="100,40 148,64 148,112 100,136 52,112 52,64" fill="#1E293B" stroke="url(#grad-h)" stroke-width="2"/>
+  <!-- 内六边形装饰 -->
+  <polygon points="100,56 130,72 130,104 100,120 70,104 70,72" fill="url(#grad-h)" opacity="0.12"/>
+  <!-- 角落装饰节点 -->
+  <circle cx="100" cy="24" r="4" fill="#E8701A" opacity="0.6"/>
+  <circle cx="162" cy="56" r="4" fill="#E8701A" opacity="0.6"/>
+  <circle cx="162" cy="120" r="4" fill="#E8701A" opacity="0.6"/>
+  <circle cx="100" cy="152" r="4" fill="#E8701A" opacity="0.6"/>
+  <circle cx="38" cy="120" r="4" fill="#E8701A" opacity="0.6"/>
+  <circle cx="38" cy="56" r="4" fill="#E8701A" opacity="0.6"/>
+  <!-- ¥ -->
+  <text x="100" y="105" text-anchor="middle" font-family="Inter, sans-serif" font-size="34" font-weight="700" fill="url(#grad-h)">¥</text>
+</svg>

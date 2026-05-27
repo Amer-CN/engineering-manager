@@ -1,6 +1,6 @@
 # CLAUDE.md - 工程管家项目约定
-> 项目状态：成本台账大改（凭证号string+AI分类学习+版本功能增强+缩放）（v2.9.0）
-> 最后同步：2026-05-18（成本台账全面升级）
+> 项目状态：三主题系统全面覆盖 + 登录页重设计 + 柱状图重写 + logo 替换（v2.9.0）
+> 最后同步：2026-05-28（主题覆盖+登录页+柱状图+hero banner）
 
 ## 🗣️ 输出语言
 - **默认中文输出**：所有解释、描述、分析、提问、总结等文字内容使用中文
@@ -19,7 +19,8 @@
 - **JSON 文件存储** - 本地数据持久化（`db.*` 集合），无需数据库
 - **Tesseract.js** - 离线 OCR 识别
 - **lucide-react** - SVG 图标库（`iconMap.ts` 注册，`<Icon name="X" />` 统一入口）
-- **recharts** - 数据可视化（BarChart/PieChart/RadialBarChart）
+- **recharts** - 数据可视化（PieChart/RadialBarChart）
+- **SimpleBarChart** - 柱状图组件（纯 CSS div 实现，`ui/SimpleBarChart.tsx`，含 SimpleGroupedBarChart 双柱变体）
 - **framer-motion** - 全站动画引擎
 
 ## 📁 核心模块架构
@@ -200,7 +201,7 @@ uploads/
 ### 设计 Token
 - **图标**：lucide-react `<Icon name="IconName" />`，`iconMap.ts` 注册
 - **中性色**：slate 色系；语义色：primary(蓝)/success(绿)/warning(琥)/danger(红)/info(天蓝)
-- **暗黑模式**：Settings→外观主题切换 Tailwind `darkMode: 'class'`
+- **三主题系统**：White（白+蓝）/ Graphite（深灰+橙）/ Sandstone（暖灰+琥珀），`data-theme` 属性驱动，`useTheme()` 全局单例（useSyncExternalStore），CSS 变量覆盖 Tailwind 类名
 - **CSS Token**：`src/index.css` 中 `:root` / `.dark` 定义
 
 ### 组件库（`src/components/ui/`）
@@ -209,14 +210,14 @@ Button(variants/sizes/iconOnly) / Input(status+leftSection/rightSection) / Modal
 ### 动画系统（framer-motion）
 - **原则**：spring 物理优先（stiffness≤200）、大元素禁 scale、装饰动画走 CSS @keyframes（合成器线程）、GPU 加速
 - **Sidebar**：入场 slide-in + layoutId 激活态弹簧滑动(spring 500/30) + nav stagger(0.03s) + whileHover 右移4px
-- **Login**：品牌区 stagger + 浮动光斑 CSS @keyframes + 表单卡片 fade-up + 错误 shake
+- **Login**：无动画，纯 CSS 布局
 - **Dashboard**：CountUp(useMotionValue+useSpring stiffness:100) + KPI stagger+whileHover + recharts animationDuration=1200；KPI 卡片 6 列（项目/待办结算/成员/支出/发票/库存）；发票状态饼图 + 最近发票列表
 - **页面切换**：AnimatePresence mode="wait"、opacity 纯透明度（无 scale 防重绘）、duration 0.2s
-- **全局交互**：Button whileHover(1.03)+whileTap(0.97) / Card y:-3+boxShadow / Badge dot 呼吸脉冲 / DropdownMenu scale 0.95→1 / Toast spring 入场
+- **全局交互**：Button whileHover(1.03)+whileTap(0.97) / Card y:-3+boxShadow / Badge dot 呼吸脉冲 / DropdownMenu CSS @keyframes 入场 / Toast spring 入场
 
 ### 页面布局
 - **侧边栏**：固定 w-64、深色渐变Logo区、圆角药丸导航+左侧激活指示条；底部头像弹出菜单（DropdownMenu，类 Windows 开始菜单），收纳用户管理/系统设置/锁定屏幕/退出登录
-- **登录页**：双列布局（左侧品牌区+右侧表单卡片）
+- **登录页**：紧凑单列布局（300×400 frameless 窗口），记住密码+自动登录，登录后窗口放大到 1400×900
 - **内容页**：统一 `PageContainer`，仪表板1600px/其他1400px/设置双列网格
 - **图纸管理**：支持 JPG/PNG/PDF/DWG/DXF 格式
 - **CARD 常量**：`bg-white border border-slate-200 rounded-xl shadow-sm` + `hover:shadow-md transition-all duration-200`
@@ -385,6 +386,7 @@ Button(variants/sizes/iconOnly) / Input(status+leftSection/rightSection) / Modal
 | 表单 onChange 逐字段展开 `...prev` | 通用 `useForm` hook 批量处理 |
 | `catch (error: any)` 然后 `showToast(error?.message)` | `handleError(err).getUserMessage()` |
 | 页面组件在 App.tsx 顶层 `import` | `React.lazy(() => import('./components/XPage'))` |
+| `Promise.all([api1(), api2(), ...])` 多 API 并行 | `Promise.allSettled` + 逐个检查，一个失败不影响其他 |
 
 ## 🕸️ Graphify 知识图谱
 

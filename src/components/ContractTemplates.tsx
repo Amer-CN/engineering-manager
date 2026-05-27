@@ -39,10 +39,7 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
 
   const loadData = async () => {
     try {
-      const [templatesResult] = await Promise.all([
-        window.electronAPI.getContractTemplates()
-      ])
-      
+      const templatesResult = await window.electronAPI.getContractTemplates()
       if (templatesResult.success && templatesResult.data) setTemplates(templatesResult.data)
     } catch (error) {
       console.error('加载数据失败:', error)

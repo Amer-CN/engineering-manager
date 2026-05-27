@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { Icon } from './ui/Icon'
 import { Tabs } from './ui/Tabs'
 import { Partner, Supervisor, Project } from '../types/electron'
@@ -41,25 +41,28 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
 
   const loadData = async () => {
     try {
-      const [partnersResult, supervisorsResult, projectsResult] = await Promise.all([
+      const [r0, r1, r2] = await Promise.allSettled([
         window.electronAPI.getPartners(),
         window.electronAPI.getSupervisors(),
         window.electronAPI.getProjects()
       ])
-      
-      if (partnersResult.success && partnersResult.data) setPartners(partnersResult.data)
-      if (supervisorsResult.success && supervisorsResult.data) {
+      const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
+      const partnersData = get(r0)
+      const supervisorsData = get(r1)
+      const projectsData = get(r2)
+      setPartners(partnersData)
+      if (supervisorsData.length > 0) {
         // 关联项目名称
-        const supervisorsWithProjects = supervisorsResult.data.map((sup: Supervisor) => {
+        const supervisorsWithProjects = supervisorsData.map((sup: Supervisor) => {
           const projectNames = sup.projectIds?.map((pid: number) => {
-            const project = projectsResult.data?.find((p: Project) => p.id === pid)
+            const project = projectsData.find((p: Project) => p.id === pid)
             return project?.name || ''
           }).filter(Boolean).join(', ') || ''
           return { ...sup, projectNames }
         })
         setSupervisors(supervisorsWithProjects)
       }
-      if (projectsResult.success && projectsResult.data) setProjects(projectsResult.data)
+      setProjects(projectsData)
     } catch (error) {
       console.error('加载数据失败:', error)
     } finally {
@@ -283,99 +286,78 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
         ]}
         animated={true}
       >
-        <AnimatePresence mode="sync">
-          {/* ==================== 合作单位内容 ==================== */}
-          {activeTab === 'partner' && (
-            <motion.div
-              key="partner"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.1 }}
-            >
-              <PartnerList
-                partners={partners}
-                projects={projects}
-                search={partnerSearch}
-                filterCategory={partnerFilterCategory}
-                filterProject={partnerFilterProject}
-                onSearchChange={setPartnerSearch}
-                onCategoryChange={setPartnerFilterCategory}
-                onProjectChange={setPartnerFilterProject}
-                onEdit={handlePartnerEdit}
-                onDelete={handlePartnerDelete}
-              />
-
-              {/* 合作单位模态框 */}
-              {showPartnerModal && (
-                <motion.div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
-                  <div className="modal-content max-h-[90vh] overflow-y-auto">
-                    <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-white">
-                      <h2 className="text-xl font-semibold text-slate-800">
-                        {editingPartner ? '编辑单位' : '添加单位'}
-                      </h2>
-                    </div>
-                    <PartnerForm
-                      partner={editingPartner}
-                      projects={projects}
-                      onSubmit={handlePartnerSubmit}
-                      onCancel={() => {
-                        setShowPartnerModal(false)
-                        setEditingPartner(null)
-                      }}
-                    />
+        {activeTab === 'partner' && (
+          <>
+            <PartnerList
+              partners={partners}
+              projects={projects}
+              search={partnerSearch}
+              filterCategory={partnerFilterCategory}
+              filterProject={partnerFilterProject}
+              onSearchChange={setPartnerSearch}
+              onCategoryChange={setPartnerFilterCategory}
+              onProjectChange={setPartnerFilterProject}
+              onEdit={handlePartnerEdit}
+              onDelete={handlePartnerDelete}
+            />
+            {showPartnerModal && (
+              <motion.div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+                <div className="modal-content max-h-[90vh] overflow-y-auto">
+                  <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-white">
+                    <h2 className="text-xl font-semibold text-slate-800">
+                      {editingPartner ? '编辑单位' : '添加单位'}
+                    </h2>
                   </div>
-                </motion.div>
-              )}
-            </motion.div>
-          )}
-
-          {/* ==================== 监管单位内容 ==================== */}
-          {activeTab === 'supervisor' && (
-            <motion.div
-              key="supervisor"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.1 }}
-            >
-              <SupervisorList
-                supervisors={supervisors}
-                projects={projects}
-                search={supervisorSearch}
-                filterCategory={supervisorFilterCategory}
-                onSearchChange={setSupervisorSearch}
-                onCategoryChange={setSupervisorFilterCategory}
-                onEdit={handleSupervisorEdit}
-                onDelete={handleSupervisorDelete}
-              />
-
-              {/* 监管单位模态框 */}
-              {showSupervisorModal && (
-                <motion.div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
-                  <div className="modal-content max-h-[90vh] overflow-y-auto">
-                    <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-white">
-                      <h2 className="text-xl font-semibold text-slate-800">
-                        {editingSupervisor ? '编辑单位' : '添加单位'}
-                      </h2>
-                    </div>
-                    <SupervisorForm
-                      supervisor={editingSupervisor}
-                      projects={projects}
-                      onSubmit={handleSupervisorSubmit}
-                      onCancel={() => {
-                        setShowSupervisorModal(false)
-                        setEditingSupervisor(null)
-                      }}
-                    />
+                  <PartnerForm
+                    partner={editingPartner}
+                    projects={projects}
+                    onSubmit={handlePartnerSubmit}
+                    onCancel={() => {
+                      setShowPartnerModal(false)
+                      setEditingPartner(null)
+                    }}
+                  />
+                </div>
+              </motion.div>
+            )}
+          </>
+        )}
+        {activeTab === 'supervisor' && (
+          <>
+            <SupervisorList
+              supervisors={supervisors}
+              projects={projects}
+              search={supervisorSearch}
+              filterCategory={supervisorFilterCategory}
+              onSearchChange={setSupervisorSearch}
+              onCategoryChange={setSupervisorFilterCategory}
+              onEdit={handleSupervisorEdit}
+              onDelete={handleSupervisorDelete}
+            />
+            {showSupervisorModal && (
+              <motion.div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+                <div className="modal-content max-h-[90vh] overflow-y-auto">
+                  <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-white">
+                    <h2 className="text-xl font-semibold text-slate-800">
+                      {editingSupervisor ? '编辑单位' : '添加单位'}
+                    </h2>
                   </div>
-                </motion.div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
+                  <SupervisorForm
+                    supervisor={editingSupervisor}
+                    projects={projects}
+                    onSubmit={handleSupervisorSubmit}
+                    onCancel={() => {
+                      setShowSupervisorModal(false)
+                      setEditingSupervisor(null)
+                    }}
+                  />
+                </div>
+              </motion.div>
+            )}
+          </>
+        )}
       </Tabs>
-          </motion.div>
+      </motion.div>
     </PageContainer>
   )
 }
