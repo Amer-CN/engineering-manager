@@ -4,6 +4,8 @@ import { CostLedgerProjectDetail } from './features/costLedger/CostLedgerProject
 import { CategoryManager } from './features/costLedger/CategoryManager'
 import { useCostLedgerCategories } from '@/hooks/useCostLedgerCategories'
 import type { Project, CostLedgerSummary } from '@/types'
+import PageContainer from './ui/PageContainer'
+import { getAPI } from '@/services/api-adapter'
 
 type ViewMode = 'dashboard' | 'detail'
 
@@ -17,9 +19,8 @@ export default function CostLedger() {
 
   const { categories, refresh: refreshCategories } = useCostLedgerCategories()
 
-  const api = window.electronAPI
-
   const loadDashboard = useCallback(async () => {
+    const api = await getAPI()
     if (!api?.getProjects) return
     setLoading(true)
     const projRes = await api.getProjects()
@@ -74,7 +75,7 @@ export default function CostLedger() {
   }
 
   return (
-    <div className="mx-auto max-w-[1400px] p-6">
+    <PageContainer>
       <CostLedgerDashboard
         projects={projects}
         summaries={summaries}
@@ -90,6 +91,6 @@ export default function CostLedger() {
           onRefresh={refreshCategories}
         />
       )}
-    </div>
+    </PageContainer>
   )
 }

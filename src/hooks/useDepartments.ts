@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { Department } from '../types/electron'
+import { getAPI } from '@/services/api-adapter'
 
 export function useDepartments() {
   const [departments, setDepartments] = useState<Department[]>([])
@@ -7,7 +8,7 @@ export function useDepartments() {
 
   const load = useCallback(async () => {
     try {
-      const result = await window.electronAPI.getDepartments()
+      const result = await (await getAPI()).getDepartments()
       if (result.success && result.data) setDepartments(result.data)
     } catch (e) {
       console.error('Failed to load departments:', e)
@@ -19,19 +20,19 @@ export function useDepartments() {
   useEffect(() => { load() }, [load])
 
   const create = async (data: { name: string; managerId?: number; positions?: string[] }) => {
-    const result = await window.electronAPI.createDepartment(data)
+    const result = await (await getAPI()).createDepartment(data)
     if (result.success) await load()
     return result
   }
 
   const update = async (data: { id: number; name?: string; managerId?: number | null; positions?: string[] }) => {
-    const result = await window.electronAPI.updateDepartment(data)
+    const result = await (await getAPI()).updateDepartment(data)
     if (result.success) await load()
     return result
   }
 
   const remove = async (id: number) => {
-    const result = await window.electronAPI.deleteDepartment(id)
+    const result = await (await getAPI()).deleteDepartment(id)
     if (result.success) await load()
     return result
   }

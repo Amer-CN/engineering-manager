@@ -220,14 +220,14 @@ export const AttendanceImportModal: React.FC<Props> = ({ show, projectId, yearMo
                 {state.sheetNames.length > 1 && (
                   <div className="flex items-center gap-2">
                     <label className="text-sm font-medium text-slate-700">工作表：</label>
-                    <select value={state.activeSheet} onChange={e => switchSheet(e.target.value)} className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
+                    <select value={state.activeSheet} onChange={e => switchSheet(e.target.value)} className="select text-sm">
                       {state.sheetNames.map(n => <option key={n} value={n}>{n}</option>)}
                     </select>
                   </div>
                 )}
                 <div className="flex items-center gap-2">
                   <label className="text-sm font-medium text-slate-700">表头行：</label>
-                  <select value={state.headerRow} onChange={e => changeHeaderRow(parseInt(e.target.value))} className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
+                  <select value={state.headerRow} onChange={e => changeHeaderRow(parseInt(e.target.value))} className="select text-sm">
                     {Array.from({ length: 8 }, (_, i) => <option key={i} value={i}>第 {i + 1} 行</option>)}
                   </select>
                   <span className="text-xs text-slate-400">（表头前面的行会被跳过）</span>
@@ -241,21 +241,21 @@ export const AttendanceImportModal: React.FC<Props> = ({ show, projectId, yearMo
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <label className="text-xs text-slate-500 block mb-1">姓名列 *</label>
-                      <select value={state.nameCol} onChange={e => setState(p => ({ ...p, nameCol: parseInt(e.target.value) }))} className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
+                      <select value={state.nameCol} onChange={e => setState(p => ({ ...p, nameCol: parseInt(e.target.value) }))} className="select text-sm">
                         <option value={-1}>不导入</option>
                         {state.headers.map((h, i) => <option key={i} value={i}>{h || `列${i + 1}`}</option>)}
                       </select>
                     </div>
                     <div>
                       <label className="text-xs text-slate-500 block mb-1">出勤天数列 *</label>
-                      <select value={state.workDaysCol} onChange={e => setState(p => ({ ...p, workDaysCol: parseInt(e.target.value) }))} className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
+                      <select value={state.workDaysCol} onChange={e => setState(p => ({ ...p, workDaysCol: parseInt(e.target.value) }))} className="select text-sm">
                         <option value={-1}>不导入</option>
                         {state.headers.map((h, i) => <option key={i} value={i}>{h || `列${i + 1}`}</option>)}
                       </select>
                     </div>
                     <div>
                       <label className="text-xs text-slate-500 block mb-1">身份证号列</label>
-                      <select value={state.idCardCol} onChange={e => setState(p => ({ ...p, idCardCol: parseInt(e.target.value) }))} className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
+                      <select value={state.idCardCol} onChange={e => setState(p => ({ ...p, idCardCol: parseInt(e.target.value) }))} className="select text-sm">
                         <option value={-1}>不导入（只用姓名匹配）</option>
                         {state.headers.map((h, i) => <option key={i} value={i}>{h || `列${i + 1}`}</option>)}
                       </select>

@@ -3,6 +3,7 @@
  */
 import { useState, useEffect, useCallback } from 'react'
 import type { OverdueStats, OverdueRecord } from '@/types'
+import { getAPI } from '@/services/api-adapter'
 
 export function useWagePaymentRecords() {
   const [loading, setLoading] = useState(false)
@@ -16,7 +17,7 @@ export function useWagePaymentRecords() {
     const f = newFilters || filters
     setLoading(true)
     try {
-      const result = await window.electronAPI.getWagePaymentRecords(f)
+      const result = await (await getAPI()).getWagePaymentRecords(f)
       if (result.success && result.data) {
         setRecords(result.data)
       }
@@ -30,7 +31,7 @@ export function useWagePaymentRecords() {
   // 加载欠薪统计
   const loadOverdueStats = useCallback(async () => {
     try {
-      const result = await window.electronAPI.getWageOverdueStats()
+      const result = await (await getAPI()).getWageOverdueStats()
       if (result.success && result.data) {
         setOverdueStats(result.data)
       }
@@ -43,7 +44,7 @@ export function useWagePaymentRecords() {
   const loadOverdueList = useCallback(async () => {
     setLoading(true)
     try {
-      const result = await window.electronAPI.getWageOverdueList()
+      const result = await (await getAPI()).getWageOverdueList()
       if (result.success && result.data) {
         setOverdueList(result.data)
       }

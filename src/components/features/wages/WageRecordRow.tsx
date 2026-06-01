@@ -14,7 +14,8 @@ export const WageRecordRow = React.memo(function WageRecordRow({
   record, isSelected, paidAmount, paidDate,
   onToggleSelect, onPaymentChange,
 }: WageRecordRowProps) {
-  const diff = (parseFloat(paidAmount) || 0) - record.actualWage
+  const actualWage = record.actualWage ?? 0
+  const diff = (parseFloat(paidAmount) || 0) - actualWage
   const diffColor = diff > 0.01 ? 'text-red-600' : diff < -0.01 ? 'text-amber-600' : 'text-green-600'
   const diffSign = diff > 0.01 ? '+' : ''
 
@@ -27,7 +28,7 @@ export const WageRecordRow = React.memo(function WageRecordRow({
       <td className="px-3 py-3 font-medium">{record.memberName || '-'}</td>
       <td className="px-3 py-3">{record.yearMonth}</td>
       <td className="px-3 py-3">{record.workDays} 天</td>
-      <td className="px-3 py-3 font-medium">¥{record.actualWage.toFixed(2)}</td>
+      <td className="px-3 py-3 font-medium">¥{(record.actualWage ?? 0).toFixed(2)}</td>
       <td className="px-3 py-3">
         <input type="text" inputMode="decimal" value={paidAmount}
           placeholder="0.00"

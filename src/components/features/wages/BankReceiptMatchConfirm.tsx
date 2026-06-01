@@ -9,6 +9,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { useToastStore } from '@/store/toastStore'
+import { Badge } from '@/components/ui/Badge/Badge'
 import type { BatchParseResult, BankReceiptMatch } from '@/types'
 
 interface BankReceiptMatchConfirmProps {
@@ -139,11 +140,11 @@ export default function BankReceiptMatchConfirm({
   }
 
   const getStatusBadge = (status: string) => {
-    const styles: Record<string, string> = {
-      matched: 'bg-green-100 text-green-800',
-      unmatched: 'bg-red-100 text-red-800',
-      ambiguous: 'bg-yellow-100 text-yellow-800',
-      archived: 'bg-slate-100 text-slate-800',
+    const variantMap: Record<string, 'success' | 'danger' | 'warning' | 'gray'> = {
+      matched: 'success',
+      unmatched: 'danger',
+      ambiguous: 'warning',
+      archived: 'gray',
     }
     const labels: Record<string, string> = {
       matched: '已匹配',
@@ -152,9 +153,9 @@ export default function BankReceiptMatchConfirm({
       archived: '已归档',
     }
     return (
-      <span className={`px-2 py-1 text-xs font-medium rounded-full ${styles[status] || ''}`}>
+      <Badge variant={variantMap[status] ?? 'gray'} size="sm" rounded="full">
         {labels[status] || status}
-      </span>
+      </Badge>
     )
   }
 

@@ -7,6 +7,7 @@ interface StaffListRowProps {
   onEdit: (m: any) => void
   onStatusChange: (m: any, newStatus: string) => void
   onSalaryHistory: (m: any) => void
+  onDelete: (id: number) => void
 }
 
 export const StaffListRow = React.memo(function StaffListRow({
@@ -15,6 +16,7 @@ export const StaffListRow = React.memo(function StaffListRow({
   onEdit,
   onStatusChange,
   onSalaryHistory,
+  onDelete,
 }: StaffListRowProps) {
   return (
     <tr className="hover:bg-slate-50">
@@ -34,6 +36,7 @@ export const StaffListRow = React.memo(function StaffListRow({
         <div className="flex items-center justify-center gap-1">
           <button onClick={() => onEdit(m)} className="btn btn-ghost btn-sm text-indigo-600">编辑</button>
           <button onClick={() => onSalaryHistory(m)} className="btn btn-ghost btn-sm text-amber-600" title="薪资历史">薪资</button>
+          <button onClick={() => { if (confirm("确定要删除 " + m.name + " 吗？")) onDelete(m.id) }} className="btn btn-ghost btn-sm text-red-500" title="删除">删除</button>
         </div>
       </td>
     </tr>

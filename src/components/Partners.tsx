@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from './ui/Icon'
 import { Tabs } from './ui/Tabs'
+import { HoverScrollbar } from './ui/HoverScrollbar'
+import Spinner from './ui/Spinner'
 import { Partner, Supervisor, Project } from '../types/electron'
 import { PartnerList, PartnerForm, SupervisorList, SupervisorForm } from './features/partners'
 import { logCreate, logUpdate, logDelete } from '../utils/audit'
 import { guessFileExt, readUploadedFile, deleteUploadedFile, uploadFile, FILE_CATEGORIES } from '../services/fileService'
 import { useToastStore } from '@/store/toastStore'
-import PageContainer from './ui/PageContainer'
+import { useConfirm } from '@/hooks/useConfirm'
+import { getAPI } from '@/services/api-adapter'
 
 interface PartnersProps {
   refresh?: () => void
@@ -18,6 +21,7 @@ type UnitType = 'partner' | 'supervisor'
 
 const Partners: React.FC<PartnersProps> = ({ refresh }) => {
   const showToast = useToastStore(state => state.showToast)
+  const { confirm, ConfirmDialog } = useConfirm()
   const [activeTab, setActiveTab] = useState<UnitType>('partner')
   const [partners, setPartners] = useState<Partner[]>([])
   const [supervisors, setSupervisors] = useState<Supervisor[]>([])
@@ -41,27 +45,26 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
 
   const loadData = async () => {
     try {
+      const api = await getAPI()
       const [r0, r1, r2] = await Promise.allSettled([
-        window.electronAPI.getPartners(),
-        window.electronAPI.getSupervisors(),
-        window.electronAPI.getProjects()
+        api.getPartners(),
+        api.getSupervisors(),
+        api.getProjects()
       ])
       const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
       const partnersData = get(r0)
       const supervisorsData = get(r1)
       const projectsData = get(r2)
       setPartners(partnersData)
-      if (supervisorsData.length > 0) {
-        // 关联项目名称
-        const supervisorsWithProjects = supervisorsData.map((sup: Supervisor) => {
-          const projectNames = sup.projectIds?.map((pid: number) => {
-            const project = projectsData.find((p: Project) => p.id === pid)
-            return project?.name || ''
-          }).filter(Boolean).join(', ') || ''
-          return { ...sup, projectNames }
-        })
-        setSupervisors(supervisorsWithProjects)
-      }
+      // 关联项目名称
+      const supervisorsWithProjects = supervisorsData.map((sup: Supervisor) => {
+        const projectNames = sup.projectIds?.map((pid: number) => {
+          const project = projectsData.find((p: Project) => p.id === pid)
+          return project?.name || ''
+        }).filter(Boolean).join(', ') || ''
+        return { ...sup, projectNames }
+      })
+      setSupervisors(supervisorsWithProjects)
       setProjects(projectsData)
     } catch (error) {
       console.error('加载数据失败:', error)
@@ -123,11 +126,11 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
       }
 
       if (editingPartner) {
-        await window.electronAPI.updatePartner({ ...editingPartner, ...processed })
+        await (await getAPI()).updatePartner({ ...editingPartner, ...processed })
         // 审计日志
         logUpdate('partners', processed.name, editingPartner.id, { before: editingPartner, after: processed })
       } else {
-        const result = await window.electronAPI.createPartner(processed)
+        const result = await (await getAPI()).createPartner(processed)
         if (result.success && result.data) {
           // 审计日志
           logCreate('partners', processed.name, result.data.id, processed)
@@ -159,37 +162,37 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
   }
 
   const handlePartnerDelete = async (id: number) => {
-    if (confirm('确定要删除这个合作单位吗？')) {
-      try {
-        // 记录删除前的信息
-        const partnerToDelete = partners.find(p => p.id === id)
+    const ok = await confirm({ title: '确认删除', content: '确定要删除这个合作单位吗？', confirmVariant: 'danger' })
+    if (!ok) return
+    try {
+      // 记录删除前的信息
+      const partnerToDelete = partners.find(p => p.id === id)
 
-        // 清理关联的磁盘文件
-        if (partnerToDelete) {
-          const delProjName = partnerToDelete.projectIds?.length > 0
-            ? projects.find(p => p.id === partnerToDelete.projectIds[0])?.name || null
-            : null
-          await deleteUploadedFile(FILE_CATEGORIES.PARTNER_LICENSE.category, FILE_CATEGORIES.PARTNER_LICENSE.subCategory, partnerToDelete.licenseFile, delProjName)
-          if (partnerToDelete.otherFiles) {
-            const parts = partnerToDelete.otherFiles.split('|||')
-            for (const part of parts) {
-              if (part && !part.startsWith('data:')) {
-                await deleteUploadedFile(FILE_CATEGORIES.PARTNER_ATTACHMENT.category, FILE_CATEGORIES.PARTNER_ATTACHMENT.subCategory, part, delProjName)
-              }
+      // 清理关联的磁盘文件
+      if (partnerToDelete) {
+        const delProjName = partnerToDelete.projectIds?.length > 0
+          ? projects.find(p => p.id === partnerToDelete.projectIds[0])?.name || null
+          : null
+        await deleteUploadedFile(FILE_CATEGORIES.PARTNER_LICENSE.category, FILE_CATEGORIES.PARTNER_LICENSE.subCategory, partnerToDelete.licenseFile, delProjName)
+        if (partnerToDelete.otherFiles) {
+          const parts = partnerToDelete.otherFiles.split('|||')
+          for (const part of parts) {
+            if (part && !part.startsWith('data:')) {
+              await deleteUploadedFile(FILE_CATEGORIES.PARTNER_ATTACHMENT.category, FILE_CATEGORIES.PARTNER_ATTACHMENT.subCategory, part, delProjName)
             }
           }
         }
-
-        await window.electronAPI.deletePartner(id)
-
-        // 审计日志
-        logDelete('partners', partnerToDelete?.name || '合作单位', id)
-
-        loadData()
-        refresh?.()
-      } catch (error) {
-        console.error('删除失败:', error)
       }
+
+      await (await getAPI()).deletePartner(id)
+
+      // 审计日志
+      logDelete('partners', partnerToDelete?.name || '合作单位', id)
+
+      loadData()
+      refresh?.()
+    } catch (error) {
+      console.error('删除失败:', error)
     }
   }
 
@@ -197,11 +200,11 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
   const handleSupervisorSubmit = async (formData: any) => {
     try {
       if (editingSupervisor) {
-        await window.electronAPI.updateSupervisor({ ...editingSupervisor, ...formData })
+        await (await getAPI()).updateSupervisor({ ...editingSupervisor, ...formData })
         // 审计日志
         logUpdate('partners', formData.name, editingSupervisor.id, { before: editingSupervisor, after: formData })
       } else {
-        const result = await window.electronAPI.createSupervisor(formData)
+        const result = await (await getAPI()).createSupervisor(formData)
         if (result.success && result.data) {
           // 审计日志
           logCreate('partners', formData.name, result.data.id, formData)
@@ -222,40 +225,33 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
   }
 
   const handleSupervisorDelete = async (id: number) => {
-    if (confirm('确定要删除这个监管单位吗？')) {
-      try {
-        // 记录删除前的信息
-        const supervisorToDelete = supervisors.find(s => s.id === id)
-        
-        await window.electronAPI.deleteSupervisor(id)
-        
-        // 审计日志
-        logDelete('partners', supervisorToDelete?.name || '监管单位', id)
-        
-        loadData()
-        refresh?.()
-      } catch (error) {
-        console.error('删除失败:', error)
-      }
+    const ok = await confirm({ title: '确认删除', content: '确定要删除这个监管单位吗？', confirmVariant: 'danger' })
+    if (!ok) return
+    try {
+      // 记录删除前的信息
+      const supervisorToDelete = supervisors.find(s => s.id === id)
+
+      await (await getAPI()).deleteSupervisor(id)
+
+      // 审计日志
+      logDelete('partners', supervisorToDelete?.name || '监管单位', id)
+
+      loadData()
+      refresh?.()
+    } catch (error) {
+      console.error('删除失败:', error)
     }
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 dark:border-slate-700 border-t-primary-600"></div>
-          <span className="text-slate-500">加载中...</span>
-        </div>
-      </div>
-    )
+    return <Spinner size="lg" text="加载单位数据..." />
   }
 
   return (
-    <PageContainer className="min-h-full flex flex-col">
-      <motion.div className="min-h-full flex flex-col" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
-      {/* 页面标题 */}
-      <div className="flex items-center justify-between mb-5">
+    <div className="h-[calc(100vh-60px)] flex flex-col overflow-hidden p-6">
+      {ConfirmDialog}
+      {/* 页面标题 - 固定高度 */}
+      <div className="flex items-center justify-between mb-5 shrink-0">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">单位管理</h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1">管理所有往来单位信息</p>
@@ -276,7 +272,7 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
         </button>
       </div>
 
-      {/* 统一 Tabs 组件 */}
+      {/* 统一 Tabs 组件 - 填满剩余空间 */}
       <Tabs
         value={activeTab}
         onChange={(value: string) => setActiveTab(value as UnitType)}
@@ -285,6 +281,8 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
           { key: 'supervisor', label: '监管单位', icon: 'Shield' },
         ]}
         animated={true}
+        className="flex-1 flex flex-col min-h-0"
+        contentClassName="flex-1 flex flex-col min-h-0"
       >
         {activeTab === 'partner' && (
           <>
@@ -302,21 +300,25 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
             />
             {showPartnerModal && (
               <motion.div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
-                <div className="modal-content max-h-[90vh] overflow-y-auto">
-                  <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-white">
+                <div className="modal-content flex flex-col" style={{ height: 'min(90vh, 800px)' }}>
+                  <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-white shrink-0">
                     <h2 className="text-xl font-semibold text-slate-800">
                       {editingPartner ? '编辑单位' : '添加单位'}
                     </h2>
                   </div>
-                  <PartnerForm
-                    partner={editingPartner}
-                    projects={projects}
-                    onSubmit={handlePartnerSubmit}
-                    onCancel={() => {
-                      setShowPartnerModal(false)
-                      setEditingPartner(null)
-                    }}
-                  />
+                  <div className="flex-1 min-h-0 overflow-hidden">
+                    <HoverScrollbar className="h-full">
+                      <PartnerForm
+                        partner={editingPartner}
+                        projects={projects}
+                        onSubmit={handlePartnerSubmit}
+                        onCancel={() => {
+                          setShowPartnerModal(false)
+                          setEditingPartner(null)
+                        }}
+                      />
+                    </HoverScrollbar>
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -336,29 +338,32 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
             />
             {showSupervisorModal && (
               <motion.div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
-                <div className="modal-content max-h-[90vh] overflow-y-auto">
-                  <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-white">
+                <div className="modal-content flex flex-col" style={{ height: 'min(90vh, 800px)' }}>
+                  <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-white shrink-0">
                     <h2 className="text-xl font-semibold text-slate-800">
                       {editingSupervisor ? '编辑单位' : '添加单位'}
                     </h2>
                   </div>
-                  <SupervisorForm
-                    supervisor={editingSupervisor}
-                    projects={projects}
-                    onSubmit={handleSupervisorSubmit}
-                    onCancel={() => {
-                      setShowSupervisorModal(false)
-                      setEditingSupervisor(null)
-                    }}
-                  />
+                  <div className="flex-1 min-h-0 overflow-hidden">
+                    <HoverScrollbar className="h-full">
+                      <SupervisorForm
+                        supervisor={editingSupervisor}
+                        projects={projects}
+                        onSubmit={handleSupervisorSubmit}
+                        onCancel={() => {
+                          setShowSupervisorModal(false)
+                          setEditingSupervisor(null)
+                        }}
+                      />
+                    </HoverScrollbar>
+                  </div>
                 </div>
               </motion.div>
             )}
           </>
         )}
       </Tabs>
-      </motion.div>
-    </PageContainer>
+    </div>
   )
 }
 

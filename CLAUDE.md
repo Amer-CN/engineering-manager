@@ -1,6 +1,6 @@
 # CLAUDE.md - 工程管家项目约定
-> 项目状态：三主题系统全面覆盖 + 登录页重设计 + 柱状图重写 + logo 替换（v2.9.0）
-> 最后同步：2026-05-28（主题覆盖+登录页+柱状图+hero banner）
+> 项目状态：C# 后端迁移完成（v0.66.0）
+> 最后同步：2026-06-01（Electron→C# 迁移，197 个 API 端点，WebView2 桌面窗口）
 
 ## 🗣️ 输出语言
 - **默认中文输出**：所有解释、描述、分析、提问、总结等文字内容使用中文
@@ -12,16 +12,85 @@
 - **可用 skills**：`/office-hours` `/plan-ceo-review` `/plan-eng-review` `/plan-design-review` `/design-consultation` `/design-shotgun` `/design-html` `/review` `/ship` `/land-and-deploy` `/canary` `/benchmark` `/browse` `/connect-chrome` `/qa` `/qa-only` `/design-review` `/setup-browser-cookies` `/setup-deploy` `/setup-gbrain` `/retro` `/investigate` `/document-release` `/codex` `/cso` `/autoplan` `/plan-devex-review` `/devex-review` `/careful` `/freeze` `/guard` `/unfreeze` `/gstack-upgrade` `/learn`
 
 ## 🛠️ 技术栈
-- **Electron 28** - 跨平台桌面应用框架
+- **C# (.NET 8) + ASP.NET Core Minimal API** — 后端 API 服务（localhost:5048）
+- **Dapper + Microsoft.Data.Sqlite** — 数据库访问（轻量 ORM，手写 SQL）
+- **WinForms + WebView2** — 桌面窗口（内嵌浏览器内核显示 React 前端）
 - **React 18 + TypeScript 5** - 类型安全的 UI 开发
 - **Vite 5** - 极速构建工具
 - **TailwindCSS** - 实用优先的样式框架
-- **JSON 文件存储** - 本地数据持久化（`db.*` 集合），无需数据库
-- **Tesseract.js** - 离线 OCR 识别
+- **SQLite** - 本地数据持久化（`engineering.db`）
 - **lucide-react** - SVG 图标库（`iconMap.ts` 注册，`<Icon name="X" />` 统一入口）
 - **recharts** - 数据可视化（PieChart/RadialBarChart）
 - **SimpleBarChart** - 柱状图组件（纯 CSS div 实现，`ui/SimpleBarChart.tsx`，含 SimpleGroupedBarChart 双柱变体）
 - **framer-motion** - 全站动画引擎
+- **pdfjs-dist** - PDF 转图片（用于发票/银行回单 PDF 的 OCR 识别）
+
+### 开发流程
+```bash
+# 启动（双击 工程管家.bat 或手动）：
+cd EngineeringManager.Api && dotnet run   # C# API (localhost:5048)
+cd .. && npm run dev                       # React 前端 (localhost:5173)
+# 浏览器自动打开 http://localhost:5173
+
+# 编译时间：C# ~1.2s，Vite ~0.4s
+# 窗口：WinForms + WebView2，圆角无边框，React TitleBar 控制
+```
+
+### 架构
+```
+React 前端 (localhost:5173)
+    ↓ HTTP fetch (api-client.ts)
+ASP.NET Core Minimal API (localhost:5048)
+    ↓ Dapper
+SQLite (engineering.db) ← 直接读取 Electron 版本的数据库，零迁移
+```
+
+### 关键文件
+| 文件 | 作用 |
+|------|------|
+| `EngineeringManager.Api/Program.cs` | 所有 API 端点（197 个）+ CORS + SQLite 连接 |
+| `EngineeringManager.Api/EntryPoint.cs` | 桌面入口（[STAThread] + WebView2 窗口） |
+| `EngineeringManager.Api/MainWindow.cs` | WinForms 窗口（WebView2 + DWM 圆角 + 消息通信） |
+| `src/services/api-client.ts` | HTTP 客户端（fetch 封装） |
+| `src/services/tauri-bridge.ts` | API 桥接层（前端调用的统一接口，名称保留兼容） |
+| `src/services/api-adapter.ts` | 环境检测 + API 选择 |
+
+## 🤖 AI 智能识别（百度 OCR 全面接入）
+
+### 架构
+```
+表单组件 → useXxxOCR hook → recognizeXxx() → baiduXxxOCR() → HTTP POST → C# API → 百度 API
+```
+
+### 已接入的 9 种识别功能
+
+| 功能 | Hook | 集成位置 | 自动填入字段 |
+|------|------|----------|-------------|
+| 身份证 | useIdCardOCR | WorkerForm | 姓名/身份证号/性别/民族/出生日期/住址 |
+| 增值税发票 | useInvoiceOCR | InvoiceForm | 发票号/日期/金额/税率/商品名称/双方 |
+| 银行卡 | useBankCardOCR | WorkerForm | 卡号/银行名称 |
+| 营业执照 | useBusinessLicenseOCR | PartnerForm | 公司名/信用代码/地址/经营范围 |
+| 银行回单 | useBankReceiptOCR | PaymentForm | 日期/金额/收付款方 |
+| 开户许可证 | usePermitOCR | PartnerForm | 信用代码/公司名 |
+| 银行单据 | useBankStatementOCR | — | 交易明细列表 |
+| 通用票据 | useGeneralReceiptOCR | — | 文字内容/金额/日期 |
+| 企业查询 | useCompanyQueryOCR | — | 工商注册信息（需单独配置API） |
+
+### 关键文件
+- `electron/ipc-handlers/ocr.ts` — 主进程 OCR 函数 + 调用统计
+- `src/services/ocr.ts` — 渲染进程 OCR 服务层
+- `src/hooks/use*OCR.ts` — 8 个 OCR Hook
+- `src/components/SettingsOcrSection.tsx` — AI 智能识别设置页
+
+### UI 模式（统一）
+- **识别中**：蓝紫渐变按钮 + 旋转加载 + 脉冲文字
+- **成功后**：emerald 绿色结果卡片 + 滑入动画 + 详细摘要
+- **图标**：Sparkles（AI 感）→ CheckCircle（成功）
+
+### 调用统计
+- 保存路径：`<userData>/ocr-stats.json`
+- 按月自动重置
+- IPC：`ocr:getStats`
 
 ## 📁 核心模块架构
 
@@ -194,7 +263,7 @@ uploads/
 - 版本号引用位置：`package.json` / `Sidebar.tsx` / `Login.tsx` / `Settings.tsx` / `SettingsChangelog.tsx` / `CLAUDE.md` / `CHANGELOG.md`
 - 版本历史：`CHANGELOG.md`（1.0.0→2.3.0）+ Settings 更新日志浮窗
 
-### 当前版本：v2.8.2
+### 当前版本：v0.67.0
 
 ## 🎨 UI 规范
 
@@ -204,11 +273,14 @@ uploads/
 - **三主题系统**：White（白+蓝）/ Graphite（深灰+橙）/ Sandstone（暖灰+琥珀），`data-theme` 属性驱动，`useTheme()` 全局单例（useSyncExternalStore），CSS 变量覆盖 Tailwind 类名
 - **CSS Token**：`src/index.css` 中 `:root` / `.dark` 定义
 
-### 组件库（`src/components/ui/`）
-Button(variants/sizes/iconOnly) / Input(status+leftSection/rightSection) / Modal(AnimatePresence+centered) / Card(padding+glass+hover) / Badge(variants+dot脉冲) / Select(下拉动画+clearable) / Table(stickyHeader+sizes) / Pagination / DropdownMenu(Portal+AnimatePresence) / Tabs(layoutId弹簧指示器+badge) / Tooltip(延迟300ms+箭头) / ProgressBar(variants+animated width) / FormField(label/error/helpText) / Toast(Context管理+AnimatePresence堆叠+spring) / Loading(Spinner+Skeleton) / EmptyState / PageContainer(`max-w-[1400px] mx-auto p-6`, wide/narrow/full)
+### 组件库（`src/components/ui/`）+ 统一基础设施
+Button(variants/sizes/iconOnly) / Input(status+leftSection/rightSection) / Modal(AnimatePresence+centered) / Card(padding+glass+hover) / Badge(variants+dot脉冲) / Select(下拉动画+clearable) / Table(stickyHeader+sizes) / Pagination / DropdownMenu(Portal+AnimatePresence) / Tabs(layoutId弹簧指示器+badge) / Tooltip(延迟300ms+箭头) / ProgressBar(variants+animated width) / FormField(label/error/helpText) / Toast(Context管理+AnimatePresence堆叠+spring) / Loading(Spinner+Skeleton) / EmptyState / PageContainer(`max-w-[1400px] mx-auto p-6`, wide/narrow/full) / HoverScrollbar(悬浮滚动条，overflow:hidden+JS wheel，鼠标靠近自动变大) / StatusBar(Reasonix风格三栏：页面名+记录数 | 选中状态 | SQLite+主题弹出选择器+字号弹出选择器)
 
 ### 动画系统（framer-motion）
 - **原则**：spring 物理优先（stiffness≤200）、大元素禁 scale、装饰动画走 CSS @keyframes（合成器线程）、GPU 加速
+- **启动动画**：`SplashScreen.tsx` — 粒子背景+Logo脉冲+品牌逐字淡入（2.5秒），跟随主题色
+- **锁屏界面**：`LockScreen.tsx` — 粒子背景+主题适配+交互反馈，密码用 CSS `-webkit-text-security` 模拟
+- **加载动画**：`Spinner.tsx`（页面级）/ `ButtonLoader.tsx`（按钮内）— Logo 呼吸+脉冲点，替代旧 animate-spin
 - **Sidebar**：入场 slide-in + layoutId 激活态弹簧滑动(spring 500/30) + nav stagger(0.03s) + whileHover 右移4px
 - **Login**：无动画，纯 CSS 布局
 - **Dashboard**：CountUp(useMotionValue+useSpring stiffness:100) + KPI stagger+whileHover + recharts animationDuration=1200；KPI 卡片 6 列（项目/待办结算/成员/支出/发票/库存）；发票状态饼图 + 最近发票列表
@@ -217,10 +289,17 @@ Button(variants/sizes/iconOnly) / Input(status+leftSection/rightSection) / Modal
 
 ### 页面布局
 - **侧边栏**：固定 w-64、深色渐变Logo区、圆角药丸导航+左侧激活指示条；底部头像弹出菜单（DropdownMenu，类 Windows 开始菜单），收纳用户管理/系统设置/锁定屏幕/退出登录
+- **启动流程**：HTML 占位（极简 Logo+脉冲点）→ React SplashScreen（粒子+品牌淡入 2.5s）→ 登录页
 - **登录页**：紧凑单列布局（300×400 frameless 窗口），记住密码+自动登录，登录后窗口放大到 1400×900
 - **内容页**：统一 `PageContainer`，仪表板1600px/其他1400px/设置双列网格
 - **图纸管理**：支持 JPG/PNG/PDF/DWG/DXF 格式
 - **CARD 常量**：`bg-white border border-slate-200 rounded-xl shadow-sm` + `hover:shadow-md transition-all duration-200`
+- **TABLE 常量**（`src/constants/table.ts`）：`container`/`headerRow`/`headerCell`/`bodyRow`/`bodyCell`/`stickyHeader`，所有列表页统一使用
+- **StatusBadge**（`src/constants/status.tsx`）：`PROJECT_STATUS`/`SETTLEMENT_STATUS`/`INVOICE_STATUS`/`MEMBER_STATUS` 等配置 + `<StatusBadge>` 通用组件
+- **动画常量**（`src/constants/animations.ts`）：`staggerContainer`/`sectionVariant`/`pageTransition`，Dashboard 类页面统一使用
+- **PageHeader**（`ui/PageHeader.tsx`）：统一页面头部（title+subtitle+onBack+actions）
+- **FilterBar**（`ui/FilterBar.tsx`）：统一筛选器容器（白底圆角+flex布局）
+- **PayrollPage**（`features/payroll/PayrollPage.tsx`）：考勤薪酬统一页面（staff/worker 双模式，进行中）
 
 ## 🔐 权限系统
 - **角色存储**：`db.roles` 集合，`getRolePermissions()` 优先读 db 回退硬编码；系统角色：admin/manager/accountant/worker
@@ -246,6 +325,45 @@ Button(variants/sizes/iconOnly) / Input(status+leftSection/rightSection) / Modal
 3. 所有组件已拆分至 600 行以内，保持模块化
 4. 新增功能时参考 `docs/` 目录下的设计规范
 
+## 🛡️ 数据保障机制（Phase 1+2+3 — 2026-05-29，全部完成）
+
+### 写入流程
+- SQLite 先写（权威）→ JSON 后写（备份，SQLite 成功时跳过）
+- 集中辅助函数：`electron/dual-write.ts` — `dualWriteCreate/Update/Delete/BatchCreate`
+- 19 个 handler 使用辅助函数，JSON 热写在 SQLite 成功且是主读源时自动跳过
+- SQLite 写入失败时 `log.warn('[DualWrite]...')` + fallback 到 JSON 写入
+
+### JSON 周期性导出（Phase 3）
+- `exportJsonFromSqlite()` 从 SQLite 全量导出 JSON
+- 触发时机：app 关闭时 + 每 30 分钟 + 手动（`data:exportJson` IPC）
+- 替代每次 CRUD 都写 JSON 的实时双写
+
+### 快照系统
+- `createSnapshot()` 同时备份 JSON + SQLite（`.db` + `.db-wal`）
+- SQLite 就绪时跳过 JSON 快照（减少 I/O）
+- `restoreSnapshot()` 同时还原 JSON + SQLite
+- 最多保留 200 个快照
+
+### 数据完整性校验
+- `saveDatabase()` 检查 24 个主要表
+- 空数据保护：内存为空但磁盘 >10KB → 拒绝写入 + 紧急备份
+- 行数骤降检测：>10 行骤降 >50% → 拒绝写入 + 紧急备份
+- `initDatabase()` 只在有实际变更时才保存
+
+### 启动时检查
+- `PRAGMA integrity_check`：失败自动切 `json-only` 模式
+- JSON/SQLite 一致性检查：对比核心表行数，不一致则 warn
+- IPC 通道：`data:consistencyCheck` / `data:integrityCheck` / `data:reconcile` / `data:exportJson`
+
+### 关键文件
+| 文件 | 作用 |
+|------|------|
+| `electron/dual-write.ts` | 集中式双写辅助函数 |
+| `electron/database.ts` | saveDatabase + 快照 + 完整性校验 + exportJsonFromSqlite |
+| `electron/main.ts` | 启动检查 + 周期性导出 + GPU 设置 |
+| `electron/ipc-handlers/sqlite-status.ts` | 数据健康检查 + reconcile + exportJson IPC |
+| `electron/ipc-handlers/config.ts` | GPU 加速设置 IPC |
+
 ## 📋 架构决策记录
 
 ### 数据模型变更
@@ -258,6 +376,11 @@ Button(variants/sizes/iconOnly) / Input(status+leftSection/rightSection) / Modal
 | `ensureDatabaseFields()` 27 集合防御 | 2026-05-06 | 覆盖全部 `db.*` 集合，旧数据库缺字段时不再崩溃 |
 | `db.salaryHistory` 薪资历史表 | 2026-05-13 | memberId/effectiveDate/baseSalary/subsidy/subsidyNote/note，追踪薪资变动，薪酬计算按月份匹配 |
 | `db.departments` 部门表 | 2026-05-12 | 部门 CRUD（名称+负责人），memberCount 计算字段，member.departmentId + member.position 新增 |
+| `migrateSalaryHistoryBackfill` | 2026-05-13 | 为已有 staff 成员自动创建初始 salaryHistory 记录，`_migrations.salaryHistoryBackfillV1` 防重复 |
+| `db.workers` 扩展默认值字段 | 2026-05-14 | Worker 类型新增 bankAccount/bankName/bankLineNo/workerType/dailyWage，导入+表单+Picker 全链路适配 |
+| Phase 1 数据保障 | 2026-05-29 | 24 表完整性校验 + 行数骤降检测 + SQLite 快照备份 + 启动 integrity_check + JSON/SQLite 一致性检查 |
+| Phase 2 SQLite 先写 | 2026-05-29 | `dual-write.ts` 集中辅助函数，19 handler 迁移（SQLite 先写→JSON 后写），initDatabase 不再启动时盲目保存 |
+| Phase 3 JSON 退出热路径 | 2026-05-29 | `exportJsonFromSqlite` 周期性导出（关闭+30分钟），SQLite 成功时跳过 JSON 热写，设置页健康检查 UI |
 | `migrateSalaryHistoryBackfill` | 2026-05-13 | 为已有 staff 成员自动创建初始 salaryHistory 记录，`_migrations.salaryHistoryBackfillV1` 防重复 |
 | `db.workers` 扩展默认值字段 | 2026-05-14 | Worker 类型新增 bankAccount/bankName/bankLineNo/workerType/dailyWage，导入+表单+Picker 全链路适配 |
 
@@ -296,6 +419,11 @@ Button(variants/sizes/iconOnly) / Input(status+leftSection/rightSection) / Modal
 | 任务功能完整移除 | 2026-05-12 | 删除 Tasks.tsx / useTasks.ts / tasks.ts IPC；Dashboard 任务区域替换为发票+结算摘要；项目详情 7 Tab→6 Tab |
 | 项目成本结构数据管线修复 | 2026-05-12 | ProjectDetail 接入 getCostLedger，expenseByCategory 从台账实算；otherT 独立计算不依赖外部 total |
 | 健康度评分公式调整 | 2026-05-12 | 移除任务进度维度，预算控制 40% + 合同执行 30% + 发票管理 30% |
+| project-workers IPC 注册修复 | 2026-05-29 | `index.ts` 缺少 `import './project-workers'` 导致 5 个 handler 从未注册，班组管理添加工人后不显示 |
+| 工资姓名 JOIN 修复 | 2026-05-29 | `listWages`/`getPaymentRecords`/`getOverdueStats`/`getOverdueList` 加 `LEFT JOIN project_workers` 解决工人工资姓名为空 |
+| enrichWage 保留已有值 | 2026-05-29 | `enrichWage` 初始化从 `w.memberName` 取值，不再用空字符串覆盖 SQLite 带回的名字 |
+| SQLite 写入检查全覆盖 | 2026-05-29 | 26 个 handler 文件、123 处 SQLite 写入全部加上返回值检查 + `log.warn` |
+| Settings 数据统计中文化 | 2026-05-29 | `TABLE_NAME_MAP` 37 个映射，SQLite 英文表名→中文；迁移按钮悬停浮窗+禁用逻辑 |
 
 ### 文件存储演进
 | 变更 | 日期 | 说明 |
@@ -322,12 +450,19 @@ Button(variants/sizes/iconOnly) / Input(status+leftSection/rightSection) / Modal
 | Toast 全局 Context | 2026-05-05 | 11 页面统一 `useToastContext()`，Portal 渲染到 `document.body` |
 | 发票票种细化 | 2026-05-06 | `InvoiceKind` 4 种：纸/电 × 普/专；收付款术语统一（收票→付款/开票→回款） |
 | 金额 formatMoney 全局化 | 2026-05-06 | 53 处 `toLocaleString()`→`formatMoney()`，14 文件补 import |
+| HoverScrollbar 统一化 | 2026-05-30 | App.tsx 主滚动区域使用 HoverScrollbar；弹窗使用 HoverScrollbar 替代 overflow-y-auto；组件移除默认 h-full 改由 className 控制 |
+| Modal Graphite 主题适配 | 2026-05-30 | Modal 组件使用 CSS 变量 var(--card) 适配深色主题 |
+| 确认弹窗统一化 | 2026-05-30 | 单位管理删除确认改用 useConfirm hook，替代原生 confirm() |
 | EmptyState 组件 | 2026-05-11 | 按 DESIGN.md 规范新建，接入 ContractPage/Drawings/ContractTemplates/InvoiceList |
 | Inter 字体栈修复 | 2026-05-11 | index.css 根 font-family 补 Inter 优先（DESIGN.md 规范对齐） |
 | WorkerSection 懒加载 | 2026-05-11 | React.lazy + Suspense 拆分 13KB chunk，Members 首屏 80→70KB |
 | 分类标签两行显示 + 合计行固定底部 | 2026-05-11 | CostLedgerList flex 链重构（flex-1 替代 h-full）；CostLedgerAnalytics/CostLedgerList line-clamp-2 防 -webkit-box 塌缩；Dashboard BarChart CategoryTick SVG tspan 两行 |
 | Hero 横幅装饰光点统一 | 2026-05-11 | 6 页 hero banner 统一呼吸光点动画（radial-gradient + 2×motion.div opacity/scale infinite），ContractDashboard / ProjectCommandCenter / ProjectDetail / ProjectList 补齐 |
 | Dashboard CountUp 弹簧加速 | 2026-05-11 | stiffness 40→100（2.5×）+ damping 25→20，数字滚动更快到位 |
+| 启动动画系统 | 2026-06-02 | SplashScreen 粒子背景+Logo 脉冲+品牌逐字淡入，HTML 占位跟随主题 |
+| 锁屏粒子背景 | 2026-06-02 | LockScreen 加入 ParticleBackground+主题适配+交互反馈+密码遮罩修复 |
+| 加载动画统一 | 2026-06-02 | Spinner/ButtonLoader 组件替代 12 个文件的 animate-spin 圆圈 |
+| 数据路径 API | 2026-06-02 | C# 实现 getConfig/setDataPath/sqliteStatus 端点+STA 线程对话框 |
 
 ### 工具链
 | 变更 | 日期 | 说明 |
@@ -338,7 +473,7 @@ Button(variants/sizes/iconOnly) / Input(status+leftSection/rightSection) / Modal
 | Superpowers skill 体系修复 | 2026-05-11 | 15 个 sub-skill 从 `superpowers/skills/` 嵌套提取到 `~/.claude/skills/` 根级（Claude Code 只扫描一层），同步到 CC Switch；清理失效 superpowers git repo |
 
 ## ⚠️ 红线
-- 不得直接修改 `electron/main.ts` 中的 IPC 处理器（已模块化到 `electron/ipc-handlers/`）
+- 不得直接修改 `EngineeringManager.Api/Program.cs` 中的端点定义（已按模块组织）
 - 不得使用 `any` 类型，必须使用严格类型
 - 不得在组件中直接操作 localStorage，使用 `AuthContext`
 - 不得绕过权限检查，所有敏感操作必须使用 `usePermission` hook

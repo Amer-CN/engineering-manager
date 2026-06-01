@@ -5,6 +5,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react'
 import { setCurrentUser as setPermissionsUser, type AuthContext as PermissionsAuthContext } from '../types/permissions'
 import { setCurrentAuditUser, logAudit } from '../utils/audit'
+import { getAPI } from '../services/api-adapter'
 
 // 存储键
 const AUTH_STORAGE_KEY = 'engineering_auth'
@@ -66,12 +67,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // 接通审计用户
         setCurrentAuditUser(userData.userId, userData.username)
         // 同步 session 到主进程（用于 IPC 权限校验）
-        window.electronAPI?.setSession?.({
+        getAPI().then(api => api?.setSession?.({
           userId: userData.userId,
           username: userData.username,
           roleId: userData.roleId,
           permissions: userData.permissions
-        }).catch((err: any) => console.warn('同步 session 到主进程失败:', err))
+        })).catch((err: any) => console.warn('同步 session 到主进程失败:', err))
       } catch (e) {
         console.error('恢复登录状态失败:', e)
         localStorage.removeItem(AUTH_STORAGE_KEY)
@@ -96,12 +97,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // 接通审计用户 + 记录登录
     setCurrentAuditUser(userData.userId, userData.username)
     // 同步 session 到主进程（用于 IPC 权限校验）
-    window.electronAPI?.setSession?.({
+    getAPI().then(api => api?.setSession?.({
       userId: userData.userId,
       username: userData.username,
       roleId: userData.roleId,
       permissions: userData.permissions
-    }).catch((err: any) => console.warn('同步 session 到主进程失败:', err))
+    })).catch((err: any) => console.warn('同步 session 到主进程失败:', err))
     logAudit('login', 'auth', `用户登录: ${userData.username}`, { resourceName: userData.username })
   }, [])
 
@@ -119,7 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // 清除审计用户
     setCurrentAuditUser(null, null)
     // 清除主进程 session
-    window.electronAPI?.clearSession?.().catch((err: any) => console.warn('清除主进程 session 失败:', err))
+    getAPI().then(api => api?.clearSession?.()).catch((err: any) => console.warn('清除主进程 session 失败:', err))
   }, [currentUser])
 
   const lock = useCallback(() => {
@@ -130,9 +131,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [currentUser])
 
   const unlock = useCallback(async (username: string, password: string) => {
-    if (!window.electronAPI?.login) return false
     try {
-      const result = await window.electronAPI.login(username, password)
+      const api = await getAPI()
+      if (!api?.login) return false
+      const result = await api.login(username, password)
       if (result.success) {
         setIsLocked(false)
         logAudit('unlock', 'auth', `用户解锁屏幕: ${username}`, { resourceName: username })

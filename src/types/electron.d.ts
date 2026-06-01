@@ -894,6 +894,11 @@ export interface ElectronAPI {
   getConfig: () => Promise<{ success: boolean; data?: { dataPath: string; defaultPath: string }; error?: string }>
   setDataPath: (path: string) => Promise<{ success: boolean; message?: string; error?: string }>
   getDataPath: () => Promise<string>
+  getGpuAcceleration: () => Promise<{ success: boolean; enabled: boolean }>
+  setGpuAcceleration: (enabled: boolean) => Promise<{ success: boolean; enabled: boolean; needRestart: boolean }>
+  consistencyCheck: () => Promise<{ success: boolean; data?: { consistent: boolean; discrepancies: { table: string; json: number; sqlite: number }[] } }>
+  integrityCheck: () => Promise<{ success: boolean; data?: { status: string; message: string } }>
+  exportJson: () => Promise<{ success: boolean; message?: string }>
 
   // 认证
   login: (username: string, password: string) => Promise<{ success: boolean; data?: StoredAuth; error?: string }>
@@ -1183,8 +1188,17 @@ export interface ElectronAPI {
 
   // ============ OCR（百度在线识别，通过主进程 IPC 代理） ============
   ocrBaiduIdCard: (imageBase64: string, config: { apiKey: string; secretKey: string }) => Promise<{ success: boolean; text?: string; idCard?: { number: string; name?: string; gender?: string; ethnicity?: string; birthDate?: string; address?: string; issueAuthority?: string; validDate?: string }; error?: string }>
+  ocrBaiduInvoice: (imageBase64: string, config: { apiKey: string; secretKey: string }) => Promise<{ success: boolean; text?: string; invoice?: { invoiceNum: string; invoiceCode: string; invoiceDate: string; invoiceType: string; totalAmount: number; amountWithoutTax: number; totalTax: number; taxRate: number; sellerName: string; purchaserName: string; checkCode: string; itemName: string; remarks: string }; error?: string }>
+  ocrBaiduBankCard: (imageBase64: string, config: { apiKey: string; secretKey: string }) => Promise<{ success: boolean; text?: string; bankCard?: { cardNumber: string; bankName: string; cardType: string; validDate: string }; error?: string }>
+  ocrBaiduBusinessLicense: (imageBase64: string, config: { apiKey: string; secretKey: string }) => Promise<{ success: boolean; text?: string; businessLicense?: { creditCode: string; companyName: string; legalPerson: string; registeredCapital: string; address: string; businessScope: string; establishDate: string; expireDate: string }; error?: string }>
+  ocrBaiduBankReceipt: (imageBase64: string, config: { apiKey: string; secretKey: string }) => Promise<{ success: boolean; text?: string; bankReceipt?: { transactionDate: string; transactionTime: string; amount: number; payerName: string; payerAccount: string; payeeName: string; payeeAccount: string; transactionNo: string; bankName: string; remarks: string }; error?: string }>
+  ocrBaiduPermit: (imageBase64: string, config: { apiKey: string; secretKey: string }) => Promise<{ success: boolean; text?: string; permit?: { companyCode: string; companyName: string; accountNumber: string; bankName: string; permitNumber: string }; error?: string }>
+  ocrBaiduBankStatement: (imageBase64: string, config: { apiKey: string; secretKey: string }) => Promise<{ success: boolean; text?: string; bankStatement?: { transactions: Array<{ date: string; time: string; amount: number; balance: number; type: string; counterparty: string; remark: string }>; accountNumber: string; bankName: string }; error?: string }>
+  ocrBaiduGeneralReceipt: (imageBase64: string, config: { apiKey: string; secretKey: string }) => Promise<{ success: boolean; text?: string; generalReceipt?: { text: string; amount: number; date: string }; error?: string }>
+  ocrBaiduCompanyQuery: (companyName: string, config: { apiKey: string; secretKey: string }) => Promise<{ success: boolean; text?: string; businessLicense?: { creditCode: string; companyName: string; legalPerson: string; registeredCapital: string; address: string; businessScope: string; establishDate: string; expireDate: string }; error?: string }>
   ocrCheckNetwork: () => Promise<boolean>
   ocrClearTokenCache: () => Promise<boolean>
+  ocrGetStats: () => Promise<{ idCard: number; invoice: number; bankCard: number; businessLicense: number; bankReceipt: number; permit: number; bankStatement: number; generalReceipt: number; companyQuery: number; lastReset: string }>
 
   // ============ SQLite 状态管理 ============
   getSqliteStatus: () => Promise<{ success: boolean; ready: boolean; migrated: boolean; dbPath: string | null; dbSize: number | null; summary: Record<string, number> | null; readMode: 'dual' | 'sqlite-primary' | 'json-only'; error?: string }>

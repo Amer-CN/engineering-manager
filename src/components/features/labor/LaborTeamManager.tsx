@@ -49,7 +49,7 @@ const LaborTeamManager: React.FC<LaborTeamManagerProps> = ({
 
   // 获取班组工人数量
   const getTeamWorkerCount = (teamId: number) => {
-    return members.filter(w => w.teamId === teamId).length
+    return members.filter(w => w.teamId != null && w.teamId === teamId).length
   }
 
   const handleAddTeam = () => {

@@ -65,6 +65,11 @@ export interface AuditLogResult {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// API 适配
+// ═══════════════════════════════════════════════════════════════════════════════
+import { getAPI } from '@/services/api-adapter'
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // 日志存储
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -189,9 +194,7 @@ export function logAudit(
   saveLogs(logs)
 
   // 同步到后端 IPC（fire-and-forget）
-  if (window.electronAPI?.auditLog) {
-    window.electronAPI.auditLog(log).catch(() => {})
-  }
+  getAPI().then(api => api.auditLog?.(log)).catch(() => {})
 
   return log
 }
@@ -312,14 +315,15 @@ export function logApprove(
  */
 export async function queryAuditLogs(query: AuditLogQuery = {}): Promise<AuditLogResult> {
   // 尝试从后端 IPC 查询
-  if (window.electronAPI?.queryAuditLogs) {
-    try {
-      const result = await window.electronAPI.queryAuditLogs(query)
+  try {
+    const api = await getAPI()
+    if (api.queryAuditLogs) {
+      const result = await api.queryAuditLogs(query)
       if (result.success && result.data) {
         return result.data as AuditLogResult
       }
-    } catch {}
-  }
+    }
+  } catch {}
 
   // 回退到 localStorage
   let logs = getLogs()
@@ -417,12 +421,13 @@ export interface AuditStats {
  */
 export async function getAuditStats(days = 7): Promise<AuditStats> {
   // 尝试从后端 IPC 查询
-  if (window.electronAPI?.getAuditStats) {
-    try {
-      const result = await window.electronAPI.getAuditStats(days)
+  try {
+    const api = await getAPI()
+    if (api.getAuditStats) {
+      const result = await api.getAuditStats(days)
       if (result.success && result.data) return result.data as AuditStats
-    } catch {}
-  }
+    }
+  } catch {}
 
   // 回退到 localStorage
   const logs = getLogs()
@@ -531,12 +536,13 @@ export async function exportAuditLogsToCsv(query: AuditLogQuery = {}): Promise<v
  */
 export async function clearOldLogs(daysToKeep = 90): Promise<number> {
   // 同步清理后端
-  if (window.electronAPI?.clearAuditLogs) {
-    try {
-      const result = await window.electronAPI.clearAuditLogs(daysToKeep)
+  try {
+    const api = await getAPI()
+    if (api.clearAuditLogs) {
+      const result = await api.clearAuditLogs(daysToKeep)
       if (result.success && result.data) return result.data.removedCount
-    } catch {}
-  }
+    }
+  } catch {}
 
   // 回退 localStorage
   const logs = getLogs()
@@ -558,9 +564,10 @@ export async function clearOldLogs(daysToKeep = 90): Promise<number> {
  */
 export async function clearAllLogs(): Promise<void> {
   // 同步清理后端
-  if (window.electronAPI?.clearAuditLogs) {
-    try { await window.electronAPI.clearAuditLogs(1) } catch {}
-  }
+  try {
+    const api = await getAPI()
+    if (api.clearAuditLogs) await api.clearAuditLogs(1)
+  } catch {}
   localStorage.removeItem(AUDIT_LOG_KEY)
 }
 

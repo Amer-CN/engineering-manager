@@ -188,7 +188,6 @@ export const InvoiceFilters: React.FC<InvoiceFiltersProps> = ({
           <button
             onClick={onPrint}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded-lg transition-colors"
-            title="打印列表（可另存为PDF）"
           >
             <Icon name="Printer" size={14} />
             打印
@@ -198,7 +197,6 @@ export const InvoiceFilters: React.FC<InvoiceFiltersProps> = ({
           <button
             onClick={onExportExcel}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary-50 hover:bg-primary-100 text-primary-700 rounded-lg transition-colors"
-            title="导出为Excel表格"
           >
             <Icon name="Download" size={14} />
             导出Excel

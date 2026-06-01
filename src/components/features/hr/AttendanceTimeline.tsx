@@ -6,6 +6,7 @@ import { useToastStore } from '@/store/toastStore'
 import { computeAttendanceSummary } from '../../../constants/attendance'
 import type { AttendanceRecord } from '../../../types/electron'
 import AttendanceDetail from '../../AttendanceDetail'
+import { getAPI } from '@/services/api-adapter'
 
 function getDaysInMonth(yearMonth: string): number {
   const [y, m] = yearMonth.split('-').map(Number)
@@ -116,7 +117,7 @@ const AttendanceTimeline: React.FC<Props> = ({ member, attendances, deptName, on
       const dailyStatus: Record<number, string> = {}
       for (let d = 1; d <= getDaysInMonth(ym); d++) dailyStatus[d] = 'work'
       try {
-        await window.electronAPI.updateAttendance({ ...record, dailyStatus })
+        await (await getAPI()).updateAttendance({ ...record, dailyStatus })
         record.dailyStatus = dailyStatus
         showToast('已自动填充默认出勤', 'success')
       } catch (e: any) { /* continue with edit anyway */ }
@@ -148,7 +149,7 @@ const AttendanceTimeline: React.FC<Props> = ({ member, attendances, deptName, on
     <div className="space-y-4">
       {/* Header */}
       <div className="bg-white rounded-xl shadow-sm px-5 py-4">
-        <button onClick={onBack} className="flex items-center gap-1.5 text-slate-500 hover:text-indigo-600 mb-3 transition-colors">
+        <button onClick={onBack} className="flex items-center gap-1.5 text-slate-500 hover:text-primary-600 mb-3 transition-colors">
           <Icon name="ArrowLeft" size={16} />
           <span className="text-sm">返回考勤列表</span>
         </button>
@@ -157,7 +158,7 @@ const AttendanceTimeline: React.FC<Props> = ({ member, attendances, deptName, on
           <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
             <span>{deptName}{member.position ? ` · ${member.position}` : ''}</span>
             {entryDate && <span>入职 {entryDate}</span>}
-            {dur && <span className="text-indigo-600 font-medium">{dur}</span>}
+            {dur && <span className="text-primary-600 font-medium">{dur}</span>}
           </div>
         </div>
       </div>
@@ -173,7 +174,7 @@ const AttendanceTimeline: React.FC<Props> = ({ member, attendances, deptName, on
             <span className="text-xs text-slate-400 mr-1">年份</span>
             {['全部', ...allYears].map(y => (
               <button key={y} onClick={() => setYearFilter(y)}
-                className={`px-2.5 py-1 text-xs rounded-full font-medium transition-colors ${yearFilter === y ? 'bg-indigo-100 text-indigo-700 ring-1 ring-indigo-300' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                className={`px-2.5 py-1 text-xs rounded-full font-medium transition-colors ${yearFilter === y ? 'bg-primary-100 text-primary-700 ring-1 ring-primary-300' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
                 {y}
               </button>
             ))}
@@ -204,7 +205,7 @@ const AttendanceTimeline: React.FC<Props> = ({ member, attendances, deptName, on
                           const month = parseInt(a.yearMonth.split('-')[1])
                           return (
                             <button key={a.id} onClick={() => handleMonthClick(a)}
-                              className="p-2.5 border border-slate-200 rounded-lg hover:border-indigo-300 hover:shadow-sm transition-all text-left">
+                              className="p-2.5 border border-slate-200 rounded-lg hover:border-primary-300 hover:shadow-sm transition-all text-left">
                               <div className="text-xs font-medium text-slate-700">{month}月</div>
                               <div className="text-xs text-slate-400 mt-0.5">
                                 {a.workDays || 0}天出勤

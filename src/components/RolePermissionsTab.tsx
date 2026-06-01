@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react'
 import { useToastStore } from '@/store/toastStore'
+import { useConfirm } from '@/hooks/useConfirm'
+import { Spinner } from './ui/Loading/Loading'
 import { SYSTEM_ROLES, RESOURCE_LABELS, ACTION_LABELS, getPermissionLabel } from '../types/permissions'
 import type { PermissionResource, PermissionAction, PermissionCode } from '../types/permissions'
 import { Icon } from './ui/Icon'
+import { getAPI } from '@/services/api-adapter'
 
 const resourceKeys: PermissionResource[] = ['dashboard', 'projects', 'contracts', 'partners', 'members', 'wages', 'settlement', 'inventory', 'invoices', 'costLedger', 'drawings', 'settings', 'users', 'roles', 'audit_logs']
 const actionKeys: PermissionAction[] = ['read', 'create', 'update', 'delete', 'export', 'import', 'approve']
 
 export const RolePermissionsTab: React.FC = () => {
   const showToast = useToastStore(state => state.showToast)
+  const { confirm, ConfirmDialog } = useConfirm()
   const [roles, setRoles] = useState<{ id: string; name: string; description: string; isSystem: boolean; permissions: string[] }[]>([])
   const [editingRoleId, setEditingRoleId] = useState<string | null>(null)
   const [editingPermissions, setEditingPermissions] = useState<string[]>([])
@@ -17,8 +21,9 @@ export const RolePermissionsTab: React.FC = () => {
   const loadRoles = async () => {
     setRolesLoading(true)
     try {
-      if (window.electronAPI?.getRoles) {
-        const result = await window.electronAPI.getRoles()
+      const api = await getAPI()
+      if (api?.getRoles) {
+        const result = await api.getRoles()
         if (result.success && result.data) { setRoles(result.data); setRolesLoading(false); return }
       }
     } catch (e) { console.error(e) }
@@ -40,8 +45,9 @@ export const RolePermissionsTab: React.FC = () => {
   const handleSavePermissions = async () => {
     if (!editingRoleId) return
     try {
-      if (window.electronAPI?.updateRole) {
-        const result = await window.electronAPI.updateRole(editingRoleId, editingPermissions)
+      const api = await getAPI()
+      if (api?.updateRole) {
+        const result = await api.updateRole(editingRoleId, editingPermissions)
         if (result.success) { showToast('角色权限已保存', 'success'); loadRoles(); setEditingRoleId(null); return }
       }
       const systemRole = SYSTEM_ROLES.find(r => r.id === editingRoleId)
@@ -51,12 +57,14 @@ export const RolePermissionsTab: React.FC = () => {
   }
 
   const handleResetRole = async (roleId: string) => {
-    if (!confirm('确定要重置此角色的权限为默认值吗？')) return
-    try { if (window.electronAPI?.resetRole) { await window.electronAPI.resetRole(roleId); loadRoles() } } catch {}
+    const ok = await confirm({ title: '确认重置', content: '确定要重置此角色的权限为默认值吗？', confirmVariant: 'danger' })
+    if (!ok) return
+    try { const api = await getAPI(); if (api?.resetRole) { await api.resetRole(roleId); loadRoles() } } catch {}
   }
 
   if (editingRoleId) return (
     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-6">
+      {ConfirmDialog}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
           编辑权限 - {roles.find(r => r.id === editingRoleId)?.name || editingRoleId}
@@ -86,9 +94,10 @@ export const RolePermissionsTab: React.FC = () => {
   )
 
   return rolesLoading ? (
-    <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-4 border-slate-200 border-t-primary-600" /></div>
+    <div className="flex items-center justify-center py-12"><Spinner size="md" /></div>
   ) : (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {ConfirmDialog}
       {roles.map(role => (
         <div key={role.id} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-5 hover:shadow-md transition-all">
           <div className="flex items-start justify-between mb-3"><div><h4 className="font-semibold text-slate-800 dark:text-slate-100">{role.name}</h4><p className="text-xs text-slate-500 mt-0.5">{role.description}</p></div>{role.isSystem && <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-xs rounded-full">系统</span>}</div>

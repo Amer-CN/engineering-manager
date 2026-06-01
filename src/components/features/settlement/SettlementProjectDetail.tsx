@@ -1,15 +1,19 @@
 import React, { useState, useRef } from 'react'
+import { HoverScrollbar } from '../../ui/HoverScrollbar'
+import FilterBar from '../../ui/FilterBar'
 import { Settlement as SettlementData, SettlementStatus, SettlementType, Project, Partner, Template } from '../../../types/electron'
 import { useToastStore } from '@/store/toastStore'
+import { useConfirm } from '@/hooks/useConfirm'
 import { SettlementList } from './SettlementList'
 import { SettlementForm } from './SettlementForm'
 import { PrintContent } from './SettlementPrintTemplate'
 import { logCreate, logUpdate, logDelete } from '../../../utils/audit'
 import { usePermission } from '../../../hooks/usePermission.tsx'
 import { formatMoney } from '../../../utils/format'
-import { motion } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
+import { Modal } from '../../ui/Modal/Modal'
 import { TemplateSelectorModal, TemplateGenerate } from '../templates'
+import { getAPI } from '@/services/api-adapter'
 
 interface SettlementProjectDetailProps {
   project: Project
@@ -27,6 +31,7 @@ const SettlementProjectDetail: React.FC<SettlementProjectDetailProps> = ({
   onDataChange,
 }) => {
   const showToast = useToastStore(state => state.showToast)
+  const { confirm, ConfirmDialog } = useConfirm()
   const { can } = usePermission()
 
   const [showModal, setShowModal] = useState(false)
@@ -63,7 +68,7 @@ const SettlementProjectDetail: React.FC<SettlementProjectDetailProps> = ({
       for (const f of files) {
         if (f.url && f.url.startsWith('data:')) {
           const ext = f.type === 'pdf' ? 'pdf' : f.type === 'excel' ? 'xlsx' : 'png'
-          const saveResult = await window.electronAPI.saveFile({
+          const saveResult = await (await getAPI()).saveFile({
             category: 'settlement',
             subCategory: 'files',
             fileData: f.url,
@@ -97,13 +102,13 @@ const SettlementProjectDetail: React.FC<SettlementProjectDetailProps> = ({
         if (editingSettlement && savedFiles.length === 0) {
           data.files = (editingSettlement as any).files || (editingSettlement.fileUrl ? [{ url: editingSettlement.fileUrl, name: editingSettlement.fileName || '', type: editingSettlement.fileType || 'image' }] : [])
         }
-        await window.electronAPI.updateSettlement({ ...editingSettlement, ...data })
+        await (await getAPI()).updateSettlement({ ...editingSettlement, ...data })
         logUpdate('settlements', data.settlementNo, editingSettlement.id, {
           before: editingSettlement,
           after: data,
         })
       } else {
-        const result = await window.electronAPI.createSettlement(data)
+        const result = await (await getAPI()).createSettlement(data)
         logCreate('settlements', data.settlementNo, result?.data?.id, data)
       }
       onDataChange()
@@ -126,10 +131,11 @@ const SettlementProjectDetail: React.FC<SettlementProjectDetailProps> = ({
       showToast('您没有删除结算单的权限', 'error')
       return
     }
-    if (confirm('确定要删除这个结算单吗？')) {
+    const ok = await confirm({ title: '确认删除', content: '确定要删除这个结算单吗？', confirmVariant: 'danger' })
+    if (ok) {
       const settlementToDelete = settlements.find(s => s.id === id)
       try {
-        await window.electronAPI.deleteSettlement(id)
+        await (await getAPI()).deleteSettlement(id)
         logDelete('settlements', settlementToDelete?.settlementNo || '结算单', id, {
           settlementNo: settlementToDelete?.settlementNo,
           type: settlementToDelete?.type,
@@ -150,7 +156,7 @@ const SettlementProjectDetail: React.FC<SettlementProjectDetailProps> = ({
       return
     }
     try {
-      const result = await window.electronAPI.processSettlement(id)
+      const result = await (await getAPI()).processSettlement(id)
       onDataChange()
       if (result.data?.warnings && result.data.warnings.length > 0) {
         showToast('已办理，但存在问题：' + result.data.warnings.join('；'), 'warning')
@@ -164,7 +170,7 @@ const SettlementProjectDetail: React.FC<SettlementProjectDetailProps> = ({
 
   const handleUnarchive = async (id: number) => {
     try {
-      await window.electronAPI.unarchiveSettlement(id)
+      await (await getAPI()).unarchiveSettlement(id)
       onDataChange()
       showToast('已取消归档', 'success')
     } catch (error: any) {
@@ -181,7 +187,7 @@ const SettlementProjectDetail: React.FC<SettlementProjectDetailProps> = ({
       if (!w) return
       let html = '<html><head><meta charset="utf-8"><title>结算凭证</title><style>body{font-family:sans-serif;margin:0;padding:16px;background:#f1f5f9}.file-item{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:8px}.file-item a{color:#6366f1;text-decoration:none}.file-item img{max-width:100%;max-height:70vh}</style></head><body>'
       for (const f of fileList) {
-        const result = await window.electronAPI.readFile({
+        const result = await (await getAPI()).readFile({
           category: 'settlement', subCategory: 'files', fileName: f.url, projectName: project.name,
         })
         if (result.success && result.data) {
@@ -216,7 +222,8 @@ const SettlementProjectDetail: React.FC<SettlementProjectDetailProps> = ({
   }
 
   return (
-    <div className="p-6 max-w-[1400px] mx-auto">
+    <div className="flex-1 flex flex-col overflow-hidden p-6 max-w-[1400px] mx-auto w-full">
+      {ConfirmDialog}
       {/* 打印内容 */}
       <div ref={printRef}>
         {filteredSettlements.map(s => (
@@ -277,7 +284,7 @@ const SettlementProjectDetail: React.FC<SettlementProjectDetailProps> = ({
       </div>
 
       {/* 筛选器 */}
-      <div className="bg-white rounded-xl shadow-sm p-4 mb-6 flex items-center gap-4">
+      <FilterBar className="mb-6">
         <div className="flex items-center gap-2">
           <label className="text-sm text-slate-600">结算类型:</label>
           <select
@@ -303,9 +310,10 @@ const SettlementProjectDetail: React.FC<SettlementProjectDetailProps> = ({
             <option value="archived">已归档</option>
           </select>
         </div>
-      </div>
+      </FilterBar>
 
       {/* 结算单列表 */}
+      <HoverScrollbar className="flex-1 min-h-0">
       <SettlementList
         settlements={filteredSettlements}
         onEdit={handleEdit}
@@ -315,34 +323,13 @@ const SettlementProjectDetail: React.FC<SettlementProjectDetailProps> = ({
         onPrint={handlePrint}
         onPreviewFile={handlePreviewFile}
       />
+      </HoverScrollbar>
 
-      {/* 模态框 */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <motion.div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }}>
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
-              <h2 className="text-xl font-semibold text-slate-800">
-                {editingSettlement ? '编辑结算单' : '新建结算单'}
-              </h2>
-              <button
-                onClick={() => { setShowModal(false); setEditingSettlement(null) }}
-                className="text-slate-400 hover:text-slate-600"
-              >
-                <Icon name="X" size={16} />
-              </button>
-            </div>
-            <div className="overflow-y-auto flex-1">
-              <SettlementForm
-                settlement={editingSettlement}
-                projects={[project]}
-                partners={partners}
-                onSubmit={handleSubmit}
-                onCancel={() => { setShowModal(false); setEditingSettlement(null) }}
-              />
-            </div>
-          </motion.div>
-        </div>
-      )}
+      <Modal isOpen={showModal} onClose={() => { setShowModal(false); setEditingSettlement(null) }}
+        title={editingSettlement ? '编辑结算单' : '新建结算单'} size="full">
+        <SettlementForm settlement={editingSettlement} projects={[project]} partners={partners}
+          onSubmit={handleSubmit} onCancel={() => { setShowModal(false); setEditingSettlement(null) }} />
+      </Modal>
 
       {/* 模板选择器 */}
       {showTemplateSelector && (

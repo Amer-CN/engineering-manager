@@ -1,4 +1,7 @@
-import React, { useState, useMemo, useCallback } from 'react'
+import React, { useState, useMemo, useCallback, useEffect } from 'react'
+import { HoverScrollbar } from './ui/HoverScrollbar'
+import Spinner from './ui/Spinner'
+import { useStatusStore } from '@/store/statusStore'
 
 export type ViewMode = 'card' | 'table'
 
@@ -33,6 +36,8 @@ interface DataTableProps<T> {
   pageSizeOptions?: number[]
   /** 默认每页条数 */
   defaultPageSize?: number
+  /** 使用悬浮滚动条 */
+  useHoverScrollbar?: boolean
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -84,7 +89,8 @@ export function DataTable<T>({
   loading = false,
   extraActions,
   pageSizeOptions = [20, 50, 100],
-  defaultPageSize = 20
+  defaultPageSize = 20,
+  useHoverScrollbar = false
 }: DataTableProps<T>) {
   const [sortKey, setSortKey] = useState<string | null>(null)
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
@@ -145,22 +151,27 @@ export function DataTable<T>({
     }
   }, [data.length, totalPages])
 
+  // 同步分页信息到状态栏
+  const setStatusBarInfo = useStatusStore(s => s.setInfo)
+  useEffect(() => {
+    if (data.length > 0) {
+      const start = pageSize > 0 ? (currentPage - 1) * pageSize + 1 : 1
+      const end = pageSize > 0 ? Math.min(currentPage * pageSize, data.length) : data.length
+      setStatusBarInfo({ total: data.length, start, end })
+    } else {
+      setStatusBarInfo(null)
+    }
+    return () => setStatusBarInfo(null)
+  }, [data.length, currentPage, pageSize, setStatusBarInfo])
+
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-500 border-t-transparent"></div>
-      </div>
-    )
+    return <Spinner size="lg" />
   }
 
   return (
     <div className="flex flex-col h-full">
       {/* 工具栏 */}
-      <div className="flex items-center justify-between mb-4 px-1">
-        <div className="text-sm text-slate-500">
-          共 {data.length} 条数据
-          {pageSize > 0 && `，显示 ${Math.min((currentPage - 1) * pageSize + 1, data.length)}-${Math.min(currentPage * pageSize, data.length)} 条`}
-        </div>
+      <div className="flex items-center justify-end mb-4 px-1">
         <div className="flex items-center gap-3">
           {extraActions}
         </div>
@@ -168,54 +179,107 @@ export function DataTable<T>({
 
       {/* 表格视图 */}
       <div className="flex-1 overflow-hidden">
-        <div className="h-full overflow-auto border border-slate-200 dark:border-slate-700 rounded-lg">
-          <table className="w-full">
-            <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
-              <tr>
-                {columns.map(col => (
-                  <th
-                    key={col.key}
-                    className={`px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider ${
-                      col.sortable ? 'cursor-pointer hover:bg-slate-100 select-none' : ''
-                    }`}
-                    style={{ width: col.width }}
-                    onClick={() => col.sortable && handleSort(col.key)}
-                  >
-                    <div className="flex items-center gap-1">
-                      {col.title}
-                      {col.sortable && (
-                        <span className="text-slate-400">
-                          {sortKey === col.key ? (sortOrder === 'asc' ? '↑' : '↓') : '↕'}
-                        </span>
-                      )}
-                    </div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-100 dark:divide-slate-700">
-              {paginatedData.length > 0 ? (
-                paginatedData.map((item, index) => (
-                  <TableRow
-                    key={getRowKey(item, index)}
-                    item={item}
-                    index={index}
-                    columns={columns}
-                    onClick={onRowClick}
-                    rowKeyStr={getRowKey(item, index)}
-                  />
-                ))
-              ) : (
+        {useHoverScrollbar ? (
+          <HoverScrollbar className="h-full border border-slate-200 dark:border-slate-700 rounded-lg">
+            <div className="min-h-full">
+              <table className="w-full">
+                <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
+                  <tr>
+                    {columns.map(col => (
+                      <th
+                        key={col.key}
+                        className={`px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider ${
+                          col.sortable ? 'cursor-pointer hover:bg-slate-100 select-none' : ''
+                        }`}
+                        style={{ width: col.width }}
+                        onClick={() => col.sortable && handleSort(col.key)}
+                      >
+                        <div className="flex items-center gap-1">
+                          {col.title}
+                          {col.sortable && (
+                            <span className="text-slate-400">
+                              {sortKey === col.key ? (sortOrder === 'asc' ? '↑' : '↓') : '↕'}
+                            </span>
+                          )}
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-100 dark:divide-slate-700">
+                  {paginatedData.length > 0 ? (
+                    paginatedData.map((item, index) => (
+                      <TableRow
+                        key={getRowKey(item, index)}
+                        item={item}
+                        index={index}
+                        columns={columns}
+                        onClick={onRowClick}
+                        rowKeyStr={getRowKey(item, index)}
+                      />
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={columns.length} className="px-4 py-12 text-center text-slate-500">
+                        {emptyIcon && <div className="text-4xl mb-2">{emptyIcon}</div>}
+                        {emptyText}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </HoverScrollbar>
+        ) : (
+          <div className="h-full overflow-auto border border-slate-200 dark:border-slate-700 rounded-lg">
+            <table className="w-full">
+              <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
                 <tr>
-                  <td colSpan={columns.length} className="px-4 py-12 text-center text-slate-500">
-                    {emptyIcon && <div className="text-4xl mb-2">{emptyIcon}</div>}
-                    {emptyText}
-                  </td>
+                  {columns.map(col => (
+                    <th
+                      key={col.key}
+                      className={`px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider ${
+                        col.sortable ? 'cursor-pointer hover:bg-slate-100 select-none' : ''
+                      }`}
+                      style={{ width: col.width }}
+                      onClick={() => col.sortable && handleSort(col.key)}
+                    >
+                      <div className="flex items-center gap-1">
+                        {col.title}
+                        {col.sortable && (
+                          <span className="text-slate-400">
+                            {sortKey === col.key ? (sortOrder === 'asc' ? '↑' : '↓') : '↕'}
+                          </span>
+                        )}
+                      </div>
+                    </th>
+                  ))}
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-100 dark:divide-slate-700">
+                {paginatedData.length > 0 ? (
+                  paginatedData.map((item, index) => (
+                    <TableRow
+                      key={getRowKey(item, index)}
+                      item={item}
+                      index={index}
+                      columns={columns}
+                      onClick={onRowClick}
+                      rowKeyStr={getRowKey(item, index)}
+                    />
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={columns.length} className="px-4 py-12 text-center text-slate-500">
+                      {emptyIcon && <div className="text-4xl mb-2">{emptyIcon}</div>}
+                      {emptyText}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {/* 分页 */}
         {pageSize > 0 && totalPages > 1 && (

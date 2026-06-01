@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Template } from '../../../types/electron'
 import { Icon } from '../../ui/Icon'
+import { Modal } from '../../ui/Modal/Modal'
+import { getAPI } from '@/services/api-adapter'
 
 interface TemplatePreviewProps {
   template: Template
@@ -22,7 +24,7 @@ export default function TemplatePreview({ template, onClose }: TemplatePreviewPr
     try {
       if (template.fileType === 'docx') {
         // 调用主进程用 mammoth 转换 docx → HTML
-        const result = await window.electronAPI.convertTemplateDocxToHtml(template.storedFileName)
+        const result = await (await getAPI()).convertTemplateDocxToHtml(template.storedFileName)
         if (result.success && result.data) {
           setHtmlContent(result.data)
         } else {
@@ -30,7 +32,7 @@ export default function TemplatePreview({ template, onClose }: TemplatePreviewPr
         }
       } else {
         // 非 docx：读取文件并提供下载链接
-        const result = await window.electronAPI.readFile({
+        const result = await (await getAPI()).readFile({
           category: 'templates',
           subCategory: 'files',
           fileName: template.storedFileName,
@@ -52,32 +54,22 @@ export default function TemplatePreview({ template, onClose }: TemplatePreviewPr
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-800">{template.name}</h2>
-            <p className="text-xs text-slate-400">{template.fileName}</p>
+    <Modal isOpen onClose={onClose} title={template.name} size="full">
+      <p className="text-xs text-slate-400 mb-4">{template.fileName}</p>
+      <div>
+        {loading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary-500 border-t-transparent" />
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
-            <Icon name="X" size={18} />
-          </button>
-        </div>
-        <div className="flex-1 overflow-auto p-6">
-          {loading ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary-500 border-t-transparent" />
-            </div>
-          ) : error ? (
-            <div className="text-center py-16 text-slate-400">
-              <Icon name="AlertCircle" size={32} className="mx-auto mb-3 text-amber-400" />
-              <p>{error}</p>
-            </div>
-          ) : (
-            <div className="border border-slate-200 rounded-lg p-6 bg-white" dangerouslySetInnerHTML={{ __html: htmlContent }} />
-          )}
-        </div>
+        ) : error ? (
+          <div className="text-center py-16 text-slate-400">
+            <Icon name="AlertCircle" size={32} className="mx-auto mb-3 text-amber-400" />
+            <p>{error}</p>
+          </div>
+        ) : (
+          <div className="border border-slate-200 rounded-lg p-6 bg-white" dangerouslySetInnerHTML={{ __html: htmlContent }} />
+        )}
       </div>
-    </div>
+    </Modal>
   )
 }

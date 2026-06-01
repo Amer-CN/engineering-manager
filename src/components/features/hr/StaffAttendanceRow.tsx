@@ -98,7 +98,7 @@ export const StaffAttendanceRow = React.memo(function StaffAttendanceRow({
               <button onClick={() => onEdit(s.id, yearMonth)}
                 className="text-indigo-600 hover:text-indigo-800 text-sm font-medium">编辑</button>
               <button onClick={() => onDelete(att)}
-                className="text-red-400 hover:text-red-600 text-sm" title="删除本月考勤">删除</button>
+                className="text-red-400 hover:text-red-600 text-sm">删除</button>
             </>
           ) : (
             <button onClick={() => onEdit(s.id, yearMonth)}

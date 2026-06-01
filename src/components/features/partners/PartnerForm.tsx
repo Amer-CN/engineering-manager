@@ -4,6 +4,9 @@ import { partnerCategories } from '../../../data/regions'
 import { inferTaxTypeFromCreditCode, getTaxTypeLabel } from '../../../services/companyQuery'
 import { useCompanyQuery } from './useCompanyQuery'
 import { FileDropZone } from './FileDropZone'
+import { useToastStore } from '@/store/toastStore'
+import { useBusinessLicenseOCR } from '@/hooks/useBusinessLicenseOCR'
+import { Icon } from '../../ui/Icon'
 
 interface PartnerFormProps {
   partner?: Partner | null
@@ -39,9 +42,12 @@ export const PartnerForm: React.FC<PartnerFormProps> = ({
   onSubmit,
   onCancel
 }) => {
+  const showToast = useToastStore(state => state.showToast)
+  const { processBusinessLicenseFile } = useBusinessLicenseOCR()
   const [formData, setFormData] = useState(defaultFormData)
   const [licenseDragOver, setLicenseDragOver] = useState(false)
   const [otherFilesDragOver, setOtherFilesDragOver] = useState(false)
+  const [businessLicenseLoading, setBusinessLicenseLoading] = useState(false)
   const { queryLoading, handleQueryCreditCode } = useCompanyQuery(formData.creditCode, setFormData)
   const licenseInputRef = useRef<HTMLInputElement>(null)
   const otherFilesInputRef = useRef<HTMLInputElement>(null)
@@ -99,11 +105,48 @@ export const PartnerForm: React.FC<PartnerFormProps> = ({
 
   const processFile = (file: File, onData: (base64: string, fileType: string) => void) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
-    if (!allowedTypes.includes(file.type)) { alert('只能上传 JPG、PNG、WebP 或 PDF 格式的文件'); return }
-    if (file.size > 10 * 1024 * 1024) { alert('文件大小不能超过 10MB'); return }
+    if (!allowedTypes.includes(file.type)) { showToast('只能上传 JPG、PNG、WebP 或 PDF 格式的文件', 'error'); return }
+    if (file.size > 10 * 1024 * 1024) { showToast('文件大小不能超过 10MB', 'error'); return }
     const reader = new FileReader()
     reader.onload = (e) => onData(e.target?.result as string, file.type === 'application/pdf' ? 'pdf' : 'image')
     reader.readAsDataURL(file)
+  }
+
+  // 营业执照 OCR 识别
+  const handleBusinessLicenseOCR = async () => {
+    if (!formData.licenseFile) {
+      showToast('请先上传营业执照图片', 'error')
+      return
+    }
+
+    setBusinessLicenseLoading(true)
+    try {
+      // 将 base64 转为 File 对象
+      const response = await fetch(formData.licenseFile)
+      const blob = await response.blob()
+      const file = new File([blob], 'license.jpg', { type: 'image/jpeg' })
+
+      const result = await processBusinessLicenseFile(file)
+      if (result) {
+        setFormData(prev => ({
+          ...prev,
+          name: result.companyName || prev.name,
+          creditCode: result.creditCode || prev.creditCode,
+          address: result.address || prev.address,
+          businessScope: result.businessScope || prev.businessScope,
+        }))
+
+        // 自动识别纳税资质
+        if (result.creditCode && result.creditCode.length === 18) {
+          const inferredTaxType = inferTaxTypeFromCreditCode(result.creditCode)
+          if (inferredTaxType) {
+            setFormData(prev => ({ ...prev, taxType: inferredTaxType }))
+          }
+        }
+      }
+    } finally {
+      setBusinessLicenseLoading(false)
+    }
   }
 
   // handleQueryCreditCode extracted to ./useCompanyQuery hook
@@ -332,6 +375,32 @@ export const PartnerForm: React.FC<PartnerFormProps> = ({
           onDrop={(e) => { e.preventDefault(); setLicenseDragOver(false); const files = e.dataTransfer.files; if (files.length > 0) processFile(files[0], (base64, fileType) => setFormData(prev => ({ ...prev, licenseFile: base64, licenseFileType: fileType }))) }}
           onClickUpload={() => licenseInputRef.current?.click()}
         />
+
+        {/* 营业执照 OCR 识别按钮 */}
+        {formData.licenseFile && formData.licenseFileType === 'image' && (
+          <button
+            type="button"
+            onClick={handleBusinessLicenseOCR}
+            disabled={businessLicenseLoading}
+            className={`btn w-full flex items-center justify-center gap-2 transition-all duration-300 ${
+              businessLicenseLoading
+                ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0'
+                : 'btn-primary'
+            }`}
+          >
+            {businessLicenseLoading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                <span className="animate-pulse">AI 正在识别营业执照...</span>
+              </>
+            ) : (
+              <>
+                <Icon name="Sparkles" size={16} />
+                AI 识别营业执照（自动填入公司信息）
+              </>
+            )}
+          </button>
+        )}
 
         {/* 其他附件上传 */}
         <FileDropZone

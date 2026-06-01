@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Icon } from '../../ui/Icon'
 import { FilePreviewModal, FilePreviewData } from './FilePreviewModal'
+import { useToastStore } from '@/store/toastStore'
 
 interface Props {
   fileUrl: string
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export const PaymentFileUpload: React.FC<Props> = ({ fileUrl, fileType, typeLabel, onFileChange, onFileRemove }) => {
+  const showToast = useToastStore(state => state.showToast)
   const [dragOverFile, setDragOverFile] = useState(false)
   const [previewFile, setPreviewFile] = useState<FilePreviewData | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -33,8 +35,8 @@ export const PaymentFileUpload: React.FC<Props> = ({ fileUrl, fileType, typeLabe
 
   const processFile = (file: File) => {
     const allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
-    if (!allowed.includes(file.type)) { alert('只能上传 JPG、PNG、WebP 或 PDF 格式的文件'); return }
-    if (file.size > 10 * 1024 * 1024) { alert('文件大小不能超过 10MB'); return }
+    if (!allowed.includes(file.type)) { showToast('只能上传 JPG、PNG、WebP 或 PDF 格式的文件', 'error'); return }
+    if (file.size > 10 * 1024 * 1024) { showToast('文件大小不能超过 10MB', 'error'); return }
     const reader = new FileReader()
     reader.onload = (e) => {
       const base64 = e.target?.result as string

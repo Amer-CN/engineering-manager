@@ -2,6 +2,7 @@ import React from 'react'
 import { Material, Project } from '../../../types/electron'
 import { Icon } from '../../ui/Icon'
 import { formatMoney } from '@/utils/format'
+import { TABLE } from '@/constants/table'
 
 interface MaterialListProps {
   materials: Material[]
@@ -33,38 +34,38 @@ export const MaterialList: React.FC<MaterialListProps> = ({
 
   return filteredMaterials.length > 0 ? (
     <div className="overflow-x-auto">
-      <table className="w-full">
-        <thead className="bg-slate-50 border-b border-slate-200">
+      <table className={TABLE.table}>
+        <thead className={TABLE.headerRow + ' ' + TABLE.stickyHeader}>
           <tr>
-            <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">材料名称</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">所属项目</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">类别</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">单位</th>
-            <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">数量</th>
-            <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">单价</th>
-            <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">小计</th>
-            <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">操作</th>
+            <th className={TABLE.headerCell}>材料名称</th>
+            <th className={TABLE.headerCell}>所属项目</th>
+            <th className={TABLE.headerCell}>类别</th>
+            <th className={TABLE.headerCell}>单位</th>
+            <th className={TABLE.headerCell + ' text-right'}>数量</th>
+            <th className={TABLE.headerCell + ' text-right'}>单价</th>
+            <th className={TABLE.headerCell + ' text-right'}>小计</th>
+            <th className={TABLE.headerCell + ' text-center'}>操作</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100">
+        <tbody>
           {filteredMaterials.map(material => (
-            <tr key={material.id} className="table-row-hover">
-              <td className="px-4 py-3">
+            <tr key={material.id} className={TABLE.bodyRow}>
+              <td className={TABLE.bodyCell}>
                 <div className="font-medium text-slate-800">{material.name}</div>
               </td>
-              <td className="px-4 py-3 text-sm text-slate-600">{getProjectName(material.projectId)}</td>
-              <td className="px-4 py-3">
+              <td className={TABLE.bodyCell + ' text-sm text-slate-600'}>{getProjectName(material.projectId)}</td>
+              <td className={TABLE.bodyCell}>
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${categoryColors[material.category || ''] || 'bg-slate-100 text-slate-800'}`}>
                   {categoryIcons[material.category || ''] || <Icon name="Package" size={14} className="inline-block" />} {material.category || '其他'}
                 </span>
               </td>
-              <td className="px-4 py-3 text-sm text-slate-600">{material.unit || '-'}</td>
-              <td className="px-4 py-3 text-right text-sm text-slate-800">{material.quantity.toLocaleString()}</td>
-              <td className="px-4 py-3 text-right text-sm text-slate-800">¥{formatMoney(material.price)}</td>
-              <td className="px-4 py-3 text-right text-sm font-medium text-slate-800">
+              <td className={TABLE.bodyCell + ' text-sm text-slate-600'}>{material.unit || '-'}</td>
+              <td className={TABLE.bodyCell + ' text-right text-sm text-slate-800'}>{material.quantity.toLocaleString()}</td>
+              <td className={TABLE.bodyCell + ' text-right text-sm text-slate-800'}>¥{formatMoney(material.price)}</td>
+              <td className={TABLE.bodyCell + ' text-right text-sm font-medium text-slate-800'}>
                 ¥{formatMoney((material.quantity * material.price))}
               </td>
-              <td className="px-4 py-3 text-center">
+              <td className={TABLE.bodyCell + ' text-center'}>
                 <div className="flex items-center justify-center gap-2">
                   <button
                     onClick={() => onEdit(material)}

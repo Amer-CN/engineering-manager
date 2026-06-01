@@ -6,13 +6,7 @@ import React from 'react'
 import type { Project, Member } from '@/types'
 import { usePermission } from '@/hooks/usePermission.tsx'
 import { Icon } from '../../ui/Icon'
-
-const statusLabels: Record<string, { text: string; color: string; dot: string }> = {
-  planning: { text: '筹备中', color: 'bg-blue-50 text-blue-700', dot: 'bg-blue-500' },
-  in_progress: { text: '进行中', color: 'bg-emerald-50 text-emerald-700', dot: 'bg-emerald-500' },
-  completed: { text: '已完成', color: 'bg-slate-100 text-slate-600', dot: 'bg-slate-400' },
-  archived: { text: '已归档', color: 'bg-amber-50 text-amber-700', dot: 'bg-amber-500' },
-}
+import { StatusBadge, PROJECT_STATUS } from '@/constants/status'
 
 export interface ProjectCardProps {
   project: Project
@@ -55,7 +49,6 @@ export const ProjectCard = React.memo(function ProjectCard({ project, members, i
   }
 
   const healthScore = project.status === 'completed' ? 95 : project.status === 'archived' ? 85 : project.status === 'in_progress' ? 72 : project.status === 'planning' ? 55 : 50
-  const status = statusLabels[project.status] || { text: project.status, color: 'bg-slate-100 text-slate-600', dot: 'bg-slate-400' }
   const budgetM = project.budget > 0 ? (project.budget / 10000).toFixed(1) : null
 
   return (
@@ -71,9 +64,7 @@ export const ProjectCard = React.memo(function ProjectCard({ project, members, i
           <h3 className="text-base font-semibold text-slate-800 group-hover:text-primary-600 transition-colors truncate">{project.name}</h3>
           <p className="text-xs text-slate-400 mt-0.5 truncate">{project.address || '暂无地址'}</p>
         </div>
-        <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${status.color}`}>
-          <span className={`inline-block w-1.5 h-1.5 rounded-full ${status.dot} mr-1`} />{status.text}
-        </span>
+        <StatusBadge status={project.status} config={PROJECT_STATUS} />
       </div>
 
       <p className="text-xs text-slate-500 mb-4 line-clamp-2 leading-relaxed">{project.description || '暂无描述'}</p>

@@ -10,6 +10,8 @@ import { Icon } from './ui/Icon'
 import { formatMoney } from '@/utils/format'
 import { Card } from '@/components/ui/Card'
 import { SimpleBarChart } from '@/components/ui/SimpleBarChart'
+import { staggerContainer, sectionVariant } from '@/constants/animations'
+import { getAPI } from '@/services/api-adapter'
 const CHART_COLORS = ['#3b82f6', '#10b981', '#f97316', '#8b5cf6', '#06b6d4', '#f59e0b']
 
 const statCards = [
@@ -21,7 +23,6 @@ const statCards = [
   { key: 'inventory', label: '库存物料', icon: 'Package', color: 'bg-orange-50 text-orange-600' },
 ]
 
-const sectionV = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { duration: 0.3, ease: 'easeOut' } } }
 const cardHover = { y: -4, boxShadow: '0 12px 30px rgba(0,0,0,0.1)', transition: { duration: 0.2 } }
 
 function formatCurrency(n: number): string {
@@ -65,7 +66,7 @@ const Dashboard: React.FC = () => {
 
   const loadStats = async () => {
     try {
-      const result = await window.electronAPI.getDashboardStats()
+      const result = await (await getAPI()).getDashboardStats()
       if (result.success && result.data) {
         setStats(result.data)
         // 从统计数据中构建分类支出图表数据
@@ -82,7 +83,7 @@ const Dashboard: React.FC = () => {
 
   const loadInvoiceData = async () => {
     try {
-      const res = await window.electronAPI.getInvoices()
+      const res = await (await getAPI()).getInvoices()
       if (res.success && res.data) {
         const invoices = res.data
         setRecentInvoices(invoices.slice(0, 5))
@@ -170,10 +171,10 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="max-w-[1600px] mx-auto p-6">
-      <motion.div initial="hidden" animate="visible" variants={{ visible: { transition: { staggerChildren: 0.07 } } }}>
+      <motion.div initial="hidden" animate="visible" variants={staggerContainer}>
 
         {/* ═══ Hero Banner ═══ */}
-        <motion.section variants={sectionV} className="relative overflow-hidden rounded-2xl mb-6 bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 text-white p-6">
+        <motion.section variants={sectionVariant} className="relative overflow-hidden rounded-2xl mb-6 bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 text-white p-6">
           <div className="hero-overlay absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.1),transparent_50%)]" />
           {/* 装饰光点 */}
           <motion.div className="absolute top-3 right-12 w-1 h-1 rounded-full bg-emerald-400"
@@ -211,7 +212,7 @@ const Dashboard: React.FC = () => {
         </motion.section>
 
         {/* ═══ KPI Stat Cards ═══ */}
-        <motion.section variants={sectionV} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+        <motion.section variants={sectionVariant} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
           {statCards.map((card, i) => {
             const val = getStatValue(card.key)
             return (
@@ -250,7 +251,7 @@ const Dashboard: React.FC = () => {
         </motion.section>
 
         {/* ═══ Charts Row ═══ */}
-        <motion.section variants={sectionV} className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+        <motion.section variants={sectionVariant} className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
           {/* BarChart — 原生 SVG，无 Recharts hover 干扰 */}
           <Card title={<span className="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2"><Icon name="BarChart3" size={14} /> 支出分类</span>} headerDivider className="hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] transition-shadow">
               {chartData.expenseByCategory.length > 0 ? (
@@ -297,7 +298,7 @@ const Dashboard: React.FC = () => {
         </motion.section>
 
         {/* ═══ Recent Projects & Invoices ═══ */}
-        <motion.section variants={sectionV} className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <motion.section variants={sectionVariant} className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <Card 
             title={<span className="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2"><Icon name="FolderKanban" size={14} /> 最近项目</span>}
             extra={stats?.projectsCount ? <span className="text-xs text-slate-400">{stats.projectsCount} 总计</span> : null}

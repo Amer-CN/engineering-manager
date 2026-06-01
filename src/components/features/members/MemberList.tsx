@@ -8,6 +8,7 @@
 import type { Member } from '@/types'
 import { MemberCard } from './MemberCard'
 import { EmptyState } from '@/components/ui/EmptyState'
+import Spinner from '@/components/ui/Spinner'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Types
@@ -58,14 +59,7 @@ export function MemberList({
 }: MemberListProps) {
   // 加载状态
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 dark:border-slate-700 border-t-primary-600"></div>
-          <span className="text-slate-500">加载中...</span>
-        </div>
-      </div>
-    )
+    return <Spinner size="lg" text="加载人员数据..." />
   }
 
   // 空状态

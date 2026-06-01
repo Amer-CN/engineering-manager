@@ -4,6 +4,7 @@
  */
 import { useState, useEffect, useCallback } from 'react'
 import type { Project, WorkerTeam, AttendanceRecord, WageRecord, OverdueStats } from '@/types'
+import { getAPI } from '@/services/api-adapter'
 
 export type ViewMode = 'dashboard' | 'cycle' | 'batch' | 'batch-confirm' | 'payment-records'
 
@@ -50,9 +51,10 @@ export function useWageManagement() {
   const loadBaseData = useCallback(async () => {
     setLoading(true)
     try {
+      const api = await getAPI()
       const [projectsRes, teamsRes] = await Promise.all([
-        window.electronAPI.getProjects(),
-        window.electronAPI.getWorkerTeams(),
+        api.getProjects(),
+        api.getWorkerTeams(),
       ])
       if (projectsRes.success && projectsRes.data) setProjects(projectsRes.data.filter((p: Project) => p.status !== 'archived'))
       if (teamsRes.success && teamsRes.data) setWorkerTeams(teamsRes.data)
@@ -63,7 +65,7 @@ export function useWageManagement() {
   const loadAttendances = useCallback(async () => {
     if (!selectedProject) return
     try {
-      const result = await window.electronAPI.getAttendances(selectedProject.id, selectedMonth)
+      const result = await (await getAPI()).getAttendances(selectedProject.id, selectedMonth)
       if (result.success && result.data) setAttendances(result.data)
     } catch (error) { console.error('加载考勤失败:', error) }
   }, [selectedProject, selectedMonth])
@@ -71,7 +73,7 @@ export function useWageManagement() {
   const loadAllProjectAttendances = useCallback(async () => {
     if (!selectedProject) return
     try {
-      const result = await window.electronAPI.getAttendances(selectedProject.id, undefined)
+      const result = await (await getAPI()).getAttendances(selectedProject.id, undefined)
       if (result.success && result.data) setAllProjectAttendances(result.data)
     } catch (error) { console.error('加载全部考勤失败:', error) }
   }, [selectedProject])
@@ -79,7 +81,7 @@ export function useWageManagement() {
   const loadWages = useCallback(async () => {
     if (!selectedProject) return
     try {
-      const result = await window.electronAPI.getWages(selectedProject.id, selectedMonth)
+      const result = await (await getAPI()).getWages(selectedProject.id, selectedMonth)
       if (result.success && result.data) setWageRecords(result.data)
     } catch (error) { console.error('加载工资数据失败:', error) }
   }, [selectedProject, selectedMonth])
@@ -87,7 +89,7 @@ export function useWageManagement() {
   const loadAllRecords = useCallback(async () => {
     try {
       const projectId = view === 'cycle' ? selectedProject?.id : undefined
-      const result = await window.electronAPI.getWages(projectId, undefined)
+      const result = await (await getAPI()).getWages(projectId, undefined)
       if (result.success && result.data) setAllWageRecords(result.data)
     } catch (error) { console.error('加载工资记录失败:', error) }
   }, [selectedProject, view])
@@ -97,9 +99,10 @@ export function useWageManagement() {
     const list: { pwId: number; name: string; teamName: string; idCard: string }[] = []
     const pwIds: number[] = []
     try {
+      const api = await getAPI()
       const [pwResult, workersResult] = await Promise.all([
-        window.electronAPI.getProjectWorkers(selectedProject.id),
-        window.electronAPI.getWorkers(),
+        api.getProjectWorkers(selectedProject.id),
+        api.getWorkers(),
       ])
       const idCardMap = new Map<number, string>()
       if (workersResult.success && workersResult.data) {
@@ -122,7 +125,7 @@ export function useWageManagement() {
   // ── 欠薪统计加载 ──
   const loadOverdueStats = useCallback(async () => {
     try {
-      const result = await window.electronAPI.getWageOverdueStats()
+      const result = await (await getAPI()).getWageOverdueStats()
       if (result.success && result.data) {
         setOverdueStats(result.data)
       }

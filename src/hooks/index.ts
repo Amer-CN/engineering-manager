@@ -18,6 +18,16 @@ export type { CRUDAPI, CRUDState, UseCRUDBaseOptions, UseCRUDBaseReturn } from '
 export { useIdCardOCR } from './useIdCardOCR'
 export type { UseIdCardOCRReturn, OCRResult, Toast } from './useIdCardOCR'
 
+// OCR 相关 Hooks
+export { useInvoiceOCR } from './useInvoiceOCR'
+export { useBankCardOCR } from './useBankCardOCR'
+export { useBusinessLicenseOCR } from './useBusinessLicenseOCR'
+export { useBankReceiptOCR } from './useBankReceiptOCR'
+export { usePermitOCR } from './usePermitOCR'
+export { useBankStatementOCR } from './useBankStatementOCR'
+export { useGeneralReceiptOCR } from './useGeneralReceiptOCR'
+export { useCompanyQueryOCR } from './useCompanyQueryOCR'
+
 // 文件上传
 export { useFileUpload } from './useFileUpload'
 export type { UseFileUploadOptions, UseFileUploadReturn, UploadedFile } from './useFileUpload'

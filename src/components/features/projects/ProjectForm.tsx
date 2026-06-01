@@ -5,6 +5,8 @@ import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import type { Project, Member } from '@/types'
 import { Icon } from '../../ui/Icon'
+import { Input } from '../../ui/Input/Input'
+import { useToastStore } from '@/store/toastStore'
 
 const statusOptions = [
   { value: 'planning', label: '筹备中' },
@@ -29,6 +31,7 @@ export interface ProjectFormProps {
 }
 
 export function ProjectForm({ project, members, onSubmit, onCancel }: ProjectFormProps) {
+  const showToast = useToastStore(state => state.showToast)
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState<ProjectFormData>({
     name: '', description: '', address: '',
@@ -51,7 +54,7 @@ export function ProjectForm({ project, members, onSubmit, onCancel }: ProjectFor
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.projectManagerId) { alert('请选择项目负责人'); return }
+    if (!formData.projectManagerId) { showToast('请选择项目负责人', 'error'); return }
     setLoading(true)
     try { await onSubmit(formData) } finally { setLoading(false) }
   }
@@ -76,11 +79,7 @@ export function ProjectForm({ project, members, onSubmit, onCancel }: ProjectFor
         <form onSubmit={handleSubmit} className="p-6">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-1.5">
-                项目名称 <span className="text-red-500">*</span>
-              </label>
-              <input type="text" value={formData.name} onChange={e => handleChange('name', e.target.value)}
-                className={glassInput} required placeholder="请输入项目名称" />
+              <Input label="项目名称" type="text" value={formData.name} onChange={e => handleChange('name', e.target.value)} size="sm" required placeholder="请输入项目名称" />
             </div>
 
             <div>
@@ -102,19 +101,15 @@ export function ProjectForm({ project, members, onSubmit, onCancel }: ProjectFor
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-1.5">项目地址</label>
-              <input type="text" value={formData.address} onChange={e => handleChange('address', e.target.value)}
-                className={glassInput} placeholder="请输入项目地址" />
+              <Input label="项目地址" type="text" value={formData.address} onChange={e => handleChange('address', e.target.value)} size="sm" placeholder="请输入项目地址" />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-1.5">开工日期</label>
-                <input type="date" value={formData.startDate} onChange={e => handleChange('startDate', e.target.value)} className={glassInput} />
+                <Input label="开工日期" type="date" value={formData.startDate} onChange={e => handleChange('startDate', e.target.value)} size="sm" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-1.5">竣工日期</label>
-                <input type="date" value={formData.endDate} onChange={e => handleChange('endDate', e.target.value)} className={glassInput} />
+                <Input label="竣工日期" type="date" value={formData.endDate} onChange={e => handleChange('endDate', e.target.value)} size="sm" />
               </div>
             </div>
 
@@ -126,9 +121,7 @@ export function ProjectForm({ project, members, onSubmit, onCancel }: ProjectFor
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-white/70 mb-1.5">合同价 (元)</label>
-                <input type="number" value={formData.budget} onChange={e => handleChange('budget', Number(e.target.value))}
-                  className={glassInput} min="0" step="0.01" placeholder="0.00" />
+                <Input label="合同价 (元)" type="number" value={formData.budget} onChange={e => handleChange('budget', Number(e.target.value))} size="sm" min="0" step="0.01" placeholder="0.00" />
               </div>
             </div>
           </div>

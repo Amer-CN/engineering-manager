@@ -1,6 +1,8 @@
 // LaborManagement.tsx - 工人管理主页面（使用统一 Tabs 组件）
 import React, { useState, useCallback, Suspense } from 'react'
+import PageHeader from './ui/PageHeader'
 import { Tabs } from './ui/Tabs'
+import { Spinner } from './ui/Loading/Loading'
 import { useLaborData } from './features/labor/hooks/useLaborData'
 import { useLaborModals } from './features/labor/hooks/useLaborModals'
 import { useLaborOperations } from './features/labor/hooks/useLaborOperations'
@@ -12,7 +14,7 @@ import { MemberForm } from './features/members'
 const LaborDashboard = React.lazy(() => import('./features/labor/LaborDashboard'))
 const LaborWorkerList = React.lazy(() => import('./features/labor/LaborWorkerList'))
 const LaborTeamManager = React.lazy(() => import('./features/labor/LaborTeamManager'))
-const WageManagement = React.lazy(() => import('./WageManagement'))
+const PayrollPage = React.lazy(() => import('./features/payroll/PayrollPage'))
 
 // Lazy load modals
 const WorkerImportModal = React.lazy(() => import('./features/members/WorkerImportModal').then(m => ({ default: m.WorkerImportModal })))
@@ -71,18 +73,14 @@ const LaborManagement: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-amber-500 border-t-transparent" />
+        <Spinner size="lg" />
       </div>
     )
   }
 
   return (
     <div className="p-6 max-w-[1400px] mx-auto">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">工人管理</h1>
-        <p className="text-slate-500 mt-1">管理农民工信息、班组与工资</p>
-      </div>
+      <PageHeader title="工人管理" subtitle="管理农民工信息、班组与工资" />
 
       {/* 统一 Tabs 组件 */}
       <Tabs
@@ -125,7 +123,7 @@ const LaborManagement: React.FC = () => {
           />
         )}
         {activeTab === 'wages' && (
-          <WageManagement />
+          <PayrollPage mode="worker" />
         )}
       </Tabs>
 

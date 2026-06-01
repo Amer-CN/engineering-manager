@@ -9,6 +9,7 @@ import { motion } from 'framer-motion'
 import { Icon } from '@/components/ui/Icon'
 import type { CostLedgerCategory, CostLedgerMatchRule } from '@/types'
 import { executeBatchImport, learnFromOverrides as doLearnFromOverrides, buildImportEntries } from './importComponents/importLogic'
+import { getAPI } from '@/services/api-adapter'
 import { ImportFileStep } from './importComponents/ImportFileStep'
 import { ImportMappingStep, parseAllRows } from './importComponents/ImportMappingStep'
 import { ImportProgressStep } from './importComponents/ImportProgressStep'
@@ -49,7 +50,7 @@ interface Props {
 export async function learnFromEdit(
   summary: string, counterparty: string, notes: string, categoryCode: string, direction: string
 ): Promise<number> {
-  const api = window.electronAPI
+  const api = await getAPI()
   if (!api?.getCostLedgerMatchRules || !api?.saveCostLedgerMatchRules) return 0
   const text = ((summary || '') + ' ' + (counterparty || '') + ' ' + (notes || '')).trim()
   if (!text) return 0
@@ -106,10 +107,11 @@ export function CostLedgerImportModal({
   const [learnedRules, setLearnedRules] = useState<CostLedgerMatchRule[]>([])
 
   useEffect(() => {
-    const api = window.electronAPI
-    if (api?.getCostLedgerMatchRules) {
-      api.getCostLedgerMatchRules().then((r: any) => { if (r?.success) setLearnedRules(r.data || []) })
-    }
+    getAPI().then(api => {
+      if (api?.getCostLedgerMatchRules) {
+        return api.getCostLedgerMatchRules()
+      }
+    }).then((r: any) => { if (r?.success) setLearnedRules(r.data || []) })
   }, [])
 
   // ── 文件选择 ──
@@ -263,10 +265,10 @@ export function CostLedgerImportModal({
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex items-center justify-end gap-3 shrink-0">
-          {step === 'file' && <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800">取消</button>}
+          {step === 'file' && <button onClick={onClose} className="btn btn-ghost btn-sm">取消</button>}
           {step === 'mapping' && (
             <>
-              <button onClick={() => setStep('file')} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800">重新选择文件</button>
+              <button onClick={() => setStep('file')} className="btn btn-ghost btn-sm">重新选择文件</button>
               <button onClick={executeImport} disabled={previewRows.validCount === 0}
                 className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
                 导入 {previewRows.validCount} 条数据

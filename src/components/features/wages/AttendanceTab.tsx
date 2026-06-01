@@ -1,7 +1,9 @@
 import { useState, useMemo, useRef } from 'react'
+import { HoverScrollbar } from '@/components/ui/HoverScrollbar'
 import type { Project, WorkerTeam, AttendanceRecord } from '@/types'
-import { Icon } from '../../ui/Icon'
+import { EmptyState } from '../../ui/EmptyState'
 import { AttendanceTabRow } from './AttendanceTabRow'
+import { TABLE } from '@/constants/table'
 
 interface AttendanceTabProps {
   selectedProject: Project | null
@@ -39,9 +41,8 @@ export default function AttendanceTab({
 
   if (!selectedProject) {
     return (
-      <div className="p-4 text-center py-12 text-slate-400">
-        <Icon name="ClipboardFile" size={48} className="mx-auto mb-4" />
-        <p>请先选择项目和月份</p>
+      <div className="p-4">
+        <EmptyState icon="ClipboardFile" title="请先选择项目和月份" />
       </div>
     )
   }
@@ -109,25 +110,21 @@ export default function AttendanceTab({
       </div>
 
       {filteredAttendances.length === 0 ? (
-        <div className="text-center py-12 text-slate-400">
-          <Icon name="ClipboardFile" size={48} className="mx-auto mb-4" />
-          <p>暂无考勤记录</p>
-          <p className="text-sm mt-1">点击"生成默认考勤"为项目工人创建考勤</p>
-        </div>
+        <EmptyState icon="ClipboardFile" title="暂无考勤记录" description="点击「生成默认考勤」为项目工人创建考勤" />
       ) : (
-        <div className="flex-1 overflow-y-auto min-h-0">
-          <table className="w-full text-sm">
-            <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200">
-              <tr className="text-left">
-                <th className="px-3 py-3 w-10">
+        <HoverScrollbar className="flex-1 min-h-0">
+          <table className={TABLE.table + ' text-sm'}>
+            <thead className={TABLE.headerRow + ' ' + TABLE.stickyHeader}>
+              <tr>
+                <th className={TABLE.headerCell + ' w-10'}>
                   <input type="checkbox"
                     checked={selectedIds.size === filteredAttendances.length && filteredAttendances.length > 0}
                     onChange={toggleAll} className="rounded" />
                 </th>
-                <th className="px-4 py-3 font-medium text-slate-600">姓名</th>
-                <th className="px-4 py-3 font-medium text-slate-600">班组</th>
-                <th className="px-4 py-3 font-medium text-slate-600">考勤摘要</th>
-                <th className="px-4 py-3 font-medium text-slate-600">操作</th>
+                <th className={TABLE.headerCell}>姓名</th>
+                <th className={TABLE.headerCell}>班组</th>
+                <th className={TABLE.headerCell}>考勤摘要</th>
+                <th className={TABLE.headerCell}>操作</th>
               </tr>
             </thead>
             <tbody>
@@ -145,7 +142,7 @@ export default function AttendanceTab({
               ))}
             </tbody>
           </table>
-        </div>
+        </HoverScrollbar>
       )}
     </div>
   )

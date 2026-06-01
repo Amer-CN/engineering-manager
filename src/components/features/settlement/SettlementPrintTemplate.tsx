@@ -8,13 +8,15 @@ interface PrintContentProps {
   partners: Partner[]
 }
 
-export const PrintContent: React.FC<PrintContentProps> = ({ settlement, projects, partners }) => (
+export const PrintContent: React.FC<PrintContentProps> = ({ settlement, projects, partners }) => {
+  const items = Array.isArray(settlement.items) ? settlement.items : []
+  return (
   <div className="print-content hidden print:block">
     <div className="print-header">
       <h1 style={{ fontSize: '24pt', fontWeight: 'bold', marginBottom: '10px' }}>{settlement.name}</h1>
       <p style={{ fontSize: '12pt', color: '#666' }}>结算单号: {settlement.settlementNo}</p>
     </div>
-    
+
     <div style={{ marginBottom: '20px' }}>
       <p><strong>项目:</strong> {projects.find(p => p.id === settlement.projectId)?.name || '-'}</p>
       <p><strong>单位:</strong> {partners.find(p => p.id === settlement.partnerId)?.name || '-'}</p>
@@ -22,7 +24,7 @@ export const PrintContent: React.FC<PrintContentProps> = ({ settlement, projects
       <p><strong>结算金额:</strong> ¥{formatMoney(settlement.amount)}</p>
     </div>
 
-    {settlement.items && settlement.items.length > 0 && (
+    {items.length > 0 && (
       <table className="print-table">
         <thead>
           <tr>
@@ -35,7 +37,7 @@ export const PrintContent: React.FC<PrintContentProps> = ({ settlement, projects
           </tr>
         </thead>
         <tbody>
-          {settlement.items.map((item, index) => (
+          {items.map((item, index) => (
             <tr key={item.id}>
               <td>{index + 1}</td>
               <td>{item.description}</td>
@@ -73,6 +75,7 @@ export const PrintContent: React.FC<PrintContentProps> = ({ settlement, projects
       </div>
     </div>
   </div>
-)
+  )
+}
 
 export default PrintContent

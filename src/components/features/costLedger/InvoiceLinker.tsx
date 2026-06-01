@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { getAPI } from '@/services/api-adapter'
 
 interface InvoiceLinkerProps {
   projectId: number
@@ -11,8 +12,8 @@ export function InvoiceLinker({ projectId, value, onChange }: InvoiceLinkerProps
   const [search, setSearch] = useState('')
 
   useEffect(() => {
-    if (projectId && window.electronAPI?.getInvoices) {
-      window.electronAPI.getInvoices(projectId).then((r: any) => {
+    if (projectId) {
+      getAPI().then(api => api.getInvoices(projectId)).then((r: any) => {
         if (r.success) setInvoices(r.data || [])
       }).catch(() => {})
     }

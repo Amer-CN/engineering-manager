@@ -2,6 +2,7 @@ import { useCallback, useRef, type ReactNode } from 'react'
 import type { Member, WorkerTeam, WorkerStatus } from '../../../../types/electron'
 import { useToastStore } from '@/store/toastStore'
 import { useConfirm } from '../../../../hooks/useConfirm'
+import { getAPI } from '@/services/api-adapter'
 import { useMemberOperations } from '../../members/useMemberOperations'
 import { useTeamOps } from '../../members/useTeamOps'
 import type { WorkerFormData } from '../../members/memberFormTypes'
@@ -113,12 +114,12 @@ export function useLaborOperations({
       bankName: formData.bankName || undefined,
       bankLineNo: formData.bankLineNo || undefined,
       workerType: formData.workerType || undefined,
-      dailyWage: formData.dailyWage ? Number(formData.dailyWage) || undefined : undefined,
+      dailyWage: formData.dailyWage != null && formData.dailyWage !== '' ? Number(formData.dailyWage) : undefined,
     }
 
     try {
       if (editingWorker) {
-        const result = await window.electronAPI.updateWorker({
+        const result = await (await getAPI()).updateWorker({
           id: editingWorker.workerId || editingWorker.id,
           ...data,
         } as any)
@@ -130,7 +131,7 @@ export function useLaborOperations({
           showToast(result.error || '更新失败', 'error')
         }
       } else {
-        const result = await window.electronAPI.createWorker(data as any)
+        const result = await (await getAPI()).createWorker(data as any)
         if (result.success) {
           showToast('工人已添加', 'success')
           await loadData()
@@ -154,7 +155,7 @@ export function useLaborOperations({
     if (!ok) return
 
     try {
-      const result = await window.electronAPI.deleteWorker(workerId)
+      const result = await (await getAPI()).deleteWorker(workerId)
       if (result.success) {
         showToast('工人已删除', 'success')
         await loadData()
@@ -169,7 +170,7 @@ export function useLaborOperations({
   // Project worker operations
   const handleBatchAddWorkers = useCallback(async (entries: any[]) => {
     try {
-      const result = await window.electronAPI.batchCreateProjectWorkers(entries as any[])
+      const result = await (await getAPI()).batchCreateProjectWorkers(entries as any[])
       if (result.success) {
         showToast(`成功添加 ${entries.length} 名工人`, 'success')
         await loadData()
@@ -183,7 +184,7 @@ export function useLaborOperations({
 
   const handleUpdateProjectWorker = useCallback(async (pwId: number, data: Record<string, any>) => {
     try {
-      const result = await window.electronAPI.updateProjectWorker({ id: pwId, ...data } as any)
+      const result = await (await getAPI()).updateProjectWorker({ id: pwId, ...data } as any)
       if (result.success) {
         showToast('更新成功', 'success')
         await loadData()
@@ -197,7 +198,7 @@ export function useLaborOperations({
 
   const handleDeleteProjectWorker = useCallback(async (pwId: number) => {
     try {
-      const result = await window.electronAPI.deleteProjectWorker(pwId)
+      const result = await (await getAPI()).deleteProjectWorker(pwId)
       if (result.success) {
         showToast('已移除', 'success')
         await loadData()
@@ -211,7 +212,7 @@ export function useLaborOperations({
 
   const handleTeamWorkerTransfer = useCallback(async (pwId: number, toTeamId: number) => {
     try {
-      const result = await window.electronAPI.updateProjectWorker({ id: pwId, teamId: toTeamId } as any)
+      const result = await (await getAPI()).updateProjectWorker({ id: pwId, teamId: toTeamId } as any)
       if (result.success) {
         showToast('调组成功', 'success')
         await loadData()
@@ -234,13 +235,13 @@ export function useLaborOperations({
   ) => {
     try {
       const pwId = (worker as any).projectWorkerId || worker.id
-      const result = await window.electronAPI.updateProjectWorker({
+      const result = await (await getAPI()).updateProjectWorker({
         id: pwId,
         teamId: toTeamId,
         projectId: toProjectId,
       } as any)
       if (result.success) {
-        await window.electronAPI.createWorkerTransfer({
+        await (await getAPI()).createWorkerTransfer({
           workerId: worker.id,
           fromTeamId: worker.teamId || 0,
           toTeamId,
@@ -266,7 +267,7 @@ export function useLaborOperations({
     remarks: string
   ) => {
     try {
-      const result = await window.electronAPI.updateMember({
+      const result = await (await getAPI()).updateMember({
         ...worker,
         status: 'left' as WorkerStatus,
         actualLeaveDate,
@@ -286,7 +287,7 @@ export function useLaborOperations({
   // 工人重新入职
   const handleWorkerReEntry = useCallback(async (worker: Member) => {
     try {
-      const result = await window.electronAPI.updateMember({
+      const result = await (await getAPI()).updateMember({
         ...worker,
         status: 'active' as WorkerStatus,
         actualLeaveDate: undefined,
@@ -306,7 +307,7 @@ export function useLaborOperations({
   // 员工状态变更
   const handleStaffStatusChange = useCallback(async (member: Member, status: string) => {
     try {
-      const result = await window.electronAPI.updateMember({
+      const result = await (await getAPI()).updateMember({
         ...member,
         status: status as any,
       } as any)

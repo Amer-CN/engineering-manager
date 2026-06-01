@@ -1,6 +1,7 @@
 import React from 'react'
 import type { Member } from '@/types'
 import { Icon } from '../../ui/Icon'
+import { Input } from '../../ui/Input/Input'
 import { staffRoles, calculateAge, type StaffFormData } from './memberFormTypes'
 import { IdCardUploadArea, FileUploadArea as _FileUploadArea } from './FormUploadWidgets'
 const FileUploadArea = _FileUploadArea as any
@@ -22,11 +23,7 @@ export default function StaffForm({ formData, setFormData, editingMember, dragOv
   return (
     <>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">姓名 *</label>
-          <input type="text" value={formData.name} onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500" required />
-        </div>
+        <Input label="姓名" size="sm" required value={formData.name} onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))} />
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">职位 *</label>
           <select value={formData.role} onChange={e => setFormData(prev => ({ ...prev, role: e.target.value }))}
@@ -35,27 +32,14 @@ export default function StaffForm({ formData, setFormData, editingMember, dragOv
             {staffRoles.map(role => <option key={role.value} value={role.value}>{role.icon} {role.value}</option>)}
           </select>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">入职时间</label>
-          <input type="date" value={formData.entryDate} onChange={e => setFormData(prev => ({ ...prev, entryDate: e.target.value }))}
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">联系电话</label>
-          <input type="tel" value={formData.phone} onChange={e => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">电子邮箱</label>
-          <input type="email" value={formData.email} onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500" />
-        </div>
+        <Input label="入职时间" size="sm" type="date" value={formData.entryDate} onChange={e => setFormData(prev => ({ ...prev, entryDate: e.target.value }))} />
+        <Input label="联系电话" size="sm" type="tel" value={formData.phone} onChange={e => setFormData(prev => ({ ...prev, phone: e.target.value }))} />
+        <Input label="电子邮箱" size="sm" type="email" value={formData.email} onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))} />
       </div>
 
       <div className="mb-6">
-        <label className="block text-sm font-medium text-slate-700 mb-2">身份证号</label>
-        <input type="text" value={formData.idCard} onChange={e => setFormData(prev => ({ ...prev, idCard: e.target.value }))}
-          className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500" placeholder="18位身份证号" maxLength={18} />
+        <Input label="身份证号" size="sm" value={formData.idCard} onChange={e => setFormData(prev => ({ ...prev, idCard: e.target.value }))}
+          placeholder="18位身份证号" maxLength={18} />
         <div className="grid grid-cols-2 gap-4 mt-4">
           <IdCardUploadArea label="人像面 - 支持拖拽/粘贴上传" image={formData.idCardFront} field="idCardFront"
             dragOverField={dragOverField} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
@@ -75,26 +59,14 @@ export default function StaffForm({ formData, setFormData, editingMember, dragOv
               <option value="male">男</option><option value="female">女</option>
             </select>
           </div>
-          <div>
-            <label className="block text-xs text-slate-600 mb-1">民族</label>
-            <input type="text" value={formData.ethnicity} onChange={e => setFormData(prev => ({ ...prev, ethnicity: e.target.value }))}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 text-sm" placeholder="如：汉族" />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-600 mb-1">出生日期</label>
-            <input type="date" value={formData.birthDate} onChange={e => setFormData(prev => ({ ...prev, birthDate: e.target.value }))}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 text-sm" />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-600 mb-1">年龄</label>
-            <input type="text" value={calculateAge(formData.birthDate)}
-              className="w-full px-3 py-2 border border-slate-200 bg-slate-50 rounded-lg text-sm text-slate-500" disabled placeholder="自动计算" />
-          </div>
+          <Input label="民族" size="sm" value={formData.ethnicity} onChange={e => setFormData(prev => ({ ...prev, ethnicity: e.target.value }))}
+            placeholder="如：汉族" />
+          <Input label="出生日期" size="sm" type="date" value={formData.birthDate} onChange={e => setFormData(prev => ({ ...prev, birthDate: e.target.value }))} />
+          <Input label="年龄" size="sm" value={calculateAge(formData.birthDate)} disabled placeholder="自动计算" />
         </div>
         <div className="mt-4">
-          <label className="block text-xs text-slate-600 mb-1">身份证住址</label>
-          <input type="text" value={formData.idCardAddress} onChange={e => setFormData(prev => ({ ...prev, idCardAddress: e.target.value }))}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 text-sm" placeholder="身份证上的住址信息" />
+          <Input label="身份证住址" size="sm" value={formData.idCardAddress} onChange={e => setFormData(prev => ({ ...prev, idCardAddress: e.target.value }))}
+            placeholder="身份证上的住址信息" />
         </div>
       </div>
 
@@ -116,13 +88,10 @@ export default function StaffForm({ formData, setFormData, editingMember, dragOv
             ['公积金（单位）', 'housingFund'],
             ['公积金（个人）', 'housingFundPersonal'],
             ['其他补贴', 'otherAllowances'],
-          ].map(([label, key]) => (
-            <div key={key}>
-              <label className="block text-xs text-slate-600 mb-1">{label}</label>
-              <input type="number" value={(formData as any)[key] ?? ''}
-                onChange={e => setFormData(prev => ({ ...prev, [key]: e.target.value ? Number(e.target.value) : undefined }))}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500" placeholder="0.00" />
-            </div>
+          ].map(([fieldLabel, key]) => (
+            <Input key={key} label={fieldLabel} size="sm" type="number" value={(formData as any)[key] ?? ''}
+              onChange={e => setFormData(prev => ({ ...prev, [key]: e.target.value ? Number(e.target.value) : undefined }))}
+              placeholder="0.00" />
           ))}
         </div>
         <div className="mt-3 flex items-center gap-2">

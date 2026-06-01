@@ -5,6 +5,7 @@
  */
 import { useState, useCallback } from 'react'
 import { useToastStore } from '@/store/toastStore'
+import { getAPI } from '@/services/api-adapter'
 import type { BatchParseResult, BankReceiptMatch } from '@/types'
 
 interface UseBankReceiptBatchProps {
@@ -45,7 +46,7 @@ export function useBankReceiptBatch({
 
   const handleBatchConfirm = useCallback(async (confirmedMatches: BankReceiptMatch[]) => {
     try {
-      const result = await window.electronAPI.batchConfirmMatches(confirmedMatches, selectedMonth)
+      const result = await (await getAPI()).batchConfirmMatches(confirmedMatches, selectedMonth)
       if (result.success) {
         showToast(`成功确认 ${result.data?.updated || 0} 条工资记录`, 'success')
         // 刷新工资数据

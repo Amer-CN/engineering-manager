@@ -36,7 +36,7 @@ export const LaborWorkerRow = React.memo(function LaborWorkerRow({
       </td>
       <td className="px-3 py-2.5 text-slate-600">{worker.gender || '-'}</td>
       <td className="px-3 py-2.5 text-slate-600">{worker.workerType ? getWorkerTypeLabel(worker.workerType as any) : '-'}</td>
-      <td className="px-3 py-2.5 text-right text-slate-700 font-medium">{worker.dailyWage ? `¥${worker.dailyWage}` : '-'}</td>
+      <td className="px-3 py-2.5 text-right text-slate-700 font-medium">{worker.dailyWage != null ? `¥${worker.dailyWage}` : '-'}</td>
       <td className="px-3 py-2.5 text-slate-500 font-mono text-xs">{(worker as any).bankAccount || '-'}</td>
       <td className="px-3 py-2.5">
         <div className="flex items-center justify-end gap-1">

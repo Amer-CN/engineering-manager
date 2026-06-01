@@ -1,6 +1,8 @@
 // LaborWorkerList.tsx - 工人库Tab
 
 import React, { useState, useRef, useCallback, useMemo } from 'react'
+import { HoverScrollbar } from '../../ui/HoverScrollbar'
+import FilterBar from '../../ui/FilterBar'
 import { Icon } from '../../ui/Icon'
 import type { Member, WorkerTeam } from '../../../types/electron'
 import { LaborWorkerRow } from './LaborWorkerRow'
@@ -171,7 +173,7 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
   return (
     <div className="flex flex-col max-h-[calc(100vh-200px)]">
       {/* 筛选器 */}
-      <div className="shrink-0 bg-white rounded-xl shadow-sm p-4 mb-6 flex flex-wrap items-center gap-4">
+      <FilterBar className="shrink-0 mb-6">
         <span className="text-slate-600 font-medium">筛选：</span>
         <select
           value={filterProject || ''}
@@ -214,11 +216,11 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
         >
           <Icon name="Upload" size={18} className="mr-1" />导入Excel
         </button>
-      </div>
+      </FilterBar>
 
       {/* 工人表格 */}
       {sortedWorkers.length > 0 ? (
-        <div className="bg-white rounded-xl border border-slate-200 overflow-auto">
+        <HoverScrollbar className="bg-white rounded-xl border border-slate-200 h-full">
           <div className="min-w-[900px]">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
@@ -263,7 +265,7 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
               </tbody>
             </table>
           </div>
-        </div>
+        </HoverScrollbar>
       ) : (
         <div className="bg-white rounded-xl shadow-sm p-12 text-center">
           <div className="text-6xl mb-4"><Icon name="Construction" size={48} /></div>

@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react'
+import { HoverScrollbar } from './ui/HoverScrollbar'
+import FilterBar from './ui/FilterBar'
+import Spinner from './ui/Spinner'
 import { Drawing, Project } from '../types/electron'
-import { motion } from 'framer-motion'
 import { Icon } from './ui/Icon'
+import { Modal } from './ui/Modal/Modal'
 import { EmptyState } from './ui/EmptyState'
+import { Input } from './ui/Input/Input'
 import { useToastStore } from '@/store/toastStore'
+import { useConfirm } from '@/hooks/useConfirm'
 import { logCreate, logUpdate, logDelete } from '../utils/audit'
 import { DrawingUploadForm } from './DrawingsUploadForm'
+import { getAPI } from '@/services/api-adapter'
 
 interface DrawingsProps {
   refresh?: () => void
@@ -13,6 +19,7 @@ interface DrawingsProps {
 
 const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
   const showToast = useToastStore(state => state.showToast)
+  const { confirm, ConfirmDialog } = useConfirm()
   const [drawings, setDrawings] = useState<Drawing[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
@@ -38,9 +45,10 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
 
   const loadData = async () => {
     try {
+      const api = await getAPI()
       const [r0, r1] = await Promise.allSettled([
-        window.electronAPI.getDrawings(),
-        window.electronAPI.getProjects()
+        api.getDrawings(),
+        api.getProjects()
       ])
       const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
       setDrawings([...get(r0)])
@@ -78,7 +86,7 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
 
     try {
       if (editingDrawing) {
-        await window.electronAPI.updateDrawing({
+        await (await getAPI()).updateDrawing({
           ...editingDrawing,
           projectId: formData.projectId as number,
           name: formData.name,
@@ -111,7 +119,7 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
             })
             const base64Data = base64.split(',')[1]
 
-            const result = await window.electronAPI.uploadDrawing({
+            const result = await (await getAPI()).uploadDrawing({
               projectId: formData.projectId as number,
               name: formData.files.length === 1 ? formData.name : file.name,
               category: formData.category,
@@ -168,10 +176,11 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
   }
 
   const handleDelete = async (id: number) => {
-    if (confirm('确定要删除这张图纸吗？')) {
+    const ok = await confirm({ title: '确认删除', content: '确定要删除这张图纸吗？', confirmVariant: 'danger' })
+    if (ok) {
       try {
         const drawing = drawings.find(d => d.id === id)
-        await window.electronAPI.deleteDrawing(id)
+        await (await getAPI()).deleteDrawing(id)
         logDelete('drawings', drawing?.name || '图纸', id, { projectId: drawing?.projectId })
         loadData()
         refresh?.()
@@ -227,15 +236,12 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-500 border-t-transparent"></div>
-      </div>
-    )
+    return <Spinner size="lg" text="加载图纸数据..." />
   }
 
   return (
     <div className="p-6 max-w-[1400px] mx-auto">
+      {ConfirmDialog}
       {/* 页面标题 */}
       <div className="flex items-center justify-between mb-8">
         <div>
@@ -271,7 +277,7 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
       </div>
 
       {/* 筛选器 */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-4 mb-6 flex items-center gap-4">
+      <FilterBar className="mb-6">
         <div className="flex items-center gap-2">
           <label className="text-sm text-slate-600">筛选项目</label>
           <select
@@ -308,11 +314,11 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
             placeholder="输入部位名称..."
           />
         </div>
-      </div>
+      </FilterBar>
 
       {/* 图纸列表 */}
       {filteredDrawings.length > 0 ? (
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm">
+        <HoverScrollbar className="bg-white dark:bg-slate-800 rounded-xl shadow-sm h-full">
           <table className="w-full border-separate border-spacing-0">
             <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
               <tr className="">
@@ -363,127 +369,60 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
               ))}
             </tbody>
           </table>
-        </div>
+        </HoverScrollbar>
       ) : (
         <EmptyState icon="Ruler" title="暂无图纸" description="点击下方按钮上传您的第一张图纸"
           action={<button onClick={() => { resetForm(); setShowModal(true) }} className="btn btn-primary px-6 py-3">上传图纸</button>}
         />
       )}
 
-      {/* 模态框 */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <motion.div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md mx-4" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }}>
-            <div className="px-6 py-4 border-b border-slate-200">
-              <h2 className="text-xl font-semibold text-slate-800">
-                {editingDrawing ? '编辑图纸' : '上传图纸'}
-              </h2>
+      <Modal isOpen={showModal} onClose={() => { if (!uploading) { setShowModal(false); resetForm() } }}
+        title={editingDrawing ? '编辑图纸' : '上传图纸'} size="md"
+        footer={<>
+          <button type="button" onClick={() => { if (uploading) return; setShowModal(false); resetForm() }}
+            disabled={uploading} className="btn btn-secondary disabled:opacity-50">取消</button>
+          <button type="submit" form="drawing-form" disabled={uploading}
+            className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
+            {uploading ? `上传中 ${uploadProgress.current}/${uploadProgress.total}...` : editingDrawing ? '保存' : formData.files.length > 1 ? `上传 (${formData.files.length})` : '上传'}
+          </button>
+        </>}>
+        <form id="drawing-form" onSubmit={handleSubmit}>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">所属项目*</label>
+              <select value={formData.projectId} onChange={e => setFormData({ ...formData, projectId: Number(e.target.value) })}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" required>
+                <option value="">请选择项目</option>
+                {projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}
+              </select>
             </div>
-            <form onSubmit={handleSubmit} className="p-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">所属项目*</label>
-                  <select
-                    value={formData.projectId}
-                    onChange={e => setFormData({ ...formData, projectId: Number(e.target.value) })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    required
-                  >
-                    <option value="">请选择项目</option>
-                    {projects.map(project => (
-                      <option key={project.id} value={project.id}>{project.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">图纸名称 *</label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">图纸类型</label>
-                  <select
-                    value={formData.category}
-                    onChange={e => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  >
-                    <option value="">请选择类型</option>
-                    {categories.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
-                    {editingDrawing ? '替换文件 (可选)' : '选择文件 *'}
-                  </label>
-                  <DrawingUploadForm
-                    files={formData.files}
-                    uploading={uploading}
-                    uploadProgress={uploadProgress}
-                    editingMode={!!editingDrawing}
-                    onFilesAdd={handleFilesAdd}
-                    onFileRemove={handleFileRemove}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">部位 *</label>
-                  <input
-                    type="text"
-                    value={formData.position}
-                    onChange={e => setFormData({ ...formData, position: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    placeholder="请输入图纸所属部位..."
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">备注说明</label>
-                  <textarea
-                    value={formData.remarks}
-                    onChange={e => setFormData({ ...formData, remarks: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    rows={3}
-                    placeholder="请输入图纸的备注说明..."
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-slate-200">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (uploading) return
-                    setShowModal(false)
-                    resetForm()
-                  }}
-                  disabled={uploading}
-                  className="btn btn-secondary disabled:opacity-50"
-                >
-                  取消
-                </button>
-                <button
-                  type="submit"
-                  disabled={uploading}
-                  className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {uploading ? `上传中 ${uploadProgress.current}/${uploadProgress.total}...` : editingDrawing ? '保存' : formData.files.length > 1 ? `上传 (${formData.files.length})` : '上传'}
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
-      )}
+            <Input label="图纸名称" size="sm" type="text" required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">图纸类型</label>
+              <select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                <option value="">请选择类型</option>
+                {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+                {editingDrawing ? '替换文件 (可选)' : '选择文件 *'}
+              </label>
+              <DrawingUploadForm files={formData.files} uploading={uploading} uploadProgress={uploadProgress}
+                editingMode={!!editingDrawing} onFilesAdd={handleFilesAdd} onFileRemove={handleFileRemove} />
+            </div>
+            <Input label="部位" size="sm" type="text" required value={formData.position} onChange={e => setFormData({ ...formData, position: e.target.value })}
+              placeholder="请输入图纸所属部位..." />
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">备注说明</label>
+              <textarea value={formData.remarks} onChange={e => setFormData({ ...formData, remarks: e.target.value })}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                rows={3} placeholder="请输入图纸的备注说明..." />
+            </div>
+          </div>
+        </form>
+      </Modal>
     </div>
   )
 }

@@ -8,6 +8,7 @@
  * 4. 解析完成后跳转到匹配确认界面
  */
 import { useState, useCallback, useRef } from 'react'
+import { getAPI } from '@/services/api-adapter'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useToastStore } from '@/store/toastStore'
 import type { BatchParseResult } from '@/types'
@@ -126,7 +127,7 @@ export default function BankReceiptBatch({
       }
 
       // 2. 调用批量解析 IPC
-      const result = await window.electronAPI.batchParseBankReceipts(
+      const result = await (await getAPI()).batchParseBankReceipts(
         filePaths,
         projectId,
         yearMonth
@@ -179,7 +180,7 @@ export default function BankReceiptBatch({
 
       // 调用 IPC 保存文件
       const fileName = `${yearMonth || 'unknown'}_${file.name}`
-      const result = await window.electronAPI.saveFile({
+      const result = await (await getAPI()).saveFile({
         category: 'wages',
         subCategory: 'bank-receipts',
         fileData: `data:${file.type};base64,${fileData}`,

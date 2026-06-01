@@ -49,6 +49,11 @@
   --warning: #d97706;
   --warning-soft: rgba(217, 119, 6, 0.12);
   --danger: #dc2626;
+
+  /* 滚动条主题色 */
+  --scrollbar-thumb: rgba(148, 163, 184, 0.5);
+  --scrollbar-thumb-hover: rgba(100, 116, 139, 0.7);
+  --scrollbar-track: transparent;
   --danger-soft: rgba(220, 38, 38, 0.12);
   --violet: #8b5cf6;
   --violet-soft: rgba(139, 92, 246, 0.12);
@@ -126,6 +131,32 @@
   --shadow-card: 0 1px 3px rgba(0,0,0,0.08);
   --shadow-dropdown: 0 10px 15px -3px rgba(0,0,0,0.1);
   --overlay: rgba(0, 0, 0, 0.5);
+}
+
+/* ── 界面字号 — 通过修改根 font-size 缩放所有 Tailwind rem 字号 ── */
+/* medium (16px) 为默认值，由浏览器默认决定，不重复设置 */
+[data-font-size="small"] { font-size: 14px; }
+[data-font-size="large"] { font-size: 18px; }
+
+/* 隐藏 Chromium 浏览器原生密码显示按钮和自动填充按钮 */
+input::-webkit-password-reveal-button,
+input::-webkit-credentials-auto-fill-button,
+input::-webkit-strong-password-auto-fill-button,
+input::-webkit-strong-password-text,
+input::-webkit-clear-button,
+input::-webkit-inner-spin-button,
+input::-webkit-outer-spin-button {
+  visibility: hidden !important;
+  pointer-events: none !important;
+  position: absolute !important;
+  right: -9999px !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* 用 CSS 模拟密码遮罩，避免浏览器原生密码按钮 */
+.password-mask {
+  -webkit-text-security: disc;
 }
 
 /* ── Graphite 主题（深色 — Reasonix 原版 OKLCH 色值）── */
@@ -232,6 +263,11 @@
   --shadow-card: 0 1px 3px rgba(0,0,0,0.35);
   --shadow-dropdown: 0 10px 15px -3px rgba(0,0,0,0.5);
   --overlay: rgba(0, 0, 0, 0.7);
+
+  /* 自定义滚动条 — Graphite 主题用更亮的灰色 */
+  --scrollbar-thumb: rgba(160, 170, 180, 0.45);
+  --scrollbar-thumb-hover: rgba(200, 110, 40, 0.6);
+  --scrollbar-track: transparent;
 }
 
 /* ── Sandstone 主题（暖浅色 — Reasonix 原版 OKLCH 色值）── */
@@ -337,6 +373,11 @@
   --shadow-card: 0 1px 3px rgba(0,0,0,0.06);
   --shadow-dropdown: 0 10px 15px -3px rgba(0,0,0,0.1);
   --overlay: rgba(0, 0, 0, 0.4);
+
+  /* 自定义滚动条 — Sandstone 主题用暖琥珀色调 */
+  --scrollbar-thumb: rgba(180, 150, 120, 0.45);
+  --scrollbar-thumb-hover: rgba(217, 119, 6, 0.6);
+  --scrollbar-track: transparent;
 }
 
 /* ── Tailwind 通用类覆盖（随主题切换，影响所有页面内容）── */
@@ -649,10 +690,29 @@
 [data-theme="graphite"] aside nav button.hover\:bg-slate-100:hover { background-color: var(--sidebar-item-hover); }
 [data-theme="graphite"] aside nav button.bg-slate-700\/50 { background-color: var(--sidebar-item-active); }
 
-/* 滚动条 Graphite 适配 */
-[data-theme="graphite"] ::-webkit-scrollbar-track { background: var(--bg-2); }
-[data-theme="graphite"] ::-webkit-scrollbar-thumb { background: var(--border-strong); }
-[data-theme="graphite"] ::-webkit-scrollbar-thumb:hover { background: var(--muted-2); }
+/* 滚动条 — 全局薄滚动条 + hover 变粗 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track, transparent);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb, rgba(148, 163, 184, 0.5));
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover, rgba(100, 116, 139, 0.7));
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb, rgba(148, 163, 184, 0.5)) transparent;
+}
 [data-theme="graphite"] .animate-float-slow,
 [data-theme="graphite"] .animate-float-slower {
   opacity: 0.15;
@@ -794,10 +854,7 @@
 [data-theme="sandstone"] .bg-slate-200 { background-color: var(--panel-2); }
 [data-theme="sandstone"] .hover\:bg-slate-200:hover { background-color: var(--panel-2); }
 
-/* Sandstone 滚动条 */
-[data-theme="sandstone"] ::-webkit-scrollbar-track { background: var(--bg-2); }
-[data-theme="sandstone"] ::-webkit-scrollbar-thumb { background: var(--border-strong); }
-[data-theme="sandstone"] ::-webkit-scrollbar-thumb:hover { background: var(--muted-2); }
+/* Sandstone 滚动条 — CSS 变量已在 [data-theme="sandstone"] 中定义，全局规则自动生效 */
 
 * {
   margin: 0;
@@ -811,24 +868,13 @@ body {
   min-height: 100vh;
 }
 
-/* 自定义滚动条 */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+/* 隐藏原生滚动条（使用自定义 HoverScrollbar 组件） */
+.hide-native-scrollbar::-webkit-scrollbar {
+  display: none;
 }
-
-::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+.hide-native-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 /* 按钮样式 */
@@ -1183,4 +1229,139 @@ button:disabled {
 .gpu {
   transform: translateZ(0);
   backface-visibility: hidden;
+}
+
+/* ── Status Bar（复刻 Reasonix 风格）── */
+.statusbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 12px;
+  font-size: 11px;
+  user-select: none;
+  flex-shrink: 0;
+  background: var(--bg-2);
+  color: var(--fg-2);
+  border-top: 1px solid var(--border);
+}
+.statusbar__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--fg-3);
+  flex-shrink: 0;
+}
+.statusbar__dot--busy {
+  background: var(--accent);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+.statusbar__model {
+  color: var(--fg-2);
+  font-weight: 500;
+}
+.statusbar__sep {
+  opacity: 0.4;
+  flex-shrink: 0;
+}
+.statusbar__activity {
+  color: var(--accent);
+}
+.statusbar__cache {
+  color: var(--fg-3);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.statusbar__ctx {
+  color: var(--fg-3);
+}
+.statusbar__spacer {
+  flex: 1;
+}
+
+/* ── Model Switcher（复刻 Reasonix 弹出选择器）── */
+.modelsw {
+  position: relative;
+  display: inline-flex;
+}
+.modelsw__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: var(--fg-3);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  white-space: nowrap;
+  min-width: 0;
+}
+.modelsw__trigger svg {
+  flex-shrink: 0;
+}
+.modelsw__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.modelsw__trigger:hover {
+  color: var(--fg-2);
+}
+.modelsw__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+}
+.modelsw__menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 31;
+  min-width: 160px;
+  max-width: 280px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 5px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+}
+.modelsw__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 9px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--fg-2);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+.modelsw__item:hover {
+  background: var(--panel-2);
+  color: var(--fg-2);
+}
+.modelsw__item--current {
+  color: var(--accent);
+}
+.modelsw__model {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.modelsw__check {
+  flex-shrink: 0;
+}
+
+@keyframes pulse {
+  50% { opacity: 0.35; }
 }

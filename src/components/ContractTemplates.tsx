@@ -1,10 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { motion } from 'framer-motion'
 import { Icon } from './ui/Icon'
+import { Modal } from './ui/Modal/Modal'
+import PageHeader from './ui/PageHeader'
 import { EmptyState } from './ui/EmptyState'
+import { Input } from './ui/Input/Input'
 import { ContractTemplate, TemplateType, TemplateVariable } from '../types/electron'
 import { useToastStore } from '@/store/toastStore'
+import { useConfirm } from '@/hooks/useConfirm'
+import { Spinner } from './ui/Loading/Loading'
 import { ContractTemplateFormModal, templateTypeConfig } from './ContractTemplateFormModal'
+import { getAPI } from '@/services/api-adapter'
 
 interface ContractTemplatesProps {
   refresh?: () => void
@@ -13,6 +18,7 @@ interface ContractTemplatesProps {
 
 const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }) => {
   const showToast = useToastStore(state => state.showToast)
+  const { confirm, ConfirmDialog } = useConfirm()
   const [templates, setTemplates] = useState<ContractTemplate[]>([])
 
   const [loading, setLoading] = useState(true)
@@ -39,7 +45,7 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
 
   const loadData = async () => {
     try {
-      const templatesResult = await window.electronAPI.getContractTemplates()
+      const templatesResult = await (await getAPI()).getContractTemplates()
       if (templatesResult.success && templatesResult.data) setTemplates(templatesResult.data)
     } catch (error) {
       console.error('加载数据失败:', error)
@@ -58,9 +64,9 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
       }
       
       if (editingTemplate) {
-        await window.electronAPI.updateContractTemplate({ ...editingTemplate, ...data })
+        await (await getAPI()).updateContractTemplate({ ...editingTemplate, ...data })
       } else {
-        await window.electronAPI.createContractTemplate(data)
+        await (await getAPI()).createContractTemplate(data)
       }
       loadData()
       setShowModal(false)
@@ -87,9 +93,10 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
   }
 
   const handleDelete = async (id: number) => {
-    if (confirm('确定要删除这个模板吗？')) {
+    const ok = await confirm({ title: '确认删除', content: '确定要删除这个模板吗？', confirmVariant: 'danger' })
+    if (ok) {
       try {
-        await window.electronAPI.deleteContractTemplate(id)
+        await (await getAPI()).deleteContractTemplate(id)
         loadData()
         refresh?.()
         showToast('模板已删除', 'success')
@@ -195,39 +202,24 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-500 border-t-transparent"></div>
+        <Spinner size="lg" />
       </div>
     )
   }
 
   return (
     <div className="p-6 max-w-[1400px] mx-auto">
+      {ConfirmDialog}
       {/* 打印内容容器 */}
       <div ref={printRef} className="hidden print:block"></div>
 
-      {/* 页面标题 */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          {onBack && (
-            <button onClick={onBack}
-              className="btn btn-ghost btn-sm flex items-center gap-1.5">
-              <Icon name="ArrowLeft" size={16} />
-              <span>返回看板</span>
-            </button>
-          )}
-          <div>
-            <h1 className="text-2xl font-bold text-slate-800">合同模板</h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-1">管理合同模板，快速生成合同文档</p>
-          </div>
-        </div>
-        <button
-          onClick={() => { resetForm(); setShowModal(true) }}
-          className="btn btn-primary"
-        >
-          <span className="text-xl">+</span>
-          添加模板
-        </button>
-      </div>
+      <PageHeader title="合同模板" subtitle="管理合同模板，快速生成合同文档" onBack={onBack}
+        actions={
+          <button onClick={() => { resetForm(); setShowModal(true) }} className="btn btn-primary">
+            <span className="text-xl">+</span> 添加模板
+          </button>
+        }
+      />
 
       {/* 统计卡片 */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
@@ -332,92 +324,41 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
         />
       )}
 
-      {/* 生成合同模态框 */}
-      {showGenerateModal && selectedTemplate && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <motion.div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }}>
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold text-slate-800">生成合同</h2>
-                <p className="text-sm text-slate-500">填写模板变量，生成合同文档</p>
-              </div>
-              <button
-                onClick={() => { setShowGenerateModal(false); setSelectedTemplate(null) }}
-                className="text-slate-400 hover:text-slate-600"
-              >
-                <Icon name="X" size={20} />
-              </button>
+      <Modal isOpen={showGenerateModal && !!selectedTemplate} onClose={() => { setShowGenerateModal(false); setSelectedTemplate(null) }}
+        title="生成合同" size="xl"
+        footer={<>
+          <button onClick={() => { setShowGenerateModal(false); setSelectedTemplate(null) }} className="btn btn-secondary">取消</button>
+          <button onClick={handlePrint} className="btn btn-primary"><Icon name="Printer" size={14} /> 打印合同</button>
+        </>}>
+        <p className="text-sm text-slate-500 -mt-2 mb-4">填写模板变量，生成合同文档</p>
+        <div className="space-y-4">
+          {selectedTemplate?.variables?.map(variable => (
+            <div key={variable.key}>
+              <label className="label">{variable.label || variable.key}{variable.required && <span className="text-red-500 ml-1">*</span>}</label>
+              {variable.type === 'date' ? (
+                <Input size="sm" type="date" value={generateForm[variable.key] || ''} onChange={e => setGenerateForm({ ...generateForm, [variable.key]: e.target.value })} />
+              ) : variable.type === 'number' ? (
+                <Input size="sm" type="number" value={generateForm[variable.key] || ''} onChange={e => setGenerateForm({ ...generateForm, [variable.key]: e.target.value })} placeholder={variable.defaultValue || `请输入${variable.label || variable.key}`} />
+              ) : (
+                <Input size="sm" type="text" value={generateForm[variable.key] || ''} onChange={e => setGenerateForm({ ...generateForm, [variable.key]: e.target.value })} placeholder={variable.defaultValue || `请输入${variable.label || variable.key}`} />
+              )}
             </div>
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
-              <div className="space-y-4">
-                {selectedTemplate.variables?.map(variable => (
-                  <div key={variable.key}>
-                    <label className="label">
-                      {variable.label || variable.key}
-                      {variable.required && <span className="text-red-500 ml-1">*</span>}
-                    </label>
-                    {variable.type === 'date' ? (
-                      <input
-                        type="date"
-                        value={generateForm[variable.key] || ''}
-                        onChange={e => setGenerateForm({ ...generateForm, [variable.key]: e.target.value })}
-                        className="input"
-                      />
-                    ) : variable.type === 'number' ? (
-                      <input
-                        type="number"
-                        value={generateForm[variable.key] || ''}
-                        onChange={e => setGenerateForm({ ...generateForm, [variable.key]: e.target.value })}
-                        className="input"
-                        placeholder={variable.defaultValue || `请输入${variable.label || variable.key}`}
-                      />
-                    ) : (
-                      <input
-                        type="text"
-                        value={generateForm[variable.key] || ''}
-                        onChange={e => setGenerateForm({ ...generateForm, [variable.key]: e.target.value })}
-                        className="input"
-                        placeholder={variable.defaultValue || `请输入${variable.label || variable.key}`}
-                      />
-                    )}
-                  </div>
-                ))}
-                
-                {/* 预览区域 */}
-                <div className="mt-6 pt-6 border-t border-slate-100">
-                  <h3 className="font-medium text-slate-800 dark:text-slate-100 mb-3">合同预览</h3>
-                  <div className="bg-slate-50 rounded-xl p-6 max-h-[300px] overflow-y-auto text-sm leading-relaxed">
-                    {(() => {
-                      let content = selectedTemplate.description || ''
-                      selectedTemplate.variables?.forEach(v => {
-                        const value = generateForm[v.key] || v.defaultValue || `【${v.label || v.key}】`
-                        content = content.replace(new RegExp(`\\{\\{${v.key}\\}\\}`, 'g'), `【${value}】`)
-                      })
-                      return content.split('\n').map((line, i) => (
-                        <p key={i} style={{ textIndent: '2em' }}>{line}</p>
-                      ))
-                    })()}
-                  </div>
-                </div>
-              </div>
+          ))}
+          <div className="mt-6 pt-6 border-t border-slate-100">
+            <h3 className="font-medium text-slate-800 dark:text-slate-100 mb-3">合同预览</h3>
+            <div className="bg-slate-50 rounded-xl p-6 max-h-[300px] overflow-y-auto text-sm leading-relaxed">
+              {(() => {
+                let content = selectedTemplate?.description || ''
+                selectedTemplate?.variables?.forEach(v => {
+                  const value = generateForm[v.key] || v.defaultValue || `【${v.label || v.key}】`
+                  content = content.replace(new RegExp(`\\{\\{${v.key}\\}\\}`, 'g'), `【${value}】`)
+                })
+                return content.split('\n').map((line, i) => <p key={i} style={{ textIndent: '2em' }}>{line}</p>)
+              })()}
             </div>
-            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-3">
-              <button
-                onClick={() => { setShowGenerateModal(false); setSelectedTemplate(null) }}
-                className="btn btn-secondary"
-              >
-                取消
-              </button>
-              <button
-                onClick={handlePrint}
-                className="btn btn-primary"
-              >
-                <Icon name="Printer" size={14} /> 打印合同
-              </button>
-            </div>
-          </motion.div>
+          </div>
         </div>
-      )}
+      </Modal>
     </div>
   )
 }

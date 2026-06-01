@@ -4,7 +4,10 @@ dist-electron/
 release/
 .gstack/
 .workbuddy/
+.reasonix/
 .claude/agents/
+.claude/hooks/
+.claude/scheduled_tasks.json
 *.log
 .DS_Store
 Thumbs.db
@@ -25,3 +28,7 @@ graphify-out/
 # 意外生成的空目录
 BRANCH=master/
 nul
+
+# Tauri 构建产物 + 误生成的数据目录
+src-tauri/target/
+__select_folder__/

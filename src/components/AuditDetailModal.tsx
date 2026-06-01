@@ -1,6 +1,7 @@
 import React from 'react'
 import { AuditLog, AuditAction } from '../utils/audit'
 import { formatMoney } from '../utils/format'
+import { Modal } from './ui/Modal/Modal'
 
 interface AuditDetailModalProps {
   selectedLog: AuditLog
@@ -164,64 +165,51 @@ const renderDetail = (log: AuditLog) => {
 
 export const AuditDetailModal: React.FC<AuditDetailModalProps> = ({ selectedLog, onClose, actionConfig, resourceLabels }) => {
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-slate-800">操作日志详情</h3>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 text-2xl"
-          >
-            ✕
-          </button>
-        </div>
-        <div className="p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-medium text-slate-500">时间</label>
-              <div className="text-sm text-slate-800 dark:text-slate-100 mt-1">
-                {new Date(selectedLog.timestamp).toLocaleString('zh-CN')}
-              </div>
+    <Modal isOpen={true} onClose={onClose} title="操作日志详情" size="xl">
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs font-medium text-slate-500">时间</label>
+            <div className="text-sm text-slate-800 dark:text-slate-100 mt-1">
+              {new Date(selectedLog.timestamp).toLocaleString('zh-CN')}
             </div>
-            <div>
-              <label className="text-xs font-medium text-slate-500">用户</label>
-              <div className="text-sm text-slate-800 dark:text-slate-100 mt-1">{selectedLog.username}</div>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-slate-500">用户</label>
+            <div className="text-sm text-slate-800 dark:text-slate-100 mt-1">{selectedLog.username}</div>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-slate-500">操作类型</label>
+            <div className="mt-1">
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                actionConfig[selectedLog.action]?.bgColor || 'bg-slate-100'
+              } ${actionConfig[selectedLog.action]?.color || 'text-slate-700'}`}>
+                {actionConfig[selectedLog.action]?.label || selectedLog.action}
+              </span>
             </div>
-            <div>
-              <label className="text-xs font-medium text-slate-500">操作类型</label>
-              <div className="mt-1">
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  actionConfig[selectedLog.action]?.bgColor || 'bg-slate-100'
-                } ${actionConfig[selectedLog.action]?.color || 'text-slate-700'}`}>
-                  {actionConfig[selectedLog.action]?.label || selectedLog.action}
-                </span>
-              </div>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-slate-500">资源类型</label>
+            <div className="text-sm text-slate-800 dark:text-slate-100 mt-1">
+              {resourceLabels[selectedLog.resource] || selectedLog.resource}
             </div>
-            <div>
-              <label className="text-xs font-medium text-slate-500">资源类型</label>
-              <div className="text-sm text-slate-800 dark:text-slate-100 mt-1">
-                {resourceLabels[selectedLog.resource] || selectedLog.resource}
-              </div>
-            </div>
-            {selectedLog.resourceName && (
-              <div className="col-span-2">
-                <label className="text-xs font-medium text-slate-500">资源名称</label>
-                <div className="text-sm text-slate-800 dark:text-slate-100 mt-1">{selectedLog.resourceName}</div>
-              </div>
-            )}
+          </div>
+          {selectedLog.resourceName && (
             <div className="col-span-2">
-              <label className="text-xs font-medium text-slate-500">描述</label>
-              <div className="text-sm text-slate-800 dark:text-slate-100 mt-1">{selectedLog.description}</div>
+              <label className="text-xs font-medium text-slate-500">资源名称</label>
+              <div className="text-sm text-slate-800 dark:text-slate-100 mt-1">{selectedLog.resourceName}</div>
             </div>
+          )}
+          <div className="col-span-2">
+            <label className="text-xs font-medium text-slate-500">描述</label>
+            <div className="text-sm text-slate-800 dark:text-slate-100 mt-1">{selectedLog.description}</div>
           </div>
-
-          {/* 详细信息 */}
-          <div className="pt-4 border-t border-slate-100">
-            <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2 block">详细信息</label>
-            {renderDetail(selectedLog)}
-          </div>
+        </div>
+        <div className="pt-4 border-t border-slate-100">
+          <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2 block">详细信息</label>
+          {renderDetail(selectedLog)}
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }

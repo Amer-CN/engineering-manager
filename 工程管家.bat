@@ -1,7 +1,7 @@
 @echo off
-title Engineering Manager
+chcp 65001 >nul 2>&1
+title EngineeringManager
 
-:: 如果没在 Windows Terminal 里，就投递到 WT 启动（无闪屏，美观）
 if "%WT_SESSION%"=="" (
     where wt.exe >nul 2>nul
     if not errorlevel 1 (
@@ -10,16 +10,7 @@ if "%WT_SESSION%"=="" (
     )
 )
 
-cd /d "%~dp0"
-
-echo Clearing cache...
-if exist "node_modules\.vite" (
-    rd /s /q "node_modules\.vite"
-    echo Cache cleared.
-)
-
-echo Starting application...
-chcp 65001 >nul
-set NODE_OPTIONS=
-npm run dev
-\r
+pushd "%~dp0"
+cd EngineeringManager.Api
+dotnet run
+exit

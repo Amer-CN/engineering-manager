@@ -23,6 +23,7 @@ interface SidebarProps {
   navItems: NavItem[]
   collapsed?: boolean
   onToggleCollapse?: () => void
+  noBackground?: boolean // overlay 模式下由外层提供背景
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -36,6 +37,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   navItems,
   collapsed = false,
   onToggleCollapse,
+  noBackground = false,
 }) => {
   const sidebarW = collapsed ? 56 : 256
 
@@ -44,13 +46,16 @@ const Sidebar: React.FC<SidebarProps> = ({
       initial={false}
       animate={{ width: sidebarW }}
       transition={{ duration: 0.2, ease: 'easeInOut' }}
-      className="flex flex-col relative z-20 overflow-hidden shrink-0"
-      style={{ background: 'var(--panel)', borderRight: '1px solid var(--border)' } as React.CSSProperties}
+      className="flex flex-col relative z-20 overflow-hidden shrink-0 h-full"
+      style={{
+        background: noBackground ? 'transparent' : 'var(--panel)',
+        borderRight: noBackground ? 'none' : '1px solid var(--border)',
+      } as React.CSSProperties}
     >
       {/* ── Logo 区域已合并到 TitleBar ── */}
 
       {/* ── 导航区域 ── */}
-      <nav className="flex-1 py-3 overflow-y-auto">
+      <nav className={`flex-1 py-3 ${collapsed ? 'overflow-hidden' : 'overflow-y-auto'}`}>
         {!collapsed && (
           <motion.div
             initial={{ opacity: 0 }}

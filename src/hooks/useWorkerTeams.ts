@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react"
 import type { WorkerTeam, WorkerTransferRecord } from "@/types"
 import { handleError, Result, VoidResult } from "@/types"
+import { getAPI } from '@/services/api-adapter'
 
 /**
  * useWorkerTeams 返回类型
@@ -38,7 +39,7 @@ export function useWorkerTeams(projectId?: number): UseWorkerTeamsReturn {
     setError(null)
     
     try {
-      const result = await window.electronAPI.getWorkerTeams()
+      const result = await (await getAPI()).getWorkerTeams()
       
       if (result.success && result.data) {
         let filteredData = result.data
@@ -61,7 +62,7 @@ export function useWorkerTeams(projectId?: number): UseWorkerTeamsReturn {
     setError(null)
     
     try {
-      const result = await window.electronAPI.createWorkerTeam(data as WorkerTeam)
+      const result = await (await getAPI()).createWorkerTeam(data as WorkerTeam)
       
       if (result.success) {
         await loadTeams()
@@ -82,7 +83,7 @@ export function useWorkerTeams(projectId?: number): UseWorkerTeamsReturn {
     setError(null)
     
     try {
-      const result = await window.electronAPI.updateWorkerTeam(team)
+      const result = await (await getAPI()).updateWorkerTeam(team)
       
       if (result.success) {
         await loadTeams()
@@ -106,7 +107,7 @@ export function useWorkerTeams(projectId?: number): UseWorkerTeamsReturn {
     setError(null)
     
     try {
-      const result = await window.electronAPI.deleteWorkerTeam(id)
+      const result = await (await getAPI()).deleteWorkerTeam(id)
       
       if (result.success) {
         setTeams(prev => prev.filter(t => t.id !== id))
@@ -188,7 +189,7 @@ export function useWorkerTransfers(): UseWorkerTransfersReturn {
     setError(null)
     
     try {
-      const result = await window.electronAPI.getWorkerTransferRecords(workerId ?? 0)
+      const result = await (await getAPI()).getWorkerTransferRecords(workerId ?? 0)
       
       if (result.success && result.data) {
         setRecords(result.data)
@@ -207,7 +208,7 @@ export function useWorkerTransfers(): UseWorkerTransfersReturn {
     setError(null)
     
     try {
-      const result = await window.electronAPI.createWorkerTransfer(record as WorkerTransferRecord)
+      const result = await (await getAPI()).createWorkerTransfer(record as WorkerTransferRecord)
       
       if (result.success) {
         await loadRecords()

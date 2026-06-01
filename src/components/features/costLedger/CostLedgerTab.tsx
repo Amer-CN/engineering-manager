@@ -6,9 +6,11 @@ import { CostLedgerCompareModal } from './CostLedgerCompareModal'
 import { useCostLedgerCategories } from '@/hooks/useCostLedgerCategories'
 import { useCostLedgerBatches } from '@/hooks/useCostLedgerBatches'
 import { useToastStore } from '@/store/toastStore'
+import { useConfirm } from '@/hooks/useConfirm'
 import { CostLedgerImportModal, learnFromEdit } from './CostLedgerImportModal'
 import { logCreate, logUpdate, logDelete } from '@/utils/audit'
 import type { CostLedgerEntry, CostLedgerSummary } from '@/types'
+import { getAPI } from '@/services/api-adapter'
 
 interface CostLedgerTabProps {
   projectId: number
@@ -17,6 +19,7 @@ interface CostLedgerTabProps {
 
 export function CostLedgerTab({ projectId, projectName }: CostLedgerTabProps) {
   const showToast = useToastStore(state => state.showToast)
+  const { confirm, ConfirmDialog } = useConfirm()
   const { categories } = useCostLedgerCategories()
   const { batches, createBatch, copyBatch, renameBatch, deleteBatch, reload: reloadBatches } = useCostLedgerBatches(projectId)
   // 默认取最新有数据的版本（非初始版），后端 getLatestBatch 决定
@@ -29,8 +32,6 @@ export function CostLedgerTab({ projectId, projectName }: CostLedgerTabProps) {
   const [showCompare, setShowCompare] = useState(false)
   const [editing, setEditing] = useState<CostLedgerEntry | null>(null)
 
-  const api = window.electronAPI
-
   // 版本列表加载后，自动切换到最新非初始版（仅首次）
   useEffect(() => {
     if (batches.length > 0 && batchId === 0) {
@@ -40,6 +41,7 @@ export function CostLedgerTab({ projectId, projectName }: CostLedgerTabProps) {
   }, [batches])
 
   const load = useCallback(async () => {
+    const api = await getAPI()
     if (!api?.getCostLedger) return
     setLoading(true)
     const [listRes, summaryRes] = await Promise.allSettled([
@@ -54,6 +56,7 @@ export function CostLedgerTab({ projectId, projectName }: CostLedgerTabProps) {
   useEffect(() => { load() }, [load])
 
   const handleSave = async (data: any) => {
+    const api = await getAPI()
     if (editing) {
       const res = await api.updateCostLedger(editing.id, data)
       if (res?.success) {
@@ -71,7 +74,7 @@ export function CostLedgerTab({ projectId, projectName }: CostLedgerTabProps) {
     } else {
       const res = await api.createCostLedger({ ...data, batchId })
       if (res?.success) {
-        if (res.warning) alert(res.warning)
+        if (res.warning) showToast(res.warning, 'warning')
         setShowForm(false)
         load()
         logCreate('costLedger', data.name || '台账', null as any, { projectId })
@@ -82,7 +85,9 @@ export function CostLedgerTab({ projectId, projectName }: CostLedgerTabProps) {
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm('确认删除这条台账记录？')) return
+    const api = await getAPI()
+    const ok = await confirm({ title: '确认删除', content: '确认删除这条台账记录？', confirmVariant: 'danger' })
+    if (!ok) return
     const res = await api.deleteCostLedger(id)
     if (res?.success) { load(); logDelete('costLedger', `台账 #${id}`, id, { projectId }) }
   }
@@ -92,6 +97,7 @@ export function CostLedgerTab({ projectId, projectName }: CostLedgerTabProps) {
 
   return (
     <div className="flex h-full flex-col">
+      {ConfirmDialog}
       <div className="flex items-center justify-between border-b border-slate-200 px-6 py-3">
         <h3 className="text-sm font-semibold text-slate-700">成本台账</h3>
         <div className="flex items-center gap-3">

@@ -1,8 +1,10 @@
 import { useRef, useState } from 'react'
+import { HoverScrollbar } from '@/components/ui/HoverScrollbar'
 import type { WageRecord } from '@/types'
 import { Icon } from '../../ui/Icon'
-import { MONTHS } from '@/constants'
+import { EmptyState } from '../../ui/EmptyState'
 import { WageRecordRow } from './WageRecordRow'
+import { TABLE } from '@/constants/table'
 
 interface WageRecordsTabProps {
   allWageRecords: WageRecord[]
@@ -48,42 +50,15 @@ export default function WageRecordsTab({
   const [showRawText, setShowRawText] = useState(false)
   const filtered = allWageRecords.filter(w => {
     if (filterMemberName && !(w.memberName || '').includes(filterMemberName)) return false
-    if (filterYear && filterYear !== '全部' && !w.yearMonth.startsWith(filterYear)) return false
-    if (filterMonth && filterMonth !== '全部' && w.yearMonth !== `${filterYear}-${filterMonth}`) return false
+    if (filterYear && filterYear !== '全部' && !(w.yearMonth ?? '').startsWith(filterYear)) return false
+    if (filterMonth && filterMonth !== '全部' && (w.yearMonth ?? '') !== `${filterYear}-${filterMonth}`) return false
     return true
   })
   const changedCount = paymentEdits.size
-  const currentYear = new Date().getFullYear().toString()
 
   return (
     <div className="p-4">
       <div className="flex items-center gap-4 mb-4 flex-wrap">
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-slate-600">年份</label>
-          <select value={filterYear || currentYear}
-            onChange={e => { onFilterYearChange(e.target.value); onFilterMonthChange('全部') }}
-            className="px-3 py-2 border border-slate-300 rounded-lg text-sm">
-            <option value="全部">全部</option>
-            {Array.from({ length: 21 }, (_, i) => {
-              const y = (new Date().getFullYear() - 10 + i).toString()
-              return <option key={y} value={y}>{y}年</option>
-            })}
-          </select>
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-slate-600">月份</label>
-          <select value={filterMonth || '全部'}
-            onChange={e => onFilterMonthChange(e.target.value)}
-            className="px-3 py-2 border border-slate-300 rounded-lg text-sm">
-            {MONTHS.map(m => <option key={m} value={m}>{m === '全部' ? '全部' : `${m}月`}</option>)}
-          </select>
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-slate-600">姓名</label>
-          <input type="text" value={filterMemberName}
-            onChange={e => onFilterNameChange(e.target.value)}
-            placeholder="搜索姓名..." className="px-3 py-2 border border-slate-300 rounded-lg text-sm w-40" />
-        </div>
         <span className="text-sm text-slate-400">{filtered.length} 条记录</span>
         {changedCount > 0 && (
           <button onClick={onSavePayments}
@@ -155,28 +130,24 @@ export default function WageRecordsTab({
       )}
 
       {filtered.length === 0 ? (
-        <div className="text-center py-12 text-slate-400">
-          <Icon name="File" size={48} className="mx-auto mb-4" />
-          <p>暂无工资发放记录</p>
-          <p className="text-sm mt-1">请先在"项目工资表"中生成并保存工资</p>
-        </div>
+        <EmptyState icon="File" title="暂无工资发放记录" description="请先在「项目工资表」中生成并保存工资" />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b border-slate-200">
-              <tr className="text-left">
-                <th className="px-3 py-3 w-10">
+        <HoverScrollbar className="h-full">
+          <table className={TABLE.table + ' text-sm'}>
+            <thead className={TABLE.headerRow + ' ' + TABLE.stickyHeader}>
+              <tr>
+                <th className={TABLE.headerCell + ' w-10'}>
                   <input type="checkbox"
                     checked={selectedIds.size === filtered.length && filtered.length > 0}
                     onChange={toggleAll} className="rounded" />
                 </th>
-                <th className="px-3 py-3 font-medium text-slate-600">姓名</th>
-                <th className="px-3 py-3 font-medium text-slate-600">月份</th>
-                <th className="px-3 py-3 font-medium text-slate-600">出勤</th>
-                <th className="px-3 py-3 font-medium text-slate-600">应发工资</th>
-                <th className="px-3 py-3 font-medium text-slate-600">实发金额</th>
-                <th className="px-3 py-3 font-medium text-slate-600">发放日期</th>
-                <th className="px-3 py-3 font-medium text-slate-600">差额</th>
+                <th className={TABLE.headerCell}>姓名</th>
+                <th className={TABLE.headerCell}>月份</th>
+                <th className={TABLE.headerCell}>出勤</th>
+                <th className={TABLE.headerCell}>应发工资</th>
+                <th className={TABLE.headerCell}>实发金额</th>
+                <th className={TABLE.headerCell}>发放日期</th>
+                <th className={TABLE.headerCell}>差额</th>
               </tr>
             </thead>
             <tbody>
@@ -193,7 +164,7 @@ export default function WageRecordsTab({
               ))}
             </tbody>
           </table>
-        </div>
+        </HoverScrollbar>
       )}
     </div>
   )

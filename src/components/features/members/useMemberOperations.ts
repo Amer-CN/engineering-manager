@@ -1,5 +1,6 @@
 import type { Member, WorkerStatus } from '../../../types/electron'
 import { logCreate, logUpdate, logDelete } from '../../../utils/audit'
+import { getAPI } from '@/services/api-adapter'
 import { processFileFields, guessFileExt, FILE_CATEGORIES } from '../../../services/fileService'
 import type { StaffFormData, WorkerFormData } from './memberFormTypes'
 
@@ -27,7 +28,7 @@ export function useMemberOperations({
     if (!confirm('确定要删除该成员吗？')) return
     try {
       const memberToDelete = members.find(m => m.id === id)
-      const result = await window.electronAPI.deleteMember(id)
+      const result = await (await getAPI()).deleteMember(id)
       if (result.success) {
         logDelete('members', memberToDelete?.name || '员工', id, { memberType: memberToDelete?.memberType })
         loadData()
@@ -67,7 +68,7 @@ export function useMemberOperations({
       const submitData = { ...processed, memberType: 'staff' as const }
       stripEmpties(submitData)
       if (editingStaff) {
-        const result = await window.electronAPI.updateMember({ ...editingStaff, ...submitData })
+        const result = await (await getAPI()).updateMember({ ...editingStaff, ...submitData })
         if (result.success) {
           logUpdate('members', submitData.name, editingStaff.id, { before: editingStaff, after: submitData })
           onSuccess()
@@ -80,7 +81,8 @@ export function useMemberOperations({
         // Create Worker in global pool, then ProjectWorker
         try {
           const d = data as any
-          const workerRes = await window.electronAPI.createWorker({
+          const api = await getAPI()
+          const workerRes = await api.createWorker({
             name: data.name,
             idCard: data.idCard,
             gender: data.gender,
@@ -96,7 +98,7 @@ export function useMemberOperations({
             return
           }
           const workerId = workerRes.data.id
-          const pwRes = await window.electronAPI.createProjectWorker({
+          const pwRes = await api.createProjectWorker({
             workerId,
             projectId: d.projectId || 0,
             teamId: d.teamId,
@@ -158,7 +160,7 @@ export function useMemberOperations({
       }
       stripEmpties(submitData)
       if (editingWorker) {
-        const result = await window.electronAPI.updateMember({ ...editingWorker, ...submitData })
+        const result = await (await getAPI()).updateMember({ ...editingWorker, ...submitData })
         if (result.success) {
           logUpdate('members', submitData.name, editingWorker.id, { before: editingWorker, after: submitData })
           onSuccess()
@@ -167,7 +169,8 @@ export function useMemberOperations({
           showToast(result.error || '更新失败', 'error')
         }
       } else {
-        const workerRes = await window.electronAPI.createWorker({
+        const api = await getAPI()
+        const workerRes = await api.createWorker({
           name: data.name, idCard: data.idCard, gender: data.gender, birthDate: data.birthDate,
           ethnicity: data.ethnicity, phone: data.phone, address: data.idCardAddress,
           bankAccount: d.wageBankAccount, bankName: d.wageBankName
@@ -175,7 +178,7 @@ export function useMemberOperations({
         if (!workerRes.success || !workerRes.data) {
           showToast(workerRes.error || '创建工人失败', 'error'); return
         }
-        const pwRes = await window.electronAPI.createProjectWorker({
+        const pwRes = await api.createProjectWorker({
           workerId: workerRes.data.id, projectId: d.projectId || 0, teamId: d.teamId,
           dailyWage: Number(d.dailyWage) || 0, workerType: d.workerType || 'other',
           entryDate: data.entryDate || new Date().toISOString().split('T')[0], status: 'active' as WorkerStatus

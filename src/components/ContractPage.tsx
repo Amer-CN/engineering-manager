@@ -1,6 +1,8 @@
 // ContractPage.tsx — 通用合同管理页面
 
 import React, { useState, useEffect } from 'react'
+import { HoverScrollbar } from './ui/HoverScrollbar'
+import Spinner from './ui/Spinner'
 import type { AgreementContract, Partner, Project, PaymentRecord, Template } from '../types/electron'
 import { partnerCategories, contractStatuses } from '../data/regions'
 import { logDelete, logExport } from '../utils/audit'
@@ -10,11 +12,13 @@ import { formatMoney } from '../utils/format'
 import { useToastStore } from '@/store/toastStore'
 import { motion } from 'framer-motion'
 import { Icon } from './ui/Icon'
+import { Tooltip } from './ui/Tooltip/Tooltip'
 import { EmptyState } from './ui/EmptyState'
 import { TemplateSelectorModal, TemplateGenerate } from './features/templates'
 
 import { CONFIG, getApi, getStatusLabel, getStatusColor, getContractPaymentTotal, AGREEMENT_SUB_TYPE_LABELS, type ContractType, type Contract } from './features/contracts/contractConfig'
 import { ContractFormModal } from './features/contracts/ContractFormModal'
+import { getAPI } from '@/services/api-adapter'
 
 interface ContractPageProps {
   refresh?: () => void; groupBy?: 'project' | 'role' | 'status'
@@ -26,7 +30,7 @@ interface ContractPageProps {
 
 const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project', onGroupByChange, type, onBack, autoCreate, onAutoCreateHandled }) => {
   const config = CONFIG[type]
-  const api = getApi(type)
+  const [api, setApi] = useState<Awaited<ReturnType<typeof getApi>> | null>(null)
   const { can } = usePermission()
   const showToast = useToastStore(state => state.showToast)
 
@@ -44,18 +48,24 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
   const [showTemplateSelector, setShowTemplateSelector] = useState(false)
   const [generatingTemplate, setGeneratingTemplate] = useState<Template | null>(null)
 
-  useEffect(() => { loadData() }, [])
+  useEffect(() => {
+    getApi(type).then(setApi)
+  }, [type])
+
+  useEffect(() => { if (api) loadData() }, [api])
 
   useEffect(() => {
     if (autoCreate) { setEditingContract(null); setShowModal(true); onAutoCreateHandled?.() }
   }, [autoCreate])
 
   const loadData = async () => {
+    if (!api) return
+    const electronAPI = await getAPI()
     const results = await Promise.allSettled([
       api.getContracts(),                          // 0
-      window.electronAPI.getProjects(),             // 1
-      window.electronAPI.getPartners(),             // 2
-      window.electronAPI.getWagePaymentRecords(),   // 3
+      electronAPI.getProjects(),                   // 1
+      electronAPI.getPartners(),                   // 2
+      electronAPI.getWagePaymentRecords(),         // 3
     ])
     const res = (i: number) => {
       const r = results[i]
@@ -86,6 +96,7 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
   }
 
   const handleDelete = async (id: number) => {
+    if (!api) return
     if (!can('contracts:delete')) { alert('您没有删除合同的权限'); return }
     if (!confirm('确定要删除这个合同吗？')) return
     const contractToDelete = contracts.find(c => c.id === id)
@@ -105,7 +116,7 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
   const resolvePreviewFileUrl = async (fileUrl: string, projectName?: string): Promise<{ previewUrl: string; downloadUrl: string }> => {
     if (!fileUrl) return { previewUrl: '', downloadUrl: '' }
     if (fileUrl.startsWith('data:')) return { previewUrl: fileUrl, downloadUrl: fileUrl }
-    const result = await window.electronAPI.readContractFile(fileUrl, config.subCategory, projectName ?? null)
+    const result = await (await getAPI()).readContractFile(fileUrl, config.subCategory, projectName ?? null)
     const prefix = projectName ? `${encodeURIComponent(projectName)}/` : ''
     return { previewUrl: `contract-file:///${prefix}${config.subCategory}/${fileUrl}`, downloadUrl: result.success && result.data ? result.data.dataUrl : '' }
   }
@@ -141,15 +152,11 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-500 border-t-transparent"></div>
-      </div>
-    )
+    return <Spinner size="lg" text="加载合同数据..." />
   }
 
   return (
-    <div className="p-6 max-w-[1400px] mx-auto">
+    <div className="flex-1 flex flex-col overflow-hidden p-6 max-w-[1400px] mx-auto w-full">
       {/* 页面头部：返回按钮 + 合同类型标识 */}
       <div className="flex items-center gap-4 mb-6">
         {onBack && (
@@ -219,6 +226,7 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
       </div>
 
       {/* 分组展示 */}
+      <HoverScrollbar className="flex-1 min-h-0">
       {Object.entries(groupedContracts()).map(([groupName, groupContracts]) => (
         <div key={groupName} className="mb-6">
           <div className="flex items-center justify-between mb-3">
@@ -287,6 +295,7 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
                       <td className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-1">
                           {contract.fileUrl && (
+                            <Tooltip content="预览附件" position="top" delay={300}>
                             <button onClick={async () => {
                               const fileType = (contract.fileType || 'image') as 'pdf' | 'image' | 'word' | 'excel'
                               const urls = await resolvePreviewFileUrl(contract.fileUrl!, contract.projectName)
@@ -295,7 +304,7 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
                                 setPreviewFile({ data: urls.downloadUrl, previewUrl: urls.previewUrl, type: 'word', title: `${contract.name} - 合同附件` })
                                 try {
                                   // 改用 IPC 让主进程用 mammoth 转换（避免把 mammoth 打进渲染进程 bundle）
-                                  const result = await window.electronAPI.convertTemplateDocxToHtml(contract.fileUrl!, 'contracts')
+                                  const result = await (await getAPI()).convertTemplateDocxToHtml(contract.fileUrl!, 'contracts')
                                   if (result?.success && result.data) {
                                     setPreviewFile(prev => prev ? { ...prev, html: result.data } : null)
                                   } else {
@@ -305,12 +314,13 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
                                 return
                               }
                               setPreviewFile({ data: urls.downloadUrl || urls.previewUrl, previewUrl: urls.previewUrl, type: fileType, title: `${contract.name} - 合同附件` })
-                            }} className="btn btn-ghost btn-sm" title="预览附件">
+                            }} className="btn btn-ghost btn-sm">
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                               </svg>
                             </button>
+                          </Tooltip>
                           )}
                           <button onClick={() => handleEdit(contract)} className="btn btn-ghost btn-sm text-primary-600">编辑</button>
                           <button onClick={() => handleDelete(contract.id)} className="btn btn-danger btn-sm">删除</button>
@@ -328,10 +338,11 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
       {filteredContracts.length === 0 && (
         <EmptyState icon="ClipboardList" title={config.emptyTitle} description={config.emptyDesc} />
       )}
+      </HoverScrollbar>
 
       <ContractFormModal
         show={showModal} type={type} editingContract={editingContract}
-        projects={projects} partners={partners} api={api}
+        projects={projects} partners={partners} api={api!}
         onClose={() => { setShowModal(false); setEditingContract(null) }}
         onSuccess={() => { loadData(); refresh?.() }}
         onShowTemplateSelector={() => setShowTemplateSelector(true)}

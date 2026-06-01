@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import type { Project, WorkerTeam, WageRecord } from '@/types'
-import { Icon } from '../../ui/Icon'
+import { EmptyState } from '../../ui/EmptyState'
 import { DropdownMenu } from '../../ui/DropdownMenu/DropdownMenu'
 import { FileImportDialog } from './FileImportDialog'
 import { MONTHS } from '@/constants'
@@ -261,13 +261,11 @@ export default function WageDetailTab({
 
   // ── 空状态 ──
   const emptyState = (
-    <div className="text-center py-12 text-slate-400">
-      <Icon name="FileText" size={48} className="mx-auto mb-4" />
-      <p>暂无工资记录</p>
-      {scope === 'project' && (
-        <p className="text-sm mt-1">点击"生成工资表"根据考勤数据自动计算</p>
-      )}
-    </div>
+    <EmptyState
+      icon="FileText"
+      title="暂无工资记录"
+      description={scope === 'project' ? '点击「生成工资表」根据考勤数据自动计算' : undefined}
+    />
   )
 
   return (

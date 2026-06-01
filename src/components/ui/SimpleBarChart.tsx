@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react'
 
-interface BarDatum { name: string; amount: number }
-
 // CSS 柱状图 — 横向布局，纯 div 实现，无 Recharts 干扰
 export const SimpleBarChart: React.FC<{
   data: { name: string; amount: number }[]
@@ -99,7 +97,6 @@ export const SimpleGroupedBarChart: React.FC<{
 
   useEffect(() => { requestAnimationFrame(() => setMounted(true)) }, [])
   const ticks = [0, 0.25, 0.5, 0.75, 1].map(r => Math.round(max * r))
-  const seriesCount = data[0]?.values.length ?? 1
 
   return (
     <div className="relative px-1 pt-2 pb-1">

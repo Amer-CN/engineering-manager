@@ -1,6 +1,49 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Icon } from './ui/Icon'
+import ButtonLoader from './ui/ButtonLoader'
 import type { SqliteStatus, ReadMode } from '../types/electron'
+import { getAPI } from '@/services/api-adapter'
+
+// SQLite 表名 → 中文名映射（已合并的旧表不显示）
+const TABLE_NAME_MAP: Record<string, string> = {
+  projects: '项目',
+  members: '人员',
+  workers: '工人',
+  project_workers: '用工关系',
+  project_members: '项目成员',
+  worker_teams: '班组',
+  worker_transfer_records: '调动记录',
+  departments: '部门',
+  income_contracts: '收入合同',
+  income_records: '收入记录',
+  expense_contracts: '支出合同',
+  expense_records: '支出记录',
+  agreement_contracts: '协议合同',
+  invoices: '发票',
+  invoice_items: '发票明细',
+  payment_records: '收付款',
+  settlements: '结算',
+  cost_ledger: '成本台账',
+  cost_ledger_batches: '台账版本',
+  cost_ledger_categories: '台账分类',
+  cost_ledger_match_rules: '匹配规则',
+  materials: '材料',
+  expenses: '费用',
+  drawings: '图纸',
+  partners: '合作单位',
+  regions: '地区',
+  supervisors: '监管单位',
+  templates: '模板',
+  inventory_items: '库存物料',
+  inventory_transactions: '出入库记录',
+  wages: '工资',
+  attendances: '考勤',
+  salary_history: '薪资历史',
+  wage_history: '工资历史',
+  audit_logs: '审计日志',
+  users: '用户',
+  roles: '角色',
+}
 
 interface Props {
   status: SqliteStatus | null
@@ -46,13 +89,52 @@ export const SettingsSqliteSection: React.FC<Props> = ({
   status, loading, enabling, migrating, switching, message,
   onEnable, onMigrate, onRemigrate, onSetReadMode,
 }) => {
+  // 数据健康检查状态
+  const [healthStatus, setHealthStatus] = useState<'healthy' | 'warning' | 'error' | 'unknown'>('unknown')
+  const [healthDetails, setHealthDetails] = useState<string | null>(null)
+  const [lastCheckTime, setLastCheckTime] = useState<string | null>(null)
+
+  // 首次渲染时自动执行健康检查
+  useEffect(() => {
+    const runCheck = async () => {
+      try {
+        const api = await getAPI()
+        const [consRes, intRes] = await Promise.all([
+          api.consistencyCheck(),
+          api.integrityCheck(),
+        ])
+
+        const consistent = consRes.data?.consistent ?? true
+        const integrityOk = intRes.data?.status === 'ok'
+        const now = new Date().toLocaleString('zh-CN')
+
+        setLastCheckTime(now)
+
+        if (integrityOk && consistent) {
+          setHealthStatus('healthy')
+          setHealthDetails(null)
+        } else if (!integrityOk) {
+          setHealthStatus('error')
+          setHealthDetails(intRes.data?.message || '完整性检查失败')
+        } else {
+          setHealthStatus('warning')
+          const count = consRes.data?.discrepancies?.length ?? 0
+          setHealthDetails(`${count} 个数据表不一致`)
+        }
+      } catch {
+        setHealthStatus('unknown')
+      }
+    }
+    runCheck()
+  }, [])
+
   if (loading) {
     return (
       <div className="card">
-        <div className="card-header"><h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2"><Icon name="Database" size={20} /> 数据库引擎</h2></div>
+        <div className="card-header"><h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2"><Icon name="Database" size={20} /> 智能数据引擎</h2></div>
         <div className="card-body flex items-center justify-center py-8">
           <div className="animate-spin rounded-full h-6 w-6 border-2 border-slate-200 border-t-primary-600"></div>
-          <span className="ml-3 text-slate-500 text-sm">检测数据库状态...</span>
+          <span className="ml-3 text-slate-500 text-sm">AI 正在检测数据状态...</span>
         </div>
       </div>
     )
@@ -79,25 +161,23 @@ export const SettingsSqliteSection: React.FC<Props> = ({
     <div className="card">
       <div className="card-header">
         <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-          <Icon name="Database" size={20} /> 数据库引擎
+          <Icon name="Database" size={20} /> 智能数据引擎
         </h2>
         <span className={`ml-auto text-xs px-2.5 py-1 rounded-full font-medium ${
           status.ready
             ? isDataSparse
               ? 'bg-warning-100 text-warning-700'
-              : status.migrated
-                ? 'bg-success-100 text-success-700'
-                : 'bg-warning-100 text-warning-700'
-            : 'bg-slate-100 text-slate-500'
+              : 'bg-success-100 text-success-700'
+            : 'bg-info-100 text-info-700'
         }`}>
-          {status.ready ? (isDataSparse ? '数据不完整' : status.migrated ? '已就绪' : '未迁移') : '未启用'}
+          {status.ready ? (isDataSparse ? 'AI 检测到数据不完整' : 'AI 已优化存储') : 'AI 正在初始化...'}
         </span>
       </div>
       <div className="card-body space-y-5">
         {/* 状态概览 */}
         <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
-          <span className={`w-3 h-3 rounded-full ${status.ready ? (isDataSparse ? 'bg-warning-500' : status.migrated ? 'bg-success-500 animate-pulse' : 'bg-warning-500') : 'bg-slate-400'}`}></span>
-          <span className="text-sm font-medium">{status.ready ? (isDataSparse ? '数据不完整' : status.migrated ? '运行中' : '已初始化') : '未启用'}</span>
+          <span className={`w-3 h-3 rounded-full ${status.ready ? (isDataSparse ? 'bg-warning-500' : 'bg-success-500 animate-pulse') : 'bg-info-500 animate-pulse'}`}></span>
+          <span className="text-sm font-medium">{status.ready ? (isDataSparse ? 'AI 检测到数据需要补全' : 'AI 持续优化中') : 'AI 正在为您配置数据引擎...'}</span>
           {status.ready && (
             <>
               <span className="text-slate-300">|</span>
@@ -123,32 +203,20 @@ export const SettingsSqliteSection: React.FC<Props> = ({
           </div>
         )}
 
-        {/* 启用 & 迁移按钮 */}
-        {!status.ready ? (
-          <div className="space-y-3">
-            <p className="text-sm text-slate-600">SQLite 数据库引擎尚未启用。启用后可获得更快的查询速度和更好的数据完整性保障。</p>
-            <button onClick={onEnable} disabled={enabling} className="btn btn-primary">
-              {enabling
-                ? <><div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>启用中...</>
-                : <><Icon name="Power" size={16} /> 启用 SQLite</>}
-            </button>
+        {/* 自动迁移状态提示 */}
+        {!status.ready && (
+          <div className="bg-info-50 border border-info-200 rounded-xl p-4">
+            <p className="text-sm text-info-800"><Icon name="Loader" size={16} className="inline animate-spin" /> AI 正在为您配置智能数据引擎，请稍候...</p>
           </div>
-        ) : !status.migrated ? (
-          <div className="space-y-3">
-            <div className="bg-warning-50 border border-warning-200 rounded-xl p-4">
-              <p className="text-sm text-warning-800"><Icon name="AlertTriangle" size={16} className="inline" /> SQLite 已启用但尚未迁移数据。当前仍在使用 JSON 文件存储。</p>
-              <p className="text-sm text-warning-700 mt-1">迁移后数据将同时写入 SQLite 和 JSON，读取优先使用 SQLite。</p>
-            </div>
-            <button onClick={onMigrate} disabled={migrating} className="btn btn-primary">
-              {migrating
-                ? <><div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>迁移中...</>
-                : <><Icon name="ArrowRightLeft" size={16} /> 迁移数据到 SQLite</>}
-            </button>
+        )}
+        {status.ready && !status.migrated && (
+          <div className="bg-info-50 border border-info-200 rounded-xl p-4">
+            <p className="text-sm text-info-800"><Icon name="Loader" size={16} className="inline animate-spin" /> AI 正在智能整理您的数据，优化存储结构...</p>
           </div>
-        ) : null}
+        )}
 
         {/* 读取模式切换 */}
-        {status.ready && status.migrated && (
+        {status.ready && (
           <div>
             <label className="label">选择读取模式</label>
             <div className="grid grid-cols-3 gap-3">
@@ -183,29 +251,40 @@ export const SettingsSqliteSection: React.FC<Props> = ({
         )}
 
         {/* 重新迁移（已就绪状态下显示） */}
-        {status.ready && status.migrated && (
+        {status.ready && (
           <div className="border-t border-slate-100 pt-4">
             {isDataSparse && (
               <div className="bg-warning-50 border border-warning-200 rounded-xl p-3 mb-3">
-                <p className="text-sm text-warning-800"><Icon name="AlertTriangle" size={16} className="inline" /> SQLite 数据不完整（仅 {totalRows} 行），建议点击下方按钮重新迁移数据。</p>
+                <p className="text-sm text-warning-800"><Icon name="AlertTriangle" size={16} className="inline" /> AI 检测到部分数据尚未同步（{totalRows} 行），点击下方按钮补全。</p>
               </div>
             )}
-            <button
-              onClick={onRemigrate}
-              disabled={migrating}
-              className={isDataSparse ? 'btn btn-primary' : 'btn btn-secondary'}
-              title="当迁移脚本更新后，使用此功能重新迁移数据"
-            >
-              {migrating
-                ? <><div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>迁移中...</>
-                : <><Icon name="RefreshCw" size={16} /> {isDataSparse ? '迁移数据到 SQLite' : '重新迁移数据'}</>}
-            </button>
-            <p className="text-xs text-slate-400 mt-1.5">迁移脚本更新后，可重新迁移以修复数据缺失问题。操作前会自动备份 SQLite 数据库。</p>
+            <div className="relative inline-block group">
+              <button
+                onClick={onRemigrate}
+                disabled={migrating || !isDataSparse}
+                className={`${isDataSparse ? 'btn btn-primary' : 'btn btn-secondary'} ${!isDataSparse ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <ButtonLoader loading={migrating} loadingText="AI 正在同步...">
+                  <><Icon name="RefreshCw" size={16} /> {isDataSparse ? 'AI 同步数据' : '重新优化存储'}</>
+                </ButtonLoader>
+              </button>
+              {/* 悬停浮窗 */}
+              <div className="absolute left-0 bottom-full mb-2 w-80 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none group-hover:pointer-events-auto">
+                <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl shadow-xl p-4 space-y-2 text-xs">
+                  <p className="font-semibold text-slate-700 dark:text-slate-200">什么时候需要点这个按钮？</p>
+                  <p><span className="text-emerald-600 dark:text-emerald-400 font-medium">可以点：</span><span className="text-slate-600 dark:text-slate-300">软件提示"数据不完整"时，说明部分数据没有迁移到新引擎，点击此按钮可以补全。</span></p>
+                  <p><span className="text-amber-600 dark:text-amber-400 font-medium">不需要点：</span><span className="text-slate-600 dark:text-slate-300">软件正常运行、没有提示数据问题时，此按钮会自动禁用，无需操作。</span></p>
+                  <p className="text-slate-400 dark:text-slate-500 border-t border-slate-100 dark:border-slate-700 pt-1.5">操作前会自动备份，放心使用。</p>
+                </div>
+                {/* 箭头 */}
+                <div className="absolute left-6 top-full w-3 h-3 bg-white dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-600 rotate-45 -mt-1.5"></div>
+              </div>
+            </div>
           </div>
         )}
 
         {/* 表统计 */}
-        {status.ready && status.migrated && status.summary && Object.keys(status.summary).length > 0 && (
+        {status.ready && status.summary && Object.keys(status.summary).length > 0 && (
           <div>
             <label className="label">数据统计</label>
             <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
@@ -214,7 +293,7 @@ export const SettingsSqliteSection: React.FC<Props> = ({
                   .sort(([, a], [, b]) => b - a)
                   .map(([table, count]) => (
                     <div key={table} className="flex justify-between items-center">
-                      <span className="text-slate-600 truncate">{table}</span>
+                      <span className="text-slate-600 truncate">{TABLE_NAME_MAP[table] || table}</span>
                       <span className="text-slate-800 font-medium tabular-nums ml-2">{count.toLocaleString()}</span>
                     </div>
                   ))}
@@ -227,14 +306,57 @@ export const SettingsSqliteSection: React.FC<Props> = ({
           </div>
         )}
 
+        {/* 数据健康检查 */}
+        {status.ready && (
+          <div className="border-t border-slate-100 pt-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                <Icon name="HeartPulse" size={16} className="text-primary-600" /> 数据健康检查
+              </span>
+              {lastCheckTime && (
+                <span className="text-xs text-slate-400">上次检查: {lastCheckTime}</span>
+              )}
+            </div>
+            <div className={`p-3 rounded-lg border ${
+              healthStatus === 'healthy' ? 'bg-success-50 border-success-200' :
+              healthStatus === 'warning' ? 'bg-warning-50 border-warning-200' :
+              healthStatus === 'error' ? 'bg-danger-50 border-danger-200' :
+              'bg-slate-50 border-slate-200'
+            }`}>
+              <div className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${
+                  healthStatus === 'healthy' ? 'bg-success-500' :
+                  healthStatus === 'warning' ? 'bg-warning-500' :
+                  healthStatus === 'error' ? 'bg-danger-500' :
+                  'bg-slate-400'
+                }`}></span>
+                <span className={`text-sm font-medium ${
+                  healthStatus === 'healthy' ? 'text-success-700' :
+                  healthStatus === 'warning' ? 'text-warning-700' :
+                  healthStatus === 'error' ? 'text-danger-700' :
+                  'text-slate-500'
+                }`}>
+                  {healthStatus === 'healthy' ? '数据完整，一切正常' :
+                   healthStatus === 'warning' ? '数据存在不一致' :
+                   healthStatus === 'error' ? '数据完整性异常' :
+                   '正在检查...'}
+                </span>
+                {healthDetails && (
+                  <span className="text-xs text-slate-500 ml-auto">{healthDetails}</span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 操作提示 */}
         {status.ready && (
           <div className="bg-info-50 border border-info-200 rounded-xl p-4">
-            <p className="text-sm text-info-800"><Icon name="Lightbulb" size={16} className="inline" /> <strong>说明</strong></p>
+            <p className="text-sm text-info-800"><Icon name="Lightbulb" size={16} className="inline" /> <strong>AI 数据保护</strong></p>
             <ul className="text-sm text-info-700 mt-2 space-y-1">
-              <li>• 启用后数据同时写入 SQLite 和 JSON（双写），确保数据安全</li>
-              <li>• 推荐使用"双写模式"，兼顾性能和安全</li>
-              <li>• 读取模式会自动保存，重启应用后保持上次的选择</li>
+              <li>• AI 自动备份您的数据，双重存储确保万无一失</li>
+              <li>• 推荐保持默认模式，AI 会自动选择最优方案</li>
+              <li>• 所有设置自动保存，无需手动操作</li>
             </ul>
           </div>
         )}

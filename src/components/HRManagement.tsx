@@ -1,10 +1,11 @@
 import React, { useState, useCallback } from 'react'
+import PageHeader from './ui/PageHeader'
 import { Tabs } from './ui/Tabs'
 import HRDashboard from './features/hr/HRDashboard'
 import StaffList from './features/hr/StaffList'
 import StaffAttendance from './features/hr/StaffAttendance'
-import StaffPayroll from './features/hr/StaffPayroll'
 import DepartmentManager from './features/hr/DepartmentManager'
+import PayrollPage from './features/payroll/PayrollPage'
 
 const TAB_KEY = 'hr_active_tab'
 const TABS = [
@@ -25,10 +26,7 @@ const HRManagement: React.FC = () => {
 
   return (
     <div className="p-6 max-w-[1400px] mx-auto min-h-full flex flex-col">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">人事管理</h1>
-        <p className="text-slate-500 mt-1">管理人员档案、考勤、薪酬与部门架构</p>
-      </div>
+      <PageHeader title="人事管理" subtitle="管理人员档案、考勤、薪酬与部门架构" />
 
       {/* Tab 导航 (统一 Tabs 组件) */}
       <Tabs
@@ -42,7 +40,7 @@ const HRManagement: React.FC = () => {
           {activeTab === 'dashboard' && <HRDashboard />}
           {activeTab === 'staff' && <StaffList />}
           {activeTab === 'attendance' && <StaffAttendance />}
-          {activeTab === 'payroll' && <StaffPayroll />}
+          {activeTab === 'payroll' && <PayrollPage mode="staff" />}
           {activeTab === 'departments' && <DepartmentManager />}
         </div>
       </Tabs>

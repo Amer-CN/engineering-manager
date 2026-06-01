@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
 import { useToastStore } from '@/store/toastStore'
 import { logCreate, logDelete } from '../../../utils/audit'
+import { getAPI } from '@/services/api-adapter'
 
 interface Props {
   member: any
@@ -28,7 +29,7 @@ const SalaryHistoryModal: React.FC<Props> = ({ member, onClose }) => {
   useEffect(() => {
     (async () => {
       setLoading(true)
-      const res = await window.electronAPI.getSalaryHistory(member.id)
+      const res = await (await getAPI()).getSalaryHistory(member.id)
       if (res.success) setHistory(res.data || [])
       setLoading(false)
     })()
@@ -45,17 +46,18 @@ const SalaryHistoryModal: React.FC<Props> = ({ member, onClose }) => {
       subsidyNote: form.subsidyNote,
       note: form.note
     }
+    const api = await getAPI()
     if (editingId) {
       // Update existing — delete old + create new (no update IPC)
-      await window.electronAPI.deleteSalaryHistory(editingId)
+      await api.deleteSalaryHistory(editingId)
       setHistory(prev => prev.filter(h => h.id !== editingId))
     }
-    const res = await window.electronAPI.createSalaryHistory(payload)
+    const res = await api.createSalaryHistory(payload)
     if (res.success) {
       logCreate('members', `${member.name} 薪资记录`, member.id, { baseSalary: form.baseSalary, effectiveDate: form.effectiveDate })
       // B→A 同步：如果修改的是入职日期的初始薪资，回写到 member.baseSalary
       if (form.effectiveDate === member.entryDate) {
-        await window.electronAPI.updateMember({ ...member, baseSalary: Number(form.baseSalary) })
+        await api.updateMember({ ...member, baseSalary: Number(form.baseSalary) })
       }
       showToast(editingId ? '已更新' : '已添加', 'success')
       setHistory(prev => [res.data!, ...prev].sort((a, b) => b.effectiveDate.localeCompare(a.effectiveDate)))
@@ -89,7 +91,8 @@ const SalaryHistoryModal: React.FC<Props> = ({ member, onClose }) => {
     if (!confirm('确定删除该薪资记录吗？')) return
     // 删除前记录一下被删条目的信息
     const deletedEntry = history.find(h => h.id === id)
-    const res = await window.electronAPI.deleteSalaryHistory(id)
+    const api = await getAPI()
+    const res = await api.deleteSalaryHistory(id)
     if (res.success) {
       logDelete('members', `${member.name} 薪资记录 #${id}`, id, { baseSalary: deletedEntry?.baseSalary })
       // B→A 同步：如果删除了入职日期的初始薪资，更新 member.baseSalary
@@ -97,7 +100,7 @@ const SalaryHistoryModal: React.FC<Props> = ({ member, onClose }) => {
         // 找剩下的最早的薪资条目回写，没有则置 0
         const remaining = history.filter(h => h.id !== id)
         const earliest = remaining.sort((a, b) => a.effectiveDate.localeCompare(b.effectiveDate))[0]
-        await window.electronAPI.updateMember({ ...member, baseSalary: earliest ? earliest.baseSalary : 0 })
+        await api.updateMember({ ...member, baseSalary: earliest ? earliest.baseSalary : 0 })
       }
       showToast('已删除', 'success')
       setHistory(prev => prev.filter(h => h.id !== id))
@@ -119,7 +122,7 @@ const SalaryHistoryModal: React.FC<Props> = ({ member, onClose }) => {
         <div className="p-6">
           {!showAdd && (
             <button onClick={() => setShowAdd(true)}
-              className="w-full mb-4 px-4 py-2 border-2 border-dashed border-slate-300 rounded-lg text-sm text-slate-500 hover:border-indigo-400 hover:text-indigo-600 transition-colors">
+              className="w-full mb-4 px-4 py-2 border-2 border-dashed border-slate-300 rounded-lg text-sm text-slate-500 hover:border-primary-400 hover:text-primary-600 transition-colors">
               + 新增薪资记录
             </button>
           )}
@@ -162,7 +165,7 @@ const SalaryHistoryModal: React.FC<Props> = ({ member, onClose }) => {
           )}
 
           {loading ? (
-            <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-6 w-6 border-2 border-indigo-500 border-t-transparent" /></div>
+            <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-6 w-6 border-2 border-primary-500 border-t-transparent" /></div>
           ) : history.length === 0 ? (
             <div className="text-center py-8 text-sm text-slate-400">暂无薪资历史记录</div>
           ) : (
@@ -182,7 +185,7 @@ const SalaryHistoryModal: React.FC<Props> = ({ member, onClose }) => {
                   </div>
                   <div className="flex items-center gap-1">
                     <button onClick={() => startEdit(h)}
-                      className="text-indigo-400 hover:text-indigo-600 text-xs px-1">编辑</button>
+                      className="text-primary-400 hover:text-primary-600 text-xs px-1">编辑</button>
                     <button onClick={() => handleDelete(h.id)}
                       className="text-red-400 hover:text-red-600 text-xs px-1">删除</button>
                   </div>

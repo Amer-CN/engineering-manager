@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { Member, WorkerTeam } from '../../../../types/electron'
 import { useToastStore } from '@/store/toastStore'
+import { getAPI } from '@/services/api-adapter'
 
 interface UseLaborDataOptions {
   refresh?: () => void
@@ -28,10 +29,11 @@ export function useLaborData({ refresh }: UseLaborDataOptions = {}): UseLaborDat
   const loadData = useCallback(async (silent?: boolean) => {
     try {
       if (!silent) setLoading(true)
+      const api = await getAPI()
       const [projectsRes, teamsRes, globalWorkersRes] = await Promise.all([
-        window.electronAPI.getProjects(),
-        window.electronAPI.getWorkerTeams(),
-        window.electronAPI.getWorkers()
+        api.getProjects(),
+        api.getWorkerTeams(),
+        api.getWorkers()
       ])
 
       const projectsData = projectsRes.success ? (projectsRes.data || []) : []
@@ -44,7 +46,7 @@ export function useLaborData({ refresh }: UseLaborDataOptions = {}): UseLaborDat
 
       for (const project of projectsData) {
         try {
-          const pwRes = await window.electronAPI.getProjectWorkers(project.id)
+          const pwRes = await (await getAPI()).getProjectWorkers(project.id)
           if (pwRes.success && pwRes.data) {
             for (const pw of pwRes.data) {
               assignedWorkerIds.add(pw.workerId)
@@ -66,7 +68,7 @@ export function useLaborData({ refresh }: UseLaborDataOptions = {}): UseLaborDat
                 teamName: pw.teamName,
                 projectId: pw.projectId,
                 projectName: pw.projectName,
-                dailyWage: pw.dailyWage || pw.worker?.dailyWage || 0,
+                dailyWage: pw.dailyWage ?? pw.worker?.dailyWage ?? 0,
                 workerType: pw.worker?.workerType || pw.workerType,
                 entryDate: pw.entryDate,
                 status: pw.status || 'active',
@@ -94,11 +96,11 @@ export function useLaborData({ refresh }: UseLaborDataOptions = {}): UseLaborDat
             bankName: w.bankName,
             bankLineNo: w.bankLineNo,
             memberType: 'worker' as const,
-            teamId: undefined,
+            teamId: null,
             teamName: undefined,
             projectId: undefined,
             projectName: undefined,
-            dailyWage: w.dailyWage,
+            dailyWage: w.dailyWage ?? 0,
             workerType: w.workerType,
             entryDate: undefined,
             status: 'active' as const,

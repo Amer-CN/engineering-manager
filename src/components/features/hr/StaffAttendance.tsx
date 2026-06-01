@@ -1,13 +1,19 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import { HoverScrollbar } from '../../ui/HoverScrollbar'
+import FilterBar from '../../ui/FilterBar'
 import { Button } from '../../ui/Button'
 import { EmptyState } from '../../ui/EmptyState'
+import ButtonLoader from '../../ui/ButtonLoader'
+import Spinner from '../../ui/Spinner'
 import { useToastStore } from '@/store/toastStore'
+import { useConfirm } from '@/hooks/useConfirm'
 import { logCreate, logDelete } from '../../../utils/audit'
 import { STATUS_META, computeAttendanceSummary } from '../../../constants/attendance'
 import type { AttendanceRecord } from '../../../types/electron'
 import AttendanceDetail from '../../AttendanceDetail'
 import AttendanceTimeline from './AttendanceTimeline'
 import { StaffAttendanceRow } from './StaffAttendanceRow'
+import { getAPI } from '@/services/api-adapter'
 
 function getDaysInMonth(yearMonth: string): number {
   const [y, m] = yearMonth.split('-').map(Number)
@@ -27,6 +33,7 @@ function formatMonthLabel(ym: string): string {
 
 const StaffAttendance: React.FC = () => {
   const showToast = useToastStore(state => state.showToast)
+  const { confirm, ConfirmDialog } = useConfirm()
   const now = new Date()
   const [yearMonth, setYearMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`)
   const [staff, setStaff] = useState<any[]>([])
@@ -52,10 +59,11 @@ const StaffAttendance: React.FC = () => {
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
+      const api = await getAPI()
       const [memRes, attRes, deptRes] = await Promise.allSettled([
-        window.electronAPI.getMembers(),
-        window.electronAPI.getAttendances(undefined, undefined),
-        window.electronAPI.getDepartments()
+        api.getMembers(),
+        api.getAttendances(undefined, undefined),
+        api.getDepartments()
       ])
       const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
       setStaff(get(memRes).filter((m: any) => m.memberType === 'staff' || m.memberType === undefined))
@@ -149,7 +157,7 @@ const StaffAttendance: React.FC = () => {
         if (currentMonthAttendances.some((a: any) => a.memberId === memberId)) continue
         const dailyStatus: Record<number, string> = {}
         for (let d = 1; d <= daysInMonth; d++) dailyStatus[d] = 'work'
-        await window.electronAPI.createAttendance({ memberId, yearMonth, dailyStatus, createdAt: new Date().toISOString() } as any)
+        await (await getAPI()).createAttendance({ memberId, yearMonth, dailyStatus, createdAt: new Date().toISOString() } as any)
         created++
       }
       await loadData()
@@ -160,18 +168,21 @@ const StaffAttendance: React.FC = () => {
   }
 
   const handleDelete = async (record: any) => {
-    if (!confirm(`确定删除 ${record.memberName || '该员工'} ${formatMonthLabel(record.yearMonth || '')} 的考勤记录吗？此操作不可撤销。`)) return
+    const ok = await confirm({ title: '确认删除', content: `确定删除 ${record.memberName || '该员工'} ${formatMonthLabel(record.yearMonth || '')} 的考勤记录吗？此操作不可撤销。`, confirmVariant: 'danger' })
+    if (!ok) return
     try {
-      const result = await window.electronAPI.deleteAttendance(record.id)
+      const result = await (await getAPI()).deleteAttendance(record.id)
       if (result.success) { showToast('已删除', 'success'); loadData(); logDelete('attendances', record.memberName || '考勤', record.id, {}) }
       else showToast(result.error || '删除失败', 'error')
     } catch (e: any) { showToast(e?.message || '删除失败', 'error') }
   }
 
   const handleBatchDelete = async () => {
-    if (selectedIds.size === 0 || !confirm(`确认删除选中的 ${selectedIds.size} 条考勤记录吗？此操作不可撤销。`)) return
+    if (selectedIds.size === 0) return
+    const ok = await confirm({ title: '确认删除', content: `确认删除选中的 ${selectedIds.size} 条考勤记录吗？此操作不可撤销。`, confirmVariant: 'danger' })
+    if (!ok) return
     try {
-      const result = await window.electronAPI.batchDeleteAttendances(Array.from(selectedIds))
+      const result = await (await getAPI()).batchDeleteAttendances(Array.from(selectedIds))
       if (result.success) { showToast(`已删除 ${selectedIds.size} 条`, 'success'); setSelectedIds(new Set()); loadData(); logDelete('attendances', `${selectedIds.size} 条考勤`, 0, {}) }
       else showToast(result.error || '批量删除失败', 'error')
     } catch (e: any) { showToast(e?.message || '批量删除失败', 'error') }
@@ -201,7 +212,7 @@ const StaffAttendance: React.FC = () => {
       const dailyStatus: Record<number, string> = {}
       for (let d = 1; d <= getDaysInMonth(ym); d++) dailyStatus[d] = 'work'
       try {
-        const res = await window.electronAPI.createAttendance({ memberId, yearMonth: ym, dailyStatus, createdAt: new Date().toISOString() } as any)
+        const res = await (await getAPI()).createAttendance({ memberId, yearMonth: ym, dailyStatus, createdAt: new Date().toISOString() } as any)
         await loadData()
         if (res.success) {
           const created = allAttendances.find((a: any) => a.memberId === memberId && a.yearMonth === ym)
@@ -257,13 +268,14 @@ const StaffAttendance: React.FC = () => {
   const joinedAfter = useMemo(() => staff.filter((s: any) => { const ed = getEntryDate(s); return ed && ed > monthEnd }).length, [staff, getEntryDate, monthEnd])
 
   if (loading) {
-    return <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-4 border-indigo-500 border-t-transparent" /></div>
+    return <Spinner size="md" text="加载考勤数据..." />
   }
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
+      {ConfirmDialog}
       {/* Toolbar */}
-      <div className="bg-white rounded-xl shadow-sm px-5 py-3 flex items-center gap-4 flex-wrap">
+      <FilterBar>
         <div className="flex items-center gap-2">
           <input type="month" value={yearMonth} onChange={e => setYearMonth(e.target.value)}
             className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm" />
@@ -286,9 +298,11 @@ const StaffAttendance: React.FC = () => {
           导出Excel
         </Button>
         <Button onClick={handleGenerateDefaults} disabled={generating || filteredStaff.length === 0} size="sm">
-          {generating ? '生成中...' : '生成默认考勤'}
+          <ButtonLoader loading={generating} loadingText="生成中...">
+            生成默认考勤
+          </ButtonLoader>
         </Button>
-      </div>
+      </FilterBar>
 
       {/* Summary list */}
       {filteredStaff.length === 0 ? (
@@ -297,7 +311,7 @@ const StaffAttendance: React.FC = () => {
             description={staff.length === 0 ? '请先在人员档案中添加管理人员' : '请调整筛选条件'} />
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm flex-1 overflow-auto">
+        <HoverScrollbar className="bg-white rounded-xl shadow-sm flex-1">
           <table className="w-full">
             <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
               <tr className="">
@@ -334,7 +348,7 @@ const StaffAttendance: React.FC = () => {
               ))}
             </tbody>
           </table>
-        </div>
+        </HoverScrollbar>
       )}
 
       {/* Legend */}

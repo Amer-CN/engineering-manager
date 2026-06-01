@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Button } from '../../ui/Button'
 import { EmptyState } from '../../ui/EmptyState'
+import Spinner from '../../ui/Spinner'
 import { useToastStore } from '@/store/toastStore'
 import { useDepartments } from '../../../hooks/useDepartments'
 import PositionEditor from './PositionEditor'
+import { getAPI } from '@/services/api-adapter'
 
 const DepartmentManager: React.FC = () => {
   const showToast = useToastStore(state => state.showToast)
@@ -17,7 +19,7 @@ const DepartmentManager: React.FC = () => {
 
   useEffect(() => {
     (async () => {
-      const res = await window.electronAPI.getMembers()
+      const res = await (await getAPI()).getMembers()
       if (res.success) setMembers(res.data || [])
     })()
   }, [])
@@ -74,7 +76,7 @@ const DepartmentManager: React.FC = () => {
   }
 
   if (loading) {
-    return <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-4 border-indigo-500 border-t-transparent" /></div>
+    return <Spinner size="md" text="加载部门数据..." />
   }
 
   return (
@@ -108,7 +110,7 @@ const DepartmentManager: React.FC = () => {
                 <td className="px-6 py-3 text-sm text-slate-600">{getManagerName(dept.managerId)}</td>
                 <td className="px-6 py-3 text-center">
                   <div className="flex items-center justify-center gap-2">
-                    <button onClick={() => openEdit(dept)} className="btn btn-ghost btn-sm text-indigo-600">编辑</button>
+                    <button onClick={() => openEdit(dept)} className="btn btn-ghost btn-sm text-primary-600">编辑</button>
                     <button onClick={() => handleDelete(dept)} className="btn btn-danger btn-sm">删除</button>
                   </div>
                 </td>
@@ -128,12 +130,12 @@ const DepartmentManager: React.FC = () => {
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">部门名称 *</label>
                 <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" required />
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" required />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">负责人</label>
                 <select value={formData.managerId} onChange={e => setFormData({ ...formData, managerId: e.target.value ? Number(e.target.value) : '' })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent">
                   <option value="">暂不指定</option>
                   {members.filter((m: any) => m.memberType === 'staff' || m.memberType === undefined).map((m: any) => (
                     <option key={m.id} value={m.id}>{m.name}</option>

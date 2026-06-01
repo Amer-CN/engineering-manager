@@ -8,6 +8,7 @@
 
 import { create } from 'zustand'
 import { setCurrentUser as setPermissionsUser, type AuthContext as PermissionsAuthContext } from '../types/permissions'
+import { getAPI } from '@/services/api-adapter'
 import { setCurrentAuditUser, logAudit } from '../utils/audit'
 
 // 存储键
@@ -96,9 +97,10 @@ export const useAuthStore = create<AuthState>((set, get) => {
     },
     
     unlock: async (username: string, password: string) => {
-      if (!window.electronAPI?.login) return false
       try {
-        const result = await window.electronAPI.login(username, password)
+        const api = await getAPI()
+        if (!api.login) return false
+        const result = await api.login(username, password)
         if (result.success) {
           set({ isLocked: false })
           logAudit('unlock', 'auth', `用户解锁屏幕: ${username}`, { resourceName: username })

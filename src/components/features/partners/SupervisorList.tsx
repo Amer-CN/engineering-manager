@@ -96,9 +96,10 @@ export const SupervisorList: React.FC<SupervisorListProps> = ({
       </div>
 
       {/* 列表 */}
-      <div className="card flex-1 overflow-hidden relative">
+      <div className="card flex-1 overflow-hidden relative min-h-0">
         <DataTable
           data={filteredSupervisors}
+          useHoverScrollbar={true}
           columns={[
             {
               key: 'name',
@@ -169,16 +170,6 @@ export const SupervisorList: React.FC<SupervisorListProps> = ({
           emptyText="暂无监管单位"
           emptyIcon={<Icon name="Landmark" size={20} />}
         />
-
-        {filteredSupervisors.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="text-center pointer-events-auto">
-              <div className="empty-state-icon"><Icon name="Landmark" size={48} /></div>
-              <h3 className="empty-state-title">暂无监管单位</h3>
-              <p className="empty-state-description mb-6">点击上方按钮添加您的第一个监管单位</p>
-            </div>
-          </div>
-        )}
       </div>
     </>
   )

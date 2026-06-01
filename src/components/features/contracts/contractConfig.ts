@@ -1,5 +1,6 @@
 import type { IncomeContract, ExpenseContract, AgreementContract, AgreementSubType, PaymentRecord } from '../../../types/electron'
 import { contractStatuses } from '../../../data/regions'
+import { getAPI } from '@/services/api-adapter'
 
 export type ContractType = 'income' | 'expense' | 'agreement'
 export type Contract = IncomeContract | ExpenseContract | AgreementContract
@@ -44,8 +45,8 @@ export const AGREEMENT_SUB_TYPE_LABELS: Record<AgreementSubType, string> = {
   compensation: '赔偿协议', personal: '个人协议', other: '其他协议',
 }
 
-export function getApi(type: ContractType) {
-  const api = window.electronAPI
+export async function getApi(type: ContractType) {
+  const api = await getAPI()
   if (type === 'income') {
     return { getContracts: () => api.getIncomeContracts(), createContract: (d: any) => api.createIncomeContract(d), updateContract: (d: any) => api.updateIncomeContract(d), deleteContract: (id: number) => api.deleteIncomeContract(id) }
   }

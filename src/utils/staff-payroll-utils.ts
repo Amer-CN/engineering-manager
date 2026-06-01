@@ -24,7 +24,7 @@ export function filteredStaffForGenerate(
   const me = monthEnd(ym)
   const ms = `${ym}-01`
   return staff.filter((s: any) => {
-    if (filterDept && s.departmentId !== filterDept) return false
+    if (filterDept && (s.departmentId ?? -1) !== filterDept) return false
     const ed = getEntryDate(s)
     if (ed && ed > me) return false             // 尚未入职
     if (s.leaveDate && !s.reentryDate && s.leaveDate < ms) return false

@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react"
 import type { Region, Supervisor } from "@/types"
 import { handleError, Result, VoidResult } from "@/types"
+import { getAPI } from '@/services/api-adapter'
 
 export interface UseRegionsReturn {
   data: Region[]; loading: boolean; error: string | null
@@ -18,7 +19,7 @@ export function useRegions(): UseRegionsReturn {
   const loadRegions = useCallback(async () => {
     setLoading(true); setError(null)
     try {
-      const result = await window.electronAPI.getRegions()
+      const result = await (await getAPI()).getRegions()
       if (result.success && result.data) setRegions(result.data)
       else setError(result.error || '加载地区列表失败')
     } catch (err) { setError(handleError(err).getUserMessage()) }
@@ -28,7 +29,7 @@ export function useRegions(): UseRegionsReturn {
   const create = useCallback(async (data: Partial<Region>): Promise<Result<{ id: number }>> => {
     setError(null)
     try {
-      const result = await window.electronAPI.createRegion(data as Region)
+      const result = await (await getAPI()).createRegion(data as Region)
       if (result.success) { await loadRegions(); return { success: true, data: { id: result.data?.id || 0 } } }
       const msg = result.error || '创建地区失败'; setError(msg); return { success: false, error: msg }
     } catch (err) { const msg = handleError(err).getUserMessage(); setError(msg); return { success: false, error: msg } }
@@ -37,7 +38,7 @@ export function useRegions(): UseRegionsReturn {
   const deleteRegion = useCallback(async (id: number): Promise<VoidResult> => {
     setError(null)
     try {
-      const result = await window.electronAPI.deleteRegion(id)
+      const result = await (await getAPI()).deleteRegion(id)
       if (result.success) { setRegions(p => p.filter(r => r.id !== id)); return { success: true } }
       const msg = result.error || '删除地区失败'; setError(msg); return { success: false, error: msg }
     } catch (err) { const msg = handleError(err).getUserMessage(); setError(msg); return { success: false, error: msg } }
@@ -68,7 +69,7 @@ export function useSupervisors(): UseSupervisorsReturn {
   const loadSupervisors = useCallback(async () => {
     setLoading(true); setError(null)
     try {
-      const result = await window.electronAPI.getSupervisors()
+      const result = await (await getAPI()).getSupervisors()
       if (result.success && result.data) setSupervisors(result.data)
       else setError(result.error || '加载监管单位列表失败')
     } catch (err) { setError(handleError(err).getUserMessage()) }
@@ -78,7 +79,7 @@ export function useSupervisors(): UseSupervisorsReturn {
   const create = useCallback(async (data: Partial<Supervisor>): Promise<Result<{ id: number }>> => {
     setError(null)
     try {
-      const result = await window.electronAPI.createSupervisor(data as Supervisor)
+      const result = await (await getAPI()).createSupervisor(data as Supervisor)
       if (result.success) { await loadSupervisors(); return { success: true, data: { id: result.data?.id || 0 } } }
       const msg = result.error || '创建监管单位失败'; setError(msg); return { success: false, error: msg }
     } catch (err) { const msg = handleError(err).getUserMessage(); setError(msg); return { success: false, error: msg } }
@@ -87,7 +88,7 @@ export function useSupervisors(): UseSupervisorsReturn {
   const update = useCallback(async (supervisor: Supervisor): Promise<VoidResult> => {
     setError(null)
     try {
-      const result = await window.electronAPI.updateSupervisor(supervisor)
+      const result = await (await getAPI()).updateSupervisor(supervisor)
       if (result.success) { await loadSupervisors(); if (selectedSupervisor?.id === supervisor.id) setSelectedSupervisor(supervisor); return { success: true } }
       const msg = result.error || '更新监管单位失败'; setError(msg); return { success: false, error: msg }
     } catch (err) { const msg = handleError(err).getUserMessage(); setError(msg); return { success: false, error: msg } }
@@ -96,7 +97,7 @@ export function useSupervisors(): UseSupervisorsReturn {
   const deleteSupervisor = useCallback(async (id: number): Promise<VoidResult> => {
     setError(null)
     try {
-      const result = await window.electronAPI.deleteSupervisor(id)
+      const result = await (await getAPI()).deleteSupervisor(id)
       if (result.success) { setSupervisors(p => p.filter(s => s.id !== id)); if (selectedSupervisor?.id === id) setSelectedSupervisor(null); return { success: true } }
       const msg = result.error || '删除监管单位失败'; setError(msg); return { success: false, error: msg }
     } catch (err) { const msg = handleError(err).getUserMessage(); setError(msg); return { success: false, error: msg } }

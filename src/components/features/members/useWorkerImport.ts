@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
+import { getAPI } from '@/services/api-adapter'
 
 export interface WorkerImportRow {
   name: string
@@ -443,7 +444,7 @@ export function useWorkerImport(existingIdCards: Set<string>) {
 
         // Check if worker already exists in global pool
         try {
-          const workerRes = await window.electronAPI.getWorkers(rowData.idCard)
+          const workerRes = await (await getAPI()).getWorkers(rowData.idCard)
           if (workerRes.success && workerRes.data && workerRes.data.length > 0) {
             const existing = workerRes.data[0]
             // Build update: only overwrite fields that have new non-empty values
@@ -456,7 +457,7 @@ export function useWorkerImport(existingIdCards: Set<string>) {
               }
             }
             if (hasChanges) {
-              const updRes = await window.electronAPI.updateWorker(update as any)
+              const updRes = await (await getAPI()).updateWorker(update as any)
               if (!updRes.success) {
                 return { ok: false, row: rowIdx, reason: updRes.error || '更新工人失败' }
               }
@@ -469,7 +470,7 @@ export function useWorkerImport(existingIdCards: Set<string>) {
         }
 
         // Create new Worker in global pool
-        const newWorkerRes = await window.electronAPI.createWorker({
+        const newWorkerRes = await (await getAPI()).createWorker({
           name: rowData.name,
           idCard: rowData.idCard,
           ...rowFields

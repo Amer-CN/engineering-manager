@@ -10,9 +10,10 @@ import { calculateHealthScore, getHealthLevel } from '@/utils/projectHealth'
 import { motion } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
 import { Card } from '../../ui/Card'
-import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell, RadialBarChart, RadialBar } from 'recharts'
+import { ResponsiveContainer, PieChart, Pie, Cell, RadialBarChart, RadialBar } from 'recharts'
 import { SimpleBarChart } from '../../ui/SimpleBarChart'
 import { formatMoney } from '@/utils/format'
+import { staggerContainer, sectionVariant } from '@/constants/animations'
 
 export interface ProjectCommandCenterProps {
   project: Project; stats: ProjectStatsData; expenseByCategory: Record<string, number>
@@ -33,8 +34,6 @@ const statusConfig: Record<string, { text: string; color: string }> = {
   planning: { text: '筹备中', color: 'bg-blue-500' }, in_progress: { text: '进行中', color: 'bg-emerald-500' },
   completed: { text: '已完成', color: 'bg-slate-400' }, archived: { text: '已归档', color: 'bg-amber-500' },
 }
-
-const sectionV = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { duration: 0.3, ease: 'easeOut' } } }
 
 function StatCard({ icon, accent, label, value, sub }: { icon: React.ReactNode; accent: string; label: string; value: string; sub?: string }) {
   return (
@@ -78,10 +77,10 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
   const hasAlerts = unpaidInvoices > 0 || (project.budget > 0 && stats.totalExpenses > project.budget * 0.85)
 
   return (
-    <motion.div initial="hidden" animate="visible" variants={{ visible: { transition: { staggerChildren: 0.07 } } }}>
+    <motion.div initial="hidden" animate="visible" variants={staggerContainer}>
 
       {/* ═══ 1. Hero ═══ */}
-      <motion.section variants={sectionV} className="relative overflow-hidden rounded-2xl mb-6 bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 text-white p-6">
+      <motion.section variants={sectionVariant} className="relative overflow-hidden rounded-2xl mb-6 bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 text-white p-6">
         <div className="hero-overlay absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.1),transparent_50%)]" />
         {/* 装饰光点 */}
         <motion.div className="absolute top-3 right-12 w-1 h-1 rounded-full bg-emerald-400"
@@ -114,7 +113,7 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
 
       {/* ═══ 2. Alerts ═══ */}
       {hasAlerts && (
-        <motion.section variants={sectionV} className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-200">
+        <motion.section variants={sectionVariant} className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-200">
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0"><Icon name="AlertTriangle" size={16} className="text-amber-600" /></div>
             <div className="flex-1 space-y-1">
@@ -128,7 +127,7 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
       )}
 
       {/* ═══ 3. Finance + Cost ═══ */}
-      <motion.section variants={sectionV} className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+      <motion.section variants={sectionVariant} className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
         <Card bordered={false} className="border border-slate-200 p-5" padding="none">
           <p className={`text-xl font-bold mb-2 ${stats.netProfit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>{stats.netProfit >= 0 ? '盈利' : '亏损'} ¥{formatMoney(Math.abs(stats.netProfit))}</p>
           <SimpleBarChart
@@ -153,7 +152,7 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
       </motion.section>
 
       {/* ═══ 4. Contracts + KPIs ═══ */}
-      <motion.section variants={sectionV} className="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-6">
+      <motion.section variants={sectionVariant} className="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-6">
         <div className="xl:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Card bordered={false} className="border border-slate-200 p-4" padding="none">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-2"><Icon name="TrendingUp" size={14} className="text-emerald-500" /> 收入合同</h3>
@@ -185,7 +184,7 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
       </motion.section>
 
       {/* ═══ 5. Partners + Invoices + Materials ═══ */}
-      <motion.section variants={sectionV} className="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-6">
+      <motion.section variants={sectionVariant} className="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-6">
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4">
           <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2"><Icon name="Building2" size={14} /> 关联单位 ({stats.partnerCount})</h3>
           {partnerStats.length > 0 ? (
@@ -238,7 +237,7 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
       </motion.section>
 
       {/* ═══ 6. Invoice stats + Info ═══ */}
-      <motion.section variants={sectionV} className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+      <motion.section variants={sectionVariant} className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
         {[{ l: '收票总额', v: `¥${formatMoney(stats.invoiceInTotal)}`, s: `已付款 ¥${formatMoney(stats.receivedInTotal)}`, cls: 'border-emerald-200 bg-emerald-50' },
           { l: '开票总额', v: `¥${formatMoney(stats.invoiceOutTotal)}`, s: `已回款 ¥${formatMoney(stats.receivedOutTotal)}`, cls: 'border-blue-200 bg-blue-50' },
           { l: '应付未付', v: `¥${formatMoney(Math.max(0, stats.invoiceInTotal - stats.receivedInTotal))}`, s: '已收票，尚未付款', cls: 'border-amber-200 bg-amber-50' },
@@ -251,7 +250,7 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
       </motion.section>
 
       {/* ═══ 7. Info Footer ═══ */}
-      <motion.section variants={sectionV} className="bg-white border border-slate-200 rounded-xl shadow-sm p-5">
+      <motion.section variants={sectionVariant} className="bg-white border border-slate-200 rounded-xl shadow-sm p-5">
         <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2"><Icon name="ClipboardList" size={14} /> 项目基本信息</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           {[{ l: '项目负责人', v: project.projectManagerName || '-' }, { l: '开工日期', v: project.startDate || '-' }, { l: '竣工日期', v: project.endDate || '-' }, { l: '项目周期', v: project.startDate && project.endDate ? `${Math.ceil((new Date(project.endDate).getTime() - new Date(project.startDate).getTime()) / (1000 * 60 * 60 * 24))}天` : '-' }].map((item, i) => (

@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react'
 import { useToastStore } from '@/store/toastStore'
+import { Input } from '../../ui/Input/Input'
 
 interface PositionEditorProps {
   positions: string[]
@@ -41,7 +42,7 @@ const PositionEditor: React.FC<PositionEditorProps> = ({ positions, onChange }) 
       {positions.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-2">
           {positions.map((p, i) => (
-            <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-50 text-indigo-700 text-xs rounded-full">
+            <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary-50 text-primary-700 text-xs rounded-full">
               {p}
               <button type="button" onClick={() => handleRemove(i)}
                 className="hover:text-red-500 transition-colors">&times;</button>
@@ -51,12 +52,12 @@ const PositionEditor: React.FC<PositionEditorProps> = ({ positions, onChange }) 
       )}
 
       <div className="flex gap-2">
-        <input ref={inputRef} type="text" value={inputValue}
+        <Input ref={inputRef} size="sm" type="text" value={inputValue}
           onChange={e => setInputValue(e.target.value)} onKeyDown={handleKeyDown}
-          className="flex-1 px-3 py-1.5 border border-slate-300 rounded-lg text-sm"
+          containerClassName="flex-1"
           placeholder="输入职位名称，如：部门经理" maxLength={MAX_CHAR} />
           <button type="button" onClick={handleAdd}
-            className="btn btn-ghost btn-sm text-indigo-600 whitespace-nowrap">添加</button>
+            className="btn btn-ghost btn-sm text-primary-600 whitespace-nowrap">添加</button>
       </div>
     </div>
   )

@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { Icon } from '../../ui/Icon'
+import { Spinner } from '../../ui/Loading/Loading'
+import { Modal } from '../../ui/Modal/Modal'
+import { getAPI } from '@/services/api-adapter'
 
 interface WorkerWageModalProps {
   show: boolean
@@ -20,34 +23,20 @@ export function WorkerWageModal({ show, workerId, workerName, onClose }: WorkerW
   useEffect(() => {
     if (!show) return
     setLoading(true)
-    window.electronAPI.getWorkerStats(workerId)
+    getAPI().then(api => api.getWorkerStats(workerId))
       .then(r => { if (r.success && r.data) setStats(r.data); else setStats(null) })
       .catch(() => setStats(null))
       .finally(() => setLoading(false))
   }, [show, workerId])
 
-  if (!show) return null
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <div>
-            <h3 className="text-lg font-semibold text-slate-800">{workerName}</h3>
-            <p className="text-xs text-slate-400 mt-0.5">工资统计</p>
-          </div>
-          <button onClick={onClose} className="text-slate-300 hover:text-slate-500">
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M5 5l8 8M13 5l-8 8" />
-            </svg>
-          </button>
-        </div>
+    <Modal isOpen={show} onClose={onClose} title={workerName} size="lg">
+      <p className="text-xs text-slate-400 mb-4">工资统计</p>
 
         {/* Body */}
         {loading ? (
           <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-4 border-amber-500 border-t-transparent" />
+            <Spinner size="md" />
           </div>
         ) : !stats ? (
           <div className="text-center py-12 text-slate-400">
@@ -84,7 +73,6 @@ export function WorkerWageModal({ show, workerId, workerName, onClose }: WorkerW
             )}
           </div>
         )}
-      </div>
-    </div>
+    </Modal>
   )
 }

@@ -3,10 +3,10 @@ import { motion, useMotionValue, useSpring } from 'framer-motion'
 import { formatMoney } from '@/utils/format'
 import { Icon } from '@/components/ui/Icon'
 import type { Project, CostLedgerSummary } from '@/types'
+import { staggerContainer, sectionVariant } from '@/constants/animations'
 
 const CARD = 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm'
 
-const sectionV = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { duration: 0.3, ease: 'easeOut' } } }
 const cardHover = { y: -4, boxShadow: '0 12px 30px rgba(0,0,0,0.1)', transition: { duration: 0.2 } }
 
 const CountUp: React.FC<{ value: number; suffix?: string; prefix?: string; decimals?: number }> = ({ value, suffix = '', prefix = '', decimals = 0 }) => {
@@ -68,10 +68,10 @@ export function CostLedgerDashboard({ projects, summaries, loading, onSelectProj
   const netFlow = totals.income - totals.expense
 
   return (
-    <motion.div initial="hidden" animate="visible" variants={{ visible: { transition: { staggerChildren: 0.07 } } }}>
+    <motion.div initial="hidden" animate="visible" variants={staggerContainer}>
 
       {/* ═══ Hero Banner ═══ */}
-      <motion.section variants={sectionV} className="relative overflow-hidden rounded-2xl mb-6 bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 text-white p-6">
+      <motion.section variants={sectionVariant} className="relative overflow-hidden rounded-2xl mb-6 bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 text-white p-6">
         <div className="hero-overlay absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(251,146,60,0.1),transparent_50%)]" />
         <motion.div className="absolute top-3 right-12 w-1 h-1 rounded-full bg-amber-400"
           animate={{ opacity: [0, 1, 0], scale: [0.5, 2, 0.5] }}
@@ -108,7 +108,7 @@ export function CostLedgerDashboard({ projects, summaries, loading, onSelectProj
       </motion.section>
 
       {/* ═══ KPI Stat Cards ═══ */}
-      <motion.section variants={sectionV} className="grid grid-cols-3 gap-3 mb-6">
+      <motion.section variants={sectionVariant} className="grid grid-cols-3 gap-3 mb-6">
         <motion.div variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { delay: 0 } } }}
           whileHover={cardHover} whileTap={{ scale: 0.98 }}
           className={`${CARD} p-3 transition-shadow duration-200 cursor-default`}>
@@ -147,7 +147,7 @@ export function CostLedgerDashboard({ projects, summaries, loading, onSelectProj
 
       {/* ═══ Toolbar ═══ */}
       {onManageCategories && (
-        <motion.section variants={sectionV} className="mb-4 flex items-center justify-between">
+        <motion.section variants={sectionVariant} className="mb-4 flex items-center justify-between">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
             <Icon name="FolderKanban" size={14} /> 项目台账
           </h2>
@@ -159,7 +159,7 @@ export function CostLedgerDashboard({ projects, summaries, loading, onSelectProj
       )}
 
       {/* ═══ Project Cards Grid ═══ */}
-      <motion.section variants={sectionV} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <motion.section variants={sectionVariant} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {projects.map((project, i) => {
           const s = summaries[project.id]
           const net = s ? s.totalIncome - s.totalExpense : 0

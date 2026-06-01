@@ -49,9 +49,9 @@ export const PartnerList: React.FC<PartnerListProps> = ({
   })
 
   return (
-    <>
-      {/* 筛选器 */}
-      <div className="card p-4 mb-4 flex items-center gap-4">
+    <div className="flex-1 flex flex-col overflow-hidden">
+      {/* 筛选器 - 固定高度 */}
+      <div className="card p-4 mb-4 flex items-center gap-4 shrink-0">
         <div className="flex-1">
           <input
             type="text"
@@ -84,10 +84,11 @@ export const PartnerList: React.FC<PartnerListProps> = ({
         </select>
       </div>
 
-      {/* 列表 */}
-      <div className="card flex-1 overflow-hidden relative">
+      {/* 列表 - 填满剩余空间，可滚动 */}
+      <div className="card flex-1 overflow-hidden relative min-h-0">
         <DataTable
           data={filteredPartners}
+          useHoverScrollbar={true}
           columns={[
             {
               key: 'name',
@@ -181,18 +182,8 @@ export const PartnerList: React.FC<PartnerListProps> = ({
           emptyText="暂无合作单位"
           emptyIcon={<Icon name="Building2" size={20} />}
         />
-
-        {filteredPartners.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="text-center pointer-events-auto">
-              <div className="empty-state-icon"><Icon name="Building2" size={48} /></div>
-              <h3 className="empty-state-title">暂无合作单位</h3>
-              <p className="empty-state-description mb-6">点击上方按钮添加您的第一个合作单位</p>
-            </div>
-          </div>
-        )}
       </div>
-    </>
+    </div>
   )
 }
 

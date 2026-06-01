@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
 import { useToastStore } from '@/store/toastStore'
 import { logUpdate } from '../../../utils/audit'
+import { getAPI } from '@/services/api-adapter'
 
 interface Props {
   orphans: any[]
@@ -24,7 +25,7 @@ const BatchDeptAssignModal: React.FC<Props> = ({ orphans, departments, onClose, 
       for (const id of selected) {
         const m = orphans.find((x: any) => x.id === id)
         if (m) {
-          await window.electronAPI.updateMember({ ...m, departmentId: batchDeptId as number })
+          await (await getAPI()).updateMember({ ...m, departmentId: batchDeptId as number })
           count++
         }
       }
@@ -46,7 +47,7 @@ const BatchDeptAssignModal: React.FC<Props> = ({ orphans, departments, onClose, 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">目标部门</label>
             <select value={batchDeptId} onChange={e => setBatchDeptId(e.target.value ? Number(e.target.value) : '')}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent">
               <option value="">请选择部门</option>
               {departments.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
@@ -55,7 +56,7 @@ const BatchDeptAssignModal: React.FC<Props> = ({ orphans, departments, onClose, 
             <div className="flex items-center justify-between mb-2">
               <label className="text-sm font-medium text-slate-700">待分配人员 ({selected.size}/{orphans.length})</label>
               <button onClick={() => setSelected(selected.size === orphans.length ? new Set() : new Set(orphans.map((m: any) => m.id)))}
-                className="text-xs text-indigo-600 hover:text-indigo-800">
+                className="text-xs text-primary-600 hover:text-primary-800">
                 {selected.size === orphans.length ? '取消全选' : '全选'}
               </button>
             </div>
@@ -68,7 +69,7 @@ const BatchDeptAssignModal: React.FC<Props> = ({ orphans, departments, onClose, 
                       next.has(m.id) ? next.delete(m.id) : next.add(m.id)
                       setSelected(next)
                     }}
-                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                    className="rounded border-slate-300 text-primary-600 focus:ring-primary-500" />
                   <span className="text-sm text-slate-800">{m.name}</span>
                   <span className="text-xs text-slate-400">{m.position || '无职位'}</span>
                 </label>

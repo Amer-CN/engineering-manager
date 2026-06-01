@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Project, WorkerTeam, AttendanceRecord, WageRecord } from '@/types'
 import { Icon } from '../../ui/Icon'
+import PageHeader from '../../ui/PageHeader'
 import { Tabs } from '../../ui/Tabs'
 import AttendanceTab from './AttendanceTab'
 import WageTableTab from './WageTableTab'
@@ -113,16 +114,7 @@ export default function WageCycleDetail(props: WageCycleDetailProps) {
 
   return (
     <div className="p-6 max-w-[1400px] mx-auto space-y-6">
-      {/* 返回 + 标题 */}
-      <div className="flex items-center gap-4">
-        <button onClick={onBack}
-          className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors">
-          <Icon name="ChevronLeft" size={18} />
-        </button>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">{selectedProject?.name}</h1>
-        </div>
-      </div>
+      <PageHeader title={selectedProject?.name || ''} onBack={onBack} />
 
       {/* Tab Bar (统一 Tabs 组件) */}
       <Tabs

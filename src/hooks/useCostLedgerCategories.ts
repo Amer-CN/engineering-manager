@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import type { CostLedgerCategory } from '@/types'
+import { getAPI } from '@/services/api-adapter'
 
 export function useCostLedgerCategories() {
   const [categories, setCategories] = useState<CostLedgerCategory[]>([])
@@ -7,10 +8,10 @@ export function useCostLedgerCategories() {
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
-    const api = window.electronAPI
-    if (!api?.getCostLedgerCategories) return
     setLoading(true)
     try {
+      const api = await getAPI()
+      if (!api?.getCostLedgerCategories) { setLoading(false); return }
       const res = await api.getCostLedgerCategories()
       if (res?.success) {
         setCategories(res.data || [])

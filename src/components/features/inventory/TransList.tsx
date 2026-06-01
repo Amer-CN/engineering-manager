@@ -1,6 +1,7 @@
 import React from 'react'
 import { InventoryTransaction, InventoryTransactionType, InventoryItem, Project, Partner } from '../../../types/electron'
 import { Icon } from '../../ui/Icon'
+import { EmptyState } from '../../ui/EmptyState'
 import { formatMoney } from '@/utils/format'
 
 interface TransListProps {
@@ -70,11 +71,7 @@ export const TransList: React.FC<TransListProps> = ({
       ))}
     </div>
   ) : (
-    <div className="text-center py-12">
-      <div className="text-6xl mb-4"><Icon name="ClipboardList" size={48} /></div>
-      <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100 mb-2">暂无出入库记录</h3>
-      <p className="text-slate-500 dark:text-slate-400 mb-6">点击上方"出入库"按钮记录您的第一笔业务</p>
-    </div>
+    <EmptyState icon="ClipboardList" title="暂无出入库记录" description="点击上方「出入库」按钮记录您的第一笔业务" />
   )
 }
 

@@ -17,6 +17,8 @@ import {
   AuditAction,
   AuditLevel,
 } from '../utils/audit'
+import { useConfirm } from '@/hooks/useConfirm'
+import { useToastStore } from '@/store/toastStore'
 
 // 操作类型映射
 const ACTION_LABELS: Record<AuditAction, string> = {
@@ -58,6 +60,8 @@ interface AuditLogViewerProps {
 }
 
 const AuditLogViewer: React.FC<AuditLogViewerProps> = ({ maxVisible = 100 }) => {
+  const { confirm, ConfirmDialog } = useConfirm()
+  const showToast = useToastStore(state => state.showToast)
   const [logs, setLogs] = useState<AuditLog[]>([])
   const [stats, setStats] = useState<AuditStats | null>(null)
   const [loading, setLoading] = useState(true)
@@ -116,12 +120,12 @@ const AuditLogViewer: React.FC<AuditLogViewerProps> = ({ maxVisible = 100 }) => 
 
   // 清理旧日志
   const handleClearOldLogs = async () => {
-    if (confirm('确定要清理 90 天前的日志吗？')) {
-      const removed = await clearOldLogs(90)
-      alert(`已清理 ${removed} 条旧日志`)
-      loadLogs()
-      loadStats()
-    }
+    const ok = await confirm({ title: '确认清理', content: '确定要清理 90 天前的日志吗？', confirmVariant: 'danger' })
+    if (!ok) return
+    const removed = await clearOldLogs(90)
+    showToast(`已清理 ${removed} 条旧日志`, 'success')
+    loadLogs()
+    loadStats()
   }
 
   // 格式化时间
@@ -137,6 +141,7 @@ const AuditLogViewer: React.FC<AuditLogViewerProps> = ({ maxVisible = 100 }) => 
 
   return (
     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200">
+      {ConfirmDialog}
       {/* 头部统计 */}
       {stats && (
         <div className="grid grid-cols-4 gap-4 p-4 bg-slate-50 border-b border-slate-200">

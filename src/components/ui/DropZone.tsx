@@ -30,14 +30,14 @@ export const DropZone: React.FC<DropZoneProps> = ({
       onDragLeave={() => setDragOver(null)}
       onDrop={e => { e.preventDefault(); setDragOver(null); const f = e.dataTransfer.files[0]; if (f) onFile(f) }}
       onClick={openPicker}
-      className={`relative border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${isOver ? 'border-indigo-400 bg-indigo-50' : 'border-slate-300 hover:border-slate-400'}`}
+      className={`relative border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${isOver ? 'border-primary-400 bg-primary-50' : 'border-slate-300 hover:border-slate-400'}`}
     >
       {preview ? (
         <div className="relative group">
           {preview.startsWith('data:') && preview.includes('image') ? (
             <img src={preview} alt={label} className="max-h-24 mx-auto rounded" />
           ) : (
-            <div className="flex items-center gap-2 justify-center text-sm text-indigo-600">
+            <div className="flex items-center gap-2 justify-center text-sm text-primary-600">
               <Icon name="FileText" size={16} /><span>已上传文件</span>
             </div>
           )}

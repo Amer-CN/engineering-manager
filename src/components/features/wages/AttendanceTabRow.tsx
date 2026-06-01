@@ -64,7 +64,7 @@ export const AttendanceTabRow = React.memo(function AttendanceTabRow({
           <button onClick={() => onOpenHistory?.((a as any).projectWorkerId, a.memberName || '', (a as any).teamName || '')}
             className="text-indigo-500 hover:text-indigo-700 text-sm">历史</button>
           <button onClick={() => onDelete(a)}
-            className="text-red-400 hover:text-red-600 text-sm" title="删除考勤">删除</button>
+            className="text-red-400 hover:text-red-600 text-sm">删除</button>
         </div>
       </td>
     </tr>

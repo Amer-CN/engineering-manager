@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { motion } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
+import { Modal } from '../../ui/Modal/Modal'
+import { Input } from '../../ui/Input/Input'
 import { PartnerSelect } from '../partners/PartnerSelect'
 import { FileDropZone } from '../partners/FileDropZone'
 import { logCreate, logUpdate } from '../../../utils/audit'
@@ -9,6 +10,7 @@ import { paymentMethods, contractStatuses } from '../../../data/regions'
 import type { Project, Partner, AgreementSubType } from '../../../types/electron'
 import type { Contract, ContractType } from './contractConfig'
 import { CONFIG, AGREEMENT_SUB_TYPE_LABELS } from './contractConfig'
+import { getAPI } from '@/services/api-adapter'
 
 interface Props {
   show: boolean
@@ -83,7 +85,7 @@ export const ContractFormModal: React.FC<Props> = ({ show, type, editingContract
       if (fileUrl && fileUrl.startsWith('data:')) {
         const ext = formData.fileType === 'pdf' ? 'pdf' : formData.fileType === 'word' ? 'docx' : formData.fileType === 'excel' ? 'xlsx' : 'png'
         const amountSuffix = type === 'agreement' ? (formData.amount ? `_${formData.amount}元` : '') : `_${formData.amount}元`
-        const saveResult = await window.electronAPI.saveContractFile({
+        const saveResult = await (await getAPI()).saveContractFile({
           fileData: fileUrl, fileName: `${formData.name}${amountSuffix}.${ext}`,
           subCategory: config.subCategory,
           projectName: projects.find(p => p.id === formData.projectId)?.name || null,
@@ -108,59 +110,58 @@ export const ContractFormModal: React.FC<Props> = ({ show, type, editingContract
     } catch (error: any) { showToast('保存失败: ' + (error?.message || error), 'error') }
   }
 
-  if (!show) return null
-
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <motion.div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }}>
-        <div className="px-6 py-4 border-b border-slate-200 sticky top-0 bg-white flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-slate-800">{isEditing ? '编辑合同' : config.modalCreateTitle}</h2>
-          <div className="flex items-center gap-2">
-            {!isEditing && (
-              <button type="button" onClick={onShowTemplateSelector} className="px-3 py-1.5 text-xs bg-primary-50 text-primary-700 hover:bg-primary-100 border border-primary-200 rounded-lg flex items-center gap-1 transition-colors">
-                <Icon name="FileText" size={14} /> 从模板生成
-              </button>
-            )}
-            <span className={`px-3 py-1 rounded-full text-xs font-medium ${type === 'income' ? 'bg-emerald-100 text-emerald-700' : type === 'expense' ? 'bg-red-100 text-red-700' : 'bg-sky-100 text-sky-700'}`}>{config.label}</span>
+    <Modal isOpen={show} onClose={onClose}
+      title={
+        <div className="flex items-center gap-2">
+          <span>{isEditing ? '编辑合同' : config.modalCreateTitle}</span>
+          {!isEditing && (
+            <button type="button" onClick={onShowTemplateSelector} className="btn btn-ghost btn-sm text-primary-600">
+              <Icon name="FileText" size={14} /> 从模板生成
+            </button>
+          )}
+          <span className={`px-3 py-1 rounded-full text-xs font-medium ${type === 'income' ? 'bg-emerald-100 text-emerald-700' : type === 'expense' ? 'bg-red-100 text-red-700' : 'bg-sky-100 text-sky-700'}`}>{config.label}</span>
+        </div>
+      }
+      size="xl"
+      footer={
+        <>
+          <button type="button" onClick={onClose} className="btn btn-secondary">取消</button>
+          <button type="button" onClick={handleSubmit} className="btn btn-primary">{isEditing ? '保存' : '添加'}</button>
+        </>
+      }>
+      <form onSubmit={handleSubmit}>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="col-span-2"><Input label="合同名称" type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} size="sm" required /></div>
+          <div><label className="block text-sm font-medium text-slate-700 mb-1">关联项目 *</label><select value={formData.projectId} onChange={e => setFormData({ ...formData, projectId: parseInt(e.target.value) })} className="select" required><option value="">选择项目</option>{projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
+          <div><label className="block text-sm font-medium text-slate-700 mb-1">{config.partnerLabel}</label><PartnerSelect partners={partners} value={formData.partnerId || null} onChange={(partnerId) => setFormData({ ...formData, partnerId: partnerId || 0 })} placeholder={config.partnerPlaceholder} /></div>
+          <div><Input label="合同编号" type="text" value={formData.contractNo} onChange={e => setFormData({ ...formData, contractNo: e.target.value })} size="sm" /></div>
+          <div><Input label="合同金额" type="number" value={formData.amount || ''} onChange={e => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })} size="sm" required={type !== 'agreement'} /></div>
+          <div><Input label="签订日期" type="date" value={formData.signedDate} onChange={e => setFormData({ ...formData, signedDate: e.target.value })} size="sm" /></div>
+          {type !== 'agreement' && (
+            <div><label className="block text-sm font-medium text-slate-700 mb-1">付款方式</label><select value={formData.paymentMethod} onChange={e => setFormData({ ...formData, paymentMethod: e.target.value as any })} className="select">{paymentMethods.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}</select></div>
+          )}
+          {type === 'agreement' && (
+            <div><label className="block text-sm font-medium text-slate-700 mb-1">协议类型</label><select value={formData.agreementType} onChange={e => setFormData({ ...formData, agreementType: e.target.value as AgreementSubType })} className="select">{Object.entries(AGREEMENT_SUB_TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
+          )}
+          <div><Input label="开始日期" type="date" value={formData.startDate} onChange={e => setFormData({ ...formData, startDate: e.target.value })} size="sm" /></div>
+          <div><Input label="结束日期" type="date" value={formData.endDate} onChange={e => setFormData({ ...formData, endDate: e.target.value })} size="sm" /></div>
+          <div><label className="block text-sm font-medium text-slate-700 mb-1">合同状态</label><select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value as any })} className="select">{contractStatuses.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}</select></div>
+          <div className="col-span-2"><label className="block text-sm font-medium text-slate-700 mb-1">备注</label><textarea value={formData.remarks} onChange={e => setFormData({ ...formData, remarks: e.target.value })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500" rows={3} /></div>
+          <div className="col-span-2">
+            <FileDropZone label="上传合同附件" iconName="Paperclip" file={formData.fileUrl} fileType={formData.fileType || 'image'}
+              fileLabel={formData.fileType === 'pdf' ? 'PDF文件' : formData.fileType === 'word' ? 'Word文档' : formData.fileType === 'excel' ? 'Excel表格' : '图片文件'}
+              dragOver={dragOverFile} inputRef={fileInputRef} iconBgClass={config.accentBgLight}
+              onFileSelect={processFileForUpload}
+              onRemove={() => setFormData(prev => ({ ...prev, fileUrl: '', fileType: undefined }))}
+              onDragOver={(e) => { e.preventDefault(); setDragOverFile(true) }}
+              onDragLeave={() => setDragOverFile(false)}
+              onDrop={(e) => { e.preventDefault(); setDragOverFile(false); const files = e.dataTransfer.files; if (files.length > 0) processFileForUpload(files[0]) }}
+              onClickUpload={() => fileInputRef.current?.click()}
+            />
           </div>
         </div>
-        <form onSubmit={handleSubmit} className="p-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2"><label className="block text-sm font-medium text-slate-700 mb-1">合同名称 *</label><input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500" required /></div>
-            <div><label className="block text-sm font-medium text-slate-700 mb-1">关联项目 *</label><select value={formData.projectId} onChange={e => setFormData({ ...formData, projectId: parseInt(e.target.value) })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500" required><option value="">选择项目</option>{projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
-            <div><label className="block text-sm font-medium text-slate-700 mb-1">{config.partnerLabel}</label><PartnerSelect partners={partners} value={formData.partnerId || null} onChange={(partnerId) => setFormData({ ...formData, partnerId: partnerId || 0 })} placeholder={config.partnerPlaceholder} /></div>
-            <div><label className="block text-sm font-medium text-slate-700 mb-1">合同编号</label><input type="text" value={formData.contractNo} onChange={e => setFormData({ ...formData, contractNo: e.target.value })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500" /></div>
-            <div><label className="block text-sm font-medium text-slate-700 mb-1">合同金额{type !== 'agreement' ? ' *' : ''}</label><input type="number" value={formData.amount || ''} onChange={e => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500" required={type !== 'agreement'} /></div>
-            <div><label className="block text-sm font-medium text-slate-700 mb-1">签订日期</label><input type="date" value={formData.signedDate} onChange={e => setFormData({ ...formData, signedDate: e.target.value })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500" /></div>
-            {type !== 'agreement' && (
-              <div><label className="block text-sm font-medium text-slate-700 mb-1">付款方式</label><select value={formData.paymentMethod} onChange={e => setFormData({ ...formData, paymentMethod: e.target.value as any })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500">{paymentMethods.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}</select></div>
-            )}
-            {type === 'agreement' && (
-              <div><label className="block text-sm font-medium text-slate-700 mb-1">协议类型</label><select value={formData.agreementType} onChange={e => setFormData({ ...formData, agreementType: e.target.value as AgreementSubType })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500">{Object.entries(AGREEMENT_SUB_TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
-            )}
-            <div><label className="block text-sm font-medium text-slate-700 mb-1">开始日期</label><input type="date" value={formData.startDate} onChange={e => setFormData({ ...formData, startDate: e.target.value })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500" /></div>
-            <div><label className="block text-sm font-medium text-slate-700 mb-1">结束日期</label><input type="date" value={formData.endDate} onChange={e => setFormData({ ...formData, endDate: e.target.value })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500" /></div>
-            <div><label className="block text-sm font-medium text-slate-700 mb-1">合同状态</label><select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value as any })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500">{contractStatuses.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}</select></div>
-            <div className="col-span-2"><label className="block text-sm font-medium text-slate-700 mb-1">备注</label><textarea value={formData.remarks} onChange={e => setFormData({ ...formData, remarks: e.target.value })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500" rows={3} /></div>
-            <div className="col-span-2">
-              <FileDropZone label="上传合同附件" iconName="Paperclip" file={formData.fileUrl} fileType={formData.fileType || 'image'}
-                fileLabel={formData.fileType === 'pdf' ? 'PDF文件' : formData.fileType === 'word' ? 'Word文档' : formData.fileType === 'excel' ? 'Excel表格' : '图片文件'}
-                dragOver={dragOverFile} inputRef={fileInputRef} iconBgClass={config.accentBgLight}
-                onFileSelect={processFileForUpload}
-                onRemove={() => setFormData(prev => ({ ...prev, fileUrl: '', fileType: undefined }))}
-                onDragOver={(e) => { e.preventDefault(); setDragOverFile(true) }}
-                onDragLeave={() => setDragOverFile(false)}
-                onDrop={(e) => { e.preventDefault(); setDragOverFile(false); const files = e.dataTransfer.files; if (files.length > 0) processFileForUpload(files[0]) }}
-                onClickUpload={() => fileInputRef.current?.click()}
-              />
-            </div>
-          </div>
-          <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-slate-200">
-            <button type="button" onClick={onClose} className="btn btn-secondary">取消</button>
-            <button type="submit" className="btn btn-primary">{isEditing ? '保存' : '添加'}</button>
-          </div>
-        </form>
-      </motion.div>
-    </div>
+      </form>
+    </Modal>
   )
 }

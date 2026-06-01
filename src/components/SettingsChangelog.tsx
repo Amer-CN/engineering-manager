@@ -1,5 +1,6 @@
 import React from 'react'
 import { Icon } from './ui/Icon'
+import { Modal } from './ui/Modal/Modal'
 
 function renderMarkdownInline(text: string): React.ReactNode {
   const parts = text.split(/(\*\*[^*]+\*\*)/g)
@@ -25,9 +26,85 @@ function renderMarkdownInline(text: string): React.ReactNode {
 // 从最初的 v1.0.0（2026-05-01 第 1 个版本）开始累计，
 // 54 个历史版本从 v1.0.0（0.1.0）到 v3.1.0（0.54.0）
 // 本次版本号方案变更为第 55 次发布，对应为 0.55.0
-// 2026-05-28: 0.57.0 → 0.58.0 — 三主题全面覆盖 + 登录页重设计 + 柱状图重写
+// 2026-05-28: 0.58.0 → 0.59.0 — Hero 横幅三主题视觉修复
 // ═══════════════════════════════════════════════════════════════════
 const versions = [
+  { v: 'v0.67.0', date: '2026-06-02', items: [
+    '启动动画：软件打开时不再是白屏，而是粒子流动 + Logo 呼吸灯动画，跟随主题色变化',
+    '锁屏界面升级：背景改为粒子动画，输入框和按钮有交互反馈，三个主题各有特色',
+    '加载动画统一：全站 12 个页面的加载圈圈替换为品牌化 Logo 呼吸动画',
+    '修复"更改数据存储位置"白屏问题，现在能正常弹出文件夹选择对话框',
+    '"恢复默认路径"确认弹窗改为统一风格，不再弹出浏览器原生对话框',
+    '新增 Ctrl+L 快捷键锁定屏幕',
+  ]},
+  { v: 'v0.66.0', date: '2026-06-01', items: [
+    '后端从 Electron 迁移到 C#，软件体积从 ~150MB 降至 ~5MB',
+    '数据库零迁移，直接读取之前的数据',
+    '197 个 API 端点全部覆盖，功能无损',
+  ]},
+  { v: 'v0.65.0', date: '2026-05-31', items: [
+    'AI 智能识别全面接入：支持 9 种百度 OCR 功能（身份证、发票、银行卡、营业执照、银行回单等）',
+    '发票/银行卡/营业执照/银行回单上传后自动识别并填入表单',
+    '发票录入时自动检测重复，列表页可一键查看所有重复发票',
+    'OCR 调用统计：设置页显示本月各功能调用次数',
+    '智能数据引擎新增数据健康检查',
+  ]},
+  { v: 'v0.64.0', date: '2026-05-31', items: [
+    '滚动条完全重写：改用 JS 驱动，彻底解决 Electron 中原生滚动条无法隐藏的问题，风格改为终端风格（极细半透明，靠近变大）',
+    '滚动条已推广到 15 个列表页面，三主题颜色自动适配',
+    '状态栏功能化：显示当前页面名+记录数，新增主题和字号弹出选择器（Reasonix 风格）',
+  ]},
+  { v: 'v0.63.1', date: '2026-05-30', items: [
+    '新增悬浮滚动条：鼠标移到页面右侧边缘时滚动条自动变粗，方便点按和拖拽，平时不占页面空间',
+    '切换主题时滚动条颜色会跟着变',
+  ]},
+  { v: 'v0.63.0', date: '2026-05-30', items: [
+    '界面全面统一：所有页面的布局、头部、表格、弹窗、按钮、筛选器样式现在完全一致，学会一个模块就能上手其他模块',
+    '删除操作的确认弹窗样式统一，不再有的是浏览器原生弹窗、有的是自定义弹窗',
+    '状态标签（进行中、已完工、在职、离场等）颜色和样式全站统一',
+    '页面加载动画统一，不再有的地方转圈、有的地方闪方块',
+    'Tooltip 提示统一：鼠标悬停图标按钮时显示统一风格的提示文字',
+    '人事管理和工人管理的考勤薪酬页面正在统一为同一套界面（开发中）',
+    '修复班组管理中工人不显示的问题',
+    '修复工资模块多处数据为空时页面崩溃的问题',
+    '修复升级后数据路径指向空目录、看不到之前数据的问题',
+  ]},
+  { v: 'v0.62.0', date: '2026-05-29', items: [
+    '数据存储引擎升级：写入顺序改为 SQLite 优先，JSON 作为备份，数据更安全',
+    '数据库快照现在同时备份 SQLite 文件，还原时两边一起恢复',
+    '启动时自动检查数据库完整性，发现问题自动切换到安全模式',
+    '修复班组管理添加工人后不显示的问题',
+    '修复工资发放记录中工人姓名为空的问题',
+    '修复审计日志保存失败的问题',
+    '设置页数据统计表名改为中文显示',
+    '新增 GPU 硬件加速开关，解决部分显卡兼容问题',
+    '数据存储设置移除了多余的「默认路径」显示',
+    '「重新迁移数据」按钮现在数据正常时自动禁用，鼠标悬停看说明',
+  ]},
+  { v: 'v0.61.0', date: '2026-05-29', items: [
+    '百度OCR终于能用了：上传身份证自动识别姓名、身份证号、性别、出生日期、民族、住址全部信息',
+    '提示弹窗修复：保存成功/失败、OCR识别结果等提示现在能正常显示了',
+    '离线模式只认数字：提取身份证号，自动算出性别和出生日期；姓名等文字需百度模式',
+    '人事管理新增删除人员：人员档案列表加了删除按钮',
+    '粘贴图片也能OCR：员工管理页面粘贴身份证图片不再失效了',
+  ]},
+  { v: 'v0.60.0', date: '2026-05-28', items: [
+    '全新登录界面：小巧窗口 + 记住密码 + 自动登录，再也不用每次输入账号密码',
+    '三个主题全面修复：深色/暖色/浅色主题下，按钮、输入框、表格、弹窗的文字都能看清了',
+    '图表悬停提示框适配主题色，不再出现白底白字看不见的问题',
+    '首页柱状图去掉了悬停时的多余背景色，视觉更干净',
+    '切换主题不再闪烁，打开设置不再自动跳到其他主题',
+    '页面切换动画更平滑，去掉了从底部弹起的突兀感',
+    '统一了软件图标，标题栏、任务栏、桌面快捷方式图标一致',
+    '修复登录时每次都强制改密码的问题',
+    '修复下拉菜单在深色主题下的文字颜色',
+  ]},
+  { v: 'v0.59.0', date: '2026-05-28', items: [
+    '深色主题下首页横幅更清晰了，不再有朦胧感',
+    '暖色主题的顶部横幅颜色更舒适，文字看得清了',
+    '项目投资组合概览的样式跟其他页面统一了',
+    '设置页的更新日志入口更简洁了',
+  ]},
   { v: 'v0.58.0', date: '2026-05-28', items: [
     '全新登录界面：小巧窗口 + 记住密码 + 自动登录，再也不用每次输入账号密码',
     '三个主题全面修复：深色/暖色/浅色主题下，按钮、输入框、表格、弹窗的文字都能看清了',
@@ -384,33 +461,26 @@ const versions = [
 interface Props { onClose: () => void }
 
 const SettingsChangelog: React.FC<Props> = ({ onClose }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-    <div className="relative rounded-2xl shadow-2xl w-full max-w-lg max-h-[70vh] overflow-y-auto" style={{ backgroundColor: 'var(--card)' }} onClick={e => e.stopPropagation()}>
-      <div className="sticky top-0 px-6 py-4 rounded-t-2xl flex items-center justify-between" style={{ backgroundColor: 'var(--card)', borderBottom: '1px solid var(--border)' }}>
-        <h3 className="text-lg font-semibold flex items-center gap-2" style={{ color: 'var(--fg)' }}><Icon name="Clock" size={18} /> 更新日志</h3>
-        <button onClick={onClose} className="p-1 rounded-lg transition-colors" style={{ color: 'var(--muted)' }} onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--panel-2)')} onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}><Icon name="X" size={18} /></button>
-      </div>
-      <div className="px-6 py-5 space-y-6">
-        {versions.map(ver => (
-          <div key={ver.v}>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="px-2 py-0.5 text-xs font-bold rounded-md" style={{ backgroundColor: 'var(--accent-soft)', color: 'var(--accent)' }}>{ver.v}</span>
-              <span className="text-xs" style={{ color: 'var(--muted)' }}>{ver.date}</span>
-            </div>
-            <ul className="space-y-1.5">
-              {ver.items.map((item, i) => (
-                <li key={i} className="text-sm flex items-start gap-2" style={{ color: 'var(--fg-2)' }}>
-                  <span className="mt-0.5 flex-shrink-0" style={{ color: 'var(--muted-2)' }}>•</span>
-                  <span>{renderMarkdownInline(item)}</span>
-                </li>
-              ))}
-            </ul>
+  <Modal isOpen={true} onClose={onClose} title={<span className="flex items-center gap-2"><Icon name="Clock" size={18} /> 更新日志</span>} size="md">
+    <div className="space-y-6">
+      {versions.map(ver => (
+        <div key={ver.v}>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="px-2 py-0.5 text-xs font-bold rounded-md" style={{ backgroundColor: 'var(--accent-soft)', color: 'var(--accent)' }}>{ver.v}</span>
+            <span className="text-xs" style={{ color: 'var(--muted)' }}>{ver.date}</span>
           </div>
-        ))}
-      </div>
+          <ul className="space-y-1.5">
+            {ver.items.map((item, i) => (
+              <li key={i} className="text-sm flex items-start gap-2" style={{ color: 'var(--fg-2)' }}>
+                <span className="mt-0.5 flex-shrink-0" style={{ color: 'var(--muted-2)' }}>•</span>
+                <span>{renderMarkdownInline(item)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
     </div>
-  </div>
+  </Modal>
 )
 
 export default SettingsChangelog

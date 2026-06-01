@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../hooks/useAuth'
 import { Icon } from './ui/Icon'
+import ParticleBackground from './ui/ParticleBackground'
 
 const LockScreen: React.FC = () => {
   const { currentUser, unlock } = useAuth()
@@ -32,14 +33,17 @@ const LockScreen: React.FC = () => {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.25 }}
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/95 backdrop-blur-md"
+      className="fixed inset-0 z-[100] flex items-center justify-center"
+      style={{ background: 'var(--bg)', backdropFilter: 'blur(8px)' }}
     >
+      {/* 粒子背景 */}
+      <ParticleBackground />
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
-        className="w-full max-w-sm mx-4"
+        className="w-full max-w-sm mx-4 relative z-10"
       >
         {/* Avatar + Name */}
         <div className="text-center mb-8">
@@ -47,7 +51,8 @@ const LockScreen: React.FC = () => {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.1 }}
-            className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center text-white text-3xl font-semibold shadow-2xl shadow-black/30 mb-4"
+            className="w-20 h-20 mx-auto rounded-full flex items-center justify-center text-3xl font-semibold shadow-2xl mb-4"
+            style={{ background: 'var(--accent)', color: 'var(--bg)' }}
           >
             {userInitial}
           </motion.div>
@@ -56,8 +61,12 @@ const LockScreen: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <h2 className="text-xl font-semibold text-white">{currentUser?.displayName || currentUser?.username}</h2>
-            <p className="text-slate-400 text-sm mt-1">{currentUser?.roleName || currentUser?.roleId}</p>
+            <h2 className="text-xl font-semibold" style={{ color: 'var(--fg)' }}>
+              {currentUser?.displayName || currentUser?.username}
+            </h2>
+            <p className="text-sm mt-1" style={{ color: 'var(--muted)' }}>
+              {currentUser?.roleName || currentUser?.roleId}
+            </p>
           </motion.div>
           <motion.div
             initial={{ opacity: 0 }}
@@ -65,8 +74,10 @@ const LockScreen: React.FC = () => {
             transition={{ delay: 0.35 }}
             className="mt-6"
           >
-            <Icon name="Lock" size={28} className="mx-auto text-slate-500" />
-            <p className="text-slate-500 text-sm mt-2">屏幕已锁定</p>
+            <div className="mx-auto w-7 h-7" style={{ color: 'var(--muted)' }}>
+              <Icon name="Lock" size={28} />
+            </div>
+            <p className="text-sm mt-2" style={{ color: 'var(--muted)' }}>屏幕已锁定</p>
           </motion.div>
         </div>
 
@@ -78,21 +89,37 @@ const LockScreen: React.FC = () => {
           onSubmit={handleUnlock}
           className="space-y-4"
         >
-          <div className="relative">
-            <Icon name="Lock" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+          <div className="relative group">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-[var(--accent)]" style={{ color: 'var(--muted)' }}>
+              <Icon name="Lock" size={18} />
+            </div>
             <input
-              type={showPassword ? 'text' : 'password'}
+              type="text"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full pl-10 pr-12 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/40 transition-all"
+              className={`w-full pl-10 pr-12 py-3 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 ${showPassword ? '' : 'password-mask'}`}
+              style={{
+                background: 'var(--panel)',
+                border: '1px solid var(--border)',
+                color: 'var(--fg)',
+              }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent)' }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border)' }}
               placeholder="请输入密码解锁"
               required
               autoFocus
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              data-lpignore="true"
+              data-1p-ignore
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-500 hover:text-slate-300 transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 transition-all duration-200 hover:scale-110"
+              style={{ color: 'var(--muted)' }}
             >
               <Icon name={showPassword ? 'EyeOff' : 'Eye'} size={18} />
             </button>
@@ -105,7 +132,8 @@ const LockScreen: React.FC = () => {
                 animate={{ opacity: 1, y: 0, scale: 1, x: [0, -5, 5, -3, 3, 0] }}
                 transition={{ x: { duration: 0.4 } }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="flex items-center gap-2 text-red-400 text-sm justify-center"
+                className="flex items-center gap-2 text-sm justify-center"
+                style={{ color: 'var(--danger)' }}
               >
                 <Icon name="AlertCircle" size={16} />
                 <span>{error}</span>
@@ -118,7 +146,12 @@ const LockScreen: React.FC = () => {
             disabled={loading}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.97 }}
-            className="w-full py-3 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-medium rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full py-3 font-medium rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-[var(--accent)]/20"
+            style={{
+              background: 'var(--accent)',
+              color: 'var(--bg)',
+              border: 'none',
+            }}
           >
             {loading ? (
               <>

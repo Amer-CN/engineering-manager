@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { HoverScrollbar } from './ui/HoverScrollbar'
 import {
   AuditLog, AuditAction,
   queryAuditLogs, AuditStats
 } from '@/utils/audit'
 import { useAuditLogFilters } from '@/hooks/useAuditLogFilters'
 import { Icon } from './ui/Icon'
+import { StatusBadge, AUDIT_LEVEL } from '@/constants/status'
 import { AuditStatsPanel } from './AuditStatsPanel'
 import { AuditFilterBar } from './AuditFilterBar'
 import { AuditDetailModal } from './AuditDetailModal'
@@ -17,7 +19,7 @@ const actionConfig: Record<AuditAction, { label: string; color: string; bgColor:
   update: { label: '更新', color: 'text-yellow-700', bgColor: 'bg-yellow-100' },
   delete: { label: '删除', color: 'text-red-700', bgColor: 'bg-red-100' },
   export: { label: '导出', color: 'text-purple-700', bgColor: 'bg-purple-100' },
-  import: { label: '导入', color: 'text-indigo-700', bgColor: 'bg-indigo-100' },
+  import: { label: '导入', color: 'text-primary-700', bgColor: 'bg-primary-100' },
   login: { label: '登录', color: 'text-cyan-700', bgColor: 'bg-cyan-100' },
   logout: { label: '登出', color: 'text-slate-700', bgColor: 'bg-slate-100' },
   approve: { label: '审批', color: 'text-pink-700', bgColor: 'bg-pink-100' },
@@ -82,7 +84,7 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <HoverScrollbar className="h-full">
               <table className="w-full">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
@@ -109,9 +111,7 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
                         <td className="px-4 py-3 text-sm text-slate-600">{resourceLabels[log.resource] || log.resource}{log.resourceName && <div className="text-xs text-slate-400">{log.resourceName}</div>}</td>
                         <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-200 max-w-xs truncate">{log.description}</td>
                         <td className="px-4 py-3 text-center">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${log.level === 'error' ? 'bg-red-100 text-red-700' : log.level === 'warning' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'}`}>
-                            {log.level === 'error' ? '错误' : log.level === 'warning' ? '警告' : '信息'}
-                          </span>
+                          <StatusBadge status={log.level} config={AUDIT_LEVEL} />
                         </td>
                         <td className="px-4 py-3 text-center"><button onClick={() => setSelectedLog(log)} className="btn btn-ghost btn-sm text-primary-600">详情</button></td>
                       </tr>
@@ -119,7 +119,7 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
                   })}
                 </tbody>
               </table>
-            </div>
+            </HoverScrollbar>
 
             <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between">
               <div className="text-sm text-slate-500">第 <span className="font-medium">{page}</span> / <span className="font-medium">{totalPages}</span> 页</div>

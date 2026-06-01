@@ -2,9 +2,12 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { DropdownMenu } from '../../ui/DropdownMenu/DropdownMenu'
 import { Button } from '../../ui/Button'
 import { EmptyState } from '../../ui/EmptyState'
+import ButtonLoader from '../../ui/ButtonLoader'
+import Spinner from '../../ui/Spinner'
 import { useToastStore } from '@/store/toastStore'
 import { MONTHS } from '@/constants'
 import { computeAttendanceSummary } from '../../../constants/attendance'
+import { getAPI } from '@/services/api-adapter'
 import {
   filteredStaffForGenerate,
   getAttendanceForMember,
@@ -53,12 +56,13 @@ const StaffPayroll: React.FC = () => {
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
+      const api = await getAPI()
       const [memRes, wageRes, attRes, deptRes, projRes] = await Promise.allSettled([
-        window.electronAPI.getMembers(),
-        window.electronAPI.getWages(undefined, undefined),  // 全量：不限月份
-        window.electronAPI.getAttendances(undefined, undefined), // 全量考勤
-        window.electronAPI.getDepartments(),
-        window.electronAPI.getProjects()
+        api.getMembers(),
+        api.getWages(undefined, undefined),  // 全量：不限月份
+        api.getAttendances(undefined, undefined), // 全量考勤
+        api.getDepartments(),
+        api.getProjects()
       ])
       const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
       const membersData = get(memRes)
@@ -134,7 +138,7 @@ const StaffPayroll: React.FC = () => {
           const summary = computeAttendanceSummary(att?.dailyStatus, wd, entryDay)
           const attWorkDays = summary.workDays
           const attDaysOff = summary.daysOff
-          const effSalary = await window.electronAPI.getEffectiveSalary(s.id, ym)
+          const effSalary = await (await getAPI()).getEffectiveSalary(s.id, ym)
           const baseSalary = (effSalary.success ? effSalary.data?.baseSalary : s.baseSalary) || 0
           const subsidy = (effSalary.success ? effSalary.data?.subsidy : 0) || 0
           const totalSalary = baseSalary + subsidy
@@ -149,10 +153,11 @@ const StaffPayroll: React.FC = () => {
           }
           // upsert: 检查是否已有同人同月记录
           const existing = allWages.find((w: any) => w.memberId === s.id && w.yearMonth === ym)
+          const wageApi = await getAPI()
           if (existing) {
-            await window.electronAPI.updateWage({ ...existing, ...record, id: existing.id })
+            await wageApi.updateWage({ ...existing, ...record, id: existing.id })
           } else {
-            await window.electronAPI.createWage(record)
+            await wageApi.createWage(record)
           }
           successCount++
         } catch { failCount++ }
@@ -171,7 +176,7 @@ const StaffPayroll: React.FC = () => {
   const handleDeleteWage = async (wage: any) => {
     if (!confirm(`确认删除 ${wage.memberName || ''} ${wage.yearMonth} 的薪酬记录？此操作不可撤销。`)) return
     try {
-      const result = await window.electronAPI.deleteWage(wage.id)
+      const result = await (await getAPI()).deleteWage(wage.id)
       if (result.success) {
         showToast('薪酬记录已删除', 'success')
         loadData()
@@ -222,7 +227,7 @@ const StaffPayroll: React.FC = () => {
     try {
       const ids = filteredWages.map((w: any) => w.id)
       if (ids.length === 0) { showToast('没有可删除的记录', 'info'); return }
-      const result = await window.electronAPI.batchDeleteWages(ids)
+      const result = await (await getAPI()).batchDeleteWages(ids)
       if (result.success) {
         showToast(`已删除 ${ids.length} 条记录`, 'success')
         loadData()
@@ -232,17 +237,13 @@ const StaffPayroll: React.FC = () => {
 
   const handlePaidChange = async (wage: any, field: string, value: any) => {
     const updated = { ...wage, [field]: value }
-    await window.electronAPI.updateWage(updated)
+    await (await getAPI()).updateWage(updated)
     loadData()
     showToast('已更新', 'success')
   }
 
   if (loading) {
-    return (
-      <div className="flex justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-4 border-indigo-500 border-t-transparent" />
-      </div>
-    )
+    return <Spinner size="md" text="加载薪酬数据..." />
   }
 
   return (
@@ -271,7 +272,7 @@ const StaffPayroll: React.FC = () => {
           <input type="text" placeholder="搜索姓名..."
             value={filterMemberName}
             onChange={e => setFilterMemberName(e.target.value)}
-            className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm w-36 focus:ring-2 focus:ring-indigo-500" />
+            className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm w-36 focus:ring-2 focus:ring-primary-500" />
         </div>
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-slate-600">部门</label>
@@ -301,7 +302,9 @@ const StaffPayroll: React.FC = () => {
           disabled={generating || staff.length === 0 || filterYear === '全部' || filterMonth === '全部'}
           size="sm"
           title={filterYear === '全部' || filterMonth === '全部' ? '请先选择具体年份和月份' : undefined}>
-          {generating ? '计算中...' : `生成${filterYear !== '全部' && filterMonth !== '全部' ? effectiveYearMonth : ''}`}
+          <ButtonLoader loading={generating} loadingText="计算中...">
+            {`生成${filterYear !== '全部' && filterMonth !== '全部' ? effectiveYearMonth : ''}`}
+          </ButtonLoader>
         </Button>
         {filteredWages.length > 0 && filterYear !== '全部' && filterMonth !== '全部' && (
           <Button onClick={handleDeleteAllMonth} size="sm" variant="danger">

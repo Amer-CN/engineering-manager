@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import type { PaymentRecord } from '@/types'
 import { handleError, Result, VoidResult } from '@/types'
+import { getAPI } from '@/services/api-adapter'
 
 export interface UsePaymentRecordsReturn {
   data: PaymentRecord[]
@@ -28,7 +29,7 @@ export function usePaymentRecords(): UsePaymentRecordsReturn {
     setLoading(true)
     setError(null)
     try {
-      const result = await window.electronAPI.getWagePaymentRecords({ status: type })
+      const result = await (await getAPI()).getWagePaymentRecords({ status: type })
       if (result.success && result.data) { setRecords(result.data) }
       else { setError(result.error || 'Failed to load payment records') }
     } catch (err) { setError(handleError(err).getUserMessage()) }
@@ -38,7 +39,7 @@ export function usePaymentRecords(): UsePaymentRecordsReturn {
   const create = useCallback(async (data: Partial<PaymentRecord>): Promise<Result<{ id: number }>> => {
     setError(null)
     try {
-      const result = await window.electronAPI.createPaymentRecord(data)
+      const result = await (await getAPI()).createPaymentRecord(data)
       if (result.success) { await loadRecords(); return { success: true, data: { id: result.data?.id || 0 } } }
       return { success: false, error: result.error || 'Failed to create payment record' }
     } catch (err) { return { success: false, error: handleError(err).getUserMessage() } }
@@ -47,7 +48,7 @@ export function usePaymentRecords(): UsePaymentRecordsReturn {
   const update = useCallback(async (record: PaymentRecord): Promise<VoidResult> => {
     setError(null)
     try {
-      const result = await window.electronAPI.updatePaymentRecord(record)
+      const result = await (await getAPI()).updatePaymentRecord(record)
       if (result.success) { await loadRecords(); return { success: true } }
       return { success: false, error: result.error || 'Failed to update payment record' }
     } catch (err) { return { success: false, error: handleError(err).getUserMessage() } }
@@ -56,7 +57,7 @@ export function usePaymentRecords(): UsePaymentRecordsReturn {
   const deleteRecord = useCallback(async (id: number): Promise<VoidResult> => {
     setError(null)
     try {
-      const result = await window.electronAPI.deletePaymentRecord(id)
+      const result = await (await getAPI()).deletePaymentRecord(id)
       if (result.success) { await loadRecords(); return { success: true } }
       return { success: false, error: result.error || 'Failed to delete payment record' }
     } catch (err) { return { success: false, error: handleError(err).getUserMessage() } }

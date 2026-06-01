@@ -2,6 +2,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import type { Project } from '@/types'
 import { handleError, Result, VoidResult } from '@/types'
+import { getAPI } from '@/services/api-adapter'
 
 export interface ProjectFilters { status?: Project['status']; searchTerm?: string; managerId?: number }
 export type CreateProjectDTO = Partial<Omit<Project, 'id' | 'createdAt' | 'updatedAt'>>
@@ -68,11 +69,11 @@ export function useProjects(filters?: ProjectFilters): UseProjectsReturn {
     setError(null)
     
     try {
-      const result = await window.electronAPI.getProjects()
+      const result = await (await getAPI()).getProjects()
       
       if (result.success && result.data) {
         // 应用筛选条件
-        let filteredData = result.data
+        let filteredData = result.data as any[]
         
         if (filters?.status) {
           filteredData = filteredData.filter(p => p.status === filters.status)
@@ -113,7 +114,7 @@ export function useProjects(filters?: ProjectFilters): UseProjectsReturn {
     setError(null)
     
     try {
-      const result = await window.electronAPI.createProject(data as Project)
+      const result = await (await getAPI()).createProject(data as Project)
       
       if (result.success) {
         await loadProjects() // 刷新列表
@@ -137,7 +138,7 @@ export function useProjects(filters?: ProjectFilters): UseProjectsReturn {
     setError(null)
     
     try {
-      const result = await window.electronAPI.updateProject(project)
+      const result = await (await getAPI()).updateProject(project)
       
       if (result.success) {
         await loadProjects()
@@ -165,7 +166,7 @@ export function useProjects(filters?: ProjectFilters): UseProjectsReturn {
     setError(null)
     
     try {
-      const result = await window.electronAPI.deleteProject(id)
+      const result = await (await getAPI()).deleteProject(id)
       
       if (result.success) {
         setProjects(prev => prev.filter(p => p.id !== id))

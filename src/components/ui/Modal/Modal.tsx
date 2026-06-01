@@ -110,12 +110,13 @@ export function Modal({
           <motion.div
             className={`
               relative
-              bg-white
+              bg-white dark:bg-slate-800
               rounded-2xl shadow-2xl
               w-full ${sizeStyles[size]}
               max-h-[90vh] flex flex-col
               ${className}
             `}
+            style={{ backgroundColor: 'var(--card, white)' }}
             variants={modalVariants}
             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
             onClick={(e) => e.stopPropagation()}
@@ -124,9 +125,9 @@ export function Modal({
             aria-labelledby={title ? 'modal-title' : undefined}
           >
             {(title || showClose) && (
-              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700">
                 {title && (
-                  <h2 id="modal-title" className="text-lg font-semibold text-slate-800">
+                  <h2 id="modal-title" className="text-lg font-semibold text-slate-800 dark:text-slate-100">
                     {title}
                   </h2>
                 )}
@@ -148,7 +149,7 @@ export function Modal({
             </div>
 
             {footer && (
-              <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
+              <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 rounded-b-2xl">
                 {footer}
               </div>
             )}

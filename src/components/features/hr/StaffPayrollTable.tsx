@@ -1,5 +1,7 @@
 import { useMemo } from 'react'
+import { HoverScrollbar } from '@/components/ui/HoverScrollbar'
 import { StaffPayrollRow } from './StaffPayrollRow'
+import { TABLE } from '@/constants/table'
 
 interface StaffPayrollTableProps {
   filteredWages: any[]
@@ -21,25 +23,25 @@ export function StaffPayrollTable({
   }, [staff])
 
   return (
-    <div className="bg-white rounded-xl shadow-sm flex-1 mt-4 flex flex-col overflow-hidden">
-      <div className="flex-1 overflow-auto min-h-0">
-        <table className="w-full">
-          <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
+    <div className={TABLE.container + ' flex-1 mt-4 flex flex-col'}>
+      <HoverScrollbar className="flex-1 min-h-0">
+        <table className={TABLE.table}>
+          <thead className={TABLE.headerRow + ' ' + TABLE.stickyHeader}>
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">姓名</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">月份</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">基本工资</th>
-              <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">出勤天数</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">补助</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">扣款</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">应发工资</th>
-              <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">实发金额</th>
-              <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">发放日期</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">差额</th>
-              <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">操作</th>
+              <th className={TABLE.headerCell}>姓名</th>
+              <th className={TABLE.headerCell}>月份</th>
+              <th className={TABLE.headerCell + ' text-right'}>基本工资</th>
+              <th className={TABLE.headerCell + ' text-center'}>出勤天数</th>
+              <th className={TABLE.headerCell + ' text-right'}>补助</th>
+              <th className={TABLE.headerCell + ' text-right'}>扣款</th>
+              <th className={TABLE.headerCell + ' text-right'}>应发工资</th>
+              <th className={TABLE.headerCell + ' text-center'}>实发金额</th>
+              <th className={TABLE.headerCell + ' text-center'}>发放日期</th>
+              <th className={TABLE.headerCell + ' text-right'}>差额</th>
+              <th className={TABLE.headerCell + ' text-center'}>操作</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody>
             {filteredWages.map((w: any) => (
               <StaffPayrollRow
                 key={w.id}
@@ -51,7 +53,7 @@ export function StaffPayrollTable({
             ))}
           </tbody>
         </table>
-      </div>
+      </HoverScrollbar>
       {/* 底部汇总条 */}
       <div className="shrink-0 flex items-center justify-end gap-6 px-4 py-2.5 border-t border-slate-200 text-sm">
         <div className="flex items-center gap-1.5">

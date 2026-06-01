@@ -1,4 +1,5 @@
 import React from 'react'
+import FilterBar from './ui/FilterBar'
 import { AuditAction, AuditLevel } from '../utils/audit'
 
 interface AuditFilterBarProps {
@@ -26,7 +27,7 @@ export const AuditFilterBar: React.FC<AuditFilterBarProps> = ({
   onFilterLevelChange, onKeywordChange, onSearch, onReset, resourceLabels,
 }) => {
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-4 mb-6">
+    <FilterBar className="mb-6 !flex-col !items-stretch">
       <div className="grid grid-cols-6 gap-4">
         <div>
           <label className="block text-xs font-medium text-slate-600 mb-1">开始日期</label>
@@ -119,6 +120,6 @@ export const AuditFilterBar: React.FC<AuditFilterBarProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </FilterBar>
   )
 }

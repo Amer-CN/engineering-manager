@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
+import { HoverScrollbar } from '@/components/ui/HoverScrollbar'
 import { CostLedgerRow } from '@/components/features/costLedger/CostLedgerRow'
 import { formatMoney } from '@/utils/format'
 import { DIRECTION_CONFIG, getLevel1ForCode, getCategoriesByDirection, getLevel1GroupsMerged, getCategoryColor } from '@/components/features/costLedger/config'
@@ -236,13 +237,13 @@ export function CostLedgerList({ entries, summary, loading, onEdit, onDelete, ca
               const n = Math.max(0.5, +(zoomRef.current - 0.1).toFixed(1))
               zoomRef.current = n; localStorage.setItem('costLedgerZoom', String(n)); setZoom(n)
               if (tableRef.current) tableRef.current.style.zoom = String(n)
-            }} className="btn btn-secondary btn-sm" title="缩小">−</button>
+            }} className="btn btn-secondary btn-sm">−</button>
             <span className="text-xs text-slate-500 w-8 text-center font-mono">{Math.round(zoom * 100)}%</span>
             <button onClick={() => {
               const n = Math.min(2, +(zoomRef.current + 0.1).toFixed(1))
               zoomRef.current = n; localStorage.setItem('costLedgerZoom', String(n)); setZoom(n)
               if (tableRef.current) tableRef.current.style.zoom = String(n)
-            }} className="btn btn-secondary btn-sm" title="放大">+</button>
+            }} className="btn btn-secondary btn-sm">+</button>
           </div>
           <span className="text-xs text-slate-400">
             {filtered.length === entries.length ? `共 ${entries.length} 条` : `筛选 ${filtered.length} / ${entries.length} 条`}
@@ -251,7 +252,8 @@ export function CostLedgerList({ entries, summary, loading, onEdit, onDelete, ca
       </div>
 
       {/* 表格 */}
-      <div ref={tableRef} className="flex-1 overflow-auto min-h-0" style={{ zoom }}>
+      <HoverScrollbar className="flex-1 min-h-0">
+      <div ref={tableRef} style={{ zoom }}>
         <table className="w-full table-fixed border-collapse">
           <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10 text-xs">
             <tr>
@@ -331,6 +333,7 @@ export function CostLedgerList({ entries, summary, loading, onEdit, onDelete, ca
           </tbody>
         </table>
       </div>
+      </HoverScrollbar>
 
       {/* 汇总行 */}
       <div className="sticky bottom-0 border-t-2 border-slate-300 bg-white">

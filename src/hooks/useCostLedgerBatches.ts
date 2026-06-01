@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { CostLedgerBatch } from '@/types'
+import { getAPI } from '@/services/api-adapter'
 
 export function useCostLedgerBatches(projectId: number) {
   const [batches, setBatches] = useState<CostLedgerBatch[]>([])
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
-    const api = window.electronAPI
+    const api = await getAPI()
     if (!api?.getCostLedgerBatches) return
     setLoading(true)
     const res = await api.getCostLedgerBatches(projectId)
@@ -17,7 +18,7 @@ export function useCostLedgerBatches(projectId: number) {
   useEffect(() => { load() }, [load])
 
   const createBatch = useCallback(async (name: string) => {
-    const api = window.electronAPI
+    const api = await getAPI()
     const res = await api.createCostLedgerBatch(projectId, name)
     if (res?.success) {
       setBatches(prev => [...prev, res.data!])
@@ -27,7 +28,7 @@ export function useCostLedgerBatches(projectId: number) {
   }, [projectId])
 
   const deleteBatch = useCallback(async (batchId: number) => {
-    const api = window.electronAPI
+    const api = await getAPI()
     const res = await api.deleteCostLedgerBatch(projectId, batchId)
     if (res?.success) {
       setBatches(prev => prev.filter(b => b.id !== batchId))
@@ -37,7 +38,7 @@ export function useCostLedgerBatches(projectId: number) {
   }, [projectId])
 
   const copyBatch = useCallback(async (sourceBatchId: number, name: string) => {
-    const api = window.electronAPI
+    const api = await getAPI()
     const res = await api.copyCostLedgerBatch(projectId, sourceBatchId, name)
     if (res?.success) {
       setBatches(prev => [...prev, res.data!])
@@ -47,7 +48,7 @@ export function useCostLedgerBatches(projectId: number) {
   }, [projectId])
 
   const renameBatch = useCallback(async (batchId: number, name: string) => {
-    const api = window.electronAPI
+    const api = await getAPI()
     const res = await api.renameCostLedgerBatch(projectId, batchId, name)
     if (res?.success) {
       setBatches(prev => prev.map(b => b.id === batchId ? { ...b, name } : b))

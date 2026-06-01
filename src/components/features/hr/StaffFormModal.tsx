@@ -72,7 +72,7 @@ const StaffFormModal: React.FC<Props> = ({
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">姓名 *</label>
               <input type="text" value={formData.name} onChange={e => set({ name: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent" required />
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent" required />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">性别</label>
@@ -94,7 +94,7 @@ const StaffFormModal: React.FC<Props> = ({
               <div className="flex gap-2 items-center">
                 <input type="date" value={formData.birthDate} onChange={e => set({ birthDate: e.target.value })}
                   className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm" />
-                {formData.birthDate && <span className="text-xs text-indigo-600 whitespace-nowrap">{calcAge(formData.birthDate)}</span>}
+                {formData.birthDate && <span className="text-xs text-primary-600 whitespace-nowrap">{calcAge(formData.birthDate)}</span>}
               </div>
             </div>
             <div>

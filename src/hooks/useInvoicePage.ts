@@ -3,6 +3,7 @@ import { Invoice, InvoiceType, InvoiceStatus, Project, Partner, PaymentRecord, I
 import { logCreate, logUpdate, logDelete, logApprove } from '../utils/audit'
 import { processFileFields, guessFileExt, readUploadedFile, FILE_CATEGORIES } from '../services/fileService'
 import { useToastStore } from '@/store/toastStore'
+import { getAPI } from '@/services/api-adapter'
 
 const getInvoiceCategory = (type: string) =>
   type === 'invoice_out' ? FILE_CATEGORIES.INVOICE_OUT : FILE_CATEGORIES.INVOICE_IN
@@ -49,12 +50,12 @@ export function useInvoicePage(refresh?: () => void) {
     }
 
     await Promise.all([
-      safeLoad(() => window.electronAPI.getInvoices(), (d) => setInvoices(d)),
-      safeLoad(() => window.electronAPI.getPaymentRecords(), (d) => setPaymentRecords(d)),
-      safeLoad(() => window.electronAPI.getProjects(), (d) => setProjects(d)),
-      safeLoad(() => window.electronAPI.getPartners(), (d) => setPartners(d)),
-      safeLoad(() => window.electronAPI.getIncomeContracts(), (d) => setContracts(prev => ({ ...prev, income: d || [] }))),
-      safeLoad(() => window.electronAPI.getExpenseContracts(), (d) => setContracts(prev => ({ ...prev, expense: d || [] }))),
+      safeLoad(async () => (await getAPI()).getInvoices(), (d: Invoice[]) => setInvoices(d)),
+      safeLoad(async () => (await getAPI()).getPaymentRecords(), (d: PaymentRecord[]) => setPaymentRecords(d)),
+      safeLoad(async () => (await getAPI()).getProjects(), (d: Project[]) => setProjects(d)),
+      safeLoad(async () => (await getAPI()).getPartners(), (d: Partner[]) => setPartners(d)),
+      safeLoad(async () => (await getAPI()).getIncomeContracts(), (d: IncomeContract[]) => setContracts(prev => ({ ...prev, income: d || [] }))),
+      safeLoad(async () => (await getAPI()).getExpenseContracts(), (d: ExpenseContract[]) => setContracts(prev => ({ ...prev, expense: d || [] }))),
     ])
     setLoading(false)
   }, [])
@@ -89,10 +90,10 @@ export function useInvoicePage(refresh?: () => void) {
       const submitData = { ...processed, sellerId: processed.sellerId || 0, buyerId: processed.buyerId || 0, projectId: processed.projectId || 0, contractId: processed.contractId || 0, status: 'issued' as InvoiceStatus }
 
       if (editingInvoice) {
-        await window.electronAPI.updateInvoice({ ...editingInvoice, ...submitData })
+        await (await getAPI()).updateInvoice({ ...editingInvoice, ...submitData })
         logUpdate('invoices', `发票: ${submitData.name}`, editingInvoice.id, { before: editingInvoice, after: submitData })
       } else {
-        const result = await window.electronAPI.createInvoice(submitData)
+        const result = await (await getAPI()).createInvoice(submitData)
         if (result.success && result.data) logCreate('invoices', `发票: ${submitData.name}`, result.data.id, submitData)
       }
       loadData(); setShowInvoiceModal(false); setEditingInvoice(null)
@@ -108,7 +109,7 @@ export function useInvoicePage(refresh?: () => void) {
     if (!confirm('确定要删除这张发票吗？')) return
     try {
       const target = invoices.find(i => i.id === id)
-      await window.electronAPI.deleteInvoice(id)
+      await (await getAPI()).deleteInvoice(id)
       logDelete('invoices', target?.name ? `发票: ${target.name}` : '发票', id)
       loadData(); refresh?.()
     } catch (error) { console.error('删除发票失败:', error) }
@@ -116,7 +117,7 @@ export function useInvoicePage(refresh?: () => void) {
 
   const handleStatusChange = useCallback(async (id: number, status: InvoiceStatus) => {
     try {
-      await window.electronAPI.updateInvoiceStatus(id, status)
+      await (await getAPI()).updateInvoiceStatus(id, status)
       const invoice = invoices.find(i => i.id === id)
       logApprove('invoices', invoice?.name || '发票', id, true, `状态变更为: ${status}`)
       loadData(); refresh?.()
@@ -152,10 +153,10 @@ export function useInvoicePage(refresh?: () => void) {
       const submitData = { ...processed, projectId: processed.projectId || 0, partnerId: processed.partnerId || 0, contractId: processed.contractId || 0, projectName: resolvedProjectName }
 
       if (editingPayment) {
-        await window.electronAPI.updatePaymentRecord({ ...editingPayment, ...submitData } as PaymentRecord)
+        await (await getAPI()).updatePaymentRecord({ ...editingPayment, ...submitData } as PaymentRecord)
         logUpdate('invoices', `回款/付款记录: ${submitData.amount}元`, editingPayment.id, { before: editingPayment, after: submitData })
       } else {
-        const result = await window.electronAPI.createPaymentRecord(submitData as PaymentRecord)
+        const result = await (await getAPI()).createPaymentRecord(submitData as PaymentRecord)
         if (result.success && result.data) logCreate('invoices', `回款/付款记录: ${submitData.amount}元`, result.data.id, submitData)
       }
       loadData(); setShowPaymentModal(false); setEditingPayment(null)
@@ -170,7 +171,7 @@ export function useInvoicePage(refresh?: () => void) {
     if (!confirm('确定要删除这条记录吗？')) return
     try {
       const target = paymentRecords.find(p => p.id === id)
-      await window.electronAPI.deletePaymentRecord(id)
+      await (await getAPI()).deletePaymentRecord(id)
       logDelete('invoices', target ? `回款/付款记录: ${target.amount}元` : '回款/付款记录', id)
       loadData()
     } catch (error) { console.error('删除收款记录失败:', error) }
@@ -182,7 +183,7 @@ export function useInvoicePage(refresh?: () => void) {
     let detectedType = type
     if (data && !data.startsWith('data:') && category && subCategory) {
       const effectiveProjectName = projectName || (projectId ? projects.find(p => p.id === projectId)?.name : null)
-      const result = await window.electronAPI.readFile({ category, subCategory, fileName: data, projectName: effectiveProjectName || null })
+      const result = await (await getAPI()).readFile({ category, subCategory, fileName: data, projectName: effectiveProjectName || null })
       if (result.success && result.data) {
         url = result.data.dataUrl
         if (result.data.mimeType?.startsWith('image/')) detectedType = 'image'

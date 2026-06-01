@@ -4,6 +4,7 @@
  */
 
 import React, { useState, Suspense } from 'react'
+import PageContainer from './ui/PageContainer'
 
 type ContractView = 'dashboard' | 'income' | 'expense' | 'agreement'
 type GroupBy = 'project' | 'role' | 'status'
@@ -35,14 +36,14 @@ const Contracts: React.FC<ContractsProps> = ({ refresh }) => {
 
   // 加载占位符
   const fallback = (
-    <div className="p-6 max-w-[1400px] mx-auto">
+    <PageContainer>
       <div className="rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse h-32 mb-6" />
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="rounded-xl bg-slate-100 dark:bg-slate-800 animate-pulse h-28" />
         ))}
       </div>
-    </div>
+    </PageContainer>
   )
 
   if (view === 'dashboard') {

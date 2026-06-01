@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { InventoryItem, InventoryTransaction, Project, Partner, Material } from '../types/electron'
 import { logCreate, logUpdate, logDelete } from '../utils/audit'
 import { useToastStore } from '@/store/toastStore'
+import { getAPI } from '@/services/api-adapter'
 
 export function useInventoryPage(
   can: (perm: string) => boolean,
@@ -28,12 +29,13 @@ export function useInventoryPage(
 
   const loadData = useCallback(async () => {
     try {
+      const api = await getAPI()
       const [itemsRes, transRes, matRes, projRes, partRes] = await Promise.all([
-        window.electronAPI.getInventoryItems(),
-        window.electronAPI.getInventoryTransactions(),
-        window.electronAPI.getMaterials(),
-        window.electronAPI.getProjects(),
-        window.electronAPI.getPartners(),
+        api.getInventoryItems(),
+        api.getInventoryTransactions(),
+        api.getMaterials(),
+        api.getProjects(),
+        api.getPartners(),
       ])
       if (itemsRes.success && itemsRes.data) setItems(itemsRes.data)
       if (transRes.success && transRes.data) setTransactions(transRes.data)
@@ -53,10 +55,10 @@ export function useInventoryPage(
   const handleItemSubmit = useCallback(async (data: any) => {
     try {
       if (editingItem) {
-        await window.electronAPI.updateInventoryItem({ ...editingItem, ...data })
+        await (await getAPI()).updateInventoryItem({ ...editingItem, ...data })
         logUpdate('inventoryItems', data.name, editingItem.id, { before: editingItem, after: data })
       } else {
-        const result = await window.electronAPI.createInventoryItem(data)
+        const result = await (await getAPI()).createInventoryItem(data)
         logCreate('inventoryItems', data.name, result?.data?.id, data)
       }
       loadData(); setShowItemModal(false); setEditingItem(null)
@@ -73,7 +75,7 @@ export function useInventoryPage(
     if (!confirm('确定要删除这个物料吗？')) return
     const target = items.find(i => i.id === id)
     try {
-      await window.electronAPI.deleteInventoryItem(id)
+      await (await getAPI()).deleteInventoryItem(id)
       logDelete('inventoryItems', target?.name || '物料', id, { name: target?.name, category: target?.category })
       loadData(); refresh?.()
     } catch (error) { console.error('删除物料失败:', error) }
@@ -87,10 +89,10 @@ export function useInventoryPage(
   const handleTransSubmit = useCallback(async (data: any) => {
     const selectedItem = items.find(i => i.id === data.itemId)
     try {
-      await window.electronAPI.createInventoryTransaction(data)
+      await (await getAPI()).createInventoryTransaction(data)
       if (selectedItem) {
         const qty = data.type === 'purchase' || data.type === 'return_in' ? data.quantity : -data.quantity
-        await window.electronAPI.updateInventoryItem({ ...selectedItem, currentStock: selectedItem.currentStock + qty })
+        await (await getAPI()).updateInventoryItem({ ...selectedItem, currentStock: selectedItem.currentStock + qty })
       }
       logCreate('inventoryTransactions', `${selectedItem?.name || '物料'} - ${data.type === 'purchase' || data.type === 'return_in' ? '入库' : '出库'}`, data.itemId, data)
       loadData(); setShowTransModal(false); setTransItem(null)
@@ -102,10 +104,10 @@ export function useInventoryPage(
   const handleMaterialSubmit = useCallback(async (data: any) => {
     try {
       if (editingMaterial) {
-        await window.electronAPI.updateMaterial({ ...editingMaterial, ...data })
+        await (await getAPI()).updateMaterial({ ...editingMaterial, ...data })
         logUpdate('materials', data.name, editingMaterial.id, { before: editingMaterial, after: data })
       } else {
-        const result = await window.electronAPI.createMaterial(data)
+        const result = await (await getAPI()).createMaterial(data)
         logCreate('materials', data.name, result?.data?.id, data)
       }
       loadData(); setShowMaterialModal(false); setEditingMaterial(null)
@@ -122,7 +124,7 @@ export function useInventoryPage(
     if (!confirm('确定要删除这个材料吗？')) return
     const target = projectMaterials.find(m => m.id === id)
     try {
-      await window.electronAPI.deleteMaterial(id)
+      await (await getAPI()).deleteMaterial(id)
       logDelete('materials', target?.name || '材料', id, { name: target?.name, category: target?.category })
       loadData(); refresh?.()
     } catch (error) { console.error('删除材料失败:', error) }

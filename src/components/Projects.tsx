@@ -7,11 +7,14 @@ import { logCreate, logUpdate, logDelete, logExport } from '../utils/audit'
 import { usePermission } from '../hooks/usePermission.tsx'
 import { exportProjects } from '../utils/export-import'
 import { useToastStore } from '@/store/toastStore'
+import { useConfirm } from '@/hooks/useConfirm'
 import { ProjectList, ProjectForm, ProjectDetail, ProjectFilters, ProjectFormData } from './features/projects'
+import { getAPI } from '@/services/api-adapter'
 
 const Projects: React.FC<{ refresh?: () => void }> = ({ refresh }) => {
   const { can } = usePermission()
   const showToast = useToastStore(state => state.showToast)
+  const { confirm, ConfirmDialog } = useConfirm()
   const [projects, setProjects] = useState<Project[]>([])
   const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(true)
@@ -26,7 +29,8 @@ const Projects: React.FC<{ refresh?: () => void }> = ({ refresh }) => {
   const loadData = async () => {
     setLoading(true)
     try {
-      const [projR, memR] = await Promise.allSettled([window.electronAPI.getProjects(), window.electronAPI.getMembers()])
+      const api = await getAPI()
+      const [projR, memR] = await Promise.allSettled([api.getProjects(), api.getMembers()])
       const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
       setProjects(get(projR))
       setMembers(get(memR))
@@ -39,21 +43,22 @@ const Projects: React.FC<{ refresh?: () => void }> = ({ refresh }) => {
   const handleCreate = () => { setEditingProject(null); setShowModal(true) }
   const handleEdit = (project: Project) => { setEditingProject(project); setShowModal(true) }
   const handleDelete = async (id: number) => {
-    if (!can('projects:delete')) { alert('无权限'); return }
-    if (!confirm('确定删除？')) return
+    if (!can('projects:delete')) { showToast('无权限', 'error'); return }
+    const ok = await confirm({ title: '确认删除', content: '确定删除？', confirmVariant: 'danger' })
+    if (!ok) return
     const p = projects.find(p => p.id === id)
-    const r = await window.electronAPI.deleteProject(id)
+    const r = await (await getAPI()).deleteProject(id)
     if (r.success) { logDelete('projects', p?.name || '项目', id, { name: p?.name }); loadData(); showToast('已删除', 'success') }
     else showToast(r.error || '失败', 'error')
   }
   const handleSubmit = async (data: ProjectFormData) => {
     try {
       if (editingProject) {
-        const r = await window.electronAPI.updateProject({ ...editingProject, ...data })
+        const r = await (await getAPI()).updateProject({ ...editingProject, ...data })
         if (!r.success) throw new Error(r.error || '更新失败')
         logUpdate('projects', data.name, editingProject.id, { before: editingProject, after: data })
       } else {
-        const r = await window.electronAPI.createProject(data)
+        const r = await (await getAPI()).createProject(data)
         if (!r.success) throw new Error(r.error || '创建失败')
         logCreate('projects', data.name, r.data?.id, data)
       }
@@ -62,7 +67,7 @@ const Projects: React.FC<{ refresh?: () => void }> = ({ refresh }) => {
     } catch (e: any) { showToast(e.message || '操作失败', 'error'); throw e }
   }
   const handleExport = () => {
-    if (!can('projects:export')) { alert('无权限'); return }
+    if (!can('projects:export')) { showToast('无权限', 'error'); return }
     try { exportProjects(filteredProjects); logExport('projects', filteredProjects.length); showToast(`已导出 ${filteredProjects.length} 个项目`, 'success') }
     catch (e) { showToast('导出失败', 'error') }
   }
@@ -92,6 +97,7 @@ const Projects: React.FC<{ refresh?: () => void }> = ({ refresh }) => {
 
   return (
     <div className="p-6 max-w-[1400px] mx-auto">
+      {ConfirmDialog}
       <div className="flex items-center justify-between mb-6">
         <div><h1 className="text-2xl font-bold text-slate-800">项目管理</h1><p className="text-slate-500 dark:text-slate-400 mt-1">管理所有项目信息</p></div>
       </div>

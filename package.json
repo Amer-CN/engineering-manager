@@ -1,19 +1,17 @@
 {
   "name": "engineering-manager",
-  "version": "0.58.0",
+  "version": "0.67.0",
   "description": "工程项目管理系统 - 一站式工程项目管理解决方案",
-  "main": "dist-electron/main.js",
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "check": "node scripts/check-rules.js",
-    "build": "node scripts/check-rules.js && \"D:\\Program Files\\nodejs\\node.exe\" node_modules/typescript/bin/tsc && \"D:\\Program Files\\nodejs\\node.exe\" node_modules/vite/bin/vite.js build && node scripts/remove-charts-preload.js && electron-builder",
+    "build:frontend": "node scripts/check-rules.js && tsc && vite build",
+    "build": "tauri build",
     "preview": "vite preview",
-    "electron:dev": "concurrently \"vite\" \"electron .\"",
-    "electron:build": "vite build && electron-builder",
-    "pack": "vite build && electron-builder --dir",
-    "dist": "vite build && electron-builder",
-    "postbuild": "node -e \"require('fs').copyFileSync('public/ocr-config.json', 'dist/ocr-config.json')\"",
-    "prebuild": "node scripts/generate-installer-assets.js",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
     "postinstall": "node -e \"require('fs').copyFileSync('public/ocr-config.json', 'dist/ocr-config.json')\"",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -21,14 +19,17 @@
     "test:ui": "vitest --ui"
   },
   "dependencies": {
-    "@types/better-sqlite3": "^7.6.13",
+    "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-dialog": "^2.0.0",
+    "@tauri-apps/plugin-fs": "^2.0.0",
+    "@tauri-apps/plugin-shell": "^2.0.0",
+    "@tauri-apps/plugin-store": "^2.0.0",
     "bcryptjs": "^3.0.3",
-    "better-sqlite3": "^12.10.0",
     "docxtemplater": "^3.68.7",
-    "electron-log": "^5.0.3",
     "framer-motion": "^12.40.0",
     "lucide-react": "^1.14.0",
     "mammoth": "^1.12.0",
+    "pdfjs-dist": "^3.11.174",
     "pizzip": "^3.2.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -39,6 +40,7 @@
     "zustand": "^5.0.13"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
@@ -47,76 +49,14 @@
     "@types/uuid": "^9.0.7",
     "@vitejs/plugin-react": "^4.2.1",
     "@vitest/coverage-v8": "^4.1.6",
-    "asar": "^3.2.0",
     "autoprefixer": "^10.4.17",
-    "concurrently": "^8.2.2",
-    "electron": "^38.8.6",
-    "electron-builder": "^24.9.1",
-    "jimp": "^1.6.1",
     "jsdom": "^29.1.1",
-    "png-to-ico": "^3.0.1",
     "postcss": "^8.4.35",
     "rollup-plugin-visualizer": "^7.0.1",
     "tailwindcss": "^3.4.1",
     "terser": "^5.47.1",
     "typescript": "^5.3.3",
     "vite": "^5.1.0",
-    "vite-plugin-electron": "^0.29.1",
-    "vite-plugin-electron-renderer": "^0.14.7",
     "vitest": "^4.1.6"
-  },
-  "build": {
-    "appId": "com.engineering.manager",
-    "productName": "工程管家",
-    "directories": {
-      "output": "release",
-      "buildResources": "public"
-    },
-    "npmRebuild": false,
-    "files": [
-      "dist/**/*",
-      "dist-electron/**/*"
-    ],
-    "extraMetadata": {
-      "main": "dist-electron/main.js"
-    },
-    "extraResources": [
-      {
-        "from": "public/seed-data.json",
-        "to": "seed-data.json"
-      },
-      {
-        "from": "public/ocr-config.json",
-        "to": "ocr-config.json"
-      }
-    ],
-    "asar": true,
-    "win": {
-      "icon": "public/installer-assets/app-icon.ico",
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "artifactName": "${productName}-Setup-${version}.${ext}",
-      "signAndEditExecutable": false
-    },
-    "nsis": {
-      "oneClick": false,
-      "perMachine": false,
-      "allowToChangeInstallationDirectory": true,
-      "allowElevation": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "工程管家",
-      "include": "public/installer.nsh",
-      "installerIcon": "public/installer-assets/app-icon.ico",
-      "uninstallerIcon": "public/installer-assets/app-icon.ico",
-      "installerHeader": "public/installer-assets/header.bmp"
-    },
-    "publish": null
   }
 }

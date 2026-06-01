@@ -1,6 +1,28 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react'
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import { motion } from 'framer-motion'
 import { useAuth } from '../hooks/useAuth'
+import { useTheme } from '../hooks/useTheme'
 import { Icon } from './ui/Icon'
+import { getAPI } from '@/services/api-adapter'
+
+/** 不同主题的交互参数 — 差异化设计 */
+const THEME_INTERACTION = {
+  white: {
+    hoverScale: 1.12,
+    tapScale: 0.88,
+    transition: { type: 'spring' as const, stiffness: 400, damping: 20 },
+  },
+  graphite: {
+    hoverScale: 1.15,
+    tapScale: 0.85,
+    transition: { type: 'spring' as const, stiffness: 500, damping: 15 },
+  },
+  sandstone: {
+    hoverScale: 1.08,
+    tapScale: 0.92,
+    transition: { type: 'spring' as const, stiffness: 300, damping: 25 },
+  },
+}
 
 interface LoginProps { onLoginSuccess: () => void }
 
@@ -20,6 +42,8 @@ function clearCred() { localStorage.removeItem(CRED_KEY) }
 
 const Login: React.FC<LoginProps> = () => {
   const { login } = useAuth()
+  const { scheme } = useTheme()
+  const interaction = useMemo(() => THEME_INTERACTION[scheme], [scheme])
   const saved = useRef(loadSaved())
   const [username, setUsername] = useState(saved.current.username)
   const [password, setPassword] = useState(saved.current.password)
@@ -29,19 +53,20 @@ const Login: React.FC<LoginProps> = () => {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const minimize = useCallback(() => (window as any).electronAPI?.minimizeWindow?.(), [])
-  const close = useCallback(() => (window as any).electronAPI?.closeWindow?.(), [])
+  const minimize = useCallback(async () => { (await getAPI()).minimizeWindow?.() }, [])
+  const close = useCallback(async () => { (await getAPI()).closeWindow?.() }, [])
 
-  useEffect(() => { (window as any).electronAPI?.resizeForLogin?.() }, [])
+  useEffect(() => { (async () => { (await getAPI()).resizeForLogin?.() })() }, [])
 
   useEffect(() => { localStorage.setItem(AUTO_KEY, String(autoLogin)) }, [autoLogin])
   useEffect(() => { if (autoLogin && saved.current.username && saved.current.password) doLogin(saved.current.username, saved.current.password) }, [])
 
   const doLogin = async (u: string, p: string) => {
     setError(''); setLoading(true)
-    if (!window.electronAPI?.login) { setError('系统错误'); setLoading(false); return }
     try {
-      const result = await window.electronAPI.login(u, p)
+      const api = await getAPI()
+      if (!api?.login) { setError('系统错误'); setLoading(false); return }
+      const result = await api.login(u, p)
       if (result.success && result.data) {
         if (remember) saveCred(u, p); else clearCred()
         login(result.data)
@@ -65,12 +90,15 @@ const Login: React.FC<LoginProps> = () => {
           {[{ icon: <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor" /></svg>, action: minimize },
             { icon: <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"><line x1="2" y1="2" x2="8" y2="8" /><line x1="8" y1="2" x2="2" y2="8" /></svg>, action: close, hoverBg: 'var(--danger)', hoverColor: '#fff' }
           ].map((btn, i) => (
-            <button key={i} onClick={btn.action}
+            <motion.button key={i} onClick={btn.action}
+              whileHover={{ scale: interaction.hoverScale }}
+              whileTap={{ scale: interaction.tapScale }}
+              transition={interaction.transition}
               style={{ width: 36, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--muted)', borderRadius: 4 }}
               onMouseEnter={e => { e.currentTarget.style.background = btn.hoverBg || 'var(--panel-2)'; if (btn.hoverColor) e.currentTarget.style.color = btn.hoverColor }}
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--muted)' }}>
               {btn.icon}
-            </button>
+            </motion.button>
           ))}
         </div>
       </div>
@@ -128,7 +156,7 @@ const Login: React.FC<LoginProps> = () => {
         </form>
 
         <div style={{ fontSize: 10, color: 'var(--muted-2)', marginTop: 8, flexShrink: 0 }}>
-          v{(window as any).__APP_VERSION__ || '0.58.0'}
+          v{(window as any).__APP_VERSION__ || '0.67.0'}
         </div>
       </div>
     </div>

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Template } from '../../../types/electron'
 import { Icon } from '../../ui/Icon'
 import { useToastStore } from '@/store/toastStore'
+import { getAPI } from '@/services/api-adapter'
 
 interface TemplateGenerateProps {
   template: Template
@@ -37,7 +38,7 @@ export default function TemplateGenerate({ template, onClose }: TemplateGenerate
     setLoading(true)
     try {
       // 调用主进程用 mammoth 转换 docx → HTML
-      const result = await window.electronAPI.convertTemplateDocxToHtml(template.storedFileName)
+      const result = await (await getAPI()).convertTemplateDocxToHtml(template.storedFileName)
       if (result.success && result.data) {
         let html = result.data
         for (const [key, val] of Object.entries(values)) {
@@ -73,7 +74,7 @@ h1{text-align:center;font-size:18pt;margin-bottom:24px}
     if (template.fileType !== 'docx') {
       // Excel — download original
       try {
-        const result = await window.electronAPI.readFile({
+        const result = await (await getAPI()).readFile({
           category: 'templates',
           subCategory: 'files',
           fileName: template.storedFileName,
@@ -92,7 +93,7 @@ h1{text-align:center;font-size:18pt;margin-bottom:24px}
     // .docx — use docxtemplater to fill variables, preserving all Word formatting
     setLoading(true)
     try {
-      const result = await window.electronAPI.fillTemplateDocx(template.storedFileName, values)
+      const result = await (await getAPI()).fillTemplateDocx(template.storedFileName, values)
       if (result.success && result.data) {
         const a = document.createElement('a')
         a.href = result.data.dataUrl

@@ -7,6 +7,8 @@ import React, { useState } from 'react'
 import type { AttendanceRecord, Member, DayStatus } from '@/types'
 import { useToastStore } from '@/store/toastStore'
 import { Icon } from './ui/Icon'
+import { getAPI } from '@/services/api-adapter'
+import { Tooltip } from './ui/Tooltip/Tooltip'
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -147,7 +149,7 @@ export default function AttendanceDetail({
   const handleSave = async () => {
     setSaving(true)
     try {
-      const result = await window.electronAPI.updateAttendance({ ...record, dailyStatus })
+      const result = await (await getAPI()).updateAttendance({ ...record, dailyStatus })
       if (result.success) { showToast('考勤已保存', 'success'); onSaved() }
       else showToast(result.error || '保存失败', 'error')
     } catch (e: any) { showToast(e?.message || '保存失败', 'error') }
@@ -175,16 +177,18 @@ export default function AttendanceDetail({
           <span className="text-xs text-slate-400">{teamName}</span>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={async () => {
-            if (!confirm(`确认删除 ${record.memberName || member?.name || '该员工'} ${yearMonth} 的考勤记录吗？此操作不可撤销。`)) return
-            try {
-              const result = await window.electronAPI.deleteAttendance(record.id)
-              if (result.success) { showToast('已删除', 'success'); onSaved(); onBack() }
-              else showToast(result.error || '删除失败', 'error')
-            } catch (e: any) { showToast(e?.message || '删除失败', 'error') }
-          }} className="btn btn-danger btn-sm" title="删除此考勤记录">
-            <Icon name="Trash2" size={16} />
-          </button>
+          <Tooltip content="删除此考勤记录" position="top" delay={300}>
+            <button onClick={async () => {
+              if (!confirm(`确认删除 ${record.memberName || member?.name || '该员工'} ${yearMonth} 的考勤记录吗？此操作不可撤销。`)) return
+              try {
+                const result = await (await getAPI()).deleteAttendance(record.id)
+                if (result.success) { showToast('已删除', 'success'); onSaved(); onBack() }
+                else showToast(result.error || '删除失败', 'error')
+              } catch (e: any) { showToast(e?.message || '删除失败', 'error') }
+            }} className="btn btn-danger btn-sm">
+              <Icon name="Trash2" size={16} />
+            </button>
+          </Tooltip>
           <button onClick={handleSave} disabled={saving} className="btn btn-primary text-sm px-5 py-2 disabled:opacity-50">
             {saving ? '保存中...' : '保存'}
           </button>

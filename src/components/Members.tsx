@@ -5,6 +5,7 @@ import type { Member, WorkerTeam, WorkerStatus } from '../types/electron'
 import { recognizeIdCard, OCRProvider, getOCRConfig } from '../services/ocr'
 import { useToastStore } from '@/store/toastStore'
 import { Icon } from './ui/Icon'
+import Spinner from './ui/Spinner'
 
 // 导入拆分后的组件
 import {
@@ -22,6 +23,7 @@ import { useMemberOperations } from './features/members/useMemberOperations'
 import { useTeamOps } from './features/members/useTeamOps'
 import { useLaborOperations } from './features/labor/hooks/useLaborOperations'
 import { useMemberPasteHandler } from './features/members/useMemberPasteHandler'
+import { getAPI } from '@/services/api-adapter'
 
 // import { staffRoles } from './features/members'
 import { useWorkerImport } from './features/members/useWorkerImport'
@@ -71,7 +73,7 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
   const [filterStatus, setFilterStatus] = useState<WorkerStatus | 'all'>('all')
 
   // UI 状态
-  const [ocrMode, setOcrMode] = useState<OCRProvider>('offline')
+  const [, setOcrMode] = useState<OCRProvider>('offline')
   const showToast = useToastStore(state => state.showToast)
   const originalMemberFileRef = useRef<Record<number, Record<string, string>>>({})
   
@@ -111,13 +113,28 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
       const base64 = e.target?.result as string
       setFormData(prev => ({ ...prev, [field]: base64 }))
       setOcrMode(getOCRConfig().provider)
-      if (ocrMode === 'offline' || ocrMode === 'baidu') {
+      // 仅人像面触发 OCR
+      if (field === 'idCardFront') {
         try {
           const result = await recognizeIdCard(base64)
-          if ((result as any).success && (result as any).data) {
-            const data = (result as any).data
-            setFormData(prev => ({ ...prev, name: data.name || prev.name, gender: data.gender || prev.gender, ethnicity: data.ethnicity || prev.ethnicity, birthDate: data.birthDate || prev.birthDate, idCard: data.idCard || prev.idCard, idCardAddress: data.address || prev.idCardAddress, idCardFront: data.portraitBase64 || prev.idCardFront }))
-            showToast('OCR 识别成功', 'success')
+          if (result.success && result.idCard) {
+            const { number, gender, birthDate, name, ethnicity, address } = result.idCard
+            setFormData(prev => ({ ...prev,
+              name: name || prev.name,
+              gender: gender || prev.gender,
+              ethnicity: ethnicity || prev.ethnicity,
+              birthDate: birthDate || prev.birthDate,
+              idCard: number || prev.idCard,
+              idCardAddress: address || prev.idCardAddress
+            }))
+            const filled: string[] = []
+            if (name) filled.push('姓名')
+            if (number) filled.push('身份证号')
+            if (gender) filled.push('性别')
+            if (birthDate) filled.push('出生日期')
+            if (ethnicity) filled.push('民族')
+            if (address) filled.push('地址')
+            showToast(filled.length > 0 ? `识别成功！已自动填充：${filled.join('、')}` : '身份证识别成功', 'success')
           }
         } catch (err) { console.error('OCR 识别失败:', err) }
       }
@@ -134,7 +151,7 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
   // WorkerPicker 批量添加处理器
   const handleBatchAddWorkers = async (entries: Partial<import('../types/electron').ProjectWorker>[]) => {
     try {
-      const result = await window.electronAPI.batchCreateProjectWorkers(entries as any[])
+      const result = await (await getAPI()).batchCreateProjectWorkers(entries as any[])
       if (result.success) {
         showToast(`成功添加 ${entries.length} 名工人`, 'success')
         loadData()
@@ -151,10 +168,11 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
   const loadData = async () => {
     try {
       setLoading(true)
+      const api = await getAPI()
       const [membersRes, projectsRes, teamsRes] = await Promise.allSettled([
-        window.electronAPI.getMembers(),
-        window.electronAPI.getProjects(),
-        window.electronAPI.getWorkerTeams()
+        api.getMembers(),
+        api.getProjects(),
+        api.getWorkerTeams()
       ])
       const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
       const membersData = get(membersRes)
@@ -304,11 +322,7 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
   // 渲染
   
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-500 border-t-transparent"></div>
-      </div>
-    )
+    return <Spinner size="lg" text="加载人员数据..." />
   }
 
   return (

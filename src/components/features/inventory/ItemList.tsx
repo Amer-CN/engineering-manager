@@ -2,6 +2,7 @@ import React from 'react'
 import { InventoryItem, Partner } from '../../../types/electron'
 import { Icon } from '../../ui/Icon'
 import { formatMoney } from '@/utils/format'
+import { TABLE } from '@/constants/table'
 
 interface ItemListProps {
   items: InventoryItem[]
@@ -29,45 +30,45 @@ export const ItemList: React.FC<ItemListProps> = ({
 
   return filteredItems.length > 0 ? (
     <div className="overflow-x-auto">
-      <table className="w-full">
-        <thead className="bg-slate-50 border-b border-slate-200">
+      <table className={TABLE.table}>
+        <thead className={TABLE.headerRow + ' ' + TABLE.stickyHeader}>
           <tr>
-            <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">编码</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">名称</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">类别</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">规格</th>
-            <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">单位</th>
-            <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">库存</th>
-            <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">采购价</th>
-            <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">销售价</th>
-            <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">操作</th>
+            <th className={TABLE.headerCell}>编码</th>
+            <th className={TABLE.headerCell}>名称</th>
+            <th className={TABLE.headerCell}>类别</th>
+            <th className={TABLE.headerCell}>规格</th>
+            <th className={TABLE.headerCell + ' text-center'}>单位</th>
+            <th className={TABLE.headerCell + ' text-right'}>库存</th>
+            <th className={TABLE.headerCell + ' text-right'}>采购价</th>
+            <th className={TABLE.headerCell + ' text-right'}>销售价</th>
+            <th className={TABLE.headerCell + ' text-center'}>操作</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100">
+        <tbody>
           {filteredItems.map(item => (
-            <tr key={item.id} className="table-row-hover">
-              <td className="px-4 py-3 text-sm font-mono text-slate-600">{item.code}</td>
-              <td className="px-4 py-3">
+            <tr key={item.id} className={TABLE.bodyRow}>
+              <td className={TABLE.bodyCell + ' text-sm font-mono text-slate-600'}>{item.code}</td>
+              <td className={TABLE.bodyCell}>
                 <div className="font-medium text-slate-800">{item.name}</div>
                 {item.currentStock <= item.minStock && (
                   <span className="text-xs text-red-500"><Icon name="AlertTriangle" size={12} className="inline-block" /> 库存不足</span>
                 )}
               </td>
-              <td className="px-4 py-3 text-sm text-slate-600">{item.category}</td>
-              <td className="px-4 py-3 text-sm text-slate-600">{item.specifications || '-'}</td>
-              <td className="px-4 py-3 text-center text-sm text-slate-600">{item.unit}</td>
-              <td className={`px-4 py-3 text-right text-sm font-medium ${
+              <td className={TABLE.bodyCell + ' text-sm text-slate-600'}>{item.category}</td>
+              <td className={TABLE.bodyCell + ' text-sm text-slate-600'}>{item.specifications || '-'}</td>
+              <td className={TABLE.bodyCell + ' text-center text-sm text-slate-600'}>{item.unit}</td>
+              <td className={TABLE.bodyCell + ` text-right text-sm font-medium ${
                 item.currentStock <= item.minStock ? 'text-red-600' : 'text-slate-800'
               }`}>
                 {item.currentStock}
               </td>
-              <td className="px-4 py-3 text-right text-sm text-slate-600">
+              <td className={TABLE.bodyCell + ' text-right text-sm text-slate-600'}>
                 ¥{formatMoney(item.purchasePrice)}
               </td>
-              <td className="px-4 py-3 text-right text-sm text-slate-600">
+              <td className={TABLE.bodyCell + ' text-right text-sm text-slate-600'}>
                 ¥{formatMoney(item.salePrice)}
               </td>
-              <td className="px-4 py-3 text-center">
+              <td className={TABLE.bodyCell + ' text-center'}>
                 <div className="flex items-center justify-center gap-2">
                   <button
                     onClick={() => onTrans(item)}

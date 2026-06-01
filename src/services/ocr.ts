@@ -2,10 +2,12 @@
  * 在线OCR服务模块
  * 支持百度在线OCR + Tesseract.js离线OCR
  * 在线识别失败时自动回退到离线模式
- * 
+ *
  * 重要：百度 OCR HTTP 请求通过主进程 IPC 代理，
  * 不需要关闭 webSecurity，保持安全策略开启。
  */
+
+import { getAPI } from './api-adapter'
 
 // ============ 类型定义 ============
 
@@ -33,6 +35,74 @@ export interface OCRResult {
     address?: string
     issueAuthority?: string
     validDate?: string
+  }
+  invoice?: {
+    invoiceNum: string
+    invoiceCode: string
+    invoiceDate: string
+    invoiceType: string
+    totalAmount: number
+    amountWithoutTax: number
+    totalTax: number
+    taxRate: number
+    sellerName: string
+    purchaserName: string
+    checkCode: string
+    itemName: string
+    remarks: string
+  }
+  bankCard?: {
+    cardNumber: string
+    bankName: string
+    cardType: string
+    validDate: string
+  }
+  businessLicense?: {
+    creditCode: string
+    companyName: string
+    legalPerson: string
+    registeredCapital: string
+    address: string
+    businessScope: string
+    establishDate: string
+    expireDate: string
+  }
+  bankReceipt?: {
+    transactionDate: string
+    transactionTime: string
+    amount: number
+    payerName: string
+    payerAccount: string
+    payeeName: string
+    payeeAccount: string
+    transactionNo: string
+    bankName: string
+    remarks: string
+  }
+  permit?: {
+    companyCode: string
+    companyName: string
+    accountNumber: string
+    bankName: string
+    permitNumber: string
+  }
+  bankStatement?: {
+    transactions: Array<{
+      date: string
+      time: string
+      amount: number
+      balance: number
+      type: string
+      counterparty: string
+      remark: string
+    }>
+    accountNumber: string
+    bankName: string
+  }
+  generalReceipt?: {
+    text: string
+    amount: number
+    date: string
   }
   error?: string
 }
@@ -102,6 +172,11 @@ export async function loadBuiltInConfig(): Promise<OCRConfig | null> {
 
 /**
  * 初始化内置配置（异步）
+ * 
+ * 从 public/ocr-config.json 加载内置配置，同步到 currentConfig。
+ * API Key 写入后可立即使用百度 OCR。
+ * 若网络不通，recognizeIdCard 中的 checkNetwork 会快速（3 秒超时）
+ * 检测到并自动回退到离线识别。
  */
 export async function initializeBuiltInConfig(): Promise<void> {
   if (configLoaded) return
@@ -109,6 +184,11 @@ export async function initializeBuiltInConfig(): Promise<void> {
   const builtIn = await loadBuiltInConfig()
   if (builtIn) {
     builtInOCRConfig = builtIn
+    // 首次加载且无 localStorage 配置时，同步内置配置
+    if (!currentConfig.baidu?.apiKey && builtIn.baidu?.apiKey) {
+      currentConfig = { ...builtIn }
+      console.debug('[OCR] 已从 ocr-config.json 同步完整配置到 currentConfig')
+    }
   }
   configLoaded = true
 }
@@ -119,16 +199,9 @@ export const initialConfig: OCRConfig = storedConfig || builtInOCRConfig
 
 // ============ OCR服务实现 ============
 
-/**
- * 检查网络连接（通过主进程 IPC，不受浏览器同源策略影响）
- */
 async function checkNetwork(): Promise<boolean> {
-  try {
-    return await window.electronAPI.ocrCheckNetwork()
-  } catch {
-    // IPC 失败时回退到浏览器 API
-    return navigator.onLine
-  }
+  // 使用浏览器 API 快速检测，不依赖外部站点（navigator.onLine 反映OS级网络状态）
+  return navigator.onLine
 }
 
 /**
@@ -143,8 +216,7 @@ async function baiduOCR(imageBase64: string, config: OCRConfig): Promise<OCRResu
   }
 
   try {
-    console.debug('[渲染进程] 通过 IPC 调用主进程百度OCR...')
-    const result = await window.electronAPI.ocrBaiduIdCard(imageBase64, {
+    const result = await (await getAPI()).ocrBaiduIdCard(imageBase64, {
       apiKey: config.baidu.apiKey,
       secretKey: config.baidu.secretKey
     })
@@ -152,6 +224,166 @@ async function baiduOCR(imageBase64: string, config: OCRConfig): Promise<OCRResu
   } catch (error: any) {
     console.error('[渲染进程] 百度OCR IPC 调用失败:', error)
     return { success: false, error: `百度OCR请求失败: ${error.message || '未知错误'}` }
+  }
+}
+
+/**
+ * 百度发票 OCR 识别（通过主进程 IPC 代理）
+ */
+async function baiduInvoiceOCR(imageBase64: string, config: OCRConfig): Promise<OCRResult> {
+  if (!config.baidu?.apiKey || !config.baidu?.secretKey) {
+    return { success: false, error: '百度OCR未配置API Key' }
+  }
+
+  try {
+    const result = await (await getAPI()).ocrBaiduInvoice(imageBase64, {
+      apiKey: config.baidu.apiKey,
+      secretKey: config.baidu.secretKey
+    })
+    return result as OCRResult
+  } catch (error: any) {
+    console.error('[渲染进程] 百度发票OCR IPC 调用失败:', error)
+    return { success: false, error: `百度OCR请求失败: ${error.message || '未知错误'}` }
+  }
+}
+
+/**
+ * 百度银行卡 OCR 识别（通过主进程 IPC 代理）
+ */
+async function baiduBankCardOCR(imageBase64: string, config: OCRConfig): Promise<OCRResult> {
+  if (!config.baidu?.apiKey || !config.baidu?.secretKey) {
+    return { success: false, error: '百度OCR未配置API Key' }
+  }
+
+  try {
+    const result = await (await getAPI()).ocrBaiduBankCard(imageBase64, {
+      apiKey: config.baidu.apiKey,
+      secretKey: config.baidu.secretKey
+    })
+    return result as OCRResult
+  } catch (error: any) {
+    console.error('[渲染进程] 百度银行卡OCR IPC 调用失败:', error)
+    return { success: false, error: `百度OCR请求失败: ${error.message || '未知错误'}` }
+  }
+}
+
+/**
+ * 百度营业执照 OCR 识别（通过主进程 IPC 代理）
+ */
+async function baiduBusinessLicenseOCR(imageBase64: string, config: OCRConfig): Promise<OCRResult> {
+  if (!config.baidu?.apiKey || !config.baidu?.secretKey) {
+    return { success: false, error: '百度OCR未配置API Key' }
+  }
+
+  try {
+    const result = await (await getAPI()).ocrBaiduBusinessLicense(imageBase64, {
+      apiKey: config.baidu.apiKey,
+      secretKey: config.baidu.secretKey
+    })
+    return result as OCRResult
+  } catch (error: any) {
+    console.error('[渲染进程] 百度营业执照OCR IPC 调用失败:', error)
+    return { success: false, error: `百度OCR请求失败: ${error.message || '未知错误'}` }
+  }
+}
+
+/**
+ * 百度银行回单 OCR 识别（通过主进程 IPC 代理）
+ */
+async function baiduBankReceiptOCR(imageBase64: string, config: OCRConfig): Promise<OCRResult> {
+  if (!config.baidu?.apiKey || !config.baidu?.secretKey) {
+    return { success: false, error: '百度OCR未配置API Key' }
+  }
+
+  try {
+    const result = await (await getAPI()).ocrBaiduBankReceipt(imageBase64, {
+      apiKey: config.baidu.apiKey,
+      secretKey: config.baidu.secretKey
+    })
+    return result as OCRResult
+  } catch (error: any) {
+    console.error('[渲染进程] 百度银行回单OCR IPC 调用失败:', error)
+    return { success: false, error: `百度OCR请求失败: ${error.message || '未知错误'}` }
+  }
+}
+
+/**
+ * 百度开户许可证 OCR 识别（通过主进程 IPC 代理）
+ */
+async function baiduPermitOCR(imageBase64: string, config: OCRConfig): Promise<OCRResult> {
+  if (!config.baidu?.apiKey || !config.baidu?.secretKey) {
+    return { success: false, error: '百度OCR未配置API Key' }
+  }
+
+  try {
+    const result = await (await getAPI()).ocrBaiduPermit(imageBase64, {
+      apiKey: config.baidu.apiKey,
+      secretKey: config.baidu.secretKey
+    })
+    return result as OCRResult
+  } catch (error: any) {
+    console.error('[渲染进程] 百度开户许可证OCR IPC 调用失败:', error)
+    return { success: false, error: `百度OCR请求失败: ${error.message || '未知错误'}` }
+  }
+}
+
+/**
+ * 百度银行单据 OCR 识别（通过主进程 IPC 代理）
+ */
+async function baiduBankStatementOCR(imageBase64: string, config: OCRConfig): Promise<OCRResult> {
+  if (!config.baidu?.apiKey || !config.baidu?.secretKey) {
+    return { success: false, error: '百度OCR未配置API Key' }
+  }
+
+  try {
+    const result = await (await getAPI()).ocrBaiduBankStatement(imageBase64, {
+      apiKey: config.baidu.apiKey,
+      secretKey: config.baidu.secretKey
+    })
+    return result as OCRResult
+  } catch (error: any) {
+    console.error('[渲染进程] 百度银行单据OCR IPC 调用失败:', error)
+    return { success: false, error: `百度OCR请求失败: ${error.message || '未知错误'}` }
+  }
+}
+
+/**
+ * 百度通用票据 OCR 识别（通过主进程 IPC 代理）
+ */
+async function baiduGeneralReceiptOCR(imageBase64: string, config: OCRConfig): Promise<OCRResult> {
+  if (!config.baidu?.apiKey || !config.baidu?.secretKey) {
+    return { success: false, error: '百度OCR未配置API Key' }
+  }
+
+  try {
+    const result = await (await getAPI()).ocrBaiduGeneralReceipt(imageBase64, {
+      apiKey: config.baidu.apiKey,
+      secretKey: config.baidu.secretKey
+    })
+    return result as OCRResult
+  } catch (error: any) {
+    console.error('[渲染进程] 百度通用票据OCR IPC 调用失败:', error)
+    return { success: false, error: `百度OCR请求失败: ${error.message || '未知错误'}` }
+  }
+}
+
+/**
+ * 百度企业工商信息查询（通过主进程 IPC 代理）
+ */
+async function baiduCompanyQuery(companyName: string, config: OCRConfig): Promise<OCRResult> {
+  if (!config.baidu?.apiKey || !config.baidu?.secretKey) {
+    return { success: false, error: '百度OCR未配置API Key' }
+  }
+
+  try {
+    const result = await (await getAPI()).ocrBaiduCompanyQuery(companyName, {
+      apiKey: config.baidu.apiKey,
+      secretKey: config.baidu.secretKey
+    })
+    return result as OCRResult
+  } catch (error: any) {
+    console.error('[渲染进程] 百度企业查询 IPC 调用失败:', error)
+    return { success: false, error: `企业查询请求失败: ${error.message || '未知错误'}` }
   }
 }
 
@@ -266,7 +498,7 @@ export function saveOCRConfig(config: OCRConfig) {
   currentConfig = config
   saveConfigToStorage(config)
   // 配置变更时清除主进程的 Token 缓存
-  window.electronAPI.ocrClearTokenCache().catch(() => {})
+  getAPI().then(api => api.ocrClearTokenCache()).catch(() => {})
 }
 
 /**
@@ -287,34 +519,195 @@ export async function recognizeIdCard(imageBase64: string): Promise<OCRResult> {
     return { success: false, error: 'OCR功能已禁用' }
   }
 
-  // 检查网络
-  const isOnline = await checkNetwork()
-
-  // 离线模式或离线网络
-  if (provider === 'offline' || !isOnline) {
-    console.debug('使用离线OCR识别')
-    return offlineOCR(imageBase64)
-  }
-
-  // 使用百度OCR
-  console.debug('使用百度OCR识别')
-  const result = await baiduOCR(imageBase64, currentConfig)
-
-  // 在线识别失败，尝试离线备选
-  if (!result.success) {
-    console.warn(`百度OCR失败: ${result.error}，尝试离线OCR...`)
-    const fallbackResult = await offlineOCR(imageBase64)
-    if (fallbackResult.success) {
-      console.debug('离线OCR备选成功')
-      return { 
-        ...fallbackResult, 
-        error: `百度OCR失败，已使用本地识别: ${result.error}` 
-      }
+  // 百度模式：快速检测网络
+  if (provider === 'baidu' && currentConfig.baidu?.apiKey) {
+    const isOnline = await checkNetwork()
+    if (!isOnline) {
+      return offlineOCR(imageBase64)
+    }
+    const result = await baiduOCR(imageBase64, currentConfig)
+    if (!result.success) {
+      const fallbackResult = await offlineOCR(imageBase64)
+      if (fallbackResult.success) return { ...fallbackResult, error: '百度OCR失败，已使用本地识别: ' + result.error }
+      return result
     }
     return result
   }
 
-  return result
+  // 离线模式
+  console.debug('使用离线OCR识别')
+  return offlineOCR(imageBase64)
+}
+
+/**
+ * 发票OCR识别主入口
+ * 根据配置自动选择百度在线或离线识别
+ */
+export async function recognizeInvoice(imageBase64: string): Promise<OCRResult> {
+  const { provider, enabled } = currentConfig
+
+  if (!enabled) {
+    return { success: false, error: 'OCR功能已禁用' }
+  }
+
+  // 百度模式
+  if (provider === 'baidu' && currentConfig.baidu?.apiKey) {
+    const isOnline = await checkNetwork()
+    if (!isOnline) {
+      return { success: false, error: '网络不可用，发票识别需要在线模式' }
+    }
+    return await baiduInvoiceOCR(imageBase64, currentConfig)
+  }
+
+  // 离线模式不支持发票识别
+  return { success: false, error: '发票识别仅支持百度在线模式' }
+}
+
+/**
+ * 银行卡OCR识别主入口
+ */
+export async function recognizeBankCard(imageBase64: string): Promise<OCRResult> {
+  const { provider, enabled } = currentConfig
+
+  if (!enabled) {
+    return { success: false, error: 'OCR功能已禁用' }
+  }
+
+  if (provider === 'baidu' && currentConfig.baidu?.apiKey) {
+    const isOnline = await checkNetwork()
+    if (!isOnline) {
+      return { success: false, error: '网络不可用，银行卡识别需要在线模式' }
+    }
+    return await baiduBankCardOCR(imageBase64, currentConfig)
+  }
+
+  return { success: false, error: '银行卡识别仅支持百度在线模式' }
+}
+
+/**
+ * 营业执照OCR识别主入口
+ */
+export async function recognizeBusinessLicense(imageBase64: string): Promise<OCRResult> {
+  const { provider, enabled } = currentConfig
+
+  if (!enabled) {
+    return { success: false, error: 'OCR功能已禁用' }
+  }
+
+  if (provider === 'baidu' && currentConfig.baidu?.apiKey) {
+    const isOnline = await checkNetwork()
+    if (!isOnline) {
+      return { success: false, error: '网络不可用，营业执照识别需要在线模式' }
+    }
+    return await baiduBusinessLicenseOCR(imageBase64, currentConfig)
+  }
+
+  return { success: false, error: '营业执照识别仅支持百度在线模式' }
+}
+
+/**
+ * 银行回单OCR识别主入口
+ */
+export async function recognizeBankReceipt(imageBase64: string): Promise<OCRResult> {
+  const { provider, enabled } = currentConfig
+
+  if (!enabled) {
+    return { success: false, error: 'OCR功能已禁用' }
+  }
+
+  if (provider === 'baidu' && currentConfig.baidu?.apiKey) {
+    const isOnline = await checkNetwork()
+    if (!isOnline) {
+      return { success: false, error: '网络不可用，银行回单识别需要在线模式' }
+    }
+    return await baiduBankReceiptOCR(imageBase64, currentConfig)
+  }
+
+  return { success: false, error: '银行回单识别仅支持百度在线模式' }
+}
+
+/**
+ * 开户许可证OCR识别主入口
+ */
+export async function recognizePermit(imageBase64: string): Promise<OCRResult> {
+  const { provider, enabled } = currentConfig
+
+  if (!enabled) {
+    return { success: false, error: 'OCR功能已禁用' }
+  }
+
+  if (provider === 'baidu' && currentConfig.baidu?.apiKey) {
+    const isOnline = await checkNetwork()
+    if (!isOnline) {
+      return { success: false, error: '网络不可用，开户许可证识别需要在线模式' }
+    }
+    return await baiduPermitOCR(imageBase64, currentConfig)
+  }
+
+  return { success: false, error: '开户许可证识别仅支持百度在线模式' }
+}
+
+/**
+ * 银行单据OCR识别主入口（高级版）
+ */
+export async function recognizeBankStatement(imageBase64: string): Promise<OCRResult> {
+  const { provider, enabled } = currentConfig
+
+  if (!enabled) {
+    return { success: false, error: 'OCR功能已禁用' }
+  }
+
+  if (provider === 'baidu' && currentConfig.baidu?.apiKey) {
+    const isOnline = await checkNetwork()
+    if (!isOnline) {
+      return { success: false, error: '网络不可用，银行单据识别需要在线模式' }
+    }
+    return await baiduBankStatementOCR(imageBase64, currentConfig)
+  }
+
+  return { success: false, error: '银行单据识别仅支持百度在线模式' }
+}
+
+/**
+ * 通用票据OCR识别主入口
+ */
+export async function recognizeGeneralReceipt(imageBase64: string): Promise<OCRResult> {
+  const { provider, enabled } = currentConfig
+
+  if (!enabled) {
+    return { success: false, error: 'OCR功能已禁用' }
+  }
+
+  if (provider === 'baidu' && currentConfig.baidu?.apiKey) {
+    const isOnline = await checkNetwork()
+    if (!isOnline) {
+      return { success: false, error: '网络不可用，通用票据识别需要在线模式' }
+    }
+    return await baiduGeneralReceiptOCR(imageBase64, currentConfig)
+  }
+
+  return { success: false, error: '通用票据识别仅支持百度在线模式' }
+}
+
+/**
+ * 企业工商信息查询主入口
+ */
+export async function queryCompanyInfo(companyName: string): Promise<OCRResult> {
+  const { provider, enabled } = currentConfig
+
+  if (!enabled) {
+    return { success: false, error: 'OCR功能已禁用' }
+  }
+
+  if (provider === 'baidu' && currentConfig.baidu?.apiKey) {
+    const isOnline = await checkNetwork()
+    if (!isOnline) {
+      return { success: false, error: '网络不可用，企业查询需要在线模式' }
+    }
+    return await baiduCompanyQuery(companyName, currentConfig)
+  }
+
+  return { success: false, error: '企业查询仅支持百度在线模式' }
 }
 
 /**

@@ -2,6 +2,7 @@ import React from 'react'
 import { Settlement as SettlementData } from '../../../types/electron'
 import { statusConfig, typeConfig, subTypeConfig } from './config'
 import { Icon } from '../../ui/Icon'
+import { Tooltip } from '../../ui/Tooltip/Tooltip'
 import { formatMoney } from '@/utils/format'
 
 interface SettlementListProps {
@@ -82,29 +83,41 @@ export const SettlementList: React.FC<SettlementListProps> = ({
               <td className="px-4 py-3 text-center">
                 <div className="flex items-center justify-center gap-0.5">
                   {((s as any).files?.length > 0 || s.fileUrl) && (
-                    <button onClick={() => onPreviewFile(s)} className="p-1.5 text-violet-500 hover:bg-violet-50 rounded" title={`查看凭证 (${(s as any).files?.length || 1}个文件)`}>
-                      <Icon name="Eye" size={14} />
-                    </button>
+                    <Tooltip content={`查看凭证 (${(s as any).files?.length || 1}个文件)`} position="top" delay={300}>
+                      <button onClick={() => onPreviewFile(s)} className="p-1.5 text-violet-500 hover:bg-violet-50 rounded">
+                        <Icon name="Eye" size={14} />
+                      </button>
+                    </Tooltip>
                   )}
-                  <button onClick={() => onPrint(s)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded" title="打印">
-                    <Icon name="Printer" size={14} />
-                  </button>
-                  {s.status !== 'archived' && (
-                    <button onClick={() => onProcess(s.id)} className="p-1.5 text-emerald-500 hover:bg-emerald-50 rounded" title="办理">
-                      <Icon name="Check" size={14} />
+                  <Tooltip content="打印" position="top" delay={300}>
+                    <button onClick={() => onPrint(s)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded">
+                      <Icon name="Printer" size={14} />
                     </button>
+                  </Tooltip>
+                  {s.status !== 'archived' && (
+                    <Tooltip content="办理" position="top" delay={300}>
+                      <button onClick={() => onProcess(s.id)} className="p-1.5 text-emerald-500 hover:bg-emerald-50 rounded">
+                        <Icon name="Check" size={14} />
+                      </button>
+                    </Tooltip>
                   )}
                   {s.status === 'archived' && (
-                    <button onClick={() => onUnarchive(s.id)} className="p-1.5 text-amber-500 hover:bg-amber-50 rounded" title="取消归档">
-                      <Icon name="Undo" size={14} />
-                    </button>
+                    <Tooltip content="取消归档" position="top" delay={300}>
+                      <button onClick={() => onUnarchive(s.id)} className="p-1.5 text-amber-500 hover:bg-amber-50 rounded">
+                        <Icon name="Undo" size={14} />
+                      </button>
+                    </Tooltip>
                   )}
-                  <button onClick={() => onEdit(s)} className="p-1.5 text-primary-500 hover:bg-primary-50 rounded" title="编辑">
-                    <Icon name="Edit3" size={14} />
-                  </button>
-                  <button onClick={() => onDelete(s.id)} className="btn btn-danger btn-sm" title="删除">
-                    <Icon name="Trash2" size={14} />
-                  </button>
+                  <Tooltip content="编辑" position="top" delay={300}>
+                    <button onClick={() => onEdit(s)} className="p-1.5 text-primary-500 hover:bg-primary-50 rounded">
+                      <Icon name="Edit3" size={14} />
+                    </button>
+                  </Tooltip>
+                  <Tooltip content="删除" position="top" delay={300}>
+                    <button onClick={() => onDelete(s.id)} className="btn btn-danger btn-sm">
+                      <Icon name="Trash2" size={14} />
+                    </button>
+                  </Tooltip>
                 </div>
               </td>
             </tr>

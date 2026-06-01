@@ -1,9 +1,11 @@
 import { useState, useEffect, useMemo } from 'react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { SimpleGroupedBarChart } from '../../ui/SimpleBarChart'
+import Spinner from '../../ui/Spinner'
 import { formatMoney } from '@/utils/format'
 import { getCategoryLabel, getCategoryColor } from './config'
 import type { CostLedgerEntry, CostLedgerCategory } from '@/types'
+import { getAPI } from '@/services/api-adapter'
 
 const FALLBACK_COLORS = ['#f97316','#3b82f6','#8b5cf6','#6b7280','#ec4899','#ef4444','#14b8a6','#a855f7','#9ca3af','#0891b2','#2563eb','#059669']
 
@@ -18,12 +20,14 @@ export function CostLedgerAnalytics({ projectId, projectName, categories }: Cost
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const api = window.electronAPI
-    if (!api?.getCostLedger) return
-    api.getCostLedger(projectId).then((res: any) => {
-      if (res?.success) setEntries(res.data || [])
-      setLoading(false)
-    })
+    ;(async () => {
+      const api = await getAPI()
+      if (!api?.getCostLedger) return
+      api.getCostLedger(projectId).then((res: any) => {
+        if (res?.success) setEntries(res.data || [])
+        setLoading(false)
+      })
+    })()
   }, [projectId])
 
   const stats = useMemo(() => {
@@ -68,11 +72,7 @@ export function CostLedgerAnalytics({ projectId, projectName, categories }: Cost
   }, [entries])
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-10 w-10 border-4 border-slate-200 border-t-blue-600" />
-      </div>
-    )
+    return <Spinner size="md" />
   }
 
   if (entries.length === 0) {

@@ -12,15 +12,11 @@ import { useCostLedgerCategories } from '@/hooks/useCostLedgerCategories'
 import { motion } from 'framer-motion'
 import PageContainer from '../../ui/PageContainer'
 import { Icon } from '../../ui/Icon'
+import { Spinner } from '../../ui/Loading/Loading'
 import { Tabs } from '../../ui/Tabs'
 import { ContractsTab, InvoicesTab, MembersTab, PartnersTab } from './ProjectDetailTabs'
-
-const statusLabels: Record<string, { text: string; color: string; dot: string }> = {
-  planning: { text: '筹备中', color: 'bg-blue-50 text-blue-700', dot: 'bg-blue-500' },
-  in_progress: { text: '进行中', color: 'bg-emerald-50 text-emerald-700', dot: 'bg-emerald-500' },
-  completed: { text: '已完成', color: 'bg-slate-100 text-slate-600', dot: 'bg-slate-400' },
-  archived: { text: '已归档', color: 'bg-amber-50 text-amber-700', dot: 'bg-amber-500' },
-}
+import { StatusBadge, PROJECT_STATUS } from '@/constants/status'
+import { getAPI } from '@/services/api-adapter'
 
 type DetailTab = 'overview' | 'contracts' | 'invoices' | 'members' | 'expenses' | 'partners'
 
@@ -49,17 +45,18 @@ export function ProjectDetail({ project, members, allMembers, onBack, onEdit }: 
   const loadProjectDetail = async () => {
     setLoading(true)
     const pid = project.id
+    const api = await getAPI()
     const results = await Promise.allSettled([
-      window.electronAPI.getInvoices(),               // 0
-      window.electronAPI.getIncomeContracts(pid),      // 1
-      window.electronAPI.getExpenseContracts(pid),     // 2
-      window.electronAPI.getPartners(),                // 3
-      window.electronAPI.getWorkerTeams(),             // 4
-      window.electronAPI.getProjectWorkers(pid),       // 5
-      window.electronAPI.getMaterials(pid),            // 6
-      window.electronAPI.getSettlements(pid),          // 7
-      window.electronAPI.getWagePaymentRecords(),      // 8
-      window.electronAPI.getCostLedger(pid),           // 9
+      api.getInvoices(),               // 0
+      api.getIncomeContracts(pid),      // 1
+      api.getExpenseContracts(pid),     // 2
+      api.getPartners(),                // 3
+      api.getWorkerTeams(),             // 4
+      api.getProjectWorkers(pid),       // 5
+      api.getMaterials(pid),            // 6
+      api.getSettlements(pid),          // 7
+      api.getWagePaymentRecords(),      // 8
+      api.getCostLedger(pid),           // 9
     ])
 
     const res = (i: number) => {
@@ -129,7 +126,6 @@ export function ProjectDetail({ project, members, allMembers, onBack, onEdit }: 
   }, [costLedgerEntries, categories])
   const staffMembers = members.filter(m => m.memberType === 'staff')
   const allStaffMembers = (allMembers || members).filter(m => m.memberType === 'staff')
-  const status = statusLabels[project.status] || { text: project.status, color: 'bg-slate-100 text-slate-600', dot: 'bg-slate-400' }
 
   const tabs = [
     { id: 'overview' as DetailTab, label: '项目总览', icon: 'LayoutDashboard' },
@@ -163,9 +159,7 @@ export function ProjectDetail({ project, members, allMembers, onBack, onEdit }: 
               <div>
                 <div className="flex items-center gap-3">
                   <h1 className="text-2xl font-bold tracking-tight">{project.name}</h1>
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/10">
-                    <span className={`inline-block w-1.5 h-1.5 rounded-full ${status.dot} mr-1`} />{status.text}
-                  </span>
+                  <StatusBadge status={project.status} config={PROJECT_STATUS} />
                 </div>
                 <p className="text-white/50 text-sm mt-1">{project.address || '暂无地址'}<span className="mx-2 opacity-50">·</span>{project.projectManagerName || '暂无负责人'}</p>
               </div>
@@ -187,7 +181,7 @@ export function ProjectDetail({ project, members, allMembers, onBack, onEdit }: 
         >
           {loading ? (
             <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-10 w-10 border-4 border-slate-200 border-t-primary-600" />
+              <Spinner size="lg" />
             </div>
           ) : (
             <>

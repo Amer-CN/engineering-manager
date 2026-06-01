@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { SqliteStatus, ReadMode } from '../types/electron'
+import { getAPI } from '@/services/api-adapter'
 
 interface MigrationResult {
   success: boolean
@@ -27,7 +28,7 @@ export function useSqliteSettings() {
 
   const refreshStatus = useCallback(async () => {
     try {
-      const result = await window.electronAPI.getSqliteStatus()
+      const result = await (await getAPI()).getSqliteStatus()
       setStatus(result)
     } catch {
       setStatus(null)
@@ -41,14 +42,15 @@ export function useSqliteSettings() {
   }, [refreshStatus])
 
   const handleEnable = useCallback(async () => {
-    if (!window.electronAPI?.enableSqlite) {
+    const api = await getAPI()
+    if (!api?.enableSqlite) {
       setMessage({ type: 'error', text: 'SQLite 功能不可用' })
       return
     }
     setEnabling(true)
     setMessage(null)
     try {
-      const result = await window.electronAPI.enableSqlite()
+      const result = await api.enableSqlite()
       if (result.success) {
         setMessage({ type: 'success', text: result.message })
         await refreshStatus()
@@ -63,14 +65,15 @@ export function useSqliteSettings() {
   }, [refreshStatus])
 
   const handleMigrate = useCallback(async (force = false) => {
-    if (!window.electronAPI?.migrateToSqlite) {
+    const api = await getAPI()
+    if (!api?.migrateToSqlite) {
       setMessage({ type: 'error', text: 'SQLite 迁移功能不可用' })
       return
     }
     setMigrating(true)
     setMessage(null)
     try {
-      const result: MigrationResult = await window.electronAPI.migrateToSqlite(force)
+      const result: MigrationResult = await api.migrateToSqlite(force)
       if (result.success) {
         const lines = [
           `迁移完成：${result.migratedTables} 张表，${result.totalRows} 行数据`,
@@ -94,14 +97,15 @@ export function useSqliteSettings() {
   }, [refreshStatus])
 
   const handleSetReadMode = useCallback(async (mode: ReadMode) => {
-    if (!window.electronAPI?.setSqliteReadMode) {
+    const api = await getAPI()
+    if (!api?.setSqliteReadMode) {
       setMessage({ type: 'error', text: '读取模式切换功能不可用' })
       return
     }
     setSwitching(true)
     setMessage(null)
     try {
-      const result = await window.electronAPI.setSqliteReadMode(mode)
+      const result = await api.setSqliteReadMode(mode)
       if (result.success) {
         const modeLabels: Record<ReadMode, string> = {
           'dual': '双写模式',

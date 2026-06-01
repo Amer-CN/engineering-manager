@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
+import { Spinner } from '../../ui/Loading/Loading'
 import {
   WORKER_IMPORT_FIELDS, type ImportState, type ImportProgress, type ImportResult,
 } from './useWorkerImport'
@@ -201,7 +202,7 @@ export function WorkerImportModal({
           {/* Phase: importing */}
           {phase === 'importing' && progress && (
             <div className="flex flex-col items-center justify-center py-12 space-y-4">
-              <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-blue-600" />
+              <Spinner size="lg" />
               <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">正在导入...</h3>
               <div className="w-full max-w-md">
                 <div className="bg-slate-100 dark:bg-slate-700 rounded-full h-3 overflow-hidden">
@@ -319,7 +320,7 @@ export function WorkerImportModal({
               <div>
                 {!showPresetInput ? (
                   <button onClick={() => setShowPresetInput(true)}
-                    className="px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors">
+                    className="btn btn-ghost btn-sm text-primary-600">
                     保存此映射为预设
                   </button>
                 ) : (
@@ -347,7 +348,7 @@ export function WorkerImportModal({
                   </div>
                 )}
               </div>
-              <button onClick={onClose} className="px-6 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg transition-colors">
+              <button onClick={onClose} className="btn btn-secondary">
                 关闭
               </button>
             </>

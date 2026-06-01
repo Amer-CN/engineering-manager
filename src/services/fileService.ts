@@ -5,6 +5,8 @@
  * 自动兼容旧 data URL 格式数据
  */
 
+import { getAPI } from './api-adapter'
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // 分类常量（与后端 electron/file-service.ts 的 FOLDER_MAP 保持一致）
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -52,7 +54,7 @@ export async function uploadFile(
   if (!fileData) return ''
   // 如果是纯 base64（无 data: 前缀），不加处理直接传
   // 如果是 data URL，后端 extractBase64Data 会处理
-  const result = await window.electronAPI.saveFile({
+  const result = await (await getAPI()).saveFile({
     category,
     subCategory,
     fileData,
@@ -130,7 +132,7 @@ export async function readUploadedFile(
   // 向后兼容：如果值是 data URL，直接返回
   if (value.startsWith('data:')) return value
   // 否则按文件名从磁盘读取
-  const result = await window.electronAPI.readFile({
+  const result = await (await getAPI()).readFile({
     category,
     subCategory,
     fileName: value,
@@ -155,7 +157,7 @@ export async function deleteUploadedFile(
   projectName?: string | null,
 ): Promise<void> {
   if (!value || value.startsWith('data:')) return
-  await window.electronAPI.deleteFile({
+  await (await getAPI()).deleteFile({
     category,
     subCategory,
     fileName: value,

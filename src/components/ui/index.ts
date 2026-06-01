@@ -74,3 +74,6 @@ export type { FormFieldProps } from './FormField'
 
 // 页面容器
 export { default as PageContainer } from './PageContainer'
+
+// 筛选栏
+export { default as FilterBar } from './FilterBar'

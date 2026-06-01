@@ -5,9 +5,11 @@
 
 import React, { useState, useEffect } from 'react'
 import { Icon } from './ui/Icon'
+import { Tooltip } from './ui/Tooltip/Tooltip'
 import { useToastStore } from '@/store/toastStore'
 import { useConfirm } from '../hooks/useConfirm'
 import type { SnapshotInfo } from '../types/electron'
+import { getAPI } from '@/services/api-adapter'
 
 const TABLE_LABELS: Record<string, string> = {
   projects: '项目',
@@ -37,9 +39,10 @@ export const SnapshotsTab: React.FC = () => {
   const loadSnapshots = async () => {
     setLoading(true)
     try {
+      const api = await getAPI()
       const [listRes, maxRes] = await Promise.allSettled([
-        window.electronAPI.getSnapshots(),
-        window.electronAPI.getMaxSnapshots(),
+        api.getSnapshots(),
+        api.getMaxSnapshots(),
       ])
       if (listRes.status === 'fulfilled' && listRes.value?.success) setSnapshots(listRes.value.data || [])
       if (maxRes.status === 'fulfilled' && maxRes.value?.success) setMaxCount(maxRes.value.data?.maxCount ?? 200)
@@ -53,7 +56,7 @@ export const SnapshotsTab: React.FC = () => {
   useEffect(() => { loadSnapshots() }, [])
 
   const handleCreate = async () => {
-    const result = await window.electronAPI.createSnapshot('手动备份')
+    const result = await (await getAPI()).createSnapshot('手动备份')
     if (result.success) {
       showToast('备份创建成功', 'success')
       loadSnapshots()
@@ -73,7 +76,7 @@ export const SnapshotsTab: React.FC = () => {
 
     setRestoring(true)
     try {
-      const result = await window.electronAPI.restoreSnapshot(snap.timestamp)
+      const result = await (await getAPI()).restoreSnapshot(snap.timestamp)
       if (result.success) {
         showToast('数据已还原，请刷新页面查看', 'success')
         loadSnapshots()
@@ -94,7 +97,7 @@ export const SnapshotsTab: React.FC = () => {
       confirmVariant: 'danger',
     })
     if (!ok) return
-    const result = await window.electronAPI.deleteSnapshot(snap.timestamp)
+    const result = await (await getAPI()).deleteSnapshot(snap.timestamp)
     if (result.success) {
       showToast('快照已删除', 'success')
       loadSnapshots()
@@ -111,7 +114,7 @@ export const SnapshotsTab: React.FC = () => {
       showToast('请输入 50～1000 之间的数字', 'error')
       return
     }
-    const result = await window.electronAPI.setMaxSnapshots(n)
+    const result = await (await getAPI()).setMaxSnapshots(n)
     if (result.success) {
       setMaxCount(result.data?.maxCount || n)
       showToast(`快照上限已设为 ${result.data?.maxCount || n}`, 'success')
@@ -219,13 +222,14 @@ export const SnapshotsTab: React.FC = () => {
                           {restoring ? '还原中...' : '还原'}
                         </button>
                       )}
-                      <button
-                        onClick={() => handleDelete(snap)}
-                        className="px-2 py-1.5 text-xs text-slate-400 hover:text-red-500 transition-colors"
-                        title="删除快照"
-                      >
-                        <Icon name="Trash2" size={14} />
-                      </button>
+                      <Tooltip content="删除快照" position="top" delay={300}>
+                        <button
+                          onClick={() => handleDelete(snap)}
+                          className="px-2 py-1.5 text-xs text-slate-400 hover:text-red-500 transition-colors"
+                        >
+                          <Icon name="Trash2" size={14} />
+                        </button>
+                      </Tooltip>
                     </div>
                   </td>
                 </tr>

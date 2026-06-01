@@ -3,7 +3,10 @@
  */
 import React, { useState, useEffect, useCallback } from 'react'
 import type { Settlement as SettlementData, Project, Partner } from '../types/electron'
+import PageHeader from './ui/PageHeader'
+import { Spinner } from './ui/Loading/Loading'
 import { SettlementDashboard, SettlementProjectDetail } from './features/settlement'
+import { getAPI } from '@/services/api-adapter'
 
 type ViewMode = 'dashboard' | 'detail'
 
@@ -18,10 +21,11 @@ const Settlement: React.FC<{ refresh?: () => void }> = ({ refresh }) => {
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
+      const api = await getAPI()
       const [settlementsResult, projectsResult, partnersResult] = await Promise.allSettled([
-        window.electronAPI.getSettlements(),
-        window.electronAPI.getProjects(),
-        window.electronAPI.getPartners(),
+        api.getSettlements(),
+        api.getProjects(),
+        api.getPartners(),
       ])
       const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
       setSettlements(get(settlementsResult))
@@ -50,7 +54,7 @@ const Settlement: React.FC<{ refresh?: () => void }> = ({ refresh }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-500 border-t-transparent" />
+        <Spinner size="lg" />
       </div>
     )
   }
@@ -72,12 +76,7 @@ const Settlement: React.FC<{ refresh?: () => void }> = ({ refresh }) => {
   // 看板首页
   return (
     <div className="p-6 max-w-[1400px] mx-auto">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">结算办理</h1>
-          <p className="text-slate-500 mt-1">管理工程结算单据</p>
-        </div>
-      </div>
+      <PageHeader title="结算办理" subtitle="管理工程结算单据" />
       <SettlementDashboard
         settlements={settlements}
         projects={projects}

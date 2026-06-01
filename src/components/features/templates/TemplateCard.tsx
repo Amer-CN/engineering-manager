@@ -2,6 +2,7 @@ import React from 'react'
 import { Template } from '../../../types/electron'
 import { categoryConfig } from './config'
 import { Icon } from '../../ui/Icon'
+import { Tooltip } from '../../ui/Tooltip/Tooltip'
 
 interface TemplateCardProps {
   template: Template
@@ -55,19 +56,23 @@ export const TemplateCard = React.memo(function TemplateCard({ template, onEdit,
 
       {/* Actions */}
       <div className="flex items-center gap-1 pt-3 border-t border-slate-100">
-        <button onClick={() => onPreview(template)} className="btn btn-secondary btn-sm" title="预览">
+        <button onClick={() => onPreview(template)} className="btn btn-secondary btn-sm">
           <Icon name="Eye" size={14} /> 预览
         </button>
-        <button onClick={() => onGenerate(template)} className="btn btn-ghost btn-sm text-primary-600" title="生成文档">
+        <button onClick={() => onGenerate(template)} className="btn btn-ghost btn-sm text-primary-600">
           <Icon name="FileText" size={14} /> 生成
         </button>
         <div className="flex-1" />
-        <button onClick={() => onEdit(template)} className="btn btn-ghost btn-sm text-slate-500" title="编辑">
-          <Icon name="Edit3" size={14} />
-        </button>
-        <button onClick={() => { if (confirm('确定删除此模板？')) onDelete(template.id) }} className="btn btn-danger btn-sm" title="删除">
-          <Icon name="Trash2" size={14} />
-        </button>
+        <Tooltip content="编辑" position="top" delay={300}>
+          <button onClick={() => onEdit(template)} className="btn btn-ghost btn-sm text-slate-500">
+            <Icon name="Edit3" size={14} />
+          </button>
+        </Tooltip>
+        <Tooltip content="删除" position="top" delay={300}>
+          <button onClick={() => { if (confirm('确定删除此模板？')) onDelete(template.id) }} className="btn btn-danger btn-sm">
+            <Icon name="Trash2" size={14} />
+          </button>
+        </Tooltip>
       </div>
     </div>
   )

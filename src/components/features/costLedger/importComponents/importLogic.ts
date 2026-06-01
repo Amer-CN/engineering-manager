@@ -4,6 +4,7 @@
  */
 import type { CostLedgerMatchRule } from '@/types'
 import { logCreate } from '@/utils/audit'
+import { getAPI } from '@/services/api-adapter'
 
 interface ParsedRow {
   date: string; voucherNo: string; summary: string; counterparty: string
@@ -39,7 +40,7 @@ export function buildImportEntries(rows: ParsedRow[]) {
 export async function learnFromOverrides(
   parseAllRows: () => ParsedRow[],
 ): Promise<{ count: number; merged?: CostLedgerMatchRule[] }> {
-  const api = window.electronAPI
+  const api = await getAPI()
   if (!api?.getCostLedgerMatchRules || !api?.saveCostLedgerMatchRules) return { count: 0 }
 
   const rows = parseAllRows()
@@ -95,7 +96,7 @@ export async function executeBatchImport(
   entries: ReturnType<typeof buildImportEntries>,
   selectedBatch: number,
 ): Promise<{ success: boolean; count?: number; error?: string }> {
-  const api = window.electronAPI
+  const api = await getAPI()
   if (!api) return { success: false, error: 'API not available' }
 
   try {

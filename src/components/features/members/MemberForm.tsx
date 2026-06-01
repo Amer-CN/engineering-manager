@@ -1,9 +1,10 @@
 ﻿// MemberForm 组件
 
 import React, { useState, useEffect, useRef } from 'react'
-import { recognizeIdCard, getOCRConfig, OCRProvider } from '@/services/ocr'
 import { readUploadedFile, FILE_CATEGORIES } from '../../../services/fileService'
 import { useToastStore } from '@/store/toastStore'
+import { useConfirm } from '@/hooks/useConfirm'
+import { useIdCardOCR } from '@/hooks/useIdCardOCR'
 import StaffForm from './StaffForm'
 import WorkerForm from './WorkerForm'
 import {
@@ -35,11 +36,18 @@ export function MemberForm({
   // ============ 状态定义 ============
   const [staffFormData, setStaffFormData] = useState<StaffFormData>(defaultStaffFormData)
   const [workerFormData, setWorkerFormData] = useState<WorkerFormData>(defaultWorkerFormData)
-  const [ocrLoading, setOcrLoading] = useState(false)
-  const [ocrMode, setOcrMode] = useState<OCRProvider>('offline')
   const [dragOverField, setDragOverField] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const showToast = useToastStore(state => state.showToast)
+  const { confirm, ConfirmDialog } = useConfirm()
+
+  // 使用 useIdCardOCR Hook
+  const [ocrResult, setOcrResult] = useState<any>(null)
+  const { loading: ocrLoading, ocrMode, processIdCardFile: hookProcessIdCardFile, processUploadFile: hookProcessUploadFile } = useIdCardOCR({
+    onOCRResult: (result) => {
+      setOcrResult(result)
+    }
+  })
 
   // 文件上传 Refs
   const staffFrontInputRef = useRef<HTMLInputElement>(null)
@@ -54,8 +62,6 @@ export function MemberForm({
 
   // ============ 初始化 ============
   useEffect(() => {
-    const config = getOCRConfig()
-    setOcrMode(config.provider)
   }, [])
 
   // 初始化表单数据
@@ -125,54 +131,28 @@ export function MemberForm({
     field: 'idCardFront' | 'idCardBack',
     setter: React.Dispatch<React.SetStateAction<StaffFormData | WorkerFormData>>
   ) => {
-    const base64 = await readFileAsBase64(file)
-    
     // 先更新图片预览
+    const base64 = await readFileAsBase64(file)
     setter((prev: any) => ({ ...prev, [field]: base64 }))
     onFileModified?.(field)
 
     // 人像面触发OCR识别
     if (field === 'idCardFront') {
-      setOcrLoading(true)
-      try {
-        const result = await recognizeIdCard(base64)
-
-        if (result.success && result.idCard) {
-          const { number, gender, birthDate, name, ethnicity, address } = result.idCard
-          
-          setter((prev: any) => ({
-            ...prev,
-            [field]: base64,
-            name: name || prev.name,
-            idCard: number || prev.idCard,
-            gender: gender || prev.gender,
-            birthDate: birthDate || prev.birthDate,
-            ethnicity: ethnicity || prev.ethnicity,
-            idCardAddress: address || prev.idCardAddress
-          }))
-
-          // 根据识别结果显示提示
-          if (result.error) {
-            showToast(`身份证识别成功！${result.error}`, 'success')
-          } else {
-            const filledFields = []
-            if (name) filledFields.push('姓名')
-            if (number) filledFields.push('身份证号')
-            if (gender) filledFields.push('性别')
-            if (birthDate) filledFields.push('出生日期')
-            if (ethnicity) filledFields.push('民族')
-            if (address) filledFields.push('地址')
-            showToast(`识别成功！已自动填充${filledFields.join('、')}`, 'success')
-          }
-        } else {
-          showToast(`未能识别到身份证号（${ocrMode === 'baidu' ? '百度OCR' : '离线OCR'}）`, 'error')
-        }
-      } catch (error: any) {
-        const errMsg = error?.message || error?.toString() || '未知错误'
-        console.error('[OCR] 识别异常:', error)
-        showToast('OCR识别失败: ' + errMsg.substring(0, 50), 'error')
-      } finally {
-        setOcrLoading(false)
+      // 使用 useIdCardOCR Hook 的 processIdCardFile
+      const result = await hookProcessIdCardFile(file)
+      if (result && ocrResult) {
+        // 使用 OCR 结果更新表单
+        setter((prev: any) => ({
+          ...prev,
+          [field]: result,
+          name: ocrResult.name || prev.name,
+          idCard: ocrResult.idCard || prev.idCard,
+          gender: ocrResult.gender || prev.gender,
+          birthDate: ocrResult.birthDate || prev.birthDate,
+          ethnicity: ocrResult.ethnicity || prev.ethnicity,
+          idCardAddress: ocrResult.address || prev.idCardAddress
+        }))
+        setOcrResult(null) // 清除结果
       }
     }
   }
@@ -200,11 +180,12 @@ export function MemberForm({
   }
 
   // ============ 文件删除 ============
-  const handleDeleteFile = (
+  const handleDeleteFile = async (
     field: string,
     setter: React.Dispatch<React.SetStateAction<StaffFormData | WorkerFormData>>
   ) => {
-    if (confirm('确定要删除这个文件吗？')) {
+    const ok = await confirm({ title: '确认删除', content: '确定要删除这个文件吗？', confirmVariant: 'danger' })
+    if (ok) {
       if (field === 'contractFile') {
         setter((prev: any) => ({ ...prev, contractFile: '', contractFileType: '' }))
       } else {
@@ -319,6 +300,8 @@ export function MemberForm({
   if (!visible) return null
 
   return (
+    <>
+    {ConfirmDialog}
     <MemberFormLayout type={type} editingMember={editingMember} ocrMode={ocrMode}
       ocrLoading={ocrLoading} submitting={submitting} onClose={onClose} onSubmit={handleSubmit}>
       {type === 'staff' ? (
@@ -338,6 +321,7 @@ export function MemberForm({
           refs={{ frontInputRef: workerFrontInputRef, backInputRef: workerBackInputRef, contractInputRef: workerContractInputRef, safetyInputRef, healthInputRef, certInputRef }} />
       )}
     </MemberFormLayout>
+    </>
   )
 }
 

@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import { getAPI } from './services/api-adapter'
 import Sidebar from './components/Sidebar'
 import TitleBar from './components/TitleBar'
 import StatusBar from './components/StatusBar'
+import { useStatusStore } from './store/statusStore'
 import { NAV_ITEMS, PAGE_IDS, getFilteredSidebarRoutes } from './routes'
 import { RequirePermission, RequireAdmin } from './hooks/usePermission'
 import { useAuth } from './hooks/useAuth'
@@ -28,11 +30,40 @@ const Settings = lazy(() => import('./components/Settings'))
 const Users = lazy(() => import('./components/Users'))
 import LockScreen from './components/LockScreen'
 const Login = lazy(() => import('./components/Login'))
+const SplashScreen = lazy(() => import('./components/SplashScreen'))
 
-// 加载占位
+// 加载占位 — 品牌化动画
 const PageLoader = () => (
-  <div className="flex items-center justify-center h-full">
-    <div className="animate-spin rounded-full h-10 w-10 border-4 border-primary-500 border-t-transparent"></div>
+  <div className="flex flex-col items-center justify-center gap-4" style={{ background: 'var(--bg)', minHeight: '100vh' }}>
+    <motion.div
+      animate={{
+        scale: [1, 1.08, 1],
+        opacity: [0.5, 1, 0.5],
+      }}
+      transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+    >
+      <svg width="40" height="40" viewBox="0 0 18 18" fill="none">
+        <defs>
+          <linearGradient id="loader-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="var(--accent)" />
+            <stop offset="100%" stopColor="var(--accent)" stopOpacity="0.6" />
+          </linearGradient>
+        </defs>
+        <path d="M2 15.5 L9 2.5 L16 15.5 Z" fill="url(#loader-grad)" />
+        <path d="M5 14 L9 6 L13 14 Z" fill="var(--bg)" />
+      </svg>
+    </motion.div>
+    <div className="flex gap-1.5">
+      {[0, 1, 2].map((i) => (
+        <motion.div
+          key={i}
+          animate={{ scale: [1, 1.3, 1], opacity: [0.3, 1, 0.3] }}
+          transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
+          className="w-1.5 h-1.5 rounded-full"
+          style={{ background: 'var(--accent)' }}
+        />
+      ))}
+    </div>
   </div>
 )
 
@@ -43,10 +74,13 @@ const AppContent: React.FC = () => {
   useTheme() // 启动时从 localStorage 读取并设置 data-theme
   useRowHoverOpacity() // 初始化表格行悬停 CSS 变量
 
+  // 启动动画状态
+  const [showSplash, setShowSplash] = useState(true)
+
   // 登录成功后放大窗口
   useEffect(() => {
     if (isAuthenticated) {
-      (window as any).electronAPI?.resizeForApp?.()
+      getAPI().then(api => api?.resizeForApp?.()).catch(() => {})
     }
   }, [isAuthenticated])
 
@@ -60,22 +94,32 @@ const AppContent: React.FC = () => {
 
   const refresh = () => setRefreshTrigger(prev => prev + 1)
 
+  // 同步当前页面名到状态栏
+  const setPageName = useStatusStore(s => s.setPageName)
+  useEffect(() => {
+    setPageName(currentPage)
+  }, [currentPage, setPageName])
+
   // 持久化侧边栏折叠状态
   useEffect(() => {
     localStorage.setItem('sidebar-collapsed', String(!sidebarOpen))
   }, [sidebarOpen])
 
-  // Ctrl+B 快捷键折叠/展开侧边栏
+  // 快捷键：Ctrl+B 折叠侧边栏，Ctrl+L 锁屏
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === 'b') {
         e.preventDefault()
         setSidebarOpen(v => !v)
       }
+      if (e.ctrlKey && e.key === 'l') {
+        e.preventDefault()
+        lock()
+      }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [])
+  }, [lock])
 
   const navItems = useMemo(() => {
     if (!currentUser?.permissions || currentUser.permissions.length === 0) return NAV_ITEMS
@@ -113,6 +157,15 @@ const AppContent: React.FC = () => {
       case 'settings': return <RequirePermission permission="settings:read"><Settings /></RequirePermission>
       default: return <Dashboard />
     }
+  }
+
+  // 启动动画
+  if (showSplash) {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <SplashScreen onComplete={() => setShowSplash(false)} />
+      </Suspense>
+    )
   }
 
   if (!isAuthenticated) {

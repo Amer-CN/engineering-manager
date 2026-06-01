@@ -1,9 +1,11 @@
 import React, { useRef } from 'react'
 import { Settlement as SettlementData, Project, Partner } from '../../../types/electron'
 import { Icon } from '../../ui/Icon'
+import { Input } from '../../ui/Input/Input'
 import { subTypeConfig } from './config'
 import { SettlementItemsTable } from './SettlementItemsTable'
 import { SettlementImportModal } from './SettlementImportModal'
+import { getAPI } from '@/services/api-adapter'
 
 interface SettlementFormProps {
   settlement?: SettlementData | null
@@ -106,10 +108,11 @@ export const SettlementForm: React.FC<SettlementFormProps> = ({
 
   const downloadTemplate = async () => {
     try {
-      const result = await window.electronAPI.getTemplates('settlement')
+      const api = await getAPI()
+      const result = await api.getTemplates('settlement')
       if (result.success && result.data && result.data.length > 0) {
         const tmpl = result.data[0]
-        const fileResult = await window.electronAPI.readFile({ category: 'templates', subCategory: 'files', fileName: tmpl.storedFileName, projectName: null })
+        const fileResult = await api.readFile({ category: 'templates', subCategory: 'files', fileName: tmpl.storedFileName, projectName: null })
         if (fileResult.success && fileResult.data) {
           const a = document.createElement('a'); a.href = fileResult.data.dataUrl; a.download = tmpl.fileName; a.click(); return
         }
@@ -194,15 +197,7 @@ export const SettlementForm: React.FC<SettlementFormProps> = ({
           </select>
         </div>
         <div>
-          <label className="label">结算名称 *</label>
-          <input
-            type="text"
-            value={formData.name}
-            onChange={e => setFormData({ ...formData, name: e.target.value })}
-            className="input"
-            placeholder="如：2024年3月工程进度款"
-            required
-          />
+          <Input label="结算名称" type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} size="sm" placeholder="如：2024年3月工程进度款" required />
         </div>
         <div>
           <label className="label">关联项目 *</label>
@@ -233,13 +228,7 @@ export const SettlementForm: React.FC<SettlementFormProps> = ({
           </select>
         </div>
         <div>
-          <label className="label">结算日期</label>
-          <input
-            type="date"
-            value={formData.settlementDate}
-            onChange={e => setFormData({ ...formData, settlementDate: e.target.value })}
-            className="input"
-          />
+          <Input label="结算日期" type="date" value={formData.settlementDate} onChange={e => setFormData({ ...formData, settlementDate: e.target.value })} size="sm" />
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Settlement as SettlementData, Project } from '../../../types/electron'
 import { SettlementProjectCard, type SettlementProjectSummary } from './SettlementProjectCard'
+import { EmptyState } from '../../ui/EmptyState'
 import { formatMoney } from '../../../utils/format'
 
 interface SettlementDashboardProps {
@@ -109,8 +110,8 @@ export default function SettlementDashboard({ settlements, projects, onProjectCl
         </div>
 
         {projectSettlementMap.length === 0 ? (
-          <div className="text-center py-16 text-slate-400 bg-white rounded-2xl border border-slate-200">
-            <p className="text-lg">暂无项目数据</p>
+          <div className="bg-white rounded-2xl border border-slate-200">
+            <EmptyState icon="FolderOpen" title="暂无项目数据" />
           </div>
         ) : (
           <div className="flex flex-col gap-2">

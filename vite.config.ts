@@ -1,7 +1,5 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import electron from 'vite-plugin-electron'
-import renderer from 'vite-plugin-electron-renderer'
 import path from 'path'
 import fs from 'fs'
 
@@ -34,38 +32,6 @@ function removeChartsPreloadPlugin() {
 export default defineConfig({
   plugins: [
     react(),
-    electron([
-      {
-        entry: 'electron/main.ts',
-        onstart(options) {
-          delete process.env.NODE_OPTIONS
-          options.startup()
-        },
-        vite: {
-          build: {
-            outDir: 'dist-electron',
-            rollupOptions: {
-              external: ['electron', 'better-sqlite3']
-            }
-          }
-        }
-      },
-      {
-        entry: 'electron/preload.ts',
-        onstart(options) {
-          options.reload()
-        },
-        vite: {
-          build: {
-            outDir: 'dist-electron',
-            rollupOptions: {
-              external: ['electron']
-            }
-          }
-        }
-      }
-    ]),
-    renderer(),
     removeChartsPreloadPlugin(),
   ],
   resolve: {
@@ -73,9 +39,18 @@ export default defineConfig({
       '@': path.resolve(__dirname, 'src')
     }
   },
+  // Tauri 开发服务器配置
+  server: {
+    port: 5173,
+    strictPort: true,
+  },
+  // Tauri 需要相对路径
+  base: './',
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    // Tauri 支持的目标
+    target: 'esnext',
     rollupOptions: {
       output: {
         manualChunks(id) {
@@ -119,10 +94,9 @@ export default defineConfig({
         'src/types/permissions.ts',
         'src/store/**',
         'src/components/features/**',
-        'electron/sqlite/queries/**',
       ],
     },
-    exclude: ['node_modules/**', 'dist/**', 'dist-electron/**', 'electron/ipc-handlers/**', 'electron/sqlite/db-init.ts', 'electron/sqlite/migrate.ts', 'electron/sqlite/index.ts'],
+    exclude: ['node_modules/**', 'dist/**', 'src-tauri/**'],
     server: {
       deps: {
         inline: ['@testing-library/user-event']

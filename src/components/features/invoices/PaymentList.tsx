@@ -6,6 +6,7 @@ import React from 'react'
 import { PaymentRecord } from '@/types/electron'
 import { formatMoney } from '@/utils/format'
 import { Icon } from '../../ui/Icon'
+import { Tooltip } from '../../ui/Tooltip/Tooltip'
 
 interface PaymentListProps {
   records: PaymentRecord[]
@@ -100,44 +101,48 @@ export const PaymentList: React.FC<PaymentListProps> = ({
               <td className="px-3 py-3 text-center">
                 <div className="flex items-center justify-center gap-1">
                   {record.fileUrl && (
+                    <Tooltip content="预览凭证" position="top" delay={300}>
+                      <button
+                        onClick={() => onPreview(record.fileUrl!, record.fileType === 'pdf' ? 'pdf' : 'image', `${record.recordDate} - ${record.type === 'invoice_out' ? '回款' : '付款'}凭证`, 'payments', record.type === 'invoice_out' ? 'payment_in' : 'payment_out', record.projectName, record.projectId ?? undefined)}
+                        className="p-1.5 text-slate-500 dark:text-slate-400 hover:bg-slate-100 rounded transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      </button>
+                    </Tooltip>
+                  )}
+                  <Tooltip content="打印凭证" position="top" delay={300}>
                     <button
-                      onClick={() => onPreview(record.fileUrl!, record.fileType === 'pdf' ? 'pdf' : 'image', `${record.recordDate} - ${record.type === 'invoice_out' ? '回款' : '付款'}凭证`, 'payments', record.type === 'invoice_out' ? 'payment_in' : 'payment_out', record.projectName, record.projectId ?? undefined)}
+                      onClick={() => onPrint(record)}
                       className="p-1.5 text-slate-500 dark:text-slate-400 hover:bg-slate-100 rounded transition-colors"
-                      title="预览凭证"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                       </svg>
                     </button>
-                  )}
-                  <button
-                    onClick={() => onPrint(record)}
-                    className="p-1.5 text-slate-500 dark:text-slate-400 hover:bg-slate-100 rounded transition-colors"
-                    title="打印凭证"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() => onEdit(record)}
-                    className="btn btn-ghost btn-sm"
-                    title="编辑"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() => onDelete(record.id)}
-                    className="btn btn-danger btn-sm"
-                    title="删除"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
+                  </Tooltip>
+                  <Tooltip content="编辑" position="top" delay={300}>
+                    <button
+                      onClick={() => onEdit(record)}
+                      className="btn btn-ghost btn-sm"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                  </Tooltip>
+                  <Tooltip content="删除" position="top" delay={300}>
+                    <button
+                      onClick={() => onDelete(record.id)}
+                      className="btn btn-danger btn-sm"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </Tooltip>
                 </div>
               </td>
             </tr>

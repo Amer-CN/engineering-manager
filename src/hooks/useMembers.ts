@@ -7,6 +7,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import type { Member, MemberType, WorkerType, WorkerStatus } from '@/types'
 import { handleError, Result, VoidResult } from '@/types'
+import { getAPI } from '@/services/api-adapter'
 
 // Types
 
@@ -82,7 +83,7 @@ export function useMembers(filters?: MemberFilters): UseMembersReturn {
     setError(null)
     
     try {
-      const result = await window.electronAPI.getMembers()
+      const result = await (await getAPI()).getMembers()
       
       if (result.success && result.data) {
         // 应用筛选条件
@@ -136,7 +137,7 @@ export function useMembers(filters?: MemberFilters): UseMembersReturn {
     setError(null)
     
     try {
-      const result = await window.electronAPI.createMember(data as Member)
+      const result = await (await getAPI()).createMember(data as Member)
       
       if (result.success) {
         await loadMembers()
@@ -158,7 +159,7 @@ export function useMembers(filters?: MemberFilters): UseMembersReturn {
     setError(null)
     
     try {
-      const result = await window.electronAPI.updateMember(member)
+      const result = await (await getAPI()).updateMember(member)
       
       if (result.success) {
         await loadMembers()
@@ -183,7 +184,7 @@ export function useMembers(filters?: MemberFilters): UseMembersReturn {
     setError(null)
     
     try {
-      const result = await window.electronAPI.deleteMember(id)
+      const result = await (await getAPI()).deleteMember(id)
       
       if (result.success) {
         setMembers(prev => prev.filter(m => m.id !== id))

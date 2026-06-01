@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
+import { Spinner } from '../../ui/Loading/Loading'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
+import { getAPI } from '@/services/api-adapter'
 
 interface DashboardData {
   totalStaff: number
@@ -28,11 +30,12 @@ const HRDashboard: React.FC = () => {
   useEffect(() => {
     (async () => {
       try {
+        const api = await getAPI()
         const [deptRes, memberRes, wageRes, attRes] = await Promise.allSettled([
-          window.electronAPI.getDepartments(),
-          window.electronAPI.getMembers(),
-          window.electronAPI.getWages(undefined, `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`),
-          window.electronAPI.getAttendances(undefined, `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`)
+          api.getDepartments(),
+          api.getMembers(),
+          api.getWages(undefined, `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`),
+          api.getAttendances(undefined, `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`)
         ])
         const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
         const deptList = get(deptRes)
@@ -86,7 +89,7 @@ const HRDashboard: React.FC = () => {
   }, [])
 
   if (loading) {
-    return <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-4 border-indigo-500 border-t-transparent" /></div>
+    return <div className="flex justify-center py-12"><Spinner size="md" /></div>
   }
 
   const payrollDiff = data.monthlyPayroll - data.monthlyPayrollEstimated

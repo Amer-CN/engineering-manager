@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Tooltip } from '@/components/ui/Tooltip/Tooltip'
 import type { CostLedgerBatch } from '@/types'
 
 interface Props {
@@ -64,10 +65,12 @@ export function CostLedgerBatchBar({ batches, currentBatchId, onChangeBatch, onC
                 <option key={b.id} value={b.id}>{b.name}</option>
               ))}
             </select>
-            <button onClick={() => { const cur = batches.find(b => b.id === currentBatchId); setRenameValue(cur?.name || ''); setRenaming(true) }}
-              className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded" title="重命名版本">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-            </button>
+            <Tooltip content="重命名版本" position="top" delay={300}>
+              <button onClick={() => { const cur = batches.find(b => b.id === currentBatchId); setRenameValue(cur?.name || ''); setRenaming(true) }}
+                className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+              </button>
+            </Tooltip>
           </div>
         )}
       </div>
@@ -109,7 +112,6 @@ export function CostLedgerBatchBar({ batches, currentBatchId, onChangeBatch, onC
         if (newBatch) onChangeBatch(newBatch.id)
       }}
         className="px-3 py-1 text-xs border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50"
-        title="复制当前版本数据到新版本"
       >复制版本</button>
 
       {/* Delete version (初始版不能删) */}
@@ -125,12 +127,13 @@ export function CostLedgerBatchBar({ batches, currentBatchId, onChangeBatch, onC
               <button onClick={() => setConfirmDelete(null)} className="btn btn-secondary btn-sm">取消</button>
             </div>
           ) : (
-            <button onClick={() => setConfirmDelete(currentBatchId)}
-              className="btn btn-ghost btn-sm text-red-500 hover:text-red-700"
-              title="删除此版本及数据"
-            >
-              <svg className="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-            </button>
+            <Tooltip content="删除此版本及数据" position="top" delay={300}>
+              <button onClick={() => setConfirmDelete(currentBatchId)}
+                className="btn btn-ghost btn-sm text-red-500 hover:text-red-700"
+              >
+                <svg className="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+              </button>
+            </Tooltip>
           )}
         </>
       )}

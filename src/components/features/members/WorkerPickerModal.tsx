@@ -4,6 +4,7 @@ import { Icon } from '../../ui/Icon'
 import type { Worker, ProjectWorker, WorkerTeam } from '@/types'
 import { workerTypes, workerTypeToCode } from './memberFormTypes'
 import { WorkerPickerItem } from './WorkerPickerItem'
+import { getAPI } from '@/services/api-adapter'
 
 interface Props {
   show: boolean
@@ -39,7 +40,7 @@ export function WorkerPickerModal({ show, projectId, workerTeams, existingWorker
   useEffect(() => {
     if (!show) return
     setLoading(true)
-    window.electronAPI.getWorkers()
+    getAPI().then(api => api.getWorkers())
       .then(res => { if (res.success && res.data) setWorkers(res.data as any) })
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -107,20 +108,20 @@ export function WorkerPickerModal({ show, projectId, workerTeams, existingWorker
     })
   }, [])
 
-  const handleConfirm = useCallback(() => {
+  const handleConfirm = useCallback(async () => {
     const entries: Partial<ProjectWorker>[] = []
     for (const [, entry] of selected) {
       entries.push({
         workerId: entry.worker.id,
         projectId,
-        teamId: entry.teamId || undefined,
+        teamId: entry.teamId ?? undefined,
         dailyWage: entry.dailyWage,
         workerType: entry.workerType,
         entryDate: new Date().toISOString().split('T')[0],
         status: 'active' as const
       })
     }
-    onConfirm(entries)
+    await onConfirm(entries)
     onClose()
   }, [selected, projectId, onConfirm, onClose])
 

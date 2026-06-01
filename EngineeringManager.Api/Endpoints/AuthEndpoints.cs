@@ -1,0 +1,127 @@
+using System.Data;
+using Dapper;
+
+namespace EngineeringManager.Api;
+
+/// <summary>
+/// 认证 + 角色 + 用户管理端点
+/// </summary>
+public static class AuthEndpoints
+{
+    public static void RegisterAuthEndpoints(this WebApplication app)
+    {
+        var now = () => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
+        // ═══════════════════════════════════════════════════════════
+        // 认证
+        // ═══════════════════════════════════════════════════════════
+
+        app.MapPost("/api/auth/login", (LoginDto dto, IDbConnection db) =>
+        {
+            var user = db.QueryFirstOrDefault(@"
+                SELECT id, username, password_hash, password_salt, password_hash_version,
+                       display_name, role_id, status
+                FROM users WHERE username = @Username",
+                new { Username = dto.Username });
+
+            if (user == null) return Common.Fail("用户名或密码错误");
+
+            // 验证密码
+            var salt = (string)user.password_salt;
+            var version = (int)(user.password_hash_version ?? 1);
+            var computedHash = Common.HashPassword(dto.Password, salt, version);
+
+            if (computedHash != (string)user.password_hash)
+                return Common.Fail("用户名或密码错误");
+
+            // 获取角色信息
+            var role = db.QueryFirstOrDefault(
+                "SELECT id, name, permissions FROM roles WHERE id = @Id",
+                new { Id = (string)user.role_id });
+
+            return Common.Ok(new
+            {
+                userId = user.id,
+                username = user.username,
+                displayName = user.display_name,
+                roleId = user.role_id,
+                roleName = role?.name ?? user.role_id,
+                permissions = role?.permissions ?? "[]"
+            });
+        });
+
+        // ═══════════════════════════════════════════════════════════
+        // 角色
+        // ═══════════════════════════════════════════════════════════
+
+        app.MapGet("/api/roles", (IDbConnection db) =>
+            Common.Ok(db.Query("SELECT id, name, permissions FROM roles ORDER BY id")));
+
+        app.MapGet("/api/roles/{id}", (string id, IDbConnection db) =>
+        {
+            var r = db.QueryFirstOrDefault("SELECT id, name, permissions FROM roles WHERE id=@Id", new { Id = id });
+            return r is not null ? Common.Ok(r) : Common.Fail("角色不存在");
+        });
+
+        app.MapPut("/api/roles", async (RoleUpdateDto dto, IDbConnection db) =>
+        {
+            var affected = await db.ExecuteAsync("UPDATE roles SET permissions=@Permissions WHERE id=@Id",
+                new { Id = dto.RoleId, Permissions = dto.Permissions });
+            return affected > 0 ? Common.Ok() : Common.Fail("角色不存在");
+        });
+
+        app.MapPost("/api/roles/{id}/reset", (string id, IDbConnection db) =>
+        {
+            var defaults = Common.GetDefaultPermissions(id);
+            if (defaults.Count == 0) return Common.Fail("无默认权限");
+            db.Execute("UPDATE roles SET permissions=@Permissions WHERE id=@Id",
+                new { Id = id, Permissions = System.Text.Json.JsonSerializer.Serialize(defaults) });
+            return Common.Ok(defaults);
+        });
+
+        // ═══════════════════════════════════════════════════════════
+        // 用户管理
+        // ═══════════════════════════════════════════════════════════
+
+        app.MapGet("/api/users", (IDbConnection db) =>
+            Common.Ok(db.Query("SELECT id, username, display_name, role_id, status, created_at FROM users ORDER BY created_at DESC")));
+
+        app.MapGet("/api/users/{id}", (string id, IDbConnection db) =>
+        {
+            var u = db.QueryFirstOrDefault("SELECT id, username, display_name, role_id, status, created_at FROM users WHERE id=@Id", new { Id = id });
+            return u is not null ? Common.Ok(u) : Common.Fail("用户不存在");
+        });
+
+        app.MapPost("/api/users", async (UserDto dto, IDbConnection db) =>
+        {
+            var salt = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16)).ToLower();
+            var hash = Common.HashPassword(dto.Password ?? "", salt, 2);
+            var id = dto.Id ?? $"user-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
+            await db.ExecuteAsync(@"INSERT INTO users (id,username,password_hash,password_salt,password_hash_version,display_name,role_id,status,created_at)
+                VALUES (@Id,@Username,@Hash,@Salt,2,@DisplayName,@RoleId,'active',@Now)",
+                new { Id = id, Username = dto.Username, Hash = hash, Salt = salt, DisplayName = dto.DisplayName ?? "", RoleId = dto.RoleId ?? "worker", Now = now() });
+            return Common.Ok(new { id });
+        });
+
+        app.MapPut("/api/users", async (UserDto dto, IDbConnection db) =>
+        {
+            if (string.IsNullOrEmpty(dto.Password))
+            {
+                var affected = await db.ExecuteAsync(@"UPDATE users SET display_name=@DisplayName,role_id=@RoleId,status=@Status WHERE id=@Id",
+                    new { dto.Id, dto.DisplayName, dto.RoleId, dto.Status });
+                return affected > 0 ? Common.Ok() : Common.Fail("用户不存在");
+            }
+            else
+            {
+                var salt = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16)).ToLower();
+                var hash = Common.HashPassword(dto.Password ?? "", salt, 2);
+                var affected = await db.ExecuteAsync(@"UPDATE users SET password_hash=@Hash,password_salt=@Salt,display_name=@DisplayName,role_id=@RoleId,status=@Status WHERE id=@Id",
+                    new { dto.Id, Hash = hash, Salt = salt, dto.DisplayName, dto.RoleId, dto.Status });
+                return affected > 0 ? Common.Ok() : Common.Fail("用户不存在");
+            }
+        });
+
+        app.MapDelete("/api/users/{id}", async (string id, IDbConnection db) =>
+            (await db.ExecuteAsync("DELETE FROM users WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.Fail("用户不存在"));
+    }
+}

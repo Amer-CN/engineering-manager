@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { readUploadedFile, FILE_CATEGORIES } from '@/services/fileService'
+import { getAPI } from '@/services/api-adapter'
 
 interface FileUploaderProps {
   files: string[]
@@ -40,7 +41,7 @@ export function FileUploader({ files, onChange, projectName }: FileUploaderProps
       } catch { /* ignore read errors */ }
     } else {
       // 非图片文件用系统默认程序打开
-      const api = window.electronAPI
+      const api = await getAPI()
       if (api?.openExternalFile) {
         api.openExternalFile({
           category: FILE_CATEGORIES.COST_LEDGER_FILE.category,

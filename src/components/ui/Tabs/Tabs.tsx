@@ -17,6 +17,7 @@ export interface TabsProps {
   children?: ReactNode
   animated?: boolean
   className?: string
+  contentClassName?: string
   size?: 'sm' | 'md' | 'lg'
   fullWidth?: boolean
 }
@@ -82,14 +83,17 @@ export function Tabs({
   children,
   animated = true,
   className = '',
+  contentClassName = '',
   size = 'md',
   fullWidth = false,
 }: TabsProps) {
+  const hasFlexLayout = contentClassName?.includes('flex')
+
   return (
     <div className={`${fullWidth ? 'w-full' : ''} ${className}`}>
-      {/* Tab 按钮容器 */}
+      {/* Tab 按钮容器 - 固定高度 */}
       <div
-        className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-1 w-fit"
+        className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-1 w-fit shrink-0"
         role="tablist"
         aria-orientation="horizontal"
       >
@@ -105,9 +109,9 @@ export function Tabs({
         ))}
       </div>
 
-      {/* 内容区域 */}
+      {/* 内容区域 - 填满剩余空间 */}
       {children && (
-        <div className="mt-4">
+        <div className={`mt-4 flex-1 min-h-0 ${contentClassName}`}>
           {animated ? (
             <AnimatePresence mode="wait">
               <motion.div
@@ -116,6 +120,7 @@ export function Tabs({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.15, ease: 'easeOut' }}
+                className={hasFlexLayout ? 'h-full flex flex-col' : ''}
               >
                 {children}
               </motion.div>

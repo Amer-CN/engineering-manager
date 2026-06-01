@@ -7,6 +7,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import type { Partner } from '@/types'
 import { handleError, Result, VoidResult } from '@/types'
+import { getAPI } from '@/services/api-adapter'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // usePartners Hook
@@ -39,7 +40,7 @@ export function usePartners(): UsePartnersReturn {
     setError(null)
     
     try {
-      const result = await window.electronAPI.getPartners()
+      const result = await (await getAPI()).getPartners()
       
       if (result.success && result.data) {
         setPartners(result.data)
@@ -58,7 +59,7 @@ export function usePartners(): UsePartnersReturn {
     setError(null)
     
     try {
-      const result = await window.electronAPI.createPartner(data as Partner)
+      const result = await (await getAPI()).createPartner(data as Partner)
       
       if (result.success) {
         await loadPartners()
@@ -79,7 +80,7 @@ export function usePartners(): UsePartnersReturn {
     setError(null)
     
     try {
-      const result = await window.electronAPI.updatePartner(partner)
+      const result = await (await getAPI()).updatePartner(partner)
       
       if (result.success) {
         await loadPartners()
@@ -103,7 +104,7 @@ export function usePartners(): UsePartnersReturn {
     setError(null)
     
     try {
-      const result = await window.electronAPI.deletePartner(id)
+      const result = await (await getAPI()).deletePartner(id)
       
       if (result.success) {
         setPartners(prev => prev.filter(p => p.id !== id))

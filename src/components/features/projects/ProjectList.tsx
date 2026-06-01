@@ -18,12 +18,12 @@ export interface ProjectListProps {
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1, transition: { staggerChildren: 0.06 } },
-}
+} as const
 const itemVariants = {
   hidden: { opacity: 0, y: 16 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.35 } },
-}
-const sectionV = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { duration: 0.3, ease: 'easeOut' } } }
+} as const
+const sectionV = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { duration: 0.3, ease: 'easeOut' as const } } } as const
 
 export function ProjectList({ projects, members, loading, onProjectClick, onEdit, onDelete, onAdd }: ProjectListProps) {
   if (loading) {

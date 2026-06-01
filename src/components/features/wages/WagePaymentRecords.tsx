@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useWagePaymentRecords } from '@/hooks/useWagePaymentRecords'
 import { Icon } from '../../ui/Icon'
+import PageHeader from '../../ui/PageHeader'
+import { getAPI } from '@/services/api-adapter'
 
 interface PaymentRecordFilters {
   projectId?: number
@@ -25,7 +27,7 @@ export default function WagePaymentRecords() {
   const [projects, setProjects] = useState<{ id: number; name: string }[]>([])
 
   useEffect(() => {
-    window.electronAPI.getProjects().then(res => {
+    getAPI().then(api => api.getProjects()).then(res => {
       if (res.success && res.data) {
         setProjects(res.data.filter((p: any) => p.status !== 'archived'))
       }
@@ -152,7 +154,7 @@ export default function WagePaymentRecords() {
                 <td className="px-4 py-3">
                   {record.bankReceiptPath ? (
                     <button
-                      onClick={() => window.electronAPI.openExternalFile({
+                      onClick={async () => (await getAPI()).openExternalFile({
                         category: 'bank_receipts',
                         subCategory: '',
                         fileName: record.bankReceiptPath,
@@ -174,27 +176,18 @@ export default function WagePaymentRecords() {
 
   return (
     <div className="p-6 max-w-[1400px] mx-auto space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">工资发放记录</h1>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => { setViewMode('all'); loadPaymentRecords() }}
-            className={`px-4 py-2 text-sm font-medium rounded-lg ${
-              viewMode === 'all' ? 'bg-primary-600 text-white' : 'bg-white text-slate-600 border border-slate-300'
-            }`}
-          >
+      <PageHeader title="工资发放记录"
+        actions={<>
+          <button onClick={() => { setViewMode('all'); loadPaymentRecords() }}
+            className={`px-4 py-2 text-sm font-medium rounded-lg ${viewMode === 'all' ? 'bg-primary-600 text-white' : 'bg-white text-slate-600 border border-slate-300'}`}>
             全部记录
           </button>
-          <button
-            onClick={handleViewOverdue}
-            className={`px-4 py-2 text-sm font-medium rounded-lg ${
-              viewMode === 'overdue' ? 'bg-red-600 text-white' : 'bg-white text-slate-600 border border-slate-300'
-            }`}
-          >
+          <button onClick={handleViewOverdue}
+            className={`px-4 py-2 text-sm font-medium rounded-lg ${viewMode === 'overdue' ? 'bg-red-600 text-white' : 'bg-white text-slate-600 border border-slate-300'}`}>
             欠薪列表
           </button>
-        </div>
-      </div>
+        </>}
+      />
 
       {/* 欠薪预警横幅 */}
       {viewMode === 'all' && overdueStats && (

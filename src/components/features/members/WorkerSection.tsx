@@ -2,7 +2,9 @@
 // @deprecated 此组件已废弃，工人管理模块已改用 LaborWorkerList + LaborTeamManager
 
 import { useState, useMemo } from 'react'
+import FilterBar from '../../ui/FilterBar'
 import { Tabs } from '../../ui/Tabs'
+import Spinner from '../../ui/Spinner'
 import type { WorkerTeam } from '@/types'
 import { getWorkerTypeLabel } from '@/utils'
 import {
@@ -79,14 +81,7 @@ export function WorkerSection({
   }
   // 加载状态
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 dark:border-slate-700 border-t-amber-600"></div>
-          <span className="text-slate-500">加载中...</span>
-        </div>
-      </div>
-    )
+    return <Spinner size="lg" text="加载工人数据..." />
   }
 
   return (
@@ -164,7 +159,7 @@ export function WorkerSection({
         {subTab === 'workers' && (
           <>
               {/* 筛选器 */}
-              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-4 mb-6 flex flex-wrap items-center gap-4">
+              <FilterBar className="mb-6">
                 <span className="text-slate-600 font-medium">筛选：</span>
                 <select
                   value={filterProject || ''}
@@ -193,7 +188,7 @@ export function WorkerSection({
                 <button onClick={onImportClick} className="btn btn-primary px-5 py-2 flex items-center">
                   <span className="mr-1">↑</span>导入Excel
                 </button>
-              </div>
+              </FilterBar>
 
               {filteredWorkers.length > 0 ? (
                 <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">

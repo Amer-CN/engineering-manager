@@ -5,10 +5,10 @@ import { Icon } from './ui/Icon'
 import { motion } from 'framer-motion'
 import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { SimpleBarChart } from './ui/SimpleBarChart'
+import { staggerContainer, sectionVariant } from '@/constants/animations'
+import { getAPI } from '@/services/api-adapter'
 
 const CARD = 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm'
-const sectionV = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { duration: 0.3, ease: 'easeOut' } } }
-const stagger = { visible: { transition: { staggerChildren: 0.08 } } }
 
 interface ContractDashboardProps {
   refresh?: () => void
@@ -25,7 +25,7 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
 
   const loadStats = async () => {
     try {
-      const result = await window.electronAPI.getContractStats()
+      const result = await (await getAPI()).getContractStats()
       if (result.success && result.data) setStats(result.data)
     } catch (error) {
       console.error('加载统计数据失败:', error)
@@ -74,9 +74,9 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
   ].filter(d => d.value > 0)
 
   return (
-    <motion.div className="p-6 max-w-[1400px] mx-auto" initial="hidden" animate="visible" variants={stagger}>
+    <motion.div className="p-6 max-w-[1400px] mx-auto" initial="hidden" animate="visible" variants={staggerContainer}>
       {/* Hero Banner */}
-      <motion.div variants={sectionV} className="relative bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 text-white p-6 rounded-2xl mb-8 overflow-hidden">
+      <motion.div variants={sectionVariant} className="relative bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 text-white p-6 rounded-2xl mb-8 overflow-hidden">
         <div className="hero-overlay absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.1),transparent_50%)]" />
         {/* 装饰光点 */}
         <motion.div className="absolute top-3 right-12 w-1 h-1 rounded-full bg-emerald-400"
@@ -108,7 +108,7 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
       </motion.div>
 
       {/* 导航入口卡片：点击进入子页面 */}
-      <motion.div variants={sectionV} className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+      <motion.div variants={sectionVariant} className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
         {/* 收入合同入口 */}
         <button onClick={() => onNavigate?.('income')}
           className={`${CARD} p-6 text-left cursor-pointer hover:shadow-lg hover:border-emerald-300 hover:-translate-y-1 transition-all duration-200 group`}>
@@ -180,7 +180,7 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
       </motion.div>
 
       {/* 汇总统计条 */}
-      <motion.div variants={sectionV} className="grid grid-cols-4 gap-4 mb-8">
+      <motion.div variants={sectionVariant} className="grid grid-cols-4 gap-4 mb-8">
         <div className={`${CARD} p-4 flex items-center gap-4`}>
           <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
             <Icon name="CheckCircle" size={20} className="text-emerald-600" />
@@ -222,7 +222,7 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
       </motion.div>
 
       {/* Charts Section */}
-      <motion.div variants={sectionV} className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <motion.div variants={sectionVariant} className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Bar Chart */}
         <div className={`${CARD} p-6`}>
           <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-4">收支对比</h3>
@@ -268,7 +268,7 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
       </motion.div>
 
       {/* 即将到期合同 + 快捷创建 */}
-      <motion.div variants={sectionV} className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+      <motion.div variants={sectionVariant} className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
         {/* Expiring Soon */}
         <div className={`${CARD} p-6 lg:col-span-3`}>
           <div className="flex items-center gap-2 mb-4">
@@ -328,7 +328,7 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
 
       {/* Empty State */}
       {(!stats || (stats.incomeCount === 0 && stats.expenseCount === 0 && stats.agreementCount === 0)) && (
-        <motion.div variants={sectionV} className={`${CARD} p-12 text-center`}>
+        <motion.div variants={sectionVariant} className={`${CARD} p-12 text-center`}>
           <Icon name="BarChart3" size={56} className="text-slate-300 dark:text-slate-600 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100 mb-2">暂无合同数据</h3>
           <p className="text-slate-500 dark:text-slate-400">开始添加收入合同和支出合同来查看统计数据</p>

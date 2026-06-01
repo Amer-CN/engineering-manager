@@ -1,5 +1,5 @@
 import React from 'react'
-import { motion } from 'framer-motion'
+import { Modal } from '../../ui/Modal/Modal'
 import { Icon } from '../../ui/Icon'; import type { Member, WorkerTeam } from '@/types'
 import { defaultLeaveFormData } from './LeaveModal'
 export type { LeaveFormData } from './LeaveModal'
@@ -80,7 +80,7 @@ export function TeamCard({ team, workerCount, onEdit, onDelete, onManageWorkers,
         {onManageWorkers && (
           <button
             onClick={() => onManageWorkers(team.id, team.name, team.projectId)}
-            className="flex-1 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors"
+            className="btn btn-ghost btn-sm text-primary-600 flex-1"
           >
             管理工人
           </button>
@@ -88,14 +88,14 @@ export function TeamCard({ team, workerCount, onEdit, onDelete, onManageWorkers,
         {onTeamWages && (
           <button
             onClick={() => onTeamWages(team.id, team.name, team.projectId, projectName)}
-            className="flex-1 px-3 py-1.5 text-sm text-green-600 hover:bg-green-50 rounded transition-colors"
+            className="btn btn-ghost btn-sm text-success-600 flex-1"
           >
             工资汇总
           </button>
         )}
         <button
           onClick={onEdit}
-          className="flex-1 px-3 py-1.5 text-sm text-amber-600 hover:bg-amber-50 rounded transition-colors"
+          className="btn btn-ghost btn-sm text-warning-600 flex-1"
         >
           编辑
         </button>
@@ -138,79 +138,59 @@ export function TeamFormModal({
       && (editingTeam ? w.teamId === editingTeam.id : true)
   )
 
-  if (!visible) return null
-
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <motion.div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md mx-4" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }}>
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-100">
-            {editingTeam ? '编辑班组' : '添加班组'}
-          </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><Icon name="X" size={16} /></button>
+    <Modal isOpen={visible} onClose={onClose} title={editingTeam ? '编辑班组' : '添加班组'} size="md"
+      footer={
+        <>
+          <button type="button" onClick={onClose} className="btn btn-secondary">取消</button>
+          <button type="submit" form="team-form" className="btn btn-warning">{editingTeam ? '保存' : '添加'}</button>
+        </>
+      }
+    >
+      <form id="team-form" onSubmit={onSubmit}>
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">班组名称 *</label>
+          <input
+            type="text"
+            value={formData.name}
+            onChange={e => onChange({ name: e.target.value })}
+            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+            placeholder="如：钢筋班、木工班"
+            required
+          />
         </div>
 
-        <form onSubmit={onSubmit} className="p-6">
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">班组名称 *</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={e => onChange({ name: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              placeholder="如：钢筋班、木工班"
-              required
-            />
-          </div>
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">所属项目*</label>
+          <select
+            value={formData.projectId || ''}
+            onChange={e => onChange({ projectId: e.target.value ? Number(e.target.value) : undefined })}
+            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+            required
+          >
+            <option value="">请选择项目</option>
+            {projects.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        </div>
 
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">所属项目*</label>
-            <select
-              value={formData.projectId || ''}
-              onChange={e => onChange({ projectId: e.target.value ? Number(e.target.value) : undefined })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              required
-            >
-              <option value="">请选择项目</option>
-              {projects.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">班组长</label>
-            <select
-              value={formData.leaderId ?? ''}
-              onChange={e => onChange({ leaderId: e.target.value ? Number(e.target.value) : null })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-            >
-              <option value="">暂无班组长</option>
-              {availableLeaders.map(w => (
-                <option key={w.id} value={w.id}>{w.name} - {w.teamName || '未分组'}</option>
-              ))}
-            </select>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">可以先创建班组，班组长可在之后从工人中选择指定</p>
-          </div>
-
-          <div className="flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-6 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              取消
-            </button>
-            <button
-              type="submit"
-              className="px-6 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors"
-            >
-              {editingTeam ? '保存' : '添加'}
-            </button>
-          </div>
-        </form>
-      </motion.div>
-    </div>
+        <div className="mb-2">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">班组长</label>
+          <select
+            value={formData.leaderId ?? ''}
+            onChange={e => onChange({ leaderId: e.target.value ? Number(e.target.value) : null })}
+            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+          >
+            <option value="">暂无班组长</option>
+            {availableLeaders.map(w => (
+              <option key={w.id} value={w.id}>{w.name} - {w.teamName || '未分组'}</option>
+            ))}
+          </select>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">可以先创建班组，班组长可在之后从工人中选择指定</p>
+        </div>
+      </form>
+    </Modal>
   )
 }
 
@@ -233,89 +213,71 @@ export function TransferModal({
   onSubmit,
   onClose
 }: TransferModalProps) {
-  if (!visible || !worker) return null
-
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <motion.div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md mx-4" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }}>
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-100">工人调组</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"><Icon name="X" size={16} /></button>
+    <Modal isOpen={visible && !!worker} onClose={onClose} title="工人调组" size="md"
+      footer={
+        <>
+          <button type="button" onClick={onClose} className="btn btn-secondary">取消</button>
+          <button type="submit" form="transfer-form" className="btn btn-primary">确认调组</button>
+        </>
+      }
+    >
+      <form id="transfer-form" onSubmit={onSubmit}>
+        <div className="mb-4 p-3 bg-slate-50 rounded-lg">
+          <div className="font-medium text-slate-800">{worker?.name}</div>
+          <div className="text-sm text-slate-500">
+            当前: {worker?.projectName} / {worker?.teamName}
+          </div>
         </div>
 
-        <form onSubmit={onSubmit} className="p-6">
-          <div className="mb-4 p-3 bg-slate-50 rounded-lg">
-            <div className="font-medium text-slate-800">{worker.name}</div>
-            <div className="text-sm text-slate-500">
-              当前: {worker.projectName} / {worker.teamName}
-            </div>
-          </div>
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">调入班组 *</label>
+          <select
+            value={formData.toTeamId || ''}
+            onChange={e => {
+              const teamId = e.target.value ? Number(e.target.value) : undefined
+              const team = workerTeams.find(t => t.id === teamId)
+              onChange({
+                toTeamId: teamId,
+                toProjectId: team?.projectId
+              })
+            }}
+            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            required
+          >
+            <option value="">选择调入的班组</option>
+            {workerTeams
+              .filter(t => worker && t.id !== worker.teamId)
+              .map(t => (
+                <option key={t.id} value={t.id}>{t.projectName} - {t.name}</option>
+              ))
+            }
+          </select>
+        </div>
 
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">调入班组 *</label>
-            <select
-              value={formData.toTeamId || ''}
-              onChange={e => {
-                const teamId = e.target.value ? Number(e.target.value) : undefined
-                const team = workerTeams.find(t => t.id === teamId)
-                onChange({
-                  toTeamId: teamId,
-                  toProjectId: team?.projectId
-                })
-              }}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              required
-            >
-              <option value="">选择调入的班组</option>
-              {workerTeams
-                .filter(t => t.id !== worker.teamId)
-                .map(t => (
-                  <option key={t.id} value={t.id}>{t.projectName} - {t.name}</option>
-                ))
-              }
-            </select>
-          </div>
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">调动日期 *</label>
+          <input
+            type="date"
+            value={formData.transferDate}
+            onChange={e => onChange({ transferDate: e.target.value })}
+            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
 
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">调动日期 *</label>
-            <input
-              type="date"
-              value={formData.transferDate}
-              onChange={e => onChange({ transferDate: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">调动原因</label>
-            <textarea
-              value={formData.reason}
-              onChange={e => onChange({ reason: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              rows={2}
-              placeholder="如：项目完工调配、工作需要等"
-            />
-          </div>
-
-          <div className="flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-6 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              取消
-            </button>
-            <button
-              type="submit"
-              className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
-            >
-              确认调组
-            </button>
-          </div>
-        </form>
-      </motion.div>
-    </div>
+        <div className="mb-2">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">调动原因</label>
+          <textarea
+            value={formData.reason}
+            onChange={e => onChange({ reason: e.target.value })}
+            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            rows={2}
+            placeholder="如：项目完工调配、工作需要等"
+          />
+        </div>
+      </form>
+    </Modal>
   )
 }
 

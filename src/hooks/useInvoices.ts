@@ -7,6 +7,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import type { Invoice, InvoiceType, InvoiceStatus } from '@/types'
 import { handleError, Result, VoidResult } from '@/types'
+import { getAPI } from '@/services/api-adapter'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Types
@@ -60,7 +61,7 @@ export function useInvoices(filters?: InvoiceFilters): UseInvoicesReturn {
     setError(null)
     
     try {
-      const result = await window.electronAPI.getInvoices(undefined, type as InvoiceType)
+      const result = await (await getAPI()).getInvoices(undefined, type as InvoiceType)
       
       if (result.success && result.data) {
         let filteredData = result.data
@@ -103,7 +104,7 @@ export function useInvoices(filters?: InvoiceFilters): UseInvoicesReturn {
     setError(null)
     
     try {
-      const result = await window.electronAPI.createInvoice(data as Invoice)
+      const result = await (await getAPI()).createInvoice(data as Invoice)
       
       if (result.success) {
         await loadInvoices()
@@ -124,7 +125,7 @@ export function useInvoices(filters?: InvoiceFilters): UseInvoicesReturn {
     setError(null)
     
     try {
-      const result = await window.electronAPI.updateInvoice(invoice)
+      const result = await (await getAPI()).updateInvoice(invoice)
       
       if (result.success) {
         await loadInvoices()
@@ -148,7 +149,7 @@ export function useInvoices(filters?: InvoiceFilters): UseInvoicesReturn {
     setError(null)
     
     try {
-      const result = await window.electronAPI.deleteInvoice(id)
+      const result = await (await getAPI()).deleteInvoice(id)
       
       if (result.success) {
         setInvoices(prev => prev.filter(i => i.id !== id))
@@ -172,7 +173,7 @@ export function useInvoices(filters?: InvoiceFilters): UseInvoicesReturn {
     setError(null)
     
     try {
-      const result = await window.electronAPI.updateInvoiceStatus(id, status)
+      const result = await (await getAPI()).updateInvoiceStatus(id, status)
       
       if (result.success) {
         await loadInvoices()

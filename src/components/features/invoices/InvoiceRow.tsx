@@ -2,6 +2,7 @@ import React from 'react'
 import { Invoice, InvoiceStatus, InvoiceType, InvoiceKind } from '@/types/electron'
 import { formatMoney } from '@/utils/format'
 import { Icon } from '../../ui/Icon'
+import { Tooltip } from '../../ui/Tooltip/Tooltip'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 状态 & 票种配置（从 InvoiceList 提取的展示逻辑）
@@ -127,35 +128,39 @@ export const InvoiceRow = React.memo(function InvoiceRow({
       <td className="px-3 py-3 text-center">
         <div className="flex items-center justify-center gap-1">
           {invoice.fileUrl && (
-            <button
-              onClick={() => onPreview(invoice.fileUrl!, invoice.fileType === 'pdf' ? 'pdf' : 'image', `${invoice.invoiceNo} - 发票附件`, 'invoices', invoice.type === 'invoice_out' ? 'invoice_out' : 'invoice_in', invoice.projectName, invoice.projectId ?? undefined)}
-              className="p-1.5 text-slate-500 dark:text-slate-400 hover:bg-slate-100 rounded transition-colors"
-              title="预览"
-            >
-              <Icon name="Eye" size={14} />
-            </button>
+            <Tooltip content="预览" position="top" delay={300}>
+              <button
+                onClick={() => onPreview(invoice.fileUrl!, invoice.fileType === 'pdf' ? 'pdf' : 'image', `${invoice.invoiceNo} - 发票附件`, 'invoices', invoice.type === 'invoice_out' ? 'invoice_out' : 'invoice_in', invoice.projectName, invoice.projectId ?? undefined)}
+                className="p-1.5 text-slate-500 dark:text-slate-400 hover:bg-slate-100 rounded transition-colors"
+              >
+                <Icon name="Eye" size={14} />
+              </button>
+            </Tooltip>
           )}
-          <button
-            onClick={() => onPrint(invoice)}
-            className="p-1.5 text-slate-500 dark:text-slate-400 hover:bg-slate-100 rounded transition-colors"
-            title="打印"
-          >
-            <Icon name="Printer" size={14} />
-          </button>
-          <button
-            onClick={() => onEdit(invoice)}
-            className="btn btn-ghost btn-sm"
-            title="编辑"
-          >
-            <Icon name="Edit" size={14} />
-          </button>
-          <button
-            onClick={() => onDelete(invoice.id)}
-            className="btn btn-danger btn-sm"
-            title="删除"
-          >
-            <Icon name="Trash2" size={14} />
-          </button>
+          <Tooltip content="打印" position="top" delay={300}>
+            <button
+              onClick={() => onPrint(invoice)}
+              className="p-1.5 text-slate-500 dark:text-slate-400 hover:bg-slate-100 rounded transition-colors"
+            >
+              <Icon name="Printer" size={14} />
+            </button>
+          </Tooltip>
+          <Tooltip content="编辑" position="top" delay={300}>
+            <button
+              onClick={() => onEdit(invoice)}
+              className="btn btn-ghost btn-sm"
+            >
+              <Icon name="Edit" size={14} />
+            </button>
+          </Tooltip>
+          <Tooltip content="删除" position="top" delay={300}>
+            <button
+              onClick={() => onDelete(invoice.id)}
+              className="btn btn-danger btn-sm"
+            >
+              <Icon name="Trash2" size={14} />
+            </button>
+          </Tooltip>
         </div>
       </td>
     </tr>

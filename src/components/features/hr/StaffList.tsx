@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import { HoverScrollbar } from '../../ui/HoverScrollbar'
+import FilterBar from '../../ui/FilterBar'
 import { Icon } from '../../ui/Icon'
 import { Button } from '../../ui/Button'
 import { EmptyState } from '../../ui/EmptyState'
+import Spinner from '../../ui/Spinner'
+import { useConfirm } from '@/hooks/useConfirm'
 import { useToastStore } from '@/store/toastStore'
 import { logCreate, logUpdate } from '../../../utils/audit'
 import { processFileFields, FILE_CATEGORIES, guessFileExt, readUploadedFile } from '../../../services/fileService'
@@ -10,6 +14,7 @@ import StaffFormModal, { type StaffFormData } from './StaffFormModal'
 import BatchDeptAssignModal from './BatchDeptAssignModal'
 import SalaryHistoryModal from './SalaryHistoryModal'
 import { StaffListRow } from './StaffListRow'
+import { getAPI } from '@/services/api-adapter'
 
 const emptyForm: StaffFormData = {
   name: '', phone: '', email: '', idCard: '', gender: '男', ethnicity: '',
@@ -23,6 +28,7 @@ const readFileAsDataURL = (file: File): Promise<string> =>
 
 const StaffList: React.FC = () => {
   const showToast = useToastStore(state => state.showToast)
+  const { ConfirmDialog } = useConfirm()
   const [members, setMembers] = useState<any[]>([])
   const [departments, setDepartments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -40,9 +46,10 @@ const StaffList: React.FC = () => {
 
   const loadData = useCallback(async () => {
     try {
+      const api = await getAPI()
       const [memRes, deptRes] = await Promise.allSettled([
-        window.electronAPI.getMembers(),
-        window.electronAPI.getDepartments()
+        api.getMembers(),
+        api.getDepartments()
       ])
       const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
       const membersData = get(memRes)
@@ -117,8 +124,12 @@ const StaffList: React.FC = () => {
           if (d.ethnicity) filled.push('民族')
           if (d.address) filled.push('地址')
           showToast(filled.length > 0 ? `识别成功！已自动填充：${filled.join('、')}` : '身份证识别成功', 'success')
+        } else {
         }
-      } catch { /* OCR fails silently */ }
+      } catch (err) {
+        console.error('[OCR] 识别异常:', err)
+        showToast('OCR 识别异常: ' + (err instanceof Error ? err.message : String(err)), 'error')
+      }
       setOcrLoading(false)
     }
   }
@@ -165,20 +176,22 @@ const StaffList: React.FC = () => {
           delete payload[f]
         }
       }
+      const memberApi = await getAPI()
       const result = editing
-        ? await window.electronAPI.updateMember({ ...payload, id: editing.id })
-        : await window.electronAPI.createMember(payload)
+        ? await memberApi.updateMember({ ...payload, id: editing.id })
+        : await memberApi.createMember(payload)
       if (result.success) {
         // A→B 同步：月基本工资变动时同步到薪资历史（入职初始薪资）
         const memberId = editing ? editing.id : (result as any).data?.id
         if (memberId && formData.baseSalary && formData.entryDate) {
           const changed = !editing || Number(editing.baseSalary) !== Number(formData.baseSalary)
           if (changed) {
-            const historyRes = await window.electronAPI.getSalaryHistory(memberId)
+            const salaryApi = await getAPI()
+            const historyRes = await salaryApi.getSalaryHistory(memberId)
             if (historyRes.success) {
               const existing = (historyRes.data || []).find((h: any) => h.effectiveDate === formData.entryDate)
-              if (existing) await window.electronAPI.deleteSalaryHistory(existing.id)
-              await window.electronAPI.createSalaryHistory({
+              if (existing) await salaryApi.deleteSalaryHistory(existing.id)
+              await salaryApi.createSalaryHistory({
                 memberId,
                 effectiveDate: formData.entryDate,
                 baseSalary: Number(formData.baseSalary),
@@ -194,11 +207,11 @@ const StaffList: React.FC = () => {
         else logCreate('members', formData.name, (result as any)?.data?.id, { staff: true })
         resetForm(); loadData()
       } else { showToast(result.error || '操作失败', 'error') }
-    } catch (e: any) { showToast(e?.message || '保存失败', 'error') }
+    } catch (e: any) { console.error('[保存失败]', e); showToast(e?.message || '保存失败', 'error') }
   }
 
   const handleStatusChange = useCallback(async (member: any, newStatus: string) => {
-    await window.electronAPI.updateMember({ ...member, status: newStatus })
+    await (await getAPI()).updateMember({ ...member, status: newStatus })
     loadData()
     showToast('状态已更新', 'success')
   }, [loadData, showToast])
@@ -212,7 +225,7 @@ const StaffList: React.FC = () => {
   const getDeptName = useCallback((id?: number) => departments.find((d: any) => d.id === id)?.name || '-', [departments])
 
   if (loading) {
-    return <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-4 border-indigo-500 border-t-transparent" /></div>
+    return <Spinner size="md" text="加载人员数据..." />
   }
 
   return (
@@ -230,7 +243,7 @@ const StaffList: React.FC = () => {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm px-5 py-3 flex items-center gap-4">
+      <FilterBar>
         <div className="flex items-center gap-2">
           <label className="text-sm text-slate-500">部门</label>
           <select value={filterDept} onChange={e => setFilterDept(e.target.value ? Number(e.target.value) : '')}
@@ -252,14 +265,14 @@ const StaffList: React.FC = () => {
         <Button onClick={() => { resetForm(); setShowForm(true) }} size="sm">
           <span className="mr-1">+</span> 添加人员
         </Button>
-      </div>
+      </FilterBar>
 
       {filtered.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm flex-1 py-12">
           <EmptyState icon="Users" title="暂无人员" description="点击上方按钮添加第一位管理人员" />
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm flex-1 overflow-auto">
+        <HoverScrollbar className="bg-white rounded-xl shadow-sm flex-1">
           <table className="w-full">
             <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
               <tr className="">
@@ -282,11 +295,18 @@ const StaffList: React.FC = () => {
                   onEdit={openEdit}
                   onStatusChange={handleStatusChange}
                   onSalaryHistory={setSalaryHistoryMember}
+                  onDelete={(id: number) => {
+                    if (window.confirm('确定要删除该人员吗？')) {
+                      getAPI().then(api => api.deleteMember(id)).then(r => {
+                        if (r.success) { showToast('已删除', 'success'); loadData() } else { showToast(r.error || '删除失败', 'error') }
+                      })
+                    }
+                  }}
                 />
               ))}
             </tbody>
           </table>
-        </div>
+        </HoverScrollbar>
       )}
 
       {showForm && (
@@ -313,6 +333,7 @@ const StaffList: React.FC = () => {
           onClose={() => setSalaryHistoryMember(null)}
         />
       )}
+      {ConfirmDialog}
     </div>
   )
 }

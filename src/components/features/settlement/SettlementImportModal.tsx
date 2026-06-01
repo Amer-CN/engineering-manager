@@ -97,14 +97,14 @@ export const SettlementImportModal: React.FC<Props> = ({ show, onClose, onImport
             {state.sheetNames.length > 1 && (
               <div className="flex items-center gap-2">
                 <label className="text-sm font-medium text-slate-700">工作表：</label>
-                <select value={state.activeSheet} onChange={e => switchSheet(e.target.value)} className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
+                <select value={state.activeSheet} onChange={e => switchSheet(e.target.value)} className="select text-sm">
                   {state.sheetNames.map(n => <option key={n} value={n}>{n}</option>)}
                 </select>
               </div>
             )}
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium text-slate-700">表头行：</label>
-              <select value={state.headerRow} onChange={e => { const hr = parseInt(e.target.value); changeHeaderRow(hr) }} className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
+              <select value={state.headerRow} onChange={e => { const hr = parseInt(e.target.value); changeHeaderRow(hr) }} className="select text-sm">
                 {Array.from({ length: 5 }, (_, i) => <option key={i} value={i}>第 {i + 1} 行</option>)}
               </select>
               <span className="text-xs text-slate-400">（表头之前的行自动跳过）</span>
@@ -116,7 +116,7 @@ export const SettlementImportModal: React.FC<Props> = ({ show, onClose, onImport
               {([{ key: 'description', label: '材料名称' }, { key: 'spec', label: '规格型号' }, { key: 'unit', label: '单位' }, { key: 'quantity', label: '数量' }, { key: 'unitPrice', label: '单价' }] as const).map(f => (
                 <div key={f.key}>
                   <label className="text-xs text-slate-500 block mb-1">{f.label}</label>
-                  <select value={state.mapping[f.key]} onChange={e => setState(p => ({ ...p, mapping: { ...p.mapping, [f.key]: parseInt(e.target.value) } }))} className="w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
+                  <select value={state.mapping[f.key]} onChange={e => setState(p => ({ ...p, mapping: { ...p.mapping, [f.key]: parseInt(e.target.value) } }))} className="select text-sm">
                     <option value={-1}>不导入</option>
                     {state.headers.map((h, i) => <option key={i} value={i}>{h || `列${i + 1}`}</option>)}
                   </select>

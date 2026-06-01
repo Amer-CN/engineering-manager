@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Template, TemplateCategory, TemplateVariable } from '../../../types/electron'
 import { categoryConfig } from './config'
 import { Icon } from '../../ui/Icon'
+import { Input } from '../../ui/Input/Input'
 import { FILE_CATEGORIES, uploadFile } from '../../../services/fileService'
 import { useToastStore } from '@/store/toastStore'
 
@@ -126,11 +127,8 @@ export default function TemplateForm({ template, onSubmit, onCancel }: TemplateF
   return (
     <form onSubmit={handleSubmit} className="p-6 space-y-5">
       {/* Name */}
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">模板名称 *</label>
-        <input type="text" value={formData.name} onChange={e => setFormData(p => ({ ...p, name: e.target.value }))}
-          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-100 focus:border-primary-300" placeholder="如：工程施工合同模板" />
-      </div>
+      <Input label="模板名称" size="sm" required value={formData.name} onChange={e => setFormData(p => ({ ...p, name: e.target.value }))}
+        placeholder="如：工程施工合同模板" />
 
       {/* Category */}
       <div>

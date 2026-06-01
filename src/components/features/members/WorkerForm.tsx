@@ -1,7 +1,11 @@
-import React from 'react'
+import React, { useState, useRef } from 'react'
 import type { Member } from '@/types'
+import { Input } from '../../ui/Input/Input'
+import { Icon } from '../../ui/Icon'
 import { calculateAge, inferGenderFromIdCard, type WorkerFormData } from './memberFormTypes'
 import { IdCardUploadArea, FileUploadArea as _FileUploadArea, SmallFileUpload as _SmallFileUpload } from './FormUploadWidgets'
+import { useBankCardOCR } from '@/hooks/useBankCardOCR'
+import { useToastStore } from '@/store/toastStore'
 const FileUploadArea = _FileUploadArea as any
 const SmallFileUpload = _SmallFileUpload as any
 
@@ -27,6 +31,10 @@ interface WorkerFormProps {
 
 export default function WorkerForm({ formData, setFormData, projects, workerTeams, editingMember, ocrLoading, dragOverField, onDragOver, onDragLeave, onDrop, onFileChange, onDeleteFile, refs }: WorkerFormProps) {
   const availableTeams = workerTeams.filter(t => !formData.projectId || t.projectId === formData.projectId)
+  const showToast = useToastStore(state => state.showToast)
+  const { processBankCardFile } = useBankCardOCR()
+  const [bankCardLoading, setBankCardLoading] = useState(false)
+  const bankCardInputRef = useRef<HTMLInputElement>(null)
 
   // 身份证号变化时自动推断性别
   React.useEffect(() => {
@@ -36,24 +44,30 @@ export default function WorkerForm({ formData, setFormData, projects, workerTeam
     }
   }, [formData.idCard])
 
+  // 银行卡 OCR 识别
+  const handleBankCardOCR = async (file: File) => {
+    setBankCardLoading(true)
+    try {
+      const result = await processBankCardFile(file)
+      if (result) {
+        setFormData(prev => ({
+          ...prev,
+          wageBankAccount: result.cardNumber || prev.wageBankAccount,
+          wageBankName: result.bankName || prev.wageBankName,
+        }))
+      }
+    } finally {
+      setBankCardLoading(false)
+    }
+  }
+
   return (
     <>
       <div className="grid grid-cols-2 gap-4 mb-4">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">姓名 *</label>
-          <input type="text" value={formData.name} onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500" required />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">联系电话</label>
-          <input type="tel" value={formData.phone} onChange={e => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">工种</label>
-          <input type="text" value={formData.workerType} onChange={e => setFormData(prev => ({ ...prev, workerType: e.target.value }))}
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500" placeholder="如：钢筋工、木工" />
-        </div>
+        <Input label="姓名" size="sm" required value={formData.name} onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))} />
+        <Input label="联系电话" size="sm" type="tel" value={formData.phone} onChange={e => setFormData(prev => ({ ...prev, phone: e.target.value }))} />
+        <Input label="工种" size="sm" value={formData.workerType} onChange={e => setFormData(prev => ({ ...prev, workerType: e.target.value }))}
+          placeholder="如：钢筋工、木工" />
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">所属项目</label>
           <select value={formData.projectId || ''}
@@ -63,12 +77,9 @@ export default function WorkerForm({ formData, setFormData, projects, workerTeam
             {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">日工资</label>
-          <input type="number" value={formData.dailyWage || ''}
-            onChange={e => setFormData(prev => ({ ...prev, dailyWage: e.target.value ? Number(e.target.value) : undefined }))}
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500" placeholder="0.00" required />
-        </div>
+        <Input label="日工资" size="sm" type="number" value={formData.dailyWage || ''}
+          onChange={e => setFormData(prev => ({ ...prev, dailyWage: e.target.value ? Number(e.target.value) : undefined }))}
+          placeholder="0.00" required />
         <div className="col-span-2">
           <label className="block text-sm font-medium text-slate-700 mb-1">所属班组</label>
           <select value={formData.teamId || ''}
@@ -84,13 +95,12 @@ export default function WorkerForm({ formData, setFormData, projects, workerTeam
       </div>
 
       <div className="mb-4">
-        <label className="block text-sm font-medium text-slate-700 mb-2">身份证号</label>
-        <input type="text" value={formData.idCard} onChange={e => {
+        <Input label="身份证号" size="sm" value={formData.idCard} onChange={e => {
           const v = e.target.value
           const gender = inferGenderFromIdCard(v)
           setFormData(prev => ({ ...prev, idCard: v, gender: gender || prev.gender }))
         }}
-          className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500" placeholder="18位身份证号" maxLength={18} />
+          placeholder="18位身份证号" maxLength={18} />
         <div className="grid grid-cols-2 gap-4 mt-4">
           <IdCardUploadArea label={ocrLoading ? '人像面 - 识别中..' : '人像面 - 支持拖拽/粘贴上传'} image={formData.idCardFront} field="idCardFront"
             dragOverField={dragOverField} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
@@ -107,20 +117,14 @@ export default function WorkerForm({ formData, setFormData, projects, workerTeam
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 text-sm">
               <option value="">请选择</option><option value="male">男</option><option value="female">女</option>
             </select></div>
-          <div><label className="block text-xs text-slate-600 mb-1">民族</label>
-            <input type="text" value={formData.ethnicity} onChange={e => setFormData(prev => ({ ...prev, ethnicity: e.target.value }))}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 text-sm" placeholder="如：汉族" /></div>
-          <div><label className="block text-xs text-slate-600 mb-1">出生日期</label>
-            <input type="date" value={formData.birthDate} onChange={e => setFormData(prev => ({ ...prev, birthDate: e.target.value }))}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 text-sm" /></div>
-          <div><label className="block text-xs text-slate-600 mb-1">年龄</label>
-            <input type="text" value={calculateAge(formData.birthDate)}
-              className="w-full px-3 py-2 border border-slate-200 bg-slate-50 rounded-lg text-sm text-slate-500" disabled placeholder="自动计算" /></div>
+          <Input label="民族" size="sm" value={formData.ethnicity} onChange={e => setFormData(prev => ({ ...prev, ethnicity: e.target.value }))}
+            placeholder="如：汉族" />
+          <Input label="出生日期" size="sm" type="date" value={formData.birthDate} onChange={e => setFormData(prev => ({ ...prev, birthDate: e.target.value }))} />
+          <Input label="年龄" size="sm" value={calculateAge(formData.birthDate)} disabled placeholder="自动计算" />
         </div>
         <div className="mt-4">
-          <label className="block text-xs text-slate-600 mb-1">身份证住址</label>
-          <input type="text" value={formData.idCardAddress} onChange={e => setFormData(prev => ({ ...prev, idCardAddress: e.target.value }))}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 text-sm" placeholder="身份证上的住址信息" />
+          <Input label="身份证住址" size="sm" value={formData.idCardAddress} onChange={e => setFormData(prev => ({ ...prev, idCardAddress: e.target.value }))}
+            placeholder="身份证上的住址信息" />
         </div>
       </div>
 
@@ -133,21 +137,51 @@ export default function WorkerForm({ formData, setFormData, projects, workerTeam
       </div>
 
       <div className="grid grid-cols-2 gap-4 mb-4">
-        <div><label className="block text-sm font-medium text-slate-700 mb-1">进场日期</label>
-          <input type="date" value={formData.entryDate} onChange={e => setFormData(prev => ({ ...prev, entryDate: e.target.value }))}
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500" /></div>
-        <div><label className="block text-sm font-medium text-slate-700 mb-1">预计退场日期</label>
-          <input type="date" value={formData.expectedLeaveDate} onChange={e => setFormData(prev => ({ ...prev, expectedLeaveDate: e.target.value }))}
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500" /></div>
+        <Input label="进场日期" size="sm" type="date" value={formData.entryDate} onChange={e => setFormData(prev => ({ ...prev, entryDate: e.target.value }))} />
+        <Input label="预计退场日期" size="sm" type="date" value={formData.expectedLeaveDate} onChange={e => setFormData(prev => ({ ...prev, expectedLeaveDate: e.target.value }))} />
       </div>
 
       <div className="grid grid-cols-2 gap-4 mb-4">
-        <div><label className="block text-sm font-medium text-slate-700 mb-1">银行卡号</label>
-          <input type="text" value={formData.wageBankAccount} onChange={e => setFormData(prev => ({ ...prev, wageBankAccount: e.target.value }))}
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500" /></div>
-        <div><label className="block text-sm font-medium text-slate-700 mb-1">开户行</label>
-          <input type="text" value={formData.wageBankName} onChange={e => setFormData(prev => ({ ...prev, wageBankName: e.target.value }))}
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500" placeholder="如：XX银行XX支行" /></div>
+        <Input label="银行卡号" size="sm" value={formData.wageBankAccount} onChange={e => setFormData(prev => ({ ...prev, wageBankAccount: e.target.value }))} />
+        <Input label="开户行" size="sm" value={formData.wageBankName} onChange={e => setFormData(prev => ({ ...prev, wageBankName: e.target.value }))}
+          placeholder="如：XX银行XX支行" />
+      </div>
+
+      {/* 银行卡 OCR 识别 */}
+      <div className="mb-4">
+        <input
+          ref={bankCardInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={async (e) => {
+            const file = e.target.files?.[0]
+            if (file) await handleBankCardOCR(file)
+            if (bankCardInputRef.current) bankCardInputRef.current.value = ''
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => bankCardInputRef.current?.click()}
+          disabled={bankCardLoading}
+          className={`btn w-full flex items-center justify-center gap-2 transition-all duration-300 ${
+            bankCardLoading
+              ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0'
+              : 'btn-secondary'
+          }`}
+        >
+          {bankCardLoading ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+              <span className="animate-pulse">AI 正在识别银行卡...</span>
+            </>
+          ) : (
+            <>
+              <Icon name="Sparkles" size={16} />
+              AI 识别银行卡（自动填入卡号和开户行）
+            </>
+          )}
+        </button>
       </div>
 
       <div className="mb-4">

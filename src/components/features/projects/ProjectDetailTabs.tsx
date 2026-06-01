@@ -4,6 +4,7 @@ import { ProjectStatsData } from './ProjectStats'
 import { Badge } from '@/components/ui/Badge'
 import { Icon } from '../../ui/Icon'
 import { formatMoney } from '@/utils/format'
+import { getAPI } from '@/services/api-adapter'
 
 const CARD = 'bg-white border border-slate-200 rounded-xl shadow-sm'
 const CARD_HOVER = 'hover:shadow-md transition-all duration-200'
@@ -133,25 +134,25 @@ export function MembersTab({ project, staffMembers, allStaffMembers, workerTeams
   useEffect(() => { loadProjectMembers(); loadProjects(); loadProjectWorkers() }, [project.id])
 
   const loadProjectWorkers = async () => {
-    const r = await window.electronAPI.getProjectWorkers(project.id)
+    const r = await (await getAPI()).getProjectWorkers(project.id)
     if (r.success) setProjectWorkers(r.data || [])
   }
 
   const loadProjects = async () => {
-    const r = await window.electronAPI.getProjects()
+    const r = await (await getAPI()).getProjects()
     if (r.success) setProjects((r.data || []).filter((p: any) => p.status !== 'archived' && p.id !== project.id))
   }
 
   const loadProjectMembers = async () => {
     try {
-      const r = await window.electronAPI.getProjectMembers(project.id)
+      const r = await (await getAPI()).getProjectMembers(project.id)
       if (r.success && r.data) setProjectRecords(r.data)
     } catch (e) { console.error('加载项目成员失败:', e) }
     finally { setLoaded(true) }
   }
 
   const handleAdd = async (memberId: number, joinedAt?: string) => {
-    const r = await window.electronAPI.addProjectMember(project.id, memberId, joinedAt)
+    const r = await (await getAPI()).addProjectMember(project.id, memberId, joinedAt)
     if (r.success) loadProjectMembers()
     return r
   }
@@ -166,10 +167,11 @@ export function MembersTab({ project, staffMembers, allStaffMembers, workerTeams
   // 确认调离
   const confirmTransfer = async () => {
     if (!transferRecord || !transferDate) return
-    await window.electronAPI.updateProjectMember(transferRecord.id, { leftAt: transferDate })
+    const api = await getAPI()
+    await api.updateProjectMember(transferRecord.id, { leftAt: transferDate })
     // 如果选了调入其他项目，在新项目创建成员记录
     if (transferToProject) {
-      await window.electronAPI.addProjectMember(
+      await api.addProjectMember(
         Number(transferToProject), transferRecord.memberId, transferDate
       )
     }
@@ -233,7 +235,7 @@ export function MembersTab({ project, staffMembers, allStaffMembers, workerTeams
                     <button onClick={() => openTransfer(rec)} className="btn btn-ghost btn-sm text-amber-600 border border-amber-200">调离</button>
                     <button onClick={() => {
                       if (confirm(`确认将 ${m.name} 从项目中删除？此操作不可撤销。`)) {
-                        window.electronAPI.removeProjectMember(rec.id).then(() => loadProjectMembers())
+                        getAPI().then(api => api.removeProjectMember(rec.id)).then(() => loadProjectMembers())
                       }
                     }} className="btn btn-danger btn-sm border border-slate-200">删除</button>
                   </div>
@@ -261,9 +263,9 @@ export function MembersTab({ project, staffMembers, allStaffMembers, workerTeams
                     </p>
                   </div>
                   <button onClick={() => {
-                    window.electronAPI.updateProjectMember(rec.id, { leftAt: '' })
+                    getAPI().then(api => api.updateProjectMember(rec.id, { leftAt: '' }))
                       .then(() => loadProjectMembers())
-                  }} className="btn btn-ghost btn-sm text-indigo-600 border border-indigo-200">恢复</button>
+                  }} className="btn btn-ghost btn-sm text-primary-600 border border-primary-200">恢复</button>
                 </div>
               ))}
             </div>
