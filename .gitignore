@@ -22,6 +22,9 @@ public/seed-data.json
 # MCP 配置 (含第三方 API Token)
 .mcp.json
 
+# 本地配置文件 (含真实路径、API Key 等)
+config.json
+
 # Graphify 知识图谱 (自动生成，无需版本控制)
 graphify-out/
 
