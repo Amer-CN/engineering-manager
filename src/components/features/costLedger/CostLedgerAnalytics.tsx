@@ -22,9 +22,12 @@ export function CostLedgerAnalytics({ projectId, projectName, categories }: Cost
   useEffect(() => {
     ;(async () => {
       const api = await getAPI()
-      if (!api?.getCostLedger) return
+      if (!api?.getCostLedger) { setLoading(false); return }
       api.getCostLedger(projectId).then((res: any) => {
         if (res?.success) setEntries(res.data || [])
+      }).catch((err: any) => {
+        console.error('[CostLedgerAnalytics] 加载失败:', err)
+      }).finally(() => {
         setLoading(false)
       })
     })()

@@ -53,110 +53,110 @@ export function Modal({
   className = '',
 }: ModalProps) {
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Escape' && isOpen) {
-      onClose()
-    }
+  if (e.key === 'Escape' && isOpen) {
+  onClose()
+  }
   }, [isOpen, onClose])
 
   useEffect(() => {
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
+  document.addEventListener('keydown', handleKeyDown)
+  return () => document.removeEventListener('keydown', handleKeyDown)
   }, [handleKeyDown])
 
   useEffect(() => {
-    if (lockScroll) {
-      if (isOpen) {
-        document.body.style.overflow = 'hidden'
-      } else {
-        document.body.style.overflow = ''
-      }
-    }
-    return () => { document.body.style.overflow = '' }
+  if (lockScroll) {
+  if (isOpen) {
+  document.body.style.overflow = 'hidden'
+  } else {
+  document.body.style.overflow = ''
+  }
+  }
+  return () => { document.body.style.overflow = '' }
   }, [isOpen, lockScroll])
 
   const handleOverlayClick = (e: React.MouseEvent) => {
-    if (closeOnOverlay && e.target === e.currentTarget) {
-      onClose()
-    }
+  if (closeOnOverlay && e.target === e.currentTarget) {
+  onClose()
+  }
   }
 
   return createPortal(
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          className={`
-            fixed inset-0 z-50 flex
-            ${centered ? 'items-center justify-center' : 'items-start justify-center pt-16'}
-            p-4
-          `}
-          initial="hidden"
-          animate="visible"
-          exit="hidden"
-          variants={overlayVariants}
-          transition={{ duration: 0.15 }}
-        >
-          {/* 遮罩 */}
-          {showOverlay && (
-            <motion.div
-              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-              onClick={handleOverlayClick}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            />
-          )}
+  <AnimatePresence>
+  {isOpen && (
+  <motion.div
+  className={`
+  fixed inset-0 z-50 flex
+  ${centered ? 'items-center justify-center' : 'items-start justify-center pt-16'}
+  p-4
+  `}
+  initial="hidden"
+  animate="visible"
+  exit="hidden"
+  variants={overlayVariants}
+  transition={{ duration: 0.15 }}
+  >
+  {/* 遮罩 */}
+  {showOverlay && (
+  <motion.div
+  className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+  onClick={handleOverlayClick}
+  initial={{ opacity: 0 }}
+  animate={{ opacity: 1 }}
+  exit={{ opacity: 0 }}
+  />
+  )}
 
-          {/* 模态框内容 */}
-          <motion.div
-            className={`
-              relative
-              bg-white dark:bg-slate-800
-              rounded-2xl shadow-2xl
-              w-full ${sizeStyles[size]}
-              max-h-[90vh] flex flex-col
-              ${className}
-            `}
-            style={{ backgroundColor: 'var(--card, white)' }}
-            variants={modalVariants}
-            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={title ? 'modal-title' : undefined}
-          >
-            {(title || showClose) && (
-              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700">
-                {title && (
-                  <h2 id="modal-title" className="text-lg font-semibold text-slate-800 dark:text-slate-100">
-                    {title}
-                  </h2>
-                )}
-                {showClose && (
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="p-2 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300 transition-colors"
-                    aria-label="关闭"
-                  >
-                    <Icon name="X" size={18} />
-                  </button>
-                )}
-              </div>
-            )}
+  {/* 模态框内容 */}
+  <motion.div
+  className={`
+  relative
+  bg-white
+  rounded-2xl shadow-2xl
+  w-full ${sizeStyles[size]}
+  max-h-[90vh] flex flex-col
+  ${className}
+  `}
+  style={{ backgroundColor: 'var(--card, white)' }}
+  variants={modalVariants}
+  transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+  onClick={(e) => e.stopPropagation()}
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby={title ? 'modal-title' : undefined}
+  >
+  {(title || showClose) && (
+  <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+  {title && (
+  <h2 id="modal-title" className="text-lg font-semibold text-slate-800">
+  {title}
+  </h2>
+  )}
+  {showClose && (
+  <button
+  type="button"
+  onClick={onClose}
+  className="p-2 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+  aria-label="关闭"
+  >
+  <Icon name="X" size={18} />
+  </button>
+  )}
+  </div>
+  )}
 
-            <div className="flex-1 overflow-y-auto px-6 py-4">
-              {children}
-            </div>
+  <div className="flex-1 overflow-y-auto px-6 py-4">
+  {children}
+  </div>
 
-            {footer && (
-              <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 rounded-b-2xl">
-                {footer}
-              </div>
-            )}
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>,
-    document.body
+  {footer && (
+  <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
+  {footer}
+  </div>
+  )}
+  </motion.div>
+  </motion.div>
+  )}
+  </AnimatePresence>,
+  document.body
   )
 }

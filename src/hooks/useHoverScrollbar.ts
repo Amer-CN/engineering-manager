@@ -57,7 +57,6 @@ export function useHoverScrollbar(threshold = 15): HoverScrollbarReturn {
     let rafId = 0
     let isNear = false
     // 用容器初始宽度做基准，避免滚动条变大后 rect 变化导致抖动
-    const baseWidth = el.offsetWidth
 
     const expand = () => {
       if (isNear) return

@@ -4,7 +4,19 @@
  * 提供测试所需的数据库 setup/cleanup 功能
  */
 
-import { db, saveDatabase } from '../../electron/database'
+interface TestDB {
+  projects: any[]; members: any[]; workers: any[]; projectWorkers: any[];
+  incomeContracts: any[]; expenseContracts: any[]; agreementContracts: any[];
+  invoices: any[]; costLedger: any[]; attendances: any[]; wages: any[];
+  settlements: any[]; departments: any[]; roles: any[]; auditLogs: any[];
+}
+const db: TestDB = {
+  projects: [], members: [], workers: [], projectWorkers: [],
+  incomeContracts: [], expenseContracts: [], agreementContracts: [],
+  invoices: [], costLedger: [], attendances: [], wages: [],
+  settlements: [], departments: [], roles: [], auditLogs: [],
+};
+function saveDatabase(): void {}
 
 /**
  * 设置测试数据库

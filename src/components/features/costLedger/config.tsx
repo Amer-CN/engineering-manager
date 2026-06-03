@@ -1,4 +1,4 @@
-import type { CostLedgerEntry, CostLedgerCategory } from '@/types'
+﻿import type { CostLedgerEntry, CostLedgerCategory } from '@/types'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 方向配置
@@ -152,9 +152,12 @@ export const CATEGORY_HIERARCHY: CategoryHierarchyEntry[] = [
 ]
 
 // 快速查找索引（构建一次，O(1) 查表）
+// 同时注册 snake_case 和 camelCase key，兼容 api-client.ts 的 convertKeysToCamelCase
 const _hierarchyMap: Record<string, CategoryHierarchyEntry> = {}
 for (const entry of CATEGORY_HIERARCHY) {
   _hierarchyMap[entry.code] = entry
+  const camelKey = entry.code.replace(/_([a-z])/g, (_, c) => c.toUpperCase())
+  if (camelKey !== entry.code) _hierarchyMap[camelKey] = entry
 }
 
 /** 从 CATEGORY_HIERARCHY 提取一级分类列表（去重，保持定义顺序）。可指定方向过滤。 */

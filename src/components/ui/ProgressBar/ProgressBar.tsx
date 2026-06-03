@@ -34,20 +34,20 @@ export function ProgressBar({
   const pct = Math.min(Math.max((value / max) * 100, 0), 100)
 
   return (
-    <div className={`flex items-center gap-3 ${className}`}>
-      <div className={`flex-1 bg-slate-100 rounded-full overflow-hidden ${sizeStyles[size]}`}>
-        <motion.div
-          className={`${sizeStyles[size]} rounded-full ${variantStyles[variant]}`}
-          initial={{ width: 0 }}
-          animate={{ width: `${pct}%` }}
-          transition={{ duration: 0.8, ease: 'easeOut' }}
-        />
-      </div>
-      {showLabel && (
-        <span className="text-xs font-medium text-slate-500 dark:text-slate-400 flex-shrink-0">
-          {Math.round(pct)}%
-        </span>
-      )}
-    </div>
+  <div className={`flex items-center gap-3 ${className}`}>
+  <div className={`flex-1 bg-slate-100 rounded-full overflow-hidden ${sizeStyles[size]}`}>
+  <motion.div
+  className={`${sizeStyles[size]} rounded-full ${variantStyles[variant]}`}
+  initial={{ width: 0 }}
+  animate={{ width: `${pct}%` }}
+  transition={{ duration: 0.8, ease: 'easeOut' }}
+  />
+  </div>
+  {showLabel && (
+  <span className="text-xs font-medium text-slate-500 flex-shrink-0">
+  {Math.round(pct)}%
+  </span>
+  )}
+  </div>
   )
 }

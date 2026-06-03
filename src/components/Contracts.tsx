@@ -25,33 +25,33 @@ const Contracts: React.FC<ContractsProps> = ({ refresh }) => {
   const [autoCreate, setAutoCreate] = useState(false)
 
   const handleNavigate = (target: ContractView, opts?: { createNew?: boolean }) => {
-    setView(target)
-    setAutoCreate(!!opts?.createNew)
+  setView(target)
+  setAutoCreate(!!opts?.createNew)
   }
 
   const handleBack = () => {
-    setView('dashboard')
-    setAutoCreate(false)
+  setView('dashboard')
+  setAutoCreate(false)
   }
 
   // 加载占位符
   const fallback = (
-    <PageContainer>
-      <div className="rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse h-32 mb-6" />
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="rounded-xl bg-slate-100 dark:bg-slate-800 animate-pulse h-28" />
-        ))}
-      </div>
-    </PageContainer>
+  <PageContainer>
+  <div className="rounded-2xl bg-slate-100 animate-pulse h-32 mb-6" />
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  {Array.from({ length: 4 }).map((_, i) => (
+  <div key={i} className="rounded-xl bg-slate-100 animate-pulse h-28" />
+  ))}
+  </div>
+  </PageContainer>
   )
 
   if (view === 'dashboard') {
-    return (
-      <Suspense fallback={fallback}>
-        <ContractDashboard refresh={refresh} onNavigate={handleNavigate} />
-      </Suspense>
-    )
+  return (
+  <Suspense fallback={fallback}>
+  <ContractDashboard refresh={refresh} onNavigate={handleNavigate} />
+  </Suspense>
+  )
   }
 
   // Income / Expense / Agreement sub-page
@@ -60,17 +60,17 @@ const Contracts: React.FC<ContractsProps> = ({ refresh }) => {
   const setGroupBy = type === 'income' ? setIncomeGroupBy : type === 'expense' ? setExpenseGroupBy : setAgreementGroupBy
 
   return (
-    <Suspense fallback={<div className="p-6 text-slate-400">加载中...</div>}>
-      <ContractPage
-        refresh={refresh}
-        groupBy={groupBy}
-        onGroupByChange={setGroupBy}
-        type={type}
-        onBack={handleBack}
-        autoCreate={autoCreate}
-        onAutoCreateHandled={() => setAutoCreate(false)}
-      />
-    </Suspense>
+  <Suspense fallback={<div className="p-6 text-slate-400">加载中...</div>}>
+  <ContractPage
+  refresh={refresh}
+  groupBy={groupBy}
+  onGroupByChange={setGroupBy}
+  type={type}
+  onBack={handleBack}
+  autoCreate={autoCreate}
+  onAutoCreateHandled={() => setAutoCreate(false)}
+  />
+  </Suspense>
   )
 }
 

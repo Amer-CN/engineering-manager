@@ -1,5 +1,0 @@
-/// <reference types="vitest" />
-import '@testing-library/jest-dom/vitest'
-
-// 空 setup 文件 - 用于诊断
-console.log('test-setup.ts loaded')

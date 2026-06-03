@@ -51,55 +51,55 @@ export function Card({
   onClick,
 }: CardProps) {
   return (
-    <motion.div
-      whileHover={hoverable || onClick ? { y: -3, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)' } : undefined}
-      transition={{ duration: 0.2 }}
-      className={`
-        rounded-xl
-        ${glass
-          ? 'bg-white/80 backdrop-blur-lg'
-          : 'bg-white'
-        }
-        ${bordered ? 'border border-slate-100' : ''}
-        ${shadowStyles[shadow]}
-        ${onClick ? 'cursor-pointer' : ''}
-        ${className}
-      `}
-      onClick={onClick}
-    >
-      {(title || subtitle || extra) && (
-        <div className={`${paddingStyles[padding]} ${headerDivider ? 'border-b border-slate-100' : ''}`}>
-          <div className="flex items-center justify-between">
-            <div>
-              {title && (
-                <h3 className="text-lg font-semibold text-slate-800">
-                  {title}
-                </h3>
-              )}
-              {subtitle && (
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                  {subtitle}
-                </p>
-              )}
-            </div>
-            {extra && (
-              <div className="flex-shrink-0">
-                {extra}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+  <motion.div
+  whileHover={hoverable || onClick ? { y: -3, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)' } : undefined}
+  transition={{ duration: 0.2 }}
+  className={`
+  rounded-xl
+  ${glass
+  ? 'bg-white/80 backdrop-blur-lg'
+  : 'bg-white'
+  }
+  ${bordered ? 'border border-slate-100' : ''}
+  ${shadowStyles[shadow]}
+  ${onClick ? 'cursor-pointer' : ''}
+  ${className}
+  `}
+  onClick={onClick}
+  >
+  {(title || subtitle || extra) && (
+  <div className={`${paddingStyles[padding]} ${headerDivider ? 'border-b border-slate-100' : ''}`}>
+  <div className="flex items-center justify-between">
+  <div>
+  {title && (
+  <h3 className="text-lg font-semibold text-slate-800">
+  {title}
+  </h3>
+  )}
+  {subtitle && (
+  <p className="text-sm text-slate-500 mt-0.5">
+  {subtitle}
+  </p>
+  )}
+  </div>
+  {extra && (
+  <div className="flex-shrink-0">
+  {extra}
+  </div>
+  )}
+  </div>
+  </div>
+  )}
 
-      <div className={paddingStyles[padding]}>
-        {children}
-      </div>
+  <div className={paddingStyles[padding]}>
+  {children}
+  </div>
 
-      {footer && (
-        <div className={`${paddingStyles[padding]} ${footerDivider ? 'border-t border-slate-100 bg-slate-50' : ''} rounded-b-xl`}>
-          {footer}
-        </div>
-      )}
-    </motion.div>
+  {footer && (
+  <div className={`${paddingStyles[padding]} ${footerDivider ? 'border-t border-slate-100 bg-slate-50' : ''} rounded-b-xl`}>
+  {footer}
+  </div>
+  )}
+  </motion.div>
   )
 }

@@ -34,10 +34,10 @@ export const SupervisorList: React.FC<SupervisorListProps> = ({
     if (search) {
       const keyword = search.toLowerCase()
       return (
-        s.name.toLowerCase().includes(keyword) ||
-        s.contact?.toLowerCase().includes(keyword) ||
-        s.phone?.toLowerCase().includes(keyword) ||
-        s.regionName?.toLowerCase().includes(keyword)
+        (s.name || '').toLowerCase().includes(keyword) ||
+        (s.contact || '').toLowerCase().includes(keyword) ||
+        (s.phone || '').toLowerCase().includes(keyword) ||
+        (s.regionName || '').toLowerCase().includes(keyword)
       )
     }
     return true

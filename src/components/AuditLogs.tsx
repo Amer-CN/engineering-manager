@@ -48,8 +48,8 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null)
 
   const loadLogs = useCallback(async () => {
-    const result = await queryAuditLogs({ ...f.filterParams, page: f.page, pageSize: PAGE_SIZE })
-    setPagedData({ logs: result.items, total: result.total, totalPages: result.totalPages })
+  const result = await queryAuditLogs({ ...f.filterParams, page: f.page, pageSize: PAGE_SIZE })
+  setPagedData({ logs: result.items, total: result.total, totalPages: result.totalPages })
   }, [f.page, f.filterParams])
 
   useEffect(() => { loadLogs() }, [loadLogs])
@@ -60,93 +60,93 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
   const { page } = f
 
   return (
-    <>
-      {statsView.visible && statsView.data && (
-        <AuditStatsPanel statsData={statsView.data} onClose={() => setStatsView(prev => ({ ...prev, visible: false }))} actionConfig={actionConfig} />
-      )}
+  <>
+  {statsView.visible && statsView.data && (
+  <AuditStatsPanel statsData={statsView.data} onClose={() => setStatsView(prev => ({ ...prev, visible: false }))} actionConfig={actionConfig} />
+  )}
 
-      <AuditFilterBar
-        startDate={f.startDate} endDate={f.endDate} filterAction={f.filterAction}
-        filterResource={f.filterResource} filterLevel={f.filterLevel} keyword={f.keyword}
-        total={total}
-        onStartDateChange={v => f.set('startDate', v)} onEndDateChange={v => f.set('endDate', v)}
-        onFilterActionChange={v => f.set('filterAction', v)} onFilterResourceChange={v => f.set('filterResource', v)}
-        onFilterLevelChange={v => f.set('filterLevel', v)} onKeywordChange={v => f.set('keyword', v)}
-        onSearch={handleSearch} onReset={f.reset} resourceLabels={resourceLabels}
-      />
+  <AuditFilterBar
+  startDate={f.startDate} endDate={f.endDate} filterAction={f.filterAction}
+  filterResource={f.filterResource} filterLevel={f.filterLevel} keyword={f.keyword}
+  total={total}
+  onStartDateChange={v => f.set('startDate', v)} onEndDateChange={v => f.set('endDate', v)}
+  onFilterActionChange={v => f.set('filterAction', v)} onFilterResourceChange={v => f.set('filterResource', v)}
+  onFilterLevelChange={v => f.set('filterLevel', v)} onKeywordChange={v => f.set('keyword', v)}
+  onSearch={handleSearch} onReset={f.reset} resourceLabels={resourceLabels}
+  />
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
-        {logs.length === 0 ? (
-          <div className="p-12 text-center">
-            <Icon name="ClipboardList" size={44} className="text-slate-300 mb-4" />
-            <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100 mb-2">暂无操作日志</h3>
-            <p className="text-slate-500">系统还未记录任何操作，或当前筛选条件下无数据</p>
-          </div>
-        ) : (
-          <>
-            <HoverScrollbar className="h-full">
-              <table className="w-full">
-                <thead className="bg-slate-50 border-b border-slate-200">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">时间</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">用户</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">操作</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">资源</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">描述</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">级别</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">操作</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {logs.map(log => {
-                    const { date, time } = formatTimestamp(log.timestamp)
-                    const action = actionConfig[log.action] || { label: log.action, color: 'text-slate-700', bgColor: 'bg-slate-100' }
-                    return (
-                      <tr key={log.id} className="table-row-hover">
-                        <td className="px-4 py-3"><div className="text-sm text-slate-800">{date}</div><div className="text-xs text-slate-400">{time}</div></td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2"><div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-sm font-medium text-primary-700">{log.username.charAt(0).toUpperCase()}</div><span className="text-sm text-slate-700">{log.username}</span></div>
-                        </td>
-                        <td className="px-4 py-3"><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${action.bgColor} ${action.color}`}>{action.label}</span></td>
-                        <td className="px-4 py-3 text-sm text-slate-600">{resourceLabels[log.resource] || log.resource}{log.resourceName && <div className="text-xs text-slate-400">{log.resourceName}</div>}</td>
-                        <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-200 max-w-xs truncate">{log.description}</td>
-                        <td className="px-4 py-3 text-center">
-                          <StatusBadge status={log.level} config={AUDIT_LEVEL} />
-                        </td>
-                        <td className="px-4 py-3 text-center"><button onClick={() => setSelectedLog(log)} className="btn btn-ghost btn-sm text-primary-600">详情</button></td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </HoverScrollbar>
+  <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+  {logs.length === 0 ? (
+  <div className="p-12 text-center">
+  <Icon name="ClipboardList" size={44} className="text-slate-300 mb-4" />
+  <h3 className="text-lg font-medium text-slate-800 mb-2">暂无操作日志</h3>
+  <p className="text-slate-500">系统还未记录任何操作，或当前筛选条件下无数据</p>
+  </div>
+  ) : (
+  <>
+  <HoverScrollbar className="h-full">
+  <table className="w-full">
+  <thead className="bg-slate-50 border-b border-slate-200">
+  <tr>
+  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">时间</th>
+  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">用户</th>
+  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">操作</th>
+  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">资源</th>
+  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">描述</th>
+  <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">级别</th>
+  <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">操作</th>
+  </tr>
+  </thead>
+  <tbody className="divide-y divide-slate-100">
+  {logs.map(log => {
+  const { date, time } = formatTimestamp(log.timestamp)
+  const action = actionConfig[log.action] || { label: log.action, color: 'text-slate-700', bgColor: 'bg-slate-100' }
+  return (
+  <tr key={log.id} className="table-row-hover">
+  <td className="px-4 py-3"><div className="text-sm text-slate-800">{date}</div><div className="text-xs text-slate-400">{time}</div></td>
+  <td className="px-4 py-3">
+  <div className="flex items-center gap-2"><div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-sm font-medium text-primary-700">{log.username.charAt(0).toUpperCase()}</div><span className="text-sm text-slate-700">{log.username}</span></div>
+  </td>
+  <td className="px-4 py-3"><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${action.bgColor} ${action.color}`}>{action.label}</span></td>
+  <td className="px-4 py-3 text-sm text-slate-600">{resourceLabels[log.resource] || log.resource}{log.resourceName && <div className="text-xs text-slate-400">{log.resourceName}</div>}</td>
+  <td className="px-4 py-3 text-sm text-slate-700 max-w-xs truncate">{log.description}</td>
+  <td className="px-4 py-3 text-center">
+  <StatusBadge status={log.level} config={AUDIT_LEVEL} />
+  </td>
+  <td className="px-4 py-3 text-center"><button onClick={() => setSelectedLog(log)} className="btn btn-ghost btn-sm text-primary-600">详情</button></td>
+  </tr>
+  )
+  })}
+  </tbody>
+  </table>
+  </HoverScrollbar>
 
-            <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between">
-              <div className="text-sm text-slate-500">第 <span className="font-medium">{page}</span> / <span className="font-medium">{totalPages}</span> 页</div>
-              <div className="flex items-center gap-2">
-                <button onClick={() => f.setPage(Math.max(1, page - 1))} disabled={page <= 1} className="btn btn-secondary btn-sm disabled:opacity-50 disabled:cursor-not-allowed">上一页</button>
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  const pageNum = Math.max(1, Math.min(totalPages - 4, page - 2)) + i
-                  return <button key={pageNum} onClick={() => f.setPage(pageNum)} className={`btn btn-sm ${pageNum === page ? 'btn-primary' : 'btn-ghost text-slate-700'}`}>{pageNum}</button>
-                })}
-                <button onClick={() => f.setPage(Math.min(totalPages, page + 1))} disabled={page >= totalPages} className="btn btn-secondary btn-sm disabled:opacity-50 disabled:cursor-not-allowed">下一页</button>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
+  <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between">
+  <div className="text-sm text-slate-500">第 <span className="font-medium">{page}</span> / <span className="font-medium">{totalPages}</span> 页</div>
+  <div className="flex items-center gap-2">
+  <button onClick={() => f.setPage(Math.max(1, page - 1))} disabled={page <= 1} className="btn btn-secondary btn-sm disabled:opacity-50 disabled:cursor-not-allowed">上一页</button>
+  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+  const pageNum = Math.max(1, Math.min(totalPages - 4, page - 2)) + i
+  return <button key={pageNum} onClick={() => f.setPage(pageNum)} className={`btn btn-sm ${pageNum === page ? 'btn-primary' : 'btn-ghost text-slate-700'}`}>{pageNum}</button>
+  })}
+  <button onClick={() => f.setPage(Math.min(totalPages, page + 1))} disabled={page >= totalPages} className="btn btn-secondary btn-sm disabled:opacity-50 disabled:cursor-not-allowed">下一页</button>
+  </div>
+  </div>
+  </>
+  )}
+  </div>
 
-      {selectedLog && <AuditDetailModal selectedLog={selectedLog} onClose={() => setSelectedLog(null)} actionConfig={actionConfig} resourceLabels={resourceLabels} />}
-    </>
+  {selectedLog && <AuditDetailModal selectedLog={selectedLog} onClose={() => setSelectedLog(null)} actionConfig={actionConfig} resourceLabels={resourceLabels} />}
+  </>
   )
 }
 
 const AuditLogs: React.FC<AuditLogsProps> = ({ refresh }) => (
   <div className="max-w-[1400px] mx-auto p-6">
-    <div className="flex items-center justify-between mb-6">
-      <div><h1 className="text-2xl font-bold text-slate-800">操作日志</h1><p className="text-slate-500 dark:text-slate-400 mt-1">查看系统所有操作记录，追踪谁在什么时间做了什么</p></div>
-    </div>
-    <AuditLogsContent refresh={refresh} />
+  <div className="flex items-center justify-between mb-6">
+  <div><h1 className="text-2xl font-bold text-slate-800">操作日志</h1><p className="text-slate-500 mt-1">查看系统所有操作记录，追踪谁在什么时间做了什么</p></div>
+  </div>
+  <AuditLogsContent refresh={refresh} />
   </div>
 )
 

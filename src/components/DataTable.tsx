@@ -60,18 +60,18 @@ const TableRow = React.memo(function TableRow<T>({
   rowKeyStr,
 }: TableRowProps<T>) {
   return (
-    <tr
-      onClick={onClick ? () => onClick(item) : undefined}
-      className={`table-row-hover ${onClick ? 'cursor-pointer' : ''}`}
-    >
-      {columns.map(col => (
-        <td key={col.key} className="px-4 py-3 text-sm text-slate-700">
-          {col.render
-            ? col.render(item, index)
-            : String((item as any)[col.key] ?? '-')}
-        </td>
-      ))}
-    </tr>
+  <tr
+  onClick={onClick ? () => onClick(item) : undefined}
+  className={`table-row-hover ${onClick ? 'cursor-pointer' : ''}`}
+  >
+  {columns.map(col => (
+  <td key={col.key} className="px-4 py-3 text-sm text-slate-700">
+  {col.render
+  ? col.render(item, index)
+  : String((item as any)[col.key] ?? '-')}
+  </td>
+  ))}
+  </tr>
   )
 }) as <T>(props: TableRowProps<T>) => React.ReactElement
 
@@ -99,46 +99,46 @@ export function DataTable<T>({
 
   // 获取行唯一标识
   const getRowKey = useCallback((item: T, index: number): string => {
-    if (typeof rowKey === 'function') {
-      return rowKey(item)
-    }
-    return String(item[rowKey] ?? index)
+  if (typeof rowKey === 'function') {
+  return rowKey(item)
+  }
+  return String(item[rowKey] ?? index)
   }, [rowKey])
 
   // 排序（useMemo 缓存，仅在 data/sortKey/sortOrder 变化时重算）
   const sortedData = useMemo(() => {
-    if (!sortKey) return data
-    return [...data].sort((a, b) => {
-      const aVal = (a as any)[sortKey]
-      const bVal = (b as any)[sortKey]
-      if (aVal == null) return 1
-      if (bVal == null) return -1
-      if (typeof aVal === 'string') {
-        return sortOrder === 'asc'
-          ? aVal.localeCompare(bVal)
-          : bVal.localeCompare(aVal)
-      }
-      return sortOrder === 'asc' ? aVal - bVal : bVal - aVal
-    })
+  if (!sortKey) return data
+  return [...data].sort((a, b) => {
+  const aVal = (a as any)[sortKey]
+  const bVal = (b as any)[sortKey]
+  if (aVal == null) return 1
+  if (bVal == null) return -1
+  if (typeof aVal === 'string') {
+  return sortOrder === 'asc'
+  ? aVal.localeCompare(bVal)
+  : bVal.localeCompare(aVal)
+  }
+  return sortOrder === 'asc' ? aVal - bVal : bVal - aVal
+  })
   }, [data, sortKey, sortOrder])
 
   // 分页（useMemo 缓存）
   const paginatedData = useMemo(() => {
-    if (pageSize === 0) return sortedData
-    const start = (currentPage - 1) * pageSize
-    return sortedData.slice(start, start + pageSize)
+  if (pageSize === 0) return sortedData
+  const start = (currentPage - 1) * pageSize
+  return sortedData.slice(start, start + pageSize)
   }, [sortedData, currentPage, pageSize])
 
   // 排序处理
   const handleSort = useCallback((key: string) => {
-    setSortKey(prev => {
-      if (prev === key) {
-        setSortOrder(o => o === 'asc' ? 'desc' : 'asc')
-      } else {
-        setSortOrder('asc')
-      }
-      return key
-    })
+  setSortKey(prev => {
+  if (prev === key) {
+  setSortOrder(o => o === 'asc' ? 'desc' : 'asc')
+  } else {
+  setSortOrder('asc')
+  }
+  return key
+  })
   }, [])
 
   // 总页数
@@ -146,238 +146,238 @@ export function DataTable<T>({
 
   // 重置页码当数据变化时
   React.useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0) {
-      setCurrentPage(1)
-    }
+  if (currentPage > totalPages && totalPages > 0) {
+  setCurrentPage(1)
+  }
   }, [data.length, totalPages])
 
   // 同步分页信息到状态栏
   const setStatusBarInfo = useStatusStore(s => s.setInfo)
   useEffect(() => {
-    if (data.length > 0) {
-      const start = pageSize > 0 ? (currentPage - 1) * pageSize + 1 : 1
-      const end = pageSize > 0 ? Math.min(currentPage * pageSize, data.length) : data.length
-      setStatusBarInfo({ total: data.length, start, end })
-    } else {
-      setStatusBarInfo(null)
-    }
-    return () => setStatusBarInfo(null)
+  if (data.length > 0) {
+  const start = pageSize > 0 ? (currentPage - 1) * pageSize + 1 : 1
+  const end = pageSize > 0 ? Math.min(currentPage * pageSize, data.length) : data.length
+  setStatusBarInfo({ total: data.length, start, end })
+  } else {
+  setStatusBarInfo(null)
+  }
+  return () => setStatusBarInfo(null)
   }, [data.length, currentPage, pageSize, setStatusBarInfo])
 
   if (loading) {
-    return <Spinner size="lg" />
+  return <Spinner size="lg" />
   }
 
   return (
-    <div className="flex flex-col h-full">
-      {/* 工具栏 */}
-      <div className="flex items-center justify-end mb-4 px-1">
-        <div className="flex items-center gap-3">
-          {extraActions}
-        </div>
-      </div>
+  <div className="flex flex-col h-full">
+  {/* 工具栏 */}
+  <div className="flex items-center justify-end mb-4 px-1">
+  <div className="flex items-center gap-3">
+  {extraActions}
+  </div>
+  </div>
 
-      {/* 表格视图 */}
-      <div className="flex-1 overflow-hidden">
-        {useHoverScrollbar ? (
-          <HoverScrollbar className="h-full border border-slate-200 dark:border-slate-700 rounded-lg">
-            <div className="min-h-full">
-              <table className="w-full">
-                <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
-                  <tr>
-                    {columns.map(col => (
-                      <th
-                        key={col.key}
-                        className={`px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider ${
-                          col.sortable ? 'cursor-pointer hover:bg-slate-100 select-none' : ''
-                        }`}
-                        style={{ width: col.width }}
-                        onClick={() => col.sortable && handleSort(col.key)}
-                      >
-                        <div className="flex items-center gap-1">
-                          {col.title}
-                          {col.sortable && (
-                            <span className="text-slate-400">
-                              {sortKey === col.key ? (sortOrder === 'asc' ? '↑' : '↓') : '↕'}
-                            </span>
-                          )}
-                        </div>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-100 dark:divide-slate-700">
-                  {paginatedData.length > 0 ? (
-                    paginatedData.map((item, index) => (
-                      <TableRow
-                        key={getRowKey(item, index)}
-                        item={item}
-                        index={index}
-                        columns={columns}
-                        onClick={onRowClick}
-                        rowKeyStr={getRowKey(item, index)}
-                      />
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={columns.length} className="px-4 py-12 text-center text-slate-500">
-                        {emptyIcon && <div className="text-4xl mb-2">{emptyIcon}</div>}
-                        {emptyText}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </HoverScrollbar>
-        ) : (
-          <div className="h-full overflow-auto border border-slate-200 dark:border-slate-700 rounded-lg">
-            <table className="w-full">
-              <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
-                <tr>
-                  {columns.map(col => (
-                    <th
-                      key={col.key}
-                      className={`px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider ${
-                        col.sortable ? 'cursor-pointer hover:bg-slate-100 select-none' : ''
-                      }`}
-                      style={{ width: col.width }}
-                      onClick={() => col.sortable && handleSort(col.key)}
-                    >
-                      <div className="flex items-center gap-1">
-                        {col.title}
-                        {col.sortable && (
-                          <span className="text-slate-400">
-                            {sortKey === col.key ? (sortOrder === 'asc' ? '↑' : '↓') : '↕'}
-                          </span>
-                        )}
-                      </div>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-100 dark:divide-slate-700">
-                {paginatedData.length > 0 ? (
-                  paginatedData.map((item, index) => (
-                    <TableRow
-                      key={getRowKey(item, index)}
-                      item={item}
-                      index={index}
-                      columns={columns}
-                      onClick={onRowClick}
-                      rowKeyStr={getRowKey(item, index)}
-                    />
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={columns.length} className="px-4 py-12 text-center text-slate-500">
-                      {emptyIcon && <div className="text-4xl mb-2">{emptyIcon}</div>}
-                      {emptyText}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+  {/* 表格视图 */}
+  <div className="flex-1 overflow-hidden">
+  {useHoverScrollbar ? (
+  <HoverScrollbar className="h-full border border-slate-200 rounded-lg">
+  <div className="min-h-full">
+  <table className="w-full">
+  <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
+  <tr>
+  {columns.map(col => (
+  <th
+  key={col.key}
+  className={`px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider ${
+  col.sortable ? 'cursor-pointer hover:bg-slate-100 select-none' : ''
+  }`}
+  style={{ width: col.width }}
+  onClick={() => col.sortable && handleSort(col.key)}
+  >
+  <div className="flex items-center gap-1">
+  {col.title}
+  {col.sortable && (
+  <span className="text-slate-400">
+  {sortKey === col.key ? (sortOrder === 'asc' ? '↑' : '↓') : '↕'}
+  </span>
+  )}
+  </div>
+  </th>
+  ))}
+  </tr>
+  </thead>
+  <tbody className="bg-white divide-y divide-slate-100">
+  {paginatedData.length > 0 ? (
+  paginatedData.map((item, index) => (
+  <TableRow
+  key={getRowKey(item, index)}
+  item={item}
+  index={index}
+  columns={columns}
+  onClick={onRowClick}
+  rowKeyStr={getRowKey(item, index)}
+  />
+  ))
+  ) : (
+  <tr>
+  <td colSpan={columns.length} className="px-4 py-12 text-center text-slate-500">
+  {emptyIcon && <div className="text-4xl mb-2">{emptyIcon}</div>}
+  {emptyText}
+  </td>
+  </tr>
+  )}
+  </tbody>
+  </table>
+  </div>
+  </HoverScrollbar>
+  ) : (
+  <div className="h-full overflow-auto border border-slate-200 rounded-lg">
+  <table className="w-full">
+  <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
+  <tr>
+  {columns.map(col => (
+  <th
+  key={col.key}
+  className={`px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider ${
+  col.sortable ? 'cursor-pointer hover:bg-slate-100 select-none' : ''
+  }`}
+  style={{ width: col.width }}
+  onClick={() => col.sortable && handleSort(col.key)}
+  >
+  <div className="flex items-center gap-1">
+  {col.title}
+  {col.sortable && (
+  <span className="text-slate-400">
+  {sortKey === col.key ? (sortOrder === 'asc' ? '↑' : '↓') : '↕'}
+  </span>
+  )}
+  </div>
+  </th>
+  ))}
+  </tr>
+  </thead>
+  <tbody className="bg-white divide-y divide-slate-100">
+  {paginatedData.length > 0 ? (
+  paginatedData.map((item, index) => (
+  <TableRow
+  key={getRowKey(item, index)}
+  item={item}
+  index={index}
+  columns={columns}
+  onClick={onRowClick}
+  rowKeyStr={getRowKey(item, index)}
+  />
+  ))
+  ) : (
+  <tr>
+  <td colSpan={columns.length} className="px-4 py-12 text-center text-slate-500">
+  {emptyIcon && <div className="text-4xl mb-2">{emptyIcon}</div>}
+  {emptyText}
+  </td>
+  </tr>
+  )}
+  </tbody>
+  </table>
+  </div>
+  )}
 
-        {/* 分页 */}
-        {pageSize > 0 && totalPages > 1 && (
-          <div className="flex items-center justify-between mt-4 px-1">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-500">每页显示</span>
-              <select
-                value={pageSize}
-                onChange={e => {
-                  setPageSize(Number(e.target.value))
-                  setCurrentPage(1)
-                }}
-                className="px-2 py-1 border border-slate-300 rounded text-sm"
-              >
-                {pageSizeOptions.map(size => (
-                  <option key={size} value={size}>{size} 条</option>
-                ))}
-              </select>
-            </div>
+  {/* 分页 */}
+  {pageSize > 0 && totalPages > 1 && (
+  <div className="flex items-center justify-between mt-4 px-1">
+  <div className="flex items-center gap-2">
+  <span className="text-sm text-slate-500">每页显示</span>
+  <select
+  value={pageSize}
+  onChange={e => {
+  setPageSize(Number(e.target.value))
+  setCurrentPage(1)
+  }}
+  className="px-2 py-1 border border-slate-300 rounded text-sm"
+  >
+  {pageSizeOptions.map(size => (
+  <option key={size} value={size}>{size} 条</option>
+  ))}
+  </select>
+  </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentPage(1)}
-                disabled={currentPage === 1}
-                className="btn btn-secondary btn-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                首页
-              </button>
-              <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="btn btn-secondary btn-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                上一页
-              </button>
+  <div className="flex items-center gap-2">
+  <button
+  onClick={() => setCurrentPage(1)}
+  disabled={currentPage === 1}
+  className="btn btn-secondary btn-sm disabled:opacity-50 disabled:cursor-not-allowed"
+  >
+  首页
+  </button>
+  <button
+  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+  disabled={currentPage === 1}
+  className="btn btn-secondary btn-sm disabled:opacity-50 disabled:cursor-not-allowed"
+  >
+  上一页
+  </button>
 
-              <span className="px-3 py-1 text-sm">
-                第 {currentPage} / {totalPages} 页
-              </span>
+  <span className="px-3 py-1 text-sm">
+  第 {currentPage} / {totalPages} 页
+  </span>
 
-              <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="btn btn-secondary btn-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                下一页
-              </button>
-              <button
-                onClick={() => setCurrentPage(totalPages)}
-                disabled={currentPage === totalPages}
-                className="btn btn-secondary btn-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                末页
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+  <button
+  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+  disabled={currentPage === totalPages}
+  className="btn btn-secondary btn-sm disabled:opacity-50 disabled:cursor-not-allowed"
+  >
+  下一页
+  </button>
+  <button
+  onClick={() => setCurrentPage(totalPages)}
+  disabled={currentPage === totalPages}
+  className="btn btn-secondary btn-sm disabled:opacity-50 disabled:cursor-not-allowed"
+  >
+  末页
+  </button>
+  </div>
+  </div>
+  )}
+  </div>
+  </div>
   )
 }
 
 // 表格单元格组件
 export const TableCell = {
   Text: ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
-    <span className={className}>{children}</span>
+  <span className={className}>{children}</span>
   ),
   Badge: ({ children, color = 'primary' }: { children: React.ReactNode; color?: string }) => {
-    const colors: Record<string, string> = {
-      primary: 'bg-primary-100 text-primary-700',
-      green: 'bg-green-100 text-green-700',
-      orange: 'bg-orange-100 text-orange-700',
-      red: 'bg-red-100 text-red-700',
-      gray: 'bg-slate-100 text-slate-700',
-      blue: 'bg-blue-100 text-blue-700'
-    }
-    return (
-      <span className={`inline-block px-2 py-0.5 text-xs rounded-full ${colors[color] || colors.primary}`}>
-        {children}
-      </span>
-    )
+  const colors: Record<string, string> = {
+  primary: 'bg-primary-100 text-primary-700',
+  green: 'bg-green-100 text-green-700',
+  orange: 'bg-orange-100 text-orange-700',
+  red: 'bg-red-100 text-red-700',
+  gray: 'bg-slate-100 text-slate-700',
+  blue: 'bg-blue-100 text-blue-700'
+  }
+  return (
+  <span className={`inline-block px-2 py-0.5 text-xs rounded-full ${colors[color] || colors.primary}`}>
+  {children}
+  </span>
+  )
   },
   Icon: ({ icon }: { icon: string }) => <span className="mr-1">{icon}</span>,
   Actions: ({ children }: { children: React.ReactNode }) => (
-    <div className="flex items-center gap-1">{children}</div>
+  <div className="flex items-center gap-1">{children}</div>
   ),
   Checkbox: ({
-    checked,
-    onChange
+  checked,
+  onChange
   }: {
-    checked: boolean
-    onChange: (checked: boolean) => void
+  checked: boolean
+  onChange: (checked: boolean) => void
   }) => (
-    <input
-      type="checkbox"
-      checked={checked}
-      onChange={e => onChange(e.target.checked)}
-      className="w-4 h-4 text-primary-600 rounded"
-    />
+  <input
+  type="checkbox"
+  checked={checked}
+  onChange={e => onChange(e.target.checked)}
+  className="w-4 h-4 text-primary-600 rounded"
+  />
   )
 }

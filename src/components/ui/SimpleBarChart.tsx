@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 
 // CSS 柱状图 — 横向布局，纯 div 实现，无 Recharts 干扰
 export const SimpleBarChart: React.FC<{
-  data: { name: string; amount: number }[]
+  data: { name: string; amount: number; color?: string }[]
   colors: string[]
   formatValue: (n: number) => string
 }> = ({ data, colors, formatValue }) => {
@@ -55,14 +55,14 @@ export const SimpleBarChart: React.FC<{
                   }}>
                   <span className="font-medium">{d.name}</span>
                   <span className="mx-1.5" style={{ color: 'var(--muted)' }}>·</span>
-                  <span style={{ fontFamily: 'var(--font-mono, monospace)', color: colors[i % colors.length] }}>{formatValue(d.amount)}</span>
+                  <span style={{ fontFamily: 'var(--font-mono, monospace)', color: d.color || colors[i % colors.length] }}>{formatValue(d.amount)}</span>
                 </div>
               )}
               <div className="w-full rounded-t-md"
                 style={{
                   height: mounted ? `${Math.max(pct, 1)}%` : '0%',
                   transition: `height 0.6s cubic-bezier(0.16, 1, 0.3, 1) ${i * 0.06}s, opacity 0.15s ease`,
-                  background: `linear-gradient(to top, ${colors[i % colors.length]}cc, ${colors[i % colors.length]})`,
+                  background: `linear-gradient(to top, ${(d.color || colors[i % colors.length])}cc, ${d.color || colors[i % colors.length]})`,
                   opacity: hovered !== null && !isHovered ? 0.4 : 1,
                   minHeight: mounted && d.amount > 0 ? 4 : 0,
                 }}

@@ -7,6 +7,30 @@
 
 const API_BASE = 'http://localhost:5048';
 
+/** snake_case → camelCase 转换 */
+function toCamelCase(str: string): string {
+  return str.replace(/_([a-z])/g, (_, c) => c.toUpperCase())
+}
+
+/** 判断 key 是否应转换为 camelCase（包含下划线的属性名） */
+function shouldConvert(key: string): boolean {
+  return key.includes('_') && !key.startsWith('custom_')
+}
+
+/** 递归转换对象 key 为 camelCase（跳过字典型 key） */
+function convertKeysToCamelCase(obj: any): any {
+  if (Array.isArray(obj)) return obj.map(convertKeysToCamelCase)
+  if (obj !== null && typeof obj === 'object' && !(obj instanceof Date)) {
+    return Object.fromEntries(
+      Object.entries(obj).map(([key, value]) => [
+        shouldConvert(key) ? toCamelCase(key) : key,
+        convertKeysToCamelCase(value)
+      ])
+    )
+  }
+  return obj
+}
+
 interface ApiResponse<T> {
   success: boolean;
   data?: T;
@@ -30,7 +54,8 @@ async function get<T>(path: string, params?: Record<string, unknown>): Promise<A
     if (!resp.ok) {
       return { success: false, error: `HTTP ${resp.status}: ${resp.statusText}` };
     }
-    return await resp.json();
+    const raw = await resp.json();
+    return convertKeysToCamelCase(raw);
   } catch (err) {
     console.error(`[API] GET ${path} 失败:`, err);
     return { success: false, error: String(err) };
@@ -50,7 +75,8 @@ async function post<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
     if (!resp.ok) {
       return { success: false, error: `HTTP ${resp.status}: ${resp.statusText}` };
     }
-    return await resp.json();
+    const raw = await resp.json();
+    return convertKeysToCamelCase(raw);
   } catch (err) {
     console.error(`[API] POST ${path} 失败:`, err);
     return { success: false, error: String(err) };
@@ -70,7 +96,8 @@ async function put<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
     if (!resp.ok) {
       return { success: false, error: `HTTP ${resp.status}: ${resp.statusText}` };
     }
-    return await resp.json();
+    const raw = await resp.json();
+    return convertKeysToCamelCase(raw);
   } catch (err) {
     console.error(`[API] PUT ${path} 失败:`, err);
     return { success: false, error: String(err) };
@@ -86,7 +113,8 @@ async function del<T>(path: string): Promise<ApiResponse<T>> {
     if (!resp.ok) {
       return { success: false, error: `HTTP ${resp.status}: ${resp.statusText}` };
     }
-    return await resp.json();
+    const raw = await resp.json();
+    return convertKeysToCamelCase(raw);
   } catch (err) {
     console.error(`[API] DELETE ${path} 失败:`, err);
     return { success: false, error: String(err) };

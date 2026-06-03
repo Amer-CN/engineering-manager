@@ -56,6 +56,18 @@ const Login: React.FC<LoginProps> = () => {
   const minimize = useCallback(async () => { (await getAPI()).minimizeWindow?.() }, [])
   const close = useCallback(async () => { (await getAPI()).closeWindow?.() }, [])
 
+  // 鼠标按下时通知 C# 端开始拖动（WebView2 环境）
+  const handleTitleBarMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.button !== 0) return
+    const target = e.target as HTMLElement
+    if (target.closest('button')) return
+
+    const webview = (window as any).chrome?.webview
+    if (webview) {
+      webview.postMessage(JSON.stringify({ action: 'startDrag' }))
+    }
+  }, [])
+
   useEffect(() => { (async () => { (await getAPI()).resizeForLogin?.() })() }, [])
 
   useEffect(() => { localStorage.setItem(AUTO_KEY, String(autoLogin)) }, [autoLogin])
@@ -82,11 +94,11 @@ const Login: React.FC<LoginProps> = () => {
       background: 'var(--bg-2)',
       width: '100vw', height: '100vh',
       display: 'flex', flexDirection: 'column',
-      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
+      fontFamily: "'Noto Sans SC', 'Source Han Sans SC', 'Microsoft YaHei', sans-serif",
     }}>
       {/* ── 标题栏 ── */}
-      <div style={{ height: 28, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '0 4px', flexShrink: 0, WebkitAppRegion: 'drag' } as React.CSSProperties}>
-        <div style={{ display: 'flex', WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+      <div style={{ height: 28, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '0 4px', flexShrink: 0 } as React.CSSProperties} onMouseDown={handleTitleBarMouseDown}>
+        <div style={{ display: 'flex' } as React.CSSProperties}>
           {[{ icon: <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor" /></svg>, action: minimize },
             { icon: <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"><line x1="2" y1="2" x2="8" y2="8" /><line x1="8" y1="2" x2="2" y2="8" /></svg>, action: close, hoverBg: 'var(--danger)', hoverColor: '#fff' }
           ].map((btn, i) => (

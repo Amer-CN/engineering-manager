@@ -1,5 +1,4 @@
 import React, { useState, useCallback } from 'react'
-import PageHeader from './ui/PageHeader'
 import { Tabs } from './ui/Tabs'
 import HRDashboard from './features/hr/HRDashboard'
 import StaffList from './features/hr/StaffList'
@@ -25,24 +24,29 @@ const HRManagement: React.FC = () => {
   }, [])
 
   return (
-    <div className="p-6 max-w-[1400px] mx-auto min-h-full flex flex-col">
-      <PageHeader title="人事管理" subtitle="管理人员档案、考勤、薪酬与部门架构" />
+    <div className="h-[calc(100vh-60px)] flex flex-col overflow-hidden p-6">
+      {/* 页面标题 - 固定高度 */}
+      <div className="flex items-center justify-between mb-5 shrink-0">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">人事管理</h1>
+          <p className="text-slate-500 mt-1">管理人员档案、考勤、薪酬与部门架构</p>
+        </div>
+      </div>
 
-      {/* Tab 导航 (统一 Tabs 组件) */}
+      {/* Tab 导航 - 填满剩余空间 */}
       <Tabs
         value={activeTab}
         onChange={setTab}
         tabs={TABS.map(tab => ({ key: tab.id, label: tab.label, icon: tab.icon }))}
         animated={true}
+        className="flex-1 flex flex-col min-h-0"
+        contentClassName="flex-1 flex flex-col min-h-0"
       >
-        {/* Tab 内容 */}
-        <div className="flex-1 overflow-hidden flex flex-col">
-          {activeTab === 'dashboard' && <HRDashboard />}
-          {activeTab === 'staff' && <StaffList />}
-          {activeTab === 'attendance' && <StaffAttendance />}
-          {activeTab === 'payroll' && <PayrollPage mode="staff" />}
-          {activeTab === 'departments' && <DepartmentManager />}
-        </div>
+        {activeTab === 'dashboard' && <HRDashboard />}
+        {activeTab === 'staff' && <StaffList />}
+        {activeTab === 'attendance' && <StaffAttendance />}
+        {activeTab === 'payroll' && <PayrollPage mode="staff" />}
+        {activeTab === 'departments' && <DepartmentManager />}
       </Tabs>
     </div>
   )

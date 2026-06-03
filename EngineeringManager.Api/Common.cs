@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 
 namespace EngineeringManager.Api;
 
@@ -56,7 +56,8 @@ record MemberDto(long? Id, string Name, string? Phone, string? Email, string? Me
 record WorkerDto(long? Id, string Name, string? IdCard, string? Gender, string? Phone, string? Address, string? BankAccount, string? BankName, string? WorkerType, double? DailyWage);
 record ProjectWorkerDto(long? WorkerId, long? ProjectId, long? TeamId, double? DailyWage, string? WorkerType, string? EntryDate, string? Status);
 record PartnerDto(long? Id, string Name, string? Category, string? Contact, string? Phone, string? Email, string? Address, string? BankAccount, string? BankName, string? TaxNumber, string? CreditCode, string? RegisteredAddress, string? BusinessScope, string? TaxType);
-record InvoiceDto(long? Id, long? ProjectId, long? PartnerId, string? Type, string? InvoiceKind, string? InvoiceNo, string? InvoiceCode, string? Name, double? Amount, double? TaxRate, double? TaxAmount, string? IssueDate, string? Status, string? Remarks);
+record InvoiceDto(long? Id, long? ProjectId, long? SellerId, long? BuyerId, long? ContractId, long? SettlementId, string? Type, string? InvoiceKind, string? InvoiceNo, string? InvoiceCode, string? Name, double? Amount, double? PriceAmount, double? TaxRate, double? TaxAmount, double? ReceivedAmount, string? IssueDate, string? Status, string? Remarks, string? FileUrl, string? FileType);
+record PaymentRecordDto(long? Id, string? Type, double? Amount, string? RecordDate, long? ProjectId, long? PartnerId, long? ContractId, string? InvoiceDetails, string? Remarks, string? FileUrl, string? FileType);
 record AttendanceDto(long? Id, long? MemberId, long? ProjectId, long? ProjectWorkerId, string YearMonth, double? WorkDays, int? DaysOff, bool? IsFullAttendance, string? DailyStatus, string? FileUrl, string? FileName);
 record WageDto(long? Id, long? ProjectId, long? MemberId, long? ProjectWorkerId, string? YearMonth, double? DailyWage, double? WorkDays, double? Bonus, double? Deduction, double? ActualWage, double? PaidAmount, string? PaidDate);
 record DepartmentDto(string Name, long? ManagerId, string? Positions);
@@ -76,3 +77,4 @@ record CostLedgerEntryDto(long? Id, long? ProjectId, long? BatchId, string? Vouc
 record CostLedgerCategoryDto(long? Id, string? Name, string? Direction, string? Level1, string? Color);
 record CostLedgerBatchDto(long? Id, long? ProjectId, string? Name, string? NewName);
 record CostLedgerMatchRuleDto(string? Pattern, string? Category, string? Direction, int? Priority);
+

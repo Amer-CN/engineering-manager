@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using Dapper;
 
 namespace EngineeringManager.Api;
@@ -19,6 +19,7 @@ public static class InvoiceEndpoints
         app.MapGet("/api/invoices", (IDbConnection db, long? projectId) =>
         {
             var sql = @"SELECT i.*, p.name as project_name,
+                               seller.name as sellerName, buyer.name as buyerName,
                                CASE WHEN i.type='invoice_in' THEN seller.name ELSE buyer.name END as partner_name
                         FROM invoices i
                         LEFT JOIN projects p ON i.project_id=p.id
@@ -32,26 +33,27 @@ public static class InvoiceEndpoints
         app.MapPost("/api/invoices", async (InvoiceDto dto, IDbConnection db) =>
         {
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO invoices
-                (project_id,partner_id,type,invoice_kind,invoice_no,invoice_code,name,amount,tax_rate,tax_amount,
-                 issue_date,status,remarks,created_at,updated_at)
-                VALUES (@ProjectId,@PartnerId,@Type,@InvoiceKind,@InvoiceNo,@InvoiceCode,@Name,@Amount,@TaxRate,
-                        @TaxAmount,@IssueDate,@Status,@Remarks,@Now,@Now);
+                (project_id,seller_id,buyer_id,contract_id,settlement_id,type,invoice_kind,invoice_no,invoice_code,name,
+                 amount,price_amount,tax_rate,tax_amount,received_amount,issue_date,status,remarks,file_url,file_type,created_at,updated_at)
+                VALUES (@ProjectId,@SellerId,@BuyerId,@ContractId,@SettlementId,@Type,@InvoiceKind,@InvoiceNo,@InvoiceCode,@Name,
+                        @Amount,@PriceAmount,@TaxRate,@TaxAmount,@ReceivedAmount,@IssueDate,@Status,@Remarks,@FileUrl,@FileType,@Now,@Now);
                 SELECT last_insert_rowid();",
-                new { dto.ProjectId, dto.PartnerId, dto.Type, dto.InvoiceKind, dto.InvoiceNo, dto.InvoiceCode,
-                      dto.Name, dto.Amount, dto.TaxRate, dto.TaxAmount, dto.IssueDate,
-                      Status = dto.Status ?? "pending", dto.Remarks, Now = now() });
+                new { dto.ProjectId, dto.SellerId, dto.BuyerId, dto.ContractId, dto.SettlementId, dto.Type, dto.InvoiceKind, dto.InvoiceNo, dto.InvoiceCode,
+                      dto.Name, dto.Amount, dto.PriceAmount, dto.TaxRate, dto.TaxAmount, dto.ReceivedAmount, dto.IssueDate,
+                      Status = dto.Status ?? "pending", dto.Remarks, dto.FileUrl, dto.FileType, Now = now() });
             return Common.Ok(id);
         });
 
         app.MapPut("/api/invoices", async (InvoiceDto dto, IDbConnection db) =>
         {
-            var affected = await db.ExecuteAsync(@"UPDATE invoices SET project_id=@ProjectId,partner_id=@PartnerId,
-                type=@Type,invoice_kind=@InvoiceKind,invoice_no=@InvoiceNo,invoice_code=@InvoiceCode,name=@Name,
-                amount=@Amount,tax_rate=@TaxRate,tax_amount=@TaxAmount,issue_date=@IssueDate,status=@Status,
-                remarks=@Remarks,updated_at=@Now WHERE id=@Id",
-                new { dto.Id, dto.ProjectId, dto.PartnerId, dto.Type, dto.InvoiceKind, dto.InvoiceNo,
-                      dto.InvoiceCode, dto.Name, dto.Amount, dto.TaxRate, dto.TaxAmount, dto.IssueDate,
-                      dto.Status, dto.Remarks, Now = now() });
+            var affected = await db.ExecuteAsync(@"UPDATE invoices SET project_id=@ProjectId,seller_id=@SellerId,
+                buyer_id=@BuyerId,contract_id=@ContractId,settlement_id=@SettlementId,type=@Type,invoice_kind=@InvoiceKind,
+                invoice_no=@InvoiceNo,invoice_code=@InvoiceCode,name=@Name,amount=@Amount,price_amount=@PriceAmount,
+                tax_rate=@TaxRate,tax_amount=@TaxAmount,received_amount=@ReceivedAmount,issue_date=@IssueDate,
+                status=@Status,remarks=@Remarks,file_url=@FileUrl,file_type=@FileType,updated_at=@Now WHERE id=@Id",
+                new { dto.Id, dto.ProjectId, dto.SellerId, dto.BuyerId, dto.ContractId, dto.SettlementId, dto.Type, dto.InvoiceKind, dto.InvoiceNo,
+                      dto.InvoiceCode, dto.Name, dto.Amount, dto.PriceAmount, dto.TaxRate, dto.TaxAmount, dto.ReceivedAmount, dto.IssueDate,
+                      dto.Status, dto.Remarks, dto.FileUrl, dto.FileType, Now = now() });
             return affected > 0 ? Common.Ok() : Common.Fail("发票不存在");
         });
 
@@ -73,14 +75,47 @@ public static class InvoiceEndpoints
             if (projectId.HasValue) conditions.Add("pr.project_id=@ProjectId");
             if (conditions.Count > 0) sql += " WHERE " + string.Join(" AND ", conditions);
             sql += " ORDER BY pr.created_at DESC";
-            return Common.Ok(db.Query(sql, new { PaymentType = paymentType, ProjectId = projectId }));
+            var records = db.Query(sql, new { PaymentType = paymentType, ProjectId = projectId }).ToList();
+
+            // 解析 invoice_details JSON 并关联发票信息
+            var result = new List<dynamic>();
+            foreach (var record in records)
+            {
+                var dict = (IDictionary<string, object>)record;
+                var invoiceDetailsStr = dict.ContainsKey("invoice_details") ? dict["invoice_details"]?.ToString() : "[]";
+                var invoiceInfos = new List<object>();
+                try
+                {
+                    if (!string.IsNullOrEmpty(invoiceDetailsStr) && invoiceDetailsStr != "[]")
+                    {
+                        var details = System.Text.Json.JsonSerializer.Deserialize<List<System.Text.Json.JsonElement>>(invoiceDetailsStr);
+                        foreach (var detail in details)
+                        {
+                            var invoiceId = detail.GetProperty("invoiceId").GetInt64();
+                            var paymentAmount = detail.GetProperty("paymentAmount").GetDouble();
+                            var invoice = db.QueryFirstOrDefault("SELECT invoice_no, amount FROM invoices WHERE id=@Id", new { Id = invoiceId });
+                            invoiceInfos.Add(new
+                            {
+                                invoiceId,
+                                invoiceNo = invoice?.invoice_no ?? "",
+                                invoiceAmount = invoice?.amount ?? 0,
+                                paymentAmount
+                            });
+                        }
+                    }
+                }
+                catch { }
+                dict["invoice_infos"] = invoiceInfos;
+                result.Add(record);
+            }
+            return Common.Ok(result);
         });
 
         app.MapPost("/api/payment-records", async (dynamic dto, IDbConnection db) =>
         {
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO payment_records
-                (project_id,partner_id,type,amount,record_date,method,remarks,created_at,updated_at)
-                VALUES (@ProjectId,@PartnerId,@Type,@Amount,@RecordDate,@Method,@Remarks,@Now,@Now);
+                (type,amount,record_date,project_id,partner_id,contract_id,invoice_details,remarks,file_url,file_type,created_at)
+                VALUES (@Type,@Amount,@RecordDate,@ProjectId,@PartnerId,@ContractId,@InvoiceDetails,@Remarks,@FileUrl,@FileType,@Now);
                 SELECT last_insert_rowid();",
                 new { Now = now() });
             return Common.Ok(id);
@@ -88,7 +123,9 @@ public static class InvoiceEndpoints
 
         app.MapPut("/api/payment-records", async (dynamic dto, IDbConnection db) =>
         {
-            var affected = await db.ExecuteAsync(@"UPDATE payment_records SET amount=@Amount,record_date=@RecordDate,method=@Method,remarks=@Remarks,updated_at=@Now WHERE id=@Id",
+            var affected = await db.ExecuteAsync(@"UPDATE payment_records SET type=@Type,amount=@Amount,record_date=@RecordDate,
+                project_id=@ProjectId,partner_id=@PartnerId,contract_id=@ContractId,invoice_details=@InvoiceDetails,
+                remarks=@Remarks,file_url=@FileUrl,file_type=@FileType WHERE id=@Id",
                 new { Now = now() });
             return affected > 0 ? Common.Ok() : Common.Fail("记录不存在");
         });
@@ -97,3 +134,5 @@ public static class InvoiceEndpoints
             (await db.ExecuteAsync("DELETE FROM payment_records WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.Fail("记录不存在"));
     }
 }
+
+

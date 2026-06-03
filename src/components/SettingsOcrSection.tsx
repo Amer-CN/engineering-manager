@@ -41,7 +41,7 @@ export const SettingsOcrSection: React.FC<Props> = ({ ocrConfig, setOcrConfig, o
   return (
   <div className="card">
     <div className="card-header">
-      <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+      <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
         <Icon name="Sparkles" size={20} className="text-primary-600" /> AI 智能识别
       </h2>
       <span className="ml-auto text-xs px-2.5 py-1 rounded-full font-medium bg-primary-100 text-primary-700">

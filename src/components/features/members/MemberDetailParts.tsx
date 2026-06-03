@@ -3,15 +3,15 @@ import { Modal } from '../../ui/Modal/Modal'
 
 export function PreviewModal({ data, type, title, onClose }: { data: string; type: 'image' | 'pdf'; title: string; onClose: () => void }) {
   return (
-    <Modal isOpen onClose={onClose} title={title} size="full">
-      <div className="bg-slate-100 rounded-lg p-4" style={{ minHeight: '70vh' }}>
-        {type === 'image' ? (
-          <img src={data} alt={title} className="max-w-full h-auto mx-auto rounded-lg shadow-lg" />
-        ) : (
-          <embed src={data} type="application/pdf" className="w-full h-full rounded-lg" />
-        )}
-      </div>
-    </Modal>
+  <Modal isOpen onClose={onClose} title={title} size="full">
+  <div className="bg-slate-100 rounded-lg p-4" style={{ minHeight: '70vh' }}>
+  {type === 'image' ? (
+  <img src={data} alt={title} className="max-w-full h-auto mx-auto rounded-lg shadow-lg" />
+  ) : (
+  <embed src={data} type="application/pdf" className="w-full h-full rounded-lg" />
+  )}
+  </div>
+  </Modal>
   )
 }
 
@@ -36,34 +36,34 @@ export function IdCardImages({ idCardFront, idCardBack, fileUrls, onPreview }: {
 }) {
   if (!idCardFront && !idCardBack) return null
   return (
-    <div className="mt-4 pt-4 border-t border-slate-100">
-      <p className="text-sm text-slate-600 mb-3">身份证图片</p>
-      <div className="grid grid-cols-2 gap-4">
-        {idCardFront && fileUrls.idCardFront && (
-          <div className="text-center"><p className="text-xs text-slate-500 mb-2">人像面</p>
-            <div className="border border-slate-200 rounded-lg p-2 cursor-pointer hover:border-primary-400 transition-colors" onClick={() => onPreview(fileUrls.idCardFront!, 'image', '身份证人像面')}>
-              <img src={fileUrls.idCardFront} alt="人像面" className="max-h-32 mx-auto rounded" /></div></div>)}
-        {idCardBack && fileUrls.idCardBack && (
-          <div className="text-center"><p className="text-xs text-slate-500 mb-2">国徽面</p>
-            <div className="border border-slate-200 rounded-lg p-2 cursor-pointer hover:border-primary-400 transition-colors" onClick={() => onPreview(fileUrls.idCardBack!, 'image', '身份证国徽面')}>
-              <img src={fileUrls.idCardBack} alt="国徽面" className="max-h-32 mx-auto rounded" /></div></div>)}
-      </div>
-    </div>
+  <div className="mt-4 pt-4 border-t border-slate-100">
+  <p className="text-sm text-slate-600 mb-3">身份证图片</p>
+  <div className="grid grid-cols-2 gap-4">
+  {idCardFront && fileUrls.idCardFront && (
+  <div className="text-center"><p className="text-xs text-slate-500 mb-2">人像面</p>
+  <div className="border border-slate-200 rounded-lg p-2 cursor-pointer hover:border-primary-400 transition-colors" onClick={() => onPreview(fileUrls.idCardFront!, 'image', '身份证人像面')}>
+  <img src={fileUrls.idCardFront} alt="人像面" className="max-h-32 mx-auto rounded" /></div></div>)}
+  {idCardBack && fileUrls.idCardBack && (
+  <div className="text-center"><p className="text-xs text-slate-500 mb-2">国徽面</p>
+  <div className="border border-slate-200 rounded-lg p-2 cursor-pointer hover:border-primary-400 transition-colors" onClick={() => onPreview(fileUrls.idCardBack!, 'image', '身份证国徽面')}>
+  <img src={fileUrls.idCardBack} alt="国徽面" className="max-h-32 mx-auto rounded" /></div></div>)}
+  </div>
+  </div>
   )
 }
 
 export function ManagerSalaryCard({ member }: { member: any }) {
   if (member.baseSalary === undefined) return null
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6">
-      <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100 mb-4 flex items-center"><span className="mr-2">💵</span>薪酬信息</h3>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <div className="bg-green-50 rounded-lg p-4"><p className="text-sm text-slate-500">基本工资</p><p className="text-xl font-bold text-green-600">{member.baseSalary?.toLocaleString() || '0'} 元/月</p></div>
-        {member.socialSecurityPersonal !== undefined && <div className="bg-blue-50 rounded-lg p-4"><p className="text-sm text-slate-500">社保（个人）</p><p className="text-lg font-medium text-blue-600">{member.socialSecurityPersonal?.toLocaleString() || '0'} 元/月</p></div>}
-        {member.socialSecurityCompany !== undefined && <div className="bg-purple-50 rounded-lg p-4"><p className="text-sm text-slate-500">社保（单位）</p><p className="text-lg font-medium text-purple-600">{member.socialSecurityCompany?.toLocaleString() || '0'} 元/月</p></div>}
-        {member.housingFund !== undefined && <div className="bg-orange-50 rounded-lg p-4"><p className="text-sm text-slate-500">公积金</p><p className="text-lg font-medium text-orange-600">{member.housingFund?.toLocaleString() || '0'} 元/月</p></div>}
-        {member.otherAllowances !== undefined && <div className="bg-slate-50 rounded-lg p-4"><p className="text-sm text-slate-500">其他补贴</p><p className="text-lg font-medium text-slate-600">{member.otherAllowances?.toLocaleString() || '0'} 元/月</p></div>}
-      </div>
-    </div>
+  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+  <h3 className="text-lg font-medium text-slate-800 mb-4 flex items-center"><span className="mr-2">💵</span>薪酬信息</h3>
+  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+  <div className="bg-green-50 rounded-lg p-4"><p className="text-sm text-slate-500">基本工资</p><p className="text-xl font-bold text-green-600">{member.baseSalary?.toLocaleString() || '0'} 元/月</p></div>
+  {member.socialSecurityPersonal !== undefined && <div className="bg-blue-50 rounded-lg p-4"><p className="text-sm text-slate-500">社保（个人）</p><p className="text-lg font-medium text-blue-600">{member.socialSecurityPersonal?.toLocaleString() || '0'} 元/月</p></div>}
+  {member.socialSecurityCompany !== undefined && <div className="bg-purple-50 rounded-lg p-4"><p className="text-sm text-slate-500">社保（单位）</p><p className="text-lg font-medium text-purple-600">{member.socialSecurityCompany?.toLocaleString() || '0'} 元/月</p></div>}
+  {member.housingFund !== undefined && <div className="bg-orange-50 rounded-lg p-4"><p className="text-sm text-slate-500">公积金</p><p className="text-lg font-medium text-orange-600">{member.housingFund?.toLocaleString() || '0'} 元/月</p></div>}
+  {member.otherAllowances !== undefined && <div className="bg-slate-50 rounded-lg p-4"><p className="text-sm text-slate-500">其他补贴</p><p className="text-lg font-medium text-slate-600">{member.otherAllowances?.toLocaleString() || '0'} 元/月</p></div>}
+  </div>
+  </div>
   )
 }

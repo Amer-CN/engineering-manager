@@ -86,169 +86,169 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
   // Excel导入状态
   const fileInputRef = useRef<HTMLInputElement>(null)
   const existingIdCards = new Set(
-    members.filter(m => m.memberType === 'worker' && m.idCard).map(m => m.idCard!)
+  members.filter(m => m.memberType === 'worker' && m.idCard).map(m => m.idCard!)
   )
   const {
-    importState, progress, result, phase, error: importError,
-    parseFile, switchSheet, setHeaderRow, setMapping, getConfidence,
-    executeImport, saveCurrentMappingAsPreset, reset: resetImport,
+  importState, progress, result, phase, error: importError,
+  parseFile, switchSheet, setHeaderRow, setMapping, getConfidence,
+  executeImport, saveCurrentMappingAsPreset, reset: resetImport,
   } = useWorkerImport(existingIdCards)
 
   // 工具函数
   
   const resetStaffForm = () => {
-    setStaffFormData(defaultStaffFormData)
-    setEditingStaff(null)
+  setStaffFormData(defaultStaffFormData)
+  setEditingStaff(null)
   }
 
   const resetWorkerForm = () => {
-    setWorkerFormData(defaultWorkerFormData)
-    setEditingWorker(null)
+  setWorkerFormData(defaultWorkerFormData)
+  setEditingWorker(null)
   }
 
   // 文件处理辅助函数（OCR 自动识别）
   const processFileForIdCard = async (file: File, field: 'idCardFront' | 'idCardBack', setFormData: React.Dispatch<React.SetStateAction<StaffFormData | WorkerFormData>>) => {
-    const reader = new FileReader()
-    reader.onload = async (e) => {
-      const base64 = e.target?.result as string
-      setFormData(prev => ({ ...prev, [field]: base64 }))
-      setOcrMode(getOCRConfig().provider)
-      // 仅人像面触发 OCR
-      if (field === 'idCardFront') {
-        try {
-          const result = await recognizeIdCard(base64)
-          if (result.success && result.idCard) {
-            const { number, gender, birthDate, name, ethnicity, address } = result.idCard
-            setFormData(prev => ({ ...prev,
-              name: name || prev.name,
-              gender: gender || prev.gender,
-              ethnicity: ethnicity || prev.ethnicity,
-              birthDate: birthDate || prev.birthDate,
-              idCard: number || prev.idCard,
-              idCardAddress: address || prev.idCardAddress
-            }))
-            const filled: string[] = []
-            if (name) filled.push('姓名')
-            if (number) filled.push('身份证号')
-            if (gender) filled.push('性别')
-            if (birthDate) filled.push('出生日期')
-            if (ethnicity) filled.push('民族')
-            if (address) filled.push('地址')
-            showToast(filled.length > 0 ? `识别成功！已自动填充：${filled.join('、')}` : '身份证识别成功', 'success')
-          }
-        } catch (err) { console.error('OCR 识别失败:', err) }
-      }
-    }
-    reader.readAsDataURL(file)
+  const reader = new FileReader()
+  reader.onload = async (e) => {
+  const base64 = e.target?.result as string
+  setFormData(prev => ({ ...prev, [field]: base64 }))
+  setOcrMode(getOCRConfig().provider)
+  // 仅人像面触发 OCR
+  if (field === 'idCardFront') {
+  try {
+  const result = await recognizeIdCard(base64)
+  if (result.success && result.idCard) {
+  const { number, gender, birthDate, name, ethnicity, address } = result.idCard
+  setFormData(prev => ({ ...prev,
+  name: name || prev.name,
+  gender: gender || prev.gender,
+  ethnicity: ethnicity || prev.ethnicity,
+  birthDate: birthDate || prev.birthDate,
+  idCard: number || prev.idCard,
+  idCardAddress: address || prev.idCardAddress
+  }))
+  const filled: string[] = []
+  if (name) filled.push('姓名')
+  if (number) filled.push('身份证号')
+  if (gender) filled.push('性别')
+  if (birthDate) filled.push('出生日期')
+  if (ethnicity) filled.push('民族')
+  if (address) filled.push('地址')
+  showToast(filled.length > 0 ? `识别成功！已自动填充：${filled.join('、')}` : '身份证识别成功', 'success')
+  }
+  } catch (err) { console.error('OCR 识别失败:', err) }
+  }
+  }
+  reader.readAsDataURL(file)
   }
 
   const processUploadFile = async (file: File, field: string, setFormData: React.Dispatch<React.SetStateAction<any>>) => {
-    const reader = new FileReader()
-    reader.onload = (e) => { setFormData((prev: any) => ({ ...prev, [field]: e.target?.result as string, [`${field}Type`]: file.type === 'application/pdf' ? 'pdf' : 'image' })) }
-    reader.readAsDataURL(file)
+  const reader = new FileReader()
+  reader.onload = (e) => { setFormData((prev: any) => ({ ...prev, [field]: e.target?.result as string, [`${field}Type`]: file.type === 'application/pdf' ? 'pdf' : 'image' })) }
+  reader.readAsDataURL(file)
   }
 
   // WorkerPicker 批量添加处理器
   const handleBatchAddWorkers = async (entries: Partial<import('../types/electron').ProjectWorker>[]) => {
-    try {
-      const result = await (await getAPI()).batchCreateProjectWorkers(entries as any[])
-      if (result.success) {
-        showToast(`成功添加 ${entries.length} 名工人`, 'success')
-        loadData()
-      } else {
-        showToast(result.error || '添加失败', 'error')
-      }
-    } catch (err: any) {
-      showToast(err.message || '添加失败', 'error')
-    }
+  try {
+  const result = await (await getAPI()).batchCreateProjectWorkers(entries as any[])
+  if (result.success) {
+  showToast(`成功添加 ${entries.length} 名工人`, 'success')
+  loadData()
+  } else {
+  showToast(result.error || '添加失败', 'error')
+  }
+  } catch (err: any) {
+  showToast(err.message || '添加失败', 'error')
+  }
   }
 
   // 数据加载
 
   const loadData = async () => {
-    try {
-      setLoading(true)
-      const api = await getAPI()
-      const [membersRes, projectsRes, teamsRes] = await Promise.allSettled([
-        api.getMembers(),
-        api.getProjects(),
-        api.getWorkerTeams()
-      ])
-      const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
-      const membersData = get(membersRes)
-      const projectsData = get(projectsRes)
-      const teamsData = get(teamsRes)
+  try {
+  setLoading(true)
+  const api = await getAPI()
+  const [membersRes, projectsRes, teamsRes] = await Promise.allSettled([
+  api.getMembers(),
+  api.getProjects(),
+  api.getWorkerTeams()
+  ])
+  const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
+  const membersData = get(membersRes)
+  const projectsData = get(projectsRes)
+  const teamsData = get(teamsRes)
 
-      const membersWithRelations = membersData.map((m: Member) => {
-        if (m.memberType === 'worker' && m.teamId) {
-          const team = teamsData.find((t: WorkerTeam) => t.id === m.teamId)
-          return {
-            ...m,
-            teamName: team?.name,
-            projectId: team?.projectId,
-            projectName: team?.projectName,
-          }
-        }
-        return m
-      })
-      setMembers(membersWithRelations)
+  const membersWithRelations = membersData.map((m: Member) => {
+  if (m.memberType === 'worker' && m.teamId) {
+  const team = teamsData.find((t: WorkerTeam) => t.id === m.teamId)
+  return {
+  ...m,
+  teamName: team?.name,
+  projectId: team?.projectId,
+  projectName: team?.projectName,
+  }
+  }
+  return m
+  })
+  setMembers(membersWithRelations)
 
-      setProjects(projectsData)
+  setProjects(projectsData)
 
-      const teamsWithRelations = teamsData.map((t: WorkerTeam) => {
-        const project = projectsData.find((p: any) => p.id === t.projectId)
-        const leader = membersData.find((m: Member) => m.id === t.leaderId)
-        return {
-          ...t,
-          projectName: project?.name,
-          leaderName: leader?.name,
-        }
-      })
-      setWorkerTeams(teamsWithRelations)
-    } catch (error) {
-      console.error('加载数据失败:', error)
-      showToast('加载数据失败', 'error')
-    } finally {
-      setLoading(false)
-    }
+  const teamsWithRelations = teamsData.map((t: WorkerTeam) => {
+  const project = projectsData.find((p: any) => p.id === t.projectId)
+  const leader = membersData.find((m: Member) => m.id === t.leaderId)
+  return {
+  ...t,
+  projectName: project?.name,
+  leaderName: leader?.name,
+  }
+  })
+  setWorkerTeams(teamsWithRelations)
+  } catch (error) {
+  console.error('加载数据失败:', error)
+  showToast('加载数据失败', 'error')
+  } finally {
+  setLoading(false)
+  }
   }
 
   useEffect(() => {
-    loadData()
-    const config = getOCRConfig()
-    setOcrMode(config.provider)
+  loadData()
+  const config = getOCRConfig()
+  setOcrMode(config.provider)
   }, [refresh])
 
   // 粘贴事件处理
   useMemberPasteHandler({
-    visible: showWorkerModal || showStaffModal,
-    type: showWorkerModal ? 'worker' : 'staff',
-    staffFormData, workerFormData,
-    setStaffFormData, setWorkerFormData,
-    processIdCardFile: processFileForIdCard,
-    processUploadFile: processUploadFile as any,
+  visible: showWorkerModal || showStaffModal,
+  type: showWorkerModal ? 'worker' : 'staff',
+  staffFormData, workerFormData,
+  setStaffFormData, setWorkerFormData,
+  processIdCardFile: processFileForIdCard,
+  processUploadFile: processUploadFile as any,
   })
 
   // CRUD + 生命周期 + 班组操作
   const { handleDeleteMember, handleFileModified, handleSubmitStaff, handleSubmitWorker } = useMemberOperations({
-    editingStaff, editingWorker, projects, originalMemberFileRef, loadData,
-    showToast,
-    onSuccess: () => { setShowStaffModal(false); setShowWorkerModal(false); resetStaffForm(); resetWorkerForm() }
+  editingStaff, editingWorker, projects, originalMemberFileRef, loadData,
+  showToast,
+  onSuccess: () => { setShowStaffModal(false); setShowWorkerModal(false); resetStaffForm(); resetWorkerForm() }
   })
 
   const {
-    handleWorkerTransfer,
-    handleWorkerLeave,
-    handleWorkerReEntry,
-    handleStaffStatusChange,
+  handleWorkerTransfer,
+  handleWorkerLeave,
+  handleWorkerReEntry,
+  handleStaffStatusChange,
 
   } = useLaborOperations({
-    members,
-    projects,
-    workerTeams,
-    loadData,
-    editingWorker,
-    onSuccess: () => { setShowStaffModal(false); setShowWorkerModal(false) },
+  members,
+  projects,
+  workerTeams,
+  loadData,
+  editingWorker,
+  onSuccess: () => { setShowStaffModal(false); setShowWorkerModal(false) },
   })
 
   const { handleCreateTeam, handleUpdateTeam, handleDeleteTeam } = useTeamOps({ workerTeams, loadData, showToast })
@@ -256,25 +256,25 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
   const handleMemberClick = (member: Member) => { setSelectedMember(member); setShowDetailModal(true) }
 
   const handleEditStaff = (staff: Member) => {
-    setEditingStaff(staff)
-    const formData = memberToStaffForm(staff)
-    originalMemberFileRef.current[staff.id] = {}
-    for (const key of ['idCardFront', 'idCardBack', 'contractFile']) {
-      const val = (formData as any)[key]
-      if (val && !val.startsWith('data:')) originalMemberFileRef.current[staff.id][key] = val
-    }
-    setShowStaffModal(true)
+  setEditingStaff(staff)
+  const formData = memberToStaffForm(staff)
+  originalMemberFileRef.current[staff.id] = {}
+  for (const key of ['idCardFront', 'idCardBack', 'contractFile']) {
+  const val = (formData as any)[key]
+  if (val && !val.startsWith('data:')) originalMemberFileRef.current[staff.id][key] = val
+  }
+  setShowStaffModal(true)
   }
 
   const handleEditWorker = (worker: Member) => {
-    setEditingWorker(worker)
-    const formData = memberToWorkerForm(worker)
-    originalMemberFileRef.current[worker.id] = {}
-    for (const key of ['idCardFront', 'idCardBack', 'contractFile', 'safetyTrainingFile', 'healthReportFile', 'specialCertificateFile']) {
-      const val = (formData as any)[key]
-      if (val && !val.startsWith('data:')) originalMemberFileRef.current[worker.id][key] = val
-    }
-    setShowWorkerModal(true)
+  setEditingWorker(worker)
+  const formData = memberToWorkerForm(worker)
+  originalMemberFileRef.current[worker.id] = {}
+  for (const key of ['idCardFront', 'idCardBack', 'contractFile', 'safetyTrainingFile', 'healthReportFile', 'specialCertificateFile']) {
+  const val = (formData as any)[key]
+  if (val && !val.startsWith('data:')) originalMemberFileRef.current[worker.id][key] = val
+  }
+  setShowWorkerModal(true)
   }
 
   // 数据过滤
@@ -283,186 +283,186 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
   const workerMembers = members.filter(m => m.memberType === 'worker')
 
   const filteredStaff = staffMembers.filter(m => {
-    const status = m.status || 'active'
-    if (filterStatus !== 'all' && status !== filterStatus) return false
-    return true
+  const status = m.status || 'active'
+  if (filterStatus !== 'all' && status !== filterStatus) return false
+  return true
   })
 
   const filteredWorkers = workerMembers.filter(w => {
-    const status = w.status || 'active'
-    if (filterStatus !== 'all' && status !== filterStatus) return false
-    return true
+  const status = w.status || 'active'
+  if (filterStatus !== 'all' && status !== filterStatus) return false
+  return true
   })
 
   // WorkerSection props (cast to avoid strict type check on extra props)
   const workerSectionProps = {
-    members: filteredWorkers,
-    projects: projects.map(p => ({ id: p.id, name: p.name })),
-    workerTeams,
-    loading: false,
-    onRefresh: loadData,
-    onAddWorker: () => { resetWorkerForm(); setShowWorkerModal(true) },
-    onEditWorker: handleEditWorker,
-    onDeleteWorker: (id: number) => handleDeleteMember(id, members),
-    onAddTeam: handleCreateTeam,
-    onEditTeam: handleUpdateTeam,
-    onDeleteTeam: handleDeleteTeam,
-    onTransfer: (worker: any, toTeamId: number, toProjectId: number, transferDate: string, reason: string) => handleWorkerTransfer(worker, toTeamId, toProjectId, transferDate, reason, workerTeams),
-    onLeave: (worker: any, actualLeaveDate: string, remarks: string) => handleWorkerLeave(worker, actualLeaveDate, remarks),
-    onReEntry: handleWorkerReEntry,
-    onImportClick: () => fileInputRef.current?.click(),
-    onFileDrop: (file: File) => parseFile(file),
-    onAddFromPool: (projectId: number, existingIds: Set<number>) => {
-      setPickerProjectId(projectId)
-      setPickerExistingWorkerIds(existingIds)
-      setShowWorkerPicker(true)
-    },
+  members: filteredWorkers,
+  projects: projects.map(p => ({ id: p.id, name: p.name })),
+  workerTeams,
+  loading: false,
+  onRefresh: loadData,
+  onAddWorker: () => { resetWorkerForm(); setShowWorkerModal(true) },
+  onEditWorker: handleEditWorker,
+  onDeleteWorker: (id: number) => handleDeleteMember(id, members),
+  onAddTeam: handleCreateTeam,
+  onEditTeam: handleUpdateTeam,
+  onDeleteTeam: handleDeleteTeam,
+  onTransfer: (worker: any, toTeamId: number, toProjectId: number, transferDate: string, reason: string) => handleWorkerTransfer(worker, toTeamId, toProjectId, transferDate, reason, workerTeams),
+  onLeave: (worker: any, actualLeaveDate: string, remarks: string) => handleWorkerLeave(worker, actualLeaveDate, remarks),
+  onReEntry: handleWorkerReEntry,
+  onImportClick: () => fileInputRef.current?.click(),
+  onFileDrop: (file: File) => parseFile(file),
+  onAddFromPool: (projectId: number, existingIds: Set<number>) => {
+  setPickerProjectId(projectId)
+  setPickerExistingWorkerIds(existingIds)
+  setShowWorkerPicker(true)
+  },
   }
 
   // 渲染
   
   if (loading) {
-    return <Spinner size="lg" text="加载人员数据..." />
+  return <Spinner size="lg" text="加载人员数据..." />
   }
 
   return (
-    <div className="p-6 max-w-[1400px] mx-auto relative">
-      {/* Toast 提示 */}
-      
-      {/* 页面标题 */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">员工管理</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">管理公司员工与农民工信息</p>
-        </div>
-      </div>
+  <div className="p-6 max-w-[1400px] mx-auto relative">
+  {/* Toast 提示 */}
+  
+  {/* 页面标题 */}
+  <div className="flex items-center justify-between mb-6">
+  <div>
+  <h1 className="text-2xl font-bold text-slate-800">员工管理</h1>
+  <p className="text-slate-500 mt-1">管理公司员工与农民工信息</p>
+  </div>
+  </div>
 
-      {/* 主 Tab */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm mb-6">
-        <div className="flex border-b border-slate-200">
-          <button
-            onClick={() => setActiveTab('staff')}
-            className={`flex-1 px-6 py-4 text-center font-medium transition-colors ${
-              activeTab === 'staff'
-                ? 'text-primary-600 border-b-2 border-primary-600'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'
-            }`}
-          >
-            <Icon name="UserCheck" size={16} /> 管理人员 ({staffMembers.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('worker')}
-            className={`flex-1 px-6 py-4 text-center font-medium transition-colors ${
-              activeTab === 'worker'
-                ? 'text-orange-600 border-b-2 border-orange-600'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'
-            }`}
-          >
-            <Icon name="HardHat" size={16} /> 农民工 ({workerMembers.length})
-          </button>
-        </div>
-      </div>
+  {/* 主 Tab */}
+  <div className="bg-white rounded-xl shadow-sm mb-6">
+  <div className="flex border-b border-slate-200">
+  <button
+  onClick={() => setActiveTab('staff')}
+  className={`flex-1 px-6 py-4 text-center font-medium transition-colors ${
+  activeTab === 'staff'
+  ? 'text-primary-600 border-b-2 border-primary-600'
+  : 'text-slate-500 hover:text-slate-700'
+  }`}
+  >
+  <Icon name="UserCheck" size={16} /> 管理人员 ({staffMembers.length})
+  </button>
+  <button
+  onClick={() => setActiveTab('worker')}
+  className={`flex-1 px-6 py-4 text-center font-medium transition-colors ${
+  activeTab === 'worker'
+  ? 'text-orange-600 border-b-2 border-orange-600'
+  : 'text-slate-500 hover:text-slate-700'
+  }`}
+  >
+  <Icon name="HardHat" size={16} /> 农民工 ({workerMembers.length})
+  </button>
+  </div>
+  </div>
 
-      {/* 管理人员 Tab */}
-      {activeTab === 'staff' && (
-        <StaffManagementTab
-          filteredStaff={filteredStaff}
-          filterStatus={filterStatus}
-          onFilterStatusChange={(v) => setFilterStatus(v as WorkerStatus | 'all')}
-          onAdd={() => { resetStaffForm(); setShowStaffModal(true) }}
-          onEdit={handleEditStaff}
-          onDelete={(id: number) => handleDeleteMember(id, members)}
-          onClick={handleMemberClick}
-          onStatusChange={handleStaffStatusChange}
-        />
-      )}
+  {/* 管理人员 Tab */}
+  {activeTab === 'staff' && (
+  <StaffManagementTab
+  filteredStaff={filteredStaff}
+  filterStatus={filterStatus}
+  onFilterStatusChange={(v) => setFilterStatus(v as WorkerStatus | 'all')}
+  onAdd={() => { resetStaffForm(); setShowStaffModal(true) }}
+  onEdit={handleEditStaff}
+  onDelete={(id: number) => handleDeleteMember(id, members)}
+  onClick={handleMemberClick}
+  onStatusChange={handleStaffStatusChange}
+  />
+  )}
 
-      {/* 农民工 Tab - React.lazy 动态加载 */}
-      {activeTab === 'worker' && (
-        <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-4 border-slate-200 border-t-orange-500"></div></div>}>
-          <WorkerSection {...workerSectionProps as any} />
-        </Suspense>
-      )}
+  {/* 农民工 Tab - React.lazy 动态加载 */}
+  {activeTab === 'worker' && (
+  <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-4 border-slate-200 border-t-orange-500"></div></div>}>
+  <WorkerSection {...workerSectionProps as any} />
+  </Suspense>
+  )}
 
-      {/* 隐藏文件选择器 + Excel导入模态框 */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".xlsx,.xls,.csv"
-        className="hidden"
-        onChange={e => { const f = e.target.files?.[0]; if (f) parseFile(f); e.target.value = '' }}
-      />
-      <Suspense fallback={null}>
-        <WorkerImportModal
-          show={phase !== 'idle' || !!importError}
-          importState={importState}
-          progress={progress}
-          result={result}
-          phase={phase}
-          error={importError}
-          onClose={() => { resetImport() }}
-          onSetHeaderRow={setHeaderRow}
-          onSwitchSheet={switchSheet}
-          onSetMapping={setMapping}
-          onGetConfidence={getConfidence}
-          onExecuteImport={() => executeImport(
-            (_data) => Promise.resolve({ success: true, data: { id: 0 } }),
-            () => loadData()
-          )}
-          onSavePreset={saveCurrentMappingAsPreset}
-        />
-      </Suspense>
+  {/* 隐藏文件选择器 + Excel导入模态框 */}
+  <input
+  ref={fileInputRef}
+  type="file"
+  accept=".xlsx,.xls,.csv"
+  className="hidden"
+  onChange={e => { const f = e.target.files?.[0]; if (f) parseFile(f); e.target.value = '' }}
+  />
+  <Suspense fallback={null}>
+  <WorkerImportModal
+  show={phase !== 'idle' || !!importError}
+  importState={importState}
+  progress={progress}
+  result={result}
+  phase={phase}
+  error={importError}
+  onClose={() => { resetImport() }}
+  onSetHeaderRow={setHeaderRow}
+  onSwitchSheet={switchSheet}
+  onSetMapping={setMapping}
+  onGetConfidence={getConfidence}
+  onExecuteImport={() => executeImport(
+  (_data) => Promise.resolve({ success: true, data: { id: 0 } }),
+  () => loadData()
+  )}
+  onSavePreset={saveCurrentMappingAsPreset}
+  />
+  </Suspense>
 
-      {/* WorkerPickerModal — 从全局工人库批量添加 */}
-      <Suspense fallback={null}>
-        <WorkerPickerModal
-          show={showWorkerPicker}
-          projectId={pickerProjectId}
-          workerTeams={workerTeams}
-          existingWorkerIds={pickerExistingWorkerIds}
-          onClose={() => setShowWorkerPicker(false)}
-          onConfirm={handleBatchAddWorkers}
-        />
-      </Suspense>
+  {/* WorkerPickerModal — 从全局工人库批量添加 */}
+  <Suspense fallback={null}>
+  <WorkerPickerModal
+  show={showWorkerPicker}
+  projectId={pickerProjectId}
+  workerTeams={workerTeams}
+  existingWorkerIds={pickerExistingWorkerIds}
+  onClose={() => setShowWorkerPicker(false)}
+  onConfirm={handleBatchAddWorkers}
+  />
+  </Suspense>
 
-      {/* 管理人员表单模态框 */}
-      {showStaffModal && (
-        <MemberForm
-          type="staff"
-          editingMember={editingStaff}
-          projects={projects}
-          workerTeams={workerTeams}
-          visible={showStaffModal}
-          onClose={() => { setShowStaffModal(false); resetStaffForm() }}
-          onSubmit={handleSubmitStaff as any}
-          onFileModified={handleFileModified}
-        />
-      )}
+  {/* 管理人员表单模态框 */}
+  {showStaffModal && (
+  <MemberForm
+  type="staff"
+  editingMember={editingStaff}
+  projects={projects}
+  workerTeams={workerTeams}
+  visible={showStaffModal}
+  onClose={() => { setShowStaffModal(false); resetStaffForm() }}
+  onSubmit={handleSubmitStaff as any}
+  onFileModified={handleFileModified}
+  />
+  )}
 
-      {/* 农民工表单模态框 */}
-      {showWorkerModal && (
-        <MemberForm
-          type="worker"
-          editingMember={editingWorker}
-          projects={projects}
-          workerTeams={workerTeams}
-          visible={showWorkerModal}
-          onClose={() => { setShowWorkerModal(false); resetWorkerForm() }}
-          onSubmit={handleSubmitWorker as any}
-          onFileModified={handleFileModified}
-        />
-      )}
+  {/* 农民工表单模态框 */}
+  {showWorkerModal && (
+  <MemberForm
+  type="worker"
+  editingMember={editingWorker}
+  projects={projects}
+  workerTeams={workerTeams}
+  visible={showWorkerModal}
+  onClose={() => { setShowWorkerModal(false); resetWorkerForm() }}
+  onSubmit={handleSubmitWorker as any}
+  onFileModified={handleFileModified}
+  />
+  )}
 
-      {/* 详情模态框 */}
-      {showDetailModal && selectedMember && (
-        <MemberDetail
-          member={selectedMember}
-          onClose={() => { setShowDetailModal(false); setSelectedMember(null) }}
-          onEdit={(selectedMember.memberType === 'worker' ? handleEditWorker : handleEditStaff) as any}
-          onDelete={handleDeleteMember as any}
-        />
-      )}
-    </div>
+  {/* 详情模态框 */}
+  {showDetailModal && selectedMember && (
+  <MemberDetail
+  member={selectedMember}
+  onClose={() => { setShowDetailModal(false); setSelectedMember(null) }}
+  onEdit={(selectedMember.memberType === 'worker' ? handleEditWorker : handleEditStaff) as any}
+  onDelete={handleDeleteMember as any}
+  />
+  )}
+  </div>
   )
 }
 

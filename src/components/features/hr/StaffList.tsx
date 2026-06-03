@@ -272,7 +272,7 @@ const StaffList: React.FC = () => {
           <EmptyState icon="Users" title="暂无人员" description="点击上方按钮添加第一位管理人员" />
         </div>
       ) : (
-        <HoverScrollbar className="bg-white rounded-xl shadow-sm flex-1">
+        <HoverScrollbar className="bg-white rounded-xl shadow-sm flex-1 min-h-0">
           <table className="w-full">
             <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
               <tr className="">

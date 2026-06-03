@@ -44,9 +44,10 @@ export function ProjectDetail({ project, members, allMembers, onBack, onEdit }: 
 
   const loadProjectDetail = async () => {
     setLoading(true)
-    const pid = project.id
-    const api = await getAPI()
-    const results = await Promise.allSettled([
+    try {
+      const pid = project.id
+      const api = await getAPI()
+      const results = await Promise.allSettled([
       api.getInvoices(),               // 0
       api.getIncomeContracts(pid),      // 1
       api.getExpenseContracts(pid),     // 2
@@ -57,32 +58,44 @@ export function ProjectDetail({ project, members, allMembers, onBack, onEdit }: 
       api.getSettlements(pid),          // 7
       api.getWagePaymentRecords(),      // 8
       api.getCostLedger(pid),           // 9
-    ])
+      ])
 
-    const res = (i: number) => {
+      const res = (i: number) => {
       const r = results[i]
       if (r.status === 'rejected') { console.error(`[ProjectDetail] API #${i} rejected:`, r.reason); return null }
       const val = r.value as any
       if (!val?.success) { console.warn(`[ProjectDetail] API #${i} failed:`, val?.error); return null }
       return val.data || []
-    }
+      }
 
-    const invoicesData = res(0) || []
-    setInvoices(invoicesData.filter((i: Invoice) => i.projectId == pid))
-    setIncomeContracts(res(1) || [])
-    setExpenseContracts(res(2) || [])
-    const partnersData = res(3) || []
-    setPartners(partnersData.filter((p: Partner) => p.projectIds?.some((id: any) => id == pid)))
-    const teamsData = res(4) || []
-    setWorkerTeams(teamsData.filter((t: WorkerTeam) => t.projectId == pid))
-    setProjectWorkers(res(5) || [])
-    setMaterials(res(6) || [])
-    const settlementsData = res(7) || []
-    setSettlements(settlementsData.filter((s: Settlement) => s.projectId == pid))
-    const paymentsData = res(8) || []
-    setPaymentRecords(paymentsData.filter((p: PaymentRecord) => p.projectId == pid))
-    setCostLedgerEntries(res(9) || [])
-    setLoading(false)
+      // 规范化 projectIds（API 返回 JSON 字符串而非数组）
+      const normalizeProjectIds = (item: any) => {
+      if (typeof item.projectIds === 'string') {
+      try { item.projectIds = JSON.parse(item.projectIds) } catch { item.projectIds = [] }
+      }
+      return item
+      }
+
+      const invoicesData = res(0) || []
+      setInvoices(invoicesData.filter((i: Invoice) => i.projectId == pid))
+      setIncomeContracts(res(1) || [])
+      setExpenseContracts(res(2) || [])
+      const partnersData = (res(3) || []).map(normalizeProjectIds)
+      setPartners(partnersData.filter((p: Partner) => p.projectIds?.some((id: any) => id == pid)))
+      const teamsData = res(4) || []
+      setWorkerTeams(teamsData.filter((t: WorkerTeam) => t.projectId == pid))
+      setProjectWorkers(res(5) || [])
+      setMaterials(res(6) || [])
+      const settlementsData = res(7) || []
+      setSettlements(settlementsData.filter((s: Settlement) => s.projectId == pid))
+      const paymentsData = res(8) || []
+      setPaymentRecords(paymentsData.filter((p: PaymentRecord) => p.projectId == pid))
+      setCostLedgerEntries(res(9) || [])
+    } catch (e) {
+      console.error('[ProjectDetail] 加载项目详情失败:', e)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const materialTotal = materials.reduce((s, m) => s + m.price * m.quantity, 0)

@@ -3,25 +3,25 @@
 @tailwind utilities;
 
 /* ═══════════════════════════════════════════════════════════════
-   多主题系统 — CSS 变量定义
+  多主题系统 — CSS 变量定义
 
-   色彩层级：
-   - 氛围层：bg/text/border/sidebar/shadow/overlay  随主题切换
-   - 语义层：primary/success/warning/danger/info     primary 随主题，其余不变
-   - 领域层：indigo/amber/emerald/violet 等硬编码    不动
+  色彩层级：
+  - 氛围层：bg/text/border/sidebar/shadow/overlay 随主题切换
+  - 语义层：primary/success/warning/danger/info primary 随主题，其余不变
+  - 领域层：indigo/amber/emerald/violet 等硬编码 不动
 
-   主题变体 = theme × mode = 6 种组合：
-     default-light / default-dark
-     graphite-light / graphite-dark
-     sandstone-light / sandstone-dark
+  主题变体 = theme × mode = 6 种组合：
+  default-light / default-dark
+  graphite-light / graphite-dark
+  sandstone-light / sandstone-dark
 
-   颜色调色板使用 RGB 格式（空格分隔），供 tailwind rgba() 使用。
-   ═══════════════════════════════════════════════════════════════ */
+  颜色调色板使用 RGB 格式（空格分隔），供 tailwind rgba() 使用。
+  ═══════════════════════════════════════════════════════════════ */
 
 /* ── White 主题（当前浅色模式 ── 保留现有配色）── */
 :root,
 [data-theme="white"] {
-  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'Noto Sans SC', 'Source Han Sans SC', 'Microsoft YaHei', 'PingFang SC', sans-serif;
   line-height: 1.5;
   font-weight: 400;
   color-scheme: light;
@@ -880,107 +880,107 @@ body {
 /* 按钮样式 */
 @layer components {
   .btn {
-    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2;
+  @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2;
   }
 
   .btn-primary {
-    @apply bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800 shadow-sm hover:shadow-md;
+  @apply bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800 shadow-sm hover:shadow-md;
   }
 
   .btn-secondary {
-    @apply bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 active:bg-slate-100 dark:active:bg-slate-600 shadow-sm;
+  @apply bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 active:bg-slate-100 shadow-sm;
   }
 
   .btn-success {
-    @apply bg-success-600 text-white hover:bg-success-700 active:bg-success-800 shadow-sm hover:shadow-md;
+  @apply bg-success-600 text-white hover:bg-success-700 active:bg-success-800 shadow-sm hover:shadow-md;
   }
 
   .btn-danger {
-    @apply bg-danger-500 text-white hover:bg-danger-600 active:bg-danger-700 shadow-sm hover:shadow-md;
+  @apply bg-danger-500 text-white hover:bg-danger-600 active:bg-danger-700 shadow-sm hover:shadow-md;
   }
 
   .btn-warning {
-    @apply bg-warning-500 text-white hover:bg-warning-600 active:bg-warning-700 shadow-sm hover:shadow-md;
+  @apply bg-warning-500 text-white hover:bg-warning-600 active:bg-warning-700 shadow-sm hover:shadow-md;
   }
 
   .btn-ghost {
-    @apply bg-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-slate-200 dark:active:bg-slate-700;
+  @apply bg-transparent text-slate-600 hover:bg-slate-100 active:bg-slate-200;
   }
 
   .btn-sm {
-    @apply px-3 py-1.5 text-sm;
+  @apply px-3 py-1.5 text-sm;
   }
 
   .btn-lg {
-    @apply px-6 py-3 text-lg;
+  @apply px-6 py-3 text-lg;
   }
 }
 
 /* 卡片样式 */
 @layer components {
   .card {
-    @apply bg-white dark:bg-slate-800 rounded-xl shadow-card hover:shadow-card-hover transition-all duration-200;
+  @apply bg-white rounded-xl shadow-card hover:shadow-card-hover transition-all duration-200;
   }
 
   .card-header {
-    @apply px-5 py-4 border-b border-slate-100 dark:border-slate-700;
+  @apply px-5 py-4 border-b border-slate-100;
   }
 
   .card-body {
-    @apply p-5;
+  @apply p-5;
   }
 }
 
 /* 表单样式 */
 @layer components {
   .input {
-    @apply w-full px-4 py-2.5 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200
-           placeholder-slate-400 dark:placeholder-slate-500 transition-all duration-200
-           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500
-           hover:border-slate-300 dark:hover:border-slate-500;
+  @apply w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-white text-slate-800
+  placeholder-slate-400 transition-all duration-200
+  focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500
+  hover:border-slate-300;
   }
 
   .input-error {
-    @apply border-danger-500 focus:ring-danger-500 focus:border-danger-500;
+  @apply border-danger-500 focus:ring-danger-500 focus:border-danger-500;
   }
 
   .select {
-    @apply w-full px-4 py-2.5 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200
-           transition-all duration-200 cursor-pointer
-           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500
-           hover:border-slate-300 dark:hover:border-slate-500;
+  @apply w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-white text-slate-800
+  transition-all duration-200 cursor-pointer
+  focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500
+  hover:border-slate-300;
   }
 
   .label {
-    @apply block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5;
+  @apply block text-sm font-medium text-slate-700 mb-1.5;
   }
 
   .form-group {
-    @apply mb-4;
+  @apply mb-4;
   }
 }
 
 /* 表格样式 */
 @layer components {
   .table {
-    @apply w-full text-sm;
+  @apply w-full text-sm;
   }
 
   .table th {
-    @apply px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700;
+  @apply px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider bg-slate-50 border-b border-slate-200;
   }
 
   .table td {
-    @apply px-4 py-3 border-b border-slate-100 dark:border-slate-700;
+  @apply px-4 py-3 border-b border-slate-100;
   }
 
   .table tr:hover td {
-    @apply bg-slate-50 dark:bg-slate-800/50;
+  @apply bg-slate-50;
   }
 }
 
 /* 全局表格行悬停高亮（透明度可调，由外观主题设置控制）
-   默认对所有表格行生效，新增表格无需额外处理 */
+  默认对所有表格行生效，新增表格无需额外处理 */
 table tbody tr {
   transition: background-color 200ms;
 }
@@ -1020,20 +1020,20 @@ table tbody tr:hover {
 }
 
 .badge-gray {
-  @apply bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300;
+  @apply bg-slate-100 text-slate-700;
 }
 
 /* 空状态 */
 .empty-state-title {
-  @apply text-lg font-medium text-slate-700 dark:text-slate-300 mb-2;
+  @apply text-lg font-medium text-slate-700 mb-2;
 }
 
 .empty-state-description {
-  @apply text-sm text-slate-500 dark:text-slate-400;
+  @apply text-sm text-slate-500;
 }
 
 .loading-spinner {
-  @apply animate-spin rounded-full border-2 border-slate-200 dark:border-slate-600 border-t-primary-600;
+  @apply animate-spin rounded-full border-2 border-slate-200 border-t-primary-600;
 }
 
 /* 状态指示器 */
@@ -1106,23 +1106,23 @@ button:disabled {
 /* 现代化表单增强（兼容现有页面使用） */
 .input-modern {
   @apply w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800
-         placeholder-slate-400 transition-all duration-300
-         focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 focus:bg-white
-         hover:border-slate-300;
+  placeholder-slate-400 transition-all duration-300
+  focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 focus:bg-white
+  hover:border-slate-300;
 }
 
 .input-modern-lg {
   @apply w-full px-5 py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl text-slate-800 text-lg
-         placeholder-slate-400 transition-all duration-300
-         focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 focus:bg-white
-         hover:border-slate-300;
+  placeholder-slate-400 transition-all duration-300
+  focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 focus:bg-white
+  hover:border-slate-300;
 }
 
 .select-modern {
   @apply w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800
-         transition-all duration-300 cursor-pointer appearance-none
-         focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 focus:bg-white
-         hover:border-slate-300;
+  transition-all duration-300 cursor-pointer appearance-none
+  focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 focus:bg-white
+  hover:border-slate-300;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 12px center;
@@ -1140,59 +1140,59 @@ button:disabled {
   .modal-footer,
   .btn,
   button:not(.print-content *) {
-    display: none !important;
+  display: none !important;
   }
 
   /* 打印内容样式 */
   .print-content {
-    width: 100%;
-    padding: 20px;
-    font-size: 12pt;
-    line-height: 1.6;
+  width: 100%;
+  padding: 20px;
+  font-size: 12pt;
+  line-height: 1.6;
   }
 
   .print-header {
-    text-align: center;
-    border-bottom: 2px solid #333;
-    padding-bottom: 20px;
-    margin-bottom: 20px;
+  text-align: center;
+  border-bottom: 2px solid #333;
+  padding-bottom: 20px;
+  margin-bottom: 20px;
   }
 
   .print-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 20px 0;
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
   }
 
   .print-table th,
   .print-table td {
-    border: 1px solid #ddd;
-    padding: 8px 12px;
-    text-align: left;
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+  text-align: left;
   }
 
   .print-table th {
-    background: #f5f5f5;
-    font-weight: bold;
+  background: #f5f5f5;
+  font-weight: bold;
   }
 
   .print-footer {
-    margin-top: 40px;
-    display: flex;
-    justify-content: space-between;
+  margin-top: 40px;
+  display: flex;
+  justify-content: space-between;
   }
 
   .print-signature {
-    text-align: center;
-    width: 200px;
+  text-align: center;
+  width: 200px;
   }
 }
 
 /* ═══════════════════════════════════════════
-   Performance-optimized compositor animations
-   CSS @keyframes run on GPU compositor thread
-   — far smoother than JS-driven animations
-   ═══════════════════════════════════════════ */
+  Performance-optimized compositor animations
+  CSS @keyframes run on GPU compositor thread
+  — far smoother than JS-driven animations
+  ═══════════════════════════════════════════ */
 @keyframes float-slow {
   0%, 100% { transform: translate(-100px, -40px); }
   50% { transform: translate(100px, 60px); }

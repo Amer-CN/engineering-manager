@@ -14,7 +14,10 @@ export const tauriAPI = {
   getAppVersion: () => '0.67.0',
   getDataPath: () => apiClient.get<string>('/api/config/data-path'),
   getUploadsPath: () => apiClient.get<string>('/api/config/uploads-path'),
-  openDevTools: () => {},
+  openDevTools: () => {
+    if ((window as any).chrome?.webview)
+      (window as any).chrome.webview.postMessage(JSON.stringify({ action: 'devtools' }));
+  },
 
   // ────────── 窗口控制（通过 WebView2 消息） ──────────
   minimizeWindow: () => {
@@ -30,7 +33,10 @@ export const tauriAPI = {
       (window as any).chrome.webview.postMessage(JSON.stringify({ action: 'close' }));
   },
   isMaximized: () => Promise.resolve({ success: true, data: false }),
-  setFullScreen: () => {},
+  setFullScreen: () => {
+    if ((window as any).chrome?.webview)
+      (window as any).chrome.webview.postMessage(JSON.stringify({ action: 'fullscreen' }));
+  },
   isFullScreen: () => Promise.resolve({ success: true, data: false }),
   resizeForLogin: () => {
     if ((window as any).chrome?.webview)
@@ -40,7 +46,10 @@ export const tauriAPI = {
     if ((window as any).chrome?.webview)
       (window as any).chrome.webview.postMessage(JSON.stringify({ action: 'resize', width: 1400, height: 900 }));
   },
-  centerWindow: () => {},
+  startDrag: () => {
+    if ((window as any).chrome?.webview)
+      (window as any).chrome.webview.postMessage(JSON.stringify({ action: 'startDrag' }));
+  },
 
   // ────────── 认证 ──────────
   login: (username: string, password: string) =>

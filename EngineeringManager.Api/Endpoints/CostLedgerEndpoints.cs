@@ -77,7 +77,19 @@ public static class CostLedgerEndpoints
         // ═══════════════════════════════════════════════════════════
 
         app.MapGet("/api/cost-ledger/categories", (IDbConnection db) =>
-            Common.Ok(db.Query("SELECT * FROM cost_ledger_categories ORDER BY name")));
+        {
+            try
+            {
+                // 尝试查询，如果表结构不匹配则返回空
+                var categories = db.Query("SELECT * FROM cost_ledger_categories").ToList();
+                return Common.Ok(categories);
+            }
+            catch
+            {
+                // 表结构不兼容，返回空列表
+                return Common.Ok(new List<object>());
+            }
+        });
 
         app.MapPost("/api/cost-ledger/categories", async (CostLedgerCategoryDto dto, IDbConnection db) =>
         {

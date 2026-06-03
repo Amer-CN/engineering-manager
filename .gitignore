@@ -25,6 +25,9 @@ public/seed-data.json
 # 本地配置文件 (含真实路径、API Key 等)
 config.json
 
+# 微信公众号 API 密钥
+scripts/wechat-config.json
+
 # Graphify 知识图谱 (自动生成，无需版本控制)
 graphify-out/
 
@@ -35,3 +38,22 @@ nul
 # Tauri 构建产物 + 误生成的数据目录
 src-tauri/target/
 __select_folder__/
+
+# 字体文件（大文件，不纳入版本控制）
+public/fonts/*.otf
+public/fonts/*.ttf
+
+# 环境变量（含 API Key 等敏感信息）
+.env
+.env.*
+
+# 备份文件
+*.backup
+*.backup2
+
+# 压缩包（临时构建产物）
+*.zip
+
+# C# 构建产物
+EngineeringManager.Api/bin/
+EngineeringManager.Api/obj/

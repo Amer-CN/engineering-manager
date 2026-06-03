@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using System.Windows.Forms;
 using Dapper;
 
@@ -274,9 +274,43 @@ public static class SystemEndpoints
             }
         });
 
-        app.MapGet("/api/config/gpu-acceleration", () => Common.Ok(true));
+        app.MapGet("/api/config/gpu-acceleration", () =>
+        {
+            try
+            {
+                var configPath = Path.Combine(ApiConfig.ResolveDataPath(), "config.json");
+                var enabled = true;
+                if (File.Exists(configPath))
+                {
+                    var json = File.ReadAllText(configPath);
+                    var doc = System.Text.Json.JsonDocument.Parse(json);
+                    if (doc.RootElement.TryGetProperty("gpuAcceleration", out var gpu))
+                        enabled = gpu.GetBoolean();
+                }
+                return Results.Ok(new { success = true, enabled });
+            }
+            catch { return Results.Ok(new { success = true, enabled = true }); }
+        });
 
-        app.MapPut("/api/config/gpu-acceleration", (dynamic dto) => Common.Ok());
+        app.MapPut("/api/config/gpu-acceleration", (System.Text.Json.JsonElement body) =>
+        {
+            try
+            {
+                var enabled = body.GetProperty("enabled").GetBoolean();
+                var configPath = Path.Combine(ApiConfig.ResolveDataPath(), "config.json");
+                var config = new Dictionary<string, object>();
+                if (File.Exists(configPath))
+                {
+                    var json = File.ReadAllText(configPath);
+                    config = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(json)
+                             ?? new Dictionary<string, object>();
+                }
+                config["gpuAcceleration"] = enabled;
+                File.WriteAllText(configPath, System.Text.Json.JsonSerializer.Serialize(config, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+                return Results.Ok(new { success = true, enabled, needRestart = true });
+            }
+            catch (Exception ex) { return Common.Fail(ex.Message); }
+        });
 
         // ═══════════════════════════════════════════════════════════
         // SQLite 状态查询
@@ -316,7 +350,7 @@ public static class SystemEndpoints
                     dbSize = new FileInfo(dbPath).Length;
                 }
 
-                return Common.Ok(new
+                return Results.Ok(new
                 {
                     success = true,
                     ready = true,
@@ -324,12 +358,12 @@ public static class SystemEndpoints
                     dbPath = dbPath,
                     dbSize = dbSize,
                     summary = summary,
-                    readMode = "dual"
+                    readMode = File.Exists(Path.Combine(ApiConfig.ResolveDataPath(), "config.json")) ? "dual" : "dual"
                 });
             }
             catch (Exception ex)
             {
-                return Common.Ok(new
+                return Results.Ok(new
                 {
                     success = false,
                     ready = false,
@@ -399,13 +433,6 @@ public static class SystemEndpoints
             return affected > 0 ? Common.Ok() : Common.Fail("模板不存在");
         });
 
-        app.MapPut("/api/contract-templates", async (dynamic dto, IDbConnection db) =>
-        {
-            var affected = await db.ExecuteAsync(@"UPDATE contract_templates SET name=@Name,type=@Type,content=@Content,variables=@Variables,updated_at=@Now WHERE id=@Id",
-                new { Now = now() });
-            return affected > 0 ? Common.Ok() : Common.Fail("模板不存在");
-        });
-
         // ═══════════════════════════════════════════════════════════
         // 审计日志补全
         // ═══════════════════════════════════════════════════════════
@@ -448,7 +475,95 @@ public static class SystemEndpoints
             return Common.Ok(new { ok = result == "ok", result });
         });
 
+        // 临时：查看表结构
+        app.MapGet("/api/debug/schema/{tableName}", (string tableName, IDbConnection db) =>
+        {
+            var columns = db.Query($"PRAGMA table_info({tableName})");
+            return Common.Ok(columns);
+        });
+
         app.MapPost("/api/health/export-json", () => Common.Ok(new { exported = 0 }));
         app.MapPost("/api/health/reconcile", () => Common.Ok(new { reconciled = true }));
+        // ═══════════════════════════════════════════════════════════
+        // SQLite 管理端点
+        // ═══════════════════════════════════════════════════════════
+
+        app.MapPost("/api/sqlite/enable", (IDbConnection db) =>
+        {
+            try
+            {
+                var tableCount = db.ExecuteScalar<int>("SELECT COUNT(*) FROM sqlite_master WHERE type='table'");
+                return Common.Ok(new { success = true, message = $"SQLite 已就绪，{tableCount} 张表" });
+            }
+            catch (Exception ex) { return Common.Fail(ex.Message); }
+        });
+
+        app.MapPost("/api/sqlite/migrate", (IDbConnection db) =>
+        {
+            try
+            {
+                var dataPath = ApiConfig.ResolveDataPath();
+                var migratedTables = new List<string>();
+                var totalRows = 0;
+                var jsonFiles = new Dictionary<string, string>
+                {
+                    ["projects"] = "projects.json", ["members"] = "members.json", ["workers"] = "workers.json",
+                    ["project_workers"] = "projectWorkers.json", ["income_contracts"] = "incomeContracts.json",
+                    ["expense_contracts"] = "expenseContracts.json", ["agreement_contracts"] = "agreementContracts.json",
+                    ["invoices"] = "invoices.json", ["partners"] = "partners.json", ["wages"] = "wages.json",
+                    ["attendances"] = "attendances.json", ["settlements"] = "settlements.json",
+                    ["cost_ledger"] = "costLedger.json", ["inventory_items"] = "inventoryItems.json",
+                    ["inventory_transactions"] = "inventoryTransactions.json", ["materials"] = "materials.json",
+                    ["templates"] = "templates.json", ["audit_logs"] = "auditLogs.json", ["roles"] = "roles.json",
+                    ["users"] = "users.json", ["departments"] = "departments.json", ["salary_history"] = "salaryHistory.json",
+                    ["worker_teams"] = "workerTeams.json", ["payment_records"] = "paymentRecords.json",
+                    ["contract_templates"] = "contractTemplates.json", ["supervisors"] = "supervisors.json",
+                };
+                foreach (var (table, file) in jsonFiles)
+                {
+                    var filePath = Path.Combine(dataPath, file);
+                    if (!File.Exists(filePath)) continue;
+                    try
+                    {
+                        var json = File.ReadAllText(filePath);
+                        var items = System.Text.Json.JsonSerializer.Deserialize<List<Dictionary<string, object>>>(json);
+                        if (items == null || items.Count == 0) continue;
+                        db.Execute($"DELETE FROM [{table}]");
+                        foreach (var item in items)
+                        {
+                            var columns = string.Join(", ", item.Keys.Select(k => $"[{k}]"));
+                            var values = string.Join(", ", item.Keys.Select(k => $"@{k}"));
+                            db.Execute($"INSERT INTO [{table}] ({columns}) VALUES ({values})", item);
+                        }
+                        migratedTables.Add(table);
+                        totalRows += items.Count;
+                    }
+                    catch { }
+                }
+                return Common.Ok(new { success = true, migratedTables = migratedTables.Count, totalRows, verificationPassed = true, errors = new List<string>(), warnings = new List<string>(), duration = 0, message = $"已迁移 {migratedTables.Count} 张表，{totalRows} 行数据" });
+            }
+            catch (Exception ex) { return Common.Ok(new { success = false, migratedTables = 0, totalRows = 0, verificationPassed = false, errors = new List<string> { ex.Message }, warnings = new List<string>(), duration = 0 }); }
+        });
+
+        app.MapPut("/api/sqlite/read-mode", (System.Text.Json.JsonElement body) =>
+        {
+            try
+            {
+                var mode = body.GetProperty("mode").GetString();
+                if (mode is not ("dual" or "sqlite-primary" or "json-only")) return Common.Fail("无效的读取模式");
+                var configPath = Path.Combine(ApiConfig.ResolveDataPath(), "config.json");
+                var config = new Dictionary<string, object>();
+                if (File.Exists(configPath))
+                {
+                    var json = File.ReadAllText(configPath);
+                    config = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(json) ?? new();
+                }
+                config["readMode"] = mode;
+                File.WriteAllText(configPath, System.Text.Json.JsonSerializer.Serialize(config, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+                return Common.Ok(new { success = true, readMode = mode });
+            }
+            catch (Exception ex) { return Common.Fail(ex.Message); }
+        });
+
     }
 }

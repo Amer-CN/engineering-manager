@@ -87,7 +87,6 @@ function ModelSwitcher({
 }
 
 const StatusBar: React.FC = () => {
-  const version = (window as any).__APP_VERSION__ || '0.67.0'
   const info = useStatusStore(s => s.info)
   const { scheme, setScheme } = useTheme()
 

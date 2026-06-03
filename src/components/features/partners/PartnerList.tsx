@@ -40,9 +40,9 @@ export const PartnerList: React.FC<PartnerListProps> = ({
     if (search) {
       const keyword = search.toLowerCase()
       return (
-        p.name.toLowerCase().includes(keyword) ||
-        p.contact?.toLowerCase().includes(keyword) ||
-        p.phone?.toLowerCase().includes(keyword)
+        (p.name || '').toLowerCase().includes(keyword) ||
+        (p.contact || '').toLowerCase().includes(keyword) ||
+        (p.phone || '').toLowerCase().includes(keyword)
       )
     }
     return true

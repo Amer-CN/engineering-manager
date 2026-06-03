@@ -7,6 +7,20 @@ namespace EngineeringManager.Api;
 public class MainWindow : Form
 {
     private WebView2? webView;
+    private bool _isFullScreen;
+    private bool _isMaximized;
+    private FormBorderStyle _preFullScreenBorder;
+    private Rectangle _preFullScreenBounds;
+    private Rectangle _preMaximizeBounds;
+
+    // ── 手动 resize ──
+    private bool _isResizing;
+    private int _resizeEdge;
+    private Point _resizeStartMouse;
+    private Rectangle _resizeStartBounds;
+
+    // ── 双击检测 ──
+    private DateTime _lastClickTime = DateTime.MinValue;
 
     public MainWindow()
     {
@@ -14,45 +28,152 @@ public class MainWindow : Form
         Icon = new Icon(Path.Combine(AppContext.BaseDirectory, "app.ico"));
         Size = new Size(300, 400);
         StartPosition = FormStartPosition.CenterScreen;
-
         ApplyNativeRoundedCorners();
+    }
 
-        // 鼠标按下时开始拖动（整个窗口区域）
-        MouseDown += OnMouseDown;
+    protected override CreateParams CreateParams
+    {
+        get
+        {
+            var cp = base.CreateParams;
+            cp.Style |= WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
+            return cp;
+        }
     }
 
     private void ApplyNativeRoundedCorners()
     {
-        try
-        {
-            int preference = 2; // DWMWCP_ROUND
-            DwmSetWindowAttribute(Handle, 33, ref preference, sizeof(int));
-        }
-        catch { }
+        try { int p = 2; DwmSetWindowAttribute(Handle, 33, ref p, sizeof(int)); } catch { }
     }
 
+    // ═══ P/Invoke ═══
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
-
     [DllImport("user32.dll")]
     private static extern void ReleaseCapture();
-
     [DllImport("user32.dll")]
     private static extern void SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
+    [DllImport("user32.dll")]
+    private static extern bool SetCapture(IntPtr hWnd);
 
-    private void OnMouseDown(object? sender, MouseEventArgs e)
+    // ═══ 常量 ═══
+    private const int WS_THICKFRAME  = 0x00040000;
+    private const int WS_MINIMIZEBOX = 0x00020000;
+    private const int WS_MAXIMIZEBOX = 0x00010000;
+    private const int HTLEFT = 10, HTRIGHT = 11, HTTOP = 12, HTTOPLEFT = 13;
+    private const int HTTOPRIGHT = 14, HTBOTTOM = 15, HTBOTTOMLEFT = 16, HTBOTTOMRIGHT = 17;
+    private const int BORDER_SIZE = 6;
+
+    // ═══════════════════════════════════════════════════════════
+    // WndProc — 只处理光标变化
+    // resize 由前端 div → postMessage → OnWebViewMouseDown 启动
+    // ═══════════════════════════════════════════════════════════
+
+    protected override void WndProc(ref Message m)
     {
-        if (e.Button == MouseButtons.Left)
+        // resize 进行中：拦截鼠标移动和释放
+        if (_isResizing)
         {
-            ReleaseCapture();
-            SendMessage(Handle, 0xA1, 0x2, 0); // WM_NCLBUTTONDOWN, HTCAPTION
+            switch (m.Msg)
+            {
+                case 0x0200: // WM_MOUSEMOVE
+                    DoResize(Cursor.Position);
+                    m.Result = IntPtr.Zero;
+                    return;
+                case 0x0202: // WM_LBUTTONUP
+                    _isResizing = false;
+                    ReleaseCapture();
+                    m.Result = IntPtr.Zero;
+                    return;
+            }
         }
+
+        switch (m.Msg)
+        {
+            case 0x0083: // WM_NCCALCSIZE
+                if (m.WParam != IntPtr.Zero) { m.Result = IntPtr.Zero; return; }
+                break;
+
+            case 0x0020: // WM_SETCURSOR — 边缘光标
+                if (!DesignMode && !_isFullScreen && !_isResizing)
+                {
+                    int ht = HitTestEdge(Cursor.Position, Bounds);
+                    if (ht != 0)
+                    {
+                        int id = ht switch
+                        {
+                            HTLEFT or HTRIGHT => 32644,
+                            HTTOP or HTBOTTOM => 32645,
+                            HTTOPLEFT or HTBOTTOMRIGHT => 32642,
+                            _ => 32643 // HTTOPRIGHT or HTBOTTOMLEFT
+                        };
+                        SetCursor(LoadCursor(IntPtr.Zero, (IntPtr)id));
+                        m.Result = IntPtr.Zero;
+                        return;
+                    }
+                }
+                break;
+        }
+
+        base.WndProc(ref m);
     }
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr LoadCursor(IntPtr h, IntPtr id);
+    [DllImport("user32.dll")]
+    private static extern IntPtr SetCursor(IntPtr h);
+
+    // ═══════════════════════════════════════════════════════════
+    // WebView2 鼠标事件 — 边缘启动 resize
+    // ═══════════════════════════════════════════════════════════
+
+    private void DoResize(Point mouse)
+    {
+        int dx = mouse.X - _resizeStartMouse.X;
+        int dy = mouse.Y - _resizeStartMouse.Y;
+        var b = _resizeStartBounds;
+        int nl = b.Left, nt = b.Top, nw = b.Width, nh = b.Height;
+
+        bool isL = _resizeEdge == HTLEFT   || _resizeEdge == HTTOPLEFT   || _resizeEdge == HTBOTTOMLEFT;
+        bool isR = _resizeEdge == HTRIGHT  || _resizeEdge == HTTOPRIGHT  || _resizeEdge == HTBOTTOMRIGHT;
+        bool isT = _resizeEdge == HTTOP    || _resizeEdge == HTTOPLEFT   || _resizeEdge == HTTOPRIGHT;
+        bool isB = _resizeEdge == HTBOTTOM || _resizeEdge == HTBOTTOMLEFT || _resizeEdge == HTBOTTOMRIGHT;
+
+        if (isL) { nl = b.Left + dx; nw = b.Width - dx; }
+        if (isR) { nw = b.Width + dx; }
+        if (isT) { nt = b.Top + dy;  nh = b.Height - dy; }
+        if (isB) { nh = b.Height + dy; }
+
+        if (nw < 200) { nw = 200; if (isL) nl = b.Right - 200; }
+        if (nh < 200) { nh = 200; if (isT) nt = b.Bottom - 200; }
+
+        SetBounds(nl, nt, nw, nh);
+    }
+
+    private static int HitTestEdge(Point cursor, Rectangle rect)
+    {
+        bool l = cursor.X <= rect.Left + BORDER_SIZE;
+        bool r = cursor.X >= rect.Right - BORDER_SIZE;
+        bool t = cursor.Y <= rect.Top + BORDER_SIZE;
+        bool b = cursor.Y >= rect.Bottom - BORDER_SIZE;
+        if (t && l) return HTTOPLEFT;
+        if (t && r) return HTTOPRIGHT;
+        if (b && l) return HTBOTTOMLEFT;
+        if (b && r) return HTBOTTOMRIGHT;
+        if (l) return HTLEFT;
+        if (r) return HTRIGHT;
+        if (t) return HTTOP;
+        if (b) return HTBOTTOM;
+        return 0;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // WebView2 初始化
+    // ═══════════════════════════════════════════════════════════
 
     protected override async void OnLoad(EventArgs e)
     {
         base.OnLoad(e);
-
         try
         {
             webView = new WebView2 { Dock = DockStyle.Fill };
@@ -60,7 +181,6 @@ public class MainWindow : Form
 
             var env = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(
                 null, Path.Combine(Path.GetTempPath(), "engineering-manager-webview2"));
-
             await webView.EnsureCoreWebView2Async(env);
 
             webView.CoreWebView2.Settings.IsStatusBarEnabled = false;
@@ -69,9 +189,6 @@ public class MainWindow : Form
 
             webView.CoreWebView2.WebMessageReceived += OnWebMessage;
             webView.CoreWebView2.Navigate("http://localhost:5173");
-
-            // WebView2 获取焦点后，鼠标事件穿透到 Form
-            webView.MouseDown += OnMouseDown;
 
             webView.CoreWebView2.DocumentTitleChanged += (_, _) =>
                 Text = $"工程管家 - {webView.CoreWebView2.DocumentTitle}";
@@ -84,33 +201,63 @@ public class MainWindow : Form
         }
     }
 
-    private void OnWebMessage(object? sender, Microsoft.Web.WebView2.Core.CoreWebView2WebMessageReceivedEventArgs e)
+    // ═══════════════════════════════════════════════════════════
+    // 前端消息处理
+    // startDrag — 立即拖动（无延迟），双击检测在 C# 侧
+    // ═══════════════════════════════════════════════════════════
+
+    private void OnWebMessage(object? s, Microsoft.Web.WebView2.Core.CoreWebView2WebMessageReceivedEventArgs e)
     {
         try
         {
-            var json = JsonDocument.Parse(e.TryGetWebMessageAsString());
-            var action = json.RootElement.GetProperty("action").GetString();
-
+            var j = JsonDocument.Parse(e.TryGetWebMessageAsString());
+            var a = j.RootElement.GetProperty("action").GetString();
             Invoke(() =>
             {
-                switch (action)
+                switch (a)
                 {
                     case "resize":
-                        var w = json.RootElement.GetProperty("width").GetInt32();
-                        var h = json.RootElement.GetProperty("height").GetInt32();
-                        Size = new Size(w, h);
-                        CenterToScreen();
+                        int w = j.RootElement.GetProperty("width").GetInt32();
+                        int h = j.RootElement.GetProperty("height").GetInt32();
+                        Size = new Size(w, h); CenterToScreen(); break;
+                    case "minimize":        WindowState = FormWindowState.Minimized; break;
+                    case "maximize":        ToggleMaximize(); break;
+                    case "fullscreen":      ToggleFullScreen(); break;
+                    case "close":           Close(); break;
+                    case "devtools":        webView!.CoreWebView2.OpenDevToolsWindow(); break;
+                    case "startResize":
+                        var edge = j.RootElement.GetProperty("edge").GetString() ?? "";
+                        int htVal = edge switch
+                        {
+                            "left" => HTLEFT, "right" => HTRIGHT,
+                            "top" => HTTOP, "bottom" => HTBOTTOM,
+                            "top-left" => HTTOPLEFT, "top-right" => HTTOPRIGHT,
+                            "bottom-left" => HTBOTTOMLEFT, "bottom-right" => HTBOTTOMRIGHT,
+                            _ => 0
+                        };
+                        if (htVal != 0 && !_isFullScreen)
+                        {
+                            _isResizing = true;
+                            _resizeEdge = htVal;
+                            _resizeStartMouse = Cursor.Position;
+                            _resizeStartBounds = Bounds;
+                            SetCapture(Handle);
+                        }
                         break;
-                    case "minimize":
-                        WindowState = FormWindowState.Minimized;
-                        break;
-                    case "maximize":
-                        WindowState = WindowState == FormWindowState.Maximized
-                            ? FormWindowState.Normal
-                            : FormWindowState.Maximized;
-                        break;
-                    case "close":
-                        Close();
+                    case "startDrag":
+                        // 双击检测：500ms 内两次 startDrag → 最大化
+                        var now = DateTime.Now;
+                        if ((now - _lastClickTime).TotalMilliseconds < 500)
+                        {
+                            _lastClickTime = DateTime.MinValue;
+                            ToggleMaximize();
+                        }
+                        else
+                        {
+                            _lastClickTime = now;
+                            ReleaseCapture();
+                            SendMessage(Handle, 0xA1, 0x2, 0);
+                        }
                         break;
                 }
             });
@@ -118,52 +265,27 @@ public class MainWindow : Form
         catch { }
     }
 
-    private Icon? _whiteIcon, _graphiteIcon, _sandstoneIcon, _currentIcon;
-    private string _currentTheme = "";
-
-    private void LoadThemeIcons()
+    private void ToggleMaximize()
     {
-        try
-        {
-            var dir = Path.GetDirectoryName(Application.ExecutablePath) ?? AppContext.BaseDirectory;
-            var load = (string file) =>
-            {
-                var path = Path.Combine(dir, file);
-                return File.Exists(path)
-                    ? Icon.FromHandle(new Bitmap(Image.FromFile(path)).GetHicon())
-                    : null;
-            };
-            _whiteIcon = load("theme-white.png");
-            _graphiteIcon = load("theme-graphite.png");
-            _sandstoneIcon = load("theme-sandstone.png");
-        }
-        catch { }
+        if (_isFullScreen) { _isFullScreen = false; FormBorderStyle = _preFullScreenBorder; NotifyFullScreenChange(); }
+        if (_isMaximized) { _isMaximized = false; Bounds = _preMaximizeBounds; }
+        else { _isMaximized = true; _preMaximizeBounds = Bounds; Bounds = Screen.FromHandle(Handle).WorkingArea; }
+        NotifyMaximizeChange();
     }
 
-    private void UpdateAppIcon(string theme)
+    private void ToggleFullScreen()
     {
-        if (theme == _currentTheme) return; // 防重复
-        _currentTheme = theme;
-
-        var newIcon = theme switch
-        {
-            "graphite" => _graphiteIcon,
-            "sandstone" => _sandstoneIcon,
-            _ => _whiteIcon
-        };
-
-        if (newIcon != null && newIcon != _currentIcon)
-        {
-            if (_currentIcon != null)
-            {
-                try { DestroyIcon(_currentIcon.Handle); } catch { }
-                _currentIcon.Dispose();
-            }
-            _currentIcon = (Icon)newIcon.Clone();
-            Icon = _currentIcon;
-        }
+        if (_isFullScreen) { _isFullScreen = false; FormBorderStyle = _preFullScreenBorder; Bounds = _preFullScreenBounds; }
+        else { _isFullScreen = true; _preFullScreenBorder = FormBorderStyle; _preFullScreenBounds = _isMaximized ? _preMaximizeBounds : Bounds; _isMaximized = false; FormBorderStyle = FormBorderStyle.None; Bounds = Screen.FromHandle(Handle).Bounds; }
+        NotifyFullScreenChange();
     }
 
-    [DllImport("user32.dll")]
-    private static extern bool DestroyIcon(IntPtr hIcon);
+    private void NotifyMaximizeChange()
+    {
+        try { webView?.CoreWebView2?.PostWebMessageAsJson(JsonSerializer.Serialize(new { type = "maximizeChange", isMaximized = _isMaximized })); } catch { }
+    }
+    private void NotifyFullScreenChange()
+    {
+        try { webView?.CoreWebView2?.PostWebMessageAsJson(JsonSerializer.Serialize(new { type = "fullScreenChange", isFullScreen = _isFullScreen })); } catch { }
+    }
 }
