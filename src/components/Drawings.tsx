@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { HoverScrollbar } from './ui/HoverScrollbar'
+import { DataTable, type Column } from '@/components/DataTable'
 import FilterBar from './ui/FilterBar'
 import Spinner from './ui/Spinner'
 import { Drawing, Project } from '../types/electron'
@@ -235,6 +235,30 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
   '其他': 'bg-slate-100 text-slate-800'
   }
 
+  const columns: Column<Drawing>[] = [
+    { key: 'name', title: '图纸名称', render: (item) => (
+      <div className="flex items-center gap-2">
+        <Icon name={categoryIcons[item.category || ''] || 'File'} size={18} className="text-slate-400" />
+        <span className="font-medium text-slate-800">{item.name}</span>
+      </div>
+    )},
+    { key: 'projectId', title: '所属项目', render: (item) => <span className="text-sm text-slate-600">{getProjectName(item.projectId)}</span> },
+    { key: 'category', title: '图纸类型', render: (item) => (
+      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${categoryColors[item.category || ''] || 'bg-slate-100 text-slate-800'}`}>
+        {item.category || '其他'}
+      </span>
+    )},
+    { key: 'position', title: '部位', render: (item) => <span className="text-sm text-slate-600">{item.position || '-'}</span> },
+    { key: 'remarks', title: '备注', render: (item) => <span className="text-sm text-slate-600 max-w-xs truncate">{item.remarks || '-'}</span> },
+    { key: 'createdAt', title: '上传日期', render: (item) => <span className="text-sm text-slate-500">{new Date(item.createdAt).toLocaleDateString('zh-CN')}</span> },
+    { key: 'actions', title: '操作', align: 'center', render: (item) => (
+      <div className="flex items-center justify-center gap-2">
+        <button onClick={() => handleEdit(item)} className="btn btn-ghost btn-sm">编辑</button>
+        <button onClick={() => handleDelete(item.id)} className="btn btn-danger btn-sm">删除</button>
+      </div>
+    )},
+  ]
+
   if (loading) {
   return <Spinner size="lg" text="加载图纸数据..." />
   }
@@ -318,58 +342,17 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
 
   {/* 图纸列表 */}
   {filteredDrawings.length > 0 ? (
-  <HoverScrollbar className="bg-white rounded-xl shadow-sm h-full">
-  <table className="w-full border-separate border-spacing-0">
-  <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
-  <tr className="">
-  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase bg-slate-50">图纸名称</th>
-  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase bg-slate-50">所属项目</th>
-  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase bg-slate-50">图纸类型</th>
-  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase bg-slate-50">部位</th>
-  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase bg-slate-50">备注</th>
-  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase bg-slate-50">上传日期</th>
-  <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase bg-slate-50">操作</th>
-  </tr>
-  </thead>
-  <tbody className="divide-y divide-slate-100">
-  {filteredDrawings.map(drawing => (
-  <tr key={drawing.id} className="table-row-hover">
-  <td className="px-4 py-3">
-  <div className="flex items-center gap-2">
-  <Icon name={categoryIcons[drawing.category || ''] || 'File'} size={18} className="text-slate-400" />
-  <span className="font-medium text-slate-800">{drawing.name}</span>
-  </div>
-  </td>
-  <td className="px-4 py-3 text-sm text-slate-600">{getProjectName(drawing.projectId)}</td>
-  <td className="px-4 py-3">
-  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${categoryColors[drawing.category || ''] || 'bg-slate-100 text-slate-800'}`}>
-  {drawing.category || '其他'}
-  </span>
-  </td>
-  <td className="px-4 py-3 text-sm text-slate-600">{drawing.position || '-'}</td>
-  <td className="px-4 py-3 text-sm text-slate-600 max-w-xs truncate">{drawing.remarks || '-'}</td>
-  <td className="px-4 py-3 text-sm text-slate-500">{new Date(drawing.createdAt).toLocaleDateString('zh-CN')}</td>
-  <td className="px-4 py-3 text-center">
-  <div className="flex items-center justify-center gap-2">
-  <button
-  onClick={() => handleEdit(drawing)}
-  className="btn btn-ghost btn-sm"
-  >
-  编辑
-  </button>
-  <button
-  onClick={() => handleDelete(drawing.id)}
-  className="btn btn-danger btn-sm"
-  >
-  删除
-  </button>
-  </div>
-  </td>
-  </tr>
-  ))}
-  </tbody>
-  </table>
-  </HoverScrollbar>
+  <DataTable
+    data={filteredDrawings}
+    columns={columns}
+    rowKey="id"
+    pagination={false}
+    showContainer={true}
+    stickyHeader={true}
+    useHoverScrollbar={true}
+    emptyText="暂无图纸"
+    emptyIcon="Ruler"
+  />
   ) : (
   <EmptyState icon="Ruler" title="暂无图纸" description="点击下方按钮上传您的第一张图纸"
   action={<button onClick={() => { resetForm(); setShowModal(true) }} className="btn btn-primary px-6 py-3">上传图纸</button>}

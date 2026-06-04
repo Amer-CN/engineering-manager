@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { DataTable, type Column } from '@/components/DataTable'
 import { Icon } from '../../ui/Icon'
 
 interface Item { description: string; spec: string; quantity: number; unit: string; unitPrice: number; amount: number; remarks: string }
@@ -83,6 +84,18 @@ export const SettlementImportModal: React.FC<Props> = ({ show, onClose, onImport
     loadSheet(wb, state.activeSheet, hr)
   }
 
+  // ── 动态列定义（基于表头） ──
+  const previewColumns: Column<any>[] = state.headers.map((h, i) => ({
+    key: `col_${i}`,
+    title: h || `列${i + 1}`,
+    render: (_row: any, index: number) => {
+      const row = state.previewRows[index]
+      if (!row) return null
+      const val = row[i]
+      return <span className="text-slate-700 whitespace-nowrap">{val !== undefined && val !== null ? String(val) : ''}</span>
+    }
+  }))
+
   if (!show) return null
 
   return (
@@ -127,18 +140,18 @@ export const SettlementImportModal: React.FC<Props> = ({ show, onClose, onImport
           <div>
             <label className="text-sm font-medium text-slate-700 block mb-2">数据预览（前 {state.previewRows.length} 行，共 {state.allRows.length} 行）</label>
             <div className="border border-slate-200 rounded-xl overflow-hidden max-h-60 overflow-y-auto">
-              <table className="w-full text-xs">
-                <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
-                  <tr>{state.headers.map((h, i) => <th key={i} className="px-3 py-2 text-left font-medium text-slate-500 whitespace-nowrap">{h || `列${i + 1}`}</th>)}</tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {state.previewRows.map((row, ri) => (
-                    <tr key={ri} className="table-row-hover">
-                      {state.headers.map((_, ci) => <td key={ci} className="px-3 py-1.5 text-slate-700 whitespace-nowrap">{row[ci] !== undefined && row[ci] !== null ? String(row[ci]) : ''}</td>)}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              {state.headers.length > 0 ? (
+                <DataTable
+                  data={state.previewRows}
+                  columns={previewColumns}
+                  rowKey={(item: any) => JSON.stringify(item)}
+                  pagination={false}
+                  showContainer={false}
+                  stickyHeader={true}
+                />
+              ) : (
+                <div className="p-4 text-center text-sm text-slate-400">请先选择工作表</div>
+              )}
             </div>
           </div>
         </div>

@@ -3,6 +3,7 @@
  * Props 从 CostLedgerImportModal 主组件传入
  */
 import { useState, Dispatch, SetStateAction } from 'react'
+import { DataTable, type Column } from '@/components/DataTable'
 import { Icon } from '@/components/ui/Icon'
 import type { CostLedgerCategory, CostLedgerMatchRule } from '@/types'
 import { IMPORT_FIELDS, autoMatchCategory, parseDate, parseNumber } from './importHelpers'
@@ -89,13 +90,49 @@ function CategoryOverridePanel({ categorySummary, categories, categoryOverrides,
 }
 
 // ── 数据预览表格 ──
-function PreviewTable({ previewRows, categories, rowOverrides, onRowOverrideChange, PAGE_SIZE }: {
+function PreviewTable({ previewRows, categories, rowOverrides, onRowOverrideChange }: {
   previewRows: Props['previewRows']; categories: CostLedgerCategory[]
   rowOverrides: Record<number, string>
   onRowOverrideChange: Dispatch<SetStateAction<Record<number, string>>>
-  PAGE_SIZE: number
 }) {
-  const [page, setPage] = useState(0)
+  const data = previewRows.valid.map(r => ({
+    ...r,
+    _idx: (r as any)._rowIdx as number,
+    _dir: (r as any)._matchedDir as 'expense' | 'income',
+    _code: (r as any)._matchedCode as string,
+  }))
+
+  const columns: Column<typeof data[number]>[] = [
+    { key: 'rowNum', title: '行', width: '48px', render: (item) => <span className="text-slate-400">{item.rowNum}</span> },
+    { key: 'date', title: '日期', render: (item) => <span className="text-slate-700">{item.date}</span> },
+    { key: 'summary', title: '摘要', render: (item) => <span className="text-slate-700 max-w-[200px] truncate block">{item.summary}</span> },
+    { key: 'counterparty', title: '往来单位', render: (item) => <span className="text-slate-700 max-w-[150px] truncate block">{item.counterparty}</span> },
+    { key: '_dir', title: '方向', render: (item) => (
+      <span className={`text-xs px-1 py-0.5 rounded ${item._dir === 'expense' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
+        {item._dir === 'expense' ? '支出' : '收入'}
+      </span>
+    )},
+    { key: 'expenseAmount', title: '金额', align: 'right', render: (item) => <span className="font-mono text-slate-700">{item.expenseAmount || item.incomeAmount}</span> },
+    { key: '_code', title: '分类', render: (item) => {
+      const overrideCode = rowOverrides[item._idx]
+      const currentCode = overrideCode || item._code
+      return (
+        <select value={currentCode}
+          onChange={e => onRowOverrideChange(prev => ({ ...prev, [item._idx]: e.target.value }))}
+          className="px-1 py-0.5 border border-slate-300 rounded text-xs bg-white max-w-[130px]">
+          <optgroup label="支出">
+            {categories.filter(c => c.direction === 'expense' && c.isEnabled).map(c => (
+              <option key={c.code} value={c.code}>{c.label}</option>))}
+          </optgroup>
+          <optgroup label="收入">
+            {categories.filter(c => c.direction === 'income' && c.isEnabled).map(c => (
+              <option key={c.code} value={c.code}>{c.label}</option>))}
+          </optgroup>
+        </select>
+      )
+    }},
+  ]
+
   return (
   <div>
   <label className="text-sm font-medium text-slate-700 block mb-2">
@@ -105,79 +142,19 @@ function PreviewTable({ previewRows, categories, rowOverrides, onRowOverrideChan
   {previewRows.total - previewRows.validCount > 0 && `（已跳过 ${previewRows.total - previewRows.validCount} 行汇总/空行）`}
   </span>
   </label>
-  <div className="overflow-x-auto border border-slate-200 rounded-lg">
-  <table className="w-full text-xs">
-  <thead className="bg-slate-50 border-b border-slate-200">
-  <tr className="">
-  <th className="px-2 py-1.5 text-left text-slate-500">行</th>
-  <th className="px-2 py-1.5 text-left text-slate-500">日期</th>
-  <th className="px-2 py-1.5 text-left text-slate-500">摘要</th>
-  <th className="px-2 py-1.5 text-left text-slate-500">往来单位</th>
-  <th className="px-2 py-1.5 text-left text-slate-500">方向</th>
-  <th className="px-2 py-1.5 text-right text-slate-500">金额</th>
-  <th className="px-2 py-1.5 text-left text-slate-500">分类</th>
-  </tr>
-  </thead>
-  <tbody>
-  {previewRows.valid.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).map((r, i) => {
-  const idx = (r as any)._rowIdx as number
-  const dir = (r as any)._matchedDir as 'expense' | 'income'
-  const code = (r as any)._matchedCode as string
-  const overrideCode = rowOverrides[idx]
-  const currentCode = overrideCode || code
-  // currentCat computed below if needed
-  // const currentCat = categories.find(c => c.code === currentCode)
-  return (
-  <tr key={i} className="border-t border-slate-100">
-  <td className="px-2 py-1 text-slate-400">{r.rowNum}</td>
-  <td className="px-2 py-1 text-slate-700">{r.date}</td>
-  <td className="px-2 py-1 text-slate-700 max-w-[200px] truncate">{r.summary}</td>
-  <td className="px-2 py-1 text-slate-700 max-w-[150px] truncate">{r.counterparty}</td>
-  <td className="px-2 py-1">
-  <span className={`text-xs px-1 py-0.5 rounded ${dir === 'expense' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
-  {dir === 'expense' ? '支出' : '收入'}
-  </span>
-  </td>
-  <td className="px-2 py-1 text-right font-mono text-slate-700">{r.expenseAmount || r.incomeAmount}</td>
-  <td className="px-2 py-1">
-  <select value={currentCode}
-  onChange={e => onRowOverrideChange(prev => ({ ...prev, [idx]: e.target.value }))}
-  className="px-1 py-0.5 border border-slate-300 rounded text-xs bg-white max-w-[130px]">
-  <optgroup label="支出">
-  {categories.filter(c => c.direction === 'expense' && c.isEnabled).map(c => (
-  <option key={c.code} value={c.code}>{c.label}</option>))}
-  </optgroup>
-  <optgroup label="收入">
-  {categories.filter(c => c.direction === 'income' && c.isEnabled).map(c => (
-  <option key={c.code} value={c.code}>{c.label}</option>))}
-  </optgroup>
-  </select>
-  </td>
-  </tr>
-  )
-  })}
+  <DataTable
+    data={data}
+    columns={columns}
+    rowKey={(item) => String(item._idx)}
+    pagination={false}
+    showContainer={true}
+    stickyHeader={true}
+    emptyText={previewRows.validCount === 0 ? '没有有效数据行，请检查列映射是否正确' : '暂无数据'}
+  />
   {previewRows.skipped.length > 0 && (
-  <tr className="border-t border-dashed border-slate-200">
-  <td colSpan={7} className="px-2 py-2 text-center text-xs text-slate-400">
-  …… 已跳过 {previewRows.total - previewRows.validCount} 行汇总/空行 ……
-  </td>
-  </tr>
-  )}
-  {previewRows.validCount === 0 && (
-  <tr><td colSpan={7} className="px-2 py-4 text-center text-sm text-slate-400">没有有效数据行，请检查列映射是否正确</td></tr>
-  )}
-  </tbody>
-  </table>
-  </div>
-  {previewRows.totalPages > 1 && (
-  <div className="flex items-center justify-center gap-3 mt-3">
-  <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
-  className="btn btn-secondary btn-sm disabled:opacity-30">上一页</button>
-  <span className="text-xs text-slate-500">第 {page + 1} / {previewRows.totalPages} 页</span>
-  <button onClick={() => setPage(p => Math.min(previewRows.totalPages - 1, p + 1))}
-  disabled={page >= previewRows.totalPages - 1}
-  className="btn btn-secondary btn-sm disabled:opacity-30">下一页</button>
-  </div>
+    <p className="text-center text-xs text-slate-400 mt-2">
+      …… 已跳过 {previewRows.total - previewRows.validCount} 行汇总/空行 ……
+    </p>
   )}
   </div>
   )
@@ -250,7 +227,6 @@ export function buildCategorySummary(rows: ParsedRow[], categories: CostLedgerCa
 }
 
 // ── 主组件 ──
-const PAGE_SIZE = 20
 
 export function ImportMappingStep(props: Props) {
   const { sheetNames, activeSheet, headers, mapping, onMappingChange, onSwitchSheet,
@@ -308,7 +284,7 @@ export function ImportMappingStep(props: Props) {
 
   {/* 数据预览 */}
   <PreviewTable previewRows={previewRows} categories={categories}
-  rowOverrides={rowOverrides} onRowOverrideChange={onRowOverrideChange} PAGE_SIZE={PAGE_SIZE} />
+  rowOverrides={rowOverrides} onRowOverrideChange={onRowOverrideChange} />
   </div>
   )
 }

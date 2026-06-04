@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react'
+import { DataTable, type Column } from '@/components/DataTable'
 import { Icon } from './ui/Icon'
 import { Tooltip } from './ui/Tooltip/Tooltip'
 import { useToastStore } from '@/store/toastStore'
@@ -128,6 +129,65 @@ export const SnapshotsTab: React.FC = () => {
     return `${(bytes / 1024 / 1024).toFixed(1)} MB`
   }
 
+  const columns: Column<SnapshotInfo & { _index: number }>[] = [
+    { key: 'timestamp', title: '时间', render: (item) => (
+      <div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-slate-800 font-medium">
+            {item.timestamp.replace('T', ' ')}
+          </span>
+          {item._index === 0 && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-700">
+              ← 当前状态
+            </span>
+          )}
+        </div>
+        {item.label && (
+          <span className="text-xs text-slate-400 mt-0.5 block">标签：{item.label}</span>
+        )}
+      </div>
+    )},
+    { key: 'fileSize', title: '大小', render: (item) => <span className="text-sm text-slate-600">{formatSize(item.fileSize)}</span> },
+    { key: 'dbSummary', title: '数据概况', render: (item) => (
+      <div className="flex flex-wrap gap-1 max-w-xs">
+        {Object.entries(item.dbSummary).filter(([, v]) => (v as number) > 0).slice(0, 5).map(([key, val]) => (
+          <span key={key} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-slate-100 text-slate-600">
+            {TABLE_LABELS[key] || key}: {val as number}
+          </span>
+        ))}
+        {Object.entries(item.dbSummary).filter(([, v]) => (v as number) > 0).length > 5 && (
+          <span className="text-xs text-slate-400">
+            +{Object.entries(item.dbSummary).filter(([, v]) => (v as number) > 0).length - 5}
+          </span>
+        )}
+      </div>
+    )},
+    { key: 'actions', title: '操作', align: 'center', width: 'w-40', render: (item) => (
+      <div className="flex items-center justify-center gap-1">
+        {item._index > 0 && (
+          <button
+            onClick={() => handleRestore(item)}
+            disabled={restoring}
+            className="px-3 py-1.5 text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 rounded-lg hover:bg-amber-100 disabled:opacity-50 transition-colors"
+          >
+            {restoring ? '还原中...' : '还原'}
+          </button>
+        )}
+        <Tooltip content="删除快照" position="top" delay={300}>
+          <button
+            onClick={() => handleDelete(item)}
+            className="px-2 py-1.5 text-xs text-slate-400 hover:text-red-500 transition-colors"
+          >
+            <Icon name="Trash2" size={14} />
+          </button>
+        </Tooltip>
+      </div>
+    )},
+  ]
+
+  // Add _index for row highlighting
+  const dataWithIndex = snapshots.map((snap, i) => ({ ...snap, _index: i }))
+
   return (
     <div className="space-y-4">
       {/* 工具栏 */}
@@ -161,82 +221,18 @@ export const SnapshotsTab: React.FC = () => {
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary-500 border-t-transparent" />
         </div>
-      ) : snapshots.length === 0 ? (
-        <div className="text-center py-12 text-slate-400">
-          <Icon name="Clock" size={36} className="mx-auto mb-2" />
-          <p className="text-sm">暂无快照</p>
-          <p className="text-xs mt-1">修改数据后会自动创建</p>
-        </div>
       ) : (
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-          <table className="w-full border-separate border-spacing-0">
-            <thead className="bg-slate-50 border-b border-slate-200">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">时间</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">大小</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">数据概况</th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase w-40">操作</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {snapshots.map((snap, i) => (
-                <tr key={snap.timestamp} className={i === 0 ? 'bg-primary-50/50' : ''}>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-slate-800 font-medium">
-                        {snap.timestamp.replace('T', ' ')}
-                      </span>
-                      {i === 0 && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-700">
-                          ← 当前状态
-                        </span>
-                      )}
-                    </div>
-                    {snap.label && (
-                      <span className="text-xs text-slate-400 mt-0.5 block">标签：{snap.label}</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{formatSize(snap.fileSize)}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1 max-w-xs">
-                      {Object.entries(snap.dbSummary).filter(([, v]) => (v as number) > 0).slice(0, 5).map(([key, val]) => (
-                        <span key={key} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-slate-100 text-slate-600">
-                          {TABLE_LABELS[key] || key}: {val as number}
-                        </span>
-                      ))}
-                      {Object.entries(snap.dbSummary).filter(([, v]) => (v as number) > 0).length > 5 && (
-                        <span className="text-xs text-slate-400">
-                          +{Object.entries(snap.dbSummary).filter(([, v]) => (v as number) > 0).length - 5}
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      {i > 0 && (
-                        <button
-                          onClick={() => handleRestore(snap)}
-                          disabled={restoring}
-                          className="px-3 py-1.5 text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 rounded-lg hover:bg-amber-100 disabled:opacity-50 transition-colors"
-                        >
-                          {restoring ? '还原中...' : '还原'}
-                        </button>
-                      )}
-                      <Tooltip content="删除快照" position="top" delay={300}>
-                        <button
-                          onClick={() => handleDelete(snap)}
-                          className="px-2 py-1.5 text-xs text-slate-400 hover:text-red-500 transition-colors"
-                        >
-                          <Icon name="Trash2" size={14} />
-                        </button>
-                      </Tooltip>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          data={dataWithIndex}
+          columns={columns}
+          rowKey="timestamp"
+          pagination={false}
+          showContainer={true}
+          stickyHeader={true}
+          loading={false}
+          emptyText="暂无快照"
+          emptyIcon="Clock"
+        />
       )}
 
       {ConfirmDialog}

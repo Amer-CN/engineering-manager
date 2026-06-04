@@ -101,6 +101,35 @@ export const getTaxTypeLabel = (taxType: TaxType | string | undefined): string =
   }
 }
 
+// 通过公司名称查询企业信息（调用后端百度API）
+export const queryCompanyByName = async (companyName: string): Promise<CompanyInfo | null> => {
+  if (!companyName || companyName.trim().length < 2) return null
+
+  try {
+    const api = await (await import('../services/api-adapter')).getAPI()
+    const result = await (api as any).ocrBaiduCompanyQuery(companyName.trim(), {})
+
+    if (result?.success && result?.businessLicense) {
+      const bl = result.businessLicense
+      return {
+        name: bl.companyName || '',
+        creditCode: bl.creditCode || '',
+        registeredAddress: bl.address || '',
+        businessScope: bl.businessScope || '',
+        taxType: 'general' as TaxType,
+        legalPerson: bl.legalPerson || '',
+        registeredCapital: bl.registeredCapital || '',
+        establishmentDate: bl.establishDate || '',
+        address: bl.address || ''
+      }
+    }
+    return null
+  } catch (error) {
+    console.warn('按名称查询企业信息失败:', error)
+    return null
+  }
+}
+
 // 使用天眼查开放API查询（需要API Key）
 export const queryCompanyTianYanCha = async (creditCode: string, apiKey?: string): Promise<CompanyInfo | null> => {
   if (!apiKey) {

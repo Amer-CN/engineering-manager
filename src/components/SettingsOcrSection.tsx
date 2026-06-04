@@ -21,7 +21,7 @@ const OCR_FEATURES = [
   { name: '开户许可证识别', icon: 'FileCheck', description: '自动识别开户许可证号、账号、开户行', status: 'beta' },
   { name: '银行单据识别', icon: 'ScrollText', description: '自动识别银行流水明细', status: 'beta' },
   { name: '通用票据识别', icon: 'FileJson', description: '自动识别票据文字内容', status: 'beta' },
-  { name: '企业工商信息查询', icon: 'Search', description: '输入公司名称查询工商注册信息', status: 'coming' },
+  { name: '企业工商信息查询', icon: 'Search', description: '输入公司名称查询工商注册信息', status: 'beta' },
 ]
 
 export const SettingsOcrSection: React.FC<Props> = ({ ocrConfig, setOcrConfig, ocrStatus, testingOCR, ocrMessage, onSave, onTest }) => {

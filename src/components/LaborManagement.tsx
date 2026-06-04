@@ -24,7 +24,7 @@ const FileImportDialog = React.lazy(() => import('./features/wages/FileImportDia
 
 const TABS = [
   { id: 'dashboard', label: '看板', icon: 'LayoutDashboard' },
-  { id: 'workers', label: '人员', icon: 'Construction' },
+  { id: 'workers', label: '工人库', icon: 'Construction' },
   { id: 'teams', label: '班组管理', icon: 'Building2' },
   { id: 'wages', label: '薪资管理', icon: 'Wallet' },
 ]

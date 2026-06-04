@@ -11,7 +11,7 @@ import { apiClient } from './api-client';
 
 export const tauriAPI = {
   // ────────── 系统 ──────────
-  getAppVersion: () => '0.67.0',
+  getAppVersion: () => '0.68.0',
   getDataPath: () => apiClient.get<string>('/api/config/data-path'),
   getUploadsPath: () => apiClient.get<string>('/api/config/uploads-path'),
   openDevTools: () => {
@@ -254,8 +254,8 @@ export const tauriAPI = {
     apiClient.get<any[]>(`/api/wage-history/${projectWorkerId}`),
   getEffectiveWage: (projectWorkerId: number, yearMonth: string) =>
     apiClient.get<any>(`/api/wage-history/${projectWorkerId}/effective`, { yearMonth }),
-  getTeamWages: (projectId: number, yearMonth: string) =>
-    apiClient.get<any[]>('/api/wages', { projectId, yearMonth }),
+  getTeamWages: (projectId: number, teamId: number) =>
+    apiClient.get<{ workerCount: number; teamTotal: number; details: any[] }>('/api/team-wages', { projectId, teamId }),
   getSalaryHistory: (memberId: number) =>
     apiClient.get<any[]>(`/api/salary-history/${memberId}`),
   createSalaryHistory: (entry: any) =>

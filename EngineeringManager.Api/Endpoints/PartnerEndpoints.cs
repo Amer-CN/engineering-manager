@@ -23,13 +23,13 @@ public static class PartnerEndpoints
         {
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO partners
                 (name,category,contact,phone,email,address,bank_account,bank_name,tax_number,credit_code,
-                 registered_address,business_scope,tax_type,created_at,updated_at)
+                 registered_address,business_scope,tax_type,project_ids,created_at,updated_at)
                 VALUES (@Name,@Category,@Contact,@Phone,@Email,@Address,@BankAccount,@BankName,@TaxNumber,
-                        @CreditCode,@RegisteredAddress,@BusinessScope,@TaxType,@Now,@Now);
+                        @CreditCode,@RegisteredAddress,@BusinessScope,@TaxType,@ProjectIds,@Now,@Now);
                 SELECT last_insert_rowid();",
                 new { dto.Name, dto.Category, dto.Contact, dto.Phone, dto.Email, dto.Address,
                       dto.BankAccount, dto.BankName, dto.TaxNumber, dto.CreditCode, dto.RegisteredAddress,
-                      dto.BusinessScope, dto.TaxType, Now = now() });
+                      dto.BusinessScope, dto.TaxType, ProjectIds = dto.ProjectIds ?? "[]", Now = now() });
             return Common.Ok(id);
         });
 
@@ -38,10 +38,10 @@ public static class PartnerEndpoints
             var affected = await db.ExecuteAsync(@"UPDATE partners SET name=@Name,category=@Category,contact=@Contact,
                 phone=@Phone,email=@Email,address=@Address,bank_account=@BankAccount,bank_name=@BankName,
                 tax_number=@TaxNumber,credit_code=@CreditCode,registered_address=@RegisteredAddress,
-                business_scope=@BusinessScope,tax_type=@TaxType,updated_at=@Now WHERE id=@Id",
+                business_scope=@BusinessScope,tax_type=@TaxType,project_ids=@ProjectIds,updated_at=@Now WHERE id=@Id",
                 new { dto.Id, dto.Name, dto.Category, dto.Contact, dto.Phone, dto.Email, dto.Address,
                       dto.BankAccount, dto.BankName, dto.TaxNumber, dto.CreditCode, dto.RegisteredAddress,
-                      dto.BusinessScope, dto.TaxType, Now = now() });
+                      dto.BusinessScope, dto.TaxType, ProjectIds = dto.ProjectIds ?? "[]", Now = now() });
             return affected > 0 ? Common.Ok() : Common.Fail("合作伙伴不存在");
         });
 

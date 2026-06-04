@@ -281,7 +281,7 @@ const Settings: React.FC<SettingsProps> = ({ refresh }) => {
  <div>
  <p className="text-xl font-bold text-slate-800">工程管家</p>
  <p className="text-slate-500">
- Version {(window as any).__APP_VERSION__ || '0.67.0'}
+ Version {(window as any).__APP_VERSION__ || '0.68.0'}
  <span className="mx-1.5 text-slate-300">·</span>
  <button onClick={() => setShowChangelog(true)} className="hover:underline" style={{ color: 'var(--accent)' }}>更新日志</button>
  </p>

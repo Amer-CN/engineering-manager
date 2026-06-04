@@ -33,8 +33,7 @@ export default function PayrollPage({ mode }: PayrollPageProps) {
   const { confirm, ConfirmDialog } = useConfirm()
   const showToast = useToastStore(state => state.showToast)
   const [activeTab, setActiveTab] = useState<TabId>(mode === 'staff' ? 'payroll' : 'attendance')
-  const [filterYear, setFilterYear] = useState(() => new Date().getFullYear().toString())
-  const [filterMonth, setFilterMonth] = useState('全部')
+  const [filterYearMonth, setFilterYearMonth] = useState(() => new Date().toISOString().slice(0, 7))
 
   // worker 模式：选中的项目
   const selectedProject = useMemo(() => {
@@ -124,12 +123,11 @@ export default function PayrollPage({ mode }: PayrollPageProps) {
   // 发放记录的过滤数据
   const paymentFilteredWages = useMemo(() => {
     return data.wages.filter((w: any) => {
-      if (filterYear && w.yearMonth?.slice(0, 4) !== filterYear) return false
-      if (filterMonth && filterMonth !== '全部' && w.yearMonth?.slice(5, 7) !== filterMonth) return false
+      if (filterYearMonth && w.yearMonth?.slice(0, 7) !== filterYearMonth) return false
       if (data.filterName && !(w.memberName || '').includes(data.filterName)) return false
       return true
     })
-  }, [data.wages, filterYear, filterMonth, data.filterName])
+  }, [data.wages, filterYearMonth, data.filterName])
 
   const [selYear, selMonth] = data.selectedMonth.split('-')
   const daysInMonth = new Date(Number(selYear), Number(selMonth), 0).getDate()
@@ -146,23 +144,8 @@ export default function PayrollPage({ mode }: PayrollPageProps) {
 
         {/* 月份选择器 */}
         {activeTab === 'payments' ? (
-          <div className="flex items-center gap-1.5">
-            <select value={filterYear} onChange={e => { setFilterYear(e.target.value); setFilterMonth('全部') }}
-              className="text-sm font-medium px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white">
-              {Array.from({ length: 11 }, (_, i) => {
-                const y = (new Date().getFullYear() - 5 + i).toString()
-                return <option key={y} value={y}>{y}年</option>
-              })}
-            </select>
-            <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)}
-              className="text-sm px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white">
-              <option value="全部">全部月份</option>
-              {Array.from({ length: 12 }, (_, i) => {
-                const m = String(i + 1).padStart(2, '0')
-                return <option key={m} value={m}>{m}月</option>
-              })}
-            </select>
-          </div>
+          <input type="month" value={filterYearMonth} onChange={e => setFilterYearMonth(e.target.value)}
+            className="text-sm font-medium px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white" />
         ) : (
           <input type="month" value={data.selectedMonth} onChange={e => data.setSelectedMonth(e.target.value)}
             className="text-sm font-medium px-3 py-1.5 rounded-lg border border-slate-200 bg-white" />
@@ -272,8 +255,7 @@ export default function PayrollPage({ mode }: PayrollPageProps) {
                   onDelete={wageActions.handleDeleteAttendance}
                   onBatchDelete={wageActions.handleBatchDeleteAttendance}
                   loading={false} onImportAttendance={wageActions.handleImportAttendance}
-                  onChangeMonth={data.setSelectedMonth}
-                />
+                                />
               ) : <div className="flex items-center justify-center h-full"><EmptyState icon="Calendar" title="请先选择项目" description="在工具栏的项目下拉框中选择一个项目" /></div>
             )}
             {activeTab === 'wages' && (
@@ -290,17 +272,17 @@ export default function PayrollPage({ mode }: PayrollPageProps) {
                   onSave={wageActions.handleSaveWages}
                   onBonusDeductionChange={wageActions.handleBonusDeductionChange}
                   onBatchDelete={wageActions.handleBatchDeleteWages}
-                  loading={false} onChangeMonth={data.setSelectedMonth}
+                  loading={false}
                 />
               ) : <div className="flex items-center justify-center h-full"><EmptyState icon="FileText" title="请先选择项目" description="在工具栏的项目下拉框中选择一个项目" /></div>
             )}
             {activeTab === 'payments' && (
               <WageRecordsTab
                 allWageRecords={paymentFilteredWages}
-                filterYear={filterYear} filterMonth={filterMonth} filterMemberName={data.filterName}
+                filterYearMonth={filterYearMonth} filterMemberName={data.filterName}
                 selectedIds={wageActions.selectedWageIds}
                 paymentEdits={wageActions.paymentEdits}
-                onFilterYearChange={setFilterYear} onFilterMonthChange={setFilterMonth}
+                onFilterYearMonthChange={setFilterYearMonth}
                 onFilterNameChange={v => data.setFilterName(v)}
                 onPaymentChange={wageActions.handlePaymentChange}
                 onSavePayments={wageActions.handleSavePayments}

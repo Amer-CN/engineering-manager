@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { DataTable, type Column } from '@/components/DataTable'
 import type { Project, Member, Partner, IncomeContract, ExpenseContract, WorkerTeam, Invoice } from '@/types'
 import { ProjectStatsData } from './ProjectStats'
 import { Badge } from '@/components/ui/Badge'
@@ -78,6 +79,15 @@ export function ContractsTab({ incomeContracts, expenseContracts, stats }: {
 }
 
 export function InvoicesTab({ invoices, stats }: { invoices: Invoice[]; stats: ProjectStatsData }) {
+  const invoiceColumns: Column<Invoice>[] = [
+    { key: 'invoiceNo', title: '发票号', render: (item) => <span className="text-sm font-mono text-slate-700">{item.invoiceNo}</span> },
+    { key: 'type', title: '类型', render: (item) => <Badge variant={item.type === 'invoice_in' ? 'success' : 'info'}>{item.type === 'invoice_in' ? '进项' : '销项'}</Badge> },
+    { key: 'name', title: '名称', render: (item) => <span className="text-sm text-slate-700">{item.name}</span> },
+    { key: 'amount', title: '金额', align: 'right', render: (item) => <span className="font-medium text-slate-800 text-sm">¥{formatMoney(item.amount)}</span> },
+    { key: 'receivedAmount', title: '已收/已付', align: 'right', render: (item) => <span className="text-sm text-emerald-600">¥{formatMoney(item.receivedAmount)}</span> },
+    { key: 'status', title: '状态', align: 'center', render: (item) => <InvoiceStatusBadge status={item.status} type={item.type} /> },
+  ]
+
   return (
     <div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
@@ -96,23 +106,15 @@ export function InvoicesTab({ invoices, stats }: { invoices: Invoice[]; stats: P
       </div>
       <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500 mb-3">发票列表</h3>
       {invoices.length > 0 ? (
-        <div className={`${CARD} overflow-hidden`}>
-          <table className="w-full">
-            <thead className="bg-slate-50 border-b border-slate-200"><tr>{['发票号', '类型', '名称', '金额', '已收/已付', '状态'].map(h => <th key={h} className={`px-4 py-2.5 text-xs text-slate-500 font-medium ${h === '金额' || h === '收款' ? 'text-right' : h === '状态' ? 'text-center' : 'text-left'}`}>{h}</th>)}</tr></thead>
-            <tbody className="divide-y divide-slate-50">
-              {invoices.map(invoice => (
-                <tr key={invoice.id} className="table-row-hover">
-                  <td className="px-4 py-2.5 text-sm font-mono text-slate-700">{invoice.invoiceNo}</td>
-                  <td className="px-4 py-2.5"><Badge variant={invoice.type === 'invoice_in' ? 'success' : 'info'}>{invoice.type === 'invoice_in' ? '进项' : '销项'}</Badge></td>
-                  <td className="px-4 py-2.5 text-sm text-slate-700">{invoice.name}</td>
-                  <td className="px-4 py-2.5 text-right font-medium text-slate-800 text-sm">¥{formatMoney(invoice.amount)}</td>
-                  <td className="px-4 py-2.5 text-right text-sm text-emerald-600">¥{formatMoney(invoice.receivedAmount)}</td>
-                  <td className="px-4 py-2.5 text-center"><InvoiceStatusBadge status={invoice.status} type={invoice.type} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          data={invoices}
+          columns={invoiceColumns}
+          rowKey="id"
+          pagination={false}
+          showContainer={true}
+          stickyHeader={true}
+          emptyText="暂无发票记录"
+        />
       ) : <EmptyState text="暂无发票记录" />}
     </div>
   )

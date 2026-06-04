@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net.Http;
 
 namespace EngineeringManager.Api;
 
@@ -8,7 +9,7 @@ namespace EngineeringManager.Api;
 public static class EntryPoint
 {
     [STAThread]
-    public static void Main(string[] args)
+    public static async Task Main(string[] args)
     {
         // 检查启动模式
         if (args.Contains("--api-only"))
@@ -34,31 +35,39 @@ public static class EntryPoint
         try { foreach (var p in System.Diagnostics.Process.GetProcessesByName("node")) existingNodePids.Add(p.Id); } catch { }
         Console.WriteLine($"[App] Existing node processes: {existingNodePids.Count}");
 
-        // 启动 Vite 前端开发服务器
+        // 检测是否为生产模式（dist/ 目录存在）
+        var distPath = Path.Combine(AppContext.BaseDirectory, "dist");
+        bool isProduction = Directory.Exists(distPath);
+        Console.WriteLine($"[App] Mode: {(isProduction ? "Production" : "Development")} (dist: {distPath})");
+
+        // ── 启动 Vite（仅开发模式）──
         Process? viteProcess = null;
-        try
+        if (!isProduction)
         {
-            var projectDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
-            if (Directory.Exists(Path.Combine(projectDir, "node_modules")))
+            try
             {
-                viteProcess = new Process
+                var projectDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
+                if (Directory.Exists(Path.Combine(projectDir, "node_modules")))
                 {
-                    StartInfo = new ProcessStartInfo
+                    viteProcess = new Process
                     {
-                        FileName = "cmd.exe",
-                        Arguments = "/c npm run dev",
-                        WorkingDirectory = projectDir,
-                        CreateNoWindow = false,
-                        UseShellExecute = false,
-                    }
-                };
-                viteProcess.Start();
-                Console.WriteLine("[Vite] Frontend dev server started");
+                        StartInfo = new ProcessStartInfo
+                        {
+                            FileName = "cmd.exe",
+                            Arguments = "/c npm run dev",
+                            WorkingDirectory = projectDir,
+                            CreateNoWindow = false,
+                            UseShellExecute = false,
+                        }
+                    };
+                    viteProcess.Start();
+                    Console.WriteLine("[Vite] Frontend dev server started");
+                }
             }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[Vite] Failed to start: {ex.Message}");
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Vite] Failed to start: {ex.Message}");
+            }
         }
 
         // API 在后台线程运行（MTA 模式）
@@ -73,13 +82,36 @@ public static class EntryPoint
         apiThread.IsBackground = true;
         apiThread.Start();
 
-        // 等待 API + Vite 启动
-        Console.WriteLine("[App] Waiting for services...");
-        Thread.Sleep(5000);
+        // ── 等待 API 就绪 ──
+        Console.WriteLine("[App] Waiting for API to be ready...");
+        var apiReady = false;
+        using (var httpClient = new HttpClient())
+        {
+            httpClient.Timeout = TimeSpan.FromSeconds(2);
+            for (int i = 0; i < 60; i++) // 最多等 30 秒
+            {
+                try
+                {
+                    var response = await httpClient.GetAsync("http://localhost:5048/api/health");
+                    if (response.IsSuccessStatusCode)
+                    {
+                        apiReady = true;
+                        Console.WriteLine($"[App] API is ready (after {(i + 1) * 500}ms)");
+                        break;
+                    }
+                }
+                catch { }
+                await Task.Delay(500);
+            }
+        }
+        if (!apiReady)
+        {
+            Console.WriteLine("[App] WARNING: API not ready after 30s, proceeding anyway");
+        }
 
-        // 主线程运行 WinForms 窗口（STA 模式）
+        // ── 主线程运行 WinForms 窗口 ──
         Console.WriteLine("[App] Opening window...");
-        Application.Run(new MainWindow());
+        Application.Run(new MainWindow(isProduction));
 
         // 退出时清理 Vite
         if (viteProcess != null && !viteProcess.HasExited)

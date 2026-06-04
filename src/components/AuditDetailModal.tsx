@@ -1,4 +1,5 @@
 import React from 'react'
+import { DataTable, type Column } from '@/components/DataTable'
 import { AuditLog, AuditAction } from '../utils/audit'
 import { formatMoney } from '../utils/format'
 import { Modal } from './ui/Modal/Modal'
@@ -58,6 +59,13 @@ const formatFieldValue = (resource: string, field: string, value: any): string =
   return String(value)
 }
 
+interface ChangeRow {
+  field: string
+  label: string
+  before: string
+  after: string
+}
+
 // 渲染详情信息（人可读格式）
 const renderDetail = (log: AuditLog) => {
   const details = log.details
@@ -100,27 +108,29 @@ const renderDetail = (log: AuditLog) => {
   return <p className="text-sm text-slate-500">无字段变更</p>
   }
 
+  const changeData: ChangeRow[] = changedFields.map(field => ({
+    field,
+    label: getFieldLabel(log.resource, field),
+    before: formatFieldValue(log.resource, field, details.before[field]),
+    after: formatFieldValue(log.resource, field, details.after[field]),
+  }))
+
+  const changeColumns: Column<ChangeRow>[] = [
+    { key: 'label', title: '字段', width: '96px' },
+    { key: 'before', title: '修改前', render: (item) => <span className="line-through text-slate-500">{item.before}</span> },
+    { key: 'after', title: '修改后', render: (item) => <span className="font-medium text-slate-800">{item.after}</span> },
+  ]
+
   return (
-  <div className="overflow-hidden rounded-lg border border-slate-200">
-  <table className="w-full text-sm">
-  <thead className="bg-slate-50 border-b border-slate-200">
-  <tr>
-  <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 w-24">字段</th>
-  <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">修改前</th>
-  <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">修改后</th>
-  </tr>
-  </thead>
-  <tbody className="divide-y divide-slate-100">
-  {changedFields.map(field => (
-  <tr key={field}>
-  <td className="px-3 py-2 text-xs font-medium text-slate-600">{getFieldLabel(log.resource, field)}</td>
-  <td className="px-3 py-2 text-xs text-slate-500 line-through">{formatFieldValue(log.resource, field, details.before[field])}</td>
-  <td className="px-3 py-2 text-xs text-slate-800 font-medium">{formatFieldValue(log.resource, field, details.after[field])}</td>
-  </tr>
-  ))}
-  </tbody>
-  </table>
-  </div>
+  <DataTable
+    data={changeData}
+    columns={changeColumns}
+    rowKey="field"
+    pagination={false}
+    showContainer={true}
+    stickyHeader={true}
+    emptyText="无字段变更"
+  />
   )
   }
 

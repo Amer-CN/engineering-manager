@@ -2,6 +2,7 @@
 // @deprecated 此组件已废弃，工人管理模块已改用 LaborWorkerList + LaborTeamManager
 
 import { useState, useMemo } from 'react'
+import { DataTable, type Column } from '@/components/DataTable'
 import FilterBar from '../../ui/FilterBar'
 import { Tabs } from '../../ui/Tabs'
 import Spinner from '../../ui/Spinner'
@@ -79,6 +80,27 @@ export function WorkerSection({
   const getTeamWorkerCount = (teamId: number) => {
   return workerMembers.filter(w => w.teamId === teamId).length
   }
+
+  const workerColumns: Column<any>[] = [
+    { key: 'name', title: '姓名', render: (item) => <span className="font-medium text-slate-800">{item.name}</span> },
+    { key: 'idCard', title: '身份证号', render: (item) => <span className="text-slate-500 font-mono text-xs">{item.idCard || '-'}</span> },
+    { key: 'age', title: '年龄', align: 'center', render: (item) => {
+      const age = item.birthDate ? calcAge(item.birthDate) : null
+      const isOverage = age !== null && age > 60
+      return <span className={`text-sm font-medium ${isOverage ? 'text-red-600' : 'text-slate-600'}`}>{age !== null ? age : '-'}</span>
+    }},
+    { key: 'gender', title: '性别', render: (item) => <span className="text-slate-600">{item.gender || '-'}</span> },
+    { key: 'workerType', title: '工种', render: (item) => <span className="text-slate-600">{item.workerType ? getWorkerTypeLabel(item.workerType as any) : '-'}</span> },
+    { key: 'dailyWage', title: '日工资', align: 'right', render: (item) => <span className="text-slate-700 font-medium">{item.dailyWage ? `¥${item.dailyWage}` : '-'}</span> },
+    { key: 'bankAccount', title: '银行卡号', render: (item) => <span className="text-slate-500 font-mono text-xs">{(item as any).bankAccount || '-'}</span> },
+    { key: 'actions', title: '操作', align: 'right', render: (item) => (
+      <div className="flex items-center justify-end gap-1">
+        <button onClick={() => onEditWorker(item)} className="btn btn-ghost btn-sm text-blue-600">编辑</button>
+        <button onClick={() => onDeleteWorker((item as any).workerId)} className="btn btn-danger btn-sm">删除</button>
+      </div>
+    )},
+  ]
+
   // 加载状态
   if (loading) {
   return <Spinner size="lg" text="加载工人数据..." />
@@ -191,49 +213,16 @@ export function WorkerSection({
   </FilterBar>
 
   {filteredWorkers.length > 0 ? (
-  <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-  <div className="overflow-x-auto">
-  <table className="w-full text-sm">
-  <thead className="bg-slate-50 border-b border-slate-200">
-  <tr>
-  <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase">姓名</th>
-  <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase">身份证号</th>
-  <th className="px-3 py-2.5 text-center text-xs font-semibold text-slate-500 uppercase">年龄</th>
-  <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase">性别</th>
-  <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase">工种</th>
-  <th className="px-3 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase">日工资</th>
-  <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase">银行卡号</th>
-  <th className="px-3 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase">操作</th>
-  </tr>
-  </thead>
-  <tbody className="divide-y divide-slate-100">
-  {filteredWorkers.map(worker => {
-  const age = worker.birthDate ? calcAge(worker.birthDate) : null
-  const isOverage = age !== null && age > 60
-  return (
-  <tr key={worker.id} className="hover:bg-slate-50 transition-colors">
-  <td className="px-3 py-2.5 font-medium text-slate-800">{worker.name}</td>
-  <td className="px-3 py-2.5 text-slate-500 font-mono text-xs">{worker.idCard || '-'}</td>
-  <td className={`px-3 py-2.5 text-center text-sm font-medium ${isOverage ? 'text-red-600' : 'text-slate-600'}`}>
-  {age !== null ? age : '-'}
-  </td>
-  <td className="px-3 py-2.5 text-slate-600">{worker.gender || '-'}</td>
-  <td className="px-3 py-2.5 text-slate-600">{worker.workerType ? getWorkerTypeLabel(worker.workerType as any) : '-'}</td>
-  <td className="px-3 py-2.5 text-right text-slate-700 font-medium">{worker.dailyWage ? `¥${worker.dailyWage}` : '-'}</td>
-  <td className="px-3 py-2.5 text-slate-500 font-mono text-xs">{(worker as any).bankAccount || '-'}</td>
-  <td className="px-3 py-2.5">
-  <div className="flex items-center justify-end gap-1">
-  <button onClick={() => onEditWorker(worker)} className="btn btn-ghost btn-sm text-blue-600">编辑</button>
-  <button onClick={() => onDeleteWorker((worker as any).workerId)} className="btn btn-danger btn-sm">删除</button>
-  </div>
-  </td>
-  </tr>
-  )
-  })}
-  </tbody>
-  </table>
-  </div>
-  </div>
+    <DataTable
+      data={filteredWorkers}
+      columns={workerColumns}
+      rowKey="id"
+      pagination={false}
+      showContainer={true}
+      stickyHeader={true}
+      emptyText="暂无工人"
+      emptyIcon="Construction"
+    />
   ) : (
   <div className="bg-white rounded-xl shadow-sm p-12 text-center">
   <div className="text-6xl mb-4">🚧</div>

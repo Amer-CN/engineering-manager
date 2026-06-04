@@ -15,10 +15,12 @@ public static class WageEndpoints
 
         app.MapGet("/api/attendances", (IDbConnection db, long? projectId, string? yearMonth) =>
         {
-            var sql = @"SELECT a.*, m.name as member_name, m.member_type, wt.name as team_name
+            var sql = @"SELECT a.*, COALESCE(m.name, wr.name) as member_name, m.member_type,
+                        wt.name as team_name, pw.worker_id
                         FROM attendances a
                         LEFT JOIN members m ON a.member_id=m.id
                         LEFT JOIN project_workers pw ON a.project_worker_id=pw.id
+                        LEFT JOIN workers wr ON pw.worker_id=wr.id
                         LEFT JOIN worker_teams wt ON pw.team_id=wt.id";
             var conditions = new List<string>();
             if (projectId.HasValue) conditions.Add("a.project_id=@ProjectId");
@@ -103,11 +105,13 @@ public static class WageEndpoints
 
         app.MapGet("/api/wages", (IDbConnection db, long? projectId, string? yearMonth) =>
         {
-            var sql = @"SELECT w.*, COALESCE(m.name, wr.name) as member_name, p.name as project_name
+            var sql = @"SELECT w.*, COALESCE(m.name, wr.name) as worker_name, p.name as project_name,
+                        wt.name as team_name
                         FROM wages w
                         LEFT JOIN members m ON w.member_id=m.id
                         LEFT JOIN project_workers pw ON w.project_worker_id=pw.id
                         LEFT JOIN workers wr ON pw.worker_id=wr.id
+                        LEFT JOIN worker_teams wt ON pw.team_id=wt.id
                         LEFT JOIN projects p ON w.project_id=p.id";
             var conditions = new List<string>();
             if (projectId.HasValue) conditions.Add("w.project_id=@ProjectId");
@@ -207,11 +211,13 @@ public static class WageEndpoints
 
         app.MapGet("/api/wages/payment-records", (IDbConnection db, long? projectId, string? yearMonth) =>
         {
-            var sql = @"SELECT w.*, COALESCE(m.name, wr.name) as member_name, p.name as project_name
+            var sql = @"SELECT w.*, COALESCE(m.name, wr.name) as worker_name, p.name as project_name,
+                        wt.name as team_name
                         FROM wages w
                         LEFT JOIN members m ON w.member_id=m.id
                         LEFT JOIN project_workers pw ON w.project_worker_id=pw.id
                         LEFT JOIN workers wr ON pw.worker_id=wr.id
+                        LEFT JOIN worker_teams wt ON pw.team_id=wt.id
                         LEFT JOIN projects p ON w.project_id=p.id
                         WHERE w.paid_amount IS NOT NULL";
             if (projectId.HasValue) sql += " AND w.project_id=@ProjectId";
@@ -232,7 +238,7 @@ public static class WageEndpoints
 
         app.MapGet("/api/wages/overdue-list", (IDbConnection db, long? projectId) =>
         {
-            var sql = @"SELECT w.*, COALESCE(m.name, wr.name) as member_name
+            var sql = @"SELECT w.*, COALESCE(m.name, wr.name) as worker_name
                         FROM wages w
                         LEFT JOIN members m ON w.member_id=m.id
                         LEFT JOIN project_workers pw ON w.project_worker_id=pw.id
@@ -300,6 +306,29 @@ public static class WageEndpoints
                 WHERE project_worker_id=@Id AND year_month<=@YearMonth ORDER BY year_month DESC LIMIT 1",
                 new { Id = projectWorkerId, YearMonth = yearMonth });
             return Common.Ok(entry);
+        });
+
+        // ═══════════════════════════════════════════════════════════
+        // 班组工资汇总
+        // ═══════════════════════════════════════════════════════════
+
+        app.MapGet("/api/team-wages", (IDbConnection db, long projectId, long teamId) =>
+        {
+            var sql = @"SELECT wr.name as worker_name, pw.daily_wage,
+                        COUNT(DISTINCT w.year_month) as months,
+                        COALESCE(SUM(w.work_days), 0) as work_days,
+                        COALESCE(SUM(w.actual_wage), 0) as total_wage
+                        FROM project_workers pw
+                        JOIN workers wr ON pw.worker_id=wr.id
+                        LEFT JOIN wages w ON w.project_worker_id=pw.id
+                        WHERE pw.project_id=@ProjectId AND pw.team_id=@TeamId
+                          AND (pw.status='active' OR pw.status IS NULL)
+                        GROUP BY pw.worker_id, wr.name, pw.daily_wage
+                        ORDER BY wr.name";
+            var details = db.Query(sql, new { ProjectId = projectId, TeamId = teamId }).ToList();
+            var workerCount = details.Count;
+            var teamTotal = details.Sum(d => (double)(d.total_wage ?? 0));
+            return Common.Ok(new { workerCount, teamTotal, details });
         });
     }
 }

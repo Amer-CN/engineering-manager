@@ -1,14 +1,12 @@
 // LaborWorkerList.tsx - 工人库Tab
 
-import React, { useState, useRef, useCallback, useMemo } from 'react'
-import { HoverScrollbar } from '../../ui/HoverScrollbar'
+import React, { useState, useMemo } from 'react'
+import { DataTable, type Column } from '@/components/DataTable'
 import FilterBar from '../../ui/FilterBar'
 import { Icon } from '../../ui/Icon'
 import type { Member, WorkerTeam } from '../../../types/electron'
-import { LaborWorkerRow } from './LaborWorkerRow'
 import { WorkerWageModal } from './WorkerWageModal'
-import { FilterPopup, COL_FILTER_LABELS } from './LaborWorkerFilterPopup'
-import type { FilterCol } from './LaborWorkerFilterPopup'
+import { getWorkerTypeLabel } from '../../../utils'
 
 interface LaborWorkerListProps {
   members: Member[]
@@ -31,11 +29,6 @@ function calcAge(birthDate: string): number {
   return age
 }
 
-interface FilterAnchor {
-  col: FilterCol
-  rect: DOMRect
-}
-
 const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
   members,
   projects,
@@ -49,126 +42,92 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
   const [filterProject, setFilterProject] = useState<number | null>(null)
   const [filterTeam, setFilterTeam] = useState<number | null>(null)
 
-  // 列筛选状态 — 每列独立
-  const [nameFilter, setNameFilter] = useState('')
-  const [idCardFilter, setIdCardFilter] = useState('')
-  const [ageMin, setAgeMin] = useState<number | ''>('')
-  const [ageMax, setAgeMax] = useState<number | ''>('')
-  const [checkedGenders, setCheckedGenders] = useState<Set<string>>(new Set())
-  const [checkedWorkerTypes, setCheckedWorkerTypes] = useState<Set<string>>(new Set())
-  const [wageMin, setWageMin] = useState<number | ''>('')
-  const [wageMax, setWageMax] = useState<number | ''>('')
-  const [bankFilter, setBankFilter] = useState('')
-
-  // ── 排序状态 ──
-  const [sortField, setSortField] = useState<'name' | 'age' | 'dailywage' | null>(null)
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
-
-  const toggleSort = useCallback((field: 'name' | 'age' | 'dailywage') => {
-    if (sortField === field) {
-      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
-    } else {
-      setSortField(field)
-      setSortDir('asc')
-    }
-  }, [sortField])
-
-  const SortIcon = ({ field }: { field: 'name' | 'age' | 'dailywage' }) => {
-    if (sortField !== field) {
-      return <span className="ml-0.5 text-slate-200 inline-block align-middle"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 3.5L5 1.5 7 3.5M7 6.5L5 8.5 3 6.5"/></svg></span>
-    }
-    return (
-      <span className="ml-0.5 inline-block align-middle text-amber-600">
-        {sortDir === 'asc'
-          ? <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M5 2l3 4H2z"/></svg>
-          : <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M5 8L2 4h6z"/></svg>
-        }
-      </span>
-    )
-  }
-
-  // 弹出菜单：当前激活的列 + 按钮位置
-  const [anchor, setAnchor] = useState<FilterAnchor | null>(null)
-
   // 工资统计弹窗
   const [wageModalWorker, setWageModalWorker] = useState<{ id: number; name: string } | null>(null)
-  const anchorRef = useRef<HTMLButtonElement | null>(null)
 
-  const openFilter = useCallback((col: FilterCol, e: React.MouseEvent) => {
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-    setAnchor(prev => prev?.col === col ? null : { col, rect })
-  }, [])
-
-  // 各列是否有激活筛选
-  const filterActive: Partial<Record<FilterCol, boolean>> = {
-    name: !!nameFilter,
-    idcard: !!idCardFilter,
-    age: ageMin !== '' || ageMax !== '',
-    gender: checkedGenders.size > 0,
-    workertype: checkedWorkerTypes.size > 0,
-    dailywage: wageMin !== '' || wageMax !== '',
-    bank: !!bankFilter,
-  }
-  const activeFilterCount = Object.values(filterActive).filter(Boolean).length
-
-  // 综合筛选
+  // 综合筛选 — 仅保留项目和班组筛选（列筛选由 DataTable 内置 filterable 处理）
   const filteredWorkers = useMemo(() => members.filter(w => {
     if (filterProject && w.projectId !== filterProject) return false
     if (filterTeam && w.teamId !== filterTeam) return false
-    if (nameFilter && !(w.name || '').toLowerCase().includes(nameFilter.toLowerCase())) return false
-    if (idCardFilter && !(w.idCard || '').toLowerCase().includes(idCardFilter.toLowerCase())) return false
-    if (ageMin !== '' || ageMax !== '') {
-      const age = w.birthDate ? calcAge(w.birthDate) : null
-      if (age !== null) {
-        if (ageMin !== '' && age < Number(ageMin)) return false
-        if (ageMax !== '' && age > Number(ageMax)) return false
-      }
-    }
-    if (checkedGenders.size > 0 && !checkedGenders.has(w.gender || '')) return false
-    if (checkedWorkerTypes.size > 0 && !checkedWorkerTypes.has(w.workerType || '')) return false
-    if (wageMin !== '' || wageMax !== '') {
-      const dw = w.dailyWage || 0
-      if (wageMin !== '' && dw < Number(wageMin)) return false
-      if (wageMax !== '' && dw > Number(wageMax)) return false
-    }
-    if (bankFilter && !((w as any).bankAccount || '').toLowerCase().includes(bankFilter.toLowerCase())) return false
     return true
-  }), [members, filterProject, filterTeam, nameFilter, idCardFilter, ageMin, ageMax, checkedGenders, checkedWorkerTypes, wageMin, wageMax, bankFilter])
+  }), [members, filterProject, filterTeam])
 
-  // 排序
-  const sortedWorkers = useMemo(() => [...filteredWorkers].sort((a, b) => {
-    const dir = sortDir === 'asc' ? 1 : -1
-    if (sortField === 'name') {
-      return dir * (a.name || '').localeCompare(b.name || '', 'zh-CN')
-    }
-    if (sortField === 'age') {
-      const ageA = a.birthDate ? calcAge(a.birthDate) : 0
-      const ageB = b.birthDate ? calcAge(b.birthDate) : 0
-      return dir * (ageA - ageB)
-    }
-    if (sortField === 'dailywage') {
-      return dir * ((a.dailyWage || 0) - (b.dailyWage || 0))
-    }
-    return 0
-  }), [filteredWorkers, sortField, sortDir])
-
-  // ── 漏斗按钮组件 ──
-  const FilterBtn = ({ col }: { col: FilterCol }) => {
-    const isActive = filterActive[col]
-    return (
-      <button
-        type="button"
-        ref={anchor?.col === col ? anchorRef : undefined}
-        onClick={e => openFilter(col, e)}
-        className={`ml-0.5 inline-flex items-center rounded p-0.5 align-middle transition-colors ${
-          isActive ? 'bg-amber-100 text-amber-600' : 'text-slate-300 hover:text-slate-500'
-        }`}
-        title={`筛选${COL_FILTER_LABELS[col]}`}
-      >
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M0 0h10L6 4.5V9L4 10V4.5L0 0z" /></svg>
-      </button>
-    )
-  }
+  // ── DataTable 列定义 ──
+  const columns: Column<any>[] = [
+    {
+      key: 'name', title: '姓名', sortable: true, filterable: true,
+      sorter: (a, b) => (a.name || '').localeCompare(b.name || '', 'zh-CN'),
+      render: (w) => <span className="font-medium text-slate-800">{w.name}</span>
+    },
+    {
+      key: 'idCard', title: '身份证号', filterable: true,
+      render: (w) => <span className="text-slate-500 font-mono text-xs">{w.idCard || '-'}</span>
+    },
+    {
+      key: 'age', title: '年龄', align: 'center', sortable: true,
+      filterable: true,
+      filterAccessor: (w: any) => w.birthDate ? String(calcAge(w.birthDate)) : '',
+      sorter: (a, b) => {
+        const ageA = a.birthDate ? calcAge(a.birthDate) : 0
+        const ageB = b.birthDate ? calcAge(b.birthDate) : 0
+        return ageA - ageB
+      },
+      render: (w) => {
+        const age = w.birthDate ? calcAge(w.birthDate) : null
+        const isOverage = age !== null && age > 60
+        return <span className={`text-sm font-medium ${isOverage ? 'text-red-600' : 'text-slate-600'}`}>{age !== null ? age : '-'}</span>
+      }
+    },
+    {
+      key: 'gender', title: '性别', filterable: 'select',
+      filterOptions: [{ label: '男', value: '男' }, { label: '女', value: '女' }],
+      render: (w) => <span className="text-slate-600">{w.gender || '-'}</span>
+    },
+    {
+      key: 'workerType', title: '工种', filterable: 'select',
+      filterOptions: [
+        { label: '土建', value: '土建' },
+        { label: '焊工', value: '焊工' },
+        { label: '安装工', value: '安装工' },
+        { label: '后勤', value: '后勤' },
+      ],
+      render: (w) => <span className="text-slate-600">{w.workerType ? getWorkerTypeLabel(w.workerType as any) : '-'}</span>
+    },
+    {
+      key: 'dailyWage', title: '日工资', align: 'right', sortable: true, filterable: true,
+      sorter: (a, b) => ((a.dailyWage || 0) - (b.dailyWage || 0)),
+      render: (w) => <span className="text-slate-700 font-medium">{w.dailyWage != null ? `¥${w.dailyWage}` : '-'}</span>
+    },
+    {
+      key: 'bankAccount', title: '银行卡号', filterable: true,
+      render: (w) => <span className="text-slate-500 font-mono text-xs">{(w as any).bankAccount || '-'}</span>
+    },
+    {
+      key: 'actions', title: '操作', align: 'right',
+      render: (w) => (
+        <div className="flex items-center justify-end gap-1">
+          <button
+            onClick={() => onEditWorker(w)}
+            className="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded"
+          >
+            编辑
+          </button>
+          <button
+            onClick={() => setWageModalWorker({ id: (w as any).workerId || w.id, name: w.name })}
+            className="px-2 py-1 text-xs text-green-600 hover:bg-green-50 rounded"
+          >
+            工资
+          </button>
+          <button
+            onClick={() => onDeleteWorker((w as any).workerId)}
+            className="btn btn-danger btn-sm"
+          >
+            删除
+          </button>
+        </div>
+      )
+    },
+  ]
 
   return (
     <div className="flex flex-col max-h-[calc(100vh-200px)]">
@@ -199,11 +158,6 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
             <option key={t.id} value={t.id}>{t.name}</option>
           ))}
         </select>
-        {activeFilterCount > 0 && (
-          <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
-            {activeFilterCount} 列筛选
-          </span>
-        )}
         <button
           onClick={onAddWorker}
           className="ml-auto btn btn-warning flex items-center"
@@ -219,55 +173,19 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
       </FilterBar>
 
       {/* 工人表格 */}
-      {sortedWorkers.length > 0 ? (
-        <HoverScrollbar className="bg-white rounded-xl border border-slate-200 h-full">
-          <div className="min-w-[900px]">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
-                <tr>
-                  <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase cursor-pointer select-none hover:text-slate-700"
-                    onClick={() => toggleSort('name')}>
-                    姓名<SortIcon field="name" /><FilterBtn col="name" />
-                  </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase">
-                    身份证号<FilterBtn col="idcard" />
-                  </th>
-                  <th className="px-3 py-2.5 text-center text-xs font-semibold text-slate-500 uppercase cursor-pointer select-none hover:text-slate-700"
-                    onClick={() => toggleSort('age')}>
-                    年龄<SortIcon field="age" /><FilterBtn col="age" />
-                  </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase">
-                    性别<FilterBtn col="gender" />
-                  </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase">
-                    工种<FilterBtn col="workertype" />
-                  </th>
-                  <th className="px-3 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase cursor-pointer select-none hover:text-slate-700"
-                    onClick={() => toggleSort('dailywage')}>
-                    日工资<SortIcon field="dailywage" /><FilterBtn col="dailywage" />
-                  </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase">
-                    银行卡号<FilterBtn col="bank" />
-                  </th>
-                  <th className="px-3 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase">操作</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {sortedWorkers.map(worker => (
-                  <LaborWorkerRow
-                    key={worker.id}
-                    worker={worker}
-                    onEdit={onEditWorker}
-                    onDelete={onDeleteWorker}
-                    onWageModal={(id, name) => setWageModalWorker({ id, name })}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </HoverScrollbar>
+      {filteredWorkers.length > 0 ? (
+        <div className="min-w-[900px]">
+          <DataTable
+            data={filteredWorkers}
+            columns={columns}
+            rowKey="id"
+            useHoverScrollbar={true}
+            scrollClassName="h-full"
+            pagination={false}
+          />
+        </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+        <div className="bg-white rounded-xl shadow-sm p-12 text-center flex-1 flex flex-col items-center justify-center">
           <div className="text-6xl mb-4"><Icon name="Construction" size={48} /></div>
           <h3 className="text-lg font-medium text-slate-800 mb-2">暂无工人</h3>
           <p className="text-slate-500 mb-6">请先在班组管理中从工人库添加，或导入 Excel</p>
@@ -279,21 +197,6 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
           </button>
         </div>
       )}
-
-      {/* 弹出菜单 */}
-      <FilterPopup
-        anchor={anchor}
-        anchorRef={anchorRef}
-        onClose={() => setAnchor(null)}
-        nameFilter={nameFilter} idCardFilter={idCardFilter}
-        ageMin={ageMin} ageMax={ageMax}
-        checkedGenders={checkedGenders} checkedWorkerTypes={checkedWorkerTypes}
-        wageMin={wageMin} wageMax={wageMax} bankFilter={bankFilter}
-        onNameChange={setNameFilter} onIdCardChange={setIdCardFilter}
-        onAgeMinChange={setAgeMin} onAgeMaxChange={setAgeMax}
-        onGendersChange={setCheckedGenders} onWorkerTypesChange={setCheckedWorkerTypes}
-        onWageMinChange={setWageMin} onWageMaxChange={setWageMax} onBankChange={setBankFilter}
-      />
 
       {/* 工人工资统计弹窗 */}
       {wageModalWorker && (

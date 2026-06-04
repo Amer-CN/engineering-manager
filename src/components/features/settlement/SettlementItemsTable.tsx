@@ -1,4 +1,5 @@
 import React from 'react'
+import { TABLE } from '@/constants/table'
 import { Icon } from '../../ui/Icon'
 import { formatMoney } from '@/utils/format'
 
@@ -44,37 +45,36 @@ export const SettlementItemsTable: React.FC<Props> = ({
       </div>
     )}
     {items.length > 0 ? (
-      <div className="border border-slate-200 rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 border-b border-slate-200">
+      <div className="overflow-hidden">
+        <table className={TABLE.table}>
+          <thead className={`${TABLE.headerRow} ${TABLE.stickyHeader}`}>
             <tr>
               {isMaterial ? <>
-                <th className="px-3 py-3 text-left text-xs font-medium text-slate-500">材料名称</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-slate-500 w-28">规格型号</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-slate-500 w-16">单位</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-slate-500 w-20">数量</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-slate-500 w-28">{taxInclusive ? '含税单价' : '不含税单价'}</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-slate-500 w-28">金额</th>
+                <th className={`${TABLE.headerCell} w-28`}>规格型号</th>
+                <th className={`${TABLE.headerCell} w-16`}>单位</th>
+                <th className={`${TABLE.headerCell} w-20`}>数量</th>
+                <th className={`${TABLE.headerCell} w-28`}>{taxInclusive ? '含税单价' : '不含税单价'}</th>
+                <th className={`${TABLE.headerCell} w-28`}>金额</th>
               </> : <>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500">描述</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 w-20">数量</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 w-20">单位</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 w-28">单价</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 w-28">金额</th>
+                <th className={TABLE.headerCell}>描述</th>
+                <th className={`${TABLE.headerCell} w-20`}>数量</th>
+                <th className={`${TABLE.headerCell} w-20`}>单位</th>
+                <th className={`${TABLE.headerCell} w-28`}>单价</th>
+                <th className={`${TABLE.headerCell} w-28`}>金额</th>
               </>}
-              <th className="px-3 py-3 text-center text-xs font-medium text-slate-500 w-12">操作</th>
+              <th className={`${TABLE.headerCell} text-center w-12`}>操作</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody>
             {items.map((item, index) => (
-              <tr key={index}>
-                <td className="px-3 py-2"><input type="text" value={item.description} onChange={e => onUpdate(index, 'description', e.target.value)} className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm" placeholder="材料名称" /></td>
-                {isMaterial && <td className="px-3 py-2"><input type="text" value={item.spec} onChange={e => onUpdate(index, 'spec', e.target.value)} className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm" placeholder="规格型号" /></td>}
-                <td className="px-3 py-2"><input type="text" value={item.unit} onChange={e => onUpdate(index, 'unit', e.target.value)} className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm" placeholder="单位" /></td>
-                <td className="px-3 py-2"><input type="number" value={item.quantity} onChange={e => onUpdate(index, 'quantity', Number(e.target.value))} className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm" min="0" step="any" /></td>
-                <td className="px-3 py-2"><input type="number" value={item.unitPrice} onChange={e => onUpdate(index, 'unitPrice', Number(e.target.value))} className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm" min="0" step="any" /></td>
-                <td className="px-3 py-2 text-right font-medium text-slate-800 text-sm">¥{formatMoney(item.amount)}</td>
-                <td className="px-3 py-2 text-center"><button type="button" onClick={() => onRemove(index)} className="btn btn-ghost btn-sm text-danger-500">✕</button></td>
+              <tr key={index} className={TABLE.bodyRow}>
+                <td className={TABLE.bodyCell}><input type="text" value={item.description} onChange={e => onUpdate(index, 'description', e.target.value)} className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm" placeholder="材料名称" /></td>
+                {isMaterial && <td className={TABLE.bodyCell}><input type="text" value={item.spec} onChange={e => onUpdate(index, 'spec', e.target.value)} className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm" placeholder="规格型号" /></td>}
+                <td className={TABLE.bodyCell}><input type="text" value={item.unit} onChange={e => onUpdate(index, 'unit', e.target.value)} className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm" placeholder="单位" /></td>
+                <td className={TABLE.bodyCell}><input type="number" value={item.quantity} onChange={e => onUpdate(index, 'quantity', Number(e.target.value))} className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm" min="0" step="any" /></td>
+                <td className={TABLE.bodyCell}><input type="number" value={item.unitPrice} onChange={e => onUpdate(index, 'unitPrice', Number(e.target.value))} className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm" min="0" step="any" /></td>
+                <td className={`${TABLE.bodyCell} text-right font-medium text-slate-800 text-sm`}>¥{formatMoney(item.amount)}</td>
+                <td className={`${TABLE.bodyCell} text-center`}><button type="button" onClick={() => onRemove(index)} className="btn btn-ghost btn-sm text-danger-500">✕</button></td>
               </tr>
             ))}
           </tbody>

@@ -1,6 +1,6 @@
 # CLAUDE.md - 工程管家项目约定
-> 项目状态：C# 后端迁移完成（v0.67.0）
-> 最后同步：2026-06-02（Electron→C# 迁移，197 个 API 端点，WebView2 桌面窗口）
+> 项目状态：v0.68.0 — 列表样式全局统一 + OCR 修复 + AI 识别浮动动画
+> 最后同步：2026-06-04（DataTable 重写 + TABLE 常量修复 + MonthPicker/OCRRecognitionFeedback 组件）
 >
 > 来源合并：`AGENTS.md`（架构铁律/红线/反模式/自检清单）和 `DESIGN.md`（UI 规范/排版系统/组件库/动画系统）的内容已合并到本文档，原始文件已删除。
 
@@ -65,9 +65,9 @@ SQLite (engineering.db) ← 直接读取 Electron 版本的数据库，零迁移
 ## 🤖 AI 智能识别（百度 OCR）
 
 - **架构**：表单组件 → useXxxOCR hook → C# API → 百度 API
-- **9 种识别**：身份证/增值税发票/银行卡/营业执照/银行回单/开户许可证/银行单据/通用票据/企业查询
-- **关键文件**：`EngineeringManager.Api/Endpoints/OcrEndpoints.cs` / `src/services/ocr.ts` / `src/hooks/use*OCR.ts` / `src/components/SettingsOcrSection.tsx`
-- **UI 模式**：识别中（蓝紫渐变+脉冲）→ 成功（emerald 卡片+滑入动画）
+- **9 种识别**：身份证/增值税发票/银行卡/营业执照/银行回单/开户许可证/银行单据/通用票据/企业工商查询
+- **关键文件**：`EngineeringManager.Api/Endpoints/OcrEndpoints.cs` / `src/services/ocr.ts` / `src/hooks/use*OCR.ts` / `src/components/SettingsOcrSection.tsx` / `src/components/ui/OCRRecognitionFeedback.tsx`
+- **UI 模式**：识别中（扫描线动画+蓝紫渐变+阶段文字循环）→ 成功（浮动 emerald 卡片+spring 弹出+逐字段显示+2.5s 自动消失）→ 失败（浮动红色卡片+抖动+3s 自动消失）
 - **详细说明**：→ [docs/MODULES.md](docs/MODULES.md)
 
 ## 📁 核心模块架构
@@ -112,7 +112,7 @@ SQLite (engineering.db) ← 直接读取 Electron 版本的数据库，零迁移
 - 版本号引用位置：`package.json` / `Sidebar.tsx` / `Login.tsx` / `Settings.tsx` / `SettingsChangelog.tsx` / `CLAUDE.md` / `CHANGELOG.md`
 - 版本历史：`CHANGELOG.md`（1.0.0→2.3.0）+ Settings 更新日志浮窗
 
-### 当前版本：v0.67.0
+### 当前版本：v0.68.0
 
 ## 🎨 UI 规范
 
@@ -123,7 +123,13 @@ SQLite (engineering.db) ← 直接读取 Electron 版本的数据库，零迁移
 - **CSS Token**：`src/index.css` 中 `:root` / `.dark` 定义
 
 ### 组件库（`src/components/ui/`）+ 统一基础设施
-Button(variants/sizes/iconOnly) / Input(status+leftSection/rightSection) / Modal(AnimatePresence+centered) / Card(padding+glass+hover) / Badge(variants+dot脉冲) / Select(下拉动画+clearable) / Table(stickyHeader+sizes) / Pagination / DropdownMenu(Portal+AnimatePresence) / Tabs(layoutId弹簧指示器+badge) / Tooltip(延迟300ms+箭头) / ProgressBar(variants+animated width) / FormField(label/error/helpText) / Toast(Context管理+AnimatePresence堆叠+spring) / Loading(Spinner+Skeleton) / EmptyState / PageContainer(`max-w-[1400px] mx-auto p-6`, wide/narrow/full) / HoverScrollbar(悬浮滚动条，overflow:hidden+JS wheel，鼠标靠近自动变大) / StatusBar(Reasonix风格三栏：页面名+记录数 | 选中状态 | SQLite+主题弹出选择器+字号弹出选择器)
+Button(variants/sizes/iconOnly) / Input(status+leftSection/rightSection) / Modal(AnimatePresence+centered) / Card(padding+glass+hover) / Badge(variants+dot脉冲) / Select(下拉动画+clearable) / Pagination / DropdownMenu(Portal+AnimatePresence) / Tabs(layoutId弹簧指示器+badge) / Tooltip(延迟300ms+箭头) / ProgressBar(variants+animated width) / FormField(label/error/helpText) / Toast(Context管理+AnimatePresence堆叠+spring) / Loading(Spinner+Skeleton) / EmptyState / PageContainer(`max-w-[1400px] mx-auto p-6`, wide/narrow/full) / HoverScrollbar(悬浮滚动条，overflow:hidden+JS wheel，鼠标靠近自动变大) / StatusBar(Reasonix风格三栏：页面名+记录数 | 选中状态 | SQLite+主题弹出选择器+字号弹出选择器) / MonthPicker(年份快速切换+3×4 月份网格) / OCRRecognitionFeedback(AI 识别浮动通知，扫描线动画)
+
+### 列表统一规范（金标准）
+- **DataTable 组件**（`src/components/DataTable.tsx`）：`TABLE` 常量为唯一样式来源，支撑排序(sortable)+列头筛选(filterable)+HoverScrollbar+skeleton 骨架屏
+- **金标准模式**：`<FilterBar className="mb-6">` + `<DataTable useHoverScrollbar={true} scrollClassName="h-full">`，无 `showContainer={false}`，无额外 div 包裹
+- **废弃组件**：`src/components/ui/Table/`（已删除），全部迁移到 DataTable
+- **列定义类型**：`Column<T>` 支持 `sortable`/`sorter`/`filterable`(boolean|'select')/`filterOptions`/`filterAccessor`/`headerRender`
 
 ### 动画系统（framer-motion）
 - **原则**：spring 物理优先（stiffness≤200）、大元素禁 scale、装饰动画走 CSS @keyframes（合成器线程）、GPU 加速

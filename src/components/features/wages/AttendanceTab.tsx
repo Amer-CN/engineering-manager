@@ -1,9 +1,10 @@
-import { useState, useMemo, useRef } from 'react'
-import { HoverScrollbar } from '@/components/ui/HoverScrollbar'
+import { useRef } from 'react'
 import type { Project, WorkerTeam, AttendanceRecord } from '@/types'
+import { summaryDot, summaryLabel } from '../../../constants/attendance'
+import type { DayStatus } from '../../../types/electron'
 import { EmptyState } from '../../ui/EmptyState'
-import { AttendanceTabRow } from './AttendanceTabRow'
-import { TABLE } from '@/constants/table'
+import FilterBar from '../../ui/FilterBar'
+import { DataTable, type Column } from '@/components/DataTable'
 
 interface AttendanceTabProps {
   selectedProject: Project | null
@@ -22,7 +23,6 @@ interface AttendanceTabProps {
   loading: boolean
   onOpenHistory?: (projectWorkerId: number, workerName: string, teamName: string) => void
   onImportAttendance: (data: { projectWorkerId: number; workDays: number; workerName: string }[]) => void
-  onChangeMonth: (month: string) => void
 }
 
 export default function AttendanceTab({
@@ -30,14 +30,9 @@ export default function AttendanceTab({
   attendances, projectMemberCount,
   selectedIds, toggleSelect, toggleAll, onGenerateAttendance, onOpenDetail,
   onDelete, onBatchDelete, loading,
-  onOpenHistory, onImportAttendance, onChangeMonth,
-}: AttendanceTabProps) {
-  const [filterTeamId, setFilterTeamId] = useState<number | null>(null)
+  onOpenHistory, onImportAttendance,}: AttendanceTabProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const filteredAttendances = useMemo(() => {
-    if (!filterTeamId) return attendances
-    return attendances.filter(a => (a as any).teamId === filterTeamId)
-  }, [attendances, filterTeamId])
+  const filteredAttendances = attendances
 
   if (!selectedProject) {
     return (
@@ -47,19 +42,93 @@ export default function AttendanceTab({
     )
   }
 
-  return (
-    <div className="p-4 flex flex-col max-h-[calc(100vh-380px)]">
-      <div className="shrink-0 flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <input type="month" value={selectedMonth} onChange={e => onChangeMonth(e.target.value)}
-            className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500" />
-          <select value={filterTeamId ?? ''} onChange={e => setFilterTeamId(e.target.value ? Number(e.target.value) : null)}
-            className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500">
-            <option value="">全部班组</option>
-            {workerTeams.filter(t => t.projectId === selectedProject.id).map(t => (
-              <option key={t.id} value={t.id}>{t.name}</option>
+  const columns: Column<any>[] = [
+    {
+      key: 'select',
+      title: '',
+      width: '40px',
+      render: (item) => (
+        <input type="checkbox" checked={selectedIds.has(item.id)}
+          onChange={() => toggleSelect(item.id)} className="rounded" />
+      )
+    },
+    {
+      key: 'memberName',
+      title: '姓名',
+      render: (item) => (
+        <span className="font-medium">{item.memberName || '-'}</span>
+      )
+    },
+    {
+      key: 'teamName',
+      title: '班组',
+      filterable: 'select',
+      filterOptions: workerTeams
+        .filter(t => t.projectId === selectedProject?.id)
+        .map(t => ({ label: t.name, value: t.name })),
+      filterAccessor: (item: any) => item.teamName || '',
+      render: (item) => (
+        <span className="text-slate-500">{(item as any).teamName || '-'}</span>
+      )
+    },
+    {
+      key: 'summary',
+      title: '考勤摘要',
+      render: (item) => {
+        const workCount = item.workDays || 0
+        let holidayCount = 0, sickCount = 0, personalCount = 0
+        const dailyStatus = item.dailyStatus || {}
+        for (let d = 1; d <= daysInMonth; d++) {
+          const s = dailyStatus[d]
+          if (!s) continue
+          if (s === 'holiday') holidayCount++
+          else if (s === 'sick_leave') sickCount++
+          else if (s === 'personal_leave') personalCount++
+        }
+        type SummaryItem = { status: DayStatus; count: number }
+        const summaryItems: SummaryItem[] = ([
+          { status: 'work' as DayStatus, count: workCount },
+          { status: 'holiday' as DayStatus, count: holidayCount },
+          { status: 'sick_leave' as DayStatus, count: sickCount },
+          { status: 'personal_leave' as DayStatus, count: personalCount },
+        ] as SummaryItem[]).filter(si => si.count > 0)
+
+        return (
+          <div className="flex items-center gap-2 flex-wrap text-xs">
+            {summaryItems.map(si => (
+              <span key={si.status} className="inline-flex items-center gap-1 whitespace-nowrap">
+                <span className={`w-2 h-2 rounded-full ${summaryDot[si.status]}`}></span>
+                <span className="text-slate-600">{summaryLabel[si.status]}</span>
+                <span className="font-medium text-slate-700">{si.count}天</span>
+              </span>
             ))}
-          </select>
+          </div>
+        )
+      }
+    },
+    {
+      key: 'actions',
+      title: '操作',
+      render: (item) => (
+        <div className="flex items-center gap-2">
+          <button onClick={() => onOpenDetail(item)}
+            className="text-blue-600 hover:text-blue-800 text-sm font-medium">编辑</button>
+          <button onClick={() => onOpenHistory?.((item as any).projectWorkerId, item.memberName || '', (item as any).teamName || '')}
+            className="text-indigo-500 hover:text-indigo-700 text-sm">历史</button>
+          <button onClick={() => onDelete(item)}
+            className="text-red-400 hover:text-red-600 text-sm">删除</button>
+        </div>
+      )
+    }
+  ]
+
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <FilterBar className="mb-6">
+        <div className="flex items-center gap-3">
+          <input type="checkbox"
+            checked={selectedIds.size === filteredAttendances.length && filteredAttendances.length > 0}
+            onChange={toggleAll} className="rounded" />
           <div className="text-slate-500">
             {filteredAttendances.length} / {attendances.length} 人 | 当月天数: {daysInMonth} 天
           </div>
@@ -70,6 +139,7 @@ export default function AttendanceTab({
             </button>
           )}
         </div>
+        <div className="flex-1" />
         <div className="flex gap-2">
           <input
             type="file"
@@ -107,43 +177,18 @@ export default function AttendanceTab({
             生成默认考勤
           </button>
         </div>
-      </div>
+      </FilterBar>
 
-      {filteredAttendances.length === 0 ? (
-        <EmptyState icon="ClipboardFile" title="暂无考勤记录" description="点击「生成默认考勤」为项目工人创建考勤" />
-      ) : (
-        <HoverScrollbar className="flex-1 min-h-0">
-          <table className={TABLE.table + ' text-sm'}>
-            <thead className={TABLE.headerRow + ' ' + TABLE.stickyHeader}>
-              <tr>
-                <th className={TABLE.headerCell + ' w-10'}>
-                  <input type="checkbox"
-                    checked={selectedIds.size === filteredAttendances.length && filteredAttendances.length > 0}
-                    onChange={toggleAll} className="rounded" />
-                </th>
-                <th className={TABLE.headerCell}>姓名</th>
-                <th className={TABLE.headerCell}>班组</th>
-                <th className={TABLE.headerCell}>考勤摘要</th>
-                <th className={TABLE.headerCell}>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredAttendances.map(a => (
-                <AttendanceTabRow
-                  key={a.id}
-                  a={a}
-                  isSelected={selectedIds.has(a.id)}
-                  daysInMonth={daysInMonth}
-                  onToggleSelect={toggleSelect}
-                  onOpenDetail={onOpenDetail}
-                  onOpenHistory={onOpenHistory}
-                  onDelete={onDelete}
-                />
-              ))}
-            </tbody>
-          </table>
-        </HoverScrollbar>
-      )}
+      <DataTable
+        data={filteredAttendances}
+        columns={columns}
+        rowKey="id"
+        pagination={false}
+        useHoverScrollbar={true}
+        scrollClassName="h-full"
+        emptyText="暂无考勤记录"
+        emptyIcon="ClipboardFile"
+      />
     </div>
   )
 }

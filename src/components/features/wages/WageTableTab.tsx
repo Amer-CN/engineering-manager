@@ -1,9 +1,8 @@
-// React not needed with new JSX transform
 import type { Project, WorkerTeam, WageRecord } from '@/types'
-import { HoverScrollbar } from '@/components/ui/HoverScrollbar'
 import { EmptyState } from '../../ui/EmptyState'
+import FilterBar from '../../ui/FilterBar'
 import { Input } from '@/components/ui/Input'
-import { TABLE } from '@/constants/table'
+import { DataTable, type Column } from '@/components/DataTable'
 
 interface WageTableTabProps {
   selectedProject: Project | null
@@ -20,14 +19,12 @@ interface WageTableTabProps {
   onBonusDeductionChange: (recordId: number, field: 'bonus' | 'deduction', value: number) => void
   onBatchDelete: () => void
   loading: boolean
-  onChangeMonth: (month: string) => void
 }
 
 export default function WageTableTab({
   selectedProject, selectedMonth, workerTeams, wageRecords,
   attendancesCount, editingWages, selectedIds, toggleSelect, toggleAll,
-  onGenerate, onSave, onBonusDeductionChange, onBatchDelete, loading, onChangeMonth,
-}: WageTableTabProps) {
+  onGenerate, onSave, onBonusDeductionChange, onBatchDelete, loading,}: WageTableTabProps) {
   if (!selectedProject) {
     return (
       <div className="p-4">
@@ -43,12 +40,114 @@ export default function WageTableTab({
     return Math.round(((w.dailyWage || 0) * (w.workDays || 0) + bonus - deduction) * 100) / 100
   }
 
+  const columns: Column<WageRecord>[] = [
+    {
+      key: 'select',
+      title: '',
+      width: '40px',
+      render: (item) => (
+        <input type="checkbox" checked={selectedIds.has(item.id)}
+          onChange={() => toggleSelect(item.id)} className="rounded" />
+      )
+    },
+    {
+      key: 'memberName',
+      title: '姓名',
+      sortable: true,
+      filterable: true,
+      sorter: (a, b) => (a.memberName || '').localeCompare(b.memberName || '', 'zh-CN'),
+      render: (item) => (
+        <span className="font-medium">{item.memberName || '-'}</span>
+      )
+    },
+    {
+      key: 'teamName',
+      title: '班组',
+      filterable: 'select',
+      filterOptions: workerTeams
+        .filter(t => t.projectId === selectedProject?.id)
+        .map(t => ({ label: t.name, value: t.name })),
+      filterAccessor: (item: any) => item.teamName || '',
+      render: (item) => (
+        <span className="text-slate-500">{item.teamName || '-'}</span>
+      )
+    },
+    {
+      key: 'workDays',
+      title: '出勤',
+      sortable: true,
+      sorter: (a, b) => ((a.workDays || 0) - (b.workDays || 0)),
+      render: (item) => (
+        <span>{item.workDays ?? '-'} 天</span>
+      )
+    },
+    {
+      key: 'dailyWage',
+      title: '日薪',
+      render: (item) => (
+        <span>¥{item.dailyWage ?? '-'}/天</span>
+      )
+    },
+    {
+      key: 'bonus',
+      title: '奖金',
+      render: (item) => {
+        const edit = editingWages.get(item.id)
+        const bonus = edit?.bonus ?? item.bonus
+        return (
+          <Input type="number" min={0} step={0.01} value={bonus}
+            onChange={e => onBonusDeductionChange(item.id, 'bonus', parseFloat(e.target.value) || 0)}
+            className="w-20 px-2 py-1 border border-slate-300 rounded text-center" />
+        )
+      }
+    },
+    {
+      key: 'deduction',
+      title: '扣款',
+      render: (item) => {
+        const edit = editingWages.get(item.id)
+        const deduction = edit?.deduction ?? item.deduction
+        return (
+          <Input type="number" min={0} step={0.01} value={deduction}
+            onChange={e => onBonusDeductionChange(item.id, 'deduction', parseFloat(e.target.value) || 0)}
+            className="w-20 px-2 py-1 border border-slate-300 rounded text-center" />
+        )
+      }
+    },
+    {
+      key: 'actualWage',
+      title: '实发工资',
+      sortable: true,
+      sorter: (a, b) => (((editingWages.get(a.id) ? calcWage(a) : (a.actualWage || 0))) - ((editingWages.get(b.id) ? calcWage(b) : (b.actualWage || 0)))),
+      render: (item) => {
+        const edit = editingWages.get(item.id)
+        const previewWage = calcWage(item)
+        const changed = edit && previewWage !== (item.actualWage ?? 0)
+        return (
+          <span className={`font-bold ${changed ? 'text-amber-600' : 'text-green-600'}`}>
+            ¥{previewWage.toFixed(2)}
+            {changed && <span className="text-xs text-amber-500 ml-1">*</span>}
+          </span>
+        )
+      }
+    }
+  ]
+
+  const footer = (
+    <div className="flex items-center px-4 py-2.5 text-sm font-bold">
+      <span className="text-green-600">
+        合计: ¥{wageRecords.reduce((sum, w) => sum + calcWage(w), 0).toFixed(2)}
+      </span>
+    </div>
+  )
+
   return (
-    <div className="p-4">
-      <div className="flex items-center justify-between mb-4">
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <FilterBar className="mb-6">
         <div className="flex items-center gap-3">
-          <input type="month" value={selectedMonth} onChange={e => onChangeMonth(e.target.value)}
-            className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500" />
+          <input type="checkbox"
+            checked={selectedIds.size === wageRecords.length && wageRecords.length > 0}
+            onChange={toggleAll} className="rounded" />
           <div className="text-slate-500">
             工资记录: {wageRecords.length} 条
             {attendancesCount === 0 && (
@@ -62,6 +161,7 @@ export default function WageTableTab({
             </button>
           )}
         </div>
+        <div className="flex-1" />
         <div className="flex gap-2">
           <button onClick={onGenerate} disabled={loading}
             className="btn btn-primary btn-sm">
@@ -74,76 +174,19 @@ export default function WageTableTab({
             </button>
           )}
         </div>
-      </div>
+      </FilterBar>
 
-      {wageRecords.length === 0 ? (
-        <EmptyState icon="FileText" title="暂无工资记录" description="点击「生成工资表」根据考勤数据自动计算" />
-      ) : (
-        <HoverScrollbar className="h-full">
-          <table className={TABLE.table + ' text-sm'}>
-            <thead className={TABLE.headerRow + ' ' + TABLE.stickyHeader}>
-              <tr>
-                <th className={TABLE.headerCell + ' w-10'}>
-                  <input type="checkbox"
-                    checked={selectedIds.size === wageRecords.length && wageRecords.length > 0}
-                    onChange={toggleAll} className="rounded" />
-                </th>
-                <th className={TABLE.headerCell}>姓名</th>
-                <th className={TABLE.headerCell}>班组</th>
-                <th className={TABLE.headerCell}>出勤</th>
-                <th className={TABLE.headerCell}>日薪</th>
-                <th className={TABLE.headerCell}>奖金</th>
-                <th className={TABLE.headerCell}>扣款</th>
-                <th className={TABLE.headerCell}>实发工资</th>
-              </tr>
-            </thead>
-            <tbody>
-              {wageRecords.map(w => {
-                const edit = editingWages.get(w.id)
-                const bonus = edit?.bonus ?? w.bonus
-                const deduction = edit?.deduction ?? w.deduction
-                const previewWage = calcWage(w)
-                const changed = edit && previewWage !== (w.actualWage ?? 0)
-
-                return (
-                  <tr key={w.id} className={TABLE.bodyRow}>
-                    <td className={TABLE.bodyCell}>
-                      <input type="checkbox" checked={selectedIds.has(w.id)}
-                        onChange={() => toggleSelect(w.id)} className="rounded" />
-                    </td>
-                    <td className={TABLE.bodyCell + ' font-medium'}>{w.memberName || '-'}</td>
-                    <td className={TABLE.bodyCell + ' text-slate-500'}>{w.teamName || '-'}</td>
-                    <td className={TABLE.bodyCell}>{w.workDays ?? '-'} 天</td>
-                    <td className={TABLE.bodyCell}>¥{w.dailyWage ?? '-'}/天</td>
-                    <td className={TABLE.bodyCell}>
-                      <Input type="number" min={0} step={0.01} value={bonus}
-                        onChange={e => onBonusDeductionChange(w.id, 'bonus', parseFloat(e.target.value) || 0)}
-                        className="w-20 px-2 py-1 border border-slate-300 rounded text-center" />
-                    </td>
-                    <td className={TABLE.bodyCell}>
-                      <Input type="number" min={0} step={0.01} value={deduction}
-                        onChange={e => onBonusDeductionChange(w.id, 'deduction', parseFloat(e.target.value) || 0)}
-                        className="w-20 px-2 py-1 border border-slate-300 rounded text-center" />
-                    </td>
-                    <td className={TABLE.bodyCell + ` font-bold ${changed ? 'text-amber-600' : 'text-green-600'}`}>
-                      ¥{previewWage.toFixed(2)}
-                      {changed && <span className="text-xs text-amber-500 ml-1">*</span>}
-                    </td>
-                  </tr>
-                )
-              })}
-              {/* 汇总行 */}
-              <tr className="border-t-2 border-slate-300 bg-slate-50 font-bold">
-                <td className={TABLE.bodyCell} colSpan={6}>合计</td>
-                <td className={TABLE.bodyCell + ' text-green-600'}>
-                  ¥{wageRecords.reduce((sum, w) => sum + calcWage(w), 0).toFixed(2)}
-                </td>
-                <td></td>
-              </tr>
-            </tbody>
-          </table>
-        </HoverScrollbar>
-      )}
+      <DataTable
+        data={wageRecords}
+        columns={columns}
+        rowKey="id"
+        pagination={false}
+        useHoverScrollbar={true}
+        scrollClassName="h-full"
+        emptyText="暂无工资记录"
+        emptyIcon="FileText"
+        footer={footer}
+      />
     </div>
   )
 }

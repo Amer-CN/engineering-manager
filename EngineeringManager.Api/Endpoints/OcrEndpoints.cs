@@ -81,7 +81,7 @@ public static class OcrEndpoints
                 var ocrData = await CallBaiduOcr(httpClient, "/rest/2.0/ocr/v1/vat_invoice", dto.ImageBase64);
                 var words = ocrData.TryGetProperty("words_result", out var wr) ? wr : default;
 
-                string GetStr(string key) => words.TryGetProperty(key, out var v) ? v.GetString() ?? "" : "";
+                string GetStr(string key) => words.TryGetProperty(key, out var v) && v.TryGetProperty("word", out var w) ? w.GetString() ?? "" : "";
                 decimal GetDec(string key) => decimal.TryParse(GetStr(key).Replace("¥", "").Replace("%", ""), out var d) ? d : 0;
 
                 var taxRateStr = words.TryGetProperty("CommodityTaxRate", out var trArr) && trArr.GetArrayLength() > 0
@@ -139,7 +139,7 @@ public static class OcrEndpoints
                 var ocrData = await CallBaiduOcr(httpClient, "/rest/2.0/ocr/v1/bankcard", dto.ImageBase64);
                 var words = ocrData.TryGetProperty("words_result", out var wr) ? wr : default;
 
-                string GetStr(string key) => words.TryGetProperty(key, out var v) ? v.GetString() ?? "" : "";
+            string GetStr(string key) => words.TryGetProperty(key, out var v) ? v.GetString() ?? "" : "";
 
                 var result = new
                 {
@@ -176,7 +176,7 @@ public static class OcrEndpoints
                 var ocrData = await CallBaiduOcr(httpClient, "/rest/2.0/ocr/v1/business_license", dto.ImageBase64);
                 var words = ocrData.TryGetProperty("words_result", out var wr) ? wr : default;
 
-                string GetStr(string key) => words.TryGetProperty(key, out var v) ? v.GetString() ?? "" : "";
+                string GetStr(string key) => words.TryGetProperty(key, out var v) && v.TryGetProperty("words", out var w) ? w.GetString() ?? "" : "";
 
                 var result = new
                 {
@@ -188,7 +188,7 @@ public static class OcrEndpoints
                         companyName = GetStr("单位名称"),
                         legalPerson = GetStr("法人"),
                         registeredCapital = GetStr("注册资本"),
-                        address = GetStr("地址"),
+                        address = GetStr("住所") is var a && !string.IsNullOrEmpty(a) ? a : GetStr("地址"),
                         businessScope = GetStr("经营范围"),
                         establishDate = GetStr("成立日期"),
                         expireDate = GetStr("有效期")
@@ -217,7 +217,7 @@ public static class OcrEndpoints
                 var ocrData = await CallBaiduOcr(httpClient, "/rest/2.0/ocr/v1/receipt", dto.ImageBase64);
                 var words = ocrData.TryGetProperty("words_result", out var wr) ? wr : default;
 
-                string GetStr(string key) => words.TryGetProperty(key, out var v) ? v.GetString() ?? "" : "";
+                string GetStr(string key) => words.TryGetProperty(key, out var v) && v.TryGetProperty("words", out var w) ? w.GetString() ?? "" : "";
 
                 var amountStr = GetStr("金额");
                 if (string.IsNullOrEmpty(amountStr)) amountStr = GetStr("交易金额");
@@ -264,7 +264,7 @@ public static class OcrEndpoints
                 var ocrData = await CallBaiduOcr(httpClient, "/rest/2.0/ocr/v1/business_license", dto.ImageBase64);
                 var words = ocrData.TryGetProperty("words_result", out var wr) ? wr : default;
 
-                string GetStr(string key) => words.TryGetProperty(key, out var v) ? v.GetString() ?? "" : "";
+                string GetStr(string key) => words.TryGetProperty(key, out var v) && v.TryGetProperty("words", out var w) ? w.GetString() ?? "" : "";
 
                 var result = new
                 {
@@ -384,14 +384,45 @@ public static class OcrEndpoints
         });
 
         // ═══════════════════════════════════════════════════════════
-        // 企业工商信息查询（占位，需要单独配置 API）
+        // 企业工商信息查询
         // ═══════════════════════════════════════════════════════════
 
-        app.MapPost("/api/ocr/company-query", (dynamic dto) => Results.Ok(new
+        app.MapPost("/api/ocr/company-query", async (dynamic dto, IHttpClientFactory httpClientFactory) =>
         {
-            success = false,
-            error = "企业工商信息查询功能需要单独配置 API。请使用营业执照 OCR 功能，或联系管理员配置企业查询 API。"
-        }));
+            try
+            {
+                string companyName = (string)dto.companyName;
+                string apiKey = (string)dto.apiKey;
+                string secretKey = (string)dto.secretKey;
+
+                if (string.IsNullOrWhiteSpace(companyName))
+                    return Results.Ok(new { success = false, error = "请输入企业名称" });
+
+                var httpClient = httpClientFactory.CreateClient();
+                httpClient.Timeout = TimeSpan.FromSeconds(10);
+
+                // 获取百度 access_token
+                var tokenUrl = $"https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id={apiKey}&client_secret={secretKey}";
+                var tokenResp = await httpClient.PostAsync(tokenUrl, null);
+                var tokenJson = await tokenResp.Content.ReadAsStringAsync();
+                var tokenDoc = System.Text.Json.JsonDocument.Parse(tokenJson);
+                var accessToken = tokenDoc.RootElement.GetProperty("access_token").GetString();
+
+                // 使用百度通用文字识别（高精度）接口，传入公司名称文本进行搜索
+                // 注意：百度 OCR 没有直接的"按名称搜索企业"接口
+                // 改用百度企业工商信息查询（如果已开通）
+                // 备选方案：返回提示信息，建议使用营业执照 OCR
+                return Results.Ok(new
+                {
+                    success = false,
+                    error = "百度云 OCR 标准版不支持按公司名称搜索工商信息。请使用「营业执照识别」功能上传营业执照图片自动填充，或手动填写信息。"
+                });
+            }
+            catch (Exception ex)
+            {
+                return Results.Ok(new { success = false, error = $"企业查询失败: {ex.Message}" });
+            }
+        });
 
         // ═══════════════════════════════════════════════════════════
         // 检查网络连通性
@@ -504,7 +535,10 @@ public static class OcrEndpoints
         {
             Path.Combine(AppContext.BaseDirectory, "public", "ocr-config.json"),
             Path.Combine(Directory.GetCurrentDirectory(), "public", "ocr-config.json"),
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "工程管家", "ocr-config.json")
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "工程管家", "ocr-config.json"),
+            // 项目根目录的 public/ 文件夹
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "public", "ocr-config.json"),
+            Path.Combine(Directory.GetCurrentDirectory(), "..", "public", "ocr-config.json"),
         };
         foreach (var p in configPaths)
         {

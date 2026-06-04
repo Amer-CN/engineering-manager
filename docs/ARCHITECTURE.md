@@ -81,6 +81,7 @@
 | 任务功能完整移除 | 2026-05-12 | 删除 Tasks 相关代码，Dashboard 替换为发票+结算摘要 |
 | 健康度评分公式调整 | 2026-05-12 | 预算控制 40% + 合同执行 30% + 发票管理 30% |
 | C# 迁移 | 2026-06-01 | Electron IPC handlers → ASP.NET Core Minimal API 端点 |
+| C# 迁移补全 | 2026-06-04 | PartnerDto 新增 ProjectIds 字段，合作伙伴 POST/PUT SQL 补全 project_ids |
 
 ### 文件存储演进
 | 变更 | 日期 | 说明 |
@@ -120,6 +121,10 @@
 | 锁屏粒子背景 | 2026-06-02 | LockScreen 加入 ParticleBackground+主题适配 |
 | 加载动画统一 | 2026-06-02 | Spinner/ButtonLoader 组件替代 12 个文件的 animate-spin |
 | 数据路径 API | 2026-06-02 | C# 实现 getConfig/setDataPath/sqliteStatus 端点+STA 线程对话框 |
+| **列表样式全局统一** | **2026-06-04** | TABLE 常量修复（headerRow 补 border-b），DataTable 重写（skeleton/headerRender/align），删除未使用的 ui/Table 组件，44 个文件迁移到统一 DataTable |
+| **列头排序+筛选** | **2026-06-04** | sortable + filterable（createPortal+搜索+checkbox 多选），30+ 个列表补充排序/筛选 |
+| **月份选择器** | **2026-06-04** | MonthPicker 组件（年份快速切换+3×4 月份网格+createPortal），替换原生 input[type=month] |
+| **AI 识别反馈动画** | **2026-06-04** | OCRRecognitionFeedback 浮动通知（扫描线/spring 弹出/自动消失） |
 
 ### 工具链
 | 变更 | 日期 | 说明 |

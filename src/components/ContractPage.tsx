@@ -1,6 +1,7 @@
 // ContractPage.tsx — 通用合同管理页面
 
 import React, { useState, useEffect } from 'react'
+import { DataTable, type Column } from '@/components/DataTable'
 import { HoverScrollbar } from './ui/HoverScrollbar'
 import Spinner from './ui/Spinner'
 import type { AgreementContract, Partner, Project, PaymentRecord, Template } from '../types/electron'
@@ -151,6 +152,100 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
     return groups
   }
 
+  // DataTable 列定义
+  const baseColumns: Column<Contract>[] = [
+    { key: 'name', title: '合同名称', render: (item) => (
+      <div className="font-medium text-slate-800">{item.name}
+        {type === 'agreement' && (item as AgreementContract).agreementType && (
+          <span className="ml-2 px-1.5 py-0.5 text-xs rounded bg-sky-50 text-sky-600 border border-sky-200">
+            {AGREEMENT_SUB_TYPE_LABELS[(item as AgreementContract).agreementType] || '协议'}
+          </span>
+        )}
+      </div>
+    )},
+    { key: 'contractNo', title: '合同编号', render: (item) => <span className="text-sm text-slate-500">{item.contractNo}</span> },
+    { key: 'partnerId', title: `${config.partnerCategoryDefault}方`, render: (item) => {
+      const partner = partners.find(p => p.id === item.partnerId)
+      return <span className="text-sm text-slate-600">{partner?.name || '-'}</span>
+    }},
+    { key: 'amount', title: '合同金额', align: 'right', sortable: true,
+      sorter: (a, b) => ((a.amount || 0) - (b.amount || 0)),
+      render: (item) => (
+      <span className="font-medium text-slate-800">
+        {type === 'agreement' ? (item.amount ? `¥ ${formatMoney(item.amount)}` : '—') : `¥ ${formatMoney(item.amount)}`}
+      </span>
+    )},
+  ]
+
+  const paymentColumn: Column<Contract> = { key: 'payment', title: config.paymentColumnLabel, align: 'right', render: (item) => {
+    const paymentTotal = getContractPaymentTotal(item.id, paymentRecords, config)
+    return (
+      <div>
+        <div className={`font-medium ${paymentTotal >= (item.amount ?? 0) ? 'text-green-600' : 'text-slate-800'}`}>
+          ¥ {formatMoney(paymentTotal)}
+        </div>
+        <div className="text-xs text-slate-400">
+          {(item.amount ?? 0) > 0 ? ((paymentTotal / (item.amount ?? 0)) * 100).toFixed(0) + '%' : '0%'}
+        </div>
+      </div>
+    )
+  }}
+
+  const statusColumn: Column<Contract> = { key: 'status', title: '状态', align: 'center',
+    filterable: 'select',
+    filterOptions: contractStatuses.map(s => ({ label: s.label, value: s.value })),
+    filterAccessor: (item: Contract) => item.status,
+    render: (item) => (
+    <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(item.status)}`}>
+      {getStatusLabel(item.status)}
+    </span>
+  )}
+
+  const endDateColumn: Column<Contract> = { key: 'endDate', title: '到期日期', align: 'center',
+    sortable: true,
+    sorter: (a, b) => (a.endDate || '').localeCompare(b.endDate || ''),
+    render: (item) => (
+    <span className="text-sm text-slate-500">{item.endDate || '-'}</span>
+  )}
+
+  const actionsColumn: Column<Contract> = { key: 'actions', title: '操作', align: 'center', render: (item) => (
+    <div className="flex items-center justify-center gap-1">
+      {item.fileUrl && (
+        <Tooltip content="预览附件" position="top" delay={300}>
+        <button onClick={async () => {
+          const fileType = (item.fileType || 'image') as 'pdf' | 'image' | 'word' | 'excel'
+          const urls = await resolvePreviewFileUrl(item.fileUrl!, item.projectName)
+          if (!urls.downloadUrl && !urls.previewUrl) { showToast('附件文件不存在或已损坏', 'error'); return }
+          if (fileType === 'word' && urls.downloadUrl) {
+            setPreviewFile({ data: urls.downloadUrl, previewUrl: urls.previewUrl, type: 'word', title: `${item.name} - 合同附件` })
+            try {
+              const result = await (await getAPI()).convertTemplateDocxToHtml(item.fileUrl!, 'contracts')
+              if (result?.success && result.data) {
+                setPreviewFile(prev => prev ? { ...prev, html: result.data } : null)
+              } else {
+                showToast('Word 文档转换失败，请下载后查看', 'error')
+              }
+            } catch { showToast('Word 文档转换失败，请下载后查看', 'error') }
+            return
+          }
+          setPreviewFile({ data: urls.downloadUrl || urls.previewUrl, previewUrl: urls.previewUrl, type: fileType, title: `${item.name} - 合同附件` })
+        }} className="btn btn-ghost btn-sm">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+          </svg>
+        </button>
+      </Tooltip>
+      )}
+      <button onClick={() => handleEdit(item)} className="btn btn-ghost btn-sm text-primary-600">编辑</button>
+      <button onClick={() => handleDelete(item.id)} className="btn btn-danger btn-sm">删除</button>
+    </div>
+  )}
+
+  const contractColumns: Column<Contract>[] = type !== 'agreement'
+    ? [...baseColumns, paymentColumn, statusColumn, endDateColumn, actionsColumn]
+    : [...baseColumns, statusColumn, endDateColumn, actionsColumn]
+
   if (loading) {
     return <Spinner size="lg" text="加载合同数据..." />
   }
@@ -240,98 +335,16 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
             </span>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">合同名称</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">合同编号</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">{config.partnerCategoryDefault}方</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">合同金额</th>
-                  {type !== 'agreement' && (
-                    <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">{config.paymentColumnLabel}</th>
-                  )}
-                  <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">状态</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">到期日期</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">操作</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {groupContracts.map(contract => {
-                  const paymentTotal = getContractPaymentTotal(contract.id, paymentRecords, config)
-                  const partner = partners.find(p => p.id === contract.partnerId)
-                  return (
-                    <tr key={contract.id} className="table-row-hover">
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-slate-800">{contract.name}
-                          {type === 'agreement' && (contract as AgreementContract).agreementType && (
-                            <span className="ml-2 px-1.5 py-0.5 text-xs rounded bg-sky-50 text-sky-600 border border-sky-200">
-                              {AGREEMENT_SUB_TYPE_LABELS[(contract as AgreementContract).agreementType] || '协议'}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-slate-500">{contract.contractNo}</td>
-                      <td className="px-4 py-3 text-sm text-slate-600">{partner?.name || '-'}</td>
-                      <td className="px-4 py-3 text-right font-medium text-slate-800">
-                        {type === 'agreement' ? (contract.amount ? `¥ ${formatMoney(contract.amount)}` : '—') : `¥ ${formatMoney(contract.amount)}`}
-                      </td>
-                      {type !== 'agreement' && (
-                        <td className="px-4 py-3 text-right">
-                          <div className={`font-medium ${paymentTotal >= (contract.amount ?? 0) ? 'text-green-600' : 'text-slate-800'}`}>
-                            ¥ {formatMoney(paymentTotal)}
-                          </div>
-                          <div className="text-xs text-slate-400">
-                            {(contract.amount ?? 0) > 0 ? ((paymentTotal / (contract.amount ?? 0)) * 100).toFixed(0) + '%' : '0%'}
-                          </div>
-                        </td>
-                      )}
-                      <td className="px-4 py-3 text-center">
-                        <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(contract.status)}`}>
-                          {getStatusLabel(contract.status)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center text-sm text-slate-500">{contract.endDate || '-'}</td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          {contract.fileUrl && (
-                            <Tooltip content="预览附件" position="top" delay={300}>
-                            <button onClick={async () => {
-                              const fileType = (contract.fileType || 'image') as 'pdf' | 'image' | 'word' | 'excel'
-                              const urls = await resolvePreviewFileUrl(contract.fileUrl!, contract.projectName)
-                              if (!urls.downloadUrl && !urls.previewUrl) { showToast('附件文件不存在或已损坏', 'error'); return }
-                              if (fileType === 'word' && urls.downloadUrl) {
-                                setPreviewFile({ data: urls.downloadUrl, previewUrl: urls.previewUrl, type: 'word', title: `${contract.name} - 合同附件` })
-                                try {
-                                  // 改用 IPC 让主进程用 mammoth 转换（避免把 mammoth 打进渲染进程 bundle）
-                                  const result = await (await getAPI()).convertTemplateDocxToHtml(contract.fileUrl!, 'contracts')
-                                  if (result?.success && result.data) {
-                                    setPreviewFile(prev => prev ? { ...prev, html: result.data } : null)
-                                  } else {
-                                    showToast('Word 文档转换失败，请下载后查看', 'error')
-                                  }
-                                } catch { showToast('Word 文档转换失败，请下载后查看', 'error') }
-                                return
-                              }
-                              setPreviewFile({ data: urls.downloadUrl || urls.previewUrl, previewUrl: urls.previewUrl, type: fileType, title: `${contract.name} - 合同附件` })
-                            }} className="btn btn-ghost btn-sm">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                              </svg>
-                            </button>
-                          </Tooltip>
-                          )}
-                          <button onClick={() => handleEdit(contract)} className="btn btn-ghost btn-sm text-primary-600">编辑</button>
-                          <button onClick={() => handleDelete(contract.id)} className="btn btn-danger btn-sm">删除</button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            data={groupContracts}
+            columns={contractColumns}
+            rowKey="id"
+            pagination={false}
+            showContainer={true}
+            stickyHeader={true}
+            onRowClick={handleEdit}
+            emptyText="该分组下暂无合同"
+          />
         </div>
       ))}
 

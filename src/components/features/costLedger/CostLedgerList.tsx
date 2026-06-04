@@ -6,6 +6,7 @@ import { DIRECTION_CONFIG, getLevel1ForCode, getCategoriesByDirection, getLevel1
 import { ColumnFilter } from '@/components/features/costLedger/ColumnFilter'
 import { printCostLedgerList, exportCostLedgerList } from '@/components/features/costLedger/printExport'
 import type { CostLedgerEntry, CostLedgerCategory } from '@/types'
+import { TABLE } from '@/constants/table'
 
 interface CostLedgerListProps {
   entries: CostLedgerEntry[]
@@ -254,8 +255,8 @@ export function CostLedgerList({ entries, summary, loading, onEdit, onDelete, ca
       {/* 表格 */}
       <HoverScrollbar className="flex-1 min-h-0">
       <div ref={tableRef} style={{ zoom }}>
-        <table className="w-full table-fixed border-collapse">
-          <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10 text-xs">
+        <table className="w-full table-fixed">
+          <thead className={`${TABLE.headerRow} ${TABLE.stickyHeader} text-xs`}>
             <tr>
               {[
                 ['voucherNo', '凭证号', 'w-[96px] text-center'],
@@ -268,7 +269,7 @@ export function CostLedgerList({ entries, summary, loading, onEdit, onDelete, ca
                 ['summary', '摘要', ''],
                 ['notes', '备注', ''],
               ].map(([field, label, width]) => (
-                <th key={field} className={`border-b border-slate-200 px-3 py-2 text-slate-500 ${width}`}>
+                <th key={field} className={`${TABLE.headerCell} ${width}`}>
                   <div className="flex items-center">
                     <span className="cursor-pointer hover:text-slate-700 select-none" onClick={() => toggleSort(field as string)}>
                       {label}{sortField === field ? (sortAsc ? ' ↑' : ' ↓') : ''}
@@ -310,7 +311,7 @@ export function CostLedgerList({ entries, summary, loading, onEdit, onDelete, ca
                   </div>
                 </th>
               ))}
-              <th className="border-b border-slate-200 px-3 py-2 text-right text-slate-500 w-[64px]">操作</th>
+              <th className={`${TABLE.headerCell} text-right w-[64px]`}>操作</th>
             </tr>
           </thead>
           <tbody>

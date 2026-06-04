@@ -99,7 +99,10 @@ public static class MemberEndpoints
 
         app.MapGet("/api/project-workers", (IDbConnection db, long? projectId) =>
         {
-            var sql = @"SELECT pw.*, w.name as worker_name, w.id_card, w.phone, wt.name as team_name
+            var sql = @"SELECT pw.*, w.name as worker_name, w.id_card, w.gender, w.phone,
+                        w.address, w.bank_account, w.bank_name, w.worker_type, w.daily_wage,
+                        w.birth_date, w.ethnicity,
+                        wt.name as team_name
                         FROM project_workers pw
                         LEFT JOIN workers w ON pw.worker_id=w.id
                         LEFT JOIN worker_teams wt ON pw.team_id=wt.id";

@@ -1,8 +1,7 @@
 import React from 'react'
-import { DataTable, TableCell } from '../../DataTable'
+import { DataTable, type Column } from '../../DataTable'
 import { Partner, Project } from '../../../types/electron'
 import { partnerCategories } from '../../../data/regions'
-import { Icon } from '../../ui/Icon'
 
 interface PartnerListProps {
   partners: Partner[]
@@ -24,165 +23,112 @@ const getPartnerCategoryLabel = (category: string) => {
 export const PartnerList: React.FC<PartnerListProps> = ({
   partners,
   projects,
-  search,
-  filterCategory,
-  filterProject,
-  onSearchChange,
-  onCategoryChange,
-  onProjectChange,
   onEdit,
   onDelete
 }) => {
-  const filteredPartners = partners.filter(p => {
-    if (filterCategory && p.category !== filterCategory) return false
-    if (filterProject && filterProject !== 'none' && !p.projectIds?.includes(Number(filterProject))) return false
-    if (filterProject === 'none' && p.projectIds && p.projectIds.length > 0) return false
-    if (search) {
-      const keyword = search.toLowerCase()
-      return (
-        (p.name || '').toLowerCase().includes(keyword) ||
-        (p.contact || '').toLowerCase().includes(keyword) ||
-        (p.phone || '').toLowerCase().includes(keyword)
+  const columns: Column<Partner>[] = [
+    {
+      key: 'name',
+      title: '单位名称',
+      sortable: true,
+      filterable: true,
+    },
+    {
+      key: 'category',
+      title: '类型',
+      width: '120px',
+      sortable: true,
+      filterable: 'select',
+      filterOptions: partnerCategories.map(c => ({ label: c.label, value: c.value })),
+      filterAccessor: (p) => getPartnerCategoryLabel(p.category),
+      render: (partner) => (
+        <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-primary-100 text-primary-700">
+          {getPartnerCategoryLabel(partner.category)}
+        </span>
+      )
+    },
+    {
+      key: 'contact',
+      title: '联系人',
+      width: '100px',
+      filterable: true,
+    },
+    {
+      key: 'phone',
+      title: '电话',
+      width: '130px',
+      filterable: true,
+    },
+    {
+      key: 'projects',
+      title: '关联项目',
+      filterable: 'select',
+      filterOptions: projects.map(p => ({ label: p.name, value: String(p.id) })),
+      filterAccessor: (partner) => {
+        if (!partner.projectIds || partner.projectIds.length === 0) return '未关联'
+        return partner.projectIds
+          .map(id => projects.find(p => p.id === id)?.name || '')
+          .filter(Boolean)
+          .join(',')
+      },
+      render: (partner) => {
+        if (!partner.projectIds || partner.projectIds.length === 0) {
+          return <span className="text-slate-400 text-xs">未关联</span>
+        }
+        return (
+          <div className="flex flex-wrap gap-1">
+            {partner.projectIds.slice(0, 3).map(projectId => {
+              const project = projects.find(p => p.id === projectId)
+              return project ? (
+                <span key={projectId} className="px-1.5 py-0.5 bg-primary-100 text-primary-700 text-xs rounded">
+                  {project.name}
+                </span>
+              ) : null
+            })}
+            {partner.projectIds.length > 3 && (
+              <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-xs rounded">
+                +{partner.projectIds.length - 3}
+              </span>
+            )}
+          </div>
+        )
+      }
+    },
+    {
+      key: 'actions',
+      title: '操作',
+      width: '140px',
+      render: (partner) => (
+        <div className="flex items-center gap-1">
+          <button
+            onClick={(e) => { e.stopPropagation(); onEdit(partner) }}
+            className="btn btn-ghost btn-sm"
+          >
+            编辑
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(partner.id) }}
+            className="btn btn-danger btn-sm"
+          >
+            删除
+          </button>
+        </div>
       )
     }
-    return true
-  })
+  ]
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      {/* 筛选器 - 固定高度 */}
-      <div className="card p-4 mb-4 flex items-center gap-4 shrink-0">
-        <div className="flex-1">
-          <input
-            type="text"
-            placeholder="搜索单位名称、联系人、电话..."
-            value={search}
-            onChange={e => onSearchChange(e.target.value)}
-            className="input"
-          />
-        </div>
-        <select
-          value={filterCategory}
-          onChange={e => onCategoryChange(e.target.value)}
-          className="select w-auto"
-        >
-          <option value="">全部类型</option>
-          {partnerCategories.map(cat => (
-            <option key={cat.value} value={cat.value}>{cat.label}</option>
-          ))}
-        </select>
-        <select
-          value={filterProject}
-          onChange={e => onProjectChange(e.target.value)}
-          className="select w-auto"
-        >
-          <option value="">全部项目</option>
-          <option value="none">未关联项目</option>
-          {projects.map(p => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* 列表 - 填满剩余空间，可滚动 */}
-      <div className="card flex-1 overflow-hidden relative min-h-0">
-        <DataTable
-          data={filteredPartners}
-          useHoverScrollbar={true}
-          columns={[
-            {
-              key: 'name',
-              title: '单位名称',
-              sortable: true,
-              render: (partner) => (
-                <div>
-                  <div className="font-medium text-slate-900">{partner.name}</div>
-                  {partner.projectIds && partner.projectIds.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {partner.projectIds.slice(0, 3).map(projectId => {
-                        const project = projects.find(p => p.id === projectId)
-                        return project ? (
-                          <span
-                            key={projectId}
-                            className="px-1.5 py-0.5 bg-primary-100 text-primary-700 text-xs rounded"
-                          >
-                            <Icon name="Building2" size={12} className="inline-block" /> {project.name}
-                          </span>
-                        ) : null
-                      })}
-                      {partner.projectIds.length > 3 && (
-                        <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-xs rounded">
-                          +{partner.projectIds.length - 3}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )
-            },
-            {
-              key: 'category',
-              title: '类型',
-              width: '120px',
-              sortable: true,
-              render: (partner) => (
-                <TableCell.Badge color="primary">
-                  {getPartnerCategoryLabel(partner.category)}
-                </TableCell.Badge>
-              )
-            },
-            {
-              key: 'contact',
-              title: '联系人',
-              width: '100px',
-              render: (partner) => partner.contact || '-'
-            },
-            {
-              key: 'phone',
-              title: '电话',
-              width: '130px',
-              render: (partner) => partner.phone || '-'
-            },
-            {
-              key: 'bankAccount',
-              title: '银行账号',
-              render: (partner) => partner.bankAccount
-                ? <span>{partner.bankAccount}{(partner as any).bankName && <span className="text-slate-400 ml-1">({(partner as any).bankName})</span>}</span>
-                : '-'
-            },
-            {
-              key: 'projectCount',
-              title: '关联项目',
-              width: '80px',
-              render: (partner) => partner.projectIds?.length || 0
-            },
-            {
-              key: 'actions',
-              title: '操作',
-              width: '140px',
-              render: (partner) => (
-                <TableCell.Actions>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onEdit(partner) }}
-                    className="btn btn-ghost btn-sm"
-                  >
-                    编辑
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onDelete(partner.id) }}
-                    className="btn btn-danger btn-sm"
-                  >
-                    删除
-                  </button>
-                </TableCell.Actions>
-              )
-            }
-          ]}
-          rowKey="id"
-          emptyText="暂无合作单位"
-          emptyIcon={<Icon name="Building2" size={20} />}
-        />
-      </div>
+      <DataTable
+        data={partners}
+        columns={columns}
+        rowKey="id"
+        useHoverScrollbar={true}
+        scrollClassName="h-full"
+        pagination={false}
+        emptyText="暂无合作单位"
+        emptyIcon="Building2"
+      />
     </div>
   )
 }

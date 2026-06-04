@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { DataTable, type Column } from '@/components/DataTable'
 import { useWagePaymentRecords } from '@/hooks/useWagePaymentRecords'
 import { Icon } from '../../ui/Icon'
 import PageHeader from '../../ui/PageHeader'
@@ -8,6 +9,20 @@ interface PaymentRecordFilters {
   projectId?: number
   yearMonth?: string
   status?: string
+}
+
+interface PaymentRow {
+  id: number | string
+  projectName: string
+  yearMonth: string
+  workerName: string
+  workerPhone?: string
+  actualWage?: number
+  paidAmount?: number
+  paymentStatus?: string
+  paidDate?: string
+  overdueDays?: number
+  bankReceiptPath?: string
 }
 
 export default function WagePaymentRecords() {
@@ -43,6 +58,73 @@ export default function WagePaymentRecords() {
     setViewMode('overdue')
     loadOverdueList()
   }
+
+  const showPhone = viewMode === 'overdue'
+
+  const baseColumns: Column<PaymentRow>[] = [
+    { key: 'projectName', title: '项目名', render: (item) => <span className="text-slate-700">{item.projectName || '-'}</span> },
+    { key: 'yearMonth', title: '月份', render: (item) => <span className="text-slate-700">{item.yearMonth || '-'}</span> },
+    { key: 'workerName', title: '工人姓名', sortable: true, filterable: true,
+      sorter: (a, b) => (a.workerName || '').localeCompare(b.workerName || '', 'zh-CN'),
+      render: (item) => <span className="text-slate-700 font-medium">{item.workerName || '-'}</span> },
+  ]
+
+  const phoneColumn: Column<PaymentRow> = { key: 'workerPhone', title: '联系电话', render: (item) => <span className="text-slate-700">{item.workerPhone || '-'}</span> }
+
+  const tailColumns: Column<PaymentRow>[] = [
+    { key: 'actualWage', title: '应发金额', align: 'right', sortable: true,
+      sorter: (a, b) => ((a.actualWage || 0) - (b.actualWage || 0)),
+      render: (item) => <span className="text-slate-700">{item.actualWage?.toFixed(2) || '0.00'}</span> },
+    { key: 'paidAmount', title: '实发金额', align: 'right', sortable: true,
+      sorter: (a, b) => ((a.paidAmount || 0) - (b.paidAmount || 0)),
+      render: (item) => <span className="text-slate-700">{item.paidAmount?.toFixed(2) || '0.00'}</span> },
+    { key: 'paymentStatus', title: '发放状态',
+      filterable: 'select',
+      filterOptions: [
+        { label: '已发清', value: '已发清' },
+        { label: '部分发放', value: '部分发放' },
+        { label: '逾期', value: '逾期' },
+        { label: '未发放', value: '未发放' }
+      ],
+      filterAccessor: (item: PaymentRow) => item.paymentStatus || '',
+      render: (item) => (
+      <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+        item.paymentStatus === '已发清' ? 'bg-green-100 text-green-700' :
+        item.paymentStatus === '部分发放' ? 'bg-yellow-100 text-yellow-700' :
+        item.paymentStatus === '逾期' ? 'bg-red-100 text-red-700' :
+        'bg-slate-100 text-slate-600'
+      }`}>
+        {item.paymentStatus || '-'}
+      </span>
+    )},
+    { key: 'paidDate', title: '发放日期', render: (item) => <span className="text-slate-700">{item.paidDate || '-'}</span> },
+  ]
+
+  const overdueColumn: Column<PaymentRow> = { key: 'overdueDays', title: '逾期天数', align: 'right', render: (item) => <span className="text-red-600 font-medium">{item.overdueDays || 0}</span> }
+
+  const receiptColumn: Column<PaymentRow> = { key: 'bankReceiptPath', title: '银行回单', render: (item) => (
+    item.bankReceiptPath ? (
+      <button
+        onClick={async () => (await getAPI()).openExternalFile({
+          category: 'bank_receipts',
+          subCategory: '',
+          fileName: item.bankReceiptPath!,
+          projectName: undefined,
+        })}
+        className="text-blue-600 hover:text-blue-800 text-xs"
+      >
+        查看
+      </button>
+    ) : <span>-</span>
+  )}
+
+  const columns: Column<PaymentRow>[] = [
+    ...baseColumns,
+    ...(showPhone ? [phoneColumn] : []),
+    ...tailColumns,
+    ...(viewMode === 'overdue' ? [overdueColumn] : []),
+    receiptColumn,
+  ]
 
   const renderFilters = () => (
     <div className="bg-white p-4 rounded-lg border border-slate-200 mb-4 flex flex-wrap items-center gap-4">
@@ -104,76 +186,6 @@ export default function WagePaymentRecords() {
     </div>
   )
 
-  const renderTable = (data: any[], showPhone: boolean = false) => (
-    <div className="bg-white rounded-lg border border-slate-200 overflow-x-auto">
-      <table className="w-full text-sm text-left">
-        <thead className="bg-slate-50 border-b border-slate-200">
-          <tr>
-            <th className="px-4 py-3 text-slate-600 font-medium">项目名</th>
-            <th className="px-4 py-3 text-slate-600 font-medium">月份</th>
-            <th className="px-4 py-3 text-slate-600 font-medium">工人姓名</th>
-            {showPhone && <th className="px-4 py-3 text-slate-600 font-medium">联系电话</th>}
-            <th className="px-4 py-3 text-slate-600 font-medium text-right">应发金额</th>
-            <th className="px-4 py-3 text-slate-600 font-medium text-right">实发金额</th>
-            <th className="px-4 py-3 text-slate-600 font-medium">发放状态</th>
-            <th className="px-4 py-3 text-slate-600 font-medium">发放日期</th>
-            {viewMode === 'overdue' && <th className="px-4 py-3 text-slate-600 font-medium text-right">逾期天数</th>}
-            <th className="px-4 py-3 text-slate-600 font-medium">银行回单</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.length === 0 ? (
-            <tr>
-              <td colSpan={showPhone ? 10 : 9} className="px-4 py-8 text-center text-slate-400">
-                {loading ? '加载中...' : '暂无数据'}
-              </td>
-            </tr>
-          ) : (
-            data.map((record, idx) => (
-              <tr key={record.id || idx} className="border-b border-slate-100 hover:bg-slate-50">
-                <td className="px-4 py-3 text-slate-700">{record.projectName || '-'}</td>
-                <td className="px-4 py-3 text-slate-700">{record.yearMonth || '-'}</td>
-                <td className="px-4 py-3 text-slate-700 font-medium">{record.workerName || '-'}</td>
-                {showPhone && <td className="px-4 py-3 text-slate-700">{record.workerPhone || '-'}</td>}
-                <td className="px-4 py-3 text-slate-700 text-right">{record.actualWage?.toFixed(2) || '0.00'}</td>
-                <td className="px-4 py-3 text-slate-700 text-right">{record.paidAmount?.toFixed(2) || '0.00'}</td>
-                <td className="px-4 py-3">
-                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                    record.paymentStatus === '已发清' ? 'bg-green-100 text-green-700' :
-                    record.paymentStatus === '部分发放' ? 'bg-yellow-100 text-yellow-700' :
-                    record.paymentStatus === '逾期' ? 'bg-red-100 text-red-700' :
-                    'bg-slate-100 text-slate-600'
-                  }`}>
-                    {record.paymentStatus || '-'}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-slate-700">{record.paidDate || '-'}</td>
-                {viewMode === 'overdue' && (
-                  <td className="px-4 py-3 text-right text-red-600 font-medium">{record.overdueDays || 0}</td>
-                )}
-                <td className="px-4 py-3">
-                  {record.bankReceiptPath ? (
-                    <button
-                      onClick={async () => (await getAPI()).openExternalFile({
-                        category: 'bank_receipts',
-                        subCategory: '',
-                        fileName: record.bankReceiptPath,
-                        projectName: undefined,
-                      })}
-                      className="text-blue-600 hover:text-blue-800 text-xs"
-                    >
-                      查看
-                    </button>
-                  ) : '-'}
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </div>
-  )
-
   return (
     <div className="p-6 max-w-[1400px] mx-auto space-y-4">
       <PageHeader title="工资发放记录"
@@ -212,8 +224,17 @@ export default function WagePaymentRecords() {
       {viewMode === 'all' && renderFilters()}
 
       {/* 数据表格 */}
-      {viewMode === 'all' && renderTable(records)}
-      {viewMode === 'overdue' && renderTable(overdueList, true)}
+      <DataTable
+        data={(viewMode === 'all' ? records : overdueList) as PaymentRow[]}
+        columns={columns}
+        rowKey="id"
+        pagination={false}
+        showContainer={true}
+        stickyHeader={true}
+        loading={loading}
+        emptyText="暂无数据"
+        emptyIcon="Receipt"
+      />
     </div>
   )
 }

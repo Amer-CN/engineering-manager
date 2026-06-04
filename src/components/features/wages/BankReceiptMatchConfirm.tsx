@@ -7,7 +7,7 @@
  * 3. 批量确认（一键确认所有高置信度匹配）
  */
 import { useState, useMemo, useCallback } from 'react'
-import { motion } from 'framer-motion'
+import { DataTable, type Column } from '@/components/DataTable'
 import { useToastStore } from '@/store/toastStore'
 import { Badge } from '@/components/ui/Badge/Badge'
 import type { BatchParseResult, BankReceiptMatch } from '@/types'
@@ -159,9 +159,70 @@ export default function BankReceiptMatchConfirm({
     )
   }
 
-  // ══════════════════════════════════════════════════════
-  // 渲染
-  // ══════════════════════════════════════════════════════
+  const columns: Column<BankReceiptMatch & { _index: number }>[] = [
+    { key: 'receiptPath', title: '回单信息', render: (item) => (
+      <div>
+        <p className="font-medium">{item.parsedDate || '日期未知'}</p>
+        <p className="text-xs text-slate-500">{item.receiptPath.split('/').pop()}</p>
+      </div>
+    )},
+    { key: 'parsedName', title: '解析姓名', render: (item) => (
+      <span className={item.parsedName ? 'text-slate-900' : 'text-slate-400'}>
+        {item.parsedName || '未识别'}
+      </span>
+    )},
+    { key: 'parsedAmount', title: '解析金额', render: (item) => (
+      <span className="font-medium text-slate-900">¥{item.parsedAmount.toFixed(2)}</span>
+    )},
+    { key: 'matchedWorkerId', title: '匹配工人', render: (item) => (
+      <select
+        value={item.matchedWorkerId || ''}
+        onChange={(e) => {
+          const selectedId = e.target.value ? parseInt(e.target.value) : null
+          const selectedWorker = workers.find(w => w.id === selectedId)
+          handleWorkerChange(item._index, selectedId, selectedWorker?.name || null)
+        }}
+        className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        disabled={item.status === 'archived'}
+      >
+        <option value="">-- 未匹配 --</option>
+        {workers.map(worker => (
+          <option key={worker.id} value={worker.id}>
+            {worker.name}
+          </option>
+        ))}
+      </select>
+    )},
+    { key: 'matchedWageId', title: '匹配工资记录', render: (item) => (
+      <select
+        value={item.matchedWageId || ''}
+        onChange={(e) => {
+          const selectedId = e.target.value ? parseInt(e.target.value) : null
+          handleWageChange(item._index, selectedId)
+        }}
+        className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        disabled={item.status === 'archived' || !item.matchedWorkerId}
+      >
+        <option value="">-- 未匹配 --</option>
+        {wageRecords
+          .filter(w => !item.matchedWorkerId || w.memberName === item.matchedWorkerName)
+          .map(w => (
+            <option key={w.id} value={w.id}>
+              {w.yearMonth} - ¥{w.actualWage.toFixed(2)}
+            </option>
+          ))}
+      </select>
+    )},
+    { key: 'confidence', title: '置信度', render: (item) => (
+      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getConfidenceColor(item.confidence)}`}>
+        {item.confidence}%
+      </span>
+    )},
+    { key: 'status', title: '状态', render: (item) => getStatusBadge(item.status) },
+  ]
+
+  // Add _index for callbacks
+  const dataWithIndex = matches.map((m, i) => ({ ...m, _index: i }))
 
   return (
     <div className="space-y-6">
@@ -230,126 +291,15 @@ export default function BankReceiptMatchConfirm({
       </div>
 
       {/* 匹配结果表格 */}
-      <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200">
-            <thead className="bg-slate-50 border-b border-slate-200">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  回单信息
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  解析姓名
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  解析金额
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  匹配工人
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  匹配工资记录
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  置信度
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  状态
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-slate-200">
-              {matches.map((match, index) => (
-                <motion.tr
-                  key={index}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="hover:bg-slate-50"
-                >
-                  {/* 回单信息 */}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
-                    <div>
-                      <p className="font-medium">{match.parsedDate || '日期未知'}</p>
-                      <p className="text-xs text-slate-500">{match.receiptPath.split('/').pop()}</p>
-                    </div>
-                  </td>
-
-                  {/* 解析姓名 */}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className={match.parsedName ? 'text-slate-900' : 'text-slate-400'}>
-                      {match.parsedName || '未识别'}
-                    </span>
-                  </td>
-
-                  {/* 解析金额 */}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className="font-medium text-slate-900">
-                      ¥{match.parsedAmount.toFixed(2)}
-                    </span>
-                  </td>
-
-                  {/* 匹配工人（可手动调整） */}
-                  <td className="px-6 py-4 text-sm">
-                    <select
-                      value={match.matchedWorkerId || ''}
-                      onChange={(e) => {
-                        const selectedId = e.target.value ? parseInt(e.target.value) : null
-                        // 这里需要从 workers 列表中找到对应的姓名
-                        const selectedWorker = workers.find(w => w.id === selectedId)
-                        handleWorkerChange(index, selectedId, selectedWorker?.name || null)
-                      }}
-                      className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      disabled={match.status === 'archived'}
-                    >
-                      <option value="">-- 未匹配 --</option>
-                      {workers.map(worker => (
-                        <option key={worker.id} value={worker.id}>
-                          {worker.name}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-
-                  {/* 匹配工资记录（可手动调整） */}
-                  <td className="px-6 py-4 text-sm">
-                    <select
-                      value={match.matchedWageId || ''}
-                      onChange={(e) => {
-                        const selectedId = e.target.value ? parseInt(e.target.value) : null
-                        handleWageChange(index, selectedId)
-                      }}
-                      className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      disabled={match.status === 'archived' || !match.matchedWorkerId}
-                    >
-                      <option value="">-- 未匹配 --</option>
-                      {wageRecords
-                        .filter(w => !match.matchedWorkerId || w.memberName === match.matchedWorkerName)
-                        .map(w => (
-                          <option key={w.id} value={w.id}>
-                            {w.yearMonth} - ¥{w.actualWage.toFixed(2)}
-                          </option>
-                        ))}
-                    </select>
-                  </td>
-
-                  {/* 置信度 */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getConfidenceColor(match.confidence)}`}>
-                      {match.confidence}%
-                    </span>
-                  </td>
-
-                  {/* 状态 */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {getStatusBadge(match.status)}
-                  </td>
-                </motion.tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <DataTable
+        data={dataWithIndex}
+        columns={columns}
+        rowKey={(item) => `${item._index}`}
+        pagination={false}
+        showContainer={true}
+        stickyHeader={true}
+        emptyText="暂无匹配结果"
+      />
 
       {/* 底部操作 */}
       <div className="flex justify-end space-x-4">

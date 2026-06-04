@@ -3,6 +3,7 @@ import type { Project, WorkerTeam, AttendanceRecord, WageRecord } from '@/types'
 import { Icon } from '../../ui/Icon'
 import PageHeader from '../../ui/PageHeader'
 import { Tabs } from '../../ui/Tabs'
+import { MonthPicker } from '../../ui/MonthPicker'
 import AttendanceTab from './AttendanceTab'
 import WageTableTab from './WageTableTab'
 import WageRecordsTab from './WageRecordsTab'
@@ -83,8 +84,7 @@ export default function WageCycleDetail(props: WageCycleDetailProps) {
 
   const [activeTab, setActiveTab] = useState<CycleTab>('attendance')
   const [showImportModal, setShowImportModal] = useState(false)
-  const [filterYear, setFilterYear] = useState(selectedMonth.split('-')[0])
-  const [filterMonth, setFilterMonth] = useState(selectedMonth.split('-')[1])
+  const [filterYearMonth, setFilterYearMonth] = useState(selectedMonth)
   const daysInMonth = getDaysInMonth(selectedMonth)
 
   // Attendance detail sub-page
@@ -115,6 +115,12 @@ export default function WageCycleDetail(props: WageCycleDetailProps) {
   return (
     <div className="p-6 max-w-[1400px] mx-auto space-y-6">
       <PageHeader title={selectedProject?.name || ''} onBack={onBack} />
+
+      {/* 月份选择器 - 统一在父级 */}
+      <div className="flex items-center gap-3">
+        <label className="text-sm text-slate-500">月份</label>
+        <MonthPicker value={selectedMonth} onChange={onChangeMonth} />
+      </div>
 
       {/* Tab Bar (统一 Tabs 组件) */}
       <Tabs
@@ -148,7 +154,6 @@ export default function WageCycleDetail(props: WageCycleDetailProps) {
               onBatchDelete={onBatchDeleteAttendances}
               loading={loading}
               onImportAttendance={() => setShowImportModal(true)}
-              onChangeMonth={onChangeMonth}
             />
           )}
           {activeTab === 'wagetable' && (
@@ -160,17 +165,16 @@ export default function WageCycleDetail(props: WageCycleDetailProps) {
               toggleAll={toggleAllWageTable} onGenerate={onGenerateWages}
               onSave={onSaveWages} onBonusDeductionChange={onBonusDeductionChange}
               onBatchDelete={onBatchDeleteWageTable} loading={loading}
-              onChangeMonth={onChangeMonth}
             />
           )}
           {activeTab === 'records' && (
             <WageRecordsTab
               allWageRecords={allWageRecords}
-              filterYear={filterYear} filterMonth={filterMonth}
+              filterYearMonth={filterYearMonth}
               filterMemberName={filterMemberName}
               selectedIds={selectedWageIds}
               paymentEdits={paymentEdits}
-              onFilterYearChange={setFilterYear} onFilterMonthChange={setFilterMonth}
+              onFilterYearMonthChange={setFilterYearMonth}
               onFilterNameChange={setFilterMemberName}
               onPaymentChange={onPaymentChange} onSavePayments={onSavePayments}
               onBankReceiptUpload={onBankReceiptUpload}

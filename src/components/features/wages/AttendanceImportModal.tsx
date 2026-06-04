@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react'
+import { DataTable, type Column } from '@/components/DataTable'
 import { Icon } from '../../ui/Icon'
 
 // 拖拽上传区域（render props 模式）
@@ -167,6 +168,41 @@ export const AttendanceImportModal: React.FC<Props> = ({ show, projectId, yearMo
     onClose()
   }
 
+  // ── 动态列定义（基于表头） ──
+  const previewColumns: Column<any>[] = state.headers.map((h, i) => ({
+    key: `col_${i}`,
+    title: h || `列${i + 1}`,
+    render: (_row: any, index: number) => {
+      const row = state.previewRows[index]
+      if (!row) return null
+      const val = row[i]
+      return <span className={`whitespace-nowrap ${
+        i === state.nameCol ? 'text-emerald-700' :
+        i === state.workDaysCol ? 'text-amber-700 font-medium' :
+        i === state.idCardCol ? 'text-blue-700' : 'text-slate-600'
+      }`}>{val !== undefined && val !== null ? String(val) : ''}</span>
+    }
+  }))
+
+  // ── 匹配结果列定义 ──
+  const matchColumns: Column<MatchedRow>[] = [
+    { key: 'name', title: 'Excel姓名', render: (r) => <span className="text-slate-700">{r.name}</span> },
+    { key: 'idCard', title: '身份证号', render: (r) => <span className="text-slate-400 font-mono text-[11px]">{r.idCard || '—'}</span> },
+    { key: 'workDays', title: '出勤天数', align: 'right', render: (r) => <span className="font-medium text-amber-700">{r.workDays}</span> },
+    {
+      key: 'matchResult', title: '匹配结果',
+      render: (r) => r.matched ? (
+        <span className="text-emerald-600 flex items-center gap-1">
+          <Icon name="Check" size={14} /> {r.workerName}{r.teamName ? ` (${r.teamName})` : ''}
+        </span>
+      ) : (
+        <span className="text-red-500 flex items-center gap-1">
+          <Icon name="X" size={14} /> 未匹配 — 请先在工人管理中录入该工人
+        </span>
+      )
+    },
+  ]
+
   if (!show) return null
 
   const months = yearMonth.split('-')
@@ -271,32 +307,14 @@ export const AttendanceImportModal: React.FC<Props> = ({ show, projectId, yearMo
                     数据预览（前 {state.previewRows.length} 行，共 {state.allRows.length} 行）
                   </label>
                   <div className="border border-slate-200 rounded-xl overflow-hidden max-h-48 overflow-y-auto">
-                    <table className="w-full text-xs">
-                      <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
-                        <tr>
-                          {state.headers.map((h, i) => (
-                            <th key={i} className={`px-3 py-2 text-left font-medium whitespace-nowrap ${
-                              i === state.nameCol ? 'text-emerald-600 bg-emerald-50' :
-                              i === state.workDaysCol ? 'text-amber-600 bg-amber-50' :
-                              i === state.idCardCol ? 'text-blue-600 bg-blue-50' : 'text-slate-500'
-                            }`}>{h || `列${i + 1}`}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {state.previewRows.map((row, ri) => (
-                          <tr key={ri} className="table-row-hover">
-                            {state.headers.map((_, ci) => (
-                              <td key={ci} className={`px-3 py-1.5 whitespace-nowrap ${
-                                ci === state.nameCol ? 'text-emerald-700' :
-                                ci === state.workDaysCol ? 'text-amber-700 font-medium' :
-                                ci === state.idCardCol ? 'text-blue-700' : 'text-slate-600'
-                              }`}>{row[ci] !== undefined && row[ci] !== null ? String(row[ci]) : ''}</td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                    <DataTable
+                      data={state.previewRows}
+                      columns={previewColumns}
+                      rowKey={(item: any) => JSON.stringify(item)}
+                      pagination={false}
+                      showContainer={false}
+                      stickyHeader={true}
+                    />
                   </div>
                 </div>
               )}
@@ -311,36 +329,14 @@ export const AttendanceImportModal: React.FC<Props> = ({ show, projectId, yearMo
                     ）
                   </label>
                   <div className="border border-slate-200 rounded-xl overflow-hidden max-h-60 overflow-y-auto">
-                    <table className="w-full text-xs">
-                      <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
-                        <tr>
-                          <th className="px-3 py-2 text-left font-medium whitespace-nowrap">Excel姓名</th>
-                          <th className="px-3 py-2 text-left font-medium whitespace-nowrap">身份证号</th>
-                          <th className="px-3 py-2 text-right font-medium whitespace-nowrap">出勤天数</th>
-                          <th className="px-3 py-2 text-left font-medium whitespace-nowrap">匹配结果</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {matchedRows.map((r, i) => (
-                          <tr key={i} className={`table-row-hover ${!r.matched ? 'bg-red-50' : ''}`}>
-                            <td className="px-3 py-1.5 text-slate-700">{r.name}</td>
-                            <td className="px-3 py-1.5 text-slate-400 font-mono text-[11px]">{r.idCard || '—'}</td>
-                            <td className="px-3 py-1.5 text-right font-medium text-amber-700">{r.workDays}</td>
-                            <td className="px-3 py-1.5">
-                              {r.matched ? (
-                                <span className="text-emerald-600 flex items-center gap-1">
-                                  <Icon name="Check" size={14} /> {r.workerName}{r.teamName ? ` (${r.teamName})` : ''}
-                                </span>
-                              ) : (
-                                <span className="text-red-500 flex items-center gap-1">
-                                  <Icon name="X" size={14} /> 未匹配 — 请先在工人管理中录入该工人
-                                </span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                    <DataTable
+                      data={matchedRows}
+                      columns={matchColumns}
+                      rowKey={(item: any) => JSON.stringify(item)}
+                      pagination={false}
+                      showContainer={false}
+                      stickyHeader={true}
+                    />
                   </div>
                 </div>
               )}

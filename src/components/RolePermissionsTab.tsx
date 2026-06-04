@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { TABLE } from '@/constants/table'
 import { useToastStore } from '@/store/toastStore'
 import { useConfirm } from '@/hooks/useConfirm'
 import { Spinner } from './ui/Loading/Loading'
@@ -72,14 +73,14 @@ export const RolePermissionsTab: React.FC = () => {
   <button onClick={() => setEditingRoleId(null)} className="px-3 py-1 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"><Icon name="X" size={14} /> 返回</button>
   </div>
   <div className="overflow-x-auto">
-  <table className="w-full text-sm border-collapse">
-  <thead className="bg-slate-50 border-b border-slate-200"><tr><th className="px-3 py-2 text-left text-xs font-medium text-slate-500">资源</th>{actionKeys.map(a => <th key={a} className="px-2 py-2 text-center text-xs font-medium text-slate-500">{ACTION_LABELS[a] || a}</th>)}</tr></thead>
-  <tbody className="divide-y divide-slate-100">
+  <table className={TABLE.table}>
+  <thead className={`${TABLE.headerRow} ${TABLE.stickyHeader}`}><tr><th className={TABLE.headerCell}>资源</th>{actionKeys.map(a => <th key={a} className={`${TABLE.headerCell} text-center`}>{ACTION_LABELS[a] || a}</th>)}</tr></thead>
+  <tbody>
   {resourceKeys.map(resource => (
-  <tr key={resource} className="table-row-hover"><td className="px-3 py-2 text-sm font-medium text-slate-700">{RESOURCE_LABELS[resource] || resource}</td>
+  <tr key={resource} className={TABLE.bodyRow}><td className={`${TABLE.bodyCell} font-medium`}>{RESOURCE_LABELS[resource] || resource}</td>
   {actionKeys.map(action => {
   const code = `${resource}:${action}` as PermissionCode
-  return (<td key={action} className="px-2 py-2 text-center"><input type="checkbox" checked={editingPermissions.includes(code)} onChange={() => togglePermission(code)} className="w-4 h-4 text-primary-600 rounded" /></td>)
+  return (<td key={action} className={`${TABLE.bodyCell} text-center`}><input type="checkbox" checked={editingPermissions.includes(code)} onChange={() => togglePermission(code)} className="w-4 h-4 text-primary-600 rounded" /></td>)
   })}
   </tr>
   ))}

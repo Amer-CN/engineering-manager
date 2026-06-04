@@ -16,10 +16,6 @@ export type { InputProps } from './Input/Input'
 export { Modal } from './Modal/Modal'
 export type { ModalProps } from './Modal/Modal'
 
-// 表格
-export { Table } from './Table/Table'
-export type { TableColumn, TableProps } from './Table/Table'
-
 // 卡片
 export { Card } from './Card/Card'
 export type { CardProps } from './Card/Card'

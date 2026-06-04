@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { HoverScrollbar } from '../../ui/HoverScrollbar'
+import { DataTable, type Column } from '@/components/DataTable'
 import FilterBar from '../../ui/FilterBar'
 import { Button } from '../../ui/Button'
 import { EmptyState } from '../../ui/EmptyState'
@@ -8,11 +8,10 @@ import Spinner from '../../ui/Spinner'
 import { useToastStore } from '@/store/toastStore'
 import { useConfirm } from '@/hooks/useConfirm'
 import { logCreate, logDelete } from '../../../utils/audit'
-import { STATUS_META, computeAttendanceSummary } from '../../../constants/attendance'
-import type { AttendanceRecord } from '../../../types/electron'
+import { STATUS_META, computeAttendanceSummary, summaryDot } from '../../../constants/attendance'
+import type { AttendanceRecord, DayStatus } from '../../../types/electron'
 import AttendanceDetail from '../../AttendanceDetail'
 import AttendanceTimeline from './AttendanceTimeline'
-import { StaffAttendanceRow } from './StaffAttendanceRow'
 import { getAPI } from '@/services/api-adapter'
 
 function getDaysInMonth(yearMonth: string): number {
@@ -225,16 +224,6 @@ const StaffAttendance: React.FC = () => {
     setDetailRecord(record); setDetailMember(member); setDetailYearMonth(ym)
   }, [staff, allAttendances, getAttendanceForMemberMonth, showToast, loadData])
 
-  // Pre-compute row data to stabilize StaffAttendanceRow props
-  const rows = useMemo(() => filteredStaff.map(s => {
-    const att = getAttendanceForMember(s.id)
-    const isSelected = !!att && selectedIds.has(att.id)
-    const deptName = getDeptName(s.departmentId)
-    const entryDay = getEntryDay(s)
-    const historyMonths = historyMap.get(s.id) || []
-    return { s, att, isSelected, deptName, entryDay, historyMonths }
-  }), [filteredStaff, getAttendanceForMember, selectedIds, getDeptName, getEntryDay, historyMap])
-
   // Show timeline sub-page for attendance history
   if (timelineMember) {
     const memberAttendances = allAttendances.filter((a: any) => a.memberId === timelineMember.id)
@@ -267,6 +256,147 @@ const StaffAttendance: React.FC = () => {
 
   const joinedAfter = useMemo(() => staff.filter((s: any) => { const ed = getEntryDate(s); return ed && ed > monthEnd }).length, [staff, getEntryDate, monthEnd])
 
+  // ── Pre-compute row data FIRST (before columns, since columns reference rows) ──
+  const rows = useMemo(() => filteredStaff.map(s => {
+    const att = getAttendanceForMember(s.id)
+    const isSelected = !!att && selectedIds.has(att.id)
+    const deptName = getDeptName(s.departmentId)
+    const entryDay = getEntryDay(s)
+    const historyMonths = historyMap.get(s.id) || []
+    return { s, att, isSelected, deptName, entryDay, historyMonths }
+  }), [filteredStaff, getAttendanceForMember, selectedIds, getDeptName, getEntryDay, historyMap])
+
+  // Build data array for DataTable
+  const tableData = useMemo(() => rows.map((r) => ({ ...r.s, __rowIndex: rows.indexOf(r) })), [rows])
+
+  // ── DataTable 列定义 (rows must be defined before this) ──
+  const columns: Column<any>[] = [
+    {
+      key: 'checkbox', title: '', width: '40px',
+      headerRender: (
+        <input type="checkbox"
+          checked={rows.length > 0 && rows.every(r => r.att && selectedIds.has(r.att.id))}
+          onChange={toggleAll} className="rounded" />
+      ),
+      render: (item) => {
+        const row = rows.find(r => r.s.id === item.id)
+        if (!row) return null
+        return row.att && (
+          <input type="checkbox" checked={row.isSelected}
+            onChange={() => toggleSelect(row.att!.id)} className="rounded" />
+        )
+      }
+    },
+    {
+      key: 'name', title: '姓名',
+      render: (item) => {
+        const row = rows.find(r => r.s.id === item.id)
+        if (!row) return null
+        return (
+          <button onClick={() => setTimelineMember(row.s)}
+            className="text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:underline text-left">
+            {row.s.name}
+          </button>
+        )
+      }
+    },
+    {
+      key: 'departmentId', title: '部门',
+      render: (item) => {
+        const row = rows.find(r => r.s.id === item.id)
+        if (!row) return null
+        return <span className="text-slate-500">{row.deptName}</span>
+      }
+    },
+    {
+      key: 'attendance', title: '当月考勤',
+      render: (item) => {
+        const row = rows.find(r => r.s.id === item.id)
+        if (!row) return null
+        const att = row.att
+        const ready = !!(att && att.dailyStatus && Object.keys(att.dailyStatus).length > 0)
+        const summary = computeAttendanceSummary(att?.dailyStatus, daysInMonth, row.entryDay)
+        const summaryItems = (STATUS_META.filter(x => x.key !== undefined) as { key: DayStatus; label: string; color: string }[])
+          .map(st => ({ ...st, count: summary.counts[st.key] }))
+          .filter(item => item.count > 0)
+        return ready ? (
+          <div className="flex items-center gap-2 flex-wrap text-xs">
+            {summaryItems.map(si => (
+              <span key={si.key} className="inline-flex items-center gap-1 whitespace-nowrap">
+                <span className={`w-2 h-2 rounded-full ${summaryDot[si.key]}`} />
+                <span className="text-slate-600">{si.label}</span>
+                <span className="font-medium text-slate-700">{si.count}天</span>
+              </span>
+            ))}
+          </div>
+        ) : (
+          <span className="text-xs text-slate-400">未标记</span>
+        )
+      }
+    },
+    {
+      key: 'status', title: '状态', align: 'center',
+      render: (item) => {
+        const row = rows.find(r => r.s.id === item.id)
+        if (!row) return null
+        const att = row.att
+        const ready = !!(att && att.dailyStatus && Object.keys(att.dailyStatus).length > 0)
+        const summary = computeAttendanceSummary(att?.dailyStatus, daysInMonth, row.entryDay)
+        return ready ? (
+          summary.daysOff <= 4 ? (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-emerald-100 text-emerald-700">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />全勤
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500" />缺勤
+            </span>
+          )
+        ) : (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-500">未标记</span>
+        )
+      }
+    },
+    {
+      key: 'history', title: '历史考勤',
+      render: (item) => {
+        const row = rows.find(r => r.s.id === item.id)
+        if (!row) return null
+        const historyYears = [...new Set(row.historyMonths.map((ym: string) => ym.slice(0, 4)))].sort()
+        return row.historyMonths.length > 0 ? (
+          <button onClick={() => setTimelineMember(row.s)}
+            className="text-xs text-indigo-600 hover:text-indigo-800 hover:underline">
+            {historyYears.length}年 · {row.historyMonths.length}个月
+          </button>
+        ) : (
+          <span className="text-xs text-slate-300">-</span>
+        )
+      }
+    },
+    {
+      key: 'actions', title: '操作', align: 'center',
+      render: (item) => {
+        const row = rows.find(r => r.s.id === item.id)
+        if (!row) return null
+        return (
+          <div className="flex items-center justify-center gap-1">
+            {row.att ? (
+              <>
+                <button onClick={() => openHistoryMonth(row.s.id, yearMonth)}
+                  className="text-indigo-600 hover:text-indigo-800 text-sm font-medium">编辑</button>
+                <button onClick={() => handleDelete(row.att)}
+                  className="text-red-400 hover:text-red-600 text-sm">删除</button>
+              </>
+            ) : (
+              <button onClick={() => openHistoryMonth(row.s.id, yearMonth)}
+                className="text-indigo-600 hover:text-indigo-800 text-sm">创建</button>
+            )}
+          </div>
+        )
+      }
+    },
+  ]
+
   if (loading) {
     return <Spinner size="md" text="加载考勤数据..." />
   }
@@ -275,7 +405,7 @@ const StaffAttendance: React.FC = () => {
     <div className="flex-1 flex flex-col overflow-hidden">
       {ConfirmDialog}
       {/* Toolbar */}
-      <FilterBar>
+      <FilterBar className="mb-6">
         <div className="flex items-center gap-2">
           <input type="month" value={yearMonth} onChange={e => setYearMonth(e.target.value)}
             className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm" />
@@ -311,44 +441,16 @@ const StaffAttendance: React.FC = () => {
             description={staff.length === 0 ? '请先在人员档案中添加管理人员' : '请调整筛选条件'} />
         </div>
       ) : (
-        <HoverScrollbar className="bg-white rounded-xl shadow-sm flex-1">
-          <table className="w-full">
-            <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
-              <tr className="">
-                <th className="px-3 py-3 w-10">
-                  <input type="checkbox"
-                    checked={selectedIds.size > 0 && (() => { const ids = filteredStaff.map(s => getAttendanceForMember(s.id)).filter(Boolean).map((a: any) => a.id); return ids.length > 0 && ids.every((id: number) => selectedIds.has(id)) })()}
-                    onChange={toggleAll} className="rounded" />
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">姓名</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">部门</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">当月考勤</th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">状态</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">历史考勤</th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">操作</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {rows.map(({ s, att, isSelected, deptName, entryDay, historyMonths }) => (
-                  <StaffAttendanceRow
-                    key={s.id}
-                    s={s}
-                    att={att}
-                    isSelected={isSelected}
-                    daysInMonth={daysInMonth}
-                    yearMonth={yearMonth}
-                    historyMonths={historyMonths}
-                    deptName={deptName}
-                    entryDay={entryDay}
-                    onToggleSelect={toggleSelect}
-                    onTimeline={setTimelineMember}
-                    onEdit={openHistoryMonth}
-                    onDelete={handleDelete}
-                  />
-              ))}
-            </tbody>
-          </table>
-        </HoverScrollbar>
+        <>
+          <DataTable
+            data={tableData}
+            columns={columns}
+            rowKey="id"
+            useHoverScrollbar={true}
+            scrollClassName="h-full"
+            pagination={false}
+          />
+        </>
       )}
 
       {/* Legend */}

@@ -6,6 +6,7 @@ namespace EngineeringManager.Api;
 
 public class MainWindow : Form
 {
+    private readonly bool _isProduction;
     private WebView2? webView;
     private bool _isFullScreen;
     private bool _isMaximized;
@@ -22,8 +23,9 @@ public class MainWindow : Form
     // ── 双击检测 ──
     private DateTime _lastClickTime = DateTime.MinValue;
 
-    public MainWindow()
+    public MainWindow(bool isProduction = false)
     {
+        _isProduction = isProduction;
         FormBorderStyle = FormBorderStyle.None;
         Icon = new Icon(Path.Combine(AppContext.BaseDirectory, "app.ico"));
         Size = new Size(300, 400);
@@ -188,7 +190,8 @@ public class MainWindow : Form
             webView.CoreWebView2.Settings.IsWebMessageEnabled = true;
 
             webView.CoreWebView2.WebMessageReceived += OnWebMessage;
-            webView.CoreWebView2.Navigate("http://localhost:5173");
+            var frontendUrl = _isProduction ? "http://localhost:5048" : "http://localhost:5173";
+            webView.CoreWebView2.Navigate(frontendUrl);
 
             webView.CoreWebView2.DocumentTitleChanged += (_, _) =>
                 Text = $"工程管家 - {webView.CoreWebView2.DocumentTitle}";

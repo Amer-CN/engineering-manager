@@ -1,15 +1,27 @@
 import React, { useState, useEffect } from 'react'
+import { DataTable, type Column } from '@/components/DataTable'
 import { motion } from 'framer-motion'
+import FilterBar from '../../ui/FilterBar'
 import { Button } from '../../ui/Button'
 import { EmptyState } from '../../ui/EmptyState'
 import Spinner from '../../ui/Spinner'
 import { useToastStore } from '@/store/toastStore'
+import { useConfirm } from '@/hooks/useConfirm'
 import { useDepartments } from '../../../hooks/useDepartments'
 import PositionEditor from './PositionEditor'
 import { getAPI } from '@/services/api-adapter'
 
+interface DeptRow {
+  id: number
+  name: string
+  memberCount: number
+  managerId?: number | null
+  positions?: string[]
+}
+
 const DepartmentManager: React.FC = () => {
   const showToast = useToastStore(state => state.showToast)
+  const { confirm, ConfirmDialog } = useConfirm()
   const { departments, loading, create, update, remove } = useDepartments()
   const [members, setMembers] = useState<any[]>([])
   const [showForm, setShowForm] = useState(false)
@@ -66,7 +78,8 @@ const DepartmentManager: React.FC = () => {
       ? `「${dept.name}」下有 ${inDept.length} 名人员（${names}），请先将他们转移或移除后再删除部门。`
       : `确定要删除「${dept.name}」吗？`
     if (names) { showToast(msg, 'error'); return }
-    if (!confirm(msg)) return
+    const ok = await confirm({ title: '确认删除', content: msg, confirmVariant: 'danger' })
+    if (!ok) return
     const result = await remove(dept.id)
     if (result.success) {
       showToast('部门已删除', 'success')
@@ -75,49 +88,48 @@ const DepartmentManager: React.FC = () => {
     }
   }
 
+  const columns: Column<DeptRow>[] = [
+    { key: 'name', title: '部门名称', render: (item) => <span className="font-medium text-slate-800">{item.name}</span> },
+    { key: 'memberCount', title: '人数', render: (item) => <span className="text-sm text-slate-600">{item.memberCount} 人</span> },
+    { key: 'managerId', title: '负责人', render: (item) => <span className="text-sm text-slate-600">{getManagerName(item.managerId)}</span> },
+    { key: 'actions', title: '操作', align: 'center', render: (item) => (
+      <div className="flex items-center justify-center gap-2">
+        <button onClick={() => openEdit(item)} className="btn btn-ghost btn-sm text-primary-600">编辑</button>
+        <button onClick={() => handleDelete(item)} className="btn btn-danger btn-sm">删除</button>
+      </div>
+    )},
+  ]
+
   if (loading) {
     return <Spinner size="md" text="加载部门数据..." />
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm">
-      <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+    <div className="flex-1 flex flex-col overflow-hidden">
+      {ConfirmDialog}
+      <FilterBar className="mb-6">
         <h2 className="text-lg font-semibold text-slate-800">部门列表</h2>
+        <div className="flex-1" />
         <Button onClick={() => { resetForm(); setShowForm(true) }} size="sm">
           <span className="mr-1">+</span> 新建部门
         </Button>
-      </div>
+      </FilterBar>
 
       {departments.length === 0 ? (
-        <div className="py-12">
+        <div className="bg-white rounded-xl shadow-sm flex-1 py-12">
           <EmptyState icon="Building2" title="暂无部门" description="点击上方按钮创建第一个部门" />
         </div>
       ) : (
-        <table className="w-full">
-          <thead className="bg-slate-50 border-b border-slate-200">
-            <tr className="">
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">部门名称</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">人数</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">负责人</th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-slate-500 uppercase">操作</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {departments.map((dept) => (
-              <tr key={dept.id} className="hover:bg-slate-50">
-                <td className="px-6 py-3 font-medium text-slate-800">{dept.name}</td>
-                <td className="px-6 py-3 text-sm text-slate-600">{dept.memberCount} 人</td>
-                <td className="px-6 py-3 text-sm text-slate-600">{getManagerName(dept.managerId)}</td>
-                <td className="px-6 py-3 text-center">
-                  <div className="flex items-center justify-center gap-2">
-                    <button onClick={() => openEdit(dept)} className="btn btn-ghost btn-sm text-primary-600">编辑</button>
-                    <button onClick={() => handleDelete(dept)} className="btn btn-danger btn-sm">删除</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <DataTable
+          data={departments as DeptRow[]}
+          columns={columns}
+          rowKey="id"
+          pagination={false}
+          useHoverScrollbar={true}
+          scrollClassName="h-full"
+          emptyText="暂无部门"
+          emptyIcon="Building2"
+        />
       )}
 
       {showForm && (

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { DataTable, type Column } from '@/components/DataTable'
 import { motion } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
 import { Spinner } from '../../ui/Loading/Loading'
@@ -65,6 +66,31 @@ export function WorkerImportModal({
   }
   return { valid: errors.length === 0, errors }
   }
+
+  // ── 动态列定义（基于表头） ──
+  const previewColumns: Column<any>[] = importState ? [
+    {
+      key: '_status', title: '', width: '32px',
+      render: (_row: any, index: number) => {
+        const row = importState.previewRows[index]
+        if (!row) return null
+        const { valid, errors } = validateRow(row, importState.mapping, index)
+        return valid
+          ? <Icon name="Check" size={12} className="text-emerald-500" />
+          : <span title={errors.join(', ')}><Icon name="AlertTriangle" size={12} className="text-red-400" /></span>
+      }
+    },
+    ...importState.headers.map((h, i) => ({
+      key: `col_${i}`,
+      title: h || `列${i + 1}`,
+      render: (_row: any, index: number) => {
+        const row = importState.previewRows[index]
+        if (!row) return null
+        const val = row[i]
+        return <span className="text-slate-700 whitespace-nowrap">{val !== undefined && val !== null ? String(val) : ''}</span>
+      }
+    }))
+  ] : []
 
   return (
   <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[70]" onClick={onClose}>
@@ -162,38 +188,14 @@ export function WorkerImportModal({
   数据预览（前 {Math.min(10, importState.previewRows.length)} 行，共 {importState.allRows.length} 行）
   </label>
   <div className="border border-slate-200 rounded-xl overflow-hidden max-h-60 overflow-y-auto">
-  <table className="w-full text-xs">
-  <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
-  <tr>
-  <th className="px-2 py-2 text-left font-medium text-slate-500 w-8">#</th>
-  {importState.headers.map((h, i) => (
-  <th key={i} className="px-3 py-2 text-left font-medium text-slate-500 whitespace-nowrap">
-  {h || `列${i + 1}`}
-  </th>
-  ))}
-  </tr>
-  </thead>
-  <tbody className="divide-y divide-slate-100">
-  {importState.previewRows.map((row, ri) => {
-  const { valid, errors } = validateRow(row, importState.mapping, ri)
-  return (
-  <tr key={ri} className={valid ? '' : 'bg-red-50'}>
-  <td className="px-2 py-1.5 text-slate-400">
-  {valid
-  ? <Icon name="Check" size={12} className="text-emerald-500" />
-  : <span title={errors.join(', ')}><Icon name="AlertTriangle" size={12} className="text-red-400" /></span>
-  }
-  </td>
-  {importState.headers.map((_, ci) => (
-  <td key={ci} className="px-3 py-1.5 text-slate-700 whitespace-nowrap">
-  {row[ci] !== undefined && row[ci] !== null ? String(row[ci]) : ''}
-  </td>
-  ))}
-  </tr>
-  )
-  })}
-  </tbody>
-  </table>
+  <DataTable
+    data={importState.previewRows}
+    columns={previewColumns}
+    rowKey={(item: any) => JSON.stringify(item)}
+    pagination={false}
+    showContainer={false}
+    stickyHeader={true}
+  />
   </div>
   </div>
   </>
@@ -261,16 +263,17 @@ export function WorkerImportModal({
   警告（{result.warnings.length} 条）
   </summary>
   <div className="mt-2 max-h-40 overflow-y-auto border border-amber-200 rounded-lg">
-  <table className="w-full text-xs">
-  <thead className="bg-amber-50 sticky top-0">
-  <tr><th className="px-3 py-1.5 text-left font-medium text-amber-600">行号</th><th className="px-3 py-1.5 text-left font-medium text-amber-600">姓名</th><th className="px-3 py-1.5 text-left font-medium text-amber-600">说明</th></tr>
-  </thead>
-  <tbody className="divide-y divide-amber-100">
-  {result.warnings.map((w, i) => (
-  <tr key={i}><td className="px-3 py-1.5 text-slate-700">{w.row}</td><td className="px-3 py-1.5 text-slate-700">{w.name}</td><td className="px-3 py-1.5 text-amber-600">{w.message}</td></tr>
-  ))}
-  </tbody>
-  </table>
+  <DataTable
+    data={result.warnings.map((w, i) => ({ ...w, _idx: i }))}
+    columns={[
+      { key: 'row', title: '行号', width: '60px' },
+      { key: 'name', title: '姓名', width: '80px' },
+      { key: 'message', title: '说明', render: (item: any) => <span className="text-amber-600">{item.message}</span> },
+    ]}
+    rowKey="_idx"
+    pagination={false}
+    showContainer={false}
+  />
   </div>
   </details>
   )}
@@ -280,16 +283,16 @@ export function WorkerImportModal({
   失败详情（{result.failures.length} 条）
   </summary>
   <div className="mt-2 max-h-40 overflow-y-auto border border-slate-200 rounded-lg">
-  <table className="w-full text-xs">
-  <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
-  <tr><th className="px-3 py-1.5 text-left font-medium text-slate-500">行号</th><th className="px-3 py-1.5 text-left font-medium text-slate-500">原因</th></tr>
-  </thead>
-  <tbody className="divide-y divide-slate-100">
-  {result.failures.map((f, i) => (
-  <tr key={i}><td className="px-3 py-1.5 text-slate-700">{f.row}</td><td className="px-3 py-1.5 text-red-500">{f.reason}</td></tr>
-  ))}
-  </tbody>
-  </table>
+  <DataTable
+    data={result.failures.map((f, i) => ({ ...f, _idx: i }))}
+    columns={[
+      { key: 'row', title: '行号', width: '60px' },
+      { key: 'reason', title: '原因', render: (item: any) => <span className="text-red-500">{item.reason}</span> },
+    ]}
+    rowKey="_idx"
+    pagination={false}
+    showContainer={false}
+  />
   </div>
   </details>
   )}

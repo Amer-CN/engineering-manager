@@ -81,9 +81,15 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
 
   // ==================== 合作单位操作 ====================
   const handlePartnerSubmit = async (formData: any) => {
+  console.log('[PartnerSubmit] called, name:', formData.name)
   try {
   // 处理文件字段
   let processed = { ...formData }
+
+  // projectIds 数组转 JSON 字符串（后端期望字符串）
+  if (Array.isArray(processed.projectIds)) {
+    processed.projectIds = JSON.stringify(processed.projectIds)
+  }
 
   // 解析合作单位关联的项目名
   const partnerProjectName = processed.projectIds?.length > 0
@@ -100,7 +106,7 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
   `${processed.name || '单位'}_营业执照${ext}`,
   partnerProjectName,
   ).catch((err: any) => {
-  showToast(err?.message || '营业执照文件上传失败', 'error')
+  try { showToast(err?.message || '营业执照文件上传失败', 'error') } catch {}
   return ''
   })
   if (fileName) processed.licenseFile = fileName
@@ -120,7 +126,7 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
   `${processed.name || '单位'}_附件${ext}`,
   partnerProjectName,
   ).catch((err: any) => {
-  showToast(err?.message || '附件上传失败', 'error')
+  try { showToast(err?.message || '附件上传失败', 'error') } catch {}
   return ''
   })
   newParts.push(fn || part)
@@ -136,20 +142,23 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
   // 审计日志
   logUpdate('partners', processed.name, editingPartner.id, { before: editingPartner, after: processed })
   } else {
+  console.log('[PartnerSubmit] creating partner with data:', JSON.stringify(processed).substring(0, 200))
   const result = await (await getAPI()).createPartner(processed)
+  console.log('[PartnerSubmit] result:', JSON.stringify(result))
   if (result.success && result.data) {
   // 审计日志
   logCreate('partners', processed.name, result.data.id, processed)
   }
   }
+  console.log('[PartnerSubmit] loadData...')
   loadData()
   setShowPartnerModal(false)
   setEditingPartner(null)
   refresh?.()
-  showToast(editingPartner ? '合作单位更新成功' : '合作单位创建成功', 'success')
+  try { showToast(editingPartner ? '合作单位更新成功' : '合作单位创建成功', 'success') } catch {}
   } catch (error: any) {
   console.error('保存失败:', error)
-  showToast(error?.message || '保存失败', 'error')
+  try { showToast(error?.message || '保存失败', 'error') } catch {}
   }
   }
 
@@ -307,10 +316,13 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
   {showPartnerModal && (
   <motion.div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
   <div className="modal-content flex flex-col" style={{ height: 'min(90vh, 800px)' }}>
-  <div className="px-6 py-4 border-b border-slate-200 bg-white shrink-0">
+  <div className="px-6 py-4 border-b border-slate-200 bg-white shrink-0 flex items-center justify-between">
   <h2 className="text-xl font-semibold text-slate-800">
   {editingPartner ? '编辑单位' : '添加单位'}
   </h2>
+  <button type="button" onClick={() => { setShowPartnerModal(false); setEditingPartner(null) }} className="text-slate-400 hover:text-slate-600 p-1">
+  <Icon name="X" size={20} />
+  </button>
   </div>
   <div className="flex-1 min-h-0 overflow-hidden">
   <HoverScrollbar className="h-full">
@@ -345,10 +357,13 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
   {showSupervisorModal && (
   <motion.div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
   <div className="modal-content flex flex-col" style={{ height: 'min(90vh, 800px)' }}>
-  <div className="px-6 py-4 border-b border-slate-200 bg-white shrink-0">
+  <div className="px-6 py-4 border-b border-slate-200 bg-white shrink-0 flex items-center justify-between">
   <h2 className="text-xl font-semibold text-slate-800">
   {editingSupervisor ? '编辑单位' : '添加单位'}
   </h2>
+  <button type="button" onClick={() => { setShowSupervisorModal(false); setEditingSupervisor(null) }} className="text-slate-400 hover:text-slate-600 p-1">
+  <Icon name="X" size={20} />
+  </button>
   </div>
   <div className="flex-1 min-h-0 overflow-hidden">
   <HoverScrollbar className="h-full">

@@ -1,5 +1,43 @@
 # 工程管家 - 更新日志
 
+## v0.68.0（2026-06-04）— 列表全局统一 + OCR 修复 + AI 识别动画
+
+### 列表样式全局统一
+- **TABLE 常量修复**：headerRow 补全 border-b，stickyHeader 去重 bg-slate-50，bodyRow 去重 hover
+- **DataTable 重写**：基于 TABLE 常量，新增 skeleton 骨架屏、headerRender、align 对齐修饰、pagination/footer/extraActions props
+- **删除废弃组件**：`src/components/ui/Table/`（完全未使用）
+- **44 个文件迁移**：所有手写 table/HoverScrollbar 迁移到 DataTable 组件
+- **金标准模式**：`FilterBar className="mb-6"` + `DataTable(showContainer 默认, useHoverScrollbar)`，无额外 div 包裹
+
+### 列头排序 + 筛选
+- **sortable 属性**：表头点击切换 ↑↓ 排序，支持中文 localeCompare 和数值比较
+- **filterable 属性**：列头漏斗图标，createPortal 渲染 dropdown，文本搜索 + checkbox 多选 + 全选/清除
+- **30+ 个列表补充**：StaffList/InvoiceList/SettlementList/ContractPage/Users/WageTableTab/WageRecordsTab/ItemList/MaterialList/WagePaymentRecords 等
+
+### 百度 OCR 修复
+- **后端 API Key 读取**：`LoadOcrConfig()` 搜索路径补充项目根 public/ 目录
+- **JSON 反序列化修复**：`Program.cs` 添加 `PropertyNameCaseInsensitive = true`
+- **营业执照字段解析**：百度返回的 `{"words": "xxx"}` 对象改为 `v.GetProperty("words").GetString()`
+- **注册地址映射**：优先读"住所"字段，回退"地址"
+- **PartnerDto 补全**：新增 `ProjectIds` 参数，INSERT/UPDATE SQL 加上 project_ids
+- **PDF 上传识别**：`useBusinessLicenseOCR` 新增 pdfjs-dist 逐页转图片，完整 PDF 逐页识别
+
+### 班组工资汇总
+- **后端实现**：新增 `/api/team-wages` 端点，按班组汇总工人工资
+- **前端接驳**：`tauri-bridge.ts` 修正调用路径和参数
+
+### UI 改进
+- **MonthPicker 组件**：年份快速切换 + 3×4 月份网格 + createPortal 渲染，替换原生 input[type=month]
+- **OCRRecognitionFeedback 组件**：浮动定位（fixed top-6 right-6），识别中扫描线动画，成功 spring 弹出+2.5s 自动消失，失败抖动+3s 自动消失
+- **关闭按钮**：所有模态框 header 统一添加 X 关闭按钮
+
+### 数据修复
+- **工人字段缺失**：后端 SQL 补全 gender/birth_date/bank_account 等字段；前端 useLaborData 修正 snake_case→camelCase 映射
+- **考勤姓名**：JOIN workers 表获取工人姓名（之前 member_id 为 null 时查不到）
+- **工资表班组**：JOIN worker_teams 表获取班组名称
+- **projectIds 类型**：提交时数组转 JSON 字符串（后端 DTO 期望 string）
+- **showToast 异常**：所有 showToast 调用包裹 try-catch，防止 WebView2 中崩溃
+
 ## v0.67.0（2026-06-02）— 启动动画 + 加载体验统一
 
 ### 启动动画（Reasonix 风格）
@@ -48,11 +86,6 @@
 - 后端：`cd EngineeringManager.Api && dotnet run`（localhost:5048）
 - 前端：`npm run dev`（localhost:5173）
 - 窗口：WinForms + WebView2，圆角无边框，React TitleBar 控制
-
-### 待完成
-- OCR 端点需接入百度 API（当前返回 stub）
-- 窗口拖动功能
-- 生产打包配置
 
 ## v0.65.0（2026-05-31）— AI 智能识别全面接入
 

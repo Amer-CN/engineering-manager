@@ -1,7 +1,8 @@
 import React from 'react'
-import { DataTable, TableCell } from '../../DataTable'
+import { DataTable } from '../../DataTable'
 import { Supervisor, Project } from '../../../types/electron'
 import { supervisorCategories } from '../../../data/regions'
+import FilterBar from '../../ui/FilterBar'
 import { Icon } from '../../ui/Icon'
 
 interface SupervisorListProps {
@@ -53,7 +54,7 @@ export const SupervisorList: React.FC<SupervisorListProps> = ({
   return (
     <>
       {/* 筛选器 */}
-      <div className="card p-4 mb-4 flex items-center gap-4">
+      <FilterBar className="mb-6 shrink-0">
         <div className="flex-1">
           <input
             type="text"
@@ -73,7 +74,7 @@ export const SupervisorList: React.FC<SupervisorListProps> = ({
             <option key={cat.value} value={cat.value}>{cat.label}</option>
           ))}
         </select>
-      </div>
+      </FilterBar>
 
       {/* 统计卡片 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
@@ -96,10 +97,11 @@ export const SupervisorList: React.FC<SupervisorListProps> = ({
       </div>
 
       {/* 列表 */}
-      <div className="card flex-1 overflow-hidden relative min-h-0">
+      <div className="flex-1 overflow-hidden relative min-h-0">
         <DataTable
           data={filteredSupervisors}
           useHoverScrollbar={true}
+          scrollClassName="h-full"
           columns={[
             {
               key: 'name',
@@ -149,7 +151,7 @@ export const SupervisorList: React.FC<SupervisorListProps> = ({
               title: '操作',
               width: '140px',
               render: (supervisor) => (
-                <TableCell.Actions>
+                <div className="flex items-center gap-1">
                   <button
                     onClick={(e) => { e.stopPropagation(); onEdit(supervisor) }}
                     className="btn btn-ghost btn-sm"
@@ -162,13 +164,13 @@ export const SupervisorList: React.FC<SupervisorListProps> = ({
                   >
                     删除
                   </button>
-                </TableCell.Actions>
+                </div>
               )
             }
           ]}
           rowKey="id"
           emptyText="暂无监管单位"
-          emptyIcon={<Icon name="Landmark" size={20} />}
+          emptyIcon="Landmark"
         />
       </div>
     </>

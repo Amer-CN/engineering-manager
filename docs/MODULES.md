@@ -19,12 +19,12 @@
 | 身份证 | useIdCardOCR | WorkerForm | 姓名/身份证号/性别/民族/出生日期/住址 |
 | 增值税发票 | useInvoiceOCR | InvoiceForm | 发票号/日期/金额/税率/商品名称/双方 |
 | 银行卡 | useBankCardOCR | WorkerForm | 卡号/银行名称 |
-| 营业执照 | useBusinessLicenseOCR | PartnerForm | 公司名/信用代码/地址/经营范围 |
+| 营业执照 | useBusinessLicenseOCR | PartnerForm | 公司名/信用代码/注册地址（住所优先）/经营范围 |
 | 银行回单 | useBankReceiptOCR | PaymentForm | 日期/金额/收付款方 |
 | 开户许可证 | usePermitOCR | PartnerForm | 信用代码/公司名 |
 | 银行单据 | useBankStatementOCR | — | 交易明细列表 |
 | 通用票据 | useGeneralReceiptOCR | — | 文字内容/金额/日期 |
-| 企业查询 | useCompanyQueryOCR | — | 工商注册信息（需单独配置 API） |
+| 企业查询 | useCompanyQueryOCR | — | 标准版百度 OCR 不支持名称搜索，需上传营业执照图片识别 |
 
 ### 关键文件
 - `EngineeringManager.Api/Endpoints/OcrEndpoints.cs` — C# OCR 端点（572 行，9 种识别 API）
@@ -33,9 +33,11 @@
 - `src/components/SettingsOcrSection.tsx` — AI 智能识别设置页
 
 ### UI 模式（统一）
-- **识别中**：蓝紫渐变按钮 + 旋转加载 + 脉冲文字
-- **成功后**：emerald 绿色结果卡片 + 滑入动画 + 详细摘要
-- **图标**：Sparkles（AI 感）→ CheckCircle（成功）
+- **新建组件**：`src/components/ui/OCRRecognitionFeedback.tsx` — 浮动定位（`fixed top-6 right-6 z-[9999]`），不影响表单布局
+- **识别中**：蓝紫渐变卡片 + 旋转 AI 图标 + 脉冲光环 + 扫描线动画 + 阶段文字循环（上传→分析→识别→提取）+ 脉冲进度点
+- **成功后**：浮动 emerald 绿色卡片 + spring 弹簧弹出（scale 0.8→1, stiffness 500）+ 顶部光晕 + Sparkles 图标 + 字段逐条出现（Zap 图标 + 120ms stagger）+ 2.5 秒自动消失
+- **失败后**：浮动红色卡片 + 抖动动画 + AlertCircle 图标 + 3 秒自动消失
+- **图标**：Sparkles（识别中）→ CheckCircle（成功）→ AlertCircle（失败）
 
 ### 调用统计
 - 保存路径：`<userData>/ocr-stats.json`
@@ -70,7 +72,7 @@
 - **模块位置**：侧边栏「核心业务」分组，路由 `/labor`，图标 HardHat
 - **职能范围**：农民工班组/档案/导入/工资管理，一级Tab直接访问工资数据
 - **页面容器**：`LaborManagement.tsx`（~280行，4-Tab容器，参考HRManagement.tsx简洁模式）
-- **4个Tab**：看板（5 KPI + 饼图 + 班组列表）→ 工人库（表格：姓名/身份证/年龄/性别/工种/日工资/银行卡号/操作）→ 班组管理（按项目分组卡片网格）→ 工资管理（直接渲染WageManagement）
+- **4个Tab**：看板（5 KPI + 饼图 + 班组列表）→ 工人库（表格：姓名/身份证/年龄/性别/工种/日工资/银行卡号/操作，支持列头排序+筛选）→ 班组管理（按项目分组卡片网格）→ 工资管理（直接渲染WageManagement）
 - **Tab导航**：下划线样式（border-b），琥珀色系(amber)，localStorage持久化 `labor_active_tab`，framer-motion layoutId="labor-tab-indicator" 滑动指示器
 - **状态管理**：3个Hook收敛——useLaborData（数据加载）、useLaborModals（~10个模态框状态）、useLaborOperations（整合useMemberOperations+useTeamOps+PoolWorker操作）
 - **表单统一**：WorkerPoolForm（快速添加）底部增加"填写完整信息→"切换到MemberForm（完整编辑）
@@ -134,11 +136,12 @@
 - 核心文件：`Templates.tsx`, `TemplateDashboard.tsx`, `TemplateList.tsx`, `TemplateForm.tsx`, `TemplateCard.tsx`, `TemplatePreview.tsx`, `TemplateGenerate.tsx`, `TemplateSelectorModal.tsx`, `config.tsx`
 - **C# 端点**：`EngineeringManager.Api/Endpoints/SystemEndpoints.cs`
 
-### 工资管理（v3.2 — 月份选择器内嵌Tab）
+### 工资管理（v3.3 — 月份选择器统一到父级）
 - **侧边栏**：隐藏（showInSidebar: false），通过工人管理模块「工资管理」Tab 直接访问，或直接 URL `/wages`
 - **职能范围**：仅工人日薪制工资/考勤，管理人员薪资逻辑已彻底移除（v3.0 代码级清理）
 - **架构**：Dashboard（2 KPI 统计+项目卡片）→ WageCycleDetail（考勤管理/项目工资表/工资发放记录 3 Tab）
-- **月份选择器**：从 WageCycleDetail 头部移除，嵌入各 Tab 内部——考勤管理和项目工资表各有一个 `<input type="month">`，工资发放记录使用独立的年/月/姓名筛选
+- **月份选择器**：统一使用 `MonthPicker` 组件（年份快速切换+3×4 月份网格，createPortal 渲染避免溢出），位于 WageCycleDetail 顶部 Tabs 上方，所有 Tab 共享同一个月份
+- **列头筛选**：考勤/工资表/发放记录均支持表头漏斗筛选（filterable 属性，createPortal+搜索+checkbox 多选）
 - **考勤系统**：按月生成，5 种日状态，AttendanceDetail 画笔模式日历，支持 Excel 导入（出勤天数），走 `generateDefaultAttendancesV2` / `batchImportAttendances` 两条路径
 - **计算规则**：`日薪 × 出勤天数 + 奖金 - 扣款`（`calculateActualWage(dailyWage, workDays, bonus, deduction)`）
 - **工资发放记录**：应发工资(只读) + 实发金额/发放日期(手动，`type="text" inputMode="decimal"` 支持精确小数输入) + 差额(自动)
@@ -169,7 +172,8 @@
 
 ### 其他模块
 - **仓库管理**：物料库 / 出入库记录 / 项目材料（整合材料管理）→ `EngineeringManager.Api/Endpoints/InventoryEndpoints.cs`
-- **单位管理**：合作单位 + 监管单位（Tab切换），纳税资质，统一社会信用代码联网填充 → `EngineeringManager.Api/Endpoints/PartnerEndpoints.cs`
+- **单位管理**：合作单位 + 监管单位（Tab切换），表头支持排序+筛选（filterable select/text），不再需要顶部的搜索/类型/项目筛选框
+- **营业执照 PDF 支持**：PDF 上传后由 `useBusinessLicenseOCR` 逐页转图片识别，找到即停
 
 ---
 

@@ -1,6 +1,7 @@
 ﻿using System.Data;
 using Microsoft.Data.Sqlite;
 using Dapper;
+using Microsoft.Extensions.FileProviders;
 using EngineeringManager.Api;
 
 // ============ API 配置类（供 EntryPoint.cs 调用） ============
@@ -9,8 +10,11 @@ public static class ApiConfig
 {
     public static void ConfigureServices(WebApplicationBuilder builder)
     {
+        // 强制 API 监听 5048 端口（launchSettings.json 只在 dotnet run 时生效）
+        builder.WebHost.UseUrls("http://localhost:5048");
+
         builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
-            p.WithOrigins("http://localhost:5173", "http://localhost:3000")
+            p.WithOrigins("http://localhost:5173", "http://localhost:3000", "http://localhost:5048")
              .AllowAnyMethod()
              .AllowAnyHeader()));
 
@@ -29,12 +33,65 @@ public static class ApiConfig
         });
 
         builder.Services.AddHttpClient();
+
+// 支持 camelCase JSON 反序列化（前端发 camelCase，后端 DTO 用 PascalCase）
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.PropertyNameCaseInsensitive = true;
+});
     }
+
+    /// <summary>
+    /// 生产模式标记：dist/ 存在时为 true（C# 自托管前端静态文件）
+    /// </summary>
+    public static bool IsProduction { get; private set; }
 
     public static void ConfigureApp(WebApplication app)
     {
+        // 检测 dist/ 是否存在 → 生产模式
+        var distPath = Path.Combine(AppContext.BaseDirectory, "dist");
+        IsProduction = Directory.Exists(distPath);
+
+        if (IsProduction)
+        {
+            Console.WriteLine($"[App] 生产模式：托管前端静态文件 {distPath}");
+
+            // 1. SPA 默认文件（index.html）
+            app.UseDefaultFiles(new DefaultFilesOptions
+            {
+                FileProvider = new PhysicalFileProvider(distPath)
+            });
+
+            // 2. 静态文件服务（JS/CSS/图片 + ocr-config.json 等）
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = new PhysicalFileProvider(distPath)
+            });
+        }
+
         app.UseCors();
         RegisterEndpoints(app);
+
+        if (IsProduction)
+        {
+            // 3. SPA 回退：非 /api 路由全部返回 index.html
+            app.MapWhen(ctx => !ctx.Request.Path.StartsWithSegments("/api"), spa =>
+            {
+                spa.Use(async (ctx, next) =>
+                {
+                    var indexPath = Path.Combine(distPath, "index.html");
+                    if (File.Exists(indexPath))
+                    {
+                        ctx.Response.ContentType = "text/html; charset=utf-8";
+                        await ctx.Response.SendFileAsync(indexPath);
+                    }
+                    else
+                    {
+                        await next();
+                    }
+                });
+            });
+        }
     }
 
     private static void RegisterEndpoints(WebApplication app)

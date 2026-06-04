@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { HoverScrollbar } from './ui/HoverScrollbar'
+import { DataTable, type Column } from '@/components/DataTable'
 import {
   AuditLog, AuditAction,
   queryAuditLogs, AuditStats
@@ -59,6 +59,67 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
   const { logs, total, totalPages } = pagedData
   const { page } = f
 
+  // ── DataTable 列定义 ──
+  const columns: Column<AuditLog>[] = [
+    {
+      key: 'timestamp', title: '时间',
+      render: (log) => {
+        const { date, time } = formatTimestamp(log.timestamp)
+        return (
+          <div>
+            <div className="text-sm text-slate-800">{date}</div>
+            <div className="text-xs text-slate-400">{time}</div>
+          </div>
+        )
+      }
+    },
+    {
+      key: 'username', title: '用户',
+      render: (log) => (
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-sm font-medium text-primary-700">{log.username.charAt(0).toUpperCase()}</div>
+          <span className="text-sm text-slate-700">{log.username}</span>
+        </div>
+      )
+    },
+    {
+      key: 'action', title: '操作',
+      render: (log) => {
+        const action = actionConfig[log.action] || { label: log.action, color: 'text-slate-700', bgColor: 'bg-slate-100' }
+        return (
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${action.bgColor} ${action.color}`}>{action.label}</span>
+        )
+      }
+    },
+    {
+      key: 'resource', title: '资源',
+      render: (log) => (
+        <span className="text-slate-600">
+          {resourceLabels[log.resource] || log.resource}
+          {log.resourceName && <div className="text-xs text-slate-400">{log.resourceName}</div>}
+        </span>
+      )
+    },
+    {
+      key: 'description', title: '描述',
+      render: (log) => (
+        <span className="text-sm text-slate-700 max-w-xs truncate block">{log.description}</span>
+      )
+    },
+    {
+      key: 'level', title: '级别', align: 'center',
+      render: (log) => (
+        <StatusBadge status={log.level} config={AUDIT_LEVEL} />
+      )
+    },
+    {
+      key: 'detail', title: '操作', align: 'center',
+      render: (log) => (
+        <button onClick={() => setSelectedLog(log)} className="btn btn-ghost btn-sm text-primary-600">详情</button>
+      )
+    },
+  ]
+
   return (
   <>
   {statsView.visible && statsView.data && (
@@ -75,51 +136,24 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
   onSearch={handleSearch} onReset={f.reset} resourceLabels={resourceLabels}
   />
 
-  <div className="bg-white rounded-xl shadow-sm overflow-hidden">
   {logs.length === 0 ? (
-  <div className="p-12 text-center">
+  <div className="bg-white rounded-xl shadow-sm overflow-hidden p-12 text-center">
   <Icon name="ClipboardList" size={44} className="text-slate-300 mb-4" />
   <h3 className="text-lg font-medium text-slate-800 mb-2">暂无操作日志</h3>
   <p className="text-slate-500">系统还未记录任何操作，或当前筛选条件下无数据</p>
   </div>
   ) : (
   <>
-  <HoverScrollbar className="h-full">
-  <table className="w-full">
-  <thead className="bg-slate-50 border-b border-slate-200">
-  <tr>
-  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">时间</th>
-  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">用户</th>
-  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">操作</th>
-  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">资源</th>
-  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">描述</th>
-  <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">级别</th>
-  <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">操作</th>
-  </tr>
-  </thead>
-  <tbody className="divide-y divide-slate-100">
-  {logs.map(log => {
-  const { date, time } = formatTimestamp(log.timestamp)
-  const action = actionConfig[log.action] || { label: log.action, color: 'text-slate-700', bgColor: 'bg-slate-100' }
-  return (
-  <tr key={log.id} className="table-row-hover">
-  <td className="px-4 py-3"><div className="text-sm text-slate-800">{date}</div><div className="text-xs text-slate-400">{time}</div></td>
-  <td className="px-4 py-3">
-  <div className="flex items-center gap-2"><div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-sm font-medium text-primary-700">{log.username.charAt(0).toUpperCase()}</div><span className="text-sm text-slate-700">{log.username}</span></div>
-  </td>
-  <td className="px-4 py-3"><span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${action.bgColor} ${action.color}`}>{action.label}</span></td>
-  <td className="px-4 py-3 text-sm text-slate-600">{resourceLabels[log.resource] || log.resource}{log.resourceName && <div className="text-xs text-slate-400">{log.resourceName}</div>}</td>
-  <td className="px-4 py-3 text-sm text-slate-700 max-w-xs truncate">{log.description}</td>
-  <td className="px-4 py-3 text-center">
-  <StatusBadge status={log.level} config={AUDIT_LEVEL} />
-  </td>
-  <td className="px-4 py-3 text-center"><button onClick={() => setSelectedLog(log)} className="btn btn-ghost btn-sm text-primary-600">详情</button></td>
-  </tr>
-  )
-  })}
-  </tbody>
-  </table>
-  </HoverScrollbar>
+  <DataTable
+    data={logs}
+    columns={columns}
+    rowKey="id"
+    pagination={false}
+    useHoverScrollbar={true}
+    scrollClassName="h-full"
+    emptyText="暂无操作日志"
+    emptyIcon="ClipboardList"
+  />
 
   <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between">
   <div className="text-sm text-slate-500">第 <span className="font-medium">{page}</span> / <span className="font-medium">{totalPages}</span> 页</div>
@@ -134,7 +168,6 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
   </div>
   </>
   )}
-  </div>
 
   {selectedLog && <AuditDetailModal selectedLog={selectedLog} onClose={() => setSelectedLog(null)} actionConfig={actionConfig} resourceLabels={resourceLabels} />}
   </>
