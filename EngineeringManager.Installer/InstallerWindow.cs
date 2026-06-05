@@ -21,7 +21,17 @@ public class InstallerWindow : Form
     public InstallerWindow()
     {
         FormBorderStyle = FormBorderStyle.None;
-        Icon = new Icon(Path.Combine(AppContext.BaseDirectory, "app.ico"));
+
+        // 从嵌入资源加载图标（单文件模式下文件系统图标不存在）
+        try
+        {
+            var iconStream = typeof(InstallerWindow).Assembly
+                .GetManifestResourceStream("EngineeringManager.Installer.app.ico");
+            if (iconStream != null)
+                Icon = new Icon(iconStream);
+        }
+        catch { }
+
         Size = new Size(520, 580);
         StartPosition = FormStartPosition.CenterScreen;
         ApplyNativeRoundedCorners();
@@ -183,20 +193,29 @@ public class InstallerWindow : Form
 
             webView.CoreWebView2.WebMessageReceived += OnWebMessage;
 
-            // 加载前端
-            var indexPath = Path.Combine(AppContext.BaseDirectory, "installer", "dist", "index.html");
-            if (File.Exists(indexPath))
+            // 从嵌入资源解压并加载前端
+            string frontendDir;
+            try
+            {
+                frontendDir = InstallerService.GetInstallerFrontendDir();
+            }
+            catch
+            {
+                frontendDir = "";
+            }
+
+            var indexPath = Path.Combine(frontendDir, "index.html");
+            if (!string.IsNullOrEmpty(frontendDir) && File.Exists(indexPath))
             {
                 webView.CoreWebView2.Navigate("file:///" + indexPath.Replace('\\', '/'));
             }
             else
             {
-                // 显示错误提示
                 webView.CoreWebView2.NavigateToString(@"
                     <html><body style='display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;background:#f8fafc;color:#0f172a'>
                     <div style='text-align:center'>
                         <h2>安装器资源缺失</h2>
-                        <p>找不到 installer/dist/index.html</p>
+                        <p>找不到安装资源包 (payload.zip)</p>
                         <p style='color:#94a3b8;font-size:12px'>请确保安装器文件完整</p>
                     </div></body></html>");
             }

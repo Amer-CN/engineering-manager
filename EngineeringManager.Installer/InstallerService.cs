@@ -1,41 +1,67 @@
+using System.IO.Compression;
+using System.Reflection;
+
 namespace EngineeringManager.Installer;
 
 public class InstallerService
 {
+    private static readonly string TempDir = Path.Combine(Path.GetTempPath(), "engineering-manager-installer");
+
+    /// <summary>
+    /// 解压嵌入的 payload.zip 到临时目录，返回解压路径
+    /// </summary>
+    public static string ExtractPayload()
+    {
+        var assembly = Assembly.GetExecutingAssembly();
+        var resourceName = assembly.GetManifestResourceNames()
+            .FirstOrDefault(n => n.EndsWith("payload.zip"));
+
+        if (resourceName == null)
+            throw new FileNotFoundException("安装资源包 (payload.zip) 未嵌入到程序中");
+
+        // 清理旧的临时目录
+        if (Directory.Exists(TempDir))
+            try { Directory.Delete(TempDir, true); } catch { }
+
+        Directory.CreateDirectory(TempDir);
+
+        using var stream = assembly.GetManifestResourceStream(resourceName)!;
+        using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
+        archive.ExtractToDirectory(TempDir, overwriteFiles: true);
+
+        return TempDir;
+    }
+
     /// <summary>
     /// 安装到指定目录
     /// </summary>
     public async Task Install(string targetPath, Action<int, string> onProgress)
     {
-        // 确保目标目录存在
         Directory.CreateDirectory(targetPath);
 
-        // 主程序的资源文件（嵌入在本 exe 中）
-        var resourceDir = Path.Combine(AppContext.BaseDirectory, "app-files");
+        // 从嵌入资源解压
+        onProgress(0, "正在释放安装文件...");
+        var sourceDir = ExtractPayload();
 
-        if (!Directory.Exists(resourceDir))
-        {
-            throw new DirectoryNotFoundException($"安装资源目录不存在: {resourceDir}");
-        }
+        // 找到 app-files 目录（zip 里的结构：app-files/... + installer/dist/...）
+        var appFilesDir = Path.Combine(sourceDir, "app-files");
+        if (!Directory.Exists(appFilesDir))
+            throw new DirectoryNotFoundException($"安装资源目录不存在: {appFilesDir}");
 
-        // 获取所有要复制的文件
-        var files = Directory.GetFiles(resourceDir, "*", SearchOption.AllDirectories);
+        var files = Directory.GetFiles(appFilesDir, "*", SearchOption.AllDirectories);
         var total = files.Length;
 
         for (int i = 0; i < total; i++)
         {
             var file = files[i];
-            var relativePath = Path.GetRelativePath(resourceDir, file);
+            var relativePath = Path.GetRelativePath(appFilesDir, file);
             var destPath = Path.Combine(targetPath, relativePath);
 
-            // 确保目标子目录存在
             var destDir = Path.GetDirectoryName(destPath);
             if (destDir != null) Directory.CreateDirectory(destDir);
 
-            // 复制文件
             File.Copy(file, destPath, true);
 
-            // 回报进度
             var percent = (int)((i + 1) / (double)total * 100);
             var step = (i + 1) switch
             {
@@ -47,15 +73,35 @@ public class InstallerService
             };
             onProgress(percent, step);
 
-            // 模拟安装延迟（让动画可见）
-            await Task.Delay(15);
+            await Task.Delay(10);
         }
 
-        // 创建桌面快捷方式
         onProgress(95, "正在创建桌面快捷方式...");
         CreateShortcut(targetPath);
 
         onProgress(100, "安装完成！");
+
+        // 清理临时文件
+        try { Directory.Delete(sourceDir, true); } catch { }
+    }
+
+    /// <summary>
+    /// 获取安装界面前端文件路径
+    /// </summary>
+    public static string GetInstallerFrontendDir()
+    {
+        // 优先从嵌入资源解压
+        var sourceDir = ExtractPayload();
+        var frontendDir = Path.Combine(sourceDir, "installer", "dist");
+        if (Directory.Exists(frontendDir))
+            return frontendDir;
+
+        // 回退：从 exe 同目录查找
+        var localDir = Path.Combine(AppContext.BaseDirectory, "installer", "dist");
+        if (Directory.Exists(localDir))
+            return localDir;
+
+        return "";
     }
 
     private void CreateShortcut(string installPath)
@@ -66,9 +112,8 @@ public class InstallerService
             var shortcutPath = Path.Combine(desktopPath, "工程管家.lnk");
             var exePath = Path.Combine(installPath, "EngineeringManager.Api.exe");
 
-            // 使用 COM 创建快捷方式
             var shell = (dynamic)Activator.CreateInstance(
-                Type.GetTypeFromProgID("WScript.Shell")!);
+                Type.GetTypeFromProgID("WScript.Shell")!)!;
             var shortcut = shell.CreateShortcut(shortcutPath);
             shortcut.TargetPath = exePath;
             shortcut.WorkingDirectory = installPath;
