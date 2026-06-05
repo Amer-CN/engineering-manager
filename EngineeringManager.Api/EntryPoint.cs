@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Net.Http;
 
 namespace EngineeringManager.Api;
 
@@ -9,7 +8,7 @@ namespace EngineeringManager.Api;
 public static class EntryPoint
 {
     [STAThread]
-    public static async Task Main(string[] args)
+    public static void Main(string[] args)
     {
         // 检查启动模式
         if (args.Contains("--api-only"))
@@ -21,18 +20,17 @@ public static class EntryPoint
             ApiConfig.ConfigureApp(app);
             app.Run();
             return;
-
-
         }
 
         // 桌面模式：STA 主线程 + WebView2
+        // ⚠️ 这些必须最先调用，在任何 COM 初始化之前
         Application.SetHighDpiMode(HighDpiMode.SystemAware);
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
 
         // 记录启动前已有的 node 进程 PID（退出时不杀这些）
         var existingNodePids = new HashSet<int>();
-        try { foreach (var p in System.Diagnostics.Process.GetProcessesByName("node")) existingNodePids.Add(p.Id); } catch { }
+        try { foreach (var p in Process.GetProcessesByName("node")) existingNodePids.Add(p.Id); } catch { }
         Console.WriteLine($"[App] Existing node processes: {existingNodePids.Count}");
 
         // 检测是否为生产模式（dist/ 目录存在）
@@ -82,27 +80,25 @@ public static class EntryPoint
         apiThread.IsBackground = true;
         apiThread.Start();
 
-        // ── 等待 API 就绪 ──
+        // ── 等待 API 就绪（同步轮询，避免 async/await 破坏 COM 线程模式）──
         Console.WriteLine("[App] Waiting for API to be ready...");
         var apiReady = false;
-        using (var httpClient = new HttpClient())
+        for (int i = 0; i < 60; i++) // 最多等 30 秒
         {
-            httpClient.Timeout = TimeSpan.FromSeconds(2);
-            for (int i = 0; i < 60; i++) // 最多等 30 秒
+            try
             {
-                try
+                using var client = new System.Net.Http.HttpClient();
+                client.Timeout = TimeSpan.FromSeconds(2);
+                var resp = client.GetAsync("http://localhost:5048/api/health").Result;
+                if (resp.IsSuccessStatusCode)
                 {
-                    var response = await httpClient.GetAsync("http://localhost:5048/api/health");
-                    if (response.IsSuccessStatusCode)
-                    {
-                        apiReady = true;
-                        Console.WriteLine($"[App] API is ready (after {(i + 1) * 500}ms)");
-                        break;
-                    }
+                    apiReady = true;
+                    Console.WriteLine($"[App] API is ready (after {(i + 1) * 500}ms)");
+                    break;
                 }
-                catch { }
-                await Task.Delay(500);
             }
+            catch { }
+            Thread.Sleep(500);
         }
         if (!apiReady)
         {
@@ -126,7 +122,7 @@ public static class EntryPoint
         Console.WriteLine("[App] Cleaning up Vite node processes...");
         try
         {
-            foreach (var p in System.Diagnostics.Process.GetProcessesByName("node"))
+            foreach (var p in Process.GetProcessesByName("node"))
             {
                 if (!existingNodePids.Contains(p.Id))
                 {
