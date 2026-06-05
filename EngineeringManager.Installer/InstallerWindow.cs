@@ -8,6 +8,7 @@ namespace EngineeringManager.Installer;
 public class InstallerWindow : Form
 {
     private WebView2? webView;
+    private string _frontendDir = "";
 
     // ── resize 相关 ──
     private bool _isResizing;
@@ -22,19 +23,28 @@ public class InstallerWindow : Form
     {
         FormBorderStyle = FormBorderStyle.None;
 
-        // 从嵌入资源加载图标（单文件模式下文件系统图标不存在）
+        // 从嵌入资源加载图标
         try
         {
             var iconStream = typeof(InstallerWindow).Assembly
                 .GetManifestResourceStream("EngineeringManager.Installer.app.ico");
-            if (iconStream != null)
-                Icon = new Icon(iconStream);
+            if (iconStream != null) Icon = new Icon(iconStream);
         }
         catch { }
 
         Size = new Size(520, 580);
         StartPosition = FormStartPosition.CenterScreen;
         ApplyNativeRoundedCorners();
+
+        // 预解压：在构造函数中同步解压，确保 OnLoad 时文件已就绪
+        try
+        {
+            _frontendDir = InstallerService.GetInstallerFrontendDir();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Installer] 解压失败: {ex.Message}");
+        }
     }
 
     protected override CreateParams CreateParams
@@ -53,20 +63,13 @@ public class InstallerWindow : Form
     }
 
     // ═══ P/Invoke ═══
-    [DllImport("dwmapi.dll")]
-    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
-    [DllImport("user32.dll")]
-    private static extern void ReleaseCapture();
-    [DllImport("user32.dll")]
-    private static extern void SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
-    [DllImport("user32.dll")]
-    private static extern bool SetCapture(IntPtr hWnd);
-    [DllImport("user32.dll")]
-    private static extern IntPtr LoadCursor(IntPtr h, IntPtr id);
-    [DllImport("user32.dll")]
-    private static extern IntPtr SetCursor(IntPtr h);
+    [DllImport("dwmapi.dll")] private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+    [DllImport("user32.dll")] private static extern void ReleaseCapture();
+    [DllImport("user32.dll")] private static extern void SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
+    [DllImport("user32.dll")] private static extern bool SetCapture(IntPtr hWnd);
+    [DllImport("user32.dll")] private static extern IntPtr LoadCursor(IntPtr h, IntPtr id);
+    [DllImport("user32.dll")] private static extern IntPtr SetCursor(IntPtr h);
 
-    // ═══ 常量 ═══
     private const int WS_THICKFRAME  = 0x00040000;
     private const int WS_MINIMIZEBOX = 0x00020000;
     private const int WS_MAXIMIZEBOX = 0x00010000;
@@ -74,36 +77,24 @@ public class InstallerWindow : Form
     private const int HTTOPRIGHT = 14, HTBOTTOM = 15, HTBOTTOMLEFT = 16, HTBOTTOMRIGHT = 17;
     private const int BORDER_SIZE = 6;
 
-    // ═══════════════════════════════════════════════════════════
-    // WndProc — 只处理光标变化和 resize 交互
-    // ═══════════════════════════════════════════════════════════
-
+    // ═══ WndProc ═══
     protected override void WndProc(ref Message m)
     {
-        // resize 进行中：拦截鼠标移动和释放
         if (_isResizing)
         {
             switch (m.Msg)
             {
-                case 0x0200: // WM_MOUSEMOVE
-                    DoResize(Cursor.Position);
-                    m.Result = IntPtr.Zero;
-                    return;
-                case 0x0202: // WM_LBUTTONUP
-                    _isResizing = false;
-                    ReleaseCapture();
-                    m.Result = IntPtr.Zero;
-                    return;
+                case 0x0200: DoResize(Cursor.Position); m.Result = IntPtr.Zero; return;
+                case 0x0202: _isResizing = false; ReleaseCapture(); m.Result = IntPtr.Zero; return;
             }
         }
 
         switch (m.Msg)
         {
-            case 0x0083: // WM_NCCALCSIZE
+            case 0x0083:
                 if (m.WParam != IntPtr.Zero) { m.Result = IntPtr.Zero; return; }
                 break;
-
-            case 0x0020: // WM_SETCURSOR — 边缘光标
+            case 0x0020:
                 if (!DesignMode && !_isResizing)
                 {
                     int ht = HitTestEdge(Cursor.Position, Bounds);
@@ -114,7 +105,7 @@ public class InstallerWindow : Form
                             HTLEFT or HTRIGHT => 32644,
                             HTTOP or HTBOTTOM => 32645,
                             HTTOPLEFT or HTBOTTOMRIGHT => 32642,
-                            _ => 32643 // HTTOPRIGHT or HTBOTTOMLEFT
+                            _ => 32643
                         };
                         SetCursor(LoadCursor(IntPtr.Zero, (IntPtr)id));
                         m.Result = IntPtr.Zero;
@@ -123,14 +114,10 @@ public class InstallerWindow : Form
                 }
                 break;
         }
-
         base.WndProc(ref m);
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // Resize 逻辑
-    // ═══════════════════════════════════════════════════════════
-
+    // ═══ Resize ═══
     private void DoResize(Point mouse)
     {
         int dx = mouse.X - _resizeStartMouse.X;
@@ -171,10 +158,7 @@ public class InstallerWindow : Form
         return 0;
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // WebView2 初始化
-    // ═══════════════════════════════════════════════════════════
-
+    // ═══ WebView2 ═══
     protected override async void OnLoad(EventArgs e)
     {
         base.OnLoad(e);
@@ -190,22 +174,11 @@ public class InstallerWindow : Form
             webView.CoreWebView2.Settings.IsStatusBarEnabled = false;
             webView.CoreWebView2.Settings.AreDevToolsEnabled = true;
             webView.CoreWebView2.Settings.IsWebMessageEnabled = true;
-
             webView.CoreWebView2.WebMessageReceived += OnWebMessage;
 
-            // 从嵌入资源解压并加载前端
-            string frontendDir;
-            try
-            {
-                frontendDir = InstallerService.GetInstallerFrontendDir();
-            }
-            catch
-            {
-                frontendDir = "";
-            }
-
-            var indexPath = Path.Combine(frontendDir, "index.html");
-            if (!string.IsNullOrEmpty(frontendDir) && File.Exists(indexPath))
+            // 加载前端
+            var indexPath = Path.Combine(_frontendDir, "index.html");
+            if (!string.IsNullOrEmpty(_frontendDir) && File.Exists(indexPath))
             {
                 webView.CoreWebView2.Navigate("file:///" + indexPath.Replace('\\', '/'));
             }
@@ -227,10 +200,7 @@ public class InstallerWindow : Form
         }
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // 前端消息处理
-    // ═══════════════════════════════════════════════════════════
-
+    // ═══ 消息处理 ═══
     private void OnWebMessage(object? s, Microsoft.Web.WebView2.Core.CoreWebView2WebMessageReceivedEventArgs e)
     {
         try
@@ -242,75 +212,46 @@ public class InstallerWindow : Form
                 switch (a)
                 {
                     case "startDrag":
-                        // 双击检测：500ms 内两次 startDrag → 最大化
                         var now = DateTime.Now;
                         if ((now - _lastClickTime).TotalMilliseconds < 500)
-                        {
-                            _lastClickTime = DateTime.MinValue;
-                            ToggleMaximize();
-                        }
+                        { _lastClickTime = DateTime.MinValue; ToggleMaximize(); }
                         else
-                        {
-                            _lastClickTime = now;
-                            ReleaseCapture();
-                            SendMessage(Handle, 0xA1, 0x2, 0);
-                        }
+                        { _lastClickTime = now; ReleaseCapture(); SendMessage(Handle, 0xA1, 0x2, 0); }
                         break;
-
                     case "startResize":
                         var edge = j.RootElement.GetProperty("edge").GetString() ?? "";
                         int htVal = edge switch
                         {
-                            "left" => HTLEFT, "right" => HTRIGHT,
-                            "top" => HTTOP, "bottom" => HTBOTTOM,
+                            "left" => HTLEFT, "right" => HTRIGHT, "top" => HTTOP, "bottom" => HTBOTTOM,
                             "top-left" => HTTOPLEFT, "top-right" => HTTOPRIGHT,
-                            "bottom-left" => HTBOTTOMLEFT, "bottom-right" => HTBOTTOMRIGHT,
-                            _ => 0
+                            "bottom-left" => HTBOTTOMLEFT, "bottom-right" => HTBOTTOMRIGHT, _ => 0
                         };
                         if (htVal != 0)
                         {
-                            _isResizing = true;
-                            _resizeEdge = htVal;
-                            _resizeStartMouse = Cursor.Position;
-                            _resizeStartBounds = Bounds;
+                            _isResizing = true; _resizeEdge = htVal;
+                            _resizeStartMouse = Cursor.Position; _resizeStartBounds = Bounds;
                             SetCapture(Handle);
                         }
                         break;
-
-                    case "minimize":
-                        WindowState = FormWindowState.Minimized;
-                        break;
-
-                    case "maximize":
-                        ToggleMaximize();
-                        break;
-
-                    case "close":
-                        Close();
-                        break;
-
+                    case "minimize": WindowState = FormWindowState.Minimized; break;
+                    case "maximize": ToggleMaximize(); break;
+                    case "close": Close(); break;
                     case "browsePath":
                         using (var dlg = new FolderBrowserDialog())
                         {
                             dlg.Description = "选择安装位置";
                             if (dlg.ShowDialog() == DialogResult.OK)
-                            {
                                 SendToWeb(new { type = "selectedPath", path = dlg.SelectedPath });
-                            }
                         }
                         break;
-
                     case "install":
                         var installPath = j.RootElement.GetProperty("path").GetString() ?? "";
                         Task.Run(() => DoInstall(installPath));
                         break;
-
                     case "launch":
                         var exePath = j.RootElement.GetProperty("path").GetString() ?? "";
                         if (File.Exists(exePath))
-                        {
                             Process.Start(new ProcessStartInfo(exePath) { UseShellExecute = true });
-                        }
                         Close();
                         break;
                 }
@@ -319,14 +260,9 @@ public class InstallerWindow : Form
         catch { }
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // 辅助方法
-    // ═══════════════════════════════════════════════════════════
-
     private void SendToWeb(object data)
     {
-        var json = JsonSerializer.Serialize(data);
-        webView?.CoreWebView2?.PostWebMessageAsJson(json);
+        webView?.CoreWebView2?.PostWebMessageAsJson(JsonSerializer.Serialize(data));
     }
 
     private async void DoInstall(string installPath)
@@ -348,9 +284,7 @@ public class InstallerWindow : Form
 
     private void ToggleMaximize()
     {
-        if (WindowState == FormWindowState.Maximized)
-            WindowState = FormWindowState.Normal;
-        else
-            WindowState = FormWindowState.Maximized;
+        WindowState = WindowState == FormWindowState.Maximized
+            ? FormWindowState.Normal : FormWindowState.Maximized;
     }
 }
