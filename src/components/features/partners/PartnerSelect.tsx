@@ -8,6 +8,7 @@
 import { useState, useMemo } from 'react'
 import type { Partner, PartnerCategory } from '@/types'
 import { Icon } from '../../ui/Icon'
+import { HoverScrollbar } from '../../ui/HoverScrollbar'
 
 const categoryLabels: Record<PartnerCategory | string, string> = {
   owner: '建设单位',
@@ -146,7 +147,7 @@ export function PartnerSelect({
   </div>
 
   {/* 单位列表 */}
-  <div className="max-h-64 overflow-y-auto">
+  <HoverScrollbar className="max-h-64"><div>
   {Object.keys(groupedPartners).length > 0 ? (
   Object.entries(groupedPartners).map(([category, partners]) => (
   <div key={category}>
@@ -185,7 +186,7 @@ export function PartnerSelect({
   未找到匹配的单位
   </div>
   )}
-  </div>
+  </div></HoverScrollbar>
 
   {/* 清空按钮 */}
   {value && (

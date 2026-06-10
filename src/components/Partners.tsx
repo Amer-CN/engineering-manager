@@ -304,12 +304,6 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
   <PartnerList
   partners={partners}
   projects={projects}
-  search={partnerSearch}
-  filterCategory={partnerFilterCategory}
-  filterProject={partnerFilterProject}
-  onSearchChange={setPartnerSearch}
-  onCategoryChange={setPartnerFilterCategory}
-  onProjectChange={setPartnerFilterProject}
   onEdit={handlePartnerEdit}
   onDelete={handlePartnerDelete}
   />

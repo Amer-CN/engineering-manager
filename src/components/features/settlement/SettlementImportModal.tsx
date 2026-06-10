@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { DataTable, type Column } from '@/components/DataTable'
 import { Icon } from '../../ui/Icon'
+import { HoverScrollbar } from '../../ui/HoverScrollbar'
 
 interface Item { description: string; spec: string; quantity: number; unit: string; unitPrice: number; amount: number; remarks: string }
 
@@ -105,7 +106,7 @@ export const SettlementImportModal: React.FC<Props> = ({ show, onClose, onImport
           <h3 className="text-lg font-semibold text-slate-800">导入 Excel 明细</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={20} /></button>
         </div>
-        <div className="p-6 overflow-y-auto flex-1 space-y-4">
+        <HoverScrollbar className="flex-1 p-6 space-y-4">
           <div className="flex items-center gap-6">
             {state.sheetNames.length > 1 && (
               <div className="flex items-center gap-2">
@@ -139,7 +140,7 @@ export const SettlementImportModal: React.FC<Props> = ({ show, onClose, onImport
           </div>
           <div>
             <label className="text-sm font-medium text-slate-700 block mb-2">数据预览（前 {state.previewRows.length} 行，共 {state.allRows.length} 行）</label>
-            <div className="border border-slate-200 rounded-xl overflow-hidden max-h-60 overflow-y-auto">
+            <HoverScrollbar className="flex-1 max-h-60"><div className="border border-slate-200 rounded-xl overflow-hidden">
               {state.headers.length > 0 ? (
                 <DataTable
                   data={state.previewRows}
@@ -152,9 +153,9 @@ export const SettlementImportModal: React.FC<Props> = ({ show, onClose, onImport
               ) : (
                 <div className="p-4 text-center text-sm text-slate-400">请先选择工作表</div>
               )}
-            </div>
+            </div></HoverScrollbar>
           </div>
-        </div>
+        </HoverScrollbar>
         <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between shrink-0">
           <span className="text-sm text-slate-500">将导入 {state.allRows.length} 条明细</span>
           <div className="flex items-center gap-3">

@@ -6,12 +6,6 @@ import { partnerCategories } from '../../../data/regions'
 interface PartnerListProps {
   partners: Partner[]
   projects: Project[]
-  search: string
-  filterCategory: string
-  filterProject: string
-  onSearchChange: (value: string) => void
-  onCategoryChange: (value: string) => void
-  onProjectChange: (value: string) => void
   onEdit: (partner: Partner) => void
   onDelete: (id: number) => void
 }

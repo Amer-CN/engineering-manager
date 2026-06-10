@@ -5,6 +5,7 @@
 import React, { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { workerTypes } from '../../../constants/member'
+import { HoverScrollbar } from '../../ui/HoverScrollbar'
 
 type FilterCol = 'name' | 'idcard' | 'age' | 'gender' | 'workertype' | 'dailywage' | 'bank'
 
@@ -94,7 +95,7 @@ export function FilterPopup({
       onClick={e => e.stopPropagation()}
     >
       {renderContent()}
-      <div className="max-h-[220px] overflow-y-auto px-1 py-1">
+      <HoverScrollbar className="flex-1 max-h-[220px] px-1 py-1"><div>
         {col === 'name' && (
           <div className="px-2 py-1">
             <input type="text" placeholder="搜索姓名..." value={nameFilter}
@@ -172,7 +173,7 @@ export function FilterPopup({
               className="w-20 px-2 py-1 border border-slate-300 rounded text-sm text-center focus:ring-2 focus:ring-primary-500" />
           </div>
         )}
-      </div>
+      </div></HoverScrollbar>
       {/* 底部按钮 */}
       {(col === 'gender' || col === 'workertype') && (
         <div className="flex items-center gap-1 px-2 pt-1.5 border-t border-slate-100">

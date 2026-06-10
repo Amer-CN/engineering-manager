@@ -11,7 +11,7 @@ import { apiClient } from './api-client';
 
 export const tauriAPI = {
   // ────────── 系统 ──────────
-  getAppVersion: () => '0.68.0',
+  getAppVersion: () => '0.70.0',
   getDataPath: () => apiClient.get<string>('/api/config/data-path'),
   getUploadsPath: () => apiClient.get<string>('/api/config/uploads-path'),
   openDevTools: () => {
@@ -332,6 +332,9 @@ export const tauriAPI = {
   restoreSnapshot: (id: string) => apiClient.post<void>(`/api/snapshots/${id}/restore`),
   deleteSnapshot: (id: string) => apiClient.del<void>(`/api/snapshots/${id}`),
   setMaxSnapshots: (count: number) => apiClient.put<void>('/api/snapshots/max-count', { count }),
+  backupDatabase: () => apiClient.post<any>('/api/backup'),
+  restoreDatabase: () => apiClient.post<any>('/api/restore'),
+  diagnoseDatabase: () => apiClient.post<any>('/api/diagnose'),
 
   // ────────── 区域 ──────────
   getRegions: () => apiClient.get<any[]>('/api/regions'),

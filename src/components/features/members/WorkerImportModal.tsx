@@ -6,6 +6,7 @@ import { Spinner } from '../../ui/Loading/Loading'
 import {
   WORKER_IMPORT_FIELDS, type ImportState, type ImportProgress, type ImportResult,
 } from './useWorkerImport'
+import { HoverScrollbar } from '../../ui/HoverScrollbar'
 
 interface Props {
   show: boolean
@@ -113,7 +114,7 @@ export function WorkerImportModal({
   </div>
 
   {/* Body */}
-  <div className="p-6 overflow-y-auto flex-1 space-y-4">
+  <HoverScrollbar className="flex-1 p-6 space-y-4">
   {/* Error display */}
   {error && (
   <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
@@ -187,7 +188,7 @@ export function WorkerImportModal({
   <label className="text-sm font-medium text-slate-700 block mb-2">
   数据预览（前 {Math.min(10, importState.previewRows.length)} 行，共 {importState.allRows.length} 行）
   </label>
-  <div className="border border-slate-200 rounded-xl overflow-hidden max-h-60 overflow-y-auto">
+  <div className="border border-slate-200 rounded-xl overflow-hidden" style={{maxHeight:240,overflowY:'auto'}}>
   <DataTable
     data={importState.previewRows}
     columns={previewColumns}
@@ -262,7 +263,7 @@ export function WorkerImportModal({
   <summary className="text-sm text-amber-600 cursor-pointer hover:text-amber-700 font-medium">
   警告（{result.warnings.length} 条）
   </summary>
-  <div className="mt-2 max-h-40 overflow-y-auto border border-amber-200 rounded-lg">
+  <div className="mt-2 border border-amber-200 rounded-lg" style={{maxHeight:160,overflowY:'auto'}}>
   <DataTable
     data={result.warnings.map((w, i) => ({ ...w, _idx: i }))}
     columns={[
@@ -282,7 +283,7 @@ export function WorkerImportModal({
   <summary className="text-sm text-slate-500 cursor-pointer hover:text-slate-700">
   失败详情（{result.failures.length} 条）
   </summary>
-  <div className="mt-2 max-h-40 overflow-y-auto border border-slate-200 rounded-lg">
+  <div className="mt-2 border border-slate-200 rounded-lg" style={{maxHeight:160,overflowY:'auto'}}>
   <DataTable
     data={result.failures.map((f, i) => ({ ...f, _idx: i }))}
     columns={[
@@ -298,7 +299,7 @@ export function WorkerImportModal({
   )}
   </div>
   )}
-  </div>
+  </HoverScrollbar>
 
   {/* Footer */}
   <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between shrink-0">

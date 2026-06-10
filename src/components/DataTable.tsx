@@ -354,15 +354,15 @@ function ColFilterDropdown({
           {/* 全选/清除按钮 */}
           <div className="flex gap-1 border-b border-slate-100 px-1.5 py-1">
             <button type="button" onClick={handleSelectAll}
-              className="text-[10px] text-blue-600 hover:text-blue-800">
+              className="text-caption text-blue-600 hover:text-blue-800">
               {allChecked ? '取消全选' : '全选'}
             </button>
             <button type="button" onClick={onClear}
-              className="text-[10px] text-slate-400 hover:text-slate-600">
+              className="text-caption text-slate-400 hover:text-slate-600">
               清除
             </button>
             {search.trim() && (
-              <span className="ml-auto text-[10px] text-slate-400">
+              <span className="ml-auto text-caption text-slate-400">
                 {filteredOptions.length}/{options.length}
               </span>
             )}
@@ -562,7 +562,7 @@ export function DataTable<T>({
               <span className="inline-flex items-center gap-1">
                 {col.headerRender ?? col.title}
                 {col.sortable && (
-                  <span className="text-slate-400 text-[10px]">
+                  <span className="text-slate-400 text-caption">
                     {sortKey === col.key ? (sortOrder === 'asc' ? '↑' : '↓') : '↕'}
                   </span>
                 )}

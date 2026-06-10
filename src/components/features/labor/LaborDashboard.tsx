@@ -3,6 +3,7 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
+import { HoverScrollbar } from '../../ui/HoverScrollbar'
 import type { Member, WorkerTeam } from '../../../types/electron'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 
@@ -168,7 +169,7 @@ const LaborDashboard: React.FC<LaborDashboardProps> = ({ members, projects, work
         >
           <h3 className="text-lg font-semibold text-slate-800 mb-4">班组概览</h3>
           {workerTeams.length > 0 ? (
-            <div className="space-y-3 max-h-[300px] overflow-y-auto">
+            <HoverScrollbar className="flex-1 max-h-[300px]"><div className="space-y-3">
               {workerTeams.slice(0, 10).map(team => {
                 const teamWorkers = members.filter((m: any) => m.teamId === team.id)
                 return (
@@ -190,7 +191,7 @@ const LaborDashboard: React.FC<LaborDashboardProps> = ({ members, projects, work
                   </div>
                 )
               })}
-            </div>
+            </div></HoverScrollbar>
           ) : (
             <div className="flex items-center justify-center h-64 text-slate-400">
               暂无班组

@@ -97,7 +97,7 @@ export const SupervisorList: React.FC<SupervisorListProps> = ({
       </div>
 
       {/* 列表 */}
-      <div className="flex-1 overflow-hidden relative min-h-0">
+      <div className="flex-1 min-h-0">
         <DataTable
           data={filteredSupervisors}
           useHoverScrollbar={true}

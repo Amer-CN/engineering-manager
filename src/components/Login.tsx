@@ -1,9 +1,10 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
 import { Icon } from './ui/Icon'
 import { getAPI } from '@/services/api-adapter'
+import LoginSettingsPage from './LoginSettingsModal'
 
 /** 不同主题的交互参数 — 差异化设计 */
 const THEME_INTERACTION = {
@@ -52,6 +53,7 @@ const Login: React.FC<LoginProps> = () => {
   const [autoLogin, setAutoLogin] = useState(() => localStorage.getItem(AUTO_KEY) === 'true')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
 
   const minimize = useCallback(async () => { (await getAPI()).minimizeWindow?.() }, [])
   const close = useCallback(async () => { (await getAPI()).closeWindow?.() }, [])
@@ -99,7 +101,8 @@ const Login: React.FC<LoginProps> = () => {
       {/* ── 标题栏 ── */}
       <div style={{ height: 28, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '0 4px', flexShrink: 0 } as React.CSSProperties} onMouseDown={handleTitleBarMouseDown}>
         <div style={{ display: 'flex' } as React.CSSProperties}>
-          {[{ icon: <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor" /></svg>, action: minimize },
+          {[{ icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.48a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>, action: () => setShowSettings(true) },
+            { icon: <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor" /></svg>, action: minimize },
             { icon: <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"><line x1="2" y1="2" x2="8" y2="8" /><line x1="8" y1="2" x2="2" y2="8" /></svg>, action: close, hoverBg: 'var(--danger)', hoverColor: '#fff' }
           ].map((btn, i) => (
             <motion.button key={i} onClick={btn.action}
@@ -116,12 +119,14 @@ const Login: React.FC<LoginProps> = () => {
       </div>
 
       {/* ── 内容 ── */}
+      {showSettings ? (
+        <LoginSettingsPage onBack={() => setShowSettings(false)} />
+      ) : (
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 24px 20px' }}>
         {/* Logo */}
         <svg width="48" height="48" viewBox="0 0 18 18" fill="none" style={{ marginBottom: 14, flexShrink: 0 }}>
-          <defs><linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="var(--accent)" /><stop offset="100%" stopColor="var(--violet)" /></linearGradient></defs>
-          <path d="M2 15.5 L9 2.5 L16 15.5 Z" fill="url(#lg)" />
-          <path d="M5 14 L9 6 L13 14 Z" fill="var(--bg-2)" />
+          <defs><linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="var(--accent)" /><stop offset="100%" stopColor="var(--violet)" /></linearGradient><mask id="lg-mask"><rect width="18" height="18" fill="white" /><path d="M5 14 L9 6 L13 14 Z" fill="black" /></mask></defs>
+          <path d="M2 15.5 L9 2.5 L16 15.5 Z" fill="url(#lg)" mask="url(#lg-mask)" />
         </svg>
 
         {/* 表单 */}
@@ -168,9 +173,11 @@ const Login: React.FC<LoginProps> = () => {
         </form>
 
         <div style={{ fontSize: 10, color: 'var(--muted-2)', marginTop: 8, flexShrink: 0 }}>
-          v{(window as any).__APP_VERSION__ || '0.68.0'}
+          v{(window as any).__APP_VERSION__ || '0.70.0'}
         </div>
       </div>
+      )}
+
     </div>
   )
 }

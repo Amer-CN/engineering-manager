@@ -2,6 +2,7 @@ import React from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
 import { DropZone } from '../../ui/DropZone'
+import { HoverScrollbar } from '../../ui/HoverScrollbar'
 
 export function calcAge(birthDate: string): string {
   if (!birthDate) return ''
@@ -60,13 +61,13 @@ const StaffFormModal: React.FC<Props> = ({
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <motion.div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto"
+      <motion.div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] flex flex-col overflow-hidden"
         initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }}>
-        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between shrink-0">
           <h2 className="text-lg font-semibold text-slate-800">{editing ? '编辑人员' : '添加人员'}</h2>
           <button onClick={onRemove} className="btn btn-ghost p-1"><Icon name="X" size={18} /></button>
         </div>
-        <form onSubmit={onSubmit} className="p-6 space-y-5">
+        <HoverScrollbar className="flex-1"><form onSubmit={onSubmit} className="p-6 space-y-5">
 
           <div className="grid grid-cols-3 gap-4">
             <div>
@@ -230,7 +231,7 @@ const StaffFormModal: React.FC<Props> = ({
             <button type="submit"
               className="btn btn-primary">{editing ? '保存' : '创建'}</button>
           </div>
-        </form>
+        </form></HoverScrollbar>
       </motion.div>
     </div>
   )

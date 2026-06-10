@@ -3,6 +3,7 @@ import { Template } from '../../../types/electron'
 import { Icon } from '../../ui/Icon'
 import { useToastStore } from '@/store/toastStore'
 import { getAPI } from '@/services/api-adapter'
+import { HoverScrollbar } from '../../ui/HoverScrollbar'
 
 interface TemplateGenerateProps {
   template: Template
@@ -123,7 +124,7 @@ h1{text-align:center;font-size:18pt;margin-bottom:24px}
             <h3 className="text-sm font-semibold text-slate-800">{template.name}</h3>
             <p className="text-xs text-slate-400">填写变量值</p>
           </div>
-          <div className="flex-1 overflow-auto p-4 space-y-3">
+          <div className="flex-1 overflow-hidden"><HoverScrollbar className="h-full p-4 space-y-3">
             {template.variables.length === 0 ? (
               <p className="text-xs text-slate-400">此模板没有定义变量</p>
             ) : (
@@ -152,7 +153,7 @@ h1{text-align:center;font-size:18pt;margin-bottom:24px}
                 </div>
               ))
             )}
-          </div>
+          </HoverScrollbar></div>
           <div className="px-4 py-3 border-t border-slate-100 flex items-center gap-2">
             <button onClick={handlePrint} className="btn btn-ghost text-xs flex items-center gap-1">
               <Icon name="Printer" size={14} /> 打印
@@ -170,7 +171,7 @@ h1{text-align:center;font-size:18pt;margin-bottom:24px}
           <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
             <span className="text-xs text-slate-400">预览（仅供参考，排版以下载的 Word 文档为准）</span>
           </div>
-          <div ref={printRef} className="flex-1 overflow-auto p-6">
+          <div className="flex-1 overflow-hidden"><HoverScrollbar className="h-full p-6"><div ref={printRef}>
             {loading ? (
               <div className="flex items-center justify-center h-full">
                 <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary-500 border-t-transparent" />
@@ -178,7 +179,7 @@ h1{text-align:center;font-size:18pt;margin-bottom:24px}
             ) : (
               <div className="border border-slate-200 rounded-lg p-8 bg-white shadow-sm" dangerouslySetInnerHTML={{ __html: previewHtml }} />
             )}
-          </div>
+          </div></HoverScrollbar></div>
         </div>
       </div>
     </div>

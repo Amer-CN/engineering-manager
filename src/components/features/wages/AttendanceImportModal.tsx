@@ -187,7 +187,7 @@ export const AttendanceImportModal: React.FC<Props> = ({ show, projectId, yearMo
   // ── 匹配结果列定义 ──
   const matchColumns: Column<MatchedRow>[] = [
     { key: 'name', title: 'Excel姓名', render: (r) => <span className="text-slate-700">{r.name}</span> },
-    { key: 'idCard', title: '身份证号', render: (r) => <span className="text-slate-400 font-mono text-[11px]">{r.idCard || '—'}</span> },
+    { key: 'idCard', title: '身份证号', render: (r) => <span className="text-slate-400 font-mono text-micro">{r.idCard || '—'}</span> },
     { key: 'workDays', title: '出勤天数', align: 'right', render: (r) => <span className="font-medium text-amber-700">{r.workDays}</span> },
     {
       key: 'matchResult', title: '匹配结果',

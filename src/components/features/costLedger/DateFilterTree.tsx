@@ -155,7 +155,7 @@ export function DateFilterTree({ values, checked, toggle, setAll, clear }: DateF
           )}
           <GroupCheckbox state={checkState} onChange={() => toggleDateGroup(node)} />
           <span className="truncate text-slate-700 font-medium">{node.label}</span>
-          <span className="ml-auto text-[10px] text-slate-400 shrink-0">{node.dates.length}</span>
+          <span className="ml-auto text-caption text-slate-400 shrink-0">{node.dates.length}</span>
         </div>
         {hasChildren && isExpanded && (
           <div>
@@ -173,8 +173,8 @@ export function DateFilterTree({ values, checked, toggle, setAll, clear }: DateF
       ) : (
         <>
           <div className="flex gap-1 border-b border-slate-100 px-1 pb-1 mb-1">
-            <button type="button" onClick={() => setAll(values)} className="text-[10px] text-blue-600 hover:text-blue-800">全选</button>
-            <button type="button" onClick={clear} className="text-[10px] text-slate-400 hover:text-slate-600">清除</button>
+            <button type="button" onClick={() => setAll(values)} className="text-caption text-blue-600 hover:text-blue-800">全选</button>
+            <button type="button" onClick={clear} className="text-caption text-slate-400 hover:text-slate-600">清除</button>
           </div>
           {dateTree.length === 0 ? (
             <p className="px-2 py-1 text-xs text-slate-400">无可用值</p>

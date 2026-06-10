@@ -72,7 +72,7 @@ function CategoryOverridePanel({ categorySummary, categories, categoryOverrides,
   <option key={c.code} value={c.code}>{c.label}</option>))}
   </optgroup>
   </select>
-  <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${currentCat?.direction === 'expense' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
+  <span className={`text-caption px-1.5 py-0.5 rounded font-medium ${currentCat?.direction === 'expense' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
   {currentCat?.direction === 'expense' ? '支出' : '收入'}
   </span>
   {isOverridden && (

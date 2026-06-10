@@ -30,7 +30,7 @@ export const SimpleBarChart: React.FC<{
       {/* Y 轴刻度 */}
       <div className="absolute flex flex-col justify-between text-right pr-2" style={{ left: 0, top: 8, bottom: 32, width: 72 }}>
         {ticks.slice().reverse().map((v, i) => (
-          <span key={i} className="text-[10px] leading-none" style={{ color: 'var(--muted)', fontFamily: 'var(--font-mono, monospace)' }}>
+          <span key={i} className="text-caption leading-none" style={{ color: 'var(--muted)', fontFamily: 'var(--font-mono, monospace)' }}>
             {v >= 10000 ? `${(v / 10000).toFixed(0)}万` : v === 0 ? '0' : String(v)}
           </span>
         ))}
@@ -76,7 +76,7 @@ export const SimpleBarChart: React.FC<{
       <div className="flex gap-1.5 mt-2" style={{ marginLeft: 80, marginRight: 12 }}>
         {data.map((d, i) => (
           <div key={i} className="flex-1 text-center">
-            <span className="text-[10px] leading-tight block truncate" style={{ color: 'var(--muted-2)' }} title={d.name}>
+            <span className="text-caption leading-tight block truncate" style={{ color: 'var(--muted-2)' }} title={d.name}>
               {d.name}
             </span>
           </div>
@@ -110,7 +110,7 @@ export const SimpleGroupedBarChart: React.FC<{
 
       <div className="absolute flex flex-col justify-between text-right pr-2" style={{ left: 0, top: 8, bottom: 32, width: 72 }}>
         {ticks.slice().reverse().map((v, i) => (
-          <span key={i} className="text-[10px] leading-none" style={{ color: 'var(--muted)', fontFamily: 'var(--font-mono, monospace)' }}>
+          <span key={i} className="text-caption leading-none" style={{ color: 'var(--muted)', fontFamily: 'var(--font-mono, monospace)' }}>
             {v >= 10000 ? `${(v / 10000).toFixed(0)}万` : v === 0 ? '0' : String(v)}
           </span>
         ))}
@@ -159,7 +159,7 @@ export const SimpleGroupedBarChart: React.FC<{
       <div className="flex mt-2" style={{ marginLeft: 80, marginRight: 12, gap: 6 }}>
         {data.map((d, i) => (
           <div key={i} className="flex-1 text-center">
-            <span className="text-[10px] leading-tight block truncate" style={{ color: 'var(--muted-2)' }} title={d.name}>{d.name}</span>
+            <span className="text-caption leading-tight block truncate" style={{ color: 'var(--muted-2)' }} title={d.name}>{d.name}</span>
           </div>
         ))}
       </div>
@@ -169,7 +169,7 @@ export const SimpleGroupedBarChart: React.FC<{
         {data[0]?.values.map((v, i) => (
           <div key={i} className="flex items-center gap-1.5">
             <div className="w-2.5 h-2.5 rounded-sm" style={{ background: v.color }} />
-            <span className="text-[10px]" style={{ color: 'var(--muted-2)' }}>{v.label}</span>
+            <span className="text-caption" style={{ color: 'var(--muted-2)' }}>{v.label}</span>
           </div>
         ))}
       </div>

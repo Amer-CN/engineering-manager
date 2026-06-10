@@ -10,6 +10,7 @@ import { taxRateOptions, invoiceKindOptions } from './constants'
 import { useToastStore } from '@/store/toastStore'
 import { useInvoiceOCR } from '@/hooks/useInvoiceOCR'
 import { Icon } from '../../ui/Icon'
+import { HoverScrollbar } from '../../ui/HoverScrollbar'
 
 export interface InvoiceFormData {
   type: InvoiceType
@@ -208,7 +209,8 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
   <button onClick={onCancel} className="text-slate-400 hover:text-slate-600">✕</button>
   </div>
   
-  <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+  <form onSubmit={handleSubmit} className="flex flex-col overflow-hidden flex-1">
+  <HoverScrollbar className="flex-1 px-6 py-4">
   <div className="space-y-4">
   <div className="grid grid-cols-2 gap-4">
   <div>
@@ -435,9 +437,8 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
   )}
   </div>
   )}
-  </div>
-
-  <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
+  </div></HoverScrollbar>
+  <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 shrink-0">
   <button type="button" onClick={onCancel} className="btn btn-secondary">取消</button>
   <button type="submit" className="btn btn-primary">{isEditing ? '保存' : '创建'}</button>
   </div>

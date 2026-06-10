@@ -43,6 +43,11 @@ const TABLE_NAME_MAP: Record<string, string> = {
   audit_logs: '审计日志',
   users: '用户',
   roles: '角色',
+  app_config: '系统配置',
+  schema_version: '架构版本',
+  tasks: '任务',
+  contract_templates: '合同模板',
+  snapshots: '数据库快照',
 }
 
 interface Props {
@@ -293,7 +298,7 @@ export const SettingsSqliteSection: React.FC<Props> = ({
                   .sort(([, a], [, b]) => b - a)
                   .map(([table, count]) => (
                     <div key={table} className="flex justify-between items-center">
-                      <span className="text-slate-600 truncate">{TABLE_NAME_MAP[table] || table}</span>
+                      <span className="text-slate-600 truncate">{TABLE_NAME_MAP[table] || TABLE_NAME_MAP[table.replace(/[A-Z]/g, c => '_' + c.toLowerCase())] || table}</span>
                       <span className="text-slate-800 font-medium tabular-nums ml-2">{count.toLocaleString()}</span>
                     </div>
                   ))}

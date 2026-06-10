@@ -83,13 +83,13 @@ export default function TemplateSelectorModal({ category, onSelect, onClose }: T
                     <h3 className="font-medium text-slate-800 text-sm group-hover:text-primary-700">{t.name}</h3>
                     {t.description && <p className="text-xs text-slate-400 mt-0.5 truncate">{t.description}</p>}
                     <div className="flex items-center gap-2 mt-2 flex-wrap">
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${t.fileType === 'docx' ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                      <span className={`text-caption px-1.5 py-0.5 rounded font-mono ${t.fileType === 'docx' ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>
                         .{t.fileType}
                       </span>
                       {t.variables.slice(0, 4).map(v => (
-                        <span key={v.key} className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">{v.label}</span>
+                        <span key={v.key} className="text-caption px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">{v.label}</span>
                       ))}
-                      {t.variables.length > 4 && <span className="text-[10px] text-slate-400">+{t.variables.length - 4}</span>}
+                      {t.variables.length > 4 && <span className="text-caption text-slate-400">+{t.variables.length - 4}</span>}
                     </div>
                   </div>
                   <Icon name="ChevronRight" size={16} className="text-slate-300 group-hover:text-primary-400 flex-shrink-0 mt-1" />

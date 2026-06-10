@@ -170,10 +170,10 @@ export function CategoryManager({ categories, onClose, onRefresh }: CategoryMana
         ) : (
           <>
             <span className="flex-1 text-sm text-slate-700">{cat.label}</span>
-            {cat.isBuiltin && <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-400">内置</span>}
-            <button onClick={() => startEditL2(cat)} className="text-[10px] text-slate-400 hover:text-blue-600">编辑</button>
+            {cat.isBuiltin && <span className="rounded bg-slate-100 px-1.5 py-0.5 text-caption text-slate-400">内置</span>}
+            <button onClick={() => startEditL2(cat)} className="text-caption text-slate-400 hover:text-blue-600">编辑</button>
             {!cat.isBuiltin && (
-              <button onClick={() => handleDeleteL2(cat)} className="text-[10px] text-slate-400 hover:text-red-500">删除</button>
+              <button onClick={() => handleDeleteL2(cat)} className="text-caption text-slate-400 hover:text-red-500">删除</button>
             )}
           </>
         )}
@@ -238,12 +238,12 @@ export function CategoryManager({ categories, onClose, onRefresh }: CategoryMana
                     <div className="flex items-center gap-2 px-3 py-2 bg-slate-50">
                       <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: group.color }} />
                       <span className="flex-1 text-sm font-semibold text-slate-800">{group.name}</span>
-                      {isHierarchyGroup(group.name) && <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] text-slate-500">内置</span>}
+                      {isHierarchyGroup(group.name) && <span className="rounded bg-slate-200 px-1.5 py-0.5 text-caption text-slate-500">内置</span>}
                       <button onClick={() => startEditL1(group)}
-                        className="text-[10px] text-slate-400 hover:text-blue-600">编辑</button>
+                        className="text-caption text-slate-400 hover:text-blue-600">编辑</button>
                       {custom && (
                         <button onClick={() => handleDeleteL1(group)}
-                          className="text-[10px] text-slate-400 hover:text-red-500">删除</button>
+                          className="text-caption text-slate-400 hover:text-red-500">删除</button>
                       )}
                     </div>
                   )}
@@ -325,14 +325,14 @@ export function CategoryManager({ categories, onClose, onRefresh }: CategoryMana
         {!viewRules && (add?.type === 'l1' ? (
           <div className="space-y-2 rounded-lg border border-blue-300 bg-blue-50/50 px-3 py-2.5">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-slate-500 w-8">一级</span>
+              <span className="text-caption text-slate-500 w-8">一级</span>
               <input value={add.groupName} onChange={e => setAdd(prev => prev && prev.type === 'l1' ? { ...prev, groupName: e.target.value } : prev)}
                 placeholder="一级分类名" className="flex-1 rounded border border-slate-200 px-2 py-1 text-xs" autoFocus />
               <input type="color" value={add.groupColor} onChange={e => setAdd({ ...add, groupColor: e.target.value })}
                 className="h-5 w-6 rounded border border-slate-200 p-0 cursor-pointer" />
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-slate-500 w-8">二级</span>
+              <span className="text-caption text-slate-500 w-8">二级</span>
               <input value={add.label} onChange={e => setAdd(prev => prev && prev.type === 'l1' ? { ...prev, label: e.target.value } : prev)}
                 placeholder="第一个二级分类名" className="flex-1 rounded border border-slate-200 px-2 py-1 text-xs" />
               <input type="color" value={add.color} onChange={e => setAdd({ ...add, color: e.target.value })}

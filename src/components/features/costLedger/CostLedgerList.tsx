@@ -190,7 +190,7 @@ export function CostLedgerList({ entries, summary, loading, onEdit, onDelete, ca
               if ((dir === 'expense' && filter === 'income') || (dir === 'income' && filter === 'expense')) return null
               const groups = getLevel1GroupsMerged(categories, dir)
               return groups.map(group => (
-                <option key={group.name} value={`level1:${group.name}`} style={{ color: group.color, fontWeight: 500 }}>
+                <option key={`${dir}-${group.name}`} value={`level1:${group.name}`} style={{ color: group.color, fontWeight: 500 }}>
                   {dir === 'expense' ? '支出' : '收入'} · {group.name}
                 </option>
               ))
@@ -200,16 +200,20 @@ export function CostLedgerList({ entries, summary, loading, onEdit, onDelete, ca
             (['expense', 'income'] as const).map(dir => {
               if ((dir === 'expense' && filter === 'income') || (dir === 'income' && filter === 'expense')) return null
               const groups = getLevel1GroupsMerged(categories, dir)
-              const dirCats = categories && categories.length > 0
+              const dirCatsAll = categories && categories.length > 0
                 ? categories.filter(c => c.direction === dir && c.isEnabled !== false)
                 : getCategoriesByDirection(dir)
+              // 按 code 去重（数据库可能返回重复分类）
+              const dirCats = Array.from(new Map(dirCatsAll.map(c => [c.code, c])).values())
               return groups.map(group => {
                 const subs = dirCats.filter(c => group.codes.includes(c.code))
-                if (subs.length === 0) return null
+                // 按 code 去重（数据库可能返回重复分类）
+                const uniqueSubs = Array.from(new Map(subs.map(c => [c.code, c])).values())
+                if (uniqueSubs.length === 0) return null
                 return (
-                  <optgroup key={group.name} label={`${dir === 'expense' ? '支出' : '收入'} · ${group.name}`}>
-                    {subs.map(c => (
-                      <option key={c.code} value={c.code} style={{ color: c.color || getCategoryColor(c.code, categories) }}>{c.label}</option>
+                  <optgroup key={`${dir}-${group.name}`} label={`${dir === 'expense' ? '支出' : '收入'} · ${group.name}`}>
+                    {uniqueSubs.map(c => (
+                      <option key={`${dir}-${c.code}`} value={c.code} style={{ color: c.color || getCategoryColor(c.code, categories) }}>{c.label}</option>
                     ))}
                   </optgroup>
                 )

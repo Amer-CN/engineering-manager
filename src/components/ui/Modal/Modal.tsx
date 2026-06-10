@@ -2,6 +2,7 @@ import React, { useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Icon } from '../Icon'
+import { HoverScrollbar } from '../HoverScrollbar'
 
 export type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | 'full'
 
@@ -144,9 +145,9 @@ export function Modal({
   </div>
   )}
 
-  <div className="flex-1 overflow-y-auto px-6 py-4">
+  <HoverScrollbar className="flex-1 px-6 py-4">
   {children}
-  </div>
+  </HoverScrollbar>
 
   {footer && (
   <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl">

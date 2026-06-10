@@ -56,7 +56,7 @@ export function FileUploadArea({ file, fileType, field, dragOverField, onDragOve
           <div className="mt-1"><span className="text-xs text-slate-500 group-hover:text-red-500 transition-colors">点击删除</span></div>
         </div>
       ) : (
-        <div className="text-slate-400 text-xs"><div className="text-lg mb-1"><Icon name="Paperclip" size={24} /></div>{placeholder}<div className="text-[10px] mt-1">支持 JPG、PNG、WebP、PDF</div></div>
+        <div className="text-slate-400 text-xs"><div className="text-lg mb-1"><Icon name="Paperclip" size={24} /></div>{placeholder}<div className="text-caption mt-1">支持 JPG、PNG、WebP、PDF</div></div>
       )}
     </div>
   )
@@ -82,7 +82,7 @@ export function SmallFileUpload({ label, file, field, dragOverField, onDragOver,
         {file ? (
           <div className="relative group">
             <span className="text-green-600 text-xs">已上传</span>
-            <span className="block text-[10px] text-slate-400 group-hover:text-red-500 transition-colors">点击删除</span>
+            <span className="block text-caption text-slate-400 group-hover:text-red-500 transition-colors">点击删除</span>
           </div>
         ) : (<span className="text-slate-400 text-xs">点击/拖拽/粘贴</span>)}
       </div>

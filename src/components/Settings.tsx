@@ -187,7 +187,7 @@ const Settings: React.FC<SettingsProps> = ({ refresh }) => {
  <span className="text-lg">{s.icon}</span>
  </div>
  <div className="text-sm font-semibold text-slate-800">{s.name}</div>
- <div className="text-[11px] text-slate-400">{s.desc}</div>
+ <div className="text-micro text-slate-400">{s.desc}</div>
  </button>
  ))}
  </div>
@@ -225,7 +225,7 @@ const Settings: React.FC<SettingsProps> = ({ refresh }) => {
  }`}
  >
  {s.label}
- <span className="block text-[10px] font-normal opacity-60 mt-0.5">{s.desc}</span>
+ <span className="block text-caption font-normal opacity-60 mt-0.5">{s.desc}</span>
  </button>
  ))}
  </div>
@@ -273,15 +273,15 @@ const Settings: React.FC<SettingsProps> = ({ refresh }) => {
  <stop offset="0%" stopColor="var(--accent)" />
  <stop offset="100%" stopColor="var(--violet)" />
  </linearGradient>
+ <mask id="about-mask"><rect width="18" height="18" fill="white" /><path d="M5 14 L9 6 L13 14 Z" fill="black" /></mask>
  </defs>
- <path d="M2 15.5 L9 2.5 L16 15.5 Z" fill="url(#about-mark-grad)" strokeLinejoin="round" />
- <path d="M5 14 L9 6 L13 14 Z" fill="var(--panel-2)" />
+ <path d="M2 15.5 L9 2.5 L16 15.5 Z" fill="url(#about-mark-grad)" strokeLinejoin="round" mask="url(#about-mask)" />
  </svg>
  </div>
  <div>
  <p className="text-xl font-bold text-slate-800">工程管家</p>
  <p className="text-slate-500">
- Version {(window as any).__APP_VERSION__ || '0.68.0'}
+ Version {(window as any).__APP_VERSION__ || '0.70.0'}
  <span className="mx-1.5 text-slate-300">·</span>
  <button onClick={() => setShowChangelog(true)} className="hover:underline" style={{ color: 'var(--accent)' }}>更新日志</button>
  </p>

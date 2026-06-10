@@ -27,7 +27,7 @@ export const CostLedgerRow = React.memo(function CostLedgerRow({ entry, category
           {getCategoryDisplayLabel(entry.category, categoryLevel, categories)}
         </span>
         {isCategoryMissing(entry.category, categories) && (
-          <span className="ml-1 rounded bg-amber-100 px-1 text-amber-700 text-[10px]" title="分类已删除或禁用">已删</span>
+          <span className="ml-1 rounded bg-amber-100 px-1 text-amber-700 text-caption" title="分类已删除或禁用">已删</span>
         )}
       </td>
       <td className="px-3 py-2 font-medium text-slate-700 truncate">{entry.counterparty}</td>
@@ -37,7 +37,7 @@ export const CostLedgerRow = React.memo(function CostLedgerRow({ entry, category
       </td>
       <td className="px-3 py-2 text-xs text-slate-600 truncate" title={entry.summary}>
         {entry.summary}
-        {entry.linkedInvoiceStatus === 'deleted' && <span className="ml-1 rounded bg-amber-100 px-1 text-amber-700 text-[10px]">已删发票</span>}
+        {entry.linkedInvoiceStatus === 'deleted' && <span className="ml-1 rounded bg-amber-100 px-1 text-amber-700 text-caption">已删发票</span>}
       </td>
       <td className="px-3 py-2 text-xs text-slate-500 truncate" title={entry.notes || ''}>
         {entry.notes || '-'}

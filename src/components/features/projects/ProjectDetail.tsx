@@ -152,38 +152,24 @@ export function ProjectDetail({ project, members, allMembers, onBack, onEdit }: 
   return (
     <PageContainer>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
-        {/* ── Header ── */}
-        <div className="relative overflow-hidden rounded-2xl mb-6 bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 text-white p-5 lg:p-6">
-          <div className="hero-overlay absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.08),transparent_50%)]" />
-          {/* 装饰光点 */}
-          <motion.div className="absolute top-3 right-12 w-1 h-1 rounded-full bg-emerald-400"
-            animate={{ opacity: [0, 1, 0], scale: [0.5, 2, 0.5] }}
-            transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 3 }}
-          />
-          <motion.div className="absolute bottom-4 right-24 w-1.5 h-1.5 rounded-full bg-amber-400"
-            animate={{ opacity: [0, 1, 0], scale: [0.5, 1.8, 0.5] }}
-            transition={{ duration: 3, repeat: Infinity, repeatDelay: 4, delay: 1 }}
-          />
-          <div className="relative z-10 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button onClick={onBack} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors">
-                <Icon name="ChevronLeft" size={20} />
-              </button>
-              <div>
-                <div className="flex items-center gap-3">
-                  <h1 className="text-2xl font-bold tracking-tight">{project.name}</h1>
-                  <StatusBadge status={project.status} config={PROJECT_STATUS} />
-                </div>
-                <p className="text-white/50 text-sm mt-1">{project.address || '暂无地址'}<span className="mx-2 opacity-50">·</span>{project.projectManagerName || '暂无负责人'}</p>
-              </div>
-            </div>
-            <button onClick={() => onEdit(project)} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-all text-sm font-medium">
-              <Icon name="Edit3" size={14} /> 编辑项目
+        {/* ── 页面头部 ── */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <button onClick={onBack} className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors text-slate-600">
+              <Icon name="ArrowLeft" size={18} />
             </button>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-bold text-slate-800">{project.name}</h1>
+                <StatusBadge status={project.status} config={PROJECT_STATUS} />
+              </div>
+              <p className="text-slate-500 text-sm mt-0.5">{project.address || '暂无地址'} · {project.projectManagerName || '暂无负责人'}</p>
+            </div>
           </div>
+          <button onClick={() => onEdit(project)} className="btn btn-secondary btn-sm">
+            <Icon name="Edit3" size={14} /> 编辑
+          </button>
         </div>
-
-        <ProjectStats budget={project.budget} stats={stats} />
 
         {/* ── Tab Bar (统一 Tabs 组件) ── */}
         <Tabs

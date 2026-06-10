@@ -79,35 +79,63 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
   return (
     <motion.div initial="hidden" animate="visible" variants={staggerContainer}>
 
-      {/* ═══ 1. Hero ═══ */}
-      <motion.section variants={sectionVariant} className="relative overflow-hidden rounded-2xl mb-6 bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 text-white p-6">
-        <div className="hero-overlay absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.1),transparent_50%)]" />
-        {/* 装饰光点 */}
-        <motion.div className="absolute top-3 right-12 w-1 h-1 rounded-full bg-emerald-400"
-          animate={{ opacity: [0, 1, 0], scale: [0.5, 2, 0.5] }}
-          transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 3 }}
-        />
-        <motion.div className="absolute bottom-4 right-24 w-1.5 h-1.5 rounded-full bg-cyan-400"
-          animate={{ opacity: [0, 1, 0], scale: [0.5, 1.8, 0.5] }}
-          transition={{ duration: 3, repeat: Infinity, repeatDelay: 4, delay: 1 }}
-        />
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center"><Icon name="Building2" size={28} /></div>
-            <div>
-              <div className="flex items-center gap-3 flex-wrap"><h2 className="text-2xl font-bold tracking-tight">{project.name}</h2><span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/15"><span className={`w-1.5 h-1.5 rounded-full ${status.color}`} />{status.text}</span></div>
-              <p className="text-white/50 text-sm mt-1">{project.address || '暂无地址'}{project.projectManagerName && <span> — {project.projectManagerName}</span>}</p>
+      {/* ═══ 1. 项目概览卡片 ═══ */}
+      <motion.section variants={sectionVariant} className="mb-6">
+        <div className="bg-white border border-slate-200 rounded-xl p-5">
+          {/* 项目基本信息 */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center">
+                <Icon name="Building2" size={20} className="text-primary-600" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-bold text-slate-800">{project.name}</h2>
+                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-caption font-medium ${project.status === 'in_progress' ? 'bg-emerald-100 text-emerald-700' : project.status === 'planning' ? 'bg-blue-100 text-blue-700' : project.status === 'completed' ? 'bg-slate-100 text-slate-600' : 'bg-amber-100 text-amber-700'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${status.color}`} />
+                    {status.text}
+                  </span>
+                </div>
+                <p className="text-slate-500 text-xs mt-0.5">{project.address || '暂无地址'} · {project.projectManagerName || '暂无负责人'}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <p className="text-2xl font-bold text-emerald-600">{healthScore}<span className="text-sm font-normal text-slate-400">分</span></p>
+                <p className="text-caption text-slate-400">{healthLevel.label}</p>
+              </div>
+              <div className="w-10 h-10 relative">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadialBarChart cx="50%" cy="50%" innerRadius="70%" outerRadius="100%" barSize={6} data={healthGauge} startAngle={180} endAngle={0}>
+                    <RadialBar dataKey="value" cornerRadius={3} animationDuration={1200} animationEasing="ease-out" />
+                  </RadialBarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-3 p-4 rounded-xl bg-white/10">
-            <div className="w-[72px] h-[72px]"><ResponsiveContainer width="100%" height="100%"><RadialBarChart cx="50%" cy="50%" innerRadius="70%" outerRadius="100%" barSize={8} data={healthGauge} startAngle={180} endAngle={0}><RadialBar dataKey="value" cornerRadius={4} animationDuration={1200} animationEasing="ease-out" /></RadialBarChart></ResponsiveContainer></div>
-            <div><p className="text-3xl font-bold text-emerald-300">{healthScore}</p><p className="text-xs text-emerald-300/80">{healthLevel.label}</p><p className="text-[10px] text-white/30 mt-0.5">健康指数</p></div>
+          {/* 关键指标 */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 pt-4 border-t border-slate-100">
+            <div className="p-3 rounded-lg bg-slate-50">
+              <p className="text-caption text-slate-400 mb-0.5">合同总额</p>
+              <p className="text-base font-bold text-slate-800">¥{project.budget > 0 ? (project.budget / 10000).toFixed(1) : '-'}万</p>
+            </div>
+            <div className="p-3 rounded-lg bg-slate-50">
+              <p className="text-caption text-slate-400 mb-0.5">工期进度</p>
+              <p className="text-base font-bold text-slate-800">{stats.timeProgress}%</p>
+              <p className="text-caption text-slate-400">{stats.daysElapsed}/{stats.totalDays}天</p>
+            </div>
+            <div className="p-3 rounded-lg bg-slate-50">
+              <p className="text-caption text-slate-400 mb-0.5">待处理</p>
+              <p className="text-base font-bold text-slate-800">{unpaidInvoices}项</p>
+              <p className="text-caption text-slate-400">发票待付/待收</p>
+            </div>
+            <div className="p-3 rounded-lg bg-slate-50">
+              <p className="text-caption text-slate-400 mb-0.5">净利润</p>
+              <p className={`text-base font-bold ${stats.netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                {stats.netProfit >= 0 ? '+' : ''}¥{(stats.netProfit / 10000).toFixed(1)}万
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="relative z-10 grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
-          {[{ l: '合同总额', v: `¥${project.budget > 0 ? (project.budget / 10000).toFixed(1) : '-'}万` }, { l: '工期进度', v: `${stats.timeProgress}%`, s: `${stats.daysElapsed}/${stats.totalDays}天` }, { l: '待处理', v: `${unpaidInvoices}项`, s: `发票待付/待收` }, { l: '净利润', v: `${stats.netProfit >= 0 ? '+' : ''}¥${(stats.netProfit / 10000).toFixed(1)}万`, a: stats.netProfit >= 0 ? 'text-emerald-300' : 'text-red-300' }].map((k, i) => (
-            <div key={i} className="p-3 rounded-xl bg-white/10"><p className="text-xs text-white/60">{k.l}</p><p className={`text-lg font-bold mt-0.5 ${(k as any).a || ''}`}>{k.v}</p>{(k as any).s && <p className="text-xs text-white/40">{(k as any).s}</p>}</div>
-          ))}
         </div>
       </motion.section>
 
@@ -160,7 +188,7 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
             {incP.length > 0 ? <div className="space-y-2">{incP.slice(0, 4).map(c => (
               <div key={c.id} className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
                 <div className="flex justify-between mb-1"><span className="text-xs font-medium text-slate-700 truncate max-w-[120px]">{c.name}</span><span className="text-xs font-bold text-emerald-600">¥{formatMoney(c.amount)}</span></div>
-                <div className="flex items-center gap-2"><div className="flex-1 h-1 rounded-full bg-slate-200 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all" style={{ width: `${c.progress}%` }} /></div><span className="text-[10px] text-slate-400 w-12 text-right">已回款 ¥{formatMoney(c.received)}</span></div>
+                <div className="flex items-center gap-2"><div className="flex-1 h-1 rounded-full bg-slate-200 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all" style={{ width: `${c.progress}%` }} /></div><span className="text-caption text-slate-400 w-12 text-right">已回款 ¥{formatMoney(c.received)}</span></div>
               </div>
             ))}</div> : <EmptyState text="暂无" />}
           </Card>
@@ -170,7 +198,7 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
             {expP.length > 0 ? <div className="space-y-2">{expP.slice(0, 4).map(c => (
               <div key={c.id} className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
                 <div className="flex justify-between mb-1"><span className="text-xs font-medium text-slate-700 truncate max-w-[120px]">{c.name}</span><span className="text-xs font-bold text-red-500">¥{formatMoney(c.amount)}</span></div>
-                <div className="flex items-center gap-2"><div className="flex-1 h-1 rounded-full bg-slate-200 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-red-500 to-red-400 transition-all" style={{ width: `${c.progress}%` }} /></div><span className="text-[10px] text-slate-400 w-12 text-right">已付款 ¥{formatMoney(c.received)}</span></div>
+                <div className="flex items-center gap-2"><div className="flex-1 h-1 rounded-full bg-slate-200 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-red-500 to-red-400 transition-all" style={{ width: `${c.progress}%` }} /></div><span className="text-caption text-slate-400 w-12 text-right">已付款 ¥{formatMoney(c.received)}</span></div>
               </div>
             ))}</div> : <EmptyState text="暂无" />}
           </Card>
@@ -191,8 +219,8 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
             <div className="space-y-2 max-h-[260px] overflow-y-auto">
               {partnerStats.map(p => (
                 <div key={p.id} className="p-2.5 rounded-lg bg-slate-50 border border-slate-100 hover:shadow-sm transition-shadow cursor-pointer">
-                  <div className="flex items-center gap-2 mb-1"><div className="w-6 h-6 rounded-lg bg-violet-100 flex items-center justify-center"><Icon name="Building2" size={12} className="text-violet-600" /></div><span className="text-xs font-medium text-slate-700 truncate">{p.name}</span><span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-500 ml-auto flex-shrink-0">{partnerRoleLabels[p.category] || p.category}</span></div>
-                  {(p.incAmt > 0 || p.expAmt > 0) && <div className="flex gap-2 text-[10px]">{p.incAmt > 0 && <span className="text-emerald-600">收入 ¥{(p.incAmt / 10000).toFixed(1)}万</span>}{p.expAmt > 0 && <span className="text-red-500">支出 ¥{(p.expAmt / 10000).toFixed(1)}万</span>}</div>}
+                  <div className="flex items-center gap-2 mb-1"><div className="w-6 h-6 rounded-lg bg-violet-100 flex items-center justify-center"><Icon name="Building2" size={12} className="text-violet-600" /></div><span className="text-xs font-medium text-slate-700 truncate">{p.name}</span><span className="text-caption px-1.5 py-0.5 rounded bg-slate-200 text-slate-500 ml-auto flex-shrink-0">{partnerRoleLabels[p.category] || p.category}</span></div>
+                  {(p.incAmt > 0 || p.expAmt > 0) && <div className="flex gap-2 text-caption">{p.incAmt > 0 && <span className="text-emerald-600">收入 ¥{(p.incAmt / 10000).toFixed(1)}万</span>}{p.expAmt > 0 && <span className="text-red-500">支出 ¥{(p.expAmt / 10000).toFixed(1)}万</span>}</div>}
                 </div>
               ))}
             </div>
@@ -212,8 +240,8 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
                 return (
                   <div key={inv.id} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-50 transition-colors">
                     <span className="text-xs text-slate-700 truncate flex-1 min-w-0">{inv.invoiceNo || '无号'}</span>
-                    <span className="text-[10px] text-slate-500 flex-shrink-0">¥{formatMoney(inv.amount)}</span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${si.color}`}>{si.label}</span>
+                    <span className="text-caption text-slate-500 flex-shrink-0">¥{formatMoney(inv.amount)}</span>
+                    <span className={`text-caption px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${si.color}`}>{si.label}</span>
                   </div>
                 )
               })}

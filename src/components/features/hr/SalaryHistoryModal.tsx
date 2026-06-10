@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
 import { useToastStore } from '@/store/toastStore'
 import { logCreate, logDelete } from '../../../utils/audit'
 import { getAPI } from '@/services/api-adapter'
-
 interface Props {
   member: any
   onClose: () => void
@@ -109,9 +108,9 @@ const SalaryHistoryModal: React.FC<Props> = ({ member, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <motion.div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[80vh] overflow-y-auto"
+      <motion.div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 flex flex-col max-h-[80vh]"
         initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }}>
-        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between flex-shrink-0">
           <div>
             <h2 className="text-lg font-semibold text-slate-800">{member.name} - 薪资历史</h2>
             <p className="text-xs text-slate-400 mt-0.5">薪酬计算按月份自动匹配对应时段的薪资标准</p>

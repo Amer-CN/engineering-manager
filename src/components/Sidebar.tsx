@@ -2,6 +2,7 @@ import React from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from './ui/Icon'
 import { DropdownMenu } from './ui/DropdownMenu'
+import { HoverScrollbar } from './ui/HoverScrollbar'
 import { type PageId } from '../routes'
 // APP_VERSION 从 window.__APP_VERSION__ 读取（由 index.html 注入）
 
@@ -55,14 +56,14 @@ const Sidebar: React.FC<SidebarProps> = ({
   {/* ── Logo 区域已合并到 TitleBar ── */}
 
   {/* ── 导航区域 ── */}
-  <nav className={`flex-1 py-3 ${collapsed ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+  <HoverScrollbar className="flex-1"><nav className={`flex-1 py-3 ${collapsed ? 'overflow-hidden' : ''}`}>
   {!collapsed && (
   <motion.div
   initial={{ opacity: 0 }}
   animate={{ opacity: 1 }}
   className="px-4 mb-2"
   >
-  <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 px-1">主菜单</p>
+  <p className="text-caption font-semibold uppercase tracking-widest text-slate-400 px-1">主菜单</p>
   </motion.div>
   )}
   {navItems.map((item) => {
@@ -120,9 +121,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   </div>
   )
   })}
-  </nav>
-
-  {/* ── 用户信息区域 ── */}
+  </nav></HoverScrollbar>
   <div className="border-t border-slate-100">
   {collapsed ? (
   <div className="flex items-center justify-center py-3">

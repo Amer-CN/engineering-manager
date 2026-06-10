@@ -280,7 +280,7 @@ export default function AttendanceDetail({
   ${isToday ? 'ring-1 ring-slate-400 shadow-sm' : ''}`}
   title={isBeforeEntry ? '入职前，不计入考勤' : `${day}日 ${(status && LABEL[status as DayStatus]) || '未设'}${isToday ? ' (今天)' : ''}${isAnchor ? ' — Shift+点击其他日期批量涂色' : ''}\n右键: 循环切换`}
   >
-  {isBeforeEntry ? <span className="text-[10px]">-</span> : day}
+  {isBeforeEntry ? <span className="text-caption">-</span> : day}
   </button>
   )
   })}

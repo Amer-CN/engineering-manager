@@ -47,23 +47,7 @@ export function HoverScrollbar({ children, className = '', threshold = 15 }: Hov
     thumb.style.top = `${thumbTop}px`
   }, [])
 
-  // 滚轮事件 — overflow:hidden 不自动滚动，需要手动处理
-  useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
-
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault()
-      el.scrollTop += e.deltaY
-      el.scrollLeft += e.deltaX
-      updateThumb()
-    }
-
-    el.addEventListener('wheel', onWheel, { passive: false })
-    return () => el.removeEventListener('wheel', onWheel)
-  }, [updateThumb])
-
-  // 监听内容变化 + resize
+  // 监听内容变化 + resize + scroll（原生滚动触发）
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
@@ -223,7 +207,7 @@ export function HoverScrollbar({ children, className = '', threshold = 15 }: Hov
     <div className={`relative ${className}`}>
       <div
         ref={containerRef}
-        className="h-full overflow-hidden"
+        className="h-full overflow-auto hide-native-scrollbar"
       >
         {children}
       </div>

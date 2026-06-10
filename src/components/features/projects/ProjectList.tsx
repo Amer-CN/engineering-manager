@@ -1,18 +1,23 @@
 /**
- * ProjectList - 投资组合仪表盘 + 项目卡片网格
+ * ProjectList - 项目卡片网格（精简版）
+ * Hero 横幅已提取到 Projects.tsx 页面顶部
  */
 import type { Project, Member } from '@/types'
 import { ProjectCard } from './ProjectCard'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { motion } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
+import type { AlertItem } from './AlertBar'
 
 export interface ProjectListProps {
-  projects: Project[]; members: Member[]; loading: boolean
+  projects: Project[]
+  members: Member[]
+  loading: boolean
   onProjectClick: (project: Project) => void
   onEdit: (project: Project) => void
   onDelete: (id: number) => void
   onAdd: () => void
+  alerts?: AlertItem[]
 }
 
 const containerVariants = {
@@ -23,15 +28,13 @@ const itemVariants = {
   hidden: { opacity: 0, y: 16 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.35 } },
 } as const
-const sectionV = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { duration: 0.3, ease: 'easeOut' as const } } } as const
 
-export function ProjectList({ projects, members, loading, onProjectClick, onEdit, onDelete, onAdd }: ProjectListProps) {
+export function ProjectList({ projects, members, loading, onProjectClick, onEdit, onDelete, onAdd, alerts = [] }: ProjectListProps) {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="rounded-2xl bg-slate-100 animate-pulse h-32" />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {[1, 2, 3].map(i => <div key={i} className="rounded-2xl bg-slate-100 animate-pulse h-64" />)}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {[1, 2, 3].map(i => <div key={i} className="rounded-2xl bg-slate-100 animate-pulse h-56" />)}
         </div>
       </div>
     )
@@ -49,54 +52,30 @@ export function ProjectList({ projects, members, loading, onProjectClick, onEdit
     )
   }
 
-  const totalBudget = projects.reduce((s, p) => s + (p.budget || 0), 0)
-  const activeCount = projects.filter(p => p.status === 'in_progress').length
-  const completedCount = projects.filter(p => p.status === 'completed').length
+  // 构建告警映射：projectName -> alert
+  const alertMap = new Map<string, AlertItem>()
+  for (const a of alerts) {
+    alertMap.set(a.projectName, a)
+  }
 
   return (
     <motion.div initial="hidden" animate="visible" variants={containerVariants}>
-      {/* 投资组合概览横幅 — 结构与 Dashboard hero banner 一致 */}
-      <motion.section variants={sectionV}
-        className="relative overflow-hidden rounded-2xl mb-6 bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 text-white p-6">
-        <div className="hero-overlay absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.1),transparent_50%)]" />
-        <motion.div className="absolute top-3 right-12 w-1 h-1 rounded-full bg-emerald-400"
-          animate={{ opacity: [0, 1, 0], scale: [0.5, 2, 0.5] }}
-          transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 3 }}
-        />
-        <motion.div className="absolute bottom-4 right-24 w-1.5 h-1.5 rounded-full bg-blue-400"
-          animate={{ opacity: [0, 1, 0], scale: [0.5, 1.8, 0.5] }}
-          transition={{ duration: 3, repeat: Infinity, repeatDelay: 4, delay: 1 }}
-        />
-        <div className="relative z-10">
-          <p className="text-xs font-semibold uppercase tracking-wider text-white/50 mb-3">项目投资组合概览</p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {[
-              { label: '项目总数', value: `${projects.length}`, sub: `${activeCount}个进行中`, icon: 'FolderKanban', accent: 'text-blue-300' },
-              { label: '组合预算', value: `¥${totalBudget > 0 ? (totalBudget / 10000).toFixed(1) : '0'}万`, sub: `${completedCount}个已完成`, icon: 'DollarSign', accent: 'text-emerald-300' },
-              { label: '进行中', value: `${activeCount}`, sub: `共${projects.length}个项目`, icon: 'LayoutDashboard', accent: 'text-amber-300' },
-              { label: '整体健康度', value: '72分', sub: '良好水平', icon: 'Activity', accent: 'text-emerald-300' },
-            ].map((kpi, i) => (
-              <div key={i}>
-                <div className="flex items-center gap-2 mb-1">
-                  <Icon name={kpi.icon} size={14} className={kpi.accent} />
-                  <p className="text-xs text-white/60">{kpi.label}</p>
-                </div>
-                <p className={`text-xl font-bold ${kpi.accent}`}>{kpi.value}</p>
-                <p className="text-xs text-white/40">{kpi.sub}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </motion.section>
-
-      {/* 项目卡片网格 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {projects.map((project, index) => (
-          <motion.div key={project.id} variants={itemVariants}>
-            <ProjectCard project={project} members={members} index={index}
-              onClick={onProjectClick} onEdit={onEdit} onDelete={onDelete} />
-          </motion.div>
-        ))}
+        {projects.map((project, index) => {
+          const alertItem = alertMap.get(project.name)
+          return (
+            <motion.div key={project.id} variants={itemVariants} className="h-full">
+              <ProjectCard
+                project={project}
+                members={members}
+                index={index}
+                onClick={onProjectClick}
+                alert={alertItem?.message}
+                alertLevel={alertItem?.level}
+              />
+            </motion.div>
+          )
+        })}
       </div>
     </motion.div>
   )

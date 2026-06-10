@@ -167,10 +167,10 @@ export function ColumnFilter(props: ColumnFilterProps) {
           ) : (
             <>
               <div className="flex gap-1 border-b border-slate-100 px-1 pb-1 mb-1">
-                <button type="button" onClick={() => meta.setAll(meta.values)} className="text-[10px] text-blue-600 hover:text-blue-800">全选</button>
-                <button type="button" onClick={meta.clear} className="text-[10px] text-slate-400 hover:text-slate-600">清除</button>
+                <button type="button" onClick={() => meta.setAll(meta.values)} className="text-caption text-blue-600 hover:text-blue-800">全选</button>
+                <button type="button" onClick={meta.clear} className="text-caption text-slate-400 hover:text-slate-600">清除</button>
                 {checkSearch.trim() && (
-                  <span className="ml-auto text-[10px] text-slate-400">{filteredValues.length}/{meta.values.length}</span>
+                  <span className="ml-auto text-caption text-slate-400">{filteredValues.length}/{meta.values.length}</span>
                 )}
               </div>
               {filteredValues.length === 0 ? (
@@ -209,7 +209,7 @@ export function ColumnFilter(props: ColumnFilterProps) {
               { label: '本年', getDates: getThisYearDates },
             ].map(p => (
               <button key={p.label} type="button" onClick={() => selectDateRange(p.getDates())}
-                className="rounded border border-slate-200 px-1.5 py-0.5 text-[10px] text-slate-500 hover:bg-slate-50">{p.label}</button>
+                className="rounded border border-slate-200 px-1.5 py-0.5 text-caption text-slate-500 hover:bg-slate-50">{p.label}</button>
             ))}
           </div>
         )}

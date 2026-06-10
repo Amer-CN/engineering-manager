@@ -14,6 +14,7 @@ import { ImportFileStep } from './importComponents/ImportFileStep'
 import { ImportMappingStep, parseAllRows } from './importComponents/ImportMappingStep'
 import { ImportProgressStep } from './importComponents/ImportProgressStep'
 import { ImportDoneStep } from './importComponents/ImportDoneStep'
+import { HoverScrollbar } from '@/components/ui/HoverScrollbar'
 
 // ── 接口 ──
 // -- IMPORT_FIELDS: 保留供参考 --
@@ -232,7 +233,7 @@ export function CostLedgerImportModal({
   </div>
 
   {/* Body */}
-  <div className="p-6 overflow-y-auto flex-1 space-y-4">
+  <HoverScrollbar className="flex-1 p-6 space-y-4">
   {error && (
   <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
   <Icon name="AlertTriangle" size={20} className="text-red-500 shrink-0 mt-0.5" />
@@ -261,7 +262,7 @@ export function CostLedgerImportModal({
   )}
   {step === 'importing' && <ImportProgressStep progress={progress} />}
   {step === 'done' && <ImportDoneStep count={progress.current} learnedMsg={learnedMsg} />}
-  </div>
+  </HoverScrollbar>
 
   {/* Footer */}
   <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-end gap-3 shrink-0">

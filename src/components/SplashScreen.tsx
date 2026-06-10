@@ -253,10 +253,12 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
                 <stop offset="0%" stopColor={config.accentColor} />
                 <stop offset="100%" stopColor={config.accentColor} stopOpacity="0.6" />
               </linearGradient>
+              <mask id="splash-mask"><rect width="18" height="18" fill="white" /><path d="M5 14 L9 6 L13 14 Z" fill="black" /></mask>
             </defs>
             <motion.path
               d="M2 15.5 L9 2.5 L16 15.5 Z"
               fill="url(#splash-grad)"
+              mask="url(#splash-mask)"
               animate={{
                 filter: [
                   'drop-shadow(0 0 8px rgba(255,255,255,0.3))',
@@ -265,10 +267,6 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
                 ],
               }}
               transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-            />
-            <path
-              d="M5 14 L9 6 L13 14 Z"
-              fill={config.bgColor}
             />
           </svg>
         </motion.div>

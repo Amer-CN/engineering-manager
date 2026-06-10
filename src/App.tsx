@@ -10,6 +10,7 @@ import { RequirePermission, RequireAdmin } from './hooks/usePermission'
 import { useAuth } from './hooks/useAuth'
 import { useRowHoverOpacity } from './hooks/useRowHoverOpacity'
 import { useTheme } from './hooks/useTheme'
+import { HoverScrollbar } from './components/ui/HoverScrollbar'
 
 // ── 路由级代码分割：每个页面独立 chunk ──
 const Dashboard = lazy(() => import('./components/Dashboard'))
@@ -48,9 +49,9 @@ const PageLoader = () => (
             <stop offset="0%" stopColor="var(--accent)" />
             <stop offset="100%" stopColor="var(--accent)" stopOpacity="0.6" />
           </linearGradient>
+          <mask id="loader-mask"><rect width="18" height="18" fill="white" /><path d="M5 14 L9 6 L13 14 Z" fill="black" /></mask>
         </defs>
-        <path d="M2 15.5 L9 2.5 L16 15.5 Z" fill="url(#loader-grad)" />
-        <path d="M5 14 L9 6 L13 14 Z" fill="var(--bg)" />
+        <path d="M2 15.5 L9 2.5 L16 15.5 Z" fill="url(#loader-grad)" mask="url(#loader-mask)" />
       </svg>
     </motion.div>
     <div className="flex gap-1.5">
@@ -209,8 +210,12 @@ const AppContent: React.FC = () => {
   }, [lock, isFullScreen])
 
   const navItems = useMemo(() => {
-    if (!currentUser?.permissions || currentUser.permissions.length === 0) return NAV_ITEMS
-    return getFilteredSidebarRoutes(currentUser.permissions)
+    // 权限可能是字符串 "[]" 或数组，统一解析
+    const perms = typeof currentUser?.permissions === 'string'
+      ? JSON.parse(currentUser.permissions || '[]')
+      : (currentUser?.permissions || [])
+    if (!perms || perms.length === 0) return NAV_ITEMS
+    return getFilteredSidebarRoutes(perms)
   }, [currentUser?.permissions])
 
   useEffect(() => {

@@ -4,7 +4,7 @@ import { Icon } from '../../ui/Icon'
 import { useToastStore } from '@/store/toastStore'
 import { logUpdate } from '../../../utils/audit'
 import { getAPI } from '@/services/api-adapter'
-
+import { HoverScrollbar } from '../../ui/HoverScrollbar'
 interface Props {
   orphans: any[]
   departments: any[]
@@ -37,13 +37,13 @@ const BatchDeptAssignModal: React.FC<Props> = ({ orphans, departments, onClose, 
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <motion.div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[85vh] flex flex-col"
+      <motion.div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[85vh] flex flex-col overflow-hidden"
         initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }}>
-        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between shrink-0">
           <h2 className="text-lg font-semibold text-slate-800">批量分配部门</h2>
           <button onClick={onClose} className="btn btn-ghost p-1"><Icon name="X" size={18} /></button>
         </div>
-        <div className="p-6 space-y-4 overflow-y-auto flex-1">
+        <HoverScrollbar className="flex-1"><div className="p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">目标部门</label>
             <select value={batchDeptId} onChange={e => setBatchDeptId(e.target.value ? Number(e.target.value) : '')}
@@ -76,8 +76,8 @@ const BatchDeptAssignModal: React.FC<Props> = ({ orphans, departments, onClose, 
               ))}
             </div>
           </div>
-        </div>
-        <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
+        </div></HoverScrollbar>
+        <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-3 shrink-0">
           <button type="button" onClick={onClose} className="btn btn-secondary">取消</button>
           <button type="button" onClick={handleAssign} className="px-5 py-2 btn btn-primary">批量分配</button>
         </div>

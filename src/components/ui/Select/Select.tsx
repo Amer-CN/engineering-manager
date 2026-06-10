@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Icon } from '../Icon'
+import { HoverScrollbar } from '../HoverScrollbar'
 
 export interface SelectOption {
   label: string
@@ -173,7 +174,7 @@ export function Select({
   </div>
   )}
 
-  <div className="max-h-60 overflow-y-auto">
+  <HoverScrollbar className="max-h-60">
   {filteredOptions.length === 0 ? (
   <div className="px-4 py-8 text-sm text-slate-500 text-center">
   暂无数据
@@ -207,7 +208,7 @@ export function Select({
   </button>
   ))
   )}
-  </div>
+  </HoverScrollbar>
   </motion.div>
   )}
   </AnimatePresence>

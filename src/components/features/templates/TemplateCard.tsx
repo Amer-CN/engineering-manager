@@ -44,12 +44,12 @@ export const TemplateCard = React.memo(function TemplateCard({ template, onEdit,
       {template.variables && template.variables.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-4">
           {template.variables.slice(0, 4).map(v => (
-            <span key={v.key} className="px-1.5 py-0.5 rounded text-[10px] bg-slate-50 text-slate-500 border border-slate-100">
+            <span key={v.key} className="px-1.5 py-0.5 rounded text-caption bg-slate-50 text-slate-500 border border-slate-100">
               {v.label}
             </span>
           ))}
           {template.variables.length > 4 && (
-            <span className="text-[10px] text-slate-400">+{template.variables.length - 4}</span>
+            <span className="text-caption text-slate-400">+{template.variables.length - 4}</span>
           )}
         </div>
       )}

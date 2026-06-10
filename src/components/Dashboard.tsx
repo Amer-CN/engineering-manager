@@ -13,6 +13,7 @@ import { SimpleBarChart } from '@/components/ui/SimpleBarChart'
 import { staggerContainer, sectionVariant } from '@/constants/animations'
 import { getAPI } from '@/services/api-adapter'
 import { getLevel1ForCode, CATEGORY_HIERARCHY } from '@/components/features/costLedger/config'
+import { HoverScrollbar } from '@/components/ui/HoverScrollbar'
 const CHART_COLORS = ['#3b82f6', '#10b981', '#f97316', '#8b5cf6', '#06b6d4', '#f59e0b']
 
 const statCards = [
@@ -200,6 +201,8 @@ const Dashboard: React.FC = () => {
   }
 
   return (
+  <div className="h-[calc(100vh-60px)] overflow-hidden">
+  <HoverScrollbar className="h-full">
   <div className="max-w-[1600px] mx-auto p-6">
   <motion.div initial="hidden" animate="visible" variants={staggerContainer}>
 
@@ -298,8 +301,8 @@ const Dashboard: React.FC = () => {
   {chartData.invoiceStatus.length > 0 ? (
   <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.4, duration: 0.4 }}
   className="flex items-center h-72">
-  <div className="flex-1 h-full">
-  <ResponsiveContainer width="100%" height="100%">
+  <div className="flex-1 h-full min-w-0">
+  <ResponsiveContainer width="100%" height={280}>
   <PieChart>
   <Pie data={chartData.invoiceStatus} cx="50%" cy="50%" innerRadius={48} outerRadius={72} paddingAngle={3} dataKey="value" strokeWidth={0}
   animationDuration={1200} animationEasing="ease-out">
@@ -419,6 +422,8 @@ const Dashboard: React.FC = () => {
   </motion.section>
 
   </motion.div>
+  </div>
+  </HoverScrollbar>
   </div>
   )
 }

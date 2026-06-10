@@ -213,15 +213,22 @@ export function getLevel1GroupsMerged(
     }
   }
 
-  // Merge custom codes into their respective groups
-  const result = groups.map(g => ({
-    ...g,
-    codes: [...g.codes, ...(customByGroup.get(g.name) || [])],
-  }))
+  // Merge custom codes into their respective groups — 按 name 去重避免重复组
+  const seenNames = new Set<string>()
+  const result: { name: string; color: string; codes: string[] }[] = []
+  for (const g of groups) {
+    if (seenNames.has(g.name)) continue
+    seenNames.add(g.name)
+    result.push({
+      ...g,
+      codes: [...g.codes, ...(customByGroup.get(g.name) || [])],
+    })
+  }
 
   // Add entirely custom groups (level1 not in builtin hierarchy)
   for (const [name, codes] of customByGroup) {
-    if (!groupNames.has(name)) {
+    if (!seenNames.has(name)) {
+      seenNames.add(name)
       result.push({ name, color: '#6366f1', codes })
     }
   }
