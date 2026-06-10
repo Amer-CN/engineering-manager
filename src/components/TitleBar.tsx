@@ -98,11 +98,10 @@ const TitleBar: React.FC<TitleBarProps> = ({ onToggleCollapse, collapsed = false
         </button>
         <div className="flex items-center gap-2 ml-0.5">
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none" className="shrink-0" style={{ marginTop: 1 }}>
-            <defs><linearGradient id="mark-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="var(--accent)" /><stop offset="100%" stopColor="var(--violet)" /></linearGradient></defs>
-            <path d="M2 15.5 L9 2.5 L16 15.5 Z" fill="url(#mark-grad)" strokeLinejoin="round" />
-            <path d="M5 14 L9 6 L13 14 Z" fill="var(--bg-2)" />
+            <defs><linearGradient id="mark-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="var(--accent)" /><stop offset="100%" stopColor="var(--violet)" /></linearGradient><mask id="mark-mask"><rect width="18" height="18" fill="white" /><path d="M5 14 L9 6 L13 14 Z" fill="black" /></mask></defs>
+            <path d="M2 15.5 L9 2.5 L16 15.5 Z" fill="url(#mark-grad)" strokeLinejoin="round" mask="url(#mark-mask)" />
           </svg>
-          <span className="text-[13.5px] font-semibold tracking-tight leading-none" style={{ color: 'var(--fg)', marginTop: 1 }}>工程管家</span>
+          <span className="text-sm font-semibold tracking-tight leading-none" style={{ color: 'var(--fg)', marginTop: 1 }}>工程管家</span>
         </div>
       </div>
 

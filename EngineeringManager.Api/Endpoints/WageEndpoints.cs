@@ -51,11 +51,11 @@ public static class WageEndpoints
                 file_name=@FileName,updated_at=@Now WHERE id=@Id",
                 new { dto.Id, dto.WorkDays, dto.DaysOff, dto.IsFullAttendance, dto.DailyStatus,
                       dto.FileUrl, dto.FileName, Now = now() });
-            return affected > 0 ? Common.Ok() : Common.Fail("考勤记录不存在");
+            return affected > 0 ? Common.Ok() : Common.NotFound("考勤记录不存在");
         });
 
         app.MapDelete("/api/attendances/{id}", async (long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM attendances WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.Fail("考勤记录不存在"));
+            (await db.ExecuteAsync("DELETE FROM attendances WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("考勤记录不存在"));
 
         // ═══════════════════════════════════════════════════════════
         // 考勤批量操作
@@ -157,11 +157,11 @@ public static class WageEndpoints
                 paid_date=@PaidDate,updated_at=@Now WHERE id=@Id",
                 new { dto.Id, dto.DailyWage, dto.WorkDays, dto.Bonus, dto.Deduction,
                       ActualWage = actualWage, dto.PaidAmount, dto.PaidDate, Now = now() });
-            return affected > 0 ? Common.Ok() : Common.Fail("工资记录不存在");
+            return affected > 0 ? Common.Ok() : Common.NotFound("工资记录不存在");
         });
 
         app.MapDelete("/api/wages/{id}", async (long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM wages WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.Fail("工资记录不存在"));
+            (await db.ExecuteAsync("DELETE FROM wages WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("工资记录不存在"));
 
         // ═══════════════════════════════════════════════════════════
         // 工资批量操作
@@ -282,7 +282,7 @@ public static class WageEndpoints
         });
 
         app.MapDelete("/api/salary-history/{id}", async (long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM salary_history WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.Fail("记录不存在"));
+            (await db.ExecuteAsync("DELETE FROM salary_history WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("记录不存在"));
 
         app.MapGet("/api/salary-history/{memberId}/effective", (long memberId, string yearMonth, IDbConnection db) =>
         {

@@ -1,10 +1,9 @@
 /**
- * UI 组件测试：ConfirmDialog、Card、ProgressBar、Tooltip
+ * UI 组件测试：ConfirmDialog、Card、Tooltip
  */
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { Card } from '../../components/ui/Card'
-import { ProgressBar } from '../../components/ui/ProgressBar'
 import { Tooltip } from '../../components/ui/Tooltip'
 
 afterEach(cleanup)
@@ -176,66 +175,6 @@ describe('Card', () => {
     render(<Card onClick={handleClick}>Clickable</Card>)
     fireEvent.click(screen.getByText('Clickable'))
     expect(handleClick).toHaveBeenCalledTimes(1)
-  })
-})
-
-// ══════════════════════════════════════════════════════════════════════════════
-// ProgressBar
-// ══════════════════════════════════════════════════════════════════════════════
-
-describe('ProgressBar', () => {
-  afterEach(cleanup)
-
-  it('renders with default props', () => {
-    const { container } = render(<ProgressBar value={50} />)
-    // Should render a progress bar with animated div
-    const wrappers = container.querySelectorAll('.bg-slate-100')
-    expect(wrappers.length).toBeGreaterThan(0)
-  })
-
-  it('shows label when showLabel is true', () => {
-    render(<ProgressBar value={75} showLabel />)
-    expect(screen.getByText('75%')).toBeInTheDocument()
-  })
-
-  it('does not show label when showLabel is false', () => {
-    render(<ProgressBar value={75} showLabel={false} />)
-    expect(screen.queryByText('75%')).not.toBeInTheDocument()
-  })
-
-  it('calculates percentage correctly', () => {
-    render(<ProgressBar value={25} max={200} showLabel />)
-    // 25/200 = 12.5%
-    expect(screen.getByText('13%')).toBeInTheDocument()
-  })
-
-  it('clamps value at 0', () => {
-    render(<ProgressBar value={-10} showLabel />)
-    expect(screen.getByText('0%')).toBeInTheDocument()
-  })
-
-  it('clamps value at max', () => {
-    render(<ProgressBar value={150} showLabel />)
-    expect(screen.getByText('100%')).toBeInTheDocument()
-  })
-
-  it('applies size classes', () => {
-    const { container } = render(<ProgressBar value={50} size="lg" />)
-    const innerBar = container.querySelectorAll('.rounded-full')[1]
-    expect(innerBar?.className).toContain('h-4')
-  })
-
-  it('applies variant classes', () => {
-    const { container } = render(<ProgressBar value={50} variant="success" />)
-    // The inner animated div should have bg-success-500
-    const innerBar = container.querySelectorAll('.rounded-full')[1]
-    expect(innerBar?.className).toContain('bg-success-500')
-  })
-
-  it('renders with gradient variant', () => {
-    const { container } = render(<ProgressBar value={50} variant="gradient" />)
-    const innerBar = container.querySelectorAll('.rounded-full')[1]
-    expect(innerBar?.className).toContain('bg-gradient')
   })
 })
 

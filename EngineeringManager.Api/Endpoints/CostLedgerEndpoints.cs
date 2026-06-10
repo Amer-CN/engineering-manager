@@ -27,11 +27,12 @@ public static class CostLedgerEndpoints
         app.MapGet("/api/cost-ledger/summary", (IDbConnection db, long? projectId) =>
         {
             var w = projectId.HasValue ? " WHERE project_id=@ProjectId" : "";
+            object param = projectId.HasValue ? new { ProjectId = projectId.Value } : new { };
             return Common.Ok(new
             {
-                totalCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM cost_ledger{w}"),
-                totalExpense = db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(amount),0) FROM cost_ledger{w} AND direction='expense'"),
-                totalIncome = db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(amount),0) FROM cost_ledger{w} AND direction='income'"),
+                totalCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM cost_ledger{w}", param),
+                totalExpense = db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(amount),0) FROM cost_ledger{w} AND direction='expense'", param),
+                totalIncome = db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(amount),0) FROM cost_ledger{w} AND direction='income'", param),
             });
         });
 
@@ -52,11 +53,11 @@ public static class CostLedgerEndpoints
                 amount=@Amount,counterparty=@Counterparty,channel=@Channel,summary=@Summary,notes=@Notes,updated_at=@Now WHERE id=@Id",
                 new { dto.VoucherNo, dto.Date, dto.Direction, dto.Category, dto.Amount,
                       dto.Counterparty, dto.Channel, dto.Summary, dto.Notes, Now = now(), dto.Id });
-            return affected > 0 ? Common.Ok() : Common.Fail("记录不存在");
+            return affected > 0 ? Common.Ok() : Common.NotFound("记录不存在");
         });
 
         app.MapDelete("/api/cost-ledger/{id}", async (long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM cost_ledger WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.Fail("记录不存在"));
+            (await db.ExecuteAsync("DELETE FROM cost_ledger WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("记录不存在"));
 
         app.MapPost("/api/cost-ledger/batch", async (List<CostLedgerEntryDto> entries, IDbConnection db) =>
         {
@@ -103,11 +104,11 @@ public static class CostLedgerEndpoints
         {
             var affected = await db.ExecuteAsync(@"UPDATE cost_ledger_categories SET name=@Name,direction=@Direction,level1=@Level1,color=@Color,updated_at=@Now WHERE id=@Id",
                 new { dto.Name, dto.Direction, dto.Level1, dto.Color, Now = now(), dto.Id });
-            return affected > 0 ? Common.Ok() : Common.Fail("分类不存在");
+            return affected > 0 ? Common.Ok() : Common.NotFound("分类不存在");
         });
 
         app.MapDelete("/api/cost-ledger/categories/{id}", async (long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM cost_ledger_categories WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.Fail("分类不存在"));
+            (await db.ExecuteAsync("DELETE FROM cost_ledger_categories WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("分类不存在"));
 
         app.MapPost("/api/cost-ledger/categories/reset", (IDbConnection db) =>
         {
@@ -133,22 +134,22 @@ public static class CostLedgerEndpoints
         app.MapPost("/api/cost-ledger/batches/{id}/copy", async (long id, CostLedgerBatchDto dto, IDbConnection db) =>
         {
             var original = db.QueryFirstOrDefault("SELECT * FROM cost_ledger_batches WHERE id=@Id", new { Id = id });
-            if (original == null) return Common.Fail("批次不存在");
+            if (original == null) return Common.NotFound("批次不存在");
             var newId = await db.ExecuteScalarAsync<long>(@"INSERT INTO cost_ledger_batches (project_id,name,created_at,updated_at)
                 VALUES (@ProjectId,@Name,@Now,@Now); SELECT last_insert_rowid();",
-                new { ProjectId = (long)original.project_id, Name = (string)dto.NewName, Now = now() });
+                new { ProjectId = (long)original.project_id, Name = dto.NewName ?? "", Now = now() });
             return Common.Ok(new { id = newId });
         });
 
         app.MapPut("/api/cost-ledger/batches/{id}", async (long id, CostLedgerBatchDto dto, IDbConnection db) =>
         {
             var affected = await db.ExecuteAsync("UPDATE cost_ledger_batches SET name=@Name,updated_at=@Now WHERE id=@Id",
-                new { Name = (string)dto.NewName, Now = now(), Id = id });
-            return affected > 0 ? Common.Ok() : Common.Fail("批次不存在");
+                new { Name = dto.NewName ?? "", Now = now(), Id = id });
+            return affected > 0 ? Common.Ok() : Common.NotFound("批次不存在");
         });
 
         app.MapDelete("/api/cost-ledger/batches/{id}", async (long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM cost_ledger_batches WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.Fail("批次不存在"));
+            (await db.ExecuteAsync("DELETE FROM cost_ledger_batches WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("批次不存在"));
 
         // ═══════════════════════════════════════════════════════════
         // 匹配规则

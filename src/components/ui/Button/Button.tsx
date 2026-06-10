@@ -2,7 +2,7 @@ import React from 'react'
 
 import { Icon } from '../Icon'
 
-export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'link' | 'outline'
+export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'link' | 'outline' | 'success' | 'warning'
 export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl'
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -29,6 +29,10 @@ const variantStyles: Record<ButtonVariant, string> = {
   'bg-transparent text-primary-600 hover:text-primary-700 hover:underline shadow-none',
   outline:
   'bg-transparent text-primary-600 border border-primary-300 hover:bg-primary-50 active:bg-primary-100',
+  success:
+  'bg-success-600 text-white hover:bg-success-700 active:bg-success-800 shadow-sm hover:shadow-md',
+  warning:
+  'bg-warning-500 text-white hover:bg-warning-600 active:bg-warning-700 shadow-sm hover:shadow-md',
 }
 
 const sizeStyles: Record<ButtonSize, string> = {

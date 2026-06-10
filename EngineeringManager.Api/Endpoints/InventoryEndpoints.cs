@@ -35,11 +35,11 @@ public static class InventoryEndpoints
                 unit=@Unit,quantity=@Quantity,min_quantity=@MinQuantity,location=@Location,notes=@Notes,
                 updated_at=@Now WHERE id=@Id",
                 new { dto.Id, dto.Name, dto.Category, dto.Unit, dto.Quantity, dto.MinQuantity, dto.Location, dto.Notes, Now = now() });
-            return affected > 0 ? Common.Ok() : Common.Fail("库存项不存在");
+            return affected > 0 ? Common.Ok() : Common.NotFound("库存项不存在");
         });
 
         app.MapDelete("/api/inventory/{id}", async (long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM inventory_items WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.Fail("库存项不存在"));
+            (await db.ExecuteAsync("DELETE FROM inventory_items WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("库存项不存在"));
 
         app.MapGet("/api/inventory/transactions", (IDbConnection db, long? itemId) =>
         {
@@ -71,10 +71,10 @@ public static class InventoryEndpoints
             var affected = await db.ExecuteAsync(@"UPDATE materials SET name=@Name,category=@Category,
                 unit=@Unit,specifications=@Specifications,supplier=@Supplier,notes=@Notes,updated_at=@Now WHERE id=@Id",
                 new { dto.Id, dto.Name, dto.Category, dto.Unit, dto.Specifications, dto.Supplier, dto.Notes, Now = now() });
-            return affected > 0 ? Common.Ok() : Common.Fail("物料不存在");
+            return affected > 0 ? Common.Ok() : Common.NotFound("物料不存在");
         });
 
         app.MapDelete("/api/materials/{id}", async (long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM materials WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.Fail("物料不存在"));
+            (await db.ExecuteAsync("DELETE FROM materials WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("物料不存在"));
     }
 }

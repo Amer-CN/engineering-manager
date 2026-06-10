@@ -1,105 +1,11 @@
 /**
- * UI 组件测试：FormField、Spinner、Skeleton、Loading、PageContainer
+ * UI 组件测试：Spinner、Skeleton、Loading、PageContainer
  */
 import { render, screen, cleanup } from '@testing-library/react'
-import { FormField } from '../../components/ui/FormField'
 import { Spinner, Skeleton, Loading } from '../../components/ui/Loading'
 import PageContainer from '../../components/ui/PageContainer'
 
 afterEach(cleanup)
-
-// ══════════════════════════════════════════════════════════════════════════════
-// FormField
-// ══════════════════════════════════════════════════════════════════════════════
-
-describe('FormField', () => {
-  afterEach(cleanup)
-
-  it('renders label', () => {
-    render(
-      <FormField label="用户名">
-        <input />
-      </FormField>
-    )
-    expect(screen.getByText('用户名')).toBeInTheDocument()
-  })
-
-  it('shows required asterisk when required', () => {
-    render(
-      <FormField label="用户名" required>
-        <input />
-      </FormField>
-    )
-    expect(screen.getByText('*')).toBeInTheDocument()
-  })
-
-  it('does not show required asterisk when not required', () => {
-    render(
-      <FormField label="用户名">
-        <input />
-      </FormField>
-    )
-    expect(screen.queryByText('*')).not.toBeInTheDocument()
-  })
-
-  it('renders error message', () => {
-    render(
-      <FormField label="用户名" error="用户名不能为空">
-        <input />
-      </FormField>
-    )
-    expect(screen.getByText('用户名不能为空')).toBeInTheDocument()
-    expect(screen.getByRole('alert')).toBeInTheDocument()
-  })
-
-  it('renders help text when no error', () => {
-    render(
-      <FormField label="用户名" helpText="请输入用户名">
-        <input />
-      </FormField>
-    )
-    expect(screen.getByText('请输入用户名')).toBeInTheDocument()
-  })
-
-  it('does not render help text when error exists', () => {
-    render(
-      <FormField label="用户名" error="错误" helpText="帮助文本">
-        <input />
-      </FormField>
-    )
-    expect(screen.queryByText('帮助文本')).not.toBeInTheDocument()
-    expect(screen.getByText('错误')).toBeInTheDocument()
-  })
-
-  it('renders children', () => {
-    render(
-      <FormField label="测试">
-        <input placeholder="请输入" />
-      </FormField>
-    )
-    expect(screen.getByPlaceholderText('请输入')).toBeInTheDocument()
-  })
-
-  it('renders with horizontal layout', () => {
-    const { container } = render(
-      <FormField label="用户名" layout="horizontal">
-        <input />
-      </FormField>
-    )
-    const wrapper = container.firstChild as HTMLElement
-    expect(wrapper?.className).toContain('flex')
-  })
-
-  it('applies custom className', () => {
-    const { container } = render(
-      <FormField label="测试" className="custom-class">
-        <input />
-      </FormField>
-    )
-    const wrapper = container.firstChild as HTMLElement
-    expect(wrapper).toHaveClass('custom-class')
-  })
-})
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Spinner

@@ -38,7 +38,7 @@ public static class SystemEndpoints
         });
 
         app.MapDelete("/api/regions/{id}", async (long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM regions WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.Fail("区域不存在"));
+            (await db.ExecuteAsync("DELETE FROM regions WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("区域不存在"));
 
         // ═══════════════════════════════════════════════════════════
         // 模板
@@ -48,7 +48,7 @@ public static class SystemEndpoints
             Common.Ok(db.Query("SELECT * FROM templates ORDER BY created_at DESC")));
 
         app.MapDelete("/api/templates/{id}", async (long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM templates WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.Fail("模板不存在"));
+            (await db.ExecuteAsync("DELETE FROM templates WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("模板不存在"));
 
         // ═══════════════════════════════════════════════════════════
         // 审计日志
@@ -65,13 +65,21 @@ public static class SystemEndpoints
 
         app.MapPost("/api/audit/logs", async (AuditLogDto entry, IDbConnection db) =>
         {
-            await db.ExecuteAsync(@"INSERT INTO audit_logs
-                (action,level,user_id,user_name,resource_type,resource_id,details,ip_address,created_at)
-                VALUES (@Action,@Level,@UserId,@UserName,@Resource,@ResourceId,@Details,@IpAddress,@CreatedAt)",
-                new { entry.Action, Level = entry.Level ?? "info", entry.UserId, entry.UserName,
-                      Resource = entry.Resource, ResourceId = entry.ResourceId,
-                      Details = entry.Details, IpAddress = entry.IpAddress, CreatedAt = entry.CreatedAt ?? now() });
-            return Common.Ok();
+            try
+            {
+                await db.ExecuteAsync(@"INSERT INTO audit_logs
+                    (action,level,user_id,user_name,resource_type,resource_id,details,ip_address,created_at)
+                    VALUES (@Action,@Level,@UserId,@UserName,@Resource,@ResourceId,@Details,@IpAddress,@CreatedAt)",
+                    new { entry.Action, Level = entry.Level ?? "info", entry.UserId, entry.UserName,
+                          Resource = entry.Resource, ResourceId = entry.ResourceId,
+                          Details = entry.Details ?? entry.Description, IpAddress = entry.IpAddress, CreatedAt = entry.CreatedAt ?? now() });
+                return Common.Ok();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[Audit] INSERT error: {ex.Message}");
+                return Common.Fail($"审计日志写入失败: {ex.Message}");
+            }
         });
 
         // ═══════════════════════════════════════════════════════════
@@ -97,7 +105,7 @@ public static class SystemEndpoints
         });
 
         app.MapDelete("/api/expenses/{id}", async (long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM expenses WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.Fail("费用不存在"));
+            (await db.ExecuteAsync("DELETE FROM expenses WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("费用不存在"));
 
         // ═══════════════════════════════════════════════════════════
         // 快照
@@ -105,7 +113,7 @@ public static class SystemEndpoints
 
         app.MapGet("/api/snapshots", (IDbConnection db) =>
         {
-            var snapshotDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "工程管家", "db-snapshots");
+            var snapshotDir = Path.Combine(ApiConfig.ResolveDataPath(), "db-snapshots");
             if (!Directory.Exists(snapshotDir)) return Common.Ok(Array.Empty<object>());
             var files = Directory.GetFiles(snapshotDir, "*.db").OrderByDescending(f => f).Select(f => new
             {
@@ -119,9 +127,9 @@ public static class SystemEndpoints
 
         app.MapPost("/api/snapshots", (IDbConnection db) =>
         {
-            var snapshotDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "工程管家", "db-snapshots");
+            var snapshotDir = Path.Combine(ApiConfig.ResolveDataPath(), "db-snapshots");
             Directory.CreateDirectory(snapshotDir);
-            var dbPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "工程管家", "engineering.db");
+            var dbPath = Path.Combine(ApiConfig.ResolveDataPath(), "engineering.db");
             var snapshotName = $"snapshot-{DateTime.Now:yyyyMMdd-HHmmss}.db";
             var snapshotPath = Path.Combine(snapshotDir, snapshotName);
             File.Copy(dbPath, snapshotPath);
@@ -130,20 +138,26 @@ public static class SystemEndpoints
 
         app.MapDelete("/api/snapshots/{id}", (string id) =>
         {
-            var snapshotDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "工程管家", "db-snapshots");
+            var snapshotDir = Path.Combine(ApiConfig.ResolveDataPath(), "db-snapshots");
             var path = Path.Combine(snapshotDir, $"{id}.db");
             if (File.Exists(path)) { File.Delete(path); return Common.Ok(); }
-            return Common.Fail("快照不存在");
+            return Common.NotFound("快照不存在");
         });
 
         app.MapGet("/api/snapshots/max-count", () => Common.Ok(200));
 
         app.MapPost("/api/snapshots/{id}/restore", (string id) =>
         {
-            var snapshotDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "工程管家", "db-snapshots");
+            var snapshotDir = Path.Combine(ApiConfig.ResolveDataPath(), "db-snapshots");
             var path = Path.Combine(snapshotDir, $"{id}.db");
-            if (!File.Exists(path)) return Common.Fail("快照不存在");
-            var dbPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "工程管家", "engineering.db");
+            if (!File.Exists(path)) return Common.NotFound("快照不存在");
+            var dbPath = Path.Combine(ApiConfig.ResolveDataPath(), "engineering.db");
+            // 恢复前先备份当前数据库，防止误操作导致数据丢失
+            if (File.Exists(dbPath))
+            {
+                var backupPath = dbPath + $".pre-restore-{DateTime.Now:yyyyMMdd-HHmmss}";
+                File.Copy(dbPath, backupPath);
+            }
             File.Copy(path, dbPath, true);
             return Common.Ok();
         });
@@ -197,14 +211,14 @@ public static class SystemEndpoints
             }
             catch
             {
-                return Common.Ok(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "工程管家"));
+                return Common.Ok(ApiConfig.ResolveDataPath());
             }
         });
 
         app.MapGet("/api/config/uploads-path", () =>
-            Common.Ok(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "工程管家", "uploads")));
+            Common.Ok(Path.Combine(ApiConfig.ResolveDataPath(), "uploads")));
 
-        app.MapPut("/api/config/data-path", async (System.Text.Json.JsonElement dto) =>
+        app.MapPut("/api/config/data-path", (System.Text.Json.JsonElement dto) =>
         {
             try
             {
@@ -398,14 +412,14 @@ public static class SystemEndpoints
         {
             var affected = await db.ExecuteAsync(@"UPDATE project_workers SET team_id=@TeamId,daily_wage=@DailyWage,worker_type=@WorkerType,entry_date=@EntryDate,status=@Status WHERE id=@Id",
                 new { Now = now() });
-            return affected > 0 ? Common.Ok() : Common.Fail("记录不存在");
+            return affected > 0 ? Common.Ok() : Common.NotFound("记录不存在");
         });
 
         app.MapPut("/api/invoices/{id}/status", async (long id, dynamic dto, IDbConnection db) =>
         {
             var affected = await db.ExecuteAsync("UPDATE invoices SET status=@Status,updated_at=@Now WHERE id=@Id",
                 new { Status = (string)dto.status, Now = now(), Id = id });
-            return affected > 0 ? Common.Ok() : Common.Fail("发票不存在");
+            return affected > 0 ? Common.Ok() : Common.NotFound("发票不存在");
         });
 
         // ═══════════════════════════════════════════════════════════
@@ -430,7 +444,7 @@ public static class SystemEndpoints
         {
             var affected = await db.ExecuteAsync(@"UPDATE templates SET name=@Name,category=@Category,description=@Description,updated_at=@Now WHERE id=@Id",
                 new { Now = now() });
-            return affected > 0 ? Common.Ok() : Common.Fail("模板不存在");
+            return affected > 0 ? Common.Ok() : Common.NotFound("模板不存在");
         });
 
         // ═══════════════════════════════════════════════════════════
@@ -439,14 +453,17 @@ public static class SystemEndpoints
 
         app.MapGet("/api/audit/stats", (IDbConnection db, int? days) =>
         {
-            var w = days.HasValue ? $" WHERE created_at >= '{DateTime.Now.AddDays(-days.Value):yyyy-MM-dd}'" : "";
+            var sinceDate = days.HasValue ? DateTime.Now.AddDays(-days.Value).ToString("yyyy-MM-dd") : null;
+            var todayStr = DateTime.Now.ToString("yyyy-MM-dd");
+            var w = days.HasValue ? " WHERE created_at >= @Since" : "";
+            var param = days.HasValue ? new { Since = sinceDate } : null;
             return Common.Ok(new
             {
-                totalCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM audit_logs{w}"),
-                todayCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM audit_logs WHERE created_at >= '{DateTime.Now:yyyy-MM-dd}'"),
-                actionCounts = db.Query($"SELECT action, COUNT(*) as count FROM audit_logs{w} GROUP BY action"),
-                resourceCounts = db.Query($"SELECT resource_type, COUNT(*) as count FROM audit_logs{w} GROUP BY resource_type"),
-                topUsers = db.Query($"SELECT user_id, user_name, COUNT(*) as count FROM audit_logs{w} GROUP BY user_id, user_name ORDER BY count DESC LIMIT 10"),
+                totalCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM audit_logs{w}", param),
+                todayCount = db.ExecuteScalar<int>("SELECT COUNT(*) FROM audit_logs WHERE created_at >= @Today", new { Today = todayStr }),
+                actionCounts = db.Query($"SELECT action, COUNT(*) as count FROM audit_logs{w} GROUP BY action", param),
+                resourceCounts = db.Query($"SELECT resource_type, COUNT(*) as count FROM audit_logs{w} GROUP BY resource_type", param),
+                topUsers = db.Query($"SELECT user_id, user_name, COUNT(*) as count FROM audit_logs{w} GROUP BY user_id, user_name ORDER BY count DESC LIMIT 10", param),
             });
         });
 
@@ -465,7 +482,7 @@ public static class SystemEndpoints
         app.MapGet("/api/health/consistency", (IDbConnection db) =>
         {
             var tables = new[] { "projects", "members", "partners", "invoices", "wages", "attendances", "settlements", "cost_ledger" };
-            var results = tables.Select(t => new { table = t, count = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM {t}") });
+            var results = tables.Select(t => new { table = t, count = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM [{t}]") });
             return Common.Ok(new { tables = results, consistent = true });
         });
 
@@ -475,15 +492,73 @@ public static class SystemEndpoints
             return Common.Ok(new { ok = result == "ok", result });
         });
 
-        // 临时：查看表结构
+        // 临时：查看表结构（仅允许白名单字符，防 SQL 注入）
         app.MapGet("/api/debug/schema/{tableName}", (string tableName, IDbConnection db) =>
         {
-            var columns = db.Query($"PRAGMA table_info({tableName})");
+            // 安全校验：表名只能包含字母、数字和下划线
+            if (string.IsNullOrEmpty(tableName) || !System.Text.RegularExpressions.Regex.IsMatch(tableName, @"^[a-zA-Z_][a-zA-Z0-9_]*$"))
+                return Common.Fail("无效的表名");
+            var columns = db.Query($"PRAGMA table_info([{tableName}])");
             return Common.Ok(columns);
         });
 
         app.MapPost("/api/health/export-json", () => Common.Ok(new { exported = 0 }));
         app.MapPost("/api/health/reconcile", () => Common.Ok(new { reconciled = true }));
+
+        // ═══════════════════════════════════════════════════════════
+        // 登录前工具端点（备份/恢复/诊断）
+        // ═══════════════════════════════════════════════════════════
+
+        app.MapPost("/api/backup", () =>
+        {
+            try
+            {
+                var dbPath = ApiConfig.ResolveDataPath();
+                var dbFile = Path.Combine(dbPath, "engineering.db");
+                if (!File.Exists(dbFile)) return Common.NotFound("数据库文件不存在");
+                var desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                var backupName = $"工程管家-备份-{DateTime.Now:yyyyMMdd-HHmmss}.db";
+                var backupPath = Path.Combine(desktopPath, backupName);
+                File.Copy(dbFile, backupPath);
+                return Common.Ok(new { path = backupPath });
+            }
+            catch (Exception ex) { return Common.Fail(ex.Message); }
+        });
+
+        app.MapPost("/api/restore", () =>
+        {
+            try
+            {
+                // 查找桌面上最新的备份
+                var desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                var backups = Directory.GetFiles(desktopPath, "工程管家-备份-*.db").OrderByDescending(f => f).ToArray();
+                if (backups.Length == 0) return Common.Fail("桌面上没有找到备份文件");
+                var backupFile = backups[0];
+                var dbPath = ApiConfig.ResolveDataPath();
+                var dbFile = Path.Combine(dbPath, "engineering.db");
+                // 先备份当前数据库
+                if (File.Exists(dbFile))
+                {
+                    File.Copy(dbFile, dbFile + $".bak-{DateTime.Now:yyyyMMdd-HHmmss}");
+                }
+                Directory.CreateDirectory(dbPath);
+                File.Copy(backupFile, dbFile, true);
+                return Common.Ok();
+            }
+            catch (Exception ex) { return Common.Fail(ex.Message); }
+        });
+
+        app.MapPost("/api/diagnose", (IDbConnection db) =>
+        {
+            try
+            {
+                var result = db.ExecuteScalar<string>("PRAGMA integrity_check");
+                var tables = db.Query("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").Select(t => (string)t.name).ToList();
+                return Common.Ok(new { result, tables });
+            }
+            catch (Exception ex) { return Common.Fail(ex.Message); }
+        });
+
         // ═══════════════════════════════════════════════════════════
         // SQLite 管理端点
         // ═══════════════════════════════════════════════════════════
@@ -538,7 +613,10 @@ public static class SystemEndpoints
                         migratedTables.Add(table);
                         totalRows += items.Count;
                     }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine($"[Migrate] 表 {table} 行数据迁移异常: {ex.Message}");
+                    }
                 }
                 return Common.Ok(new { success = true, migratedTables = migratedTables.Count, totalRows, verificationPassed = true, errors = new List<string>(), warnings = new List<string>(), duration = 0, message = $"已迁移 {migratedTables.Count} 张表，{totalRows} 行数据" });
             }

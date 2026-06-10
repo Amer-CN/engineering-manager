@@ -10,7 +10,24 @@ public static class Common
     // ============ 辅助函数 ============
 
     public static IResult Ok(object? data = null) => Results.Ok(new { success = true, data });
-    public static IResult Fail(string error) => Results.Ok(new { success = false, error });
+
+    /// <summary>业务错误 — HTTP 400</summary>
+    public static IResult Fail(string error, int statusCode = 400) =>
+        Results.Json(new { success = false, error }, statusCode: statusCode);
+
+    /// <summary>资源不存在 — HTTP 404</summary>
+    public static IResult NotFound(string error = "资源不存在") =>
+        Results.Json(new { success = false, error }, statusCode: 404);
+
+    /// <summary>服务器内部错误 — HTTP 500</summary>
+    public static IResult ServerError(string context, Exception ex)
+    {
+        Console.Error.WriteLine($"[ERROR] {context}: {ex.Message}");
+        return Results.Json(new { success = false, error = $"服务器错误: {context}" }, statusCode: 500);
+    }
+
+    /// <summary>当前时间字符串（yyyy-MM-dd HH:mm:ss）— 避免在每个端点文件中重复定义</summary>
+    public static string NowString() => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
     public static string HashPassword(string password, string salt, int version = 2)
     {
@@ -61,7 +78,7 @@ record PaymentRecordDto(long? Id, string? Type, double? Amount, string? RecordDa
 record AttendanceDto(long? Id, long? MemberId, long? ProjectId, long? ProjectWorkerId, string YearMonth, double? WorkDays, int? DaysOff, bool? IsFullAttendance, string? DailyStatus, string? FileUrl, string? FileName);
 record WageDto(long? Id, long? ProjectId, long? MemberId, long? ProjectWorkerId, string? YearMonth, double? DailyWage, double? WorkDays, double? Bonus, double? Deduction, double? ActualWage, double? PaidAmount, string? PaidDate);
 record DepartmentDto(string Name, long? ManagerId, string? Positions);
-record AuditLogDto(string Action, string? Level, string? UserId, string? UserName, string? Resource, string? ResourceId, string? Details, string? IpAddress, string? CreatedAt);
+record AuditLogDto(string Action, string? Level, string? UserId, string? UserName, string? Resource, string? ResourceId, string? Details, string? Description, string? IpAddress, string? CreatedAt);
 record FileSaveDto(string? Category, string? SubCategory, string? FileName, string? FileData, string? ProjectName);
 record RegionDto(long? Id, string? Province, string? City, string? District);
 record SupervisorDto(long? Id, long? RegionId, string Name, string? Category, string? Contact, string? Phone, string? Address, string? ProjectIds, string? Remarks);

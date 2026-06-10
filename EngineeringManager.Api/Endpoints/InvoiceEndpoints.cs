@@ -54,11 +54,11 @@ public static class InvoiceEndpoints
                 new { dto.Id, dto.ProjectId, dto.SellerId, dto.BuyerId, dto.ContractId, dto.SettlementId, dto.Type, dto.InvoiceKind, dto.InvoiceNo,
                       dto.InvoiceCode, dto.Name, dto.Amount, dto.PriceAmount, dto.TaxRate, dto.TaxAmount, dto.ReceivedAmount, dto.IssueDate,
                       dto.Status, dto.Remarks, dto.FileUrl, dto.FileType, Now = now() });
-            return affected > 0 ? Common.Ok() : Common.Fail("发票不存在");
+            return affected > 0 ? Common.Ok() : Common.NotFound("发票不存在");
         });
 
         app.MapDelete("/api/invoices/{id}", async (long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM invoices WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.Fail("发票不存在"));
+            (await db.ExecuteAsync("DELETE FROM invoices WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("发票不存在"));
 
         // ═══════════════════════════════════════════════════════════
         // 收付款记录
@@ -88,7 +88,7 @@ public static class InvoiceEndpoints
                 {
                     if (!string.IsNullOrEmpty(invoiceDetailsStr) && invoiceDetailsStr != "[]")
                     {
-                        var details = System.Text.Json.JsonSerializer.Deserialize<List<System.Text.Json.JsonElement>>(invoiceDetailsStr);
+                        var details = System.Text.Json.JsonSerializer.Deserialize<List<System.Text.Json.JsonElement>>(invoiceDetailsStr) ?? [];
                         foreach (var detail in details)
                         {
                             var invoiceId = detail.GetProperty("invoiceId").GetInt64();
@@ -127,11 +127,11 @@ public static class InvoiceEndpoints
                 project_id=@ProjectId,partner_id=@PartnerId,contract_id=@ContractId,invoice_details=@InvoiceDetails,
                 remarks=@Remarks,file_url=@FileUrl,file_type=@FileType WHERE id=@Id",
                 new { Now = now() });
-            return affected > 0 ? Common.Ok() : Common.Fail("记录不存在");
+            return affected > 0 ? Common.Ok() : Common.NotFound("记录不存在");
         });
 
         app.MapDelete("/api/payment-records/{id}", async (long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM payment_records WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.Fail("记录不存在"));
+            (await db.ExecuteAsync("DELETE FROM payment_records WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("记录不存在"));
     }
 }
 

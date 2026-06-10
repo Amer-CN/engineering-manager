@@ -535,7 +535,7 @@ public static class OcrEndpoints
         {
             Path.Combine(AppContext.BaseDirectory, "public", "ocr-config.json"),
             Path.Combine(Directory.GetCurrentDirectory(), "public", "ocr-config.json"),
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "工程管家", "ocr-config.json"),
+            Path.Combine(ApiConfig.ResolveDataPath(), "ocr-config.json"),
             // 项目根目录的 public/ 文件夹
             Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "public", "ocr-config.json"),
             Path.Combine(Directory.GetCurrentDirectory(), "..", "public", "ocr-config.json"),

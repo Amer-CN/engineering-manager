@@ -60,14 +60,14 @@ public static class AuthEndpoints
         app.MapGet("/api/roles/{id}", (string id, IDbConnection db) =>
         {
             var r = db.QueryFirstOrDefault("SELECT id, name, permissions FROM roles WHERE id=@Id", new { Id = id });
-            return r is not null ? Common.Ok(r) : Common.Fail("角色不存在");
+            return r is not null ? Common.Ok(r) : Common.NotFound("角色不存在");
         });
 
         app.MapPut("/api/roles", async (RoleUpdateDto dto, IDbConnection db) =>
         {
             var affected = await db.ExecuteAsync("UPDATE roles SET permissions=@Permissions WHERE id=@Id",
                 new { Id = dto.RoleId, Permissions = dto.Permissions });
-            return affected > 0 ? Common.Ok() : Common.Fail("角色不存在");
+            return affected > 0 ? Common.Ok() : Common.NotFound("角色不存在");
         });
 
         app.MapPost("/api/roles/{id}/reset", (string id, IDbConnection db) =>
@@ -89,7 +89,7 @@ public static class AuthEndpoints
         app.MapGet("/api/users/{id}", (string id, IDbConnection db) =>
         {
             var u = db.QueryFirstOrDefault("SELECT id, username, display_name, role_id, status, created_at FROM users WHERE id=@Id", new { Id = id });
-            return u is not null ? Common.Ok(u) : Common.Fail("用户不存在");
+            return u is not null ? Common.Ok(u) : Common.NotFound("用户不存在");
         });
 
         app.MapPost("/api/users", async (UserDto dto, IDbConnection db) =>
@@ -109,7 +109,7 @@ public static class AuthEndpoints
             {
                 var affected = await db.ExecuteAsync(@"UPDATE users SET display_name=@DisplayName,role_id=@RoleId,status=@Status WHERE id=@Id",
                     new { dto.Id, dto.DisplayName, dto.RoleId, dto.Status });
-                return affected > 0 ? Common.Ok() : Common.Fail("用户不存在");
+                return affected > 0 ? Common.Ok() : Common.NotFound("用户不存在");
             }
             else
             {
@@ -117,11 +117,11 @@ public static class AuthEndpoints
                 var hash = Common.HashPassword(dto.Password ?? "", salt, 2);
                 var affected = await db.ExecuteAsync(@"UPDATE users SET password_hash=@Hash,password_salt=@Salt,display_name=@DisplayName,role_id=@RoleId,status=@Status WHERE id=@Id",
                     new { dto.Id, Hash = hash, Salt = salt, dto.DisplayName, dto.RoleId, dto.Status });
-                return affected > 0 ? Common.Ok() : Common.Fail("用户不存在");
+                return affected > 0 ? Common.Ok() : Common.NotFound("用户不存在");
             }
         });
 
         app.MapDelete("/api/users/{id}", async (string id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM users WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.Fail("用户不存在"));
+            (await db.ExecuteAsync("DELETE FROM users WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("用户不存在"));
     }
 }

@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useToastStore } from '@/store/toastStore'
 import type { BatchParseResult } from '@/types'
 import { getAPI } from '@/services/api-adapter'
+import { HoverScrollbar } from '../../ui/HoverScrollbar'
 
 interface BankReceiptBatchProps {
   projectId?: number
@@ -208,10 +209,10 @@ export default function BankReceiptBatch({
     <div className="space-y-6">
       {/* 标题 */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">银行回单批量解析</h2>
+        <h2 className="text-2xl font-bold text-slate-900">银行回单批量解析</h2>
         <button
           onClick={onCancel}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+          className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
         >
           返回
         </button>
@@ -228,7 +229,7 @@ export default function BankReceiptBatch({
           transition-colors duration-200
           ${isDragOver
             ? 'border-blue-500 bg-blue-50'
-            : 'border-gray-300 bg-gray-50 hover:bg-gray-100'
+            : 'border-slate-300 bg-slate-50 hover:bg-slate-100'
           }
         `}
       >
@@ -244,10 +245,10 @@ export default function BankReceiptBatch({
         <div className="space-y-4">
           <div className="text-6xl">📄</div>
           <div>
-            <p className="text-lg font-medium text-gray-900">
+            <p className="text-lg font-medium text-slate-900">
               拖拽文件到此处，或 <span className="text-blue-600">点击选择</span>
             </p>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-slate-500 mt-1">
               支持 jpg、png、pdf 格式，可多选
             </p>
           </div>
@@ -256,9 +257,9 @@ export default function BankReceiptBatch({
 
       {/* 文件列表 */}
       {files.length > 0 && (
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="bg-white rounded-lg border border-slate-200 p-4">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-medium text-gray-900">
+            <h3 className="text-lg font-medium text-slate-900">
               已选择 {files.length} 个文件
             </h3>
             <button
@@ -269,7 +270,7 @@ export default function BankReceiptBatch({
             </button>
           </div>
 
-          <div className="space-y-2 max-h-60 overflow-y-auto">
+          <HoverScrollbar className="flex-1 max-h-60"><div className="space-y-2">
             <AnimatePresence>
               {files.map((file, index) => (
                 <motion.div
@@ -277,13 +278,13 @@ export default function BankReceiptBatch({
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0, x: 100 }}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-md"
+                  className="flex items-center justify-between p-3 bg-slate-50 rounded-md"
                 >
                   <div className="flex items-center space-x-3">
                     <span className="text-2xl">📄</span>
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{file.name}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-sm font-medium text-slate-900">{file.name}</p>
+                      <p className="text-xs text-slate-500">
                         {(file.size / 1024 / 1024).toFixed(2)} MB
                       </p>
                     </div>
@@ -299,7 +300,7 @@ export default function BankReceiptBatch({
                 </motion.div>
               ))}
             </AnimatePresence>
-          </div>
+          </div></HoverScrollbar>
         </div>
       )}
 
@@ -331,15 +332,15 @@ export default function BankReceiptBatch({
           <h3 className="text-lg font-medium text-green-900 mb-2">解析完成</h3>
           <div className="grid grid-cols-3 gap-4 text-sm">
             <div className="bg-white rounded p-3">
-              <p className="text-gray-600">成功解析</p>
+              <p className="text-slate-600">成功解析</p>
               <p className="text-2xl font-bold text-green-600">{parseResult.successCount}</p>
             </div>
             <div className="bg-white rounded p-3">
-              <p className="text-gray-600">失败</p>
+              <p className="text-slate-600">失败</p>
               <p className="text-2xl font-bold text-red-600">{parseResult.failCount}</p>
             </div>
             <div className="bg-white rounded p-3">
-              <p className="text-gray-600">匹配项</p>
+              <p className="text-slate-600">匹配项</p>
               <p className="text-2xl font-bold text-blue-600">{parseResult.matches.length}</p>
             </div>
           </div>
@@ -371,7 +372,7 @@ export default function BankReceiptBatch({
       <div className="flex justify-end space-x-4">
         <button
           onClick={onCancel}
-          className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+          className="px-6 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
         >
           取消
         </button>
@@ -381,7 +382,7 @@ export default function BankReceiptBatch({
           className={`
             px-6 py-2 text-sm font-medium text-white rounded-md
             ${(files.length === 0 || status === 'parsing')
-              ? 'bg-gray-400 cursor-not-allowed'
+              ? 'bg-slate-400 cursor-not-allowed'
               : 'bg-primary-600 hover:bg-primary-700'
             }
           `}

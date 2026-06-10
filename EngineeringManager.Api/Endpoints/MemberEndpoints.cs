@@ -23,7 +23,7 @@ public static class MemberEndpoints
         app.MapGet("/api/members/{id}", (long id, IDbConnection db) =>
         {
             var m = db.QueryFirstOrDefault("SELECT * FROM members WHERE id=@Id", new { Id = id });
-            return m is not null ? Common.Ok(m) : Common.Fail("成员不存在");
+            return m is not null ? Common.Ok(m) : Common.NotFound("成员不存在");
         });
 
         app.MapPost("/api/members", async (MemberDto dto, IDbConnection db) =>
@@ -50,11 +50,11 @@ public static class MemberEndpoints
                 new { dto.Id, dto.Name, dto.Phone, dto.Email, dto.MemberType, dto.Role, dto.IdCard,
                       dto.Gender, dto.Ethnicity, dto.BirthDate, dto.IdCardAddress, dto.BaseSalary,
                       dto.DailyWage, dto.EntryDate, dto.Status, dto.DepartmentId, dto.Position });
-            return affected > 0 ? Common.Ok() : Common.Fail("成员不存在");
+            return affected > 0 ? Common.Ok() : Common.NotFound("成员不存在");
         });
 
         app.MapDelete("/api/members/{id}", async (long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM members WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.Fail("成员不存在"));
+            (await db.ExecuteAsync("DELETE FROM members WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("成员不存在"));
 
         // ═══════════════════════════════════════════════════════════
         // 工人
@@ -87,11 +87,11 @@ public static class MemberEndpoints
                 worker_type=@WorkerType,daily_wage=@DailyWage WHERE id=@Id",
                 new { dto.Id, dto.Name, dto.IdCard, dto.Gender, dto.Phone, dto.Address,
                       dto.BankAccount, dto.BankName, dto.WorkerType, dto.DailyWage });
-            return affected > 0 ? Common.Ok() : Common.Fail("工人不存在");
+            return affected > 0 ? Common.Ok() : Common.NotFound("工人不存在");
         });
 
         app.MapDelete("/api/workers/{id}", async (long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM workers WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.Fail("工人不存在"));
+            (await db.ExecuteAsync("DELETE FROM workers WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("工人不存在"));
 
         // ═══════════════════════════════════════════════════════════
         // 项目工人
@@ -123,7 +123,7 @@ public static class MemberEndpoints
         });
 
         app.MapDelete("/api/project-workers/{id}", async (long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM project_workers WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.Fail("记录不存在"));
+            (await db.ExecuteAsync("DELETE FROM project_workers WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("记录不存在"));
 
         // ═══════════════════════════════════════════════════════════
         // 部门
@@ -141,7 +141,7 @@ public static class MemberEndpoints
         });
 
         app.MapDelete("/api/departments/{id}", async (long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM departments WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.Fail("部门不存在"));
+            (await db.ExecuteAsync("DELETE FROM departments WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("部门不存在"));
 
         // ═══════════════════════════════════════════════════════════
         // 班组
@@ -170,10 +170,10 @@ public static class MemberEndpoints
             var affected = await db.ExecuteAsync(@"UPDATE worker_teams SET name=COALESCE(@Name,name),
                 leader_id=@LeaderId,updated_at=@Now WHERE id=@Id",
                 new { dto.Id, dto.Name, dto.LeaderId, Now = now() });
-            return affected > 0 ? Common.Ok() : Common.Fail("班组不存在");
+            return affected > 0 ? Common.Ok() : Common.NotFound("班组不存在");
         });
 
         app.MapDelete("/api/worker-teams/{id}", async (long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM worker_teams WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.Fail("班组不存在"));
+            (await db.ExecuteAsync("DELETE FROM worker_teams WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("班组不存在"));
     }
 }

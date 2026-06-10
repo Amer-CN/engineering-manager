@@ -42,11 +42,11 @@ public static class PartnerEndpoints
                 new { dto.Id, dto.Name, dto.Category, dto.Contact, dto.Phone, dto.Email, dto.Address,
                       dto.BankAccount, dto.BankName, dto.TaxNumber, dto.CreditCode, dto.RegisteredAddress,
                       dto.BusinessScope, dto.TaxType, ProjectIds = dto.ProjectIds ?? "[]", Now = now() });
-            return affected > 0 ? Common.Ok() : Common.Fail("合作伙伴不存在");
+            return affected > 0 ? Common.Ok() : Common.NotFound("合作伙伴不存在");
         });
 
         app.MapDelete("/api/partners/{id}", async (long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM partners WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.Fail("合作伙伴不存在"));
+            (await db.ExecuteAsync("DELETE FROM partners WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("合作伙伴不存在"));
 
         // ═══════════════════════════════════════════════════════════
         // 监管单位
@@ -74,10 +74,10 @@ public static class PartnerEndpoints
                 remarks=@Remarks,updated_at=@Now WHERE id=@Id",
                 new { dto.Id, dto.RegionId, dto.Name, dto.Category, dto.Contact, dto.Phone, dto.Address,
                       ProjectIds = dto.ProjectIds, dto.Remarks, Now = now() });
-            return affected > 0 ? Common.Ok() : Common.Fail("监管单位不存在");
+            return affected > 0 ? Common.Ok() : Common.NotFound("监管单位不存在");
         });
 
         app.MapDelete("/api/supervisors/{id}", async (long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM supervisors WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.Fail("监管单位不存在"));
+            (await db.ExecuteAsync("DELETE FROM supervisors WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("监管单位不存在"));
     }
 }

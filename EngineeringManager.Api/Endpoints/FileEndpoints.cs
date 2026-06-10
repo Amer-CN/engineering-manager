@@ -9,6 +9,14 @@ namespace EngineeringManager.Api;
 /// </summary>
 public static class FileEndpoints
 {
+    /// <summary>校验路径是否在允许的目录内，防止路径遍历攻击</summary>
+    private static bool IsPathSafe(string fullPath, string allowedBase)
+    {
+        var resolved = Path.GetFullPath(fullPath);
+        var baseResolved = Path.GetFullPath(allowedBase);
+        return resolved.StartsWith(baseResolved, StringComparison.OrdinalIgnoreCase);
+    }
+
     public static void RegisterFileEndpoints(this WebApplication app)
     {
         var now = () => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
@@ -21,10 +29,11 @@ public static class FileEndpoints
         {
             try
             {
-                var baseDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "工程管家", "uploads");
+                var baseDir = Path.Combine(ApiConfig.ResolveDataPath(), "uploads");
                 var dir = Path.Combine(baseDir, dto.Category ?? "未分类");
                 Directory.CreateDirectory(dir);
                 var filePath = Path.Combine(dir, dto.FileName ?? "file");
+                if (!IsPathSafe(filePath, baseDir)) return Common.Fail("非法路径");
                 if (!string.IsNullOrEmpty(dto.FileData))
                 {
                     var data = dto.FileData;
@@ -40,7 +49,7 @@ public static class FileEndpoints
         {
             try
             {
-                var baseDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "工程管家", "uploads");
+                var baseDir = Path.Combine(ApiConfig.ResolveDataPath(), "uploads");
                 var paths = new[]
                 {
                     Path.Combine(baseDir, projectName ?? "", category, fileName),
@@ -49,6 +58,7 @@ public static class FileEndpoints
                 };
                 foreach (var p in paths)
                 {
+                    if (!IsPathSafe(p, baseDir)) continue;
                     if (File.Exists(p))
                     {
                         var bytes = File.ReadAllBytes(p);
@@ -63,7 +73,7 @@ public static class FileEndpoints
                         return Common.Ok(new { dataUrl = $"data:{mime};base64,{Convert.ToBase64String(bytes)}", mimeType = mime });
                     }
                 }
-                return Common.Fail("文件不存在");
+                return Common.NotFound("文件不存在");
             }
             catch (Exception ex) { return Common.Fail(ex.Message); }
         });
@@ -81,7 +91,7 @@ public static class FileEndpoints
         });
 
         app.MapDelete("/api/drawings/{id}", async (long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM drawings WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.Fail("图纸不存在"));
+            (await db.ExecuteAsync("DELETE FROM drawings WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("图纸不存在"));
 
         // ═══════════════════════════════════════════════════════════
         // 图纸写操作（补全）
@@ -99,14 +109,14 @@ public static class FileEndpoints
         {
             var affected = await db.ExecuteAsync("UPDATE drawings SET name=@Name,notes=@Notes,updated_at=@Now WHERE id=@Id",
                 new { Now = now() });
-            return affected > 0 ? Common.Ok() : Common.Fail("图纸不存在");
+            return affected > 0 ? Common.Ok() : Common.NotFound("图纸不存在");
         });
 
         app.MapPut("/api/expenses", async (dynamic dto, IDbConnection db) =>
         {
             var affected = await db.ExecuteAsync(@"UPDATE expenses SET category=@Category,amount=@Amount,date=@Date,description=@Description,vendor=@Vendor,updated_at=@Now WHERE id=@Id",
                 new { Now = now() });
-            return affected > 0 ? Common.Ok() : Common.Fail("费用不存在");
+            return affected > 0 ? Common.Ok() : Common.NotFound("费用不存在");
         });
 
         app.MapPost("/api/inventory/transactions", async (dynamic dto, IDbConnection db) =>
@@ -125,11 +135,12 @@ public static class FileEndpoints
         {
             try
             {
-                var baseDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "工程管家", "uploads");
+                var baseDir = Path.Combine(ApiConfig.ResolveDataPath(), "uploads");
                 var dir = Path.Combine(baseDir, (string)(dto.category ?? "未分类"));
                 var path = Path.Combine(dir, (string)(dto.fileName ?? ""));
+                if (!IsPathSafe(path, baseDir)) return Common.Fail("非法路径");
                 if (File.Exists(path)) { File.Delete(path); return Common.Ok(); }
-                return Common.Fail("文件不存在");
+                return Common.NotFound("文件不存在");
             }
             catch (Exception ex) { return Common.Fail(ex.Message); }
         });
@@ -138,11 +149,12 @@ public static class FileEndpoints
         {
             try
             {
-                var baseDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "工程管家", "uploads");
+                var baseDir = Path.Combine(ApiConfig.ResolveDataPath(), "uploads");
                 var dir = Path.Combine(baseDir, (string)(dto.category ?? "未分类"));
                 var path = Path.Combine(dir, (string)(dto.fileName ?? ""));
+                if (!IsPathSafe(path, baseDir)) return Common.Fail("非法路径");
                 if (File.Exists(path)) { Process.Start(new ProcessStartInfo(path) { UseShellExecute = true }); return Common.Ok(); }
-                return Common.Fail("文件不存在");
+                return Common.NotFound("文件不存在");
             }
             catch (Exception ex) { return Common.Fail(ex.Message); }
         });
@@ -151,7 +163,7 @@ public static class FileEndpoints
         {
             try
             {
-                var baseDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "工程管家", "uploads");
+                var baseDir = Path.Combine(ApiConfig.ResolveDataPath(), "uploads");
                 var paths = new[]
                 {
                     Path.Combine(baseDir, projectName ?? "", "合同", subCategory == "income" ? "收入" : "支出", fileName),
@@ -159,6 +171,7 @@ public static class FileEndpoints
                 };
                 foreach (var p in paths)
                 {
+                    if (!IsPathSafe(p, baseDir)) continue;
                     if (File.Exists(p))
                     {
                         var bytes = File.ReadAllBytes(p);
@@ -167,7 +180,7 @@ public static class FileEndpoints
                         return Common.Ok(new { dataUrl = $"data:{mime};base64,{Convert.ToBase64String(bytes)}", mimeType = mime });
                     }
                 }
-                return Common.Fail("文件不存在");
+                return Common.NotFound("文件不存在");
             }
             catch (Exception ex) { return Common.Fail(ex.Message); }
         });
@@ -176,11 +189,12 @@ public static class FileEndpoints
         {
             try
             {
-                var baseDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "工程管家", "uploads");
+                var baseDir = Path.Combine(ApiConfig.ResolveDataPath(), "uploads");
                 var subDir = (string)(dto.subCategory ?? "income") == "income" ? "收入" : "支出";
                 var dir = Path.Combine(baseDir, (string)(dto.projectName ?? "未分类"), "合同", subDir);
                 Directory.CreateDirectory(dir);
                 var filePath = Path.Combine(dir, (string)(dto.fileName ?? "file"));
+                if (!IsPathSafe(filePath, baseDir)) return Common.Fail("非法路径");
                 if (!string.IsNullOrEmpty((string)(dto.fileData ?? "")))
                 {
                     var data = (string)dto.fileData;

@@ -60,16 +60,12 @@ export type { TabsProps } from './Tabs'
 export { Tooltip } from './Tooltip'
 export type { TooltipProps } from './Tooltip'
 
-// 进度条
-export { ProgressBar } from './ProgressBar'
-export type { ProgressBarProps } from './ProgressBar'
-
-// 表单字段
-export { FormField } from './FormField'
-export type { FormFieldProps } from './FormField'
-
 // 页面容器
 export { default as PageContainer } from './PageContainer'
 
 // 筛选栏
 export { default as FilterBar } from './FilterBar'
+
+// Hero 横幅（组件创建后将取消注释）
+// export { HeroBanner } from './HeroBanner'
+// export type { HeroBannerProps } from './HeroBanner'

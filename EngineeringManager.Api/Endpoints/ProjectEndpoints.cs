@@ -52,7 +52,7 @@ public static class ProjectEndpoints
                     inProgressProjects, totalExpenses, inventoryItemsCount, expenseByCategory, recentProjects
                 });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return Common.Ok(new
                 {
@@ -76,7 +76,7 @@ public static class ProjectEndpoints
         {
             var p = db.QueryFirstOrDefault(@"SELECT p.*, m.name as project_manager_name FROM projects p
                 LEFT JOIN members m ON p.project_manager_id=m.id WHERE p.id=@Id", new { Id = id });
-            return p is not null ? Common.Ok(p) : Common.Fail("项目不存在");
+            return p is not null ? Common.Ok(p) : Common.NotFound("项目不存在");
         });
 
         app.MapPost("/api/projects", async (ProjectDto dto, IDbConnection db) =>
@@ -97,11 +97,11 @@ public static class ProjectEndpoints
                 project_manager_id=@ProjectManagerId,updated_at=@Now WHERE id=@Id",
                 new { dto.Name, dto.Description, dto.Address, dto.StartDate, dto.EndDate,
                       dto.Status, dto.Budget, dto.ProjectManagerId, Now = now(), Id = id });
-            return affected > 0 ? Common.Ok() : Common.Fail("项目不存在");
+            return affected > 0 ? Common.Ok() : Common.NotFound("项目不存在");
         });
 
         app.MapDelete("/api/projects/{id}", async (long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM projects WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.Fail("项目不存在"));
+            (await db.ExecuteAsync("DELETE FROM projects WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("项目不存在"));
 
         // ═══════════════════════════════════════════════════════════
         // 项目成员
@@ -124,6 +124,6 @@ public static class ProjectEndpoints
         });
 
         app.MapDelete("/api/project-members/{id}", async (long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM project_members WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.Fail("记录不存在"));
+            (await db.ExecuteAsync("DELETE FROM project_members WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("记录不存在"));
     }
 }

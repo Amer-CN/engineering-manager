@@ -72,21 +72,21 @@ public static class ContractEndpoints
         {
             var affected = await db.ExecuteAsync(@"UPDATE income_contracts SET name=@Name,amount=@Amount,status=@Status,remarks=@Remarks,updated_at=@Now WHERE id=@Id",
                 new { Now = now() });
-            return affected > 0 ? Common.Ok() : Common.Fail("合同不存在");
+            return affected > 0 ? Common.Ok() : Common.NotFound("合同不存在");
         });
 
         app.MapPut("/api/contracts/expense", async (dynamic dto, IDbConnection db) =>
         {
             var affected = await db.ExecuteAsync(@"UPDATE expense_contracts SET name=@Name,amount=@Amount,status=@Status,remarks=@Remarks,updated_at=@Now WHERE id=@Id",
                 new { Now = now() });
-            return affected > 0 ? Common.Ok() : Common.Fail("合同不存在");
+            return affected > 0 ? Common.Ok() : Common.NotFound("合同不存在");
         });
 
         app.MapDelete("/api/contracts/income/{id}", async (long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM income_contracts WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.Fail("合同不存在"));
+            (await db.ExecuteAsync("DELETE FROM income_contracts WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("合同不存在"));
 
         app.MapDelete("/api/contracts/expense/{id}", async (long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM expense_contracts WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.Fail("合同不存在"));
+            (await db.ExecuteAsync("DELETE FROM expense_contracts WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("合同不存在"));
 
         // ═══════════════════════════════════════════════════════════
         // 合同模板
@@ -108,11 +108,11 @@ public static class ContractEndpoints
         {
             var affected = await db.ExecuteAsync(@"UPDATE contract_templates SET name=@Name,type=@Type,content=@Content,variables=@Variables,updated_at=@Now WHERE id=@Id",
                 new { Now = now() });
-            return affected > 0 ? Common.Ok() : Common.Fail("模板不存在");
+            return affected > 0 ? Common.Ok() : Common.NotFound("模板不存在");
         });
 
         app.MapDelete("/api/contract-templates/{id}", async (long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM contract_templates WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.Fail("模板不存在"));
+            (await db.ExecuteAsync("DELETE FROM contract_templates WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("模板不存在"));
 
         // ═══════════════════════════════════════════════════════════
         // 结算
@@ -141,24 +141,24 @@ public static class ContractEndpoints
         {
             var affected = await db.ExecuteAsync(@"UPDATE settlements SET name=@Name,sub_type=@SubType,amount=@Amount,remarks=@Remarks,updated_at=@Now WHERE id=@Id",
                 new { Now = now() });
-            return affected > 0 ? Common.Ok() : Common.Fail("结算不存在");
+            return affected > 0 ? Common.Ok() : Common.NotFound("结算不存在");
         });
 
         app.MapDelete("/api/settlements/{id}", async (long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM settlements WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.Fail("结算不存在"));
+            (await db.ExecuteAsync("DELETE FROM settlements WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("结算不存在"));
 
         app.MapPut("/api/settlements/{id}/process", async (long id, IDbConnection db) =>
         {
             var affected = await db.ExecuteAsync(@"UPDATE settlements SET status='processed',updated_at=@Now WHERE id=@Id",
                 new { Id = id, Now = now() });
-            return affected > 0 ? Common.Ok() : Common.Fail("结算不存在");
+            return affected > 0 ? Common.Ok() : Common.NotFound("结算不存在");
         });
 
         app.MapPut("/api/settlements/{id}/unarchive", async (long id, IDbConnection db) =>
         {
             var affected = await db.ExecuteAsync(@"UPDATE settlements SET status='pending',updated_at=@Now WHERE id=@Id",
                 new { Id = id, Now = now() });
-            return affected > 0 ? Common.Ok() : Common.Fail("结算不存在");
+            return affected > 0 ? Common.Ok() : Common.NotFound("结算不存在");
         });
     }
 }

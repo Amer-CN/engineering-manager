@@ -191,8 +191,96 @@ if (fileExists(preloadPath)) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// 铁律六：代码分割检查
+// 铁律七：样式系统防复发检查（新增 — 2026-06-10 治理）
 // ═══════════════════════════════════════════════════════════
+
+console.log('\n═══ 铁律七：样式系统防复发 ═══')
+
+function walkTsxFiles(dir, filter) {
+  const results = []
+  if (!fs.existsSync(dir)) return results
+  const entries = fs.readdirSync(dir, { withFileTypes: true })
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name)
+    if (entry.isDirectory()) {
+      results.push(...walkTsxFiles(fullPath, filter))
+    } else if (entry.name.endsWith('.tsx') || entry.name.endsWith('.ts')) {
+      if (!filter || filter(fullPath)) results.push(fullPath)
+    }
+  }
+  return results
+}
+
+// 规则 1：禁止硬编码 hex 颜色（排除 index.css 变量定义、测试文件、prototype HTML）
+const hexColorRegex = /#[0-9a-fA-F]{6}/g
+const noHexColorFiles = walkTsxFiles(SRC, f =>
+  !f.includes('__tests__') && !f.includes('node_modules') && !f.includes('prototype') && !f.endsWith('.html'))
+let hexWarnings = 0
+for (const file of noHexColorFiles) {
+  const content = fs.readFileSync(file, 'utf-8')
+  const matches = content.match(hexColorRegex)
+  if (matches) {
+    // 排除 index.css 中的 CSS 变量定义和主题颜色
+    const effective = matches.length
+    if (effective > 0) {
+      const rel = path.relative(ROOT, file)
+      console.log(`  SOFT WARN  ${rel}: ${effective} 处硬编码 hex 颜色`)
+      hexWarnings += effective
+      warnings++
+    }
+  }
+}
+if (hexWarnings > 0) {
+  console.log(`  共 ${hexWarnings} 处硬编码颜色，建议迁移到 Tailwind 主题色或 CSS 变量`)
+}
+
+// 规则 2：禁止 gray- 色系（排除 index.css 主题定义）
+function checkGrayInFile(filePath) {
+  const content = fs.readFileSync(filePath, 'utf-8')
+  const lines = content.split('\n')
+  const violations = []
+  lines.forEach((line, i) => {
+    if (/\bgray-\d/.test(line) && !line.trim().startsWith('/*') && !line.trim().startsWith('//')) {
+      violations.push({ line: i + 1, content: line.trim() })
+    }
+  })
+  return violations
+}
+const grayCheckFiles = walkTsxFiles(SRC, f => !f.includes('__tests__') && !f.includes('node_modules'))
+let grayViolations = 0
+for (const file of grayCheckFiles) {
+  const v = checkGrayInFile(file)
+  if (v.length > 0) {
+    const rel = path.relative(ROOT, file)
+    console.log(`  HARD FAIL  ${rel}: ${v.length} 处 gray-* 使用，请改为 slate-*`)
+    grayViolations += v.length
+  }
+}
+if (grayViolations > 0) {
+  console.log(`  共 ${grayViolations} 处 gray-* 违规，必须改为 slate-*`)
+  violations += grayViolations
+}
+
+// 规则 2：禁止 gray- 色系（排除 .css 文件——主题定义中 gray- 是有意为之）
+
+// 规则 3：禁止 text-[Npx] 任意字号（已有 text-caption/text-micro 替代）
+const arbitraryTextPattern = /text-\[\d+(\.\d+)?px\]/g
+const textCheckFiles = walkTsxFiles(SRC, f => !f.includes('__tests__') && !f.includes('node_modules'))
+let textViolations = 0
+for (const file of textCheckFiles) {
+  const content = fs.readFileSync(file, 'utf-8')
+  const matches = content.match(arbitraryTextPattern)
+  if (matches) {
+    const rel = path.relative(ROOT, file)
+    console.log(`  HARD FAIL  ${rel}: ${matches.length} 处任意字号 (${matches.join(', ')})，请用 text-caption 或 text-micro`)
+    textViolations += matches.length
+  }
+}
+if (textViolations > 0) {
+  violations += textViolations
+}
+
+console.log(`  硬编码 hex: ${hexWarnings} (warn), gray-*: ${grayViolations}, 任意字号: ${textViolations}`)
 
 console.log('\n═══ 铁律六：代码分割检查 ═══')
 
