@@ -57,3 +57,10 @@ public/fonts/*.ttf
 # C# 构建产物
 EngineeringManager.Api/bin/
 EngineeringManager.Api/obj/
+EngineeringManager.Installer/publish/
+.sisyphus/prod-test/
+
+# 编译产物（禁止提交）
+*.exe
+*.pdb
+
