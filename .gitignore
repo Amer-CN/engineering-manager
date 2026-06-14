@@ -64,3 +64,6 @@ EngineeringManager.Installer/publish/
 *.exe
 *.pdb
 
+
+# npm lock file (CI uses npm install instead of npm ci)
+package-lock.json
