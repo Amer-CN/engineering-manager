@@ -1,0 +1,280 @@
+/* ═══════════════════════════════════════════════════════════════
+   安装器设计系统 — 复用主程序三主题 CSS 变量
+   ═══════════════════════════════════════════════════════════════ */
+
+/* 思源黑体 */
+@font-face {
+  font-family: 'Noto Sans SC';
+  src: url('../fonts/SourceHanSansSC-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root,
+[data-theme="white"] {
+  --bg: #f8fafc;
+  --bg-2: #f1f5f9;
+  --panel: #ffffff;
+  --border: #e2e8f0;
+  --fg: #0f172a;
+  --fg-2: #475569;
+  --muted: #94a3b8;
+  --accent: #2563eb;
+  --accent-soft: rgba(37, 99, 235, 0.12);
+  --accent-strong: #1d4ed8;
+  --success: #16a34a;
+  --success-soft: rgba(22, 163, 74, 0.12);
+  --danger: #dc2626;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --shadow-sm: 0 1px 0 rgba(0,0,0,0.04);
+  --shadow-md: 0 8px 24px -10px rgba(0,0,0,0.1);
+  --shadow-lg: 0 24px 60px -20px rgba(0,0,0,0.18);
+  --particle: rgba(37, 99, 235, 0.25);
+  --particle-line: rgba(37, 99, 235, 0.06);
+}
+
+[data-theme="graphite"] {
+  --bg: oklch(17% 0.005 280);
+  --bg-2: oklch(20% 0.006 275);
+  --panel: oklch(21.5% 0.007 275);
+  --border: oklch(30% 0.008 275);
+  --fg: oklch(96% 0.004 280);
+  --fg-2: oklch(81% 0.005 280);
+  --muted: oklch(63% 0.006 280);
+  --accent: oklch(68% 0.16 38);
+  --accent-soft: oklch(68% 0.16 38 / 0.15);
+  --accent-strong: oklch(72% 0.18 36);
+  --success: oklch(65% 0.19 155);
+  --success-soft: oklch(65% 0.19 155 / 0.15);
+  --danger: oklch(65% 0.2 25);
+  --particle: rgba(255, 140, 50, 0.3);
+  --particle-line: rgba(255, 140, 50, 0.08);
+}
+
+[data-theme="sandstone"] {
+  --bg: oklch(97.5% 0.008 80);
+  --bg-2: oklch(95.5% 0.011 78);
+  --panel: oklch(98.5% 0.005 80);
+  --border: oklch(88% 0.016 76);
+  --fg: oklch(22% 0.014 55);
+  --fg-2: oklch(36% 0.013 55);
+  --muted: oklch(53% 0.011 60);
+  --accent: oklch(60% 0.19 38);
+  --accent-soft: oklch(60% 0.19 38 / 0.1);
+  --accent-strong: oklch(54% 0.21 36);
+  --success: oklch(55% 0.18 150);
+  --success-soft: oklch(55% 0.18 150 / 0.1);
+  --danger: oklch(58% 0.2 25);
+  --particle: rgba(217, 119, 6, 0.25);
+  --particle-line: rgba(217, 119, 6, 0.06);
+}
+
+/* ── 全局基础 ── */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Noto Sans SC', 'Source Han Sans SC', 'Microsoft YaHei', sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  overflow: hidden;
+  user-select: none;
+  transition: background 0.4s ease, color 0.4s ease;
+}
+
+/* ── 标题栏拖动区 ── */
+.titlebar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 36px;
+  z-index: 100;
+  -webkit-app-region: drag;
+}
+
+/* ── 按钮基础 ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 24px;
+  border-radius: var(--radius);
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  -webkit-app-region: no-drag;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.btn-primary:hover {
+  background: var(--accent-strong);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--fg-2);
+  border: 1px solid var(--border);
+}
+
+.btn-ghost:hover {
+  background: var(--bg-2);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-danger {
+  background: #dc2626;
+  color: white;
+  box-shadow: 0 2px 8px rgba(220,38,38,0.15);
+}
+
+.btn-danger:hover {
+  background: #b91c1c;
+  box-shadow: 0 4px 16px rgba(220,38,38,0.25);
+  transform: translateY(-1px);
+}
+
+.btn-danger:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* ── 输入框 ── */
+.input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--fg);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* ── 卡片 ── */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  transition: all 0.3s ease;
+}
+
+/* ── 进度条 ── */
+.progress-track {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+  transition: width 0.3s ease;
+}
+
+/* ── 主题切换按钮 ── */
+.theme-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  -webkit-app-region: no-drag;
+}
+
+.theme-btn:hover {
+  transform: scale(1.15);
+  border-color: var(--accent);
+}
+
+.theme-btn.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+/* ── 标题栏按钮 ── */
+.titlebar-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  -webkit-app-region: no-drag;
+}
+
+.titlebar-btn:hover {
+  background: var(--bg-2);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* 关闭按钮悬停特殊样式 */
+.titlebar-btn.close-hover:hover {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: white;
+}
+
+/* ── 标题栏按钮 ── */
+.titlebar-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  -webkit-app-region: no-drag;
+}
+
+.titlebar-btn:hover {
+  background: var(--bg-2);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.titlebar-btn.close-hover:hover {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: white;
+}
+
+/* ── 关闭按钮（已废弃，使用 titlebar-btn 替代） ── */
