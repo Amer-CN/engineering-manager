@@ -1,3 +1,4 @@
+import { maskIdCard, maskPhone, maskBankAccount } from "@/utils/mask";
 import React from 'react'
 import { getWorkerTypeLabel } from '../../../utils'
 
@@ -30,14 +31,14 @@ export const LaborWorkerRow = React.memo(function LaborWorkerRow({
   return (
     <tr className="hover:bg-slate-50 transition-colors">
       <td className="px-3 py-2.5 font-medium text-slate-800">{worker.name}</td>
-      <td className="px-3 py-2.5 text-slate-500 font-mono text-xs">{worker.idCard || '-'}</td>
+      <td className="px-3 py-2.5 text-slate-500 font-mono text-xs">{maskIdCard(worker.idCard) || '-'}</td>
       <td className={`px-3 py-2.5 text-center text-sm font-medium ${isOverage ? 'text-red-600' : 'text-slate-600'}`}>
         {age !== null ? age : '-'}
       </td>
       <td className="px-3 py-2.5 text-slate-600">{worker.gender || '-'}</td>
       <td className="px-3 py-2.5 text-slate-600">{worker.workerType ? getWorkerTypeLabel(worker.workerType as any) : '-'}</td>
       <td className="px-3 py-2.5 text-right text-slate-700 font-medium">{worker.dailyWage != null ? `¥${worker.dailyWage}` : '-'}</td>
-      <td className="px-3 py-2.5 text-slate-500 font-mono text-xs">{(worker as any).bankAccount || '-'}</td>
+      <td className="px-3 py-2.5 text-slate-500 font-mono text-xs">{maskBankAccount((worker as any).bankAccount) || '-'}</td>
       <td className="px-3 py-2.5">
         <div className="flex items-center justify-end gap-1">
           <button

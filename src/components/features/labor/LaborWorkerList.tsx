@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react'
 import { DataTable, type Column } from '@/components/DataTable'
 import FilterBar from '../../ui/FilterBar'
+import { maskIdCard, maskPhone, maskBankAccount } from "@/utils/mask";
 import { Icon } from '../../ui/Icon'
 import type { Member, WorkerTeam } from '../../../types/electron'
 import { WorkerWageModal } from './WorkerWageModal'
@@ -61,7 +62,7 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
     },
     {
       key: 'idCard', title: '身份证号', filterable: true,
-      render: (w) => <span className="text-slate-500 font-mono text-xs">{w.idCard || '-'}</span>
+      render: (w) => <span className="text-slate-500 font-mono text-xs">{maskIdCard(w.idCard) || '-'}</span>
     },
     {
       key: 'age', title: '年龄', align: 'center', sortable: true,

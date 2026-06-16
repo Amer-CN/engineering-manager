@@ -1,3 +1,4 @@
+import { maskIdCard, maskPhone, maskBankAccount } from "@/utils/mask";
 import React from 'react'
 
 interface WorkerPickerItemProps {
@@ -36,7 +37,7 @@ export const WorkerPickerItem = React.memo(function WorkerPickerItem({
   <span className="text-sm font-medium text-slate-800 truncate">{w.name}</span>
   <span className="text-xs text-slate-400">{w.gender}</span>
   </div>
-  <div className="text-xs text-slate-400 mt-0.5">{w.idCard}</div>
+  <div className="text-xs text-slate-400 mt-0.5">{maskIdCard(w.idCard)}</div>
   </div>
   <div className="flex items-center gap-3 text-xs text-slate-500">
   {w.projectCount > 0 && (

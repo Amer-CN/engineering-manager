@@ -1,6 +1,7 @@
 // WorkerSection 组件
 // @deprecated 此组件已废弃，工人管理模块已改用 LaborWorkerList + LaborTeamManager
 
+import { maskIdCard, maskPhone, maskBankAccount } from "@/utils/mask";
 import { useState, useMemo } from 'react'
 import { DataTable, type Column } from '@/components/DataTable'
 import FilterBar from '../../ui/FilterBar'
@@ -83,7 +84,7 @@ export function WorkerSection({
 
   const workerColumns: Column<any>[] = [
     { key: 'name', title: '姓名', render: (item) => <span className="font-medium text-slate-800">{item.name}</span> },
-    { key: 'idCard', title: '身份证号', render: (item) => <span className="text-slate-500 font-mono text-xs">{item.idCard || '-'}</span> },
+    { key: 'idCard', title: '身份证号', render: (item) => <span className="text-slate-500 font-mono text-xs">{maskIdCard(item.idCard) || '-'}</span> },
     { key: 'age', title: '年龄', align: 'center', render: (item) => {
       const age = item.birthDate ? calcAge(item.birthDate) : null
       const isOverage = age !== null && age > 60
@@ -92,7 +93,7 @@ export function WorkerSection({
     { key: 'gender', title: '性别', render: (item) => <span className="text-slate-600">{item.gender || '-'}</span> },
     { key: 'workerType', title: '工种', render: (item) => <span className="text-slate-600">{item.workerType ? getWorkerTypeLabel(item.workerType as any) : '-'}</span> },
     { key: 'dailyWage', title: '日工资', align: 'right', render: (item) => <span className="text-slate-700 font-medium">{item.dailyWage ? `¥${item.dailyWage}` : '-'}</span> },
-    { key: 'bankAccount', title: '银行卡号', render: (item) => <span className="text-slate-500 font-mono text-xs">{(item as any).bankAccount || '-'}</span> },
+    { key: 'bankAccount', title: '银行卡号', render: (item) => <span className="text-slate-500 font-mono text-xs">{maskBankAccount((item as any).bankAccount) || '-'}</span> },
     { key: 'actions', title: '操作', align: 'right', render: (item) => (
       <div className="flex items-center justify-end gap-1">
         <button onClick={() => onEditWorker(item)} className="btn btn-ghost btn-sm text-blue-600">编辑</button>
