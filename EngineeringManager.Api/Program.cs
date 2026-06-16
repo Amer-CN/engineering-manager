@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using Microsoft.Data.Sqlite;
 using Dapper;
 using Microsoft.Extensions.FileProviders;
@@ -128,6 +128,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
         // OCR（百度）
         app.RegisterOcrEndpoints();
+        OcrSetupWizard.Map(app);
 
         // 健康检查 + 快照 + 配置 + 审计日志 + 区域 + 费用 + 模板
         app.RegisterSystemEndpoints();

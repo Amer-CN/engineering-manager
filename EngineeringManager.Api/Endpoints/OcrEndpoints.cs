@@ -530,13 +530,41 @@ public static class OcrEndpoints
 
     private static (string apiKey, string secretKey) LoadOcrConfig()
     {
-        // 优先从 public/ocr-config.json 读取
+        // 优先级 1: 环境变量（推荐用于生产/部署）
+        var envApiKey = Environment.GetEnvironmentVariable("BAIDU_OCR_API_KEY");
+        var envSecretKey = Environment.GetEnvironmentVariable("BAIDU_OCR_SECRET_KEY");
+        if (!string.IsNullOrEmpty(envApiKey) && !string.IsNullOrEmpty(envSecretKey))
+        {
+            Console.Error.WriteLine("[OcrConfig] 使用环境变量 BAIDU_OCR_API_KEY/BAIDU_OCR_SECRET_KEY");
+            return (envApiKey, envSecretKey);
+        }
+
+        // 优先级 2: Windows DPAPI 加密文件（用户首次配置向导写入）
+        var dpapiPath = Path.Combine(ApiConfig.ResolveDataPath(), "ocr-config.dpapi.json");
+        if (File.Exists(dpapiPath))
+        {
+            try
+            {
+                var encrypted = File.ReadAllBytes(dpapiPath);
+                var plaintext = System.Security.Cryptography.ProtectedData.Unprotect(
+                    encrypted, null, System.Security.Cryptography.DataProtectionScope.CurrentUser);
+                var json = System.Text.Json.JsonDocument.Parse(plaintext);
+                var baidu = json.RootElement.GetProperty("baidu");
+                return (baidu.GetProperty("apiKey").GetString() ?? "", baidu.GetProperty("secretKey").GetString() ?? "");
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[OcrConfig] DPAPI 解密失败: {ex.Message}");
+            }
+        }
+
+        // 优先级 3: 兼容老明文 JSON（已安装用户从 v1.0.0 升级时临时保留）
+        // 注意: 这种方式 key 仍以明文存盘，建议用户升级后通过向导迁移到 DPAPI
         var configPaths = new[]
         {
             Path.Combine(AppContext.BaseDirectory, "public", "ocr-config.json"),
             Path.Combine(Directory.GetCurrentDirectory(), "public", "ocr-config.json"),
             Path.Combine(ApiConfig.ResolveDataPath(), "ocr-config.json"),
-            // 项目根目录的 public/ 文件夹
             Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "public", "ocr-config.json"),
             Path.Combine(Directory.GetCurrentDirectory(), "..", "public", "ocr-config.json"),
         };
@@ -549,15 +577,39 @@ public static class OcrEndpoints
                     var json = System.Text.Json.JsonDocument.Parse(File.ReadAllText(p));
                     var root = json.RootElement;
                     var baidu = root.GetProperty("baidu");
-                    return (baidu.GetProperty("apiKey").GetString() ?? "", baidu.GetProperty("secretKey").GetString() ?? "");
+                    var apiKey = baidu.GetProperty("apiKey").GetString() ?? "";
+                    var secretKey = baidu.GetProperty("secretKey").GetString() ?? "";
+                    if (!string.IsNullOrEmpty(apiKey) && !string.IsNullOrEmpty(secretKey))
+                    {
+                        Console.Error.WriteLine($"[OcrConfig] 警告: 从明文 JSON {p} 读取 OCR key（v1.0.0 兼容模式）。请运行首次启动向导迁移到 DPAPI 加密。");
+                        return (apiKey, secretKey);
+                    }
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"[OcrConfig] 解析 {p} 失败: {ex.Message}");
+                }
             }
         }
         return ("", "");
     }
 
-    private static async Task<string> GetBaiduAccessToken(HttpClient httpClient)
+    public static void SaveOcrConfigEncrypted(string apiKey, string secretKey)
+    {
+        // 写入 DPAPI 加密文件（仅当前 Windows 用户可解）
+        var json = "{\"baidu\":{\"apiKey\":\"" + apiKey + "\",\"secretKey\":\"" + secretKey + "\"}}";
+        var plaintext = System.Text.Encoding.UTF8.GetBytes(json);
+        var encrypted = System.Security.Cryptography.ProtectedData.Protect(
+            plaintext, null, System.Security.Cryptography.DataProtectionScope.CurrentUser);
+        var dpapiPath = Path.Combine(ApiConfig.ResolveDataPath(), "ocr-config.dpapi.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(dpapiPath)!);
+        File.WriteAllBytes(dpapiPath, encrypted);
+        Console.Error.WriteLine($"[OcrConfig] DPAPI 加密 key 已写入 {dpapiPath}");
+
+        // 同步设置环境变量（避免重启进程读取不到 env）
+        Environment.SetEnvironmentVariable("BAIDU_OCR_API_KEY", apiKey);
+        Environment.SetEnvironmentVariable("BAIDU_OCR_SECRET_KEY", secretKey);
+    }    private static async Task<string> GetBaiduAccessToken(HttpClient httpClient)
     {
         if (!string.IsNullOrEmpty(cachedAccessToken) && DateTime.Now < tokenExpiresAt)
             return cachedAccessToken;
