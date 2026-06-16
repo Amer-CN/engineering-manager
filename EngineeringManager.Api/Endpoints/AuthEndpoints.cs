@@ -49,7 +49,7 @@ public static class AuthEndpoints
                 permissions = role?.permissions ?? "[]",
                 token = GenerateJwtToken((string)user.id, (string)user.username, (string)user.role_id, role?.name ?? (string)user.role_id)
             });
-        });
+        }).RequireRateLimiting("login");
 
         static string GenerateJwtToken(string userId, string username, string roleId, string roleName)
         {

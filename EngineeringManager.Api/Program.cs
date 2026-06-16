@@ -46,6 +46,45 @@ public static class ApiConfig
         builder.Services.AddAuthorization();
         builder.Services.AddHttpClient();
 
+        // P0-4: 限流（登录防爆破 + 写防滥用）
+        builder.Services.AddRateLimiter(options =>
+            {
+                // 登录限流：1 个 IP 1 分钟最多 5 次
+                options.AddPolicy("login", httpContext =>
+                {
+                    var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                    return System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+                        ip,
+                        _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+                        {
+                            PermitLimit = 5,
+                            Window = TimeSpan.FromMinutes(1),
+                            QueueLimit = 0
+                        });
+                });
+
+                // 写限流：1 个 IP 1 秒最多 30 次
+                options.AddPolicy("write", httpContext =>
+                {
+                    var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                    return System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+                        ip,
+                        _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+                        {
+                            PermitLimit = 30,
+                            Window = TimeSpan.FromSeconds(1),
+                            QueueLimit = 0
+                        });
+                });
+
+                // 429 响应
+                options.OnRejected = async (context, token) =>
+                {
+                    context.HttpContext.Response.StatusCode = 429;
+                    await context.HttpContext.Response.WriteAsJsonAsync(new { success = false, error = "请求过于频繁，请稍后再试" }, token);
+                };
+            });
+
 // 支持 camelCase JSON 反序列化（前端发 camelCase，后端 DTO 用 PascalCase）
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
@@ -85,6 +124,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
         app.UseAuthentication();
         app.UseAuthorization();
         app.UseMiddleware<EngineeringManager.Api.GlobalAuthMiddleware>();
+        app.UseRateLimiter();
         RegisterEndpoints(app);
 
         if (IsProduction)
