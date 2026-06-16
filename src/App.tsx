@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { getAPI } from './services/api-adapter'
 import Sidebar from './components/Sidebar'
@@ -10,6 +10,7 @@ import { RequirePermission, RequireAdmin } from './hooks/usePermission'
 import { useAuth } from './hooks/useAuth'
 import { useRowHoverOpacity } from './hooks/useRowHoverOpacity'
 import { useTheme } from './hooks/useTheme'
+import { MaskProvider } from './contexts/MaskContext';
 import { HoverScrollbar } from './components/ui/HoverScrollbar'
 
 // ── 路由级代码分割：每个页面独立 chunk ──
@@ -341,7 +342,7 @@ const AppContent: React.FC = () => {
 }
 
 function App() {
-  return <AppContent />
+  return <MaskProvider><AppContent /></MaskProvider>
 }
 
 export default App

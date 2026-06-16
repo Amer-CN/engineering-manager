@@ -1,5 +1,6 @@
 // LaborWorkerList.tsx - 工人库Tab
 
+import { useMask } from '@/contexts/MaskContext';
 import React, { useState, useMemo } from 'react'
 import { DataTable, type Column } from '@/components/DataTable'
 import FilterBar from '../../ui/FilterBar'
@@ -21,6 +22,8 @@ interface LaborWorkerListProps {
 }
 
 function calcAge(birthDate: string): number {
+
+  const { masked } = useMask();
   const birth = new Date(birthDate)
   if (isNaN(birth.getTime())) return 0
   const today = new Date()
@@ -62,7 +65,7 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
     },
     {
       key: 'idCard', title: '身份证号', filterable: true,
-      render: (w) => <span className="text-slate-500 font-mono text-xs">{maskIdCard(w.idCard) || '-'}</span>
+      render: (w) => <span className="text-slate-500 font-mono text-xs">{masked ? maskIdCard(w.idCard) || '-'}</span>
     },
     {
       key: 'age', title: '年龄', align: 'center', sortable: true,

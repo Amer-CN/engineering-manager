@@ -1,3 +1,4 @@
+import { useMask } from '@/contexts/MaskContext';
 import { useState } from 'react'
 import { DataTable, type Column } from '@/components/DataTable'
 import { maskIdCard, maskPhone, maskBankAccount } from "@/utils/mask";
@@ -24,6 +25,8 @@ interface TeamWorkerModalProps {
 }
 
 export function TeamWorkerModal({
+
+  const { masked } = useMask();
   show, teamId, teamName, projectId, members, workerTeams,
   onClose, onUpdateWorker, onRemoveWorker, onTransferWorker, onAddWorkers, onWageUpdated
 }: TeamWorkerModalProps) {
@@ -35,7 +38,7 @@ export function TeamWorkerModal({
 
   const columns: Column<any>[] = [
     { key: 'name', title: '姓名', render: (item) => <span className="font-medium text-slate-800">{item.name}</span> },
-    { key: 'idCard', title: '身份证号', render: (item) => <span className="text-slate-500 font-mono text-xs">{maskIdCard(item.idCard) || '-'}</span> },
+    { key: 'idCard', title: '身份证号', render: (item) => <span className="text-slate-500 font-mono text-xs">{masked ? maskIdCard(item.idCard) || '-'}</span> },
     { key: 'workerType', title: '工种', render: (item) => <span className="text-slate-600">{item.workerType ? getWorkerTypeLabel(item.workerType as any) : '-'}</span> },
     { key: 'dailyWage', title: '日工资', align: 'right', render: (item) => <span className="text-slate-700">{item.dailyWage ? `¥${item.dailyWage}` : '-'}</span> },
     { key: 'entryDate', title: '进场日期', render: (item) => <span className="text-slate-500 text-xs">{item.entryDate || '-'}</span> },
