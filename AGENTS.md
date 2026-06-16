@@ -250,3 +250,54 @@ export function useProjects() {
 ### 当前版本：v1.0.0
 
 *本文档与 `CHANGELOG.md`、`docs/` 保持同步。*
+
+---
+
+## 🩺 安全审计结果（2026-06-16 v1.0.0 状态）
+
+> **审计者**：darwin-skill 9 维 rubric 参照 + vibe-coding-guide 19 条 + 4 个 explore 子代理 file:line 实证
+> **回滚锚点**：git reset --hard v1.0.0-pre-vibe（commit fcdffea3fed06f878789db7f08d98303ffdf077f）
+> **完整修复计划**：[P0-FIX-PLAN.md](P0-FIX-PLAN.md)
+> **vibe-coding-guide 评估**：[ibe-coding-guide-eval-2026-06-16.md](vibe-coding-guide-eval-2026-06-16.md)
+
+### 4 个 🔴 P0 缺口（**当前版本未修，发布前必读**）
+
+| # | 缺口 | 现状 | 严重度 |
+|---|------|------|------|
+| P0-1 | **OCR API key 公开在安装包** | public/ocr-config.json:5-6 明文 key 已被打进 dist + 装到所有用户机器。OcrEndpoints.cs:531-558 + src/services/ocr.ts:158-194 直接读明文 | 🔴 **最高优先级** |
+| P0-2 | **全 API 无鉴权中间件** | Program.cs 全文 grep "UseAuthentication|AddAuthentication|AddAuthorization" **0 命中**。所有 endpoint 任何人都能访问（含 /api/users /api/audit/logs /api/sqlite/migrate） | 🔴 |
+| P0-3 | **PII 零加密零脱敏** | members/workers/partners 表的 id_card/phone/ank_account 全部 TEXT 明文。所有列表 API 返回全表，前端组件直接渲染 w.idCard w.bankAccount m.phone | 🔴 |
+| P0-4 | **越权读 + 无限流** | grep "WHERE\s+(user_id|created_by)\s*=" **0 命中**。0 限流中间件。任意用户能看任意数据 | 🔴 |
+
+### 5 个 🟡 P1 缺口
+
+| # | 缺口 | 现状 |
+|---|------|------|
+| P1-1 | **静默吞错** | 5 处 catch { } 真静默 + 40 处单边（只 log 不返错 / 只返错不 log）+ 8 处 OCR Results.Ok(new { success=false }) 假成功（OcrEndpoints.cs:64,122,159,200,247,285,339,380） |
+| P1-2 | **admin/admin123 多处公开** | Rust 端 init.rs:711 硬编码 + 启动日志 :732 打印明文 + AGENTS.md/README.md/CLAUDE.md 多处明文 |
+| P1-3 | **OCR 8 处把 ex.Message 直回前端** | 信息泄露风险（OcrEndpoints.cs:8 处） |
+| P1-4 | **审计 user_id 来自 DTO 字段** | AuditEndpoints.cs:35 + SystemEndpoints.cs:73 客户端可伪造身份 |
+| P1-5 | **密码比较用 string ==** | AuthEndpoints.cs:34 应改 CryptographicOperations.FixedTimeEquals |
+
+### 6 个 ✅ 真正合规项（之前 AGENTS.md 没明确写但代码做到了）
+
+| # | 实际合规项 | 证据 |
+|---|------|------|
+| 1 | **密码哈希** | Common.cs:32-40 PBKDF2-HMAC-SHA512 210k iterations（OWASP 合规，**比 bcrypt 还好**） |
+| 2 | **SQL 参数化** | ~200 个 Dapper 调用 **0 拼接**（仅 {w} 条件分支 + [{tableName}] 标识符插值，受控） |
+| 3 | **金额非浮点** | migration  03_MoneyRealToInteger.sql + INTEGER(分) 字段 |
+| 4 | **数据存储路径独立** | ApiConfig.ResolveDataPath() 22 处调用，0 处 AppData |
+| 5 | **软删除 + 审计** | DapperHelpers.SoftDeleteAsync() + deleted_at + udit_logs 表 |
+| 6 | **迁移文件唯一来源** | Migrations/Scripts/001-008 + MigrationRunner + schema_versions 表 |
+
+### 行动指引
+
+**任何接手工程管家的开发者**：
+1. **v1.0.0 发布前**：P0-1 必须修（OCR key rotate），其他 3 个 P0 在 v1.0.x 立即跟进
+2. **新功能开发前**：先读 [P0-FIX-PLAN.md](P0-FIX-PLAN.md) 决定当前 sprint 是否带 1-2 个 P0 修复
+3. **不要在 P0 修完前**新增涉及 PII 的新功能（先把 P0-2/P0-3 修了再考虑）
+4. **vibe-coding-guide 兼容度**：v2 实证 9/19 完美 + 5/19 缺口 + 5/19 部分合规（详见 v2 报告）
+
+**AGENTS.md 之前声称"RequireAuthorization() 强制"是文档与代码 gap**——以本审计为准，**代码实际未做鉴权**。
+
+*本节与 CHANGELOG.md、P0-FIX-PLAN.md 保持同步。*
