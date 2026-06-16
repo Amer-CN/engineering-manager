@@ -708,7 +708,10 @@ fn create_default_admin(conn: &Connection) -> Result<()> {
     use std::num::NonZeroU32;
 
     let salt = "admin-default-salt-2026"; // 固定 salt 用于默认管理员
-    let password = "admin123";
+    let password = std::env::var("ADMIN_INITIAL_PASSWORD").unwrap_or_else(|_| {
+        use rand::Rng;
+        rand::thread_rng().sample_string(&rand::distributions::Alphanumeric, 16)
+    });
     let iterations = NonZeroU32::new(210000).unwrap();
     let mut hash = [0u8; 64];
 
@@ -729,7 +732,7 @@ fn create_default_admin(conn: &Connection) -> Result<()> {
         rusqlite::params![password_hash, salt, now],
     )?;
 
-    log::info!("默认管理员账号已创建: admin / admin123");
+    log::info!("默认管理员账号已创建: admin（首次登录后请立即修改密码，初始密码已从环境变量 ADMIN_INITIAL_PASSWORD 读取或自动生成）");
     Ok(())
 }
 

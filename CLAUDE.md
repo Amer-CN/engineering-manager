@@ -84,7 +84,7 @@ SQLite (engineering.db) ← 数据存储路径由用户配置
 - **权限组件**：`<RequirePermission />` / `<RequireAdmin />` — App.tsx 路由级守卫
 - **侧边栏过滤**：`getFilteredSidebarRoutes(permissions)` 按权限过滤，管理员看到全部
 - **前端兼容**：`permissions` 可能是字符串或数组，统一 JSON.parse 处理
-- 默认管理员：`admin` / `admin123`
+- 默认管理员：`admin`（首次登录时**强制修改密码**）
 
 ## 🤖 AI 智能识别（百度 OCR）
 - **架构**：表单组件 → useXxxOCR hook → C# API → 百度 API
