@@ -5,7 +5,7 @@
  * 保持与 Electron/Tauri 版本兼容的接口
  */
 
-import { apiClient } from './api-client';
+import { apiClient, setToken } from './api-client';
 
 // ============ 导出的 API ============
 
@@ -52,8 +52,13 @@ export const tauriAPI = {
   },
 
   // ────────── 认证 ──────────
-  login: (username: string, password: string) =>
-    apiClient.post<any>('/api/auth/login', { username, password }),
+  login: async (username: string, password: string) => {
+    const result = await apiClient.post<any>('/api/auth/login', { username, password });
+    if (result.success && result.data?.token) {
+      setToken(result.data.token);
+    }
+    return result;
+  },
   authLogin: (username: string, password: string) =>
     apiClient.post<any>('/api/auth/login', { username, password }),
   setSession: () => {},

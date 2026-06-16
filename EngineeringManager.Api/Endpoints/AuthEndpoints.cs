@@ -46,9 +46,30 @@ public static class AuthEndpoints
                 displayName = user.display_name,
                 roleId = user.role_id,
                 roleName = role?.name ?? user.role_id,
-                permissions = role?.permissions ?? "[]"
+                permissions = role?.permissions ?? "[]",
+                token = GenerateJwtToken((string)user.id, (string)user.username, (string)user.role_id, role?.name ?? (string)user.role_id)
             });
         });
+
+        static string GenerateJwtToken(string userId, string username, string roleId, string roleName)
+        {
+            var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? "dev-only-secret-please-change-in-prod-32bytes";
+            var key = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(jwtSecret));
+            var creds = new Microsoft.IdentityModel.Tokens.SigningCredentials(key, Microsoft.IdentityModel.Tokens.SecurityAlgorithms.HmacSha256);
+            var claims = new[]
+            {
+                new System.Security.Claims.Claim("uid", userId),
+                new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Name, username),
+                new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, roleName)
+            };
+            var token = new System.IdentityModel.Tokens.Jwt.JwtSecurityToken(
+                issuer: "engineering-manager",
+                audience: "engineering-manager",
+                claims: claims,
+                expires: DateTime.Now.AddDays(1),
+                signingCredentials: creds);
+            return new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler().WriteToken(token);
+        }
 
         // ═══════════════════════════════════════════════════════════
         // 角色

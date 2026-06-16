@@ -6,6 +6,10 @@
  */
 
 const API_BASE = 'http://localhost:5048';
+const TOKEN_KEY = 'jwt_token';
+function getToken(): string | null { try { return localStorage.getItem(TOKEN_KEY); } catch { return null; } }
+export function setToken(token: string | null): void { try { if (token) localStorage.setItem(TOKEN_KEY, token); else localStorage.removeItem(TOKEN_KEY); } catch {} }
+function authHeaders(): Record<string, string> { const t = getToken(); return t ? { Authorization: "Bearer " + t } : {}; }
 
 /** snake_case → camelCase 转换 */
 function toCamelCase(str: string): string {
@@ -50,7 +54,8 @@ async function get<T>(path: string, params?: Record<string, unknown>): Promise<A
         }
       });
     }
-    const resp = await fetch(url.toString());
+    const resp = await fetch(url.toString(), { headers: authHeaders() });
+    if (resp.status === 401) setToken(null);
     if (!resp.ok) {
       return { success: false, error: `HTTP ${resp.status}: ${resp.statusText}` };
     }
@@ -69,9 +74,10 @@ async function post<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
   try {
     const resp = await fetch(`${API_BASE}${path}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: body ? JSON.stringify(body) : undefined,
     });
+    if (resp.status === 401) setToken(null);
     if (!resp.ok) {
       return { success: false, error: `HTTP ${resp.status}: ${resp.statusText}` };
     }
@@ -90,9 +96,10 @@ async function put<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
   try {
     const resp = await fetch(`${API_BASE}${path}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: body ? JSON.stringify(body) : undefined,
     });
+    if (resp.status === 401) setToken(null);
     if (!resp.ok) {
       return { success: false, error: `HTTP ${resp.status}: ${resp.statusText}` };
     }
@@ -109,7 +116,8 @@ async function put<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
  */
 async function del<T>(path: string): Promise<ApiResponse<T>> {
   try {
-    const resp = await fetch(`${API_BASE}${path}`, { method: 'DELETE' });
+    const resp = await fetch(`${API_BASE}${path}`, { method: 'DELETE', headers: authHeaders() });
+    if (resp.status === 401) setToken(null);
     if (!resp.ok) {
       return { success: false, error: `HTTP ${resp.status}: ${resp.statusText}` };
     }
