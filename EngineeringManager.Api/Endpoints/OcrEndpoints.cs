@@ -437,7 +437,11 @@ public static class OcrEndpoints
                 var response = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, "https://www.baidu.com/favicon.ico"));
                 return Results.Ok(response.IsSuccessStatusCode);
             }
-            catch { return Results.Ok(false); }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[OcrEndpoints/ocr-config] 解析失败: {ex.Message}");
+                return Results.Problem("OCR 配置解析失败", statusCode: 500);
+            }
         });
 
         // ═══════════════════════════════════════════════════════════
@@ -501,7 +505,10 @@ public static class OcrEndpoints
                 return stats;
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[OcrEndpoints/LoadOcrStats] 读取失败: {ex.Message}，返回空统计");
+        }
         return new Dictionary<string, int>
         {
             ["idCard"] = 0, ["invoice"] = 0, ["bankCard"] = 0, ["businessLicense"] = 0,
@@ -518,7 +525,10 @@ public static class OcrEndpoints
             if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
             File.WriteAllText(ocrStatsPath, System.Text.Json.JsonSerializer.Serialize(stats, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[OcrEndpoints/SaveOcrStats] 写入失败: {ex.Message}");
+        }
     }
 
     private static void IncrementOcrStat(string key)

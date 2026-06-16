@@ -44,7 +44,11 @@ public static class ProjectEndpoints
                         ORDER BY amount DESC
                     ").ToDictionary(r => (string)r.name, r => (double)r.amount);
                 }
-                catch { expenseByCategory = new(); }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"[ProjectEndpoints/expenseByCategory] 统计失败: {ex.Message}");
+                    expenseByCategory = new();
+                }
 
                 return Common.Ok(new
                 {

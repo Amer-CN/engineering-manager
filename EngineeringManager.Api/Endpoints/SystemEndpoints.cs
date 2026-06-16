@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using System.Windows.Forms;
 using Dapper;
 
@@ -303,7 +303,11 @@ public static class SystemEndpoints
                 }
                 return Results.Ok(new { success = true, enabled });
             }
-            catch { return Results.Ok(new { success = true, enabled = true }); }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[SystemEndpoints/gpu-config] 读取失败: {ex.Message}，返回兜底配置");
+                return Results.Problem("GPU 配置读取失败", statusCode: 500);
+            }
         });
 
         app.MapPut("/api/config/gpu-acceleration", (System.Text.Json.JsonElement body) =>

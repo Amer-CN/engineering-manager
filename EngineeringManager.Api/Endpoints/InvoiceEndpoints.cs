@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using Dapper;
 
 namespace EngineeringManager.Api;
@@ -104,7 +104,10 @@ public static class InvoiceEndpoints
                         }
                     }
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"[InvoiceEndpoints/payment-record] 解析失败: {ex.Message}");
+                }
                 dict["invoice_infos"] = invoiceInfos;
                 result.Add(record);
             }
