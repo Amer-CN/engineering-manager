@@ -32,6 +32,18 @@ public static class ApiConfig
             return conn;
         });
 
+
+        builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
+            {
+                var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? "dev-only-secret-please-change-in-prod-32bytes";
+                options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+                {
+                    ValidateIssuer = true, ValidateAudience = true, ValidateLifetime = true, ValidateIssuerSigningKey = true,
+                    ValidIssuer = "engineering-manager", ValidAudience = "engineering-manager",
+                    IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(jwtSecret))
+                };
+            });
+        builder.Services.AddAuthorization();
         builder.Services.AddHttpClient();
 
 // 支持 camelCase JSON 反序列化（前端发 camelCase，后端 DTO 用 PascalCase）
@@ -70,6 +82,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
         }
 
         app.UseCors();
+        app.UseAuthentication();
+        app.UseAuthorization();
+        app.UseMiddleware<EngineeringManager.Api.GlobalAuthMiddleware>();
         RegisterEndpoints(app);
 
         if (IsProduction)
