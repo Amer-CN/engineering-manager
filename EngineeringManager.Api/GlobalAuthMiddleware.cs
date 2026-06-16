@@ -12,6 +12,21 @@ namespace EngineeringManager.Api;
 public class GlobalAuthMiddleware
 {
     private readonly RequestDelegate _next;
+
+    // P0-4 缓解：路径必须带 projectId（粗粒度租户隔离）
+    private static readonly (string Prefix, string Param)[] ProjectScopedPaths = new[]
+    {
+        ("/api/contracts/income", "projectId"),
+        ("/api/contracts/expense", "projectId"),
+        ("/api/contracts/agreement", "projectId"),
+        ("/api/contracts/stats", "projectId"),
+        ("/api/wages", "projectId"),
+        ("/api/attendances", "projectId"),
+        ("/api/expenses", "projectId"),
+        ("/api/cost-ledger", "projectId"),
+        ("/api/drawings", "projectId"),
+        ("/api/inventory", "projectId"),
+    };
     private static readonly string[] PublicPathPrefixes = new[]
     {
         "/api/auth/login",
@@ -54,6 +69,20 @@ public class GlobalAuthMiddleware
             return;
         }
 
+
+        // P0-4 缓解：粗粒度 project_id 强制（防止已登录用户 SELECT * 列举全表）
+        foreach (var (prefix, param) in ProjectScopedPaths)
+        {
+            if (path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                && !context.Request.Query.ContainsKey(param))
+            {
+                context.Response.StatusCode = 400;
+                context.Response.ContentType = "application/json; charset=utf-8";
+                await context.Response.WriteAsync(
+                    @"{\""success\"":false,\""error\"":\""必须指定 " + param + @" 参数\""}");
+                return;
+            }
+        }
         await _next(context);
     }
 }
