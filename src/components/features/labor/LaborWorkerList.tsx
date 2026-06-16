@@ -1,5 +1,6 @@
 // LaborWorkerList.tsx - 工人库Tab
 
+import { useMask } from '@/contexts/MaskContext';
 import React, { useState, useMemo } from 'react'
 import { DataTable, type Column } from '@/components/DataTable'
 import FilterBar from '../../ui/FilterBar'
@@ -62,7 +63,7 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
     },
     {
       key: 'idCard', title: '身份证号', filterable: true,
-      render: (w) => <span className="text-slate-500 font-mono text-xs">{maskIdCard(w.idCard) || '-'}</span>
+      render: (w) => <span className="text-slate-500 font-mono text-xs">{masked ? maskIdCard(w.idCard) : w.idCard || '-'}</span>
     },
     {
       key: 'age', title: '年龄', align: 'center', sortable: true,
@@ -101,7 +102,7 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
     },
     {
       key: 'bankAccount', title: '银行卡号', filterable: true,
-      render: (w) => <span className="text-slate-500 font-mono text-xs">{(w as any).bankAccount || '-'}</span>
+      render: (w) => <span className="text-slate-500 font-mono text-xs">{masked ? maskBankAccount((w as any).bankAccount) : (w as any).bankAccount || '-'}</span>
     },
     {
       key: 'actions', title: '操作', align: 'right',

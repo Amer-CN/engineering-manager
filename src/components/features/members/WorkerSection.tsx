@@ -1,6 +1,7 @@
 // WorkerSection 组件
 // @deprecated 此组件已废弃，工人管理模块已改用 LaborWorkerList + LaborTeamManager
 
+import { useMask } from '@/contexts/MaskContext';
 import { maskIdCard, maskPhone, maskBankAccount } from "@/utils/mask";
 import { useState, useMemo } from 'react'
 import { DataTable, type Column } from '@/components/DataTable'

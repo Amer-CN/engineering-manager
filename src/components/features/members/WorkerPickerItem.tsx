@@ -1,3 +1,4 @@
+import { useMask } from '@/contexts/MaskContext';
 import { maskIdCard, maskPhone, maskBankAccount } from "@/utils/mask";
 import React from 'react'
 
@@ -14,6 +15,7 @@ export const WorkerPickerItem = React.memo(function WorkerPickerItem({
   isSelected,
   onToggle,
 }: WorkerPickerItemProps) {
+  const { masked } = useMask();
   return (
   <div
   className={`flex items-center px-6 py-3 cursor-pointer transition-colors ${
@@ -37,7 +39,7 @@ export const WorkerPickerItem = React.memo(function WorkerPickerItem({
   <span className="text-sm font-medium text-slate-800 truncate">{w.name}</span>
   <span className="text-xs text-slate-400">{w.gender}</span>
   </div>
-  <div className="text-xs text-slate-400 mt-0.5">{maskIdCard(w.idCard)}</div>
+  <div className="text-xs text-slate-400 mt-0.5">{masked ? maskIdCard(w.idCard) : w.idCard || '-'}</div>
   </div>
   <div className="flex items-center gap-3 text-xs text-slate-500">
   {w.projectCount > 0 && (
