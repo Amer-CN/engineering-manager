@@ -12,6 +12,31 @@ public static class Common
     public static IResult Ok(object? data = null) => Results.Ok(new { success = true, data });
 
     /// <summary>业务错误 — HTTP 400</summary>
+
+    /// <summary>P1-1: 脱敏异常信息（防泄露绝对路径/堆栈/内部细节给前端）
+    /// 规则：移除 Windows 绝对路径，截断到 200 字符
+    /// </summary>
+    public static string Sanitize(string? error)
+    {
+        if (string.IsNullOrEmpty(error)) return "操作失败";
+        var s = error!;
+        try
+        {
+            // 移除 Windows 绝对路径（C:\Users\xxx\...\file.cs → C:\...\file.cs）
+            s = System.Text.RegularExpressions.Regex.Replace(
+                s,
+                @"[A-Z]:\\[^\s""<>|]*\\[^\s""<>|]*",
+                m => {
+                    var path = m.Value;
+                    var lastSlash = path.LastIndexOf('\\');
+                    if (lastSlash > 3) return path.Substring(0, 3) + @"...\" + path.Substring(lastSlash);
+                    return path;
+                });
+        }
+        catch { /* regex 失败时用原字符串 */ }
+        if (s.Length > 200) s = s.Substring(0, 200) + "...";
+        return s;
+    }
     public static IResult Fail(string error, int statusCode = 400) =>
         Results.Json(new { success = false, error }, statusCode: statusCode);
 

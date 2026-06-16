@@ -20,7 +20,7 @@ public static class SystemEndpoints
         app.MapGet("/api/health", (IDbConnection db) =>
         {
             try { db.ExecuteScalar("SELECT 1"); return Common.Ok(new { status = "ok", mode = "sqlite" }); }
-            catch (Exception ex) { return Common.Fail(ex.Message); }
+            catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });
 
         // ═══════════════════════════════════════════════════════════
@@ -327,7 +327,7 @@ public static class SystemEndpoints
                 File.WriteAllText(configPath, System.Text.Json.JsonSerializer.Serialize(config, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
                 return Results.Ok(new { success = true, enabled, needRestart = true });
             }
-            catch (Exception ex) { return Common.Fail(ex.Message); }
+            catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });
 
         // ═══════════════════════════════════════════════════════════
@@ -526,7 +526,7 @@ public static class SystemEndpoints
                 File.Copy(dbFile, backupPath);
                 return Common.Ok(new { path = backupPath });
             }
-            catch (Exception ex) { return Common.Fail(ex.Message); }
+            catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });
 
         app.MapPost("/api/restore", () =>
@@ -549,7 +549,7 @@ public static class SystemEndpoints
                 File.Copy(backupFile, dbFile, true);
                 return Common.Ok();
             }
-            catch (Exception ex) { return Common.Fail(ex.Message); }
+            catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });
 
         app.MapPost("/api/diagnose", (IDbConnection db) =>
@@ -560,7 +560,7 @@ public static class SystemEndpoints
                 var tables = db.Query("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").Select(t => (string)t.name).ToList();
                 return Common.Ok(new { result, tables });
             }
-            catch (Exception ex) { return Common.Fail(ex.Message); }
+            catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });
 
         // ═══════════════════════════════════════════════════════════
@@ -574,7 +574,7 @@ public static class SystemEndpoints
                 var tableCount = db.ExecuteScalar<int>("SELECT COUNT(*) FROM sqlite_master WHERE type='table'");
                 return Common.Ok(new { success = true, message = $"SQLite 已就绪，{tableCount} 张表" });
             }
-            catch (Exception ex) { return Common.Fail(ex.Message); }
+            catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });
 
         app.MapPost("/api/sqlite/migrate", (IDbConnection db) =>
@@ -644,7 +644,7 @@ public static class SystemEndpoints
                 File.WriteAllText(configPath, System.Text.Json.JsonSerializer.Serialize(config, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
                 return Common.Ok(new { success = true, readMode = mode });
             }
-            catch (Exception ex) { return Common.Fail(ex.Message); }
+            catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });
 
     }

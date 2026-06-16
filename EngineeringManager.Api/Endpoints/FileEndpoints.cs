@@ -42,7 +42,7 @@ public static class FileEndpoints
                 }
                 return Common.Ok(new { fileName = dto.FileName });
             }
-            catch (Exception ex) { return Common.Fail(ex.Message); }
+            catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });
 
         app.MapGet("/api/files/read", (string category, string fileName, string? projectName) =>
@@ -75,7 +75,7 @@ public static class FileEndpoints
                 }
                 return Common.NotFound("文件不存在");
             }
-            catch (Exception ex) { return Common.Fail(ex.Message); }
+            catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });
 
         // ═══════════════════════════════════════════════════════════
@@ -142,7 +142,7 @@ public static class FileEndpoints
                 if (File.Exists(path)) { File.Delete(path); return Common.Ok(); }
                 return Common.NotFound("文件不存在");
             }
-            catch (Exception ex) { return Common.Fail(ex.Message); }
+            catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });
 
         app.MapPost("/api/files/open-external", (dynamic dto) =>
@@ -156,7 +156,7 @@ public static class FileEndpoints
                 if (File.Exists(path)) { Process.Start(new ProcessStartInfo(path) { UseShellExecute = true }); return Common.Ok(); }
                 return Common.NotFound("文件不存在");
             }
-            catch (Exception ex) { return Common.Fail(ex.Message); }
+            catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });
 
         app.MapGet("/api/contracts/read-file", (string fileName, string subCategory, string? projectName) =>
@@ -182,7 +182,7 @@ public static class FileEndpoints
                 }
                 return Common.NotFound("文件不存在");
             }
-            catch (Exception ex) { return Common.Fail(ex.Message); }
+            catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });
 
         app.MapPost("/api/contracts/save-file", (dynamic dto) =>
@@ -203,7 +203,7 @@ public static class FileEndpoints
                 }
                 return Common.Ok(new { fileName = (string)(dto.fileName ?? "") });
             }
-            catch (Exception ex) { return Common.Fail(ex.Message); }
+            catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });
     }
 }
