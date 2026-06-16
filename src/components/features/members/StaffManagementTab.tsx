@@ -1,4 +1,3 @@
-import { useMask } from '@/contexts/MaskContext';
 import type { Member } from '@/types'
 import { maskIdCard, maskPhone, maskBankAccount } from "@/utils/mask";
 import { Icon } from '../../ui/Icon'
@@ -36,14 +35,14 @@ const staffTableColumns = (
     key: 'phone',
     title: '电话',
     width: '130px',
-    render: item => <span className="text-slate-600 text-sm">{masked ? maskPhone(item.phone) || '-'}</span>,
+    render: item => <span className="text-slate-600 text-sm">{maskPhone(item.phone) || '-'}</span>,
   },
   {
     key: 'idCard',
     title: '身份证号',
     width: '170px',
     render: item => (
-      <span className="text-slate-500 text-xs font-mono">{masked ? maskIdCard(item.idCard) || '-'}</span>
+      <span className="text-slate-500 text-xs font-mono">{maskIdCard(item.idCard) || '-'}</span>
     ),
   },
   {
@@ -99,8 +98,6 @@ const staffTableColumns = (
 ]
 
 export default function StaffManagementTab({
-
-  const { masked } = useMask();
   filteredStaff,
   filterStatus,
   onFilterStatusChange,
