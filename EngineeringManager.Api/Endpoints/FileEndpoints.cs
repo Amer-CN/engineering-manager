@@ -93,7 +93,11 @@ public static class FileEndpoints
         });
 
         app.MapDelete("/api/drawings/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM drawings WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("图纸不存在"));
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            return (await db.ExecuteAsync("DELETE FROM drawings WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
+        });
 
         // ═══════════════════════════════════════════════════════════
         // 图纸写操作（补全）
@@ -102,32 +106,36 @@ public static class FileEndpoints
         app.MapPost("/api/drawings", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO drawings (project_id,name,file_url,file_name,drawing_type,scale,notes,created_at,updated_at)
-                VALUES (@ProjectId,@Name,@FileUrl,@FileName,@DrawingType,@Scale,@Notes,@Now,@Now); SELECT last_insert_rowid();",
-                new { Now = now() });
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO drawings (project_id,name,file_url,file_name,drawing_type,scale,notes,created_by,created_at,updated_at)
+                VALUES (@ProjectId,@Name,@FileUrl,@FileName,@DrawingType,@Scale,@Notes,@CreatedBy,@Now,@Now); SELECT last_insert_rowid();",
+                new { Now = now(), CreatedBy = uid });
             return Common.Ok(id);
         });
 
         app.MapPut("/api/drawings", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
         {
-            var affected = await db.ExecuteAsync("UPDATE drawings SET name=@Name,notes=@Notes,updated_at=@Now WHERE id=@Id",
-                new { Now = now() });
-            return affected > 0 ? Common.Ok() : Common.NotFound("图纸不存在");
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var affected = await db.ExecuteAsync("UPDATE drawings SET name=@Name,notes=@Notes,updated_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
+                new { Now = now(), Uid = uid, IsAdmin = isAdmin });
+            return affected > 0 ? Common.Ok() : Results.Forbid();
         });
 
         app.MapPut("/api/expenses", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
         {
-            var affected = await db.ExecuteAsync(@"UPDATE expenses SET category=@Category,amount=@Amount,date=@Date,description=@Description,vendor=@Vendor,updated_at=@Now WHERE id=@Id",
-                new { Now = now() });
-            return affected > 0 ? Common.Ok() : Common.NotFound("费用不存在");
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var affected = await db.ExecuteAsync(@"UPDATE expenses SET category=@Category,amount=@Amount,date=@Date,description=@Description,vendor=@Vendor,updated_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
+                new { Now = now(), Uid = uid, IsAdmin = isAdmin });
+            return affected > 0 ? Common.Ok() : Results.Forbid();
         });
 
         app.MapPost("/api/inventory/transactions", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO inventory_transactions (item_id,type,quantity,date,notes,operator,created_at)
-                VALUES (@ItemId,@Type,@Quantity,@Date,@Notes,@Operator,@Now); SELECT last_insert_rowid();",
-                new { Now = now() });
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO inventory_transactions (item_id,type,quantity,date,notes,operator,created_by,created_at)
+                VALUES (@ItemId,@Type,@Quantity,@Date,@Notes,@Operator,@CreatedBy,@Now); SELECT last_insert_rowid();",
+                new { Now = now(), CreatedBy = uid });
             return Common.Ok(id);
         });
 
