@@ -69,10 +69,21 @@ public static class ContractEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO expense_contracts
-                (project_id,partner_id,contract_no,name,amount,signed_date,start_date,end_date,status,payment_method,remarks,created_at,updated_at)
-                VALUES (@ProjectId,@PartnerId,@ContractNo,@Name,@Amount,@SignedDate,@StartDate,@EndDate,@Status,@PaymentMethod,@Remarks,@Now,@Now);
+                (project_id,partner_id,contract_no,name,amount,signed_date,start_date,end_date,status,payment_method,remarks,created_by,created_at,updated_at)
+                VALUES (@ProjectId,@PartnerId,@ContractNo,@Name,@Amount,@SignedDate,@StartDate,@EndDate,@Status,@PaymentMethod,@Remarks,@CreatedBy,@Now,@Now);
                 SELECT last_insert_rowid();",
-                new { Now = now() });
+                new { CreatedBy = uid, Now = now() });
+            return Common.Ok(id);
+        });
+
+        app.MapPost("/api/contracts/agreement", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO agreement_contracts
+                (project_id,partner_id,contract_no,name,amount,signed_date,start_date,end_date,status,remarks,created_by,created_at,updated_at)
+                VALUES (@ProjectId,@PartnerId,@ContractNo,@Name,@Amount,@SignedDate,@StartDate,@EndDate,@Status,@Remarks,@CreatedBy,@Now,@Now);
+                SELECT last_insert_rowid();",
+                new { CreatedBy = uid, Now = now() });
             return Common.Ok(id);
         });
 
@@ -94,6 +105,15 @@ public static class ContractEndpoints
             return affected > 0 ? Common.Ok() : Results.Forbid();
         });
 
+        app.MapPut("/api/contracts/agreement", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var affected = await db.ExecuteAsync(@"UPDATE agreement_contracts SET name=@Name,amount=@Amount,status=@Status,remarks=@Remarks,updated_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
+                new { Uid = uid, IsAdmin = isAdmin, Now = now() });
+            return affected > 0 ? Common.Ok() : Results.Forbid();
+        });
+
         app.MapDelete("/api/contracts/income/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
@@ -108,8 +128,15 @@ public static class ContractEndpoints
             return (await db.ExecuteAsync("DELETE FROM expense_contracts WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
         });
 
+        app.MapDelete("/api/contracts/agreement/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            return (await db.ExecuteAsync("DELETE FROM agreement_contracts WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
+        });
+
         // ═══════════════════════════════════════════════════════════
-        // 合同模板
+        // 合同模板 (无 created_by 列, 仅 var uid 强制鉴权)
         // ═══════════════════════════════════════════════════════════
 
         app.MapGet("/api/contract-templates", (HttpContext ctx, IDbConnection db) =>
@@ -127,16 +154,20 @@ public static class ContractEndpoints
 
         app.MapPut("/api/contract-templates", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var affected = await db.ExecuteAsync(@"UPDATE contract_templates SET name=@Name,type=@Type,content=@Content,variables=@Variables,updated_at=@Now WHERE id=@Id",
                 new { Now = now() });
-            return affected > 0 ? Common.Ok() : Common.NotFound("模板不存在");
+            return affected > 0 ? Common.Ok() : Results.Forbid();
         });
 
         app.MapDelete("/api/contract-templates/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM contract_templates WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("模板不存在"));
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            return (await db.ExecuteAsync("DELETE FROM contract_templates WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Results.Forbid();
+        });
 
         // ═══════════════════════════════════════════════════════════
-        // 结算
+        // 结算 (settlements 表无 created_by 列, 仅 var uid 强制鉴权)
         // ═══════════════════════════════════════════════════════════
 
         app.MapGet("/api/settlements", (HttpContext ctx, IDbConnection db, long? projectId) =>
@@ -161,26 +192,32 @@ public static class ContractEndpoints
 
         app.MapPut("/api/settlements", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var affected = await db.ExecuteAsync(@"UPDATE settlements SET name=@Name,sub_type=@SubType,amount=@Amount,remarks=@Remarks,updated_at=@Now WHERE id=@Id",
                 new { Now = now() });
-            return affected > 0 ? Common.Ok() : Common.NotFound("结算不存在");
+            return affected > 0 ? Common.Ok() : Results.Forbid();
         });
 
         app.MapDelete("/api/settlements/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM settlements WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("结算不存在"));
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            return (await db.ExecuteAsync("DELETE FROM settlements WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Results.Forbid();
+        });
 
         app.MapPut("/api/settlements/{id}/process", async (HttpContext ctx, long id, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var affected = await db.ExecuteAsync(@"UPDATE settlements SET status='processed',updated_at=@Now WHERE id=@Id",
                 new { Id = id, Now = now() });
-            return affected > 0 ? Common.Ok() : Common.NotFound("结算不存在");
+            return affected > 0 ? Common.Ok() : Results.Forbid();
         });
 
         app.MapPut("/api/settlements/{id}/unarchive", async (HttpContext ctx, long id, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var affected = await db.ExecuteAsync(@"UPDATE settlements SET status='pending',updated_at=@Now WHERE id=@Id",
                 new { Id = id, Now = now() });
-            return affected > 0 ? Common.Ok() : Common.NotFound("结算不存在");
+            return affected > 0 ? Common.Ok() : Results.Forbid();
         });
     }
 }
