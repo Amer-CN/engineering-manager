@@ -1,4 +1,3 @@
-import { useMask } from '@/contexts/MaskContext';
 import type { Member } from '@/types'
 import { maskIdCard, maskPhone, maskBankAccount } from "@/utils/mask";
 import { Icon } from '../../ui/Icon'
@@ -36,7 +35,7 @@ const staffTableColumns = (
     key: 'phone',
     title: '电话',
     width: '130px',
-    render: item => <span className="text-slate-600 text-sm">{masked ? maskPhone(item.phone) : item.phone || '-'}</span>,
+    render: item => <span className="text-slate-600 text-sm">{maskPhone(item.phone) || '-'}</span>,
   },
   {
     key: 'idCard',
