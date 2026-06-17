@@ -64,7 +64,7 @@ public static class MemberEndpoints
         });
 
         // ═══════════════════════════════════════════════════════════
-        // 工人
+        // 工人 (workers 表有 created_by)
         // ═══════════════════════════════════════════════════════════
 
         app.MapGet("/api/workers", (HttpContext ctx, IDbConnection db) =>
@@ -80,29 +80,35 @@ public static class MemberEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO workers
-                (name,id_card,gender,phone,address,bank_account,bank_name,worker_type,daily_wage,created_at)
-                VALUES (@Name,@IdCard,@Gender,@Phone,@Address,@BankAccount,@BankName,@WorkerType,@DailyWage,@Now);
+                (name,id_card,gender,phone,address,bank_account,bank_name,worker_type,daily_wage,created_by,created_at)
+                VALUES (@Name,@IdCard,@Gender,@Phone,@Address,@BankAccount,@BankName,@WorkerType,@DailyWage,@CreatedBy,@Now);
                 SELECT last_insert_rowid();",
                 new { dto.Name, dto.IdCard, dto.Gender, dto.Phone, dto.Address, dto.BankAccount,
-                      dto.BankName, dto.WorkerType, dto.DailyWage, Now = now() });
+                      dto.BankName, dto.WorkerType, dto.DailyWage, CreatedBy = uid, Now = now() });
             return Common.Ok(id);
         });
 
         app.MapPut("/api/workers", async (HttpContext ctx, WorkerDto dto, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var affected = await db.ExecuteAsync(@"UPDATE workers SET name=@Name,id_card=@IdCard,gender=@Gender,
                 phone=@Phone,address=@Address,bank_account=@BankAccount,bank_name=@BankName,
-                worker_type=@WorkerType,daily_wage=@DailyWage WHERE id=@Id",
+                worker_type=@WorkerType,daily_wage=@DailyWage WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
                 new { dto.Id, dto.Name, dto.IdCard, dto.Gender, dto.Phone, dto.Address,
-                      dto.BankAccount, dto.BankName, dto.WorkerType, dto.DailyWage });
-            return affected > 0 ? Common.Ok() : Common.NotFound("工人不存在");
+                      dto.BankAccount, dto.BankName, dto.WorkerType, dto.DailyWage, Uid = uid, IsAdmin = isAdmin });
+            return affected > 0 ? Common.Ok() : Results.Forbid();
         });
 
         app.MapDelete("/api/workers/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM workers WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("工人不存在"));
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            return (await db.ExecuteAsync("DELETE FROM workers WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
+        });
 
         // ═══════════════════════════════════════════════════════════
-        // 项目工人
+        // 项目工人 (project_workers 表有 created_by)
         // ═══════════════════════════════════════════════════════════
 
         app.MapGet("/api/project-workers", (HttpContext ctx, IDbConnection db, long? projectId) =>
@@ -123,19 +129,23 @@ public static class MemberEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO project_workers
-                (worker_id,project_id,team_id,daily_wage,worker_type,entry_date,status,created_at)
-                VALUES (@WorkerId,@ProjectId,@TeamId,@DailyWage,@WorkerType,@EntryDate,@Status,@Now);
+                (worker_id,project_id,team_id,daily_wage,worker_type,entry_date,status,created_by,created_at)
+                VALUES (@WorkerId,@ProjectId,@TeamId,@DailyWage,@WorkerType,@EntryDate,@Status,@CreatedBy,@Now);
                 SELECT last_insert_rowid();",
                 new { dto.WorkerId, dto.ProjectId, dto.TeamId, dto.DailyWage, dto.WorkerType,
-                      dto.EntryDate, Status = dto.Status ?? "active", Now = now() });
+                      dto.EntryDate, Status = dto.Status ?? "active", CreatedBy = uid, Now = now() });
             return Common.Ok(id);
         });
 
         app.MapDelete("/api/project-workers/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM project_workers WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("记录不存在"));
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            return (await db.ExecuteAsync("DELETE FROM project_workers WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
+        });
 
         // ═══════════════════════════════════════════════════════════
-        // 部门
+        // 部门 (departments 表无 created_by, 仅 var uid 强制鉴权)
         // ═══════════════════════════════════════════════════════════
 
         app.MapGet("/api/departments", (HttpContext ctx, IDbConnection db) =>
@@ -151,10 +161,13 @@ public static class MemberEndpoints
         });
 
         app.MapDelete("/api/departments/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM departments WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("部门不存在"));
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            return (await db.ExecuteAsync("DELETE FROM departments WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Results.Forbid();
+        });
 
         // ═══════════════════════════════════════════════════════════
-        // 班组
+        // 班组 (worker_teams 表无 created_by, 仅 var uid 强制鉴权)
         // ═══════════════════════════════════════════════════════════
 
         app.MapGet("/api/worker-teams", (HttpContext ctx, IDbConnection db, long? projectId) =>
@@ -178,13 +191,17 @@ public static class MemberEndpoints
 
         app.MapPut("/api/worker-teams", async (HttpContext ctx, WorkerTeamDto dto, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var affected = await db.ExecuteAsync(@"UPDATE worker_teams SET name=COALESCE(@Name,name),
                 leader_id=@LeaderId,updated_at=@Now WHERE id=@Id",
                 new { dto.Id, dto.Name, dto.LeaderId, Now = now() });
-            return affected > 0 ? Common.Ok() : Common.NotFound("班组不存在");
+            return affected > 0 ? Common.Ok() : Results.Forbid();
         });
 
         app.MapDelete("/api/worker-teams/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM worker_teams WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("班组不存在"));
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            return (await db.ExecuteAsync("DELETE FROM worker_teams WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Results.Forbid();
+        });
     }
 }
