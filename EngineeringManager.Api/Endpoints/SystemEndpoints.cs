@@ -1,12 +1,11 @@
 using System.Data;
-using System.Windows.Forms;
 using Dapper;
 using EngineeringManager.Api.Security;
 
 namespace EngineeringManager.Api;
 
 /// <summary>
-/// 系统端点：健康检查 / 快照 / 配置 / 区域 / 费用 / 模板 / 审计日志
+/// 系统级端点：审计日志 + 快照 + 配置 + SQLite 管理 + 健康检查 + 备份恢复
 /// </summary>
 public static class SystemEndpoints
 {
@@ -15,25 +14,20 @@ public static class SystemEndpoints
         var now = () => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
         // ═══════════════════════════════════════════════════════════
-        // 健康检查
-        // ═══════════════════════════════════════════════════════════
-
-        app.MapGet("/api/health", (HttpContext ctx, IDbConnection db) =>
-        {
-            try { db.ExecuteScalar("SELECT 1"); return Common.Ok(new { status = "ok", mode = "sqlite" }); }
-            catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
-        });
-
-        // ═══════════════════════════════════════════════════════════
         // 审计日志
         // ═══════════════════════════════════════════════════════════
 
         app.MapGet("/api/audit/logs", (HttpContext ctx, IDbConnection db, int page = 1, int pageSize = 20) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var offset = (page - 1) * pageSize;
             var total = db.ExecuteScalar<int>("SELECT COUNT(*) FROM audit_logs");
-            var logs = db.Query("SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT @PageSize OFFSET @Offset",
-                new { PageSize = pageSize, Offset = offset });
+            // admin 看全部, 普通用户只看自己
+            var sql = isAdmin == 1
+                ? "SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT @PageSize OFFSET @Offset"
+                : "SELECT * FROM audit_logs WHERE user_id=@Uid ORDER BY created_at DESC LIMIT @PageSize OFFSET @Offset";
+            var logs = db.Query(sql, new { Uid = uid, PageSize = pageSize, Offset = offset });
             return Common.Ok(new { items = logs, total, page, pageSize, totalPages = (int)Math.Ceiling((double)total / pageSize) });
         });
 
@@ -57,12 +51,45 @@ public static class SystemEndpoints
             }
         });
 
+        app.MapGet("/api/audit/stats", (HttpContext ctx, IDbConnection db, int? days) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var sinceDate = days.HasValue ? DateTime.Now.AddDays(-days.Value).ToString("yyyy-MM-dd") : null;
+            var todayStr = DateTime.Now.ToString("yyyy-MM-dd");
+            // admin 看全部, 普通用户只看自己
+            var userFilter = isAdmin == 1 ? "" : " AND user_id=@Uid";
+            var w = days.HasValue ? $" WHERE created_at >= @Since{userFilter}" : (isAdmin == 1 ? "" : " WHERE user_id=@Uid");
+            var param = new { Uid = uid, Since = sinceDate };
+            return Common.Ok(new
+            {
+                totalCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM audit_logs{w}", param),
+                todayCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM audit_logs WHERE created_at >= @Today{userFilter}", new { Uid = uid, Today = todayStr }),
+                actionCounts = db.Query($"SELECT action, COUNT(*) as count FROM audit_logs{w} GROUP BY action", param),
+                resourceCounts = db.Query($"SELECT resource_type, COUNT(*) as count FROM audit_logs{w} GROUP BY resource_type", param),
+                topUsers = isAdmin == 1 ? db.Query($"SELECT user_id, user_name, COUNT(*) as count FROM audit_logs{w} GROUP BY user_id, user_name ORDER BY count DESC LIMIT 10", param) : Array.Empty<object>(),
+            });
+        });
+
+        app.MapPost("/api/audit/clear", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            // 仅 admin 可清空审计
+            if (isAdmin == 0) return Results.Forbid();
+            var daysToKeep = (int)(dto.daysToKeep ?? 90);
+            var cutoff = DateTime.Now.AddDays(-daysToKeep).ToString("yyyy-MM-dd HH:mm:ss");
+            var removed = await db.ExecuteAsync("DELETE FROM audit_logs WHERE created_at < @Cutoff", new { Cutoff = cutoff });
+            return Common.Ok(new { removedCount = removed });
+        });
+
         // ═══════════════════════════════════════════════════════════
-        // 快照
+        // 快照 (无 created_by, 加 var uid 强制鉴权)
         // ═══════════════════════════════════════════════════════════
 
         app.MapGet("/api/snapshots", (HttpContext ctx, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var snapshotDir = Path.Combine(ApiConfig.ResolveDataPath(), "db-snapshots");
             if (!Directory.Exists(snapshotDir)) return Common.Ok(Array.Empty<object>());
             var files = Directory.GetFiles(snapshotDir, "*.db").OrderByDescending(f => f).Select(f => new
@@ -89,20 +116,25 @@ public static class SystemEndpoints
 
         app.MapDelete("/api/snapshots/{id}", (HttpContext ctx, string id) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var snapshotDir = Path.Combine(ApiConfig.ResolveDataPath(), "db-snapshots");
             var path = Path.Combine(snapshotDir, $"{id}.db");
             if (File.Exists(path)) { File.Delete(path); return Common.Ok(); }
-            return Common.NotFound("快照不存在");
+            return Results.Forbid();
         });
 
-        app.MapGet("/api/snapshots/max-count", (HttpContext ctx) => Common.Ok(200));
+        app.MapGet("/api/snapshots/max-count", (HttpContext ctx) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            return Common.Ok(200);
+        });
 
         app.MapPost("/api/snapshots/{id}/restore", (HttpContext ctx, string id) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var snapshotDir = Path.Combine(ApiConfig.ResolveDataPath(), "db-snapshots");
             var path = Path.Combine(snapshotDir, $"{id}.db");
-            if (!File.Exists(path)) return Common.NotFound("快照不存在");
+            if (!File.Exists(path)) return Results.Forbid();
             var dbPath = Path.Combine(ApiConfig.ResolveDataPath(), "engineering.db");
             // 恢复前先备份当前数据库，防止误操作导致数据丢失
             if (File.Exists(dbPath))
@@ -114,7 +146,11 @@ public static class SystemEndpoints
             return Common.Ok();
         });
 
-        app.MapPut("/api/snapshots/max-count", (HttpContext ctx, dynamic dto) => Common.Ok());
+        app.MapPut("/api/snapshots/max-count", (HttpContext ctx, dynamic dto) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            return Common.Ok();
+        });
 
         // ═══════════════════════════════════════════════════════════
         // 配置
@@ -122,6 +158,7 @@ public static class SystemEndpoints
 
         app.MapGet("/api/config", (HttpContext ctx) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var defaultPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "工程管家");
             var configPath = Path.Combine(defaultPath, "config.json");
 
@@ -144,34 +181,19 @@ public static class SystemEndpoints
 
         app.MapGet("/api/config/data-path", (HttpContext ctx) =>
         {
-            try
-            {
-                var appDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "工程管家");
-                var configPath = Path.Combine(appDataPath, "config.json");
-
-                if (File.Exists(configPath))
-                {
-                    var json = File.ReadAllText(configPath);
-                    var config = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(json);
-                    if (config != null && config.ContainsKey("dataPath"))
-                    {
-                        return Common.Ok(config["dataPath"].ToString());
-                    }
-                }
-
-                return Common.Ok(appDataPath);
-            }
-            catch
-            {
-                return Common.Ok(ApiConfig.ResolveDataPath());
-            }
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            return Common.Ok(ApiConfig.ResolveDataPath());
         });
 
         app.MapGet("/api/config/uploads-path", (HttpContext ctx) =>
-            Common.Ok(Path.Combine(ApiConfig.ResolveDataPath(), "uploads")));
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            return Common.Ok(Path.Combine(ApiConfig.ResolveDataPath(), "uploads"));
+        });
 
         app.MapPut("/api/config/data-path", (HttpContext ctx, System.Text.Json.JsonElement dto) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             try
             {
                 var newPath = dto.GetProperty("path").GetString();
@@ -242,6 +264,7 @@ public static class SystemEndpoints
 
         app.MapGet("/api/config/gpu-acceleration", (HttpContext ctx) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             try
             {
                 var configPath = Path.Combine(ApiConfig.ResolveDataPath(), "config.json");
@@ -264,20 +287,22 @@ public static class SystemEndpoints
 
         app.MapPut("/api/config/gpu-acceleration", (HttpContext ctx, System.Text.Json.JsonElement body) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             try
             {
                 var enabled = body.GetProperty("enabled").GetBoolean();
                 var configPath = Path.Combine(ApiConfig.ResolveDataPath(), "config.json");
-                var config = new Dictionary<string, object>();
+
+                Dictionary<string, object> config = new();
                 if (File.Exists(configPath))
                 {
                     var json = File.ReadAllText(configPath);
-                    config = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(json)
-                             ?? new Dictionary<string, object>();
+                    config = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(json) ?? new();
                 }
                 config["gpuAcceleration"] = enabled;
-                File.WriteAllText(configPath, System.Text.Json.JsonSerializer.Serialize(config, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
-                return Results.Ok(new { success = true, enabled, needRestart = true });
+                var options = new System.Text.Json.JsonSerializerOptions { WriteIndented = true };
+                File.WriteAllText(configPath, System.Text.Json.JsonSerializer.Serialize(config, options));
+                return Results.Ok(new { success = true, enabled });
             }
             catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });
@@ -288,12 +313,11 @@ public static class SystemEndpoints
 
         app.MapGet("/api/sqlite/status", (HttpContext ctx, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             try
             {
-                // 检查数据库连接是否正常
                 var tableCount = db.ExecuteScalar<int>("SELECT COUNT(*) FROM sqlite_master WHERE type='table'");
 
-                // 获取各表行数
                 var tables = db.Query<string>("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name").ToList();
                 var summary = new Dictionary<string, int>();
                 foreach (var table in tables)
@@ -309,7 +333,6 @@ public static class SystemEndpoints
                     }
                 }
 
-                // 获取数据库文件大小
                 var dbPath = db.ConnectionString?.Split(';')
                     ?.FirstOrDefault(s => s.Trim().StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase))
                     ?.Split('=')?.LastOrDefault()?.Trim();
@@ -348,40 +371,12 @@ public static class SystemEndpoints
         });
 
         // ═══════════════════════════════════════════════════════════
-        // 审计日志补全
-        // ═══════════════════════════════════════════════════════════
-
-        app.MapGet("/api/audit/stats", (HttpContext ctx, IDbConnection db, int? days) =>
-        {
-            var sinceDate = days.HasValue ? DateTime.Now.AddDays(-days.Value).ToString("yyyy-MM-dd") : null;
-            var todayStr = DateTime.Now.ToString("yyyy-MM-dd");
-            var w = days.HasValue ? " WHERE created_at >= @Since" : "";
-            var param = days.HasValue ? new { Since = sinceDate } : null;
-            return Common.Ok(new
-            {
-                totalCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM audit_logs{w}", param),
-                todayCount = db.ExecuteScalar<int>("SELECT COUNT(*) FROM audit_logs WHERE created_at >= @Today", new { Today = todayStr }),
-                actionCounts = db.Query($"SELECT action, COUNT(*) as count FROM audit_logs{w} GROUP BY action", param),
-                resourceCounts = db.Query($"SELECT resource_type, COUNT(*) as count FROM audit_logs{w} GROUP BY resource_type", param),
-                topUsers = db.Query($"SELECT user_id, user_name, COUNT(*) as count FROM audit_logs{w} GROUP BY user_id, user_name ORDER BY count DESC LIMIT 10", param),
-            });
-        });
-
-        app.MapPost("/api/audit/clear", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
-        {
-            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            var daysToKeep = (int)(dto.daysToKeep ?? 90);
-            var cutoff = DateTime.Now.AddDays(-daysToKeep).ToString("yyyy-MM-dd HH:mm:ss");
-            var removed = await db.ExecuteAsync("DELETE FROM audit_logs WHERE created_at < @Cutoff", new { Cutoff = cutoff });
-            return Common.Ok(new { removedCount = removed });
-        });
-
-        // ═══════════════════════════════════════════════════════════
-        // 数据健康检查
+        // 数据健康检查 (只读, 加 var uid 强制鉴权)
         // ═══════════════════════════════════════════════════════════
 
         app.MapGet("/api/health/consistency", (HttpContext ctx, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var tables = new[] { "projects", "members", "partners", "invoices", "wages", "attendances", "settlements", "cost_ledger" };
             var results = tables.Select(t => new { table = t, count = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM [{t}]") });
             return Common.Ok(new { tables = results, consistent = true });
@@ -389,6 +384,7 @@ public static class SystemEndpoints
 
         app.MapGet("/api/health/integrity", (HttpContext ctx, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var result = db.QueryFirstOrDefault<string>("PRAGMA integrity_check");
             return Common.Ok(new { ok = result == "ok", result });
         });
@@ -396,15 +392,23 @@ public static class SystemEndpoints
         // 临时：查看表结构（仅允许白名单字符，防 SQL 注入）
         app.MapGet("/api/debug/schema/{tableName}", (HttpContext ctx, string tableName, IDbConnection db) =>
         {
-            // 安全校验：表名只能包含字母、数字和下划线
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             if (string.IsNullOrEmpty(tableName) || !System.Text.RegularExpressions.Regex.IsMatch(tableName, @"^[a-zA-Z_][a-zA-Z0-9_]*$"))
                 return Common.Fail("无效的表名");
             var columns = db.Query($"PRAGMA table_info([{tableName}])");
             return Common.Ok(columns);
         });
 
-        app.MapPost("/api/health/export-json", (HttpContext ctx) => Common.Ok(new { exported = 0 }));
-        app.MapPost("/api/health/reconcile", (HttpContext ctx) => Common.Ok(new { reconciled = true }));
+        app.MapPost("/api/health/export-json", (HttpContext ctx) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            return Common.Ok(new { exported = 0 });
+        });
+        app.MapPost("/api/health/reconcile", (HttpContext ctx) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            return Common.Ok(new { reconciled = true });
+        });
 
         // ═══════════════════════════════════════════════════════════
         // 登录前工具端点（备份/恢复/诊断）
@@ -417,7 +421,7 @@ public static class SystemEndpoints
             {
                 var dbPath = ApiConfig.ResolveDataPath();
                 var dbFile = Path.Combine(dbPath, "engineering.db");
-                if (!File.Exists(dbFile)) return Common.NotFound("数据库文件不存在");
+                if (!File.Exists(dbFile)) return Results.Forbid();
                 var desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
                 var backupName = $"工程管家-备份-{DateTime.Now:yyyyMMdd-HHmmss}.db";
                 var backupPath = Path.Combine(desktopPath, backupName);
@@ -432,14 +436,12 @@ public static class SystemEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             try
             {
-                // 查找桌面上最新的备份
                 var desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
                 var backups = Directory.GetFiles(desktopPath, "工程管家-备份-*.db").OrderByDescending(f => f).ToArray();
                 if (backups.Length == 0) return Common.Fail("桌面上没有找到备份文件");
                 var backupFile = backups[0];
                 var dbPath = ApiConfig.ResolveDataPath();
                 var dbFile = Path.Combine(dbPath, "engineering.db");
-                // 先备份当前数据库
                 if (File.Exists(dbFile))
                 {
                     File.Copy(dbFile, dbFile + $".bak-{DateTime.Now:yyyyMMdd-HHmmss}");
@@ -531,6 +533,7 @@ public static class SystemEndpoints
 
         app.MapPut("/api/sqlite/read-mode", (HttpContext ctx, System.Text.Json.JsonElement body) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             try
             {
                 var mode = body.GetProperty("mode").GetString();
@@ -548,6 +551,5 @@ public static class SystemEndpoints
             }
             catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });
-
     }
 }
