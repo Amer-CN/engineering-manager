@@ -128,7 +128,6 @@ const StatusBar: React.FC = () => {
         <span className="statusbar__dot" style={{ background: 'var(--success)' }} />
         SQLite
       </span>
-      <MaskToggle />
       <span className="statusbar__sep">│</span>
       <ModelSwitcher
         label={currentThemeLabel}
