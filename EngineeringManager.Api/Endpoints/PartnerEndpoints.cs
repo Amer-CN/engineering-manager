@@ -1,5 +1,6 @@
 using System.Data;
 using Dapper;
+using EngineeringManager.Api.Security;
 
 namespace EngineeringManager.Api;
 
@@ -16,11 +17,12 @@ public static class PartnerEndpoints
         // 合作伙伴
         // ═══════════════════════════════════════════════════════════
 
-        app.MapGet("/api/partners", (IDbConnection db) =>
+        app.MapGet("/api/partners", (HttpContext ctx, IDbConnection db) =>
             Common.Ok(db.Query("SELECT * FROM partners ORDER BY name")));
 
-        app.MapPost("/api/partners", async (PartnerDto dto, IDbConnection db) =>
+        app.MapPost("/api/partners", async (HttpContext ctx, PartnerDto dto, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO partners
                 (name,category,contact,phone,email,address,bank_account,bank_name,tax_number,credit_code,
                  registered_address,business_scope,tax_type,project_ids,created_at,updated_at)
@@ -33,7 +35,7 @@ public static class PartnerEndpoints
             return Common.Ok(id);
         });
 
-        app.MapPut("/api/partners", async (PartnerDto dto, IDbConnection db) =>
+        app.MapPut("/api/partners", async (HttpContext ctx, PartnerDto dto, IDbConnection db) =>
         {
             var affected = await db.ExecuteAsync(@"UPDATE partners SET name=@Name,category=@Category,contact=@Contact,
                 phone=@Phone,email=@Email,address=@Address,bank_account=@BankAccount,bank_name=@BankName,
@@ -45,19 +47,20 @@ public static class PartnerEndpoints
             return affected > 0 ? Common.Ok() : Common.NotFound("合作伙伴不存在");
         });
 
-        app.MapDelete("/api/partners/{id}", async (long id, IDbConnection db) =>
+        app.MapDelete("/api/partners/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
             (await db.ExecuteAsync("DELETE FROM partners WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("合作伙伴不存在"));
 
         // ═══════════════════════════════════════════════════════════
         // 监管单位
         // ═══════════════════════════════════════════════════════════
 
-        app.MapGet("/api/supervisors", (IDbConnection db) =>
+        app.MapGet("/api/supervisors", (HttpContext ctx, IDbConnection db) =>
             Common.Ok(db.Query(@"SELECT s.*, CASE WHEN r.province IS NOT NULL THEN r.province||'-'||r.city||'-'||r.district ELSE '' END as region_name
                           FROM supervisors s LEFT JOIN regions r ON s.region_id=r.id ORDER BY s.created_at DESC")));
 
-        app.MapPost("/api/supervisors", async (SupervisorDto dto, IDbConnection db) =>
+        app.MapPost("/api/supervisors", async (HttpContext ctx, SupervisorDto dto, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO supervisors
                 (region_id,name,category,contact,phone,address,project_ids,remarks,created_at,updated_at)
                 VALUES (@RegionId,@Name,@Category,@Contact,@Phone,@Address,@ProjectIds,@Remarks,@Now,@Now);
@@ -67,7 +70,7 @@ public static class PartnerEndpoints
             return Common.Ok(id);
         });
 
-        app.MapPut("/api/supervisors", async (SupervisorDto dto, IDbConnection db) =>
+        app.MapPut("/api/supervisors", async (HttpContext ctx, SupervisorDto dto, IDbConnection db) =>
         {
             var affected = await db.ExecuteAsync(@"UPDATE supervisors SET region_id=@RegionId,name=@Name,
                 category=@Category,contact=@Contact,phone=@Phone,address=@Address,project_ids=@ProjectIds,
@@ -77,7 +80,7 @@ public static class PartnerEndpoints
             return affected > 0 ? Common.Ok() : Common.NotFound("监管单位不存在");
         });
 
-        app.MapDelete("/api/supervisors/{id}", async (long id, IDbConnection db) =>
+        app.MapDelete("/api/supervisors/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
             (await db.ExecuteAsync("DELETE FROM supervisors WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("监管单位不存在"));
     }
 }

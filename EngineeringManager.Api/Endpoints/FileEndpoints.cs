@@ -1,6 +1,7 @@
 using System.Data;
 using System.Diagnostics;
 using Dapper;
+using EngineeringManager.Api.Security;
 
 namespace EngineeringManager.Api;
 
@@ -25,8 +26,9 @@ public static class FileEndpoints
         // 文件操作（简化版）
         // ═══════════════════════════════════════════════════════════
 
-        app.MapPost("/api/files/save", (FileSaveDto dto) =>
+        app.MapPost("/api/files/save", (HttpContext ctx, FileSaveDto dto) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             try
             {
                 var baseDir = Path.Combine(ApiConfig.ResolveDataPath(), "uploads");
@@ -45,7 +47,7 @@ public static class FileEndpoints
             catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });
 
-        app.MapGet("/api/files/read", (string category, string fileName, string? projectName) =>
+        app.MapGet("/api/files/read", (HttpContext ctx, string category, string fileName, string? projectName) =>
         {
             try
             {
@@ -82,7 +84,7 @@ public static class FileEndpoints
         // 图纸
         // ═══════════════════════════════════════════════════════════
 
-        app.MapGet("/api/drawings", (IDbConnection db, long? projectId) =>
+        app.MapGet("/api/drawings", (HttpContext ctx, IDbConnection db, long? projectId) =>
         {
             var sql = "SELECT * FROM drawings";
             if (projectId.HasValue) sql += " WHERE project_id=@ProjectId";
@@ -90,37 +92,39 @@ public static class FileEndpoints
             return Common.Ok(db.Query(sql, new { ProjectId = projectId }));
         });
 
-        app.MapDelete("/api/drawings/{id}", async (long id, IDbConnection db) =>
+        app.MapDelete("/api/drawings/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
             (await db.ExecuteAsync("DELETE FROM drawings WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("图纸不存在"));
 
         // ═══════════════════════════════════════════════════════════
         // 图纸写操作（补全）
         // ═══════════════════════════════════════════════════════════
 
-        app.MapPost("/api/drawings", async (dynamic dto, IDbConnection db) =>
+        app.MapPost("/api/drawings", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO drawings (project_id,name,file_url,file_name,drawing_type,scale,notes,created_at,updated_at)
                 VALUES (@ProjectId,@Name,@FileUrl,@FileName,@DrawingType,@Scale,@Notes,@Now,@Now); SELECT last_insert_rowid();",
                 new { Now = now() });
             return Common.Ok(id);
         });
 
-        app.MapPut("/api/drawings", async (dynamic dto, IDbConnection db) =>
+        app.MapPut("/api/drawings", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
         {
             var affected = await db.ExecuteAsync("UPDATE drawings SET name=@Name,notes=@Notes,updated_at=@Now WHERE id=@Id",
                 new { Now = now() });
             return affected > 0 ? Common.Ok() : Common.NotFound("图纸不存在");
         });
 
-        app.MapPut("/api/expenses", async (dynamic dto, IDbConnection db) =>
+        app.MapPut("/api/expenses", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
         {
             var affected = await db.ExecuteAsync(@"UPDATE expenses SET category=@Category,amount=@Amount,date=@Date,description=@Description,vendor=@Vendor,updated_at=@Now WHERE id=@Id",
                 new { Now = now() });
             return affected > 0 ? Common.Ok() : Common.NotFound("费用不存在");
         });
 
-        app.MapPost("/api/inventory/transactions", async (dynamic dto, IDbConnection db) =>
+        app.MapPost("/api/inventory/transactions", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO inventory_transactions (item_id,type,quantity,date,notes,operator,created_at)
                 VALUES (@ItemId,@Type,@Quantity,@Date,@Notes,@Operator,@Now); SELECT last_insert_rowid();",
                 new { Now = now() });
@@ -131,8 +135,9 @@ public static class FileEndpoints
         // 文件操作补全
         // ═══════════════════════════════════════════════════════════
 
-        app.MapPost("/api/files/delete", (dynamic dto) =>
+        app.MapPost("/api/files/delete", (HttpContext ctx, dynamic dto) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             try
             {
                 var baseDir = Path.Combine(ApiConfig.ResolveDataPath(), "uploads");
@@ -145,8 +150,9 @@ public static class FileEndpoints
             catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });
 
-        app.MapPost("/api/files/open-external", (dynamic dto) =>
+        app.MapPost("/api/files/open-external", (HttpContext ctx, dynamic dto) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             try
             {
                 var baseDir = Path.Combine(ApiConfig.ResolveDataPath(), "uploads");
@@ -159,7 +165,7 @@ public static class FileEndpoints
             catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });
 
-        app.MapGet("/api/contracts/read-file", (string fileName, string subCategory, string? projectName) =>
+        app.MapGet("/api/contracts/read-file", (HttpContext ctx, string fileName, string subCategory, string? projectName) =>
         {
             try
             {
@@ -185,8 +191,9 @@ public static class FileEndpoints
             catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });
 
-        app.MapPost("/api/contracts/save-file", (dynamic dto) =>
+        app.MapPost("/api/contracts/save-file", (HttpContext ctx, dynamic dto) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             try
             {
                 var baseDir = Path.Combine(ApiConfig.ResolveDataPath(), "uploads");

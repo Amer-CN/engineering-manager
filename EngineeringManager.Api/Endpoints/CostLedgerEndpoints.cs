@@ -1,5 +1,6 @@
 using System.Data;
 using Dapper;
+using EngineeringManager.Api.Security;
 
 namespace EngineeringManager.Api;
 
@@ -16,7 +17,7 @@ public static class CostLedgerEndpoints
         // 台账条目
         // ═══════════════════════════════════════════════════════════
 
-        app.MapGet("/api/cost-ledger", (IDbConnection db, long? projectId) =>
+        app.MapGet("/api/cost-ledger", (HttpContext ctx, IDbConnection db, long? projectId) =>
         {
             var sql = "SELECT * FROM cost_ledger";
             if (projectId.HasValue) sql += " WHERE project_id=@ProjectId";
@@ -24,7 +25,7 @@ public static class CostLedgerEndpoints
             return Common.Ok(db.Query(sql, new { ProjectId = projectId }));
         });
 
-        app.MapGet("/api/cost-ledger/summary", (IDbConnection db, long? projectId) =>
+        app.MapGet("/api/cost-ledger/summary", (HttpContext ctx, IDbConnection db, long? projectId) =>
         {
             var w = projectId.HasValue ? " WHERE project_id=@ProjectId" : "";
             object param = projectId.HasValue ? new { ProjectId = projectId.Value } : new { };
@@ -36,8 +37,9 @@ public static class CostLedgerEndpoints
             });
         });
 
-        app.MapPost("/api/cost-ledger", async (CostLedgerEntryDto dto, IDbConnection db) =>
+        app.MapPost("/api/cost-ledger", async (HttpContext ctx, CostLedgerEntryDto dto, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO cost_ledger
                 (project_id,batch_id,voucher_no,date,direction,category,amount,counterparty,channel,summary,notes,created_at,updated_at)
                 VALUES (@ProjectId,@BatchId,@VoucherNo,@Date,@Direction,@Category,@Amount,@Counterparty,@Channel,@Summary,@Notes,@Now,@Now);
@@ -47,7 +49,7 @@ public static class CostLedgerEndpoints
             return Common.Ok(id);
         });
 
-        app.MapPut("/api/cost-ledger", async (CostLedgerEntryDto dto, IDbConnection db) =>
+        app.MapPut("/api/cost-ledger", async (HttpContext ctx, CostLedgerEntryDto dto, IDbConnection db) =>
         {
             var affected = await db.ExecuteAsync(@"UPDATE cost_ledger SET voucher_no=@VoucherNo,date=@Date,direction=@Direction,category=@Category,
                 amount=@Amount,counterparty=@Counterparty,channel=@Channel,summary=@Summary,notes=@Notes,updated_at=@Now WHERE id=@Id",
@@ -56,11 +58,12 @@ public static class CostLedgerEndpoints
             return affected > 0 ? Common.Ok() : Common.NotFound("记录不存在");
         });
 
-        app.MapDelete("/api/cost-ledger/{id}", async (long id, IDbConnection db) =>
+        app.MapDelete("/api/cost-ledger/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
             (await db.ExecuteAsync("DELETE FROM cost_ledger WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("记录不存在"));
 
-        app.MapPost("/api/cost-ledger/batch", async (List<CostLedgerEntryDto> entries, IDbConnection db) =>
+        app.MapPost("/api/cost-ledger/batch", async (HttpContext ctx, List<CostLedgerEntryDto> entries, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var count = 0;
             foreach (var dto in entries)
             {
@@ -77,7 +80,7 @@ public static class CostLedgerEndpoints
         // 分类管理
         // ═══════════════════════════════════════════════════════════
 
-        app.MapGet("/api/cost-ledger/categories", (IDbConnection db) =>
+        app.MapGet("/api/cost-ledger/categories", (HttpContext ctx, IDbConnection db) =>
         {
             try
             {
@@ -92,26 +95,28 @@ public static class CostLedgerEndpoints
             }
         });
 
-        app.MapPost("/api/cost-ledger/categories", async (CostLedgerCategoryDto dto, IDbConnection db) =>
+        app.MapPost("/api/cost-ledger/categories", async (HttpContext ctx, CostLedgerCategoryDto dto, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO cost_ledger_categories (name,direction,level1,color,created_at,updated_at)
                 VALUES (@Name,@Direction,@Level1,@Color,@Now,@Now); SELECT last_insert_rowid();",
                 new { dto.Name, dto.Direction, dto.Level1, dto.Color, Now = now() });
             return Common.Ok(id);
         });
 
-        app.MapPut("/api/cost-ledger/categories", async (CostLedgerCategoryDto dto, IDbConnection db) =>
+        app.MapPut("/api/cost-ledger/categories", async (HttpContext ctx, CostLedgerCategoryDto dto, IDbConnection db) =>
         {
             var affected = await db.ExecuteAsync(@"UPDATE cost_ledger_categories SET name=@Name,direction=@Direction,level1=@Level1,color=@Color,updated_at=@Now WHERE id=@Id",
                 new { dto.Name, dto.Direction, dto.Level1, dto.Color, Now = now(), dto.Id });
             return affected > 0 ? Common.Ok() : Common.NotFound("分类不存在");
         });
 
-        app.MapDelete("/api/cost-ledger/categories/{id}", async (long id, IDbConnection db) =>
+        app.MapDelete("/api/cost-ledger/categories/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
             (await db.ExecuteAsync("DELETE FROM cost_ledger_categories WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("分类不存在"));
 
-        app.MapPost("/api/cost-ledger/categories/reset", (IDbConnection db) =>
+        app.MapPost("/api/cost-ledger/categories/reset", (HttpContext ctx, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             db.Execute("DELETE FROM cost_ledger_categories");
             return Common.Ok();
         });
@@ -120,19 +125,21 @@ public static class CostLedgerEndpoints
         // 批次管理
         // ═══════════════════════════════════════════════════════════
 
-        app.MapGet("/api/cost-ledger/batches", (IDbConnection db, long projectId) =>
+        app.MapGet("/api/cost-ledger/batches", (HttpContext ctx, IDbConnection db, long projectId) =>
             Common.Ok(db.Query("SELECT * FROM cost_ledger_batches WHERE project_id=@ProjectId ORDER BY created_at DESC", new { ProjectId = projectId })));
 
-        app.MapPost("/api/cost-ledger/batches", async (CostLedgerBatchDto dto, IDbConnection db) =>
+        app.MapPost("/api/cost-ledger/batches", async (HttpContext ctx, CostLedgerBatchDto dto, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO cost_ledger_batches (project_id,name,created_at,updated_at)
                 VALUES (@ProjectId,@Name,@Now,@Now); SELECT last_insert_rowid();",
                 new { dto.ProjectId, dto.Name, Now = now() });
             return Common.Ok(id);
         });
 
-        app.MapPost("/api/cost-ledger/batches/{id}/copy", async (long id, CostLedgerBatchDto dto, IDbConnection db) =>
+        app.MapPost("/api/cost-ledger/batches/{id}/copy", async (HttpContext ctx, long id, CostLedgerBatchDto dto, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var original = db.QueryFirstOrDefault("SELECT * FROM cost_ledger_batches WHERE id=@Id", new { Id = id });
             if (original == null) return Common.NotFound("批次不存在");
             var newId = await db.ExecuteScalarAsync<long>(@"INSERT INTO cost_ledger_batches (project_id,name,created_at,updated_at)
@@ -141,25 +148,26 @@ public static class CostLedgerEndpoints
             return Common.Ok(new { id = newId });
         });
 
-        app.MapPut("/api/cost-ledger/batches/{id}", async (long id, CostLedgerBatchDto dto, IDbConnection db) =>
+        app.MapPut("/api/cost-ledger/batches/{id}", async (HttpContext ctx, long id, CostLedgerBatchDto dto, IDbConnection db) =>
         {
             var affected = await db.ExecuteAsync("UPDATE cost_ledger_batches SET name=@Name,updated_at=@Now WHERE id=@Id",
                 new { Name = dto.NewName ?? "", Now = now(), Id = id });
             return affected > 0 ? Common.Ok() : Common.NotFound("批次不存在");
         });
 
-        app.MapDelete("/api/cost-ledger/batches/{id}", async (long id, IDbConnection db) =>
+        app.MapDelete("/api/cost-ledger/batches/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
             (await db.ExecuteAsync("DELETE FROM cost_ledger_batches WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("批次不存在"));
 
         // ═══════════════════════════════════════════════════════════
         // 匹配规则
         // ═══════════════════════════════════════════════════════════
 
-        app.MapGet("/api/cost-ledger/match-rules", (IDbConnection db) =>
+        app.MapGet("/api/cost-ledger/match-rules", (HttpContext ctx, IDbConnection db) =>
             Common.Ok(db.Query("SELECT * FROM cost_ledger_match_rules ORDER BY hit_count DESC")));
 
-        app.MapPost("/api/cost-ledger/match-rules", async (CostLedgerMatchRuleDto dto, IDbConnection db) =>
+        app.MapPost("/api/cost-ledger/match-rules", async (HttpContext ctx, CostLedgerMatchRuleDto dto, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             await db.ExecuteAsync(@"INSERT OR REPLACE INTO cost_ledger_match_rules (pattern,category,direction,priority,hit_count,created_at,updated_at)
                 VALUES (@Pattern,@Category,@Direction,@Priority,COALESCE((SELECT hit_count FROM cost_ledger_match_rules WHERE pattern=@Pattern),0)+1,@Now,@Now)",
                 new { dto.Pattern, dto.Category, dto.Direction, dto.Priority, Now = now() });

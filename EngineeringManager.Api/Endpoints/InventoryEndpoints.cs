@@ -1,5 +1,6 @@
 using System.Data;
 using Dapper;
+using EngineeringManager.Api.Security;
 
 namespace EngineeringManager.Api;
 
@@ -16,11 +17,12 @@ public static class InventoryEndpoints
         // 库存
         // ═══════════════════════════════════════════════════════════
 
-        app.MapGet("/api/inventory", (IDbConnection db) =>
+        app.MapGet("/api/inventory", (HttpContext ctx, IDbConnection db) =>
             Common.Ok(db.Query("SELECT * FROM inventory_items ORDER BY name")));
 
-        app.MapPost("/api/inventory", async (InventoryItemDto dto, IDbConnection db) =>
+        app.MapPost("/api/inventory", async (HttpContext ctx, InventoryItemDto dto, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO inventory_items
                 (name,category,unit,quantity,min_quantity,location,notes,created_at,updated_at)
                 VALUES (@Name,@Category,@Unit,@Quantity,@MinQuantity,@Location,@Notes,@Now,@Now);
@@ -29,7 +31,7 @@ public static class InventoryEndpoints
             return Common.Ok(id);
         });
 
-        app.MapPut("/api/inventory", async (InventoryItemDto dto, IDbConnection db) =>
+        app.MapPut("/api/inventory", async (HttpContext ctx, InventoryItemDto dto, IDbConnection db) =>
         {
             var affected = await db.ExecuteAsync(@"UPDATE inventory_items SET name=@Name,category=@Category,
                 unit=@Unit,quantity=@Quantity,min_quantity=@MinQuantity,location=@Location,notes=@Notes,
@@ -38,10 +40,10 @@ public static class InventoryEndpoints
             return affected > 0 ? Common.Ok() : Common.NotFound("库存项不存在");
         });
 
-        app.MapDelete("/api/inventory/{id}", async (long id, IDbConnection db) =>
+        app.MapDelete("/api/inventory/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
             (await db.ExecuteAsync("DELETE FROM inventory_items WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("库存项不存在"));
 
-        app.MapGet("/api/inventory/transactions", (IDbConnection db, long? itemId) =>
+        app.MapGet("/api/inventory/transactions", (HttpContext ctx, IDbConnection db, long? itemId) =>
         {
             var sql = "SELECT * FROM inventory_transactions";
             if (itemId.HasValue) sql += " WHERE item_id=@ItemId";
@@ -53,11 +55,12 @@ public static class InventoryEndpoints
         // 物料
         // ═══════════════════════════════════════════════════════════
 
-        app.MapGet("/api/materials", (IDbConnection db) =>
+        app.MapGet("/api/materials", (HttpContext ctx, IDbConnection db) =>
             Common.Ok(db.Query("SELECT * FROM materials ORDER BY name")));
 
-        app.MapPost("/api/materials", async (MaterialDto dto, IDbConnection db) =>
+        app.MapPost("/api/materials", async (HttpContext ctx, MaterialDto dto, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO materials
                 (name,category,unit,specifications,supplier,notes,created_at,updated_at)
                 VALUES (@Name,@Category,@Unit,@Specifications,@Supplier,@Notes,@Now,@Now);
@@ -66,7 +69,7 @@ public static class InventoryEndpoints
             return Common.Ok(id);
         });
 
-        app.MapPut("/api/materials", async (MaterialDto dto, IDbConnection db) =>
+        app.MapPut("/api/materials", async (HttpContext ctx, MaterialDto dto, IDbConnection db) =>
         {
             var affected = await db.ExecuteAsync(@"UPDATE materials SET name=@Name,category=@Category,
                 unit=@Unit,specifications=@Specifications,supplier=@Supplier,notes=@Notes,updated_at=@Now WHERE id=@Id",
@@ -74,7 +77,7 @@ public static class InventoryEndpoints
             return affected > 0 ? Common.Ok() : Common.NotFound("物料不存在");
         });
 
-        app.MapDelete("/api/materials/{id}", async (long id, IDbConnection db) =>
+        app.MapDelete("/api/materials/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
             (await db.ExecuteAsync("DELETE FROM materials WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("物料不存在"));
     }
 }

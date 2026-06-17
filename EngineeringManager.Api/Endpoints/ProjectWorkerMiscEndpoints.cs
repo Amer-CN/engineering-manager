@@ -1,5 +1,6 @@
 using System.Data;
 using Dapper;
+using EngineeringManager.Api.Security;
 
 namespace EngineeringManager.Api;
 
@@ -12,8 +13,9 @@ public static class ProjectWorkerMiscEndpoints
     {
         
 
-        app.MapPost("/api/project-workers/batch", async (List<ProjectWorkerDto> records, IDbConnection db) =>
+        app.MapPost("/api/project-workers/batch", async (HttpContext ctx, List<ProjectWorkerDto> records, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var count = 0;
             foreach (var dto in records)
             {
@@ -25,14 +27,14 @@ public static class ProjectWorkerMiscEndpoints
             return Common.Ok(new { count });
         });
 
-        app.MapPut("/api/project-workers", async (ProjectWorkerDto dto, IDbConnection db) =>
+        app.MapPut("/api/project-workers", async (HttpContext ctx, ProjectWorkerDto dto, IDbConnection db) =>
         {
             var affected = await db.ExecuteAsync(@"UPDATE project_workers SET team_id=@TeamId,daily_wage=@DailyWage,worker_type=@WorkerType,entry_date=@EntryDate,status=@Status WHERE id=@Id",
                 new { dto.Id, dto.TeamId, dto.DailyWage, dto.WorkerType, dto.EntryDate, dto.Status, Now = Common.NowString() });
             return affected > 0 ? Common.Ok() : Common.NotFound("记录不存在");
         });
 
-        app.MapPut("/api/invoices/{id}/status", async (long id, InvoiceStatusDto dto, IDbConnection db) =>
+        app.MapPut("/api/invoices/{id}/status", async (HttpContext ctx, long id, InvoiceStatusDto dto, IDbConnection db) =>
         {
             var affected = await db.ExecuteAsync("UPDATE invoices SET status=@Status,updated_at=@Now WHERE id=@Id",
                 new { Status = dto.Status, Now = Common.NowString(), Id = id });

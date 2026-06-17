@@ -1,6 +1,7 @@
 using System.Data;
 using System.Windows.Forms;
 using Dapper;
+using EngineeringManager.Api.Security;
 
 namespace EngineeringManager.Api;
 
@@ -17,7 +18,7 @@ public static class SystemEndpoints
         // 健康检查
         // ═══════════════════════════════════════════════════════════
 
-        app.MapGet("/api/health", (IDbConnection db) =>
+        app.MapGet("/api/health", (HttpContext ctx, IDbConnection db) =>
         {
             try { db.ExecuteScalar("SELECT 1"); return Common.Ok(new { status = "ok", mode = "sqlite" }); }
             catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
@@ -27,34 +28,35 @@ public static class SystemEndpoints
         // 区域
         // ═══════════════════════════════════════════════════════════
 
-        app.MapGet("/api/regions", (IDbConnection db) =>
+        app.MapGet("/api/regions", (HttpContext ctx, IDbConnection db) =>
             Common.Ok(db.Query("SELECT * FROM regions ORDER BY province, city, district")));
 
-        app.MapPost("/api/regions", async (RegionDto dto, IDbConnection db) =>
+        app.MapPost("/api/regions", async (HttpContext ctx, RegionDto dto, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO regions (province,city,district)
                 VALUES (@Province,@City,@District); SELECT last_insert_rowid();", dto);
             return Common.Ok(id);
         });
 
-        app.MapDelete("/api/regions/{id}", async (long id, IDbConnection db) =>
+        app.MapDelete("/api/regions/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
             (await db.ExecuteAsync("DELETE FROM regions WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("区域不存在"));
 
         // ═══════════════════════════════════════════════════════════
         // 模板
         // ═══════════════════════════════════════════════════════════
 
-        app.MapGet("/api/templates", (IDbConnection db) =>
+        app.MapGet("/api/templates", (HttpContext ctx, IDbConnection db) =>
             Common.Ok(db.Query("SELECT * FROM templates ORDER BY created_at DESC")));
 
-        app.MapDelete("/api/templates/{id}", async (long id, IDbConnection db) =>
+        app.MapDelete("/api/templates/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
             (await db.ExecuteAsync("DELETE FROM templates WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("模板不存在"));
 
         // ═══════════════════════════════════════════════════════════
         // 审计日志
         // ═══════════════════════════════════════════════════════════
 
-        app.MapGet("/api/audit/logs", (IDbConnection db, int page = 1, int pageSize = 20) =>
+        app.MapGet("/api/audit/logs", (HttpContext ctx, IDbConnection db, int page = 1, int pageSize = 20) =>
         {
             var offset = (page - 1) * pageSize;
             var total = db.ExecuteScalar<int>("SELECT COUNT(*) FROM audit_logs");
@@ -63,8 +65,9 @@ public static class SystemEndpoints
             return Common.Ok(new { items = logs, total, page, pageSize, totalPages = (int)Math.Ceiling((double)total / pageSize) });
         });
 
-        app.MapPost("/api/audit/logs", async (AuditLogDto entry, IDbConnection db) =>
+        app.MapPost("/api/audit/logs", async (HttpContext ctx, AuditLogDto entry, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             try
             {
                 await db.ExecuteAsync(@"INSERT INTO audit_logs
@@ -86,7 +89,7 @@ public static class SystemEndpoints
         // 费用
         // ═══════════════════════════════════════════════════════════
 
-        app.MapGet("/api/expenses", (IDbConnection db, long? projectId) =>
+        app.MapGet("/api/expenses", (HttpContext ctx, IDbConnection db, long? projectId) =>
         {
             var sql = "SELECT * FROM expenses";
             if (projectId.HasValue) sql += " WHERE project_id=@ProjectId";
@@ -94,8 +97,9 @@ public static class SystemEndpoints
             return Common.Ok(db.Query(sql, new { ProjectId = projectId }));
         });
 
-        app.MapPost("/api/expenses", async (ExpenseDto dto, IDbConnection db) =>
+        app.MapPost("/api/expenses", async (HttpContext ctx, ExpenseDto dto, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO expenses
                 (project_id,category,amount,date,description,vendor,receipt_url,created_at,updated_at)
                 VALUES (@ProjectId,@Category,@Amount,@Date,@Description,@Vendor,@ReceiptUrl,@Now,@Now);
@@ -104,14 +108,14 @@ public static class SystemEndpoints
             return Common.Ok(id);
         });
 
-        app.MapDelete("/api/expenses/{id}", async (long id, IDbConnection db) =>
+        app.MapDelete("/api/expenses/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
             (await db.ExecuteAsync("DELETE FROM expenses WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("费用不存在"));
 
         // ═══════════════════════════════════════════════════════════
         // 快照
         // ═══════════════════════════════════════════════════════════
 
-        app.MapGet("/api/snapshots", (IDbConnection db) =>
+        app.MapGet("/api/snapshots", (HttpContext ctx, IDbConnection db) =>
         {
             var snapshotDir = Path.Combine(ApiConfig.ResolveDataPath(), "db-snapshots");
             if (!Directory.Exists(snapshotDir)) return Common.Ok(Array.Empty<object>());
@@ -125,8 +129,9 @@ public static class SystemEndpoints
             return Common.Ok(files);
         });
 
-        app.MapPost("/api/snapshots", (IDbConnection db) =>
+        app.MapPost("/api/snapshots", (HttpContext ctx, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var snapshotDir = Path.Combine(ApiConfig.ResolveDataPath(), "db-snapshots");
             Directory.CreateDirectory(snapshotDir);
             var dbPath = Path.Combine(ApiConfig.ResolveDataPath(), "engineering.db");
@@ -136,7 +141,7 @@ public static class SystemEndpoints
             return Common.Ok(new { id = Path.GetFileNameWithoutExtension(snapshotName), name = snapshotName });
         });
 
-        app.MapDelete("/api/snapshots/{id}", (string id) =>
+        app.MapDelete("/api/snapshots/{id}", (HttpContext ctx, string id) =>
         {
             var snapshotDir = Path.Combine(ApiConfig.ResolveDataPath(), "db-snapshots");
             var path = Path.Combine(snapshotDir, $"{id}.db");
@@ -144,10 +149,11 @@ public static class SystemEndpoints
             return Common.NotFound("快照不存在");
         });
 
-        app.MapGet("/api/snapshots/max-count", () => Common.Ok(200));
+        app.MapGet("/api/snapshots/max-count", (HttpContext ctx) => Common.Ok(200));
 
-        app.MapPost("/api/snapshots/{id}/restore", (string id) =>
+        app.MapPost("/api/snapshots/{id}/restore", (HttpContext ctx, string id) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var snapshotDir = Path.Combine(ApiConfig.ResolveDataPath(), "db-snapshots");
             var path = Path.Combine(snapshotDir, $"{id}.db");
             if (!File.Exists(path)) return Common.NotFound("快照不存在");
@@ -162,13 +168,13 @@ public static class SystemEndpoints
             return Common.Ok();
         });
 
-        app.MapPut("/api/snapshots/max-count", (dynamic dto) => Common.Ok());
+        app.MapPut("/api/snapshots/max-count", (HttpContext ctx, dynamic dto) => Common.Ok());
 
         // ═══════════════════════════════════════════════════════════
         // 配置
         // ═══════════════════════════════════════════════════════════
 
-        app.MapGet("/api/config", () =>
+        app.MapGet("/api/config", (HttpContext ctx) =>
         {
             var defaultPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "工程管家");
             var configPath = Path.Combine(defaultPath, "config.json");
@@ -190,7 +196,7 @@ public static class SystemEndpoints
             return Common.Ok(config);
         });
 
-        app.MapGet("/api/config/data-path", () =>
+        app.MapGet("/api/config/data-path", (HttpContext ctx) =>
         {
             try
             {
@@ -215,10 +221,10 @@ public static class SystemEndpoints
             }
         });
 
-        app.MapGet("/api/config/uploads-path", () =>
+        app.MapGet("/api/config/uploads-path", (HttpContext ctx) =>
             Common.Ok(Path.Combine(ApiConfig.ResolveDataPath(), "uploads")));
 
-        app.MapPut("/api/config/data-path", (System.Text.Json.JsonElement dto) =>
+        app.MapPut("/api/config/data-path", (HttpContext ctx, System.Text.Json.JsonElement dto) =>
         {
             try
             {
@@ -288,7 +294,7 @@ public static class SystemEndpoints
             }
         });
 
-        app.MapGet("/api/config/gpu-acceleration", () =>
+        app.MapGet("/api/config/gpu-acceleration", (HttpContext ctx) =>
         {
             try
             {
@@ -310,7 +316,7 @@ public static class SystemEndpoints
             }
         });
 
-        app.MapPut("/api/config/gpu-acceleration", (System.Text.Json.JsonElement body) =>
+        app.MapPut("/api/config/gpu-acceleration", (HttpContext ctx, System.Text.Json.JsonElement body) =>
         {
             try
             {
@@ -334,7 +340,7 @@ public static class SystemEndpoints
         // SQLite 状态查询
         // ═══════════════════════════════════════════════════════════
 
-        app.MapGet("/api/sqlite/status", (IDbConnection db) =>
+        app.MapGet("/api/sqlite/status", (HttpContext ctx, IDbConnection db) =>
         {
             try
             {
@@ -399,8 +405,9 @@ public static class SystemEndpoints
         // 项目工人批量（补全）
         // ═══════════════════════════════════════════════════════════
 
-        app.MapPost("/api/project-workers/batch", async (List<dynamic> records, IDbConnection db) =>
+        app.MapPost("/api/project-workers/batch", async (HttpContext ctx, List<dynamic> records, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var count = 0;
             foreach (var dto in records)
             {
@@ -412,14 +419,14 @@ public static class SystemEndpoints
             return Common.Ok(new { count });
         });
 
-        app.MapPut("/api/project-workers", async (dynamic dto, IDbConnection db) =>
+        app.MapPut("/api/project-workers", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
         {
             var affected = await db.ExecuteAsync(@"UPDATE project_workers SET team_id=@TeamId,daily_wage=@DailyWage,worker_type=@WorkerType,entry_date=@EntryDate,status=@Status WHERE id=@Id",
                 new { Now = now() });
             return affected > 0 ? Common.Ok() : Common.NotFound("记录不存在");
         });
 
-        app.MapPut("/api/invoices/{id}/status", async (long id, dynamic dto, IDbConnection db) =>
+        app.MapPut("/api/invoices/{id}/status", async (HttpContext ctx, long id, dynamic dto, IDbConnection db) =>
         {
             var affected = await db.ExecuteAsync("UPDATE invoices SET status=@Status,updated_at=@Now WHERE id=@Id",
                 new { Status = (string)dto.status, Now = now(), Id = id });
@@ -430,21 +437,22 @@ public static class SystemEndpoints
         // 模板写操作（补全）
         // ═══════════════════════════════════════════════════════════
 
-        app.MapGet("/api/templates/stats", (IDbConnection db) => Common.Ok(new
+        app.MapGet("/api/templates/stats", (HttpContext ctx, IDbConnection db) => Common.Ok(new
         {
             total = db.ExecuteScalar<int>("SELECT COUNT(*) FROM templates"),
             byCategory = db.Query("SELECT category, COUNT(*) as count FROM templates GROUP BY category"),
         }));
 
-        app.MapPost("/api/templates", async (dynamic dto, IDbConnection db) =>
+        app.MapPost("/api/templates", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO templates (name,category,description,file_name,stored_file_name,file_type,created_at,updated_at)
                 VALUES (@Name,@Category,@Description,@FileName,@StoredFileName,@FileType,@Now,@Now); SELECT last_insert_rowid();",
                 new { Now = now() });
             return Common.Ok(id);
         });
 
-        app.MapPut("/api/templates", async (dynamic dto, IDbConnection db) =>
+        app.MapPut("/api/templates", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
         {
             var affected = await db.ExecuteAsync(@"UPDATE templates SET name=@Name,category=@Category,description=@Description,updated_at=@Now WHERE id=@Id",
                 new { Now = now() });
@@ -455,7 +463,7 @@ public static class SystemEndpoints
         // 审计日志补全
         // ═══════════════════════════════════════════════════════════
 
-        app.MapGet("/api/audit/stats", (IDbConnection db, int? days) =>
+        app.MapGet("/api/audit/stats", (HttpContext ctx, IDbConnection db, int? days) =>
         {
             var sinceDate = days.HasValue ? DateTime.Now.AddDays(-days.Value).ToString("yyyy-MM-dd") : null;
             var todayStr = DateTime.Now.ToString("yyyy-MM-dd");
@@ -471,8 +479,9 @@ public static class SystemEndpoints
             });
         });
 
-        app.MapPost("/api/audit/clear", async (dynamic dto, IDbConnection db) =>
+        app.MapPost("/api/audit/clear", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var daysToKeep = (int)(dto.daysToKeep ?? 90);
             var cutoff = DateTime.Now.AddDays(-daysToKeep).ToString("yyyy-MM-dd HH:mm:ss");
             var removed = await db.ExecuteAsync("DELETE FROM audit_logs WHERE created_at < @Cutoff", new { Cutoff = cutoff });
@@ -483,21 +492,21 @@ public static class SystemEndpoints
         // 数据健康检查
         // ═══════════════════════════════════════════════════════════
 
-        app.MapGet("/api/health/consistency", (IDbConnection db) =>
+        app.MapGet("/api/health/consistency", (HttpContext ctx, IDbConnection db) =>
         {
             var tables = new[] { "projects", "members", "partners", "invoices", "wages", "attendances", "settlements", "cost_ledger" };
             var results = tables.Select(t => new { table = t, count = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM [{t}]") });
             return Common.Ok(new { tables = results, consistent = true });
         });
 
-        app.MapGet("/api/health/integrity", (IDbConnection db) =>
+        app.MapGet("/api/health/integrity", (HttpContext ctx, IDbConnection db) =>
         {
             var result = db.QueryFirstOrDefault<string>("PRAGMA integrity_check");
             return Common.Ok(new { ok = result == "ok", result });
         });
 
         // 临时：查看表结构（仅允许白名单字符，防 SQL 注入）
-        app.MapGet("/api/debug/schema/{tableName}", (string tableName, IDbConnection db) =>
+        app.MapGet("/api/debug/schema/{tableName}", (HttpContext ctx, string tableName, IDbConnection db) =>
         {
             // 安全校验：表名只能包含字母、数字和下划线
             if (string.IsNullOrEmpty(tableName) || !System.Text.RegularExpressions.Regex.IsMatch(tableName, @"^[a-zA-Z_][a-zA-Z0-9_]*$"))
@@ -506,15 +515,16 @@ public static class SystemEndpoints
             return Common.Ok(columns);
         });
 
-        app.MapPost("/api/health/export-json", () => Common.Ok(new { exported = 0 }));
-        app.MapPost("/api/health/reconcile", () => Common.Ok(new { reconciled = true }));
+        app.MapPost("/api/health/export-json", (HttpContext ctx) => Common.Ok(new { exported = 0 }));
+        app.MapPost("/api/health/reconcile", (HttpContext ctx) => Common.Ok(new { reconciled = true }));
 
         // ═══════════════════════════════════════════════════════════
         // 登录前工具端点（备份/恢复/诊断）
         // ═══════════════════════════════════════════════════════════
 
-        app.MapPost("/api/backup", () =>
+        app.MapPost("/api/backup", (HttpContext ctx) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             try
             {
                 var dbPath = ApiConfig.ResolveDataPath();
@@ -529,8 +539,9 @@ public static class SystemEndpoints
             catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });
 
-        app.MapPost("/api/restore", () =>
+        app.MapPost("/api/restore", (HttpContext ctx) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             try
             {
                 // 查找桌面上最新的备份
@@ -552,8 +563,9 @@ public static class SystemEndpoints
             catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });
 
-        app.MapPost("/api/diagnose", (IDbConnection db) =>
+        app.MapPost("/api/diagnose", (HttpContext ctx, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             try
             {
                 var result = db.ExecuteScalar<string>("PRAGMA integrity_check");
@@ -567,8 +579,9 @@ public static class SystemEndpoints
         // SQLite 管理端点
         // ═══════════════════════════════════════════════════════════
 
-        app.MapPost("/api/sqlite/enable", (IDbConnection db) =>
+        app.MapPost("/api/sqlite/enable", (HttpContext ctx, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             try
             {
                 var tableCount = db.ExecuteScalar<int>("SELECT COUNT(*) FROM sqlite_master WHERE type='table'");
@@ -577,8 +590,9 @@ public static class SystemEndpoints
             catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });
 
-        app.MapPost("/api/sqlite/migrate", (IDbConnection db) =>
+        app.MapPost("/api/sqlite/migrate", (HttpContext ctx, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             try
             {
                 var dataPath = ApiConfig.ResolveDataPath();
@@ -627,7 +641,7 @@ public static class SystemEndpoints
             catch (Exception ex) { return Common.Ok(new { success = false, migratedTables = 0, totalRows = 0, verificationPassed = false, errors = new List<string> { ex.Message }, warnings = new List<string>(), duration = 0 }); }
         });
 
-        app.MapPut("/api/sqlite/read-mode", (System.Text.Json.JsonElement body) =>
+        app.MapPut("/api/sqlite/read-mode", (HttpContext ctx, System.Text.Json.JsonElement body) =>
         {
             try
             {

@@ -1,5 +1,6 @@
 using System.Data;
 using Dapper;
+using EngineeringManager.Api.Security;
 
 namespace EngineeringManager.Api;
 
@@ -16,7 +17,7 @@ public static class InvoiceEndpoints
         // 发票
         // ═══════════════════════════════════════════════════════════
 
-        app.MapGet("/api/invoices", (IDbConnection db, long? projectId) =>
+        app.MapGet("/api/invoices", (HttpContext ctx, IDbConnection db, long? projectId) =>
         {
             var sql = @"SELECT i.*, p.name as project_name,
                                seller.name as sellerName, buyer.name as buyerName,
@@ -30,8 +31,9 @@ public static class InvoiceEndpoints
             return Common.Ok(db.Query(sql, new { ProjectId = projectId }));
         });
 
-        app.MapPost("/api/invoices", async (InvoiceDto dto, IDbConnection db) =>
+        app.MapPost("/api/invoices", async (HttpContext ctx, InvoiceDto dto, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO invoices
                 (project_id,seller_id,buyer_id,contract_id,settlement_id,type,invoice_kind,invoice_no,invoice_code,name,
                  amount,price_amount,tax_rate,tax_amount,received_amount,issue_date,status,remarks,file_url,file_type,created_at,updated_at)
@@ -44,7 +46,7 @@ public static class InvoiceEndpoints
             return Common.Ok(id);
         });
 
-        app.MapPut("/api/invoices", async (InvoiceDto dto, IDbConnection db) =>
+        app.MapPut("/api/invoices", async (HttpContext ctx, InvoiceDto dto, IDbConnection db) =>
         {
             var affected = await db.ExecuteAsync(@"UPDATE invoices SET project_id=@ProjectId,seller_id=@SellerId,
                 buyer_id=@BuyerId,contract_id=@ContractId,settlement_id=@SettlementId,type=@Type,invoice_kind=@InvoiceKind,
@@ -57,14 +59,14 @@ public static class InvoiceEndpoints
             return affected > 0 ? Common.Ok() : Common.NotFound("发票不存在");
         });
 
-        app.MapDelete("/api/invoices/{id}", async (long id, IDbConnection db) =>
+        app.MapDelete("/api/invoices/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
             (await db.ExecuteAsync("DELETE FROM invoices WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("发票不存在"));
 
         // ═══════════════════════════════════════════════════════════
         // 收付款记录
         // ═══════════════════════════════════════════════════════════
 
-        app.MapGet("/api/payment-records", (IDbConnection db, string? paymentType, long? projectId) =>
+        app.MapGet("/api/payment-records", (HttpContext ctx, IDbConnection db, string? paymentType, long? projectId) =>
         {
             var sql = @"SELECT pr.*, p.name as project_name, pt.name as partner_name
                         FROM payment_records pr
@@ -114,8 +116,9 @@ public static class InvoiceEndpoints
             return Common.Ok(result);
         });
 
-        app.MapPost("/api/payment-records", async (dynamic dto, IDbConnection db) =>
+        app.MapPost("/api/payment-records", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO payment_records
                 (type,amount,record_date,project_id,partner_id,contract_id,invoice_details,remarks,file_url,file_type,created_at)
                 VALUES (@Type,@Amount,@RecordDate,@ProjectId,@PartnerId,@ContractId,@InvoiceDetails,@Remarks,@FileUrl,@FileType,@Now);
@@ -124,7 +127,7 @@ public static class InvoiceEndpoints
             return Common.Ok(id);
         });
 
-        app.MapPut("/api/payment-records", async (dynamic dto, IDbConnection db) =>
+        app.MapPut("/api/payment-records", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
         {
             var affected = await db.ExecuteAsync(@"UPDATE payment_records SET type=@Type,amount=@Amount,record_date=@RecordDate,
                 project_id=@ProjectId,partner_id=@PartnerId,contract_id=@ContractId,invoice_details=@InvoiceDetails,
@@ -133,7 +136,7 @@ public static class InvoiceEndpoints
             return affected > 0 ? Common.Ok() : Common.NotFound("记录不存在");
         });
 
-        app.MapDelete("/api/payment-records/{id}", async (long id, IDbConnection db) =>
+        app.MapDelete("/api/payment-records/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
             (await db.ExecuteAsync("DELETE FROM payment_records WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("记录不存在"));
     }
 }
