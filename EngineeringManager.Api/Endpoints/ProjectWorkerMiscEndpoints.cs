@@ -11,17 +11,15 @@ public static class ProjectWorkerMiscEndpoints
 {
     public static void RegisterProjectWorkerMiscEndpoints(this WebApplication app)
     {
-        
-
         app.MapPost("/api/project-workers/batch", async (HttpContext ctx, List<ProjectWorkerDto> records, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var count = 0;
             foreach (var dto in records)
             {
-                await db.ExecuteAsync(@"INSERT INTO project_workers (worker_id,project_id,team_id,daily_wage,worker_type,entry_date,status,created_at)
-                    VALUES (@WorkerId,@ProjectId,@TeamId,@DailyWage,@WorkerType,@EntryDate,'active',@Now)",
-                    new { dto.WorkerId, dto.ProjectId, dto.TeamId, dto.DailyWage, dto.WorkerType, dto.EntryDate, Now = Common.NowString() });
+                await db.ExecuteAsync(@"INSERT INTO project_workers (worker_id,project_id,team_id,daily_wage,worker_type,entry_date,status,created_by,created_at)
+                    VALUES (@WorkerId,@ProjectId,@TeamId,@DailyWage,@WorkerType,@EntryDate,'active',@CreatedBy,@Now)",
+                    new { dto.WorkerId, dto.ProjectId, dto.TeamId, dto.DailyWage, dto.WorkerType, dto.EntryDate, CreatedBy = uid, Now = Common.NowString() });
                 count++;
             }
             return Common.Ok(new { count });
@@ -29,16 +27,20 @@ public static class ProjectWorkerMiscEndpoints
 
         app.MapPut("/api/project-workers", async (HttpContext ctx, ProjectWorkerDto dto, IDbConnection db) =>
         {
-            var affected = await db.ExecuteAsync(@"UPDATE project_workers SET team_id=@TeamId,daily_wage=@DailyWage,worker_type=@WorkerType,entry_date=@EntryDate,status=@Status WHERE id=@Id",
-                new { dto.Id, dto.TeamId, dto.DailyWage, dto.WorkerType, dto.EntryDate, dto.Status, Now = Common.NowString() });
-            return affected > 0 ? Common.Ok() : Common.NotFound("记录不存在");
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var affected = await db.ExecuteAsync(@"UPDATE project_workers SET team_id=@TeamId,daily_wage=@DailyWage,worker_type=@WorkerType,entry_date=@EntryDate,status=@Status WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
+                new { dto.Id, dto.TeamId, dto.DailyWage, dto.WorkerType, dto.EntryDate, dto.Status, Uid = uid, IsAdmin = isAdmin });
+            return affected > 0 ? Common.Ok() : Results.Forbid();
         });
 
         app.MapPut("/api/invoices/{id}/status", async (HttpContext ctx, long id, InvoiceStatusDto dto, IDbConnection db) =>
         {
-            var affected = await db.ExecuteAsync("UPDATE invoices SET status=@Status,updated_at=@Now WHERE id=@Id",
-                new { Status = dto.Status, Now = Common.NowString(), Id = id });
-            return affected > 0 ? Common.Ok() : Common.NotFound("发票不存在");
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var affected = await db.ExecuteAsync("UPDATE invoices SET status=@Status,updated_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
+                new { Status = dto.Status, Now = Common.NowString(), Id = id, Uid = uid, IsAdmin = isAdmin });
+            return affected > 0 ? Common.Ok() : Results.Forbid();
         });
     }
 }

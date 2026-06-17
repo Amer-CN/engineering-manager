@@ -51,15 +51,19 @@ public static class CostLedgerEndpoints
 
         app.MapPut("/api/cost-ledger", async (HttpContext ctx, CostLedgerEntryDto dto, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var affected = await db.ExecuteAsync(@"UPDATE cost_ledger SET voucher_no=@VoucherNo,date=@Date,direction=@Direction,category=@Category,
                 amount=@Amount,counterparty=@Counterparty,channel=@Channel,summary=@Summary,notes=@Notes,updated_at=@Now WHERE id=@Id",
                 new { dto.VoucherNo, dto.Date, dto.Direction, dto.Category, dto.Amount,
                       dto.Counterparty, dto.Channel, dto.Summary, dto.Notes, Now = now(), dto.Id });
-            return affected > 0 ? Common.Ok() : Common.NotFound("记录不存在");
+            return affected > 0 ? Common.Ok() : Results.Forbid();
         });
 
         app.MapDelete("/api/cost-ledger/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM cost_ledger WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("记录不存在"));
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            return (await db.ExecuteAsync("DELETE FROM cost_ledger WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Results.Forbid();
+        });
 
         app.MapPost("/api/cost-ledger/batch", async (HttpContext ctx, List<CostLedgerEntryDto> entries, IDbConnection db) =>
         {
@@ -84,13 +88,11 @@ public static class CostLedgerEndpoints
         {
             try
             {
-                // 尝试查询，如果表结构不匹配则返回空
                 var categories = db.Query("SELECT * FROM cost_ledger_categories").ToList();
                 return Common.Ok(categories);
             }
             catch
             {
-                // 表结构不兼容，返回空列表
                 return Common.Ok(new List<object>());
             }
         });
@@ -106,13 +108,17 @@ public static class CostLedgerEndpoints
 
         app.MapPut("/api/cost-ledger/categories", async (HttpContext ctx, CostLedgerCategoryDto dto, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var affected = await db.ExecuteAsync(@"UPDATE cost_ledger_categories SET name=@Name,direction=@Direction,level1=@Level1,color=@Color,updated_at=@Now WHERE id=@Id",
                 new { dto.Name, dto.Direction, dto.Level1, dto.Color, Now = now(), dto.Id });
-            return affected > 0 ? Common.Ok() : Common.NotFound("分类不存在");
+            return affected > 0 ? Common.Ok() : Results.Forbid();
         });
 
         app.MapDelete("/api/cost-ledger/categories/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM cost_ledger_categories WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("分类不存在"));
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            return (await db.ExecuteAsync("DELETE FROM cost_ledger_categories WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Results.Forbid();
+        });
 
         app.MapPost("/api/cost-ledger/categories/reset", (HttpContext ctx, IDbConnection db) =>
         {
@@ -150,13 +156,17 @@ public static class CostLedgerEndpoints
 
         app.MapPut("/api/cost-ledger/batches/{id}", async (HttpContext ctx, long id, CostLedgerBatchDto dto, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var affected = await db.ExecuteAsync("UPDATE cost_ledger_batches SET name=@Name,updated_at=@Now WHERE id=@Id",
                 new { Name = dto.NewName ?? "", Now = now(), Id = id });
-            return affected > 0 ? Common.Ok() : Common.NotFound("批次不存在");
+            return affected > 0 ? Common.Ok() : Results.Forbid();
         });
 
         app.MapDelete("/api/cost-ledger/batches/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM cost_ledger_batches WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("批次不存在"));
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            return (await db.ExecuteAsync("DELETE FROM cost_ledger_batches WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Results.Forbid();
+        });
 
         // ═══════════════════════════════════════════════════════════
         // 匹配规则
