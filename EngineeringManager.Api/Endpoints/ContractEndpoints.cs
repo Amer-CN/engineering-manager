@@ -78,23 +78,35 @@ public static class ContractEndpoints
 
         app.MapPut("/api/contracts/income", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
         {
-            var affected = await db.ExecuteAsync(@"UPDATE income_contracts SET name=@Name,amount=@Amount,status=@Status,remarks=@Remarks,updated_at=@Now WHERE id=@Id",
-                new { Now = now() });
-            return affected > 0 ? Common.Ok() : Common.NotFound("合同不存在");
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var affected = await db.ExecuteAsync(@"UPDATE income_contracts SET name=@Name,amount=@Amount,status=@Status,remarks=@Remarks,updated_at=@Now WHERE id=@Id AND " + CurrentUser.UserFilterFragment,
+                new { Uid = uid, IsAdmin = isAdmin, Now = now() });
+            return affected > 0 ? Common.Ok() : Results.Forbid();
         });
 
         app.MapPut("/api/contracts/expense", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
         {
-            var affected = await db.ExecuteAsync(@"UPDATE expense_contracts SET name=@Name,amount=@Amount,status=@Status,remarks=@Remarks,updated_at=@Now WHERE id=@Id",
-                new { Now = now() });
-            return affected > 0 ? Common.Ok() : Common.NotFound("合同不存在");
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var affected = await db.ExecuteAsync(@"UPDATE expense_contracts SET name=@Name,amount=@Amount,status=@Status,remarks=@Remarks,updated_at=@Now WHERE id=@Id AND " + CurrentUser.UserFilterFragment,
+                new { Uid = uid, IsAdmin = isAdmin, Now = now() });
+            return affected > 0 ? Common.Ok() : Results.Forbid();
         });
 
         app.MapDelete("/api/contracts/income/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM income_contracts WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("合同不存在"));
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            return (await db.ExecuteAsync("DELETE FROM income_contracts WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
+        });
 
         app.MapDelete("/api/contracts/expense/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM expense_contracts WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("合同不存在"));
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            return (await db.ExecuteAsync("DELETE FROM expense_contracts WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
+        });
 
         // ═══════════════════════════════════════════════════════════
         // 合同模板
