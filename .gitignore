@@ -67,3 +67,10 @@ EngineeringManager.Installer/publish/
 
 # npm lock file (CI uses npm install instead of npm ci)
 package-lock.json
+
+# Tests 构建产物
+EngineeringManager.Tests/bin/
+EngineeringManager.Tests/obj/
+# 本地 skill / 外部指南（不入库）
+.claude/skills/
+vibe-coding-guide/
