@@ -1,6 +1,6 @@
-﻿# AGENTS.md - 工程管家项目约定
-> 项目状态：v1.0.0 — 架构重构 + 数据治理 + Repository 层 + React Query
-> 最后同步：2026-06-17（v1.0.0 发布收尾 + P0/P1 安全修复 + 文档差距修正）
+# AGENTS.md - 工程管家项目约定
+> 项目状态：v0.71.0 — P0-4 完整版（SQL 端点改造 169/171 端点）+ P0-3-A API 脱敏 + P2.1 字段统一
+> 最后同步：2026-06-18（v0.71.0 收尾 + Sprint B + Sprint C 代码合入）
 
 ## 🗣️ 输出语言
 - **默认中文输出**：所有解释、描述、分析、提问、总结等文字内容使用中文
@@ -247,7 +247,7 @@ export function useProjects() {
 - **语义化版本**：patch(Bug修复) / minor(新功能模块) / major(架构级变更)
 - 版本号引用位置：`package.json` / `Sidebar.tsx` / `Login.tsx` / `installer/src/App.tsx` / `CHANGELOG.md`
 
-### 当前版本：v1.0.0
+### 当前版本：v0.71.0
 
 *本文档与 `CHANGELOG.md`、`docs/` 保持同步。*
 

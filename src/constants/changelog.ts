@@ -23,6 +23,14 @@ export interface ChangelogVersion {
   items: string[]
 }
 export const versions: ChangelogVersion[] = [
+  { v: 'v0.71.0', date: '2026-06-18', items: [
+    'Sprint B 完成：19 个业务表加 created_by 列 + 169 个端点 SQL 端点改造（按 created_by 过滤或按角色鉴权）',
+    'P0-3-A API 响应层 PII 脱敏：4 个列表端点（成员/工人/项目工人/合作单位）的身份证/手机号/银行卡自动脱敏（中间显示为 ****）',
+    'P2.1 字段命名统一：用户表密码字段从 password+salt 改为 password_hash+salt+version（与 AuthEndpoints 一致）',
+    '清理 6 个死代码 endpoint 文件（29 个重复端点路由）',
+    '所有写端点统一用 Results.Forbid 替代 NotFound，未授权访问直接拒绝',
+    'admin 端点审计日志：用户操作记录更完整',
+  ] },
   { v: 'v0.70.0', date: '2026-06-06', items: [
     '全新安装器：可选择安装位置和数据存储位置',
     '新增卸载器：安全卸载，数据完整保留',

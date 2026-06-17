@@ -1,4 +1,4 @@
-﻿import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
@@ -173,7 +173,7 @@ const Login: React.FC<LoginProps> = () => {
         </form>
 
         <div style={{ fontSize: 10, color: 'var(--muted-2)', marginTop: 8, flexShrink: 0 }}>
-          v{(window as any).__APP_VERSION__ || '1.0.0'}
+          v{(window as any).__APP_VERSION__ || '0.71.0'}
         </div>
       </div>
       )}
