@@ -88,22 +88,25 @@ public static class ProjectEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO projects
-                (name,description,address,start_date,end_date,status,budget,project_manager_id,created_at,updated_at)
-                VALUES (@Name,@Description,@Address,@StartDate,@EndDate,@Status,@Budget,@ProjectManagerId,@Now,@Now);
+                (name,description,address,start_date,end_date,status,budget,project_manager_id,created_by,created_at,updated_at)
+                VALUES (@Name,@Description,@Address,@StartDate,@EndDate,@Status,@Budget,@ProjectManagerId,@CreatedBy,@Now,@Now);
                 SELECT last_insert_rowid();",
                 new { dto.Name, dto.Description, dto.Address, dto.StartDate, dto.EndDate,
-                      Status = dto.Status ?? "planning", dto.Budget, dto.ProjectManagerId, Now = now() });
+                      Status = dto.Status ?? "planning", dto.Budget, dto.ProjectManagerId, CreatedBy = uid, Now = now() });
             return Common.Ok(id);
         });
 
         app.MapPut("/api/projects/{id}", async (HttpContext ctx, long id, ProjectDto dto, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var affected = await db.ExecuteAsync(@"UPDATE projects SET name=@Name,description=@Description,
                 address=@Address,start_date=@StartDate,end_date=@EndDate,status=@Status,budget=@Budget,
-                project_manager_id=@ProjectManagerId,updated_at=@Now WHERE id=@Id",
+                project_manager_id=@ProjectManagerId,updated_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
                 new { dto.Name, dto.Description, dto.Address, dto.StartDate, dto.EndDate,
-                      dto.Status, dto.Budget, dto.ProjectManagerId, Now = now(), Id = id });
-            return affected > 0 ? Common.Ok() : Common.NotFound("项目不存在");
+                      dto.Status, dto.Budget, dto.ProjectManagerId, Now = now(), Id = id,
+                      Uid = uid, IsAdmin = isAdmin });
+            return affected > 0 ? Common.Ok() : Results.Forbid();
         });
 
         app.MapDelete("/api/projects/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
@@ -131,6 +134,11 @@ public static class ProjectEndpoints
         });
 
         app.MapDelete("/api/project-members/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM project_members WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("记录不存在"));
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            return (await db.ExecuteAsync("DELETE FROM project_members WHERE id=@Id", new { Id = id, Uid = uid })) > 0 ? Common.Ok() : Results.Forbid();
+        });
+
+
     }
 }
