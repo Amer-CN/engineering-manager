@@ -68,9 +68,10 @@ public static class WageEndpoints
         app.MapPost("/api/attendances/batch-delete", async (HttpContext ctx, List<long> ids, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var count = 0;
             foreach (var id in ids)
-                count += await db.ExecuteAsync("DELETE FROM attendances WHERE id=@Id", new { Id = id });
+                count += await db.ExecuteAsync("DELETE FROM attendances WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin });
             return Common.Ok(new { deleted = count });
         });
 
@@ -80,9 +81,9 @@ public static class WageEndpoints
             var count = 0;
             foreach (var dto in records)
             {
-                await db.ExecuteAsync(@"INSERT INTO attendances (member_id,project_id,project_worker_id,year_month,work_days,days_off,is_full_attendance,daily_status,created_at,updated_at)
-                    VALUES (@MemberId,@ProjectId,@ProjectWorkerId,@YearMonth,@WorkDays,@DaysOff,@IsFullAttendance,@DailyStatus,@Now,@Now)",
-                    new { Now = now() });
+                await db.ExecuteAsync(@"INSERT INTO attendances (member_id,project_id,project_worker_id,year_month,work_days,days_off,is_full_attendance,daily_status,created_by,created_at,updated_at)
+                    VALUES (@MemberId,@ProjectId,@ProjectWorkerId,@YearMonth,@WorkDays,@DaysOff,@IsFullAttendance,@DailyStatus,@CreatedBy,@Now,@Now)",
+                    new { Now = now(), CreatedBy = uid });
                 count++;
             }
             return Common.Ok(new { count });
@@ -172,29 +173,32 @@ public static class WageEndpoints
         app.MapPost("/api/wages/batch-delete", async (HttpContext ctx, List<long> ids, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var count = 0;
             foreach (var id in ids)
-                count += await db.ExecuteAsync("DELETE FROM wages WHERE id=@Id AND (payment_locked=0 OR payment_locked IS NULL)", new { Id = id });
+                count += await db.ExecuteAsync("DELETE FROM wages WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1) AND (payment_locked=0 OR payment_locked IS NULL)", new { Id = id, Uid = uid, IsAdmin = isAdmin });
             return Common.Ok(new { deleted = count });
         });
 
         app.MapPost("/api/wages/batch-clear-payments", async (HttpContext ctx, List<long> ids, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var count = 0;
             foreach (var id in ids)
-                count += await db.ExecuteAsync("UPDATE wages SET paid_amount=NULL,paid_date=NULL,bank_receipt_path=NULL,updated_at=@Now WHERE id=@Id AND (payment_locked=0 OR payment_locked IS NULL)",
-                    new { Id = id, Now = now() });
+                count += await db.ExecuteAsync("UPDATE wages SET paid_amount=NULL,paid_date=NULL,bank_receipt_path=NULL,updated_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1) AND (payment_locked=0 OR payment_locked IS NULL)",
+                    new { Id = id, Uid = uid, IsAdmin = isAdmin, Now = now() });
             return Common.Ok(new { cleared = count });
         });
 
         app.MapPost("/api/wages/archive", async (HttpContext ctx, List<long> ids, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var count = 0;
             foreach (var id in ids)
-                count += await db.ExecuteAsync("UPDATE wages SET payment_locked=1,updated_at=@Now WHERE id=@Id",
-                    new { Id = id, Now = now() });
+                count += await db.ExecuteAsync("UPDATE wages SET payment_locked=1,updated_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
+                    new { Id = id, Uid = uid, IsAdmin = isAdmin, Now = now() });
             return Common.Ok(new { archived = count });
         });
 
@@ -257,16 +261,16 @@ public static class WageEndpoints
             foreach (var dto in records)
             {
                 await db.ExecuteAsync(@"INSERT OR REPLACE INTO wages
-                    (project_id,project_worker_id,year_month,daily_wage,work_days,bonus,deduction,actual_wage,created_at,updated_at)
-                    VALUES (@ProjectId,@ProjectWorkerId,@YearMonth,@DailyWage,@WorkDays,@Bonus,@Deduction,@ActualWage,@Now,@Now)",
-                    new { Now = now() });
+                    (project_id,project_worker_id,year_month,daily_wage,work_days,bonus,deduction,actual_wage,created_by,created_at,updated_at)
+                    VALUES (@ProjectId,@ProjectWorkerId,@YearMonth,@DailyWage,@WorkDays,@Bonus,@Deduction,@ActualWage,@CreatedBy,@Now,@Now)",
+                    new { Now = now(), CreatedBy = uid });
                 count++;
             }
             return Common.Ok(new { saved = count });
         });
 
         // ═══════════════════════════════════════════════════════════
-        // 薪资历史
+        // 薪资历史 (无 created_by 列, 仅加 var uid 强制鉴权)
         // ═══════════════════════════════════════════════════════════
 
         app.MapGet("/api/salary-history/{memberId}", (HttpContext ctx, long memberId, IDbConnection db) =>
@@ -285,7 +289,10 @@ public static class WageEndpoints
         });
 
         app.MapDelete("/api/salary-history/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM salary_history WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("记录不存在"));
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            return (await db.ExecuteAsync("DELETE FROM salary_history WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Results.Forbid();
+        });
 
         app.MapGet("/api/salary-history/{memberId}/effective", (HttpContext ctx, long memberId, string yearMonth, IDbConnection db) =>
         {
@@ -296,7 +303,7 @@ public static class WageEndpoints
         });
 
         // ═══════════════════════════════════════════════════════════
-        // 工资历史
+        // 工资历史 (系统表, 无 created_by)
         // ═══════════════════════════════════════════════════════════
 
         app.MapGet("/api/wage-history/{projectWorkerId}", (HttpContext ctx, long projectWorkerId, IDbConnection db) =>
