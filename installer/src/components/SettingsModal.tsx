@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 type Tab = 'about' | 'log'
@@ -150,7 +150,7 @@ export default function SettingsModal({ onClose }: Props) {
                   background: 'var(--accent-soft)', color: 'var(--accent)',
                   fontSize: 12, fontWeight: 600,
                 }}>
-                  v0.72.0
+                  v1.0.0
                 </div>
 
                 {/* 技术栈 */}

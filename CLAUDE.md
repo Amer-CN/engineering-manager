@@ -1,6 +1,6 @@
-# CLAUDE.md - 工程管家项目约定
-> 项目状态：v0.70.0 — 安装程序完整重写 + 卸载器 + 数据安全加固
-> 最后同步：2026-06-06（安装器/卸载器、数据架构、权限种子、安全审计）
+﻿# CLAUDE.md - 工程管家项目约定
+> 项目状态：v1.0.0 — P0/P1 安全基线补齐 + OCR key DPAPI + JWT 鉴权 + 限流 + PII 阶段 A
+> 最后同步：2026-06-17（v1.0.0 发布收尾 + P0/P1 安全修复 + AGENTS.md 文档差距修正）
 
 ## 🗣️ 输出语言
 - **默认中文输出**：所有解释、描述、分析、提问、总结等文字内容使用中文
@@ -188,6 +188,6 @@ Button / Input / Modal / Card / Badge / Select / Pagination / DropdownMenu / Tab
 - **语义化版本**：patch(Bug修复) / minor(新功能模块) / major(架构级变更)
 - 版本号引用位置：`package.json` / `Sidebar.tsx` / `Login.tsx` / `installer/src/App.tsx` / `CHANGELOG.md`
 
-### 当前版本：v0.70.0
+### 当前版本：v1.0.0
 
 *本文档与 `CHANGELOG.md`、`docs/` 保持同步。*

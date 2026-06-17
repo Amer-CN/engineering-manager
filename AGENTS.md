@@ -1,6 +1,6 @@
-# AGENTS.md - 工程管家项目约定
+﻿# AGENTS.md - 工程管家项目约定
 > 项目状态：v1.0.0 — 架构重构 + 数据治理 + Repository 层 + React Query
-> 最后同步：2026-06-12（CHANGELOG v1.0.0 发布，与 CLAUDE.md 同步）
+> 最后同步：2026-06-17（v1.0.0 发布收尾 + P0/P1 安全修复 + 文档差距修正）
 
 ## 🗣️ 输出语言
 - **默认中文输出**：所有解释、描述、分析、提问、总结等文字内容使用中文
@@ -167,7 +167,7 @@ Button / Input / Modal / Card / Badge / Select / Pagination / DropdownMenu / Tab
 ### 后端代码质量规则
 - **SQL**：必须参数化（Dapper 匿名对象 @Param），严禁字符串拼接。表名必须用 `[]` 包裹
 - **异常处理**：所有 catch 必须含 `Console.Error.WriteLine` 日志 + 正确的 HTTP 状态码返回
-- **认证**：新端点默认加 `RequireAuthorization()`，健康检查 `/api/health` 和登录 `/api/auth/login` 除外
+- **认证**：所有 `/api/*` 端点默认经 `GlobalAuthMiddleware` 强制鉴权（白名单：`/api/auth/login` `/api/health` `/api/ocr/setup/*`）。`/api/auth/login` 加 `login` 限流（5 次/分/IP），其他写端点加 `write` 限流（30 次/秒/IP）
 - **审计日志**：写入失败必须返回实际错误，不得返回 `{ success: true }`
 - **新建功能**：组件放 `src/components/features/<模块>/`，禁止在 `src/features/` 下建文件
 - **禁止创建重复文件**：新建前确认无同名组件

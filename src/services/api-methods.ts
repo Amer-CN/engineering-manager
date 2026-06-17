@@ -1,4 +1,4 @@
-/**
+﻿/**
  * API 桥接层
  *
  * 通过 HTTP 调用 C# 后端 API
@@ -20,7 +20,7 @@ import type {
 
 export const tauriAPI = {
   // ────────── 系统 ──────────
-  getAppVersion: () => '0.70.0',
+  getAppVersion: () => '1.0.0',
   getDataPath: () => apiClient.get<string>('/api/config/data-path'),
   getUploadsPath: () => apiClient.get<string>('/api/config/uploads-path'),
   openDevTools: () => {

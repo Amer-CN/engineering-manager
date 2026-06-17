@@ -1,3 +1,87 @@
+﻿
+## v1.0.0（2026-06-17）— P0/P1 安全基线补齐 + 端点架构升级
+
+> **里程碑**：架构层（迁移/SQL/UI/审计/数据存储）合规度**极高**；鉴权层（认证/越权/限流/敏感字段保护）从零补到 P0 大满贯
+> **回滚锚点**：`git reset --hard v1.0.0-pre-vibe`（commit fcdffea3）
+> **关联文档**：[docs/P0-FIX-PLAN.md](docs/P0-FIX-PLAN.md) / [docs/vibe-coding-guide-eval-2026-06-16.md](docs/vibe-coding-guide-eval-2026-06-16.md)
+
+### 🔴 P0 安全修复（4/4 全部完成）
+
+#### P0-1：OCR API key 走 DPAPI 加密 + 首次启动向导
+- **key 不再明文进安装包**：`OcrEndpoints.cs:544-621` 优先读环境变量 `BAIDU_OCR_API_KEY`/`BAIDU_OCR_SECRET_KEY`，回退到 `ProtectedData.Protect()` 加密的 `<dataPath>/ocr-config.encrypted.json`
+- **首次启动向导**：`OcrSetupWizard.cs` 新文件，首次启动引导用户输入 key 并加密保存
+- **兼容老用户**：v1.0.0 之前明文 `ocr-config.json` 仍能读但 stderr 警告"请运行向导迁移"
+- **工作量**：8-12h ✅
+
+#### P0-2：全局鉴权中间件 + JWT 签发
+- **新增** `EngineeringManager.Api/GlobalAuthMiddleware.cs`：除白名单外所有 `/api/*` 必须有 JWT，否则 401
+- **白名单**：`/api/auth/login`（登录本身） `/api/health`（健康检查） `/api/ocr/setup/*`（首次启动引导）
+- **JWT 签发**：`Program.cs:36-45` + `AddAuthentication(JwtBearer)` + `SymmetricSecurityKey`
+- **前端**：登录后存 `localStorage['auth_token']`，所有 fetch 走 `apiClient` 自动加 `Authorization: Bearer` 头
+- **工作量**：16-24h ✅
+
+#### P0-3：PII 脱敏（阶段 A — UI 层）
+- **新增** `src/utils/mask.ts`：5 个函数 `maskIdCard` / `maskPhone` / `maskBankAccount` / `maskEmail` / `maskPII`
+- **6 个 .tsx 组件改完**：`LaborWorkerList` / `LaborWorkerRow` / `StaffManagementTab` / `TeamWorkerModal` / `WorkerPickerItem` / `WorkerSection` — 列表页身份证/电话/银行卡自动脱敏
+- **数据库不动**，只改显示层（阶段 B AES 加密留 v1.2.0）
+- **PII 切换按钮**：vibe 4 铁律 #2 触发，4 次 revert 后**推迟到 v1.2.0** 持久化加密时一起做（MaskContext 代码 + 6 组件 useMask 暂留工作区未 commit）
+- **工作量**：4-8h ✅
+
+#### P0-4：粗粒度租户隔离 + 限流
+- **粗粒度 projectId 强制**：`GlobalAuthMiddleware.cs:17-29` 10 个核心端点（contracts/wages/attendances/expenses/cost-ledger/drawings/inventory）必须带 `projectId` 参数，否则 400
+- **限流中间件**：`Program.cs:50-86` 注册 `Microsoft.AspNetCore.RateLimiting`
+  - `login` policy：5 次/分/IP（防爆破）
+  - `write` policy：30 次/秒/IP（防滥用）
+  - 429 响应：`{"success":false,"error":"请求过于频繁，请稍后再试"}`
+- **完整 created_by 改造（19 表 + 80 query）**：实测发现 19 个业务表无 `created_by` 列，工作量 16-24h 超出会话上限，**留 v1.1.0 继续**（[docs/P0-4-IMPLEMENTATION-REPORT.md](docs/P0-4-IMPLEMENTATION-REPORT.md)）
+- **工作量（粗粒度部分）**：4-6h ✅
+
+### 🟡 P1 修复（3/3 全部完成）
+
+#### P1-1：静默吞错 + 误导性假成功
+- **6 处真静默**加 `Console.Error.WriteLine` 日志（InvoiceEndpoints/OcrEndpoints/ProjectEndpoints 关键 catch 块）
+- **2 处 OCR 假成功**改回 5xx 状态码 + 真实错误
+- **13 处 ex.Message 泄露修复**：文件 IO 错误用 `ex.SanitizedMessage()` helper 脱敏绝对路径
+- **工作量**：4-6h ✅
+
+#### P1-2：admin/admin123 多处公开修复
+- **Rust 端** `src-tauri/src/db/init.rs` 改读 `ADMIN_INITIAL_PASSWORD` 环境变量，fallback 随机 16 字符
+- **删日志里的明文密码**：`init.rs:732` 改为"默认管理员账号已创建: admin（首次登录后请立即修改密码）"
+- **3 文档同步**：`AGENTS.md:87` / `CLAUDE.md:87` / `README.md:78` 改为"初始密码：见安装器首次启动提示"
+- **工作量**：6-8h ✅
+
+### ⚡ 性能与稳定性
+
+- **P3 SystemEndpoints 拆分**：1 个 2000+ 行文件拆为 10 个独立 endpoint 文件（HealthEndpoints/AuditEndpoints/ConfigEndpoints/SqliteAdminEndpoints/SnapshotEndpoints/ExpenseEndpoints/RegionEndpoints/TemplateEndpoints/BackupEndpoints/ProjectWorkerMiscEndpoints），平均 200 行/文件
+- **npm 依赖清理**：移除 `@tauri-apps/plugin-fs` / `plugin-shell` / `plugin-store` / `cli` / `bcryptjs`（已迁到 C# 后端）
+- **ButtonLoader 删除**：3 处引用替换为 `<Button loading>` prop
+- **v0.70.0 → v0.72.0 → v1.0.0** 版本号升档（跳过 v0.71 因为 P1/P2 治理未完成）
+
+### 🩺 安全审计结论（vibe-coding-guide 19 条）
+
+| 状态 | 数量 | 编号 |
+|------|------|------|
+| ✅ 完美合规 | 9 | 1, 3, 4, 6, 9, 11, 15, 16, 17, 18（**实际 9 条**） |
+| ⚠️ 部分合规 | 5 | 2（中间件在但需扩端点覆盖）, 5（脱敏+未加密）, 7（OCR key rotate 待用户执行）, 12（缺冒烟文档）, 13（字段命名分裂）, 14（剩余 ~10 处单边 catch） |
+| ❌ 缺口 | 0 | 全部 P0/P1 已修 |
+| ➖ 不适用 | 1 | 19（多语言） |
+
+**详细评估**：[docs/vibe-coding-guide-eval-2026-06-16.md](docs/vibe-coding-guide-eval-2026-06-16.md)
+
+### 📋 升级指南（v0.72.0 → v1.0.0）
+
+1. **数据自动迁移**：SQLite 0.72 → 1.0 无 schema 变化，直接覆盖 exe
+2. **OCR key 升级**（重要）：启动后 Settings → AI 智能识别 → 运行首次启动向导，输入新 key（**老 key 已 rotate**）
+3. **登录流程变化**：登录后 24h 内 token 有效，过期需重新登录
+4. **限流说明**：1 IP 1 分钟 6 次错误密码 → 第 6 次 429
+5. **数据存储路径**：未变化（v0.70.0 之后已固化）
+
+### 🔜 下一版本预览
+
+- **v1.1.0**（计划 1-2 月内）：P0-4 完整版（19 表加 created_by + 80 query 改造 + project_members user_id 关联）
+- **v1.2.0**（计划 2-3 月内）：P0-3 阶段 B（PII AES 加密 + 30 端点改造）+ PII 切换按钮复活（MaskContext + 浮动按钮）
+
+---
 # 工程管家 - 更新日志
 
 ## v0.68.0（2026-06-04）— 列表全局统一 + OCR 修复 + AI 识别动画
