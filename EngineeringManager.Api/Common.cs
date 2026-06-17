@@ -51,6 +51,30 @@ public static class Common
         return Results.Json(new { success = false, error = $"服务器错误: {context}" }, statusCode: 500);
     }
 
+    /// <summary>P0-3-A: 身份证号脱敏（保留前 4 + 后 4，中间 ****）</summary>
+    public static string? MaskIdCard(string? idCard)
+    {
+        if (string.IsNullOrEmpty(idCard)) return idCard;
+        if (idCard.Length <= 8) return idCard.Substring(0, 1) + "***" + idCard.Substring(idCard.Length - 1);
+        return idCard.Substring(0, 4) + "****" + idCard.Substring(idCard.Length - 4);
+    }
+
+    /// <summary>P0-3-A: 手机号脱敏（保留前 3 + 后 4，中间 ****）</summary>
+    public static string? MaskPhone(string? phone)
+    {
+        if (string.IsNullOrEmpty(phone)) return phone;
+        if (phone.Length <= 7) return phone.Substring(0, 1) + "***" + phone.Substring(phone.Length - 1);
+        return phone.Substring(0, 3) + "****" + phone.Substring(phone.Length - 4);
+    }
+
+    /// <summary>P0-3-A: 银行账号脱敏（保留前 4 + 后 4，中间 ****）</summary>
+    public static string? MaskBankAccount(string? account)
+    {
+        if (string.IsNullOrEmpty(account)) return account;
+        if (account.Length <= 8) return account.Substring(0, 1) + "***" + account.Substring(account.Length - 1);
+        return account.Substring(0, 4) + "****" + account.Substring(account.Length - 4);
+    }
+
     /// <summary>当前时间字符串（yyyy-MM-dd HH:mm:ss）— 避免在每个端点文件中重复定义</summary>
     public static string NowString() => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 

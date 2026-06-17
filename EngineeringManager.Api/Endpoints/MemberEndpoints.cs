@@ -18,8 +18,26 @@ public static class MemberEndpoints
         // ═══════════════════════════════════════════════════════════
 
         app.MapGet("/api/members", (HttpContext ctx, IDbConnection db) =>
-            Common.Ok(db.Query(@"SELECT m.*, d.name as department_name FROM members m
-                          LEFT JOIN departments d ON m.department_id=d.id ORDER BY m.created_at DESC")));
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var rows = db.Query(@"SELECT m.*, d.name as department_name FROM members m
+                          LEFT JOIN departments d ON m.department_id=d.id ORDER BY m.created_at DESC").ToList();
+            // P0-3-A: API 响应层 PII 脱敏
+            var masked = rows.Select(m => new
+            {
+                id = m.id, name = m.name, member_type = m.member_type, role = m.role, gender = m.gender,
+                ethnicity = m.ethnicity, birth_date = m.birth_date, base_salary = m.base_salary, daily_wage = m.daily_wage,
+                entry_date = m.entry_date, status = m.status, department_id = m.department_id, position = m.position,
+                department_name = m.department_name, created_at = m.created_at, updated_at = m.updated_at,
+                id_card = Common.MaskIdCard(m.id_card as string),
+                phone = Common.MaskPhone(m.phone as string),
+                email = m.email,
+                id_card_address = m.id_card_address,
+                bank_account = Common.MaskBankAccount(m.bank_account as string),
+                bank_name = m.bank_name, bank_line_no = m.bank_line_no, photo = m.photo
+            });
+            return Common.Ok(masked);
+        });
 
         app.MapGet("/api/members/{id}", (HttpContext ctx, long id, IDbConnection db) =>
         {
@@ -68,7 +86,21 @@ public static class MemberEndpoints
         // ═══════════════════════════════════════════════════════════
 
         app.MapGet("/api/workers", (HttpContext ctx, IDbConnection db) =>
-            Common.Ok(db.Query("SELECT * FROM workers ORDER BY name")));
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var rows = db.Query("SELECT * FROM workers ORDER BY name").ToList();
+            // P0-3-A: API 响应层 PII 脱敏
+            var masked = rows.Select(w => new
+            {
+                id = w.id, name = w.name, gender = w.gender, worker_type = w.worker_type, daily_wage = w.daily_wage,
+                address = w.address, created_at = w.created_at,
+                id_card = Common.MaskIdCard(w.id_card as string),
+                phone = Common.MaskPhone(w.phone as string),
+                bank_account = Common.MaskBankAccount(w.bank_account as string),
+                bank_name = w.bank_name, bank_line_no = w.bank_line_no
+            });
+            return Common.Ok(masked);
+        });
 
         app.MapGet("/api/workers/stats", (HttpContext ctx, IDbConnection db) => Common.Ok(new
         {
@@ -114,8 +146,7 @@ public static class MemberEndpoints
         app.MapGet("/api/project-workers", (HttpContext ctx, IDbConnection db, long? projectId) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            var sql = @"SELECT pw.*, w.name as worker_name, w.id_card, w.gender, w.phone,
-                        w.address, w.bank_account, w.bank_name, w.worker_type, w.daily_wage,
+            var sql = @"SELECT pw.*, w.name as worker_name, w.gender, w.address, w.bank_name, w.worker_type, w.daily_wage,
                         w.birth_date, w.ethnicity,
                         wt.name as team_name
                         FROM project_workers pw
@@ -123,7 +154,20 @@ public static class MemberEndpoints
                         LEFT JOIN worker_teams wt ON pw.team_id=wt.id";
             if (projectId.HasValue) sql += " WHERE pw.project_id=@ProjectId";
             sql += " ORDER BY pw.created_at DESC";
-            return Common.Ok(db.Query(sql, new { ProjectId = projectId }));
+            var rows = db.Query(sql, new { ProjectId = projectId }).ToList();
+            // P0-3-A: API 响应层 PII 脱敏
+            var masked = rows.Select(pw => new
+            {
+                id = pw.id, worker_id = pw.worker_id, project_id = pw.project_id, team_id = pw.team_id,
+                daily_wage = pw.daily_wage, worker_type = pw.worker_type, entry_date = pw.entry_date, status = pw.status,
+                created_at = pw.created_at, updated_at = pw.updated_at,
+                worker_name = pw.worker_name, gender = pw.gender, address = pw.address, bank_name = pw.bank_name,
+                birth_date = pw.birth_date, ethnicity = pw.ethnicity, team_name = pw.team_name,
+                id_card = Common.MaskIdCard(pw.id_card as string),
+                phone = Common.MaskPhone(pw.phone as string),
+                bank_account = Common.MaskBankAccount(pw.bank_account as string)
+            });
+            return Common.Ok(masked);
         });
 
         app.MapPost("/api/project-workers", async (HttpContext ctx, ProjectWorkerDto dto, IDbConnection db) =>

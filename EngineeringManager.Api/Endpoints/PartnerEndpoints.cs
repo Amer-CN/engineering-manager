@@ -18,7 +18,24 @@ public static class PartnerEndpoints
         // ═══════════════════════════════════════════════════════════
 
         app.MapGet("/api/partners", (HttpContext ctx, IDbConnection db) =>
-            Common.Ok(db.Query("SELECT * FROM partners ORDER BY name")));
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var rows = db.Query("SELECT * FROM partners ORDER BY name").ToList();
+            // P0-3-A: API 响应层 PII 脱敏
+            var masked = rows.Select(p => new
+            {
+                id = p.id, name = p.name, category = p.category, contact = p.contact,
+                address = p.address, bank_name = p.bank_name, tax_type = p.project_ids, project_ids = p.project_ids,
+                created_at = p.created_at, updated_at = p.updated_at,
+                phone = Common.MaskPhone(p.phone as string),
+                email = p.email,
+                bank_account = Common.MaskBankAccount(p.bank_account as string),
+                tax_number = Common.MaskBankAccount(p.tax_number as string),
+                credit_code = Common.MaskBankAccount(p.credit_code as string),
+                registered_address = p.registered_address, business_scope = p.business_scope
+            });
+            return Common.Ok(masked);
+        });
 
         app.MapPost("/api/partners", async (HttpContext ctx, PartnerDto dto, IDbConnection db) =>
         {
