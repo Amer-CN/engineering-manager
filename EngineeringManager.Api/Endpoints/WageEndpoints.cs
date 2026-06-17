@@ -16,6 +16,7 @@ public static class WageEndpoints
 
         app.MapGet("/api/attendances", (HttpContext ctx, IDbConnection db, long? projectId, string? yearMonth) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var sql = @"SELECT a.*, COALESCE(m.name, wr.name) as member_name, m.member_type,
                         wt.name as team_name, pw.worker_id
                         FROM attendances a
@@ -90,13 +91,22 @@ public static class WageEndpoints
         });
 
         app.MapPost("/api/attendances/generate", (HttpContext ctx, dynamic dto, IDbConnection db) =>
-            Common.Ok(new { count = 0 }));
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            return Common.Ok(new { count = 0 });
+        });
 
         app.MapPost("/api/attendances/generate-v2", (HttpContext ctx, dynamic dto, IDbConnection db) =>
-            Common.Ok(new { count = 0 }));
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            return Common.Ok(new { count = 0 });
+        });
 
         app.MapPost("/api/attendances/batch-import", (HttpContext ctx, dynamic dto, IDbConnection db) =>
-            Common.Ok(new { created = 0, updated = 0 }));
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            return Common.Ok(new { created = 0, updated = 0 });
+        });
 
         // ═══════════════════════════════════════════════════════════
         // 工资
@@ -104,6 +114,7 @@ public static class WageEndpoints
 
         app.MapGet("/api/wages", (HttpContext ctx, IDbConnection db, long? projectId, string? yearMonth) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var sql = @"SELECT w.*, COALESCE(m.name, wr.name) as worker_name, p.name as project_name,
                         wt.name as team_name
                         FROM wages w
@@ -122,6 +133,7 @@ public static class WageEndpoints
 
         app.MapGet("/api/wages/stats", (HttpContext ctx, IDbConnection db, long? projectId, string? yearMonth) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var where = new List<string>();
             if (projectId.HasValue) where.Add("project_id=@ProjectId");
             if (!string.IsNullOrEmpty(yearMonth)) where.Add("year_month=@YearMonth");
@@ -216,6 +228,7 @@ public static class WageEndpoints
 
         app.MapGet("/api/wages/payment-records", (HttpContext ctx, IDbConnection db, long? projectId, string? yearMonth) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var sql = @"SELECT w.*, COALESCE(m.name, wr.name) as worker_name, p.name as project_name,
                         wt.name as team_name
                         FROM wages w
@@ -233,6 +246,7 @@ public static class WageEndpoints
 
         app.MapGet("/api/wages/overdue-stats", (HttpContext ctx, IDbConnection db, long? projectId) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var w = projectId.HasValue ? " WHERE project_id=@ProjectId AND paid_amount IS NULL AND year_month < @CurrentMonth" : " WHERE paid_amount IS NULL AND year_month < @CurrentMonth";
             return Common.Ok(new
             {
@@ -243,6 +257,7 @@ public static class WageEndpoints
 
         app.MapGet("/api/wages/overdue-list", (HttpContext ctx, IDbConnection db, long? projectId) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var sql = @"SELECT w.*, COALESCE(m.name, wr.name) as worker_name
                         FROM wages w
                         LEFT JOIN members m ON w.member_id=m.id
@@ -274,8 +289,11 @@ public static class WageEndpoints
         // ═══════════════════════════════════════════════════════════
 
         app.MapGet("/api/salary-history/{memberId}", (HttpContext ctx, long memberId, IDbConnection db) =>
-            Common.Ok(db.Query("SELECT * FROM salary_history WHERE member_id=@MemberId ORDER BY effective_date DESC",
-                new { MemberId = memberId })));
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            return Common.Ok(db.Query("SELECT * FROM salary_history WHERE member_id=@MemberId ORDER BY effective_date DESC",
+                new { MemberId = memberId }));
+        });
 
         app.MapPost("/api/salary-history", async (HttpContext ctx, SalaryHistoryDto dto, IDbConnection db) =>
         {
@@ -296,6 +314,7 @@ public static class WageEndpoints
 
         app.MapGet("/api/salary-history/{memberId}/effective", (HttpContext ctx, long memberId, string yearMonth, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var entry = db.QueryFirstOrDefault(@"SELECT * FROM salary_history
                 WHERE member_id=@MemberId AND effective_date<=@Cutoff ORDER BY effective_date DESC LIMIT 1",
                 new { MemberId = memberId, Cutoff = $"{yearMonth}-01" });
@@ -307,11 +326,15 @@ public static class WageEndpoints
         // ═══════════════════════════════════════════════════════════
 
         app.MapGet("/api/wage-history/{projectWorkerId}", (HttpContext ctx, long projectWorkerId, IDbConnection db) =>
-            Common.Ok(db.Query("SELECT * FROM wage_history WHERE project_worker_id=@Id ORDER BY year_month DESC",
-                new { Id = projectWorkerId })));
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            return Common.Ok(db.Query("SELECT * FROM wage_history WHERE project_worker_id=@Id ORDER BY year_month DESC",
+                new { Id = projectWorkerId }));
+        });
 
         app.MapGet("/api/wage-history/{projectWorkerId}/effective", (HttpContext ctx, long projectWorkerId, string yearMonth, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var entry = db.QueryFirstOrDefault(@"SELECT * FROM wage_history
                 WHERE project_worker_id=@Id AND year_month<=@YearMonth ORDER BY year_month DESC LIMIT 1",
                 new { Id = projectWorkerId, YearMonth = yearMonth });
@@ -324,6 +347,7 @@ public static class WageEndpoints
 
         app.MapGet("/api/team-wages", (HttpContext ctx, IDbConnection db, long projectId, long teamId) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var sql = @"SELECT wr.name as worker_name, pw.daily_wage,
                         COUNT(DISTINCT w.year_month) as months,
                         COALESCE(SUM(w.work_days), 0) as work_days,

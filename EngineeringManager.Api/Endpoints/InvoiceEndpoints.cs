@@ -19,6 +19,7 @@ public static class InvoiceEndpoints
 
         app.MapGet("/api/invoices", (HttpContext ctx, IDbConnection db, long? projectId) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var sql = @"SELECT i.*, p.name as project_name,
                                seller.name as sellerName, buyer.name as buyerName,
                                CASE WHEN i.type='invoice_in' THEN seller.name ELSE buyer.name END as partner_name
@@ -74,6 +75,7 @@ public static class InvoiceEndpoints
 
         app.MapGet("/api/payment-records", (HttpContext ctx, IDbConnection db, string? paymentType, long? projectId) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var sql = @"SELECT pr.*, p.name as project_name, pt.name as partner_name
                         FROM payment_records pr
                         LEFT JOIN projects p ON pr.project_id=p.id

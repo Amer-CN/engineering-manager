@@ -49,6 +49,7 @@ public static class FileEndpoints
 
         app.MapGet("/api/files/read", (HttpContext ctx, string category, string fileName, string? projectName) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             try
             {
                 var baseDir = Path.Combine(ApiConfig.ResolveDataPath(), "uploads");
@@ -175,6 +176,7 @@ public static class FileEndpoints
 
         app.MapGet("/api/contracts/read-file", (HttpContext ctx, string fileName, string subCategory, string? projectName) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             try
             {
                 var baseDir = Path.Combine(ApiConfig.ResolveDataPath(), "uploads");

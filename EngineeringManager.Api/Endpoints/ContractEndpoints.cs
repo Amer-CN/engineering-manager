@@ -32,6 +32,7 @@ public static class ContractEndpoints
 
         app.MapGet("/api/contracts/expense", (HttpContext ctx, IDbConnection db, long? projectId) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var sql = "SELECT * FROM expense_contracts";
             if (projectId.HasValue) sql += " WHERE project_id=@ProjectId";
             sql += " ORDER BY created_at DESC";
@@ -40,6 +41,7 @@ public static class ContractEndpoints
 
         app.MapGet("/api/contracts/agreement", (HttpContext ctx, IDbConnection db, long? projectId) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var sql = "SELECT * FROM agreement_contracts";
             if (projectId.HasValue) sql += " WHERE project_id=@ProjectId";
             sql += " ORDER BY created_at DESC";

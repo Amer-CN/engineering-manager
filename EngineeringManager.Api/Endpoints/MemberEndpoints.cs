@@ -113,6 +113,7 @@ public static class MemberEndpoints
 
         app.MapGet("/api/project-workers", (HttpContext ctx, IDbConnection db, long? projectId) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var sql = @"SELECT pw.*, w.name as worker_name, w.id_card, w.gender, w.phone,
                         w.address, w.bank_account, w.bank_name, w.worker_type, w.daily_wage,
                         w.birth_date, w.ethnicity,

@@ -19,6 +19,7 @@ public static class CostLedgerEndpoints
 
         app.MapGet("/api/cost-ledger", (HttpContext ctx, IDbConnection db, long? projectId) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var sql = "SELECT * FROM cost_ledger";
             if (projectId.HasValue) sql += " WHERE project_id=@ProjectId";
             sql += " ORDER BY date DESC";
@@ -86,6 +87,7 @@ public static class CostLedgerEndpoints
 
         app.MapGet("/api/cost-ledger/categories", (HttpContext ctx, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             try
             {
                 var categories = db.Query("SELECT * FROM cost_ledger_categories").ToList();
@@ -132,7 +134,10 @@ public static class CostLedgerEndpoints
         // ═══════════════════════════════════════════════════════════
 
         app.MapGet("/api/cost-ledger/batches", (HttpContext ctx, IDbConnection db, long projectId) =>
-            Common.Ok(db.Query("SELECT * FROM cost_ledger_batches WHERE project_id=@ProjectId ORDER BY created_at DESC", new { ProjectId = projectId })));
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            return Common.Ok(db.Query("SELECT * FROM cost_ledger_batches WHERE project_id=@ProjectId ORDER BY created_at DESC", new { ProjectId = projectId }));
+        });
 
         app.MapPost("/api/cost-ledger/batches", async (HttpContext ctx, CostLedgerBatchDto dto, IDbConnection db) =>
         {
@@ -173,7 +178,10 @@ public static class CostLedgerEndpoints
         // ═══════════════════════════════════════════════════════════
 
         app.MapGet("/api/cost-ledger/match-rules", (HttpContext ctx, IDbConnection db) =>
-            Common.Ok(db.Query("SELECT * FROM cost_ledger_match_rules ORDER BY hit_count DESC")));
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            return Common.Ok(db.Query("SELECT * FROM cost_ledger_match_rules ORDER BY hit_count DESC"));
+        });
 
         app.MapPost("/api/cost-ledger/match-rules", async (HttpContext ctx, CostLedgerMatchRuleDto dto, IDbConnection db) =>
         {
