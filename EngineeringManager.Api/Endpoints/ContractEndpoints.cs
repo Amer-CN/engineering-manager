@@ -1,5 +1,6 @@
 using System.Data;
 using Dapper;
+using EngineeringManager.Api.Security;
 
 namespace EngineeringManager.Api;
 
@@ -16,12 +17,17 @@ public static class ContractEndpoints
         // 合同
         // ═══════════════════════════════════════════════════════════
 
-        app.MapGet("/api/contracts/income", (IDbConnection db, long? projectId) =>
+        app.MapGet("/api/contracts/income", (HttpContext ctx, IDbConnection db, long? projectId) =>
         {
+            var uid = CurrentUser.GetUserId(ctx);
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var sql = "SELECT * FROM income_contracts";
-            if (projectId.HasValue) sql += " WHERE project_id=@ProjectId";
+            if (projectId.HasValue)
+            {
+                sql += " WHERE project_id=@ProjectId AND " + CurrentUser.UserFilterFragment;
+            }
             sql += " ORDER BY created_at DESC";
-            return Common.Ok(db.Query(sql, new { ProjectId = projectId }));
+            return Common.Ok(db.Query(sql, new { ProjectId = projectId, Uid = uid, IsAdmin = isAdmin }));
         });
 
         app.MapGet("/api/contracts/expense", (IDbConnection db, long? projectId) =>
@@ -48,13 +54,14 @@ public static class ContractEndpoints
             expenseTotal = db.ExecuteScalar<decimal>("SELECT COALESCE(SUM(amount),0) FROM expense_contracts"),
         }));
 
-        app.MapPost("/api/contracts/income", async (dynamic dto, IDbConnection db) =>
+        app.MapPost("/api/contracts/income", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO income_contracts
-                (project_id,partner_id,contract_no,name,amount,signed_date,start_date,end_date,status,payment_method,remarks,created_at,updated_at)
-                VALUES (@ProjectId,@PartnerId,@ContractNo,@Name,@Amount,@SignedDate,@StartDate,@EndDate,@Status,@PaymentMethod,@Remarks,@Now,@Now);
+                (project_id,partner_id,contract_no,name,amount,signed_date,start_date,end_date,status,payment_method,remarks,created_by,created_at,updated_at)
+                VALUES (@ProjectId,@PartnerId,@ContractNo,@Name,@Amount,@SignedDate,@StartDate,@EndDate,@Status,@PaymentMethod,@Remarks,@CreatedBy,@Now,@Now);
                 SELECT last_insert_rowid();",
-                new { Now = now() });
+                new { CreatedBy = uid, Now = now() });
             return Common.Ok(id);
         });
 
