@@ -1,9 +1,12 @@
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { HoverScrollbar } from './ui/HoverScrollbar'
 import { Icon } from './ui/Icon'
 import { TABLE } from '@/constants/table'
 import { useStatusStore } from '@/store/statusStore'
+import { TableSkeleton, TableEmpty, TableRow } from './DataTable/TableParts'
+import { ColFilterDropdown } from './DataTable/ColFilterDropdown'
+import { TableCell } from './DataTable/TableCell'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 类型定义
@@ -106,63 +109,9 @@ const alignMap = {
 // 骨架屏
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function TableSkeleton({ columns, rows = 5 }: { columns: Column<never>[]; rows?: number }) {
-  return (
-    <div className={TABLE.container}>
-      <table className={TABLE.table}>
-        <thead className={`${TABLE.headerRow} ${TABLE.stickyHeader}`}>
-          <tr>
-            {columns.map(col => (
-              <th key={col.key} className={TABLE.headerCell} style={{ width: col.width }}>
-                {col.title}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {Array.from({ length: rows }).map((_, i) => (
-            <tr key={i} className={TABLE.bodyRow}>
-              {columns.map(col => (
-                <td key={col.key} className={TABLE.bodyCell}>
-                  <div className="h-4 bg-slate-200 rounded animate-pulse" />
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // 空状态
 // ═══════════════════════════════════════════════════════════════════════════════
-
-function TableEmpty({
-  colSpan,
-  text,
-  iconName,
-}: {
-  colSpan: number
-  text: string
-  iconName?: string | React.ReactNode
-}) {
-  return (
-    <tr>
-      <td colSpan={colSpan} className="px-4 py-16 text-center">
-        <div className="flex flex-col items-center gap-3 text-slate-400">
-          {typeof iconName === 'string' ? (
-            <Icon name={iconName} size={32} />
-          ) : iconName ? (
-            <div className="text-4xl">{iconName}</div>
-          ) : null}
-          <span className="text-sm">{text}</span>
-        </div>
-      </td>
-    </tr>
-  )
-}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Memoized 行组件
@@ -175,32 +124,6 @@ interface TableRowProps<T> {
   onClick?: (item: T) => void
   rowKeyStr: string
 }
-
-const TableRow = React.memo(function TableRow<T>({
-  item,
-  index,
-  columns,
-  onClick,
-  rowKeyStr,
-}: TableRowProps<T>) {
-  return (
-    <tr
-      onClick={onClick ? () => onClick(item) : undefined}
-      className={`${TABLE.bodyRow} ${onClick ? 'cursor-pointer' : ''}`}
-    >
-      {columns.map(col => (
-        <td
-          key={col.key}
-          className={`${TABLE.bodyCell} ${col.align ? alignMap[col.align] : ''}`}
-        >
-          {col.render
-            ? col.render(item, index)
-            : String((item as Record<string, unknown>)[col.key] ?? '-')}
-        </td>
-      ))}
-    </tr>
-  )
-}) as <T>(props: TableRowProps<T>) => React.ReactElement
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 列头筛选下拉框 (createPortal)
@@ -221,180 +144,6 @@ interface ColFilterDropdownProps {
   onClear: () => void
   /** 是否激活（有筛选条件） */
   isActive: boolean
-}
-
-function ColFilterDropdown({
-  col,
-  data,
-  checked,
-  onToggle,
-  onSelectAll,
-  onClear,
-  isActive,
-}: ColFilterDropdownProps) {
-  const [open, setOpen] = useState(false)
-  const [search, setSearch] = useState('')
-  const [pos, setPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 })
-  const btnRef = useRef<HTMLButtonElement>(null)
-  const popRef = useRef<HTMLDivElement>(null)
-
-  // 计算可选项列表
-  const options = useMemo(() => {
-    if (col.filterable === 'select' && col.filterOptions) {
-      return col.filterOptions.map(o => o.value)
-    }
-    // filterable === true，自动从 data 中提取唯一值
-    const accessor = col.filterAccessor || ((item: unknown) => String((item as Record<string, unknown>)[col.key] ?? ''))
-    const unique = new Set<string>()
-    for (const item of data) {
-      const val = accessor(item)
-      if (val) unique.add(val)
-    }
-    return Array.from(unique).sort()
-  }, [col, data])
-
-  const updatePos = useCallback(() => {
-    if (btnRef.current) {
-      const r = btnRef.current.getBoundingClientRect()
-      setPos({ top: r.bottom + 4, left: r.left })
-    }
-  }, [])
-
-  const handleToggle = useCallback(() => {
-    if (!open) {
-      setSearch('')
-      updatePos()
-      setOpen(true)
-    } else {
-      setOpen(false)
-    }
-  }, [open, updatePos])
-
-  // 点击外部关闭 (mousedown)
-  useEffect(() => {
-    if (!open) return
-    const handler = (e: MouseEvent) => {
-      if (
-        popRef.current && !popRef.current.contains(e.target as Node) &&
-        btnRef.current && !btnRef.current.contains(e.target as Node)
-      ) {
-        setOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [open])
-
-  // 滚动时更新位置
-  useEffect(() => {
-    if (!open) return
-    const handler = () => updatePos()
-    window.addEventListener('scroll', handler, true)
-    return () => window.removeEventListener('scroll', handler, true)
-  }, [open, updatePos])
-
-  // 搜索过滤
-  const q = search.trim().toLowerCase()
-  const filteredOptions = q ? options.filter(v => v.toLowerCase().includes(q)) : options
-  const allChecked = filteredOptions.length > 0 && filteredOptions.every(v => checked.has(v))
-
-  const handleSelectAll = () => {
-    if (allChecked) {
-      // 如果当前搜索结果全选了，则取消搜索结果中的所有项
-      for (const v of filteredOptions) {
-        if (checked.has(v)) onToggle(v)
-      }
-    } else {
-      // 选中搜索结果中未选中的项
-      for (const v of filteredOptions) {
-        if (!checked.has(v)) onToggle(v)
-      }
-    }
-  }
-
-  const handleLabel = (value: string) => {
-    // 如果有 filterOptions，使用 label 显示
-    if (col.filterable === 'select' && col.filterOptions) {
-      const opt = col.filterOptions.find(o => o.value === value)
-      return opt?.label ?? value
-    }
-    return value
-  }
-
-  return (
-    <>
-      <button
-        ref={btnRef}
-        type="button"
-        onClick={(e) => { e.stopPropagation(); handleToggle() }}
-        className={`ml-1 shrink-0 rounded p-0.5 transition-colors ${isActive ? 'bg-blue-100 text-blue-600' : 'text-slate-300 hover:text-slate-500'}`}
-        title={`筛选${col.title}`}
-      >
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
-          <path d="M0 0h10L6 4.5V9L4 10V4.5L0 0z" />
-        </svg>
-      </button>
-      {open && createPortal(
-        <div
-          ref={popRef}
-          className="fixed z-[100] w-52 rounded-lg border border-slate-200 bg-white shadow-xl"
-          style={{ top: pos.top, left: pos.left }}
-        >
-          {/* 搜索框 */}
-          <div className="p-1.5 border-b border-slate-100">
-            <input
-              autoFocus
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="搜索..."
-              className="w-full rounded border border-slate-200 px-2 py-1 text-xs text-slate-600 focus:border-blue-400 focus:outline-none"
-            />
-          </div>
-          {/* 全选/清除按钮 */}
-          <div className="flex gap-1 border-b border-slate-100 px-1.5 py-1">
-            <button type="button" onClick={handleSelectAll}
-              className="text-caption text-blue-600 hover:text-blue-800">
-              {allChecked ? '取消全选' : '全选'}
-            </button>
-            <button type="button" onClick={onClear}
-              className="text-caption text-slate-400 hover:text-slate-600">
-              清除
-            </button>
-            {search.trim() && (
-              <span className="ml-auto text-caption text-slate-400">
-                {filteredOptions.length}/{options.length}
-              </span>
-            )}
-          </div>
-          {/* checkbox 列表 */}
-          <div className="max-h-48 overflow-y-auto p-1">
-            {options.length === 0 ? (
-              <p className="px-2 py-1 text-xs text-slate-400">无可用值</p>
-            ) : filteredOptions.length === 0 ? (
-              <p className="px-2 py-1 text-xs text-slate-400">无匹配结果</p>
-            ) : (
-              filteredOptions.map(v => (
-                <label
-                  key={v}
-                  className="flex items-center gap-1.5 cursor-pointer rounded px-1 py-0.5 text-xs text-slate-600 hover:bg-slate-50"
-                >
-                  <input
-                    type="checkbox"
-                    checked={checked.has(v)}
-                    onChange={() => onToggle(v)}
-                    className="h-3 w-3 rounded border-slate-300 shrink-0"
-                  />
-                  <span className="truncate">{handleLabel(v)}</span>
-                </label>
-              ))
-            )}
-          </div>
-        </div>,
-        document.body
-      )}
-    </>
-  )
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -702,35 +451,3 @@ export function DataTable<T>({
 // ═══════════════════════════════════════════════════════════════════════════════
 // TableCell 辅助组件（Phase 2 迁移后移除）
 // ═══════════════════════════════════════════════════════════════════════════════
-
-export const TableCell = {
-  Text: ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
-    <span className={className}>{children}</span>
-  ),
-  Badge: ({
-    children,
-    color = 'primary',
-  }: {
-    children: React.ReactNode
-    color?: string
-  }) => {
-    const colors: Record<string, string> = {
-      primary: 'bg-primary-100 text-primary-700',
-      green: 'bg-green-100 text-green-700',
-      orange: 'bg-orange-100 text-orange-700',
-      red: 'bg-red-100 text-red-700',
-      gray: 'bg-slate-100 text-slate-700',
-      blue: 'bg-blue-100 text-blue-700',
-    }
-    return (
-      <span
-        className={`inline-block px-2 py-0.5 text-xs rounded-full ${colors[color] || colors.primary}`}
-      >
-        {children}
-      </span>
-    )
-  },
-  Actions: ({ children }: { children: React.ReactNode }) => (
-    <div className="flex items-center gap-1">{children}</div>
-  ),
-}

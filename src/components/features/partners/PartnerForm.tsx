@@ -1,12 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { OCRRecognitionFeedback } from '../../ui/OCRRecognitionFeedback'
 import { Partner, Project } from '../../../types/electron'
 import { partnerCategories } from '../../../data/regions'
 import { FileDropZone } from './FileDropZone'
 import { useToastStore } from '@/store/toastStore'
-import { useBusinessLicenseOCR } from '@/hooks/useBusinessLicenseOCR'
-import { initializeBuiltInConfig } from '@/services/ocr'
-import { Icon } from '../../ui/Icon'
+import { BusinessLicenseOCRBlock } from './BusinessLicenseOCRBlock'
 
 interface PartnerFormProps {
   partner?: Partner | null
@@ -47,17 +44,10 @@ export const PartnerForm: React.FC<PartnerFormProps> = ({
   const [formData, setFormData] = useState(defaultFormData)
   const [licenseDragOver, setLicenseDragOver] = useState(false)
   const [otherFilesDragOver, setOtherFilesDragOver] = useState(false)
-  const [businessLicenseLoading, setBusinessLicenseLoading] = useState(false)
-  const [ocrStatus, setOcrStatus] = useState<'idle' | 'recognizing' | 'success' | 'error'>('idle')
-  const [ocrFields, setOcrFields] = useState<{ label: string; value: string }[]>([])
-  const [ocrError, setOcrError] = useState('')
   const licenseInputRef = useRef<HTMLInputElement>(null)
   const otherFilesInputRef = useRef<HTMLInputElement>(null)
 
   // 初始化 OCR 配置
-  useEffect(() => { initializeBuiltInConfig() }, [])
-
-  // 粘贴上传支持
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
       const items = e.clipboardData?.items
@@ -114,39 +104,6 @@ export const PartnerForm: React.FC<PartnerFormProps> = ({
     reader.onload = (e) => onData(e.target?.result as string, file.type === 'application/pdf' ? 'pdf' : 'image')
     reader.readAsDataURL(file)
   }
-
-  // 营业执照 OCR 识别
-  const handleBusinessLicenseOCR = async () => {
-    if (!formData.licenseFile) {
-      showToast('请先上传营业执照图片或PDF', 'error')
-      return
-    }
-    setBusinessLicenseLoading(true)
-    try {
-      const response = await fetch(formData.licenseFile)
-      const blob = await response.blob()
-      const file = new File([blob], formData.licenseFileType === 'pdf' ? 'license.pdf' : 'license.jpg', { type: formData.licenseFileType === 'pdf' ? 'application/pdf' : 'image/jpeg' })
-      showToast('正在识别营业执照...', 'info')
-      const result = await processBusinessLicenseFile(file)
-      if (result) {
-        setFormData(prev => ({
-          ...prev,
-          name: result.companyName || prev.name,
-          creditCode: result.creditCode || prev.creditCode,
-          registeredAddress: result.address || prev.registeredAddress,
-          businessScope: result.businessScope || prev.businessScope,
-        }))
-        showToast('营业执照识别成功，已自动填充', 'success')
-      } else {
-        showToast('识别未返回结果，请检查图片', 'error')
-      }
-    } catch (err: any) {
-      showToast('识别失败: ' + (err.message || '未知错误'), 'error')
-    } finally {
-      setBusinessLicenseLoading(false)
-    }
-  }
-
   const toggleProject = (projectId: number) => {
     setFormData(prev => ({
       ...prev,
@@ -342,63 +299,17 @@ export const PartnerForm: React.FC<PartnerFormProps> = ({
           onClickUpload={() => licenseInputRef.current?.click()}
         />
 
-        {/* 营业执照 OCR 识别按钮 */}
-        {formData.licenseFile && (
-          <button
-            type="button"
-            onClick={async () => {
-              setBusinessLicenseLoading(true)
-              setOcrStatus('recognizing')
-              setOcrFields([])
-              setOcrError('')
-              try {
-                const response = await fetch(formData.licenseFile)
-                const blob = await response.blob()
-                const file = new File([blob], formData.licenseFileType === 'pdf' ? 'license.pdf' : 'license.jpg', { type: formData.licenseFileType === 'pdf' ? 'application/pdf' : 'image/jpeg' })
-                const result = await processBusinessLicenseFile(file)
-                if (result) {
-                  const fields: { label: string; value: string }[] = []
-                  if (result.companyName) { fields.push({ label: '公司名称', value: result.companyName }); setFormData(prev => ({ ...prev, name: result.companyName || prev.name })) }
-                  if (result.creditCode) { fields.push({ label: '信用代码', value: result.creditCode }); setFormData(prev => ({ ...prev, creditCode: result.creditCode || prev.creditCode })) }
-                  if (result.address) { fields.push({ label: '注册地址', value: result.address }); setFormData(prev => ({ ...prev, registeredAddress: result.address || prev.registeredAddress })) }
-                  if (result.businessScope) { fields.push({ label: '经营范围', value: result.businessScope }); setFormData(prev => ({ ...prev, businessScope: result.businessScope || prev.businessScope })) }
-                  setOcrFields(fields)
-                  setOcrStatus('success')
-                } else {
-                  setOcrError('识别未返回结果，请检查图片是否清晰')
-                  setOcrStatus('error')
-                }
-              } catch (err: any) {
-                setOcrError(err.message || '未知错误')
-                setOcrStatus('error')
-              }
-              setBusinessLicenseLoading(false)
-            }}
-            disabled={businessLicenseLoading}
-            className={`btn w-full flex items-center justify-center gap-2 transition-all duration-300 ${
-              businessLicenseLoading
-                ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0'
-                : 'btn-primary'
-            }`}
-          >
-            {businessLicenseLoading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                <span className="animate-pulse">AI 正在识别营业执照...</span>
-              </>
-            ) : (
-              <>
-                <Icon name="Sparkles" size={16} />
-                AI 识别营业执照（自动填入公司信息）
-              </>
-            )}
-          </button>
-        )}
-        <OCRRecognitionFeedback
-          status={ocrStatus}
-          fields={ocrFields}
-          errorMessage={ocrError}
-          onDismiss={() => setOcrStatus('idle')}
+        { /* BusinessLicenseOCR (v1.1.0 extracted) */ }
+        <BusinessLicenseOCRBlock
+          licenseFile={formData.licenseFile}
+          licenseFileType={formData.licenseFileType}
+          onResult={fields => setFormData(prev => ({
+            ...prev,
+            name: fields.name || prev.name,
+            creditCode: fields.creditCode || prev.creditCode,
+            registeredAddress: fields.registeredAddress || prev.registeredAddress,
+            businessScope: fields.businessScope || prev.businessScope
+          }))}
         />
 
         {/* 其他附件上传 */}

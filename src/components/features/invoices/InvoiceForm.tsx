@@ -11,6 +11,7 @@ import { useToastStore } from '@/store/toastStore'
 import { useInvoiceOCR } from '@/hooks/useInvoiceOCR'
 import { Icon } from '../../ui/Icon'
 import { HoverScrollbar } from '../../ui/HoverScrollbar'
+import { InvoiceOCRBlock } from './InvoiceOCRBlock'
 
 export interface InvoiceFormData {
   type: InvoiceType
@@ -50,7 +51,6 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
   const [formData, setFormData] = useState<InvoiceFormData>(initialData)
   const [dragOverFile, setDragOverFile] = useState(false)
   const [previewFile, setPreviewFile] = useState<{data: string, type: 'image' | 'pdf', title: string} | null>(null)
-  const [ocrLoading, setOcrLoading] = useState(false)
   const [duplicateInvoice, setDuplicateInvoice] = useState<{ id: number; invoiceNo: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -94,86 +94,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
   checkDuplicateInvoice(value)
   }, [checkDuplicateInvoice])
 
-  const [ocrResult, setOcrResult] = useState<string | null>(null)
 
-  const handleOCR识别 = async () => {
-  if (!formData.fileUrl) {
-  showToast('请先上传发票文件', 'error')
-  return
-  }
-
-  setOcrLoading(true)
-  setOcrResult(null)
-  try {
-  // 将 base64 转为 File 对象
-  const response = await fetch(formData.fileUrl)
-  const blob = await response.blob()
-  const fileType = formData.fileType === 'pdf' ? 'application/pdf' : 'image/jpeg'
-  const fileName = formData.fileType === 'pdf' ? 'invoice.pdf' : 'invoice.jpg'
-  const file = new File([blob], fileName, { type: fileType })
-
-  const result = await processInvoiceFile(file)
-
-  if (result) {
-  // 自动匹配销售方/购买方
-  const matchedSeller = partners.find(p => p.name === result.sellerName)
-  const matchedBuyer = partners.find(p => p.name === result.purchaserName)
-
-  // 匹配税率选项
-  const matchedTaxRate = taxRateOptions.find(opt => opt.value === result.taxRate)?.value
-
-  // 判断发票类型
-  let invoiceKind: InvoiceKind = formData.invoiceKind
-  const typeStr = result.invoiceType.toLowerCase()
-  if (typeStr.includes('专用') || typeStr.includes('special')) {
-  invoiceKind = typeStr.includes('电子') || typeStr.includes('electronic') ? 'electronic_special' : 'paper_special'
-  } else if (typeStr.includes('普通') || typeStr.includes('regular') || typeStr.includes('ordinary')) {
-  invoiceKind = typeStr.includes('电子') || typeStr.includes('electronic') ? 'electronic_regular' : 'paper_regular'
-  }
-
-  // 从备注中提取项目信息并匹配
-  let matchedProjectId = formData.projectId
-  if (result.remarks) {
-  const matchedProject = projects.find(p => result.remarks.includes(p.name))
-  if (matchedProject) matchedProjectId = matchedProject.id
-  }
-
-  const newData = {
-  invoiceKind: invoiceKind,
-  invoiceNo: result.invoiceNo || formData.invoiceNo,
-  invoiceCode: result.invoiceCode || formData.invoiceCode,
-  issueDate: result.issueDate || formData.issueDate,
-  name: result.itemName || formData.name,
-  amount: result.amount || formData.amount,
-  priceAmount: result.priceAmount || formData.priceAmount,
-  taxAmount: result.taxAmount || formData.taxAmount,
-  taxRate: matchedTaxRate !== undefined ? matchedTaxRate : formData.taxRate,
-  sellerId: matchedSeller ? matchedSeller.id : formData.sellerId,
-  buyerId: matchedBuyer ? matchedBuyer.id : formData.buyerId,
-  projectId: matchedProjectId,
-  remarks: result.remarks || formData.remarks,
-  }
-
-  setFormData(prev => ({ ...prev, ...newData }))
-
-  // 显示识别结果摘要
-  const summary = [
-  result.invoiceNo ? `发票号: ${result.invoiceNo}` : null,
-  result.amount ? `金额: ¥${result.amount.toLocaleString()}` : null,
-  result.itemName ? `项目: ${result.itemName}` : null,
-  matchedSeller ? `销售方: ${matchedSeller.name}` : null,
-  matchedBuyer ? `购买方: ${matchedBuyer.name}` : null,
-  ].filter(Boolean).join(' | ')
-
-  setOcrResult(summary)
-  showToast('🎉 AI 识别成功！已自动填入 12 个字段', 'success')
-  }
-  } catch (err: any) {
-  showToast(`识别失败: ${err.message}`, 'error')
-  } finally {
-  setOcrLoading(false)
-  }
-  }
 
   useEffect(() => {
   const handlePaste = (e: ClipboardEvent) => {
@@ -393,50 +314,22 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
   onClickUpload={() => fileInputRef.current?.click()}
   />
 
-  {/* OCR 识别按钮 */}
-  {formData.fileUrl && (
-  <div className="space-y-2">
-  <button
-  type="button"
-  onClick={handleOCR识别}
-  disabled={ocrLoading}
-  className={`btn w-full flex items-center justify-center gap-2 transition-all duration-300 ${
-  ocrLoading
-  ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0'
-  : 'btn-primary'
-  }`}
-  >
-  {ocrLoading ? (
-  <>
-  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-  <span className="animate-pulse">AI 正在识别发票内容...</span>
-  </>
-  ) : (
-  <>
-  <Icon name="Sparkles" size={16} />
-  AI 识别发票（自动填入）
-  </>
-  )}
-  </button>
-
-  {/* 识别结果提示 */}
-  {ocrResult && (
-  <motion.div
-  initial={{ opacity: 0, y: -10 }}
-  animate={{ opacity: 1, y: 0 }}
-  className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg"
-  >
-  <div className="flex items-start gap-2">
-  <Icon name="CheckCircle" size={16} className="text-emerald-600 mt-0.5 flex-shrink-0" />
-  <div className="text-sm text-emerald-700">
-  <p className="font-medium mb-1">AI 已自动填入以下信息：</p>
-  <p className="text-emerald-600">{ocrResult}</p>
-  </div>
-  </div>
-  </motion.div>
-  )}
-  </div>
-  )}
+  { /* InvoiceOCR (v1.1.0 extracted) */ }
+  <InvoiceOCRBlock
+    fileUrl={formData.fileUrl}
+    fileType={formData.fileType}
+    onResult={fields => setFormData(prev => ({
+      ...prev,
+      invoiceNo: fields.invoiceNo || prev.invoiceNo,
+      amount: fields.amount || prev.amount,
+      priceAmount: fields.priceAmount || prev.priceAmount,
+      taxAmount: fields.taxAmount || prev.taxAmount,
+      taxRate: fields.taxRate || prev.taxRate,
+      sellerName: fields.sellerName || prev.sellerName,
+      purchaserName: fields.purchaserName || prev.purchaserName,
+      issueDate: fields.issueDate || prev.issueDate
+    }))}
+  />
   </div></HoverScrollbar>
   <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 shrink-0">
   <button type="button" onClick={onCancel} className="btn btn-secondary">取消</button>
