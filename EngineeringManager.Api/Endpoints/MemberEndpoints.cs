@@ -32,31 +32,36 @@ public static class MemberEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO members
                 (name,phone,email,member_type,role,id_card,gender,ethnicity,birth_date,id_card_address,
-                 base_salary,daily_wage,entry_date,status,department_id,position,created_at)
+                 base_salary,daily_wage,entry_date,status,department_id,position,created_by,created_at)
                 VALUES (@Name,@Phone,@Email,@MemberType,@Role,@IdCard,@Gender,@Ethnicity,@BirthDate,
-                        @IdCardAddress,@BaseSalary,@DailyWage,@EntryDate,@Status,@DepartmentId,@Position,@Now);
+                        @IdCardAddress,@BaseSalary,@DailyWage,@EntryDate,@Status,@DepartmentId,@Position,@CreatedBy,@Now);
                 SELECT last_insert_rowid();",
                 new { dto.Name, dto.Phone, dto.Email, MemberType = dto.MemberType ?? "staff",
                       dto.Role, dto.IdCard, dto.Gender, dto.Ethnicity, dto.BirthDate, dto.IdCardAddress,
                       dto.BaseSalary, dto.DailyWage, dto.EntryDate, Status = dto.Status ?? "active",
-                      dto.DepartmentId, dto.Position, Now = now() });
-            return Common.Ok(id);
-        });
+                      dto.DepartmentId, dto.Position, CreatedBy = uid, Now = now() });
+            return Common.Ok(id);        });
 
         app.MapPut("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var affected = await db.ExecuteAsync(@"UPDATE members SET name=@Name,phone=@Phone,email=@Email,
                 member_type=@MemberType,role=@Role,id_card=@IdCard,gender=@Gender,ethnicity=@Ethnicity,
                 birth_date=@BirthDate,id_card_address=@IdCardAddress,base_salary=@BaseSalary,daily_wage=@DailyWage,
-                entry_date=@EntryDate,status=@Status,department_id=@DepartmentId,position=@Position WHERE id=@Id",
+                entry_date=@EntryDate,status=@Status,department_id=@DepartmentId,position=@Position WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
                 new { dto.Id, dto.Name, dto.Phone, dto.Email, dto.MemberType, dto.Role, dto.IdCard,
-                      dto.Gender, dto.Ethnicity, dto.BirthDate, dto.IdCardAddress, dto.BaseSalary,
+                      Uid = uid, IsAdmin = isAdmin, dto.Gender, dto.Ethnicity, dto.BirthDate, dto.IdCardAddress, dto.BaseSalary,
                       dto.DailyWage, dto.EntryDate, dto.Status, dto.DepartmentId, dto.Position });
-            return affected > 0 ? Common.Ok() : Common.NotFound("成员不存在");
+            return affected > 0 ? Common.Ok() : Results.Forbid();
         });
 
         app.MapDelete("/api/members/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM members WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("成员不存在"));
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            return (await db.ExecuteAsync("DELETE FROM members WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
+        });
 
         // ═══════════════════════════════════════════════════════════
         // 工人
