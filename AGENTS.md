@@ -1,6 +1,6 @@
-﻿# AGENTS.md - 工程管家项目约定
-> 项目状态：v1.0.0 — 架构重构 + 数据治理 + Repository 层 + React Query
-> 最后同步：2026-06-17（v1.0.0 发布收尾 + P0/P1 安全修复 + 文档差距修正）
+# AGENTS.md - 工程管家项目约定
+> 项目状态：v1.1.0 — P0-4 完整版（SQL 端点改造 169/171 端点）+ P0-3-A API 脱敏 + P2.1 字段统一
+> 最后同步：2026-06-18（v1.1.0 收尾 + P0 安全基线补齐 + 文档差距修正）
 
 ## 🗣️ 输出语言
 - **默认中文输出**：所有解释、描述、分析、提问、总结等文字内容使用中文
@@ -247,9 +247,38 @@ export function useProjects() {
 - **语义化版本**：patch(Bug修复) / minor(新功能模块) / major(架构级变更)
 - 版本号引用位置：`package.json` / `Sidebar.tsx` / `Login.tsx` / `installer/src/App.tsx` / `CHANGELOG.md`
 
-### 当前版本：v1.0.0
+### 当前版本：v1.1.0
 
 *本文档与 `CHANGELOG.md`、`docs/` 保持同步。*
+
+---
+
+## 🚦 红绿灯（v1.1.0 起）
+
+每个 sprint 收尾 / release 前必跑，0 error 才算合格。完整流程见 [docs/SMOKE-TEST.md](docs/SMOKE-TEST.md)。
+
+```bash
+# 1. 后端编译
+cd "E:\\测试\\EngineeringManager.Api" && dotnet build 2>&1 | Select-String -Pattern "错误|Build succeeded"
+cd "E:\\测试\\EngineeringManager.Api" && dotnet build 2>&1 | Select-String -Pattern "(warning|error|生成成功|生成失败|Build)"
+
+# 2. 后端单元测试
+cd "E:\\测试\\EngineeringManager.Tests" && dotnet test 2>&1 | Select-String -Pattern "通过:|失败:|总计:"
+
+# 3. 前端规则检查
+cd "E:\\测试" && npm run check 2>&1 | Select-String -Pattern "HARD FAIL|passed|failed"
+
+# 4. 前端构建
+cd "E:\\测试" && npx vite build 2>&1 | Select-String -Pattern "error|success|✓|✗"
+```
+
+**通过标准**：
+- 后端 0 错误 0 警告
+- tests 8/8 通过
+- 前端 check 0 HARD FAIL
+- vite build 11-12 秒成功
+
+**4 项全绿才可 git tag v1.x.0**。任何一项红 → 标记 WIP，先修。
 
 ---
 
