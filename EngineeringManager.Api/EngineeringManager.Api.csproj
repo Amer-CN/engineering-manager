@@ -28,4 +28,7 @@
     </Content>
   </ItemGroup>
 
-</Project>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Migrations\Scripts\*.sql" />
+  </ItemGroup></Project>

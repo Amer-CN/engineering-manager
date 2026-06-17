@@ -20,4 +20,9 @@
     <ProjectReference Include="..\EngineeringManager.Api\EngineeringManager.Api.csproj" />
   </ItemGroup>
 
-</Project>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\EngineeringManager.Api\Migrations\Scripts\*.sql">
+      <Link>Migrations\Scripts\%(Filename)%(Extension)</Link>
+    </EmbeddedResource>
+  </ItemGroup></Project>
