@@ -31,6 +31,9 @@ public static class AuthEndpoints
             var version = (int)(user.password_hash_version ?? 1);
             var computedHash = Common.HashPassword(dto.Password, salt, version);
 
+            // v0.71.0 P2.1: 检测旧库未迁移用户 (password_hash 为空, 来自 001 旧 password+salt 字段)
+            if (string.IsNullOrEmpty((string)user.password_hash))
+                return Common.Fail("账户需要重置密码, 请联系管理员 (v0.71.0 数据迁移)");
             if (computedHash != (string)user.password_hash)
                 return Common.Fail("用户名或密码错误");
 
