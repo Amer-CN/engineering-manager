@@ -181,11 +181,17 @@ builder.Services.ConfigureHttpJsonOptions(options =>
         // 文件操作 + 图纸
         app.RegisterFileEndpoints();
 
+        // 区域 + 模板 + 费用 + 项目工人杂项
+        app.RegisterRegionEndpoints();
+        app.RegisterTemplateEndpoints();
+        app.RegisterExpenseEndpoints();
+        app.RegisterProjectWorkerMiscEndpoints();
+
         // OCR（百度）
         app.RegisterOcrEndpoints();
         OcrSetupWizard.Map(app);
 
-        // 健康检查 + 快照 + 配置 + 审计日志 + 区域 + 费用 + 模板
+        // 健康检查 + 快照 + 配置 + 审计日志
         app.RegisterSystemEndpoints();
     }
     // ============ P0-1: 从 config.json 读取 dataPath ============

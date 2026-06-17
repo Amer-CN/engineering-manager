@@ -25,34 +25,6 @@ public static class SystemEndpoints
         });
 
         // ═══════════════════════════════════════════════════════════
-        // 区域
-        // ═══════════════════════════════════════════════════════════
-
-        app.MapGet("/api/regions", (HttpContext ctx, IDbConnection db) =>
-            Common.Ok(db.Query("SELECT * FROM regions ORDER BY province, city, district")));
-
-        app.MapPost("/api/regions", async (HttpContext ctx, RegionDto dto, IDbConnection db) =>
-        {
-            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO regions (province,city,district)
-                VALUES (@Province,@City,@District); SELECT last_insert_rowid();", dto);
-            return Common.Ok(id);
-        });
-
-        app.MapDelete("/api/regions/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM regions WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("区域不存在"));
-
-        // ═══════════════════════════════════════════════════════════
-        // 模板
-        // ═══════════════════════════════════════════════════════════
-
-        app.MapGet("/api/templates", (HttpContext ctx, IDbConnection db) =>
-            Common.Ok(db.Query("SELECT * FROM templates ORDER BY created_at DESC")));
-
-        app.MapDelete("/api/templates/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM templates WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("模板不存在"));
-
-        // ═══════════════════════════════════════════════════════════
         // 审计日志
         // ═══════════════════════════════════════════════════════════
 
@@ -84,32 +56,6 @@ public static class SystemEndpoints
                 return Common.Fail($"审计日志写入失败: {ex.Message}");
             }
         });
-
-        // ═══════════════════════════════════════════════════════════
-        // 费用
-        // ═══════════════════════════════════════════════════════════
-
-        app.MapGet("/api/expenses", (HttpContext ctx, IDbConnection db, long? projectId) =>
-        {
-            var sql = "SELECT * FROM expenses";
-            if (projectId.HasValue) sql += " WHERE project_id=@ProjectId";
-            sql += " ORDER BY created_at DESC";
-            return Common.Ok(db.Query(sql, new { ProjectId = projectId }));
-        });
-
-        app.MapPost("/api/expenses", async (HttpContext ctx, ExpenseDto dto, IDbConnection db) =>
-        {
-            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO expenses
-                (project_id,category,amount,date,description,vendor,receipt_url,created_at,updated_at)
-                VALUES (@ProjectId,@Category,@Amount,@Date,@Description,@Vendor,@ReceiptUrl,@Now,@Now);
-                SELECT last_insert_rowid();",
-                new { dto.ProjectId, dto.Category, dto.Amount, dto.Date, dto.Description, dto.Vendor, dto.ReceiptUrl, Now = now() });
-            return Common.Ok(id);
-        });
-
-        app.MapDelete("/api/expenses/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM expenses WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("费用不存在"));
 
         // ═══════════════════════════════════════════════════════════
         // 快照
@@ -399,64 +345,6 @@ public static class SystemEndpoints
                     error = ex.Message
                 });
             }
-        });
-
-        // ═══════════════════════════════════════════════════════════
-        // 项目工人批量（补全）
-        // ═══════════════════════════════════════════════════════════
-
-        app.MapPost("/api/project-workers/batch", async (HttpContext ctx, List<dynamic> records, IDbConnection db) =>
-        {
-            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            var count = 0;
-            foreach (var dto in records)
-            {
-                await db.ExecuteAsync(@"INSERT INTO project_workers (worker_id,project_id,team_id,daily_wage,worker_type,entry_date,status,created_at)
-                    VALUES (@WorkerId,@ProjectId,@TeamId,@DailyWage,@WorkerType,@EntryDate,'active',@Now)",
-                    new { Now = now() });
-                count++;
-            }
-            return Common.Ok(new { count });
-        });
-
-        app.MapPut("/api/project-workers", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
-        {
-            var affected = await db.ExecuteAsync(@"UPDATE project_workers SET team_id=@TeamId,daily_wage=@DailyWage,worker_type=@WorkerType,entry_date=@EntryDate,status=@Status WHERE id=@Id",
-                new { Now = now() });
-            return affected > 0 ? Common.Ok() : Common.NotFound("记录不存在");
-        });
-
-        app.MapPut("/api/invoices/{id}/status", async (HttpContext ctx, long id, dynamic dto, IDbConnection db) =>
-        {
-            var affected = await db.ExecuteAsync("UPDATE invoices SET status=@Status,updated_at=@Now WHERE id=@Id",
-                new { Status = (string)dto.status, Now = now(), Id = id });
-            return affected > 0 ? Common.Ok() : Common.NotFound("发票不存在");
-        });
-
-        // ═══════════════════════════════════════════════════════════
-        // 模板写操作（补全）
-        // ═══════════════════════════════════════════════════════════
-
-        app.MapGet("/api/templates/stats", (HttpContext ctx, IDbConnection db) => Common.Ok(new
-        {
-            total = db.ExecuteScalar<int>("SELECT COUNT(*) FROM templates"),
-            byCategory = db.Query("SELECT category, COUNT(*) as count FROM templates GROUP BY category"),
-        }));
-
-        app.MapPost("/api/templates", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
-        {
-            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO templates (name,category,description,file_name,stored_file_name,file_type,created_at,updated_at)
-                VALUES (@Name,@Category,@Description,@FileName,@StoredFileName,@FileType,@Now,@Now); SELECT last_insert_rowid();",
-                new { Now = now() });
-            return Common.Ok(id);
-        });
-
-        app.MapPut("/api/templates", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
-        {
-            var affected = await db.ExecuteAsync(@"UPDATE templates SET name=@Name,category=@Category,description=@Description,updated_at=@Now WHERE id=@Id",
-                new { Now = now() });
-            return affected > 0 ? Common.Ok() : Common.NotFound("模板不存在");
         });
 
         // ═══════════════════════════════════════════════════════════
