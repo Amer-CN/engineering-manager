@@ -36,39 +36,33 @@ public static class WageEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO attendances
                 (member_id,project_id,project_worker_id,year_month,work_days,days_off,is_full_attendance,
-                 daily_status,file_url,file_name,created_at,updated_at)
+                 daily_status,file_url,file_name,created_by,created_at,updated_at)
                 VALUES (@MemberId,@ProjectId,@ProjectWorkerId,@YearMonth,@WorkDays,@DaysOff,@IsFullAttendance,
-                        @DailyStatus,@FileUrl,@FileName,@Now,@Now);
+                        @DailyStatus,@FileUrl,@FileName,@CreatedBy,@Now,@Now);
                 SELECT last_insert_rowid();",
                 new { dto.MemberId, dto.ProjectId, dto.ProjectWorkerId, dto.YearMonth,
                       dto.WorkDays, dto.DaysOff, dto.IsFullAttendance, dto.DailyStatus,
-                      dto.FileUrl, dto.FileName, Now = now() });
+                      dto.FileUrl, dto.FileName, CreatedBy = uid, Now = now() });
             return Common.Ok(id);
         });
 
         app.MapPut("/api/attendances", async (HttpContext ctx, AttendanceDto dto, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var affected = await db.ExecuteAsync(@"UPDATE attendances SET work_days=@WorkDays,days_off=@DaysOff,
                 is_full_attendance=@IsFullAttendance,daily_status=@DailyStatus,file_url=@FileUrl,
-                file_name=@FileName,updated_at=@Now WHERE id=@Id",
+                file_name=@FileName,updated_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
                 new { dto.Id, dto.WorkDays, dto.DaysOff, dto.IsFullAttendance, dto.DailyStatus,
-                      dto.FileUrl, dto.FileName, Now = now() });
-            return affected > 0 ? Common.Ok() : Common.NotFound("考勤记录不存在");
+                      dto.FileUrl, dto.FileName, Uid = uid, IsAdmin = isAdmin, Now = now() });
+            return affected > 0 ? Common.Ok() : Results.Forbid();
         });
 
         app.MapDelete("/api/attendances/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM attendances WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("考勤记录不存在"));
-
-        // ═══════════════════════════════════════════════════════════
-        // 考勤批量操作
-        // ═══════════════════════════════════════════════════════════
-
-        app.MapGet("/api/attendances/member/{memberId}", (HttpContext ctx, long memberId, IDbConnection db, string? yearMonth) =>
         {
-            var sql = "SELECT * FROM attendances WHERE member_id=@MemberId";
-            if (!string.IsNullOrEmpty(yearMonth)) sql += " AND year_month=@YearMonth";
-            sql += " ORDER BY updated_at DESC";
-            return Common.Ok(db.Query(sql, new { MemberId = memberId, YearMonth = yearMonth }));
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            return (await db.ExecuteAsync("DELETE FROM attendances WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
         });
 
         app.MapPost("/api/attendances/batch-delete", async (HttpContext ctx, List<long> ids, IDbConnection db) =>
@@ -144,39 +138,35 @@ public static class WageEndpoints
             var actualWage = dto.ActualWage ?? (dto.DailyWage * dto.WorkDays + dto.Bonus - dto.Deduction);
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO wages
                 (project_id,member_id,project_worker_id,year_month,daily_wage,work_days,bonus,deduction,
-                 actual_wage,paid_amount,paid_date,created_at,updated_at)
+                 actual_wage,paid_amount,paid_date,created_by,created_at,updated_at)
                 VALUES (@ProjectId,@MemberId,@ProjectWorkerId,@YearMonth,@DailyWage,@WorkDays,@Bonus,@Deduction,
-                        @ActualWage,@PaidAmount,@PaidDate,@Now,@Now);
+                        @ActualWage,@PaidAmount,@PaidDate,@CreatedBy,@Now,@Now);
                 SELECT last_insert_rowid();",
                 new { dto.ProjectId, dto.MemberId, dto.ProjectWorkerId, dto.YearMonth, dto.DailyWage,
                       dto.WorkDays, dto.Bonus, dto.Deduction, ActualWage = actualWage,
-                      dto.PaidAmount, dto.PaidDate, Now = now() });
+                      dto.PaidAmount, dto.PaidDate, CreatedBy = uid, Now = now() });
             return Common.Ok(id);
         });
 
         app.MapPut("/api/wages", async (HttpContext ctx, WageDto dto, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var actualWage = dto.ActualWage ?? (dto.DailyWage * dto.WorkDays + dto.Bonus - dto.Deduction);
             var affected = await db.ExecuteAsync(@"UPDATE wages SET daily_wage=@DailyWage,work_days=@WorkDays,
                 bonus=@Bonus,deduction=@Deduction,actual_wage=@ActualWage,paid_amount=@PaidAmount,
-                paid_date=@PaidDate,updated_at=@Now WHERE id=@Id",
+                paid_date=@PaidDate,updated_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
                 new { dto.Id, dto.DailyWage, dto.WorkDays, dto.Bonus, dto.Deduction,
-                      ActualWage = actualWage, dto.PaidAmount, dto.PaidDate, Now = now() });
-            return affected > 0 ? Common.Ok() : Common.NotFound("工资记录不存在");
+                      ActualWage = actualWage, dto.PaidAmount, dto.PaidDate,
+                      Uid = uid, IsAdmin = isAdmin, Now = now() });
+            return affected > 0 ? Common.Ok() : Results.Forbid();
         });
 
         app.MapDelete("/api/wages/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM wages WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("工资记录不存在"));
-
-        // ═══════════════════════════════════════════════════════════
-        // 工资批量操作
-        // ═══════════════════════════════════════════════════════════
-
-        app.MapPost("/api/wages/generate", (HttpContext ctx, dynamic dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            // 简化版：从考勤生成工资
-            return Common.Ok(new { newCount = 0, archivedSkipped = 0 });
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            return (await db.ExecuteAsync("DELETE FROM wages WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
         });
 
         app.MapPost("/api/wages/batch-delete", async (HttpContext ctx, List<long> ids, IDbConnection db) =>
