@@ -12,8 +12,11 @@ public static class TemplateEndpoints
     public static void RegisterTemplateEndpoints(this WebApplication app)
     {
         // 模板 — 基础查询 + 删除
-        app.MapGet("/api/templates", (IDbConnection db) =>
-            Common.Ok(db.Query("SELECT * FROM templates ORDER BY created_at DESC")));
+        app.MapGet("/api/templates", (HttpContext ctx, IDbConnection db) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            return Common.Ok(db.Query("SELECT * FROM templates ORDER BY created_at DESC"));
+        });
 
         app.MapDelete("/api/templates/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
@@ -22,11 +25,15 @@ public static class TemplateEndpoints
         });
 
         // 模板 — 统计 + 创建 + 更新
-        app.MapGet("/api/templates/stats", (IDbConnection db) => Common.Ok(new
+        app.MapGet("/api/templates/stats", (HttpContext ctx, IDbConnection db) =>
         {
-            total = db.ExecuteScalar<int>("SELECT COUNT(*) FROM templates"),
-            byCategory = db.Query("SELECT category, COUNT(*) as count FROM templates GROUP BY category"),
-        }));
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            return Common.Ok(new
+            {
+                total = db.ExecuteScalar<int>("SELECT COUNT(*) FROM templates"),
+                byCategory = db.Query("SELECT category, COUNT(*) as count FROM templates GROUP BY category"),
+            });
+        });
 
         app.MapPost("/api/templates", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
         {

@@ -11,8 +11,11 @@ public static class RegionEndpoints
 {
     public static void RegisterRegionEndpoints(this WebApplication app)
     {
-        app.MapGet("/api/regions", (IDbConnection db) =>
-            Common.Ok(db.Query("SELECT * FROM regions ORDER BY province, city, district")));
+        app.MapGet("/api/regions", (HttpContext ctx, IDbConnection db) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            return Common.Ok(db.Query("SELECT * FROM regions ORDER BY province, city, district"));
+        });
 
         app.MapPost("/api/regions", async (HttpContext ctx, RegionDto dto, IDbConnection db) =>
         {

@@ -19,6 +19,7 @@ public static class ProjectEndpoints
 
                 app.MapGet("/api/dashboard/stats", (HttpContext ctx, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             try
             {
                 var projectsCount = db.ExecuteScalar<int>("SELECT COUNT(*) FROM projects");
@@ -74,11 +75,15 @@ public static class ProjectEndpoints
         // ═══════════════════════════════════════════════════════════
 
         app.MapGet("/api/projects", (HttpContext ctx, IDbConnection db) =>
-            Common.Ok(db.Query(@"SELECT p.*, m.name as project_manager_name FROM projects p
-                          LEFT JOIN members m ON p.project_manager_id=m.id ORDER BY p.created_at DESC")));
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            return Common.Ok(db.Query(@"SELECT p.*, m.name as project_manager_name FROM projects p
+                          LEFT JOIN members m ON p.project_manager_id=m.id ORDER BY p.created_at DESC"));
+        });
 
         app.MapGet("/api/projects/{id}", (HttpContext ctx, long id, IDbConnection db) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var p = db.QueryFirstOrDefault(@"SELECT p.*, m.name as project_manager_name FROM projects p
                 LEFT JOIN members m ON p.project_manager_id=m.id WHERE p.id=@Id", new { Id = id });
             return p is not null ? Common.Ok(p) : Common.NotFound("项目不存在");
@@ -110,16 +115,23 @@ public static class ProjectEndpoints
         });
 
         app.MapDelete("/api/projects/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM projects WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("项目不存在"));
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            return (await db.ExecuteAsync("DELETE FROM projects WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
+        });
 
         // ═══════════════════════════════════════════════════════════
         // 项目成员
         // ═══════════════════════════════════════════════════════════
 
         app.MapGet("/api/project-members/{projectId}", (HttpContext ctx, long projectId, IDbConnection db) =>
-            Common.Ok(db.Query(@"SELECT pm.*, m.name as member_name, m.role as member_role, m.member_type, m.phone
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            return Common.Ok(db.Query(@"SELECT pm.*, m.name as member_name, m.role as member_role, m.member_type, m.phone
                           FROM project_members pm LEFT JOIN members m ON pm.member_id=m.id
-                          WHERE pm.project_id=@ProjectId ORDER BY pm.joined_at DESC", new { ProjectId = projectId })));
+                          WHERE pm.project_id=@ProjectId ORDER BY pm.joined_at DESC", new { ProjectId = projectId }));
+        });
 
         app.MapPost("/api/project-members", async (HttpContext ctx, ProjectMemberDto dto, IDbConnection db) =>
         {
