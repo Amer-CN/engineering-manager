@@ -285,7 +285,7 @@ cd "E:\测试" && npx vite build 2>&1 | Select-String -Pattern "error|success|�
 ## 🩺 安全审计结果（2026-06-16 v1.0.0 状态）
 
 > **审计者**：darwin-skill 9 维 rubric 参照 + vibe-coding-guide 19 条 + 4 个 explore 子代理 file:line 实证
-> **回滚锚点**：git reset --hard v1.0.0-pre-vibe（commit fcdffea3fed06f878789db7f08d98303ffdf077f）
+> **回滚锚点**：git reset --hard v0.69.0（v1.0.0-pre-vibe 之前，commit fcdffea3fed06f878789db7f08d98303ffdf077f 之上的版本）
 > **完整修复计划**：[P0-FIX-PLAN.md](P0-FIX-PLAN.md)
 > **vibe-coding-guide 评估**：[ibe-coding-guide-eval-2026-06-16.md](vibe-coding-guide-eval-2026-06-16.md)
 
@@ -322,7 +322,7 @@ cd "E:\测试" && npx vite build 2>&1 | Select-String -Pattern "error|success|�
 ### 行动指引
 
 **任何接手工程管家的开发者**：
-1. **v1.0.0 发布前**：P0-1 必须修（OCR key rotate），其他 3 个 P0 在 v1.0.x 立即跟进
+1. **v0.70.0 发布前**：P0-1 必须修（OCR key rotate），其他 3 个 P0 在 v0.70.x 立即跟进
 2. **新功能开发前**：先读 [P0-FIX-PLAN.md](P0-FIX-PLAN.md) 决定当前 sprint 是否带 1-2 个 P0 修复
 3. **不要在 P0 修完前**新增涉及 PII 的新功能（先把 P0-2/P0-3 修了再考虑）
 4. **vibe-coding-guide 兼容度**：v2 实证 9/19 完美 + 5/19 缺口 + 5/19 部分合规（详见 v2 报告）
