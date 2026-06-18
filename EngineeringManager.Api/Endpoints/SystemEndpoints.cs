@@ -29,41 +29,66 @@ public static class SystemEndpoints
             return Common.Ok(new { message = "WAL checkpoint 完成, 数据已写入主 db 文件" });
         });
 
-        // v0.72.0: PII 加密统计 (admin 用, 看哪些表还没全部加密)
-        app.MapGet("/api/admin/pii-stats", (HttpContext ctx, IDbConnection db) =>
+        // v0.72.0 (收尾): 删调试端点 /api/admin/db-schema-info (零外部调用, 历史使命完成)
+        // 历史: 用于 PII _enc 列迁移排错, 2026-06-18 backfill 闭环后已不需要.
+
+        // v0.72.0 (收尾): PII 加密进度统计 (admin 用, 看哪些表还没全部加密)
+        // 入参: ?table=members|workers|partners|supervisors|all (默认 all)
+        // 返回: { tables: {members: {total,encrypted,pending,percentComplete}, ...},
+        //        summary: {total,encrypted,pending,percentComplete}, errors: [...], generatedAt: "..." }
+        app.MapGet("/api/admin/pii-stats", (HttpContext ctx, IDbConnection db, string? table) =>
         {
             var uid = CurrentUser.GetUserId(ctx);
             if (string.IsNullOrEmpty(uid)) return Common.Fail("未登录");
             if (!CurrentUser.IsAdmin(ctx)) return Results.Forbid();
 
-            var stats = new Dictionary<string, object>();
-            string[] tables = { "members", "workers", "partners", "supervisors" };
-            foreach (var t in tables)
+            // 白名单 (防 SQL 注入 + 拼错)
+            var allTables = new[] { "members", "workers", "partners", "supervisors" };
+            var target = string.IsNullOrEmpty(table) || table == "all"
+                ? allTables
+                : (Array.IndexOf(allTables, table) >= 0 ? new[] { table } : null);
+            if (target == null) return Common.Fail($"不支持的 table: {table} (可选: members / workers / partners / supervisors / all)");
+
+            var tables = new Dictionary<string, object>();
+            var errors = new List<string>();
+            int grandTotal = 0, grandEncrypted = 0;
+
+            foreach (var t in target)
             {
-                var total = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM {t}");
-                // 用动态 SQL 检查 _enc 列存在 (避免 no such column 错误)
-            var encrypted = 0;
-            try { encrypted = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM {t} WHERE id_card_enc IS NOT NULL"); } catch { encrypted = 0; }
-            if (encrypted == 0) {
-                try { encrypted = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM {t} WHERE phone_enc IS NOT NULL"); } catch { encrypted = 0; }
+                int total = 0, encrypted = 0;
+                try { total = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM {t}"); }
+                catch (Exception ex) { errors.Add($"{t}.count: {ex.Message}"); }
+
+                // 4 张表的 _enc 主列各不相同, 按表分别查
+                string encCol = t switch
+                {
+                    "members" => "id_card_enc",
+                    "workers" => "id_card_enc",
+                    "partners" => "phone_enc",
+                    "supervisors" => "phone_enc",
+                    _ => "phone_enc"
+                };
+                try { encrypted = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM {t} WHERE {encCol} IS NOT NULL"); }
+                catch (Exception ex) { errors.Add($"{t}.{encCol}: {ex.Message}"); }
+
+                var pending = Math.Max(0, total - encrypted);
+                var percent = total == 0 ? 100.0 : Math.Round((double)encrypted / total * 100, 1);
+                tables[t] = new { total, encrypted, pending, percentComplete = percent };
+
+                grandTotal += total;
+                grandEncrypted += encrypted;
             }
-                stats[t] = new { total, encrypted, pending = total - encrypted };
-            }
-            return Common.Ok(stats);
-        });
-        // v0.72.0 DEBUG: 看 db 实际 schema
-        app.MapGet("/api/admin/db-schema-info", (IDbConnection db) =>
-        {
-            var tables = new[] { "members", "workers", "partners", "supervisors", "users" };
-            var info = new Dictionary<string, object>();
-            foreach (var t in tables)
+
+            var grandPending = Math.Max(0, grandTotal - grandEncrypted);
+            var grandPercent = grandTotal == 0 ? 100.0 : Math.Round((double)grandEncrypted / grandTotal * 100, 1);
+
+            return Common.Ok(new
             {
-                var cols = db.Query<string>($"SELECT name FROM pragma_table_info('{t}')").ToList();
-                info[t] = cols;
-            }
-            var sv = db.Query<string>("SELECT script_name FROM schema_versions").ToList();
-            info["schema_versions"] = sv;
-            return Common.Ok(info);
+                tables,
+                summary = new { total = grandTotal, encrypted = grandEncrypted, pending = grandPending, percentComplete = grandPercent },
+                errors,
+                generatedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+            });
         });
 
         // ============================================================

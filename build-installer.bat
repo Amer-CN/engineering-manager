@@ -46,7 +46,7 @@ echo.
 echo [5/6] Creating payload.zip...
 if exist EngineeringManager.Installer\payload.zip del EngineeringManager.Installer\payload.zip
 cd EngineeringManager.Installer
-powershell -Command "Compress-Archive -Path 'app-files','installer\dist' -DestinationPath 'payload.zip' -Force"
+powershell -Command "Compress-Archive -Path 'app-files','..\installer\dist' -DestinationPath 'payload.zip' -Force"
 cd ..
 for %%I in (EngineeringManager.Installer\payload.zip) do echo    Size: %%~zI bytes
 echo    OK
