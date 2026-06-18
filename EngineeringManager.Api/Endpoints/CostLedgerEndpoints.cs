@@ -28,16 +28,16 @@ public static class CostLedgerEndpoints
 
         app.MapGet("/api/cost-ledger/summary", (HttpContext ctx, IDbConnection db, long? projectId) =>
         {
-            var w = projectId.HasValue ? " WHERE project_id=@ProjectId" : "";
+            // v1.2.0 修: 始终有 WHERE 条件, 避免空 w 时 SQL syntax error
+            var projectFilter = projectId.HasValue ? " AND project_id=@ProjectId" : "";
             object param = projectId.HasValue ? new { ProjectId = projectId.Value } : new { };
             return Common.Ok(new
             {
-                totalCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM cost_ledger{w}", param),
-                totalExpense = db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(amount),0) FROM cost_ledger{w} AND direction='expense'", param),
-                totalIncome = db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(amount),0) FROM cost_ledger{w} AND direction='income'", param),
+                totalCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM cost_ledger WHERE 1=1{projectFilter}"),
+                totalExpense = db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(amount),0) FROM cost_ledger WHERE direction='expense'{projectFilter}"),
+                totalIncome = db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(amount),0) FROM cost_ledger WHERE direction='income'{projectFilter}"),
             });
         });
-
         app.MapPost("/api/cost-ledger", async (HttpContext ctx, CostLedgerEntryDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();

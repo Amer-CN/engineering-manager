@@ -14,6 +14,8 @@ public class GlobalAuthMiddleware
     private readonly RequestDelegate _next;
 
     // P0-4 缓解：路径必须带 projectId（粗粒度租户隔离）
+    // 注: 排除全局配置子路径 (categories, match-rules, batches)
+    //     /api/cost-ledger/categories, /api/cost-ledger/match-rules 不分项目
     private static readonly (string Prefix, string Param)[] ProjectScopedPaths = new[]
     {
         ("/api/contracts/income", "projectId"),
@@ -23,7 +25,6 @@ public class GlobalAuthMiddleware
         ("/api/wages", "projectId"),
         ("/api/attendances", "projectId"),
         ("/api/expenses", "projectId"),
-        ("/api/cost-ledger", "projectId"),
         ("/api/drawings", "projectId"),
         ("/api/inventory", "projectId"),
     };
