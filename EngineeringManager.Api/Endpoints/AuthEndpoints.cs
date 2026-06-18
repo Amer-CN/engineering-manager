@@ -1,5 +1,6 @@
 using System.Data;
 using Dapper;
+using EngineeringManager.Api.Security;
 
 namespace EngineeringManager.Api;
 
@@ -53,6 +54,33 @@ public static class AuthEndpoints
                 token = GenerateJwtToken((string)user.id, (string)user.username, (string)user.role_id, role?.name ?? (string)user.role_id)
             });
         }).RequireRateLimiting("login");
+
+        // v1.1.1: admin 强制重置用户密码 (老库 v0.71.0 升级必须)
+        app.MapPost("/api/auth/reset-password", async (HttpContext ctx, PasswordResetDto dto, IDbConnection db) =>
+        {
+            // 1. 当前用户必须已登录 + admin 角色
+            var uid = CurrentUser.GetUserId(ctx);
+            if (string.IsNullOrEmpty(uid)) return Common.Fail("未登录");
+            var isAdmin = CurrentUser.IsAdmin(ctx);
+            if (!isAdmin) return Results.Forbid();  // 仅 admin 可重置
+
+            // 2. 校验新密码非空
+            if (string.IsNullOrWhiteSpace(dto.NewPassword) || dto.NewPassword.Length < 6)
+                return Common.Fail("新密码至少 6 位");
+
+            // 3. 检查目标用户存在
+            var target = db.QueryFirstOrDefault("SELECT id, username FROM users WHERE id=@Id", new { Id = dto.UserId });
+            if (target == null) return Common.NotFound("目标用户不存在");
+
+            // 4. 生成新 salt + hash (v2 = 210k iterations)
+            var salt = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16)).ToLower();
+            var hash = Common.HashPassword(dto.NewPassword, salt, 2);
+
+            // 5. 写入
+            var affected = await db.ExecuteAsync(@"UPDATE users SET password_hash=@Hash, password_salt=@Salt, password_hash_version=2 WHERE id=@Id",
+                new { Hash = hash, Salt = salt, Id = dto.UserId });
+            return affected > 0 ? Common.Ok(new { userId = dto.UserId, newHashVersion = 2 }) : Common.Fail("重置失败");
+        });
 
         static string GenerateJwtToken(string userId, string username, string roleId, string roleName)
         {

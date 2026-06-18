@@ -116,6 +116,7 @@ public static class Common
 
 record LoginDto(string Username, string Password);
 record UserDto(string? Id, string Username, string? Password, string? DisplayName, string? RoleId, string? Status);
+record PasswordResetDto(string UserId, string NewPassword);
 record RoleUpdateDto(string RoleId, string Permissions);
 record ProjectDto(string Name, string? Description, string? Address, string? StartDate, string? EndDate, string? Status, double Budget, long? ProjectManagerId);
 record MemberDto(long? Id, string Name, string? Phone, string? Email, string? MemberType, string? Role, string? IdCard, string? Gender, string? Ethnicity, string? BirthDate, string? IdCardAddress, double? BaseSalary, double? DailyWage, string? EntryDate, string? Status, long? DepartmentId, string? Position);
