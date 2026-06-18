@@ -45,21 +45,27 @@ public static class MemberEndpoints
             return m is not null ? Common.Ok(m) : Common.NotFound("成员不存在");
         });
 
-        app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection db) =>
+                app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // v1.2.0: PII 字段加密
+            var pii = ctx.RequestServices.GetRequiredService<EngineeringManager.Api.Security.PiiProtector>();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO members
                 (name,phone,email,member_type,role,id_card,gender,ethnicity,birth_date,id_card_address,
-                 base_salary,daily_wage,entry_date,status,department_id,position,created_by,created_at)
+                 base_salary,daily_wage,entry_date,status,department_id,position,created_by,created_at,
+                 id_card_enc,id_card_address_enc,phone_enc,bank_account_enc)
                 VALUES (@Name,@Phone,@Email,@MemberType,@Role,@IdCard,@Gender,@Ethnicity,@BirthDate,
-                        @IdCardAddress,@BaseSalary,@DailyWage,@EntryDate,@Status,@DepartmentId,@Position,@CreatedBy,@Now);
+                        @IdCardAddress,@BaseSalary,@DailyWage,@EntryDate,@Status,@DepartmentId,@Position,@CreatedBy,@Now,
+                        @IdCardEnc,@IdCardAddressEnc,@PhoneEnc,@BankAccountEnc);
                 SELECT last_insert_rowid();",
                 new { dto.Name, dto.Phone, dto.Email, MemberType = dto.MemberType ?? "staff",
                       dto.Role, dto.IdCard, dto.Gender, dto.Ethnicity, dto.BirthDate, dto.IdCardAddress,
                       dto.BaseSalary, dto.DailyWage, dto.EntryDate, Status = dto.Status ?? "active",
-                      dto.DepartmentId, dto.Position, CreatedBy = uid, Now = now() });
-            return Common.Ok(id);        });
-
+                      dto.DepartmentId, dto.Position, CreatedBy = uid, Now = now(),
+                      IdCardEnc = pii.Encrypt(dto.IdCard ?? ""), IdCardAddressEnc = pii.Encrypt(dto.IdCardAddress ?? ""),
+                      PhoneEnc = pii.Encrypt(dto.Phone ?? ""), BankAccountEnc = pii.Encrypt("") });
+            return Common.Ok(id);
+        });
         app.MapPut("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
@@ -108,18 +114,24 @@ public static class MemberEndpoints
             active = db.ExecuteScalar<int>("SELECT COUNT(*) FROM project_workers WHERE status='active'"),
         }));
 
-        app.MapPost("/api/workers", async (HttpContext ctx, WorkerDto dto, IDbConnection db) =>
+                app.MapPost("/api/workers", async (HttpContext ctx, WorkerDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // v1.2.0: PII 字段加密 (PiiProtector 注入)
+            var pii = ctx.RequestServices.GetRequiredService<EngineeringManager.Api.Security.PiiProtector>();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO workers
-                (name,id_card,gender,phone,address,bank_account,bank_name,worker_type,daily_wage,created_by,created_at)
-                VALUES (@Name,@IdCard,@Gender,@Phone,@Address,@BankAccount,@BankName,@WorkerType,@DailyWage,@CreatedBy,@Now);
+                (name,id_card,gender,phone,address,bank_account,bank_name,worker_type,daily_wage,
+                 id_card_enc,phone_enc,address_enc,bank_account_enc,created_by,created_at)
+                VALUES (@Name,@IdCard,@Gender,@Phone,@Address,@BankAccount,@BankName,@WorkerType,@DailyWage,
+                        @IdCardEnc,@PhoneEnc,@AddressEnc,@BankAccountEnc,@CreatedBy,@Now);
                 SELECT last_insert_rowid();",
                 new { dto.Name, dto.IdCard, dto.Gender, dto.Phone, dto.Address, dto.BankAccount,
-                      dto.BankName, dto.WorkerType, dto.DailyWage, CreatedBy = uid, Now = now() });
+                      dto.BankName, dto.WorkerType, dto.DailyWage,
+                      IdCardEnc = pii.Encrypt(dto.IdCard ?? ""), PhoneEnc = pii.Encrypt(dto.Phone ?? ""),
+                      AddressEnc = pii.Encrypt(dto.Address ?? ""), BankAccountEnc = pii.Encrypt(dto.BankAccount ?? ""),
+                      CreatedBy = uid, Now = now() });
             return Common.Ok(id);
         });
-
         app.MapPut("/api/workers", async (HttpContext ctx, WorkerDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
