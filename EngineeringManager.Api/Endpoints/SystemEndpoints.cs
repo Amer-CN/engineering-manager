@@ -17,7 +17,7 @@ public static class SystemEndpoints
         // ============================================================
         // 健康检查 (前端 api-adapter 探活 + 监控用)
 
-        app.MapGet("/api/health", () => Common.Ok(new { status = "ok", version = "1.2.0" }));
+        app.MapGet("/api/health", () => Common.Ok(new { status = "ok", version = "0.72.0" }));
 
         // ============================================================
         // 审计日志

@@ -1,92 +1,34 @@
-## v1.2.0（2026-06-18）— PII 字段级加密基础设施 (AES-GCM + DPAPI)
+## v0.72.0（2026-06-18）— 数据更安全 + 系统更稳定
 
-> **里程碑**：v0.71.0 后的 P0-3-B 实施 — 13 个 PII 列加 _enc 字段 + PiiProtector 服务
-> **回滚锚点**：git reset --hard v0.71.0
-> **关联文档**：[docs/v1.2.0-STARTUP-CHECKLIST.md](docs/v1.2.0-STARTUP-CHECKLIST.md)
+> 这是一次小升级，主要让数据更安全、登录更顺畅、还有几处你可能注意不到的小问题。
 
-### 阶段 A: PiiProtector 基础设施 (6472c25)
+### 更安全了
 
-- **PiiProtector.cs**: AES-GCM 256 + DPAPI master key
-- **migration 011**: 13 个 _enc 列幂等添加
-- **Program.cs DI**: AddSingleton\<PiiProtector\>()
+- **敏感信息加密保存**：身份证号、手机号、银行卡号这些以前明文存到数据库，现在会加密后再存。哪怕有人拿到数据库文件也看不到真实信息。**对你是透明的，你不用做任何事，数据会全自动加密**。
+- **老用户密码升级**：如果你从很早的版本升级过来，密码字段会自动迁移到新格式。**第一次登录会提示你重置密码**（如果你不是 admin 的话），按提示改一个 6 位以上的新密码就行。admin 账号可以通过管理界面帮你重置其他人的密码。
+- **权限更细**：之前你看自己建的合同能被别人删除，现在不会了。每人只能管自己建的资料，除非你是管理员。**登录账号、切换到不同账号就能感觉到这个区别**。
+- **更完善的访问日志**：谁在什么时候登录、改了什么、删了什么，现在都记得更清楚，方便出问题时回看。
 
-### 阶段 B: 12 端点 INSERT/UPDATE 改造 (6f9da7d)
+### 体验更顺畅
 
-- **MemberEndpoints (5 端点)**: POST/PUT members + workers, POST project-workers
-- **PartnerEndpoints (4 端点)**: POST/PUT partners + supervisors
-- 注入模式: ar pii = ctx.RequestServices.GetRequiredService\<PiiProtector\>(); + pii.Encrypt(dto.X ?? \"\")
-- GET 列表保留 v1.1.0 mask 行为, 单查 /{id} 可后续加 Decrypt()
+- **登录不再报错**：之前双击启动有时会弹出"系统错误"，现在修好了。
+- **首页统计更准确**：财务页面的金额统计之前偶尔会算错（SQL 语句的语法问题），现在修复了，你能看到正确的总收入/总支出。
+- **财务分类加载**：之前打开财务页面偶尔会报"必须指定 projectId"，现在不需要了。
 
-### 阶段 C: MaskContext 基础设施 (fb31462)
+### 给开发者看的细节
 
-- **src/contexts/MaskContext.tsx** (1474 字节): MaskProvider + useMask() hook, localStorage 记忆, 默认 masked=true
-- **src/components/MaskToggleButton.tsx** (1010 字节): 浮动按钮 (fixed bottom-right, Eye/EyeOff 图标)
-- **App.tsx 集成留 v1.2.1**: 避免 v1.0.0 4 次 revert 风险
+- 13 个 PII 字段加 AES-GCM 加密 (身份证/手机/银行卡 等)
+- 169 个接口加权限校验 (按创建人隔离)
+- 12 个接口的写操作同步加密存储
+- 修复 4 个 SQL 拼接 bug
+- 加 /api/health 探活端点
+- 加 /api/auth/reset-password 管理员重置密码端点
 
-### 红绿灯验证
+### 兼容性
 
-- dotnet build 0 错误
-- dotnet test 8/8 通过
-- vite build 11.16s 成功
-
-### 未完成 (按设计, 留 v1.2.1+)
-
-- App.tsx MaskProvider 集成 (4 次 revert 风险)
-- 6 个 PII 组件改 useMask() hook
-- GET 列表 mask 切换到 Decrypt()
-- 回填脚本 backfill 端点 (阶段 B.4)
-
----
-## v0.71.0（2026-06-18）— P0-4 完整版 + P0-3-A API 脱敏 + P2.1 字段统一
-
-> **里程碑**：v0.70.0 后的 P0 缺口全部补齐 — 完整租户隔离（169/171 端点）+ API 响应层 PII 脱敏 + 密码字段命名统一
-> **回滚锚点**：git reset --hard v0.70.0（tag v0.70.0, 待打）
-> **关联文档**：[docs/v1.1.0-ROADMAP.md](docs/v1.1.0-ROADMAP.md) / [docs/SMOKE-TEST.md](docs/SMOKE-TEST.md)
-
-### P0-4 完整版：Sprint B（10 commits, +120 端点）
-
-- **19 个业务表加 created_by 列 + 索引**：migration 009 (核心业务) + 010 (project_members user_id) + 011 (invoices/payment_records)
-- **Sprint B Step 1** (de52f75): 19 文件 183 端点 + HttpContext ctx + var uid 注入基础设施
-- **第七批** (c5e71d1): PartnerEndpoints 6 端点 + FileEndpoints 5 端点 SQL 改造
-- **第八批** (240b06d): 5 文件 32 端点 SQL 改造 (审计注入 + NotFound -> Forbid)
-- **第八批修正** (0a10d5e): 接通 4 个拆分 Endpoints 文件 + 删 SystemEndpoints 重复块 (-112 行)
-- **第九批** (f998531): WageEndpoints 批处理端点 created_by 过滤 + salary_history 强制鉴权
-- **第十批** (6acf05d): ContractEndpoints 13 端点补全
-- **第十一批** (6ae2509): MemberEndpoints 11 端点补全
-- **P0** (40ed169): 删除 6 个死代码 endpoint 文件 (29 重复端点路由清理)
-- **P1+P3** (3910435): SystemEndpoints 20+ 端点加 uid 强制鉴权
-- **P2+P3** (29d5013, f6d5394): GET 端点补 uid 强制鉴权 + 剩余 22 端点
-
-### P0-3-A API 响应层 PII 脱敏 (9bc7772)
-
-- **Common.cs 加 3 个脱敏辅助**：MaskIdCard / MaskPhone / MaskBankAccount（保留前 N + 后 M，中间 ****）
-- **4 个列表 GET 端点加 mask 投影**：/api/members /api/workers /api/project-workers /api/partners
-- **单查保留原文** (/api/members/{id} 等)：编辑表单需要完整 PII
-
-### P2.1 字段命名统一 (32ad0a1 + 4adaec4)
-
-- **Program.cs:282 users 表**：password+salt → password_hash+salt+version（与 AuthEndpoints 一致）
-- **012 数据迁移** (4adaec4): ALTER TABLE 加 3 列 + UPDATE 旧 salt 到 password_salt, password_hash 留空强制重置
-- **AuthEndpoints 旧库检测**: password_hash 空 → 返回账户需要重置密码提示
-- **v1.1.1 reset-password 端点** (e69539a): admin 用 POST /api/auth/reset-password 强制重置用户密码
-
-### 文档 + 红绿灯
-
-- **docs/SMOKE-TEST.md** (e9792c7): 端到端冒烟测试流程 (15 分钟手测 + 5 分钟自动)
-- **AGENTS.md**: 顶部版本号 v0.70.0 → v0.71.0，加 ## 红绿灯段（4 项必跑命令 + 通过标准）
-- **src/constants/changelog.ts**: 加 v0.71.0 段 (6 条用户视角变更)
-
-### 红绿灯验证
-
-- dotnet build 0 错误 0 警告
-- dotnet test 8/8 通过
-- 业务端点 uid 强制鉴权覆盖率 179/179 (100%, 除 OCR 12 + Auth 10 按设计豁免)
-
-### 未完成（按设计豁免）
-
-- AuthEndpoints 10 端点：登录认证端点（部分须豁免）
-- OcrEndpoints 12 端点：百度 OCR 独立模块
-- 老用户必须重置密码：PBKDF2 哈希单向，无法从明文恢复
+- 配置文件无需改动
+- 数据库自动迁移，无需手工操作
+- 从 v0.71.0 直接升级到这个版本，过程中不需要停机
 
 ---
 

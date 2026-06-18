@@ -1,6 +1,6 @@
 # AGENTS.md - 工程管家项目约定
-> 项目状态：v1.2.0 — PII 字段级加密基础设施 (AES-GCM + DPAPI + 12 端点改造)+ P0-3-A API 脱敏 + P2.1 字段统一
-> 最后同步：2026-06-18（v1.2.0 收尾 + PiiProtector + 12 端点 _enc 改造 + MaskContext 基础设施）
+> 项目状态：v0.72.0 — PII 加密 + 数据迁移 + 控制台错误修复
+> 最后同步：2026-06-18（v0.72.0 收尾 + PII 加密 + 用户体验修复）
 
 ## 🗣️ 输出语言
 - **默认中文输出**：所有解释、描述、分析、提问、总结等文字内容使用中文
@@ -247,7 +247,7 @@ export function useProjects() {
 - **语义化版本**：patch(Bug修复) / minor(新功能模块) / major(架构级变更)
 - 版本号引用位置：`package.json` / `Sidebar.tsx` / `Login.tsx` / `installer/src/App.tsx` / `CHANGELOG.md`
 
-### 当前版本：v1.2.0
+### 当前版本：v0.72.0
 
 *本文档与 `CHANGELOG.md`、`docs/` 保持同步。*
 
