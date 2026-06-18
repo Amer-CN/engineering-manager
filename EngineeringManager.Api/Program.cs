@@ -13,6 +13,9 @@ public static class ApiConfig
         // 强制 API 监听 5048 端口（launchSettings.json 只在 dotnet run 时生效）
         builder.WebHost.UseUrls("http://localhost:5048");
 
+        // v1.2.0: PII 字段级加密 (AES-GCM + DPAPI master key)
+        builder.Services.AddSingleton<EngineeringManager.Api.Security.PiiProtector>();
+
         builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
             p.WithOrigins("http://localhost:5173", "http://localhost:3000", "http://localhost:5048")
              .AllowAnyMethod()
