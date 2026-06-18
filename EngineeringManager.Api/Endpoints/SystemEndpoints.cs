@@ -19,6 +19,53 @@ public static class SystemEndpoints
 
         app.MapGet("/api/health", () => Common.Ok(new { status = "ok", version = "0.72.0" }));
 
+        // v0.72.0: WAL checkpoint (强制把 -wal 数据回写到 .db, 否则 backup 看不到加密数据)
+        app.MapPost("/api/admin/db-checkpoint", (HttpContext ctx, IDbConnection db) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx);
+            if (string.IsNullOrEmpty(uid)) return Common.Fail("未登录");
+            if (!CurrentUser.IsAdmin(ctx)) return Results.Forbid();
+            db.Execute("PRAGMA wal_checkpoint(TRUNCATE)");
+            return Common.Ok(new { message = "WAL checkpoint 完成, 数据已写入主 db 文件" });
+        });
+
+        // v0.72.0: PII 加密统计 (admin 用, 看哪些表还没全部加密)
+        app.MapGet("/api/admin/pii-stats", (HttpContext ctx, IDbConnection db) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx);
+            if (string.IsNullOrEmpty(uid)) return Common.Fail("未登录");
+            if (!CurrentUser.IsAdmin(ctx)) return Results.Forbid();
+
+            var stats = new Dictionary<string, object>();
+            string[] tables = { "members", "workers", "partners", "supervisors" };
+            foreach (var t in tables)
+            {
+                var total = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM {t}");
+                // 用动态 SQL 检查 _enc 列存在 (避免 no such column 错误)
+            var encrypted = 0;
+            try { encrypted = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM {t} WHERE id_card_enc IS NOT NULL"); } catch { encrypted = 0; }
+            if (encrypted == 0) {
+                try { encrypted = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM {t} WHERE phone_enc IS NOT NULL"); } catch { encrypted = 0; }
+            }
+                stats[t] = new { total, encrypted, pending = total - encrypted };
+            }
+            return Common.Ok(stats);
+        });
+        // v0.72.0 DEBUG: 看 db 实际 schema
+        app.MapGet("/api/admin/db-schema-info", (IDbConnection db) =>
+        {
+            var tables = new[] { "members", "workers", "partners", "supervisors", "users" };
+            var info = new Dictionary<string, object>();
+            foreach (var t in tables)
+            {
+                var cols = db.Query<string>($"SELECT name FROM pragma_table_info('{t}')").ToList();
+                info[t] = cols;
+            }
+            var sv = db.Query<string>("SELECT script_name FROM schema_versions").ToList();
+            info["schema_versions"] = sv;
+            return Common.Ok(info);
+        });
+
         // ============================================================
         // 审计日志
         // ═══════════════════════════════════════════════════════════

@@ -17,7 +17,11 @@ public static class CurrentUser
 
     /// <summary>当前用户是否为 admin 角色（admin role claim 由登录端点写入）。</summary>
     public static bool IsAdmin(HttpContext ctx) =>
-        ctx.User?.IsInRole("admin") ?? false;
+        // 登录端点 JWT 写入的 role claim 是中文"管理员"或英文"admin" (取决于 role.name)
+        // 兼容两种: 中文 roleName + 英文 roleId
+        ctx.User?.HasClaim("http://schemas.microsoft.com/ws/2008/06/identity/claims/role", "管理员")
+        ?? ctx.User?.HasClaim("http://schemas.microsoft.com/ws/2008/06/identity/claims/role", "admin")
+        ?? false;
 
     /// <summary>
     /// 构造 SQL WHERE 子句的用户维度过滤片段：

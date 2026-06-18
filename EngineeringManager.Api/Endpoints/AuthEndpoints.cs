@@ -175,5 +175,84 @@ public static class AuthEndpoints
 
         app.MapDelete("/api/users/{id}", async (string id, IDbConnection db) =>
             (await db.ExecuteAsync("DELETE FROM users WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("用户不存在"));
+
+        // v0.72.0: PII 数据回填 (老库 PII 明文 → _enc 列加密)
+        // 策略: 遍历 4 张表, 查 _enc 为空的记录, 加密原明文列写入 _enc
+        // 仅 admin 可调, 幂等 (重复调用安全)
+        app.MapPost("/api/admin/backfill-pii", async (HttpContext ctx, IDbConnection db) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx);
+            if (string.IsNullOrEmpty(uid)) return Common.Fail("未登录");
+            if (!CurrentUser.IsAdmin(ctx)) return Results.Forbid();
+
+            var pii = ctx.RequestServices.GetRequiredService<EngineeringManager.Api.Security.PiiProtector>();
+            var stats = new Dictionary<string, object>();
+            var errors = new List<string>();
+            int total = 0;
+
+            // 通用回填辅助: 查询 + 批量 UPDATE, 异常隔离
+            async Task<int> BackfillTable(string table, string selectCols, string updateSql, Action<dynamic, Dictionary<string, object>> mapParams)
+            {
+                try
+                {
+                    var rows = db.Query<dynamic>($"SELECT id, {selectCols} FROM {table} WHERE 1=1").ToList();
+                    int done = 0;
+                    foreach (var r in rows)
+                    {
+                        try
+                        {
+                            var p = new Dictionary<string, object>();
+                            mapParams(r, p);
+                            p["Id"] = (long)r.id;
+                            await db.ExecuteAsync(updateSql, p);
+                            done++;
+                        }
+                        catch (Exception ex) { errors.Add($"{table} id={r.id}: {ex.Message}"); }
+                    }
+                    return done;
+                }
+                catch (Exception ex) { errors.Add($"{table} query: {ex.Message}"); return 0; }
+            }
+
+            total += await BackfillTable("members",
+                "id_card, id_card_address, phone",
+                "UPDATE members SET id_card_enc=@IdCardEnc, id_card_address_enc=@IdCardAddressEnc, phone_enc=@PhoneEnc WHERE id=@Id",
+                (r, p) => {
+                    p["IdCardEnc"] = pii.Encrypt(r.id_card ?? "");
+                    p["IdCardAddressEnc"] = pii.Encrypt(r.id_card_address ?? "");
+                    p["PhoneEnc"] = pii.Encrypt(r.phone ?? "");
+                });
+            stats["members"] = stats.GetValueOrDefault("members", 0);
+
+            total += await BackfillTable("workers",
+                "id_card, phone, address",
+                "UPDATE workers SET id_card_enc=@IdCardEnc, phone_enc=@PhoneEnc, address_enc=@AddressEnc WHERE id=@Id",
+                (r, p) => {
+                    p["IdCardEnc"] = pii.Encrypt(r.id_card ?? "");
+                    p["PhoneEnc"] = pii.Encrypt(r.phone ?? "");
+                    p["AddressEnc"] = pii.Encrypt(r.address ?? "");
+                });
+            stats["workers"] = stats.GetValueOrDefault("workers", 0);
+
+            total += await BackfillTable("partners",
+                "phone, credit_code, tax_number",
+                "UPDATE partners SET phone_enc=@PhoneEnc, credit_code_enc=@CreditCodeEnc, tax_number_enc=@TaxNumberEnc WHERE id=@Id",
+                (r, p) => {
+                    p["PhoneEnc"] = pii.Encrypt(r.phone ?? "");
+                    p["CreditCodeEnc"] = pii.Encrypt(r.credit_code ?? "");
+                    p["TaxNumberEnc"] = pii.Encrypt(r.tax_number ?? "");
+                });
+            stats["partners"] = stats.GetValueOrDefault("partners", 0);
+
+            total += await BackfillTable("supervisors",
+                "phone",
+                "UPDATE supervisors SET phone_enc=@PhoneEnc WHERE id=@Id",
+                (r, p) => {
+                    p["PhoneEnc"] = pii.Encrypt(r.phone ?? "");
+                });
+            stats["supervisors"] = stats.GetValueOrDefault("supervisors", 0);
+
+            return Common.Ok(new { message = $"PII 回填完成, 共 {total} 条记录", stats = new Dictionary<string, object> { { "total", total } }, errors });
+        });
     }
 }

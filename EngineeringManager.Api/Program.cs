@@ -32,7 +32,10 @@ public static class ApiConfig
             cmd.CommandText = "PRAGMA journal_mode=WAL";
             cmd.ExecuteNonQuery();
             EnsureTables(conn);
-            return conn;
+
+            // v0.72.0: 跑 migrations 脚本 (idempotent, 自动跳过已跑的)
+            // 实际跑: 011 加 _enc 列, 012 users 表 password_hash+salt+version 迁移
+            EngineeringManager.Api.Migrations.MigrationRunner.Run($"Data Source={dbPath}");            return conn;
         });
 
 
