@@ -253,6 +253,35 @@ export function useProjects() {
 
 ---
 
+## 🚦 红绿灯（v0.71.0 起）
+
+每个 sprint 收尾 / release 前必跑，0 error 才算合格。完整流程见 [docs/SMOKE-TEST.md](docs/SMOKE-TEST.md)。
+
+`ash
+# 1. 后端编译
+cd "E:\测试\EngineeringManager.Api" && dotnet build 2>&1 | Select-String -Pattern "错误|Build succeeded"
+cd "E:\测试\EngineeringManager.Api" && dotnet build 2>&1 | Select-String -Pattern "(warning|error|生成成功|生成失败|Build)"
+
+# 2. 后端单元测试
+cd "E:\测试\EngineeringManager.Tests" && dotnet test 2>&1 | Select-String -Pattern "通过:|失败:|总计:"
+
+# 3. 前端规则检查
+cd "E:\测试" && npm run check 2>&1 | Select-String -Pattern "HARD FAIL|passed|failed"
+
+# 4. 前端构建
+cd "E:\测试" && npx vite build 2>&1 | Select-String -Pattern "error|success|✓|✗"
+`
+
+**通过标准**：
+- 后端 0 错误 0 警告
+- tests 8/8 通过
+- 前端 check 0 HARD FAIL
+- vite build 11-12 秒成功
+
+**4 项全绿才可 git tag v0.x.0**。任何一项红 → 标记 WIP，先修。
+
+---
+
 ## 🩺 安全审计结果（2026-06-16 v1.0.0 状态）
 
 > **审计者**：darwin-skill 9 维 rubric 参照 + vibe-coding-guide 19 条 + 4 个 explore 子代理 file:line 实证
