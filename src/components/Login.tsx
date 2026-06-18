@@ -173,7 +173,7 @@ const Login: React.FC<LoginProps> = () => {
         </form>
 
         <div style={{ fontSize: 10, color: 'var(--muted-2)', marginTop: 8, flexShrink: 0 }}>
-          v{(window as any).__APP_VERSION__ || '0.71.0'}
+          v{(window as any).__APP_VERSION__ || '1.2.0'}
         </div>
       </div>
       )}

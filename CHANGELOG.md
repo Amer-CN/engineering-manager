@@ -1,3 +1,42 @@
+## v1.2.0（2026-06-18）— PII 字段级加密基础设施 (AES-GCM + DPAPI)
+
+> **里程碑**：v0.71.0 后的 P0-3-B 实施 — 13 个 PII 列加 _enc 字段 + PiiProtector 服务
+> **回滚锚点**：git reset --hard v0.71.0
+> **关联文档**：[docs/v1.2.0-STARTUP-CHECKLIST.md](docs/v1.2.0-STARTUP-CHECKLIST.md)
+
+### 阶段 A: PiiProtector 基础设施 (6472c25)
+
+- **PiiProtector.cs**: AES-GCM 256 + DPAPI master key
+- **migration 011**: 13 个 _enc 列幂等添加
+- **Program.cs DI**: AddSingleton\<PiiProtector\>()
+
+### 阶段 B: 12 端点 INSERT/UPDATE 改造 (6f9da7d)
+
+- **MemberEndpoints (5 端点)**: POST/PUT members + workers, POST project-workers
+- **PartnerEndpoints (4 端点)**: POST/PUT partners + supervisors
+- 注入模式: ar pii = ctx.RequestServices.GetRequiredService\<PiiProtector\>(); + pii.Encrypt(dto.X ?? \"\")
+- GET 列表保留 v1.1.0 mask 行为, 单查 /{id} 可后续加 Decrypt()
+
+### 阶段 C: MaskContext 基础设施 (fb31462)
+
+- **src/contexts/MaskContext.tsx** (1474 字节): MaskProvider + useMask() hook, localStorage 记忆, 默认 masked=true
+- **src/components/MaskToggleButton.tsx** (1010 字节): 浮动按钮 (fixed bottom-right, Eye/EyeOff 图标)
+- **App.tsx 集成留 v1.2.1**: 避免 v1.0.0 4 次 revert 风险
+
+### 红绿灯验证
+
+- dotnet build 0 错误
+- dotnet test 8/8 通过
+- vite build 11.16s 成功
+
+### 未完成 (按设计, 留 v1.2.1+)
+
+- App.tsx MaskProvider 集成 (4 次 revert 风险)
+- 6 个 PII 组件改 useMask() hook
+- GET 列表 mask 切换到 Decrypt()
+- 回填脚本 backfill 端点 (阶段 B.4)
+
+---
 ## v0.71.0（2026-06-18）— P0-4 完整版 + P0-3-A API 脱敏 + P2.1 字段统一
 
 > **里程碑**：v0.70.0 后的 P0 缺口全部补齐 — 完整租户隔离（169/171 端点）+ API 响应层 PII 脱敏 + 密码字段命名统一
