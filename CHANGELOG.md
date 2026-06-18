@@ -1,4 +1,56 @@
-﻿
+## v0.71.0（2026-06-18）— P0-4 完整版 + P0-3-A API 脱敏 + P2.1 字段统一
+
+> **里程碑**：v0.70.0 后的 P0 缺口全部补齐 — 完整租户隔离（169/171 端点）+ API 响应层 PII 脱敏 + 密码字段命名统一
+> **回滚锚点**：git reset --hard v0.70.0（tag v0.70.0, 待打）
+> **关联文档**：[docs/v1.1.0-ROADMAP.md](docs/v1.1.0-ROADMAP.md) / [docs/SMOKE-TEST.md](docs/SMOKE-TEST.md)
+
+### P0-4 完整版：Sprint B（10 commits, +120 端点）
+
+- **19 个业务表加 created_by 列 + 索引**：migration 009 (核心业务) + 010 (project_members user_id) + 011 (invoices/payment_records)
+- **Sprint B Step 1** (de52f75): 19 文件 183 端点 + HttpContext ctx + var uid 注入基础设施
+- **第七批** (c5e71d1): PartnerEndpoints 6 端点 + FileEndpoints 5 端点 SQL 改造
+- **第八批** (240b06d): 5 文件 32 端点 SQL 改造 (审计注入 + NotFound -> Forbid)
+- **第八批修正** (0a10d5e): 接通 4 个拆分 Endpoints 文件 + 删 SystemEndpoints 重复块 (-112 行)
+- **第九批** (f998531): WageEndpoints 批处理端点 created_by 过滤 + salary_history 强制鉴权
+- **第十批** (6acf05d): ContractEndpoints 13 端点补全
+- **第十一批** (6ae2509): MemberEndpoints 11 端点补全
+- **P0** (40ed169): 删除 6 个死代码 endpoint 文件 (29 重复端点路由清理)
+- **P1+P3** (3910435): SystemEndpoints 20+ 端点加 uid 强制鉴权
+- **P2+P3** (29d5013, f6d5394): GET 端点补 uid 强制鉴权 + 剩余 22 端点
+
+### P0-3-A API 响应层 PII 脱敏 (9bc7772)
+
+- **Common.cs 加 3 个脱敏辅助**：MaskIdCard / MaskPhone / MaskBankAccount（保留前 N + 后 M，中间 ****）
+- **4 个列表 GET 端点加 mask 投影**：/api/members /api/workers /api/project-workers /api/partners
+- **单查保留原文** (/api/members/{id} 等)：编辑表单需要完整 PII
+
+### P2.1 字段命名统一 (32ad0a1 + 4adaec4)
+
+- **Program.cs:282 users 表**：password+salt → password_hash+salt+version（与 AuthEndpoints 一致）
+- **012 数据迁移** (4adaec4): ALTER TABLE 加 3 列 + UPDATE 旧 salt 到 password_salt, password_hash 留空强制重置
+- **AuthEndpoints 旧库检测**: password_hash 空 → 返回账户需要重置密码提示
+- **v1.1.1 reset-password 端点** (e69539a): admin 用 POST /api/auth/reset-password 强制重置用户密码
+
+### 文档 + 红绿灯
+
+- **docs/SMOKE-TEST.md** (e9792c7): 端到端冒烟测试流程 (15 分钟手测 + 5 分钟自动)
+- **AGENTS.md**: 顶部版本号 v0.70.0 → v0.71.0，加 ## 红绿灯段（4 项必跑命令 + 通过标准）
+- **src/constants/changelog.ts**: 加 v0.71.0 段 (6 条用户视角变更)
+
+### 红绿灯验证
+
+- dotnet build 0 错误 0 警告
+- dotnet test 8/8 通过
+- 业务端点 uid 强制鉴权覆盖率 179/179 (100%, 除 OCR 12 + Auth 10 按设计豁免)
+
+### 未完成（按设计豁免）
+
+- AuthEndpoints 10 端点：登录认证端点（部分须豁免）
+- OcrEndpoints 12 端点：百度 OCR 独立模块
+- 老用户必须重置密码：PBKDF2 哈希单向，无法从明文恢复
+
+---
+
 ## v1.0.0（2026-06-17）— P0/P1 安全基线补齐 + 端点架构升级
 
 > **里程碑**：架构层（迁移/SQL/UI/审计/数据存储）合规度**极高**；鉴权层（认证/越权/限流/敏感字段保护）从零补到 P0 大满贯
