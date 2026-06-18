@@ -66,20 +66,25 @@ public static class MemberEndpoints
                       PhoneEnc = pii.Encrypt(dto.Phone ?? ""), BankAccountEnc = pii.Encrypt("") });
             return Common.Ok(id);
         });
-        app.MapPut("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection db) =>
+                app.MapPut("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            // v1.2.0: PII 字段加密
+            var pii = ctx.RequestServices.GetRequiredService<EngineeringManager.Api.Security.PiiProtector>();
             var affected = await db.ExecuteAsync(@"UPDATE members SET name=@Name,phone=@Phone,email=@Email,
                 member_type=@MemberType,role=@Role,id_card=@IdCard,gender=@Gender,ethnicity=@Ethnicity,
                 birth_date=@BirthDate,id_card_address=@IdCardAddress,base_salary=@BaseSalary,daily_wage=@DailyWage,
-                entry_date=@EntryDate,status=@Status,department_id=@DepartmentId,position=@Position WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
+                entry_date=@EntryDate,status=@Status,department_id=@DepartmentId,position=@Position,
+                id_card_enc=@IdCardEnc,id_card_address_enc=@IdCardAddressEnc,phone_enc=@PhoneEnc,bank_account_enc=@BankAccountEnc
+                WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
                 new { dto.Id, dto.Name, dto.Phone, dto.Email, dto.MemberType, dto.Role, dto.IdCard,
                       Uid = uid, IsAdmin = isAdmin, dto.Gender, dto.Ethnicity, dto.BirthDate, dto.IdCardAddress, dto.BaseSalary,
-                      dto.DailyWage, dto.EntryDate, dto.Status, dto.DepartmentId, dto.Position });
+                      dto.DailyWage, dto.EntryDate, dto.Status, dto.DepartmentId, dto.Position,
+                      IdCardEnc = pii.Encrypt(dto.IdCard ?? ""), IdCardAddressEnc = pii.Encrypt(dto.IdCardAddress ?? ""),
+                      PhoneEnc = pii.Encrypt(dto.Phone ?? ""), BankAccountEnc = pii.Encrypt("") });
             return affected > 0 ? Common.Ok() : Results.Forbid();
         });
-
         app.MapDelete("/api/members/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
@@ -132,18 +137,23 @@ public static class MemberEndpoints
                       CreatedBy = uid, Now = now() });
             return Common.Ok(id);
         });
-        app.MapPut("/api/workers", async (HttpContext ctx, WorkerDto dto, IDbConnection db) =>
+                app.MapPut("/api/workers", async (HttpContext ctx, WorkerDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            // v1.2.0: PII 字段加密
+            var pii = ctx.RequestServices.GetRequiredService<EngineeringManager.Api.Security.PiiProtector>();
             var affected = await db.ExecuteAsync(@"UPDATE workers SET name=@Name,id_card=@IdCard,gender=@Gender,
                 phone=@Phone,address=@Address,bank_account=@BankAccount,bank_name=@BankName,
-                worker_type=@WorkerType,daily_wage=@DailyWage WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
-                new { dto.Id, dto.Name, dto.IdCard, dto.Gender, dto.Phone, dto.Address,
-                      dto.BankAccount, dto.BankName, dto.WorkerType, dto.DailyWage, Uid = uid, IsAdmin = isAdmin });
+                worker_type=@WorkerType,daily_wage=@DailyWage,
+                id_card_enc=@IdCardEnc,phone_enc=@PhoneEnc,address_enc=@AddressEnc,bank_account_enc=@BankAccountEnc
+                WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
+                new { dto.Id, dto.Name, dto.IdCard, dto.Gender, dto.Phone, dto.Address, dto.BankAccount,
+                      dto.BankName, dto.WorkerType, dto.DailyWage, Uid = uid, IsAdmin = isAdmin,
+                      IdCardEnc = pii.Encrypt(dto.IdCard ?? ""), PhoneEnc = pii.Encrypt(dto.Phone ?? ""),
+                      AddressEnc = pii.Encrypt(dto.Address ?? ""), BankAccountEnc = pii.Encrypt(dto.BankAccount ?? "") });
             return affected > 0 ? Common.Ok() : Results.Forbid();
         });
-
         app.MapDelete("/api/workers/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
@@ -182,9 +192,10 @@ public static class MemberEndpoints
             return Common.Ok(masked);
         });
 
-        app.MapPost("/api/project-workers", async (HttpContext ctx, ProjectWorkerDto dto, IDbConnection db) =>
+                app.MapPost("/api/project-workers", async (HttpContext ctx, ProjectWorkerDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // v1.2.0: project-workers 不直接存 PII (JOIN workers 表), 加密仍加 0 _enc 列
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO project_workers
                 (worker_id,project_id,team_id,daily_wage,worker_type,entry_date,status,created_by,created_at)
                 VALUES (@WorkerId,@ProjectId,@TeamId,@DailyWage,@WorkerType,@EntryDate,@Status,@CreatedBy,@Now);
@@ -193,7 +204,6 @@ public static class MemberEndpoints
                       dto.EntryDate, Status = dto.Status ?? "active", CreatedBy = uid, Now = now() });
             return Common.Ok(id);
         });
-
         app.MapDelete("/api/project-workers/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
