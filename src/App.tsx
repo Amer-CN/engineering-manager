@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { getAPI } from './services/api-adapter'
 import Sidebar from './components/Sidebar'
@@ -254,7 +254,7 @@ const AppContent: React.FC = () => {
   // 启动动画
   if (showSplash) {
     return (
-      <Suspense fallback={<PageLoader />}>
+<Suspense fallback={<PageLoader />}>
         <SplashScreen onComplete={() => setShowSplash(false)} />
       </Suspense>
     )
@@ -317,6 +317,7 @@ const AppContent: React.FC = () => {
       </div>
       {/* 全屏时隐藏状态栏 */}
       {!isFullScreen && <StatusBar />}
+
 
       {/* 窗口边缘 resize 手柄 */}
       <div className="fixed top-0 left-0 right-0 h-1.5 cursor-n-resize z-50"
