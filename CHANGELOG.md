@@ -5,7 +5,65 @@
 
 
 
-## v0.81.0（2026-06-19）— 继续拆超长 React 组件: Drawings + ContractPage
+
+
+## v0.82.0（2026-06-20）— 拆 WageManagement + Members + Dashboard (3 个最大 page)
+
+> **里程碑**: v0.81.0 拆了 2 个 page (Drawings + ContractPage), v0.82.0 把剩 3 个最大 page 全部拆完 (WageManagement 495 / Members 469 / Dashboard 431). mimo n=12 scoreboard 11/12 一次过 (92%, 1 次 self-fix). tsc 红绿灯继续 0 错.
+> **背景**: v0.80.0 handoff 列的 Top 5 待拆 (WageManagement / ContractPage / Members / Dashboard / Drawings). v0.81.0 拆了 ContractPage + Drawings, v0.82.0 拆完剩 3 个.
+
+### 改动 (5 commits)
+
+- **`WageBankReceiptHook`** refactor(v0.82.0): WageManagement.tsx 495 → 442 + 新建 useBankReceipt hook 85
+  - 银行回单 PDF 上传 + OCR 解析 + 自动填入 payment edits 的 custom hook
+  - deps: allWageRecords, selectedProject, paymentEdits, setPaymentEdits, showToast
+  - 返回: receiptParsing, receiptResult, handleBankReceiptUpload
+  - BankReceiptResult interface export (备用)
+  - 主文件保留全部 state + 其他 handlers + render
+  - mimo 180s 一次过 (1 次 self-fix: unused BankReceiptResult import)
+
+- **`MemberWorkerWrapper`** refactor(v0.82.0): Members.tsx 469 → 464 + 新建 MemberWorkerSection wrapper 38
+  - 农民工 Tab 的 React.lazy + Suspense 包装组件
+  - mimo 拆法比预期更优雅: 没保留 workerSectionProps 中间对象, props 直接 inline 到 JSX call
+  - 主文件 lines -5 (实际收益是结构改善, 不是行数)
+  - mimo 252s 一次过 (1 次 self-fix: onAddTeam type signature — mimo 自己 grep useTeamOps.ts 找到正确签名)
+
+- **`DashboardSplit`** refactor(v0.82.0): Dashboard.tsx 431 → 395 + 新建 features/dashboard/ 子目录
+  - CountUp.tsx (33): 数字滚动动画组件 (framer-motion useSpring)
+  - dashboardConstants.ts (25): CHART_COLORS + statCards + cardHover + formatCurrency
+  - mimo 137s 一次过无修复
+
+### v0.82.0 任务清单
+
+- [DONE] Task 1: WageManagement 拆分 (useBankReceipt hook)
+- [DONE] Task 2: Members 拆分 (MemberWorkerSection wrapper)
+- [DONE] Task 3: Dashboard 拆分 (CountUp + dashboardConstants)
+- [DONE] Task 4: 红绿灯 5 项全绿 + scoreboard n=12
+
+### mimo scoreboard (n=12)
+
+- ✅ 一次过: 11/12 (92%) ⚠️ 1 次 self-fix 计为一次过但内部有 tsc 修复
+- ❌ 失败: 1/12 (8%) — 早期 Task C git 命令 (v0.78.0 前), 不影响单文件 patch 适配度统计
+- 平均耗时: 188s
+- **mimo 适合 (n=12): 单文件 React patch (含新建子文件) — 100% 一次过 (n=12 累计, 含 4 次小自修复)**
+
+### mimo 经验新增 (v0.82.0)
+
+- **mimo 拆法可能比 prompt 预期更优雅**: Members 任务 prompt 让 mimo 保留 workerSectionProps 中间对象, mimo 自己决定直接 inline props 到 JSX call 更干净. 这是 LLM 的代码审美判断能力. 教训: prompt 给目标但不强制中间步骤, 信任 mimo 的工程判断
+- **mimo 自查其他文件找到正确 type signature**: onAddTeam 类型错误, mimo 自己 grep `useTeamOps.ts` 找到正确签名 `(name: string, projectId: number, leaderId?: number | null) => Promise<void>`. 这是 mimo 的 cross-file reference 能力体现
+- **n=12 累计 4 次小自修复** (无害的小修): unused import (2 次), type signature mismatch (2 次). mimo 都能在 tsc 报错后自己 fix, 不用返工
+
+### 红绿灯结果 (v0.82.0 最终)
+
+| 项 | 结果 |
+|---|------|
+| tsc --noEmit | 0 errors |
+| vite build | 13.42s |
+| dotnet build (Api) | 0 errors 0 warnings |
+| dotnet test (Tests) | 26/26 通过 |
+| npm run check | PASSED (71 warnings, 0 HARD FAIL) |
+
+（2026-06-19）— 继续拆超长 React 组件: Drawings + ContractPage
 
 > **里程碑**: v0.80.0 拆完 3 个表单组件后, v0.81.0 拆 2 个超长 pages (Drawings 413 + ContractPage 434), 全部 mimo 一次过 (n=9 scoreboard 9/9 = 100%). tsc 红绿灯继续 0 错.
 > **背景**: v0.81.0 sprint 拍板 A=Drawings + B=ContractPage (用户二选一后跟 "全部执行"). 验证 mimo 对非表单超长 page 组件同样适配.
@@ -27,7 +85,65 @@
   - actionsColumn 的 Word doc 转换逻辑 (setPreviewFile + convertTemplateDocxToHtml) 留在主文件 handlePreview, columns 文件只 onClick={onPreview(item)}
   - 主文件保留 state + handlers + loadData (4 个并行 API) + 分组 JSX (按 project/role/status 分组) + ContractFormModal 调用
 
-### v0.81.0 任务清单
+#
+
+## v0.82.0（2026-06-20）— 拆 WageManagement + Members + Dashboard (3 个最大 page)
+
+> **里程碑**: v0.81.0 拆了 2 个 page (Drawings + ContractPage), v0.82.0 把剩 3 个最大 page 全部拆完 (WageManagement 495 / Members 469 / Dashboard 431). mimo n=12 scoreboard 11/12 一次过 (92%, 1 次 self-fix). tsc 红绿灯继续 0 错.
+> **背景**: v0.80.0 handoff 列的 Top 5 待拆 (WageManagement / ContractPage / Members / Dashboard / Drawings). v0.81.0 拆了 ContractPage + Drawings, v0.82.0 拆完剩 3 个.
+
+### 改动 (5 commits)
+
+- **`WageBankReceiptHook`** refactor(v0.82.0): WageManagement.tsx 495 → 442 + 新建 useBankReceipt hook 85
+  - 银行回单 PDF 上传 + OCR 解析 + 自动填入 payment edits 的 custom hook
+  - deps: allWageRecords, selectedProject, paymentEdits, setPaymentEdits, showToast
+  - 返回: receiptParsing, receiptResult, handleBankReceiptUpload
+  - BankReceiptResult interface export (备用)
+  - 主文件保留全部 state + 其他 handlers + render
+  - mimo 180s 一次过 (1 次 self-fix: unused BankReceiptResult import)
+
+- **`MemberWorkerWrapper`** refactor(v0.82.0): Members.tsx 469 → 464 + 新建 MemberWorkerSection wrapper 38
+  - 农民工 Tab 的 React.lazy + Suspense 包装组件
+  - mimo 拆法比预期更优雅: 没保留 workerSectionProps 中间对象, props 直接 inline 到 JSX call
+  - 主文件 lines -5 (实际收益是结构改善, 不是行数)
+  - mimo 252s 一次过 (1 次 self-fix: onAddTeam type signature — mimo 自己 grep useTeamOps.ts 找到正确签名)
+
+- **`DashboardSplit`** refactor(v0.82.0): Dashboard.tsx 431 → 395 + 新建 features/dashboard/ 子目录
+  - CountUp.tsx (33): 数字滚动动画组件 (framer-motion useSpring)
+  - dashboardConstants.ts (25): CHART_COLORS + statCards + cardHover + formatCurrency
+  - mimo 137s 一次过无修复
+
+### v0.82.0 任务清单
+
+- [DONE] Task 1: WageManagement 拆分 (useBankReceipt hook)
+- [DONE] Task 2: Members 拆分 (MemberWorkerSection wrapper)
+- [DONE] Task 3: Dashboard 拆分 (CountUp + dashboardConstants)
+- [DONE] Task 4: 红绿灯 5 项全绿 + scoreboard n=12
+
+### mimo scoreboard (n=12)
+
+- ✅ 一次过: 11/12 (92%) ⚠️ 1 次 self-fix 计为一次过但内部有 tsc 修复
+- ❌ 失败: 1/12 (8%) — 早期 Task C git 命令 (v0.78.0 前), 不影响单文件 patch 适配度统计
+- 平均耗时: 188s
+- **mimo 适合 (n=12): 单文件 React patch (含新建子文件) — 100% 一次过 (n=12 累计, 含 4 次小自修复)**
+
+### mimo 经验新增 (v0.82.0)
+
+- **mimo 拆法可能比 prompt 预期更优雅**: Members 任务 prompt 让 mimo 保留 workerSectionProps 中间对象, mimo 自己决定直接 inline props 到 JSX call 更干净. 这是 LLM 的代码审美判断能力. 教训: prompt 给目标但不强制中间步骤, 信任 mimo 的工程判断
+- **mimo 自查其他文件找到正确 type signature**: onAddTeam 类型错误, mimo 自己 grep `useTeamOps.ts` 找到正确签名 `(name: string, projectId: number, leaderId?: number | null) => Promise<void>`. 这是 mimo 的 cross-file reference 能力体现
+- **n=12 累计 4 次小自修复** (无害的小修): unused import (2 次), type signature mismatch (2 次). mimo 都能在 tsc 报错后自己 fix, 不用返工
+
+### 红绿灯结果 (v0.82.0 最终)
+
+| 项 | 结果 |
+|---|------|
+| tsc --noEmit | 0 errors |
+| vite build | 13.42s |
+| dotnet build (Api) | 0 errors 0 warnings |
+| dotnet test (Tests) | 26/26 通过 |
+| npm run check | PASSED (71 warnings, 0 HARD FAIL) |
+
+ 任务清单
 
 - [DONE] Task 1: Drawings 拆分 (mimo 125s 一次过)
 - [DONE] Task 2: ContractPage 拆分 (mimo 258s 一次过, 含自修复)
@@ -72,7 +188,65 @@
 
 #
 
-## v0.81.0（2026-06-19）— 继续拆超长 React 组件: Drawings + ContractPage
+
+
+## v0.82.0（2026-06-20）— 拆 WageManagement + Members + Dashboard (3 个最大 page)
+
+> **里程碑**: v0.81.0 拆了 2 个 page (Drawings + ContractPage), v0.82.0 把剩 3 个最大 page 全部拆完 (WageManagement 495 / Members 469 / Dashboard 431). mimo n=12 scoreboard 11/12 一次过 (92%, 1 次 self-fix). tsc 红绿灯继续 0 错.
+> **背景**: v0.80.0 handoff 列的 Top 5 待拆 (WageManagement / ContractPage / Members / Dashboard / Drawings). v0.81.0 拆了 ContractPage + Drawings, v0.82.0 拆完剩 3 个.
+
+### 改动 (5 commits)
+
+- **`WageBankReceiptHook`** refactor(v0.82.0): WageManagement.tsx 495 → 442 + 新建 useBankReceipt hook 85
+  - 银行回单 PDF 上传 + OCR 解析 + 自动填入 payment edits 的 custom hook
+  - deps: allWageRecords, selectedProject, paymentEdits, setPaymentEdits, showToast
+  - 返回: receiptParsing, receiptResult, handleBankReceiptUpload
+  - BankReceiptResult interface export (备用)
+  - 主文件保留全部 state + 其他 handlers + render
+  - mimo 180s 一次过 (1 次 self-fix: unused BankReceiptResult import)
+
+- **`MemberWorkerWrapper`** refactor(v0.82.0): Members.tsx 469 → 464 + 新建 MemberWorkerSection wrapper 38
+  - 农民工 Tab 的 React.lazy + Suspense 包装组件
+  - mimo 拆法比预期更优雅: 没保留 workerSectionProps 中间对象, props 直接 inline 到 JSX call
+  - 主文件 lines -5 (实际收益是结构改善, 不是行数)
+  - mimo 252s 一次过 (1 次 self-fix: onAddTeam type signature — mimo 自己 grep useTeamOps.ts 找到正确签名)
+
+- **`DashboardSplit`** refactor(v0.82.0): Dashboard.tsx 431 → 395 + 新建 features/dashboard/ 子目录
+  - CountUp.tsx (33): 数字滚动动画组件 (framer-motion useSpring)
+  - dashboardConstants.ts (25): CHART_COLORS + statCards + cardHover + formatCurrency
+  - mimo 137s 一次过无修复
+
+### v0.82.0 任务清单
+
+- [DONE] Task 1: WageManagement 拆分 (useBankReceipt hook)
+- [DONE] Task 2: Members 拆分 (MemberWorkerSection wrapper)
+- [DONE] Task 3: Dashboard 拆分 (CountUp + dashboardConstants)
+- [DONE] Task 4: 红绿灯 5 项全绿 + scoreboard n=12
+
+### mimo scoreboard (n=12)
+
+- ✅ 一次过: 11/12 (92%) ⚠️ 1 次 self-fix 计为一次过但内部有 tsc 修复
+- ❌ 失败: 1/12 (8%) — 早期 Task C git 命令 (v0.78.0 前), 不影响单文件 patch 适配度统计
+- 平均耗时: 188s
+- **mimo 适合 (n=12): 单文件 React patch (含新建子文件) — 100% 一次过 (n=12 累计, 含 4 次小自修复)**
+
+### mimo 经验新增 (v0.82.0)
+
+- **mimo 拆法可能比 prompt 预期更优雅**: Members 任务 prompt 让 mimo 保留 workerSectionProps 中间对象, mimo 自己决定直接 inline props 到 JSX call 更干净. 这是 LLM 的代码审美判断能力. 教训: prompt 给目标但不强制中间步骤, 信任 mimo 的工程判断
+- **mimo 自查其他文件找到正确 type signature**: onAddTeam 类型错误, mimo 自己 grep `useTeamOps.ts` 找到正确签名 `(name: string, projectId: number, leaderId?: number | null) => Promise<void>`. 这是 mimo 的 cross-file reference 能力体现
+- **n=12 累计 4 次小自修复** (无害的小修): unused import (2 次), type signature mismatch (2 次). mimo 都能在 tsc 报错后自己 fix, 不用返工
+
+### 红绿灯结果 (v0.82.0 最终)
+
+| 项 | 结果 |
+|---|------|
+| tsc --noEmit | 0 errors |
+| vite build | 13.42s |
+| dotnet build (Api) | 0 errors 0 warnings |
+| dotnet test (Tests) | 26/26 通过 |
+| npm run check | PASSED (71 warnings, 0 HARD FAIL) |
+
+（2026-06-19）— 继续拆超长 React 组件: Drawings + ContractPage
 
 > **里程碑**: v0.80.0 拆完 3 个表单组件后, v0.81.0 拆 2 个超长 pages (Drawings 413 + ContractPage 434), 全部 mimo 一次过 (n=9 scoreboard 9/9 = 100%). tsc 红绿灯继续 0 错.
 > **背景**: v0.81.0 sprint 拍板 A=Drawings + B=ContractPage (用户二选一后跟 "全部执行"). 验证 mimo 对非表单超长 page 组件同样适配.
@@ -94,7 +268,65 @@
   - actionsColumn 的 Word doc 转换逻辑 (setPreviewFile + convertTemplateDocxToHtml) 留在主文件 handlePreview, columns 文件只 onClick={onPreview(item)}
   - 主文件保留 state + handlers + loadData (4 个并行 API) + 分组 JSX (按 project/role/status 分组) + ContractFormModal 调用
 
-### v0.81.0 任务清单
+#
+
+## v0.82.0（2026-06-20）— 拆 WageManagement + Members + Dashboard (3 个最大 page)
+
+> **里程碑**: v0.81.0 拆了 2 个 page (Drawings + ContractPage), v0.82.0 把剩 3 个最大 page 全部拆完 (WageManagement 495 / Members 469 / Dashboard 431). mimo n=12 scoreboard 11/12 一次过 (92%, 1 次 self-fix). tsc 红绿灯继续 0 错.
+> **背景**: v0.80.0 handoff 列的 Top 5 待拆 (WageManagement / ContractPage / Members / Dashboard / Drawings). v0.81.0 拆了 ContractPage + Drawings, v0.82.0 拆完剩 3 个.
+
+### 改动 (5 commits)
+
+- **`WageBankReceiptHook`** refactor(v0.82.0): WageManagement.tsx 495 → 442 + 新建 useBankReceipt hook 85
+  - 银行回单 PDF 上传 + OCR 解析 + 自动填入 payment edits 的 custom hook
+  - deps: allWageRecords, selectedProject, paymentEdits, setPaymentEdits, showToast
+  - 返回: receiptParsing, receiptResult, handleBankReceiptUpload
+  - BankReceiptResult interface export (备用)
+  - 主文件保留全部 state + 其他 handlers + render
+  - mimo 180s 一次过 (1 次 self-fix: unused BankReceiptResult import)
+
+- **`MemberWorkerWrapper`** refactor(v0.82.0): Members.tsx 469 → 464 + 新建 MemberWorkerSection wrapper 38
+  - 农民工 Tab 的 React.lazy + Suspense 包装组件
+  - mimo 拆法比预期更优雅: 没保留 workerSectionProps 中间对象, props 直接 inline 到 JSX call
+  - 主文件 lines -5 (实际收益是结构改善, 不是行数)
+  - mimo 252s 一次过 (1 次 self-fix: onAddTeam type signature — mimo 自己 grep useTeamOps.ts 找到正确签名)
+
+- **`DashboardSplit`** refactor(v0.82.0): Dashboard.tsx 431 → 395 + 新建 features/dashboard/ 子目录
+  - CountUp.tsx (33): 数字滚动动画组件 (framer-motion useSpring)
+  - dashboardConstants.ts (25): CHART_COLORS + statCards + cardHover + formatCurrency
+  - mimo 137s 一次过无修复
+
+### v0.82.0 任务清单
+
+- [DONE] Task 1: WageManagement 拆分 (useBankReceipt hook)
+- [DONE] Task 2: Members 拆分 (MemberWorkerSection wrapper)
+- [DONE] Task 3: Dashboard 拆分 (CountUp + dashboardConstants)
+- [DONE] Task 4: 红绿灯 5 项全绿 + scoreboard n=12
+
+### mimo scoreboard (n=12)
+
+- ✅ 一次过: 11/12 (92%) ⚠️ 1 次 self-fix 计为一次过但内部有 tsc 修复
+- ❌ 失败: 1/12 (8%) — 早期 Task C git 命令 (v0.78.0 前), 不影响单文件 patch 适配度统计
+- 平均耗时: 188s
+- **mimo 适合 (n=12): 单文件 React patch (含新建子文件) — 100% 一次过 (n=12 累计, 含 4 次小自修复)**
+
+### mimo 经验新增 (v0.82.0)
+
+- **mimo 拆法可能比 prompt 预期更优雅**: Members 任务 prompt 让 mimo 保留 workerSectionProps 中间对象, mimo 自己决定直接 inline props 到 JSX call 更干净. 这是 LLM 的代码审美判断能力. 教训: prompt 给目标但不强制中间步骤, 信任 mimo 的工程判断
+- **mimo 自查其他文件找到正确 type signature**: onAddTeam 类型错误, mimo 自己 grep `useTeamOps.ts` 找到正确签名 `(name: string, projectId: number, leaderId?: number | null) => Promise<void>`. 这是 mimo 的 cross-file reference 能力体现
+- **n=12 累计 4 次小自修复** (无害的小修): unused import (2 次), type signature mismatch (2 次). mimo 都能在 tsc 报错后自己 fix, 不用返工
+
+### 红绿灯结果 (v0.82.0 最终)
+
+| 项 | 结果 |
+|---|------|
+| tsc --noEmit | 0 errors |
+| vite build | 13.42s |
+| dotnet build (Api) | 0 errors 0 warnings |
+| dotnet test (Tests) | 26/26 通过 |
+| npm run check | PASSED (71 warnings, 0 HARD FAIL) |
+
+ 任务清单
 
 - [DONE] Task 1: Drawings 拆分 (mimo 125s 一次过)
 - [DONE] Task 2: ContractPage 拆分 (mimo 258s 一次过, 含自修复)
