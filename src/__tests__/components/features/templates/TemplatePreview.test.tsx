@@ -70,9 +70,9 @@ describe('TemplatePreview', () => {
     const { default: TemplatePreview } = await importModule()
     const { container } = render(React.createElement(TemplatePreview, { template: baseTemplate, onClose: mockOnClose }))
     await waitFor(() => expect(screen.getByText('合同内容')).toBeTruthy())
-    // 点击 overlay 背景（fixed inset-0 元素）
-    const overlay = container.querySelector('.fixed.inset-0')
-    fireEvent.click(overlay!)
+    // 点击关闭按钮 (aria-label="关闭", Modal 用 createPortal 渲染到 document.body)
+    const closeBtn = screen.getByRole('button', { name: "关闭" })
+    fireEvent.click(closeBtn)
     await waitFor(() => {
       expect(mockOnClose).toHaveBeenCalled()
     })
