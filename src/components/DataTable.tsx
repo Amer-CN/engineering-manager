@@ -39,6 +39,12 @@ export interface Column<T> {
   filterAccessor?: (item: T) => string
 }
 
+const alignMap = {
+  left: TABLE.cellLeft,
+  center: TABLE.cellCenter,
+  right: TABLE.cellRight,
+}
+
 export interface DataTableProps<T> {
   /** 数据列表 */
   data: T[]
@@ -97,14 +103,6 @@ export interface DataTableProps<T> {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 对齐修饰映射
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const alignMap = {
-  left: TABLE.cellLeft,
-  center: TABLE.cellCenter,
-  right: TABLE.cellRight,
-}
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // 骨架屏
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -185,53 +183,18 @@ export function DataTable<T>({
     enablePagination, defaultPageSize, onSortChange,
   )
 
+  // v0.75.0: 抽出筛选操作回调到 useDataTableFilters hook
+  const {
+    handleFilterToggle,
+    handleFilterSelectAll,
+    handleFilterClear,
+  } = useDataTableFilters(setFilters)
 
 
   // 重置页码
   useEffect(() => {
     if (currentPage > totalPages && totalPages > 0) setCurrentPage(1)
   }, [data.length, totalPages, currentPage])
-
-  // 同步分页到状态栏
-  const setStatusBarInfo = useStatusStore(s => s.setInfo)
-  useEffect(() => {
-    if (data.length > 0 && enablePagination) {
-      const start = pageSize > 0 ? (currentPage - 1) * pageSize + 1 : 1
-      const end = pageSize > 0 ? Math.min(currentPage * pageSize, data.length) : data.length
-      setStatusBarInfo({ total: data.length, start, end })
-    } else if (data.length > 0) {
-      setStatusBarInfo({ total: data.length, start: 1, end: data.length })
-    } else {
-      setStatusBarInfo(null)
-    }
-    return () => setStatusBarInfo(null)
-  }, [data.length, currentPage, pageSize, enablePagination, setStatusBarInfo])
-
-  // 筛选操作回调
-  const handleFilterToggle = useCallback((colKey: string, value: string) => {
-    setFilters(prev => {
-      const next = { ...prev }
-      const set = new Set(next[colKey] || [])
-      if (set.has(value)) set.delete(value)
-      else set.add(value)
-      next[colKey] = set
-      return next
-    })
-  }, [])
-
-  const handleFilterSelectAll = useCallback((colKey: string, allValues: string[]) => {
-    setFilters(prev => ({
-      ...prev,
-      [colKey]: new Set(allValues),
-    }))
-  }, [])
-
-  const handleFilterClear = useCallback((colKey: string) => {
-    setFilters(prev => ({
-      ...prev,
-      [colKey]: new Set<string>(),
-    }))
-  }, [])
 
   // ── Loading 骨架屏 ──
   if (loading) return <TableSkeleton columns={columns} />
