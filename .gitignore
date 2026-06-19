@@ -1,0 +1,76 @@
+node_modules/
+dist/
+dist-electron/
+release/
+.gstack/
+.workbuddy/
+.reasonix/
+.claude/agents/
+.claude/hooks/
+.claude/scheduled_tasks.json
+*.log
+.DS_Store
+Thumbs.db
+
+# 真实数据文件 (包含 API Key、项目数据、人员身份信息等敏感内容)
+public/ocr-config.json
+public/seed-data.json
+
+# Claude Code 本地设置 (含个人权限配置和路径)
+.claude/settings.local.json
+
+# MCP 配置 (含第三方 API Token)
+.mcp.json
+
+# 本地配置文件 (含真实路径、API Key 等)
+config.json
+
+# 微信公众号 API 密钥
+scripts/wechat-config.json
+
+# Graphify 知识图谱 (自动生成，无需版本控制)
+graphify-out/
+
+# 意外生成的空目录
+BRANCH=master/
+nul
+
+# Tauri 构建产物 + 误生成的数据目录
+src-tauri/target/
+__select_folder__/
+
+# 字体文件（大文件，不纳入版本控制）
+public/fonts/*.otf
+public/fonts/*.ttf
+
+# 环境变量（含 API Key 等敏感信息）
+.env
+.env.*
+
+# 备份文件
+*.backup
+*.backup2
+
+# 压缩包（临时构建产物）
+*.zip
+
+# C# 构建产物
+EngineeringManager.Api/bin/
+EngineeringManager.Api/obj/
+EngineeringManager.Installer/publish/
+.sisyphus/prod-test/
+
+# 编译产物（禁止提交）
+*.exe
+*.pdb
+
+
+# npm lock file (CI uses npm install instead of npm ci)
+package-lock.json
+
+# Tests 构建产物
+EngineeringManager.Tests/bin/
+EngineeringManager.Tests/obj/
+# 本地 skill / 外部指南（不入库）
+.claude/skills/
+vibe-coding-guide/

@@ -1,0 +1,96 @@
+import { useState, useEffect, useCallback } from 'react'
+import { CostLedgerDashboard } from './features/costLedger/CostLedgerDashboard'
+import { CostLedgerProjectDetail } from './features/costLedger/CostLedgerProjectDetail'
+import { CategoryManager } from './features/costLedger/CategoryManager'
+import { useCostLedgerCategories } from '@/hooks/useCostLedgerCategories'
+import type { Project, CostLedgerSummary } from '@/types'
+import PageContainer from './ui/PageContainer'
+import { getAPI } from '@/services/api-adapter'
+
+type ViewMode = 'dashboard' | 'detail'
+
+export default function CostLedger() {
+  const [view, setView] = useState<ViewMode>('dashboard')
+  const [projects, setProjects] = useState<Project[]>([])
+  const [summaries, setSummaries] = useState<Record<number, CostLedgerSummary>>({})
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [showCategoryManager, setShowCategoryManager] = useState(false)
+
+  const { categories, refresh: refreshCategories } = useCostLedgerCategories()
+
+  const loadDashboard = useCallback(async () => {
+    const api = await getAPI()
+    if (!api?.getProjects) return
+    setLoading(true)
+    const projRes = await api.getProjects()
+    const projectList = projRes?.success ? projRes.data || [] : []
+    setProjects(projectList)
+
+    const sums: Record<number, CostLedgerSummary> = {}
+    if (api.getCostLedgerSummary) {
+      await Promise.all(projectList.map(async (p: Project) => {
+        const r = await api.getCostLedgerSummary(p.id)
+        if (r?.success && r.data) sums[p.id] = r.data
+      }))
+    }
+    setSummaries(sums)
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { loadDashboard() }, [loadDashboard])
+
+  const handleSelectProject = (projectId: number) => {
+    const project = projects.find(p => p.id === projectId)
+    if (project) {
+      setSelectedProject(project)
+      setView('detail')
+    }
+  }
+
+  const handleBack = () => {
+    setSelectedProject(null)
+    setView('dashboard')
+    loadDashboard()
+  }
+
+  if (view === 'detail' && selectedProject) {
+    return (
+      <>
+        <CostLedgerProjectDetail
+          project={selectedProject}
+          onBack={handleBack}
+          categories={categories}
+          onManageCategories={() => setShowCategoryManager(true)}
+        />
+        {showCategoryManager && (
+          <CategoryManager
+            categories={categories}
+            onClose={() => setShowCategoryManager(false)}
+            onRefresh={refreshCategories}
+          />
+        )}
+      </>
+    )
+  }
+
+  return (
+    <PageContainer>
+      <CostLedgerDashboard
+        projects={projects}
+        summaries={summaries}
+        loading={loading}
+        onSelectProject={handleSelectProject}
+        onManageCategories={() => setShowCategoryManager(true)}
+      />
+
+      {showCategoryManager && (
+        <CategoryManager
+          categories={categories}
+          onClose={() => setShowCategoryManager(false)}
+          onRefresh={refreshCategories}
+        />
+      )}
+    </PageContainer>
+  )
+}
