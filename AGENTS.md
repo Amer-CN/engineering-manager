@@ -253,11 +253,11 @@ export function useProjects() {
 
 ---
 
-## 🚦 红绿灯（v0.71.0 起）
+## 🚦 红绿灯（v0.71.0 起, v0.79.0 加 tsc）
 
 每个 sprint 收尾 / release 前必跑，0 error 才算合格。完整流程见 [docs/SMOKE-TEST.md](docs/SMOKE-TEST.md)。
 
-`ash
+```bash
 # 1. 后端编译
 cd "E:\测试\EngineeringManager.Api" && dotnet build 2>&1 | Select-String -Pattern "错误|Build succeeded"
 cd "E:\测试\EngineeringManager.Api" && dotnet build 2>&1 | Select-String -Pattern "(warning|error|生成成功|生成失败|Build)"
@@ -270,16 +270,20 @@ cd "E:\测试" && npm run check 2>&1 | Select-String -Pattern "HARD FAIL|passed|
 
 # 4. 前端构建
 cd "E:\测试" && npx vite build 2>&1 | Select-String -Pattern "error|success|✓|✗"
-`
+
+# 5. TypeScript 类型检查 (v0.79.0 新增)
+cd "E:\测试" && npx tsc --noEmit --pretty false 2>&1 | Select-String -Pattern "error TS"
+```
 
 **通过标准**：
 - 后端 0 错误 0 警告
 - 后端 tests 26/26 通过 (v0.73.0 起: UserDimFilterTests 17 + UserDimPhase2Tests 9)
-- 前端 check 0 HARD FAIL (74 警告是历史软警告, 不影响)
+- 前端 check 0 HARD FAIL (73 警告是历史软警告, 不影响)
 - vite build 10-18 秒成功 (依赖并行 CI, 18s 偏慢可接受)
+- **tsc 0 error (v0.79.0 起, 防 unused import / 类型错乱回归)**
 - 前端 vitest 48/48 通过 (mask.ts 30 + useMaskedFn 7 + api-client 11, hooks/ 目录下其他测试视情况)
 
-**4 项全绿才可 git tag v0.x.0**。任何一项红 → 标记 WIP，先修。
+**5 项全绿才可 git tag v0.x.0**。任何一项红 → 标记 WIP，先修。
 
 ---
 
