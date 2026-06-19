@@ -1,3 +1,49 @@
+
+## v0.76.0（2026-06-19）— useUserIdSync 接入 App.tsx + 仓库清理
+
+> **里程碑**: PII Mask toggle 多设备同步的最后一公里 — 用户登录后自动从后端拉 toggle 状态覆盖 localStorage. 之前 hook 已暴露但未挂载.
+> **仓库卫生**: 清理 10 个一次性调试脚本, `.gitignore` 加 `.mimo-runs/` 规则.
+
+### 改动 (3 commit)
+
+- **`useUserIdSync接入`** feat(v0.76.0): useUserIdSync 接入 App.tsx
+  - 修复 v0.75.0 路线图 #1: MaskContext 已暴露 `useUserIdSync` hook 但 App.tsx 没挂载, 用户登录后不会自动从后端拉 toggle
+  - `src/App.tsx` L77 新增: `useUserIdSync(currentUser?.id)` (登录后从后端拉 PII mask toggle 覆盖 localStorage)
+  - `src/App.tsx` L9 import 调整: `import { MaskProvider, useUserIdSync } from './contexts/MaskContext'`
+- **`仓库清理`** chore(v0.76.0): 清理 10 个一次性调试脚本 + `.gitignore` 加 `.mimo-runs/`
+  - **删除 5 个 cjs 调试脚本**: `count-btn.cjs` / `test-btn.cjs` / `test-regex.cjs` / `screenshot.cjs` / `rb.cjs`
+  - **删除 4 个 Python logo 旧版**: `generate-logos-v2.py` / `v3.py` / `8x.py` / `gradient.py` (保留 v1 作历史)
+  - **删除 1 个 PowerShell 重构脚本**: `refactor-partnerform.ps1`
+  - **保留 9 个项目脚本**: `check-rules.cjs` (核心) / `apply-p0-4-filter.cjs` (P0-4 迁移) / `v1.2.0-backfill-pii.cjs` (PII 迁移) / 4 个 `replace-*.cjs` (重构审计) / `publish-wechat.cjs` (公众号工具) / `generate-logos.py` (v1)
+  - `.gitignore` 末尾加 `.mimo-runs/` 规则 (codex mimo wrapper 残留)
+- **`知识库同步`** docs(v0.76.0): 同步 v0.76.0 知识库
+  - `AGENTS.md` / `CLAUDE.md` 头部版本号 v0.75.0 → v0.76.0
+  - `package.json` / `installer/package.json` version 0.72.0 → 0.76.0
+  - `src/components/Login.tsx` L176 fallback: `'0.72.0'` → `'0.76.0'`
+  - `installer/src/App.tsx` L120 version prop: `"0.68.0"` → `"0.76.0"`
+  - `docs/MODULES.md` / `docs/ARCHITECTURE.md` 同步时间 + 架构变更
+
+### 路线图审计
+
+v0.75.0 handoff 列出的 v0.76.0 路线图 6 条:
+
+| # | 路线图 | v0.76.0 状态 |
+|---|--------|------|
+| 1 | useUserIdSync 接入 App.tsx | ✅ 完成 |
+| 2 | inventory/materials GET user-dim 修复 | ⚠️ **路线图过时, 已结案** — 代码层 (InventoryEndpoints.cs L25/L79) 和测试层 (UserDimFilterTests.cs L137-152) 在 v0.74.0 commit `532fd87` 已修复, 17 个 user-dim 测试已覆盖 |
+| 3 | 5 个超长文件拆分 (DataTable 已做, 其余 skip) | ⏭️ 已多次评估 skip |
+| 4 | PII INSERT 加密审计 | ⚠️ **已结案** — grep 确认 members/workers/partners/project_workers/supervisors POST/PUT 都已 `PiiProtector.Encrypt`, 无遗漏 |
+| 5 | 后端 `?unmask=true` 参数移除 | ⏭️ 跳过 (保留可避免破坏老客户端) |
+| 6 | 前端 hooks 补 vitest | ⏭️ 跳过 (边际收益低) |
+
+### 红绿灯 (v0.76.0)
+
+- 后端 build: 0 错 0 警
+- 后端 tests: 26/26 通过
+- 前端 check: BUILD PASSED (74 历史警告, 无新增)
+- vite build: 15-18s 成功
+- vitest: 48/48 通过 (mask 30 + useMaskedValue 7 + api-client 11)
+
 ## v0.75.0（2026-06-19）— PII Mask 完整闭环 + User Preferences API + 后端去硬 mask
 
 > **里程碑**: PII Mask toggle 完整闭环 — 后端去硬 mask (前端 hook 唯一控制显示) + 多设备同步 (User Preferences API).

@@ -1,7 +1,7 @@
 # 架构决策与数据保障
 
 > 本文档包含架构决策历史记录和数据保障机制详细说明，CLAUDE.md 只保留概要。
-> 最后同步：2026-06-02（C# 迁移后更新）
+> 最后同步：2026-06-19（v0.76.0 release: useUserIdSync 接入 + 仓库清理）
 
 ---
 
@@ -88,6 +88,8 @@
 | PII Mask 多设备同步 v0.75.0 | 2026-06-19 | User Preferences API (migration 022 + 4 端点: GET/PUT /api/user-preferences + GET/PUT /api/user-preferences/{key}) + MaskContext 通过 PUT 后端同步 toggle + useUserIdSync hook (登录后拉后端真值覆盖 localStorage) |
 | Partners tax_number schema 修复 v0.74.0 | 2026-06-19 | migration 021_AddPartnersTaxNumber.sql 修复 POST /api/partners 500 bug (v0.72.0 之前一直存在) |
 | DataTable 拆分 v0.75.0 | 2026-06-19 | 453 → 358 行 (-21%) + 提取 useDataTableState + useDataTableFilters hook + 修复 alignMap UI bug (列对齐失效) |
+| useUserIdSync 接入 v0.76.0 | 2026-06-19 | MaskContext 已暴露 useUserIdSync hook 但 App.tsx 没挂载 → L77 加 useUserIdSync(currentUser?.id) (登录后从后端拉 PII mask toggle 覆盖 localStorage) + L9 import 调整 |
+| 仓库清理 v0.76.0 | 2026-06-19 | git rm 10 个一次性调试脚本 (count-btn/test-btn/test-regex/screenshot/rb.cjs + 4 个 generate-logos-*.py 旧版 + refactor-partnerform.ps1) + .gitignore 加 .mimo-runs/ 规则 |
 
 ### 文件存储演进
 | 变更 | 日期 | 说明 |
