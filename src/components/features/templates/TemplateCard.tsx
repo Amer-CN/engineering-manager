@@ -56,12 +56,16 @@ export const TemplateCard = React.memo(function TemplateCard({ template, onEdit,
 
       {/* Actions */}
       <div className="flex items-center gap-1 pt-3 border-t border-slate-100">
-        <button onClick={() => onPreview(template)} className="btn btn-secondary btn-sm">
-          <Icon name="Eye" size={14} /> 预览
-        </button>
-        <button onClick={() => onGenerate(template)} className="btn btn-ghost btn-sm text-primary-600">
-          <Icon name="FileText" size={14} /> 生成
-        </button>
+        <Tooltip content="预览" position="top" delay={300}>
+          <button onClick={() => onPreview(template)} className="btn btn-secondary btn-sm">
+            <Icon name="Eye" size={14} /> 预览
+          </button>
+        </Tooltip>
+        <Tooltip content="生成文档" position="top" delay={300}>
+          <button onClick={() => onGenerate(template)} className="btn btn-ghost btn-sm text-primary-600">
+            <Icon name="FileText" size={14} /> 生成
+          </button>
+        </Tooltip>
         <div className="flex-1" />
         <Tooltip content="编辑" position="top" delay={300}>
           <button onClick={() => onEdit(template)} className="btn btn-ghost btn-sm text-slate-500">
