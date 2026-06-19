@@ -1,7 +1,7 @@
 # 架构决策与数据保障
 
 > 本文档包含架构决策历史记录和数据保障机制详细说明，CLAUDE.md 只保留概要。
-> 最后同步：2026-06-19（v0.76.0 release: useUserIdSync 接入 + 仓库清理）
+> 最后同步：2026-06-19（v0.77.0 release: DataTable.tsx 进一步拆分 358→209 行）
 
 ---
 
@@ -90,6 +90,7 @@
 | DataTable 拆分 v0.75.0 | 2026-06-19 | 453 → 358 行 (-21%) + 提取 useDataTableState + useDataTableFilters hook + 修复 alignMap UI bug (列对齐失效) |
 | useUserIdSync 接入 v0.76.0 | 2026-06-19 | MaskContext 已暴露 useUserIdSync hook 但 App.tsx 没挂载 → L77 加 useUserIdSync(currentUser?.id) (登录后从后端拉 PII mask toggle 覆盖 localStorage) + L9 import 调整 |
 | 仓库清理 v0.76.0 | 2026-06-19 | git rm 10 个一次性调试脚本 (count-btn/test-btn/test-regex/screenshot/rb.cjs + 4 个 generate-logos-*.py 旧版 + refactor-partnerform.ps1) + .gitignore 加 .mimo-runs/ 规则 |
+| DataTable 进一步拆分 v0.77.0 | 2026-06-19 | DataTable.tsx 358→209 行 (-42%, 超 -35% 目标) + 新建 DataTable/types.ts (99 行, 4 interface) + DataTable/consts.ts (7 行, alignMap). 保持 import type { Column } from "../DataTable" 兼容, 子文件零改动 |
 
 ### 文件存储演进
 | 变更 | 日期 | 说明 |

@@ -1,6 +1,6 @@
 # AGENTS.md - 工程管家项目约定
-> 项目状态：v0.76.0 — useUserIdSync 接入 App.tsx + 调试脚本清理 + 仓库噪音消除（项目当前最新 release）
-> 最后同步：2026-06-19（v0.76.0 release: useUserIdSync 接入 App.tsx + 清理 10 个调试脚本 + .gitignore 加 .mimo-runs/）
+> 项目状态：v0.77.0 — DataTable.tsx 进一步拆分 358→209 行 (-42%) + types/consts 子文件 (项目当前最新 release)
+> 最后同步：2026-06-19（v0.77.0 release: DataTable.tsx 拆 types/consts 子文件, 358→209 行, 仓库噪音清理续）
 
 ## 🗣️ 输出语言
 - **默认中文输出**：所有解释、描述、分析、提问、总结等文字内容使用中文
@@ -247,7 +247,7 @@ export function useProjects() {
 - **语义化版本**：patch(Bug修复) / minor(新功能模块) / major(架构级变更)
 - 版本号引用位置：`package.json` / `Sidebar.tsx` / `Login.tsx` / `installer/src/App.tsx` / `CHANGELOG.md`
 
-### 当前版本：v0.76.0 (已打 tag)
+### 当前版本：v0.77.0 (已打 tag)
 
 *本文档与 `CHANGELOG.md`、`docs/` 保持同步。*
 
