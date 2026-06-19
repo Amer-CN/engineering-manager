@@ -6,7 +6,7 @@ import TitleBar from './components/TitleBar'
 import StatusBar from './components/StatusBar'
 import { useStatusStore } from './store/statusStore'
 import { NAV_ITEMS, PAGE_IDS, getFilteredSidebarRoutes } from './routes'
-import { MaskProvider } from './contexts/MaskContext'
+import { MaskProvider, useUserIdSync } from './contexts/MaskContext'
 import { MaskToggleButton } from './components/MaskToggleButton'
 import { RequirePermission, RequireAdmin } from './hooks/usePermission'
 import { useAuth } from './hooks/useAuth'
@@ -74,6 +74,7 @@ type Page = typeof PAGE_IDS[number]
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, isLocked, currentUser, logout, lock } = useAuth()
+  useUserIdSync(currentUser?.id) // v0.76.0: 登录后从后端拉 PII mask toggle 覆盖 localStorage
   useTheme() // 启动时从 localStorage 读取并设置 data-theme
   useRowHoverOpacity() // 初始化表格行悬停 CSS 变量
 
