@@ -1,7 +1,7 @@
 # 核心模块详细说明
 
 > 本文档包含各业务模块的详细设计说明，CLAUDE.md 只保留模块索引。
-> 最后同步：2026-06-02（C# 迁移后更新）
+> 最后同步：2026-06-19（v0.76.0 release: useUserIdSync 接入 + 仓库清理）
 
 ---
 
@@ -205,7 +205,7 @@ uploads/
 ```
 - 类型映射：`invoice_out`→发票/开票/ + 收付款/回款/；`invoice_in`→发票/收票/ + 收付款/付款/
 
-### PII Mask 模块 (v0.73.0 + v0.74.0 + v0.75.0 PII 完整闭环)
+### PII Mask 模块 (v0.73.0 + v0.74.0 + v0.75.0 + v0.76.0 PII 完整闭环 + App 接入)
 
 - 位置: 横切关注点, 不属于某个业务模块, 所有含 PII 字段的模块都依赖它
 - 涉及业务模块: 人事管理 / 工人管理 / 合同管理 / 合作单位管理 / 仓库管理 / 银行单据 OCR 等 (13 列 PII 字段)
@@ -223,6 +223,14 @@ uploads/
   - 用户点击 toggle → localStorage v120_mask_enabled = 'false' + 异步 PUT /api/user-preferences/pii_mask_enabled
   - 下次 PII GET → api-client 自动加 ?unmask=true (无效参数, 因为后端默认就是明文) → 前端 hook 看到 unmasked=true 返回原值
   - 多设备: 登录后 useUserIdSync hook 从后端 GET 拉取真值覆盖 localStorage
+
+
+### v0.76.0 增量: useUserIdSync 接入 App.tsx
+
+- 修复 v0.75.0 路线图 #1: `useUserIdSync` hook 已暴露但未挂载, 用户登录后不会从后端拉 toggle 状态覆盖 localStorage
+- `src/App.tsx` L77: 新增 `useUserIdSync(currentUser?.id)` (在 useAuth 解构后, useTheme 前)
+- `src/App.tsx` L9: import 调整 `import { MaskProvider, useUserIdSync } from './contexts/MaskContext'`
+- 效果: 跨设备登录时 PII mask toggle 自动同步; 多设备体验一致
 
 ### 核心文件
 | 文件 | 作用 |
