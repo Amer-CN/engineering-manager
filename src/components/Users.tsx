@@ -11,22 +11,15 @@ import { Input } from './ui/Input/Input'
 import { setCurrentUser } from '../types/permissions'
 import type { UserInfo } from '../types/electron'
 import { Icon } from './ui/Icon'
-import { StatusBadge, USER_STATUS } from '@/constants/status'
+
 import PageHeader from './ui/PageHeader'
 import { Tabs } from './ui/Tabs'
 import { AuditLogsContent } from './AuditLogs'
 import { SnapshotsTab } from './SnapshotsTab'
 import { ProjectAuthorizationsTab } from '@/components/features/users/ProjectAuthorizationsTab'
-import { DataTable, type Column } from '@/components/DataTable'
+import { DataTable } from '@/components/DataTable'
 import { getAPI } from '@/services/api-adapter'
-
-// 角色选项
-const ROLE_OPTIONS = [
-  { value: 'admin', label: '管理员' },
-  { value: 'manager', label: '项目经理' },
-  { value: 'accountant', label: '财务人员' },
-  { value: 'worker', label: '普通员工' },
-]
+import { getUserListColumns, ROLE_OPTIONS } from './features/users/userListColumns'
 
 const Users: React.FC = () => {
   const { isAdmin } = usePermission()
@@ -167,95 +160,10 @@ const Users: React.FC = () => {
     setShowCreateForm(true)
   }
 
-  // 获取角色标签
-  const getRoleLabel = (roleId: string) => {
-    const role = ROLE_OPTIONS.find(r => r.value === roleId)
-    return role ? role.label : roleId
-  }
-
-  const columns: Column<UserInfo>[] = [
-    {
-      key: 'username',
-      title: '用户名',
-      render: (item) => (
-        <span className="font-medium text-slate-800">{item.username}</span>
-      )
-    },
-    {
-      key: 'displayName',
-      title: '显示名称',
-      render: (item) => (
-        <span>{item.displayName}</span>
-      )
-    },
-    {
-      key: 'roleId',
-      title: '角色',
-      filterable: 'select',
-      filterOptions: ROLE_OPTIONS,
-      filterAccessor: (item: UserInfo) => item.roleId,
-      render: (item) => (
-        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-          item.roleId === 'admin' ? 'bg-red-100 text-red-700' :
-          item.roleId === 'manager' ? 'bg-blue-100 text-blue-700' :
-          item.roleId === 'accountant' ? 'bg-green-100 text-green-700' :
-          'bg-slate-100 text-slate-700'
-        }`}>
-          {getRoleLabel(item.roleId)}
-        </span>
-      )
-    },
-    {
-      key: 'status',
-      title: '状态',
-      filterable: 'select',
-      filterOptions: [{ label: '正常', value: 'active' }, { label: '已禁用', value: 'disabled' }],
-      filterAccessor: (item: UserInfo) => item.status,
-      render: (item) => (
-        <StatusBadge status={item.status} config={USER_STATUS} />
-      )
-    },
-    {
-      key: 'createdAt',
-      title: '创建时间',
-      sortable: true,
-      sorter: (a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''),
-      render: (item) => (
-        <span className="text-slate-500">{new Date(item.createdAt).toLocaleDateString()}</span>
-      )
-    },
-    {
-      key: 'lastLoginAt',
-      title: '最后登录',
-      render: (item) => (
-        <span className="text-slate-500">
-          {item.lastLoginAt ? new Date(item.lastLoginAt).toLocaleString() : '从未登录'}
-        </span>
-      )
-    },
-    {
-      key: 'actions',
-      title: '操作',
-      render: (item) => (
-        <div className="flex gap-2">
-          <button
-            onClick={() => startEdit(item)}
-            className="btn btn-ghost btn-sm text-primary-600"
-          >
-            编辑
-          </button>
-          {item.roleId !== 'admin' && (
-            <button
-              onClick={() => handleDelete(item.id)}
-              className="btn btn-danger btn-sm"
-            >
-              删除
-            </button>
-          )}
-        </div>
-      )
-    }
-  ]
+  const columns = getUserListColumns({
+    onEdit: startEdit,
+    onDelete: handleDelete,
+  })
 
   return (
     <div className="p-6 max-w-[1400px] mx-auto">
