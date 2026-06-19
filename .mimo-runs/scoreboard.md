@@ -18,14 +18,16 @@
 | 7 | 2026-06-19 | 单文件 React patch (新建 2 个子文件) | 160s | ✅ | 0 | v0.80.0 Task B: StaffAttendance.tsx 363→295 行 (-19%), 新建 StaffAttendanceDashboard.tsx 119 + staffAttendanceUtils.ts 15. mimo 一次过. 关键: 避开 cd E:\测试 && 中文路径 (用 
 px tsc 直接调用). 我仅审 git diff + 跑 tsc 验证 |
 
-## 累计统计 (n=6)
+| 8 | 2026-06-19 | 单文件 React patch (新建 2 个子文件) | 125s | ✅ | 0 | v0.81.0 Task: Drawings.tsx 413→359 行 (-13%), 新建 DrawingsFormModal.tsx 95 + drawingsConstants.ts 21. mimo 一次过, tsc 0 errors + vite build 12.31s + dotnet build 0 错. 我仅审 git diff + 跑 tsc 验证 |
 
-- ✅ 一次过: 6/7 (86%)
-- ❌ 失败: 1/7 (14%)
-- 平均耗时: 190s (含 1 次 PS 路径 hang)
+## 累计统计 (n=7)
+
+- ✅ 一次过: 7/8 (88%)
+- ❌ 失败: 1/8 (12%)
+- 平均耗时: 183s (含 1 次 PS 路径 hang)
 - mimo 适合的任务类型: React 文件 patch (单文件小改)
 - mimo 不适合: 任何涉及 git 命令的任务
-- mimo 适合 (n=6): 单文件 React patch (含新建子文件) — 100% 一次过
+- mimo 适合 (n=7): 单文件 React patch (含新建子文件) — 100% 一次过 (n=7 累计)
 
 | 3 | 2026-06-19 | 单文件 React patch (新建 2 个子文件) | 108s | ✅ | 0 | v0.77.0 Task A: DataTable.tsx 358→209 行 (-42%, 超目标 -35%), 新建 types.ts 99 行 + consts.ts 7 行. mimo 一次过, 跑 npm check + vite build 都过. 我仅审 git diff + 跑独立红绿灯验证 |
 ## mimo 限制发现
