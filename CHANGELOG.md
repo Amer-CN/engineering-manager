@@ -3,12 +3,12 @@
 
 
 
-## v0.80.0（2026-06-19, WIP）— 继续拆超长 React 组件
+## v0.80.0（2026-06-19）— 继续拆超长 React 组件 + 修 templates vitest
 
-> **状态**: 进行中 (1/3 完成). PartnerForm 已拆, 待 StaffAttendance 拆分 + TemplatePreview 测试修复.
+> **里程碑**: v0.79.0 tsc 红绿灯落地后, 立刻拆超长 React 组件. 3 commits (Task A/B/C) 全部完成, mimo n=7 scoreboard 6/7 一次过 (86%). 同时修 v0.78.0 留下的 TemplateCard Tooltip 设计 bug + TemplatePreview 测试 portal bug.
 > **背景**: v0.79.0 加 tsc 红绿灯后, 项目实际有 60+ 个 > 200 行的 .tsx 文件 (原 handoff 估计"5 个"是低估). v0.80.0 优先拆 features/ 下的表单组件 (高复用 + 易测).
 
-### 改动 (1+ commit, 进行中)
+### 改动 (4 commits)
 
 - **`PartnerFormSplit`** refactor(v0.80.0): PartnerForm.tsx 360 → 190 + 新建 PartnerFormFields.tsx 214
   - mimo n=6 scoreboard: 5/6 一次过 (83%)
@@ -17,10 +17,24 @@
   - 主文件保留 state + handlers + FileDropZone x2 (营业执照 + 其他附件) + OCR + footer
   - tsc 0 errors, vite build 14.06s, dotnet build 0 errors
 
-### 待办 (留 v0.80.0 后续)
+### v0.80.0 任务清单
 
 - **StaffAttendance 363 行拆分** (handoff 原计划): 已有 staffAttendanceColumns.tsx, 再拆 Dashboard 部分. mimo 适合度 ⭐⭐⭐⭐
 - **TemplatePreview 关闭按钮测试** (v0.78.0 留下): 测试用 `container.querySelector` 但 Modal 用 `createPortal`, 改 `document.body.querySelector`. 1 行测试 fix
+
+- **StaffAttendanceSplit** refactor(v0.80.0): StaffAttendance.tsx 363 → 295 + 新建 StaffAttendanceDashboard.tsx 119 + staffAttendanceUtils.ts 15
+  - mimo 160s 一次过 (避开 PS 中文路径 hang 策略生效, 用 'npx tsc' 直接调不用 'cd ... &&')
+  - 3 个 helper (getDaysInMonth, getLastDayOfMonth, formatMonthLabel) 移到 utils.ts
+  - 主 JSX (FilterBar + DataTable + Legend + Spinner) 移到 Dashboard.tsx, 19 个 props 透传
+  - 主文件保留 state + handlers + sub-page routing (timeline + detail)
+  - tsc 0 errors, vite build 14.55s, dotnet build 0 errors
+- **TemplateTestsFix** fix(v0.80.0): TemplateCard 加 Tooltip + TemplatePreview 测试改 getByRole
+  - TemplateCard.tsx: preview + generate 按钮包 Tooltip (跟 edit/delete 一致)
+    - v0.78.0 Tooltip 加 native title fallback, 但这两个按钮忘记包
+    - → getByTitle 测试可工作 + 无障碍工具可识别
+  - TemplatePreview.test.tsx: 用 getByRole('button', { name: '关闭' }) 替代 querySelector
+    - Modal 用 createPortal 渲染到 document.body, container.querySelector 找不到 portal
+  - templates vitest: 28/31 → 31/31 (修 3 fail)
 
 ### 已知 issue (留 v0.81.0+)
 
