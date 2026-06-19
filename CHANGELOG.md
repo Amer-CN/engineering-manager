@@ -3,6 +3,34 @@
 
 
 
+## v0.80.0（2026-06-19, WIP）— 继续拆超长 React 组件
+
+> **状态**: 进行中 (1/3 完成). PartnerForm 已拆, 待 StaffAttendance 拆分 + TemplatePreview 测试修复.
+> **背景**: v0.79.0 加 tsc 红绿灯后, 项目实际有 60+ 个 > 200 行的 .tsx 文件 (原 handoff 估计"5 个"是低估). v0.80.0 优先拆 features/ 下的表单组件 (高复用 + 易测).
+
+### 改动 (1+ commit, 进行中)
+
+- **`PartnerFormSplit`** refactor(v0.80.0): PartnerForm.tsx 360 → 190 + 新建 PartnerFormFields.tsx 214
+  - mimo n=6 scoreboard: 5/6 一次过 (83%)
+  - PartnerFormFields 自带 `PartnerFormData` interface (解耦, 不依赖主文件 defaultFormData)
+  - props: formData, setFormData, projects, toggleProject
+  - 主文件保留 state + handlers + FileDropZone x2 (营业执照 + 其他附件) + OCR + footer
+  - tsc 0 errors, vite build 14.06s, dotnet build 0 errors
+
+### 待办 (留 v0.80.0 后续)
+
+- **StaffAttendance 363 行拆分** (handoff 原计划): 已有 staffAttendanceColumns.tsx, 再拆 Dashboard 部分. mimo 适合度 ⭐⭐⭐⭐
+- **TemplatePreview 关闭按钮测试** (v0.78.0 留下): 测试用 `container.querySelector` 但 Modal 用 `createPortal`, 改 `document.body.querySelector`. 1 行测试 fix
+
+### 已知 issue (留 v0.81.0+)
+
+- **超长文件清单 (60+ 文件 > 200 行, top 5)**:
+  - WageManagement.tsx 495 行
+  - ContractPage.tsx 434 行
+  - Members.tsx 469 行
+  - Dashboard.tsx 431 行
+  - Drawings.tsx 413 行
+- 这些不是表单组件, 拆分模式不一样, 留给后续 sprint 处理
 ## v0.79.0（2026-06-19）— 清 tsc 错误 + 加 tsc 到红绿灯
 
 > **里程碑**: 项目上线 v0.78.0 后未做 tsc 检查, 累积 84 个 type error (37 unused imports + 47 类型/路径). v0.79.0 清到 0, 并把 `npx tsc --noEmit` 加入红绿灯 (4 → 5 项), 防止未来回归.
