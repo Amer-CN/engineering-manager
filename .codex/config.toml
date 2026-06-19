@@ -1,0 +1,6 @@
+[mcp_servers.codegraph]
+command = 'C:\Users\Admin\AppData\Roaming\npm\codegraph.cmd'
+args = [
+    "serve",
+    "--mcp",
+]

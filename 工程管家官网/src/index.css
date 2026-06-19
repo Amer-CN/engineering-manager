@@ -1,0 +1,247 @@
+/* ========== 三主题 CSS 变量 ========== */
+/* White 主题（默认）— 明亮 · 蓝 */
+:root,
+[data-theme="white"] {
+  --bg: #f8fafc;
+  --bg-secondary: #f1f5f9;
+  --bg-card: rgba(255, 255, 255, 0.8);
+  --text: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --border: rgba(148, 163, 184, 0.25);
+  --border-solid: #e2e8f0;
+  --primary: #3b82f6;
+  --primary-light: #60a5fa;
+  --primary-dark: #2563eb;
+  --accent: #6366f1;
+  --accent-strong: #4f46e5;
+  --accent-light: #818cf8;
+  --accent-soft: #818cf840;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --logo-filter: none;
+}
+
+/* Graphite 主题 — 深色 · 橙 */
+[data-theme="graphite"] {
+  --bg: oklch(17% 0.005 280);
+  --bg-secondary: oklch(20% 0.006 275);
+  --bg-card: oklch(23.5% 0.007 275 / 0.85);
+  --text: oklch(96% 0.004 280);
+  --text-secondary: oklch(81% 0.005 280);
+  --text-muted: oklch(63% 0.006 280);
+  --border: oklch(30% 0.008 275 / 0.4);
+  --border-solid: oklch(30% 0.008 275);
+  --primary: oklch(68% 0.16 38);
+  --primary-light: oklch(72% 0.18 36);
+  --primary-dark: oklch(58% 0.14 40);
+  --accent: oklch(68% 0.16 38);
+  --accent-strong: oklch(60% 0.16 40);
+  --accent-light: oklch(72% 0.18 36);
+  --accent-soft: oklch(72% 0.18 36 / 0.25);
+  --success: oklch(70% 0.14 145);
+  --warning: oklch(78% 0.14 85);
+  --danger: oklch(66% 0.18 25);
+  --logo-filter: none;
+}
+
+/* Sandstone 主题 — 暖浅色 · 琥珀 */
+[data-theme="sandstone"] {
+  --bg: oklch(97.5% 0.008 80);
+  --bg-secondary: oklch(95.5% 0.011 78);
+  --bg-card: oklch(99.5% 0.003 80 / 0.85);
+  --text: oklch(22% 0.014 55);
+  --text-secondary: oklch(36% 0.013 55);
+  --text-muted: oklch(53% 0.011 60);
+  --border: oklch(88% 0.016 76 / 0.4);
+  --border-solid: oklch(88% 0.016 76);
+  --primary: oklch(60% 0.19 38);
+  --primary-light: oklch(65% 0.18 36);
+  --primary-dark: oklch(54% 0.21 36);
+  --accent: oklch(60% 0.19 38);
+  --accent-strong: oklch(54% 0.21 36);
+  --accent-light: oklch(65% 0.18 36);
+  --accent-soft: oklch(65% 0.18 36 / 0.25);
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --logo-filter: none;
+}
+
+/* ========== 全局重置 ========== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; scroll-padding-top: var(--header-height); }
+body {
+  font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  overflow-x: hidden;
+  min-height: 100vh;
+  transition: background 0.3s ease, color 0.3s ease;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+a { color: var(--primary-light); text-decoration: none; transition: color 0.2s; }
+a:hover { color: var(--primary); }
+img { max-width: 100%; height: auto; }
+::selection { background: var(--primary); color: white; }
+
+/* ========== 滚动条美化 ========== */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* ========== 公用容器 ========== */
+.container {
+  width: 100%;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ========== Section 公用 ========== */
+.section {
+  padding: 100px 0;
+  position: relative;
+}
+.section-header {
+  text-align: center;
+  margin-bottom: 60px;
+}
+.section-label {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--primary-light);
+  margin-bottom: 12px;
+}
+.section-title {
+  font-size: clamp(28px, 5vw, 42px);
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+.section-desc {
+  font-size: 16px;
+  color: var(--text-secondary);
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.8;
+}
+
+/* ========== 玻璃卡片 ========== */
+.glass-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 20px);
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease, background 0.3s ease;
+}
+.glass-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 60px rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+/* ========== 按钮 ========== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  border: none;
+  border-radius: var(--radius, 12px);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  color: white;
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(59, 130, 246, 0.4);
+}
+.btn-outline {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.btn-outline:hover {
+  border-color: var(--primary-light);
+  color: var(--primary-light);
+  background: rgba(59, 130, 246, 0.05);
+}
+
+/* ========== 功能卡片语义色 ========== */
+:root, [data-theme="white"] {
+  --color-indigo: #6366f1;
+  --color-amber: #f59e0b;
+  --color-emerald: #10b981;
+  --color-blue: #3b82f6;
+  --color-violet: #8b5cf6;
+  --color-cyan: #06b6d4;
+  --color-orange: #f97316;
+  --color-teal: #14b8a6;
+  --color-pink: #ec4899;
+  --color-slate: #64748b;
+}
+[data-theme="graphite"] {
+  --color-indigo: oklch(70% 0.14 270);
+  --color-amber: oklch(78% 0.14 85);
+  --color-emerald: oklch(70% 0.14 160);
+  --color-blue: oklch(70% 0.14 250);
+  --color-violet: oklch(70% 0.14 290);
+  --color-cyan: oklch(72% 0.12 200);
+  --color-orange: oklch(78% 0.16 55);
+  --color-teal: oklch(70% 0.14 175);
+  --color-pink: oklch(70% 0.16 350);
+  --color-slate: oklch(70% 0.01 280);
+}
+[data-theme="sandstone"] {
+  --color-indigo: #6366f1;
+  --color-amber: #d97706;
+  --color-emerald: #059669;
+  --color-blue: #2563eb;
+  --color-violet: #7c3aed;
+  --color-cyan: #0891b2;
+  --color-orange: #ea580c;
+  --color-teal: #0d9488;
+  --color-pink: #db2777;
+  --color-slate: #475569;
+}
+
+/* ========== Hero 渐变装饰 ========== */
+.hero-glow {
+  position: absolute;
+  pointer-events: none;
+  width: 60%;
+  height: 60%;
+}
+.hero-glow--tl {
+  top: -20%;
+  left: -10%;
+  background: radial-gradient(ellipse, color-mix(in srgb, var(--primary) 12%, transparent) 0%, transparent 70%);
+}
+.hero-glow--br {
+  bottom: -20%;
+  right: -10%;
+  background: radial-gradient(ellipse, color-mix(in srgb, var(--accent) 10%, transparent) 0%, transparent 70%);
+}
+
+/* ========== 响应式辅助 ========== */
+@media (max-width: 768px) {
+  .section { padding: 60px 0; }
+  .container { padding: 0 16px; }
+}

@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <OutputType>WinExe</OutputType>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <NoWarn>MSB3277</NoWarn>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3967.48" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- app.ico 同时作为 Content（exe 图标）和 EmbeddedResource（运行时加载） -->
+    <Content Include="app.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <EmbeddedResource Include="app.ico" LogicalName="EngineeringManager.Installer.app.ico" />
+  </ItemGroup>
+
+  <!-- 嵌入压缩包（构建前由 build-installer.bat 生成） -->
+  <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)payload.zip" Condition="Exists('$(MSBuildThisFileDirectory)payload.zip')" />
+  </ItemGroup>
+
+</Project>
