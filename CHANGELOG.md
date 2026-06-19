@@ -1,6 +1,52 @@
 
 
 
+
+
+## v0.78.0（2026-06-19）— 修 DataTable 3 个 critical runtime bug
+
+> **里程碑**: v0.75.0 commit `fbbcaa2` 拆分 DataTable 时漏改 3 处, 致所有 List 页面 (`SettlementList` / `StaffList` / `InvoiceList` / `PaymentList` / `LaborWorkerList` / `ItemList` / `MaterialList` 等 30+ 处) 在 runtime 崩溃. v0.78.0 修这 3 处 + 顺便给 Tooltip 加 native title fallback.
+> **质量恢复**: SettlementList 测试 0/8 → 8/8 ✅
+
+### 改动 (1 commit)
+
+- **`DataTableRuntimeFix`** fix(v0.78.0): DataTable.tsx 修 3 critical runtime bug + Tooltip native title fallback
+  - **修复 A**: v0.75.0 漏 `useDataTableState` 和 `useDataTableFilters` import, 加在 L10-11
+  - **修复 B**: v0.75.0 内部用 `getRowKey(item, index)` 但 props 叫 `rowKey`, 加 helper 适配 string / function 两种类型
+  - **修复 C**: v0.77.0 拆 types 时 `export type {...} from` 没让类型在当前文件 scope 可用 (DataTableProps 等), 改 `import type + export type`
+  - **Tooltip 增强**: `Tooltip` 组件把 `content` (string 时) 复制到 child 的 native `title` 属性, 让 `getByTitle` 测试和无障碍工具能识别
+
+### 修复前后对比
+
+| 测试 / 场景 | v0.75.0 - v0.77.0 | v0.78.0 |
+|------------|-------------------|---------|
+| SettlementList vitest (8 tests) | 0/8 ❌ (ReferenceError) | 8/8 ✅ |
+| TemplatePreview vitest (4 tests) | 3/4 (1 failed - 测试设计 bug) | 3/4 (同上, 已知 issue) |
+| DataTable 真正使用 List 页面 (30+ 处) | runtime 崩溃 | 正常 |
+| Tooltip native title (getByTitle / a11y) | 缺失 | 有 |
+
+### 已知 issue (留 v0.79.0+)
+
+- **TemplatePreview 关闭按钮 1 failed**: 测试用 `container.querySelector('.fixed.inset-0')` 但 Modal 用 `createPortal` 渲染到 `document.body`, `container` 找不到 portal 内容. **测试设计 bug, 需测试改用 `document.body.querySelector` 或 `screen.getByRole`**.
+
+### 红绿灯 (v0.78.0)
+
+- 后端 build: 0 错 0 警
+- 后端 tests: 26/26 通过
+- 前端 check: BUILD PASSED (73 警告, 0 新增)
+- vite build: 18.72s 成功
+- vitest PII: 48/48 通过
+- SettlementList: 8/8 通过 (v0.75.0 - v0.77.0 期间 0/8)
+
+### 路线图状态 (v0.77.0 handoff 列出的 v0.78.0 4 条)
+
+| # | 路线图 | v0.78.0 状态 |
+|---|--------|------|
+| 1 | 修 SettlementList + TemplatePreview 9 failed | ✅ **完成** (8/9, 1 个测试设计 bug 留 v0.79.0) |
+| 2 | 后端 PII SELECT 解密 | ⏭️ 跳过 (改动量大) |
+| 3 | InvoiceForm 347 / PartnerForm 361 / StaffAttendance 364 拆分 | ⏭️ 跳过 (mimo 待派) |
+| 4 | 5 个超长文件彻底清扫 | ⏭️ 跳过 (低价值) |
+
 ## v0.77.0（2026-06-19）— DataTable.tsx 进一步拆分 358→209 行
 
 > **里程碑**: DataTable 单文件继续瘦身, 类型定义 + 常量拆到子目录, 走 v0.75.0 路线图 #2.

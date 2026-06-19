@@ -1,6 +1,6 @@
 # CLAUDE.md - 工程管家项目约定
-> 项目状态：v0.77.0 — DataTable.tsx 进一步拆分 358→209 行 (-42%) + types/consts 子文件 (项目当前最新 release)
-> 最后同步：2026-06-19（v0.77.0 release 同步）
+> 项目状态：v0.78.0 — 修 DataTable 3 个 critical runtime bug (useDataTableState 漏 import + getRowKey 类型不匹配) + Tooltip native title fallback (项目当前最新 release)
+> 最后同步：2026-06-19（v0.78.0 release 同步）
 
 ## 🗣️ 输出语言
 - **默认中文输出**：所有解释、描述、分析、提问、总结等文字内容使用中文

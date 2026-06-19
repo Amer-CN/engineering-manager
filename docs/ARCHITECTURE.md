@@ -1,7 +1,7 @@
 # 架构决策与数据保障
 
 > 本文档包含架构决策历史记录和数据保障机制详细说明，CLAUDE.md 只保留概要。
-> 最后同步：2026-06-19（v0.77.0 release: DataTable.tsx 进一步拆分 358→209 行）
+> 最后同步：2026-06-19（v0.78.0 release: 修 DataTable 3 critical runtime bug, List 页面真正可用）
 
 ---
 
@@ -91,6 +91,7 @@
 | useUserIdSync 接入 v0.76.0 | 2026-06-19 | MaskContext 已暴露 useUserIdSync hook 但 App.tsx 没挂载 → L77 加 useUserIdSync(currentUser?.id) (登录后从后端拉 PII mask toggle 覆盖 localStorage) + L9 import 调整 |
 | 仓库清理 v0.76.0 | 2026-06-19 | git rm 10 个一次性调试脚本 (count-btn/test-btn/test-regex/screenshot/rb.cjs + 4 个 generate-logos-*.py 旧版 + refactor-partnerform.ps1) + .gitignore 加 .mimo-runs/ 规则 |
 | DataTable 进一步拆分 v0.77.0 | 2026-06-19 | DataTable.tsx 358→209 行 (-42%, 超 -35% 目标) + 新建 DataTable/types.ts (99 行, 4 interface) + DataTable/consts.ts (7 行, alignMap). 保持 import type { Column } from "../DataTable" 兼容, 子文件零改动 |
+| DataTable critical runtime bug 修复 v0.78.0 | 2026-06-19 | v0.75.0 commit fbbcaa2 拆分时漏 3 处: (1) useDataTableState + useDataTableFilters import 缺失 (致 30+ List 页面 runtime 崩溃), (2) 内部用 getRowKey 但 props 叫 rowKey (string vs function 类型不匹配), (3) v0.77.0 export type 让 DataTableProps 在内部 scope 不可用. + Tooltip 加 native title fallback. SettlementList 0/8→8/8 |
 
 ### 文件存储演进
 | 变更 | 日期 | 说明 |

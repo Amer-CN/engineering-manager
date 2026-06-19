@@ -1,6 +1,6 @@
 {
   "name": "engineering-manager",
-  "version": "0.77.0",
+  "version": "0.78.0",
   "description": "工程项目管理系统 - 一站式工程项目管理解决方案",
   "type": "module",
   "scripts": {
