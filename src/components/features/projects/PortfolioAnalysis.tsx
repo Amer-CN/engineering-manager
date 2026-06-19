@@ -1,6 +1,3 @@
-import React from 'react'
-import { Icon } from '../../ui/Icon'
-
 interface PortfolioAnalysisProps {
   projects: Array<{
     status: string

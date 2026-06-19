@@ -1,6 +1,4 @@
-import React from 'react'
-import { Icon } from '../../../ui/Icon'
-import type { Column } from '../../../DataTable'
+import type { Column } from '@/components/DataTable'
 
 /**
  * StaffAttendance columns 工厂（v1.1.0 拆分自 StaffAttendance）
@@ -15,7 +13,6 @@ export interface AttendanceColumnDeps {
   yearMonth: string
   summaryDot: Record<string, string>
   STATUS_META: any[]
-  DayStatus: any
   computeAttendanceSummary: (dailyStatus: any, days: number, entryDay: number) => any
   toggleAll: () => void
   toggleSelect: (id: number) => void
@@ -32,7 +29,6 @@ export function getAttendanceColumns(deps: AttendanceColumnDeps): Column<any>[] 
     yearMonth,
     summaryDot,
     STATUS_META,
-    DayStatus,
     computeAttendanceSummary,
     toggleAll,
     toggleSelect,

@@ -1,4 +1,4 @@
-﻿// MemberForm 组件
+// MemberForm 组件
 
 import React, { useState, useEffect, useRef } from 'react'
 import { readUploadedFile, FILE_CATEGORIES } from '../../../services/fileService'
@@ -43,7 +43,7 @@ export function MemberForm({
 
   // 使用 useIdCardOCR Hook
   const [ocrResult, setOcrResult] = useState<any>(null)
-  const { loading: ocrLoading, ocrMode, processIdCardFile: hookProcessIdCardFile, processUploadFile: hookProcessUploadFile } = useIdCardOCR({
+  const { loading: ocrLoading, ocrMode, processIdCardFile: hookProcessIdCardFile } = useIdCardOCR({
     onOCRResult: (result) => {
       setOcrResult(result)
     }

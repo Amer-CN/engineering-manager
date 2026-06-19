@@ -89,6 +89,7 @@ export function useDataTableState<T>(
     sortKey, sortOrder, currentPage, pageSize, filters,
     sortedData, filteredData, paginatedData, totalPages,
     setCurrentPage, setPageSize,
+    setFilters,
     handleSort, handleFilterChange,
   }
 }

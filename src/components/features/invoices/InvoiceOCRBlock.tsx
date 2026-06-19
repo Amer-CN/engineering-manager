@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useInvoiceOCR } from '@/hooks/useInvoiceOCR'
+import type { InvoiceTaxRate } from '@/types/electron'
 import { useToastStore } from '@/store/toastStore'
 import { Icon } from '../../ui/Icon'
 
@@ -15,7 +16,7 @@ interface InvoiceOCRBlockProps {
     amount?: number
     priceAmount?: number
     taxAmount?: number
-    taxRate?: number
+    taxRate?: InvoiceTaxRate
     sellerName?: string
     purchaserName?: string
     issueDate?: string
@@ -59,7 +60,7 @@ export const InvoiceOCRBlock: React.FC<InvoiceOCRBlockProps> = ({
           amount: ocrResult.amount,
           priceAmount: ocrResult.priceAmount,
           taxAmount: ocrResult.taxAmount,
-          taxRate: ocrResult.taxRate,
+          taxRate: ocrResult.taxRate as InvoiceTaxRate | undefined,
           sellerName: ocrResult.sellerName,
           purchaserName: ocrResult.purchaserName,
           issueDate: ocrResult.issueDate

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { DataTable, type Column } from '@/components/DataTable'
+import { DataTable } from '@/components/DataTable'
 import FilterBar from '../../ui/FilterBar'
 import { Button } from '../../ui/Button'
 import { EmptyState } from '../../ui/EmptyState'
@@ -9,7 +9,7 @@ import { useToastStore } from '@/store/toastStore'
 import { useConfirm } from '@/hooks/useConfirm'
 import { logCreate, logDelete } from '../../../utils/audit'
 import { STATUS_META, computeAttendanceSummary, summaryDot } from '../../../constants/attendance'
-import type { AttendanceRecord, DayStatus } from '../../../types/electron'
+import type { AttendanceRecord } from '../../../types/electron'
 import AttendanceDetail from '../../AttendanceDetail'
 import AttendanceTimeline from './AttendanceTimeline'
 import { getAPI } from '@/services/api-adapter'
@@ -279,7 +279,6 @@ const StaffAttendance: React.FC = () => {
     yearMonth,
     summaryDot,
     STATUS_META,
-    DayStatus,
     computeAttendanceSummary,
     toggleAll,
     toggleSelect,

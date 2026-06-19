@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
 import { useToastStore } from '@/store/toastStore'

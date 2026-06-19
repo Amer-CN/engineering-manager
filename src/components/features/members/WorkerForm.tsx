@@ -5,7 +5,6 @@ import { Icon } from '../../ui/Icon'
 import { calculateAge, inferGenderFromIdCard, type WorkerFormData } from './memberFormTypes'
 import { IdCardUploadArea, FileUploadArea as _FileUploadArea, SmallFileUpload as _SmallFileUpload } from './FormUploadWidgets'
 import { useBankCardOCR } from '@/hooks/useBankCardOCR'
-import { useToastStore } from '@/store/toastStore'
 const FileUploadArea = _FileUploadArea as any
 const SmallFileUpload = _SmallFileUpload as any
 
@@ -31,7 +30,6 @@ interface WorkerFormProps {
 
 export default function WorkerForm({ formData, setFormData, projects, workerTeams, editingMember, ocrLoading, dragOverField, onDragOver, onDragLeave, onDrop, onFileChange, onDeleteFile, refs }: WorkerFormProps) {
   const availableTeams = workerTeams.filter(t => !formData.projectId || t.projectId === formData.projectId)
-  const showToast = useToastStore(state => state.showToast)
   const { processBankCardFile } = useBankCardOCR()
   const [bankCardLoading, setBankCardLoading] = useState(false)
   const bankCardInputRef = useRef<HTMLInputElement>(null)

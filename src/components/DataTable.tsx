@@ -1,12 +1,8 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react'
-import { createPortal } from 'react-dom'
+import { useEffect } from 'react'
 import { HoverScrollbar } from './ui/HoverScrollbar'
-import { Icon } from './ui/Icon'
 import { TABLE } from '@/constants/table'
-import { useStatusStore } from '@/store/statusStore'
 import { TableSkeleton, TableEmpty, TableRow } from './DataTable/TableParts'
 import { ColFilterDropdown } from './DataTable/ColFilterDropdown'
-import { TableCell } from './DataTable/TableCell'
 import { useDataTableState } from '@/hooks/useDataTableState'
 import { useDataTableFilters } from '@/hooks/useDataTableFilters'
 
@@ -52,9 +48,9 @@ export function DataTable<T>({
   // v0.75.0: 抽出 sort / filter / pagination 状态管理到 useDataTableState hook
   const {
     sortKey, sortOrder, currentPage, pageSize, filters, setFilters,
-    sortedData, filteredData, paginatedData, totalPages,
+    paginatedData, totalPages,
     setCurrentPage, setPageSize,
-    handleSort, handleFilterChange,
+    handleSort,
   } = useDataTableState(
     data, columns, defaultSortKey, defaultSortOrder,
     enablePagination, defaultPageSize, onSortChange,

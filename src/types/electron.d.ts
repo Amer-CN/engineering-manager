@@ -270,8 +270,20 @@ export interface CostLedgerCategory {
   level1?: string
 }
 
-export interface SnapshotInfo {
-  timestamp: string
+export interface AuditLogEntry {
+  id: number
+  action: string
+  level: string
+  userId: string
+  userName: string
+  resource: string
+  resourceId: string
+  details: string
+  ipAddress: string
+  createdAt: string
+}
+
+export interface SnapshotInfo {  timestamp: string
   fileSize: number
   dbSummary: Record<string, number>
   label?: string

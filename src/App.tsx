@@ -12,7 +12,6 @@ import { RequirePermission, RequireAdmin } from './hooks/usePermission'
 import { useAuth } from './hooks/useAuth'
 import { useRowHoverOpacity } from './hooks/useRowHoverOpacity'
 import { useTheme } from './hooks/useTheme'
-import { HoverScrollbar } from './components/ui/HoverScrollbar'
 
 // ── 路由级代码分割：每个页面独立 chunk ──
 const Dashboard = lazy(() => import('./components/Dashboard'))
@@ -74,7 +73,7 @@ type Page = typeof PAGE_IDS[number]
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, isLocked, currentUser, logout, lock } = useAuth()
-  useUserIdSync(currentUser?.id) // v0.76.0: 登录后从后端拉 PII mask toggle 覆盖 localStorage
+  useUserIdSync(currentUser?.userId) // v0.76.0: 登录后从后端拉 PII mask toggle 覆盖 localStorage
   useTheme() // 启动时从 localStorage 读取并设置 data-theme
   useRowHoverOpacity() // 初始化表格行悬停 CSS 变量
 

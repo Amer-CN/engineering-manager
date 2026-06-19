@@ -40,7 +40,6 @@ export const PartnerForm: React.FC<PartnerFormProps> = ({
   onCancel
 }) => {
   const showToast = useToastStore(state => state.showToast)
-  const { processBusinessLicenseFile } = useBusinessLicenseOCR()
   const [formData, setFormData] = useState(defaultFormData)
   const [licenseDragOver, setLicenseDragOver] = useState(false)
   const [otherFilesDragOver, setOtherFilesDragOver] = useState(false)
