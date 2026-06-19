@@ -28,7 +28,7 @@ import { getAPI } from '@/services/api-adapter'
 // import { staffRoles } from './features/members'
 import { useWorkerImport } from './features/members/useWorkerImport'
 
-const WorkerSection = React.lazy(() => import('./features/members/WorkerSection'))
+import MemberWorkerSection from './features/members/MemberWorkerSection'
 const WorkerImportModal = React.lazy(() => import('./features/members/WorkerImportModal').then(m => ({ default: m.WorkerImportModal })))
 const WorkerPickerModal = React.lazy(() => import('./features/members/WorkerPickerModal').then(m => ({ default: m.WorkerPickerModal })))
 
@@ -294,31 +294,6 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
   return true
   })
 
-  // WorkerSection props (cast to avoid strict type check on extra props)
-  const workerSectionProps = {
-  members: filteredWorkers,
-  projects: projects.map(p => ({ id: p.id, name: p.name })),
-  workerTeams,
-  loading: false,
-  onRefresh: loadData,
-  onAddWorker: () => { resetWorkerForm(); setShowWorkerModal(true) },
-  onEditWorker: handleEditWorker,
-  onDeleteWorker: (id: number) => handleDeleteMember(id, members),
-  onAddTeam: handleCreateTeam,
-  onEditTeam: handleUpdateTeam,
-  onDeleteTeam: handleDeleteTeam,
-  onTransfer: (worker: any, toTeamId: number, toProjectId: number, transferDate: string, reason: string) => handleWorkerTransfer(worker, toTeamId, toProjectId, transferDate, reason, workerTeams),
-  onLeave: (worker: any, actualLeaveDate: string, remarks: string) => handleWorkerLeave(worker, actualLeaveDate, remarks),
-  onReEntry: handleWorkerReEntry,
-  onImportClick: () => fileInputRef.current?.click(),
-  onFileDrop: (file: File) => parseFile(file),
-  onAddFromPool: (projectId: number, existingIds: Set<number>) => {
-  setPickerProjectId(projectId)
-  setPickerExistingWorkerIds(existingIds)
-  setShowWorkerPicker(true)
-  },
-  }
-
   // 渲染
   
   if (loading) {
@@ -379,9 +354,29 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
 
   {/* 农民工 Tab - React.lazy 动态加载 */}
   {activeTab === 'worker' && (
-  <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-4 border-slate-200 border-t-orange-500"></div></div>}>
-  <WorkerSection {...workerSectionProps as any} />
-  </Suspense>
+  <MemberWorkerSection
+    members={filteredWorkers}
+    projects={projects.map(p => ({ id: p.id, name: p.name }))}
+    workerTeams={workerTeams}
+    loading={false}
+    onRefresh={loadData}
+    onAddWorker={() => { resetWorkerForm(); setShowWorkerModal(true) }}
+    onEditWorker={handleEditWorker}
+    onDeleteWorker={(id: number) => handleDeleteMember(id, members)}
+    onAddTeam={handleCreateTeam}
+    onEditTeam={handleUpdateTeam}
+    onDeleteTeam={handleDeleteTeam}
+    onTransfer={(worker, toTeamId, toProjectId, transferDate, reason) => handleWorkerTransfer(worker, toTeamId, toProjectId, transferDate, reason, workerTeams)}
+    onLeave={(worker, actualLeaveDate, remarks) => handleWorkerLeave(worker, actualLeaveDate, remarks)}
+    onReEntry={handleWorkerReEntry}
+    onImportClick={() => fileInputRef.current?.click()}
+    onFileDrop={(file) => parseFile(file)}
+    onAddFromPool={(projectId, existingIds) => {
+      setPickerProjectId(projectId)
+      setPickerExistingWorkerIds(existingIds)
+      setShowWorkerPicker(true)
+    }}
+  />
   )}
 
   {/* 隐藏文件选择器 + Excel导入模态框 */}
