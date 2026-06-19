@@ -1,5 +1,5 @@
-﻿import React, { useState, useEffect, useRef } from 'react'
-import { motion, useMotionValue, useSpring } from 'framer-motion'
+import React, { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import {
   Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -14,44 +14,8 @@ import { staggerContainer, sectionVariant } from '@/constants/animations'
 import { getAPI } from '@/services/api-adapter'
 import { getLevel1ForCode, CATEGORY_HIERARCHY } from '@/components/features/costLedger/config'
 import { HoverScrollbar } from '@/components/ui/HoverScrollbar'
-const CHART_COLORS = ['#3b82f6', '#10b981', '#f97316', '#8b5cf6', '#06b6d4', '#f59e0b']
-
-const statCards = [
-  { key: 'projects', label: '项目总数', icon: 'FolderKanban', color: 'bg-blue-50 text-blue-600' },
-  { key: 'settlements', label: '待办结算', icon: 'ClipboardList', color: 'bg-amber-50 text-amber-600' },
-  { key: 'members', label: '团队成员', icon: 'Users', color: 'bg-violet-50 text-violet-600' },
-  { key: 'costLedger', label: '总支出', icon: 'Wallet', color: 'bg-emerald-50 text-emerald-600' },
-  { key: 'invoices', label: '发票记录', icon: 'Receipt', color: 'bg-teal-50 text-teal-600' },
-  { key: 'inventory', label: '库存物料', icon: 'Package', color: 'bg-orange-50 text-orange-600' },
-]
-
-const cardHover = { y: -4, boxShadow: '0 12px 30px rgba(0,0,0,0.1)', transition: { duration: 0.2 } }
-
-function formatCurrency(n: number): string {
-  return n >= 10000 ? `¥${(n / 10000).toFixed(1)}万` : `¥${formatMoney(n)}`
-}
-
-// CountUp: 数字滚动动画组件
-const CountUp: React.FC<{ value: number; duration?: number; suffix?: string; prefix?: string; decimals?: number }> = ({ value, duration = 0.5, suffix = '', prefix = '', decimals = 0 }) => {
-  const motionVal = useMotionValue(0)
-  const springVal = useSpring(motionVal, { stiffness: 250, damping: 35 })
-  const [display, setDisplay] = useState('0')
-  const prevValue = useRef(0)
-
-  useEffect(() => {
-  motionVal.set(value)
-  prevValue.current = value
-  }, [value])
-
-  useEffect(() => {
-  const unsub = springVal.on('change', (latest) => {
-  setDisplay(prefix + Number(latest).toFixed(decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + suffix)
-  })
-  return () => unsub()
-  }, [springVal, prefix, suffix, decimals])
-
-  return <span>{display}</span>
-}
+import CountUp from './features/dashboard/CountUp'
+import { CHART_COLORS, statCards, cardHover, formatCurrency } from './features/dashboard/dashboardConstants'
 
 interface StatValue { primary: string; secondary: string; progress?: number; raw?: number }
 
