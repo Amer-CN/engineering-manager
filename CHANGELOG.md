@@ -3,6 +3,43 @@
 
 
 
+## v0.79.0（2026-06-19）— 清 tsc 错误 + 加 tsc 到红绿灯
+
+> **里程碑**: 项目上线 v0.78.0 后未做 tsc 检查, 累积 84 个 type error (37 unused imports + 47 类型/路径). v0.79.0 清到 0, 并把 `npx tsc --noEmit` 加入红绿灯 (4 → 5 项), 防止未来回归.
+
+### 改动 (2 commit)
+
+- **`TscUnusedCleanup`** chore(v0.79.0): 清 37 个 TS6133 unused import 错误 (mimo 批量执行, 134s 一次过)
+  - 21 import 语句删除/简化
+  - 10 解构变量删除
+  - 3 内部变量删除
+  - 6 useState 删除 (重命名/合并)
+- **`TscTypeFixes`** fix(v0.79.0): 清 47 个 type error (Codex 接手, 跨 7 文件手工修复)
+  - `useDataTableState` return 加 `setFilters` (v0.75.0 拆 hook 时漏)
+  - `StaffAttendance` + `staffAttendanceColumns` 删死字段 `DayStatus` (type-only import 被当 value 用)
+  - `InvoiceFormData` 加 optional `sellerName?` + `purchaserName?` (OCR 回调需要)
+  - `StaffManagementTab` 用 `useMaskedFn()` 替代裸 `masked` 函数 (PII 脱敏)
+  - `ProjectAuthorizationsTab` Select onChange 类型修复 (value 不是 event)
+  - `MaskToggleButton` 解构加 `isSyncing` (MaskContext 提供)
+  - `electron.d.ts` 加 `AuditLogEntry` interface (audit_logs 表 schema)
+  - `InvoiceOCRBlock` `taxRate` 类型精确化 (`InvoiceTaxRate` 字面量联合)
+
+### 文档同步
+
+- **AGENTS.md**: 🚦 红绿灯 4 → 5 项, 加 `npx tsc --noEmit --pretty false`. 标题加 `(v0.79.0 加 tsc)` 标注.
+
+### 修复前后对比
+
+| 检查项 | v0.78.0 | v0.79.0 |
+|--------|---------|---------|
+| `npx tsc --noEmit` | 84 errors (从 v0.75.0 累积) | 0 errors |
+| 红绿灯项数 | 4 项 | 5 项 (加 tsc) |
+| 类型安全回归防护 | 无 | tsc 红绿灯 + 后端 dotnet build |
+
+### 已知 issue (留 v0.80.0+)
+
+- **5 个超长文件**: InvoiceForm 347 (待拆) / PartnerForm 361 / StaffAttendance 364 / DataTable 209 (v0.78.0 拆后) / 还有 1-2 个
+- **TemplatePreview 关闭按钮 1 failed** (v0.78.0 留下): 测试用 `container.querySelector` 但 Modal 用 `createPortal`, 需改 `document.body.querySelector`
 ## v0.78.0（2026-06-19）— 修 DataTable 3 个 critical runtime bug
 
 > **里程碑**: v0.75.0 commit `fbbcaa2` 拆分 DataTable 时漏改 3 处, 致所有 List 页面 (`SettlementList` / `StaffList` / `InvoiceList` / `PaymentList` / `LaborWorkerList` / `ItemList` / `MaterialList` 等 30+ 处) 在 runtime 崩溃. v0.78.0 修这 3 处 + 顺便给 Tooltip 加 native title fallback.
