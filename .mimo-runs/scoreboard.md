@@ -15,14 +15,17 @@
 
 | 6 | 2026-06-19 | 单文件 React patch (新建 1 个子文件) | 150s effective (300s timeout due to PS中文路径bug) | ✅ | 0 | v0.80.0 Task A: PartnerForm.tsx 360→190 行 (-47%), 新建 PartnerFormFields.tsx 214 行. mimo 完成工作, 但 PS cd 'E:\测试' && 触发中文路径解析错误, mimo 内部 hang. 我 5min 后 kill. Code 改动 100% 正确, tsc 0 errors + vite build 14s. 教训: mimo PS 环境 + 中文路径 = hang risk |
 
-## 累计统计 (n=5)
+| 7 | 2026-06-19 | 单文件 React patch (新建 2 个子文件) | 160s | ✅ | 0 | v0.80.0 Task B: StaffAttendance.tsx 363→295 行 (-19%), 新建 StaffAttendanceDashboard.tsx 119 + staffAttendanceUtils.ts 15. mimo 一次过. 关键: 避开 cd E:\测试 && 中文路径 (用 
+px tsc 直接调用). 我仅审 git diff + 跑 tsc 验证 |
 
-- ✅ 一次过: 5/6 (83%)
-- ❌ 失败: 1/6 (17%)
-- 平均耗时: 195s (含 1 次 timeout 5min)
+## 累计统计 (n=6)
+
+- ✅ 一次过: 6/7 (86%)
+- ❌ 失败: 1/7 (14%)
+- 平均耗时: 190s (含 1 次 PS 路径 hang)
 - mimo 适合的任务类型: React 文件 patch (单文件小改)
 - mimo 不适合: 任何涉及 git 命令的任务
-- mimo 适合 (n=5): 单文件 React patch (含新建子文件) — 100% 一次过 (工作正确, hang 是 PS bug)
+- mimo 适合 (n=6): 单文件 React patch (含新建子文件) — 100% 一次过
 
 | 3 | 2026-06-19 | 单文件 React patch (新建 2 个子文件) | 108s | ✅ | 0 | v0.77.0 Task A: DataTable.tsx 358→209 行 (-42%, 超目标 -35%), 新建 types.ts 99 行 + consts.ts 7 行. mimo 一次过, 跑 npm check + vite build 都过. 我仅审 git diff + 跑独立红绿灯验证 |
 ## mimo 限制发现

@@ -1,0 +1,122 @@
+# 任务: 拆分 StaffAttendance.tsx (363 行 → 3 文件)
+
+## 目标
+把 `src/components/features/hr/StaffAttendance.tsx` (363 行) 拆成 3 个文件, 把 helpers 和主 JSX dashboard 抽到独立子模块, 主组件保留 state + handlers + sub-page routing。
+
+预期:
+- `src/components/features/hr/StaffAttendance.tsx` ~200 行 (imports + 主体组件 state/handlers + sub-page routing + dashboard 调用)
+- `src/components/features/hr/StaffAttendanceDashboard.tsx` ~150 行 (新, 主 JSX: FilterBar + DataTable + Legend)
+- `src/components/features/hr/staffAttendanceUtils.ts` ~30 行 (新, 3 个 helper functions)
+
+## 重要: 中文路径 bug 规避
+
+之前 v0.80.0 Task A mimo 在 verification step 用 `cd E:\测试 && npx tsc ...` 触发 PowerShell 中文路径解析错误 hang 5min. **本次严禁在 cd 命令里用中文路径**.
+
+**正确 verification 命令** (mimo 当前 cwd 已经在项目根, 直接调用):
+```bash
+npx tsc --noEmit --pretty false
+```
+(不要 `cd ... && ...`, 直接跑 npx 即可)
+
+## 详细要求
+
+### 1. 新建 `src/components/features/hr/staffAttendanceUtils.ts`
+
+从 StaffAttendance.tsx 抽出来 (L19-33):
+- `getDaysInMonth(yearMonth: string): number`
+- `getLastDayOfMonth(yearMonth: string): string`
+- `formatMonthLabel(ym: string): string`
+
+导出方式: `export function xxx(...)`, 让两个文件都能用.
+
+### 2. 新建 `src/components/features/hr/StaffAttendanceDashboard.tsx`
+
+从 StaffAttendance.tsx 抽出来 (L295-360):
+- 主 JSX `<div className="flex-1 flex flex-col overflow-hidden">`
+- `{ConfirmDialog}` placeholder (需要 props 传入)
+- FilterBar (L299-326)
+- EmptyState 分支 (L329-345)
+- Legend (L348-358)
+- 如果 `loading` 时显示 Spinner (L291-293)
+
+**Props 接口**:
+```typescript
+interface StaffAttendanceDashboardProps {
+  loading: boolean
+  yearMonth: string
+  setYearMonth: (ym: string) => void
+  filterDept: number | ''
+  setFilterDept: (d: number | '') => void
+  daysInMonth: number
+  departments: any[]
+  filteredStaff: any[]
+  joinedAfter: number
+  selectedIds: Set<number>
+  handleBatchDelete: () => void
+  handleExport: () => void
+  handleGenerateDefaults: () => void
+  generating: boolean
+  tableData: any[]
+  columns: Column<any>[]
+  ConfirmDialog: React.ReactNode
+}
+```
+
+### 3. StaffAttendance.tsx 改动
+
+- 删除 L19-33 helper functions (移到 utils)
+- 删除 L295-360 主 JSX return
+- 改为: `return <StaffAttendanceDashboard ... />`
+- 保留 L230-257 sub-page return (timeline + detail)
+- 保留 L291-294 loading spinner return (这是 sub-page 之前的 early return, 可以保留在主组件)
+
+### 4. Import 处理
+
+**staffAttendanceUtils.ts** 新增:
+- (无 imports, 纯函数)
+
+**StaffAttendanceDashboard.tsx** 新增:
+- `import React from 'react'`
+- `import { DataTable } from '@/components/DataTable'` (type Column from types)
+- `import FilterBar from '../../ui/FilterBar'`
+- `import { Button } from '../../ui/Button'`
+- `import { EmptyState } from '../../ui/EmptyState'`
+- `import ButtonLoader from '../../ui/ButtonLoader'
+- `import Spinner from '../../ui/Spinner'`
+- `import { STATUS_META } from '../../../constants/attendance'`
+- `import type { Column } from '@/components/DataTable'`
+
+**StaffAttendance.tsx** 改动:
+- 删 `import FilterBar from '../../ui/FilterBar'`
+- 删 `import { EmptyState } from '../../ui/EmptyState'`
+- 删 `import ButtonLoader from '../../ui/ButtonLoader'`
+- 删 `import Spinner from '../../ui/Spinner'` (loading spinner 移到 dashboard)
+- 加 `import { getDaysInMonth, getLastDayOfMonth, formatMonthLabel } from './staffAttendanceUtils'`
+- 加 `import { StaffAttendanceDashboard } from './StaffAttendanceDashboard'`
+
+### 5. 验证步骤 (必跑, 注意避开中文路径)
+
+跑完代码改动后 (mimo 当前 cwd 已经是 E:\测试, 直接跑):
+```bash
+npx tsc --noEmit --pretty false
+```
+(不用 `cd ... && ...`, 直接调 npx)
+
+期望: 无 error TS 输出
+
+### 6. 不要做的
+
+- 不要改任何 state / handler / callback 逻辑
+- 不要改 sub-page return (L230-257)
+- 不要改 useMemo / useCallback 依赖
+- 不要新建多余文件 (就 utils.ts + Dashboard.tsx 两个)
+- 不要跑 git 命令
+- 不要 commit
+- **不要用 `cd E:\测试 && ...` 这种带中文路径的命令 (会触发 PS bug hang)**
+
+## 当前 StaffAttendance.tsx 现状 (L1-363)
+
+参考路径: `src/components/features/hr/StaffAttendance.tsx`
+已有 staffAttendanceColumns.tsx, 现在再加 utils.ts + Dashboard.tsx 两个子文件.
+
+完成后告诉我: tsc 错误数 / StaffAttendance.tsx 行数 / StaffAttendanceDashboard.tsx 行数 / staffAttendanceUtils.ts 行数.
