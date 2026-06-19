@@ -6,6 +6,7 @@
  */
 
 import React from 'react'
+import { useMaskedFn } from '@/hooks/useMaskedValue'
 import { Icon } from '../../ui/Icon'
 import type { Member } from '@/types'
 import { calculateAge as calcAge, getWorkerTypeLabel } from '@/utils'

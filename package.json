@@ -19,6 +19,7 @@
     "test:ui": "vitest --ui"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.101.0",
     "@tauri-apps/plugin-dialog": "^2.0.0",
     "docxtemplater": "^3.68.7",
     "framer-motion": "^12.40.0",

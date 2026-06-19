@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { getAPI } from '@/services/api-adapter'
 import { useToastStore } from '@/store/toastStore'
 import { Icon } from '@/components/ui/Icon'
@@ -171,9 +171,9 @@ export function ProjectAuthorizationsTab() {
   const columns: Column<Authorization>[] = [
     {
       key: 'project_name',
-      label: '项目',
+      title: '项目',
       sortable: true,
-      render: (_, row) => (
+      render: (row, _idx) => (
         <span className="font-medium text-slate-800">
           {row.project_name || `#${row.project_id}`}
         </span>
@@ -181,9 +181,9 @@ export function ProjectAuthorizationsTab() {
     },
     {
       key: 'user_display_name',
-      label: '用户',
+      title: '用户',
       sortable: true,
-      render: (_, row) => (
+      render: (row, _idx) => (
         <div>
           <div className="text-slate-800">{row.user_display_name || row.username || row.user_id}</div>
           {row.username && row.user_display_name && (
@@ -194,24 +194,24 @@ export function ProjectAuthorizationsTab() {
     },
     {
       key: 'granted_at',
-      label: '授权时间',
+      title: '授权时间',
       sortable: true,
-      render: (_, row) => (
+      render: (row, _idx) => (
         <span className="text-caption text-slate-600">{row.granted_at}</span>
       ),
     },
     {
       key: 'granted_by',
-      label: '授权人',
-      render: (_, row) => (
+      title: '授权人',
+      render: (row, _idx) => (
         <span className="text-caption text-slate-600">{row.granted_by}</span>
       ),
     },
     {
       key: 'actions',
-      label: '操作',
+      title: '操作',
       align: 'right',
-      render: (_, row) => (
+      render: (row, _idx) => (
         <Button variant="danger" size="sm" onClick={() => setRevokeTarget(row)}>
           撤销
         </Button>
@@ -268,21 +268,17 @@ export function ProjectAuthorizationsTab() {
         <div className="space-y-4">
           <Select
             label="项目"
-            size="sm"
             value={grantProjectId === 0 ? "" : String(grantProjectId)}
-            onChange={e => setGrantProjectId(e.target.value ? Number(e.target.value) : 0)}
+            onChange={value => setGrantProjectId(value ? Number(value) : 0)}
             options={projectOptions}
             placeholder="选择项目"
-            required
           />
           <Select
             label="用户"
-            size="sm"
             value={grantUserId}
-            onChange={e => setGrantUserId(e.target.value)}
+            onChange={value => setGrantUserId(String(value))}
             options={userOptions}
             placeholder="选择用户"
-            required
           />
           <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
             <p className="text-micro text-slate-600">

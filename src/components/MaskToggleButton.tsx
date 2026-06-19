@@ -5,7 +5,7 @@ import { Eye, EyeOff } from "lucide-react"
 import { useMask } from "../contexts/MaskContext"
 
 export function MaskToggleButton() {
-  const { masked, toggleMask } = useMask()
+  const { masked, toggleMask, isSyncing } = useMask()
   return (
     <button
       onClick={toggleMask}

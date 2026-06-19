@@ -5,7 +5,7 @@
  */
 import { useState, useEffect, useMemo } from 'react'
 import type { Project, Member, Partner, IncomeContract, ExpenseContract, WorkerTeam, Invoice, Material, Settlement, PaymentRecord, CostLedgerEntry } from '@/types'
-import { ProjectStats, ProjectStatsData } from './ProjectStats'
+import { ProjectStatsData } from './ProjectStats'
 import { ProjectCommandCenter } from './ProjectCommandCenter'
 import { CostLedgerAnalytics } from '../costLedger/CostLedgerAnalytics'
 import { useCostLedgerCategories } from '@/hooks/useCostLedgerCategories'

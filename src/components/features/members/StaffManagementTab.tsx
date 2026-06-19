@@ -1,6 +1,6 @@
 import type { Member } from '@/types'
-import { useMaskedFn } from "@/hooks/useMaskedValue";
 import { Icon } from '../../ui/Icon'
+import { useMaskedFn } from '@/hooks/useMaskedValue'
 import { DataTable, type Column } from '../../DataTable'
 
 interface StaffManagementTabProps {
@@ -18,6 +18,7 @@ const staffTableColumns = (
   onEdit: (m: Member) => void,
   onDelete: (id: number) => void,
   onStatusChange: (m: Member, s: string) => void,
+  masked: (kind: 'phone' | 'idCard', value: string) => string,
 ): Column<Member>[] => [
   {
     key: 'name',
@@ -107,6 +108,7 @@ export default function StaffManagementTab({
   onClick,
   onStatusChange,
 }: StaffManagementTabProps) {
+  const masked = useMaskedFn()
   return (
     <>
       <div className="flex items-center justify-between mb-6">
@@ -133,7 +135,7 @@ export default function StaffManagementTab({
 
       <DataTable
         data={filteredStaff}
-        columns={staffTableColumns(onEdit, onDelete, onStatusChange)}
+        columns={staffTableColumns(onEdit, onDelete, onStatusChange, masked)}
         rowKey="id"
         pagination={false}
         onRowClick={onClick}

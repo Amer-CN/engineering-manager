@@ -30,9 +30,6 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
   
   const [showPartnerModal, setShowPartnerModal] = useState(false)
   const [editingPartner, setEditingPartner] = useState<Partner | null>(null)
-  const [partnerSearch, setPartnerSearch] = useState('')
-  const [partnerFilterCategory, setPartnerFilterCategory] = useState<string>('')
-  const [partnerFilterProject, setPartnerFilterProject] = useState<string>('')
 
   const [showSupervisorModal, setShowSupervisorModal] = useState(false)
   const [editingSupervisor, setEditingSupervisor] = useState<Supervisor | null>(null)

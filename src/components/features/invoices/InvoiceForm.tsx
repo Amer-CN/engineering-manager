@@ -8,7 +8,6 @@ import { FilePreviewModal } from './FilePreviewModal'
 import { useInvoiceAmounts } from './useInvoiceAmounts'
 import { taxRateOptions, invoiceKindOptions } from './constants'
 import { useToastStore } from '@/store/toastStore'
-import { useInvoiceOCR } from '@/hooks/useInvoiceOCR'
 import { Icon } from '../../ui/Icon'
 import { HoverScrollbar } from '../../ui/HoverScrollbar'
 import { InvoiceOCRBlock } from './InvoiceOCRBlock'
@@ -24,6 +23,8 @@ export interface InvoiceFormData {
   taxAmount: number
   taxRate: InvoiceTaxRate
   issueDate: string
+  sellerName?: string
+  purchaserName?: string
   sellerId: number | ''
   buyerId: number | ''
   projectId: number | ''
@@ -47,7 +48,6 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
   initialData, projects, partners, contracts, existingInvoices = [], onSubmit, onCancel
 }) => {
   const showToast = useToastStore(state => state.showToast)
-  const { processInvoiceFile } = useInvoiceOCR()
   const [formData, setFormData] = useState<InvoiceFormData>(initialData)
   const [dragOverFile, setDragOverFile] = useState(false)
   const [previewFile, setPreviewFile] = useState<{data: string, type: 'image' | 'pdf', title: string} | null>(null)
