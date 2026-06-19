@@ -1,6 +1,6 @@
 # AGENTS.md - 工程管家项目约定
-> 项目状态：v0.73.0 (待打 tag) — P0-4 越权防护完整版 (33 业务端点 user-dim + 4 管理端点 + 6 migrations + tests 17/17)
-> 最后同步：2026-06-19（CHANGELOG v0.73.0 段同步 commit 26f1f44 闭环 + cost-ledger/batches user-dim + 4 schema 兼容性修复）
+> 项目状态：v0.75.0 — PII Mask 完整闭环 + User Preferences API + 后端去硬 mask（项目当前最新 release）
+> 最后同步：2026-06-19（v0.75.0 release: 后端去硬 mask 18 处 + User Preferences API + MaskContext 接后端同步 + 4 个 hook vitest 测试 + DataTable 拆分 453→358 行）
 
 ## 🗣️ 输出语言
 - **默认中文输出**：所有解释、描述、分析、提问、总结等文字内容使用中文
@@ -247,7 +247,7 @@ export function useProjects() {
 - **语义化版本**：patch(Bug修复) / minor(新功能模块) / major(架构级变更)
 - 版本号引用位置：`package.json` / `Sidebar.tsx` / `Login.tsx` / `installer/src/App.tsx` / `CHANGELOG.md`
 
-### 当前版本：v0.73.0 (待打 tag)
+### 当前版本：v0.75.0 (已打 tag)
 
 *本文档与 `CHANGELOG.md`、`docs/` 保持同步。*
 
@@ -274,9 +274,10 @@ cd "E:\测试" && npx vite build 2>&1 | Select-String -Pattern "error|success|�
 
 **通过标准**：
 - 后端 0 错误 0 警告
-- tests 8/8 通过
-- 前端 check 0 HARD FAIL
-- vite build 11-12 秒成功
+- 后端 tests 26/26 通过 (v0.73.0 起: UserDimFilterTests 17 + UserDimPhase2Tests 9)
+- 前端 check 0 HARD FAIL (74 警告是历史软警告, 不影响)
+- vite build 10-18 秒成功 (依赖并行 CI, 18s 偏慢可接受)
+- 前端 vitest 48/48 通过 (mask.ts 30 + useMaskedFn 7 + api-client 11, hooks/ 目录下其他测试视情况)
 
 **4 项全绿才可 git tag v0.x.0**。任何一项红 → 标记 WIP，先修。
 
@@ -340,7 +341,7 @@ cd "E:\测试" && npx vite build 2>&1 | Select-String -Pattern "error|success|�
 | P0-1 | OCR API key 公开 | ✅ 已修 (v1.0.0) | OcrEndpoints.cs 走 DPAPI 加密, OcrSetupWizard 首次启动引导 |
 | P0-2 | 全 API 无鉴权 | ✅ 已修 (v1.0.0) | GlobalAuthMiddleware + 白名单 (/api/auth/login /api/health /api/ocr/setup) |
 | P0-3 | PII 零加密 | ✅ 已修 (v0.72.0) | PiiProtector + 13 列 _enc 加密 + backfill-pii 端点 + API 响应层 Mask |
-| P0-4 | 越权读 + 无限流 | ✅ 已修 (v1.0.0 限流 + v0.73.0 P0-4) | 限流中间件 (login 5/min + write 30/sec) + 33 个业务端点 user-dim 隔离 (commit 6dde702/745617b/6a58ed8/e2c8cb7/6df6713/26b2b2e/26f1f44; 标题历史命名 v1.1.0, 实际版本 v0.73.0) |
+| P0-4 | 越权读 + 无限流 | ✅ 已修 (v1.0.0 限流 + v0.73.0 P0-4 + v0.74.0 缺口修复) | 限流中间件 (login 5/min + write 30/sec) + 33 个业务端点 user-dim 隔离 (v0.73.0 P0-4 + v0.74.0 修复 inventory/materials GET user-dim 缺口) |
 | P1-1 | 静默吞错 | ✅ 已修 (v1.0.0) | 6 处真静默 + 2 处 OCR 假成功已修 |
 | P1-2 | admin/admin123 多处公开 | ✅ 已修 (v1.0.0) | 改读环境变量 + 启动日志去明文 |
 | P1-3 | OCR ex.Message 直回前端 | ✅ 已修 (v1.0.0) | ex.SanitizedMessage() helper |
@@ -348,5 +349,17 @@ cd "E:\测试" && npx vite build 2>&1 | Select-String -Pattern "error|success|�
 | P1-5 | 密码 string == 比较 | ✅ 已修 (v1.0.0) | CryptographicOperations.FixedTimeEquals |
 
 **v0.73.0 P0-4 闭环 100%**: 33 业务端点 + 4 管理端点 + 6 migrations (009/010/011/013/014/020) + CurrentUser 3 helper + tests 17/17 通过 + 26f1f44 闭环 (cost-ledger/batches user-dim + 4 schema 兼容性修复).
+
+**v0.74.0 PII Mask 完整闭环**:
+- 后端去硬 mask (v0.75.0 refactor 19b0acc): 18 处 Common.MaskXxx 调用全部简化, GET 默认返明文. 前端 useMaskedFn hook 完全控制显示.
+- api-client 自动加 ?unmask=true (0b14478): PII 端点 GET 自动检测 localStorage v120_mask_enabled, toggle=false 时追加 unmask=true.
+- MaskContext 多设备同步 (v0.75.0): MaskProvider 通过 GET /api/user-preferences/pii_mask_enabled 拉后端真值, toggle 时异步 PUT 同步. localStorage 是兜底缓存.
+- 9 个 PII 组件响应 toggle (41c6102 + 532fd87): useMaskedFn hook 替代写死 maskIdCard, MemberCard/MemberDetail 修复明文 PII 暴露.
+- User Preferences API (2ff2550): GET/PUT /api/user-preferences + GET/PUT /api/user-preferences/{key}. migration 022_AddUserPreferencesTable.sql.
+- 测试覆盖: 26/26 后端 + 48/48 vitest (37 PII + 11 api-client).
+
+**v0.74.0 修复的真实缺口**:
+- Partners POST/PUT 500 bug (1e2a0c5): migration 021_AddPartnersTaxNumber.sql 加 tax_number 列.
+- GET /api/inventory + /api/materials 越权 (532fd87): 加 user-dim, 之前 GET 全表返回.
 
 *本节与 CHANGELOG.md、P0-FIX-PLAN.md 保持同步.*

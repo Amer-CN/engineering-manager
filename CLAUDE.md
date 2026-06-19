@@ -1,6 +1,6 @@
 ﻿# CLAUDE.md - 工程管家项目约定
-> 项目状态：v0.73.0 (待打 tag) — P0-4 越权防护完整版 + 历史 v1.0.0 P0/P1 安全基线
-> 最后同步：2026-06-19（CHANGELOG v0.73.0 段同步 commit 26f1f44 闭环 + cost-ledger/batches user-dim + 4 schema 兼容性修复）
+> 项目状态：v0.75.0 — PII Mask 完整闭环 + User Preferences API + 后端去硬 mask（项目当前最新 release）
+> 最后同步：2026-06-19（v0.75.0 release 同步）
 
 ## 🗣️ 输出语言
 - **默认中文输出**：所有解释、描述、分析、提问、总结等文字内容使用中文
@@ -188,6 +188,6 @@ Button / Input / Modal / Card / Badge / Select / Pagination / DropdownMenu / Tab
 - **语义化版本**：patch(Bug修复) / minor(新功能模块) / major(架构级变更)
 - 版本号引用位置：`package.json` / `Sidebar.tsx` / `Login.tsx` / `installer/src/App.tsx` / `CHANGELOG.md`
 
-### 当前版本：v0.73.0 (待打 tag)
+### 当前版本：v0.75.0 (已打 tag)
 
 *本文档与 `CHANGELOG.md`、`docs/` 保持同步。*

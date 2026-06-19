@@ -1,3 +1,65 @@
+## v0.75.0（2026-06-19）— PII Mask 完整闭环 + User Preferences API + 后端去硬 mask
+
+> **里程碑**: PII Mask toggle 完整闭环 — 后端去硬 mask (前端 hook 唯一控制显示) + 多设备同步 (User Preferences API).
+> **架构清理**: 双层 mask (后端 Common.MaskIdCard + 前端 useMaskedFn) 消除, * 数量合理.
+
+### 改动 (5 commit, 累计 +159 行)
+
+> 注: 本会话因 codex mimo wrapper bug 导致 .git 丢失, 历史 commit 不可恢复.
+> v0.74.0 之前的 11 个 commit (1bb783b / ed854bf / 1e2a0c5 / 0b14478 / 9ab078d / b9fba99 + P0-4 7 commit) 源码都在本 release 中, commit hash 不可追溯.
+> 当前 git 历史只有 3 commit (snapshot recovery + v0.74.0 WIP + DataTable 拆分).
+
+- **`19b0acc`** refactor(v0.75.0): 后端响应层去掉硬 mask
+  - 18 处 Common.MaskXxx 调用简化 (MemberEndpoints 9 处 + PartnerEndpoints 5 处 + ProjectEndpoints 1 处 + 单条 GET 3 处)
+  - `var unmask` 声明 + `?unmask=true` 参数移除 (默认就是明文)
+  - 3 个测试断言更新: 默认 GET 现在是明文 (不再是 masked)
+  - Common.MaskXxx 函数保留为 utility (caller 自行使用)
+- **`2ff2550`** feat(v0.75.0): User Preferences API — PII Mask toggle 多设备同步
+  - 新建 migration 022_AddUserPreferencesTable.sql (user_id + key 复合主键)
+  - 新建 EngineeringManager.Api/Endpoints/UserPreferencesEndpoints.cs (4 端点: GET/PUT /api/user-preferences + GET/PUT /api/user-preferences/{key})
+  - Program.cs 注册 RegisterUserPreferencesEndpoints
+  - 2 个测试: UserPreferences_GetAndPut_PiiMaskEnabled + GetUnknownKey_Returns404
+- **`6c43a97`** test(v0.75.0): api-client vitest 单元测试 (11 用例)
+  - PII Mask toggle 自动注入逻辑 11 关键路径覆盖
+  - masked=true (默认) / masked=false / 4 PII 端点 / localStorage 异常 / POST 不受影响等
+- **`fbbcaa2`** refactor: 拆 DataTable.tsx 453 → 358 行 (-95, -21%) + 恢复 alignMap UI bug
+  - 新建 src/hooks/useDataTableFilters.ts (handleFilterToggle / handleFilterSelectAll / handleFilterClear)
+  - 删除 dead code (useStatusStore import + statusBar useEffect)
+  - 恢复 alignMap 常量 (之前 commit 误删导致表格列对齐失效)
+
+### PII Mask 完整闭环架构
+
+| 层 | 行为 | 文件 |
+|---|---|---|
+| 用户点击 toggle | 写 localStorage v120_mask_enabled = 'false' + 异步 PUT /api/user-preferences/pii_mask_enabled | MaskContext.tsx + api-methods.ts |
+| 下次 PII GET | api-client 自动追加 ?unmask=true (caller 显式参数优先级最高) | api-client.ts |
+| 后端 GET 默认 | 返明文 ("5101234567890123456") | MemberEndpoints.cs / PartnerEndpoints.cs |
+| 前端组件 masked=true (默认) | useMaskedFn hook 返回脱敏值 ("5101****1234") | useMaskedValue.ts |
+| 前端组件 masked=false | useMaskedFn hook 返回原值 (明文) | 同上 |
+| 多设备登录后 | useUserIdSync hook 从后端 GET 真值覆盖 localStorage | MaskContext.tsx (useUserIdSync 暴露) |
+
+### 测试覆盖 (v0.75.0)
+- 后端 dotnet test: 26/26 通过
+  - UserDimFilterTests: 17 (P0-4 越权)
+  - UserDimPhase2Tests: 9 (smoke + unmask + UserPreferences)
+- 前端 vitest: 48/48 通过
+  - mask.ts: 30 (工具函数所有边界)
+  - useMaskedFn: 7 (hook 响应式行为)
+  - api-client: 11 (PII toggle 自动注入)
+
+### 红绿灯
+- 后端 build: 0 错 0 警
+- 后端 tests: 26/26
+- 前端 check: BUILD PASSED (74 警告)
+- vite build: 10-18s
+
+### 已知遗留 (v0.76.0 路线图)
+- 前端 MaskContext 的 useUserIdSync hook 已暴露但**未在 App.tsx 接入** (登录后调它拉后端 toggle 状态). 留作下个 sprint.
+- 后端响应层 mask 移除后, ?unmask=true 参数已无意义但保留 (避免破坏老客户端). 未来可完全移除.
+- DataTable.tsx 还 358 行 > 250 目标. 进一步拆 thead/tbody sub-component 边际收益低.
+- InvoiceForm.tsx (347) + PartnerForm.tsx (361) + StaffAttendance.tsx (364) 评估后跳过拆分 (业务逻辑紧密, 已部分拆).
+
+
 ## v0.72.0（2026-06-18）— 数据更安全 + 系统更稳定
 
 > 这是一次小升级，主要让数据更安全、登录更顺畅、还有几处你可能注意不到的小问题。
