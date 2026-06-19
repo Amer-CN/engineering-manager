@@ -7,9 +7,12 @@ import { useStatusStore } from '@/store/statusStore'
 import { TableSkeleton, TableEmpty, TableRow } from './DataTable/TableParts'
 import { ColFilterDropdown } from './DataTable/ColFilterDropdown'
 import { TableCell } from './DataTable/TableCell'
+import { useDataTableState } from '@/hooks/useDataTableState'
+import { useDataTableFilters } from '@/hooks/useDataTableFilters'
 
 // v0.77.0: 类型和常量已拆到 DataTable/types.ts + DataTable/consts.ts
-export type { Column, DataTableProps, TableRowProps, ColFilterDropdownProps } from './DataTable/types'
+import type { Column, DataTableProps, TableRowProps, ColFilterDropdownProps } from './DataTable/types'
+export type { Column, DataTableProps, TableRowProps, ColFilterDropdownProps }
 import { alignMap } from './DataTable/consts'
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -39,6 +42,12 @@ export function DataTable<T>({
   onSortChange,
 }: DataTableProps<T>) {
   const enablePagination = paginationProp !== false
+  // 内部 helper: rowKey 可能是 string (字段名) 或 function, 统一返回 string
+  const getRowKey = (item: T, index: number): string => {
+    if (typeof rowKey === 'function') return rowKey(item)
+    return String(item[rowKey as keyof T] ?? index)
+  }
+
 
   // v0.75.0: 抽出 sort / filter / pagination 状态管理到 useDataTableState hook
   const {
