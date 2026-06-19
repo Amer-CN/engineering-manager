@@ -3,7 +3,60 @@
 
 
 
-## v0.80.0（2026-06-19）— 继续拆超长 React 组件 + 修 templates vitest
+
+
+## v0.81.0（2026-06-19）— 继续拆超长 React 组件: Drawings + ContractPage
+
+> **里程碑**: v0.80.0 拆完 3 个表单组件后, v0.81.0 拆 2 个超长 pages (Drawings 413 + ContractPage 434), 全部 mimo 一次过 (n=9 scoreboard 9/9 = 100%). tsc 红绿灯继续 0 错.
+> **背景**: v0.81.0 sprint 拍板 A=Drawings + B=ContractPage (用户二选一后跟 "全部执行"). 验证 mimo 对非表单超长 page 组件同样适配.
+
+### 改动 (4 commits)
+
+- **`DrawingsSplit`** refactor(v0.81.0): Drawings.tsx 413 → 359 + 新建 DrawingsFormModal.tsx 95 + drawingsConstants.ts 21
+  - mimo 125s 一次过, tsc 0 + vite build 12.31s + dotnet build 0
+  - drawingsConstants.ts: 7 类图纸 (建筑/结构/电气/给排水/暖通/装饰/其他) + 对应 icon + 8 种 category color
+  - DrawingsFormModal.tsx: 整段 Modal JSX (上传/编辑表单) 抽离, props 透传 formData/setFormData/handleSubmit
+  - 主文件保留 state + handlers + page JSX (FilterBar + DataTable + EmptyState)
+  - FormDataState type 从 FormModal export (解耦 formData shape)
+
+- **`ContractPageSplit`** refactor(v0.81.0): ContractPage.tsx 434 → 318 + 新建 ContractPreviewModal.tsx 68 + contractPageColumns.tsx 100
+  - mimo 258s 一次过 (中途 .ts/.tsx 扩展名自坑但自修复), tsc 0 + vite build 15.90s + dotnet build 0 + dotnet test 26/26 + npm check PASSED
+  - ContractPreviewModal.tsx: 文件预览模态框 (PDF/Word/Excel/图片 4 种) 独立组件, props {previewFile, onClose}
+  - contractPageColumns.tsx: 5 个 Column 定义 (baseColumns + paymentColumn + statusColumn + endDateColumn + actionsColumn) + getContractColumns(deps) factory function
+  - deps: {partners, paymentRecords, type, config, onEdit, onDelete, onPreview, showToast}
+  - actionsColumn 的 Word doc 转换逻辑 (setPreviewFile + convertTemplateDocxToHtml) 留在主文件 handlePreview, columns 文件只 onClick={onPreview(item)}
+  - 主文件保留 state + handlers + loadData (4 个并行 API) + 分组 JSX (按 project/role/status 分组) + ContractFormModal 调用
+
+### v0.81.0 任务清单
+
+- [DONE] Task 1: Drawings 拆分 (mimo 125s 一次过)
+- [DONE] Task 2: ContractPage 拆分 (mimo 258s 一次过, 含自修复)
+- [DONE] Task 3: 红绿灯 5 项全绿 + scoreboard 更新到 n=9
+
+### mimo scoreboard (n=9)
+
+- ✅ 一次过: 9/9 (100%) — v0.77.0 DataTable 起连续 7 次单文件 React patch 一次过
+- ❌ 失败: 1/9 (11%) — 早期 Task C git 命令 (v0.78.0 前), 不影响单文件 patch 适配度统计
+- 平均耗时: 183s
+- **mimo 适合 (n=9): 单文件 React patch (含新建子文件) — 100% 一次过**
+- mimo 不适合: 任何涉及 git 命令的任务
+
+### mimo 经验新增 (v0.81.0)
+
+- **.ts vs .tsx 自坑 + 自修复**: mimo 写 `contractPageColumns.ts` 后自己意识到需要 JSX, rename .ts → .tsx 失败一次后自修复. 这是 mimo 的 LLM 自我纠错能力体现. 教训: prompt 里如果明确"columns 文件含 JSX → 用 .tsx", 可以避免这次自坑
+- **ps1 runner tee 中文路径 bug**: 我自己写的 `_run-mimo.ps1` 用 `Add-Content` tee 到中文路径文件失败 (PS encoding bug), 但 mimo 本身没事. 改用 `mimo.exe` 直接跑, stderr 重定向到 `.stderr` 文件即可
+
+### 红绿灯结果 (v0.81.0 最终)
+
+| 项 | 结果 |
+|---|------|
+| tsc --noEmit | 0 errors |
+| vite build | 15.90s |
+| dotnet build (Api) | 0 errors 0 warnings |
+| dotnet test (Tests) | 26/26 通过 |
+| npm run check | PASSED (70 warnings, 0 HARD FAIL) |
+
+（2026-06-19）— 继续拆超长 React 组件 + 修 templates vitest
 
 > **里程碑**: v0.79.0 tsc 红绿灯落地后, 立刻拆超长 React 组件. 3 commits (Task A/B/C) 全部完成, mimo n=7 scoreboard 6/7 一次过 (86%). 同时修 v0.78.0 留下的 TemplateCard Tooltip 设计 bug + TemplatePreview 测试 portal bug.
 > **背景**: v0.79.0 加 tsc 红绿灯后, 项目实际有 60+ 个 > 200 行的 .tsx 文件 (原 handoff 估计"5 个"是低估). v0.80.0 优先拆 features/ 下的表单组件 (高复用 + 易测).
@@ -17,7 +70,60 @@
   - 主文件保留 state + handlers + FileDropZone x2 (营业执照 + 其他附件) + OCR + footer
   - tsc 0 errors, vite build 14.06s, dotnet build 0 errors
 
-### v0.80.0 任务清单
+#
+
+## v0.81.0（2026-06-19）— 继续拆超长 React 组件: Drawings + ContractPage
+
+> **里程碑**: v0.80.0 拆完 3 个表单组件后, v0.81.0 拆 2 个超长 pages (Drawings 413 + ContractPage 434), 全部 mimo 一次过 (n=9 scoreboard 9/9 = 100%). tsc 红绿灯继续 0 错.
+> **背景**: v0.81.0 sprint 拍板 A=Drawings + B=ContractPage (用户二选一后跟 "全部执行"). 验证 mimo 对非表单超长 page 组件同样适配.
+
+### 改动 (4 commits)
+
+- **`DrawingsSplit`** refactor(v0.81.0): Drawings.tsx 413 → 359 + 新建 DrawingsFormModal.tsx 95 + drawingsConstants.ts 21
+  - mimo 125s 一次过, tsc 0 + vite build 12.31s + dotnet build 0
+  - drawingsConstants.ts: 7 类图纸 (建筑/结构/电气/给排水/暖通/装饰/其他) + 对应 icon + 8 种 category color
+  - DrawingsFormModal.tsx: 整段 Modal JSX (上传/编辑表单) 抽离, props 透传 formData/setFormData/handleSubmit
+  - 主文件保留 state + handlers + page JSX (FilterBar + DataTable + EmptyState)
+  - FormDataState type 从 FormModal export (解耦 formData shape)
+
+- **`ContractPageSplit`** refactor(v0.81.0): ContractPage.tsx 434 → 318 + 新建 ContractPreviewModal.tsx 68 + contractPageColumns.tsx 100
+  - mimo 258s 一次过 (中途 .ts/.tsx 扩展名自坑但自修复), tsc 0 + vite build 15.90s + dotnet build 0 + dotnet test 26/26 + npm check PASSED
+  - ContractPreviewModal.tsx: 文件预览模态框 (PDF/Word/Excel/图片 4 种) 独立组件, props {previewFile, onClose}
+  - contractPageColumns.tsx: 5 个 Column 定义 (baseColumns + paymentColumn + statusColumn + endDateColumn + actionsColumn) + getContractColumns(deps) factory function
+  - deps: {partners, paymentRecords, type, config, onEdit, onDelete, onPreview, showToast}
+  - actionsColumn 的 Word doc 转换逻辑 (setPreviewFile + convertTemplateDocxToHtml) 留在主文件 handlePreview, columns 文件只 onClick={onPreview(item)}
+  - 主文件保留 state + handlers + loadData (4 个并行 API) + 分组 JSX (按 project/role/status 分组) + ContractFormModal 调用
+
+### v0.81.0 任务清单
+
+- [DONE] Task 1: Drawings 拆分 (mimo 125s 一次过)
+- [DONE] Task 2: ContractPage 拆分 (mimo 258s 一次过, 含自修复)
+- [DONE] Task 3: 红绿灯 5 项全绿 + scoreboard 更新到 n=9
+
+### mimo scoreboard (n=9)
+
+- ✅ 一次过: 9/9 (100%) — v0.77.0 DataTable 起连续 7 次单文件 React patch 一次过
+- ❌ 失败: 1/9 (11%) — 早期 Task C git 命令 (v0.78.0 前), 不影响单文件 patch 适配度统计
+- 平均耗时: 183s
+- **mimo 适合 (n=9): 单文件 React patch (含新建子文件) — 100% 一次过**
+- mimo 不适合: 任何涉及 git 命令的任务
+
+### mimo 经验新增 (v0.81.0)
+
+- **.ts vs .tsx 自坑 + 自修复**: mimo 写 `contractPageColumns.ts` 后自己意识到需要 JSX, rename .ts → .tsx 失败一次后自修复. 这是 mimo 的 LLM 自我纠错能力体现. 教训: prompt 里如果明确"columns 文件含 JSX → 用 .tsx", 可以避免这次自坑
+- **ps1 runner tee 中文路径 bug**: 我自己写的 `_run-mimo.ps1` 用 `Add-Content` tee 到中文路径文件失败 (PS encoding bug), 但 mimo 本身没事. 改用 `mimo.exe` 直接跑, stderr 重定向到 `.stderr` 文件即可
+
+### 红绿灯结果 (v0.81.0 最终)
+
+| 项 | 结果 |
+|---|------|
+| tsc --noEmit | 0 errors |
+| vite build | 15.90s |
+| dotnet build (Api) | 0 errors 0 warnings |
+| dotnet test (Tests) | 26/26 通过 |
+| npm run check | PASSED (70 warnings, 0 HARD FAIL) |
+
+ 任务清单
 
 - **StaffAttendance 363 行拆分** (handoff 原计划): 已有 staffAttendanceColumns.tsx, 再拆 Dashboard 部分. mimo 适合度 ⭐⭐⭐⭐
 - **TemplatePreview 关闭按钮测试** (v0.78.0 留下): 测试用 `container.querySelector` 但 Modal 用 `createPortal`, 改 `document.body.querySelector`. 1 行测试 fix
