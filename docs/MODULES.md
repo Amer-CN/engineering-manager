@@ -1,7 +1,7 @@
 # 核心模块详细说明
 
 > 本文档包含各业务模块的详细设计说明，CLAUDE.md 只保留模块索引。
-> 最后同步：2026-06-19（v0.77.0 release: DataTable.tsx 进一步拆分 358→209 行）
+> 最后同步：2026-06-19（v0.78.0 release: 修 DataTable 3 critical runtime bug, List 页面真正可用）
 
 ---
 
@@ -240,7 +240,15 @@ uploads/
 - 新建 src/components/DataTable/consts.ts (7 行, alignMap 常量)
 - DataTable.tsx 顶部 re-export 保持 '../DataTable' import 兼容, 子文件 TableParts/ColFilterDropdown/TableCell 零改动
 - 目标 200 行: 实际 209 (含 4 行 re-export 注释), 业务逻辑主体 204 行不可压缩
-### 核心文件
+
+### v0.78.0 增量: 修 DataTable 3 critical runtime bug
+
+- v0.75.0 commit fbbcaa2 拆分 DataTable 时漏 3 处, 致 30+ List 页面 runtime 崩溃 (SettlementList/StaffList/InvoiceList/PaymentList/LaborWorkerList/ItemList/MaterialList 等)
+- 修复 A: 加 useDataTableState + useDataTableFilters import (L10-11)
+- 修复 B: 内部用 getRowKey(item, index) 但 props 叫 rowKey (类型 keyof T | function), 加 helper 处理 string/function 两种情况
+- 修复 C: v0.77.0 export type {...} from 没让类型在内部 scope 可用, 改 import type + export type
+- Tooltip 增强: content (string 时) 复制到 child native title 属性, 让 getByTitle 测试 + 无障碍工具能识别
+- SettlementList vitest 0/8 → 8/8 (v0.75.0 起一直 0/8)### 核心文件
 | 文件 | 作用 |
 |------|------|
 | `EngineeringManager.Api/Endpoints/FileEndpoints.cs` | C# 文件端点：save/read/delete/openExternal |
