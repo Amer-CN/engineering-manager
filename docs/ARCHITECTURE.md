@@ -82,6 +82,12 @@
 | 健康度评分公式调整 | 2026-05-12 | 预算控制 40% + 合同执行 30% + 发票管理 30% |
 | C# 迁移 | 2026-06-01 | Electron IPC handlers → ASP.NET Core Minimal API 端点 |
 | C# 迁移补全 | 2026-06-04 | PartnerDto 新增 ProjectIds 字段，合作伙伴 POST/PUT SQL 补全 project_ids |
+| P0-4 越权防护闭环 v0.73.0 | 2026-06-19 | 33 业务端点 + 4 管理端点 user-dim 隔离 + 6 migrations (009-014 + 020) + project_authorizations 表 (admin 手动授权) + CurrentUser helper 3 个 + smoke 测试 5 个 |
+| PII Mask 基础设施 v0.73.0 | 2026-06-19 | MaskContext / MaskToggleButton / useMaskedFn hook / 8 组件响应式化 + vitest 单元测试 37 用例 |
+| PII Mask 完整闭环 v0.74.0 | 2026-06-19 | 后端去硬 mask (18 处 Common.MaskXxx 调用简化) + 后端 ?unmask=true 查询参数 + apiClient 自动加 unmask=true 参数 (PII_PATHS 常量) + 4 个 GET 端点响应层 mask 支持 (含 GET /api/inventory / /api/materials) |
+| PII Mask 多设备同步 v0.75.0 | 2026-06-19 | User Preferences API (migration 022 + 4 端点: GET/PUT /api/user-preferences + GET/PUT /api/user-preferences/{key}) + MaskContext 通过 PUT 后端同步 toggle + useUserIdSync hook (登录后拉后端真值覆盖 localStorage) |
+| Partners tax_number schema 修复 v0.74.0 | 2026-06-19 | migration 021_AddPartnersTaxNumber.sql 修复 POST /api/partners 500 bug (v0.72.0 之前一直存在) |
+| DataTable 拆分 v0.75.0 | 2026-06-19 | 453 → 358 行 (-21%) + 提取 useDataTableState + useDataTableFilters hook + 修复 alignMap UI bug (列对齐失效) |
 
 ### 文件存储演进
 | 变更 | 日期 | 说明 |

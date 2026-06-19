@@ -205,6 +205,25 @@ uploads/
 ```
 - 类型映射：`invoice_out`→发票/开票/ + 收付款/回款/；`invoice_in`→发票/收票/ + 收付款/付款/
 
+### PII Mask 模块 (v0.73.0 + v0.74.0 + v0.75.0 PII 完整闭环)
+
+- 位置: 横切关注点, 不属于某个业务模块, 所有含 PII 字段的模块都依赖它
+- 涉及业务模块: 人事管理 / 工人管理 / 合同管理 / 合作单位管理 / 仓库管理 / 银行单据 OCR 等 (13 列 PII 字段)
+- 后端:
+  - `EngineeringManager.Api/Security/PiiProtector.cs` — AES-GCM 加密 (字段级 PII 入库加密)
+  - `EngineeringManager.Api/Common.cs` — MaskIdCard / MaskPhone / MaskBankAccount utility (工具函数, v0.75.0 起不再自动调用, 保留供 caller 自行使用)
+  - `EngineeringManager.Api/Endpoints/UserPreferencesEndpoints.cs` (v0.75.0) — GET/PUT /api/user-preferences (PII Mask toggle 多设备同步)
+- 前端:
+  - `src/contexts/MaskContext.tsx` — 全局 mask 状态 (MaskProvider / useMask) + localStorage 缓存 + 后端同步
+  - `src/components/MaskToggleButton.tsx` — 右下角浮动 Eye/EyeOff 按钮
+  - `src/hooks/useMaskedValue.ts` — useMaskedFn hook (返回 (type, value) => string 函数, 在 .map / render callback 中安全使用)
+  - `src/services/api-client.ts` — 自动给 PII 端点 GET 加 ?unmask=true (基于 localStorage v120_mask_enabled)
+- toggle 行为:
+  - 默认 masked=true (保守), 后端 GET 默认返明文, 前端 hook 显示脱敏
+  - 用户点击 toggle → localStorage v120_mask_enabled = 'false' + 异步 PUT /api/user-preferences/pii_mask_enabled
+  - 下次 PII GET → api-client 自动加 ?unmask=true (无效参数, 因为后端默认就是明文) → 前端 hook 看到 unmasked=true 返回原值
+  - 多设备: 登录后 useUserIdSync hook 从后端 GET 拉取真值覆盖 localStorage
+
 ### 核心文件
 | 文件 | 作用 |
 |------|------|
