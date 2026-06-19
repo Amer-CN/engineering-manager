@@ -1,4 +1,49 @@
 
+
+
+## v0.77.0（2026-06-19）— DataTable.tsx 进一步拆分 358→209 行
+
+> **里程碑**: DataTable 单文件继续瘦身, 类型定义 + 常量拆到子目录, 走 v0.75.0 路线图 #2.
+> **架构清理**: 单一巨型组件 (358 行) → 主组件 (209 行) + types (99 行) + consts (7 行) = 215 行业务 + 99 行类型 + 7 行常量, 各自单一职责.
+
+### 改动 (1 commit)
+
+- **`DataTable拆分`** refactor(v0.77.0): DataTable.tsx 358→209 行 (-42%)
+  - 新建 `src/components/DataTable/types.ts` (99 行): Column<T> / DataTableProps<T> / TableRowProps<T> / ColFilterDropdownProps
+  - 新建 `src/components/DataTable/consts.ts` (7 行): alignMap 常量
+  - `DataTable.tsx` 顶部追加 re-export: `export type { Column, DataTableProps, TableRowProps, ColFilterDropdownProps } from './DataTable/types'` (保持 `'../DataTable'` import 兼容)
+  - 主组件 DataTable<T> 逻辑不变 (204 行核心)
+
+### 数据对比
+
+| 文件 | v0.75.0 | v0.77.0 | 变化 |
+|------|---------|---------|------|
+| `DataTable.tsx` | 358 | 209 | **-42%** (-149 行) |
+| `DataTable/types.ts` | — | 99 | 新建 |
+| `DataTable/consts.ts` | — | 7 | 新建 |
+| `DataTable/TableParts.tsx` | 80 | 80 | 0 |
+| `DataTable/ColFilterDropdown.tsx` | 189 | 189 | 0 |
+| `DataTable/TableCell.tsx` | 30 | 30 | 0 |
+
+### 红绿灯 (v0.77.0)
+
+- 后端 build: 0 错 0 警
+- 后端 tests: 26/26 通过
+- 前端 check: BUILD PASSED (73 警告, 较 v0.76.0 -1: 少一个 hex grep 命中)
+- vite build: 14.59s 成功
+- vitest PII: 48/48 通过
+
+### 路线图状态
+
+v0.76.0 handoff 列出的 v0.77.0 4 条:
+
+| # | 路线图 | v0.77.0 状态 |
+|---|--------|------|
+| 1 | 后端 PII SELECT 解密 | ⏭️ 跳过 (改动量大, 留 v0.78.0+) |
+| 2 | DataTable.tsx 进一步拆分 | ✅ **完成** (commit 1) |
+| 3 | Migrations 文件整理 | ⏭️ 跳过 (边际收益低) |
+| 4 | pdf.worker 1.9MB 懒加载 | ⏭️ 跳过 (低价值) |
+
 ## v0.76.0（2026-06-19）— useUserIdSync 接入 App.tsx + 仓库清理
 
 > **里程碑**: PII Mask toggle 多设备同步的最后一公里 — 用户登录后自动从后端拉 toggle 状态覆盖 localStorage. 之前 hook 已暴露但未挂载.

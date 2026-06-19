@@ -1,7 +1,7 @@
 # 核心模块详细说明
 
 > 本文档包含各业务模块的详细设计说明，CLAUDE.md 只保留模块索引。
-> 最后同步：2026-06-19（v0.76.0 release: useUserIdSync 接入 + 仓库清理）
+> 最后同步：2026-06-19（v0.77.0 release: DataTable.tsx 进一步拆分 358→209 行）
 
 ---
 
@@ -232,6 +232,14 @@ uploads/
 - `src/App.tsx` L9: import 调整 `import { MaskProvider, useUserIdSync } from './contexts/MaskContext'`
 - 效果: 跨设备登录时 PII mask toggle 自动同步; 多设备体验一致
 
+
+### v0.77.0 增量: DataTable.tsx 进一步拆分 358→209 行
+
+- 完成 v0.75.0 handoff 路线图 #2: DataTable.tsx 358→209 行 (-42%, 超 -35% 目标)
+- 新建 src/components/DataTable/types.ts (99 行, 4 interface: Column/DataTableProps/TableRowProps/ColFilterDropdownProps)
+- 新建 src/components/DataTable/consts.ts (7 行, alignMap 常量)
+- DataTable.tsx 顶部 re-export 保持 '../DataTable' import 兼容, 子文件 TableParts/ColFilterDropdown/TableCell 零改动
+- 目标 200 行: 实际 209 (含 4 行 re-export 注释), 业务逻辑主体 204 行不可压缩
 ### 核心文件
 | 文件 | 作用 |
 |------|------|
