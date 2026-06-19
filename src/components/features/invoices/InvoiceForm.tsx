@@ -1,16 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { InvoiceType, InvoiceKind, InvoiceTaxRate, Project, Partner, IncomeContract, ExpenseContract } from '@/types/electron'
-import { parseDateString } from '@/utils/date'
 import { motion } from 'framer-motion'
-import { Input } from '../../ui/Input/Input'
 import { FileDropZone } from '../partners/FileDropZone'
 import { FilePreviewModal } from './FilePreviewModal'
 import { useInvoiceAmounts } from './useInvoiceAmounts'
-import { taxRateOptions, invoiceKindOptions } from './constants'
 import { useToastStore } from '@/store/toastStore'
-import { Icon } from '../../ui/Icon'
 import { HoverScrollbar } from '../../ui/HoverScrollbar'
 import { InvoiceOCRBlock } from './InvoiceOCRBlock'
+import { InvoiceFormFields } from './InvoiceFormFields'
 
 export interface InvoiceFormData {
   type: InvoiceType
@@ -132,205 +129,55 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
   
   <form onSubmit={handleSubmit} className="flex flex-col overflow-hidden flex-1">
   <HoverScrollbar className="flex-1 px-6 py-4">
-  <div className="space-y-4">
-  <div className="grid grid-cols-2 gap-4">
-  <div>
-  <label className="label">发票类型 *</label>
-  <select
-  value={formData.type}
-  onChange={e => setFormData({ ...formData, type: e.target.value as InvoiceType })}
-  className="input"
-  required
-  >
-  <option value="invoice_in">收票</option>
-  <option value="invoice_out">开票</option>
-  </select>
-  </div>
-  <div>
-  <label className="label">票种 *</label>
-  <select
-  value={formData.invoiceKind}
-  onChange={e => setFormData({ ...formData, invoiceKind: e.target.value as InvoiceKind })}
-  className="input"
-  required
-  >
-  {invoiceKindOptions.map(opt => (
-  <option key={opt.value} value={opt.value}>{opt.label}</option>
-  ))}
-  </select>
-  </div>
-  </div>
+    <InvoiceFormFields
+      formData={formData}
+      setFormData={setFormData}
+      partners={partners}
+      projects={projects}
+      contracts={contracts}
+      handleInvoiceNoChange={handleInvoiceNoChange}
+      handleTaxRateChange={handleTaxRateChange}
+      handleTaxedAmountChange={handleTaxedAmountChange}
+      handleUntaxedAmountChange={handleUntaxedAmountChange}
+      handleTaxAmountChange={handleTaxAmountChange}
+      duplicateInvoice={duplicateInvoice}
+    />
 
-  <div className="grid grid-cols-2 gap-4">
-  <div>
-  <Input label="发票号码" type="text" value={formData.invoiceNo}
-  onChange={e => handleInvoiceNoChange(e.target.value)}
-  size="sm" className="font-mono" required />
-  {duplicateInvoice && (
-  <motion.div
-  initial={{ opacity: 0, y: -5 }}
-  animate={{ opacity: 1, y: 0 }}
-  className="mt-1 p-2 bg-amber-50 border border-amber-200 rounded-lg"
-  >
-  <div className="flex items-center gap-2">
-  <Icon name="AlertTriangle" size={14} className="text-amber-600" />
-  <span className="text-xs text-amber-700">
-  此发票号已存在（ID: {duplicateInvoice.id}）
-  </span>
-  </div>
-  </motion.div>
-  )}
-  </div>
-  <div>
-  <Input label="开票日期" type="date" value={formData.issueDate}
-  onChange={e => setFormData({ ...formData, issueDate: e.target.value })}
-  onPaste={e => {
-  const parsed = parseDateString(e.clipboardData.getData('text'))
-  if (parsed) { setFormData({ ...formData, issueDate: parsed }); e.preventDefault() }
-  }}
-  size="sm" />
-  </div>
-  </div>
+    {/* 文件上传 */}
+    <FileDropZone
+      label="上传发票"
+      iconName="Paperclip"
+      file={formData.fileUrl}
+      fileType={formData.fileType}
+      fileLabel={formData.fileType === 'pdf' ? 'PDF文件' : '图片文件'}
+      dragOver={dragOverFile}
+      inputRef={fileInputRef}
+      iconBgClass="bg-primary-100"
+      onPreview={() => setPreviewFile({ data: formData.fileUrl, type: formData.fileType === 'pdf' ? 'pdf' : 'image', title: '发票预览' })}
+      onFileSelect={processFile}
+      onRemove={() => setFormData(prev => ({ ...prev, fileUrl: '', fileType: '' }))}
+      onDragOver={(e) => { e.preventDefault(); setDragOverFile(true) }}
+      onDragLeave={() => setDragOverFile(false)}
+      onDrop={(e) => { e.preventDefault(); setDragOverFile(false); const files = e.dataTransfer.files; if (files.length > 0) processFile(files[0]) }}
+      onClickUpload={() => fileInputRef.current?.click()}
+    />
 
-  {formData.invoiceKind.startsWith('paper') && (
-  <div>
-  <Input label="发票代码" type="text" value={formData.invoiceCode} onChange={e => setFormData({ ...formData, invoiceCode: e.target.value })} size="sm" className="font-mono" />
-  </div>
-  )}
-
-  <div>
-  <Input label="发票名称" type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} size="sm" placeholder="如: 工程款、材料款" required />
-  </div>
-
-  <div className="grid grid-cols-2 gap-4">
-  <div>
-  <label className="label">销售方 *</label>
-  <select
-  value={formData.sellerId}
-  onChange={e => setFormData({ ...formData, sellerId: e.target.value ? Number(e.target.value) : '' })}
-  className="input"
-  required
-  >
-  <option value="">请选择销售方</option>
-  {partners.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-  </select>
-  </div>
-  <div>
-  <label className="label">购买方 *</label>
-  <select
-  value={formData.buyerId}
-  onChange={e => setFormData({ ...formData, buyerId: e.target.value ? Number(e.target.value) : '' })}
-  className="input"
-  required
-  >
-  <option value="">请选择购买方</option>
-  {partners.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-  </select>
-  </div>
-  </div>
-
-  <div>
-  <label className="label">关联项目</label>
-  <select
-  value={formData.projectId}
-  onChange={e => setFormData({ ...formData, projectId: e.target.value ? Number(e.target.value) : '' })}
-  className="input"
-  >
-  <option value="">请选择项目</option>
-  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-  </select>
-  </div>
-
-  <div>
-  <label className="label">关联合同</label>
-  <select
-  value={formData.contractId}
-  onChange={e => setFormData({ ...formData, contractId: e.target.value ? Number(e.target.value) : '' })}
-  className="input"
-  >
-  <option value="">不关联合同</option>
-  {formData.type === 'invoice_in' && contracts.expense
-  .filter(c => (!formData.projectId || c.projectId === formData.projectId) && (!formData.sellerId || c.partnerId === formData.sellerId))
-  .map(c => (<option key={c.id} value={c.id}>[支出] {c.name}</option>))}
-  {formData.type === 'invoice_out' && contracts.income
-  .filter(c => (!formData.projectId || c.projectId === formData.projectId) && (!formData.buyerId || c.partnerId === formData.buyerId))
-  .map(c => (<option key={c.id} value={c.id}>[收入] {c.name}</option>))}
-  </select>
-  </div>
-
-  <div className="grid grid-cols-2 gap-4">
-  <div>
-  <label className="label">税率 *</label>
-  <select
-  value={formData.taxRate}
-  onChange={e => handleTaxRateChange(Number(e.target.value))}
-  className="input"
-  required
-  >
-  {taxRateOptions.map(opt => (
-  <option key={opt.value} value={opt.value}>{opt.label}</option>
-  ))}
-  </select>
-  </div>
-  <div>
-  <Input label="价税合计（含税价）" type="number" value={formData.amount || ''} onChange={e => handleTaxedAmountChange(Number(e.target.value) || 0)} size="sm" min="0" step="0.01" />
-  </div>
-  </div>
-
-  <div className="grid grid-cols-2 gap-4">
-  <div>
-  <Input label="不含税金额" type="number" value={formData.priceAmount || ''} onChange={e => handleUntaxedAmountChange(Number(e.target.value) || 0)} size="sm" min="0" step="0.01" />
-  </div>
-  <div>
-  <Input label="税额" type="number" value={formData.taxAmount || ''} onChange={e => handleTaxAmountChange(Number(e.target.value) || 0)} size="sm" min="0" step="0.01" />
-  </div>
-  </div>
-
-  <div>
-  <label className="label">备注</label>
-  <textarea
-  value={formData.remarks}
-  onChange={e => setFormData({ ...formData, remarks: e.target.value })}
-  className="input min-h-[80px]"
-  />
-  </div>
-
-  {/* 文件上传 */}
-  <FileDropZone
-  label="上传发票"
-  iconName="Paperclip"
-  file={formData.fileUrl}
-  fileType={formData.fileType}
-  fileLabel={formData.fileType === 'pdf' ? 'PDF文件' : '图片文件'}
-  dragOver={dragOverFile}
-  inputRef={fileInputRef}
-  iconBgClass="bg-primary-100"
-  onPreview={() => setPreviewFile({ data: formData.fileUrl, type: formData.fileType === 'pdf' ? 'pdf' : 'image', title: '发票预览' })}
-  onFileSelect={processFile}
-  onRemove={() => setFormData(prev => ({ ...prev, fileUrl: '', fileType: '' }))}
-  onDragOver={(e) => { e.preventDefault(); setDragOverFile(true) }}
-  onDragLeave={() => setDragOverFile(false)}
-  onDrop={(e) => { e.preventDefault(); setDragOverFile(false); const files = e.dataTransfer.files; if (files.length > 0) processFile(files[0]) }}
-  onClickUpload={() => fileInputRef.current?.click()}
-  />
-
-  { /* InvoiceOCR (v1.1.0 extracted) */ }
-  <InvoiceOCRBlock
-    fileUrl={formData.fileUrl}
-    fileType={formData.fileType}
-    onResult={fields => setFormData(prev => ({
-      ...prev,
-      invoiceNo: fields.invoiceNo || prev.invoiceNo,
-      amount: fields.amount || prev.amount,
-      priceAmount: fields.priceAmount || prev.priceAmount,
-      taxAmount: fields.taxAmount || prev.taxAmount,
-      taxRate: fields.taxRate || prev.taxRate,
-      sellerName: fields.sellerName || prev.sellerName,
-      purchaserName: fields.purchaserName || prev.purchaserName,
-      issueDate: fields.issueDate || prev.issueDate
-    }))}
-  />
-  </div></HoverScrollbar>
+    <InvoiceOCRBlock
+      fileUrl={formData.fileUrl}
+      fileType={formData.fileType}
+      onResult={fields => setFormData(prev => ({
+        ...prev,
+        invoiceNo: fields.invoiceNo || prev.invoiceNo,
+        amount: fields.amount || prev.amount,
+        priceAmount: fields.priceAmount || prev.priceAmount,
+        taxAmount: fields.taxAmount || prev.taxAmount,
+        taxRate: fields.taxRate || prev.taxRate,
+        sellerName: fields.sellerName || prev.sellerName,
+        purchaserName: fields.purchaserName || prev.purchaserName,
+        issueDate: fields.issueDate || prev.issueDate
+      }))}
+    />
+  </HoverScrollbar>
   <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 shrink-0">
   <button type="button" onClick={onCancel} className="btn btn-secondary">取消</button>
   <button type="submit" className="btn btn-primary">{isEditing ? '保存' : '创建'}</button>
