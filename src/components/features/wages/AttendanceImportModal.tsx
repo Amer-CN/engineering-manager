@@ -1,23 +1,8 @@
-import React, { useState, useMemo, useCallback } from 'react'
+import React, { useState, useMemo } from 'react'
 import { DataTable, type Column } from '@/components/DataTable'
 import { Icon } from '../../ui/Icon'
-
-// 拖拽上传区域（render props 模式）
-function DropZone({ onFile, children }: { onFile: (f: File) => void; children: (dragging: boolean) => React.ReactNode }) {
-  const [dragging, setDragging] = useState(false)
-  const handleDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); setDragging(true) }, [])
-  const handleDragLeave = useCallback(() => setDragging(false), [])
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault(); setDragging(false)
-    const file = e.dataTransfer.files[0]
-    if (file) onFile(file)
-  }, [onFile])
-  return (
-    <div onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
-      {children(dragging)}
-    </div>
-  )
-}
+import { DropZone } from './DropZone'
+import { autoMapColumns } from './autoMapColumns'
 
 interface MatchedRow {
   name: string
@@ -56,25 +41,6 @@ const defaultState: ImportState = {
   previewRows: [], allRows: [], nameCol: -1, workDaysCol: -1, idCardCol: -1,
 }
 
-// Detect name, work-days, and ID card columns from header row
-function autoMap(headers: string[]): { nameCol: number; workDaysCol: number; idCardCol: number } {
-  let nameCol = -1; let workDaysCol = -1; let idCardCol = -1
-  headers.forEach((h, i) => {
-    const l = h.toLowerCase().replace(/\s+/g, '')
-    if (nameCol === -1 && (l.includes('姓名') || l.includes('名字') || l === 'name')) nameCol = i
-    if (idCardCol === -1 && (l.includes('身份证') || l.includes('证件') || l.includes('idcard'))) idCardCol = i
-    if (workDaysCol === -1 && (l.includes('勤') || (l.includes('天') && l.includes('数')) || l.includes('工作量') || l.includes('计时'))) workDaysCol = i
-  })
-  // Fallback workDaysCol
-  if (workDaysCol === -1) {
-    for (let i = 0; i < headers.length; i++) {
-      const h = headers[i].replace(/\s+/g, '')
-      if (h.includes('天') || h.includes('工') && !h.includes('工资')) { workDaysCol = i; break }
-    }
-  }
-  return { nameCol, workDaysCol, idCardCol }
-}
-
 export const AttendanceImportModal: React.FC<Props> = ({ show, projectId, yearMonth, workerList, onClose, onImport }) => {
   const [state, setState] = useState<ImportState>(defaultState)
   const [wbBuffer, setWbBuffer] = useState<ArrayBuffer | null>(null)
@@ -87,7 +53,7 @@ export const AttendanceImportModal: React.FC<Props> = ({ show, projectId, yearMo
     const headers = rows.length > headerRow ? rows[headerRow].map((h: any) => String(h || '').trim()) : []
     const dataRows = rows.slice(headerRow + 1).filter((r: any[]) => r.some(c => c !== undefined && c !== null && String(c).trim() !== ''))
     const preview = dataRows.slice(0, 10)
-    const { nameCol, workDaysCol, idCardCol } = autoMap(headers)
+    const { nameCol, workDaysCol, idCardCol } = autoMapColumns(headers)
     setState({ headerRow, activeSheet: sheetName, headers, previewRows: preview, allRows: dataRows, nameCol, workDaysCol, idCardCol, sheetNames: state.sheetNames })
   }
 
