@@ -111,8 +111,7 @@ public static class FileEndpoints
         app.MapPost("/api/drawings", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO drawings (project_id,name,file_url,file_name,drawing_type,scale,notes,created_by,created_at,updated_at)
-                VALUES (@ProjectId,@Name,@FileUrl,@FileName,@DrawingType,@Scale,@Notes,@CreatedBy,@Now,@Now); SELECT last_insert_rowid();",
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO drawings (project_id,name,file_url,file_name,drawing_type,scale,notes,created_by,created_at,updated_at, last_modified_at) VALUES (@ProjectId,@Name,@FileUrl,@FileName,@DrawingType,@Scale,@Notes,@CreatedBy,@Now,@Now, @Now); SELECT last_insert_rowid();",
                 new { Now = now(), CreatedBy = uid });
             return Common.Ok(id);
         });
@@ -121,7 +120,7 @@ public static class FileEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
-            var affected = await db.ExecuteAsync("UPDATE drawings SET name=@Name,notes=@Notes,updated_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
+            var affected = await db.ExecuteAsync("UPDATE drawings SET name=@Name,notes=@Notes,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
                 new { Now = now(), Uid = uid, IsAdmin = isAdmin });
             return affected > 0 ? Common.Ok() : Results.Forbid();
         });
@@ -130,7 +129,7 @@ public static class FileEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
-            var affected = await db.ExecuteAsync(@"UPDATE expenses SET category=@Category,amount=@Amount,date=@Date,description=@Description,vendor=@Vendor,updated_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
+            var affected = await db.ExecuteAsync(@"UPDATE expenses SET category=@Category,amount=@Amount,date=@Date,description=@Description,vendor=@Vendor,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
                 new { Now = now(), Uid = uid, IsAdmin = isAdmin });
             return affected > 0 ? Common.Ok() : Results.Forbid();
         });
@@ -138,8 +137,7 @@ public static class FileEndpoints
         app.MapPost("/api/inventory/transactions", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO inventory_transactions (item_id,type,quantity,date,notes,operator,created_by,created_at)
-                VALUES (@ItemId,@Type,@Quantity,@Date,@Notes,@Operator,@CreatedBy,@Now); SELECT last_insert_rowid();",
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO inventory_transactions (item_id,type,quantity,date,notes,operator,created_by,created_at, last_modified_at) VALUES (@ItemId,@Type,@Quantity,@Date,@Notes,@Operator,@CreatedBy,@Now, @Now); SELECT last_insert_rowid();",
                 new { Now = now(), CreatedBy = uid });
             return Common.Ok(id);
         });

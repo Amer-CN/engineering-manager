@@ -67,13 +67,11 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             // v1.2.0: PII 字段加密
             var pii = ctx.RequestServices.GetRequiredService<EngineeringManager.Api.Security.PiiProtector>();
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO members
-                (name,phone,email,member_type,role,id_card,gender,ethnicity,birth_date,id_card_address,
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO members (name,phone,email,member_type,role,id_card,gender,ethnicity,birth_date,id_card_address,
                  base_salary,daily_wage,entry_date,status,department_id,position,created_by,created_at,
-                 id_card_enc,id_card_address_enc,phone_enc,bank_account_enc)
-                VALUES (@Name,@Phone,@Email,@MemberType,@Role,@IdCard,@Gender,@Ethnicity,@BirthDate,
+                 id_card_enc,id_card_address_enc,phone_enc,bank_account_enc, last_modified_at) VALUES (@Name,@Phone,@Email,@MemberType,@Role,@IdCard,@Gender,@Ethnicity,@BirthDate,
                         @IdCardAddress,@BaseSalary,@DailyWage,@EntryDate,@Status,@DepartmentId,@Position,@CreatedBy,@Now,
-                        @IdCardEnc,@IdCardAddressEnc,@PhoneEnc,@BankAccountEnc);
+                        @IdCardEnc,@IdCardAddressEnc,@PhoneEnc,@BankAccountEnc, @Now);
                 SELECT last_insert_rowid();",
                 new { dto.Name, dto.Phone, dto.Email, MemberType = dto.MemberType ?? "staff",
                       dto.Role, dto.IdCard, dto.Gender, dto.Ethnicity, dto.BirthDate, dto.IdCardAddress,
@@ -93,7 +91,7 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
                 member_type=@MemberType,role=@Role,id_card=@IdCard,gender=@Gender,ethnicity=@Ethnicity,
                 birth_date=@BirthDate,id_card_address=@IdCardAddress,base_salary=@BaseSalary,daily_wage=@DailyWage,
                 entry_date=@EntryDate,status=@Status,department_id=@DepartmentId,position=@Position,
-                id_card_enc=@IdCardEnc,id_card_address_enc=@IdCardAddressEnc,phone_enc=@PhoneEnc,bank_account_enc=@BankAccountEnc
+                id_card_enc=@IdCardEnc,id_card_address_enc=@IdCardAddressEnc,phone_enc=@PhoneEnc,bank_account_enc=@BankAccountEnc, version=version+1, last_modified_at=@Now
                 WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
                 new { dto.Id, dto.Name, dto.Phone, dto.Email, dto.MemberType, dto.Role, dto.IdCard,
                       Uid = uid, IsAdmin = isAdmin, dto.Gender, dto.Ethnicity, dto.BirthDate, dto.IdCardAddress, dto.BaseSalary,
@@ -152,11 +150,9 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             // v1.2.0: PII 字段加密 (PiiProtector 注入)
             var pii = ctx.RequestServices.GetRequiredService<EngineeringManager.Api.Security.PiiProtector>();
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO workers
-                (name,id_card,gender,phone,address,bank_account,bank_name,worker_type,daily_wage,
-                 id_card_enc,phone_enc,address_enc,bank_account_enc,created_by,created_at)
-                VALUES (@Name,@IdCard,@Gender,@Phone,@Address,@BankAccount,@BankName,@WorkerType,@DailyWage,
-                        @IdCardEnc,@PhoneEnc,@AddressEnc,@BankAccountEnc,@CreatedBy,@Now);
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO workers (name,id_card,gender,phone,address,bank_account,bank_name,worker_type,daily_wage,
+                 id_card_enc,phone_enc,address_enc,bank_account_enc,created_by,created_at, last_modified_at) VALUES (@Name,@IdCard,@Gender,@Phone,@Address,@BankAccount,@BankName,@WorkerType,@DailyWage,
+                        @IdCardEnc,@PhoneEnc,@AddressEnc,@BankAccountEnc,@CreatedBy,@Now, @Now);
                 SELECT last_insert_rowid();",
                 new { dto.Name, dto.IdCard, dto.Gender, dto.Phone, dto.Address, dto.BankAccount,
                       dto.BankName, dto.WorkerType, dto.DailyWage,
@@ -174,7 +170,7 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
             var affected = await db.ExecuteAsync(@"UPDATE workers SET name=@Name,id_card=@IdCard,gender=@Gender,
                 phone=@Phone,address=@Address,bank_account=@BankAccount,bank_name=@BankName,
                 worker_type=@WorkerType,daily_wage=@DailyWage,
-                id_card_enc=@IdCardEnc,phone_enc=@PhoneEnc,address_enc=@AddressEnc,bank_account_enc=@BankAccountEnc
+                id_card_enc=@IdCardEnc,phone_enc=@PhoneEnc,address_enc=@AddressEnc,bank_account_enc=@BankAccountEnc, version=version+1, last_modified_at=@Now
                 WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
                 new { dto.Id, dto.Name, dto.IdCard, dto.Gender, dto.Phone, dto.Address, dto.BankAccount,
                       dto.BankName, dto.WorkerType, dto.DailyWage, Uid = uid, IsAdmin = isAdmin,
@@ -229,9 +225,7 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             // v1.2.0: project-workers 不直接存 PII (JOIN workers 表), 加密仍加 0 _enc 列
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO project_workers
-                (worker_id,project_id,team_id,daily_wage,worker_type,entry_date,status,created_by,created_at)
-                VALUES (@WorkerId,@ProjectId,@TeamId,@DailyWage,@WorkerType,@EntryDate,@Status,@CreatedBy,@Now);
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO project_workers (worker_id,project_id,team_id,daily_wage,worker_type,entry_date,status,created_by,created_at, last_modified_at) VALUES (@WorkerId,@ProjectId,@TeamId,@DailyWage,@WorkerType,@EntryDate,@Status,@CreatedBy,@Now, @Now);
                 SELECT last_insert_rowid();",
                 new { dto.WorkerId, dto.ProjectId, dto.TeamId, dto.DailyWage, dto.WorkerType,
                       dto.EntryDate, Status = dto.Status ?? "active", CreatedBy = uid, Now = now() });
@@ -259,8 +253,7 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
         app.MapPost("/api/departments", async (HttpContext ctx, DepartmentDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO departments (name,manager_id,positions,created_by,created_at)
-                VALUES (@Name,@ManagerId,@Positions,@CreatedBy,@Now); SELECT last_insert_rowid();",
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO departments (name,manager_id,positions,created_by,created_at, last_modified_at) VALUES (@Name,@ManagerId,@Positions,@CreatedBy,@Now, @Now); SELECT last_insert_rowid();",
                 new { dto.Name, dto.ManagerId, dto.Positions, CreatedBy = uid, Now = now() });
             return Common.Ok(id);
         });
@@ -295,8 +288,7 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
         app.MapPost("/api/worker-teams", async (HttpContext ctx, WorkerTeamDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO worker_teams (name,project_id,leader_id,created_by,created_at,updated_at)
-                VALUES (@Name,@ProjectId,@LeaderId,@CreatedBy,@Now,@Now); SELECT last_insert_rowid();",
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO worker_teams (name,project_id,leader_id,created_by,created_at,updated_at, last_modified_at) VALUES (@Name,@ProjectId,@LeaderId,@CreatedBy,@Now,@Now, @Now); SELECT last_insert_rowid();",
                 new { dto.Name, dto.ProjectId, dto.LeaderId, CreatedBy = uid, Now = now() });
             return Common.Ok(id);
         });
@@ -305,7 +297,7 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var affected = await db.ExecuteAsync(@"UPDATE worker_teams SET name=COALESCE(@Name,name),
-                leader_id=@LeaderId,updated_at=@Now WHERE id=@Id",
+                leader_id=@LeaderId,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id",
                 new { dto.Id, dto.Name, dto.LeaderId, Now = now() });
             return affected > 0 ? Common.Ok() : Results.Forbid();
         });

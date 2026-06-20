@@ -38,11 +38,9 @@ public static class WageEndpoints
         app.MapPost("/api/attendances", async (HttpContext ctx, AttendanceDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO attendances
-                (member_id,project_id,project_worker_id,year_month,work_days,days_off,is_full_attendance,
-                 daily_status,file_url,file_name,created_by,created_at,updated_at)
-                VALUES (@MemberId,@ProjectId,@ProjectWorkerId,@YearMonth,@WorkDays,@DaysOff,@IsFullAttendance,
-                        @DailyStatus,@FileUrl,@FileName,@CreatedBy,@Now,@Now);
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO attendances (member_id,project_id,project_worker_id,year_month,work_days,days_off,is_full_attendance,
+                 daily_status,file_url,file_name,created_by,created_at,updated_at, last_modified_at) VALUES (@MemberId,@ProjectId,@ProjectWorkerId,@YearMonth,@WorkDays,@DaysOff,@IsFullAttendance,
+                        @DailyStatus,@FileUrl,@FileName,@CreatedBy,@Now,@Now, @Now);
                 SELECT last_insert_rowid();",
                 new { dto.MemberId, dto.ProjectId, dto.ProjectWorkerId, dto.YearMonth,
                       dto.WorkDays, dto.DaysOff, dto.IsFullAttendance, dto.DailyStatus,
@@ -56,7 +54,7 @@ public static class WageEndpoints
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var affected = await db.ExecuteAsync(@"UPDATE attendances SET work_days=@WorkDays,days_off=@DaysOff,
                 is_full_attendance=@IsFullAttendance,daily_status=@DailyStatus,file_url=@FileUrl,
-                file_name=@FileName,updated_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
+                file_name=@FileName,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
                 new { dto.Id, dto.WorkDays, dto.DaysOff, dto.IsFullAttendance, dto.DailyStatus,
                       dto.FileUrl, dto.FileName, Uid = uid, IsAdmin = isAdmin, Now = now() });
             return affected > 0 ? Common.Ok() : Results.Forbid();
@@ -85,8 +83,7 @@ public static class WageEndpoints
             var count = 0;
             foreach (var dto in records)
             {
-                await db.ExecuteAsync(@"INSERT INTO attendances (member_id,project_id,project_worker_id,year_month,work_days,days_off,is_full_attendance,daily_status,created_by,created_at,updated_at)
-                    VALUES (@MemberId,@ProjectId,@ProjectWorkerId,@YearMonth,@WorkDays,@DaysOff,@IsFullAttendance,@DailyStatus,@CreatedBy,@Now,@Now)",
+                await db.ExecuteAsync(@"INSERT INTO attendances (member_id,project_id,project_worker_id,year_month,work_days,days_off,is_full_attendance,daily_status,created_by,created_at,updated_at, last_modified_at) VALUES (@MemberId,@ProjectId,@ProjectWorkerId,@YearMonth,@WorkDays,@DaysOff,@IsFullAttendance,@DailyStatus,@CreatedBy,@Now,@Now, @Now)",
                     new { Now = now(), CreatedBy = uid });
                 count++;
             }
@@ -156,11 +153,9 @@ public static class WageEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var actualWage = dto.ActualWage ?? (dto.DailyWage * dto.WorkDays + dto.Bonus - dto.Deduction);
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO wages
-                (project_id,member_id,project_worker_id,year_month,daily_wage,work_days,bonus,deduction,
-                 actual_wage,paid_amount,paid_date,created_by,created_at,updated_at)
-                VALUES (@ProjectId,@MemberId,@ProjectWorkerId,@YearMonth,@DailyWage,@WorkDays,@Bonus,@Deduction,
-                        @ActualWage,@PaidAmount,@PaidDate,@CreatedBy,@Now,@Now);
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO wages (project_id,member_id,project_worker_id,year_month,daily_wage,work_days,bonus,deduction,
+                 actual_wage,paid_amount,paid_date,created_by,created_at,updated_at, last_modified_at) VALUES (@ProjectId,@MemberId,@ProjectWorkerId,@YearMonth,@DailyWage,@WorkDays,@Bonus,@Deduction,
+                        @ActualWage,@PaidAmount,@PaidDate,@CreatedBy,@Now,@Now, @Now);
                 SELECT last_insert_rowid();",
                 new { dto.ProjectId, dto.MemberId, dto.ProjectWorkerId, dto.YearMonth, dto.DailyWage,
                       dto.WorkDays, dto.Bonus, dto.Deduction, ActualWage = actualWage,
@@ -175,7 +170,7 @@ public static class WageEndpoints
             var actualWage = dto.ActualWage ?? (dto.DailyWage * dto.WorkDays + dto.Bonus - dto.Deduction);
             var affected = await db.ExecuteAsync(@"UPDATE wages SET daily_wage=@DailyWage,work_days=@WorkDays,
                 bonus=@Bonus,deduction=@Deduction,actual_wage=@ActualWage,paid_amount=@PaidAmount,
-                paid_date=@PaidDate,updated_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
+                paid_date=@PaidDate,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
                 new { dto.Id, dto.DailyWage, dto.WorkDays, dto.Bonus, dto.Deduction,
                       ActualWage = actualWage, dto.PaidAmount, dto.PaidDate,
                       Uid = uid, IsAdmin = isAdmin, Now = now() });
@@ -205,7 +200,7 @@ public static class WageEndpoints
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var count = 0;
             foreach (var id in ids)
-                count += await db.ExecuteAsync("UPDATE wages SET paid_amount=NULL,paid_date=NULL,bank_receipt_path=NULL,updated_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1) AND (payment_locked=0 OR payment_locked IS NULL)",
+                count += await db.ExecuteAsync("UPDATE wages SET paid_amount=NULL,paid_date=NULL,bank_receipt_path=NULL,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1) AND (payment_locked=0 OR payment_locked IS NULL)",
                     new { Id = id, Uid = uid, IsAdmin = isAdmin, Now = now() });
             return Common.Ok(new { cleared = count });
         });
@@ -216,7 +211,7 @@ public static class WageEndpoints
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var count = 0;
             foreach (var id in ids)
-                count += await db.ExecuteAsync("UPDATE wages SET payment_locked=1,updated_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
+                count += await db.ExecuteAsync("UPDATE wages SET payment_locked=1,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
                     new { Id = id, Uid = uid, IsAdmin = isAdmin, Now = now() });
             return Common.Ok(new { archived = count });
         });
@@ -317,9 +312,7 @@ public static class WageEndpoints
         app.MapPost("/api/salary-history", async (HttpContext ctx, SalaryHistoryDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO salary_history
-                (member_id,effective_date,base_salary,subsidy,subsidy_note,note,created_by,created_at)
-                VALUES (@MemberId,@EffectiveDate,@BaseSalary,@Subsidy,@SubsidyNote,@Note,@CreatedBy,@Now);
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO salary_history (member_id,effective_date,base_salary,subsidy,subsidy_note,note,created_by,created_at, last_modified_at) VALUES (@MemberId,@EffectiveDate,@BaseSalary,@Subsidy,@SubsidyNote,@Note,@CreatedBy,@Now, @Now);
                 SELECT last_insert_rowid();",
                 new { dto.MemberId, dto.EffectiveDate, dto.BaseSalary, dto.Subsidy, dto.SubsidyNote, dto.Note, CreatedBy = uid, Now = now() });
             return Common.Ok(id);

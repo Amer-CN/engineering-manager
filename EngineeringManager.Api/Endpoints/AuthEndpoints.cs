@@ -216,7 +216,7 @@ public static class AuthEndpoints
 
             total += await BackfillTable("members",
                 "id_card, id_card_address, phone",
-                "UPDATE members SET id_card_enc=@IdCardEnc, id_card_address_enc=@IdCardAddressEnc, phone_enc=@PhoneEnc WHERE id=@Id",
+                "UPDATE members SET id_card_enc=@IdCardEnc, id_card_address_enc=@IdCardAddressEnc, phone_enc=@PhoneEnc, version=version+1, last_modified_at=@Now WHERE id=@Id",
                 (r, p) => {
                     p["IdCardEnc"] = pii.Encrypt(r.id_card ?? "");
                     p["IdCardAddressEnc"] = pii.Encrypt(r.id_card_address ?? "");
@@ -226,7 +226,7 @@ public static class AuthEndpoints
 
             total += await BackfillTable("workers",
                 "id_card, phone, address",
-                "UPDATE workers SET id_card_enc=@IdCardEnc, phone_enc=@PhoneEnc, address_enc=@AddressEnc WHERE id=@Id",
+                "UPDATE workers SET id_card_enc=@IdCardEnc, phone_enc=@PhoneEnc, address_enc=@AddressEnc, version=version+1, last_modified_at=@Now WHERE id=@Id",
                 (r, p) => {
                     p["IdCardEnc"] = pii.Encrypt(r.id_card ?? "");
                     p["PhoneEnc"] = pii.Encrypt(r.phone ?? "");
@@ -236,7 +236,7 @@ public static class AuthEndpoints
 
             total += await BackfillTable("partners",
                 "phone, credit_code, tax_number",
-                "UPDATE partners SET phone_enc=@PhoneEnc, credit_code_enc=@CreditCodeEnc, tax_number_enc=@TaxNumberEnc WHERE id=@Id",
+                "UPDATE partners SET phone_enc=@PhoneEnc, credit_code_enc=@CreditCodeEnc, tax_number_enc=@TaxNumberEnc, version=version+1, last_modified_at=@Now WHERE id=@Id",
                 (r, p) => {
                     p["PhoneEnc"] = pii.Encrypt(r.phone ?? "");
                     p["CreditCodeEnc"] = pii.Encrypt(r.credit_code ?? "");
@@ -246,7 +246,7 @@ public static class AuthEndpoints
 
             total += await BackfillTable("supervisors",
                 "phone",
-                "UPDATE supervisors SET phone_enc=@PhoneEnc WHERE id=@Id",
+                "UPDATE supervisors SET phone_enc=@PhoneEnc, version=version+1, last_modified_at=@Now WHERE id=@Id",
                 (r, p) => {
                     p["PhoneEnc"] = pii.Encrypt(r.phone ?? "");
                 });

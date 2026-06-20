@@ -104,9 +104,7 @@ public static class ProjectEndpoints
         app.MapPost("/api/projects", async (HttpContext ctx, ProjectDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO projects
-                (name,description,address,start_date,end_date,status,budget,project_manager_id,created_by,created_at,updated_at)
-                VALUES (@Name,@Description,@Address,@StartDate,@EndDate,@Status,@Budget,@ProjectManagerId,@CreatedBy,@Now,@Now);
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO projects (name,description,address,start_date,end_date,status,budget,project_manager_id,created_by,created_at,updated_at, last_modified_at) VALUES (@Name,@Description,@Address,@StartDate,@EndDate,@Status,@Budget,@ProjectManagerId,@CreatedBy,@Now,@Now, @Now);
                 SELECT last_insert_rowid();",
                 new { dto.Name, dto.Description, dto.Address, dto.StartDate, dto.EndDate,
                       Status = dto.Status ?? "planning", dto.Budget, dto.ProjectManagerId, CreatedBy = uid, Now = now() });
@@ -119,7 +117,7 @@ public static class ProjectEndpoints
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var affected = await db.ExecuteAsync(@"UPDATE projects SET name=@Name,description=@Description,
                 address=@Address,start_date=@StartDate,end_date=@EndDate,status=@Status,budget=@Budget,
-                project_manager_id=@ProjectManagerId,updated_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
+                project_manager_id=@ProjectManagerId,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
                 new { dto.Name, dto.Description, dto.Address, dto.StartDate, dto.EndDate,
                       dto.Status, dto.Budget, dto.ProjectManagerId, Now = now(), Id = id,
                       Uid = uid, IsAdmin = isAdmin });
@@ -152,8 +150,7 @@ public static class ProjectEndpoints
             var exists = db.ExecuteScalar<int>("SELECT COUNT(*) FROM project_members WHERE project_id=@ProjectId AND member_id=@MemberId",
                 new { dto.ProjectId, dto.MemberId }) > 0;
             if (exists) return Common.Fail("该成员已在项目中");
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO project_members (project_id,member_id,joined_at)
-                VALUES (@ProjectId,@MemberId,@JoinedAt); SELECT last_insert_rowid();",
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO project_members (project_id,member_id,joined_at, last_modified_at) VALUES (@ProjectId,@MemberId,@JoinedAt, @Now); SELECT last_insert_rowid();",
                 new { dto.ProjectId, dto.MemberId, JoinedAt = dto.JoinedAt ?? now() });
             return Common.Ok(id);
         });
