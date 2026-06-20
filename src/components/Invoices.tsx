@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState } from 'react'
 import { HoverScrollbar } from './ui/HoverScrollbar'
 import { useToastStore } from '@/store/toastStore'
 import { Spinner } from './ui/Loading/Loading'
@@ -11,6 +11,7 @@ import {
 } from './features/invoices'
 import { getInvoiceFormData, getPaymentFormData } from './features/invoices/constants'
 import { FilePreviewModal } from './features/invoices/FilePreviewModal'
+import { useDuplicateInvoices } from './features/invoices/useDuplicateInvoices'
 import { Icon } from './ui/Icon'
 
 interface InvoicesProps { refresh?: () => void }
@@ -20,19 +21,7 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
   const h = useInvoicePage(refresh)
   const [showDuplicates, setShowDuplicates] = useState(false)
 
-  // 检测重复发票
-  const duplicateInvoices = useMemo(() => {
-  const invoiceNoMap = new Map<string, typeof h.invoices>()
-  for (const inv of h.invoices) {
-  if (!inv.invoiceNo) continue
-  const existing = invoiceNoMap.get(inv.invoiceNo) || []
-  existing.push(inv)
-  invoiceNoMap.set(inv.invoiceNo, existing)
-  }
-  return Array.from(invoiceNoMap.entries())
-  .filter(([_, invs]) => invs.length > 1)
-  .map(([invoiceNo, invs]) => ({ invoiceNo, invoices: invs }))
-  }, [h.invoices])
+  const duplicateInvoices = useDuplicateInvoices(h.invoices)
 
   if (h.loading) {
   return (
