@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { ContractStats } from '../types/electron'
 import { formatMoney } from '../utils/format'
+import { formatContractCurrency } from './features/contracts/formatContractCurrency'
 import { Icon } from './ui/Icon'
 import { motion } from 'framer-motion'
 import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
@@ -32,12 +33,6 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
   } finally {
   setLoading(false)
   }
-  }
-
-  const formatCurrency = (amount: number) => {
-  if (amount >= 100000000) return (amount / 100000000).toFixed(2) + ' 亿'
-  if (amount >= 10000) return (amount / 10000).toFixed(2) + ' 万'
-  return formatMoney(amount)
   }
 
   if (loading) {
@@ -100,7 +95,7 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
   <div className="text-right">
   <p className="text-sm text-slate-400">收支差额</p>
   <p className={`text-2xl font-bold ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
-  {isPositive ? '+' : '-'}¥{formatCurrency(Math.abs(netIncome))}
+  {isPositive ? '+' : '-'}¥{formatContractCurrency(Math.abs(netIncome))}
   </p>
   </div>
   </div>
@@ -124,7 +119,7 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
   <div className="flex items-end justify-between">
   <div>
   <p className="text-3xl font-bold text-slate-800">{stats?.incomeCount || 0}</p>
-  <p className="text-sm text-slate-500 mt-0.5">总额 ¥{formatCurrency(stats?.incomeTotal || 0)}</p>
+  <p className="text-sm text-slate-500 mt-0.5">总额 ¥{formatContractCurrency(stats?.incomeTotal || 0)}</p>
   </div>
   <span className="text-sm text-emerald-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
   查看详情 <Icon name="ChevronRight" size={14} />
@@ -147,7 +142,7 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
   <div className="flex items-end justify-between">
   <div>
   <p className="text-3xl font-bold text-slate-800">{stats?.expenseCount || 0}</p>
-  <p className="text-sm text-slate-500 mt-0.5">总额 ¥{formatCurrency(stats?.expenseTotal || 0)}</p>
+  <p className="text-sm text-slate-500 mt-0.5">总额 ¥{formatContractCurrency(stats?.expenseTotal || 0)}</p>
   </div>
   <span className="text-sm text-red-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
   查看详情 <Icon name="ChevronRight" size={14} />
@@ -187,7 +182,7 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
   </div>
   <div>
   <p className="text-xs text-slate-500">已回款</p>
-  <p className="text-lg font-bold text-emerald-600">¥{formatCurrency(stats?.incomeReceived || 0)}</p>
+  <p className="text-lg font-bold text-emerald-600">¥{formatContractCurrency(stats?.incomeReceived || 0)}</p>
   </div>
   </div>
   <div className={`${CARD} p-4 flex items-center gap-4`}>
@@ -196,7 +191,7 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
   </div>
   <div>
   <p className="text-xs text-slate-500">已付款</p>
-  <p className="text-lg font-bold text-red-600">¥{formatCurrency(stats?.expensePaid || 0)}</p>
+  <p className="text-lg font-bold text-red-600">¥{formatContractCurrency(stats?.expensePaid || 0)}</p>
   </div>
   </div>
   <div className={`${CARD} p-4 flex items-center gap-4`}>
@@ -206,7 +201,7 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
   <div>
   <p className="text-xs text-slate-500">收支差额</p>
   <p className={`text-lg font-bold ${netIncome >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-  {netIncome >= 0 ? '+' : '-'}¥{formatCurrency(Math.abs(netIncome))}
+  {netIncome >= 0 ? '+' : '-'}¥{formatContractCurrency(Math.abs(netIncome))}
   </p>
   </div>
   </div>
