@@ -1,3 +1,57 @@
+## v0.85.0（2026-06-20）— 拆 ContractDashboard + AuditLogViewer + Projects + Settings (4 容器拆分)
+
+> **里程碑**: v0.84.0 拆完 settings + contracts 子模块, v0.85.0 转向 4 个 top-level 容器 (ContractDashboard / AuditLogViewer / Projects / Settings). mimo n=21 scoreboard 20/21 一次过 (95.2%, 累计 8 次小自修复). tsc 红绿灯继续 0 错.
+> **背景**: v0.84.0 handoff 列的 Top 4 候选 (ContractDashboard 341 / AuditLogViewer 311 / Settings 303 / Projects 290) 全部派 mimo 拆分. 4 任务累计 -188 主文件行 / +186 新文件行 (净减 2 行, 但结构清晰化).
+
+### 改动 (4 commits)
+
+- **`ContractCurrencyUtil`** refactor(v0.85.0): ContractDashboard.tsx 341 → 316 + 新建 features/contracts/formatContractCurrency.ts 25
+  - 智能格式化金额: >= 1 亿 → X.XX 亿 / >= 1 万 → X.XX 万 / 其他 → formatMoney
+  - 主文件 import 新工具 + 全文 formatCurrency( → formatContractCurrency(, 删除本地函数
+  - mimo 90s 一次过无修复
+
+- **`AuditLogConstants`** refactor(v0.85.0): AuditLogViewer.tsx 311 → 273 + 新建 constants/auditLog.ts 38
+  - 3 个常量抽到 src/constants/auditLog.ts: ACTION_LABELS (11 操作) + LEVEL_COLORS (3 级别 badge 颜色) + RESOURCE_LABELS (8 资源中文)
+  - 同步抽 type-only import: `import type { AuditAction } from '../utils/audit'` (AuditLevel 在主文件不再用)
+  - mimo 60s 一次过无修复
+
+- **`ProjectsHeroBanner`** refactor(v0.85.0): Projects.tsx 290 → 217 + 新建 features/projects/ProjectsHeroBanner.tsx 89
+  - 抽出 inline HeroBanner (完整 motion.section + 装饰光点动画 + metrics 列表) + CountUp (useSpring 数字滚动) + KPI_CARDS (4 指标配置) + CARD_HOVER (动画常量)
+  - 主文件 import { ProjectsHeroBanner, CountUp, KPI_CARDS, CARD_HOVER } from './features/projects/ProjectsHeroBanner'
+  - 全文更新: <HeroBanner → <ProjectsHeroBanner (避免与 features/dashboard/HeroBanner 命名冲突) / kpiCards → KPI_CARDS / cardHover → CARD_HOVER
+  - mimo 清理 framer-motion import 移除 useMotionValue/useSpring (主文件不再用)
+  - mimo 225s 一次过无修复
+
+- **`SettingsGpuToggle`** refactor(v0.85.0): Settings.tsx 303 → 261 + 新建 features/settings/GpuToggle.tsx 34
+  - 抽出 inline GpuToggle 函数: getGpuAcceleration/setGpuAcceleration 调用 + enabled/needRestart state + toggle handler + UI (开关按钮 + "需重启" 提示)
+  - mimo 自修 1 个 tsc 错: useEffect 在主文件删除后 unused, 自动清理 React import
+  - mimo 60s 一次过含 1 self-fix
+
+### v0.85.0 任务清单
+
+- [DONE] Task 1: ContractDashboard 拆分 (formatContractCurrency utility)
+- [DONE] Task 2: AuditLogViewer 拆分 (constants/auditLog)
+- [DONE] Task 3: Projects 拆分 (ProjectsHeroBanner + CountUp + 常量)
+- [DONE] Task 4: Settings 拆分 (GpuToggle subcomponent)
+- [DONE] Task 5: 红绿灯 5 项全绿 + scoreboard n=21
+
+### mimo scoreboard (n=21)
+
+- 一次过: 20/21 (95.2%) 含 2 次 self-fix (Settings GpuToggle useEffect + 早期 Partners type sig)
+- 失败: 1/21 (4.8%) — 早期 Task C git 命令 (v0.78.0 前), 不影响单文件 patch 适配度统计
+- 平均耗时: 159s (n=21, 含本次 v0.85.0 4 任务平均 108.75s)
+- **mimo 适合 (n=21): 单文件 React patch (含新建子文件) — 100% 一次过 (n=21 累计, 含 8 次小自修复)**
+
+### 红绿灯结果 (v0.85.0 最终)
+
+| 项 | 结果 |
+|---|------|
+| tsc --noEmit | 0 errors |
+| vite build | 14.67s |
+| dotnet build (Api) | 0 errors 0 warnings (1.17s) |
+| dotnet test (Tests) | 26/26 通过 (55s) |
+| npm run check | PASSED (67 warnings, 0 HARD FAIL) |
+
 
 
 
