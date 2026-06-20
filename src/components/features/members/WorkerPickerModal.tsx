@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
-import type { Worker, ProjectWorker, WorkerTeam } from '@/types'
-import { workerTypes, workerTypeToCode } from './memberFormTypes'
+import type { ProjectWorker, WorkerTeam } from '@/types'
+import { workerTypes } from './memberFormTypes'
 import { WorkerPickerItem } from './WorkerPickerItem'
-import { getAPI } from '@/services/api-adapter'
+import { useWorkerPicker } from './useWorkerPicker'
 
 interface Props {
   show: boolean
@@ -16,124 +15,19 @@ interface Props {
   onConfirm: (entries: Partial<ProjectWorker>[]) => void
 }
 
-interface PickEntry {
-  worker: Worker
-  teamId: number | null
-  dailyWage: number
-  workerType: string
-}
-
 export function WorkerPickerModal({ show, projectId, workerTeams, existingWorkerIds, defaultTeamId, onClose, onConfirm }: Props) {
-  const [workers, setWorkers] = useState<(Worker & { projectCount: number })[]>([])
-  const [search, setSearch] = useState('')
-  const [hideExisting, setHideExisting] = useState(true)
-  const [selected, setSelected] = useState<Map<number, PickEntry>>(new Map())
-  const [showAdvanced, setShowAdvanced] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [bulkWorkerType, setBulkWorkerType] = useState('other')
-  const [bulkDailyWage, setBulkDailyWage] = useState(350)
-  const searchRef = useRef<HTMLInputElement>(null)
-
-  // Whether we're adding to a specific team (simplified flow)
-  const hasDefaultTeam = defaultTeamId != null
-
-  useEffect(() => {
-  if (!show) return
-  setLoading(true)
-  getAPI().then(api => api.getWorkers())
-  .then(res => { if (res.success && res.data) setWorkers(res.data as any) })
-  .catch(() => {})
-  .finally(() => setLoading(false))
-  setSearch(''); setSelected(new Map()); setShowAdvanced(false)
-  }, [show])
-
-  const filtered = useMemo(() => {
-  let list = workers
-  if (search.trim()) {
-  const kw = search.trim().toLowerCase()
-  list = list.filter(w =>
-  w.name.toLowerCase().includes(kw) ||
-  w.idCard.toLowerCase().includes(kw) ||
-  (w.phone && w.phone.includes(search.trim()))
-  )
-  }
-  if (hideExisting) {
-  list = list.filter(w => !existingWorkerIds.has(w.id))
-  }
-  return list
-  }, [workers, search, hideExisting, existingWorkerIds])
-
-  const toggleWorker = useCallback((worker: Worker) => {
-  setSelected(prev => {
-  const next = new Map(prev)
-  if (next.has(worker.id)) {
-  next.delete(worker.id)
-  } else {
-  next.set(worker.id, {
-  worker,
-  teamId: defaultTeamId ?? null,
-  dailyWage: worker.dailyWage ?? bulkDailyWage,
-  workerType: (workerTypeToCode(worker.workerType!) ?? bulkWorkerType) as string
+  const picker = useWorkerPicker({
+    show, projectId, workerTeams, existingWorkerIds, defaultTeamId, onConfirm, onClose,
   })
-  }
-  return next
-  })
-  }, [defaultTeamId, bulkDailyWage, bulkWorkerType])
-
-  const toggleAll = useCallback(() => {
-  if (selected.size === filtered.length) {
-  setSelected(new Map())
-  } else {
-  const next = new Map<number, PickEntry>()
-  for (const w of filtered) {
-  if (!existingWorkerIds.has(w.id)) {
-  next.set(w.id, {
-  worker: w,
-  teamId: defaultTeamId ?? null,
-  dailyWage: w.dailyWage ?? bulkDailyWage,
-  workerType: (workerTypeToCode(w.workerType!) ?? bulkWorkerType) as string
-  })
-  }
-  }
-  setSelected(next)
-  }
-  }, [filtered, selected.size, existingWorkerIds, defaultTeamId, bulkDailyWage, bulkWorkerType])
-
-  const updateEntry = useCallback((workerId: number, field: keyof PickEntry, value: any) => {
-  setSelected(prev => {
-  const next = new Map(prev)
-  const entry = next.get(workerId)
-  if (entry) next.set(workerId, { ...entry, [field]: value })
-  return next
-  })
-  }, [])
-
-  const handleConfirm = useCallback(async () => {
-  const entries: Partial<ProjectWorker>[] = []
-  for (const [, entry] of selected) {
-  entries.push({
-  workerId: entry.worker.id,
-  projectId,
-  teamId: entry.teamId ?? undefined,
-  dailyWage: entry.dailyWage,
-  workerType: entry.workerType,
-  entryDate: new Date().toISOString().split('T')[0],
-  status: 'active' as const
-  })
-  }
-  await onConfirm(entries)
-  onClose()
-  }, [selected, projectId, onConfirm, onClose])
-
-  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-  setSearch(e.target.value)
-  }, [])
+  const {
+    workers, search, hideExisting, selected, showAdvanced, loading,
+    bulkWorkerType, bulkDailyWage, searchRef,
+    filtered, allSelectable, allSelected, teamName, hasDefaultTeam,
+    setHideExisting, setShowAdvanced, setBulkWorkerType, setBulkDailyWage,
+    toggleWorker, toggleAll, updateEntry, handleConfirm, handleSearchChange,
+  } = picker
 
   if (!show) return null
-
-  const teamName = hasDefaultTeam ? workerTeams.find(t => t.id === defaultTeamId)?.name : null
-  const allSelectable = filtered.filter(w => !existingWorkerIds.has(w.id))
-  const allSelected = allSelectable.length > 0 && selected.size === allSelectable.length
 
   return (
   <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[70]" onClick={onClose}>
