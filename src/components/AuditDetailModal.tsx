@@ -1,176 +1,13 @@
 import React from 'react'
-import { DataTable, type Column } from '@/components/DataTable'
 import { AuditLog, AuditAction } from '../utils/audit'
-import { formatMoney } from '../utils/format'
 import { Modal } from './ui/Modal/Modal'
+import { renderAuditDetail } from './features/audit/auditFieldFormat'
 
 interface AuditDetailModalProps {
   selectedLog: AuditLog
   onClose: () => void
   actionConfig: Record<AuditAction, { label: string; color: string; bgColor: string }>
   resourceLabels: Record<string, string>
-}
-
-// 字段名→中文标签映射（按资源类型）
-const getFieldLabel = (resource: string, field: string): string => {
-  const commonFields: Record<string, string> = {
-  name: '名称', status: '状态', remarks: '备注', amount: '金额',
-  projectId: '关联项目', partnerId: '关联单位', contractNo: '合同编号',
-  signedDate: '签订日期', startDate: '开始日期', endDate: '结束日期',
-  paymentMethod: '付款方式', fileUrl: '附件',
-  }
-  const resourceFields: Record<string, Record<string, string>> = {
-  projects: { description: '描述', budget: '预算', projectManagerId: '项目经理' },
-  members: { phone: '电话', idNumber: '身份证号', position: '职位', entryDate: '入职时间', actualLeaveDate: '离职日期', memberType: '人员类型' },
-  incomeContracts: { partnerLabel: '甲方' },
-  expenseContracts: { partnerLabel: '乙方' },
-  invoices: { invoiceNo: '发票号码', taxAmount: '税额', kind: '发票类型', invoiceDate: '开票日期' },
-  payments: { recordDate: '日期', type: '类型', receivedAmount: '已收金额', contractId: '关联合同', invoiceId: '关联发票' },
-  tasks: { priority: '优先级', assigneeId: '负责人', dueDate: '截止日期' },
-  expenses: { category: '类别', expenseDate: '日期', projectId: '关联项目' },
-  costLedger: { direction: '方向', amount: '金额', category: '分类', date: '日期', counterparty: '对方', channel: '支付渠道', summary: '摘要', projectId: '关联项目' },
-  }
-  return resourceFields[resource]?.[field] || commonFields[field] || field
-}
-
-// 格式化单个值为可读文本
-const formatFieldValue = (resource: string, field: string, value: any): string => {
-  if (value === undefined || value === null) return '（空）'
-  if (typeof value === 'boolean') return value ? '是' : '否'
-  if (typeof value === 'object') {
-  if (Array.isArray(value)) return `[${value.length} 项]`
-  return JSON.stringify(value)
-  }
-  // 金额字段格式化
-  if (field === 'amount' || field === 'budget' || field === 'taxAmount' || field === 'receivedAmount') {
-  const num = Number(value)
-  if (!isNaN(num)) return `¥${formatMoney(num)}`
-  }
-  // 状态值翻译
-  if (field === 'status') {
-  const statusMap: Record<string, string> = {
-  active: '进行中', draft: '草稿', pending: '待审批', expired: '已到期',
-  terminated: '已终止', archived: '已归档', completed: '已完成',
-  paid: '已付清', unpaid: '未付', partially_paid: '部分付款',
-  received: '已收齐', issued: '已开具', cancelled: '已作废',
-  }
-  if (statusMap[String(value)]) return statusMap[String(value)]
-  }
-  return String(value)
-}
-
-interface ChangeRow {
-  field: string
-  label: string
-  before: string
-  after: string
-}
-
-// 渲染详情信息（人可读格式）
-const renderDetail = (log: AuditLog) => {
-  const details = log.details
-  if (!details) return <p className="text-slate-500 text-sm">无详细信息</p>
-
-  // 导出/删除等没有 before/after 的操作
-  if (details.count !== undefined && !details.before && !details.after) {
-  return (
-  <div className="space-y-2">
-  {details.count !== undefined && (
-  <div className="text-sm text-slate-600">数量：<span className="font-medium">{details.count}</span> 条</div>
-  )}
-  {details.reason && <div className="text-sm text-slate-600">原因：{details.reason}</div>}
-  </div>
-  )
-  }
-
-  // 审批操作
-  if (details.approved !== undefined) {
-  return (
-  <div className="space-y-2">
-  <div className="text-sm text-slate-600">
-  审批结果：<span className={`font-medium ${details.approved ? 'text-green-600' : 'text-red-600'}`}>{details.approved ? '通过' : '驳回'}</span>
-  </div>
-  {details.reason && <div className="text-sm text-slate-600">原因：{details.reason}</div>}
-  </div>
-  )
-  }
-
-  // 更新操作：before/after 对比
-  if (details.before && details.after) {
-  const allFields = Array.from(new Set([...Object.keys(details.before), ...Object.keys(details.after)]))
-  const changedFields = allFields.filter(f => {
-  const b = details.before[f]
-  const a = details.after[f]
-  return JSON.stringify(b) !== JSON.stringify(a)
-  })
-
-  if (changedFields.length === 0) {
-  return <p className="text-sm text-slate-500">无字段变更</p>
-  }
-
-  const changeData: ChangeRow[] = changedFields.map(field => ({
-    field,
-    label: getFieldLabel(log.resource, field),
-    before: formatFieldValue(log.resource, field, details.before[field]),
-    after: formatFieldValue(log.resource, field, details.after[field]),
-  }))
-
-  const changeColumns: Column<ChangeRow>[] = [
-    { key: 'label', title: '字段', width: '96px' },
-    { key: 'before', title: '修改前', render: (item) => <span className="line-through text-slate-500">{item.before}</span> },
-    { key: 'after', title: '修改后', render: (item) => <span className="font-medium text-slate-800">{item.after}</span> },
-  ]
-
-  return (
-  <DataTable
-    data={changeData}
-    columns={changeColumns}
-    rowKey="field"
-    pagination={false}
-    showContainer={true}
-    stickyHeader={true}
-    emptyText="无字段变更"
-  />
-  )
-  }
-
-  // 创建操作：仅 after
-  if (details.after && !details.before) {
-  const fields = Object.keys(details.after).filter(k => k !== 'fileUrl' || (typeof details.after[k] === 'string' && details.after[k].length < 100))
-  return (
-  <div className="space-y-2">
-  <h4 className="text-sm font-medium text-slate-600">创建内容</h4>
-  <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-  {fields.slice(0, 12).map(field => (
-  <div key={field} className="flex justify-between text-sm">
-  <span className="text-slate-500">{getFieldLabel(log.resource, field)}</span>
-  <span className="text-slate-800 font-medium">{formatFieldValue(log.resource, field, details.after[field])}</span>
-  </div>
-  ))}
-  </div>
-  </div>
-  )
-  }
-
-  // 删除操作：仅 before
-  if (details.before && !details.after) {
-  const fields = Object.keys(details.before).filter(k => k !== 'fileUrl' || (typeof details.before[k] === 'string' && details.before[k].length < 100))
-  return (
-  <div className="space-y-2">
-  <h4 className="text-sm font-medium text-red-600">已删除内容</h4>
-  <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-  {fields.slice(0, 12).map(field => (
-  <div key={field} className="flex justify-between text-sm">
-  <span className="text-slate-500">{getFieldLabel(log.resource, field)}</span>
-  <span className="text-slate-800 font-medium">{formatFieldValue(log.resource, field, details.before[field])}</span>
-  </div>
-  ))}
-  </div>
-  </div>
-  )
-  }
-
-  return <p className="text-sm text-slate-500">无详细信息</p>
 }
 
 export const AuditDetailModal: React.FC<AuditDetailModalProps> = ({ selectedLog, onClose, actionConfig, resourceLabels }) => {
@@ -217,7 +54,7 @@ export const AuditDetailModal: React.FC<AuditDetailModalProps> = ({ selectedLog,
   </div>
   <div className="pt-4 border-t border-slate-100">
   <label className="text-xs font-medium text-slate-500 mb-2 block">详细信息</label>
-  {renderDetail(selectedLog)}
+  {renderAuditDetail(selectedLog)}
   </div>
   </div>
   </Modal>
