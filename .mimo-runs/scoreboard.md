@@ -67,3 +67,16 @@ px tsc 直接调用). 我仅审 git diff + 跑 tsc 验证 |
 - **mimo 适合 (n=27): 单文件 React patch (含新建子文件) — 100% 一次过 (排除 #2)**
 - mimo 不适合: 任何涉及 git 命令的任务 (#2 唯一败因)
 - mimo 优化能力 (part 2 Task 5): 主动加 setCheckedX setters / 迁移 getLevel1ForCode / 加 useCallback — 比 prompt 更优雅
+
+| 26 | 2026-06-20 | React 拆 useWorkerPicker hook | ~175s | ✅ | 0 | v0.75.3 part 3 Task 7, WorkerPickerModal 364→249 + 182. mimo 一次过. |
+| 27 | 2026-06-20 | React 拆 useSettlementFilters + settlementPrintUtil | ~200s | ✅ | 0 | v0.75.3 part 3 Task 8, 333→312 + 37 + 17. 双重产出 (hook + util). |
+| 28 | 2026-06-20 | React 拆 useProjectAuthorizations hook | ~85s | ✅ | 0 | v0.75.3 part 3 Task 9, 321→197 + 131. 完整 CRUD 闭环. |
+
+## 累计统计 (n=30, 含本次 part 3 3 任务)
+
+- ✅ 一次过: 29/30 (96.7%)
+- ❌ 失败: 1/30 (Task #2 batch git rm, v0.78.0 前, 不影响单文件 patch 适配度统计)
+- 平均耗时: ~150s
+- **mimo 适合 (n=30): 单文件 React patch (含新建子文件) — 100% 一次过 (排除 #2)**
+- mimo 不适合: 任何涉及 git 命令的任务 (#2 唯一败因)
+- mimo 优化能力 (part 2 Task 5 / part 3 持续): 主动加 setters / 迁移附属函数 / 加 useCallback — 比 prompt 更优雅
