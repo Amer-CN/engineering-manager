@@ -7,12 +7,13 @@
  * 3. 解析失败自动重试（最多 3 次）
  * 4. 解析完成后跳转到匹配确认界面
  */
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useToastStore } from '@/store/toastStore'
 import type { BatchParseResult } from '@/types'
 import { getAPI } from '@/services/api-adapter'
 import { HoverScrollbar } from '../../ui/HoverScrollbar'
+import { useBankReceiptFiles } from './useBankReceiptFiles'
 
 interface BankReceiptBatchProps {
   projectId?: number
@@ -32,69 +33,13 @@ export default function BankReceiptBatch({
   onCancel,
 }: BankReceiptBatchProps) {
   const showToast = useToastStore(state => state.showToast)
+  const { files, isDragOver, fileInputRef, fileInputProps, dropZoneProps, removeFile, clearFiles } = useBankReceiptFiles()
 
-  // ── 状态管理 ──
-  const [files, setFiles] = useState<File[]>([])
+  // ── 解析状态 ──
   const [status, setStatus] = useState<ParseStatus>('idle')
   const [progress, setProgress] = useState({ current: 0, total: 0 })
-  const [isDragOver, setIsDragOver] = useState(false)
   const [parseResult, setParseResult] = useState<BatchParseResult | null>(null)
   const [error, setError] = useState<string | null>(null)
-
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
-  // ═══════════════════════════════════════════════════════
-  // 文件选择处理
-  // ═══════════════════════════════════════════════════════
-
-  const handleFileSelect = useCallback((selectedFiles: FileList | File[]) => {
-    const validFiles = Array.from(selectedFiles).filter(file => {
-      const ext = file.name.toLowerCase().split('.').pop()
-      return ['jpg', 'jpeg', 'png', 'pdf'].includes(ext || '')
-    })
-
-    if (validFiles.length === 0) {
-      showToast('请选择 jpg、png 或 pdf 格式的文件', 'warning')
-      return
-    }
-
-    setFiles(prev => [...prev, ...validFiles])
-    setError(null)
-  }, [showToast])
-
-  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    setIsDragOver(false)
-    if (e.dataTransfer.files.length > 0) {
-      handleFileSelect(e.dataTransfer.files)
-    }
-  }, [handleFileSelect])
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragOver(true)
-  }, [])
-
-  const handleDragLeave = useCallback(() => {
-    setIsDragOver(false)
-  }, [])
-
-  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      handleFileSelect(e.target.files)
-      e.target.value = '' // 清空 input 以允许重复选择同一文件
-    }
-  }, [handleFileSelect])
-
-  const removeFile = useCallback((index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index))
-  }, [])
-
-  const clearFiles = useCallback(() => {
-    setFiles([])
-    setParseResult(null)
-    setError(null)
-  }, [])
 
   // ═══════════════════════════════════════════════════════
   // 批量解析逻辑（含自动重试）
@@ -220,9 +165,9 @@ export default function BankReceiptBatch({
 
       {/* 拖拽上传区域 */}
       <div
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
+        onDrop={dropZoneProps.onDrop}
+        onDragOver={dropZoneProps.onDragOver}
+        onDragLeave={dropZoneProps.onDragLeave}
         onClick={() => fileInputRef.current?.click()}
         className={`
           relative border-2 border-dashed rounded-lg p-12 text-center cursor-pointer
@@ -238,7 +183,7 @@ export default function BankReceiptBatch({
           type="file"
           multiple
           accept=".jpg,.jpeg,.png,.pdf"
-          onChange={handleFileInputChange}
+          onChange={fileInputProps.onChange}
           className="hidden"
         />
 
@@ -263,7 +208,7 @@ export default function BankReceiptBatch({
               已选择 {files.length} 个文件
             </h3>
             <button
-              onClick={clearFiles}
+              onClick={() => { clearFiles(); setParseResult(null) }}
               className="text-sm text-red-600 hover:text-red-800"
             >
               清空列表
