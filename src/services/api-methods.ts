@@ -424,6 +424,10 @@ export const tauriAPI = {
   setGpuAcceleration: (enabled: boolean) =>
     apiClient.put<void>('/api/config/gpu-acceleration', { enabled }),
 
+  // ────────── PII Key Rotation (v0.76.0 累计待办 #5) ──────────
+  getPiiKeys: () => apiClient.get<{ keys: any[]; activeKeyId: number; totalKeys: number }>('/api/admin/pii/keys'),
+  rotatePiiKey: () => apiClient.post<{ newKeyId: number; message: string }>('/api/admin/pii/rotate', {}),
+
   // ────────── 数据健康 ──────────
   dataConsistencyCheck: () => apiClient.get<{ tables: { table: string; count: number }[]; consistent: boolean }>('/api/health/consistency'),
   consistencyCheck: () => apiClient.get<{ tables: { table: string; count: number }[]; consistent: boolean }>('/api/health/consistency'),
