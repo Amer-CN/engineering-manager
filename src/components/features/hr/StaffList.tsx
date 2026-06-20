@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import { useStaffListFilters } from './useStaffListFilters'
 import { DataTable, type Column } from '@/components/DataTable'
 import FilterBar from '../../ui/FilterBar'
 import { Icon } from '../../ui/Icon'
@@ -31,8 +32,6 @@ const StaffList: React.FC = () => {
   const [members, setMembers] = useState<any[]>([])
   const [departments, setDepartments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [filterDept, setFilterDept] = useState<number | ''>('')
-  const [filterStatus, setFilterStatus] = useState<string>('')
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [formData, setFormData] = useState<StaffFormData>({ ...emptyForm })
@@ -61,6 +60,9 @@ const StaffList: React.FC = () => {
   useEffect(() => { loadData() }, [loadData])
 
   const orphans = useMemo(() => members.filter((m: any) => !m.departmentId), [members])
+
+  const { filterDept, filterStatus, setFilterDept, setFilterStatus, filtered, getDeptName } =
+    useStaffListFilters(members, departments)
 
   const resetForm = () => {
     setEditing(null)
@@ -214,14 +216,6 @@ const StaffList: React.FC = () => {
     loadData()
     showToast('状态已更新', 'success')
   }, [loadData, showToast])
-
-  const filtered = useMemo(() => members.filter((m: any) => {
-    if (filterDept && m.departmentId !== filterDept) return false
-    if (filterStatus && m.status !== filterStatus) return false
-    return true
-  }), [members, filterDept, filterStatus])
-
-  const getDeptName = useCallback((id?: number) => departments.find((d: any) => d.id === id)?.name || '-', [departments])
 
   // ── DataTable 列定义 ──
   const columns: Column<any>[] = [
