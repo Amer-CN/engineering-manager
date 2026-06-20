@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Modal } from '../../ui/Modal/Modal'
 import { Icon } from '../../ui/Icon'
 import type { Member } from '@/types'
 import { getWorkerTypeLabel, calculateAge } from './memberFormTypes'
-import { readUploadedFile, FILE_CATEGORIES } from '../../../services/fileService'
+import { useMemberFileUrls } from './useMemberFileUrls'
 import { PreviewModal, FilePreviewItem, InfoItem, Tag } from './MemberDetailParts'
 import { useMaskedFn } from '@/hooks/useMaskedValue'
 
@@ -29,29 +29,7 @@ export function MemberDetail({
 }: MemberDetailProps) {
   const masked = useMaskedFn()
   const [previewData, setPreviewData] = useState<{ data: string; type: 'image' | 'pdf'; title: string } | null>(null)
-  const [fileUrls, setFileUrls] = useState<Record<string, string>>({})
-
-  useEffect(() => {
-  const loadFiles = async () => {
-  const urls: Record<string, string> = {}
-  const fileFields = [
-  { key: 'idCardFront', cfg: FILE_CATEGORIES.MEMBER_ID_CARD },
-  { key: 'idCardBack', cfg: FILE_CATEGORIES.MEMBER_ID_CARD },
-  { key: 'contractFile', cfg: FILE_CATEGORIES.MEMBER_CONTRACT },
-  { key: 'safetyTrainingFile', cfg: FILE_CATEGORIES.MEMBER_TRAINING },
-  { key: 'healthReportFile', cfg: FILE_CATEGORIES.MEMBER_HEALTH },
-  { key: 'specialCertificateFile', cfg: FILE_CATEGORIES.MEMBER_CERTIFICATE },
-  ] as const
-  await Promise.all(fileFields.map(async ({ key, cfg }) => {
-  const value = (member as any)[key]
-  if (value) {
-  urls[key] = await readUploadedFile(cfg.category, cfg.subCategory, value, member.projectName)
-  }
-  }))
-  setFileUrls(urls)
-  }
-  loadFiles()
-  }, [member])
+  const fileUrls = useMemberFileUrls(member)
   
   const isWorker = member.memberType === 'worker'
   const isLeft = member.status === 'left'
