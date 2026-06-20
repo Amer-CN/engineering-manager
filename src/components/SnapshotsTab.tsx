@@ -11,23 +11,7 @@ import { useToastStore } from '@/store/toastStore'
 import { useConfirm } from '../hooks/useConfirm'
 import type { SnapshotInfo } from '../types/electron'
 import { getAPI } from '@/services/api-adapter'
-
-const TABLE_LABELS: Record<string, string> = {
-  projects: '项目',
-  members: '人员',
-  drawings: '图纸',
-  materials: '材料',
-  expenses: '费用',
-  costLedger: '台账',
-  partners: '合作单位',
-  incomeContracts: '收入合同',
-  expenseContracts: '支出合同',
-  workerTeams: '班组',
-  settlements: '结算',
-  inventoryItems: '库存',
-  invoices: '发票',
-  auditLogs: '审计日志',
-}
+import { SNAPSHOT_TABLE_LABELS } from '../constants/snapshots'
 
 export const SnapshotsTab: React.FC = () => {
   const showToast = useToastStore(state => state.showToast)
@@ -152,7 +136,7 @@ export const SnapshotsTab: React.FC = () => {
       <div className="flex flex-wrap gap-1 max-w-xs">
         {Object.entries(item.dbSummary).filter(([, v]) => (v as number) > 0).slice(0, 5).map(([key, val]) => (
           <span key={key} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-slate-100 text-slate-600">
-            {TABLE_LABELS[key] || key}: {val as number}
+            {SNAPSHOT_TABLE_LABELS[key] || key}: {val as number}
           </span>
         ))}
         {Object.entries(item.dbSummary).filter(([, v]) => (v as number) > 0).length > 5 && (
