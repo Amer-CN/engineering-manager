@@ -29,9 +29,7 @@ public static class InventoryEndpoints
         app.MapPost("/api/inventory", async (HttpContext ctx, InventoryItemDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO inventory_items
-                (name,category,unit,quantity,min_quantity,location,notes,created_by,created_at,updated_at)
-                VALUES (@Name,@Category,@Unit,@Quantity,@MinQuantity,@Location,@Notes,@CreatedBy,@Now,@Now);
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO inventory_items (name,category,unit,quantity,min_quantity,location,notes,created_by,created_at,updated_at, last_modified_at) VALUES (@Name,@Category,@Unit,@Quantity,@MinQuantity,@Location,@Notes,@CreatedBy,@Now,@Now, @Now);
                 SELECT last_insert_rowid();",
                 new { dto.Name, dto.Category, dto.Unit, dto.Quantity, dto.MinQuantity, dto.Location, dto.Notes, CreatedBy = uid, Now = now() });
             return Common.Ok(id);
@@ -43,7 +41,7 @@ public static class InventoryEndpoints
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var affected = await db.ExecuteAsync(@"UPDATE inventory_items SET name=@Name,category=@Category,
                 unit=@Unit,quantity=@Quantity,min_quantity=@MinQuantity,location=@Location,notes=@Notes,
-                updated_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
+                updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
                 new { dto.Id, dto.Name, dto.Category, dto.Unit, dto.Quantity, dto.MinQuantity, dto.Location, dto.Notes,
                       Uid = uid, IsAdmin = isAdmin, Now = now() });
             return affected > 0 ? Common.Ok() : Results.Forbid();
@@ -83,9 +81,7 @@ public static class InventoryEndpoints
         app.MapPost("/api/materials", async (HttpContext ctx, MaterialDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO materials
-                (name,category,unit,specifications,supplier,notes,created_by,created_at,updated_at)
-                VALUES (@Name,@Category,@Unit,@Specifications,@Supplier,@Notes,@CreatedBy,@Now,@Now);
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO materials (name,category,unit,specifications,supplier,notes,created_by,created_at,updated_at, last_modified_at) VALUES (@Name,@Category,@Unit,@Specifications,@Supplier,@Notes,@CreatedBy,@Now,@Now, @Now);
                 SELECT last_insert_rowid();",
                 new { dto.Name, dto.Category, dto.Unit, dto.Specifications, dto.Supplier, dto.Notes, CreatedBy = uid, Now = now() });
             return Common.Ok(id);
@@ -96,7 +92,7 @@ public static class InventoryEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var affected = await db.ExecuteAsync(@"UPDATE materials SET name=@Name,category=@Category,
-                unit=@Unit,specifications=@Specifications,supplier=@Supplier,notes=@Notes,updated_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
+                unit=@Unit,specifications=@Specifications,supplier=@Supplier,notes=@Notes,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
                 new { dto.Id, dto.Name, dto.Category, dto.Unit, dto.Specifications, dto.Supplier, dto.Notes,
                       Uid = uid, IsAdmin = isAdmin, Now = now() });
             return affected > 0 ? Common.Ok() : Results.Forbid();

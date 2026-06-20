@@ -46,9 +46,7 @@ public static class CostLedgerEndpoints
         app.MapPost("/api/cost-ledger", async (HttpContext ctx, CostLedgerEntryDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO cost_ledger
-                (project_id,batch_id,voucher_no,date,direction,category,amount,counterparty,channel,summary,notes,created_by,created_at,updated_at)
-                VALUES (@ProjectId,@BatchId,@VoucherNo,@Date,@Direction,@Category,@Amount,@Counterparty,@Channel,@Summary,@Notes,@CreatedBy,@Now,@Now);
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO cost_ledger (project_id,batch_id,voucher_no,date,direction,category,amount,counterparty,channel,summary,notes,created_by,created_at,updated_at, last_modified_at) VALUES (@ProjectId,@BatchId,@VoucherNo,@Date,@Direction,@Category,@Amount,@Counterparty,@Channel,@Summary,@Notes,@CreatedBy,@Now,@Now, @Now);
                 SELECT last_insert_rowid();",
                 new { dto.ProjectId, dto.BatchId, dto.VoucherNo, dto.Date, dto.Direction, dto.Category,
                       dto.Amount, dto.Counterparty, dto.Channel, dto.Summary, dto.Notes, CreatedBy = uid, Now = now() });
@@ -59,7 +57,7 @@ public static class CostLedgerEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var affected = await db.ExecuteAsync(@"UPDATE cost_ledger SET voucher_no=@VoucherNo,date=@Date,direction=@Direction,category=@Category,
-                amount=@Amount,counterparty=@Counterparty,channel=@Channel,summary=@Summary,notes=@Notes,updated_at=@Now WHERE id=@Id",
+                amount=@Amount,counterparty=@Counterparty,channel=@Channel,summary=@Summary,notes=@Notes,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id",
                 new { dto.VoucherNo, dto.Date, dto.Direction, dto.Category, dto.Amount,
                       dto.Counterparty, dto.Channel, dto.Summary, dto.Notes, Now = now(), dto.Id });
             return affected > 0 ? Common.Ok() : Results.Forbid();
@@ -77,8 +75,7 @@ public static class CostLedgerEndpoints
             var count = 0;
             foreach (var dto in entries)
             {
-                await db.ExecuteAsync(@"INSERT INTO cost_ledger (project_id,voucher_no,date,direction,category,amount,counterparty,channel,summary,notes,created_by,created_at,updated_at)
-                    VALUES (@ProjectId,@VoucherNo,@Date,@Direction,@Category,@Amount,@Counterparty,@Channel,@Summary,@Notes,@CreatedBy,@Now,@Now)",
+                await db.ExecuteAsync(@"INSERT INTO cost_ledger (project_id,voucher_no,date,direction,category,amount,counterparty,channel,summary,notes,created_by,created_at,updated_at, last_modified_at) VALUES (@ProjectId,@VoucherNo,@Date,@Direction,@Category,@Amount,@Counterparty,@Channel,@Summary,@Notes,@CreatedBy,@Now,@Now, @Now)",
                     new { dto.ProjectId, dto.VoucherNo, dto.Date, dto.Direction, dto.Category,
                           dto.Amount, dto.Counterparty, dto.Channel, dto.Summary, dto.Notes, CreatedBy = uid, Now = now() });
                 count++;
@@ -149,8 +146,7 @@ public static class CostLedgerEndpoints
         app.MapPost("/api/cost-ledger/batches", async (HttpContext ctx, CostLedgerBatchDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO cost_ledger_batches (project_id,name,created_by,created_at,updated_at)
-                VALUES (@ProjectId,@Name,@CreatedBy,@Now,@Now); SELECT last_insert_rowid();",
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO cost_ledger_batches (project_id,name,created_by,created_at,updated_at, last_modified_at) VALUES (@ProjectId,@Name,@CreatedBy,@Now,@Now, @Now); SELECT last_insert_rowid();",
                 new { dto.ProjectId, dto.Name, Now = now() });
             return Common.Ok(id);
         });
@@ -160,8 +156,7 @@ public static class CostLedgerEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var original = db.QueryFirstOrDefault("SELECT * FROM cost_ledger_batches WHERE id=@Id", new { Id = id });
             if (original == null) return Common.NotFound("批次不存在");
-            var newId = await db.ExecuteScalarAsync<long>(@"INSERT INTO cost_ledger_batches (project_id,name,created_by,created_at,updated_at)
-                VALUES (@ProjectId,@Name,@CreatedBy,@Now,@Now); SELECT last_insert_rowid();",
+            var newId = await db.ExecuteScalarAsync<long>(@"INSERT INTO cost_ledger_batches (project_id,name,created_by,created_at,updated_at, last_modified_at) VALUES (@ProjectId,@Name,@CreatedBy,@Now,@Now, @Now); SELECT last_insert_rowid();",
                 new { ProjectId = (long)original.project_id, Name = dto.NewName ?? "", Now = now() });
             return Common.Ok(new { id = newId });
         });
@@ -169,7 +164,7 @@ public static class CostLedgerEndpoints
         app.MapPut("/api/cost-ledger/batches/{id}", async (HttpContext ctx, long id, CostLedgerBatchDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            var affected = await db.ExecuteAsync("UPDATE cost_ledger_batches SET name=@Name,updated_at=@Now WHERE id=@Id",
+            var affected = await db.ExecuteAsync("UPDATE cost_ledger_batches SET name=@Name,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id",
                 new { Name = dto.NewName ?? "", Now = now(), Id = id });
             return affected > 0 ? Common.Ok() : Results.Forbid();
         });
