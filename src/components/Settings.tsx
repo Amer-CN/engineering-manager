@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from '@/components/ui/Icon'
 import PageHeader from '@/components/ui/PageHeader'
@@ -15,35 +15,7 @@ import { SettingsOcrSection } from '@/components/SettingsOcrSection'
 import { SettingsSqliteSection } from '@/components/SettingsSqliteSection'
 import SettingsChangelog from '@/components/SettingsChangelog'
 import { getAPI } from '@/services/api-adapter'
-
-function GpuToggle() {
-  const [enabled, setEnabled] = useState(true)
-  const [needRestart, setNeedRestart] = useState(false)
-  useEffect(() => {
- (async () => {
- try {
- const res = await (await getAPI()).getGpuAcceleration()
- if (res.success) setEnabled(res.enabled)
- } catch {}
- })()
-  }, [])
-  const toggle = async () => {
- const res = await (await getAPI()).setGpuAcceleration(!enabled)
- if (res.success) {
- setEnabled(res.enabled)
- setNeedRestart(res.needRestart)
- }
-  }
-  return (
- <div className="flex items-center gap-2">
- {needRestart && <span className="text-xs text-amber-600">需重启</span>}
- <button onClick={toggle}
- className={`relative w-11 h-6 rounded-full transition-colors ${enabled ? 'bg-emerald-500' : 'bg-slate-300'}`}>
- <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${enabled ? 'translate-x-5' : ''}`} />
- </button>
- </div>
-  )
-}
+import { GpuToggle } from '@/components/features/settings/GpuToggle'
 
 interface SettingsProps { refresh?: () => void }
 
