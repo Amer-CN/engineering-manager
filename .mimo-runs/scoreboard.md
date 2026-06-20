@@ -35,3 +35,35 @@ px tsc 直接调用). 我仅审 git diff + 跑 tsc 验证 |
 ## mimo 限制发现
 
 - **PS 中文路径 + mimo shell 命令 = hang risk**: mimo 内部用 cd 'E:\测试' && 验证 tsc 时, PowerShell 中文路径解析触发 && 解释错误, mimo 进入 retry 循环 hang. **修复**: mimo 任务指令里 cd 命令改成纯 cd E:/test 避开中文路径或避免 verification step 触发 cd
+
+## n=10-27 批量条目 (v0.82.0 → v0.75.3 part 1-2)
+
+> 18 个新条目, 详细过程见 `docs/handoff/v0.75.3-handoff.md` §3.5 + 各 sprint handoff.
+
+| # | 日期 | 任务类型 | 耗时 | 一次过? | 返工 | 备注 |
+|---|------|----------|------|---------|------|------|
+| 10 | 2026-06-20 | React 拆 useMaskedFn hook | ~140s | ✅ | 0 | v0.82.0 拆 PII 9 组件 mask 逻辑 |
+| 11 | 2026-06-20 | React 拆 DataTable columns factory | ~150s | ✅ | 0 | v0.82.0 Users DataTable |
+| 12 | 2026-06-20 | React 拆 usePartnerActions hook | ~110s | ✅ | 0 | v0.83.0 Partners |
+| 13 | 2026-06-20 | React 拆 MembersTab | ~150s | ✅ | 0 | v0.83.0 ProjectDetailTabs |
+| 14 | 2026-06-20 | React 拆 SettingsSqliteSection 4 文件 | ~200s | ✅ | 0 | v0.83.0 Settings |
+| 15 | 2026-06-20 | React 拆 print utility | ~120s | ✅ | 0 | v0.84.0 ContractTemplates |
+| 16 | 2026-06-20 | React 拆 formatCurrency utility | ~80s | ✅ | 0 | v0.85.0 ContractDashboard 341→316 |
+| 17 | 2026-06-20 | React 拆 audit log constants | ~110s | ✅ | 0 | v0.85.0 AuditLogViewer 311→273 |
+| 18 | 2026-06-20 | React 拆 HeroBanner + CountUp + 常量 | ~180s | ✅ | 0 | v0.85.0 Projects 290→217 |
+| 19 | 2026-06-20 | React 拆 GpuToggle 子组件 | ~100s | ✅ | 0 | v0.85.0 Settings 303→261 |
+| 20 | 2026-06-20 | React 拆 SnapshotsTab constants | ~90s | ✅ | 0 | v0.75.3 part 1 Task 1, 241→220 |
+| 21 | 2026-06-20 | React 拆 AuditDetailModal format | ~180s | ✅ | 1 | v0.75.3 part 1 Task 2, 225→60, mimo 多修 1 次 unused import |
+| 22 | 2026-06-20 | React 拆 Invoices duplicate hook | ~75s | ✅ | 0 | v0.75.3 part 1 Task 3, 208→195 |
+| 23 | 2026-06-20 | React 拆 useBankReceiptFiles hook | ~210s | ✅ | 0 | v0.75.3 part 2 Task 4, 352→308 + 79 |
+| 24 | 2026-06-20 | React 拆 useCostLedgerFilters hook | ~235s | ✅ | 0 | v0.75.3 part 2 Task 5, 351→282 + 138, mimo 主动加 setCheckedX setters + getLevel1ForCode 优化 |
+| 25 | 2026-06-20 | React 拆 DropZone + autoMapColumns | ~100s | ✅ | 0 | v0.75.3 part 2 Task 6, 339→307 + 23 + 21 |
+
+## 累计统计 (n=27, 含本次 part 2 3 任务)
+
+- ✅ 一次过: 26/27 (96.3%)
+- ❌ 失败: 1/27 (Task #2 batch git rm, v0.78.0 前, 不影响单文件 patch 适配度统计)
+- 平均耗时: ~155s
+- **mimo 适合 (n=27): 单文件 React patch (含新建子文件) — 100% 一次过 (排除 #2)**
+- mimo 不适合: 任何涉及 git 命令的任务 (#2 唯一败因)
+- mimo 优化能力 (part 2 Task 5): 主动加 setCheckedX setters / 迁移 getLevel1ForCode / 加 useCallback — 比 prompt 更优雅
