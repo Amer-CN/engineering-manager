@@ -73,6 +73,25 @@
 - 设备注册 API: POST /api/devices/register → 生成 device_id (32 hex) + refresh_token
 - 冲突检测: 拉云端时 version 比本地旧 → 弹窗让用户选 (本地 / 云端 / 字段合并)
 
+### 阶段 1 收尾 (commit b662814): 33 业务端点 INSERT/UPDATE 加 version 自增
+
+- **`feat(endpoint version 自增)`** b662814: 12 端点文件 × 80 SQL 修改
+  - UPDATE 端点 (40 处): SET 末尾 WHERE 前加 `, version=version+1, last_modified_at=@Now`
+  - INSERT 端点 (40 处): columns 末尾加 `last_modified_at`, VALUES 末尾加 `@Now`
+  - 现有客户端调用零改动 (version DEFAULT 1, sync_status DEFAULT 'synced')
+  - 端点文件: AuthEndpoints / ContractEndpoints / CostLedgerEndpoints / ExpenseEndpoints / FileEndpoints / InventoryEndpoints / InvoiceEndpoints / MemberEndpoints / PartnerEndpoints / ProjectEndpoints / ProjectWorkerMiscEndpoints / WageEndpoints
+- **`test(endpoint e2e)`** 3 个新 unit tests (CloudSyncEndpointTests.cs):
+  - Projects_InsertAndUpdate_IncrementsVersionAndSetsLastModifiedAt (POST → GET v=1 → PUT → GET v=2 → PUT → GET v=3)
+  - Contracts_Update_IncrementsVersion (raw SQL v=1 → 2)
+  - Members_Insert_SetsLastModifiedAtToCurrentTime (INSERT 时 last_modified_at 被注入)
+- **测试**: 100/100 → 103/103 通过
+- **不做** (留 v0.78.0 阶段 2):
+  - UPDATE 加 CAS WHERE version=@OldVersion (客户端暂不传 oldVersion)
+  - last_modified_by_device 注入 (阶段 2 设备注册后才有 device_id)
+  - JWT refresh token (阶段 2 sync worker 推送时才有意义)
+
+
+
 ---
 
 ## v0.76.0 (2026-06-20) — 7 项累计待办集中 release: PII 防护强化 + react-query 接入 + PII 密钥轮换
