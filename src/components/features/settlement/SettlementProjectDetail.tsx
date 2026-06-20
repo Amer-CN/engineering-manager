@@ -14,6 +14,8 @@ import { Icon } from '../../ui/Icon'
 import { Modal } from '../../ui/Modal/Modal'
 import { TemplateSelectorModal, TemplateGenerate } from '../templates'
 import { getAPI } from '@/services/api-adapter'
+import { useSettlementFilters } from './useSettlementFilters'
+import { printSettlement } from './settlementPrintUtil'
 
 interface SettlementProjectDetailProps {
   project: Project
@@ -36,25 +38,14 @@ const SettlementProjectDetail: React.FC<SettlementProjectDetailProps> = ({
 
   const [showModal, setShowModal] = useState(false)
   const [editingSettlement, setEditingSettlement] = useState<SettlementData | null>(null)
-  const [filterType, setFilterType] = useState<SettlementType | ''>('')
-  const [filterStatus, setFilterStatus] = useState<SettlementStatus | ''>('')
   const [showTemplateSelector, setShowTemplateSelector] = useState(false)
   const [generatingTemplate, setGeneratingTemplate] = useState<Template | null>(null)
   const printRef = useRef<HTMLDivElement>(null)
 
-  const filteredSettlements = settlements.filter(s => {
-    if (filterType && s.type !== filterType) return false
-    if (filterStatus && s.status !== filterStatus) return false
-    return true
-  })
-
-  const stats = {
-    total: filteredSettlements.length,
-    pending: filteredSettlements.filter(s => s.status === 'pending' || s.status === 'draft').length,
-    completed: filteredSettlements.filter(s => s.status === 'completed').length,
-    archived: filteredSettlements.filter(s => s.status === 'archived').length,
-    totalAmount: filteredSettlements.reduce((sum, s) => sum + s.amount, 0),
-  }
+  const {
+    filterType, filterStatus, setFilterType, setFilterStatus,
+    filteredSettlements, stats,
+  } = useSettlementFilters(settlements)
 
   const handleSubmit = async (formData: any) => {
     if (!formData.partnerId) {
@@ -207,20 +198,6 @@ const SettlementProjectDetail: React.FC<SettlementProjectDetailProps> = ({
     } catch { showToast('预览失败', 'error') }
   }
 
-  const handlePrint = (settlement: SettlementData) => {
-    const printContent = printRef.current
-    if (printContent) {
-      const originalContent = document.body.innerHTML
-      const printSection = printContent.querySelector('.print-content')
-      if (printSection) {
-        document.body.innerHTML = printSection.innerHTML
-        window.print()
-        document.body.innerHTML = originalContent
-        window.location.reload()
-      }
-    }
-  }
-
   return (
     <div className="flex-1 flex flex-col overflow-hidden p-6 max-w-[1400px] mx-auto w-full">
       {ConfirmDialog}
@@ -320,7 +297,7 @@ const SettlementProjectDetail: React.FC<SettlementProjectDetailProps> = ({
         onDelete={handleDelete}
         onProcess={handleProcess}
         onUnarchive={handleUnarchive}
-        onPrint={handlePrint}
+        onPrint={() => printSettlement(printRef)}
         onPreviewFile={handlePreviewFile}
       />
       </HoverScrollbar>
