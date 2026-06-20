@@ -3,6 +3,7 @@ using Microsoft.Data.Sqlite;
 using Dapper;
 using Microsoft.Extensions.FileProviders;
 using EngineeringManager.Api;
+using Microsoft.Extensions.DependencyInjection;
 
 // ============ API 配置类（供 EntryPoint.cs 调用） ============
 
@@ -140,6 +141,14 @@ builder.Services.ConfigureHttpJsonOptions(options =>
         }
         RegisterEndpoints(app);
 
+        // v0.76.0 累计待办 #5: PII 列级 key rotation - 启动时初始化 PiiProtector (从 pii_keys 表加载所有 key, 旧 pii_keys 空时从 pp.key 迁移)
+        using (var scope = app.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<IDbConnection>();
+            var pii = app.Services.GetRequiredService<EngineeringManager.Api.Security.PiiProtector>();
+            pii.Initialize(db);
+        }
+
         if (IsProduction)
         {
             // 3. SPA 回退：非 /api 路由全部返回 index.html
@@ -169,6 +178,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
         // 用户偏好 (v0.75.0 PII Mask toggle 多设备同步)
         app.RegisterUserPreferencesEndpoints();
+        app.RegisterPiiKeyEndpoints(); // v0.76.0 累计待办 #5: PII key rotation API
 
         // 项目 + 仪表盘 + 项目成员
         app.RegisterProjectEndpoints();

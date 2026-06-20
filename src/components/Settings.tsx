@@ -16,6 +16,7 @@ import { SettingsSqliteSection } from '@/components/SettingsSqliteSection'
 import SettingsChangelog from '@/components/SettingsChangelog'
 import { getAPI } from '@/services/api-adapter'
 import { GpuToggle } from '@/components/features/settings/GpuToggle'
+import { SettingsPiiKeySection } from '@/components/features/settings/SettingsPiiKeySection'
 
 interface SettingsProps { refresh?: () => void }
 
@@ -98,6 +99,10 @@ const Settings: React.FC<SettingsProps> = ({ refresh }) => {
  )}
  </div>
  </div>
+
+ <SettingsPiiKeySection />
+
+
 
  <SettingsSqliteSection
  status={sqlite.status}
