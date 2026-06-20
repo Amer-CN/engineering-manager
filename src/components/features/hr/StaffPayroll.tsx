@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { useStaffPayrollFilters } from './useStaffPayrollFilters'
 import { DropdownMenu } from '../../ui/DropdownMenu/DropdownMenu'
 import { Button } from '../../ui/Button'
 import { EmptyState } from '../../ui/EmptyState'
@@ -18,39 +19,13 @@ import { StaffPayrollTable } from './StaffPayrollTable'
 
 const StaffPayroll: React.FC = () => {
   const showToast = useToastStore(state => state.showToast)
-  const now = new Date()
-  const [filterYear, setFilterYear] = useState<string>('全部')
-  const [filterMonth, setFilterMonth] = useState<string>('全部')
-  const [filterMemberName, setFilterMemberName] = useState('')
   const [staff, setStaff] = useState<any[]>([])
   const [departments, setDepartments] = useState<any[]>([])
-  const [filterDept, setFilterDept] = useState<number | ''>('')
   const [projects, setProjects] = useState<any[]>([])
-  const [filterProject, setFilterProject] = useState<string>('全部')
   const [allWages, setAllWages] = useState<any[]>([])
   const [attendances, setAttendances] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
-
-  // ── 可选年份：从工资记录中提取 ──
-  const yearOptions = React.useMemo(() => {
-    const s = new Set<string>()
-    for (const w of allWages) {
-      if (w.yearMonth) s.add(w.yearMonth.slice(0, 4))
-    }
-    const y = now.getFullYear()
-    // 兜底：近 10 年
-    if (s.size === 0) {
-      for (let i = y - 9; i <= y; i++) s.add(String(i))
-    }
-    return Array.from(s).sort()
-  }, [allWages])
-
-  // ── 当前生效的年月（用于生成动作） ──
-  const effectiveYearMonth = filterYear !== '全部' && filterMonth !== '全部'
-    ? `${filterYear}-${filterMonth}`
-    : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-
 
   // ── 数据加载：全量 staff 工资 + 考勤 ──
   const loadData = useCallback(async () => {
@@ -82,33 +57,12 @@ const StaffPayroll: React.FC = () => {
 
   useEffect(() => { loadData() }, [loadData])
 
-  // ── 客户端过滤 ──
-  const filteredWages = React.useMemo(() => {
-    return allWages.filter((w: any) => {
-      if (filterYear !== '全部' && w.yearMonth?.slice(0, 4) !== filterYear) return false
-      if (filterMonth !== '全部' && w.yearMonth?.slice(5, 7) !== filterMonth) return false
-      if (filterMemberName && !(w.memberName || '').includes(filterMemberName)) return false
-      if (filterDept) {
-        const s = staff.find((m: any) => m.id === w.memberId)
-        if (s && s.departmentId !== filterDept) return false
-      }
-      // 项目筛选：null（全公司）始终显示；有 projectId 的按实际项目匹配
-      if (filterProject !== '全部') {
-        if (w.projectId != null && w.projectId !== Number(filterProject)) return false
-        // projectId == null 的视为全公司通用，在所有项目下都显示
-      }
-      return true
-    })
-  }, [allWages, filterYear, filterMonth, filterMemberName, filterDept, staff])
-
-  // ── 汇总统计 ──
-  const summaryTotals = React.useMemo(() => {
-    const totalNet = filteredWages.reduce((s, w) => s + ((w.netSalary || 0) - (w.deduction || 0)), 0)
-    const totalPaid = filteredWages.reduce((s, w) => s + (Number(w.paidAmount) || 0), 0)
-    return { totalNet, totalPaid, totalDiff: totalNet - totalPaid }
-  }, [filteredWages])
-
-  // ── 生成薪酬的辅助函数 ──
+  const f = useStaffPayrollFilters(staff, allWages)
+  const {
+    filterYear, filterMonth, filterMemberName, filterDept, filterProject,
+    setFilterYear, setFilterMonth, setFilterMemberName, setFilterDept, setFilterProject,
+    yearOptions, effectiveYearMonth, filteredWages, summaryTotals,
+  } = f
 
   // ── 生成本月薪酬 ──
   const generatePayroll = async () => {
