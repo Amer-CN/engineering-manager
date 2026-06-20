@@ -29,10 +29,29 @@ function removeChartsPreloadPlugin() {
   }
 }
 
+
+// 读取 package.json 版本号, 注入到 index.html 的 window.__APP_VERSION__ 占位符
+function injectVersionPlugin() {
+  return {
+    name: 'inject-app-version',
+    transformIndexHtml: {
+      order: 'pre',
+      handler(html) {
+        const placeholder = /window\.__APP_VERSION__\s*=\s*['"]<APP_VERSION>['"]/;
+        if (placeholder.test(html)) {
+          return html.replace(placeholder, `window.__APP_VERSION__ = '${appVersion}'`);
+        }
+        return html;
+      }
+    }
+  }
+}
+
 export default defineConfig({
   plugins: [
     react(),
     removeChartsPreloadPlugin(),
+    injectVersionPlugin(),
   ],
   resolve: {
     alias: {
