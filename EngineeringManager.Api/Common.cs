@@ -75,7 +75,24 @@ public static class Common
         return account.Substring(0, 4) + "****" + account.Substring(account.Length - 4);
     }
 
-    /// <summary>当前时间字符串（yyyy-MM-dd HH:mm:ss）— 避免在每个端点文件中重复定义</summary>
+
+    /// <summary>
+    /// v0.76.0 累计待办 #1: PII ACL 字段统一脱敏入口
+    /// 规则: canReadPii=true → 返回原值; false → 按字段类型脱敏
+    /// 字段类型: idCard / phone / idCardAddress / bankAccount / default (按 idCard 规则)
+    /// </summary>
+    public static string? MaskPiiField(string field, string? value, bool canReadPii)
+    {
+        if (canReadPii) return value;
+        if (string.IsNullOrEmpty(value)) return value;
+        return field switch
+        {
+            "phone" => MaskPhone(value),
+            "bankAccount" => MaskBankAccount(value),
+            // idCard / idCardAddress / 其他: 走 MaskIdCard 规则 (前 4 后 4 中间 ****)
+            _ => MaskIdCard(value),
+        };
+    }    /// <summary>当前时间字符串（yyyy-MM-dd HH:mm:ss）— 避免在每个端点文件中重复定义</summary>
     public static string NowString() => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
     public static string HashPassword(string password, string salt, int version = 2)

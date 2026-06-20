@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using Dapper;
 using EngineeringManager.Api.Security;
 
@@ -27,18 +27,19 @@ public static class MemberEndpoints
                           WHERE {CurrentUser.UserFilterCompany("m.created_by")}
                           ORDER BY m.created_at DESC",
                           new { Uid = uid, IsAdmin = isAdmin }).ToList();
-            // v0.75.0: 后端响应层不再 mask, 完全由前端 useMaskedFn hook 控制. 双层 mask 消除.
+            // v0.76.0 累计待办 #1: PII ACL — worker 角色只能看脱敏, 其他人明文
+            var canReadPii = CurrentUser.CanReadPii(ctx);
             var masked = rows.Select(m => new
             {
                 id = m.id, name = m.name, member_type = m.member_type, role = m.role, gender = m.gender,
                 ethnicity = m.ethnicity, birth_date = m.birth_date, base_salary = m.base_salary, daily_wage = m.daily_wage,
                 entry_date = m.entry_date, status = m.status, department_id = m.department_id, position = m.position,
                 department_name = m.department_name, created_at = m.created_at, updated_at = m.updated_at,
-                id_card = m.id_card as string,
-                phone = m.phone as string,
+                id_card = Common.MaskPiiField("idCard", m.id_card as string, canReadPii),
+                phone = Common.MaskPiiField("phone", m.phone as string, canReadPii),
                 email = m.email,
-                id_card_address = m.id_card_address as string,
-                bank_account = m.bank_account as string,
+                id_card_address = Common.MaskPiiField("idCardAddress", m.id_card_address as string, canReadPii),
+                bank_account = Common.MaskPiiField("bankAccount", m.bank_account as string, canReadPii),
                 bank_name = m.bank_name, bank_line_no = m.bank_line_no, photo = m.photo
             });
             return Common.Ok(masked);
@@ -51,10 +52,17 @@ public static class MemberEndpoints
             // v1.1.0 P0-4 Phase 2: 单条也加 user-dim 过滤 (防 ID 枚举越权)
             var m = db.QueryFirstOrDefault($"SELECT * FROM members WHERE id=@Id AND {CurrentUser.UserFilterCompany("m.created_by")}", new { Id = id, Uid = uid, IsAdmin = isAdmin });
             if (m is null) return Common.NotFound("成员不存在");
-            // v0.75.0: 后端响应层不再 mask, 直接返回数据 (前端 useMaskedFn 控制显示)
-            return Common.Ok(m);
-        });
-                app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection db) =>
+            // v0.76.0 累计待办 #1: PII ACL — 同上 /api/members, 返回 dict 屏蔽 PII
+            var canReadPii = CurrentUser.CanReadPii(ctx);
+            var result = ((IDictionary<string, object>)m).ToDictionary(k => k.Key, v => (object?)v.Value);
+            result["id_card"] = Common.MaskPiiField("idCard", (string?)m.id_card, canReadPii);
+            result["phone"] = Common.MaskPiiField("phone", (string?)m.phone, canReadPii);
+            result["id_card_address"] = Common.MaskPiiField("idCardAddress", (string?)m.id_card_address, canReadPii);
+            result["bank_account"] = Common.MaskPiiField("bankAccount", (string?)m.bank_account, canReadPii);
+            return Common.Ok(result);
+                        });
+
+app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             // v1.2.0: PII 字段加密
@@ -112,15 +120,16 @@ public static class MemberEndpoints
             // v1.1.0 P0-4 Phase 2: 公司维度表过滤
             var rows = db.Query($@"SELECT * FROM workers WHERE {CurrentUser.UserFilterCompany()} ORDER BY name",
                 new { Uid = uid, IsAdmin = isAdmin }).ToList();
-            // v0.75.0: 后端响应层不再 mask
+            // v0.76.0 累计待办 #1: PII ACL — worker 角色只能看脱敏, 其他人明文
+            var canReadPii = CurrentUser.CanReadPii(ctx);
             var masked = rows.Select(w => new
             {
                 id = w.id, name = w.name, gender = w.gender, worker_type = w.worker_type, daily_wage = w.daily_wage,
                 address = w.address as string,
                 created_at = w.created_at,
-                id_card = w.id_card as string,
-                phone = w.phone as string,
-                bank_account = w.bank_account as string,
+                id_card = Common.MaskPiiField("idCard", w.id_card as string, canReadPii),
+                phone = Common.MaskPiiField("phone", w.phone as string, canReadPii),
+                bank_account = Common.MaskPiiField("bankAccount", w.bank_account as string, canReadPii),
                 bank_name = w.bank_name, bank_line_no = w.bank_line_no
             });
             return Common.Ok(masked);
