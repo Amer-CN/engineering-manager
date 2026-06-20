@@ -10,6 +10,71 @@
 
 ---
 
+## v0.77.0 (2026-06-21) — feat: cloud sync schema 准备 (阶段 1)
+
+> **核心范围**: cloud sync 调研 (累计待办 #4) 的 v0.77.0 阶段 1 实施 — 只做 schema 准备, 不实现 sync 推/拉/冲突逻辑.
+> **完整方案**: `docs/design/cloud-sync-design.md` (245 行, 4 方案对比 + 推荐 E=B+D 混合, 3 阶段路线).
+> **SemVer**: minor bump (0.76.0 → 0.77.0), 因为加 5 列 + 2 新表 = 新功能, 但不破坏现有 API (DEFAULT 值保证兼容).
+
+### 改动 (1 feat + 2 migration, 共 3 项)
+
+- **`feat(cloud sync schema)`**: 27 业务表加 5 列 + 2 新基础设施表
+  - migration 024_AddCloudSyncColumns.sql (233 行):
+    - 27 业务表 (按 user-dim P0-4 闭环清单): projects / project_members / project_workers / income_contracts / expense_contracts / agreement_contracts / wages / attendances / members / workers / partners / supervisors / inventory_items / inventory_transactions / materials / expenses / drawings / invoices / payment_records / cost_ledger / settlements / cost_ledger_batches / worker_teams / departments / contract_templates / salary_history / wage_history
+    - 每表加 5 列: `version` (INTEGER NOT NULL DEFAULT 1, 乐观锁 CAS) / `last_modified_by_device` (TEXT, 多设备追踪) / `last_modified_at` (TEXT, sync 面时间戳) / `sync_status` (TEXT NOT NULL DEFAULT 'synced', 程序层约束 'synced'/'pending'/'conflict') / `conflict_marker` (TEXT, 阶段 2 冲突检测用)
+    - 每表加 idx_<table>_version 索引 (高频 CAS 查询)
+  - migration 025_AddSyncQueueAndDevices.sql (58 行):
+    - `sync_queue` 表 (本地待同步写操作队列): id / table_name / row_id / operation / payload (JSON) / device_id / user_id / version / enqueued_at / attempt_count / last_error / last_attempt_at + 3 索引
+    - `device_registrations` 表 (多设备注册): device_id (主键) / user_id / device_name / device_type / os_info / app_version / registered_at / last_seen_at / refresh_token_hash / refresh_token_expires_at / is_active + 2 索引
+  - 60 个新 unit tests (CloudSyncSchemaTests.cs):
+    - 4 Facts (sync_queue / device_registrations 表 + 索引存在性)
+    - 27 × 2 = 54 Theory (每张业务表都有 5 列 + version 索引)
+    - 2 Facts (INSERT 默认 version=1 sync_status='synced' / sync_queue 可写可查)
+
+### 测试结果
+
+- 后端 build: 0 错误
+- 后端 tests: 100/100 通过 (40 旧 + 60 新 CloudSyncSchemaTests)
+- 前端 check: BUILD PASSED (66 历史软警告)
+- tsc: 0 errors
+- vite build: built in 18.67s
+
+### 设计决策
+
+- **不做的事** (留到 v0.78.0 阶段 2):
+  - 33 业务端点的 INSERT/UPDATE 加 version 自增 (设计文档列在阶段 1 但本 sprint 范围收窄, 留到阶段 2 改 endpoint 时一起做)
+  - JWT refresh token (阶段 2 设备注册后才有意义)
+  - sync worker 推/拉 (阶段 2)
+  - 冲突检测 UI (阶段 2)
+- **DEFAULT 值策略**: version=1, sync_status='synced', last_modified_at=NULL 让现有代码完全无感 — INSERT 不写这些列也能 work, 老数据迁移零成本
+- **程序层约束**: sync_status 不加 SQLite CHECK 约束 (避免老版本 SQLite ALTER ADD COLUMN 失败), 由 C# CloudSyncHelper 强制取值 (阶段 2)
+- **索引策略**: 只加 version 单列索引 (CAS 高频), 暂不加 sync_status / last_modified_at 索引 (阶段 2 有 sync worker 后再加)
+
+### 升级路径 (v0.76.0 → v0.77.0)
+
+1. 重启 C# 服务, 自动跑 migration 024 + 025
+2. 27 张业务表加 5 列 (DEFAULT 1 / NULL, 不破坏现有数据)
+3. 新表 `sync_queue` + `device_registrations` 建好, 暂时为空 (阶段 2 才写)
+4. 前端无需改动 (GET 端点自动返新列, 但前端暂未展示 version / sync_status)
+
+### 已知风险 + 缓解
+
+| 风险 | 严重度 | 缓解 |
+|---|---|---|
+| 27 表 × 5 列 ALTER TABLE 在大库上慢 | 🟢 低 | ALTER TABLE 不锁表, SQLite 单文件 ALTER ADD COLUMN 微秒级 |
+| DEFAULT 1 让所有现有行 version=1 | 🟢 低 | 这是预期行为, 阶段 2 sync 不会误判冲突 (本地 vs 云端都是 1) |
+| sync_status='synced' 默认 | 🟢 低 | 阶段 2 sync worker 才会把 pending 行推完后改回 synced |
+
+### v0.78.0 阶段 2 入口
+
+- 33 业务端点 INSERT/UPDATE 改用 CloudSyncHelper (version 自增 + last_modified_at 注入)
+- CloudSyncHelper.WriteAsync(db, table, op, rowId, dto) 统一入口
+- sync worker: 定时 SELECT sync_queue WHERE attempt_count < 3 → POST 云端 → DELETE 成功行
+- 设备注册 API: POST /api/devices/register → 生成 device_id (32 hex) + refresh_token
+- 冲突检测: 拉云端时 version 比本地旧 → 弹窗让用户选 (本地 / 云端 / 字段合并)
+
+---
+
 ## v0.76.0 (2026-06-20) — 7 项累计待办集中 release: PII 防护强化 + react-query 接入 + PII 密钥轮换
 
 > **核心原则**: 本次 release 是 v0.75.3 era 之后 7 个跨 sprint 累计待办的集中收尾, 每项单独 commit, 一起 bump 到 v0.76.0 (minor, 因为含 5 个 feat).
