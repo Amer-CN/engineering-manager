@@ -1,54 +1,10 @@
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import { Icon } from './ui/Icon'
 import ButtonLoader from './ui/ButtonLoader'
 import type { SqliteStatus, ReadMode } from '../types/electron'
-import { getAPI } from '@/services/api-adapter'
-
-// SQLite 表名 → 中文名映射（已合并的旧表不显示）
-const TABLE_NAME_MAP: Record<string, string> = {
-  projects: '项目',
-  members: '人员',
-  workers: '工人',
-  project_workers: '用工关系',
-  project_members: '项目成员',
-  worker_teams: '班组',
-  worker_transfer_records: '调动记录',
-  departments: '部门',
-  income_contracts: '收入合同',
-  income_records: '收入记录',
-  expense_contracts: '支出合同',
-  expense_records: '支出记录',
-  agreement_contracts: '协议合同',
-  invoices: '发票',
-  invoice_items: '发票明细',
-  payment_records: '收付款',
-  settlements: '结算',
-  cost_ledger: '成本台账',
-  cost_ledger_batches: '台账版本',
-  cost_ledger_categories: '台账分类',
-  cost_ledger_match_rules: '匹配规则',
-  materials: '材料',
-  expenses: '费用',
-  drawings: '图纸',
-  partners: '合作单位',
-  regions: '地区',
-  supervisors: '监管单位',
-  templates: '模板',
-  inventory_items: '库存物料',
-  inventory_transactions: '出入库记录',
-  wages: '工资',
-  attendances: '考勤',
-  salary_history: '薪资历史',
-  wage_history: '工资历史',
-  audit_logs: '审计日志',
-  users: '用户',
-  roles: '角色',
-  app_config: '系统配置',
-  schema_version: '架构版本',
-  tasks: '任务',
-  contract_templates: '合同模板',
-  snapshots: '数据库快照',
-}
+import { readModeConfig } from './features/settings/sqliteConstants'
+import { SqliteHealthCheck } from './features/settings/SqliteHealthCheck'
+import { SqliteTableSummary } from './features/settings/SqliteTableSummary'
 
 interface Props {
   status: SqliteStatus | null
@@ -63,76 +19,10 @@ interface Props {
   onSetReadMode: (mode: ReadMode) => void
 }
 
-const readModeConfig: { mode: ReadMode; label: string; desc: string; icon: string; color: string; activeColor: string }[] = [
-  {
-    mode: 'dual',
-    label: '双写模式',
-    desc: 'SQLite 优先读取，失败回退 JSON',
-    icon: 'ArrowLeftRight',
-    color: 'bg-slate-100',
-    activeColor: 'border-primary-500 bg-primary-50 shadow-md',
-  },
-  {
-    mode: 'sqlite-primary',
-    label: 'SQLite 优先',
-    desc: '仅从 SQLite 读取，失败报错',
-    icon: 'Database',
-    color: 'bg-blue-100',
-    activeColor: 'border-blue-500 bg-blue-50 shadow-md',
-  },
-  {
-    mode: 'json-only',
-    label: '仅 JSON',
-    desc: '跳过 SQLite，仅使用 JSON 文件',
-    icon: 'FileJson',
-    color: 'bg-amber-100',
-    activeColor: 'border-amber-500 bg-amber-50 shadow-md',
-  },
-]
-
 export const SettingsSqliteSection: React.FC<Props> = ({
   status, loading, enabling, migrating, switching, message,
   onEnable, onMigrate, onRemigrate, onSetReadMode,
 }) => {
-  // 数据健康检查状态
-  const [healthStatus, setHealthStatus] = useState<'healthy' | 'warning' | 'error' | 'unknown'>('unknown')
-  const [healthDetails, setHealthDetails] = useState<string | null>(null)
-  const [lastCheckTime, setLastCheckTime] = useState<string | null>(null)
-
-  // 首次渲染时自动执行健康检查
-  useEffect(() => {
-    const runCheck = async () => {
-      try {
-        const api = await getAPI()
-        const [consRes, intRes] = await Promise.all([
-          api.consistencyCheck(),
-          api.integrityCheck(),
-        ])
-
-        const consistent = consRes.data?.consistent ?? true
-        const integrityOk = intRes.data?.ok === true
-        const now = new Date().toLocaleString('zh-CN')
-
-        setLastCheckTime(now)
-
-        if (integrityOk && consistent) {
-          setHealthStatus('healthy')
-          setHealthDetails(null)
-        } else if (!integrityOk) {
-          setHealthStatus('error')
-          setHealthDetails(intRes.data?.result || '完整性检查失败')
-        } else {
-          setHealthStatus('warning')
-          const count = consRes.data?.discrepancies?.length ?? 0
-          setHealthDetails(`${count} 个数据表不一致`)
-        }
-      } catch {
-        setHealthStatus('unknown')
-      }
-    }
-    runCheck()
-  }, [])
-
   if (loading) {
     return (
       <div className="card">
@@ -292,65 +182,14 @@ export const SettingsSqliteSection: React.FC<Props> = ({
         {status.ready && status.summary && Object.keys(status.summary).length > 0 && (
           <div>
             <label className="label">数据统计</label>
-            <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2 text-sm">
-                {Object.entries(status.summary)
-                  .sort(([, a], [, b]) => b - a)
-                  .map(([table, count]) => (
-                    <div key={table} className="flex justify-between items-center">
-                      <span className="text-slate-600 truncate">{TABLE_NAME_MAP[table] || TABLE_NAME_MAP[table.replace(/[A-Z]/g, c => '_' + c.toLowerCase())] || table}</span>
-                      <span className="text-slate-800 font-medium tabular-nums ml-2">{count.toLocaleString()}</span>
-                    </div>
-                  ))}
-              </div>
-              <div className="mt-3 pt-3 border-t border-slate-200 flex justify-between text-sm">
-                <span className="text-slate-600 font-medium">总计</span>
-                <span className="text-slate-800 font-bold tabular-nums">{totalRows.toLocaleString()} 行</span>
-              </div>
-            </div>
+            <SqliteTableSummary summary={status.summary} />
           </div>
         )}
 
         {/* 数据健康检查 */}
         {status.ready && (
           <div className="border-t border-slate-100 pt-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium text-slate-700 flex items-center gap-2">
-                <Icon name="HeartPulse" size={16} className="text-primary-600" /> 数据健康检查
-              </span>
-              {lastCheckTime && (
-                <span className="text-xs text-slate-400">上次检查: {lastCheckTime}</span>
-              )}
-            </div>
-            <div className={`p-3 rounded-lg border ${
-              healthStatus === 'healthy' ? 'bg-success-50 border-success-200' :
-              healthStatus === 'warning' ? 'bg-warning-50 border-warning-200' :
-              healthStatus === 'error' ? 'bg-danger-50 border-danger-200' :
-              'bg-slate-50 border-slate-200'
-            }`}>
-              <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full ${
-                  healthStatus === 'healthy' ? 'bg-success-500' :
-                  healthStatus === 'warning' ? 'bg-warning-500' :
-                  healthStatus === 'error' ? 'bg-danger-500' :
-                  'bg-slate-400'
-                }`}></span>
-                <span className={`text-sm font-medium ${
-                  healthStatus === 'healthy' ? 'text-success-700' :
-                  healthStatus === 'warning' ? 'text-warning-700' :
-                  healthStatus === 'error' ? 'text-danger-700' :
-                  'text-slate-500'
-                }`}>
-                  {healthStatus === 'healthy' ? '数据完整，一切正常' :
-                   healthStatus === 'warning' ? '数据存在不一致' :
-                   healthStatus === 'error' ? '数据完整性异常' :
-                   '正在检查...'}
-                </span>
-                {healthDetails && (
-                  <span className="text-xs text-slate-500 ml-auto">{healthDetails}</span>
-                )}
-              </div>
-            </div>
+            <SqliteHealthCheck enabled={status.ready} />
           </div>
         )}
 
