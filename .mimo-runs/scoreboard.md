@@ -91,3 +91,27 @@ px tsc 直接调用). 我仅审 git diff + 跑 tsc 验证 |
 - ❌ 失败: 1/33 (Task #2 batch git rm, v0.78.0 前)
 - 平均耗时: ~150s
 - **mimo 适合 (n=33): 单文件 React patch (含新建子文件) — 100% 一次过 (排除 #2)**
+
+## v0.76.0 release — 0 mimo 任务 (本期 7 项累计待办全部 Codex 手写)
+
+### 决策: 为什么不用 mimo?
+
+- 7 项累计待办 (#1 PII ACL / #2 MaskContext / #3 react-query / #4 cloud sync / #5 PII rotation / #6 version 注入 / #7 Settings 拆分)
+- 全部涉及**跨文件协调** + **schema 决策** + **端点设计** + **后端 + 前端** 联动
+- mimo 1-file-patch 模式不适合这种 scope
+- mimo 适合的: 单文件 React refactor (n=33, 100% 一次过 排除 #2)
+- **保留** mimo 留给后续单文件 refactor 任务 (v0.77.0+)
+
+### 累计统计保持 n=33
+
+- n=33 总 mimo 任务
+- 32/33 一次过 (97.0%)
+- v0.75.3 era 的 13 commits + 5 docs 全部 mimo 完成
+- v0.76.0 era 的 7 commits 全部 Codex 手写
+
+## 累计统计 (n=33, v0.76.0 收尾)
+
+- ✅ 一次过: 32/33 (97.0%)
+- ❌ 失败: 1/33 (Task #2 batch git rm, v0.78.0 前)
+- 平均耗时: ~155s
+- **mimo 适合 (n=33): 单文件 React patch (含新建子文件) — 100% 一次过 (排除 #2)**

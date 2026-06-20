@@ -255,7 +255,7 @@ export function useProjects() {
 | `refactor(...)` 代码重构 | **不 bump** | 版本号不变 |
 | `docs(...)` / `chore(...)` | **不 bump** | 版本号不变 |
 
-### 当前版本: v0.75.3
+### 当前版本: v0.76.0
 
 ### 历史背景 (重要)
 v0.74.0 → v0.85.0 (已 rebase 整理) 期间, 项目曾把 **refactor-only sprint 也当作 minor 版本 bump**, 导致 7 次 spurious `chore: bump version` commits. v0.75.3 已 `git rebase -i ce8cf23` **drop 掉这 7 个 commits**, 重组 git 历史为正确 semver (1 minor + 3 patches + 18 refactors).
