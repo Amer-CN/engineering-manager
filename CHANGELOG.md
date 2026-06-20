@@ -94,6 +94,84 @@
 
 ---
 
+## v0.77.1 (2026-06-21) — fix: OCR 8 处假成功 → 真 500 (P1-1 闭环)
+
+> **核心修复**: 累计待办 #5 OCR 8 处假成功 → P1-1 安全闭环 (v0.76.0 累计待办列表 "下次 sprint 候选" 里记的 OCR 8 处).
+> **SemVer**: patch bump (0.77.0 → 0.77.1), 因为是 bug 修复.
+
+### 改动 (1 fix + 1 test)
+
+- **`fix(OCR 假成功)`**: OcrEndpoints.cs 8 处 catch 块从 HTTP 200 + success=false 改成 HTTP 500
+  - 新增 `CatchOcrError(endpointName, ex)` private static helper
+    - 服务端: `Console.Error.WriteLine` log 完整 ex.Message (调试用)
+    - 客户端: 友好提示 ("百度OCR请求超时" / "百度OCR识别失败，请稍后重试或检查图片质量")
+    - HTTP 状态码: 500 (不再是假成功 200)
+  - 8 个 OCR 端点 catch 块替换:
+    - `/api/ocr/id-card` (L28-69)
+    - `/api/ocr/invoice` (L74-127)
+    - `/api/ocr/bank-card` (L132-164)
+    - `/api/ocr/business-license` (L169-205)
+    - `/api/ocr/bank-receipt` (L210-252)
+    - `/api/ocr/permit` (L257-290)
+    - `/api/ocr/bank-statement` (L295-344)
+    - `/api/ocr/general-receipt` (L349-385)
+  - **未修** (留后续 sprint): L399 enterprise query validation (400 应取代 200), L423 enterprise query catch (500 应取代 200)
+- **`test(OCR 修复验证)`**: OcrEndpointsTests.cs 5 个新 tests
+  - `CatchOcrError_HelperMethodExists` (反射验证 helper 存在)
+  - `CatchOcrError_Returns500_OnNetworkTimeout` (超时异常 → 500)
+  - `CatchOcrError_Returns500_OnGenericException` (通用异常 → 500)
+  - `OcrEndpoints_File_NoLongerContainsFakeSuccessInCatchBlocks` (静态分析: 文件中 `Results.Ok(new { success = false` <= 2)
+  - `OcrEndpoints_File_AllEightCatchBlocksReplaced` (静态分析: 8 个 `CatchOcrError("ocr-X", ex)` 都在)
+
+### 测试结果
+
+- 后端 build: 0 错误
+- 后端 tests: 108/108 通过 (103 旧 + 5 新 OCR)
+- 前端 check: BUILD PASSED (66 历史软警告)
+- tsc: 0 errors
+- vite build: 18.50s
+
+### 修复前后对比
+
+**修复前 (假成功, P1-1 安全问题)**:
+\`\`\`
+catch (Exception ex)
+{
+    return Results.Ok(new { success = false, error = ex.Message.Contains("超时") ? "..." : "百度OCR请求失败: {ex.Message}" });
+}
+\`\`\`
+- HTTP 状态码: 200 (前端误以为是成功)
+- 错误信息: 直接泄露 ex.Message (P1-3 信息泄露)
+
+**修复后 (真 500)**:
+\`\`\`
+catch (Exception ex)
+{
+    return CatchOcrError("ocr-id-card", ex);
+}
+\`\`\`
+- HTTP 状态码: 500 (前端正确处理错误)
+- 错误信息: 脱敏后友好提示, 不泄露内部细节
+
+### v0.78.0 入口
+
+按 cloud-sync-design.md §阶段 2 范围:
+- CloudSyncHelper (统一 version 自增 + sync_queue 写)
+- JWT refresh token + device 注册 API
+- sync worker 推/拉
+- 冲突检测 UI
+- PII 跨设备兼容
+- 限流 + 审计 + 监控
+
+### 不在本 sprint 范围 (后续候选)
+
+- enterprise query L399/L423 修复 (同上模式, 留 v0.77.x patch)
+- PII 后台 re-encrypt worker (v0.76.0 #5 续)
+- react-query 渐进迁移 (v0.76.0 #3 续)
+- SettingsChangelog 拆分
+
+---
+
 ## v0.76.0 (2026-06-20) — 7 项累计待办集中 release: PII 防护强化 + react-query 接入 + PII 密钥轮换
 
 > **核心原则**: 本次 release 是 v0.75.3 era 之后 7 个跨 sprint 累计待办的集中收尾, 每项单独 commit, 一起 bump 到 v0.76.0 (minor, 因为含 5 个 feat).
