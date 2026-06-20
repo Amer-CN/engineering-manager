@@ -1,6 +1,6 @@
 # AGENTS.md - 工程管家项目约定
-> 项目状态：v0.78.0 — 修 DataTable 3 个 critical runtime bug (useDataTableState 漏 import + getRowKey 类型不匹配) + Tooltip native title fallback (项目当前最新 release)
-> 最后同步：2026-06-19（v0.78.0 release: 修 DataTable 3 critical runtime bug, List 页面真正可用）
+> 项目状态：v0.75.3 — semver 整理后 (1 minor + 3 patches + 18 refactors), 见 CHANGELOG.md
+> 最后同步：2026-06-20（v0.75.3 semver rebase: drop 7 spurious chore bump commits, 重组 git 历史 + 重写 CHANGELOG + 加 Version Policy）
 
 ## 🗣️ 输出语言
 - **默认中文输出**：所有解释、描述、分析、提问、总结等文字内容使用中文
@@ -243,14 +243,34 @@ export function useProjects() {
 
 ---
 
-## 🔢 版本管理
-- **语义化版本**：patch(Bug修复) / minor(新功能模块) / major(架构级变更)
-- 版本号引用位置：`package.json` / `Sidebar.tsx` / `Login.tsx` / `installer/src/App.tsx` / `CHANGELOG.md`
+## 🔢 版本管理 (v0.75.3 起严格执行 SemVer)
 
-### 当前版本：v0.78.0 (已打 tag)
+### Bump 规则
 
-*本文档与 `CHANGELOG.md`、`docs/` 保持同步。*
+| Commit 类型 | Bump 方式 | 例 |
+|------------|----------|---|
+| `feat(...)` 新功能 | **minor**: 0.X.0 | v0.74.0 → v0.75.0 |
+| `fix(...)` bug 修复 | **patch**: 0.X.Y | v0.75.0 → v0.75.1 |
+| `perf(...)` 性能优化 | **patch**: 0.X.Y | |
+| `refactor(...)` 代码重构 | **不 bump** | 版本号不变 |
+| `docs(...)` / `chore(...)` | **不 bump** | 版本号不变 |
 
+### 当前版本: v0.75.3
+
+### 历史背景 (重要)
+v0.74.0 → v0.85.0 (已 rebase 整理) 期间, 项目曾把 **refactor-only sprint 也当作 minor 版本 bump**, 导致 7 次 spurious `chore: bump version` commits. v0.75.3 已 `git rebase -i ce8cf23` **drop 掉这 7 个 commits**, 重组 git 历史为正确 semver (1 minor + 3 patches + 18 refactors).
+
+详见 `docs/handoff/v0.75.3-handoff.md` §1.
+
+### 版本号引用位置 (4 处, bump 时一起改)
+- `package.json`
+- `installer/package.json`
+- `installer/src/App.tsx`
+- `src/components/Login.tsx` (fallback for `__APP_VERSION__`)
+
+### 何时打 tag
+- 每次 minor / patch bump 时, 打完 chore commit 后立刻 `git tag v0.X.Y`
+- refactor-only sprint: **不打 tag**
 ---
 
 ## 🚦 红绿灯（v0.71.0 起, v0.79.0 加 tsc）
