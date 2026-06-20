@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'framer-motion'
 import { getAPI } from './services/api-adapter'
 import Sidebar from './components/Sidebar'
@@ -344,11 +345,19 @@ const AppContent: React.FC = () => {
 }
 
 function App() {
+  // v0.76.0 累计待办 #3: react-query 完整接入 — 全局 QueryClient
+  const [queryClient] = useState(() => new QueryClient({
+    defaultOptions: {
+      queries: { staleTime: 30_000, refetchOnWindowFocus: false, retry: 1 },
+    },
+  }))
   return (
-    <MaskProvider>
-      <AppContent />
-      <MaskToggleButton />
-    </MaskProvider>
+    <QueryClientProvider client={queryClient}>
+      <MaskProvider>
+        <AppContent />
+        <MaskToggleButton />
+      </MaskProvider>
+    </QueryClientProvider>
   )
 }
 
