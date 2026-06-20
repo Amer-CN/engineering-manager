@@ -17,6 +17,20 @@ public static class OcrEndpoints
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "工程管家", "ocr-stats.json");
 
+    /// <summary>
+    /// v0.77.1 P1-1 修复: OCR catch 块统一返回 500 (之前假成功返回 HTTP 200 + success=false)
+    /// - 服务端: log 完整 ex.Message (调试用)
+    /// - 客户端: 友好提示 (不泄露内部路径/堆栈)
+    /// </summary>
+    private static IResult CatchOcrError(string endpointName, Exception ex)
+    {
+        Console.Error.WriteLine($"[OcrEndpoints/{endpointName}] OCR失败: {ex.Message}");
+        var userMsg = ex.Message.Contains("超时")
+            ? "百度OCR请求超时，请检查网络连接"
+            : "百度OCR识别失败，请稍后重试或检查图片质量";
+        return Results.Json(new { success = false, error = userMsg }, statusCode: 500);
+    }
+
     public static void RegisterOcrEndpoints(this WebApplication app)
     {
         var httpClientFactory = app.Services.GetRequiredService<IHttpClientFactory>();
@@ -63,7 +77,7 @@ public static class OcrEndpoints
             }
             catch (Exception ex)
             {
-                return Results.Ok(new { success = false, error = ex.Message.Contains("超时") ? "百度OCR请求超时，请检查网络连接" : $"百度OCR请求失败: {ex.Message}" });
+                return CatchOcrError("ocr-id-card", ex);
             }
         });
 
@@ -121,7 +135,7 @@ public static class OcrEndpoints
             }
             catch (Exception ex)
             {
-                return Results.Ok(new { success = false, error = ex.Message.Contains("超时") ? "百度OCR请求超时，请检查网络连接" : $"百度OCR请求失败: {ex.Message}" });
+                return CatchOcrError("ocr-invoice", ex);
             }
         });
 
@@ -158,7 +172,7 @@ public static class OcrEndpoints
             }
             catch (Exception ex)
             {
-                return Results.Ok(new { success = false, error = ex.Message.Contains("超时") ? "百度OCR请求超时，请检查网络连接" : $"百度OCR请求失败: {ex.Message}" });
+                return CatchOcrError("ocr-bank-card", ex);
             }
         });
 
@@ -199,7 +213,7 @@ public static class OcrEndpoints
             }
             catch (Exception ex)
             {
-                return Results.Ok(new { success = false, error = ex.Message.Contains("超时") ? "百度OCR请求超时，请检查网络连接" : $"百度OCR请求失败: {ex.Message}" });
+                return CatchOcrError("ocr-business-license", ex);
             }
         });
 
@@ -246,7 +260,7 @@ public static class OcrEndpoints
             }
             catch (Exception ex)
             {
-                return Results.Ok(new { success = false, error = ex.Message.Contains("超时") ? "百度OCR请求超时，请检查网络连接" : $"百度OCR请求失败: {ex.Message}" });
+                return CatchOcrError("ocr-bank-receipt", ex);
             }
         });
 
@@ -284,7 +298,7 @@ public static class OcrEndpoints
             }
             catch (Exception ex)
             {
-                return Results.Ok(new { success = false, error = ex.Message.Contains("超时") ? "百度OCR请求超时，请检查网络连接" : $"百度OCR请求失败: {ex.Message}" });
+                return CatchOcrError("ocr-permit", ex);
             }
         });
 
@@ -338,7 +352,7 @@ public static class OcrEndpoints
             }
             catch (Exception ex)
             {
-                return Results.Ok(new { success = false, error = ex.Message.Contains("超时") ? "百度OCR请求超时，请检查网络连接" : $"百度OCR请求失败: {ex.Message}" });
+                return CatchOcrError("ocr-bank-statement", ex);
             }
         });
 
@@ -379,7 +393,7 @@ public static class OcrEndpoints
             }
             catch (Exception ex)
             {
-                return Results.Ok(new { success = false, error = ex.Message.Contains("超时") ? "百度OCR请求超时，请检查网络连接" : $"百度OCR请求失败: {ex.Message}" });
+                return CatchOcrError("ocr-general-receipt", ex);
             }
         });
 
