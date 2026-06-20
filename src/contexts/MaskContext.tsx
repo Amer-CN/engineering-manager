@@ -24,24 +24,23 @@ const PREF_KEY = "pii_mask_enabled"
 // 这里只暴露 setMasked / toggleMask, 它们写 localStorage + 异步 PUT 后端.
 
 export function MaskProvider({ children }: { children: ReactNode }) {
-  // 默认 masked=true (保守)
-  const [masked, setMaskedState] = useState<boolean>(true)
+  // v0.76.0 累计待办 #2: 同步从 localStorage 初始化 (避免首屏 mask 闪一下). 默认 true (保守).
+  const [masked, setMaskedState] = useState<boolean>(() => {
+    try {
+      const v = localStorage.getItem(STORAGE_KEY)
+      if (v === "1") return true
+      if (v === "0") return false
+    } catch { /* SSR / 隐私模式 fallback */ }
+    return true
+  })
   const [isSyncing, setIsSyncing] = useState(false)
   const [isHydrated, setIsHydrated] = useState(false)
 
   // 防重复 PUT: 上次同步值与本次相同则跳过
   const lastSyncedRef = useRef<boolean | null>(null)
 
-  // 启动时读 localStorage (同步, 立即生效)
+  // v0.76.0 累计待办 #2: localStorage 已在 useState 同步读, useEffect 只标记 hydrated
   useEffect(() => {
-    try {
-      const v = localStorage.getItem(STORAGE_KEY)
-      if (v === "1" || v === "0") {
-        const localMasked = v === "1"
-        setMaskedState(localMasked)
-        lastSyncedRef.current = localMasked
-      }
-    } catch { /* SSR / 隐私模式 fallback to default */ }
     setIsHydrated(true)
   }, [])
 
