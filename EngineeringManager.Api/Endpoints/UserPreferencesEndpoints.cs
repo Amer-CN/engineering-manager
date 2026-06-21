@@ -52,7 +52,7 @@ public static class UserPreferencesEndpoints
                 body = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(
                     bodyText, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             }
-            catch (Exception ex) { return Common.Fail("参数解析失败: " + ex.Message); }
+            catch (Exception ex) { return Common.Fail("参数解析失败: " + Common.Sanitize(ex.Message)); }
             if (body == null || body.Count == 0) return Common.Fail("为空请求体");
 
             // 逐条 UPSERT
@@ -104,7 +104,7 @@ public static class UserPreferencesEndpoints
                 dto = System.Text.Json.JsonSerializer.Deserialize<PrefValueDto>(bodyText,
                     new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new PrefValueDto();
             }
-            catch (Exception ex) { return Common.Fail("参数解析失败: " + ex.Message); }
+            catch (Exception ex) { return Common.Fail("参数解析失败: " + Common.Sanitize(ex.Message)); }
 
             db.Execute(@"
                 INSERT INTO user_preferences (user_id, key, value, updated_at)
