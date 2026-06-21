@@ -37,7 +37,7 @@ export function MemberForm({
   const [workerFormData, setWorkerFormData] = useState<WorkerFormData>(defaultWorkerFormData)
   const [submitting, setSubmitting] = useState(false)
   const showToast = useToastStore(state => state.showToast)
-  const { confirm, ConfirmDialog } = useConfirm()
+  const { confirm: _confirm, ConfirmDialog } = useConfirm()
 
   const [ocrResult, setOcrResult] = useState<any>(null)
   const { loading: ocrLoading, ocrMode, processIdCardFile: hookProcessIdCardFile } = useIdCardOCR({
@@ -180,3 +180,4 @@ export function MemberForm({
 }
 
 export default MemberForm
+
