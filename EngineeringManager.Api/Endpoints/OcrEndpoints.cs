@@ -410,7 +410,7 @@ public static class OcrEndpoints
                 string secretKey = (string)dto.secretKey;
 
                 if (string.IsNullOrWhiteSpace(companyName))
-                    return Results.Ok(new { success = false, error = "请输入企业名称" });
+                    return Common.Fail("请输入企业名称", 400);
 
                 var httpClient = httpClientFactory.CreateClient();
                 httpClient.Timeout = TimeSpan.FromSeconds(10);
@@ -434,7 +434,7 @@ public static class OcrEndpoints
             }
             catch (Exception ex)
             {
-                return Results.Ok(new { success = false, error = $"企业查询失败: {ex.Message}" });
+                return CatchOcrError("ocr-company-query", ex);
             }
         });
 

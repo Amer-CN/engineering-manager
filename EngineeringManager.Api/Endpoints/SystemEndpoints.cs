@@ -57,7 +57,7 @@ public static class SystemEndpoints
             {
                 int total = 0, encrypted = 0;
                 try { total = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM {t}"); }
-                catch (Exception ex) { errors.Add($"{t}.count: {ex.Message}"); }
+                catch (Exception ex) { errors.Add($"{t}.count: {Common.Sanitize(ex.Message)}"); }
 
                 // 4 张表的 _enc 主列各不相同, 按表分别查
                 string encCol = t switch
@@ -69,7 +69,7 @@ public static class SystemEndpoints
                     _ => "phone_enc"
                 };
                 try { encrypted = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM {t} WHERE {encCol} IS NOT NULL"); }
-                catch (Exception ex) { errors.Add($"{t}.{encCol}: {ex.Message}"); }
+                catch (Exception ex) { errors.Add($"{t}.{encCol}: {Common.Sanitize(ex.Message)}"); }
 
                 var pending = Math.Max(0, total - encrypted);
                 var percent = total == 0 ? 100.0 : Math.Round((double)encrypted / total * 100, 1);
@@ -125,7 +125,7 @@ public static class SystemEndpoints
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"[Audit] INSERT error: {ex.Message}");
-                return Common.Fail($"审计日志写入失败: {ex.Message}");
+                return Common.Fail($"审计日志写入失败: {Common.Sanitize(ex.Message)}");
             }
         });
 
@@ -336,7 +336,7 @@ public static class SystemEndpoints
             }
             catch (Exception ex)
             {
-                return Common.Fail($"设置路径失败: {ex.Message}");
+                return Common.Fail($"设置路径失败: {Common.Sanitize(ex.Message)}");
             }
         });
 
@@ -443,7 +443,7 @@ public static class SystemEndpoints
                     dbSize = (long?)null,
                     summary = (object?)null,
                     readMode = "json-only",
-                    error = ex.Message
+                    error = Common.Sanitize(ex.Message)
                 });
             }
         });
@@ -606,7 +606,7 @@ public static class SystemEndpoints
                 }
                 return Common.Ok(new { success = true, migratedTables = migratedTables.Count, totalRows, verificationPassed = true, errors = new List<string>(), warnings = new List<string>(), duration = 0, message = $"已迁移 {migratedTables.Count} 张表，{totalRows} 行数据" });
             }
-            catch (Exception ex) { return Common.Ok(new { success = false, migratedTables = 0, totalRows = 0, verificationPassed = false, errors = new List<string> { ex.Message }, warnings = new List<string>(), duration = 0 }); }
+            catch (Exception ex) { return Common.Ok(new { success = false, migratedTables = 0, totalRows = 0, verificationPassed = false, errors = new List<string> { Common.Sanitize(ex.Message) }, warnings = new List<string>(), duration = 0 }); }
         });
 
         app.MapPut("/api/sqlite/read-mode", (HttpContext ctx, System.Text.Json.JsonElement body) =>

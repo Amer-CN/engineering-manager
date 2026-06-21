@@ -207,11 +207,11 @@ public static class AuthEndpoints
                             await db.ExecuteAsync(updateSql, p);
                             done++;
                         }
-                        catch (Exception ex) { errors.Add($"{table} id={r.id}: {ex.Message}"); }
+                        catch (Exception ex) { errors.Add($"{table} id={r.id}: {Common.Sanitize(ex.Message)}"); }
                     }
                     return done;
                 }
-                catch (Exception ex) { errors.Add($"{table} query: {ex.Message}"); return 0; }
+                catch (Exception ex) { errors.Add($"{table} query: {Common.Sanitize(ex.Message)}"); return 0; }
             }
 
             total += await BackfillTable("members",
@@ -300,7 +300,7 @@ public static class AuthEndpoints
                 var bodyText = await reader.ReadToEndAsync();
                 dto = System.Text.Json.JsonSerializer.Deserialize<ProjectAuthDto>(bodyText, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new ProjectAuthDto();
             }
-            catch (Exception ex) { return Common.Fail($"参数解析失败: {ex.Message}"); }
+            catch (Exception ex) { return Common.Fail($"参数解析失败: {Common.Sanitize(ex.Message)}"); }
             if (dto.ProjectId <= 0 || string.IsNullOrEmpty(dto.UserId)) return Common.Fail("projectId 与 userId 必填");
 
             // 幂等插入
@@ -342,7 +342,7 @@ public static class AuthEndpoints
                 var bodyText = await reader.ReadToEndAsync();
                 dto = System.Text.Json.JsonSerializer.Deserialize<UnmaskPiiDto>(bodyText, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new UnmaskPiiDto();
             }
-            catch (Exception ex) { return Common.Fail($"参数解析失败: {ex.Message}"); }
+            catch (Exception ex) { return Common.Fail($"参数解析失败: {Common.Sanitize(ex.Message)}"); }
             if (dto.Id <= 0 || string.IsNullOrEmpty(dto.Resource)) return Common.Fail("resource 与 id 必填");
 
             // resource 转换为 SQL 列名 (PiiProtector Decrypt 调用)
@@ -381,7 +381,7 @@ public static class AuthEndpoints
             }
             catch (Exception ex)
             {
-                return Common.Fail($"Decrypt 失败: {ex.Message}");
+                return Common.Fail($"Decrypt 失败: {Common.Sanitize(ex.Message)}");
             }
         });
     }
