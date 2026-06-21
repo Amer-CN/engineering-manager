@@ -115,3 +115,5 @@ px tsc 直接调用). 我仅审 git diff + 跑 tsc 验证 |
 - ❌ 失败: 1/33 (Task #2 batch git rm, v0.78.0 前)
 - 平均耗时: ~155s
 - **mimo 适合 (n=33): 单文件 React patch (含新建子文件) — 100% 一次过 (排除 #2)**
+
+| 28 | 2026-06-21 | React 单文件移动 (新建子文件) | ~200s | ✅ | 0 | v0.85.0 task-05: SettingsChangelog.tsx 35→39 行 (含 settings/ 子目录), 3 处 import 路径更新. mimo copy-paste 旧 relative import 路径后自动加 ../ 深度 (1 次 self-fix). 我仅审 git diff + 跑 5 项红绿灯验证 |
