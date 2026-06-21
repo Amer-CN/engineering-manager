@@ -94,6 +94,79 @@
 
 ---
 
+
+## v0.77.2 (2026-06-21) — fix: P1-3 ex.Message 泄露修复 (18 处) + enterprise query 假成功 (2 处)
+
+> **核心修复**: v0.77.1 OCR 假成功后, P1-3 ex.Message 泄露残留还在 4 文件 18 处. 同时 enterprise query (OcrEndpoints L413/L437) 还有 2 处假成功.
+> **SemVer**: patch bump (0.77.1 → 0.77.2).
+
+### 改动 (1 fix + 1 test)
+
+- **`fix(P1-3 ex.Message 泄露)`**: 4 文件 18 处用 `Common.Sanitize(ex.Message)` 替换直接 `ex.Message`
+  - `AuthEndpoints.cs` (5 处): 3 Common.Fail + 2 errors.Add (backfill-pii admin tool)
+  - `UserPreferencesEndpoints.cs` (2 处): 2 Common.Fail
+  - `SystemEndpoints.cs` (11 处): 3 Common.Fail + 1 `error=ex.Message` (db-status admin) + 7 errors.Add (PII stats + migration)
+  - **`OcrEndpoints.cs` L437 catch** → `CatchOcrError("ocr-company-query", ex)` (真 500 + 脱敏)
+- **`fix(OcrEndpoints enterprise query)`**:
+  - **L413** validation: `Results.Ok(new {success=false, ...})` → `Common.Fail("请输入企业名称", 400)` (真 400)
+  - **L437** catch: `Results.Ok(new {success=false, error=$"...{ex.Message}"})` → `CatchOcrError` (真 500 + 脱敏)
+
+### P1-3 修复模式
+
+**修复前**:
+```csharp
+catch (Exception ex) {
+    return Common.Fail($"参数解析失败: {ex.Message}");  // 直接泄露内部堆栈/路径
+}
+```
+
+**修复后**:
+```csharp
+catch (Exception ex) {
+    return Common.Fail($"参数解析失败: {Common.Sanitize(ex.Message)}");  // 脱敏: 移除路径, 截断 200 字符
+}
+```
+
+`Common.Sanitize()` (v0.76.0 P1-3 引入) 移除 Windows 绝对路径, 截断到 200 字符, 防泄露内部实现细节.
+
+### 测试 (PiiLeakTests.cs 9 个新 tests)
+
+- `EndpointFile_AllRawExMessageAreInServerSideLogs[3 files]` (Theory × 3 = 3): 验证 response body 不再 raw `{ex.Message}`, 只允许 server-side `Console.Error.WriteLine` 用 raw
+- `EndpointFile_HasCommonSanitizeAroundExMessage[3 files]` (Theory × 3 = 3): 验证每个文件至少 1 处 `Common.Sanitize(ex.Message)`
+- `OcrEndpoints_CompanyQuery_ValidationReturns400` (Fact): L413 真 400
+- `OcrEndpoints_CompanyQuery_CatchReturns500` (Fact): L437 真 500
+- `OcrEndpoints_File_NoLongerContainsEnterpriseQueryFakeSuccess` (Fact): 老假成功模式不存在
+
+### 测试结果
+
+- 后端 build: 0 错误
+- 后端 tests: **117/117 通过** (108 旧 + 9 PiiLeakTests)
+- 前端 check: BUILD PASSED (66 历史软警告)
+- tsc: 0 errors
+- vite build: 14.77s
+
+### P1 闭环进度
+
+| P1 项 | 状态 |
+|---|---|
+| P1-1 静默吞错 (8 OCR 假成功) | ✅ v0.77.1 |
+| P1-1 静默吞错 (2 enterprise query 假成功) | ✅ v0.77.2 |
+| P1-3 ex.Message 泄露 (v0.77.1 范围 OCR 8 处) | ✅ v0.77.1 |
+| P1-3 ex.Message 泄露 (其他 18 处) | ✅ v0.77.2 |
+
+**P1 全部闭环** ✅
+
+### v0.78.0 入口
+
+按 cloud-sync-design.md §阶段 2:
+1. CloudSyncHelper 统一入口
+2. JWT refresh token + device 注册 API
+3. sync worker 推/拉
+4. 冲突检测 UI
+5. PII 跨设备兼容
+6. 限流 + 审计 + 监控
+
+---
 ## v0.77.1 (2026-06-21) — fix: OCR 8 处假成功 → 真 500 (P1-1 闭环)
 
 > **核心修复**: 累计待办 #5 OCR 8 处假成功 → P1-1 安全闭环 (v0.76.0 累计待办列表 "下次 sprint 候选" 里记的 OCR 8 处).
