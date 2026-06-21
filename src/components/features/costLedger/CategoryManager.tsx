@@ -5,6 +5,8 @@ import { useToastStore } from '@/store/toastStore'
 import type { CostLedgerCategory, CostLedgerMatchRule } from '@/types'
 import { getLevel1GroupsMerged, HIERARCHY_GROUP_NAMES } from './config'
 import { getAPI } from '@/services/api-adapter'
+import { LearningRulesView } from './LearningRulesView'
+import { CategoryManagerGroupList } from './CategoryManagerGroupList'
 
 interface CategoryManagerProps {
   categories: CostLedgerCategory[]
@@ -12,11 +14,11 @@ interface CategoryManagerProps {
   onRefresh: () => void
 }
 
-type EditState =
+export type EditState =
   | { type: 'l1'; group: string; name: string; color: string }
   | { type: 'l2'; id: number; name: string; color: string }
   | null
-type AddState =
+export type AddState =
   | { type: 'l1'; label: string; color: string; groupName: string; groupColor: string }
   | { type: 'l2'; group: string; label: string; color: string }
   | null
@@ -147,40 +149,6 @@ export function CategoryManager({ categories, onClose, onRefresh }: CategoryMana
     else showToast(res?.error || '恢复失败', 'error')
   }
 
-  const isCustomGroup = (group: { name: string; codes: string[] }) =>
-    group.codes.every(code => { const cat = filtered.find(c => c.code === code); return cat && !cat.isBuiltin })
-
-  const isHierarchyGroup = (name: string) => hierarchyNames.includes(name)
-
-  // ── Render level2 row ──
-  const renderL2Row = (cat: CostLedgerCategory) => {
-    const isEditingL2 = edit?.type === 'l2' && edit.id === cat.id
-    return (
-      <div key={cat.id} className="flex items-center gap-2 pl-5 pr-3 py-1.5 border-b border-slate-50 last:border-0">
-        <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: cat.color }} />
-        {isEditingL2 ? (
-          <>
-            <input value={edit.name} onChange={e => setEdit(prev => prev && prev.type === 'l2' ? { ...prev, name: e.target.value } : prev)}
-              className="flex-1 rounded border border-slate-200 px-2 py-0.5 text-xs" autoFocus />
-            <input type="color" value={edit.color} onChange={e => setEdit({ ...edit, color: e.target.value })}
-              className="h-5 w-6 rounded border border-slate-200 p-0 cursor-pointer" />
-            <button onClick={saveEditL2} className="text-xs text-blue-600 hover:text-blue-800">保存</button>
-            <button onClick={clearEdit} className="text-xs text-slate-400 hover:text-slate-600">取消</button>
-          </>
-        ) : (
-          <>
-            <span className="flex-1 text-sm text-slate-700">{cat.label}</span>
-            {cat.isBuiltin && <span className="rounded bg-slate-100 px-1.5 py-0.5 text-caption text-slate-400">内置</span>}
-            <button onClick={() => startEditL2(cat)} className="text-caption text-slate-400 hover:text-blue-600">编辑</button>
-            {!cat.isBuiltin && (
-              <button onClick={() => handleDeleteL2(cat)} className="text-caption text-slate-400 hover:text-red-500">删除</button>
-            )}
-          </>
-        )}
-      </div>
-    )
-  }
-
   return (
     <Modal isOpen onClose={onClose} title="管理分类" size="lg"
       footer={
@@ -214,111 +182,17 @@ export function CategoryManager({ categories, onClose, onRefresh }: CategoryMana
         {error && <p className="rounded bg-red-50 px-3 py-1.5 text-xs text-red-600">{error}</p>}
 
         {!viewRules && mergedGroups.length > 0 && (
-          <div className="space-y-2">
-            {mergedGroups.map(group => {
-              const groupCats = filtered.filter(c => group.codes.includes(c.code))
-              if (groupCats.length === 0 && !isHierarchyGroup(group.name)) return null
-              const custom = isCustomGroup(group)
-              const isEditingL1 = edit?.type === 'l1' && edit.group === group.name
-
-              return (
-                <div key={group.name} className="rounded-lg border border-slate-200 overflow-hidden">
-                  {/* Level 1 header */}
-                  {isEditingL1 ? (
-                    <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border-b border-slate-200">
-                      <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: edit.color }} />
-                      <input value={edit.name} onChange={e => setEdit(prev => prev && prev.type === 'l1' ? { ...prev, name: e.target.value } : prev)}
-                        className="flex-1 rounded border border-slate-300 px-2 py-0.5 text-sm font-medium" autoFocus />
-                      <input type="color" value={edit.color} onChange={e => setEdit({ ...edit, color: e.target.value })}
-                        className="h-5 w-6 rounded border border-slate-200 p-0 cursor-pointer" />
-                      <button onClick={saveEditL1} className="text-xs text-blue-600 hover:text-blue-800">保存</button>
-                      <button onClick={clearEdit} className="text-xs text-slate-400 hover:text-slate-600">取消</button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 px-3 py-2 bg-slate-50">
-                      <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: group.color }} />
-                      <span className="flex-1 text-sm font-semibold text-slate-800">{group.name}</span>
-                      {isHierarchyGroup(group.name) && <span className="rounded bg-slate-200 px-1.5 py-0.5 text-caption text-slate-500">内置</span>}
-                      <button onClick={() => startEditL1(group)}
-                        className="text-caption text-slate-400 hover:text-blue-600">编辑</button>
-                      {custom && (
-                        <button onClick={() => handleDeleteL1(group)}
-                          className="text-caption text-slate-400 hover:text-red-500">删除</button>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Level 2 items */}
-                  {groupCats.length > 0 ? (
-                    <div>{groupCats.map(cat => renderL2Row(cat))}</div>
-                  ) : (
-                    <div className="px-3 py-3 text-center text-xs text-slate-400">暂无二级分类</div>
-                  )}
-
-                  {/* Add level2 */}
-                  {add?.type === 'l2' && add.group === group.name ? (
-                    <div className="flex items-center gap-2 px-3 py-2 border-t border-slate-100 bg-blue-50/30">
-                      <input value={add.label} onChange={e => setAdd(prev => prev && prev.type === 'l2' ? { ...prev, label: e.target.value } : prev)}
-                        placeholder="二级分类名" className="flex-1 rounded border border-slate-200 px-2 py-1 text-xs" autoFocus />
-                      <input type="color" value={add.color} onChange={e => setAdd({ ...add, color: e.target.value })}
-                        className="h-5 w-6 rounded border border-slate-200 p-0 cursor-pointer" />
-                      <button onClick={handleCreateL2} className="text-xs font-medium text-blue-600 hover:text-blue-800">添加</button>
-                      <button onClick={clearAdd} className="text-xs text-slate-400 hover:text-slate-600">取消</button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => { setAdd({ type: 'l2', group: group.name, label: '', color: '#6b7280' }); setEdit(null); setError('') }}
-                      className="w-full px-3 py-1.5 text-xs text-slate-400 hover:text-blue-600 hover:bg-blue-50/30 transition-colors"
-                    >
-                      + 添加二级
-                    </button>
-                  )}
-                </div>
-              )
-            })}
-          </div>
+          <CategoryManagerGroupList mergedGroups={mergedGroups} filtered={filtered} customs={customs}
+            hierarchyNames={hierarchyNames} edit={edit} add={add} setEdit={setEdit} setAdd={setAdd}
+            setError={setError} saveEditL1={saveEditL1} clearEdit={clearEdit} clearAdd={clearAdd}
+            startEditL1={startEditL1} handleDeleteL1={handleDeleteL1} handleCreateL2={handleCreateL2}
+            handleCreateL1={handleCreateL1} saveEditL2={saveEditL2} startEditL2={startEditL2}
+            handleDeleteL2={handleDeleteL2} />
         )}
 
         {/* ── 学习规则视图 ── */}
         {viewRules && (
-          <div className="space-y-1">
-            {rules.length === 0 ? (
-              <p className="py-8 text-center text-sm text-slate-400">暂无学习规则</p>
-            ) : (
-              <div className="space-y-0.5">
-                {rules.map((rule, i) => {
-                  const cat = categories.find(c => c.code === rule.category && c.direction === rule.direction)
-                  return (
-                    <div key={i} className="flex items-center gap-2 rounded-lg border border-slate-100 px-3 py-2 text-xs hover:bg-slate-50">
-                      <span className="font-mono text-slate-800 min-w-[80px]">{rule.keyword}</span>
-                      <span className="text-slate-300">→</span>
-                      <span className={`rounded px-1.5 py-0.5 font-medium ${rule.direction === 'expense' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                        {cat?.label || rule.category}
-                      </span>
-                      <span className="text-slate-300 ml-auto">命中 {rule.hitCount} 次</span>
-                      <button onClick={async () => {
-                        const api = await getAPI()
-                        const remaining = rules.filter((_, j) => j !== i)
-                        const res = await api.saveCostLedgerMatchRules(remaining)
-                        if (res?.success) setRules(remaining)
-                      }} className="btn btn-danger btn-sm">✕</button>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-            {rules.length > 0 && (
-              <button onClick={async () => {
-                const ok = await confirm({ title: '确认清空', content: '确定清空所有学习规则？', confirmVariant: 'danger' })
-                if (!ok) return
-                const api = await getAPI()
-                const res = await api.saveCostLedgerMatchRules([])
-                if (res?.success) setRules([])
-              }}
-                className="mt-3 w-full rounded-lg border border-dashed border-red-200 px-3 py-2 text-xs text-red-400 hover:border-red-400 hover:text-red-600 transition-colors"
-              >清空所有学习规则</button>
-            )}
-          </div>
+          <LearningRulesView rules={rules} categories={categories} confirm={confirm} setRules={setRules} />
         )}
 
         {/* Create level1 group */}
