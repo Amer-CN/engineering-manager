@@ -11,18 +11,18 @@ import {
   type StaffFormData, type WorkerFormData, type MemberFormProps,
   defaultStaffFormData, defaultWorkerFormData,
   memberToStaffForm, memberToWorkerForm,
-  validateImageFile, validateFile, readFileAsBase64,
 } from './memberFormTypes'
 import { MemberFormLayout } from './MemberFormLayout'
 import { useMemberPasteHandler } from './useMemberPasteHandler'
+import { useMemberFormFileHandlers } from './useMemberFormFileHandlers'
 
 // MemberForm — 表单容器（逻辑层）
 // 类型/常量/Helper → memberFormTypes.ts
 // 管理人员表单 UI → StaffForm.tsx
 // 农民工表单 UI → WorkerForm.tsx
 // 上传控件 → FormUploadWidgets.tsx
+// 文件处理逻辑 → useMemberFormFileHandlers.ts
 
-// MemberForm 组件
 export function MemberForm({
   type,
   editingMember,
@@ -33,23 +33,25 @@ export function MemberForm({
   onSubmit,
   onFileModified
 }: MemberFormProps) {
-  // ============ 状态定义 ============
   const [staffFormData, setStaffFormData] = useState<StaffFormData>(defaultStaffFormData)
   const [workerFormData, setWorkerFormData] = useState<WorkerFormData>(defaultWorkerFormData)
-  const [dragOverField, setDragOverField] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const showToast = useToastStore(state => state.showToast)
   const { confirm, ConfirmDialog } = useConfirm()
 
-  // 使用 useIdCardOCR Hook
   const [ocrResult, setOcrResult] = useState<any>(null)
   const { loading: ocrLoading, ocrMode, processIdCardFile: hookProcessIdCardFile } = useIdCardOCR({
-    onOCRResult: (result) => {
-      setOcrResult(result)
-    }
+    onOCRResult: (result) => { setOcrResult(result) }
   })
 
-  // 文件上传 Refs
+  const {
+    dragOverField, processIdCardFile, processUploadFile,
+    handleDeleteFile, handleDragOver, handleDragLeave, handleDrop, handleFileChange,
+  } = useMemberFormFileHandlers({
+    type, onFileModified, hookProcessIdCardFile, ocrResult, setOcrResult,
+    setStaffFormData, setWorkerFormData,
+  })
+
   const staffFrontInputRef = useRef<HTMLInputElement>(null)
   const staffBackInputRef = useRef<HTMLInputElement>(null)
   const staffContractInputRef = useRef<HTMLInputElement>(null)
@@ -60,11 +62,9 @@ export function MemberForm({
   const healthInputRef = useRef<HTMLInputElement>(null)
   const certInputRef = useRef<HTMLInputElement>(null)
 
-  // ============ 初始化 ============
   useEffect(() => {
   }, [])
 
-  // 初始化表单数据
   useEffect(() => {
     const initForm = async () => {
       if (editingMember) {
@@ -124,155 +124,11 @@ export function MemberForm({
     initForm()
   }, [editingMember, type, visible])
 
-
-  // ============ OCR 识别 ============
-  const processIdCardFile = async (
-    file: File,
-    field: 'idCardFront' | 'idCardBack',
-    setter: React.Dispatch<React.SetStateAction<StaffFormData | WorkerFormData>>
-  ) => {
-    // 先更新图片预览
-    const base64 = await readFileAsBase64(file)
-    setter((prev: any) => ({ ...prev, [field]: base64 }))
-    onFileModified?.(field)
-
-    // 人像面触发OCR识别
-    if (field === 'idCardFront') {
-      // 使用 useIdCardOCR Hook 的 processIdCardFile
-      const result = await hookProcessIdCardFile(file)
-      if (result && ocrResult) {
-        // 使用 OCR 结果更新表单
-        setter((prev: any) => ({
-          ...prev,
-          [field]: result,
-          name: ocrResult.name || prev.name,
-          idCard: ocrResult.idCard || prev.idCard,
-          gender: ocrResult.gender || prev.gender,
-          birthDate: ocrResult.birthDate || prev.birthDate,
-          ethnicity: ocrResult.ethnicity || prev.ethnicity,
-          idCardAddress: ocrResult.address || prev.idCardAddress
-        }))
-        setOcrResult(null) // 清除结果
-      }
-    }
-  }
-
-  // ============ 文件上传 ============
-  const processUploadFile = async (
-    file: File,
-    field: string,
-    setter: React.Dispatch<React.SetStateAction<StaffFormData | WorkerFormData>>
-  ) => {
-    const error = validateFile(file)
-    if (error) {
-      showToast(error, 'error')
-      return
-    }
-
-    const base64 = await readFileAsBase64(file)
-    const fileType = file.type === 'application/pdf' ? 'pdf' : 'image'
-    
-    if (field === 'contractFile') {
-      setter((prev: any) => ({ ...prev, contractFile: base64, contractFileType: fileType }))
-    } else {
-      setter((prev: any) => ({ ...prev, [field]: base64 }))
-    }
-  }
-
-  // ============ 文件删除 ============
-  const handleDeleteFile = async (
-    field: string,
-    setter: React.Dispatch<React.SetStateAction<StaffFormData | WorkerFormData>>
-  ) => {
-    const ok = await confirm({ title: '确认删除', content: '确定要删除这个文件吗？', confirmVariant: 'danger' })
-    if (ok) {
-      if (field === 'contractFile') {
-        setter((prev: any) => ({ ...prev, contractFile: '', contractFileType: '' }))
-      } else {
-        setter((prev: any) => ({ ...prev, [field]: '' }))
-      }
-    }
-  }
-
-  // ============ 拖拽处理 ============
-  const handleDragOver = (e: React.DragEvent, field: string) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragOverField(field)
-  }
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragOverField(null)
-  }
-
-  const handleDrop = async (
-    e: React.DragEvent,
-    field: string,
-    setter: React.Dispatch<React.SetStateAction<StaffFormData | WorkerFormData>>,
-    isIdCard: boolean = false
-  ) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragOverField(null)
-
-    const files = e.dataTransfer.files
-    if (files.length === 0) return
-
-    const file = files[0]
-    const safeSetter = typeof setter === 'function' ? setter : (type === 'staff' ? setStaffFormData as any : setWorkerFormData as any)
-
-    if (isIdCard) {
-      const error = validateImageFile(file)
-      if (error) {
-        showToast(error, 'error')
-        return
-      }
-      await processIdCardFile(file, field as 'idCardFront' | 'idCardBack', safeSetter)
-    } else {
-      await processUploadFile(file, field, safeSetter)
-    }
-  }
-
-  // ============ 文件输入变化 ============
-  const handleFileChange = async (
-    e: React.ChangeEvent<HTMLInputElement>,
-    field: string,
-    setter: React.Dispatch<React.SetStateAction<StaffFormData | WorkerFormData>>,
-    isIdCard: boolean = false,
-    inputRef?: React.RefObject<HTMLInputElement>
-  ) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    if (isIdCard) {
-      const error = validateImageFile(file)
-      if (error) {
-        showToast(error, 'error')
-        return
-      }
-      await processIdCardFile(file, field as 'idCardFront' | 'idCardBack', setter)
-    } else {
-      await processUploadFile(file, field, setter)
-    }
-
-    // 清空input，允许重复选择同一文件
-    if (inputRef?.current) {
-      inputRef.current.value = ''
-    } else {
-      e.target.value = ''
-    }
-  }
-
-  // ============ 表单提交 ============
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
-
     try {
       if (type === 'staff') {
-        // 验证必填字段
         if (!staffFormData.name.trim()) {
           showToast('请输入姓名', 'error')
           return
@@ -283,12 +139,10 @@ export function MemberForm({
         }
         await onSubmit(staffFormData)
       } else {
-        // 验证必填字段
         if (!workerFormData.name.trim()) {
           showToast('请输入姓名', 'error')
           return
         }
-        // 项目/班组/日工资不再强制必填（工人库只存基本信息）
         await onSubmit(workerFormData)
       }
     } finally {
