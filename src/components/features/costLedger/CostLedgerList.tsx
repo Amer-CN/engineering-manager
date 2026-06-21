@@ -1,13 +1,9 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { HoverScrollbar } from '@/components/ui/HoverScrollbar'
-import { CostLedgerRow } from '@/components/features/costLedger/CostLedgerRow'
+import { CostLedgerListToolbar } from '@/components/features/costLedger/CostLedgerListToolbar'
+import { CostLedgerTable } from '@/components/features/costLedger/CostLedgerTable'
 import { formatMoney } from '@/utils/format'
-import { DIRECTION_CONFIG, getCategoriesByDirection, getLevel1GroupsMerged, getCategoryColor } from '@/components/features/costLedger/config'
-import { ColumnFilter } from '@/components/features/costLedger/ColumnFilter'
 import { useCostLedgerFilters } from '@/components/features/costLedger/useCostLedgerFilters'
-import { printCostLedgerList, exportCostLedgerList } from '@/components/features/costLedger/printExport'
 import type { CostLedgerEntry, CostLedgerCategory } from '@/types'
-import { TABLE } from '@/constants/table'
 
 interface CostLedgerListProps {
   entries: CostLedgerEntry[]
@@ -15,7 +11,6 @@ interface CostLedgerListProps {
   loading: boolean
   onEdit: (entry: CostLedgerEntry) => void
   onDelete: (id: number) => void
-  /** 动态分类列表（从数据库加载），用于显示标签和筛选下拉。不传则回退到硬编码常量。 */
   categories?: CostLedgerCategory[] | null
 }
 
@@ -79,192 +74,30 @@ export function CostLedgerList({ entries, summary, loading, onEdit, onDelete, ca
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
-      {/* 顶部快捷筛选栏 */}
-      <div className="flex items-center gap-3 border-b border-slate-200 px-6 py-3">
-        <div className="flex gap-1 rounded-lg bg-slate-100 p-0.5">
-          {(['all', 'expense', 'income'] as const).map(f => (
-            <button key={f} onClick={() => setFilter(f)}
-              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
-                filter === f ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              {f === 'all' ? '全部' : DIRECTION_CONFIG[f].label}
-            </button>
-          ))}
-        </div>
-        {/* 分类列显示层级切换：一级 / 二级 — 下拉框联动，切换时重置筛选项 */}
-        <div className="flex gap-0.5 rounded-lg bg-slate-100 p-0.5">
-          {(['level1', 'level2'] as const).map(level => (
-            <button key={level} onClick={() => setCategoryLevelAndReset(level)}
-              className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                categoryLevel === level ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              {level === 'level1' ? '一级' : '二级'}
-            </button>
-          ))}
-        </div>
-        <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}
-          className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 max-w-[160px]">
-          <option value="all">全部分类</option>
-          {/* 方案一：下拉框跟随一级/二级切换联动 */}
-          {categoryLevel === 'level1' ? (
-            // 一级模式：只显示一级分组选项
-            (['expense', 'income'] as const).map(dir => {
-              if ((dir === 'expense' && filter === 'income') || (dir === 'income' && filter === 'expense')) return null
-              const groups = getLevel1GroupsMerged(categories, dir)
-              return groups.map(group => (
-                <option key={`${dir}-${group.name}`} value={`level1:${group.name}`} style={{ color: group.color, fontWeight: 500 }}>
-                  {dir === 'expense' ? '支出' : '收入'} · {group.name}
-                </option>
-              ))
-            })
-          ) : (
-            // 二级模式：只显示二级分类，按一级分组
-            (['expense', 'income'] as const).map(dir => {
-              if ((dir === 'expense' && filter === 'income') || (dir === 'income' && filter === 'expense')) return null
-              const groups = getLevel1GroupsMerged(categories, dir)
-              const dirCatsAll = categories && categories.length > 0
-                ? categories.filter(c => c.direction === dir && c.isEnabled !== false)
-                : getCategoriesByDirection(dir)
-              // 按 code 去重（数据库可能返回重复分类）
-              const dirCats = Array.from(new Map(dirCatsAll.map(c => [c.code, c])).values())
-              return groups.map(group => {
-                const subs = dirCats.filter(c => group.codes.includes(c.code))
-                // 按 code 去重（数据库可能返回重复分类）
-                const uniqueSubs = Array.from(new Map(subs.map(c => [c.code, c])).values())
-                if (uniqueSubs.length === 0) return null
-                return (
-                  <optgroup key={`${dir}-${group.name}`} label={`${dir === 'expense' ? '支出' : '收入'} · ${group.name}`}>
-                    {uniqueSubs.map(c => (
-                      <option key={`${dir}-${c.code}`} value={c.code} style={{ color: c.color || getCategoryColor(c.code, categories) }}>{c.label}</option>
-                    ))}
-                  </optgroup>
-                )
-              })
-            })
-          )}
-        </select>
-        {activeFilters > 0 && (
-          <button onClick={clearAll} className="text-xs text-blue-600 hover:text-blue-800">清除 {activeFilters} 个筛选</button>
-        )}
-        <div className="ml-auto flex items-center gap-2">
-          <button
-            onClick={() => printCostLedgerList(filtered, categories, categoryLevel, { expense: filterSummary.totalExpense, income: filterSummary.totalIncome, count: filterSummary.count })}
-            className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs text-slate-500 hover:border-slate-300 hover:text-slate-700 hover:bg-slate-50 transition-colors"
-          >
-            打印
-          </button>
-          <button
-            onClick={() => exportCostLedgerList(filtered, categories, categoryLevel)}
-            className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs text-slate-500 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-          >
-            导出Excel
-          </button>
-          <div className="flex items-center gap-1 border-l border-slate-200 pl-3">
-            <button onClick={() => {
-              const n = Math.max(0.5, +(zoomRef.current - 0.1).toFixed(1))
-              zoomRef.current = n; localStorage.setItem('costLedgerZoom', String(n)); setZoom(n)
-              if (tableRef.current) tableRef.current.style.zoom = String(n)
-            }} className="btn btn-secondary btn-sm">−</button>
-            <span className="text-xs text-slate-500 w-8 text-center font-mono">{Math.round(zoom * 100)}%</span>
-            <button onClick={() => {
-              const n = Math.min(2, +(zoomRef.current + 0.1).toFixed(1))
-              zoomRef.current = n; localStorage.setItem('costLedgerZoom', String(n)); setZoom(n)
-              if (tableRef.current) tableRef.current.style.zoom = String(n)
-            }} className="btn btn-secondary btn-sm">+</button>
-          </div>
-          <span className="text-xs text-slate-400">
-            {filtered.length === entries.length ? `共 ${entries.length} 条` : `筛选 ${filtered.length} / ${entries.length} 条`}
-          </span>
-        </div>
-      </div>
+      <CostLedgerListToolbar
+        filter={filter} categoryFilter={categoryFilter} categoryLevel={categoryLevel}
+        setFilter={setFilter} setCategoryFilter={setCategoryFilter} setCategoryLevelAndReset={setCategoryLevelAndReset}
+        clearAll={clearAll} activeFilters={activeFilters} categories={categories}
+        filtered={filtered} entries={entries} filterSummary={filterSummary}
+        zoomRef={zoomRef} tableRef={tableRef} zoom={zoom} setZoom={setZoom}
+      />
 
-      {/* 表格 */}
-      <HoverScrollbar className="flex-1 min-h-0">
-      <div ref={tableRef} style={{ zoom }}>
-        <table className="w-full table-fixed">
-          <thead className={`${TABLE.headerRow} ${TABLE.stickyHeader} text-xs`}>
-            <tr>
-              {[
-                ['voucherNo', '凭证号', 'w-[96px] text-center'],
-                ['date', '日期', 'w-[84px]'],
-                ['direction', '方向', 'w-[60px]'],
-                ['category', '分类', 'w-[96px]'],
-                ['counterparty', '往来单位/个人', ''],
-                ['channel', '渠道', 'w-[96px]'],
-                ['amount', '金额', 'w-[136px] text-right'],
-                ['summary', '摘要', ''],
-                ['notes', '备注', ''],
-              ].map(([field, label, width]) => (
-                <th key={field} className={`${TABLE.headerCell} ${width}`}>
-                  <div className="flex items-center">
-                    <span className="cursor-pointer hover:text-slate-700 select-none" onClick={() => toggleSort(field as string)}>
-                      {label}{sortField === field ? (sortAsc ? ' ↑' : ' ↓') : ''}
-                    </span>
-                    {filterCols.includes(field as string) && (
-                      <ColumnFilter
-                        col={field as string}
-                        colValues={colValues}
-                        checkedCounterparties={checkedCounterparties}
-                        checkedChannels={checkedChannels}
-                        checkedVoucherNos={checkedVoucherNos}
-                        checkedSummaries={checkedSummaries}
-                        checkedNotesSet={checkedNotesSet}
-                        checkedDates={checkedDates}
-                        checkedAmounts={checkedAmounts}
-                        onToggleCounterparty={makeToggle(setCheckedCounterparties)}
-                        onToggleChannel={makeToggle(setCheckedChannels)}
-                        onToggleVoucherNo={makeToggle(setCheckedVoucherNos)}
-                        onToggleSummary={makeToggle(setCheckedSummaries)}
-                        onToggleNote={makeToggle(setCheckedNotesSet)}
-                        onToggleDate={makeToggle(setCheckedDates)}
-                        onToggleAmount={makeToggle(setCheckedAmounts)}
-                        onSetAllCounterparties={makeSetAll(setCheckedCounterparties)}
-                        onSetAllChannels={makeSetAll(setCheckedChannels)}
-                        onSetAllVoucherNos={makeSetAll(setCheckedVoucherNos)}
-                        onSetAllSummaries={makeSetAll(setCheckedSummaries)}
-                        onSetAllNotes={makeSetAll(setCheckedNotesSet)}
-                        onSetAllDates={makeSetAll(setCheckedDates)}
-                        onSetAllAmounts={makeSetAll(setCheckedAmounts)}
-                        onClearCounterparties={makeClear(setCheckedCounterparties)}
-                        onClearChannels={makeClear(setCheckedChannels)}
-                        onClearVoucherNos={makeClear(setCheckedVoucherNos)}
-                        onClearSummaries={makeClear(setCheckedSummaries)}
-                        onClearNotes={makeClear(setCheckedNotesSet)}
-                        onClearDates={makeClear(setCheckedDates)}
-                        onClearAmounts={makeClear(setCheckedAmounts)}
-                      />
-                    )}
-                  </div>
-                </th>
-              ))}
-              <th className={`${TABLE.headerCell} text-right w-[64px]`}>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={10} className="px-4 py-12 text-center text-sm text-slate-400">
-                  无匹配结果，请调整筛选条件
-                </td>
-              </tr>
-            ) : filtered.map(entry => (
-              <CostLedgerRow
-                key={entry.id}
-                entry={entry}
-                categoryLevel={categoryLevel}
-                categories={categories}
-                onEdit={onEdit}
-                onDelete={onDelete}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
-      </HoverScrollbar>
+      <CostLedgerTable
+        filtered={filtered} entries={entries} categoryLevel={categoryLevel} categories={categories}
+        onEdit={onEdit} onDelete={onDelete}
+        toggleSort={toggleSort} sortField={sortField} sortAsc={sortAsc}
+        filterCols={filterCols} colValues={colValues}
+        checkedCounterparties={checkedCounterparties} checkedChannels={checkedChannels}
+        checkedVoucherNos={checkedVoucherNos} checkedSummaries={checkedSummaries}
+        checkedNotesSet={checkedNotesSet} checkedDates={checkedDates} checkedAmounts={checkedAmounts}
+        makeToggle={makeToggle} makeSetAll={makeSetAll} makeClear={makeClear}
+        setCheckedCounterparties={setCheckedCounterparties} setCheckedChannels={setCheckedChannels}
+        setCheckedVoucherNos={setCheckedVoucherNos} setCheckedSummaries={setCheckedSummaries}
+        setCheckedNotesSet={setCheckedNotesSet} setCheckedDates={setCheckedDates}
+        setCheckedAmounts={setCheckedAmounts}
+        tableRef={tableRef} zoom={zoom}
+      />
 
-      {/* 汇总行 */}
       <div className="sticky bottom-0 border-t-2 border-slate-300 bg-white">
         <div className="flex items-center justify-between px-6 py-4 text-sm">
           <span className="text-sm text-slate-600">
