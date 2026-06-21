@@ -1,7 +1,7 @@
 import React from 'react'
-import { Icon } from './ui/Icon'
-import { Modal } from './ui/Modal/Modal'
-import { versions } from '../constants/changelog'
+import { Icon } from '../../ui/Icon'
+import { Modal } from '../../ui/Modal/Modal'
+import { versions } from '../../../constants/changelog'
 
 function renderMarkdownInline(text: string): React.ReactNode {
   const parts = text.split(/(\*\*[^*]+\*\*)/g)

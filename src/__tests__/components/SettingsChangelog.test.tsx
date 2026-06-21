@@ -11,7 +11,7 @@ vi.mock('@/components/ui/Icon', () => ({
   Icon: ({ name, size, className }: any) => React.createElement('span', { 'data-icon': name, 'data-size': size, className }, `[icon:${name}]`),
 }))
 
-const SettingsChangelog = (await import('@/components/SettingsChangelog')).default
+const SettingsChangelog = (await import('@/components/features/settings/SettingsChangelog')).default
 
 describe('SettingsChangelog.tsx', () => {
   test('应显示标题更新日志', () => {

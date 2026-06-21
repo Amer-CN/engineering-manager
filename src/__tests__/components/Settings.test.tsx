@@ -63,7 +63,7 @@ vi.mock('@/components/SettingsSqliteSection', () => ({
   SettingsSqliteSection: () => <div data-testid="sqlite-section">SQLite</div>,
 }))
 
-vi.mock('@/components/SettingsChangelog', () => ({
+vi.mock('@/components/features/settings/SettingsChangelog', () => ({
   default: ({ onClose }: any) => (
     <div data-testid="changelog">
       Changelog
