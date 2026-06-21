@@ -6,10 +6,10 @@
  */
 
 import React from 'react'
-import { useMaskedFn } from '@/hooks/useMaskedValue'
-import { Icon } from '../../ui/Icon'
 import type { Member } from '@/types'
-import { calculateAge as calcAge, getWorkerTypeLabel } from '@/utils'
+import { calculateAge as calcAge } from '@/utils'
+import { MemberCardMedia } from './MemberCardMedia'
+import { MemberCardInfo } from './MemberCardInfo'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Types
@@ -57,7 +57,7 @@ export function calculateAge(birthDate: string | undefined): string {
  */
 export function getRoleIcon(role: string, memberType: string): string {
   if (memberType === 'worker') return 'Construction'
-  
+
   const staffRoles: Record<string, string> = {
   '项目经理': 'UserCircle',
   '技术负责人': 'Wrench',
@@ -82,7 +82,7 @@ export function getRoleIcon(role: string, memberType: string): string {
 
 /**
  * MemberCard 组件
- * 
+ *
  * @example
  * ```tsx
  * <MemberCard
@@ -107,11 +107,9 @@ export const MemberCard = React.memo(function MemberCard({
   onLeave,
   onReEntry,
 }: MemberCardProps) {
-  const masked = useMaskedFn()
   const isWorker = type === 'worker' || member.memberType === 'worker'
   const iconName = getRoleIcon(member.role || '', member.memberType)
   const status = member.status ? statusStyles[member.status] : null
-  const age = calcAge(member.birthDate)
   const isLeft = member.status === 'left'
 
   return (
@@ -121,104 +119,8 @@ export const MemberCard = React.memo(function MemberCard({
   }`}
   onClick={() => onClick(member)}
   >
-  {/* 头部 */}
-  <div className="flex items-start gap-4 mb-4">
-  {/* 头像 */}
-  <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl shadow-sm ${
-  isWorker
-  ? 'bg-gradient-to-br from-amber-100 to-amber-200'
-  : 'bg-gradient-to-br from-primary-100 to-primary-200'
-  }`}>
-  <Icon name={iconName} size={24} />
-  </div>
-  
-  {/* 信息 */}
-  <div className="flex-1 min-w-0">
-  <div className="flex items-center gap-2">
-  <h3 className="text-lg font-semibold text-slate-800 truncate">
-  {member.name}
-  </h3>
-  {member.isTeamLeader && (
-  <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">
-  组长
-  </span>
-  )}
-  </div>
-  
-  <p className="text-sm text-slate-500 mt-0.5">
-  {isWorker 
-  ? getWorkerTypeLabel(member.workerType || 'other')
-  : member.role || '未知职位'
-  }
-  </p>
-  </div>
-
-  {/* 状态标签 */}
-  {status && (
-  <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${status.color}`}>
-  {status.label}
-  </span>
-  )}
-  </div>
-
-  {/* 详情 */}
-  <div className="space-y-2 mb-4">
-  {member.phone && (
-  <div className="flex items-center text-sm text-slate-600">
-  <span className="w-12 text-slate-400"><Icon name="Phone" size={16} /></span>
-  <span>{masked('phone', member.phone)}</span>
-  </div>
-  )}
-  
-  {member.idCard && (
-  <div className="flex items-center text-sm text-slate-600">
-  <span className="w-12 text-slate-400"><Icon name="CreditCard" size={16} /></span>
-  <span className="font-mono">{masked('idCard', member.idCard)}</span>
-  {age && <span className="text-slate-400 ml-1">{age}</span>}
-  </div>
-  )}
-
-  {isWorker && (member.gender || member.ethnicity) && (
-  <div className="flex items-center text-sm text-slate-600">
-  <span className="w-12 text-slate-400"><Icon name="UserCircle" size={16} /></span>
-  <span>{member.gender}{member.ethnicity && ` / ${member.ethnicity}`}</span>
-  </div>
-  )}
-  
-  {member.teamName && (
-  <div className="flex items-center text-sm text-slate-600">
-  <span className="w-12 text-slate-400"><Icon name="Users" size={16} /></span>
-  <span className="truncate">{member.projectName} / {member.teamName}</span>
-  </div>
-  )}
-
-  {isWorker && member.dailyWage && (
-  <div className="flex items-center text-sm text-green-600">
-  <span className="w-12 text-slate-400"><Icon name="DollarSign" size={16} /></span>
-  <span>{member.dailyWage} 元/天</span>
-  </div>
-  )}
-
-  {(member.entryDate || isLeft) && (
-  <div className="flex items-center text-sm text-slate-500">
-  <span className="w-12 text-slate-400"><Icon name="Calendar" size={16} /></span>
-  <span>{isLeft ? `离职: ${member.actualLeaveDate || '-'}` : `入职: ${member.entryDate}`}</span>
-  </div>
-  )}
-  </div>
-
-  {/* 标签 */}
-  <div className="flex flex-wrap gap-1 mb-4">
-  {member.idCardFront && (
-  <span className="px-2 py-0.5 bg-green-50 text-green-600 text-xs rounded"><Icon name="CreditCard" size={12} className="inline-block" /> 身份证</span>
-  )}
-  {member.contractFile && (
-  <span className="px-2 py-0.5 bg-green-50 text-green-600 text-xs rounded"><Icon name="FileText" size={12} className="inline-block" /> 合同</span>
-  )}
-  {isWorker && member.threeLevelEducation && (
-  <span className="px-2 py-0.5 bg-green-50 text-green-600 text-xs rounded"><Icon name="Check" size={12} className="inline-block" /> 三级教育</span>
-  )}
-  </div>
+  <MemberCardMedia member={member} isWorker={isWorker} iconName={iconName} status={status} />
+  <MemberCardInfo member={member} isWorker={isWorker} isLeft={isLeft} />
 
   {/* 操作 */}
   <div
