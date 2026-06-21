@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import React, { useReducer, useCallback, useEffect, useRef, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
@@ -41,19 +41,66 @@ function loadSaved() {
 function saveCred(u: string, p: string) { localStorage.setItem(CRED_KEY, btoa(JSON.stringify({ u, p }))) }
 function clearCred() { localStorage.removeItem(CRED_KEY) }
 
+interface LoginState {
+  username: string
+  password: string
+  remember: boolean
+  autoLogin: boolean
+  showPw: boolean
+  showSettings: boolean
+  loading: boolean
+  error: string
+}
+
+type LoginAction =
+  | { type: 'SET_CREDENTIALS'; field: 'username' | 'password'; value: string }
+  | { type: 'TOGGLE_REMEMBER'; value: boolean }
+  | { type: 'TOGGLE_AUTO_LOGIN'; value: boolean }
+  | { type: 'TOGGLE_SHOW_PW' }
+  | { type: 'TOGGLE_SETTINGS' }
+  | { type: 'LOGIN_START' }
+  | { type: 'LOGIN_SUCCESS' }
+  | { type: 'LOGIN_ERROR'; error: string }
+  | { type: 'LOGIN_RESET' }
+
+function loginReducer(state: LoginState, action: LoginAction): LoginState {
+  switch (action.type) {
+    case 'SET_CREDENTIALS':
+      return { ...state, [action.field]: action.value }
+    case 'TOGGLE_REMEMBER':
+      return { ...state, remember: action.value }
+    case 'TOGGLE_AUTO_LOGIN':
+      return { ...state, autoLogin: action.value }
+    case 'TOGGLE_SHOW_PW':
+      return { ...state, showPw: !state.showPw }
+    case 'TOGGLE_SETTINGS':
+      return { ...state, showSettings: !state.showSettings }
+    case 'LOGIN_START':
+      return { ...state, loading: true, error: '' }
+    case 'LOGIN_SUCCESS':
+      return { ...state, loading: false }
+    case 'LOGIN_ERROR':
+      return { ...state, loading: false, error: action.error }
+    case 'LOGIN_RESET':
+      return { ...state, error: '' }
+  }
+}
+
 const Login: React.FC<LoginProps> = () => {
   const { login } = useAuth()
   const { scheme } = useTheme()
   const interaction = useMemo(() => THEME_INTERACTION[scheme], [scheme])
   const saved = useRef(loadSaved())
-  const [username, setUsername] = useState(saved.current.username)
-  const [password, setPassword] = useState(saved.current.password)
-  const [showPw, setShowPw] = useState(false)
-  const [remember, setRemember] = useState(!!saved.current.username)
-  const [autoLogin, setAutoLogin] = useState(() => localStorage.getItem(AUTO_KEY) === 'true')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [showSettings, setShowSettings] = useState(false)
+  const [state, dispatch] = useReducer(loginReducer, {
+    username: saved.current.username,
+    password: saved.current.password,
+    showPw: false,
+    remember: !!saved.current.username,
+    autoLogin: localStorage.getItem(AUTO_KEY) === 'true',
+    error: '',
+    loading: false,
+    showSettings: false,
+  })
 
   const minimize = useCallback(async () => { (await getAPI()).minimizeWindow?.() }, [])
   const close = useCallback(async () => { (await getAPI()).closeWindow?.() }, [])
@@ -72,24 +119,24 @@ const Login: React.FC<LoginProps> = () => {
 
   useEffect(() => { (async () => { (await getAPI()).resizeForLogin?.() })() }, [])
 
-  useEffect(() => { localStorage.setItem(AUTO_KEY, String(autoLogin)) }, [autoLogin])
-  useEffect(() => { if (autoLogin && saved.current.username && saved.current.password) doLogin(saved.current.username, saved.current.password) }, [])
+  useEffect(() => { localStorage.setItem(AUTO_KEY, String(state.autoLogin)) }, [state.autoLogin])
+  useEffect(() => { if (state.autoLogin && saved.current.username && saved.current.password) doLogin(saved.current.username, saved.current.password) }, [])
 
   const doLogin = async (u: string, p: string) => {
-    setError(''); setLoading(true)
+    dispatch({ type: 'LOGIN_START' })
     try {
       const api = await getAPI()
-      if (!api?.login) { setError('系统错误'); setLoading(false); return }
+      if (!api?.login) { dispatch({ type: 'LOGIN_ERROR', error: '系统错误' }); return }
       const result = await api.login(u, p)
       if (result.success && result.data) {
-        if (remember) saveCred(u, p); else clearCred()
+        if (state.remember) saveCred(u, p); else clearCred()
         login(result.data)
-      } else { setError(result.error || '用户名或密码错误') }
-    } catch (err: any) { setError(err.message || '登录失败') }
-    finally { setLoading(false) }
+      } else { dispatch({ type: 'LOGIN_ERROR', error: result.error || '用户名或密码错误' }) }
+    } catch (err: any) { dispatch({ type: 'LOGIN_ERROR', error: err.message || '登录失败' }) }
+    finally { dispatch({ type: 'LOGIN_SUCCESS' }) }
   }
 
-  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); doLogin(username, password) }
+  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); doLogin(state.username, state.password) }
 
   return (
     <div style={{
@@ -101,7 +148,7 @@ const Login: React.FC<LoginProps> = () => {
       {/* ── 标题栏 ── */}
       <div style={{ height: 28, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '0 4px', flexShrink: 0 } as React.CSSProperties} onMouseDown={handleTitleBarMouseDown}>
         <div style={{ display: 'flex' } as React.CSSProperties}>
-          {[{ icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.48a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>, action: () => setShowSettings(true) },
+          {[{ icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.48a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>, action: () => dispatch({ type: 'TOGGLE_SETTINGS' }) },
             { icon: <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor" /></svg>, action: minimize },
             { icon: <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"><line x1="2" y1="2" x2="8" y2="8" /><line x1="8" y1="2" x2="2" y2="8" /></svg>, action: close, hoverBg: 'var(--danger)', hoverColor: '#fff' }
           ].map((btn, i) => (
@@ -119,8 +166,8 @@ const Login: React.FC<LoginProps> = () => {
       </div>
 
       {/* ── 内容 ── */}
-      {showSettings ? (
-        <LoginSettingsPage onBack={() => setShowSettings(false)} />
+      {state.showSettings ? (
+        <LoginSettingsPage onBack={() => dispatch({ type: 'TOGGLE_SETTINGS' })} />
       ) : (
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 24px 20px' }}>
         {/* Logo */}
@@ -131,43 +178,43 @@ const Login: React.FC<LoginProps> = () => {
 
         {/* 表单 */}
         <form onSubmit={handleSubmit} style={{ width: '100%', flex: 1, display: 'flex', flexDirection: 'column' }}>
-          <input type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="用户名" required autoFocus
+          <input type="text" value={state.username} onChange={e => dispatch({ type: 'SET_CREDENTIALS', field: 'username', value: e.target.value })} placeholder="用户名" required autoFocus
             style={{ width: '100%', padding: '7px 10px', fontSize: 13, borderRadius: 8, outline: 'none', marginBottom: 6, boxSizing: 'border-box', background: 'var(--panel)', border: '1px solid var(--border)', color: 'var(--fg)' }}
             onFocus={e => { e.currentTarget.style.borderColor = 'var(--accent)' }}
             onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)' }} />
 
           <div style={{ position: 'relative', width: '100%', marginBottom: 10 }}>
-            <input type={showPw ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="密码" required
+            <input type={state.showPw ? 'text' : 'password'} value={state.password} onChange={e => dispatch({ type: 'SET_CREDENTIALS', field: 'password', value: e.target.value })} placeholder="密码" required
               style={{ width: '100%', padding: '7px 30px 7px 10px', fontSize: 13, borderRadius: 8, outline: 'none', boxSizing: 'border-box', background: 'var(--panel)', border: '1px solid var(--border)', color: 'var(--fg)' }}
               onFocus={e => { e.currentTarget.style.borderColor = 'var(--accent)' }}
               onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)' }} />
-            <button type="button" onClick={() => setShowPw(!showPw)}
+            <button type="button" onClick={() => dispatch({ type: 'TOGGLE_SHOW_PW' })}
               style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--muted)', display: 'flex' }}>
-              <Icon name={showPw ? 'EyeOff' : 'Eye'} size={14} />
+              <Icon name={state.showPw ? 'EyeOff' : 'Eye'} size={14} />
             </button>
           </div>
 
           <div style={{ display: 'flex', gap: 12, marginBottom: 10 }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 11, color: 'var(--fg-2)' }}>
-              <input type="checkbox" checked={remember} onChange={e => { setRemember(e.target.checked); if (!e.target.checked) { setAutoLogin(false); clearCred() } }}
+              <input type="checkbox" checked={state.remember} onChange={e => { dispatch({ type: 'TOGGLE_REMEMBER', value: e.target.checked }); if (!e.target.checked) { dispatch({ type: 'TOGGLE_AUTO_LOGIN', value: false }); clearCred() } }}
                 style={{ width: 12, height: 12, accentColor: 'var(--accent)', margin: 0 }} />记住密码
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 11, color: 'var(--fg-2)' }}>
-              <input type="checkbox" checked={autoLogin} onChange={e => { setAutoLogin(e.target.checked); if (e.target.checked) setRemember(true) }}
+              <input type="checkbox" checked={state.autoLogin} onChange={e => { dispatch({ type: 'TOGGLE_AUTO_LOGIN', value: e.target.checked }); if (e.target.checked) dispatch({ type: 'TOGGLE_REMEMBER', value: true }) }}
                 style={{ width: 12, height: 12, accentColor: 'var(--accent)', margin: 0 }} />自动登录
             </label>
           </div>
 
-          {error && (
+          {state.error && (
             <div style={{ padding: '5px 8px', borderRadius: 6, fontSize: 11, marginBottom: 10, background: 'var(--danger-soft)', color: 'var(--danger)' }}>
-              {error}
+              {state.error}
             </div>
           )}
 
           <div style={{ marginTop: 'auto' }}>
-            <button type="submit" disabled={loading}
-              style={{ width: '100%', padding: '8px 0', fontSize: 13, fontWeight: 600, borderRadius: 8, border: 'none', cursor: loading ? 'wait' : 'pointer', background: 'var(--accent)', color: 'var(--bg)', letterSpacing: '0.04em', opacity: loading ? 0.7 : 1, transition: 'opacity 0.1s' }}>
-              {loading ? '登录中...' : '登 录'}
+            <button type="submit" disabled={state.loading}
+              style={{ width: '100%', padding: '8px 0', fontSize: 13, fontWeight: 600, borderRadius: 8, border: 'none', cursor: state.loading ? 'wait' : 'pointer', background: 'var(--accent)', color: 'var(--bg)', letterSpacing: '0.04em', opacity: state.loading ? 0.7 : 1, transition: 'opacity 0.1s' }}>
+              {state.loading ? '登录中...' : '登 录'}
             </button>
           </div>
         </form>
