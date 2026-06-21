@@ -1,23 +1,18 @@
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import {
-  Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell,
-} from 'recharts'
 import { DashboardStats, Invoice } from '../types/electron'
 import { useAuth } from '@/hooks/useAuth'
 import { Icon } from './ui/Icon'
 import { formatMoney } from '@/utils/format'
 import { Card } from '@/components/ui/Card'
-import { SimpleBarChart } from '@/components/ui/SimpleBarChart'
 import { staggerContainer, sectionVariant } from '@/constants/animations'
 import { getAPI } from '@/services/api-adapter'
 import { getLevel1ForCode, CATEGORY_HIERARCHY } from '@/components/features/costLedger/config'
 import { HoverScrollbar } from '@/components/ui/HoverScrollbar'
 import CountUp from './features/dashboard/CountUp'
-import { CHART_COLORS, statCards, cardHover, formatCurrency } from './features/dashboard/dashboardConstants'
-
-interface StatValue { primary: string; secondary: string; progress?: number; raw?: number }
+import { statusLabels, invoiceStatusLabels, getGreeting } from './features/dashboard/dashboardConstants'
+import DashboardStatsCard from './features/dashboard/DashboardStatsCard'
+import DashboardCharts from './features/dashboard/DashboardCharts'
 
 const Dashboard: React.FC = () => {
   const { currentUser } = useAuth()
@@ -101,36 +96,7 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => { Promise.all([loadStats(), loadInvoiceData()]).finally(() => setLoading(false)) }, [])
 
-  const getStatValue = (key: string): StatValue => {
-  if (!stats) return { primary: '0', secondary: '', raw: 0 }
-  switch (key) {
-  case 'projects': return { primary: String(stats.projectsCount), secondary: `${stats.inProgressProjects} 个进行中`, progress: stats.projectsCount ? Math.round((stats.inProgressProjects / stats.projectsCount) * 100) : 0, raw: stats.projectsCount }
-  case 'settlements': return { primary: String(stats.settlementsCount), secondary: '待办结算', raw: stats.settlementsCount }
-  case 'members': return { primary: String(stats.membersCount), secondary: '管理人员 + 农民工', raw: stats.membersCount }
-  case 'costLedger': return { primary: formatCurrency(stats.totalExpenses), secondary: '累计成本', raw: stats.totalExpenses }
-  case 'invoices': return { primary: String(stats.invoicesCount), secondary: '收票 / 开票', raw: stats.invoicesCount }
-  case 'inventory': return { primary: String(stats.inventoryItemsCount), secondary: '进销存管理', raw: stats.inventoryItemsCount }
-  default: return { primary: '0', secondary: '', raw: 0 }
-  }
-  }
-
-  const statusLabels: Record<string, { text: string; color: string; dot: string }> = {
-  planning: { text: '筹备中', color: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500' },
-  in_progress: { text: '进行中', color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' },
-  completed: { text: '已完成', color: 'bg-slate-100 text-slate-700', dot: 'bg-slate-400' },
-  archived: { text: '已归档', color: 'bg-amber-100 text-amber-700', dot: 'bg-amber-500' },
-  }
-  const invoiceStatusLabels: Record<string, { text: string; color: string; dot: string }> = {
-  'received': { text: '已收齐', color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' },
-  'partially_paid': { text: '部分收付', color: 'bg-amber-100 text-amber-700', dot: 'bg-amber-500' },
-  'issued': { text: '已开具', color: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500' },
-  'cancelled': { text: '已作废', color: 'bg-slate-100 text-slate-700', dot: 'bg-slate-400' },
-  'red_flushed': { text: '已红冲', color: 'bg-red-100 text-red-700', dot: 'bg-red-500' },
-  '其他': { text: '其他', color: 'bg-slate-100 text-slate-700', dot: 'bg-slate-400' },
-  }
-
-  const hour = new Date().getHours()
-  const greeting = hour < 6 ? '夜深了' : hour < 9 ? '早上好' : hour < 12 ? '上午好' : hour < 14 ? '中午好' : hour < 18 ? '下午好' : '晚上好'
+  const greeting = getGreeting()
 
   if (loading) {
   return (
@@ -209,90 +175,10 @@ const Dashboard: React.FC = () => {
   </motion.section>
 
   {/* ═══ KPI Stat Cards ═══ */}
-  <motion.section variants={sectionVariant} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-  {statCards.map((card, i) => {
-  const val = getStatValue(card.key)
-  return (
-  <motion.div
-  key={card.key}
-  variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { delay: i * 0.03 } } }}
-  whileHover={cardHover}
-  whileTap={{ scale: 0.98 }}
-  className="bg-white border border-slate-200 rounded-xl shadow-sm p-3 transition-shadow duration-200 cursor-default"
-  >
-  <div className="flex items-center gap-2 mb-1">
-  <span className={`w-7 h-7 rounded-lg flex items-center justify-center ${card.color}`}><Icon name={card.icon} size={14} /></span>
-  <span className="text-xs text-slate-400">{card.label}</span>
-  </div>
-  <p className="text-lg font-bold text-slate-800">
-  {val.raw !== undefined && val.raw > 999 ? (
-  <CountUp value={val.raw} />
-  ) : val.raw !== undefined ? (
-  <CountUp value={val.raw} />
-  ) : val.primary}
-  </p>
-  <p className="text-xs text-slate-400">{val.secondary}</p>
-  {val.progress !== undefined && (
-  <div className="mt-2 h-1 bg-slate-100 rounded-full overflow-hidden">
-  <motion.div
-  className="h-full bg-primary-500 rounded-full"
-  initial={{ width: 0 }}
-  animate={{ width: `${val.progress}%` }}
-  transition={{ duration: 1, delay: 0.5 + i * 0.1, ease: 'easeOut' }}
-  />
-  </div>
-  )}
-  </motion.div>
-  )
-  })}
-  </motion.section>
+  <DashboardStatsCard stats={stats} />
 
   {/* ═══ Charts Row ═══ */}
-  <motion.section variants={sectionVariant} className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
-  {/* BarChart — 原生 SVG，无 Recharts hover 干扰 */}
-  <Card title={<span className="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2"><Icon name="BarChart3" size={14} /> 支出分类</span>} headerDivider className="hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] transition-shadow">
-  {chartData.expenseByCategory.length > 0 ? (
-  <SimpleBarChart data={chartData.expenseByCategory} colors={CHART_COLORS} formatValue={formatCurrency} />
-  ) : (
-  <div className="flex flex-col items-center justify-center py-12 text-slate-400">
-  <Icon name="Wallet" size={32} className="mb-2 opacity-40" /><p className="text-sm">暂无支出数据</p>
-  </div>
-  )}
-  </Card>
-
-  {/* Invoice Status PieChart */}
-  <Card title={<span className="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2"><Icon name="PieChart" size={14} /> 发票状态</span>} headerDivider className="hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] transition-shadow">
-  {chartData.invoiceStatus.length > 0 ? (
-  <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.4, duration: 0.4 }}
-  className="flex items-center h-72">
-  <div className="flex-1 h-full min-w-0">
-  <ResponsiveContainer width="100%" height={280}>
-  <PieChart>
-  <Pie data={chartData.invoiceStatus} cx="50%" cy="50%" innerRadius={48} outerRadius={72} paddingAngle={3} dataKey="value" strokeWidth={0}
-  animationDuration={1200} animationEasing="ease-out">
-  {chartData.invoiceStatus.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-  </Pie>
-  <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, boxShadow: 'var(--shadow-md)', color: 'var(--fg)' }} formatter={((value: any, name: any) => [value, invoiceStatusLabels[name ?? '']?.text || name]) as any} />
-  </PieChart>
-  </ResponsiveContainer>
-  </div>
-  <div className="w-36 space-y-3 pl-2">
-  {chartData.invoiceStatus.map((entry, i) => (
-  <motion.div key={entry.name} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 + i * 0.1 }}
-  className="flex items-center gap-2">
-  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
-  <div className="flex-1 min-w-0"><div className="text-xs text-slate-500 truncate">{invoiceStatusLabels[entry.name]?.text || entry.name}</div><div className="text-sm font-semibold text-slate-800">{entry.value}</div></div>
-  </motion.div>
-  ))}
-  </div>
-  </motion.div>
-  ) : (
-  <div className="flex flex-col items-center justify-center py-12 text-slate-400">
-  <Icon name="Receipt" size={32} className="mb-2 opacity-40" /><p className="text-sm">暂无发票数据</p>
-  </div>
-  )}
-  </Card>
-  </motion.section>
+  <DashboardCharts chartData={chartData} />
 
   {/* ═══ Recent Projects & Invoices ═══ */}
   <motion.section variants={sectionVariant} className="grid grid-cols-1 lg:grid-cols-2 gap-5">
