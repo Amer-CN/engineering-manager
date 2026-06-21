@@ -1,12 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useStaffPayrollFilters } from './useStaffPayrollFilters'
-import { DropdownMenu } from '../../ui/DropdownMenu/DropdownMenu'
-import { Button } from '../../ui/Button'
 import { EmptyState } from '../../ui/EmptyState'
-import ButtonLoader from '../../ui/ButtonLoader'
 import Spinner from '../../ui/Spinner'
 import { useToastStore } from '@/store/toastStore'
-import { MONTHS } from '@/constants'
 import { computeAttendanceSummary } from '../../../constants/attendance'
 import { getAPI } from '@/services/api-adapter'
 import {
@@ -16,6 +12,7 @@ import {
   getEntryDate,
 } from '../../../utils/staff-payroll-utils'
 import { StaffPayrollTable } from './StaffPayrollTable'
+import StaffPayrollToolbar from './StaffPayrollToolbar'
 
 const StaffPayroll: React.FC = () => {
   const showToast = useToastStore(state => state.showToast)
@@ -27,15 +24,14 @@ const StaffPayroll: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
 
-  // ── 数据加载：全量 staff 工资 + 考勤 ──
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
       const api = await getAPI()
       const [memRes, wageRes, attRes, deptRes, projRes] = await Promise.allSettled([
         api.getMembers(),
-        api.getWages(undefined, undefined),  // 全量：不限月份
-        api.getAttendances(undefined, undefined), // 全量考勤
+        api.getWages(undefined, undefined),
+        api.getAttendances(undefined, undefined),
         api.getDepartments(),
         api.getProjects()
       ])
@@ -45,7 +41,6 @@ const StaffPayroll: React.FC = () => {
         (m: any) => m.memberType === 'staff' || m.memberType === undefined
       )
       setStaff(staffOnly)
-      // 只保留 staff 的工资记录（非 worker）
       const staffIds = new Set(staffOnly.map((m: any) => m.id))
       setAllWages(get(wageRes).filter((w: any) => staffIds.has(w.memberId)))
       setAttendances(get(attRes))
@@ -64,7 +59,6 @@ const StaffPayroll: React.FC = () => {
     yearOptions, effectiveYearMonth, filteredWages, summaryTotals,
   } = f
 
-  // ── 生成本月薪酬 ──
   const generatePayroll = async () => {
     if (filterYear === '全部' || filterMonth === '全部') {
       showToast('请选择具体的年份和月份', 'warning')
@@ -105,7 +99,6 @@ const StaffPayroll: React.FC = () => {
             attendanceDays: attWorkDays, bonus: 0, deduction: 0, netSalary,
             paidAmount: null, paidDate: null,
           }
-          // upsert: 检查是否已有同人同月记录
           const existing = allWages.find((w: any) => w.memberId === s.id && w.yearMonth === ym)
           const wageApi = await getAPI()
           if (existing) {
@@ -126,7 +119,6 @@ const StaffPayroll: React.FC = () => {
     finally { setGenerating(false) }
   }
 
-  // ── 删除 ──
   const handleDeleteWage = async (wage: any) => {
     if (!confirm(`确认删除 ${wage.memberName || ''} ${wage.yearMonth} 的薪酬记录？此操作不可撤销。`)) return
     try {
@@ -202,82 +194,19 @@ const StaffPayroll: React.FC = () => {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      {/* 筛选工具栏 */}
-      <div className="bg-white rounded-xl shadow-sm px-5 py-3 flex items-center gap-4 flex-wrap flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-slate-600">年份</label>
-          <select value={filterYear}
-            onChange={e => { setFilterYear(e.target.value); setFilterMonth('全部') }}
-            className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
-            <option value="全部">全部</option>
-            {yearOptions.map(y => <option key={y} value={y}>{y}年</option>)}
-          </select>
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-slate-600">月份</label>
-          <select value={filterMonth}
-            onChange={e => setFilterMonth(e.target.value)}
-            className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
-            {MONTHS.map(m => <option key={m} value={m}>{m === '全部' ? '全部' : `${m}月`}</option>)}
-          </select>
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-slate-600">姓名</label>
-          <input type="text" placeholder="搜索姓名..."
-            value={filterMemberName}
-            onChange={e => setFilterMemberName(e.target.value)}
-            className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm w-36 focus:ring-2 focus:ring-primary-500" />
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-slate-600">部门</label>
-          <select value={filterDept} onChange={e => setFilterDept(e.target.value ? Number(e.target.value) : '')}
-            className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
-            <option value="">全部</option>
-            {departments.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
-          </select>
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-slate-600">项目</label>
-          <select value={filterProject} onChange={e => setFilterProject(e.target.value)}
-            className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
-            <option value="全部">全部</option>
-            {projects.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-        </div>
-        {filterYear !== '全部' && filterMonth !== '全部' && (() => {
-          const candidates = filteredStaffForGenerate(staff, filterDept, effectiveYearMonth)
-          const ready = candidates.filter(s => isAttendanceReady(s.id, effectiveYearMonth, attendances)).length
-          return ready < candidates.length ? (
-            <span className="text-xs text-amber-500">考勤{ready}/{candidates.length}</span>
-          ) : null
-        })()}
-        <div className="flex-1" />
-        <Button onClick={generatePayroll}
-          disabled={generating || staff.length === 0 || filterYear === '全部' || filterMonth === '全部'}
-          size="sm"
-          title={filterYear === '全部' || filterMonth === '全部' ? '请先选择具体年份和月份' : undefined}>
-          <ButtonLoader loading={generating} loadingText="计算中...">
-            {`生成${filterYear !== '全部' && filterMonth !== '全部' ? effectiveYearMonth : ''}`}
-          </ButtonLoader>
-        </Button>
-        {filteredWages.length > 0 && filterYear !== '全部' && filterMonth !== '全部' && (
-          <Button onClick={handleDeleteAllMonth} size="sm" variant="danger">
-            删除本月
-          </Button>
-        )}
-        {filteredWages.length > 0 && (
-          <DropdownMenu
-            trigger={<button className="btn btn-secondary text-sm">更多 ▾</button>}
-            items={[
-              { key: 'export', label: '导出Excel', onClick: handleExportExcel },
-              { key: 'print', label: '打印', onClick: () => window.print() },
-            ]}
-            align="end"
-          />
-        )}
-      </div>
-
-      {/* 内容区 */}
+      <StaffPayrollToolbar
+        filterYear={filterYear} filterMonth={filterMonth}
+        filterMemberName={filterMemberName} filterDept={filterDept}
+        filterProject={filterProject} yearOptions={yearOptions}
+        effectiveYearMonth={effectiveYearMonth} filteredWages={filteredWages}
+        staff={staff} departments={departments} projects={projects}
+        attendances={attendances} generating={generating}
+        setFilterYear={setFilterYear} setFilterMonth={setFilterMonth}
+        setFilterMemberName={setFilterMemberName} setFilterDept={setFilterDept}
+        setFilterProject={setFilterProject}
+        onGenerate={generatePayroll} onDeleteAllMonth={handleDeleteAllMonth}
+        onExportExcel={handleExportExcel}
+      />
       {filteredWages.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm flex-1 mt-4 flex items-center justify-center">
           {allWages.length === 0 ? (
