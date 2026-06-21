@@ -1,24 +1,26 @@
 using System.Data;
 using Dapper;
+using Microsoft.Data.Sqlite;
 
 namespace EngineeringManager.Api.Security;
 
 /// <summary>
-/// v0.78.0 累计待办 #5 续: PII 后台 re-encrypt worker
+/// v0.78.0 → v0.78.1: PII 后台 re-encrypt worker (chunked 优化版)
 /// 背景: PiiProtector 多 key 轮换 (v0.76.0) 后, 旧 _enc 列还是用旧 key 加密的
 ///       admin rotate 新 key 后, 调此 worker 用新 active key 重新加密所有 _enc
 ///
-/// 设计:
-///   - 13 个 _enc 列 (4 张表), 后台顺序处理, 每行 Decrypt → Encrypt → UPDATE
-///   - 进度持久化到 pii_reencrypt_status 表 (重启可继续)
-///   - 单行失败不中断 worker (log error + continue)
-///   - 用 PiiProtector 自动判断密文格式 (v1.2.0 旧 fallback key_id=1 / v0.76.0 新格式)
-///   - snapshot target_key_id at start, 防止 rotate 期间混乱
+/// v0.78.1 优化:
+///   - chunked SELECT: 每批 500 行 (WHERE id > lastId ORDER BY id LIMIT 500)
+///   - batch UPDATE: 每 50 行一次事务提交 (减少 WAL 写入)
+///   - 进度更新粒度: 每 50 行 (前端轮询 3s 可见变化)
+///   - 重启继续: last_processed_id + current_table/column 持久化
 /// </summary>
 public class PiiReencryptWorker
 {
     private readonly PiiProtector _pii;
     private readonly ILogger<PiiReencryptWorker> _logger;
+    private const int ChunkSize = 500;
+    private const int BatchCommitSize = 50;
 
     // 13 个 _enc 列: (table, column)
     private static readonly (string Table, string Column)[] PiiColumns = new[]
@@ -44,10 +46,6 @@ public class PiiReencryptWorker
         _logger = logger;
     }
 
-    /// <summary>
-    /// 启动 worker (fire-and-forget, 后台线程)
-    /// 注: 如果已经在 running, 抛 InvalidOperationException
-    /// </summary>
     public Task StartAsync(IDbConnection db, string triggeredBy)
     {
         var status = db.QueryFirstOrDefault<dynamic>("SELECT status FROM pii_reencrypt_status WHERE id=1");
@@ -58,9 +56,6 @@ public class PiiReencryptWorker
         return Task.Run(() => RunInternalAsync(db, triggeredBy));
     }
 
-    /// <summary>
-    /// 查询当前状态 (前端轮询用)
-    /// </summary>
     public ReencryptStatusDto GetStatus(IDbConnection db)
     {
         var row = db.QueryFirstOrDefault<dynamic>("SELECT * FROM pii_reencrypt_status WHERE id=1");
@@ -83,7 +78,7 @@ public class PiiReencryptWorker
 
     private async Task RunInternalAsync(IDbConnection db, string triggeredBy)
     {
-        await Task.Yield(); // satisfy async
+        await Task.Yield();
         var now = () => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
         var targetKeyId = _pii.ActiveKeyId;
         if (targetKeyId == 0)
@@ -103,13 +98,13 @@ public class PiiReencryptWorker
         long totalRows = 0;
         foreach (var (table, column) in PiiColumns)
         {
-            var count = db.ExecuteScalar<long>($"SELECT COUNT(*) FROM {table} WHERE {column} IS NOT NULL AND {column} != ''");
+            var count = db.ExecuteScalar<long>($"SELECT COUNT(*) FROM [{table}] WHERE [{column}] IS NOT NULL AND [{column}] != ''");
             totalRows += count;
         }
         db.Execute("UPDATE pii_reencrypt_status SET total_rows=@T, updated_at=@Now WHERE id=1", new { T = totalRows, Now = now() });
         _logger.LogInformation("[PiiReencrypt] 启动: target_key_id={Key}, total_rows={Total}", targetKeyId, totalRows);
 
-        // 3. 处理每列
+        // 3. chunked 处理每列
         long processedRows = 0;
         long failedRows = 0;
         var lastProcessedId = db.QueryFirstOrDefault<long?>("SELECT last_processed_id FROM pii_reencrypt_status WHERE id=1");
@@ -119,48 +114,70 @@ public class PiiReencryptWorker
 
         foreach (var (table, column) in PiiColumns)
         {
-            // 跳过已 resume 之前的列
             if (skipUntil && (table != resumeTable || column != resumeColumn)) continue;
             skipUntil = false;
 
             db.Execute("UPDATE pii_reencrypt_status SET current_table=@T, current_column=@C, updated_at=@Now WHERE id=1",
                 new { T = table, C = column, Now = now() });
 
-            // 取所有非空 _enc 行
-            var rows = db.Query<(long Id, string Cipher)>($"SELECT id, {column} FROM {table} WHERE {column} IS NOT NULL AND {column} != '' ORDER BY id").ToList();
-            foreach (var row in rows)
+            // chunked: 每次取 ChunkSize 行, 用 id > lastId 游标分页
+            long chunkStartId = 0;
+            // resume: 如果当前列就是 resume 列, 从 lastProcessedId+1 开始
+            if (resumeTable == table && resumeColumn == column && lastProcessedId.HasValue)
+                chunkStartId = lastProcessedId.Value;
+
+            while (true)
             {
-                if (resumeTable == table && resumeColumn == column && lastProcessedId.HasValue && row.Id <= lastProcessedId.Value)
-                {
-                    processedRows++;
-                    continue;
-                }
+                var chunk = db.Query<(long Id, string Cipher)>(
+                    $"SELECT id, [{column}] FROM [{table}] WHERE [{column}] IS NOT NULL AND [{column}] != '' AND id > @LastId ORDER BY id LIMIT @Limit",
+                    new { LastId = chunkStartId, Limit = ChunkSize }).ToList();
 
-                try
+                if (chunk.Count == 0) break;
+
+                // batch: 每 BatchCommitSize 行开一个事务
+                var batchUpdates = new List<(long Id, string NewCipher)>();
+                foreach (var row in chunk)
                 {
-                    var plain = _pii.Decrypt(row.Cipher);
-                    var newCipher = _pii.Encrypt(plain);
-                    // 如果新旧密文相同, 跳过 UPDATE (idempotent)
-                    if (newCipher != row.Cipher)
+                    try
                     {
-                        db.Execute($"UPDATE {table} SET {column}=@C WHERE id=@Id", new { C = newCipher, Id = row.Id });
+                        var plain = _pii.Decrypt(row.Cipher);
+                        var newCipher = _pii.Encrypt(plain);
+                        if (newCipher != row.Cipher)
+                            batchUpdates.Add((row.Id, newCipher));
+                        processedRows++;
                     }
-                    processedRows++;
-                }
-                catch (Exception ex)
-                {
-                    failedRows++;
-                    _logger.LogError(ex, "[PiiReencrypt] 失败: {Table}.{Column} id={Id}", table, column, row.Id);
-                    db.Execute("UPDATE pii_reencrypt_status SET failed_rows=@F, last_error=@E, updated_at=@Now WHERE id=1",
-                        new { F = failedRows, E = $"{table}.{column} id={row.Id}: {ex.Message}", Now = now() });
+                    catch (Exception ex)
+                    {
+                        failedRows++;
+                        _logger.LogError(ex, "[PiiReencrypt] 失败: {Table}.{Column} id={Id}", table, column, row.Id);
+                        db.Execute("UPDATE pii_reencrypt_status SET failed_rows=@F, last_error=@E, updated_at=@Now WHERE id=1",
+                            new { F = failedRows, E = $"{table}.{column} id={row.Id}: {ex.Message}", Now = now() });
+                    }
+
+                    // 每 BatchCommitSize 行提交一次事务
+                    if (batchUpdates.Count >= BatchCommitSize)
+                    {
+                        FlushBatch(db, table, column, batchUpdates);
+                        batchUpdates.Clear();
+                    }
+
+                    // 每 50 行更新进度
+                    if (processedRows % 50 == 0)
+                    {
+                        db.Execute("UPDATE pii_reencrypt_status SET processed_rows=@P, last_processed_id=@I, updated_at=@Now WHERE id=1",
+                            new { P = processedRows, I = row.Id, Now = now() });
+                    }
                 }
 
-                // 每 50 行更新一次进度
-                if (processedRows % 50 == 0)
-                {
-                    db.Execute("UPDATE pii_reencrypt_status SET processed_rows=@P, last_processed_id=@I, updated_at=@Now WHERE id=1",
-                        new { P = processedRows, I = row.Id, Now = now() });
-                }
+                // flush 剩余
+                if (batchUpdates.Count > 0)
+                    FlushBatch(db, table, column, batchUpdates);
+
+                chunkStartId = chunk[chunk.Count - 1].Id;
+
+                // chunk 间更新进度
+                db.Execute("UPDATE pii_reencrypt_status SET processed_rows=@P, last_processed_id=@I, updated_at=@Now WHERE id=1",
+                    new { P = processedRows, I = chunkStartId, Now = now() });
             }
         }
 
@@ -169,11 +186,32 @@ public class PiiReencryptWorker
             new { S = failedRows > 0 ? "completed_with_errors" : "completed", P = processedRows, F = failedRows, Now = now() });
         _logger.LogInformation("[PiiReencrypt] 完成: processed={Processed}, failed={Failed}", processedRows, failedRows);
     }
+
+    /// <summary>
+    /// 批量提交 UPDATE (事务)
+    /// </summary>
+    private static void FlushBatch(IDbConnection db, string table, string column, List<(long Id, string NewCipher)> batch)
+    {
+        if (db is SqliteConnection sqliteConn)
+        {
+            using var tx = sqliteConn.BeginTransaction();
+            foreach (var (id, cipher) in batch)
+            {
+                db.Execute($"UPDATE [{table}] SET [{column}]=@C WHERE id=@Id", new { C = cipher, Id = id }, tx);
+            }
+            tx.Commit();
+        }
+        else
+        {
+            // fallback: 逐行 (非 SQLite 环境)
+            foreach (var (id, cipher) in batch)
+            {
+                db.Execute($"UPDATE [{table}] SET [{column}]=@C WHERE id=@Id", new { C = cipher, Id = id });
+            }
+        }
+    }
 }
 
-/// <summary>
-/// PII re-encrypt 状态 DTO (前端轮询用)
-/// </summary>
 public class ReencryptStatusDto
 {
     public string Status { get; set; } = "idle";
