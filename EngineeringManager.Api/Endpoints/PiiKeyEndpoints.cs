@@ -83,5 +83,65 @@ public static class PiiKeyEndpoints
                 message = "PII key 已轮换, 旧数据仍可解密, 新数据用新 key 加密"
             });
         });
+
+        // POST /api/admin/pii/reencrypt - 启动后台 re-encrypt worker (admin-only)
+        app.MapPost("/api/admin/pii/reencrypt", async (HttpContext ctx, IDbConnection db, PiiReencryptWorker worker) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx);
+            if (string.IsNullOrEmpty(uid)) return Common.Fail("未登录");
+            if (!CurrentUser.IsAdmin(ctx)) return Results.Forbid();
+
+            try
+            {
+                await worker.StartAsync(db, uid);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.Json(new { success = false, error = ex.Message }, statusCode: 400);
+            }
+            catch (Exception ex)
+            {
+                return Common.ServerError("PII re-encrypt start", ex);
+            }
+
+            // 写 audit log (start event)
+            try
+            {
+                db.Execute(@"INSERT INTO audit_logs
+                    (action, level, user_id, user_name, resource_type, resource_id, details, ip_address, created_at)
+                    VALUES (@Action, @Level, @UserId, @UserName, @Resource, @ResourceId, @Details, @IpAddress, @CreatedAt)",
+                    new
+                    {
+                        Action = "create",
+                        Level = "warning",
+                        UserId = uid,
+                        UserName = uid,
+                        Resource = "pii_reencrypt",
+                        ResourceId = 1,
+                        Details = "{\"event\":\"pii_reencrypt_started\"}",
+                        IpAddress = ctx.Connection.RemoteIpAddress?.ToString() ?? "",
+                        CreatedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                    });
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[ERROR] PII re-encrypt audit log failed: {ex.Message}");
+            }
+
+            return Common.Ok(new
+            {
+                status = worker.GetStatus(db),
+                message = "PII re-encrypt 已启动 (后台异步)"
+            });
+        });
+
+        // GET /api/admin/pii/reencrypt/status - 查询 re-encrypt 进度 (admin-only)
+        app.MapGet("/api/admin/pii/reencrypt/status", (HttpContext ctx, IDbConnection db, PiiReencryptWorker worker) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx);
+            if (string.IsNullOrEmpty(uid)) return Common.Fail("未登录");
+            if (!CurrentUser.IsAdmin(ctx)) return Results.Forbid();
+            return Common.Ok(worker.GetStatus(db));
+        });
     }
 }

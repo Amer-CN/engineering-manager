@@ -19,6 +19,8 @@ public static class ApiConfig
 
         // v1.2.0: PII 字段级加密 (AES-GCM + DPAPI master key)
         builder.Services.AddSingleton<EngineeringManager.Api.Security.PiiProtector>();
+        // v0.78.0 PII 后台 re-encrypt worker (admin rotate key 后调用)
+        builder.Services.AddSingleton<EngineeringManager.Api.Security.PiiReencryptWorker>();
 
         builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
             p.WithOrigins("http://localhost:5173", "http://localhost:3000", "http://localhost:5048")

@@ -140,3 +140,11 @@ async function del<T>(path: string): Promise<ApiResponse<T>> {
 }
 
 export const apiClient = { get, post, put, del };
+
+export const piiKeyApi = {
+  getPiiKeys: () => apiClient.get<{ keys: any[]; activeKeyId: number; totalKeys: number }>('/api/admin/pii/keys'),
+  rotatePiiKey: () => apiClient.post<{ newKeyId: number; message: string }>('/api/admin/pii/rotate', {}),
+  startPiiReencrypt: () => apiClient.post<{ status: any; message: string }>('/api/admin/pii/reencrypt', {}),
+  getPiiReencryptStatus: () => apiClient.get<any>('/api/admin/pii/reencrypt/status'),
+};
+

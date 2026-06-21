@@ -1,26 +1,30 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useConfirm } from '@/hooks/useConfirm'
 import { getAPI } from '@/services/api-adapter'
 import { Icon } from '@/components/ui/Icon'
 import { useToastStore } from '@/store/toastStore'
 
-/**
- * v0.76.0 累计待办 #5: PII Key Rotation 卡片 (admin-only)
- * - 显示当前 active key + 总 keys
- * - "立即轮换" 按钮: confirm 后调 rotatePiiKey()
- * - 后端 admin-only + audit log, 这里不再做角色判断
- *
- * 轮换语义:
- *   - 生成新 key, 写 pii_keys 表 (is_active=1)
- *   - 旧 active key 标 retired_at, 仍可用于解密历史数据
- *   - 新数据用新 key 加密
- *   - 旧密文完全可读, 无数据迁移
- */
+interface ReencryptStatus {
+  status: string
+  targetKeyId: number
+  totalRows: number
+  processedRows: number
+  failedRows: number
+  currentTable: string | null
+  currentColumn: string | null
+  startedAt: string | null
+  completedAt: string | null
+  lastError: string | null
+}
+
 export function SettingsPiiKeySection() {
   const { confirm, ConfirmDialog } = useConfirm()
   const { showToast } = useToastStore()
   const [loading, setLoading] = useState(true)
   const [rotating, setRotating] = useState(false)
+  const [reencrypting, setReencrypting] = useState(false)
+  const [reencryptStatus, setReencryptStatus] = useState<ReencryptStatus | null>(null)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [info, setInfo] = useState<{ activeKeyId: number; totalKeys: number; latestRetiredAt: string | null; latestCreatedAt: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -49,7 +53,33 @@ export function SettingsPiiKeySection() {
     }
   }
 
+  const pollReencryptStatus = useCallback(async () => {
+    try {
+      const res = await (await getAPI()).getPiiReencryptStatus()
+      if (res.success && res.data) {
+        const s = res.data as ReencryptStatus
+        setReencryptStatus(s)
+        if (s.status === 'completed' || s.status === 'completed_with_errors' || s.status === 'idle') {
+          if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
+          setReencrypting(false)
+          if (s.status === 'completed') {
+            showToast('PII re-encrypt 全部完成', 'success')
+          } else if (s.status === 'completed_with_errors') {
+            showToast(`PII re-encrypt 完成 (${s.failedRows} 行失败)`, 'warning')
+          }
+        }
+      }
+    } catch {
+      // poll error, ignore
+    }
+  }, [showToast])
+
   useEffect(() => { loadInfo() }, [])
+
+  // cleanup poll on unmount
+  useEffect(() => {
+    return () => { if (pollRef.current) clearInterval(pollRef.current) }
+  }, [])
 
   const handleRotate = async () => {
     if (rotating) return
@@ -75,6 +105,37 @@ export function SettingsPiiKeySection() {
       setRotating(false)
     }
   }
+
+  const handleReencrypt = async () => {
+    if (reencrypting) return
+    const ok = await confirm({
+      title: '重新加密 PII 数据',
+      content: '将使用当前 active key 重新加密所有 PII 字段 (13 列)。\n\n此操作在后台异步执行, 期间不影响正常使用。\n\n确定要继续吗?',
+      confirmText: '开始 re-encrypt',
+      cancelText: '取消',
+    })
+    if (!ok) return
+    setReencrypting(true)
+    try {
+      const res = await (await getAPI()).startPiiReencrypt()
+      if (res.success) {
+        showToast('PII re-encrypt 已启动', 'success')
+        // start polling
+        pollRef.current = setInterval(pollReencryptStatus, 3000)
+        pollReencryptStatus()
+      } else {
+        showToast(res.error || '启动失败', 'error')
+        setReencrypting(false)
+      }
+    } catch (e) {
+      showToast(String(e), 'error')
+      setReencrypting(false)
+    }
+  }
+
+  const progressPct = reencryptStatus && reencryptStatus.totalRows > 0
+    ? Math.round((reencryptStatus.processedRows / reencryptStatus.totalRows) * 100)
+    : 0
 
   return (
     <>
@@ -145,6 +206,60 @@ export function SettingsPiiKeySection() {
                   className="btn btn-secondary"
                 >
                   <Icon name="RefreshCw" size={14} /> 刷新
+                </button>
+              </div>
+
+              {/* Re-encrypt section */}
+              <div className="border-t border-slate-200 pt-4 mt-4">
+                <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2 mb-3">
+                  <Icon name="Database" size={16} /> 重新加密历史数据
+                </h3>
+                <p className="text-xs text-slate-500 mb-3">
+                  轮换 key 后, 旧密文仍可解密但用旧 key 加密。点击下方按钮用当前 active key 重新加密所有 PII 字段。
+                </p>
+
+                {reencryptStatus && reencryptStatus.status !== 'idle' && (
+                  <div className="bg-slate-50 rounded-lg p-3 mb-3 text-sm">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-slate-600">
+                        {reencryptStatus.status === 'running' ? '进行中...' :
+                         reencryptStatus.status === 'completed' ? '已完成' :
+                         reencryptStatus.status === 'completed_with_errors' ? '完成 (有失败)' : reencryptStatus.status}
+                      </span>
+                      <span className="font-mono text-slate-800">{progressPct}%</span>
+                    </div>
+                    <div className="w-full bg-slate-200 rounded-full h-2">
+                      <div
+                        className={`h-2 rounded-full transition-all ${reencryptStatus.status === 'completed' ? 'bg-success-500' : reencryptStatus.status === 'completed_with_errors' ? 'bg-warning-500' : 'bg-primary-500'}`}
+                        style={{ width: `${progressPct}%` }}
+                      />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 mt-2 text-xs text-slate-500">
+                      <div>已处理: {reencryptStatus.processedRows}/{reencryptStatus.totalRows}</div>
+                      <div>失败: {reencryptStatus.failedRows}</div>
+                      <div>当前: {reencryptStatus.currentTable}.{reencryptStatus.currentColumn}</div>
+                    </div>
+                    {reencryptStatus.lastError && (
+                      <div className="text-xs text-danger-600 mt-1">最近错误: {reencryptStatus.lastError}</div>
+                    )}
+                  </div>
+                )}
+
+                <button
+                  onClick={handleReencrypt}
+                  disabled={reencrypting}
+                  className="btn btn-secondary"
+                >
+                  {reencrypting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-slate-600 border-t-transparent" />
+                      re-encrypt 进行中...
+                    </>
+                  ) : (
+                    <>
+                      <Icon name="RefreshCcw" size={16} /> 立即 re-encrypt PII
+                    </>
+                  )}
                 </button>
               </div>
             </>

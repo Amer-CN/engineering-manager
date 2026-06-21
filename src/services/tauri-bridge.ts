@@ -1,4 +1,4 @@
-﻿/**
+/**
  * API 桥接层
  *
  * 通过 HTTP 调用 C# 后端 API
@@ -449,6 +449,10 @@ export const tauriAPI = {
   // ────────── PII Key Rotation (v0.76.0 累计待办 #5) ──────────
   getPiiKeys: () => apiClient.get<{ keys: any[]; activeKeyId: number; totalKeys: number }>('/api/admin/pii/keys'),
   rotatePiiKey: () => apiClient.post<{ newKeyId: number; message: string }>('/api/admin/pii/rotate', {}),
+
+  // ────────── PII Re-encrypt Worker (v0.78.0) ──────────
+  startPiiReencrypt: () => apiClient.post<{ status: any; message: string }>('/api/admin/pii/reencrypt', {}),
+  getPiiReencryptStatus: () => apiClient.get<any>('/api/admin/pii/reencrypt/status'),
 
   // ────────── 数据健康 ──────────
   dataConsistencyCheck: () => apiClient.get<any>('/api/health/consistency'),

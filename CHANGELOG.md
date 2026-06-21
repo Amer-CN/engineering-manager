@@ -8,6 +8,31 @@
 >
 > **重要**: v0.74.0 → v0.75.3 期间曾过度打 tag (refactor-only sprint 也 bump). 已在 v0.75.3 重新整理 git 历史 (drop 7 个 spurious chore "bump version" commits), 重组成正确的 semver 历史. 详见 `docs/handoff/v0.75.3-handoff.md`.
 
+
+## v0.78.0 (2026-06-21) — feat: PII 后台 re-encrypt worker
+
+> **核心范围**: v0.76.0 PII 多 key 轮换的续作 — admin rotate key 后, 可一键用新 active key 重新加密所有 13 个 _enc 列.
+> **SemVer**: minor bump (0.77.2 → 0.78.0), 新功能 (后台 worker + 2 endpoint + 前端 UI).
+
+### 改动 (1 feat, 共 6 项)
+
+- **migration 026**: `pii_reencrypt_status` 单行表 (进度持久化, 支持重启继续)
+- **PiiReencryptWorker.cs**: 后台异步 worker, 13 列顺序 Decrypt→Encrypt→UPDATE, 单行失败不中断, 每 50 行更新进度, idempotent (同 key 跳过)
+- **PiiKeyEndpoints.cs**: `POST /api/admin/pii/reencrypt` (启动 worker) + `GET /api/admin/pii/reencrypt/status` (进度轮询), admin-only + audit log
+- **Program.cs**: `AddSingleton<PiiReencryptWorker>()` DI 注册
+- **SettingsPiiKeySection.tsx**: "立即 re-encrypt PII" 按钮 + 进度条 + 3s 轮询
+- **PiiReencryptWorkerTests.cs**: 5 个 unit tests (基本流程 / idempotent / 失败继续 / GetStatus / 并发保护)
+
+### 红绿灯
+
+- dotnet build: 0 错误 0 警告
+- dotnet test: 122/122 通过 (含 5 新 reencrypt tests)
+- npm check: BUILD PASSED (67 软警告)
+- tsc: 0 error
+- vite build: 11.91s
+
+---
+
 ---
 
 ## v0.77.0 (2026-06-21) — feat: cloud sync schema 准备 (阶段 1)
