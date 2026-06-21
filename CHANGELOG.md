@@ -9,6 +9,25 @@
 > **重要**: v0.74.0 → v0.75.3 期间曾过度打 tag (refactor-only sprint 也 bump). 已在 v0.75.3 重新整理 git 历史 (drop 7 个 spurious chore "bump version" commits), 重组成正确的 semver 历史. 详见 `docs/handoff/v0.75.3-handoff.md`.
 
 
+## v0.78.1 (2026-06-21) — fix: PII re-encrypt chunked + batch UPDATE
+
+> **SemVer**: patch bump (0.78.0 → 0.78.1), 性能优化, 不破坏 API.
+
+### 改动
+
+- **PiiReencryptWorker.cs**: chunked SELECT (每批 500 行, WHERE id > lastId LIMIT 500) + batch UPDATE (每 50 行事务提交, 减少 WAL 写入)
+- 进度更新粒度: 每 50 行 (前端 3s 轮询可见变化)
+
+### 红绿灯
+
+- dotnet build: 0 错误 0 警告
+- dotnet test: 122/122 通过
+- npm check: BUILD PASSED
+- tsc: 0 error
+- vite build: 12.38s
+
+---
+
 ## v0.78.0 (2026-06-21) — feat: PII 后台 re-encrypt worker
 
 > **核心范围**: v0.76.0 PII 多 key 轮换的续作 — admin rotate key 后, 可一键用新 active key 重新加密所有 13 个 _enc 列.
