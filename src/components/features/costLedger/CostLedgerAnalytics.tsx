@@ -7,7 +7,23 @@ import { getCategoryLabel, getCategoryColor } from './config'
 import type { CostLedgerEntry, CostLedgerCategory } from '@/types'
 import { getAPI } from '@/services/api-adapter'
 
-const FALLBACK_COLORS = ['#f97316','#3b82f6','#8b5cf6','#6b7280','#ec4899','#ef4444','#14b8a6','#a855f7','#9ca3af','#0891b2','#2563eb','#059669']
+const COLORS = {
+  orange: '#f97316',
+  blue: '#3b82f6',
+  purple: '#8b5cf6',
+  gray: '#6b7280',
+  pink: '#ec4899',
+  red: '#ef4444',
+  teal: '#14b8a6',
+  violet: '#a855f7',
+  lightGray: '#9ca3af',
+  cyan: '#0891b2',
+  indigo: '#2563eb',
+  emerald: '#059669',
+  expenseBar: '#ef4444',
+  incomeBar: '#10b981',
+} as const
+const FALLBACK_COLORS = [COLORS.orange, COLORS.blue, COLORS.purple, COLORS.gray, COLORS.pink, COLORS.red, COLORS.teal, COLORS.violet, COLORS.lightGray, COLORS.cyan, COLORS.indigo, COLORS.emerald]
 
 interface CostLedgerAnalyticsProps {
   projectId: number
@@ -158,8 +174,8 @@ export function CostLedgerAnalytics({ projectId, projectName, categories }: Cost
               data={stats.trendData.map((d: any) => ({
                 name: d.month,
                 values: [
-                  { label: '支出', amount: d['支出'] || 0, color: '#ef4444' },
-                  { label: '收入', amount: d['收入'] || 0, color: '#10b981' },
+                  { label: '支出', amount: d['支出'] || 0, color: COLORS.expenseBar },
+                  { label: '收入', amount: d['收入'] || 0, color: COLORS.incomeBar },
                 ],
               }))}
               formatValue={(v) => formatMoney(v)}
