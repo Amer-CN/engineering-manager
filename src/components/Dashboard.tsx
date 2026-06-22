@@ -14,6 +14,16 @@ import { statusLabels, invoiceStatusLabels, getGreeting } from './features/dashb
 import DashboardStatsCard from './features/dashboard/DashboardStatsCard'
 import DashboardCharts from './features/dashboard/DashboardCharts'
 
+const COLORS = {
+  fallbackCategory: '#9ca3af',
+  invoiceReceived: '#10b981',
+  invoicePartiallyPaid: '#f59e0b',
+  invoiceIssued: '#3b82f6',
+  invoiceCancelled: '#94a3b8',
+  invoiceRedFlushed: '#ef4444',
+  invoiceFallback: '#94a3b8',
+} as const
+
 const Dashboard: React.FC = () => {
   const { currentUser } = useAuth()
   const [stats, setStats] = useState<DashboardStats | null>(null)
@@ -61,7 +71,7 @@ const Dashboard: React.FC = () => {
   if (entry.direction === 'expense') colorMap.set(entry.level1, entry.level1Color)
   }
   const expenseByCategory = Array.from(level1Map.entries())
-  .map(([name, amount]) => ({ name, amount: Math.round(amount), color: colorMap.get(name) || '#9ca3af' }))
+  .map(([name, amount]) => ({ name, amount: Math.round(amount), color: colorMap.get(name) || COLORS.fallbackCategory }))
   .sort((a, b) => b.amount - a.amount)
   console.log('[Dashboard] expenseByCategory final:', JSON.stringify(expenseByCategory))
   setChartData(prev => ({ ...prev, expenseByCategory }))
@@ -83,11 +93,11 @@ const Dashboard: React.FC = () => {
   statusCounts[s] = (statusCounts[s] || 0) + 1
   }
   const colorMap: Record<string, string> = {
-  'received': '#10b981', 'partially_paid': '#f59e0b', 'issued': '#3b82f6',
-  'cancelled': '#94a3b8', 'red_flushed': '#ef4444',
+  'received': COLORS.invoiceReceived, 'partially_paid': COLORS.invoicePartiallyPaid, 'issued': COLORS.invoiceIssued,
+  'cancelled': COLORS.invoiceCancelled, 'red_flushed': COLORS.invoiceRedFlushed,
   }
   const invoiceStatus = Object.entries(statusCounts)
-  .map(([name, value]) => ({ name, value, color: colorMap[name] || '#94a3b8' }))
+  .map(([name, value]) => ({ name, value, color: colorMap[name] || COLORS.invoiceFallback }))
   .filter(d => d.value > 0)
   setChartData(prev => ({ ...prev, invoiceStatus }))
   }
