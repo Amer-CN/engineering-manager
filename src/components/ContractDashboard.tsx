@@ -9,6 +9,14 @@ import { SimpleBarChart } from './ui/SimpleBarChart'
 import { staggerContainer, sectionVariant } from '@/constants/animations'
 import { getAPI } from '@/services/api-adapter'
 
+const COLORS = {
+  income: '#10b981',
+  expense: '#ef4444',
+  received: '#3b82f6',
+  paid: '#f59e0b',
+  agreement: '#0ea5e9',
+} as const
+
 const CARD = 'bg-white border border-slate-200 rounded-xl shadow-sm'
 
 interface ContractDashboardProps {
@@ -56,16 +64,16 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
   const isPositive = netIncome >= 0
 
   const barData = [
-  { name: '收入合同', amount: stats?.incomeTotal || 0, fill: '#10b981' },
-  { name: '支出合同', amount: stats?.expenseTotal || 0, fill: '#ef4444' },
-  { name: '已回款', amount: stats?.incomeReceived || 0, fill: '#3b82f6' },
-  { name: '已付款', amount: stats?.expensePaid || 0, fill: '#f59e0b' },
+  { name: '收入合同', amount: stats?.incomeTotal || 0, fill: COLORS.income },
+  { name: '支出合同', amount: stats?.expenseTotal || 0, fill: COLORS.expense },
+  { name: '已回款', amount: stats?.incomeReceived || 0, fill: COLORS.received },
+  { name: '已付款', amount: stats?.expensePaid || 0, fill: COLORS.paid },
   ]
 
   const pieData = [
-  { name: '收入合同', value: stats?.incomeCount || 0, color: '#10b981' },
-  { name: '支出合同', value: stats?.expenseCount || 0, color: '#ef4444' },
-  { name: '其他协议', value: stats?.agreementCount || 0, color: '#0ea5e9' },
+  { name: '收入合同', value: stats?.incomeCount || 0, color: COLORS.income },
+  { name: '支出合同', value: stats?.expenseCount || 0, color: COLORS.expense },
+  { name: '其他协议', value: stats?.agreementCount || 0, color: COLORS.agreement },
   ].filter(d => d.value > 0)
 
   return (
