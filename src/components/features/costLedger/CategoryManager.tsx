@@ -3,6 +3,7 @@ import { Modal } from '../../ui/Modal/Modal'
 import { useConfirm } from '@/hooks/useConfirm'
 import { useToastStore } from '@/store/toastStore'
 import type { CostLedgerCategory, CostLedgerMatchRule } from '@/types'
+import { COLORS } from './costLedgerColors'
 import { getLevel1GroupsMerged, HIERARCHY_GROUP_NAMES } from './config'
 import { getAPI } from '@/services/api-adapter'
 import { LearningRulesView } from './LearningRulesView'
@@ -217,7 +218,7 @@ export function CategoryManager({ categories, onClose, onRefresh }: CategoryMana
           </div>
         ) : (
           <button
-            onClick={() => { setAdd({ type: 'l1', groupName: '', groupColor: '#6366f1', label: '', color: '#6b7280' }); setEdit(null); setError('') }}
+            onClick={() => { setAdd({ type: 'l1', groupName: '', groupColor: COLORS.projectReturn, label: '', color: COLORS.publicService }); setEdit(null); setError('') }}
             className="w-full rounded-lg border border-dashed border-slate-300 px-3 py-2 text-xs text-slate-500 hover:border-blue-400 hover:text-blue-600 transition-colors"
           >
             + 新建一级分类
