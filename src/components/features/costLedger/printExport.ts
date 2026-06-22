@@ -1,15 +1,7 @@
 import { formatMoney } from '@/utils/format'
 import { DIRECTION_CONFIG, getCategoryDisplayLabel } from './config'
 import type { CostLedgerEntry, CostLedgerCategory } from '@/types'
-
-const COLORS = {
-  textPrimary: '#333',
-  textSecondary: '#666',
-  border: '#ccc',
-  tableHeaderBg: '#f1f5f9',
-  expense: '#dc2626',
-  income: '#059669',
-} as const
+import { COLORS } from './printExportColors'
 
 function esc(s: string): string {
   if (!s) return ''
