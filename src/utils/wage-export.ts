@@ -2,16 +2,7 @@
  * 工资明细导出 & 打印工具
  */
 import type { WageRecord } from '@/types'
-
-const COLORS = {
-  settled: '#059669',
-  pending: '#d97706',
-  textBody: '#333',
-  textSub: '#666',
-  borderTable: '#bbb',
-  bgTableHeader: '#f1f5f9',
-  textFooter: '#999',
-} as const
+import { COLORS } from './wageExportColors'
 
 /** 导出工资明细为 Excel */
 export async function exportWageDetailToExcel(records: WageRecord[]) {
