@@ -13,16 +13,7 @@ import CountUp from './features/dashboard/CountUp'
 import { statusLabels, invoiceStatusLabels, getGreeting } from './features/dashboard/dashboardConstants'
 import DashboardStatsCard from './features/dashboard/DashboardStatsCard'
 import DashboardCharts from './features/dashboard/DashboardCharts'
-
-const COLORS = {
-  fallbackCategory: '#9ca3af',
-  invoiceReceived: '#10b981',
-  invoicePartiallyPaid: '#f59e0b',
-  invoiceIssued: '#3b82f6',
-  invoiceCancelled: '#94a3b8',
-  invoiceRedFlushed: '#ef4444',
-  invoiceFallback: '#94a3b8',
-} as const
+import { COLORS } from './features/dashboard/dashboardColors'
 
 const Dashboard: React.FC = () => {
   const { currentUser } = useAuth()
