@@ -4,6 +4,7 @@ import { Icon } from '../../ui/Icon'
 import { Spinner } from '../../ui/Loading/Loading'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { getAPI } from '@/services/api-adapter'
+import { CHART_PALETTE } from './hrColors'
 
 interface DashboardData {
   totalStaff: number
@@ -16,18 +17,6 @@ interface DashboardData {
   deptDistribution: { name: string; value: number }[]
   recentStaff: { id: number; name: string; departmentId?: number; position?: string; createdAt: string }[]
 }
-
-const COLORS = {
-  primary: '#6366f1',
-  emerald: '#10b981',
-  amber: '#f59e0b',
-  danger: '#ef4444',
-  violet: '#8b5cf6',
-  cyan: '#06b6d4',
-  orange: '#f97316',
-  lime: '#84cc16',
-} as const
-const COLOR_VALUES = Object.values(COLORS)
 
 const HRDashboard: React.FC = () => {
   const [data, setData] = useState<DashboardData>({
@@ -149,7 +138,7 @@ const HRDashboard: React.FC = () => {
             <ResponsiveContainer width="100%" height={240}>
               <PieChart>
                 <Pie data={data.deptDistribution} cx="50%" cy="50%" innerRadius={55} outerRadius={95} paddingAngle={3} dataKey="value">
-                  {data.deptDistribution.map((_, i) => <Cell key={i} fill={COLOR_VALUES[i % COLOR_VALUES.length]} />)}
+                  {data.deptDistribution.map((_, i) => <Cell key={i} fill={CHART_PALETTE[i % CHART_PALETTE.length]} />)}
                 </Pie>
                 <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, boxShadow: 'var(--shadow-md)', color: 'var(--fg)' }} />
               </PieChart>
@@ -160,7 +149,7 @@ const HRDashboard: React.FC = () => {
           <div className="flex flex-wrap gap-3 mt-3 justify-center">
             {data.deptDistribution.map((d, i) => (
               <span key={d.name} className="flex items-center gap-1 text-xs text-slate-600">
-                <span className="w-2.5 h-2.5 rounded-full" style={{ background: COLOR_VALUES[i % COLOR_VALUES.length] }} />{d.name}
+                <span className="w-2.5 h-2.5 rounded-full" style={{ background: CHART_PALETTE[i % CHART_PALETTE.length] }} />{d.name}
               </span>
             ))}
           </div>
