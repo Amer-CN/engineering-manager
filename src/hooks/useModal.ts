@@ -6,6 +6,9 @@
 
 import { useState, useCallback } from 'react'
 
+export type { ConfirmConfig, UseConfirmReturn } from './useModalHelpers'
+export { useConfirm } from './useModalHelpers'
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // useModal
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -73,103 +76,5 @@ export function useModal<T = unknown>(initialData?: T): UseModalReturn<T> {
     open,
     close,
     toggle,
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// useConfirm
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * 确认对话框配置
- */
-export interface ConfirmConfig {
-  title: string
-  content: string
-  confirmText?: string
-  cancelText?: string
-  confirmVariant?: 'primary' | 'danger'
-  onConfirm: () => void
-  onCancel?: () => void
-}
-
-/**
- * useConfirm 返回类型
- */
-export interface UseConfirmReturn {
-  isOpen: boolean
-  config: ConfirmConfig | null
-  confirm: (config: ConfirmConfig) => void
-  handleConfirm: () => void
-  handleCancel: () => void
-  close: () => void
-}
-
-/**
- * 确认对话框 Hook
- * 
- * @example
- * ```tsx
- * function MyComponent() {
- *   const confirm = useConfirm()
- *   
- *   const handleDelete = () => {
- *     confirm.confirm({
- *       title: '确认删除',
- *       content: '确定要删除这个项目吗？此操作无法撤销。',
- *       confirmText: '删除',
- *       confirmVariant: 'danger',
- *       onConfirm: () => deleteProject(),
- *     })
- *   }
- *   
- *   return (
- *     <>
- *       <button onClick={handleDelete}>删除</button>
- *       <ConfirmDialog
- *         isOpen={confirm.isOpen}
- *         onConfirm={confirm.handleConfirm}
- *         onCancel={confirm.handleCancel}
- *       >
- *         <p>{confirm.config?.content}</p>
- *       </ConfirmDialog>
- *     </>
- *   )
- * }
- * ```
- */
-export function useConfirm(): UseConfirmReturn {
-  const [isOpen, setIsOpen] = useState(false)
-  const [config, setConfig] = useState<ConfirmConfig | null>(null)
-
-  const confirm = useCallback((newConfig: ConfirmConfig) => {
-    setConfig(newConfig)
-    setIsOpen(true)
-  }, [])
-
-  const handleConfirm = useCallback(() => {
-    config?.onConfirm()
-    setIsOpen(false)
-    setConfig(null)
-  }, [config])
-
-  const handleCancel = useCallback(() => {
-    config?.onCancel?.()
-    setIsOpen(false)
-    setConfig(null)
-  }, [config])
-
-  const close = useCallback(() => {
-    setIsOpen(false)
-    setConfig(null)
-  }, [])
-
-  return {
-    isOpen,
-    config,
-    confirm,
-    handleConfirm,
-    handleCancel,
-    close,
   }
 }
