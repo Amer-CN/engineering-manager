@@ -3,6 +3,7 @@ import { InventoryItem, InventoryTransaction, Project, Partner, Material } from 
 import { logCreate, logUpdate, logDelete } from '../utils/audit'
 import { useToastStore } from '@/store/toastStore'
 import { getAPI } from '@/services/api-adapter'
+import { computeStats } from './useInventoryPageHelpers'
 
 export function useInventoryPage(
   can: (perm: string) => boolean,
@@ -131,12 +132,7 @@ export function useInventoryPage(
   }, [can, projectMaterials, loadData, refresh, showToast])
 
   // Stats
-  const stats = {
-    totalItems: items.length,
-    lowStock: items.filter(i => i.currentStock <= i.minStock).length,
-    totalValue: items.reduce((sum, i) => sum + i.currentStock * i.purchasePrice, 0),
-    totalMaterials: projectMaterials.filter(m => !filterProject || m.projectId === filterProject).length,
-  }
+  const stats = computeStats(items, projectMaterials, filterProject)
 
   return {
     activeTab, setActiveTab, loading,
