@@ -7,13 +7,7 @@ import React from 'react'
 import type { Project, Member } from '@/types'
 import { Icon } from '../../ui/Icon'
 import { StatusBadge, PROJECT_STATUS } from '@/constants/status'
-
-const COLORS = {
-  healthGood: '#10b981',
-  healthModerate: '#3b82f6',
-  healthWarning: '#f59e0b',
-  healthCritical: '#ef4444',
-} as const
+import { COLORS } from './projectsColors'
 
 export interface ProjectCardProps {
   project: Project
