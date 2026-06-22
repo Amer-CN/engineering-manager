@@ -1,6 +1,14 @@
 import type { Invoice, PaymentRecord } from '@/types'
 import { formatMoney } from '@/utils/format'
 
+const COLORS = {
+  borderDark: '#333',
+  successGreen: '#059669',
+  borderLight: '#ddd',
+  headerBg: '#f5f5f5',
+  textMuted: '#666',
+} as const
+
 function escapeHtml(s: string): string {
   if (!s) return ''
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
@@ -38,7 +46,7 @@ export function getKindLabel(kind: string) {
 export function generateInvoicePrintContent(invoice: Invoice) {
   return `
     <div style="padding: 20px; font-family: 'SimSun', serif;">
-      <div style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 20px;">
+      <div style="text-align: center; border-bottom: 2px solid ${COLORS.borderDark}; padding-bottom: 20px; margin-bottom: 20px;">
         <h1 style="font-size: 24pt; font-weight: bold;">${invoice.type === 'invoice_in' ? '收' : '开'}票证明</h1>
       </div>
       <div style="margin-bottom: 30px;">
@@ -48,14 +56,14 @@ export function generateInvoicePrintContent(invoice: Invoice) {
         <p><strong>票种:</strong> ${getKindLabel(invoice.invoiceKind)}</p>
       </div>
       <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
-        <tr><td style="border: 1px solid #333; padding: 10px; width: 50%;"><strong>销售方:</strong> ${invoice.sellerName || '-'}</td>
-        <td style="border: 1px solid #333; padding: 10px;"><strong>购买方:</strong> ${invoice.buyerName || '-'}</td></tr>
-        <tr><td style="border: 1px solid #333; padding: 10px;"><strong>项目:</strong> ${invoice.projectName || '-'}</td>
-        <td style="border: 1px solid #333; padding: 10px;"><strong>税率:</strong> ${(invoice.taxRate * 100).toFixed(0)}%</td></tr>
-        <tr><td style="border: 1px solid #333; padding: 10px;" colspan="2"><strong>发票名称:</strong> ${invoice.name}</td></tr>
-        <tr><td style="border: 1px solid #333; padding: 10px;"><strong>不含税金额:</strong> ¥${formatMoney(invoice.priceAmount)}</td>
-        <td style="border: 1px solid #333; padding: 10px;"><strong>税额:</strong> ¥${invoice.taxAmount.toLocaleString()}</td></tr>
-        <tr><td colspan="2" style="border: 1px solid #333; padding: 10px; text-align: right;">
+        <tr><td style="border: 1px solid ${COLORS.borderDark}; padding: 10px; width: 50%;"><strong>销售方:</strong> ${invoice.sellerName || '-'}</td>
+        <td style="border: 1px solid ${COLORS.borderDark}; padding: 10px;"><strong>购买方:</strong> ${invoice.buyerName || '-'}</td></tr>
+        <tr><td style="border: 1px solid ${COLORS.borderDark}; padding: 10px;"><strong>项目:</strong> ${invoice.projectName || '-'}</td>
+        <td style="border: 1px solid ${COLORS.borderDark}; padding: 10px;"><strong>税率:</strong> ${(invoice.taxRate * 100).toFixed(0)}%</td></tr>
+        <tr><td style="border: 1px solid ${COLORS.borderDark}; padding: 10px;" colspan="2"><strong>发票名称:</strong> ${invoice.name}</td></tr>
+        <tr><td style="border: 1px solid ${COLORS.borderDark}; padding: 10px;"><strong>不含税金额:</strong> ¥${formatMoney(invoice.priceAmount)}</td>
+        <td style="border: 1px solid ${COLORS.borderDark}; padding: 10px;"><strong>税额:</strong> ¥${invoice.taxAmount.toLocaleString()}</td></tr>
+        <tr><td colspan="2" style="border: 1px solid ${COLORS.borderDark}; padding: 10px; text-align: right;">
           <strong>价税合计:</strong> <span style="font-size: 18pt; font-weight: bold;">¥${invoice.amount.toLocaleString()}</span></td></tr>
       </table>
       <div style="margin-top: 60px; display: flex; justify-content: space-between;">
@@ -69,24 +77,24 @@ export function generatePaymentPrintContent(record: PaymentRecord) {
   const typeLabel = record.type === 'invoice_out' ? '回款' : '付款'
   return `
     <div style="padding: 20px; font-family: 'SimSun', serif;">
-      <div style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 20px;">
+      <div style="text-align: center; border-bottom: 2px solid ${COLORS.borderDark}; padding-bottom: 20px; margin-bottom: 20px;">
         <h1 style="font-size: 24pt; font-weight: bold;">${typeLabel}凭证</h1>
       </div>
       <div style="margin-bottom: 30px;">
         <p><strong>收款日期:</strong> ${record.recordDate}</p>
         <p><strong>收款类型:</strong> ${record.type === 'invoice_out' ? '回款（开票收款）' : '付款（收票付款）'}</p>
-        <p><strong>收款金额:</strong> <span style="font-size: 18pt; font-weight: bold; color: #059669;">¥${formatMoney(record.amount)}</span></p>
+        <p><strong>收款金额:</strong> <span style="font-size: 18pt; font-weight: bold; color: ${COLORS.successGreen};">¥${formatMoney(record.amount)}</span></p>
       </div>
       <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
-        <tr><td style="border: 1px solid #333; padding: 10px; width: 50%;"><strong>关联单位:</strong> ${record.partnerName || '-'}</td>
-        <td style="border: 1px solid #333; padding: 10px;"><strong>关联项目:</strong> ${record.projectName || '-'}</td></tr>
-        <tr><td style="border: 1px solid #333; padding: 10px;" colspan="2"><strong>关联合同:</strong> ${record.contractName || '-'}</td></tr>
+        <tr><td style="border: 1px solid ${COLORS.borderDark}; padding: 10px; width: 50%;"><strong>关联单位:</strong> ${record.partnerName || '-'}</td>
+        <td style="border: 1px solid ${COLORS.borderDark}; padding: 10px;"><strong>关联项目:</strong> ${record.projectName || '-'}</td></tr>
+        <tr><td style="border: 1px solid ${COLORS.borderDark}; padding: 10px;" colspan="2"><strong>关联合同:</strong> ${record.contractName || '-'}</td></tr>
         ${(record as any).invoiceInfos && (record as any).invoiceInfos.length > 0 ? `
-        <tr><td style="border: 1px solid #333; padding: 10px;" colspan="2"><strong>关联发票:</strong>
+        <tr><td style="border: 1px solid ${COLORS.borderDark}; padding: 10px;" colspan="2"><strong>关联发票:</strong>
           <ul style="margin: 5px 0 0 20px; padding: 0;">
             ${(record as any).invoiceInfos.map((info: any) => `<li>No.${info.invoiceNo} - ${info.invoiceName} - 开票金额: ¥${formatMoney(info.invoiceAmount)}</li>`).join('')}
           </ul></td></tr>` : ''}
-        <tr><td style="border: 1px solid #333; padding: 10px;" colspan="2"><strong>备注:</strong> ${record.remarks || '-'}</td></tr>
+        <tr><td style="border: 1px solid ${COLORS.borderDark}; padding: 10px;" colspan="2"><strong>备注:</strong> ${record.remarks || '-'}</td></tr>
       </table>
       <div style="margin-top: 60px; display: flex; justify-content: space-between;">
         <div style="text-align: center; width: 200px;"><p>经办人签字:</p><p style="margin-top: 40px;">___________</p><p style="margin-top: 10px;">年  月  日</p></div>
@@ -116,8 +124,8 @@ export function printInvoiceList(invoiceList: Invoice[]) {
     <td>${getStatusLabel(inv.status, inv.type)}</td></tr>`).join('')
   const content = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>发票列表</title>
     <style>body { font-family: 'Microsoft YaHei', sans-serif; padding: 20px; } h1 { text-align: center; margin-bottom: 20px; }
-    table { width: 100%; border-collapse: collapse; font-size: 12px; } th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-    th { background: #f5f5f5; } .footer { margin-top: 20px; text-align: right; font-size: 12px; color: #666; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; } th, td { border: 1px solid ${COLORS.borderLight}; padding: 8px; text-align: left; }
+    th { background: ${COLORS.headerBg}; } .footer { margin-top: 20px; text-align: right; font-size: 12px; color: ${COLORS.textMuted}; }
     @media print { body { padding: 0; } }</style></head><body><h1>发票列表</h1>
     <table><thead><tr><th>开票日期</th><th>类型</th><th>票种</th><th>发票名称</th><th>发票号码</th><th>税率</th><th>金额</th><th>税额</th><th>状态</th></tr></thead>
     <tbody>${rows}</tbody></table><div class="footer">共 ${invoiceList.length} 条记录 | 打印时间: ${new Date().toLocaleString()}</div></body></html>`
@@ -131,8 +139,8 @@ export function printPaymentList(paymentList: PaymentRecord[]) {
     <td>${escapeHtml(p.projectName || '-')}</td><td>${escapeHtml(p.contractName || '-')}</td><td>${escapeHtml(p.remarks || '-')}</td></tr>`).join('')
   const content = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>收款记录列表</title>
     <style>body { font-family: 'Microsoft YaHei', sans-serif; padding: 20px; } h1 { text-align: center; margin-bottom: 20px; }
-    table { width: 100%; border-collapse: collapse; font-size: 12px; } th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-    th { background: #f5f5f5; } .footer { margin-top: 20px; text-align: right; font-size: 12px; color: #666; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; } th, td { border: 1px solid ${COLORS.borderLight}; padding: 8px; text-align: left; }
+    th { background: ${COLORS.headerBg}; } .footer { margin-top: 20px; text-align: right; font-size: 12px; color: ${COLORS.textMuted}; }
     @media print { body { padding: 0; } }</style></head><body><h1>收款记录列表</h1>
     <table><thead><tr><th>日期</th><th>类型</th><th>金额</th><th>单位</th><th>项目</th><th>合同</th><th>备注</th></tr></thead>
     <tbody>${rows}</tbody></table><div class="footer">共 ${paymentList.length} 条记录 | 打印时间: ${new Date().toLocaleString()}</div></body></html>`
@@ -201,8 +209,8 @@ export const printPaymentRecordList = (
   `).join('')
   const content = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>收款记录列表</title>
     <style>body{font-family:'Microsoft YaHei',sans-serif;padding:20px}h1{text-align:center;margin-bottom:20px}
-    table{width:100%;border-collapse:collapse;font-size:12px}th,td{border:1px solid #ddd;padding:8px;text-align:left}
-    th{background:#f5f5f5}.footer{margin-top:20px;text-align:right;font-size:12px;color:#666}
+    table{width:100%;border-collapse:collapse;font-size:12px}th,td{border:1px solid ${COLORS.borderLight};padding:8px;text-align:left}
+    th{background:${COLORS.headerBg}}.footer{margin-top:20px;text-align:right;font-size:12px;color:${COLORS.textMuted}}
     @media print{body{padding:0}}</style></head><body>
     <h1>收款记录列表</h1><table><thead><tr><th>日期</th><th>类型</th><th>金额</th><th>单位</th><th>项目</th><th>合同</th><th>备注</th></tr></thead>
     <tbody>${rows}</tbody></table><div class="footer">共 ${paymentList.length} 条记录 | 打印时间: ${new Date().toLocaleString()}</div></body></html>`
