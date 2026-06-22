@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import type { CostLedgerCategory } from '@/types'
 import { getAPI } from '@/services/api-adapter'
+import { COLORS } from '@/components/features/costLedger/costLedgerColors'
 
 export function useCostLedgerCategories() {
   const [categories, setCategories] = useState<CostLedgerCategory[]>([])
@@ -42,7 +43,7 @@ export function useCostLedgerCategories() {
   }, [categories])
 
   const getColor = useCallback((code: string): string => {
-    return categories.find(c => c.code === code)?.color || '#9ca3af'
+    return categories.find(c => c.code === code)?.color || COLORS.finance
   }, [categories])
 
   const getByDirection = useCallback((dir: 'expense' | 'income') => {
