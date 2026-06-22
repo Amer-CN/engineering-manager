@@ -1,29 +1,22 @@
-import { useState, useCallback, useEffect } from "react"
-import type { WorkerTeam, WorkerTransferRecord } from "@/types"
-import { handleError, Result, VoidResult } from "@/types"
-import { getAPI } from '@/services/api-adapter'
-
 /**
- * useWorkerTeams 返回类型
+ * useWorkerTeams + useWorkerTransfers Hooks
+ *
+ * 农民工班组管理 + 工人调动记录管理 Hook
  */
-export interface UseWorkerTeamsReturn {
-  
-  data: WorkerTeam[]
-  loading: boolean
-  error: string | null
-  selectedItem: WorkerTeam | null
-  
-  
-  loadData: () => Promise<void>
-  create: (data: Partial<WorkerTeam>) => Promise<Result<{ id: number }>>
-  update: (team: WorkerTeam) => Promise<VoidResult>
-  delete: (id: number) => Promise<VoidResult>
-  
-  
-  setSelectedItem: (item: WorkerTeam | null) => void
-  clearError: () => void
-  refresh: () => Promise<void>
-}
+
+import { useState, useCallback, useEffect } from 'react'
+import type { WorkerTeam, WorkerTransferRecord } from '@/types'
+import type { UseWorkerTeamsReturn, UseWorkerTransfersReturn } from './useWorkerTeams.types'
+import {
+  useWorkerTeamsLoaders,
+  useWorkerTransfersLoaders,
+} from './useWorkerTeamsLoaders'
+import {
+  useWorkerTeamsActions,
+  useWorkerTransfersActions,
+} from './useWorkerTeamsActions'
+
+export type { UseWorkerTeamsReturn, UseWorkerTransfersReturn } from './useWorkerTeams.types'
 
 /**
  * 农民工班组管理 Hook
@@ -34,98 +27,18 @@ export function useWorkerTeams(projectId?: number): UseWorkerTeamsReturn {
   const [error, setError] = useState<string | null>(null)
   const [selectedTeam, setSelectedTeam] = useState<WorkerTeam | null>(null)
 
-  const loadTeams = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    
-    try {
-      const result = await (await getAPI()).getWorkerTeams()
-      
-      if (result.success && result.data) {
-        let filteredData = result.data
-        if (projectId) {
-          filteredData = filteredData.filter((t: WorkerTeam) => t.projectId === projectId)
-        }
-        setTeams(filteredData)
-      } else {
-        setError(result.error || '加载班组列表失败')
-      }
-    } catch (err) {
-      const appError = handleError(err)
-      setError(appError.getUserMessage())
-    } finally {
-      setLoading(false)
-    }
-  }, [projectId])
+  const { loadTeams } = useWorkerTeamsLoaders(
+    { setLoading, setError, setTeams },
+    projectId,
+  )
 
-  const create = useCallback(async (data: Partial<WorkerTeam>): Promise<Result<{ id: number }>> => {
-    setError(null)
-    
-    try {
-      const result = await (await getAPI()).createWorkerTeam(data as WorkerTeam)
-      
-      if (result.success) {
-        await loadTeams()
-        return { success: true, data: { id: result.data?.id || 0 } }
-      }
-      
-      const errorMsg = result.error || '创建班组失败'
-      setError(errorMsg)
-      return { success: false, error: errorMsg }
-    } catch (err) {
-      const appError = handleError(err)
-      setError(appError.getUserMessage())
-      return { success: false, error: appError.getUserMessage() }
-    }
-  }, [loadTeams])
-
-  const update = useCallback(async (team: WorkerTeam): Promise<VoidResult> => {
-    setError(null)
-    
-    try {
-      const result = await (await getAPI()).updateWorkerTeam(team)
-      
-      if (result.success) {
-        await loadTeams()
-        if (selectedTeam?.id === team.id) {
-          setSelectedTeam(team)
-        }
-        return { success: true }
-      }
-      
-      const errorMsg = result.error || '更新班组失败'
-      setError(errorMsg)
-      return { success: false, error: errorMsg }
-    } catch (err) {
-      const appError = handleError(err)
-      setError(appError.getUserMessage())
-      return { success: false, error: appError.getUserMessage() }
-    }
-  }, [loadTeams, selectedTeam])
-
-  const deleteTeam = useCallback(async (id: number): Promise<VoidResult> => {
-    setError(null)
-    
-    try {
-      const result = await (await getAPI()).deleteWorkerTeam(id)
-      
-      if (result.success) {
-        setTeams(prev => prev.filter(t => t.id !== id))
-        if (selectedTeam?.id === id) {
-          setSelectedTeam(null)
-        }
-        return { success: true }
-      }
-      
-      const errorMsg = result.error || '删除班组失败'
-      setError(errorMsg)
-      return { success: false, error: errorMsg }
-    } catch (err) {
-      const appError = handleError(err)
-      setError(appError.getUserMessage())
-      return { success: false, error: appError.getUserMessage() }
-    }
-  }, [selectedTeam])
+  const { create, update, deleteTeam } = useWorkerTeamsActions({
+    setError,
+    setTeams,
+    loadTeams,
+    selectedTeam,
+    setSelectedTeam,
+  })
 
   const clearError = useCallback(() => {
     setError(null)
@@ -159,24 +72,6 @@ export function useWorkerTeams(projectId?: number): UseWorkerTeamsReturn {
 }
 
 /**
- * useWorkerTransfers 返回类型
- */
-export interface UseWorkerTransfersReturn {
-  
-  data: WorkerTransferRecord[]
-  loading: boolean
-  error: string | null
-  
-  
-  loadData: (workerId?: number) => Promise<void>
-  create: (record: Partial<WorkerTransferRecord>) => Promise<Result<{ id: number }>>
-  
-  
-  clearError: () => void
-  refresh: () => Promise<void>
-}
-
-/**
  * 工人调动记录 Hook
  */
 export function useWorkerTransfers(): UseWorkerTransfersReturn {
@@ -184,46 +79,16 @@ export function useWorkerTransfers(): UseWorkerTransfersReturn {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const loadRecords = useCallback(async (workerId?: number) => {
-    setLoading(true)
-    setError(null)
-    
-    try {
-      const result = await (await getAPI()).getWorkerTransferRecords(workerId ?? 0)
-      
-      if (result.success && result.data) {
-        setRecords(result.data)
-      } else {
-        setError(result.error || '加载调动记录失败')
-      }
-    } catch (err) {
-      const appError = handleError(err)
-      setError(appError.getUserMessage())
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  const { loadRecords } = useWorkerTransfersLoaders({
+    setLoading,
+    setError,
+    setRecords,
+  })
 
-  const create = useCallback(async (record: Partial<WorkerTransferRecord>): Promise<Result<{ id: number }>> => {
-    setError(null)
-    
-    try {
-      const result = await (await getAPI()).createWorkerTransfer(record as WorkerTransferRecord)
-      
-      if (result.success) {
-        await loadRecords()
-        return { success: true, data: { id: result.data?.id || 0 } }
-      }
-      
-      const errorMsg = result.error || '创建调动记录失败'
-      setError(errorMsg)
-      return { success: false, error: errorMsg }
-    } catch (err) {
-      const appError = handleError(err)
-      setError(appError.getUserMessage())
-      return { success: false, error: appError.getUserMessage() }
-    }
-  }, [loadRecords])
+  const { create } = useWorkerTransfersActions({
+    setError,
+    loadRecords,
+  })
 
   const clearError = useCallback(() => {
     setError(null)
