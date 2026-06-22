@@ -3,7 +3,7 @@ import type { Worker, ProjectWorker, WorkerTeam } from '@/types'
 import { workerTypeToCode } from './memberFormTypes'
 import { getAPI } from '@/services/api-adapter'
 
-interface PickEntry {
+export interface PickEntry {
   worker: Worker
   teamId: number | null
   dailyWage: number
