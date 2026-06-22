@@ -1,6 +1,13 @@
+/**
+ * BankReceiptMatchConfirm 表格列定义 + 置信度辅助函数
+ *
+ * 提取自 BankReceiptMatchConfirm.tsx，用于减少主文件行数
+ */
+import { type Column } from '@/components/DataTable'
 import { Badge } from '@/components/ui/Badge/Badge'
-import type { Column } from '@/components/DataTable'
 import type { BankReceiptMatch } from '@/types'
+
+type BankReceiptMatchWithIndex = BankReceiptMatch & { _index: number }
 
 function getConfidenceColor(confidence: number) {
   if (confidence >= 80) return 'text-green-600 bg-green-50'
@@ -33,94 +40,66 @@ export function getMatchColumns(
   wageRecords: { id: number; memberName?: string; actualWage: number; yearMonth: string }[],
   handleWorkerChange: (index: number, workerId: number | null, workerName: string | null) => void,
   handleWageChange: (index: number, wageId: number | null) => void,
-): Column<BankReceiptMatch & { _index: number }>[] {
+): Column<BankReceiptMatchWithIndex>[] {
   return [
-    {
-      key: 'receiptPath',
-      title: '回单信息',
-      render: (item) => (
-        <div>
-          <p className="font-medium">{item.parsedDate || '日期未知'}</p>
-          <p className="text-xs text-slate-500">{item.receiptPath.split('/').pop()}</p>
-        </div>
-      ),
-    },
-    {
-      key: 'parsedName',
-      title: '解析姓名',
-      render: (item) => (
-        <span className={item.parsedName ? 'text-slate-900' : 'text-slate-400'}>
-          {item.parsedName || '未识别'}
-        </span>
-      ),
-    },
-    {
-      key: 'parsedAmount',
-      title: '解析金额',
-      render: (item) => (
-        <span className="font-medium text-slate-900">¥{item.parsedAmount.toFixed(2)}</span>
-      ),
-    },
-    {
-      key: 'matchedWorkerId',
-      title: '匹配工人',
-      render: (item) => (
-        <select
-          value={item.matchedWorkerId || ''}
-          onChange={(e) => {
-            const selectedId = e.target.value ? parseInt(e.target.value) : null
-            const selectedWorker = workers.find(w => w.id === selectedId)
-            handleWorkerChange(item._index, selectedId, selectedWorker?.name || null)
-          }}
-          className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          disabled={item.status === 'archived'}
-        >
-          <option value="">-- 未匹配 --</option>
-          {workers.map(worker => (
-            <option key={worker.id} value={worker.id}>
-              {worker.name}
+    { key: 'receiptPath', title: '回单信息', render: (item) => (
+      <div>
+        <p className="font-medium">{item.parsedDate || '日期未知'}</p>
+        <p className="text-xs text-slate-500">{item.receiptPath.split('/').pop()}</p>
+      </div>
+    )},
+    { key: 'parsedName', title: '解析姓名', render: (item) => (
+      <span className={item.parsedName ? 'text-slate-900' : 'text-slate-400'}>
+        {item.parsedName || '未识别'}
+      </span>
+    )},
+    { key: 'parsedAmount', title: '解析金额', render: (item) => (
+      <span className="font-medium text-slate-900">¥{item.parsedAmount.toFixed(2)}</span>
+    )},
+    { key: 'matchedWorkerId', title: '匹配工人', render: (item) => (
+      <select
+        value={item.matchedWorkerId || ''}
+        onChange={(e) => {
+          const selectedId = e.target.value ? parseInt(e.target.value) : null
+          const selectedWorker = workers.find(w => w.id === selectedId)
+          handleWorkerChange(item._index, selectedId, selectedWorker?.name || null)
+        }}
+        className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        disabled={item.status === 'archived'}
+      >
+        <option value="">-- 未匹配 --</option>
+        {workers.map(worker => (
+          <option key={worker.id} value={worker.id}>
+            {worker.name}
+          </option>
+        ))}
+      </select>
+    )},
+    { key: 'matchedWageId', title: '匹配工资记录', render: (item) => (
+      <select
+        value={item.matchedWageId || ''}
+        onChange={(e) => {
+          const selectedId = e.target.value ? parseInt(e.target.value) : null
+          handleWageChange(item._index, selectedId)
+        }}
+        className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        disabled={item.status === 'archived' || !item.matchedWorkerId}
+      >
+        <option value="">-- 未匹配 --</option>
+        {wageRecords
+          .filter(w => !item.matchedWorkerId || w.memberName === item.matchedWorkerName)
+          .map(w => (
+            <option key={w.id} value={w.id}>
+              {w.yearMonth} - ¥{w.actualWage.toFixed(2)}
             </option>
           ))}
-        </select>
-      ),
-    },
-    {
-      key: 'matchedWageId',
-      title: '匹配工资记录',
-      render: (item) => (
-        <select
-          value={item.matchedWageId || ''}
-          onChange={(e) => {
-            const selectedId = e.target.value ? parseInt(e.target.value) : null
-            handleWageChange(item._index, selectedId)
-          }}
-          className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          disabled={item.status === 'archived' || !item.matchedWorkerId}
-        >
-          <option value="">-- 未匹配 --</option>
-          {wageRecords
-            .filter(w => !item.matchedWorkerId || w.memberName === item.matchedWorkerName)
-            .map(w => (
-              <option key={w.id} value={w.id}>
-                {w.yearMonth} - ¥{w.actualWage.toFixed(2)}
-              </option>
-            ))}
-        </select>
-      ),
-    },
-    {
-      key: 'confidence',
-      title: '置信度',
-      render: (item) => (
-        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getConfidenceColor(item.confidence)}`}>
-          {item.confidence}%
-        </span>
-      ),
-    },
-    {
-      key: 'status',
-      title: '状态',
-      render: (item) => getStatusBadge(item.status),
-    },
+      </select>
+    )},
+    { key: 'confidence', title: '置信度', render: (item) => (
+      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getConfidenceColor(item.confidence)}`}>
+        {item.confidence}%
+      </span>
+    )},
+    { key: 'status', title: '状态', render: (item) => getStatusBadge(item.status) },
   ]
 }
