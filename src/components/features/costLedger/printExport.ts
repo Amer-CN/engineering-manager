@@ -2,6 +2,15 @@ import { formatMoney } from '@/utils/format'
 import { DIRECTION_CONFIG, getCategoryDisplayLabel } from './config'
 import type { CostLedgerEntry, CostLedgerCategory } from '@/types'
 
+const COLORS = {
+  textPrimary: '#333',
+  textSecondary: '#666',
+  border: '#ccc',
+  tableHeaderBg: '#f1f5f9',
+  expense: '#dc2626',
+  income: '#059669',
+} as const
+
 function esc(s: string): string {
   if (!s) return ''
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -36,7 +45,7 @@ export function printCostLedgerList(
       <td>${esc(getCategoryDisplayLabel(e.category, categoryLevel, categories))}</td>
       <td>${esc(e.counterparty)}</td>
       <td>${esc(e.channel || '-')}</td>
-      <td style="text-align:right;color:${e.direction === 'expense' ? '#dc2626' : '#059669'}">${e.direction === 'expense' ? '-' : '+'}${formatMoney(e.amount)}</td>
+      <td style="text-align:right;color:${e.direction === 'expense' ? COLORS.expense : COLORS.income}">${e.direction === 'expense' ? '-' : '+'}${formatMoney(e.amount)}</td>
       <td>${esc(e.summary || '-')}</td>
       <td>${esc(e.notes || '-')}</td>
     </tr>`).join('')
@@ -44,13 +53,13 @@ export function printCostLedgerList(
   const net = totals.income - totals.expense
   const content = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>成本台账</title>
     <style>
-      body{font-family:'Microsoft YaHei',sans-serif;padding:20px;color:#333}
+      body{font-family:'Microsoft YaHei',sans-serif;padding:20px;color:${COLORS.textPrimary}}
       h1{text-align:center;margin-bottom:8px;font-size:20px}
-      .sub{text-align:center;color:#666;font-size:12px;margin-bottom:20px}
+      .sub{text-align:center;color:${COLORS.textSecondary};font-size:12px;margin-bottom:20px}
       table{width:100%;border-collapse:collapse;font-size:11px}
-      th,td{border:1px solid #ccc;padding:6px 8px}
-      th{background:#f1f5f9;font-weight:600;white-space:nowrap}
-      .footer{margin-top:16px;text-align:right;font-size:12px;color:#666}
+      th,td{border:1px solid ${COLORS.border};padding:6px 8px}
+      th{background:${COLORS.tableHeaderBg};font-weight:600;white-space:nowrap}
+      .footer{margin-top:16px;text-align:right;font-size:12px;color:${COLORS.textSecondary}}
       .summary{margin-top:8px;display:flex;gap:24px;justify-content:flex-end;font-size:13px}
       .summary strong{font-family:monospace}
       @media print{body{padding:0}@page{size:landscape;margin:12mm}}
@@ -61,9 +70,9 @@ export function printCostLedgerList(
       <th>凭证号</th><th>日期</th><th>方向</th><th>分类</th><th>往来单位/个人</th><th>渠道</th><th>金额</th><th>摘要</th><th>备注</th>
     </tr></thead><tbody>${rows}</tbody></table>
     <div class="summary">
-      <span>经营支出: <strong style="color:#dc2626">${formatMoney(totals.expense)}</strong></span>
-      <span>资金收入: <strong style="color:#059669">${formatMoney(totals.income)}</strong></span>
-      <span>净${net >= 0 ? '流入' : '流出'}: <strong style="color:${net >= 0 ? '#059669' : '#dc2626'}">${formatMoney(net)}</strong></span>
+      <span>经营支出: <strong style="color:${COLORS.expense}">${formatMoney(totals.expense)}</strong></span>
+      <span>资金收入: <strong style="color:${COLORS.income}">${formatMoney(totals.income)}</strong></span>
+      <span>净${net >= 0 ? '流入' : '流出'}: <strong style="color:${net >= 0 ? COLORS.income : COLORS.expense}">${formatMoney(net)}</strong></span>
     </div>
     <div class="footer">打印时间: ${new Date().toLocaleString()}</div>
     </body></html>`
