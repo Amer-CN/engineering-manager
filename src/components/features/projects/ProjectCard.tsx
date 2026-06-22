@@ -8,6 +8,13 @@ import type { Project, Member } from '@/types'
 import { Icon } from '../../ui/Icon'
 import { StatusBadge, PROJECT_STATUS } from '@/constants/status'
 
+const COLORS = {
+  healthGood: '#10b981',
+  healthModerate: '#3b82f6',
+  healthWarning: '#f59e0b',
+  healthCritical: '#ef4444',
+} as const
+
 export interface ProjectCardProps {
   project: Project
   members: Member[]
@@ -18,7 +25,7 @@ export interface ProjectCardProps {
 }
 
 function HealthRing({ score, size = 44 }: { score: number; size?: number }) {
-  const color = score >= 80 ? '#10b981' : score >= 60 ? '#3b82f6' : score >= 40 ? '#f59e0b' : '#ef4444'
+  const color = score >= 80 ? COLORS.healthGood : score >= 60 ? COLORS.healthModerate : score >= 40 ? COLORS.healthWarning : COLORS.healthCritical
   const sw = 4; const r = (size - sw) / 2
   const circumference = 2 * Math.PI * r
   const offset = circumference - (Math.min(100, Math.max(0, score)) / 100) * circumference
