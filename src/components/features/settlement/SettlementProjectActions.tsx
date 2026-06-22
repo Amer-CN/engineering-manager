@@ -4,14 +4,7 @@ import { useConfirm } from '@/hooks/useConfirm'
 import { logCreate, logUpdate, logDelete } from '../../../utils/audit'
 import { usePermission } from '../../../hooks/usePermission.tsx'
 import { getAPI } from '@/services/api-adapter'
-
-const COLORS = {
-  bodyBg: '#f1f5f9',
-  cardBg: '#fff',
-  cardBorder: '#e2e8f0',
-  primary: '#6366f1',
-  mutedText: '#94a3b8',
-} as const
+import { COLORS } from './settlementColors'
 
 export interface SettlementActionParams {
   project: Project
