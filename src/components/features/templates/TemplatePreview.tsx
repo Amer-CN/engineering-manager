@@ -4,6 +4,13 @@ import { Icon } from '../../ui/Icon'
 import { Modal } from '../../ui/Modal/Modal'
 import { getAPI } from '@/services/api-adapter'
 
+const COLORS = {
+  textMuted: '#94a3b8',
+  textSubtle: '#64748b',
+  primary: '#6366f1',
+  white: '#fff',
+} as const
+
 interface TemplatePreviewProps {
   template: Template
   onClose: () => void
@@ -28,7 +35,7 @@ export default function TemplatePreview({ template, onClose }: TemplatePreviewPr
         if (result.success && result.data) {
           setHtmlContent(result.data)
         } else {
-          setHtmlContent(`<div style="text-align:center;padding:40px;"><p style="color:#94a3b8;margin-bottom:12px;">Word 文档转换失败，请下载查看</p></div>`)
+          setHtmlContent(`<div style="text-align:center;padding:40px;"><p style="color:${COLORS.textMuted};margin-bottom:12px;">Word 文档转换失败，请下载查看</p></div>`)
         }
       } else {
         // 非 docx：读取文件并提供下载链接
@@ -40,7 +47,7 @@ export default function TemplatePreview({ template, onClose }: TemplatePreviewPr
         })
         if (result.success && result.data) {
           const { dataUrl } = result.data
-          setHtmlContent(`<div style="text-align:center;padding:40px;"><p style="color:#64748b;margin-bottom:12px;">Excel 模板无法在线预览</p><a href="${dataUrl}" download="${template.fileName}" style="display:inline-block;padding:8px 16px;background:#6366f1;color:#fff;border-radius:8px;text-decoration:none;">下载查看</a></div>`)
+          setHtmlContent(`<div style="text-align:center;padding:40px;"><p style="color:${COLORS.textSubtle};margin-bottom:12px;">Excel 模板无法在线预览</p><a href="${dataUrl}" download="${template.fileName}" style="display:inline-block;padding:8px 16px;background:${COLORS.primary};color:${COLORS.white};border-radius:8px;text-decoration:none;">下载查看</a></div>`)
         } else {
           setError(result.error || '文件读取失败')
         }
