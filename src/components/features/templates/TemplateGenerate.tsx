@@ -5,6 +5,11 @@ import { useToastStore } from '@/store/toastStore'
 import { getAPI } from '@/services/api-adapter'
 import { HoverScrollbar } from '../../ui/HoverScrollbar'
 
+const COLORS = {
+  mutedText: '#94a3b8',
+  danger: '#ef4444',
+} as const
+
 interface TemplateGenerateProps {
   template: Template
   onClose: () => void
@@ -32,7 +37,7 @@ export default function TemplateGenerate({ template, onClose }: TemplateGenerate
 
   const loadAndRender = async () => {
     if (template.fileType !== 'docx') {
-      setPreviewHtml(`<p style="text-align:center;color:#94a3b8;padding:40px;">Excel 模板请下载后填写变量值</p>`)
+      setPreviewHtml(`<p style="text-align:center;color:${COLORS.mutedText};padding:40px;">Excel 模板请下载后填写变量值</p>`)
       return
     }
 
@@ -47,11 +52,11 @@ export default function TemplateGenerate({ template, onClose }: TemplateGenerate
         }
         setPreviewHtml(html)
       } else {
-        setPreviewHtml(`<p style="text-align:center;color:#ef4444;padding:40px;">转换模板失败：${result.error || '未知错误'}</p>`)
+        setPreviewHtml(`<p style="text-align:center;color:${COLORS.danger};padding:40px;">转换模板失败：${result.error || '未知错误'}</p>`)
       }
     } catch (e) {
       console.error('Template render failed:', e)
-      setPreviewHtml('<p style="text-align:center;color:#ef4444;padding:40px;">加载模板失败</p>')
+      setPreviewHtml(`<p style="text-align:center;color:${COLORS.danger};padding:40px;">加载模板失败</p>`)
     } finally {
       setLoading(false)
     }
