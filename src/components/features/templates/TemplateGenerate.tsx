@@ -4,11 +4,7 @@ import { Icon } from '../../ui/Icon'
 import { useToastStore } from '@/store/toastStore'
 import { getAPI } from '@/services/api-adapter'
 import { HoverScrollbar } from '../../ui/HoverScrollbar'
-
-const COLORS = {
-  mutedText: '#94a3b8',
-  danger: '#ef4444',
-} as const
+import { COLORS } from './templatesColors'
 
 interface TemplateGenerateProps {
   template: Template
@@ -37,7 +33,7 @@ export default function TemplateGenerate({ template, onClose }: TemplateGenerate
 
   const loadAndRender = async () => {
     if (template.fileType !== 'docx') {
-      setPreviewHtml(`<p style="text-align:center;color:${COLORS.mutedText};padding:40px;">Excel 模板请下载后填写变量值</p>`)
+      setPreviewHtml(`<p style="text-align:center;color:${COLORS.textMuted};padding:40px;">Excel 模板请下载后填写变量值</p>`)
       return
     }
 
@@ -190,3 +186,4 @@ h1{text-align:center;font-size:18pt;margin-bottom:24px}
     </div>
   )
 }
+
