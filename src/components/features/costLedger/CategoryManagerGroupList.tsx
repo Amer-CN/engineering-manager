@@ -1,6 +1,7 @@
 import type { CostLedgerCategory } from '@/types'
 import type { EditState, AddState } from './CategoryManager'
 import { CategoryManagerL2Row } from './CategoryManagerL2Row'
+import { COLORS } from './costLedgerColors'
 
 interface MergedGroup {
   name: string
@@ -93,7 +94,7 @@ export function CategoryManagerGroupList({
               </div>
             ) : (
               <button
-                onClick={() => { setAdd({ type: 'l2', group: group.name, label: '', color: '#6b7280' }); setEdit(null); setError('') }}
+                onClick={() => { setAdd({ type: 'l2', group: group.name, label: '', color: COLORS.publicService }); setEdit(null); setError('') }}
                 className="w-full px-3 py-1.5 text-xs text-slate-400 hover:text-blue-600 hover:bg-blue-50/30 transition-colors"
               >
                 + 添加二级
