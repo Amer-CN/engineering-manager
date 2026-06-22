@@ -1,66 +1,8 @@
 // useForm Hook - 表单状态管理
 import { useState, useCallback, useMemo } from 'react'
-import type { Result, VoidResult } from '@/types'
+import type { FieldError, FormErrors, TouchedFields, Validator, SubmitHandler, UseFormReturn } from './formTypes'
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Types
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * 表单字段错误
- */
-export type FieldError = string | null
-
-/**
- * 表单错误集合
- */
-export type FormErrors<T extends Record<string, unknown>> = Partial<Record<keyof T, FieldError>>
-
-/**
- * 字段是否被触碰过
- */
-export type TouchedFields<T extends Record<string, unknown>> = Partial<Record<keyof T, boolean>>
-
-/**
- * 验证函数类型
- */
-export type Validator<T extends Record<string, unknown>> = (values: T) => FormErrors<T>
-
-/**
- * 提交函数类型
- */
-export type SubmitHandler<T extends Record<string, unknown>, R = void> = (
-  values: T
-) => Promise<Result<R> | VoidResult>
-
-/**
- * useForm 返回类型
- */
-export interface UseFormReturn<T extends Record<string, unknown>, R = void> {
-  // 值
-  values: T
-  errors: FormErrors<T>
-  touched: TouchedFields<T>
-  isSubmitting: boolean
-  
-  // 方法
-  handleChange: (field: keyof T, value: T[keyof T]) => void
-  handleBlur: (field: keyof T) => void
-  handleSubmit: (e?: React.FormEvent) => Promise<void>
-  reset: () => void
-  setValues: (values: Partial<T>) => void
-  setFieldValue: (field: keyof T, value: T[keyof T]) => void
-  
-  // 辅助
-  isValid: boolean
-  isDirty: boolean
-  getFieldProps: (field: keyof T) => {
-    name: keyof T
-    value: T[keyof T]
-    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void
-    onBlur: () => void
-  }
-}
+export type { FieldError, FormErrors, TouchedFields, Validator, SubmitHandler, UseFormReturn }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Hook Implementation
