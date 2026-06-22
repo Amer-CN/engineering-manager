@@ -3,13 +3,7 @@ import { Template } from '../../../types/electron'
 import { Icon } from '../../ui/Icon'
 import { Modal } from '../../ui/Modal/Modal'
 import { getAPI } from '@/services/api-adapter'
-
-const COLORS = {
-  textMuted: '#94a3b8',
-  textSubtle: '#64748b',
-  primary: '#6366f1',
-  white: '#fff',
-} as const
+import { COLORS } from './templatesColors'
 
 interface TemplatePreviewProps {
   template: Template
