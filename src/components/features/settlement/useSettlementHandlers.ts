@@ -5,14 +5,7 @@ import { useConfirm } from '@/hooks/useConfirm'
 import { logCreate, logUpdate, logDelete } from '../../../utils/audit'
 import { usePermission } from '../../../hooks/usePermission.tsx'
 import { getAPI } from '@/services/api-adapter'
-
-const COLORS = {
-  bodyBackground: '#f1f5f9',
-  fileItemBackground: '#fff',
-  fileItemBorder: '#e2e8f0',
-  linkColor: '#6366f1',
-  mutedText: '#94a3b8',
-} as const
+import { COLORS } from './settlementColors'
 
 interface UseSettlementHandlersParams {
   project: Project
@@ -164,7 +157,7 @@ export function useSettlementHandlers({
     try {
       const w = window.open('', '_blank')
       if (!w) return
-      let html = `<html><head><meta charset="utf-8"><title>结算凭证</title><style>body{font-family:sans-serif;margin:0;padding:16px;background:${COLORS.bodyBackground}}.file-item{background:${COLORS.fileItemBackground};border:1px solid ${COLORS.fileItemBorder};border-radius:8px;padding:12px;margin-bottom:8px}.file-item a{color:${COLORS.linkColor};text-decoration:none}.file-item img{max-width:100%;max-height:70vh}</style></head><body>`
+      let html = `<html><head><meta charset="utf-8"><title>结算凭证</title><style>body{font-family:sans-serif;margin:0;padding:16px;background:${COLORS.bodyBg}}.file-item{background:${COLORS.cardBg};border:1px solid ${COLORS.cardBorder};border-radius:8px;padding:12px;margin-bottom:8px}.file-item a{color:${COLORS.primary};text-decoration:none}.file-item img{max-width:100%;max-height:70vh}</style></head><body>`
       for (const f of fileList) {
         const result = await (await getAPI()).readFile({
           category: 'settlement', subCategory: 'files', fileName: f.url, projectName: project.name,
@@ -196,3 +189,4 @@ export function useSettlementHandlers({
     ConfirmDialog,
   }
 }
+
