@@ -4,26 +4,10 @@ import { SimpleGroupedBarChart } from '../../ui/SimpleBarChart'
 import Spinner from '../../ui/Spinner'
 import { formatMoney } from '@/utils/format'
 import { getCategoryLabel, getCategoryColor } from './config'
+import { ANALYTICS_FALLBACK_PALETTE, ANALYTICS_BAR_COLORS } from './costLedgerColors'
 import type { CostLedgerEntry, CostLedgerCategory } from '@/types'
 import { getAPI } from '@/services/api-adapter'
 
-const COLORS = {
-  orange: '#f97316',
-  blue: '#3b82f6',
-  purple: '#8b5cf6',
-  gray: '#6b7280',
-  pink: '#ec4899',
-  red: '#ef4444',
-  teal: '#14b8a6',
-  violet: '#a855f7',
-  lightGray: '#9ca3af',
-  cyan: '#0891b2',
-  indigo: '#2563eb',
-  emerald: '#059669',
-  expenseBar: '#ef4444',
-  incomeBar: '#10b981',
-} as const
-const FALLBACK_COLORS = [COLORS.orange, COLORS.blue, COLORS.purple, COLORS.gray, COLORS.pink, COLORS.red, COLORS.teal, COLORS.violet, COLORS.lightGray, COLORS.cyan, COLORS.indigo, COLORS.emerald]
 
 interface CostLedgerAnalyticsProps {
   projectId: number
@@ -140,7 +124,7 @@ export function CostLedgerAnalytics({ projectId, projectName, categories }: Cost
                   <PieChart>
                     <Pie data={stats.pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={2} dataKey="value">
                       {stats.pieData.map((d: any, i) => (
-                        <Cell key={i} fill={getCategoryColor(d.code, categories as any) || FALLBACK_COLORS[i % FALLBACK_COLORS.length]} />
+                        <Cell key={i} fill={getCategoryColor(d.code, categories as any) || ANALYTICS_FALLBACK_PALETTE[i % ANALYTICS_FALLBACK_PALETTE.length]} />
                       ))}
                     </Pie>
                     <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, boxShadow: 'var(--shadow-md)', color: 'var(--fg)' }} formatter={((v: any) => formatMoney(v ?? 0)) as any} />
@@ -151,7 +135,7 @@ export function CostLedgerAnalytics({ projectId, projectName, categories }: Cost
                 {stats.pieData.map((d: any, i) => (
                   <div key={d.code} className="flex items-start justify-between text-xs">
                     <div className="flex items-start gap-1.5 min-w-0">
-                      <span className="h-2 w-2 shrink-0 rounded-full mt-1" style={{ backgroundColor: getCategoryColor(d.code, categories as any) || FALLBACK_COLORS[i % FALLBACK_COLORS.length] }} />
+                      <span className="h-2 w-2 shrink-0 rounded-full mt-1" style={{ backgroundColor: getCategoryColor(d.code, categories as any) || ANALYTICS_FALLBACK_PALETTE[i % ANALYTICS_FALLBACK_PALETTE.length] }} />
                       <span className="flex-1 min-w-0">
                         <span className="text-slate-600 line-clamp-2 leading-tight">{d.name}</span>
                       </span>
@@ -174,8 +158,8 @@ export function CostLedgerAnalytics({ projectId, projectName, categories }: Cost
               data={stats.trendData.map((d: any) => ({
                 name: d.month,
                 values: [
-                  { label: '支出', amount: d['支出'] || 0, color: COLORS.expenseBar },
-                  { label: '收入', amount: d['收入'] || 0, color: COLORS.incomeBar },
+                  { label: '支出', amount: d['支出'] || 0, color: ANALYTICS_BAR_COLORS.expense },
+                  { label: '收入', amount: d['收入'] || 0, color: ANALYTICS_BAR_COLORS.income },
                 ],
               }))}
               formatValue={(v) => formatMoney(v)}
