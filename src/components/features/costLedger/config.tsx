@@ -1,5 +1,6 @@
 import type { CostLedgerEntry, CostLedgerCategory } from '@/types'
 import {
+  COLORS,
   DIRECTION_CONFIG,
   CATEGORY_CONFIG,
   CATEGORY_HIERARCHY,
@@ -37,7 +38,7 @@ export function getCategoryColor(code: string, dynamicCategories?: (CategoryConf
     const found = dynamicCategories.find(c => c.code === code)
     if (found) return found.color
   }
-  return CATEGORY_CONFIG.find(c => c.code === code)?.color || '#9ca3af'
+  return CATEGORY_CONFIG.find(c => c.code === code)?.color || COLORS.finance
 }
 
 export function getCategoriesByDirection(direction: 'expense' | 'income', categories?: CategoryConfig[]): CategoryConfig[] {
@@ -135,13 +136,13 @@ export function getLevel1GroupsMerged(
   for (const [name, codes] of customByGroup) {
     if (!seenNames.has(name)) {
       seenNames.add(name)
-      result.push({ name, color: '#6366f1', codes })
+      result.push({ name, color: COLORS.customGroup, codes })
     }
   }
 
   // Add orphan group (custom categories without level1)
   if (orphans.length > 0) {
-    result.push({ name: '(自定义)', color: '#6366f1', codes: orphans })
+    result.push({ name: '(自定义)', color: COLORS.customGroup, codes: orphans })
   }
 
   return result
@@ -196,7 +197,7 @@ export function getLevel1Color(
     if (cat?.level1) {
       // Try to find the group color from hierarchy or use the category's own color
       const groupColor = _hierarchyMap[cat.code]?.level1Color
-      return groupColor ?? cat.color ?? '#9ca3af'
+      return groupColor ?? cat.color ?? COLORS.finance
     }
   }
   return getCategoryColor(code, dynamicCategories)
