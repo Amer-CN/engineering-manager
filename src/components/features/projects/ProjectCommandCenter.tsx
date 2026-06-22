@@ -16,6 +16,17 @@ import { formatMoney } from '@/utils/format'
 import { staggerContainer, sectionVariant } from '@/constants/animations'
 import { ProjectCommandCenterDetail } from './ProjectCommandCenterDetail'
 
+const COLORS = {
+  blue: '#3b82f6',
+  emerald: '#10b981',
+  orange: '#f97316',
+  purple: '#8b5cf6',
+  lightEmerald: '#34d399',
+  red: '#ef4444',
+  lightRed: '#f87171',
+  amber: '#f59e0b',
+} as const
+
 export interface ProjectCommandCenterProps {
   project: Project; stats: ProjectStatsData; expenseByCategory: Record<string, number>
   materials: Material[]
@@ -62,9 +73,9 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
   const incP = incomeContracts.map(c => { const rec = invoices.filter(i => i.contractId === c.id && i.type === 'invoice_out').reduce((s, i) => s + i.receivedAmount, 0); return { ...c, received: rec, progress: c.amount > 0 ? Math.round(rec / c.amount * 100) : 0 } })
   const expP = expenseContracts.map(c => { const rec = invoices.filter(i => i.contractId === c.id && i.type === 'invoice_in').reduce((s, i) => s + i.receivedAmount, 0); return { ...c, received: rec, progress: c.amount > 0 ? Math.round(rec / c.amount * 100) : 0 } })
 
-  const costDonut = [{ name: '人工', value: laborT, color: '#3b82f6' }, { name: '材料', value: materialCT, color: '#10b981' }, { name: '机械', value: machineryT, color: '#f97316' }, { name: '其他', value: otherT, color: '#8b5cf6' }].filter(d => d.value > 0)
-  const financeBar = [{ name: '收入合同', value: stats.incomeTotal, color: '#10b981' }, { name: '已回款', value: stats.receivedOutTotal, color: '#34d399' }, { name: '支出合同', value: stats.expenseTotal, color: '#ef4444' }, { name: '已付款', value: stats.receivedInTotal, color: '#f87171' }]
-  const healthGauge = [{ name: '健康度', value: healthScore, fill: healthScore >= 80 ? '#10b981' : healthScore >= 60 ? '#3b82f6' : healthScore >= 40 ? '#f59e0b' : '#ef4444' }]
+  const costDonut = [{ name: '人工', value: laborT, color: COLORS.blue }, { name: '材料', value: materialCT, color: COLORS.emerald }, { name: '机械', value: machineryT, color: COLORS.orange }, { name: '其他', value: otherT, color: COLORS.purple }].filter(d => d.value > 0)
+  const financeBar = [{ name: '收入合同', value: stats.incomeTotal, color: COLORS.emerald }, { name: '已回款', value: stats.receivedOutTotal, color: COLORS.lightEmerald }, { name: '支出合同', value: stats.expenseTotal, color: COLORS.red }, { name: '已付款', value: stats.receivedInTotal, color: COLORS.lightRed }]
+  const healthGauge = [{ name: '健康度', value: healthScore, fill: healthScore >= 80 ? COLORS.emerald : healthScore >= 60 ? COLORS.blue : healthScore >= 40 ? COLORS.amber : COLORS.red }]
   const materialTotalAmt = materials.reduce((s, m) => s + m.price * m.quantity, 0)
   const partnerStats = partners.map(p => ({ ...p, incAmt: incomeContracts.filter(c => c.partnerId === p.id).reduce((s, c) => s + c.amount, 0), expAmt: expenseContracts.filter(c => c.partnerId === p.id).reduce((s, c) => s + c.amount, 0) }))
   const unpaidInvoices = invoices.filter(i => i.status === 'partially_paid' || i.status === 'issued').length
