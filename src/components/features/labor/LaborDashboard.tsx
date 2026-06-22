@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
 import { HoverScrollbar } from '../../ui/HoverScrollbar'
 import type { Member, WorkerTeam } from '../../../types/electron'
+import { CHART_PALETTE } from './laborColors'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 
 interface LaborDashboardProps {
@@ -13,23 +14,7 @@ interface LaborDashboardProps {
   workerTeams: WorkerTeam[]
 }
 
-const COLORS = {
-  amber: '#f59e0b',
-  emerald: '#10b981',
-  indigo: '#6366f1',
-  red: '#ef4444',
-  violet: '#8b5cf6',
-  cyan: '#06b6d4',
-  orange: '#f97316',
-  teal: '#14b8a6',
-  rose: '#e11d48',
-  violetDark: '#7c3aed',
-} as const
 
-const CHART_COLORS = [
-  COLORS.amber, COLORS.emerald, COLORS.indigo, COLORS.red, COLORS.violet,
-  COLORS.cyan, COLORS.orange, COLORS.teal, COLORS.rose, COLORS.violetDark,
-]
 
 const LaborDashboard: React.FC<LaborDashboardProps> = ({ members, projects, workerTeams }) => {
   // KPI calculations
@@ -144,7 +129,7 @@ const LaborDashboard: React.FC<LaborDashboardProps> = ({ members, projects, work
                     dataKey="value"
                   >
                     {projectDistribution.map((_, index) => (
-                      <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                      <Cell key={index} fill={CHART_PALETTE[index % CHART_PALETTE.length]} />
                     ))}
                   </Pie>
                   <Tooltip
@@ -158,7 +143,7 @@ const LaborDashboard: React.FC<LaborDashboardProps> = ({ members, projects, work
                   <div key={item.name} className="flex items-center gap-2">
                     <div
                       className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
+                      style={{ backgroundColor: CHART_PALETTE[index % CHART_PALETTE.length] }}
                     />
                     <span className="text-sm text-slate-600">{item.name}</span>
                     <span className="text-sm text-slate-400">({item.value})</span>
