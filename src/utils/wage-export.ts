@@ -3,6 +3,16 @@
  */
 import type { WageRecord } from '@/types'
 
+const COLORS = {
+  settled: '#059669',
+  pending: '#d97706',
+  textBody: '#333',
+  textSub: '#666',
+  borderTable: '#bbb',
+  bgTableHeader: '#f1f5f9',
+  textFooter: '#999',
+} as const
+
 /** 导出工资明细为 Excel */
 export async function exportWageDetailToExcel(records: WageRecord[]) {
   if (records.length === 0) return
@@ -52,7 +62,7 @@ export function printWageDetail(records: WageRecord[], title: string) {
       <td style="text-align:right">${actualWage.toFixed(2)}</td>
       <td style="text-align:right">${paid.toFixed(2)}</td>
       <td style="text-align:center">${r.paidDate || '-'}</td>
-      <td style="text-align:right;font-weight:600;color:${diff === 0 ? '#059669' : '#d97706'}">${diffStr}</td>
+      <td style="text-align:right;font-weight:600;color:${diff === 0 ? COLORS.settled : COLORS.pending}">${diffStr}</td>
     </tr>`
   }).join('')
 
@@ -60,13 +70,13 @@ export function printWageDetail(records: WageRecord[], title: string) {
   const totalPaid = records.reduce((s, r) => s + (Number(r.paidAmount) || 0), 0)
   const content = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>工资明细</title>
     <style>
-      body{font-family:'Microsoft YaHei',sans-serif;padding:20px;color:#333}
+      body{font-family:'Microsoft YaHei',sans-serif;padding:20px;color:${COLORS.textBody}}
       h1{text-align:center;margin-bottom:4px;font-size:18px}
-      .sub{text-align:center;color:#666;font-size:12px;margin-bottom:16px}
+      .sub{text-align:center;color:${COLORS.textSub};font-size:12px;margin-bottom:16px}
       table{width:100%;border-collapse:collapse;font-size:11px}
-      th,td{border:1px solid #bbb;padding:5px 6px}
-      th{background:#f1f5f9;font-weight:600;white-space:nowrap}
-      .footer{margin-top:12px;text-align:right;font-size:11px;color:#999}
+      th,td{border:1px solid ${COLORS.borderTable};padding:5px 6px}
+      th{background:${COLORS.bgTableHeader};font-weight:600;white-space:nowrap}
+      .footer{margin-top:12px;text-align:right;font-size:11px;color:${COLORS.textFooter}}
       .summary{margin-top:10px;display:flex;gap:24px;justify-content:flex-end;font-size:13px}
       .summary strong{font-family:monospace}
       @media print{body{padding:0}@page{size:landscape;margin:10mm}}
@@ -78,8 +88,8 @@ export function printWageDetail(records: WageRecord[], title: string) {
     </tr></thead><tbody>${rows}</tbody></table>
     <div class="summary">
       <span>应发总额: <strong>${totalWage.toFixed(2)}</strong></span>
-      <span>实发总额: <strong style="color:#059669">${totalPaid.toFixed(2)}</strong></span>
-      <span>未发: <strong style="color:#d97706">${(totalWage - totalPaid).toFixed(2)}</strong></span>
+      <span>实发总额: <strong style="color:${COLORS.settled}">${totalPaid.toFixed(2)}</strong></span>
+      <span>未发: <strong style="color:${COLORS.pending}">${(totalWage - totalPaid).toFixed(2)}</strong></span>
     </div>
     <div class="footer">打印时间: ${new Date().toLocaleString()}</div>
     </body></html>`
