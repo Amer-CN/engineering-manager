@@ -7,10 +7,11 @@
  * 3. 批量确认（一键确认所有高置信度匹配）
  */
 import { useState, useMemo, useCallback } from 'react'
-import { DataTable, type Column } from '@/components/DataTable'
+import { DataTable } from '@/components/DataTable'
 import { useToastStore } from '@/store/toastStore'
-import { Badge } from '@/components/ui/Badge/Badge'
 import type { BatchParseResult, BankReceiptMatch } from '@/types'
+import { getMatchColumns } from './BankReceiptMatchColumns'
+import { MatchConfirmStatsBar } from './MatchConfirmStatsBar'
 
 interface BankReceiptMatchConfirmProps {
   parseResult: BatchParseResult
@@ -33,13 +34,8 @@ export default function BankReceiptMatchConfirm({
 }: BankReceiptMatchConfirmProps) {
   const showToast = useToastStore(state => state.showToast)
 
-  // ── 本地状态：可编辑的匹配列表 ──
   const [matches, setMatches] = useState<BankReceiptMatch[]>(parseResult.matches)
   const [confirming, setConfirming] = useState(false)
-
-  // ══════════════════════════════════════════════════════
-  // 计算统计信息
-  // ══════════════════════════════════════════════════════
 
   const stats = useMemo(() => {
     const total = matches.length
@@ -51,10 +47,6 @@ export default function BankReceiptMatchConfirm({
 
     return { total, matched, unmatched, ambiguous, archived, highConfidence }
   }, [matches])
-
-  // ══════════════════════════════════════════════════════
-  // 手动调整匹配
-  // ══════════════════════════════════════════════════════
 
   const handleWorkerChange = useCallback((index: number, workerId: number | null, workerName: string | null) => {
     setMatches(prev => {
@@ -83,10 +75,6 @@ export default function BankReceiptMatchConfirm({
     })
   }, [])
 
-  // ══════════════════════════════════════════════════════
-  // 批量确认高置信度匹配
-  // ══════════════════════════════════════════════════════
-
   const handleBatchConfirm = useCallback(async () => {
     const highConfMatches = matches.filter(m => m.confidence >= 80 && m.status !== 'archived' && m.matchedWageId)
 
@@ -105,10 +93,6 @@ export default function BankReceiptMatchConfirm({
       setConfirming(false)
     }
   }, [matches, onConfirm, showToast])
-
-  // ══════════════════════════════════════════════════════
-  // 确认所有已调整的匹配
-  // ══════════════════════════════════════════════════════
 
   const handleConfirmAll = useCallback(async () => {
     const validMatches = matches.filter(m => m.matchedWageId && m.status !== 'archived')
@@ -129,104 +113,11 @@ export default function BankReceiptMatchConfirm({
     }
   }, [matches, onConfirm, showToast])
 
-  // ══════════════════════════════════════════════════════
-  // 获取置信度颜色
-  // ══════════════════════════════════════════════════════
-
-  const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 80) return 'text-green-600 bg-green-50'
-    if (confidence >= 60) return 'text-yellow-600 bg-yellow-50'
-    return 'text-red-600 bg-red-50'
-  }
-
-  const getStatusBadge = (status: string) => {
-    const variantMap: Record<string, 'success' | 'danger' | 'warning' | 'gray'> = {
-      matched: 'success',
-      unmatched: 'danger',
-      ambiguous: 'warning',
-      archived: 'gray',
-    }
-    const labels: Record<string, string> = {
-      matched: '已匹配',
-      unmatched: '未匹配',
-      ambiguous: '待确认',
-      archived: '已归档',
-    }
-    return (
-      <Badge variant={variantMap[status] ?? 'gray'} size="sm" rounded="full">
-        {labels[status] || status}
-      </Badge>
-    )
-  }
-
-  const columns: Column<BankReceiptMatch & { _index: number }>[] = [
-    { key: 'receiptPath', title: '回单信息', render: (item) => (
-      <div>
-        <p className="font-medium">{item.parsedDate || '日期未知'}</p>
-        <p className="text-xs text-slate-500">{item.receiptPath.split('/').pop()}</p>
-      </div>
-    )},
-    { key: 'parsedName', title: '解析姓名', render: (item) => (
-      <span className={item.parsedName ? 'text-slate-900' : 'text-slate-400'}>
-        {item.parsedName || '未识别'}
-      </span>
-    )},
-    { key: 'parsedAmount', title: '解析金额', render: (item) => (
-      <span className="font-medium text-slate-900">¥{item.parsedAmount.toFixed(2)}</span>
-    )},
-    { key: 'matchedWorkerId', title: '匹配工人', render: (item) => (
-      <select
-        value={item.matchedWorkerId || ''}
-        onChange={(e) => {
-          const selectedId = e.target.value ? parseInt(e.target.value) : null
-          const selectedWorker = workers.find(w => w.id === selectedId)
-          handleWorkerChange(item._index, selectedId, selectedWorker?.name || null)
-        }}
-        className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        disabled={item.status === 'archived'}
-      >
-        <option value="">-- 未匹配 --</option>
-        {workers.map(worker => (
-          <option key={worker.id} value={worker.id}>
-            {worker.name}
-          </option>
-        ))}
-      </select>
-    )},
-    { key: 'matchedWageId', title: '匹配工资记录', render: (item) => (
-      <select
-        value={item.matchedWageId || ''}
-        onChange={(e) => {
-          const selectedId = e.target.value ? parseInt(e.target.value) : null
-          handleWageChange(item._index, selectedId)
-        }}
-        className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        disabled={item.status === 'archived' || !item.matchedWorkerId}
-      >
-        <option value="">-- 未匹配 --</option>
-        {wageRecords
-          .filter(w => !item.matchedWorkerId || w.memberName === item.matchedWorkerName)
-          .map(w => (
-            <option key={w.id} value={w.id}>
-              {w.yearMonth} - ¥{w.actualWage.toFixed(2)}
-            </option>
-          ))}
-      </select>
-    )},
-    { key: 'confidence', title: '置信度', render: (item) => (
-      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getConfidenceColor(item.confidence)}`}>
-        {item.confidence}%
-      </span>
-    )},
-    { key: 'status', title: '状态', render: (item) => getStatusBadge(item.status) },
-  ]
-
-  // Add _index for callbacks
+  const columns = getMatchColumns(workers, wageRecords, handleWorkerChange, handleWageChange)
   const dataWithIndex = matches.map((m, i) => ({ ...m, _index: i }))
 
   return (
     <div className="space-y-6">
-      {/* 标题与统计 */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-slate-900">匹配结果确认</h2>
         <button
@@ -237,60 +128,13 @@ export default function BankReceiptMatchConfirm({
         </button>
       </div>
 
-      {/* 统计卡片 */}
-      <div className="grid grid-cols-5 gap-4">
-        <div className="bg-white rounded-lg border border-slate-200 p-4">
-          <p className="text-sm text-slate-600">总计</p>
-          <p className="text-2xl font-bold text-slate-900">{stats.total}</p>
-        </div>
-        <div className="bg-white rounded-lg border border-slate-200 p-4">
-          <p className="text-sm text-slate-600">已匹配</p>
-          <p className="text-2xl font-bold text-green-600">{stats.matched}</p>
-        </div>
-        <div className="bg-white rounded-lg border border-slate-200 p-4">
-          <p className="text-sm text-slate-600">待确认</p>
-          <p className="text-2xl font-bold text-yellow-600">{stats.ambiguous}</p>
-        </div>
-        <div className="bg-white rounded-lg border border-slate-200 p-4">
-          <p className="text-sm text-slate-600">未匹配</p>
-          <p className="text-2xl font-bold text-red-600">{stats.unmatched}</p>
-        </div>
-        <div className="bg-white rounded-lg border border-slate-200 p-4">
-          <p className="text-sm text-slate-600">已归档</p>
-          <p className="text-2xl font-bold text-slate-600">{stats.archived}</p>
-        </div>
-      </div>
+      <MatchConfirmStatsBar
+        stats={stats}
+        confirming={confirming}
+        onBatchConfirm={handleBatchConfirm}
+        onConfirmAll={handleConfirmAll}
+      />
 
-      {/* 操作按钮 */}
-      <div className="flex justify-between items-center">
-        <div className="text-sm text-slate-600">
-          高置信度匹配（≥80%）：<span className="font-bold text-green-600">{stats.highConfidence}</span> 条
-        </div>
-        <div className="space-x-4">
-          <button
-            onClick={handleBatchConfirm}
-            disabled={confirming || stats.highConfidence === 0}
-            className={`
-              px-6 py-2 text-sm font-medium text-white rounded-md
-              ${stats.highConfidence === 0 || confirming
-                ? 'bg-slate-400 cursor-not-allowed'
-                : 'bg-green-600 hover:bg-green-700'
-              }
-            `}
-          >
-            {confirming ? '确认中...' : `一键确认高置信度（${stats.highConfidence}）`}
-          </button>
-          <button
-            onClick={handleConfirmAll}
-            disabled={confirming}
-            className="px-6 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:bg-slate-400"
-          >
-            {confirming ? '确认中...' : '确认所有已匹配'}
-          </button>
-        </div>
-      </div>
-
-      {/* 匹配结果表格 */}
       <DataTable
         data={dataWithIndex}
         columns={columns}
@@ -301,7 +145,6 @@ export default function BankReceiptMatchConfirm({
         emptyText="暂无匹配结果"
       />
 
-      {/* 底部操作 */}
       <div className="flex justify-end space-x-4">
         <button
           onClick={onCancel}
