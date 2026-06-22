@@ -1,10 +1,10 @@
 import React, { useRef } from 'react'
 import { Settlement as SettlementData, Project, Partner } from '../../../types/electron'
-import { Icon } from '../../ui/Icon'
 import { Input } from '../../ui/Input/Input'
 import { subTypeConfig } from './config'
 import { SettlementItemsTable } from './SettlementItemsTable'
 import { SettlementImportModal } from './SettlementImportModal'
+import { FileUploadSection } from './FileUploadSection'
 import { getAPI } from '@/services/api-adapter'
 
 interface SettlementFormProps {
@@ -36,9 +36,7 @@ export const SettlementForm: React.FC<SettlementFormProps> = ({
   onCancel
 }) => {
   const [formData, setFormData] = React.useState(defaultFormData)
-  const [dragOverFile, setDragOverFile] = React.useState(false)
   const [taxInclusive, setTaxInclusive] = React.useState(true) // 材料结算：含税/不含税
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const isMaterial = formData.subType === 'material'
 
   React.useEffect(() => {
@@ -68,39 +66,6 @@ export const SettlementForm: React.FC<SettlementFormProps> = ({
       setFormData(defaultFormData)
     }
   }, [settlement])
-
-  const processFiles = (fileList: FileList | File[]) => {
-    const files = Array.from(fileList)
-    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
-    const allowedExts = ['.jpg', '.jpeg', '.png', '.webp', '.pdf', '.xlsx']
-
-    files.forEach(file => {
-      const fname = file.name.toLowerCase()
-      if (!allowed.includes(file.type) && !allowedExts.some(e => fname.endsWith(e))) return
-      if (file.size > 30 * 1024 * 1024) return
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const base64 = e.target?.result as string
-        let ft: 'pdf' | 'image' | 'excel' = 'image'
-        if (fname.endsWith('.pdf') || file.type === 'application/pdf') ft = 'pdf'
-        else if (fname.endsWith('.xlsx') || file.type.includes('sheet')) ft = 'excel'
-        setFormData(p => ({ ...p, files: [...p.files, { url: base64, name: file.name, type: ft }] }))
-      }
-      reader.readAsDataURL(file)
-    })
-  }
-
-  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setDragOverFile(true) }
-  const handleDragLeave = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setDragOverFile(false) }
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault(); e.stopPropagation(); setDragOverFile(false)
-    if (e.dataTransfer.files.length > 0) processFiles(e.dataTransfer.files)
-  }
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) { processFiles(e.target.files); e.target.value = '' }
-  }
-  const handleRemoveFile = (index: number) => setFormData(p => ({ ...p, files: p.files.filter((_, i) => i !== index) }))
 
   // 模板导入
   const templateInputRef = useRef<HTMLInputElement>(null)
@@ -245,39 +210,7 @@ export const SettlementForm: React.FC<SettlementFormProps> = ({
       />
 
       {/* 结算凭证上传（多文件） */}
-      <div className="mb-6">
-        <label className="label">结算凭证</label>
-        <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.xlsx"
-          onChange={handleFileChange} className="hidden" multiple />
-        {formData.files.length > 0 && (
-          <div className="space-y-2 mb-3">
-            {formData.files.map((f, i) => (
-              <div key={i} className="border border-slate-200 rounded-lg p-3 bg-slate-50 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded bg-primary-100 flex items-center justify-center">
-                    {f.type === 'pdf' ? <Icon name="File" size={16} className="text-primary-600" /> :
-                     f.type === 'excel' ? <Icon name="LayoutDashboard" size={16} className="text-primary-600" /> :
-                     <Icon name="Image" size={16} className="text-primary-600" />}
-                  </div>
-                  <span className="text-sm text-slate-700 truncate max-w-[300px]">{f.name}</span>
-                  <span className="text-xs text-slate-400">{f.type === 'pdf' ? 'PDF' : f.type === 'excel' ? 'Excel' : '图片'}</span>
-                </div>
-                <button type="button" onClick={() => handleRemoveFile(i)}
-                  className="text-red-400 hover:text-red-600 text-sm">删除</button>
-              </div>
-            ))}
-          </div>
-        )}
-        <div className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-all ${
-          dragOverFile ? 'border-primary-500 bg-primary-50' : 'border-slate-300 hover:border-primary-400 hover:bg-slate-50'
-        }`}
-          onClick={() => fileInputRef.current?.click()}
-          onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
-          <Icon name="Paperclip" size={28} className="text-slate-300 mb-1 mx-auto" />
-          <p className="text-sm font-medium text-slate-600">上传结算凭证（支持多文件）</p>
-          <p className="text-xs text-slate-400 mt-0.5">点击或拖拽上传，JPG/PNG/PDF/XLSX，每文件最大 30MB</p>
-        </div>
-      </div>
+      <FileUploadSection files={formData.files} onFilesChange={files => setFormData(p => ({ ...p, files }))} />
 
       <div className="mb-6">
         <label className="label">备注</label>
