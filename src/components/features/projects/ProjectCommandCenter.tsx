@@ -15,17 +15,7 @@ import { SimpleBarChart } from '../../ui/SimpleBarChart'
 import { formatMoney } from '@/utils/format'
 import { staggerContainer, sectionVariant } from '@/constants/animations'
 import { ProjectCommandCenterDetail } from './ProjectCommandCenterDetail'
-
-const COLORS = {
-  blue: '#3b82f6',
-  emerald: '#10b981',
-  orange: '#f97316',
-  purple: '#8b5cf6',
-  lightEmerald: '#34d399',
-  red: '#ef4444',
-  lightRed: '#f87171',
-  amber: '#f59e0b',
-} as const
+import { COLORS } from './projectsColors'
 
 export interface ProjectCommandCenterProps {
   project: Project; stats: ProjectStatsData; expenseByCategory: Record<string, number>
