@@ -3,6 +3,7 @@
 // 优先使用 Tailwind 类（slate/blue/...），仅当 recharts 强制需要 hex 时引用本字典。
 
 export const COLORS = {
+  // 原始调色板（ProjectCommandCenter 用途：成本/财务/健康度图表）
   blue:         '#3b82f6',
   emerald:      '#10b981',
   orange:       '#f97316',
@@ -11,6 +12,12 @@ export const COLORS = {
   red:          '#ef4444',
   lightRed:     '#f87171',
   amber:        '#f59e0b',
+
+  // 健康度语义色（ProjectCard HealthRing 用途：>=80 / >=60 / >=40 / <40）
+  healthGood:     '#10b981',
+  healthModerate: '#3b82f6',
+  healthWarning:  '#f59e0b',
+  healthCritical: '#ef4444',
 } as const
 
 export const CHART_PALETTE: readonly string[] = [
@@ -22,4 +29,8 @@ export const CHART_PALETTE: readonly string[] = [
   COLORS.red,
   COLORS.lightRed,
   COLORS.amber,
+  COLORS.healthGood,
+  COLORS.healthModerate,
+  COLORS.healthWarning,
+  COLORS.healthCritical,
 ]
