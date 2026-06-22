@@ -8,6 +8,7 @@ export const COLORS = {
   projectReturn:  '#2563eb',
   refund:         '#7c3aed',
   otherIncome:    '#0891b2',
+  customGroup:    '#6366f1',
 } as const
 
 export const DIRECTION_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
