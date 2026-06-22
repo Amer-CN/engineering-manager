@@ -13,9 +13,22 @@ interface LaborDashboardProps {
   workerTeams: WorkerTeam[]
 }
 
+const COLORS = {
+  amber: '#f59e0b',
+  emerald: '#10b981',
+  indigo: '#6366f1',
+  red: '#ef4444',
+  violet: '#8b5cf6',
+  cyan: '#06b6d4',
+  orange: '#f97316',
+  teal: '#14b8a6',
+  rose: '#e11d48',
+  violetDark: '#7c3aed',
+} as const
+
 const CHART_COLORS = [
-  '#f59e0b', '#10b981', '#6366f1', '#ef4444', '#8b5cf6',
-  '#06b6d4', '#f97316', '#14b8a6', '#e11d48', '#7c3aed',
+  COLORS.amber, COLORS.emerald, COLORS.indigo, COLORS.red, COLORS.violet,
+  COLORS.cyan, COLORS.orange, COLORS.teal, COLORS.rose, COLORS.violetDark,
 ]
 
 const LaborDashboard: React.FC<LaborDashboardProps> = ({ members, projects, workerTeams }) => {
