@@ -10,6 +10,7 @@ import type { Project, WorkerTeam, AttendanceRecord, WageRecord, WageStats } fro
 import { useToastContext } from '../hooks/useToast'
 import { useConfirm } from '../hooks/useConfirm'
 import PageHeader from './ui/PageHeader'
+import PageContainer from './ui/PageContainer'
 import WageCycleDetail from './features/wages/WageCycleDetail'
 import WageStatsTab from './features/wages/WageStatsTab'
 import WageProjectList from './features/wages/WageProjectList'
@@ -421,7 +422,7 @@ export default function WageManagement() {
   }
 
   return (
-    <div className="p-6 max-w-[1400px] mx-auto space-y-6">
+    <PageContainer className="space-y-6">
       <PageHeader title="工资管理" />
       {/* 统计看板 */}
       <WageStatsTab wageStats={wageStats} selectedMonth={selectedMonth} />
@@ -436,7 +437,7 @@ export default function WageManagement() {
 
       {/* 确认对话框 */}
       {ConfirmDialog}
-    </div>
+    </PageContainer>
   )
 
 }
