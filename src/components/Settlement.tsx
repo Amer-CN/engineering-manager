@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import type { Settlement as SettlementData, Project, Partner } from '../types/electron'
 import PageHeader from './ui/PageHeader'
+import PageContainer from './ui/PageContainer'
 import { Spinner } from './ui/Loading/Loading'
 import { SettlementDashboard, SettlementProjectDetail } from './features/settlement'
 import { getAPI } from '@/services/api-adapter'
@@ -75,14 +76,14 @@ const Settlement: React.FC<{ refresh?: () => void }> = ({ refresh }) => {
 
   // 看板首页
   return (
-    <div className="p-6 max-w-[1400px] mx-auto">
+    <PageContainer>
       <PageHeader title="结算办理" subtitle="管理工程结算单据" />
       <SettlementDashboard
         settlements={settlements}
         projects={projects}
         onProjectClick={handleProjectClick}
       />
-    </div>
+    </PageContainer>
   )
 }
 
