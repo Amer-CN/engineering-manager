@@ -6,6 +6,7 @@ import { Spinner } from './ui/Loading/Loading'
 import { SYSTEM_ROLES, RESOURCE_LABELS, ACTION_LABELS, getPermissionLabel } from '../types/permissions'
 import type { PermissionResource, PermissionAction, PermissionCode } from '../types/permissions'
 import { Icon } from './ui/Icon'
+import { Card } from './ui/Card'
 import { getAPI } from '@/services/api-adapter'
 
 const resourceKeys: PermissionResource[] = ['dashboard', 'projects', 'contracts', 'partners', 'members', 'wages', 'settlement', 'inventory', 'invoices', 'costLedger', 'drawings', 'settings', 'users', 'roles', 'audit_logs']
@@ -64,7 +65,7 @@ export const RolePermissionsTab: React.FC = () => {
   }
 
   if (editingRoleId) return (
-  <div className="bg-white rounded-xl shadow-sm p-6">
+  <Card bordered={false} className="p-6">
   {ConfirmDialog}
   <div className="flex items-center justify-between mb-4">
   <h3 className="text-lg font-semibold text-slate-800">
@@ -91,7 +92,7 @@ export const RolePermissionsTab: React.FC = () => {
   <button onClick={() => setEditingRoleId(null)} className="btn btn-secondary">取消</button>
   <button onClick={handleSavePermissions} className="btn btn-primary">保存权限</button>
   </div>
-  </div>
+  </Card>
   )
 
   return rolesLoading ? (
@@ -100,11 +101,11 @@ export const RolePermissionsTab: React.FC = () => {
   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
   {ConfirmDialog}
   {roles.map(role => (
-  <div key={role.id} className="bg-white rounded-xl shadow-sm p-5 hover:shadow-md transition-all">
+  <Card bordered={false} hoverable className="p-5 hover:shadow-md transition-all">
   <div className="flex items-start justify-between mb-3"><div><h4 className="font-semibold text-slate-800">{role.name}</h4><p className="text-xs text-slate-500 mt-0.5">{role.description}</p></div>{role.isSystem && <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-xs rounded-full">系统</span>}</div>
   <div className="flex flex-wrap gap-1 mb-4">{role.permissions.slice(0, 8).map(p => <span key={p} className="px-2 py-0.5 bg-primary-50 text-primary-700 text-xs rounded">{getPermissionLabel(p as PermissionCode)}</span>)}{role.permissions.length > 8 && <span className="px-2 py-0.5 bg-slate-50 text-slate-500 text-xs rounded">+{role.permissions.length - 8}</span>}</div>
   <div className="flex items-center gap-2 pt-3 border-t border-slate-100"><button onClick={() => startEditRole(role.id)} className="flex-1 px-3 py-1.5 text-xs font-medium bg-primary-600 text-white rounded-lg hover:bg-primary-700">编辑权限</button>{role.isSystem && <button onClick={() => handleResetRole(role.id)} className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg">重置</button>}</div>
-  </div>
+  </Card>
   ))}
   </div>
   )

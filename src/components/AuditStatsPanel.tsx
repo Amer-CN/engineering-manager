@@ -1,5 +1,6 @@
 import React from 'react'
 import { AuditAction, AuditStats } from '../utils/audit'
+import { Card } from './ui/Card'
 
 interface AuditStatsPanelProps {
   statsData: AuditStats
@@ -9,7 +10,7 @@ interface AuditStatsPanelProps {
 
 export const AuditStatsPanel: React.FC<AuditStatsPanelProps> = ({ statsData, onClose, actionConfig }) => {
   return (
-  <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+  <Card bordered={false} className="p-6 mb-6">
   <div className="flex items-center justify-between mb-4">
   <h3 className="font-semibold text-slate-800">近30天操作统计</h3>
   <button
@@ -76,6 +77,6 @@ export const AuditStatsPanel: React.FC<AuditStatsPanelProps> = ({ statsData, onC
   </div>
   </div>
   </div>
-  </div>
+  </Card>
   )
 }

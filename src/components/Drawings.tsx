@@ -4,6 +4,7 @@ import FilterBar from './ui/FilterBar'
 import Spinner from './ui/Spinner'
 import { Drawing, Project } from '../types/electron'
 import { Icon } from './ui/Icon'
+import { Card } from './ui/Card'
 import PageContainer from './ui/PageContainer'
 import { EmptyState } from './ui/EmptyState'
 import { useToastStore } from '@/store/toastStore'
@@ -266,18 +267,18 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
 
   {/* 统计卡片 */}
   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-  <div className="bg-white rounded-xl shadow-sm p-4">
+  <Card bordered={false} className="p-4">
   <p className="text-sm text-slate-500">图纸总数</p>
   <p className="text-2xl font-bold text-slate-800">{filteredDrawings.length}</p>
-  </div>
-  <div className="bg-white rounded-xl shadow-sm p-4">
+  </Card>
+  <Card bordered={false} className="p-4">
   <p className="text-sm text-slate-500">涉及项目</p>
   <p className="text-2xl font-bold text-slate-800">{new Set(filteredDrawings.map(d => d.projectId)).size}</p>
-  </div>
-  <div className="bg-white rounded-xl shadow-sm p-4">
+  </Card>
+  <Card bordered={false} className="p-4">
   <p className="text-sm text-slate-500">图纸类型</p>
   <p className="text-2xl font-bold text-slate-800">{new Set(filteredDrawings.map(d => d.category)).size}</p>
-  </div>
+  </Card>
   </div>
 
   {/* 筛选器 */}
