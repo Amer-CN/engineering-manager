@@ -6,6 +6,7 @@ import {
 } from '@/utils/audit'
 import { useAuditLogFilters } from '@/hooks/useAuditLogFilters'
 import { Icon } from './ui/Icon'
+import { Card } from './ui/Card'
 import { StatusBadge, AUDIT_LEVEL } from '@/constants/status'
 import { AuditStatsPanel } from './AuditStatsPanel'
 import { AuditFilterBar } from './AuditFilterBar'
@@ -137,11 +138,11 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
   />
 
   {logs.length === 0 ? (
-  <div className="bg-white rounded-xl shadow-sm overflow-hidden p-12 text-center">
+  <Card bordered={false} className="overflow-hidden p-12 text-center">
   <Icon name="ClipboardList" size={44} className="text-slate-300 mb-4" />
   <h3 className="text-lg font-medium text-slate-800 mb-2">暂无操作日志</h3>
   <p className="text-slate-500">系统还未记录任何操作，或当前筛选条件下无数据</p>
-  </div>
+  </Card>
   ) : (
   <>
   <DataTable
