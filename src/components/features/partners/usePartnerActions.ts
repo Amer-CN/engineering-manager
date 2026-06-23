@@ -18,7 +18,6 @@ export function usePartnerActions({ partners, supervisors, projects, loadData, r
   const { confirm } = useConfirm()
 
   const handlePartnerSubmit = async (formData: any, editingPartner: Partner | null) => {
-    console.log('[PartnerSubmit] called, name:', formData.name)
     try {
       let processed = { ...formData }
 
@@ -73,14 +72,11 @@ export function usePartnerActions({ partners, supervisors, projects, loadData, r
         await (await getAPI()).updatePartner({ ...editingPartner, ...processed })
         logUpdate('partners', processed.name, editingPartner.id, { before: editingPartner, after: processed })
       } else {
-        console.log('[PartnerSubmit] creating partner with data:', JSON.stringify(processed).substring(0, 200))
         const result = await (await getAPI()).createPartner(processed)
-        console.log('[PartnerSubmit] result:', JSON.stringify(result))
         if (result.success && result.data) {
           logCreate('partners', processed.name, result.data.id, processed)
         }
       }
-      console.log('[PartnerSubmit] loadData...')
       loadData()
       refresh?.()
       try { showToast(editingPartner ? '合作单位更新成功' : '合作单位创建成功', 'success') } catch {}

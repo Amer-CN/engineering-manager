@@ -161,11 +161,9 @@ export async function loadBuiltInConfig(): Promise<OCRConfig | null> {
     const response = await fetch('./ocr-config.json')
     if (response.ok) {
       const config = await response.json()
-      console.debug('成功加载预置OCR配置:', config)
       return config as OCRConfig
     }
-  } catch (error) {
-    console.debug('加载预置OCR配置失败，使用默认值:', error)
+  } catch {
   }
   return null
 }
@@ -187,7 +185,6 @@ export async function initializeBuiltInConfig(): Promise<void> {
     // 首次加载且无 localStorage 配置时，同步内置配置
     if (!currentConfig.baidu?.apiKey && builtIn.baidu?.apiKey) {
       currentConfig = { ...builtIn }
-      console.debug('[OCR] 已从 ocr-config.json 同步完整配置到 currentConfig')
     }
   }
   configLoaded = true
@@ -392,8 +389,6 @@ async function baiduCompanyQuery(companyName: string, config: OCRConfig): Promis
  */
 async function offlineOCR(imageBase64: string): Promise<OCRResult> {
   try {
-    console.debug('[离线OCR] 开始识别...')
-
     // Tesseract.js 需要图片URL或File对象
     // 将base64转换为Blob URL
     const response = await fetch(imageBase64)
@@ -402,22 +397,11 @@ async function offlineOCR(imageBase64: string): Promise<OCRResult> {
     // 创建临时URL
     const imageUrl = URL.createObjectURL(blob)
 
-    console.debug('[离线OCR] 图片URL创建成功:', imageUrl.substring(0, 50))
-
     try {
       const Tesseract = await import('tesseract.js')
-      const result = await Tesseract.recognize(imageUrl, 'chi_sim+eng', {
-        logger: (m) => {
-          if (m.status === 'recognizing text') {
-            console.debug(`[离线OCR] 识别进度: ${Math.round(m.progress * 100)}%`)
-          }
-        }
-      })
-
-      console.debug('[离线OCR] 原始识别文本:', result.data.text.substring(0, 200))
+      const result = await Tesseract.recognize(imageUrl, 'chi_sim+eng')
 
       const text = result.data.text.replace(/\s+/g, '').trim()
-      console.debug('[离线OCR] 清理后文本:', text.substring(0, 100))
 
       // 提取身份证号 - 多种正则匹配
       const patterns = [
@@ -431,20 +415,16 @@ async function offlineOCR(imageBase64: string): Promise<OCRResult> {
         const match = text.match(pattern)
         if (match) {
           idCard = match[1].toUpperCase()
-          console.debug('[离线OCR] 匹配到身份证号:', idCard)
           break
         }
       }
 
       if (!idCard) {
         // 最后尝试：搜索所有17-18位数字组合
-        const allNumbers = text.match(/\d{15,18}/g)
-        console.debug('[离线OCR] 所有15-18位数字:', allNumbers)
         return { success: false, error: '未能识别到身份证号' }
       }
 
       const parsed = parseIdCard(idCard)
-      console.debug('[离线OCR] 解析结果:', parsed)
 
       return {
         success: true,
@@ -534,8 +514,6 @@ export async function recognizeIdCard(imageBase64: string): Promise<OCRResult> {
     return result
   }
 
-  // 离线模式
-  console.debug('使用离线OCR识别')
   return offlineOCR(imageBase64)
 }
 
