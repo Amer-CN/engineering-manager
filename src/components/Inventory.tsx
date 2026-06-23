@@ -1,5 +1,6 @@
 import React from 'react'
 import { Icon } from './ui/Icon'
+import PageContainer from './ui/PageContainer'
 import { Modal } from './ui/Modal/Modal'
 import PageHeader from './ui/PageHeader'
 import { Tabs } from './ui/Tabs'
@@ -30,7 +31,7 @@ const Inventory: React.FC<InventoryProps> = ({ refresh }) => {
   }
 
   return (
-  <div className="p-6 max-w-[1400px] mx-auto">
+  <PageContainer>
   <PageHeader title="仓库管理" subtitle="管理材料库存、出入库和项目材料"
   actions={<>
   <button onClick={() => { h.setEditingMaterial(null); h.setShowMaterialModal(true) }} className="btn btn-secondary">
@@ -131,7 +132,7 @@ const Inventory: React.FC<InventoryProps> = ({ refresh }) => {
   categoryIcons={categoryIcons} onSubmit={h.handleMaterialSubmit}
   onCancel={() => { h.setShowMaterialModal(false); h.setEditingMaterial(null) }} />
   </Modal>
-  </div>
+  </PageContainer>
   )
 }
 
