@@ -8,6 +8,7 @@ import { Icon } from '../../ui/Icon'
 import type { Member, WorkerTeam } from '../../../types/electron'
 import { WorkerWageModal } from './WorkerWageModal'
 import { getWorkerTypeLabel } from '../../../utils'
+import { Card } from '@/components/ui/Card'
 
 interface LaborWorkerListProps {
   members: Member[]
@@ -187,7 +188,7 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
           />
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm p-12 text-center flex-1 flex flex-col items-center justify-center">
+        <Card bordered={false} className="p-12 text-center flex-1 flex flex-col items-center justify-center">
           <div className="text-6xl mb-4"><Icon name="Construction" size={48} /></div>
           <h3 className="text-lg font-medium text-slate-800 mb-2">暂无工人</h3>
           <p className="text-slate-500 mb-6">请先在班组管理中从工人库添加，或导入 Excel</p>
@@ -197,7 +198,7 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
           >
             添加工人
           </button>
-        </div>
+        </Card>
       )}
 
       {/* 工人工资统计弹窗 */}
