@@ -10,6 +10,7 @@ import type { Member } from '@/types'
 import { calculateAge as calcAge } from '@/utils'
 import { MemberCardMedia } from './MemberCardMedia'
 import { MemberCardInfo } from './MemberCardInfo'
+import { Card } from '@/components/ui/Card'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Types
@@ -113,11 +114,12 @@ export const MemberCard = React.memo(function MemberCard({
   const isLeft = member.status === 'left'
 
   return (
-  <div
-  className={`bg-white rounded-xl shadow-sm p-5 hover:shadow-md transition-all cursor-pointer ${
-  isLeft ? 'opacity-70' : ''
-  }`}
-  onClick={() => onClick(member)}
+  <Card
+    className={`bg-white rounded-xl shadow-sm p-5 hover:shadow-md transition-all cursor-pointer ${
+      isLeft ? 'opacity-70' : ''
+    }`}
+    hoverable
+    onClick={() => onClick(member)}
   >
   <MemberCardMedia member={member} isWorker={isWorker} iconName={iconName} status={status} />
   <MemberCardInfo member={member} isWorker={isWorker} isLeft={isLeft} />
@@ -215,6 +217,6 @@ export const MemberCard = React.memo(function MemberCard({
   )
   )}
   </div>
-  </div>
+</Card>
   )
 })
