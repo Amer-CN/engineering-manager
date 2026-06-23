@@ -7,6 +7,7 @@ import { useMemberFileUrls } from './useMemberFileUrls'
 import { PreviewModal, InfoItem, Tag, IdCardImages, ManagerSalaryCard } from './MemberDetailParts'
 import { WorkerDetailCards } from './WorkerDetailCards'
 import { useMaskedFn } from '@/hooks/useMaskedValue'
+import { Card } from '@/components/ui/Card'
 
 export interface MemberDetailProps {
   member: Member
@@ -86,7 +87,7 @@ export function MemberDetail({
       }
     >
       {/* 基本信息卡片 */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+      <Card className="border border-slate-200 p-6 mb-6">
         <h3 className="text-lg font-medium text-slate-800 mb-4 flex items-center">
           <span className="mr-2">📋</span>
           基本信息
@@ -128,10 +129,10 @@ export function MemberDetail({
             <InfoItem icon={<Icon name="HelpCircle" size={16} />} label="实际离场" value={member.actualLeaveDate} highlight />
           )}
         </div>
-      </div>
+      </Card>
 
       {/* 身份证信息卡片 */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+      <Card className="border border-slate-200 p-6 mb-6">
         <h3 className="text-lg font-medium text-slate-800 mb-4 flex items-center">
           <span className="mr-2">🪪</span>
           身份证信息
@@ -157,7 +158,7 @@ export function MemberDetail({
           fileUrls={fileUrls}
           onPreview={handlePreview}
         />
-      </div>
+      </Card>
 
       {/* 农民工专属信息 */}
       {isWorker && (
@@ -171,7 +172,7 @@ export function MemberDetail({
 
       {/* 合同信息卡片 */}
       {member.contractFile && fileUrls.contractFile && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+        <Card className="border border-slate-200 p-6 mb-6">
           <h3 className="text-lg font-medium text-slate-800 mb-4 flex items-center">
             <Icon name="FileText" size={18} className="mr-2" />
             劳动合同
@@ -182,18 +183,18 @@ export function MemberDetail({
           >
             {member.contractFileType === 'pdf' ? <><Icon name="FileText" size={14} className="inline-block" /> 查看PDF合同</> : <><Icon name="Image" size={14} className="inline-block" />查看合同图片</>}
           </button>
-        </div>
+        </Card>
       )}
 
       {/* 备注卡片 */}
       {member.remarks && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+        <Card className="border border-slate-200 p-6 mb-6">
           <h3 className="text-lg font-medium text-slate-800 mb-4 flex items-center">
             <span className="mr-2">📝</span>
             备注
           </h3>
           <p className="text-slate-600 whitespace-pre-wrap">{member.remarks}</p>
-        </div>
+        </Card>
       )}
 
       {previewData && <PreviewModal data={previewData.data} type={previewData.type} title={previewData.title} onClose={() => setPreviewData(null)} />}
