@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { Template, TemplateCategory } from '../../../types/electron'
 import { categoryConfig, categoryColors } from './config'
 import { Icon } from '../../ui/Icon'
+import { Card } from '@/components/ui/Card'
 
 interface TemplateDashboardProps {
   templates: Template[]
@@ -22,22 +23,22 @@ export default function TemplateDashboard({ templates, stats, onCategoryClick }:
     <div>
       {/* Global stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white rounded-xl shadow-sm p-4">
+        <Card bordered={false} className="p-4">
           <p className="text-sm text-slate-500">模板总数</p>
           <p className="text-2xl font-bold text-slate-800">{stats.total || templates.length}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
+        </Card>
+        <Card bordered={false} className="p-4">
           <p className="text-sm text-slate-500">Word 模板</p>
           <p className="text-2xl font-bold text-blue-600">{templates.filter(t => t.fileType === 'docx').length}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
+        </Card>
+        <Card bordered={false} className="p-4">
           <p className="text-sm text-slate-500">Excel 模板</p>
           <p className="text-2xl font-bold text-emerald-600">{templates.filter(t => t.fileType === 'xlsx').length}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
+        </Card>
+        <Card bordered={false} className="p-4">
           <p className="text-sm text-slate-500">模板分类</p>
           <p className="text-2xl font-bold text-slate-800">{Object.keys(categoryStats).length}</p>
-        </div>
+        </Card>
       </div>
 
       {/* Category cards */}
