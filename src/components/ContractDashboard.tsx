@@ -8,14 +8,7 @@ import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { SimpleBarChart } from './ui/SimpleBarChart'
 import { staggerContainer, sectionVariant } from '@/constants/animations'
 import { getAPI } from '@/services/api-adapter'
-
-const COLORS = {
-  income: '#10b981',
-  expense: '#ef4444',
-  received: '#3b82f6',
-  paid: '#f59e0b',
-  agreement: '#0ea5e9',
-} as const
+import { COLORS } from './features/contracts/contractsColors'
 
 const CARD = 'bg-white border border-slate-200 rounded-xl shadow-sm'
 
