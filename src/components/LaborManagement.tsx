@@ -1,6 +1,7 @@
 // LaborManagement.tsx - 工人管理主页面（使用统一 Tabs 组件）
 import React, { useState, useCallback, Suspense } from 'react'
 import PageHeader from './ui/PageHeader'
+import PageContainer from './ui/PageContainer'
 import { Tabs } from './ui/Tabs'
 import { Spinner } from './ui/Loading/Loading'
 import { useLaborData } from './features/labor/hooks/useLaborData'
@@ -79,7 +80,7 @@ const LaborManagement: React.FC = () => {
   }
 
   return (
-    <div className="p-6 max-w-[1400px] mx-auto">
+    <PageContainer>
       <PageHeader title="工人管理" subtitle="管理农民工信息、班组与工资" />
 
       {/* 统一 Tabs 组件 */}
@@ -222,7 +223,7 @@ const LaborManagement: React.FC = () => {
 
       {/* 确认对话框(工人管理) */}
       {ops.ConfirmDialog}
-    </div>
+    </PageContainer>
   )
 }
 
