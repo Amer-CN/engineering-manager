@@ -10,6 +10,7 @@ import WageTableTab from './WageTableTab'
 import WageRecordsTab from './WageRecordsTab'
 import AttendanceDetail from '../../AttendanceDetail'
 import { AttendanceImportModal } from './AttendanceImportModal'
+import { Card } from '@/components/ui/Card'
 
 type CycleTab = 'attendance' | 'wagetable' | 'records'
 
@@ -143,7 +144,7 @@ export default function WageCycleDetail(props: WageCycleDetailProps) {
         )}
 
         {/* Tab Content */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+        <Card className="border border-slate-200">
           {activeTab === 'attendance' && (
             <AttendanceTab
               selectedProject={selectedProject} selectedMonth={selectedMonth}
@@ -184,7 +185,7 @@ export default function WageCycleDetail(props: WageCycleDetailProps) {
               onBatchDelete={onBatchDeleteWages} onBatchArchive={onBatchArchivePayments}
             />
           )}
-        </div>
+        </Card>
       </Tabs>
     </PageContainer>
   )
