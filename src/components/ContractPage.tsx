@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { DataTable } from '@/components/DataTable'
 import { HoverScrollbar } from './ui/HoverScrollbar'
+import PageContainer from './ui/PageContainer'
 import Spinner from './ui/Spinner'
 import type { Partner, Project, PaymentRecord, Template } from '../types/electron'
 import { partnerCategories, contractStatuses } from '../data/regions'
@@ -180,7 +181,7 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden p-6 max-w-[1400px] mx-auto w-full">
+    <PageContainer className="flex-1 flex flex-col overflow-hidden w-full">
       {/* 页面头部：返回按钮 + 合同类型标识 */}
       <div className="flex items-center gap-4 mb-6">
         {onBack && (
@@ -311,7 +312,7 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
           onClose={() => setGeneratingTemplate(null)}
         />
       )}
-    </div>
+    </PageContainer>
   )
 }
 
