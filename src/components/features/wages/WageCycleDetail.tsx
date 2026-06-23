@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Project, WorkerTeam, AttendanceRecord, WageRecord } from '@/types'
 import { Icon } from '../../ui/Icon'
 import PageHeader from '../../ui/PageHeader'
+import PageContainer from '@/components/ui/PageContainer'
 import { Tabs } from '../../ui/Tabs'
 import { MonthPicker } from '../../ui/MonthPicker'
 import AttendanceTab from './AttendanceTab'
@@ -92,7 +93,7 @@ export default function WageCycleDetail(props: WageCycleDetailProps) {
     const adr = attendanceDetailRecord as any
     const teamName = adr.teamName || workerTeams.find(t => t.id === adr.teamId)?.name || '-'
     return (
-      <div className="p-6 max-w-[1400px] mx-auto space-y-6">
+      <PageContainer className="space-y-6">
         <button onClick={() => setAttendanceDetailRecord(null)}
           className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 transition-colors mb-4">
           <Icon name="ChevronLeft" size={16} /> 返回考勤列表
@@ -102,7 +103,7 @@ export default function WageCycleDetail(props: WageCycleDetailProps) {
           daysInMonth={daysInMonth} projectName={selectedProject?.name || ''}
           onBack={() => setAttendanceDetailRecord(null)}
           onSaved={async () => { setAttendanceDetailRecord(null); await onGenerateAttendance() }} />
-      </div>
+      </PageContainer>
     )
   }
 
@@ -113,7 +114,7 @@ export default function WageCycleDetail(props: WageCycleDetailProps) {
   ]
 
   return (
-    <div className="p-6 max-w-[1400px] mx-auto space-y-6">
+    <PageContainer className="space-y-6">
       <PageHeader title={selectedProject?.name || ''} onBack={onBack} />
 
       {/* 月份选择器 - 统一在父级 */}
@@ -185,6 +186,6 @@ export default function WageCycleDetail(props: WageCycleDetailProps) {
           )}
         </div>
       </Tabs>
-    </div>
+    </PageContainer>
   )
 }
