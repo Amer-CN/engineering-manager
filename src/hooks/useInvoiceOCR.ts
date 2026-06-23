@@ -91,12 +91,8 @@ export function useInvoiceOCR(): UseInvoiceOCRReturn {
         })
       }
 
-      console.log('[发票OCR] 开始识别, 文件类型:', file.type, 'base64长度:', base64.length)
-
       // 调用 OCR 识别
       const result: OCRResult = await recognizeInvoice(base64)
-
-      console.log('[发票OCR] 识别结果:', result)
 
       if (!result.success || !result.invoice) {
         const errorMsg = result.error || '发票识别失败'

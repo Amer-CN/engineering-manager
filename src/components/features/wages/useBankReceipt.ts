@@ -72,7 +72,6 @@ export function useBankReceipt({
       if (items.length === 0 && result.data.rawTextSnippet) {
         debugPayload.rawTextSnippet = result.data.rawTextSnippet
       }
-      console.debug('[bankReceipt]', JSON.stringify(debugPayload))
       setPaymentEdits(newEdits)
       setReceiptResult({ matched, failed, totalItems: items.length, date, receiptPath, totalAmount: result.data.totalAmount, successAmount: result.data.successAmount, rawTextSnippet: result.data.rawTextSnippet })
       showToast(`匹配 ${matched} 条记录已填入${date ? '（' + date + '）' : ''}`, 'success')
