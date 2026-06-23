@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react'
 import { HoverScrollbar } from '../../ui/HoverScrollbar'
+import PageContainer from '@/components/ui/PageContainer'
 import FilterBar from '../../ui/FilterBar'
 import { Settlement as SettlementData, SettlementStatus, SettlementType, Project, Partner, Template } from '../../../types/electron'
 import { SettlementList } from './SettlementList'
@@ -48,7 +49,7 @@ const SettlementProjectDetail: React.FC<SettlementProjectDetailProps> = ({
   })
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden p-6 max-w-[1400px] mx-auto w-full">
+    <PageContainer className="flex-1 flex flex-col overflow-hidden w-full">
       {ConfirmDialog}
       {/* 打印内容 */}
       <div ref={printRef}>
@@ -176,7 +177,7 @@ const SettlementProjectDetail: React.FC<SettlementProjectDetailProps> = ({
           onClose={() => setGeneratingTemplate(null)}
         />
       )}
-    </div>
+    </PageContainer>
   )
 }
 
