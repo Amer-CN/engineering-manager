@@ -65,7 +65,6 @@ const Dashboard: React.FC = () => {
   const expenseByCategory = Array.from(level1Map.entries())
   .map(([name, amount]) => ({ name, amount: Math.round(amount), color: colorMap.get(name) || COLORS.fallbackCategory }))
   .sort((a, b) => b.amount - a.amount)
-  console.log('[Dashboard] expenseByCategory final:', JSON.stringify(expenseByCategory))
   setChartData(prev => ({ ...prev, expenseByCategory }))
   }
   }
