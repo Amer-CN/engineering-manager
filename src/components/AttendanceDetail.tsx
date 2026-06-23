@@ -7,6 +7,7 @@ import React, { useState } from 'react'
 import type { AttendanceRecord, Member, DayStatus } from '@/types'
 import { useToastStore } from '@/store/toastStore'
 import { Icon } from './ui/Icon'
+import { Card } from './ui/Card'
 import { getAPI } from '@/services/api-adapter'
 import { Tooltip } from './ui/Tooltip/Tooltip'
 
@@ -196,7 +197,7 @@ export default function AttendanceDetail({
   </div>
 
   {/* 主体卡片 */}
-  <div className="bg-white rounded-xl shadow-sm p-5 space-y-4">
+  <Card bordered={false} className="p-5 space-y-4">
 
   {/* 画笔工具栏 */}
   <div className="flex items-center justify-between flex-wrap gap-3">
@@ -295,7 +296,7 @@ export default function AttendanceDetail({
   &nbsp;·&nbsp; 未标记 <span className="font-medium text-slate-400">{daysInMonth - (counts.work + counts.holiday + counts.sick_leave + counts.personal_leave)}</span> 天
   </div>
   </div>
-  </div>
+  </Card>
   </div>
   )
 }
