@@ -12,6 +12,7 @@ import {
   getEntryDate,
 } from '../../../utils/staff-payroll-utils'
 import { StaffPayrollTable } from './StaffPayrollTable'
+import { Card } from '@/components/ui/Card'
 import StaffPayrollToolbar from './StaffPayrollToolbar'
 
 const StaffPayroll: React.FC = () => {
@@ -208,14 +209,14 @@ const StaffPayroll: React.FC = () => {
         onExportExcel={handleExportExcel}
       />
       {filteredWages.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm flex-1 mt-4 flex items-center justify-center">
+        <Card bordered={false} className="flex-1 mt-4 flex items-center justify-center">
           {allWages.length === 0 ? (
             <EmptyState icon="Calculator" title="未生成薪酬"
               description="请选择具体年份和月份后点击「生成薪酬」开始计算" />
           ) : (
             <EmptyState icon="Banknote" title="暂无符合筛选条件的记录" description="请调整筛选条件" />
           )}
-        </div>
+        </Card>
       ) : (
         <StaffPayrollTable
           filteredWages={filteredWages}
