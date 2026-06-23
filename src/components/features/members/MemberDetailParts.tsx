@@ -1,5 +1,6 @@
 import React from 'react'
 import { Modal } from '../../ui/Modal/Modal'
+import { Card } from '@/components/ui/Card'
 
 export function PreviewModal({ data, type, title, onClose }: { data: string; type: 'image' | 'pdf'; title: string; onClose: () => void }) {
   return (
@@ -55,7 +56,7 @@ export function IdCardImages({ idCardFront, idCardBack, fileUrls, onPreview }: {
 export function ManagerSalaryCard({ member }: { member: any }) {
   if (member.baseSalary === undefined) return null
   return (
-  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+  <Card className="border border-slate-200 p-6 mb-6">
   <h3 className="text-lg font-medium text-slate-800 mb-4 flex items-center"><span className="mr-2">💵</span>薪酬信息</h3>
   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
   <div className="bg-green-50 rounded-lg p-4"><p className="text-sm text-slate-500">基本工资</p><p className="text-xl font-bold text-green-600">{member.baseSalary?.toLocaleString() || '0'} 元/月</p></div>
@@ -64,6 +65,6 @@ export function ManagerSalaryCard({ member }: { member: any }) {
   {member.housingFund !== undefined && <div className="bg-orange-50 rounded-lg p-4"><p className="text-sm text-slate-500">公积金</p><p className="text-lg font-medium text-orange-600">{member.housingFund?.toLocaleString() || '0'} 元/月</p></div>}
   {member.otherAllowances !== undefined && <div className="bg-slate-50 rounded-lg p-4"><p className="text-sm text-slate-500">其他补贴</p><p className="text-lg font-medium text-slate-600">{member.otherAllowances?.toLocaleString() || '0'} 元/月</p></div>}
   </div>
-  </div>
+  </Card>
   )
 }

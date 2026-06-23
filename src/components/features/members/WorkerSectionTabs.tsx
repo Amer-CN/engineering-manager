@@ -2,6 +2,7 @@ import type { Member, WorkerTeam } from '@/types'
 import { TeamCard } from './WorkerSectionModals'
 import FilterBar from '../../ui/FilterBar'
 import { DataTable } from '@/components/DataTable'
+import { Card } from '@/components/ui/Card'
 
 interface TeamsTabProps {
   workerTeams: WorkerTeam[]
@@ -37,7 +38,7 @@ export function TeamsTab({
       {Object.keys(teamsByProject).length > 0 ? (
         <div className="space-y-6">
           {Object.values(teamsByProject).map(projectGroup => (
-            <div key={projectGroup.projectId} className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <Card bordered={false} className="overflow-hidden">
               <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
                 <div className="flex items-center">
                   <span className="mr-2">📁</span>
@@ -59,18 +60,18 @@ export function TeamsTab({
                   ))}
                 </div>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+        <Card bordered={false} className="p-12 text-center">
           <div className="text-6xl mb-4">🏗️</div>
           <h3 className="text-lg font-medium text-slate-800 mb-2">暂无班组</h3>
           <p className="text-slate-500 mb-6">请先添加项目，然后创建班组</p>
           <button onClick={onOpenAddModal} className="btn btn-warning">
             添加班组
           </button>
-        </div>
+        </Card>
       )}
     </>
   )
@@ -146,14 +147,14 @@ export function WorkersTab({
           emptyIcon="Construction"
         />
       ) : (
-        <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+        <Card bordered={false} className="p-12 text-center">
           <div className="text-6xl mb-4">🚧</div>
           <h3 className="text-lg font-medium text-slate-800 mb-2">暂无工人</h3>
           <p className="text-slate-500 mb-6">请先在班组管理中从工人库添加，或导入 Excel</p>
           <button onClick={onAddWorker} className="btn btn-warning">
             添加工人
           </button>
-        </div>
+        </Card>
       )}
     </>
   )
