@@ -3,6 +3,7 @@ import { DataTable, type Column } from '@/components/DataTable'
 import { useWagePaymentRecords } from '@/hooks/useWagePaymentRecords'
 import { Icon } from '../../ui/Icon'
 import PageHeader from '../../ui/PageHeader'
+import PageContainer from '@/components/ui/PageContainer'
 import { getAPI } from '@/services/api-adapter'
 
 interface PaymentRecordFilters {
@@ -187,7 +188,7 @@ export default function WagePaymentRecords() {
   )
 
   return (
-    <div className="p-6 max-w-[1400px] mx-auto space-y-4">
+    <PageContainer className="space-y-4">
       <PageHeader title="工资发放记录"
         actions={<>
           <button onClick={() => { setViewMode('all'); loadPaymentRecords() }}
@@ -235,6 +236,6 @@ export default function WagePaymentRecords() {
         emptyText="暂无数据"
         emptyIcon="Receipt"
       />
-    </div>
+    </PageContainer>
   )
 }
