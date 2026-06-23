@@ -11,6 +11,7 @@ import { Input } from './ui/Input/Input'
 import { setCurrentUser } from '../types/permissions'
 import type { UserInfo } from '../types/electron'
 import { Icon } from './ui/Icon'
+import PageContainer from './ui/PageContainer'
 
 import PageHeader from './ui/PageHeader'
 import { Tabs } from './ui/Tabs'
@@ -166,7 +167,7 @@ const Users: React.FC = () => {
   })
 
   return (
-    <div className="p-6 max-w-[1400px] mx-auto">
+    <PageContainer>
       {ConfirmDialog}
       <PageHeader title="用户管理" subtitle="管理系统用户与权限"
         actions={activeTab === 'user_list' ? (
@@ -255,7 +256,7 @@ const Users: React.FC = () => {
       {activeTab === 'snapshots' && (
         <SnapshotsTab />
       )}
-    </div>
+    </PageContainer>
   )
 }
 
