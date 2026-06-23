@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Icon } from './ui/Icon'
+import PageContainer from './ui/PageContainer'
 import { Modal } from './ui/Modal/Modal'
 import PageHeader from './ui/PageHeader'
 import { EmptyState } from './ui/EmptyState'
@@ -175,7 +176,7 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
   }
 
   return (
-  <div className="p-6 max-w-[1400px] mx-auto">
+  <PageContainer>
   {ConfirmDialog}
   {/* 打印内容容器 */}
   <div ref={printRef} className="hidden print:block"></div>
@@ -326,7 +327,7 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
   </div>
   </div>
   </Modal>
-  </div>
+  </PageContainer>
   )
 }
 
