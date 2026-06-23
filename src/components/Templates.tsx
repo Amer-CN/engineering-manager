@@ -7,6 +7,7 @@ import { useToastStore } from '@/store/toastStore'
 import { useConfirm } from '@/hooks/useConfirm'
 import { Spinner } from './ui/Loading/Loading'
 import PageHeader from './ui/PageHeader'
+import PageContainer from './ui/PageContainer'
 import { TemplateDashboard, TemplateList, TemplateForm, TemplatePreview, TemplateGenerate } from './features/templates'
 import { logCreate, logUpdate, logDelete } from '../utils/audit'
 import { Modal } from './ui/Modal/Modal'
@@ -120,7 +121,7 @@ const Templates: React.FC = () => {
   if (view === 'detail') {
     const categoryTemplates = templates.filter(t => t.category === selectedCategory)
     return (
-      <div className="p-6 max-w-[1400px] mx-auto">
+      <PageContainer>
         {ConfirmDialog}
         <TemplateList
           category={selectedCategory}
@@ -148,13 +149,13 @@ const Templates: React.FC = () => {
         {generateTemplate && (
           <TemplateGenerate template={generateTemplate} onClose={() => setGenerateTemplate(null)} />
         )}
-      </div>
+      </PageContainer>
     )
   }
 
   // 看板首页
   return (
-    <div className="p-6 max-w-[1400px] mx-auto">
+    <PageContainer>
       {ConfirmDialog}
       <PageHeader title="模板管理" subtitle="管理文档模板，支持 Word/Excel 文件上传与变量填充" />
       <TemplateDashboard
@@ -162,7 +163,7 @@ const Templates: React.FC = () => {
         stats={stats}
         onCategoryClick={handleCategoryClick}
       />
-    </div>
+    </PageContainer>
   )
 }
 
