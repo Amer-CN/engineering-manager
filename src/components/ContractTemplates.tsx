@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Icon } from './ui/Icon'
+import { Card } from './ui/Card'
 import PageContainer from './ui/PageContainer'
 import { Modal } from './ui/Modal/Modal'
 import PageHeader from './ui/PageHeader'
@@ -191,15 +192,15 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
 
   {/* 统计卡片 */}
   <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-  <div className="bg-white rounded-xl shadow-sm p-4">
+  <Card bordered={false} className="p-4">
   <p className="text-sm text-slate-500">模板总数</p>
   <p className="text-2xl font-bold text-slate-800">{stats.total}</p>
-  </div>
+  </Card>
   {Object.entries(templateTypeConfig).map(([type, config]) => (
-  <div key={type} className="bg-white rounded-xl shadow-sm p-4">
+  <Card bordered={false} className="p-4">
   <p className="text-sm text-slate-500">{config.label}</p>
   <p className="text-2xl font-bold text-slate-800">{stats.byType[type] || 0}</p>
-  </div>
+  </Card>
   ))}
   </div>
 
@@ -207,7 +208,7 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
   {templates.length > 0 ? (
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
   {templates.map(template => (
-  <div key={template.id} className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all">
+  <Card bordered={false} hoverable className="hover:shadow-md transition-all">
   <div className="p-5">
   <div className="flex items-start justify-between mb-4">
   <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${
@@ -269,7 +270,7 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
   </button>
   </div>
   </div>
-  </div>
+  </Card>
   ))}
   </div>
   ) : (
