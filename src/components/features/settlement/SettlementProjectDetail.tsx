@@ -13,6 +13,7 @@ import { TemplateSelectorModal, TemplateGenerate } from '../templates'
 import { useSettlementFilters } from './useSettlementFilters'
 import { useSettlementHandlers } from './useSettlementHandlers'
 import { printSettlement } from './settlementPrintUtil'
+import { Card } from '@/components/ui/Card'
 
 interface SettlementProjectDetailProps {
   project: Project
@@ -88,26 +89,26 @@ const SettlementProjectDetail: React.FC<SettlementProjectDetailProps> = ({
 
       {/* 统计卡片 */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-        <div className="bg-white rounded-xl shadow-sm p-4">
+        <Card bordered={false} className="p-4">
           <p className="text-sm text-slate-500">结算单总数</p>
           <p className="text-2xl font-bold text-slate-800">{stats.total}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
+        </Card>
+        <Card bordered={false} className="p-4">
           <p className="text-sm text-slate-500">未办理</p>
           <p className="text-2xl font-bold text-amber-600">{stats.pending}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
+        </Card>
+        <Card bordered={false} className="p-4">
           <p className="text-sm text-slate-500">已办理</p>
           <p className="text-2xl font-bold text-emerald-600">{stats.completed}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
+        </Card>
+        <Card bordered={false} className="p-4">
           <p className="text-sm text-slate-500">已归档</p>
           <p className="text-2xl font-bold text-slate-500">{stats.archived}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
+        </Card>
+        <Card bordered={false} className="p-4">
           <p className="text-sm text-slate-500">结算总金额</p>
           <p className="text-2xl font-bold text-primary-600">¥{formatMoney(stats.totalAmount)}</p>
-        </div>
+        </Card>
       </div>
 
       {/* 筛选器 */}
