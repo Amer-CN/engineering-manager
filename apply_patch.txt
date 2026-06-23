@@ -1,0 +1,26 @@
+*** Begin Patch
+*** Update File: E:\测试\src\components\features\hr\HRDashboard.tsx
+@@
+ import { getAPI } from '@/services/api-adapter'
++import { CHART_PALETTE } from './hrColors'
+
+ interface DashboardData {
+@@
+ const COLORS = {
+   primary: '#6366f1',
+   emerald: '#10b981',
+   amber: '#f59e0b',
+   danger: '#ef4444',
+   violet: '#8b5cf6',
+   cyan: '#06b6d4',
+   orange: '#f97316',
+   lime: '#84cc16',
+ } as const
+-const COLOR_VALUES = Object.values(COLORS)
+@@
+-                  {data.deptDistribution.map((_, i) => <Cell key={i} fill={COLOR_VALUES[i % COLOR_VALUES.length]} />)}
++                  {data.deptDistribution.map((_, i) => <Cell key={i} fill={CHART_PALETTE[i % CHART_PALETTE.length]} />)}
+@@
+-                <span className="w-2.5 h-2.5 rounded-full" style={{ background: COLOR_VALUES[i % COLOR_VALUES.length] }} />{d.name}
++                <span className="w-2.5 h-2.5 rounded-full" style={{ background: CHART_PALETTE[i % CHART_PALETTE.length] }} />{d.name}
+*** End Patch

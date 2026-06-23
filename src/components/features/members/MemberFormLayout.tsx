@@ -2,6 +2,7 @@ import React from 'react'
 import { Modal } from '../../ui/Modal/Modal'
 import { Icon } from '../../ui/Icon'
 import { OCRProvider } from '@/services/ocr'
+import { Button } from '../../ui/Button'
 
 interface Props {
   type: 'staff' | 'worker'; editingMember: any; ocrMode: OCRProvider
@@ -15,7 +16,7 @@ export const MemberFormLayout: React.FC<Props> = ({ type, editingMember, ocrMode
     <Modal isOpen onClose={onClose} title={title} size="xl"
       footer={
         <>
-          <button type="button" onClick={onClose} className="btn btn-secondary" disabled={submitting}>取消</button>
+          <Button type="button" onClick={onClose}  disabled={submitting} variant="secondary" className="btn">取消</Button>
           <button type="submit" form="member-form" disabled={submitting} className={`btn ${type === 'staff' ? 'btn-primary' : 'btn-warning'} ${submitting ? 'opacity-50 cursor-not-allowed' : ''}`}>{submitting ? '提交中..' : (editingMember ? '保存' : '添加')}</button>
         </>
       }

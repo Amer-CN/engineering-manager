@@ -21,6 +21,7 @@ import { ContractFormModal } from './features/contracts/ContractFormModal'
 import ContractPreviewModal, { type ContractPreviewFile } from './features/contracts/ContractPreviewModal'
 import { getContractColumns } from './features/contracts/contractPageColumns'
 import { getAPI } from '@/services/api-adapter'
+import { Button } from './ui/Button'
 
 interface ContractPageProps {
   refresh?: () => void; groupBy?: 'project' | 'role' | 'status'
@@ -185,11 +186,11 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
       {/* 页面头部：返回按钮 + 合同类型标识 */}
       <div className="flex items-center gap-4 mb-6">
         {onBack && (
-          <button onClick={onBack}
-            className="btn btn-ghost btn-sm flex items-center gap-1.5">
+          <Button onClick={onBack}
+             variant="ghost" size="sm" className="btn flex items-center gap-1.5">
             <Icon name="ArrowLeft" size={16} />
             <span>返回看板</span>
-          </button>
+          </Button>
         )}
         <div className="flex items-center gap-3">
           <span className={`w-1.5 h-8 rounded-full ${type === 'income' ? 'bg-emerald-500' : type === 'expense' ? 'bg-red-500' : 'bg-sky-500'}`} />
@@ -238,15 +239,15 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
         </div>
         <div className="flex items-center gap-3">
           {can('contracts:export') && (
-            <button onClick={handleExport}
-              className="btn btn-secondary flex items-center gap-2">
+            <Button onClick={handleExport}
+               variant="secondary" className="btn flex items-center gap-2">
               <Icon name="Download" size={16} /> 导出
-            </button>
+            </Button>
           )}
-          <button onClick={() => { setEditingContract(null); setShowModal(true) }}
-            className="btn btn-primary px-5 py-2 flex items-center">
+          <Button onClick={() => { setEditingContract(null); setShowModal(true) }}
+             variant="primary" className="btn px-5 py-2 flex items-center">
             <span className="text-lg mr-1">+</span>新增合同
-          </button>
+          </Button>
         </div>
       </div>
 

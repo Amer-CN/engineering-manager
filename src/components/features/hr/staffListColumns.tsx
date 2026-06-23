@@ -1,6 +1,7 @@
 import { type Column } from '@/components/DataTable'
 import { HR_STATUS_LABELS, HR_STATUS_COLORS } from './config'
 import { getAPI } from '@/services/api-adapter'
+import { Button } from '../../ui/Button'
 
 interface StaffListColumnsParams {
   departments: any[]
@@ -43,9 +44,9 @@ export function getStaffListColumns({
     { key: 'leaveDate', title: '离职日期', render: (m) => <span className="text-slate-500">{m.leaveDate || '-'}</span> },
     { key: 'actions', title: '操作', align: 'center', render: (m) => (
       <div className="flex items-center justify-center gap-1">
-        <button onClick={() => openEdit(m)} className="btn btn-ghost btn-sm text-indigo-600">编辑</button>
-        <button onClick={() => setSalaryHistoryMember(m)} className="btn btn-ghost btn-sm text-amber-600" title="薪资历史">薪资</button>
-        <button onClick={() => { if (confirm("确定要删除 " + m.name + " 吗？")) { if (window.confirm('确定要删除该人员吗？')) { getAPI().then(api => api.deleteMember(m.id)).then(r => { if (r.success) { showToast('已删除', 'success'); loadData() } else { showToast(r.error || '删除失败', 'error') } }) } } }} className="btn btn-ghost btn-sm text-red-500" title="删除">删除</button>
+        <Button onClick={() => openEdit(m)}  variant="ghost" size="sm" className="btn text-indigo-600">编辑</Button>
+        <Button onClick={() => setSalaryHistoryMember(m)}  title="薪资历史" variant="ghost" size="sm" className="btn text-amber-600">薪资</Button>
+        <Button onClick={() => { if (confirm("确定要删除 " + m.name + " 吗？")) { if (window.confirm('确定要删除该人员吗？')) { getAPI().then(api => api.deleteMember(m.id)).then(r => { if (r.success) { showToast('已删除', 'success'); loadData() } else { showToast(r.error || '删除失败', 'error') } }) } } }}  title="删除" variant="ghost" size="sm" className="btn text-red-500">删除</Button>
       </div>
     )},
   ]

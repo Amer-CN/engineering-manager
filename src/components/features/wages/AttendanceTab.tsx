@@ -5,6 +5,7 @@ import type { DayStatus } from '../../../types/electron'
 import { EmptyState } from '../../ui/EmptyState'
 import FilterBar from '../../ui/FilterBar'
 import { DataTable, type Column } from '@/components/DataTable'
+import { Button } from '../../ui/Button'
 
 interface AttendanceTabProps {
   selectedProject: Project | null
@@ -133,10 +134,10 @@ export default function AttendanceTab({
             {filteredAttendances.length} / {attendances.length} 人 | 当月天数: {daysInMonth} 天
           </div>
           {selectedIds.size > 0 && (
-            <button onClick={onBatchDelete}
-              className="btn btn-danger btn-sm">
+            <Button onClick={onBatchDelete}
+               variant="danger" size="sm" className="btn">
               删除选中 ({selectedIds.size})
-            </button>
+            </Button>
           )}
         </div>
         <div className="flex-1" />
@@ -169,13 +170,13 @@ export default function AttendanceTab({
               } catch (err) { console.error('解析考勤文件失败:', err) }
             }}
           />
-          <button
+          <Button
             onClick={() => { fileInputRef.current?.click() }}
-            className="btn btn-primary btn-sm">导入考勤</button>
-          <button onClick={onGenerateAttendance} disabled={loading}
-            className="btn btn-warning btn-sm">
+             variant="primary" size="sm" className="btn">导入考勤</Button>
+          <Button onClick={onGenerateAttendance} disabled={loading}
+             variant="warning" size="sm" className="btn">
             生成默认考勤
-          </button>
+          </Button>
         </div>
       </FilterBar>
 

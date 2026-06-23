@@ -8,6 +8,7 @@ import { useToastStore } from '@/store/toastStore'
 import { HoverScrollbar } from '../../ui/HoverScrollbar'
 import { InvoiceOCRBlock } from './InvoiceOCRBlock'
 import { InvoiceFormFields } from './InvoiceFormFields'
+import { Button } from '../../ui/Button'
 
 export interface InvoiceFormData {
   type: InvoiceType
@@ -179,8 +180,8 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
     />
   </HoverScrollbar>
   <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 shrink-0">
-  <button type="button" onClick={onCancel} className="btn btn-secondary">取消</button>
-  <button type="submit" className="btn btn-primary">{isEditing ? '保存' : '创建'}</button>
+  <Button type="button" onClick={onCancel}  variant="secondary" className="btn">取消</Button>
+  <Button type="submit"  variant="primary" className="btn">{isEditing ? '保存' : '创建'}</Button>
   </div>
   </form>
   </motion.div>

@@ -8,6 +8,7 @@ import type { PermissionResource, PermissionAction, PermissionCode } from '../ty
 import { Icon } from './ui/Icon'
 import { Card } from './ui/Card'
 import { getAPI } from '@/services/api-adapter'
+import { Button } from './ui/Button'
 
 const resourceKeys: PermissionResource[] = ['dashboard', 'projects', 'contracts', 'partners', 'members', 'wages', 'settlement', 'inventory', 'invoices', 'costLedger', 'drawings', 'settings', 'users', 'roles', 'audit_logs']
 const actionKeys: PermissionAction[] = ['read', 'create', 'update', 'delete', 'export', 'import', 'approve']
@@ -89,8 +90,8 @@ export const RolePermissionsTab: React.FC = () => {
   </table>
   </div>
   <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-slate-100">
-  <button onClick={() => setEditingRoleId(null)} className="btn btn-secondary">取消</button>
-  <button onClick={handleSavePermissions} className="btn btn-primary">保存权限</button>
+  <Button onClick={() => setEditingRoleId(null)}  variant="secondary" className="btn">取消</Button>
+  <Button onClick={handleSavePermissions}  variant="primary" className="btn">保存权限</Button>
   </div>
   </Card>
   )

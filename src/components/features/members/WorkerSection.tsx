@@ -14,6 +14,7 @@ import {
 } from './WorkerSectionModals'
 import { LeaveModal } from './LeaveModal'
 import { TeamsTab, WorkersTab } from './WorkerSectionTabs'
+import { Button } from '../../ui/Button'
 
 function calcAge(birthDate: string): number {
   const birth = new Date(birthDate)
@@ -90,8 +91,8 @@ export function WorkerSection({
     { key: 'bankAccount', title: '银行卡号', render: (item) => <span className="text-slate-500 font-mono text-xs">{masked('bankAccount', (item as any).bankAccount) || '-'}</span> },
     { key: 'actions', title: '操作', align: 'right', render: (item) => (
       <div className="flex items-center justify-end gap-1">
-        <button onClick={() => onEditWorker(item)} className="btn btn-ghost btn-sm text-blue-600">编辑</button>
-        <button onClick={() => onDeleteWorker((item as any).workerId)} className="btn btn-danger btn-sm">删除</button>
+        <Button onClick={() => onEditWorker(item)}  variant="ghost" size="sm" className="btn text-blue-600">编辑</Button>
+        <Button onClick={() => onDeleteWorker((item as any).workerId)}  variant="danger" size="sm" className="btn">删除</Button>
       </div>
     )},
   ]

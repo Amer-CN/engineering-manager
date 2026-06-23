@@ -1,6 +1,7 @@
 import React from 'react'
 import { Modal } from '../../ui/Modal/Modal'
 import type { Member } from '@/types'
+import { Button } from '../../ui/Button'
 
 export interface LeaveFormData {
   actualLeaveDate: string
@@ -30,8 +31,8 @@ export function LeaveModal({
   <Modal isOpen onClose={onClose} title="工人离场" size="md"
   footer={
   <>
-  <button type="button" onClick={onClose} className="btn btn-secondary">取消</button>
-  <button type="button" onClick={onSubmit} className="btn btn-primary">确认离场</button>
+  <Button type="button" onClick={onClose}  variant="secondary" className="btn">取消</Button>
+  <Button type="button" onClick={onSubmit}  variant="primary" className="btn">确认离场</Button>
   </>
   }>
   <form onSubmit={onSubmit}>

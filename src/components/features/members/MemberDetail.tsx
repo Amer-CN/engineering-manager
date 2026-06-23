@@ -8,6 +8,7 @@ import { PreviewModal, InfoItem, Tag, IdCardImages, ManagerSalaryCard } from './
 import { WorkerDetailCards } from './WorkerDetailCards'
 import { useMaskedFn } from '@/hooks/useMaskedValue'
 import { Card } from '@/components/ui/Card'
+import { Button } from '../../ui/Button'
 
 export interface MemberDetailProps {
   member: Member
@@ -63,25 +64,25 @@ export function MemberDetail({
           </div>
           <div className="flex items-center gap-3">
             {onDelete && (
-              <button onClick={onDelete} className="btn btn-danger btn-sm">删除</button>
+              <Button onClick={onDelete}  variant="danger" size="sm" className="btn">删除</Button>
             )}
             {isWorker && !isLeft && (
               <>
                 {onTransfer && (
-                  <button onClick={onTransfer} className="btn btn-ghost btn-sm text-primary-600">调组</button>
+                  <Button onClick={onTransfer}  variant="ghost" size="sm" className="btn text-primary-600">调组</Button>
                 )}
                 {onLeave && (
-                  <button onClick={onLeave} className="btn btn-ghost btn-sm">离场</button>
+                  <Button onClick={onLeave}  variant="ghost" size="sm" className="btn">离场</Button>
                 )}
               </>
             )}
             {isWorker && isLeft && onReEntry && (
-              <button onClick={onReEntry} className="btn btn-ghost btn-sm text-success-600">重新入场</button>
+              <Button onClick={onReEntry}  variant="ghost" size="sm" className="btn text-success-600">重新入场</Button>
             )}
             {onEdit && (
-              <button onClick={onEdit} className={`btn btn-sm ${isWorker ? 'btn-warning' : 'btn-primary'}`}>编辑</button>
+              <Button onClick={onEdit} variant={isWorker ? 'warning' : 'primary'} size="sm">编辑</Button>
             )}
-            <button onClick={onClose} className="btn btn-secondary btn-sm">关闭</button>
+            <Button onClick={onClose} variant="secondary" size="sm">关闭</Button>
           </div>
         </div>
       }

@@ -4,6 +4,7 @@ import { getAPI } from '@/services/api-adapter'
 import { Icon } from '@/components/ui/Icon'
 import { useToastStore } from '@/store/toastStore'
 import { PiiReencryptSection, type ReencryptStatus } from './PiiReencryptSection'
+import { Button } from '../../ui/Button'
 
 export function SettingsPiiKeySection() {
   const { confirm, ConfirmDialog } = useConfirm()
@@ -172,11 +173,11 @@ export function SettingsPiiKeySection() {
               </div>
 
               <div className="flex items-center gap-3 pt-2">
-                <button
+                <Button
                   onClick={handleRotate}
                   disabled={rotating}
-                  className="btn btn-primary"
-                >
+                  
+                 variant="primary" className="btn">
                   {rotating ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
@@ -187,14 +188,14 @@ export function SettingsPiiKeySection() {
                       <Icon name="RotateCw" size={16} /> 立即轮换
                     </>
                   )}
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={loadInfo}
                   disabled={loading}
-                  className="btn btn-secondary"
-                >
+                  
+                 variant="secondary" className="btn">
                   <Icon name="RefreshCw" size={14} /> 刷新
-                </button>
+                </Button>
               </div>
 
               <PiiReencryptSection

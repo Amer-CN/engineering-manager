@@ -14,6 +14,7 @@ import { useSettlementFilters } from './useSettlementFilters'
 import { useSettlementHandlers } from './useSettlementHandlers'
 import { printSettlement } from './settlementPrintUtil'
 import { Card } from '@/components/ui/Card'
+import { Button } from '../../ui/Button'
 
 interface SettlementProjectDetailProps {
   project: Project
@@ -72,19 +73,19 @@ const SettlementProjectDetail: React.FC<SettlementProjectDetailProps> = ({
           <p className="text-slate-500 mt-1">结算办理</p>
         </div>
         <div className="flex-1" />
-        <button
+        <Button
           onClick={() => setShowTemplateSelector(true)}
-          className="btn btn-secondary flex items-center gap-1.5 mr-2"
-        >
+          
+         variant="secondary" className="btn flex items-center gap-1.5 mr-2">
           <Icon name="FileText" size={16} /> 从模板生成
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={() => { setEditingSettlement(null); setShowModal(true) }}
-          className="btn btn-primary"
-        >
+          
+         variant="primary" className="btn">
           <span className="text-xl">+</span>
           新建结算单
-        </button>
+        </Button>
       </div>
 
       {/* 统计卡片 */}

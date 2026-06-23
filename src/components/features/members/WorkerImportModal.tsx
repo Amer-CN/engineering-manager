@@ -6,6 +6,7 @@ import {
   type ImportState, type ImportProgress, type ImportResult,
 } from './useWorkerImport'
 import { MappingPhase, ImportingPhase, DonePhase } from './WorkerImportPhase'
+import { Button } from '../../ui/Button'
 
 interface Props {
   show: boolean
@@ -79,8 +80,8 @@ export function WorkerImportModal({
             <>
               <span className="text-sm text-slate-500">将导入 {importState.allRows.length} 人</span>
               <div className="flex items-center gap-3">
-                <button onClick={onClose} className="btn btn-secondary">取消</button>
-                <button onClick={onExecuteImport} className="btn btn-primary">确认导入</button>
+                <Button onClick={onClose}  variant="secondary" className="btn">取消</Button>
+                <Button onClick={onExecuteImport}  variant="primary" className="btn">确认导入</Button>
               </div>
             </>
           )}
@@ -91,10 +92,10 @@ export function WorkerImportModal({
             <>
               <div>
                 {!showPresetInput ? (
-                  <button onClick={() => setShowPresetInput(true)}
-                    className="btn btn-ghost btn-sm text-primary-600">
+                  <Button onClick={() => setShowPresetInput(true)}
+                     variant="ghost" size="sm" className="btn text-primary-600">
                     保存此映射为预设
-                  </button>
+                  </Button>
                 ) : (
                   <div className="flex items-center gap-2">
                     <input
@@ -104,21 +105,21 @@ export function WorkerImportModal({
                       className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm w-48"
                       autoFocus
                     />
-                    <button
+                    <Button
                       onClick={() => {
                         if (presetName.trim() && onSavePreset(presetName.trim())) {
                           setShowPresetInput(false)
                           setPresetName('')
                         }
                       }}
-                      className="btn btn-primary text-sm"
-                    >保存</button>
+                      
+                     variant="primary" className="btn text-sm">保存</Button>
                     <button onClick={() => setShowPresetInput(false)}
                       className="px-3 py-1.5 text-slate-500 hover:text-slate-700 text-sm">取消</button>
                   </div>
                 )}
               </div>
-              <button onClick={onClose} className="btn btn-secondary">关闭</button>
+              <Button onClick={onClose}  variant="secondary" className="btn">关闭</Button>
             </>
           )}
         </div>

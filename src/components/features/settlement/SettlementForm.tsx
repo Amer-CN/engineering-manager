@@ -6,6 +6,7 @@ import { SettlementItemsTable } from './SettlementItemsTable'
 import { SettlementImportModal } from './SettlementImportModal'
 import { FileUploadSection } from './FileUploadSection'
 import { getAPI } from '@/services/api-adapter'
+import { Button } from '../../ui/Button'
 
 interface SettlementFormProps {
   settlement?: SettlementData | null
@@ -223,8 +224,8 @@ export const SettlementForm: React.FC<SettlementFormProps> = ({
       </div>
 
       <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-        <button type="button" onClick={onCancel} className="btn btn-secondary">取消</button>
-        <button type="submit" className="btn btn-primary">{settlement ? '保存修改' : '创建结算单'}</button>
+        <Button type="button" onClick={onCancel}  variant="secondary" className="btn">取消</Button>
+        <Button type="submit"  variant="primary" className="btn">{settlement ? '保存修改' : '创建结算单'}</Button>
       </div>
 
       <SettlementImportModal show={showImportModal} onClose={() => setShowImportModal(false)} onImport={handleImportItems} />

@@ -9,6 +9,7 @@ import type { Member, WorkerTeam } from '../../../types/electron'
 import { WorkerWageModal } from './WorkerWageModal'
 import { getWorkerTypeLabel } from '../../../utils'
 import { Card } from '@/components/ui/Card'
+import { Button } from '../../ui/Button'
 
 interface LaborWorkerListProps {
   members: Member[]
@@ -121,12 +122,12 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
           >
             工资
           </button>
-          <button
+          <Button
             onClick={() => onDeleteWorker((w as any).workerId)}
-            className="btn btn-danger btn-sm"
-          >
+            
+           variant="danger" size="sm" className="btn">
             删除
-          </button>
+          </Button>
         </div>
       )
     },
@@ -161,18 +162,18 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
             <option key={t.id} value={t.id}>{t.name}</option>
           ))}
         </select>
-        <button
+        <Button
           onClick={onAddWorker}
-          className="ml-auto btn btn-warning flex items-center"
-        >
+          
+         variant="warning" className="ml-auto btn flex items-center">
           <Icon name="Plus" size={18} className="mr-1" />添加工人
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={onImportClick}
-          className="btn btn-primary px-5 py-2 flex items-center"
-        >
+          
+         variant="primary" className="btn px-5 py-2 flex items-center">
           <Icon name="Upload" size={18} className="mr-1" />导入Excel
-        </button>
+        </Button>
       </FilterBar>
 
       {/* 工人表格 */}
@@ -192,12 +193,12 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
           <div className="text-6xl mb-4"><Icon name="Construction" size={48} /></div>
           <h3 className="text-lg font-medium text-slate-800 mb-2">暂无工人</h3>
           <p className="text-slate-500 mb-6">请先在班组管理中从工人库添加，或导入 Excel</p>
-          <button
+          <Button
             onClick={onAddWorker}
-            className="btn btn-warning"
-          >
+            
+           variant="warning" className="btn">
             添加工人
-          </button>
+          </Button>
         </Card>
       )}
 

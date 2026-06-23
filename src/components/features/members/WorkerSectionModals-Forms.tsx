@@ -2,6 +2,7 @@ import React from 'react'
 import { Modal } from '../../ui/Modal/Modal'
 import type { Member, WorkerTeam } from '@/types'
 import type { TeamFormData, TransferFormData } from './WorkerSectionModals'
+import { Button } from '../../ui/Button'
 
 interface TeamFormModalProps {
   visible: boolean
@@ -34,8 +35,8 @@ export function TeamFormModal({
     <Modal isOpen={visible} onClose={onClose} title={editingTeam ? '编辑班组' : '添加班组'} size="md"
       footer={
         <>
-          <button type="button" onClick={onClose} className="btn btn-secondary">取消</button>
-          <button type="submit" form="team-form" className="btn btn-warning">{editingTeam ? '保存' : '添加'}</button>
+          <Button type="button" onClick={onClose}  variant="secondary" className="btn">取消</Button>
+          <Button type="submit" form="team-form"  variant="warning" className="btn">{editingTeam ? '保存' : '添加'}</Button>
         </>
       }
     >
@@ -109,8 +110,8 @@ export function TransferModal({
     <Modal isOpen={visible && !!worker} onClose={onClose} title="工人调组" size="md"
       footer={
         <>
-          <button type="button" onClick={onClose} className="btn btn-secondary">取消</button>
-          <button type="submit" form="transfer-form" className="btn btn-primary">确认调组</button>
+          <Button type="button" onClick={onClose}  variant="secondary" className="btn">取消</Button>
+          <Button type="submit" form="transfer-form"  variant="primary" className="btn">确认调组</Button>
         </>
       }
     >

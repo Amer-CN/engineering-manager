@@ -13,6 +13,7 @@ import { Spinner } from './ui/Loading/Loading'
 import { ContractTemplateFormModal, templateTypeConfig } from './ContractTemplateFormModal'
 import { getAPI } from '@/services/api-adapter'
 import { printContractTemplate } from '../utils/printContractTemplate'
+import { Button } from './ui/Button'
 
 interface ContractTemplatesProps {
   refresh?: () => void
@@ -184,9 +185,9 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
 
   <PageHeader title="合同模板" subtitle="管理合同模板，快速生成合同文档" onBack={onBack}
   actions={
-  <button onClick={() => { resetForm(); setShowModal(true) }} className="btn btn-primary">
+  <Button onClick={() => { resetForm(); setShowModal(true) }}  variant="primary" className="btn">
   <span className="text-xl">+</span> 添加模板
-  </button>
+  </Button>
   }
   />
 
@@ -250,24 +251,24 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
   </div>
   
   <div className="flex items-center gap-2 pt-4 border-t border-slate-100">
-  <button
+  <Button
   onClick={() => handleGenerate(template)}
-  className="flex-1 btn btn-primary btn-sm"
-  >
+  
+   variant="primary" size="sm" className="flex-1 btn">
   <Icon name="File" size={14} /> 生成合同
-  </button>
-  <button
+  </Button>
+  <Button
   onClick={() => handleEdit(template)}
-  className="btn btn-secondary btn-sm"
-  >
+  
+   variant="secondary" size="sm" className="btn">
   编辑
-  </button>
-  <button
+  </Button>
+  <Button
   onClick={() => handleDelete(template.id)}
-  className="btn btn-danger btn-sm"
-  >
+  
+   variant="danger" size="sm" className="btn">
   删除
-  </button>
+  </Button>
   </div>
   </div>
   </Card>
@@ -275,7 +276,7 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
   </div>
   ) : (
   <EmptyState icon="FileText" title="暂无合同模板" description="点击下方按钮创建您的第一个合同模板"
-  action={<button onClick={() => { resetForm(); setShowModal(true) }} className="btn btn-primary">添加模板</button>}
+  action={<Button onClick={() => { resetForm(); setShowModal(true) }}  variant="primary" className="btn">添加模板</Button>}
   />
   )}
 
@@ -296,8 +297,8 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
   <Modal isOpen={showGenerateModal && !!selectedTemplate} onClose={() => { setShowGenerateModal(false); setSelectedTemplate(null) }}
   title="生成合同" size="xl"
   footer={<>
-  <button onClick={() => { setShowGenerateModal(false); setSelectedTemplate(null) }} className="btn btn-secondary">取消</button>
-  <button onClick={handlePrint} className="btn btn-primary"><Icon name="Printer" size={14} /> 打印合同</button>
+  <Button onClick={() => { setShowGenerateModal(false); setSelectedTemplate(null) }}  variant="secondary" className="btn">取消</Button>
+  <Button onClick={handlePrint}  variant="primary" className="btn"><Icon name="Printer" size={14} /> 打印合同</Button>
   </>}>
   <p className="text-sm text-slate-500 -mt-2 mb-4">填写模板变量，生成合同文档</p>
   <div className="space-y-4">

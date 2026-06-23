@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Icon } from './ui/Icon'
 import { OCRConfig, OCRProvider, getProviderName as gpName } from '../services/ocr'
 import { getAPI } from '@/services/api-adapter'
+import { Button } from './ui/Button'
 
 interface Props {
   ocrConfig: OCRConfig; setOcrConfig: (c: OCRConfig) => void
@@ -178,16 +179,16 @@ export const SettingsOcrSection: React.FC<Props> = ({ ocrConfig, setOcrConfig, o
 
       {/* 操作按钮 */}
       <div className="flex flex-wrap gap-3">
-        <button onClick={onSave} className="btn btn-primary">
+        <Button onClick={onSave}  variant="primary" className="btn">
           <Icon name="Save" size={16} /> 保存配置
-        </button>
-        <button onClick={onTest} disabled={testingOCR} className="btn btn-secondary">
+        </Button>
+        <Button onClick={onTest} disabled={testingOCR}  variant="secondary" className="btn">
           {testingOCR ? (
             <><div className="animate-spin rounded-full h-4 w-4 border-2 border-slate-300 border-t-slate-600"></div>检测中...</>
           ) : (
             <><Icon name="RefreshCw" size={16} /> 检测连接</>
           )}
-        </button>
+        </Button>
       </div>
 
       {/* 消息提示 */}

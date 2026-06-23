@@ -9,6 +9,7 @@ import { PartnerList, PartnerForm, SupervisorList, SupervisorForm } from './feat
 import { readUploadedFile, FILE_CATEGORIES } from '../services/fileService'
 import { usePartnerActions } from './features/partners/usePartnerActions'
 import { getAPI } from '@/services/api-adapter'
+import { Button } from './ui/Button'
 
 interface PartnersProps {
   refresh?: () => void
@@ -104,7 +105,7 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
           <h1 className="text-2xl font-bold text-slate-800">单位管理</h1>
           <p className="text-slate-500 mt-1">管理所有往来单位信息</p>
         </div>
-        <button
+        <Button
           onClick={() => {
             if (activeTab === 'partner') {
               setEditingPartner(null)
@@ -114,10 +115,10 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
               setShowSupervisorModal(true)
             }
           }}
-          className="btn btn-primary btn-sm"
-        >
+          
+         variant="primary" size="sm" className="btn">
           <Icon name="Plus" size={14} /> 添加{activeTab === 'partner' ? '合作单位' : '监管单位'}
-        </button>
+        </Button>
       </div>
 
       <Tabs

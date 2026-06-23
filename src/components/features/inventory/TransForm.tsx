@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { InventoryItem, InventoryTransactionType, Project, Partner } from '../../../types/electron'
+import { Button } from '../../ui/Button'
 
 interface TransFormProps {
   items: InventoryItem[]
@@ -167,8 +168,8 @@ export const TransForm: React.FC<TransFormProps> = ({
         </div>
       </div>
       <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
-        <button type="button" onClick={onCancel} className="btn btn-secondary">取消</button>
-        <button type="submit" className="btn btn-primary">确认</button>
+        <Button type="button" onClick={onCancel}  variant="secondary" className="btn">取消</Button>
+        <Button type="submit"  variant="primary" className="btn">确认</Button>
       </div>
     </form>
   )

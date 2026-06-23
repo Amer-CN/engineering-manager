@@ -11,6 +11,7 @@ import { calculateAge as calcAge } from '@/utils'
 import { MemberCardMedia } from './MemberCardMedia'
 import { MemberCardInfo } from './MemberCardInfo'
 import { Card } from '@/components/ui/Card'
+import { Button } from '../../ui/Button'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Types
@@ -140,12 +141,12 @@ export const MemberCard = React.memo(function MemberCard({
   重新入场
   </button>
   )}
-  <button
+  <Button
   onClick={() => onDelete(member.id)}
-  className="btn btn-danger btn-sm"
-  >
+  
+   variant="danger" size="sm" className="btn">
   删除
-  </button>
+  </Button>
   </>
   ) : (
   <>
@@ -184,12 +185,12 @@ export const MemberCard = React.memo(function MemberCard({
   重新入职
   </button>
   )}
-  <button
+  <Button
   onClick={() => onDelete(member.id)}
-  className="btn btn-danger btn-sm"
-  >
+  
+   variant="danger" size="sm" className="btn">
   删除
-  </button>
+  </Button>
   </>
   ) : (
   <>
@@ -207,12 +208,12 @@ export const MemberCard = React.memo(function MemberCard({
   离职
   </button>
   )}
-  <button
+  <Button
   onClick={() => onDelete(member.id)}
-  className="btn btn-danger btn-sm"
-  >
+  
+   variant="danger" size="sm" className="btn">
   删除
-  </button>
+  </Button>
   </>
   )
   )}

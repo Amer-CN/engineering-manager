@@ -9,6 +9,7 @@ import { useState, useMemo } from 'react'
 import type { Partner, PartnerCategory } from '@/types'
 import { Icon } from '../../ui/Icon'
 import { HoverScrollbar } from '../../ui/HoverScrollbar'
+import { Button } from '../../ui/Button'
 
 const categoryLabels: Record<PartnerCategory | string, string> = {
   owner: '建设单位',
@@ -191,16 +192,16 @@ export function PartnerSelect({
   {/* 清空按钮 */}
   {value && (
   <div className="p-3 border-t border-slate-100">
-  <button
+  <Button
   type="button"
   onClick={() => {
   onChange(null)
   setIsOpen(false)
   }}
-  className="btn btn-danger w-full"
-  >
+  
+   variant="danger" className="btn w-full">
   清空选择
-  </button>
+  </Button>
   </div>
   )}
   </div>

@@ -5,6 +5,7 @@ import { useToastStore } from '@/store/toastStore'
 import { logUpdate } from '../../../utils/audit'
 import { getAPI } from '@/services/api-adapter'
 import { HoverScrollbar } from '../../ui/HoverScrollbar'
+import { Button } from '../../ui/Button'
 interface Props {
   orphans: any[]
   departments: any[]
@@ -41,7 +42,7 @@ const BatchDeptAssignModal: React.FC<Props> = ({ orphans, departments, onClose, 
         initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }}>
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between shrink-0">
           <h2 className="text-lg font-semibold text-slate-800">批量分配部门</h2>
-          <button onClick={onClose} className="btn btn-ghost p-1"><Icon name="X" size={18} /></button>
+          <Button onClick={onClose}  variant="ghost" className="btn p-1"><Icon name="X" size={18} /></Button>
         </div>
         <HoverScrollbar className="flex-1"><div className="p-6 space-y-4">
           <div>
@@ -78,8 +79,8 @@ const BatchDeptAssignModal: React.FC<Props> = ({ orphans, departments, onClose, 
           </div>
         </div></HoverScrollbar>
         <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-3 shrink-0">
-          <button type="button" onClick={onClose} className="btn btn-secondary">取消</button>
-          <button type="button" onClick={handleAssign} className="px-5 py-2 btn btn-primary">批量分配</button>
+          <Button type="button" onClick={onClose}  variant="secondary" className="btn">取消</Button>
+          <Button type="button" onClick={handleAssign}  variant="primary" className="px-5 py-2 btn">批量分配</Button>
         </div>
       </motion.div>
     </div>

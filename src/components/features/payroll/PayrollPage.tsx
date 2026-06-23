@@ -12,6 +12,7 @@ import { getAPI } from '@/services/api-adapter'
 // worker 模式操作
 import { useWageActions } from '../wages/useWageActions'
 import { PayrollTable } from './PayrollTable'
+import { Button } from '../../ui/Button'
 
 interface PayrollPageProps {
   mode: PayrollMode
@@ -181,10 +182,10 @@ export default function PayrollPage({ mode }: PayrollPageProps) {
         {/* 操作按钮 */}
         {mode === 'staff' && (
           <div className="flex items-center gap-2 ml-2">
-            <button onClick={handleGeneratePayroll} disabled={data.generating} className="btn btn-primary btn-sm">
+            <Button onClick={handleGeneratePayroll} disabled={data.generating}  variant="primary" size="sm" className="btn">
               {data.generating ? '生成中...' : '生成薪酬'}
-            </button>
-            <button onClick={handleDeleteMonth} className="btn btn-danger btn-sm">删除本月</button>
+            </Button>
+            <Button onClick={handleDeleteMonth}  variant="danger" size="sm" className="btn">删除本月</Button>
           </div>
         )}
       </div>

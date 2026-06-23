@@ -20,6 +20,7 @@ import type { AuditAction } from '../utils/audit'
 import { ACTION_LABELS, LEVEL_COLORS, RESOURCE_LABELS } from '../constants/auditLog'
 import { useConfirm } from '@/hooks/useConfirm'
 import { useToastStore } from '@/store/toastStore'
+import { Button } from './ui/Button'
 
 interface AuditLogViewerProps {
   /** 最大显示条数 */
@@ -166,28 +167,28 @@ const AuditLogViewer: React.FC<AuditLogViewerProps> = ({ maxVisible = 100 }) => 
   ))}
   </select>
 
-  <button
+  <Button
   type="submit"
-  className="btn btn-primary text-sm"
-  >
+  
+   variant="primary" className="btn text-sm">
   搜索
-  </button>
+  </Button>
 
   <div className="flex gap-2 ml-auto">
-  <button
+  <Button
   type="button"
   onClick={() => handleExport('csv')}
-  className="btn btn-secondary btn-sm"
-  >
+  
+   variant="secondary" size="sm" className="btn">
   导出 CSV
-  </button>
-  <button
+  </Button>
+  <Button
   type="button"
   onClick={() => handleExport('json')}
-  className="btn btn-secondary btn-sm"
-  >
+  
+   variant="secondary" size="sm" className="btn">
   导出 JSON
-  </button>
+  </Button>
   </div>
   </form>
   </div>

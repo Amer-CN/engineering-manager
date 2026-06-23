@@ -8,6 +8,7 @@ import { getLevel1GroupsMerged, HIERARCHY_GROUP_NAMES } from './config'
 import { getAPI } from '@/services/api-adapter'
 import { LearningRulesView } from './LearningRulesView'
 import { CategoryManagerGroupList } from './CategoryManagerGroupList'
+import { Button } from '../../ui/Button'
 
 interface CategoryManagerProps {
   categories: CostLedgerCategory[]
@@ -155,7 +156,7 @@ export function CategoryManager({ categories, onClose, onRefresh }: CategoryMana
       footer={
         <div className="flex items-center justify-between w-full">
           <button onClick={handleReset} className="text-xs text-slate-400 hover:text-red-500">恢复默认</button>
-          <button onClick={onClose} className="btn btn-secondary btn-sm">关闭</button>
+          <Button onClick={onClose}  variant="secondary" size="sm" className="btn">关闭</Button>
         </div>
       }
     >

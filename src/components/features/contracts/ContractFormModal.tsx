@@ -11,6 +11,7 @@ import type { Project, Partner, AgreementSubType } from '../../../types/electron
 import type { Contract, ContractType } from './contractConfig'
 import { CONFIG, AGREEMENT_SUB_TYPE_LABELS } from './contractConfig'
 import { getAPI } from '@/services/api-adapter'
+import { Button } from '../../ui/Button'
 
 interface Props {
   show: boolean
@@ -116,9 +117,9 @@ export const ContractFormModal: React.FC<Props> = ({ show, type, editingContract
         <div className="flex items-center gap-2">
           <span>{isEditing ? '编辑合同' : config.modalCreateTitle}</span>
           {!isEditing && (
-            <button type="button" onClick={onShowTemplateSelector} className="btn btn-ghost btn-sm text-primary-600">
+            <Button type="button" onClick={onShowTemplateSelector}  variant="ghost" size="sm" className="btn text-primary-600">
               <Icon name="FileText" size={14} /> 从模板生成
-            </button>
+            </Button>
           )}
           <span className={`px-3 py-1 rounded-full text-xs font-medium ${type === 'income' ? 'bg-emerald-100 text-emerald-700' : type === 'expense' ? 'bg-red-100 text-red-700' : 'bg-sky-100 text-sky-700'}`}>{config.label}</span>
         </div>
@@ -126,8 +127,8 @@ export const ContractFormModal: React.FC<Props> = ({ show, type, editingContract
       size="xl"
       footer={
         <>
-          <button type="button" onClick={onClose} className="btn btn-secondary">取消</button>
-          <button type="button" onClick={handleSubmit} className="btn btn-primary">{isEditing ? '保存' : '添加'}</button>
+          <Button type="button" onClick={onClose}  variant="secondary" className="btn">取消</Button>
+          <Button type="button" onClick={handleSubmit}  variant="primary" className="btn">{isEditing ? '保存' : '添加'}</Button>
         </>
       }>
       <form onSubmit={handleSubmit}>

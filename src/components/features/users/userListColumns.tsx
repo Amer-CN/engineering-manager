@@ -1,6 +1,7 @@
 import type { Column } from '@/components/DataTable'
 import type { UserInfo } from '../../../types/electron'
 import { StatusBadge, USER_STATUS } from '../../../constants/status'
+import { Button } from '../../ui/Button'
 
 export const ROLE_OPTIONS = [
   { value: 'admin', label: '管理员' },
@@ -87,19 +88,19 @@ export function getUserListColumns(deps: UserListColumnsDeps): Column<UserInfo>[
       title: '操作',
       render: (item) => (
         <div className="flex gap-2">
-          <button
+          <Button
             onClick={() => onEdit(item)}
-            className="btn btn-ghost btn-sm text-primary-600"
-          >
+            
+           variant="ghost" size="sm" className="btn text-primary-600">
             编辑
-          </button>
+          </Button>
           {item.roleId !== 'admin' && (
-            <button
+            <Button
               onClick={() => onDelete(item.id)}
-              className="btn btn-danger btn-sm"
-            >
+              
+             variant="danger" size="sm" className="btn">
               删除
-            </button>
+            </Button>
           )}
         </div>
       )

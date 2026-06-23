@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { DataTable, type Column } from '@/components/DataTable'
 import { Icon } from '../../ui/Icon'
 import { HoverScrollbar } from '../../ui/HoverScrollbar'
+import { Button } from '../../ui/Button'
 
 interface Item { description: string; spec: string; quantity: number; unit: string; unitPrice: number; amount: number; remarks: string }
 
@@ -159,8 +160,8 @@ export const SettlementImportModal: React.FC<Props> = ({ show, onClose, onImport
         <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between shrink-0">
           <span className="text-sm text-slate-500">将导入 {state.allRows.length} 条明细</span>
           <div className="flex items-center gap-3">
-            <button type="button" onClick={onClose} className="btn btn-secondary">取消</button>
-            <button type="button" onClick={confirmImport} className="btn btn-primary">确认导入</button>
+            <Button type="button" onClick={onClose}  variant="secondary" className="btn">取消</Button>
+            <Button type="button" onClick={confirmImport}  variant="primary" className="btn">确认导入</Button>
           </div>
         </div>
       </div>

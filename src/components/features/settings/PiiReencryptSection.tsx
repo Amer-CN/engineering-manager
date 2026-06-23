@@ -1,4 +1,5 @@
 import { Icon } from '@/components/ui/Icon'
+import { Button } from '../../ui/Button'
 
 interface ReencryptStatus {
   status: string
@@ -59,11 +60,11 @@ export function PiiReencryptSection({ reencryptStatus, progressPct, reencrypting
         </div>
       )}
 
-      <button
+      <Button
         onClick={handleReencrypt}
         disabled={reencrypting}
-        className="btn btn-secondary"
-      >
+        
+       variant="secondary" className="btn">
         {reencrypting ? (
           <>
             <div className="animate-spin rounded-full h-4 w-4 border-2 border-slate-600 border-t-transparent" />
@@ -74,7 +75,7 @@ export function PiiReencryptSection({ reencryptStatus, progressPct, reencrypting
             <Icon name="RefreshCcw" size={16} /> 立即 re-encrypt PII
           </>
         )}
-      </button>
+      </Button>
     </div>
   )
 }

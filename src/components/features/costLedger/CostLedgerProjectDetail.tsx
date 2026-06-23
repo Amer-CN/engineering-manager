@@ -10,6 +10,7 @@ import { useConfirm } from '@/hooks/useConfirm'
 import { CostLedgerImportModal, learnFromEdit } from './CostLedgerImportModal'
 import type { CostLedgerEntry, CostLedgerSummary, Project, CostLedgerCategory } from '@/types'
 import { getAPI } from '@/services/api-adapter'
+import { Button } from '../../ui/Button'
 
 interface CostLedgerProjectDetailProps {
   project: Project
@@ -122,9 +123,9 @@ export function CostLedgerProjectDetail({ project, onBack, categories, onManageC
           onImport={() => setShowImport(true)}
           onCompare={() => setShowCompare(true)}
         />
-        <button onClick={() => { setEditing(null); setShowForm(true) }} className="btn btn-primary btn-sm">
+        <Button onClick={() => { setEditing(null); setShowForm(true) }}  variant="primary" size="sm" className="btn">
           + 新增台账
-        </button>
+        </Button>
       </div>
 
       {/* 内容区 */}

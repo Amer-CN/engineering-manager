@@ -5,6 +5,7 @@ import { formatMoney } from '@/utils/format'
 import { getCategoryLabel } from './config'
 import type { CostLedgerBatch, CostLedgerSummary, CostLedgerCategory } from '@/types'
 import { getAPI } from '@/services/api-adapter'
+import { Button } from '../../ui/Button'
 
 interface Props {
   show: boolean
@@ -67,10 +68,10 @@ export function CostLedgerCompareModal({ show, projectId, batches, categories, o
             {batches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
         </div>
-        <button onClick={loadCompare} disabled={aId === bId}
-          className="btn btn-primary text-sm ml-4 disabled:opacity-40">
+        <Button onClick={loadCompare} disabled={aId === bId}
+           variant="primary" className="btn text-sm ml-4 disabled:opacity-40">
           {loading ? '加载中...' : '查看对比'}
-        </button>
+        </Button>
       </div>
 
       {/* Compare table */}

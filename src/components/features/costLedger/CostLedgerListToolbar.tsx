@@ -1,6 +1,7 @@
 import { DIRECTION_CONFIG, getLevel1GroupsMerged, getCategoriesByDirection, getCategoryColor } from '@/components/features/costLedger/config'
 import { printCostLedgerList, exportCostLedgerList } from '@/components/features/costLedger/printExport'
 import type { CostLedgerEntry, CostLedgerCategory } from '@/types'
+import { Button } from '../../ui/Button'
 
 interface CostLedgerListToolbarProps {
   filter: 'all' | 'expense' | 'income'
@@ -105,17 +106,17 @@ export function CostLedgerListToolbar({
           导出Excel
         </button>
         <div className="flex items-center gap-1 border-l border-slate-200 pl-3">
-          <button onClick={() => {
+          <Button onClick={() => {
             const n = Math.max(0.5, +(zoomRef.current - 0.1).toFixed(1))
             zoomRef.current = n; localStorage.setItem('costLedgerZoom', String(n)); setZoom(n)
             if (tableRef.current) tableRef.current.style.zoom = String(n)
-          }} className="btn btn-secondary btn-sm">−</button>
+          }}  variant="secondary" size="sm" className="btn">−</Button>
           <span className="text-xs text-slate-500 w-8 text-center font-mono">{Math.round(zoom * 100)}%</span>
-          <button onClick={() => {
+          <Button onClick={() => {
             const n = Math.min(2, +(zoomRef.current + 0.1).toFixed(1))
             zoomRef.current = n; localStorage.setItem('costLedgerZoom', String(n)); setZoom(n)
             if (tableRef.current) tableRef.current.style.zoom = String(n)
-          }} className="btn btn-secondary btn-sm">+</button>
+          }}  variant="secondary" size="sm" className="btn">+</Button>
         </div>
         <span className="text-xs text-slate-400">
           {filtered.length === entries.length ? `共 ${entries.length} 条` : `筛选 ${filtered.length} / ${entries.length} 条`}

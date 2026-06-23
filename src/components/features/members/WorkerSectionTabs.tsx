@@ -3,6 +3,7 @@ import { TeamCard } from './WorkerSectionModals'
 import FilterBar from '../../ui/FilterBar'
 import { DataTable } from '@/components/DataTable'
 import { Card } from '@/components/ui/Card'
+import { Button } from '../../ui/Button'
 
 interface TeamsTabProps {
   workerTeams: WorkerTeam[]
@@ -29,9 +30,9 @@ export function TeamsTab({
         <div className="text-slate-500">
           按项目分类管理班组，共{workerTeams.length} 个班组 </div>
         <div className="flex items-center gap-3">
-          <button onClick={onOpenAddModal} className="btn btn-warning">
+          <Button onClick={onOpenAddModal}  variant="warning" className="btn">
             <span className="mr-2">+</span>添加班组
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -68,9 +69,9 @@ export function TeamsTab({
           <div className="text-6xl mb-4">🏗️</div>
           <h3 className="text-lg font-medium text-slate-800 mb-2">暂无班组</h3>
           <p className="text-slate-500 mb-6">请先添加项目，然后创建班组</p>
-          <button onClick={onOpenAddModal} className="btn btn-warning">
+          <Button onClick={onOpenAddModal}  variant="warning" className="btn">
             添加班组
-          </button>
+          </Button>
         </Card>
       )}
     </>
@@ -127,12 +128,12 @@ export function WorkersTab({
             <option key={t.id} value={t.id}>{t.name}</option>
           ))}
         </select>
-        <button onClick={onAddWorker} className="btn btn-warning flex items-center">
+        <Button onClick={onAddWorker}  variant="warning" className="btn flex items-center">
           <span className="mr-1">+</span>添加工人
-        </button>
-        <button onClick={onImportClick} className="btn btn-primary px-5 py-2 flex items-center">
+        </Button>
+        <Button onClick={onImportClick}  variant="primary" className="btn px-5 py-2 flex items-center">
           <span className="mr-1">↑</span>导入Excel
-        </button>
+        </Button>
       </FilterBar>
 
       {filteredWorkers.length > 0 ? (
@@ -151,9 +152,9 @@ export function WorkersTab({
           <div className="text-6xl mb-4">🚧</div>
           <h3 className="text-lg font-medium text-slate-800 mb-2">暂无工人</h3>
           <p className="text-slate-500 mb-6">请先在班组管理中从工人库添加，或导入 Excel</p>
-          <button onClick={onAddWorker} className="btn btn-warning">
+          <Button onClick={onAddWorker}  variant="warning" className="btn">
             添加工人
-          </button>
+          </Button>
         </Card>
       )}
     </>

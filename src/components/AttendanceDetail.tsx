@@ -10,6 +10,7 @@ import { Icon } from './ui/Icon'
 import { Card } from './ui/Card'
 import { getAPI } from '@/services/api-adapter'
 import { Tooltip } from './ui/Tooltip/Tooltip'
+import { Button } from './ui/Button'
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -166,10 +167,10 @@ export default function AttendanceDetail({
   {/* 顶部栏 */}
   <div className="flex items-center justify-between">
   <div className="flex items-center gap-3">
-  <button onClick={onBack} className="btn btn-ghost text-sm flex items-center gap-1">
+  <Button onClick={onBack}  variant="ghost" className="btn text-sm flex items-center gap-1">
   <Icon name="ChevronLeft" size={18} /><span className="text-sm">返回</span>
   <Icon name="ChevronLeft" size={18} /><span className="text-sm">返回</span>
-  </button>
+  </Button>
   <h2 className="text-lg font-bold text-slate-800">{record.memberName || member?.name || '-'}</h2>
   <span className="text-sm text-slate-400">{yearMonth}</span>
   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${member?.memberType === 'staff' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
@@ -179,20 +180,20 @@ export default function AttendanceDetail({
   </div>
   <div className="flex items-center gap-2">
   <Tooltip content="删除此考勤记录" position="top" delay={300}>
-  <button onClick={async () => {
+  <Button onClick={async () => {
   if (!confirm(`确认删除 ${record.memberName || member?.name || '该员工'} ${yearMonth} 的考勤记录吗？此操作不可撤销。`)) return
   try {
   const result = await (await getAPI()).deleteAttendance(record.id)
   if (result.success) { showToast('已删除', 'success'); onSaved(); onBack() }
   else showToast(result.error || '删除失败', 'error')
   } catch (e: any) { showToast(e?.message || '删除失败', 'error') }
-  }} className="btn btn-danger btn-sm">
+  }}  variant="danger" size="sm" className="btn">
   <Icon name="Trash2" size={16} />
-  </button>
+  </Button>
   </Tooltip>
-  <button onClick={handleSave} disabled={saving} className="btn btn-primary text-sm px-5 py-2 disabled:opacity-50">
+  <Button onClick={handleSave} disabled={saving}  variant="primary" className="btn text-sm px-5 py-2 disabled:opacity-50">
   {saving ? '保存中...' : '保存'}
-  </button>
+  </Button>
   </div>
   </div>
 

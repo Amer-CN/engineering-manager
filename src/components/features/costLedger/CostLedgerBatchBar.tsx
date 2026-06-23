@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Tooltip } from '@/components/ui/Tooltip/Tooltip'
 import type { CostLedgerBatch } from '@/types'
+import { Button } from '../../ui/Button'
 
 interface Props {
   batches: CostLedgerBatch[]
@@ -86,13 +87,13 @@ export function CostLedgerBatchBar({ batches, currentBatchId, onChangeBatch, onC
   placeholder="版本名称"
   className="w-36 px-2 py-1 border border-slate-300 rounded-lg text-sm"
   />
-  <button onClick={handleCreate} className="btn btn-primary px-2 py-1 text-xs">确定</button>
-  <button onClick={() => { setShowNewInput(false); setNewName('') }} className="btn btn-secondary btn-sm">取消</button>
+  <Button onClick={handleCreate}  variant="primary" className="btn px-2 py-1 text-xs">确定</Button>
+  <Button onClick={() => { setShowNewInput(false); setNewName('') }}  variant="secondary" size="sm" className="btn">取消</Button>
   </div>
   ) : (
-  <button onClick={() => setShowNewInput(true)}
-  className="btn btn-secondary btn-sm"
-  >+ 新建版本</button>
+  <Button onClick={() => setShowNewInput(true)}
+  
+   variant="secondary" size="sm" className="btn">+ 新建版本</Button>
   )}
 
   {/* Import & Compare */}
@@ -120,19 +121,19 @@ export function CostLedgerBatchBar({ batches, currentBatchId, onChangeBatch, onC
   {confirmDelete === currentBatchId ? (
   <div className="flex items-center gap-1 bg-red-50 px-2 py-1 rounded-lg border border-red-200">
   <span className="text-xs text-red-600 whitespace-nowrap">确定删除此版本？数据不可恢复</span>
-  <button onClick={async () => {
+  <Button onClick={async () => {
   const ok = await onDeleteBatch(currentBatchId)
   if (ok) { onChangeBatch(0); setConfirmDelete(null) }
-  }} className="btn btn-danger btn-sm">确认删除</button>
-  <button onClick={() => setConfirmDelete(null)} className="btn btn-secondary btn-sm">取消</button>
+  }}  variant="danger" size="sm" className="btn">确认删除</Button>
+  <Button onClick={() => setConfirmDelete(null)}  variant="secondary" size="sm" className="btn">取消</Button>
   </div>
   ) : (
   <Tooltip content="删除此版本及数据" position="top" delay={300}>
-  <button onClick={() => setConfirmDelete(currentBatchId)}
-  className="btn btn-ghost btn-sm text-red-500 hover:text-red-700"
-  >
+  <Button onClick={() => setConfirmDelete(currentBatchId)}
+  
+   variant="ghost" size="sm" className="btn text-red-500 hover:text-red-700">
   <svg className="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-  </button>
+  </Button>
   </Tooltip>
   )}
   </>

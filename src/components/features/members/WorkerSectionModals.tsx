@@ -3,6 +3,7 @@ import { Icon } from '../../ui/Icon'
 import type { Member, WorkerTeam } from '@/types'
 export { TeamFormModal, TransferModal } from './WorkerSectionModals-Forms'
 import { defaultLeaveFormData } from './LeaveModal'
+import { Button } from '../../ui/Button'
 export type { LeaveFormData } from './LeaveModal'
 export { defaultLeaveFormData }
 export interface WorkerSectionProps {
@@ -79,33 +80,33 @@ export function TeamCard({ team, workerCount, onEdit, onDelete, onManageWorkers,
   工人: {workerCount} 人 </div>
   <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
   {onManageWorkers && (
-  <button
+  <Button
   onClick={() => onManageWorkers(team.id, team.name, team.projectId)}
-  className="btn btn-ghost btn-sm text-primary-600 flex-1"
-  >
+  
+   variant="ghost" size="sm" className="btn text-primary-600 flex-1">
   管理工人
-  </button>
+  </Button>
   )}
   {onTeamWages && (
-  <button
+  <Button
   onClick={() => onTeamWages(team.id, team.name, team.projectId, projectName)}
-  className="btn btn-ghost btn-sm text-success-600 flex-1"
-  >
+  
+   variant="ghost" size="sm" className="btn text-success-600 flex-1">
   工资汇总
-  </button>
+  </Button>
   )}
-  <button
+  <Button
   onClick={onEdit}
-  className="btn btn-ghost btn-sm text-warning-600 flex-1"
-  >
+  
+   variant="ghost" size="sm" className="btn text-warning-600 flex-1">
   编辑
-  </button>
-  <button
+  </Button>
+  <Button
   onClick={onDelete}
-  className="btn btn-danger btn-sm flex-1"
-  >
+  
+   variant="danger" size="sm" className="btn flex-1">
   删除
-  </button>
+  </Button>
   </div>
   </div>
   )

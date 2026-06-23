@@ -1,6 +1,7 @@
 import React from 'react'
 import FilterBar from './ui/FilterBar'
 import { AuditAction, AuditLevel } from '../utils/audit'
+import { Button } from './ui/Button'
 
 interface AuditFilterBarProps {
   startDate: string
@@ -106,18 +107,18 @@ export const AuditFilterBar: React.FC<AuditFilterBarProps> = ({
           共找到 <span className="font-medium text-slate-700">{total}</span> 条记录
         </span>
         <div className="flex items-center gap-2">
-          <button
+          <Button
             onClick={onReset}
-            className="btn btn-secondary btn-sm"
-          >
+            
+           variant="secondary" size="sm" className="btn">
             重置
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={onSearch}
-            className="btn btn-primary text-sm"
-          >
+            
+           variant="primary" className="btn text-sm">
             搜索
-          </button>
+          </Button>
         </div>
       </div>
     </FilterBar>
