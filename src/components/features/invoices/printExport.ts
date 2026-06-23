@@ -1,13 +1,6 @@
 import type { Invoice, PaymentRecord } from '@/types'
 import { formatMoney } from '@/utils/format'
-
-const COLORS = {
-  borderDark: '#333',
-  successGreen: '#059669',
-  borderLight: '#ddd',
-  headerBg: '#f5f5f5',
-  textMuted: '#666',
-} as const
+import { COLORS } from './invoicesPrintExportColors'
 
 function escapeHtml(s: string): string {
   if (!s) return ''
