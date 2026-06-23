@@ -15,6 +15,7 @@ import {
   AuditLogQuery,
   AuditStats,
 } from '../utils/audit'
+import { Card } from './ui/Card'
 import type { AuditAction } from '../utils/audit'
 import { ACTION_LABELS, LEVEL_COLORS, RESOURCE_LABELS } from '../constants/auditLog'
 import { useConfirm } from '@/hooks/useConfirm'
@@ -106,7 +107,7 @@ const AuditLogViewer: React.FC<AuditLogViewerProps> = ({ maxVisible = 100 }) => 
   }
 
   return (
-  <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+  <Card className="border border-slate-200">
   {ConfirmDialog}
   {/* 头部统计 */}
   {stats && (
@@ -270,7 +271,7 @@ const AuditLogViewer: React.FC<AuditLogViewerProps> = ({ maxVisible = 100 }) => 
   清理 90 天前的日志
   </button>
   </div>
-  </div>
+  </Card>
   )
 }
 
