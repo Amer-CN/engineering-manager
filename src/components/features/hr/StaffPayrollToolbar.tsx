@@ -4,6 +4,7 @@ import { Button } from '../../ui/Button'
 import ButtonLoader from '../../ui/ButtonLoader'
 import { MONTHS } from '@/constants'
 import { filteredStaffForGenerate, isAttendanceReady } from '../../../utils/staff-payroll-utils'
+import { Card } from '@/components/ui/Card'
 
 interface StaffPayrollToolbarProps {
   filterYear: string
@@ -36,7 +37,7 @@ const StaffPayrollToolbar: React.FC<StaffPayrollToolbarProps> = ({
   setFilterYear, setFilterMonth, setFilterMemberName, setFilterDept, setFilterProject,
   onGenerate, onDeleteAllMonth, onExportExcel,
 }) => (
-  <div className="bg-white rounded-xl shadow-sm px-5 py-3 flex items-center gap-4 flex-wrap flex-shrink-0">
+  <Card bordered={false} className="px-5 py-3 flex items-center gap-4 flex-wrap flex-shrink-0">
     <div className="flex items-center gap-2">
       <label className="text-sm font-medium text-slate-600">年份</label>
       <select value={filterYear}
@@ -108,7 +109,7 @@ const StaffPayrollToolbar: React.FC<StaffPayrollToolbarProps> = ({
         align="end"
       />
     )}
-  </div>
+  </Card>
 )
 
 export default StaffPayrollToolbar
