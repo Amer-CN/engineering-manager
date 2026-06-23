@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
 import { Spinner } from '../../ui/Loading/Loading'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { getAPI } from '@/services/api-adapter'
 import { CHART_PALETTE } from './hrColors'
+import { Card } from '@/components/ui/Card'
 
 interface DashboardData {
   totalStaff: number
@@ -114,7 +114,7 @@ const HRDashboard: React.FC = () => {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         {kpis.map((kpi) => (
-          <motion.div key={kpi.label} className="bg-white rounded-xl shadow-sm p-5" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.1 }}>
+          <Card bordered={false} className="p-5">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-slate-500">{kpi.label}</span>
               <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${kpi.color}`}>
@@ -126,13 +126,13 @@ const HRDashboard: React.FC = () => {
               <span className="text-sm text-slate-400">{kpi.unit}</span>
             </div>
             {kpi.suffix && <div className="mt-1">{kpi.suffix}</div>}
-          </motion.div>
+          </Card>
         ))}
       </div>
 
       {/* Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl shadow-sm p-6">
+        <Card bordered={false} className="p-6">
           <h3 className="text-sm font-semibold text-slate-700 mb-4">部门人数分布</h3>
           {data.deptDistribution.length > 0 ? (
             <ResponsiveContainer width="100%" height={240}>
@@ -153,9 +153,9 @@ const HRDashboard: React.FC = () => {
               </span>
             ))}
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-white rounded-xl shadow-sm p-6">
+        <Card bordered={false} className="p-6">
           <h3 className="text-sm font-semibold text-slate-700 mb-4">最近入职</h3>
           {data.recentStaff.length > 0 ? (
             <div className="space-y-2">
@@ -175,7 +175,7 @@ const HRDashboard: React.FC = () => {
           ) : (
             <div className="flex items-center justify-center h-60 text-sm text-slate-400">暂无人员数据</div>
           )}
-        </div>
+        </Card>
       </div>
     </div>
   )
