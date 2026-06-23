@@ -9,6 +9,7 @@ import { Icon } from '../../ui/Icon'
 import { Tooltip } from '../../ui/Tooltip/Tooltip'
 import { DataTable, type Column } from '@/components/DataTable'
 import { getStatusLabel, getStatusConfig, getKindConfig } from './invoiceConfig'
+import { Button } from '../../ui/Button'
 
 export interface InvoiceListProps {
   invoices: Invoice[]
@@ -177,20 +178,20 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
             </button>
           </Tooltip>
           <Tooltip content="编辑" position="top" delay={300}>
-            <button
+            <Button
               onClick={() => onEdit(item)}
-              className="btn btn-ghost btn-sm"
-            >
+              
+             variant="ghost" size="sm" className="btn">
               <Icon name="Edit" size={14} />
-            </button>
+            </Button>
           </Tooltip>
           <Tooltip content="删除" position="top" delay={300}>
-            <button
+            <Button
               onClick={() => onDelete(item.id)}
-              className="btn btn-danger btn-sm"
-            >
+              
+             variant="danger" size="sm" className="btn">
               <Icon name="Trash2" size={14} />
-            </button>
+            </Button>
           </Tooltip>
         </div>
       )

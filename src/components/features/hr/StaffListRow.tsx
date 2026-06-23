@@ -1,5 +1,6 @@
 import React from 'react'
 import { HR_STATUS_LABELS, HR_STATUS_COLORS } from './config'
+import { Button } from '../../ui/Button'
 
 interface StaffListRowProps {
   m: any
@@ -34,9 +35,9 @@ export const StaffListRow = React.memo(function StaffListRow({
       <td className="px-4 py-3 text-sm text-slate-500">{m.leaveDate || '-'}</td>
       <td className="px-4 py-3 text-center">
         <div className="flex items-center justify-center gap-1">
-          <button onClick={() => onEdit(m)} className="btn btn-ghost btn-sm text-indigo-600">编辑</button>
-          <button onClick={() => onSalaryHistory(m)} className="btn btn-ghost btn-sm text-amber-600" title="薪资历史">薪资</button>
-          <button onClick={() => { if (confirm("确定要删除 " + m.name + " 吗？")) onDelete(m.id) }} className="btn btn-ghost btn-sm text-red-500" title="删除">删除</button>
+          <Button onClick={() => onEdit(m)}  variant="ghost" size="sm" className="btn text-indigo-600">编辑</Button>
+          <Button onClick={() => onSalaryHistory(m)}  title="薪资历史" variant="ghost" size="sm" className="btn text-amber-600">薪资</Button>
+          <Button onClick={() => { if (confirm("确定要删除 " + m.name + " 吗？")) onDelete(m.id) }}  title="删除" variant="ghost" size="sm" className="btn text-red-500">删除</Button>
         </div>
       </td>
     </tr>

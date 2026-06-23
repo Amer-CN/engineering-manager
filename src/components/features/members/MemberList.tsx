@@ -9,6 +9,7 @@ import type { Member } from '@/types'
 import { MemberCard } from './MemberCard'
 import { EmptyState } from '@/components/ui/EmptyState'
 import Spinner from '@/components/ui/Spinner'
+import { Button } from '../../ui/Button'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Types
@@ -67,12 +68,12 @@ export function MemberList({
     return (
       <div className="card p-12 text-center">
         <EmptyState title={`暂无${type === 'staff' ? '管理人员' : '农民工'}`} />
-        <button
+        <Button
           onClick={onAdd}
-          className="btn btn-primary mt-6"
-        >
+          
+         variant="primary" className="btn mt-6">
           + 添加{type === 'staff' ? '管理人员' : '农民工'}
-        </button>
+        </Button>
       </div>
     )
   }

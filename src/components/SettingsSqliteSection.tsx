@@ -1,6 +1,7 @@
 import React from 'react'
 import { Icon } from './ui/Icon'
 import ButtonLoader from './ui/ButtonLoader'
+import { Button } from './ui/Button'
 import type { SqliteStatus, ReadMode } from '../types/electron'
 import { readModeConfig } from './features/settings/sqliteConstants'
 import { SqliteHealthCheck } from './features/settings/SqliteHealthCheck'
@@ -154,15 +155,15 @@ export const SettingsSqliteSection: React.FC<Props> = ({
               </div>
             )}
             <div className="relative inline-block group">
-              <button
+              <Button
+                variant={isDataSparse ? 'primary' : 'secondary'}
                 onClick={onRemigrate}
                 disabled={migrating || !isDataSparse}
-                className={`${isDataSparse ? 'btn btn-primary' : 'btn btn-secondary'} ${!isDataSparse ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
+                className={!isDataSparse ? 'opacity-50 cursor-not-allowed' : undefined}>
                 <ButtonLoader loading={migrating} loadingText="AI 正在同步...">
                   <><Icon name="RefreshCw" size={16} /> {isDataSparse ? 'AI 同步数据' : '重新优化存储'}</>
                 </ButtonLoader>
-              </button>
+              </Button>
               {/* 悬停浮窗 */}
               <div className="absolute left-0 bottom-full mb-2 w-80 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none group-hover:pointer-events-auto">
                 <div className="bg-white border border-slate-200 rounded-xl shadow-xl p-4 space-y-2 text-xs">

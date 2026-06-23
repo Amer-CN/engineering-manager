@@ -2,6 +2,7 @@ import React from 'react'
 import { DataTable, type Column } from '../../DataTable'
 import { Partner, Project } from '../../../types/electron'
 import { partnerCategories } from '../../../data/regions'
+import { Button } from '../../ui/Button'
 
 interface PartnerListProps {
   partners: Partner[]
@@ -94,18 +95,18 @@ export const PartnerList: React.FC<PartnerListProps> = ({
       width: '140px',
       render: (partner) => (
         <div className="flex items-center gap-1">
-          <button
+          <Button
             onClick={(e) => { e.stopPropagation(); onEdit(partner) }}
-            className="btn btn-ghost btn-sm"
-          >
+            
+           variant="ghost" size="sm" className="btn">
             编辑
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={(e) => { e.stopPropagation(); onDelete(partner.id) }}
-            className="btn btn-danger btn-sm"
-          >
+            
+           variant="danger" size="sm" className="btn">
             删除
-          </button>
+          </Button>
         </div>
       )
     }

@@ -7,6 +7,7 @@ import { FileUploader } from './FileUploader'
 import { Input } from '@/components/ui/Input'
 import { DIRECTION_CONFIG, getCategoriesByDirection, emptyEntry } from './config'
 import type { CostLedgerEntry, CostLedgerCategory } from '@/types'
+import { Button } from '../../ui/Button'
 
 interface CostLedgerFormProps {
   projectId: number
@@ -82,8 +83,8 @@ export function CostLedgerForm({ projectId, projectName, initial, onSave, onClos
     <Modal isOpen onClose={onClose} title={initial ? '编辑台账记录' : '新增台账记录'} size="lg"
       footer={
         <>
-          <button type="button" onClick={onClose} className="btn btn-secondary text-sm">取消</button>
-          <button type="submit" form="cost-ledger-form" className="btn btn-primary text-sm">{initial ? '保存修改' : '保存'}</button>
+          <Button type="button" onClick={onClose}  variant="secondary" className="btn text-sm">取消</Button>
+          <Button type="submit" form="cost-ledger-form"  variant="primary" className="btn text-sm">{initial ? '保存修改' : '保存'}</Button>
         </>
       }
     >

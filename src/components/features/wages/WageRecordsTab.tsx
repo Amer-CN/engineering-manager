@@ -4,6 +4,7 @@ import { Icon } from '../../ui/Icon'
 import FilterBar from '../../ui/FilterBar'
 import { MonthPicker } from '../../ui/MonthPicker'
 import { DataTable, type Column } from '@/components/DataTable'
+import { Button } from '../../ui/Button'
 
 interface WageRecordsTabProps {
   allWageRecords: WageRecord[]
@@ -156,16 +157,16 @@ export default function WageRecordsTab({
             onChange={toggleAll} className="rounded" />
           <span className="text-sm text-slate-400">{filtered.length} 条记录</span>
           {changedCount > 0 && (
-            <button onClick={onSavePayments}
-              className="btn btn-success btn-sm">
+            <Button onClick={onSavePayments}
+               variant="success" size="sm" className="btn">
               保存发放 ({changedCount})
-            </button>
+            </Button>
           )}
           {selectedIds.size > 0 && (
-            <button onClick={onBatchDelete}
-              className="btn btn-danger btn-sm">
+            <Button onClick={onBatchDelete}
+               variant="danger" size="sm" className="btn">
               删除选中 ({selectedIds.size})
-            </button>
+            </Button>
           )}
         </div>
         <div className="flex-1" />
@@ -174,20 +175,20 @@ export default function WageRecordsTab({
           <MonthPicker value={filterYearMonth} onChange={onFilterYearMonthChange} />
         </div>
         <div className="flex gap-2">
-          <button onClick={onBatchArchive}
-            className="btn btn-warning btn-sm flex items-center gap-1"
-          >
+          <Button onClick={onBatchArchive}
+            
+           variant="warning" size="sm" className="btn flex items-center gap-1">
             <Icon name="Lock" size={14} />
             归档
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => fileInputRef.current?.click()}
             disabled={receiptParsing}
-            className="btn btn-primary btn-sm flex items-center gap-1"
-          >
+            
+           variant="primary" size="sm" className="btn flex items-center gap-1">
             <Icon name="Upload" size={14} />
             {receiptParsing ? '解析中...' : '上传银行回单'}
-          </button>
+          </Button>
           <input
             ref={fileInputRef}
             type="file"

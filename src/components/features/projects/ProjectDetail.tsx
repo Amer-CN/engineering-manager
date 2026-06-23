@@ -17,6 +17,7 @@ import { Tabs } from '../../ui/Tabs'
 import { ContractsTab, InvoicesTab, MembersTab, PartnersTab } from './ProjectDetailTabs'
 import { StatusBadge, PROJECT_STATUS } from '@/constants/status'
 import { getAPI } from '@/services/api-adapter'
+import { Button } from '../../ui/Button'
 
 type DetailTab = 'overview' | 'contracts' | 'invoices' | 'members' | 'expenses' | 'partners'
 
@@ -166,9 +167,9 @@ export function ProjectDetail({ project, members, allMembers, onBack, onEdit }: 
               <p className="text-slate-500 text-sm mt-0.5">{project.address || '暂无地址'} · {project.projectManagerName || '暂无负责人'}</p>
             </div>
           </div>
-          <button onClick={() => onEdit(project)} className="btn btn-secondary btn-sm">
+          <Button onClick={() => onEdit(project)}  variant="secondary" size="sm" className="btn">
             <Icon name="Edit3" size={14} /> 编辑
-          </button>
+          </Button>
         </div>
 
         {/* ── Tab Bar (统一 Tabs 组件) ── */}

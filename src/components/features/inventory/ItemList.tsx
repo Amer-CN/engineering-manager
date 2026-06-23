@@ -3,6 +3,7 @@ import { InventoryItem, Partner } from '../../../types/electron'
 import { Icon } from '../../ui/Icon'
 import { formatMoney } from '@/utils/format'
 import { DataTable, type Column } from '@/components/DataTable'
+import { Button } from '../../ui/Button'
 
 interface ItemListProps {
   items: InventoryItem[]
@@ -115,24 +116,24 @@ export const ItemList: React.FC<ItemListProps> = ({
       align: 'center',
       render: (item) => (
         <div className="flex items-center justify-center gap-2">
-          <button
+          <Button
             onClick={() => onTrans(item)}
-            className="btn btn-ghost btn-sm text-primary-600"
-          >
+            
+           variant="ghost" size="sm" className="btn text-primary-600">
             出入库
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => onEdit(item)}
-            className="btn btn-secondary btn-sm"
-          >
+            
+           variant="secondary" size="sm" className="btn">
             编辑
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => onDelete(item.id)}
-            className="btn btn-danger btn-sm"
-          >
+            
+           variant="danger" size="sm" className="btn">
             删除
-          </button>
+          </Button>
         </div>
       )
     }

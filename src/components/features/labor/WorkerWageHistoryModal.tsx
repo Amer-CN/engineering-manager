@@ -7,6 +7,7 @@ import { useConfirm } from '@/hooks/useConfirm'
 import { Modal } from '../../ui/Modal/Modal'
 import { Input } from '../../ui/Input/Input'
 import { getAPI } from '@/services/api-adapter'
+import { Button } from '../../ui/Button'
 
 interface WageHistoryItem {
   id: number
@@ -134,10 +135,10 @@ export function WorkerWageHistoryModal({ show, projectWorkerId, workerName, curr
               <Input label="备注" size="sm" value={formNote} onChange={e => setFormNote(e.target.value)}
                 placeholder="如：本月施工难度大，上调单价" />
               <div className="flex justify-end gap-2">
-                <button onClick={cancelForm} className="btn btn-secondary btn-sm">取消</button>
-                <button onClick={handleSave} className="btn btn-warning btn-sm">
+                <Button onClick={cancelForm}  variant="secondary" size="sm" className="btn">取消</Button>
+                <Button onClick={handleSave}  variant="warning" size="sm" className="btn">
                   {editingId ? '更新' : '保存'}
-                </button>
+                </Button>
               </div>
             </div>
           )}

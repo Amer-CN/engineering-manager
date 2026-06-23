@@ -11,6 +11,7 @@ import { StatusBadge, AUDIT_LEVEL } from '@/constants/status'
 import { AuditStatsPanel } from './AuditStatsPanel'
 import { AuditFilterBar } from './AuditFilterBar'
 import { AuditDetailModal } from './AuditDetailModal'
+import { Button } from './ui/Button'
 
 const PAGE_SIZE = 20
 
@@ -116,7 +117,7 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
     {
       key: 'detail', title: '操作', align: 'center',
       render: (log) => (
-        <button onClick={() => setSelectedLog(log)} className="btn btn-ghost btn-sm text-primary-600">详情</button>
+        <Button onClick={() => setSelectedLog(log)}  variant="ghost" size="sm" className="btn text-primary-600">详情</Button>
       )
     },
   ]
@@ -159,12 +160,12 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
   <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between">
   <div className="text-sm text-slate-500">第 <span className="font-medium">{page}</span> / <span className="font-medium">{totalPages}</span> 页</div>
   <div className="flex items-center gap-2">
-  <button onClick={() => f.setPage(Math.max(1, page - 1))} disabled={page <= 1} className="btn btn-secondary btn-sm disabled:opacity-50 disabled:cursor-not-allowed">上一页</button>
+  <Button onClick={() => f.setPage(Math.max(1, page - 1))} disabled={page <= 1}  variant="secondary" size="sm" className="btn disabled:opacity-50 disabled:cursor-not-allowed">上一页</Button>
   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
   const pageNum = Math.max(1, Math.min(totalPages - 4, page - 2)) + i
-  return <button key={pageNum} onClick={() => f.setPage(pageNum)} className={`btn btn-sm ${pageNum === page ? 'btn-primary' : 'btn-ghost text-slate-700'}`}>{pageNum}</button>
+  return <Button key={pageNum} onClick={() => f.setPage(pageNum)} variant={pageNum === page ? 'primary' : 'ghost'} size="sm" className={pageNum === page ? undefined : 'text-slate-700'}>{pageNum}</Button>
   })}
-  <button onClick={() => f.setPage(Math.min(totalPages, page + 1))} disabled={page >= totalPages} className="btn btn-secondary btn-sm disabled:opacity-50 disabled:cursor-not-allowed">下一页</button>
+  <Button onClick={() => f.setPage(Math.min(totalPages, page + 1))} disabled={page >= totalPages}  variant="secondary" size="sm" className="btn disabled:opacity-50 disabled:cursor-not-allowed">下一页</Button>
   </div>
   </div>
   </>

@@ -5,6 +5,7 @@ import { workerTypes } from './memberFormTypes'
 import { WorkerPickerItem } from './WorkerPickerItem'
 import { WorkerPickerAdvancedPanel } from './WorkerPickerAdvancedPanel'
 import { useWorkerPicker } from './useWorkerPicker'
+import { Button } from '../../ui/Button'
 
 interface Props {
   show: boolean
@@ -176,16 +177,16 @@ export function WorkerPickerModal({ show, projectId, workerTeams, existingWorker
   {selected.size > 0 && <span className="text-blue-600 ml-1">· 已选 {selected.size} 人</span>}
   </span>
   <div className="flex items-center gap-3">
-  <button onClick={onClose} className="btn btn-secondary text-sm">
+  <Button onClick={onClose}  variant="secondary" className="btn text-sm">
   取消
-  </button>
-  <button
+  </Button>
+  <Button
   onClick={handleConfirm}
   disabled={selected.size === 0}
-  className="btn btn-primary text-sm disabled:bg-slate-300 disabled:cursor-not-allowed"
-  >
+  
+   variant="primary" className="btn text-sm disabled:bg-slate-300 disabled:cursor-not-allowed">
   确认添加{selected.size > 0 ? ` ${selected.size} 人到「${teamName ?? '项目'}」` : ''}
-  </button>
+  </Button>
   </div>
   </div>
   </motion.div>

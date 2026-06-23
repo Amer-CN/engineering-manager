@@ -6,6 +6,7 @@ import type { Member, WorkerTeam } from '../../../types/electron'
 import { TeamCard, TeamFormModal, TeamFormData, defaultTeamFormData } from '../members/WorkerSectionModals'
 import { TeamWageModal } from './TeamWageModal'
 import { Card } from '@/components/ui/Card'
+import { Button } from '../../ui/Button'
 
 interface LaborTeamManagerProps {
   members: Member[]
@@ -102,13 +103,13 @@ const LaborTeamManager: React.FC<LaborTeamManagerProps> = ({
         <div className="text-slate-500">
           按项目分类管理班组，共 {workerTeams.length} 个班组
         </div>
-        <button
+        <Button
           onClick={handleAddTeam}
-          className="btn btn-warning flex items-center"
-        >
+          
+         variant="warning" className="btn flex items-center">
           <Icon name="Plus" size={20} className="mr-2" />
           添加班组
-        </button>
+        </Button>
       </div>
 
       {/* Team list by project */}
@@ -146,12 +147,12 @@ const LaborTeamManager: React.FC<LaborTeamManagerProps> = ({
           <div className="text-6xl mb-4"><Icon name="Building2" size={48} /></div>
           <h3 className="text-lg font-medium text-slate-800 mb-2">暂无班组</h3>
           <p className="text-slate-500 mb-6">请先添加项目，然后创建班组</p>
-          <button
+          <Button
             onClick={handleAddTeam}
-            className="btn btn-warning"
-          >
+            
+           variant="warning" className="btn">
             添加班组
-          </button>
+          </Button>
         </Card>
       )}
 

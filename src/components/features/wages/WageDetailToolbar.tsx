@@ -2,6 +2,7 @@ import { DropdownMenu } from '../../ui/DropdownMenu/DropdownMenu'
 import { MONTHS } from '@/constants'
 import { exportWageDetailToExcel, printWageDetail } from '@/utils/wage-export'
 import type { Project, WageRecord } from '@/types'
+import { Button } from '../../ui/Button'
 
 type DetailScope = 'project' | 'all'
 
@@ -125,28 +126,28 @@ export function WageDetailToolbar({
         )}
 
         {scope === 'project' && (
-          <button onClick={onBatchArchive}
-            className="btn btn-success btn-sm">
+          <Button onClick={onBatchArchive}
+             variant="success" size="sm" className="btn">
             归档{selectedIds.size > 0 ? `选中 (${selectedIds.size})` : '全部'}
-          </button>
+          </Button>
         )}
 
         {changedCount > 0 && (
-          <button onClick={onSavePayments} disabled={loading}
-            className="btn btn-success btn-sm">
+          <Button onClick={onSavePayments} disabled={loading}
+             variant="success" size="sm" className="btn">
             保存发放 ({changedCount})
-          </button>
+          </Button>
         )}
 
         {selectedIds.size > 0 && (
-          <button onClick={onBatchDelete}
-            className="btn btn-danger btn-sm">
+          <Button onClick={onBatchDelete}
+             variant="danger" size="sm" className="btn">
             删除选中 ({selectedIds.size})
-          </button>
+          </Button>
         )}
 
         <DropdownMenu
-          trigger={<button className="btn btn-secondary btn-sm">更多 ▾</button>}
+          trigger={<Button  variant="secondary" size="sm" className="btn">更多 ▾</Button>}
           items={[
             { key: 'export', label: '导出Excel', onClick: () => exportWageDetailToExcel(scopeData) },
             { key: 'print', label: '打印', onClick: () => printWageDetail(scopeData, scope === 'project' ? selectedProject?.name || '' : '全部项目') },

@@ -3,6 +3,7 @@ import { Template } from '../../../types/electron'
 import { categoryConfig } from './config'
 import { Icon } from '../../ui/Icon'
 import { Tooltip } from '../../ui/Tooltip/Tooltip'
+import { Button } from '../../ui/Button'
 
 interface TemplateCardProps {
   template: Template
@@ -57,25 +58,25 @@ export const TemplateCard = React.memo(function TemplateCard({ template, onEdit,
       {/* Actions */}
       <div className="flex items-center gap-1 pt-3 border-t border-slate-100">
         <Tooltip content="预览" position="top" delay={300}>
-          <button onClick={() => onPreview(template)} className="btn btn-secondary btn-sm">
+          <Button onClick={() => onPreview(template)}  variant="secondary" size="sm" className="btn">
             <Icon name="Eye" size={14} /> 预览
-          </button>
+          </Button>
         </Tooltip>
         <Tooltip content="生成文档" position="top" delay={300}>
-          <button onClick={() => onGenerate(template)} className="btn btn-ghost btn-sm text-primary-600">
+          <Button onClick={() => onGenerate(template)}  variant="ghost" size="sm" className="btn text-primary-600">
             <Icon name="FileText" size={14} /> 生成
-          </button>
+          </Button>
         </Tooltip>
         <div className="flex-1" />
         <Tooltip content="编辑" position="top" delay={300}>
-          <button onClick={() => onEdit(template)} className="btn btn-ghost btn-sm text-slate-500">
+          <Button onClick={() => onEdit(template)}  variant="ghost" size="sm" className="btn text-slate-500">
             <Icon name="Edit3" size={14} />
-          </button>
+          </Button>
         </Tooltip>
         <Tooltip content="删除" position="top" delay={300}>
-          <button onClick={() => { if (confirm('确定删除此模板？')) onDelete(template.id) }} className="btn btn-danger btn-sm">
+          <Button onClick={() => { if (confirm('确定删除此模板？')) onDelete(template.id) }}  variant="danger" size="sm" className="btn">
             <Icon name="Trash2" size={14} />
-          </button>
+          </Button>
         </Tooltip>
       </div>
     </div>

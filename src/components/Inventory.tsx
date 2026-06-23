@@ -8,6 +8,7 @@ import { InventoryStats, ItemList, ItemForm, TransList, TransForm, MaterialList,
 import { Spinner } from './ui/Loading/Loading'
 import { usePermission } from '../hooks/usePermission.tsx'
 import { useInventoryPage } from '../hooks/useInventoryPage'
+import { Button } from './ui/Button'
 
 const CARD = 'bg-white border border-slate-200 rounded-xl shadow-sm'
 const categories = ['钢材', '水泥', '混凝土', '木材', '玻璃', '涂料', '管材', '电线电缆', '五金配件', '其他']
@@ -34,15 +35,15 @@ const Inventory: React.FC<InventoryProps> = ({ refresh }) => {
   <PageContainer>
   <PageHeader title="仓库管理" subtitle="管理材料库存、出入库和项目材料"
   actions={<>
-  <button onClick={() => { h.setEditingMaterial(null); h.setShowMaterialModal(true) }} className="btn btn-secondary">
+  <Button onClick={() => { h.setEditingMaterial(null); h.setShowMaterialModal(true) }}  variant="secondary" className="btn">
   <Icon name="ClipboardList" size={16} /> 添加项目材料
-  </button>
-  <button onClick={() => { h.setTransItem(null); h.setShowTransModal(true) }} className="btn btn-secondary">
+  </Button>
+  <Button onClick={() => { h.setTransItem(null); h.setShowTransModal(true) }}  variant="secondary" className="btn">
   <Icon name="Download" size={16} /> 出入库
-  </button>
-  <button onClick={() => { h.setEditingItem(null); h.setShowItemModal(true) }} className="btn btn-primary">
+  </Button>
+  <Button onClick={() => { h.setEditingItem(null); h.setShowItemModal(true) }}  variant="primary" className="btn">
   <span className="text-xl">+</span> 添加物料
-  </button>
+  </Button>
   </>}
   />
 

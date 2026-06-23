@@ -3,6 +3,7 @@ import { Material, Project } from '../../../types/electron'
 import { Icon } from '../../ui/Icon'
 import { formatMoney } from '@/utils/format'
 import { DataTable, type Column } from '@/components/DataTable'
+import { Button } from '../../ui/Button'
 
 interface MaterialListProps {
   materials: Material[]
@@ -104,18 +105,18 @@ export const MaterialList: React.FC<MaterialListProps> = ({
       align: 'center',
       render: (item) => (
         <div className="flex items-center justify-center gap-2">
-          <button
+          <Button
             onClick={() => onEdit(item)}
-            className="btn btn-ghost btn-sm text-primary-600"
-          >
+            
+           variant="ghost" size="sm" className="btn text-primary-600">
             编辑
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => onDelete(item.id)}
-            className="btn btn-danger btn-sm"
-          >
+            
+           variant="danger" size="sm" className="btn">
             删除
-          </button>
+          </Button>
         </div>
       )
     }

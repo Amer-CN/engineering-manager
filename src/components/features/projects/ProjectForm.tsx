@@ -7,6 +7,7 @@ import type { Project, Member } from '@/types'
 import { Icon } from '../../ui/Icon'
 import { Input } from '../../ui/Input/Input'
 import { useToastStore } from '@/store/toastStore'
+import { Button } from '../../ui/Button'
 
 const statusOptions = [
   { value: 'planning', label: '筹备中' },
@@ -127,10 +128,10 @@ export function ProjectForm({ project, members, onSubmit, onCancel }: ProjectFor
   </div>
 
   <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-slate-200">
-  <button type="button" onClick={onCancel} className="btn btn-secondary" disabled={loading}>取消</button>
-  <button type="submit" className="btn btn-primary" disabled={loading}>
+  <Button type="button" onClick={onCancel}  disabled={loading} variant="secondary" className="btn">取消</Button>
+  <Button type="submit"  disabled={loading} variant="primary" className="btn">
   {loading ? '保存中...' : project ? <><Icon name="Save" size={14} /> 保存</> : <><Icon name="Plus" size={14} /> 创建</>}
-  </button>
+  </Button>
   </div>
   </form>
   </motion.div>

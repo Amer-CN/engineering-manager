@@ -2,6 +2,7 @@ import type { Member } from '@/types'
 import { Icon } from '../../ui/Icon'
 import { useMaskedFn } from '@/hooks/useMaskedValue'
 import { DataTable, type Column } from '../../DataTable'
+import { Button } from '../../ui/Button'
 
 interface StaffManagementTabProps {
   filteredStaff: Member[]
@@ -87,12 +88,12 @@ const staffTableColumns = (
     align: 'center',
     render: item => (
       <div className="flex items-center justify-center gap-1" onClick={e => e.stopPropagation()}>
-        <button onClick={() => onEdit(item)} className="btn btn-ghost btn-sm text-primary-600">
+        <Button onClick={() => onEdit(item)}  variant="ghost" size="sm" className="btn text-primary-600">
           编辑
-        </button>
-        <button onClick={() => onDelete(item.id)} className="btn btn-danger btn-sm">
+        </Button>
+        <Button onClick={() => onDelete(item.id)}  variant="danger" size="sm" className="btn">
           删除
-        </button>
+        </Button>
       </div>
     ),
   },

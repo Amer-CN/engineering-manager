@@ -1,5 +1,6 @@
 import React from 'react'
 import { Icon } from '../../ui/Icon'
+import { Button } from '../../ui/Button'
 
 interface StaffPayrollRowProps {
   wage: any
@@ -42,10 +43,10 @@ export const StaffPayrollRow = React.memo(function StaffPayrollRow({
         {diff === 0 ? '已结清' : diff.toLocaleString()}
       </td>
       <td className="px-4 py-3 text-center">
-        <button onClick={() => onDeleteWage(wage)}
-          className="btn btn-danger btn-sm" title="删除此记录">
+        <Button onClick={() => onDeleteWage(wage)}
+           title="删除此记录" variant="danger" size="sm" className="btn">
           <Icon name="Trash2" size={14} />
-        </button>
+        </Button>
       </td>
     </tr>
   )

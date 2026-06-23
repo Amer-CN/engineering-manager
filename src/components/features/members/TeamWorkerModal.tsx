@@ -7,6 +7,7 @@ import { Modal } from '../../ui/Modal/Modal'
 import { useConfirm } from '@/hooks/useConfirm'
 import { getWorkerTypeLabel } from '@/utils'
 import { WorkerWageHistoryModal } from '../labor/WorkerWageHistoryModal'
+import { Button } from '../../ui/Button'
 
 interface TeamWorkerModalProps {
   show: boolean
@@ -43,25 +44,25 @@ export function TeamWorkerModal({
     { key: 'status', title: '状态', align: 'center', render: (item) => <StatusBadge status={item.status} config={WORKER_STATUS} /> },
     { key: 'actions', title: '操作', align: 'right', render: (item) => (
       <div className="flex items-center justify-end gap-1">
-        <button onClick={() => setWageHistoryWorker({ id: item.id, name: item.name, dailyWage: item.dailyWage || 0 })}
-          className="btn btn-ghost btn-sm text-amber-600">薪资</button>
+        <Button onClick={() => setWageHistoryWorker({ id: item.id, name: item.name, dailyWage: item.dailyWage || 0 })}
+           variant="ghost" size="sm" className="btn text-amber-600">薪资</Button>
         {otherTeams.length > 0 && (
           <div className="relative group">
-            <button className="btn btn-ghost btn-sm text-amber-600">调组</button>
+            <Button  variant="ghost" size="sm" className="btn text-amber-600">调组</Button>
             <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg py-1 hidden group-hover:block z-10 min-w-[120px]">
               {otherTeams.map(t => (
-                <button key={t.id} onClick={() => onTransferWorker(item.id, t.id)}
-                  className="btn btn-secondary btn-sm w-full text-left">
+                <Button key={t.id} onClick={() => onTransferWorker(item.id, t.id)}
+                   variant="secondary" size="sm" className="btn w-full text-left">
                   {t.name}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
         )}
-        <button onClick={async () => {
+        <Button onClick={async () => {
           const ok = await confirm({ title: '移除工人', content: `确认将 ${item.name} 从班组中移除？`, confirmVariant: 'danger' })
           if (ok) onRemoveWorker(item.id)
-        }} className="btn btn-danger btn-sm">移除</button>
+        }}  variant="danger" size="sm" className="btn">移除</Button>
       </div>
     )},
   ]
@@ -75,10 +76,10 @@ export function TeamWorkerModal({
   <div className="flex items-center justify-between w-full">
   <span className="text-sm text-slate-500">{teamWorkers.length} 名工人</span>
   <div className="flex items-center gap-3">
-  <button onClick={() => onAddWorkers(teamId, projectId)}
-  className="btn btn-primary">
+  <Button onClick={() => onAddWorkers(teamId, projectId)}
+   variant="primary" className="btn">
   <Icon name="Plus" size={16} />从工人库添加
-  </button>
+  </Button>
   </div>
   </div>
   }>

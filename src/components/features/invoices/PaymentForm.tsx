@@ -7,6 +7,7 @@ import { Input } from '../../ui/Input/Input'
 import { PaymentFileUpload } from './PaymentFileUpload'
 import { useBankReceiptOCR } from '@/hooks/useBankReceiptOCR'
 import { Icon } from '../../ui/Icon'
+import { Button } from '../../ui/Button'
 
 export interface PaymentFormData {
   type: InvoiceType; amount: number; recordDate: string
@@ -70,8 +71,8 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ initialData, projects,
   size="xl"
   footer={
   <>
-  <button type="button" onClick={onCancel} className="btn btn-secondary">取消</button>
-  <button type="button" onClick={() => onSubmit(formData)} className="btn btn btn-warning">{isEditing ? '保存' : '登记'}</button>
+  <Button type="button" onClick={onCancel}  variant="secondary" className="btn">取消</Button>
+  <Button type="button" onClick={() => onSubmit(formData)}  variant="warning" className="btn btn">{isEditing ? '保存' : '登记'}</Button>
   </>
   }>
   <form onSubmit={e => { e.preventDefault(); onSubmit(formData) }}>

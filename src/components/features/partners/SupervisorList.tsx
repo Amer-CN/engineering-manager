@@ -4,6 +4,7 @@ import { Supervisor, Project } from '../../../types/electron'
 import { supervisorCategories } from '../../../data/regions'
 import FilterBar from '../../ui/FilterBar'
 import { Icon } from '../../ui/Icon'
+import { Button } from '../../ui/Button'
 
 interface SupervisorListProps {
   supervisors: Supervisor[]
@@ -152,18 +153,18 @@ export const SupervisorList: React.FC<SupervisorListProps> = ({
               width: '140px',
               render: (supervisor) => (
                 <div className="flex items-center gap-1">
-                  <button
+                  <Button
                     onClick={(e) => { e.stopPropagation(); onEdit(supervisor) }}
-                    className="btn btn-ghost btn-sm"
-                  >
+                    
+                   variant="ghost" size="sm" className="btn">
                     编辑
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     onClick={(e) => { e.stopPropagation(); onDelete(supervisor.id) }}
-                    className="btn btn-danger btn-sm"
-                  >
+                    
+                   variant="danger" size="sm" className="btn">
                     删除
-                  </button>
+                  </Button>
                 </div>
               )
             }

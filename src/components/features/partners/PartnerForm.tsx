@@ -4,6 +4,7 @@ import { FileDropZone } from './FileDropZone'
 import { useToastStore } from '@/store/toastStore'
 import { BusinessLicenseOCRBlock } from './BusinessLicenseOCRBlock'
 import { PartnerFormFields, type PartnerFormData } from './PartnerFormFields'
+import { Button } from '../../ui/Button'
 
 interface PartnerFormProps {
   partner?: Partner | null
@@ -176,12 +177,12 @@ export const PartnerForm: React.FC<PartnerFormProps> = ({
 
       {/* 提交按钮 */}
       <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-200">
-        <button type="button" onClick={onCancel} className="btn btn-secondary">
+        <Button type="button" onClick={onCancel}  variant="secondary" className="btn">
           取消
-        </button>
-        <button type="submit" className="btn btn-primary">
+        </Button>
+        <Button type="submit"  variant="primary" className="btn">
           {partner ? '保存修改' : '添加单位'}
-        </button>
+        </Button>
       </div>
     </form>
   )

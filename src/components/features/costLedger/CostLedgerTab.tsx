@@ -11,6 +11,7 @@ import { CostLedgerImportModal, learnFromEdit } from './CostLedgerImportModal'
 import { logCreate, logUpdate, logDelete } from '@/utils/audit'
 import type { CostLedgerEntry, CostLedgerSummary } from '@/types'
 import { getAPI } from '@/services/api-adapter'
+import { Button } from '../../ui/Button'
 
 interface CostLedgerTabProps {
   projectId: number
@@ -116,9 +117,9 @@ export function CostLedgerTab({ projectId, projectName }: CostLedgerTabProps) {
             onImport={() => setShowImport(true)}
             onCompare={() => setShowCompare(true)}
           />
-          <button onClick={openNew} className="btn btn-primary btn-sm">
+          <Button onClick={openNew}  variant="primary" size="sm" className="btn">
             + 新增
-          </button>
+          </Button>
         </div>
       </div>
       <div className="flex-1 min-h-0 flex flex-col">

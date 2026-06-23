@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Icon } from '../../ui/Icon'
 import { FilePreviewModal, FilePreviewData } from './FilePreviewModal'
 import { useToastStore } from '@/store/toastStore'
+import { Button } from '../../ui/Button'
 
 interface Props {
   fileUrl: string
@@ -66,7 +67,7 @@ export const PaymentFileUpload: React.FC<Props> = ({ fileUrl, fileType, typeLabe
   </div>
   <div className="flex items-center gap-2">
   <button type="button" onClick={() => setPreviewFile({ data: fileUrl, type: fileType === 'pdf' ? 'pdf' : 'image', title: '凭证预览' })} className="px-3 py-1.5 text-xs text-amber-600 hover:bg-amber-50 rounded-lg">预览</button>
-  <button type="button" onClick={onFileRemove} className="btn btn-danger btn-sm">删除</button>
+  <Button type="button" onClick={onFileRemove}  variant="danger" size="sm" className="btn">删除</Button>
   </div>
   </div>
   </div>

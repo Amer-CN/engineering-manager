@@ -4,6 +4,7 @@ import { getAPI } from '@/services/api-adapter'
 import type { Project, Member, WorkerTeam } from '@/types'
 import type { ProjectStatsData } from './ProjectStats'
 import { AddMemberModal } from './AddMemberModal'
+import { Button } from '../../ui/Button'
 
 const CARD = 'bg-white border border-slate-200 rounded-xl shadow-sm'
 const CARD_HOVER = 'hover:shadow-md transition-all duration-200'
@@ -126,12 +127,12 @@ export function MembersTab({ project, staffMembers, allStaffMembers, workerTeams
                     </p>}
                   </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => openTransfer(rec)} className="btn btn-ghost btn-sm text-amber-600 border border-amber-200">调离</button>
-                    <button onClick={() => {
+                    <Button onClick={() => openTransfer(rec)}  variant="ghost" size="sm" className="btn text-amber-600 border border-amber-200">调离</Button>
+                    <Button onClick={() => {
                       if (confirm(`确认将 ${m.name} 从项目中删除？此操作不可撤销。`)) {
                         getAPI().then(api => api.removeProjectMember(rec.id)).then(() => loadProjectMembers())
                       }
-                    }} className="btn btn-danger btn-sm border border-slate-200">删除</button>
+                    }}  variant="danger" size="sm" className="btn border border-slate-200">删除</Button>
                   </div>
                 </div>
               )
@@ -156,10 +157,10 @@ export function MembersTab({ project, staffMembers, allStaffMembers, workerTeams
                       )}
                     </p>
                   </div>
-                  <button onClick={() => {
+                  <Button onClick={() => {
                     getAPI().then(api => api.updateProjectMember(rec.id, { leftAt: '' }))
                       .then(() => loadProjectMembers())
-                  }} className="btn btn-ghost btn-sm text-primary-600 border border-primary-200">恢复</button>
+                  }}  variant="ghost" size="sm" className="btn text-primary-600 border border-primary-200">恢复</Button>
                 </div>
               ))}
             </div>

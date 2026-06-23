@@ -5,6 +5,7 @@ import { statusConfig, typeConfig, subTypeConfig } from './config'
 import { Icon } from '../../ui/Icon'
 import { Tooltip } from '../../ui/Tooltip/Tooltip'
 import { formatMoney } from '@/utils/format'
+import { Button } from '../../ui/Button'
 
 interface SettlementListProps {
   settlements: SettlementData[]
@@ -103,9 +104,9 @@ export const SettlementList: React.FC<SettlementListProps> = ({
           </button>
         </Tooltip>
         <Tooltip content="删除" position="top" delay={300}>
-          <button onClick={() => onDelete(item.id)} className="btn btn-danger btn-sm">
+          <Button onClick={() => onDelete(item.id)}  variant="danger" size="sm" className="btn">
             <Icon name="Trash2" size={14} />
-          </button>
+          </Button>
         </Tooltip>
       </div>
     )},

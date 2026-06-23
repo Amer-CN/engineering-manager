@@ -1,5 +1,6 @@
 import type { CostLedgerMatchRule, CostLedgerCategory } from '@/types'
 import { getAPI } from '@/services/api-adapter'
+import { Button } from '../../ui/Button'
 
 interface Props {
   rules: CostLedgerMatchRule[]
@@ -40,7 +41,7 @@ export function LearningRulesView({ rules, categories, confirm, setRules }: Prop
                   {cat?.label || rule.category}
                 </span>
                 <span className="text-slate-300 ml-auto">命中 {rule.hitCount} 次</span>
-                <button onClick={() => handleDelete(i)} className="btn btn-danger btn-sm">✕</button>
+                <Button onClick={() => handleDelete(i)}  variant="danger" size="sm" className="btn">✕</Button>
               </div>
             )
           })}

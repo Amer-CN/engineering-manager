@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react'
 import { useToastStore } from '@/store/toastStore'
 import { Input } from '../../ui/Input/Input'
+import { Button } from '../../ui/Button'
 
 interface PositionEditorProps {
   positions: string[]
@@ -56,8 +57,8 @@ const PositionEditor: React.FC<PositionEditorProps> = ({ positions, onChange }) 
           onChange={e => setInputValue(e.target.value)} onKeyDown={handleKeyDown}
           containerClassName="flex-1"
           placeholder="输入职位名称，如：部门经理" maxLength={MAX_CHAR} />
-          <button type="button" onClick={handleAdd}
-            className="btn btn-ghost btn-sm text-primary-600 whitespace-nowrap">添加</button>
+          <Button type="button" onClick={handleAdd}
+             variant="ghost" size="sm" className="btn text-primary-600 whitespace-nowrap">添加</Button>
       </div>
     </div>
   )

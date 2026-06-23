@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react'
 import { Icon } from '../../ui/Icon'
 import { autoMapColumns } from './autoMapColumns'
 import { AttendanceImportBody } from './AttendanceImportBody'
+import { Button } from '../../ui/Button'
 
 export interface MatchedRow {
   name: string
@@ -150,11 +151,11 @@ export const AttendanceImportModal: React.FC<Props> = ({ show, projectId, yearMo
             }
           </span>
           <div className="flex items-center gap-3">
-            <button type="button" onClick={onClose} className="btn btn-secondary text-sm">取消</button>
-            <button type="button" onClick={confirmImport} disabled={matchedCount === 0}
-              className="btn btn-primary text-sm disabled:opacity-50">
+            <Button type="button" onClick={onClose}  variant="secondary" className="btn text-sm">取消</Button>
+            <Button type="button" onClick={confirmImport} disabled={matchedCount === 0}
+               variant="primary" className="btn text-sm disabled:opacity-50">
               确认导入 ({matchedCount})
-            </button>
+            </Button>
           </div>
         </div>
       </div>

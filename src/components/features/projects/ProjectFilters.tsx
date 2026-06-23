@@ -4,6 +4,7 @@
 import type { Member } from '@/types'
 import { usePermission } from '@/hooks/usePermission.tsx'
 import { Icon } from '../../ui/Icon'
+import { Button } from '../../ui/Button'
 
 const statusOptions = [
   { value: '', label: '全部状态' },
@@ -58,14 +59,14 @@ export function ProjectFilters({
             共 {projectCount} 个项目
           </span>
           {can('projects:export') && (
-            <button onClick={onExport} className="btn btn-secondary btn-sm">
+            <Button onClick={onExport}  variant="secondary" size="sm" className="btn">
               <Icon name="Download" size={14} className="inline-block" /> 导出
-            </button>
+            </Button>
           )}
           {can('projects:create') && (
-            <button onClick={onAdd} className="btn btn-primary">
+            <Button onClick={onAdd}  variant="primary" className="btn">
               <Icon name="Plus" size={16} className="inline-block" /> 新增项目
-            </button>
+            </Button>
           )}
         </div>
       </div>

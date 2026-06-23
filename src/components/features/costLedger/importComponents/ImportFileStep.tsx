@@ -41,7 +41,7 @@ export function ImportFileStep({ selectedBatch, onBatchChange, batches, onFileCh
   <Icon name="FileSpreadsheet" size={48} className="mx-auto text-slate-400 mb-3" />
   <p className="text-slate-600 mb-2">选择 Excel 文件（.xlsx / .xls）</p>
   <p className="text-xs text-slate-400 mb-4">财务导出的台账格式</p>
-  <label className="btn btn-primary cursor-pointer">
+  <label className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg cursor-pointer hover:bg-primary-700 transition-colors">
   <Icon name="Upload" size={16} />
   选择文件
   <input type="file" accept=".xlsx,.xls" onChange={onFileChange} className="hidden" />

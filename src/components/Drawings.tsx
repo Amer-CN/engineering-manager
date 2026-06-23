@@ -14,6 +14,7 @@ import { getAPI } from '@/services/api-adapter'
 import { categories, categoryIcons, categoryColors } from './drawingsConstants'
 import { DrawingsFormModal } from './DrawingsFormModal'
 import type { FormDataState } from './DrawingsFormModal'
+import { Button } from './ui/Button'
 
 interface DrawingsProps {
   refresh?: () => void
@@ -234,8 +235,8 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
     { key: 'createdAt', title: '上传日期', render: (item) => <span className="text-sm text-slate-500">{new Date(item.createdAt).toLocaleDateString('zh-CN')}</span> },
     { key: 'actions', title: '操作', align: 'center', render: (item) => (
       <div className="flex items-center justify-center gap-2">
-        <button onClick={() => handleEdit(item)} className="btn btn-ghost btn-sm">编辑</button>
-        <button onClick={() => handleDelete(item.id)} className="btn btn-danger btn-sm">删除</button>
+        <Button onClick={() => handleEdit(item)}  variant="ghost" size="sm" className="btn">编辑</Button>
+        <Button onClick={() => handleDelete(item.id)}  variant="danger" size="sm" className="btn">删除</Button>
       </div>
     )},
   ]
@@ -253,16 +254,16 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
   <h1 className="text-2xl font-bold text-slate-800">图纸管理</h1>
   <p className="text-slate-500 mt-1">上传和管理工程图纸</p>
   </div>
-  <button
+  <Button
   onClick={() => {
   resetForm()
   setShowModal(true)
   }}
-  className="btn btn-primary px-6 py-3 flex items-center"
-  >
+  
+   variant="primary" className="btn px-6 py-3 flex items-center">
   <span className="text-xl mr-2">+</span>
   上传图纸
-  </button>
+  </Button>
   </div>
 
   {/* 统计卡片 */}
@@ -336,7 +337,7 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
   />
   ) : (
   <EmptyState icon="Ruler" title="暂无图纸" description="点击下方按钮上传您的第一张图纸"
-  action={<button onClick={() => { resetForm(); setShowModal(true) }} className="btn btn-primary px-6 py-3">上传图纸</button>}
+  action={<Button onClick={() => { resetForm(); setShowModal(true) }}  variant="primary" className="btn px-6 py-3">上传图纸</Button>}
   />
   )}
 

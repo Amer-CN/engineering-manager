@@ -2,6 +2,7 @@ import React from 'react'
 import { TABLE } from '@/constants/table'
 import { Icon } from '../../ui/Icon'
 import { formatMoney } from '@/utils/format'
+import { Button } from '../../ui/Button'
 
 interface Item { description: string; spec: string; quantity: number; unit: string; unitPrice: number; amount: number; remarks: string }
 
@@ -30,11 +31,11 @@ export const SettlementItemsTable: React.FC<Props> = ({
       <div className="flex items-center gap-2">
         {isMaterial && <>
           <input ref={templateInputRef} type="file" accept=".xlsx,.xls" onChange={onTemplateFileChange} className="hidden" />
-          <button type="button" onClick={onDownloadTemplate} className="btn btn-sm bg-white text-slate-600 hover:bg-slate-100 border border-slate-300"><Icon name="Download" size={14} /> 下载模板</button>
-          <button type="button" onClick={onUploadTemplate} className="btn btn-sm bg-primary-50 text-primary-700 hover:bg-primary-100 border border-primary-200"><Icon name="Upload" size={14} /> 上传模板</button>
-          <button type="button" onClick={onImportExcel} className="btn btn-sm bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200"><Icon name="File" size={14} /> 导入其他表</button>
+          <Button type="button" variant="outline" size="sm" onClick={onDownloadTemplate} className="bg-white text-slate-600 hover:bg-slate-100 border border-slate-300"><Icon name="Download" size={14} /> 下载模板</Button>
+          <Button type="button" variant="primary" size="sm" onClick={onUploadTemplate} className="bg-primary-50 text-primary-700 hover:bg-primary-100 border border-primary-200"><Icon name="Upload" size={14} /> 上传模板</Button>
+          <Button type="button" variant="success" size="sm" onClick={onImportExcel} className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200"><Icon name="File" size={14} /> 导入其他表</Button>
         </>}
-        <button type="button" onClick={onAdd} className="btn btn-sm btn-secondary">+ 添加明细</button>
+        <Button type="button" onClick={onAdd}  variant="secondary" size="sm">+ 添加明细</Button>
       </div>
     </div>
     {isMaterial && (
@@ -74,7 +75,7 @@ export const SettlementItemsTable: React.FC<Props> = ({
                 <td className={TABLE.bodyCell}><input type="number" value={item.quantity} onChange={e => onUpdate(index, 'quantity', Number(e.target.value))} className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm" min="0" step="any" /></td>
                 <td className={TABLE.bodyCell}><input type="number" value={item.unitPrice} onChange={e => onUpdate(index, 'unitPrice', Number(e.target.value))} className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm" min="0" step="any" /></td>
                 <td className={`${TABLE.bodyCell} text-right font-medium text-slate-800 text-sm`}>¥{formatMoney(item.amount)}</td>
-                <td className={`${TABLE.bodyCell} text-center`}><button type="button" onClick={() => onRemove(index)} className="btn btn-ghost btn-sm text-danger-500">✕</button></td>
+                <td className={`${TABLE.bodyCell} text-center`}><Button type="button" onClick={() => onRemove(index)}  variant="ghost" size="sm" className="btn text-danger-500">✕</Button></td>
               </tr>
             ))}
           </tbody>

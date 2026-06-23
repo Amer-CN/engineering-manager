@@ -101,7 +101,7 @@ const StaffPayrollToolbar: React.FC<StaffPayrollToolbarProps> = ({
     )}
     {filteredWages.length > 0 && (
       <DropdownMenu
-        trigger={<button className="btn btn-secondary text-sm">更多 ▾</button>}
+        trigger={<Button  variant="secondary" className="btn text-sm">更多 ▾</Button>}
         items={[
           { key: 'export', label: '导出Excel', onClick: onExportExcel },
           { key: 'print', label: '打印', onClick: () => window.print() },

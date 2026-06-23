@@ -29,7 +29,7 @@ const ContractPreviewModal: React.FC<ContractPreviewModalProps> = ({ previewFile
             {previewFile.type !== 'image' && (
               <a href={previewFile.data}
                 download={`合同附件.${previewFile.type === 'pdf' ? 'pdf' : previewFile.type === 'word' ? 'docx' : 'xlsx'}`}
-                className="btn btn-primary btn-sm">下载文件</a>
+                className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors">下载文件</a>
             )}
             <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
               <Icon name="X" size={20} />

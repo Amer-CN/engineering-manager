@@ -1,5 +1,6 @@
 import React from 'react'
 import { Icon } from '../../ui/Icon'
+import { Button } from '../../ui/Button'
 
 interface FileDropZoneProps {
   label: string
@@ -49,12 +50,12 @@ export const FileDropZone: React.FC<FileDropZoneProps> = ({
   </div>
   <div className="flex items-center gap-2">
   {multiple && onAddMore && (
-  <button type="button" onClick={onAddMore} className="btn btn-ghost btn-sm text-primary-600">继续添加</button>
+  <Button type="button" onClick={onAddMore}  variant="ghost" size="sm" className="btn text-primary-600">继续添加</Button>
   )}
   {onPreview && (
-  <button type="button" onClick={onPreview} className="btn btn-ghost btn-sm text-primary-600">预览</button>
+  <Button type="button" onClick={onPreview}  variant="ghost" size="sm" className="btn text-primary-600">预览</Button>
   )}
-  <button type="button" onClick={onRemove} className="btn btn-danger btn-sm">删除</button>
+  <Button type="button" onClick={onRemove}  variant="danger" size="sm" className="btn">删除</Button>
   </div>
   </div>
   </div>

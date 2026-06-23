@@ -3,6 +3,7 @@ import { EmptyState } from '../../ui/EmptyState'
 import FilterBar from '../../ui/FilterBar'
 import { Input } from '@/components/ui/Input'
 import { DataTable, type Column } from '@/components/DataTable'
+import { Button } from '../../ui/Button'
 
 interface WageTableTabProps {
   selectedProject: Project | null
@@ -155,23 +156,23 @@ export default function WageTableTab({
             )}
           </div>
           {selectedIds.size > 0 && (
-            <button onClick={onBatchDelete}
-              className="btn btn-danger btn-sm">
+            <Button onClick={onBatchDelete}
+               variant="danger" size="sm" className="btn">
               删除选中 ({selectedIds.size})
-            </button>
+            </Button>
           )}
         </div>
         <div className="flex-1" />
         <div className="flex gap-2">
-          <button onClick={onGenerate} disabled={loading}
-            className="btn btn-primary btn-sm">
+          <Button onClick={onGenerate} disabled={loading}
+             variant="primary" size="sm" className="btn">
             生成工资表
-          </button>
+          </Button>
           {editingWages.size > 0 && (
-            <button onClick={onSave} disabled={loading}
-              className="btn btn-success btn-sm">
+            <Button onClick={onSave} disabled={loading}
+               variant="success" size="sm" className="btn">
               保存修改 ({editingWages.size})
-            </button>
+            </Button>
           )}
         </div>
       </FilterBar>

@@ -3,6 +3,7 @@ import { Icon } from './ui/Icon'
 import { Input } from './ui/Input/Input'
 import { Modal } from './ui/Modal/Modal'
 import { ContractTemplate, TemplateType, TemplateVariable } from '../types/electron'
+import { Button } from './ui/Button'
 
 export const templateTypeConfig: Record<TemplateType, { label: string; icon: string }> = {
   income: { label: '收入合同', icon: 'TrendingUp' },
@@ -30,8 +31,8 @@ export const ContractTemplateFormModal: React.FC<Props> = ({
 }) => (
   <Modal isOpen={true} onClose={onClose} title={editingTemplate ? '编辑模板' : '添加模板'} size="xl"
     footer={<>
-      <button type="button" onClick={onClose} className="btn btn-secondary">取消</button>
-      <button type="submit" form="contract-template-form" className="btn btn-primary">{editingTemplate ? '保存' : '创建'}</button>
+      <Button type="button" onClick={onClose}  variant="secondary" className="btn">取消</Button>
+      <Button type="submit" form="contract-template-form"  variant="primary" className="btn">{editingTemplate ? '保存' : '创建'}</Button>
     </>}>
     <form id="contract-template-form" onSubmit={onSubmit}>
       <div className="space-y-4">
@@ -41,7 +42,7 @@ export const ContractTemplateFormModal: React.FC<Props> = ({
         </div>
         <div><label className="label">模板描述 *</label><textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} className="input min-h-[200px]" placeholder="输入合同模板内容，使用 {{变量名}} 表示需要填充的内容..." required /><p className="text-xs text-slate-500 mt-1">提示：使用 {"{{变量名}}"} 表示需要填充的内容</p></div>
         <div>
-          <div className="flex items-center justify-between mb-2"><label className="label mb-0">模板变量</label><button type="button" onClick={onAddVariable} className="btn btn-sm btn-secondary">+ 添加变量</button></div>
+          <div className="flex items-center justify-between mb-2"><label className="label mb-0">模板变量</label><Button type="button" onClick={onAddVariable}  variant="secondary" size="sm" className="btn">+ 添加变量</Button></div>
           {formData.variables.length > 0 ? (
             <div className="space-y-3">{formData.variables.map((variable, index) => (
               <div key={index} className="grid grid-cols-4 gap-3 p-3 bg-slate-50 rounded-xl">

@@ -5,6 +5,7 @@ import { Icon } from '../../ui/Icon'
 import { Input } from '../../ui/Input/Input'
 import { FILE_CATEGORIES, uploadFile } from '../../../services/fileService'
 import { useToastStore } from '@/store/toastStore'
+import { Button } from '../../ui/Button'
 
 interface TemplateFormProps {
   template?: Template | null
@@ -227,10 +228,10 @@ export default function TemplateForm({ template, onSubmit, onCancel }: TemplateF
 
       {/* Actions */}
       <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100">
-        <button type="button" onClick={onCancel} className="btn btn-ghost text-sm">取消</button>
-        <button type="submit" className="btn btn-primary text-sm">
+        <Button type="button" onClick={onCancel}  variant="ghost" className="btn text-sm">取消</Button>
+        <Button type="submit"  variant="primary" className="btn text-sm">
           {template ? '保存修改' : '创建模板'}
-        </button>
+        </Button>
       </div>
     </form>
   )

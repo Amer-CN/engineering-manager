@@ -1,6 +1,7 @@
 import { useMaskedFn } from "@/hooks/useMaskedValue";
 import React from 'react'
 import { getWorkerTypeLabel } from '../../../utils'
+import { Button } from '../../ui/Button'
 
 function calcAge(birthDate: string): number {
   const birth = new Date(birthDate)
@@ -54,12 +55,12 @@ export const LaborWorkerRow = React.memo(function LaborWorkerRow({
           >
             工资
           </button>
-          <button
+          <Button
             onClick={() => onDelete((worker as any).workerId)}
-            className="btn btn-danger btn-sm"
-          >
+            
+           variant="danger" size="sm" className="btn">
             删除
-          </button>
+          </Button>
         </div>
       </td>
     </tr>

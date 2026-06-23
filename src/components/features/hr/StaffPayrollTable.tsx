@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Icon } from '../../ui/Icon'
 import { DataTable, type Column } from '@/components/DataTable'
+import { Button } from '../../ui/Button'
 
 interface StaffPayrollTableProps {
   filteredWages: any[]
@@ -118,10 +119,10 @@ export function StaffPayrollTable({
       title: '操作',
       align: 'center',
       render: (item) => (
-        <button onClick={() => onDeleteWage(item)}
-          className="btn btn-danger btn-sm" title="删除此记录">
+        <Button onClick={() => onDeleteWage(item)}
+           title="删除此记录" variant="danger" size="sm" className="btn">
           <Icon name="Trash2" size={14} />
-        </button>
+        </Button>
       )
     }
   ]
