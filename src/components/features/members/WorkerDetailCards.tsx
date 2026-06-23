@@ -1,6 +1,7 @@
 import { Icon } from '../../ui/Icon'
 import type { Member } from '@/types'
 import { FilePreviewItem, InfoItem, Tag } from './MemberDetailParts'
+import { Card } from '@/components/ui/Card'
 
 interface WorkerDetailCardsProps {
   member: Member
@@ -11,7 +12,7 @@ export function WorkerDetailCards({ member, onPreview }: WorkerDetailCardsProps)
   return (
     <>
       {/* 工资信息卡片 */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+      <Card className="border border-slate-200 p-6 mb-6">
         <h3 className="text-lg font-medium text-slate-800 mb-4 flex items-center">
           <span className="mr-2">💰</span>
           工资信息
@@ -22,10 +23,10 @@ export function WorkerDetailCards({ member, onPreview }: WorkerDetailCardsProps)
           <InfoItem icon={<Icon name="CreditCard" size={16} />} label="工资卡号" value={member.wageBankAccount} />
           <InfoItem icon={<Icon name="Building2" size={16} />} label="开户行" value={member.wageBankName} />
         </div>
-      </div>
+      </Card>
 
       {/* 安全档案卡片 */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+      <Card className="border border-slate-200 p-6 mb-6">
         <h3 className="text-lg font-medium text-slate-800 mb-4 flex items-center">
           <span className="mr-2">📁</span>
           安全档案
@@ -56,7 +57,7 @@ export function WorkerDetailCards({ member, onPreview }: WorkerDetailCardsProps)
             onPreview={() => onPreview(member.specialCertificateFile!, 'image', '特种作业证')}
           />
         </div>
-      </div>
+      </Card>
     </>
   )
 }

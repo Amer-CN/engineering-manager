@@ -6,6 +6,7 @@ import React from 'react'
 import { Invoice } from '@/types/electron'
 import { formatMoney } from '@/utils/format'
 import { Icon } from '../../ui/Icon'
+import { Card } from '@/components/ui/Card'
 
 interface InvoiceStatsProps {
   invoices: Invoice[]
@@ -30,7 +31,7 @@ export const InvoiceStats: React.FC<InvoiceStatsProps> = ({ invoices, filteredIn
 
   return (
   <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-  <div className="bg-white rounded-xl shadow-sm p-4">
+  <Card bordered={false} className="p-4">
   <div className="flex items-center gap-3">
   <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center"><Icon name="Upload" size={20} /></div>
   <div>
@@ -38,8 +39,8 @@ export const InvoiceStats: React.FC<InvoiceStatsProps> = ({ invoices, filteredIn
   <p className="text-lg font-bold text-blue-600">¥{formatMoney(stats.invoiceOutAmount)}</p>
   </div>
   </div>
-  </div>
-  <div className="bg-white rounded-xl shadow-sm p-4">
+  </Card>
+  <Card bordered={false} className="p-4">
   <div className="flex items-center gap-3">
   <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center"><Icon name="Download" size={20} /></div>
   <div>
@@ -47,8 +48,8 @@ export const InvoiceStats: React.FC<InvoiceStatsProps> = ({ invoices, filteredIn
   <p className="text-lg font-bold text-green-600">¥{formatMoney(stats.invoiceInAmount)}</p>
   </div>
   </div>
-  </div>
-  <div className="bg-white rounded-xl shadow-sm p-4">
+  </Card>
+  <Card bordered={false} className="p-4">
   <div className="flex items-center gap-3">
   <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center"><Icon name="LayoutDashboard" size={20} /></div>
   <div>
@@ -61,8 +62,8 @@ export const InvoiceStats: React.FC<InvoiceStatsProps> = ({ invoices, filteredIn
   </p>
   </div>
   </div>
-  </div>
-  <div className="bg-white rounded-xl shadow-sm p-4">
+  </Card>
+  <Card bordered={false} className="p-4">
   <div className="flex items-center gap-3">
   <div className="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center"><Icon name="Shield" size={20} className="text-violet-600" /></div>
   <div>
@@ -70,8 +71,8 @@ export const InvoiceStats: React.FC<InvoiceStatsProps> = ({ invoices, filteredIn
   <p className={`text-lg font-bold ${stats.specialTax > 0 ? 'text-violet-600' : 'text-slate-400'}`}>¥{formatMoney(stats.specialTax)}</p>
   </div>
   </div>
-  </div>
-  <div className="bg-white rounded-xl shadow-sm p-4">
+  </Card>
+  <Card bordered={false} className="p-4">
   <div className="flex items-center gap-3">
   <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center"><Icon name="File" size={20} className="text-slate-600" /></div>
   <div>
@@ -79,7 +80,7 @@ export const InvoiceStats: React.FC<InvoiceStatsProps> = ({ invoices, filteredIn
   <p className={`text-lg font-bold ${stats.regularTax > 0 ? 'text-slate-600' : 'text-slate-400'}`}>¥{formatMoney(stats.regularTax)}</p>
   </div>
   </div>
-  </div>
+  </Card>
   </div>
   )
 }
