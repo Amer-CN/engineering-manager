@@ -5,6 +5,7 @@ import { Icon } from '../../ui/Icon'
 import type { Member, WorkerTeam } from '../../../types/electron'
 import { TeamCard, TeamFormModal, TeamFormData, defaultTeamFormData } from '../members/WorkerSectionModals'
 import { TeamWageModal } from './TeamWageModal'
+import { Card } from '@/components/ui/Card'
 
 interface LaborTeamManagerProps {
   members: Member[]
@@ -114,7 +115,7 @@ const LaborTeamManager: React.FC<LaborTeamManagerProps> = ({
       {Object.keys(teamsByProject).length > 0 ? (
         <div className="space-y-6">
           {Object.values(teamsByProject).map(projectGroup => (
-            <div key={projectGroup.projectId} className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <Card bordered={false} className="overflow-hidden">
               <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
                 <div className="flex items-center">
                   <Icon name="FolderKanban" size={18} className="mr-2" />
@@ -137,11 +138,11 @@ const LaborTeamManager: React.FC<LaborTeamManagerProps> = ({
                   ))}
                 </div>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+        <Card bordered={false} className="p-12 text-center">
           <div className="text-6xl mb-4"><Icon name="Building2" size={48} /></div>
           <h3 className="text-lg font-medium text-slate-800 mb-2">暂无班组</h3>
           <p className="text-slate-500 mb-6">请先添加项目，然后创建班组</p>
@@ -151,7 +152,7 @@ const LaborTeamManager: React.FC<LaborTeamManagerProps> = ({
           >
             添加班组
           </button>
-        </div>
+        </Card>
       )}
 
       {/* Team wage modal */}
