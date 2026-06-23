@@ -1,6 +1,7 @@
 import React from 'react'
 import { Settlement as SettlementData, Project, Partner } from '../../../types/electron'
 import { formatMoney } from '@/utils/format'
+import { COLORS } from './settlementColors'
 
 interface PrintContentProps {
   settlement: SettlementData
@@ -14,7 +15,7 @@ export const PrintContent: React.FC<PrintContentProps> = ({ settlement, projects
   <div className="print-content hidden print:block">
     <div className="print-header">
       <h1 style={{ fontSize: '24pt', fontWeight: 'bold', marginBottom: '10px' }}>{settlement.name}</h1>
-      <p style={{ fontSize: '12pt', color: '#666' }}>结算单号: {settlement.settlementNo}</p>
+      <p style={{ fontSize: '12pt', color: COLORS.secondaryText }}>结算单号: {settlement.settlementNo}</p>
     </div>
 
     <div style={{ marginBottom: '20px' }}>
