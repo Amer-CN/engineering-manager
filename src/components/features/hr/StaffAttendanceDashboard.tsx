@@ -7,6 +7,7 @@ import ButtonLoader from '../../ui/ButtonLoader'
 import Spinner from '../../ui/Spinner'
 import { STATUS_META } from '../../../constants/attendance'
 import type { Column } from '@/components/DataTable'
+import { Card } from '@/components/ui/Card'
 
 interface StaffAttendanceDashboardProps {
   loading: boolean
@@ -86,10 +87,10 @@ export function StaffAttendanceDashboard({
       </FilterBar>
 
       {filteredStaff.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm flex-1 py-12">
+        <Card bordered={false} className="flex-1 py-12">
           <EmptyState icon="Calendar" title="暂无符合条件的人员"
             description={staff.length === 0 ? '请先在人员档案中添加管理人员' : '请调整筛选条件'} />
-        </div>
+        </Card>
       ) : (
         <>
           <DataTable
