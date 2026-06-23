@@ -5,6 +5,7 @@ import type { Member, WorkerTeam, WorkerStatus } from '../types/electron'
 import { recognizeIdCard, OCRProvider, getOCRConfig } from '../services/ocr'
 import { useToastStore } from '@/store/toastStore'
 import { Icon } from './ui/Icon'
+import PageContainer from './ui/PageContainer'
 import Spinner from './ui/Spinner'
 
 // 导入拆分后的组件
@@ -301,7 +302,7 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
   }
 
   return (
-  <div className="p-6 max-w-[1400px] mx-auto relative">
+  <PageContainer className="relative">
   {/* Toast 提示 */}
   
   {/* 页面标题 */}
@@ -457,7 +458,7 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
   onDelete={handleDeleteMember as any}
   />
   )}
-  </div>
+  </PageContainer>
   )
 }
 
