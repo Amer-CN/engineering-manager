@@ -3,6 +3,7 @@ import { ContractStats } from '../types/electron'
 import { formatMoney } from '../utils/format'
 import { formatContractCurrency } from './features/contracts/formatContractCurrency'
 import { Icon } from './ui/Icon'
+import HeroBanner from './ui/HeroBanner'
 import { motion } from 'framer-motion'
 import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { SimpleBarChart } from './ui/SimpleBarChart'
@@ -71,37 +72,16 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
 
   return (
   <motion.div className="p-6 max-w-[1400px] mx-auto" initial="hidden" animate="visible" variants={staggerContainer}>
-  {/* Hero Banner */}
-  <motion.div variants={sectionVariant} className="relative bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 text-white p-6 rounded-2xl mb-8 overflow-hidden">
-  <div className="hero-overlay absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.1),transparent_50%)]" />
-  {/* 装饰光点 */}
-  <motion.div className="absolute top-3 right-12 w-1 h-1 rounded-full bg-emerald-400"
-  animate={{ opacity: [0, 1, 0], scale: [0.5, 2, 0.5] }}
-  transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 3 }}
+  <HeroBanner
+    icon="FileText"
+    title="合同看板"
+    subtitle="合同数据统计与收支分析"
+    metrics={[
+      { value: (stats?.incomeCount || 0) + (stats?.expenseCount || 0) + (stats?.agreementCount || 0), label: "合同总数" },
+      { value: `${isPositive ? "+" : "-"}¥${formatContractCurrency(Math.abs(netIncome))}`, label: "收支差额", color: isPositive ? "text-emerald-400" : "text-red-400" },
+    ]}
+    accentColor="emerald"
   />
-  <motion.div className="absolute bottom-4 right-24 w-1.5 h-1.5 rounded-full bg-blue-400"
-  animate={{ opacity: [0, 1, 0], scale: [0.5, 1.8, 0.5] }}
-  transition={{ duration: 3, repeat: Infinity, repeatDelay: 4, delay: 1 }}
-  />
-  <div className="relative z-10 flex items-center justify-between">
-  <div>
-  <h1 className="text-2xl font-bold">合同看板</h1>
-  <p className="text-slate-300 mt-1">合同数据统计与收支分析</p>
-  </div>
-  <div className="flex items-center gap-6">
-  <div className="text-right">
-  <p className="text-sm text-slate-400">合同总数</p>
-  <p className="text-2xl font-bold">{(stats?.incomeCount || 0) + (stats?.expenseCount || 0) + (stats?.agreementCount || 0)}</p>
-  </div>
-  <div className="text-right">
-  <p className="text-sm text-slate-400">收支差额</p>
-  <p className={`text-2xl font-bold ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
-  {isPositive ? '+' : '-'}¥{formatContractCurrency(Math.abs(netIncome))}
-  </p>
-  </div>
-  </div>
-  </div>
-  </motion.div>
 
   {/* 导航入口卡片：点击进入子页面 */}
   <motion.div variants={sectionVariant} className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
