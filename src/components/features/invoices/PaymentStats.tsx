@@ -6,6 +6,7 @@ import React from 'react'
 import { PaymentRecord, Invoice } from '@/types/electron'
 import { Icon } from '../../ui/Icon'
 import { formatMoney } from '@/utils/format'
+import { Card } from '@/components/ui/Card'
 
 interface PaymentStatsProps {
   records: PaymentRecord[]
@@ -32,7 +33,7 @@ export const PaymentStats: React.FC<PaymentStatsProps> = ({ records, filteredRec
 
   return (
   <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
-  <div className="bg-white rounded-xl shadow-sm p-4">
+  <Card bordered={false} className="p-4">
   <div className="flex items-center gap-3">
   <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center"><Icon name="Download" size={20} /></div>
   <div>
@@ -40,8 +41,8 @@ export const PaymentStats: React.FC<PaymentStatsProps> = ({ records, filteredRec
   <p className="text-lg font-bold text-blue-600">¥{formatMoney(stats.paymentInAmount)}</p>
   </div>
   </div>
-  </div>
-  <div className="bg-white rounded-xl shadow-sm p-4">
+  </Card>
+  <Card bordered={false} className="p-4">
   <div className="flex items-center gap-3">
   <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center"><Icon name="Upload" size={20} /></div>
   <div>
@@ -49,8 +50,8 @@ export const PaymentStats: React.FC<PaymentStatsProps> = ({ records, filteredRec
   <p className="text-lg font-bold text-red-600">¥{formatMoney(stats.paymentOutAmount)}</p>
   </div>
   </div>
-  </div>
-  <div className="bg-white rounded-xl shadow-sm p-4">
+  </Card>
+  <Card bordered={false} className="p-4">
   <div className="flex items-center gap-3">
   <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center"><Icon name="LayoutDashboard" size={20} /></div>
   <div>
@@ -63,8 +64,8 @@ export const PaymentStats: React.FC<PaymentStatsProps> = ({ records, filteredRec
   </p>
   </div>
   </div>
-  </div>
-  <div className="bg-white rounded-xl shadow-sm p-4">
+  </Card>
+  <Card bordered={false} className="p-4">
   <div className="flex items-center gap-3">
   <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center"><Icon name="AlertCircle" size={20} className="text-orange-600" /></div>
   <div>
@@ -72,8 +73,8 @@ export const PaymentStats: React.FC<PaymentStatsProps> = ({ records, filteredRec
   <p className={`text-lg font-bold ${stats.unpaidOut > 0 ? 'text-red-600' : 'text-slate-400'}`}>¥{formatMoney(stats.unpaidOut)}</p>
   </div>
   </div>
-  </div>
-  <div className="bg-white rounded-xl shadow-sm p-4">
+  </Card>
+  <Card bordered={false} className="p-4">
   <div className="flex items-center gap-3">
   <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center"><Icon name="AlertCircle" size={20} className="text-red-600" /></div>
   <div>
@@ -81,7 +82,7 @@ export const PaymentStats: React.FC<PaymentStatsProps> = ({ records, filteredRec
   <p className={`text-lg font-bold ${stats.unpaidIn > 0 ? 'text-red-600' : 'text-slate-400'}`}>¥{formatMoney(stats.unpaidIn)}</p>
   </div>
   </div>
-  </div>
+  </Card>
   </div>
   )
 }
