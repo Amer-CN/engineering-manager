@@ -1,16 +1,5 @@
 import { formatMoney } from '../../../utils/format'
 
-const COLORS = {
-  blue: '#3b82f6',
-  emerald: '#10b981',
-  orange: '#f97316',
-  violet: '#8b5cf6',
-  teal: '#06b6d4',
-  amber: '#f59e0b',
-} as const
-
-export const CHART_COLORS = [COLORS.blue, COLORS.emerald, COLORS.orange, COLORS.violet, COLORS.teal, COLORS.amber]
-
 export interface StatCardConfig {
   key: string
   label: string

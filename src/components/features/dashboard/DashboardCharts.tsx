@@ -8,7 +8,8 @@ import { Icon } from '@/components/ui/Icon'
 import { Card } from '@/components/ui/Card'
 import { SimpleBarChart } from '@/components/ui/SimpleBarChart'
 import { sectionVariant } from '@/constants/animations'
-import { CHART_COLORS, formatCurrency, invoiceStatusLabels } from './dashboardConstants'
+import { CHART_COLORS } from './dashboardColors'
+import { formatCurrency, invoiceStatusLabels } from './dashboardConstants'
 
 export interface ChartData {
   expenseByCategory: { name: string; amount: number; color?: string }[]
@@ -70,3 +71,4 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({ chartData }) => {
 }
 
 export default DashboardCharts
+
