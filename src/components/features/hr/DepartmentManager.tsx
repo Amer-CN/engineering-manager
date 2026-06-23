@@ -10,6 +10,7 @@ import { useConfirm } from '@/hooks/useConfirm'
 import { useDepartments } from '../../../hooks/useDepartments'
 import PositionEditor from './PositionEditor'
 import { getAPI } from '@/services/api-adapter'
+import { Card } from '@/components/ui/Card'
 
 interface DeptRow {
   id: number
@@ -116,9 +117,9 @@ const DepartmentManager: React.FC = () => {
       </FilterBar>
 
       {departments.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm flex-1 py-12">
+        <Card bordered={false} className="flex-1 py-12">
           <EmptyState icon="Building2" title="暂无部门" description="点击上方按钮创建第一个部门" />
-        </div>
+        </Card>
       ) : (
         <DataTable
           data={departments as DeptRow[]}
