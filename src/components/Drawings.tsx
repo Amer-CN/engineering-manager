@@ -4,6 +4,7 @@ import FilterBar from './ui/FilterBar'
 import Spinner from './ui/Spinner'
 import { Drawing, Project } from '../types/electron'
 import { Icon } from './ui/Icon'
+import PageContainer from './ui/PageContainer'
 import { EmptyState } from './ui/EmptyState'
 import { useToastStore } from '@/store/toastStore'
 import { useConfirm } from '@/hooks/useConfirm'
@@ -243,7 +244,7 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
   }
 
   return (
-  <div className="p-6 max-w-[1400px] mx-auto">
+  <PageContainer>
   {ConfirmDialog}
   {/* 页面标题 */}
   <div className="flex items-center justify-between mb-8">
@@ -352,7 +353,7 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
     setShowModal={setShowModal}
     resetForm={resetForm}
   />
-  </div>
+  </PageContainer>
   )
 }
 

@@ -14,6 +14,7 @@ import { ProjectList, ProjectForm, ProjectDetail, ProjectFilters, ProjectFormDat
 import { getAPI } from '@/services/api-adapter'
 import { motion } from 'framer-motion'
 import { Icon } from './ui/Icon'
+import PageContainer from './ui/PageContainer'
 import { ProjectsHeroBanner, CountUp, KPI_CARDS, CARD_HOVER } from './features/projects/ProjectsHeroBanner'
 
 const Projects: React.FC<{ refresh?: () => void }> = ({ refresh }) => {
@@ -133,7 +134,7 @@ const Projects: React.FC<{ refresh?: () => void }> = ({ refresh }) => {
   }
 
   return (
-    <div className="p-6 max-w-[1400px] mx-auto">
+    <PageContainer>
       {ConfirmDialog}
 
       {/* ① Hero 横幅 */}
@@ -216,7 +217,7 @@ const Projects: React.FC<{ refresh?: () => void }> = ({ refresh }) => {
         onEdit={handleEdit} onDelete={handleDelete} onAdd={handleCreate} alerts={alerts} />
 
       {showModal && <ProjectForm project={editingProject} members={members} onSubmit={handleSubmit} onCancel={() => { setShowModal(false); setEditingProject(null) }} />}
-    </div>
+    </PageContainer>
   )
 }
 
