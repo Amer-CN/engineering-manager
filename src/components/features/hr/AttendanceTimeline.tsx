@@ -7,6 +7,7 @@ import { computeAttendanceSummary } from '../../../constants/attendance'
 import type { AttendanceRecord } from '../../../types/electron'
 import AttendanceDetail from '../../AttendanceDetail'
 import { getAPI } from '@/services/api-adapter'
+import { Card } from '@/components/ui/Card'
 
 function getDaysInMonth(yearMonth: string): number {
   const [y, m] = yearMonth.split('-').map(Number)
@@ -148,7 +149,7 @@ const AttendanceTimeline: React.FC<Props> = ({ member, attendances, deptName, on
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="bg-white rounded-xl shadow-sm px-5 py-4">
+      <Card bordered={false} className="px-5 py-4">
         <button onClick={onBack} className="flex items-center gap-1.5 text-slate-500 hover:text-primary-600 mb-3 transition-colors">
           <Icon name="ArrowLeft" size={16} />
           <span className="text-sm">返回考勤列表</span>
@@ -161,16 +162,16 @@ const AttendanceTimeline: React.FC<Props> = ({ member, attendances, deptName, on
             {dur && <span className="text-primary-600 font-medium">{dur}</span>}
           </div>
         </div>
-      </div>
+      </Card>
 
       {grouped.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm py-12">
+        <Card bordered={false} className="py-12">
           <EmptyState icon="Calendar" title="暂无考勤记录" description="该员工还没有任何月份的考勤数据" />
-        </div>
+        </Card>
       ) : (
         <>
           {/* Year filter pills */}
-          <div className="bg-white rounded-xl shadow-sm px-5 py-3 flex items-center gap-2 flex-wrap">
+          <Card bordered={false} className="px-5 py-3 flex items-center gap-2 flex-wrap">
             <span className="text-xs text-slate-400 mr-1">年份</span>
             {['全部', ...allYears].map(y => (
               <button key={y} onClick={() => setYearFilter(y)}
@@ -178,14 +179,14 @@ const AttendanceTimeline: React.FC<Props> = ({ member, attendances, deptName, on
                 {y}
               </button>
             ))}
-          </div>
+          </Card>
 
           {/* Year groups */}
           {filteredYears.map(([year, records]) => {
             const s = yearSummary(records)
             const expanded = expandedYears.has(year)
             return (
-              <div key={year} className="bg-white rounded-xl shadow-sm overflow-hidden">
+              <Card bordered={false} className="overflow-hidden">
                 <button onClick={() => toggleYear(year)}
                   className="w-full px-5 py-3 flex items-center gap-3 hover:bg-slate-50 transition-colors text-left">
                   <Icon name={expanded ? 'ChevronDown' : 'ChevronRight'} size={16} className="text-slate-400" />
@@ -220,7 +221,7 @@ const AttendanceTimeline: React.FC<Props> = ({ member, attendances, deptName, on
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </div>
+              </Card>
             )
           })}
         </>
