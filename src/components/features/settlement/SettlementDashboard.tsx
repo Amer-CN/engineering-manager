@@ -3,6 +3,7 @@ import { Settlement as SettlementData, Project } from '../../../types/electron'
 import { SettlementProjectCard, type SettlementProjectSummary } from './SettlementProjectCard'
 import { EmptyState } from '../../ui/EmptyState'
 import { formatMoney } from '../../../utils/format'
+import { Card } from '@/components/ui/Card'
 
 interface SettlementDashboardProps {
   settlements: SettlementData[]
@@ -74,28 +75,28 @@ export default function SettlementDashboard({ settlements, projects, onProjectCl
     <div>
       {/* 统计卡片 */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-xl shadow-sm p-4">
+        <Card bordered={false} className="p-4">
           <p className="text-sm text-slate-500">结算项目</p>
           <p className="text-2xl font-bold text-slate-800">
             {activeProjects}<span className="text-base font-normal text-slate-400">/{totalProjects}</span>
           </p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
+        </Card>
+        <Card bordered={false} className="p-4">
           <p className="text-sm text-slate-500">待办结算</p>
           <p className={`text-2xl font-bold ${totalPending > 0 ? 'text-amber-600' : 'text-slate-800'}`}>
             {totalPending}
           </p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
+        </Card>
+        <Card bordered={false} className="p-4">
           <p className="text-sm text-slate-500">结算总笔数</p>
           <p className="text-2xl font-bold text-slate-800">
             {settlements.length}
           </p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
+        </Card>
+        <Card bordered={false} className="p-4">
           <p className="text-sm text-slate-500">结算总金额</p>
           <p className="text-2xl font-bold text-primary-600">¥{formatMoney(totalAmount)}</p>
-        </div>
+        </Card>
       </div>
 
       {/* 项目结算列表 */}
