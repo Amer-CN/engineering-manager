@@ -3,6 +3,7 @@ import { ContractStats } from '../types/electron'
 import { formatMoney } from '../utils/format'
 import { formatContractCurrency } from './features/contracts/formatContractCurrency'
 import { Icon } from './ui/Icon'
+import PageContainer from './ui/PageContainer'
 import HeroBanner from './ui/HeroBanner'
 import { motion } from 'framer-motion'
 import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
@@ -39,7 +40,7 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
 
   if (loading) {
   return (
-  <div className="p-6 max-w-[1400px] mx-auto">
+  <PageContainer>
   <div className="rounded-2xl bg-slate-100 animate-pulse h-32 mb-6" />
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
   {Array.from({ length: 4 }).map((_, i) => (
@@ -50,7 +51,7 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
   <div className="rounded-xl bg-slate-100 animate-pulse h-80" />
   <div className="rounded-xl bg-slate-100 animate-pulse h-80" />
   </div>
-  </div>
+  </PageContainer>
   )
   }
 
@@ -71,7 +72,8 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
   ].filter(d => d.value > 0)
 
   return (
-  <motion.div className="p-6 max-w-[1400px] mx-auto" initial="hidden" animate="visible" variants={staggerContainer}>
+  <motion.div initial="hidden" animate="visible" variants={staggerContainer}>
+  <PageContainer>
   <HeroBanner
     icon="FileText"
     title="合同看板"
@@ -310,6 +312,7 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
   <p className="text-slate-500">开始添加收入合同和支出合同来查看统计数据</p>
   </motion.div>
   )}
+  </PageContainer>
   </motion.div>
   )
 }
