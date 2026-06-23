@@ -5,6 +5,7 @@ import type { Member, WorkerTeam, WorkerStatus } from '../types/electron'
 import { recognizeIdCard, OCRProvider, getOCRConfig } from '../services/ocr'
 import { useToastStore } from '@/store/toastStore'
 import { Icon } from './ui/Icon'
+import { Card } from './ui/Card'
 import PageContainer from './ui/PageContainer'
 import Spinner from './ui/Spinner'
 
@@ -314,7 +315,7 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
   </div>
 
   {/* 主 Tab */}
-  <div className="bg-white rounded-xl shadow-sm mb-6">
+  <Card bordered={false} className="mb-6">
   <div className="flex border-b border-slate-200">
   <button
   onClick={() => setActiveTab('staff')}
@@ -337,7 +338,7 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
   <Icon name="HardHat" size={16} /> 农民工 ({workerMembers.length})
   </button>
   </div>
-  </div>
+  </Card>
 
   {/* 管理人员 Tab */}
   {activeTab === 'staff' && (
