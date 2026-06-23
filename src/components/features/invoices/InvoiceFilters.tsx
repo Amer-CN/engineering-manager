@@ -5,6 +5,7 @@
 import React from 'react'
 import { InvoiceType, InvoiceStatus, Project, Partner } from '@/types/electron'
 import { Icon } from '../../ui/Icon'
+import { Card } from '@/components/ui/Card'
 
 interface InvoiceFiltersProps {
   filterType: InvoiceType | ''
@@ -67,7 +68,7 @@ export const InvoiceFilters: React.FC<InvoiceFiltersProps> = ({
   const hasFilter = isPaymentFilter ? hasPaymentFilter : hasActiveFilter
 
   return (
-  <div className="bg-white rounded-xl shadow-sm p-3 mb-2">
+  <Card bordered={false} className="p-3 mb-2">
   <div className="flex items-center flex-wrap gap-x-6 gap-y-3">
   {/* 根据模式显示不同的筛选条件 */}
   {isPaymentFilter ? (
@@ -203,7 +204,7 @@ export const InvoiceFilters: React.FC<InvoiceFiltersProps> = ({
   </button>
   </div>
   </div>
-  </div>
+  </Card>
   )
 }
 
