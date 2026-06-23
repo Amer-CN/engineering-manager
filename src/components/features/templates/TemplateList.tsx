@@ -2,6 +2,7 @@ import { Template, TemplateCategory } from '../../../types/electron'
 import { categoryConfig } from './config'
 import { TemplateCard } from './TemplateCard'
 import { Icon } from '../../ui/Icon'
+import { Card } from '@/components/ui/Card'
 
 interface TemplateListProps {
   category: TemplateCategory
@@ -42,18 +43,18 @@ export default function TemplateList({
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-xl shadow-sm p-3">
+        <Card bordered={false} className="p-3">
           <p className="text-xs text-slate-400">模板总数</p>
           <p className="text-lg font-bold text-slate-800">{templates.length}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-3">
+        </Card>
+        <Card bordered={false} className="p-3">
           <p className="text-xs text-slate-400">Word 文档</p>
           <p className="text-lg font-bold text-blue-600">{docxCount}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-3">
+        </Card>
+        <Card bordered={false} className="p-3">
           <p className="text-xs text-slate-400">Excel 表格</p>
           <p className="text-lg font-bold text-emerald-600">{xlsxCount}</p>
-        </div>
+        </Card>
       </div>
 
       {/* Template cards */}
