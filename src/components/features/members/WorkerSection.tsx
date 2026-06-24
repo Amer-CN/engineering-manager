@@ -2,6 +2,7 @@
 // @deprecated 此组件已废弃，工人管理模块已改用 LaborWorkerList + LaborTeamManager
 
 import { useMaskedFn } from "@/hooks/useMaskedValue";
+import type { ProjectWorker } from '@/types'
 import { useState, useMemo } from 'react'
 import { type Column } from '@/components/DataTable'
 import Spinner from '../../ui/Spinner'
@@ -86,13 +87,13 @@ export function WorkerSection({
       return <span className={`text-sm font-medium ${isOverage ? 'text-red-600' : 'text-slate-600'}`}>{age !== null ? age : '-'}</span>
     }},
     { key: 'gender', title: '性别', render: (item) => <span className="text-slate-600">{item.gender || '-'}</span> },
-    { key: 'workerType', title: '工种', render: (item) => <span className="text-slate-600">{item.workerType ? getWorkerTypeLabel(item.workerType as any) : '-'}</span> },
+    { key: 'workerType', title: '工种', render: (item) => <span className="text-slate-600">{item.workerType ? getWorkerTypeLabel(item.workerType as WorkerType) : '-'}</span> },
     { key: 'dailyWage', title: '日工资', align: 'right', render: (item) => <span className="text-slate-700 font-medium">{item.dailyWage ? `¥${item.dailyWage}` : '-'}</span> },
-    { key: 'bankAccount', title: '银行卡号', render: (item) => <span className="text-slate-500 font-mono text-xs">{masked('bankAccount', (item as any).bankAccount) || '-'}</span> },
+    { key: 'bankAccount', title: '银行卡号', render: (item) => <span className="text-slate-500 font-mono text-xs">{masked('bankAccount', item.bankAccount) || '-'}</span> },
     { key: 'actions', title: '操作', align: 'right', render: (item) => (
       <div className="flex items-center justify-end gap-1">
         <Button onClick={() => onEditWorker(item)}  variant="ghost" size="sm" className="text-blue-600">编辑</Button>
-        <Button onClick={() => onDeleteWorker((item as any).workerId)}  variant="danger" size="sm">删除</Button>
+        <Button onClick={() => onDeleteWorker((item as ProjectWorker).workerId)}  variant="danger" size="sm">删除</Button>
       </div>
     )},
   ]

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { getAPI } from '@/services/api-adapter'
 
 /** 检测是否在 Tauri 环境 */
-const isTauri = typeof window !== 'undefined' && ((window as any).__TAURI__ !== undefined || (window as any).__TAURI_INTERNALS__ !== undefined)
+const isTauri = typeof window !== 'undefined' && ((window as unknown as Record<string, unknown>).__TAURI__ !== undefined || (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ !== undefined)
 
 export function useDataPath(refresh?: () => void) {
   const [dataPath, setDataPath] = useState('')
@@ -44,7 +44,7 @@ export function useDataPath(refresh?: () => void) {
       const result = await api.setDataPath(selectedPath || '__select_folder__')
 
       // 检查是否取消了选择
-      if (result.success && (result as any).cancelled) {
+      if (result.success && (result as { cancelled?: boolean }).cancelled) {
         return
       }
 

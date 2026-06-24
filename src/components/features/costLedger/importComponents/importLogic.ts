@@ -16,8 +16,8 @@ interface ParsedRow {
 /** 构造批量导入的 entries */
 export function buildImportEntries(rows: ParsedRow[]) {
   return rows.map(r => {
-    const dir = (r as any)._matchedDir as 'expense' | 'income'
-    const code = (r as any)._matchedCode as string
+    const dir = (r as { _matchedDir?: string })._matchedDir as 'expense' | 'income'
+    const code = (r as { _matchedCode?: string })._matchedCode as string
     const amount = dir === 'expense'
       ? (r.expenseAmount > 0 ? r.expenseAmount : r.incomeAmount)
       : (r.incomeAmount > 0 ? r.incomeAmount : r.expenseAmount)
@@ -45,7 +45,7 @@ export async function learnFromOverrides(
 
   const rows = parseAllRows()
   const changedRows = rows.filter(
-    r => !r.skip && (r as any)._originalCode && (r as any)._originalCode !== (r as any)._matchedCode
+    r => !r.skip && (r as { _originalCode?: string })._originalCode && (r as { _originalCode?: string })._originalCode !== (r as { _matchedCode?: string })._matchedCode
   )
   if (changedRows.length === 0) return { count: 0 }
 
@@ -53,8 +53,8 @@ export async function learnFromOverrides(
   const newRules: Map<string, CostLedgerMatchRule> = new Map()
 
   changedRows.forEach(r => {
-    const code = (r as any)._matchedCode as string
-    const dir = (r as any)._matchedDir as 'expense' | 'income'
+    const code = (r as { _matchedCode?: string })._matchedCode as string
+    const dir = (r as { _matchedDir?: string })._matchedDir as 'expense' | 'income'
     const text = r.summary + ' ' + r.notes + ' ' + r.counterparty
     const parts = text.split(/[：:：（）()／\/,，、\s]+|(?<=\D)(?=\d)|(?<=\d)(?=\D)/)
     parts.forEach(p => {

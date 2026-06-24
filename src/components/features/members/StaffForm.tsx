@@ -4,7 +4,7 @@ import { Icon } from '../../ui/Icon'
 import { Input } from '../../ui/Input/Input'
 import { staffRoles, calculateAge, type StaffFormData } from './memberFormTypes'
 import { IdCardUploadArea, FileUploadArea as _FileUploadArea } from './FormUploadWidgets'
-const FileUploadArea = _FileUploadArea as any
+const FileUploadArea = _FileUploadArea as any;
 
 interface StaffFormProps {
   formData: StaffFormData
@@ -73,9 +73,9 @@ export default function StaffForm({ formData, setFormData, editingMember, dragOv
       <div className="mb-6">
         <label className="block text-sm font-medium text-slate-700 mb-1">劳动合同</label>
         <FileUploadArea file={formData.contractFile} fileType={formData.contractFileType} field="contractFile"
-          dragOverField={dragOverField} onDragOver={onDragOver as any} onDragLeave={onDragLeave as any} onDrop={onDrop as any}
-          onFileChange={onFileChange as any} onDelete={(() => onDeleteFile('contractFile', setFormData)) as any}
-          inputRef={refs.contractInputRef as any} onInputChange={((e: any) => onFileChange(e as any, 'contractFile', setFormData, false, refs.contractInputRef)) as any} />
+          dragOverField={dragOverField} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
+          onFileChange={onFileChange} onDelete={(() => onDeleteFile("contractFile", setFormData))}
+          inputRef={refs.contractInputRef} onInputChange={((e: React.ChangeEvent<HTMLInputElement>) => onFileChange(e, 'contractFile', setFormData, false, refs.contractInputRef))} />
       </div>
 
       <div className="mb-6 p-4 bg-blue-50 rounded-lg">
@@ -89,7 +89,7 @@ export default function StaffForm({ formData, setFormData, editingMember, dragOv
             ['公积金（个人）', 'housingFundPersonal'],
             ['其他补贴', 'otherAllowances'],
           ].map(([fieldLabel, key]) => (
-            <Input key={key} label={fieldLabel} size="sm" type="number" value={(formData as any)[key] ?? ''}
+            <Input key={key} label={fieldLabel} size="sm" type="number" value={(formData as unknown as Record<string, string | number>)[key] ?? ''}
               onChange={e => setFormData(prev => ({ ...prev, [key]: e.target.value ? Number(e.target.value) : undefined }))}
               placeholder="0.00" />
           ))}

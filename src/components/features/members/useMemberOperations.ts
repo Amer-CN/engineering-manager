@@ -80,7 +80,7 @@ export function useMemberOperations({
       } else {
         // Create Worker in global pool, then ProjectWorker
         try {
-          const d = data as any
+          const d = data as unknown as Record<string, unknown>
           const api = await getAPI()
           const workerRes = await api.createWorker({
             name: data.name,
@@ -135,14 +135,14 @@ export function useMemberOperations({
         }
         if (hasRestore) submitFileData = restored
       }
-      const processed = await processFileFields(submitFileData as any, [
+      const processed = await processFileFields(submitFileData as Parameters<typeof processFileFields>[0], [
         { field: 'idCardFront', ...FILE_CATEGORIES.MEMBER_ID_CARD, getFileName: () => `${data.name || '工人'}_身份证人像${guessFileExt(data.idCardFront)}` },
         { field: 'idCardBack', ...FILE_CATEGORIES.MEMBER_ID_CARD, getFileName: () => `${data.name || '工人'}_身份证国徽${guessFileExt(data.idCardBack)}` },
-        { field: 'safetyTrainingFile', ...FILE_CATEGORIES.MEMBER_TRAINING, getFileName: () => `${data.name || '工人'}_安全培训${guessFileExt((data as any).safetyTrainingFile)}` },
-        { field: 'healthReportFile', ...FILE_CATEGORIES.MEMBER_HEALTH, getFileName: () => `${data.name || '工人'}_体检报告${guessFileExt((data as any).healthReportFile)}` },
-        { field: 'specialCertificateFile', ...FILE_CATEGORIES.MEMBER_CERTIFICATE, getFileName: () => `${data.name || '工人'}_特种证${guessFileExt((data as any).specialCertificateFile)}` },
+        { field: 'safetyTrainingFile', ...FILE_CATEGORIES.MEMBER_TRAINING, getFileName: () => `${data.name || '工人'}_安全培训${guessFileExt(String((data as unknown as Record<string, unknown>).safetyTrainingFile))}` },
+        { field: 'healthReportFile', ...FILE_CATEGORIES.MEMBER_HEALTH, getFileName: () => `${data.name || '工人'}_体检报告${guessFileExt(String((data as unknown as Record<string, unknown>).healthReportFile))}` },
+        { field: 'specialCertificateFile', ...FILE_CATEGORIES.MEMBER_CERTIFICATE, getFileName: () => `${data.name || '工人'}_特种证${guessFileExt(String((data as unknown as Record<string, unknown>).specialCertificateFile))}` },
       ], null)
-      const d = data as any
+      const d = data as unknown as Record<string, unknown>
       const submitData = {
         ...processed,
         name: data.name,

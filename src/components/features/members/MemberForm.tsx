@@ -80,10 +80,10 @@ export function MemberForm({
             if (typeof val === 'string' && val && !val.startsWith('data:')) {
               try {
                 const url = await readUploadedFile(cfg.category, cfg.subCategory, val as string, null)
-                if (url) (formData as any)[key] = url
-                else (formData as any)[key] = ''
+                if (url) (formData as unknown as Record<string, unknown>)[key] = url
+                else (formData as unknown as Record<string, unknown>)[key] = ''
               } catch {
-                (formData as any)[key] = ''
+                (formData as unknown as Record<string, unknown>)[key] = ''
               }
             }
           }
@@ -104,10 +104,10 @@ export function MemberForm({
             if (typeof val === 'string' && val && !val.startsWith('data:')) {
               try {
                 const url = await readUploadedFile(cfg.category, cfg.subCategory, val as string, workerProjName)
-                if (url) (formData as any)[key] = url
-                else (formData as any)[key] = ''
+                if (url) (formData as unknown as Record<string, unknown>)[key] = url
+                else (formData as unknown as Record<string, unknown>)[key] = ''
               } catch {
-                (formData as any)[key] = ''
+                (formData as unknown as Record<string, unknown>)[key] = ''
               }
             }
           }

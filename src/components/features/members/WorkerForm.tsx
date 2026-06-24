@@ -5,8 +5,8 @@ import { Icon } from '../../ui/Icon'
 import { calculateAge, inferGenderFromIdCard, type WorkerFormData } from './memberFormTypes'
 import { IdCardUploadArea, FileUploadArea as _FileUploadArea, SmallFileUpload as _SmallFileUpload } from './FormUploadWidgets'
 import { useBankCardOCR } from '@/hooks/useBankCardOCR'
-const FileUploadArea = _FileUploadArea as any
-const SmallFileUpload = _SmallFileUpload as any
+const FileUploadArea = _FileUploadArea as any;
+const SmallFileUpload = _SmallFileUpload as any;
 
 interface WorkerFormProps {
   formData: WorkerFormData
@@ -102,12 +102,12 @@ export default function WorkerForm({ formData, setFormData, projects, workerTeam
         <div className="grid grid-cols-2 gap-4 mt-4">
           <IdCardUploadArea label={ocrLoading ? '人像面 - 识别中..' : '人像面 - 支持拖拽/粘贴上传'} image={formData.idCardFront} field="idCardFront"
             dragOverField={dragOverField} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
-            onFileChange={onFileChange as any} onDelete={() => onDeleteFile('idCardFront', setFormData)}
-            inputRef={refs.frontInputRef} onInputChange={e => (onFileChange as any)(e, 'idCardFront', setFormData, true, refs.frontInputRef)} />
+            onFileChange={onFileChange} onDelete={() => onDeleteFile('idCardFront', setFormData)}
+            inputRef={refs.frontInputRef} onInputChange={e => onFileChange(e, 'idCardFront', setFormData, true, refs.frontInputRef)} />
           <IdCardUploadArea label="国徽面" image={formData.idCardBack} field="idCardBack"
             dragOverField={dragOverField} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
-            onFileChange={onFileChange as any} onDelete={() => onDeleteFile('idCardBack', setFormData)}
-            inputRef={refs.backInputRef} onInputChange={e => (onFileChange as any)(e, 'idCardBack', setFormData, true, refs.backInputRef)} />
+            onFileChange={onFileChange} onDelete={() => onDeleteFile('idCardBack', setFormData)}
+            inputRef={refs.backInputRef} onInputChange={e => onFileChange(e, 'idCardBack', setFormData, true, refs.backInputRef)} />
         </div>
         <div className="grid grid-cols-4 gap-4 mt-4">
           <div><label className="block text-xs text-slate-600 mb-1">性别</label>
@@ -130,8 +130,8 @@ export default function WorkerForm({ formData, setFormData, projects, workerTeam
         <label className="block text-sm font-medium text-slate-700 mb-1">劳动合同</label>
         <FileUploadArea file={formData.contractFile} fileType={formData.contractFileType} field="contractFile"
           dragOverField={dragOverField} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
-          onFileChange={onFileChange as any} onDelete={() => onDeleteFile('contractFile', setFormData as any)}
-          inputRef={refs.contractInputRef} onInputChange={((e: any) => (onFileChange as any)(e, 'contractFile', setFormData, false, refs.contractInputRef))} />
+          onFileChange={onFileChange} onDelete={() => onDeleteFile('contractFile', setFormData)}
+          inputRef={refs.contractInputRef} onInputChange={((e: any) => onFileChange(e, 'contractFile', setFormData, false, refs.contractInputRef))} />
       </div>
 
       <div className="grid grid-cols-2 gap-4 mb-4">
@@ -194,16 +194,16 @@ export default function WorkerForm({ formData, setFormData, projects, workerTeam
       <div className="grid grid-cols-3 gap-4 mb-6">
         <SmallFileUpload label="安全培训记录" file={formData.safetyTrainingFile} field="safetyTrainingFile"
           dragOverField={dragOverField} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
-          onFileChange={onFileChange as any} onDelete={() => onDeleteFile('safetyTrainingFile', setFormData)}
-          inputRef={refs.safetyInputRef} onInputChange={((e: any) => (onFileChange as any)(e, 'safetyTrainingFile', setFormData, false, refs.safetyInputRef))} />
+          onFileChange={onFileChange} onDelete={() => onDeleteFile('safetyTrainingFile', setFormData)}
+          inputRef={refs.safetyInputRef} onInputChange={((e: any) => onFileChange(e, 'safetyTrainingFile', setFormData, false, refs.safetyInputRef))} />
         <SmallFileUpload label="健康报告" file={formData.healthReportFile} field="healthReportFile"
           dragOverField={dragOverField} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
-          onFileChange={onFileChange as any} onDelete={() => onDeleteFile('healthReportFile', setFormData)}
-          inputRef={refs.healthInputRef} onInputChange={((e: any) => (onFileChange as any)(e, 'healthReportFile', setFormData, false, refs.healthInputRef))} />
+          onFileChange={onFileChange} onDelete={() => onDeleteFile('healthReportFile', setFormData)}
+          inputRef={refs.healthInputRef} onInputChange={((e: any) => onFileChange(e, 'healthReportFile', setFormData, false, refs.healthInputRef))} />
         <SmallFileUpload label="特种作业证" file={formData.specialCertificateFile} field="specialCertificateFile"
           dragOverField={dragOverField} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
-          onFileChange={onFileChange as any} onDelete={() => onDeleteFile('specialCertificateFile', setFormData)}
-          inputRef={refs.certInputRef} onInputChange={((e: any) => (onFileChange as any)(e, 'specialCertificateFile', setFormData, false, refs.certInputRef))} />
+          onFileChange={onFileChange} onDelete={() => onDeleteFile('specialCertificateFile', setFormData)}
+          inputRef={refs.certInputRef} onInputChange={((e: any) => onFileChange(e, 'specialCertificateFile', setFormData, false, refs.certInputRef))} />
       </div>
     </>
   )

@@ -199,7 +199,7 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
         <MemberDetail
           member={selectedMember}
           onClose={() => { setShowDetailModal(false); setSelectedMember(null) }}
-          onEdit={(selectedMember.memberType === 'worker' ? handleEditWorker : handleEditStaff) as any}
+          onEdit={(selectedMember.memberType === "worker" ? handleEditWorker : handleEditStaff) as any}
           onDelete={handleDeleteMember as any}
         />
       )}
