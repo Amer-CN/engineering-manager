@@ -1,6 +1,6 @@
 {
   "name": "installer",
-  "version": "0.78.1",
+  "version": "0.78.2",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -24,3 +24,4 @@
     "vite": "^8.0.16"
   }
 }
+
