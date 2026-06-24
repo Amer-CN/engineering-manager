@@ -144,7 +144,7 @@ export const MemberCard = React.memo(function MemberCard({
   <Button
   onClick={() => onDelete(member.id)}
   
-   variant="danger" size="sm" className="btn">
+   variant="danger" size="sm">
   删除
   </Button>
   </>
@@ -188,7 +188,7 @@ export const MemberCard = React.memo(function MemberCard({
   <Button
   onClick={() => onDelete(member.id)}
   
-   variant="danger" size="sm" className="btn">
+   variant="danger" size="sm">
   删除
   </Button>
   </>
@@ -211,7 +211,7 @@ export const MemberCard = React.memo(function MemberCard({
   <Button
   onClick={() => onDelete(member.id)}
   
-   variant="danger" size="sm" className="btn">
+   variant="danger" size="sm">
   删除
   </Button>
   </>

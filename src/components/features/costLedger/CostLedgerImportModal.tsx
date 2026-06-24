@@ -224,12 +224,12 @@ export function CostLedgerImportModal({
 
   {/* Footer */}
   <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-end gap-3 shrink-0">
-  {step === 'file' && <Button onClick={onClose}  variant="ghost" size="sm" className="btn">取消</Button>}
+  {step === 'file' && <Button onClick={onClose}  variant="ghost" size="sm">取消</Button>}
   {step === 'mapping' && (
   <>
-  <Button onClick={() => setStep('file')}  variant="ghost" size="sm" className="btn">重新选择文件</Button>
+  <Button onClick={() => setStep('file')}  variant="ghost" size="sm">重新选择文件</Button>
   <Button onClick={executeImport} disabled={previewRows.validCount === 0}
-   variant="primary" className="btn disabled:opacity-50 disabled:cursor-not-allowed">
+   variant="primary" className="disabled:opacity-50 disabled:cursor-not-allowed">
   导入 {previewRows.validCount} 条数据
   </Button>
   </>
@@ -237,7 +237,7 @@ export function CostLedgerImportModal({
   {step === 'importing' && <p className="text-sm text-slate-400">请稍候……</p>}
   {step === 'done' && (
   <Button onClick={() => { onClose(); onImported() }}
-   variant="primary" className="btn text-sm">
+   variant="primary" className="text-sm">
   完成
   </Button>
   )}

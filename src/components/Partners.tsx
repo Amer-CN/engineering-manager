@@ -116,7 +116,7 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
             }
           }}
           
-         variant="primary" size="sm" className="btn">
+         variant="primary" size="sm">
           <Icon name="Plus" size={14} /> 添加{activeTab === 'partner' ? '合作单位' : '监管单位'}
         </Button>
       </div>

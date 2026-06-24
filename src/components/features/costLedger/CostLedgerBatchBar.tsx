@@ -87,13 +87,13 @@ export function CostLedgerBatchBar({ batches, currentBatchId, onChangeBatch, onC
   placeholder="版本名称"
   className="w-36 px-2 py-1 border border-slate-300 rounded-lg text-sm"
   />
-  <Button onClick={handleCreate}  variant="primary" className="btn px-2 py-1 text-xs">确定</Button>
-  <Button onClick={() => { setShowNewInput(false); setNewName('') }}  variant="secondary" size="sm" className="btn">取消</Button>
+  <Button onClick={handleCreate}  variant="primary" className="px-2 py-1 text-xs">确定</Button>
+  <Button onClick={() => { setShowNewInput(false); setNewName('') }}  variant="secondary" size="sm">取消</Button>
   </div>
   ) : (
   <Button onClick={() => setShowNewInput(true)}
   
-   variant="secondary" size="sm" className="btn">+ 新建版本</Button>
+   variant="secondary" size="sm">+ 新建版本</Button>
   )}
 
   {/* Import & Compare */}
@@ -124,14 +124,14 @@ export function CostLedgerBatchBar({ batches, currentBatchId, onChangeBatch, onC
   <Button onClick={async () => {
   const ok = await onDeleteBatch(currentBatchId)
   if (ok) { onChangeBatch(0); setConfirmDelete(null) }
-  }}  variant="danger" size="sm" className="btn">确认删除</Button>
-  <Button onClick={() => setConfirmDelete(null)}  variant="secondary" size="sm" className="btn">取消</Button>
+  }}  variant="danger" size="sm">确认删除</Button>
+  <Button onClick={() => setConfirmDelete(null)}  variant="secondary" size="sm">取消</Button>
   </div>
   ) : (
   <Tooltip content="删除此版本及数据" position="top" delay={300}>
   <Button onClick={() => setConfirmDelete(currentBatchId)}
   
-   variant="ghost" size="sm" className="btn text-red-500 hover:text-red-700">
+   variant="ghost" size="sm" className="text-red-500 hover:text-red-700">
   <svg className="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
   </Button>
   </Tooltip>

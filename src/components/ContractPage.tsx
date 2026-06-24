@@ -187,7 +187,7 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
       <div className="flex items-center gap-4 mb-6">
         {onBack && (
           <Button onClick={onBack}
-             variant="ghost" size="sm" className="btn flex items-center gap-1.5">
+             variant="ghost" size="sm" className="flex items-center gap-1.5">
             <Icon name="ArrowLeft" size={16} />
             <span>返回看板</span>
           </Button>
@@ -240,12 +240,12 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
         <div className="flex items-center gap-3">
           {can('contracts:export') && (
             <Button onClick={handleExport}
-               variant="secondary" className="btn flex items-center gap-2">
+               variant="secondary" className="flex items-center gap-2">
               <Icon name="Download" size={16} /> 导出
             </Button>
           )}
           <Button onClick={() => { setEditingContract(null); setShowModal(true) }}
-             variant="primary" className="btn px-5 py-2 flex items-center">
+             variant="primary" className="px-5 py-2 flex items-center">
             <span className="text-lg mr-1">+</span>新增合同
           </Button>
         </div>

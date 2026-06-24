@@ -69,7 +69,7 @@ export function CostLedgerCompareModal({ show, projectId, batches, categories, o
           </select>
         </div>
         <Button onClick={loadCompare} disabled={aId === bId}
-           variant="primary" className="btn text-sm ml-4 disabled:opacity-40">
+           variant="primary" className="text-sm ml-4 disabled:opacity-40">
           {loading ? '加载中...' : '查看对比'}
         </Button>
       </div>

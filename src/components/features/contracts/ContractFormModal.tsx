@@ -117,7 +117,7 @@ export const ContractFormModal: React.FC<Props> = ({ show, type, editingContract
         <div className="flex items-center gap-2">
           <span>{isEditing ? '编辑合同' : config.modalCreateTitle}</span>
           {!isEditing && (
-            <Button type="button" onClick={onShowTemplateSelector}  variant="ghost" size="sm" className="btn text-primary-600">
+            <Button type="button" onClick={onShowTemplateSelector}  variant="ghost" size="sm" className="text-primary-600">
               <Icon name="FileText" size={14} /> 从模板生成
             </Button>
           )}
@@ -127,8 +127,8 @@ export const ContractFormModal: React.FC<Props> = ({ show, type, editingContract
       size="xl"
       footer={
         <>
-          <Button type="button" onClick={onClose}  variant="secondary" className="btn">取消</Button>
-          <Button type="button" onClick={handleSubmit}  variant="primary" className="btn">{isEditing ? '保存' : '添加'}</Button>
+          <Button type="button" onClick={onClose}  variant="secondary">取消</Button>
+          <Button type="button" onClick={handleSubmit}  variant="primary">{isEditing ? '保存' : '添加'}</Button>
         </>
       }>
       <form onSubmit={handleSubmit}>

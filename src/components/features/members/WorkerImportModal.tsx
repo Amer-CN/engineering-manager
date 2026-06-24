@@ -80,8 +80,8 @@ export function WorkerImportModal({
             <>
               <span className="text-sm text-slate-500">将导入 {importState.allRows.length} 人</span>
               <div className="flex items-center gap-3">
-                <Button onClick={onClose}  variant="secondary" className="btn">取消</Button>
-                <Button onClick={onExecuteImport}  variant="primary" className="btn">确认导入</Button>
+                <Button onClick={onClose}  variant="secondary">取消</Button>
+                <Button onClick={onExecuteImport}  variant="primary">确认导入</Button>
               </div>
             </>
           )}
@@ -93,7 +93,7 @@ export function WorkerImportModal({
               <div>
                 {!showPresetInput ? (
                   <Button onClick={() => setShowPresetInput(true)}
-                     variant="ghost" size="sm" className="btn text-primary-600">
+                     variant="ghost" size="sm" className="text-primary-600">
                     保存此映射为预设
                   </Button>
                 ) : (
@@ -113,13 +113,13 @@ export function WorkerImportModal({
                         }
                       }}
                       
-                     variant="primary" className="btn text-sm">保存</Button>
+                     variant="primary" className="text-sm">保存</Button>
                     <button onClick={() => setShowPresetInput(false)}
                       className="px-3 py-1.5 text-slate-500 hover:text-slate-700 text-sm">取消</button>
                   </div>
                 )}
               </div>
-              <Button onClick={onClose}  variant="secondary" className="btn">关闭</Button>
+              <Button onClick={onClose}  variant="secondary">关闭</Button>
             </>
           )}
         </div>

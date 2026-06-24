@@ -37,7 +37,7 @@ export default function TemplateList({
           <h1 className="text-xl font-bold text-slate-800">{config.label}</h1>
           <p className="text-sm text-slate-500">{config.description}</p>
         </div>
-        <Button onClick={onCreate}  variant="primary" className="btn">
+        <Button onClick={onCreate}  variant="primary">
           <Icon name="Plus" size={16} /> 新建模板
         </Button>
       </div>
@@ -64,7 +64,7 @@ export default function TemplateList({
           <Icon name="FileText" size={48} className="mx-auto mb-3 text-slate-300" />
           <p className="text-lg">此分类暂无模板</p>
           <p className="text-sm mt-1">点击「新建模板」上传 .docx 或 .xlsx 文件</p>
-          <Button onClick={onCreate}  variant="primary" className="btn mt-4 text-sm">创建第一个模板</Button>
+          <Button onClick={onCreate}  variant="primary" className="mt-4 text-sm">创建第一个模板</Button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

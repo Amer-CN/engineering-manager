@@ -58,23 +58,23 @@ export const TemplateCard = React.memo(function TemplateCard({ template, onEdit,
       {/* Actions */}
       <div className="flex items-center gap-1 pt-3 border-t border-slate-100">
         <Tooltip content="预览" position="top" delay={300}>
-          <Button onClick={() => onPreview(template)}  variant="secondary" size="sm" className="btn">
+          <Button onClick={() => onPreview(template)}  variant="secondary" size="sm">
             <Icon name="Eye" size={14} /> 预览
           </Button>
         </Tooltip>
         <Tooltip content="生成文档" position="top" delay={300}>
-          <Button onClick={() => onGenerate(template)}  variant="ghost" size="sm" className="btn text-primary-600">
+          <Button onClick={() => onGenerate(template)}  variant="ghost" size="sm" className="text-primary-600">
             <Icon name="FileText" size={14} /> 生成
           </Button>
         </Tooltip>
         <div className="flex-1" />
         <Tooltip content="编辑" position="top" delay={300}>
-          <Button onClick={() => onEdit(template)}  variant="ghost" size="sm" className="btn text-slate-500">
+          <Button onClick={() => onEdit(template)}  variant="ghost" size="sm" className="text-slate-500">
             <Icon name="Edit3" size={14} />
           </Button>
         </Tooltip>
         <Tooltip content="删除" position="top" delay={300}>
-          <Button onClick={() => { if (confirm('确定删除此模板？')) onDelete(template.id) }}  variant="danger" size="sm" className="btn">
+          <Button onClick={() => { if (confirm('确定删除此模板？')) onDelete(template.id) }}  variant="danger" size="sm">
             <Icon name="Trash2" size={14} />
           </Button>
         </Tooltip>

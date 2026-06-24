@@ -158,13 +158,13 @@ export default function WageRecordsTab({
           <span className="text-sm text-slate-400">{filtered.length} 条记录</span>
           {changedCount > 0 && (
             <Button onClick={onSavePayments}
-               variant="success" size="sm" className="btn">
+               variant="success" size="sm">
               保存发放 ({changedCount})
             </Button>
           )}
           {selectedIds.size > 0 && (
             <Button onClick={onBatchDelete}
-               variant="danger" size="sm" className="btn">
+               variant="danger" size="sm">
               删除选中 ({selectedIds.size})
             </Button>
           )}
@@ -177,7 +177,7 @@ export default function WageRecordsTab({
         <div className="flex gap-2">
           <Button onClick={onBatchArchive}
             
-           variant="warning" size="sm" className="btn flex items-center gap-1">
+           variant="warning" size="sm" className="flex items-center gap-1">
             <Icon name="Lock" size={14} />
             归档
           </Button>
@@ -185,7 +185,7 @@ export default function WageRecordsTab({
             onClick={() => fileInputRef.current?.click()}
             disabled={receiptParsing}
             
-           variant="primary" size="sm" className="btn flex items-center gap-1">
+           variant="primary" size="sm" className="flex items-center gap-1">
             <Icon name="Upload" size={14} />
             {receiptParsing ? '解析中...' : '上传银行回单'}
           </Button>

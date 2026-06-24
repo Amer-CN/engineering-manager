@@ -228,8 +228,8 @@ export default function TemplateForm({ template, onSubmit, onCancel }: TemplateF
 
       {/* Actions */}
       <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100">
-        <Button type="button" onClick={onCancel}  variant="ghost" className="btn text-sm">取消</Button>
-        <Button type="submit"  variant="primary" className="btn text-sm">
+        <Button type="button" onClick={onCancel}  variant="ghost" className="text-sm">取消</Button>
+        <Button type="submit"  variant="primary" className="text-sm">
           {template ? '保存修改' : '创建模板'}
         </Button>
       </div>

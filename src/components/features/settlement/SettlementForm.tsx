@@ -224,8 +224,8 @@ export const SettlementForm: React.FC<SettlementFormProps> = ({
       </div>
 
       <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-        <Button type="button" onClick={onCancel}  variant="secondary" className="btn">取消</Button>
-        <Button type="submit"  variant="primary" className="btn">{settlement ? '保存修改' : '创建结算单'}</Button>
+        <Button type="button" onClick={onCancel}  variant="secondary">取消</Button>
+        <Button type="submit"  variant="primary">{settlement ? '保存修改' : '创建结算单'}</Button>
       </div>
 
       <SettlementImportModal show={showImportModal} onClose={() => setShowImportModal(false)} onImport={handleImportItems} />

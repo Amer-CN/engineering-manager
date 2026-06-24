@@ -46,7 +46,7 @@ export function ProjectList({ projects, members, loading, onProjectClick, onEdit
       <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center shadow-sm">
         <Icon name="FolderKanban" size={48} className="mx-auto mb-4 text-slate-300" />
         <EmptyState title="暂无项目" description="点击下方按钮创建您的第一个项目" />
-        <Button onClick={onAdd}  variant="primary" className="btn mt-6">
+        <Button onClick={onAdd}  variant="primary" className="mt-6">
           <Icon name="Plus" size={16} className="inline-block" /> 创建项目
         </Button>
       </div>

@@ -98,13 +98,13 @@ export const PartnerList: React.FC<PartnerListProps> = ({
           <Button
             onClick={(e) => { e.stopPropagation(); onEdit(partner) }}
             
-           variant="ghost" size="sm" className="btn">
+           variant="ghost" size="sm">
             编辑
           </Button>
           <Button
             onClick={(e) => { e.stopPropagation(); onDelete(partner.id) }}
             
-           variant="danger" size="sm" className="btn">
+           variant="danger" size="sm">
             删除
           </Button>
         </div>

@@ -140,8 +140,8 @@ export const MaterialForm: React.FC<MaterialFormProps> = ({
         </div>
       </div>
       <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
-        <Button type="button" onClick={onCancel}  variant="secondary" className="btn">取消</Button>
-        <Button type="submit"  variant="primary" className="btn">{material ? '保存' : '添加'}</Button>
+        <Button type="button" onClick={onCancel}  variant="secondary">取消</Button>
+        <Button type="submit"  variant="primary">{material ? '保存' : '添加'}</Button>
       </div>
     </form>
   )

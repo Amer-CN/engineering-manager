@@ -76,13 +76,13 @@ const SettlementProjectDetail: React.FC<SettlementProjectDetailProps> = ({
         <Button
           onClick={() => setShowTemplateSelector(true)}
           
-         variant="secondary" className="btn flex items-center gap-1.5 mr-2">
+         variant="secondary" className="flex items-center gap-1.5 mr-2">
           <Icon name="FileText" size={16} /> 从模板生成
         </Button>
         <Button
           onClick={() => { setEditingSettlement(null); setShowModal(true) }}
           
-         variant="primary" className="btn">
+         variant="primary">
           <span className="text-xl">+</span>
           新建结算单
         </Button>

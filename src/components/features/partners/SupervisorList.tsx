@@ -156,13 +156,13 @@ export const SupervisorList: React.FC<SupervisorListProps> = ({
                   <Button
                     onClick={(e) => { e.stopPropagation(); onEdit(supervisor) }}
                     
-                   variant="ghost" size="sm" className="btn">
+                   variant="ghost" size="sm">
                     编辑
                   </Button>
                   <Button
                     onClick={(e) => { e.stopPropagation(); onDelete(supervisor.id) }}
                     
-                   variant="danger" size="sm" className="btn">
+                   variant="danger" size="sm">
                     删除
                   </Button>
                 </div>

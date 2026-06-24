@@ -35,8 +35,8 @@ export function TeamFormModal({
     <Modal isOpen={visible} onClose={onClose} title={editingTeam ? '编辑班组' : '添加班组'} size="md"
       footer={
         <>
-          <Button type="button" onClick={onClose}  variant="secondary" className="btn">取消</Button>
-          <Button type="submit" form="team-form"  variant="warning" className="btn">{editingTeam ? '保存' : '添加'}</Button>
+          <Button type="button" onClick={onClose}  variant="secondary">取消</Button>
+          <Button type="submit" form="team-form"  variant="warning">{editingTeam ? '保存' : '添加'}</Button>
         </>
       }
     >
@@ -110,8 +110,8 @@ export function TransferModal({
     <Modal isOpen={visible && !!worker} onClose={onClose} title="工人调组" size="md"
       footer={
         <>
-          <Button type="button" onClick={onClose}  variant="secondary" className="btn">取消</Button>
-          <Button type="submit" form="transfer-form"  variant="primary" className="btn">确认调组</Button>
+          <Button type="button" onClick={onClose}  variant="secondary">取消</Button>
+          <Button type="submit" form="transfer-form"  variant="primary">确认调组</Button>
         </>
       }
     >

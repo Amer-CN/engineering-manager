@@ -88,10 +88,10 @@ const staffTableColumns = (
     align: 'center',
     render: item => (
       <div className="flex items-center justify-center gap-1" onClick={e => e.stopPropagation()}>
-        <Button onClick={() => onEdit(item)}  variant="ghost" size="sm" className="btn text-primary-600">
+        <Button onClick={() => onEdit(item)}  variant="ghost" size="sm" className="text-primary-600">
           编辑
         </Button>
-        <Button onClick={() => onDelete(item.id)}  variant="danger" size="sm" className="btn">
+        <Button onClick={() => onDelete(item.id)}  variant="danger" size="sm">
           删除
         </Button>
       </div>

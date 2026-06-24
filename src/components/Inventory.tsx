@@ -35,13 +35,13 @@ const Inventory: React.FC<InventoryProps> = ({ refresh }) => {
   <PageContainer>
   <PageHeader title="仓库管理" subtitle="管理材料库存、出入库和项目材料"
   actions={<>
-  <Button onClick={() => { h.setEditingMaterial(null); h.setShowMaterialModal(true) }}  variant="secondary" className="btn">
+  <Button onClick={() => { h.setEditingMaterial(null); h.setShowMaterialModal(true) }}  variant="secondary">
   <Icon name="ClipboardList" size={16} /> 添加项目材料
   </Button>
-  <Button onClick={() => { h.setTransItem(null); h.setShowTransModal(true) }}  variant="secondary" className="btn">
+  <Button onClick={() => { h.setTransItem(null); h.setShowTransModal(true) }}  variant="secondary">
   <Icon name="Download" size={16} /> 出入库
   </Button>
-  <Button onClick={() => { h.setEditingItem(null); h.setShowItemModal(true) }}  variant="primary" className="btn">
+  <Button onClick={() => { h.setEditingItem(null); h.setShowItemModal(true) }}  variant="primary">
   <span className="text-xl">+</span> 添加物料
   </Button>
   </>}

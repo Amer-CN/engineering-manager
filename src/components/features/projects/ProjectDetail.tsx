@@ -167,7 +167,7 @@ export function ProjectDetail({ project, members, allMembers, onBack, onEdit }: 
               <p className="text-slate-500 text-sm mt-0.5">{project.address || '暂无地址'} · {project.projectManagerName || '暂无负责人'}</p>
             </div>
           </div>
-          <Button onClick={() => onEdit(project)}  variant="secondary" size="sm" className="btn">
+          <Button onClick={() => onEdit(project)}  variant="secondary" size="sm">
             <Icon name="Edit3" size={14} /> 编辑
           </Button>
         </div>

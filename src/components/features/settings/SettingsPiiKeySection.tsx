@@ -177,7 +177,7 @@ export function SettingsPiiKeySection() {
                   onClick={handleRotate}
                   disabled={rotating}
                   
-                 variant="primary" className="btn">
+                 variant="primary">
                   {rotating ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
@@ -193,7 +193,7 @@ export function SettingsPiiKeySection() {
                   onClick={loadInfo}
                   disabled={loading}
                   
-                 variant="secondary" className="btn">
+                 variant="secondary">
                   <Icon name="RefreshCw" size={14} /> 刷新
                 </Button>
               </div>

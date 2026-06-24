@@ -120,7 +120,7 @@ export function StaffPayrollTable({
       align: 'center',
       render: (item) => (
         <Button onClick={() => onDeleteWage(item)}
-           title="删除此记录" variant="danger" size="sm" className="btn">
+           title="删除此记录" variant="danger" size="sm">
           <Icon name="Trash2" size={14} />
         </Button>
       )

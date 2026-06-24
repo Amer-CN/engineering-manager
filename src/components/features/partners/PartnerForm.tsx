@@ -177,10 +177,10 @@ export const PartnerForm: React.FC<PartnerFormProps> = ({
 
       {/* 提交按钮 */}
       <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-200">
-        <Button type="button" onClick={onCancel}  variant="secondary" className="btn">
+        <Button type="button" onClick={onCancel}  variant="secondary">
           取消
         </Button>
-        <Button type="submit"  variant="primary" className="btn">
+        <Button type="submit"  variant="primary">
           {partner ? '保存修改' : '添加单位'}
         </Button>
       </div>

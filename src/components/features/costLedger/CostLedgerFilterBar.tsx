@@ -109,13 +109,13 @@ export function CostLedgerFilterBar({
             const n = Math.max(0.5, +(zoomRef.current - 0.1).toFixed(1))
             zoomRef.current = n; localStorage.setItem('costLedgerZoom', String(n)); setZoom(n)
             if (tableRef.current) tableRef.current.style.zoom = String(n)
-          }}  variant="secondary" size="sm" className="btn">−</Button>
+          }}  variant="secondary" size="sm">−</Button>
           <span className="text-xs text-slate-500 w-8 text-center font-mono">{Math.round(zoom * 100)}%</span>
           <Button onClick={() => {
             const n = Math.min(2, +(zoomRef.current + 0.1).toFixed(1))
             zoomRef.current = n; localStorage.setItem('costLedgerZoom', String(n)); setZoom(n)
             if (tableRef.current) tableRef.current.style.zoom = String(n)
-          }}  variant="secondary" size="sm" className="btn">+</Button>
+          }}  variant="secondary" size="sm">+</Button>
         </div>
         <span className="text-xs text-slate-400">
           {filtered.length === entries.length ? `共 ${entries.length} 条` : `筛选 ${filtered.length} / ${entries.length} 条`}

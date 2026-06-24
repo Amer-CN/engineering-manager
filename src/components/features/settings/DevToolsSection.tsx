@@ -17,7 +17,7 @@ export function DevToolsSection() {
           <div className="flex flex-wrap gap-3">
             <Button onClick={async () => {
               try { await (await getAPI()).openDevTools() } catch (e) { console.warn('openDevTools failed:', e) }
-            }}  variant="secondary" className="btn"><Icon name="Monitor" size={16} />打开控制台</Button>
+            }}  variant="secondary"><Icon name="Monitor" size={16} />打开控制台</Button>
             <span className="text-sm text-slate-400 self-center">或按 <kbd className="px-2 py-1 bg-slate-100 rounded text-xs font-mono border border-slate-200">F12</kbd></span>
           </div>
         </div>

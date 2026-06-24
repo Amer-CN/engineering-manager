@@ -199,7 +199,7 @@ export function PartnerSelect({
   setIsOpen(false)
   }}
   
-   variant="danger" className="btn w-full">
+   variant="danger" className="w-full">
   清空选择
   </Button>
   </div>

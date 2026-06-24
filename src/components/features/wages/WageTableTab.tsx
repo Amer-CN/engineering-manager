@@ -157,7 +157,7 @@ export default function WageTableTab({
           </div>
           {selectedIds.size > 0 && (
             <Button onClick={onBatchDelete}
-               variant="danger" size="sm" className="btn">
+               variant="danger" size="sm">
               删除选中 ({selectedIds.size})
             </Button>
           )}
@@ -165,12 +165,12 @@ export default function WageTableTab({
         <div className="flex-1" />
         <div className="flex gap-2">
           <Button onClick={onGenerate} disabled={loading}
-             variant="primary" size="sm" className="btn">
+             variant="primary" size="sm">
             生成工资表
           </Button>
           {editingWages.size > 0 && (
             <Button onClick={onSave} disabled={loading}
-               variant="success" size="sm" className="btn">
+               variant="success" size="sm">
               保存修改 ({editingWages.size})
             </Button>
           )}

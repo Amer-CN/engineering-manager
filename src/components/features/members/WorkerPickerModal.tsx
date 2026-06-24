@@ -177,14 +177,14 @@ export function WorkerPickerModal({ show, projectId, workerTeams, existingWorker
   {selected.size > 0 && <span className="text-blue-600 ml-1">· 已选 {selected.size} 人</span>}
   </span>
   <div className="flex items-center gap-3">
-  <Button onClick={onClose}  variant="secondary" className="btn text-sm">
+  <Button onClick={onClose}  variant="secondary" className="text-sm">
   取消
   </Button>
   <Button
   onClick={handleConfirm}
   disabled={selected.size === 0}
   
-   variant="primary" className="btn text-sm disabled:bg-slate-300 disabled:cursor-not-allowed">
+   variant="primary" className="text-sm disabled:bg-slate-300 disabled:cursor-not-allowed">
   确认添加{selected.size > 0 ? ` ${selected.size} 人到「${teamName ?? '项目'}」` : ''}
   </Button>
   </div>

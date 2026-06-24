@@ -75,7 +75,7 @@ export const SettlementItemsTable: React.FC<Props> = ({
                 <td className={TABLE.bodyCell}><input type="number" value={item.quantity} onChange={e => onUpdate(index, 'quantity', Number(e.target.value))} className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm" min="0" step="any" /></td>
                 <td className={TABLE.bodyCell}><input type="number" value={item.unitPrice} onChange={e => onUpdate(index, 'unitPrice', Number(e.target.value))} className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm" min="0" step="any" /></td>
                 <td className={`${TABLE.bodyCell} text-right font-medium text-slate-800 text-sm`}>¥{formatMoney(item.amount)}</td>
-                <td className={`${TABLE.bodyCell} text-center`}><Button type="button" onClick={() => onRemove(index)}  variant="ghost" size="sm" className="btn text-danger-500">✕</Button></td>
+                <td className={`${TABLE.bodyCell} text-center`}><Button type="button" onClick={() => onRemove(index)}  variant="ghost" size="sm" className="text-danger-500">✕</Button></td>
               </tr>
             ))}
           </tbody>

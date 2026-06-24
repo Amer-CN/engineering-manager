@@ -42,7 +42,7 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
   </div>
   <div className="flex items-center gap-3">
   {duplicateInvoices.length > 0 && (
-  <Button onClick={() => setShowDuplicates(true)}  variant="warning" className="btn flex items-center gap-2">
+  <Button onClick={() => setShowDuplicates(true)}  variant="warning" className="flex items-center gap-2">
   <Icon name="AlertTriangle" size={16} />
   检测到 {duplicateInvoices.length} 组重复发票
   </Button>
@@ -50,7 +50,7 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
   <button onClick={() => { h.setEditingPayment(null); h.setShowPaymentModal(true) }} className="btn bg-amber-500 hover:bg-amber-600 text-white">
   <span className="text-xl">+</span> 回款/付款登记
   </button>
-  <Button onClick={() => { h.setEditingInvoice(null); h.setShowInvoiceModal(true) }}  variant="primary" className="btn">
+  <Button onClick={() => { h.setEditingInvoice(null); h.setShowInvoiceModal(true) }}  variant="primary">
   <span className="text-xl">+</span> 新建发票
   </Button>
   </div>
@@ -164,7 +164,7 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
   h.handleEditInvoice(inv)
   }}
   
-   variant="secondary" size="sm" className="btn">
+   variant="secondary" size="sm">
   查看
   </Button>
   <Button
@@ -173,7 +173,7 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
   showToast('已删除重复发票', 'success')
   }}
   
-   variant="danger" size="sm" className="btn">
+   variant="danger" size="sm">
   删除
   </Button>
   </div>
@@ -186,7 +186,7 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
   )}
   </div>
   <div className="px-6 py-4 border-t border-slate-100 flex justify-end">
-  <Button onClick={() => setShowDuplicates(false)}  variant="secondary" className="btn">关闭</Button>
+  <Button onClick={() => setShowDuplicates(false)}  variant="secondary">关闭</Button>
   </div>
   </div>
   </div>

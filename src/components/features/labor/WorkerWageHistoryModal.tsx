@@ -135,8 +135,8 @@ export function WorkerWageHistoryModal({ show, projectWorkerId, workerName, curr
               <Input label="备注" size="sm" value={formNote} onChange={e => setFormNote(e.target.value)}
                 placeholder="如：本月施工难度大，上调单价" />
               <div className="flex justify-end gap-2">
-                <Button onClick={cancelForm}  variant="secondary" size="sm" className="btn">取消</Button>
-                <Button onClick={handleSave}  variant="warning" size="sm" className="btn">
+                <Button onClick={cancelForm}  variant="secondary" size="sm">取消</Button>
+                <Button onClick={handleSave}  variant="warning" size="sm">
                   {editingId ? '更新' : '保存'}
                 </Button>
               </div>

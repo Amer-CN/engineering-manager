@@ -71,8 +71,8 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ initialData, projects,
   size="xl"
   footer={
   <>
-  <Button type="button" onClick={onCancel}  variant="secondary" className="btn">取消</Button>
-  <Button type="button" onClick={() => onSubmit(formData)}  variant="warning" className="btn btn">{isEditing ? '保存' : '登记'}</Button>
+  <Button type="button" onClick={onCancel}  variant="secondary">取消</Button>
+  <Button type="button" onClick={() => onSubmit(formData)}  variant="warning">{isEditing ? '保存' : '登记'}</Button>
   </>
   }>
   <form onSubmit={e => { e.preventDefault(); onSubmit(formData) }}>

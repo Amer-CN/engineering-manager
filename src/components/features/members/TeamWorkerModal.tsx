@@ -45,14 +45,14 @@ export function TeamWorkerModal({
     { key: 'actions', title: '操作', align: 'right', render: (item) => (
       <div className="flex items-center justify-end gap-1">
         <Button onClick={() => setWageHistoryWorker({ id: item.id, name: item.name, dailyWage: item.dailyWage || 0 })}
-           variant="ghost" size="sm" className="btn text-amber-600">薪资</Button>
+           variant="ghost" size="sm" className="text-amber-600">薪资</Button>
         {otherTeams.length > 0 && (
           <div className="relative group">
-            <Button  variant="ghost" size="sm" className="btn text-amber-600">调组</Button>
+            <Button  variant="ghost" size="sm" className="text-amber-600">调组</Button>
             <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg py-1 hidden group-hover:block z-10 min-w-[120px]">
               {otherTeams.map(t => (
                 <Button key={t.id} onClick={() => onTransferWorker(item.id, t.id)}
-                   variant="secondary" size="sm" className="btn w-full text-left">
+                   variant="secondary" size="sm" className="w-full text-left">
                   {t.name}
                 </Button>
               ))}
@@ -62,7 +62,7 @@ export function TeamWorkerModal({
         <Button onClick={async () => {
           const ok = await confirm({ title: '移除工人', content: `确认将 ${item.name} 从班组中移除？`, confirmVariant: 'danger' })
           if (ok) onRemoveWorker(item.id)
-        }}  variant="danger" size="sm" className="btn">移除</Button>
+        }}  variant="danger" size="sm">移除</Button>
       </div>
     )},
   ]
@@ -77,7 +77,7 @@ export function TeamWorkerModal({
   <span className="text-sm text-slate-500">{teamWorkers.length} 名工人</span>
   <div className="flex items-center gap-3">
   <Button onClick={() => onAddWorkers(teamId, projectId)}
-   variant="primary" className="btn">
+   variant="primary">
   <Icon name="Plus" size={16} />从工人库添加
   </Button>
   </div>

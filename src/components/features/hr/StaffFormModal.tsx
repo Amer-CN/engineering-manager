@@ -66,7 +66,7 @@ const StaffFormModal: React.FC<Props> = ({
         initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }}>
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between shrink-0">
           <h2 className="text-lg font-semibold text-slate-800">{editing ? '编辑人员' : '添加人员'}</h2>
-          <Button onClick={onRemove}  variant="ghost" className="btn p-1"><Icon name="X" size={18} /></Button>
+          <Button onClick={onRemove}  variant="ghost" className="p-1"><Icon name="X" size={18} /></Button>
         </div>
         <HoverScrollbar className="flex-1"><form onSubmit={onSubmit} className="p-6 space-y-5">
 
@@ -228,9 +228,9 @@ const StaffFormModal: React.FC<Props> = ({
 
           <div className="flex justify-end gap-3 pt-2">
             <Button type="button" onClick={onRemove}
-               variant="secondary" className="btn">取消</Button>
+               variant="secondary">取消</Button>
             <Button type="submit"
-               variant="primary" className="btn">{editing ? '保存' : '创建'}</Button>
+               variant="primary">{editing ? '保存' : '创建'}</Button>
           </div>
         </form></HoverScrollbar>
       </motion.div>

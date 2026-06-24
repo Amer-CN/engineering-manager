@@ -167,7 +167,7 @@ export default function AttendanceDetail({
   {/* 顶部栏 */}
   <div className="flex items-center justify-between">
   <div className="flex items-center gap-3">
-  <Button onClick={onBack}  variant="ghost" className="btn text-sm flex items-center gap-1">
+  <Button onClick={onBack}  variant="ghost" className="text-sm flex items-center gap-1">
   <Icon name="ChevronLeft" size={18} /><span className="text-sm">返回</span>
   <Icon name="ChevronLeft" size={18} /><span className="text-sm">返回</span>
   </Button>
@@ -187,11 +187,11 @@ export default function AttendanceDetail({
   if (result.success) { showToast('已删除', 'success'); onSaved(); onBack() }
   else showToast(result.error || '删除失败', 'error')
   } catch (e: any) { showToast(e?.message || '删除失败', 'error') }
-  }}  variant="danger" size="sm" className="btn">
+  }}  variant="danger" size="sm">
   <Icon name="Trash2" size={16} />
   </Button>
   </Tooltip>
-  <Button onClick={handleSave} disabled={saving}  variant="primary" className="btn text-sm px-5 py-2 disabled:opacity-50">
+  <Button onClick={handleSave} disabled={saving}  variant="primary" className="text-sm px-5 py-2 disabled:opacity-50">
   {saving ? '保存中...' : '保存'}
   </Button>
   </div>

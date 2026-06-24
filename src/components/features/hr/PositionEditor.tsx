@@ -58,7 +58,7 @@ const PositionEditor: React.FC<PositionEditorProps> = ({ positions, onChange }) 
           containerClassName="flex-1"
           placeholder="输入职位名称，如：部门经理" maxLength={MAX_CHAR} />
           <Button type="button" onClick={handleAdd}
-             variant="ghost" size="sm" className="btn text-primary-600 whitespace-nowrap">添加</Button>
+             variant="ghost" size="sm" className="text-primary-600 whitespace-nowrap">添加</Button>
       </div>
     </div>
   )

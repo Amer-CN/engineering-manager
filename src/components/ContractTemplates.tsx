@@ -185,7 +185,7 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
 
   <PageHeader title="合同模板" subtitle="管理合同模板，快速生成合同文档" onBack={onBack}
   actions={
-  <Button onClick={() => { resetForm(); setShowModal(true) }}  variant="primary" className="btn">
+  <Button onClick={() => { resetForm(); setShowModal(true) }}  variant="primary">
   <span className="text-xl">+</span> 添加模板
   </Button>
   }
@@ -254,19 +254,19 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
   <Button
   onClick={() => handleGenerate(template)}
   
-   variant="primary" size="sm" className="flex-1 btn">
+   variant="primary" size="sm" className="flex-1 ">
   <Icon name="File" size={14} /> 生成合同
   </Button>
   <Button
   onClick={() => handleEdit(template)}
   
-   variant="secondary" size="sm" className="btn">
+   variant="secondary" size="sm">
   编辑
   </Button>
   <Button
   onClick={() => handleDelete(template.id)}
   
-   variant="danger" size="sm" className="btn">
+   variant="danger" size="sm">
   删除
   </Button>
   </div>
@@ -276,7 +276,7 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
   </div>
   ) : (
   <EmptyState icon="FileText" title="暂无合同模板" description="点击下方按钮创建您的第一个合同模板"
-  action={<Button onClick={() => { resetForm(); setShowModal(true) }}  variant="primary" className="btn">添加模板</Button>}
+  action={<Button onClick={() => { resetForm(); setShowModal(true) }}  variant="primary">添加模板</Button>}
   />
   )}
 
@@ -297,8 +297,8 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
   <Modal isOpen={showGenerateModal && !!selectedTemplate} onClose={() => { setShowGenerateModal(false); setSelectedTemplate(null) }}
   title="生成合同" size="xl"
   footer={<>
-  <Button onClick={() => { setShowGenerateModal(false); setSelectedTemplate(null) }}  variant="secondary" className="btn">取消</Button>
-  <Button onClick={handlePrint}  variant="primary" className="btn"><Icon name="Printer" size={14} /> 打印合同</Button>
+  <Button onClick={() => { setShowGenerateModal(false); setSelectedTemplate(null) }}  variant="secondary">取消</Button>
+  <Button onClick={handlePrint}  variant="primary"><Icon name="Printer" size={14} /> 打印合同</Button>
   </>}>
   <p className="text-sm text-slate-500 -mt-2 mb-4">填写模板变量，生成合同文档</p>
   <div className="space-y-4">
