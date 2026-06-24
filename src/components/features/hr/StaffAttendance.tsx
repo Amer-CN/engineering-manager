@@ -5,6 +5,7 @@ import type { AttendanceRecord } from '../../../types/electron'
 import AttendanceDetail from '../../AttendanceDetail'
 import AttendanceTimeline from './AttendanceTimeline'
 import { getAPI } from '@/services/api-adapter'
+import type { Member, Department } from '@/types'
 import { getAttendanceColumns } from './staffAttendanceColumns'
 import { getDaysInMonth, getLastDayOfMonth } from './staffAttendanceUtils'
 import { StaffAttendanceDashboard } from './StaffAttendanceDashboard'
@@ -15,19 +16,19 @@ const StaffAttendance: React.FC = () => {
   const { confirm, ConfirmDialog } = useConfirm()
   const now = new Date()
   const [yearMonth, setYearMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`)
-  const [staff, setStaff] = useState<any[]>([])
-  const [departments, setDepartments] = useState<any[]>([])
+  const [staff, setStaff] = useState<Member[]>([])
+  const [departments, setDepartments] = useState<Department[]>([])
   const [filterDept, setFilterDept] = useState<number | ''>('')
-  const [allAttendances, setAllAttendances] = useState<any[]>([])
+  const [allAttendances, setAllAttendances] = useState<AttendanceRecord[]>([])
   const [loading, setLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
 
   // Sub-page: attendance timeline for one person (all months, year-grouped)
-  const [timelineMember, setTimelineMember] = useState<any | null>(null)
+  const [timelineMember, setTimelineMember] = useState<Member | null>(null)
   // Sub-page: attendance detail for one person at a specific month
   const [detailRecord, setDetailRecord] = useState<AttendanceRecord | null>(null)
-  const [detailMember, setDetailMember] = useState<any | null>(null)
+  const [detailMember, setDetailMember] = useState<Member | null>(null)
   const [detailYearMonth, setDetailYearMonth] = useState('')
 
   const daysInMonth = useMemo(() => getDaysInMonth(yearMonth), [yearMonth])
@@ -44,11 +45,11 @@ const StaffAttendance: React.FC = () => {
         api.getAttendances(undefined, undefined),
         api.getDepartments()
       ])
-      const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
-      setStaff(get(memRes).filter((m: any) => m.memberType === 'staff' || m.memberType === undefined))
-      setAllAttendances(get(attRes))
-      setDepartments(get(deptRes))
-    } catch (e) { console.error(e) }
+      const get = <T,>(r: PromiseSettledResult<{ success?: boolean; data?: unknown }>): T[] => (r.status === 'fulfilled' && r.value?.success ? (r.value.data as T[] || []) : [])
+      setStaff(get<Member>(memRes).filter((m: Member) => m.memberType === 'staff' || m.memberType === undefined))
+      setAllAttendances(get<AttendanceRecord>(attRes))
+      setDepartments(get<Department>(deptRes))
+    } catch (e: unknown) { console.error(e) }
     finally { setLoading(false) }
   }, [])
 
@@ -56,7 +57,7 @@ const StaffAttendance: React.FC = () => {
 
   // Current-month attendances (client-side filter from allAttendances)
   const currentMonthAttendances = useMemo(
-    () => allAttendances.filter((a: any) => a.yearMonth === yearMonth),
+    () => allAttendances.filter((a: AttendanceRecord) => a.yearMonth === yearMonth),
     [allAttendances, yearMonth]
   )
 
@@ -75,9 +76,9 @@ const StaffAttendance: React.FC = () => {
   // Filter: only staff who joined on or before end of selected month, and haven't left before this month
   const monthEnd = getLastDayOfMonth(yearMonth)
   const monthStart = `${yearMonth}-01`
-  const getEntryDate = useCallback((s: any) => s.entryDate || (s.createdAt ? s.createdAt.split('T')[0] : null), [])
+  const getEntryDate = useCallback((s: Member) => s.entryDate || (s.createdAt ? s.createdAt.split('T')[0] : null), [])
 
-  const filterableStaff = useMemo(() => staff.filter((s: any) => {
+  const filterableStaff = useMemo(() => staff.filter((s: Member) => {
     const ed = getEntryDate(s)
     if (!ed) return true
     if (ed > monthEnd) return false
@@ -86,25 +87,25 @@ const StaffAttendance: React.FC = () => {
     return true
   }), [staff, monthEnd, monthStart, getEntryDate])
 
-  const filteredStaff = useMemo(() => filterableStaff.filter((s: any) => {
+  const filteredStaff = useMemo(() => filterableStaff.filter((s: Member) => {
     if (filterDept && s.departmentId !== filterDept) return false
     return true
   }), [filterableStaff, filterDept])
 
   const getAttendanceForMember = useCallback((memberId: number) =>
-    currentMonthAttendances.find((a: any) => a.memberId === memberId),
+    currentMonthAttendances.find((a: AttendanceRecord) => a.memberId === memberId),
     [currentMonthAttendances]
   )
 
   const getAttendanceForMemberMonth = useCallback((memberId: number, ym: string) =>
-    allAttendances.find((a: any) => a.memberId === memberId && a.yearMonth === ym),
+    allAttendances.find((a: AttendanceRecord) => a.memberId === memberId && a.yearMonth === ym),
     [allAttendances]
   )
 
-  const getDeptName = useCallback((id?: number) => departments.find((d: any) => d.id === id)?.name || '-', [departments])
+  const getDeptName = useCallback((id?: number) => departments.find((d: Department) => d.id === id)?.name || '-', [departments])
 
   // Pre-compute entry day for a staff member in the current month
-  const getEntryDay = useCallback((s: any) => {
+  const getEntryDay = useCallback((s: Member) => {
     const ed = getEntryDate(s)
     if (!ed) return 1
     const [ey, em, ed2] = ed.split('-').map(Number)
@@ -117,7 +118,7 @@ const StaffAttendance: React.FC = () => {
     setSelectedIds(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next })
   }, [])
   const toggleAll = () => {
-    const recordIds = filteredStaff.map(s => getAttendanceForMember(s.id)).filter(Boolean).map((a: any) => a.id)
+    const recordIds = filteredStaff.map(s => getAttendanceForMember(s.id)).filter((a): a is AttendanceRecord => !!a).map(a => a.id)
     if (recordIds.length === 0) return
     setSelectedIds(prev => prev.size === recordIds.length ? new Set() : new Set(recordIds))
   }
@@ -143,7 +144,7 @@ const StaffAttendance: React.FC = () => {
 
   // Show timeline sub-page for attendance history
   if (timelineMember) {
-    const memberAttendances = allAttendances.filter((a: any) => a.memberId === timelineMember.id)
+    const memberAttendances = allAttendances.filter((a: AttendanceRecord) => a.memberId === timelineMember.id)
     return (
       <AttendanceTimeline
         member={timelineMember}
@@ -171,7 +172,7 @@ const StaffAttendance: React.FC = () => {
     )
   }
 
-  const joinedAfter = useMemo(() => staff.filter((s: any) => { const ed = getEntryDate(s); return ed && ed > monthEnd }).length, [staff, getEntryDate, monthEnd])
+  const joinedAfter = useMemo(() => staff.filter((s: Member) => { const ed = getEntryDate(s); return ed && ed > monthEnd }).length, [staff, getEntryDate, monthEnd])
 
   // ── Pre-compute row data FIRST (before columns, since columns reference rows) ──
   const rows = useMemo(() => filteredStaff.map(s => {

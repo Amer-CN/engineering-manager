@@ -6,9 +6,10 @@ import { logUpdate } from '../../../utils/audit'
 import { getAPI } from '@/services/api-adapter'
 import { HoverScrollbar } from '../../ui/HoverScrollbar'
 import { Button } from '../../ui/Button'
+import type { Member, Department } from '@/types'
 interface Props {
-  orphans: any[]
-  departments: any[]
+  orphans: Member[]
+  departments: Department[]
   onClose: () => void
   onDone: () => void
 }
@@ -16,7 +17,7 @@ interface Props {
 const BatchDeptAssignModal: React.FC<Props> = ({ orphans, departments, onClose, onDone }) => {
   const showToast = useToastStore(state => state.showToast)
   const [batchDeptId, setBatchDeptId] = useState<number | ''>('')
-  const [selected, setSelected] = useState<Set<number>>(new Set(orphans.map((m: any) => m.id)))
+  const [selected, setSelected] = useState<Set<number>>(new Set(orphans.map((m: Member) => m.id)))
 
   const handleAssign = async () => {
     if (!batchDeptId) { showToast('请选择目标部门', 'error'); return }
@@ -24,7 +25,7 @@ const BatchDeptAssignModal: React.FC<Props> = ({ orphans, departments, onClose, 
     try {
       let count = 0
       for (const id of selected) {
-        const m = orphans.find((x: any) => x.id === id)
+        const m = orphans.find((x: Member) => x.id === id)
         if (m) {
           await (await getAPI()).updateMember({ ...m, departmentId: batchDeptId as number })
           count++
@@ -33,7 +34,7 @@ const BatchDeptAssignModal: React.FC<Props> = ({ orphans, departments, onClose, 
       showToast(`已将 ${count} 名人员分配到目标部门`, 'success')
       logUpdate('members', `${count} 名员工批量调部门`, 0, { departmentId: batchDeptId, count })
       onDone()
-    } catch (e: any) { showToast(e?.message || '批量分配失败', 'error') }
+    } catch (e: unknown) { showToast(e instanceof Error ? e.message : '批量分配失败', 'error') }
   }
 
   return (
@@ -50,19 +51,19 @@ const BatchDeptAssignModal: React.FC<Props> = ({ orphans, departments, onClose, 
             <select value={batchDeptId} onChange={e => setBatchDeptId(e.target.value ? Number(e.target.value) : '')}
               className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent">
               <option value="">请选择部门</option>
-              {departments.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
+              {departments.map((d: Department) => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
           </div>
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-sm font-medium text-slate-700">待分配人员 ({selected.size}/{orphans.length})</label>
-              <button onClick={() => setSelected(selected.size === orphans.length ? new Set() : new Set(orphans.map((m: any) => m.id)))}
+              <button onClick={() => setSelected(selected.size === orphans.length ? new Set() : new Set(orphans.map((m: Member) => m.id)))}
                 className="text-xs text-primary-600 hover:text-primary-800">
                 {selected.size === orphans.length ? '取消全选' : '全选'}
               </button>
             </div>
             <div className="max-h-56 overflow-y-auto border border-slate-200 rounded-lg divide-y divide-slate-100">
-              {orphans.map((m: any) => (
+              {orphans.map((m: Member) => (
                 <label key={m.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 cursor-pointer">
                   <input type="checkbox" checked={selected.has(m.id)}
                     onChange={() => {
