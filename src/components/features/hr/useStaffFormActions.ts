@@ -94,7 +94,7 @@ export function useStaffFormActions({
           getFileName: () => `${formData.name}_劳动合同${guessFileExt(payload.contractFile, payload.contractFileType)}` },
       ]
       const dirtyConfigs = fieldConfigs.filter(c => fileDirty.has(c.field))
-      payload = await processFileFields(payload, dirtyConfigs as any, null)
+      payload = await processFileFields(payload, dirtyConfigs as Parameters<typeof processFileFields>[1], null)
       for (const f of ['idCardFront', 'idCardBack', 'contractFile'] as const) {
         if (!fileDirty.has(f)) {
           if (editing?.[f] && editing[f] !== '') payload[f] = editing[f]
@@ -108,7 +108,7 @@ export function useStaffFormActions({
         ? await memberApi.updateMember({ ...payload, id: editing.id })
         : await memberApi.createMember(payload)
       if (result.success) {
-        const memberId = editing ? editing.id : (result as any).data?.id
+        const memberId = editing ? editing.id : result.data?.id
         if (memberId && formData.baseSalary && formData.entryDate) {
           const changed = !editing || Number(editing.baseSalary) !== Number(formData.baseSalary)
           if (changed) {
@@ -130,7 +130,7 @@ export function useStaffFormActions({
         }
         showToast(editing ? '人员信息已更新' : '人员已创建', 'success')
         if (editing) logUpdate('members', formData.name, editing.id, { staff: true })
-        else logCreate('members', formData.name, (result as any)?.data?.id, { staff: true })
+        else logCreate('members', formData.name, (result as { data?: { id?: number } })?.data?.id, { staff: true })
         resetForm(); loadData()
       } else { showToast(result.error || '操作失败', 'error') }
     } catch (e: any) { console.error('[保存失败]', e); showToast(e?.message || '保存失败', 'error') }

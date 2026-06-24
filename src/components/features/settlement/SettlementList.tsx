@@ -43,12 +43,12 @@ export const SettlementList: React.FC<SettlementListProps> = ({
       filterOptions: Object.entries(subTypeConfig).map(([k, v]) => ({ label: v.label, value: k })),
       filterAccessor: (item: any) => item.subType || '',
       render: (item) => (
-      <span className="text-sm text-slate-600">{(item as any).subType ? subTypeConfig[(item as any).subType]?.label : '-'}</span>
+      <span className="text-sm text-slate-600">{item.subType ? subTypeConfig[item.subType]?.label : '-'}</span>
     )},
     { key: 'partnerName', title: '单位', render: (item) => <span className="text-sm text-slate-600">{item.partnerName || '-'}</span> },
     { key: 'settlementDate', title: '结算日期', sortable: true,
-      sorter: (a, b) => ((a as any).settlementDate || '').localeCompare((b as any).settlementDate || ''),
-      render: (item) => <span className="text-sm text-slate-500">{(item as any).settlementDate || item.periodStart || '-'}</span> },
+      sorter: (a, b) => (a.settlementDate || '').localeCompare(b.settlementDate || ''),
+      render: (item) => <span className="text-sm text-slate-500">{item.settlementDate || item.periodStart || '-'}</span> },
     { key: 'amount', title: '金额', align: 'right', sortable: true,
       sorter: (a, b) => ((a.amount || 0) - (b.amount || 0)),
       render: (item) => <span className="font-semibold text-slate-800">¥{formatMoney(item.amount)}</span> },
@@ -61,9 +61,9 @@ export const SettlementList: React.FC<SettlementListProps> = ({
         <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusConfig[item.status]?.bgColor || 'bg-slate-100'} ${statusConfig[item.status]?.color || 'text-slate-600'}`}>
           {statusConfig[item.status]?.label || item.status || '草稿'}
         </span>
-        {(item as any).warnings && (item as any).warnings.length > 0 && (
+        {(item as SettlementData & { warnings?: string[] }).warnings && (item as SettlementData & { warnings?: string[] }).warnings!.length > 0 && (
           <div className="mt-1 space-y-0.5">
-            {(item as any).warnings.map((w: string, i: number) => (
+            {(item as SettlementData & { warnings?: string[] }).warnings!.map((w: string, i: number) => (
               <p key={i} className="text-xs text-red-500 max-w-[160px] leading-tight">{w}</p>
             ))}
           </div>
@@ -72,8 +72,8 @@ export const SettlementList: React.FC<SettlementListProps> = ({
     )},
     { key: 'actions', title: '操作', align: 'center', render: (item) => (
       <div className="flex items-center justify-center gap-0.5">
-        {((item as any).files?.length > 0 || item.fileUrl) && (
-          <Tooltip content={`查看凭证 (${(item as any).files?.length || 1}个文件)`} position="top" delay={300}>
+        {((item.files?.length ?? 0) > 0 || item.fileUrl) && (
+          <Tooltip content={`查看凭证 (${item.files?.length || 1}个文件)`} position="top" delay={300}>
             <button onClick={() => onPreviewFile(item)} className="p-1.5 text-violet-500 hover:bg-violet-50 rounded">
               <Icon name="Eye" size={14} />
             </button>

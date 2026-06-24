@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import type { Project, WorkerTeam, AttendanceRecord } from '@/types'
+type AttendanceRow = AttendanceRecord & { teamName?: string; projectWorkerId?: number }
 import { summaryDot, summaryLabel } from '../../../constants/attendance'
 import type { DayStatus } from '../../../types/electron'
 import { EmptyState } from '../../ui/EmptyState'
@@ -69,7 +70,7 @@ export default function AttendanceTab({
         .map(t => ({ label: t.name, value: t.name })),
       filterAccessor: (item: any) => item.teamName || '',
       render: (item) => (
-        <span className="text-slate-500">{(item as any).teamName || '-'}</span>
+        <span className="text-slate-500">{(item as AttendanceRow).teamName || '-'}</span>
       )
     },
     {
@@ -114,7 +115,7 @@ export default function AttendanceTab({
         <div className="flex items-center gap-2">
           <button onClick={() => onOpenDetail(item)}
             className="text-blue-600 hover:text-blue-800 text-sm font-medium">编辑</button>
-          <button onClick={() => onOpenHistory?.((item as any).projectWorkerId, item.memberName || '', (item as any).teamName || '')}
+          <button onClick={() => onOpenHistory?.(((item as AttendanceRow).projectWorkerId ?? 0), item.memberName || '', (item as AttendanceRow).teamName || '')}
             className="text-indigo-500 hover:text-indigo-700 text-sm">历史</button>
           <button onClick={() => onDelete(item)}
             className="text-red-400 hover:text-red-600 text-sm">删除</button>

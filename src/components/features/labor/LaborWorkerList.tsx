@@ -95,7 +95,7 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
         { label: '安装工', value: '安装工' },
         { label: '后勤', value: '后勤' },
       ],
-      render: (w) => <span className="text-slate-600">{w.workerType ? getWorkerTypeLabel(w.workerType as any) : '-'}</span>
+      render: (w) => <span className="text-slate-600">{w.workerType ? getWorkerTypeLabel(w.workerType) : '-'}</span>
     },
     {
       key: 'dailyWage', title: '日工资', align: 'right', sortable: true, filterable: true,
@@ -104,7 +104,7 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
     },
     {
       key: 'bankAccount', title: '银行卡号', filterable: true,
-      render: (w) => <span className="text-slate-500 font-mono text-xs">{(w as any).bankAccount || '-'}</span>
+      render: (w) => <span className="text-slate-500 font-mono text-xs">{(w as Member & { bankAccount?: string }).bankAccount || '-'}</span>
     },
     {
       key: 'actions', title: '操作', align: 'right',
@@ -117,13 +117,13 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
             编辑
           </button>
           <button
-            onClick={() => setWageModalWorker({ id: (w as any).workerId || w.id, name: w.name })}
+            onClick={() => setWageModalWorker({ id: (w as Member & { workerId?: number }).workerId || w.id, name: w.name })}
             className="px-2 py-1 text-xs text-green-600 hover:bg-green-50 rounded"
           >
             工资
           </button>
           <Button
-            onClick={() => onDeleteWorker((w as any).workerId)}
+            onClick={() => onDeleteWorker((w as Member & { workerId?: number }).workerId ?? w.id)}
             
            variant="danger" size="sm">
             删除

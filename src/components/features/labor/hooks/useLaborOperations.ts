@@ -122,7 +122,7 @@ export function useLaborOperations({
         const result = await (await getAPI()).updateWorker({
           id: editingWorker.workerId || editingWorker.id,
           ...data,
-        } as any)
+        })
         if (result.success) {
           showToast('工人信息已更新', 'success')
           await loadData()
@@ -131,7 +131,7 @@ export function useLaborOperations({
           showToast(result.error || '更新失败', 'error')
         }
       } else {
-        const result = await (await getAPI()).createWorker(data as any)
+        const result = await (await getAPI()).createWorker(data)
         if (result.success) {
           showToast('工人已添加', 'success')
           await loadData()
@@ -146,7 +146,7 @@ export function useLaborOperations({
   }, [loadData, showToast])
 
   const handleDeletePoolWorker = useCallback(async (workerId: number) => {
-    const worker = members.find(m => (m as any).workerId === workerId || m.id === workerId)
+    const worker = members.find(m => (m as Member & { workerId?: number }).workerId === workerId || m.id === workerId)
     const ok = await confirm({
       title: '确认删除',
       content: `确定删除工人"${worker?.name || ''}"？将从所有项目中移除。`,
@@ -170,7 +170,7 @@ export function useLaborOperations({
   // Project worker operations
   const handleBatchAddWorkers = useCallback(async (entries: any[]) => {
     try {
-      const result = await (await getAPI()).batchCreateProjectWorkers(entries as any[])
+      const result = await (await getAPI()).batchCreateProjectWorkers(entries)
       if (result.success) {
         showToast(`成功添加 ${entries.length} 名工人`, 'success')
         await loadData()
@@ -184,7 +184,7 @@ export function useLaborOperations({
 
   const handleUpdateProjectWorker = useCallback(async (pwId: number, data: Record<string, any>) => {
     try {
-      const result = await (await getAPI()).updateProjectWorker({ id: pwId, ...data } as any)
+      const result = await (await getAPI()).updateProjectWorker({ id: pwId, ...data })
       if (result.success) {
         showToast('更新成功', 'success')
         await loadData()
@@ -212,7 +212,7 @@ export function useLaborOperations({
 
   const handleTeamWorkerTransfer = useCallback(async (pwId: number, toTeamId: number) => {
     try {
-      const result = await (await getAPI()).updateProjectWorker({ id: pwId, teamId: toTeamId } as any)
+      const result = await (await getAPI()).updateProjectWorker({ id: pwId, teamId: toTeamId })
       if (result.success) {
         showToast('调组成功', 'success')
         await loadData()
@@ -234,12 +234,12 @@ export function useLaborOperations({
     workerTeams: WorkerTeam[]
   ) => {
     try {
-      const pwId = (worker as any).projectWorkerId || worker.id
+      const pwId = (worker as Member & { projectWorkerId?: number }).projectWorkerId || worker.id
       const result = await (await getAPI()).updateProjectWorker({
         id: pwId,
         teamId: toTeamId,
         projectId: toProjectId,
-      } as any)
+      })
       if (result.success) {
         await (await getAPI()).createWorkerTransfer({
           workerId: worker.id,
@@ -272,7 +272,7 @@ export function useLaborOperations({
         status: 'left' as WorkerStatus,
         actualLeaveDate,
         remarks,
-      } as any)
+      })
       if (result.success) {
         showToast('已办理离场', 'success')
         await loadData()
@@ -292,7 +292,7 @@ export function useLaborOperations({
         status: 'active' as WorkerStatus,
         actualLeaveDate: undefined,
         reentryDate: new Date().toISOString().split('T')[0],
-      } as any)
+      })
       if (result.success) {
         showToast('已办理重新入职', 'success')
         await loadData()
@@ -309,8 +309,8 @@ export function useLaborOperations({
     try {
       const result = await (await getAPI()).updateMember({
         ...member,
-        status: status as any,
-      } as any)
+        status: status as WorkerStatus,
+      })
       if (result.success) {
         showToast('状态已更新', 'success')
         await loadData()

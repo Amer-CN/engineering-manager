@@ -111,7 +111,7 @@ const Login: React.FC<LoginProps> = () => {
     const target = e.target as HTMLElement
     if (target.closest('button')) return
 
-    const webview = (window as any).chrome?.webview
+    const webview = window.chrome?.webview
     if (webview) {
       webview.postMessage(JSON.stringify({ action: 'startDrag' }))
     }
@@ -220,7 +220,7 @@ const Login: React.FC<LoginProps> = () => {
         </form>
 
         <div style={{ fontSize: 10, color: 'var(--muted-2)', marginTop: 8, flexShrink: 0 }}>
-          v{(window as any).__APP_VERSION__ || '0.78.3'}
+          v{__APP_VERSION__ || '0.78.3'}
         </div>
       </div>
       )}

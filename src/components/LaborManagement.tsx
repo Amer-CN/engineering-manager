@@ -203,7 +203,7 @@ const LaborManagement: React.FC = () => {
           workerTeams={workerTeams}
           visible={modals.showWorkerModal}
           onClose={modals.closeWorkerModal}
-          onSubmit={ops.handleSubmitWorker as any}
+          onSubmit={ops.handleSubmitWorker}
           onFileModified={ops.handleFileModified}
         />
       )}
@@ -216,7 +216,7 @@ const LaborManagement: React.FC = () => {
           workerTeams={workerTeams}
           visible={modals.showDetailModal}
           onClose={modals.closeDetailModal}
-          onSubmit={ops.handleSubmitWorker as any}
+          onSubmit={ops.handleSubmitWorker}
           onFileModified={ops.handleFileModified}
         />
       )}

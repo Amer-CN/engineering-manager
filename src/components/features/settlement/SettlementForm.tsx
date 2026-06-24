@@ -1,5 +1,5 @@
 import React, { useRef } from 'react'
-import { Settlement as SettlementData, Project, Partner } from '../../../types/electron'
+import { Settlement as SettlementData, SettlementItem, Project, Partner } from '../../../types/electron'
 import { Input } from '../../ui/Input/Input'
 import { subTypeConfig } from './config'
 import { SettlementItemsTable } from './SettlementItemsTable'
@@ -46,16 +46,16 @@ export const SettlementForm: React.FC<SettlementFormProps> = ({
         projectId: settlement.projectId && settlement.projectId > 0 ? settlement.projectId : '',
         partnerId: settlement.partnerId && settlement.partnerId > 0 ? settlement.partnerId : '',
         type: settlement.type,
-        subType: (settlement as any).subType || '',
+        subType: settlement.subType || '',
         name: settlement.name,
         amount: settlement.amount,
-        settlementDate: (settlement as any).settlementDate || settlement.periodStart || '',
+        settlementDate: settlement.settlementDate || settlement.periodStart || '',
         remarks: settlement.remarks || '',
-        files: (settlement as any).files?.length > 0 ? (settlement as any).files
+        files: (settlement.files?.length ?? 0) > 0 ? settlement.files!
           : settlement.fileUrl ? [{ url: settlement.fileUrl, name: settlement.fileName || '凭证', type: settlement.fileType || 'image' as const }] : [],
         items: settlement.items?.map(item => ({
           description: item.description,
-          spec: (item as any).spec || '',
+          spec: ((item as SettlementItem & { spec?: string }).spec ?? ''),
           quantity: item.quantity,
           unit: item.unit,
           unitPrice: item.unitPrice,
