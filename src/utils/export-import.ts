@@ -5,6 +5,7 @@
  */
 
 import * as XLSX from 'xlsx'
+import type { Project, Partner, Member, IncomeContract, ExpenseContract, AgreementContract, Invoice, Settlement, InventoryItem, InventoryTransaction } from '@/types'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 类型定义
@@ -62,16 +63,16 @@ export interface BackupMetadata {
 export interface BackupData {
   metadata: BackupMetadata
   data: {
-    projects?: any[]
-    partners?: any[]
-    members?: any[]
-    incomeContracts?: any[]
-    expenseContracts?: any[]
-    agreementContracts?: any[]
-    invoices?: any[]
-    settlements?: any[]
-    inventoryItems?: any[]
-    inventoryTransactions?: any[]
+    projects?: Project[]
+    partners?: Partner[]
+    members?: Member[]
+    incomeContracts?: IncomeContract[]
+    expenseContracts?: ExpenseContract[]
+    agreementContracts?: AgreementContract[]
+    invoices?: Invoice[]
+    settlements?: Settlement[]
+    inventoryItems?: InventoryItem[]
+    inventoryTransactions?: InventoryTransaction[]
   }
 }
 
@@ -105,7 +106,7 @@ export function exportToExcel<T extends Record<string, any>>(
 
   // 转换为工作表数据
   const wsData = data.map(row => {
-    const newRow: Record<string, any> = {}
+    const newRow: Record<string, unknown> = {}
     columns.forEach(col => {
       newRow[col.header] = row[col.key]
     })
@@ -136,7 +137,7 @@ export function exportToExcel<T extends Record<string, any>>(
 /**
  * 导出项目列表
  */
-export function exportProjects(projects: any[], options?: Partial<ExportOptions>): void {
+export function exportProjects(projects: Project[], options?: Partial<ExportOptions>): void {
   exportToExcel(
     projects,
     [
@@ -155,7 +156,7 @@ export function exportProjects(projects: any[], options?: Partial<ExportOptions>
 /**
  * 导出合作单位列表
  */
-export function exportPartners(partners: any[], options?: Partial<ExportOptions>): void {
+export function exportPartners(partners: Partner[], options?: Partial<ExportOptions>): void {
   exportToExcel(
     partners,
     [
@@ -175,7 +176,7 @@ export function exportPartners(partners: any[], options?: Partial<ExportOptions>
 /**
  * 导出员工列表
  */
-export function exportMembers(members: any[], options?: Partial<ExportOptions>): void {
+export function exportMembers(members: Member[], options?: Partial<ExportOptions>): void {
   exportToExcel(
     members,
     [
@@ -195,7 +196,7 @@ export function exportMembers(members: any[], options?: Partial<ExportOptions>):
 /**
  * 导出合同列表
  */
-export function exportContracts(contracts: any[], type: 'income' | 'expense' | 'agreement', options?: Partial<ExportOptions>): void {
+export function exportContracts(contracts: (IncomeContract | ExpenseContract | AgreementContract)[], type: 'income' | 'expense' | 'agreement', options?: Partial<ExportOptions>): void {
   const prefix = type === 'income' ? '收入合同' : type === 'expense' ? '支出合同' : '其他协议'
   exportToExcel(
     contracts,
@@ -217,7 +218,7 @@ export function exportContracts(contracts: any[], type: 'income' | 'expense' | '
 /**
  * 导出结算单列表
  */
-export function exportSettlements(settlements: any[], options?: Partial<ExportOptions>): void {
+export function exportSettlements(settlements: Settlement[], options?: Partial<ExportOptions>): void {
   exportToExcel(
     settlements,
     [
@@ -238,7 +239,7 @@ export function exportSettlements(settlements: any[], options?: Partial<ExportOp
 /**
  * 导出发票列表
  */
-export function exportInvoices(invoices: any[], options?: Partial<ExportOptions>): void {
+export function exportInvoices(invoices: Invoice[], options?: Partial<ExportOptions>): void {
   exportToExcel(
     invoices,
     [
@@ -259,7 +260,7 @@ export function exportInvoices(invoices: any[], options?: Partial<ExportOptions>
 /**
  * 导出物料库存
  */
-export function exportInventory(items: any[], options?: Partial<ExportOptions>): void {
+export function exportInventory(items: InventoryItem[], options?: Partial<ExportOptions>): void {
   exportToExcel(
     items,
     [
@@ -299,7 +300,7 @@ export async function importFromExcel<T extends Record<string, any>>(
         const workbook = XLSX.read(data, { type: 'array' })
         const sheetName = workbook.SheetNames[0]
         const worksheet = workbook.Sheets[sheetName]
-        const jsonData = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet)
+        const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet)
         
         if (jsonData.length === 0) {
           resolve({
@@ -317,7 +318,7 @@ export async function importFromExcel<T extends Record<string, any>>(
         const headerToKey = new Map(mapping.map(m => [m.header, m.key]))
         
         for (const row of jsonData) {
-          const mappedRow: Record<string, any> = {}
+          const mappedRow: Record<string, unknown> = {}
           let isValid = true
           
           for (const [header, key] of headerToKey) {
@@ -368,7 +369,7 @@ export async function importFromExcel<T extends Record<string, any>>(
 /**
  * 导入项目数据
  */
-export async function importProjects(file: File): Promise<ImportResult<any>> {
+export async function importProjects(file: File): Promise<ImportResult<Record<string, unknown>>> {
   return importFromExcel(file, [
     { key: 'name', header: '项目名称' },
     { key: 'address', header: '地址' },
@@ -381,7 +382,7 @@ export async function importProjects(file: File): Promise<ImportResult<any>> {
 /**
  * 导入合作单位数据
  */
-export async function importPartners(file: File): Promise<ImportResult<any>> {
+export async function importPartners(file: File): Promise<ImportResult<Record<string, unknown>>> {
   return importFromExcel(file, [
     { key: 'name', header: '单位名称' },
     { key: 'category', header: '类型' },
@@ -394,7 +395,7 @@ export async function importPartners(file: File): Promise<ImportResult<any>> {
 /**
  * 导入员工数据
  */
-export async function importMembers(file: File): Promise<ImportResult<any>> {
+export async function importMembers(file: File): Promise<ImportResult<Record<string, unknown>>> {
   return importFromExcel(file, [
     { key: 'name', header: '姓名' },
     { key: 'phone', header: '电话' },
@@ -412,7 +413,7 @@ export async function importMembers(file: File): Promise<ImportResult<any>> {
  * 生成备份数据
  */
 export function createBackupData(
-  data: Record<string, any[]>,
+  data: Record<string, unknown[]>,
   createdBy: string = 'system'
 ): BackupData {
   const recordCounts: Record<string, number> = {}
