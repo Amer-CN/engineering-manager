@@ -1,0 +1,35 @@
+import { type Column } from '@/components/DataTable'
+import { Icon } from '../../ui/Icon'
+import { Button } from '../../ui/Button'
+import { categoryIcons, categoryColors } from '../../drawingsConstants'
+import type { Drawing } from '../../../types/electron'
+
+export function createDrawingColumns(
+  getProjectName: (projectId: number) => string,
+  onEdit: (drawing: Drawing) => void,
+  onDelete: (id: number) => void
+): Column<Drawing>[] {
+  return [
+    { key: 'name', title: '图纸名称', render: (item) => (
+      <div className="flex items-center gap-2">
+        <Icon name={categoryIcons[item.category || ''] || 'File'} size={18} className="text-slate-400" />
+        <span className="font-medium text-slate-800">{item.name}</span>
+      </div>
+    )},
+    { key: 'projectId', title: '所属项目', render: (item) => <span className="text-sm text-slate-600">{getProjectName(item.projectId)}</span> },
+    { key: 'category', title: '图纸类型', render: (item) => (
+      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${categoryColors[item.category || ''] || 'bg-slate-100 text-slate-800'}`}>
+        {item.category || '其他'}
+      </span>
+    )},
+    { key: 'position', title: '部位', render: (item) => <span className="text-sm text-slate-600">{item.position || '-'}</span> },
+    { key: 'remarks', title: '备注', render: (item) => <span className="text-sm text-slate-600 max-w-xs truncate">{item.remarks || '-'}</span> },
+    { key: 'createdAt', title: '上传日期', render: (item) => <span className="text-sm text-slate-500">{new Date(item.createdAt).toLocaleDateString('zh-CN')}</span> },
+    { key: 'actions', title: '操作', align: 'center', render: (item) => (
+      <div className="flex items-center justify-center gap-2">
+        <Button onClick={() => onEdit(item)}  variant="ghost" size="sm">编辑</Button>
+        <Button onClick={() => onDelete(item.id)}  variant="danger" size="sm">删除</Button>
+      </div>
+    )},
+  ]
+}
