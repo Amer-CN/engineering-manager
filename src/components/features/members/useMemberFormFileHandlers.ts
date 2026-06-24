@@ -123,9 +123,9 @@ export function useMemberFormFileHandlers({
         showToast(error, 'error')
         return
       }
-      await processIdCardFile(file, field as 'idCardFront' | 'idCardBack', safeSetter)
+      await processIdCardFile(file, field as 'idCardFront' | 'idCardBack', safeSetter as React.Dispatch<React.SetStateAction<StaffFormData | WorkerFormData>>)
     } else {
-      await processUploadFile(file, field, safeSetter)
+      await processUploadFile(file, field, safeSetter as React.Dispatch<React.SetStateAction<StaffFormData | WorkerFormData>>)
     }
   }
 
