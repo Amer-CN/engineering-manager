@@ -14,14 +14,23 @@ import {
 import { StaffPayrollTable } from './StaffPayrollTable'
 import { Card } from '@/components/ui/Card'
 import StaffPayrollToolbar from './StaffPayrollToolbar'
+import type { Member, Department, Project, WageRecord, AttendanceRecord } from '@/types'
+
+/** HR staff payroll extends WageRecord with staff-specific fields */
+type StaffWageRecord = WageRecord & {
+  baseSalary?: number
+  subsidy?: number
+  attendanceDays?: number
+  netSalary?: number
+}
 
 const StaffPayroll: React.FC = () => {
   const showToast = useToastStore(state => state.showToast)
-  const [staff, setStaff] = useState<any[]>([])
-  const [departments, setDepartments] = useState<any[]>([])
-  const [projects, setProjects] = useState<any[]>([])
-  const [allWages, setAllWages] = useState<any[]>([])
-  const [attendances, setAttendances] = useState<any[]>([])
+  const [staff, setStaff] = useState<Member[]>([])
+  const [departments, setDepartments] = useState<Department[]>([])
+  const [projects, setProjects] = useState<Project[]>([])
+  const [allWages, setAllWages] = useState<StaffWageRecord[]>([])
+  const [attendances, setAttendances] = useState<AttendanceRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
 
@@ -36,18 +45,18 @@ const StaffPayroll: React.FC = () => {
         api.getDepartments(),
         api.getProjects()
       ])
-      const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
-      const membersData = get(memRes)
+      const get = <T,>(r: PromiseSettledResult<{ success?: boolean; data?: unknown }>): T[] => (r.status === 'fulfilled' && r.value?.success ? (r.value.data as T[] || []) : [])
+      const membersData = get<Member>(memRes)
       const staffOnly = membersData.filter(
-        (m: any) => m.memberType === 'staff' || m.memberType === undefined
+        (m: Member) => m.memberType === 'staff' || m.memberType === undefined
       )
       setStaff(staffOnly)
-      const staffIds = new Set(staffOnly.map((m: any) => m.id))
-      setAllWages(get(wageRes).filter((w: any) => staffIds.has(w.memberId)))
-      setAttendances(get(attRes))
-      setDepartments(get(deptRes))
-      setProjects(get(projRes).filter((p: any) => p.status !== 'archived'))
-    } catch (e) { console.error(e) }
+      const staffIds = new Set(staffOnly.map((m: Member) => m.id))
+      setAllWages(get<StaffWageRecord>(wageRes).filter((w: StaffWageRecord) => staffIds.has(w.memberId ?? 0)))
+      setAttendances(get<AttendanceRecord>(attRes))
+      setDepartments(get<Department>(deptRes))
+      setProjects(get<Project>(projRes).filter((p: Project) => p.status !== 'archived'))
+    } catch (e: unknown) { console.error(e) }
     finally { setLoading(false) }
   }, [])
 
@@ -95,12 +104,12 @@ const StaffPayroll: React.FC = () => {
           const netSalary = isPartialMonth
             ? Math.round(totalSalary * (attWorkDays / wd))
             : attDaysOff <= 4 ? totalSalary : Math.round(totalSalary * (attWorkDays / wd))
-          const record: any = {
+          const record: Record<string, unknown> = {
             memberId: s.id, projectId: null, yearMonth: ym, baseSalary, subsidy,
             attendanceDays: attWorkDays, bonus: 0, deduction: 0, netSalary,
             paidAmount: null, paidDate: null,
           }
-          const existing = allWages.find((w: any) => w.memberId === s.id && w.yearMonth === ym)
+          const existing = allWages.find((w) => (w.memberId ?? 0) === s.id && w.yearMonth === ym)
           const wageApi = await getAPI()
           if (existing) {
             await wageApi.updateWage({ ...existing, ...record, id: existing.id })
@@ -116,11 +125,11 @@ const StaffPayroll: React.FC = () => {
       if (skipCount > 0) parts.push(`${skipCount} 人无考勤已跳过`)
       if (failCount > 0) parts.push(`${failCount} 条失败`)
       showToast(parts.join('，'), failCount > 0 ? 'error' : skipCount > 0 ? 'info' : 'success')
-    } catch (e: any) { showToast(e?.message || '生成失败', 'error') }
+    } catch (e: unknown) { showToast(e instanceof Error ? e.message : '生成失败', 'error') }
     finally { setGenerating(false) }
   }
 
-  const handleDeleteWage = async (wage: any) => {
+  const handleDeleteWage = async (wage: StaffWageRecord) => {
     if (!confirm(`确认删除 ${wage.memberName || ''} ${wage.yearMonth} 的薪酬记录？此操作不可撤销。`)) return
     try {
       const result = await (await getAPI()).deleteWage(wage.id)
@@ -130,16 +139,16 @@ const StaffPayroll: React.FC = () => {
       } else {
         showToast(result.error || '删除失败', 'error')
       }
-    } catch (e: any) { showToast(e?.message || '删除失败', 'error') }
+    } catch (e: unknown) { showToast(e instanceof Error ? e.message : '删除失败', 'error') }
   }
 
   const handleExportExcel = async () => {
     try {
       const XLSX = await import('xlsx')
-      const staffMapLocal = new Map(staff.map((s: any) => [s.id, s]))
-      const getDeptNameLocal = (id?: number) => departments.find((d: any) => d.id === id)?.name || '-'
-      const rows = filteredWages.map((w: any) => {
-        const s = staffMapLocal.get(w.memberId)
+      const staffMapLocal = new Map(staff.map((s: Member) => [s.id, s]))
+      const getDeptNameLocal = (id?: number) => departments.find((d: Department) => d.id === id)?.name || '-'
+      const rows = filteredWages.map((w: StaffWageRecord) => {
+        const s = staffMapLocal.get(w.memberId ?? 0)
         return {
           '姓名': w.memberName || s?.name || '',
           '部门': getDeptNameLocal(s?.departmentId),
@@ -162,7 +171,7 @@ const StaffPayroll: React.FC = () => {
         : `薪酬汇总_全部`
       XLSX.writeFile(wb, `${label}.xlsx`)
       showToast('导出成功', 'success')
-    } catch (e: any) { showToast(e?.message || '导出失败', 'error') }
+    } catch (e: unknown) { showToast(e instanceof Error ? e.message : '导出失败', 'error') }
   }
 
   const handleDeleteAllMonth = async () => {
@@ -172,17 +181,17 @@ const StaffPayroll: React.FC = () => {
     }
     if (!confirm(`确认删除 ${effectiveYearMonth} 所有薪酬记录？此操作不可撤销。`)) return
     try {
-      const ids = filteredWages.map((w: any) => w.id)
+      const ids = filteredWages.map((w) => w.id)
       if (ids.length === 0) { showToast('没有可删除的记录', 'info'); return }
       const result = await (await getAPI()).batchDeleteWages(ids)
       if (result.success) {
         showToast(`已删除 ${ids.length} 条记录`, 'success')
         loadData()
       } else { showToast(result.error || '批量删除失败', 'error') }
-    } catch (e: any) { showToast(e?.message || '删除失败', 'error') }
+    } catch (e: unknown) { showToast(e instanceof Error ? e.message : '删除失败', 'error') }
   }
 
-  const handlePaidChange = async (wage: any, field: string, value: any) => {
+  const handlePaidChange = async (wage: StaffWageRecord, field: string, value: string | number | null) => {
     const updated = { ...wage, [field]: value }
     await (await getAPI()).updateWage(updated)
     loadData()

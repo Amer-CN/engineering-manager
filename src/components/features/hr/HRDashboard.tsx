@@ -4,6 +4,7 @@ import { Spinner } from '../../ui/Loading/Loading'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { getAPI } from '@/services/api-adapter'
 import { CHART_PALETTE } from './hrColors'
+import type { Member, Department, WageRecord, AttendanceRecord } from '@/types'
 import { Card } from '@/components/ui/Card'
 
 interface DashboardData {
@@ -24,7 +25,7 @@ const HRDashboard: React.FC = () => {
     todayPresent: 0, todayLeave: 0, deptDistribution: [], recentStaff: []
   })
   const [loading, setLoading] = useState(true)
-  const [depts, setDepts] = useState<any[]>([])
+  const [depts, setDepts] = useState<Department[]>([])
 
   useEffect(() => {
     (async () => {
@@ -36,30 +37,30 @@ const HRDashboard: React.FC = () => {
           api.getWages(undefined, `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`),
           api.getAttendances(undefined, `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`)
         ])
-        const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
-        const deptList = get(deptRes)
-        const members = get(memberRes)
-        const wages = get(wageRes)
-        const attendances = get(attRes)
-        const staff = members.filter((m: any) => m.memberType === 'staff' || !m.memberType)
+        const get = <T,>(r: PromiseSettledResult<{ success?: boolean; data?: unknown }>): T[] => (r.status === 'fulfilled' && r.value?.success ? (r.value.data as T[] || []) : [])
+        const deptList = get<Department>(deptRes)
+        const members = get<Member>(memberRes)
+        const wages = get<WageRecord>(wageRes)
+        const attendances = get<AttendanceRecord>(attRes)
+        const staff = members.filter((m: Member) => m.memberType === 'staff' || !m.memberType)
         const now = new Date()
         const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
         const today = now.getDate()
 
-        const getEntryDate = (m: any) => m.entryDate || (m.createdAt ? m.createdAt.split('T')[0] : null)
-        const newThisMonth = staff.filter((m: any) => (getEntryDate(m) || '').startsWith(thisMonth)).length
-        const activeStaff = staff.filter((m: any) => m.status !== 'left')
-        const leftThisMonth = staff.filter((m: any) => m.status === 'left').length
+        const getEntryDate = (m: Member) => m.entryDate || (m.createdAt ? m.createdAt.split('T')[0] : null)
+        const newThisMonth = staff.filter((m: Member) => (getEntryDate(m) || '').startsWith(thisMonth)).length
+        const activeStaff = staff.filter((m: Member) => m.status !== 'left')
+        const leftThisMonth = staff.filter((m: Member) => m.status === 'left').length
 
         // Actual payroll from wage records
-        const monthlyPayroll = wages.reduce((sum: number, w: any) => sum + ((w.netSalary || 0) + (w.bonus || 0) - (w.deduction || 0)), 0)
-        const monthlyPayrollEstimated = activeStaff.reduce((sum: number, m: any) => sum + (m.baseSalary || 0), 0)
+        const monthlyPayroll = wages.reduce((sum: number, w: WageRecord) => { const r = w as WageRecord & Record<string, unknown>; return sum + (((r.netSalary as number) || 0) + (w.bonus || 0) - (w.deduction || 0)) }, 0)
+        const monthlyPayrollEstimated = activeStaff.reduce((sum: number, m: Member) => sum + (m.baseSalary || 0), 0)
 
         // Today's attendance
         let todayPresent = 0
         let todayLeave = 0
         for (const s of activeStaff) {
-          const att = attendances.find((a: any) => a.memberId === s.id && a.yearMonth === thisMonth)
+          const att = attendances.find((a: AttendanceRecord) => a.memberId === s.id && a.yearMonth === thisMonth)
           if (att?.dailyStatus) {
             const dayStatus = att.dailyStatus[today]
             if (dayStatus === 'work' || dayStatus === 'holiday') {
@@ -79,10 +80,10 @@ const HRDashboard: React.FC = () => {
           monthlyPayrollEstimated,
           todayPresent,
           todayLeave,
-          deptDistribution: deptList.map((d: any) => ({ name: d.name, value: d.memberCount || 0 })).filter((d: any) => d.value > 0),
-          recentStaff: staff.sort((a: any, b: any) => new Date(getEntryDate(b) || 0).getTime() - new Date(getEntryDate(a) || 0).getTime()).slice(0, 8)
+          deptDistribution: deptList.map((d: Department) => ({ name: d.name, value: d.memberCount || 0 })).filter((d: { name: string; value: number }) => d.value > 0),
+          recentStaff: staff.sort((a: Member, b: Member) => new Date(getEntryDate(b) || 0).getTime() - new Date(getEntryDate(a) || 0).getTime()).slice(0, 8)
         })
-      } catch (e) { console.error('HR dashboard load error:', e) }
+      } catch (e: unknown) { console.error('HR dashboard load error:', e) }
       finally { setLoading(false) }
     })()
   }, [])
@@ -160,14 +161,14 @@ const HRDashboard: React.FC = () => {
           {data.recentStaff.length > 0 ? (
             <div className="space-y-2">
               {data.recentStaff.map((s) => {
-                const dept = depts.find((d: any) => d.id === s.departmentId)
+                const dept = depts.find((d: Department) => d.id === s.departmentId)
                 return (
                   <div key={s.id} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
                     <div>
                       <span className="text-sm font-medium text-slate-800">{s.name}</span>
                       <span className="text-xs text-slate-400 ml-2">{dept?.name || ''}{s.position ? ` · ${s.position}` : ''}</span>
                     </div>
-                    <span className="text-xs text-slate-400">{(s as any).entryDate || s.createdAt?.split('T')[0]}</span>
+                    <span className="text-xs text-slate-400">{(s as Member).entryDate || s.createdAt?.split('T')[0]}</span>
                   </div>
                 )
               })}
