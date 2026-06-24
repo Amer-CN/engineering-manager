@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import type { Member, WorkerTeam, WorkerStatus, ProjectWorker } from '../types/electron'
-import { recognizeIdCard, OCRProvider, getOCRConfig } from '../services/ocr'
+import type { Member, WorkerTeam, WorkerStatus } from '../types/electron'
+import { OCRProvider, getOCRConfig } from '../services/ocr'
 import { useToastStore } from '../store/toastStore'
 import {
   StaffFormData,
@@ -16,6 +16,8 @@ import { useLaborOperations } from '../components/features/labor/hooks/useLaborO
 import { useMemberPasteHandler } from '../components/features/members/useMemberPasteHandler'
 import { getAPI } from '../services/api-adapter'
 import { useWorkerImport } from '../components/features/members/useWorkerImport'
+import { useMembersOCR } from './useMembersOCR'
+import { useMembersBatch } from './useMembersBatch'
 
 interface UseMembersPageProps {
   refresh?: () => void
@@ -75,73 +77,16 @@ export function useMembersPage({ refresh }: UseMembersPageProps) {
     setEditingStaff(null)
   }, [])
 
+
   const resetWorkerForm = useCallback(() => {
     setWorkerFormData(defaultWorkerFormData)
     setEditingWorker(null)
   }, [])
 
   // OCR file processing
-  const processFileForIdCard = useCallback(async (file: File, field: 'idCardFront' | 'idCardBack', setFormData: React.Dispatch<React.SetStateAction<StaffFormData | WorkerFormData>>) => {
-    const reader = new FileReader()
-    reader.onload = async (e) => {
-      const base64 = e.target?.result as string
-      setFormData(prev => ({ ...prev, [field]: base64 }))
-      setOcrMode(getOCRConfig().provider)
-      if (field === 'idCardFront') {
-        try {
-          const result = await recognizeIdCard(base64)
-          if (result.success && result.idCard) {
-            const { number, gender, birthDate, name, ethnicity, address } = result.idCard
-            setFormData(prev => ({
-              ...prev,
-              name: name || prev.name,
-              gender: gender || prev.gender,
-              ethnicity: ethnicity || prev.ethnicity,
-              birthDate: birthDate || prev.birthDate,
-              idCard: number || prev.idCard,
-              idCardAddress: address || prev.idCardAddress
-            }))
-            const filled: string[] = []
-            if (name) filled.push('姓名')
-            if (number) filled.push('身份证号')
-            if (gender) filled.push('性别')
-            if (birthDate) filled.push('出生日期')
-            if (ethnicity) filled.push('民族')
-            if (address) filled.push('地址')
-            showToast(filled.length > 0 ? `识别成功！已自动填充：${filled.join('、')}` : '身份证识别成功', 'success')
-          }
-        } catch (err) { console.error('OCR 识别失败:', err) }
-      }
-    }
-    reader.readAsDataURL(file)
-  }, [showToast])
+  const { processFileForIdCard, processUploadFile } = useMembersOCR({ setOcrMode })
 
-  const processUploadFile = useCallback(async (file: File, field: string, setFormData: React.Dispatch<React.SetStateAction<any>>) => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      setFormData((prev: any) => ({
-        ...prev,
-        [field]: e.target?.result as string,
-        [`${field}Type`]: file.type === 'application/pdf' ? 'pdf' : 'image'
-      }))
-    }
-    reader.readAsDataURL(file)
-  }, [])
-
-  // WorkerPicker batch add
-  const handleBatchAddWorkers = useCallback(async (entries: Partial<ProjectWorker>[]) => {
-    try {
-      const result = await (await getAPI()).batchCreateProjectWorkers(entries as any[])
-      if (result.success) {
-        showToast(`成功添加 ${entries.length} 名工人`, 'success')
-        loadData()
-      } else {
-        showToast(result.error || '添加失败', 'error')
-      }
-    } catch (err: any) {
-      showToast(err.message || '添加失败', 'error')
-    }
-  }, [showToast])
+  
 
   // Data loading
   const loadData = useCallback(async () => {
@@ -190,6 +135,9 @@ export function useMembersPage({ refresh }: UseMembersPageProps) {
       setLoading(false)
     }
   }, [showToast])
+
+  // WorkerPicker batch add
+  const { handleBatchAddWorkers } = useMembersBatch({ loadData })
 
   useEffect(() => {
     loadData()
@@ -260,18 +208,8 @@ export function useMembersPage({ refresh }: UseMembersPageProps) {
   // Data filtering
   const staffMembers = members.filter(m => m.memberType !== 'worker' || !m.memberType)
   const workerMembers = members.filter(m => m.memberType === 'worker')
-
-  const filteredStaff = staffMembers.filter(m => {
-    const status = m.status || 'active'
-    if (filterStatus !== 'all' && status !== filterStatus) return false
-    return true
-  })
-
-  const filteredWorkers = workerMembers.filter(w => {
-    const status = w.status || 'active'
-    if (filterStatus !== 'all' && status !== filterStatus) return false
-    return true
-  })
+  const filteredStaff = staffMembers.filter(m => filterStatus === 'all' || (m.status || 'active') === filterStatus)
+  const filteredWorkers = workerMembers.filter(w => filterStatus === 'all' || (w.status || 'active') === filterStatus)
 
   return {
     // Tab
