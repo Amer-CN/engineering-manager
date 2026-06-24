@@ -218,9 +218,9 @@ async function baiduOCR(imageBase64: string, config: OCRConfig): Promise<OCRResu
       secretKey: config.baidu.secretKey
     })
     return result as OCRResult
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[渲染进程] 百度OCR IPC 调用失败:', error)
-    return { success: false, error: `百度OCR请求失败: ${error.message || '未知错误'}` }
+    return { success: false, error: `百度OCR请求失败: ${error instanceof Error ? error.message : '未知错误'}` }
   }
 }
 
@@ -238,9 +238,9 @@ async function baiduInvoiceOCR(imageBase64: string, config: OCRConfig): Promise<
       secretKey: config.baidu.secretKey
     })
     return result as OCRResult
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[渲染进程] 百度发票OCR IPC 调用失败:', error)
-    return { success: false, error: `百度OCR请求失败: ${error.message || '未知错误'}` }
+    return { success: false, error: `百度OCR请求失败: ${error instanceof Error ? error.message : '未知错误'}` }
   }
 }
 
@@ -258,9 +258,9 @@ async function baiduBankCardOCR(imageBase64: string, config: OCRConfig): Promise
       secretKey: config.baidu.secretKey
     })
     return result as OCRResult
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[渲染进程] 百度银行卡OCR IPC 调用失败:', error)
-    return { success: false, error: `百度OCR请求失败: ${error.message || '未知错误'}` }
+    return { success: false, error: `百度OCR请求失败: ${error instanceof Error ? error.message : '未知错误'}` }
   }
 }
 
@@ -278,9 +278,9 @@ async function baiduBusinessLicenseOCR(imageBase64: string, config: OCRConfig): 
       secretKey: config.baidu.secretKey
     })
     return result as OCRResult
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[渲染进程] 百度营业执照OCR IPC 调用失败:', error)
-    return { success: false, error: `百度OCR请求失败: ${error.message || '未知错误'}` }
+    return { success: false, error: `百度OCR请求失败: ${error instanceof Error ? error.message : '未知错误'}` }
   }
 }
 
@@ -298,9 +298,9 @@ async function baiduBankReceiptOCR(imageBase64: string, config: OCRConfig): Prom
       secretKey: config.baidu.secretKey
     })
     return result as OCRResult
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[渲染进程] 百度银行回单OCR IPC 调用失败:', error)
-    return { success: false, error: `百度OCR请求失败: ${error.message || '未知错误'}` }
+    return { success: false, error: `百度OCR请求失败: ${error instanceof Error ? error.message : '未知错误'}` }
   }
 }
 
@@ -318,9 +318,9 @@ async function baiduPermitOCR(imageBase64: string, config: OCRConfig): Promise<O
       secretKey: config.baidu.secretKey
     })
     return result as OCRResult
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[渲染进程] 百度开户许可证OCR IPC 调用失败:', error)
-    return { success: false, error: `百度OCR请求失败: ${error.message || '未知错误'}` }
+    return { success: false, error: `百度OCR请求失败: ${error instanceof Error ? error.message : '未知错误'}` }
   }
 }
 
@@ -338,9 +338,9 @@ async function baiduBankStatementOCR(imageBase64: string, config: OCRConfig): Pr
       secretKey: config.baidu.secretKey
     })
     return result as OCRResult
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[渲染进程] 百度银行单据OCR IPC 调用失败:', error)
-    return { success: false, error: `百度OCR请求失败: ${error.message || '未知错误'}` }
+    return { success: false, error: `百度OCR请求失败: ${error instanceof Error ? error.message : '未知错误'}` }
   }
 }
 
@@ -358,9 +358,9 @@ async function baiduGeneralReceiptOCR(imageBase64: string, config: OCRConfig): P
       secretKey: config.baidu.secretKey
     })
     return result as OCRResult
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[渲染进程] 百度通用票据OCR IPC 调用失败:', error)
-    return { success: false, error: `百度OCR请求失败: ${error.message || '未知错误'}` }
+    return { success: false, error: `百度OCR请求失败: ${error instanceof Error ? error.message : '未知错误'}` }
   }
 }
 
@@ -378,9 +378,9 @@ async function baiduCompanyQuery(companyName: string, config: OCRConfig): Promis
       secretKey: config.baidu.secretKey
     })
     return result as OCRResult
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[渲染进程] 百度企业查询 IPC 调用失败:', error)
-    return { success: false, error: `企业查询请求失败: ${error.message || '未知错误'}` }
+    return { success: false, error: `企业查询请求失败: ${error instanceof Error ? error.message : '未知错误'}` }
   }
 }
 
@@ -438,9 +438,9 @@ async function offlineOCR(imageBase64: string): Promise<OCRResult> {
       // 清理临时URL
       URL.revokeObjectURL(imageUrl)
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[离线OCR] 识别失败:', error)
-    return { success: false, error: `离线OCR失败: ${error.message}` }
+    return { success: false, error: `离线OCR失败: ${error instanceof Error ? error.message : '未知错误'}` }
   }
 }
 

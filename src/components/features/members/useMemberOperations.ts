@@ -1,4 +1,4 @@
-import type { Member, WorkerStatus } from '../../../types/electron'
+import type { Member, WorkerStatus, Project } from '../../../types/electron'
 import { logCreate, logUpdate, logDelete } from '../../../utils/audit'
 import { getAPI } from '@/services/api-adapter'
 import { processFileFields, guessFileExt, FILE_CATEGORIES } from '../../../services/fileService'
@@ -7,14 +7,14 @@ import type { StaffFormData, WorkerFormData } from './memberFormTypes'
 interface SubmitMemberOptions {
   editingStaff: Member | null
   editingWorker: Member | null
-  projects: any[]
+  projects: Project[]
   originalMemberFileRef: React.MutableRefObject<Record<number, Record<string, string>>>
   loadData: () => Promise<void>
   showToast: (msg: string, type: 'success' | 'error') => void
   onSuccess: () => void
 }
 
-function stripEmpties(obj: any) {
+function stripEmpties(obj: Record<string, unknown>) {
   Object.keys(obj).forEach(key => {
     if (typeof obj[key] === 'string' && obj[key] === '') obj[key] = undefined
   })
@@ -48,10 +48,10 @@ export function useMemberOperations({
 
   const handleSubmitStaff = async (data: StaffFormData | WorkerFormData) => {
     try {
-      let submitFileData: any = data
+      let submitFileData: Record<string, unknown> = data as Record<string, unknown>
       if (editingStaff) {
         const orig = originalMemberFileRef.current[editingStaff.id] || {}
-        const restored: any = { ...data }
+        const restored: Record<string, unknown> = { ...data } as Record<string, unknown>
         let hasRestore = false
         for (const key of ['idCardFront', 'idCardBack', 'contractFile']) {
           if (typeof restored[key] === 'string' && restored[key].startsWith('data:') && orig[key]) {
@@ -114,19 +114,20 @@ export function useMemberOperations({
           } else {
             showToast(pwRes.error || '创建用工关系失败', 'error')
           }
-        } catch (err: any) {
-          showToast(err?.message || '创建失败', 'error')
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : '创建失败'
+          showToast(msg, 'error')
         }
       }
-    } catch (error: any) { showToast(error?.message || '保存失败', 'error') }
+    } catch (error: unknown) { const msg = error instanceof Error ? error.message : '保存失败'; showToast(msg, 'error') }
   }
 
   const handleSubmitWorker = async (data: StaffFormData | WorkerFormData) => {
     try {
-      let submitFileData: any = data
+      let submitFileData: Record<string, unknown> = data as Record<string, unknown>
       if (editingWorker) {
         const orig = originalMemberFileRef.current[editingWorker.id] || {}
-        const restored: any = { ...data }
+        const restored: Record<string, unknown> = { ...data } as Record<string, unknown>
         let hasRestore = false
         for (const key of ['idCardFront', 'idCardBack', 'contractFile', 'safetyTrainingFile', 'healthReportFile', 'specialCertificateFile']) {
           if (typeof restored[key] === 'string' && restored[key].startsWith('data:') && orig[key]) {
@@ -191,7 +192,7 @@ export function useMemberOperations({
           showToast(pwRes.error || '创建用工关系失败', 'error')
         }
       }
-    } catch (err: any) { showToast(err?.message || '保存失败', 'error') }
+    } catch (err: unknown) { const msg = err instanceof Error ? err.message : '保存失败'; showToast(msg, 'error') }
   }
 
   return {

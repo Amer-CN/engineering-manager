@@ -8,8 +8,8 @@ interface UseMemberFormFileHandlersParams {
   type: 'staff' | 'worker'
   onFileModified?: (field: string) => void
   hookProcessIdCardFile: (file: File) => Promise<string | null>
-  ocrResult: any
-  setOcrResult: React.Dispatch<React.SetStateAction<any>>
+  ocrResult: { name?: string; idCard?: string; gender?: string; birthDate?: string; ethnicity?: string; address?: string } | null
+  setOcrResult: React.Dispatch<React.SetStateAction<{ name?: string; idCard?: string; gender?: string; birthDate?: string; ethnicity?: string; address?: string } | null>>
   setStaffFormData: React.Dispatch<React.SetStateAction<StaffFormData>>
   setWorkerFormData: React.Dispatch<React.SetStateAction<WorkerFormData>>
 }
@@ -33,13 +33,13 @@ export function useMemberFormFileHandlers({
     setter: React.Dispatch<React.SetStateAction<StaffFormData | WorkerFormData>>
   ) => {
     const base64 = await readFileAsBase64(file)
-    setter((prev: any) => ({ ...prev, [field]: base64 }))
+    setter((prev: StaffFormData | WorkerFormData) => ({ ...prev, [field]: base64 }))
     onFileModified?.(field)
 
     if (field === 'idCardFront') {
       const result = await hookProcessIdCardFile(file)
       if (result && ocrResult) {
-        setter((prev: any) => ({
+        setter((prev: StaffFormData | WorkerFormData) => ({
           ...prev,
           [field]: result,
           name: ocrResult.name || prev.name,
@@ -69,9 +69,9 @@ export function useMemberFormFileHandlers({
     const fileType = file.type === 'application/pdf' ? 'pdf' : 'image'
     
     if (field === 'contractFile') {
-      setter((prev: any) => ({ ...prev, contractFile: base64, contractFileType: fileType }))
+      setter((prev: StaffFormData | WorkerFormData) => ({ ...prev, contractFile: base64, contractFileType: fileType }))
     } else {
-      setter((prev: any) => ({ ...prev, [field]: base64 }))
+      setter((prev: StaffFormData | WorkerFormData) => ({ ...prev, [field]: base64 }))
     }
   }
 
@@ -82,9 +82,9 @@ export function useMemberFormFileHandlers({
     const ok = await confirm({ title: '确认删除', content: '确定要删除这个文件吗？', confirmVariant: 'danger' })
     if (ok) {
       if (field === 'contractFile') {
-        setter((prev: any) => ({ ...prev, contractFile: '', contractFileType: '' }))
+        setter((prev: StaffFormData | WorkerFormData) => ({ ...prev, contractFile: '', contractFileType: '' }))
       } else {
-        setter((prev: any) => ({ ...prev, [field]: '' }))
+        setter((prev: StaffFormData | WorkerFormData) => ({ ...prev, [field]: '' }))
       }
     }
   }
@@ -115,7 +115,7 @@ export function useMemberFormFileHandlers({
     if (files.length === 0) return
 
     const file = files[0]
-    const safeSetter = typeof setter === 'function' ? setter : (type === 'staff' ? setStaffFormData as any : setWorkerFormData as any)
+    const safeSetter = typeof setter === 'function' ? setter : (type === 'staff' ? setStaffFormData as React.Dispatch<React.SetStateAction<StaffFormData>> : setWorkerFormData as React.Dispatch<React.SetStateAction<WorkerFormData>>)
 
     if (isIdCard) {
       const error = validateImageFile(file)
