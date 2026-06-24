@@ -1,4 +1,6 @@
 import type { Column } from '@/components/DataTable'
+import type { Member, AttendanceRecord, DayStatus } from '@/types/electron'
+import type { StatusMeta } from '@/constants/attendance'
 
 /**
  * StaffAttendance columns 工厂（v1.1.0 拆分自 StaffAttendance）
@@ -6,22 +8,33 @@ import type { Column } from '@/components/DataTable'
  *
  * 依赖通过 deps 注入（避免循环 import + 提升测试性）
  */
+
+/** 行数据结构：StaffAttendance 页面构造并传入 */
+export interface AttendanceRow {
+  s: Member
+  att: AttendanceRecord | undefined
+  isSelected: boolean
+  deptName: string
+  entryDay: number
+  historyMonths: string[]
+}
+
 export interface AttendanceColumnDeps {
-  rows: any[]
+  rows: AttendanceRow[]
   selectedIds: Set<number>
   daysInMonth: number
   yearMonth: string
   summaryDot: Record<string, string>
-  STATUS_META: any[]
-  computeAttendanceSummary: (dailyStatus: any, days: number, entryDay: number) => any
+  STATUS_META: StatusMeta[]
+  computeAttendanceSummary: (dailyStatus: Record<number, DayStatus> | undefined, days: number, entryDay: number) => { counts: Record<DayStatus, number>; workDays: number; daysOff: number; applicableDays: number }
   toggleAll: () => void
   toggleSelect: (id: number) => void
-  setTimelineMember: (member: any) => void
+  setTimelineMember: (member: Member) => void
   openHistoryMonth: (memberId: number, ym: string) => void
-  handleDelete: (record: any) => void
+  handleDelete: (record: AttendanceRecord) => void
 }
 
-export function getAttendanceColumns(deps: AttendanceColumnDeps): Column<any>[] {
+export function getAttendanceColumns(deps: AttendanceColumnDeps): Column<Member>[] {
   const {
     rows,
     selectedIds,
@@ -45,7 +58,7 @@ export function getAttendanceColumns(deps: AttendanceColumnDeps): Column<any>[] 
           checked={rows.length > 0 && rows.every(r => r.att && selectedIds.has(r.att.id))}
           onChange={toggleAll} className="rounded" />
       ),
-      render: (item: any) => {
+      render: (item: Member) => {
         const row = rows.find(r => r.s.id === item.id)
         if (!row) return null
         return row.att && (
@@ -56,7 +69,7 @@ export function getAttendanceColumns(deps: AttendanceColumnDeps): Column<any>[] 
     },
     {
       key: 'name', title: '姓名',
-      render: (item: any) => {
+      render: (item: Member) => {
         const row = rows.find(r => r.s.id === item.id)
         if (!row) return null
         return (
@@ -69,7 +82,7 @@ export function getAttendanceColumns(deps: AttendanceColumnDeps): Column<any>[] 
     },
     {
       key: 'departmentId', title: '部门',
-      render: (item: any) => {
+      render: (item: Member) => {
         const row = rows.find(r => r.s.id === item.id)
         if (!row) return null
         return <span className="text-slate-500">{row.deptName}</span>
@@ -77,20 +90,20 @@ export function getAttendanceColumns(deps: AttendanceColumnDeps): Column<any>[] 
     },
     {
       key: 'attendance', title: '当月考勤',
-      render: (item: any) => {
+      render: (item: Member) => {
         const row = rows.find(r => r.s.id === item.id)
         if (!row) return null
         const att = row.att
         const ready = !!(att && att.dailyStatus && Object.keys(att.dailyStatus).length > 0)
         const summary = computeAttendanceSummary(att?.dailyStatus, daysInMonth, row.entryDay)
-        const summaryItems = (STATUS_META.filter(x => x.key !== undefined) as { key: any; label: string; color: string }[])
-          .map(st => ({ ...st, count: summary.counts[st.key] }))
+        const summaryItems = STATUS_META.filter(x => x.key !== undefined)
+          .map(st => ({ ...st, count: summary.counts[st.key!] }))
           .filter(item => item.count > 0)
         return ready ? (
           <div className="flex items-center gap-2 flex-wrap text-xs">
             {summaryItems.map(si => (
               <span key={si.key} className="inline-flex items-center gap-1 whitespace-nowrap">
-                <span className={`w-2 h-2 rounded-full ${summaryDot[si.key]}`} />
+                <span className={`w-2 h-2 rounded-full ${summaryDot[si.key!]}`} />
                 <span className="text-slate-600">{si.label}</span>
                 <span className="font-medium text-slate-700">{si.count}天</span>
               </span>
@@ -103,7 +116,7 @@ export function getAttendanceColumns(deps: AttendanceColumnDeps): Column<any>[] 
     },
     {
       key: 'status', title: '状态', align: 'center',
-      render: (item: any) => {
+      render: (item: Member) => {
         const row = rows.find(r => r.s.id === item.id)
         if (!row) return null
         const att = row.att
@@ -126,7 +139,7 @@ export function getAttendanceColumns(deps: AttendanceColumnDeps): Column<any>[] 
     },
     {
       key: 'history', title: '历史考勤',
-      render: (item: any) => {
+      render: (item: Member) => {
         const row = rows.find(r => r.s.id === item.id)
         if (!row) return null
         const historyYears = [...new Set(row.historyMonths.map((ym: string) => ym.slice(0, 4)))].sort()
@@ -142,7 +155,7 @@ export function getAttendanceColumns(deps: AttendanceColumnDeps): Column<any>[] 
     },
     {
       key: 'actions', title: '操作', align: 'center',
-      render: (item: any) => {
+      render: (item: Member) => {
         const row = rows.find(r => r.s.id === item.id)
         if (!row) return null
         return (
@@ -151,7 +164,7 @@ export function getAttendanceColumns(deps: AttendanceColumnDeps): Column<any>[] 
               <>
                 <button onClick={() => openHistoryMonth(row.s.id, yearMonth)}
                   className="text-indigo-600 hover:text-indigo-800 text-sm font-medium">编辑</button>
-                <button onClick={() => handleDelete(row.att)}
+                <button onClick={() => handleDelete(row.att!)}
                   className="text-red-400 hover:text-red-600 text-sm">删除</button>
               </>
             ) : (

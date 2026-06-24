@@ -2,13 +2,14 @@ import { type Column } from '@/components/DataTable'
 import { HR_STATUS_LABELS, HR_STATUS_COLORS } from './config'
 import { getAPI } from '@/services/api-adapter'
 import { Button } from '../../ui/Button'
+import type { Member, Department } from '@/types/electron'
 
 interface StaffListColumnsParams {
-  departments: any[]
-  getDeptName: (id: any) => string
-  handleStatusChange: (member: any, status: string) => void
-  openEdit: (m: any) => void
-  setSalaryHistoryMember: (m: any) => void
+  departments: Department[]
+  getDeptName: (id: number | undefined) => string
+  handleStatusChange: (member: Member, status: string) => void
+  openEdit: (m: Member) => void
+  setSalaryHistoryMember: (m: Member) => void
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
   loadData: () => Promise<void>
 }
@@ -16,22 +17,22 @@ interface StaffListColumnsParams {
 export function getStaffListColumns({
   departments, getDeptName, handleStatusChange,
   openEdit, setSalaryHistoryMember, showToast, loadData,
-}: StaffListColumnsParams): Column<any>[] {
+}: StaffListColumnsParams): Column<Member>[] {
   return [
     { key: 'name', title: '姓名', sortable: true, filterable: true,
       sorter: (a, b) => (a.name || '').localeCompare(b.name || '', 'zh-CN'),
       render: (m) => <span className="font-medium text-slate-800">{m.name}</span> },
     { key: 'departmentId', title: '部门',
       filterable: 'select',
-      filterOptions: departments.map((d: any) => ({ label: d.name, value: d.id })),
-      filterAccessor: (m: any) => getDeptName(m.departmentId),
+      filterOptions: departments.map((d) => ({ label: d.name, value: String(d.id) })),
+      filterAccessor: (m) => getDeptName(m.departmentId),
       render: (m) => <span className="text-slate-600">{getDeptName(m.departmentId)}</span> },
     { key: 'position', title: '职位', render: (m) => <span className="text-slate-600">{m.position || '-'}</span> },
     { key: 'phone', title: '手机', render: (m) => <span className="text-slate-600">{m.phone || '-'}</span> },
     { key: 'status', title: '状态',
       filterable: 'select',
       filterOptions: [{ label: '在职', value: 'active' }, { label: '离职', value: 'left' }],
-      filterAccessor: (m: any) => m.status || 'active',
+      filterAccessor: (m) => m.status || 'active',
       render: (m) => (
       <select value={m.status || 'active'} onChange={e => handleStatusChange(m, e.target.value)}
         className={`px-2 py-1 rounded-full text-xs font-medium border-0 ${HR_STATUS_COLORS[m.status || 'active'] || 'bg-slate-100 text-slate-600'}`}>

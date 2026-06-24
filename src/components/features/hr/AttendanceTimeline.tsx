@@ -2,9 +2,8 @@ import React, { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
 import { EmptyState } from '../../ui/EmptyState'
-import { useToastStore } from '@/store/toastStore'
 import { computeAttendanceSummary } from '../../../constants/attendance'
-import type { AttendanceRecord } from '../../../types/electron'
+import type { AttendanceRecord, Member } from '../../../types/electron'
 import AttendanceDetail from '../../AttendanceDetail'
 import { getAPI } from '@/services/api-adapter'
 import { Card } from '@/components/ui/Card'
@@ -15,14 +14,14 @@ function getDaysInMonth(yearMonth: string): number {
 }
 
 interface Props {
-  member: any
-  attendances: any[]
+  member: Member
+  attendances: AttendanceRecord[]
   deptName: string
   onBack: () => void
   onSaved: () => void
 }
 
-function getEntryDateStr(member: any): string | null {
+function getEntryDateStr(member: Member): string | null {
   return member.entryDate || (member.createdAt ? member.createdAt.split('T')[0] : null)
 }
 
@@ -40,11 +39,10 @@ function durationStr(entryDate: string | null): string {
 }
 
 const AttendanceTimeline: React.FC<Props> = ({ member, attendances, deptName, onBack, onSaved }) => {
-  const showToast = useToastStore(state => state.showToast)
   const [expandedYears, setExpandedYears] = useState<Set<string>>(() => {
     // Expand current year by default
     const thisYear = String(new Date().getFullYear())
-    const years = [...new Set(attendances.map((a: any) => a.yearMonth.slice(0, 4)))]
+    const years = [...new Set(attendances.map((a) => a.yearMonth.slice(0, 4)))]
     return new Set(years.includes(thisYear) ? [thisYear] : years.length > 0 ? [years[years.length - 1]] : [])
   })
   const [yearFilter, setYearFilter] = useState<string>('全部')
@@ -53,13 +51,13 @@ const AttendanceTimeline: React.FC<Props> = ({ member, attendances, deptName, on
 
   // Group by year
   const grouped = useMemo(() => {
-    const map = new Map<string, any[]>()
+    const map = new Map<string, AttendanceRecord[]>()
     for (const a of attendances) {
       const year = a.yearMonth.slice(0, 4)
       if (!map.has(year)) map.set(year, [])
       map.get(year)!.push(a)
     }
-    for (const [_, records] of map) records.sort((a: any, b: any) => a.yearMonth.localeCompare(b.yearMonth))
+    for (const [_, records] of map) records.sort((a, b) => a.yearMonth.localeCompare(b.yearMonth))
     const sorted = [...map.entries()].sort(([a], [b]) => b.localeCompare(a)) // newest first
     return sorted
   }, [attendances])
@@ -83,7 +81,7 @@ const AttendanceTimeline: React.FC<Props> = ({ member, attendances, deptName, on
     return (ey === cy && em === cm) ? ed2 : 1
   }
 
-  const yearSummary = (records: any[]) => {
+  const yearSummary = (records: AttendanceRecord[]) => {
     let workDays = 0
     let daysOff = 0
     let fullMonths = 0
@@ -103,7 +101,7 @@ const AttendanceTimeline: React.FC<Props> = ({ member, attendances, deptName, on
   const fullAttendanceColor = (rate: number) =>
     rate >= 90 ? 'text-emerald-600' : rate >= 70 ? 'text-amber-600' : 'text-red-600'
 
-  const monthStatusBadge = (a: any) => {
+  const monthStatusBadge = (a: AttendanceRecord) => {
     if (!a.dailyStatus || Object.keys(a.dailyStatus).length === 0) return { label: '无数据', cls: 'bg-slate-50 text-slate-400' }
     const dim = getDaysInMonth(a.yearMonth)
     const s = computeAttendanceSummary(a.dailyStatus, dim, getEntryDay(a.yearMonth))
@@ -111,23 +109,22 @@ const AttendanceTimeline: React.FC<Props> = ({ member, attendances, deptName, on
     return { label: `缺勤${s.daysOff}天`, cls: 'bg-red-100 text-red-700' }
   }
 
-  const handleMonthClick = async (record: any) => {
+  const handleMonthClick = async (record: AttendanceRecord) => {
     const ym = record.yearMonth
     if (!record.dailyStatus || Object.keys(record.dailyStatus).length === 0) {
       // Auto-fill defaults if empty
       const dailyStatus: Record<number, string> = {}
       for (let d = 1; d <= getDaysInMonth(ym); d++) dailyStatus[d] = 'work'
       try {
-        await (await getAPI()).updateAttendance({ ...record, dailyStatus })
-        record.dailyStatus = dailyStatus
-        showToast('已自动填充默认出勤', 'success')
-      } catch (e: any) { /* continue with edit anyway */ }
+        await (await getAPI()).updateAttendance({ ...record, dailyStatus } as AttendanceRecord)
+        onSaved()
+      } catch (e: unknown) { /* continue with edit anyway */ }
     }
     setDetailRecord(record)
     setDetailYearMonth(ym)
   }
 
-  // Sub-page: attendance detail for a specific month
+  // Show detail view for a specific month
   if (detailRecord && detailYearMonth) {
     return (
       <AttendanceDetail
@@ -186,7 +183,7 @@ const AttendanceTimeline: React.FC<Props> = ({ member, attendances, deptName, on
             const s = yearSummary(records)
             const expanded = expandedYears.has(year)
             return (
-              <Card bordered={false} className="overflow-hidden">
+              <Card key={year} bordered={false} className="overflow-hidden">
                 <button onClick={() => toggleYear(year)}
                   className="w-full px-5 py-3 flex items-center gap-3 hover:bg-slate-50 transition-colors text-left">
                   <Icon name={expanded ? 'ChevronDown' : 'ChevronRight'} size={16} className="text-slate-400" />
@@ -201,7 +198,7 @@ const AttendanceTimeline: React.FC<Props> = ({ member, attendances, deptName, on
                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
                       transition={{ duration: 0.2 }} className="overflow-hidden">
                       <div className="px-5 pb-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-                        {records.map((a: any) => {
+                        {records.map((a) => {
                           const badge = monthStatusBadge(a)
                           const month = parseInt(a.yearMonth.split('-')[1])
                           return (
