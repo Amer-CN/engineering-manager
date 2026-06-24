@@ -48,10 +48,10 @@ export function useMemberOperations({
 
   const handleSubmitStaff = async (data: StaffFormData | WorkerFormData) => {
     try {
-      let submitFileData: Record<string, unknown> = data as Record<string, unknown>
+      let submitFileData: Record<string, unknown> = data as any
       if (editingStaff) {
         const orig = originalMemberFileRef.current[editingStaff.id] || {}
-        const restored: Record<string, unknown> = { ...data } as Record<string, unknown>
+        const restored: Record<string, unknown> = { ...data } as any
         let hasRestore = false
         for (const key of ['idCardFront', 'idCardBack', 'contractFile']) {
           if (typeof restored[key] === 'string' && restored[key].startsWith('data:') && orig[key]) {
@@ -70,7 +70,7 @@ export function useMemberOperations({
       if (editingStaff) {
         const result = await (await getAPI()).updateMember({ ...editingStaff, ...submitData })
         if (result.success) {
-          logUpdate('members', submitData.name, editingStaff.id, { before: editingStaff, after: submitData })
+          logUpdate('members', (submitData as any).name || '', editingStaff.id, { before: editingStaff, after: submitData })
           onSuccess()
           showToast('更新成功', 'success')
         } else {
@@ -124,7 +124,7 @@ export function useMemberOperations({
 
   const handleSubmitWorker = async (data: StaffFormData | WorkerFormData) => {
     try {
-      let submitFileData: Record<string, unknown> = data as Record<string, unknown>
+      let submitFileData: Record<string, unknown> = data as any
       if (editingWorker) {
         const orig = originalMemberFileRef.current[editingWorker.id] || {}
         const restored: Record<string, unknown> = { ...data } as Record<string, unknown>

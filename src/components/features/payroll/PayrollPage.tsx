@@ -4,11 +4,12 @@
  */
 import React, { useState, useCallback, useMemo } from 'react'
 import { Spinner } from '../../ui/Loading/Loading'
-import { usePayrollData, type PayrollMode, type StaffWageRecord } from './usePayrollData'
+import { usePayrollData, type PayrollMode } from './usePayrollData'
+import type { Member } from '@/types'
+
 import { useConfirm } from '@/hooks/useConfirm'
 import { useToastStore } from '@/store/toastStore'
 import { getAPI } from '@/services/api-adapter'
-import type { Member, WageRecord } from '@/types'
 
 // worker 模式操作
 import { useWageActions } from '../wages/useWageActions'
@@ -83,10 +84,10 @@ export default function PayrollPage({ mode }: PayrollPageProps) {
           const netSalary = isPartialMonth
             ? Math.round(totalSalary * (summary.workDays / daysInMonth))
             : summary.daysOff <= 4 ? totalSalary : Math.round(totalSalary * (summary.workDays / daysInMonth))
-          const record: Partial<StaffWageRecord> = { memberId: s.id, projectId: null as unknown as number, yearMonth: ym, baseSalary, subsidy, attendanceDays: summary.workDays, bonus: 0, deduction: 0, netSalary }
+          const record = { memberId: s.id, projectId: null as unknown as number, yearMonth: ym, baseSalary, subsidy, attendanceDays: summary.workDays, bonus: 0, deduction: 0, netSalary }
           const existing = data.wages.find((w) => w.memberId === s.id && w.yearMonth === ym)
           const api = await getAPI()
-          if (existing) await api.updateWage({ ...existing, ...record, id: existing.id } as WageRecord)
+          if (existing) await api.updateWage(existing.id, record)
           else await api.createWage(record)
           ok2++
         } catch { fail++ }
