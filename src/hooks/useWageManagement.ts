@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback } from 'react'
 import type { Project, WorkerTeam, AttendanceRecord, WageRecord, WageStats } from '@/types'
 import { getAPI } from '@/services/api-adapter'
 import { useBankReceipt } from '../components/features/wages/useBankReceipt'
+import { useWageAttendance } from './useWageAttendance'
+import { useWageTable } from './useWageTable'
 
 type ViewMode = 'dashboard' | 'cycle'
 
@@ -19,11 +21,8 @@ interface UseWageManagementOptions {
 }
 
 export default function useWageManagement({ showToast, confirm }: UseWageManagementOptions) {
-  // ── 基础数据 ──
   const [projects, setProjects] = useState<Project[]>([])
   const [workerTeams, setWorkerTeams] = useState<WorkerTeam[]>([])
-
-  // ── UI 状态 ──
   const [view, setView] = useState<ViewMode>('dashboard')
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
@@ -31,66 +30,33 @@ export default function useWageManagement({ showToast, confirm }: UseWageManagem
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   })
   const [loading, setLoading] = useState(false)
-
-  // ── 考勤数据 ──
   const [attendances, setAttendances] = useState<AttendanceRecord[]>([])
   const [attendanceDetailRecord, setAttendanceDetailRecord] = useState<AttendanceRecord | null>(null)
-
-  // ── 工资表数据 ──
   const [wageRecords, setWageRecords] = useState<WageRecord[]>([])
   const [editingWages, setEditingWages] = useState<Map<number, { bonus: number; deduction: number }>>(new Map())
-
-  // ── 工资发放编辑 ──
   const [paymentEdits, setPaymentEdits] = useState<Map<number, { paidAmount: string; paidDate: string; bankReceiptPath?: string }>>(new Map())
-
-  // ── 记录和统计 ──
   const [allWageRecords, setAllWageRecords] = useState<WageRecord[]>([])
   const [wageStats, setWageStats] = useState<WageStats | null>(null)
   const [filterMemberName, setFilterMemberName] = useState('')
-
-  // ── 批量选中（三个Tab各自独立） ──
   const [selectedAttendanceIds, setSelectedAttendanceIds] = useState<Set<number>>(new Set())
   const [selectedWageTableIds, setSelectedWageTableIds] = useState<Set<number>>(new Set())
   const [selectedWageIds, setSelectedWageIds] = useState<Set<number>>(new Set())
-
-  // ── 项目工人数据 ──
   const [projectWorkerList, setProjectWorkerList] = useState<ProjectWorkerItem[]>([])
   const [workerPwIds, setWorkerPwIds] = useState<number[]>([])
 
-  // ══════════════════════════════════════════════════════
-  // 数据加载
-  // ══════════════════════════════════════════════════════
+  // ── 数据加载 ──
 
   const loadBaseData = useCallback(async () => {
     setLoading(true)
     try {
       const api = await getAPI()
-      const [projectsRes, teamsRes] = await Promise.allSettled([
-        api.getProjects(),
-        api.getWorkerTeams(),
-      ])
+      const [projectsRes, teamsRes] = await Promise.allSettled([api.getProjects(), api.getWorkerTeams()])
       const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
       setProjects(get(projectsRes).filter((p: Project) => p.status !== 'archived'))
       setWorkerTeams(get(teamsRes))
     } catch (error) { console.error('加载基础数据失败:', error) }
     finally { setLoading(false) }
   }, [])
-
-  const loadAttendances = useCallback(async () => {
-    if (!selectedProject) return
-    try {
-      const result = await (await getAPI()).getAttendances(selectedProject.id, selectedMonth)
-      if (result.success && result.data) setAttendances(result.data)
-    } catch (error) { console.error('加载考勤失败:', error) }
-  }, [selectedProject, selectedMonth])
-
-  const loadWages = useCallback(async () => {
-    if (!selectedProject) return
-    try {
-      const result = await (await getAPI()).getWages(selectedProject.id, selectedMonth)
-      if (result.success && result.data) setWageRecords(result.data)
-    } catch (error) { console.error('加载工资数据失败:', error) }
-  }, [selectedProject, selectedMonth])
 
   const loadAllRecords = useCallback(async () => {
     try {
@@ -108,26 +74,52 @@ export default function useWageManagement({ showToast, confirm }: UseWageManagem
   }, [selectedMonth])
 
   useEffect(() => { loadBaseData() }, [loadBaseData])
-  useEffect(() => { loadAttendances() }, [loadAttendances])
-  useEffect(() => { loadWages() }, [loadWages])
   useEffect(() => { loadAllRecords() }, [loadAllRecords])
   useEffect(() => { loadStats() }, [loadStats])
 
-  // ══════════════════════════════════════════════════════
-  // 加载项目下活跃工人
-  // ══════════════════════════════════════════════════════
+  // ── 考勤操作 ──
+
+  const { loadAttendances, handleGenerateAttendance, handleDeleteAttendance } =
+    useWageAttendance({ selectedProject, selectedMonth, workerPwIds, setAttendances, setLoading, showToast, confirm })
+  useEffect(() => { loadAttendances() }, [loadAttendances])
+
+  const handleBatchDeleteAttendances = async () => {
+    if (selectedAttendanceIds.size === 0) return
+    const ok = await confirm({ title: '确认删除', content: `确认删除选中的 ${selectedAttendanceIds.size} 条考勤记录吗？`, confirmVariant: 'danger' })
+    if (!ok) return
+    try {
+      const result = await (await getAPI()).batchDeleteAttendances(Array.from(selectedAttendanceIds))
+      if (result.success) { showToast(`已删除 ${selectedAttendanceIds.size} 条考勤记录`, 'success'); setSelectedAttendanceIds(new Set()); await loadAttendances() }
+      else showToast(result.error || '批量删除失败', 'error')
+    } catch (error: any) { showToast(error?.message || '批量删除失败', 'error') }
+  }
+
+  // ── 工资表操作 ──
+
+  const { loadWages, handleGenerateWages, handleWageBonusDeductionChange, handleSaveWages } =
+    useWageTable({ selectedProject, selectedMonth, wageRecords, editingWages, setWageRecords, setEditingWages, setLoading, showToast, loadAllRecords, loadStats })
+  useEffect(() => { loadWages() }, [loadWages])
+
+  const handleBatchDeleteWageTable = async () => {
+    if (selectedWageTableIds.size === 0) return
+    const ok = await confirm({ title: '确认删除', content: `确认删除选中的 ${selectedWageTableIds.size} 条工资记录吗？`, confirmVariant: 'danger' })
+    if (!ok) return
+    try {
+      const result = await (await getAPI()).batchDeleteWages(Array.from(selectedWageTableIds))
+      if (result.success) { showToast(`已删除 ${selectedWageTableIds.size} 条工资记录`, 'success'); setSelectedWageTableIds(new Set()); await loadWages() }
+      else showToast(result.error || '批量删除失败', 'error')
+    } catch (error: any) { showToast(error?.message || '批量删除失败', 'error') }
+  }
+
+  // ── 项目工人 ──
 
   const loadProjectWorkers = useCallback(async () => {
     if (!selectedProject) { setProjectWorkerList([]); setWorkerPwIds([]); return }
     const list: ProjectWorkerItem[] = []
     const pwIds: number[] = []
-
     try {
       const api = await getAPI()
-      const [pwResult, workersResult] = await Promise.allSettled([
-        api.getProjectWorkers(selectedProject.id),
-        api.getWorkers(),
-      ])
+      const [pwResult, workersResult] = await Promise.allSettled([api.getProjectWorkers(selectedProject.id), api.getWorkers()])
       const getVal = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
       const pwData = getVal(pwResult)
       const workersData = getVal(workersResult)
@@ -143,164 +135,45 @@ export default function useWageManagement({ showToast, confirm }: UseWageManagem
         }
       }
     } catch (e) { console.error('获取项目工人失败:', e) }
-
     setProjectWorkerList(list)
     setWorkerPwIds(pwIds)
   }, [selectedProject, workerTeams])
-
   useEffect(() => { loadProjectWorkers() }, [loadProjectWorkers])
 
-  // ══════════════════════════════════════════════════════
-  // 考勤操作
-  // ══════════════════════════════════════════════════════
-
-  const handleGenerateAttendance = async () => {
-    if (!selectedProject) return
-    if (workerPwIds.length === 0) {
-      showToast('该项目没有活跃工人，请先在项目详情页→人员管理中添加工人班组', 'warning'); return
-    }
-    setLoading(true)
-    try {
-      const r = await (await getAPI()).generateDefaultAttendancesV2(selectedProject.id, selectedMonth, workerPwIds)
-      if (r.success && r.data && r.data.count > 0) { showToast(`已为 ${r.data.count} 名工人生成考勤记录`, 'success'); await loadAttendances() }
-      else showToast('所有工人已有考勤记录', 'info')
-    } catch (error: any) { showToast(error?.message || '生成考勤失败', 'error') }
-    finally { setLoading(false) }
-  }
-
-  const handleDeleteAttendance = async (record: AttendanceRecord) => {
-    const ok = await confirm({
-      title: '确认删除',
-      content: `确认删除 ${record.memberName || '该工人'} 的考勤记录吗？`,
-      confirmVariant: 'danger',
-    })
-    if (!ok) return
-    try {
-      const result = await (await getAPI()).deleteAttendance(record.id)
-      if (result.success) { showToast('考勤记录已删除', 'success'); await loadAttendances() }
-      else showToast(result.error || '删除失败', 'error')
-    } catch (error: any) { showToast(error?.message || '删除失败', 'error') }
-  }
-
-  // ══════════════════════════════════════════════════════
-  // 工资表操作
-  // ══════════════════════════════════════════════════════
-
-  const handleGenerateWages = async () => {
-    if (!selectedProject) return
-    setLoading(true)
-    try {
-      const result = await (await getAPI()).generateProjectWages(selectedProject.id, selectedMonth)
-      if (result.success && result.data) { showToast(`已生成 ${result.data.length} 条工资记录`, 'success'); await loadWages(); await loadAllRecords(); setEditingWages(new Map()) }
-      else showToast(result.error || '生成工资表失败', 'error')
-    } catch (error: any) { showToast(error?.message || '生成工资表失败', 'error') }
-    finally { setLoading(false) }
-  }
-
-  const handleWageBonusDeductionChange = (recordId: number, field: 'bonus' | 'deduction', value: number) => {
-    setEditingWages(prev => { const next = new Map(prev); const current = next.get(recordId) || { bonus: 0, deduction: 0 }; next.set(recordId, { ...current, [field]: value }); return next })
-  }
-
-  const handleSaveWages = async () => {
-    if (editingWages.size === 0) { showToast('没有需要保存的修改', 'info'); return }
-    setLoading(true)
-    try {
-      const updated = wageRecords.map(w => {
-        const edit = editingWages.get(w.id)
-        if (!edit) return w
-        const actualWage = Math.round(((w.dailyWage || 0) * (w.workDays || 0) + edit.bonus - edit.deduction) * 100) / 100
-        return { ...w, bonus: edit.bonus, deduction: edit.deduction, actualWage, updatedAt: new Date().toISOString() }
-      })
-      const result = await (await getAPI()).batchSaveWages(updated)
-      if (result.success) { showToast('工资表已保存', 'success'); setEditingWages(new Map()); await loadWages(); await loadAllRecords(); await loadStats() }
-      else showToast(result.error || '保存失败', 'error')
-    } catch (error: any) { showToast(error?.message || '保存失败', 'error') }
-    finally { setLoading(false) }
-  }
-
-  // ══════════════════════════════════════════════════════
-  // 批量删除
-  // ══════════════════════════════════════════════════════
-
-  const handleBatchDeleteAttendances = async () => {
-    if (selectedAttendanceIds.size === 0) return
-    const ok = await confirm({
-      title: '确认删除',
-      content: `确认删除选中的 ${selectedAttendanceIds.size} 条考勤记录吗？`,
-      confirmVariant: 'danger',
-    })
-    if (!ok) return
-    try {
-      const result = await (await getAPI()).batchDeleteAttendances(Array.from(selectedAttendanceIds))
-      if (result.success) { showToast(`已删除 ${selectedAttendanceIds.size} 条考勤记录`, 'success'); setSelectedAttendanceIds(new Set()); await loadAttendances() }
-      else showToast(result.error || '批量删除失败', 'error')
-    } catch (error: any) { showToast(error?.message || '批量删除失败', 'error') }
-  }
-
-  const handleBatchDeleteWageTable = async () => {
-    if (selectedWageTableIds.size === 0) return
-    const ok = await confirm({
-      title: '确认删除',
-      content: `确认删除选中的 ${selectedWageTableIds.size} 条工资记录吗？`,
-      confirmVariant: 'danger',
-    })
-    if (!ok) return
-    try {
-      const result = await (await getAPI()).batchDeleteWages(Array.from(selectedWageTableIds))
-      if (result.success) { showToast(`已删除 ${selectedWageTableIds.size} 条工资记录`, 'success'); setSelectedWageTableIds(new Set()); await loadWages() }
-      else showToast(result.error || '批量删除失败', 'error')
-    } catch (error: any) { showToast(error?.message || '批量删除失败', 'error') }
-  }
+  // ── 工资发放操作 ──
 
   const handleBatchDeleteWages = async () => {
     if (selectedWageIds.size === 0) return
-    const ok = await confirm({
-      title: '确认清除',
-      content: `确认清除选中的 ${selectedWageIds.size} 条发放记录吗？（不会删除工资记录本身）`,
-      confirmVariant: 'danger',
-    })
+    const ok = await confirm({ title: '确认清除', content: `确认清除选中的 ${selectedWageIds.size} 条发放记录吗？（不会删除工资记录本身）`, confirmVariant: 'danger' })
     if (!ok) return
     try {
       const result = await (await getAPI()).batchClearPayments(Array.from(selectedWageIds))
       if (result.success) {
         showToast(`已清除 ${result.data?.cleared ?? selectedWageIds.size} 条发放记录`, 'success')
         setSelectedWageIds(new Set())
-        setPaymentEdits(prev => {
-          const next = new Map(prev)
-          for (const id of selectedWageIds) next.delete(id)
-          return next
-        })
+        setPaymentEdits(prev => { const next = new Map(prev); for (const id of selectedWageIds) next.delete(id); return next })
         await loadAllRecords()
       } else showToast(result.error || '清除失败', 'error')
     } catch (error: any) { showToast(error?.message || '清除失败', 'error') }
   }
 
   const handleBatchArchivePayments = async () => {
-    const toArchive = selectedWageIds.size > 0
-      ? Array.from(selectedWageIds)
-      : allWageRecords.filter(w => !w.paymentLocked).map(w => w.id)
+    const toArchive = selectedWageIds.size > 0 ? Array.from(selectedWageIds) : allWageRecords.filter(w => !w.paymentLocked).map(w => w.id)
     if (toArchive.length === 0) { showToast('没有可归档的记录', 'info'); return }
     const prompt = selectedWageIds.size > 0
       ? `确认归档选中的 ${selectedWageIds.size} 条发放记录吗？归档后实发金额与日期将不能修改。`
       : `确认归档该项目当前月份全部 ${toArchive.length} 条发放记录吗？`
-    const ok = await confirm({
-      title: '确认归档',
-      content: prompt,
-      confirmVariant: 'primary',
-    })
+    const ok = await confirm({ title: '确认归档', content: prompt, confirmVariant: 'primary' })
     if (!ok) return
     try {
       const result = await (await getAPI()).batchArchivePayments(toArchive)
       if (result.success && result.data) {
         showToast(`已归档 ${result.data?.archived ?? toArchive.length} 条发放记录`, 'success')
-        setSelectedWageIds(new Set())
-        await loadAllRecords()
-        setPaymentEdits(new Map())
+        setSelectedWageIds(new Set()); await loadAllRecords(); setPaymentEdits(new Map())
       } else showToast(result.error || '归档失败', 'error')
     } catch (error: any) { showToast(error?.message || '归档失败', 'error') }
   }
 
-  // ── 工资发放编辑 ──
   const handlePaymentChange = (recordId: number, field: 'paidAmount' | 'paidDate', value: string | number) => {
     setPaymentEdits(prev => {
       const next = new Map(prev)
@@ -327,18 +200,9 @@ export default function useWageManagement({ showToast, confirm }: UseWageManagem
     finally { setLoading(false) }
   }
 
-  // ── 上传银行回单并自动填入 ──
-  const { receiptParsing, receiptResult, handleBankReceiptUpload } = useBankReceipt({
-    allWageRecords,
-    selectedProject,
-    paymentEdits,
-    setPaymentEdits,
-    showToast,
-  })
+  const { receiptParsing, receiptResult, handleBankReceiptUpload } = useBankReceipt({ allWageRecords, selectedProject, paymentEdits, setPaymentEdits, showToast })
 
-  // ══════════════════════════════════════════════════════
-  // 选中切换
-  // ══════════════════════════════════════════════════════
+  // ── 选中切换 ──
 
   const toggleAttendanceSelect = (id: number) => setSelectedAttendanceIds(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next })
   const toggleAllAttendances = () => setSelectedAttendanceIds(prev => prev.size === attendances.length ? new Set() : new Set(attendances.map(a => a.id)))
