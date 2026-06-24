@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { DataTable, type Column } from '@/components/DataTable'
+import { DataTable } from '@/components/DataTable'
 import FilterBar from './ui/FilterBar'
 import Spinner from './ui/Spinner'
 import { Drawing, Project } from '../types/electron'
-import { Icon } from './ui/Icon'
 import { Card } from './ui/Card'
 import PageContainer from './ui/PageContainer'
 import { EmptyState } from './ui/EmptyState'
@@ -11,10 +10,11 @@ import { useToastStore } from '@/store/toastStore'
 import { useConfirm } from '@/hooks/useConfirm'
 import { logCreate, logUpdate, logDelete } from '../utils/audit'
 import { getAPI } from '@/services/api-adapter'
-import { categories, categoryIcons, categoryColors } from './drawingsConstants'
+import { categories } from './drawingsConstants'
 import { DrawingsFormModal } from './DrawingsFormModal'
 import type { FormDataState } from './DrawingsFormModal'
 import { Button } from './ui/Button'
+import { createDrawingColumns } from './features/drawings/drawingsColumns'
 
 interface DrawingsProps {
   refresh?: () => void
@@ -217,29 +217,7 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
   return project?.name || '未分配'
   }
 
-  const columns: Column<Drawing>[] = [
-    { key: 'name', title: '图纸名称', render: (item) => (
-      <div className="flex items-center gap-2">
-        <Icon name={categoryIcons[item.category || ''] || 'File'} size={18} className="text-slate-400" />
-        <span className="font-medium text-slate-800">{item.name}</span>
-      </div>
-    )},
-    { key: 'projectId', title: '所属项目', render: (item) => <span className="text-sm text-slate-600">{getProjectName(item.projectId)}</span> },
-    { key: 'category', title: '图纸类型', render: (item) => (
-      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${categoryColors[item.category || ''] || 'bg-slate-100 text-slate-800'}`}>
-        {item.category || '其他'}
-      </span>
-    )},
-    { key: 'position', title: '部位', render: (item) => <span className="text-sm text-slate-600">{item.position || '-'}</span> },
-    { key: 'remarks', title: '备注', render: (item) => <span className="text-sm text-slate-600 max-w-xs truncate">{item.remarks || '-'}</span> },
-    { key: 'createdAt', title: '上传日期', render: (item) => <span className="text-sm text-slate-500">{new Date(item.createdAt).toLocaleDateString('zh-CN')}</span> },
-    { key: 'actions', title: '操作', align: 'center', render: (item) => (
-      <div className="flex items-center justify-center gap-2">
-        <Button onClick={() => handleEdit(item)}  variant="ghost" size="sm">编辑</Button>
-        <Button onClick={() => handleDelete(item.id)}  variant="danger" size="sm">删除</Button>
-      </div>
-    )},
-  ]
+  const columns = createDrawingColumns(getProjectName, handleEdit, handleDelete)
 
   if (loading) {
   return <Spinner size="lg" text="加载图纸数据..." />
