@@ -2,9 +2,10 @@
  * 员工薪酬辅助函数
  */
 import { computeAttendanceSummary } from '../constants/attendance'
+import type { Member, AttendanceRecord } from '@/types'
 
 /** 获取入职日期（优先 entryDate，回退到 createdAt） */
-export function getEntryDate(s: any): string | null {
+export function getEntryDate(s: Member): string | null {
   return s.entryDate || (s.createdAt ? s.createdAt.split('T')[0] : null)
 }
 
@@ -17,13 +18,13 @@ export function monthEnd(ym: string): string {
 
 /** 筛选符合条件的在职员工（用于生成薪酬） */
 export function filteredStaffForGenerate(
-  staff: any[],
+  staff: Member[],
   filterDept: number | '',
   ym: string
-): any[] {
+): Member[] {
   const me = monthEnd(ym)
   const ms = `${ym}-01`
-  return staff.filter((s: any) => {
+  return staff.filter((s) => {
     if (filterDept && (s.departmentId ?? -1) !== filterDept) return false
     const ed = getEntryDate(s)
     if (ed && ed > me) return false             // 尚未入职
@@ -35,15 +36,15 @@ export function filteredStaffForGenerate(
 
 /** 获取指定员工某月份的考勤记录 */
 export function getAttendanceForMember(
-  attendances: any[],
+  attendances: AttendanceRecord[],
   memberId: number,
   ym: string
-): any | undefined {
-  return attendances.find((a: any) => a.memberId === memberId && a.yearMonth === ym)
+): AttendanceRecord | undefined {
+  return attendances.find((a) => a.memberId === memberId && a.yearMonth === ym)
 }
 
 /** 考勤是否已填写（至少有 dailyStatus） */
-export function isAttendanceReady(memberId: number, ym: string, attendances: any[]): boolean {
+export function isAttendanceReady(memberId: number, ym: string, attendances: AttendanceRecord[]): boolean {
   const att = getAttendanceForMember(attendances, memberId, ym)
   if (!att) return false
   if (!att.dailyStatus || Object.keys(att.dailyStatus).length === 0) return false
@@ -52,7 +53,7 @@ export function isAttendanceReady(memberId: number, ym: string, attendances: any
 
 /** 计算某员工某月份考勤天数 */
 export function computeWorkDays(
-  attendances: any[],
+  attendances: AttendanceRecord[],
   memberId: number,
   ym: string,
   entryDay: number

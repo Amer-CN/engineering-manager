@@ -17,8 +17,8 @@ interface ImportState {
   activeSheet: string
   headerRow: number
   headers: string[]
-  previewRows: any[][]
-  allRows: any[][]
+  previewRows: unknown[][]
+  allRows: unknown[][]
   mapping: { description: number; spec: number; unit: number; quantity: number; unitPrice: number }
 }
 
@@ -44,13 +44,13 @@ export const SettlementImportModal: React.FC<Props> = ({ show, onClose, onImport
   const [state, setState] = useState<ImportState>(defaultImportState)
   const [wbBuffer] = useState<ArrayBuffer | null>(null)
 
-  const loadSheet = async (wb: any, sheetName: string, hRow?: number) => {
+  const loadSheet = async (wb: import('xlsx').WorkBook, sheetName: string, hRow?: number) => {
     const XLSX = await import('xlsx')
     const headerRow = hRow ?? 0
     const ws = wb.Sheets[sheetName]
-    const rows = XLSX.utils.sheet_to_json<any>(ws, { header: 1 }) as any[][]
-    const headers = rows.length > headerRow ? rows[headerRow].map((h: any) => String(h || '').trim()) : []
-    const dataRows = rows.slice(headerRow + 1).filter((r: any[]) => r.some(c => c !== undefined && c !== null && String(c).trim() !== ''))
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1 }) as unknown[][]
+    const headers = rows.length > headerRow ? rows[headerRow].map((h: unknown) => String(h || '').trim()) : []
+    const dataRows = rows.slice(headerRow + 1).filter((r: unknown[]) => r.some((c: unknown) => c !== undefined && c !== null && String(c).trim() !== ''))
     const preview = dataRows.slice(0, 10)
     const mapping = autoMap(headers)
     setState(p => ({ ...p, headerRow, activeSheet: sheetName, headers, previewRows: preview, allRows: dataRows, mapping }))
@@ -58,9 +58,9 @@ export const SettlementImportModal: React.FC<Props> = ({ show, onClose, onImport
 
   const confirmImport = () => {
     const { allRows, mapping } = state
-    const items = allRows.map((r: any) => {
-      const qty = mapping.quantity >= 0 ? parseFloat(r[mapping.quantity]) || 1 : 1
-      const price = mapping.unitPrice >= 0 ? parseFloat(r[mapping.unitPrice]) || 0 : 0
+    const items = allRows.map((r: unknown[]) => {
+      const qty = mapping.quantity >= 0 ? parseFloat(String(r[mapping.quantity])) || 1 : 1
+      const price = mapping.unitPrice >= 0 ? parseFloat(String(r[mapping.unitPrice])) || 0 : 0
       return {
         description: mapping.description >= 0 ? String(r[mapping.description] || '').trim() : '',
         spec: mapping.spec >= 0 ? String(r[mapping.spec] || '').trim() : '',
@@ -87,10 +87,10 @@ export const SettlementImportModal: React.FC<Props> = ({ show, onClose, onImport
   }
 
   // ── 动态列定义（基于表头） ──
-  const previewColumns: Column<any>[] = state.headers.map((h, i) => ({
+  const previewColumns: Column<Record<string, unknown>>[] = state.headers.map((h, i) => ({
     key: `col_${i}`,
     title: h || `列${i + 1}`,
-    render: (_row: any, index: number) => {
+    render: (_row: Record<string, unknown>, index: number) => {
       const row = state.previewRows[index]
       if (!row) return null
       const val = row[i]
@@ -144,9 +144,9 @@ export const SettlementImportModal: React.FC<Props> = ({ show, onClose, onImport
             <HoverScrollbar className="flex-1 max-h-60"><div className="border border-slate-200 rounded-xl overflow-hidden">
               {state.headers.length > 0 ? (
                 <DataTable
-                  data={state.previewRows}
+                  data={state.previewRows as unknown as Record<string, unknown>[]}
                   columns={previewColumns}
-                  rowKey={(item: any) => JSON.stringify(item)}
+                  rowKey={(item: Record<string, unknown>) => JSON.stringify(item)}
                   pagination={false}
                   showContainer={false}
                   stickyHeader={true}
