@@ -3,6 +3,7 @@ import type { Invoice, InvoiceType, InvoiceStatus } from '@/types'
 import { handleError, type Result, type VoidResult } from '@/types'
 import { getAPI } from '@/services/api-adapter'
 import type { InvoiceFilters, UseInvoicesReturn } from './useInvoices.types'
+import { filterInvoices } from './useInvoices.utils'
 export type { InvoiceFilters, UseInvoicesReturn }
 export function useInvoices(filters?: InvoiceFilters): UseInvoicesReturn {
   const [invoices, setInvoices] = useState<Invoice[]>([])
@@ -16,26 +17,7 @@ export function useInvoices(filters?: InvoiceFilters): UseInvoicesReturn {
     try {
       const result = await (await getAPI()).getInvoices(undefined, type as InvoiceType)
       if (result.success && result.data) {
-        let filteredData = result.data
-        if (filters?.type) {
-          filteredData = filteredData.filter((i: Invoice) => i.type === filters.type)
-        }
-        if (filters?.status) {
-          filteredData = filteredData.filter((i: Invoice) => i.status === filters.status)
-        }
-        if (filters?.projectId) {
-          filteredData = filteredData.filter((i: Invoice) => i.projectId === filters.projectId)
-        }
-        if (filters?.searchTerm) {
-          const term = filters.searchTerm.toLowerCase()
-          filteredData = filteredData.filter((i: Invoice) =>
-            i.name?.toLowerCase().includes(term) ||
-            i.invoiceNo?.toLowerCase().includes(term) ||
-            i.sellerName?.toLowerCase().includes(term) ||
-            i.buyerName?.toLowerCase().includes(term)
-          )
-        }
-        setInvoices(filteredData)
+        setInvoices(filterInvoices(result.data, filters))
       } else {
         setError(result.error || '加载发票列表失败')
       }
