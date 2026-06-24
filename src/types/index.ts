@@ -29,6 +29,7 @@ export type {
   WorkerStatus,
   Worker,
   ProjectWorker,
+  ProjectMember,
 
   // 部门管理
   Department,

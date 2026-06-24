@@ -1,10 +1,20 @@
 import { useState, useEffect } from 'react'
 import { Icon } from '../../ui/Icon'
 import { getAPI } from '@/services/api-adapter'
-import type { Project, Member, WorkerTeam } from '@/types'
+import type { Project, Member, WorkerTeam, ProjectWorker, ProjectMember } from '@/types'
 import type { ProjectStatsData } from './ProjectStats'
 import { AddMemberModal } from './AddMemberModal'
 import { Button } from '../../ui/Button'
+
+// 项目成员记录（含前端虚拟 leftAt + 关联成员信息）
+interface ProjectMemberRecord extends ProjectMember {
+  leftAt?: string
+  member?: Member
+  memberName?: string
+  memberRole?: string
+  memberType?: string
+  phone?: string
+}
 
 const CARD = 'bg-white border border-slate-200 rounded-xl shadow-sm'
 const CARD_HOVER = 'hover:shadow-md transition-all duration-200'
@@ -16,12 +26,12 @@ function EmptyState({ text }: { text: string }) {
 export function MembersTab({ project, staffMembers, allStaffMembers, workerTeams, members, stats }: {
   project: Project; staffMembers: Member[]; allStaffMembers: Member[]; workerTeams: WorkerTeam[]; members: Member[]; stats: ProjectStatsData
 }) {
-  const [projectRecords, setProjectRecords] = useState<any[]>([])
-  const [projectWorkers, setProjectWorkers] = useState<any[]>([])
+  const [projectRecords, setProjectRecords] = useState<ProjectMemberRecord[]>([])
+  const [projectWorkers, setProjectWorkers] = useState<ProjectWorker[]>([])
   const [showAddModal, setShowAddModal] = useState(false)
   const [loaded, setLoaded] = useState(false)
   // 调离弹窗
-  const [transferRecord, setTransferRecord] = useState<any | null>(null)
+  const [transferRecord, setTransferRecord] = useState<{ id: number; projectId: number; memberId: number; joinedAt: string; leftAt?: string; member?: Member } | null>(null)
   const [transferDate, setTransferDate] = useState('')
   const [transferToProject, setTransferToProject] = useState<number | ''>('')
   const [projects, setProjects] = useState<Project[]>([])
@@ -35,7 +45,7 @@ export function MembersTab({ project, staffMembers, allStaffMembers, workerTeams
 
   const loadProjects = async () => {
     const r = await (await getAPI()).getProjects()
-    if (r.success) setProjects((r.data || []).filter((p: any) => p.status !== 'archived' && p.id !== project.id))
+    if (r.success) setProjects((r.data || []).filter((p: Project) => p.status !== 'archived' && p.id !== project.id))
   }
 
   const loadProjectMembers = async () => {
@@ -53,7 +63,7 @@ export function MembersTab({ project, staffMembers, allStaffMembers, workerTeams
   }
 
   // 打开调离弹窗
-  const openTransfer = (rec: any) => {
+  const openTransfer = (rec: ProjectMemberRecord) => {
     setTransferRecord(rec)
     setTransferDate(new Date().toISOString().split('T')[0])
     setTransferToProject('')
@@ -75,20 +85,20 @@ export function MembersTab({ project, staffMembers, allStaffMembers, workerTeams
   }
 
   // 按 leftAt 区分当前成员和已调离成员
-  const activeRecords = projectRecords.filter((r: any) => !r.leftAt)
-  const pastRecords = projectRecords.filter((r: any) => r.leftAt)
+  const activeRecords = projectRecords.filter(r => !r.leftAt)
+  const pastRecords = projectRecords.filter(r => r.leftAt)
 
   // 当前项目人员（无论公司在职/离职，只要在项目上的都显示）
   const projectStaff = staffMembers.filter(m =>
-    activeRecords.some((r: any) => r.memberId === m.id)
+    activeRecords.some(r => r.memberId === m.id)
   )
   const available = allStaffMembers.filter(m =>
-    !projectRecords.some((r: any) => r.memberId === m.id && !r.leftAt) &&
+    !projectRecords.some(r => r.memberId === m.id && !r.leftAt) &&
     m.id !== project.projectManagerId
   )
 
   // 获取成员的项目记录
-  const getRecordFor = (memberId: number) => projectRecords.find((r: any) => r.memberId === memberId)
+  const getRecordFor = (memberId: number) => projectRecords.find(r => r.memberId === memberId)
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -127,10 +137,10 @@ export function MembersTab({ project, staffMembers, allStaffMembers, workerTeams
                     </p>}
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button onClick={() => openTransfer(rec)}  variant="ghost" size="sm" className="text-amber-600 border border-amber-200">调离</Button>
+                    <Button onClick={() => rec && openTransfer(rec)}  variant="ghost" size="sm" className="text-amber-600 border border-amber-200">调离</Button>
                     <Button onClick={() => {
                       if (confirm(`确认将 ${m.name} 从项目中删除？此操作不可撤销。`)) {
-                        getAPI().then(api => api.removeProjectMember(rec.id)).then(() => loadProjectMembers())
+                        getAPI().then(api => api.removeProjectMember(rec!.id)).then(() => loadProjectMembers())
                       }
                     }}  variant="danger" size="sm" className="border border-slate-200">删除</Button>
                   </div>
@@ -174,7 +184,7 @@ export function MembersTab({ project, staffMembers, allStaffMembers, workerTeams
         {workerTeams.length > 0 ? (
           <div className="space-y-2">
             {workerTeams.map(team => {
-              const tm = projectWorkers.filter((pw: any) => pw.teamId === team.id)
+              const tm = projectWorkers.filter((pw: ProjectWorker) => pw.teamId === team.id)
               return (
                 <div key={team.id} className={`${CARD} p-3`}>
                   <div className="flex items-center justify-between mb-1"><span className="text-sm font-medium text-slate-800">{team.name}</span><span className="text-xs font-medium text-amber-600">{tm.length}人</span></div>
@@ -207,7 +217,7 @@ export function MembersTab({ project, staffMembers, allStaffMembers, workerTeams
                 <select value={transferToProject} onChange={e => setTransferToProject(e.target.value ? Number(e.target.value) : '')}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
                   <option value="">仅调离，不调入其他项目</option>
-                  {projects.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  {projects.map((p: Project) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </div>
             </div>
