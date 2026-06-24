@@ -220,7 +220,7 @@ const Login: React.FC<LoginProps> = () => {
         </form>
 
         <div style={{ fontSize: 10, color: 'var(--muted-2)', marginTop: 8, flexShrink: 0 }}>
-          v{(window as any).__APP_VERSION__ || '0.78.1'}
+          v{(window as any).__APP_VERSION__ || '0.78.2'}
         </div>
       </div>
       )}
@@ -230,3 +230,4 @@ const Login: React.FC<LoginProps> = () => {
 }
 
 export default Login
+
