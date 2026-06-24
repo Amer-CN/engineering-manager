@@ -3,13 +3,13 @@
 // 优先使用 Tailwind 类（slate/...），仅当 HTML 字符串拼接强制需要 hex 时引用本字典。
 
 export const COLORS = {
-  settled:        '#059669',  // 已结清绿 (emerald-600)
-  pending:        '#d97706',  // 待付橙 (amber-600)
-  textBody:       '#333',     // 正文文本（深灰）
-  textSub:        '#666',     // 副文本（中灰）
-  borderTable:    '#bbb',     // 表格边框
-  bgTableHeader:  '#f1f5f9',  // 表头背景 (slate-100)
-  textFooter:     '#999',     // 页脚文本（浅灰）
+  settled:        '#059669',  // Tailwind: emerald-600
+  pending:        '#d97706',  // Tailwind: amber-600
+  textBody:       '#333',     // Tailwind: slate-800 (近似)
+  textSub:        '#666',     // Tailwind: gray-500 (近似)
+  borderTable:    '#bbb',     // Tailwind: gray-300 (近似)
+  bgTableHeader:  '#f1f5f9',  // Tailwind: slate-100
+  textFooter:     '#999',     // Tailwind: gray-400 (近似)
 } as const
 
 export const CHART_PALETTE: readonly string[] = [
