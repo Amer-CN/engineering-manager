@@ -81,8 +81,8 @@ export function renderAuditDetail(log: AuditLog): React.ReactNode {
     const afterObj = (typeof details.after === 'object' && details.after !== null) ? details.after : {}
     const allKeys = new Set([...Object.keys(beforeObj), ...Object.keys(afterObj)])
     for (const key of allKeys) {
-      const beforeVal = (beforeObj as any)[key]
-      const afterVal = (afterObj as any)[key]
+      const beforeVal = (beforeObj as Record<string, unknown>)[key]
+      const afterVal = (afterObj as Record<string, unknown>)[key]
       if (JSON.stringify(beforeVal) !== JSON.stringify(afterVal)) {
         changes.push({
           field: key,

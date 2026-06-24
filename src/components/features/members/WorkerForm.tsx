@@ -5,8 +5,8 @@ import { Icon } from '../../ui/Icon'
 import { calculateAge, inferGenderFromIdCard, type WorkerFormData } from './memberFormTypes'
 import { IdCardUploadArea, FileUploadArea as _FileUploadArea, SmallFileUpload as _SmallFileUpload } from './FormUploadWidgets'
 import { useBankCardOCR } from '@/hooks/useBankCardOCR'
-const FileUploadArea = _FileUploadArea as any;
-const SmallFileUpload = _SmallFileUpload as any;
+const FileUploadArea = _FileUploadArea;
+const SmallFileUpload = _SmallFileUpload;
 
 interface WorkerFormProps {
   formData: WorkerFormData
@@ -130,7 +130,7 @@ export default function WorkerForm({ formData, setFormData, projects, workerTeam
         <label className="block text-sm font-medium text-slate-700 mb-1">劳动合同</label>
         <FileUploadArea file={formData.contractFile} fileType={formData.contractFileType} field="contractFile"
           dragOverField={dragOverField} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
-          onFileChange={onFileChange} onDelete={() => onDeleteFile('contractFile', setFormData)}
+          onDelete={() => onDeleteFile('contractFile', setFormData)}
           inputRef={refs.contractInputRef} onInputChange={((e: any) => onFileChange(e, 'contractFile', setFormData, false, refs.contractInputRef))} />
       </div>
 
@@ -194,15 +194,15 @@ export default function WorkerForm({ formData, setFormData, projects, workerTeam
       <div className="grid grid-cols-3 gap-4 mb-6">
         <SmallFileUpload label="安全培训记录" file={formData.safetyTrainingFile} field="safetyTrainingFile"
           dragOverField={dragOverField} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
-          onFileChange={onFileChange} onDelete={() => onDeleteFile('safetyTrainingFile', setFormData)}
+          onDelete={() => onDeleteFile('safetyTrainingFile', setFormData)}
           inputRef={refs.safetyInputRef} onInputChange={((e: any) => onFileChange(e, 'safetyTrainingFile', setFormData, false, refs.safetyInputRef))} />
         <SmallFileUpload label="健康报告" file={formData.healthReportFile} field="healthReportFile"
           dragOverField={dragOverField} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
-          onFileChange={onFileChange} onDelete={() => onDeleteFile('healthReportFile', setFormData)}
+          onDelete={() => onDeleteFile('healthReportFile', setFormData)}
           inputRef={refs.healthInputRef} onInputChange={((e: any) => onFileChange(e, 'healthReportFile', setFormData, false, refs.healthInputRef))} />
         <SmallFileUpload label="特种作业证" file={formData.specialCertificateFile} field="specialCertificateFile"
           dragOverField={dragOverField} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
-          onFileChange={onFileChange} onDelete={() => onDeleteFile('specialCertificateFile', setFormData)}
+          onDelete={() => onDeleteFile('specialCertificateFile', setFormData)}
           inputRef={refs.certInputRef} onInputChange={((e: any) => onFileChange(e, 'specialCertificateFile', setFormData, false, refs.certInputRef))} />
       </div>
     </>

@@ -175,7 +175,7 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
           workerTeams={workerTeams}
           visible={showStaffModal}
           onClose={() => { setShowStaffModal(false); resetStaffForm() }}
-          onSubmit={handleSubmitStaff as any}
+          onSubmit={handleSubmitStaff}
           onFileModified={handleFileModified}
         />
       )}
@@ -189,7 +189,7 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
           workerTeams={workerTeams}
           visible={showWorkerModal}
           onClose={() => { setShowWorkerModal(false); resetWorkerForm() }}
-          onSubmit={handleSubmitWorker as any}
+          onSubmit={handleSubmitWorker}
           onFileModified={handleFileModified}
         />
       )}
@@ -199,8 +199,8 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
         <MemberDetail
           member={selectedMember}
           onClose={() => { setShowDetailModal(false); setSelectedMember(null) }}
-          onEdit={(selectedMember.memberType === "worker" ? handleEditWorker : handleEditStaff) as any}
-          onDelete={handleDeleteMember as any}
+          onEdit={() => selectedMember.memberType === "worker" ? handleEditWorker(selectedMember) : handleEditStaff(selectedMember)}
+          onDelete={() => handleDeleteMember(selectedMember.id, members)}
         />
       )}
     </PageContainer>

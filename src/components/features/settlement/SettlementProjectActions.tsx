@@ -66,7 +66,7 @@ export function useSettlementActions({
 
       if (editingSettlement) {
         if (editingSettlement && savedFiles.length === 0) {
-          data.files = (editingSettlement as any).files || (editingSettlement.fileUrl ? [{ url: editingSettlement.fileUrl, name: editingSettlement.fileName || '', type: editingSettlement.fileType || 'image' }] : [])
+          data.files = editingSettlement.files || (editingSettlement.fileUrl ? [{ url: editingSettlement.fileUrl, name: editingSettlement.fileName || '', type: editingSettlement.fileType || 'image' }] : [])
         }
         await (await getAPI()).updateSettlement({ ...editingSettlement, ...data })
         logUpdate('settlements', data.settlementNo, editingSettlement.id, {
@@ -145,7 +145,7 @@ export function useSettlementActions({
   }
 
   const handlePreviewFile = async (settlement: SettlementData) => {
-    const fileList = (settlement as any).files?.length > 0 ? (settlement as any).files
+    const fileList = settlement.files && settlement.files.length > 0 ? settlement.files
       : settlement.fileUrl ? [{ url: settlement.fileUrl, name: settlement.fileName || '凭证', type: settlement.fileType || 'image' }] : []
     if (fileList.length === 0) return
     try {

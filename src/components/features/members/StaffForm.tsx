@@ -4,7 +4,7 @@ import { Icon } from '../../ui/Icon'
 import { Input } from '../../ui/Input/Input'
 import { staffRoles, calculateAge, type StaffFormData } from './memberFormTypes'
 import { IdCardUploadArea, FileUploadArea as _FileUploadArea } from './FormUploadWidgets'
-const FileUploadArea = _FileUploadArea as any;
+const FileUploadArea = _FileUploadArea;
 
 interface StaffFormProps {
   formData: StaffFormData
@@ -74,7 +74,7 @@ export default function StaffForm({ formData, setFormData, editingMember, dragOv
         <label className="block text-sm font-medium text-slate-700 mb-1">劳动合同</label>
         <FileUploadArea file={formData.contractFile} fileType={formData.contractFileType} field="contractFile"
           dragOverField={dragOverField} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
-          onFileChange={onFileChange} onDelete={(() => onDeleteFile("contractFile", setFormData))}
+          onDelete={(() => onDeleteFile("contractFile", setFormData))}
           inputRef={refs.contractInputRef} onInputChange={((e: React.ChangeEvent<HTMLInputElement>) => onFileChange(e, 'contractFile', setFormData, false, refs.contractInputRef))} />
       </div>
 
