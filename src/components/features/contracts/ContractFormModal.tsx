@@ -9,6 +9,7 @@ import { useToastStore } from '@/store/toastStore'
 import { paymentMethods, contractStatuses } from '../../../data/regions'
 import type { Project, Partner, AgreementSubType } from '../../../types/electron'
 import type { Contract, ContractType } from './contractConfig'
+import type { AgreementContract, IncomeContract, ExpenseContract } from '@/types'
 import { CONFIG, AGREEMENT_SUB_TYPE_LABELS } from './contractConfig'
 import { getAPI } from '@/services/api-adapter'
 import { Button } from '../../ui/Button'
@@ -43,13 +44,13 @@ export const ContractFormModal: React.FC<Props> = ({ show, type, editingContract
 
   useEffect(() => {
     if (editingContract) {
-      const agreementContract = editingContract as any
+      const agreementContract = editingContract as AgreementContract
       setFormData({
         projectId: editingContract.projectId, partnerId: editingContract.partnerId || 0,
         contractNo: editingContract.contractNo, name: editingContract.name,
         amount: editingContract.amount || 0, signedDate: editingContract.signedDate,
         startDate: editingContract.startDate, endDate: editingContract.endDate,
-        status: editingContract.status, paymentMethod: (editingContract as any).paymentMethod || 'by_progress',
+        status: editingContract.status, paymentMethod: (editingContract as IncomeContract | ExpenseContract).paymentMethod || 'by_progress',
         remarks: editingContract.remarks || '', fileUrl: editingContract.fileUrl || '',
         fileType: editingContract.fileType,
         agreementType: agreementContract.agreementType || 'cooperation',
@@ -97,7 +98,7 @@ export const ContractFormModal: React.FC<Props> = ({ show, type, editingContract
       const submissionData = { ...formData, fileUrl }
       if (isEditing) {
         const updateData: any = { ...editingContract }
-        for (const [key, value] of Object.entries(submissionData)) { if (value !== undefined && value !== '') (updateData as any)[key] = value }
+        for (const [key, value] of Object.entries(submissionData)) { if (value !== undefined && value !== '') (updateData as Record<string, unknown>)[key] = value }
         await api.updateContract(updateData)
         const strip = (obj: any) => obj?.fileUrl ? { ...obj, fileUrl: obj.fileUrl.startsWith('data:') ? '[base64 data]' : obj.fileUrl } : obj
         logUpdate(config.auditResource, formData.name, editingContract!.id, { before: strip(editingContract), after: strip(submissionData) })
@@ -140,14 +141,14 @@ export const ContractFormModal: React.FC<Props> = ({ show, type, editingContract
           <div><Input label="合同金额" type="number" value={formData.amount || ''} onChange={e => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })} size="sm" required={type !== 'agreement'} /></div>
           <div><Input label="签订日期" type="date" value={formData.signedDate} onChange={e => setFormData({ ...formData, signedDate: e.target.value })} size="sm" /></div>
           {type !== 'agreement' && (
-            <div><label className="block text-sm font-medium text-slate-700 mb-1">付款方式</label><select value={formData.paymentMethod} onChange={e => setFormData({ ...formData, paymentMethod: e.target.value as any })} className="select">{paymentMethods.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}</select></div>
+            <div><label className="block text-sm font-medium text-slate-700 mb-1">付款方式</label><select value={formData.paymentMethod} onChange={e => setFormData({ ...formData, paymentMethod: e.target.value as typeof formData.paymentMethod })} className="select">{paymentMethods.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}</select></div>
           )}
           {type === 'agreement' && (
             <div><label className="block text-sm font-medium text-slate-700 mb-1">协议类型</label><select value={formData.agreementType} onChange={e => setFormData({ ...formData, agreementType: e.target.value as AgreementSubType })} className="select">{Object.entries(AGREEMENT_SUB_TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
           )}
           <div><Input label="开始日期" type="date" value={formData.startDate} onChange={e => setFormData({ ...formData, startDate: e.target.value })} size="sm" /></div>
           <div><Input label="结束日期" type="date" value={formData.endDate} onChange={e => setFormData({ ...formData, endDate: e.target.value })} size="sm" /></div>
-          <div><label className="block text-sm font-medium text-slate-700 mb-1">合同状态</label><select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value as any })} className="select">{contractStatuses.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}</select></div>
+          <div><label className="block text-sm font-medium text-slate-700 mb-1">合同状态</label><select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value as typeof formData.status })} className="select">{contractStatuses.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}</select></div>
           <div className="col-span-2"><label className="block text-sm font-medium text-slate-700 mb-1">备注</label><textarea value={formData.remarks} onChange={e => setFormData({ ...formData, remarks: e.target.value })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500" rows={3} /></div>
           <div className="col-span-2">
             <FileDropZone label="上传合同附件" iconName="Paperclip" file={formData.fileUrl} fileType={formData.fileType || 'image'}

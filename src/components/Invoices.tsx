@@ -78,7 +78,7 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
   onFilterPaymentProjectChange={h.setFilterPaymentProject}
   onFilterDateStartChange={h.setFilterDateStart} onFilterDateEndChange={h.setFilterDateEnd}
   onPrint={h.activeTab === 'invoices' ? () => printInvoiceList(h.filteredInvoices) : () => printPaymentRecordList(h.filteredPayments, showToast as any, formatMoney, handlePrint)}
-  onExportExcel={h.activeTab === 'invoices' ? () => exportInvoiceList(h.filteredInvoices) : () => exportPaymentRecordList(h.filteredPayments, showToast as any)}
+  onExportExcel={h.activeTab === 'invoices' ? () => exportInvoiceList(h.filteredInvoices) : () => exportPaymentRecordList(h.filteredPayments, showToast as (msg: string) => void)}
   isPaymentFilter={h.activeTab === 'payments'}
   />
   </div>

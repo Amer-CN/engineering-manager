@@ -89,7 +89,7 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
   const handleExport = () => {
     if (!can('contracts:export')) { alert('您没有导出合同数据的权限'); return }
     try {
-      exportContracts(filteredContracts as any, config.exportType as any)
+      exportContracts(filteredContracts, config.exportType as "income" | "expense" | "agreement")
       logExport(config.auditResource, filteredContracts.length)
       showToast(`已导出 ${filteredContracts.length} 条合同`, 'success')
     } catch (error) {

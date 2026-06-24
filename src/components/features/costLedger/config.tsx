@@ -1,5 +1,6 @@
 import type { CostLedgerEntry, CostLedgerCategory } from '@/types'
 import {
+
   COLORS,
   DIRECTION_CONFIG,
   CATEGORY_CONFIG,
@@ -10,6 +11,8 @@ import {
 
 export { DIRECTION_CONFIG, CATEGORY_CONFIG, CATEGORY_HIERARCHY }
 export type { CategoryConfig, CategoryHierarchyEntry }
+
+type CostLedgerCategoryWithMeta = CostLedgerCategory & { isEnabled?: boolean; isBuiltin?: boolean; level1?: string };
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 分类查找函数
@@ -52,7 +55,7 @@ export function getCategoriesByDirection(direction: 'expense' | 'income', catego
  */
 export function isCategoryMissing(code: string, dynamicCategories?: (CategoryConfig | CostLedgerCategory)[] | null): boolean {
   if (!dynamicCategories || dynamicCategories.length === 0) return false
-  return !dynamicCategories.some(c => c.code === code && (c as any).isEnabled !== false)
+  return !dynamicCategories.some(c => c.code === code && (c as CostLedgerCategoryWithMeta).isEnabled !== false)
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -102,12 +105,12 @@ export function getLevel1GroupsMerged(
 
   if (dynamicCategories && dynamicCategories.length > 0) {
     for (const c of dynamicCategories) {
-      if ((c as any).isEnabled === false) continue
+      if ((c as CostLedgerCategoryWithMeta).isEnabled === false) continue
       if (direction && c.direction !== direction) continue
       // 内置分类已经在 groups 的 codes 中，跳过
-      const isBuiltin = (c as any).isBuiltin
+      const isBuiltin = (c as CostLedgerCategoryWithMeta).isBuiltin
       if (isBuiltin) continue
-      const l1 = (c as any).level1 as string | undefined
+      const l1 = (c as CostLedgerCategoryWithMeta).level1 as string | undefined
       if (l1 && groupNames.has(l1)) {
         if (!customByGroup.has(l1)) customByGroup.set(l1, [])
         customByGroup.get(l1)!.push(c.code)
@@ -159,7 +162,7 @@ export function getLevel2Codes(level1Name: string): string[] {
  */
 export function getLevel1ForCode(code: string, dynamicCategories?: (CategoryConfig | CostLedgerCategory)[] | null): string | null {
   if (dynamicCategories && dynamicCategories.length > 0) {
-    const cat = dynamicCategories.find(c => c.code === code) as any
+    const cat = dynamicCategories.find(c => c.code === code) as CostLedgerCategoryWithMeta | undefined
     if (cat?.level1) return cat.level1
   }
   return _hierarchyMap[code]?.level1 ?? null
@@ -193,7 +196,7 @@ export function getLevel1Color(
   if (fromHierarchy) return fromHierarchy
   // Check dynamic categories for level1 color
   if (dynamicCategories && dynamicCategories.length > 0) {
-    const cat = dynamicCategories.find(c => c.code === code) as any
+    const cat = dynamicCategories.find(c => c.code === code) as CostLedgerCategoryWithMeta | undefined
     if (cat?.level1) {
       // Try to find the group color from hierarchy or use the category's own color
       const groupColor = _hierarchyMap[cat.code]?.level1Color

@@ -161,7 +161,7 @@ export function cleanFormData<T extends Record<string, any>>(data: T): Partial<T
   Object.entries(data).forEach(([key, value]) => {
     if (typeof value === 'string' && value === '') {
       if (['name', 'phone', 'idCard', 'role'].includes(key)) {
-        cleaned[key as keyof T] = value as any
+        cleaned[key as keyof T] = value as T[keyof T]
       }
     } else {
       cleaned[key as keyof T] = value
@@ -188,7 +188,7 @@ export function memberToStaffForm(member: Member): StaffFormData {
 
 export function memberToWorkerForm(member: Member): WorkerFormData {
   // 从身份证自动推断性别（如果未设置）
-  const idCard = (member as any).idCard || member.idCard || ''
+  const idCard = (member as Member).idCard || member.idCard || ''
   const autoGender = member.gender || inferGenderFromIdCard(idCard)
   return {
     name: member.name || '', phone: member.phone || '',
@@ -199,7 +199,7 @@ export function memberToWorkerForm(member: Member): WorkerFormData {
     contractFile: member.contractFile || '', contractFileType: member.contractFileType || '',
     projectId: member.projectId, teamId: member.teamId, dailyWage: member.dailyWage,
     entryDate: member.entryDate || '', expectedLeaveDate: member.expectedLeaveDate || '',
-    wageBankAccount: (member as any).bankAccount || member.wageBankAccount || '', wageBankName: (member as any).bankName || member.wageBankName || '',
+    wageBankAccount: (member as Member).wageBankAccount || member.wageBankAccount || '', wageBankName: (member as Member).wageBankName || member.wageBankName || '',
     threeLevelEducation: member.threeLevelEducation || false,
     safetyTrainingFile: member.safetyTrainingFile || '',
     healthReportFile: member.healthReportFile || '',

@@ -124,10 +124,10 @@ export function CostLedgerAnalytics({ projectId, projectName, categories }: Cost
                   <PieChart>
                     <Pie data={stats.pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={2} dataKey="value">
                       {stats.pieData.map((d: any, i) => (
-                        <Cell key={i} fill={getCategoryColor(d.code, categories as any) || ANALYTICS_FALLBACK_PALETTE[i % ANALYTICS_FALLBACK_PALETTE.length]} />
+                        <Cell key={i} fill={getCategoryColor(d.code, categories as Parameters<typeof getCategoryColor>[1]) || ANALYTICS_FALLBACK_PALETTE[i % ANALYTICS_FALLBACK_PALETTE.length]} />
                       ))}
                     </Pie>
-                    <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, boxShadow: 'var(--shadow-md)', color: 'var(--fg)' }} formatter={((v: any) => formatMoney(v ?? 0)) as any} />
+                    <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, boxShadow: 'var(--shadow-md)', color: 'var(--fg)' }} formatter={((v: number) => formatMoney(v ?? 0)) as any} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -135,7 +135,7 @@ export function CostLedgerAnalytics({ projectId, projectName, categories }: Cost
                 {stats.pieData.map((d: any, i) => (
                   <div key={d.code} className="flex items-start justify-between text-xs">
                     <div className="flex items-start gap-1.5 min-w-0">
-                      <span className="h-2 w-2 shrink-0 rounded-full mt-1" style={{ backgroundColor: getCategoryColor(d.code, categories as any) || ANALYTICS_FALLBACK_PALETTE[i % ANALYTICS_FALLBACK_PALETTE.length] }} />
+                      <span className="h-2 w-2 shrink-0 rounded-full mt-1" style={{ backgroundColor: getCategoryColor(d.code, categories as Parameters<typeof getCategoryColor>[1]) || ANALYTICS_FALLBACK_PALETTE[i % ANALYTICS_FALLBACK_PALETTE.length] }} />
                       <span className="flex-1 min-w-0">
                         <span className="text-slate-600 line-clamp-2 leading-tight">{d.name}</span>
                       </span>

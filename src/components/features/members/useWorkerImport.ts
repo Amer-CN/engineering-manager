@@ -259,8 +259,8 @@ export function useWorkerImport(existingIdCards: Set<string>) {
       const sName = sheetName || wb.SheetNames[0]
       const ws = wb.Sheets[sName]
       const rows = XLSX.utils.sheet_to_json(ws, { header: 1 })
-      const rawHeaders: any[] = headerRow < rows.length ? rows[headerRow] as any[] : []
-      const rawDataRows = (rows.slice(1).filter((r) => (r as any[]).some((c: any) => c !== undefined && c !== null && String(c).trim() !== ''))) as any[][]
+      const rawHeaders: any[] = headerRow < rows.length ? rows[headerRow] as string[] : []
+      const rawDataRows = (rows.slice(1).filter((r) => (r as unknown[]).some((c: unknown) => c !== undefined && c !== null && String(c).trim() !== ''))) as string[][]
       // 过滤 null 表头并对齐数据列（修复合并单元格列索引错位）
       const { headers, rows: dataRows } = alignColumns(rawHeaders, rawDataRows)
       const match2 = matchPreset(headers)
@@ -336,7 +336,7 @@ export function useWorkerImport(existingIdCards: Set<string>) {
         wb = XLSX.read(buf, { type: 'array' })
         const sheetName = wb.SheetNames[0]
         const ws = wb.Sheets[sheetName]
-        const rows = XLSX.utils.sheet_to_json<any>(ws, { header: 1 }) as any[][]
+        const rows = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1 }) as string[][]
         const rawHeaders = rows.length > 0 ? rows[0] : []
         const rawDataRows = rows.slice(1).filter((r: any[]) => r.some(c => c !== undefined && c !== null && String(c).trim() !== ''))
         // 过滤 null 表头并对齐数据列（修复合并单元格列索引错位）
@@ -411,7 +411,7 @@ export function useWorkerImport(existingIdCards: Set<string>) {
           const colIdx = importState.mapping[field.key]
           if (colIdx >= 0 && colIdx < row.length) {
             const val = row[colIdx]
-            ;(rowData as any)[field.key] = val !== undefined && val !== null ? String(val).trim() : ''
+            ;(rowData as Record<string, string>)[field.key] = val !== undefined && val !== null ? String(val).trim() : ''
           }
         }
 
@@ -457,7 +457,7 @@ export function useWorkerImport(existingIdCards: Set<string>) {
               }
             }
             if (hasChanges) {
-              const updRes = await (await getAPI()).updateWorker(update as any)
+              const updRes = await (await getAPI()).updateWorker(update as Parameters<NonNullable<Awaited<ReturnType<typeof getAPI>>>["updateWorker"]>[0])
               if (!updRes.success) {
                 return { ok: false, row: rowIdx, reason: updRes.error || '更新工人失败' }
               }
@@ -483,16 +483,16 @@ export function useWorkerImport(existingIdCards: Set<string>) {
       }))
 
       for (const r of batchResults) {
-        if ((r as any).skipped) {
+        if ((r as Record<string, unknown>).skipped) {
           continue // skip blank/summary rows silently
         } else if (r.ok) {
-          if ((r as any).isUpdated) {
+          if ((r as Record<string, unknown>).isUpdated) {
             resultAcc.updated++
           } else {
             resultAcc.success++
           }
-          if ((r as any).warning) {
-            resultAcc.warnings.push({ row: r.row!, name: (r as any).name, message: (r as any).warning })
+          if ((r as Record<string, unknown>).warning) {
+            resultAcc.warnings.push({ row: r.row!, name: String((r as Record<string, unknown>).name ?? ""), message: String((r as Record<string, unknown>).warning ?? "") })
           }
         } else { resultAcc.failed++; resultAcc.failures.push({ row: r.row ?? 0, reason: r.reason ?? '未知错误' }) }
       }

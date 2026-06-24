@@ -30,7 +30,7 @@ export function AboutSection({ onShowChangelog }: AboutSectionProps) {
             <div>
               <p className="text-xl font-bold text-slate-800">工程管家</p>
               <p className="text-slate-500">
-                Version {(window as any).__APP_VERSION__ || '0.75.3'}
+                Version {String((window as unknown as Record<string, unknown>).__APP_VERSION__ ?? '0.75.3')}
                 <span className="mx-1.5 text-slate-300">·</span>
                 <button onClick={onShowChangelog} className="hover:underline" style={{ color: 'var(--accent)' }}>更新日志</button>
               </p>

@@ -100,7 +100,7 @@ export const SettlementForm: React.FC<SettlementFormProps> = ({
       try {
         const XLSX = await import('xlsx')
         const wb = XLSX.read(ev.target?.result, { type: 'array' })
-        const rows = XLSX.utils.sheet_to_json<any>(wb.Sheets[wb.SheetNames[0]], { header: 1 }) as any[][]
+        const rows = XLSX.utils.sheet_to_json<unknown>(wb.Sheets[wb.SheetNames[0]], { header: 1 }) as unknown[][]
         if (rows.length < 2) return
         const items = rows.slice(1).filter((r: any[]) => r.some(c => c !== undefined && c !== null && String(c).trim() !== ''))
           .map((r: any) => { const qty = parseFloat(r[3]) || 1; const price = parseFloat(r[4]) || 0; return { description: String(r[0] || '').trim(), spec: String(r[1] || '').trim(), unit: String(r[2] || '').trim(), quantity: qty, unitPrice: price, amount: Math.round(qty * price * 100) / 100, remarks: '' } })

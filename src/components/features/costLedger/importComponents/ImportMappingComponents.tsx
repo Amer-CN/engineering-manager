@@ -78,9 +78,9 @@ export function PreviewTable({ previewRows, categories, rowOverrides, onRowOverr
 }) {
   const data = previewRows.valid.map(r => ({
     ...r,
-    _idx: (r as any)._rowIdx as number,
-    _dir: (r as any)._matchedDir as 'expense' | 'income',
-    _code: (r as any)._matchedCode as string,
+    _idx: (r as unknown as Record<string, unknown>)._rowIdx as number,
+    _dir: (r as unknown as Record<string, unknown>)._matchedDir as 'expense' | 'income',
+    _code: (r as unknown as Record<string, unknown>)._matchedCode as string,
   }))
 
   const columns: Column<typeof data[number]>[] = [

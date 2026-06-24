@@ -20,8 +20,8 @@ export function useMembersEditHandlers({
     const formData = memberToStaffForm(staff)
     originalMemberFileRef.current[staff.id] = {}
     for (const key of ['idCardFront', 'idCardBack', 'contractFile']) {
-      const val = (formData as any)[key]
-      if (val && !val.startsWith('data:')) originalMemberFileRef.current[staff.id][key] = val
+      const val = (formData as any as Record<string, unknown>)[key]
+      if (val && typeof val === 'string' && !val.startsWith('data:')) originalMemberFileRef.current[staff.id][key] = val
     }
     setShowStaffModal(true)
   }, [setEditingStaff, setShowStaffModal, originalMemberFileRef])
@@ -31,8 +31,8 @@ export function useMembersEditHandlers({
     const formData = memberToWorkerForm(worker)
     originalMemberFileRef.current[worker.id] = {}
     for (const key of ['idCardFront', 'idCardBack', 'contractFile', 'safetyTrainingFile', 'healthReportFile', 'specialCertificateFile']) {
-      const val = (formData as any)[key]
-      if (val && !val.startsWith('data:')) originalMemberFileRef.current[worker.id][key] = val
+      const val = (formData as any as Record<string, unknown>)[key]
+      if (val && typeof val === 'string' && !val.startsWith('data:')) originalMemberFileRef.current[worker.id][key] = val
     }
     setShowWorkerModal(true)
   }, [setEditingWorker, setShowWorkerModal, originalMemberFileRef])

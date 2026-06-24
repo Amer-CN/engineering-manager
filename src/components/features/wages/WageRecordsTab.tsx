@@ -196,8 +196,8 @@ export default function WageRecordsTab({
             className="hidden"
             onChange={e => {
               const file = e.target.files?.[0]
-              if (file && (file as any).path) {
-                onBankReceiptUpload((file as any).path)
+              if (file && ((file as any).path ?? "")) {
+                onBankReceiptUpload((file as File & { path?: string }).path ?? "")
               }
               e.target.value = ''
             }}

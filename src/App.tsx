@@ -32,6 +32,9 @@ const Invoices = lazy(() => import('./components/Invoices'))
 const Settings = lazy(() => import('./components/Settings'))
 const Users = lazy(() => import('./components/Users'))
 import LockScreen from './components/LockScreen'
+
+type WebViewWindow = Window & { chrome?: { webview?: { postMessage: (msg: string) => void; addEventListener: (event: string, handler: (e: any) => void) => void; removeEventListener: (event: string, handler: (e: any) => void) => void } } };
+const getWebview = () => (window as WebViewWindow).chrome?.webview;
 const Login = lazy(() => import('./components/Login'))
 const SplashScreen = lazy(() => import('./components/SplashScreen'))
 
@@ -88,7 +91,7 @@ const AppContent: React.FC = () => {
 
   // 监听全屏状态变化（来自 C# 端）
   useEffect(() => {
-    const webview = (window as any).chrome?.webview
+    const webview = getWebview()
     if (!webview) return
 
     const handler = (event: any) => {
@@ -324,22 +327,22 @@ const AppContent: React.FC = () => {
 
       {/* 窗口边缘 resize 手柄 */}
       <div className="fixed top-0 left-0 right-0 h-1.5 cursor-n-resize z-50"
-        onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); (window as any).chrome?.webview?.postMessage(JSON.stringify({ action: 'startResize', edge: 'top' })) }} />
+        onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); getWebview()?.postMessage(JSON.stringify({ action: 'startResize', edge: 'top' })) }} />
       <div className="fixed bottom-0 left-0 right-0 h-1.5 cursor-s-resize z-50"
-        onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); (window as any).chrome?.webview?.postMessage(JSON.stringify({ action: 'startResize', edge: 'bottom' })) }} />
+        onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); getWebview()?.postMessage(JSON.stringify({ action: 'startResize', edge: 'bottom' })) }} />
       <div className="fixed top-0 left-0 bottom-0 w-1.5 cursor-w-resize z-50"
-        onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); (window as any).chrome?.webview?.postMessage(JSON.stringify({ action: 'startResize', edge: 'left' })) }} />
+        onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); getWebview()?.postMessage(JSON.stringify({ action: 'startResize', edge: 'left' })) }} />
       <div className="fixed top-0 right-0 bottom-0 w-1.5 cursor-e-resize z-50"
-        onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); (window as any).chrome?.webview?.postMessage(JSON.stringify({ action: 'startResize', edge: 'right' })) }} />
+        onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); getWebview()?.postMessage(JSON.stringify({ action: 'startResize', edge: 'right' })) }} />
       {/* 四角 */}
       <div className="fixed top-0 left-0 w-4 h-4 cursor-nw-resize z-50"
-        onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); (window as any).chrome?.webview?.postMessage(JSON.stringify({ action: 'startResize', edge: 'top-left' })) }} />
+        onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); getWebview()?.postMessage(JSON.stringify({ action: 'startResize', edge: 'top-left' })) }} />
       <div className="fixed top-0 right-0 w-4 h-4 cursor-ne-resize z-50"
-        onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); (window as any).chrome?.webview?.postMessage(JSON.stringify({ action: 'startResize', edge: 'top-right' })) }} />
+        onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); getWebview()?.postMessage(JSON.stringify({ action: 'startResize', edge: 'top-right' })) }} />
       <div className="fixed bottom-0 left-0 w-4 h-4 cursor-sw-resize z-50"
-        onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); (window as any).chrome?.webview?.postMessage(JSON.stringify({ action: 'startResize', edge: 'bottom-left' })) }} />
+        onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); getWebview()?.postMessage(JSON.stringify({ action: 'startResize', edge: 'bottom-left' })) }} />
       <div className="fixed bottom-0 right-0 w-4 h-4 cursor-se-resize z-50"
-        onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); (window as any).chrome?.webview?.postMessage(JSON.stringify({ action: 'startResize', edge: 'bottom-right' })) }} />
+        onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); getWebview()?.postMessage(JSON.stringify({ action: 'startResize', edge: 'bottom-right' })) }} />
     </div>
   )
 }

@@ -3,6 +3,10 @@ import { motion } from 'framer-motion'
 import { useTheme } from '../hooks/useTheme'
 import { getAPI } from '../services/api-adapter'
 
+type WebViewWindow = Window & { chrome?: { webview?: { postMessage: (msg: string) => void } }; electronAPI?: { [key: string]: (...args: any[]) => any } };
+const getWebview = () => (window as unknown as WebViewWindow).chrome?.webview;
+const getElectronAPI = () => (window as unknown as WebViewWindow).electronAPI;
+
 interface TitleBarProps {
   onToggleCollapse?: () => void
   collapsed?: boolean
@@ -33,13 +37,13 @@ const TitleBar: React.FC<TitleBarProps> = ({ onToggleCollapse, collapsed = false
   const [isFullScreen, setIsFullScreen] = useState(false)
 
   useEffect(() => {
-    const api = (window as any).electronAPI
+    const api = getElectronAPI()
     if (api) {
       api.isMaximized?.().then((max: boolean) => setIsMaximized(max))
       const unsub = api.onMaximizeChange?.((max: boolean) => setIsMaximized(max))
       return () => { if (typeof unsub === 'function') unsub() }
     }
-    const webview = (window as any).chrome?.webview
+    const webview = getWebview()
     if (webview) {
       const handler = (event: any) => {
         try {
@@ -65,7 +69,7 @@ const TitleBar: React.FC<TitleBarProps> = ({ onToggleCollapse, collapsed = false
     const target = e.target as HTMLElement
     if (target.closest('button') || target.closest('input') || target.closest('a')) return
 
-    const webview = (window as any).chrome?.webview
+    const webview = getWebview()
     if (webview) {
       webview.postMessage(JSON.stringify({ action: 'startDrag' }))
     }

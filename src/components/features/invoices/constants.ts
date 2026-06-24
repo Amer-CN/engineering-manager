@@ -1,6 +1,6 @@
+import type { InvoiceType, InvoiceTaxRate, InvoiceKind, Invoice, PaymentRecord } from '@/types'
 import type { InvoiceFormData } from './InvoiceForm'
 import type { PaymentFormData } from './PaymentForm'
-import type { Invoice, InvoiceKind, InvoiceTaxRate, PaymentRecord } from '../../../types/electron'
 
 export const taxRateOptions: { value: InvoiceTaxRate; label: string }[] = [
   { value: 0, label: '不征税' },
@@ -27,7 +27,7 @@ export const defaultInvoiceFormData: InvoiceFormData = {
   amount: 0,
   priceAmount: 0,
   taxAmount: 0,
-  taxRate: 0.09 as any,
+  taxRate: 0.09 as InvoiceTaxRate,
   issueDate: new Date().toISOString().split('T')[0],
   sellerId: '',
   buyerId: '',
@@ -39,7 +39,7 @@ export const defaultInvoiceFormData: InvoiceFormData = {
 }
 
 export const defaultPaymentFormData: PaymentFormData = {
-  type: 'invoice_in' as any,
+  type: 'invoice_in' as InvoiceType,
   amount: 0,
   recordDate: new Date().toISOString().split('T')[0],
   projectId: '',
@@ -55,17 +55,17 @@ export function getInvoiceFormData(editingInvoice: Invoice | null): InvoiceFormD
   if (!editingInvoice) return { ...defaultInvoiceFormData }
   return {
     type: editingInvoice.type,
-    invoiceKind: (editingInvoice as any).kind || 'electronic_regular',
+    invoiceKind: editingInvoice.invoiceKind || 'electronic_regular',
     invoiceNo: editingInvoice.invoiceNo || '',
-    invoiceCode: (editingInvoice as any).invoiceCode || '',
+    invoiceCode: editingInvoice.invoiceCode || '',
     name: editingInvoice.name || '',
     amount: editingInvoice.amount || 0,
-    priceAmount: (editingInvoice as any).priceAmount || editingInvoice.amount || 0,
+    priceAmount: editingInvoice.priceAmount || editingInvoice.amount || 0,
     taxAmount: editingInvoice.taxAmount || 0,
-    taxRate: (editingInvoice as any).taxRate || 0.09,
+    taxRate: editingInvoice.taxRate || 0.09,
     issueDate: editingInvoice.issueDate || '',
-    sellerId: (editingInvoice as any).sellerId || '',
-    buyerId: (editingInvoice as any).buyerId || '',
+    sellerId: editingInvoice.sellerId || '',
+    buyerId: editingInvoice.buyerId || '',
     projectId: editingInvoice.projectId || '',
     contractId: editingInvoice.contractId || '',
     remarks: editingInvoice.remarks || '',

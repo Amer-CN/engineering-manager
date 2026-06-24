@@ -29,7 +29,7 @@ export const PaymentList: React.FC<PaymentListProps> = ({
     {
       key: 'recordDate', title: '日期',
       render: (record) => (
-        <div className="font-medium text-slate-800">{record.recordDate || (record as any).date || '-'}</div>
+        <div className="font-medium text-slate-800">{record.recordDate || (record as PaymentRecord & { date?: string }).date || '-'}</div>
       )
     },
     {
@@ -50,7 +50,7 @@ export const PaymentList: React.FC<PaymentListProps> = ({
       key: 'invoiceInfos', title: '关联发票',
       render: (record) => (
         <div className="flex flex-col gap-1.5">
-          {(record as any).invoiceInfos?.map((info: any) => (
+          {(record as PaymentRecord & { invoiceInfos?: { invoiceNo: string; invoiceName: string; invoiceAmount: number }[] }).invoiceInfos?.map((info: any) => (
             <div key={info.invoiceId} className="text-xs">
               <div className="font-mono text-slate-700">{info.invoiceNo}</div>
               <div className="text-slate-500 mt-0.5">开票金额 ¥{formatMoney(info.invoiceAmount)}</div>
@@ -68,7 +68,7 @@ export const PaymentList: React.FC<PaymentListProps> = ({
     {
       key: 'ratio', title: '本次收款比例', align: 'center',
       render: (record) => {
-        const invoiceInfos = (record as any).invoiceInfos || []
+        const invoiceInfos = (record as PaymentRecord & { invoiceInfos?: { invoiceNo: string; invoiceName: string; invoiceAmount: number }[] }).invoiceInfos || []
         const totalInvoiceAmount = invoiceInfos.reduce((sum: number, info: any) => sum + info.invoiceAmount, 0)
         if (totalInvoiceAmount === 0) {
           return <span className="text-slate-400">-</span>

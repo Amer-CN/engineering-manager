@@ -226,7 +226,7 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
   <Cell key={idx} fill={entry.color} stroke="none" />
   ))}
   </Pie>
-  <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, boxShadow: 'var(--shadow-md)', color: 'var(--fg)' }} formatter={((value: any) => [`${value ?? 0} 份`, '']) as any} />
+  <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, boxShadow: 'var(--shadow-md)', color: 'var(--fg)' }} formatter={((value: number) => [`${value ?? 0} 份`, ''] as [string, string]) as any} />
   </PieChart>
   </ResponsiveContainer>
   ) : (
