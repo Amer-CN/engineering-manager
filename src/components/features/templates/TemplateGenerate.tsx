@@ -157,12 +157,12 @@ h1{text-align:center;font-size:18pt;margin-bottom:24px}
             )}
           </HoverScrollbar></div>
           <div className="px-4 py-3 border-t border-slate-100 flex items-center gap-2">
-            <Button onClick={handlePrint}  variant="ghost" className="btn text-xs flex items-center gap-1">
+            <Button onClick={handlePrint}  variant="ghost" className="text-xs flex items-center gap-1">
               <Icon name="Printer" size={14} /> 打印
             </Button>
             <div className="flex-1" />
-            <Button onClick={onClose}  variant="ghost" className="btn text-xs">取消</Button>
-            <Button onClick={handleDownload} disabled={loading}  variant="primary" className="btn text-xs flex items-center gap-1">
+            <Button onClick={onClose}  variant="ghost" className="text-xs">取消</Button>
+            <Button onClick={handleDownload} disabled={loading}  variant="primary" className="text-xs flex items-center gap-1">
               <Icon name="Download" size={14} /> 下载 Word 文档
             </Button>
           </div>

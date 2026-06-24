@@ -59,12 +59,12 @@ export function ProjectFilters({
             共 {projectCount} 个项目
           </span>
           {can('projects:export') && (
-            <Button onClick={onExport}  variant="secondary" size="sm" className="btn">
+            <Button onClick={onExport}  variant="secondary" size="sm">
               <Icon name="Download" size={14} className="inline-block" /> 导出
             </Button>
           )}
           {can('projects:create') && (
-            <Button onClick={onAdd}  variant="primary" className="btn">
+            <Button onClick={onAdd}  variant="primary">
               <Icon name="Plus" size={16} className="inline-block" /> 新增项目
             </Button>
           )}

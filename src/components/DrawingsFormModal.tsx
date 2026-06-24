@@ -49,9 +49,9 @@ export const DrawingsFormModal: React.FC<DrawingsFormModalProps> = ({
       title={editingDrawing ? '编辑图纸' : '上传图纸'} size="md"
       footer={<>
         <Button type="button" onClick={() => { if (uploading) return; setShowModal(false); resetForm() }}
-          disabled={uploading}  variant="secondary" className="btn disabled:opacity-50">取消</Button>
+          disabled={uploading}  variant="secondary" className="disabled:opacity-50">取消</Button>
         <Button type="submit" form="drawing-form" disabled={uploading}
-           variant="primary" className="btn disabled:opacity-50 disabled:cursor-not-allowed">
+           variant="primary" className="disabled:opacity-50 disabled:cursor-not-allowed">
           {uploading ? `上传中 ${uploadProgress.current}/${uploadProgress.total}...` : editingDrawing ? '保存' : formData.files.length > 1 ? `上传 (${formData.files.length})` : '上传'}
         </Button>
       </>}>

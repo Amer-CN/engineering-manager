@@ -151,9 +151,9 @@ export const AttendanceImportModal: React.FC<Props> = ({ show, projectId, yearMo
             }
           </span>
           <div className="flex items-center gap-3">
-            <Button type="button" onClick={onClose}  variant="secondary" className="btn text-sm">取消</Button>
+            <Button type="button" onClick={onClose}  variant="secondary" className="text-sm">取消</Button>
             <Button type="button" onClick={confirmImport} disabled={matchedCount === 0}
-               variant="primary" className="btn text-sm disabled:opacity-50">
+               variant="primary" className="text-sm disabled:opacity-50">
               确认导入 ({matchedCount})
             </Button>
           </div>

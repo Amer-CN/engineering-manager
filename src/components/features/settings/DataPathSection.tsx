@@ -22,7 +22,7 @@ export function DataPathSection({ refresh }: { refresh?: () => void }) {
           <div className="bg-slate-50 rounded-lg p-3 text-sm text-slate-700 font-mono break-all border border-slate-200">{dp.dataPath}</div>
         </div>
         <div className="flex flex-wrap gap-3 pt-2 items-center">
-          <Button onClick={dp.handleChangeDataPath} disabled={dp.migrating}  variant="primary" className="btn">
+          <Button onClick={dp.handleChangeDataPath} disabled={dp.migrating}  variant="primary">
             <Icon name="FolderKanban" size={16} />更改数据存储位置
           </Button>
           {dp.dataPath !== dp.defaultPath && (
@@ -34,7 +34,7 @@ export function DataPathSection({ refresh }: { refresh?: () => void }) {
                 cancelText: '取消',
               })
               if (ok) dp.handleResetToDefault()
-            }} disabled={dp.migrating}  variant="secondary" className="btn"><Icon name="RotateCcw" size={16} /> 恢复默认路径</Button>
+            }} disabled={dp.migrating}  variant="secondary"><Icon name="RotateCcw" size={16} /> 恢复默认路径</Button>
           )}
           {dp.migrating && (
             <div className="text-sm text-amber-600 flex items-center gap-2">

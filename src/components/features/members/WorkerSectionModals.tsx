@@ -83,7 +83,7 @@ export function TeamCard({ team, workerCount, onEdit, onDelete, onManageWorkers,
   <Button
   onClick={() => onManageWorkers(team.id, team.name, team.projectId)}
   
-   variant="ghost" size="sm" className="btn text-primary-600 flex-1">
+   variant="ghost" size="sm" className="text-primary-600 flex-1">
   管理工人
   </Button>
   )}
@@ -91,20 +91,20 @@ export function TeamCard({ team, workerCount, onEdit, onDelete, onManageWorkers,
   <Button
   onClick={() => onTeamWages(team.id, team.name, team.projectId, projectName)}
   
-   variant="ghost" size="sm" className="btn text-success-600 flex-1">
+   variant="ghost" size="sm" className="text-success-600 flex-1">
   工资汇总
   </Button>
   )}
   <Button
   onClick={onEdit}
   
-   variant="ghost" size="sm" className="btn text-warning-600 flex-1">
+   variant="ghost" size="sm" className="text-warning-600 flex-1">
   编辑
   </Button>
   <Button
   onClick={onDelete}
   
-   variant="danger" size="sm" className="btn flex-1">
+   variant="danger" size="sm" className="flex-1">
   删除
   </Button>
   </div>

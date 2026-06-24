@@ -41,7 +41,7 @@ export function LearningRulesView({ rules, categories, confirm, setRules }: Prop
                   {cat?.label || rule.category}
                 </span>
                 <span className="text-slate-300 ml-auto">命中 {rule.hitCount} 次</span>
-                <Button onClick={() => handleDelete(i)}  variant="danger" size="sm" className="btn">✕</Button>
+                <Button onClick={() => handleDelete(i)}  variant="danger" size="sm">✕</Button>
               </div>
             )
           })}

@@ -83,8 +83,8 @@ export function CostLedgerForm({ projectId, projectName, initial, onSave, onClos
     <Modal isOpen onClose={onClose} title={initial ? '编辑台账记录' : '新增台账记录'} size="lg"
       footer={
         <>
-          <Button type="button" onClick={onClose}  variant="secondary" className="btn text-sm">取消</Button>
-          <Button type="submit" form="cost-ledger-form"  variant="primary" className="btn text-sm">{initial ? '保存修改' : '保存'}</Button>
+          <Button type="button" onClick={onClose}  variant="secondary" className="text-sm">取消</Button>
+          <Button type="submit" form="cost-ledger-form"  variant="primary" className="text-sm">{initial ? '保存修改' : '保存'}</Button>
         </>
       }
     >

@@ -235,8 +235,8 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
     { key: 'createdAt', title: '上传日期', render: (item) => <span className="text-sm text-slate-500">{new Date(item.createdAt).toLocaleDateString('zh-CN')}</span> },
     { key: 'actions', title: '操作', align: 'center', render: (item) => (
       <div className="flex items-center justify-center gap-2">
-        <Button onClick={() => handleEdit(item)}  variant="ghost" size="sm" className="btn">编辑</Button>
-        <Button onClick={() => handleDelete(item.id)}  variant="danger" size="sm" className="btn">删除</Button>
+        <Button onClick={() => handleEdit(item)}  variant="ghost" size="sm">编辑</Button>
+        <Button onClick={() => handleDelete(item.id)}  variant="danger" size="sm">删除</Button>
       </div>
     )},
   ]
@@ -260,7 +260,7 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
   setShowModal(true)
   }}
   
-   variant="primary" className="btn px-6 py-3 flex items-center">
+   variant="primary" className="px-6 py-3 flex items-center">
   <span className="text-xl mr-2">+</span>
   上传图纸
   </Button>
@@ -337,7 +337,7 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
   />
   ) : (
   <EmptyState icon="Ruler" title="暂无图纸" description="点击下方按钮上传您的第一张图纸"
-  action={<Button onClick={() => { resetForm(); setShowModal(true) }}  variant="primary" className="btn px-6 py-3">上传图纸</Button>}
+  action={<Button onClick={() => { resetForm(); setShowModal(true) }}  variant="primary" className="px-6 py-3">上传图纸</Button>}
   />
   )}
 

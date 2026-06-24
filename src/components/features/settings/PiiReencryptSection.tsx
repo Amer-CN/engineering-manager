@@ -64,7 +64,7 @@ export function PiiReencryptSection({ reencryptStatus, progressPct, reencrypting
         onClick={handleReencrypt}
         disabled={reencrypting}
         
-       variant="secondary" className="btn">
+       variant="secondary">
         {reencrypting ? (
           <>
             <div className="animate-spin rounded-full h-4 w-4 border-2 border-slate-600 border-t-transparent" />

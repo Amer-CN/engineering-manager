@@ -181,7 +181,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
             <Button
               onClick={() => onEdit(item)}
               
-             variant="ghost" size="sm" className="btn">
+             variant="ghost" size="sm">
               <Icon name="Edit" size={14} />
             </Button>
           </Tooltip>
@@ -189,7 +189,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
             <Button
               onClick={() => onDelete(item.id)}
               
-             variant="danger" size="sm" className="btn">
+             variant="danger" size="sm">
               <Icon name="Trash2" size={14} />
             </Button>
           </Tooltip>

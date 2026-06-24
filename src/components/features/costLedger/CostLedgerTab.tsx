@@ -117,7 +117,7 @@ export function CostLedgerTab({ projectId, projectName }: CostLedgerTabProps) {
             onImport={() => setShowImport(true)}
             onCompare={() => setShowCompare(true)}
           />
-          <Button onClick={openNew}  variant="primary" size="sm" className="btn">
+          <Button onClick={openNew}  variant="primary" size="sm">
             + 新增
           </Button>
         </div>

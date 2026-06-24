@@ -135,7 +135,7 @@ export default function AttendanceTab({
           </div>
           {selectedIds.size > 0 && (
             <Button onClick={onBatchDelete}
-               variant="danger" size="sm" className="btn">
+               variant="danger" size="sm">
               删除选中 ({selectedIds.size})
             </Button>
           )}
@@ -172,9 +172,9 @@ export default function AttendanceTab({
           />
           <Button
             onClick={() => { fileInputRef.current?.click() }}
-             variant="primary" size="sm" className="btn">导入考勤</Button>
+             variant="primary" size="sm">导入考勤</Button>
           <Button onClick={onGenerateAttendance} disabled={loading}
-             variant="warning" size="sm" className="btn">
+             variant="warning" size="sm">
             生成默认考勤
           </Button>
         </div>

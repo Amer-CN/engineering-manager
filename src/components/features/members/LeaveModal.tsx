@@ -31,8 +31,8 @@ export function LeaveModal({
   <Modal isOpen onClose={onClose} title="工人离场" size="md"
   footer={
   <>
-  <Button type="button" onClick={onClose}  variant="secondary" className="btn">取消</Button>
-  <Button type="button" onClick={onSubmit}  variant="primary" className="btn">确认离场</Button>
+  <Button type="button" onClick={onClose}  variant="secondary">取消</Button>
+  <Button type="button" onClick={onSubmit}  variant="primary">确认离场</Button>
   </>
   }>
   <form onSubmit={onSubmit}>

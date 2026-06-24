@@ -71,7 +71,7 @@ export function MemberList({
         <Button
           onClick={onAdd}
           
-         variant="primary" className="btn mt-6">
+         variant="primary" className="mt-6">
           + 添加{type === 'staff' ? '管理人员' : '农民工'}
         </Button>
       </div>

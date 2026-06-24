@@ -123,7 +123,7 @@ export function CostLedgerProjectDetail({ project, onBack, categories, onManageC
           onImport={() => setShowImport(true)}
           onCompare={() => setShowCompare(true)}
         />
-        <Button onClick={() => { setEditing(null); setShowForm(true) }}  variant="primary" size="sm" className="btn">
+        <Button onClick={() => { setEditing(null); setShowForm(true) }}  variant="primary" size="sm">
           + 新增台账
         </Button>
       </div>

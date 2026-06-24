@@ -95,8 +95,8 @@ const DepartmentManager: React.FC = () => {
     { key: 'managerId', title: '负责人', render: (item) => <span className="text-sm text-slate-600">{getManagerName(item.managerId)}</span> },
     { key: 'actions', title: '操作', align: 'center', render: (item) => (
       <div className="flex items-center justify-center gap-2">
-        <Button onClick={() => openEdit(item)}  variant="ghost" size="sm" className="btn text-primary-600">编辑</Button>
-        <Button onClick={() => handleDelete(item)}  variant="danger" size="sm" className="btn">删除</Button>
+        <Button onClick={() => openEdit(item)}  variant="ghost" size="sm" className="text-primary-600">编辑</Button>
+        <Button onClick={() => handleDelete(item)}  variant="danger" size="sm">删除</Button>
       </div>
     )},
   ]
@@ -158,8 +158,8 @@ const DepartmentManager: React.FC = () => {
               <PositionEditor positions={positions} onChange={setPositions} />
 
               <div className="flex justify-end gap-3 pt-2">
-                <Button type="button" onClick={resetForm}  variant="secondary" className="btn">取消</Button>
-                <Button type="submit"  variant="primary" className="px-5 py-2 btn">{editing ? '保存' : '创建'}</Button>
+                <Button type="button" onClick={resetForm}  variant="secondary">取消</Button>
+                <Button type="submit"  variant="primary" className="px-5 py-2 ">{editing ? '保存' : '创建'}</Button>
               </div>
             </form>
           </motion.div>

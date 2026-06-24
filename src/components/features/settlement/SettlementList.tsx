@@ -104,7 +104,7 @@ export const SettlementList: React.FC<SettlementListProps> = ({
           </button>
         </Tooltip>
         <Tooltip content="删除" position="top" delay={300}>
-          <Button onClick={() => onDelete(item.id)}  variant="danger" size="sm" className="btn">
+          <Button onClick={() => onDelete(item.id)}  variant="danger" size="sm">
             <Icon name="Trash2" size={14} />
           </Button>
         </Tooltip>

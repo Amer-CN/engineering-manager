@@ -110,13 +110,13 @@ export const AuditFilterBar: React.FC<AuditFilterBarProps> = ({
           <Button
             onClick={onReset}
             
-           variant="secondary" size="sm" className="btn">
+           variant="secondary" size="sm">
             重置
           </Button>
           <Button
             onClick={onSearch}
             
-           variant="primary" className="btn text-sm">
+           variant="primary" className="text-sm">
             搜索
           </Button>
         </div>

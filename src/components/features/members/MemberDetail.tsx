@@ -64,20 +64,20 @@ export function MemberDetail({
           </div>
           <div className="flex items-center gap-3">
             {onDelete && (
-              <Button onClick={onDelete}  variant="danger" size="sm" className="btn">删除</Button>
+              <Button onClick={onDelete}  variant="danger" size="sm">删除</Button>
             )}
             {isWorker && !isLeft && (
               <>
                 {onTransfer && (
-                  <Button onClick={onTransfer}  variant="ghost" size="sm" className="btn text-primary-600">调组</Button>
+                  <Button onClick={onTransfer}  variant="ghost" size="sm" className="text-primary-600">调组</Button>
                 )}
                 {onLeave && (
-                  <Button onClick={onLeave}  variant="ghost" size="sm" className="btn">离场</Button>
+                  <Button onClick={onLeave}  variant="ghost" size="sm">离场</Button>
                 )}
               </>
             )}
             {isWorker && isLeft && onReEntry && (
-              <Button onClick={onReEntry}  variant="ghost" size="sm" className="btn text-success-600">重新入场</Button>
+              <Button onClick={onReEntry}  variant="ghost" size="sm" className="text-success-600">重新入场</Button>
             )}
             {onEdit && (
               <Button onClick={onEdit} variant={isWorker ? 'warning' : 'primary'} size="sm">编辑</Button>

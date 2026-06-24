@@ -117,7 +117,7 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
     {
       key: 'detail', title: '操作', align: 'center',
       render: (log) => (
-        <Button onClick={() => setSelectedLog(log)}  variant="ghost" size="sm" className="btn text-primary-600">详情</Button>
+        <Button onClick={() => setSelectedLog(log)}  variant="ghost" size="sm" className="text-primary-600">详情</Button>
       )
     },
   ]
@@ -160,12 +160,12 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
   <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between">
   <div className="text-sm text-slate-500">第 <span className="font-medium">{page}</span> / <span className="font-medium">{totalPages}</span> 页</div>
   <div className="flex items-center gap-2">
-  <Button onClick={() => f.setPage(Math.max(1, page - 1))} disabled={page <= 1}  variant="secondary" size="sm" className="btn disabled:opacity-50 disabled:cursor-not-allowed">上一页</Button>
+  <Button onClick={() => f.setPage(Math.max(1, page - 1))} disabled={page <= 1}  variant="secondary" size="sm" className="disabled:opacity-50 disabled:cursor-not-allowed">上一页</Button>
   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
   const pageNum = Math.max(1, Math.min(totalPages - 4, page - 2)) + i
   return <Button key={pageNum} onClick={() => f.setPage(pageNum)} variant={pageNum === page ? 'primary' : 'ghost'} size="sm" className={pageNum === page ? undefined : 'text-slate-700'}>{pageNum}</Button>
   })}
-  <Button onClick={() => f.setPage(Math.min(totalPages, page + 1))} disabled={page >= totalPages}  variant="secondary" size="sm" className="btn disabled:opacity-50 disabled:cursor-not-allowed">下一页</Button>
+  <Button onClick={() => f.setPage(Math.min(totalPages, page + 1))} disabled={page >= totalPages}  variant="secondary" size="sm" className="disabled:opacity-50 disabled:cursor-not-allowed">下一页</Button>
   </div>
   </div>
   </>

@@ -90,8 +90,8 @@ export const RolePermissionsTab: React.FC = () => {
   </table>
   </div>
   <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-slate-100">
-  <Button onClick={() => setEditingRoleId(null)}  variant="secondary" className="btn">取消</Button>
-  <Button onClick={handleSavePermissions}  variant="primary" className="btn">保存权限</Button>
+  <Button onClick={() => setEditingRoleId(null)}  variant="secondary">取消</Button>
+  <Button onClick={handleSavePermissions}  variant="primary">保存权限</Button>
   </div>
   </Card>
   )

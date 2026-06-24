@@ -127,12 +127,12 @@ export function MembersTab({ project, staffMembers, allStaffMembers, workerTeams
                     </p>}
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button onClick={() => openTransfer(rec)}  variant="ghost" size="sm" className="btn text-amber-600 border border-amber-200">调离</Button>
+                    <Button onClick={() => openTransfer(rec)}  variant="ghost" size="sm" className="text-amber-600 border border-amber-200">调离</Button>
                     <Button onClick={() => {
                       if (confirm(`确认将 ${m.name} 从项目中删除？此操作不可撤销。`)) {
                         getAPI().then(api => api.removeProjectMember(rec.id)).then(() => loadProjectMembers())
                       }
-                    }}  variant="danger" size="sm" className="btn border border-slate-200">删除</Button>
+                    }}  variant="danger" size="sm" className="border border-slate-200">删除</Button>
                   </div>
                 </div>
               )
@@ -160,7 +160,7 @@ export function MembersTab({ project, staffMembers, allStaffMembers, workerTeams
                   <Button onClick={() => {
                     getAPI().then(api => api.updateProjectMember(rec.id, { leftAt: '' }))
                       .then(() => loadProjectMembers())
-                  }}  variant="ghost" size="sm" className="btn text-primary-600 border border-primary-200">恢复</Button>
+                  }}  variant="ghost" size="sm" className="text-primary-600 border border-primary-200">恢复</Button>
                 </div>
               ))}
             </div>

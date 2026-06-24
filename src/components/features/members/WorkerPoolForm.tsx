@@ -97,8 +97,8 @@ export function WorkerPoolForm({ visible, editing, onClose, onSubmit, onSwitchTo
   )}
   </div>
   <div className="flex gap-3">
-  <Button onClick={onClose}  variant="secondary" className="btn text-sm">取消</Button>
-  <Button onClick={handleSubmit} disabled={submitting || !form.name.trim()}  variant="warning" className="btn text-sm disabled:opacity-50">
+  <Button onClick={onClose}  variant="secondary" className="text-sm">取消</Button>
+  <Button onClick={handleSubmit} disabled={submitting || !form.name.trim()}  variant="warning" className="text-sm disabled:opacity-50">
   {submitting ? '提交中...' : editing ? '保存修改' : '添加'}
   </Button>
   </div>

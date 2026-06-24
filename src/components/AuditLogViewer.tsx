@@ -170,7 +170,7 @@ const AuditLogViewer: React.FC<AuditLogViewerProps> = ({ maxVisible = 100 }) => 
   <Button
   type="submit"
   
-   variant="primary" className="btn text-sm">
+   variant="primary" className="text-sm">
   搜索
   </Button>
 
@@ -179,14 +179,14 @@ const AuditLogViewer: React.FC<AuditLogViewerProps> = ({ maxVisible = 100 }) => 
   type="button"
   onClick={() => handleExport('csv')}
   
-   variant="secondary" size="sm" className="btn">
+   variant="secondary" size="sm">
   导出 CSV
   </Button>
   <Button
   type="button"
   onClick={() => handleExport('json')}
   
-   variant="secondary" size="sm" className="btn">
+   variant="secondary" size="sm">
   导出 JSON
   </Button>
   </div>

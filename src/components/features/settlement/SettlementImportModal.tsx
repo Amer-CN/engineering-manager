@@ -160,8 +160,8 @@ export const SettlementImportModal: React.FC<Props> = ({ show, onClose, onImport
         <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between shrink-0">
           <span className="text-sm text-slate-500">将导入 {state.allRows.length} 条明细</span>
           <div className="flex items-center gap-3">
-            <Button type="button" onClick={onClose}  variant="secondary" className="btn">取消</Button>
-            <Button type="button" onClick={confirmImport}  variant="primary" className="btn">确认导入</Button>
+            <Button type="button" onClick={onClose}  variant="secondary">取消</Button>
+            <Button type="button" onClick={confirmImport}  variant="primary">确认导入</Button>
           </div>
         </div>
       </div>

@@ -108,13 +108,13 @@ export const MaterialList: React.FC<MaterialListProps> = ({
           <Button
             onClick={() => onEdit(item)}
             
-           variant="ghost" size="sm" className="btn text-primary-600">
+           variant="ghost" size="sm" className="text-primary-600">
             编辑
           </Button>
           <Button
             onClick={() => onDelete(item.id)}
             
-           variant="danger" size="sm" className="btn">
+           variant="danger" size="sm">
             删除
           </Button>
         </div>

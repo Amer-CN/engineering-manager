@@ -125,7 +125,7 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
           <Button
             onClick={() => onDeleteWorker((w as any).workerId)}
             
-           variant="danger" size="sm" className="btn">
+           variant="danger" size="sm">
             删除
           </Button>
         </div>
@@ -165,13 +165,13 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
         <Button
           onClick={onAddWorker}
           
-         variant="warning" className="ml-auto btn flex items-center">
+         variant="warning" className="ml-auto  flex items-center">
           <Icon name="Plus" size={18} className="mr-1" />添加工人
         </Button>
         <Button
           onClick={onImportClick}
           
-         variant="primary" className="btn px-5 py-2 flex items-center">
+         variant="primary" className="px-5 py-2 flex items-center">
           <Icon name="Upload" size={18} className="mr-1" />导入Excel
         </Button>
       </FilterBar>
@@ -196,7 +196,7 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
           <Button
             onClick={onAddWorker}
             
-           variant="warning" className="btn">
+           variant="warning">
             添加工人
           </Button>
         </Card>

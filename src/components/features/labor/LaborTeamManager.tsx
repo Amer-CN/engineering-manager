@@ -106,7 +106,7 @@ const LaborTeamManager: React.FC<LaborTeamManagerProps> = ({
         <Button
           onClick={handleAddTeam}
           
-         variant="warning" className="btn flex items-center">
+         variant="warning" className="flex items-center">
           <Icon name="Plus" size={20} className="mr-2" />
           添加班组
         </Button>
@@ -150,7 +150,7 @@ const LaborTeamManager: React.FC<LaborTeamManagerProps> = ({
           <Button
             onClick={handleAddTeam}
             
-           variant="warning" className="btn">
+           variant="warning">
             添加班组
           </Button>
         </Card>
