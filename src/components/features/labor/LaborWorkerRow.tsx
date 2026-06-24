@@ -38,9 +38,9 @@ export const LaborWorkerRow = React.memo(function LaborWorkerRow({
         {age !== null ? age : '-'}
       </td>
       <td className="px-3 py-2.5 text-slate-600">{worker.gender || '-'}</td>
-      <td className="px-3 py-2.5 text-slate-600">{worker.workerType ? getWorkerTypeLabel(worker.workerType as any) : '-'}</td>
+      <td className="px-3 py-2.5 text-slate-600">{worker.workerType ? getWorkerTypeLabel(worker.workerType) : '-'}</td>
       <td className="px-3 py-2.5 text-right text-slate-700 font-medium">{worker.dailyWage != null ? `¥${worker.dailyWage}` : '-'}</td>
-      <td className="px-3 py-2.5 text-slate-500 font-mono text-xs">{masked('bankAccount', (worker as any).bankAccount) || '-'}</td>
+      <td className="px-3 py-2.5 text-slate-500 font-mono text-xs">{masked('bankAccount', worker.bankAccount) || '-'}</td>
       <td className="px-3 py-2.5">
         <div className="flex items-center justify-end gap-1">
           <button
@@ -50,13 +50,13 @@ export const LaborWorkerRow = React.memo(function LaborWorkerRow({
             编辑
           </button>
           <button
-            onClick={() => onWageModal((worker as any).workerId || worker.id, worker.name)}
+            onClick={() => onWageModal(worker.workerId || worker.id, worker.name)}
             className="px-2 py-1 text-xs text-green-600 hover:bg-green-50 rounded"
           >
             工资
           </button>
           <Button
-            onClick={() => onDelete((worker as any).workerId)}
+            onClick={() => onDelete(worker.workerId)}
             
            variant="danger" size="sm">
             删除
