@@ -83,7 +83,7 @@ export const InvoiceOCRBlock: React.FC<InvoiceOCRBlockProps> = ({
         type="button"
         onClick={handleClick}
         disabled={loading}
-        className={`btn w-full flex items-center justify-center gap-2 transition-all duration-300 ${
+        className={` w-full flex items-center justify-center gap-2 transition-all duration-300 ${
           loading
             ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0'
             : 'btn-primary'
