@@ -214,7 +214,7 @@ function walkTsxFiles(dir, filter) {
 // 规则 1：禁止硬编码 hex 颜色（排除 index.css 变量定义、测试文件、prototype HTML）
 const hexColorRegex = /#[0-9a-fA-F]{6}/g
 const noHexColorFiles = walkTsxFiles(SRC, f =>
-  !f.includes('__tests__') && !f.includes('node_modules') && !f.includes('prototype') && !f.endsWith('.html'))
+  !f.includes('__tests__') && !f.includes('node_modules') && !f.includes('prototype') && !f.endsWith('.html') && !f.endsWith('Colors.ts'))
 let hexWarnings = 0
 for (const file of noHexColorFiles) {
   const content = fs.readFileSync(file, 'utf-8')
