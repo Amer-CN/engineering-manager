@@ -17,7 +17,7 @@ export const MemberFormLayout: React.FC<Props> = ({ type, editingMember, ocrMode
       footer={
         <>
           <Button type="button" onClick={onClose}  disabled={submitting} variant="secondary">取消</Button>
-          <button type="submit" form="member-form" disabled={submitting} className={`${type === 'staff' ? 'btn-primary' : 'btn-warning'} ${submitting ? 'opacity-50 cursor-not-allowed' : ''}`}>{submitting ? '提交中..' : (editingMember ? '保存' : '添加')}</button>
+          <button type="submit" form="member-form" disabled={submitting} className={`${type === 'staff' ? 'bg-primary-600 hover:bg-primary-700 text-white' : 'bg-amber-500 hover:bg-amber-600 text-white'} ${submitting ? 'opacity-50 cursor-not-allowed' : ''}`}>{submitting ? '提交中..' : (editingMember ? '保存' : '添加')}</button>
         </>
       }
     >

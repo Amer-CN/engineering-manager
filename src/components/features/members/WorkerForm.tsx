@@ -165,7 +165,7 @@ export default function WorkerForm({ formData, setFormData, projects, workerTeam
           className={`w-full flex items-center justify-center gap-2 transition-all duration-300 ${
             bankCardLoading
               ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0'
-              : 'btn-secondary'
+              : 'bg-slate-200 text-slate-700 hover:bg-slate-300 rounded-lg font-medium'
           }`}
         >
           {bankCardLoading ? (
