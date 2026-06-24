@@ -66,7 +66,9 @@ export function generateInvoicePrintContent(invoice: Invoice) {
     </div>`
 }
 
-export function generatePaymentPrintContent(record: PaymentRecord) {
+interface PaymentRecordWithInvoices extends PaymentRecord { invoiceInfos?: { invoiceNo: string; invoiceName: string; invoiceAmount: number }[] }
+
+export function generatePaymentPrintContent(record: PaymentRecordWithInvoices) {
   const typeLabel = record.type === 'invoice_out' ? '回款' : '付款'
   return `
     <div style="padding: 20px; font-family: 'SimSun', serif;">
@@ -82,10 +84,10 @@ export function generatePaymentPrintContent(record: PaymentRecord) {
         <tr><td style="border: 1px solid ${COLORS.borderDark}; padding: 10px; width: 50%;"><strong>关联单位:</strong> ${record.partnerName || '-'}</td>
         <td style="border: 1px solid ${COLORS.borderDark}; padding: 10px;"><strong>关联项目:</strong> ${record.projectName || '-'}</td></tr>
         <tr><td style="border: 1px solid ${COLORS.borderDark}; padding: 10px;" colspan="2"><strong>关联合同:</strong> ${record.contractName || '-'}</td></tr>
-        ${(record as any).invoiceInfos && (record as any).invoiceInfos.length > 0 ? `
+        ${record.invoiceInfos && record.invoiceInfos.length > 0 ? `
         <tr><td style="border: 1px solid ${COLORS.borderDark}; padding: 10px;" colspan="2"><strong>关联发票:</strong>
           <ul style="margin: 5px 0 0 20px; padding: 0;">
-            ${(record as any).invoiceInfos.map((info: any) => `<li>No.${info.invoiceNo} - ${info.invoiceName} - 开票金额: ¥${formatMoney(info.invoiceAmount)}</li>`).join('')}
+            ${record.invoiceInfos.map((info: { invoiceNo: string; invoiceName: string; invoiceAmount: number }) => `<li>No.${info.invoiceNo} - ${info.invoiceName} - 开票金额: ¥${formatMoney(info.invoiceAmount)}</li>`).join('')}
           </ul></td></tr>` : ''}
         <tr><td style="border: 1px solid ${COLORS.borderDark}; padding: 10px;" colspan="2"><strong>备注:</strong> ${record.remarks || '-'}</td></tr>
       </table>

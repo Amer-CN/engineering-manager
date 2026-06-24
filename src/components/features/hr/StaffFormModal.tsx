@@ -207,7 +207,7 @@ const StaffFormModal: React.FC<Props> = ({
                   label={field === 'idCardFront' ? '人像面' : '国徽面'}
                   preview={formData[field] as string}
                   onFile={(file) => onFileDrop(field, file)}
-                  onRemove={() => set({ [field]: '' } as any)}
+                  onRemove={() => set({ [field]: '' } as Partial<StaffFormData>)}
                   dragOver={dragOver} setDragOver={setDragOver}
                 />
               ))}
@@ -220,7 +220,7 @@ const StaffFormModal: React.FC<Props> = ({
               label="上传劳动合同（支持 JPG/PNG/PDF）"
               preview={formData.contractFile as string}
               onFile={(file) => onFileDrop('contractFile', file)}
-              onRemove={() => set({ contractFile: '', contractFileType: '' } as any)}
+              onRemove={() => set({ contractFile: '', contractFileType: '' })}
               dragOver={dragOver} setDragOver={setDragOver}
               acceptPdf
             />

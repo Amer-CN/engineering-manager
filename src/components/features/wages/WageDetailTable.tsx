@@ -36,7 +36,7 @@ export function WageDetailTable({
     },
     { key: 'memberName', title: '姓名', render: (w) => <span className="font-medium">{w.memberName || '-'}</span> },
     { key: 'teamName', title: '班组', render: (w) => <span className="text-slate-500">{w.teamName || '-'}</span> },
-    ...(scope === 'all' ? [{ key: 'projectName', title: '项目', render: (w: any) => <span className="text-slate-500">{(w as any).projectName || '-'}</span> }] : []),
+    ...(scope === 'all' ? [{ key: 'projectName', title: '项目', render: (w: any) => <span className="text-slate-500">{w.projectName || '-'}</span> }] : []),
     { key: 'yearMonth', title: '月份', render: (w) => <span className="text-slate-500">{w.yearMonth}</span> },
     { key: 'workDays', title: '出勤', render: (w) => <span>{w.workDays} 天</span> },
     { key: 'dailyWage', title: '日薪', render: (w) => <span>¥{w.dailyWage}/天</span> },

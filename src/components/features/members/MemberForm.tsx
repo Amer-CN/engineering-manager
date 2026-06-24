@@ -162,16 +162,16 @@ export function MemberForm({
         <StaffForm formData={staffFormData} setFormData={setStaffFormData}
           editingMember={editingMember} dragOverField={dragOverField}
           onDragOver={handleDragOver} onDragLeave={handleDragLeave}
-          onDrop={handleDrop as any} onFileChange={handleFileChange as any}
-          onDeleteFile={handleDeleteFile as any}
+          onDrop={handleDrop as (e: React.DragEvent, field: string, setter: React.Dispatch<React.SetStateAction<StaffFormData>>, isIdCard?: boolean) => void} onFileChange={handleFileChange as (e: React.ChangeEvent<HTMLInputElement>, field: string, setter: React.Dispatch<React.SetStateAction<StaffFormData>>, isIdCard?: boolean, ref?: React.RefObject<HTMLInputElement>) => Promise<void>}
+          onDeleteFile={handleDeleteFile as (field: string, setter: React.Dispatch<React.SetStateAction<StaffFormData>>) => Promise<void>}
           refs={{ frontInputRef: staffFrontInputRef, backInputRef: staffBackInputRef, contractInputRef: staffContractInputRef }} />
       ) : (
         <WorkerForm formData={workerFormData} setFormData={setWorkerFormData}
           projects={projects} workerTeams={workerTeams} editingMember={editingMember}
           ocrLoading={ocrLoading} dragOverField={dragOverField}
           onDragOver={handleDragOver} onDragLeave={handleDragLeave}
-          onDrop={handleDrop as any} onFileChange={handleFileChange as any}
-          onDeleteFile={handleDeleteFile as any}
+          onDrop={handleDrop as (e: React.DragEvent, field: string, setter: React.Dispatch<React.SetStateAction<WorkerFormData>>, isIdCard?: boolean) => void} onFileChange={handleFileChange as (e: React.ChangeEvent<HTMLInputElement>, field: string, setter: React.Dispatch<React.SetStateAction<WorkerFormData>>, isIdCard?: boolean, ref?: React.RefObject<HTMLInputElement>) => Promise<void>}
+          onDeleteFile={handleDeleteFile as (field: string, setter: React.Dispatch<React.SetStateAction<WorkerFormData>>) => Promise<void>}
           refs={{ frontInputRef: workerFrontInputRef, backInputRef: workerBackInputRef, contractInputRef: workerContractInputRef, safetyInputRef, healthInputRef, certInputRef }} />
       )}
     </MemberFormLayout>

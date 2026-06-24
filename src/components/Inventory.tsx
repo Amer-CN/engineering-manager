@@ -52,7 +52,7 @@ const Inventory: React.FC<InventoryProps> = ({ refresh }) => {
   {/* 统一 Tabs 组件 */}
   <Tabs
   value={h.activeTab}
-  onChange={(value: string) => h.setActiveTab(value as any)}
+  onChange={(value: string) => h.setActiveTab(value as 'items' | 'transactions' | 'projectMaterials')}
   tabs={[
   { key: 'items', label: '物料库', icon: 'Package' },
   { key: 'transactions', label: '出入库记录', icon: 'ArrowLeftRight' },
