@@ -185,7 +185,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ initialData, projects,
   type="button"
   onClick={() => bankReceiptInputRef.current?.click()}
   disabled={bankReceiptLoading}
-  className={`btn w-full flex items-center justify-center gap-2 transition-all duration-300 ${
+  className={`w-full flex items-center justify-center gap-2 transition-all duration-300 ${
   bankReceiptLoading
   ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0'
   : 'btn-secondary'

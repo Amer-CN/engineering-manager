@@ -47,7 +47,7 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
   检测到 {duplicateInvoices.length} 组重复发票
   </Button>
   )}
-  <button onClick={() => { h.setEditingPayment(null); h.setShowPaymentModal(true) }} className="btn bg-amber-500 hover:bg-amber-600 text-white">
+  <button onClick={() => { h.setEditingPayment(null); h.setShowPaymentModal(true) }} className=" bg-amber-500 hover:bg-amber-600 text-white">
   <span className="text-xl">+</span> 回款/付款登记
   </button>
   <Button onClick={() => { h.setEditingInvoice(null); h.setShowInvoiceModal(true) }}  variant="primary">
