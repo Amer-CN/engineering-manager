@@ -4,21 +4,21 @@
 
 export const COLORS = {
   // 发票状态色（Dashboard 概览页 invoice status 饼图）
-  fallbackCategory:     '#9ca3af',
-  invoiceReceived:      '#10b981',
-  invoicePartiallyPaid: '#f59e0b',
-  invoiceIssued:        '#3b82f6',
-  invoiceCancelled:     '#94a3b8',
-  invoiceRedFlushed:    '#ef4444',
-  invoiceFallback:      '#94a3b8',
+  fallbackCategory:     '#9ca3af', // Tailwind: gray-400
+  invoiceReceived:      '#10b981', // Tailwind: emerald-500
+  invoicePartiallyPaid: '#f59e0b', // Tailwind: amber-500
+  invoiceIssued:        '#3b82f6', // Tailwind: blue-500
+  invoiceCancelled:     '#94a3b8', // Tailwind: slate-400
+  invoiceRedFlushed:    '#ef4444', // Tailwind: red-500
+  invoiceFallback:      '#94a3b8', // Tailwind: slate-400
 
   // 通用 chart fallback 色（DashboardCharts 成本分类柱图循环用）
-  chartBlue:    '#3b82f6',
-  chartEmerald: '#10b981',
-  chartOrange:  '#f97316',
-  chartViolet:  '#8b5cf6',
-  chartTeal:    '#06b6d4',
-  chartAmber:   '#f59e0b',
+  chartBlue:    '#3b82f6', // Tailwind: blue-500
+  chartEmerald: '#10b981', // Tailwind: emerald-500
+  chartOrange:  '#f97316', // Tailwind: orange-500
+  chartViolet:  '#8b5cf6', // Tailwind: violet-500
+  chartTeal:    '#06b6d4', // Tailwind: cyan-500
+  chartAmber:   '#f59e0b', // Tailwind: amber-500
 } as const
 
 /** 发票状态饼图 palette（按 invoiceReceived → fallbackCategory 顺序） */
@@ -41,4 +41,3 @@ export const CHART_COLORS: string[] = [
   COLORS.chartTeal,
   COLORS.chartAmber,
 ]
-

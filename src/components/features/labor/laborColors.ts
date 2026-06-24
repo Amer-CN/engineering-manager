@@ -3,16 +3,16 @@
 // 优先使用 Tailwind 类（slate/amber/...），仅当 recharts 强制需要 hex 时引用本字典。
 
 export const COLORS = {
-  amber:      '#f59e0b',
-  emerald:    '#10b981',
-  indigo:     '#6366f1',
-  red:        '#ef4444',
-  violet:     '#8b5cf6',
-  cyan:       '#06b6d4',
-  orange:     '#f97316',
-  teal:       '#14b8a6',
-  rose:       '#e11d48',
-  violetDark: '#7c3aed',
+  amber:      '#f59e0b', // Tailwind: amber-500
+  emerald:    '#10b981', // Tailwind: emerald-500
+  indigo:     '#6366f1', // Tailwind: indigo-500
+  red:        '#ef4444', // Tailwind: red-500
+  violet:     '#8b5cf6', // Tailwind: violet-500
+  cyan:       '#06b6d4', // Tailwind: cyan-500
+  orange:     '#f97316', // Tailwind: orange-500
+  teal:       '#14b8a6', // Tailwind: teal-500
+  rose:       '#e11d48', // Tailwind: rose-600
+  violetDark: '#7c3aed', // Tailwind: violet-600
 } as const
 
 export const CHART_PALETTE: readonly string[] = [

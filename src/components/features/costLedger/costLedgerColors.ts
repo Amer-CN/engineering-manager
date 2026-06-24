@@ -1,14 +1,14 @@
 export const COLORS = {
-  business:       '#ec4899',
-  directProject:  '#f97316',
-  siteMgmt:       '#14b8a6',
-  publicService:  '#6b7280',
-  finance:        '#9ca3af',
-  investment:     '#059669',
-  projectReturn:  '#2563eb',
-  refund:         '#7c3aed',
-  otherIncome:    '#0891b2',
-  customGroup:    '#6366f1',
+  business:       '#ec4899',  // Tailwind: pink-500
+  directProject:  '#f97316',  // Tailwind: orange-500
+  siteMgmt:       '#14b8a6',  // Tailwind: teal-500
+  publicService:  '#6b7280',  // Tailwind: gray-500
+  finance:        '#9ca3af',  // Tailwind: gray-400
+  investment:     '#059669',  // Tailwind: emerald-600
+  projectReturn:  '#2563eb',  // Tailwind: blue-600
+  refund:         '#7c3aed',  // Tailwind: violet-600
+  otherIncome:    '#0891b2',  // Tailwind: cyan-600
+  customGroup:    '#6366f1',  // Tailwind: indigo-500
 } as const
 
 export const DIRECTION_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -121,22 +121,22 @@ export const CATEGORY_HIERARCHY: CategoryHierarchyEntry[] = [
 
 /** 饼图 fallback 调色板（12 色循环，用于 category 没定义 color 时） */
 export const ANALYTICS_FALLBACK_PALETTE = [
-  COLORS.directProject,  // #f97316 orange
-  '#3b82f6',              // blue
-  '#8b5cf6',              // purple
-  COLORS.publicService,   // #6b7280 gray
-  COLORS.business,        // #ec4899 pink
-  '#ef4444',              // red
-  COLORS.siteMgmt,        // #14b8a6 teal
-  '#a855f7',              // violet
-  COLORS.finance,         // #9ca3af lightGray
-  COLORS.otherIncome,     // #0891b2 cyan
-  COLORS.projectReturn,   // #2563eb indigo
-  COLORS.investment,      // #059669 emerald
+  COLORS.directProject,  // orange-500
+  '#3b82f6',              // Tailwind: blue-500
+  '#8b5cf6',              // Tailwind: violet-500
+  COLORS.publicService,   // gray-500
+  COLORS.business,        // pink-500
+  '#ef4444',              // Tailwind: red-500
+  COLORS.siteMgmt,        // teal-500
+  '#a855f7',              // Tailwind: purple-500
+  COLORS.finance,         // gray-400
+  COLORS.otherIncome,     // cyan-600
+  COLORS.projectReturn,   // blue-600
+  COLORS.investment,      // emerald-600
 ] as const
 
 /** 柱图系列颜色（支出红 / 收入绿） */
 export const ANALYTICS_BAR_COLORS = {
-  expense: '#ef4444',
-  income:  '#10b981',
+  expense: '#ef4444',  // Tailwind: red-500
+  income:  '#10b981',  // Tailwind: emerald-500
 } as const

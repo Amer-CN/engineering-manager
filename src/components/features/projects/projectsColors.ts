@@ -4,20 +4,20 @@
 
 export const COLORS = {
   // 原始调色板（ProjectCommandCenter 用途：成本/财务/健康度图表）
-  blue:         '#3b82f6',
-  emerald:      '#10b981',
-  orange:       '#f97316',
-  purple:       '#8b5cf6',
-  lightEmerald: '#34d399',
-  red:          '#ef4444',
-  lightRed:     '#f87171',
-  amber:        '#f59e0b',
+  blue:         '#3b82f6',  // Tailwind: blue-500
+  emerald:      '#10b981',  // Tailwind: emerald-500
+  orange:       '#f97316',  // Tailwind: orange-500
+  purple:       '#8b5cf6',  // Tailwind: violet-500
+  lightEmerald: '#34d399',  // Tailwind: emerald-400
+  red:          '#ef4444',  // Tailwind: red-500
+  lightRed:     '#f87171',  // Tailwind: red-400
+  amber:        '#f59e0b',  // Tailwind: amber-500
 
   // 健康度语义色（ProjectCard HealthRing 用途：>=80 / >=60 / >=40 / <40）
-  healthGood:     '#10b981',
-  healthModerate: '#3b82f6',
-  healthWarning:  '#f59e0b',
-  healthCritical: '#ef4444',
+  healthGood:     '#10b981',  // Tailwind: emerald-500
+  healthModerate: '#3b82f6',  // Tailwind: blue-500
+  healthWarning:  '#f59e0b',  // Tailwind: amber-500
+  healthCritical: '#ef4444',  // Tailwind: red-500
 } as const
 
 export const CHART_PALETTE: readonly string[] = [
