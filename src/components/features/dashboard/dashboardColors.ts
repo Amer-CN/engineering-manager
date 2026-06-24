@@ -4,7 +4,7 @@
 
 export const COLORS = {
   // 发票状态色（Dashboard 概览页 invoice status 饼图）
-  fallbackCategory:     '#9ca3af', // Tailwind: gray-400
+  fallbackCategory:     '#9ca3af', // Tailwind: slate-
   invoiceReceived:      '#10b981', // Tailwind: emerald-500
   invoicePartiallyPaid: '#f59e0b', // Tailwind: amber-500
   invoiceIssued:        '#3b82f6', // Tailwind: blue-500

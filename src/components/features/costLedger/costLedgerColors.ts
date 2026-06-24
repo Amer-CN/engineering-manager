@@ -2,8 +2,8 @@ export const COLORS = {
   business:       '#ec4899',  // Tailwind: pink-500
   directProject:  '#f97316',  // Tailwind: orange-500
   siteMgmt:       '#14b8a6',  // Tailwind: teal-500
-  publicService:  '#6b7280',  // Tailwind: gray-500
-  finance:        '#9ca3af',  // Tailwind: gray-400
+  publicService:  '#6b7280',  // Tailwind: slate-
+  finance:        '#9ca3af',  // Tailwind: slate-
   investment:     '#059669',  // Tailwind: emerald-600
   projectReturn:  '#2563eb',  // Tailwind: blue-600
   refund:         '#7c3aed',  // Tailwind: violet-600
@@ -124,12 +124,12 @@ export const ANALYTICS_FALLBACK_PALETTE = [
   COLORS.directProject,  // orange-500
   '#3b82f6',              // Tailwind: blue-500
   '#8b5cf6',              // Tailwind: violet-500
-  COLORS.publicService,   // gray-500
+  COLORS.publicService,   // slate-
   COLORS.business,        // pink-500
   '#ef4444',              // Tailwind: red-500
   COLORS.siteMgmt,        // teal-500
   '#a855f7',              // Tailwind: purple-500
-  COLORS.finance,         // gray-400
+  COLORS.finance,         // slate-
   COLORS.otherIncome,     // cyan-600
   COLORS.projectReturn,   // blue-600
   COLORS.investment,      // emerald-600

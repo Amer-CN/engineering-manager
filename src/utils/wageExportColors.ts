@@ -6,10 +6,10 @@ export const COLORS = {
   settled:        '#059669',  // Tailwind: emerald-600
   pending:        '#d97706',  // Tailwind: amber-600
   textBody:       '#333',     // Tailwind: slate-800 (近似)
-  textSub:        '#666',     // Tailwind: gray-500 (近似)
-  borderTable:    '#bbb',     // Tailwind: gray-300 (近似)
+  textSub:        '#666',     // Tailwind: slate- (近似)
+  borderTable:    '#bbb',     // Tailwind: slate- (近似)
   bgTableHeader:  '#f1f5f9',  // Tailwind: slate-100
-  textFooter:     '#999',     // Tailwind: gray-400 (近似)
+  textFooter:     '#999',     // Tailwind: slate- (近似)
 } as const
 
 export const CHART_PALETTE: readonly string[] = [
