@@ -79,8 +79,8 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
       key: 'username', title: '用户',
       render: (log) => (
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-sm font-medium text-primary-700">{log.username.charAt(0).toUpperCase()}</div>
-          <span className="text-sm text-slate-700">{log.username}</span>
+          <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-sm font-medium text-primary-700">{(log.username || '?').charAt(0).toUpperCase()}</div>
+          <span className="text-sm text-slate-700">{log.username || '-'}</span>
         </div>
       )
     },
