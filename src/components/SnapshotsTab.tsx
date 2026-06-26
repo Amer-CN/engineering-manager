@@ -134,14 +134,14 @@ export const SnapshotsTab: React.FC = () => {
     { key: 'fileSize', title: '大小', render: (item) => <span className="text-sm text-slate-600">{formatSize(item.fileSize)}</span> },
     { key: 'dbSummary', title: '数据概况', render: (item) => (
       <div className="flex flex-wrap gap-1 max-w-xs">
-        {Object.entries(item.dbSummary).filter(([, v]) => (v as number) > 0).slice(0, 5).map(([key, val]) => (
+        {Object.entries(item.dbSummary || {}).filter(([, v]) => (v as number) > 0).slice(0, 5).map(([key, val]) => (
           <span key={key} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-slate-100 text-slate-600">
             {SNAPSHOT_TABLE_LABELS[key] || key}: {val as number}
           </span>
         ))}
-        {Object.entries(item.dbSummary).filter(([, v]) => (v as number) > 0).length > 5 && (
+        {Object.entries(item.dbSummary || {}).filter(([, v]) => (v as number) > 0).length > 5 && (
           <span className="text-xs text-slate-400">
-            +{Object.entries(item.dbSummary).filter(([, v]) => (v as number) > 0).length - 5}
+            +{Object.entries(item.dbSummary || {}).filter(([, v]) => (v as number) > 0).length - 5}
           </span>
         )}
       </div>
