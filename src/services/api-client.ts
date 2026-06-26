@@ -67,6 +67,10 @@ async function get<T>(path: string, params?: Record<string, unknown>): Promise<A
     const resp = await fetch(url.toString(), { headers: authHeaders() });
     if (resp.status === 401) setToken(null);
     if (!resp.ok) {
+      try {
+        const errBody = await resp.json();
+        if (errBody?.error) return { success: false, error: errBody.error };
+      } catch { /* non-JSON response */ }
       return { success: false, error: `HTTP ${resp.status}: ${resp.statusText}` };
     }
     const raw = await resp.json();
@@ -89,6 +93,10 @@ async function post<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
     });
     if (resp.status === 401) setToken(null);
     if (!resp.ok) {
+      try {
+        const errBody = await resp.json();
+        if (errBody?.error) return { success: false, error: errBody.error };
+      } catch { /* non-JSON response */ }
       return { success: false, error: `HTTP ${resp.status}: ${resp.statusText}` };
     }
     const raw = await resp.json();
@@ -111,6 +119,10 @@ async function put<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
     });
     if (resp.status === 401) setToken(null);
     if (!resp.ok) {
+      try {
+        const errBody = await resp.json();
+        if (errBody?.error) return { success: false, error: errBody.error };
+      } catch { /* non-JSON response */ }
       return { success: false, error: `HTTP ${resp.status}: ${resp.statusText}` };
     }
     const raw = await resp.json();
@@ -129,6 +141,10 @@ async function del<T>(path: string): Promise<ApiResponse<T>> {
     const resp = await fetch(`${API_BASE}${path}`, { method: 'DELETE', headers: authHeaders() });
     if (resp.status === 401) setToken(null);
     if (!resp.ok) {
+      try {
+        const errBody = await resp.json();
+        if (errBody?.error) return { success: false, error: errBody.error };
+      } catch { /* non-JSON response */ }
       return { success: false, error: `HTTP ${resp.status}: ${resp.statusText}` };
     }
     const raw = await resp.json();
