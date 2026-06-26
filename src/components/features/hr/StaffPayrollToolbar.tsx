@@ -1,4 +1,6 @@
 import React from 'react'
+import type { Department, Project, Member, AttendanceRecord } from '@/types'
+import type { PayrollWage } from '../payroll/usePayrollData'
 import { DropdownMenu } from '../../ui/DropdownMenu/DropdownMenu'
 import { Button } from '../../ui/Button'
 import ButtonLoader from '../../ui/ButtonLoader'
@@ -14,11 +16,11 @@ interface StaffPayrollToolbarProps {
   filterProject: string
   yearOptions: string[]
   effectiveYearMonth: string
-  filteredWages: any[]
-  staff: any[]
-  departments: any[]
-  projects: any[]
-  attendances: any[]
+  filteredWages: PayrollWage[]
+  staff: Member[]
+  departments: Department[]
+  projects: Project[]
+  attendances: AttendanceRecord[]
   generating: boolean
   setFilterYear: (v: string) => void
   setFilterMonth: (v: string) => void
@@ -67,7 +69,7 @@ const StaffPayrollToolbar: React.FC<StaffPayrollToolbarProps> = ({
       <select value={filterDept} onChange={e => setFilterDept(e.target.value ? Number(e.target.value) : '')}
         className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
         <option value="">全部</option>
-        {departments.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
+        {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
       </select>
     </div>
     <div className="flex items-center gap-2">
@@ -75,7 +77,7 @@ const StaffPayrollToolbar: React.FC<StaffPayrollToolbarProps> = ({
       <select value={filterProject} onChange={e => setFilterProject(e.target.value)}
         className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
         <option value="全部">全部</option>
-        {projects.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+        {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
       </select>
     </div>
     {filterYear !== '全部' && filterMonth !== '全部' && (() => {

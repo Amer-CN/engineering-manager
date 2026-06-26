@@ -108,7 +108,7 @@ export function useMemberOperations({
             status: 'active' as WorkerStatus
           })
           if (pwRes.success) {
-            logCreate('workers', data.name, workerId, data)
+            logCreate('workers', data.name, workerId, data as unknown as Record<string, unknown>)
             onSuccess()
             showToast('创建成功', 'success')
           } else {
@@ -185,7 +185,7 @@ export function useMemberOperations({
           entryDate: data.entryDate || new Date().toISOString().split('T')[0], status: 'active' as WorkerStatus
         })
         if (pwRes.success) {
-          logCreate('workers', data.name, workerRes.data.id, data)
+          logCreate('workers', data.name, workerRes.data.id, data as unknown as Record<string, unknown>)
           onSuccess()
           showToast('创建成功', 'success')
         } else {

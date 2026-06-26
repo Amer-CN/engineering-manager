@@ -1,4 +1,5 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { HoverScrollbar } from './ui/HoverScrollbar'
 import { TABLE } from '@/constants/table'
 import { TableSkeleton, TableEmpty, TableRow } from './DataTable/TableParts'
@@ -63,6 +64,17 @@ export function DataTable<T>({
     handleFilterClear,
   } = useDataTableFilters(setFilters)
 
+  // 虚拟化: 行数 > 50 时启用
+  const ROW_HEIGHT = 44
+  const parentRef = useRef<HTMLDivElement>(null)
+  const enableVirtualization = paginatedData.length > 50
+  const virtualizer = useVirtualizer({
+    count: paginatedData.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 10,
+  })
+
 
   // 重置页码
   useEffect(() => {
@@ -119,19 +131,60 @@ export function DataTable<T>({
         </tr>
       </thead>
       <tbody>
-        {paginatedData.length > 0 ? (
-          paginatedData.map((item, index) => (
-            <TableRow
-              key={getRowKey(item, index)}
-              item={item}
-              index={index}
-              columns={columns}
-              onClick={onRowClick}
-              rowKeyStr={getRowKey(item, index)}
-            />
-          ))
+        {enableVirtualization ? (
+          <tr>
+            <td colSpan={columns.length} style={{ padding: 0, border: 'none' }}>
+              <div ref={parentRef} className="overflow-auto" style={{ maxHeight: '60vh' }}>
+                <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
+                  {virtualizer.getVirtualItems().map(virtualRow => {
+                    const item = paginatedData[virtualRow.index]
+                    return (
+                      <div
+                        key={getRowKey(item, virtualRow.index)}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: ROW_HEIGHT,
+                          transform: `translateY(${virtualRow.start}px)`,
+                        }}
+                        className={`${TABLE.bodyRow} ${onRowClick ? 'cursor-pointer' : ''}`}
+                        onClick={() => onRowClick?.(item)}
+                      >
+                        <div className="flex">
+                          {columns.map(col => (
+                            <div
+                              key={col.key}
+                              className={`${TABLE.bodyCell} ${col.align ? alignMap[col.align] : ''}`}
+                              style={{ width: col.width, minWidth: col.width ? undefined : 0, flex: col.width ? undefined : 1 }}
+                            >
+                              {col.render ? col.render(item, virtualRow.index) : String((item as Record<string, unknown>)[col.key] ?? '-')}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </td>
+          </tr>
         ) : (
-          <TableEmpty colSpan={columns.length} text={emptyText} iconName={emptyIcon} />
+          paginatedData.length > 0 ? (
+            paginatedData.map((item, index) => (
+              <TableRow
+                key={getRowKey(item, index)}
+                item={item}
+                index={index}
+                columns={columns}
+                onClick={onRowClick}
+                rowKeyStr={getRowKey(item, index)}
+              />
+            ))
+          ) : (
+            <TableEmpty colSpan={columns.length} text={emptyText} iconName={emptyIcon} />
+          )
         )}
       </tbody>
     </table>

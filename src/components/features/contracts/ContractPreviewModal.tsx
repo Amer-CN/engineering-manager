@@ -57,7 +57,7 @@ const ContractPreviewModal: React.FC<ContractPreviewModalProps> = ({ previewFile
             </div>
           )}
           {previewFile.type === 'image' && (
-            <img src={previewFile.data} alt="预览" className="max-w-full max-h-full object-contain mx-auto" />
+            <img src={previewFile.data} alt="预览" className="max-w-full max-h-full object-contain mx-auto" loading="lazy" />
           )}
         </div>
       </motion.div>

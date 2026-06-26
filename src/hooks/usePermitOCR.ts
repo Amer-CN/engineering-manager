@@ -61,8 +61,8 @@ export function usePermitOCR(): UsePermitOCRReturn {
         bankName: permit.bankName || '',
         permitNumber: permit.permitNumber || ''
       }
-    } catch (err: any) {
-      showToast(`识别失败: ${err.message}`, 'error')
+    } catch (err: unknown) {
+      showToast(`识别失败: ${err instanceof Error ? err.message : '未知错误'}`, 'error')
       return null
     }
   }, [showToast, validateImageFile])

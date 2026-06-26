@@ -35,7 +35,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
       {preview ? (
         <div className="relative group">
           {preview.startsWith('data:') && preview.includes('image') ? (
-            <img src={preview} alt={label} className="max-h-24 mx-auto rounded" />
+            <img src={preview} alt={label} className="max-h-24 mx-auto rounded" loading="lazy" />
           ) : (
             <div className="flex items-center gap-2 justify-center text-sm text-primary-600">
               <Icon name="FileText" size={16} /><span>已上传文件</span>

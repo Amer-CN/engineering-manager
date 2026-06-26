@@ -91,7 +91,7 @@ export function Button({
   <button
   className={baseClasses}
   disabled={isDisabled}
-  {...(props as any)}
+  {...props}
   >
   {loading ? (
   <Icon name="Loader2" size={iconSize} className="animate-spin" />

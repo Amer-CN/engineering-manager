@@ -1,6 +1,7 @@
 import type { Invoice, PaymentRecord } from '@/types'
 import { formatMoney } from '@/utils/format'
 import { COLORS } from './invoicesPrintExportColors'
+import { useToastStore } from '@/store/toastStore'
 
 function escapeHtml(s: string): string {
   if (!s) return ''
@@ -143,7 +144,7 @@ export function printPaymentList(paymentList: PaymentRecord[]) {
 }
 
 export async function exportInvoiceList(invoiceList: Invoice[]) {
-  if (invoiceList.length === 0) { alert('没有可导出的数据'); return }
+  if (invoiceList.length === 0) { useToastStore.getState().showToast('没有可导出的数据', 'error'); return }
   try {
     const XLSX = await import('xlsx')
     const exportData = invoiceList.map((inv, index) => ({
@@ -161,11 +162,11 @@ export async function exportInvoiceList(invoiceList: Invoice[]) {
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, '发票列表')
     XLSX.writeFile(workbook, `发票列表_${new Date().toISOString().slice(0, 10)}.xlsx`)
-  } catch (error) { console.error('导出失败:', error); alert('导出失败，请重试') }
+  } catch (error) { console.error('导出失败:', error); useToastStore.getState().showToast('导出失败，请重试', 'error') }
 }
 
 export async function exportPaymentList(paymentList: PaymentRecord[]) {
-  if (paymentList.length === 0) { alert('没有可导出的数据'); return }
+  if (paymentList.length === 0) { useToastStore.getState().showToast('没有可导出的数据', 'error'); return }
   try {
     const XLSX = await import('xlsx')
     const exportData = paymentList.map((p, index) => ({
@@ -180,7 +181,7 @@ export async function exportPaymentList(paymentList: PaymentRecord[]) {
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, '收款记录')
     XLSX.writeFile(workbook, `收款记录_${new Date().toISOString().slice(0, 10)}.xlsx`)
-  } catch (error) { console.error('导出失败:', error); alert('导出失败，请重试') }
+  } catch (error) { console.error('导出失败:', error); useToastStore.getState().showToast('导出失败，请重试', 'error') }
 }
 
 // 打印收款记录列表（HTML 表格，打印后恢复页面）
@@ -232,5 +233,5 @@ export const exportPaymentRecordList = async (
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, '收款记录')
     XLSX.writeFile(workbook, `收款记录_${new Date().toISOString().slice(0,10)}.xlsx`)
-  } catch (error) { console.error('导出失败:', error); alert('导出失败，请重试') }
+  } catch (error) { console.error('导出失败:', error); useToastStore.getState().showToast('导出失败，请重试', 'error') }
 }

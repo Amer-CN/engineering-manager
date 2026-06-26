@@ -97,14 +97,14 @@ const AppContent: React.FC = () => {
     const handler = (event: any) => {
       try {
         const data = JSON.parse(event.data)
-        if (data.type === 'fullScreenChange') {
-          setIsFullScreen(data.isFullScreen)
-          if (!data.isFullScreen) {
-            setShowTitleBarInFullScreen(false)
-            if (hideTitleBarTimer.current) clearTimeout(hideTitleBarTimer.current)
+          if (data.type === 'fullScreenChange') {
+            setIsFullScreen(data.isFullScreen)
+            if (!data.isFullScreen) {
+              setShowTitleBarInFullScreen(false)
+              if (hideTitleBarTimer.current) clearTimeout(hideTitleBarTimer.current)
+            }
           }
-        }
-      } catch {}
+        } catch (err) { console.warn('[App] 解析webview消息失败:', err) }
     }
     webview.addEventListener('message', handler)
     return () => webview.removeEventListener('message', handler)
@@ -217,9 +217,12 @@ const AppContent: React.FC = () => {
 
   const navItems = useMemo(() => {
     // 权限可能是字符串 "[]" 或数组，统一解析
-    const perms = typeof currentUser?.permissions === 'string'
-      ? JSON.parse(currentUser.permissions || '[]')
-      : (currentUser?.permissions || [])
+    let perms: string[] = []
+    try {
+      perms = typeof currentUser?.permissions === 'string'
+        ? JSON.parse(currentUser.permissions || '[]')
+        : (currentUser?.permissions || [])
+    } catch { perms = [] }
     if (!perms || perms.length === 0) return NAV_ITEMS
     return getFilteredSidebarRoutes(perms)
   }, [currentUser?.permissions])

@@ -1,7 +1,8 @@
 import React from 'react'
+import type { WageRecord } from '@/types'
 
 interface WageDetailRowProps {
-  record: any
+  record: WageRecord
   scope: 'project' | 'all'
   isSelected: boolean
   paidAmount: string
@@ -28,7 +29,7 @@ export const WageDetailRow = React.memo(function WageDetailRow({
       </td>
       <td className="px-3 py-3 font-medium">{record.memberName || '-'}</td>
       <td className="px-3 py-3 text-slate-500">{record.teamName || '-'}</td>
-      {scope === 'all' && <td className="px-3 py-3 text-slate-500">{(record as any).projectName || '-'}</td>}
+      {scope === 'all' && <td className="px-3 py-3 text-slate-500">{record.projectName || '-'}</td>}
       <td className="px-3 py-3 text-slate-500">{record.yearMonth}</td>
       <td className="px-3 py-3">{record.workDays} 天</td>
       <td className="px-3 py-3">¥{record.dailyWage}/天</td>

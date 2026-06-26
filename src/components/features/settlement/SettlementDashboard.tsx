@@ -48,7 +48,7 @@ export default function SettlementDashboard({ settlements, projects, onProjectCl
       if (s.type === 'income') entry.incomeAmount += s.amount
       else if (s.type === 'expense') entry.expenseAmount += s.amount
 
-      const date = (s as any).settlementDate || s.periodStart || ''
+      const date = s.settlementDate || s.periodStart || ''
       if (date && (!entry.latestDate || date > entry.latestDate)) {
         entry.latestDate = date
       }

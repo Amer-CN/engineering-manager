@@ -48,12 +48,12 @@ export function useWageActions({
     try {
       const api = await getAPI()
       const pwRes = await api.getProjectWorkers(selectedProject.id)
-      const pwIds = (pwRes.success && pwRes.data) ? pwRes.data.filter((pw: any) => pw.status === 'active').map((pw: any) => pw.id) : []
+      const pwIds = (pwRes.success && pwRes.data) ? pwRes.data.filter((pw: { id: number; status: string }) => pw.status === 'active').map((pw: { id: number }) => pw.id) : []
       if (pwIds.length === 0) { showToast('该项目没有活跃工人', 'warning'); return }
       const r = await api.generateDefaultAttendancesV2(selectedProject.id, selectedMonth, pwIds)
       if (r.success && r.data && r.data.count > 0) { showToast(`已为 ${r.data.count} 名工人生成考勤`, 'success'); await loadData() }
       else showToast('所有工人已有考勤记录', 'info')
-    } catch (e: any) { showToast(e?.message || '生成考勤失败', 'error') }
+    } catch (e: unknown) { showToast((e instanceof Error ? e.message : '生成考勤失败'), 'error') }
   }, [selectedProject, selectedMonth, loadData, showToast])
 
   const handleOpenAttendanceDetail = useCallback((_record: AttendanceRecord) => {
@@ -83,7 +83,7 @@ export function useWageActions({
       const r = await (await getAPI()).batchImportAttendances(selectedProject.id, selectedMonth, data)
       if (r.success) { showToast(`已导入 ${data.length} 条考勤`, 'success'); await loadData() }
       else showToast(r.error || '导入失败', 'error')
-    } catch (e: any) { showToast(e?.message || '导入失败', 'error') }
+    } catch (e: unknown) { showToast((e instanceof Error ? e.message : '导入失败'), 'error') }
   }, [selectedProject, selectedMonth, loadData, showToast])
 
   // ── 工资表操作 ──
@@ -180,9 +180,9 @@ export function useWageActions({
         else { failed++ }
       }
       setPaymentEdits(newEdits)
-      setReceiptResult({ matched, failed, totalItems: items.length, date, receiptPath, totalAmount: items.reduce((s: number, i: any) => s + i.amount, 0), successAmount: items.filter((i: any) => /(成功|Success)/i.test(i.status)).reduce((s: number, i: any) => s + i.amount, 0), rawTextSnippet: result.data.rawTextSnippet })
+      setReceiptResult({ matched, failed, totalItems: items.length, date, receiptPath, totalAmount: items.reduce((s: number, i: { amount: number }) => s + i.amount, 0), successAmount: items.filter((i: { status: string }) => /(成功|Success)/i.test(i.status)).reduce((s: number, i: { amount: number }) => s + i.amount, 0), rawTextSnippet: result.data.rawTextSnippet })
       showToast(`匹配 ${matched} 条，未匹配 ${failed} 条`, matched > 0 ? 'success' : 'warning')
-    } catch (e: any) { showToast(e?.message || '回单解析失败', 'error') }
+    } catch (e: unknown) { showToast((e instanceof Error ? e.message : '回单解析失败'), 'error') }
     finally { setReceiptParsing(false) }
   }, [selectedProject, paymentEdits, wages, showToast])
 

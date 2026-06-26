@@ -4,13 +4,14 @@ import React from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
 import { HoverScrollbar } from '../../ui/HoverScrollbar'
+import type { Project } from '@/types/electron'
 import type { Member, WorkerTeam } from '../../../types/electron'
 import { CHART_PALETTE } from './laborColors'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 
 interface LaborDashboardProps {
   members: Member[]
-  projects: any[]
+  projects: Project[]
   workerTeams: WorkerTeam[]
 }
 
@@ -29,12 +30,12 @@ const LaborDashboard: React.FC<LaborDashboardProps> = ({ members, projects, work
 
   // Project distribution for pie chart
   const projectDistribution = projects.map(project => {
-    const count = members.filter((m: any) => m.projectId === project.id).length
+    const count = members.filter((m: Member) => m.projectId === project.id).length
     return { name: project.name, value: count }
   }).filter(item => item.value > 0)
 
   // Add unassigned workers
-  const unassignedCount = members.filter((m: any) => !m.projectId).length
+  const unassignedCount = members.filter((m: Member) => !m.projectId).length
   if (unassignedCount > 0) {
     projectDistribution.push({ name: '未分配', value: unassignedCount })
   }
@@ -133,7 +134,7 @@ const LaborDashboard: React.FC<LaborDashboardProps> = ({ members, projects, work
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={((value: any, name: any) => [`${value ?? 0} 人`, name ?? '']) as any}
+                    formatter={((value: number, name: string) => [`${value ?? 0} 人`, name ?? '']) as never}
                     contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--fg)' }}
                   />
                 </PieChart>
@@ -169,7 +170,7 @@ const LaborDashboard: React.FC<LaborDashboardProps> = ({ members, projects, work
           {workerTeams.length > 0 ? (
             <HoverScrollbar className="flex-1 max-h-[300px]"><div className="space-y-3">
               {workerTeams.slice(0, 10).map(team => {
-                const teamWorkers = members.filter((m: any) => m.teamId === team.id)
+                const teamWorkers = members.filter((m: Member) => m.teamId === team.id)
                 return (
                   <div
                     key={team.id}

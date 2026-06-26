@@ -22,7 +22,7 @@ export interface WorkerSectionProps {
   onAddFromPool?: () => void
   wageContent?: React.ReactNode
   onManageWorkers?: (teamId: number, teamName: string, projectId: number) => void
-  onUpdateWorker?: (pwId: number, data: Record<string, any>) => void
+  onUpdateWorker?: (pwId: number, data: Record<string, unknown>) => void
   onRemoveFromTeam?: (pwId: number) => void
 }
 
@@ -62,7 +62,7 @@ interface TeamCardProps {
 }
 
 export function TeamCard({ team, workerCount, onEdit, onDelete, onManageWorkers, onTeamWages }: TeamCardProps) {
-  const projectName = (team as any).projectName || ''
+  const projectName = (team.projectName ?? '')
   return (
   <div className="border border-slate-200 rounded-lg p-4 hover:border-amber-300 transition-colors">
   <div className="flex items-center justify-between mb-2">

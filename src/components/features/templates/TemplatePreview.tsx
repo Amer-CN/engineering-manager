@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import DOMPurify from 'dompurify'
 import { Template } from '../../../types/electron'
 import { Icon } from '../../ui/Icon'
 import { Modal } from '../../ui/Modal/Modal'
@@ -68,7 +69,7 @@ export default function TemplatePreview({ template, onClose }: TemplatePreviewPr
             <p>{error}</p>
           </div>
         ) : (
-          <div className="border border-slate-200 rounded-lg p-6 bg-white" dangerouslySetInnerHTML={{ __html: htmlContent }} />
+          <div className="border border-slate-200 rounded-lg p-6 bg-white" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(htmlContent) }} />
         )}
       </div>
     </Modal>

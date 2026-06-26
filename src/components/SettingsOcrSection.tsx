@@ -33,7 +33,7 @@ export const SettingsOcrSection: React.FC<Props> = ({ ocrConfig, setOcrConfig, o
       try {
         const res = await (await getAPI()).ocrGetStats()
         setOcrStats(res?.data || res)
-      } catch {}
+      } catch (err) { console.warn('[SettingsOcr] 获取OCR统计失败:', err) }
     })()
   }, [])
 

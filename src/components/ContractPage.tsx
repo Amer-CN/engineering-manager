@@ -87,7 +87,7 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
   const handleEdit = (contract: Contract) => { setEditingContract(contract); setShowModal(true) }
 
   const handleExport = () => {
-    if (!can('contracts:export')) { alert('您没有导出合同数据的权限'); return }
+    if (!can('contracts:export')) { showToast('您没有导出合同数据的权限', 'error'); return }
     try {
       exportContracts(filteredContracts, config.exportType as "income" | "expense" | "agreement")
       logExport(config.auditResource, filteredContracts.length)
@@ -100,7 +100,7 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
 
   const handleDelete = async (id: number) => {
     if (!api) return
-    if (!can('contracts:delete')) { alert('您没有删除合同的权限'); return }
+    if (!can('contracts:delete')) { showToast('您没有删除合同的权限', 'error'); return }
     if (!confirm('确定要删除这个合同吗？')) return
     const contractToDelete = contracts.find(c => c.id === id)
     try {

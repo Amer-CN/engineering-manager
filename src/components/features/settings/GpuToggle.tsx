@@ -14,7 +14,7 @@ export function GpuToggle() {
       try {
         const res = await (await getAPI()).getGpuAcceleration()
         if (res.success) setEnabled(res.enabled)
-      } catch {}
+      } catch (err) { console.warn('[GpuToggle] 获取GPU加速状态失败:', err) }
     })()
   }, [])
 

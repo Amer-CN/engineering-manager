@@ -11,7 +11,7 @@ interface Props {
   isMaterial: boolean
   taxInclusive: boolean
   onAdd: () => void
-  onUpdate: (index: number, field: string, value: any) => void
+  onUpdate: (index: number, field: keyof Item, value: string | number) => void
   onRemove: (index: number) => void
   onSetTaxInclusive: (v: boolean) => void
   onDownloadTemplate: () => void

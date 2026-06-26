@@ -20,8 +20,11 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.0",
+    "@tanstack/react-virtual": "^3.14.3",
     "@tauri-apps/plugin-dialog": "^2.0.0",
+    "@types/dompurify": "^3.0.5",
     "docxtemplater": "^3.68.7",
+    "dompurify": "^3.4.11",
     "framer-motion": "^12.40.0",
     "lucide-react": "^1.14.0",
     "mammoth": "^1.12.0",
@@ -36,6 +39,7 @@
     "zustand": "^5.0.13"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
@@ -56,4 +60,3 @@
     "vitest": "^4.1.6"
   }
 }
-

@@ -54,15 +54,15 @@ export const RolePermissionsTab: React.FC = () => {
   if (result.success) { showToast('角色权限已保存', 'success'); loadRoles(); setEditingRoleId(null); return }
   }
   const systemRole = SYSTEM_ROLES.find(r => r.id === editingRoleId)
-  if (systemRole) { systemRole.permissions = [...editingPermissions] as any; showToast('角色权限已保存（仅本地生效）', 'success') }
-  } catch (e: any) { showToast(e?.message || '保存失败', 'error') }
+  if (systemRole) { systemRole.permissions = [...editingPermissions] as typeof systemRole.permissions; showToast('角色权限已保存（仅本地生效）', 'success') }
+  } catch (e: unknown) { showToast(e instanceof Error ? e.message : '保存失败', 'error') }
   setEditingRoleId(null); loadRoles()
   }
 
   const handleResetRole = async (roleId: string) => {
   const ok = await confirm({ title: '确认重置', content: '确定要重置此角色的权限为默认值吗？', confirmVariant: 'danger' })
   if (!ok) return
-  try { const api = await getAPI(); if (api?.resetRole) { await api.resetRole(roleId); loadRoles() } } catch {}
+  try { const api = await getAPI(); if (api?.resetRole) { await api.resetRole(roleId); loadRoles() } } catch (e) { console.warn('[RolePermissions] 重置角色失败:', e) }
   }
 
   if (editingRoleId) return (

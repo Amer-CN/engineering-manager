@@ -19,7 +19,7 @@ const LoginSettingsPage: React.FC<Props> = ({ onBack }) => {
         if (res?.success && res.data?.dataPath) {
           setDataPath(res.data.dataPath)
         }
-      } catch {}
+      } catch (err) { console.warn('[LoginSettings] 获取配置失败:', err) }
     })()
   }, [])
 
@@ -34,7 +34,7 @@ const LoginSettingsPage: React.FC<Props> = ({ onBack }) => {
           setDataPath(cfg.data.dataPath)
         }
       }
-    } catch {}
+    } catch (err) { console.warn('[LoginSettings] 选择文件夹失败:', err) }
   }, [])
 
   const handleSave = useCallback(async () => {
@@ -43,7 +43,7 @@ const LoginSettingsPage: React.FC<Props> = ({ onBack }) => {
     try {
       const api = await getAPI()
       await api.setDataPath?.(dataPath.trim())
-    } catch {}
+    } catch (err) { console.warn('[LoginSettings] 保存路径失败:', err) }
     setSaving(false)
     onBack()
   }, [dataPath, onBack])

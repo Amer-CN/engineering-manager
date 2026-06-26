@@ -35,7 +35,7 @@ export function useWageTable({
       const result = await (await getAPI()).generateProjectWages(selectedProject.id, selectedMonth)
       if (result.success && result.data) { showToast(`已生成 ${result.data.length} 条工资记录`, 'success'); await loadWages(); await loadAllRecords(); setEditingWages(new Map()) }
       else showToast(result.error || '生成工资表失败', 'error')
-    } catch (error: any) { showToast(error?.message || '生成工资表失败', 'error') }
+    } catch (error: unknown) { showToast(error instanceof Error ? error.message : '生成工资表失败', 'error') }
     finally { setLoading(false) }
   }
 
@@ -56,7 +56,7 @@ export function useWageTable({
       const result = await (await getAPI()).batchSaveWages(updated)
       if (result.success) { showToast('工资表已保存', 'success'); setEditingWages(new Map()); await loadWages(); await loadAllRecords(); await loadStats() }
       else showToast(result.error || '保存失败', 'error')
-    } catch (error: any) { showToast(error?.message || '保存失败', 'error') }
+    } catch (error: unknown) { showToast(error instanceof Error ? error.message : '保存失败', 'error') }
     finally { setLoading(false) }
   }
 

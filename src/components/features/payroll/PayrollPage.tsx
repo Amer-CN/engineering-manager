@@ -67,7 +67,7 @@ export default function PayrollPage({ mode }: PayrollPageProps) {
       const ym = data.selectedMonth
       const [year, month] = ym.split('-').map(Number)
       const daysInMonth = new Date(year, month, 0).getDate()
-      const candidates = filteredStaffForGenerate(data.people as Member[], data.filterDept, ym)
+      const candidates = filteredStaffForGenerate(data.people as unknown as Member[], data.filterDept, ym)
       let ok2 = 0, skip = 0, fail = 0
       for (const s of candidates) {
         if (!isAttendanceReady(s.id, ym, data.attendances)) { skip++; continue }

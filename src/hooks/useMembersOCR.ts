@@ -45,10 +45,10 @@ export function useMembersOCR({ setOcrMode }: UseMembersOCROptions) {
     reader.readAsDataURL(file)
   }, [showToast, setOcrMode])
 
-  const processUploadFile = useCallback(async (file: File, field: string, setFormData: React.Dispatch<React.SetStateAction<any>>) => {
+  const processUploadFile = useCallback(async (file: File, field: string, setFormData: React.Dispatch<React.SetStateAction<StaffFormData | WorkerFormData>>) => {
     const reader = new FileReader()
     reader.onload = (e) => {
-      setFormData((prev: any) => ({
+      setFormData((prev: StaffFormData | WorkerFormData) => ({
         ...prev,
         [field]: e.target?.result as string,
         [`${field}Type`]: file.type === 'application/pdf' ? 'pdf' : 'image'

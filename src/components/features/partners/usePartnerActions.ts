@@ -37,8 +37,8 @@ export function usePartnerActions({ partners, supervisors, projects, loadData, r
           processed.licenseFile,
           `${processed.name || '单位'}_营业执照${ext}`,
           partnerProjectName,
-        ).catch((err: any) => {
-          try { showToast(err?.message || '营业执照文件上传失败', 'error') } catch {}
+        ).catch((err: unknown) => {
+          try { showToast((err instanceof Error ? err.message : '营业执照文件上传失败'), 'error') } catch (e) { console.warn('[Partners] showToast失败:', e) }
           return ''
         })
         if (fileName) processed.licenseFile = fileName
@@ -56,8 +56,8 @@ export function usePartnerActions({ partners, supervisors, projects, loadData, r
               part,
               `${processed.name || '单位'}_附件${ext}`,
               partnerProjectName,
-            ).catch((err: any) => {
-              try { showToast(err?.message || '附件上传失败', 'error') } catch {}
+            ).catch((err: unknown) => {
+              try { showToast((err instanceof Error ? err.message : '附件上传失败'), 'error') } catch (e) { console.warn('[Partners] showToast失败:', e) }
               return ''
             })
             newParts.push(fn || part)
@@ -79,10 +79,10 @@ export function usePartnerActions({ partners, supervisors, projects, loadData, r
       }
       loadData()
       refresh?.()
-      try { showToast(editingPartner ? '合作单位更新成功' : '合作单位创建成功', 'success') } catch {}
-    } catch (error: any) {
+      try { showToast(editingPartner ? '合作单位更新成功' : '合作单位创建成功', 'success') } catch (e) { console.warn('[Partners] showToast失败:', e) }
+    } catch (error: unknown) {
       console.error('保存失败:', error)
-      try { showToast(error?.message || '保存失败', 'error') } catch {}
+      try { showToast((error instanceof Error ? error.message : '保存失败'), 'error') } catch (e) { console.warn('[Partners] showToast失败:', e) }
     }
   }
 

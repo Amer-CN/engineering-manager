@@ -5,7 +5,7 @@ using EngineeringManager.Api.Security;
 namespace EngineeringManager.Api;
 
 /// <summary>
-/// 发票 + 收付款记录端点
+/// 鍙戠エ + 鏀朵粯娆捐褰曠鐐?
 /// </summary>
 public static class InvoiceEndpoints
 {
@@ -13,15 +13,15 @@ public static class InvoiceEndpoints
     {
         var now = () => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
-        // ═══════════════════════════════════════════════════════════
-        // 发票
-        // ═══════════════════════════════════════════════════════════
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+        // 鍙戠エ
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 
         app.MapGet("/api/invoices", (HttpContext ctx, IDbConnection db, long? projectId) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
-            // v1.1.0 P0-4 Phase 2: 内联 SQL 避免 JOIN partners/projects 也有 created_by 列的冲突
+            // v1.1.0 P0-4 Phase 2: 鍐呰仈 SQL 閬垮厤 JOIN partners/projects 涔熸湁 created_by 鍒楃殑鍐茬獊
             var sql = @"SELECT i.*, p.name as project_name,
                                seller.name as sellerName, buyer.name as buyerName,
                                CASE WHEN i.type='invoice_in' THEN seller.name ELSE buyer.name END as partner_name
@@ -29,7 +29,7 @@ public static class InvoiceEndpoints
                         LEFT JOIN projects p ON i.project_id=p.id
                         LEFT JOIN partners seller ON i.seller_id=seller.id
                         LEFT JOIN partners buyer ON i.buyer_id=buyer.id
-                        WHERE (i.created_by=@Uid OR @IsAdmin=1 OR EXISTS(SELECT 1 FROM project_authorizations WHERE project_id=i.project_id AND user_id=@Uid))";
+                        WHERE (i.created_by=@Uid OR @IsAdmin=1 OR EXISTS(SELECT 1 FROM project_authorizations WHERE project_id=i.project_id AND user_id=@Uid)) AND i.deleted_at IS NULL";
             if (projectId.HasValue) sql += " AND i.project_id=@ProjectId";
             sql += " ORDER BY i.created_at DESC";
             return Common.Ok(db.Query(sql, new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }));
@@ -67,12 +67,12 @@ public static class InvoiceEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
-            return (await db.ExecuteAsync("DELETE FROM invoices WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
+            return (await db.ExecuteAsync("UPDATE invoices SET deleted_at=@Now WHERE id=@Id AND deleted_at IS NULL AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin, Now = now() })) > 0 ? Common.Ok() : Results.Forbid();
         });
 
-        // ═══════════════════════════════════════════════════════════
-        // 收付款记录
-        // ═══════════════════════════════════════════════════════════
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+        // 鏀朵粯娆捐褰?
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 
         app.MapGet("/api/payment-records", (HttpContext ctx, IDbConnection db, string? paymentType, long? projectId) =>
         {
@@ -85,13 +85,14 @@ public static class InvoiceEndpoints
             var conditions = new List<string>();
             if (!string.IsNullOrEmpty(paymentType)) conditions.Add("pr.type=@PaymentType");
             if (projectId.HasValue) conditions.Add("pr.project_id=@ProjectId");
-            // v1.1.0 P0-4 Phase 2: 总加 user-dim
+            // v1.1.0 P0-4 Phase 2: 鎬诲姞 user-dim
             conditions.Add(CurrentUser.UserFilterWithAuthorizedProjects("pr.project_id", "pr.created_by"));
+            conditions.Add("pr.deleted_at IS NULL");
             sql += " WHERE " + string.Join(" AND ", conditions);
             sql += " ORDER BY pr.created_at DESC";
             var records = db.Query(sql, new { Uid = uid, IsAdmin = isAdmin, PaymentType = paymentType, ProjectId = projectId }).ToList();
 
-            // 解析 invoice_details JSON 并关联发票信息
+            // 瑙ｆ瀽 invoice_details JSON 骞跺叧鑱斿彂绁ㄤ俊鎭?
             var result = new List<dynamic>();
             foreach (var record in records)
             {
@@ -107,7 +108,7 @@ public static class InvoiceEndpoints
                         {
                             var invoiceId = detail.GetProperty("invoiceId").GetInt64();
                             var paymentAmount = detail.GetProperty("paymentAmount").GetDouble();
-                            var invoice = db.QueryFirstOrDefault("SELECT invoice_no, amount FROM invoices WHERE id=@Id", new { Id = invoiceId });
+                            var invoice = db.QueryFirstOrDefault("SELECT invoice_no, amount FROM invoices WHERE id=@Id AND deleted_at IS NULL", new { Id = invoiceId });
                             invoiceInfos.Add(new
                             {
                                 invoiceId,
@@ -120,7 +121,7 @@ public static class InvoiceEndpoints
                 }
                 catch (Exception ex)
                 {
-                    Console.Error.WriteLine($"[InvoiceEndpoints/payment-record] 解析失败: {ex.Message}");
+                    Console.Error.WriteLine($"[InvoiceEndpoints/payment-record] 瑙ｆ瀽澶辫触: {ex.Message}");
                 }
                 dict["invoice_infos"] = invoiceInfos;
                 result.Add(record);
@@ -152,7 +153,7 @@ public static class InvoiceEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
-            return (await db.ExecuteAsync("DELETE FROM payment_records WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
+            return (await db.ExecuteAsync("UPDATE payment_records SET deleted_at=@Now WHERE id=@Id AND deleted_at IS NULL AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin, Now = now() })) > 0 ? Common.Ok() : Results.Forbid();
         });
     }
 }

@@ -18,6 +18,25 @@ public static class FileEndpoints
         return resolved.StartsWith(baseResolved, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// open-external 端点允许的文件扩展名白名单 (P0-3)。
+    /// 仅文档 + 图片,显式排除可执行文件 (.bat/.exe/.cmd/.ps1/.vbs/.js/.scr/.com/.msi 等),
+    /// 防止上传的文件被 UseShellExecute 远程执行。
+    /// </summary>
+    private static readonly HashSet<string> OpenableExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        // 文档
+        ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".csv", ".rtf",
+        // 图片
+        ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tif", ".tiff", ".svg",
+    };
+
+    private static bool IsOpenableExtension(string path)
+    {
+        var ext = Path.GetExtension(path);
+        return !string.IsNullOrEmpty(ext) && OpenableExtensions.Contains(ext);
+    }
+
     public static void RegisterFileEndpoints(this WebApplication app)
     {
         var now = () => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
@@ -170,6 +189,9 @@ public static class FileEndpoints
                 var dir = Path.Combine(baseDir, (string)(dto.category ?? "未分类"));
                 var path = Path.Combine(dir, (string)(dto.fileName ?? ""));
                 if (!IsPathSafe(path, baseDir)) return Common.Fail("非法路径");
+                // P0-3: UseShellExecute=true 会用系统默认程序打开文件,必须限制扩展名,
+                // 防止上传 .bat/.exe/.ps1 等可执行文件后被远程执行。
+                if (!IsOpenableExtension(path)) return Common.Fail("不支持的文件类型,仅允许文档和图片");
                 if (File.Exists(path)) { Process.Start(new ProcessStartInfo(path) { UseShellExecute = true }); return Common.Ok(); }
                 return Common.NotFound("文件不存在");
             }

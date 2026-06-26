@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using Dapper;
 using EngineeringManager.Api.Security;
 
@@ -261,7 +261,8 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
         app.MapDelete("/api/departments/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            return (await db.ExecuteAsync("DELETE FROM departments WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Results.Forbid();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            return (await db.ExecuteAsync("DELETE FROM departments WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
         });
 
         // ═══════════════════════════════════════════════════════════
@@ -305,7 +306,8 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
         app.MapDelete("/api/worker-teams/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            return (await db.ExecuteAsync("DELETE FROM worker_teams WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Results.Forbid();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            return (await db.ExecuteAsync("DELETE FROM worker_teams WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
         });
     }
 }

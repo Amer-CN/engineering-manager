@@ -1,11 +1,11 @@
 import { useCallback } from 'react'
-import type { Member, WorkerTeam } from '../types/electron'
+import type { Member, Project, WorkerTeam } from '../types/electron'
 import { getAPI } from '../services/api-adapter'
 import { useToastStore } from '../store/toastStore'
 
 interface UseMembersLoadDataProps {
   setMembers: React.Dispatch<React.SetStateAction<Member[]>>
-  setProjects: React.Dispatch<React.SetStateAction<any[]>>
+  setProjects: React.Dispatch<React.SetStateAction<Project[]>>
   setWorkerTeams: React.Dispatch<React.SetStateAction<WorkerTeam[]>>
   setLoading: React.Dispatch<React.SetStateAction<boolean>>
 }
@@ -24,11 +24,14 @@ export function useMembersLoadData({
         api.getProjects(),
         api.getWorkerTeams(),
       ])
-      const get = (r: PromiseSettledResult<any>) =>
-        r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
-      const membersData = get(membersRes)
-      const projectsData = get(projectsRes)
-      const teamsData = get(teamsRes)
+      const get = <T,>(r: PromiseSettledResult<unknown>): T[] => {
+        if (r.status !== 'fulfilled') return [];
+        const val = r.value as { success?: boolean; data?: unknown };
+        return (val?.success && Array.isArray(val.data) ? val.data : []) as T[];
+      }
+      const membersData = get<Member>(membersRes)
+      const projectsData = get<Project>(projectsRes)
+      const teamsData = get<WorkerTeam>(teamsRes)
 
       const membersWithRelations = membersData.map((m: Member) => {
         if (m.memberType === 'worker' && m.teamId) {
@@ -41,7 +44,7 @@ export function useMembersLoadData({
       setProjects(projectsData)
 
       const teamsWithRelations = teamsData.map((t: WorkerTeam) => {
-        const project = projectsData.find((p: any) => p.id === t.projectId)
+        const project = projectsData.find((p: Project) => p.id === t.projectId)
         const leader = membersData.find((m: Member) => m.id === t.leaderId)
         return { ...t, projectName: project?.name, leaderName: leader?.name }
       })

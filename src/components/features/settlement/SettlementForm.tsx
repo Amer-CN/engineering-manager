@@ -8,11 +8,21 @@ import { FileUploadSection } from './FileUploadSection'
 import { getAPI } from '@/services/api-adapter'
 import { Button } from '../../ui/Button'
 
+interface SettlementFormDataItem {
+  description: string
+  spec: string
+  quantity: number
+  unit: string
+  unitPrice: number
+  amount: number
+  remarks: string
+}
+
 interface SettlementFormProps {
   settlement?: SettlementData | null
   projects: Project[]
   partners: Partner[]
-  onSubmit: (data: any) => void
+  onSubmit: (data: typeof defaultFormData) => void
   onCancel: () => void
 }
 
@@ -83,7 +93,7 @@ export const SettlementForm: React.FC<SettlementFormProps> = ({
           const a = document.createElement('a'); a.href = fileResult.data.dataUrl; a.download = tmpl.fileName; a.click(); return
         }
       }
-    } catch (e) {}
+    } catch (e) { console.warn('[SettlementForm] 模板下载失败:', e) }
     const XLSX = await import('xlsx')
     const headers = ['材料名称', '规格型号', '单位', '数量', '单价(元)']
     const sampleRows = [['示例：水泥PO42.5', '50kg/袋', '吨', 100, 420], ['示例：钢筋HRB400', 'Φ12mm', '吨', 50, 3850]]
@@ -100,12 +110,13 @@ export const SettlementForm: React.FC<SettlementFormProps> = ({
       try {
         const XLSX = await import('xlsx')
         const wb = XLSX.read(ev.target?.result, { type: 'array' })
-        const rows = XLSX.utils.sheet_to_json<unknown>(wb.Sheets[wb.SheetNames[0]], { header: 1 }) as unknown[][]
+        const rows = XLSX.utils.sheet_to_json<unknown>(wb.Sheets[wb.SheetNames[0]], { header: 1 }) as (string | number | undefined | null)[][]
         if (rows.length < 2) return
-        const items = rows.slice(1).filter((r: any[]) => r.some(c => c !== undefined && c !== null && String(c).trim() !== ''))
-          .map((r: any) => { const qty = parseFloat(r[3]) || 1; const price = parseFloat(r[4]) || 0; return { description: String(r[0] || '').trim(), spec: String(r[1] || '').trim(), unit: String(r[2] || '').trim(), quantity: qty, unitPrice: price, amount: Math.round(qty * price * 100) / 100, remarks: '' } })
-          .filter((it: any) => it.description)
-        if (items.length > 0) setFormData(p => { const merged = [...p.items, ...items]; return { ...p, items: merged, amount: Math.round(merged.reduce((s: number, it: any) => s + it.amount, 0) * 100) / 100 } })
+        const items = (rows.slice(1) as (string | number | undefined | null)[][])
+          .filter(r => r.some(c => c !== undefined && c !== null && String(c).trim() !== ''))
+          .map((r) => { const qty = parseFloat(String(r[3])) || 1; const price = parseFloat(String(r[4])) || 0; return { description: String(r[0] || '').trim(), spec: String(r[1] || '').trim(), unit: String(r[2] || '').trim(), quantity: qty, unitPrice: price, amount: Math.round(qty * price * 100) / 100, remarks: '' } })
+          .filter((it: SettlementFormDataItem) => it.description)
+        if (items.length > 0) setFormData(p => { const merged = [...p.items, ...items]; return { ...p, items: merged, amount: Math.round(merged.reduce((s: number, it: SettlementFormDataItem) => s + it.amount, 0) * 100) / 100 } })
       } catch (err) { console.error('模板导入失败:', err) }
     }
     reader.readAsArrayBuffer(file); e.target.value = ''
@@ -113,7 +124,7 @@ export const SettlementForm: React.FC<SettlementFormProps> = ({
 
   const addItem = () => setFormData(prev => ({ ...prev, items: [...prev.items, { description: '', spec: '', quantity: 1, unit: '', unitPrice: 0, amount: 0, remarks: '' }] }))
 
-  const updateItem = (index: number, field: string, value: any) => setFormData(prev => {
+  const updateItem = (index: number, field: keyof SettlementFormDataItem, value: string | number) => setFormData(prev => {
     const newItems = [...prev.items]; newItems[index] = { ...newItems[index], [field]: value }
     if (field === 'quantity' || field === 'unitPrice') newItems[index].amount = Math.round(newItems[index].quantity * newItems[index].unitPrice * 100) / 100
     return { ...prev, items: newItems, amount: Math.round(newItems.reduce((sum, item) => sum + item.amount, 0) * 100) / 100 }

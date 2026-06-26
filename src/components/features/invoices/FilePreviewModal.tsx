@@ -16,7 +16,7 @@ export const FilePreviewModal: React.FC<{
       {file.type === 'pdf' ? (
         <iframe src={file.data} className="w-full h-full border-0 rounded" />
       ) : (
-        <img src={file.data} alt="预览" className="max-w-full max-h-full object-contain mx-auto" />
+        <img src={file.data} alt="预览" className="max-w-full max-h-full object-contain mx-auto" loading="lazy" />
       )}
     </div>
   </Modal>

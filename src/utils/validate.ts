@@ -80,7 +80,7 @@ export function isValidUrl(url: string | null | undefined): boolean {
 /**
  * 验证必填
  */
-export function isRequired(value: any): boolean {
+export function isRequired(value: unknown): boolean {
   if (value === null || value === undefined) return false
   if (typeof value === 'string') return value.trim().length > 0
   if (Array.isArray(value)) return value.length > 0

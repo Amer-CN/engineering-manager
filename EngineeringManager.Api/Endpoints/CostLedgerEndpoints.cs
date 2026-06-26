@@ -25,6 +25,7 @@ public static class CostLedgerEndpoints
             var conditions = new List<string>();
             if (projectId.HasValue) conditions.Add("project_id=@ProjectId");
             conditions.Add(CurrentUser.UserFilterCompany());
+            conditions.Add("deleted_at IS NULL");
             var sql = "SELECT * FROM cost_ledger WHERE " + string.Join(" AND ", conditions) + " ORDER BY date DESC";
             return Common.Ok(db.Query(sql, new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }));
         });
@@ -38,9 +39,9 @@ public static class CostLedgerEndpoints
             var userFilter = $" AND {CurrentUser.UserFilterCompany()}";
             return Common.Ok(new
             {
-                totalCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM cost_ledger WHERE 1=1{projectFilter}{userFilter}", new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }),
-                totalExpense = db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(amount),0) FROM cost_ledger WHERE direction='expense'{projectFilter}{userFilter}", new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }),
-                totalIncome = db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(amount),0) FROM cost_ledger WHERE direction='income'{projectFilter}{userFilter}", new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }),
+                totalCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM cost_ledger WHERE 1=1{projectFilter}{userFilter} AND deleted_at IS NULL", new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }),
+                totalExpense = db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(amount),0) FROM cost_ledger WHERE direction='expense'{projectFilter}{userFilter} AND deleted_at IS NULL", new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }),
+                totalIncome = db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(amount),0) FROM cost_ledger WHERE direction='income'{projectFilter}{userFilter} AND deleted_at IS NULL", new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }),
             });
         });
         app.MapPost("/api/cost-ledger", async (HttpContext ctx, CostLedgerEntryDto dto, IDbConnection db) =>
@@ -66,7 +67,7 @@ public static class CostLedgerEndpoints
         app.MapDelete("/api/cost-ledger/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            return (await db.ExecuteAsync("DELETE FROM cost_ledger WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Results.Forbid();
+            return (await db.ExecuteAsync("UPDATE cost_ledger SET deleted_at=@Now WHERE id=@Id AND deleted_at IS NULL", new { Id = id, Now = now() })) > 0 ? Common.Ok() : Results.Forbid();
         });
 
         app.MapPost("/api/cost-ledger/batch", async (HttpContext ctx, List<CostLedgerEntryDto> entries, IDbConnection db) =>
@@ -95,8 +96,9 @@ public static class CostLedgerEndpoints
                 var categories = db.Query("SELECT * FROM cost_ledger_categories").ToList();
                 return Common.Ok(categories);
             }
-            catch
+            catch (Exception ex)
             {
+                Console.Error.WriteLine($"[CostLedger] categories 查询失败: {ex.Message}");
                 return Common.Ok(new List<object>());
             }
         });
@@ -140,7 +142,7 @@ public static class CostLedgerEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             // v1.1.0 P0-4 Phase 2: cost_ledger_batches 现在有 created_by (migration 020), 完整 user-dim
-            return Common.Ok(db.Query($"SELECT * FROM cost_ledger_batches WHERE project_id=@ProjectId AND {CurrentUser.UserFilterCompany} ORDER BY created_at DESC", new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }));
+            return Common.Ok(db.Query($"SELECT * FROM cost_ledger_batches WHERE project_id=@ProjectId AND {CurrentUser.UserFilterCompany()} ORDER BY created_at DESC", new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }));
         });
 
         app.MapPost("/api/cost-ledger/batches", async (HttpContext ctx, CostLedgerBatchDto dto, IDbConnection db) =>
@@ -195,3 +197,4 @@ public static class CostLedgerEndpoints
         });
     }
 }
+

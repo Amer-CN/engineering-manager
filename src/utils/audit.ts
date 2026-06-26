@@ -32,7 +32,7 @@ export interface AuditLog {
   resourceName?: string
   level: AuditLevel
   description: string
-  details?: Record<string, any>
+  details?: Record<string, unknown>
   ip?: string
   userAgent?: string
 }
@@ -84,7 +84,7 @@ try {
   if (raw) {
     const parsed = JSON.parse(raw)
     if (Array.isArray(parsed) && parsed.length > 0) {
-      const stripped = parsed.slice(-3000).map(({ details, ...rest }: any) => rest)
+      const stripped = parsed.slice(-3000).map(({ details, ...rest }: Record<string, unknown>) => rest)
       localStorage.setItem(AUDIT_LOG_KEY, JSON.stringify(stripped))
     }
   }
@@ -171,7 +171,7 @@ export function logAudit(
     resourceId?: string | number
     resourceName?: string
     level?: AuditLevel
-    details?: Record<string, any>
+    details?: Record<string, unknown>
   } = {}
 ): AuditLog {
   const log: AuditLog = {
@@ -206,7 +206,7 @@ export function logCreate(
   resource: string,
   resourceName: string,
   resourceId?: string | number,
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 ): AuditLog {
   return logAudit('create', resource, `创建 ${resourceName}`, {
     resourceId,
@@ -236,7 +236,7 @@ export function logUpdate(
   resource: string,
   resourceName: string,
   resourceId: string | number,
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 ): AuditLog {
   return logAudit('update', resource, `更新 ${resourceName}`, {
     resourceId,
@@ -252,7 +252,7 @@ export function logDelete(
   resource: string,
   resourceName: string,
   resourceId?: string | number,
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 ): AuditLog {
   return logAudit('delete', resource, `删除 ${resourceName}`, {
     resourceId,
@@ -268,7 +268,7 @@ export function logDelete(
 export function logExport(
   resource: string,
   count: number,
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 ): AuditLog {
   return logAudit('export', resource, `导出 ${count} 条 ${resource} 记录`, {
     details: { count, ...details },
@@ -281,7 +281,7 @@ export function logExport(
 export function logImport(
   resource: string,
   count: number,
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 ): AuditLog {
   return logAudit('import', resource, `导入 ${count} 条 ${resource} 记录`, {
     details: { count, ...details },
@@ -323,7 +323,7 @@ export async function queryAuditLogs(query: AuditLogQuery = {}): Promise<AuditLo
         return result.data as AuditLogResult
       }
     }
-  } catch {}
+  } catch (err) { console.warn('[Audit] 后端查询失败:', err) }
 
   // 回退到 localStorage
   let logs = getLogs()
@@ -427,7 +427,7 @@ export async function getAuditStats(days = 7): Promise<AuditStats> {
       const result = await api.getAuditStats(days)
       if (result.success && result.data) return result.data as AuditStats
     }
-  } catch {}
+  } catch (err) { console.warn('[Audit] 获取统计失败:', err) }
 
   // 回退到 localStorage
   const logs = getLogs()
@@ -542,7 +542,7 @@ export async function clearOldLogs(daysToKeep = 90): Promise<number> {
       const result = await api.clearAuditLogs(daysToKeep)
       if (result.success && result.data) return result.data.removedCount
     }
-  } catch {}
+  } catch (err) { console.warn('[Audit] 清理旧日志失败:', err) }
 
   // 回退 localStorage
   const logs = getLogs()
@@ -567,7 +567,7 @@ export async function clearAllLogs(): Promise<void> {
   try {
     const api = await getAPI()
     if (api.clearAuditLogs) await api.clearAuditLogs(1)
-  } catch {}
+  } catch (err) { console.warn('[Audit] 清空日志失败:', err) }
   localStorage.removeItem(AUDIT_LOG_KEY)
 }
 

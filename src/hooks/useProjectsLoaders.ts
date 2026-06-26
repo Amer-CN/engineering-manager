@@ -21,7 +21,7 @@ export function useProjectsLoaders(deps: UseProjectsLoadersDeps, filters?: Proje
       const result = await (await getAPI()).getProjects()
 
       if (result.success && result.data) {
-        let filteredData = result.data as any[]
+        let filteredData: Project[] = result.data
 
         if (filters?.status) {
           filteredData = filteredData.filter(p => p.status === filters.status)

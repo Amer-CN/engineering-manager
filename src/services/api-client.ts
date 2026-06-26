@@ -5,12 +5,12 @@
  * 替代 Tauri 的 invoke 和 Electron 的 ipcRenderer
  */
 
-const API_BASE = 'http://localhost:5048';
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5048';
 const TOKEN_KEY = 'jwt_token';
 const MASK_KEY = 'v120_mask_enabled';
 const PII_PATHS = ['/api/members', '/api/workers', '/api/partners', '/api/project-members'];
 function getToken(): string | null { try { return localStorage.getItem(TOKEN_KEY); } catch { return null; } }
-export function setToken(token: string | null): void { try { if (token) localStorage.setItem(TOKEN_KEY, token); else localStorage.removeItem(TOKEN_KEY); } catch {} }
+export function setToken(token: string | null): void { try { if (token) localStorage.setItem(TOKEN_KEY, token); else localStorage.removeItem(TOKEN_KEY); } catch (err) { console.warn('[ApiClient] 保存token失败:', err) } }
 function authHeaders(): Record<string, string> { const t = getToken(); return t ? { Authorization: "Bearer " + t } : {}; }
 /** 读取 Mask toggle 状态 (true = masked/默认, false = unmasked) */
 function getMaskedState(): boolean { try { return localStorage.getItem(MASK_KEY) !== 'false'; } catch { return true; } }

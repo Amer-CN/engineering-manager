@@ -7,6 +7,7 @@ import ButtonLoader from '../../ui/ButtonLoader'
 import Spinner from '../../ui/Spinner'
 import { STATUS_META } from '../../../constants/attendance'
 import type { Column } from '@/components/DataTable'
+import type { Member, Department } from '@/types/electron'
 import { Card } from '@/components/ui/Card'
 
 interface StaffAttendanceDashboardProps {
@@ -16,18 +17,18 @@ interface StaffAttendanceDashboardProps {
   filterDept: number | ''
   setFilterDept: (d: number | '') => void
   daysInMonth: number
-  departments: any[]
-  filteredStaff: any[]
+  departments: Department[]
+  filteredStaff: Member[]
   joinedAfter: number
   selectedIds: Set<number>
   handleBatchDelete: () => void
   handleExport: () => void
   handleGenerateDefaults: () => void
   generating: boolean
-  tableData: any[]
-  columns: Column<any>[]
+  tableData: (Member & { __rowIndex?: number })[]
+  columns: Column<Member & { __rowIndex?: number }>[]
   ConfirmDialog: React.ReactNode
-  staff: any[]
+  staff: Member[]
 }
 
 export function StaffAttendanceDashboard({
@@ -67,7 +68,7 @@ export function StaffAttendanceDashboard({
           <select value={filterDept} onChange={e => setFilterDept(e.target.value ? Number(e.target.value) : '')}
             className="px-2 py-1.5 border border-slate-300 rounded-lg text-sm">
             <option value="">全部</option>
-            {departments.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
+            {departments.map((d: Department) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
         </div>
         <span className="text-xs text-slate-400">{filteredStaff.length} 人 · {daysInMonth} 天</span>

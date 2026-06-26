@@ -38,8 +38,8 @@ export function useOCRConfig() {
       } else {
         setOcrMessage({ type: 'info', text: '当前离线，将使用本地Tesseract.js识别' })
       }
-    } catch (error: any) {
-      setOcrMessage({ type: 'error', text: `检测失败 ${error.message}` })
+    } catch (error: unknown) {
+      setOcrMessage({ type: 'error', text: `检测失败 ${error instanceof Error ? error.message : '未知错误'}` })
     } finally {
       setTestingOCR(false)
     }
