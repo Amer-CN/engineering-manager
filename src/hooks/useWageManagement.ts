@@ -56,7 +56,7 @@ export default function useWageManagement({ showToast, confirm }: UseWageManagem
       const result = await (await getAPI()).batchDeleteAttendances(Array.from(selectedAttendanceIds))
       if (result.success) { showToast(`已删除 ${selectedAttendanceIds.size} 条考勤记录`, 'success'); setSelectedAttendanceIds(new Set()); await loadAttendances() }
       else showToast(result.error || '批量删除失败', 'error')
-    } catch (error: any) { showToast(error?.message || '批量删除失败', 'error') }
+    } catch (error: unknown) { showToast(error instanceof Error ? error.message : '批量删除失败', 'error') }
   }
 
   // ── 工资表操作 ──
@@ -72,7 +72,7 @@ export default function useWageManagement({ showToast, confirm }: UseWageManagem
       const result = await (await getAPI()).batchDeleteWages(Array.from(selectedWageTableIds))
       if (result.success) { showToast(`已删除 ${selectedWageTableIds.size} 条工资记录`, 'success'); setSelectedWageTableIds(new Set()); await loadWages() }
       else showToast(result.error || '批量删除失败', 'error')
-    } catch (error: any) { showToast(error?.message || '批量删除失败', 'error') }
+    } catch (error: unknown) { showToast(error instanceof Error ? error.message : '批量删除失败', 'error') }
   }
 
   // ── 项目工人 ──

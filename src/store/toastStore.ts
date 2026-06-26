@@ -12,11 +12,15 @@ interface ToastStore {
 }
 
 let idCounter = 0
+const timeoutIds = new Map<number, ReturnType<typeof setTimeout>>()
+
 
 export const useToastStore = create<ToastStore>((set, get) => ({
   toasts: [],
 
   removeToast: (id: number) => {
+    const tid = timeoutIds.get(id)
+    if (tid) { clearTimeout(tid); timeoutIds.delete(id) }
     set(state => ({
       toasts: state.toasts.filter(t => t.id !== id)
     }))
@@ -27,9 +31,10 @@ export const useToastStore = create<ToastStore>((set, get) => ({
     set(state => ({
       toasts: [...state.toasts, { id, message, type }]
     }))
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       get().removeToast(id)
     }, duration)
+    timeoutIds.set(id, timeoutId)
   },
 
   success: (message: string) => get().showToast(message, 'success'),

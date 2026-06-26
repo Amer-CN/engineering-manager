@@ -1,5 +1,6 @@
 using System.Data;
 using Dapper;
+using EngineeringManager.Api.Security;
 
 namespace EngineeringManager.Api;
 
@@ -11,6 +12,7 @@ public static class OcrEndpoints
     // Token 缓存
     private static string? cachedAccessToken;
     private static DateTime tokenExpiresAt = DateTime.MinValue;
+    private static readonly object _tokenLock = new object();
 
     // OCR 统计文件路径
     private static readonly string ocrStatsPath = Path.Combine(
@@ -462,10 +464,14 @@ public static class OcrEndpoints
         // 清除 Token 缓存
         // ═══════════════════════════════════════════════════════════
 
-        app.MapPost("/api/ocr/clear-token-cache", () =>
+        app.MapPost("/api/ocr/clear-token-cache", (HttpContext ctx) =>
         {
-            cachedAccessToken = null;
-            tokenExpiresAt = DateTime.MinValue;
+            if (!CurrentUser.IsAdmin(ctx)) return Common.Fail("仅管理员可执行此操作");
+            lock (_tokenLock)
+            {
+                cachedAccessToken = null;
+                tokenExpiresAt = DateTime.MinValue;
+            }
             return Results.Ok(true);
         });
 
@@ -473,8 +479,9 @@ public static class OcrEndpoints
         // OCR 统计
         // ═══════════════════════════════════════════════════════════
 
-        app.MapGet("/api/ocr/stats", () =>
+        app.MapGet("/api/ocr/stats", (HttpContext ctx) =>
         {
+            if (!CurrentUser.IsAdmin(ctx)) return Common.Fail("仅管理员可执行此操作");
             var stats = LoadOcrStats();
             return Results.Ok(new
             {
@@ -621,7 +628,7 @@ public static class OcrEndpoints
     public static void SaveOcrConfigEncrypted(string apiKey, string secretKey)
     {
         // 写入 DPAPI 加密文件（仅当前 Windows 用户可解）
-        var json = "{\"baidu\":{\"apiKey\":\"" + apiKey + "\",\"secretKey\":\"" + secretKey + "\"}}";
+        var json = System.Text.Json.JsonSerializer.Serialize(new { baidu = new { apiKey, secretKey } });
         var plaintext = System.Text.Encoding.UTF8.GetBytes(json);
         var encrypted = System.Security.Cryptography.ProtectedData.Protect(
             plaintext, null, System.Security.Cryptography.DataProtectionScope.CurrentUser);
@@ -633,10 +640,14 @@ public static class OcrEndpoints
         // 同步设置环境变量（避免重启进程读取不到 env）
         Environment.SetEnvironmentVariable("BAIDU_OCR_API_KEY", apiKey);
         Environment.SetEnvironmentVariable("BAIDU_OCR_SECRET_KEY", secretKey);
-    }    private static async Task<string> GetBaiduAccessToken(HttpClient httpClient)
+    }
+    private static async Task<string> GetBaiduAccessToken(HttpClient httpClient)
     {
-        if (!string.IsNullOrEmpty(cachedAccessToken) && DateTime.Now < tokenExpiresAt)
-            return cachedAccessToken;
+        lock (_tokenLock)
+        {
+            if (!string.IsNullOrEmpty(cachedAccessToken) && DateTime.Now < tokenExpiresAt)
+                return cachedAccessToken;
+        }
 
         var (apiKey, secretKey) = LoadOcrConfig();
         if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(secretKey))
@@ -649,9 +660,12 @@ public static class OcrEndpoints
         if (data.RootElement.TryGetProperty("error", out var err))
             throw new InvalidOperationException($"获取Token失败: {data.RootElement.GetProperty("error_description").GetString() ?? err.GetString()}");
 
-        cachedAccessToken = data.RootElement.GetProperty("access_token").GetString()!;
-        var expiresIn = data.RootElement.TryGetProperty("expires_in", out var exp) ? exp.GetInt32() : 2592000;
-        tokenExpiresAt = DateTime.Now.AddSeconds(expiresIn - 3600); // 提前1小时刷新
+        lock (_tokenLock)
+        {
+            cachedAccessToken = data.RootElement.GetProperty("access_token").GetString()!;
+            var expiresIn = data.RootElement.TryGetProperty("expires_in", out var exp) ? exp.GetInt32() : 2592000;
+            tokenExpiresAt = DateTime.Now.AddSeconds(expiresIn - 3600); // 提前1小时刷新
+        }
         return cachedAccessToken;
     }
 
@@ -673,7 +687,7 @@ public static class OcrEndpoints
         if (ocrData.TryGetProperty("error_code", out var errorCode))
         {
             var code = errorCode.GetInt32();
-            if (code == 110 || code == 111) { cachedAccessToken = null; } // Token 过期
+            if (code == 110 || code == 111) { lock (_tokenLock) { cachedAccessToken = null; } } // Token 过期
             throw new InvalidOperationException($"百度OCR错误: {(ocrData.TryGetProperty("error_msg", out var msg) ? msg.GetString() : code.ToString())}");
         }
 

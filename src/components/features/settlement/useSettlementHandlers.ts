@@ -1,5 +1,6 @@
 
 import { Settlement as SettlementData, Project } from '../../../types/electron'
+import type { SettlementItem } from '../../../types/electron'
 import { useToastStore } from '@/store/toastStore'
 import { useConfirm } from '@/hooks/useConfirm'
 import { logCreate, logUpdate, logDelete } from '../../../utils/audit'
@@ -28,14 +29,14 @@ export function useSettlementHandlers({
   const { confirm, ConfirmDialog } = useConfirm()
   const { can } = usePermission()
 
-  const handleSubmit = async (formData: any) => {
+  const handleSubmit = async (formData: Record<string, unknown>) => {
     if (!formData.partnerId) {
       showToast('请选择关联单位', 'error')
       return
     }
 
     try {
-      const files = formData.files || []
+      const files = (formData.files as { url: string; name: string; type: string }[]) || []
       const savedFiles: { url: string; name: string; type: string }[] = []
       for (const f of files) {
         if (f.url && f.url.startsWith('data:')) {
@@ -62,9 +63,9 @@ export function useSettlementHandlers({
         ...formData,
         files: savedFiles,
         projectId: project.id,
-        partnerId: formData.partnerId,
+        partnerId: formData.partnerId as number,
         settlementNo: editingSettlement?.settlementNo || `S${Date.now()}`,
-        items: formData.items.map((item: any, idx: number) => ({
+        items: (formData.items as SettlementItem[]).map((item: SettlementItem, idx: number) => ({
           ...item,
           id: editingSettlement?.items?.[idx]?.id || Date.now() + idx,
         })),
@@ -87,9 +88,9 @@ export function useSettlementHandlers({
       setShowModal(false)
       setEditingSettlement(null)
       showToast(editingSettlement ? '结算单更新成功' : '结算单创建成功', 'success')
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('保存结算单失败:', error)
-      showToast(error?.message || '保存失败', 'error')
+      showToast((error instanceof Error ? error.message : '保存失败'), 'error')
     }
   }
 
@@ -115,9 +116,9 @@ export function useSettlementHandlers({
         })
         onDataChange()
         showToast('结算单已删除', 'success')
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('删除结算单失败:', error)
-        showToast(error?.message || '删除失败', 'error')
+        showToast((error instanceof Error ? error.message : '删除失败'), 'error')
       }
     }
   }
@@ -135,8 +136,8 @@ export function useSettlementHandlers({
       } else {
         showToast('付款与发票核验通过，已自动归档', 'success')
       }
-    } catch (error: any) {
-      showToast(error?.message || '操作失败', 'error')
+    } catch (error: unknown) {
+      showToast((error instanceof Error ? error.message : '操作失败'), 'error')
     }
   }
 
@@ -145,8 +146,8 @@ export function useSettlementHandlers({
       await (await getAPI()).unarchiveSettlement(id)
       onDataChange()
       showToast('已取消归档', 'success')
-    } catch (error: any) {
-      showToast(error?.message || '操作失败', 'error')
+    } catch (error: unknown) {
+      showToast((error instanceof Error ? error.message : '操作失败'), 'error')
     }
   }
 
@@ -167,7 +168,7 @@ export function useSettlementHandlers({
           if (f.type === 'pdf') {
             html += `<iframe src="${result.data.dataUrl}" width="100%" height="500" style="border:none"></iframe>`
           } else if (f.type === 'image') {
-            html += `<img src="${result.data.dataUrl}" />`
+            html += `<img src="${result.data.dataUrl}" loading="lazy" />`
           } else {
             html += `<p style="color:${COLORS.mutedText}">Excel 文件不支持在线预览，请下载后查看</p><a href="${result.data.dataUrl}" download>下载文件</a>`
           }

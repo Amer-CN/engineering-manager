@@ -27,19 +27,18 @@ const THEME_INTERACTION = {
 
 interface LoginProps { onLoginSuccess: () => void }
 
-const CRED_KEY = 'login-remembered'
+const CRED_KEY = 'login-remembered-user'
 const AUTO_KEY = 'login-auto'
 
-function loadSaved() {
+// P0-4: 只记住用户名,绝不存密码到 localStorage (Base64 不是加密,DevTools 可一键解码)。
+// "记住密码"复选框语义改为"记住用户名"。
+function loadSaved(): string {
   try {
-    const raw = localStorage.getItem(CRED_KEY)
-    if (!raw) return { username: '', password: '' }
-    const d = JSON.parse(atob(raw))
-    return { username: d.u || '', password: d.p || '' }
-  } catch { return { username: '', password: '' } }
+    return localStorage.getItem(CRED_KEY) || ''
+  } catch { return '' }
 }
-function saveCred(u: string, p: string) { localStorage.setItem(CRED_KEY, btoa(JSON.stringify({ u, p }))) }
-function clearCred() { localStorage.removeItem(CRED_KEY) }
+function saveUser(u: string) { localStorage.setItem(CRED_KEY, u) }
+function clearUser() { localStorage.removeItem(CRED_KEY) }
 
 interface LoginState {
   username: string
@@ -90,13 +89,13 @@ const Login: React.FC<LoginProps> = () => {
   const { login } = useAuth()
   const { scheme } = useTheme()
   const interaction = useMemo(() => THEME_INTERACTION[scheme], [scheme])
-  const saved = useRef(loadSaved())
+  const savedUser = useRef(loadSaved())
   const [state, dispatch] = useReducer(loginReducer, {
-    username: saved.current.username,
-    password: saved.current.password,
+    username: savedUser.current,
+    password: '',
     showPw: false,
-    remember: !!saved.current.username,
-    autoLogin: localStorage.getItem(AUTO_KEY) === 'true',
+    remember: !!savedUser.current,
+    autoLogin: false,
     error: '',
     loading: false,
     showSettings: false,
@@ -119,8 +118,9 @@ const Login: React.FC<LoginProps> = () => {
 
   useEffect(() => { (async () => { (await getAPI()).resizeForLogin?.() })() }, [])
 
+  // P0-4: 取消"自动登录"功能。原逻辑会用 localStorage 中明文密码自动重登,存在安全隐患。
+  // 安全改造后只记住用户名,用户仍需手动输入密码。autoLogin 状态保留以兼容旧 UI 但不再触发自动登录。
   useEffect(() => { localStorage.setItem(AUTO_KEY, String(state.autoLogin)) }, [state.autoLogin])
-  useEffect(() => { if (state.autoLogin && saved.current.username && saved.current.password) doLogin(saved.current.username, saved.current.password) }, [])
 
   const doLogin = async (u: string, p: string) => {
     dispatch({ type: 'LOGIN_START' })
@@ -129,10 +129,10 @@ const Login: React.FC<LoginProps> = () => {
       if (!api?.login) { dispatch({ type: 'LOGIN_ERROR', error: '系统错误' }); return }
       const result = await api.login(u, p)
       if (result.success && result.data) {
-        if (state.remember) saveCred(u, p); else clearCred()
+        if (state.remember) saveUser(u); else clearUser()
         login(result.data)
       } else { dispatch({ type: 'LOGIN_ERROR', error: result.error || '用户名或密码错误' }) }
-    } catch (err: any) { dispatch({ type: 'LOGIN_ERROR', error: err.message || '登录失败' }) }
+    } catch (err: unknown) { dispatch({ type: 'LOGIN_ERROR', error: err instanceof Error ? err.message : '登录失败' }) }
     finally { dispatch({ type: 'LOGIN_SUCCESS' }) }
   }
 
@@ -196,12 +196,8 @@ const Login: React.FC<LoginProps> = () => {
 
           <div style={{ display: 'flex', gap: 12, marginBottom: 10 }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 11, color: 'var(--fg-2)' }}>
-              <input type="checkbox" checked={state.remember} onChange={e => { dispatch({ type: 'TOGGLE_REMEMBER', value: e.target.checked }); if (!e.target.checked) { dispatch({ type: 'TOGGLE_AUTO_LOGIN', value: false }); clearCred() } }}
-                style={{ width: 12, height: 12, accentColor: 'var(--accent)', margin: 0 }} />记住密码
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 11, color: 'var(--fg-2)' }}>
-              <input type="checkbox" checked={state.autoLogin} onChange={e => { dispatch({ type: 'TOGGLE_AUTO_LOGIN', value: e.target.checked }); if (e.target.checked) dispatch({ type: 'TOGGLE_REMEMBER', value: true }) }}
-                style={{ width: 12, height: 12, accentColor: 'var(--accent)', margin: 0 }} />自动登录
+              <input type="checkbox" checked={state.remember} onChange={e => { dispatch({ type: 'TOGGLE_REMEMBER', value: e.target.checked }); if (!e.target.checked) { clearUser() } }}
+                style={{ width: 12, height: 12, accentColor: 'var(--accent)', margin: 0 }} />记住用户名
             </label>
           </div>
 

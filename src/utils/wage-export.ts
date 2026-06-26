@@ -3,6 +3,7 @@
  */
 import type { WageRecord } from '@/types'
 import { COLORS } from './wageExportColors'
+import { useToastStore } from '@/store/toastStore'
 
 /** 导出工资明细为 Excel */
 export async function exportWageDetailToExcel(records: WageRecord[]) {
@@ -13,7 +14,7 @@ export async function exportWageDetailToExcel(records: WageRecord[]) {
       '序号': i + 1,
       '姓名': r.memberName || '',
       '班组': r.teamName || '',
-      '项目': (r as any).projectName || '',
+      '项目': r.projectName || '',
       '月份': r.yearMonth,
       '出勤': r.workDays,
       '日薪': r.dailyWage,
@@ -32,7 +33,7 @@ export async function exportWageDetailToExcel(records: WageRecord[]) {
     XLSX.writeFile(wb, `工资明细_${new Date().toISOString().slice(0, 10)}.xlsx`)
   } catch (e) {
     console.error('导出失败:', e)
-    alert('导出失败，请重试')
+    useToastStore.getState().showToast('导出失败，请重试', 'error')
   }
 }
 

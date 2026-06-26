@@ -23,9 +23,9 @@ export function CostLedgerAnalytics({ projectId, projectName, categories }: Cost
     ;(async () => {
       const api = await getAPI()
       if (!api?.getCostLedger) { setLoading(false); return }
-      api.getCostLedger(projectId).then((res: any) => {
+      api.getCostLedger(projectId).then((res: { success: boolean; data?: CostLedgerEntry[] }) => {
         if (res?.success) setEntries(res.data || [])
-      }).catch((err: any) => {
+      }).catch((err: unknown) => {
         console.error('[CostLedgerAnalytics] 加载失败:', err)
       }).finally(() => {
         setLoading(false)
@@ -123,16 +123,16 @@ export function CostLedgerAnalytics({ projectId, projectName, categories }: Cost
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie data={stats.pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={2} dataKey="value">
-                      {stats.pieData.map((d: any, i) => (
+                      {stats.pieData.map((d: { code: string; name: string; value: number }, i) => (
                         <Cell key={i} fill={getCategoryColor(d.code, categories as Parameters<typeof getCategoryColor>[1]) || ANALYTICS_FALLBACK_PALETTE[i % ANALYTICS_FALLBACK_PALETTE.length]} />
                       ))}
                     </Pie>
-                    <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, boxShadow: 'var(--shadow-md)', color: 'var(--fg)' }} formatter={((v: number) => formatMoney(v ?? 0)) as any} />
+                    <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, boxShadow: 'var(--shadow-md)', color: 'var(--fg)' }} formatter={((v: number) => formatMoney(v ?? 0)) as never} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
               <div className="flex-1 space-y-1 min-w-0">
-                {stats.pieData.map((d: any, i) => (
+                {stats.pieData.map((d: { code: string; name: string; value: number }, i) => (
                   <div key={d.code} className="flex items-start justify-between text-xs">
                     <div className="flex items-start gap-1.5 min-w-0">
                       <span className="h-2 w-2 shrink-0 rounded-full mt-1" style={{ backgroundColor: getCategoryColor(d.code, categories as Parameters<typeof getCategoryColor>[1]) || ANALYTICS_FALLBACK_PALETTE[i % ANALYTICS_FALLBACK_PALETTE.length] }} />
@@ -155,11 +155,11 @@ export function CostLedgerAnalytics({ projectId, projectName, categories }: Cost
           <h3 className="text-sm font-semibold text-slate-700 mb-4">月度收支趋势</h3>
           {stats.trendData.length > 0 ? (
             <SimpleGroupedBarChart
-              data={stats.trendData.map((d: any) => ({
-                name: d.month,
+              data={stats.trendData.map((d: Record<string, number | string>) => ({
+                name: String(d.month),
                 values: [
-                  { label: '支出', amount: d['支出'] || 0, color: ANALYTICS_BAR_COLORS.expense },
-                  { label: '收入', amount: d['收入'] || 0, color: ANALYTICS_BAR_COLORS.income },
+                  { label: '支出', amount: Number(d['支出']) || 0, color: ANALYTICS_BAR_COLORS.expense },
+                  { label: '收入', amount: Number(d['收入']) || 0, color: ANALYTICS_BAR_COLORS.income },
                 ],
               }))}
               formatValue={(v) => formatMoney(v)}

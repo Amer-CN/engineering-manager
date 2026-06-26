@@ -10,9 +10,9 @@ public static class WageEndpoints
     {
         var now = () => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
-        // ═══════════════════════════════════════════════════════════
-        // 考勤
-        // ═══════════════════════════════════════════════════════════
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+        // 鑰冨嫟
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 
         app.MapGet("/api/attendances", (HttpContext ctx, IDbConnection db, long? projectId, string? yearMonth) =>
         {
@@ -28,7 +28,7 @@ public static class WageEndpoints
             var conditions = new List<string>();
             if (projectId.HasValue) conditions.Add("a.project_id=@ProjectId");
             if (!string.IsNullOrEmpty(yearMonth)) conditions.Add("a.year_month=@YearMonth");
-            // v1.1.0 P0-4 Phase 2: 总是加 user-dim 过滤
+            // v1.1.0 P0-4 Phase 2: 鎬绘槸鍔?user-dim 杩囨护
             conditions.Add(CurrentUser.UserFilterWithAuthorizedProjects("a.project_id", "a.created_by"));
             sql += " WHERE " + string.Join(" AND ", conditions);
             sql += " ORDER BY a.updated_at DESC";
@@ -73,7 +73,7 @@ public static class WageEndpoints
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var count = 0;
             foreach (var id in ids)
-                count += await db.ExecuteAsync("DELETE FROM attendances WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin });
+                count += await db.ExecuteAsync("DELETE FROM attendances WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin, Now = now() });
             return Common.Ok(new { deleted = count });
         });
 
@@ -108,9 +108,9 @@ public static class WageEndpoints
             return Common.Ok(new { created = 0, updated = 0 });
         });
 
-        // ═══════════════════════════════════════════════════════════
-        // 工资
-        // ═══════════════════════════════════════════════════════════
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+        // 宸ヨ祫
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 
         app.MapGet("/api/wages", (HttpContext ctx, IDbConnection db, long? projectId, string? yearMonth) =>
         {
@@ -128,6 +128,7 @@ public static class WageEndpoints
             if (projectId.HasValue) conditions.Add("w.project_id=@ProjectId");
             if (!string.IsNullOrEmpty(yearMonth)) conditions.Add("w.year_month=@YearMonth");
             conditions.Add(CurrentUser.UserFilterWithAuthorizedProjects("w.project_id", "w.created_by"));
+            conditions.Add("w.deleted_at IS NULL");
             sql += " WHERE " + string.Join(" AND ", conditions);
             sql += " ORDER BY w.updated_at DESC";
             return Common.Ok(db.Query(sql, new { ProjectId = projectId, YearMonth = yearMonth, Uid = uid, IsAdmin = isAdmin }));
@@ -141,6 +142,7 @@ public static class WageEndpoints
             if (projectId.HasValue) where.Add("project_id=@ProjectId");
             if (!string.IsNullOrEmpty(yearMonth)) where.Add("year_month=@YearMonth");
             where.Add(CurrentUser.UserFilterWithAuthorizedProjects());
+            where.Add("deleted_at IS NULL");
             var w = " WHERE " + string.Join(" AND ", where);
             return Common.Ok(new
             {
@@ -181,7 +183,7 @@ public static class WageEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
-            return (await db.ExecuteAsync("DELETE FROM wages WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
+            return (await db.ExecuteAsync("UPDATE wages SET deleted_at=@Now WHERE id=@Id AND deleted_at IS NULL AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin, Now = now() })) > 0 ? Common.Ok() : Results.Forbid();
         });
 
         app.MapPost("/api/wages/batch-delete", async (HttpContext ctx, List<long> ids, IDbConnection db) =>
@@ -190,7 +192,7 @@ public static class WageEndpoints
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var count = 0;
             foreach (var id in ids)
-                count += await db.ExecuteAsync("DELETE FROM wages WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1) AND (payment_locked=0 OR payment_locked IS NULL)", new { Id = id, Uid = uid, IsAdmin = isAdmin });
+                count += await db.ExecuteAsync("UPDATE wages SET deleted_at=@Now WHERE id=@Id AND deleted_at IS NULL AND (created_by=@Uid OR @IsAdmin=1) AND (payment_locked=0 OR payment_locked IS NULL)", new { Id = id, Uid = uid, IsAdmin = isAdmin, Now = now() });
             return Common.Ok(new { deleted = count });
         });
 
@@ -219,13 +221,13 @@ public static class WageEndpoints
         app.MapPost("/api/wages/match-receipts", (HttpContext ctx, dynamic dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            return Common.Ok(Array.Empty<object>()); // 简化版
+            return Common.Ok(Array.Empty<object>()); // 绠€鍖栫増
         });
 
         app.MapPost("/api/wages/confirm-matches", (HttpContext ctx, dynamic dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            return Common.Ok(new { updated = 0 }); // 简化版
+            return Common.Ok(new { updated = 0 }); // 绠€鍖栫増
         });
 
         app.MapGet("/api/wages/payment-records", (HttpContext ctx, IDbConnection db, long? projectId, string? yearMonth) =>
@@ -239,10 +241,10 @@ public static class WageEndpoints
                         LEFT JOIN workers wr ON pw.worker_id=wr.id
                         LEFT JOIN worker_teams wt ON pw.team_id=wt.id
                         LEFT JOIN projects p ON w.project_id=p.id
-                        WHERE w.paid_amount IS NOT NULL";
+                        WHERE w.paid_amount IS NOT NULL AND w.deleted_at IS NULL";
             if (projectId.HasValue) sql += " AND w.project_id=@ProjectId";
             if (!string.IsNullOrEmpty(yearMonth)) sql += " AND w.year_month=@YearMonth";
-            // v1.1.0 P0-4 Phase 2: 加 user-dim 过滤 (非 admin 看不到别人发的工资单)
+            // v1.1.0 P0-4 Phase 2: 鍔?user-dim 杩囨护 (闈?admin 鐪嬩笉鍒板埆浜哄彂鐨勫伐璧勫崟)
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             sql += " AND " + CurrentUser.UserFilterWithAuthorizedProjects("w.project_id", "w.created_by");
             sql += " ORDER BY w.paid_date DESC";
@@ -253,10 +255,10 @@ public static class WageEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
-            // v1.1.0 P0-4 Phase 2: 总是加 user-dim
+            // v1.1.0 P0-4 Phase 2: 鎬绘槸鍔?user-dim
             var w = projectId.HasValue
-                ? " WHERE project_id=@ProjectId AND paid_amount IS NULL AND year_month < @CurrentMonth AND " + CurrentUser.UserFilterWithAuthorizedProjects()
-                : " WHERE paid_amount IS NULL AND year_month < @CurrentMonth AND " + CurrentUser.UserFilterWithAuthorizedProjects();
+                ? " WHERE project_id=@ProjectId AND deleted_at IS NULL AND paid_amount IS NULL AND year_month < @CurrentMonth AND " + CurrentUser.UserFilterWithAuthorizedProjects()
+                : " WHERE deleted_at IS NULL AND paid_amount IS NULL AND year_month < @CurrentMonth AND " + CurrentUser.UserFilterWithAuthorizedProjects();
             return Common.Ok(new
             {
                 count = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM wages{w}", new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId, CurrentMonth = DateTime.Now.ToString("yyyy-MM") }),
@@ -273,9 +275,9 @@ public static class WageEndpoints
                         LEFT JOIN members m ON w.member_id=m.id
                         LEFT JOIN project_workers pw ON w.project_worker_id=pw.id
                         LEFT JOIN workers wr ON pw.worker_id=wr.id
-                        WHERE w.paid_amount IS NULL AND w.year_month < @CurrentMonth";
+                        WHERE w.paid_amount IS NULL AND w.deleted_at IS NULL AND w.year_month < @CurrentMonth";
             if (projectId.HasValue) sql += " AND w.project_id=@ProjectId";
-            // v1.1.0 P0-4 Phase 2: 加 user-dim
+            // v1.1.0 P0-4 Phase 2: 鍔?user-dim
             sql += " AND " + CurrentUser.UserFilterWithAuthorizedProjects("w.project_id");
             sql += " ORDER BY w.year_month DESC";
             return Common.Ok(db.Query(sql, new { ProjectId = projectId, CurrentMonth = DateTime.Now.ToString("yyyy-MM") }));
@@ -296,15 +298,15 @@ public static class WageEndpoints
             return Common.Ok(new { saved = count });
         });
 
-        // ═══════════════════════════════════════════════════════════
-        // 薪资历史 (无 created_by 列, 仅加 var uid 强制鉴权)
-        // ═══════════════════════════════════════════════════════════
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+        // 钖祫鍘嗗彶 (鏃?created_by 鍒? 浠呭姞 var uid 寮哄埗閴存潈)
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 
         app.MapGet("/api/salary-history/{memberId}", (HttpContext ctx, long memberId, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
-            // v1.1.0 P0-4 Phase 2: salary_history 现在有 created_by (migration 014)
+            // v1.1.0 P0-4 Phase 2: salary_history 鐜板湪鏈?created_by (migration 014)
             return Common.Ok(db.Query($"SELECT * FROM salary_history WHERE member_id=@MemberId AND {CurrentUser.UserFilterCompany()} ORDER BY effective_date DESC",
                 new { MemberId = memberId, Uid = uid, IsAdmin = isAdmin }));
         });
@@ -321,14 +323,14 @@ public static class WageEndpoints
         app.MapDelete("/api/salary-history/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            return (await db.ExecuteAsync("DELETE FROM salary_history WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Results.Forbid();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            return (await db.ExecuteAsync("DELETE FROM salary_history WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
         });
-
         app.MapGet("/api/salary-history/{memberId}/effective", (HttpContext ctx, long memberId, string yearMonth, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
-            // v1.1.0 P0-4 Phase 2: salary_history 现在有 created_by
+            // v1.1.0 P0-4 Phase 2: salary_history 鐜板湪鏈?created_by
             var entry = db.QueryFirstOrDefault($@"SELECT * FROM salary_history
                 WHERE member_id=@MemberId AND effective_date<=@Cutoff AND {CurrentUser.UserFilterCompany()}
                 ORDER BY effective_date DESC LIMIT 1",
@@ -336,15 +338,15 @@ public static class WageEndpoints
             return Common.Ok(entry);
         });
 
-        // ═══════════════════════════════════════════════════════════
-        // 工资历史 (系统表, 无 created_by)
-        // ═══════════════════════════════════════════════════════════
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+        // 宸ヨ祫鍘嗗彶 (绯荤粺琛? 鏃?created_by)
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 
         app.MapGet("/api/wage-history/{projectWorkerId}", (HttpContext ctx, long projectWorkerId, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
-            // v1.1.0 P0-4 Phase 2: wage_history 现在有 created_by
+            // v1.1.0 P0-4 Phase 2: wage_history 鐜板湪鏈?created_by
             return Common.Ok(db.Query($"SELECT * FROM wage_history WHERE project_worker_id=@Id AND {CurrentUser.UserFilterCompany()} ORDER BY year_month DESC",
                 new { Id = projectWorkerId, Uid = uid, IsAdmin = isAdmin }));
         });
@@ -353,7 +355,7 @@ public static class WageEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
-            // v1.1.0 P0-4 Phase 2: wage_history 现在有 created_by
+            // v1.1.0 P0-4 Phase 2: wage_history 鐜板湪鏈?created_by
             var entry = db.QueryFirstOrDefault($@"SELECT * FROM wage_history
                 WHERE project_worker_id=@Id AND year_month<=@YearMonth AND {CurrentUser.UserFilterCompany()}
                 ORDER BY year_month DESC LIMIT 1",
@@ -361,22 +363,22 @@ public static class WageEndpoints
             return Common.Ok(entry);
         });
 
-        // ═══════════════════════════════════════════════════════════
-        // 班组工资汇总
-        // ═══════════════════════════════════════════════════════════
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+        // 鐝粍宸ヨ祫姹囨€?
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 
         app.MapGet("/api/team-wages", (HttpContext ctx, IDbConnection db, long projectId, long teamId) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
-            // v1.1.0 P0-4 Phase 2: 加 user-dim 过滤 (限制非 admin 看到非授权项目)
+            // v1.1.0 P0-4 Phase 2: 鍔?user-dim 杩囨护 (闄愬埗闈?admin 鐪嬪埌闈炴巿鏉冮」鐩?
             var sql = $@"SELECT wr.name as worker_name, pw.daily_wage,
                         COUNT(DISTINCT w.year_month) as months,
                         COALESCE(SUM(w.work_days), 0) as work_days,
                         COALESCE(SUM(w.actual_wage), 0) as total_wage
                         FROM project_workers pw
                         JOIN workers wr ON pw.worker_id=wr.id
-                        LEFT JOIN wages w ON w.project_worker_id=pw.id
+                        LEFT JOIN wages w ON w.project_worker_id=pw.id AND w.deleted_at IS NULL
                         WHERE pw.project_id=@ProjectId AND pw.team_id=@TeamId
                           AND (pw.status='active' OR pw.status IS NULL)
                           AND {CurrentUser.UserFilterWithAuthorizedProjects("pw.project_id", "pw.created_by")}
@@ -389,3 +391,4 @@ public static class WageEndpoints
         });
     }
 }
+

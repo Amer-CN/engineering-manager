@@ -22,7 +22,7 @@ export function useMemberFileUrls(member: Member): Record<string, string> {
     const loadFiles = async () => {
       const urls: Record<string, string> = {}
       await Promise.all(FILE_FIELDS.map(async ({ key, cfg }) => {
-        const value = (member as any)[key]
+        const value = (member as unknown as Record<string, string>)[key]
         if (value) {
           urls[key] = await readUploadedFile(cfg.category, cfg.subCategory, value, member.projectName)
         }

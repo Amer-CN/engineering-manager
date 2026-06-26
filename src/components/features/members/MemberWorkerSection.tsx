@@ -15,9 +15,9 @@ interface MemberWorkerSectionProps {
   onAddTeam: (name: string, projectId: number, leaderId?: number | null) => Promise<void>
   onEditTeam: (team: WorkerTeam) => void
   onDeleteTeam: (id: number) => void
-  onTransfer: (worker: any, toTeamId: number, toProjectId: number, transferDate: string, reason: string) => void | Promise<void>
-  onLeave: (worker: any, actualLeaveDate: string, remarks: string) => void | Promise<void>
-  onReEntry: (worker: any) => void | Promise<void>
+  onTransfer: (worker: Member, toTeamId: number, toProjectId: number, transferDate: string, reason: string) => void | Promise<void>
+  onLeave: (worker: Member, actualLeaveDate: string, remarks: string) => void | Promise<void>
+  onReEntry: (worker: Member) => void | Promise<void>
   onImportClick: () => void
   onFileDrop: (file: File) => void | Promise<void>
   onAddFromPool: (projectId: number, existingIds: Set<number>) => void
@@ -30,7 +30,7 @@ const MemberWorkerSection: React.FC<MemberWorkerSectionProps> = (props) => {
         <div className="animate-spin rounded-full h-8 w-8 border-4 border-slate-200 border-t-orange-500"></div>
       </div>
     }>
-      <WorkerSection {...props as any} />
+      <WorkerSection {...(props as unknown as import('./WorkerSectionModals').WorkerSectionProps)} />
     </Suspense>
   )
 }

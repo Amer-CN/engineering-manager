@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import DOMPurify from 'dompurify'
 import { Template } from '../../../types/electron'
 import { Icon } from '../../ui/Icon'
 import { useToastStore } from '@/store/toastStore'
@@ -179,7 +180,7 @@ h1{text-align:center;font-size:18pt;margin-bottom:24px}
                 <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary-500 border-t-transparent" />
               </div>
             ) : (
-              <div className="border border-slate-200 rounded-lg p-8 bg-white shadow-sm" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+              <div className="border border-slate-200 rounded-lg p-8 bg-white shadow-sm" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewHtml) }} />
             )}
           </div></HoverScrollbar></div>
         </div>

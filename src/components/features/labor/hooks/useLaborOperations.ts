@@ -37,7 +37,7 @@ interface UseLaborOperationsReturn {
 
   // Project worker operations
   handleBatchAddWorkers: (entries: any[]) => Promise<void>
-  handleUpdateProjectWorker: (pwId: number, data: Record<string, any>) => Promise<void>
+  handleUpdateProjectWorker: (pwId: number, data: Record<string, unknown>) => Promise<void>
   handleDeleteProjectWorker: (pwId: number) => Promise<void>
   handleTeamWorkerTransfer: (pwId: number, toTeamId: number) => Promise<void>
   /** 确认对话框 JSX，需要在调用方渲染 */
@@ -71,7 +71,7 @@ export function useLaborOperations({
     projects,
     originalMemberFileRef,
     loadData,
-    showToast: (msg: string, type: any) => showToast(msg, type),
+    showToast: (msg: string, type: 'success' | 'error' | 'warning' | 'info') => showToast(msg, type),
     onSuccess: onSuccess || (() => {}),
   })
 
@@ -79,7 +79,7 @@ export function useLaborOperations({
   const { handleCreateTeam, handleUpdateTeam, handleDeleteTeam } = useTeamOps({
     workerTeams,
     loadData,
-    showToast: (msg: string, type: any) => showToast(msg, type),
+    showToast: (msg: string, type: 'success' | 'error' | 'warning' | 'info') => showToast(msg, type),
   })
 
   // Wrap delete member with confirm dialog
@@ -140,8 +140,8 @@ export function useLaborOperations({
           showToast(result.error || '添加失败', 'error')
         }
       }
-    } catch (err: any) {
-      showToast(err.message || '操作失败', 'error')
+    } catch (err: unknown) {
+      showToast((err instanceof Error ? err.message : '操作失败'), 'error')
     }
   }, [loadData, showToast])
 
@@ -162,8 +162,8 @@ export function useLaborOperations({
       } else {
         showToast(result.error || '删除失败', 'error')
       }
-    } catch (err: any) {
-      showToast(err.message || '删除失败', 'error')
+    } catch (err: unknown) {
+      showToast((err instanceof Error ? err.message : '删除失败'), 'error')
     }
   }, [members, confirm, loadData, showToast])
 
@@ -177,12 +177,12 @@ export function useLaborOperations({
       } else {
         showToast(result.error || '添加失败', 'error')
       }
-    } catch (err: any) {
-      showToast(err.message || '添加失败', 'error')
+    } catch (err: unknown) {
+      showToast((err instanceof Error ? err.message : '添加失败'), 'error')
     }
   }, [loadData, showToast])
 
-  const handleUpdateProjectWorker = useCallback(async (pwId: number, data: Record<string, any>) => {
+  const handleUpdateProjectWorker = useCallback(async (pwId: number, data: Record<string, unknown>) => {
     try {
       const result = await (await getAPI()).updateProjectWorker({ id: pwId, ...data })
       if (result.success) {
@@ -191,8 +191,8 @@ export function useLaborOperations({
       } else {
         showToast(result.error || '更新失败', 'error')
       }
-    } catch (err: any) {
-      showToast(err.message || '更新失败', 'error')
+    } catch (err: unknown) {
+      showToast((err instanceof Error ? err.message : '更新失败'), 'error')
     }
   }, [loadData, showToast])
 
@@ -205,8 +205,8 @@ export function useLaborOperations({
       } else {
         showToast(result.error || '移除失败', 'error')
       }
-    } catch (err: any) {
-      showToast(err.message || '移除失败', 'error')
+    } catch (err: unknown) {
+      showToast((err instanceof Error ? err.message : '移除失败'), 'error')
     }
   }, [loadData, showToast])
 
@@ -219,8 +219,8 @@ export function useLaborOperations({
       } else {
         showToast(result.error || '调组失败', 'error')
       }
-    } catch (err: any) {
-      showToast(err.message || '调组失败', 'error')
+    } catch (err: unknown) {
+      showToast((err instanceof Error ? err.message : '调组失败'), 'error')
     }
   }, [loadData, showToast])
 
@@ -255,8 +255,8 @@ export function useLaborOperations({
       } else {
         showToast(result.error || '调转失败', 'error')
       }
-    } catch (err: any) {
-      showToast(err.message || '调转失败', 'error')
+    } catch (err: unknown) {
+      showToast((err instanceof Error ? err.message : '调转失败'), 'error')
     }
   }, [loadData, showToast])
 
@@ -279,8 +279,8 @@ export function useLaborOperations({
       } else {
         showToast(result.error || '操作失败', 'error')
       }
-    } catch (err: any) {
-      showToast(err.message || '操作失败', 'error')
+    } catch (err: unknown) {
+      showToast((err instanceof Error ? err.message : '操作失败'), 'error')
     }
   }, [loadData, showToast])
 
@@ -299,8 +299,8 @@ export function useLaborOperations({
       } else {
         showToast(result.error || '操作失败', 'error')
       }
-    } catch (err: any) {
-      showToast(err.message || '操作失败', 'error')
+    } catch (err: unknown) {
+      showToast((err instanceof Error ? err.message : '操作失败'), 'error')
     }
   }, [loadData, showToast])
 
@@ -317,8 +317,8 @@ export function useLaborOperations({
       } else {
         showToast(result.error || '操作失败', 'error')
       }
-    } catch (err: any) {
-      showToast(err.message || '操作失败', 'error')
+    } catch (err: unknown) {
+      showToast((err instanceof Error ? err.message : '操作失败'), 'error')
     }
   }, [loadData, showToast])
 

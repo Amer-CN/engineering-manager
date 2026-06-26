@@ -61,7 +61,7 @@ export function useWagePayments({
       const result = await (await getAPI()).batchSaveWages(updated)
       if (result.success) { showToast('发放记录已保存', 'success'); setPaymentEdits(new Map()); await loadAllRecords(); await loadStats() }
       else showToast(result.error || '保存失败', 'error')
-    } catch (error: any) { showToast(error?.message || '保存失败', 'error') }
+    } catch (error: unknown) { showToast(error instanceof Error ? error.message : '保存失败', 'error') }
     finally { setLoading(false) }
   }, [paymentEdits, allWageRecords, showToast, setLoading, loadAllRecords, loadStats])
 
@@ -85,7 +85,7 @@ export function useWagePayments({
         })
         await loadAllRecords()
       } else showToast(result.error || '清除失败', 'error')
-    } catch (error: any) { showToast(error?.message || '清除失败', 'error') }
+    } catch (error: unknown) { showToast(error instanceof Error ? error.message : '清除失败', 'error') }
   }, [selectedWageIds, confirm, showToast, setSelectedWageIds, loadAllRecords])
 
   const handleBatchArchivePayments = useCallback(async () => {
@@ -110,7 +110,7 @@ export function useWagePayments({
         await loadAllRecords()
         setPaymentEdits(new Map())
       } else showToast(result.error || '归档失败', 'error')
-    } catch (error: any) { showToast(error?.message || '归档失败', 'error') }
+    } catch (error: unknown) { showToast(error instanceof Error ? error.message : '归档失败', 'error') }
   }, [selectedWageIds, allWageRecords, confirm, showToast, setSelectedWageIds, loadAllRecords])
 
   const toggleWageSelect = useCallback((id: number) => setSelectedWageIds(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next }), [])

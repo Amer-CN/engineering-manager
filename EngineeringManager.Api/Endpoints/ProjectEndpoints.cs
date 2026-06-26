@@ -158,9 +158,9 @@ public static class ProjectEndpoints
         app.MapDelete("/api/project-members/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            return (await db.ExecuteAsync("DELETE FROM project_members WHERE id=@Id", new { Id = id, Uid = uid })) > 0 ? Common.Ok() : Results.Forbid();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            return (await db.ExecuteAsync("DELETE FROM project_members WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
         });
-
 
     }
 }

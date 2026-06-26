@@ -2,6 +2,7 @@ import { formatMoney } from '@/utils/format'
 import { DIRECTION_CONFIG, getCategoryDisplayLabel } from './config'
 import type { CostLedgerEntry, CostLedgerCategory } from '@/types'
 import { COLORS } from './printExportColors'
+import { useToastStore } from '@/store/toastStore'
 
 function esc(s: string): string {
   if (!s) return ''
@@ -80,7 +81,7 @@ export async function exportCostLedgerList(
   categories: CostLedgerCategory[] | null | undefined,
   categoryLevel: 'level1' | 'level2',
 ) {
-  if (entries.length === 0) { alert('没有可导出的数据'); return }
+  if (entries.length === 0) { useToastStore.getState().showToast('没有可导出的数据', 'error'); return }
   try {
     const XLSX = await import('xlsx')
     const data = entries.map((e, i) => ({
@@ -103,5 +104,5 @@ export async function exportCostLedgerList(
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, '成本台账')
     XLSX.writeFile(wb, `成本台账_${new Date().toISOString().slice(0, 10)}.xlsx`)
-  } catch (e) { console.error('导出失败:', e); alert('导出失败，请重试') }
+  } catch (e) { console.error('导出失败:', e); useToastStore.getState().showToast('导出失败，请重试', 'error') }
 }

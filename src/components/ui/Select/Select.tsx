@@ -91,7 +91,7 @@ export function Select({
   if (multiple) {
   onChange?.([])
   } else {
-  onChange?.(undefined as any)
+  onChange?.(undefined as unknown as string | number | (string | number)[])
   }
   }
 

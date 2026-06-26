@@ -4,7 +4,7 @@
 import { setCurrentUser as setPermissionsUser, type AuthContext as PermissionsAuthContext } from '../types/permissions'
 import { setCurrentAuditUser, logAudit } from '../utils/audit'
 import { getAPI } from '../services/api-adapter'
-import type { StoredAuth } from './AuthContext'
+import type { StoredAuth } from '@/store/authStore'
 
 /**
  * 同步登录状态到各模块（权限模块、审计、主进程 session）
@@ -89,3 +89,4 @@ export function restoreAuthSession(): StoredAuth | null {
   }
   return null
 }
+

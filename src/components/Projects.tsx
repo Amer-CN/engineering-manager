@@ -3,7 +3,7 @@
  * 布局：Hero 横幅 → KPI 卡片 → 告警条 → 筛选栏 → 项目卡片
  * KPI 卡片融合了 Dashboard 和项目管理首页的数据，去除重复项
  */
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import type { Project, Member } from '../types/electron'
 import { logCreate, logUpdate, logDelete, logExport } from '../utils/audit'
 import { usePermission } from '../hooks/usePermission.tsx'
@@ -12,6 +12,9 @@ import { useToastStore } from '@/store/toastStore'
 import { useConfirm } from '@/hooks/useConfirm'
 import { ProjectList, ProjectForm, ProjectDetail, ProjectFilters, ProjectFormData, AlertBar, AlertItem } from './features/projects'
 import { getAPI } from '@/services/api-adapter'
+import { useQueryClient } from '@tanstack/react-query'
+import { useProjects } from '../hooks/data/useProjects'
+import { useMembers } from '../hooks/data/useMembers'
 import { motion } from 'framer-motion'
 import { Icon } from './ui/Icon'
 import PageContainer from './ui/PageContainer'
@@ -21,9 +24,12 @@ const Projects: React.FC<{ refresh?: () => void }> = ({ refresh }) => {
   const { can } = usePermission()
   const showToast = useToastStore(state => state.showToast)
   const { confirm, ConfirmDialog } = useConfirm()
-  const [projects, setProjects] = useState<Project[]>([])
-  const [members, setMembers] = useState<Member[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
+  const projectsQuery = useProjects()
+  const membersQuery = useMembers()
+  const projects: Project[] = projectsQuery.data ?? []
+  const members: Member[] = membersQuery.data ?? []
+  const loading = projectsQuery.isLoading || membersQuery.isLoading
   const [view, setView] = useState<'list' | 'detail'>('list')
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [showModal, setShowModal] = useState(false)
@@ -31,20 +37,6 @@ const Projects: React.FC<{ refresh?: () => void }> = ({ refresh }) => {
   const [filterStatus, setFilterStatus] = useState<string | null>(null)
   const [filterManager, setFilterManager] = useState<number | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
-
-  const loadData = async () => {
-    setLoading(true)
-    try {
-      const api = await getAPI()
-      const [projR, memR] = await Promise.allSettled([api.getProjects(), api.getMembers()])
-      const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
-      setProjects(get(projR))
-      setMembers(get(memR))
-    } catch (e) { console.error('加载失败:', e) }
-    finally { setLoading(false) }
-  }
-
-  useEffect(() => { loadData() }, [refresh])
 
   const handleCreate = () => { setEditingProject(null); setShowModal(true) }
   const handleEdit = (project: Project) => { setEditingProject(project); setShowModal(true) }
@@ -54,7 +46,7 @@ const Projects: React.FC<{ refresh?: () => void }> = ({ refresh }) => {
     if (!ok) return
     const p = projects.find(p => p.id === id)
     const r = await (await getAPI()).deleteProject(id)
-    if (r.success) { logDelete('projects', p?.name || '项目', id, { name: p?.name }); loadData(); showToast('已删除', 'success') }
+    if (r.success) { logDelete('projects', p?.name || '项目', id, { name: p?.name }); queryClient.invalidateQueries({ queryKey: ['projects'] }); showToast('已删除', 'success') }
     else showToast(r.error || '失败', 'error')
   }
   const handleSubmit = async (data: ProjectFormData) => {
@@ -66,9 +58,9 @@ const Projects: React.FC<{ refresh?: () => void }> = ({ refresh }) => {
       } else {
         const r = await (await getAPI()).createProject(data)
         if (!r.success) throw new Error(r.error || '创建失败')
-        logCreate('projects', data.name, r.data?.id, data)
+        logCreate('projects', data.name, r.data?.id, data as unknown as Record<string, unknown>)
       }
-      loadData(); setShowModal(false); setEditingProject(null)
+      queryClient.invalidateQueries({ queryKey: ['projects'] }); setShowModal(false); setEditingProject(null)
       showToast(editingProject ? '更新成功' : '创建成功', 'success')
     } catch (e: any) { showToast(e.message || '操作失败', 'error'); throw e }
   }

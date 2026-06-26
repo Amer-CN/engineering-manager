@@ -22,7 +22,7 @@ export function IdCardUploadArea({ label, image, field, dragOverField, onDragOve
         <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={onInputChange} className="hidden" onClick={(e) => e.stopPropagation()} />
         {image ? (
           <div className="relative group">
-            <img src={image} alt={label} className="max-h-20 mx-auto rounded" />
+            <img src={image} alt={label} className="max-h-20 mx-auto rounded" loading="lazy" />
             <div className="absolute inset-0 bg-black bg-opacity-40 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
               <span className="text-white text-xs">点击删除</span>
             </div>

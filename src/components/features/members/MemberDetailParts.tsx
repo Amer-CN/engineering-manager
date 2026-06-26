@@ -7,7 +7,7 @@ export function PreviewModal({ data, type, title, onClose }: { data: string; typ
   <Modal isOpen onClose={onClose} title={title} size="full">
   <div className="bg-slate-100 rounded-lg p-4" style={{ minHeight: '70vh' }}>
   {type === 'image' ? (
-  <img src={data} alt={title} className="max-w-full h-auto mx-auto rounded-lg shadow-lg" />
+  <img src={data} alt={title} className="max-w-full h-auto mx-auto rounded-lg shadow-lg" loading="lazy" />
   ) : (
   <embed src={data} type="application/pdf" className="w-full h-full rounded-lg" />
   )}
@@ -43,11 +43,11 @@ export function IdCardImages({ idCardFront, idCardBack, fileUrls, onPreview }: {
   {idCardFront && fileUrls.idCardFront && (
   <div className="text-center"><p className="text-xs text-slate-500 mb-2">人像面</p>
   <div className="border border-slate-200 rounded-lg p-2 cursor-pointer hover:border-primary-400 transition-colors" onClick={() => onPreview(fileUrls.idCardFront!, 'image', '身份证人像面')}>
-  <img src={fileUrls.idCardFront} alt="人像面" className="max-h-32 mx-auto rounded" /></div></div>)}
+  <img src={fileUrls.idCardFront} alt="人像面" className="max-h-32 mx-auto rounded" loading="lazy" /></div></div>)}
   {idCardBack && fileUrls.idCardBack && (
   <div className="text-center"><p className="text-xs text-slate-500 mb-2">国徽面</p>
   <div className="border border-slate-200 rounded-lg p-2 cursor-pointer hover:border-primary-400 transition-colors" onClick={() => onPreview(fileUrls.idCardBack!, 'image', '身份证国徽面')}>
-  <img src={fileUrls.idCardBack} alt="国徽面" className="max-h-32 mx-auto rounded" /></div></div>)}
+  <img src={fileUrls.idCardBack} alt="国徽面" className="max-h-32 mx-auto rounded" loading="lazy" /></div></div>)}
   </div>
   </div>
   )

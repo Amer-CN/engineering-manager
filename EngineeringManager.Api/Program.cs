@@ -1,4 +1,5 @@
 using System.Data;
+using System.Security.Cryptography;
 using Microsoft.Data.Sqlite;
 using Dapper;
 using Microsoft.Extensions.FileProviders;
@@ -6,6 +7,66 @@ using EngineeringManager.Api;
 using Microsoft.Extensions.DependencyInjection;
 
 // ============ API 配置类（供 EntryPoint.cs 调用） ============
+
+/// <summary>
+/// JWT secret 提供者 (P0-1/P0-8 修复)。
+/// 优先级: JWT_SECRET 环境变量 > 持久化文件 (%APPDATA%\工程管家\jwt.key) > 首次生成。
+/// 持久化文件机器绑定,不随数据存储路径迁移,避免密钥外泄到备份/其他机器。
+/// </summary>
+public static class JwtSecretProvider
+{
+    private static string? _cached;
+    private static readonly object _lock = new();
+
+    public static string GetOrCreate()
+    {
+        lock (_lock)
+        {
+            if (_cached != null) return _cached;
+
+            // 1. 优先环境变量 (开发/运维场景显式覆盖)
+            var env = Environment.GetEnvironmentVariable("JWT_SECRET");
+            if (!string.IsNullOrWhiteSpace(env) && env.Length >= 32)
+            {
+                _cached = env;
+                return _cached;
+            }
+
+            // 2. 持久化文件
+            var path = GetKeyPath();
+            try
+            {
+                if (File.Exists(path))
+                {
+                    var fromFile = File.ReadAllText(path).Trim();
+                    if (fromFile.Length >= 32) { _cached = fromFile; return _cached; }
+                }
+            }
+            catch (Exception ex) { Console.Error.WriteLine($"[JwtSecret] 读取持久化文件失败: {Common.Sanitize(ex.Message)}"); }
+
+            // 3. 首次启动生成随机 32 字节密钥 (base64 编码),持久化
+            var bytes = RandomNumberGenerator.GetBytes(32);
+            var generated = Convert.ToBase64String(bytes);
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                File.WriteAllText(path, generated);
+                Console.Out.WriteLine("[JwtSecret] 已生成并持久化随机 JWT secret (首次启动)");
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[JwtSecret] 持久化失败,使用内存临时密钥: {Common.Sanitize(ex.Message)}");
+            }
+            _cached = generated;
+            return _cached;
+        }
+    }
+
+    private static string GetKeyPath() =>
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "工程管家", "jwt.key");
+}
 
 public static class ApiConfig
 {
@@ -47,7 +108,10 @@ public static class ApiConfig
 
         builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
             {
-                var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? "dev-only-secret-please-change-in-prod-32bytes";
+                // P0-1/P0-8: JWT secret 不再硬编码默认值。优先级: 环境变量 > 持久化文件。
+                // 首次启动若无环境变量则生成随机 32 字节密钥,持久化到 %APPDATA%\工程管家\jwt.key
+                // (机器绑定: 不随数据备份迁移到其他机器, 避免密钥外泄)
+                var jwtSecret = JwtSecretProvider.GetOrCreate();
                 options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
                 {
                     ValidateIssuer = true, ValidateAudience = true, ValidateLifetime = true, ValidateIssuerSigningKey = true,
@@ -133,6 +197,20 @@ builder.Services.ConfigureHttpJsonOptions(options =>
         }
 
         app.UseCors();
+        app.UseExceptionHandler(errorApp =>
+        {
+            errorApp.Run(async context =>
+            {
+                context.Response.StatusCode = 500;
+                context.Response.ContentType = "application/json";
+                var error = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
+                if (error != null)
+                {
+                    Console.Error.WriteLine($"[Global] 未处理异常: {error.Error.Message}");
+                    await context.Response.WriteAsJsonAsync(new { success = false, error = "服务器内部错误" });
+                }
+            });
+        });
         app.UseAuthentication();
         app.UseAuthorization();
         app.UseMiddleware<EngineeringManager.Api.GlobalAuthMiddleware>();
@@ -239,7 +317,10 @@ builder.Services.ConfigureHttpJsonOptions(options =>
                     return path;
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[ResolveDataPath] 读取 config.json 失败: {ex.Message}");
+        }
         return defaultPath;
     }
 
@@ -317,27 +398,13 @@ CREATE TABLE IF NOT EXISTS regions (id INTEGER PRIMARY KEY AUTOINCREMENT, provin
 CREATE TABLE IF NOT EXISTS drawings (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, name TEXT, file_url TEXT, file_name TEXT, file_type TEXT, remark TEXT, created_at TEXT, updated_at TEXT);
 CREATE TABLE IF NOT EXISTS expenses (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, category TEXT, amount REAL, date TEXT, description TEXT, vendor TEXT, receipt_url TEXT, created_at TEXT, updated_at TEXT);
 CREATE TABLE IF NOT EXISTS contract_templates (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, type TEXT, content TEXT, variables TEXT, created_at TEXT, updated_at TEXT);
-CREATE TABLE IF NOT EXISTS payment_records (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    type TEXT NOT NULL,
-    amount REAL DEFAULT 0,
-    record_date TEXT DEFAULT '',
-    project_id INTEGER,
-    partner_id INTEGER,
-    contract_id INTEGER,
-    invoice_details TEXT DEFAULT '[]',
-    remarks TEXT DEFAULT '',
-    file_url TEXT,
-    file_type TEXT,
-    created_at TEXT DEFAULT (datetime('now'))
-);
 ");
 
             // invoices 表迁移：添加缺失列
-            try { db.Execute(@"ALTER TABLE invoices ADD COLUMN seller_id INTEGER"); } catch { }
-            try { db.Execute(@"ALTER TABLE invoices ADD COLUMN buyer_id INTEGER"); } catch { }
-            try { db.Execute(@"ALTER TABLE invoices ADD COLUMN received_amount REAL DEFAULT 0"); } catch { }
-            try { db.Execute(@"ALTER TABLE invoices ADD COLUMN settlement_id INTEGER"); } catch { }
+            try { db.Execute(@"ALTER TABLE invoices ADD COLUMN seller_id INTEGER"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] invoices seller_id: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE invoices ADD COLUMN buyer_id INTEGER"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] invoices buyer_id: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE invoices ADD COLUMN received_amount REAL DEFAULT 0"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] invoices received_amount: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE invoices ADD COLUMN settlement_id INTEGER"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] invoices settlement_id: {ex.Message}"); }
 
             // payment_records 表迁移
             try
@@ -367,7 +434,10 @@ CREATE TABLE IF NOT EXISTS payment_records (
                     ");
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[EnsureTables] payment_records 迁移失败: {ex.Message}");
+            }
     }
 
 }

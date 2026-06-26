@@ -7,6 +7,7 @@
  */
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { getAPI } from '@/services/api-adapter'
+import type { Member, Project, Department, WorkerTeam, ProjectWorker, AttendanceRecord, WageRecord } from '@/types'
 
 export type PayrollMode = 'staff' | 'worker'
 
@@ -14,13 +15,40 @@ export interface PayrollDataOptions {
   mode: PayrollMode
 }
 
+
+/** Worker 模式下的人员数据（来自 project_workers 关联查询） */
+export interface PayrollPerson {
+  id: number
+  workerId: number
+  name: string
+  idCard: string
+  teamId: number
+  teamName: string
+  projectId: number
+  projectName: string
+  dailyWage: number
+  workerType: string
+  entryDate: string
+  status: string
+  departmentId?: number
+}
+
+/** 工资记录（staff 和 worker 模式共用） */
+export interface PayrollWage extends WageRecord {
+  netSalary?: number
+  /** staff 模式专有 */
+  baseSalary?: number
+  attendanceDays?: number
+  subsidy?: number
+}
+
 export interface PayrollData {
   loading: boolean
   selectedMonth: string
   setSelectedMonth: (m: string) => void
-  projects: any[]
-  departments: any[]
-  workerTeams: any[]
+  projects: Project[]
+  departments: Department[]
+  workerTeams: WorkerTeam[]
   filterDept: number | ''
   setFilterDept: (d: number | '') => void
   filterProject: string
@@ -28,12 +56,12 @@ export interface PayrollData {
   filterName: string
   setFilterName: (n: string) => void
   // 人员/工人（worker 模式下是选中项目的人）
-  people: any[]
+  people: PayrollPerson[]
   // 考勤
-  attendances: any[]
+  attendances: AttendanceRecord[]
   // 工资
-  wages: any[]
-  filteredWages: any[]
+  wages: PayrollWage[]
+  filteredWages: PayrollWage[]
   // 统计
   summary: { totalNet: number; totalPaid: number; totalDiff: number }
   // 操作
@@ -41,6 +69,11 @@ export interface PayrollData {
   generating: boolean
   setGenerating: (v: boolean) => void
 }
+
+type ApiOk<T = Record<string, unknown>[]> = { success: boolean; data: T }
+
+const unwrapSettled = <T,>(r: PromiseSettledResult<ApiOk<T>>): T =>
+  r.status === 'fulfilled' && r.value?.success ? r.value.data : ([] as unknown as T)
 
 const now = new Date()
 const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
@@ -51,9 +84,9 @@ export function usePayrollData({ mode }: PayrollDataOptions): PayrollData {
   const [generating, setGenerating] = useState(false)
 
   // 基础数据
-  const [projects, setProjects] = useState<any[]>([])
-  const [departments, setDepartments] = useState<any[]>([])
-  const [workerTeams, setWorkerTeams] = useState<any[]>([])
+  const [projects, setProjects] = useState<Project[]>([])
+  const [departments, setDepartments] = useState<Department[]>([])
+  const [workerTeams, setWorkerTeams] = useState<WorkerTeam[]>([])
 
   // 筛选
   const [filterDept, setFilterDept] = useState<number | ''>('')
@@ -61,9 +94,9 @@ export function usePayrollData({ mode }: PayrollDataOptions): PayrollData {
   const [filterName, setFilterName] = useState('')
 
   // 业务数据
-  const [people, setPeople] = useState<any[]>([])
-  const [attendances, setAttendances] = useState<any[]>([])
-  const [wages, setWages] = useState<any[]>([])
+  const [people, setPeople] = useState<PayrollPerson[]>([])
+  const [attendances, setAttendances] = useState<AttendanceRecord[]>([])
+  const [wages, setWages] = useState<PayrollWage[]>([])
 
   // ── 加载基础数据（项目/部门/班组） ──
   const loadBaseData = useCallback(async () => {
@@ -75,19 +108,17 @@ export function usePayrollData({ mode }: PayrollDataOptions): PayrollData {
           api.getDepartments(),
           api.getProjects(),
         ])
-        const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
-        const staffOnly = get(memRes).filter((m: any) => m.memberType === 'staff' || m.memberType === undefined)
-        setPeople(staffOnly)
-        setDepartments(get(deptRes))
-        setProjects(get(projRes).filter((p: any) => p.status !== 'archived'))
+        const staffOnly = unwrapSettled<Member[]>(memRes).filter((m) => m.memberType === 'staff' || m.memberType === undefined)
+        setPeople(staffOnly as unknown as PayrollPerson[])
+        setDepartments(unwrapSettled<Department[]>(deptRes))
+        setProjects(unwrapSettled<Project[]>(projRes).filter((p) => p.status !== 'archived'))
       } else {
         const [projRes, teamsRes] = await Promise.allSettled([
           api.getProjects(),
           api.getWorkerTeams(),
         ])
-        const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
-        setProjects(get(projRes).filter((p: any) => p.status !== 'archived'))
-        setWorkerTeams(get(teamsRes))
+        setProjects(unwrapSettled<Project[]>(projRes).filter((p) => p.status !== 'archived'))
+        setWorkerTeams(unwrapSettled<WorkerTeam[]>(teamsRes))
       }
     } catch (e) {
       console.error('加载基础数据失败:', e)
@@ -103,10 +134,9 @@ export function usePayrollData({ mode }: PayrollDataOptions): PayrollData {
         api.getWages(undefined, undefined),
         api.getAttendances(undefined, undefined),
       ])
-      const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
-      const staffIds = new Set(people.map((m: any) => m.id))
-      setWages(get(wageRes).filter((w: any) => staffIds.has(w.memberId)))
-      setAttendances(get(attRes))
+      const staffIds = new Set(people.map((m) => m.id))
+      setWages(unwrapSettled<PayrollWage[]>(wageRes).filter((w) => staffIds.has(w.memberId!)))
+      setAttendances(unwrapSettled<AttendanceRecord[]>(attRes))
     } catch (e) { console.error('加载工资数据失败:', e) }
     finally { setLoading(false) }
   }, [people])
@@ -121,15 +151,16 @@ export function usePayrollData({ mode }: PayrollDataOptions): PayrollData {
         api.getWages(projectId, undefined),
         api.getAttendances(projectId, undefined),
       ])
-      const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
 
       // 构建项目工人列表
-      const pwData = get(pwRes)
-      const allPw = pwData.map((pw: any) => ({
+      // API 返回的 project_worker 带有嵌套 worker 关联数据
+      type ProjectWorkerRaw = ProjectWorker & { worker?: { name?: string; idCard?: string; dailyWage?: number; workerType?: string } }
+      const pwData = unwrapSettled<ProjectWorkerRaw[]>(pwRes)
+      const allPw = pwData.map((pw) => ({
         id: pw.id, workerId: pw.workerId,
         name: pw.workerName || pw.worker?.name || '',
         idCard: pw.workerIdCard || pw.worker?.idCard || '',
-        teamId: pw.teamId, teamName: pw.teamName || '',
+        teamId: pw.teamId ?? 0, teamName: pw.teamName || '',
         projectId: pw.projectId, projectName: pw.projectName || '',
         dailyWage: pw.dailyWage || pw.worker?.dailyWage || 0,
         workerType: pw.worker?.workerType || pw.workerType,
@@ -137,9 +168,9 @@ export function usePayrollData({ mode }: PayrollDataOptions): PayrollData {
       }))
       setPeople(allPw)
 
-      const pwIds = new Set(allPw.map((pw: any) => pw.id))
-      setWages(get(wageRes).filter((w: any) => pwIds.has(w.projectWorkerId)))
-      setAttendances(get(attRes))
+      const pwIds = new Set(allPw.map((pw) => pw.id))
+      setWages(unwrapSettled<PayrollWage[]>(wageRes).filter((w) => pwIds.has(w.projectWorkerId!)))
+      setAttendances(unwrapSettled<AttendanceRecord[]>(attRes))
     } catch (e) { console.error('加载项目数据失败:', e) }
     finally { setLoading(false) }
   }, [])
@@ -177,7 +208,7 @@ export function usePayrollData({ mode }: PayrollDataOptions): PayrollData {
     if (mode === 'worker') {
       // worker 模式：数据已按项目加载，只需按月过滤
       const [year, month] = selectedMonth.split('-')
-      return wages.filter((w: any) => {
+      return wages.filter((w) => {
         if (w.yearMonth?.slice(0, 4) !== year) return false
         if (w.yearMonth?.slice(5, 7) !== month) return false
         if (filterName && !(w.memberName || '').includes(filterName)) return false
@@ -186,12 +217,12 @@ export function usePayrollData({ mode }: PayrollDataOptions): PayrollData {
     }
     // staff 模式：按年月+部门+项目+姓名过滤
     const [year, month] = selectedMonth.split('-')
-    return wages.filter((w: any) => {
+    return wages.filter((w) => {
       if (w.yearMonth?.slice(0, 4) !== year) return false
       if (w.yearMonth?.slice(5, 7) !== month) return false
       if (filterName && !(w.memberName || '').includes(filterName)) return false
       if (filterDept) {
-        const p = people.find((m: any) => m.id === w.memberId)
+        const p = people.find((m) => m.id === w.memberId!)
         if (p && (p.departmentId ?? -1) !== filterDept) return false
       }
       if (filterProject !== '全部') {
@@ -203,8 +234,8 @@ export function usePayrollData({ mode }: PayrollDataOptions): PayrollData {
 
   // 汇总统计
   const summary = useMemo(() => {
-    const totalNet = filteredWages.reduce((s: number, w: any) => s + (w.actualWage || w.netSalary || 0), 0)
-    const totalPaid = filteredWages.reduce((s: number, w: any) => s + (Number(w.paidAmount) || 0), 0)
+    const totalNet = filteredWages.reduce((s, w) => s + (w.actualWage || w.netSalary || 0), 0)
+    const totalPaid = filteredWages.reduce((s, w) => s + (Number(w.paidAmount) || 0), 0)
     return { totalNet, totalPaid, totalDiff: totalNet - totalPaid }
   }, [filteredWages])
 

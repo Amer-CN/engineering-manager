@@ -27,7 +27,7 @@ export function useWagePaymentOps(deps: {
         setPaymentEdits(prev => { const next = new Map(prev); for (const id of selectedWageIds) next.delete(id); return next })
         await loadAllRecords()
       } else showToast(result.error || '清除失败', 'error')
-    } catch (error: any) { showToast(error?.message || '清除失败', 'error') }
+    } catch (error: unknown) { showToast(error instanceof Error ? error.message : '清除失败', 'error') }
   }
 
   const handleBatchArchivePayments = async () => {
@@ -44,7 +44,7 @@ export function useWagePaymentOps(deps: {
         showToast(`已归档 ${result.data?.archived ?? toArchive.length} 条发放记录`, 'success')
         setSelectedWageIds(new Set()); await loadAllRecords(); setPaymentEdits(new Map())
       } else showToast(result.error || '归档失败', 'error')
-    } catch (error: any) { showToast(error?.message || '归档失败', 'error') }
+    } catch (error: unknown) { showToast(error instanceof Error ? error.message : '归档失败', 'error') }
   }
 
   const handlePaymentChange = (recordId: number, field: 'paidAmount' | 'paidDate', value: string | number) => {
@@ -69,7 +69,7 @@ export function useWagePaymentOps(deps: {
       const result = await (await getAPI()).batchSaveWages(updated)
       if (result.success) { showToast('发放记录已保存', 'success'); setPaymentEdits(new Map()); await loadAllRecords(); await loadStats() }
       else showToast(result.error || '保存失败', 'error')
-    } catch (error: any) { showToast(error?.message || '保存失败', 'error') }
+    } catch (error: unknown) { showToast(error instanceof Error ? error.message : '保存失败', 'error') }
     finally { setLoading(false) }
   }
 

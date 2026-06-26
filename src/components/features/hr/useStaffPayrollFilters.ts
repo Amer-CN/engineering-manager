@@ -1,4 +1,6 @@
 import { useState, useMemo } from 'react'
+import type { Member } from '@/types'
+import type { PayrollWage } from '../payroll/usePayrollData'
 
 export interface StaffPayrollFiltersApi {
   filterYear: string
@@ -13,13 +15,13 @@ export interface StaffPayrollFiltersApi {
   setFilterProject: (p: string) => void
   yearOptions: string[]
   effectiveYearMonth: string
-  filteredWages: any[]
+  filteredWages: PayrollWage[]
   summaryTotals: { totalNet: number; totalPaid: number; totalDiff: number }
 }
 
 export function useStaffPayrollFilters(
-  staff: any[],
-  allWages: any[],
+  staff: Member[],
+  allWages: PayrollWage[],
   now: Date = new Date()
 ): StaffPayrollFiltersApi {
   const [filterYear, setFilterYear] = useState<string>('全部')
@@ -45,12 +47,12 @@ export function useStaffPayrollFilters(
     : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 
   const filteredWages = useMemo(() => {
-    return allWages.filter((w: any) => {
+    return allWages.filter((w) => {
       if (filterYear !== '全部' && w.yearMonth?.slice(0, 4) !== filterYear) return false
       if (filterMonth !== '全部' && w.yearMonth?.slice(5, 7) !== filterMonth) return false
       if (filterMemberName && !(w.memberName || '').includes(filterMemberName)) return false
       if (filterDept) {
-        const s = staff.find((m: any) => m.id === w.memberId)
+        const s = staff.find((m) => m.id === w.memberId)
         if (s && s.departmentId !== filterDept) return false
       }
       if (filterProject !== '全部') {

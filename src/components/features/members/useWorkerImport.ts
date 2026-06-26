@@ -48,8 +48,8 @@ export interface ImportState {
   activeSheet: string
   headerRow: number
   headers: string[]
-  previewRows: any[][]
-  allRows: any[][]
+  previewRows: string[][]
+  allRows: string[][]
   mapping: Record<string, number>
   fileName: string
   detectedPreset: string | null
@@ -108,7 +108,7 @@ function confidenceForField(key: string, headers: string[]): number {
 }
 
 /** 过滤 null/空 headers 并对齐数据行（修复合并单元格列索引错位） */
-function alignColumns(rawHeaders: any[], dataRows: any[][]): { headers: string[]; rows: any[][] } {
+function alignColumns(rawHeaders: unknown[], dataRows: string[][]): { headers: string[]; rows: string[][] } {
   // 找出有效（非空）表头的列索引
   const validColIndices: number[] = []
   const filteredHeaders: string[] = []
@@ -122,7 +122,7 @@ function alignColumns(rawHeaders: any[], dataRows: any[][]): { headers: string[]
   }
   if (validColIndices.length === rawHeaders.length) {
     // 无空列，直接返回
-    return { headers: rawHeaders.map((h: any) => String(h || '').trim()), rows: dataRows }
+    return { headers: rawHeaders.map((h) => String(h || '').trim()), rows: dataRows }
   }
   // 按有效列索引对齐数据
   const alignedRows = dataRows.map(row => validColIndices.map(i => row[i]))
@@ -259,7 +259,7 @@ export function useWorkerImport(existingIdCards: Set<string>) {
       const sName = sheetName || wb.SheetNames[0]
       const ws = wb.Sheets[sName]
       const rows = XLSX.utils.sheet_to_json(ws, { header: 1 })
-      const rawHeaders: any[] = headerRow < rows.length ? rows[headerRow] as string[] : []
+      const rawHeaders: unknown[] = headerRow < rows.length ? rows[headerRow] as unknown[] : []
       const rawDataRows = (rows.slice(1).filter((r) => (r as unknown[]).some((c: unknown) => c !== undefined && c !== null && String(c).trim() !== ''))) as string[][]
       // 过滤 null 表头并对齐数据列（修复合并单元格列索引错位）
       const { headers, rows: dataRows } = alignColumns(rawHeaders, rawDataRows)
@@ -308,7 +308,7 @@ export function useWorkerImport(existingIdCards: Set<string>) {
         // Store buffer for re-parsing
         storedBufferRef.current = { buf, fileName: file.name, fileType: file.name.endsWith('.csv') ? 'csv' : 'xlsx' }
 
-        let wb: any
+        let wb: ReturnType<typeof XLSX.read>
 
         if (file.name.endsWith('.csv')) {
           const encoding = detectCSVEncoding(buf)
@@ -338,7 +338,7 @@ export function useWorkerImport(existingIdCards: Set<string>) {
         const ws = wb.Sheets[sheetName]
         const rows = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1 }) as string[][]
         const rawHeaders = rows.length > 0 ? rows[0] : []
-        const rawDataRows = rows.slice(1).filter((r: any[]) => r.some(c => c !== undefined && c !== null && String(c).trim() !== ''))
+        const rawDataRows = rows.slice(1).filter((r: unknown[]) => r.some(c => c !== undefined && c !== null && String(c).trim() !== ''))
         // 过滤 null 表头并对齐数据列（修复合并单元格列索引错位）
         const { headers, rows: dataRows } = alignColumns(rawHeaders, rawDataRows)
         const match = matchPreset(headers)
@@ -392,7 +392,7 @@ export function useWorkerImport(existingIdCards: Set<string>) {
   }, [importState])
 
   const executeImport = useCallback(async (
-    createMember: (data: any) => Promise<{ success: boolean; data?: any; error?: string }>,
+    createMember: (data: Record<string, unknown>) => Promise<{ success: boolean; data?: Record<string, unknown>; error?: string }>,
     onComplete: () => void
   ) => {
     if (!importState) return
@@ -430,7 +430,7 @@ export function useWorkerImport(existingIdCards: Set<string>) {
         const birthDate = rowData.birthDate || extractBirthDate(rowData.idCard)
 
         // Build field values from this row
-        const rowFields: Record<string, any> = {
+        const rowFields: Record<string, string | number | undefined> = {
           gender, birthDate,
           ethnicity: rowData.ethnicity || undefined,
           phone: rowData.phone || undefined,
@@ -448,7 +448,7 @@ export function useWorkerImport(existingIdCards: Set<string>) {
           if (workerRes.success && workerRes.data && workerRes.data.length > 0) {
             const existing = workerRes.data[0]
             // Build update: only overwrite fields that have new non-empty values
-            const update: Record<string, any> = { id: existing.id }
+            const update: Record<string, unknown> = { id: existing.id }
             let hasChanges = false
             for (const [key, val] of Object.entries(rowFields)) {
               if (val !== undefined && val !== '' && val !== null) {

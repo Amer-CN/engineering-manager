@@ -56,7 +56,7 @@ export function CostLedgerImportModal({
   const [activeSheet, setActiveSheet] = useState('')
   const [headerRow] = useState(0)
   const [headers, setHeaders] = useState<string[]>([])
-  const [allRows, setAllRows] = useState<any[][]>([])
+  const [allRows, setAllRows] = useState<string[][]>([] as string[][])
   const [mapping, setMapping] = useState<Record<string, number>>({})
   const [categoryOverrides, setCategoryOverrides] = useState<Record<string, string>>({})
   const [rowOverrides, setRowOverrides] = useState<Record<number, string>>({})
@@ -70,7 +70,7 @@ export function CostLedgerImportModal({
   if (api?.getCostLedgerMatchRules) {
   return api.getCostLedgerMatchRules()
   }
-  }).then((r: any) => { if (r?.success) setLearnedRules(r.data || []) })
+  }).then((r: unknown) => { const res = r as Record<string, unknown>; if (res?.success) setLearnedRules((res.data as CostLedgerMatchRule[]) || []) })
   }, [])
 
   // ── 文件选择 ──
@@ -88,18 +88,18 @@ export function CostLedgerImportModal({
   setSheetNames(workbook.SheetNames)
   setActiveSheet(workbook.SheetNames[0] || '')
   loadSheet(workbook, workbook.SheetNames[0] || '', 0)
-  } catch (err: any) { setError(`文件读取失败: ${err.message}`) }
+  } catch (err: unknown) { setError(`文件读取失败: ${err instanceof Error ? err.message : String(err)}`) }
   }
   reader.readAsArrayBuffer(file)
   e.target.value = ''
   }, [])
 
   // ── 加载工作表 ──
-  const loadSheet = useCallback(async (workbook: any, sheetName: string, hRow: number) => {
+  const loadSheet = useCallback(async (workbook: WorkBook, sheetName: string, hRow: number) => {
   const XLSX = await import('xlsx')
   const ws = workbook.Sheets[sheetName]
-  const rows = XLSX.utils.sheet_to_json<any[]>(ws, { header: 1 }) as any[][]
-  const hdrs = rows.length > hRow ? rows[hRow].map((h: any) => String(h || '').trim()) : []
+  const rows = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1 }) as string[][]
+  const hdrs = rows.length > hRow ? rows[hRow].map((h: unknown) => String(h ?? '').trim()) : []
   const dataRows = rows.slice(hRow + 1)
   setHeaders(hdrs)
   setAllRows(dataRows)

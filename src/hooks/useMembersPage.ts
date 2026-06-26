@@ -3,6 +3,7 @@ import type { Member } from '../types/electron'
 import { getOCRConfig } from '../services/ocr'
 import { useToastStore } from '../store/toastStore'
 import { defaultStaffFormData, defaultWorkerFormData } from '../components/features/members'
+import type { StaffFormData, WorkerFormData } from '../components/features/members'
 import { useMemberOperations } from '../components/features/members/useMemberOperations'
 import { useTeamOps } from '../components/features/members/useTeamOps'
 import { useLaborOperations } from '../components/features/labor/hooks/useLaborOperations'
@@ -62,7 +63,7 @@ export function useMembersPage({ refresh }: UseMembersPageProps) {
     type: showWorkerModal ? 'worker' : 'staff',
     staffFormData, workerFormData, setStaffFormData, setWorkerFormData,
     processIdCardFile: processFileForIdCard,
-    processUploadFile: processUploadFile as any,
+    processUploadFile: processUploadFile as (file: File, field: string, setter: React.Dispatch<React.SetStateAction<StaffFormData | WorkerFormData>>) => Promise<void>,
   })
 
   const { handleDeleteMember, handleFileModified, handleSubmitStaff, handleSubmitWorker } = useMemberOperations({

@@ -76,7 +76,7 @@ export const SettlementImportModal: React.FC<Props> = ({ show, onClose, onImport
 
   const switchSheet = async (sheetName: string) => {
     if (!wbBuffer) return
-    try { const XLSX = await import('xlsx'); const wb = XLSX.read(wbBuffer, { type: 'array' }); loadSheet(wb, sheetName) } catch {}
+    try { const XLSX = await import('xlsx'); const wb = XLSX.read(wbBuffer, { type: 'array' }); loadSheet(wb, sheetName) } catch (err) { console.warn('[SettlementImport] 切换工作表失败:', err) }
   }
 
   const changeHeaderRow = async (hr: number) => {

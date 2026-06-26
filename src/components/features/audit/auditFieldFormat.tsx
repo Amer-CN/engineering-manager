@@ -50,16 +50,16 @@ export function formatFieldValue(resource: string, field: string, value: any): s
 }
 
 export function renderAuditDetail(log: AuditLog): React.ReactNode {
-  const details = log.details
+  const details = log.details as Record<string, unknown> | undefined
   if (!details) return <p className="text-slate-500 text-sm">无详细信息</p>
 
   if (details.count !== undefined && !details.before && !details.after) {
     return (
       <div className="space-y-2">
         {details.count !== undefined && (
-          <div className="text-sm text-slate-600">数量：<span className="font-medium">{details.count}</span> 条</div>
+          <div className="text-sm text-slate-600">数量：<span className="font-medium">{String(details.count)}</span> 条</div>
         )}
-        {details.reason && <div className="text-sm text-slate-600">原因：{details.reason}</div>}
+        {String(details.reason) && <div className="text-sm text-slate-600">原因：{String(details.reason)}</div>}
       </div>
     )
   }
@@ -68,9 +68,9 @@ export function renderAuditDetail(log: AuditLog): React.ReactNode {
     return (
       <div className="space-y-2">
         <div className="text-sm text-slate-600">
-          审批结果：<span className={`font-medium ${details.approved ? 'text-green-600' : 'text-red-600'}`}>{details.approved ? '通过' : '驳回'}</span>
+          审批结果：<span className={`font-medium ${(details.approved as boolean) ? 'text-green-600' : 'text-red-600'}`}>{(details.approved as boolean) ? '通过' : '驳回'}</span>
         </div>
-        {details.reason && <div className="text-sm text-slate-600">原因：{details.reason}</div>}
+        {String(details.reason) && <div className="text-sm text-slate-600">原因：{String(details.reason)}</div>}
       </div>
     )
   }

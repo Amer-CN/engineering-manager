@@ -15,6 +15,7 @@ import SalaryHistoryModal from './SalaryHistoryModal'
 import { useStaffFormActions } from './useStaffFormActions'
 import { getStaffListColumns } from './staffListColumns'
 import { getAPI } from '@/services/api-adapter'
+import type { Member, Department } from '@/types/electron'
 
 const emptyForm: StaffFormData = {
   name: '', phone: '', email: '', idCard: '', gender: '男', ethnicity: '',
@@ -26,18 +27,18 @@ const emptyForm: StaffFormData = {
 const StaffList: React.FC = () => {
   const showToast = useToastStore(state => state.showToast)
   const { ConfirmDialog } = useConfirm()
-  const [members, setMembers] = useState<any[]>([])
-  const [departments, setDepartments] = useState<any[]>([])
+  const [members, setMembers] = useState<Member[]>([] as Member[])
+  const [departments, setDepartments] = useState<Department[]>([] as Department[])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [editing, setEditing] = useState<any>(null)
+  const [editing, setEditing] = useState<Member | null>(null)
   const [formData, setFormData] = useState<StaffFormData>({ ...emptyForm })
   const [dragOver, setDragOver] = useState<string | null>(null)
   const [fileDirty, setFileDirty] = useState<Set<string>>(new Set())
   const [ocrLoading, setOcrLoading] = useState(false)
   const [ocrMode] = useState(getOCRConfig().provider)
   const [showBatchModal, setShowBatchModal] = useState(false)
-  const [salaryHistoryMember, setSalaryHistoryMember] = useState<any | null>(null)
+  const [salaryHistoryMember, setSalaryHistoryMember] = useState<Member | null>(null)
 
   const loadData = useCallback(async () => {
     try {
@@ -46,17 +47,19 @@ const StaffList: React.FC = () => {
         api.getMembers(),
         api.getDepartments()
       ])
-      const get = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && r.value?.success ? r.value.data || [] : []
-      const membersData = get(memRes)
-      setMembers(membersData.filter((m: any) => m.memberType === 'staff' || m.memberType === undefined))
-      setDepartments(get(deptRes))
+      type ApiResponse<T = unknown> = { success: boolean; data?: T }
+      const unwrap = <T,>(r: PromiseSettledResult<ApiResponse<T[]>>): T[] =>
+        r.status === 'fulfilled' && r.value?.success ? r.value.data ?? [] : []
+      const membersData = unwrap<Member>(memRes)
+      setMembers(membersData.filter(m => m.memberType === 'staff' || m.memberType === undefined))
+      setDepartments(unwrap<Department>(deptRes))
     } catch (e) { console.error(e) }
     finally { setLoading(false) }
   }, [])
 
   useEffect(() => { loadData() }, [loadData])
 
-  const orphans = useMemo(() => members.filter((m: any) => !m.departmentId), [members])
+  const orphans = useMemo(() => members.filter((m: Member) => !m.departmentId), [members])
 
   const { filterDept, filterStatus, setFilterDept, setFilterStatus, filtered, getDeptName } =
     useStaffListFilters(members, departments)
@@ -68,7 +71,7 @@ const StaffList: React.FC = () => {
     setShowForm(false)
   }
 
-  const openEdit = async (m: any) => {
+  const openEdit = async (m: Member) => {
     setEditing(m)
     const [r0, r1, r2] = await Promise.allSettled([
       m.idCardFront ? readUploadedFile(FILE_CATEGORIES.MEMBER_ID_CARD.category, FILE_CATEGORIES.MEMBER_ID_CARD.subCategory, m.idCardFront) : Promise.resolve(''),
@@ -91,7 +94,7 @@ const StaffList: React.FC = () => {
     setShowForm(true)
   }
 
-  const handleStatusChange = useCallback(async (member: any, newStatus: string) => {
+  const handleStatusChange = useCallback(async (member: Member, newStatus: string) => {
     await (await getAPI()).updateMember({ ...member, status: newStatus })
     loadData()
     showToast('状态已更新', 'success')
@@ -132,7 +135,7 @@ const StaffList: React.FC = () => {
           <select value={filterDept} onChange={e => setFilterDept(e.target.value ? Number(e.target.value) : '')}
             className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
             <option value="">全部</option>
-            {departments.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
+            {departments.map((d: Department) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
         </div>
         <div className="flex items-center gap-2">

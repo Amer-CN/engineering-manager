@@ -76,3 +76,20 @@ EngineeringManager.Tests/obj/
 vibe-coding-guide/
 # Codex mimo wrapper 残留日志
 .mimo-runs/
+# Agent 工具目录 (不属于项目)
+.agents/
+.btn-backup/
+.claude/
+.codex/
+.firecrawl/
+.sisyphus/
+.skills-lock.json
+
+# 历史残留
+CLAUDE.md
+PRODUCT.md
+PROJECT_MEMORY.md
+SPACING.md
+*.bak
+
+.codegraph/

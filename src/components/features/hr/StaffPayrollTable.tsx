@@ -2,14 +2,16 @@ import { useMemo } from 'react'
 import { Icon } from '../../ui/Icon'
 import { DataTable, type Column } from '@/components/DataTable'
 import { Button } from '../../ui/Button'
+import type { Department } from '@/types'
+import type { PayrollWage } from '../payroll/usePayrollData'
 
 interface StaffPayrollTableProps {
-  filteredWages: any[]
-  staff: any[]
-  departments: any[]
+  filteredWages: PayrollWage[]
+  staff: ReadonlyArray<{ id: number; name?: string }>
+  departments: Department[]
   summaryTotals: { totalNet: number; totalPaid: number; totalDiff: number }
-  onDeleteWage: (wage: any) => void
-  onPaidChange: (wage: any, field: string, value: any) => void
+  onDeleteWage: (wage: PayrollWage) => void
+  onPaidChange: (wage: PayrollWage, field: string, value: number | string) => void
 }
 
 export function StaffPayrollTable({
@@ -17,17 +19,17 @@ export function StaffPayrollTable({
   onDeleteWage, onPaidChange,
 }: StaffPayrollTableProps) {
   const staffMap = useMemo(() => {
-    const m = new Map<number, any>()
+    const m = new Map<number, { id: number; name?: string }>()
     for (const s of staff) m.set(s.id, s)
     return m
   }, [staff])
 
-  const columns: Column<any>[] = [
+  const columns: Column<PayrollWage>[] = [
     {
       key: 'memberName',
       title: '姓名',
       render: (item) => (
-        <span className="font-medium text-slate-800">{item.memberName || staffMap.get(item.memberId)?.name || '-'}</span>
+        <span className="font-medium text-slate-800">{item.memberName || staffMap.get(item.memberId!)?.name || '-'}</span>
       )
     },
     {
@@ -60,7 +62,7 @@ export function StaffPayrollTable({
       title: '补助',
       align: 'right',
       render: (item) => (
-        <span className="text-amber-600">{item.subsidy > 0 ? `+${(item.subsidy || 0).toLocaleString()}` : '-'}</span>
+        <span className="text-amber-600">{(item.subsidy ?? 0) > 0 ? `+${(item.subsidy || 0).toLocaleString()}` : '-'}</span>
       )
     },
     {

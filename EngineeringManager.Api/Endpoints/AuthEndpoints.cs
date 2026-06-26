@@ -84,7 +84,7 @@ public static class AuthEndpoints
 
         static string GenerateJwtToken(string userId, string username, string roleId, string roleName)
         {
-            var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? "dev-only-secret-please-change-in-prod-32bytes";
+            var jwtSecret = JwtSecretProvider.GetOrCreate();
             var key = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(jwtSecret));
             var creds = new Microsoft.IdentityModel.Tokens.SigningCredentials(key, Microsoft.IdentityModel.Tokens.SecurityAlgorithms.HmacSha256);
             var claims = new[]
@@ -398,3 +398,5 @@ public static class AuthEndpoints
         public string UserId { get; set; } = "";
     }
 }
+
+

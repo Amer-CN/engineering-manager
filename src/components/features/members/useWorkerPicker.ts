@@ -45,7 +45,7 @@ export interface WorkerPickerApi {
   // 操作
   toggleWorker: (worker: Worker) => void
   toggleAll: () => void
-  updateEntry: (workerId: number, field: keyof PickEntry, value: any) => void
+  updateEntry: (workerId: number, field: keyof PickEntry, value: PickEntry[keyof PickEntry]) => void
   handleConfirm: () => Promise<void>
   handleSearchChange: (e: React.ChangeEvent<HTMLInputElement>) => void
 }
@@ -76,7 +76,7 @@ export function useWorkerPicker({
     if (!show) return
     setLoading(true)
     getAPI().then(api => api.getWorkers())
-      .then(res => { if (res.success && res.data) setWorkers(res.data as any) })
+      .then(res => { if (res.success && res.data) setWorkers(res.data as (Worker & { projectCount: number })[]) })
       .catch(() => {})
       .finally(() => setLoading(false))
     setSearch(''); setSelected(new Map()); setShowAdvanced(false)
@@ -134,7 +134,7 @@ export function useWorkerPicker({
     }
   }, [filtered, selected.size, existingWorkerIds, defaultTeamId, bulkDailyWage, bulkWorkerType])
 
-  const updateEntry = useCallback((workerId: number, field: keyof PickEntry, value: any) => {
+  const updateEntry = useCallback((workerId: number, field: keyof PickEntry, value: PickEntry[keyof PickEntry]) => {
     setSelected(prev => {
       const next = new Map(prev)
       const entry = next.get(workerId)

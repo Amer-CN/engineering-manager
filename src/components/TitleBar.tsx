@@ -50,7 +50,7 @@ const TitleBar: React.FC<TitleBarProps> = ({ onToggleCollapse, collapsed = false
           const data = JSON.parse(event.data)
           if (data.type === 'maximizeChange') setIsMaximized(data.isMaximized)
           if (data.type === 'fullScreenChange') setIsFullScreen(data.isFullScreen)
-        } catch {}
+        } catch (err) { console.warn('[TitleBar] 解析webview消息失败:', err) }
       }
       webview.addEventListener('message', handler)
       return () => webview.removeEventListener('message', handler)

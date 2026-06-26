@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import type { Member, WorkerTeam, WorkerStatus } from '../types/electron'
+import type { Member, Project, WorkerTeam, WorkerStatus } from '../types/electron'
 import type { OCRProvider } from '../services/ocr'
 import {
   StaffFormData, WorkerFormData, defaultStaffFormData, defaultWorkerFormData,
@@ -10,8 +10,8 @@ export interface MembersState {
   setActiveTab: React.Dispatch<React.SetStateAction<'staff' | 'worker'>>
   members: Member[]
   setMembers: React.Dispatch<React.SetStateAction<Member[]>>
-  projects: any[]
-  setProjects: React.Dispatch<React.SetStateAction<any[]>>
+  projects: Project[]
+  setProjects: React.Dispatch<React.SetStateAction<Project[]>>
   workerTeams: WorkerTeam[]
   setWorkerTeams: React.Dispatch<React.SetStateAction<WorkerTeam[]>>
   loading: boolean
@@ -49,7 +49,7 @@ export interface MembersState {
 export function useMembersState(): MembersState {
   const [activeTab, setActiveTab] = useState<'staff' | 'worker'>('staff')
   const [members, setMembers] = useState<Member[]>([])
-  const [projects, setProjects] = useState<any[]>([])
+  const [projects, setProjects] = useState<Project[]>([])
   const [workerTeams, setWorkerTeams] = useState<WorkerTeam[]>([])
   const [loading, setLoading] = useState(true)
   const [showStaffModal, setShowStaffModal] = useState(false)

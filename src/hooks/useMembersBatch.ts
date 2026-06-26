@@ -12,15 +12,15 @@ export function useMembersBatch({ loadData }: UseMembersBatchOptions) {
 
   const handleBatchAddWorkers = useCallback(async (entries: Partial<ProjectWorker>[]) => {
     try {
-      const result = await (await getAPI()).batchCreateProjectWorkers(entries as any[])
+      const result = await (await getAPI()).batchCreateProjectWorkers(entries)
       if (result.success) {
         showToast(`成功添加 ${entries.length} 名工人`, 'success')
         loadData()
       } else {
         showToast(result.error || '添加失败', 'error')
       }
-    } catch (err: any) {
-      showToast(err.message || '添加失败', 'error')
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : '添加失败', 'error')
     }
   }, [showToast, loadData])
 

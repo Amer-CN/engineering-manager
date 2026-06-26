@@ -8,7 +8,7 @@ export interface MatchedRow {
   name: string
   idCard: string
   workDays: number
-  rawData: any[]
+  rawData: unknown[]
   matched: boolean
   workerName: string | null
   projectWorkerId: number | null
@@ -20,8 +20,8 @@ export interface ImportState {
   activeSheet: string
   headerRow: number
   headers: string[]
-  previewRows: any[][]
-  allRows: any[][]
+  previewRows: unknown[][]
+  allRows: unknown[][]
   nameCol: number
   workDaysCol: number
   idCardCol: number
@@ -45,13 +45,13 @@ export const AttendanceImportModal: React.FC<Props> = ({ show, projectId, yearMo
   const [state, setState] = useState<ImportState>(defaultState)
   const [wbBuffer, setWbBuffer] = useState<ArrayBuffer | null>(null)
 
-  const loadSheet = async (wb: any, sheetName: string, hRow?: number) => {
+  const loadSheet = async (wb: { Sheets: Record<string, unknown> }, sheetName: string, hRow?: number) => {
     const XLSX = await import('xlsx')
     const headerRow = hRow ?? 0
     const ws = wb.Sheets[sheetName]
-    const rows = XLSX.utils.sheet_to_json<any>(ws, { header: 1 }) as any[][]
-    const headers = rows.length > headerRow ? rows[headerRow].map((h: any) => String(h || '').trim()) : []
-    const dataRows = rows.slice(headerRow + 1).filter((r: any[]) => r.some(c => c !== undefined && c !== null && String(c).trim() !== ''))
+    const rows = XLSX.utils.sheet_to_json(ws as never, { header: 1 }) as unknown[][]
+    const headers = rows.length > headerRow ? rows[headerRow].map((h: unknown) => String(h || '').trim()) : []
+    const dataRows = rows.slice(headerRow + 1).filter((r: unknown[]) => r.some(c => c !== undefined && c !== null && String(c).trim() !== ''))
     const preview = dataRows.slice(0, 10)
     const { nameCol, workDaysCol, idCardCol } = autoMapColumns(headers)
     setState({ headerRow, activeSheet: sheetName, headers, previewRows: preview, allRows: dataRows, nameCol, workDaysCol, idCardCol, sheetNames: state.sheetNames })
@@ -59,12 +59,12 @@ export const AttendanceImportModal: React.FC<Props> = ({ show, projectId, yearMo
 
   const switchSheet = async (name: string) => {
     if (!wbBuffer) return
-    try { const XLSX = await import('xlsx'); const wb = XLSX.read(wbBuffer, { type: 'array' }); loadSheet(wb, name, state.headerRow) } catch {}
+    try { const XLSX = await import('xlsx'); const wb = XLSX.read(wbBuffer, { type: 'array' }); loadSheet(wb, name, state.headerRow) } catch (err) { console.warn('[AttendanceImport] 切换工作表失败:', err) }
   }
 
   const changeHeaderRow = async (row: number) => {
     if (!wbBuffer) return
-    try { const XLSX = await import('xlsx'); const wb = XLSX.read(wbBuffer, { type: 'array' }); loadSheet(wb, state.activeSheet, row) } catch {}
+    try { const XLSX = await import('xlsx'); const wb = XLSX.read(wbBuffer, { type: 'array' }); loadSheet(wb, state.activeSheet, row) } catch (err) { console.warn('[AttendanceImport] 切换表头行失败:', err) }
   }
 
   // Match rows against project worker list (ID card first, then name)

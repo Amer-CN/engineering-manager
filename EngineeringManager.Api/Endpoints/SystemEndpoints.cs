@@ -210,6 +210,7 @@ public static class SystemEndpoints
         app.MapPost("/api/snapshots/{id}/restore", (HttpContext ctx, string id) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            if (!CurrentUser.IsAdmin(ctx)) return Common.Fail("仅管理员可恢复快照");
             var snapshotDir = Path.Combine(ApiConfig.ResolveDataPath(), "db-snapshots");
             var path = Path.Combine(snapshotDir, $"{id}.db");
             if (!File.Exists(path)) return Results.Forbid();
@@ -631,3 +632,5 @@ public static class SystemEndpoints
         });
     }
 }
+
+

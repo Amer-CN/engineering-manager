@@ -8,16 +8,17 @@ import { useConfirm } from '@/hooks/useConfirm'
 import { getWorkerTypeLabel } from '@/utils'
 import { WorkerWageHistoryModal } from '../labor/WorkerWageHistoryModal'
 import { Button } from '../../ui/Button'
+import type { Member } from '@/types'
 
 interface TeamWorkerModalProps {
   show: boolean
   teamId: number
   teamName: string
   projectId: number
-  members: any[]
+  members: Member[]
   workerTeams: Array<{ id: number; name: string; projectId: number }>
   onClose: () => void
-  onUpdateWorker: (pwId: number, data: Record<string, any>) => void
+  onUpdateWorker: (pwId: number, data: Record<string, unknown>) => void
   onRemoveWorker: (pwId: number) => void
   onTransferWorker: (pwId: number, toTeamId: number) => void
   onAddWorkers: (teamId: number, projectId: number) => void
@@ -32,13 +33,13 @@ export function TeamWorkerModal({
   const { confirm, ConfirmDialog } = useConfirm()
   const [wageHistoryWorker, setWageHistoryWorker] = useState<{ id: number; name: string; dailyWage: number } | null>(null)
 
-  const teamWorkers = members.filter((w: any) => w.teamId != null && w.teamId === teamId)
+  const teamWorkers = members.filter((w) => w.teamId != null && w.teamId === teamId)
   const otherTeams = workerTeams.filter(t => t.id !== teamId && t.projectId === projectId)
 
-  const columns: Column<any>[] = [
+  const columns: Column<Member>[] = [
     { key: 'name', title: '姓名', render: (item) => <span className="font-medium text-slate-800">{item.name}</span> },
-    { key: 'idCard', title: '身份证号', render: (item: any) => <span className="text-slate-500 font-mono text-xs">{masked('idCard', item.idCard) || '-'}</span> },
-    { key: 'workerType', title: '工种', render: (item) => <span className="text-slate-600">{item.workerType ? getWorkerTypeLabel(item.workerType as any) : '-'}</span> },
+    { key: 'idCard', title: '身份证号', render: (item) => <span className="text-slate-500 font-mono text-xs">{masked('idCard', item.idCard) || '-'}</span> },
+    { key: 'workerType', title: '工种', render: (item) => <span className="text-slate-600">{item.workerType ? getWorkerTypeLabel(item.workerType) : '-'}</span> },
     { key: 'dailyWage', title: '日工资', align: 'right', render: (item) => <span className="text-slate-700">{item.dailyWage ? `¥${item.dailyWage}` : '-'}</span> },
     { key: 'entryDate', title: '进场日期', render: (item) => <span className="text-slate-500 text-xs">{item.entryDate || '-'}</span> },
     { key: 'status', title: '状态', align: 'center', render: (item) => <StatusBadge status={item.status} config={WORKER_STATUS} /> },

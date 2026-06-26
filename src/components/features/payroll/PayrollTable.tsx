@@ -1,5 +1,6 @@
 import { EmptyState } from '../../ui/EmptyState'
-import { usePayrollData, type PayrollMode } from './usePayrollData'
+import { usePayrollData, type PayrollMode, type PayrollWage } from './usePayrollData'
+import type { Project, AttendanceRecord } from '@/types'
 import AttendanceTab from '../wages/AttendanceTab'
 import WageTableTab from '../wages/WageTableTab'
 import WageRecordsTab from '../wages/WageRecordsTab'
@@ -14,15 +15,15 @@ interface PayrollTableProps {
   mode: PayrollMode
   activeTab: TabId
   data: ReturnType<typeof usePayrollData>
-  selectedProject: any
-  projectAttendances: any[]
-  projectWages: any[]
+  selectedProject: Project | null
+  projectAttendances: AttendanceRecord[]
+  projectWages: PayrollWage[]
   daysInMonth: number
   wageActions: ReturnType<typeof useWageActions>
-  paymentFilteredWages: any[]
+  paymentFilteredWages: PayrollWage[]
   filterYearMonth: string
   setFilterYearMonth: (v: string) => void
-  confirm: any
+  confirm: (options: { title?: string; content: React.ReactNode; confirmVariant?: "primary" | "danger" }) => Promise<boolean>
 }
 
 export function PayrollTable({
@@ -39,13 +40,13 @@ export function PayrollTable({
               <StaffPayrollTable
                 filteredWages={data.filteredWages} staff={data.people} departments={data.departments}
                 summaryTotals={data.summary}
-                onDeleteWage={async (wage: any) => {
+                onDeleteWage={async (wage: PayrollWage) => {
                   const ok = await confirm({ title: '确认删除', content: `确认删除 ${wage.memberName || ''} ${wage.yearMonth} 的薪酬？`, confirmVariant: 'danger' })
                   if (!ok) return
                   await (await getAPI()).deleteWage(wage.id)
                   await data.loadData()
                 }}
-                onPaidChange={async (wage: any, field: string, value: any) => {
+                onPaidChange={async (wage: PayrollWage, field: string, value: number | string) => {
                   await (await getAPI()).updateWage({ ...wage, [field]: value })
                   await data.loadData()
                 }}
@@ -65,7 +66,7 @@ export function PayrollTable({
                 selectedProject={selectedProject} selectedMonth={data.selectedMonth}
                 daysInMonth={daysInMonth} workerTeams={data.workerTeams}
                 attendances={projectAttendances}
-                projectMemberCount={data.people.filter((p: any) => p.projectId === selectedProject.id).length}
+                projectMemberCount={data.people.filter((p) => p.projectId === selectedProject.id).length}
                 selectedIds={wageActions.selectedAttendanceIds}
                 toggleSelect={wageActions.toggleAttendanceSelect}
                 toggleAll={wageActions.toggleAllAttendance}

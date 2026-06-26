@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react'
+import { type OCRResult } from '@/hooks/useIdCardOCR'
 import { useToastStore } from '@/store/toastStore'
 import { useConfirm } from '@/hooks/useConfirm'
 import { useIdCardOCR } from '@/hooks/useIdCardOCR'
@@ -14,7 +15,7 @@ interface MemberFileHandlerOpts {
 
 export function useMemberFileHandlers({ type, onFileModified }: MemberFileHandlerOpts) {
   const [dragOverField, setDragOverField] = useState<string | null>(null)
-  const [ocrResult, setOcrResult] = useState<any>(null)
+  const [ocrResult, setOcrResult] = useState<OCRResult | null>(null)
   const showToast = useToastStore(state => state.showToast)
   const { confirm, ConfirmDialog } = useConfirm()
 
@@ -40,13 +41,13 @@ export function useMemberFileHandlers({ type, onFileModified }: MemberFileHandle
     setter: React.Dispatch<React.SetStateAction<StaffFormData | WorkerFormData>>
   ) => {
     const base64 = await readFileAsBase64(file)
-    setter((prev: any) => ({ ...prev, [field]: base64 }))
+    setter((prev: StaffFormData | WorkerFormData) => ({ ...prev, [field]: base64 }))
     onFileModified?.(field)
 
     if (field === 'idCardFront') {
       const result = await hookProcessIdCardFile(file)
       if (result && ocrResult) {
-        setter((prev: any) => ({
+        setter((prev: StaffFormData | WorkerFormData) => ({
           ...prev,
           [field]: result,
           name: ocrResult.name || prev.name,
@@ -77,9 +78,9 @@ export function useMemberFileHandlers({ type, onFileModified }: MemberFileHandle
     const fileType = file.type === 'application/pdf' ? 'pdf' : 'image'
 
     if (field === 'contractFile') {
-      setter((prev: any) => ({ ...prev, contractFile: base64, contractFileType: fileType }))
+      setter((prev: StaffFormData | WorkerFormData) => ({ ...prev, contractFile: base64, contractFileType: fileType }))
     } else {
-      setter((prev: any) => ({ ...prev, [field]: base64 }))
+      setter((prev: StaffFormData | WorkerFormData) => ({ ...prev, [field]: base64 }))
     }
   }
 
@@ -91,9 +92,9 @@ export function useMemberFileHandlers({ type, onFileModified }: MemberFileHandle
     const ok = await confirm({ title: '确认删除', content: '确定要删除这个文件吗？', confirmVariant: 'danger' })
     if (ok) {
       if (field === 'contractFile') {
-        setter((prev: any) => ({ ...prev, contractFile: '', contractFileType: '' }))
+        setter((prev: StaffFormData | WorkerFormData) => ({ ...prev, contractFile: '', contractFileType: '' }))
       } else {
-        setter((prev: any) => ({ ...prev, [field]: '' }))
+        setter((prev: StaffFormData | WorkerFormData) => ({ ...prev, [field]: '' }))
       }
     }
   }

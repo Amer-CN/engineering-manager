@@ -68,7 +68,7 @@ export function MaskProvider({ children }: { children: ReactNode }) {
 
   const setMasked = useCallback((v: boolean) => {
     setMaskedState(v)
-    try { localStorage.setItem(STORAGE_KEY, v ? "1" : "0") } catch {}
+    try { localStorage.setItem(STORAGE_KEY, v ? "1" : "0") } catch (err) { console.warn('[MaskContext] 写入localStorage失败:', err) }
     // 异步同步后端 (fire-and-forget)
     void syncToServer(v)
   }, [syncToServer])
