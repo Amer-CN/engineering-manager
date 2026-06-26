@@ -118,7 +118,7 @@ export const SnapshotsTab: React.FC = () => {
       <div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-slate-800 font-medium">
-            {item.timestamp.replace('T', ' ')}
+            {(item.timestamp ?? "").replace('T', ' ')}
           </span>
           {item._index === 0 && (
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-700">
