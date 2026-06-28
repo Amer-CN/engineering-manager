@@ -30,7 +30,8 @@ public class GlobalAuthMiddleware
     {
         "/api/auth/login",
         "/api/health",
-        "/api/ocr/setup"
+        "/api/ocr/setup",
+        "/api/agent/setup"
     };
 
     public GlobalAuthMiddleware(RequestDelegate next)
