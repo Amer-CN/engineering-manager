@@ -15,7 +15,7 @@ import { useRowHoverOpacity } from './hooks/useRowHoverOpacity'
 import { useTheme } from './hooks/useTheme'
 
 // ── 路由级代码分割：每个页面独立 chunk ──
-const Dashboard = lazy(() => import('./components/Dashboard'))
+const Dashboard = lazy(() => import('./components/features/agent/AgentDashboard'))
 const Projects = lazy(() => import('./components/Projects'))
 const Contracts = lazy(() => import('./components/Contracts'))
 const Members = lazy(() => import('./components/Members'))
