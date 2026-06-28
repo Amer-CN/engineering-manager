@@ -83,6 +83,11 @@ public static class ApiConfig
         // v0.78.0 PII 后台 re-encrypt worker (admin rotate key 后调用)
         builder.Services.AddSingleton<EngineeringManager.Api.Security.PiiReencryptWorker>();
 
+        // v1.3.0 Agent AI 助手服务
+        builder.Services.AddSingleton<EngineeringManager.Api.Services.LlmProviderService>();
+        builder.Services.AddSingleton<EngineeringManager.Api.Services.AgentToolService>();
+        builder.Services.AddSingleton<EngineeringManager.Api.Services.AgentConversationService>();
+
         builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
             p.WithOrigins("http://localhost:5173", "http://localhost:3000", "http://localhost:5048")
              .AllowAnyMethod()
@@ -299,6 +304,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
         // 健康检查 + 快照 + 配置 + 审计日志
         app.RegisterSystemEndpoints();
+
+        // v1.3.0 Agent AI 助手
+        app.RegisterAgentEndpoints();
     }
     // ============ P0-1: 从 config.json 读取 dataPath ============
     public static string ResolveDataPath()
