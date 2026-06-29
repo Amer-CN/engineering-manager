@@ -175,11 +175,13 @@ public static class SafeQueryValidator
         if (selectMatch.Success)
         {
             var selectClause = selectMatch.Groups[1].Value;
+            // 先剔除函数内的 (*)，避免 COUNT(*) 等被误伤
+            var clause = Regex.Replace(selectClause, @"\(\s*\*\s*\)", "()");
             // 匹配独立的 * token（前面不是字母/数字/下划线/点，后面也不是字母/数字/下划线）
-            if (Regex.IsMatch(selectClause, @"(?<![A-Za-z0-9_.])\*(?![A-Za-z0-9_])"))
+            if (Regex.IsMatch(clause, @"(?<![A-Za-z0-9_.])\*(?![A-Za-z0-9_])"))
                 return new ValidationResult(false, null, null, "不允许 SELECT *，请明确指定列名");
             // 额外拦截 alias.* 形式（如 p.*）
-            if (Regex.IsMatch(selectClause, @"\w+\.\s*\*"))
+            if (Regex.IsMatch(clause, @"\w+\.\s*\*"))
                 return new ValidationResult(false, null, null, "不允许 SELECT *，请明确指定列名");
         }
 
