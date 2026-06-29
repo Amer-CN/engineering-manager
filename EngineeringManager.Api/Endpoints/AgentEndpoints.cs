@@ -191,6 +191,217 @@ public static class AgentEndpoints
         });
 
         // ═══════════════════════════════════════════════════════════
+        // 核心聊天 — SSE 流式版本
+        // ═══════════════════════════════════════════════════════════
+
+        app.MapPost("/api/agent/chat/stream", async (
+            HttpContext ctx,
+            IDbConnection db,
+            AgentChatRequest request,
+            LlmProviderService llm,
+            AgentToolService tools,
+            AgentConversationService conversations) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx);
+            if (string.IsNullOrEmpty(uid))
+            {
+                ctx.Response.StatusCode = 401;
+                await ctx.Response.WriteAsync("data: {\"error\":\"未登录\"}\n\n");
+                return;
+            }
+
+            // 设置 SSE 响应头
+            ctx.Response.ContentType = "text/event-stream";
+            ctx.Response.Headers.Append("Cache-Control", "no-cache");
+            ctx.Response.Headers.Append("Connection", "keep-alive");
+            ctx.Response.Headers.Append("X-Accel-Buffering", "no");
+
+            try
+            {
+                // 1. 创建或获取对话
+                long conversationId;
+                if (request.ConversationId.HasValue)
+                {
+                    conversationId = request.ConversationId.Value;
+                }
+                else
+                {
+                    var title = request.Message.Truncate(20);
+                    conversationId = await conversations.CreateConversationAsync(db, uid, title);
+                }
+
+                // 发送对话 ID
+                await WriteSSE(ctx, new { type = "conversation_id", conversationId });
+
+                // 2. 保存用户消息
+                var userMsg = new AgentMessage
+                {
+                    Role = MessageRole.User,
+                    Content = request.Message,
+                };
+                await conversations.SaveMessageAsync(db, conversationId, userMsg);
+
+                // 3. 构建 LLM 消息列表
+                var llmMessages = new List<AgentMessage>
+                {
+                    new AgentMessage
+                    {
+                        Role = MessageRole.System,
+                        Content = BuildSystemPrompt(),
+                    }
+                };
+
+                // 加载历史消息（最近 40 条）
+                var history = await conversations.GetMessagesForLlmAsync(db, conversationId, 40);
+                llmMessages.AddRange(history);
+
+                // 4. 获取可用工具
+                var availableTools = tools.GetAvailableTools(ctx);
+
+                // 5. 调用 LLM（最多 5 轮 tool_use 循环）
+                var maxRounds = 5;
+                var toolResults = new List<ToolCallResult>();
+
+                for (int round = 0; round < maxRounds; round++)
+                {
+                    var response = await llm.ChatAsync(llmMessages, availableTools);
+
+                    if (response == null)
+                    {
+                        toolResults.Add(new ToolCallResult
+                        {
+                            ToolName = "llm",
+                            ToolCallId = "",
+                            Success = false,
+                            Error = "LLM 调用失败，请检查配置",
+                        });
+                        await WriteSSE(ctx, new { type = "error", error = "LLM 调用失败，请检查配置" });
+                        break;
+                    }
+
+                    var choice = response.Choices.FirstOrDefault();
+                    if (choice == null) break;
+
+                    // 检查是否有 tool_calls
+                    if (choice.Message.ToolCalls != null && choice.Message.ToolCalls.Count > 0)
+                    {
+                        // 保存 assistant 消息（含 tool_calls）
+                        var assistantMsg = new AgentMessage
+                        {
+                            Role = MessageRole.Assistant,
+                            Content = choice.Message.Content,
+                            ToolCalls = choice.Message.ToolCalls,
+                        };
+                        await conversations.SaveMessageAsync(db, conversationId, assistantMsg);
+                        llmMessages.Add(assistantMsg);
+
+                        // 执行每个工具调用
+                        foreach (var tc in choice.Message.ToolCalls)
+                        {
+                            // 发送工具执行进度
+                            await WriteSSE(ctx, new { type = "tool", name = tc.Function.Name });
+
+                            JsonElement args;
+                            try
+                            {
+                                args = JsonDocument.Parse(tc.Function.Arguments).RootElement;
+                            }
+                            catch
+                            {
+                                args = JsonDocument.Parse("{}").RootElement;
+                            }
+
+                            var result = await tools.ExecuteToolAsync(
+                                tc.Function.Name, args, ctx, db);
+                            result = result with { ToolCallId = tc.Id };
+
+                            toolResults.Add(result);
+
+                            // 构建 tool 消息反馈 LLM
+                            var toolMsg = new AgentMessage
+                            {
+                                Role = MessageRole.Tool,
+                                Content = JsonSerializer.Serialize(result),
+                                ToolCallId = tc.Id,
+                                Name = tc.Function.Name,
+                            };
+                            await conversations.SaveMessageAsync(db, conversationId, toolMsg);
+                            llmMessages.Add(toolMsg);
+                        }
+
+                        // 继续循环，让 LLM 处理工具结果
+                        continue;
+                    }
+
+                    // 无 tool_calls：流式输出最终文本回复
+                    var finalContentBuilder = new StringBuilder();
+
+                    // 使用流式 API 输出最终回复
+                    await foreach (var chunk in llm.ChatStreamAsync(llmMessages))
+                    {
+                        try
+                        {
+                            var chunkDoc = JsonDocument.Parse(chunk);
+                            var delta = chunkDoc.RootElement
+                                .GetProperty("choices")[0]
+                                .GetProperty("delta");
+
+                            if (delta.TryGetProperty("content", out var contentProp))
+                            {
+                                var text = contentProp.GetString();
+                                if (!string.IsNullOrEmpty(text))
+                                {
+                                    finalContentBuilder.Append(text);
+                                    await WriteSSE(ctx, new { type = "content", text });
+                                }
+                            }
+                        }
+                        catch
+                        {
+                            // 忽略解析错误的 chunk
+                        }
+                    }
+
+                    // 保存最终消息
+                    var finalContent = finalContentBuilder.ToString();
+                    if (!string.IsNullOrEmpty(finalContent))
+                    {
+                        var finalMsg = new AgentMessage
+                        {
+                            Role = MessageRole.Assistant,
+                            Content = finalContent,
+                        };
+                        await conversations.SaveMessageAsync(db, conversationId, finalMsg);
+                    }
+
+                    // 发送完成信号
+                    await WriteSSE(ctx, new
+                    {
+                        type = "done",
+                        conversationId,
+                        toolCalls = toolResults,
+                    });
+
+                    return;
+                }
+
+                // 达到最大轮数
+                await WriteSSE(ctx, new
+                {
+                    type = "done",
+                    conversationId,
+                    message = "已执行工具查询，详见上方结果。",
+                    toolCalls = toolResults,
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[AgentEndpoints] /api/agent/chat/stream 失败: {ex.Message}");
+                await WriteSSE(ctx, new { type = "error", error = Common.Sanitize(ex.Message) });
+            }
+        });
+
+        // ═══════════════════════════════════════════════════════════
         // 对话列表
         // ═══════════════════════════════════════════════════════════
 
@@ -465,6 +676,55 @@ public static class AgentEndpoints
             "- getInventory — 库存物料列表",
             "- getCostSummary — 成本汇总（按分类统计收支），可选按项目筛选",
             "- getPartners — 合作伙伴列表",
+            "- runSafeQuery — 受限只读查询（高级功能，仅 admin/manager 可用）",
+            "",
+            "## runSafeQuery 使用说明",
+            "当现有工具无法满足查询需求时，可以使用 runSafeQuery 执行自定义 SQL 查询。",
+            "限制条件：",
+            "- 只允许 SELECT 语句",
+            "- 只能查询白名单表：projects, members, workers, invoices, settlements, cost_ledger, income_contracts, expense_contracts, inventory_items, partners",
+            "- 不允许 SELECT *，必须明确指定列名",
+            "- 查询结果会自动按你的权限过滤（只能看到你有权访问的数据）",
+            "- 自动添加 LIMIT 100",
+            "- 敏感信息（身份证、手机、银行账号）会自动脱敏",
+            "",
+            "示例用法：",
+            "```sql",
+            "SELECT name, status, budget FROM projects WHERE status = 'active'",
+            "```",
+            "",
+            "## 术语映射（中文 → 数据库表名）",
+            "- 项目 = projects",
+            "- 成员/员工 = members",
+            "- 工人 = workers",
+            "- 发票 = invoices",
+            "- 结算 = settlements",
+            "- 成本台账/成本明细 = cost_ledger",
+            "- 收入合同 = income_contracts",
+            "- 支出合同 = expense_contracts",
+            "- 合作伙伴/合作方 = partners",
+            "- 库存/物料 = inventory_items",
+            "",
+            "## 字段含义说明",
+            "- projects.status: 项目状态（active=进行中, completed=已完成, pending=待开工）",
+            "- cost_ledger.direction: 收支方向（income=收入, expense=支出）",
+            "- cost_ledger.category: 成本分类（人工费, 材料费, 机械费, 管理费, 其他）",
+            "- members.member_type: 成员类型（staff=管理人员, worker=工人）",
+            "- members.status: 成员状态（active=在职, left=离职）",
+            "- invoices.type: 发票类型（income=收入发票, expense=支出发票）",
+            "- invoices.status: 发票状态（pending=待处理, received=已收, sent=已开）",
+            "- settlements.status: 结算状态（pending=待结算, completed=已结算）",
+            "- partners.category: 合作方分类（labor=劳务分包, material=材料供应, equipment=设备租赁）",
+            "",
+            "## 工具选择指引",
+            "1. 查询项目列表 → getProjects",
+            "2. 查询单个项目详情 → getProjectDetail（需要 projectId）",
+            "3. 查询发票 → getInvoices（可选 projectId 筛选）",
+            "4. 查询待处理发票 → getPendingInvoices",
+            "5. 查询结算记录 → getSettlements（可选 projectId 筛选）",
+            "6. 查询成本汇总（按分类统计）→ getCostSummary（可选 projectId 筛选）",
+            "7. 查询成本明细（按时间/项目）→ runSafeQuery（自定义 SQL）",
+            "8. 按项目筛选数据 → 先 getProjects 获取 projectId，再用 projectId 调用其他工具",
             "",
             "## 回答规范",
             "1. 当用户询问数据时，主动调用对应工具获取最新数据",
@@ -512,5 +772,15 @@ public static class AgentEndpoints
         if (root.TryGetProperty(name, out var prop) && prop.ValueKind == JsonValueKind.Number)
             return prop.GetInt32();
         return 4096;
+    }
+
+    /// <summary>
+    /// 写入 SSE 事件并刷新响应流
+    /// </summary>
+    private static async Task WriteSSE(HttpContext ctx, object data)
+    {
+        var json = JsonSerializer.Serialize(data);
+        await ctx.Response.WriteAsync($"data: {json}\n\n");
+        await ctx.Response.Body.FlushAsync();
     }
 }
