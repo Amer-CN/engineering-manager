@@ -85,6 +85,7 @@ public static class ApiConfig
 
         // v1.3.0 Agent AI 助手服务
         builder.Services.AddSingleton<EngineeringManager.Api.Services.LlmProviderService>();
+        builder.Services.AddSingleton<EngineeringManager.Api.Services.IModelRouter, EngineeringManager.Api.Services.ModelRoutingService>();
         builder.Services.AddSingleton<EngineeringManager.Api.Services.AgentToolService>();
         builder.Services.AddSingleton<EngineeringManager.Api.Services.AgentConversationService>();
 
