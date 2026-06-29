@@ -84,6 +84,7 @@ public static class ApiConfig
         builder.Services.AddSingleton<EngineeringManager.Api.Security.PiiReencryptWorker>();
 
         // v1.3.0 Agent AI 助手服务
+        builder.Services.AddSingleton<EngineeringManager.Api.Services.LlmConfigResolver>();
         builder.Services.AddSingleton<EngineeringManager.Api.Services.LlmProviderService>();
         builder.Services.AddSingleton<EngineeringManager.Api.Services.IModelRouter, EngineeringManager.Api.Services.ModelRoutingService>();
         builder.Services.AddSingleton<EngineeringManager.Api.Services.AgentToolService>();
