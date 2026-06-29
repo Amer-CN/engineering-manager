@@ -1,0 +1,12 @@
+{
+  "latest": "0.80.0",
+  "minForced": "0.0.0",
+  "releasedAt": "2026-07-01T10:00:00+08:00",
+  "notesUrl": "",
+  "package": {
+    "url": "https://cdn.example.cn/gjgj/工程管家-Setup-0.80.0.exe",
+    "size": 0,
+    "sha256": "",
+    "signature": ""
+  }
+}
