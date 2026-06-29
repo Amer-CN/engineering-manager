@@ -139,9 +139,9 @@ public static class SafeQueryValidator
     /// </summary>
     /// <param name="sql">原始 SQL</param>
     /// <param name="uid">当前用户 ID</param>
-    /// <param name="isAdmin">是否管理员</param>
+    /// <param name="scope">数据范围(替代原 isAdmin 布尔)</param>
     /// <returns>验证结果，包含改写后的 SQL 或错误信息</returns>
-    public static ValidationResult ValidateAndRewrite(string sql, string uid, int isAdmin)
+    public static ValidationResult ValidateAndRewrite(string sql, string uid, Security.CurrentUser.DataScope scope)
     {
         // 1. 基本清理
         sql = sql.Trim().TrimEnd(';').Trim();
@@ -277,7 +277,7 @@ public static class SafeQueryValidator
         var rewrittenSql = query.ToSql();
 
         // 10. 强制注入用户过滤（字符串层面）
-        rewrittenSql = InjectUserFilterAstAware(rewrittenSql, aliasToTable, referencedTables);
+        rewrittenSql = InjectUserFilterAstAware(rewrittenSql, aliasToTable, referencedTables, scope);
 
         // 11. 强制 LIMIT（字符串兜底）
         rewrittenSql = EnsureLimit(rewrittenSql, 100);
@@ -288,22 +288,22 @@ public static class SafeQueryValidator
     /// <summary>
     /// 获取表的过滤 SQL 片段
     /// </summary>
-    public static string GetTableFilter(string table, string tableAlias = "")
+    public static string GetTableFilter(Security.CurrentUser.DataScope scope, string table, string tableAlias = "")
     {
         var colPrefix = string.IsNullOrEmpty(tableAlias) ? "" : $"{tableAlias}.";
         var createdByCol = $"{colPrefix}created_by";
 
         if (CompanyLevelTables.Contains(table))
-            return Security.CurrentUser.UserFilterCompany(createdByCol);
+            return Security.CurrentUser.UserFilterCompany(scope, createdByCol);
 
         if (ProjectLevelTables.Contains(table))
         {
             var projectCol = $"{colPrefix}project_id";
-            return Security.CurrentUser.UserFilterWithAuthorizedProjects(projectCol, createdByCol);
+            return Security.CurrentUser.UserFilterWithAuthorizedProjects(scope, projectCol, createdByCol);
         }
 
         // 默认使用公司级过滤
-        return Security.CurrentUser.UserFilterCompany(createdByCol);
+        return Security.CurrentUser.UserFilterCompany(scope, createdByCol);
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -668,7 +668,8 @@ public static class SafeQueryValidator
     private static string InjectUserFilterAstAware(
         string sql,
         Dictionary<string, string> aliasToTable,
-        HashSet<string> referencedTables)
+        HashSet<string> referencedTables,
+        Security.CurrentUser.DataScope scope)
     {
         var filters = new List<string>();
 
@@ -680,7 +681,7 @@ public static class SafeQueryValidator
             var alias = aliasToTable.FirstOrDefault(
                 kvp => string.Equals(kvp.Value, table, StringComparison.OrdinalIgnoreCase)).Key;
 
-            filters.Add(GetTableFilter(table, alias ?? ""));
+            filters.Add(GetTableFilter(scope, table, alias ?? ""));
         }
 
         if (filters.Count == 0)

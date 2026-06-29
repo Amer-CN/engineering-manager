@@ -78,6 +78,7 @@ public static class InvoiceEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             var sql = @"SELECT pr.*, p.name as project_name, pt.name as partner_name
                         FROM payment_records pr
                         LEFT JOIN projects p ON pr.project_id=p.id
@@ -86,7 +87,7 @@ public static class InvoiceEndpoints
             if (!string.IsNullOrEmpty(paymentType)) conditions.Add("pr.type=@PaymentType");
             if (projectId.HasValue) conditions.Add("pr.project_id=@ProjectId");
             // v1.1.0 P0-4 Phase 2: 鎬诲姞 user-dim
-            conditions.Add(CurrentUser.UserFilterWithAuthorizedProjects("pr.project_id", "pr.created_by"));
+            conditions.Add(CurrentUser.UserFilterWithAuthorizedProjects(scope, "pr.project_id", "pr.created_by"));
             conditions.Add("pr.deleted_at IS NULL");
             sql += " WHERE " + string.Join(" AND ", conditions);
             sql += " ORDER BY pr.created_at DESC";

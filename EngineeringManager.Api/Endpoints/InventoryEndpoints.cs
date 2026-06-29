@@ -21,14 +21,16 @@ public static class InventoryEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             // v1.1.0 P0-4 Phase 2: 公司维度表过滤 (无 project_id)
-            return Common.Ok(db.Query($"SELECT * FROM inventory_items WHERE {CurrentUser.UserFilterCompany()} ORDER BY name",
+            return Common.Ok(db.Query($"SELECT * FROM inventory_items WHERE {CurrentUser.UserFilterCompany(scope)} ORDER BY name",
                 new { Uid = uid, IsAdmin = isAdmin }));
         });
 
         app.MapPost("/api/inventory", async (HttpContext ctx, InventoryItemDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var scope = CurrentUser.GetDataScope(ctx);
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO inventory_items (name,category,unit,quantity,min_quantity,location,notes,created_by,created_at,updated_at, last_modified_at) VALUES (@Name,@Category,@Unit,@Quantity,@MinQuantity,@Location,@Notes,@CreatedBy,@Now,@Now, @Now);
                 SELECT last_insert_rowid();",
                 new { dto.Name, dto.Category, dto.Unit, dto.Quantity, dto.MinQuantity, dto.Location, dto.Notes, CreatedBy = uid, Now = now() });
@@ -39,6 +41,7 @@ public static class InventoryEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             var affected = await db.ExecuteAsync(@"UPDATE inventory_items SET name=@Name,category=@Category,
                 unit=@Unit,quantity=@Quantity,min_quantity=@MinQuantity,location=@Location,notes=@Notes,
                 updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
@@ -51,6 +54,7 @@ public static class InventoryEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             return (await db.ExecuteAsync("DELETE FROM inventory_items WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
         });
 
@@ -58,8 +62,9 @@ public static class InventoryEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             // v1.1.0 P0-4 Phase 2: 公司维度表过滤, itemId 仅作进一步收窄
-            var sql = $@"SELECT * FROM inventory_transactions WHERE {CurrentUser.UserFilterCompany()}";
+            var sql = $@"SELECT * FROM inventory_transactions WHERE {CurrentUser.UserFilterCompany(scope)}";
             if (itemId.HasValue) sql += " AND item_id=@ItemId";
             sql += " ORDER BY created_at DESC";
             return Common.Ok(db.Query(sql, new { ItemId = itemId, Uid = uid, IsAdmin = isAdmin }));
@@ -73,14 +78,16 @@ public static class InventoryEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             // v1.1.0 P0-4 Phase 2: 公司维度表过滤 (无 project_id)
-            return Common.Ok(db.Query($"SELECT * FROM materials WHERE {CurrentUser.UserFilterCompany()} ORDER BY name",
+            return Common.Ok(db.Query($"SELECT * FROM materials WHERE {CurrentUser.UserFilterCompany(scope)} ORDER BY name",
                 new { Uid = uid, IsAdmin = isAdmin }));
         });
 
         app.MapPost("/api/materials", async (HttpContext ctx, MaterialDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var scope = CurrentUser.GetDataScope(ctx);
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO materials (name,category,unit,specifications,supplier,notes,created_by,created_at,updated_at, last_modified_at) VALUES (@Name,@Category,@Unit,@Specifications,@Supplier,@Notes,@CreatedBy,@Now,@Now, @Now);
                 SELECT last_insert_rowid();",
                 new { dto.Name, dto.Category, dto.Unit, dto.Specifications, dto.Supplier, dto.Notes, CreatedBy = uid, Now = now() });
@@ -91,6 +98,7 @@ public static class InventoryEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             var affected = await db.ExecuteAsync(@"UPDATE materials SET name=@Name,category=@Category,
                 unit=@Unit,specifications=@Specifications,supplier=@Supplier,notes=@Notes,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
                 new { dto.Id, dto.Name, dto.Category, dto.Unit, dto.Specifications, dto.Supplier, dto.Notes,
@@ -102,6 +110,7 @@ public static class InventoryEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             return (await db.ExecuteAsync("DELETE FROM materials WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
         });
 }

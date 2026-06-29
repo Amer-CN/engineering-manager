@@ -21,8 +21,9 @@ public static class PartnerEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             // v1.1.0 P0-4 Phase 2: 公司维度表过滤
-            var rows = db.Query($@"SELECT * FROM partners WHERE {CurrentUser.UserFilterCompany()} ORDER BY name",
+            var rows = db.Query($@"SELECT * FROM partners WHERE {CurrentUser.UserFilterCompany(scope)} ORDER BY name",
                 new { Uid = uid, IsAdmin = isAdmin }).ToList();
             // v0.75.0: 后端响应层不再 mask
             var masked = rows.Select(p => new
@@ -43,6 +44,7 @@ public static class PartnerEndpoints
                 app.MapPost("/api/partners", async (HttpContext ctx, PartnerDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var scope = CurrentUser.GetDataScope(ctx);
             // v1.2.0: PII 字段加密
             var pii = ctx.RequestServices.GetRequiredService<EngineeringManager.Api.Security.PiiProtector>();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO partners (name,category,contact,phone,email,address,bank_account,bank_name,tax_number,credit_code,
@@ -62,6 +64,7 @@ public static class PartnerEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             // v1.2.0: PII 字段加密
             var pii = ctx.RequestServices.GetRequiredService<EngineeringManager.Api.Security.PiiProtector>();
             var affected = await db.ExecuteAsync(@"UPDATE partners SET name=@Name,category=@Category,contact=@Contact,
@@ -82,6 +85,7 @@ public static class PartnerEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             return (await db.ExecuteAsync("DELETE FROM partners WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
         });
 
@@ -93,10 +97,11 @@ public static class PartnerEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             // v0.74.0 公司维度表过滤 + v0.75.0 后端响应层不再 mask
             var rows = db.Query($@"SELECT s.*, CASE WHEN r.province IS NOT NULL THEN r.province||'-'||r.city||'-'||r.district ELSE '' END as region_name
                           FROM supervisors s LEFT JOIN regions r ON s.region_id=r.id
-                          WHERE {CurrentUser.UserFilterCompany()}
+                          WHERE {CurrentUser.UserFilterCompany(scope)}
                           ORDER BY s.created_at DESC",
                           new { Uid = uid, IsAdmin = isAdmin });
             return Common.Ok(rows);
@@ -105,6 +110,7 @@ public static class PartnerEndpoints
                 app.MapPost("/api/supervisors", async (HttpContext ctx, SupervisorDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var scope = CurrentUser.GetDataScope(ctx);
             // v1.2.0: phone 字段加密
             var pii = ctx.RequestServices.GetRequiredService<EngineeringManager.Api.Security.PiiProtector>();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO supervisors (region_id,name,category,contact,phone,address,project_ids,remarks,created_by,created_at,
@@ -120,6 +126,7 @@ public static class PartnerEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             // v1.2.0: phone 字段加密
             var pii = ctx.RequestServices.GetRequiredService<EngineeringManager.Api.Security.PiiProtector>();
             var affected = await db.ExecuteAsync(@"UPDATE supervisors SET region_id=@RegionId,name=@Name,
@@ -135,6 +142,7 @@ public static class PartnerEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             return (await db.ExecuteAsync("DELETE FROM supervisors WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
         });
     }

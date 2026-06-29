@@ -23,14 +23,24 @@ public static class CurrentUser
         ?? ctx.User?.HasClaim("http://schemas.microsoft.com/ws/2008/06/identity/claims/role", "admin")
         ?? false;
 
+    // ── v0.80 D-1: 数据范围枚举(替代 @IsAdmin 布尔字面量;参考若依 @DataScope) ──
+    /// <summary>数据可见范围。Company 预留(需先加 company_id/org_id 列,当前库无此锚点)。</summary>
+    public enum DataScope { SelfOnly, AuthorizedProjects, All /*, Company */ }
+
+    /// <summary>当前请求的数据范围。行为保持映射:admin→All,其余→AuthorizedProjects
+    /// (其 created_by 分支已覆盖 SelfOnly)。</summary>
+    public static DataScope GetDataScope(HttpContext ctx) =>
+        IsAdmin(ctx) ? DataScope.All : DataScope.AuthorizedProjects;
+
     /// <summary>
-    /// 旧调用兼容: 项目级表 (有 project_id 列) 的 created_by OR admin 过滤片段。
-    /// 保留 const 形式供现有 5 处调用 (拼接形式)。
-    /// 新代码请用 <see cref="UserFilterWithAuthorizedProjects"/>。
+    /// 项目级表过滤片段 (有 project_id 列), 已弃 const UserFilterFragment 改用此方法。
+    /// All→(1=1); 非 All→created_by ∨ 授权项目。
     /// </summary>
-    public const string UserFilterFragment = @"
+    public static string UserFilterFragmentForProject(DataScope scope) =>
+        scope == DataScope.All
+            ? "(1 = 1)"
+            : @"
         (created_by = @Uid
-         OR @IsAdmin = 1
          OR EXISTS(SELECT 1 FROM project_authorizations
                    WHERE project_id = @ProjectId AND user_id = @Uid))";
 
@@ -39,8 +49,8 @@ public static class CurrentUser
     /// 简单看: 创建人 OR admin
     /// 入参: createdByCol 当前行 created_by 列 (默认 "created_by", 当主查询 JOIN 多个有 created_by 的表时需带表别名如 "m.created_by")
     /// </summary>
-    public static string UserFilterCompany(string createdByCol = "created_by") =>
-        $"({createdByCol} = @Uid OR @IsAdmin = 1)";
+    public static string UserFilterCompany(DataScope scope, string createdByCol = "created_by") =>
+        scope == DataScope.All ? "(1 = 1)" : $"({createdByCol} = @Uid)";
 
     /// <summary>
     /// 项目级表过滤 (有 project_id 列, 如 income_contracts / wages / attendances / invoices / cost_ledger / expenses / drawings / inventory_transactions)
@@ -50,10 +60,12 @@ public static class CurrentUser
     ///   createdByCol 当前行 created_by 列 (默认 "created_by", 当主查询 JOIN 多个有 created_by 的表时需带表别名如 "i.created_by")
     /// </summary>
     public static string UserFilterWithAuthorizedProjects(
+        DataScope scope,
         string projectCol = "project_id",
         string createdByCol = "created_by") =>
-        $@"({createdByCol} = @Uid
-            OR @IsAdmin = 1
+        scope == DataScope.All
+            ? "(1 = 1)"
+            : $@"({createdByCol} = @Uid
             OR EXISTS(SELECT 1 FROM project_authorizations
                       WHERE project_id = {projectCol} AND user_id = @Uid))";
 
