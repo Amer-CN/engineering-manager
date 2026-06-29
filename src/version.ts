@@ -1,3 +1,2 @@
-// 此文件由构建脚本自动生成，不要手动修改
-// 版本号单一数据源：package.json
-export const APP_VERSION = '0.79.0'
+// 此文件由 scripts/sync-version.mjs 自动生成，请勿手动修改
+export const APP_VERSION = '0.80.0'
