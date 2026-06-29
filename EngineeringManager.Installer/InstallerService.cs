@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO.Compression;
 using System.Reflection;
 
@@ -7,29 +8,63 @@ public class InstallerService
 {
     private static readonly string TempDir = Path.Combine(Path.GetTempPath(), "engineering-manager-installer");
 
+    private const string PayloadMagic = "EMPAYLD1"; // 必须正好 8 字节
+    private const int    FooterSize   = 16;         // 8(magic) + 8(Int64 长度)
+
     /// <summary>
-    /// 解压嵌入的 payload.zip 到临时目录，返回解压路径
+    /// 解压 payload 到临时目录，返回解压路径。
+    /// 优先从 exe 尾部追加段读取（单文件安装器），回退到 exe 同目录的 payload.zip。
     /// </summary>
     public static string ExtractPayload()
     {
-        var assembly = Assembly.GetExecutingAssembly();
-        var resourceName = assembly.GetManifestResourceNames()
-            .FirstOrDefault(n => n.EndsWith("payload.zip"));
-
-        if (resourceName == null)
-            throw new FileNotFoundException("安装资源包 (payload.zip) 未嵌入到程序中");
-
-        // 清理旧的临时目录
         if (Directory.Exists(TempDir))
             try { Directory.Delete(TempDir, true); } catch { }
-
         Directory.CreateDirectory(TempDir);
 
-        using var stream = assembly.GetManifestResourceStream(resourceName)!;
-        using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
+        using var payload = OpenPayloadStream();
+        using var archive = new ZipArchive(payload, ZipArchiveMode.Read);
         archive.ExtractToDirectory(TempDir, overwriteFiles: true);
-
         return TempDir;
+    }
+
+    /// <summary>
+    /// 从 exe 尾部追加段读取 payload；回退到 exe 同目录的 payload.zip
+    /// </summary>
+    private static Stream OpenPayloadStream()
+    {
+        var exePath = Environment.ProcessPath
+            ?? Process.GetCurrentProcess().MainModule!.FileName;
+
+        using (var fs = new FileStream(exePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            if (fs.Length > FooterSize)
+            {
+                fs.Seek(-FooterSize, SeekOrigin.End);
+                var footer = new byte[FooterSize];
+                fs.ReadExactly(footer, 0, FooterSize);
+                var magic = System.Text.Encoding.ASCII.GetString(footer, 0, 8);
+                if (magic == PayloadMagic)
+                {
+                    long len = BitConverter.ToInt64(footer, 8); // 小端
+                    if (len > 0 && len <= fs.Length - FooterSize)
+                    {
+                        long start = fs.Length - FooterSize - len;
+                        fs.Seek(start, SeekOrigin.Begin);
+                        var buf = new byte[len];
+                        fs.ReadExactly(buf, 0, (int)len);
+                        return new MemoryStream(buf, writable: false);
+                    }
+                }
+            }
+        }
+
+        // 回退：exe 同目录的 payload.zip
+        var sideCar = Path.Combine(AppContext.BaseDirectory, "payload.zip");
+        if (File.Exists(sideCar))
+            return new FileStream(sideCar, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+        throw new FileNotFoundException(
+            "找不到安装资源包 (payload.zip)：exe 尾部无有效追加段，且同目录无 payload.zip");
     }
 
     /// <summary>

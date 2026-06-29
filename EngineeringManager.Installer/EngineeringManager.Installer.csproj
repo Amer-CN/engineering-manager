@@ -27,9 +27,4 @@
     <EmbeddedResource Include="app.ico" LogicalName="EngineeringManager.Installer.app.ico" />
   </ItemGroup>
 
-  <!-- 嵌入压缩包（构建前由 build-installer.bat 生成） -->
-  <ItemGroup>
-    <EmbeddedResource Include="payload.zip" LogicalName="EngineeringManager.Installer.payload.zip" />
-  </ItemGroup>
-
 </Project>

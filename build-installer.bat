@@ -64,8 +64,20 @@ if exist release-installer rmdir /s /q release-installer
 dotnet publish EngineeringManager.Installer -c Release -r win-x64 --self-contained -o release-installer -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
 if errorlevel 1 ( echo X FAILED & pause & exit /b 1 )
 
-:: Copy the single exe
-copy /Y release-installer\EngineeringManager.Installer.exe "release\EngineeringManager-Setup-%VERSION%.exe" >nul
+:: Concatenate stub + payload + footer (自解压追加段)
+echo    Concatenating stub + payload + footer...
+powershell -NoProfile -Command ^
+  "$stub='release-installer\EngineeringManager.Installer.exe';" ^
+  "$payload='EngineeringManager.Installer\payload.zip';" ^
+  "$out='release\EngineeringManager-Setup-%VERSION%.exe';" ^
+  "$magic=[Text.Encoding]::ASCII.GetBytes('EMPAYLD1');" ^
+  "$len=(Get-Item $payload).Length;" ^
+  "$lenBytes=[BitConverter]::GetBytes([Int64]$len);" ^
+  "$o=[IO.File]::Open($out,'Create');" ^
+  "try{ $s=[IO.File]::OpenRead($stub); try{$s.CopyTo($o)}finally{$s.Dispose()};" ^
+  "$p=[IO.File]::OpenRead($payload); try{$p.CopyTo($o)}finally{$p.Dispose()};" ^
+  "$o.Write($magic,0,8); $o.Write($lenBytes,0,8) } finally { $o.Dispose() }"
+if errorlevel 1 ( echo X FAILED & pause & exit /b 1 )
 
 :: Clean up
 rmdir /s /q release-installer 2>nul
