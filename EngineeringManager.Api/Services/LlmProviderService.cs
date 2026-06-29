@@ -26,6 +26,7 @@ public class LlmProviderService
     private readonly ILogger<LlmProviderService> _logger;
     private readonly IConfiguration _configuration;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IModelRouter _router;
     private LlmProviderConfig _config;
 
     // 内置 Agnes 兜底
@@ -43,11 +44,13 @@ public class LlmProviderService
     public LlmProviderService(
         ILogger<LlmProviderService> logger,
         IConfiguration configuration,
-        IHttpClientFactory httpClientFactory)
+        IHttpClientFactory httpClientFactory,
+        IModelRouter router)
     {
         _logger = logger;
         _configuration = configuration;
         _httpClientFactory = httpClientFactory;
+        _router = router;
         _config = ResolveConfig();
     }
 
@@ -220,22 +223,22 @@ public class LlmProviderService
         List<AgentMessage> messages,
         List<object>? tools = null)
     {
-        var config = GetConfigWithKey();
+        var route = _router.GetRoute("chat");
 
         var payload = new Dictionary<string, object>
         {
-            ["model"] = config.Model,
+            ["model"] = route.Model,
             ["messages"] = messages,
         };
 
         if (tools != null && tools.Count > 0)
             payload["tools"] = tools;
 
-        if (config.Temperature > 0)
-            payload["temperature"] = config.Temperature;
+        if (route.Temperature > 0)
+            payload["temperature"] = route.Temperature;
 
-        if (config.MaxTokens > 0)
-            payload["max_tokens"] = config.MaxTokens;
+        if (route.MaxTokens > 0)
+            payload["max_tokens"] = route.MaxTokens;
 
         try
         {
@@ -245,8 +248,8 @@ public class LlmProviderService
             var json = JsonSerializer.Serialize(payload, SerializerOptions);
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
             using var request = new HttpRequestMessage(HttpMethod.Post,
-                $"{config.BaseUrl.TrimEnd('/')}/chat/completions");
-            request.Headers.Add("Authorization", $"Bearer {config.ApiKey}");
+                $"{route.BaseUrl.TrimEnd('/')}/chat/completions");
+            request.Headers.Add("Authorization", $"Bearer {route.ApiKey}");
             request.Content = content;
 
             var response = await client.SendAsync(request);
@@ -274,11 +277,11 @@ public class LlmProviderService
         List<AgentMessage> messages,
         List<object>? tools = null)
     {
-        var config = GetConfigWithKey();
+        var route = _router.GetRoute("chat-stream");
 
         var payload = new Dictionary<string, object>
         {
-            ["model"] = config.Model,
+            ["model"] = route.Model,
             ["messages"] = messages,
             ["stream"] = true,
         };
@@ -286,14 +289,14 @@ public class LlmProviderService
         if (tools != null && tools.Count > 0)
             payload["tools"] = tools;
 
-        if (config.Temperature > 0)
-            payload["temperature"] = config.Temperature;
+        if (route.Temperature > 0)
+            payload["temperature"] = route.Temperature;
 
-        if (config.MaxTokens > 0)
-            payload["max_tokens"] = config.MaxTokens;
+        if (route.MaxTokens > 0)
+            payload["max_tokens"] = route.MaxTokens;
 
         // 分离连接与 yield：try/catch 内不能 yield return
-        var connectResult = await ConnectStreamAsync(config, payload);
+        var connectResult = await ConnectStreamAsync(route, payload);
         if (connectResult.Error != null)
         {
             yield return connectResult.Error;
@@ -325,7 +328,7 @@ public class LlmProviderService
     }
 
     private async Task<(StreamReader? Reader, string? Error)> ConnectStreamAsync(
-        LlmProviderConfig config,
+        ModelRouteInfo route,
         Dictionary<string, object> payload)
     {
         try
@@ -336,8 +339,8 @@ public class LlmProviderService
             var json = JsonSerializer.Serialize(payload, SerializerOptions);
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
             using var request = new HttpRequestMessage(HttpMethod.Post,
-                $"{config.BaseUrl.TrimEnd('/')}/chat/completions");
-            request.Headers.Add("Authorization", $"Bearer {config.ApiKey}");
+                $"{route.BaseUrl.TrimEnd('/')}/chat/completions");
+            request.Headers.Add("Authorization", $"Bearer {route.ApiKey}");
             request.Content = content;
 
             var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
