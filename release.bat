@@ -14,14 +14,10 @@ for /f "tokens=2 delims=:, " %%a in ('findstr /C:"version" package.json') do set
 set VERSION=%VERSION:"=%
 echo   Version: %VERSION%
 
-:: Check EM_RELEASE_BASE
+:: Check EM_RELEASE_BASE (auto-set from version if not provided)
 if "%EM_RELEASE_BASE%"=="" (
-    echo.
-    echo   [ERROR] 缺少环境变量 EM_RELEASE_BASE
-    echo   请设置: set EM_RELEASE_BASE=https://github.com/Amer-CN/engineering-manager/releases/download/v%%VERSION%%
-    echo.
-    pause
-    exit /b 1
+    set EM_RELEASE_BASE=https://github.com/Amer-CN/engineering-manager/releases/download/v%VERSION%
+    echo   [AUTO] EM_RELEASE_BASE not set, using GitHub Release: %EM_RELEASE_BASE%
 )
 echo   Release Base: %EM_RELEASE_BASE%
 echo.
