@@ -1,5 +1,7 @@
 # 工程管家 - 工程业务管理系统
 
+**[官方网站](https://engineering-manager-website.pages.dev/)** · [GitHub Releases](https://github.com/Amer-CN/engineering-manager/releases)
+
 ## 📖 项目介绍
 
 **工程管家** 是一款专为工程公司和施工团队设计的桌面应用程序，帮助您高效管理项目、合同、发票、人员、材料、结算等核心业务。
