@@ -9,6 +9,43 @@
 > **重要**: v0.74.0 → v0.75.3 期间曾过度打 tag (refactor-only sprint 也 bump). 已在 v0.75.3 重新整理 git 历史 (drop 7 个 spurious chore "bump version" commits), 重组成正确的 semver 历史. 详见 `docs/handoff/v0.75.3-handoff.md`.
 
 
+## v0.80.0 (2026-06-30) — feat: 版本自动更新系统 + PII/数据范围安全重构
+
+> **SemVer**: minor bump (0.79.0 → 0.80.0), 新增功能（应用内自动更新）+ 安全重构.
+
+### 改动
+
+#### 🚀 版本自动更新系统（核心新功能）
+- **三环交付**: 检查更新端点 + 前端 UpdateBanner + 下载/SHA256 校验/装包重启完整闭环
+- **版本单源**: `scripts/sync-version.mjs` 从 `package.json.version` 同步到 `.csproj`/`version.ts`/`installer.iss`
+- **多源 manifest fallback**: `UpdateService` 支持 `ManifestUrls[]` 按序尝试（GitHub Release + CDN）
+- **增量 SHA256**: `IncrementalHash` 边下边算，下完即校验，不留 `.part` 半成品
+- **实时进度反馈**: SSE 推送下载进度（百分比+MB+速度），进度条 UI
+- **强制更新遮罩**: `minForced > current` 时全屏不可关 modal
+- **manifest 自动化**: `scripts/make-manifest.mjs` 发版时自动计算 SHA256+size，支持 GitHub Release URL 模板
+- **启动防呆**: `ManifestUrls` 含 `example.cn` 时 Console.Error 警告
+
+#### 🔒 安全重构
+- **D-2 PII 字段权限分级**: `CanReadPii(bool)` → `PiiAccess` 结构体（per-field 控制），修复 `workers.address` 未脱敏漏洞
+- **D-1 DataScope 枚举化**: `@IsAdmin` 布尔字面量 → `DataScope` 三档枚举（All/AuthorizedProjects/SelfOnly），SQL 不再出现 `@IsAdmin`
+- **L-1/L-2/L-3 SafeQueryValidator**: REPLACE 标量函数放行 + EnsureLimit 修复 + 子查询提示语更新
+- **REST 端点 PII 对齐**: `/api/workers`/`/api/project-workers` 的 PII 字段走 `MaskPiiField(piiAccess)`
+- **退役 `CanReadPii`**: 已无调用点，删除死代码
+
+#### 🛠️ 技术改进
+- **版本号同步**: `src/version.ts`/`installer/package.json`/`Login.tsx` fallback 全部对齐到 `package.json.version`
+- **安装包 ASCII 名**: `installer.iss` OutputBaseFilename 改为 `EngineeringManager-Setup-{VERSION}`
+- **Inno Setup 自动版本**: `#include "installer\version.iss"` + `CloseApplications=yes`
+
+### 红绿灯
+
+- dotnet build: 0 错误
+- dotnet test: 158/158 通过
+- tsc: 0 错误
+- vite build: 成功
+
+---
+
 ## v0.79.0 (2026-06-29) — feat: AI 助手安全增强 + runSafeQuery + AST 引擎 + 模型路由
 
 > **SemVer**: minor bump (0.78.3 → 0.79.0), 新增功能（SSE 流式 / runSafeQuery / AST 引擎 / 模型路由）+ 安全修复.
