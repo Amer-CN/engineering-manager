@@ -59,7 +59,7 @@ dotnet publish EngineeringManager.Installer -c Release -r win-x64 --self-contain
 if errorlevel 1 ( echo X FAILED & pause & exit /b 1 )
 
 :: Copy the single exe
-copy /Y release-installer\EngineeringManager.Installer.exe "release\工程管家-Setup.exe" >nul
+copy /Y release-installer\EngineeringManager.Installer.exe "release\工程管家-v0.79.0-Setup.exe" >nul
 
 :: Clean up
 rmdir /s /q release-installer 2>nul
@@ -68,9 +68,9 @@ echo.
 echo ============================================================
 echo   BUILD COMPLETE!
 echo.
-echo   Single-file installer: release\工程管家-Setup.exe
+echo   Single-file installer: release\工程管家-v0.79.0-Setup.exe
 echo.
-for %%I in (release\工程管家-Setup.exe) do echo   Size: %%~zI bytes (%%~zI bytes / 1024 / 1024 = ~%%~zI MB)
+for %%I in (release\工程管家-v0.79.0-Setup.exe) do echo   Size: %%~zI bytes
 echo ============================================================
 echo.
 

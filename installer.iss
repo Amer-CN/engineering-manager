@@ -6,7 +6,7 @@
 ; ═══════════════════════════════════════════════════════════════
 
 #define MyAppName "工程管家"
-#define MyAppVersion "0.68.0"
+#define MyAppVersion "0.79.0"
 #define MyAppPublisher "Reasonix"
 #define MyAppExeName "EngineeringManager.Api.exe"
 #define MyAppDescription "工程项目管理系统 - 一站式工程项目管理解决方案"
