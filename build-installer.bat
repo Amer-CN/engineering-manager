@@ -9,6 +9,12 @@ echo.
 
 pushd "%~dp0"
 
+:: Read version from package.json
+for /f "tokens=2 delims=:, " %%a in ('findstr /C:"version" package.json') do set VERSION=%%~a
+set VERSION=%VERSION:"=%
+echo   Version: %VERSION%
+echo.
+
 :: 1. Build installer frontend
 echo [1/6] Building installer frontend...
 cd installer
@@ -59,7 +65,7 @@ dotnet publish EngineeringManager.Installer -c Release -r win-x64 --self-contain
 if errorlevel 1 ( echo X FAILED & pause & exit /b 1 )
 
 :: Copy the single exe
-copy /Y release-installer\EngineeringManager.Installer.exe "release\工程管家-v0.79.0-Setup.exe" >nul
+copy /Y release-installer\EngineeringManager.Installer.exe "release\EngineeringManager-Setup-%VERSION%.exe" >nul
 
 :: Clean up
 rmdir /s /q release-installer 2>nul
@@ -68,9 +74,9 @@ echo.
 echo ============================================================
 echo   BUILD COMPLETE!
 echo.
-echo   Single-file installer: release\工程管家-v0.79.0-Setup.exe
+echo   Single-file installer: release\EngineeringManager-Setup-%VERSION%.exe
 echo.
-for %%I in (release\工程管家-v0.79.0-Setup.exe) do echo   Size: %%~zI bytes
+for %%I in (release\EngineeringManager-Setup-%VERSION%.exe) do echo   Size: %%~zI bytes
 echo ============================================================
 echo.
 
