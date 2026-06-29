@@ -9,6 +9,8 @@ if (!releaseBase) {
   console.error('[make-manifest] 错误：缺少环境变量 EM_RELEASE_BASE（二进制下载根地址）')
   process.exit(1)
 }
+// 支持 GitHub Release URL 模板：将 ${version} 占位符替换为实际版本号
+const resolvedBase = releaseBase.replace(/\$\{version\}/g, version).replace(/\/+$/, '')
 
 // 读现有 manifest（保留 notesUrl）
 let existingNotesUrl = ''
@@ -41,7 +43,7 @@ const buf = fs.readFileSync(setupFile)
 const sha256 = createHash('sha256').update(buf).digest('hex').toUpperCase()
 const size = buf.length
 
-const url = `${releaseBase.replace(/\/+$/, '')}/EngineeringManager-Setup-${version}.exe`
+const url = `${resolvedBase}/EngineeringManager-Setup-${version}.exe`
 
 // 防呆检查
 if (url.includes('example.cn')) {
