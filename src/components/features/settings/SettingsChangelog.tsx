@@ -15,7 +15,7 @@ interface Props { onClose: () => void }
 
 const SettingsChangelog: React.FC<Props> = ({ onClose }) => (
   <Modal isOpen={true} onClose={onClose} title={<span className="flex items-center gap-2"><Icon name="Clock" size={18} /> 更新日志</span>} size="md">
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-y-auto max-h-[60vh] pr-2">
       {versions.map(ver => (
         <div key={ver.v}>
           <div className="flex items-center gap-2 mb-2">
