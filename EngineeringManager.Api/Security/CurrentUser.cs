@@ -76,4 +76,50 @@ public static class CurrentUser
         }
         return false;
     }
+
+    // ── v0.80 D-2: PII 字段权限分级(新增;上面 CanReadPii 暂不删,REST 端点可能还在用) ──
+
+    /// <summary>PII 列全集(以 DB 列名为准)</summary>
+    public static readonly string[] AllPiiColumns =
+        { "id_card", "phone", "bank_account", "address", "id_card_address" };
+
+    public enum PiiRole { Admin, Accountant, Manager, Worker, None }
+
+    /// <summary>角色 → 可读明文的 PII 字段集合(未列出一律脱敏;默认拒绝)。
+    /// 当前为「行为保持」映射,与原 CanReadPii 等价。收紧 manager 只改这一处。</summary>
+    private static readonly IReadOnlyDictionary<PiiRole, HashSet<string>> PiiReadable =
+        new Dictionary<PiiRole, HashSet<string>>
+        {
+            [PiiRole.Admin]      = new(StringComparer.OrdinalIgnoreCase) { "id_card", "idCard", "phone", "bank_account", "bankAccount", "address", "id_card_address", "idCardAddress" },
+            [PiiRole.Accountant] = new(StringComparer.OrdinalIgnoreCase) { "id_card", "idCard", "phone", "bank_account", "bankAccount", "address", "id_card_address", "idCardAddress" },
+            [PiiRole.Manager]    = new(StringComparer.OrdinalIgnoreCase) { "id_card", "idCard", "phone", "bank_account", "bankAccount", "address", "id_card_address", "idCardAddress" },
+            [PiiRole.Worker]     = new(StringComparer.OrdinalIgnoreCase) { },
+            [PiiRole.None]       = new(StringComparer.OrdinalIgnoreCase) { },
+        };
+
+    public readonly struct PiiAccess
+    {
+        private readonly HashSet<string> _readable;
+        public PiiAccess(HashSet<string> readable) => _readable = readable;
+        public bool CanRead(string field) => _readable.Contains(field);
+    }
+
+    /// <summary>集中角色解析(兼容中文 roleName 与英文 roleId)</summary>
+    public static PiiRole ResolveRole(HttpContext ctx)
+    {
+        var roleClaims = ctx.User?.FindAll(System.Security.Claims.ClaimTypes.Role);
+        if (roleClaims == null) return PiiRole.None;
+        foreach (var c in roleClaims)
+            switch (c.Value)
+            {
+                case "管理员": case "admin":      return PiiRole.Admin;
+                case "经理":   case "manager":    return PiiRole.Manager;
+                case "财务":   case "accountant": return PiiRole.Accountant;
+                case "工人":   case "worker":     return PiiRole.Worker;
+            }
+        return PiiRole.None;
+    }
+
+    public static PiiAccess GetPiiAccess(HttpContext ctx) =>
+        new PiiAccess(PiiReadable[ResolveRole(ctx)]);
 }

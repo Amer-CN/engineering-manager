@@ -87,7 +87,7 @@ public class AgentToolService
         {
             var uid = CurrentUser.GetUserId(ctx) ?? "";
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
-            var canReadPii = CurrentUser.CanReadPii(ctx);
+            var piiAccess = CurrentUser.GetPiiAccess(ctx);
 
             object? result = toolName switch
             {
@@ -98,20 +98,20 @@ public class AgentToolService
                 "getPendingInvoices" => await ExecuteGetPendingInvoices(db, uid, isAdmin),
                 "getSettlements" => await ExecuteGetSettlements(db, arguments, uid, isAdmin),
                 "getPendingSettlements" => await ExecuteGetPendingSettlements(db, uid, isAdmin),
-                "getMembers" => await ExecuteGetMembers(db, uid, isAdmin, canReadPii),
-                "getWorkers" => await ExecuteGetWorkers(db, uid, isAdmin, canReadPii),
+                "getMembers" => await ExecuteGetMembers(db, uid, isAdmin),
+                "getWorkers" => await ExecuteGetWorkers(db, uid, isAdmin),
                 "getContracts" => await ExecuteGetContracts(db, arguments, uid, isAdmin),
                 "getInventory" => await ExecuteGetInventory(db, uid, isAdmin),
                 "getCostSummary" => await ExecuteGetCostSummary(db, arguments, uid, isAdmin),
                 "getPartners" => await ExecuteGetPartners(db, uid, isAdmin),
-                "runSafeQuery" => await ExecuteRunSafeQuery(db, arguments, uid, isAdmin, canReadPii),
+                "runSafeQuery" => await ExecuteRunSafeQuery(db, arguments, uid, isAdmin, piiAccess),
                 _ => null,
             };
 
             // PII 脱敏
             if (result != null && tool.PiiFields.Length > 0)
             {
-                result = MaskPiiInResult(result, tool.PiiFields, canReadPii);
+                result = MaskPiiInResult(result, tool.PiiFields, piiAccess);
             }
 
             return new ToolCallResult
@@ -279,7 +279,7 @@ public class AgentToolService
         return Task.FromResult<object>(settlements);
     }
 
-    private static Task<object> ExecuteGetMembers(IDbConnection db, string uid, int isAdmin, bool canReadPii)
+    private static Task<object> ExecuteGetMembers(IDbConnection db, string uid, int isAdmin)
     {
         var filter = CurrentUser.UserFilterCompany("m.created_by");
         var members = db.Query($@"
@@ -293,7 +293,7 @@ public class AgentToolService
         return Task.FromResult<object>(members);
     }
 
-    private static Task<object> ExecuteGetWorkers(IDbConnection db, string uid, int isAdmin, bool canReadPii)
+    private static Task<object> ExecuteGetWorkers(IDbConnection db, string uid, int isAdmin)
     {
         var filter = CurrentUser.UserFilterCompany("w.created_by");
         var workers = db.Query($@"
@@ -416,7 +416,7 @@ public class AgentToolService
     /// 执行受限只读查询（runSafeQuery）
     /// </summary>
     private static async Task<object> ExecuteRunSafeQuery(
-        IDbConnection db, JsonElement args, string uid, int isAdmin, bool canReadPii)
+        IDbConnection db, JsonElement args, string uid, int isAdmin, CurrentUser.PiiAccess access)
     {
         // 1. 提取 SQL 参数
         string sql;
@@ -461,8 +461,10 @@ public class AgentToolService
             var results = await db.QueryAsync(command);
             var resultList = results.ToList();
 
-            // 5. PII 脱敏（对结果中的敏感字段）
-            var maskedResults = MaskSafeQueryResults(resultList, validation.ReferencedTables!, canReadPii);
+            // 5. PII 脱敏（按角色对 PII 列脱敏，与工具路径统一）
+            var maskedResults = ((IEnumerable<object>)MaskPiiInResult(
+                    resultList.Cast<object>().ToList(), CurrentUser.AllPiiColumns, access))
+                .ToList();
 
             // 6. 记录审计日志
             SafeQueryValidator.LogAudit(db, uid, sql, validation.RewrittenSql, true, null);
@@ -481,50 +483,6 @@ public class AgentToolService
             SafeQueryValidator.LogAudit(db, uid, sql, validation.RewrittenSql, false, errorMsg);
             return new { success = false, error = Common.Sanitize(errorMsg) };
         }
-    }
-
-    /// <summary>
-    /// 对安全查询结果进行 PII 脱敏
-    /// </summary>
-    private static List<dynamic> MaskSafeQueryResults(
-        List<dynamic> results, HashSet<string> tables, bool canReadPii)
-    {
-        // canReadPii=true → 返回明文; false → 脱敏
-        if (canReadPii) return results;
-
-        var piiFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "id_card", "phone", "bank_account", "id_card_address"
-        };
-
-        var maskedResults = new List<dynamic>();
-        foreach (var row in results)
-        {
-            var dict = (IDictionary<string, object>)row;
-            var maskedDict = new Dictionary<string, object>();
-
-            foreach (var kvp in dict)
-            {
-                if (piiFields.Contains(kvp.Key) && kvp.Value is string strValue)
-                {
-                    // 应用脱敏
-                    maskedDict[kvp.Key] = kvp.Key switch
-                    {
-                        "phone" => Common.MaskPhone(strValue) ?? strValue,
-                        "bank_account" => Common.MaskBankAccount(strValue) ?? strValue,
-                        _ => Common.MaskIdCard(strValue) ?? strValue,
-                    };
-                }
-                else
-                {
-                    maskedDict[kvp.Key] = kvp.Value;
-                }
-            }
-
-            maskedResults.Add(maskedDict);
-        }
-
-        return maskedResults;
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -575,26 +533,24 @@ public class AgentToolService
     /// DapperRow / FastExpando 实现了 IDictionary&lt;string, object&gt;，
     /// 用字典写入而非反射 SetValue（反射对只读属性无效）
     /// </summary>
-    private static object MaskPiiInResult(object result, string[] piiFields, bool canReadPii)
+    private static object MaskPiiInResult(object result, string[] piiFields, CurrentUser.PiiAccess access)
     {
-        if (canReadPii) return result;
-
         // 对列表中的每行进行脱敏
         if (result is IEnumerable<object> list)
         {
             var masked = new List<object>();
             foreach (var item in list)
             {
-                masked.Add(MaskPiiRow(item, piiFields));
+                masked.Add(MaskPiiRow(item, piiFields, access));
             }
             return masked;
         }
 
         // 单条记录
-        return MaskPiiRow(result, piiFields);
+        return MaskPiiRow(result, piiFields, access);
     }
 
-    private static object MaskPiiRow(object row, string[] piiFields)
+    private static object MaskPiiRow(object row, string[] piiFields, CurrentUser.PiiAccess access)
     {
         // DapperRow / FastExpando 都实现了 IDictionary<string, object>
         if (row is IDictionary<string, object> dict)
@@ -603,7 +559,7 @@ public class AgentToolService
             {
                 if (dict.TryGetValue(field, out var val) && val is string str && !string.IsNullOrEmpty(str))
                 {
-                    dict[field] = Common.MaskPiiField(field, str, false);
+                    dict[field] = Common.MaskPiiField(field, str, access);
                 }
             }
             return dict;
@@ -617,7 +573,7 @@ public class AgentToolService
             var val = prop.GetValue(row);
             if (piiFields.Contains(prop.Name) && val is string str && !string.IsNullOrEmpty(str))
             {
-                newDict[prop.Name] = Common.MaskPiiField(prop.Name, str, false);
+                newDict[prop.Name] = Common.MaskPiiField(prop.Name, str, access);
             }
             else
             {
@@ -746,7 +702,7 @@ public class AgentToolService
             Description = "获取工人列表：姓名、电话、工种、日薪",
             Parameters = BuildParams(new Dictionary<string, object>()),
             RequiredPermission = "labor:read",
-            PiiFields = new[] { "id_card", "phone", "bank_account" },
+            PiiFields = new[] { "id_card", "phone", "bank_account", "address" },
         });
 
         // 10. getContracts

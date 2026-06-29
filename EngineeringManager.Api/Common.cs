@@ -81,10 +81,10 @@ public static class Common
     /// 规则: canReadPii=true → 返回原值; false → 按字段类型脱敏
     /// 字段类型: idCard / phone / idCardAddress / bankAccount / bank_account / default (按 idCard 规则)
     /// </summary>
-    public static string? MaskPiiField(string field, string? value, bool canReadPii)
+    public static string? MaskPiiField(string field, string? value, EngineeringManager.Api.Security.CurrentUser.PiiAccess access)
     {
-        if (canReadPii) return value;
         if (string.IsNullOrEmpty(value)) return value;
+        if (access.CanRead(field)) return value;
         return field switch
         {
             "phone" => MaskPhone(value),

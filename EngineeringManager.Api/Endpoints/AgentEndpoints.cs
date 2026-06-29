@@ -765,7 +765,7 @@ public static class AgentEndpoints
             "【硬性约束】",
             "- 严禁查询以下表：users、roles、audit_logs、llm_config（含变体 llm-config）、sqlite_master 及任何 sqlite_* 系统表。若用户索要这些（如\"用户列表\"\"权限角色\"\"操作日志\"\"模型密钥\"），明确拒绝并说明这是受限数据。",
             "- 仅生成单条只读 SELECT；不得使用 INSERT/UPDATE/DELETE/DROP/ATTACH/PRAGMA 等。",
-            "- 本版本暂不支持子查询；如需多表请用 JOIN。",
+            "- 多表关联请优先用顶层 JOIN。权限过滤目前仅在最外层 WHERE 注入,子查询中引入新表会在执行阶段被拒,请不要在子查询里查询额外的表。",
             "- 不要在回答中编造表或字段；不确定字段名时，先用已知字段，必要时说明假设。",
             "",
             "## 回答规范",
