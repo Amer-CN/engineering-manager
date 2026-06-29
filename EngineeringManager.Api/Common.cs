@@ -79,7 +79,7 @@ public static class Common
     /// <summary>
     /// v0.76.0 累计待办 #1: PII ACL 字段统一脱敏入口
     /// 规则: canReadPii=true → 返回原值; false → 按字段类型脱敏
-    /// 字段类型: idCard / phone / idCardAddress / bankAccount / default (按 idCard 规则)
+    /// 字段类型: idCard / phone / idCardAddress / bankAccount / bank_account / default (按 idCard 规则)
     /// </summary>
     public static string? MaskPiiField(string field, string? value, bool canReadPii)
     {
@@ -88,7 +88,7 @@ public static class Common
         return field switch
         {
             "phone" => MaskPhone(value),
-            "bankAccount" => MaskBankAccount(value),
+            "bankAccount" or "bank_account" => MaskBankAccount(value),
             // idCard / idCardAddress / 其他: 走 MaskIdCard 规则 (前 4 后 4 中间 ****)
             _ => MaskIdCard(value),
         };
@@ -113,17 +113,22 @@ public static class Common
                     "members:create","members:read","members:update","members:delete",
                     "wages:create","wages:read","wages:update","wages:delete",
                     "settlement:create","settlement:read","settlement:update","settlement:delete",
+                    "inventory:read",
                     "invoices:create","invoices:read","invoices:update","invoices:delete",
                     "costLedger:create","costLedger:read","costLedger:update","costLedger:delete",
                     "settings:read","settings:update","users:create","users:read","users:update","users:delete",
-                    "roles:read","roles:update","audit_logs:read","audit_logs:export"],
+                    "roles:read","roles:update","audit_logs:read","audit_logs:export",
+                    "labor:read","safeQuery:read"],
         "manager" => ["dashboard:read","projects:read","projects:update","contracts:read","contracts:update",
                       "partners:read","members:read","wages:read","settlement:read","invoices:read",
-                      "costLedger:read","settings:read","users:read","roles:read","audit_logs:read"],
+                      "inventory:read",
+                      "costLedger:read","settings:read","users:read","roles:read","audit_logs:read",
+                      "labor:read","safeQuery:read"],
         "accountant" => ["dashboard:read","projects:read","contracts:read","members:read",
                          "wages:create","wages:read","wages:update","settlement:read","invoices:create",
                          "invoices:read","invoices:update","costLedger:create","costLedger:read",
-                         "costLedger:update","settings:read","audit_logs:read","audit_logs:export"],
+                         "costLedger:update","settings:read","audit_logs:read","audit_logs:export",
+                         "labor:read"],
         "worker" => ["dashboard:read","projects:read","members:read","wages:read"],
         _ => []
     };

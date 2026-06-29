@@ -101,9 +101,10 @@ public class AgentToolService
                 "getMembers" => await ExecuteGetMembers(db, uid, isAdmin, canReadPii),
                 "getWorkers" => await ExecuteGetWorkers(db, uid, isAdmin, canReadPii),
                 "getContracts" => await ExecuteGetContracts(db, arguments, uid, isAdmin),
-                "getInventory" => await ExecuteGetInventory(db),
+                "getInventory" => await ExecuteGetInventory(db, uid, isAdmin),
                 "getCostSummary" => await ExecuteGetCostSummary(db, arguments, uid, isAdmin),
                 "getPartners" => await ExecuteGetPartners(db, uid, isAdmin),
+                "runSafeQuery" => await ExecuteRunSafeQuery(db, arguments, uid, isAdmin),
                 _ => null,
             };
 
@@ -140,19 +141,24 @@ public class AgentToolService
 
     private static Task<object> ExecuteGetDashboardStats(IDbConnection db, string uid, int isAdmin)
     {
-        var projectsCount = db.ExecuteScalar<int>("SELECT COUNT(*) FROM projects");
-        var membersCount = db.ExecuteScalar<int>("SELECT COUNT(*) FROM members");
-        var workersCount = db.ExecuteScalar<int>("SELECT COUNT(*) FROM workers");
-        var invoicesCount = db.ExecuteScalar<int>("SELECT COUNT(*) FROM invoices");
-        var settlementsCount = db.ExecuteScalar<int>("SELECT COUNT(*) FROM settlements");
-        var inProgressProjects = db.ExecuteScalar<int>("SELECT COUNT(*) FROM projects WHERE status='active'");
-        var totalIncome = db.ExecuteScalar<double>("SELECT COALESCE(SUM(amount), 0) FROM cost_ledger WHERE direction='income'");
-        var totalExpense = db.ExecuteScalar<double>("SELECT COALESCE(SUM(amount), 0) FROM cost_ledger WHERE direction='expense'");
+        var companyFilter = CurrentUser.UserFilterCompany("created_by");
+        var projectFilter = CurrentUser.UserFilterWithAuthorizedProjects("project_id", "created_by");
+        var p = new { Uid = uid, IsAdmin = isAdmin };
 
-        var recentProjects = db.Query(@"
+        var projectsCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM projects WHERE {companyFilter}", p);
+        var membersCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM members WHERE {companyFilter}", p);
+        var workersCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM workers WHERE {companyFilter}", p);
+        var invoicesCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM invoices WHERE {projectFilter}", p);
+        var settlementsCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM settlements WHERE {projectFilter}", p);
+        var inProgressProjects = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM projects WHERE status='active' AND {companyFilter}", p);
+        var totalIncome = db.ExecuteScalar<double>($"SELECT COALESCE(SUM(amount), 0) FROM cost_ledger WHERE direction='income' AND {projectFilter}", p);
+        var totalExpense = db.ExecuteScalar<double>($"SELECT COALESCE(SUM(amount), 0) FROM cost_ledger WHERE direction='expense' AND {projectFilter}", p);
+
+        var recentProjects = db.Query($@"
             SELECT id, name, status FROM projects
+            WHERE {companyFilter}
             ORDER BY created_at DESC LIMIT 5
-        ").ToList();
+        ", p).ToList();
 
         return Task.FromResult<object>(new
         {
@@ -340,14 +346,16 @@ public class AgentToolService
         return Task.FromResult<object>(new { incomeContracts = income, expenseContracts = expense });
     }
 
-    private static Task<object> ExecuteGetInventory(IDbConnection db)
+    private static Task<object> ExecuteGetInventory(IDbConnection db, string uid, int isAdmin)
     {
-        var items = db.Query(@"
+        var filter = CurrentUser.UserFilterCompany("created_by");
+        var items = db.Query($@"
             SELECT id, name, category, unit, quantity, min_quantity, location
             FROM inventory_items
+            WHERE {filter}
             ORDER BY name
             LIMIT 30
-        ").ToList();
+        ", new { Uid = uid, IsAdmin = isAdmin }).ToList();
 
         return Task.FromResult<object>(items);
     }
@@ -355,31 +363,30 @@ public class AgentToolService
     private static Task<object> ExecuteGetCostSummary(IDbConnection db, JsonElement args, string uid, int isAdmin)
     {
         var projectId = GetOptionalIntArg(args, "projectId");
-
-        var whereClause = projectId.HasValue
-            ? $"WHERE project_id = {projectId.Value}"
-            : "";
+        var filter = CurrentUser.UserFilterWithAuthorizedProjects("project_id", "created_by");
+        var projectFilter = projectId.HasValue
+            ? $"{filter} AND project_id = @ProjectId"
+            : filter;
+        var p = new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId };
 
         var byCategory = db.Query($@"
             SELECT category, SUM(amount) as total
             FROM cost_ledger
-            {whereClause}
+            WHERE {projectFilter}
             GROUP BY category
             ORDER BY total DESC
             LIMIT 20
-        ").ToList();
+        ", p).ToList();
 
         var totalIncome = db.ExecuteScalar<double>($@"
             SELECT COALESCE(SUM(amount), 0) FROM cost_ledger
-            WHERE direction = 'income'
-            {(projectId.HasValue ? $" AND project_id = {projectId.Value}" : "")}
-        ");
+            WHERE direction = 'income' AND {projectFilter}
+        ", p);
 
         var totalExpense = db.ExecuteScalar<double>($@"
             SELECT COALESCE(SUM(amount), 0) FROM cost_ledger
-            WHERE direction = 'expense'
-            {(projectId.HasValue ? $" AND project_id = {projectId.Value}" : "")}
-        ");
+            WHERE direction = 'expense' AND {projectFilter}
+        ", p);
 
         return Task.FromResult<object>(new
         {
@@ -403,6 +410,112 @@ public class AgentToolService
         ", new { Uid = uid, IsAdmin = isAdmin }).ToList();
 
         return Task.FromResult<object>(partners);
+    }
+
+    /// <summary>
+    /// 执行受限只读查询（runSafeQuery）
+    /// </summary>
+    private static async Task<object> ExecuteRunSafeQuery(
+        IDbConnection db, JsonElement args, string uid, int isAdmin)
+    {
+        // 1. 提取 SQL 参数
+        string sql;
+        try
+        {
+            sql = args.GetProperty("sql").GetString() ?? "";
+        }
+        catch
+        {
+            return new { success = false, error = "缺少 sql 参数" };
+        }
+
+        if (string.IsNullOrWhiteSpace(sql))
+            return new { success = false, error = "SQL 不能为空" };
+
+        // 2. 验证并改写 SQL
+        var validation = SafeQueryValidator.ValidateAndRewrite(sql, uid, isAdmin);
+        if (!validation.IsValid)
+        {
+            // 记录审计日志
+            SafeQueryValidator.LogAudit(db, uid, sql, null, false, validation.Error);
+            return new { success = false, error = validation.Error };
+        }
+
+        // 3. 执行查询（带超时）
+        try
+        {
+            // 设置命令超时为 5 秒
+            var command = new Dapper.CommandDefinition(
+                validation.RewrittenSql!,
+                new { Uid = uid, IsAdmin = isAdmin },
+                commandTimeout: 5);
+
+            var results = await db.QueryAsync(command);
+            var resultList = results.ToList();
+
+            // 4. PII 脱敏（对结果中的敏感字段）
+            var maskedResults = MaskSafeQueryResults(resultList, validation.ReferencedTables!);
+
+            // 5. 记录审计日志
+            SafeQueryValidator.LogAudit(db, uid, sql, validation.RewrittenSql, true, null);
+
+            return new
+            {
+                success = true,
+                data = maskedResults,
+                rowCount = maskedResults.Count,
+                rewrittenSql = validation.RewrittenSql,
+            };
+        }
+        catch (Exception ex)
+        {
+            var errorMsg = $"查询执行失败: {ex.Message}";
+            SafeQueryValidator.LogAudit(db, uid, sql, validation.RewrittenSql, false, errorMsg);
+            return new { success = false, error = Common.Sanitize(errorMsg) };
+        }
+    }
+
+    /// <summary>
+    /// 对安全查询结果进行 PII 脱敏
+    /// </summary>
+    private static List<dynamic> MaskSafeQueryResults(
+        List<dynamic> results, HashSet<string> tables)
+    {
+        // 确定是否需要脱敏（这里简化处理，实际应根据用户权限）
+        // 由于 runSafeQuery 已经过权限验证，这里对所有结果进行脱敏
+        var piiFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "id_card", "phone", "bank_account", "id_card_address"
+        };
+
+        var maskedResults = new List<dynamic>();
+        foreach (var row in results)
+        {
+            var dict = (IDictionary<string, object>)row;
+            var maskedDict = new Dictionary<string, object>();
+
+            foreach (var kvp in dict)
+            {
+                if (piiFields.Contains(kvp.Key) && kvp.Value is string strValue)
+                {
+                    // 应用脱敏
+                    maskedDict[kvp.Key] = kvp.Key switch
+                    {
+                        "phone" => Common.MaskPhone(strValue) ?? strValue,
+                        "bank_account" => Common.MaskBankAccount(strValue) ?? strValue,
+                        _ => Common.MaskIdCard(strValue) ?? strValue,
+                    };
+                }
+                else
+                {
+                    maskedDict[kvp.Key] = kvp.Value;
+                }
+            }
+
+            maskedResults.Add(maskedDict);
+        }
+
+        return maskedResults;
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -671,6 +784,19 @@ public class AgentToolService
             Parameters = BuildParams(new Dictionary<string, object>()),
             RequiredPermission = "partners:read",
             PiiFields = new[] { "phone", "bank_account" },
+        });
+
+        // 14. runSafeQuery（受限只读查询）
+        registry.Add(new AgentTool
+        {
+            Name = "runSafeQuery",
+            Description = "受限只读查询：可以执行自定义 SELECT 查询，但有严格的安全限制（仅允许白名单表/列，自动注入权限过滤，强制 LIMIT）",
+            Parameters = BuildParams(new Dictionary<string, object>
+            {
+                ["sql"] = "要执行的 SQL 查询语句（仅 SELECT）"
+            }),
+            RequiredPermission = "safeQuery:read",
+            PiiFields = Array.Empty<string>(),
         });
 
         return registry;
