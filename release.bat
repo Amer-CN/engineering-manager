@@ -58,7 +58,7 @@ echo    OK
 
 :: 5. Build installer with Inno Setup
 echo.
-echo [5/5] Building installer with Inno Setup...
+echo [5/6] Building installer with Inno Setup...
 if not exist release mkdir release
 iscc installer.iss /DVERSION=%VERSION%
 if errorlevel 1 ( echo X FAILED & pause & exit /b 1 )
@@ -67,6 +67,7 @@ echo    OK
 :: Generate manifest
 echo.
 echo [6/6] Generating manifest...
+set EM_RELEASE_BASE=https://github.com/Amer-CN/engineering-manager/releases/download/v%VERSION%
 call npm run release:manifest
 if errorlevel 1 ( echo X FAILED & pause & exit /b 1 )
 echo    OK
