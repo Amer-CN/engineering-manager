@@ -46,7 +46,7 @@ PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 
 ; 安装包图标
-SetupIconFile=src-tauri\icons\icon.ico
+SetupIconFile=EngineeringManager.Api\app.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 
 ; 版本信息
@@ -57,7 +57,7 @@ VersionInfoProductName={#MyAppName}
 VersionInfoProductVersion={#VERSION}
 
 ; 界面设置
-WizardSmallImageFile=src-tauri\icons\32x32.png
+WizardSmallImageFile=EngineeringManager.Api\app.ico
 
 [Languages]
 Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
