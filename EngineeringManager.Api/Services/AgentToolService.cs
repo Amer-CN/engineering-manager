@@ -441,7 +441,15 @@ public class AgentToolService
             return new { success = false, error = validation.Error };
         }
 
-        // 3. 执行查询（带超时）
+        // 3. dry-run 预检
+        var dryRunError = SafeQueryValidator.DryRun(db, validation.RewrittenSql!);
+        if (dryRunError != null)
+        {
+            SafeQueryValidator.LogAudit(db, uid, sql, validation.RewrittenSql, false, dryRunError);
+            return new { success = false, error = dryRunError };
+        }
+
+        // 4. 执行查询（带超时）
         try
         {
             // 设置命令超时为 5 秒
@@ -453,10 +461,10 @@ public class AgentToolService
             var results = await db.QueryAsync(command);
             var resultList = results.ToList();
 
-            // 4. PII 脱敏（对结果中的敏感字段）
+            // 5. PII 脱敏（对结果中的敏感字段）
             var maskedResults = MaskSafeQueryResults(resultList, validation.ReferencedTables!, canReadPii);
 
-            // 5. 记录审计日志
+            // 6. 记录审计日志
             SafeQueryValidator.LogAudit(db, uid, sql, validation.RewrittenSql, true, null);
 
             return new
