@@ -1,9 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { getAPI } from '@/services/api-adapter'
 
-/** 检测是否在 Tauri 环境 */
-const isTauri = typeof window !== 'undefined' && ((window as unknown as Record<string, unknown>).__TAURI__ !== undefined || (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ !== undefined)
-
 export function useDataPath(refresh?: () => void) {
   const [dataPath, setDataPath] = useState('')
   const [defaultPath, setDefaultPath] = useState('')
@@ -30,18 +27,8 @@ export function useDataPath(refresh?: () => void) {
   const handleChangeDataPath = useCallback(async () => {
     setMessage(null)
     try {
-      let selectedPath: string | null = null
-
-      if (isTauri) {
-        // Tauri: 用前端 dialog 插件打开文件夹选择
-        const { open } = await import('@tauri-apps/plugin-dialog')
-        selectedPath = await open({ directory: true, title: '选择数据存储位置' })
-        if (!selectedPath) return
-      }
-
       const api = await getAPI()
-      // Tauri: 传实际路径; C#: 传 '__select_folder__' 让后端打开对话框
-      const result = await api.setDataPath(selectedPath || '__select_folder__')
+      const result = await api.setDataPath('__select_folder__')
 
       // 检查是否取消了选择
       if (result.success && (result as { cancelled?: boolean }).cancelled) {

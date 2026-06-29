@@ -9,9 +9,6 @@
     "build:frontend": "node scripts/check-rules.cjs && tsc && vite build",
     "build": "vite build",
     "preview": "vite preview",
-    "tauri": "tauri",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build",
     "postinstall": "node -e \"const fs=require('fs');if(fs.existsSync('public/ocr-config.json')){fs.mkdirSync('dist',{recursive:true});fs.copyFileSync('public/ocr-config.json','dist/ocr-config.json');}else{console.log('postinstall: skip, no public/ocr-config.json');}\"",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -21,7 +18,6 @@
   "dependencies": {
     "@tanstack/react-query": "^5.101.0",
     "@tanstack/react-virtual": "^3.14.3",
-    "@tauri-apps/plugin-dialog": "^2.0.0",
     "@types/dompurify": "^3.0.5",
     "docxtemplater": "^3.68.7",
     "dompurify": "^3.4.11",
