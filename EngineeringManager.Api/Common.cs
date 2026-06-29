@@ -149,7 +149,8 @@ record InvoiceDto(long? Id, long? ProjectId, long? SellerId, long? BuyerId, long
 record PaymentRecordDto(long? Id, string? Type, double? Amount, string? RecordDate, long? ProjectId, long? PartnerId, long? ContractId, string? InvoiceDetails, string? Remarks, string? FileUrl, string? FileType);
 record AttendanceDto(long? Id, long? MemberId, long? ProjectId, long? ProjectWorkerId, string YearMonth, double? WorkDays, int? DaysOff, bool? IsFullAttendance, string? DailyStatus, string? FileUrl, string? FileName);
 record WageDto(long? Id, long? ProjectId, long? MemberId, long? ProjectWorkerId, string? YearMonth, double? DailyWage, double? WorkDays, double? Bonus, double? Deduction, double? ActualWage, double? PaidAmount, string? PaidDate);
-record DepartmentDto(string Name, long? ManagerId, string? Positions);
+record DepartmentDto(string Name, long? ManagerId, List<string>? Positions);
+record DepartmentUpdateDto(long Id, string Name, long? ManagerId, List<string>? Positions);
 record AuditLogDto(string Action, string? Level, string? UserId, string? UserName, string? Resource, string? ResourceId, string? Details, string? Description, string? IpAddress, string? CreatedAt);
 record FileSaveDto(string? Category, string? SubCategory, string? FileName, string? FileData, string? ProjectName);
 record RegionDto(long? Id, string? Province, string? City, string? District);
