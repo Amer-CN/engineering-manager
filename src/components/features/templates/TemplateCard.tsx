@@ -42,7 +42,7 @@ export const TemplateCard = React.memo(function TemplateCard({ template, onEdit,
       )}
 
       {/* Variables */}
-      {template.variables && template.variables.length > 0 && (
+      {Array.isArray(template.variables) && template.variables.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-4">
           {template.variables.slice(0, 4).map(v => (
             <span key={v.key} className="px-1.5 py-0.5 rounded text-caption bg-slate-50 text-slate-500 border border-slate-100">
