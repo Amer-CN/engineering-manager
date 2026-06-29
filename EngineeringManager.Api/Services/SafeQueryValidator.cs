@@ -228,6 +228,32 @@ public static class SafeQueryValidator
             return new ValidationResult(false, null, null, ex.Message);
         }
 
+        // 8.5 校验 WHERE / GROUP BY / HAVING / ORDER BY（与投影同等的列/表/子查询校验）
+        try
+        {
+            if (select.Selection != null)
+                ValidateExpressionColumns(select.Selection, aliasToTable, referencedTables);
+
+            if (select.Having != null)
+                ValidateExpressionColumns(select.Having, aliasToTable, referencedTables);
+
+            if (select.GroupBy is GroupByExpression.Expressions groupByExprs)
+            {
+                foreach (var ge in groupByExprs.ColumnNames)
+                    ValidateExpressionColumns(ge, aliasToTable, referencedTables);
+            }
+
+            if (query.OrderBy != null)
+            {
+                foreach (var ob in query.OrderBy.Expressions)
+                    ValidateExpressionColumns(ob.Expression, aliasToTable, referencedTables);
+            }
+        }
+        catch (ValidationException ex)
+        {
+            return new ValidationResult(false, null, null, ex.Message);
+        }
+
         // 9. 使用 AST 回写 SQL 作为基础
         var rewrittenSql = query.ToSql();
 
@@ -345,6 +371,22 @@ public static class SafeQueryValidator
 
         CollectTables(subSelect.From, parentAliasToTable, parentReferencedTables);
         ValidateProjection(subSelect.Projection, parentAliasToTable, parentReferencedTables);
+
+        // 额外校验子查询自己的 WHERE/GROUP/ORDER（嵌套子查询的场景）
+        if (subSelect.Selection != null)
+            ValidateExpressionColumns(subSelect.Selection, parentAliasToTable, parentReferencedTables);
+        if (subSelect.Having != null)
+            ValidateExpressionColumns(subSelect.Having, parentAliasToTable, parentReferencedTables);
+        if (subSelect.GroupBy is GroupByExpression.Expressions gbSub)
+        {
+            foreach (var ge in gbSub.ColumnNames)
+                ValidateExpressionColumns(ge, parentAliasToTable, parentReferencedTables);
+        }
+        if (subQuery.OrderBy != null)
+        {
+            foreach (var ob in subQuery.OrderBy.Expressions)
+                ValidateExpressionColumns(ob.Expression, parentAliasToTable, parentReferencedTables);
+        }
     }
 
     /// <summary>
@@ -627,48 +669,72 @@ public static class SafeQueryValidator
 
         var filterClause = string.Join(" AND ", filters);
 
-        // 替换第一个顶层 WHERE，或在 GROUP BY / ORDER BY / LIMIT 前插入
-        var whereRegex = new Regex(@"\bWHERE\b", RegexOptions.IgnoreCase);
-        if (whereRegex.IsMatch(sql))
+        // 使用括号深度感知的顶层关键字定位
+        var whereIdx = FindTopLevelKeyword(sql, "WHERE");
+        if (whereIdx >= 0)
         {
-            return whereRegex.Replace(sql, $"WHERE {filterClause} AND", 1);
+            // 在顶层 WHERE 后插入
+            var insertAt = whereIdx + "WHERE".Length;
+            return sql.Substring(0, insertAt) + $" {filterClause} AND" + sql.Substring(insertAt);
         }
-        else
-        {
-            var insertPoint = Regex.Match(sql, @"\b(GROUP\s+BY|ORDER\s+BY|LIMIT)\b", RegexOptions.IgnoreCase);
-            if (insertPoint.Success)
-            {
-                var pos = insertPoint.Index;
-                return sql.Substring(0, pos) + $" WHERE {filterClause} " + sql.Substring(pos);
-            }
-            else
-            {
-                return sql + $" WHERE {filterClause}";
-            }
-        }
+
+        // 无顶层 WHERE：在顶层 GROUP BY / ORDER BY / LIMIT 之前插入
+        var groupIdx = FindTopLevelKeyword(sql, "GROUP");
+        var orderIdx = FindTopLevelKeyword(sql, "ORDER");
+        var limitIdx = FindTopLevelKeyword(sql, "LIMIT");
+        var candidates = new[] { groupIdx, orderIdx, limitIdx }.Where(x => x >= 0).ToArray();
+        var pos = candidates.Length > 0 ? candidates.Min() : -1;
+
+        if (pos >= 0)
+            return sql.Substring(0, pos) + $"WHERE {filterClause} " + sql.Substring(pos);
+        return sql + $" WHERE {filterClause}";
     }
 
     /// <summary>
-    /// 确保 SQL 有 LIMIT 子句，且不超过最大值
+    /// 返回顶层（括号深度 0）第一个关键字的位置，没有则 -1。
+    /// 避免命中子查询内的同名关键字。
+    /// </summary>
+    private static int FindTopLevelKeyword(string sql, string keyword)
+    {
+        int depth = 0;
+        for (int i = 0; i + keyword.Length <= sql.Length; i++)
+        {
+            var c = sql[i];
+            if (c == '(') { depth++; continue; }
+            if (c == ')') { depth--; continue; }
+            if (depth != 0) continue;
+
+            if (string.Compare(sql, i, keyword, 0, keyword.Length, StringComparison.OrdinalIgnoreCase) == 0
+                && (i == 0 || !char.IsLetterOrDigit(sql[i - 1]))
+                && (i + keyword.Length == sql.Length || !char.IsLetterOrDigit(sql[i + keyword.Length])))
+            {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /// <summary>
+    /// 确保 SQL 有 LIMIT 子句，且不超过最大值（使用顶层 LIMIT 定位）
     /// </summary>
     private static string EnsureLimit(string sql, int maxLimit)
     {
-        var limitMatch = Regex.Match(sql, @"LIMIT\s+(\d+)", RegexOptions.IgnoreCase);
-
-        if (limitMatch.Success)
-        {
-            var currentLimit = int.Parse(limitMatch.Groups[1].Value);
-            if (currentLimit > maxLimit)
-            {
-                return sql.Substring(0, limitMatch.Index) + $"LIMIT {maxLimit}" +
-                       sql.Substring(limitMatch.Index + limitMatch.Length);
-            }
-            return sql;
-        }
-        else
-        {
+        var limitIdx = FindTopLevelKeyword(sql, "LIMIT");
+        if (limitIdx < 0)
             return sql + $" LIMIT {maxLimit}";
-        }
+
+        // 提取 LIMIT 后的数字
+        var afterLimit = sql.Substring(limitIdx + 5).TrimStart();
+        var numMatch = Regex.Match(afterLimit, @"^(\d+)");
+        if (!numMatch.Success)
+            return sql + $" LIMIT {maxLimit}";
+
+        var currentLimit = int.Parse(numMatch.Groups[1].Value);
+        if (currentLimit <= maxLimit)
+            return sql;
+
+        return sql.Substring(0, limitIdx) + $"LIMIT {maxLimit}" +
+               sql.Substring(limitIdx + 5 + numMatch.Length);
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -679,11 +745,14 @@ public static class SafeQueryValidator
     /// dry-run 预检 — 对改写后的 SQL 执行 EXPLAIN，验证语法和表/列存在性。
     /// 只读操作，不产生业务数据。异常则判定校验失败。
     /// </summary>
-    public static string? DryRun(IDbConnection db, string rewrittenSql)
+    public static string? DryRun(IDbConnection db, string rewrittenSql, object? queryParams = null)
     {
         try
         {
-            db.Execute($"EXPLAIN {rewrittenSql}");
+            if (queryParams != null)
+                db.Execute($"EXPLAIN {rewrittenSql}", queryParams);
+            else
+                db.Execute($"EXPLAIN {rewrittenSql}");
             return null; // 成功，无错误
         }
         catch (Exception ex)
