@@ -178,6 +178,9 @@ public static class SafeQueryValidator
             // 匹配独立的 * token（前面不是字母/数字/下划线/点，后面也不是字母/数字/下划线）
             if (Regex.IsMatch(selectClause, @"(?<![A-Za-z0-9_.])\*(?![A-Za-z0-9_])"))
                 return new ValidationResult(false, null, null, "不允许 SELECT *，请明确指定列名");
+            // 额外拦截 alias.* 形式（如 p.*）
+            if (Regex.IsMatch(selectClause, @"\w+\.\s*\*"))
+                return new ValidationResult(false, null, null, "不允许 SELECT *，请明确指定列名");
         }
 
         // 7. 提取并验证表名
@@ -333,6 +336,16 @@ public static class SafeQueryValidator
     {
         // 从 FROM 子句解析表别名: 匹配 "FROM table [AS] alias" 或 "FROM table"
         var aliasMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        // SQL 关键字集合 — 匹配到的候选别名命中这些关键字则视为无别名
+        var sqlKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "WHERE", "ORDER", "GROUP", "LIMIT", "HAVING", "AS", "ON", "JOIN",
+            "INNER", "LEFT", "RIGHT", "OUTER", "CROSS", "FULL", "UNION",
+            "INTO", "FROM", "AND", "OR", "NOT", "IN", "IS", "NULL",
+            "BETWEEN", "LIKE", "EXISTS", "CASE", "WHEN", "THEN", "ELSE", "END"
+        };
+
         foreach (var table in tables)
         {
             if (!TableWhitelist.ContainsKey(table)) continue;
@@ -340,7 +353,12 @@ public static class SafeQueryValidator
             var aliasMatch = Regex.Match(sql,
                 $@"\b{table}\b\s+(?:AS\s+)?(\w+)", RegexOptions.IgnoreCase);
             if (aliasMatch.Success)
-                aliasMap[table] = aliasMatch.Groups[1].Value;
+            {
+                var candidate = aliasMatch.Groups[1].Value;
+                // 排除 SQL 关键字，避免 WHERE/ORDER/LIMIT 等被误当别名
+                if (!sqlKeywords.Contains(candidate))
+                    aliasMap[table] = candidate;
+            }
         }
 
         var filters = new List<string>();
