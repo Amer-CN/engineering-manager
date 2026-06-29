@@ -12,21 +12,21 @@ public class ModelRoutingService : IModelRouter
 {
     private readonly ILogger<ModelRoutingService> _logger;
     private readonly IConfiguration _configuration;
-    private readonly LlmProviderService _llmProvider;
+    private readonly LlmConfigResolver _configResolver;
 
     public ModelRoutingService(
         ILogger<ModelRoutingService> logger,
         IConfiguration configuration,
-        LlmProviderService llmProvider)
+        LlmConfigResolver configResolver)
     {
         _logger = logger;
         _configuration = configuration;
-        _llmProvider = llmProvider;
+        _configResolver = configResolver;
     }
 
     /// <summary>
     /// 获取模型路由信息。
-    /// 策略：先从配置读取默认模型覆盖，否则回退到 LlmProviderService 的三级兜底。
+    /// 策略：先从配置读取默认模型覆盖，否则回退到三级兜底。
     /// </summary>
     public ModelRouteInfo GetRoute(string scenario = "default")
     {
@@ -36,8 +36,8 @@ public class ModelRoutingService : IModelRouter
         var overriddenBaseUrl = _configuration["LLM_ROUTE_BASE_URL"]
             ?? Environment.GetEnvironmentVariable("LLM_ROUTE_BASE_URL");
 
-        // 从 LlmProviderService 获取当前生效配置（含三级兜底 key）
-        var config = _llmProvider.GetConfigWithKey();
+        // 从 LlmConfigResolver 获取当前生效配置（含三级兜底 key）
+        var config = _configResolver.GetConfigWithKey();
 
         var model = overriddenModel ?? config.Model;
         var baseUrl = overriddenBaseUrl ?? config.BaseUrl;
