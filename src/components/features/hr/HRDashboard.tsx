@@ -115,7 +115,7 @@ const HRDashboard: React.FC = () => {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         {kpis.map((kpi) => (
-          <Card bordered={false} className="p-5">
+          <Card key={kpi.label} bordered={false} className="p-5">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-slate-500">{kpi.label}</span>
               <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${kpi.color}`}>

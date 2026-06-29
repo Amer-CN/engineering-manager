@@ -14,6 +14,7 @@ import BatchDeptAssignModal from './BatchDeptAssignModal'
 import SalaryHistoryModal from './SalaryHistoryModal'
 import { useStaffFormActions } from './useStaffFormActions'
 import { getStaffListColumns } from './staffListColumns'
+import { useMaskedFn } from '@/hooks/useMaskedValue'
 import { getAPI } from '@/services/api-adapter'
 import type { Member, Department } from '@/types/electron'
 
@@ -27,6 +28,7 @@ const emptyForm: StaffFormData = {
 const StaffList: React.FC = () => {
   const showToast = useToastStore(state => state.showToast)
   const { ConfirmDialog } = useConfirm()
+  const mask = useMaskedFn()
   const [members, setMembers] = useState<Member[]>([] as Member[])
   const [departments, setDepartments] = useState<Department[]>([] as Department[])
   const [loading, setLoading] = useState(true)
@@ -107,8 +109,8 @@ const StaffList: React.FC = () => {
 
   const columns = useMemo(() => getStaffListColumns({
     departments, getDeptName, handleStatusChange,
-    openEdit, setSalaryHistoryMember, showToast, loadData,
-  }), [departments, getDeptName, handleStatusChange, openEdit, setSalaryHistoryMember, showToast, loadData])
+    openEdit, setSalaryHistoryMember, showToast, loadData, mask,
+  }), [departments, getDeptName, handleStatusChange, openEdit, setSalaryHistoryMember, showToast, loadData, mask])
 
   if (loading) {
     return <Spinner size="md" text="加载人员数据..." />

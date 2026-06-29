@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── 隐藏 WebView2/Edge 原生密码框装饰按钮 ──
+   ::-ms-reveal 是内核自动渲染的"显示密码"眼睛，会和组件自定义的
+   眼睛按钮叠加显示（输入密码时出现，看起来像左侧多了一个眼睛）。
+   这里全局关掉，统一用组件自己的 toggle 按钮。 */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
 /* ═══════════════════════════════════════════════════════════════
   多主题系统 — CSS 变量定义
 
@@ -1281,6 +1290,32 @@ button:disabled {
 }
 .statusbar__spacer {
   flex: 1;
+}
+
+/* ── 脱敏开关（状态栏内联按钮，复用 modelsw__trigger 视觉规范）── */
+.statusbar__maskbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: var(--fg-3);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  white-space: nowrap;
+  user-select: none;
+}
+.statusbar__maskbtn svg {
+  flex-shrink: 0;
+}
+.statusbar__maskbtn:hover:not(:disabled) {
+  color: var(--fg-2);
+}
+.statusbar__maskbtn:disabled {
+  opacity: 0.5;
+  cursor: wait;
 }
 
 /* ── Model Switcher（复刻 Reasonix 弹出选择器）── */

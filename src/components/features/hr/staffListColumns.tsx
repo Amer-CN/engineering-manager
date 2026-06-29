@@ -4,6 +4,8 @@ import { getAPI } from '@/services/api-adapter'
 import { Button } from '../../ui/Button'
 import type { Member, Department } from '@/types/electron'
 
+type MaskFn = (type: 'idCard' | 'phone' | 'bankAccount' | 'email', value: string | null | undefined) => string
+
 interface StaffListColumnsParams {
   departments: Department[]
   getDeptName: (id: number | undefined) => string
@@ -12,11 +14,12 @@ interface StaffListColumnsParams {
   setSalaryHistoryMember: (m: Member) => void
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
   loadData: () => Promise<void>
+  mask: MaskFn
 }
 
 export function getStaffListColumns({
   departments, getDeptName, handleStatusChange,
-  openEdit, setSalaryHistoryMember, showToast, loadData,
+  openEdit, setSalaryHistoryMember, showToast, loadData, mask,
 }: StaffListColumnsParams): Column<Member>[] {
   return [
     { key: 'name', title: '姓名', sortable: true, filterable: true,
@@ -28,7 +31,8 @@ export function getStaffListColumns({
       filterAccessor: (m) => getDeptName(m.departmentId),
       render: (m) => <span className="text-slate-600">{getDeptName(m.departmentId)}</span> },
     { key: 'position', title: '职位', render: (m) => <span className="text-slate-600">{m.position || '-'}</span> },
-    { key: 'phone', title: '手机', render: (m) => <span className="text-slate-600">{m.phone || '-'}</span> },
+    { key: 'phone', title: '手机', render: (m) => <span className="text-slate-600 font-mono text-xs">{mask('phone', m.phone) || '-'}</span> },
+    { key: 'idCard', title: '身份证号', filterable: true, render: (m) => <span className="text-slate-500 font-mono text-xs">{mask('idCard', m.idCard) || '-'}</span> },
     { key: 'status', title: '状态',
       filterable: 'select',
       filterOptions: [{ label: '在职', value: 'active' }, { label: '离职', value: 'left' }],

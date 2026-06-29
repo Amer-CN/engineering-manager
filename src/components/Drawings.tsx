@@ -306,7 +306,6 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
     data={filteredDrawings}
     columns={columns}
     rowKey="id"
-    pagination={false}
     showContainer={true}
     stickyHeader={true}
     useHoverScrollbar={true}

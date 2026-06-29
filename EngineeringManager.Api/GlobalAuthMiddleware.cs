@@ -13,19 +13,6 @@ public class GlobalAuthMiddleware
 {
     private readonly RequestDelegate _next;
 
-    // P0-4 缓解：路径必须带 projectId（粗粒度租户隔离）
-    // 注: 排除全局配置子路径 (categories, match-rules, batches)
-    //     /api/cost-ledger/categories, /api/cost-ledger/match-rules 不分项目
-    private static readonly (string Prefix, string Param)[] ProjectScopedPaths = new[]
-    {
-        ("/api/contracts/income", "projectId"),
-        ("/api/contracts/expense", "projectId"),
-        ("/api/contracts/agreement", "projectId"),
-        ("/api/wages", "projectId"),
-        ("/api/attendances", "projectId"),
-        ("/api/expenses", "projectId"),
-        ("/api/drawings", "projectId"),
-    };
     private static readonly string[] PublicPathPrefixes = new[]
     {
         "/api/auth/login",
@@ -50,7 +37,7 @@ public class GlobalAuthMiddleware
             return;
         }
 
-        // 白名单：登录、健康检查、OCR 首次启动引导
+        // 白名单：登录、健康检查、OCR 首次启动引导、Agent 首次启动引导
         var isPublic = PublicPathPrefixes.Any(p =>
             path.StartsWith(p, StringComparison.OrdinalIgnoreCase));
         if (isPublic)
@@ -60,6 +47,9 @@ public class GlobalAuthMiddleware
         }
 
         // 其他 /api/* 必须鉴权
+        // 注: 租户隔离在端点 SQL 层 (CurrentUser.UserFilterWithAuthorizedProjects) 完成,
+        //     不在中间件层强制 projectId —— 那会误伤跨项目汇总端点 (/api/wages/payment-records,
+        //     /api/wages/overdue-stats 等) 且与前端 "projectId 可选" 契约冲突.
         if (context.User.Identity?.IsAuthenticated != true)
         {
             context.Response.StatusCode = 401;
@@ -69,25 +59,6 @@ public class GlobalAuthMiddleware
             return;
         }
 
-
-        // P0-4 缓解：粗粒度 project_id 强制（防止已登录用户 SELECT * 列举全表）
-        // v1.1.0: 只对 GET/DELETE 强制 (POST/PUT 有 body, projectId 在 body 里)
-        var method = context.Request.Method;
-        if (method == HttpMethods.Get || method == HttpMethods.Delete)
-        {
-            foreach (var (prefix, param) in ProjectScopedPaths)
-            {
-                if (path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
-                    && !context.Request.Query.ContainsKey(param))
-                {
-                    context.Response.StatusCode = 400;
-                    context.Response.ContentType = "application/json; charset=utf-8";
-                    await context.Response.WriteAsync(
-                        "{\"success\":false,\"error\":\"必须指定 \" + param + \" 参数\"}");
-                    return;
-                }
-            }
-        }
         await _next(context);
     }
 }

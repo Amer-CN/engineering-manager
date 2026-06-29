@@ -97,16 +97,18 @@ public class AgentConversationService
 
     /// <summary>
     /// 获取对话详情（含消息列表）
+    /// 必须校验 user_id 归属，防止越权读
     /// </summary>
     public async Task<object?> GetConversationDetailAsync(
         IDbConnection db,
-        long conversationId)
+        long conversationId,
+        string userId)
     {
         var conv = await db.QueryFirstOrDefaultAsync<dynamic>(@"
             SELECT id, user_id, title, created_at, updated_at
             FROM agent_conversations
-            WHERE id = @Id AND deleted_at IS NULL
-        ", new { Id = conversationId });
+            WHERE id = @Id AND user_id = @UserId AND deleted_at IS NULL
+        ", new { Id = conversationId, UserId = userId });
 
         if (conv == null) return null;
 
