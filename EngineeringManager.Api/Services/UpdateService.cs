@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Collections.Concurrent;
 
 namespace EngineeringManager.Api.Services;
 
@@ -25,18 +27,38 @@ public sealed record UpdateCheckResult(
     bool HasUpdate, string Current, string Latest, bool Forced,
     string? NotesUrl, UpdatePackage? Package);
 
+/// <summary>下载进度状态（线程安全）</summary>
+public sealed class DownloadProgress
+{
+    public string Phase { get; set; } = "idle";   // idle|downloading|verifying|done|error
+    public long BytesReceived { get; set; }
+    public long? TotalBytes { get; set; }
+    public double? Percent => TotalBytes.HasValue && TotalBytes.Value > 0
+        ? Math.Round((double)BytesReceived / TotalBytes.Value * 100, 1)
+        : null;
+    public double? SpeedBytesPerSec { get; set; }
+    public string? FilePath { get; set; }
+    public string? Error { get; set; }
+
+    public string ToJson() => JsonSerializer.Serialize(this, new JsonSerializerOptions
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+    });
+}
+
 public class UpdateService
 {
     private readonly IHttpClientFactory _http;
     private readonly IConfiguration _cfg;
+    private readonly ConcurrentDictionary<string, DownloadProgress> _downloads = new();
+
     public UpdateService(IHttpClientFactory http, IConfiguration cfg) { _http = http; _cfg = cfg; }
 
-    // 多源 fallback：按序尝试，任一个成功即返回
     private string[] ManifestUrls =>
         _cfg.GetSection("Update:ManifestUrls").Get<string[]>()
         ?? throw new InvalidOperationException("缺少配置 Update:ManifestUrls");
 
-    // 当前版本：程序集版本 >= .csproj <Version>
     public string CurrentVersion =>
         typeof(UpdateService).Assembly.GetName().Version?.ToString(3)
         ?? _cfg["Update:CurrentVersion"]
@@ -66,48 +88,116 @@ public class UpdateService
             m.NotesUrl, has ? m.Package : null);
     }
 
-    /// <summary>下载目录：%LocalAppData%/工程管家/updates/</summary>
     public string UpdatesDir => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "工程管家", "updates");
 
-    public async Task<string> DownloadAsync(UpdatePackage pkg, CancellationToken ct)
+    /// <summary>获取当前下载进度（调用方通常用 downloadId="default"）</summary>
+    public DownloadProgress? GetProgress(string downloadId = "default")
     {
-        if (string.IsNullOrWhiteSpace(pkg.Url))
-            throw new InvalidOperationException("manifest 缺少下载地址");
-
-        Directory.CreateDirectory(UpdatesDir);
-        var fileName  = Path.GetFileName(new Uri(pkg.Url).AbsolutePath);
-        var finalPath = Path.Combine(UpdatesDir, fileName);
-        var partPath  = finalPath + ".part";
-
-        var client = _http.CreateClient("update-download");
-        using (var resp = await client.GetAsync(pkg.Url, HttpCompletionOption.ResponseHeadersRead, ct))
-        {
-            resp.EnsureSuccessStatusCode();
-            await using var src = await resp.Content.ReadAsStreamAsync(ct);
-            await using var dst = File.Create(partPath);
-            await src.CopyToAsync(dst, ct);
-        }
-
-        // SHA256 校验（manifest 没填 sha256 时跳过）
-        if (!string.IsNullOrWhiteSpace(pkg.Sha256))
-        {
-            await using var fs = File.OpenRead(partPath);
-            var hash = Convert.ToHexString(await System.Security.Cryptography.SHA256.HashDataAsync(fs, ct));
-            if (!hash.Equals(pkg.Sha256, StringComparison.OrdinalIgnoreCase))
-            {
-                File.Delete(partPath);
-                throw new InvalidOperationException($"SHA256 校验失败：期望 {pkg.Sha256}，实际 {hash}");
-            }
-        }
-
-        if (File.Exists(finalPath)) File.Delete(finalPath);
-        File.Move(partPath, finalPath);
-        return finalPath;
+        return _downloads.TryGetValue(downloadId, out var p) ? p : null;
     }
 
-    /// <summary>启动安装器并退出当前进程（单进程，关自己让安装器覆盖）</summary>
+    /// <summary>启动后台下载，立即返回。进度通过 GetProgress 或 SSE 查询。</summary>
+    public void StartDownload(UpdatePackage pkg, string downloadId = "default")
+    {
+        var progress = new DownloadProgress { Phase = "idle" };
+        _downloads[downloadId] = progress;
+
+        // 后台执行，不阻塞请求
+        _ = Task.Run(async () => await DownloadAsync(pkg, progress, downloadId));
+    }
+
+    private async Task DownloadAsync(UpdatePackage pkg, DownloadProgress progress, string downloadId)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(pkg.Url))
+                throw new InvalidOperationException("manifest 缺少下载地址");
+
+            Directory.CreateDirectory(UpdatesDir);
+            var fileName  = Path.GetFileName(new Uri(pkg.Url).AbsolutePath);
+            var finalPath = Path.Combine(UpdatesDir, fileName);
+            var partPath  = finalPath + ".part";
+
+            progress.Phase = "downloading";
+
+            var client = _http.CreateClient("update-download");
+            using var resp = await client.GetAsync(pkg.Url, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
+            resp.EnsureSuccessStatusCode();
+
+            progress.TotalBytes = resp.Content.Headers.ContentLength;
+
+            await using var src = await resp.Content.ReadAsStreamAsync();
+            await using var dst = File.Create(partPath);
+
+            var buffer = new byte[81920]; // 80KB 块
+            long bytesReceived = 0;
+            var sw = Stopwatch.StartNew();
+            long lastBytes = 0;
+            double lastTimestamp = 0;
+
+            // 增量 SHA256 计算
+            using var incrementalHash = System.Security.Cryptography.IncrementalHash.CreateHash(
+                System.Security.Cryptography.HashAlgorithmName.SHA256);
+
+            int bytesRead;
+            while ((bytesRead = await src.ReadAsync(buffer)) > 0)
+            {
+                await dst.WriteAsync(buffer.AsMemory(0, bytesRead));
+                incrementalHash.AppendData(buffer.AsSpan(0, bytesRead));
+
+                bytesReceived += bytesRead;
+                var elapsed = sw.Elapsed.TotalSeconds;
+                // 每秒更新一次速度（避免高频抖动）
+                if (elapsed - lastTimestamp >= 1.0)
+                {
+                    var deltaBytes = bytesReceived - lastBytes;
+                    var deltaTime = elapsed - lastTimestamp;
+                    progress.SpeedBytesPerSec = deltaTime > 0 ? deltaBytes / deltaTime : null;
+                    lastBytes = bytesReceived;
+                    lastTimestamp = elapsed;
+                }
+
+                progress.BytesReceived = bytesReceived;
+            }
+
+            await dst.FlushAsync();
+            sw.Stop();
+
+            // 校验前标记
+            progress.Phase = "verifying";
+
+            // SHA256 校验
+            if (!string.IsNullOrWhiteSpace(pkg.Sha256))
+            {
+                var hash = Convert.ToHexString(incrementalHash.GetHashAndReset());
+                if (!hash.Equals(pkg.Sha256, StringComparison.OrdinalIgnoreCase))
+                {
+                    File.Delete(partPath);
+                    progress.Phase = "error";
+                    progress.Error = $"SHA256 校验失败：期望 {pkg.Sha256[..16]}...，实际 {hash[..16]}...";
+                    _downloads.TryRemove(downloadId, out _);
+                    return;
+                }
+            }
+
+            // 原子 rename
+            if (File.Exists(finalPath)) File.Delete(finalPath);
+            File.Move(partPath, finalPath);
+
+            progress.Phase = "done";
+            progress.FilePath = finalPath;
+            progress.BytesReceived = bytesReceived;
+        }
+        catch (Exception ex)
+        {
+            progress.Phase = "error";
+            progress.Error = ex.Message;
+            _downloads.TryRemove(downloadId, out _);
+        }
+    }
+
     public void ApplyAndExit(string installerPath)
     {
         if (!File.Exists(installerPath))
@@ -119,7 +209,6 @@ public class UpdateService
             UseShellExecute = true,
         });
 
-        // 给 HTTP 响应一点时间回包，再退出整个进程
         Task.Run(async () => { await Task.Delay(800); Environment.Exit(0); });
     }
 
