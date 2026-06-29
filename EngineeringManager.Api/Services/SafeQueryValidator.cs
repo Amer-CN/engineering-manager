@@ -1,6 +1,9 @@
 using System.Data;
 using System.Text.RegularExpressions;
 using Dapper;
+using SqlParser;
+using SqlParser.Ast;
+using SqlParser.Dialects;
 
 namespace EngineeringManager.Api.Services;
 
@@ -146,102 +149,92 @@ public static class SafeQueryValidator
         if (string.IsNullOrWhiteSpace(sql))
             return new ValidationResult(false, null, null, "SQL 不能为空");
 
-        // 2. 语句类型检查：必须是 SELECT
-        if (!sql.StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
-            return new ValidationResult(false, null, null, "只允许 SELECT 查询");
+        // 2. AST 解析
+        Sequence<Statement> statements;
+        try
+        {
+            var options = new ParserOptions();
+            var parser = new SqlQueryParser();
+            statements = parser.Parse(sql, new SQLiteDialect(), options);
+        }
+        catch (Exception ex)
+        {
+            return new ValidationResult(false, null, null, $"SQL 解析失败: {ex.Message}");
+        }
 
-        // 3. 拒绝多语句
-        if (sql.Contains(';'))
+        // 3. 必须恰好一条语句且为 Query
+        if (statements.Count != 1)
             return new ValidationResult(false, null, null, "不允许多条语句");
 
-        // 4. 检查禁止关键字
+        var stmt = statements[0];
+        Query query;
+        try
+        {
+            query = stmt.AsQuery();
+        }
+        catch
+        {
+            return new ValidationResult(false, null, null, "只允许 SELECT 查询");
+        }
+
+        // 4. Body 必须是 Select（拒绝 SetOperation 如 UNION）
+        Select select;
+        try
+        {
+            select = query.Body.AsSelect();
+        }
+        catch
+        {
+            return new ValidationResult(false, null, null, "不支持 UNION/INTERSECT/EXCEPT 等集合操作");
+        }
+
+        // 5. ForbiddenKeywords 二次兜底（检查原始 SQL）
         foreach (var keyword in ForbiddenKeywords)
         {
-            // 使用单词边界匹配，避免误匹配列名中的子串
             if (Regex.IsMatch(sql, $@"\b{keyword}\b", RegexOptions.IgnoreCase))
                 return new ValidationResult(false, null, null, $"禁止使用 {keyword} 关键字");
         }
 
-        // 5. 检查禁止函数
+        // 6. ForbiddenFunctions 二次兜底
         foreach (var func in ForbiddenFunctions)
         {
             if (Regex.IsMatch(sql, $@"\b{func}\s*\(", RegexOptions.IgnoreCase))
                 return new ValidationResult(false, null, null, $"禁止使用 {func} 函数");
         }
 
-        // 6. 检查 SELECT *（不允许，拦截 t.* / id, * / *, id 等变体，放行 COUNT(*)）
-        // 提取 SELECT…FROM 之间的子句
-        var selectMatch = Regex.Match(sql, @"SELECT\s+(.*?)\s+FROM", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-        if (selectMatch.Success)
+        // 7. 收集所有被引用表并校验
+        var aliasToTable = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var referencedTables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        try
         {
-            var selectClause = selectMatch.Groups[1].Value;
-            // 先剔除函数内的 (*)，避免 COUNT(*) 等被误伤
-            var clause = Regex.Replace(selectClause, @"\(\s*\*\s*\)", "()");
-            // 匹配独立的 * token（前面不是字母/数字/下划线/点，后面也不是字母/数字/下划线）
-            if (Regex.IsMatch(clause, @"(?<![A-Za-z0-9_.])\*(?![A-Za-z0-9_])"))
-                return new ValidationResult(false, null, null, "不允许 SELECT *，请明确指定列名");
-            // 额外拦截 alias.* 形式（如 p.*）
-            if (Regex.IsMatch(clause, @"\w+\.\s*\*"))
-                return new ValidationResult(false, null, null, "不允许 SELECT *，请明确指定列名");
+            CollectTables(select.From, aliasToTable, referencedTables);
+        }
+        catch (ValidationException ex)
+        {
+            return new ValidationResult(false, null, null, ex.Message);
         }
 
-        // 7. 提取并验证表名
-        var referencedTables = ExtractTableNames(sql);
         if (referencedTables.Count == 0)
             return new ValidationResult(false, null, null, "未找到有效的表名");
 
-        foreach (var table in referencedTables)
+        // 8. 校验列白名单
+        try
         {
-            if (ForbiddenTables.Contains(table))
-                return new ValidationResult(false, null, null, $"禁止访问表 {table}");
-
-            if (!TableWhitelist.ContainsKey(table))
-                return new ValidationResult(false, null, null, $"表 {table} 不在白名单中");
+            ValidateProjection(select.Projection, aliasToTable, referencedTables);
+        }
+        catch (ValidationException ex)
+        {
+            return new ValidationResult(false, null, null, ex.Message);
         }
 
-        // 7.1 拒绝多表查询
-        if (referencedTables.Count > 1)
-            return new ValidationResult(false, null, null, "暂仅支持单表查询，请拆分后重试");
+        // 9. 使用 AST 回写 SQL 作为基础
+        var rewrittenSql = query.ToSql();
 
-        // 7.2 拒绝子查询（SELECT 关键字出现超过 1 次即认定含子查询）
-        var selectCount = 0;
-        var upperSql = sql.ToUpperInvariant();
-        for (var i = 0; i <= upperSql.Length - 6; i++)
-        {
-            if (upperSql[i] == 'S' && upperSql.Substring(i, 6) == "SELECT"
-                && (i == 0 || !char.IsLetterOrDigit(upperSql[i - 1])))
-            {
-                selectCount++;
-                if (selectCount > 1)
-                    return new ValidationResult(false, null, null, "暂不支持子查询");
-            }
-        }
+        // 10. 强制注入用户过滤（字符串层面）
+        rewrittenSql = InjectUserFilterAstAware(rewrittenSql, aliasToTable, referencedTables);
 
-        // 8. 验证列名（强制列白名单校验）
-        // 构造所有被引用表的白名单列并集
-        var allowedColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var table in referencedTables)
-        {
-            if (TableWhitelist.TryGetValue(table, out var cols))
-            {
-                foreach (var col in cols)
-                    allowedColumns.Add(col);
-            }
-        }
-
-        // 提取 SELECT 子句中的所有裸列引用并逐一校验
-        var referencedColumns = ExtractColumnNames(sql);
-        foreach (var col in referencedColumns)
-        {
-            if (col == "*") continue; // 已在步骤 6 或 FIX-3 拒绝
-            if (!allowedColumns.Contains(col))
-                return new ValidationResult(false, null, null, $"列 \"{col}\" 不在允许查询范围");
-        }
-
-        // 9. 强制注入用户过滤
-        var rewrittenSql = InjectUserFilter(sql, referencedTables, uid, isAdmin);
-
-        // 10. 强制 LIMIT
+        // 11. 强制 LIMIT（字符串兜底）
         rewrittenSql = EnsureLimit(rewrittenSql, 100);
 
         return new ValidationResult(true, rewrittenSql, referencedTables, null);
@@ -269,108 +262,364 @@ public static class SafeQueryValidator
     }
 
     // ═══════════════════════════════════════════════════════════
-    // 私有方法
+    // 私有方法 — AST 遍历与校验
     // ═══════════════════════════════════════════════════════════
 
     /// <summary>
-    /// 从 SQL 中提取表名（简化版，处理常见的 FROM/JOIN 子句）
+    /// 递归收集 FROM 和 JOIN 中出现的表，校验表名白名单。
+    /// 对 Derived（子查询）递归校验内部 Select。
     /// </summary>
-    private static HashSet<string> ExtractTableNames(string sql)
+    private static void CollectTables(
+        Sequence<TableWithJoins> fromClause,
+        Dictionary<string, string> aliasToTable,
+        HashSet<string> referencedTables)
     {
-        var tables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        // 匹配 FROM table 或 JOIN table
-        var fromPattern = @"(?:FROM|JOIN)\s+(\w+)";
-        var matches = Regex.Matches(sql, fromPattern, RegexOptions.IgnoreCase);
-
-        foreach (Match match in matches)
+        foreach (var tableWithJoins in fromClause)
         {
-            if (match.Groups.Count > 1)
+            CollectTableFromFactor(tableWithJoins.Relation, aliasToTable, referencedTables);
+
+            if (tableWithJoins.Joins != null)
             {
-                var tableName = match.Groups[1].Value;
-                tables.Add(tableName);
-            }
-        }
-
-        return tables;
-    }
-
-    /// <summary>
-    /// 从 SELECT 子句中提取列名（简化版）
-    /// </summary>
-    private static HashSet<string> ExtractColumnNames(string sql)
-    {
-        var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        // 提取 SELECT 和 FROM 之间的内容
-        var selectMatch = Regex.Match(sql, @"SELECT\s+(.*?)\s+FROM", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-        if (selectMatch.Success)
-        {
-            var selectClause = selectMatch.Groups[1].Value;
-            // 简单分割逗号，去除别名和函数
-            var parts = selectClause.Split(',');
-            foreach (var part in parts)
-            {
-                var trimmed = part.Trim();
-                // 跳过聚合函数
-                if (Regex.IsMatch(trimmed, @"^\w+\s*\(", RegexOptions.IgnoreCase))
-                    continue;
-
-                // 提取列名（可能带表别名前缀）
-                var colMatch = Regex.Match(trimmed, @"(?:\w+\.)?(\w+)$");
-                if (colMatch.Success)
+                foreach (var join in tableWithJoins.Joins)
                 {
-                    var colName = colMatch.Groups[1].Value;
-                    // 跳过 SQL 关键字
-                    if (!IsSqlKeyword(colName))
-                        columns.Add(colName);
+                    CollectTableFromFactor(join.Relation, aliasToTable, referencedTables);
                 }
             }
         }
-
-        return columns;
     }
 
     /// <summary>
-    /// 注入用户过滤条件 — 只替换第一个顶层 WHERE，计算表别名
+    /// 从单个 TableFactor 中提取表信息
     /// </summary>
-    private static string InjectUserFilter(string sql, HashSet<string> tables, string uid, int isAdmin)
+    private static void CollectTableFromFactor(
+        TableFactor factor,
+        Dictionary<string, string> aliasToTable,
+        HashSet<string> referencedTables)
     {
-        // 从 FROM 子句解析表别名: 匹配 "FROM table [AS] alias" 或 "FROM table"
-        var aliasMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-        // SQL 关键字集合 — 匹配到的候选别名命中这些关键字则视为无别名
-        var sqlKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        if (factor is TableFactor.Table table)
         {
-            "WHERE", "ORDER", "GROUP", "LIMIT", "HAVING", "AS", "ON", "JOIN",
-            "INNER", "LEFT", "RIGHT", "OUTER", "CROSS", "FULL", "UNION",
-            "INTO", "FROM", "AND", "OR", "NOT", "IN", "IS", "NULL",
-            "BETWEEN", "LIKE", "EXISTS", "CASE", "WHEN", "THEN", "ELSE", "END"
-        };
+            var tableName = GetObjectNameSimpleName(table.Name);
 
-        foreach (var table in tables)
+            string? alias = null;
+            if (table.Alias != null)
+                alias = table.Alias.Name.Value;
+
+            referencedTables.Add(tableName);
+
+            if (!string.IsNullOrEmpty(alias))
+                aliasToTable[alias] = tableName;
+
+            if (ForbiddenTables.Contains(tableName))
+                throw new ValidationException($"禁止访问表 {tableName}");
+
+            if (!TableWhitelist.ContainsKey(tableName))
+                throw new ValidationException($"表 {tableName} 不在白名单中");
+        }
+        else if (factor is TableFactor.Derived derived)
         {
-            if (!TableWhitelist.ContainsKey(table)) continue;
-            // 匹配 "FROM table alias" 或 "FROM table AS alias"（单词边界）
-            var aliasMatch = Regex.Match(sql,
-                $@"\b{table}\b\s+(?:AS\s+)?(\w+)", RegexOptions.IgnoreCase);
-            if (aliasMatch.Success)
-            {
-                var candidate = aliasMatch.Groups[1].Value;
-                // 排除 SQL 关键字，避免 WHERE/ORDER/LIMIT 等被误当别名
-                if (!sqlKeywords.Contains(candidate))
-                    aliasMap[table] = candidate;
-            }
+            ValidateDerivedQuery(derived.SubQuery, aliasToTable, referencedTables);
+        }
+        else
+        {
+            throw new ValidationException("不支持的表类型（子查询/表函数等）");
+        }
+    }
+
+    /// <summary>
+    /// 递归校验子查询（Derived 中的 SubQuery）
+    /// </summary>
+    private static void ValidateDerivedQuery(
+        Query subQuery,
+        Dictionary<string, string> parentAliasToTable,
+        HashSet<string> parentReferencedTables)
+    {
+        Select subSelect;
+        try
+        {
+            subSelect = subQuery.Body.AsSelect();
+        }
+        catch
+        {
+            throw new ValidationException("子查询中不支持集合操作");
         }
 
-        var filters = new List<string>();
-        foreach (var table in tables)
+        CollectTables(subSelect.From, parentAliasToTable, parentReferencedTables);
+        ValidateProjection(subSelect.Projection, parentAliasToTable, parentReferencedTables);
+    }
+
+    /// <summary>
+    /// 校验 SELECT 投影列表中的列是否在白名单内
+    /// </summary>
+    private static void ValidateProjection(
+        Sequence<SelectItem> projection,
+        Dictionary<string, string> aliasToTable,
+        HashSet<string> referencedTables)
+    {
+        foreach (var item in projection)
         {
-            if (TableWhitelist.ContainsKey(table))
+            if (item is SelectItem.Wildcard)
             {
-                var alias = aliasMap.TryGetValue(table, out var a) ? a : "";
-                filters.Add(GetTableFilter(table, alias));
+                throw new ValidationException("不允许 SELECT *，请明确指定列名");
             }
+
+            if (item is SelectItem.QualifiedWildcard)
+            {
+                throw new ValidationException("不允许 SELECT *，请明确指定列名");
+            }
+
+            Expression expr;
+            if (item is SelectItem.UnnamedExpression unnamed)
+            {
+                expr = unnamed.Expression;
+            }
+            else if (item is SelectItem.ExpressionWithAlias aliased)
+            {
+                expr = aliased.Expression;
+            }
+            else
+            {
+                continue;
+            }
+
+            ValidateExpressionColumns(expr, aliasToTable, referencedTables);
+        }
+    }
+
+    /// <summary>
+    /// 递归校验表达式中的 Identifier / CompoundIdentifier / Function
+    /// </summary>
+    private static void ValidateExpressionColumns(
+        Expression expr,
+        Dictionary<string, string> aliasToTable,
+        HashSet<string> referencedTables)
+    {
+        if (expr is Expression.Identifier ident)
+        {
+            var columnName = ident.Ident.Value;
+            if (!IsColumnAllowedInAnyTable(columnName, referencedTables))
+                throw new ValidationException($"列 \"{columnName}\" 不在允许查询范围");
+        }
+        else if (expr is Expression.CompoundIdentifier compound)
+        {
+            var idents = compound.Idents;
+            if (idents.Count < 2)
+            {
+                var columnName = idents[0].Value;
+                if (!IsColumnAllowedInAnyTable(columnName, referencedTables))
+                    throw new ValidationException($"列 \"{columnName}\" 不在允许查询范围");
+                return;
+            }
+
+            var columnName2 = idents[^1].Value;
+            var tableRef = idents[^2].Value;
+
+            if (aliasToTable.TryGetValue(tableRef, out var actualTable))
+            {
+                if (!IsColumnAllowedInTable(columnName2, actualTable))
+                    throw new ValidationException($"列 \"{columnName2}\" 不在表 {actualTable} 允许查询范围");
+            }
+            else if (referencedTables.Contains(tableRef))
+            {
+                if (!IsColumnAllowedInTable(columnName2, tableRef))
+                    throw new ValidationException($"列 \"{columnName2}\" 不在表 {tableRef} 允许查询范围");
+            }
+            else
+            {
+                if (!IsColumnAllowedInAnyTable(columnName2, referencedTables))
+                    throw new ValidationException($"列 \"{columnName2}\" 不在允许查询范围");
+            }
+        }
+        else if (expr is Expression.Function func)
+        {
+            var funcName = func.Name.ToSql();
+            if (ForbiddenFunctions.Contains(funcName))
+                throw new ValidationException($"禁止使用 {funcName} 函数");
+
+            // 校验函数参数中的列引用（COUNT(*) 的 * 是 Wildcard，天然放行）
+            if (func.Args is FunctionArguments.List argList)
+            {
+                foreach (var arg in argList.ArgumentList.Args)
+                {
+                    if (arg is FunctionArg.Unnamed unnamed)
+                    {
+                        if (unnamed.FunctionArgExpression is FunctionArgExpression.FunctionExpression fe)
+                        {
+                            ValidateExpressionColumns(fe.Expression, aliasToTable, referencedTables);
+                        }
+                    }
+                }
+            }
+        }
+        else if (expr is Expression.BinaryOp binOp)
+        {
+            ValidateExpressionColumns(binOp.Left, aliasToTable, referencedTables);
+            ValidateExpressionColumns(binOp.Right, aliasToTable, referencedTables);
+        }
+        else if (expr is Expression.UnaryOp unaryOp)
+        {
+            ValidateExpressionColumns(unaryOp.Expression, aliasToTable, referencedTables);
+        }
+        else if (expr is Expression.Case caseExpr)
+        {
+            if (caseExpr.Operand != null)
+                ValidateExpressionColumns(caseExpr.Operand, aliasToTable, referencedTables);
+            foreach (var cond in caseExpr.Conditions)
+                ValidateExpressionColumns(cond, aliasToTable, referencedTables);
+            foreach (var res in caseExpr.Results)
+                ValidateExpressionColumns(res, aliasToTable, referencedTables);
+            if (caseExpr.ElseResult != null)
+                ValidateExpressionColumns(caseExpr.ElseResult, aliasToTable, referencedTables);
+        }
+        else if (expr is Expression.Cast cast)
+        {
+            ValidateExpressionColumns(cast.Expression, aliasToTable, referencedTables);
+        }
+        else if (expr is Expression.Extract extract)
+        {
+            ValidateExpressionColumns(extract.Expression, aliasToTable, referencedTables);
+        }
+        else if (expr is Expression.Substring substring)
+        {
+            ValidateExpressionColumns(substring.Expression, aliasToTable, referencedTables);
+            if (substring.SubstringFrom != null)
+                ValidateExpressionColumns(substring.SubstringFrom, aliasToTable, referencedTables);
+            if (substring.SubstringFor != null)
+                ValidateExpressionColumns(substring.SubstringFor, aliasToTable, referencedTables);
+        }
+        else if (expr is Expression.InList inList)
+        {
+            ValidateExpressionColumns(inList.Expression, aliasToTable, referencedTables);
+            foreach (var item in inList.List)
+                ValidateExpressionColumns(item, aliasToTable, referencedTables);
+        }
+        else if (expr is Expression.InSubquery inSubquery)
+        {
+            ValidateExpressionColumns(inSubquery.Expression, aliasToTable, referencedTables);
+            ValidateDerivedQuery(inSubquery.SubQuery, aliasToTable, referencedTables);
+        }
+        else if (expr is Expression.Exists exists)
+        {
+            ValidateDerivedQuery(exists.SubQuery, aliasToTable, referencedTables);
+        }
+        else if (expr is Expression.Between between)
+        {
+            ValidateExpressionColumns(between.Expression, aliasToTable, referencedTables);
+            ValidateExpressionColumns(between.Low, aliasToTable, referencedTables);
+            ValidateExpressionColumns(between.High, aliasToTable, referencedTables);
+        }
+        else if (expr is Expression.Like like)
+        {
+            ValidateExpressionColumns(like.Expression, aliasToTable, referencedTables);
+            ValidateExpressionColumns(like.Pattern, aliasToTable, referencedTables);
+        }
+        else if (expr is Expression.IsNull isNull)
+        {
+            ValidateExpressionColumns(isNull.Expression, aliasToTable, referencedTables);
+        }
+        else if (expr is Expression.IsNotNull isNotNull)
+        {
+            ValidateExpressionColumns(isNotNull.Expression, aliasToTable, referencedTables);
+        }
+        else if (expr is Expression.IsTrue isTrue)
+        {
+            ValidateExpressionColumns(isTrue.Expression, aliasToTable, referencedTables);
+        }
+        else if (expr is Expression.IsNotTrue isNotTrue)
+        {
+            ValidateExpressionColumns(isNotTrue.Expression, aliasToTable, referencedTables);
+        }
+        else if (expr is Expression.IsFalse isFalse)
+        {
+            ValidateExpressionColumns(isFalse.Expression, aliasToTable, referencedTables);
+        }
+        else if (expr is Expression.IsNotFalse isNotFalse)
+        {
+            ValidateExpressionColumns(isNotFalse.Expression, aliasToTable, referencedTables);
+        }
+        else if (expr is Expression.IsUnknown isUnknown)
+        {
+            ValidateExpressionColumns(isUnknown.Expression, aliasToTable, referencedTables);
+        }
+        else if (expr is Expression.IsNotUnknown isNotUnknown)
+        {
+            ValidateExpressionColumns(isNotUnknown.Expression, aliasToTable, referencedTables);
+        }
+        else if (expr is Expression.IsDistinctFrom isDistinct)
+        {
+            ValidateExpressionColumns(isDistinct.Expression1, aliasToTable, referencedTables);
+            ValidateExpressionColumns(isDistinct.Expression2, aliasToTable, referencedTables);
+        }
+        else if (expr is Expression.IsNotDistinctFrom isNotDistinct)
+        {
+            ValidateExpressionColumns(isNotDistinct.Expression1, aliasToTable, referencedTables);
+            ValidateExpressionColumns(isNotDistinct.Expression2, aliasToTable, referencedTables);
+        }
+        else if (expr is Expression.Nested nested)
+        {
+            ValidateExpressionColumns(nested.Expression, aliasToTable, referencedTables);
+        }
+        else if (expr is Expression.Subquery subquery)
+        {
+            ValidateDerivedQuery(subquery.Query, aliasToTable, referencedTables);
+        }
+        // LiteralValue / Wildcard / QualifiedWildcard / 等不含列引用，无需递归
+    }
+
+    /// <summary>
+    /// 检查列名是否在任一被引用表的白名单中
+    /// </summary>
+    private static bool IsColumnAllowedInAnyTable(string columnName, HashSet<string> referencedTables)
+    {
+        foreach (var table in referencedTables)
+        {
+            if (TableWhitelist.TryGetValue(table, out var cols) && cols.Contains(columnName))
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// 检查列名是否在指定表的白名单中
+    /// </summary>
+    private static bool IsColumnAllowedInTable(string columnName, string tableName)
+    {
+        return TableWhitelist.TryGetValue(tableName, out var cols) && cols.Contains(columnName);
+    }
+
+    /// <summary>
+    /// 从 ObjectName 中提取简单表名（忽略 schema）
+    /// </summary>
+    private static string GetObjectNameSimpleName(ObjectName name)
+    {
+        if (name.Values.Count > 0)
+            return name.Values[^1].Value;
+        return name.ToSql();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // SQL 改写（字符串层面，因为 AST 属性为 init-only）
+    // ═══════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// 注入用户过滤条件 — 使用 AST 收集的别名信息，
+    /// 在字符串层面注入 WHERE 过滤。
+    /// </summary>
+    private static string InjectUserFilterAstAware(
+        string sql,
+        Dictionary<string, string> aliasToTable,
+        HashSet<string> referencedTables)
+    {
+        var filters = new List<string>();
+
+        foreach (var table in referencedTables)
+        {
+            if (!TableWhitelist.ContainsKey(table)) continue;
+
+            // 查找该表在查询中的别名
+            var alias = aliasToTable.FirstOrDefault(
+                kvp => string.Equals(kvp.Value, table, StringComparison.OrdinalIgnoreCase)).Key;
+
+            filters.Add(GetTableFilter(table, alias ?? ""));
         }
 
         if (filters.Count == 0)
@@ -378,7 +627,7 @@ public static class SafeQueryValidator
 
         var filterClause = string.Join(" AND ", filters);
 
-        // 只替换第一个顶层 WHERE
+        // 替换第一个顶层 WHERE，或在 GROUP BY / ORDER BY / LIMIT 前插入
         var whereRegex = new Regex(@"\bWHERE\b", RegexOptions.IgnoreCase);
         if (whereRegex.IsMatch(sql))
         {
@@ -386,7 +635,6 @@ public static class SafeQueryValidator
         }
         else
         {
-            // 在 GROUP BY / ORDER BY / LIMIT 前插入 WHERE
             var insertPoint = Regex.Match(sql, @"\b(GROUP\s+BY|ORDER\s+BY|LIMIT)\b", RegexOptions.IgnoreCase);
             if (insertPoint.Success)
             {
@@ -412,7 +660,6 @@ public static class SafeQueryValidator
             var currentLimit = int.Parse(limitMatch.Groups[1].Value);
             if (currentLimit > maxLimit)
             {
-                // 替换为最大限制
                 return sql.Substring(0, limitMatch.Index) + $"LIMIT {maxLimit}" +
                        sql.Substring(limitMatch.Index + limitMatch.Length);
             }
@@ -420,23 +667,13 @@ public static class SafeQueryValidator
         }
         else
         {
-            // 没有 LIMIT，添加
             return sql + $" LIMIT {maxLimit}";
         }
     }
 
-    /// <summary>
-    /// 检查是否为 SQL 关键字
-    /// </summary>
-    private static bool IsSqlKeyword(string word)
-    {
-        var keywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "AS", "AND", "OR", "NOT", "IN", "ON", "IS", "NULL", "TRUE", "FALSE",
-            "DISTINCT", "ALL", "CASE", "WHEN", "THEN", "ELSE", "END"
-        };
-        return keywords.Contains(word);
-    }
+    // ═══════════════════════════════════════════════════════════
+    // 审计日志
+    // ═══════════════════════════════════════════════════════════
 
     /// <summary>
     /// 记录审计日志
@@ -481,3 +718,11 @@ public record ValidationResult(
     HashSet<string>? ReferencedTables,
     string? Error
 );
+
+/// <summary>
+/// 验证器内部抛出的校验异常，用于提前退出多层递归
+/// </summary>
+internal class ValidationException : Exception
+{
+    public ValidationException(string message) : base(message) { }
+}
