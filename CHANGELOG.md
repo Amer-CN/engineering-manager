@@ -72,6 +72,10 @@
 - **清理**: 1942 行历史 prototype HTML 设计稿 + 调试日志 batch 清理
 - **vite build 通过**: 11.27s
 
+---
+
+## v0.78.1 (2026-06-21) — fix: PII re-encrypt chunked + batch UPDATE
+
 > **SemVer**: patch bump (0.78.0 → 0.78.1), 性能优化, 不破坏 API.
 
 ### 改动
