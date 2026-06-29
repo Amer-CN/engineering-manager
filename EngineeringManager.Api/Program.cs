@@ -313,6 +313,11 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     // ============ P0-1: 从 config.json 读取 dataPath ============
     public static string ResolveDataPath()
     {
+        // 环境变量优先级最高 — 用于开发版与安装版数据隔离
+        var envPath = Environment.GetEnvironmentVariable("ENGINEERING_MANAGER_DATA_PATH");
+        if (!string.IsNullOrEmpty(envPath))
+            return envPath;
+
         var defaultPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "工程管家");
