@@ -169,9 +169,16 @@ public static class SafeQueryValidator
                 return new ValidationResult(false, null, null, $"禁止使用 {func} 函数");
         }
 
-        // 6. 检查 SELECT *（不允许）
-        if (Regex.IsMatch(sql, @"SELECT\s+\*", RegexOptions.IgnoreCase))
-            return new ValidationResult(false, null, null, "不允许 SELECT *，请明确指定列名");
+        // 6. 检查 SELECT *（不允许，拦截 t.* / id, * / *, id 等变体，放行 COUNT(*)）
+        // 提取 SELECT…FROM 之间的子句
+        var selectMatch = Regex.Match(sql, @"SELECT\s+(.*?)\s+FROM", RegexOptions.IgnoreCase | RegexOptions.Singleline);
+        if (selectMatch.Success)
+        {
+            var selectClause = selectMatch.Groups[1].Value;
+            // 匹配独立的 * token（前面不是字母/数字/下划线/点，后面也不是字母/数字/下划线）
+            if (Regex.IsMatch(selectClause, @"(?<![A-Za-z0-9_.])\*(?![A-Za-z0-9_])"))
+                return new ValidationResult(false, null, null, "不允许 SELECT *，请明确指定列名");
+        }
 
         // 7. 提取并验证表名
         var referencedTables = ExtractTableNames(sql);
@@ -187,12 +194,43 @@ public static class SafeQueryValidator
                 return new ValidationResult(false, null, null, $"表 {table} 不在白名单中");
         }
 
-        // 8. 验证列名（提取 SELECT 子句中的列）
+        // 7.1 拒绝多表查询
+        if (referencedTables.Count > 1)
+            return new ValidationResult(false, null, null, "暂仅支持单表查询，请拆分后重试");
+
+        // 7.2 拒绝子查询（SELECT 关键字出现超过 1 次即认定含子查询）
+        var selectCount = 0;
+        var upperSql = sql.ToUpperInvariant();
+        for (var i = 0; i <= upperSql.Length - 6; i++)
+        {
+            if (upperSql[i] == 'S' && upperSql.Substring(i, 6) == "SELECT"
+                && (i == 0 || !char.IsLetterOrDigit(upperSql[i - 1])))
+            {
+                selectCount++;
+                if (selectCount > 1)
+                    return new ValidationResult(false, null, null, "暂不支持子查询");
+            }
+        }
+
+        // 8. 验证列名（强制列白名单校验）
+        // 构造所有被引用表的白名单列并集
+        var allowedColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var table in referencedTables)
+        {
+            if (TableWhitelist.TryGetValue(table, out var cols))
+            {
+                foreach (var col in cols)
+                    allowedColumns.Add(col);
+            }
+        }
+
+        // 提取 SELECT 子句中的所有裸列引用并逐一校验
         var referencedColumns = ExtractColumnNames(sql);
         foreach (var col in referencedColumns)
         {
-            if (col == "*") continue; // 已经在步骤 6 拒绝
-            // 列名验证是可选的，因为有些列可能是表达式或别名
+            if (col == "*") continue; // 已在步骤 6 或 FIX-3 拒绝
+            if (!allowedColumns.Contains(col))
+                return new ValidationResult(false, null, null, $"列 \"{col}\" 不在允许查询范围");
         }
 
         // 9. 强制注入用户过滤
@@ -289,17 +327,29 @@ public static class SafeQueryValidator
     }
 
     /// <summary>
-    /// 注入用户过滤条件
+    /// 注入用户过滤条件 — 只替换第一个顶层 WHERE，计算表别名
     /// </summary>
     private static string InjectUserFilter(string sql, HashSet<string> tables, string uid, int isAdmin)
     {
-        var filters = new List<string>();
+        // 从 FROM 子句解析表别名: 匹配 "FROM table [AS] alias" 或 "FROM table"
+        var aliasMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var table in tables)
+        {
+            if (!TableWhitelist.ContainsKey(table)) continue;
+            // 匹配 "FROM table alias" 或 "FROM table AS alias"（单词边界）
+            var aliasMatch = Regex.Match(sql,
+                $@"\b{table}\b\s+(?:AS\s+)?(\w+)", RegexOptions.IgnoreCase);
+            if (aliasMatch.Success)
+                aliasMap[table] = aliasMatch.Groups[1].Value;
+        }
 
+        var filters = new List<string>();
         foreach (var table in tables)
         {
             if (TableWhitelist.ContainsKey(table))
             {
-                filters.Add(GetTableFilter(table));
+                var alias = aliasMap.TryGetValue(table, out var a) ? a : "";
+                filters.Add(GetTableFilter(table, alias));
             }
         }
 
@@ -308,11 +358,11 @@ public static class SafeQueryValidator
 
         var filterClause = string.Join(" AND ", filters);
 
-        // 检查是否已有 WHERE
-        if (Regex.IsMatch(sql, @"\bWHERE\b", RegexOptions.IgnoreCase))
+        // 只替换第一个顶层 WHERE
+        var whereRegex = new Regex(@"\bWHERE\b", RegexOptions.IgnoreCase);
+        if (whereRegex.IsMatch(sql))
         {
-            // 在现有 WHERE 后追加 AND
-            return Regex.Replace(sql, @"\bWHERE\b", $"WHERE {filterClause} AND", RegexOptions.IgnoreCase);
+            return whereRegex.Replace(sql, $"WHERE {filterClause} AND", 1);
         }
         else
         {
