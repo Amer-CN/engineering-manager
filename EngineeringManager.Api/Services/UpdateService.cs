@@ -177,7 +177,6 @@ public class UpdateService
                     File.Delete(partPath);
                     progress.Phase = "error";
                     progress.Error = $"SHA256 校验失败：期望 {pkg.Sha256[..16]}...，实际 {hash[..16]}...";
-                    _downloads.TryRemove(downloadId, out _);
                     return;
                 }
             }
@@ -194,7 +193,6 @@ public class UpdateService
         {
             progress.Phase = "error";
             progress.Error = ex.Message;
-            _downloads.TryRemove(downloadId, out _);
         }
     }
 
