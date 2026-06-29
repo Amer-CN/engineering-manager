@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using Dapper;
 using EngineeringManager.Api.Security;
 
@@ -21,9 +21,10 @@ public static class ContractEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             // v1.1.0 P0-4 Phase 2: 椤圭洰绾ц〃杩囨护 (created_by OR admin OR project_authorizations)
             // projectId 鏄洿绐勭殑鏀剁獎, 涓嶈兘婕?
-            var sql = $@"SELECT * FROM income_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects("project_id")}";
+            var sql = $@"SELECT * FROM income_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope, "project_id")}";
             if (projectId.HasValue) sql += " AND project_id=@ProjectId";
             sql += " ORDER BY created_at DESC";
             return Common.Ok(db.Query(sql, new { ProjectId = projectId, Uid = uid, IsAdmin = isAdmin }));
@@ -33,8 +34,9 @@ public static class ContractEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             // v1.1.0 P0-4 Phase 2: 椤圭洰绾ц〃杩囨护
-            var sql = $@"SELECT * FROM expense_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects("project_id")}";
+            var sql = $@"SELECT * FROM expense_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope, "project_id")}";
             if (projectId.HasValue) sql += " AND project_id=@ProjectId";
             sql += " ORDER BY created_at DESC";
             return Common.Ok(db.Query(sql, new { ProjectId = projectId, Uid = uid, IsAdmin = isAdmin }));
@@ -44,8 +46,9 @@ public static class ContractEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             // v1.1.0 P0-4 Phase 2: 椤圭洰绾ц〃杩囨护
-            var sql = $@"SELECT * FROM agreement_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects("project_id")}";
+            var sql = $@"SELECT * FROM agreement_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope, "project_id")}";
             if (projectId.HasValue) sql += " AND project_id=@ProjectId";
             sql += " ORDER BY created_at DESC";
             return Common.Ok(db.Query(sql, new { ProjectId = projectId, Uid = uid, IsAdmin = isAdmin }));
@@ -55,13 +58,14 @@ public static class ContractEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             // v1.1.0 P0-4 Phase 2: stats 涔熸寜 user-dim 杩囨护 (admin 鐪嬪叏琛? 鍏朵粬鐪嬭嚜宸?鎺堟潈)
             return Common.Ok(new
             {
-                incomeCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM income_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects()}", new { Uid = uid, IsAdmin = isAdmin }),
-                expenseCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM expense_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects()}", new { Uid = uid, IsAdmin = isAdmin }),
-                incomeTotal = db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(amount),0) FROM income_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects()}", new { Uid = uid, IsAdmin = isAdmin }),
-                expenseTotal = db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(amount),0) FROM expense_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects()}", new { Uid = uid, IsAdmin = isAdmin }),
+                incomeCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM income_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope)}", new { Uid = uid, IsAdmin = isAdmin }),
+                expenseCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM expense_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope)}", new { Uid = uid, IsAdmin = isAdmin }),
+                incomeTotal = db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(amount),0) FROM income_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope)}", new { Uid = uid, IsAdmin = isAdmin }),
+                expenseTotal = db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(amount),0) FROM expense_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope)}", new { Uid = uid, IsAdmin = isAdmin }),
             });
         });
 
@@ -147,7 +151,8 @@ public static class ContractEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
-            var affected = await db.ExecuteAsync(@"UPDATE income_contracts SET name=@Name,amount=@Amount,status=@Status,remarks=@Remarks,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND " + CurrentUser.UserFilterFragment,
+            var scope = CurrentUser.GetDataScope(ctx);
+            var affected = await db.ExecuteAsync(@"UPDATE income_contracts SET name=@Name,amount=@Amount,status=@Status,remarks=@Remarks,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND " + CurrentUser.UserFilterFragmentForProject(scope),
                 new { Uid = uid, IsAdmin = isAdmin, Now = now() });
             return affected > 0 ? Common.Ok() : Results.Forbid();
         });
@@ -156,10 +161,11 @@ public static class ContractEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             using var reader = new System.IO.StreamReader(ctx.Request.Body);
             var bodyText = await reader.ReadToEndAsync();
             var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(bodyText);
-            var affected = await db.ExecuteAsync(@"UPDATE expense_contracts SET name=@Name,amount=@Amount,status=@Status,remarks=@Remarks,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND " + CurrentUser.UserFilterFragment,
+            var affected = await db.ExecuteAsync(@"UPDATE expense_contracts SET name=@Name,amount=@Amount,status=@Status,remarks=@Remarks,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND " + CurrentUser.UserFilterFragmentForProject(scope),
                 new { Uid = uid, IsAdmin = isAdmin, Now = now(),
                     Id = body.TryGetProperty("id", out var id) ? id.GetInt64() : 0,
                     Name = body.TryGetProperty("name", out var n) ? n.GetString() : null,
@@ -174,6 +180,7 @@ public static class ContractEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             using var reader = new System.IO.StreamReader(ctx.Request.Body);
             var bodyText = await reader.ReadToEndAsync();
             var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(bodyText);
@@ -192,6 +199,7 @@ public static class ContractEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             return (await db.ExecuteAsync("DELETE FROM income_contracts WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
         });
 
@@ -199,6 +207,7 @@ public static class ContractEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             return (await db.ExecuteAsync("DELETE FROM expense_contracts WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
         });
 
@@ -206,6 +215,7 @@ public static class ContractEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             return (await db.ExecuteAsync("DELETE FROM agreement_contracts WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
         });
 
@@ -217,8 +227,9 @@ public static class ContractEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             // v1.1.0 P0-4 Phase 2: contract_templates 鐜板湪鏈?created_by
-            return Common.Ok(db.Query($"SELECT * FROM contract_templates WHERE {CurrentUser.UserFilterCompany()} ORDER BY created_at DESC", new { Uid = uid, IsAdmin = isAdmin }));
+            return Common.Ok(db.Query($"SELECT * FROM contract_templates WHERE {CurrentUser.UserFilterCompany(scope)} ORDER BY created_at DESC", new { Uid = uid, IsAdmin = isAdmin }));
         });
 
         app.MapPost("/api/contract-templates", async (HttpContext ctx, ContractTemplateDto dto, IDbConnection db) =>
@@ -241,6 +252,7 @@ public static class ContractEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             return (await db.ExecuteAsync("DELETE FROM contract_templates WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
         });
         // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
@@ -251,6 +263,7 @@ public static class ContractEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             // v1.1.0 P0-4 Phase 2: settlements 琛ㄧ幇鍦ㄦ湁 created_by (migration 014)
             // 浼樺厛鐢ㄥ唴鑱?SQL 閬垮厤 LEFT JOIN projects 涔熸湁 created_by 鍒楀啿绐?
             var sql = @"SELECT s.*, p.name as project_name
@@ -282,6 +295,7 @@ public static class ContractEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             return (await db.ExecuteAsync("UPDATE settlements SET deleted_at=@Now WHERE id=@Id AND deleted_at IS NULL AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin, Now = now() })) > 0 ? Common.Ok() : Results.Forbid();
         });
         app.MapPut("/api/settlements/{id}/process", async (HttpContext ctx, long id, IDbConnection db) =>
@@ -301,3 +315,4 @@ public static class ContractEndpoints
         });
     }
 }
+

@@ -9,7 +9,7 @@ namespace EngineeringManager.Tests.Endpoints;
 public class SafeQueryValidatorTests
 {
     private const string TestUid = "test-user";
-    private const int TestIsAdmin = 1;
+    private static readonly EngineeringManager.Api.Security.CurrentUser.DataScope TestScope = EngineeringManager.Api.Security.CurrentUser.DataScope.All;
 
     // ════════ L-1: REPLACE 标量函数 ════════
 
@@ -18,7 +18,7 @@ public class SafeQueryValidatorTests
     {
         // REPLACE 标量函数应被放行（不是 REPLACE INTO）
         var result = SafeQueryValidator.ValidateAndRewrite(
-            "SELECT REPLACE(name, ' ', '') FROM projects", TestUid, TestIsAdmin);
+            "SELECT REPLACE(name, ' ', '') FROM projects", TestUid, TestScope);
 
         Assert.True(result.IsValid, $"REPLACE 标量函数应该通过，但被拒绝: {result.Error}");
         Assert.NotNull(result.RewrittenSql);
@@ -29,7 +29,7 @@ public class SafeQueryValidatorTests
     {
         // REPLACE INTO 是 DML，应该被 AST 校验拒绝
         var result = SafeQueryValidator.ValidateAndRewrite(
-            "REPLACE INTO projects (id, name) VALUES (1, 'test')", TestUid, TestIsAdmin);
+            "REPLACE INTO projects (id, name) VALUES (1, 'test')", TestUid, TestScope);
 
         Assert.False(result.IsValid, "REPLACE INTO 应该被拒绝");
     }
@@ -41,7 +41,7 @@ public class SafeQueryValidatorTests
     {
         // LIMIT 500 → 应被压到 100
         var sql = "SELECT id, name FROM projects LIMIT 500";
-        var result = SafeQueryValidator.ValidateAndRewrite(sql, TestUid, TestIsAdmin);
+        var result = SafeQueryValidator.ValidateAndRewrite(sql, TestUid, TestScope);
 
         Assert.True(result.IsValid, $"LIMIT 500 应该通过: {result.Error}");
         Assert.NotNull(result.RewrittenSql);
@@ -53,7 +53,7 @@ public class SafeQueryValidatorTests
     {
         // LIMIT 0, 500 → count 500 被压到 100
         var sql = "SELECT id, name FROM projects LIMIT 0, 500";
-        var result = SafeQueryValidator.ValidateAndRewrite(sql, TestUid, TestIsAdmin);
+        var result = SafeQueryValidator.ValidateAndRewrite(sql, TestUid, TestScope);
 
         Assert.True(result.IsValid, $"LIMIT 0,500 应该通过: {result.Error}");
         Assert.NotNull(result.RewrittenSql);
@@ -68,7 +68,7 @@ public class SafeQueryValidatorTests
     {
         // LIMIT 10 ≤ 100，保持不变
         var sql = "SELECT id, name FROM projects LIMIT 10";
-        var result = SafeQueryValidator.ValidateAndRewrite(sql, TestUid, TestIsAdmin);
+        var result = SafeQueryValidator.ValidateAndRewrite(sql, TestUid, TestScope);
 
         Assert.True(result.IsValid, $"LIMIT 10 应该通过: {result.Error}");
         Assert.NotNull(result.RewrittenSql);
@@ -80,7 +80,7 @@ public class SafeQueryValidatorTests
     {
         // LIMIT 10 OFFSET 1000 → count=10 ≤ 100，保持不变
         var sql = "SELECT id, name FROM projects LIMIT 10 OFFSET 1000";
-        var result = SafeQueryValidator.ValidateAndRewrite(sql, TestUid, TestIsAdmin);
+        var result = SafeQueryValidator.ValidateAndRewrite(sql, TestUid, TestScope);
 
         Assert.True(result.IsValid, $"LIMIT 10 OFFSET 1000 应该通过: {result.Error}");
         Assert.NotNull(result.RewrittenSql);
@@ -92,7 +92,7 @@ public class SafeQueryValidatorTests
     {
         // 无 LIMIT → 自动添加 LIMIT 100
         var sql = "SELECT id, name FROM projects";
-        var result = SafeQueryValidator.ValidateAndRewrite(sql, TestUid, TestIsAdmin);
+        var result = SafeQueryValidator.ValidateAndRewrite(sql, TestUid, TestScope);
 
         Assert.True(result.IsValid, $"无 LIMIT 查询应该通过: {result.Error}");
         Assert.NotNull(result.RewrittenSql);

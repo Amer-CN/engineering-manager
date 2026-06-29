@@ -15,10 +15,11 @@ public static class ExpenseEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             // v1.1.0 P0-4 Phase 2: 总加 user-dim
             var conditions = new List<string>();
             if (projectId.HasValue) conditions.Add("project_id=@ProjectId");
-            conditions.Add(CurrentUser.UserFilterWithAuthorizedProjects());
+            conditions.Add(CurrentUser.UserFilterWithAuthorizedProjects(scope));
             var sql = "SELECT * FROM expenses WHERE " + string.Join(" AND ", conditions) + " ORDER BY created_at DESC";
             return Common.Ok(db.Query(sql, new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }));
         });

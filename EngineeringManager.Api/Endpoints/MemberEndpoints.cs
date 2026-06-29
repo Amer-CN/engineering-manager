@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using Dapper;
 using EngineeringManager.Api.Security;
 
@@ -21,10 +21,11 @@ public static class MemberEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             // v1.1.0 P0-4 Phase 2: 公司维度表过滤 (created_by=@Uid OR @IsAdmin=1)
             var rows = db.Query($@"SELECT m.*, d.name as department_name FROM members m
                           LEFT JOIN departments d ON m.department_id=d.id
-                          WHERE {CurrentUser.UserFilterCompany("m.created_by")}
+                          WHERE {CurrentUser.UserFilterCompany(scope, "m.created_by")}
                           ORDER BY m.created_at DESC",
                           new { Uid = uid, IsAdmin = isAdmin }).ToList();
             // v0.76.0 累计待办 #1: PII ACL — worker 角色只能看脱敏, 其他人明文
@@ -49,8 +50,9 @@ public static class MemberEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             // v1.1.0 P0-4 Phase 2: 单条也加 user-dim 过滤 (防 ID 枚举越权)
-            var m = db.QueryFirstOrDefault($"SELECT * FROM members WHERE id=@Id AND {CurrentUser.UserFilterCompany("m.created_by")}", new { Id = id, Uid = uid, IsAdmin = isAdmin });
+            var m = db.QueryFirstOrDefault($"SELECT * FROM members WHERE id=@Id AND {CurrentUser.UserFilterCompany(scope, "m.created_by")}", new { Id = id, Uid = uid, IsAdmin = isAdmin });
             if (m is null) return Common.NotFound("成员不存在");
             // v0.76.0 累计待办 #1: PII ACL — 同上 /api/members, 返回 dict 屏蔽 PII
             var piiAccess = CurrentUser.GetPiiAccess(ctx);
@@ -85,6 +87,7 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             // v1.2.0: PII 字段加密
             var pii = ctx.RequestServices.GetRequiredService<EngineeringManager.Api.Security.PiiProtector>();
             var affected = await db.ExecuteAsync(@"UPDATE members SET name=@Name,phone=@Phone,email=@Email,
@@ -104,6 +107,7 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             return (await db.ExecuteAsync("DELETE FROM members WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
         });
 
@@ -115,8 +119,9 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             // v1.1.0 P0-4 Phase 2: 公司维度表过滤
-            var rows = db.Query($@"SELECT * FROM workers WHERE {CurrentUser.UserFilterCompany()} ORDER BY name",
+            var rows = db.Query($@"SELECT * FROM workers WHERE {CurrentUser.UserFilterCompany(scope)} ORDER BY name",
                 new { Uid = uid, IsAdmin = isAdmin }).ToList();
             // v0.76.0 累计待办 #1: PII ACL — worker 角色只能看脱敏, 其他人明文
             var piiAccess = CurrentUser.GetPiiAccess(ctx);
@@ -137,11 +142,12 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             // v1.1.0 P0-4 Phase 2: 统计也带过滤 (admin 看全量, 非 admin 只看自己建的)
             return Common.Ok(new
             {
-                total = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM workers WHERE {CurrentUser.UserFilterCompany()}", new { Uid = uid, IsAdmin = isAdmin }),
-                active = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM project_workers pw WHERE pw.status='active' AND {CurrentUser.UserFilterWithAuthorizedProjects("pw.project_id")}", new { Uid = uid, IsAdmin = isAdmin }),
+                total = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM workers WHERE {CurrentUser.UserFilterCompany(scope)}", new { Uid = uid, IsAdmin = isAdmin }),
+                active = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM project_workers pw WHERE pw.status='active' AND {CurrentUser.UserFilterWithAuthorizedProjects(scope, "pw.project_id")}", new { Uid = uid, IsAdmin = isAdmin }),
             });
         });
 
@@ -165,6 +171,7 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             // v1.2.0: PII 字段加密
             var pii = ctx.RequestServices.GetRequiredService<EngineeringManager.Api.Security.PiiProtector>();
             var affected = await db.ExecuteAsync(@"UPDATE workers SET name=@Name,id_card=@IdCard,gender=@Gender,
@@ -182,6 +189,7 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             return (await db.ExecuteAsync("DELETE FROM workers WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
         });
 
@@ -192,6 +200,7 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
         app.MapGet("/api/project-workers", (HttpContext ctx, IDbConnection db, long? projectId) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var scope = CurrentUser.GetDataScope(ctx);
             var sql = @"SELECT pw.*, w.name as worker_name, w.gender, w.address, w.bank_name, w.worker_type, w.daily_wage,
                         w.birth_date, w.ethnicity,
                         wt.name as team_name
@@ -201,7 +210,7 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
             // v1.1.0 P0-4 Phase 2: 总加 user-dim
             var conditions = new List<string>();
             if (projectId.HasValue) conditions.Add("pw.project_id=@ProjectId");
-            conditions.Add(CurrentUser.UserFilterWithAuthorizedProjects("pw.project_id", "pw.created_by"));
+            conditions.Add(CurrentUser.UserFilterWithAuthorizedProjects(scope, "pw.project_id", "pw.created_by"));
             sql += " WHERE " + string.Join(" AND ", conditions);
             sql += " ORDER BY pw.created_at DESC";
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
@@ -237,6 +246,7 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             return (await db.ExecuteAsync("DELETE FROM project_workers WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
         });
 
@@ -248,8 +258,9 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             // v1.1.0 P0-4 Phase 2: departments 现在有 created_by
-            var rows = db.Query($"SELECT * FROM departments WHERE {CurrentUser.UserFilterCompany()} ORDER BY name", new { Uid = uid, IsAdmin = isAdmin }).ToList();
+            var rows = db.Query($"SELECT * FROM departments WHERE {CurrentUser.UserFilterCompany(scope)} ORDER BY name", new { Uid = uid, IsAdmin = isAdmin }).ToList();
             // positions 存为 JSON TEXT，返回前 parse 为数组供前端使用
             foreach (var row in rows)
             {
@@ -276,6 +287,7 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             var positionsJson = System.Text.Json.JsonSerializer.Serialize(dto.Positions ?? new List<string>());
             var affected = await db.ExecuteAsync(
                 @"UPDATE departments SET name=@Name, manager_id=@ManagerId, positions=@Positions,
@@ -290,6 +302,7 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             return (await db.ExecuteAsync("DELETE FROM departments WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
         });
 
@@ -301,6 +314,7 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             // v1.1.0 P0-4 Phase 2: worker_teams 现在有 created_by
             // LEFT JOIN projects 也有 created_by 列, 改用 wt. 表别名
             var conditions = new List<string>();
@@ -335,7 +349,9 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             return (await db.ExecuteAsync("DELETE FROM worker_teams WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
         });
     }
 }
+

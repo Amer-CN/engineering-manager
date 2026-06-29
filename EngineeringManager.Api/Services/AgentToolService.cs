@@ -88,23 +88,24 @@ public class AgentToolService
             var uid = CurrentUser.GetUserId(ctx) ?? "";
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var piiAccess = CurrentUser.GetPiiAccess(ctx);
+            var scope = CurrentUser.GetDataScope(ctx);
 
             object? result = toolName switch
             {
-                "getDashboardStats" => await ExecuteGetDashboardStats(db, uid, isAdmin),
-                "getProjects" => await ExecuteGetProjects(db, uid, isAdmin),
-                "getProjectDetail" => await ExecuteGetProjectDetail(db, arguments, uid, isAdmin),
-                "getInvoices" => await ExecuteGetInvoices(db, arguments, uid, isAdmin),
-                "getPendingInvoices" => await ExecuteGetPendingInvoices(db, uid, isAdmin),
-                "getSettlements" => await ExecuteGetSettlements(db, arguments, uid, isAdmin),
-                "getPendingSettlements" => await ExecuteGetPendingSettlements(db, uid, isAdmin),
-                "getMembers" => await ExecuteGetMembers(db, uid, isAdmin),
-                "getWorkers" => await ExecuteGetWorkers(db, uid, isAdmin),
-                "getContracts" => await ExecuteGetContracts(db, arguments, uid, isAdmin),
-                "getInventory" => await ExecuteGetInventory(db, uid, isAdmin),
-                "getCostSummary" => await ExecuteGetCostSummary(db, arguments, uid, isAdmin),
-                "getPartners" => await ExecuteGetPartners(db, uid, isAdmin),
-                "runSafeQuery" => await ExecuteRunSafeQuery(db, arguments, uid, isAdmin, piiAccess),
+                "getDashboardStats" => await ExecuteGetDashboardStats(db, uid, scope),
+                "getProjects" => await ExecuteGetProjects(db, uid, scope),
+                "getProjectDetail" => await ExecuteGetProjectDetail(db, arguments, uid, scope),
+                "getInvoices" => await ExecuteGetInvoices(db, arguments, uid, scope),
+                "getPendingInvoices" => await ExecuteGetPendingInvoices(db, uid, scope),
+                "getSettlements" => await ExecuteGetSettlements(db, arguments, uid, scope),
+                "getPendingSettlements" => await ExecuteGetPendingSettlements(db, uid, scope),
+                "getMembers" => await ExecuteGetMembers(db, uid, scope),
+                "getWorkers" => await ExecuteGetWorkers(db, uid, scope),
+                "getContracts" => await ExecuteGetContracts(db, arguments, uid, scope),
+                "getInventory" => await ExecuteGetInventory(db, uid, scope),
+                "getCostSummary" => await ExecuteGetCostSummary(db, arguments, uid, scope),
+                "getPartners" => await ExecuteGetPartners(db, uid, scope),
+                "runSafeQuery" => await ExecuteRunSafeQuery(db, arguments, uid, scope, piiAccess),
                 _ => null,
             };
 
@@ -139,11 +140,11 @@ public class AgentToolService
     // 工具执行方法
     // ═══════════════════════════════════════════════════════════
 
-    private static Task<object> ExecuteGetDashboardStats(IDbConnection db, string uid, int isAdmin)
+    private static Task<object> ExecuteGetDashboardStats(IDbConnection db, string uid, CurrentUser.DataScope scope)
     {
-        var companyFilter = CurrentUser.UserFilterCompany("created_by");
-        var projectFilter = CurrentUser.UserFilterWithAuthorizedProjects("project_id", "created_by");
-        var p = new { Uid = uid, IsAdmin = isAdmin };
+        var companyFilter = CurrentUser.UserFilterCompany(scope, "created_by");
+        var projectFilter = CurrentUser.UserFilterWithAuthorizedProjects(scope, "project_id", "created_by");
+        var p = new { Uid = uid, IsAdmin = 0 };
 
         var projectsCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM projects WHERE {companyFilter}", p);
         var membersCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM members WHERE {companyFilter}", p);
@@ -168,9 +169,9 @@ public class AgentToolService
         });
     }
 
-    private static Task<object> ExecuteGetProjects(IDbConnection db, string uid, int isAdmin)
+    private static Task<object> ExecuteGetProjects(IDbConnection db, string uid, CurrentUser.DataScope scope)
     {
-        var filter = CurrentUser.UserFilterCompany("p.created_by");
+        var filter = CurrentUser.UserFilterCompany(scope, "p.created_by");
         var projects = db.Query($@"
             SELECT p.id, p.name, p.status, p.start_date, p.end_date, p.budget,
                    m.name as projectManager
@@ -179,32 +180,32 @@ public class AgentToolService
             WHERE {filter}
             ORDER BY p.created_at DESC
             LIMIT 20
-        ", new { Uid = uid, IsAdmin = isAdmin }).ToList();
+        ", new { Uid = uid, IsAdmin = 0 }).ToList();
 
         return Task.FromResult<object>(projects);
     }
 
-    private static Task<object> ExecuteGetProjectDetail(IDbConnection db, JsonElement args, string uid, int isAdmin)
+    private static Task<object> ExecuteGetProjectDetail(IDbConnection db, JsonElement args, string uid, CurrentUser.DataScope scope)
     {
         var projectId = GetIntArg(args, "projectId");
-        var filter = CurrentUser.UserFilterWithAuthorizedProjects("p.id", "p.created_by");
+        var filter = CurrentUser.UserFilterWithAuthorizedProjects(scope, "p.id", "p.created_by");
 
         var project = db.QueryFirstOrDefault($@"
             SELECT p.*, m.name as project_manager_name
             FROM projects p
             LEFT JOIN members m ON p.project_manager_id = m.id
             WHERE p.id = @Id AND ({filter})
-        ", new { Id = projectId, Uid = uid, IsAdmin = isAdmin });
+        ", new { Id = projectId, Uid = uid, IsAdmin = 0 });
 
         return Task.FromResult<object>(project ?? new { error = "项目不存在" });
     }
 
-    private static Task<object> ExecuteGetInvoices(IDbConnection db, JsonElement args, string uid, int isAdmin)
+    private static Task<object> ExecuteGetInvoices(IDbConnection db, JsonElement args, string uid, CurrentUser.DataScope scope)
     {
         var projectId = GetOptionalIntArg(args, "projectId");
         var filter = projectId.HasValue
-            ? CurrentUser.UserFilterWithAuthorizedProjects("i.project_id", "i.created_by")
-            : CurrentUser.UserFilterCompany("i.created_by");
+            ? CurrentUser.UserFilterWithAuthorizedProjects(scope, "i.project_id", "i.created_by")
+            : CurrentUser.UserFilterCompany(scope, "i.created_by");
 
         var sql = $@"
             SELECT i.id, i.invoice_no, i.name, i.amount, i.status, i.issue_date,
@@ -218,14 +219,14 @@ public class AgentToolService
         ";
 
         var invoices = db.Query(sql,
-            new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }).ToList();
+            new { Uid = uid, IsAdmin = 0, ProjectId = projectId }).ToList();
 
         return Task.FromResult<object>(invoices);
     }
 
-    private static Task<object> ExecuteGetPendingInvoices(IDbConnection db, string uid, int isAdmin)
+    private static Task<object> ExecuteGetPendingInvoices(IDbConnection db, string uid, CurrentUser.DataScope scope)
     {
-        var filter = CurrentUser.UserFilterWithAuthorizedProjects("i.project_id", "i.created_by");
+        var filter = CurrentUser.UserFilterWithAuthorizedProjects(scope, "i.project_id", "i.created_by");
         var invoices = db.Query($@"
             SELECT i.id, i.invoice_no, i.name, i.amount, i.status, i.issue_date,
                    p.name as project_name
@@ -234,17 +235,17 @@ public class AgentToolService
             WHERE i.status = 'pending' AND ({filter})
             ORDER BY i.created_at DESC
             LIMIT 30
-        ", new { Uid = uid, IsAdmin = isAdmin }).ToList();
+        ", new { Uid = uid, IsAdmin = 0 }).ToList();
 
         return Task.FromResult<object>(invoices);
     }
 
-    private static Task<object> ExecuteGetSettlements(IDbConnection db, JsonElement args, string uid, int isAdmin)
+    private static Task<object> ExecuteGetSettlements(IDbConnection db, JsonElement args, string uid, CurrentUser.DataScope scope)
     {
         var projectId = GetOptionalIntArg(args, "projectId");
         var filter = projectId.HasValue
-            ? CurrentUser.UserFilterWithAuthorizedProjects("s.project_id", "s.created_by")
-            : CurrentUser.UserFilterCompany("s.created_by");
+            ? CurrentUser.UserFilterWithAuthorizedProjects(scope, "s.project_id", "s.created_by")
+            : CurrentUser.UserFilterCompany(scope, "s.created_by");
 
         var sql = $@"
             SELECT s.id, s.name, s.amount, s.status, s.date,
@@ -258,14 +259,14 @@ public class AgentToolService
         ";
 
         var settlements = db.Query(sql,
-            new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }).ToList();
+            new { Uid = uid, IsAdmin = 0, ProjectId = projectId }).ToList();
 
         return Task.FromResult<object>(settlements);
     }
 
-    private static Task<object> ExecuteGetPendingSettlements(IDbConnection db, string uid, int isAdmin)
+    private static Task<object> ExecuteGetPendingSettlements(IDbConnection db, string uid, CurrentUser.DataScope scope)
     {
-        var filter = CurrentUser.UserFilterWithAuthorizedProjects("s.project_id", "s.created_by");
+        var filter = CurrentUser.UserFilterWithAuthorizedProjects(scope, "s.project_id", "s.created_by");
         var settlements = db.Query($@"
             SELECT s.id, s.name, s.amount, s.status, s.date,
                    p.name as project_name
@@ -274,28 +275,28 @@ public class AgentToolService
             WHERE s.status = 'pending' AND ({filter})
             ORDER BY s.created_at DESC
             LIMIT 30
-        ", new { Uid = uid, IsAdmin = isAdmin }).ToList();
+        ", new { Uid = uid, IsAdmin = 0 }).ToList();
 
         return Task.FromResult<object>(settlements);
     }
 
-    private static Task<object> ExecuteGetMembers(IDbConnection db, string uid, int isAdmin)
+    private static Task<object> ExecuteGetMembers(IDbConnection db, string uid, CurrentUser.DataScope scope)
     {
-        var filter = CurrentUser.UserFilterCompany("m.created_by");
+        var filter = CurrentUser.UserFilterCompany(scope, "m.created_by");
         var members = db.Query($@"
             SELECT m.id, m.name, m.phone, m.member_type, m.role, m.status, m.id_card, m.bank_account
             FROM members m
             WHERE {filter}
             ORDER BY m.created_at DESC
             LIMIT 30
-        ", new { Uid = uid, IsAdmin = isAdmin }).ToList();
+        ", new { Uid = uid, IsAdmin = 0 }).ToList();
 
         return Task.FromResult<object>(members);
     }
 
-    private static Task<object> ExecuteGetWorkers(IDbConnection db, string uid, int isAdmin)
+    private static Task<object> ExecuteGetWorkers(IDbConnection db, string uid, CurrentUser.DataScope scope)
     {
-        var filter = CurrentUser.UserFilterCompany("w.created_by");
+        var filter = CurrentUser.UserFilterCompany(scope, "w.created_by");
         var workers = db.Query($@"
             SELECT w.id, w.name, w.phone, w.worker_type, w.daily_wage,
                    w.id_card, w.bank_account, w.address
@@ -303,19 +304,19 @@ public class AgentToolService
             WHERE {filter}
             ORDER BY w.created_at DESC
             LIMIT 30
-        ", new { Uid = uid, IsAdmin = isAdmin }).ToList();
+        ", new { Uid = uid, IsAdmin = 0 }).ToList();
 
         return Task.FromResult<object>(workers);
     }
 
-    private static Task<object> ExecuteGetContracts(IDbConnection db, JsonElement args, string uid, int isAdmin)
+    private static Task<object> ExecuteGetContracts(IDbConnection db, JsonElement args, string uid, CurrentUser.DataScope scope)
     {
         var projectId = GetOptionalIntArg(args, "projectId");
 
         // income_contracts
         var incomeFilter = projectId.HasValue
-            ? CurrentUser.UserFilterWithAuthorizedProjects("ic.project_id", "ic.created_by")
-            : CurrentUser.UserFilterCompany("ic.created_by");
+            ? CurrentUser.UserFilterWithAuthorizedProjects(scope, "ic.project_id", "ic.created_by")
+            : CurrentUser.UserFilterCompany(scope, "ic.created_by");
 
         var income = db.Query($@"
             SELECT 'income' as type, ic.id, ic.name, ic.amount, ic.counterparty,
@@ -326,11 +327,11 @@ public class AgentToolService
             {(projectId.HasValue ? " AND ic.project_id = @ProjectId" : "")}
             ORDER BY ic.created_at DESC
             LIMIT 15
-        ", new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }).ToList();
+        ", new { Uid = uid, IsAdmin = 0, ProjectId = projectId }).ToList();
 
         var expenseFilter = projectId.HasValue
-            ? CurrentUser.UserFilterWithAuthorizedProjects("ec.project_id", "ec.created_by")
-            : CurrentUser.UserFilterCompany("ec.created_by");
+            ? CurrentUser.UserFilterWithAuthorizedProjects(scope, "ec.project_id", "ec.created_by")
+            : CurrentUser.UserFilterCompany(scope, "ec.created_by");
 
         var expense = db.Query($@"
             SELECT 'expense' as type, ec.id, ec.name, ec.amount, ec.counterparty,
@@ -341,33 +342,33 @@ public class AgentToolService
             {(projectId.HasValue ? " AND ec.project_id = @ProjectId" : "")}
             ORDER BY ec.created_at DESC
             LIMIT 15
-        ", new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }).ToList();
+        ", new { Uid = uid, IsAdmin = 0, ProjectId = projectId }).ToList();
 
         return Task.FromResult<object>(new { incomeContracts = income, expenseContracts = expense });
     }
 
-    private static Task<object> ExecuteGetInventory(IDbConnection db, string uid, int isAdmin)
+    private static Task<object> ExecuteGetInventory(IDbConnection db, string uid, CurrentUser.DataScope scope)
     {
-        var filter = CurrentUser.UserFilterCompany("created_by");
+        var filter = CurrentUser.UserFilterCompany(scope, "created_by");
         var items = db.Query($@"
             SELECT id, name, category, unit, quantity, min_quantity, location
             FROM inventory_items
             WHERE {filter}
             ORDER BY name
             LIMIT 30
-        ", new { Uid = uid, IsAdmin = isAdmin }).ToList();
+        ", new { Uid = uid, IsAdmin = 0 }).ToList();
 
         return Task.FromResult<object>(items);
     }
 
-    private static Task<object> ExecuteGetCostSummary(IDbConnection db, JsonElement args, string uid, int isAdmin)
+    private static Task<object> ExecuteGetCostSummary(IDbConnection db, JsonElement args, string uid, CurrentUser.DataScope scope)
     {
         var projectId = GetOptionalIntArg(args, "projectId");
-        var filter = CurrentUser.UserFilterWithAuthorizedProjects("project_id", "created_by");
+        var filter = CurrentUser.UserFilterWithAuthorizedProjects(scope, "project_id", "created_by");
         var projectFilter = projectId.HasValue
             ? $"{filter} AND project_id = @ProjectId"
             : filter;
-        var p = new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId };
+        var p = new { Uid = uid, IsAdmin = 0, ProjectId = projectId };
 
         var byCategory = db.Query($@"
             SELECT category, SUM(amount) as total
@@ -398,16 +399,16 @@ public class AgentToolService
         });
     }
 
-    private static Task<object> ExecuteGetPartners(IDbConnection db, string uid, int isAdmin)
+    private static Task<object> ExecuteGetPartners(IDbConnection db, string uid, CurrentUser.DataScope scope)
     {
-        var filter = CurrentUser.UserFilterCompany("p.created_by");
+        var filter = CurrentUser.UserFilterCompany(scope, "p.created_by");
         var partners = db.Query($@"
             SELECT p.id, p.name, p.category, p.contact, p.phone, p.bank_account
             FROM partners p
             WHERE {filter}
             ORDER BY p.created_at DESC
             LIMIT 30
-        ", new { Uid = uid, IsAdmin = isAdmin }).ToList();
+        ", new { Uid = uid, IsAdmin = 0 }).ToList();
 
         return Task.FromResult<object>(partners);
     }
@@ -416,7 +417,7 @@ public class AgentToolService
     /// 执行受限只读查询（runSafeQuery）
     /// </summary>
     private static async Task<object> ExecuteRunSafeQuery(
-        IDbConnection db, JsonElement args, string uid, int isAdmin, CurrentUser.PiiAccess access)
+        IDbConnection db, JsonElement args, string uid, CurrentUser.DataScope scope, CurrentUser.PiiAccess access)
     {
         // 1. 提取 SQL 参数
         string sql;
@@ -433,7 +434,7 @@ public class AgentToolService
             return new { success = false, error = "SQL 不能为空" };
 
         // 2. 验证并改写 SQL
-        var validation = SafeQueryValidator.ValidateAndRewrite(sql, uid, isAdmin);
+        var validation = SafeQueryValidator.ValidateAndRewrite(sql, uid, scope);
         if (!validation.IsValid)
         {
             // 记录审计日志
@@ -442,7 +443,7 @@ public class AgentToolService
         }
 
         // 3. dry-run 预检
-        var dryRunError = SafeQueryValidator.DryRun(db, validation.RewrittenSql!, new { Uid = uid, IsAdmin = isAdmin });
+        var dryRunError = SafeQueryValidator.DryRun(db, validation.RewrittenSql!, new { Uid = uid, IsAdmin = 0 });
         if (dryRunError != null)
         {
             SafeQueryValidator.LogAudit(db, uid, sql, validation.RewrittenSql, false, dryRunError);
@@ -455,7 +456,7 @@ public class AgentToolService
             // 设置命令超时为 5 秒
             var command = new Dapper.CommandDefinition(
                 validation.RewrittenSql!,
-                new { Uid = uid, IsAdmin = isAdmin },
+                new { Uid = uid, IsAdmin = 0 },
                 commandTimeout: 5);
 
             var results = await db.QueryAsync(command);
@@ -767,3 +768,11 @@ public class AgentToolService
         return registry;
     }
 }
+
+
+
+
+
+
+
+

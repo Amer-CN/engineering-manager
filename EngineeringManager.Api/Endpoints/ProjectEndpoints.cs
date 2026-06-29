@@ -77,10 +77,11 @@ public static class ProjectEndpoints
         app.MapGet("/api/projects", (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var scope = CurrentUser.GetDataScope(ctx);
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             // v1.1.0 P0-4 Phase 2: 项目级表过滤 (UserFilterWithAuthorizedProjects + p.created_by 表别名)
             // projects 表主键是 id (不是 project_id), project_authorizations.project_id 引用 projects.id
-            var filter = CurrentUser.UserFilterWithAuthorizedProjects("p.id", "p.created_by");
+            var filter = CurrentUser.UserFilterWithAuthorizedProjects(scope, "p.id", "p.created_by");
             return Common.Ok(db.Query($@"SELECT p.*, m.name as project_manager_name FROM projects p
                           LEFT JOIN members m ON p.project_manager_id=m.id
                           WHERE {filter}
@@ -91,9 +92,10 @@ public static class ProjectEndpoints
         app.MapGet("/api/projects/{id}", (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var scope = CurrentUser.GetDataScope(ctx);
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             // v1.1.0 P0-4 Phase 2: 单条也加项目级过滤 (p.created_by + project_authorizations)
-            var filter = CurrentUser.UserFilterWithAuthorizedProjects("p.id", "p.created_by");
+            var filter = CurrentUser.UserFilterWithAuthorizedProjects(scope, "p.id", "p.created_by");
             var p = db.QueryFirstOrDefault($@"SELECT p.*, m.name as project_manager_name FROM projects p
                 LEFT JOIN members m ON p.project_manager_id=m.id
                 WHERE p.id=@Id AND ({filter})",
