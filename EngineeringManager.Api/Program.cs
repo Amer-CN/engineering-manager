@@ -89,6 +89,7 @@ public static class ApiConfig
         builder.Services.AddSingleton<EngineeringManager.Api.Services.IModelRouter, EngineeringManager.Api.Services.ModelRoutingService>();
         builder.Services.AddSingleton<EngineeringManager.Api.Services.AgentToolService>();
         builder.Services.AddSingleton<EngineeringManager.Api.Services.AgentConversationService>();
+        builder.Services.AddSingleton<EngineeringManager.Api.Services.UpdateService>();
 
         builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
             p.WithOrigins("http://localhost:5173", "http://localhost:3000", "http://localhost:5048")
@@ -309,6 +310,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
         // v1.3.0 Agent AI 助手
         app.RegisterAgentEndpoints();
+
+        // v0.80 版本更新检查
+        app.RegisterUpdateEndpoints();
     }
     // ============ P0-1: 从 config.json 读取 dataPath ============
     public static string ResolveDataPath()

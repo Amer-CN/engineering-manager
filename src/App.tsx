@@ -6,7 +6,7 @@ import Sidebar from './components/Sidebar'
 import TitleBar from './components/TitleBar'
 import StatusBar from './components/StatusBar'
 import { useStatusStore } from './store/statusStore'
-import { NAV_ITEMS, PAGE_IDS, getFilteredSidebarRoutes } from './routes'
+import { UpdateBanner } from './components/UpdateBanner'
 import { MaskProvider, useUserIdSync } from './contexts/MaskContext'
 import { RequirePermission, RequireAdmin } from './hooks/usePermission'
 import { useAuth } from './hooks/useAuth'
@@ -312,6 +312,7 @@ const AppContent: React.FC = () => {
           {isLocked && <LockScreen />}
         </AnimatePresence>
         <main className="flex-1 overflow-auto">
+          <UpdateBanner />
           <AnimatePresence mode="wait">
             <motion.div key={currentPage} className="min-h-full"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
