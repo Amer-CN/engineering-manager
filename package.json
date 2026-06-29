@@ -11,6 +11,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "postinstall": "node -e \"const fs=require('fs');if(fs.existsSync('public/ocr-config.json')){fs.mkdirSync('dist',{recursive:true});fs.copyFileSync('public/ocr-config.json','dist/ocr-config.json');}else{console.log('postinstall: skip, no public/ocr-config.json');}\"",
+    "release:manifest": "node scripts/make-manifest.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
