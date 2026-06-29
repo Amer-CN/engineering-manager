@@ -116,7 +116,7 @@ const LaborTeamManager: React.FC<LaborTeamManagerProps> = ({
       {Object.keys(teamsByProject).length > 0 ? (
         <div className="space-y-6">
           {Object.values(teamsByProject).map(projectGroup => (
-            <Card bordered={false} className="overflow-hidden">
+            <Card key={projectGroup.projectName} bordered={false} className="overflow-hidden">
               <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
                 <div className="flex items-center">
                   <Icon name="FolderKanban" size={18} className="mr-2" />
