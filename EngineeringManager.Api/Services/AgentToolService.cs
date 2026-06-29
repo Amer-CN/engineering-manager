@@ -104,7 +104,7 @@ public class AgentToolService
                 "getInventory" => await ExecuteGetInventory(db, uid, isAdmin),
                 "getCostSummary" => await ExecuteGetCostSummary(db, arguments, uid, isAdmin),
                 "getPartners" => await ExecuteGetPartners(db, uid, isAdmin),
-                "runSafeQuery" => await ExecuteRunSafeQuery(db, arguments, uid, isAdmin),
+                "runSafeQuery" => await ExecuteRunSafeQuery(db, arguments, uid, isAdmin, canReadPii),
                 _ => null,
             };
 
@@ -416,7 +416,7 @@ public class AgentToolService
     /// 执行受限只读查询（runSafeQuery）
     /// </summary>
     private static async Task<object> ExecuteRunSafeQuery(
-        IDbConnection db, JsonElement args, string uid, int isAdmin)
+        IDbConnection db, JsonElement args, string uid, int isAdmin, bool canReadPii)
     {
         // 1. 提取 SQL 参数
         string sql;
@@ -454,7 +454,7 @@ public class AgentToolService
             var resultList = results.ToList();
 
             // 4. PII 脱敏（对结果中的敏感字段）
-            var maskedResults = MaskSafeQueryResults(resultList, validation.ReferencedTables!);
+            var maskedResults = MaskSafeQueryResults(resultList, validation.ReferencedTables!, canReadPii);
 
             // 5. 记录审计日志
             SafeQueryValidator.LogAudit(db, uid, sql, validation.RewrittenSql, true, null);
@@ -479,10 +479,11 @@ public class AgentToolService
     /// 对安全查询结果进行 PII 脱敏
     /// </summary>
     private static List<dynamic> MaskSafeQueryResults(
-        List<dynamic> results, HashSet<string> tables)
+        List<dynamic> results, HashSet<string> tables, bool canReadPii)
     {
-        // 确定是否需要脱敏（这里简化处理，实际应根据用户权限）
-        // 由于 runSafeQuery 已经过权限验证，这里对所有结果进行脱敏
+        // canReadPii=true → 返回明文; false → 脱敏
+        if (canReadPii) return results;
+
         var piiFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "id_card", "phone", "bank_account", "id_card_address"
