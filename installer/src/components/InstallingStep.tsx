@@ -20,14 +20,17 @@ export default function InstallingStep({ onComplete }: Props) {
   const [doneSteps, setDoneSteps] = useState<number[]>([])
 
   useEffect(() => {
-    const handler = (e: MessageEvent) => {
+    // @ts-ignore
+    const wv = window.chrome?.webview
+    if (!wv) return
+    const handler = (e: any) => {
       try {
-        const data = JSON.parse(e.data)
-        if (data.type === 'progress') {
+        const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data
+        if (data?.type === 'progress') {
           setPercent(data.percent)
           setCurrentStep(data.step)
         }
-        if (data.type === 'installComplete') {
+        if (data?.type === 'installComplete') {
           setPercent(100)
           setCurrentStep('安装完成！')
           setDoneSteps([0, 1, 2, 3, 4])
@@ -35,8 +38,8 @@ export default function InstallingStep({ onComplete }: Props) {
         }
       } catch {}
     }
-    window.addEventListener('message', handler)
-    return () => window.removeEventListener('message', handler)
+    wv.addEventListener('message', handler)
+    return () => wv.removeEventListener('message', handler)
   }, [onComplete])
 
   // 跟踪哪些步骤已完成

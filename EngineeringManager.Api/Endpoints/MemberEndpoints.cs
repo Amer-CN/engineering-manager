@@ -247,15 +247,41 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             // v1.1.0 P0-4 Phase 2: departments 现在有 created_by
-            return Common.Ok(db.Query($"SELECT * FROM departments WHERE {CurrentUser.UserFilterCompany()} ORDER BY name", new { Uid = uid, IsAdmin = isAdmin }));
+            var rows = db.Query($"SELECT * FROM departments WHERE {CurrentUser.UserFilterCompany()} ORDER BY name", new { Uid = uid, IsAdmin = isAdmin }).ToList();
+            // positions 存为 JSON TEXT，返回前 parse 为数组供前端使用
+            foreach (var row in rows)
+            {
+                var dict = (IDictionary<string, object>)row;
+                if (dict.TryGetValue("positions", out var pos) && pos is string posStr && !string.IsNullOrEmpty(posStr))
+                {
+                    try { dict["positions"] = System.Text.Json.JsonSerializer.Deserialize<List<string>>(posStr); }
+                    catch { dict["positions"] = new List<string>(); }
+                }
+            }
+            return Common.Ok(rows);
         });
 
         app.MapPost("/api/departments", async (HttpContext ctx, DepartmentDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var positionsJson = System.Text.Json.JsonSerializer.Serialize(dto.Positions ?? new List<string>());
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO departments (name,manager_id,positions,created_by,created_at, last_modified_at) VALUES (@Name,@ManagerId,@Positions,@CreatedBy,@Now, @Now); SELECT last_insert_rowid();",
-                new { dto.Name, dto.ManagerId, dto.Positions, CreatedBy = uid, Now = now() });
+                new { dto.Name, dto.ManagerId, Positions = positionsJson, CreatedBy = uid, Now = now() });
             return Common.Ok(id);
+        });
+
+        app.MapPut("/api/departments", async (HttpContext ctx, DepartmentUpdateDto dto, IDbConnection db) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var positionsJson = System.Text.Json.JsonSerializer.Serialize(dto.Positions ?? new List<string>());
+            var affected = await db.ExecuteAsync(
+                @"UPDATE departments SET name=@Name, manager_id=@ManagerId, positions=@Positions,
+                  version=version+1, last_modified_at=@Now
+                  WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
+                new { dto.Id, dto.Name, dto.ManagerId, Positions = positionsJson,
+                      Uid = uid, IsAdmin = isAdmin, Now = now() });
+            return affected > 0 ? Common.Ok() : Results.Forbid();
         });
 
         app.MapDelete("/api/departments/{id}", async (HttpContext ctx, long id, IDbConnection db) =>

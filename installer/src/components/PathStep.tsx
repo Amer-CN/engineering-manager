@@ -12,16 +12,19 @@ export default function PathStep({ defaultPath, onNext, onBack }: Props) {
 
   // 监听 C# 回传的路径选择
   useEffect(() => {
-    const handler = (e: MessageEvent) => {
+    // @ts-ignore
+    const wv = window.chrome?.webview
+    if (!wv) return
+    const handler = (e: any) => {
       try {
-        const data = JSON.parse(e.data)
-        if (data.type === 'selectedPath') {
+        const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data
+        if (data?.type === 'selectedPath') {
           setPath(data.path)
         }
       } catch {}
     }
-    window.addEventListener('message', handler)
-    return () => window.removeEventListener('message', handler)
+    wv.addEventListener('message', handler)
+    return () => wv.removeEventListener('message', handler)
   }, [])
 
   const browse = () => {
