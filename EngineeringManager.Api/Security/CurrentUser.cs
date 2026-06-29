@@ -69,27 +69,7 @@ public static class CurrentUser
             OR EXISTS(SELECT 1 FROM project_authorizations
                       WHERE project_id = {projectCol} AND user_id = @Uid))";
 
-    /// <summary>
-    /// 当前用户是否可读 PII 字段 (身份证/手机/地址/银行账号)
-    /// 规则: admin / manager / accountant 可读; worker 不可读 (只看脱敏)
-    /// v0.76.0: 累计待办 #1 — PII 解密 ACL 字段
-    /// </summary>
-    public static bool CanReadPii(HttpContext ctx)
-    {
-        var roleClaims = ctx.User?.FindAll(System.Security.Claims.ClaimTypes.Role);
-        if (roleClaims == null) return false;
-        foreach (var c in roleClaims)
-        {
-            // 兼容中文 roleName (管理员/经理/财务) 和英文 roleId (admin/manager/accountant)
-            if (c.Value == "管理员" || c.Value == "admin" ||
-                c.Value == "经理" || c.Value == "manager" ||
-                c.Value == "财务" || c.Value == "accountant")
-                return true;
-        }
-        return false;
-    }
-
-    // ── v0.80 D-2: PII 字段权限分级(新增;上面 CanReadPii 暂不删,REST 端点可能还在用) ──
+    // ── v0.80 D-2: PII 字段权限分级 ──
 
     /// <summary>PII 列全集(以 DB 列名为准)</summary>
     public static readonly string[] AllPiiColumns =
