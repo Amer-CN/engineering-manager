@@ -78,6 +78,13 @@ git push origin master --tags
 if errorlevel 1 ( echo X FAILED & pause & exit /b 1 )
 echo    OK
 
+:: Create GitHub Release with installer
+echo.
+echo [8/8] Creating GitHub Release...
+gh release create v%VERSION% "release\EngineeringManager-Setup-%VERSION%.exe#EngineeringManager-Setup-%VERSION%.exe" "update\manifest.json#manifest.json" --title "v%VERSION%" --notes-file CHANGELOG.md --draft
+if errorlevel 1 ( echo X FAILED & pause & exit /b 1 )
+echo    OK
+
 echo.
 echo ============================================================
 echo   RELEASE COMPLETE!
@@ -85,10 +92,11 @@ echo.
 echo   Installer: release\EngineeringManager-Setup-%VERSION%.exe
 echo   Tag: v%VERSION%
 echo   Manifest: update/manifest.json
+echo   GitHub Release: DRAFT created (upload installer manually or via gh)
 echo.
 echo   Next steps:
-echo   1. Upload installer to GitHub Release
-echo   2. Verify manifest URL works
+echo   1. Review draft release on GitHub
+echo   2. Publish release when ready
 echo   3. Test auto-update flow
 echo ============================================================
 echo.
