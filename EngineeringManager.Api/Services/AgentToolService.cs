@@ -442,7 +442,7 @@ public class AgentToolService
         }
 
         // 3. dry-run 预检
-        var dryRunError = SafeQueryValidator.DryRun(db, validation.RewrittenSql!);
+        var dryRunError = SafeQueryValidator.DryRun(db, validation.RewrittenSql!, new { Uid = uid, IsAdmin = isAdmin });
         if (dryRunError != null)
         {
             SafeQueryValidator.LogAudit(db, uid, sql, validation.RewrittenSql, false, dryRunError);
