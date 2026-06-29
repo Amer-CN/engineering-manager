@@ -57,7 +57,7 @@ VersionInfoProductName={#MyAppName}
 VersionInfoProductVersion={#VERSION}
 
 ; 界面设置
-WizardSmallImageFile=EngineeringManager.Api\app.ico
+; WizardSmallImageFile — 暂不设置（需要 164x314 BMP）
 
 [Languages]
 Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
