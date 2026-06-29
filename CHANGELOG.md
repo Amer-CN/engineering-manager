@@ -9,7 +9,68 @@
 > **重要**: v0.74.0 → v0.75.3 期间曾过度打 tag (refactor-only sprint 也 bump). 已在 v0.75.3 重新整理 git 历史 (drop 7 个 spurious chore "bump version" commits), 重组成正确的 semver 历史. 详见 `docs/handoff/v0.75.3-handoff.md`.
 
 
-## v0.78.1 (2026-06-21) — fix: PII re-encrypt chunked + batch UPDATE
+## v0.79.0 (2026-06-29) — feat: AI 助手安全增强 + runSafeQuery + AST 引擎 + 模型路由
+
+> **SemVer**: minor bump (0.78.3 → 0.79.0), 新增功能（SSE 流式 / runSafeQuery / AST 引擎 / 模型路由）+ 安全修复.
+
+### 改动
+
+#### 🔒 安全修复（P0）
+- **getWorkers/getInventory 权限串失效**: 补 labor:read / inventory:read 权限，工具不再对所有角色不可用
+- **getDashboardStats 跨公司越权**: 注入行级过滤，非 admin 只看到自己的数据
+- **getCostSummary SQL 拼接 + 越权**: 换用参数化查询 + 行级过滤
+- **getInventory 无行级隔离**: 追加 uid/isAdmin 参数和 WHERE 过滤
+
+#### 🤖 AI 助手增强（P1-P2）
+- **SSE 流式输出**: POST /api/agent/chat/stream，工具执行进度 + 逐字回复
+- **runSafeQuery 受限查询**: 10 项安全护栏（AST 解析 + 列白名单 + 用户过滤 + LIMIT + dry-run + 审计）
+- **语义层注入**: 系统提示补术语映射/字段说明/工具指引
+- **模型路由层**: IModelRouter 接口 + 配置驱动换模型
+
+#### 🛠️ 技术重构
+- **SafeQueryValidator AST 升级**: 从正则改为 SqlParserCS AST 解析，支持 JOIN/子查询
+- **LlmConfigResolver**: 打破循环依赖，依赖方向单向无环
+- **修复安装器路径选择**: window.chrome.webview.addEventListener 代替 window.addEventListener
+
+#### 🐛 Bug 修复
+- 新建部门失败（DepartmentDto Positions 数组类型不匹配）
+- 编辑部门缺 PUT 接口
+- ORDER BY/HAVING 别名误杀（投影别名放行）
+- TemplateCard variables 非数组崩溃
+- LaborTeamManager 缺 key prop
+
+### 红绿灯
+
+- dotnet build: 0 错误
+- tsc: 通过
+- vite build: 通过
+
+---
+
+## v0.78.3 (2026-06-26) — feat: Agent AI 助手初版 + R9-R16 安全/质量 Sprint
+
+> **SemVer**: patch bump (0.78.2 → 0.78.3), 新功能（AI 助手）+ 大量重构(不 bump).
+
+### 改动
+
+- **Agent AI 助手**: 13 个只读查询工具 + 对话管理 + LLM 三级兜底(DPAPI→环境变量→内置 Agnes)
+- **5 个安全修复**: 登录友好提示、数据回滚/审计日志/审计明细页面崩溃修复
+- **代码重构 R9-R16**: 300+ 处 as any 清理、hooks 拆分、Button 样式统一、颜色 hex→Tailwind 常量
+- **新登录页**: Tempest 风格粒子动画 + 三种主题
+
+---
+
+## v0.78.2 (2026-06-24) — refactor: R8 Sprint — 样式统一 + 颜色常量 + 文件拆分
+
+> **SemVer**: patch bump (0.78.1 → 0.78.2), 重构不 bump 但跨 Sprint 需要区分基线.
+
+### 改动
+
+- **98 个文件 btn 样式统一**: 手写 bg-white rounded-xl shadow-sm → <Card> 组件 (R8-49)
+- **颜色常量提取**: 20 个分析器中的 inline hex → 命名的 COLORS 常量 (R6+R4)
+- **文件拆分**: 49 个超 250 行的大文件拆成 types/loaders/actions 子模块 (R3+R5)
+- **清理**: 1942 行历史 prototype HTML 设计稿 + 调试日志 batch 清理
+- **vite build 通过**: 11.27s
 
 > **SemVer**: patch bump (0.78.0 → 0.78.1), 性能优化, 不破坏 API.
 
