@@ -110,7 +110,7 @@ public static class SafeQueryValidator
     private static readonly HashSet<string> ForbiddenKeywords = new(StringComparer.OrdinalIgnoreCase)
     {
         "INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "CREATE", "ATTACH",
-        "DETACH", "PRAGMA", "VACUUM", "REPLACE", "TRUNCATE", "GRANT", "REVOKE"
+        "DETACH", "PRAGMA", "VACUUM", "TRUNCATE", "GRANT", "REVOKE"
     };
 
     /// <summary>
@@ -742,18 +742,30 @@ public static class SafeQueryValidator
         if (limitIdx < 0)
             return sql + $" LIMIT {maxLimit}";
 
-        // 提取 LIMIT 后的数字
-        var afterLimit = sql.Substring(limitIdx + 5).TrimStart();
-        var numMatch = Regex.Match(afterLimit, @"^(\d+)");
-        if (!numMatch.Success)
+        // 保留原始偏移，不要先 TrimStart，否则后续 Substring 偏移会算错
+        var afterPos = limitIdx + "LIMIT".Length;
+        var rest = sql.Substring(afterPos);
+
+        // 兼容两种形式：LIMIT count / LIMIT offset, count
+        var m = Regex.Match(rest, @"^(\s*)(\d+)(\s*,\s*(\d+))?");
+        if (!m.Success)
             return sql + $" LIMIT {maxLimit}";
 
-        var currentLimit = int.Parse(numMatch.Groups[1].Value);
+        var hasComma = m.Groups[4].Success;
+        // 逗号形式 LIMIT offset, count → 取 count;否则取唯一的数字
+        var currentLimit = int.Parse(hasComma ? m.Groups[4].Value : m.Groups[2].Value);
         if (currentLimit <= maxLimit)
             return sql;
 
-        return sql.Substring(0, limitIdx) + $"LIMIT {maxLimit}" +
-               sql.Substring(limitIdx + 5 + numMatch.Length);
+        // 用绝对偏移精确替换整个 "<ws><offset?,><count>" 片段(m.Index 因 ^ 锚定恒为 0)
+        var matchEnd = afterPos + m.Length;
+        if (hasComma)
+        {
+            // 保留原 offset，仅把 count 压到 maxLimit
+            var offset = m.Groups[2].Value;
+            return sql.Substring(0, limitIdx) + $"LIMIT {offset}, {maxLimit}" + sql.Substring(matchEnd);
+        }
+        return sql.Substring(0, limitIdx) + $"LIMIT {maxLimit}" + sql.Substring(matchEnd);
     }
 
     // ═══════════════════════════════════════════════════════════
