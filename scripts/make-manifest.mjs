@@ -54,15 +54,18 @@ if (!sha256 || sha256.length < 64) {
   process.exit(1)
 }
 
+const now = new Date()
+const pad = (n) => String(n).padStart(2, '0')
+// 转成东八区各字段
+const t = new Date(now.getTime() + 8 * 3600 * 1000)
+const releasedAt =
+  `${t.getUTCFullYear()}-${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())}` +
+  `T${pad(t.getUTCHours())}:${pad(t.getUTCMinutes())}:${pad(t.getUTCSeconds())}+08:00`
+
 const manifest = {
   latest: version,
   minForced,
-  releasedAt: new Date().toLocaleString('zh-CN', {
-    timeZone: 'Asia/Shanghai',
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
-    hour12: false,
-  }).replace(/\//g, '-').replace(',', 'T') + '+08:00',
+  releasedAt,
   notesUrl: existingNotesUrl || '',
   package: {
     url,
