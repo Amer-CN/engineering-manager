@@ -123,7 +123,7 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
             var masked = rows.Select(w => new
             {
                 id = w.id, name = w.name, gender = w.gender, worker_type = w.worker_type, daily_wage = w.daily_wage,
-                address = w.address as string,
+                address = Common.MaskPiiField("address", w.address as string, piiAccess),
                 created_at = w.created_at,
                 id_card = Common.MaskPiiField("idCard", w.id_card as string, piiAccess),
                 phone = Common.MaskPiiField("phone", w.phone as string, piiAccess),
@@ -205,6 +205,7 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
             sql += " WHERE " + string.Join(" AND ", conditions);
             sql += " ORDER BY pw.created_at DESC";
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var piiAccess = CurrentUser.GetPiiAccess(ctx);
             var rows = db.Query(sql, new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }).ToList();
             // v0.75.0: 后端响应层不再 mask
             var masked = rows.Select(pw => new
@@ -212,11 +213,12 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
                 id = pw.id, worker_id = pw.worker_id, project_id = pw.project_id, team_id = pw.team_id,
                 daily_wage = pw.daily_wage, worker_type = pw.worker_type, entry_date = pw.entry_date, status = pw.status,
                 created_at = pw.created_at, updated_at = pw.updated_at,
-                worker_name = pw.worker_name, gender = pw.gender, address = pw.address, bank_name = pw.bank_name,
+                worker_name = pw.worker_name, gender = pw.gender, address = Common.MaskPiiField("address", pw.address as string, piiAccess),
+                bank_name = pw.bank_name,
                 birth_date = pw.birth_date, ethnicity = pw.ethnicity, team_name = pw.team_name,
-                id_card = pw.id_card as string,
-                phone = pw.phone as string,
-                bank_account = pw.bank_account as string
+                id_card = Common.MaskPiiField("idCard", pw.id_card as string, piiAccess),
+                phone = Common.MaskPiiField("phone", pw.phone as string, piiAccess),
+                bank_account = Common.MaskPiiField("bankAccount", pw.bank_account as string, piiAccess),
             });
             return Common.Ok(masked);
         });
