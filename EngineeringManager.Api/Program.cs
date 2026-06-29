@@ -130,6 +130,10 @@ public static class ApiConfig
         builder.Services.AddAuthorization();
         builder.Services.AddHttpClient();
 
+        // 版本更新：manifest 拉取（30s） + 安装包下载（10min）
+        builder.Services.AddHttpClient("update", c => c.Timeout = TimeSpan.FromSeconds(30));
+        builder.Services.AddHttpClient("update-download", c => c.Timeout = TimeSpan.FromMinutes(10));
+
         // P0-4: 限流（登录防爆破 + 写防滥用）
         builder.Services.AddRateLimiter(options =>
             {

@@ -9,6 +9,7 @@
 
     <ApplicationIcon>app.ico</ApplicationIcon>
     <NoWarn>MSB3277;AD0001</NoWarn>
+    <Version>0.80.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -32,4 +33,9 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Migrations\Scripts\*.sql" />
-  </ItemGroup></Project>
+  </ItemGroup>
+
+  <Target Name="SyncVersion" BeforeTargets="BeforeBuild">
+    <Exec Command="node scripts/sync-version.mjs" WorkingDirectory="$(MSBuildProjectDirectory)\.." ContinueOnError="true" />
+  </Target>
+</Project>

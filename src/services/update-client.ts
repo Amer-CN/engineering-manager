@@ -25,3 +25,16 @@ export const checkUpdate = async (): Promise<UpdateCheck | null> => {
   if (!res.success) return null
   return res.data ?? null
 }
+
+/** 下载最新安装包（返回本地路径） */
+export const downloadUpdate = async (): Promise<string | null> => {
+  const res = await apiClient.post<{ path: string }>('/api/update/download', {})
+  if (!res.success) return null
+  return res.data?.path ?? null
+}
+
+/** 装包 + 重启 */
+export const applyUpdate = async (path: string): Promise<boolean> => {
+  const res = await apiClient.post('/api/update/apply', { path })
+  return res.success
+}
