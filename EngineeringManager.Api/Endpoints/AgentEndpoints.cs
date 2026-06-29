@@ -156,14 +156,15 @@ public static class AgentEndpoints
                     };
                     await conversations.SaveMessageAsync(db, conversationId, finalMsg);
 
+                    // 注意：字段名必须是 content，与前端 AgentMessage.content 契约对齐
                     return Common.Ok(new
                     {
                         success = true,
                         conversationId,
                         message = new
                         {
-                            role = MessageRole.Assistant,
-                            finalContent,
+                            role = MessageRole.Assistant.ToString().ToLower(),
+                            content = finalContent,
                         },
                         toolCalls = toolResults,
                     });
@@ -176,7 +177,7 @@ public static class AgentEndpoints
                     conversationId,
                     message = new
                     {
-                        role = MessageRole.Assistant,
+                        role = MessageRole.Assistant.ToString().ToLower(),
                         content = "已执行工具查询，详见上方结果。",
                     },
                     toolCalls = toolResults,
@@ -230,7 +231,7 @@ public static class AgentEndpoints
 
             try
             {
-                var detail = await conversations.GetConversationDetailAsync(db, id);
+                var detail = await conversations.GetConversationDetailAsync(db, id, uid!);
                 if (detail == null)
                     return Common.NotFound("对话不存在");
                 return Common.Ok(detail);
@@ -356,7 +357,7 @@ public static class AgentEndpoints
                     ProviderName = GetStringProp(root, "providerName") ?? "Custom",
                     BaseUrl = GetStringProp(root, "baseUrl") ?? "https://apihub.agnes-ai.com/v1",
                     ApiKey = GetStringProp(root, "apiKey") ?? "",
-                    Model = GetStringProp(root, "model") ?? "gpt-4o-mini",
+                    Model = GetStringProp(root, "model") ?? "agnes-2.0-flash",
                     UseBuiltIn = GetBoolProp(root, "useBuiltIn"),
                     Temperature = GetDoubleProp(root, "temperature"),
                     MaxTokens = GetIntProp(root, "maxTokens"),

@@ -104,7 +104,7 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
     },
     {
       key: 'bankAccount', title: '银行卡号', filterable: true,
-      render: (w) => <span className="text-slate-500 font-mono text-xs">{(w as Member & { bankAccount?: string }).bankAccount || '-'}</span>
+      render: (w) => <span className="text-slate-500 font-mono text-xs">{masked('bankAccount', (w as Member & { bankAccount?: string }).bankAccount) || '-'}</span>
     },
     {
       key: 'actions', title: '操作', align: 'right',

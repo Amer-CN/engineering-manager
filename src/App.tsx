@@ -8,7 +8,6 @@ import StatusBar from './components/StatusBar'
 import { useStatusStore } from './store/statusStore'
 import { NAV_ITEMS, PAGE_IDS, getFilteredSidebarRoutes } from './routes'
 import { MaskProvider, useUserIdSync } from './contexts/MaskContext'
-import MaskToggleButton from './components/MaskToggleButton'
 import { RequirePermission, RequireAdmin } from './hooks/usePermission'
 import { useAuth } from './hooks/useAuth'
 import { useRowHoverOpacity } from './hooks/useRowHoverOpacity'
@@ -361,7 +360,6 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <MaskProvider>
         <AppContent />
-        <MaskToggleButton />
       </MaskProvider>
     </QueryClientProvider>
   )

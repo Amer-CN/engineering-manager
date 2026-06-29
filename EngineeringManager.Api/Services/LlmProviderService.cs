@@ -155,17 +155,26 @@ public class LlmProviderService
 
     /// <summary>
     /// 保存用户自定义配置（DPAPI 加密 apiKey，存到 llm-config.dpapi.json）
+    /// 如果 newConfig.ApiKey 为空，保留旧 key（避免前端只改 model 时把 key 清空）
     /// </summary>
     public async Task SaveUserConfigAsync(LlmProviderConfig newConfig)
     {
         var dataPath = ApiConfig.ResolveDataPath();
         var filePath = Path.Combine(dataPath, "llm-config.dpapi.json");
 
-        var encryptedApiKey = string.IsNullOrEmpty(newConfig.ApiKey)
+        // 如果前端没传 key（空字符串），保留旧 key
+        string apiKeyToSave = newConfig.ApiKey;
+        if (string.IsNullOrEmpty(apiKeyToSave))
+        {
+            var oldConfig = GetConfigWithKey();
+            apiKeyToSave = oldConfig.ApiKey;
+        }
+
+        var encryptedApiKey = string.IsNullOrEmpty(apiKeyToSave)
             ? ""
             : Convert.ToBase64String(
                 ProtectedData.Protect(
-                    Encoding.UTF8.GetBytes(newConfig.ApiKey),
+                    Encoding.UTF8.GetBytes(apiKeyToSave),
                     null,
                     DataProtectionScope.CurrentUser));
 
@@ -187,7 +196,17 @@ public class LlmProviderService
 
         lock (_lock)
         {
-            _config = newConfig;
+            // 用保留了旧 key 的配置更新内存
+            _config = new LlmProviderConfig
+            {
+                ProviderName = newConfig.ProviderName,
+                BaseUrl = newConfig.BaseUrl,
+                ApiKey = apiKeyToSave,
+                Model = newConfig.Model,
+                UseBuiltIn = newConfig.UseBuiltIn,
+                Temperature = newConfig.Temperature,
+                MaxTokens = newConfig.MaxTokens,
+            };
         }
 
         _logger.LogInformation("[LlmProviderService] 用户配置已保存: Provider={Provider}, Model={Model}",

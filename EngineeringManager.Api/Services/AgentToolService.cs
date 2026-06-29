@@ -450,6 +450,8 @@ public class AgentToolService
 
     /// <summary>
     /// PII 脱敏：遍历结果对象，对指定字段进行脱敏
+    /// DapperRow / FastExpando 实现了 IDictionary&lt;string, object&gt;，
+    /// 用字典写入而非反射 SetValue（反射对只读属性无效）
     /// </summary>
     private static object MaskPiiInResult(object result, string[] piiFields, bool canReadPii)
     {
@@ -466,30 +468,41 @@ public class AgentToolService
             return masked;
         }
 
+        // 单条记录
         return MaskPiiRow(result, piiFields);
     }
 
     private static object MaskPiiRow(object row, string[] piiFields)
     {
-        if (row is not IDictionary<string, object?> dict)
-            return row;
-
-        foreach (var field in piiFields)
+        // DapperRow / FastExpando 都实现了 IDictionary<string, object>
+        if (row is IDictionary<string, object> dict)
         {
-            // Dapper 返回的是 dynamic，用 FastExpando 或 DapperRow
-            // 通过反射查找属性
-            var prop = row.GetType().GetProperty(field);
-            if (prop != null)
+            foreach (var field in piiFields)
             {
-                var val = prop.GetValue(row) as string;
-                if (!string.IsNullOrEmpty(val))
+                if (dict.TryGetValue(field, out var val) && val is string str && !string.IsNullOrEmpty(str))
                 {
-                    var masked = Common.MaskPiiField(field, val, false);
-                    prop.SetValue(row, masked);
+                    dict[field] = Common.MaskPiiField(field, str, false);
                 }
             }
+            return dict;
         }
-        return row;
+
+        // fallback：匿名对象或其他类型，转成可修改的字典
+        var props = row.GetType().GetProperties();
+        var newDict = new Dictionary<string, object?>();
+        foreach (var prop in props)
+        {
+            var val = prop.GetValue(row);
+            if (piiFields.Contains(prop.Name) && val is string str && !string.IsNullOrEmpty(str))
+            {
+                newDict[prop.Name] = Common.MaskPiiField(prop.Name, str, false);
+            }
+            else
+            {
+                newDict[prop.Name] = val;
+            }
+        }
+        return newDict;
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -610,7 +623,7 @@ public class AgentToolService
             Name = "getWorkers",
             Description = "获取工人列表：姓名、电话、工种、日薪",
             Parameters = BuildParams(new Dictionary<string, object>()),
-            RequiredPermission = "members:read",
+            RequiredPermission = "labor:read",
             PiiFields = new[] { "id_card", "phone", "bank_account" },
         });
 
@@ -633,7 +646,7 @@ public class AgentToolService
             Name = "getInventory",
             Description = "获取库存物料列表：名称、分类、单位、数量",
             Parameters = BuildParams(new Dictionary<string, object>()),
-            RequiredPermission = "dashboard:read",
+            RequiredPermission = "inventory:read",
             PiiFields = Array.Empty<string>(),
         });
 

@@ -2,14 +2,16 @@
  * AgentDashboard — AI 助手主组件
  *
  * Hero 横幅(Bot图标+"AI助手"+"用户名"), 消息列表+输入框+发送按钮,
- * 加载状态"思考中...", 建议卡片(空消息时展示), 对话历史侧边栏
+ * 加载状态"思考中...", 建议卡片(空消息时展示, 按权限过滤), 对话历史侧边栏
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Icon } from '@/components/ui/Icon'
 import HeroBanner from '@/components/ui/HeroBanner'
+import PageContainer from '@/components/ui/PageContainer'
 import { useAuth } from '@/hooks/useAuth'
+import { usePermission } from '@/hooks/usePermission'
 import {
   sendAgentMessage,
   getAgentConversationDetail,
@@ -42,6 +44,7 @@ function genClientId(): string {
 
 const AgentDashboard: React.FC = () => {
   const { currentUser } = useAuth()
+  const { can } = usePermission()
   const username = currentUser?.displayName || currentUser?.username || '用户'
 
   // ── 状态 ──
@@ -52,7 +55,7 @@ const AgentDashboard: React.FC = () => {
   const [historyOpen, setHistoryOpen] = useState(false)
 
   // 输入框 ref 和滚动容器 ref
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   // ── 自动滚动到底部 ──
@@ -171,7 +174,7 @@ const AgentDashboard: React.FC = () => {
 
   // ── 键盘事件 ──
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault()
         handleSend()
@@ -180,57 +183,81 @@ const AgentDashboard: React.FC = () => {
     [handleSend],
   )
 
-  // ── 建议卡片配置 ──
-  const suggestionCards: SuggestionCardConfig[] = [
+  // ── 建议卡片配置（按权限过滤） ──
+  const allSuggestions: SuggestionCardConfig[] = [
     {
       icon: 'FolderKanban',
-      title: '今天有哪些项目',
-      prompt: '今天有哪些项目在进行中？',
-      color: 'blue',
+      title: '项目概况',
+      prompt: '帮我总结一下目前所有项目的状态',
+      requiredPermission: 'projects:read',
+      color: 'bg-blue-50 text-blue-600',
     },
     {
       icon: 'Receipt',
-      title: '待付款发票',
-      prompt: '列出当前所有待付款的发票',
-      color: 'amber',
+      title: '发票待办',
+      prompt: '有哪些发票需要付款？',
+      requiredPermission: 'invoices:read',
+      color: 'bg-amber-50 text-amber-600',
     },
     {
-      icon: 'Landmark',
-      title: '最近结算情况',
-      prompt: '最近一次结算的情况怎么样？',
-      color: 'emerald',
+      icon: 'ClipboardList',
+      title: '结算进度',
+      prompt: '最近的结算办理情况如何？',
+      requiredPermission: 'settlement:read',
+      color: 'bg-emerald-50 text-emerald-600',
     },
     {
       icon: 'Users',
-      title: '团队出勤概况',
-      prompt: '今天的团队出勤情况如何？',
-      color: 'violet',
+      title: '团队成员',
+      prompt: '我们有多少员工和工人？',
+      requiredPermission: 'members:read',
+      color: 'bg-violet-50 text-violet-600',
+    },
+    {
+      icon: 'Package',
+      title: '库存物料',
+      prompt: '仓库里有哪些物料？',
+      requiredPermission: 'inventory:read',
+      color: 'bg-orange-50 text-orange-600',
+    },
+    {
+      icon: 'DollarSign',
+      title: '成本分析',
+      prompt: '帮我分析一下成本支出情况',
+      requiredPermission: 'costLedger:read',
+      color: 'bg-rose-50 text-rose-600',
     },
   ]
+
+  // 根据权限过滤建议卡片
+  const suggestionCards = allSuggestions.filter(s =>
+    !s.requiredPermission || can(s.requiredPermission as any)
+  )
 
   const isEmpty = messages.length === 0
 
   // ── 渲染 ──
   return (
-    <div className="flex flex-col h-full" style={{ background: 'var(--bg)' }}>
-      {/* Hero 横幅 */}
-      <HeroBanner
-        icon="Sparkles"
-        title="AI 助手"
-        subtitle={`你好，${username}！我是你的智能工程管理助手。`}
-        accentColor="blue"
-      >
-        {/* 历史按钮 */}
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setHistoryOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/15 text-white/80 hover:bg-white/25 hover:text-white text-xs font-medium transition-colors"
+    <PageContainer>
+      <div className="flex flex-col h-[calc(100vh-120px)]">
+        {/* Hero 横幅 */}
+        <HeroBanner
+          icon="Bot"
+          title="AI 助手"
+          subtitle={`${username}，有什么可以帮您？`}
+          accentColor="blue"
         >
-          <Icon name="Clock" size={14} />
-          历史
-        </motion.button>
-      </HeroBanner>
+          {/* 历史按钮 */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setHistoryOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/15 text-white/80 hover:bg-white/25 hover:text-white text-xs font-medium transition-colors"
+          >
+            <Icon name="Clock" size={14} />
+            历史
+          </motion.button>
+        </HeroBanner>
 
       {/* 消息区域 */}
       <div
@@ -304,23 +331,24 @@ const AgentDashboard: React.FC = () => {
       {/* 底部输入区域 */}
       <div className="px-6 py-4 border-t border-slate-100 bg-white/60 backdrop-blur-sm">
         <div className="max-w-3xl mx-auto">
-          <div className="flex items-center gap-3">
+          <div className="flex items-end gap-3">
             {/* 输入框 */}
             <div className="flex-1 relative">
-              <input
+              <textarea
                 ref={inputRef}
-                type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="输入你的问题..."
+                placeholder="输入你的问题... (Shift+Enter 换行)"
                 disabled={loading}
-                className="w-full px-4 py-3 pr-12 rounded-xl border border-slate-200 bg-white text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-shadow disabled:opacity-50"
+                rows={1}
+                className="w-full px-4 py-3 pr-12 rounded-xl border border-slate-200 bg-white text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-shadow disabled:opacity-50 resize-none"
+                style={{ minHeight: '48px', maxHeight: '120px' }}
               />
               {inputValue && (
                 <button
                   onClick={() => setInputValue('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                  className="absolute right-3 top-3 p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
                 >
                   <Icon name="X" size={14} />
                 </button>
@@ -357,7 +385,8 @@ const AgentDashboard: React.FC = () => {
         onSelectConversation={handleSelectConversation}
         onNewConversation={handleNewConversation}
       />
-    </div>
+      </div>
+    </PageContainer>
   )
 }
 

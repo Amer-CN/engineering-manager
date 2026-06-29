@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
+import { Eye, EyeOff } from 'lucide-react'
 import { useStatusStore } from '@/store/statusStore'
 import { useTheme, type ThemeScheme } from '@/hooks/useTheme'
+import { useMask } from '@/contexts/MaskContext'
 
 const PAGE_NAMES: Record<string, string> = {
   dashboard: '仪表盘',
@@ -89,6 +91,7 @@ function ModelSwitcher({
 const StatusBar: React.FC = () => {
   const info = useStatusStore(s => s.info)
   const { scheme, setScheme } = useTheme()
+  const { masked, toggleMask, isSyncing } = useMask()
 
   const [fontSize, setFontSize] = useState<string>(() => {
     return document.documentElement.getAttribute('data-font-size') || 'medium'
@@ -123,7 +126,19 @@ const StatusBar: React.FC = () => {
         </>
       )}
       <span className="statusbar__spacer" />
-      {/* 右侧：SQLite + 主题 + 字号 */}
+      {/* 右侧：脱敏开关 + SQLite + 主题 + 字号 */}
+      <button
+        className="statusbar__maskbtn"
+        onClick={toggleMask}
+        disabled={isSyncing}
+        title={masked ? '当前：脱敏中（点击显示完整 PII）' : '当前：显示完整 PII（点击脱敏）'}
+        aria-label={masked ? '显示完整 PII' : '脱敏 PII'}
+        aria-pressed={masked}
+      >
+        {masked ? <EyeOff size={13} /> : <Eye size={13} />}
+        <span>{masked ? '脱敏中' : '显示完整'}</span>
+      </button>
+      <span className="statusbar__sep">│</span>
       <span className="statusbar__cache">
         <span className="statusbar__dot" style={{ background: 'var(--success)' }} />
         SQLite
