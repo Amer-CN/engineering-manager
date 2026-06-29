@@ -672,6 +672,27 @@ public static class SafeQueryValidator
     }
 
     // ═══════════════════════════════════════════════════════════
+    // dry-run 预检
+    // ═══════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// dry-run 预检 — 对改写后的 SQL 执行 EXPLAIN，验证语法和表/列存在性。
+    /// 只读操作，不产生业务数据。异常则判定校验失败。
+    /// </summary>
+    public static string? DryRun(IDbConnection db, string rewrittenSql)
+    {
+        try
+        {
+            db.Execute($"EXPLAIN {rewrittenSql}");
+            return null; // 成功，无错误
+        }
+        catch (Exception ex)
+        {
+            return $"SQL 预检失败: {Common.Sanitize(ex.Message)}";
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════
     // 审计日志
     // ═══════════════════════════════════════════════════════════
 
