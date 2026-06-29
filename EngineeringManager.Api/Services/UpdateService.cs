@@ -77,8 +77,8 @@ public class UpdateService
             throw new InvalidOperationException("manifest 缺少下载地址");
 
         Directory.CreateDirectory(UpdatesDir);
-        var fileName = Path.GetFileName(new Uri(pkg.Url).AbsolutePath);
-        var finalPath = Path.Combine(UpdatesDir, $"工程管家-Setup-{fileName}");
+        var fileName  = Path.GetFileName(new Uri(pkg.Url).AbsolutePath);
+        var finalPath = Path.Combine(UpdatesDir, fileName);
         var partPath  = finalPath + ".part";
 
         var client = _http.CreateClient("update-download");

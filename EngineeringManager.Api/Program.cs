@@ -208,6 +208,24 @@ builder.Services.ConfigureHttpJsonOptions(options =>
             });
         }
 
+        // 启动期防呆：检查 Update:ManifestUrls 是否仍含占位符
+        try
+        {
+            var manifestUrls = app.Configuration.GetSection("Update:ManifestUrls").Get<string[]>();
+            if (manifestUrls != null)
+            {
+                foreach (var url in manifestUrls)
+                {
+                    if (url.Contains("example.cn", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Console.Error.WriteLine("[WARN] [Update] ManifestUrls 仍含占位符 example.cn，线上请替换为真实地址");
+                        break;
+                    }
+                }
+            }
+        }
+        catch { /* 配置读取异常不阻塞启动 */ }
+
         app.UseCors();
         app.UseExceptionHandler(errorApp =>
         {
