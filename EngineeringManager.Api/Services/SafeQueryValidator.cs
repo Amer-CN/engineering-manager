@@ -228,14 +228,27 @@ public static class SafeQueryValidator
             return new ValidationResult(false, null, null, ex.Message);
         }
 
+        // 8.4 收集投影别名（供 ORDER BY / HAVING 引用放行）
+        var projectionAliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var item in select.Projection)
+        {
+            if (item is SelectItem.ExpressionWithAlias ewa)
+                projectionAliases.Add(ewa.Alias.Value);
+        }
+
         // 8.5 校验 WHERE / GROUP BY / HAVING / ORDER BY（与投影同等的列/表/子查询校验）
         try
         {
             if (select.Selection != null)
                 ValidateExpressionColumns(select.Selection, aliasToTable, referencedTables);
 
-            if (select.Having != null)
-                ValidateExpressionColumns(select.Having, aliasToTable, referencedTables);
+            // HAVING 引用投影别名时放行（SQLite 允许）
+            if (!(select.Having is Expression.Identifier hid
+                  && projectionAliases.Contains(hid.Ident.Value)))
+            {
+                if (select.Having != null)
+                    ValidateExpressionColumns(select.Having, aliasToTable, referencedTables);
+            }
 
             if (select.GroupBy is GroupByExpression.Expressions groupByExprs)
             {
@@ -243,10 +256,16 @@ public static class SafeQueryValidator
                     ValidateExpressionColumns(ge, aliasToTable, referencedTables);
             }
 
+            // ORDER BY 引用投影别名的标识符放行
             if (query.OrderBy != null)
             {
                 foreach (var ob in query.OrderBy.Expressions)
+                {
+                    if (ob.Expression is Expression.Identifier oid
+                        && projectionAliases.Contains(oid.Ident.Value))
+                        continue;
                     ValidateExpressionColumns(ob.Expression, aliasToTable, referencedTables);
+                }
             }
         }
         catch (ValidationException ex)
