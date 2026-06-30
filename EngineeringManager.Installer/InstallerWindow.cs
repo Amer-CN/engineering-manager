@@ -176,11 +176,14 @@ public class InstallerWindow : Form
             webView.CoreWebView2.Settings.IsWebMessageEnabled = true;
             webView.CoreWebView2.WebMessageReceived += OnWebMessage;
 
-            // 加载前端
+            // 加载前端（用虚拟域名避免 file:// CORS 限制）
             var indexPath = Path.Combine(_frontendDir, "index.html");
             if (!string.IsNullOrEmpty(_frontendDir) && File.Exists(indexPath))
             {
-                webView.CoreWebView2.Navigate("file:///" + indexPath.Replace('\\', '/'));
+                webView.CoreWebView2.SetVirtualHostNameToFolderMapping(
+                    "installer.local", _frontendDir,
+                    Microsoft.Web.WebView2.Core.CoreWebView2HostResourceAccessKind.Allow);
+                webView.CoreWebView2.Navigate("http://installer.local/index.html");
             }
             else
             {
