@@ -37,9 +37,12 @@ export default function Logo({ size = 64, glow = false, spin = false }: Props) {
             <stop offset="0%" stopColor="var(--accent)" />
             <stop offset="100%" stopColor="var(--accent-strong)" />
           </linearGradient>
+          <mask id="logo-mask">
+            <rect width="18" height="18" fill="white"/>
+            <path d="M5 14 L9 6 L13 14 Z" fill="black"/>
+          </mask>
         </defs>
-        <path d="M2 15.5 L9 2.5 L16 15.5 Z" fill="url(#logo-grad)" />
-        <path d="M5 14 L9 6 L13 14 Z" fill="var(--bg)" />
+        <path d="M2 15.5 L9 2.5 L16 15.5 Z" fill="url(#logo-grad)" mask="url(#logo-mask)" />
       </svg>
     </motion.div>
   )

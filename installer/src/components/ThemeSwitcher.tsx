@@ -11,25 +11,29 @@ const THEMES: { id: Theme; color: string; label: string }[] = [
 interface Props {
   current: Theme
   onChange: (theme: Theme) => void
+  onClose?: () => void
 }
 
-export default function ThemeSwitcher({ current, onChange }: Props) {
+export default function ThemeSwitcher({ current, onChange, onClose }: Props) {
   return (
     <div
       style={{
         position: 'absolute',
-        top: 12,
-        left: 14,
+        top: 8,
+        right: 12,
         display: 'flex',
-        gap: 6,
+        gap: 4,
         zIndex: 200,
-        padding: '6px 10px',
+        alignItems: 'center',
+        padding: '4px 8px',
         borderRadius: 20,
         background: 'var(--panel)',
         border: '1px solid var(--border)',
         boxShadow: 'var(--shadow-sm)',
         transition: 'all 0.3s ease',
-      }}
+        // @ts-ignore
+        WebkitAppRegion: 'no-drag',
+      } as React.CSSProperties}
     >
       {THEMES.map((t) => (
         <motion.button
@@ -45,6 +49,31 @@ export default function ThemeSwitcher({ current, onChange }: Props) {
           title={t.label}
         />
       ))}
+      {onClose && (
+        <>
+          <div style={{ width: 1, height: 16, background: 'var(--border)', margin: '0 4px' }} />
+          <motion.button
+            onClick={onClose}
+            style={{
+              width: 20,
+              height: 20,
+              borderRadius: '50%',
+              border: 'none',
+              background: 'transparent',
+              color: 'var(--muted)',
+              fontSize: 14,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+            }}
+            whileHover={{ background: 'var(--danger)', color: 'white', scale: 1.1 }}
+          >
+            ×
+          </motion.button>
+        </>
+      )}
     </div>
   )
 }
