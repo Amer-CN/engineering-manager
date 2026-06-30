@@ -1,12 +1,12 @@
 {
   "latest": "0.80.0",
   "minForced": "0.0.0",
-  "releasedAt": "2026-06-30T14:44:45+08:00",
+  "releasedAt": "2026-06-30T15:17:06+08:00",
   "notesUrl": "",
   "package": {
     "url": "https://github.com/Amer-CN/engineering-manager/releases/download/v0.80.0/EngineeringManager-Setup-0.80.0.exe",
-    "size": 168432371,
-    "sha256": "9CDD1CE6C715BB65774EC1D32E891CC3BFAEA5C86C42BB946EFFBD383DF7EF3F",
+    "size": 168432367,
+    "sha256": "2DDFE695667CBDF9021252904F4CCD1FAEA92963F1ACF2EBDA8717E71709E65E",
     "signature": ""
   }
 }
