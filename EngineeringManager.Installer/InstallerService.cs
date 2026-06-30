@@ -127,7 +127,14 @@ public class InstallerService
     {
         // 优先从嵌入资源解压
         var sourceDir = ExtractPayload();
-        var frontendDir = Path.Combine(sourceDir, "installer", "dist");
+
+        // payload.zip 里 installer/dist 被压缩为根级 dist/（Compress-Archive 行为）
+        var frontendDir = Path.Combine(sourceDir, "dist");
+        if (Directory.Exists(frontendDir))
+            return frontendDir;
+
+        // 回退：尝试 installer/dist 子目录
+        frontendDir = Path.Combine(sourceDir, "installer", "dist");
         if (Directory.Exists(frontendDir))
             return frontendDir;
 
