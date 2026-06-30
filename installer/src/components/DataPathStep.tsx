@@ -3,14 +3,14 @@ import { motion } from 'framer-motion'
 
 interface Props {
   defaultPath: string
-  onNext: (path: string) => void
+  onNext: (dataPath: string) => void
   onBack: () => void
 }
 
-export default function PathStep({ defaultPath, onNext, onBack }: Props) {
+export default function DataPathStep({ defaultPath, onNext, onBack }: Props) {
   const [path, setPath] = useState(defaultPath)
 
-  // 监听 C# 回传的路径选择
+  // 监听 C# 回传的数据路径选择
   useEffect(() => {
     // @ts-ignore
     const wv = window.chrome?.webview
@@ -18,7 +18,7 @@ export default function PathStep({ defaultPath, onNext, onBack }: Props) {
     const handler = (e: any) => {
       try {
         const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data
-        if (data?.type === 'selectedPath') {
+        if (data?.type === 'selectedDataPath') {
           setPath(data.path)
         }
       } catch {}
@@ -29,7 +29,7 @@ export default function PathStep({ defaultPath, onNext, onBack }: Props) {
 
   const browse = () => {
     // @ts-ignore — C# postMessage 桥接
-    window.chrome?.webview?.postMessage(JSON.stringify({ action: 'browsePath' }))
+    window.chrome?.webview?.postMessage(JSON.stringify({ action: 'browseDataPath' }))
   }
 
   return (
@@ -48,10 +48,10 @@ export default function PathStep({ defaultPath, onNext, onBack }: Props) {
         transition={{ delay: 0.1 }}
       >
         <h2 style={{ fontSize: 20, fontWeight: 600, color: 'var(--fg)', marginBottom: 4 }}>
-          选择安装位置
+          选择数据存储位置
         </h2>
         <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 24 }}>
-          软件将安装到以下目录
+          项目数据、数据库将存储在此目录。安装后可在设置中修改。
         </p>
       </motion.div>
 
@@ -64,7 +64,7 @@ export default function PathStep({ defaultPath, onNext, onBack }: Props) {
         style={{ marginBottom: 16 }}
       >
         <label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 8 }}>
-          安装路径
+          数据存储路径
         </label>
         <div style={{ display: 'flex', gap: 8 }}>
           <input
@@ -84,23 +84,16 @@ export default function PathStep({ defaultPath, onNext, onBack }: Props) {
         </div>
       </motion.div>
 
-      {/* 磁盘信息 */}
+      {/* 说明 */}
       <motion.div
-        className="card"
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 0.35, type: 'spring', stiffness: 200, damping: 25 }}
-        style={{ marginBottom: 24, display: 'flex', gap: 24 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.35 }}
+        style={{ marginBottom: 24, fontSize: 12, color: 'var(--muted)', lineHeight: 1.6 }}
       >
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>所需空间</div>
-          <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--fg)' }}>~70 MB</div>
-        </div>
-        <div style={{ width: 1, background: 'var(--border)' }} />
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>磁盘剩余</div>
-          <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--success)' }}>充足</div>
-        </div>
+        <p>• 数据库文件（engineering.db）和上传的附件将存储在此目录</p>
+        <p>• 此目录不会被卸载程序删除，请选择安全的位置</p>
+        <p>• 建议使用非系统盘（如 D:\工程管家数据）</p>
       </motion.div>
 
       {/* 按钮区 */}
@@ -125,7 +118,7 @@ export default function PathStep({ defaultPath, onNext, onBack }: Props) {
           whileTap={{ scale: 0.97 }}
           onClick={() => onNext(path)}
         >
-          下一步
+          开始安装
         </motion.button>
       </div>
     </div>

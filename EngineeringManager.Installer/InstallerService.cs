@@ -70,7 +70,7 @@ public class InstallerService
     /// <summary>
     /// 安装到指定目录
     /// </summary>
-    public async Task Install(string targetPath, Action<int, string> onProgress)
+    public async Task Install(string targetPath, string dataPath, Action<int, string> onProgress)
     {
         Directory.CreateDirectory(targetPath);
 
@@ -113,6 +113,26 @@ public class InstallerService
 
         onProgress(95, "正在创建桌面快捷方式...");
         CreateShortcut(targetPath);
+
+        // 写入数据存储路径配置（主程序 ResolveDataPath() 会读取此文件）
+        if (!string.IsNullOrWhiteSpace(dataPath))
+        {
+            try
+            {
+                var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                var cfgDir = Path.Combine(appData, "工程管家");
+                Directory.CreateDirectory(cfgDir);
+                var cfgPath = Path.Combine(cfgDir, "config.json");
+                var json = System.Text.Json.JsonSerializer.Serialize(
+                    new { dataPath },
+                    new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(cfgPath, json);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[Installer] 写入 config.json 失败: {ex.Message}");
+            }
+        }
 
         onProgress(100, "安装完成！");
 

@@ -208,7 +208,9 @@ public class InstallerWindow : Form
     {
         try
         {
-            var j = JsonDocument.Parse(e.TryGetWebMessageAsString());
+            var raw = e.TryGetWebMessageAsString();
+            if (string.IsNullOrEmpty(raw)) raw = e.WebMessageAsJson;
+            var j = JsonDocument.Parse(raw);
             var a = j.RootElement.GetProperty("action").GetString();
             Invoke(() =>
             {
@@ -243,13 +245,22 @@ public class InstallerWindow : Form
                         using (var dlg = new FolderBrowserDialog())
                         {
                             dlg.Description = "选择安装位置";
-                            if (dlg.ShowDialog() == DialogResult.OK)
+                            if (dlg.ShowDialog(this) == DialogResult.OK)
                                 SendToWeb(new { type = "selectedPath", path = dlg.SelectedPath });
+                        }
+                        break;
+                    case "browseDataPath":
+                        using (var dlg = new FolderBrowserDialog())
+                        {
+                            dlg.Description = "选择数据存储位置";
+                            if (dlg.ShowDialog(this) == DialogResult.OK)
+                                SendToWeb(new { type = "selectedDataPath", path = dlg.SelectedPath });
                         }
                         break;
                     case "install":
                         var installPath = j.RootElement.GetProperty("path").GetString() ?? "";
-                        Task.Run(() => DoInstall(installPath));
+                        var dataPath = j.RootElement.TryGetProperty("dataPath", out var dpEl) ? (dpEl.GetString() ?? "") : "";
+                        Task.Run(() => DoInstall(installPath, dataPath));
                         break;
                     case "launch":
                         var exePath = j.RootElement.GetProperty("path").GetString() ?? "";
@@ -268,12 +279,12 @@ public class InstallerWindow : Form
         webView?.CoreWebView2?.PostWebMessageAsJson(JsonSerializer.Serialize(data));
     }
 
-    private async void DoInstall(string installPath)
+    private async void DoInstall(string installPath, string dataPath)
     {
         try
         {
             var service = new InstallerService();
-            await service.Install(installPath, (percent, step) =>
+            await service.Install(installPath, dataPath, (percent, step) =>
             {
                 SendToWeb(new { type = "progress", percent, step });
             });
