@@ -276,7 +276,14 @@ public class InstallerWindow : Form
 
     private void SendToWeb(object data)
     {
-        webView?.CoreWebView2?.PostWebMessageAsJson(JsonSerializer.Serialize(data));
+        if (InvokeRequired)
+        {
+            Invoke(() => webView?.CoreWebView2?.PostWebMessageAsJson(JsonSerializer.Serialize(data)));
+        }
+        else
+        {
+            webView?.CoreWebView2?.PostWebMessageAsJson(JsonSerializer.Serialize(data));
+        }
     }
 
     private async void DoInstall(string installPath, string dataPath)

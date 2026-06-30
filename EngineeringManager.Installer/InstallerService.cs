@@ -17,6 +17,10 @@ public class InstallerService
     /// </summary>
     public static string ExtractPayload()
     {
+        // 如果已解压过（WebView2 正在使用），直接返回，不重复解压
+        if (Directory.Exists(TempDir) && Directory.Exists(Path.Combine(TempDir, "app-files")))
+            return TempDir;
+
         if (Directory.Exists(TempDir))
             try { Directory.Delete(TempDir, true); } catch { }
         Directory.CreateDirectory(TempDir);

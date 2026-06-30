@@ -237,7 +237,6 @@ public static class SystemEndpoints
 
         app.MapGet("/api/config", (HttpContext ctx) =>
         {
-            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var defaultPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "工程管家");
             var configPath = Path.Combine(defaultPath, "config.json");
 
@@ -272,7 +271,6 @@ public static class SystemEndpoints
 
         app.MapPut("/api/config/data-path", (HttpContext ctx, System.Text.Json.JsonElement dto) =>
         {
-            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             try
             {
                 var newPath = dto.GetProperty("path").GetString();

@@ -19,7 +19,8 @@ public class GlobalAuthMiddleware
         "/api/health",
         "/api/ocr/setup",
         "/api/agent/setup",
-        "/api/update/download"
+        "/api/update/download",
+        "/api/config"
     };
 
     public GlobalAuthMiddleware(RequestDelegate next)
