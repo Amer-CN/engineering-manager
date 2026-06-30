@@ -240,21 +240,20 @@ public static class SystemEndpoints
             var defaultPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "工程管家");
             var configPath = Path.Combine(defaultPath, "config.json");
 
-            Dictionary<string, object> config = new();
+            string? dataPath = null;
             if (File.Exists(configPath))
             {
-                var json = File.ReadAllText(configPath);
-                config = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(json) ?? new();
+                try
+                {
+                    var json = File.ReadAllText(configPath);
+                    var config = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(json) ?? new();
+                    if (config.TryGetValue("dataPath", out var dp) && dp is string s && !string.IsNullOrWhiteSpace(s))
+                        dataPath = s;
+                }
+                catch { }
             }
 
-            // 确保返回 dataPath 和 defaultPath
-            if (!config.ContainsKey("dataPath"))
-            {
-                config["dataPath"] = defaultPath;
-            }
-            config["defaultPath"] = defaultPath;
-
-            return Common.Ok(config);
+            return Common.Ok(new { dataPath = dataPath ?? defaultPath, defaultPath });
         });
 
         app.MapGet("/api/config/data-path", (HttpContext ctx) =>
@@ -271,6 +270,8 @@ public static class SystemEndpoints
 
         app.MapPut("/api/config/data-path", (HttpContext ctx, System.Text.Json.JsonElement dto) =>
         {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            if (!CurrentUser.IsAdmin(ctx)) return Results.Forbid();
             try
             {
                 var newPath = dto.GetProperty("path").GetString();

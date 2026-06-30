@@ -123,6 +123,17 @@ public class InstallerService
         {
             try
             {
+                // 检查磁盘是否存在，不存在则回退到默认路径
+                var driveRoot = Path.GetPathRoot(dataPath);
+                if (string.IsNullOrEmpty(driveRoot) || !Directory.Exists(driveRoot))
+                {
+                    Console.Error.WriteLine($"[Installer] 数据路径磁盘不存在: {dataPath}，回退到默认路径");
+                    dataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "工程管家");
+                }
+
+                // 确保数据目录存在
+                Directory.CreateDirectory(dataPath);
+
                 var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
                 var cfgDir = Path.Combine(appData, "工程管家");
                 Directory.CreateDirectory(cfgDir);
