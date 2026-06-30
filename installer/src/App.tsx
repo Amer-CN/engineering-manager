@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import ParticleSystem from './components/ParticleSystem'
 import ThemeSwitcher from './components/ThemeSwitcher'
@@ -18,7 +18,7 @@ function postToHost(msg: object) {
   window.chrome?.webview?.postMessage(JSON.stringify(msg))
 }
 
-// 获取默认数据存储路径（与后端 ResolveDataPath() 默认一致）
+// 获取默认数据存储路径（与后端 %APPDATA%\工程管家 默认一致）
 function getDefaultDataPath(): string {
   return 'D:\\工程管家数据'
 }

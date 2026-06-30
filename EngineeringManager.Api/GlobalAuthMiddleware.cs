@@ -19,8 +19,7 @@ public class GlobalAuthMiddleware
         "/api/health",
         "/api/ocr/setup",
         "/api/agent/setup",
-        "/api/update/download",
-        "/api/config"
+        "/api/update/download"
     };
 
     public GlobalAuthMiddleware(RequestDelegate next)
@@ -42,6 +41,11 @@ public class GlobalAuthMiddleware
         // 白名单：登录、健康检查、OCR 首次启动引导、Agent 首次启动引导
         var isPublic = PublicPathPrefixes.Any(p =>
             path.StartsWith(p, StringComparison.OrdinalIgnoreCase));
+
+        // /api/config GET 精确放行（登录设置页面需要读配置），PUT 仍需鉴权
+        if (!isPublic && path == "/api/config" && HttpMethods.IsGet(context.Request.Method))
+            isPublic = true;
+
         if (isPublic)
         {
             await _next(context);
