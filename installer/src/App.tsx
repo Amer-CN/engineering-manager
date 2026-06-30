@@ -20,7 +20,7 @@ function postToHost(msg: object) {
 
 // 获取默认数据存储路径（与后端 ResolveDataPath() 默认一致）
 function getDefaultDataPath(): string {
-  return '%APPDATA%\\工程管家'
+  return 'D:\\工程管家数据'
 }
 
 export default function App() {
@@ -77,46 +77,11 @@ export default function App() {
       {/* 粒子背景 */}
       <ParticleSystem accelerate={accelerate} />
 
-      {/* 主题切换 — 左上角 */}
-      <ThemeSwitcher current={theme} onChange={setTheme} />
+      {/* 主题切换 + 关闭按钮 — 右上角 */}
+      <ThemeSwitcher current={theme} onChange={setTheme} onClose={handleClose} />
 
       {/* 标题栏拖动 */}
       <div className="titlebar" onMouseDown={onTitleBarMouseDown} />
-
-      {/* 关闭按钮 — 右上角 */}
-      <motion.button
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-        onClick={handleClose}
-        style={{
-          position: 'absolute',
-          top: 8, right: 12,
-          width: 28, height: 28,
-          borderRadius: '50%',
-          border: 'none',
-          background: 'transparent',
-          color: 'var(--muted)',
-          fontSize: 18,
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 200,
-          transition: 'all 0.2s',
-        }}
-        whileHover={{ background: 'var(--danger)', color: 'white', scale: 1.1 }}
-        onMouseEnter={(e) => {
-          ;(e.target as HTMLElement).style.background = 'var(--danger)'
-          ;(e.target as HTMLElement).style.color = 'white'
-        }}
-        onMouseLeave={(e) => {
-          ;(e.target as HTMLElement).style.background = 'transparent'
-          ;(e.target as HTMLElement).style.color = 'var(--muted)'
-        }}
-      >
-        ×
-      </motion.button>
 
       {/* 步骤页面 */}
       <AnimatePresence mode="wait">
