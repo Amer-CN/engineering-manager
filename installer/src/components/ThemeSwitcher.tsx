@@ -19,7 +19,7 @@ export default function ThemeSwitcher({ current, onChange }: Props) {
       style={{
         position: 'absolute',
         top: 12,
-        right: 16,
+        left: 14,
         display: 'flex',
         gap: 6,
         zIndex: 200,

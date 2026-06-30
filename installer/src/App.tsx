@@ -78,9 +78,7 @@ export default function App() {
       <ParticleSystem accelerate={accelerate} />
 
       {/* 主题切换 — 左上角 */}
-      <div style={{ position: 'absolute', top: 10, left: 14, zIndex: 200, WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-        <ThemeSwitcher current={theme} onChange={setTheme} />
-      </div>
+      <ThemeSwitcher current={theme} onChange={setTheme} />
 
       {/* 标题栏拖动 */}
       <div className="titlebar" onMouseDown={onTitleBarMouseDown} />
