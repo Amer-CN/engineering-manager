@@ -19,6 +19,17 @@ public class InstallerWindow : Form
 
     // ── 双击检测 ──
     private DateTime _lastClickTime = DateTime.MinValue;
+    private bool _initSent;
+
+    private void SendInit()
+    {
+        if (_initSent) return;
+        _initSent = true;
+        if (_opts.IsUpdate)
+            SendToWeb(new { type = "init", mode = "update", installPath = _opts.TargetPath, dataPath = _opts.DataPath });
+        else
+            SendToWeb(new { type = "init", mode = "fresh" });
+    }
 
     public InstallerWindow(UpdateOptions? opts = null)
     {
@@ -187,24 +198,7 @@ public class InstallerWindow : Form
                     Microsoft.Web.WebView2.Core.CoreWebView2HostResourceAccessKind.Allow);
                             webView.CoreWebView2.Navigate("http://installer.local/index.html");
 
-                // 导航完成后发送初始化消息（更新模式 or 全新安装）
-                webView.CoreWebView2.NavigationCompleted += (_, _) =>
-                {
-                    if (_opts.IsUpdate)
-                    {
-                        SendToWeb(new
-                        {
-                            type = "init",
-                            mode = "update",
-                            installPath = _opts.TargetPath,
-                            dataPath = _opts.DataPath,
-                        });
-                    }
-                    else
-                    {
-                        SendToWeb(new { type = "init", mode = "fresh" });
-                    }
-                };
+                // 导航完成后等待前端 ready 握手（不再直接发 init，避免竞态）
             }
             else
             {
@@ -262,6 +256,7 @@ public class InstallerWindow : Form
                     case "minimize": WindowState = FormWindowState.Minimized; break;
                     case "maximize": ToggleMaximize(); break;
                     case "close": Close(); break;
+                    case "ready": SendInit(); break;
                     case "browsePath":
                         using (var dlg = new FolderBrowserDialog())
                         {
