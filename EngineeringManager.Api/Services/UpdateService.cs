@@ -201,11 +201,28 @@ public class UpdateService
         if (!File.Exists(installerPath))
             throw new FileNotFoundException("安装包不存在", installerPath);
 
-        Process.Start(new ProcessStartInfo
+        var installDir = AppContext.BaseDirectory.TrimEnd('\\');
+        var dataPath = ApiConfig.ResolveDataPath();
+        var pid = Environment.ProcessId;
+
+        // 检查是否需要提权（安装目录在 Program Files 下）
+        var needsElevation = installDir.StartsWith(
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            StringComparison.OrdinalIgnoreCase)
+            || installDir.StartsWith(
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+            StringComparison.OrdinalIgnoreCase);
+
+        var psi = new ProcessStartInfo
         {
             FileName = installerPath,
+            Arguments = $"--update --target \"{installDir}\" --data-path \"{dataPath}\" --wait-pid {pid}",
             UseShellExecute = true,
-        });
+        };
+        if (needsElevation)
+            psi.Verb = "runas";
+
+        Process.Start(psi);
 
         Task.Run(async () => { await Task.Delay(800); Environment.Exit(0); });
     }
