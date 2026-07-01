@@ -21,7 +21,7 @@ public static class AuthEndpoints
         {
             var user = db.QueryFirstOrDefault(@"
                 SELECT id, username, password_hash, password_salt, password_hash_version,
-                       display_name, role_id, status
+                       display_name, role_id, status, is_default_password
                 FROM users WHERE username = @Username",
                 new { Username = dto.Username });
 
@@ -51,6 +51,7 @@ public static class AuthEndpoints
                 roleId = user.role_id,
                 roleName = role?.name ?? user.role_id,
                 permissions = role?.permissions ?? "[]",
+                passwordIsDefault = ((int)(user.is_default_password ?? 0)) == 1,
                 token = GenerateJwtToken((string)user.id, (string)user.username, (string)user.role_id, role?.name ?? (string)user.role_id)
             });
         }).RequireRateLimiting("login");

@@ -165,9 +165,14 @@ public class InstallerService
         var cfgDir = Path.Combine(appData, "工程管家");
         var cfgPath = Path.Combine(cfgDir, "config.json");
 
+        Console.WriteLine($"[Installer] WriteDataPathConfig: dataPath='{dataPath}', isUpdate={isUpdate}, cfgPath='{cfgPath}'");
+
         // 更新模式下：若用户未显式改动则保留现有 config.json
         if (isUpdate && File.Exists(cfgPath) && string.IsNullOrWhiteSpace(dataPath))
+        {
+            Console.WriteLine("[Installer] 更新模式 + dataPath 为空 + cfgPath 存在 → 跳过写入");
             return;
+        }
 
         try
         {
@@ -184,13 +189,17 @@ public class InstallerService
             }
 
             if (string.IsNullOrWhiteSpace(dataPath))
+            {
                 dataPath = Path.Combine(appData, "工程管家");
+                Console.WriteLine($"[Installer] dataPath 为空，使用默认值: {dataPath}");
+            }
 
             Directory.CreateDirectory(cfgDir);
             var json = System.Text.Json.JsonSerializer.Serialize(
                 new { dataPath },
                 new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(cfgPath, json);
+            Console.WriteLine($"[Installer] config.json 已写入: {cfgPath} → {dataPath}");
         }
         catch (Exception ex)
         {
