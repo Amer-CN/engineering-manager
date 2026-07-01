@@ -108,6 +108,12 @@ public static class ApiConfig
             cmd.ExecuteNonQuery();
             EnsureTables(conn);
 
+            // v0.80: is_default_password 列迁移（幂等）
+            try { conn.Execute(@"ALTER TABLE users ADD COLUMN is_default_password INTEGER DEFAULT 0"); } catch { }
+
+            // v0.80: 种子管理员（仅在 users 空表时触发）
+            SeedDefaultAdmin(conn);
+
             // v0.72.0: 跑 migrations 脚本 (idempotent, 自动跳过已跑的)
             // 实际跑: 011 加 _enc 列, 012 users 表 password_hash+salt+version 迁移
             EngineeringManager.Api.Migrations.MigrationRunner.Run($"Data Source={dbPath}");            return conn;
@@ -429,7 +435,7 @@ CREATE TABLE IF NOT EXISTS materials (id INTEGER PRIMARY KEY AUTOINCREMENT, name
 CREATE TABLE IF NOT EXISTS templates (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, type TEXT, category TEXT, content TEXT, variables TEXT, created_at TEXT, updated_at TEXT);
 CREATE TABLE IF NOT EXISTS audit_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, action TEXT, level TEXT, user_id TEXT, user_name TEXT, resource TEXT, resource_id TEXT, details TEXT, ip_address TEXT, created_at TEXT);
 CREATE TABLE IF NOT EXISTS roles (id TEXT PRIMARY KEY, name TEXT NOT NULL, permissions TEXT, is_system INTEGER DEFAULT 0, created_at TEXT);
-CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, username TEXT UNIQUE NOT NULL, password TEXT, password_hash TEXT NOT NULL, password_salt TEXT, password_hash_version INTEGER DEFAULT 1, salt TEXT, display_name TEXT, role_id TEXT, status TEXT DEFAULT 'active', avatar TEXT, created_at TEXT, updated_at TEXT);
+CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, username TEXT UNIQUE NOT NULL, password TEXT, password_hash TEXT NOT NULL, password_salt TEXT, password_hash_version INTEGER DEFAULT 1, salt TEXT, display_name TEXT, role_id TEXT, status TEXT DEFAULT 'active', avatar TEXT, is_default_password INTEGER DEFAULT 0, created_at TEXT, updated_at TEXT);
 CREATE TABLE IF NOT EXISTS snapshots (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, size INTEGER, created_at TEXT);
 CREATE TABLE IF NOT EXISTS departments (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, manager_id INTEGER, positions TEXT, created_at TEXT);
 CREATE TABLE IF NOT EXISTS salary_history (id INTEGER PRIMARY KEY AUTOINCREMENT, member_id INTEGER, effective_date TEXT, base_salary REAL, subsidy REAL, subsidy_note TEXT, note TEXT, created_at TEXT);
@@ -481,5 +487,42 @@ CREATE TABLE IF NOT EXISTS contract_templates (id INTEGER PRIMARY KEY AUTOINCREM
             }
     }
 
+    /// <summary>
+    /// 幂等种子管理员：仅在 users 空表时创建默认 admin 用户 + 角色
+    /// </summary>
+    private static void SeedDefaultAdmin(IDbConnection db)
+    {
+        var userCount = db.ExecuteScalar<int>("SELECT COUNT(*) FROM users");
+        if (userCount > 0) return;
+
+        var roleCount = db.ExecuteScalar<int>("SELECT COUNT(*) FROM roles");
+        if (roleCount == 0)
+        {
+            var roles = new[] {
+                ("admin", "管理员"),
+                ("manager", "经理"),
+                ("accountant", "财务"),
+                ("worker", "工人"),
+            };
+            var now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            foreach (var (id, name) in roles)
+            {
+                var perms = System.Text.Json.JsonSerializer.Serialize(Common.GetDefaultPermissions(id));
+                db.Execute(@"INSERT OR IGNORE INTO roles (id, name, permissions, is_system, created_at)
+                    VALUES (@Id, @Name, @Perms, 1, @Now)",
+                    new { Id = id, Name = name, Perms = perms, Now = now });
+            }
+        }
+
+        var salt = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16)).ToLower();
+        var hash = Common.HashPassword("admin123", salt, 2);
+        var nowStr = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        db.Execute(@"INSERT INTO users (id, username, password_hash, password_salt, password_hash_version,
+            display_name, role_id, status, is_default_password, created_at)
+            VALUES (@Id, 'admin', @Hash, @Salt, 2, '管理员', 'admin', 'active', 1, @Now)",
+            new { Id = $"user-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}", Hash = hash, Salt = salt, Now = nowStr });
+
+        Console.WriteLine("[Seed] 默认管理员已创建: admin / admin123");
+    }
 }
 
