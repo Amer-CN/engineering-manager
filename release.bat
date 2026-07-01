@@ -3,7 +3,7 @@ chcp 65001 >nul 2>&1
 title Engineering Manager - Release Build
 
 echo ============================================================
-echo   Engineering Manager - 一键发版脚本
+echo   Engineering Manager - 一键发版脚本（WebView2 安装器）
 echo ============================================================
 echo.
 
@@ -14,61 +14,78 @@ for /f "tokens=2 delims=:, " %%a in ('findstr /C:"version" package.json') do set
 set VERSION=%VERSION:"=%
 echo   Version: %VERSION%
 
-:: Check EM_RELEASE_BASE (auto-set from version if not provided)
+:: Auto-set EM_RELEASE_BASE
 if "%EM_RELEASE_BASE%"=="" (
     set EM_RELEASE_BASE=https://github.com/Amer-CN/engineering-manager/releases/download/v%VERSION%
-    echo   [AUTO] EM_RELEASE_BASE not set, using GitHub Release: %EM_RELEASE_BASE%
+    echo   [AUTO] EM_RELEASE_BASE: %EM_RELEASE_BASE%
 )
-echo   Release Base: %EM_RELEASE_BASE%
 echo.
 
 :: 1. Sync version to all downstream files
-echo [1/5] Syncing version to all files...
+echo [1/7] Syncing version to all files...
 call npm run sync-version
 if errorlevel 1 ( echo X FAILED & pause & exit /b 1 )
 echo    OK
 
-:: 2. Build main app frontend
+:: 2. Build installer frontend (WebView2 UI)
 echo.
-echo [2/5] Building main app frontend...
+echo [2/7] Building installer frontend...
+cd installer
+call npx vite build
+if errorlevel 1 ( echo X FAILED & pause & exit /b 1 )
+cd ..
+echo    OK
+
+:: 3. Build main app frontend
+echo.
+echo [3/7] Building main app frontend...
 call npx vite build
 if errorlevel 1 ( echo X FAILED & pause & exit /b 1 )
 echo    OK
 
-:: 3. Publish main app
+:: 4. Publish main app + copy assets
 echo.
-echo [3/5] Publishing main app...
+echo [4/7] Publishing main app...
 set APP_DIR=EngineeringManager.Installer\app-files
 if exist "%APP_DIR%" rmdir /s /q "%APP_DIR%"
 dotnet publish EngineeringManager.Api -c Release -r win-x64 --self-contained -o "%APP_DIR%"
 if errorlevel 1 ( echo X FAILED & pause & exit /b 1 )
-echo    OK
-
-:: 4. Copy frontend + config into app-files
-echo.
-echo [4/5] Copying assets into app-files...
 xcopy /E /I /Q /Y dist "%APP_DIR%\dist" >nul
 copy /Y public\ocr-config.json "%APP_DIR%\ocr-config.json" >nul
 copy /Y public\seed-data.json "%APP_DIR%\seed-data.json" >nul
 echo    OK
 
-:: 5. Build installer with Inno Setup
+:: 5. Build WebView2 installer (payload.zip + single-file publish + stub+payload+footer)
 echo.
-echo [5/6] Building installer with Inno Setup...
+echo [5/7] Building WebView2 installer...
+:: 5a. Create payload.zip
+if exist EngineeringManager.Installer\payload.zip del EngineeringManager.Installer\payload.zip
+cd EngineeringManager.Installer
+powershell -Command "Compress-Archive -Path 'app-files','..\installer\dist' -DestinationPath 'payload.zip' -Force"
+cd ..
+if errorlevel 1 ( echo X PAYLOAD FAILED & pause & exit /b 1 )
+
+:: 5b. Publish installer as single-file
+if exist release-installer rmdir /s /q release-installer
+dotnet publish EngineeringManager.Installer -c Release -r win-x64 --self-contained -o release-installer -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+if errorlevel 1 ( echo X STUB FAILED & pause & exit /b 1 )
+
+:: 5c. Concatenate stub + payload + footer (EMPAYLD1 magic + Int64 length)
 if not exist release mkdir release
-iscc installer.iss /DVERSION=%VERSION%
-if errorlevel 1 ( echo X FAILED & pause & exit /b 1 )
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\pack-installer.ps1 -Stub "release-installer\EngineeringManager.Installer.exe" -Payload "EngineeringManager.Installer\payload.zip" -Out "release\EngineeringManager-Setup-%VERSION%.exe"
+if errorlevel 1 ( echo X CONCAT FAILED & pause & exit /b 1 )
+
+rmdir /s /q release-installer 2>nul
 echo    OK
 
-:: Generate manifest
+:: 6. Generate manifest (SHA256 of final exe)
 echo.
-echo [6/6] Generating manifest...
-set EM_RELEASE_BASE=https://github.com/Amer-CN/engineering-manager/releases/download/v%VERSION%
+echo [6/7] Generating manifest...
 call npm run release:manifest
 if errorlevel 1 ( echo X FAILED & pause & exit /b 1 )
 echo    OK
 
-:: Commit and push
+:: 7. Commit, tag, push, create GitHub Release
 echo.
 echo [7/7] Committing and pushing...
 git add -A
@@ -76,14 +93,6 @@ git commit -m "release: v%VERSION%"
 git tag v%VERSION%
 git push origin master --tags
 if errorlevel 1 ( echo X FAILED & pause & exit /b 1 )
-echo    OK
-
-:: Create GitHub Release with installer
-echo.
-echo [8/8] Creating GitHub Release...
-gh release create v%VERSION% "release\EngineeringManager-Setup-%VERSION%.exe#EngineeringManager-Setup-%VERSION%.exe" "update\manifest.json#manifest.json" --title "v%VERSION%" --notes-file CHANGELOG.md --draft
-if errorlevel 1 ( echo X FAILED & pause & exit /b 1 )
-echo    OK
 
 echo.
 echo ============================================================
@@ -92,12 +101,6 @@ echo.
 echo   Installer: release\EngineeringManager-Setup-%VERSION%.exe
 echo   Tag: v%VERSION%
 echo   Manifest: update/manifest.json
-echo   GitHub Release: DRAFT created (upload installer manually or via gh)
-echo.
-echo   Next steps:
-echo   1. Review draft release on GitHub
-echo   2. Publish release when ready
-echo   3. Test auto-update flow
 echo ============================================================
 echo.
 

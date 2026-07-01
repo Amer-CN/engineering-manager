@@ -9,6 +9,7 @@ public class InstallerWindow : Form
 {
     private WebView2? webView;
     private string _frontendDir = "";
+    private readonly UpdateOptions _opts;
 
     // ── resize 相关 ──
     private bool _isResizing;
@@ -19,8 +20,9 @@ public class InstallerWindow : Form
     // ── 双击检测 ──
     private DateTime _lastClickTime = DateTime.MinValue;
 
-    public InstallerWindow()
+    public InstallerWindow(UpdateOptions? opts = null)
     {
+        _opts = opts ?? new UpdateOptions();
         FormBorderStyle = FormBorderStyle.None;
 
         // 从嵌入资源加载图标
@@ -183,7 +185,26 @@ public class InstallerWindow : Form
                 webView.CoreWebView2.SetVirtualHostNameToFolderMapping(
                     "installer.local", _frontendDir,
                     Microsoft.Web.WebView2.Core.CoreWebView2HostResourceAccessKind.Allow);
-                webView.CoreWebView2.Navigate("http://installer.local/index.html");
+                            webView.CoreWebView2.Navigate("http://installer.local/index.html");
+
+                // 导航完成后发送初始化消息（更新模式 or 全新安装）
+                webView.CoreWebView2.NavigationCompleted += (_, _) =>
+                {
+                    if (_opts.IsUpdate)
+                    {
+                        SendToWeb(new
+                        {
+                            type = "init",
+                            mode = "update",
+                            installPath = _opts.TargetPath,
+                            dataPath = _opts.DataPath,
+                        });
+                    }
+                    else
+                    {
+                        SendToWeb(new { type = "init", mode = "fresh" });
+                    }
+                };
             }
             else
             {
@@ -290,12 +311,36 @@ public class InstallerWindow : Form
     {
         try
         {
+            // 更新模式：等待旧进程退出
+            if (_opts.WaitPid > 0)
+            {
+                SendToWeb(new { type = "progress", percent = 0, step = "等待旧版本退出..." });
+                try
+                {
+                    var oldProc = Process.GetProcessById(_opts.WaitPid);
+                    oldProc.WaitForExit(15000);
+                }
+                catch { }
+
+                // 兜底：按进程名杀残留
+                foreach (var p in Process.GetProcessesByName("EngineeringManager.Api"))
+                {
+                    try { p.Kill(); p.WaitForExit(5000); } catch { }
+                }
+            }
+
+            // 更新模式下使用传入的路径
+            var actualTarget = _opts.IsUpdate && !string.IsNullOrEmpty(_opts.TargetPath)
+                ? _opts.TargetPath : installPath;
+            var actualDataPath = _opts.IsUpdate && !string.IsNullOrEmpty(_opts.DataPath)
+                ? _opts.DataPath : dataPath;
+
             var service = new InstallerService();
-            await service.Install(installPath, dataPath, (percent, step) =>
+            await service.Install(actualTarget, actualDataPath, _opts.IsUpdate, (percent, step) =>
             {
                 SendToWeb(new { type = "progress", percent, step });
             });
-            SendToWeb(new { type = "installComplete", path = installPath });
+            SendToWeb(new { type = "installComplete", path = actualTarget });
         }
         catch (Exception ex)
         {

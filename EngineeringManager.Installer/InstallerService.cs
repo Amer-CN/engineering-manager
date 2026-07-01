@@ -74,7 +74,11 @@ public class InstallerService
     /// <summary>
     /// 安装到指定目录
     /// </summary>
-    public async Task Install(string targetPath, string dataPath, Action<int, string> onProgress)
+    /// <param name="targetPath">安装目录</param>
+    /// <param name="dataPath">数据存储路径</param>
+    /// <param name="isUpdate">是否更新模式（跳过快捷方式、不覆盖已有 dataPath）</param>
+    /// <param name="onProgress">进度回调</param>
+    public async Task Install(string targetPath, string dataPath, bool isUpdate, Action<int, string> onProgress)
     {
         Directory.CreateDirectory(targetPath);
 
@@ -99,7 +103,8 @@ public class InstallerService
             var destDir = Path.GetDirectoryName(destPath);
             if (destDir != null) Directory.CreateDirectory(destDir);
 
-            File.Copy(file, destPath, true);
+            // 带重试的文件复制（更新模式下文件可能被占用）
+            await CopyFileWithRetry(file, destPath);
 
             var percent = (int)((i + 1) / (double)total * 100);
             var step = (i + 1) switch
@@ -115,44 +120,82 @@ public class InstallerService
             await Task.Delay(10);
         }
 
+        // 快捷方式（更新模式下覆盖同名，不重复堆叠）
         onProgress(95, "正在创建桌面快捷方式...");
         CreateShortcut(targetPath);
 
-        // 写入数据存储路径配置（主程序 ResolveDataPath() 会读取此文件）
-        if (!string.IsNullOrWhiteSpace(dataPath))
+        // 写入数据存储路径配置（更新模式下：若用户未显式改动则保留现有 config.json）
+        WriteDataPathConfig(dataPath, isUpdate);
+
+        onProgress(100, isUpdate ? "更新完成！" : "安装完成！");
+
+        // 清理临时文件
+        try { Directory.Delete(sourceDir, true); } catch { }
+    }
+
+    // 兼容旧签名
+    public Task Install(string targetPath, string dataPath, Action<int, string> onProgress)
+        => Install(targetPath, dataPath, false, onProgress);
+
+    /// <summary>
+    /// 带重试的文件复制（更新模式下文件可能仍被占用）
+    /// </summary>
+    private static async Task CopyFileWithRetry(string src, string dest, int maxRetries = 10)
+    {
+        for (int retry = 0; ; retry++)
         {
             try
             {
-                // 检查磁盘是否存在，不存在则回退到默认路径
+                File.Copy(src, dest, true);
+                return;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException && retry < maxRetries)
+            {
+                await Task.Delay(300 + retry * 200);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 写入数据存储路径配置
+    /// </summary>
+    private void WriteDataPathConfig(string dataPath, bool isUpdate)
+    {
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        var cfgDir = Path.Combine(appData, "工程管家");
+        var cfgPath = Path.Combine(cfgDir, "config.json");
+
+        // 更新模式下：若用户未显式改动则保留现有 config.json
+        if (isUpdate && File.Exists(cfgPath) && string.IsNullOrWhiteSpace(dataPath))
+            return;
+
+        try
+        {
+            // 检查磁盘是否存在，不存在则回退到默认路径
+            if (!string.IsNullOrWhiteSpace(dataPath))
+            {
                 var driveRoot = Path.GetPathRoot(dataPath);
                 if (string.IsNullOrEmpty(driveRoot) || !Directory.Exists(driveRoot))
                 {
                     Console.Error.WriteLine($"[Installer] 数据路径磁盘不存在: {dataPath}，回退到默认路径");
-                    dataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "工程管家");
+                    dataPath = Path.Combine(appData, "工程管家");
                 }
-
-                // 确保数据目录存在
                 Directory.CreateDirectory(dataPath);
+            }
 
-                var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-                var cfgDir = Path.Combine(appData, "工程管家");
-                Directory.CreateDirectory(cfgDir);
-                var cfgPath = Path.Combine(cfgDir, "config.json");
-                var json = System.Text.Json.JsonSerializer.Serialize(
-                    new { dataPath },
-                    new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(cfgPath, json);
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"[Installer] 写入 config.json 失败: {ex.Message}");
-            }
+            if (string.IsNullOrWhiteSpace(dataPath))
+                dataPath = Path.Combine(appData, "工程管家");
+
+            Directory.CreateDirectory(cfgDir);
+            var json = System.Text.Json.JsonSerializer.Serialize(
+                new { dataPath },
+                new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(cfgPath, json);
         }
-
-        onProgress(100, "安装完成！");
-
-        // 清理临时文件
-        try { Directory.Delete(sourceDir, true); } catch { }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[Installer] 写入 config.json 失败: {ex.Message}");
+        }
     }
 
     /// <summary>
