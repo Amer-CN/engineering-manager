@@ -176,6 +176,7 @@ const AppContent: React.FC = () => {
     const stored = localStorage.getItem('sidebar-collapsed')
     return stored !== 'true' // 默认展开
   })
+  const [closedDefaultPwd, setClosedDefaultPwd] = useState(false)
 
   const refresh = () => setRefreshTrigger(prev => prev + 1)
 
@@ -315,9 +316,10 @@ const AppContent: React.FC = () => {
         <main className="flex-1 overflow-auto">
           <UpdateBanner />
           {/* 默认密码提示 */}
-          {currentUser?.passwordIsDefault && (
+          {currentUser?.passwordIsDefault && !closedDefaultPwd && (
             <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 text-sm text-amber-800 flex items-center gap-2">
-              <span>⚠️ 当前正在使用默认密码 admin123，为安全建议尽快在【设置 → 用户管理】中自行修改。</span>
+              <span className="flex-1">⚠️ 当前正在使用默认密码 admin123，为安全建议尽快在【设置 → 用户管理】中自行修改。</span>
+              <button onClick={() => setClosedDefaultPwd(true)} className="text-amber-400 hover:text-amber-600 text-lg leading-none">&times;</button>
             </div>
           )}
           <AnimatePresence mode="wait">
