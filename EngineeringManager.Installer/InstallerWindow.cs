@@ -25,10 +25,12 @@ public class InstallerWindow : Form
     {
         if (_initSent) return;
         _initSent = true;
+        // 始终下发默认值，让前端用计算值而非硬编码
+        var defaultDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\工程管家";
         if (_opts.IsUpdate)
             SendToWeb(new { type = "init", mode = "update", installPath = _opts.TargetPath, dataPath = _opts.DataPath });
         else
-            SendToWeb(new { type = "init", mode = "fresh" });
+            SendToWeb(new { type = "init", mode = "fresh", defaultDataPath });
     }
 
     public InstallerWindow(UpdateOptions? opts = null)

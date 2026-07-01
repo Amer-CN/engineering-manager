@@ -18,9 +18,9 @@ function postToHost(msg: object) {
   window.chrome?.webview?.postMessage(JSON.stringify(msg))
 }
 
-// 获取默认数据存储路径（与后端 %APPDATA%\工程管家 默认一致）
+// 获取默认数据存储路径（由 C# init 消息下发，此处仅 fallback）
 function getDefaultDataPath(): string {
-  return 'D:\\工程管家数据'
+  return ''
 }
 
 export default function App() {
@@ -46,6 +46,11 @@ export default function App() {
           setAccelerate(true)
           setStep('installing')
           postToHost({ action: 'install', path: ip, dataPath: dp })
+        } else if (data?.type === 'init' && data.mode === 'fresh') {
+          // 用 C# 下发的默认数据路径替换硬编码
+          if (data.defaultDataPath) {
+            setDataPath(data.defaultDataPath)
+          }
         }
       } catch {}
     }
