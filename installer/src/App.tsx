@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import ParticleSystem from './components/ParticleSystem'
 import ThemeSwitcher from './components/ThemeSwitcher'
@@ -29,6 +29,29 @@ export default function App() {
   const [installPath, setInstallPath] = useState('')
   const [dataPath, setDataPath] = useState('')
   const [accelerate, setAccelerate] = useState(false)
+
+  // 监听 C# 的 init 消息（更新模式跳过向导）
+  useEffect(() => {
+    // @ts-ignore
+    const wv = window.chrome?.webview
+    if (!wv) return
+    const handler = (e: any) => {
+      try {
+        const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data
+        if (data?.type === 'init' && data.mode === 'update') {
+          const ip = data.installPath ?? ''
+          const dp = data.dataPath ?? ''
+          setInstallPath(ip)
+          setDataPath(dp)
+          setAccelerate(true)
+          setStep('installing')
+          postToHost({ action: 'install', path: ip, dataPath: dp })
+        }
+      } catch {}
+    }
+    wv.addEventListener('message', handler)
+    return () => wv.removeEventListener('message', handler)
+  }, [])
 
   // 标题栏拖动
   const onTitleBarMouseDown = () => {
