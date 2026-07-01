@@ -22,6 +22,7 @@ export interface StoredAuth {
   roleId: string
   roleName: string
   permissions: string[]
+  passwordIsDefault?: boolean
 }
 
 // Auth Store 接口
