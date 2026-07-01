@@ -50,6 +50,7 @@ export default function App() {
       } catch {}
     }
     wv.addEventListener('message', handler)
+    postToHost({ action: 'ready' })   // 通知 C# 监听器已就绪，可安全发 init
     return () => wv.removeEventListener('message', handler)
   }, [])
 
