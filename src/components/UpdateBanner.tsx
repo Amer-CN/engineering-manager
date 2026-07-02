@@ -29,9 +29,9 @@ export function UpdateBanner() {
       <div className="fixed inset-0 z-[9999] bg-black/60 flex items-center justify-center">
         <div className="bg-white rounded-xl shadow-2xl px-8 py-10 max-w-sm w-full mx-4 text-center">
           <div className="text-4xl mb-4">🚀</div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">发现新版本</h2>
-          <p className="text-sm text-gray-600 mb-1">
-            <strong className="text-gray-900">{info.latest}</strong>（当前 {info.current}）
+          <h2 className="text-lg font-semibold text-slate-900 mb-2">发现新版本</h2>
+          <p className="text-sm text-slate-600 mb-1">
+            <strong className="text-slate-900">{info.latest}</strong>（当前 {info.current}）
           </p>
           <p className="text-sm text-red-600 font-medium mb-4">此版本需强制更新</p>
 
@@ -42,7 +42,7 @@ export function UpdateBanner() {
               onClick={download}
               disabled={phase === 'downloading'}
               className={`w-full px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                phase === 'downloading' ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-red-600 text-white hover:bg-red-700'
+                phase === 'downloading' ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-red-600 text-white hover:bg-red-700'
               }`}
             >
               {phase === 'downloading' ? '准备中...' : '立即更新'}
@@ -128,16 +128,16 @@ function renderProgress(progress: any, phase: string) {
   return (
     <div className="w-full mt-2">
       {phase === 'verifying' ? (
-        <div className="text-xs text-gray-500">正在校验...</div>
+        <div className="text-xs text-slate-500">正在校验...</div>
       ) : (
         <>
-          <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+          <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-300 ${indeterminate ? 'w-1/3 bg-blue-400 animate-pulse' : 'bg-blue-500'}`}
               style={indeterminate ? {} : { width: `${Math.min(pct ?? 0, 100)}%` }}
             />
           </div>
-          <div className="text-xs text-gray-500 mt-1 flex justify-between">
+          <div className="text-xs text-slate-500 mt-1 flex justify-between">
             <span>
               {formatBytes(progress.bytesReceived)}
               {progress.totalBytes ? ` / ${formatBytes(progress.totalBytes)}` : ''}

@@ -12,15 +12,26 @@ if (!releaseBase) {
 // 支持 GitHub Release URL 模板：将 ${version} 占位符替换为实际版本号
 const resolvedBase = releaseBase.replace(/\$\{version\}/g, version).replace(/\/+$/, '')
 
-// 读现有 manifest（保留 notesUrl）
+// 读现有 manifest（保留 notesUrl + 自定义 proxies）
 let existingNotesUrl = ''
+let existingProxies = null
 const manifestPath = 'update/manifest.json'
 if (fs.existsSync(manifestPath)) {
   try {
     const existing = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'))
     if (existing.notesUrl) existingNotesUrl = existing.notesUrl
+    // 保留线上已自定义的 proxies（若存在且非空）
+    if (Array.isArray(existing.package?.proxies) && existing.package.proxies.length > 0) {
+      existingProxies = existing.package.proxies
+    }
   } catch { /* ignore */ }
 }
+
+// 默认代理前缀数组（不含版本号/文件名，客户端自动拼接）
+const DEFAULT_PROXIES = [
+  'https://gh-proxy.com/',
+  'https://ghfast.top/',
+]
 
 // minForced: 环境变量覆盖，否则用现 manifest 的值，否则 "0.0.0"
 const minForced = process.env.EM_MIN_FORCED
@@ -70,6 +81,7 @@ const manifest = {
   notesUrl: existingNotesUrl || '',
   package: {
     url,
+    proxies: existingProxies || DEFAULT_PROXIES,
     size,
     sha256,
     signature: '',

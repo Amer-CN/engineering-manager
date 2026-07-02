@@ -15,7 +15,8 @@ let csharpApiAvailable: boolean | null = null;
 async function checkCSharpApi(): Promise<boolean> {
   if (csharpApiAvailable !== null) return csharpApiAvailable;
   try {
-    const resp = await fetch('http://localhost:5048/api/health', { signal: AbortSignal.timeout(2000) });
+    // 使用相对路径，dev 模式通过 Vite 代理转发到 C# 后端
+    const resp = await fetch('/api/health', { signal: AbortSignal.timeout(2000) });
     csharpApiAvailable = resp.ok;
   } catch {
     csharpApiAvailable = false;
@@ -178,7 +179,8 @@ function createMockAPI() {
     authUpdateUser: async () => ({ success: true }),
     authDeleteUser: async () => ({ success: true }),
     // 配置
-    getConfig: async () => ({ success: true, data: { dataPath: '', gpuAcceleration: true } }),
+    getConfig: async () => ({ success: true, data: { dataPath: '', defaultPath: '', gpuAcceleration: true } }),
+    getDataPath: async () => ({ success: true, data: '' }),
     setDataPath: async () => ({ success: true }),
     getGpuAcceleration: async () => ({ success: true, data: true }),
     setGpuAcceleration: async () => ({ success: true }),
