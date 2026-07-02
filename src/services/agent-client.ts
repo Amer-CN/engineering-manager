@@ -15,6 +15,7 @@ import type {
   LlmProviderTestRequest,
   LlmProviderTestResponse,
   LlmProviderConfig,
+  ToolCallResult,
 } from '../types/agent'
 
 // ═══════════════════════════════════════════════════════════════
@@ -186,4 +187,128 @@ export async function reloadLlmProviderConfig(): Promise<boolean> {
     {}
   )
   return result.success
+}
+
+// ===================== 流式聊天 (2a) =====================
+
+export interface AgentStreamCallbacks {
+  onConversationId?: (conversationId: number) => void
+  onTool?: (name: string) => void
+  onContent?: (text: string) => void
+  onDone?: (payload: {
+    conversationId: number
+    toolCalls?: ToolCallResult[]
+    message?: string
+  }) => void
+  onError?: (error: string) => void
+}
+
+const AGENT_STREAM_BASE =
+  import.meta.env.VITE_API_BASE || 'http://localhost:5048'
+
+/**
+ * 流式发送 Agent 消息。逐块回调；出错/环境不支持时抛异常，交给调用方回退到 sendAgentMessage。
+ */
+export async function sendAgentMessageStream(
+  request: AgentChatRequest,
+  callbacks: AgentStreamCallbacks,
+  signal?: AbortSignal,
+): Promise<void> {
+  if (typeof ReadableStream === 'undefined') {
+    throw new Error('ReadableStream not supported')
+  }
+
+  const token = localStorage.getItem('jwt_token')
+  const response = await fetch(`${AGENT_STREAM_BASE}/api/agent/chat/stream`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(request),
+    signal,
+  })
+
+  if (!response.ok || !response.body) {
+    throw new Error(`stream request failed: ${response.status}`)
+  }
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  try {
+    // 逐块读取，用空行(\n\n)切分 SSE 事件
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+
+      let sepIndex: number
+      while ((sepIndex = buffer.indexOf('\n\n')) !== -1) {
+        const rawEvent = buffer.slice(0, sepIndex)
+        buffer = buffer.slice(sepIndex + 2)
+        dispatchSseEvent(rawEvent, callbacks)
+      }
+    }
+    // 冲刷残余
+    if (buffer.trim().length > 0) {
+      dispatchSseEvent(buffer, callbacks)
+    }
+  } finally {
+    reader.releaseLock()
+  }
+}
+
+function dispatchSseEvent(
+  rawEvent: string,
+  callbacks: AgentStreamCallbacks,
+): void {
+  // 一个事件块可能含多行，只取 data: 行
+  for (const line of rawEvent.split('\n')) {
+    const trimmed = line.trimStart()
+    if (!trimmed.startsWith('data:')) continue
+    const jsonStr = trimmed.slice('data:'.length).trim()
+    if (!jsonStr) continue
+
+    let evt: {
+      type?: string
+      conversationId?: number
+      name?: string
+      text?: string
+      toolCalls?: ToolCallResult[]
+      message?: string
+      error?: string
+    }
+    try {
+      evt = JSON.parse(jsonStr)
+    } catch {
+      continue // 半包/坏行，跳过
+    }
+
+    switch (evt.type) {
+      case 'conversation_id':
+        if (typeof evt.conversationId === 'number')
+          callbacks.onConversationId?.(evt.conversationId)
+        break
+      case 'tool':
+        callbacks.onTool?.(evt.name ?? '')
+        break
+      case 'content':
+        callbacks.onContent?.(evt.text ?? '')
+        break
+      case 'done':
+        callbacks.onDone?.({
+          conversationId: evt.conversationId ?? 0,
+          toolCalls: evt.toolCalls,
+          message: evt.message,
+        })
+        break
+      case 'error':
+        callbacks.onError?.(evt.error ?? 'unknown error')
+        break
+      default:
+        break
+    }
+  }
 }
