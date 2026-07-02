@@ -4,7 +4,7 @@ import {
   type UpdateCheck, type DownloadProgress,
 } from '../services/update-client'
 
-export type UpdaterPhase = 'idle' | 'checking' | 'downloading' | 'verifying' | 'done' | 'error' | 'no-update' | 'cancelled'
+export type UpdaterPhase = 'idle' | 'checking' | 'downloading' | 'verifying' | 'done' | 'error' | 'no-update' | 'cancelled' | 'paused'
 
 export function useUpdater() {
   const [info, setInfo] = useState<UpdateCheck | null>(null)
@@ -75,6 +75,22 @@ export function useUpdater() {
     setProgress(null)
   }, [])
 
+  // 暂停：取消下载但保留 .part 文件和进度，可继续
+  const pause = useCallback(async () => {
+    await cancelDownload()
+    esRef.current?.close()
+    esRef.current = null
+    setPhase('paused')
+    // 保留 progress 数据，让用户看到已下载量
+  }, [])
+
+  // 继续：重新启动下载，后端检测到 .part 文件自动断点续传
+  const resume = useCallback(() => {
+    setPhase('idle')
+    setError(null)
+    download()
+  }, [download])
+
   const retry = useCallback(() => {
     setPhase('idle')
     setProgress(null)
@@ -82,5 +98,5 @@ export function useUpdater() {
     download()
   }, [download])
 
-  return { info, progress, phase, error, check, download, cancel, retry, setInfo }
+  return { info, progress, phase, error, check, download, cancel, pause, resume, retry, setInfo }
 }
