@@ -9,6 +9,51 @@
 > **重要**: v0.74.0 → v0.75.3 期间曾过度打 tag (refactor-only sprint 也 bump). 已在 v0.75.3 重新整理 git 历史 (drop 7 个 spurious chore "bump version" commits), 重组成正确的 semver 历史. 详见 `docs/handoff/v0.75.3-handoff.md`.
 
 
+## v0.81.0 (2026-07-02) — fix: 数据存储路径 + 默认密码提示 + 安装器修复
+
+> **SemVer**: minor bump (0.80.0 → 0.81.0), 多项 bug 修复 + 体验改善.
+
+### 更新了什么（大白话）
+
+#### 🐛 修了一堆跟「数据存储路径」相关的 bug
+- **安装器选了 D 盘，装完还是 C 盘**：安装器界面选数据存储路径时，默认路径不显示（空白）；手动改了路径（比如 D:\工程管家数据），安装完打开软件发现还是默认的 C 盘路径 —— 这个 bug 修了
+- **根因**：安装器前端代码在点击「开始安装」时把 C# 传过来的默认路径覆盖成了空字符串；后端读 config.json 时用了错误的类型转换（`JsonElement` 当 `string` 判断），导致永远读不到用户设的路径
+- **登录界面设置里改数据路径也没用**：改完点保存没反应，因为后端鉴权拦截了未登录请求 + 前端没检查返回值就关了弹窗 —— 都修了
+
+#### 🔐 默认密码提示改密后终于会消失了
+- **改完密码提示还在**：admin 用 admin123 登录后会出现「正在使用默认密码」的提示，但改完密码重新登录提示还在 —— 因为数据库里的 `is_default_password` 标记在改密时没清零，现在修了
+- **提示不再挤位置**：默认密码提示从内嵌横幅改成悬浮在顶部居中的浮动通知条，不再挤压软件界面布局
+
+#### 🔧 其他修复
+- **安装器加了诊断日志**：安装过程会写日志到 `%TEMP%\工程管家-installer-debug.log`，方便排查问题
+- **健康检查版本号对齐**：`/api/health` 接口里写死的 `0.72.0` 终于对齐到实际版本了
+- **config.json 合并写入修复**：GPU 加速、读取模式等配置写入时不再丢失已有键
+
+### 改动（开发者视角）
+
+#### 🐛 Bug 修复
+- **SystemEndpoints GET /api/config**: `JsonSerializer.Deserialize<Dictionary<string, object>>` 返回 `JsonElement` 而非 `string`，`dp is string` 恒 `false` → 改用 `JsonDocument.Parse` + `dp.GetString()`
+- **SystemEndpoints 4 处合并写入**: `PUT /api/config/data-path` / `PUT /api/config/gpu-acceleration` / `PUT /api/sqlite/read-mode` 同步修复，合并写入改用 `JsonDocument.EnumerateObject()` + `Clone()`
+- **GlobalAuthMiddleware**: 白名单放行 `PUT /api/config/data-path`（登录前可配置数据路径）
+- **SystemEndpoints PUT /api/config/data-path**: 鉴权条件化（未登录允许，已登录需 admin）
+- **LoginSettingsModal**: 增加返回值检查 + 错误/成功反馈消息 + 重启提示
+- **installer App.tsx**: `handleBegin` 不再覆盖 C# init 下发的 `defaultDataPath`；删除无用的 `getDefaultDataPath()` 函数
+- **AuthEndpoints**: `POST /api/auth/reset-password` 和 `PUT /api/users`（带 password 分支）追加 `is_default_password=0`；加不变量注释
+- **App.tsx**: 默认密码提示从内嵌横幅改为 `fixed` 悬浮浮动条，`flex justify-center` 居中
+- **ApiTestBase**: 测试环境补 `is_default_password` 列（EnsureTables 在测试不跑，预存 bug）
+
+#### 📝 约定
+- **不变量**: 任何写入 `password_hash` 的 UPDATE 必须同时 `is_default_password=0`（AuthEndpoints.cs 两处注释标注）
+
+### 红绿灯
+
+- dotnet build: 0 错误
+- dotnet test: 158/158 通过
+- tsc: 0 错误
+- vite build: 成功
+
+---
+
 ## v0.80.0 (2026-06-30) — feat: 应用内自动更新 + 安全加固
 
 > **SemVer**: minor bump (0.79.0 → 0.80.0), 新增功能（应用内自动更新）+ 安全重构.
