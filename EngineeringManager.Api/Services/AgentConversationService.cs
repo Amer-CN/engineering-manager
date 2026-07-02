@@ -216,4 +216,19 @@ public class AgentConversationService
 
         return affected > 0;
     }
+
+    /// <summary>
+    /// 重命名会话（带所有权校验，软删除的不可改）
+    /// </summary>
+    public async Task<bool> RenameConversationAsync(
+        IDbConnection db, long conversationId, string userId, string title)
+    {
+        var now = Common.NowString();
+        var affected = await db.ExecuteAsync(
+            @"UPDATE agent_conversations
+              SET title = @Title, updated_at = @Now
+              WHERE id = @Id AND user_id = @UserId AND deleted_at IS NULL",
+            new { Title = title, Now = now, Id = conversationId, UserId = userId });
+        return affected > 0;
+    }
 }

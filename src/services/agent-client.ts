@@ -89,6 +89,22 @@ export async function deleteAgentConversation(
   return result.success
 }
 
+/**
+ * 重命名对话
+ * @param conversationId 对话 ID
+ * @param title 新标题
+ */
+export async function renameAgentConversation(
+  conversationId: number,
+  title: string
+): Promise<boolean> {
+  const result = await apiClient.put<{ success: boolean }>(
+    `/api/agent/conversations/${conversationId}`,
+    { title }
+  )
+  return result.success
+}
+
 // ═══════════════════════════════════════════════════════════════
 // LLM 配置管理
 // ═══════════════════════════════════════════════════════════════
