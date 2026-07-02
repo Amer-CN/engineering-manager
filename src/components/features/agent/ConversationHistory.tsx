@@ -322,7 +322,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
           onClose={() => setDeleteTarget(null)}
           onConfirm={handleDelete}
           title="删除对话"
-          content={`确定要删除「${deleteTarget?.title || `对话 ${deleteTarget?.id}`}?」吗？此操作无法撤销。`}
+          content={`确定要删除「${deleteTarget?.title || `对话 ${deleteTarget?.id}`}」吗？此操作无法撤销。`}
           confirmText="删除"
           confirmVariant="danger"
           loading={deleting}
@@ -370,7 +370,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
               onClose={() => setDeleteTarget(null)}
               onConfirm={handleDelete}
               title="删除对话"
-              content={`确定要删除「${deleteTarget?.title || `对话 ${deleteTarget?.id}`}?」吗？此操作无法撤销。`}
+              content={`确定要删除「${deleteTarget?.title || `对话 ${deleteTarget?.id}`}」吗？此操作无法撤销。`}
               confirmText="删除"
               confirmVariant="danger"
               loading={deleting}

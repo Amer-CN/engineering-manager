@@ -19,6 +19,7 @@ export interface ModalProps {
   lockScroll?: boolean
   centered?: boolean
   className?: string
+  bodyClassName?: string
 }
 
 const sizeStyles: Record<ModalSize, string> = {
@@ -52,6 +53,7 @@ export function Modal({
   lockScroll = true,
   centered = true,
   className = '',
+  bodyClassName,
 }: ModalProps) {
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
   if (e.key === 'Escape' && isOpen) {
@@ -145,8 +147,8 @@ export function Modal({
   </div>
   )}
 
-  <HoverScrollbar className="flex-1 px-6 py-4">
-  {children}
+  <HoverScrollbar className={`flex-1 ${bodyClassName ?? 'px-6 py-4'}`}>
+    {children}
   </HoverScrollbar>
 
   {footer && (
