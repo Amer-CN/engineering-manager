@@ -19,9 +19,9 @@ describe('SettingsChangelog.tsx', () => {
     expect(screen.getByText('更新日志')).toBeTruthy()
   })
 
-  test('应显示第一个版本号 v2.12.0', () => {
+  test('应显示最新版本号 v0.81.0', () => {
     render(React.createElement(SettingsChangelog, { onClose: vi.fn() }))
-    expect(screen.getByText('v2.12.0')).toBeTruthy()
+    expect(screen.getByText('v0.81.0')).toBeTruthy()
   })
 
   test('应显示 v1.0.0 发布日期', () => {
@@ -31,7 +31,7 @@ describe('SettingsChangelog.tsx', () => {
 
   test('应显示第一条更新条目', () => {
     render(React.createElement(SettingsChangelog, { onClose: vi.fn() }))
-    expect(screen.getByText(/支持字符串格式/)).toBeTruthy()
+    expect(screen.getByText(/数据存储路径/)).toBeTruthy()
   })
 
   test('点击关闭按钮应调用 onClose', () => {
