@@ -212,9 +212,20 @@ builder.Services.ConfigureHttpJsonOptions(options =>
             });
 
             // 2. 静态文件服务（JS/CSS/图片 + ocr-config.json 等）
+            // index.html 禁止缓存（防 WebView2 缓存旧前端），带 hash 的 JS/CSS 默认永久缓存（文件名变=自动失效）
             app.UseStaticFiles(new StaticFileOptions
             {
-                FileProvider = new PhysicalFileProvider(distPath)
+                FileProvider = new PhysicalFileProvider(distPath),
+                OnPrepareResponse = ctx =>
+                {
+                    var path = ctx.File.Name;
+                    if (path.EndsWith(".html", StringComparison.OrdinalIgnoreCase))
+                    {
+                        ctx.Context.Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                        ctx.Context.Response.Headers["Pragma"] = "no-cache";
+                        ctx.Context.Response.Headers["Expires"] = "0";
+                    }
+                }
             });
         }
 

@@ -50,6 +50,11 @@ export interface ChangelogVersion {
   groups?: ChangelogGroup[]
 }
 export const versions: ChangelogVersion[] = [
+  { v: 'v0.81.3', date: '2026-07-02', groups: [
+    { label: '🐛 Bug 修复', items: [
+      '**更新后版本号和更新日志不刷新**：安装更新后打开软件发现版本号还是旧的、更新日志也没变？这是浏览器缓存了旧页面导致的，现在装更新时会自动清理旧文件，服务器也加了禁止缓存',
+    ] },
+  ] },
   { v: 'v0.81.2', date: '2026-07-02', groups: [
     { label: '🐛 Bug 修复', items: [
       '**下载完成后文件被占用导致崩溃**：杀毒软件短暂锁住文件时，下载收尾的改名操作会失败崩溃，现在会自动重试几次',

@@ -82,6 +82,17 @@ public class InstallerService
     {
         Directory.CreateDirectory(targetPath);
 
+        // 更新模式：先清理旧 dist/ 目录（防 WebView2 加载旧 hash 的 JS 文件）
+        if (isUpdate)
+        {
+            var oldDist = Path.Combine(targetPath, "dist");
+            if (Directory.Exists(oldDist))
+            {
+                try { Directory.Delete(oldDist, true); }
+                catch { /* 文件被占用则忽略，新文件会覆盖 */ }
+            }
+        }
+
         // 从嵌入资源解压
         onProgress(0, "正在释放安装文件...");
         var sourceDir = ExtractPayload();
