@@ -246,9 +246,9 @@ public static class SystemEndpoints
                 try
                 {
                     var json = File.ReadAllText(configPath);
-                    var config = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(json) ?? new();
-                    if (config.TryGetValue("dataPath", out var dp) && dp is string s && !string.IsNullOrWhiteSpace(s))
-                        dataPath = s;
+                    using var doc = System.Text.Json.JsonDocument.Parse(json);
+                    if (doc.RootElement.TryGetProperty("dataPath", out var dp) && dp.GetString() is { Length: > 0 } dpStr)
+                        dataPath = dpStr;
                 }
                 catch { }
             }
@@ -270,8 +270,11 @@ public static class SystemEndpoints
 
         app.MapPut("/api/config/data-path", (HttpContext ctx, System.Text.Json.JsonElement dto) =>
         {
-            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            if (!CurrentUser.IsAdmin(ctx)) return Results.Forbid();
+            // 登录前可配置数据路径（安装后首次启动 / 登录设置页面场景）；
+            // 登录后需 admin 权限才能修改。
+            var uid = CurrentUser.GetUserId(ctx);
+            if (uid != null && !CurrentUser.IsAdmin(ctx))
+                return Results.Forbid();
             try
             {
                 var newPath = dto.GetProperty("path").GetString();
@@ -316,15 +319,17 @@ public static class SystemEndpoints
                     Directory.CreateDirectory(newPath);
                 }
 
-                // 保存到配置文件
+                // 保存到配置文件（合并写入，不覆盖已有键）
                 var appDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "工程管家");
                 var configPath = Path.Combine(appDataPath, "config.json");
 
-                Dictionary<string, object> config = new();
+                var config = new Dictionary<string, object>();
                 if (File.Exists(configPath))
                 {
                     var json = File.ReadAllText(configPath);
-                    config = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(json) ?? new();
+                    using var doc = System.Text.Json.JsonDocument.Parse(json);
+                    foreach (var prop in doc.RootElement.EnumerateObject())
+                        config[prop.Name] = prop.Value.Clone();
                 }
 
                 config["dataPath"] = newPath;
@@ -371,11 +376,13 @@ public static class SystemEndpoints
                 var enabled = body.GetProperty("enabled").GetBoolean();
                 var configPath = Path.Combine(ApiConfig.ResolveDataPath(), "config.json");
 
-                Dictionary<string, object> config = new();
+                var config = new Dictionary<string, object>();
                 if (File.Exists(configPath))
                 {
                     var json = File.ReadAllText(configPath);
-                    config = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(json) ?? new();
+                    using var doc = System.Text.Json.JsonDocument.Parse(json);
+                    foreach (var prop in doc.RootElement.EnumerateObject())
+                        config[prop.Name] = prop.Value.Clone();
                 }
                 config["gpuAcceleration"] = enabled;
                 var options = new System.Text.Json.JsonSerializerOptions { WriteIndented = true };
@@ -621,7 +628,9 @@ public static class SystemEndpoints
                 if (File.Exists(configPath))
                 {
                     var json = File.ReadAllText(configPath);
-                    config = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(json) ?? new();
+                    using var doc = System.Text.Json.JsonDocument.Parse(json);
+                    foreach (var prop in doc.RootElement.EnumerateObject())
+                        config[prop.Name] = prop.Value.Clone();
                 }
                 config["readMode"] = mode;
                 File.WriteAllText(configPath, System.Text.Json.JsonSerializer.Serialize(config, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));

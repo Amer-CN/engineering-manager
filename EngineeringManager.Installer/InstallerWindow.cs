@@ -278,6 +278,7 @@ public class InstallerWindow : Form
                     case "install":
                         var installPath = j.RootElement.GetProperty("path").GetString() ?? "";
                         var dataPath = j.RootElement.TryGetProperty("dataPath", out var dpEl) ? (dpEl.GetString() ?? "") : "";
+                        InstallerLog($"[OnWebMessage] install received: installPath='{installPath}', dataPath='{dataPath}', raw={raw}");
                         Task.Run(() => DoInstall(installPath, dataPath));
                         break;
                     case "launch":
@@ -308,6 +309,7 @@ public class InstallerWindow : Form
     {
         try
         {
+            InstallerLog($"[DoInstall] 入口: installPath='{installPath}', dataPath='{dataPath}', IsUpdate={_opts.IsUpdate}, opts.DataPath='{_opts.DataPath}'");
             // 更新模式：等待旧进程退出
             if (_opts.WaitPid > 0)
             {
@@ -332,6 +334,7 @@ public class InstallerWindow : Form
             var actualDataPath = _opts.IsUpdate && !string.IsNullOrEmpty(_opts.DataPath)
                 ? _opts.DataPath : dataPath;
 
+            InstallerLog($"[DoInstall] 调用 Install: actualTarget='{actualTarget}', actualDataPath='{actualDataPath}', isUpdate={_opts.IsUpdate}");
             var service = new InstallerService();
             await service.Install(actualTarget, actualDataPath, _opts.IsUpdate, (percent, step) =>
             {
@@ -343,6 +346,16 @@ public class InstallerWindow : Form
         {
             SendToWeb(new { type = "installError", message = ex.Message });
         }
+    }
+
+    private static void InstallerLog(string msg)
+    {
+        try
+        {
+            var logPath = Path.Combine(Path.GetTempPath(), "工程管家-installer-debug.log");
+            File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {msg}\n");
+        }
+        catch { }
     }
 
     private void ToggleMaximize()

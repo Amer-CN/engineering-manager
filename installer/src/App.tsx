@@ -18,11 +18,6 @@ function postToHost(msg: object) {
   window.chrome?.webview?.postMessage(JSON.stringify(msg))
 }
 
-// 获取默认数据存储路径（由 C# init 消息下发，此处仅 fallback）
-function getDefaultDataPath(): string {
-  return ''
-}
-
 export default function App() {
   const { theme, setTheme, getDefaultPath } = useTheme()
   const [step, setStep] = useState<Step>('welcome')
@@ -66,7 +61,7 @@ export default function App() {
 
   const handleBegin = () => {
     setInstallPath(getDefaultPath())
-    setDataPath(getDefaultDataPath())
+    // dataPath 已由 C# init 消息下发设置，不再覆盖
     setStep('path')
   }
 
