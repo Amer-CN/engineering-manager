@@ -136,9 +136,13 @@ public static class ApiConfig
         builder.Services.AddAuthorization();
         builder.Services.AddHttpClient();
 
-        // 版本更新：manifest 拉取（30s） + 安装包下载（10min）
-        builder.Services.AddHttpClient("update", c => c.Timeout = TimeSpan.FromSeconds(30));
-        builder.Services.AddHttpClient("update-download", c => c.Timeout = TimeSpan.FromMinutes(10));
+// 版本更新：manifest 拉取（30s 短超时）
+builder.Services.AddHttpClient("update", c => c.Timeout = TimeSpan.FromSeconds(30));
+// 安装包下载：连接/响应头超时 10s，但【无整体下载死超时】（大文件靠慢速看门狗控制）
+builder.Services.AddHttpClient("update-download", c =>
+{
+    c.Timeout = Timeout.InfiniteTimeSpan; // 禁用整体超时，靠看门狗
+});
 
         // P0-4: 限流（登录防爆破 + 写防滥用）
         builder.Services.AddRateLimiter(options =>

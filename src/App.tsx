@@ -323,10 +323,12 @@ const AppContent: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                className="fixed top-12 left-1/2 -translate-x-1/2 z-[200] bg-amber-50 border border-amber-200 shadow-lg rounded-lg px-4 py-2.5 text-sm text-amber-800 flex items-center gap-3"
+                className="fixed top-12 left-0 right-0 z-[200] flex justify-center pointer-events-none"
               >
-                <span>⚠️ 当前正在使用默认密码 admin123，为安全建议尽快在【设置 → 用户管理】中自行修改。</span>
-                <button onClick={() => setClosedDefaultPwd(true)} className="text-amber-400 hover:text-amber-600 text-lg leading-none flex-shrink-0">&times;</button>
+                <div className="bg-amber-50 border border-amber-200 shadow-lg rounded-lg px-4 py-2.5 text-sm text-amber-800 flex items-center gap-3 pointer-events-auto">
+                  <span>⚠️ 当前正在使用默认密码 admin123，为安全建议尽快在【设置 → 用户管理】中自行修改。</span>
+                  <button onClick={() => setClosedDefaultPwd(true)} className="text-amber-400 hover:text-amber-600 text-lg leading-none flex-shrink-0">&times;</button>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

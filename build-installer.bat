@@ -9,9 +9,8 @@ echo.
 
 pushd "%~dp0"
 
-:: Read version from package.json
-for /f "tokens=2 delims=:, " %%a in ('findstr /C:"version" package.json') do set VERSION=%%~a
-set VERSION=%VERSION:"=%
+:: Read version from package.json (node for reliable parsing)
+for /f "delims=" %%a in ('node -p "require('./package.json').version"') do set VERSION=%%a
 echo   Version: %VERSION%
 echo.
 

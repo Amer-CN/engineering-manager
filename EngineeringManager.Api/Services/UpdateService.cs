@@ -1,5 +1,7 @@
 using System.Diagnostics;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Collections.Concurrent;
@@ -9,9 +11,32 @@ namespace EngineeringManager.Api.Services;
 public sealed class UpdatePackage
 {
     [JsonPropertyName("url")]       public string Url { get; set; } = "";
+    /// <summary>代理前缀数组（不含版本号/文件名），客户端自动拼接 Url。</summary>
+    [JsonPropertyName("proxies")]   public string[]? Proxies { get; set; }
     [JsonPropertyName("size")]      public long Size { get; set; }
     [JsonPropertyName("sha256")]    public string Sha256 { get; set; } = "";
     [JsonPropertyName("signature")] public string? Signature { get; set; }
+
+    /// <summary>
+    /// 组装候选下载地址列表：proxies 前缀 + Url，末尾追加 Url 原链做永久兜底。
+    /// proxies 为空时 candidates = [Url]。
+    /// </summary>
+    public string[] ResolveCandidates()
+    {
+        var candidates = new List<string>();
+        if (Proxies is { Length: > 0 })
+        {
+            foreach (var p in Proxies)
+            {
+                if (string.IsNullOrWhiteSpace(p)) continue;
+                candidates.Add(p.TrimEnd('/') + "/" + Url);
+            }
+        }
+        // GitHub 原链永久兜底，放最后
+        if (!string.IsNullOrWhiteSpace(Url) && !candidates.Contains(Url))
+            candidates.Add(Url);
+        return candidates.ToArray();
+    }
 }
 
 public sealed class UpdateManifest
@@ -52,6 +77,11 @@ public class UpdateService
     private readonly IHttpClientFactory _http;
     private readonly IConfiguration _cfg;
     private readonly ConcurrentDictionary<string, DownloadProgress> _downloads = new();
+
+    // ── 看门狗阈值 ──
+    private const int SlowSpeedThresholdBytesPerSec = 50 * 1024;  // 50 KB/s
+    private const int SlowSpeedWindowSeconds = 15;                  // 连续 15 秒低于阈值
+    private const int ConnectTimeoutSeconds = 10;                   // 首字节超时
 
     public UpdateService(IHttpClientFactory http, IConfiguration cfg) { _http = http; _cfg = cfg; }
 
@@ -108,92 +138,286 @@ public class UpdateService
         _ = Task.Run(async () => await DownloadAsync(pkg, progress, downloadId));
     }
 
+    // ════════════════════════════════════════════════════════════════
+    //  核心下载逻辑（internal 供单元测试调用）
+    // ════════════════════════════════════════════════════════════════
+
     private async Task DownloadAsync(UpdatePackage pkg, DownloadProgress progress, string downloadId)
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(pkg.Url))
+            var urls = pkg.ResolveCandidates();
+            if (urls.Length == 0)
                 throw new InvalidOperationException("manifest 缺少下载地址");
 
             Directory.CreateDirectory(UpdatesDir);
+            // 文件名从原始 Url 提取（代理 URL 的 path 可能不规范）
             var fileName  = Path.GetFileName(new Uri(pkg.Url).AbsolutePath);
             var finalPath = Path.Combine(UpdatesDir, fileName);
             var partPath  = finalPath + ".part";
 
             progress.Phase = "downloading";
+            progress.TotalBytes = pkg.Size;
+
+            // 检查已有 .part
+            long existingBytes = GetPartSize(partPath);
+            if (existingBytes > 0)
+                Console.WriteLine($"[Update] 发现 .part 已有 {existingBytes} 字节，尝试续传");
 
             var client = _http.CreateClient("update-download");
-            using var resp = await client.GetAsync(pkg.Url, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
-            resp.EnsureSuccessStatusCode();
+            Exception? lastError = null;
 
-            progress.TotalBytes = resp.Content.Headers.ContentLength;
-
-            await using var src = await resp.Content.ReadAsStreamAsync();
-            await using var dst = File.Create(partPath);
-
-            var buffer = new byte[81920]; // 80KB 块
-            long bytesReceived = 0;
-            var sw = Stopwatch.StartNew();
-            long lastBytes = 0;
-            double lastTimestamp = 0;
-
-            // 增量 SHA256 计算
-            using var incrementalHash = System.Security.Cryptography.IncrementalHash.CreateHash(
-                System.Security.Cryptography.HashAlgorithmName.SHA256);
-
-            int bytesRead;
-            while ((bytesRead = await src.ReadAsync(buffer)) > 0)
+            for (int i = 0; i < urls.Length; i++)
             {
-                await dst.WriteAsync(buffer.AsMemory(0, bytesRead));
-                incrementalHash.AppendData(buffer.AsSpan(0, bytesRead));
+                var url = urls[i];
+                var isLastSource = i == urls.Length - 1;
+                var shortUrl = url.Length > 70 ? url[..70] + "..." : url;
+                Console.WriteLine($"[Update] 尝试源 {i + 1}/{urls.Length}: {shortUrl}");
 
-                bytesReceived += bytesRead;
-                var elapsed = sw.Elapsed.TotalSeconds;
-                // 每秒更新一次速度（避免高频抖动）
-                if (elapsed - lastTimestamp >= 1.0)
+                try
                 {
-                    var deltaBytes = bytesReceived - lastBytes;
-                    var deltaTime = elapsed - lastTimestamp;
-                    progress.SpeedBytesPerSec = deltaTime > 0 ? deltaBytes / deltaTime : null;
-                    lastBytes = bytesReceived;
-                    lastTimestamp = elapsed;
-                }
+                    var result = await TryDownloadFromSourceAsync(
+                        client, url, pkg, partPath, progress,
+                        existingBytes, isLastSource);
 
-                progress.BytesReceived = bytesReceived;
+                    if (result == DownloadSourceResult.Success)
+                    {
+                        // ── 全量 SHA256 校验 ──
+                        progress.Phase = "verifying";
+                        progress.BytesReceived = GetPartSize(partPath);
+
+                        if (!await VerifySha256Async(partPath, pkg.Sha256))
+                        {
+                            Console.Error.WriteLine("[Update] SHA256 校验失败，删除 .part");
+                            TryDeleteFile(partPath);
+                            progress.Phase = "error";
+                            progress.Error = "SHA256 校验失败：文件可能损坏或被篡改";
+                            return;
+                        }
+
+                        // ── 原子 rename ──
+                        if (File.Exists(finalPath)) File.Delete(finalPath);
+                        File.Move(partPath, finalPath);
+
+                        progress.Phase = "done";
+                        progress.FilePath = finalPath;
+                        progress.BytesReceived = pkg.Size;
+                        Console.WriteLine($"[Update] 下载完成: {finalPath}");
+                        return;
+                    }
+
+                    // 源未成功但没异常 — 更新 existingBytes 供下一个源续传
+                    existingBytes = GetPartSize(partPath);
+                    Console.WriteLine($"[Update] 源 {i + 1} 未成功（{result}），切换下一个源");
+                }
+                catch (Exception ex)
+                {
+                    lastError = ex;
+                    existingBytes = GetPartSize(partPath);
+                    Console.Error.WriteLine($"[Update] 源 {i + 1} 异常: {ex.Message}");
+
+                    if (isLastSource)
+                    {
+                        progress.Phase = "error";
+                        progress.Error = $"所有下载源均不可用：{ex.Message}";
+                        return;
+                    }
+                }
             }
 
-            await dst.FlushAsync();
-            sw.Stop();
-
-            // 校验前标记
-            progress.Phase = "verifying";
-
-            // SHA256 校验
-            if (!string.IsNullOrWhiteSpace(pkg.Sha256))
-            {
-                var hash = Convert.ToHexString(incrementalHash.GetHashAndReset());
-                if (!hash.Equals(pkg.Sha256, StringComparison.OrdinalIgnoreCase))
-                {
-                    File.Delete(partPath);
-                    progress.Phase = "error";
-                    progress.Error = $"SHA256 校验失败：期望 {pkg.Sha256[..16]}...，实际 {hash[..16]}...";
-                    return;
-                }
-            }
-
-            // 原子 rename
-            if (File.Exists(finalPath)) File.Delete(finalPath);
-            File.Move(partPath, finalPath);
-
-            progress.Phase = "done";
-            progress.FilePath = finalPath;
-            progress.BytesReceived = bytesReceived;
+            progress.Phase = "error";
+            progress.Error = lastError != null
+                ? $"所有下载源均不可用：{lastError.Message}"
+                : "所有下载源均不可用";
         }
         catch (Exception ex)
         {
             progress.Phase = "error";
             progress.Error = ex.Message;
         }
+    }
+
+    /// <summary>
+    /// 从单个源尝试下载（含断点续传 + 慢速看门狗）。
+    /// 返回 Success 表示下载完整；其他值表示应切到下一个源。
+    /// </summary>
+    internal async Task<DownloadSourceResult> TryDownloadFromSourceAsync(
+        HttpClient client, string url, UpdatePackage pkg,
+        string partPath, DownloadProgress progress,
+        long existingBytes, bool isLastSource)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Get, url);
+        if (existingBytes > 0)
+            req.Headers.Range = new RangeHeaderValue(existingBytes, null);
+
+        using var cts = new CancellationTokenSource();
+        using var resp = await client.SendAsync(
+            req, HttpCompletionOption.ResponseHeadersRead, cts.Token);
+
+        // ── 非 2xx 处理 ──
+        if (!resp.IsSuccessStatusCode)
+        {
+            if (resp.StatusCode == System.Net.HttpStatusCode.RequestedRangeNotSatisfiable
+                && existingBytes >= pkg.Size)
+            {
+                // 416 且 .part 已达完整大小 → 直接进入校验
+                Console.WriteLine("[Update] 416 但 .part 已达完整大小，直接校验");
+                progress.BytesReceived = existingBytes;
+                return DownloadSourceResult.Success;
+            }
+            Console.Error.WriteLine($"[Update] HTTP {(int)resp.StatusCode} {resp.ReasonPhrase}");
+            return DownloadSourceResult.HardFail;
+        }
+
+        // ── 判断响应类型 ──
+        var contentLength = resp.Content.Headers.ContentLength;
+        bool isPartialContent = resp.StatusCode == System.Net.HttpStatusCode.PartialContent;
+
+        if (!isPartialContent && existingBytes > 0)
+        {
+            // 200 OK：服务器忽略了 Range → 从 0 重写
+            Console.WriteLine("[Update] 服务器忽略 Range（200 OK），从 0 重新下载");
+            existingBytes = 0;
+        }
+
+        // ── 防坏源：检查 Content-Length 是否合理 ──
+        if (contentLength.HasValue && !isPartialContent)
+        {
+            // 200 OK 时 Content-Length 应等于 pkg.Size
+            if (contentLength.Value != pkg.Size)
+            {
+                Console.Error.WriteLine(
+                    $"[Update] Content-Length ({contentLength.Value}) 与预期 ({pkg.Size}) 不符，可能不是安装包");
+                return DownloadSourceResult.InvalidContent;
+            }
+        }
+
+        // ── 打开目标文件 ──
+        FileStream dst;
+        if (isPartialContent && existingBytes > 0)
+        {
+            // 206: 追加模式（绝不 File.Create，会清零）
+            dst = new FileStream(partPath, FileMode.Append, FileAccess.Write, FileShare.None, 81920);
+            Console.WriteLine($"[Update] 续传: 从 {existingBytes} 字节开始追加");
+        }
+        else
+        {
+            // 200 OK 或全新下载: 从 0 开始
+            dst = new FileStream(partPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920);
+            existingBytes = 0;
+            Console.WriteLine("[Update] 全新下载: 从 0 开始");
+        }
+
+        await using (dst)
+        {
+            await using var src = await resp.Content.ReadAsStreamAsync(cts.Token);
+
+            var buffer = new byte[81920]; // 80KB 块
+            long bytesThisSession = 0;
+            long sessionStartBytes = existingBytes;
+            long totalBytes = existingBytes;
+            var sw = Stopwatch.StartNew();
+            long lastCheckBytes = 0;
+            double lastCheckTime = 0;
+
+            int bytesRead;
+            while (true)
+            {
+                // ── 慢速看门狗（仅非兜底源） ──
+                if (!isLastSource)
+                {
+                    var watchdogElapsed = sw.Elapsed.TotalSeconds;
+                    if (watchdogElapsed - lastCheckTime >= SlowSpeedWindowSeconds)
+                    {
+                        var deltaBytes = totalBytes - lastCheckBytes - sessionStartBytes;
+                        var speed = deltaBytes / (watchdogElapsed - lastCheckTime);
+                        if (speed < SlowSpeedThresholdBytesPerSec)
+                        {
+                            Console.Error.WriteLine(
+                                $"[Update] 慢速看门狗触发: {speed / 1024:F1} KB/s < {SlowSpeedThresholdBytesPerSec / 1024} KB/s，切换源");
+                            return DownloadSourceResult.TooSlow;
+                        }
+                        lastCheckBytes = totalBytes - sessionStartBytes;
+                        lastCheckTime = watchdogElapsed;
+                    }
+                }
+
+                // ── 读取数据 ──
+                using var readCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token);
+                readCts.CancelAfter(TimeSpan.FromSeconds(isLastSource ? 120 : 30));
+                try
+                {
+                    bytesRead = await src.ReadAsync(buffer.AsMemory(0, buffer.Length), readCts.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    if (isLastSource) continue; // 兜底源不因超时放弃
+                    Console.Error.WriteLine("[Update] 读取超时，切换源");
+                    return DownloadSourceResult.TooSlow;
+                }
+
+                if (bytesRead <= 0) break;
+
+                await dst.WriteAsync(buffer.AsMemory(0, bytesRead));
+                bytesThisSession += bytesRead;
+                totalBytes = sessionStartBytes + bytesThisSession;
+
+                // 更新进度
+                progress.BytesReceived = totalBytes;
+                var elapsed = sw.Elapsed.TotalSeconds;
+                if (elapsed >= 1.0)
+                {
+                    progress.SpeedBytesPerSec = bytesThisSession / elapsed;
+                }
+
+                // 防止超过文件总大小
+                if (totalBytes >= pkg.Size) break;
+            }
+
+            await dst.FlushAsync();
+            sw.Stop();
+
+            // 验证下载大小
+            var finalSize = GetPartSize(partPath);
+            if (finalSize != pkg.Size)
+            {
+                Console.Error.WriteLine(
+                    $"[Update] 下载大小不符: {finalSize} != {pkg.Size}");
+                return DownloadSourceResult.InvalidContent;
+            }
+
+            progress.BytesReceived = finalSize;
+            return DownloadSourceResult.Success;
+        }
+    }
+
+    /// <summary>对 .part 文件做全量 SHA256 校验</summary>
+    internal static async Task<bool> VerifySha256Async(string partPath, string expectedHash)
+    {
+        if (string.IsNullOrWhiteSpace(expectedHash)) return true;
+
+        await using var stream = File.OpenRead(partPath);
+        using var sha = SHA256.Create();
+        var hashBytes = await sha.ComputeHashAsync(stream);
+        var hash = Convert.ToHexString(hashBytes);
+
+        return hash.Equals(expectedHash, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    //  辅助方法
+    // ════════════════════════════════════════════════════════════════
+
+    internal static long GetPartSize(string partPath)
+    {
+        try { return File.Exists(partPath) ? new FileInfo(partPath).Length : 0; }
+        catch { return 0; }
+    }
+
+    internal static void TryDeleteFile(string path)
+    {
+        try { if (File.Exists(path)) File.Delete(path); }
+        catch { /* ignore */ }
     }
 
     public void ApplyAndExit(string installerPath)
@@ -232,4 +456,17 @@ public class UpdateService
         var parts = v.Split('.', StringSplitOptions.RemoveEmptyEntries);
         return parts.Length switch { <= 1 => v + ".0.0", 2 => v + ".0", _ => v };
     }
+}
+
+/// <summary>单源下载结果</summary>
+internal enum DownloadSourceResult
+{
+    /// <summary>下载完整，可以进入校验</summary>
+    Success,
+    /// <summary>硬失败（连接失败 / 非 2xx / DNS 失败）</summary>
+    HardFail,
+    /// <summary>速度太慢，被看门狗中断</summary>
+    TooSlow,
+    /// <summary>内容无效（大小不符 / HTML 错误页）</summary>
+    InvalidContent,
 }

@@ -50,6 +50,14 @@ export interface ChangelogVersion {
   groups?: ChangelogGroup[]
 }
 export const versions: ChangelogVersion[] = [
+  { v: 'v0.81.1', date: '2026-07-02', groups: [
+    { label: '🐛 Bug 修复', items: [
+      '**自动更新下载链接失效**：之前用的两个下载加速链接挂了，现在去掉了，换成了新的加速源',
+    ] },
+    { label: '🔧 技术优化', items: [
+      '**下载加速源改为自动管理**：以前每个版本的下载链接都要手写一遍，现在只需要维护加速地址前缀，版本号自动拼接，发版更省事了',
+    ] },
+  ] },
   { v: 'v0.81.0', date: '2026-07-02', groups: [
     { label: '🐛 Bug 修复', items: [
       '**安装器设置「数据存储路径」不生效**：安装时选的数据存放位置，装完发现没被用上？修好了，现在装完就用你选的路径',
