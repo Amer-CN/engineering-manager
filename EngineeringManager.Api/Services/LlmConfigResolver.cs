@@ -186,6 +186,10 @@ public class LlmConfigResolver
             return userConfig;
         }
 
+        // 温度/MaxTokens 覆盖：即使回落到内置或环境变量模型，也让用户在设置里保存的温度生效
+        double overrideTemp = userConfig?.Temperature ?? 0;
+        int overrideMax = userConfig?.MaxTokens ?? 0;
+
         // 2. 环境变量
         var envBaseUrl = _configuration["LLM_BASE_URL"]
             ?? Environment.GetEnvironmentVariable("LLM_BASE_URL");
@@ -205,6 +209,8 @@ public class LlmConfigResolver
                 ApiKey = envApiKey,
                 Model = envModel ?? "gpt-4o-mini",
                 UseBuiltIn = false,
+                Temperature = overrideTemp,
+                MaxTokens = overrideMax,
             };
         }
 
@@ -217,6 +223,8 @@ public class LlmConfigResolver
             ApiKey = BuiltInApiKey,
             Model = BuiltInModel,
             UseBuiltIn = true,
+            Temperature = overrideTemp,
+            MaxTokens = overrideMax,
         };
     }
 

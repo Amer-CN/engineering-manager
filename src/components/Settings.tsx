@@ -12,6 +12,7 @@ import { SettingsPiiKeySection } from '@/components/features/settings/SettingsPi
 import { DataPathSection } from '@/components/features/settings/DataPathSection'
 import { DevToolsSection } from '@/components/features/settings/DevToolsSection'
 import { AppearanceSection } from '@/components/features/settings/AppearanceSection'
+import { AiProviderSection } from '@/components/features/settings/AiProviderSection'
 import { AboutSection } from '@/components/features/settings/AboutSection'
 
 /**
@@ -51,6 +52,7 @@ const Settings: React.FC<SettingsProps> = ({ refresh }) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* ── 左列：数据 & 技术 ── */}
         <div className="space-y-6">
+          <AiProviderSection />
           <DataPathSection refresh={refresh} />
           <SettingsPiiKeySection />
           <SettingsSqliteSection
