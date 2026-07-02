@@ -50,6 +50,11 @@ export interface ChangelogVersion {
   groups?: ChangelogGroup[]
 }
 export const versions: ChangelogVersion[] = [
+  { v: 'v0.81.4', date: '2026-07-02', groups: [
+    { label: '🐛 Bug 修复', items: [
+      '**更新后前端版本号和日志仍显示旧版**：根因是 WebView2 浏览器内核缓存了旧前端文件，现在软件启动时检测版本变化会自动清理缓存，确保加载最新界面',
+    ] },
+  ] },
   { v: 'v0.81.3', date: '2026-07-02', groups: [
     { label: '🐛 Bug 修复', items: [
       '**更新后版本号和更新日志不刷新**：安装更新后打开软件发现版本号还是旧的、更新日志也没变？这是浏览器缓存了旧页面导致的，现在装更新时会自动清理旧文件，服务器也加了禁止缓存',
