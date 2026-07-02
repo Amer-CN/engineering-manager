@@ -9,6 +9,7 @@ import { useStatusStore } from './store/statusStore'
 import { UpdateBanner } from './components/UpdateBanner'
 import { NAV_ITEMS, PAGE_IDS, getFilteredSidebarRoutes } from './routes'
 import { MaskProvider, useUserIdSync } from './contexts/MaskContext'
+import { UpdaterProvider } from './hooks/useUpdater'
 import { RequirePermission, RequireAdmin } from './hooks/usePermission'
 import { useAuth } from './hooks/useAuth'
 import { useRowHoverOpacity } from './hooks/useRowHoverOpacity'
@@ -379,7 +380,9 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <MaskProvider>
-        <AppContent />
+        <UpdaterProvider>
+          <AppContent />
+        </UpdaterProvider>
       </MaskProvider>
     </QueryClientProvider>
   )

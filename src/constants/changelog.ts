@@ -50,6 +50,11 @@ export interface ChangelogVersion {
   groups?: ChangelogGroup[]
 }
 export const versions: ChangelogVersion[] = [
+  { v: 'v0.81.7', date: '2026-07-02', groups: [
+    { label: '🐛 Bug 修复', items: [
+      '**设置页下载更新无进度条**：根因是设置页和顶部通知条各自独立管理更新状态，互不共享。现已改为全局共享状态，在设置页下载更新时也能看到进度条和暂停/取消按钮',
+    ] },
+  ] },
   { v: 'v0.81.6', date: '2026-07-02', groups: [
     { label: '✨ 体验优化', items: [
       '**下载更新支持暂停/继续**：下载进度条现在有暂停和取消两个按钮（之前两个都是取消，重复了），暂停后可以继续下载，利用断点续传不丢进度',
