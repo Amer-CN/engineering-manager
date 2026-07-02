@@ -178,14 +178,20 @@ public class MainWindow : Form
         base.OnLoad(e);
         try
         {
-            // ── 版本变化时清理 WebView2 缓存（防旧前端残留） ──
-            ClearWebView2CacheIfVersionChanged();
+            // ── 版本化缓存目录：每个版本独立缓存，彻底杜绝旧缓存 ──
+            var appVersion = ReadFrontendVersion();
+            var cacheDir = string.IsNullOrEmpty(appVersion)
+                ? Path.Combine(Path.GetTempPath(), "engineering-manager-webview2")
+                : Path.Combine(Path.GetTempPath(), $"engineering-manager-webview2-v{appVersion}");
+
+            // 清理旧版本缓存目录（只删非当前版本的）
+            CleanupOldCacheDirs(appVersion);
 
             webView = new WebView2 { Dock = DockStyle.Fill };
             Controls.Add(webView);
 
             var env = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(
-                null, Path.Combine(Path.GetTempPath(), "engineering-manager-webview2"));
+                null, cacheDir);
             await webView.EnsureCoreWebView2Async(env);
 
             webView.CoreWebView2.Settings.IsStatusBarEnabled = false;
@@ -208,43 +214,59 @@ public class MainWindow : Form
     }
 
     // ═══════════════════════════════════════════════════════════
-    // WebView2 缓存管理 — 版本变化时自动清理
+    // WebView2 缓存管理 — 版本化缓存目录
     // ═══════════════════════════════════════════════════════════
 
     /// <summary>
-    /// 检查程序集版本是否与上次记录不同，不同则清理 WebView2 缓存目录。
-    /// 解决：安装新版后 WebView2 仍从本地缓存加载旧前端文件。
+    /// 从 dist/index.html 读取前端版本号（__APP_VERSION__）。
+    /// 不依赖 C# Assembly version（可能因 MSBuild 评估时机滞后）。
     /// </summary>
-    private static void ClearWebView2CacheIfVersionChanged()
+    private static string? ReadFrontendVersion()
     {
         try
         {
-            var currentVersion = typeof(MainWindow).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
-            var cacheRoot = Path.Combine(Path.GetTempPath(), "engineering-manager-webview2");
-            var versionFile = Path.Combine(cacheRoot, ".app-version");
+            var exeDir = AppContext.BaseDirectory;
+            var indexPath = Path.Combine(exeDir, "dist", "index.html");
+            if (!File.Exists(indexPath)) return null;
 
-            string? lastVersion = null;
-            if (File.Exists(versionFile))
-                lastVersion = File.ReadAllText(versionFile).Trim();
-
-            if (lastVersion == currentVersion) return;  // 版本没变，不清理
-
-            Console.WriteLine($"[MainWindow] 版本变化 {lastVersion} → {currentVersion}，清理 WebView2 缓存");
-
-            // 删除整个缓存目录（WebView2 不运行时才能删）
-            if (Directory.Exists(cacheRoot))
-            {
-                try { Directory.Delete(cacheRoot, true); }
-                catch { /* 部分文件被占用则忽略，WebView2 会重建 */ }
-            }
-
-            // 重新创建目录并写入版本标记
-            Directory.CreateDirectory(cacheRoot);
-            File.WriteAllText(versionFile, currentVersion);
+            var html = File.ReadAllText(indexPath);
+            // 匹配 window.__APP_VERSION__ = 'x.y.z'
+            var match = System.Text.RegularExpressions.Regex.Match(
+                html, @"__APP_VERSION__' *]= *'([0-9]+\.[0-9]+\.[0-9]+)'");
+            return match.Success ? match.Groups[1].Value : null;
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[MainWindow] 清理 WebView2 缓存失败: {ex.Message}");
+            Console.Error.WriteLine($"[MainWindow] 读取前端版本失败: {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 清理旧版本的 WebView2 缓存目录（保留当前版本）。
+    /// 在 WebView2 启动前执行，此时旧目录无文件锁。
+    /// </summary>
+    private static void CleanupOldCacheDirs(string? currentVersion)
+    {
+        try
+        {
+            var tempPath = Path.GetTempPath();
+            var prefix = "engineering-manager-webview2";
+            foreach (var dir in Directory.GetDirectories(tempPath, prefix + "*"))
+            {
+                var dirName = Path.GetFileName(dir);
+                // 保留：无版本后缀的旧目录（兼容）+ 当前版本目录
+                if (dirName == prefix) continue;  // 旧格式目录，跳过（可能有锁）
+                if (dirName == $"{prefix}-v{currentVersion}") continue;  // 当前版本
+
+                Console.WriteLine($"[MainWindow] 清理旧缓存: {dirName}");
+                try { Directory.Delete(dir, true); }
+                catch { /* 被占用则忽略 */ }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[MainWindow] 清理旧缓存失败: {ex.Message}");
         }
     }
 

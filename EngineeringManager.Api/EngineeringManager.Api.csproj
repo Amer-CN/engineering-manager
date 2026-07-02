@@ -9,7 +9,7 @@
 
     <ApplicationIcon>app.ico</ApplicationIcon>
     <NoWarn>MSB3277;AD0001</NoWarn>
-    <Version>0.81.4</Version>
+    <Version>0.81.5</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,9 +22,12 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="theme-*.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <Content Include="theme-*.png">
+
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+
+    </Content>
+
     <Content Include="app.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -35,7 +38,5 @@
     <EmbeddedResource Include="Migrations\Scripts\*.sql" />
   </ItemGroup>
 
-  <Target Name="SyncVersion" BeforeTargets="BeforeBuild">
-    <Exec Command="node scripts/sync-version.mjs" WorkingDirectory="$(MSBuildProjectDirectory)\.." ContinueOnError="true" />
-  </Target>
+  
 </Project>

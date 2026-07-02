@@ -82,9 +82,12 @@ public class InstallerService
     {
         Directory.CreateDirectory(targetPath);
 
-        // 更新模式：先清理旧 dist/ 目录（防 WebView2 加载旧 hash 的 JS 文件）
+        // 更新模式：先杀旧进程 + 清理旧 dist/ 目录
         if (isUpdate)
         {
+            // 杀掉正在运行的 EngineeringManager.Api.exe（否则 exe 文件被锁无法覆盖）
+            KillRunningProcesses(targetPath);
+
             var oldDist = Path.Combine(targetPath, "dist");
             if (Directory.Exists(oldDist))
             {
@@ -147,6 +150,57 @@ public class InstallerService
     // 兼容旧签名
     public Task Install(string targetPath, string dataPath, Action<int, string> onProgress)
         => Install(targetPath, dataPath, false, onProgress);
+
+    /// <summary>
+    /// 杀掉指定安装目录下正在运行的 EngineeringManager.Api.exe 及其子进程（msedgewebview2）。
+    /// 更新模式下必须先杀进程，否则 exe 文件被锁无法覆盖。
+    /// </summary>
+    private static void KillRunningProcesses(string targetPath)
+    {
+        try
+        {
+            var exePath = Path.Combine(targetPath, "EngineeringManager.Api.exe");
+            var normalizedTarget = Path.GetFullPath(targetPath).TrimEnd('\\').ToLowerInvariant();
+
+            // 杀主进程
+            foreach (var proc in Process.GetProcessesByName("EngineeringManager.Api"))
+            {
+                try
+                {
+                    var procPath = Path.GetFullPath(proc.MainModule?.FileName ?? "").ToLowerInvariant();
+                    if (procPath.StartsWith(normalizedTarget))
+                    {
+                        Console.WriteLine($"[Installer] 杀旧进程: {proc.Id} ({procPath})");
+                        proc.Kill(entireProcessTree: true);
+                        proc.WaitForExit(5000);
+                    }
+                }
+                catch { /* 权限不足或进程已退出 */ }
+            }
+
+            // 杀残留 WebView2 子进程（按路径匹配 targetPath 下的 msedgewebview2）
+            foreach (var proc in Process.GetProcessesByName("msedgewebview2"))
+            {
+                try
+                {
+                    var procPath = Path.GetFullPath(proc.MainModule?.FileName ?? "").ToLowerInvariant();
+                    if (procPath.StartsWith(normalizedTarget))
+                    {
+                        proc.Kill(entireProcessTree: true);
+                        proc.WaitForExit(3000);
+                    }
+                }
+                catch { }
+            }
+
+            // 给操作系统一点时间释放文件句柄
+            Thread.Sleep(500);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[Installer] 杀旧进程失败: {ex.Message}");
+        }
+    }
 
     /// <summary>
     /// 带重试的文件复制（更新模式下文件可能仍被占用）
