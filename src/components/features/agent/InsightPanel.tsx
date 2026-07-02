@@ -51,7 +51,7 @@ const InsightPanel: React.FC<InsightPanelProps> = ({ onAsk }) => {
   })
 
   const statsQuery = useQuery({
-    queryKey: ['insight-stats'],
+    queryKey: ['dashboard-stats'],
     queryFn: async () => {
       const api = await getAPI()
       const res = await api.getDashboardStats()

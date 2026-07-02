@@ -176,20 +176,24 @@ const AgentDashboard: React.FC = () => {
     setTimeout(() => inputRef.current?.focus(), 100)
   }, [])
 
-  /** 重发（重跑上一条 user 消息） */
-  const handleResend = useCallback(() => {
-    // 找到最后一条 user 消息
-    const lastUserIdx = [...messages].reverse().findIndex(m => m.role === 'user')
-    if (lastUserIdx === -1) return
-    const actualIdx = messages.length - 1 - lastUserIdx
-    const lastUserMsg = messages[actualIdx]
-    if (!lastUserMsg?.content) return
-
-    // 移除从该消息开始的所有消息
-    setMessages(prev => prev.slice(0, actualIdx))
-    // 重新发送
-    setTimeout(() => handleSend(lastUserMsg.content), 50)
-  }, [messages, handleSend])
+  /** 重发（按目标 AI 气泡的 clientId 定位其前一条 user 消息并重发） */
+  const handleResend = useCallback(
+    (assistantClientId: string) => {
+      const aIdx = messages.findIndex(m => m.clientId === assistantClientId)
+      if (aIdx < 0) return
+      // 向前找最近的一条 user 消息
+      let uIdx = -1
+      for (let i = aIdx - 1; i >= 0; i--) {
+        if (messages[i].role === 'user') { uIdx = i; break }
+      }
+      if (uIdx < 0) return
+      const userContent = messages[uIdx].content ?? ''
+      // 截断到该 user 消息之前（移除这条 user 及其之后的所有消息），再重新发送
+      setMessages(prev => prev.slice(0, uIdx))
+      setTimeout(() => handleSend(userContent), 50)
+    },
+    [messages, handleSend],
+  )
 
   /** Insight/Search 触发提问 */
   const handleAsk = useCallback(
@@ -301,7 +305,7 @@ const AgentDashboard: React.FC = () => {
                     isUser={msg.role === 'user'}
                     onResend={
                       msg.role === 'assistant' && idx > 0
-                        ? handleResend
+                        ? () => handleResend(msg.clientId)
                         : undefined
                     }
                   />

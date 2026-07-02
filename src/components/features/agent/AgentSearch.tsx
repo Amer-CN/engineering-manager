@@ -173,7 +173,7 @@ const AgentSearch: React.FC<AgentSearchProps> = ({
   // ── 滚动到选中项 ──
   useEffect(() => {
     const el = listRef.current?.querySelector(`[data-idx="${selectedIndex}"]`)
-    el?.scrollIntoView({ block: 'nearest' })
+    el?.scrollIntoView?.({ block: 'nearest' })
   }, [selectedIndex])
 
   // ── 执行选中 ──
@@ -201,12 +201,13 @@ const AgentSearch: React.FC<AgentSearchProps> = ({
     <Modal
       isOpen={open}
       onClose={onClose}
-      size="lg"
+      size="xl"
       showClose={false}
       showOverlay={true}
       closeOnOverlay={true}
       centered={false}
-      className="!max-w-xl mt-[10vh]"
+      className="!max-w-xl"
+      bodyClassName="p-0"
     >
       <div className="flex flex-col" style={{ maxHeight: '70vh' }}>
         {/* 搜索输入 */}
