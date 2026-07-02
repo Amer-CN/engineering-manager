@@ -14,6 +14,13 @@ for /f "delims=" %%a in ('node -p "require('./package.json').version"') do set V
 echo   Version: %VERSION%
 echo.
 
+:: 0. Sync version to all locations BEFORE any dotnet build
+::    (must run before dotnet publish so MSBuild evaluates the correct <Version>)
+echo [0/6] Syncing version %VERSION%...
+node scripts\sync-version.mjs
+if errorlevel 1 ( echo X FAILED & pause & exit /b 1 )
+echo    OK
+
 :: 1. Build installer frontend
 echo [1/6] Building installer frontend...
 cd installer
@@ -29,7 +36,7 @@ call npx vite build
 if errorlevel 1 ( echo X FAILED & pause & exit /b 1 )
 echo    OK
 
-:: 3. Publish main app
+:: 3. Publish main app (version already synced, no BeforeBuild target needed)
 echo.
 echo [3/6] Publishing main app...
 set APP_DIR=EngineeringManager.Installer\app-files
