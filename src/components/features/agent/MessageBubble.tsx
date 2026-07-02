@@ -2,18 +2,23 @@
  * MessageBubble — 消息气泡组件
  *
  * 区分用户/AI 消息样式，展示 tool_calls 结果（成功绿色/失败红色）
+ * AI 消息 hover 出操作条（复制/重发/👍👎）
+ * 工具结果沿用现有文本渲染（富卡片留第二批，代码结构预留 RichToolResult 接入点）
  */
 
-import React from 'react'
+import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from '@/components/ui/Icon'
 import type { AgentMessage, AgentMessageResponse, ToolCallResult } from '@/types/agent'
+import MessageActions from './MessageActions'
 
 interface MessageBubbleProps {
   /** 消息数据 */
-  message: AgentMessage | AgentMessageResponse
+  message: AgentMessage | AgentMessageResponse | (AgentMessage & { clientId?: string; sending?: boolean })
   /** 是否为当前用户发送的消息 */
   isUser: boolean
+  /** 重发回调（重跑上一条 user 消息） */
+  onResend?: () => void
 }
 
 /** 解析 toolCalls — 支持 ToolCall[] 和 ToolCallResult[] 两种形态 */
@@ -36,7 +41,8 @@ function extractToolResults(
   }))
 }
 
-const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser }) => {
+const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend }) => {
+  const [hovered, setHovered] = useState(false)
   const content = message.content || ''
   const toolResults = extractToolResults(
     (message as AgentMessage).toolCalls
@@ -47,7 +53,9 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser }) => {
       initial={{ opacity: 0, y: 12, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.25, ease: 'easeOut' }}
-      className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'} mb-4`}
+      className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'} mb-4 group`}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
       {/* 头像 */}
       <motion.div
@@ -65,7 +73,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser }) => {
       </motion.div>
 
       {/* 气泡主体 */}
-      <div className={`max-w-[75%] min-w-[120px] ${isUser ? 'items-end' : 'items-start'}`}>
+      <div className={`max-w-[75%] min-w-[120px] ${isUser ? 'items-end' : 'items-start'} flex flex-col`}>
         {/* 文字内容 */}
         {content && (
           <div
@@ -117,6 +125,14 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser }) => {
               </motion.div>
             ))}
           </div>
+        )}
+
+        {/* ═══ RichToolResult 接入点（第二批富卡片渲染） ═══ */}
+        {/* 当后端返回结构化 tool result 时，在此处渲染富卡片组件 */}
+
+        {/* AI 消息操作条 */}
+        {!isUser && content && hovered && (
+          <MessageActions content={content} onResend={onResend} />
         )}
       </div>
     </motion.div>
