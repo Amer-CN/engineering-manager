@@ -57,6 +57,9 @@ public class ApiTestBase : IDisposable
         using var conn = new SqliteConnection(ConnectionString);
         conn.Open();
 
+        // v0.80: is_default_password 列（EnsureTables 在生产环境添加，测试环境需手动补）
+        try { conn.Execute("ALTER TABLE users ADD COLUMN is_default_password INTEGER DEFAULT 0"); } catch { }
+
         var salt = "test-salt-1234567890123456";
         var hash = EngineeringManager.Api.Common.HashPassword("admin123", salt, 2);
 
