@@ -86,10 +86,12 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
   }, [deleteTarget, toast])
 
   const startRename = useCallback((conv: { id: number; title: string }) => {
+    cancelRenameRef.current = false
     setRenamingId(conv.id); setRenameValue(conv.title)
   }, [])
 
   const commitRename = useCallback(async (convId: number) => {
+    if (cancelRenameRef.current) { cancelRenameRef.current = false; return }
     if (committingRef.current) return
     committingRef.current = true
     const newTitle = renameValue.trim()
