@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, createContext, useContext, type ReactNode } from 'react'
 import {
   checkUpdate, startDownload, subscribeDownloadProgress, applyUpdate, cancelDownload,
   type UpdateCheck, type DownloadProgress,
@@ -6,7 +6,23 @@ import {
 
 export type UpdaterPhase = 'idle' | 'checking' | 'downloading' | 'verifying' | 'done' | 'error' | 'no-update' | 'cancelled' | 'paused'
 
-export function useUpdater() {
+interface UpdaterContextValue {
+  info: UpdateCheck | null
+  progress: DownloadProgress | null
+  phase: UpdaterPhase
+  error: string | null
+  check: () => Promise<UpdateCheck | null>
+  download: () => Promise<void>
+  cancel: () => Promise<void>
+  pause: () => Promise<void>
+  resume: () => void
+  retry: () => void
+  setInfo: (v: UpdateCheck | null) => void
+}
+
+const UpdaterContext = createContext<UpdaterContextValue | null>(null)
+
+export function UpdaterProvider({ children }: { children: ReactNode }) {
   const [info, setInfo] = useState<UpdateCheck | null>(null)
   const [progress, setProgress] = useState<DownloadProgress | null>(null)
   const [phase, setPhase] = useState<UpdaterPhase>('idle')
@@ -98,5 +114,15 @@ export function useUpdater() {
     download()
   }, [download])
 
-  return { info, progress, phase, error, check, download, cancel, pause, resume, retry, setInfo }
+  const value: UpdaterContextValue = {
+    info, progress, phase, error, check, download, cancel, pause, resume, retry, setInfo,
+  }
+
+  return <UpdaterContext.Provider value={value}>{children}</UpdaterContext.Provider>
+}
+
+export function useUpdater() {
+  const ctx = useContext(UpdaterContext)
+  if (!ctx) throw new Error('useUpdater must be used within UpdaterProvider')
+  return ctx
 }

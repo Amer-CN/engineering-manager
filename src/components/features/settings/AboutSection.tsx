@@ -7,11 +7,22 @@ interface AboutSectionProps {
   onShowChangelog: () => void
 }
 
+function formatBytes(b: number): string {
+  if (b < 1024 * 1024) return (b / 1024).toFixed(0) + ' KB'
+  return (b / 1024 / 1024).toFixed(1) + ' MB'
+}
+
+function formatSpeed(bps: number): string {
+  if (bps < 1024) return bps.toFixed(0) + ' B/s'
+  if (bps < 1024 * 1024) return (bps / 1024).toFixed(0) + ' KB/s'
+  return (bps / 1024 / 1024).toFixed(1) + ' MB/s'
+}
+
 /**
  * 关于卡片：Logo + 版本号 + 检查更新 + 更新日志
  */
 export function AboutSection({ onShowChangelog }: AboutSectionProps) {
-  const { info, phase, error, check, download } = useUpdater()
+  const { info, progress, phase, error, check, download, cancel, pause, resume, retry } = useUpdater()
   const [checked, setChecked] = useState(false)
 
   const handleCheck = async () => {
@@ -19,16 +30,95 @@ export function AboutSection({ onShowChangelog }: AboutSectionProps) {
     setChecked(true)
   }
 
+  const isDownloading = phase === 'downloading' || phase === 'verifying'
+
+  const renderProgressBar = () => {
+    if (!progress || phase === 'idle') return null
+    const pct = progress.percent
+    const indeterminate = pct == null && phase === 'downloading'
+
+    if (phase === 'verifying') {
+      return <div className="text-xs text-slate-500 mt-1">正在校验...</div>
+    }
+
+    return (
+      <div className="mt-2 w-full">
+        <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all duration-300 ${indeterminate ? 'w-1/3 bg-blue-400 animate-pulse' : phase === 'paused' ? 'bg-amber-400' : 'bg-blue-500'}`}
+            style={indeterminate ? {} : { width: `${Math.min(pct ?? 0, 100)}%` }}
+          />
+        </div>
+        <div className="text-xs text-slate-500 mt-1 flex justify-between items-center">
+          <span>
+            {phase === 'paused' ? '已暂停 · ' : ''}
+            {formatBytes(progress.bytesReceived)}
+            {progress.totalBytes ? ` / ${formatBytes(progress.totalBytes)}` : ''}
+          </span>
+          <span className="flex items-center gap-2">
+            {pct != null ? `${pct}%` : indeterminate ? '下载中...' : ''}
+            {progress.speedBytesPerSec ? ` · ${formatSpeed(progress.speedBytesPerSec)}` : ''}
+            {phase === 'downloading' && (
+              <>
+                <button
+                  onClick={pause}
+                  className="text-slate-400 hover:text-amber-500 transition-colors ml-1"
+                  title="暂停下载"
+                >
+                  ❚❚
+                </button>
+                <button
+                  onClick={cancel}
+                  className="text-slate-400 hover:text-red-500 transition-colors ml-1"
+                  title="取消下载"
+                >
+                  ✕
+                </button>
+              </>
+            )}
+          </span>
+        </div>
+        {phase === 'paused' && (
+          <div className="flex items-center gap-2 mt-1.5">
+            <button
+              onClick={resume}
+              className="text-xs px-2 py-0.5 rounded bg-blue-600 text-white hover:bg-blue-700"
+            >
+              继续下载
+            </button>
+            <button
+              onClick={cancel}
+              className="text-xs px-2 py-0.5 rounded bg-slate-200 text-slate-600 hover:bg-slate-300"
+            >
+              取消
+            </button>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   const renderUpdateStatus = () => {
     if (phase === 'checking') return <span className="text-blue-500 text-xs">检查中...</span>
     if (phase === 'no-update' && checked) return <span className="text-green-600 text-xs">已是最新版本</span>
     if (phase === 'error') return <span className="text-red-500 text-xs">{error}</span>
     if (info?.hasUpdate) {
-      if (phase === 'downloading' || phase === 'verifying') {
+      if (isDownloading) {
         return <span className="text-blue-500 text-xs">下载中...</span>
+      }
+      if (phase === 'paused') {
+        return <span className="text-amber-600 text-xs">下载已暂停</span>
       }
       if (phase === 'done') {
         return <span className="text-green-600 text-xs">更新完成，正在重启...</span>
+      }
+      if (phase === 'cancelled') {
+        return (
+          <div className="flex items-center gap-2">
+            <span className="text-slate-500 text-xs">下载已取消</span>
+            <button onClick={retry} className="text-xs px-2 py-0.5 rounded bg-blue-600 text-white hover:bg-blue-700">重新下载</button>
+          </div>
+        )
       }
       return (
         <div className="flex items-center gap-2">
@@ -83,7 +173,7 @@ export function AboutSection({ onShowChangelog }: AboutSectionProps) {
             <div className="flex items-center gap-2">
               <button
                 onClick={handleCheck}
-                disabled={phase === 'checking' || phase === 'downloading' || phase === 'verifying'}
+                disabled={phase === 'checking' || isDownloading}
                 className="text-xs px-3 py-1 rounded border border-slate-300 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {phase === 'checking' ? '检查中...' : '检查更新'}
@@ -93,6 +183,7 @@ export function AboutSection({ onShowChangelog }: AboutSectionProps) {
               )}
             </div>
             <div className="mt-1">{renderUpdateStatus()}</div>
+            {renderProgressBar()}
           </div>
         </div>
       </div>
