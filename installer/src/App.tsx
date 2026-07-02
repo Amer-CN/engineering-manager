@@ -119,7 +119,7 @@ export default function App() {
           style={{ position: 'absolute', inset: 0 }}
         >
           {step === 'welcome' && (
-            <WelcomeStep onBegin={handleBegin} version="0.81.5" />
+            <WelcomeStep onBegin={handleBegin} version="0.81.6" />
           )}
           {step === 'path' && (
             <PathStep

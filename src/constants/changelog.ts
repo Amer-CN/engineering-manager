@@ -50,6 +50,11 @@ export interface ChangelogVersion {
   groups?: ChangelogGroup[]
 }
 export const versions: ChangelogVersion[] = [
+  { v: 'v0.81.6', date: '2026-07-02', groups: [
+    { label: '✨ 体验优化', items: [
+      '**下载更新支持暂停/继续**：下载进度条现在有暂停和取消两个按钮（之前两个都是取消，重复了），暂停后可以继续下载，利用断点续传不丢进度',
+    ] },
+  ] },
   { v: 'v0.81.5', date: '2026-07-02', groups: [
     { label: '🐛 Bug 修复', items: [
       '**更新后版本号仍显示旧版**：三个根因一次性修复：①安装器更新时自动杀旧进程确保 C# 程序文件被正确覆盖；②版本号同步提前到编译之前解决 exe 版本滞后问题；③WebView2 改用版本化缓存目录，每个版本独立缓存，从根源杜绝旧前端残留',
