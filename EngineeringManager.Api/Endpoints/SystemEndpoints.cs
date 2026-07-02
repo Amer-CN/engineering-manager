@@ -17,7 +17,8 @@ public static class SystemEndpoints
         // ============================================================
         // 健康检查 (前端 api-adapter 探活 + 监控用)
 
-        app.MapGet("/api/health", () => Common.Ok(new { status = "ok", version = "0.81.0" }));
+        var appVer = typeof(SystemEndpoints).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
+        app.MapGet("/api/health", () => Common.Ok(new { status = "ok", version = appVer }));
 
         // v0.72.0: WAL checkpoint (强制把 -wal 数据回写到 .db, 否则 backup 看不到加密数据)
         app.MapPost("/api/admin/db-checkpoint", (HttpContext ctx, IDbConnection db) =>

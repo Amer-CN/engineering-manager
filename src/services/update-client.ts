@@ -18,7 +18,7 @@ export interface UpdateCheck {
 
 /** SSE 推送的下载进度 */
 export interface DownloadProgress {
-  phase: 'idle' | 'downloading' | 'verifying' | 'done' | 'error'
+  phase: 'idle' | 'downloading' | 'verifying' | 'done' | 'error' | 'cancelled'
   bytesReceived: number
   totalBytes?: number
   percent?: number
@@ -63,6 +63,12 @@ export const subscribeDownloadProgress = (
     // EventSource 自动重连，不做特殊处理
   }
   return es
+}
+
+/** 取消下载 */
+export const cancelDownload = async (): Promise<boolean> => {
+  const res = await apiClient.post('/api/update/download/cancel', {})
+  return res.success
 }
 
 /** 装包 + 重启 */

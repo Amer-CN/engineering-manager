@@ -14,7 +14,7 @@ function formatSpeed(bps: number): string {
 }
 
 export function UpdateBanner() {
-  const { info, progress, phase, error, check, download, retry, setInfo } = useUpdater()
+  const { info, progress, phase, error, check, download, cancel, retry, setInfo } = useUpdater()
   const [dismissed, setDismissed] = useState(false)
 
   useEffect(() => {
@@ -35,7 +35,7 @@ export function UpdateBanner() {
           </p>
           <p className="text-sm text-red-600 font-medium mb-4">此版本需强制更新</p>
 
-          {renderProgress(progress, phase)}
+          {renderProgress(progress, phase, cancel)}
 
           {(!progress || phase === 'idle') && (
             <button
@@ -50,6 +50,13 @@ export function UpdateBanner() {
           )}
 
           {phase === 'done' && <p className="text-sm text-green-600 font-medium mt-3">更新完成，正在重启...</p>}
+
+          {phase === 'cancelled' && (
+            <div className="mt-3">
+              <p className="text-xs text-slate-500 mb-2">下载已取消</p>
+              <button onClick={retry} className="px-4 py-1.5 rounded text-xs font-medium bg-red-600 text-white hover:bg-red-700">重新下载</button>
+            </div>
+          )}
 
           {phase === 'error' && (
             <div className="mt-3">
@@ -82,7 +89,7 @@ export function UpdateBanner() {
               🚀 发现新版本 <strong>{info.latest}</strong>（当前 {info.current}）
             </span>
 
-            {!progress && !isDownloading && phase !== 'done' && (
+            {!progress && !isDownloading && phase !== 'done' && phase !== 'cancelled' && (
               <button
                 onClick={download}
                 className="px-3 py-1 rounded text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 flex-shrink-0"
@@ -92,21 +99,36 @@ export function UpdateBanner() {
             )}
 
             {phase === 'downloading' && (
-              <span className="text-xs text-blue-600 flex-shrink-0">准备中...</span>
+              <button
+                onClick={cancel}
+                className="px-3 py-1 rounded text-xs font-medium bg-slate-200 text-slate-600 hover:bg-slate-300 flex-shrink-0"
+              >
+                取消
+              </button>
             )}
 
             {phase === 'done' && <span className="text-xs text-green-600 flex-shrink-0">更新完成，正在重启...</span>}
+            {phase === 'cancelled' && (
+              <button
+                onClick={retry}
+                className="px-3 py-1 rounded text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 flex-shrink-0"
+              >
+                重新下载
+              </button>
+            )}
 
-            <button
-              onClick={() => setDismissed(true)}
-              className="text-amber-400 hover:text-amber-600 text-lg leading-none flex-shrink-0 ml-1"
-              title="稍后再说"
-            >
-              &times;
-            </button>
+            {phase !== 'downloading' && phase !== 'verifying' && (
+              <button
+                onClick={() => setDismissed(true)}
+                className="text-amber-400 hover:text-amber-600 text-lg leading-none flex-shrink-0 ml-1"
+                title="稍后再说"
+              >
+                &times;
+              </button>
+            )}
           </div>
 
-          {isDownloading && renderProgress(progress, phase)}
+          {isDownloading && renderProgress(progress, phase, cancel)}
 
           {phase === 'error' && (
             <div className="flex items-center gap-2 mt-1">
@@ -120,7 +142,7 @@ export function UpdateBanner() {
   )
 }
 
-function renderProgress(progress: any, phase: string) {
+function renderProgress(progress: any, phase: string, cancel?: () => void) {
   if (!progress || phase === 'idle') return null
   const pct = progress.percent
   const indeterminate = pct == null && phase === 'downloading'
@@ -137,14 +159,23 @@ function renderProgress(progress: any, phase: string) {
               style={indeterminate ? {} : { width: `${Math.min(pct ?? 0, 100)}%` }}
             />
           </div>
-          <div className="text-xs text-slate-500 mt-1 flex justify-between">
+          <div className="text-xs text-slate-500 mt-1 flex justify-between items-center">
             <span>
               {formatBytes(progress.bytesReceived)}
               {progress.totalBytes ? ` / ${formatBytes(progress.totalBytes)}` : ''}
             </span>
-            <span>
+            <span className="flex items-center gap-2">
               {pct != null ? `${pct}%` : indeterminate ? '下载中...' : ''}
               {progress.speedBytesPerSec ? ` · ${formatSpeed(progress.speedBytesPerSec)}` : ''}
+              {cancel && phase === 'downloading' && (
+                <button
+                  onClick={cancel}
+                  className="text-slate-400 hover:text-red-500 transition-colors"
+                  title="取消下载"
+                >
+                  ✕
+                </button>
+              )}
             </span>
           </div>
         </>

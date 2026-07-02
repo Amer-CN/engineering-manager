@@ -55,7 +55,7 @@ public sealed record UpdateCheckResult(
 /// <summary>下载进度状态（线程安全）</summary>
 public sealed class DownloadProgress
 {
-    public string Phase { get; set; } = "idle";   // idle|downloading|verifying|done|error
+    public string Phase { get; set; } = "idle";   // idle|downloading|verifying|done|error|cancelled
     public long BytesReceived { get; set; }
     public long? TotalBytes { get; set; }
     public double? Percent => TotalBytes.HasValue && TotalBytes.Value > 0
@@ -77,6 +77,8 @@ public class UpdateService
     private readonly IHttpClientFactory _http;
     private readonly IConfiguration _cfg;
     private readonly ConcurrentDictionary<string, DownloadProgress> _downloads = new();
+    private readonly ConcurrentDictionary<string, byte> _active = new();
+    private readonly ConcurrentDictionary<string, CancellationTokenSource> _cancelTokens = new();
 
     // ── 看门狗阈值 ──
     private const int SlowSpeedThresholdBytesPerSec = 50 * 1024;  // 50 KB/s
@@ -128,21 +130,50 @@ public class UpdateService
         return _downloads.TryGetValue(downloadId, out var p) ? p : null;
     }
 
-    /// <summary>启动后台下载，立即返回。进度通过 GetProgress 或 SSE 查询。</summary>
-    public void StartDownload(UpdatePackage pkg, string downloadId = "default")
+    /// <summary>
+    /// 启动后台下载，立即返回。同 id 只允许一个活动下载（防并发写同一 .part）。
+    /// 返回 false 表示已有同 id 下载在跑。
+    /// </summary>
+    public bool StartDownload(UpdatePackage pkg, string downloadId = "default")
     {
+        // 已有同 id 下载在跑 → 拒绝重复触发
+        if (!_active.TryAdd(downloadId, 0)) return false;
+
         var progress = new DownloadProgress { Phase = "idle" };
         _downloads[downloadId] = progress;
 
+        var cts = new CancellationTokenSource();
+        _cancelTokens[downloadId] = cts;
+
         // 后台执行，不阻塞请求
-        _ = Task.Run(async () => await DownloadAsync(pkg, progress, downloadId));
+        _ = Task.Run(async () =>
+        {
+            try { await DownloadAsync(pkg, progress, downloadId, cts.Token); }
+            finally
+            {
+                _active.TryRemove(downloadId, out _);
+                if (_cancelTokens.TryRemove(downloadId, out var c)) c?.Dispose();
+            }
+        });
+        return true;
+    }
+
+    /// <summary>取消进行中的下载</summary>
+    public bool CancelDownload(string downloadId = "default")
+    {
+        if (_cancelTokens.TryGetValue(downloadId, out var cts))
+        {
+            cts.Cancel();
+            return true;
+        }
+        return false;
     }
 
     // ════════════════════════════════════════════════════════════════
     //  核心下载逻辑（internal 供单元测试调用）
     // ════════════════════════════════════════════════════════════════
 
-    private async Task DownloadAsync(UpdatePackage pkg, DownloadProgress progress, string downloadId)
+    internal async Task DownloadAsync(UpdatePackage pkg, DownloadProgress progress, string downloadId, CancellationToken cancelToken)
     {
         try
         {
@@ -169,6 +200,13 @@ public class UpdateService
 
             for (int i = 0; i < urls.Length; i++)
             {
+                if (cancelToken.IsCancellationRequested)
+                {
+                    progress.Phase = "cancelled";
+                    progress.Error = "下载已取消";
+                    return;
+                }
+
                 var url = urls[i];
                 var isLastSource = i == urls.Length - 1;
                 var shortUrl = url.Length > 70 ? url[..70] + "..." : url;
@@ -178,7 +216,7 @@ public class UpdateService
                 {
                     var result = await TryDownloadFromSourceAsync(
                         client, url, pkg, partPath, progress,
-                        existingBytes, isLastSource);
+                        existingBytes, isLastSource, cancelToken);
 
                     if (result == DownloadSourceResult.Success)
                     {
@@ -195,9 +233,8 @@ public class UpdateService
                             return;
                         }
 
-                        // ── 原子 rename ──
-                        if (File.Exists(finalPath)) File.Delete(finalPath);
-                        File.Move(partPath, finalPath);
+                        // ── 落盘退避重试（防杀软占用） ──
+                        await FinalizeWithRetryAsync(partPath, finalPath);
 
                         progress.Phase = "done";
                         progress.FilePath = finalPath;
@@ -209,6 +246,12 @@ public class UpdateService
                     // 源未成功但没异常 — 更新 existingBytes 供下一个源续传
                     existingBytes = GetPartSize(partPath);
                     Console.WriteLine($"[Update] 源 {i + 1} 未成功（{result}），切换下一个源");
+                }
+                catch (OperationCanceledException) when (cancelToken.IsCancellationRequested)
+                {
+                    progress.Phase = "cancelled";
+                    progress.Error = "下载已取消";
+                    return;
                 }
                 catch (Exception ex)
                 {
@@ -230,6 +273,11 @@ public class UpdateService
                 ? $"所有下载源均不可用：{lastError.Message}"
                 : "所有下载源均不可用";
         }
+        catch (OperationCanceledException) when (cancelToken.IsCancellationRequested)
+        {
+            progress.Phase = "cancelled";
+            progress.Error = "下载已取消";
+        }
         catch (Exception ex)
         {
             progress.Phase = "error";
@@ -238,22 +286,37 @@ public class UpdateService
     }
 
     /// <summary>
-    /// 从单个源尝试下载（含断点续传 + 慢速看门狗）。
+    /// 从单个源尝试下载（含断点续传 + 慢速看门狗 + 头部超时）。
     /// 返回 Success 表示下载完整；其他值表示应切到下一个源。
     /// </summary>
     internal async Task<DownloadSourceResult> TryDownloadFromSourceAsync(
         HttpClient client, string url, UpdatePackage pkg,
         string partPath, DownloadProgress progress,
-        long existingBytes, bool isLastSource)
+        long existingBytes, bool isLastSource, CancellationToken cancelToken = default)
     {
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
         if (existingBytes > 0)
             req.Headers.Range = new RangeHeaderValue(existingBytes, null);
 
-        using var cts = new CancellationTokenSource();
-        using var resp = await client.SendAsync(
-            req, HttpCompletionOption.ResponseHeadersRead, cts.Token);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancelToken);
+        // ── 头部/连接阶段超时（10s）—— 防代理收了 TCP 却不回响应头 ──
+        cts.CancelAfter(TimeSpan.FromSeconds(ConnectTimeoutSeconds));
 
+        HttpResponseMessage resp;
+        try
+        {
+            resp = await client.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cts.Token);
+        }
+        catch (OperationCanceledException) when (!cancelToken.IsCancellationRequested)
+        {
+            Console.Error.WriteLine($"[Update] 响应头超时（{ConnectTimeoutSeconds}s），切换源");
+            return DownloadSourceResult.HardFail;
+        }
+        // 已拿到响应头，撤销头部计时器（正文流不设整体死线）
+        cts.CancelAfter(Timeout.InfiniteTimeSpan);
+
+        using (resp)
+        {
         // ── 非 2xx 处理 ──
         if (!resp.IsSuccessStatusCode)
         {
@@ -323,6 +386,10 @@ public class UpdateService
             int bytesRead;
             while (true)
             {
+                // ── 取消检查 ──
+                if (cancelToken.IsCancellationRequested)
+                    throw new OperationCanceledException(cancelToken);
+
                 // ── 慢速看门狗（仅非兜底源） ──
                 if (!isLastSource)
                 {
@@ -343,11 +410,15 @@ public class UpdateService
                 }
 
                 // ── 读取数据 ──
-                using var readCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token);
+                using var readCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, cancelToken);
                 readCts.CancelAfter(TimeSpan.FromSeconds(isLastSource ? 120 : 30));
                 try
                 {
                     bytesRead = await src.ReadAsync(buffer.AsMemory(0, buffer.Length), readCts.Token);
+                }
+                catch (OperationCanceledException) when (cancelToken.IsCancellationRequested)
+                {
+                    throw; // 用户取消，向上传播
                 }
                 catch (OperationCanceledException)
                 {
@@ -358,8 +429,12 @@ public class UpdateService
 
                 if (bytesRead <= 0) break;
 
-                await dst.WriteAsync(buffer.AsMemory(0, bytesRead));
-                bytesThisSession += bytesRead;
+                // ── 防 overshoot：按剩余量裁剪，杜绝写超 pkg.Size ──
+                var remaining = pkg.Size - totalBytes;
+                if (remaining <= 0) break;
+                var toWrite = (int)Math.Min(bytesRead, remaining);
+                await dst.WriteAsync(buffer.AsMemory(0, toWrite));
+                bytesThisSession += toWrite;
                 totalBytes = sessionStartBytes + bytesThisSession;
 
                 // 更新进度
@@ -374,7 +449,8 @@ public class UpdateService
                 if (totalBytes >= pkg.Size) break;
             }
 
-            await dst.FlushAsync();
+            // ── 刷到磁盘（减少关闭瞬间与杀软的竞态） ──
+            dst.Flush(flushToDisk: true);
             sw.Stop();
 
             // 验证下载大小
@@ -389,6 +465,7 @@ public class UpdateService
             progress.BytesReceived = finalSize;
             return DownloadSourceResult.Success;
         }
+        } // end using (resp)
     }
 
     /// <summary>对 .part 文件做全量 SHA256 校验</summary>
@@ -418,6 +495,29 @@ public class UpdateService
     {
         try { if (File.Exists(path)) File.Delete(path); }
         catch { /* ignore */ }
+    }
+
+    /// <summary>
+    /// 落盘退避重试：File.Delete + File.Move，最多重试 6 次。
+    /// 解决杀毒软件短暂占用文件导致 File.Move 抛 IOException 的问题。
+    /// </summary>
+    internal static async Task FinalizeWithRetryAsync(string partPath, string finalPath, int maxAttempts = 6)
+    {
+        for (int attempt = 1; ; attempt++)
+        {
+            try
+            {
+                if (File.Exists(finalPath)) File.Delete(finalPath);
+                File.Move(partPath, finalPath);
+                return;
+            }
+            catch (Exception ex) when
+                ((ex is IOException || ex is UnauthorizedAccessException) && attempt < maxAttempts)
+            {
+                Console.Error.WriteLine($"[Update] 落盘重试 {attempt}/{maxAttempts}: {ex.Message}");
+                await Task.Delay(attempt * 500); // 0.5s→1s→…→2.5s
+            }
+        }
     }
 
     public void ApplyAndExit(string installerPath)
@@ -463,7 +563,7 @@ internal enum DownloadSourceResult
 {
     /// <summary>下载完整，可以进入校验</summary>
     Success,
-    /// <summary>硬失败（连接失败 / 非 2xx / DNS 失败）</summary>
+    /// <summary>硬失败（连接失败 / 非 2xx / DNS 失败 / 头部超时）</summary>
     HardFail,
     /// <summary>速度太慢，被看门狗中断</summary>
     TooSlow,
