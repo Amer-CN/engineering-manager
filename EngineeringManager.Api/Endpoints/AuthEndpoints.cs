@@ -78,7 +78,8 @@ public static class AuthEndpoints
             var hash = Common.HashPassword(dto.NewPassword, salt, 2);
 
             // 5. 写入
-            var affected = await db.ExecuteAsync(@"UPDATE users SET password_hash=@Hash, password_salt=@Salt, password_hash_version=2 WHERE id=@Id",
+            // 不变量: 任何写入 password_hash 的 UPDATE 必须同时 is_default_password=0
+            var affected = await db.ExecuteAsync(@"UPDATE users SET password_hash=@Hash, password_salt=@Salt, password_hash_version=2, is_default_password=0 WHERE id=@Id",
                 new { Hash = hash, Salt = salt, Id = dto.UserId });
             return affected > 0 ? Common.Ok(new { userId = dto.UserId, newHashVersion = 2 }) : Common.Fail("重置失败");
         });
@@ -168,7 +169,8 @@ public static class AuthEndpoints
             {
                 var salt = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16)).ToLower();
                 var hash = Common.HashPassword(dto.Password ?? "", salt, 2);
-                var affected = await db.ExecuteAsync(@"UPDATE users SET password_hash=@Hash,password_salt=@Salt,display_name=@DisplayName,role_id=@RoleId,status=@Status WHERE id=@Id",
+                // 不变量: 任何写入 password_hash 的 UPDATE 必须同时 is_default_password=0
+                var affected = await db.ExecuteAsync(@"UPDATE users SET password_hash=@Hash,password_salt=@Salt,display_name=@DisplayName,role_id=@RoleId,status=@Status,is_default_password=0 WHERE id=@Id",
                     new { dto.Id, Hash = hash, Salt = salt, dto.DisplayName, dto.RoleId, dto.Status });
                 return affected > 0 ? Common.Ok() : Common.NotFound("用户不存在");
             }
