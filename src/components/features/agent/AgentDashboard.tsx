@@ -1,14 +1,8 @@
 /**
- * AgentDashboard — AI 助手主组件（重构：混合式工作台）
- *
- * 空态（无消息）：丰富工作台
- *   AgentHero → StatOverview → AgentComposer + SuggestionChips → CapabilityGrid + InsightPanel
- *
- * 对话态（有消息）：专注聊天
- *   [紧凑 Hero 条 → 消息流 → 底部 Composer] [右侧 ConversationHistory 常驻]
- *   <lg: 右栏转抽屉
- *
- * ⌘K 唤起 AgentSearch 命令面板
+ * AgentDashboard — AI 助手主组件（混合式工作台）
+ * 空态：Hero→Stats→Composer+Chips→Capability+Insight
+ * 对话态：紧凑Hero→消息流→Composer + 右栏History
+ * ⌘K 唤起 AgentSearch
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
@@ -20,10 +14,11 @@ import { useAuth } from '@/hooks/useAuth'
 import { usePermission } from '@/hooks/usePermission'
 import {
   sendAgentMessage,
+  sendAgentMessageStream,
   getAgentConversationDetail,
 } from '@/services/agent-client'
+import type { AgentStreamCallbacks } from '@/services/agent-client'
 import type {
-  AgentChatResponse,
   AgentConversation,
   SuggestionCardConfig,
 } from '@/types/agent'
@@ -78,67 +73,87 @@ const AgentDashboard: React.FC = () => {
 
   // ── 辅助函数 ──
 
-  const addMessage = useCallback((msg: Omit<LocalMessage, 'clientId'>) => {
-    setMessages(prev => [...prev, { ...msg, clientId: genClientId() }])
-  }, [])
-
-  /** 发送消息 */
+  /** 发送消息（流式优先，失败回退非流式） */
   const handleSend = useCallback(
-    async (text?: string) => {
-      const content = (text ?? inputValue).trim()
+    async (overrideContent?: string) => {
+      const content = (overrideContent ?? inputValue).trim()
       if (!content || loading) return
 
-      setInputValue('')
+      const userClientId = genClientId()
+      const assistantClientId = genClientId()
+
+      // 1) 追加用户消息 + 助手占位（流式逐字填充）
+      setMessages((prev) => [
+        ...prev,
+        { clientId: userClientId, role: 'user', content },
+        { clientId: assistantClientId, role: 'assistant', content: '', sending: true },
+      ])
+      if (overrideContent === undefined) setInputValue('')
       setLoading(true)
-      addMessage({ role: 'user', content, sending: true })
 
-      try {
-        const response: AgentChatResponse = await sendAgentMessage({
-          message: content,
-          ...(conversationId ? { conversationId } : {}),
-        })
-
-        if (response.conversationId && !conversationId) {
-          setConversationId(response.conversationId)
-          setRefreshTrigger(t => t + 1)
-        }
-
-        setMessages(prev =>
-          prev.map(m =>
-            m.sending && m.role === 'user' ? { ...m, sending: false } : m,
+      // 局部工具：按 clientId 更新助手占位
+      const patchAssistant = (patch: Partial<LocalMessage>) => {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.clientId === assistantClientId ? { ...m, ...patch } : m,
           ),
         )
+      }
 
-        if (response.message) {
-          addMessage({
-            role: 'assistant',
-            content: response.message.content,
-            toolCalls: response.toolCalls || response.message.toolCalls,
-          })
-        } else if (response.toolCalls && response.toolCalls.length > 0) {
-          addMessage({
-            role: 'assistant',
-            toolCalls: response.toolCalls,
-          })
-        } else if (response.error) {
-          addMessage({
-            role: 'assistant',
-            content: `❌ ${response.error}`,
+      const request = { message: content, ...(conversationId ? { conversationId } : {}) }
+
+      try {
+        const callbacks: AgentStreamCallbacks = {
+          onConversationId: (id) => setConversationId(id),
+          onTool: (name) => patchAssistant({ content: `🔧 正在查询：${name}…` }),
+          onContent: (text) => {
+            // 第一段正文到达时，清掉「正在查询」提示
+            setMessages((prev) =>
+              prev.map((m) => {
+                if (m.clientId !== assistantClientId) return m
+                const base = m.content?.startsWith('🔧') ? '' : (m.content ?? '')
+                return { ...m, content: base + text }
+              }),
+            )
+          },
+          onDone: ({ toolCalls }) => {
+            patchAssistant({ sending: false, toolCalls })
+            setRefreshTrigger((v) => v + 1) // 刷新洞察/统计
+          },
+          onError: (err) => {
+            patchAssistant({ sending: false, content: `❌ 出错了：${err}` })
+          },
+        }
+
+        await sendAgentMessageStream(request, callbacks)
+      } catch {
+        // 2) 流式失败 → 无缝回退到非流式（现有逻辑保持不变）
+        try {
+          const resp = await sendAgentMessage(request)
+          if (resp.success) {
+            if (resp.conversationId) setConversationId(resp.conversationId)
+            patchAssistant({
+              sending: false,
+              content: resp.message?.content ?? '',
+              toolCalls: resp.toolCalls,
+            })
+            setRefreshTrigger((v) => v + 1)
+          } else {
+            patchAssistant({ sending: false, content: `❌ ${resp.error ?? '请求失败'}` })
+          }
+        } catch (e) {
+          patchAssistant({
+            sending: false,
+            content: `❌ 请求失败：${e instanceof Error ? e.message : '未知错误'}`,
           })
         }
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err)
-        addMessage({
-          role: 'assistant',
-          content: `❌ 请求失败: ${msg}`,
-        })
       } finally {
         setLoading(false)
-        setRefreshTrigger(t => t + 1)
+        setRefreshTrigger((v) => v + 1)
         setTimeout(() => inputRef.current?.focus(), 50)
       }
     },
-    [inputValue, loading, conversationId, addMessage],
+    [inputValue, loading, conversationId],
   )
 
   /** 加载历史对话 */
