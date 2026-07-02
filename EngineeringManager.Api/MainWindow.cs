@@ -178,6 +178,9 @@ public class MainWindow : Form
         base.OnLoad(e);
         try
         {
+            // ── 版本变化时清理 WebView2 缓存（防旧前端残留） ──
+            ClearWebView2CacheIfVersionChanged();
+
             webView = new WebView2 { Dock = DockStyle.Fill };
             Controls.Add(webView);
 
@@ -201,6 +204,47 @@ public class MainWindow : Form
             MessageBox.Show($"WebView2 初始化失败：{ex.Message}",
                 "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
             Close();
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // WebView2 缓存管理 — 版本变化时自动清理
+    // ═══════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// 检查程序集版本是否与上次记录不同，不同则清理 WebView2 缓存目录。
+    /// 解决：安装新版后 WebView2 仍从本地缓存加载旧前端文件。
+    /// </summary>
+    private static void ClearWebView2CacheIfVersionChanged()
+    {
+        try
+        {
+            var currentVersion = typeof(MainWindow).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
+            var cacheRoot = Path.Combine(Path.GetTempPath(), "engineering-manager-webview2");
+            var versionFile = Path.Combine(cacheRoot, ".app-version");
+
+            string? lastVersion = null;
+            if (File.Exists(versionFile))
+                lastVersion = File.ReadAllText(versionFile).Trim();
+
+            if (lastVersion == currentVersion) return;  // 版本没变，不清理
+
+            Console.WriteLine($"[MainWindow] 版本变化 {lastVersion} → {currentVersion}，清理 WebView2 缓存");
+
+            // 删除整个缓存目录（WebView2 不运行时才能删）
+            if (Directory.Exists(cacheRoot))
+            {
+                try { Directory.Delete(cacheRoot, true); }
+                catch { /* 部分文件被占用则忽略，WebView2 会重建 */ }
+            }
+
+            // 重新创建目录并写入版本标记
+            Directory.CreateDirectory(cacheRoot);
+            File.WriteAllText(versionFile, currentVersion);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[MainWindow] 清理 WebView2 缓存失败: {ex.Message}");
         }
     }
 
