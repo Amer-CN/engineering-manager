@@ -481,6 +481,48 @@ public static class AgentEndpoints
         });
 
         // ═══════════════════════════════════════════════════════════
+        // 重命名会话
+        // ═══════════════════════════════════════════════════════════
+
+        app.MapPut("/api/agent/conversations/{id}", async (
+            HttpContext ctx,
+            long id,
+            IDbConnection db,
+            AgentConversationService conversations) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx);
+            if (string.IsNullOrEmpty(uid))
+                return Common.Fail("未登录", 401);
+
+            try
+            {
+                using var doc = await JsonDocument.ParseAsync(ctx.Request.Body);
+                var root = doc.RootElement;
+
+                string title = "";
+                if (root.TryGetProperty("title", out var titleProp) &&
+                    titleProp.ValueKind == JsonValueKind.String)
+                {
+                    title = titleProp.GetString() ?? "";
+                }
+
+                if (string.IsNullOrWhiteSpace(title))
+                    return Common.Fail("标题不能为空");
+
+                title = title.Trim();
+                if (title.Length > 100) title = title.Substring(0, 100);
+
+                var ok = await conversations.RenameConversationAsync(db, id, uid, title);
+                return ok ? Common.Ok() : Common.NotFound("对话不存在或无权操作");
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[AgentEndpoints] /api/agent/conversations/{id} PUT 失败: {ex.Message}");
+                return Common.Fail(Common.Sanitize(ex.Message));
+            }
+        });
+
+        // ═══════════════════════════════════════════════════════════
         // 配置状态（白名单，无需登录）
         // ═══════════════════════════════════════════════════════════
 

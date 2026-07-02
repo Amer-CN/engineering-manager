@@ -10,9 +10,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 // ── Mocks ──
 const mockGetAgentConversations = vi.hoisted(() => vi.fn())
 const mockDeleteAgentConversation = vi.hoisted(() => vi.fn())
+const mockRenameAgentConversation = vi.hoisted(() => vi.fn())
 vi.mock('@/services/agent-client', () => ({
   getAgentConversations: mockGetAgentConversations,
   deleteAgentConversation: mockDeleteAgentConversation,
+  renameAgentConversation: mockRenameAgentConversation,
 }))
 
 vi.mock('@/hooks/usePermission', () => ({
@@ -35,10 +37,15 @@ vi.mock('@/types/permissions', () => ({
 import ConversationHistory from '../ConversationHistory'
 import type { AgentConversation } from '@/types/agent'
 
+// 使用相对日期，避免跨日测试失败
+const _now = new Date()
+const _yesterday = new Date(_now.getTime() - 86400000)
+const _earlier = new Date(_now.getTime() - 10 * 86400000)
+
 const mockConversations: AgentConversation[] = [
-  { id: 1, title: '今天的对话', lastMessage: '最新消息', messageCount: 3, createdAt: '2026-07-02T10:00:00Z', updatedAt: '2026-07-02T10:30:00Z' },
-  { id: 2, title: '昨天的对话', lastMessage: '昨天消息', messageCount: 2, createdAt: '2026-07-01T10:00:00Z', updatedAt: '2026-07-01T10:30:00Z' },
-  { id: 3, title: '更早的对话', lastMessage: '旧消息', messageCount: 1, createdAt: '2026-06-20T10:00:00Z', updatedAt: '2026-06-20T10:30:00Z' },
+  { id: 1, title: '今天的对话', lastMessage: '最新消息', messageCount: 3, createdAt: _now.toISOString(), updatedAt: _now.toISOString() },
+  { id: 2, title: '昨天的对话', lastMessage: '昨天消息', messageCount: 2, createdAt: _yesterday.toISOString(), updatedAt: _yesterday.toISOString() },
+  { id: 3, title: '更早的对话', lastMessage: '旧消息', messageCount: 1, createdAt: _earlier.toISOString(), updatedAt: _earlier.toISOString() },
 ]
 
 function renderWithProviders(ui: React.ReactElement) {
@@ -51,6 +58,7 @@ describe('ConversationHistory', () => {
     vi.clearAllMocks()
     mockGetAgentConversations.mockResolvedValue(mockConversations)
     mockDeleteAgentConversation.mockResolvedValue(true)
+    mockRenameAgentConversation.mockResolvedValue(true)
   })
 
   test('渲染日期分组', async () => {
@@ -132,6 +140,96 @@ describe('ConversationHistory', () => {
     fireEvent.click(screen.getByText('删除'))
 
     // 等待回滚
+    await waitFor(() => {
+      expect(screen.getByText('今天的对话')).toBeTruthy()
+    })
+  })
+
+  test('点重命名按钮 → 出现输入框; Enter 保存 → 调用 renameAgentConversation', async () => {
+    const { container } = renderWithProviders(
+      <ConversationHistory
+        inline
+        onSelectConversation={vi.fn()}
+        onNewConversation={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('今天的对话')).toBeTruthy()
+    })
+
+    // 找到重命名按钮
+    const renameButtons = container.querySelectorAll('button[title="重命名对话"]')
+    expect(renameButtons.length).toBeGreaterThan(0)
+
+    fireEvent.click(renameButtons[0])
+
+    // 出现输入框，值为原标题
+    const input = await screen.findByDisplayValue('今天的对话')
+    expect(input).toBeTruthy()
+
+    // 修改标题
+    fireEvent.change(input, { target: { value: '新标题测试' } })
+
+    // 按 Enter 保存
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    await waitFor(() => {
+      expect(mockRenameAgentConversation).toHaveBeenCalledWith(1, '新标题测试')
+    })
+  })
+
+  test('Esc 取消重命名 → 不调用 renameAgentConversation', async () => {
+    const { container } = renderWithProviders(
+      <ConversationHistory
+        inline
+        onSelectConversation={vi.fn()}
+        onNewConversation={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('今天的对话')).toBeTruthy()
+    })
+
+    const renameButtons = container.querySelectorAll('button[title="重命名对话"]')
+    fireEvent.click(renameButtons[0])
+
+    const input = await screen.findByDisplayValue('今天的对话')
+    fireEvent.change(input, { target: { value: '不该保存的' } })
+    fireEvent.keyDown(input, { key: 'Escape' })
+
+    // 重命名输入框消失（搜索框仍存在，不能用 querySelector）
+    await waitFor(() => {
+      expect(screen.queryByDisplayValue('不该保存的')).toBeNull()
+    })
+
+    expect(mockRenameAgentConversation).not.toHaveBeenCalled()
+  })
+
+  test('重命名失败 → toast.error 且标题回滚', async () => {
+    mockRenameAgentConversation.mockResolvedValue(false)
+
+    const { container } = renderWithProviders(
+      <ConversationHistory
+        inline
+        onSelectConversation={vi.fn()}
+        onNewConversation={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('今天的对话')).toBeTruthy()
+    })
+
+    const renameButtons = container.querySelectorAll('button[title="重命名对话"]')
+    fireEvent.click(renameButtons[0])
+
+    const input = await screen.findByDisplayValue('今天的对话')
+    fireEvent.change(input, { target: { value: '失败标题' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    // 回滚后原标题还在
     await waitFor(() => {
       expect(screen.getByText('今天的对话')).toBeTruthy()
     })
