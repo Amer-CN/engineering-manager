@@ -10,6 +10,7 @@ interface Props {
 const LoginSettingsPage: React.FC<Props> = ({ onBack }) => {
   const [dataPath, setDataPath] = useState('')
   const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   useEffect(() => {
     (async () => {
@@ -24,29 +25,45 @@ const LoginSettingsPage: React.FC<Props> = ({ onBack }) => {
   }, [])
 
   const handleSelectFolder = useCallback(async () => {
+    setMessage(null)
     try {
       const api = await getAPI()
       const res = await api.setDataPath?.('__select_folder__')
-      if (res?.success && !res.data?.cancelled) {
-        // 刷新配置
-        const cfg = await api.getConfig?.()
-        if (cfg?.success && cfg.data?.dataPath) {
-          setDataPath(cfg.data.dataPath)
-        }
+      if (!res?.success) {
+        setMessage({ type: 'error', text: res?.error || '选择文件夹失败' })
+        return
       }
-    } catch (err) { console.warn('[LoginSettings] 选择文件夹失败:', err) }
+      if (res.data?.cancelled) return
+      // 刷新配置
+      const cfg = await api.getConfig?.()
+      if (cfg?.success && cfg.data?.dataPath) {
+        setDataPath(cfg.data.dataPath)
+      }
+    } catch (err) {
+      console.warn('[LoginSettings] 选择文件夹失败:', err)
+      setMessage({ type: 'error', text: '选择文件夹失败' })
+    }
   }, [])
 
   const handleSave = useCallback(async () => {
     if (!dataPath.trim()) return
     setSaving(true)
+    setMessage(null)
     try {
       const api = await getAPI()
-      await api.setDataPath?.(dataPath.trim())
-    } catch (err) { console.warn('[LoginSettings] 保存路径失败:', err) }
+      const res = await api.setDataPath?.(dataPath.trim())
+      if (!res?.success) {
+        setMessage({ type: 'error', text: res?.error || '保存路径失败' })
+        setSaving(false)
+        return
+      }
+      setMessage({ type: 'success', text: '路径已保存，需关闭并重新打开软件后生效。' })
+    } catch (err) {
+      console.warn('[LoginSettings] 保存路径失败:', err)
+      setMessage({ type: 'error', text: '保存路径失败，请重试' })
+    }
     setSaving(false)
-    onBack()
-  }, [dataPath, onBack])
+  }, [dataPath])
 
   return (
     <div style={{
@@ -71,7 +88,7 @@ const LoginSettingsPage: React.FC<Props> = ({ onBack }) => {
         <div style={{ display: 'flex', gap: 6 }}>
           <input
             type="text" value={dataPath}
-            onChange={e => setDataPath(e.target.value)}
+            onChange={e => { setDataPath(e.target.value); setMessage(null) }}
             placeholder="选择数据存储位置…"
             style={{
               flex: 1, padding: '6px 8px', fontSize: 11, borderRadius: 6, outline: 'none',
@@ -95,11 +112,25 @@ const LoginSettingsPage: React.FC<Props> = ({ onBack }) => {
 
       {/* 提示 */}
       <div style={{
-        fontSize: 10, color: 'var(--muted-2)', lineHeight: 1.5, marginBottom: 16, flex: 1,
+        fontSize: 10, color: 'var(--muted-2)', lineHeight: 1.5, marginBottom: 8,
       }}>
         数据存储路径包含所有工程数据（数据库、上传文件等），
         更换路径后原有数据不会自动迁移。
       </div>
+
+      {/* 操作反馈消息 */}
+      {message && (
+        <div style={{
+          fontSize: 11, padding: '6px 8px', borderRadius: 6, marginBottom: 8,
+          background: message.type === 'success' ? 'var(--success-soft)' : 'var(--danger-soft)',
+          color: message.type === 'success' ? 'var(--success)' : 'var(--danger)',
+          lineHeight: 1.5,
+        }}>
+          {message.text}
+        </div>
+      )}
+
+      <div style={{ flex: 1 }} />
 
       {/* 保存按钮 */}
       <motion.button
