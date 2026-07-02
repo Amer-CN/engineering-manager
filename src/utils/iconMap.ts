@@ -1,6 +1,6 @@
 import {
   Activity, AlertCircle, AlertTriangle, ArrowDownCircle, ArrowLeft, ArrowLeftRight, ArrowRightLeft, ArrowUpCircle,
-  BadgeCheck, Ban, Banknote, BarChart3, Briefcase, Building2,
+  BadgeCheck, Ban, Banknote, BarChart3, Bot, Briefcase, Building2,
   Calendar, CalendarCheck, Camera, Check, CheckCircle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ClipboardList, ClipboardPen, Clock, Construction, CreditCard,
   Database, DollarSign, Download, Droplets,
   Edit3, Eye, EyeOff,
@@ -11,7 +11,7 @@ import {
   Key,
   Landmark, LayoutDashboard, Lightbulb, Loader, Loader2, Lock, LogOut,
   Mail, MapPin, Menu, Monitor, Moon, MoreVertical,
-  Package, PaintBucket, Paperclip, Phone, PieChart, Plus, Power, Printer,
+  Package, PaintBucket, Paperclip, Phone, PieChart, Plug, Plus, Power, Printer,
   Receipt, Redo, RefreshCw, RotateCcw, Ruler,
   Save, Scan, ScrollText, Search, Settings, Shield, ShieldCheck, Snowflake, Sparkles, Stamp, Sun,
   Trash2, TrendingDown, TrendingUp, Truck,
@@ -23,7 +23,7 @@ import {
 
 export const iconMap: Record<string, LucideIcon> = {
   Activity, AlertCircle, AlertTriangle, ArrowDownCircle, ArrowLeft, ArrowLeftRight, ArrowRightLeft, ArrowUpCircle,
-  BadgeCheck, Ban, Banknote, BarChart3, Briefcase, Building2,
+  BadgeCheck, Ban, Banknote, BarChart3, Bot, Briefcase, Building2,
   Calendar, CalendarCheck, Camera, Check, CheckCircle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ClipboardFile: ClipboardPen, ClipboardList, ClipboardPen, Clock, Construction, CreditCard,
   Database, DollarSign, Download, Droplets,
   Edit: Edit3, Edit3, Eye, EyeOff,
@@ -34,7 +34,7 @@ export const iconMap: Record<string, LucideIcon> = {
   Key,
   Landmark, LayoutDashboard, Lightbulb, Loader, Loader2, Lock, LogOut,
   Mail, MapPin, Menu, Monitor, Moon, MoreVertical,
-  Package, PaintBucket, Palette: PaintBucket, Paperclip, Phone, PieChart, Plus, Power, Printer,
+  Package, PaintBucket, Palette: PaintBucket, Paperclip, Phone, PieChart, Plug, Plus, Power, Printer,
   Receipt, Redo, RefreshCw, RotateCcw, Ruler,
   Save, Scan, ScrollText, Search, Settings, Shield, ShieldCheck, Snowflake, Sparkles, Stamp, Sun,
   Trash2, TrendingDown, TrendingUp, Truck,
