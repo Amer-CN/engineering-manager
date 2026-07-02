@@ -1,16 +1,17 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import {
-  checkUpdate, startDownload, subscribeDownloadProgress, applyUpdate,
+  checkUpdate, startDownload, subscribeDownloadProgress, applyUpdate, cancelDownload,
   type UpdateCheck, type DownloadProgress,
 } from '../services/update-client'
 
-export type UpdaterPhase = 'idle' | 'checking' | 'downloading' | 'verifying' | 'done' | 'error' | 'no-update'
+export type UpdaterPhase = 'idle' | 'checking' | 'downloading' | 'verifying' | 'done' | 'error' | 'no-update' | 'cancelled'
 
 export function useUpdater() {
   const [info, setInfo] = useState<UpdateCheck | null>(null)
   const [progress, setProgress] = useState<DownloadProgress | null>(null)
   const [phase, setPhase] = useState<UpdaterPhase>('idle')
   const [error, setError] = useState<string | null>(null)
+  const esRef = useRef<EventSource | null>(null)
 
   const check = useCallback(async () => {
     setPhase('checking')
@@ -47,15 +48,31 @@ export function useUpdater() {
       if (p.phase === 'verifying') setPhase('verifying')
       if (p.phase === 'done') {
         es.close()
+        esRef.current = null
         setPhase('done')
         if (p.filePath) applyUpdate(p.filePath).catch(() => {})
       }
       if (p.phase === 'error') {
         es.close()
+        esRef.current = null
         setPhase('error')
         setError(p.error || '下载失败')
       }
+      if (p.phase === 'cancelled') {
+        es.close()
+        esRef.current = null
+        setPhase('cancelled')
+      }
     })
+    esRef.current = es
+  }, [])
+
+  const cancel = useCallback(async () => {
+    await cancelDownload()
+    esRef.current?.close()
+    esRef.current = null
+    setPhase('cancelled')
+    setProgress(null)
   }, [])
 
   const retry = useCallback(() => {
@@ -65,5 +82,5 @@ export function useUpdater() {
     download()
   }, [download])
 
-  return { info, progress, phase, error, check, download, retry, setInfo }
+  return { info, progress, phase, error, check, download, cancel, retry, setInfo }
 }

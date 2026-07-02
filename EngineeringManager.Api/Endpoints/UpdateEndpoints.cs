@@ -22,10 +22,23 @@ public static class UpdateEndpoints
                 if (!check.HasUpdate || check.Package == null)
                     return Common.Fail("暂无可用更新");
 
-                svc.StartDownload(check.Package, "default");
+                // 并发闸：同 id 只允许一个活动下载，重复点击复用进行中的下载
+                if (!svc.StartDownload(check.Package, "default"))
+                    return Common.Ok(new { accepted = true, alreadyRunning = true });
                 return Common.Ok(new { accepted = true });
             }
             catch (Exception ex) { return Common.ServerError("启动下载", ex); }
+        });
+
+        // 取消下载
+        app.MapPost("/api/update/download/cancel", (UpdateService svc) =>
+        {
+            try
+            {
+                svc.CancelDownload("default");
+                return Common.Ok(new { cancelled = true });
+            }
+            catch (Exception ex) { return Common.ServerError("取消下载", ex); }
         });
 
         // SSE 进度推送
@@ -43,7 +56,7 @@ public static class UpdateEndpoints
                 if (progress != null)
                 {
                     await WriteSSE(ctx, progress);
-                    if (progress.Phase is "done" or "error")
+                    if (progress.Phase is "done" or "error" or "cancelled")
                         break;
                 }
                 await Task.Delay(300, ct);

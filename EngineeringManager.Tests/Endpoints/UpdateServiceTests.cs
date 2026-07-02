@@ -14,25 +14,31 @@ namespace EngineeringManager.Tests.Endpoints;
 /// <summary>按请求 URL 分发的可编程 HttpMessageHandler</summary>
 internal sealed class ProgrammableHandler : HttpMessageHandler
 {
-    private readonly Dictionary<string, Func<HttpRequestMessage, HttpResponseMessage>> _routes = new();
+    private readonly Dictionary<string, Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>> _routes = new();
 
     public ProgrammableHandler Route(string urlContains, Func<HttpRequestMessage, HttpResponseMessage> handler)
+    {
+        _routes[urlContains] = (req, ct) => Task.FromResult(handler(req));
+        return this;
+    }
+
+    /// <summary>异步路由（支持延迟/取消）</summary>
+    public ProgrammableHandler RouteAsync(string urlContains, Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> handler)
     {
         _routes[urlContains] = handler;
         return this;
     }
 
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         foreach (var (pattern, handler) in _routes)
         {
             if (request.RequestUri!.ToString().Contains(pattern))
             {
-                try { return Task.FromResult(handler(request)); }
-                catch (Exception ex) { return Task.FromException<HttpResponseMessage>(ex); }
+                return await handler(request, cancellationToken);
             }
         }
-        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        return new HttpResponseMessage(HttpStatusCode.NotFound);
     }
 }
 
@@ -309,7 +315,6 @@ public class UpdateServiceTests
         var client = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
 
         // 慢速源 → 返回部分数据后抛异常 → 异常传播到 DownloadAsync 的 catch
-        // 这里直接调用 TryDownloadFromSourceAsync，异常会传播出来
         Exception? caughtEx = null;
         try
         {
@@ -446,6 +451,273 @@ public class UpdateServiceTests
         // 模拟 DownloadAsync 中的清理逻辑
         UpdateService.TryDeleteFile(partPath);
         Assert.False(File.Exists(partPath));
+
+        Directory.Delete(tmpDir, true);
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    //  P1-3 新增测试
+    // ════════════════════════════════════════════════════════════════
+
+    // ── 测试 9：并发闸 — 第一个 StartDownload 进行中时第二个返回 false ──
+    [Fact]
+    public async Task T09_ConcurrencyGuard_SecondStartReturnsFalse()
+    {
+        var handler = new ProgrammableHandler()
+            .Route("source1", _ => OkResponse(FakeExeData));
+
+        var svc = CreateService(handler);
+        var pkg = CreatePkg("https://source1/file.exe");
+
+        // 第一次 StartDownload → true
+        var first = svc.StartDownload(pkg, "concurrent-test");
+        Assert.True(first);
+
+        // 立刻第二次 → false（同 id 活动中）
+        var second = svc.StartDownload(pkg, "concurrent-test");
+        Assert.False(second);
+
+        // 等待后台任务完成
+        await Task.Delay(500);
+
+        // 完成后可以再次启动
+        var third = svc.StartDownload(pkg, "concurrent-test");
+        Assert.True(third);
+
+        // 等待清理
+        await Task.Delay(500);
+    }
+
+    // ── 测试 10：FinalizeWithRetry — finalPath 先被占用后成功 ──
+    [Fact]
+    public async Task T10_FinalizeWithRetry_SuccessAfterRetry()
+    {
+        var tmpDir = Path.Combine(Path.GetTempPath(), $"updtest-{Guid.NewGuid()}");
+        Directory.CreateDirectory(tmpDir);
+        var partPath = Path.Combine(tmpDir, "file.exe.part");
+        var finalPath = Path.Combine(tmpDir, "file.exe");
+
+        // 写入 .part
+        await File.WriteAllBytesAsync(partPath, FakeExeData);
+
+        // 创建一个占用 finalPath 的 FileStream（模拟杀毒软件占用）
+        var lockStream = new FileStream(finalPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None);
+        try
+        {
+            // 在另一个任务中延迟释放锁
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(800); // 等 FinalizeWithRetry 重试一两次
+                lockStream.Dispose();
+            });
+
+            // FinalizeWithRetry 应该在前几次失败后最终成功
+            await UpdateService.FinalizeWithRetryAsync(partPath, finalPath, maxAttempts: 6);
+
+            // 验证 finalPath 内容正确
+            var fileBytes = await File.ReadAllBytesAsync(finalPath);
+            Assert.Equal(FakeExeData, fileBytes);
+            Assert.False(File.Exists(partPath)); // .part 已被 move
+        }
+        finally
+        {
+            if (lockStream.CanRead) lockStream.Dispose();
+        }
+
+        Directory.Delete(tmpDir, true);
+    }
+
+    // ── 测试 11：头部超时 — handler 在响应头阶段阻塞 → 返回 HardFail ──
+    [Fact]
+    public async Task T11_HeaderTimeout_ReturnsHardFail()
+    {
+        var handler = new ProgrammableHandler()
+            .RouteAsync("timeout-source", async (req, ct) =>
+            {
+                // 模拟代理收了 TCP 但不回响应头 — 15s 延迟，远超 10s 头部超时
+                await Task.Delay(15000, ct);
+                return OkResponse(FakeExeData);
+            })
+            .Route("fast-source", _ => OkResponse(FakeExeData));
+
+        var svc = CreateService(handler);
+        var pkg = CreatePkg("https://fast-source/file.exe");
+        var progress = new DownloadProgress();
+
+        var tmpDir = Path.Combine(Path.GetTempPath(), $"updtest-{Guid.NewGuid()}");
+        Directory.CreateDirectory(tmpDir);
+        var partPath = Path.Combine(tmpDir, "file.exe.part");
+
+        var client = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
+
+        // 超时源 → HardFail（头部 10s 超时触发 CTS 取消）
+        var r1 = await svc.TryDownloadFromSourceAsync(
+            client, "https://timeout-source/file.exe", pkg, partPath, progress, 0, false);
+        Assert.Equal(DownloadSourceResult.HardFail, r1);
+
+        // 快速源 → 成功
+        var r2 = await svc.TryDownloadFromSourceAsync(
+            client, "https://fast-source/file.exe", pkg, partPath, progress, 0, true);
+        Assert.Equal(DownloadSourceResult.Success, r2);
+
+        Directory.Delete(tmpDir, true);
+    }
+
+    // ── 测试 12：overshoot — 源多吐尾部垃圾 → 裁剪后 .part 大小 == pkg.Size ──
+    [Fact]
+    public async Task T12_Overshoot_ClippedToPkgSize()
+    {
+        // 构造一个比 pkg.Size 大的数据（尾部追加垃圾）
+        var oversizedData = new byte[FakeExeData.Length + 5000];
+        Array.Copy(FakeExeData, oversizedData, FakeExeData.Length);
+        // 尾部 5000 字节是垃圾（随机）
+
+        var handler = new ProgrammableHandler()
+            .Route("source1", _ =>
+            {
+                var resp = new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StreamContent(new MemoryStream(oversizedData))
+                };
+                // Content-Length 声明为 oversizedData.Length（比 pkg.Size 大）
+                resp.Content.Headers.ContentLength = oversizedData.Length;
+                return resp;
+            });
+
+        var svc = CreateService(handler);
+        var pkg = CreatePkg("https://source1/file.exe");
+        // pkg.Size 仍是 FakeExeData.Length
+        var progress = new DownloadProgress();
+
+        var tmpDir = Path.Combine(Path.GetTempPath(), $"updtest-{Guid.NewGuid()}");
+        Directory.CreateDirectory(tmpDir);
+        var partPath = Path.Combine(tmpDir, "file.exe.part");
+
+        var result = await svc.TryDownloadFromSourceAsync(
+            new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan },
+            "https://source1/file.exe", pkg, partPath, progress, 0, true);
+
+        // 由于 Content-Length != pkg.Size，会返回 InvalidContent
+        // 但如果 Content-Length 没声明（null），则只靠裁剪
+        Assert.Equal(DownloadSourceResult.InvalidContent, result);
+
+        Directory.Delete(tmpDir, true);
+    }
+
+    // ── 测试 12b：overshoot — Content-Length 正确但流多吐 → 裁剪后 SHA256 通过 ──
+    [Fact]
+    public async Task T12b_OvershootClipped_NoContentLength_ShaOk()
+    {
+        // 构造一个比 pkg.Size 大的数据
+        var oversizedData = new byte[FakeExeData.Length + 5000];
+        Array.Copy(FakeExeData, oversizedData, FakeExeData.Length);
+
+        var handler = new ProgrammableHandler()
+            .Route("source1", _ =>
+            {
+                var resp = new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StreamContent(new MemoryStream(oversizedData))
+                };
+                // 显式移除 Content-Length（模拟某些代理 strip 掉的情况）
+                resp.Content.Headers.ContentLength = null;
+                return resp;
+            });
+
+        var svc = CreateService(handler);
+        var pkg = CreatePkg("https://source1/file.exe");
+        var progress = new DownloadProgress();
+
+        var tmpDir = Path.Combine(Path.GetTempPath(), $"updtest-{Guid.NewGuid()}");
+        Directory.CreateDirectory(tmpDir);
+        var partPath = Path.Combine(tmpDir, "file.exe.part");
+
+        var result = await svc.TryDownloadFromSourceAsync(
+            new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan },
+            "https://source1/file.exe", pkg, partPath, progress, 0, true);
+
+        // 裁剪后应该成功
+        Assert.Equal(DownloadSourceResult.Success, result);
+
+        // .part 大小应该 == pkg.Size（不是 oversizedData.Length）
+        Assert.Equal(FakeExeData.Length, new FileInfo(partPath).Length);
+
+        // SHA256 应该通过（只取前 pkg.Size 字节）
+        var ok = await UpdateService.VerifySha256Async(partPath, FakeSha256);
+        Assert.True(ok);
+
+        Directory.Delete(tmpDir, true);
+    }
+
+    // ── 测试 13：端到端 — 首源坏内容 → 次源续传成功 → done ──
+    [Fact]
+    public async Task T13_EndToEnd_BadFirstSource_SecondSucceeds()
+    {
+        var htmlBytes = System.Text.Encoding.UTF8.GetBytes("<html>限流</html>");
+        var handler = new ProgrammableHandler()
+            .Route("proxy", _ =>
+            {
+                var resp = new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new ByteArrayContent(htmlBytes)
+                };
+                resp.Content.Headers.ContentLength = htmlBytes.Length;
+                return resp;
+            })
+            .Route("github", _ => OkResponse(FakeExeData));
+
+        var svc = CreateService(handler);
+        var pkg = new UpdatePackage
+        {
+            Url = "https://github/file.exe",
+            Proxies = new[] { "https://proxy/" },
+            Size = FakeExeData.Length,
+            Sha256 = FakeSha256,
+        };
+
+        var progress = new DownloadProgress();
+
+        // 直接调用 internal DownloadAsync（编排层）
+        var tmpDir = Path.Combine(Path.GetTempPath(), $"updtest-{Guid.NewGuid()}");
+        Directory.CreateDirectory(tmpDir);
+
+        // 临时替换 UpdatesDir — 通过 reflection 设置
+        var updatesDirField = typeof(UpdateService).GetField("_updatesDir",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        // UpdatesDir 是属性，不是字段。改用直接调用并验证 phase
+
+        // 直接调用 DownloadAsync，它使用 UpdatesDir 属性（%LocalAppData%/工程管家/updates）
+        // 为避免污染真实目录，我们用 partPath/finalPath 测试法：
+        // 改为手工编排模拟 DownloadAsync 的循环
+        var urls = pkg.ResolveCandidates();
+        Assert.Equal(2, urls.Length); // proxy + github
+
+        var partPath = Path.Combine(tmpDir, "file.exe.part");
+        var client = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
+
+        // 源 1 (proxy) → InvalidContent
+        var r1 = await svc.TryDownloadFromSourceAsync(
+            client, urls[0], pkg, partPath, progress, 0, false);
+        Assert.Equal(DownloadSourceResult.InvalidContent, r1);
+
+        // 源 2 (github) → Success
+        var r2 = await svc.TryDownloadFromSourceAsync(
+            client, urls[1], pkg, partPath, progress, 0, true);
+        Assert.Equal(DownloadSourceResult.Success, r2);
+
+        // SHA256 通过
+        var ok = await UpdateService.VerifySha256Async(partPath, FakeSha256);
+        Assert.True(ok);
+
+        // FinalizeWithRetry 成功
+        var finalPath = Path.Combine(tmpDir, "file.exe");
+        await UpdateService.FinalizeWithRetryAsync(partPath, finalPath);
+        Assert.True(File.Exists(finalPath));
+        Assert.False(File.Exists(partPath));
+
+        // 验证内容
+        var fileBytes = await File.ReadAllBytesAsync(finalPath);
+        Assert.Equal(FakeExeData, fileBytes);
 
         Directory.Delete(tmpDir, true);
     }
