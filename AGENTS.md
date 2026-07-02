@@ -271,6 +271,31 @@ v0.74.0 → v0.85.0 (已 rebase 整理) 期间, 项目曾把 **refactor-only spr
 ### 何时打 tag
 - 每次 minor / patch bump 时, 打完 chore commit 后立刻 `git tag v0.X.Y`
 - refactor-only sprint: **不打 tag**
+
+### 更新日志写作规范 (v0.81.0 起)
+
+**数据源文件**: `src/constants/changelog.ts` — 应用内「设置 → 更新日志」的唯一数据源
+
+**发布同步**: 写完 `changelog.ts` 后, 同步内容到 GitHub Release notes (大白话描述, 与应用内一致)
+
+| 规则 | 说明 |
+|------|------|
+| 语言 | 大白话, 普通人能看懂; 不写代码细节 |
+| 格式 | 新版本**必须用 `groups` 分组格式** (与 GitHub Release 一致); 旧版本 `items` 扁平格式保留不回溯 |
+| 条目写法 | `**粗体标题**：大白话描述` — 组件 `renderMarkdownInline` 自动解析粗体 |
+| 分组标题 | `🐛 Bug 修复` / `✨ 体验优化` / `🚀 新功能` / `🔧 技术优化` |
+
+**示例**:
+```typescript
+{ v: 'v0.82.0', date: '2026-07-05', groups: [
+  { label: '🚀 新功能', items: [
+    '**批量导入发票**：现在可以一次拖入多个发票文件，系统自动识别并填好',
+  ] },
+  { label: '🐛 Bug 修复', items: [
+    '**合同金额不显示**：某些合同金额显示为 0 的问题修好了',
+  ] },
+] }
+```
 ---
 
 ## 🚦 红绿灯（v0.71.0 起, v0.79.0 加 tsc）
