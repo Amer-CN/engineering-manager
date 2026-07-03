@@ -8,7 +8,8 @@ namespace EngineeringManager.Uninstaller;
 public class UninstallerWindow : Form
 {
     private WebView2? webView;
-    private readonly string _appDir; // 安装目录
+    private readonly string _appDir;      // 前端资源目录(exe 同级的 uninstaller\)
+    private readonly string _installPath; // 真实安装目录(从 uninstaller.json 解析)
 
     // ── resize 相关 ──
     private bool _isResizing;
@@ -45,9 +46,22 @@ public class UninstallerWindow : Form
         StartPosition = FormStartPosition.CenterScreen;
         ApplyNativeRoundedCorners();
 
-        // 安装目录 = 本程序所在目录
+        // 前端资源目录 = 本程序所在目录(exe 同级的 uninstaller\)
         _appDir = AppContext.BaseDirectory;
         Log($"[Uninstaller] appDir: {_appDir}");
+
+        // 真实安装目录:从同目录 uninstaller.json 解析。卸载器位于 <安装目录>\uninstall\,
+        // 或已被复制到 %TEMP% 运行,两种情况都不能用 BaseDirectory 当安装目录。
+        try
+        {
+            _installPath = UninstallerService.GetInstallPath();
+        }
+        catch (Exception ex)
+        {
+            _installPath = "";
+            Log($"[Uninstaller] 解析安装目录失败: {ex.Message}");
+        }
+        Log($"[Uninstaller] installPath: {_installPath}");
     }
 
     protected override CreateParams CreateParams
@@ -184,7 +198,7 @@ public class UninstallerWindow : Form
                 webView.CoreWebView2.Navigate("file:///" + indexPath.Replace('\\', '/'));
                 webView.CoreWebView2.NavigationCompleted += (s, args) =>
                 {
-                    EvalJS($"window.__setInstallPath?.('{EscapeJS(_appDir)}')");
+                    EvalJS($"window.__setInstallPath?.('{EscapeJS(_installPath)}')");
                 };
             }
             else
@@ -266,10 +280,17 @@ public class UninstallerWindow : Form
 
     private async Task DoUninstall()
     {
-        Log($"[Uninstaller] 开始卸载: {_appDir}");
+        Log($"[Uninstaller] 开始卸载: {_installPath}");
+
+        if (string.IsNullOrEmpty(_installPath) || !Directory.Exists(_installPath))
+        {
+            Log("[Uninstaller] 无法确定安装目录,终止卸载");
+            BeginInvoke(() => EvalJS("window.__installError?.('无法确定安装目录,卸载已终止')"));
+            return;
+        }
 
         var service = new UninstallerService();
-        await service.Uninstall(_appDir, (percent, step) =>
+        await service.Uninstall(_installPath, (percent, step) =>
         {
             BeginInvoke(() => EvalJS($"window.__updateProgress?.({percent}, '{EscapeJS(step)}')"));
         });
