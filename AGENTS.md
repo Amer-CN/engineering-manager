@@ -336,7 +336,7 @@ cd "E:\测试" && npx tsc --noEmit --pretty false 2>&1 | Select-String -Pattern 
 > **回滚锚点**：git reset --hard v0.69.0（v1.0.0-pre-vibe 之前，commit fcdffea3fed06f878789db7f08d98303ffdf077f 之上的版本）
 > **完整修复计划**：[P0-FIX-PLAN.md](docs/P0-FIX-PLAN.md)
 
-### 4 个 🔴 P0 缺口
+### 4 个 🔴 P0 缺口（**当前版本未修，发布前必读**）
 
 | # | 缺口 | 现状 | 严重度 |
 |---|------|------|------|
