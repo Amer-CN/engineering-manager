@@ -48,6 +48,13 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend
     (message as AgentMessage).toolCalls
   )
 
+  const isSending = 'sending' in message && (message as { sending?: boolean }).sending === true
+
+  // 空的「发送中」助手占位：思考指示器由 AgentDashboard 统一渲染，此处不渲染孤立头像，避免与「思考中」重叠
+  if (!isUser && isSending && !content && toolResults.length === 0) {
+    return null
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12, scale: 0.97 }}
@@ -129,6 +136,13 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend
 
         {/* ═══ RichToolResult 接入点（第二批富卡片渲染） ═══ */}
         {/* 当后端返回结构化 tool result 时，在此处渲染富卡片组件 */}
+
+        {/* 已完成但无任何内容（如达到最大工具轮次后无最终文本）→ 占位提示，避免空气泡 */}
+        {!isUser && !isSending && !content && toolResults.length === 0 && (
+          <div className="px-4 py-2.5 rounded-2xl text-sm italic text-slate-400 bg-white border border-slate-200 rounded-bl-md shadow-sm">
+            本次没有返回内容，请重试或换个问法。
+          </div>
+        )}
 
         {/* AI 消息操作条 */}
         {!isUser && content && hovered && (
