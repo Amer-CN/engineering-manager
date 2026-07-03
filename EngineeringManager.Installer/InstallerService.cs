@@ -154,51 +154,101 @@ public class InstallerService
     /// <summary>
     /// 杀掉指定安装目录下正在运行的 EngineeringManager.Api.exe 及其子进程（msedgewebview2）。
     /// 更新模式下必须先杀进程，否则 exe 文件被锁无法覆盖。
+    /// 硬化：不再静默吞异常，所有失败写入 installer-debug.log；主程序进程名唯一，
+    /// 读不到路径时降级为按名强杀；msedgewebview2 为共享进程，仅在路径匹配时才杀，
+    /// 读不到路径则跳过（避免误杀安装器自身或其他应用的 WebView2）。
     /// </summary>
     private static void KillRunningProcesses(string targetPath)
     {
-        try
-        {
-            var exePath = Path.Combine(targetPath, "EngineeringManager.Api.exe");
-            var normalizedTarget = Path.GetFullPath(targetPath).TrimEnd('\\').ToLowerInvariant();
+        var exePath = Path.Combine(targetPath, "EngineeringManager.Api.exe");
+        var normalizedTarget = Path.GetFullPath(targetPath).TrimEnd('\\').ToLowerInvariant();
 
-            // 杀主进程
-            foreach (var proc in Process.GetProcessesByName("EngineeringManager.Api"))
-            {
-                try
-                {
-                    var procPath = Path.GetFullPath(proc.MainModule?.FileName ?? "").ToLowerInvariant();
-                    if (procPath.StartsWith(normalizedTarget))
-                    {
-                        Console.WriteLine($"[Installer] 杀旧进程: {proc.Id} ({procPath})");
-                        proc.Kill(entireProcessTree: true);
-                        proc.WaitForExit(5000);
-                    }
-                }
-                catch { /* 权限不足或进程已退出 */ }
-            }
+        // 主程序：进程名唯一属于本应用，路径读不到时可降级按名强杀
+        KillMatchingProcesses("EngineeringManager.Api", normalizedTarget, waitMs: 5000, allowNameOnlyFallback: true);
+        // WebView2：共享进程，仅在路径匹配安装目录时才杀，读不到路径一律跳过
+        KillMatchingProcesses("msedgewebview2", normalizedTarget, waitMs: 3000, allowNameOnlyFallback: false);
 
-            // 杀残留 WebView2 子进程（按路径匹配 targetPath 下的 msedgewebview2）
-            foreach (var proc in Process.GetProcessesByName("msedgewebview2"))
-            {
-                try
-                {
-                    var procPath = Path.GetFullPath(proc.MainModule?.FileName ?? "").ToLowerInvariant();
-                    if (procPath.StartsWith(normalizedTarget))
-                    {
-                        proc.Kill(entireProcessTree: true);
-                        proc.WaitForExit(3000);
-                    }
-                }
-                catch { }
-            }
+        // 给操作系统一点时间释放文件句柄
+        Thread.Sleep(500);
 
-            // 给操作系统一点时间释放文件句柄
-            Thread.Sleep(500);
-        }
+        // 最终校验：若目标 exe 仍被占用，显式告警（不再静默，便于发版排障）
+        if (File.Exists(exePath) && IsFileLocked(exePath))
+            InstallerLog($"[KillRunningProcesses] 警告: 杀进程后 {exePath} 仍被占用，覆盖可能失败");
+    }
+
+    /// <summary>
+    /// 按进程名结束匹配安装目录的进程。
+    /// allowNameOnlyFallback=true 时，读不到进程路径也会按名强杀（仅用于名字唯一属于本应用的进程）。
+    /// </summary>
+    private static void KillMatchingProcesses(string processName, string normalizedTarget, int waitMs, bool allowNameOnlyFallback)
+    {
+        Process[] procs;
+        try { procs = Process.GetProcessesByName(processName); }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[Installer] 杀旧进程失败: {ex.Message}");
+            InstallerLog($"[KillRunningProcesses] 枚举进程 {processName} 失败: {ex.Message}");
+            return;
+        }
+
+        foreach (var proc in procs)
+        {
+            try
+            {
+                // 尝试读取进程路径以匹配安装目录；跨架构/权限不足时读不到
+                string? procPath = null;
+                try
+                {
+                    var raw = proc.MainModule?.FileName;
+                    procPath = string.IsNullOrEmpty(raw) ? null : Path.GetFullPath(raw).ToLowerInvariant();
+                }
+                catch (Exception ex)
+                {
+                    InstallerLog($"[KillRunningProcesses] 无法读取 {processName} (PID {proc.Id}) 路径: {ex.Message}");
+                }
+
+                var matched = procPath != null && procPath.StartsWith(normalizedTarget);
+                var nameOnly = procPath == null && allowNameOnlyFallback;
+
+                if (!matched && !nameOnly)
+                {
+                    if (procPath == null)
+                        InstallerLog($"[KillRunningProcesses] 跳过 {processName} (PID {proc.Id}): 路径不可读且不允许按名降级");
+                    continue;
+                }
+
+                InstallerLog($"[KillRunningProcesses] 结束进程 {processName} PID {proc.Id}{(nameOnly ? " (按名降级)" : $" ({procPath})")}");
+                proc.Kill(entireProcessTree: true);
+                if (!proc.WaitForExit(waitMs))
+                    InstallerLog($"[KillRunningProcesses] 警告: {processName} PID {proc.Id} 在 {waitMs}ms 内未退出");
+            }
+            catch (Exception ex)
+            {
+                InstallerLog($"[KillRunningProcesses] 结束 {processName} (PID {proc.Id}) 失败: {ex.Message}");
+            }
+            finally
+            {
+                proc.Dispose();
+            }
+        }
+    }
+
+    /// <summary>
+    /// 探测文件是否被占用（独占打开失败即视为被锁）。
+    /// </summary>
+    private static bool IsFileLocked(string path)
+    {
+        try
+        {
+            using var fs = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+            return false;
+        }
+        catch (IOException)
+        {
+            return true;
+        }
+        catch
+        {
+            return false;
         }
     }
 
