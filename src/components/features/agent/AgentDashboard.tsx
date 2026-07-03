@@ -18,10 +18,7 @@ import {
   getAgentConversationDetail,
 } from '@/services/agent-client'
 import type { AgentStreamCallbacks } from '@/services/agent-client'
-import type {
-  AgentConversation,
-  SuggestionCardConfig,
-} from '@/types/agent'
+import type { AgentConversation } from '@/types/agent'
 import type { LocalMessage } from './types'
 import { genClientId } from './types'
 
@@ -34,6 +31,7 @@ import SuggestionChips from './SuggestionChips'
 import MessageBubble from './MessageBubble'
 import ConversationHistory from './ConversationHistory'
 import AgentSearch from './AgentSearch'
+import { getFilteredSuggestions } from './suggestions'
 
 const AgentDashboard: React.FC = () => {
   const { currentUser } = useAuth()
@@ -116,8 +114,15 @@ const AgentDashboard: React.FC = () => {
               }),
             )
           },
-          onDone: ({ toolCalls }) => {
-            patchAssistant({ sending: false, toolCalls })
+          onDone: ({ toolCalls, message }) => {
+            setMessages((prev) =>
+              prev.map((m) => {
+                if (m.clientId !== assistantClientId) return m
+                // 若正文仍是「🔧 正在查询」占位（工具跑完但模型没产出正文），视为无正文
+                const streamed = m.content && !m.content.startsWith('🔧') ? m.content : ''
+                return { ...m, sending: false, toolCalls, content: streamed || message || '' }
+              }),
+            )
             setRefreshTrigger((v) => v + 1) // 刷新洞察/统计
           },
           onError: (err) => {
@@ -218,21 +223,16 @@ const AgentDashboard: React.FC = () => {
     [handleSend],
   )
 
-  // ── 建议卡片配置 ──
-  const allSuggestions: SuggestionCardConfig[] = [
-    { icon: 'FolderKanban', title: '项目概况', prompt: '帮我总结一下目前所有项目的状态', requiredPermission: 'projects:read', color: 'blue' },
-    { icon: 'Receipt', title: '发票待办', prompt: '有哪些发票需要付款？', requiredPermission: 'invoices:read', color: 'amber' },
-    { icon: 'ClipboardList', title: '结算进度', prompt: '最近的结算办理情况如何？', requiredPermission: 'settlement:read', color: 'emerald' },
-    { icon: 'Users', title: '团队成员', prompt: '我们有多少员工和工人？', requiredPermission: 'hr:read', color: 'violet' },
-    { icon: 'Package', title: '库存物料', prompt: '仓库里有哪些物料？', requiredPermission: 'inventory:read', color: 'orange' },
-    { icon: 'DollarSign', title: '成本分析', prompt: '帮我分析一下成本支出情况', requiredPermission: 'costLedger:read', color: 'rose' },
-  ]
-
-  const suggestionCards = allSuggestions.filter(s =>
-    !s.requiredPermission || can(s.requiredPermission as any),
-  )
+  const suggestionCards = getFilteredSuggestions(can)
 
   const isEmpty = messages.length === 0
+
+  const lastMsg = messages[messages.length - 1]
+  const showThinking =
+    loading &&
+    (!lastMsg ||
+      lastMsg.role !== 'assistant' ||
+      (!!lastMsg.sending && !lastMsg.content))
 
   // ═══════════════════════════════════════════════════════════════
   // 空态：丰富工作台
@@ -328,7 +328,7 @@ const AgentDashboard: React.FC = () => {
               </AnimatePresence>
 
               {/* 思考中 */}
-              {loading && (
+              {showThinking && (
                 <motion.div
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
