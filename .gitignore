@@ -94,3 +94,9 @@ SPACING.md
 *.bak
 
 .codegraph/
+
+# 卸载器 / 安装器构建产物（禁止提交）
+EngineeringManager.Uninstaller/bin/
+EngineeringManager.Uninstaller/obj/
+release-uninstaller/
+EngineeringManager.Installer/app-files/

@@ -141,6 +141,10 @@ public class InstallerService
         // 写入数据存储路径配置（更新模式下：若用户未显式改动则保留现有 config.json）
         WriteDataPathConfig(dataPath, isUpdate);
 
+        // 注册卸载信息（uninstaller.json + "程序和功能"注册表项）
+        onProgress(98, "正在注册卸载信息...");
+        RegisterUninstaller(targetPath);
+
         onProgress(100, isUpdate ? "更新完成！" : "安装完成！");
 
         // 清理临时文件
@@ -320,6 +324,59 @@ public class InstallerService
         catch (Exception ex)
         {
             InstallerLog($"[WriteDataPathConfig] 写入 config.json 失败: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 安装收尾:写卸载器定位文件 uninstaller.json + "程序和功能"注册表卸载项(HKCU,per-user 无需管理员)。
+    /// uninstaller.json 供 UninstallerService.GetInstallPath() 读取;注册表项让系统"添加/删除程序"列出并调用卸载器。
+    /// 更新模式同样刷新(版本可能变化)。任何失败只记日志、不抛出,避免影响主安装流程。
+    /// </summary>
+    private void RegisterUninstaller(string installPath)
+    {
+        try
+        {
+            var uninstallDir = Path.Combine(installPath, "uninstall");
+            var uninstallerExe = Path.Combine(uninstallDir, "工程管家卸载.exe");
+
+            // 卸载器不存在则跳过,避免写出无法执行的 UninstallString
+            if (!File.Exists(uninstallerExe))
+            {
+                InstallerLog($"[RegisterUninstaller] 跳过:未找到卸载器 {uninstallerExe}");
+                return;
+            }
+
+            // 1) 写 uninstaller.json(内容=安装目录纯路径),供卸载器定位
+            Directory.CreateDirectory(uninstallDir);
+            File.WriteAllText(Path.Combine(uninstallDir, "uninstaller.json"), installPath);
+            InstallerLog($"[RegisterUninstaller] uninstaller.json 已写入: {installPath}");
+
+            // 2) 读取已安装主程序版本(用于 DisplayVersion)
+            var apiExe = Path.Combine(installPath, "EngineeringManager.Api.exe");
+            var version = "";
+            try
+            {
+                if (File.Exists(apiExe))
+                    version = FileVersionInfo.GetVersionInfo(apiExe).ProductVersion ?? "";
+            }
+            catch (Exception ex) { InstallerLog($"[RegisterUninstaller] 读取版本失败: {ex.Message}"); }
+
+            // 3) 写 HKCU "程序和功能" 卸载项
+            using var key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(
+                @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\工程管家");
+            key.SetValue("DisplayName", "工程管家");
+            if (!string.IsNullOrEmpty(version)) key.SetValue("DisplayVersion", version);
+            key.SetValue("Publisher", "工程管家");
+            key.SetValue("DisplayIcon", File.Exists(apiExe) ? apiExe : uninstallerExe);
+            key.SetValue("InstallLocation", installPath);
+            key.SetValue("UninstallString", $"\"{uninstallerExe}\"");
+            key.SetValue("NoModify", 1, Microsoft.Win32.RegistryValueKind.DWord);
+            key.SetValue("NoRepair", 1, Microsoft.Win32.RegistryValueKind.DWord);
+            InstallerLog($"[RegisterUninstaller] 注册表卸载项已写入 (DisplayVersion={version})");
+        }
+        catch (Exception ex)
+        {
+            InstallerLog($"[RegisterUninstaller] 失败: {ex.Message}");
         }
     }
 
