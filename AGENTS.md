@@ -260,8 +260,6 @@ export function useProjects() {
 ### 历史背景 (重要)
 v0.74.0 → v0.85.0 (已 rebase 整理) 期间, 项目曾把 **refactor-only sprint 也当作 minor 版本 bump**, 导致 7 次 spurious `chore: bump version` commits. v0.75.3 已 `git rebase -i ce8cf23` **drop 掉这 7 个 commits**, 重组 git 历史为正确 semver (1 minor + 3 patches + 18 refactors).
 
-详见 `docs/handoff/v0.75.3-handoff.md` §1.
-
 ### 版本号引用位置 (4 处, bump 时一起改)
 - `package.json`
 - `installer/package.json`
@@ -336,10 +334,9 @@ cd "E:\测试" && npx tsc --noEmit --pretty false 2>&1 | Select-String -Pattern 
 
 > **审计者**：darwin-skill 9 维 rubric 参照 + vibe-coding-guide 19 条 + 4 个 explore 子代理 file:line 实证
 > **回滚锚点**：git reset --hard v0.69.0（v1.0.0-pre-vibe 之前，commit fcdffea3fed06f878789db7f08d98303ffdf077f 之上的版本）
-> **完整修复计划**：[P0-FIX-PLAN.md](P0-FIX-PLAN.md)
-> **vibe-coding-guide 评估**：[ibe-coding-guide-eval-2026-06-16.md](vibe-coding-guide-eval-2026-06-16.md)
+> **完整修复计划**：[P0-FIX-PLAN.md](docs/P0-FIX-PLAN.md)
 
-### 4 个 🔴 P0 缺口（**当前版本未修，发布前必读**）
+### 4 个 🔴 P0 缺口
 
 | # | 缺口 | 现状 | 严重度 |
 |---|------|------|------|
@@ -373,7 +370,7 @@ cd "E:\测试" && npx tsc --noEmit --pretty false 2>&1 | Select-String -Pattern 
 
 **任何接手工程管家的开发者**：
 1. **v0.70.0 发布前**：P0-1 必须修（OCR key rotate），其他 3 个 P0 在 v0.70.x 立即跟进
-2. **新功能开发前**：先读 [P0-FIX-PLAN.md](P0-FIX-PLAN.md) 决定当前 sprint 是否带 1-2 个 P0 修复
+2. **新功能开发前**：先读 [P0-FIX-PLAN.md](docs/P0-FIX-PLAN.md) 决定当前 sprint 是否带 1-2 个 P0 修复
 3. **不要在 P0 修完前**新增涉及 PII 的新功能（先把 P0-2/P0-3 修了再考虑）
 4. **vibe-coding-guide 兼容度**：v2 实证 9/19 完美 + 5/19 缺口 + 5/19 部分合规（详见 v2 报告）
 
