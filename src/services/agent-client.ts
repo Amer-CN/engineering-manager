@@ -328,3 +328,31 @@ function dispatchSseEvent(
     }
   }
 }
+
+// ═══════════════════════════════════════════════════════════════
+// OCR 图片识别（附件）
+// ═══════════════════════════════════════════════════════════════
+
+export interface OcrRecognizeResult {
+  success: boolean
+  text?: string
+  error?: string
+}
+
+/**
+ * 通用票据 OCR：识别图片中的文字（复用 /api/ocr/general-receipt，百度 accurate_basic）。
+ * 后端 /api/ocr/general-receipt 用 Results.Ok 直接返回裸 body {success,text,generalReceipt}，
+ * apiClient.post 也直接返回裸 body（无 .data 包裹）；失败时返回 {success:false,error}。
+ * 后端会自动剥离 dataURL 前缀，可直接传 FileReader 的 dataURL。
+ */
+export async function recognizeReceiptText(
+  imageBase64: string,
+): Promise<OcrRecognizeResult> {
+  const raw = (await apiClient.post<unknown>('/api/ocr/general-receipt', {
+    imageBase64,
+  })) as { success?: boolean; text?: string; error?: string }
+  if (raw?.success && typeof raw.text === 'string') {
+    return { success: true, text: raw.text }
+  }
+  return { success: false, error: raw?.error || 'OCR 识别失败' }
+}

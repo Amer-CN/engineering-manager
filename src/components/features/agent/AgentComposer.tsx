@@ -10,6 +10,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Icon } from '@/components/ui/Icon'
 import { Tooltip } from '@/components/ui/Tooltip'
+import { recognizeReceiptText } from '@/services/agent-client'
 import { SLASH_COMMANDS } from './types'
 
 interface AgentComposerProps {
@@ -22,6 +23,8 @@ interface AgentComposerProps {
   /** 是否居中样式（空态用） */
   centered?: boolean
 }
+
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024 // 4MB
 
 const AgentComposer: React.FC<AgentComposerProps> = ({
   value,
@@ -36,6 +39,10 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
   const textareaRef = inputRef || innerRef
   const [showSlashMenu, setShowSlashMenu] = useState(false)
   const [slashFilter, setSlashFilter] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [attachment, setAttachment] = useState<{ name: string; dataUrl: string } | null>(null)
+  const [ocrLoading, setOcrLoading] = useState(false)
+  const [ocrError, setOcrError] = useState<string | null>(null)
 
   // ── 自适应高度 ──
   const adjustHeight = useCallback(() => {
@@ -60,15 +67,68 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
     }
   }, [value])
 
+  const canSend =
+    (value.trim().length > 0 || !!attachment) && !disabled && !ocrLoading
+
+  // ── 选择图片文件 ──
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      e.target.value = '' // 允许重复选择同一文件
+      if (!file) return
+      if (!file.type.startsWith('image/')) { setOcrError('仅支持图片文件'); return }
+      if (file.size > MAX_IMAGE_BYTES) { setOcrError('图片过大（上限 4MB）'); return }
+      const reader = new FileReader()
+      reader.onload = () => {
+        setOcrError(null)
+        setAttachment({ name: file.name, dataUrl: String(reader.result) })
+      }
+      reader.onerror = () => setOcrError('图片读取失败')
+      reader.readAsDataURL(file)
+    },
+    [],
+  )
+
+  const removeAttachment = useCallback(() => {
+    setAttachment(null)
+    setOcrError(null)
+  }, [])
+
+  // ── 发送（含附件 OCR）──
+  const doSend = useCallback(async () => {
+    if (!canSend) return
+    const typed = value.trim()
+    if (attachment) {
+      setOcrLoading(true)
+      setOcrError(null)
+      try {
+        const res = await recognizeReceiptText(attachment.dataUrl)
+        if (!res.success) { setOcrError(res.error || '图片识别失败'); return }
+        const ocrText = (res.text || '').trim()
+        const combined = [typed, ocrText ? `【附件图片识别文字】\n${ocrText}` : '']
+          .filter(Boolean)
+          .join('\n\n')
+        if (!combined) { setOcrError('未识别到文字，请补充问题或更换图片'); return }
+        setAttachment(null)
+        onChange('')
+        onSend(combined)
+      } finally {
+        setOcrLoading(false)
+      }
+      return
+    }
+    onSend()
+  }, [canSend, value, attachment, onChange, onSend])
+
   // ── 键盘事件 ──
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault()
-        onSend()
+        void doSend()
       }
     },
-    [onSend],
+    [doSend],
   )
 
   // ── 选择斜杠命令 ──
@@ -91,8 +151,6 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
   const filteredCommands = SLASH_COMMANDS.filter(
     cmd => !slashFilter || cmd.key.slice(1).includes(slashFilter) || cmd.label.includes(slashFilter),
   )
-
-  const canSend = value.trim().length > 0 && !disabled
 
   return (
     <div className={`relative ${centered ? 'max-w-2xl mx-auto' : ''}`}>
@@ -128,13 +186,65 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
         )}
       </AnimatePresence>
 
+      {/* 附件预览 */}
+      {attachment && (
+        <div className="mb-2 flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-slate-50">
+          <img
+            src={attachment.dataUrl}
+            alt={attachment.name}
+            className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
+          />
+          <span className="text-xs text-slate-600 truncate flex-1">{attachment.name}</span>
+          {ocrLoading && (
+            <span className="text-xs text-violet-500 flex items-center gap-1">
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+              >
+                <Icon name="Loader2" size={14} />
+              </motion.div>
+              识别中…
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={removeAttachment}
+            disabled={ocrLoading}
+            aria-label="移除附件"
+            className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-40"
+          >
+            <Icon name="X" size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* OCR 错误提示 */}
+      {ocrError && (
+        <div className="mb-2 px-3 py-1.5 rounded-lg bg-red-50 border border-red-200 text-xs text-red-600">
+          {ocrError}
+        </div>
+      )}
+
       {/* 输入区域 */}
       <div className="flex items-end gap-2.5 p-2 rounded-2xl border border-slate-200 bg-white shadow-sm focus-within:ring-2 focus-within:ring-blue-400/30 focus-within:border-blue-400 transition-all">
-        {/* 附件按钮（占位，本批禁用） */}
-        <Tooltip content="即将支持附件上传" position="top">
+        {/* 隐藏文件输入 */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          aria-label="选择图片文件"
+          onChange={handleFileChange}
+        />
+
+        {/* 附件按钮（图片 OCR） */}
+        <Tooltip content="上传图片（自动识别文字）" position="top">
           <button
-            disabled
-            className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-slate-300 cursor-not-allowed bg-slate-50"
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={disabled || ocrLoading}
+            aria-label="上传图片"
+            className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-blue-500 hover:bg-blue-50 disabled:text-slate-300 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors"
           >
             <Icon name="Paperclip" size={18} />
           </button>
@@ -170,11 +280,12 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
         <motion.button
           whileHover={canSend ? { scale: 1.05 } : undefined}
           whileTap={canSend ? { scale: 0.95 } : undefined}
-          onClick={() => onSend()}
+          onClick={() => void doSend()}
+          aria-label="发送"
           disabled={!canSend}
           className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 text-white flex items-center justify-center shadow-md shadow-blue-200/40 disabled:opacity-30 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-blue-300/50 transition-shadow"
         >
-          {disabled ? (
+          {disabled || ocrLoading ? (
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
