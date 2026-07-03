@@ -8,12 +8,7 @@ export const APP_VERSION = '${v}'
 fs.writeFileSync('src/version.ts', versionTs)
 console.log(`[sync-version] 已写入 src/version.ts → ${v}`)
 
-// 2) Inno Setup 版本 include
-fs.mkdirSync('installer', { recursive: true })
-fs.writeFileSync('installer/version.iss', `#define VERSION "${v}"\n`)
-console.log(`[sync-version] 已写入 installer/version.iss → ${v}`)
-
-// 3) .csproj <Version>
+// 2) .csproj <Version>
 const csproj = 'EngineeringManager.Api/EngineeringManager.Api.csproj'
 let xml = fs.readFileSync(csproj, 'utf-8')
 if (xml.includes('<Version>')) {
@@ -25,4 +20,4 @@ if (xml.includes('<Version>')) {
 fs.writeFileSync(csproj, xml)
 console.log(`[sync-version] 已写入 .csproj <Version> → ${v}`)
 
-console.log(`[sync-version] 完成：版本号 ${v} 已同步至 3 个位置`)
+console.log(`[sync-version] 完成：版本号 ${v} 已同步至 2 个位置`)
