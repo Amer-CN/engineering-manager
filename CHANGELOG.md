@@ -6,7 +6,7 @@
 > - `refactor` (代码重构): **不 bump version**
 > - `docs` / `chore` (文档/杂务): **不 bump version**
 >
-> **重要**: v0.74.0 → v0.75.3 期间曾过度打 tag (refactor-only sprint 也 bump). 已在 v0.75.3 重新整理 git 历史 (drop 7 个 spurious chore "bump version" commits), 重组成正确的 semver 历史. 详见 `docs/handoff/v0.75.3-handoff.md`.
+> **重要**: v0.74.0 → v0.75.3 期间曾过度打 tag (refactor-only sprint 也 bump). 已在 v0.75.3 重新整理 git 历史 (drop 7 个 spurious chore "bump version" commits), 重组成正确的 semver 历史.
 
 
 ## v0.81.7 (2026-07-02) — fix: 设置页下载更新共享全局状态,显示进度条
