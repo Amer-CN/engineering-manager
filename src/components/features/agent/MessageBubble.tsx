@@ -11,6 +11,7 @@ import { motion } from 'framer-motion'
 import { Icon } from '@/components/ui/Icon'
 import type { AgentMessage, AgentMessageResponse, ToolCallResult } from '@/types/agent'
 import MessageActions from './MessageActions'
+import RichToolResult from './RichToolResult'
 
 interface MessageBubbleProps {
   /** 消息数据 */
@@ -94,45 +95,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend
           </div>
         )}
 
-        {/* Tool Call 结果 */}
-        {toolResults.length > 0 && (
-          <div className="mt-2 space-y-1.5">
-            {toolResults.map((tc, i) => (
-              <motion.div
-                key={tc.toolCallId || i}
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.1 * i, duration: 0.2 }}
-                className={`flex items-start gap-2 px-3 py-2 rounded-xl text-xs border ${
-                  tc.success
-                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                    : 'bg-red-50 border-red-200 text-red-800'
-                }`}
-              >
-                <Icon
-                  name={tc.success ? 'CheckCircle' : 'XCircle'}
-                  size={14}
-                  className={`mt-0.5 flex-shrink-0 ${
-                    tc.success ? 'text-emerald-500' : 'text-red-500'
-                  }`}
-                />
-                <div className="min-w-0">
-                  <span className="font-semibold">{tc.toolName}</span>
-                  {tc.error && (
-                    <span className="block text-red-600 mt-0.5">{tc.error}</span>
-                  )}
-                  {tc.result != null && !tc.error && (
-                    <span className="block text-slate-500 mt-0.5 truncate max-w-[260px]">
-                      {typeof tc.result === 'string'
-                        ? tc.result
-                        : JSON.stringify(tc.result)}
-                    </span>
-                  )}
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        )}
+        {/* Tool Call 结果（富卡片） */}
+        {toolResults.length > 0 && <RichToolResult results={toolResults} />}
 
         {/* ═══ RichToolResult 接入点（第二批富卡片渲染） ═══ */}
         {/* 当后端返回结构化 tool result 时，在此处渲染富卡片组件 */}
