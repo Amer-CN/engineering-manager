@@ -1,6 +1,6 @@
 # AGENTS.md - 工程管家项目约定
-> 项目状态：v0.75.3 — semver 整理后 (1 minor + 3 patches + 18 refactors), 见 CHANGELOG.md
-> 最后同步：2026-06-20（v0.75.3 semver rebase: drop 7 spurious chore bump commits, 重组 git 历史 + 重写 CHANGELOG + 加 Version Policy）
+> 项目状态：v0.82.0（当前版本，见 CHANGELOG.md）
+> 最后同步：2026-07-04（对齐 v0.82.0：合并安全审计章节、修正安装包命名、去除失效的 CLAUDE.md/src-tauri 引用）
 
 ## 🗣️ 输出语言
 - **默认中文输出**：所有解释、描述、分析、提问、总结等文字内容使用中文
@@ -57,7 +57,7 @@ SQLite (engineering.db) ← 数据存储路径由用户配置
 
 ## 📦 打包与部署
 - **平时只构建不打包**：修改代码 → `vite build`（约5-10秒）→ dev模式测试 → 用户通知才生成安装包
-- 安装包：`release\工程管家-Setup.exe`
+- 安装包：`release\EngineeringManager-Setup-<版本号>.exe`（例：`release\EngineeringManager-Setup-0.82.0.exe`，见 `build-installer.bat`）
 - 打包脚本：`build-installer.bat` / `release.bat`（构建前端 + C# 发布 + payload.zip 打包 + 安装器；卸载器 vite build + publish 后铺入 `app-files\uninstall\`）
 - **卸载器接线**：安装时写 `<安装目录>\uninstall\uninstaller.json` + 注册「程序和功能」卸载项（HKCU，DisplayName=工程管家）；卸载时先把自身复制到 `%TEMP%` 再重启副本删除安装目录（避免 exe 自锁），数据存储路径永不删。
 - 优化后安装包大小：~198MB（去除了 WPF 运行时、重复字体、未使用依赖）
@@ -321,23 +321,25 @@ cd "E:\测试" && npx tsc --noEmit --pretty false 2>&1 | Select-String -Pattern 
 
 **通过标准**：
 - 后端 0 错误 0 警告
-- 后端 tests 26/26 通过 (v0.73.0 起: UserDimFilterTests 17 + UserDimPhase2Tests 9)
+- 后端 tests 全部通过（测试套件位于 EngineeringManager.Tests/：Common / Endpoints / Migrations / Security）
 - 前端 check 0 HARD FAIL (73 警告是历史软警告, 不影响)
 - vite build 10-18 秒成功 (依赖并行 CI, 18s 偏慢可接受)
 - **tsc 0 error (v0.79.0 起, 防 unused import / 类型错乱回归)**
-- 前端 vitest 48/48 通过 (mask.ts 30 + useMaskedFn 7 + api-client 11, hooks/ 目录下其他测试视情况)
+- 前端 vitest 全部通过（mask / useMaskedFn / api-client 等套件）
 
 **5 项全绿才可 git tag v0.x.0**。任何一项红 → 标记 WIP，先修。
 
 ---
 
-## 🩺 安全审计结果（2026-06-16 v1.0.0 状态）
+## 🩺 历史安全审计（2026-06-16，v1.0.0 之前快照 · 仅存档）
 
 > **审计者**：darwin-skill 9 维 rubric 参照 + vibe-coding-guide 19 条 + 4 个 explore 子代理 file:line 实证
 > **回滚锚点**：git reset --hard v0.69.0（v1.0.0-pre-vibe 之前，commit fcdffea3fed06f878789db7f08d98303ffdf077f 之上的版本）
 > **完整修复计划**：[P0-FIX-PLAN.md](docs/P0-FIX-PLAN.md)
+> ⚠️ 本节为历史审计快照。下列 P0/P1 问题**均已修复**，当前状态见下一节「✅ 当前安全状态」。
+> 注：本节 v1.0.0 等为历史规划编号；项目现行版本号为 v0.8x（见「版本管理」）。
 
-### 4 个 🔴 P0 缺口（**当前版本未修，发布前必读**）
+### 4 个 🔴 P0 缺口（历史 · v1.0.0 之前 · 现已全部修复）
 
 | # | 缺口 | 现状 | 严重度 |
 |---|------|------|------|
@@ -375,11 +377,11 @@ cd "E:\测试" && npx tsc --noEmit --pretty false 2>&1 | Select-String -Pattern 
 3. **不要在 P0 修完前**新增涉及 PII 的新功能（先把 P0-2/P0-3 修了再考虑）
 4. **vibe-coding-guide 兼容度**：v2 实证 9/19 完美 + 5/19 缺口 + 5/19 部分合规（详见 v2 报告）
 
-**AGENTS.md 之前声称"RequireAuthorization() 强制"是文档与代码 gap**——以本审计为准，**代码实际未做鉴权**。
+> 历史说明：该审计时点代码确实未做鉴权；此问题已在 v1.0.0 修复（GlobalAuthMiddleware）。当前状态以下一节为准。
 
 ---
 
-## 🟢 截至 v0.73.0 (P0-4 闭环, commit 26f1f44) 实际状态
+## ✅ 当前安全状态（P0/P1 均已修复）
 
 **注意**: 上面 "🔴 P0-1/2/3/4 缺口" 是 v1.0.0 之前的审计结果. 实际当前代码状态:
 
