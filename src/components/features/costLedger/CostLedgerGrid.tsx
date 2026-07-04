@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties } from 'react'
+import { useMemo, useState, useEffect, type CSSProperties } from 'react'
 import {
   useReactTable, getCoreRowModel, getSortedRowModel,
   getGroupedRowModel, getExpandedRowModel, flexRender,
@@ -24,6 +24,7 @@ function pinStyle<T>(column: TCol<T, unknown>): CSSProperties {
 
 export function CostLedgerGrid({ rows, onChanged }: { rows: CostLedgerEntry[]; onChanged: () => void }) {
   const [data, setData] = useState<CostLedgerEntry[]>(rows)
+  useEffect(() => { setData(rows) }, [rows])   // rows 变化时同步
   const [sorting, setSorting] = useState<SortingState>([])
   const [grouping, setGrouping] = useState<GroupingState>([])  // 例：['direction'] 或 ['category']
 
