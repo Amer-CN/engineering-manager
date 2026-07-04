@@ -4,6 +4,10 @@
 > **回滚锚点**：`git reset --hard v1.0.0-pre-vibe`（commit fcdffea3fed06f878789db7f08d98303ffdf077f）
 > **严重度图例**：🔴 P0 必须修 / 🟡 P1 强烈建议 / 🟢 P2 可选
 
+> ✅ **状态更新（2026-07-04）**：本计划中的 P0-1/2/3/4 与 P1-1/2 均已在 v1.0.0–v0.74.0 落地完成，详见 AGENTS.md「✅ 当前安全状态」。以下为原始修复计划（含 file:line），保留作实施记录与回滚参考。
+> ⚠️ 版本号：本文档 v1.0.x / v1.1.0 等为历史规划编号，项目现行版本为 v0.8x。
+> ⚠️ 历史：文中 src-tauri/…（Rust）相关描述为 C# 迁移前的历史，src-tauri/ 目录现已移除。
+
 ---
 
 ## TL;DR
@@ -19,7 +23,7 @@
 ## 🔴 P0-1: OCR API Key 公开在安装包（最高优先级）
 
 ### 现状
-- `E:\测试\public\ocr-config.json:5-6` 明文 `apiKey=3ctkvORt...` `secretKey=nXFQ0nHox...`
+- `E:\测试\public\ocr-config.json:5-6` 明文 `apiKey=<REDACTED>` `secretKey=<REDACTED>`
 - 已被打进 `dist/ocr-config.json`，随安装包发布到**所有用户机器**
 - `OcrEndpoints.cs:531-558` 直接从 JSON 读明文 key
 - `src/services/ocr.ts:158-194` 前端把 key 写到 `localStorage['workbuddy_ocr_config']`
@@ -106,7 +110,7 @@ git reset --hard v1.0.0-pre-vibe
 8-12 小时（含测试 + 文档 + 升级指南 + 现有用户数据迁移脚本）
 
 ### 验证
-- 安装包下载后**搜索** `apiKey=3ctkvORt` 应**0 命中**
+- 安装包下载后**搜索** `apiKey=<REDACTED>` 应**0 命中**
 - 新用户首次启动**强制配置** key
 - 已升级用户**保留**旧 key 配置（如已配）
 
@@ -437,13 +441,15 @@ git reset --hard v1.0.0-pre-vibe
 
 ---
 
-## 🟡 P1-2: admin/admin123 多处公开
+## 🟡 P1-2: admin 默认密码多处公开
+
+> 已修复（v1.0.0）：改读环境变量 + 启动日志去明文；以下为历史现状描述。
 
 ### 现状
-- `src-tauri/src/db/init.rs:711` Rust 端硬编码 `let password = "admin123";`
-- `init.rs:710` 硬编码盐 `"admin-default-salt-2026"`
-- `init.rs:732` 启动日志打印 `默认管理员账号已创建: admin / admin123`
-- `AGENTS.md:87` / `CLAUDE.md:87` / `README.md:78` 明文
+- `src-tauri/src/db/init.rs:711` Rust 端硬编码 `let password = "<REDACTED>";`
+- `init.rs:710` 硬编码盐 `"<REDACTED-SALT>"`
+- `init.rs:732` 启动日志打印 `默认管理员账号已创建: admin / <REDACTED>`
+- `AGENTS.md` / `README.md` 明文
 
 ### 修复
 
