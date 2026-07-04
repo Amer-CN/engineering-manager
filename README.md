@@ -30,7 +30,7 @@
 - **Dapper + Microsoft.Data.Sqlite** - 轻量 ORM + 数据库访问
 - **WinForms + WebView2** - 桌面窗口（内嵌浏览器内核显示 React 前端）
 - **React 18 + TypeScript 5** - 类型安全的 UI 开发
-- **Vite 5** - 极速构建工具
+- **Vite 8** - 极速构建工具
 - **TailwindCSS** - 实用优先的样式框架
 - **framer-motion** - 全站交互动画引擎
 - **recharts** - 声明式数据可视化图表库
@@ -82,8 +82,8 @@ build-installer.bat
 
 ## 📚 文档索引
 
-- **[CLAUDE.md](./CLAUDE.md)** — 项目架构、技术栈、模块说明、开发指南（AI 辅助开发入口）
-- **[DESIGN.md](./DESIGN.md)** — 完整设计系统（色彩、字体、间距、动画、组件规范）
+- **[AGENTS.md](./AGENTS.md)** — 项目架构、技术栈、模块说明、开发指南（AI 辅助开发入口）
+- **[设计系统](./AGENTS.md#-ui-规范)** — 完整设计系统（色彩、字体、间距、动画、组件规范）
 - **[CHANGELOG.md](./CHANGELOG.md)** — 版本历史（v1.0.0 → 最新）
 - **[docs/](./docs/)** — 架构审查、代码规范、交接文档、OCR 配置指南等
 
