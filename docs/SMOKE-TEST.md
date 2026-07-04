@@ -24,7 +24,7 @@ cd "E:\测试" && npx vite build 2>&1 | Select-String -Pattern "error|success|�
 
 **通过标准**：
 - 后端 0 错误 0 警告
-- tests 8/8 通过
+- 后端单元测试全部通过
 - 前端 check 0 HARD FAIL
 - vite build 11-12 秒成功
 
@@ -48,17 +48,19 @@ cd "E:\测试\EngineeringManager.Api" && dotnet run
 
 **测试账号**（按角色验证）：
 
+> ⚠️ 测试账号密码请勿写入仓库文档；从本地 seed 数据或管理员设置获取。
+
 | 账号 | 密码 | 角色 | 验证项 |
 |------|------|------|--------|
-| `admin` | `admin123` (首次需改) | admin | 看到全部侧边栏 + 全部数据 |
-| `manager` | `manager123` | manager | 看到项目/合同/工人（无系统设置） |
-| `accountant` | `accountant123` | accountant | 看到财务/发票/合同（无人员管理） |
-| `worker` | `worker123` | worker | 只看 dashboard + 项目（只读） |
+| `admin` | `<初始密码>` (首次需改) | admin | 看到全部侧边栏 + 全部数据 |
+| `manager` | `<密码>` | manager | 看到项目/合同/工人（无系统设置） |
+| `accountant` | `<密码>` | accountant | 看到财务/发票/合同（无人员管理） |
+| `worker` | `<密码>` | worker | 只看 dashboard + 项目（只读） |
 
 **v0.71.0 老库升级特殊处理**：
 - 老用户从 v0.70.0 升级后，password_hash 为空 → 登录返回"账户需要重置密码"
 - admin 用 DB 工具 (DB Browser for SQLite) 直接 UPDATE users SET password_hash='xxx' WHERE id='1'
-- 或 v1.1.1 的 `/api/auth/reset-password` 端点（admin 调）
+- 或 `/api/auth/reset-password` 端点（admin 调）
 
 **通过标准**：
 - [ ] 登录成功 + 跳转主页
@@ -195,7 +197,7 @@ curl http://localhost:5048/api/contracts/income
 | 类别 | 标准 | 状态 |
 |------|------|------|
 | 编译 | 0 错误 0 警告 | ☐ |
-| 单元测试 | 8/8 通过 | ☐ |
+| 单元测试 | 全部通过 | ☐ |
 | 前端 check | 0 HARD FAIL | ☐ |
 | 前端 build | 11-12 秒 | ☐ |
 | 启动 | 窗口弹出 + WebView2 加载 | ☐ |
