@@ -66,6 +66,32 @@ public class MainWindow : Form
     private const int HTTOPRIGHT = 14, HTBOTTOM = 15, HTBOTTOMLEFT = 16, HTBOTTOMRIGHT = 17;
     private const int BORDER_SIZE = 6;
 
+    /// <summary>
+    /// API 冷启动期间显示的品牌化"启动中"占位页。
+    /// </summary>
+    private const string WarmingHtml = """
+        <!DOCTYPE html>
+        <html><head><meta charset="utf-8"><style>
+          *{margin:0;padding:0;box-sizing:border-box}
+          body{display:flex;align-items:center;justify-content:center;
+               height:100vh;background:#1e293b;font-family:'Microsoft YaHei',sans-serif}
+          .wrap{text-align:center}
+          .logo{width:48px;height:48px;margin:0 auto 20px;animation:pulse 1.2s ease-in-out infinite}
+          .text{color:#94a3b8;font-size:14px;letter-spacing:1px}
+          @keyframes pulse{0%,100%{opacity:.4;transform:scale(.95)}50%{opacity:1;transform:scale(1.05)}}
+        </style></head><body><div class="wrap">
+          <svg class="logo" viewBox="0 0 18 18" fill="none">
+            <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#3b82f6" stop-opacity=".6"/>
+            </linearGradient>
+            <mask id="m"><rect width="18" height="18" fill="white"/>
+            <path d="M5 14 L9 6 L13 14 Z" fill="black"/></mask></defs>
+            <path d="M2 15.5 L9 2.5 L16 15.5 Z" fill="url(#g)" mask="url(#m)"/>
+          </svg>
+          <div class="text">正在启动…</div>
+        </div></body></html>
+        """;
+
     // ═══════════════════════════════════════════════════════════
     // WndProc — 只处理光标变化
     // resize 由前端 div → postMessage → OnWebViewMouseDown 启动
@@ -200,6 +226,20 @@ public class MainWindow : Form
 
             webView.CoreWebView2.WebMessageReceived += OnWebMessage;
             var frontendUrl = _isProduction ? "http://localhost:5048" : "http://localhost:5173";
+
+            // 生产模式：WebView2 初始化与 API 冷启动并行后，导航前快速轮询就绪
+            if (_isProduction)
+            {
+                // 先显示"启动中"占位页，避免轮询期间窗口空白
+                webView.CoreWebView2.NavigateToString(WarmingHtml);
+                using var client = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(1) };
+                for (int i = 0; i < 150; i++) // 100ms × 150 ≈ 15s 兜底
+                {
+                    try { if ((await client.GetAsync("http://localhost:5048/api/health")).IsSuccessStatusCode) break; }
+                    catch { }
+                    await Task.Delay(100);
+                }
+            }
             webView.CoreWebView2.Navigate(frontendUrl);
 
             webView.CoreWebView2.DocumentTitleChanged += (_, _) =>

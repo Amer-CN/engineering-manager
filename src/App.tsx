@@ -33,11 +33,11 @@ const Invoices = lazy(() => import('./components/Invoices'))
 const Settings = lazy(() => import('./components/Settings'))
 const Users = lazy(() => import('./components/Users'))
 import LockScreen from './components/LockScreen'
+import SplashScreen from './components/SplashScreen'
 
 type WebViewWindow = Window & { chrome?: { webview?: { postMessage: (msg: string) => void; addEventListener: (event: string, handler: (e: any) => void) => void; removeEventListener: (event: string, handler: (e: any) => void) => void } } };
 const getWebview = () => (window as WebViewWindow).chrome?.webview;
 const Login = lazy(() => import('./components/Login'))
-const SplashScreen = lazy(() => import('./components/SplashScreen'))
 
 // 加载占位 — 品牌化动画
 const PageLoader = () => (
@@ -264,11 +264,7 @@ const AppContent: React.FC = () => {
 
   // 启动动画
   if (showSplash) {
-    return (
-<Suspense fallback={<PageLoader />}>
-        <SplashScreen onComplete={() => setShowSplash(false)} />
-      </Suspense>
-    )
+    return <SplashScreen onComplete={() => setShowSplash(false)} />
   }
 
   if (!isAuthenticated) {
