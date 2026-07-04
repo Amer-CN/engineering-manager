@@ -10,6 +10,7 @@
     <ApplicationIcon>app.ico</ApplicationIcon>
     <NoWarn>MSB3277;AD0001</NoWarn>
     <Version>0.82.0</Version>
+    <PublishReadyToRun>true</PublishReadyToRun>
   </PropertyGroup>
 
   <ItemGroup>
