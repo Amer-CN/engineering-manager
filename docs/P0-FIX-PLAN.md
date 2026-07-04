@@ -492,7 +492,7 @@ git reset --hard v1.0.0-pre-vibe
 6-8 小时
 
 ### 验证
-- `grep -E "admin123|admin-default-salt"` 在 `E:\测试` **0 命中**
+- `grep -E` 检测 admin 默认密码及盐值字面量（正则 `admin[0-9]{3}|admin-.*-salt`）在 `E:\测试` **0 命中**
 - 新安装用户首次启动有引导，**不会**有默认密码
 - AGENTS.md/README.md 不含明文密码
 
