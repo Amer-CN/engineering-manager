@@ -60,7 +60,7 @@ SQLite (engineering.db) ← 数据存储路径由用户配置
 - 安装包：`release\EngineeringManager-Setup-<版本号>.exe`（例：`release\EngineeringManager-Setup-0.82.0.exe`，见 `build-installer.bat`）
 - 打包脚本：`build-installer.bat` / `release.bat`（构建前端 + C# 发布 + payload.zip 打包 + 安装器）
 - **卸载器接线**：主程序 `EngineeringManager.Api.exe --uninstall` 模式（极简 WinForms 确认+进度窗，不用 WebView2/React）；注册「程序和功能」卸载项（HKCU，DisplayName=工程管家，UninstallString=`Api.exe --uninstall`）；卸载时删快捷方式/注册表/`%APPDATA%\工程管家`/安装目录里除自身 exe 外的文件，最后 detached `cmd.exe` 在进程退出后 `rmdir /s /q` 整个安装目录（含 exe 自身），数据存储路径永不删。
-- 优化后安装包大小：~198MB（去除了 WPF 运行时、重复字体、未使用依赖）
+- 优化后安装包大小：~158MB（去除独立卸载器运行时后实测，见 `build-installer.bat`）
 
 ## 📐 数据架构铁律
 
