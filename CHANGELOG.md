@@ -9,6 +9,51 @@
 > **重要**: v0.74.0 → v0.75.3 期间曾过度打 tag (refactor-only sprint 也 bump). 已在 v0.75.3 重新整理 git 历史 (drop 7 个 spurious chore "bump version" commits), 重组成正确的 semver 历史.
 
 
+## v0.82.1 (2026-07-05) — perf: 启动提速（Splash 去死等 + 后端并行化）
+
+> **SemVer**: patch bump (0.82.0 → 0.82.1).
+
+### 更新了什么（大白话）
+
+#### ✨ 体验优化
+- **启动速度大幅提升**：去掉了启动动画的固定等待时间（从 2.8 秒缩短到 0.8 秒），动画还在、只是快多了
+- **窗口打开更快**：以前双击后要先等后端启动完才弹窗口，现在窗口和后端同时启动，省掉了一段干等时间
+- **启动中不再白屏**：后端启动慢时窗口会显示"正在启动…"带 Logo 动画的占位页，不再是空白窗口
+
+### 改动（开发者视角）
+
+- **`perf(splash)`** c2eae25: 前端 Splash 去死等
+  - `SplashParticles.tsx`: `fadeTimer` 2200→500ms, `completeTimer` 2800→800ms
+  - `App.tsx`: `SplashScreen` 从 `lazy()` 改为静态 `import`，去掉 `<Suspense>` 包裹
+
+- **`perf(startup)`** ac85b53: 后端启动并行化
+  - `EntryPoint.cs`: 删除 `for (int i = 0; i < 60; i++)` 同步死等 API 轮询段（500ms × 60 = 30s 兜底），窗口立刻打开
+  - `MainWindow.cs` `OnLoad`: `EnsureCoreWebView2Async` 后先 `NavigateToString(WarmingHtml)` 显示品牌化"正在启动…"占位页，再 100ms 粒度轮询 `/api/health`（15s 兜底），就绪后 `Navigate(frontendUrl)` 切真实页面
+
+### 红绿灯
+
+- dotnet build: 0 错误
+- dotnet test: 174/174 通过
+- npm check: BUILD PASSED
+- tsc: 0 error
+- vite build: 8.08s
+
+---
+
+## v0.82.0 (2026-07-04) — feat: 卸载器合并 + 安装包体积优化
+
+> **SemVer**: minor bump (0.81.7 → 0.82.0).
+
+### 更新了什么（大白话）
+
+#### 🚀 新功能
+- **支持从 Windows「程序和功能」卸载**：现在工程管家会像正常软件一样出现在「控制面板 → 程序和功能」列表里，可以从那里一键卸载
+#### ✨ 体验优化
+- **卸载更干净彻底**：点卸载后程序会先把自己复制到临时目录再运行删除，避免"程序删不掉自己"的问题；数据存放文件夹永远不会被删
+- **安装包体积优化**：合并卸载器到主程序，安装包从 ~198MB 降至 ~160MB
+
+---
+
 ## v0.81.7 (2026-07-02) — fix: 设置页下载更新共享全局状态,显示进度条
 
 > **SemVer**: patch bump (0.81.6 → 0.81.7).
