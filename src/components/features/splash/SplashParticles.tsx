@@ -136,11 +136,11 @@ const SplashParticles: React.FC<SplashParticlesProps> = ({ config, onComplete })
 
     const fadeTimer = setTimeout(() => {
       fadeOut = true
-    }, 2200)
+    }, 500)
 
     const completeTimer = setTimeout(() => {
       onComplete()
-    }, 2800)
+    }, 800)
 
     return () => {
       cancelAnimationFrame(animFrameRef.current)
