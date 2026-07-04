@@ -1,3 +1,17 @@
+/**
+ * TODO: 当前 TanStack 成本台账 Grid 仅为技术实验骨架，暂未达到可上线 Beta 标准。
+ *
+ * 重新接入 UI 前必须补齐：
+ * 1. 接回旧表格已有的筛选能力（useCostLedgerFilters / CostLedgerListToolbar / ColumnFilter）
+ * 2. 恢复"操作"列（编辑 / 删除）
+ * 3. 补充分组切换入口（按方向 / 按分类 / 取消分组）
+ * 4. 重新校准金额列单位，确保与旧表格显示一致
+ * 5. 验证冻结列在横向滚动下的可见性、层级和不透底
+ * 6. 补 loading / 空状态 / 失败回滚提示 / 主题适配
+ *
+ * 在完成以上项目之前，不应作为用户可见功能暴露。
+ */
+
 import { useMemo, useState, type CSSProperties } from 'react'
 import {
   useReactTable, getCoreRowModel, getSortedRowModel,
