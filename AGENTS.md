@@ -58,7 +58,8 @@ SQLite (engineering.db) ← 数据存储路径由用户配置
 ## 📦 打包与部署
 - **平时只构建不打包**：修改代码 → `vite build`（约5-10秒）→ dev模式测试 → 用户通知才生成安装包
 - 安装包：`release\工程管家-Setup.exe`
-- 打包脚本：`build-installer.bat`（构建前端 + C# 发布 + payload.zip 打包 + 安装器/卸载器）
+- 打包脚本：`build-installer.bat` / `release.bat`（构建前端 + C# 发布 + payload.zip 打包 + 安装器；卸载器 vite build + publish 后铺入 `app-files\uninstall\`）
+- **卸载器接线**：安装时写 `<安装目录>\uninstall\uninstaller.json` + 注册「程序和功能」卸载项（HKCU，DisplayName=工程管家）；卸载时先把自身复制到 `%TEMP%` 再重启副本删除安装目录（避免 exe 自锁），数据存储路径永不删。
 - 优化后安装包大小：~198MB（去除了 WPF 运行时、重复字体、未使用依赖）
 
 ## 📐 数据架构铁律
