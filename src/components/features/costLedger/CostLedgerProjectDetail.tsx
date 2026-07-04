@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { CostLedgerList } from './CostLedgerList'
+import { CostLedgerGrid } from './CostLedgerGrid'
 import { CostLedgerForm } from './CostLedgerForm'
 import { CostLedgerBatchBar } from './CostLedgerBatchBar'
 import { CostLedgerCompareModal } from './CostLedgerCompareModal'
@@ -32,6 +33,16 @@ export function CostLedgerProjectDetail({ project, onBack, categories, onManageC
   const [showImport, setShowImport] = useState(false)
   const [showCompare, setShowCompare] = useState(false)
   const [editing, setEditing] = useState<CostLedgerEntry | null>(null)
+
+  // 新表格开关（localStorage 持久化，方便对比新旧）
+  const [useNewGrid, setUseNewGrid] = useState(
+    () => localStorage.getItem('costledger_new_grid') === 'true'
+  )
+  const toggleGrid = () => {
+    const v = !useNewGrid
+    setUseNewGrid(v)
+    localStorage.setItem('costledger_new_grid', String(v))
+  }
 
   // 版本列表加载后，自动切换到最新非初始版（仅首次）
   useEffect(() => {
@@ -126,18 +137,25 @@ export function CostLedgerProjectDetail({ project, onBack, categories, onManageC
         <Button onClick={() => { setEditing(null); setShowForm(true) }}  variant="primary" size="sm">
           + 新增台账
         </Button>
+        <Button variant="secondary" size="sm" onClick={toggleGrid}>
+          {useNewGrid ? '经典表格' : '新表格(Beta)'}
+        </Button>
       </div>
 
       {/* 内容区 */}
       <div className="flex-1 min-h-0 flex flex-col">
-        <CostLedgerList key={batchId}
-          entries={entries}
-          summary={summary}
-          loading={loading}
-          onEdit={(e) => { setEditing(e); setShowForm(true) }}
-          onDelete={handleDelete}
-          categories={categories}
-        />
+        {useNewGrid ? (
+          <CostLedgerGrid rows={entries} onChanged={load} />
+        ) : (
+          <CostLedgerList key={batchId}
+            entries={entries}
+            summary={summary}
+            loading={loading}
+            onEdit={(e) => { setEditing(e); setShowForm(true) }}
+            onDelete={handleDelete}
+            categories={categories}
+          />
+        )}
       </div>
 
       {showForm && (
