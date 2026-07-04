@@ -47,6 +47,7 @@ export function CostLedgerGrid({ rows, onChanged }: { rows: CostLedgerEntry[]; o
 
   const table = useReactTable({
     data, columns,
+    getRowId: (row) => String(row.id),   // 让 row.id === 业务 id，updateCell 的 findIndex 才能命中
     state: { sorting, grouping },
     initialState: { columnPinning: { left: ['voucherNo', 'date'], right: ['actions'] } }, // 冻结列
     defaultColumn: { cell: EditableCell as ColumnDef<CostLedgerEntry>['cell'] },                    // 默认走可编辑单元格
