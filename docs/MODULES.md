@@ -1,7 +1,7 @@
 # 核心模块详细说明
 
-> 本文档包含各业务模块的详细设计说明，CLAUDE.md 只保留模块索引。
-> 最后同步：2026-06-19（v0.78.0 release: 修 DataTable 3 critical runtime bug, List 页面真正可用）
+> 本文档包含各业务模块的详细设计说明，AGENTS.md 只保留模块索引。
+> 最后同步：2026-07-04（对齐 v0.82.0；逐版本增量见 CHANGELOG.md）
 
 ---
 

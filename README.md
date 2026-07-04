@@ -85,7 +85,7 @@ build-installer.bat
 - **[AGENTS.md](./AGENTS.md)** — 项目架构、技术栈、模块说明、开发指南（AI 辅助开发入口）
 - **[设计系统](./AGENTS.md#-ui-规范)** — 完整设计系统（色彩、字体、间距、动画、组件规范）
 - **[CHANGELOG.md](./CHANGELOG.md)** — 版本历史（v1.0.0 → 最新）
-- **[docs/](./docs/)** — 架构审查、代码规范、交接文档、OCR 配置指南等
+- **[docs/](./docs/)** — 架构决策（ARCHITECTURE）、数据库设计（DATABASE_DESIGN）、模块详解（MODULES）、安全修复计划（P0-FIX-PLAN）、冒烟测试（SMOKE-TEST）、历史交接（handoff/）
 
 ## 📄 许可证
 
