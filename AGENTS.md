@@ -53,13 +53,13 @@ SQLite (engineering.db) ← 数据存储路径由用户配置
 | `src/services/tauri-bridge.ts` | API 桥接层（前端调用的统一接口） |
 | `src/services/api-adapter.ts` | 环境检测 + API 选择 |
 | `EngineeringManager.Installer/` | 安装器（WinForms + WebView2 + React 前端） |
-| `EngineeringManager.Uninstaller/` | 卸载器（WinForms + WebView2 + React 前端） |
+| `EngineeringManager.Uninstaller/` | 旧独立卸载器（已废弃，卸载逻辑已合并到主程序 `--uninstall` 模式；源码留存存档） |
 
 ## 📦 打包与部署
 - **平时只构建不打包**：修改代码 → `vite build`（约5-10秒）→ dev模式测试 → 用户通知才生成安装包
 - 安装包：`release\EngineeringManager-Setup-<版本号>.exe`（例：`release\EngineeringManager-Setup-0.82.0.exe`，见 `build-installer.bat`）
-- 打包脚本：`build-installer.bat` / `release.bat`（构建前端 + C# 发布 + payload.zip 打包 + 安装器；卸载器 vite build + publish 后铺入 `app-files\uninstall\`）
-- **卸载器接线**：安装时写 `<安装目录>\uninstall\uninstaller.json` + 注册「程序和功能」卸载项（HKCU，DisplayName=工程管家）；卸载时先把自身复制到 `%TEMP%` 再重启副本删除安装目录（避免 exe 自锁），数据存储路径永不删。
+- 打包脚本：`build-installer.bat` / `release.bat`（构建前端 + C# 发布 + payload.zip 打包 + 安装器）
+- **卸载器接线**：主程序 `EngineeringManager.Api.exe --uninstall` 模式（极简 WinForms 确认+进度窗，不用 WebView2/React）；注册「程序和功能」卸载项（HKCU，DisplayName=工程管家，UninstallString=`Api.exe --uninstall`）；卸载时删快捷方式/注册表/`%APPDATA%\工程管家`/安装目录里除自身 exe 外的文件，最后 detached `cmd.exe` 在进程退出后 `rmdir /s /q` 整个安装目录（含 exe 自身），数据存储路径永不删。
 - 优化后安装包大小：~198MB（去除了 WPF 运行时、重复字体、未使用依赖）
 
 ## 📐 数据架构铁律
