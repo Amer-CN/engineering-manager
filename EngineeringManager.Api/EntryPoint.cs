@@ -80,31 +80,6 @@ public static class EntryPoint
         apiThread.IsBackground = true;
         apiThread.Start();
 
-        // ── 等待 API 就绪（同步轮询，避免 async/await 破坏 COM 线程模式）──
-        Console.WriteLine("[App] Waiting for API to be ready...");
-        var apiReady = false;
-        for (int i = 0; i < 60; i++) // 最多等 30 秒
-        {
-            try
-            {
-                using var client = new System.Net.Http.HttpClient();
-                client.Timeout = TimeSpan.FromSeconds(2);
-                var resp = client.GetAsync("http://localhost:5048/api/health").Result;
-                if (resp.IsSuccessStatusCode)
-                {
-                    apiReady = true;
-                    Console.WriteLine($"[App] API is ready (after {(i + 1) * 500}ms)");
-                    break;
-                }
-            }
-            catch { }
-            Thread.Sleep(500);
-        }
-        if (!apiReady)
-        {
-            Console.WriteLine("[App] WARNING: API not ready after 30s, proceeding anyway");
-        }
-
         // ── 主线程运行 WinForms 窗口 ──
         Console.WriteLine("[App] Opening window...");
         Application.Run(new MainWindow(isProduction));
