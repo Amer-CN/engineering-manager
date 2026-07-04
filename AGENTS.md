@@ -12,7 +12,7 @@
 - **Dapper + Microsoft.Data.Sqlite** — 数据库访问（轻量 ORM，手写 SQL）
 - **WinForms + WebView2** — 桌面窗口（内嵌浏览器内核显示 React 前端）
 - **React 18 + TypeScript 5** - 类型安全的 UI 开发
-- **Vite 5** - 极速构建工具
+- **Vite 8** - 极速构建工具
 - **TailwindCSS** - 实用优先的样式框架
 - **SQLite** - 本地数据持久化（`engineering.db`）
 - **lucide-react** - SVG 图标库（`iconMap.ts` 注册，`<Icon name="X" />` 统一入口）
