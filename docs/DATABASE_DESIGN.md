@@ -1,8 +1,8 @@
 # 工程管家 数据库设计文档
 
-> **版本**：v1.0
-> **日期**：2026-06-12
-> **状态**：Phase 0 产出物，待人工确认
+> **版本**：v1.1
+> **日期**：2026-06-12（首版）/ 2026-07-04（对齐当前 schema）
+> **状态**：Phase 1+ 已落地（金额已迁移 INTEGER、软删除/审计字段已补齐），本文档已对齐实际 schema
 
 ---
 
@@ -97,8 +97,8 @@
 
 | 主表 | 从表 | 关系类型 | 关联字段 | 说明 |
 |------|------|----------|----------|------|
-| partners | partner_projects | 1:N | partner_id | 合作伙伴↔项目(拆分后) |
-| supervisors | supervisor_projects | 1:N | supervisor_id | 监管单位↔项目(拆分后) |
+| partners | partner_projects | 1:N | partner_id | 合作伙伴↔项目（计划拆分；当前仍为 project_ids JSON） |
+| supervisors | supervisor_projects | 1:N | supervisor_id | 监管单位↔项目（计划拆分；当前仍为 project_ids JSON） |
 | inventory_items | inventory_transactions | 1:N | item_id | 库存项目↔交易 |
 | roles | users | 1:N | role_id | 角色↔用户 |
 | regions | supervisors | 1:N | region_id | 区域↔监管单位 |
@@ -117,7 +117,7 @@ erDiagram
         TEXT start_date
         TEXT end_date
         TEXT status
-        REAL budget
+        INTEGER budget
         TEXT created_at
         TEXT updated_at
     }
@@ -131,8 +131,8 @@ erDiagram
         TEXT role
         TEXT id_card
         TEXT gender
-        REAL base_salary
-        REAL daily_wage
+        INTEGER base_salary
+        INTEGER daily_wage
         TEXT entry_date
         TEXT status
         INTEGER department_id
@@ -151,7 +151,7 @@ erDiagram
         TEXT bank_account
         TEXT bank_name
         TEXT worker_type
-        REAL daily_wage
+        INTEGER daily_wage
         TEXT created_at
         TEXT updated_at
     }
@@ -168,7 +168,7 @@ erDiagram
         INTEGER worker_id FK
         INTEGER project_id FK
         INTEGER team_id FK
-        REAL daily_wage
+        INTEGER daily_wage
         TEXT worker_type
         TEXT entry_date
         TEXT status
@@ -180,7 +180,7 @@ erDiagram
         INTEGER id PK
         INTEGER project_id FK
         TEXT name
-        REAL amount
+        INTEGER amount
         TEXT counterparty
         TEXT sign_date
         TEXT status
@@ -194,7 +194,7 @@ erDiagram
         INTEGER id PK
         INTEGER project_id FK
         TEXT name
-        REAL amount
+        INTEGER amount
         TEXT counterparty
         TEXT sign_date
         TEXT status
@@ -208,7 +208,7 @@ erDiagram
         INTEGER id PK
         INTEGER project_id FK
         TEXT name
-        REAL amount
+        INTEGER amount
         TEXT counterparty
         TEXT sign_date
         TEXT agreement_type
@@ -230,11 +230,11 @@ erDiagram
         TEXT invoice_no
         TEXT invoice_code
         TEXT name
-        REAL amount
-        REAL price_amount
-        REAL tax_amount
+        INTEGER amount
+        INTEGER price_amount
+        INTEGER tax_amount
         REAL tax_rate
-        REAL received_amount
+        INTEGER received_amount
         INTEGER settlement_id
         TEXT issue_date
         TEXT status
@@ -247,7 +247,7 @@ erDiagram
     payment_records {
         INTEGER id PK
         TEXT type
-        REAL amount
+        INTEGER amount
         TEXT record_date
         INTEGER project_id FK
         INTEGER partner_id FK
@@ -264,7 +264,7 @@ erDiagram
         INTEGER partner_id FK
         TEXT name
         TEXT category
-        REAL amount
+        INTEGER amount
         TEXT status
         TEXT date
         TEXT remark
@@ -280,12 +280,12 @@ erDiagram
         INTEGER member_id FK
         INTEGER project_worker_id FK
         TEXT year_month
-        REAL daily_wage
+        INTEGER daily_wage
         REAL work_days
-        REAL bonus
-        REAL deduction
-        REAL actual_wage
-        REAL paid_amount
+        INTEGER bonus
+        INTEGER deduction
+        INTEGER actual_wage
+        INTEGER paid_amount
         TEXT paid_date
         TEXT status
         TEXT created_at
@@ -315,7 +315,7 @@ erDiagram
         TEXT date
         TEXT direction
         TEXT category
-        REAL amount
+        INTEGER amount
         TEXT counterparty
         TEXT channel
         TEXT summary
@@ -337,6 +337,7 @@ erDiagram
         TEXT bank_account
         TEXT bank_name
         TEXT credit_code
+        TEXT tax_number
         TEXT project_ids
         TEXT created_at
         TEXT updated_at
@@ -392,7 +393,7 @@ erDiagram
         INTEGER project_id FK
         TEXT type
         REAL quantity
-        REAL unit_price
+        INTEGER unit_price
         TEXT date
         TEXT remark
         TEXT created_at
@@ -530,11 +531,11 @@ stateDiagram-v2
 
 | 规范 | 说明 |
 |------|------|
-| 类型 | `REAL`（当前）→ Phase 1 迁移为 `INTEGER`（以"分为单位"） |
+| 类型 | `INTEGER`（以“分”为单位；Phase 1 已由 REAL 迁移完成，见 migration 003_MoneyRealToInteger.sql） |
 | 默认值 | `DEFAULT 0` |
 | 计算 | 前端显示时 ÷ 100 转换为元 |
 
-**需要迁移的金额字段**：
+**已迁移为 INTEGER 的金额字段（migration 003_MoneyRealToInteger.sql）**：
 
 | 表 | 字段 |
 |----|------|
@@ -561,7 +562,7 @@ stateDiagram-v2
 | created_at | TEXT | 创建时间，`datetime('now')` |
 | updated_at | TEXT | 更新时间，需应用层维护 |
 
-**缺少 updated_at 的表**（Phase 2.4 补充）：
+**历史上缺 updated_at、已在 Phase 2.x migration 补齐的表**（以实际 schema 为准）：
 - workers
 - payment_records
 - cost_ledger_categories
@@ -576,7 +577,7 @@ stateDiagram-v2
 |------|------|------|
 | deleted_at | TEXT | NULL=正常，非NULL=已删除 |
 
-**需要添加的表**（Phase 2.1）：
+**已在 Phase 2.x / 安全加固 migration 补齐 deleted_at 的表**：
 - invoices
 - payment_records
 - wages
@@ -601,12 +602,12 @@ stateDiagram-v2
 
 | 反范式 | 表 | 说明 | 原因 |
 |--------|-----|------|------|
-| JSON TEXT 字段 | partners.project_ids | 项目ID列表存储为JSON | 查询频率低，避免额外关联表；Phase 2.2 拆分为关联表 |
-| JSON TEXT 字段 | supervisors.project_ids | 项目ID列表存储为JSON | 同上 |
+| JSON TEXT 字段 | partners.project_ids | 项目ID列表存储为JSON | 查询频率低，避免额外关联表；（计划）Phase 2.2 拆分，当前仍为 JSON |
+| JSON TEXT 字段 | supervisors.project_ids | 项目ID列表存储为JSON | 同上（计划拆分，当前仍为 JSON） |
 | JSON TEXT 字段 | invoices (invoice_details in payment_records/settlements) | 发票关联信息 | 复合关联（ID+金额），JSON更灵活；Phase 2.2 拆分 |
 | JSON TEXT 字段 | cost_ledger.attachments | 附件列表 | 文件引用，无需结构化查询 |
 | JSON TEXT 字段 | templates/contract_templates.variables | 模板变量 | 配置数据，非查询条件 |
-| TEXT 多值字段 | departments.positions | 职位列表 | Phase 2.2 拆分为关联表 |
+| TEXT 多值字段 | departments.positions | 职位列表 | （计划）Phase 2.2 拆分，当前仍为 JSON |
 | 无物理外键 | 全局 | 无 FOREIGN KEY 约束 | SQLite 默认关闭外键检查，应用层保证完整性 |
 
 ---
@@ -628,4 +629,4 @@ stateDiagram-v2
 
 ---
 
-**产出 `docs/DATABASE_DESIGN.md` 后暂停，等人工确认后再进入 Phase 1。**
+**本文档已对齐 Phase 1+ 后的实际 schema；后续 schema 变更请同步更新本文件与对应 migration 脚本。**
