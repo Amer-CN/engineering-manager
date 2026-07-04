@@ -353,7 +353,7 @@ cd "E:\测试" && npx tsc --noEmit --pretty false 2>&1 | Select-String -Pattern 
 | # | 缺口 | 现状 |
 |---|------|------|
 | P1-1 | **静默吞错** | 5 处 catch { } 真静默 + 40 处单边（只 log 不返错 / 只返错不 log）+ 8 处 OCR Results.Ok(new { success=false }) 假成功（OcrEndpoints.cs:64,122,159,200,247,285,339,380） |
-| P1-2 | **admin/admin123 多处公开** | Rust 端 init.rs:711 硬编码 + 启动日志 :732 打印明文 + AGENTS.md/README.md/CLAUDE.md 多处明文 |
+| P1-2 | **admin 默认密码多处公开** | Rust 端 init.rs:711 硬编码 + 启动日志 :732 打印明文 + AGENTS.md/README.md 多处明文 |
 | P1-3 | **OCR 8 处把 ex.Message 直回前端** | 信息泄露风险（OcrEndpoints.cs:8 处） |
 | P1-4 | **审计 user_id 来自 DTO 字段** | AuditEndpoints.cs:35 + SystemEndpoints.cs:73 客户端可伪造身份 |
 | P1-5 | **密码比较用 string ==** | AuthEndpoints.cs:34 应改 CryptographicOperations.FixedTimeEquals |
@@ -392,7 +392,7 @@ cd "E:\测试" && npx tsc --noEmit --pretty false 2>&1 | Select-String -Pattern 
 | P0-3 | PII 零加密 | ✅ 已修 (v0.72.0) | PiiProtector + 13 列 _enc 加密 + backfill-pii 端点 + API 响应层 Mask |
 | P0-4 | 越权读 + 无限流 | ✅ 已修 (v1.0.0 限流 + v0.73.0 P0-4 + v0.74.0 缺口修复) | 限流中间件 (login 5/min + write 30/sec) + 33 个业务端点 user-dim 隔离 (v0.73.0 P0-4 + v0.74.0 修复 inventory/materials GET user-dim 缺口) |
 | P1-1 | 静默吞错 | ✅ 已修 (v1.0.0) | 6 处真静默 + 2 处 OCR 假成功已修 |
-| P1-2 | admin/admin123 多处公开 | ✅ 已修 (v1.0.0) | 改读环境变量 + 启动日志去明文 |
+| P1-2 | admin 默认密码多处公开 | ✅ 已修 (v1.0.0) | 改读环境变量 + 启动日志去明文 |
 | P1-3 | OCR ex.Message 直回前端 | ✅ 已修 (v1.0.0) | ex.SanitizedMessage() helper |
 | P1-4 | 审计 user_id 来自 DTO | ✅ 已修 (v1.0.0) | 改从 JWT uid claim |
 | P1-5 | 密码 string == 比较 | ✅ 已修 (v1.0.0) | CryptographicOperations.FixedTimeEquals |
