@@ -156,7 +156,8 @@ public class UninstallService
         // ── 8. 自删除：detached cmd.exe 在本进程退出后删掉整个安装目录（含 exe 自身）──
         try
         {
-            var deleteCmd = $"/c timeout /t 2 /nobreak >nul & rmdir /s /q \"{installPath}\"";
+            var safePath = installPath.TrimEnd('\\');
+            var deleteCmd = $"/c timeout /t 2 /nobreak >nul & rmdir /s /q \"{safePath}\"";
             Process.Start(new ProcessStartInfo("cmd.exe", deleteCmd)
             {
                 UseShellExecute = false,
