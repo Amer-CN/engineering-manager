@@ -64,12 +64,19 @@ export function CostLedgerProjectDetail({ project, onBack, categories, onManageC
       api.getCostLedger(project.id, batchId),
       api.getCostLedgerSummary(project.id, batchId),
     ])
-    if (listRes.status === 'fulfilled' && listRes.value?.success) {
-      setEntries(listRes.value.data || [])
-    } else if (listRes.status === 'rejected') {
+    if (listRes.status === 'fulfilled') {
+      if (listRes.value?.success) {
+        setEntries(listRes.value.data || [])
+      } else {
+        setEntries([])
+        setLoadError(listRes.value?.error || '加载台账列表失败')
+      }
+    } else {
+      setEntries([])
       setLoadError(listRes.reason?.message || '加载台账列表失败')
     }
     if (summaryRes.status === 'fulfilled' && summaryRes.value?.success) setSummary(summaryRes.value.data || null)
+    else setSummary(null)
     setLoading(false)
   }, [project.id, batchId])
 
