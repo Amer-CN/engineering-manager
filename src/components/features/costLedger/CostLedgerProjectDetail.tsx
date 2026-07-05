@@ -20,9 +20,9 @@ interface CostLedgerProjectDetailProps {
   onManageCategories?: () => void
 }
 
-// ── Beta 开关：状态优先级 ──
-// 1) costledger_grid_internal=1 → 强制新 Grid（内部调试）
-// 2) costledger_grid_beta_enabled=1 → 新 Grid（用户主动选择）
+// ── Beta 开关：初始模式优先级 ──
+// 1) costledger_grid_internal=1 → 内部调试时默认优先进入新 Grid（不禁止切回经典表格）
+// 2) costledger_grid_beta_enabled=1 → 用户主动选择新 Grid
 // 3) 否则 → 旧表格（默认）
 function readGridMode(): 'new' | 'classic' {
   if (typeof window === 'undefined') return 'classic'
@@ -84,9 +84,13 @@ export function CostLedgerProjectDetail({ project, onBack, categories, onManageC
       setEntries([])
       setLoadError(listRes.reason?.message || '加载台账列表失败')
     }
-    if (summaryRes.status === 'fulfilled' && summaryRes.value?.success) {
-      setSummary(summaryRes.value.data || null)
-    } else if (summaryRes.status === 'rejected') {
+    if (summaryRes.status === 'fulfilled') {
+      if (summaryRes.value?.success) {
+        setSummary(summaryRes.value.data || null)
+      } else {
+        setSummary(null)
+      }
+    } else {
       setSummary(null)
     }
     setLoading(false)
