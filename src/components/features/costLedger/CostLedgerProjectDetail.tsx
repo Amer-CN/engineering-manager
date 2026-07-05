@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { CostLedgerList } from './CostLedgerList'
+import { CostLedgerGrid } from './CostLedgerGrid'
 import { CostLedgerForm } from './CostLedgerForm'
 import { CostLedgerBatchBar } from './CostLedgerBatchBar'
 import { CostLedgerCompareModal } from './CostLedgerCompareModal'
@@ -23,15 +24,28 @@ export function CostLedgerProjectDetail({ project, onBack, categories, onManageC
   const showToast = useToastStore(state => state.showToast)
   const { confirm, ConfirmDialog } = useConfirm()
   const { batches, createBatch, copyBatch, renameBatch, deleteBatch } = useCostLedgerBatches(project.id)
-  // 默认取最新有数据的版本（非初始版），后端 getLatestBatch 决定
   const [batchId, setBatchId] = useState<number>(0)
   const [entries, setEntries] = useState<CostLedgerEntry[]>([])
   const [summary, setSummary] = useState<CostLedgerSummary | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [showImport, setShowImport] = useState(false)
   const [showCompare, setShowCompare] = useState(false)
   const [editing, setEditing] = useState<CostLedgerEntry | null>(null)
+
+  // ── 内部专用隐藏开关：localStorage 或 query 参数 ──
+  // 不暴露任何用户可见 UI；仅供开发/内部验收使用
+  const useNewGrid = useMemo(() => {
+    try {
+      if (localStorage.getItem('costledger_grid_internal') === '1') return true
+    } catch {}
+    try {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('costledgerGridInternal') === '1') return true
+    } catch {}
+    return false
+  }, [])
 
   // 版本列表加载后，自动切换到最新非初始版（仅首次）
   useEffect(() => {
@@ -45,11 +59,16 @@ export function CostLedgerProjectDetail({ project, onBack, categories, onManageC
     const api = await getAPI()
     if (!api?.getCostLedger) return
     setLoading(true)
+    setLoadError(null)
     const [listRes, summaryRes] = await Promise.allSettled([
       api.getCostLedger(project.id, batchId),
       api.getCostLedgerSummary(project.id, batchId),
     ])
-    if (listRes.status === 'fulfilled' && listRes.value?.success) setEntries(listRes.value.data || [])
+    if (listRes.status === 'fulfilled' && listRes.value?.success) {
+      setEntries(listRes.value.data || [])
+    } else if (listRes.status === 'rejected') {
+      setLoadError(listRes.reason?.message || '加载台账列表失败')
+    }
     if (summaryRes.status === 'fulfilled' && summaryRes.value?.success) setSummary(summaryRes.value.data || null)
     setLoading(false)
   }, [project.id, batchId])
@@ -128,16 +147,27 @@ export function CostLedgerProjectDetail({ project, onBack, categories, onManageC
         </Button>
       </div>
 
-      {/* 内容区 */}
+      {/* 内容区 — 默认旧表格；内部开关开启时走新 Grid */}
       <div className="flex-1 min-h-0 flex flex-col">
-        <CostLedgerList key={batchId}
-          entries={entries}
-          summary={summary}
-          loading={loading}
-          onEdit={(e) => { setEditing(e); setShowForm(true) }}
-          onDelete={handleDelete}
-          categories={categories}
-        />
+        {useNewGrid ? (
+          <CostLedgerGrid key={batchId}
+            rows={entries}
+            loading={loading}
+            error={loadError}
+            categories={categories}
+            onEdit={(e) => { setEditing(e); setShowForm(true) }}
+            onChanged={load}
+          />
+        ) : (
+          <CostLedgerList key={batchId}
+            entries={entries}
+            summary={summary}
+            loading={loading}
+            onEdit={(e) => { setEditing(e); setShowForm(true) }}
+            onDelete={handleDelete}
+            categories={categories}
+          />
+        )}
       </div>
 
       {showForm && (
