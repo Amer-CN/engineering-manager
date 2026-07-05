@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { CostLedgerList } from './CostLedgerList'
 import { CostLedgerForm } from './CostLedgerForm'
 import { CostLedgerBatchBar } from './CostLedgerBatchBar'
 import { CostLedgerCompareModal } from './CostLedgerCompareModal'
+import { CostLedgerGrid } from './CostLedgerGrid'
 import { useCostLedgerBatches } from '@/hooks/useCostLedgerBatches'
 import { Icon } from '@/components/ui/Icon'
 import { useToastStore } from '@/store/toastStore'
@@ -19,21 +20,43 @@ interface CostLedgerProjectDetailProps {
   onManageCategories?: () => void
 }
 
+// ── Beta 开关：状态优先级 ──
+// 1) costledger_grid_internal=1 → 强制新 Grid（内部调试）
+// 2) costledger_grid_beta_enabled=1 → 新 Grid（用户主动选择）
+// 3) 否则 → 旧表格（默认）
+function readGridMode(): 'new' | 'classic' {
+  if (typeof window === 'undefined') return 'classic'
+  if (localStorage.getItem('costledger_grid_internal') === '1') return 'new'
+  if (localStorage.getItem('costledger_grid_beta_enabled') === '1') return 'new'
+  return 'classic'
+}
+
+function setBetaEnabled(enabled: boolean) {
+  if (enabled) localStorage.setItem('costledger_grid_beta_enabled', '1')
+  else localStorage.removeItem('costledger_grid_beta_enabled')
+}
+
 export function CostLedgerProjectDetail({ project, onBack, categories, onManageCategories }: CostLedgerProjectDetailProps) {
   const showToast = useToastStore(state => state.showToast)
   const { confirm, ConfirmDialog } = useConfirm()
   const { batches, createBatch, copyBatch, renameBatch, deleteBatch } = useCostLedgerBatches(project.id)
-  // 默认取最新有数据的版本（非初始版），后端 getLatestBatch 决定
   const [batchId, setBatchId] = useState<number>(0)
   const [entries, setEntries] = useState<CostLedgerEntry[]>([])
   const [summary, setSummary] = useState<CostLedgerSummary | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [showImport, setShowImport] = useState(false)
   const [showCompare, setShowCompare] = useState(false)
   const [editing, setEditing] = useState<CostLedgerEntry | null>(null)
 
-  // 版本列表加载后，自动切换到最新非初始版（仅首次）
+  // Beta 模式状态
+  const [gridMode, setGridMode] = useState<'new' | 'classic'>(readGridMode)
+  const isInternalMode = useMemo(() => {
+    if (typeof window === 'undefined') return false
+    return localStorage.getItem('costledger_grid_internal') === '1'
+  }, [])
+
   useEffect(() => {
     if (batches.length > 0 && batchId === 0) {
       const latest = [...batches].sort((a, b) => b.id - a.id).find(b => b.id > 0)
@@ -45,12 +68,27 @@ export function CostLedgerProjectDetail({ project, onBack, categories, onManageC
     const api = await getAPI()
     if (!api?.getCostLedger) return
     setLoading(true)
+    setLoadError(null)
     const [listRes, summaryRes] = await Promise.allSettled([
       api.getCostLedger(project.id, batchId),
       api.getCostLedgerSummary(project.id, batchId),
     ])
-    if (listRes.status === 'fulfilled' && listRes.value?.success) setEntries(listRes.value.data || [])
-    if (summaryRes.status === 'fulfilled' && summaryRes.value?.success) setSummary(summaryRes.value.data || null)
+    if (listRes.status === 'fulfilled') {
+      if (listRes.value?.success) {
+        setEntries(listRes.value.data || [])
+      } else {
+        setEntries([])
+        setLoadError(listRes.value?.error || '加载台账列表失败')
+      }
+    } else {
+      setEntries([])
+      setLoadError(listRes.reason?.message || '加载台账列表失败')
+    }
+    if (summaryRes.status === 'fulfilled' && summaryRes.value?.success) {
+      setSummary(summaryRes.value.data || null)
+    } else if (summaryRes.status === 'rejected') {
+      setSummary(null)
+    }
     setLoading(false)
   }, [project.id, batchId])
 
@@ -61,7 +99,6 @@ export function CostLedgerProjectDetail({ project, onBack, categories, onManageC
     if (editing) {
       const res = await api.updateCostLedger(editing.id, data)
       if (res?.success) {
-        // 分类改变时自动学习
         if (editing.category !== data.category) {
           const n = await learnFromEdit(data.summary || '', data.counterparty || '', data.notes || '', data.category, data.direction)
           if (n > 0) showToast(`已学习 ${n} 条分类规则`, 'success')
@@ -92,6 +129,14 @@ export function CostLedgerProjectDetail({ project, onBack, categories, onManageC
     if (res?.success) load()
   }
 
+  // 切换 Grid 模式
+  const handleSwitchGrid = (mode: 'new' | 'classic') => {
+    if (mode === gridMode) return
+    setGridMode(mode)
+    setBetaEnabled(mode === 'new')
+    showToast(mode === 'new' ? '已切换到新表格 Beta' : '已切回经典表格', 'success')
+  }
+
   return (
     <div className="flex h-full flex-col">
       {ConfirmDialog}
@@ -108,6 +153,24 @@ export function CostLedgerProjectDetail({ project, onBack, categories, onManageC
           <p className="text-sm text-slate-500">成本台账</p>
         </div>
         <div className="flex-1" />
+
+        {/* Beta 切换入口 — 低调但明确 */}
+        <div className="flex items-center gap-1 rounded-lg bg-slate-100 p-0.5">
+          <button
+            onClick={() => handleSwitchGrid('classic')}
+            className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${gridMode === 'classic' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            经典表格
+          </button>
+          <button
+            onClick={() => handleSwitchGrid('new')}
+            className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors flex items-center gap-1 ${gridMode === 'new' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            新表格
+            <span className="rounded bg-blue-100 px-1 py-0.5 text-caption font-semibold text-blue-600">Beta</span>
+          </button>
+        </div>
+
         <CostLedgerBatchBar
           batches={batches}
           currentBatchId={batchId}
@@ -128,16 +191,44 @@ export function CostLedgerProjectDetail({ project, onBack, categories, onManageC
         </Button>
       </div>
 
+      {/* Beta 提示条 — 仅在新 Grid 模式下显示 */}
+      {gridMode === 'new' && (
+        <div className="flex items-center gap-2 px-6 py-2 text-xs text-blue-700 bg-blue-50 border-b border-blue-200">
+          <Icon name="Info" size={14} />
+          <span>你正在使用<strong>新表格 Beta</strong>，可随时切回经典表格。导入/导出/打印请暂用经典表格。</span>
+          {isInternalMode && <span className="ml-1 rounded bg-slate-200 px-1 py-0.5 text-caption text-slate-600">内部调试</span>}
+          <button
+            onClick={() => handleSwitchGrid('classic')}
+            className="ml-auto rounded-md border border-blue-300 px-2 py-0.5 text-xs font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+          >
+            切回经典表格
+          </button>
+        </div>
+      )}
+
       {/* 内容区 */}
       <div className="flex-1 min-h-0 flex flex-col">
-        <CostLedgerList key={batchId}
-          entries={entries}
-          summary={summary}
-          loading={loading}
-          onEdit={(e) => { setEditing(e); setShowForm(true) }}
-          onDelete={handleDelete}
-          categories={categories}
-        />
+        {gridMode === 'new' ? (
+          <CostLedgerGrid
+            key={batchId}
+            rows={entries}
+            loading={loading}
+            error={loadError}
+            categories={categories}
+            onEdit={(e) => { setEditing(e); setShowForm(true) }}
+            onChanged={load}
+          />
+        ) : (
+          <CostLedgerList
+            key={batchId}
+            entries={entries}
+            summary={summary}
+            loading={loading}
+            onEdit={(e) => { setEditing(e); setShowForm(true) }}
+            onDelete={handleDelete}
+            categories={categories}
+          />
+        )}
       </div>
 
       {showForm && (
