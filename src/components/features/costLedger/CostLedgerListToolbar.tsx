@@ -20,6 +20,8 @@ interface CostLedgerListToolbarProps {
   tableRef: React.RefObject<HTMLDivElement | null>
   zoom: number
   setZoom: (z: number) => void
+  /** Beta 模式下隐藏打印/导出按钮（未接线能力降级） */
+  betaMode?: boolean
 }
 
 export function CostLedgerListToolbar({
@@ -27,7 +29,7 @@ export function CostLedgerListToolbar({
   setFilter, setCategoryFilter, setCategoryLevelAndReset,
   clearAll, activeFilters, categories,
   filtered, entries, filterSummary,
-  zoomRef, tableRef, zoom, setZoom,
+  zoomRef, tableRef, zoom, setZoom, betaMode,
 }: CostLedgerListToolbarProps) {
   return (
     <div className="flex items-center gap-3 border-b border-slate-200 px-6 py-3">
@@ -93,6 +95,9 @@ export function CostLedgerListToolbar({
         <button onClick={clearAll} className="text-xs text-blue-600 hover:text-blue-800">清除 {activeFilters} 个筛选</button>
       )}
       <div className="ml-auto flex items-center gap-2">
+        {betaMode ? (
+          <span className="text-xs text-slate-400" title="新表格 Beta 暂不支持打印/导出，请切回经典表格使用">Beta 模式不支持打印/导出</span>
+        ) : (<>
         <button
           onClick={() => printCostLedgerList(filtered, categories, categoryLevel, { expense: filterSummary.totalExpense, income: filterSummary.totalIncome, count: filterSummary.count })}
           className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs text-slate-500 hover:border-slate-300 hover:text-slate-700 hover:bg-slate-50 transition-colors"
@@ -105,6 +110,7 @@ export function CostLedgerListToolbar({
         >
           导出Excel
         </button>
+        </>)}
         <div className="flex items-center gap-1 border-l border-slate-200 pl-3">
           <Button onClick={() => {
             const n = Math.max(0.5, +(zoomRef.current - 0.1).toFixed(1))
