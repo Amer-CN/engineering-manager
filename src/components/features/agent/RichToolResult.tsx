@@ -17,6 +17,7 @@ import type { ToolCallResult } from '@/types/agent'
 import {
   toolLabel, fieldLabel, formatValue, isObjectArray, isScalar,
 } from './richToolResult.utils'
+import KnowledgeSourceCard from './KnowledgeSourceCard'
 
 const MAX_ROWS = 8
 
@@ -155,6 +156,8 @@ const ToolResultCard: React.FC<{ result: ToolCallResult }> = ({ result }) => {
         <div className="px-3 pb-2.5 pt-0.5">
           {result.error ? (
             <span className="text-red-600">{result.error}</span>
+          ) : result.toolName === 'searchKnowledgeBase' ? (
+            <KnowledgeSourceCard result={result.result} />
           ) : (
             <RenderValue value={result.result} />
           )}

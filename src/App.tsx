@@ -30,6 +30,7 @@ const Settlement = lazy(() => import('./components/Settlement'))
 const Templates = lazy(() => import('./components/Templates'))
 const Inventory = lazy(() => import('./components/Inventory'))
 const Invoices = lazy(() => import('./components/Invoices'))
+const SpeechKnowledgePage = lazy(() => import('./components/features/knowledge/SpeechKnowledgePage'))
 const Settings = lazy(() => import('./components/Settings'))
 const Users = lazy(() => import('./components/Users'))
 import LockScreen from './components/LockScreen'
@@ -256,6 +257,7 @@ const AppContent: React.FC = () => {
       case 'templates': return <Templates />
       case 'inventory': return <Inventory {...props} />
       case 'invoices': return <Invoices {...props} />
+      case 'knowledge': return <RequirePermission permission="knowledge:read"><SpeechKnowledgePage /></RequirePermission>
       case 'users': return <RequireAdmin><Users /></RequireAdmin>
       case 'settings': return <RequirePermission permission="settings:read"><Settings /></RequirePermission>
       default: return <Dashboard />

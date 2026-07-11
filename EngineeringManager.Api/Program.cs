@@ -5,6 +5,7 @@ using Dapper;
 using Microsoft.Extensions.FileProviders;
 using EngineeringManager.Api;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Http.Features;
 
 // ============ API 配置类（供 EntryPoint.cs 调用） ============
 
@@ -78,6 +79,18 @@ public static class ApiConfig
             && Environment.GetEnvironmentVariable("DISABLE_RATELIMIT") == "1";
         builder.WebHost.UseUrls(testMode ? "http://127.0.0.1:0" : "http://localhost:5048");
 
+        // M4: 允许大音频上传 (500MB) — multipart/form-data 流式上传
+        // Kestrel MaxRequestBodySize 控制整体 HTTP body 上限
+        // FormOptions.MultipartBodyLengthLimit 控制 multipart 单段上限（默认 128MB，不够）
+        builder.WebHost.ConfigureKestrel(options =>
+        {
+            options.Limits.MaxRequestBodySize = 550 * 1024 * 1024; // 550MB (略大于 500MB 上限)
+        });
+        builder.Services.Configure<FormOptions>(options =>
+        {
+            options.MultipartBodyLengthLimit = 550 * 1024 * 1024; // 550MB
+        });
+
         // v1.2.0: PII 字段级加密 (AES-GCM + DPAPI master key)
         builder.Services.AddSingleton<EngineeringManager.Api.Security.PiiProtector>();
         // v0.78.0 PII 后台 re-encrypt worker (admin rotate key 后调用)
@@ -86,10 +99,18 @@ public static class ApiConfig
         // v1.3.0 Agent AI 助手服务
         builder.Services.AddSingleton<EngineeringManager.Api.Services.LlmConfigResolver>();
         builder.Services.AddSingleton<EngineeringManager.Api.Services.LlmProviderService>();
+        builder.Services.AddSingleton<EngineeringManager.Api.Services.ILlmChatService>(sp =>
+            sp.GetRequiredService<EngineeringManager.Api.Services.LlmProviderService>());
         builder.Services.AddSingleton<EngineeringManager.Api.Services.IModelRouter, EngineeringManager.Api.Services.ModelRoutingService>();
         builder.Services.AddSingleton<EngineeringManager.Api.Services.AgentToolService>();
         builder.Services.AddSingleton<EngineeringManager.Api.Services.AgentConversationService>();
         builder.Services.AddSingleton<EngineeringManager.Api.Services.UpdateService>();
+
+        // v0.83 STT 语音转文字后台 worker（单并发）
+        builder.Services.AddHostedService<EngineeringManager.Api.Services.Stt.SttWorker>();
+
+        // v0.84 M2 知识库：文本嵌入服务 + 知识库服务
+        builder.Services.AddSingleton<EngineeringManager.Api.Services.IEmbeddingService, EngineeringManager.Api.Services.BgeEmbeddingService>();
 
         builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
             p.WithOrigins("http://localhost:5173", "http://localhost:3000", "http://localhost:5048")
@@ -356,6 +377,12 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
         // v0.80 版本更新检查
         app.RegisterUpdateEndpoints();
+
+        // v0.83 STT 语音转文字
+        app.RegisterSttEndpoints();
+
+        // v0.84 M2 知识库
+        app.RegisterKnowledgeEndpoints();
     }
     // ============ P0-1: 从 config.json 读取 dataPath ============
     public static string ResolveDataPath()

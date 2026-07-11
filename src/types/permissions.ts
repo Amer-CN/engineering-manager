@@ -29,6 +29,7 @@ export type PermissionResource =
   | 'expenses'
   | 'costLedger'
   | 'drawings'
+  | 'knowledge'
   | 'settings'
   | 'users'
   | 'roles'
@@ -91,6 +92,7 @@ export const SYSTEM_ROLES: Role[] = [
       'invoices:create', 'invoices:read', 'invoices:update', 'invoices:delete', 'invoices:export',
       'expenses:create', 'expenses:read', 'expenses:update', 'expenses:delete', 'expenses:export',
       'drawings:create', 'drawings:read', 'drawings:update', 'drawings:delete', 'drawings:export', 'drawings:import',
+      'knowledge:read',
       'settings:read', 'settings:update',
       'users:create', 'users:read', 'users:update', 'users:delete',
       'roles:read', 'roles:update',
@@ -114,6 +116,7 @@ export const SYSTEM_ROLES: Role[] = [
       'invoices:read', 'invoices:export',
       'expenses:create', 'expenses:read', 'expenses:update', 'expenses:export',
       'drawings:create', 'drawings:read', 'drawings:update', 'drawings:export', 'drawings:import',
+      'knowledge:read',
     ],
   },
   {
@@ -265,6 +268,7 @@ export const RESOURCE_LABELS: Record<PermissionResource, string> = {
   expenses: '成本管理',
   costLedger: '成本台账',
   drawings: '图纸管理',
+  knowledge: '语音知识库',
   settings: '系统设置',
   users: '用户管理',
   roles: '角色管理',

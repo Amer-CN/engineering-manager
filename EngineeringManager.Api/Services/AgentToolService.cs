@@ -20,9 +20,11 @@ namespace EngineeringManager.Api.Services;
 public class AgentToolService
 {
     private readonly List<AgentTool> _allTools;
+    private readonly IEmbeddingService _embedding;
 
-    public AgentToolService()
+    public AgentToolService(IEmbeddingService embedding)
     {
+        _embedding = embedding;
         _allTools = BuildToolRegistry();
     }
 
@@ -106,6 +108,7 @@ public class AgentToolService
                 "getCostSummary" => await ExecuteGetCostSummary(db, arguments, uid, scope),
                 "getPartners" => await ExecuteGetPartners(db, uid, scope),
                 "runSafeQuery" => await ExecuteRunSafeQuery(db, arguments, uid, scope, piiAccess),
+                "searchKnowledgeBase" => await ExecuteSearchKnowledgeBase(db, arguments, uid, CurrentUser.IsAdmin(ctx), _embedding),
                 _ => null,
             };
 
@@ -487,6 +490,106 @@ public class AgentToolService
     }
 
     // ═══════════════════════════════════════════════════════════
+    // 知识库检索工具
+    // ═══════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// searchKnowledgeBase 工具执行：通过 KnowledgeBaseService.SearchAsync 检索知识库。
+    /// 不直接查询 knowledge_documents / knowledge_chunks / knowledge_fts。
+    /// 数据范围（created_by / project_authorizations）由 KnowledgeBaseService 统一处理。
+    /// </summary>
+    private static async Task<object> ExecuteSearchKnowledgeBase(
+        IDbConnection db,
+        JsonElement args,
+        string uid,
+        bool isAdmin,
+        IEmbeddingService embedding)
+    {
+        // 1. 解析 query（必填）— 参数错误抛异常，由 ExecuteToolAsync catch 统一处理
+        string query;
+        try
+        {
+            query = args.GetProperty("query").GetString() ?? "";
+        }
+        catch
+        {
+            throw new InvalidOperationException("缺少 query 参数");
+        }
+
+        query = query.Trim();
+        if (string.IsNullOrWhiteSpace(query))
+            throw new InvalidOperationException("query 不能为空");
+
+        if (query.Length > 500)
+            query = query.Substring(0, 500);
+
+        // 2. 解析 topK（可选，默认 5，clamp 1-10）
+        int topK = 5;
+        if (args.TryGetProperty("topK", out var topKProp) && topKProp.ValueKind == JsonValueKind.Number)
+        {
+            try { topK = topKProp.GetInt32(); } catch { /* 非整数用默认值 */ }
+        }
+        topK = Math.Clamp(topK, 1, 10);
+
+        // 3. 解析 projectId（可选，校验为正整数，防溢出）— 参数错误抛异常
+        int? projectId = null;
+        if (args.TryGetProperty("projectId", out var projProp) && projProp.ValueKind == JsonValueKind.Number)
+        {
+            try
+            {
+                var projLong = projProp.GetInt64();
+                if (projLong < 1)
+                    throw new InvalidOperationException("projectId 必须为正整数");
+                if (projLong > int.MaxValue)
+                    throw new InvalidOperationException("projectId 超出范围");
+                projectId = (int)projLong;
+            }
+            catch (InvalidOperationException)
+            {
+                throw; // 重新抛出我们自己的参数校验异常
+            }
+            catch
+            {
+                throw new InvalidOperationException("projectId 格式无效");
+            }
+        }
+
+        // 4. 执行检索（通过 KnowledgeBaseService，不直接查表）
+        var service = new KnowledgeBaseService(db, embedding);
+        var result = await service.SearchAsync(query, topK, projectId, uid, isAdmin);
+
+        // 5. 构建返回结构（紧凑、可溯源，不含 embedding BLOB / created_by）
+        var hits = result.Hits.Select(h => new
+        {
+            documentId = h.DocumentId,
+            chunkId = h.ChunkId,
+            chunkIndex = h.ChunkIndex,
+            title = h.DocTitle,
+            sourceType = h.SourceType,
+            sourceRef = h.SourceRef,
+            projectId = h.ProjectId,
+            occurredAt = h.OccurredAt,
+            speakers = h.Speakers,
+            text = h.Text,
+            relevance = new
+            {
+                ftsRank = h.FtsRank,
+                semanticRank = h.SemanticRank,
+                rrfScore = h.RrfScore,
+            },
+        }).ToList();
+
+        return new
+        {
+            success = true,
+            query = result.Query,
+            totalHits = result.TotalHits,
+            usedSemantic = result.UsedSemantic,
+            hits,
+        };
+    }
+
+    // ═══════════════════════════════════════════════════════════
     // 辅助方法
     // ═══════════════════════════════════════════════════════════
 
@@ -762,6 +865,36 @@ public class AgentToolService
                 ["sql"] = "要执行的 SQL 查询语句（仅 SELECT）"
             }),
             RequiredPermission = "safeQuery:read",
+            PiiFields = Array.Empty<string>(),
+        });
+
+        // 15. searchKnowledgeBase（知识库语义检索）
+        registry.Add(new AgentTool
+        {
+            Name = "searchKnowledgeBase",
+            Description = "检索企业知识库中的历史通话、会议、录音转写和手工文档。适用于查询'上次谁说过什么'、'某通电话谈了什么'、'以前沟通过的预算/付款/合同安排'等历史沟通内容。支持关键词和语义检索，即使查询词没有在原文中出现也可能命中。",
+            Parameters = BuildParams(new Dictionary<string, object>
+            {
+                ["query"] = new
+                {
+                    type = "string",
+                    description = "自然语言检索问题或关键词",
+                },
+                ["topK"] = new
+                {
+                    type = "integer",
+                    description = "返回结果数量，默认 5，最小 1，最大 10",
+                    minimum = 1,
+                    maximum = 10,
+                    @default = 5,
+                },
+                ["projectId"] = new
+                {
+                    type = "integer",
+                    description = "限定项目范围；只有明确知道项目 ID 时才传",
+                },
+            }, new[] { "query" }),
+            RequiredPermission = "knowledge:read",
             PiiFields = Array.Empty<string>(),
         });
 
