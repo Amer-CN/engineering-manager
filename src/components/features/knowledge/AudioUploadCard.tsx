@@ -137,4 +137,7 @@ const AudioUploadCard: React.FC<AudioUploadCardProps> = ({
         </div>
       )}
     </Card>
+  )
+}
+
 export default AudioUploadCard
