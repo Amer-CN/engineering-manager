@@ -9,7 +9,7 @@
  * - 路由级：knowledge:read 权限缺失时 SpeechKnowledgePage 不可见
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import React from 'react'
 
@@ -24,7 +24,6 @@ import {
 } from '@/hooks/permissionHelpers'
 import {
   setCurrentUser,
-  getCurrentUser,
 } from '@/types/permissions'
 import type { AuthContext } from '@/types/permissions'
 
@@ -34,9 +33,8 @@ import type { AuthContext } from '@/types/permissions'
 
 function makeUser(overrides: Partial<AuthContext> = {}): AuthContext {
   return {
-    userId: 1,
+    userId: '1',
     username: 'admin',
-    displayName: '管理员',
     roleId: 'admin',
     roleName: '管理员',
     permissions: [
@@ -63,9 +61,8 @@ function makeUser(overrides: Partial<AuthContext> = {}): AuthContext {
 
 function makeWorkerUser(): AuthContext {
   return makeUser({
-    userId: 2,
+    userId: '2',
     username: 'worker1',
-    displayName: '工人',
     roleId: 'worker',
     roleName: '工人',
     permissions: [
@@ -261,7 +258,6 @@ describe('路由级权限守卫 — knowledge:read', () => {
       roleId: 'manager',
       roleName: '经理',
       username: 'manager1',
-      displayName: '经理',
     }))
 
     const MockKnowledgePage = () => React.createElement('div', { 'data-testid': 'knowledge-page' }, '语音知识库')

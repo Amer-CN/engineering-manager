@@ -9,7 +9,7 @@
  * - 文件验证：不支持的格式不选中
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, act, fireEvent } from '@testing-library/react'
 import React from 'react'
 

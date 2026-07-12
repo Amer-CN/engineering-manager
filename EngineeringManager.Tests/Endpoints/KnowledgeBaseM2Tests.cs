@@ -178,8 +178,10 @@ public class KnowledgeBaseM2Tests
         using var _ = conn;
         conn.Execute("INSERT INTO projects (id, name, created_by, created_at) VALUES (1, '项目A', 'user1', '2026-01-01 00:00:00')");
 
+        // admin 可以访问存在的项目
         Assert.True(KnowledgeBaseService.CanAccessProject(conn, 1, "admin", isAdmin: true));
-        Assert.True(KnowledgeBaseService.CanAccessProject(conn, 999, "admin", isAdmin: true));
+        // 不存在的项目即使是 admin 也不允许（M4 安全加固：前置检查项目是否存在）
+        Assert.False(KnowledgeBaseService.CanAccessProject(conn, 999, "admin", isAdmin: true));
     }
 
     [Fact]

@@ -1251,10 +1251,12 @@ public class M2FifthRoundHttp403Tests : ApiTestBase
         Assert.Equal(System.Net.HttpStatusCode.OK, postResp.StatusCode);
         var respJson = await postResp.Content.ReadFromJsonAsync<JsonElement>();
         Assert.True(respJson.GetProperty("success").GetBoolean());
-        var docId = respJson.GetProperty("documentId").GetInt64();
+        // M4 响应契约：documentId/idempotent/hasEmbeddings 包裹在 data 中
+        var respData = respJson.GetProperty("data");
+        var docId = respData.GetProperty("documentId").GetInt64();
         Assert.True(docId > 0);
-        Assert.False(respJson.GetProperty("idempotent").GetBoolean());
+        Assert.False(respData.GetProperty("idempotent").GetBoolean());
 
-        Console.WriteLine($"[HTTP200] admin POST /api/knowledge/documents → 200, docId={docId}, idempotent={respJson.GetProperty("idempotent").GetBoolean()}, hasEmbeddings={respJson.GetProperty("hasEmbeddings").GetBoolean()}");
+        Console.WriteLine($"[HTTP200] admin POST /api/knowledge/documents → 200, docId={docId}, idempotent={respData.GetProperty("idempotent").GetBoolean()}, hasEmbeddings={respData.GetProperty("hasEmbeddings").GetBoolean()}");
     }
 }
