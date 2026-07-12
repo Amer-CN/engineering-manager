@@ -99,13 +99,9 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, onInge
       correctedSegments = segments
       correctedText = rebuildFullText(segments)
     } else {
+      // 单人模式：只发送纯文本，不发送 segments（避免后端重组不一致）
       correctedText = singleText.trim()
-      correctedSegments = [{
-        speaker: 1,
-        start: 0,
-        end: job.durationSec || 0,
-        text: correctedText,
-      }]
+      correctedSegments = [] // 不发送 segments
     }
 
     if (!correctedText.trim()) {

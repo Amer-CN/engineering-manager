@@ -3,6 +3,8 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.IO;
+using System.Threading.Tasks;
 using Dapper;
 using Microsoft.Data.Sqlite;
 using Xunit;
@@ -214,10 +216,14 @@ public class M4ThirdRoundTests : ApiTestBase
         var token = await LoginAdminAsync();
         SetAuth(token);
 
+        var dataPath = ApiConfig.ResolveDataPath();
+        var sttDir = Path.Combine(dataPath, "uploads", "stt", "1");
+        Directory.CreateDirectory(sttDir); // 确保目录存在
+
         // 使用 CancellationTokenSource 在写入中途取消
         using var cts = new CancellationTokenSource();
-        // 50MB 文件
-        var audioData = new byte[50 * 1024 * 1024];
+        // 10MB 文件（减少大小以加快 .uploading 创建速度）
+        var audioData = new byte[10 * 1024 * 1024];
         audioData[0] = 0x52; audioData[1] = 0x49; audioData[2] = 0x46; audioData[3] = 0x46;
 
         // 使用慢速流内容：每写入 1KB 就延时 1ms，确保请求到达服务端后仍在传输中被取消
@@ -226,32 +232,47 @@ public class M4ThirdRoundTests : ApiTestBase
         using var form = new MultipartFormDataContent();
         form.Add(slowContent, "file", "cancel.wav");
 
-        // 延迟 200ms 后取消 — 此时请求已在传输中
-        cts.CancelAfter(TimeSpan.FromMilliseconds(200));
+        // Barrier：等待 .uploading 文件创建（证明请求已到达服务端并开始写入）
+        var uploadingCreated = new TaskCompletionSource<bool>();
+        var uploadingPath = Path.Combine(sttDir, "cancel.wav.uploading");
+        var watcher = new FileSystemWatcher(sttDir);
+        watcher.Created += (s, e) => {
+            if (e.Name?.EndsWith(".uploading") == true)
+                uploadingCreated.TrySetResult(true);
+        };
+        watcher.EnableRaisingEvents = true;
 
-        try
-        {
-            await Client.PostAsync("/api/stt/upload", form, cts.Token);
-        }
-        catch (OperationCanceledException)
-        {
-            // 预期：请求在传输中被取消
-        }
-        catch (IOException)
-        {
-            // 客户端在取消时可能抛 IOException
-        }
+        // 启动上传任务
+        var uploadTask = Task.Run(async () => {
+            try
+            {
+                await Client.PostAsync("/api/stt/upload", form, cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                // 预期：请求在传输中被取消
+            }
+            catch (IOException)
+            {
+                // 客户端在取消时可能抛 IOException
+            }
+        });
 
-        // 验证没有 .uploading 临时文件残留
+        // 等待 .uploading 文件创建（barrier）
+        await Task.WhenAny(uploadingCreated.Task, Task.Delay(5000));
+        watcher.Dispose();
+
+        Assert.True(uploadingCreated.Task.IsCompleted, ".uploading 文件未在 5s 内创建，请求可能未到达服务端");
+
+        // 现在触发取消
+        cts.Cancel();
+
+        await uploadTask;
+
+        // 验证 .uploading 临时文件已被清理
         await Task.Delay(1000);
-        var dataPath = ApiConfig.ResolveDataPath();
-        var sttDir = Path.Combine(dataPath, "uploads", "stt", "1");
-        if (Directory.Exists(sttDir))
-        {
-            var uploadingFiles = Directory.GetFiles(sttDir, "*.uploading", SearchOption.TopDirectoryOnly);
-            Assert.True(uploadingFiles.Length == 0, $"应无 .uploading 残留，但有 {uploadingFiles.Length} 个");
-        }
-        // 如果 sttDir 不存在，说明请求在到达服务端前就被取消了，也没有残留
+        var uploadingFiles = Directory.GetFiles(sttDir, "*.uploading", SearchOption.TopDirectoryOnly);
+        Assert.True(uploadingFiles.Length == 0, $"应无 .uploading 残留，但有 {uploadingFiles.Length} 个: {string.Join(", ", uploadingFiles)}");
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -705,24 +726,19 @@ file class SlowStreamContent : ByteArrayContent
         };
     }
 
-    protected override async Task SerializeToStreamAsync(Stream stream, TransportContext? context)
-    {
-        await SerializeToStreamAsync(stream, context, CancellationToken.None);
-    }
-
     protected override async Task SerializeToStreamAsync(Stream stream, TransportContext? context, CancellationToken cancellationToken)
     {
-        var buffer = new byte[1024];
-        var offset = 0;
-        while (offset < _data.Length)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var chunkSize = Math.Min(1024, _data.Length - offset);
-            Buffer.BlockCopy(_data, offset, buffer, 0, chunkSize);
-            await stream.WriteAsync(buffer, 0, chunkSize, cancellationToken);
-            offset += chunkSize;
-            // 每 1KB 延时 1ms — 50MB 需约 50 秒传输，确保 200ms 后取消发生在中途
-            await Task.Delay(1, cancellationToken);
-        }
+      var buffer = new byte[1024];
+      var offset = 0;
+      while (offset < _data.Length)
+      {
+        cancellationToken.ThrowIfCancellationRequested();
+        var chunkSize = Math.Min(1024, _data.Length - offset);
+        Buffer.BlockCopy(_data, offset, buffer, 0, chunkSize);
+        await stream.WriteAsync(buffer, 0, chunkSize, cancellationToken);
+        offset += chunkSize;
+        // 10MB 文件用 0.5ms 延时（更快创建 .uploading）
+        await Task.Delay(0, cancellationToken);
+      }
     }
 }
