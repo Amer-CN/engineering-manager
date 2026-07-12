@@ -36,6 +36,9 @@ public class SttEngineSelector
 
         try
         {
+            // 优先用 DXGI 获取准确 VRAM（WMI AdapterRAM 是 uint32，>4GB 会溢出报 0）
+            var dxgiVram = DetectVramViaRegistry();
+
             using var searcher = new ManagementObjectSearcher(
                 "SELECT Name, AdapterRAM, VideoProcessor FROM Win32_VideoController");
             var gpus = searcher.Get();
@@ -48,7 +51,6 @@ public class SttEngineSelector
                 if (vramBytes != null)
                 {
                     // AdapterRAM is uint32, overflows for VRAM >4GB (wraps to 0 or small value)
-                    // Known WMI bug: 8GB RX 580 reports 0. We compensate below.
                     try { vramMb = (int)Math.Min((uint)(long)vramBytes / (1024 * 1024), 32768); }
                     catch { }
                 }
@@ -72,11 +74,21 @@ public class SttEngineSelector
                     isDiscrete = false;
                 }
 
-                // WMI AdapterRAM uint32 溢出补偿：独显 VRAM 报 0 时给默认值
+                // WMI AdapterRAM uint32 溢出补偿：优先用注册表/DXGI 值，其次按显卡名推断
                 if (isDiscrete && vramMb == 0)
                 {
-                    vramMb = 4096; // 独显至少 4GB，保守取 4096
-                    Console.WriteLine($"[SttEngineSelector] VRAM 探测溢出（WMI uint32 bug），已补偿为 {vramMb}MB");
+                    // 优先用注册表查到的准确值
+                    if (dxgiVram > 0)
+                    {
+                        vramMb = dxgiVram;
+                        Console.WriteLine($"[SttEngineSelector] VRAM 从注册表获取: {vramMb}MB");
+                    }
+                    else
+                    {
+                        // 按显卡名推断显存
+                        vramMb = InferVramFromName(name);
+                        Console.WriteLine($"[SttEngineSelector] VRAM 探测溢出（WMI uint32 bug），按型号推断为 {vramMb}MB");
+                    }
                 }
 
                 info.AllGpus.Add($"{name} ({vramMb}MB)");
@@ -98,6 +110,113 @@ public class SttEngineSelector
         }
 
         return info;
+    }
+
+    /// <summary>
+    /// 通过注册表读取显卡显存（绕过 WMI uint32 溢出 bug）
+    /// 路径: HKLM\SYSTEM\CurrentControlSet\Enum\PCI\*\*\Device Parameters\VideoMemory
+    /// 或通过 DXGI Adapter 的 DedicatedVideoMemory
+    /// </summary>
+    private static int DetectVramViaRegistry()
+    {
+        try
+        {
+            // 方法1: 通过 dxdiag 不行（需要等进程退出），改用注册表
+            // 注册表 HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\*
+            // 下的 HardwareInformation.qwMemorySize (REG_QWORD, 单位 bytes)
+            using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+                @"SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}");
+            if (key == null) return 0;
+
+            int bestVram = 0;
+            foreach (var subKeyName in key.GetSubKeyNames())
+            {
+                using var subKey = key.OpenSubKey(subKeyName);
+                if (subKey == null) continue;
+
+                // HardwareInformation.qwMemorySize 是 REG_QWORD (8 bytes)，准确反映 >4GB VRAM
+                var memSize = subKey.GetValue("HardwareInformation.qwMemorySize");
+                if (memSize is long longVal && longVal > 0)
+                {
+                    var mb = (int)(longVal / (1024 * 1024));
+                    if (mb > bestVram) bestVram = mb;
+                    continue;
+                }
+
+                // 退化: HardwareInformation.MemorySize 是 REG_DWORD (uint32)，>4GB 也会溢出
+                var dwordMem = subKey.GetValue("HardwareInformation.MemorySize");
+                if (dwordMem is int intVal && intVal > 0)
+                {
+                    var mb = intVal / (1024 * 1024);
+                    if (mb > bestVram) bestVram = mb;
+                }
+            }
+            return bestVram;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[SttEngineSelector] 注册表 VRAM 探测失败: {Common.Sanitize(ex.Message)}");
+            return 0;
+        }
+    }
+
+    /// <summary>
+    /// 按显卡型号名推断显存大小（WMI uint32 溢出且注册表也失败时的兜底方案）
+    /// </summary>
+    private static int InferVramFromName(string name)
+    {
+        // RX 580 系列
+        if (name.Contains("RX 580", StringComparison.OrdinalIgnoreCase))
+            return 8192; // RX 580 通常 8GB（2048SP 也是 8GB）
+        // RX 570/590 系列
+        if (name.Contains("RX 570", StringComparison.OrdinalIgnoreCase))
+            return 8192;
+        if (name.Contains("RX 590", StringComparison.OrdinalIgnoreCase))
+            return 8192;
+        // RX 5600/5700 系列
+        if (name.Contains("RX 5600", StringComparison.OrdinalIgnoreCase))
+            return 6144;
+        if (name.Contains("RX 5700", StringComparison.OrdinalIgnoreCase))
+            return 8192;
+        // RX 6000 系列
+        if (name.Contains("RX 6600", StringComparison.OrdinalIgnoreCase))
+            return 8192;
+        if (name.Contains("RX 6700", StringComparison.OrdinalIgnoreCase))
+            return 12288;
+        if (name.Contains("RX 6800", StringComparison.OrdinalIgnoreCase))
+            return 16384;
+        if (name.Contains("RX 6900", StringComparison.OrdinalIgnoreCase))
+            return 16384;
+        // RX 7000 系列
+        if (name.Contains("RX 7600", StringComparison.OrdinalIgnoreCase))
+            return 8192;
+        if (name.Contains("RX 7700", StringComparison.OrdinalIgnoreCase))
+            return 12288;
+        if (name.Contains("RX 7800", StringComparison.OrdinalIgnoreCase))
+            return 16384;
+        if (name.Contains("RX 7900", StringComparison.OrdinalIgnoreCase))
+            return 20480;
+        // NVIDIA
+        if (name.Contains("RTX 4090", StringComparison.OrdinalIgnoreCase))
+            return 24576;
+        if (name.Contains("RTX 4080", StringComparison.OrdinalIgnoreCase))
+            return 16384;
+        if (name.Contains("RTX 4070", StringComparison.OrdinalIgnoreCase))
+            return 12288;
+        if (name.Contains("RTX 4060", StringComparison.OrdinalIgnoreCase))
+            return 8192;
+        if (name.Contains("RTX 3090", StringComparison.OrdinalIgnoreCase))
+            return 24576;
+        if (name.Contains("RTX 3080", StringComparison.OrdinalIgnoreCase))
+            return 10240;
+        if (name.Contains("RTX 3070", StringComparison.OrdinalIgnoreCase))
+            return 8192;
+        if (name.Contains("RTX 3060", StringComparison.OrdinalIgnoreCase))
+            return 12288;
+        if (name.Contains("RTX 3050", StringComparison.OrdinalIgnoreCase))
+            return 8192;
+        // 兜底
+        return 4096;
     }
 
     /// <summary>是否可以启用本地转写</summary>

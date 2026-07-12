@@ -359,12 +359,13 @@ def init_llama_lib():
     llama_sampler_init_logit_bias.restype = ctypes.c_void_p
 
 
-def load_model(model_path: str):
+def load_model(model_path: str, n_gpu_layers: int = -1):
     """
     加载 GGUF 模型（自动处理初始化和路径编码）
     
     Args:
         model_path: GGUF 模型文件路径
+        n_gpu_layers: GPU 层数 (-1 = 全部 offload 到 GPU)
         
     Returns:
         model: llama_model 指针
@@ -384,6 +385,9 @@ def load_model(model_path: str):
     # 初始化 backend，载入模型
     init_llama_lib()
     model_params = llama_model_default_params()
+    model_params.n_gpu_layers = n_gpu_layers  # GPU offload: -1 = 全部层
+    if n_gpu_layers != 0:
+        logger.info(f"GPU offload: n_gpu_layers={n_gpu_layers} ({'全部层' if n_gpu_layers < 0 else f'{n_gpu_layers} 层'})")
     model = llama_model_load_from_file(
         model_rel.as_posix().encode('utf-8'),
         model_params
@@ -427,7 +431,7 @@ def create_context(model, n_ctx=2048, n_batch=2048, n_ubatch=512, n_seq_max=1,
 class LlamaModel:
     """模型的面向对象封装"""
     def __init__(self, path, n_gpu_layers=-1):
-        self.ptr = load_model(path)
+        self.ptr = load_model(path, n_gpu_layers=n_gpu_layers)
             
         self.vocab = llama_model_get_vocab(self.ptr)
         self.n_embd = llama_model_n_embd(self.ptr)
