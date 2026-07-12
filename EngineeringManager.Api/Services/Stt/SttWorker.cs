@@ -203,7 +203,7 @@ public class SttWorker : IHostedService, IDisposable
                 {
                     Text = result.Text,
                     Json = resultJson,
-                    result.ElapsedSec,
+                    Elapsed = result.ElapsedSec,
                     Now = now(),
                     job.Id,
                 });
