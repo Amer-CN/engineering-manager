@@ -914,6 +914,7 @@ export interface ElectronAPI {
 
   // 认证
   login: (username: string, password: string) => Promise<{ success: boolean; data?: StoredAuth; error?: string }>
+  changeOwnPassword: (oldPassword: string, newPassword: string) => Promise<{ success: boolean; data?: { changed: boolean }; error?: string }>
   getCurrentUser: (userId: string) => Promise<{ success: boolean; data?: StoredAuth; error?: string }>
   getAllUsers: () => Promise<{ success: boolean; data?: UserInfo[]; error?: string }>
   createUser: (userData: { username: string; password: string; displayName: string; roleId: string }) => Promise<{ success: boolean; data?: { id: string }; error?: string }>
