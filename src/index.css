@@ -1403,3 +1403,14 @@ button:disabled {
 @keyframes pulse {
   50% { opacity: 0.35; }
 }
+
+/* v0.83.0 设置内搜索：命中项跳转后的短暂高亮环 */
+.setting-anchor-highlight {
+  animation: setting-anchor-pulse 1.4s ease-out;
+  border-radius: 0.75rem;
+}
+@keyframes setting-anchor-pulse {
+  0%   { box-shadow: 0 0 0 0 var(--accent); }
+  25%  { box-shadow: 0 0 0 3px var(--accent); }
+  100% { box-shadow: 0 0 0 3px rgba(0, 0, 0, 0); }
+}
