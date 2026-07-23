@@ -100,3 +100,42 @@ EngineeringManager.Uninstaller/bin/
 EngineeringManager.Uninstaller/obj/
 release-uninstaller/
 EngineeringManager.Installer/app-files/
+
+# ── 构建/缓存/诊断/工具产物（本地生成，不入库）──
+
+# Python 缓存 / 编译产物
+__pycache__/
+*.pyc
+*.pyo
+
+# ASR 引擎解包 / 构建 / 备份 / 诊断产物
+asr-engine/transcribe.exe_extracted/
+asr-engine/build/
+asr-engine/*.old_*
+asr-engine/diag_*
+asr-engine/inspect_pyc.py
+asr-engine/test_vulkan_enum*.py
+
+# ASR 本地测试大文件 / 子进程输出
+asr-test/audios/
+asr-test/wav/
+asr-test/models/
+asr-test/*_stderr.txt
+asr-test/*_stdout.txt
+
+# 根目录诊断日志 / 子进程输出
+10.16_*.txt
+*_stderr.txt
+*_stdout.txt
+
+# 临时截图
+bedrock_step*.png
+screenshot_step*.png
+
+# 工具 / 会话 / 代理产物（非项目源码）
+.qoder/
+.codely-cli/
+.meituan-catpaw/
+.impeccable/
+10.10_executor/
+CODELY.md
