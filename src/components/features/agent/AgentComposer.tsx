@@ -174,7 +174,7 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
                   onClick={() => selectSlashCommand(cmd.prompt)}
                   className="w-full flex items-center gap-3 px-3 py-2 hover:bg-slate-50 transition-colors text-left"
                 >
-                  <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 text-xs font-mono font-medium flex-shrink-0">
+                  <span className="px-1.5 py-0.5 rounded bg-primary-50 text-primary-600 text-xs font-mono font-medium flex-shrink-0">
                     {cmd.key}
                   </span>
                   <span className="text-sm text-slate-600">{cmd.label}</span>
@@ -196,7 +196,7 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
           />
           <span className="text-xs text-slate-600 truncate flex-1">{attachment.name}</span>
           {ocrLoading && (
-            <span className="text-xs text-violet-500 flex items-center gap-1">
+            <span className="text-xs text-primary-500 flex items-center gap-1">
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
@@ -226,7 +226,7 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
       )}
 
       {/* 输入区域 */}
-      <div className="flex items-end gap-2.5 p-2 rounded-2xl border border-slate-200 bg-white shadow-sm focus-within:ring-2 focus-within:ring-blue-400/30 focus-within:border-blue-400 transition-all">
+      <div className="flex items-end gap-2.5 p-2 rounded-2xl border border-slate-200 bg-white shadow-sm focus-within:ring-2 focus-within:ring-primary-400/30 focus-within:border-primary-400 transition-all">
         {/* 隐藏文件输入 */}
         <input
           ref={fileInputRef}
@@ -244,7 +244,7 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
             onClick={() => fileInputRef.current?.click()}
             disabled={disabled || ocrLoading}
             aria-label="上传图片"
-            className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-blue-500 hover:bg-blue-50 disabled:text-slate-300 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors"
+            className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-primary-500 hover:bg-primary-50 disabled:text-slate-300 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors"
           >
             <Icon name="Paperclip" size={18} />
           </button>
@@ -283,7 +283,7 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
           onClick={() => void doSend()}
           aria-label="发送"
           disabled={!canSend}
-          className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 text-white flex items-center justify-center shadow-md shadow-blue-200/40 disabled:opacity-30 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-blue-300/50 transition-shadow"
+          className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-r from-primary-600 to-primary-500 text-white flex items-center justify-center shadow-md shadow-primary-500/20 disabled:opacity-30 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-primary-500/30 transition-shadow"
         >
           {disabled || ocrLoading ? (
             <motion.div

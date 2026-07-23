@@ -81,7 +81,7 @@ const KnowledgeSourceCard: React.FC<KnowledgeSourceCardProps> = ({ result }) => 
     <div className="space-y-2">
       {/* 头部 */}
       <div className="flex items-center gap-2 text-xs">
-        <Icon name="Library" size={14} className="text-violet-500" />
+        <Icon name="Library" size={14} className="text-primary-500" />
         <span className="font-semibold text-slate-700">知识库检索</span>
         <span className="text-slate-400">·</span>
         <span className="text-slate-500">查询："{data.query}"</span>
@@ -101,7 +101,7 @@ const KnowledgeSourceCard: React.FC<KnowledgeSourceCardProps> = ({ result }) => 
           return (
             <div
               key={hit.chunkId || i}
-              className={`p-2.5 rounded-lg border border-slate-200 bg-white hover:border-violet-300 hover:shadow-sm transition-all ${
+              className={`p-2.5 rounded-lg border border-slate-200 bg-white hover:border-primary-300 hover:shadow-sm transition-all ${
                 docId ? 'cursor-pointer' : ''
               }`}
               onClick={() => docId && handleOpenDocument(docId)}
@@ -122,7 +122,7 @@ const KnowledgeSourceCard: React.FC<KnowledgeSourceCardProps> = ({ result }) => 
                 {hit.sourceType && <span>{hit.sourceType}</span>}
                 {hit.occurredAt && <span>· {hit.occurredAt}</span>}
                 {hit.speakers && <span>· {formatSpeakers(hit.speakers)}</span>}
-                {docId && <span className="ml-auto text-violet-500">点击查看 →</span>}
+                {docId && <span className="ml-auto text-primary-500">点击查看 →</span>}
               </div>
             </div>
           )
@@ -134,7 +134,7 @@ const KnowledgeSourceCard: React.FC<KnowledgeSourceCardProps> = ({ result }) => 
         <button
           type="button"
           onClick={() => setExpanded(v => !v)}
-          className="text-xs text-violet-600 hover:text-violet-700 font-medium"
+          className="text-xs text-primary-600 hover:text-primary-700 font-medium"
         >
           {expanded ? '收起' : `查看全部来源（共 ${hits.length} 条）`}
         </button>

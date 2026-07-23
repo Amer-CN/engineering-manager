@@ -152,7 +152,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
           <Icon name="Search" size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="搜索对话..."
-            className="w-full pl-8 pr-3 py-2 text-sm rounded-lg border border-slate-200 bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400/30 focus:border-blue-400 transition-all" />
+            className="w-full pl-8 pr-3 py-2 text-sm rounded-lg border border-slate-200 bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-400/30 focus:border-primary-400 transition-all" />
           {searchQuery && (
             <button onClick={() => setSearchQuery('')}
               className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500">
@@ -165,7 +165,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
       <div className="px-3 pb-2">
         <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
           onClick={() => { onNewConversation(); if (!inline) onClose?.() }}
-          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 text-white text-sm font-medium shadow-md shadow-blue-200/40 hover:shadow-lg hover:shadow-blue-300/50 transition-shadow">
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-primary-600 to-primary-500 text-white text-sm font-medium shadow-md shadow-primary-500/20 hover:shadow-lg hover:shadow-primary-500/30 transition-shadow">
           <Icon name="Plus" size={16} />新对话
         </motion.button>
       </div>
@@ -194,7 +194,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
                     const isRenaming = renamingId === conv.id
                     return (
                       <div key={conv.id}
-                        className={`group relative rounded-xl transition-colors ${isActive ? 'bg-blue-50' : 'hover:bg-slate-50'}`}>
+                        className={`group relative rounded-xl transition-colors ${isActive ? 'bg-primary-50' : 'hover:bg-slate-50'}`}>
                         {isRenaming ? (
                           <input type="text" value={renameValue}
                             onChange={(e) => setRenameValue(e.target.value)}
@@ -205,13 +205,13 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
                               }
                             }}
                             onBlur={() => commitRename(conv.id)} autoFocus
-                            className="w-full px-3 py-2.5 text-sm rounded-xl border border-blue-400 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400/30" />
+                            className="w-full px-3 py-2.5 text-sm rounded-xl border border-primary-400 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-400/30" />
                         ) : (
                           <>
                             <button onClick={() => { onSelectConversation(conv); if (!inline) onClose?.() }}
                               className="w-full text-left px-3 py-2.5 pr-16">
                               <div className="flex items-start justify-between gap-2">
-                                <p className={`text-sm font-medium truncate flex-1 ${isActive ? 'text-blue-700' : 'text-slate-700'}`}>
+                                <p className={`text-sm font-medium truncate flex-1 ${isActive ? 'text-primary-700' : 'text-slate-700'}`}>
                                   {conv.title || `对话 ${conv.id}`}
                                 </p>
                                 <span className="text-xs text-slate-400 flex-shrink-0 mt-0.5">{formatTime(conv.updatedAt)}</span>
@@ -222,7 +222,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
                               </div>
                             </button>
                             <button onClick={(e) => { e.stopPropagation(); startRename(conv) }}
-                              className="absolute right-9 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-300 hover:text-blue-500 hover:bg-blue-50 opacity-0 group-hover:opacity-100 transition-all"
+                              className="absolute right-9 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-300 hover:text-primary-500 hover:bg-primary-50 opacity-0 group-hover:opacity-100 transition-all"
                               title="重命名对话">
                               <Icon name="Edit3" size={14} />
                             </button>

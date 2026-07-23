@@ -12,6 +12,7 @@ import { Icon } from '@/components/ui/Icon'
 import type { AgentMessage, AgentMessageResponse, ToolCallResult } from '@/types/agent'
 import MessageActions from './MessageActions'
 import RichToolResult from './RichToolResult'
+import MarkdownRenderer from './MarkdownRenderer'
 
 interface MessageBubbleProps {
   /** 消息数据 */
@@ -70,8 +71,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend
         whileHover={{ scale: 1.08 }}
         className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center ${
           isUser
-            ? 'bg-blue-100 text-blue-600'
-            : 'bg-gradient-to-br from-violet-100 to-purple-100 text-purple-600'
+            ? 'bg-primary-100 text-primary-600'
+            : 'bg-gradient-to-br from-primary-100 to-primary-50 text-primary-600'
         }`}
       >
         <Icon
@@ -82,16 +83,16 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend
 
       {/* 气泡主体 */}
       <div className={`max-w-[75%] min-w-[120px] ${isUser ? 'items-end' : 'items-start'} flex flex-col`}>
-        {/* 文字内容 */}
+        {/* 文字内容：用户消息纯文本，AI 消息走 Markdown 渲染 */}
         {content && (
           <div
-            className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${
+            className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed break-words ${
               isUser
-                ? 'bg-blue-600 text-white rounded-br-md'
+                ? 'bg-primary-600 text-white rounded-br-md whitespace-pre-wrap'
                 : 'bg-white border border-slate-200 text-slate-700 rounded-bl-md shadow-sm'
             }`}
           >
-            {content}
+            {isUser ? content : <MarkdownRenderer content={content} />}
           </div>
         )}
 

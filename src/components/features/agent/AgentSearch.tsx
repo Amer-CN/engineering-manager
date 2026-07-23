@@ -239,7 +239,7 @@ const AgentSearch: React.FC<AgentSearchProps> = ({
                     onAsk(debouncedQuery)
                     onClose()
                   }}
-                  className="mt-3 text-xs text-blue-600 hover:text-blue-700 font-medium"
+                  className="mt-3 text-xs text-primary-600 hover:text-primary-700 font-medium"
                 >
                   向 AI 提问「{debouncedQuery}」
                 </button>
@@ -276,13 +276,13 @@ const AgentSearch: React.FC<AgentSearchProps> = ({
                     onClick={() => handleSelect(item)}
                     onMouseEnter={() => setSelectedIndex(idx)}
                     className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
-                      isSelected ? 'bg-blue-50' : 'hover:bg-slate-50'
+                      isSelected ? 'bg-primary-50' : 'hover:bg-slate-50'
                     }`}
                   >
                     {/* 图标 */}
                     <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center">
                       {item.type === 'ask' && (
-                        <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-violet-500 flex items-center justify-center">
+                        <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-400 flex items-center justify-center">
                           <Icon name="Sparkles" size={14} className="text-white" />
                         </span>
                       )}
@@ -301,7 +301,7 @@ const AgentSearch: React.FC<AgentSearchProps> = ({
                     {/* 文本 */}
                     <div className="min-w-0 flex-1">
                       <p className={`text-sm font-medium truncate ${
-                        item.type === 'ask' ? 'text-blue-600' : 'text-slate-700'
+                        item.type === 'ask' ? 'text-primary-600' : 'text-slate-700'
                       }`}>
                         {item.label}
                       </p>

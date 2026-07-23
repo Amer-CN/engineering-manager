@@ -60,7 +60,7 @@ const DataTable: React.FC<{ rows: Record<string, unknown>[] }> = ({ rows }) => {
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="mt-1.5 text-xs text-violet-600 hover:text-violet-700 font-medium"
+          className="mt-1.5 text-xs text-primary-600 hover:text-primary-700 font-medium"
         >
           {expanded ? '收起' : `展开全部（共 ${rows.length} 条）`}
         </button>
