@@ -10,6 +10,16 @@ import logging
 import sys
 import os
 
+# ═══════════════════════════════════════════════════════════
+# 10.12 UTF-8 生产端修复：强制 stdout/stderr 为严格 UTF-8
+# 必须在任何其他输出之前执行，确保 transcribe.exe 的所有输出
+# 都符合 PYTHONUTF8=1 契约，杜绝 GBK 编码。
+# ═══════════════════════════════════════════════════════════
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='strict')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8', errors='strict')
+
 # 获取项目根目录 (适配打包环境)
 if getattr(sys, 'frozen', False):
     # 打包环境：sys.executable 位于 dist/Project/ 根目录

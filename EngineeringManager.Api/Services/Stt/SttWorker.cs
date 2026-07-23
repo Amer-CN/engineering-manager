@@ -38,6 +38,14 @@ public class SttWorker : IHostedService, IDisposable
 
     private async void Poll(object? state)
     {
+        // 10.12 验收模式：STT_WORKER_PAUSED=1 时暂停轮询，让执行器验证后再处理
+        var pausedEnv = Environment.GetEnvironmentVariable("STT_WORKER_PAUSED");
+        if (pausedEnv == "1")
+        {
+            _logger?.LogInformation("[SttWorker] 验收模式：Worker 已暂停，等待执行器验证完成");
+            return;
+        }
+
         // 单并发：同时只处理一个 STT 任务
         lock (_runLock)
         {

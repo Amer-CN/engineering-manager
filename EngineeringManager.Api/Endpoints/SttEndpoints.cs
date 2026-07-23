@@ -13,10 +13,10 @@ namespace EngineeringManager.Api;
 /// </summary>
 public static class SttEndpoints
 {
-    // 允许的音频格式
+    // 允许的音频格式（.webm 为浏览器录音默认格式，ffmpeg 预处理可解码）
     private static readonly HashSet<string> AllowedAudioExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".wav", ".mp3", ".m4a", ".aac", ".flac", ".ogg", ".wma", ".amr", ".opus"
+        ".wav", ".mp3", ".m4a", ".aac", ".flac", ".ogg", ".wma", ".amr", ".opus", ".webm"
     };
 
     // 音频大小上限：500MB
@@ -107,13 +107,7 @@ public static class SttEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             try
             {
-                // 检查本地转写是否可用
-                if (!SttEngineSelector.CanUseLocalStt())
-                {
-                    return Common.Fail($"本地语音转文字不可用: {SttEngineSelector.GetUnavailableReason()}。可使用云端转写（即将推出）。", 400);
-                }
-
-                // 验证文件路径
+                // 验证文件路径（安全检查优先于服务可用性检查）
                 if (string.IsNullOrWhiteSpace(dto.FilePath))
                     return Common.Fail("请提供音频文件路径");
 
@@ -139,6 +133,13 @@ public static class SttEndpoints
                 var fileSize = new FileInfo(resolvedFull).Length;
                 if (fileSize > MaxAudioSize)
                     return Common.Fail($"音频文件过大 ({fileSize / 1024 / 1024}MB)，上限 {MaxAudioSize / 1024 / 1024}MB");
+
+                // 检查本地转写是否可用（安全检查通过后再检查服务可用性）
+                // 返回 503 ServiceUnavailable 而非 400，区分"请求非法"和"服务不可用"
+                if (!SttEngineSelector.CanUseLocalStt())
+                {
+                    return Results.Json(new { success = false, error = $"本地语音转文字不可用: {SttEngineSelector.GetUnavailableReason()}。可使用云端转写（即将推出）。" }, statusCode: 503);
+                }
 
                 var now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 

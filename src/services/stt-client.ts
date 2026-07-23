@@ -138,10 +138,11 @@ export async function getSttStatus(): Promise<ApiResponse<SttCapability>> {
   }
 }
 
-/** POST /api/stt/upload — multipart/form-data 流式上传（带进度） */
+/** POST /api/stt/upload — multipart/form-data 流式上传（带进度 + 可取消） */
 export function uploadSttAudio(
   file: File,
   onProgress?: (percent: number) => void,
+  signal?: AbortSignal,
 ): Promise<ApiResponse<SttUploadResult>> {
   return new Promise((resolve) => {
     const xhr = new XMLHttpRequest()
@@ -160,6 +161,16 @@ export function uploadSttAudio(
       })
     }
 
+    // 支持外部取消
+    const onAbort = () => {
+      xhr.abort()
+      resolve({ success: false, error: '上传已取消' })
+    }
+    if (signal) {
+      if (signal.aborted) { onAbort(); return }
+      signal.addEventListener('abort', onAbort, { once: true })
+    }
+
     xhr.addEventListener('error', () => {
       resolve({ success: false, error: '网络错误，上传失败' })
     })
@@ -169,6 +180,7 @@ export function uploadSttAudio(
     })
 
     xhr.addEventListener('load', () => {
+      if (signal) signal.removeEventListener('abort', onAbort)
       if (xhr.status === 401) {
         try { localStorage.removeItem(TOKEN_KEY) } catch { /* */ }
       }

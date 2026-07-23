@@ -8,12 +8,15 @@ namespace EngineeringManager.Api.Services.Stt;
 /// 关键设计：
 /// 1. 进程要能被 CancellationToken 杀掉整个进程树（taskkill /F /T /PID）
 /// 2. 超时保护（30 分钟）
-/// 3. stdout 解析容错：transcribe.exe 的 PyInstaller 打包版在打印 emoji 统计时
-///    会因 GBK 编码崩溃 (exit code 1)，但文本在此之前已经输出到 stdout，
-///    所以只要 stdout 里有文本就视为成功。
+/// 3. stdout 解析：使用原始字节读取 + StdoutEncodingDecoder 严格 UTF-8 解码。
+///    PYTHONUTF8=1 + PYTHONIOENCODING=utf-8 强制 Python 子进程用 UTF-8 输出。
+///    10.12 修正：解码失败直接 fail closed，禁止 GBK 猜测回退。
 /// 4. 环境变量 PYTHONUTF8=1 + PYTHONIOENCODING=utf-8 强制 Python 子进程用 UTF-8 输出
 /// 5. 批量转写 (TranscribeBatchAsync)：一次进程处理多段音频，模型只加载一次
 /// 6. 热词表 (hotwords.txt) 自动读取并拼入 --context 参数
+/// 7. GPU fail-closed：启动后 30 秒内必须检测到 "Vulkan backend"，否则杀进程拒绝运行
+/// 8. 资源保险丝：持续监控进程 PrivateMemorySize64，超过 6GB 或系统 RAM≥80% 立即杀进程树
+/// 9. 单实例：同时只允许一个 transcribe.exe 进程运行
 /// </summary>
 public class LlamaCppGgufEngine : ISttEngine
 {
@@ -25,6 +28,18 @@ public class LlamaCppGgufEngine : ISttEngine
     // transcribe.exe 默认超时：30 分钟（长音频可能很慢）
     // 批量模式按段数线性放大：每段额外加 5 分钟
     private static readonly TimeSpan DefaultTimeout = TimeSpan.FromMinutes(30);
+
+    // 资源保险丝：内存检查间隔
+    private static readonly TimeSpan MemoryCheckInterval = TimeSpan.FromSeconds(5);
+
+    // 单实例锁：同时只允许一个 transcribe.exe 进程
+    private static readonly object _instanceLock = new();
+    private static volatile bool _isRunning;
+
+    // OS 级命名 Mutex：跨进程单实例约束
+    // 部署不变量：工程管家桌面应用只有一个 API 进程实例，该进程内只有一个 worker 调用 ASR。
+    // 此 Mutex 作为额外安全层，防止多 API 进程同时运行 transcribe.exe。
+    private static readonly Mutex _osMutex = new(false, "Global\\EngineeringManagerSttEngine");
 
     public LlamaCppGgufEngine()
     {
@@ -44,14 +59,11 @@ public class LlamaCppGgufEngine : ISttEngine
 
     /// <summary>
     /// 构建完整的 context 参数：读取 hotwords.txt 热词表 + 拼入用户提供的上下文。
-    /// hotwords.txt 位于 asr-engine/ 目录，每行一个热词（工程术语、人名、地名等）。
-    /// 拼接格式：甲方、乙方、监理、…、[已脱敏]。用户上下文
     /// </summary>
     private string? BuildContext(string? userContext)
     {
         var parts = new List<string>();
 
-        // 1. 读取热词表
         var hotwordsPath = Path.Combine(_engineDir, "hotwords.txt");
         if (File.Exists(hotwordsPath))
         {
@@ -74,7 +86,6 @@ public class LlamaCppGgufEngine : ISttEngine
             }
         }
 
-        // 2. 拼入用户上下文
         if (!string.IsNullOrWhiteSpace(userContext))
             parts.Add(userContext);
 
@@ -115,18 +126,9 @@ public class LlamaCppGgufEngine : ISttEngine
     }
 
     // ═══════════════════════════════════════════════════════════
-    // 批量转写：一次 transcribe.exe 调用处理多个音频文件
-    // 模型只加载一次，避免 N 段 N 次重载 1.7B 模型的性能灾难
+    // 批量转写
     // ═══════════════════════════════════════════════════════════
 
-    /// <summary>
-    /// 批量转写多个音频文件，返回每段对应的文本列表。
-    /// transcribe.exe 支持 FILES... 多文件参数，一次进程内顺序处理。
-    /// </summary>
-    /// <param name="wavPaths">要转写的 WAV 文件路径列表</param>
-    /// <param name="context">可选上下文/热词提示</param>
-    /// <param name="ct">取消令牌</param>
-    /// <returns>每段音频对应的转写文本（顺序与 wavPaths 一致）</returns>
     public async Task<List<string>> TranscribeBatchAsync(
         List<string> wavPaths,
         string? context,
@@ -135,14 +137,12 @@ public class LlamaCppGgufEngine : ISttEngine
         if (wavPaths.Count == 0)
             return new List<string>();
 
-        // 单段直接走单文件路径
         if (wavPaths.Count == 1)
         {
             var result = await TranscribeAsync(wavPaths[0], context, null, ct);
             return new List<string> { result.Text };
         }
 
-        // 验证文件存在
         foreach (var path in wavPaths)
         {
             if (!File.Exists(path))
@@ -158,7 +158,6 @@ public class LlamaCppGgufEngine : ISttEngine
 
         var texts = ParseMultiFileOutput(stdout, wavPaths);
 
-        // 验证：至少有一段非空文本
         if (texts.All(string.IsNullOrWhiteSpace))
         {
             var errMsg = string.IsNullOrEmpty(stderr) ? stdout : stderr;
@@ -184,14 +183,10 @@ public class LlamaCppGgufEngine : ISttEngine
     // 内部方法
     // ═══════════════════════════════════════════════════════════
 
-    /// <summary>
-    /// 构建 transcribe.exe 命令行参数（单文件和多文件通用）
-    /// </summary>
     private StringBuilder BuildArgs(List<string> wavPaths, string? fullContext)
     {
         var args = new StringBuilder();
 
-        // 文件路径（transcribe.exe 接受 FILES... 多文件）
         foreach (var path in wavPaths)
         {
             args.Append('"').Append(path).Append('"').Append(' ');
@@ -200,14 +195,14 @@ public class LlamaCppGgufEngine : ISttEngine
         args.Append("--prec int4");
         args.Append(" --n-ctx 2048");
         args.Append(" --chunk-size 40");
-        args.Append(" --no-ts");       // 不需要时间戳对齐（不需要 Aligner 模型）
-        args.Append(" --quiet");       // 减少无关输出（避免统计 emoji 崩溃）
-        args.Append(" -y");            // 覆盖已有输出
+        args.Append(" --no-ts");
+        args.Append(" --quiet");
+        args.Append(" -y");
         if (_useVulkan)
             args.Append(" --vulkan");
         else
             args.Append(" --no-vulkan");
-        args.Append(" --no-dml");      // Encoder 留 CPU
+        args.Append(" --no-dml");
         if (!string.IsNullOrWhiteSpace(fullContext))
             args.Append(" --context \"").Append(fullContext.Replace("\"", "\\\"")).Append('"');
         args.Append(" --language Chinese");
@@ -217,7 +212,10 @@ public class LlamaCppGgufEngine : ISttEngine
 
     /// <summary>
     /// 运行 transcribe.exe 并返回 stdout/stderr/exitCode/hasCompletionMarker。
-    /// 公共逻辑：进程启动、UTF-8 编码、取消令牌、超时保护、进程树杀。
+    /// 安全机制：
+    /// - GPU fail-closed：启动后 30 秒内必须检测到 Vulkan 后端，否则杀进程拒绝运行
+    /// - 资源保险丝：PrivateMemorySize64 ≥6GB 或系统 RAM≥80% 或 Commit≥90% 时杀进程树
+    /// - 单实例：同时只允许一个 transcribe.exe 进程
     /// </summary>
     private async Task<(string stdout, string stderr, int exitCode, bool hasCompletionMarker)> RunTranscribeExe(
         StringBuilder args,
@@ -228,98 +226,218 @@ public class LlamaCppGgufEngine : ISttEngine
         if (!File.Exists(exePath))
             throw new FileNotFoundException($"transcribe.exe 不存在: {exePath}");
 
-        var psi = new ProcessStartInfo
-        {
-            FileName = exePath,
-            Arguments = args.ToString(),
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            // transcribe.exe (PyInstaller 打包) 不受 PYTHONUTF8 环境变量控制，
-            // 其 stdout 使用系统默认编码（中文 Windows = GBK）。
-            // stderr 可能含 emoji 统计信息，仍用 UTF-8 读取避免崩溃。
-            StandardOutputEncoding = Encoding.Default,
-            StandardErrorEncoding = Encoding.UTF8,
-            WorkingDirectory = _engineDir,
-        };
+        // fail-closed 前置检查：Vulkan DLL 必须存在
+        if (!_useVulkan)
+            throw new InvalidOperationException("GPU fail-closed: Vulkan 不可用，拒绝启动 ASR（严禁 CPU 回退）");
 
-        // 环境变量：强制 Python UTF-8 模式（根治 emoji GBK 崩溃）
-        psi.Environment["PYTHONUTF8"] = "1";
-        psi.Environment["PYTHONIOENCODING"] = "utf-8";
-        psi.Environment["GGML_VULKAN_DEVICE"] = "0";
+        // Mutex 获取/释放委托给 SttMutexGuard.WithMutexAsync
+        // 在专用线程上同步获取和释放 Mutex，确保同一线程满足 Windows Mutex 所有权规则
+        return await SttMutexGuard.WithMutexAsync(
+            _osMutex, _instanceLock, () => _isRunning, v => _isRunning = v,
+            async () =>
+            {
+            // Pre-job 动态资源门控：不缓存，启动子进程前实时读取 RAM/Commit/可用内存
+            var preJobRam = SttEngineSelector.GetRamUsagePercent();
+            var (preJobCommit, preJobCommitLimit) = SttEngineSelector.GetCommitInfo();
+            var preJobAvailMem = SttEngineSelector.GetAvailableMemoryBytes();
+            var preJobCheck = SttSafetyChecker.CheckPreJobResources(
+                preJobRam, preJobCommit, preJobCommitLimit, preJobAvailMem);
+            if (preJobCheck.ShouldFail)
+            {
+                throw new InvalidOperationException(preJobCheck.Message);
+            }
 
-        using var process = new Process { StartInfo = psi };
-        var tcs = new TaskCompletionSource<bool>();
+            Process? process = null;
+            try
+            {
+            var psi = new ProcessStartInfo
+            {
+                FileName = exePath,
+                Arguments = args.ToString(),
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8,
+                WorkingDirectory = _engineDir,
+            };
 
-        process.EnableRaisingEvents = true;
-        process.Exited += (s, e) => tcs.TrySetResult(true);
+            psi.Environment["PYTHONUTF8"] = "1";
+            psi.Environment["PYTHONIOENCODING"] = "utf-8";
+            psi.Environment["GGML_VULKAN_DEVICE"] = "0";
 
-        if (!process.Start())
-            throw new Exception("无法启动 transcribe.exe");
+            process = new Process { StartInfo = psi };
+            var tcs = new TaskCompletionSource<bool>();
 
-        // 使用 ReadToEndAsync 代替 BeginOutputReadLine，避免事件回调丢数据
-        var stdoutTask = process.StandardOutput.ReadToEndAsync(ct);
-        var stderrTask = process.StandardError.ReadToEndAsync(ct);
+            process.EnableRaisingEvents = true;
+            process.Exited += (s, e) => tcs.TrySetResult(true);
 
-        // 注册取消令牌：杀掉整个进程树
-        await using var ctReg = ct.Register(() =>
-        {
-            try { KillProcessTree(process); } catch { }
-            tcs.TrySetCanceled(ct);
-        });
+            if (!process.Start())
+                throw new Exception("无法启动 transcribe.exe");
 
-        // 超时：按文件数线性放大（每段额外加 5 分钟）
-        var timeout = TimeSpan.FromMinutes(DefaultTimeout.TotalMinutes + (fileCount - 1) * 5);
-        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeoutCts.CancelAfter(timeout);
-        await using var timeoutReg = timeoutCts.Token.Register(() =>
-        {
-            try { KillProcessTree(process); } catch { }
-            tcs.TrySetException(new TimeoutException($"转写超时 ({timeout.TotalMinutes:F0} 分钟, {fileCount} 段)"));
-        });
+            // 逐行读取 stdout/stderr，使监控计时器能实时检查 GPU 确认
+            // stdout 使用原始字节读取 + 后续严格解码，避免 UTF-8 替换回退产生 U+FFFD
+            var outputBuilder = new StringBuilder();   // best-effort UTF-8，仅供监控循环使用
+            var errorBuilder = new StringBuilder();
+            var outputLock = new object();
+            var rawStdoutStream = new System.IO.MemoryStream();
 
-        try
-        {
-            await tcs.Task;
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (TimeoutException)
-        {
-            throw;
-        }
+            var stdoutTask = Task.Run(async () =>
+            {
+                var buffer = new byte[8192];
+                var baseStream = process.StandardOutput.BaseStream;
+                int bytesRead;
+                while ((bytesRead = await baseStream.ReadAsync(buffer, ct)) > 0)
+                {
+                    // 1. 保存原始字节（用于最终严格解码）
+                    lock (outputLock)
+                    {
+                        rawStdoutStream.Write(buffer, 0, bytesRead);
+                    }
+                    // 2. best-effort UTF-8 解码追加到 outputBuilder（仅供监控循环检查 ASCII 标记）
+                    lock (outputLock)
+                    {
+                        var bestEffortText = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                        outputBuilder.Append(bestEffortText);
+                    }
+                }
+            }, ct);
 
-        // 等待进程完全退出 + 异步读取完成
-        process.WaitForExit();
+            var stderrTask = Task.Run(async () =>
+            {
+                string? line;
+                while ((line = await process.StandardError.ReadLineAsync(ct)) != null)
+                {
+                    lock (outputLock)
+                        errorBuilder.AppendLine(line);
+                }
+            }, ct);
 
-        var stdout = await stdoutTask;
-        var stderr = await stderrTask;
+// GPU fail-closed + 资源保险丝：使用 SttMonitorLoop（可注入 ISttTelemetryProvider）
+var logFilePath = Path.Combine(_engineDir, "logs", "latest.log");
+// 启动前准备日志文件：重命名旧文件，杜绝陈旧日志误放行
+if (!LogFileIncrementalReader.PrepareForNewRun(logFilePath))
+{
+    throw new Exception("日志文件准备失败（重命名/删除均失败），fail closed，不启动模型");
+}
+var telemetry = new SttTelemetryProvider(process, outputLock, outputBuilder, errorBuilder, logFilePath);
+            var monitorLoop = new SttMonitorLoop(telemetry);
+            var startTime = DateTime.UtcNow;
 
-        // 完成标记检测：用多种方式匹配（编码兼容）
-        var hasCompletionMarker = stdout.Contains("已完成", StringComparison.Ordinal)
-            || stdout.Contains("completed", StringComparison.OrdinalIgnoreCase);
+            using var monitorTimer = new System.Threading.Timer(_ =>
+            {
+                try
+                {
+                    var stopReason = monitorLoop.CheckOnce(startTime);
+                    if (stopReason != null)
+                    {
+                        Console.Error.WriteLine($"[SttEngine] {stopReason}");
+                        tcs.TrySetException(new InvalidOperationException(stopReason));
+                    }
+                }
+                catch { }
+            }, null, MemoryCheckInterval, MemoryCheckInterval);
 
-        Console.WriteLine($"[SttEngine] stdout len={stdout.Length}, stderr len={stderr.Length}, exit={process.ExitCode}");
+            // 注册取消令牌
+            await using var ctReg = ct.Register(() =>
+            {
+                try { KillProcessTree(process); } catch { }
+                tcs.TrySetCanceled(ct);
+            });
 
-        return (stdout, stderr, process.ExitCode, hasCompletionMarker);
+            // 超时
+            var timeout = TimeSpan.FromMinutes(DefaultTimeout.TotalMinutes + (fileCount - 1) * 5);
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(timeout);
+            await using var timeoutReg = timeoutCts.Token.Register(() =>
+            {
+                try { KillProcessTree(process); } catch { }
+                tcs.TrySetException(new TimeoutException($"转写超时 ({timeout.TotalMinutes:F0} 分钟, {fileCount} 段)"));
+            });
+
+            try
+            {
+                await tcs.Task;
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (TimeoutException)
+            {
+                throw;
+            }
+
+            process.WaitForExit();
+
+            await stdoutTask;
+            await stderrTask;
+
+            string stdout;
+            string stderr;
+            byte[] rawStdoutBytes;
+            lock (outputLock)
+            {
+                rawStdoutBytes = rawStdoutStream.ToArray();
+                stderr = errorBuilder.ToString();
+            }
+
+            // 严格解码 stdout：UTF-8 严格模式，失败则 fail closed
+            // 10.12 修正：禁止 GBK 猜测回退，严格按 PYTHONUTF8=1 契约
+            var decodeResult = StdoutEncodingDecoder.Decode(rawStdoutBytes);
+            stdout = decodeResult.Text;
+
+            Console.WriteLine($"[SttEngine] stdout decoded as {decodeResult.EncodingUsed}, " +
+                $"raw={rawStdoutBytes.Length} bytes, text={stdout.Length} chars, " +
+                $"containsFffd={decodeResult.ContainsReplacementChars}");
+
+            if (decodeResult.ContainsReplacementChars)
+            {
+                throw new InvalidOperationException(
+                    $"Stdout 解码后仍含 U+FFFD 替换字符（编码={decodeResult.EncodingUsed}），" +
+                    "fail closed：结果不可信，拒绝使用。");
+            }
+
+            // GPU fail-closed 最终验证（使用 GpuLogParser 严格解析）
+            var gpuResult = monitorLoop.FinalGpuVerification();
+
+            if (gpuResult.ShouldFail)
+            {
+                Console.Error.WriteLine($"[SttEngine] GPU fail-closed 最终验证失败: {gpuResult.Message}");
+                throw new InvalidOperationException($"GPU fail-closed: {gpuResult.Message}");
+            }
+
+            Console.WriteLine($"[SttEngine] {gpuResult.Message}");
+
+            // CPU fallback 最终检测
+            if (monitorLoop.CpuFallbackDetected)
+            {
+                Console.Error.WriteLine("[SttEngine] GPU fail-closed: 检测到 CPU fallback。拒绝结果");
+                throw new InvalidOperationException("GPU fail-closed: 检测到 CPU fallback，结果被拒绝");
+            }
+
+            var hasCompletionMarker = stdout.Contains("已完成", StringComparison.Ordinal)
+                || stdout.Contains("completed", StringComparison.OrdinalIgnoreCase);
+
+            Console.WriteLine($"[SttEngine] stdout len={stdout.Length}, stderr len={stderr.Length}, exit={process.ExitCode}");
+
+            return (stdout, stderr, process.ExitCode, hasCompletionMarker);
+            }
+            finally
+            {
+                process?.Dispose();
+            }
+            }); // end SttMutexGuard.WithMutexAsync
     }
 
     /// <summary>
-    /// 验证转写结果，抛异常或打日志
+    /// 验证转写结果
     /// </summary>
     private static void ValidateResult(string text, int exitCode, bool hasCompletionMarker, string stderr, string stdout)
     {
-        // 判定逻辑：
-        // 1. exit code=0 → 成功
-        // 2. exit code=1 + 有文本 + 有完成标记 → 成功（emoji 崩溃发生在输出统计阶段）
-        // 3. exit code=1 + 有文本 + 无完成标记 → 可疑（可能中途崩了只吐了半截）
-        // 4. exit code=1 + 无文本 → 真正失败
         if (string.IsNullOrWhiteSpace(text))
         {
-            // 没有文本 → 真正的失败
             var errMsg = string.IsNullOrEmpty(stderr) ? stdout : stderr;
             throw new Exception($"transcribe.exe 转写失败 (exit={exitCode}): {Common.Sanitize(errMsg)}");
         }
@@ -328,38 +446,17 @@ public class LlamaCppGgufEngine : ISttEngine
         {
             if (hasCompletionMarker)
             {
-                // 完成标记存在 → 文本是完整的，exit code=1 只是尾部 emoji 崩溃
                 Console.WriteLine($"[SttEngine] transcribe.exe exit code={exitCode} (完成标记已找到，尾部崩溃已忽略)");
             }
             else
             {
-                // 无完成标记 → 可能中途崩溃，文本可能不完整
                 Console.Error.WriteLine($"[SttEngine] 警告: transcribe.exe exit code={exitCode} 且无完成标记，文本可能不完整");
-                // 不抛异常，但在日志中标记可疑（准确优先原则下宁可告警也不静默）
             }
         }
     }
 
     /// <summary>
     /// 从 stdout 中提取单文件转写文本
-    /// 
-    /// transcribe.exe --quiet 输出格式：
-    ///   +---------- Qwen3-ASR 配置选项 ----------+
-    ///   |  模型目录    ...                       |
-    ///   +----------------------------------------+
-    ///   --- [QwenASR] 引擎初始化耗时: 2.49 秒 ---
-    ///   
-    ///   开始处理: filename.wav
-    ///   
-    ///   转写文本第一行
-    ///   转写文本第二行
-    ///   ...
-    ///   转写文本最后一行
-    ///   
-    ///   所有任务已完成。
-    ///   
-    /// 提取策略：找 "开始处理:" 行之后的文本，到 "所有任务已完成" 或 "--- [QwenASR]" 或 Traceback 为止
-    /// 返回值：text, elapsed, hasCompletionMarker
     /// </summary>
     private static (string text, double elapsed, bool hasCompletionMarker) ParseTranscribeOutput(string stdout, string? filename = null)
     {
@@ -374,7 +471,6 @@ public class LlamaCppGgufEngine : ISttEngine
         {
             var trimmed = rawLine.Trim();
 
-            // 文本区域开始：匹配 "开始处理" 或包含文件名
             if (!inTextSection)
             {
                 if (trimmed.Contains("开始处理", StringComparison.Ordinal)
@@ -385,42 +481,32 @@ public class LlamaCppGgufEngine : ISttEngine
                 continue;
             }
 
-            // 文本区域结束标志
             if (inTextSection)
             {
-                // "所有任务已完成" → 成功完成标记
                 if (trimmed.Contains("所有任务已完成", StringComparison.Ordinal))
                 {
                     hasCompletionMarker = true;
                     break;
                 }
-                // "--- [QwenASR]" → 引擎关闭，结束
                 if (trimmed.StartsWith("--- [QwenASR]", StringComparison.Ordinal))
                     break;
-                // Traceback → 崩溃输出，结束
                 if (trimmed.Contains("Traceback", StringComparison.Ordinal))
                     break;
-                // "+----------------" → traceback 边框，结束
                 if (trimmed.StartsWith("+---") && trimmed.Contains("---+"))
                     break;
-                // UnicodeEncodeError → 编码崩溃，结束
                 if (trimmed.Contains("UnicodeEncodeError", StringComparison.Ordinal))
                     break;
-                // "[PYI-" → PyInstaller 错误，结束
                 if (trimmed.StartsWith("[PYI-", StringComparison.Ordinal))
                     break;
 
-                // 跳过导出消息行（emoji 修复后这些行会出现在文本之后）
                 if (trimmed.StartsWith("已保存文本文件", StringComparison.Ordinal)
                     || trimmed.StartsWith("已生成字幕文件", StringComparison.Ordinal)
                     || trimmed.StartsWith("已导出时间戳", StringComparison.Ordinal))
                     continue;
 
-                // 跳过空行（但保留文本中的空行结构）
                 if (string.IsNullOrEmpty(trimmed))
                     continue;
 
-                // 收集文本行
                 textLines.Add(trimmed);
             }
         }
@@ -430,19 +516,7 @@ public class LlamaCppGgufEngine : ISttEngine
     }
 
     /// <summary>
-    /// 解析多文件转写输出：按 "开始处理:" 标记切分各文件文本。
-    /// 
-    /// 多文件输出格式：
-    ///   --- [QwenASR] 引擎初始化耗时: 2.49 秒 ---
-    ///   
-    ///   开始处理: seg_000_spk0.wav
-    ///   文本A第一行
-    ///   文本A第二行
-    ///   
-    ///   开始处理: seg_001_spk1.wav
-    ///   文本B第一行
-    ///   
-    ///   所有任务已完成。
+    /// 解析多文件转写输出
     /// </summary>
     private static List<string> ParseMultiFileOutput(string stdout, List<string> wavPaths)
     {
@@ -452,14 +526,12 @@ public class LlamaCppGgufEngine : ISttEngine
         bool inTextSection = false;
         bool hasAnyFile = false;
 
-        // 提取文件名列表（纯 ASCII，不受编码影响）
         var filenames = wavPaths.Select(p => Path.GetFileName(p)).ToList();
 
         foreach (var rawLine in lines)
         {
             var trimmed = rawLine.Trim();
 
-            // 新文件区域开始：行中包含已知文件名
             bool isFileMarker = false;
             foreach (var fn in filenames)
             {
@@ -472,7 +544,6 @@ public class LlamaCppGgufEngine : ISttEngine
 
             if (isFileMarker)
             {
-                // 保存上一个文件的文本
                 if (hasAnyFile)
                 {
                     results.Add(string.Join("\n", currentText).Trim());
@@ -486,7 +557,6 @@ public class LlamaCppGgufEngine : ISttEngine
             if (!inTextSection)
                 continue;
 
-            // 结束标记
             if (trimmed.Contains("所有任务已完成", StringComparison.Ordinal))
             {
                 if (hasAnyFile)
@@ -524,37 +594,30 @@ public class LlamaCppGgufEngine : ISttEngine
                 break;
             }
 
-            // 跳过导出消息行（包含 .txt 路径的行是导出消息，不是转写文本）
             if (trimmed.Contains(".txt", StringComparison.OrdinalIgnoreCase))
                 continue;
-            // 跳过中文导出消息行（编码正确时匹配）
             if (trimmed.StartsWith("已保存文本文件", StringComparison.Ordinal)
                 || trimmed.StartsWith("已生成字幕文件", StringComparison.Ordinal)
                 || trimmed.StartsWith("已导出时间戳", StringComparison.Ordinal))
                 continue;
 
-            // 跳过空行
             if (string.IsNullOrEmpty(trimmed))
                 continue;
 
             currentText.Add(trimmed);
         }
 
-        // 循环结束后：如果还在文本区域，保存最后一段文本
-        // （进程可能在输出完最后一段文本后崩溃，没有 "所有任务已完成" 标记）
         if (hasAnyFile && inTextSection)
         {
             results.Add(string.Join("\n", currentText).Trim());
         }
 
-        // 如果没有找到任何文件标记，回退到单文件解析
         if (results.Count == 0)
         {
             var (text, _, _) = ParseTranscribeOutput(stdout, filenames.FirstOrDefault());
             results.Add(text);
         }
 
-        // 确保结果数量和预期一致（不足的补空字符串）
         var expectedCount = wavPaths.Count;
         while (results.Count < expectedCount)
             results.Add("");
@@ -563,8 +626,7 @@ public class LlamaCppGgufEngine : ISttEngine
     }
 
     /// <summary>
-    /// 杀掉整个进程树（transcribe.exe 会起子进程做编码/对齐）
-    /// 使用 taskkill /F /T /PID 强制杀掉进程及其所有子进程
+    /// 杀掉整个进程树
     /// </summary>
     private static void KillProcessTree(Process process)
     {
@@ -575,7 +637,6 @@ public class LlamaCppGgufEngine : ISttEngine
             var pid = process.Id;
             Console.WriteLine($"[SttEngine] 杀掉进程树 PID={pid}");
 
-            // taskkill /F /T 强制杀掉进程及其所有子进程
             var psi = new ProcessStartInfo
             {
                 FileName = "taskkill",
@@ -591,7 +652,6 @@ public class LlamaCppGgufEngine : ISttEngine
         catch (Exception ex)
         {
             Console.Error.WriteLine($"[SttEngine] 杀进程树失败: {Common.Sanitize(ex.Message)}");
-            // 回退：直接 Kill
             try { process.Kill(entireProcessTree: true); } catch { }
         }
     }

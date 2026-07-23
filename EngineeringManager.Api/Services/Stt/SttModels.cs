@@ -83,4 +83,19 @@ public class GpuInfo
 
     /// <summary>所有显卡列表（供调试/展示）</summary>
     public List<string> AllGpus { get; set; } = new();
+
+    /// <summary>
+    /// VRAM 检测方式： "registry"（注册表 qwMemorySize）/ "wmi"（WMI AdapterRAM）/ "unknown"（未检测到）。
+    /// 禁止使用 "inferred"（型号推断）作为放行依据。
+    /// </summary>
+    public string VramDetectionMethod { get; set; } = "unknown";
 }
+
+/// <summary>
+/// 注册表适配器记录（从 HKLM\...\{4d36e968-...}\* 读取的 GPU 信息）。
+/// 用于 SelectAdapterVram 纯函数的输入，可注入测试。
+/// </summary>
+public sealed record AdapterRecord(
+    string DriverDesc,
+    long? QwMemorySize,
+    int? DwordMemorySize);
