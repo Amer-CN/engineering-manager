@@ -233,7 +233,10 @@ builder.Services.ConfigureHttpJsonOptions(options =>
             });
 
             // 2. 静态文件服务（JS/CSS/图片 + ocr-config.json 等）
-            // index.html 禁止缓存（防 WebView2 缓存旧前端），带 hash 的 JS/CSS 默认永久缓存（文件名变=自动失效）
+            // 缓存策略：
+            //   - index.html (入口 HTML): no-cache, no-store, must-revalidate — 每次必须重新验证，防 WebView2 缓存旧前端
+            //   - 带 hash 的 JS/CSS (如 index-B2cgUbMM.js): public, max-age=31536000, immutable — 长期缓存，文件名变=自动失效
+            //   - 其他静态文件 (ocr-config.json 等): no-cache — 每次重新验证
             app.UseStaticFiles(new StaticFileOptions
             {
                 FileProvider = new PhysicalFileProvider(distPath),
@@ -242,9 +245,22 @@ builder.Services.ConfigureHttpJsonOptions(options =>
                     var path = ctx.File.Name;
                     if (path.EndsWith(".html", StringComparison.OrdinalIgnoreCase))
                     {
+                        // 入口 HTML 禁止缓存
                         ctx.Context.Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
                         ctx.Context.Response.Headers["Pragma"] = "no-cache";
                         ctx.Context.Response.Headers["Expires"] = "0";
+                    }
+                    else if (path.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
+                             path.EndsWith(".css", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // 带 content-hash 的 JS/CSS 长期缓存 + immutable
+                        // Vite 生成的文件名含 content hash，文件内容变=文件名变=自动失效
+                        ctx.Context.Response.Headers["Cache-Control"] = "public, max-age=31536000, immutable";
+                    }
+                    else
+                    {
+                        // 其他静态文件（如 ocr-config.json）每次验证
+                        ctx.Context.Response.Headers["Cache-Control"] = "no-cache";
                     }
                 }
             });
@@ -304,6 +320,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
         if (IsProduction)
         {
             // 3. SPA 回退：非 /api 路由全部返回 index.html
+            // 必须设置 no-cache 头：SPA fallback 使用 SendFileAsync 绕过了 UseStaticFiles 的 OnPrepareResponse，
+            // 如果不显式设置 Cache-Control，浏览器/WebView2 可能缓存旧版 index.html，
+            // 导致引用的旧 hash JS/CSS 文件名 404 或加载过时前端。
             app.MapWhen(ctx => !ctx.Request.Path.StartsWithSegments("/api"), spa =>
             {
                 spa.Use(async (ctx, next) =>
@@ -312,6 +331,10 @@ builder.Services.ConfigureHttpJsonOptions(options =>
                     if (File.Exists(indexPath))
                     {
                         ctx.Response.ContentType = "text/html; charset=utf-8";
+                        // 入口 HTML 必须禁止缓存（与 UseStaticFiles 的 OnPrepareResponse 策略一致）
+                        ctx.Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                        ctx.Response.Headers["Pragma"] = "no-cache";
+                        ctx.Response.Headers["Expires"] = "0";
                         await ctx.Response.SendFileAsync(indexPath);
                     }
                     else
