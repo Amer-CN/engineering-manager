@@ -8,7 +8,7 @@ vi.mock('lucide-react', () => {
   const iconNames = [
     'Activity', 'AlertCircle', 'AlertTriangle', 'ArrowDownCircle', 'ArrowLeft',
     'ArrowLeftRight', 'ArrowRightLeft', 'ArrowUpCircle', 'BadgeCheck', 'Ban', 'Banknote',
-    'BarChart3', 'Bot', 'Briefcase', 'Building2', 'Calendar', 'CalendarCheck', 'Camera',
+    'BarChart3', 'Bell', 'Bot', 'Briefcase', 'Building2', 'Calendar', 'CalendarCheck', 'Camera',
     'Check', 'CheckCircle', 'ChevronDown', 'ChevronLeft', 'ChevronRight',
     'ChevronUp', 'ClipboardList', 'ClipboardPen', 'Clock', 'Construction',
     'CreditCard', 'Database', 'DollarSign', 'Download', 'Droplets', 'Edit3', 'Eye', 'EyeOff',
