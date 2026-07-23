@@ -5,9 +5,10 @@
  * 单人：显示完整可编辑文本区
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { Icon } from '@/components/ui/Icon'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToastContext } from '@/hooks/useToast'
 import { maskKnowledgeText } from './knowledgeTextMask'
@@ -16,6 +17,8 @@ import type { SttJobDetail, SttSegment } from '@/services/stt-client'
 interface TranscriptEditorProps {
   job: SttJobDetail
   masked: boolean
+  /** 本地音频播放 URL（录音/上传当次可用，历史任务为空）*/
+  audioUrl?: string | null
   onIngest: (correctedText: string, segments: SttSegment[], title: string, projectId?: number, occurredAt?: string) => void
 }
 
@@ -33,8 +36,17 @@ function rebuildFullText(segments: SttSegment[]): string {
     .join('\n')
 }
 
-const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, onIngest }) => {
+const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioUrl, onIngest }) => {
   const { showToast } = useToastContext()
+
+  // 音频播放 + 分段跳转
+  const audioRef = useRef<HTMLAudioElement>(null)
+  const seekTo = useCallback((sec: number) => {
+    const a = audioRef.current
+    if (!a) return
+    a.currentTime = sec
+    a.play().catch(() => { /* 自动播放可能被浏览器拦截，忽略 */ })
+  }, [])
 
   // 编辑状态
   const [segments, setSegments] = useState<SttSegment[]>([])
@@ -134,6 +146,14 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, onInge
         />
       </div>
 
+      {/* 音频播放器 — 边听边改 */}
+      {audioUrl && (
+        <div>
+          <label className="text-xs font-medium text-slate-600 mb-1 block">原始录音</label>
+          <audio ref={audioRef} src={audioUrl} controls preload="metadata" className="w-full h-10" />
+        </div>
+      )}
+
       {/* 编辑区 */}
       {segments.length > 0 ? (
         <div className="space-y-2">
@@ -148,9 +168,16 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, onInge
               <div key={i} className="flex gap-2 items-start p-2 rounded-lg border border-slate-200 bg-white">
                 <div className="flex-shrink-0 w-20">
                   <div className="text-xs font-medium text-primary-600">说话人{seg.speaker}</div>
-                  <div className="text-xs text-slate-400">
+                  <button
+                    type="button"
+                    onClick={() => seekTo(seg.start)}
+                    disabled={!audioUrl}
+                    className="text-xs text-slate-400 hover:text-primary-600 disabled:hover:text-slate-400 disabled:cursor-default flex items-center gap-0.5 mt-0.5"
+                    title={audioUrl ? '跳转到此段播放' : undefined}
+                  >
+                    {audioUrl && <Icon name="Play" size={9} />}
                     {formatTimestamp(seg.start)} - {formatTimestamp(seg.end)}
-                  </div>
+                  </button>
                 </div>
                 <textarea
                   value={seg.text}

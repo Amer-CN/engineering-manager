@@ -1,20 +1,18 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
 import { Icon } from '@/components/ui/Icon'
 import { useToastContext } from '@/hooks/useToast'
 import { useMask } from '@/contexts/MaskContext'
 import { sttClient, type SttCapability, type SttJobDetail, type SttSegment } from '@/services/stt-client'
-import AudioUploadCard from './AudioUploadCard'
+import AudioInputCard from './AudioInputCard'
 import SttJobList from './SttJobList'
 import TranscriptEditor from './TranscriptEditor'
+import TranscriptionParams, { type RecordingType } from './TranscriptionParams'
 
-const ACCEPTED_EXTS = '.wav,.mp3,.m4a,.aac,.flac,.ogg,.wma,.amr,.opus'
+const ACCEPTED_EXTS = '.wav,.mp3,.m4a,.aac,.flac,.ogg,.wma,.amr,.opus,.webm'
 const MAX_SIZE = 500 * 1024 * 1024
-
-type RecordingType = 'single' | 'dual' | 'multi'
 
 interface TranscriptionWorkspaceProps {
   onIngested?: (docId?: number) => void
@@ -31,8 +29,9 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadedPath, setUploadedPath] = useState<string | null>(null)
+  const [audioUrl, setAudioUrl] = useState<string | null>(null)
 
-  const [recordingType, setRecordingType] = useState<RecordingType>('dual')
+  const [recordingType, setRecordingType] = useState<RecordingType>('single')
   const [numSpeakers, setNumSpeakers] = useState<number>(2)
   const [hotwords, setHotwords] = useState('')
 
@@ -41,6 +40,8 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
   const [jobLoading, setJobLoading] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const audioUrlRef = useRef<string | null>(null)
+  const uploadAbortRef = useRef<AbortController | null>(null)
 
   // 能力检测
   useEffect(() => {
@@ -78,18 +79,42 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
     pollRef.current = setInterval(() => pollJob(jobId), 1000)
   }, [pollJob])
 
-  // 卸载时清理轮询
+  // 卸载时清理轮询 + 音频播放 URL
   useEffect(() => {
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)
+      if (audioUrlRef.current && typeof URL !== 'undefined' && URL.revokeObjectURL) URL.revokeObjectURL(audioUrlRef.current)
     }
   }, [])
 
-  // 文件选择
-  const handleFileSelect = useCallback((file: File) => {
-    const ext = '.' + file.name.split('.').pop()?.toLowerCase()
-    const validExts = ACCEPTED_EXTS.split(',')
-    if (!validExts.includes(ext)) {
+  // 设置/清理本地音频播放 URL（供校对时边听边改）
+  const setAudio = useCallback((url: string | null) => {
+    if (audioUrlRef.current && typeof URL !== 'undefined' && URL.revokeObjectURL) {
+      URL.revokeObjectURL(audioUrlRef.current)
+    }
+    audioUrlRef.current = url
+    setAudioUrl(url)
+  }, [])
+
+  // 清除已选音频
+  const handleClearInput = useCallback(() => {
+    setSelectedFile(null)
+    setUploadedPath(null)
+    setUploadProgress(0)
+    setAudio(null)
+  }, [setAudio])
+
+  // 取消正在进行的上传
+  const handleCancelUpload = useCallback(() => {
+    if (uploadAbortRef.current) {
+      uploadAbortRef.current.abort()
+    }
+  }, [])
+
+  // 选择文件 / 录音完成 → 校验后立即自动上传
+  const handleFileSelect = useCallback(async (file: File) => {
+    const ext = '.' + (file.name.split('.').pop()?.toLowerCase() || '')
+    if (!ACCEPTED_EXTS.split(',').includes(ext)) {
       showToast(`不支持的格式 ${ext}，支持: ${ACCEPTED_EXTS}`, 'error')
       return
     }
@@ -101,27 +126,30 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
       showToast('文件为空', 'error')
       return
     }
+
+    const objectUrl = (typeof URL !== 'undefined' && URL.createObjectURL) ? URL.createObjectURL(file) : null
+    setAudio(objectUrl)
     setSelectedFile(file)
     setUploadedPath(null)
     setUploadProgress(0)
-  }, [showToast])
 
-  // 上传
-  const handleUpload = useCallback(async () => {
-    if (!selectedFile) return
+    // 自动上传，无需再点「开始上传」
     setUploading(true)
-    setUploadProgress(0)
-    const res = await sttClient.uploadSttAudio(selectedFile, (percent) => {
-      setUploadProgress(percent)
-    })
+    const controller = new AbortController()
+    uploadAbortRef.current = controller
+    const res = await sttClient.uploadSttAudio(file, (percent) => setUploadProgress(percent), controller.signal)
+    uploadAbortRef.current = null
     setUploading(false)
-    if (res.success && res.data) {
+    if (res?.success && res.data) {
       setUploadedPath(res.data.filePath)
       showToast('上传成功', 'success')
+    } else if (res?.error === '上传已取消') {
+      handleClearInput()
+      showToast('已取消上传', 'info')
     } else {
-      showToast(res.error || '上传失败', 'error')
+      showToast(res?.error || '上传失败', 'error')
     }
-  }, [selectedFile, showToast])
+  }, [showToast, setAudio, handleClearInput])
 
   // 创建转写任务
   const handleCreateJob = useCallback(async () => {
@@ -163,8 +191,9 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
     }
   }, [uploadedPath, capability, recordingType, numSpeakers, hotwords, showToast, startPolling])
 
-  // 选择已有任务
+  // 选择已有任务（历史任务无本地音频，清掉播放 URL）
   const handleSelectJob = useCallback(async (jobId: number) => {
+    setAudio(null)
     setJobLoading(true)
     const res = await sttClient.getSttJob(jobId)
     setJobLoading(false)
@@ -176,7 +205,7 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
     } else {
       showToast(res.error || '获取任务详情失败', 'error')
     }
-  }, [showToast, startPolling])
+  }, [showToast, startPolling, setAudio])
 
   // 入库
   const handleIngest = useCallback(async (correctedText: string, segments: SttSegment[], title: string, projectId?: number, occurredAt?: string) => {
@@ -242,7 +271,7 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
       {/* 上传区域 + 参数 */}
       {canTranscribe && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <AudioUploadCard
+          <AudioInputCard
             selectedFile={selectedFile}
             uploading={uploading}
             uploadProgress={uploadProgress}
@@ -250,73 +279,21 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
             accept={ACCEPTED_EXTS}
             disabled={creating}
             onFileSelect={handleFileSelect}
-            onUpload={handleUpload}
-            onClear={() => { setSelectedFile(null); setUploadedPath(null); setUploadProgress(0) }}
+            onClear={handleClearInput}
+            onCancelUpload={handleCancelUpload}
           />
 
-          <Card title="转写参数" padding="md" shadow="sm">
-            <div className="space-y-4">
-              <div>
-                <label className="text-xs font-medium text-slate-600 mb-2 block">录音类型</label>
-                <div className="flex gap-2">
-                  {([
-                    { value: 'single', label: '单人录音' },
-                    { value: 'dual', label: '双人通话' },
-                    { value: 'multi', label: '多人会议' },
-                  ] as const).map(opt => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => setRecordingType(opt.value)}
-                      className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
-                        recordingType === opt.value
-                          ? 'bg-primary-50 border-primary-300 text-primary-700'
-                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {recordingType === 'multi' && (
-                <div>
-                  <label className="text-xs font-medium text-slate-600 mb-2 block">说话人数量（可选，留空自动估计）</label>
-                  <Input
-                    type="number"
-                    min={2}
-                    max={10}
-                    value={numSpeakers || ''}
-                    onChange={(e) => setNumSpeakers(e.target.value ? parseInt(e.target.value) : 0)}
-                    placeholder="自动估计"
-                  />
-                </div>
-              )}
-
-              <div>
-                <label className="text-xs font-medium text-slate-600 mb-2 block">热词 / 上下文（可选）</label>
-                <Input
-                  value={hotwords}
-                  onChange={(e) => setHotwords(e.target.value)}
-                  placeholder="人名、项目名、工程术语，用逗号分隔"
-                />
-                <p className="text-xs text-slate-400 mt-1">用于提升专有名词识别准确率</p>
-              </div>
-
-              <Button
-                variant="primary"
-                size="md"
-                block
-                loading={creating}
-                disabled={!uploadedPath || creating}
-                onClick={handleCreateJob}
-                leftIcon="Sparkles"
-              >
-                {uploadedPath ? '创建转写任务' : '请先上传音频'}
-              </Button>
-            </div>
-          </Card>
+          <TranscriptionParams
+            recordingType={recordingType}
+            onRecordingTypeChange={setRecordingType}
+            numSpeakers={numSpeakers}
+            onNumSpeakersChange={setNumSpeakers}
+            hotwords={hotwords}
+            onHotwordsChange={setHotwords}
+            creating={creating}
+            uploadedPath={uploadedPath}
+            onCreateJob={handleCreateJob}
+          />
         </div>
       )}
 
@@ -324,7 +301,7 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
       {currentJob && (
         <Card title="转写结果" padding="md" shadow="sm"
           extra={
-            <Button variant="ghost" size="xs" onClick={() => { setCurrentJob(null); if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null } }}>
+            <Button variant="ghost" size="xs" onClick={() => { setCurrentJob(null); setAudio(null); if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null } }}>
               <Icon name="X" size={14} />
             </Button>
           }
@@ -359,7 +336,7 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
 
               {/* 失败 */}
               {currentJob.status === 'failed' && (
-                <div className="flex items-start gap-2 text-sm text-red-600 bg-red-50 rounded-lg p-3">
+                <div className="flex items-start gap-2 text-sm text-danger-600 bg-danger-50 rounded-lg p-3">
                   <Icon name="XCircle" size={16} className="flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="font-medium">转写失败</p>
@@ -373,6 +350,7 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
                 <TranscriptEditor
                   job={currentJob}
                   masked={masked}
+                  audioUrl={audioUrl}
                   onIngest={handleIngest}
                 />
               )}
