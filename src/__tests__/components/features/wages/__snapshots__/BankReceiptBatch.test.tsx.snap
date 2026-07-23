@@ -9,12 +9,12 @@ exports[`BankReceiptBatch > 快照匹配 1`] = `
       class="flex items-center justify-between"
     >
       <h2
-        class="text-2xl font-bold text-gray-900"
+        class="text-2xl font-bold text-slate-900"
       >
         银行回单批量解析
       </h2>
       <button
-        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+        class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
       >
         返回
       </button>
@@ -23,7 +23,7 @@ exports[`BankReceiptBatch > 快照匹配 1`] = `
       class="
           relative border-2 border-dashed rounded-lg p-12 text-center cursor-pointer
           transition-colors duration-200
-          border-gray-300 bg-gray-50 hover:bg-gray-100
+          border-slate-300 bg-slate-50 hover:bg-slate-100
         "
     >
       <input
@@ -42,7 +42,7 @@ exports[`BankReceiptBatch > 快照匹配 1`] = `
         </div>
         <div>
           <p
-            class="text-lg font-medium text-gray-900"
+            class="text-lg font-medium text-slate-900"
           >
             拖拽文件到此处，或 
             <span
@@ -52,7 +52,7 @@ exports[`BankReceiptBatch > 快照匹配 1`] = `
             </span>
           </p>
           <p
-            class="text-sm text-gray-500 mt-1"
+            class="text-sm text-slate-500 mt-1"
           >
             支持 jpg、png、pdf 格式，可多选
           </p>
@@ -63,14 +63,14 @@ exports[`BankReceiptBatch > 快照匹配 1`] = `
       class="flex justify-end space-x-4"
     >
       <button
-        class="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+        class="px-6 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
       >
         取消
       </button>
       <button
         class="
             px-6 py-2 text-sm font-medium text-white rounded-md
-            bg-gray-400 cursor-not-allowed
+            bg-slate-400 cursor-not-allowed
           "
         disabled=""
       >

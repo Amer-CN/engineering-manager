@@ -105,9 +105,10 @@ describe('DropdownMenu', () => {
     // 打开菜单
     fireEvent.click(screen.getByText('操作'))
     
-    // "删除" 按钮应该有危险样式（text-red-600）
+    // "删除" 按钮应该有危险样式（danger 项 hover 背景为 hover:bg-red-50，
+    // 文字颜色改为内联 style color: var(--danger)）
     const deleteButton = screen.getByText('删除').closest('button')
-    expect(deleteButton).toHaveClass('text-red-600')
+    expect(deleteButton).toHaveClass('hover:bg-red-50')
   })
 
   it('renders icon when provided', () => {
@@ -131,8 +132,8 @@ describe('DropdownMenu', () => {
     // 打开菜单
     fireEvent.click(screen.getByText('操作'))
     
-    // 检查分隔线（border-t border-slate-100）
-    const dividers = document.querySelectorAll('.border-t.border-slate-100')
+    // 检查分隔线（当前实现为 my-1 border-t，颜色走内联 style borderColor: var(--border)）
+    const dividers = document.querySelectorAll('.my-1.border-t')
     expect(dividers.length).toBeGreaterThanOrEqual(1)
   })
 

@@ -6,10 +6,8 @@ vi.mock('@/components/ui/EmptyState', () => ({
   EmptyState: ({ title }: any) => <div>{title}</div>,
 }))
 
-// Mock InvoiceRow
-vi.mock('@/components/features/invoices/InvoiceRow', () => ({
-  InvoiceRow: ({ invoice }: any) => <tr data-testid="invoice-row"><td>{invoice.name}</td></tr>,
-}))
+// 注：InvoiceList 已重构为使用 DataTable + columns 配置渲染，不再使用 InvoiceRow 组件，
+// 因此不存在 data-testid="invoice-row"。发票数据行现由 DataTable 根据列配置渲染。
 
 import { InvoiceList } from '@/components/features/invoices/InvoiceList'
 
@@ -52,6 +50,9 @@ describe('InvoiceList', () => {
       onPrint: vi.fn(),
       onPreview: vi.fn(),
     }))
-    expect(screen.getByTestId('invoice-row')).toBeTruthy()
+    // 数据行由 DataTable 渲染：name 列显示发票名称，据此确认行已渲染
+    expect(screen.getByText('建材发票')).toBeTruthy()
+    // 表头行 + 数据行，至少存在一个数据行
+    expect(screen.getAllByRole('row').length).toBeGreaterThan(1)
   })
 })

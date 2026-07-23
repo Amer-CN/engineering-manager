@@ -1,88 +1,45 @@
 import { renderHook, act, cleanup } from '@testing-library/react'
+import { useTheme } from '../../hooks/useTheme'
 
-afterEach(cleanup)
+// useTheme 已从旧的 light/dark toggle 迁移到三主题 scheme 系统
+// (white / graphite / sandstone), 使用模块级全局 store (useSyncExternalStore).
+describe('useTheme (三主题 scheme)', () => {
+  afterEach(cleanup)
 
-describe('useTheme', () => {
-  // 每个测试清空 localStorage
-  afterEach(() => {
-    localStorage.removeItem('app-theme')
-    document.documentElement.classList.remove('dark')
+  // 每个用例先把全局 store 复位到 white (localStorage 已加载, 只能经 setScheme 改)
+  beforeEach(() => {
+    const { result, unmount } = renderHook(() => useTheme())
+    act(() => { result.current.setScheme('white') })
+    unmount()
   })
 
-  it('默认应为 light 主题', async () => {
-    const { useTheme } = await import('../../hooks/useTheme')
+  it('setScheme 应更新 scheme', () => {
     const { result } = renderHook(() => useTheme())
-    expect(result.current.theme).toBe('light')
-    expect(result.current.isDark).toBe(false)
+    act(() => { result.current.setScheme('graphite') })
+    expect(result.current.scheme).toBe('graphite')
   })
 
-  it('应从 localStorage 读取已保存的 dark 主题', async () => {
-    localStorage.setItem('app-theme', 'dark')
-    const { useTheme } = await import('../../hooks/useTheme')
+  it('setScheme 应写入 localStorage(app-theme) 与 data-theme 属性', () => {
     const { result } = renderHook(() => useTheme())
-    expect(result.current.theme).toBe('dark')
-    expect(result.current.isDark).toBe(true)
+    act(() => { result.current.setScheme('sandstone') })
+    expect(result.current.scheme).toBe('sandstone')
+    expect(localStorage.getItem('app-theme')).toBe('sandstone')
+    expect(document.documentElement.getAttribute('data-theme')).toBe('sandstone')
   })
 
-  it('setTheme 应切换主题并更新 localStorage', async () => {
-    const { useTheme } = await import('../../hooks/useTheme')
+  it('切回 white 应生效并持久化', () => {
     const { result } = renderHook(() => useTheme())
-
-    act(() => {
-      result.current.setTheme('dark')
-    })
-
-    expect(result.current.theme).toBe('dark')
-    expect(result.current.isDark).toBe(true)
-    expect(localStorage.getItem('app-theme')).toBe('dark')
+    act(() => { result.current.setScheme('graphite') })
+    act(() => { result.current.setScheme('white') })
+    expect(result.current.scheme).toBe('white')
+    expect(localStorage.getItem('app-theme')).toBe('white')
   })
 
-  it('toggleTheme 应在 light 和 dark 之间切换', async () => {
-    const { useTheme } = await import('../../hooks/useTheme')
-    const { result } = renderHook(() => useTheme())
-
-    expect(result.current.theme).toBe('light')
-
-    act(() => {
-      result.current.toggleTheme()
-    })
-    expect(result.current.theme).toBe('dark')
-
-    act(() => {
-      result.current.toggleTheme()
-    })
-    expect(result.current.theme).toBe('light')
-  })
-
-  it('dark 主题时应在 documentElement 添加 dark class', async () => {
-    const { useTheme } = await import('../../hooks/useTheme')
-    const { result } = renderHook(() => useTheme())
-
-    act(() => {
-      result.current.setTheme('dark')
-    })
-
-    expect(document.documentElement.classList.contains('dark')).toBe(true)
-  })
-
-  it('light 主题时应移除 dark class', async () => {
-    localStorage.setItem('app-theme', 'dark')
-    const { useTheme } = await import('../../hooks/useTheme')
-    const { result } = renderHook(() => useTheme())
-
-    expect(document.documentElement.classList.contains('dark')).toBe(true)
-
-    act(() => {
-      result.current.setTheme('light')
-    })
-
-    expect(document.documentElement.classList.contains('dark')).toBe(false)
-  })
-
-  it('localStorage 中存储无效值时应回退到 light', async () => {
-    localStorage.setItem('app-theme', 'invalid-theme')
-    const { useTheme } = await import('../../hooks/useTheme')
-    const { result } = renderHook(() => useTheme())
-    expect(result.current.theme).toBe('light')
+  it('多个 useTheme 实例应共享同一 scheme', () => {
+    const a = renderHook(() => useTheme())
+    const b = renderHook(() => useTheme())
+    act(() => { a.result.current.setScheme('graphite') })
+    expect(a.result.current.scheme).toBe('graphite')
+    expect(b.result.current.scheme).toBe('graphite')
   })
 })

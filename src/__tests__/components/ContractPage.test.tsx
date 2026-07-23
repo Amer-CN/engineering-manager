@@ -11,9 +11,27 @@ vi.mock('@/hooks/usePermission', () => ({
   usePermission: () => ({ can: () => true }),
 }))
 
-vi.mock('framer-motion', () => ({
-  motion: { div: 'div' as any, button: 'button' as any },
-}))
+vi.mock('framer-motion', () => {
+  const React = require('react')
+  const make = (tag: string) => {
+    const C = React.forwardRef((props: any, ref: any) => {
+      const { children, initial, animate, exit, whileHover, whileTap, transition, variants, layout, ...rest } = props
+      return React.createElement(typeof tag === 'string' ? tag : 'div', { ...rest, ref }, children)
+    })
+    C.displayName = `motion.${tag}`
+    return C
+  }
+  const motion: any = new Proxy({}, {
+    get: (_t, prop) => (typeof prop === 'symbol' ? undefined : make(String(prop))),
+  })
+  return {
+    motion,
+    AnimatePresence: ({ children }: any) => React.createElement(React.Fragment, null, children),
+    useMotionValue: () => ({ set: () => {}, get: () => 0 }),
+    useSpring: () => ({ set: () => {}, get: () => 0, on: () => () => {} }),
+    useTransform: () => 0,
+  }
+})
 
 vi.mock('mammoth', () => ({
   default: { extractRawText: vi.fn(() => Promise.resolve({ value: '' })) },
@@ -29,7 +47,7 @@ vi.mock('@/components/features/contracts/contractConfig', () => ({
     expense: { label: '支出合同', exportType: 'expense' as const, auditResource: 'contract_expense', subCategory: 'expense', accentColor: 'bg-red-500', partnerCategoryDefault: '乙方' },
     agreement: { label: '其他协议', exportType: 'agreement' as const, auditResource: 'contract_agreement', subCategory: 'agreement', accentColor: 'bg-sky-500', partnerCategoryDefault: '协议方' },
   },
-  getApi: () => ({ getContracts: mockGetContracts, deleteContract: mockDeleteContract }),
+  getApi: () => Promise.resolve({ getContracts: mockGetContracts, deleteContract: mockDeleteContract }),
   getStatusLabel: (s: string) => s === 'active' ? '履行中' : s === 'completed' ? '已完成' : s,
   getStatusColor: () => 'green',
   getContractPaymentTotal: () => 0,

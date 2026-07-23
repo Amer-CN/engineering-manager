@@ -61,22 +61,29 @@ describe('ProjectList', () => {
     expect(screen.getByText('暂无项目')).toBeTruthy()
   })
 
-  test('有项目应显示概览横幅', async () => {
+  // 注：概览横幅（"项目投资组合概览" + 总数/进行中计数）已从 ProjectList 提取到
+  // Projects.tsx 页面头部（subtitle "投资组合概览 · 共 N 个项目"）。
+  // ProjectList 现在仅渲染项目卡片网格，以下测试断言其当前真实行为。
+
+  test('有项目时应渲染卡片网格而非空状态', async () => {
     const { ProjectList } = await importModule()
     render(React.createElement(ProjectList, baseProps))
-    expect(screen.getByText('项目投资组合概览')).toBeTruthy()
+    expect(screen.queryByText('暂无项目')).toBeNull()
+    expect(screen.getAllByTestId(/^project-card-/)).toHaveLength(2)
   })
 
-  test('概览应显示项目总数', async () => {
+  test('渲染的卡片数量应等于项目总数', async () => {
     const { ProjectList } = await importModule()
     render(React.createElement(ProjectList, baseProps))
-    expect(screen.getByText('2')).toBeTruthy()
+    expect(screen.getAllByTestId(/^project-card-/)).toHaveLength(baseProps.projects.length)
   })
 
-  test('概览应显示进行中数量', async () => {
+  test('进行中项目应被渲染', async () => {
     const { ProjectList } = await importModule()
     render(React.createElement(ProjectList, baseProps))
-    expect(screen.getByText('1')).toBeTruthy()
+    // 安岳项目 status 为 in_progress
+    expect(screen.getByTestId('project-card-1')).toBeTruthy()
+    expect(screen.getByText('安岳项目')).toBeTruthy()
   })
 
   test('应渲染项目卡片', async () => {

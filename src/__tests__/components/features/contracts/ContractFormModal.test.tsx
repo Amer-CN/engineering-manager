@@ -255,24 +255,24 @@ describe('ContractFormModal — Package B1', () => {
   // ═══════════════════════════════════
   it('可以填写合同名称', async () => {
     const user = userEvent.setup()
-    const { container } = await setupRender(true, 'income', null)
-    const nameInput = container.querySelector('input[type="text"]') as HTMLInputElement
+    await setupRender(true, 'income', null)
+    const nameInput = document.querySelector('input[type="text"]') as HTMLInputElement
     await user.type(nameInput, '新合同名称')
     expect(nameInput.value).toBe('新合同名称')
   })
 
   it('可以选择关联项目', async () => {
     const user = userEvent.setup()
-    const { container } = await setupRender(true, 'income', null)
-    const projectSelect = container.querySelectorAll('select')[0] as HTMLSelectElement
+    await setupRender(true, 'income', null)
+    const projectSelect = document.querySelectorAll('select')[0] as HTMLSelectElement
     await user.selectOptions(projectSelect, '1')
     expect(projectSelect.value).toBe('1')
   })
 
   it('可以填写合同金额', async () => {
     const user = userEvent.setup()
-    const { container } = await setupRender(true, 'income', null)
-    const amountInput = container.querySelector('input[type="number"]') as HTMLInputElement
+    await setupRender(true, 'income', null)
+    const amountInput = document.querySelector('input[type="number"]') as HTMLInputElement
     await user.type(amountInput, '123456')
     expect(parseFloat(amountInput.value)).toBeGreaterThan(0)
   })
@@ -282,14 +282,14 @@ describe('ContractFormModal — Package B1', () => {
   // ═══════════════════════════════════
   it('合同名称为空时提交显示错误 toast', async () => {
     const user = userEvent.setup()
-    const { container } = await setupRender(true, 'income', null)
+    await setupRender(true, 'income', null)
     // 只选项目，不填名称
-    const projectSelect = container.querySelectorAll('select')[0] as HTMLSelectElement
+    const projectSelect = document.querySelectorAll('select')[0] as HTMLSelectElement
     await user.selectOptions(projectSelect, '1')
-    const amountInput = container.querySelector('input[type="number"]') as HTMLInputElement
+    const amountInput = document.querySelector('input[type="number"]') as HTMLInputElement
     await user.type(amountInput, '10000')
     // 用 fireEvent.submit 绕过 HTML5 原生验证，直接触发 React handleSubmit
-    const form = container.querySelector('form') as HTMLFormElement
+    const form = document.querySelector('form') as HTMLFormElement
     fireEvent.submit(form)
     await waitFor(() => {
       expect(mockShowToast).toHaveBeenCalledWith(expect.stringContaining('合同名称'), 'error')
@@ -298,14 +298,14 @@ describe('ContractFormModal — Package B1', () => {
 
   it('未选择项目时提交显示错误 toast', async () => {
     const user = userEvent.setup()
-    const { container } = await setupRender(true, 'income', null)
+    await setupRender(true, 'income', null)
     // 只填名称，不选项目
-    const nameInput = container.querySelector('input[type="text"]') as HTMLInputElement
+    const nameInput = document.querySelector('input[type="text"]') as HTMLInputElement
     await user.type(nameInput, '测试合同')
-    const amountInput = container.querySelector('input[type="number"]') as HTMLInputElement
+    const amountInput = document.querySelector('input[type="number"]') as HTMLInputElement
     await user.type(amountInput, '10000')
     // 用 fireEvent.submit 绕过 HTML5 原生验证
-    const form = container.querySelector('form') as HTMLFormElement
+    const form = document.querySelector('form') as HTMLFormElement
     fireEvent.submit(form)
     await waitFor(() => {
       expect(mockShowToast).toHaveBeenCalledWith(expect.stringContaining('项目'), 'error')
@@ -314,13 +314,13 @@ describe('ContractFormModal — Package B1', () => {
 
   it('合同金额为 0 时（非协议类型）提交显示错误 toast', async () => {
     const user = userEvent.setup()
-    const { container } = await setupRender(true, 'income', null)
-    const nameInput = container.querySelector('input[type="text"]') as HTMLInputElement
+    await setupRender(true, 'income', null)
+    const nameInput = document.querySelector('input[type="text"]') as HTMLInputElement
     await user.type(nameInput, '测试合同')
-    const projectSelect = container.querySelectorAll('select')[0] as HTMLSelectElement
+    const projectSelect = document.querySelectorAll('select')[0] as HTMLSelectElement
     await user.selectOptions(projectSelect, '1')
     // 金额留空（即为 0），用 fireEvent.submit 绕过 HTML5 验证
-    const form = container.querySelector('form') as HTMLFormElement
+    const form = document.querySelector('form') as HTMLFormElement
     fireEvent.submit(form)
     await waitFor(() => {
       expect(mockShowToast).toHaveBeenCalledWith(expect.stringContaining('金额'), 'error')
@@ -332,12 +332,12 @@ describe('ContractFormModal — Package B1', () => {
   // ═══════════════════════════════════
   it('CREATE：填写完整表单后提交调用 createContract', async () => {
     const user = userEvent.setup()
-    const { mockApi, container } = await setupRender(true, 'income', null)
-    const nameInput = container.querySelector('input[type="text"]') as HTMLInputElement
+    const { mockApi } = await setupRender(true, 'income', null)
+    const nameInput = document.querySelector('input[type="text"]') as HTMLInputElement
     await user.type(nameInput, '测试合同')
-    const projectSelect = container.querySelectorAll('select')[0] as HTMLSelectElement
+    const projectSelect = document.querySelectorAll('select')[0] as HTMLSelectElement
     await user.selectOptions(projectSelect, '1')
-    const amountInput = container.querySelector('input[type="number"]') as HTMLInputElement
+    const amountInput = document.querySelector('input[type="number"]') as HTMLInputElement
     await user.type(amountInput, '88888')
     const submitBtn = screen.getByText('添加')
     await user.click(submitBtn)
@@ -348,12 +348,12 @@ describe('ContractFormModal — Package B1', () => {
 
   it('CREATE 成功后调用 onClose 和 onSuccess', async () => {
     const user = userEvent.setup()
-    const { container, mockOnClose, mockOnSuccess } = await setupRender(true, 'income', null)
-    const nameInput = container.querySelector('input[type="text"]') as HTMLInputElement
+    const { mockOnClose, mockOnSuccess } = await setupRender(true, 'income', null)
+    const nameInput = document.querySelector('input[type="text"]') as HTMLInputElement
     await user.type(nameInput, '成功测试合同')
-    const projectSelect = container.querySelectorAll('select')[0] as HTMLSelectElement
+    const projectSelect = document.querySelectorAll('select')[0] as HTMLSelectElement
     await user.selectOptions(projectSelect, '1')
-    const amountInput = container.querySelector('input[type="number"]') as HTMLInputElement
+    const amountInput = document.querySelector('input[type="number"]') as HTMLInputElement
     await user.type(amountInput, '77777')
     const submitBtn = screen.getByText('添加')
     await user.click(submitBtn)
@@ -365,12 +365,12 @@ describe('ContractFormModal — Package B1', () => {
 
   it('CREATE 成功后显示成功 toast', async () => {
     const user = userEvent.setup()
-    const { container } = await setupRender(true, 'income', null)
-    const nameInput = container.querySelector('input[type="text"]') as HTMLInputElement
+    await setupRender(true, 'income', null)
+    const nameInput = document.querySelector('input[type="text"]') as HTMLInputElement
     await user.type(nameInput, 'toast测试')
-    const projectSelect = container.querySelectorAll('select')[0] as HTMLSelectElement
+    const projectSelect = document.querySelectorAll('select')[0] as HTMLSelectElement
     await user.selectOptions(projectSelect, '1')
-    const amountInput = container.querySelector('input[type="number"]') as HTMLInputElement
+    const amountInput = document.querySelector('input[type="number"]') as HTMLInputElement
     await user.type(amountInput, '11111')
     await user.click(screen.getByText('添加'))
     await waitFor(() => {
@@ -414,9 +414,9 @@ describe('ContractFormModal — Package B1', () => {
   })
 
   it('type=agreement 时不显示付款方式下拉框', async () => {
-    const { container } = await setupRender(true, 'agreement', null)
+    await setupRender(true, 'agreement', null)
     // 协议类型只有 partner-select 和 agreement-sub-type select，不应含「付款」option
-    const allSelects = container.querySelectorAll('select')
+    const allSelects = document.querySelectorAll('select')
     let hasPaymentMethod = false
     allSelects.forEach(sel => {
       const options = Array.from(sel.options)
@@ -429,11 +429,11 @@ describe('ContractFormModal — Package B1', () => {
 
   it('type=agreement 时金额为非必填（不报金额错误）', async () => {
     const user = userEvent.setup()
-    const { container } = await setupRender(true, 'agreement', null)
+    await setupRender(true, 'agreement', null)
     // 填名称 + 选项目，但不填金额
-    const nameInput = container.querySelector('input[type="text"]') as HTMLInputElement
+    const nameInput = document.querySelector('input[type="text"]') as HTMLInputElement
     await user.type(nameInput, '协议测试')
-    const projectSelect = container.querySelectorAll('select')[0] as HTMLSelectElement
+    const projectSelect = document.querySelectorAll('select')[0] as HTMLSelectElement
     await user.selectOptions(projectSelect, '1')
     // 协议类型金额非必填，提交应成功（不报金额错误）
     await user.click(screen.getByText('添加'))

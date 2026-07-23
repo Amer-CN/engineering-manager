@@ -3,14 +3,14 @@
  * 
  * 验证工资计算逻辑正确性
  * 
- * 注意：由于 electron/ipc-handlers/wage-calc.ts 依赖 CommonJS 模块，
+ * 注意：由于原始工资计算逻辑已迁移至 C# 后端，
  * 这里直接复制纯函数实现进行测试。
  */
 
 import { describe, it, expect } from 'vitest'
 
 // ════════════════════════════════════════
-// 从 electron/ipc-handlers/wage-calc.ts 复制的纯函数
+// 从原 electron/ipc-handlers/wage-calc.ts 迁移的纯函数
 // ════════════════════════════════════════
 
 /**

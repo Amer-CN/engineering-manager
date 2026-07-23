@@ -1,7 +1,9 @@
 import { renderHook, act, waitFor } from '@testing-library/react'
-import { useWageManagement } from '@/hooks/useWageManagement'
+import useWageManagement from '@/hooks/useWageManagement'
 
 describe('useWageManagement', () => {
+  const showToast = vi.fn()
+  const confirmMock = vi.fn().mockResolvedValue(true)
   beforeEach(() => {
     vi.clearAllMocks()
     ;(window.electronAPI as any).getProjects = vi.fn().mockResolvedValue({ success: true, data: [{ id: 1, name: '项目A', status: 'in_progress' }] })
@@ -14,7 +16,7 @@ describe('useWageManagement', () => {
   })
 
   test('初始视图应为 dashboard', async () => {
-    const { result } = renderHook(() => useWageManagement())
+    const { result } = renderHook(() => useWageManagement({ showToast, confirm: confirmMock }))
     // 等待 useEffect 完成（加载项目列表）
     await waitFor(() => {
       expect(result.current.view).toBe('dashboard')
@@ -22,13 +24,13 @@ describe('useWageManagement', () => {
   })
 
   test('初始应加载项目列表', async () => {
-    const { result } = renderHook(() => useWageManagement())
+    const { result } = renderHook(() => useWageManagement({ showToast, confirm: confirmMock }))
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.projects).toEqual([{ id: 1, name: '项目A', status: 'in_progress' }])
   })
 
   test('setView 应切换视图', async () => {
-    const { result } = renderHook(() => useWageManagement())
+    const { result } = renderHook(() => useWageManagement({ showToast, confirm: confirmMock }))
     await waitFor(() => {
       act(() => { result.current.setView('cycle') })
       expect(result.current.view).toBe('cycle')
@@ -36,7 +38,7 @@ describe('useWageManagement', () => {
   })
 
   test('setSelectedMonth 应更新月份', async () => {
-    const { result } = renderHook(() => useWageManagement())
+    const { result } = renderHook(() => useWageManagement({ showToast, confirm: confirmMock }))
     await waitFor(() => {
       act(() => { result.current.setSelectedMonth('2026-02') })
       expect(result.current.selectedMonth).toBe('2026-02')
@@ -44,7 +46,7 @@ describe('useWageManagement', () => {
   })
 
   test('selectedProject 为 null 时考勤和工资应为空', async () => {
-    const { result } = renderHook(() => useWageManagement())
+    const { result } = renderHook(() => useWageManagement({ showToast, confirm: confirmMock }))
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.attendances).toEqual([])
     expect(result.current.wageRecords).toEqual([])
@@ -54,7 +56,7 @@ describe('useWageManagement', () => {
     ;(window.electronAPI as any).getAttendances.mockResolvedValue({ success: true, data: [{ id: 1 }] })
     ;(window.electronAPI as any).getWages.mockResolvedValue({ success: true, data: [{ id: 1 }] })
 
-    const { result } = renderHook(() => useWageManagement())
+    const { result } = renderHook(() => useWageManagement({ showToast, confirm: confirmMock }))
     await waitFor(() => expect(result.current.loading).toBe(false))
 
     act(() => {
@@ -68,7 +70,7 @@ describe('useWageManagement', () => {
   })
 
   test('paymentEdits 应初始为空 Map', async () => {
-    const { result } = renderHook(() => useWageManagement())
+    const { result } = renderHook(() => useWageManagement({ showToast, confirm: confirmMock }))
     await waitFor(() => {
       expect(result.current.paymentEdits).toBeInstanceOf(Map)
       expect(result.current.paymentEdits.size).toBe(0)
@@ -76,7 +78,7 @@ describe('useWageManagement', () => {
   })
 
   test('selectedAttendanceIds 应初始为空 Set', async () => {
-    const { result } = renderHook(() => useWageManagement())
+    const { result } = renderHook(() => useWageManagement({ showToast, confirm: confirmMock }))
     await waitFor(() => {
       expect(result.current.selectedAttendanceIds).toBeInstanceOf(Set)
       expect(result.current.selectedAttendanceIds.size).toBe(0)
@@ -84,7 +86,7 @@ describe('useWageManagement', () => {
   })
 
   test('initial selectedMonth should be current month', async () => {
-    const { result } = renderHook(() => useWageManagement())
+    const { result } = renderHook(() => useWageManagement({ showToast, confirm: confirmMock }))
     const now = new Date()
     const expected = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
     await waitFor(() => {
