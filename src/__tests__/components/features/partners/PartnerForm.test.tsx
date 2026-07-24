@@ -70,8 +70,8 @@ describe('PartnerForm', () => {
         onCancel={mockOnCancel}
       />
     )
-    // 新增模式：按钮文字为"添加"
-    expect(screen.getByText('添加')).toBeInTheDocument()
+    // 新增模式：按钮文字为"添加单位"
+    expect(screen.getByText('添加单位')).toBeInTheDocument()
     // 单位名称 label 存在
     expect(screen.getByText('单位名称 *')).toBeInTheDocument()
     // 取消按钮
@@ -112,8 +112,8 @@ describe('PartnerForm', () => {
         onCancel={mockOnCancel}
       />
     )
-    // 编辑模式：按钮文字为"保存"
-    expect(screen.getByText('保存')).toBeInTheDocument()
+    // 编辑模式：按钮文字为"保存修改"
+    expect(screen.getByText('保存修改')).toBeInTheDocument()
     // 单位名称输入框应有预填充值
     const nameInput = screen.getAllByRole('textbox')[0] as HTMLInputElement
     expect(nameInput.value).toBe('测试单位')
@@ -182,7 +182,7 @@ describe('PartnerForm', () => {
     document.querySelectorAll('[required]').forEach(el => el.removeAttribute('required'))
 
     // 提交（点击添加按钮）
-    await user.click(screen.getByText('添加'))
+    await user.click(screen.getByText('添加单位'))
 
     await waitFor(() => {
       expect(mockOnSubmit).toHaveBeenCalledTimes(1)

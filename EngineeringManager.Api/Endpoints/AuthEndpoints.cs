@@ -84,6 +84,79 @@ public static class AuthEndpoints
             return affected > 0 ? Common.Ok(new { userId = dto.UserId, newHashVersion = 2 }) : Common.Fail("重置失败");
         });
 
+        // v0.83.0: 用户自助修改密码 (校验旧密码 + JWT uid, 任意角色可改自己的密码)
+        app.MapPost("/api/auth/change-password", async (HttpContext ctx, ChangePasswordDto dto, IDbConnection db) =>
+        {
+            // 1. 必须已登录 — uid 取自 JWT, 绝不信任客户端传入的身份 (P1-4)
+            var uid = CurrentUser.GetUserId(ctx);
+            if (string.IsNullOrEmpty(uid)) return Common.Fail("未登录", 401);
+
+            // 2. 校验新密码 (与 reset-password 一致: 非空且 >= 6 位)
+            if (string.IsNullOrWhiteSpace(dto.NewPassword) || dto.NewPassword.Length < 6)
+                return Common.Fail("新密码至少 6 位");
+
+            try
+            {
+                // 3. 取当前用户
+                var user = db.QueryFirstOrDefault(
+                    "SELECT id, username, password_hash, password_salt, password_hash_version FROM users WHERE id=@Id",
+                    new { Id = uid });
+                if (user == null) return Common.NotFound("用户不存在");
+
+                var salt = (string)user.password_salt;
+                var version = (int)(user.password_hash_version ?? 1);
+                var storedHash = (string)(user.password_hash ?? "");
+                if (string.IsNullOrEmpty(storedHash))
+                    return Common.Fail("账户需要重置密码, 请联系管理员");
+
+                // 4. 校验旧密码 — P1-5: 固定时间比较防时序攻击
+                var oldHash = Common.HashPassword(dto.OldPassword ?? "", salt, version);
+                var match = System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(
+                    System.Text.Encoding.UTF8.GetBytes(oldHash),
+                    System.Text.Encoding.UTF8.GetBytes(storedHash));
+                if (!match) return Common.Fail("原密码不正确");
+
+                // 5. 生成新 salt + hash (version=2). 不变量: 写 password_hash 必同置 is_default_password=0
+                var newSalt = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16)).ToLower();
+                var newHash = Common.HashPassword(dto.NewPassword, newSalt, 2);
+                var affected = await db.ExecuteAsync(
+                    "UPDATE users SET password_hash=@Hash, password_salt=@Salt, password_hash_version=2, is_default_password=0 WHERE id=@Id",
+                    new { Hash = newHash, Salt = newSalt, Id = uid });
+                if (affected == 0) return Common.Fail("修改失败");
+
+                // 6. 写审计日志 — user_id 取自 JWT (P1-4); 失败不影响主流程
+                try
+                {
+                    await db.ExecuteAsync(@"INSERT INTO audit_logs
+                        (action, level, user_id, user_name, resource_type, resource_id, details, ip_address, created_at)
+                        VALUES (@Action, @Level, @UserId, @UserName, @Resource, @ResourceId, @Details, @IpAddress, @CreatedAt)",
+                        new
+                        {
+                            Action = "update",
+                            Level = "warning",
+                            UserId = uid,
+                            UserName = (string)(user.username ?? uid),
+                            Resource = "users",
+                            ResourceId = uid,
+                            Details = "{\"event\":\"self_change_password\"}",
+                            IpAddress = ctx.Connection.RemoteIpAddress?.ToString() ?? "",
+                            CreatedAt = Common.NowString()
+                        });
+                }
+                catch (Exception auditEx)
+                {
+                    Console.Error.WriteLine($"[ChangePassword] 审计日志写入失败: {auditEx.Message}");
+                }
+
+                return Common.Ok(new { changed = true });
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[ChangePassword] error: {ex.Message}");
+                return Common.Fail($"修改密码失败: {Common.Sanitize(ex.Message)}");
+            }
+        }).RequireRateLimiting("write");
+
         static string GenerateJwtToken(string userId, string username, string roleId, string roleName)
         {
             var jwtSecret = JwtSecretProvider.GetOrCreate();

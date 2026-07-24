@@ -44,12 +44,12 @@ export function ContractsTab({ incomeContracts, expenseContracts, stats }: {
           <div className="space-y-2">
             {incomeContracts.map(c => (
               <div key={c.id} className={`${CARD} p-3 border-l-2 border-l-emerald-400`}>
-                <div className="flex items-center justify-between mb-1"><span className="font-medium text-sm text-slate-800">{c.name}</span><span className="font-bold text-sm text-emerald-600">¥{formatMoney(c.amount)}</span></div>
+                <div className="flex items-center justify-between mb-1"><span className="font-medium text-sm text-slate-800">{c.name}</span><span className="font-bold text-sm text-emerald-600 tabular-nums">¥{formatMoney(c.amount)}</span></div>
                 <div className="text-xs text-slate-400">{c.partnerName || '未知'} · {c.signedDate}</div>
               </div>
             ))}
             <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200">
-              <div className="flex justify-between text-sm"><span className="text-emerald-700 font-medium">合计</span><span className="text-emerald-700 font-bold">¥{formatMoney(stats.incomeTotal)}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-emerald-700 font-medium">合计</span><span className="text-emerald-700 font-bold tabular-nums">¥{formatMoney(stats.incomeTotal)}</span></div>
             </div>
           </div>
         ) : <EmptyState text="暂无收入合同" />}
@@ -62,12 +62,12 @@ export function ContractsTab({ incomeContracts, expenseContracts, stats }: {
           <div className="space-y-2">
             {expenseContracts.map(c => (
               <div key={c.id} className={`${CARD} p-3 border-l-2 border-l-red-400`}>
-                <div className="flex items-center justify-between mb-1"><span className="font-medium text-sm text-slate-800">{c.name}</span><span className="font-bold text-sm text-red-600">¥{formatMoney(c.amount)}</span></div>
+                <div className="flex items-center justify-between mb-1"><span className="font-medium text-sm text-slate-800">{c.name}</span><span className="font-bold text-sm text-red-600 tabular-nums">¥{formatMoney(c.amount)}</span></div>
                 <div className="text-xs text-slate-400">{c.partnerName || '未知'} · {c.signedDate}</div>
               </div>
             ))}
             <div className="p-3 rounded-xl bg-red-50 border border-red-200">
-              <div className="flex justify-between text-sm"><span className="text-red-700 font-medium">合计</span><span className="text-red-700 font-bold">¥{formatMoney(stats.expenseTotal)}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-red-700 font-medium">合计</span><span className="text-red-700 font-bold tabular-nums">¥{formatMoney(stats.expenseTotal)}</span></div>
             </div>
           </div>
         ) : <EmptyState text="暂无支出合同" />}
@@ -81,8 +81,8 @@ export function InvoicesTab({ invoices, stats }: { invoices: Invoice[]; stats: P
     { key: 'invoiceNo', title: '发票号', render: (item) => <span className="text-sm font-mono text-slate-700">{item.invoiceNo}</span> },
     { key: 'type', title: '类型', render: (item) => <Badge variant={item.type === 'invoice_in' ? 'success' : 'info'}>{item.type === 'invoice_in' ? '进项' : '销项'}</Badge> },
     { key: 'name', title: '名称', render: (item) => <span className="text-sm text-slate-700">{item.name}</span> },
-    { key: 'amount', title: '金额', align: 'right', render: (item) => <span className="font-medium text-slate-800 text-sm">¥{formatMoney(item.amount)}</span> },
-    { key: 'receivedAmount', title: '已收/已付', align: 'right', render: (item) => <span className="text-sm text-emerald-600">¥{formatMoney(item.receivedAmount)}</span> },
+    { key: 'amount', title: '金额', align: 'right', render: (item) => <span className="font-medium text-slate-800 text-sm tabular-nums">¥{formatMoney(item.amount)}</span> },
+    { key: 'receivedAmount', title: '已收/已付', align: 'right', render: (item) => <span className="text-sm text-emerald-600 tabular-nums">¥{formatMoney(item.receivedAmount)}</span> },
     { key: 'status', title: '状态', align: 'center', render: (item) => <InvoiceStatusBadge status={item.status} type={item.type} /> },
   ]
 

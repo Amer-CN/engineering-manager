@@ -14,6 +14,7 @@ import { RequirePermission, RequireAdmin } from './hooks/usePermission'
 import { useAuth } from './hooks/useAuth'
 import { useRowHoverOpacity } from './hooks/useRowHoverOpacity'
 import { useTheme } from './hooks/useTheme'
+import { getLocalPref, PREF_KEYS } from './utils/appPrefs'
 
 // ── 路由级代码分割：每个页面独立 chunk ──
 const Dashboard = lazy(() => import('./components/features/agent/AgentDashboard'))
@@ -30,10 +31,12 @@ const Settlement = lazy(() => import('./components/Settlement'))
 const Templates = lazy(() => import('./components/Templates'))
 const Inventory = lazy(() => import('./components/Inventory'))
 const Invoices = lazy(() => import('./components/Invoices'))
+const SpeechKnowledgePage = lazy(() => import('./components/features/knowledge/SpeechKnowledgePage'))
 const Settings = lazy(() => import('./components/Settings'))
 const Users = lazy(() => import('./components/Users'))
 import LockScreen from './components/LockScreen'
 import SplashScreen from './components/SplashScreen'
+import CommandPalette from './components/CommandPalette'
 
 type WebViewWindow = Window & { chrome?: { webview?: { postMessage: (msg: string) => void; addEventListener: (event: string, handler: (e: any) => void) => void; removeEventListener: (event: string, handler: (e: any) => void) => void } } };
 const getWebview = () => (window as WebViewWindow).chrome?.webview;
@@ -170,7 +173,14 @@ const AppContent: React.FC = () => {
     }
   }, [isAuthenticated])
 
-  const [currentPage, setCurrentPage] = useState<Page>('dashboard')
+  const [currentPage, setCurrentPage] = useState<Page>(() => {
+    // 默认起始页偏好 (通知与偏好设置)。localStorage 同步读, 避免首屏跳变。
+    try {
+      const v = getLocalPref(PREF_KEYS.defaultStartPage)
+      if (v && (PAGE_IDS as string[]).includes(v)) return v as Page
+    } catch { /* ignore */ }
+    return 'dashboard'
+  })
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true
@@ -178,6 +188,7 @@ const AppContent: React.FC = () => {
     return stored !== 'true' // 默认展开
   })
   const [closedDefaultPwd, setClosedDefaultPwd] = useState(false)
+  const [prefTick, setPrefTick] = useState(0)
 
   const refresh = () => setRefreshTrigger(prev => prev + 1)
 
@@ -191,6 +202,30 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('sidebar-collapsed', String(!sidebarOpen))
   }, [sidebarOpen])
+
+  // 监听偏好变更（自动锁屏时长等实时生效，无需重启）
+  useEffect(() => {
+    const h = () => setPrefTick(t => t + 1)
+    window.addEventListener('app-pref-changed', h)
+    return () => window.removeEventListener('app-pref-changed', h)
+  }, [])
+
+  // 自动锁屏：无操作达到设定时长后自动锁定屏幕（个人账户 → 自动锁屏）
+  useEffect(() => {
+    if (!isAuthenticated || isLocked) return
+    const minutes = parseInt(getLocalPref(PREF_KEYS.autoLockMinutes) || '0', 10)
+    if (!minutes || minutes <= 0) return
+    const ms = minutes * 60_000
+    let timer: ReturnType<typeof setTimeout>
+    const reset = () => { clearTimeout(timer); timer = setTimeout(() => lock(), ms) }
+    const events = ['mousemove', 'mousedown', 'keydown', 'wheel', 'touchstart']
+    events.forEach(e => window.addEventListener(e, reset, { passive: true }))
+    reset()
+    return () => {
+      clearTimeout(timer)
+      events.forEach(e => window.removeEventListener(e, reset))
+    }
+  }, [isAuthenticated, isLocked, lock, prefTick])
 
   // 快捷键：Ctrl+B 折叠侧边栏，Ctrl+L 锁屏，F11 全屏，Esc 退出全屏
   useEffect(() => {
@@ -256,6 +291,7 @@ const AppContent: React.FC = () => {
       case 'templates': return <Templates />
       case 'inventory': return <Inventory {...props} />
       case 'invoices': return <Invoices {...props} />
+      case 'knowledge': return <RequirePermission permission="knowledge:read"><SpeechKnowledgePage /></RequirePermission>
       case 'users': return <RequireAdmin><Users /></RequireAdmin>
       case 'settings': return <RequirePermission permission="settings:read"><Settings /></RequirePermission>
       default: return <Dashboard />
@@ -323,7 +359,7 @@ const AppContent: React.FC = () => {
                 className="fixed top-12 left-0 right-0 z-[200] flex justify-center pointer-events-none"
               >
                 <div className="bg-amber-50 border border-amber-200 shadow-lg rounded-lg px-4 py-2.5 text-sm text-amber-800 flex items-center gap-3 pointer-events-auto">
-                  <span>⚠️ 当前正在使用默认密码 admin123，为安全建议尽快在【设置 → 用户管理】中自行修改。</span>
+                  <span>⚠️ 当前正在使用默认密码 admin123，为安全建议尽快在【设置 → 个人账户】中自行修改。</span>
                   <button onClick={() => setClosedDefaultPwd(true)} className="text-amber-400 hover:text-amber-600 text-lg leading-none flex-shrink-0">&times;</button>
                 </div>
               </motion.div>
@@ -342,6 +378,9 @@ const AppContent: React.FC = () => {
       </div>
       {/* 全屏时隐藏状态栏 */}
       {!isFullScreen && <StatusBar />}
+
+      {/* ⌘K 全局命令面板（shadcn Command · Bedrock 落地首件） */}
+      <CommandPalette />
 
 
       {/* 窗口边缘 resize 手柄 */}

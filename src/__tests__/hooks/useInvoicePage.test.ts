@@ -50,7 +50,7 @@ describe('useInvoicePage', () => {
     vi.clearAllMocks()
     ea = window.electronAPI as Record<string, any>
     ea.getInvoices = vi.fn().mockResolvedValue({ success: true, data: mockInvoices })
-    ea.getWagePaymentRecords = vi.fn().mockResolvedValue({ success: true, data: mockPayments })
+    ea.getPaymentRecords = vi.fn().mockResolvedValue({ success: true, data: mockPayments })
     ea.getProjects = vi.fn().mockResolvedValue({ success: true, data: mockProjects })
     ea.getPartners = vi.fn().mockResolvedValue({ success: true, data: mockPartners })
     ea.getIncomeContracts = vi.fn().mockResolvedValue({ success: true, data: mockIncomeContracts })

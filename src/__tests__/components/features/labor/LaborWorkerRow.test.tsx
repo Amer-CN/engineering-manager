@@ -1,6 +1,7 @@
-import { render, screen, cleanup } from '@testing-library/react'
+import { screen, cleanup } from '@testing-library/react'
 import React from 'react'
 import { LaborWorkerRow } from '@/components/features/labor/LaborWorkerRow'
+import { renderWithProviders, setMaskEnabled } from '@/test-utils/render'
 
 describe('LaborWorkerRow', () => {
   const mockOnEdit = vi.fn()
@@ -21,11 +22,12 @@ describe('LaborWorkerRow', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    setMaskEnabled(false) // 断言原文 idCard/bankAccount, 需关闭脱敏
   })
   afterEach(cleanup)
 
   test('应渲染工人基本信息', () => {
-    render(React.createElement(LaborWorkerRow, {
+    renderWithProviders(React.createElement(LaborWorkerRow, {
       worker: baseWorker,
       onEdit: mockOnEdit,
       onDelete: mockOnDelete,
@@ -38,7 +40,7 @@ describe('LaborWorkerRow', () => {
   })
 
   test('年龄不超过 60 时正常显示', () => {
-    render(React.createElement(LaborWorkerRow, {
+    renderWithProviders(React.createElement(LaborWorkerRow, {
       worker: { ...baseWorker, birthDate: '1990-01-01' },
       onEdit: mockOnEdit,
       onDelete: mockOnDelete,
@@ -51,7 +53,7 @@ describe('LaborWorkerRow', () => {
   })
 
   test('缺少出生日期时显示 -', () => {
-    render(React.createElement(LaborWorkerRow, {
+    renderWithProviders(React.createElement(LaborWorkerRow, {
       worker: { ...baseWorker, birthDate: '' },
       onEdit: mockOnEdit,
       onDelete: mockOnDelete,
@@ -61,7 +63,7 @@ describe('LaborWorkerRow', () => {
   })
 
   test('缺少工种类型时显示 -', () => {
-    render(React.createElement(LaborWorkerRow, {
+    renderWithProviders(React.createElement(LaborWorkerRow, {
       worker: { ...baseWorker, workerType: null },
       onEdit: mockOnEdit,
       onDelete: mockOnDelete,
@@ -73,7 +75,7 @@ describe('LaborWorkerRow', () => {
   })
 
   test('点击编辑按钮应触发 onEdit', () => {
-    render(React.createElement(LaborWorkerRow, {
+    renderWithProviders(React.createElement(LaborWorkerRow, {
       worker: baseWorker,
       onEdit: mockOnEdit,
       onDelete: mockOnDelete,
@@ -84,7 +86,7 @@ describe('LaborWorkerRow', () => {
   })
 
   test('点击工资按钮应触发 onWageModal', () => {
-    render(React.createElement(LaborWorkerRow, {
+    renderWithProviders(React.createElement(LaborWorkerRow, {
       worker: baseWorker,
       onEdit: mockOnEdit,
       onDelete: mockOnDelete,
@@ -95,7 +97,7 @@ describe('LaborWorkerRow', () => {
   })
 
   test('点击删除按钮应触发 onDelete', () => {
-    render(React.createElement(LaborWorkerRow, {
+    renderWithProviders(React.createElement(LaborWorkerRow, {
       worker: baseWorker,
       onEdit: mockOnEdit,
       onDelete: mockOnDelete,

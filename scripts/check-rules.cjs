@@ -10,7 +10,6 @@ const path = require('path')
 
 const ROOT = path.resolve(__dirname, '..')
 const SRC = path.join(ROOT, 'src')
-const ELECTRON = path.join(ROOT, 'electron')
 
 let violations = 0
 let warnings = 0
@@ -28,21 +27,6 @@ function countUseState(filePath) {
   const content = fs.readFileSync(filePath, 'utf-8')
   const matches = content.match(/\buseState\s*\(/g)
   return matches ? matches.length : 0
-}
-
-function checkAnyInPreload(filePath) {
-  const content = fs.readFileSync(filePath, 'utf-8')
-  // 找每个 ipcRenderer.invoke 调用，检查其参数类型是否为 any
-  const lines = content.split('\n')
-  const violations = []
-  lines.forEach((line, i) => {
-    if (line.includes(': any') && !line.trim().startsWith('//') && !line.trim().startsWith('*')) {
-      // 排除合法的 any 使用（如 catch 中的 error: any）
-      if (line.includes('catch') || line.includes('error')) return
-      violations.push({ line: i + 1, content: line.trim() })
-    }
-  })
-  return violations
 }
 
 function fileExists(filePath) {
@@ -67,12 +51,6 @@ const SIZE_LIMITS = {
     hard: 400,
     soft: 250,
     filter: (f) => f.endsWith('.tsx'),
-  },
-  ipcHandlers: {
-    dir: path.join(ELECTRON, 'ipc-handlers'),
-    hard: 350,
-    soft: 200,
-    filter: (f) => f.endsWith('.ts'),
   },
   hooks: {
     dir: path.join(SRC, 'hooks'),
@@ -120,10 +98,8 @@ for (const [name, config] of Object.entries(SIZE_LIMITS)) {
 console.log('\n═══ 铁律二：孪生文件检测 ═══')
 
 const TWIN_PAIRS = [
-  {
-    files: ['src/components/IncomeContracts.tsx', 'src/components/ExpenseContracts.tsx'],
-    message: '收入/支出合同组件应合并为一个 ContractPage 组件',
-  },
+  // 历史孪生已合并：IncomeContracts + ExpenseContracts → ContractPage（2026-07 清理）
+  // 未来发现新的孪生文件时在此追加
 ]
 
 for (const pair of TWIN_PAIRS) {
@@ -166,27 +142,6 @@ for (const file of featureFiles) {
   if (count > 8) {
     console.log(`  HARD FAIL  ${rel}: ${count} 个 useState (上限 8)`)
     violations++
-  }
-}
-
-// ═══════════════════════════════════════════════════════════
-// 铁律五：preload.ts any 类型检测
-// ═══════════════════════════════════════════════════════════
-
-console.log('\n═══ 铁律五：preload.ts 类型安全 ═══')
-
-const preloadPath = path.join(ELECTRON, 'preload.ts')
-if (fileExists(preloadPath)) {
-  const anyViolations = checkAnyInPreload(preloadPath)
-  if (anyViolations.length > 30) {
-    // 当前已有大量 any，只显示统计，不阻断
-    console.log(`  SOFT WARN  preload.ts: ${anyViolations.length} 处使用 any（待逐步类型化）`)
-    warnings++
-  } else if (anyViolations.length > 0) {
-    for (const v of anyViolations) {
-      console.log(`  HARD FAIL  preload.ts:${v.line}: ${v.content}`)
-    }
-    violations += anyViolations.length
   }
 }
 
@@ -260,8 +215,6 @@ if (grayViolations > 0) {
   console.log(`  共 ${grayViolations} 处 gray-* 违规，必须改为 slate-*`)
   violations += grayViolations
 }
-
-// 规则 2：禁止 gray- 色系（排除 .css 文件——主题定义中 gray- 是有意为之）
 
 // 规则 3：禁止 text-[Npx] 任意字号（已有 text-caption/text-micro 替代）
 const arbitraryTextPattern = /text-\[\d+(\.\d+)?px\]/g

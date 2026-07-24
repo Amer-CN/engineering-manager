@@ -10,7 +10,6 @@ import PageContainer from './ui/PageContainer'
 import PageHeader from './ui/PageHeader'
 import { Tabs } from './ui/Tabs'
 import { AuditLogsContent } from './AuditLogs'
-import { SnapshotsTab } from './SnapshotsTab'
 import { ProjectAuthorizationsTab } from '@/components/features/users/ProjectAuthorizationsTab'
 import { getAPI } from '@/services/api-adapter'
 import { UserListTab } from './UserListTab'
@@ -84,7 +83,6 @@ const Users: React.FC = () => {
             { key: 'role_permissions', label: '角色权限', icon: 'Shield' },
             { key: 'project_authorizations', label: '项目授权', icon: 'KeyRound' },
             { key: 'audit_logs', label: '操作日志', icon: 'ClipboardList' },
-            { key: 'snapshots', label: '数据回滚', icon: 'RotateCcw' },
           ]}
         />
       </div>
@@ -96,10 +94,6 @@ const Users: React.FC = () => {
 
       {activeTab === 'audit_logs' && (
         <AuditLogsContent refresh={undefined} />
-      )}
-
-      {activeTab === 'snapshots' && (
-        <SnapshotsTab />
       )}
     </PageContainer>
   )

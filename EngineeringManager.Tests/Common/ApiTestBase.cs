@@ -33,6 +33,9 @@ public class ApiTestBase : IDisposable
         builder.WebHost.UseUrls("http://127.0.0.1:0");
         ApiConfig.ConfigureServices(builder);
 
+        // 子类可覆盖此方法注入测试替身
+        ConfigureExtraServices(builder.Services);
+
         builder.Services.AddScoped<IDbConnection>(_ =>
         {
             var conn = new SqliteConnection(ConnectionString);
@@ -51,6 +54,12 @@ public class ApiTestBase : IDisposable
         var port = _app.Urls.First().Split(':').Last();
         Client = new HttpClient { BaseAddress = new Uri($"http://localhost:{port}") };
     }
+
+    /// <summary>
+    /// 子类可覆盖此方法，在 Build 之前注入或覆盖 DI 服务注册。
+    /// 默认不做任何事。
+    /// </summary>
+    protected virtual void ConfigureExtraServices(IServiceCollection services) { }
 
     private void SeedTestData()
     {

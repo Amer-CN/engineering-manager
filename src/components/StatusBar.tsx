@@ -23,9 +23,9 @@ const PAGE_NAMES: Record<string, string> = {
 }
 
 const THEMES: { value: ThemeScheme; label: string }[] = [
-  { value: 'white', label: 'White' },
-  { value: 'graphite', label: 'Graphite' },
-  { value: 'sandstone', label: 'Sandstone' },
+  { value: 'white', label: '暖白纸' },
+  { value: 'graphite', label: '石墨黑' },
+  { value: 'sandstone', label: '净白' },
 ]
 
 const FONT_SIZES: { value: string; label: string }[] = [
@@ -104,7 +104,7 @@ const StatusBar: React.FC = () => {
 
   const pageName = info?.pageName ? PAGE_NAMES[info.pageName] || info.pageName : ''
   const selectedCount = info?.selectedCount || 0
-  const currentThemeLabel = THEMES.find(t => t.value === scheme)?.label || 'White'
+  const currentThemeLabel = THEMES.find(t => t.value === scheme)?.label || '暖白纸'
   const currentSizeLabel = FONT_SIZES.find(f => f.value === fontSize)?.label || '中'
 
   return (

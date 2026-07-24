@@ -2,26 +2,26 @@ import React from 'react'
 import { iconMap, getIcon } from '../../utils/iconMap'
 
 // Mock lucide-react 以避免加载大量图标组件
+// 注: 列表需覆盖 src/utils/iconMap.ts 从 lucide-react 导入的全部图标名
 vi.mock('lucide-react', () => {
-  // 为每个导出的图标创建简单组件模拟
   const icons: Record<string, React.FC> = {}
   const iconNames = [
     'Activity', 'AlertCircle', 'AlertTriangle', 'ArrowDownCircle', 'ArrowLeft',
-    'ArrowLeftRight', 'ArrowUpCircle', 'BadgeCheck', 'Ban', 'Banknote',
-    'BarChart3', 'Building2', 'Calendar', 'CalendarCheck', 'Camera',
+    'ArrowLeftRight', 'ArrowRightLeft', 'ArrowUpCircle', 'BadgeCheck', 'Ban', 'Banknote',
+    'BarChart3', 'Bell', 'Bot', 'Briefcase', 'Building2', 'Calendar', 'CalendarCheck', 'Camera',
     'Check', 'CheckCircle', 'ChevronDown', 'ChevronLeft', 'ChevronRight',
     'ChevronUp', 'ClipboardList', 'ClipboardPen', 'Clock', 'Construction',
-    'CreditCard', 'DollarSign', 'Download', 'Edit3', 'Eye', 'EyeOff',
-    'File', 'FileText', 'Filter', 'FolderKanban', 'Globe', 'HardHat',
-    'HelpCircle', 'Home', 'Image', 'Inbox', 'Info', 'Key', 'Landmark',
-    'LayoutDashboard', 'Lightbulb', 'Loader2', 'Lock', 'LogOut', 'Mail',
-    'MapPin', 'Menu', 'Monitor', 'Moon', 'MoreVertical', 'Package',
-    'PaintBucket', 'Paperclip', 'Phone', 'PieChart', 'Plus', 'Printer',
-    'Receipt', 'Redo', 'RefreshCw', 'RotateCcw', 'Ruler', 'Save',
-    'ScrollText', 'Search', 'Settings', 'Shield', 'Sparkles', 'Stamp',
+    'CreditCard', 'Database', 'DollarSign', 'Download', 'Droplets', 'Edit3', 'Eye', 'EyeOff',
+    'File', 'FileCheck', 'FileJson', 'FileSpreadsheet', 'FileText', 'Filter', 'FolderKanban', 'FolderOpen',
+    'Globe', 'HardHat', 'HeartPulse', 'HelpCircle', 'Home', 'Image', 'Inbox', 'Info', 'Key', 'Landmark',
+    'LayoutDashboard', 'Library', 'Lightbulb', 'Loader', 'Loader2', 'Lock', 'LogOut', 'Mail',
+    'MapPin', 'Menu', 'Mic', 'Monitor', 'Moon', 'MoreVertical', 'Package',
+    'PaintBucket', 'Paperclip', 'Pause', 'Phone', 'PieChart', 'Play', 'Plug', 'Plus', 'Power', 'Printer',
+    'Receipt', 'Redo', 'RefreshCw', 'RotateCcw', 'Ruler', 'Save', 'Scan',
+    'ScrollText', 'Search', 'Settings', 'Shield', 'ShieldCheck', 'Snowflake', 'Sparkles', 'Square', 'Stamp',
     'Sun', 'Trash2', 'TrendingDown', 'TrendingUp', 'Truck', 'Undo',
-    'Upload', 'UserCheck', 'UserCircle', 'UserCog', 'Users', 'Wallet',
-    'WifiOff', 'Wrench', 'X', 'XCircle',
+    'Upload', 'User', 'UserCheck', 'UserCircle', 'UserCog', 'Users', 'Wallet',
+    'WifiOff', 'Wrench', 'X', 'XCircle', 'Zap',
   ]
 
   for (const name of iconNames) {

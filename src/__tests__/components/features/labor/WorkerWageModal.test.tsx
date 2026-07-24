@@ -86,14 +86,16 @@ describe('WorkerWageModal', () => {
   test('点击关闭应触发 onClose', async () => {
     ;(window.electronAPI as any).getWorkerStats.mockResolvedValue({ success: false })
     const { WorkerWageModal } = await importModule()
-    const { container } = render(React.createElement(WorkerWageModal, {
+    render(React.createElement(WorkerWageModal, {
       show: true, workerId: 1, workerName: '张三', onClose: mockOnClose,
     }))
     await waitFor(() => {
       expect(screen.getByText('张三')).toBeTruthy()
     })
-    // 点击 overlay（外层 fixed div）
-    fireEvent.click(container.firstElementChild!)
+    // Modal 通过 portal 渲染到 document.body，点击遮罩层 .bg-black/50 触发 onClose
+    const overlay = document.querySelector('.bg-black\\/50') as HTMLElement
+    expect(overlay).toBeTruthy()
+    fireEvent.click(overlay)
     expect(mockOnClose).toHaveBeenCalled()
   })
 })

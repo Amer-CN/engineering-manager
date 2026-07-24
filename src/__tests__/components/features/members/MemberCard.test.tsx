@@ -4,9 +4,10 @@
  * - 操作按钮（编辑、删除、调组、离场/重新入场）
  * - 农民工 vs 管理人员 不同展示
  */
-import { render, screen, cleanup } from '@testing-library/react'
+import { screen, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { Member } from '@/types'
+import { renderWithProviders, setMaskEnabled } from '@/test-utils/render'
 
 // ═════════════════════════════════════════
 // 不 mock Icon —— 真实渲染 SVG，jsdom 可正常处理
@@ -26,6 +27,7 @@ describe('MemberCard', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    setMaskEnabled(false) // 断言原文 phone/idCard, 需关闭脱敏
   })
 
   afterEach(() => {
@@ -60,7 +62,7 @@ describe('MemberCard', () => {
 
   it('renders staff member name and role', async () => {
     const { MemberCard } = await importModule()
-    render(
+    renderWithProviders(
       <MemberCard
         member={baseStaff}
         onClick={mockOnClick}
@@ -74,7 +76,7 @@ describe('MemberCard', () => {
 
   it('renders phone number', async () => {
     const { MemberCard } = await importModule()
-    render(
+    renderWithProviders(
       <MemberCard
         member={baseStaff}
         onClick={mockOnClick}
@@ -87,7 +89,7 @@ describe('MemberCard', () => {
 
   it('shows active status badge', async () => {
     const { MemberCard } = await importModule()
-    render(
+    renderWithProviders(
       <MemberCard
         member={{ ...baseStaff, status: 'active' }}
         onClick={mockOnClick}
@@ -100,7 +102,7 @@ describe('MemberCard', () => {
 
   it('shows left status badge', async () => {
     const { MemberCard } = await importModule()
-    render(
+    renderWithProviders(
       <MemberCard
         member={{ ...baseStaff, status: 'left' }}
         onClick={mockOnClick}
@@ -113,7 +115,7 @@ describe('MemberCard', () => {
 
   it('shows team leader badge', async () => {
     const { MemberCard } = await importModule()
-    render(
+    renderWithProviders(
       <MemberCard
         member={{ ...baseStaff, isTeamLeader: true }}
         onClick={mockOnClick}
@@ -127,7 +129,7 @@ describe('MemberCard', () => {
   it('calls onClick when card is clicked', async () => {
     const user = userEvent.setup()
     const { MemberCard } = await importModule()
-    render(
+    renderWithProviders(
       <MemberCard
         member={baseStaff}
         onClick={mockOnClick}
@@ -142,7 +144,7 @@ describe('MemberCard', () => {
   it('calls onEdit when edit button clicked', async () => {
     const user = userEvent.setup()
     const { MemberCard } = await importModule()
-    render(
+    renderWithProviders(
       <MemberCard
         member={baseStaff}
         onClick={mockOnClick}
@@ -157,7 +159,7 @@ describe('MemberCard', () => {
   it('calls onDelete when delete button clicked', async () => {
     const user = userEvent.setup()
     const { MemberCard } = await importModule()
-    render(
+    renderWithProviders(
       <MemberCard
         member={baseStaff}
         onClick={mockOnClick}
@@ -171,7 +173,7 @@ describe('MemberCard', () => {
 
   it('shows idCard number when idCard exists', async () => {
     const { MemberCard } = await importModule()
-    render(
+    renderWithProviders(
       <MemberCard
         member={{ ...baseStaff, idCard: '510101199001011234' }}
         onClick={mockOnClick}
@@ -185,7 +187,7 @@ describe('MemberCard', () => {
 
   it('shows idCardFront badge when idCardFront exists', async () => {
     const { MemberCard } = await importModule()
-    render(
+    renderWithProviders(
       <MemberCard
         member={{ ...baseStaff, idCardFront: 'idcard-front.png' }}
         onClick={mockOnClick}
@@ -211,7 +213,7 @@ describe('MemberCard', () => {
 
   it('renders worker type for worker member', async () => {
     const { MemberCard } = await importModule()
-    render(
+    renderWithProviders(
       <MemberCard
         member={baseWorker}
         type="worker"
@@ -225,7 +227,7 @@ describe('MemberCard', () => {
 
   it('renders daily wage for worker member', async () => {
     const { MemberCard } = await importModule()
-    render(
+    renderWithProviders(
       <MemberCard
         member={baseWorker}
         type="worker"
@@ -239,7 +241,7 @@ describe('MemberCard', () => {
 
   it('shows re-entry button for left worker', async () => {
     const { MemberCard } = await importModule()
-    render(
+    renderWithProviders(
       <MemberCard
         member={{ ...baseWorker, status: 'left' }}
         type="worker"
@@ -255,7 +257,7 @@ describe('MemberCard', () => {
   it('calls onReEntry when re-entry button clicked', async () => {
     const user = userEvent.setup()
     const { MemberCard } = await importModule()
-    render(
+    renderWithProviders(
       <MemberCard
         member={{ ...baseWorker, status: 'left' }}
         type="worker"

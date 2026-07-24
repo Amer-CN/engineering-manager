@@ -34,55 +34,56 @@ input[type="password"]::-ms-clear {
   line-height: 1.5;
   font-weight: 400;
   color-scheme: light;
-  color: #1f2937;
-  background-color: #f8fafc;
+  color: oklch(23% 0.014 70);
+  background-color: oklch(98.6% 0.009 85);
 
-  /* Reasonix-style shell tokens (映射到现有色值) */
-  --bg: #f8fafc;
-  --bg-2: #f1f5f9;
-  --panel: #ffffff;
-  --panel-2: #f1f5f9;
-  --card: #ffffff;
-  --card-hover: #f8fafc;
-  --border: #e2e8f0;
-  --border-strong: #cbd5e1;
-  --fg: #0f172a;
-  --fg-2: #475569;
-  --muted: #94a3b8;
-  --muted-2: #64748b;
-  --accent: #2563eb;
-  --accent-soft: rgba(37, 99, 235, 0.12);
-  --accent-strong: #1d4ed8;
-  --success: #16a34a;
-  --success-soft: rgba(22, 163, 74, 0.12);
-  --warning: #d97706;
-  --warning-soft: rgba(217, 119, 6, 0.12);
-  --danger: #dc2626;
+  /* Bedrock · Paper（暖白纸）shell tokens */
+  --bg: oklch(98.6% 0.009 85);
+  --bg-2: oklch(96.5% 0.011 84);
+  --panel: oklch(99.4% 0.006 85);
+  --panel-2: oklch(96% 0.012 83);
+  --card: oklch(99.7% 0.005 85);
+  --card-hover: oklch(97.6% 0.009 84);
+  --border: oklch(90% 0.012 82);
+  --border-strong: oklch(83% 0.014 80);
+  --fg: oklch(23% 0.014 70);
+  --fg-2: oklch(41% 0.012 72);
+  --muted: oklch(54% 0.01 76);
+  --muted-2: oklch(46% 0.011 74);
+  --accent: oklch(28% 0.02 74);
+  --accent-soft: oklch(28% 0.02 74 / 0.08);
+  --accent-strong: oklch(20% 0.018 74);
+  --on-accent: oklch(98.5% 0.007 85);
+  --success: oklch(50% 0.1 150);
+  --success-soft: oklch(50% 0.1 150 / 0.12);
+  --warning: oklch(60% 0.11 70);
+  --warning-soft: oklch(60% 0.11 70 / 0.14);
+  --danger: oklch(52% 0.16 25);
 
   /* 滚动条主题色 */
-  --scrollbar-thumb: rgba(148, 163, 184, 0.5);
-  --scrollbar-thumb-hover: rgba(100, 116, 139, 0.7);
+  --scrollbar-thumb: oklch(60% 0.01 78 / 0.45);
+  --scrollbar-thumb-hover: oklch(45% 0.012 76 / 0.65);
   --scrollbar-track: transparent;
-  --danger-soft: rgba(220, 38, 38, 0.12);
-  --violet: #8b5cf6;
-  --violet-soft: rgba(139, 92, 246, 0.12);
-  --shadow-sm: 0 1px 0 rgba(0,0,0,0.04);
-  --shadow-md: 0 8px 24px -10px rgba(0,0,0,0.1);
-  --shadow-lg: 0 24px 60px -20px rgba(0,0,0,0.18);
+  --danger-soft: oklch(52% 0.16 25 / 0.12);
+  --violet: oklch(55% 0.06 250);
+  --violet-soft: oklch(55% 0.06 250 / 0.12);
+  --shadow-sm: 0 1px 0 oklch(0% 0 0 / 0.04);
+  --shadow-md: 0 8px 24px -10px oklch(0% 0 0 / 0.09);
+  --shadow-lg: 0 24px 60px -20px oklch(0% 0 0 / 0.16);
   --radius: 8px;
   --radius-lg: 12px;
 
   /* 语义色 — Blue palette */
-  --color-primary-50: 239 246 255;
-  --color-primary-100: 219 234 254;
-  --color-primary-200: 191 219 254;
-  --color-primary-300: 147 197 253;
-  --color-primary-400: 96 165 250;
-  --color-primary-500: 59 130 246;
-  --color-primary-600: 37 99 235;
-  --color-primary-700: 29 78 216;
-  --color-primary-800: 30 64 175;
-  --color-primary-900: 30 58 138;
+  --color-primary-50: 245 244 241;
+  --color-primary-100: 234 232 228;
+  --color-primary-200: 214 210 203;
+  --color-primary-300: 183 178 169;
+  --color-primary-400: 135 129 119;
+  --color-primary-500: 90 84 74;
+  --color-primary-600: 59 54 46;
+  --color-primary-700: 47 43 37;
+  --color-primary-800: 38 35 30;
+  --color-primary-900: 30 28 24;
   --color-success-50: 240 253 244;
   --color-success-100: 220 252 231;
   --color-success-200: 187 247 208;
@@ -125,21 +126,21 @@ input[type="password"]::-ms-clear {
   --color-info-900: 12 74 110;
 
   /* 向后兼容 — 现有组件使用的变量 */
-  --bg-primary: #ffffff;
-  --bg-secondary: #f8fafc;
-  --bg-tertiary: #f1f5f9;
-  --text-primary: #1e293b;
-  --text-secondary: #475569;
-  --text-tertiary: #94a3b8;
-  --border-primary: #e2e8f0;
-  --border-secondary: #cbd5e1;
-  --sidebar-bg: #ffffff;
-  --sidebar-border: #e2e8f0;
-  --sidebar-item-hover: #f1f5f9;
-  --sidebar-item-active: #eff6ff;
-  --shadow-card: 0 1px 3px rgba(0,0,0,0.08);
-  --shadow-dropdown: 0 10px 15px -3px rgba(0,0,0,0.1);
-  --overlay: rgba(0, 0, 0, 0.5);
+  --bg-primary: oklch(99.4% 0.006 85);
+  --bg-secondary: oklch(98.6% 0.009 85);
+  --bg-tertiary: oklch(96.5% 0.011 84);
+  --text-primary: oklch(23% 0.014 70);
+  --text-secondary: oklch(41% 0.012 72);
+  --text-tertiary: oklch(54% 0.01 76);
+  --border-primary: oklch(90% 0.012 82);
+  --border-secondary: oklch(83% 0.014 80);
+  --sidebar-bg: oklch(99.4% 0.006 85);
+  --sidebar-border: oklch(90% 0.012 82);
+  --sidebar-item-hover: oklch(96.5% 0.011 84);
+  --sidebar-item-active: oklch(93.5% 0.014 82);
+  --shadow-card: 0 1px 3px oklch(0% 0 0 / 0.07);
+  --shadow-dropdown: 0 10px 15px -3px oklch(0% 0 0 / 0.1);
+  --overlay: oklch(20% 0.01 75 / 0.45);
 }
 
 /* ── 界面字号 — 通过修改根 font-size 缩放所有 Tailwind rem 字号 ── */
@@ -171,29 +172,30 @@ input::-webkit-outer-spin-button {
 /* ── Graphite 主题（深色 — Reasonix 原版 OKLCH 色值）── */
 [data-theme="graphite"] {
   /* Reasonix-style shell tokens */
-  --bg: oklch(17% 0.005 280);
-  --bg-2: oklch(20% 0.006 275);
-  --panel: oklch(21.5% 0.007 275);
-  --panel-2: oklch(24.5% 0.008 275);
-  --card: oklch(23.5% 0.007 275);
-  --card-hover: oklch(26.5% 0.008 275);
-  --border: oklch(30% 0.008 275);
-  --border-strong: oklch(38% 0.01 275);
-  --fg: oklch(96% 0.004 280);
-  --fg-2: oklch(81% 0.005 280);
-  --muted: oklch(63% 0.006 280);
-  --muted-2: oklch(49% 0.006 280);
-  --accent: oklch(68% 0.16 38);
-  --accent-soft: oklch(68% 0.16 38 / 0.15);
-  --accent-strong: oklch(72% 0.18 36);
-  --success: oklch(70% 0.14 145);
-  --success-soft: oklch(70% 0.14 145 / 0.14);
-  --warning: oklch(78% 0.14 85);
-  --warning-soft: oklch(78% 0.14 85 / 0.16);
-  --danger: oklch(66% 0.18 25);
-  --danger-soft: oklch(66% 0.18 25 / 0.16);
-  --violet: oklch(72% 0.14 295);
-  --violet-soft: oklch(72% 0.14 295 / 0.16);
+  --bg: oklch(20.5% 0.003 75);
+  --bg-2: oklch(23.5% 0.003 75);
+  --panel: oklch(24% 0.004 75);
+  --panel-2: oklch(27.5% 0.004 75);
+  --card: oklch(25.5% 0.004 75);
+  --card-hover: oklch(29% 0.004 75);
+  --border: oklch(32% 0.004 75);
+  --border-strong: oklch(40% 0.005 75);
+  --fg: oklch(86% 0.003 80);
+  --fg-2: oklch(72% 0.004 80);
+  --muted: oklch(58% 0.005 78);
+  --muted-2: oklch(48% 0.005 78);
+  --accent: oklch(92% 0.004 80);
+  --accent-soft: oklch(92% 0.004 80 / 0.12);
+  --accent-strong: oklch(98% 0.003 85);
+  --on-accent: oklch(21% 0.004 75);
+  --success: oklch(72% 0.12 150);
+  --success-soft: oklch(72% 0.12 150 / 0.16);
+  --warning: oklch(78% 0.1 78);
+  --warning-soft: oklch(78% 0.1 78 / 0.16);
+  --danger: oklch(68% 0.15 25);
+  --danger-soft: oklch(68% 0.15 25 / 0.16);
+  --violet: oklch(70% 0.08 250);
+  --violet-soft: oklch(70% 0.08 250 / 0.16);
   --shadow-sm: 0 1px 0 oklch(0% 0 0 / 0.35);
   --shadow-md: 0 8px 24px -8px oklch(0% 0 0 / 0.5);
   --shadow-lg: 0 24px 60px -16px oklch(0% 0 0 / 0.65);
@@ -205,16 +207,16 @@ input::-webkit-outer-spin-button {
   color-scheme: dark;
 
   /* 语义色 — 深色模式用主题色搭配 */
-  --color-primary-50: 40 25 15;
-  --color-primary-100: 60 38 20;
-  --color-primary-200: 85 55 30;
-  --color-primary-300: 115 75 45;
-  --color-primary-400: 150 100 60;
-  --color-primary-500: 200 128 55;
-  --color-primary-600: 215 115 42;
-  --color-primary-700: 190 95 30;
-  --color-primary-800: 160 75 20;
-  --color-primary-900: 130 55 10;
+  --color-primary-50: 34 32 30;
+  --color-primary-100: 48 45 42;
+  --color-primary-200: 66 62 58;
+  --color-primary-300: 92 87 81;
+  --color-primary-400: 120 114 107;
+  --color-primary-500: 150 143 135;
+  --color-primary-600: 176 169 160;
+  --color-primary-700: 200 194 186;
+  --color-primary-800: 222 217 210;
+  --color-primary-900: 240 236 231;
   --color-success-50: 10 35 20;
   --color-success-100: 15 60 35;
   --color-success-200: 20 85 50;
@@ -257,57 +259,58 @@ input::-webkit-outer-spin-button {
   --color-info-900: 208 236 251;
 
   /* 向后兼容 */
-  --bg-primary: oklch(17% 0.005 280);
-  --bg-secondary: oklch(20% 0.006 275);
-  --bg-tertiary: oklch(24.5% 0.008 275);
-  --text-primary: oklch(96% 0.004 280);
-  --text-secondary: oklch(81% 0.005 280);
-  --text-tertiary: oklch(63% 0.006 280);
-  --border-primary: oklch(30% 0.008 275);
-  --border-secondary: oklch(38% 0.01 275);
-  --sidebar-bg: oklch(21.5% 0.007 275);
-  --sidebar-border: oklch(30% 0.008 275);
-  --sidebar-item-hover: oklch(24.5% 0.008 275);
-  --sidebar-item-active: oklch(26% 0.04 38);
-  --shadow-card: 0 1px 3px rgba(0,0,0,0.35);
-  --shadow-dropdown: 0 10px 15px -3px rgba(0,0,0,0.5);
-  --overlay: rgba(0, 0, 0, 0.7);
+  --bg-primary: oklch(20.5% 0.003 75);
+  --bg-secondary: oklch(23.5% 0.003 75);
+  --bg-tertiary: oklch(27.5% 0.004 75);
+  --text-primary: oklch(86% 0.003 80);
+  --text-secondary: oklch(72% 0.004 80);
+  --text-tertiary: oklch(58% 0.005 78);
+  --border-primary: oklch(32% 0.004 75);
+  --border-secondary: oklch(40% 0.005 75);
+  --sidebar-bg: oklch(24% 0.004 75);
+  --sidebar-border: oklch(32% 0.004 75);
+  --sidebar-item-hover: oklch(27.5% 0.004 75);
+  --sidebar-item-active: oklch(92% 0.004 80 / 0.14);
+  --shadow-card: 0 1px 3px oklch(0% 0 0 / 0.35);
+  --shadow-dropdown: 0 10px 15px -3px oklch(0% 0 0 / 0.5);
+  --overlay: oklch(0% 0 0 / 0.7);
 
-  /* 自定义滚动条 — Graphite 主题用更亮的灰色 */
-  --scrollbar-thumb: rgba(160, 170, 180, 0.45);
-  --scrollbar-thumb-hover: rgba(200, 110, 40, 0.6);
+  /* 自定义滚动条 — Graphite 中性灰 */
+  --scrollbar-thumb: oklch(70% 0.004 80 / 0.4);
+  --scrollbar-thumb-hover: oklch(85% 0.003 80 / 0.6);
   --scrollbar-track: transparent;
 }
 
 /* ── Sandstone 主题（暖浅色 — Reasonix 原版 OKLCH 色值）── */
 [data-theme="sandstone"] {
   /* Reasonix-style shell tokens */
-  --bg: oklch(97.5% 0.008 80);
-  --bg-2: oklch(95.5% 0.011 78);
-  --panel: oklch(98.5% 0.005 80);
-  --panel-2: oklch(93.5% 0.014 76);
-  --card: oklch(99.5% 0.003 80);
-  --card-hover: oklch(96.5% 0.009 78);
-  --border: oklch(88% 0.016 76);
-  --border-strong: oklch(78% 0.020 72);
-  --fg: oklch(22% 0.014 55);
-  --fg-2: oklch(36% 0.013 55);
-  --muted: oklch(53% 0.011 60);
-  --muted-2: oklch(67% 0.010 65);
-  --accent: oklch(60% 0.19 38);
-  --accent-soft: oklch(60% 0.19 38 / 0.1);
-  --accent-strong: oklch(54% 0.21 36);
-  --success: oklch(48% 0.14 155);
-  --success-soft: oklch(48% 0.14 155 / 0.1);
-  --warning: oklch(58% 0.14 75);
-  --warning-soft: oklch(58% 0.14 75 / 0.12);
-  --danger: oklch(54% 0.2 22);
-  --danger-soft: oklch(54% 0.2 22 / 0.1);
-  --violet: oklch(62% 0.16 52);
-  --violet-soft: oklch(62% 0.16 52 / 0.10);
-  --shadow-sm: 0 1px 0 oklch(30% 0.05 50 / 0.05);
-  --shadow-md: 0 8px 24px -10px oklch(30% 0.05 50 / 0.13);
-  --shadow-lg: 0 24px 60px -20px oklch(30% 0.05 50 / 0.20);
+  --bg: oklch(98.8% 0 0);
+  --bg-2: oklch(97% 0 0);
+  --panel: oklch(99.6% 0 0);
+  --panel-2: oklch(97.4% 0 0);
+  --card: oklch(100% 0 0);
+  --card-hover: oklch(98% 0 0);
+  --border: oklch(90% 0 0);
+  --border-strong: oklch(82% 0 0);
+  --fg: oklch(24% 0 0);
+  --fg-2: oklch(42% 0 0);
+  --muted: oklch(55% 0 0);
+  --muted-2: oklch(47% 0 0);
+  --accent: oklch(30% 0 0);
+  --accent-soft: oklch(30% 0 0 / 0.08);
+  --accent-strong: oklch(22% 0 0);
+  --on-accent: oklch(100% 0 0);
+  --success: oklch(52% 0.1 150);
+  --success-soft: oklch(52% 0.1 150 / 0.1);
+  --warning: oklch(62% 0.11 70);
+  --warning-soft: oklch(62% 0.11 70 / 0.12);
+  --danger: oklch(54% 0.16 25);
+  --danger-soft: oklch(54% 0.16 25 / 0.1);
+  --violet: oklch(55% 0.05 250);
+  --violet-soft: oklch(55% 0.05 250 / 0.1);
+  --shadow-sm: 0 1px 0 oklch(0% 0 0 / 0.04);
+  --shadow-md: 0 8px 24px -10px oklch(0% 0 0 / 0.1);
+  --shadow-lg: 0 24px 60px -20px oklch(0% 0 0 / 0.16);
   --radius: 8px;
   --radius-lg: 12px;
 
@@ -315,16 +318,16 @@ input::-webkit-outer-spin-button {
   color: var(--fg);
 
   /* 语义色 */
-  --color-primary-50: 255 247 237;
-  --color-primary-100: 255 237 213;
-  --color-primary-200: 254 215 170;
-  --color-primary-300: 253 186 116;
-  --color-primary-400: 251 146 60;
-  --color-primary-500: 249 115 22;
-  --color-primary-600: 234 88 12;
-  --color-primary-700: 194 65 12;
-  --color-primary-800: 154 52 18;
-  --color-primary-900: 67 20 7;
+  --color-primary-50: 245 245 245;
+  --color-primary-100: 233 233 233;
+  --color-primary-200: 212 212 212;
+  --color-primary-300: 180 180 180;
+  --color-primary-400: 133 133 133;
+  --color-primary-500: 90 90 90;
+  --color-primary-600: 58 58 58;
+  --color-primary-700: 46 46 46;
+  --color-primary-800: 37 37 37;
+  --color-primary-900: 28 28 28;
   --color-success-50: 240 253 244;
   --color-success-100: 220 252 231;
   --color-success-200: 187 247 208;
@@ -367,25 +370,25 @@ input::-webkit-outer-spin-button {
   --color-info-900: 12 74 110;
 
   /* 向后兼容 */
-  --bg-primary: oklch(98.5% 0.005 80);
-  --bg-secondary: oklch(95.5% 0.011 78);
-  --bg-tertiary: oklch(93.5% 0.014 76);
-  --text-primary: oklch(22% 0.014 55);
-  --text-secondary: oklch(36% 0.013 55);
-  --text-tertiary: oklch(53% 0.011 60);
-  --border-primary: oklch(88% 0.016 76);
-  --border-secondary: oklch(78% 0.020 72);
-  --sidebar-bg: oklch(98.5% 0.005 80);
-  --sidebar-border: oklch(88% 0.016 76);
-  --sidebar-item-hover: oklch(95.5% 0.011 78);
-  --sidebar-item-active: oklch(88% 0.06 55);
-  --shadow-card: 0 1px 3px rgba(0,0,0,0.06);
-  --shadow-dropdown: 0 10px 15px -3px rgba(0,0,0,0.1);
-  --overlay: rgba(0, 0, 0, 0.4);
+  --bg-primary: oklch(99.6% 0 0);
+  --bg-secondary: oklch(97% 0 0);
+  --bg-tertiary: oklch(97.4% 0 0);
+  --text-primary: oklch(24% 0 0);
+  --text-secondary: oklch(42% 0 0);
+  --text-tertiary: oklch(55% 0 0);
+  --border-primary: oklch(90% 0 0);
+  --border-secondary: oklch(82% 0 0);
+  --sidebar-bg: oklch(99.6% 0 0);
+  --sidebar-border: oklch(90% 0 0);
+  --sidebar-item-hover: oklch(97% 0 0);
+  --sidebar-item-active: oklch(30% 0 0 / 0.07);
+  --shadow-card: 0 1px 3px oklch(0% 0 0 / 0.06);
+  --shadow-dropdown: 0 10px 15px -3px oklch(0% 0 0 / 0.1);
+  --overlay: oklch(20% 0 0 / 0.4);
 
-  /* 自定义滚动条 — Sandstone 主题用暖琥珀色调 */
-  --scrollbar-thumb: rgba(180, 150, 120, 0.45);
-  --scrollbar-thumb-hover: rgba(217, 119, 6, 0.6);
+  /* 自定义滚动条 — Snow(Qoder 净白)中性灰 */
+  --scrollbar-thumb: oklch(60% 0 0 / 0.45);
+  --scrollbar-thumb-hover: oklch(45% 0 0 / 0.65);
   --scrollbar-track: transparent;
 }
 
@@ -454,6 +457,34 @@ input::-webkit-outer-spin-button {
 [data-theme="sandstone"] .text-slate-400 { color: var(--muted-2); }
 [data-theme="sandstone"] .border-slate-200,
 [data-theme="sandstone"] .border-slate-100 { border-color: var(--border); }
+
+/* ── 浅色主题(Paper/净白)装饰性冷色中性化 — 去 AI 蓝，收敛到墨/中性；状态色(绿/红/琥珀)保留 ── */
+[data-theme="white"] .text-blue-500, [data-theme="white"] .text-blue-600, [data-theme="white"] .text-blue-700,
+[data-theme="white"] .text-indigo-500, [data-theme="white"] .text-indigo-600, [data-theme="white"] .text-indigo-700,
+[data-theme="white"] .text-violet-500, [data-theme="white"] .text-violet-600,
+[data-theme="white"] .text-purple-500, [data-theme="white"] .text-purple-600,
+[data-theme="white"] .text-sky-500, [data-theme="white"] .text-sky-600,
+[data-theme="white"] .text-cyan-600, [data-theme="white"] .text-teal-600,
+[data-theme="sandstone"] .text-blue-500, [data-theme="sandstone"] .text-blue-600, [data-theme="sandstone"] .text-blue-700,
+[data-theme="sandstone"] .text-indigo-500, [data-theme="sandstone"] .text-indigo-600, [data-theme="sandstone"] .text-indigo-700,
+[data-theme="sandstone"] .text-violet-500, [data-theme="sandstone"] .text-violet-600,
+[data-theme="sandstone"] .text-purple-500, [data-theme="sandstone"] .text-purple-600,
+[data-theme="sandstone"] .text-sky-500, [data-theme="sandstone"] .text-sky-600,
+[data-theme="sandstone"] .text-cyan-600, [data-theme="sandstone"] .text-teal-600 { color: var(--accent); }
+[data-theme="white"] .bg-blue-50, [data-theme="white"] .bg-blue-100,
+[data-theme="white"] .bg-indigo-50, [data-theme="white"] .bg-indigo-100,
+[data-theme="white"] .bg-violet-50, [data-theme="white"] .bg-violet-100,
+[data-theme="white"] .bg-purple-50, [data-theme="white"] .bg-purple-100,
+[data-theme="white"] .bg-sky-50, [data-theme="white"] .bg-sky-100,
+[data-theme="white"] .bg-cyan-50, [data-theme="white"] .bg-teal-50, [data-theme="white"] .bg-teal-100,
+[data-theme="sandstone"] .bg-blue-50, [data-theme="sandstone"] .bg-blue-100,
+[data-theme="sandstone"] .bg-indigo-50, [data-theme="sandstone"] .bg-indigo-100,
+[data-theme="sandstone"] .bg-violet-50, [data-theme="sandstone"] .bg-violet-100,
+[data-theme="sandstone"] .bg-purple-50, [data-theme="sandstone"] .bg-purple-100,
+[data-theme="sandstone"] .bg-sky-50, [data-theme="sandstone"] .bg-sky-100,
+[data-theme="sandstone"] .bg-cyan-50, [data-theme="sandstone"] .bg-teal-50, [data-theme="sandstone"] .bg-teal-100 { background-color: var(--accent-soft); }
+[data-theme="white"] .border-blue-200, [data-theme="white"] .border-indigo-200, [data-theme="white"] .border-sky-200,
+[data-theme="sandstone"] .border-blue-200, [data-theme="sandstone"] .border-indigo-200, [data-theme="sandstone"] .border-sky-200 { border-color: var(--border-strong); }
 
 /* ── 组件层覆盖（卡片/按钮/输入框/表格）── */
 [data-theme="graphite"] .card,
@@ -1402,4 +1433,15 @@ button:disabled {
 
 @keyframes pulse {
   50% { opacity: 0.35; }
+}
+
+/* v0.83.0 设置内搜索：命中项跳转后的短暂高亮环 */
+.setting-anchor-highlight {
+  animation: setting-anchor-pulse 1.4s ease-out;
+  border-radius: 0.75rem;
+}
+@keyframes setting-anchor-pulse {
+  0%   { box-shadow: 0 0 0 0 var(--accent); }
+  25%  { box-shadow: 0 0 0 3px var(--accent); }
+  100% { box-shadow: 0 0 0 3px rgba(0, 0, 0, 0); }
 }

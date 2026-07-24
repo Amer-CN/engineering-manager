@@ -45,9 +45,10 @@ describe('SettingsChangelog.tsx', () => {
 
   test('点击背景遮罩应调用 onClose', () => {
     const onClose = vi.fn()
-    const { container } = render(React.createElement(SettingsChangelog, { onClose }))
-    // 最外层 div 绑定 onClick={onClose}
-    const overlay = container.firstChild as HTMLElement
+    render(React.createElement(SettingsChangelog, { onClose }))
+    // Modal 通过 portal 渲染到 document.body，遮罩层是 .bg-black/50 元素
+    const overlay = document.querySelector('.bg-black\\/50') as HTMLElement
+    expect(overlay).toBeTruthy()
     fireEvent.click(overlay)
     expect(onClose).toHaveBeenCalledTimes(1)
   })

@@ -11,11 +11,14 @@ import userEvent from '@testing-library/user-event'
 import type { Project, Member } from '@/types/electron'
 
 // ════════════════════════════════════════
-// Mock：window.alert
+// Mock：toastStore（组件用 showToast 做校验提示，而非 window.alert）
 // ════════════════════════════════════════
-const mockAlert = vi.fn()
+const mockShowToast = vi.fn()
+vi.mock('@/store/toastStore', () => ({
+  useToastStore: (selector: any) => selector({ showToast: mockShowToast }),
+}))
 beforeEach(() => {
-  window.alert = mockAlert
+  mockShowToast.mockClear()
 })
 afterEach(() => {
   vi.restoreAllMocks()
@@ -207,7 +210,7 @@ describe('ProjectForm', () => {
     expect(mockOnCancel).toHaveBeenCalledTimes(1)
   })
 
-  it('shows alert when submitting without project manager', async () => {
+  it('shows toast when submitting without project manager', async () => {
     const user = userEvent.setup()
     const { ProjectForm } = await importModule()
     render(
@@ -224,9 +227,9 @@ describe('ProjectForm', () => {
     const submitButton = screen.getByText('创建')
     await user.click(submitButton)
 
-    // 应触发 alert
+    // 应触发 error 类型的 toast 提示
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith('请选择项目负责人')
+      expect(mockShowToast).toHaveBeenCalledWith('请选择项目负责人', 'error')
     })
     // onSubmit 不应被调用
     expect(mockOnSubmit).not.toHaveBeenCalled()

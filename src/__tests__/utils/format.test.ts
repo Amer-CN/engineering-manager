@@ -14,27 +14,28 @@ import {
 describe('format.ts', () => {
   // ─── formatMoney ─────────────────────────────────────────────
   describe('formatMoney', () => {
+    // 注: formatMoney 设计为"去尾零"(见 format.ts 注释), 例: 1000 → '1,000', 1234.50 → '1,234.5'
     it('应格式化整数金额', () => {
-      expect(formatMoney(1000)).toBe('1,000.00')
+      expect(formatMoney(1000)).toBe('1,000')
     })
 
     it('应格式化小数金额', () => {
-      expect(formatMoney(1234.5)).toBe('1,234.50')
+      expect(formatMoney(1234.5)).toBe('1,234.5')
       expect(formatMoney(1234.567)).toBe('1,234.57') // 四舍五入
     })
 
     it('应处理大额数字', () => {
-      expect(formatMoney(1000000)).toBe('1,000,000.00')
+      expect(formatMoney(1000000)).toBe('1,000,000')
     })
 
     it('应处理零和负数', () => {
-      expect(formatMoney(0)).toBe('0.00')
-      expect(formatMoney(-1000)).toBe('-1,000.00')
+      expect(formatMoney(0)).toBe('0')
+      expect(formatMoney(-1000)).toBe('-1,000')
     })
 
     it('应处理 null/undefined', () => {
-      expect(formatMoney(null)).toBe('0.00')
-      expect(formatMoney(undefined)).toBe('0.00')
+      expect(formatMoney(null)).toBe('0')
+      expect(formatMoney(undefined)).toBe('0')
     })
 
     it('应支持自定义小数位', () => {

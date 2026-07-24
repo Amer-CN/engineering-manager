@@ -78,6 +78,9 @@ export const tauriAPI = {
   },
   authLogin: (username: string, password: string) =>
     apiClient.post<StoredAuth & { token: string }>('/api/auth/login', { username, password }),
+  // v0.83.0: 用户自助修改密码 (校验旧密码 + JWT uid, 任意角色可用)
+  changeOwnPassword: (oldPassword: string, newPassword: string) =>
+    apiClient.post<{ changed: boolean }>('/api/auth/change-password', { oldPassword, newPassword }),
   setSession: () => {},
   clearSession: () => {},
 

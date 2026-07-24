@@ -1,6 +1,32 @@
 # AGENTS.md - 工程管家项目约定
-> 项目状态：v0.82.0（当前版本，见 CHANGELOG.md）
-> 最后同步：2026-07-04（对齐 v0.82.0：合并安全审计章节、修正安装包命名、去除失效的 CLAUDE.md/src-tauri 引用）
+> 项目状态：v0.82.1（当前版本，见 package.json）
+> 最后同步：2026-07-23（对齐 v0.82.1：校正版本管理章节，明确 sync-version 脚本自动同步范围）
+
+## 🤝 开发协作模式
+
+本项目采用 **AI 双引擎协作模式**：
+
+| 角色 | 工具 | 职责 |
+|------|------|------|
+| **规划者** | 外部 GPT-5.6（Web 对话） | 制定详细实施计划（如 M2/M3/M4 里程碑）、审查执行结果 |
+| **执行者** | CatPaw（本地 IDE AI） | 按计划编码、编译、测试、生成审查材料 |
+| **传递者** | 用户 | 在两者之间传递文件和消息 |
+
+### 关键约定
+
+1. **GPT-5.6 无法读取本地代码** — 每个里程碑完成后，必须生成一份包含改动文件完整源码 + 关键依赖 + 测试输出的 markdown 文件（如 `M3_source_bundle.md`），供用户发给 GPT-5.6 审查。
+
+2. **审查材料必须包含**：
+   - 改动文件清单
+   - 每个改动文件的完整源码（不是摘要）
+   - 关键依赖文件的签名/接口（让审查者能验证复用关系）
+   - 测试代码全文
+   - 测试运行输出（编译 + 全套测试结果）
+   - 对照验收标准的逐条证据
+
+3. **完成后停下等审** — 每个里程碑完成后，生成审查材料并停下，不要自行启动下一个里程碑。
+
+4. **历史审查包**：可用 Repomix 将整个代码库打包为 markdown（早期生成了 7 个 `project-bundle-*.md`），但日常里程碑审查只需打包当次改动的文件即可。
 
 ## 🗣️ 输出语言
 - **默认中文输出**：所有解释、描述、分析、提问、总结等文字内容使用中文
@@ -25,6 +51,9 @@
 ```bash
 # 启动（双击 工程管家.bat 或手动）：
 cd EngineeringManager.Api && dotnet run   # C# API + WebView2 窗口（localhost:5048）
+
+# 前端改完代码后：
+npx vite build   # 输出到项目根 dist/，dotnet build/run 会自动同步到 C# 输出目录
 
 # 编译时间：C# ~1.2s
 # 窗口：WinForms + WebView2，圆角无边框，React TitleBar 控制
@@ -56,7 +85,7 @@ SQLite (engineering.db) ← 数据存储路径由用户配置
 | `EngineeringManager.Uninstaller/` | 卸载器（WinForms + WebView2 + React 前端） |
 
 ## 📦 打包与部署
-- **平时只构建不打包**：修改代码 → `vite build`（约5-10秒）→ dev模式测试 → 用户通知才生成安装包
+- **平时只构建不打包**：修改代码 → `vite build`（约5-10秒）→ `dotnet run`（csproj 的 `SyncFrontendDist` Target 自动同步 dist/ 到 C# 输出目录）→ dev模式测试 → 用户通知才生成安装包
 - 安装包：`release\EngineeringManager-Setup-<版本号>.exe`（例：`release\EngineeringManager-Setup-0.82.0.exe`，见 `build-installer.bat`）
 - 打包脚本：`build-installer.bat` / `release.bat`（构建前端 + C# 发布 + payload.zip 打包 + 安装器；卸载器 vite build + publish 后铺入 `app-files\uninstall\`）
 - **卸载器接线**：安装时写 `<安装目录>\uninstall\uninstaller.json` + 注册「程序和功能」卸载项（HKCU，DisplayName=工程管家）；卸载时先把自身复制到 `%TEMP%` 再重启副本删除安装目录（避免 exe 自锁），数据存储路径永不删。
@@ -256,16 +285,30 @@ export function useProjects() {
 | `refactor(...)` 代码重构 | **不 bump** | 版本号不变 |
 | `docs(...)` / `chore(...)` | **不 bump** | 版本号不变 |
 
-### 当前版本: v0.82.0
+### 当前版本: v0.82.1（以 package.json 为唯一真源）
 
 ### 历史背景 (重要)
 v0.74.0 → v0.85.0 (已 rebase 整理) 期间, 项目曾把 **refactor-only sprint 也当作 minor 版本 bump**, 导致 7 次 spurious `chore: bump version` commits. v0.75.3 已 `git rebase -i ce8cf23` **drop 掉这 7 个 commits**, 重组 git 历史为正确 semver (1 minor + 3 patches + 18 refactors).
 
-### 版本号引用位置 (4 处, bump 时一起改)
-- `package.json`
-- `installer/package.json`
-- `installer/src/App.tsx`
-- `src/components/Login.tsx` (fallback for `__APP_VERSION__`)
+### 版本号引用位置（6 处）
+
+**自动同步**（由 `scripts/sync-version.mjs` 从 package.json 读取并写入，`npm run sync-version` 或 `build:frontend` 时自动执行）：
+
+| 位置 | 用途 |
+|------|------|
+| `src/version.ts` | 前端运行时版本常量（`APP_VERSION`） |
+| `EngineeringManager.Api/EngineeringManager.Api.csproj` `<Version>` | 后端程序集版本 |
+| `installer/package.json` | 安装器项目版本 |
+| `installer/src/App.tsx` | 安装器界面显示的版本号（`<WelcomeStep version="x.y.z" />`） |
+
+**手动同步**（bump 版本时需人工修改，脚本不覆盖）：
+
+| 位置 | 用途 |
+|------|------|
+| `src/components/Login.tsx` | 登录页版本 fallback（`__APP_VERSION__` 未注入时的兜底值） |
+| `index.html` | `window.__APP_VERSION__` 占位符（由 vite.config.ts 在构建时从 package.json 替换，无需手动改） |
+
+> **注意**：`index.html` 中的 `<APP_VERSION>` 占位符由 `vite.config.ts` 在每次构建时自动从 `package.json` 读取并替换，因此无需手动修改。实际需手动改的只有 Login.tsx 1 处。
 
 ### 何时打 tag
 - 每次 minor / patch bump 时, 打完 chore commit 后立刻 `git tag v0.X.Y`
