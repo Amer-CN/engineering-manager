@@ -103,6 +103,9 @@ export default defineConfig({
     },
     minify: 'terser',
   },
+  css: {
+    minify: 'esbuild',
+  },
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test-setup.ts'],
@@ -122,7 +125,7 @@ export default defineConfig({
         'src/components/features/**',
       ],
     },
-    exclude: ['node_modules/**', 'dist/**', 'src-tauri/**'],
+    exclude: ['node_modules/**', 'dist/**', 'src-tauri/**', 'e2e/**'],
     server: {
       deps: {
         inline: ['@testing-library/user-event']

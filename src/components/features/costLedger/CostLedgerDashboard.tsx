@@ -75,21 +75,11 @@ export function CostLedgerDashboard({ projects, summaries, loading, onSelectProj
     icon="Wallet"
     title="成本台账"
     subtitle="真实资金流追踪 — 经营支出、垫资进出、股东融资"
-    accentColor="amber"
-  >
-    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }}
-      className="flex items-center gap-4 p-4 rounded-xl bg-white/10">
-      <div className="text-right">
-        <p className="text-3xl font-bold text-red-300"><CountUp value={totals.expense} /></p>
-        <p className="text-xs text-red-300/80">经营支出</p>
-      </div>
-      <div className="w-px h-10 bg-white/20" />
-      <div className="text-right">
-        <p className="text-3xl font-bold text-emerald-300"><CountUp value={totals.income} /></p>
-        <p className="text-xs text-emerald-300/80">资金收入</p>
-      </div>
-    </motion.div>
-  </HeroBanner>
+    metrics={[
+      { value: <CountUp value={totals.expense} />, label: '经营支出' },
+      { value: <CountUp value={totals.income} />, label: '资金收入' },
+    ]}
+  />
 
   {/* ═══ KPI Stat Cards ═══ */}
   <motion.section variants={sectionVariant} className="grid grid-cols-3 gap-3 mb-6">

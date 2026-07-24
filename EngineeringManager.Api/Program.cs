@@ -5,6 +5,7 @@ using Dapper;
 using Microsoft.Extensions.FileProviders;
 using EngineeringManager.Api;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Http.Features;
 
 // ============ API 配置类（供 EntryPoint.cs 调用） ============
 
@@ -78,6 +79,18 @@ public static class ApiConfig
             && Environment.GetEnvironmentVariable("DISABLE_RATELIMIT") == "1";
         builder.WebHost.UseUrls(testMode ? "http://127.0.0.1:0" : "http://localhost:5048");
 
+        // M4: 允许大音频上传 (500MB) — multipart/form-data 流式上传
+        // Kestrel MaxRequestBodySize 控制整体 HTTP body 上限
+        // FormOptions.MultipartBodyLengthLimit 控制 multipart 单段上限（默认 128MB，不够）
+        builder.WebHost.ConfigureKestrel(options =>
+        {
+            options.Limits.MaxRequestBodySize = 550 * 1024 * 1024; // 550MB (略大于 500MB 上限)
+        });
+        builder.Services.Configure<FormOptions>(options =>
+        {
+            options.MultipartBodyLengthLimit = 550 * 1024 * 1024; // 550MB
+        });
+
         // v1.2.0: PII 字段级加密 (AES-GCM + DPAPI master key)
         builder.Services.AddSingleton<EngineeringManager.Api.Security.PiiProtector>();
         // v0.78.0 PII 后台 re-encrypt worker (admin rotate key 后调用)
@@ -86,10 +99,18 @@ public static class ApiConfig
         // v1.3.0 Agent AI 助手服务
         builder.Services.AddSingleton<EngineeringManager.Api.Services.LlmConfigResolver>();
         builder.Services.AddSingleton<EngineeringManager.Api.Services.LlmProviderService>();
+        builder.Services.AddSingleton<EngineeringManager.Api.Services.ILlmChatService>(sp =>
+            sp.GetRequiredService<EngineeringManager.Api.Services.LlmProviderService>());
         builder.Services.AddSingleton<EngineeringManager.Api.Services.IModelRouter, EngineeringManager.Api.Services.ModelRoutingService>();
         builder.Services.AddSingleton<EngineeringManager.Api.Services.AgentToolService>();
         builder.Services.AddSingleton<EngineeringManager.Api.Services.AgentConversationService>();
         builder.Services.AddSingleton<EngineeringManager.Api.Services.UpdateService>();
+
+        // v0.83 STT 语音转文字后台 worker（单并发）
+        builder.Services.AddHostedService<EngineeringManager.Api.Services.Stt.SttWorker>();
+
+        // v0.84 M2 知识库：文本嵌入服务 + 知识库服务
+        builder.Services.AddSingleton<EngineeringManager.Api.Services.IEmbeddingService, EngineeringManager.Api.Services.BgeEmbeddingService>();
 
         builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
             p.WithOrigins("http://localhost:5173", "http://localhost:3000", "http://localhost:5048")
@@ -212,7 +233,10 @@ builder.Services.ConfigureHttpJsonOptions(options =>
             });
 
             // 2. 静态文件服务（JS/CSS/图片 + ocr-config.json 等）
-            // index.html 禁止缓存（防 WebView2 缓存旧前端），带 hash 的 JS/CSS 默认永久缓存（文件名变=自动失效）
+            // 缓存策略：
+            //   - index.html (入口 HTML): no-cache, no-store, must-revalidate — 每次必须重新验证，防 WebView2 缓存旧前端
+            //   - 带 hash 的 JS/CSS (如 index-B2cgUbMM.js): public, max-age=31536000, immutable — 长期缓存，文件名变=自动失效
+            //   - 其他静态文件 (ocr-config.json 等): no-cache — 每次重新验证
             app.UseStaticFiles(new StaticFileOptions
             {
                 FileProvider = new PhysicalFileProvider(distPath),
@@ -221,9 +245,22 @@ builder.Services.ConfigureHttpJsonOptions(options =>
                     var path = ctx.File.Name;
                     if (path.EndsWith(".html", StringComparison.OrdinalIgnoreCase))
                     {
+                        // 入口 HTML 禁止缓存
                         ctx.Context.Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
                         ctx.Context.Response.Headers["Pragma"] = "no-cache";
                         ctx.Context.Response.Headers["Expires"] = "0";
+                    }
+                    else if (path.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
+                             path.EndsWith(".css", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // 带 content-hash 的 JS/CSS 长期缓存 + immutable
+                        // Vite 生成的文件名含 content hash，文件内容变=文件名变=自动失效
+                        ctx.Context.Response.Headers["Cache-Control"] = "public, max-age=31536000, immutable";
+                    }
+                    else
+                    {
+                        // 其他静态文件（如 ocr-config.json）每次验证
+                        ctx.Context.Response.Headers["Cache-Control"] = "no-cache";
                     }
                 }
             });
@@ -283,6 +320,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
         if (IsProduction)
         {
             // 3. SPA 回退：非 /api 路由全部返回 index.html
+            // 必须设置 no-cache 头：SPA fallback 使用 SendFileAsync 绕过了 UseStaticFiles 的 OnPrepareResponse，
+            // 如果不显式设置 Cache-Control，浏览器/WebView2 可能缓存旧版 index.html，
+            // 导致引用的旧 hash JS/CSS 文件名 404 或加载过时前端。
             app.MapWhen(ctx => !ctx.Request.Path.StartsWithSegments("/api"), spa =>
             {
                 spa.Use(async (ctx, next) =>
@@ -291,6 +331,10 @@ builder.Services.ConfigureHttpJsonOptions(options =>
                     if (File.Exists(indexPath))
                     {
                         ctx.Response.ContentType = "text/html; charset=utf-8";
+                        // 入口 HTML 必须禁止缓存（与 UseStaticFiles 的 OnPrepareResponse 策略一致）
+                        ctx.Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                        ctx.Response.Headers["Pragma"] = "no-cache";
+                        ctx.Response.Headers["Expires"] = "0";
                         await ctx.Response.SendFileAsync(indexPath);
                     }
                     else
@@ -356,6 +400,12 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
         // v0.80 版本更新检查
         app.RegisterUpdateEndpoints();
+
+        // v0.83 STT 语音转文字
+        app.RegisterSttEndpoints();
+
+        // v0.84 M2 知识库
+        app.RegisterKnowledgeEndpoints();
     }
     // ============ P0-1: 从 config.json 读取 dataPath ============
     public static string ResolveDataPath()

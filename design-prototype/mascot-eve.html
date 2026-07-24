@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI 管家 · EVE 风格公仔原型</title>
+<style>
+  :root{ --ease: cubic-bezier(0.16,1,0.3,1); }
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    font-family:"Inter","Noto Sans SC","PingFang SC",sans-serif;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:24px; min-height:100vh; transition:background .4s var(--ease);
+  }
+  body[data-bg="paper"]{ background: oklch(98.6% 0.009 85); color: oklch(34% .012 72);
+    --body-hi: oklch(99% 0.004 85); --body-lo: oklch(88% 0.008 82); --body-edge: oklch(80% 0.012 80);
+    --sheen: oklch(100% 0 0 / .55); --contact: oklch(60% .02 78 / .20); --muted: oklch(56% .01 76); }
+  body[data-bg="graphite"]{ background: oklch(20.5% .003 75); color: oklch(86% .003 80);
+    --body-hi: oklch(97% 0.004 85); --body-lo: oklch(84% 0.008 82); --body-edge: oklch(72% 0.012 80);
+    --sheen: oklch(100% 0 0 / .5); --contact: oklch(0% 0 0 / .4); --muted: oklch(62% .008 258); }
+
+  /* 眼睛三档配色（面板始终深色） */
+  body[data-eye="warm"]{ --visor: oklch(26% 0.012 70); --eye-core: oklch(97% 0.03 82); --eye-glow: oklch(90% 0.06 78 / .55); }
+  body[data-eye="cyan"]{ --visor: oklch(24% 0.02 240); --eye-core: oklch(90% 0.09 220); --eye-glow: oklch(80% 0.12 220 / .55); }
+  body[data-eye="ink"]{  --visor: oklch(94% 0.004 85); --eye-core: oklch(24% 0.02 72); --eye-glow: oklch(24% 0.02 72 / 0); }
+
+  .stage{ display:flex; align-items:flex-end; gap:48px; }
+  .eve{ width:250px; height:290px; overflow:visible; cursor:pointer; }
+  .eve.mini{ width:56px; height:65px; }
+  .mini-wrap{ display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .mini-wrap span{ font-size:11px; color:var(--muted); }
+
+  .breathG{ animation: breathe 3.8s var(--ease) infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+  @keyframes breathe{ 0%,100%{ transform: scale(1,1);} 50%{ transform: scale(1.02,0.98);} }
+  .eyesBlink{ transform-box: fill-box; transform-origin: 50% 50%; }
+  .blink{ animation: blink .16s var(--ease); transform-box: fill-box; transform-origin:50% 50%; }
+  @keyframes blink{ 50%{ transform: scaleY(.08); } }
+  .eyeG{ transition: transform .12s ease-out; }
+  .eyeRot{ transition: transform .3s var(--ease); transform-box: fill-box; transform-origin:50% 50%; }
+  .eve[data-state="listening"] .eyeRot{ transform: scale(1.18); }
+
+  .happy, .dots{ opacity:0; transition:opacity .2s; }
+  .eve[data-state="success"] .happy{ opacity:1; }
+  .eve[data-state="success"] .eyeCore, .eve[data-state="success"] .eyeGlow{ opacity:0; }
+  .eve[data-state="thinking"] .dots{ opacity:1; }
+  .dots circle{ animation: dot 1.2s infinite; } .dots circle:nth-child(2){ animation-delay:.2s; } .dots circle:nth-child(3){ animation-delay:.4s; }
+  @keyframes dot{ 0%,100%{ opacity:.25; } 50%{ opacity:1; } }
+
+  .panel{ position:fixed; top:16px; right:16px; display:flex; flex-direction:column; gap:8px; align-items:flex-end; }
+  .seg{ display:flex; gap:4px; padding:4px; border:1px solid var(--muted); border-radius:10px; }
+  .seg button{ font:inherit; font-size:12px; padding:5px 11px; border:none; background:none; color:var(--muted); border-radius:7px; cursor:pointer; }
+  .seg button.on{ background: var(--muted); color: var(--body-hi); }
+  .controls{ display:flex; gap:8px; }
+  .controls button{ font:inherit; font-size:13px; padding:8px 15px; border-radius:10px; cursor:pointer; background:transparent; color:inherit; border:1px solid var(--muted); transition:.15s var(--ease); }
+  .controls button.on{ background:var(--muted); color:var(--body-hi); }
+  .caption{ font-size:13px; color:var(--muted); text-align:center; max-width:540px; line-height:1.6; }
+</style>
+</head>
+<body data-bg="paper" data-eye="warm">
+  <div class="panel">
+    <div class="seg" id="bgSeg"><button data-bg="paper" class="on">纸底</button><button data-bg="graphite">墨底</button></div>
+    <div class="seg" id="eyeSeg"><button data-eye="warm" class="on">暖白眼</button><button data-eye="cyan">EVE蓝</button><button data-eye="ink">墨眼</button></div>
+  </div>
+
+  <div class="stage">
+    <svg class="eve" data-state="idle" viewBox="0 0 240 290" aria-label="EVE 风格 AI 管家">
+      <defs>
+        <radialGradient id="egg" cx="42%" cy="30%" r="75%"><stop offset="0%" stop-color="var(--body-hi)"/><stop offset="100%" stop-color="var(--body-lo)"/></radialGradient>
+        <radialGradient id="glowG" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="var(--eye-glow)"/><stop offset="100%" stop-color="oklch(90% 0 0 / 0)"/></radialGradient>
+      </defs>
+      <ellipse class="contact" cx="120" cy="262" rx="66" ry="13" fill="var(--contact)"/>
+      <g class="leanG"><g class="breathG">
+        <!-- 蛋形身体（缎面） -->
+        <circle cx="120" cy="150" r="104" fill="url(#egg)" stroke="var(--body-edge)" stroke-width="1.5"/>
+        <path d="M74,74 C92,54 128,52 150,64 C120,60 92,72 80,96 Z" fill="var(--sheen)" opacity="0.7"/>
+        <!-- 思考气泡 -->
+        <g class="dots" fill="var(--muted)"><circle cx="150" cy="150" r="4"/><circle cx="164" cy="146" r="4"/><circle cx="178" cy="144" r="4"/></g>
+        <!-- 深色脸屏 visor -->
+        <rect x="58" y="96" width="124" height="66" rx="33" fill="var(--visor)"/>
+        <g class="eyesBlink">
+          <g class="eyeG" data-side="l"><g class="eyeRot">
+            <ellipse class="eyeGlow" cx="100" cy="129" rx="19" ry="23" fill="url(#glowG)"/>
+            <ellipse class="eyeCore" cx="100" cy="129" rx="9" ry="15" fill="var(--eye-core)"/>
+          </g></g>
+          <g class="eyeG" data-side="r"><g class="eyeRot">
+            <ellipse class="eyeGlow" cx="140" cy="129" rx="19" ry="23" fill="url(#glowG)"/>
+            <ellipse class="eyeCore" cx="140" cy="129" rx="9" ry="15" fill="var(--eye-core)"/>
+          </g></g>
+          <path class="happy" d="M86,132 Q100,116 114,132" fill="none" stroke="var(--eye-core)" stroke-width="6" stroke-linecap="round"/>
+          <path class="happy" d="M126,132 Q140,116 154,132" fill="none" stroke="var(--eye-core)" stroke-width="6" stroke-linecap="round"/>
+        </g>
+      </g></g>
+    </svg>
+
+    <div class="mini-wrap">
+      <svg class="eve mini" data-state="idle" viewBox="0 0 240 290">
+        <ellipse class="contact" cx="120" cy="262" rx="66" ry="13" fill="var(--contact)"/>
+        <g class="leanG"><g class="breathG">
+          <circle cx="120" cy="150" r="104" fill="url(#egg)" stroke="var(--body-edge)" stroke-width="1.5"/>
+          <rect x="58" y="96" width="124" height="66" rx="33" fill="var(--visor)"/>
+          <g class="eyesBlink">
+            <g class="eyeG" data-side="l"><g class="eyeRot"><ellipse class="eyeCore" cx="100" cy="129" rx="9" ry="15" fill="var(--eye-core)"/></g></g>
+            <g class="eyeG" data-side="r"><g class="eyeRot"><ellipse class="eyeCore" cx="140" cy="129" rx="9" ry="15" fill="var(--eye-core)"/></g></g>
+          </g>
+        </g></g>
+      </svg>
+      <span>56px 小尺寸</span>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button data-state="idle" class="on">待机</button>
+    <button data-state="thinking">思考</button>
+    <button data-state="listening">聆听</button>
+    <button data-state="success">完成</button>
+  </div>
+  <p class="caption">EVE 风格：光洁蛋身 + 深色仪器脸屏 + 两只眼。移动鼠标眼睛会看你；右上角可切 <b>纸/墨底</b> 与 <b>眼睛配色</b>（暖白 / EVE蓝 / 墨）。纯 SVG · 0 积分。</p>
+
+<script>
+  const eves = [...document.querySelectorAll('.eve')];
+  function track(cx, cy){
+    eves.forEach(svg=>{
+      const st = svg.dataset.state; if(st==='thinking'||st==='success') return;
+      const r = svg.getBoundingClientRect();
+      const ex = r.left + r.width/2, ey = r.top + r.height*0.42;
+      const ang = Math.atan2(cy-ey, cx-ex);
+      const d = Math.min(1, Math.hypot(cx-ex, cy-ey)/280);
+      const dx = Math.cos(ang)*7*d, dy = Math.sin(ang)*5*d;
+      svg.querySelectorAll('.eyeG').forEach(g=> g.setAttribute('transform', `translate(${dx.toFixed(1)},${dy.toFixed(1)})`));
+      svg.querySelector('.leanG').setAttribute('transform', `rotate(${(dx*0.12).toFixed(2)} 120 252)`);
+    });
+  }
+  window.addEventListener('mousemove', e=>track(e.clientX, e.clientY));
+
+  function setState(s){
+    eves.forEach(svg=>{ svg.dataset.state = s;
+      if(s==='thinking') svg.querySelectorAll('.eyeG').forEach(g=>g.setAttribute('transform','translate(0,-5)'));
+    });
+    document.querySelectorAll('.controls button').forEach(b=>b.classList.toggle('on', b.dataset.state===s));
+  }
+  document.querySelectorAll('.controls button').forEach(b=> b.addEventListener('click', ()=>setState(b.dataset.state)));
+
+  function blink(){
+    eves.forEach(svg=>{ if(svg.dataset.state==='success') return;
+      const g = svg.querySelector('.eyesBlink'); g.classList.add('blink'); setTimeout(()=>g.classList.remove('blink'),170); });
+    setTimeout(blink, 2800 + Math.random()*2600);
+  }
+  setTimeout(blink, 1600);
+
+  function seg(id, key){
+    document.querySelectorAll('#'+id+' button').forEach(b=> b.addEventListener('click', ()=>{
+      document.body.dataset[key] = b.dataset[key];
+      document.querySelectorAll('#'+id+' button').forEach(x=>x.classList.toggle('on', x===b));
+    }));
+  }
+  seg('bgSeg','bg'); seg('eyeSeg','eye');
+</script>
+</body>
+</html>

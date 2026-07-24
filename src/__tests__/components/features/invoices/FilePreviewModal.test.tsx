@@ -33,16 +33,20 @@ describe('FilePreviewModal', () => {
       file: { data: 'data:application/pdf;base64,test', type: 'pdf', title: '发票.pdf' },
       onClose: mockOnClose,
     }))
-    fireEvent.click(screen.getByText('✕'))
+    // 关闭按钮现为 <Icon name="X" />，通过 Modal 头部按钮的 aria-label 定位
+    fireEvent.click(screen.getByLabelText('关闭'))
     expect(mockOnClose).toHaveBeenCalled()
   })
 
   test('点击背景 overlay 应触发 onClose', () => {
-    const { container } = render(React.createElement(FilePreviewModal, {
+    render(React.createElement(FilePreviewModal, {
       file: { data: 'data:application/pdf;base64,test', type: 'pdf', title: '发票.pdf' },
       onClose: mockOnClose,
     }))
-    fireEvent.click(container.firstElementChild!)
+    // Modal 通过 portal 渲染到 document.body，遮罩层是 .bg-black/50 元素
+    const overlay = document.querySelector('.bg-black\\/50') as HTMLElement
+    expect(overlay).toBeTruthy()
+    fireEvent.click(overlay)
     expect(mockOnClose).toHaveBeenCalled()
   })
 })

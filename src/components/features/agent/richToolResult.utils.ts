@@ -19,6 +19,7 @@ export const TOOL_LABELS: Record<string, string> = {
   getCostSummary: '成本汇总',
   getPartners: '合作伙伴',
   runSafeQuery: '自定义查询',
+  searchKnowledgeBase: '知识库检索',
   llm: 'AI',
 }
 

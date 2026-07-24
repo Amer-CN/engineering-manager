@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="paper">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>工程管家 · Bedrock 设计原型</title>
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   BEDROCK 设计系统原型 — 单一 OKLCH token 层，三套主题方向
+   Paper(暖白纸) / Snow(清冷白) / Graphite(石墨黑) — 一黑一白一暖白，近乎单色，去荧光
+   所有颜色走语义 token，零硬编码覆盖 —— 这就是干掉 900 行补丁后的样子
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Graphite：Notion 式柔和石墨（#191919 底 / #D4D4D4 字，中性无色偏）── */
+[data-theme="graphite"] {
+  --bg:        oklch(20.5% 0.003 75);
+  --bg-2:      oklch(22.5% 0.003 75);
+  --panel:     oklch(24.5% 0.003 75);
+  --panel-2:   oklch(28% 0.004 75);
+  --card:      oklch(23% 0.003 75);
+  --card-2:    oklch(26.5% 0.004 75);
+  --hair:      oklch(31% 0.004 75 / 0.9);
+  --hair-strong: oklch(40% 0.005 75);
+  --fg:        oklch(86% 0.003 80);
+  --fg-2:      oklch(70% 0.004 80);
+  --muted:     oklch(56% 0.005 80);
+  --muted-2:   oklch(44% 0.005 80);
+  --accent:    oklch(92% 0.004 80);
+  --accent-2:  oklch(80% 0.005 80);
+  --on-accent: oklch(21% 0.004 75);
+  --accent-soft: oklch(92% 0.004 80 / 0.1);
+  --accent-line: oklch(66% 0.005 80 / 0.4);
+  --ok:        oklch(72% 0.12 155);
+  --warn:      oklch(78% 0.11 82);
+  --danger:    oklch(68% 0.16 25);
+  --glow:      oklch(92% 0.004 80 / 0.04);
+  --shadow:    0 20px 60px -24px oklch(0% 0 0 / 0.55);
+  --shadow-sm: 0 4px 16px -8px oklch(0% 0 0 / 0.4);
+  --grid-line: oklch(30% 0.004 75 / 0.7);
+  color-scheme: dark;
+}
+
+/* ── Snow：清冷纯白（亮色）── 干净锐利，接近纯白但不刺眼 ── */
+[data-theme="snow"] {
+  --bg:        oklch(99% 0.0015 250);
+  --bg-2:      oklch(97.5% 0.002 250);
+  --panel:     oklch(99.7% 0.001 250);
+  --panel-2:   oklch(96.5% 0.003 250);
+  --card:      oklch(99.9% 0.0005 250);
+  --card-2:    oklch(98.2% 0.002 250);
+  --hair:      oklch(91% 0.004 255);
+  --hair-strong: oklch(84% 0.006 255);
+  --fg:        oklch(21% 0.012 262);
+  --fg-2:      oklch(40% 0.011 262);
+  --muted:     oklch(55% 0.01 258);
+  --muted-2:   oklch(68% 0.008 255);
+  --accent:    oklch(25% 0.016 262);
+  --accent-2:  oklch(38% 0.018 262);
+  --on-accent: oklch(99.5% 0.001 250);
+  --accent-soft: oklch(25% 0.016 262 / 0.06);
+  --accent-line: oklch(25% 0.016 262 / 0.18);
+  --ok:        oklch(50% 0.11 155);
+  --warn:      oklch(60% 0.11 72);
+  --danger:    oklch(53% 0.17 25);
+  --glow:      oklch(25% 0.016 262 / 0.04);
+  --shadow:    0 22px 55px -30px oklch(30% 0.02 260 / 0.13);
+  --shadow-sm: 0 2px 10px -6px oklch(30% 0.02 260 / 0.08);
+  --grid-line: oklch(91% 0.004 255 / 0.8);
+  color-scheme: light;
+}
+
+/* ── Paper：暖白纸感（亮色旗舰·默认）── 明亮暖白，像优质打印纸，不发灰 ── */
+[data-theme="paper"] {
+  --bg:        oklch(98.6% 0.009 85);
+  --bg-2:      oklch(96.8% 0.011 84);
+  --panel:     oklch(99.4% 0.006 85);
+  --panel-2:   oklch(95.5% 0.012 82);
+  --card:      oklch(99.7% 0.005 85);
+  --card-2:    oklch(97.8% 0.008 84);
+  --hair:      oklch(90% 0.012 82);
+  --hair-strong: oklch(81% 0.016 80);
+  --fg:        oklch(23% 0.014 70);
+  --fg-2:      oklch(41% 0.012 72);
+  --muted:     oklch(54% 0.01 76);
+  --muted-2:   oklch(66% 0.008 80);
+  --accent:    oklch(28% 0.02 74);
+  --accent-2:  oklch(40% 0.02 74);
+  --on-accent: oklch(98.5% 0.007 85);
+  --accent-soft: oklch(28% 0.02 74 / 0.06);
+  --accent-line: oklch(28% 0.02 74 / 0.18);
+  --ok:        oklch(50% 0.1 150);
+  --warn:      oklch(60% 0.11 70);
+  --danger:    oklch(52% 0.16 25);
+  --glow:      oklch(28% 0.02 74 / 0.04);
+  --shadow:    0 20px 50px -28px oklch(30% 0.02 75 / 0.15);
+  --shadow-sm: 0 2px 10px -6px oklch(30% 0.02 75 / 0.09);
+  --grid-line: oklch(90% 0.012 82 / 0.8);
+  color-scheme: light;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --font-ui: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-num: ui-monospace, "Cascadia Code", "JetBrains Mono", "SF Mono", Consolas, monospace;
+  --r: 10px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html, body { height: 100%; }
+body {
+  font-family: var(--font-ui);
+  background: var(--bg);
+  color: var(--fg);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.5s var(--ease), color 0.5s var(--ease);
+}
+.num { font-family: var(--font-num); font-feature-settings: "tnum" 1; letter-spacing: -0.02em; }
+
+/* 全窗背景 —— 纯净底色，无灰雾 */
+.app {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column;
+  background: var(--bg);
+}
+
+/* ═══ 标题栏 ═══ */
+.titlebar {
+  height: 44px; flex-shrink: 0;
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 10px 0 14px;
+  border-bottom: 1px solid var(--hair);
+  background: var(--bg-2);
+}
+.brand { display: flex; align-items: center; gap: 9px; }
+.brand__mark {
+  width: 26px; height: 26px; border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  display: grid; place-items: center;
+  box-shadow: 0 0 18px -2px var(--glow);
+  position: relative; overflow: hidden;
+}
+.brand__mark svg { position: relative; z-index: 1; }
+.brand__name { font-weight: 700; font-size: 14px; letter-spacing: -0.01em; white-space: nowrap; }
+.brand__tag {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+  color: var(--accent); padding: 2px 6px; border-radius: 5px;
+  background: var(--accent-soft); text-transform: uppercase;
+}
+.tb-spacer { flex: 1; }
+.tb-search {
+  display: flex; align-items: center; gap: 8px;
+  height: 30px; padding: 0 10px 0 12px; min-width: 300px;
+  border: 1px solid var(--hair); border-radius: 8px;
+  background: color-mix(in oklch, var(--panel) 60%, transparent);
+  color: var(--muted); font-size: 12.5px; cursor: pointer;
+  transition: all 0.2s var(--ease);
+}
+.tb-search:hover { border-color: var(--accent-line); color: var(--fg-2); }
+.tb-search kbd {
+  margin-left: auto; font-family: var(--font-num); font-size: 10px;
+  padding: 2px 6px; border-radius: 5px; background: var(--panel-2);
+  border: 1px solid var(--hair); color: var(--muted);
+}
+.tb-btn {
+  width: 30px; height: 30px; border-radius: 8px; border: none;
+  background: transparent; color: var(--muted); cursor: pointer;
+  display: grid; place-items: center; transition: all 0.15s var(--ease);
+}
+.tb-btn:hover { background: var(--panel-2); color: var(--fg); }
+.win-ctl { display: flex; margin-left: 4px; }
+.win-ctl button {
+  width: 40px; height: 30px; border: none; background: transparent;
+  color: var(--muted); cursor: pointer; display: grid; place-items: center;
+  border-radius: 7px; transition: all 0.15s var(--ease);
+}
+.win-ctl button:hover { background: var(--panel-2); color: var(--fg); }
+.win-ctl button.close:hover { background: var(--danger); color: oklch(98% 0.01 250); }
+
+/* ═══ 主体 ═══ */
+.body { flex: 1; display: flex; overflow: hidden; }
+
+/* ═══ 侧边栏 —— 指挥中心 ═══ */
+.sidebar {
+  width: 244px; flex-shrink: 0;
+  display: flex; flex-direction: column;
+  border-right: 1px solid var(--hair);
+  background: color-mix(in oklch, var(--bg-2) 50%, transparent);
+  padding: 10px 10px 0;
+}
+.nav-group { margin-bottom: 4px; }
+.nav-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
+  color: var(--muted-2); text-transform: uppercase;
+  padding: 12px 10px 6px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 8px 10px; border-radius: 9px; cursor: pointer;
+  color: var(--fg-2); font-size: 13px; font-weight: 500;
+  position: relative; transition: all 0.18s var(--ease);
+  border: 1px solid transparent;
+}
+.nav-item svg { width: 17px; height: 17px; flex-shrink: 0; opacity: 0.8; }
+.nav-item:hover { background: var(--panel); color: var(--fg); }
+.nav-item.active {
+  background: linear-gradient(100deg, var(--accent-soft), transparent 90%);
+  color: var(--fg); border-color: var(--accent-line);
+}
+.nav-item.active svg { opacity: 1; color: var(--accent); }
+/* 选中态用背景染色 + 图标高亮表达，不用彩色侧边竖条（No Side-Stripe Rule） */
+.nav-badge {
+  margin-left: auto; font-family: var(--font-num); font-size: 10.5px;
+  padding: 1px 6px; border-radius: 20px; background: var(--panel-2);
+  color: var(--muted); font-weight: 600;
+}
+.nav-item.active .nav-badge { background: var(--accent-soft); color: var(--accent); }
+
+.side-user {
+  margin-top: auto; margin-inline: -10px;
+  padding: 10px 14px; border-top: 1px solid var(--hair);
+  display: flex; align-items: center; gap: 10px;
+  background: color-mix(in oklch, var(--bg-2) 40%, transparent);
+}
+.avatar {
+  width: 32px; height: 32px; border-radius: 10px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  display: grid; place-items: center; color: var(--on-accent); font-weight: 700; font-size: 13px;
+}
+.side-user .meta { min-width: 0; }
+.side-user .name { font-size: 13px; font-weight: 600; }
+.side-user .role { font-size: 11px; color: var(--muted); }
+
+/* ═══ 内容区 ═══ */
+.main { flex: 1; overflow-y: auto; position: relative; }
+.main::-webkit-scrollbar { width: 10px; }
+.main::-webkit-scrollbar-thumb { background: var(--hair-strong); border-radius: 10px; border: 3px solid transparent; background-clip: padding-box; }
+.page { display: none; }
+.page.active { display: block; animation: pageIn 0.4s var(--ease); }
+@keyframes pageIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* ═══ 状态栏 ═══ */
+.statusbar {
+  height: 26px; flex-shrink: 0;
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 12px; font-size: 11px; color: var(--muted);
+  border-top: 1px solid var(--hair);
+  background: color-mix(in oklch, var(--bg-2) 60%, transparent);
+}
+.sb-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 8px 0 var(--ok); }
+.sb-sep { opacity: 0.4; }
+.sb-spacer { flex: 1; }
+.sb-item { display: flex; align-items: center; gap: 5px; cursor: pointer; transition: color 0.15s; }
+.sb-item:hover { color: var(--fg-2); }
+.sb-num { font-family: var(--font-num); color: var(--accent); }
+
+/* ═══ 通用组件 ═══ */
+.wrap { max-width: 1180px; margin: 0 auto; padding: 26px 30px 40px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 34px; padding: 0 15px; border-radius: 9px; border: 1px solid transparent;
+  font-family: var(--font-ui); font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: all 0.18s var(--ease);
+}
+.btn svg { width: 15px; height: 15px; }
+.btn-primary { background: var(--accent); color: var(--on-accent); box-shadow: 0 6px 20px -8px var(--glow); }
+.btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); box-shadow: 0 10px 26px -8px var(--glow); }
+.btn-ghost { background: var(--panel); color: var(--fg-2); border-color: var(--hair); }
+.btn-ghost:hover { background: var(--panel-2); color: var(--fg); border-color: var(--hair-strong); }
+
+.eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; color: var(--accent); text-transform: uppercase; }
+.h1 { font-size: 25px; font-weight: 750; letter-spacing: -0.02em; margin: 4px 0 2px; }
+.sub { font-size: 13.5px; color: var(--muted); }
+.page-head { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 22px; }
+
+/* KPI —— 精密仪表，等宽数字 */
+.kpi-row { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+.kpi-row .kpi:first-child { background: linear-gradient(150deg, var(--accent-soft), transparent 72%), var(--card); border-color: var(--accent-line); }
+.kpi-row .kpi:first-child .val { font-size: 36px; }
+.kpi {
+  padding: 16px 18px; border-radius: var(--r-lg);
+  background: var(--card); border: 1px solid var(--hair);
+  position: relative; overflow: hidden; transition: all 0.25s var(--ease);
+}
+.kpi:hover { border-color: var(--accent-line); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+.kpi::after {
+  content: ""; position: absolute; inset: 0; opacity: 0;
+  background: radial-gradient(400px 120px at 100% 0, var(--accent-soft), transparent 70%);
+  transition: opacity 0.3s; pointer-events: none;
+}
+.kpi:hover::after { opacity: 1; }
+.kpi .lab { font-size: 11.5px; color: var(--muted); display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+.kpi .lab svg { width: 14px; height: 14px; color: var(--accent); }
+.kpi .val { font-size: 28px; font-weight: 700; letter-spacing: -0.03em; }
+.kpi .val .unit { font-size: 14px; color: var(--muted); font-weight: 600; margin-left: 3px; }
+.kpi .delta { font-size: 11.5px; margin-top: 6px; display: flex; align-items: center; gap: 5px; }
+.kpi .up { color: var(--ok); } .kpi .down { color: var(--danger); }
+.spark { position: absolute; right: 14px; bottom: 12px; width: 64px; height: 26px; opacity: 0.7; }
+
+.card {
+  background: var(--card); border: 1px solid var(--hair); border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.card-h { padding: 15px 18px; border-bottom: 1px solid var(--hair); display: flex; align-items: center; justify-content: space-between; }
+.card-h .t { font-size: 14px; font-weight: 650; display: flex; align-items: center; gap: 8px; }
+.card-h .t svg { width: 16px; height: 16px; color: var(--accent); }
+.card-b { padding: 18px; }
+.grid-2 { display: grid; grid-template-columns: 1.5fr 1fr; gap: 16px; }
+
+/* 数据表格 */
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tbl th { text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: var(--muted); text-transform: uppercase; padding: 0 14px 10px; }
+.tbl td { padding: 12px 14px; border-top: 1px solid var(--hair); }
+.tbl tbody tr { transition: background 0.15s; }
+.tbl tbody tr:hover { background: var(--accent-soft); }
+.pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; }
+.pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.pill.ok { color: var(--ok); background: color-mix(in oklch, var(--ok) 14%, transparent); }
+.pill.warn { color: var(--warn); background: color-mix(in oklch, var(--warn) 15%, transparent); }
+.pill.dan { color: var(--danger); background: color-mix(in oklch, var(--danger) 15%, transparent); }
+.mono-money { font-family: var(--font-num); font-weight: 600; letter-spacing: -0.02em; }
+
+/* 洞察流 —— AI 主动提醒 */
+.insights { display: flex; gap: 12px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 4px; }
+.insight {
+  flex: 1; min-width: 220px; padding: 14px 16px; border-radius: var(--r-lg);
+  background: linear-gradient(150deg, var(--accent-soft), transparent 80%), var(--card);
+  border: 1px solid var(--accent-line); position: relative;
+}
+.insight .ai-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: var(--accent); display: flex; align-items: center; gap: 5px; margin-bottom: 8px; }
+.insight .ai-tag svg { width: 12px; height: 12px; }
+.insight .txt { font-size: 13px; line-height: 1.5; color: var(--fg-2); }
+.insight .txt b { color: var(--fg); font-weight: 650; }
+.insight .act { margin-top: 10px; font-size: 12px; font-weight: 600; color: var(--accent); cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+
+/* ═══ 图表（纯 SVG/CSS） ═══ */
+.chart-area { width: 100%; height: 180px; }
+.donut-wrap { display: flex; align-items: center; gap: 20px; }
+.donut { position: relative; width: 132px; height: 132px; flex-shrink: 0; }
+.donut .center { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+.donut .center .big { font-family: var(--font-num); font-size: 22px; font-weight: 700; }
+.donut .center .sml { font-size: 10px; color: var(--muted); }
+.legend { display: flex; flex-direction: column; gap: 9px; font-size: 12.5px; flex: 1; min-width: 0; }
+.legend .row { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.legend .sw { width: 9px; height: 9px; border-radius: 3px; }
+.legend .row .v { margin-left: auto; font-family: var(--font-num); color: var(--fg-2); }
+
+/* ═══ AI 主页 ═══ */
+.ai-home { max-width: 860px; margin: 0 auto; padding: 20px 30px 40px; display: flex; flex-direction: column; min-height: 100%; }
+.ai-hero { text-align: center; padding: 30px 0 14px; }
+.ai-greet { font-size: 27px; font-weight: 750; letter-spacing: -0.02em; }
+.ai-greet .accent { color: var(--accent); }
+.ai-hint { font-size: 14px; color: var(--muted); margin-top: 8px; }
+
+/* 助手能量球 —— 跟随鼠标 + 环境态（公仔 IP 的 Phase 1） */
+.orb-stage { display: grid; place-items: center; padding: 8px 0 20px; }
+.orb { width: 108px; height: 108px; position: relative; cursor: pointer; }
+.orb .halo { display: none; }
+@keyframes breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.02); } }
+.orb .core {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: var(--panel-2);
+  border: 1px solid var(--hair-strong);
+  box-shadow: inset 0 -6px 16px -8px oklch(0% 0 0 / 0.22), var(--shadow-sm);
+  overflow: hidden; animation: breathe 5s var(--ease) infinite;
+}
+.orb .ring { display: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.orb .eyes { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 16px; }
+.orb .eye { width: 14px; height: 14px; border-radius: 50%; background: var(--fg); position: relative; transition: transform 0.12s ease-out; }
+.orb .eye::after { content: ""; position: absolute; width: 4px; height: 4px; border-radius: 50%; background: var(--card); top: 3px; right: 3px; opacity: 0.7; }
+.orb.thinking .core { animation: think 1.4s ease-in-out infinite; }
+@keyframes think { 0%,100% { opacity: 1; } 50% { opacity: 0.72; } }
+
+/* 对话输入 */
+.composer {
+  margin-top: 4px; border: 1px solid var(--hair); border-radius: var(--r-xl);
+  background: var(--card);
+  padding: 6px 6px 6px 18px;
+  display: flex; align-items: center; gap: 10px; transition: all 0.2s var(--ease);
+  box-shadow: var(--shadow-sm);
+}
+.composer:focus-within { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft), var(--shadow-sm); }
+.composer input { flex: 1; background: none; border: none; outline: none; color: var(--fg); font-family: var(--font-ui); font-size: 14.5px; }
+.composer input::placeholder { color: var(--muted-2); }
+.composer .send { width: 40px; height: 40px; border-radius: 14px; border: none; background: var(--accent); color: var(--on-accent); cursor: pointer; display: grid; place-items: center; transition: all 0.18s var(--ease); }
+.composer .send:hover { filter: brightness(1.1); transform: scale(1.05); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 16px; }
+.chip {
+  font-size: 12.5px; padding: 8px 13px; border-radius: 20px; cursor: pointer;
+  background: var(--panel); border: 1px solid var(--hair); color: var(--fg-2);
+  transition: all 0.18s var(--ease); display: flex; align-items: center; gap: 6px;
+}
+.chip svg { width: 13px; height: 13px; color: var(--accent); }
+.chip:hover { border-color: var(--accent-line); color: var(--fg); transform: translateY(-1px); }
+
+/* 对话流 */
+.thread { display: flex; flex-direction: column; gap: 16px; padding: 10px 0 20px; }
+.msg { display: flex; gap: 12px; max-width: 100%; }
+.msg.user { flex-direction: row-reverse; }
+.msg .bubble { padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.6; max-width: 78%; }
+.msg.user .bubble { background: var(--accent); color: var(--on-accent); border-bottom-right-radius: 5px; font-weight: 500; }
+.msg.ai .bubble { background: var(--card); border: 1px solid var(--hair); border-bottom-left-radius: 5px; }
+.msg .mini-orb { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; background: var(--panel-2); border: 1px solid var(--hair-strong); }
+.tool-run { font-size: 12px; color: var(--accent); display: flex; align-items: center; gap: 7px; padding: 6px 0; }
+.tool-run .d { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: think 1s infinite; }
+
+/* ═══ 命令面板 ═══ */
+.cmdk-mask { position: fixed; inset: 0; z-index: 100; display: none; background: oklch(10% 0.02 250 / 0.5); backdrop-filter: blur(4px); }
+.cmdk-mask.open { display: block; animation: fade 0.2s; }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+.cmdk {
+  position: absolute; top: 16%; left: 50%; transform: translateX(-50%);
+  width: min(600px, 92vw); border-radius: var(--r-lg);
+  background: color-mix(in oklch, var(--panel) 92%, transparent);
+  backdrop-filter: blur(30px); border: 1px solid var(--hair-strong);
+  box-shadow: var(--shadow); overflow: hidden; animation: cmdkIn 0.28s var(--ease);
+}
+@keyframes cmdkIn { from { opacity: 0; transform: translateX(-50%) translateY(-12px) scale(0.98); } to { opacity: 1; transform: translateX(-50%); } }
+.cmdk-in { display: flex; align-items: center; gap: 11px; padding: 16px 18px; border-bottom: 1px solid var(--hair); }
+.cmdk-in svg { width: 19px; height: 19px; color: var(--accent); }
+.cmdk-in input { flex: 1; background: none; border: none; outline: none; color: var(--fg); font-size: 15.5px; font-family: var(--font-ui); }
+.cmdk-in input::placeholder { color: var(--muted-2); }
+.cmdk-list { max-height: 340px; overflow-y: auto; padding: 8px; }
+.cmdk-sec { font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; color: var(--muted-2); text-transform: uppercase; padding: 10px 12px 6px; }
+.cmdk-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 9px; cursor: pointer; font-size: 13.5px; color: var(--fg-2); }
+.cmdk-item svg { width: 16px; height: 16px; opacity: 0.7; }
+.cmdk-item.sel, .cmdk-item:hover { background: var(--accent-soft); color: var(--fg); }
+.cmdk-item.sel svg { color: var(--accent); opacity: 1; }
+.cmdk-item .k { margin-left: auto; font-family: var(--font-num); font-size: 10.5px; color: var(--muted-2); }
+.cmdk-item .ai-ico { color: var(--accent); opacity: 1; }
+
+/* 主题切换胶囊 + 悬浮提示 */
+.theme-sw { display: flex; gap: 3px; padding: 3px; border-radius: 9px; background: var(--panel-2); border: 1px solid var(--hair); }
+.theme-sw button { border: none; background: none; color: var(--muted); font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 6px; cursor: pointer; transition: all 0.15s; font-family: var(--font-ui); }
+.theme-sw button.on { background: var(--accent); color: var(--on-accent); }
+.floating-note { position: fixed; bottom: 38px; left: 50%; transform: translateX(-50%); z-index: 60; font-size: 12px; color: var(--muted); background: color-mix(in oklch, var(--panel) 85%, transparent); backdrop-filter: blur(12px); border: 1px solid var(--hair); padding: 8px 16px; border-radius: 20px; box-shadow: var(--shadow-sm); }
+.floating-note b { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- ═══ 标题栏 ═══ -->
+  <div class="titlebar">
+    <div class="brand">
+      <div class="brand__mark">
+        <svg width="15" height="15" viewBox="0 0 18 18" fill="none"><path d="M2 15.5 L9 2.5 L16 15.5 Z" fill="var(--on-accent)"/><path d="M6 15.5 L9 9 L12 15.5 Z" fill="var(--on-accent)" opacity="0.35"/></svg>
+      </div>
+      <span class="brand__name">工程管家</span>
+      <span class="brand__tag">Bedrock</span>
+    </div>
+    <div class="tb-spacer"></div>
+    <div class="tb-search" onclick="openCmdk()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <span>搜索、执行操作或直接问 AI…</span>
+      <kbd>⌘K</kbd>
+    </div>
+    <div class="tb-spacer"></div>
+    <div class="theme-sw" id="themeSw">
+      <button data-t="paper" class="on">纸 Paper</button>
+      <button data-t="snow">白 Snow</button>
+      <button data-t="graphite">墨 Graphite</button>
+    </div>
+    <div class="win-ctl">
+      <button aria-label="min"><svg width="11" height="11" viewBox="0 0 11 11"><rect x="1" y="5" width="9" height="1" rx="0.5" fill="currentColor"/></svg></button>
+      <button aria-label="max"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.1"><rect x="1.5" y="1.5" width="8" height="8" rx="1.5"/></svg></button>
+      <button class="close" aria-label="close"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><line x1="2" y1="2" x2="9" y2="9"/><line x1="9" y1="2" x2="2" y2="9"/></svg></button>
+    </div>
+  </div>
+
+  <div class="body">
+    <!-- ═══ 侧边栏 ═══ -->
+    <aside class="sidebar">
+      <div class="nav-label">工作台</div>
+      <div class="nav-item active" data-page="ai" onclick="go('ai',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.9 2.6 8.5 6 5 7.4 8.5 8.8 9.9 12.3 11.3 8.8 14.8 7.4 11.3 6Z"/><path d="M18 10l-.9 2.2L15 13l2.1.8.9 2.2.9-2.2 2.1-.8-2.1-.8Z"/></svg>
+        AI 管家
+      </div>
+      <div class="nav-item" data-page="cockpit" onclick="go('cockpit',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+        项目驾驶舱
+      </div>
+      <div class="nav-label">业务</div>
+      <div class="nav-item" onclick="go('cockpit',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V6a2 2 0 0 1 2-2h6l2 2h4a2 2 0 0 1 2 2v2"/><path d="M2 12h20l-2 8H4Z"/></svg>
+        项目管理 <span class="nav-badge">18</span>
+      </div>
+      <div class="nav-item" onclick="go('cockpit',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg>
+        合同管理 <span class="nav-badge">7</span>
+      </div>
+      <div class="nav-item" onclick="go('cockpit',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>
+        发票管理 <span class="nav-badge">32</span>
+      </div>
+      <div class="nav-item" onclick="go('cockpit',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.3 9 5.2v9L12 21l-9-5.2v-9Z"/><path d="M3 7.5 12 12l9-4.5M12 21v-9"/></svg>
+        仓库管理
+      </div>
+      <div class="nav-label">资产</div>
+      <div class="nav-item" onclick="go('cockpit',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>
+        语音知识库 <span class="nav-badge">AI</span>
+      </div>
+      <div class="side-user">
+        <div class="avatar">陈</div>
+        <div class="meta"><div class="name">陈工</div><div class="role">项目经理</div></div>
+      </div>
+    </aside>
+
+    <!-- ═══ 内容区 ═══ -->
+    <main class="main">
+      <!-- ── AI 管家主页 ── -->
+      <section class="page active" id="page-ai">
+        <div class="ai-home">
+          <div class="ai-hero">
+            <div class="orb-stage"><div class="orb" id="orb">
+              <div class="halo"></div><div class="ring"></div>
+              <div class="core"></div>
+              <div class="eyes"><div class="eye" id="eyeL"></div><div class="eye" id="eyeR"></div></div>
+            </div></div>
+            <div class="ai-greet">下午好，陈工。<span class="accent">今天想先看什么？</span></div>
+            <div class="ai-hint">我已经帮你盯着 18 个项目的资金、合同和进度。</div>
+          </div>
+          <div class="composer">
+            <input placeholder="问我任何事，比如“哪些项目本月有超支风险？”" onkeydown="if(event.key==='Enter')ask(this.value)" />
+            <button class="send" onclick="ask()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+          </div>
+          <div class="chips">
+            <div class="chip" onclick="ask('本月哪些项目有超支风险？')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>超支风险扫描</div>
+            <div class="chip" onclick="ask('列出逾期未回款的发票')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>逾期回款</div>
+            <div class="chip" onclick="ask('生成本周项目进度周报')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg>生成周报</div>
+            <div class="chip" onclick="ask('把这段录音转成文字并入库')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 19v3"/></svg>语音转写</div>
+          </div>
+          <div class="thread" id="thread"></div>
+        </div>
+      </section>
+
+      <!-- ── 项目驾驶舱 ── -->
+      <section class="page" id="page-cockpit">
+        <div class="wrap">
+          <div class="page-head">
+            <div>
+              <div class="eyebrow">项目驾驶舱</div>
+              <div class="h1">投资组合概览</div>
+              <div class="sub">18 个项目 · 实时资金流与健康度</div>
+            </div>
+            <div style="display:flex;gap:10px">
+              <button class="btn btn-ghost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"/></svg>导出</button>
+              <button class="btn btn-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>新建项目</button>
+            </div>
+          </div>
+
+          <div class="insights">
+            <div class="insight">
+              <div class="ai-tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.9 2.6 8.5 6 5 7.4 8.5 8.8 9.9 12.3 11.3 8.8 14.8 7.4 11.3 6Z"/></svg>AI 洞察</div>
+              <div class="txt"><b>滨江综合体</b> 预算使用率 92%，按当前速度预计 <b>17 天后超支</b>。</div>
+              <div class="act">查看成本明细 →</div>
+            </div>
+            <div class="insight">
+              <div class="ai-tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.9 2.6 8.5 6 5 7.4 8.5 8.8 9.9 12.3 11.3 8.8 14.8 7.4 11.3 6Z"/></svg>AI 洞察</div>
+              <div class="txt">有 <b>3 张发票</b>共 <b class="num">¥1,284,000</b> 已逾期回款超 30 天。</div>
+              <div class="act">一键催收 →</div>
+            </div>
+            <div class="insight">
+              <div class="ai-tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.9 2.6 8.5 6 5 7.4 8.5 8.8 9.9 12.3 11.3 8.8 14.8 7.4 11.3 6Z"/></svg>AI 洞察</div>
+              <div class="txt">本月整体收款率 <b>68%</b>，较上月 <b class="up" style="color:var(--ok)">↑ 12%</b>，资金回笼加速。</div>
+              <div class="act">查看资金流 →</div>
+            </div>
+          </div>
+
+          <div class="kpi-row">
+            <div class="kpi"><div class="lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V6a2 2 0 0 1 2-2h6l2 2h4a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2Z"/></svg>在建项目</div><div class="val num">12</div><div class="delta up">↑ 2 较上月</div><svg class="spark" viewBox="0 0 64 26" preserveAspectRatio="none"><polyline points="0,20 12,16 24,18 36,10 48,12 64,4" fill="none" stroke="var(--accent)" stroke-width="2"/></svg></div>
+            <div class="kpi"><div class="lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>合同总额</div><div class="val num">4,820<span class="unit">万</span></div><div class="delta up">↑ 8.4%</div><svg class="spark" viewBox="0 0 64 26" preserveAspectRatio="none"><polyline points="0,22 12,18 24,14 36,15 48,8 64,6" fill="none" stroke="var(--accent)" stroke-width="2"/></svg></div>
+            <div class="kpi"><div class="lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>待回款</div><div class="val num">1,284<span class="unit">万</span></div><div class="delta down">↓ 逾期 3 张</div><svg class="spark" viewBox="0 0 64 26" preserveAspectRatio="none"><polyline points="0,6 12,10 24,8 36,14 48,16 64,20" fill="none" stroke="var(--danger)" stroke-width="2"/></svg></div>
+            <div class="kpi"><div class="lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12A10 10 0 1 1 12 2"/><path d="M22 2 12 12"/></svg>组合健康度</div><div class="val num">86<span class="unit">分</span></div><div class="delta up">↑ 良好</div><svg class="spark" viewBox="0 0 64 26" preserveAspectRatio="none"><polyline points="0,18 12,14 24,15 36,9 48,10 64,5" fill="none" stroke="var(--ok)" stroke-width="2"/></svg></div>
+          </div>
+
+          <div class="grid-2">
+            <div class="card">
+              <div class="card-h"><div class="t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>成本 vs 回款趋势</div><span class="sub num">近 6 个月</span></div>
+              <div class="card-b">
+                <svg class="chart-area" viewBox="0 0 600 180" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="gArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent)" stop-opacity="0.35"/><stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/></linearGradient>
+                  </defs>
+                  <line x1="0" y1="45" x2="600" y2="45" stroke="var(--grid-line)"/><line x1="0" y1="90" x2="600" y2="90" stroke="var(--grid-line)"/><line x1="0" y1="135" x2="600" y2="135" stroke="var(--grid-line)"/>
+                  <path d="M0,140 L120,120 L240,128 L360,80 L480,92 L600,50 L600,180 L0,180 Z" fill="url(#gArea)"/>
+                  <path d="M0,140 L120,120 L240,128 L360,80 L480,92 L600,50" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+                  <path d="M0,150 L120,145 L240,120 L360,130 L480,95 L600,88" fill="none" stroke="var(--muted)" stroke-width="2" stroke-dasharray="5 5" opacity="0.7"/>
+                </svg>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-h"><div class="t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.2 15.9A10 10 0 1 1 8.1 2.8"/><path d="M22 12A10 10 0 0 0 12 2v10Z"/></svg>发票状态</div></div>
+              <div class="card-b"><div class="donut-wrap">
+                <div class="donut">
+                  <svg width="132" height="132" viewBox="0 0 42 42">
+                    <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--panel-2)" stroke-width="5"/>
+                    <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--ok)" stroke-width="5" stroke-dasharray="52 48" stroke-dashoffset="25" stroke-linecap="round"/>
+                    <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--warn)" stroke-width="5" stroke-dasharray="28 72" stroke-dashoffset="-27" stroke-linecap="round"/>
+                    <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--danger)" stroke-width="5" stroke-dasharray="20 80" stroke-dashoffset="-55" stroke-linecap="round"/>
+                  </svg>
+                  <div class="center"><div><div class="big">32</div><div class="sml">张发票</div></div></div>
+                </div>
+                <div class="legend">
+                  <div class="row"><span class="sw" style="background:var(--ok)"></span>已回款<span class="v">17</span></div>
+                  <div class="row"><span class="sw" style="background:var(--warn)"></span>部分回款<span class="v">9</span></div>
+                  <div class="row"><span class="sw" style="background:var(--danger)"></span>逾期<span class="v">3</span></div>
+                  <div class="row"><span class="sw" style="background:var(--panel-2)"></span>已开票<span class="v">3</span></div>
+                </div>
+              </div></div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:16px">
+            <div class="card-h"><div class="t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg>近期合同</div><span class="sub">7 份</span></div>
+            <div class="card-b" style="padding:8px 4px 4px">
+              <table class="tbl">
+                <thead><tr><th>项目 / 合同</th><th>对方单位</th><th>金额</th><th>进度</th><th>状态</th></tr></thead>
+                <tbody>
+                  <tr><td>滨江综合体 · 总包</td><td>中建八局</td><td class="mono-money">¥28,500,000</td><td class="num">72%</td><td><span class="pill ok">履约中</span></td></tr>
+                  <tr><td>科技园 A 座 · 幕墙</td><td>远大幕墙</td><td class="mono-money">¥6,120,000</td><td class="num">45%</td><td><span class="pill warn">待付款</span></td></tr>
+                  <tr><td>地铁 3 号线 · 机电</td><td>南方电气</td><td class="mono-money">¥12,840,000</td><td class="num">30%</td><td><span class="pill dan">逾期回款</span></td></tr>
+                  <tr><td>人才公寓 · 精装</td><td>金螳螂</td><td class="mono-money">¥9,360,000</td><td class="num">88%</td><td><span class="pill ok">履约中</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ═══ 状态栏 ═══ -->
+  <div class="statusbar">
+    <span class="sb-dot"></span>
+    <span id="sbPage">AI 管家</span>
+    <span class="sb-sep">·</span>
+    <span>本地引擎 <span class="sb-num">Qwen3</span> 就绪</span>
+    <span class="sb-spacer"></span>
+    <span class="sb-item"><span class="sb-dot" style="background:var(--accent)"></span>模型 <span class="sb-num">GPT-5.6</span></span>
+    <span class="sb-sep">│</span>
+    <span class="sb-item">SQLite · <span class="sb-num">1.2 GB</span></span>
+    <span class="sb-sep">│</span>
+    <span class="sb-item">脱敏中</span>
+  </div>
+</div>
+
+<!-- ═══ 命令面板 ⌘K ═══ -->
+<div class="cmdk-mask" id="cmdkMask" onclick="if(event.target===this)closeCmdk()">
+  <div class="cmdk">
+    <div class="cmdk-in">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="cmdkInput" placeholder="搜索页面、执行操作，或直接问 AI…" oninput="filterCmdk(this.value)" autocomplete="off" />
+      <kbd style="font-family:var(--font-num);font-size:10px;color:var(--muted-2)">ESC</kbd>
+    </div>
+    <div class="cmdk-list" id="cmdkList">
+      <div class="cmdk-sec">导航</div>
+      <div class="cmdk-item sel" data-go="ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.9 2.6 8.5 6 5 7.4 8.5 8.8 9.9 12.3 11.3 8.8 14.8 7.4 11.3 6Z"/></svg>打开 AI 管家<span class="k">G A</span></div>
+      <div class="cmdk-item" data-go="cockpit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/></svg>打开项目驾驶舱<span class="k">G D</span></div>
+      <div class="cmdk-item" data-go="cockpit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1V2"/></svg>发票管理<span class="k">G V</span></div>
+      <div class="cmdk-sec">AI 操作</div>
+      <div class="cmdk-item" data-ask="本月哪些项目有超支风险？"><svg class="ai-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>扫描超支风险的项目</div>
+      <div class="cmdk-item" data-ask="列出逾期未回款的发票并生成催收清单"><svg class="ai-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>逾期回款催收清单</div>
+      <div class="cmdk-item" data-ask="生成本周项目进度周报"><svg class="ai-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/></svg>生成本周周报</div>
+      <div class="cmdk-sec">快捷</div>
+      <div class="cmdk-item" data-theme-cycle><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2"/></svg>切换主题方向</div>
+    </div>
+  </div>
+</div>
+
+<div class="floating-note">设计原型 · 按 <b>⌘K</b> 唤起命令面板 · 右上角切换<b>三套主题方向</b> · 移动鼠标看 AI 管家的<b>眼睛</b></div>
+
+<script>
+const html = document.documentElement;
+const THEMES = ['paper','snow','graphite'];
+
+// ── 主题切换 ──
+document.getElementById('themeSw').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  setTheme(b.dataset.t);
+});
+function setTheme(t){
+  html.setAttribute('data-theme', t);
+  document.querySelectorAll('#themeSw button').forEach(x => x.classList.toggle('on', x.dataset.t === t));
+}
+function cycleTheme(){
+  const cur = html.getAttribute('data-theme');
+  setTheme(THEMES[(THEMES.indexOf(cur)+1) % THEMES.length]);
+}
+
+// ── 页面导航 ──
+function go(page, el){
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const nav = el && el.classList.contains('nav-item') ? el : document.querySelector('.nav-item[data-page="'+page+'"]');
+  if (nav) nav.classList.add('active');
+  document.getElementById('sbPage').textContent = page === 'ai' ? 'AI 管家' : '项目驾驶舱';
+  document.querySelector('.main').scrollTop = 0;
+}
+
+// ── 命令面板 ──
+const mask = document.getElementById('cmdkMask');
+function openCmdk(){ mask.classList.add('open'); const i=document.getElementById('cmdkInput'); i.value=''; filterCmdk(''); setTimeout(()=>i.focus(),40); }
+function closeCmdk(){ mask.classList.remove('open'); }
+function filterCmdk(q){
+  q = q.trim().toLowerCase();
+  document.querySelectorAll('#cmdkList .cmdk-item').forEach(it => {
+    it.style.display = !q || it.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+document.getElementById('cmdkList').addEventListener('click', e => {
+  const it = e.target.closest('.cmdk-item'); if (!it) return;
+  closeCmdk();
+  if (it.dataset.go) go(it.dataset.go);
+  else if (it.hasAttribute('data-theme-cycle')) cycleTheme();
+  else if (it.dataset.ask) { go('ai'); setTimeout(()=>ask(it.dataset.ask), 200); }
+});
+window.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k'){ e.preventDefault(); mask.classList.contains('open') ? closeCmdk() : openCmdk(); }
+  if (e.key === 'Escape') closeCmdk();
+});
+
+// ── 能量球：眼睛跟随鼠标 ──
+const orb = document.getElementById('orb'), eyeL = document.getElementById('eyeL'), eyeR = document.getElementById('eyeR');
+window.addEventListener('mousemove', e => {
+  if (!orb || !document.getElementById('page-ai').classList.contains('active')) return;
+  const r = orb.getBoundingClientRect(), cx = r.left + r.width/2, cy = r.top + r.height/2;
+  const a = Math.atan2(e.clientY - cy, e.clientX - cx), d = Math.min(4, Math.hypot(e.clientX-cx, e.clientY-cy)/40);
+  const tx = Math.cos(a)*d, ty = Math.sin(a)*d;
+  if (eyeL) eyeL.style.transform = `translate(${tx}px,${ty}px)`;
+  if (eyeR) eyeR.style.transform = `translate(${tx}px,${ty}px)`;
+});
+
+// ── 模拟 AI 流式回答 ──
+let chatting = false;
+function startChat(){
+  if (chatting) return; chatting = true;
+  document.querySelector('.ai-hero').style.display = 'none';
+  document.querySelector('.chips').style.display = 'none';
+  const th = document.getElementById('thread'); th.style.flex = '1'; th.style.order = '1';
+  document.querySelector('.composer').style.order = '2';
+  document.querySelector('.ai-home').style.justifyContent = 'flex-end';
+}
+function esc(s){ return (s||'').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function scrollThread(){ const m = document.querySelector('.main'); m.scrollTop = m.scrollHeight; }
+function reply(q){
+  if (/超支|风险|预算/.test(q)) return '我扫描了全部 18 个在建项目，发现 2 个有超支风险：\n\n1. 滨江综合体：预算使用率 92%，按当前支出速度约 17 天后超支，主要来自钢材涨价。\n2. 地铁 3 号线机电：人工成本超计划 8%。\n\n建议优先复核滨江综合体的材料采购计划，需要我拉出成本明细吗？';
+  if (/逾期|回款|催收|发票/.test(q)) return '当前有 3 张发票逾期回款超过 30 天，合计 ¥1,284,000：\n\n· 中建八局 · ¥620,000（逾期 41 天）\n· 南方电气 · ¥438,000（逾期 33 天）\n· 远大幕墙 · ¥226,000（逾期 31 天）\n\n我可以按对方单位生成催收函草稿，并同步到成本台账。要现在生成吗？';
+  if (/周报|报告|汇报/.test(q)) return '本周项目组合概览：\n\n· 在建 12 个，本周新增 2 个\n· 合同新签 ¥820 万，回款率环比 ↑12%\n· 健康度 86 分（良好），1 项预算预警\n\n完整周报已生成，可导出为 Word 或直接发到项目群。';
+  return '好的，我来帮你处理。我可以查项目、合同、发票、成本、库存等业务数据，也能把语音转写后沉淀到知识库。你想让我先做哪一件？';
+}
+function typeText(el, text, done){
+  el.style.whiteSpace = 'pre-wrap'; el.textContent = '';
+  let i = 0;
+  const t = setInterval(() => {
+    el.textContent += text[i++]; scrollThread();
+    if (i >= text.length){ clearInterval(t); done && done(); }
+  }, 14);
+}
+function ask(text){
+  const input = document.querySelector('.composer input');
+  const val = (text != null ? text : (input ? input.value : '')).trim();
+  if (!val) return;
+  if (!document.getElementById('page-ai').classList.contains('active')) go('ai');
+  startChat();
+  const th = document.getElementById('thread');
+  th.insertAdjacentHTML('beforeend', `<div class="msg user"><div class="bubble">${esc(val)}</div></div>`);
+  if (input) input.value = '';
+  const id = 'm' + Date.now();
+  th.insertAdjacentHTML('beforeend', `<div class="msg ai"><div class="mini-orb"></div><div class="bubble" id="${id}"><div class="tool-run"><span class="d"></span>正在查询业务数据…</div></div></div>`);
+  orb && orb.classList.add('thinking'); scrollThread();
+  setTimeout(() => {
+    const el = document.getElementById(id);
+    typeText(el, reply(val), () => orb && orb.classList.remove('thinking'));
+  }, 1100);
+}
+</script>
+</body>
+</html>
+

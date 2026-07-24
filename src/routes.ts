@@ -33,6 +33,7 @@ export type PageId =
   | 'templates'
   | 'inventory'
   | 'invoices'
+  | 'knowledge'
   | 'settings'
   | 'users'
 
@@ -185,6 +186,13 @@ export const routes: RouteMeta[] = [
     shortcut: 'G G',
     description: '项目图纸上传与查看',
   },
+  {
+    id: 'knowledge',
+    label: '语音知识库',
+    icon: 'Library',
+    shortcut: 'G K',
+    description: '录音转写与历史沟通检索',
+  },
   
   // ─────────────────────────────────────────────────────────────────────────────
   // 系统模块
@@ -246,6 +254,7 @@ const SIDEBAR_RESOURCE_MAP: Record<string, string> = {
   expenses: 'expenses',
   costLedger: 'costLedger',
   drawings: 'drawings',
+  knowledge: 'knowledge',
   settings: 'settings',
   users: 'users',
 }

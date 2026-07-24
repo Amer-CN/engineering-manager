@@ -20,4 +20,22 @@ if (xml.includes('<Version>')) {
 fs.writeFileSync(csproj, xml)
 console.log(`[sync-version] 已写入 .csproj <Version> → ${v}`)
 
-console.log(`[sync-version] 完成：版本号 ${v} 已同步至 2 个位置`)
+// 3) installer/package.json
+const installerPkg = 'installer/package.json'
+if (fs.existsSync(installerPkg)) {
+  const pkg = JSON.parse(fs.readFileSync(installerPkg, 'utf-8'))
+  pkg.version = v
+  fs.writeFileSync(installerPkg, JSON.stringify(pkg, null, 2) + '\n')
+  console.log(`[sync-version] 已写入 installer/package.json → ${v}`)
+}
+
+// 4) installer/src/App.tsx — version prop
+const installerApp = 'installer/src/App.tsx'
+if (fs.existsSync(installerApp)) {
+  let content = fs.readFileSync(installerApp, 'utf-8')
+  content = content.replace(/version="[\d.]+"/, `version="${v}"`)
+  fs.writeFileSync(installerApp, content)
+  console.log(`[sync-version] 已写入 installer/src/App.tsx → ${v}`)
+}
+
+console.log(`[sync-version] 完成：版本号 ${v} 已同步至所有位置`)

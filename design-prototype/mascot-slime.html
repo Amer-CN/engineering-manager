@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI 管家 · 史莱姆公仔原型</title>
+<style>
+  :root { --ease: cubic-bezier(0.16,1,0.3,1); }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body{height:100%;}
+  body{
+    font-family:"Inter","Noto Sans SC","PingFang SC",sans-serif;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:26px; min-height:100vh; transition:background .4s var(--ease), color .4s var(--ease);
+  }
+  /* 两套中性底：纸 / 墨 */
+  body[data-bg="paper"]{
+    background: oklch(98.6% 0.009 85); color: oklch(30% .012 72);
+    --hi: oklch(90% 0.008 82); --lo: oklch(79% 0.012 80); --edge: oklch(64% 0.02 78);
+    --toplite: oklch(96% 0.006 85 / .8);
+    --sclera: oklch(99% .004 85); --pupil: oklch(26% .02 72); --spark: oklch(99% .004 85);
+    --shadow: oklch(60% .02 78 / .22); --muted: oklch(56% .01 76);
+  }
+  body[data-bg="graphite"]{
+    background: oklch(20.5% .003 75); color: oklch(86% .003 80);
+    --hi: oklch(54% 0.008 260); --lo: oklch(40% 0.01 262); --edge: oklch(66% 0.012 260);
+    --toplite: oklch(64% 0.01 260 / .55);
+    --sclera: oklch(94% .004 250); --pupil: oklch(15% .01 262); --spark: oklch(96% .004 250);
+    --shadow: oklch(0% 0 0 / .38); --muted: oklch(60% .008 258);
+  }
+
+  .stage{ display:flex; align-items:flex-end; gap:44px; }
+  .slime{ width:260px; height:270px; overflow:visible; cursor:pointer; }
+  .slime.mini{ width:52px; height:54px; }
+  .mini-wrap{ display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .mini-wrap span{ font-size:11px; color:var(--muted); }
+
+  /* 呼吸：从底部像果冻一样轻微挤压 */
+  .breathG{ animation: breathe 3.6s var(--ease) infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+  @keyframes breathe{ 0%,100%{ transform: scale(1,1); } 50%{ transform: scale(1.035,0.965); } }
+
+  .eyesG{ transition: transform .3s var(--ease); transform-box: fill-box; transform-origin: 50% 50%; }
+  .eyesG.listening{ transform: scale(1.14); }
+  .pupilG{ transition: transform .12s ease-out; }
+
+  .blink{ animation: blink .16s var(--ease); transform-box: fill-box; transform-origin: 50% 50%; }
+  @keyframes blink{ 50%{ transform: scaleY(.08); } }
+
+  .happy, .dots{ opacity:0; transition:opacity .2s; }
+  .slime[data-state="success"] .happy{ opacity:1; }
+  .slime[data-state="success"] .eyeball{ opacity:0; }
+  .slime[data-state="thinking"] .dots{ opacity:1; }
+  .dots circle{ animation: dot 1.2s infinite; }
+  .dots circle:nth-child(2){ animation-delay:.2s; } .dots circle:nth-child(3){ animation-delay:.4s; }
+  @keyframes dot{ 0%,100%{ opacity:.25; transform:translateY(0);} 50%{ opacity:1; transform:translateY(-2px);} }
+
+  .controls{ display:flex; gap:8px; }
+  .controls button{
+    font:inherit; font-size:13px; padding:8px 15px; border-radius:10px; cursor:pointer;
+    background: var(--sclera); color: var(--pupil); border:1px solid var(--edge);
+    transition: all .15s var(--ease);
+  }
+  .controls button:hover{ transform:translateY(-1px); }
+  .controls button.on{ background: var(--pupil); color: var(--sclera); }
+  .bgtoggle{ position:fixed; top:18px; right:18px; display:flex; gap:4px; padding:4px; border:1px solid var(--edge); border-radius:10px; }
+  .bgtoggle button{ font:inherit; font-size:12px; padding:5px 12px; border:none; background:none; color:var(--muted); border-radius:7px; cursor:pointer; }
+  .bgtoggle button.on{ background:var(--pupil); color:var(--sclera); }
+  .caption{ font-size:13px; color:var(--muted); text-align:center; max-width:520px; line-height:1.6; }
+  .caption b{ color:inherit; }
+</style>
+</head>
+<body data-bg="paper">
+  <div class="bgtoggle">
+    <button data-set="paper" class="on">纸 Paper</button>
+    <button data-set="graphite">墨 Graphite</button>
+  </div>
+
+  <div class="stage">
+    <!-- 大号 hero -->
+    <svg class="slime" data-state="idle" viewBox="0 0 220 232" aria-label="AI 管家史莱姆">
+      <ellipse class="contact" cx="110" cy="200" rx="58" ry="11" fill="var(--shadow)"/>
+      <g class="leanG">
+        <g class="breathG">
+          <defs>
+            <radialGradient id="matte" cx="42%" cy="34%" r="72%">
+              <stop offset="0%" stop-color="var(--hi)"/>
+              <stop offset="100%" stop-color="var(--lo)"/>
+            </radialGradient>
+          </defs>
+          <path d="M110,46 C152,46 178,76 178,114 C178,152 162,184 130,192 C122,195 98,195 90,192 C58,184 42,152 42,114 C42,76 68,46 110,46 Z"
+                fill="url(#matte)" stroke="var(--edge)" stroke-width="1.5"/>
+          <ellipse cx="84" cy="72" rx="24" ry="12" fill="var(--toplite)" opacity="0.45"/>
+          <!-- 思考气泡 ··· -->
+          <g class="dots" fill="var(--muted)"><circle cx="150" cy="44" r="4"/><circle cx="163" cy="40" r="4"/><circle cx="176" cy="38" r="4"/></g>
+          <g class="eyesG">
+            <g class="blinkG">
+              <g class="eye">
+                <ellipse class="eyeball" cx="88" cy="116" rx="17" ry="21" fill="var(--sclera)"/>
+                <g class="pupilG eyeball"><circle cx="88" cy="118" r="10.5" fill="var(--pupil)"/><circle cx="91.5" cy="114" r="3.2" fill="var(--spark)"/></g>
+              </g>
+              <g class="eye">
+                <ellipse class="eyeball" cx="132" cy="116" rx="17" ry="21" fill="var(--sclera)"/>
+                <g class="pupilG eyeball"><circle cx="132" cy="118" r="10.5" fill="var(--pupil)"/><circle cx="135.5" cy="114" r="3.2" fill="var(--spark)"/></g>
+              </g>
+            </g>
+            <!-- 完成：弯眼微笑 -->
+            <path class="happy" d="M72,118 Q88,100 104,118" fill="none" stroke="var(--pupil)" stroke-width="6" stroke-linecap="round"/>
+            <path class="happy" d="M116,118 Q132,100 148,118" fill="none" stroke="var(--pupil)" stroke-width="6" stroke-linecap="round"/>
+          </g>
+        </g>
+      </g>
+    </svg>
+
+    <!-- 小尺寸验证（侧边栏/状态栏用） -->
+    <div class="mini-wrap">
+      <svg class="slime mini" data-state="idle" viewBox="0 0 220 232">
+        <ellipse class="contact" cx="110" cy="200" rx="58" ry="11" fill="var(--shadow)"/>
+        <g class="leanG"><g class="breathG">
+          <path d="M110,46 C152,46 178,76 178,114 C178,152 162,184 130,192 C122,195 98,195 90,192 C58,184 42,152 42,114 C42,76 68,46 110,46 Z" fill="url(#matte)" stroke="var(--edge)" stroke-width="1.5"/>
+          <g class="eyesG"><g class="blinkG">
+            <g class="eye"><ellipse class="eyeball" cx="88" cy="116" rx="17" ry="21" fill="var(--sclera)"/><g class="pupilG eyeball"><circle cx="88" cy="118" r="10.5" fill="var(--pupil)"/></g></g>
+            <g class="eye"><ellipse class="eyeball" cx="132" cy="116" rx="17" ry="21" fill="var(--sclera)"/><g class="pupilG eyeball"><circle cx="132" cy="118" r="10.5" fill="var(--pupil)"/></g></g>
+          </g></g>
+        </g></g>
+      </svg>
+      <span>48px 小尺寸</span>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button data-state="idle" class="on">待机</button>
+    <button data-state="thinking">思考</button>
+    <button data-state="listening">聆听</button>
+    <button data-state="success">完成</button>
+  </div>
+  <p class="caption">移动鼠标 —— 它的眼睛会看着你。这是<b>纯代码 SVG</b>，0 积分、颜色对齐设计 token、可随主题切换。<br/>这是<b>2D 交互分身</b>；确定造型后，同一只史莱姆可再交给 miora 出一版哑光 3D 大图。</p>
+
+<script>
+  const slimes = [...document.querySelectorAll('.slime')];
+
+  // 眼睛跟随鼠标 + 身体轻微侧倾
+  function track(cx, cy){
+    slimes.forEach(svg=>{
+      const st = svg.dataset.state;
+      if(st==='thinking' || st==='success') return;
+      const r = svg.getBoundingClientRect();
+      const ex = r.left + r.width/2, ey = r.top + r.height*0.52;
+      const ang = Math.atan2(cy-ey, cx-ex);
+      const d = Math.min(1, Math.hypot(cx-ex, cy-ey)/280);
+      const dx = Math.cos(ang)*7*d, dy = Math.sin(ang)*6*d;
+      svg.querySelectorAll('.pupilG').forEach(p=>p.setAttribute('transform',`translate(${dx.toFixed(1)},${dy.toFixed(1)})`));
+      svg.querySelector('.leanG').setAttribute('transform',`translate(${(dx*0.35).toFixed(1)},${(dy*0.25).toFixed(1)}) rotate(${(dx*0.16).toFixed(2)} 110 196)`);
+    });
+  }
+  window.addEventListener('mousemove', e=>track(e.clientX, e.clientY));
+
+  // 状态切换
+  function setState(s){
+    slimes.forEach(svg=>{
+      svg.dataset.state = s;
+      const eyes = svg.querySelector('.eyesG');
+      eyes.classList.toggle('listening', s==='listening');
+      if(s==='thinking'){
+        svg.querySelectorAll('.pupilG').forEach(p=>p.setAttribute('transform','translate(-4,-7)'));
+        svg.querySelector('.leanG').setAttribute('transform','rotate(-2 110 196)');
+      }
+    });
+    document.querySelectorAll('.controls button').forEach(b=>b.classList.toggle('on', b.dataset.state===s));
+  }
+  document.querySelectorAll('.controls button').forEach(b=> b.addEventListener('click', ()=>setState(b.dataset.state)) );
+
+  // 眨眼（成功态不眨）
+  function blink(){
+    slimes.forEach(svg=>{
+      if(svg.dataset.state==='success') return;
+      const g = svg.querySelector('.blinkG');
+      g.classList.add('blink'); setTimeout(()=>g.classList.remove('blink'), 170);
+    });
+    setTimeout(blink, 2600 + Math.random()*2600);
+  }
+  setTimeout(blink, 1800);
+
+  // 主题切换
+  document.querySelectorAll('.bgtoggle button').forEach(b=> b.addEventListener('click', ()=>{
+    document.body.dataset.bg = b.dataset.set;
+    document.querySelectorAll('.bgtoggle button').forEach(x=>x.classList.toggle('on', x===b));
+  }));
+</script>
+</body>
+</html>

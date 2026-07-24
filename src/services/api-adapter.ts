@@ -173,6 +173,7 @@ function createMockAPI() {
     ocrGetStats: async () => ({ success: true, data: { idCard: 0, invoice: 0, bankCard: 0, businessLicense: 0, bankReceipt: 0, permit: 0, bankStatement: 0, generalReceipt: 0, companyQuery: 0, lastReset: '' } }),
     // 认证
     authLogin: async () => ({ success: true, data: { id: '1', username: 'admin', role_id: 'admin' } }),
+    changeOwnPassword: async () => ({ success: true, data: { changed: true } }),
     authGetAllUsers: async () => ({ success: true, data: [] }),
     authGetCurrentUser: async () => ({ success: true, data: null }),
     authCreateUser: async () => ({ success: true, data: { id: '1' } }),

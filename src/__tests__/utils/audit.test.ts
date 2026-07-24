@@ -105,9 +105,10 @@ describe('audit.ts', () => {
       expect(log.level).toBe('info')
     })
 
-    it('应同步到 electronAPI', () => {
+    it('应同步到 electronAPI', async () => {
       logAudit('create', 'projects', '测试')
-      expect(mockAuditLog).toHaveBeenCalledTimes(1)
+      // logAudit 经 getAPI().then(api => api.auditLog(...)) 异步同步到后端, 需等待微任务
+      await vi.waitFor(() => expect(mockAuditLog).toHaveBeenCalledTimes(1))
     })
 
     it('应持久化到 localStorage', () => {

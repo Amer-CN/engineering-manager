@@ -100,3 +100,63 @@ EngineeringManager.Uninstaller/bin/
 EngineeringManager.Uninstaller/obj/
 release-uninstaller/
 EngineeringManager.Installer/app-files/
+
+# ── 构建/缓存/诊断/工具产物（本地生成，不入库）──
+
+# Python 缓存 / 编译产物
+__pycache__/
+*.pyc
+*.pyo
+
+# ASR 引擎解包 / 构建 / 备份 / 诊断产物
+asr-engine/transcribe.exe_extracted/
+asr-engine/build/
+asr-engine/*.old_*
+asr-engine/diag_*
+asr-engine/inspect_pyc.py
+asr-engine/test_vulkan_enum*.py
+
+# ASR 本地测试大文件 / 子进程输出
+asr-test/audios/
+asr-test/wav/
+asr-test/models/
+asr-test/*_stderr.txt
+asr-test/*_stdout.txt
+
+# 根目录诊断日志 / 子进程输出
+10.16_*.txt
+*_stderr.txt
+*_stdout.txt
+
+# 临时截图
+bedrock_step*.png
+screenshot_step*.png
+
+# 工具 / 会话 / 代理产物（非项目源码）
+.qoder/
+.codely-cli/
+.meituan-catpaw/
+.impeccable/
+10.10_executor/
+CODELY.md
+
+# Design Review 插件产物（本地生成，不入库）
+.design-qa/
+.design-qa-run/
+
+# Stitch 设计导出（zip 已忽略；解压出的 HTML/PNG 二进制过大且 GitHub 无法审阅，不入库。设计文档 STITCH-SCREENS.md 等在 design-prototype/ 根目录，照常入库）
+design-prototype/stitch-export/
+
+# ── 大文件（模型/音频/打包运行时/构建产物）严禁入库：可下载或构建生成，GitHub 单文件限 100MB ──
+asr-engine/model/
+asr-engine/embedding/
+asr-engine/internal/
+asr-engine/dist/
+asr-engine/diarization/*.onnx
+asr-engine/diarization/sherpa-onnx-*/
+asr-engine/qwen_asr_gguf/inference/bin/
+*.gguf
+*.onnx
+# E2E 构建产物
+EngineeringManager.E2E/bin/
+EngineeringManager.E2E/obj/

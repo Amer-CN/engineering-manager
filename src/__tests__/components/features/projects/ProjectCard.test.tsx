@@ -55,24 +55,24 @@ describe('ProjectCard', () => {
     expect(screen.getByText('进行中')).toBeTruthy()
   })
 
-  test('已完成项目应显示已完成标签', async () => {
+  test('已完工项目应显示已完工标签', async () => {
     const { ProjectCard } = await importModule()
     render(React.createElement(ProjectCard, {
       project: { ...baseProject, status: 'completed' },
       members: baseMembers, index: 0,
       onClick: mockOnClick, onEdit: mockOnEdit, onDelete: mockOnDelete,
     }))
-    expect(screen.getByText('已完成')).toBeTruthy()
+    expect(screen.getByText('已完工')).toBeTruthy()
   })
 
-  test('筹备中项目应显示筹备中标签', async () => {
+  test('规划中项目应显示规划中标签', async () => {
     const { ProjectCard } = await importModule()
     render(React.createElement(ProjectCard, {
       project: { ...baseProject, status: 'planning' },
       members: baseMembers, index: 0,
       onClick: mockOnClick, onEdit: mockOnEdit, onDelete: mockOnDelete,
     }))
-    expect(screen.getByText('筹备中')).toBeTruthy()
+    expect(screen.getByText('规划中')).toBeTruthy()
   })
 
   test('应渲染健康环 SVG', async () => {

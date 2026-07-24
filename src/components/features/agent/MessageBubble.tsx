@@ -12,6 +12,7 @@ import { Icon } from '@/components/ui/Icon'
 import type { AgentMessage, AgentMessageResponse, ToolCallResult } from '@/types/agent'
 import MessageActions from './MessageActions'
 import RichToolResult from './RichToolResult'
+import MarkdownRenderer from './MarkdownRenderer'
 
 interface MessageBubbleProps {
   /** 消息数据 */
@@ -68,11 +69,12 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend
       {/* 头像 */}
       <motion.div
         whileHover={{ scale: 1.08 }}
-        className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center ${
+        className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center"
+        style={
           isUser
-            ? 'bg-blue-100 text-blue-600'
-            : 'bg-gradient-to-br from-violet-100 to-purple-100 text-purple-600'
-        }`}
+            ? { background: 'var(--accent-soft)', color: 'var(--accent)' }
+            : { background: 'var(--panel-2)', border: '1px solid var(--border)', color: 'var(--accent)' }
+        }
       >
         <Icon
           name={isUser ? 'UserCircle' : 'Sparkles'}
@@ -82,16 +84,19 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend
 
       {/* 气泡主体 */}
       <div className={`max-w-[75%] min-w-[120px] ${isUser ? 'items-end' : 'items-start'} flex flex-col`}>
-        {/* 文字内容 */}
+        {/* 文字内容：用户消息纯文本，AI 消息走 Markdown 渲染 */}
         {content && (
           <div
-            className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${
-              isUser
-                ? 'bg-blue-600 text-white rounded-br-md'
-                : 'bg-white border border-slate-200 text-slate-700 rounded-bl-md shadow-sm'
+            className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed break-words ${
+              isUser ? 'rounded-br-md whitespace-pre-wrap' : 'rounded-bl-md'
             }`}
+            style={
+              isUser
+                ? { background: 'var(--accent)', color: 'var(--on-accent)' }
+                : { background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg)' }
+            }
           >
-            {content}
+            {isUser ? content : <MarkdownRenderer content={content} />}
           </div>
         )}
 
@@ -103,7 +108,10 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend
 
         {/* 已完成但无任何内容（如达到最大工具轮次后无最终文本）→ 占位提示，避免空气泡 */}
         {!isUser && !isSending && !content && toolResults.length === 0 && (
-          <div className="px-4 py-2.5 rounded-2xl text-sm italic text-slate-400 bg-white border border-slate-200 rounded-bl-md shadow-sm">
+          <div
+            className="px-4 py-2.5 rounded-2xl text-sm italic rounded-bl-md"
+            style={{ color: 'var(--muted)', background: 'var(--card)', border: '1px solid var(--border)' }}
+          >
             本次没有返回内容，请重试或换个问法。
           </div>
         )}

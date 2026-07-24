@@ -9,7 +9,7 @@
 
     <ApplicationIcon>app.ico</ApplicationIcon>
     <NoWarn>MSB3277;AD0001</NoWarn>
-    <Version>0.82.1</Version>
+    <Version>0.83.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,7 +19,12 @@
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.8" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3967.48" />
     <PackageReference Include="SqlParserCS" Version="0.6.5" />
+    <PackageReference Include="System.Management" Version="8.0.0" />
+    <PackageReference Include="org.k2fsa.sherpa.onnx" Version="1.13.4" />
+    <PackageReference Include="org.k2fsa.sherpa.onnx.runtime.win-x64" Version="1.13.4" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.19.2" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="theme-*.png">
@@ -38,5 +43,14 @@
     <EmbeddedResource Include="Migrations\Scripts\*.sql" />
   </ItemGroup>
 
-  
+  <!--
+    自动同步前端 dist/ → C# 输出目录 dist/
+    每次 dotnet build / dotnet run 后自动执行，避免手动 xcopy
+    robocopy 返回 0-7 都是成功，用 & exit 0 吞掉非零退出码
+  -->
+  <Target Name="SyncFrontendDist" AfterTargets="Build" Condition="Exists('$(MSBuildThisFileDirectory)..\dist')">
+    <Exec Command='robocopy "$(MSBuildThisFileDirectory)..\dist" "$(OutDir)dist" /MIR /NJH /NJS /NP /NDL &amp; exit 0' />
+    <Message Text="✓ Frontend dist/ synced → $(OutDir)dist/" Importance="high" />
+  </Target>
+
 </Project>

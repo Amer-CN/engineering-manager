@@ -17,6 +17,7 @@ import type { ToolCallResult } from '@/types/agent'
 import {
   toolLabel, fieldLabel, formatValue, isObjectArray, isScalar,
 } from './richToolResult.utils'
+import KnowledgeSourceCard from './KnowledgeSourceCard'
 
 const MAX_ROWS = 8
 
@@ -59,7 +60,7 @@ const DataTable: React.FC<{ rows: Record<string, unknown>[] }> = ({ rows }) => {
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="mt-1.5 text-xs text-violet-600 hover:text-violet-700 font-medium"
+          className="mt-1.5 text-xs text-primary-600 hover:text-primary-700 font-medium"
         >
           {expanded ? '收起' : `展开全部（共 ${rows.length} 条）`}
         </button>
@@ -129,32 +130,33 @@ const ToolResultCard: React.FC<{ result: ToolCallResult }> = ({ result }) => {
 
   return (
     <div
-      className={`rounded-xl border text-xs overflow-hidden ${
-        result.success ? 'bg-white border-slate-200' : 'bg-red-50 border-red-200'
-      }`}
+      className="rounded-xl border text-xs overflow-hidden"
+      style={result.success
+        ? { background: 'var(--card)', borderColor: 'var(--border)' }
+        : { background: 'var(--danger-soft)', borderColor: 'var(--danger)' }}
     >
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 transition-colors"
       >
-        <Icon
-          name={result.success ? 'CheckCircle' : 'XCircle'}
-          size={14}
-          className={`flex-shrink-0 ${result.success ? 'text-emerald-500' : 'text-red-500'}`}
-        />
-        <span className="font-semibold text-slate-700">{toolLabel(result.toolName)}</span>
-        {count !== null && <span className="text-slate-400">· {count} 条</span>}
-        <Icon
-          name={open ? 'ChevronDown' : 'ChevronRight'}
-          size={14}
-          className="ml-auto text-slate-400"
-        />
+        <span className="flex-shrink-0" style={{ color: result.success ? 'var(--muted)' : 'var(--danger)' }}>
+          <Icon name={result.success ? 'CheckCircle' : 'XCircle'} size={14} />
+        </span>
+        <span className="font-semibold" style={{ color: 'var(--fg)' }}>
+          {result.success ? `数据来源 · ${toolLabel(result.toolName)}` : toolLabel(result.toolName)}
+        </span>
+        {count !== null && <span style={{ color: 'var(--muted)' }}>· {count} 条</span>}
+        <span className="ml-auto" style={{ color: 'var(--muted)' }}>
+          <Icon name={open ? 'ChevronDown' : 'ChevronRight'} size={14} />
+        </span>
       </button>
       {open && (
         <div className="px-3 pb-2.5 pt-0.5">
           {result.error ? (
             <span className="text-red-600">{result.error}</span>
+          ) : result.toolName === 'searchKnowledgeBase' ? (
+            <KnowledgeSourceCard result={result.result} />
           ) : (
             <RenderValue value={result.result} />
           )}

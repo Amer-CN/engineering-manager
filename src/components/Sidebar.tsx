@@ -63,7 +63,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   animate={{ opacity: 1 }}
   className="px-4 mb-2"
   >
-  <p className="text-caption font-semibold uppercase tracking-widest text-slate-400 px-1">主菜单</p>
+  <p className="text-caption font-semibold uppercase tracking-widest px-1" style={{ color: 'var(--muted)' }}>主菜单</p>
   </motion.div>
   )}
   {navItems.map((item) => {
@@ -78,11 +78,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   whileHover={{ scale: 1.1 }}
   whileTap={{ scale: 0.93 }}
   title={item.label}
-  className={`w-10 h-10 mx-auto rounded-xl flex items-center justify-center transition-colors ${
-  isActive
-  ? 'bg-slate-100 text-slate-700'
-  : 'text-slate-400 hover:bg-slate-50'
-  }`}
+  className="w-10 h-10 mx-auto rounded-xl flex items-center justify-center transition-colors"
+  style={{ background: isActive ? 'var(--sidebar-item-active)' : 'transparent', color: isActive ? 'var(--accent)' : 'var(--muted)' }}
+  onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--sidebar-item-hover)' }}
+  onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent' }}
   >
   <Icon name={item.icon} size={18} />
   </motion.button>
@@ -97,23 +96,22 @@ const Sidebar: React.FC<SidebarProps> = ({
   onClick={() => onNavigate(item.id)}
   whileHover={{ x: 4 }}
   whileTap={{ scale: 0.97 }}
-  className={`w-full flex items-center px-3 py-2.5 rounded-xl text-sm font-medium transition-colors duration-200 group relative mb-0.5 ${
-  isActive
-  ? 'bg-slate-100 text-slate-800'
-  : 'text-slate-600 hover:bg-slate-50'
-  }`}
+  className="w-full flex items-center px-3 py-2.5 rounded-xl text-sm font-medium transition-colors duration-200 group relative mb-0.5"
+  style={{ background: isActive ? 'var(--sidebar-item-active)' : 'transparent', color: isActive ? 'var(--accent)' : 'var(--fg-2)' }}
+  onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--sidebar-item-hover)' }}
+  onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent' }}
   >
   <motion.div
   animate={{ scale: isActive ? 1.1 : 1 }}
   transition={{ type: 'spring', stiffness: 400, damping: 15 }}
   >
-  <Icon name={item.icon} size={18} className={isActive ? 'text-slate-700' : 'text-slate-400'} />
+  <Icon name={item.icon} size={18} />
   </motion.div>
   <span className="ml-3">{item.label}</span>
   {isActive && (
   <motion.div
   layoutId="sidebar-indicator"
-  className="absolute left-0 top-1 bottom-1 w-0.5 bg-slate-700 rounded-full"
+  className="absolute left-0 top-1 bottom-1 w-0.5 rounded-full" style={{ background: 'var(--accent)' }}
   transition={{ type: 'spring', stiffness: 500, damping: 30 }}
   />
   )}
@@ -122,7 +120,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   )
   })}
   </nav></HoverScrollbar>
-  <div className="border-t border-slate-100">
+  <div className="border-t" style={{ borderColor: 'var(--border)' }}>
   {collapsed ? (
   <div className="flex items-center justify-center py-3">
   <DropdownMenu
@@ -140,7 +138,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   <motion.button
   whileHover={{ scale: 1.1 }}
   whileTap={{ scale: 0.95 }}
-  className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center text-white text-xs font-medium shadow-sm cursor-pointer"
+  className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium shadow-sm cursor-pointer" style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
   >
   {currentUser?.displayName?.charAt(0) || currentUser?.username?.charAt(0) || 'A'}
   </motion.button>
@@ -165,15 +163,15 @@ const Sidebar: React.FC<SidebarProps> = ({
   <motion.button
   whileHover={{ scale: 1.1 }}
   whileTap={{ scale: 0.95 }}
-  className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center text-white text-sm font-medium flex-shrink-0 shadow-sm cursor-pointer"
+  className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0 shadow-sm cursor-pointer" style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
   >
   {currentUser?.displayName?.charAt(0) || currentUser?.username?.charAt(0) || 'A'}
   </motion.button>
   }
   />
   <div className="ml-3 min-w-0">
-  <div className="text-sm font-medium text-slate-700 truncate">{currentUser?.displayName || currentUser?.username}</div>
-  <div className="text-xs text-slate-400">{currentUser?.roleName || currentUser?.roleId}</div>
+  <div className="text-sm font-medium truncate" style={{ color: 'var(--fg-2)' }}>{currentUser?.displayName || currentUser?.username}</div>
+  <div className="text-xs" style={{ color: 'var(--muted)' }}>{currentUser?.roleName || currentUser?.roleId}</div>
   </div>
   </div>
   </div>

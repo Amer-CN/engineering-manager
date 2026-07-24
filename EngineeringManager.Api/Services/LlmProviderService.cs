@@ -20,7 +20,7 @@ namespace EngineeringManager.Api.Services;
 ///
 /// 线程安全：配置读写由 LlmConfigResolver 管理
 /// </summary>
-public class LlmProviderService
+public class LlmProviderService : ILlmChatService
 {
     private readonly ILogger<LlmProviderService> _logger;
     private readonly IHttpClientFactory _httpClientFactory;

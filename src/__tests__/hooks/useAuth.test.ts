@@ -114,7 +114,7 @@ describe('useAuth', () => {
     expect(result.current.isLocked).toBe(true)
   })
 
-  it('从 localStorage 恢复登录状态', async () => {
+  it('出于安全设计不从 localStorage 自动恢复登录 (每次需重新登录)', async () => {
     const userData = {
       userId: '1',
       username: 'admin',
@@ -124,11 +124,12 @@ describe('useAuth', () => {
       permissions: ['all'],
     }
     localStorage.setItem('engineering_auth', JSON.stringify(userData))
-    // Dynamic import to trigger fresh store creation
+    // 重新创建 store: authStore 初始化时主动清除会话, 不自动恢复 (见 authStore.ts 安全设计)
     vi.resetModules()
     const { useAuth } = await import('@/hooks/useAuth')
     const { result } = renderHook(() => useAuth())
-    expect(result.current.isAuthenticated).toBe(true)
-    expect(result.current.currentUser?.username).toBe('admin')
+    expect(result.current.isAuthenticated).toBe(false)
+    expect(result.current.currentUser).toBeNull()
+    expect(localStorage.getItem('engineering_auth')).toBeNull()
   })
 })

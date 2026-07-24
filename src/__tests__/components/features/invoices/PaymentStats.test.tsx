@@ -38,9 +38,10 @@ describe('PaymentStats', () => {
       filteredRecords: baseRecords,
       invoices: baseInvoices,
     }))
-    // 回款金额和未收金额都包含 ¥10,000.00，用 getAllByText
-    expect(screen.getAllByText(/¥10,000\.00/).length).toBeGreaterThanOrEqual(1)
-    expect(screen.getAllByText(/¥5,000\.00/).length).toBeGreaterThanOrEqual(1)
+    // formatMoney 去尾零：10000 → '10,000'、5000 → '5,000'
+    // 回款金额和未收金额都包含 ¥10,000，用 getAllByText
+    expect(screen.getAllByText(/¥10,000/).length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText(/¥5,000/).length).toBeGreaterThanOrEqual(1)
   })
 
   test('记录总数应显示笔数', () => {
@@ -58,7 +59,7 @@ describe('PaymentStats', () => {
       filteredRecords: [],
       invoices: [],
     }))
-    // 多个 ¥0.00（回款、付款、未收、未付都是0）
-    expect(screen.getAllByText(/¥0\.00/).length).toBeGreaterThanOrEqual(1)
+    // formatMoney 去尾零：0 → '0'，多个 ¥0（回款、付款、未收、未付都是0）
+    expect(screen.getAllByText(/¥0/).length).toBeGreaterThanOrEqual(1)
   })
 })

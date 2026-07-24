@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import type { CRUDAPI, UseCRUDBaseOptions, UseCRUDBaseReturn } from './useCRUDBase.types'
 import { useCRUDBaseLoaders } from './useCRUDBase.loaders'
 import { useCRUDBaseActions } from './useCRUDBase.actions'
@@ -16,8 +16,11 @@ export function useCRUDBase<T extends { id: number }, CreateDTO = Partial<T>, Up
   const [selectedItem, setSelectedItem] = useState<T | null>(null)
   const mountedRef = useRef(true)
 
+  // 稳定化传给 loaders 的 api 引用: 若每次渲染新建 { getAll } 会使 loadData 身份变化,
+  // 导致下方 autoLoad effect (依赖 loadData) 每次渲染重跑 → 无限重载, loading 无法落定
+  const loaderApi = useMemo(() => ({ getAll: api.getAll }), [api.getAll])
   const { loadData } = useCRUDBaseLoaders<T>({
-    api: { getAll: api.getAll }, errorPrefix, mountedRef, setData, setLoading, setError, onLoaded,
+    api: loaderApi, errorPrefix, mountedRef, setData, setLoading, setError, onLoaded,
   })
   const { create, update, delete: deleteItem } = useCRUDBaseActions<T, CreateDTO, UpdateDTO>({
     api, errorPrefix, loadData, selectedItem, setData, setSelectedItem, setError,

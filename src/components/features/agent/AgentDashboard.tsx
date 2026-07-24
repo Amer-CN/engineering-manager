@@ -1,14 +1,13 @@
 /**
- * AgentDashboard — AI 助手主组件（混合式工作台）
- * 空态：Hero→Stats→Composer+Chips→Capability+Insight
- * 对话态：紧凑Hero→消息流→Composer + 右栏History
+ * AgentDashboard — AI 助手主组件（纯对话优先布局）
+ * 空态：AgentWelcome（居中问候+输入+快捷提问）+ 右栏历史
+ * 对话态：极简顶条→消息流→Composer + 右栏历史
  * ⌘K 唤起 AgentSearch
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Icon } from '@/components/ui/Icon'
-import PageContainer from '@/components/ui/PageContainer'
 import { HoverScrollbar } from '@/components/ui/HoverScrollbar'
 import { useAuth } from '@/hooks/useAuth'
 import { usePermission } from '@/hooks/usePermission'
@@ -16,21 +15,17 @@ import {
   sendAgentMessage,
   sendAgentMessageStream,
   getAgentConversationDetail,
+  getLlmProviderConfig,
 } from '@/services/agent-client'
 import type { AgentStreamCallbacks } from '@/services/agent-client'
 import type { AgentConversation } from '@/types/agent'
 import type { LocalMessage } from './types'
 import { genClientId } from './types'
 
-import AgentHero from './AgentHero'
 import AgentComposer from './AgentComposer'
-import StatOverview from './StatOverview'
-import CapabilityGrid from './CapabilityGrid'
-import InsightPanel from './InsightPanel'
-import SuggestionChips from './SuggestionChips'
+import AgentWelcome from './AgentWelcome'
+import AgentOverlays, { HistorySidebar } from './AgentOverlays'
 import MessageBubble from './MessageBubble'
-import ConversationHistory from './ConversationHistory'
-import AgentSearch from './AgentSearch'
 import { getFilteredSuggestions } from './suggestions'
 
 const AgentDashboard: React.FC = () => {
@@ -46,6 +41,8 @@ const AgentDashboard: React.FC = () => {
   const [historyOpen, setHistoryOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [modelName, setModelName] = useState('')
+  const [providerName, setProviderName] = useState('')
 
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -67,6 +64,17 @@ const AgentDashboard: React.FC = () => {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
+  }, [])
+
+  // ── 拉取当前模型名（顶部徽章展示）──
+  useEffect(() => {
+    let cancelled = false
+    getLlmProviderConfig().then(cfg => {
+      if (cancelled || !cfg) return
+      setProviderName(cfg.providerName || '')
+      setModelName(cfg.model || '')
+    }).catch(() => { /* silent */ })
+    return () => { cancelled = true }
   }, [])
 
   // ── 辅助函数 ──
@@ -215,14 +223,6 @@ const AgentDashboard: React.FC = () => {
     [messages, handleSend],
   )
 
-  /** Insight/Search 触发提问 */
-  const handleAsk = useCallback(
-    (prompt: string) => {
-      handleSend(prompt)
-    },
-    [handleSend],
-  )
-
   const suggestionCards = getFilteredSuggestions(can)
 
   const isEmpty = messages.length === 0
@@ -235,50 +235,41 @@ const AgentDashboard: React.FC = () => {
       (!!lastMsg.sending && !lastMsg.content))
 
   // ═══════════════════════════════════════════════════════════════
-  // 空态：丰富工作台
+  // 空态：居中欢迎工作台
   // ═══════════════════════════════════════════════════════════════
   if (isEmpty) {
     return (
       <>
-        <PageContainer maxWidth="default" className="!max-w-[1200px]">
-          <HoverScrollbar className="h-[calc(100vh-120px)]">
-            <AgentHero username={username} onOpenSearch={() => setSearchOpen(true)} />
-
-            <StatOverview />
-
-            {/* 居中 Composer + 建议词 */}
-            <div className="mb-8">
-              <AgentComposer
-                value={inputValue}
-                onChange={setInputValue}
-                onSend={handleSend}
-                disabled={loading}
-                inputRef={inputRef}
-                centered
-              />
-              <div className="max-w-2xl mx-auto mt-4">
-                <SuggestionChips
-                  suggestions={suggestionCards}
-                  onSelect={handleSend}
-                  disabled={loading}
-                />
-              </div>
-            </div>
-
-            {/* 两栏：能力模块 + 智能建议 */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-8">
-              <CapabilityGrid />
-              <InsightPanel onAsk={handleAsk} />
-            </div>
-          </HoverScrollbar>
-        </PageContainer>
-
-        {/* 搜索命令面板 */}
-        <AgentSearch
-          open={searchOpen}
-          onClose={() => setSearchOpen(false)}
-          onAsk={handleAsk}
+        <div className="flex h-[calc(100vh-120px)]">
+          <AgentWelcome
+            username={username}
+            modelName={modelName}
+            providerName={providerName}
+            inputValue={inputValue}
+            onInputChange={setInputValue}
+            onSend={handleSend}
+            loading={loading}
+            inputRef={inputRef}
+            suggestions={suggestionCards}
+            onOpenHistory={() => setHistoryOpen(true)}
+          />
+          <HistorySidebar
+            conversationId={conversationId}
+            onSelectConversation={handleSelectConversation}
+            onNewConversation={handleNewConversation}
+            refreshTrigger={refreshTrigger}
+          />
+        </div>
+        <AgentOverlays
+          conversationId={conversationId}
           onSelectConversation={handleSelectConversation}
+          onNewConversation={handleNewConversation}
+          refreshTrigger={refreshTrigger}
+          historyOpen={historyOpen}
+          onHistoryClose={() => setHistoryOpen(false)}
+          searchOpen={searchOpen}
+          onSearchClose={() => setSearchOpen(false)}
+          onAsk={handleSend}
         />
       </>
     )
@@ -292,21 +283,32 @@ const AgentDashboard: React.FC = () => {
       <div className="flex h-[calc(100vh-120px)]">
         {/* 主区 */}
         <div className="flex-1 flex flex-col min-w-0">
-          {/* 紧凑 Hero 条 */}
-          <div className="px-6 pt-4 flex-shrink-0">
-            <AgentHero
-              username={username}
-              onOpenSearch={() => setSearchOpen(true)}
-              compact
-            />
-            {/* 移动端历史按钮 */}
-            <button
-              onClick={() => setHistoryOpen(true)}
-              className="lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors mb-3"
-            >
-              <Icon name="Inbox" size={14} />
-              对话历史
-            </button>
+          {/* 顶部条：助手标识 + 搜索 + 移动端历史 */}
+          <div className="flex items-center justify-between gap-3 px-6 pt-4 pb-2 flex-shrink-0">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-sm">
+                <Icon name="Sparkles" size={16} className="text-white" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-700 truncate">工程管理助手</p>
+                {modelName && <p className="text-xs text-slate-400 truncate">{modelName}</p>}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={() => setSearchOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                <Icon name="Search" size={14} />
+                <kbd className="hidden md:inline-flex items-center px-1 py-0.5 rounded bg-slate-100 text-caption text-slate-400 font-mono">⌘K</kbd>
+              </button>
+              <button
+                onClick={() => setHistoryOpen(true)}
+                className="lg:hidden flex items-center px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                <Icon name="Inbox" size={14} />
+              </button>
+            </div>
           </div>
 
           {/* 消息流 */}
@@ -339,7 +341,7 @@ const AgentDashboard: React.FC = () => {
                       animate={{ rotate: 360 }}
                       transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
                     >
-                      <Icon name="Loader2" size={16} className="text-violet-500" />
+                      <Icon name="Loader2" size={16} className="text-primary-500" />
                     </motion.div>
                     <span className="text-sm text-slate-500">思考中...</span>
                   </div>
@@ -363,33 +365,24 @@ const AgentDashboard: React.FC = () => {
         </div>
 
         {/* 右栏：对话历史（桌面 ≥lg 常驻） */}
-        <div className="hidden lg:block w-80 flex-shrink-0">
-          <ConversationHistory
-            inline
-            currentConversationId={conversationId}
-            onSelectConversation={handleSelectConversation}
-            onNewConversation={handleNewConversation}
-            refreshTrigger={refreshTrigger}
-          />
-        </div>
+        <HistorySidebar
+          conversationId={conversationId}
+          onSelectConversation={handleSelectConversation}
+          onNewConversation={handleNewConversation}
+          refreshTrigger={refreshTrigger}
+        />
       </div>
 
-      {/* 移动端对话历史抽屉 */}
-      <ConversationHistory
-        open={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        currentConversationId={conversationId}
+      <AgentOverlays
+        conversationId={conversationId}
         onSelectConversation={handleSelectConversation}
         onNewConversation={handleNewConversation}
         refreshTrigger={refreshTrigger}
-      />
-
-      {/* 搜索命令面板 */}
-      <AgentSearch
-        open={searchOpen}
-        onClose={() => setSearchOpen(false)}
-        onAsk={handleAsk}
-        onSelectConversation={handleSelectConversation}
+        historyOpen={historyOpen}
+        onHistoryClose={() => setHistoryOpen(false)}
+        searchOpen={searchOpen}
+        onSearchClose={() => setSearchOpen(false)}
+        onAsk={handleSend}
       />
     </>
   )

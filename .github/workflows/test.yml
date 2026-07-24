@@ -2,9 +2,10 @@ name: Tests
 
 on:
   push:
-    branches: [main, develop]
+    branches: [master, 'feat/**', 'fix/**', 'perf/**']
   pull_request:
-    branches: [main, develop]
+    branches: [master]
+  workflow_dispatch:
 
 jobs:
   test:
@@ -39,7 +40,7 @@ jobs:
         run: npm install
 
       - name: Run tests
-        run: npm run test:ci
+        run: npm run test
         env:
           CI: true
 
@@ -101,10 +102,32 @@ jobs:
       - name: Run linter
         run: npm run check
 
-  build:
-    name: Build
+  backend:
+    name: Backend Build & Test (.NET 8)
     runs-on: windows-latest
-    
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build backend API
+        run: dotnet build EngineeringManager.Api/EngineeringManager.Api.csproj
+
+      - name: Run backend tests
+        # 排除 SttE2ETests：这些是需要 GB 级 ASR 模型 + 真实转写子进程的可选端到端测试
+        # （模型二进制未纳入版本库，测试文件自身注明用 --filter 选择性运行）
+        run: dotnet test EngineeringManager.Tests/EngineeringManager.Tests.csproj --filter "FullyQualifiedName!~SttE2ETests"
+
+  build:
+    name: Full Build (Frontend + Backend)
+    runs-on: windows-latest
+    needs: [test, backend]
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -115,23 +138,30 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install dependencies
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install frontend dependencies
         run: npm install
 
-      - name: Build Electron app
-        run: npm run build
-        env:
-          CSC_IDENTITY_AUTO_DETECTION: false
+      - name: Build frontend (Vite)
+        run: npx vite build
 
-      - name: Upload build artifacts
+      - name: Build backend (.NET)
+        run: dotnet build EngineeringManager.Api/EngineeringManager.Api.csproj
+
+      - name: Upload frontend build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: electron-app-windows
-          path: |
-            release/
-            dist/
-            dist-electron/
+          name: frontend-dist
+          path: dist/
           retention-days: 7
 
-
-
+      - name: Upload backend build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-output
+          path: EngineeringManager.Api/bin/Debug/net8.0-windows/
+          retention-days: 7

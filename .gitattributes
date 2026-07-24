@@ -1,0 +1,8 @@
+# ── 行尾规范化 ──
+# 背景：DESIGN.md 曾因 CRLF 行尾导致 YAML frontmatter 被严格解析器（Design Review
+# 插件的 audit 脚本 / Canvas 预览）判定为非法。对易被严格解析器读取的文本类型强制 LF，
+# 从源头避免复发。
+*.md    text eol=lf
+*.yaml  text eol=lf
+*.yml   text eol=lf
+*.json  text eol=lf

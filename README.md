@@ -58,12 +58,14 @@ cd EngineeringManager.Api && dotnet restore
 双击运行 `工程管家.bat`，或手动执行：
 
 ```bash
-# 终端 1：启动 C# 后端
+# 终端 1：启动 C# 后端（自动同步前端 dist/ 到输出目录）
 cd EngineeringManager.Api && dotnet run
 
-# 终端 2：启动 React 前端
+# 终端 2：启动 React 前端（热更新开发）
 npm run dev
 ```
+
+> 修改前端代码后，执行 `npx vite build` 重新构建，然后 `dotnet run` 会通过 csproj 中的 `SyncFrontendDist` Target 自动将 `dist/` 同步到 C# 输出目录。
 
 ### 打包桌面应用
 
@@ -71,7 +73,7 @@ npm run dev
 build-installer.bat
 ```
 
-打包完成后，安装包位于 `release/EngineeringManager-Setup-<版本号>.exe`（例：`release/EngineeringManager-Setup-0.82.0.exe`）。
+打包完成后，安装包位于 `release/EngineeringManager-Setup-<版本号>.exe`（例：`release/EngineeringManager-Setup-0.82.1.exe`）。
 
 ## 📝 使用说明
 

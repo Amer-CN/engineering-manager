@@ -99,8 +99,8 @@ describe('CategoryManager', () => {
       />
     )
 
-    // 点击关闭按钮（×）
-    const closeBtn = screen.getByText('✕')
+    // 点击关闭按钮（Modal 头部的 X 图标按钮，aria-label="关闭"）
+    const closeBtn = screen.getByLabelText('关闭')
     fireEvent.click(closeBtn)
     expect(onClose).toHaveBeenCalledOnce()
   })
@@ -221,8 +221,8 @@ describe('CategoryManager', () => {
   })
 
   test('恢复默认：点击「恢复默认」触发确认', async () => {
-    // 模拟 confirm 返回 true
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    // 恢复默认现在通过 useConfirm 的声明式 ConfirmDialog 确认，
+    // 而非原生 window.confirm，需要点击弹出的「确认」按钮。
     const api = (window as any).electronAPI
 
     const onClose = vi.fn()
@@ -235,9 +235,13 @@ describe('CategoryManager', () => {
       />
     )
 
-    // 点击「恢复默认」
+    // 点击「恢复默认」→ 弹出确认对话框
     const resetBtn = screen.getByText('恢复默认')
     fireEvent.click(resetBtn)
+
+    // 在确认对话框中点击「确认」按钮
+    const confirmBtn = await screen.findByRole('button', { name: '确认' })
+    fireEvent.click(confirmBtn)
 
     await waitFor(() => {
       expect(api.resetCostLedgerCategories).toHaveBeenCalled()

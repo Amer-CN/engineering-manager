@@ -12,6 +12,10 @@ export type { ButtonProps } from './Button/Button'
 export { Input } from './Input/Input'
 export type { InputProps } from './Input/Input'
 
+// 多行输入框
+export { Textarea } from './Textarea/Textarea'
+export type { TextareaProps } from './Textarea/Textarea'
+
 // 模态框
 export { Modal } from './Modal/Modal'
 export type { ModalProps } from './Modal/Modal'

@@ -107,16 +107,20 @@ public static class MigrationRunner
         );
 
     /// <summary>
-    /// 简易 SQL 语句切分器：按 ; 切，跳过字符串/注释内的 ;
+    /// SQL 语句切分器：按 ; 切，跳过字符串/注释内的 ;
+    /// 支持 BEGIN...END 块（触发器体内的 ; 不切分）
     /// </summary>
     private static List<string> SplitSqlStatements(string script)
     {
         var result = new List<string>();
         var sb = new System.Text.StringBuilder();
         bool inSingleQuote = false, inDoubleQuote = false;
+        int beginDepth = 0; // BEGIN...END 嵌套深度
+
         for (int i = 0; i < script.Length; i++)
         {
             char c = script[i];
+
             // 跳过 -- 行注释
             if (!inSingleQuote && !inDoubleQuote && c == '-' && i + 1 < script.Length && script[i + 1] == '-')
             {
@@ -124,10 +128,49 @@ public static class MigrationRunner
                 if (i < script.Length) sb.Append('\n');
                 continue;
             }
+
             if (c == '\'' && !inDoubleQuote) inSingleQuote = !inSingleQuote;
             else if (c == '"' && !inSingleQuote) inDoubleQuote = !inDoubleQuote;
 
-            if (c == ';' && !inSingleQuote && !inDoubleQuote)
+            // 检测 BEGIN / END 关键字（不区分大小写，需为完整单词）
+            if (!inSingleQuote && !inDoubleQuote)
+            {
+                // 检查当前是否在单词边界
+                bool atWordStart = i == 0 || !char.IsLetterOrDigit(script[i - 1]);
+
+                if (atWordStart)
+                {
+                    // 向前匹配 BEGIN
+                    if (i + 5 <= script.Length)
+                    {
+                        var word = script.Substring(i, 5);
+                        if (word.Equals("BEGIN", StringComparison.OrdinalIgnoreCase) &&
+                            (i + 5 >= script.Length || !char.IsLetterOrDigit(script[i + 5])))
+                        {
+                            beginDepth++;
+                            sb.Append(script, i, 5);
+                            i += 4;
+                            continue;
+                        }
+                    }
+
+                    // 向前匹配 END（仅在 BEGIN 块内）
+                    if (beginDepth > 0 && i + 3 <= script.Length)
+                    {
+                        var word = script.Substring(i, 3);
+                        if (word.Equals("END", StringComparison.OrdinalIgnoreCase) &&
+                            (i + 3 >= script.Length || !char.IsLetterOrDigit(script[i + 3])))
+                        {
+                            beginDepth--;
+                            sb.Append(script, i, 3);
+                            i += 2;
+                            continue;
+                        }
+                    }
+                }
+            }
+
+            if (c == ';' && !inSingleQuote && !inDoubleQuote && beginDepth == 0)
             {
                 result.Add(sb.ToString());
                 sb.Clear();

@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Http;
+using System.Data;
+using Dapper;
 
 namespace EngineeringManager.Api.Security;
 
@@ -114,4 +116,37 @@ public static class CurrentUser
 
     public static PiiAccess GetPiiAccess(HttpContext ctx) =>
         new PiiAccess(PiiReadable[ResolveRole(ctx)]);
+
+    // ── M4: 服务端权限检查 ──
+
+    /// <summary>
+    /// 检查当前用户是否拥有指定权限码（如 "knowledge:read"）。
+    /// admin 角色直接返回 true（管理员拥有全部权限）。
+    /// 非 admin 从 roles.permissions JSON 字段中查找。
+    /// </summary>
+    public static bool HasPermission(HttpContext ctx, IDbConnection db, string permissionCode)
+    {
+        if (IsAdmin(ctx)) return true;
+        var uid = GetUserId(ctx);
+        if (uid == null) return false;
+
+        var roleId = ctx.User?.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+        // 兼容中文角色名
+        if (roleId == "管理员") roleId = "admin";
+        else if (roleId == "经理") roleId = "manager";
+        else if (roleId == "财务") roleId = "accountant";
+        else if (roleId == "工人") roleId = "worker";
+
+        var permissionsJson = db.QueryFirstOrDefault<string>(
+            "SELECT permissions FROM roles WHERE id = @RoleId",
+            new { RoleId = roleId });
+        if (string.IsNullOrEmpty(permissionsJson)) return false;
+
+        try
+        {
+            var perms = System.Text.Json.JsonSerializer.Deserialize<string[]>(permissionsJson);
+            return perms != null && perms.Contains(permissionCode);
+        }
+        catch { return false; }
+    }
 }

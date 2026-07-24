@@ -65,9 +65,8 @@ describe('Tabs', () => {
       <Tabs value="tab1" onChange={() => {}} tabs={mockTabs} className="my-custom-tabs" />
     )
     
-    // 检查自定义类名
-    const tabsList = container.querySelector('[role="tablist"]')
-    expect(tabsList).toHaveClass('my-custom-tabs')
+    // 自定义类名作用在最外层根容器（而非 tablist）
+    expect(container.firstChild).toHaveClass('my-custom-tabs')
   })
 
   it('renders with icon when provided', () => {

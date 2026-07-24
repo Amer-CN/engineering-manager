@@ -118,12 +118,12 @@ public static class Common
                     "costLedger:create","costLedger:read","costLedger:update","costLedger:delete",
                     "settings:read","settings:update","users:create","users:read","users:update","users:delete",
                     "roles:read","roles:update","audit_logs:read","audit_logs:export",
-                    "labor:read","safeQuery:read"],
+                    "labor:read","safeQuery:read","knowledge:read"],
         "manager" => ["dashboard:read","projects:read","projects:update","contracts:read","contracts:update",
                       "partners:read","members:read","wages:read","settlement:read","invoices:read",
                       "inventory:read",
                       "costLedger:read","settings:read","users:read","roles:read","audit_logs:read",
-                      "labor:read","safeQuery:read"],
+                      "labor:read","safeQuery:read","knowledge:read"],
         "accountant" => ["dashboard:read","projects:read","contracts:read","members:read",
                          "wages:create","wages:read","wages:update","settlement:read","invoices:create",
                          "invoices:read","invoices:update","costLedger:create","costLedger:read",
@@ -139,6 +139,7 @@ public static class Common
 record LoginDto(string Username, string Password);
 record UserDto(string? Id, string Username, string? Password, string? DisplayName, string? RoleId, string? Status);
 record PasswordResetDto(string UserId, string NewPassword);
+record ChangePasswordDto(string OldPassword, string NewPassword);
 record RoleUpdateDto(string RoleId, string Permissions);
 record ProjectDto(string Name, string? Description, string? Address, string? StartDate, string? EndDate, string? Status, double Budget, long? ProjectManagerId);
 record MemberDto(long? Id, string Name, string? Phone, string? Email, string? MemberType, string? Role, string? IdCard, string? Gender, string? Ethnicity, string? BirthDate, string? IdCardAddress, double? BaseSalary, double? DailyWage, string? EntryDate, string? Status, long? DepartmentId, string? Position);
