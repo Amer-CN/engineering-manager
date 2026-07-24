@@ -84,7 +84,7 @@ const SpeechKnowledgePage: React.FC = () => {
         {/* ── Header ── */}
         <div className="px-6 pt-5 pb-0">
           <div className="flex items-center gap-2.5 mb-1">
-            <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-gradient-to-br from-slate-700 to-slate-800 text-white shadow-sm">
+            <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg shadow-sm" style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}>
               <Icon name="Library" size={16} />
             </span>
             <h1 className="text-xl font-bold text-slate-800">语音知识库</h1>

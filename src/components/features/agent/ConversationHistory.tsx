@@ -165,7 +165,8 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
       <div className="px-3 pb-2">
         <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
           onClick={() => { onNewConversation(); if (!inline) onClose?.() }}
-          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-primary-600 to-primary-500 text-white text-sm font-medium shadow-md shadow-primary-500/20 hover:shadow-lg hover:shadow-primary-500/30 transition-shadow">
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium shadow-sm transition-opacity"
+          style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}>
           <Icon name="Plus" size={16} />新对话
         </motion.button>
       </div>

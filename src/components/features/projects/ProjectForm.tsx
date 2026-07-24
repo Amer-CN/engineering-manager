@@ -72,8 +72,8 @@ export function ProjectForm({ project, members, onSubmit, onCancel }: ProjectFor
   <motion.div className="bg-white backdrop-blur-xl border border-slate-200 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
   initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.25 }}>
   {/* Header */}
-  <div className="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary-600 to-primary-500 rounded-t-2xl">
-  <h2 className="text-lg font-semibold text-white">{project ? '编辑项目' : '新建项目'}</h2>
+  <div className="px-6 py-4 rounded-t-2xl" style={{ borderBottom: '1px solid var(--border)', background: 'var(--panel)' }}>
+  <h2 className="text-lg font-semibold" style={{ color: 'var(--fg)' }}>{project ? '编辑项目' : '新建项目'}</h2>
   </div>
 
   {/* Form */}

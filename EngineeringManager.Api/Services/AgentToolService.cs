@@ -862,8 +862,8 @@ public class AgentToolService
             Description = "受限只读查询：可以执行自定义 SELECT 查询，但有严格的安全限制（仅允许白名单表/列，自动注入权限过滤，强制 LIMIT）",
             Parameters = BuildParams(new Dictionary<string, object>
             {
-                ["sql"] = "要执行的 SQL 查询语句（仅 SELECT）"
-            }),
+                ["sql"] = new { type = "string", description = "要执行的 SQL 查询语句（仅 SELECT）" },
+            }, new[] { "sql" }),
             RequiredPermission = "safeQuery:read",
             PiiFields = Array.Empty<string>(),
         });

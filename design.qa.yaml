@@ -1,0 +1,59 @@
+# Design QA 配置 —— 工程管家（Design Review 插件）
+# 由 Design Review 插件的脚本读取（design-md / design-debt / component-alignment）。
+# 运行方式见文件末尾注释。
+
+project:
+  name: 工程管家
+  baseUrl: http://localhost:5048
+  outputDir: .design-qa
+
+design:
+  designMd: DESIGN.md
+  screenSpec: SCREEN_SPEC.md
+
+# 仅扫描前端源码；排除测试、构建产物、脚本运行目录
+code:
+  include:
+    - src/**/*.{ts,tsx,js,jsx,css}
+  exclude:
+    - node_modules/**
+    - dist/**
+    - build/**
+    - .design-qa/**
+    - .design-qa-run/**
+    - src/__tests__/**
+    - src/test-utils/**
+    - "**/*.test.{ts,tsx}"
+
+# 组件库对齐：本项目 UI 基元位于 src/components/ui/，
+# 业务代码通过 '@/components/ui/X' 或相对路径 '../../ui/X' 引入。
+components:
+  libraryImportPatterns:
+    - "@/components/ui"
+    - "components/ui"
+    - "/ui/"
+  rawElementPolicy:
+    button: prefer-design-system
+    input: prefer-design-system
+    select: prefer-design-system
+    textarea: prefer-design-system
+    dialog: prefer-design-system
+  # UI 基元本身允许使用原生元素
+  allowedRawElementFiles:
+    - "**/components/ui/**"
+
+# 设计债阈值：DESIGN.md「单一 Token 铁律」要求零硬编码颜色
+debt:
+  maxHardCodedColors: 0
+  maxArbitraryTailwindValues: 5
+  maxInlineStyles: 0
+  allowedColorValues:
+    - "#000"
+    - "#fff"
+    - transparent
+
+# 运行（需先安装 yaml + fast-glob 依赖，见 README）：
+#   node .design-qa-run/skills/design-md-review/scripts/audit-design-md.mjs --config design.qa.yaml
+#   node .design-qa-run/skills/design-debt-review/scripts/audit-design-debt.mjs --config design.qa.yaml
+#   node .design-qa-run/skills/component-library-alignment/scripts/audit-components.mjs --config design.qa.yaml
+# 报告输出至 .design-qa/reports/*.json

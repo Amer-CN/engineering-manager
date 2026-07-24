@@ -86,8 +86,8 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
       sorter: (a, b) => ((a.amount || 0) - (b.amount || 0)),
       render: (item) => (
         <>
-          <div className="font-bold text-slate-800">¥{formatMoney(item.amount)}</div>
-          <div className="text-xs text-slate-400">税: ¥{formatMoney(item.taxAmount)}</div>
+          <div className="font-bold text-slate-800 tabular-nums">¥{formatMoney(item.amount)}</div>
+          <div className="text-xs text-slate-400 tabular-nums">税: ¥{formatMoney(item.taxAmount)}</div>
         </>
       )
     },
@@ -97,11 +97,11 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
       align: 'right',
       render: (item) => (
         <>
-          <div className={`font-bold ${item.receivedAmount > 0 ? 'text-green-600' : 'text-slate-400'}`}>
+          <div className={`font-bold tabular-nums ${item.receivedAmount > 0 ? 'text-green-600' : 'text-slate-400'}`}>
             ¥{formatMoney(item.receivedAmount)}
           </div>
           {item.amount > 0 && item.receivedAmount < item.amount && (
-            <div className="text-xs text-red-500 mt-0.5">
+            <div className="text-xs text-red-500 mt-0.5 tabular-nums">
               剩余 ¥{formatMoney(item.amount - item.receivedAmount)}
             </div>
           )}

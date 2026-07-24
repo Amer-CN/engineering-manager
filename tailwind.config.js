@@ -24,6 +24,8 @@ module.exports = {
     extend: {
       colors: {
         primary: {
+          DEFAULT: 'var(--accent)',
+          foreground: 'var(--on-accent)',
           50: colorVar('--color-primary-50'),
           100: colorVar('--color-primary-100'),
           200: colorVar('--color-primary-200'),
@@ -83,6 +85,19 @@ module.exports = {
           800: colorVar('--color-info-800'),
           900: colorVar('--color-info-900'),
         },
+        // ── shadcn/ui 语义色：Tailwind 名 → Bedrock CSS 变量（见 DESIGN.md 映射表）──
+        // 桥接层：不覆盖项目现有 --accent/--muted 语义，仅新增 Tailwind 颜色名
+        background: 'var(--bg)',
+        foreground: 'var(--fg)',
+        card: { DEFAULT: 'var(--card)', foreground: 'var(--fg)' },
+        popover: { DEFAULT: 'var(--panel)', foreground: 'var(--fg)' },
+        secondary: { DEFAULT: 'var(--panel-2)', foreground: 'var(--fg)' },
+        muted: { DEFAULT: 'var(--panel-2)', foreground: 'var(--muted)' },
+        accent: { DEFAULT: 'var(--card-hover)', foreground: 'var(--fg)' },
+        destructive: { DEFAULT: 'var(--danger)', foreground: 'oklch(98% 0.01 250)' },
+        border: 'var(--border)',
+        input: 'var(--border)',
+        ring: 'var(--accent)',
       },
       borderRadius: {
         'xl': '1rem',
@@ -126,5 +141,5 @@ module.exports = {
       },
     },
   },
-  plugins: [],
+  plugins: [require('tailwindcss-animate')],
 }

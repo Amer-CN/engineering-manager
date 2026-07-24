@@ -34,24 +34,24 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
 
   return (
   <div className="flex flex-col h-full overflow-hidden">
-  <div className="flex-shrink-0 bg-slate-50 px-6 pt-6 pb-2 max-w-[1400px] mx-auto w-full">
-  <div className="flex items-center justify-between mb-4">
+  <div className="flex-shrink-0 px-6 pt-6 pb-2 max-w-[1400px] mx-auto w-full" style={{ background: 'var(--bg)' }}>
+  <div className="flex items-end justify-between mb-4">
   <div>
-  <h1 className="text-2xl font-bold text-slate-800">发票管理</h1>
-  <p className="text-slate-500 mt-1">管理收票、开票及收款业务</p>
+  <h1 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--fg)' }}>发票管理</h1>
+  <p className="text-sm mt-1" style={{ color: 'var(--muted)' }}>管理收票、开票及收款业务</p>
   </div>
-  <div className="flex items-center gap-3">
+  <div className="flex items-center gap-3 flex-shrink-0">
   {duplicateInvoices.length > 0 && (
   <Button onClick={() => setShowDuplicates(true)}  variant="warning" className="flex items-center gap-2">
   <Icon name="AlertTriangle" size={16} />
   检测到 {duplicateInvoices.length} 组重复发票
   </Button>
   )}
-  <button onClick={() => { h.setEditingPayment(null); h.setShowPaymentModal(true) }} className=" bg-amber-500 hover:bg-amber-600 text-white">
-  <span className="text-xl">+</span> 回款/付款登记
-  </button>
+  <Button onClick={() => { h.setEditingPayment(null); h.setShowPaymentModal(true) }} variant="secondary">
+  <span className="text-xl leading-none">+</span> 回款/付款登记
+  </Button>
   <Button onClick={() => { h.setEditingInvoice(null); h.setShowInvoiceModal(true) }}  variant="primary">
-  <span className="text-xl">+</span> 新建发票
+  <span className="text-xl leading-none">+</span> 新建发票
   </Button>
   </div>
   </div>

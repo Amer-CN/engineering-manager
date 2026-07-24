@@ -36,6 +36,7 @@ const Settings = lazy(() => import('./components/Settings'))
 const Users = lazy(() => import('./components/Users'))
 import LockScreen from './components/LockScreen'
 import SplashScreen from './components/SplashScreen'
+import CommandPalette from './components/CommandPalette'
 
 type WebViewWindow = Window & { chrome?: { webview?: { postMessage: (msg: string) => void; addEventListener: (event: string, handler: (e: any) => void) => void; removeEventListener: (event: string, handler: (e: any) => void) => void } } };
 const getWebview = () => (window as WebViewWindow).chrome?.webview;
@@ -377,6 +378,9 @@ const AppContent: React.FC = () => {
       </div>
       {/* 全屏时隐藏状态栏 */}
       {!isFullScreen && <StatusBar />}
+
+      {/* ⌘K 全局命令面板（shadcn Command · Bedrock 落地首件） */}
+      <CommandPalette />
 
 
       {/* 窗口边缘 resize 手柄 */}

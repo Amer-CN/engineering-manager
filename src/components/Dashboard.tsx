@@ -137,21 +137,11 @@ const Dashboard: React.FC = () => {
               icon="LayoutDashboard"
               title={`${greeting}，${currentUser?.displayName || currentUser?.username || '用户'}`}
               subtitle="工程管理驾驶舱 · 数据概览"
-              accentColor="emerald"
-            >
-              <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }}
-                className="flex items-center gap-4 p-4 rounded-xl bg-white/10">
-                <div className="text-right">
-                  <p className="text-3xl font-bold text-emerald-300"><CountUp value={stats?.projectsCount || 0} /></p>
-                  <p className="text-xs text-emerald-300/80">项目总数</p>
-                </div>
-                <div className="w-px h-10 bg-white/20" />
-                <div className="text-right">
-                  <p className="text-3xl font-bold text-amber-300"><CountUp value={stats?.settlementsCount || 0} /></p>
-                  <p className="text-xs text-amber-300/80">待办结算</p>
-                </div>
-              </motion.div>
-            </HeroBanner>
+              metrics={[
+                { value: <CountUp value={stats?.projectsCount || 0} />, label: '项目总数' },
+                { value: <CountUp value={stats?.settlementsCount || 0} />, label: '待办结算' },
+              ]}
+            />
 
             {/* ═══ KPI Stat Cards ═══ */}
             <DashboardStatsCard stats={stats} />

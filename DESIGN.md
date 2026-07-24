@@ -2,19 +2,20 @@
 name: 工程管家 · Bedrock
 description: 工程行业的精密仪器 —— 保留成熟 AI 骨架，重铸设计的皮与魂
 colors:
-  bg: "oklch(16% 0.012 250)"
-  panel: "oklch(21% 0.015 250)"
-  card: "oklch(22.5% 0.016 250)"
-  hairline: "oklch(32% 0.02 250 / 0.7)"
-  content: "oklch(97% 0.008 240)"
-  content-2: "oklch(80% 0.012 240)"
-  content-muted: "oklch(64% 0.016 245)"
-  accent: "oklch(74% 0.15 220)"
-  accent-2: "oklch(82% 0.14 195)"
-  on-accent: "oklch(18% 0.03 250)"
-  state-ok: "oklch(76% 0.15 165)"
-  state-warn: "oklch(80% 0.14 85)"
-  state-danger: "oklch(70% 0.19 25)"
+  # canonical = Paper（暖白纸，默认旗舰亮色）；Snow / Graphite 见 Colors
+  bg: "oklch(98.6% 0.009 85)"
+  panel: "oklch(99.4% 0.006 85)"
+  card: "oklch(99.7% 0.005 85)"
+  hairline: "oklch(90% 0.012 82)"
+  content: "oklch(23% 0.014 70)"
+  content-2: "oklch(41% 0.012 72)"
+  content-muted: "oklch(54% 0.01 76)"
+  accent: "oklch(28% 0.02 74)"
+  accent-2: "oklch(40% 0.02 74)"
+  on-accent: "oklch(98.5% 0.007 85)"
+  state-ok: "oklch(50% 0.1 150)"
+  state-warn: "oklch(60% 0.11 70)"
+  state-danger: "oklch(52% 0.16 25)"
 typography:
   display:
     fontFamily: "Inter, 'Noto Sans SC', system-ui, sans-serif"
@@ -86,11 +87,11 @@ components:
 
 # Design System: 工程管家 · Bedrock
 
-## 1. Overview
+## Overview
 
 **Creative North Star: "精密仪器 / The Precision Instrument"**
 
-Bedrock 把工程管家当成一台**专业驾驶舱级的精密仪器**来对待，而不是又一个后台管理模板。它的气质来自机械腕表和工程蓝图：冷静、笃定、每一个数字都对得整整齐齐，边界是发丝级的细线而不是笨重的粗框，深度靠一层层表面和柔和环境光营造，而不是靠廉价的重投影。它是一位沉稳的行业专家管家的视觉化身。
+Bedrock 把工程管家当成一台**专业驾驶舱级的精密仪器**来对待，而不是又一个后台管理模板。它的气质来自机械腕表和工程蓝图：冷静、笃定、每一个数字都对得整整齐齐，边界是发丝级的细线而不是笨重的粗框，深度靠一层层表面和发丝级边界营造，几乎不用阴影，更不靠发光或霓虹。它是一位沉稳的行业专家管家的视觉化身。
 
 这套系统显式拒绝：泛蓝企业 SaaS 模板、深灰渐变的 hero-metric 横幅、千篇一律的图标卡片墙、"深蓝紫霓虹 / 满屏玻璃拟态"的一眼假 AI 外观，以及任何不传达状态的装饰动画。density（信息密度）为工程数据服务，但密而不乱；delight（惊喜）只集中在外壳、AI 主页、驾驶舱和入场等高光时刻。
 
@@ -98,36 +99,53 @@ Bedrock 把工程管家当成一台**专业驾驶舱级的精密仪器**来对�
 
 **Key Characteristics:**
 - 单一 OKLCH 语义 token 体系，零硬编码颜色，主题只换变量不改结构。
-- 发丝级边界 + 分层表面 + 柔和环境光，几乎不用硬投影。
+- 发丝级边界 + 分层表面 + 极柔和中性阴影，几乎不用硬投影，绝不发光。
 - 金额与 KPI 强制等宽 tabular 数字，读起来像仪表读数。
-- accent 稀有：只出现在主操作、当前选中、状态与 AI 触点。
+- 主色是墨色（亮近黑 / 暗近白）；真正的彩色（绿 / 琥珀 / 红）只用于语义状态，占比极小。
 - 玻璃质感只用于浮层（命令面板、弹层），绝不铺满内容区。
 
-## 2. Colors
+## Colors
 
-调色板是"深空里的电光信号"：大面积低彩度中性面，靠一个克制而精准的信号色点亮，三套主题各换一种信号色与明暗基调。frontmatter 中的 canonical 值取自旗舰主题 Blueprint。
+调色板是"墨与纸"：近乎单色的中性面（暖白纸 / 冷白 / 石墨黑），主色是一味墨色，真正的彩色只留给语义状态。三套主题是同一套中性色在三种明暗下的呈现。frontmatter canonical 取自默认旗舰 Paper。参考 Stitch 实拍提炼：Primary ≈ #2B2B2B、Neutral 灰阶、危险红。
 
-### Primary
-- **Electric Cyan-Blue / 电光青蓝** (`oklch(74% 0.15 220)`)：Blueprint（暗色旗舰）主题的信号色。用于主按钮、当前选中态、状态高亮、AI 触点、焦点环与发光。是全屏里唯一"会发光"的颜色。
-- **Aqua Highlight / 浅青高光** (`oklch(82% 0.14 195)`)：accent 的更亮变体，仅用于渐变高光端、能量球高光、图标微光，制造光泽而非大面积铺色。
+### Primary（墨色主色，非彩色）
+- **Ink / 墨**（Paper `oklch(28% 0.02 74)` ≈ #2B2B2B；Graphite 暗色主题翻转为近白 `oklch(92% 0.004 80)` ≈ #D4D4D4）：用于主按钮、当前选中、焦点环。它**不是"信号色"**，靠明度对比承担强调 —— 全屏几乎不出现饱和色。
 
-### Secondary
-三套主题各自的信号色（同为 Primary 角色，随主题切换）：
-- **Titanium（亮）Ink-Blue** (`oklch(58% 0.17 250)`)：中性冷灰亮底上的单一电光蓝信号色，配近白文字。
-- **Kiln（暖暗）Molten Copper** (`oklch(74% 0.16 55)`)：暖石墨底上的熔铜琥珀信号色，延续行业"安全帽 / 施工"暖调。
+### Neutral（三主题的底与面）
+- **Paper / 暖白纸**（默认旗舰）：底 `oklch(98.6% 0.009 85)`，暖白如优质打印纸，不发灰。
+- **Snow / 清冷白**：底 `oklch(99% 0.0015 250)`，最干净锐利的报表视图。
+- **Graphite / 石墨黑**：底 `oklch(20.5% 0.003 75)` ≈ Notion #191919 柔和石墨，字 `oklch(86% 0.003 80)` ≈ #D4D4D4，中性无色偏（不偏蓝）。
+- **Panel / Card**：在底色上以 OKLCH 亮度递增分层，用亮度差 + 1px 发丝边拉开层级，不靠投影。
+- **Content 三级**（正文 / 次级 / 弱化）：均为极低彩度中性，无纯黑纯白。
 
-### Neutral
-- **Deep Space / 深空底** (`oklch(16% 0.012 250)`，Blueprint)：应用背景，向品牌蓝染极低彩度，绝非纯黑。
-- **Panel / 面板** (`oklch(21% 0.015 250)`) 与 **Card / 卡面** (`oklch(22.5% 0.016 250)`)：两层抬升表面，用亮度差而非投影拉开层级。
-- **Hairline / 发丝线** (`oklch(32% 0.02 250 / 0.7)`)：所有分隔与卡片边界，1px。
-- **Content / 正文** (`oklch(97% 0.008 240)`)、**Content-2 / 次级** (`oklch(80% 0.012 240)`)、**Muted / 弱化** (`oklch(64% 0.016 245)`)：三级文字层级，均染微量蓝相，无纯白。
+### State（唯一的彩色，只用于语义）
+- **成功绿 / 警告琥珀 / 危险红**（低饱和）：仅用于状态药丸、告警、趋势方向（如"逾期"红药丸），是全屏几乎唯一出现的彩色。
 
 ### Named Rules
 **The Single Token Rule.** 所有颜色必须走语义 token（surface / content / border / accent / state-*）。禁止在组件里硬编码 `bg-white`、`slate-*`、hex 值。换主题只改 `:root` 变量，绝不再写 `[data-theme] .bg-slate-100 {}` 这类覆盖补丁。
 
-**The One Signal Rule.** accent（信号色）只允许出现在四种地方：主操作、当前选中 / 焦点、状态指示、AI 触点。它在任意一屏的占比应 ≤ 10%，稀有正是它的意义。禁止把 accent 当装饰底色大面积铺开。
+**The Color-For-Meaning-Only Rule.** 界面主色是**墨色**（非彩色），靠明度对比承担强调。真正的彩色（绿 / 琥珀 / 红）只允许表达**语义状态**，任意一屏彩色占比应极小。禁止把彩色当装饰底色，禁止电光蓝 / 霓虹等"信号色"式点缀。
 
-## 3. Typography
+### shadcn ↔ Bedrock Token 映射
+
+接入 shadcn/ui 时，**桥接发生在 `tailwind.config.js`**：shadcn 组件用 Tailwind 类名（`bg-primary` / `bg-accent` / `text-muted-foreground` 等），我们把这些 Tailwind 颜色名映射到项目现有 CSS 变量，因此**不改动、也不与项目现有 `--accent` / `--muted` 的语义冲突**。
+
+| shadcn Tailwind 名 | → Bedrock CSS 变量 | 语义提示 |
+|---|---|---|
+| `background` / `foreground` | `--bg` / `--fg` | 页面底 / 正文 |
+| `card` / `card-foreground` | `--card` / `--fg` | 卡面 / 卡上文字 |
+| `popover` / `popover-foreground` | `--panel` / `--fg` | 浮层（命令面板、下拉） |
+| `primary` / `primary-foreground` | `--accent` / `--on-accent` | shadcn 的 primary = 我们的**墨色主色 accent**（亮近黑 / 暗近白） |
+| `secondary` / `secondary-foreground` | `--panel-2` / `--fg` | 次级填充面 |
+| `muted` / `muted-foreground` | `--panel-2` / `--muted` | ⚠ shadcn 的 muted 是**面**，muted-foreground 才是我们的弱化**文字** |
+| `accent` / `accent-foreground` | `--card-hover` / `--fg` | ⚠ shadcn 的 accent ≠ 品牌色，是 **hover / 选中高亮面** |
+| `destructive` | `--danger` | 危险操作 |
+| `border` / `input` | `--border` | 边框 / 输入框描边 |
+| `ring` | `--accent` | 焦点环 |
+
+**The Bridge-Not-Overwrite Rule.** 绝不在 CSS 里用 shadcn 的语义重定义项目已有的 `--accent` / `--muted`（会破坏全站品牌色与文字色）。映射一律走 tailwind.config.js 的颜色名，CSS 变量层保持项目原义。新增的唯一 CSS 变量是每主题一份的 `--on-accent`（accent 上的文字色）。
+
+## Typography
 
 **Display / Body Font:** Inter（西文）+ Noto Sans SC（中文），system-ui 兜底。
 **Numeric Font:** JetBrains Mono / Geist Mono（等宽，tabular figures）。
@@ -146,12 +164,23 @@ Bedrock 把工程管家当成一台**专业驾驶舱级的精密仪器**来对�
 
 **The Flat Scale Ban.** 层级靠 scale + weight 对比（相邻级 ≥ 1.25 或明显字重差）拉开，禁止用一堆同号字堆出"扁平无层级"的界面。
 
-## 4. Elevation
+## Layout
 
-系统以**分层表面（tonal layering）为主、柔和环境光为辅**表达深度，几乎不用硬投影。层级顺序：`bg → panel → card`，靠 OKLCH 亮度递增来区分；只有真正浮起的元素（浮层、hover 抬起）才使用带品牌色相的、极其柔和的大扩散阴影。
+Bedrock 的布局服务于「驾驶舱级信息密度」：主框架为固定侧边栏 + 内容区的两栏结构。侧边栏固定 `w-64`（圆角药丸导航，见 Components → Navigation），内容区为自适应主区域，承载 KPI / 看板 / 表格等工程数据。
+
+### Named Rules
+**The Density-With-Air Rule.** 信息密度为工程数据服务，但要「密而不乱」：靠一致的间距节奏（见 frontmatter `spacing`：xs 6 / sm 10 / md 16 / lg 26）与发丝级分隔拉开层次，禁止用粗边框或卡中卡堆叠制造拥挤。
+
+**The Reading-Measure Rule.** 长文本（说明、对话气泡）行宽控制在 65–75ch，避免整行贯穿宽屏导致阅读疲劳。
+
+**Layout tokens（needs-design-decision）**：断点（breakpoints）、栅格列数、内容区最大宽度尚未在 token 层固化，实现中按需内联。如需跨页一致，应补充到 frontmatter 或本节。
+
+## Elevation & Depth
+
+系统以**分层表面（tonal layering）为主、极柔和中性阴影为辅**表达深度，几乎不用硬投影，**绝不发光**。层级顺序：`bg → panel → card`，靠 OKLCH 亮度递增来区分；只有真正浮起的元素（浮层、hover 抬起）才使用**中性的**、极其柔和的大扩散阴影。
 
 ### Shadow Vocabulary
-- **Ambient Glow / 环境光**（`box-shadow: 0 12px 40px -8px var(--glow)`）：能量球、主按钮等"发光体"下方的漫射辉光，传达"活着 / 智能"，非结构投影。
+- **Soft Ambient / 柔光**（极低强度，中性色）：主按钮 / 浮起元素下方一层极淡的中性柔光，制造轻微浮起感，**非发光、非霓虹**。
 - **Floating / 浮层**（`box-shadow: 0 20px 60px -24px oklch(0% 0 0 / 0.7)`）：命令面板、下拉、弹层等脱离平面的浮层。
 - **Lift / 抬起**（`box-shadow: 0 4px 16px -8px …`）：卡片 hover 时的轻微抬起反馈。
 
@@ -160,11 +189,20 @@ Bedrock 把工程管家当成一台**专业驾驶舱级的精密仪器**来对�
 
 **The Glass-Only-Floats Rule.** backdrop-filter 毛玻璃只允许用于**浮层**（命令面板、弹出菜单、toast）。禁止给标题栏、输入框、卡片等常驻内容元素默认加玻璃 —— 那正是"一眼假 AI"的元凶。
 
-## 5. Components
+## Shapes
+
+形状语言由统一的圆角标尺与发丝级边界构成，见 frontmatter `rounded`：sm 9px（按钮 / chip / 导航项）、md 10px、lg 16px（卡片 / 容器）、xl 22px（对话输入等大圆角胶囊）。
+
+### Named Rules
+**The Hairline Border Rule.** 所有分隔与容器边界统一为 1px 发丝线（`{colors.hairline}`）；hover 时边框转 accent-line。禁止 >1px 的彩色边或彩色侧边竖条（见 Do's and Don'ts）。
+
+**The Radius Scale Rule.** 圆角只取 `rounded` 标尺内的档位，按组件语义选择；同类组件必须使用同一档圆角，禁止逐处自定义 px 圆角。
+
+## Components
 
 ### Buttons
 - **Shape:** 圆角矩形（9px），高 34px。
-- **Primary:** 实心 accent 底 + `on-accent` 文字（每主题一份的语义 token，绝不写死颜色），带极柔和的 accent 辉光；hover 时轻微提亮并上浮 1px。
+- **Primary:** 实心 accent（墨色）底 + `on-accent` 文字（每主题一份的语义 token，绝不写死颜色）；hover 时轻微提亮并上浮 1px，**无发光**。
 - **Ghost / Secondary:** panel 底 + 发丝边 + content-2 文字；hover 提一层表面。
 - **状态:** default / hover / focus-visible（accent 焦点环）/ active / disabled 五态齐全。
 
@@ -181,7 +219,7 @@ Bedrock 把工程管家当成一台**专业驾驶舱级的精密仪器**来对�
 
 ### Inputs / Fields
 - **Style:** card 实色底 + 发丝边，圆角随场景（对话输入用 22px 大圆角胶囊）。
-- **Focus:** 边框转 accent + 4px accent-soft 辉光环，不做位移。
+- **Focus:** 边框转 accent + 4px accent-soft 焦点环，不做位移。
 - **禁止**给输入框默认加毛玻璃。
 
 ### Navigation（侧边栏 · 指挥中心）
@@ -192,19 +230,19 @@ Bedrock 把工程管家当成一台**专业驾驶舱级的精密仪器**来对�
 ### Command Palette（⌘K，签名组件）
 全局浮层，居中，玻璃质感（此处允许）。三组条目：导航 / AI 操作 / 快捷。AI 操作条目用 accent 图标标记，可直接把自然语言指令派发给 Agent。它是"AI 无处不在"的主入口。
 
-### Assistant Orb（AI 管家能量球，签名组件）
-AI 主页中央的发光球体，是角色 IP 的 Phase 1 形态：呼吸光晕 + 缓慢旋转环 + 会跟随鼠标转动的眼睛；思考态时核心提亮脉动。它让"AI 在场"具象化，未来可平滑替换为 Rive/Lottie 角色。
+### Assistant Mark（AI 管家形象，签名组件）
+AI 主页中央的助手形象。当前为**扁平中性占位**（墨色圆形 + 会跟随鼠标转动的眼睛，无发光、无霓虹、无旋转环），是角色 IP 的过渡形态。正式形象由 miora 出稿（首选 **Rive** 交互动画：眼睛跟随鼠标 + 待机 / 思考 / 聆听 / 完成状态；兜底**分层 SVG** 由前端自行驱动），届时无缝替换此占位。**绝不做发光能量球。**
 
-## 6. Do's and Don'ts
+## Do's and Don'ts
 
 ### Do:
 - **Do** 所有颜色走语义 token（The Single Token Rule），换主题只改变量。
 - **Do** 金额 / KPI 一律等宽 tabular 数字（The Tabular Numeral Rule）。
 - **Do** 用亮度分层 + 1px 发丝边表达层级；阴影只作状态响应（The Flat-By-Default Rule）。
-- **Do** 把 accent 当稀有信号色，占比 ≤ 10%（The One Signal Rule）。
+- **Do** 主色用墨色；真正的彩色只用于语义状态、占比极小（The Color-For-Meaning-Only Rule）。
 - **Do** 用背景染色 + 图标高亮表达导航选中态。
 - **Do** 把玻璃质感只留给命令面板等浮层（The Glass-Only-Floats Rule）。
-- **Do** 为每套主题写一句"物理场景"来强制明暗决策：Titanium = 白天办公室、明亮日光下看报表；Blueprint = 傍晚 / 夜间加班、暗室里盯资金看板；Kiln = 长时间连续办公、需要暖而不刺眼的沉浸环境。
+- **Do** 为每套主题写一句"物理场景"来强制明暗决策：Paper = 白天办公室、像优质打印纸；Snow = 需要最干净锐利的报表视图；Graphite = 夜间 / 偏好暗色、Notion 式柔和石墨。
 
 ### Don't:
 - **Don't** 硬编码 `bg-white`、`slate-*` 或 hex 颜色，也不要再写 `[data-theme] .bg-slate-x {}` 覆盖补丁。
@@ -215,3 +253,38 @@ AI 主页中央的发光球体，是角色 IP 的 Phase 1 形态：呼吸光晕 
 - **Don't** 用渐变文字（`background-clip: text` + 渐变）；强调靠字重与字号。
 - **Don't** 加不传达状态的装饰动画（飘浮圆点、无意义 pulse-glow）；也不要给静止卡片挂重投影。
 - **Don't** 用纯 `#000` / `#fff`；中性色一律向品牌色相染极低彩度。
+
+## Implementation Status
+
+> 本节记录「设计契约」与「当前实现」的差距，供接手的人类与 Agent 判断哪些是目标态、哪些是现状。标注 `needs-design-decision` 的项需产品 / 设计定夺后再落地。
+
+**契约与实现存在显著漂移（needs-design-decision）。** 本 DESIGN.md 描述的是 Bedrock 目标设计语言（单一 OKLCH 语义 token 体系、零硬编码颜色、禁止 slate-*/bg-white/hex）；但当前前端实现仍以旧的 Tailwind 工具类体系为主：
+
+- `slate-*` 工具类：约 **3025 处 / 275 个文件**（The Single Token Rule 要求为 0）。
+- `bg-white`：约 **249 处 / 119 个文件**。
+- 硬编码 hex 颜色：约 **150 处 / 21 个文件**（多集中在 `*Colors.ts` / `printExport.ts` 导出与图表配色，属可接受例外，应显式登记）。
+- Bedrock 的 OKLCH token 仅存在于 `src/index.css`（约 110 个 oklch 值），且 `tailwind.config.js` 只暴露 `primary/success/warning/danger/info`，**未暴露** `bg/panel/card/content/accent/hairline` 等语义名——组件目前无法书写 `bg-panel`/`text-content`，只能退回 `slate-*`。
+- White 主题的 `:root`（`src/index.css`）用 **hex** 定义（如 `--bg:#f8fafc`、`--accent:#2563eb`），与「零硬编码颜色 / OKLCH 体系」的表述不符。
+
+**与 AGENTS.md 的规则冲突（needs-design-decision）。** `AGENTS.md` 现行 UI 规范将 `slate-*` 列为许可中性色、禁止 `gray-*`；本文件却禁止 `slate-*`。同一仓库存在两套相互矛盾的颜色契约，Agent 无法据此可靠实现。需明确：Bedrock 是目标态（则应给出迁移路径并同步 AGENTS.md），还是现状（则应修订本文件表述）。
+
+**建议的落地路径（需决策后执行）：**
+1. 在 `tailwind.config.js` 暴露 Bedrock 语义 token（`bg/panel/card/content/content-2/muted/accent/hairline/state-*`），映射到 `src/index.css` 的 CSS 变量。
+2. 分模块用 codemod 将 `slate-*` / `bg-white` 迁移到语义 token，从主路径页面开始。
+3. 统一 AGENTS.md 与本文件的颜色契约表述，消除矛盾。
+4. 为 `*Colors.ts` / 导出配色登记「可接受例外」清单（见下）。
+
+### 契约优先级（Precedence）
+
+在 Bedrock 迁移完成前，本文件的 **Colors / Do's and Don'ts** 描述的是**目标态**；**当前实现层的颜色契约以 `AGENTS.md`（slate-* 中性色 + primary/success/warning/danger 语义色，由 `scripts/check-rules.cjs` 强制）为准**。即：新代码继续遵循 AGENTS.md，`slate-*` 在迁移前不算违规；「禁止 slate-*」等条款在语义 token 接入 Tailwind 且完成迁移后才转为强制。以此消除两份文档的表述冲突。
+
+### 可接受例外清单（Acceptable Exceptions）
+
+以下位置允许出现硬编码颜色 / 内联样式，不计入设计债（`scripts/check-rules.cjs` 已将 `*Colors.ts` 排除在 hex 检查外）：
+
+- `src/index.css`：主题 token 与 CSS 变量的定义源，本就应出现原始色值。
+- `src/**/*Colors.ts`（如 `costLedgerColors.ts` / `dashboardColors.ts` / `hrColors.ts` 等）：图表 / 状态 / 分类的配色映射表。
+- `src/**/printExport.ts`、`src/utils/wage-export.ts`、`invoicesPrintExportColors.ts` 等：Excel / 打印导出需要具体色值，非页面渲染。
+- `src/components/ui/SimpleBarChart.tsx`、`HoverScrollbar.tsx` 等：图表几何 / 滚动条需按数据动态计算的内联样式。
+
+新增例外须在此登记并说明理由；未登记的硬编码颜色 / 内联样式一律视为设计债。

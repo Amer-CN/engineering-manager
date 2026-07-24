@@ -139,3 +139,10 @@ screenshot_step*.png
 .impeccable/
 10.10_executor/
 CODELY.md
+
+# Design Review 插件产物（本地生成，不入库）
+.design-qa/
+.design-qa-run/
+
+# Stitch 设计导出（zip 已忽略；解压出的 HTML/PNG 二进制过大且 GitHub 无法审阅，不入库。设计文档 STITCH-SCREENS.md 等在 design-prototype/ 根目录，照常入库）
+design-prototype/stitch-export/

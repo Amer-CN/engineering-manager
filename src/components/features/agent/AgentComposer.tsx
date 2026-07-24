@@ -174,7 +174,7 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
                   onClick={() => selectSlashCommand(cmd.prompt)}
                   className="w-full flex items-center gap-3 px-3 py-2 hover:bg-slate-50 transition-colors text-left"
                 >
-                  <span className="px-1.5 py-0.5 rounded bg-primary-50 text-primary-600 text-xs font-mono font-medium flex-shrink-0">
+                  <span className="px-1.5 py-0.5 rounded text-xs font-mono font-medium flex-shrink-0" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
                     {cmd.key}
                   </span>
                   <span className="text-sm text-slate-600">{cmd.label}</span>
@@ -283,7 +283,8 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
           onClick={() => void doSend()}
           aria-label="发送"
           disabled={!canSend}
-          className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-r from-primary-600 to-primary-500 text-white flex items-center justify-center shadow-md shadow-primary-500/20 disabled:opacity-30 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-primary-500/30 transition-shadow"
+          className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center shadow-sm disabled:opacity-30 disabled:cursor-not-allowed transition-opacity"
+          style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
         >
           {disabled || ocrLoading ? (
             <motion.div

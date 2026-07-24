@@ -41,7 +41,7 @@ const AgentWelcome: React.FC<AgentWelcomeProps> = ({
     <div className="flex items-center justify-end px-6 pt-4 flex-shrink-0">
       <button
         onClick={onOpenHistory}
-        className="lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+        className="lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors" style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}
       >
         <Icon name="Inbox" size={14} />
         对话历史
@@ -55,21 +55,15 @@ const AgentWelcome: React.FC<AgentWelcomeProps> = ({
         transition={{ duration: 0.35, ease: 'easeOut' }}
         className="w-full max-w-2xl"
       >
-        {/* 头像 + 问候 */}
-        <div className="text-center mb-7">
-          <div className="inline-flex w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 items-center justify-center shadow-lg shadow-primary-500/20 mb-4">
-            <Icon name="Sparkles" size={26} className="text-white" />
-          </div>
-          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">
+        {/* 问候（对齐 Stitch ai_1：大号居中问候，无头像/副标） */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold tracking-tight" style={{ color: 'var(--fg)' }}>
             {getGreeting()}，{username}
           </h1>
-          <p className="text-sm text-slate-500 mt-1.5">
-            我是你的工程管理助手，可以帮你查项目、看发票、算成本
-          </p>
           {modelName && (
-            <div className="inline-flex items-center gap-1.5 mt-3 px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200">
-              <span className="w-1.5 h-1.5 rounded-full bg-success-500 animate-pulse" />
-              <span className="text-xs text-slate-500 font-medium">
+            <div className="inline-flex items-center gap-1.5 mt-4 px-2.5 py-1 rounded-lg" style={{ background: 'var(--panel-2)', border: '1px solid var(--border)' }}>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--success)' }} />
+              <span className="text-xs font-medium" style={{ color: 'var(--muted)' }}>
                 {providerName ? `${providerName} · ` : ''}{modelName}
               </span>
             </div>
@@ -83,6 +77,7 @@ const AgentWelcome: React.FC<AgentWelcomeProps> = ({
           onSend={onSend}
           disabled={loading}
           inputRef={inputRef}
+          placeholder="输入工程指令或查询数据…"
           centered
         />
 
