@@ -74,7 +74,7 @@ function GroupCheckbox({ state, onChange }: { state: 'checked' | 'indeterminate'
       type="checkbox"
       checked={state === 'checked'}
       onChange={onChange}
-      className="h-3 w-3 rounded border-slate-300 shrink-0"
+      className="h-3 w-3 rounded border-[color:var(--border)] shrink-0"
     />
   )
 }
@@ -124,11 +124,11 @@ export function DateFilterTree({ values, checked, toggle, setAll, clear }: DateF
   const renderNode = (node: DateNode, depth: number): React.ReactNode => {
     if (node.type === 'day') {
       return (
-        <label key={node.key} className="flex items-center gap-1.5 cursor-pointer rounded px-1 py-0.5 text-xs text-slate-600 hover:bg-slate-50"
+        <label key={node.key} className="flex items-center gap-1.5 cursor-pointer rounded px-1 py-0.5 text-xs text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)]"
           style={{ paddingLeft: 28 + depth * 12 }}>
           <input type="checkbox" checked={checked.has(node.dates[0])}
             onChange={() => toggle(node.dates[0])}
-            className="h-3 w-3 rounded border-slate-300 shrink-0" />
+            className="h-3 w-3 rounded border-[color:var(--border)] shrink-0" />
           <span className="truncate">{node.label}</span>
         </label>
       )
@@ -140,11 +140,11 @@ export function DateFilterTree({ values, checked, toggle, setAll, clear }: DateF
 
     return (
       <div key={node.key}>
-        <div className="flex items-center gap-1 cursor-pointer rounded px-1 py-0.5 text-xs hover:bg-slate-50"
+        <div className="flex items-center gap-1 cursor-pointer rounded px-1 py-0.5 text-xs hover:bg-[color:var(--panel-2)]"
           style={{ paddingLeft: 4 + depth * 12 }}>
           {hasChildren ? (
             <button type="button" onClick={() => toggleExpand(node.key)}
-              className="shrink-0 w-4 h-4 flex items-center justify-center text-slate-400 hover:text-slate-600">
+              className="shrink-0 w-4 h-4 flex items-center justify-center text-[color:var(--muted)] hover:text-[color:var(--fg-2)]">
               <svg width="8" height="8" viewBox="0 0 8 8"
                 style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}>
                 <path d="M2.5 1L5.5 4L2.5 7" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -154,8 +154,8 @@ export function DateFilterTree({ values, checked, toggle, setAll, clear }: DateF
             <span className="w-4 shrink-0" />
           )}
           <GroupCheckbox state={checkState} onChange={() => toggleDateGroup(node)} />
-          <span className="truncate text-slate-700 font-medium">{node.label}</span>
-          <span className="ml-auto text-caption text-slate-400 shrink-0">{node.dates.length}</span>
+          <span className="truncate text-[color:var(--fg-2)] font-medium">{node.label}</span>
+          <span className="ml-auto text-caption text-[color:var(--muted)] shrink-0">{node.dates.length}</span>
         </div>
         {hasChildren && isExpanded && (
           <div>
@@ -169,15 +169,15 @@ export function DateFilterTree({ values, checked, toggle, setAll, clear }: DateF
   return (
     <div className="max-h-52 overflow-y-auto p-1">
       {values.length === 0 ? (
-        <p className="px-2 py-1 text-xs text-slate-400">无可用值</p>
+        <p className="px-2 py-1 text-xs text-[color:var(--muted)]">无可用值</p>
       ) : (
         <>
-          <div className="flex gap-1 border-b border-slate-100 px-1 pb-1 mb-1">
-            <button type="button" onClick={() => setAll(values)} className="text-caption text-blue-600 hover:text-blue-800">全选</button>
-            <button type="button" onClick={clear} className="text-caption text-slate-400 hover:text-slate-600">清除</button>
+          <div className="flex gap-1 border-b border-[color:var(--border)] px-1 pb-1 mb-1">
+            <button type="button" onClick={() => setAll(values)} className="text-caption text-[color:var(--accent)] hover:opacity-80">全选</button>
+            <button type="button" onClick={clear} className="text-caption text-[color:var(--muted)] hover:text-[color:var(--fg-2)]">清除</button>
           </div>
           {dateTree.length === 0 ? (
-            <p className="px-2 py-1 text-xs text-slate-400">无可用值</p>
+            <p className="px-2 py-1 text-xs text-[color:var(--muted)]">无可用值</p>
           ) : (
             dateTree.map(node => renderNode(node, 0))
           )}

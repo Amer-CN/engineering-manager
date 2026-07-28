@@ -46,36 +46,36 @@ const LaborDashboard: React.FC<LaborDashboardProps> = ({ members, projects, work
       label: '工人总数',
       value: totalWorkers,
       icon: 'Users',
-      color: 'bg-amber-50 text-amber-600',
+      color: 'bg-warning-50 text-warning-600',
       suffix: '人',
     },
     {
       label: '在场工人',
       value: activeWorkers,
       icon: 'UserCheck',
-      color: 'bg-emerald-50 text-emerald-600',
+      color: 'bg-success-50 text-success-600',
       suffix: '人',
     },
     {
       label: '已离场',
       value: leftWorkers,
       icon: 'LogOut',
-      color: 'bg-slate-50 text-slate-600',
+      color: 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)]',
       suffix: '人',
     },
     {
       label: '超龄工人',
       value: overAgeWorkers,
       icon: 'AlertTriangle',
-      color: 'bg-red-50 text-red-600',
+      color: 'bg-danger-50 text-danger-600',
       suffix: '人',
-      suffixColor: overAgeWorkers > 0 ? 'text-red-500' : 'text-slate-400',
+      suffixColor: overAgeWorkers > 0 ? 'text-danger-500' : 'text-[color:var(--muted)]',
     },
     {
       label: '班组数量',
       value: workerTeams.length,
       icon: 'Building2',
-      color: 'bg-blue-50 text-blue-600',
+      color: 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)]',
       suffix: '个',
     },
   ]
@@ -90,17 +90,17 @@ const LaborDashboard: React.FC<LaborDashboardProps> = ({ members, projects, work
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: index * 0.03 }}
-            className="bg-white rounded-xl border border-slate-200 shadow-sm p-5"
+            className="bg-[color:var(--card)] rounded-xl border border-[color:var(--border)] shadow-sm p-5"
           >
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-slate-500">{kpi.label}</span>
+              <span className="text-sm text-[color:var(--muted)]">{kpi.label}</span>
               <div className={`p-2 rounded-lg ${kpi.color}`}>
                 <Icon name={kpi.icon} size={18} />
               </div>
             </div>
             <div className="flex items-baseline gap-1">
-              <span className="text-3xl font-bold text-slate-800">{kpi.value}</span>
-              <span className={`text-sm ${kpi.suffixColor || 'text-slate-400'}`}>{kpi.suffix}</span>
+              <span className="text-numeric-xl font-mono tabular-nums tracking-tight text-[color:var(--fg)]">{kpi.value}</span>
+              <span className={`text-sm ${kpi.suffixColor || 'text-[color:var(--muted)]'}`}>{kpi.suffix}</span>
             </div>
           </motion.div>
         ))}
@@ -113,9 +113,9 @@ const LaborDashboard: React.FC<LaborDashboardProps> = ({ members, projects, work
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.15 }}
-          className="bg-white rounded-xl border border-slate-200 shadow-sm p-6"
+          className="bg-[color:var(--card)] rounded-xl border border-[color:var(--border)] shadow-sm p-6"
         >
-          <h3 className="text-lg font-semibold text-slate-800 mb-4">工人分布</h3>
+          <h3 className="text-lg font-semibold text-[color:var(--fg)] mb-4">工人分布</h3>
           {projectDistribution.length > 0 ? (
             <div className="flex flex-col items-center">
               <ResponsiveContainer width="100%" height={250}>
@@ -146,14 +146,14 @@ const LaborDashboard: React.FC<LaborDashboardProps> = ({ members, projects, work
                       className="w-3 h-3 rounded-full"
                       style={{ backgroundColor: CHART_PALETTE[index % CHART_PALETTE.length] }}
                     />
-                    <span className="text-sm text-slate-600">{item.name}</span>
-                    <span className="text-sm text-slate-400">({item.value})</span>
+                    <span className="text-sm text-[color:var(--fg-2)]">{item.name}</span>
+                    <span className="text-sm text-[color:var(--muted)]">({item.value})</span>
                   </div>
                 ))}
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-64 text-slate-400">
+            <div className="flex items-center justify-center h-64 text-[color:var(--muted)]">
               暂无数据
             </div>
           )}
@@ -164,9 +164,9 @@ const LaborDashboard: React.FC<LaborDashboardProps> = ({ members, projects, work
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="bg-white rounded-xl border border-slate-200 shadow-sm p-6"
+          className="bg-[color:var(--card)] rounded-xl border border-[color:var(--border)] shadow-sm p-6"
         >
-          <h3 className="text-lg font-semibold text-slate-800 mb-4">班组概览</h3>
+          <h3 className="text-lg font-semibold text-[color:var(--fg)] mb-4">班组概览</h3>
           {workerTeams.length > 0 ? (
             <HoverScrollbar className="flex-1 max-h-[300px]"><div className="space-y-3">
               {workerTeams.slice(0, 10).map(team => {
@@ -174,25 +174,25 @@ const LaborDashboard: React.FC<LaborDashboardProps> = ({ members, projects, work
                 return (
                   <div
                     key={team.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors"
+                    className="flex items-center justify-between p-3 rounded-lg bg-[color:var(--panel-2)] hover:bg-[color:var(--panel-2)] transition-colors"
                   >
                     <div>
-                      <div className="font-medium text-slate-700">{team.name}</div>
-                      <div className="text-sm text-slate-400">
+                      <div className="font-medium text-[color:var(--fg-2)]">{team.name}</div>
+                      <div className="text-sm text-[color:var(--muted)]">
                         {team.projectName || '未分配项目'}
                         {team.leaderName && ` · 组长: ${team.leaderName}`}
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="text-lg font-semibold text-amber-600">{teamWorkers.length}</span>
-                      <span className="text-sm text-slate-400 ml-1">人</span>
+                      <span className="text-lg font-semibold text-warning-600">{teamWorkers.length}</span>
+                      <span className="text-sm text-[color:var(--muted)] ml-1">人</span>
                     </div>
                   </div>
                 )
               })}
             </div></HoverScrollbar>
           ) : (
-            <div className="flex items-center justify-center h-64 text-slate-400">
+            <div className="flex items-center justify-center h-64 text-[color:var(--muted)]">
               暂无班组
             </div>
           )}

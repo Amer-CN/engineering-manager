@@ -163,23 +163,23 @@ export function ColumnFilter(props: ColumnFilterProps) {
       return (
         <div className="max-h-48 overflow-y-auto p-1">
           {meta.values.length === 0 ? (
-            <p className="px-2 py-1 text-xs text-slate-400">无可用值</p>
+            <p className="px-2 py-1 text-xs text-[color:var(--muted)]">无可用值</p>
           ) : (
             <>
-              <div className="flex gap-1 border-b border-slate-100 px-1 pb-1 mb-1">
-                <button type="button" onClick={() => meta.setAll(meta.values)} className="text-caption text-blue-600 hover:text-blue-800">全选</button>
-                <button type="button" onClick={meta.clear} className="text-caption text-slate-400 hover:text-slate-600">清除</button>
+              <div className="flex gap-1 border-b border-[color:var(--border)] px-1 pb-1 mb-1">
+                <button type="button" onClick={() => meta.setAll(meta.values)} className="text-caption text-[color:var(--accent)] hover:opacity-80">全选</button>
+                <button type="button" onClick={meta.clear} className="text-caption text-[color:var(--muted)] hover:text-[color:var(--fg-2)]">清除</button>
                 {checkSearch.trim() && (
-                  <span className="ml-auto text-caption text-slate-400">{filteredValues.length}/{meta.values.length}</span>
+                  <span className="ml-auto text-caption text-[color:var(--muted)]">{filteredValues.length}/{meta.values.length}</span>
                 )}
               </div>
               {filteredValues.length === 0 ? (
-                <p className="px-2 py-1 text-xs text-slate-400">无匹配结果</p>
+                <p className="px-2 py-1 text-xs text-[color:var(--muted)]">无匹配结果</p>
               ) : (
                 filteredValues.map(v => (
-                  <label key={v} className="flex items-center gap-1.5 cursor-pointer rounded px-1 py-0.5 text-xs text-slate-600 hover:bg-slate-50">
+                  <label key={v} className="flex items-center gap-1.5 cursor-pointer rounded px-1 py-0.5 text-xs text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)]">
                     <input type="checkbox" checked={meta.checked.has(v)} onChange={() => meta.toggle(v)}
-                      className="h-3 w-3 rounded border-slate-300 shrink-0" />
+                      className="h-3 w-3 rounded border-[color:var(--border)] shrink-0" />
                     <span className="truncate">{v}</span>
                   </label>
                 ))
@@ -193,23 +193,23 @@ export function ColumnFilter(props: ColumnFilterProps) {
     return (
       <div className="w-52">
         {/* 搜索框 */}
-        <div className="p-1.5 border-b border-slate-100">
+        <div className="p-1.5 border-b border-[color:var(--border)]">
           <input autoFocus type="text" value={checkSearch}
             onChange={e => setCheckSearch(e.target.value)}
             placeholder="搜索..."
-            className="w-full rounded border border-slate-200 px-2 py-1 text-xs text-slate-600 focus:border-blue-400 focus:outline-none"
+            className="w-full rounded border border-[color:var(--border)] px-2 py-1 text-xs text-[color:var(--fg-2)] focus:border-[color:var(--accent)] focus:outline-none"
           />
         </div>
         {/* 日期快捷按钮 */}
         {isDate && (
-          <div className="flex gap-1 border-b border-slate-100 px-1.5 py-1.5">
+          <div className="flex gap-1 border-b border-[color:var(--border)] px-1.5 py-1.5">
             {[
               { label: '本月', getDates: getThisMonthDates },
               { label: '近3月', getDates: getLast3MonthDates },
               { label: '本年', getDates: getThisYearDates },
             ].map(p => (
               <button key={p.label} type="button" onClick={() => selectDateRange(p.getDates())}
-                className="rounded border border-slate-200 px-1.5 py-0.5 text-caption text-slate-500 hover:bg-slate-50">{p.label}</button>
+                className="rounded border border-[color:var(--border)] px-1.5 py-0.5 text-caption text-[color:var(--muted)] hover:bg-[color:var(--panel-2)]">{p.label}</button>
             ))}
           </div>
         )}
@@ -228,13 +228,13 @@ export function ColumnFilter(props: ColumnFilterProps) {
         ref={btnRef}
         type="button"
         onClick={e => { e.stopPropagation(); handleToggle() }}
-        className={`ml-1 shrink-0 rounded p-0.5 transition-colors ${isActive ? 'bg-blue-100 text-blue-600' : 'text-slate-300 hover:text-slate-500'}`}
+        className={`ml-1 shrink-0 rounded p-0.5 transition-colors ${isActive ? 'bg-[color:var(--accent-soft)] text-[color:var(--accent)]' : 'text-[color:var(--border-strong)] hover:text-[color:var(--muted)]'}`}
         title="筛选"
       >
         <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M0 0h10L6 4.5V9L4 10V4.5L0 0z" /></svg>
       </button>
       {open && createPortal(
-        <div ref={popRef} className="fixed z-[100] min-w-[180px] rounded-lg border border-slate-200 bg-white shadow-xl"
+        <div ref={popRef} className="fixed z-[100] min-w-[180px] rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] shadow-xl"
           style={{ top: pos.top, left: pos.left }}>
           {renderContent()}
         </div>,

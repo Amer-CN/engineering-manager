@@ -140,7 +140,7 @@ const LoginSettingsPage: React.FC<Props> = ({ onBack }) => {
         style={{
           width: '100%', padding: '8px 0', fontSize: 12, fontWeight: 600, borderRadius: 8,
           border: 'none', cursor: saving ? 'wait' : 'pointer',
-          background: 'var(--accent)', color: 'var(--bg)',
+          background: 'var(--accent)', color: 'var(--on-accent)',
           opacity: saving || !dataPath.trim() ? 0.6 : 1,
         }}
       >

@@ -19,7 +19,7 @@ const sizeStyles: Record<TextareaSize, string> = {
 }
 
 const statusBorderStyles: Record<TextareaStatus, string> = {
-  default: 'border-slate-200 focus:ring-primary-500/20 focus:border-primary-500 hover:border-slate-300',
+  default: 'border-[color:var(--border)] focus:ring-[color:var(--accent-soft)] focus:border-[color:var(--accent)] hover:border-[color:var(--border)]',
   error: 'border-danger-500 focus:ring-danger-500/20 focus:border-danger-500',
   warning: 'border-warning-500 focus:ring-warning-500/20 focus:border-warning-500',
   success: 'border-success-500 focus:ring-success-500/20 focus:border-success-500',
@@ -52,7 +52,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(({
       {label && (
         <label
           htmlFor={textareaId}
-          className="block text-sm font-medium text-slate-700 mb-1.5"
+          className="block text-sm font-medium text-[color:var(--fg-2)] mb-1.5"
         >
           {label}
           {props.required && <span className="text-danger-500 ml-1">*</span>}
@@ -65,13 +65,13 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(({
         rows={rows}
         className={`
           w-full
-          bg-white text-slate-800
+          bg-[color:var(--card)] text-[color:var(--fg)]
           border rounded-lg
-          placeholder-slate-400
+          placeholder-[color:var(--muted)]
           transition-all duration-200
           resize-y
           focus:outline-none focus:ring-2
-          disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed
+          disabled:bg-[color:var(--panel-2)] disabled:text-[color:var(--muted)] disabled:cursor-not-allowed
           ${sizeStyles[size]}
           ${statusBorderStyles[resolvedStatus]}
           ${className}
@@ -89,7 +89,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(({
       )}
 
       {helpText && !error && (
-        <p id={`${textareaId}-help`} className="mt-1.5 text-sm text-slate-500">
+        <p id={`${textareaId}-help`} className="mt-1.5 text-sm text-[color:var(--muted)]">
           {helpText}
         </p>
       )}

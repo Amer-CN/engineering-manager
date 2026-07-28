@@ -34,7 +34,7 @@ export const ItemList: React.FC<ItemListProps> = ({
       key: 'code',
       title: '编码',
       render: (item) => (
-        <span className="text-sm font-mono text-slate-600">{item.code}</span>
+        <span className="text-sm font-mono text-[color:var(--fg-2)]">{item.code}</span>
       )
     },
     {
@@ -44,9 +44,9 @@ export const ItemList: React.FC<ItemListProps> = ({
       sorter: (a, b) => (a.name || '').localeCompare(b.name || '', 'zh-CN'),
       render: (item) => (
         <>
-          <div className="font-medium text-slate-800">{item.name}</div>
+          <div className="font-medium text-[color:var(--fg)]">{item.name}</div>
           {item.currentStock <= item.minStock && (
-            <span className="text-xs text-red-500">
+            <span className="text-xs text-danger-500">
               <Icon name="AlertTriangle" size={12} className="inline-block" /> 库存不足
             </span>
           )}
@@ -60,14 +60,14 @@ export const ItemList: React.FC<ItemListProps> = ({
       filterOptions: categories.map(c => ({ label: c, value: c })),
       filterAccessor: (item: InventoryItem) => item.category,
       render: (item) => (
-        <span className="text-slate-600">{item.category}</span>
+        <span className="text-[color:var(--fg-2)]">{item.category}</span>
       )
     },
     {
       key: 'specifications',
       title: '规格',
       render: (item) => (
-        <span className="text-slate-600">{item.specifications || '-'}</span>
+        <span className="text-[color:var(--fg-2)]">{item.specifications || '-'}</span>
       )
     },
     {
@@ -75,7 +75,7 @@ export const ItemList: React.FC<ItemListProps> = ({
       title: '单位',
       align: 'center',
       render: (item) => (
-        <span className="text-slate-600">{item.unit}</span>
+        <span className="text-[color:var(--fg-2)]">{item.unit}</span>
       )
     },
     {
@@ -85,8 +85,8 @@ export const ItemList: React.FC<ItemListProps> = ({
       sortable: true,
       sorter: (a, b) => ((a.currentStock || 0) - (b.currentStock || 0)),
       render: (item) => (
-        <span className={`font-medium ${
-          item.currentStock <= item.minStock ? 'text-red-600' : 'text-slate-800'
+        <span className={`font-medium font-mono tabular-nums ${
+          item.currentStock <= item.minStock ? 'text-danger-600' : 'text-[color:var(--fg)]'
         }`}>
           {item.currentStock}
         </span>
@@ -99,7 +99,7 @@ export const ItemList: React.FC<ItemListProps> = ({
       sortable: true,
       sorter: (a, b) => ((a.purchasePrice || 0) - (b.purchasePrice || 0)),
       render: (item) => (
-        <span className="text-slate-600">¥{formatMoney(item.purchasePrice)}</span>
+        <span className="text-[color:var(--fg-2)] font-mono tabular-nums">¥{formatMoney(item.purchasePrice)}</span>
       )
     },
     {
@@ -107,7 +107,7 @@ export const ItemList: React.FC<ItemListProps> = ({
       title: '销售价',
       align: 'right',
       render: (item) => (
-        <span className="text-slate-600">¥{formatMoney(item.salePrice)}</span>
+        <span className="text-[color:var(--fg-2)] font-mono tabular-nums">¥{formatMoney(item.salePrice)}</span>
       )
     },
     {
@@ -119,7 +119,7 @@ export const ItemList: React.FC<ItemListProps> = ({
           <Button
             onClick={() => onTrans(item)}
             
-           variant="ghost" size="sm" className="text-primary-600">
+           variant="ghost" size="sm" className="text-[color:var(--accent)]">
             出入库
           </Button>
           <Button

@@ -56,7 +56,7 @@ describe('Skeleton', () => {
   it('renders with default props', () => {
     const { container } = render(<Skeleton />)
     const el = container.firstChild as HTMLElement
-    expect(el).toHaveClass('bg-slate-200', 'animate-pulse')
+    expect(el).toHaveClass('bg-[color:var(--panel-2)]', 'animate-pulse')
   })
 
   it('applies width and height styles', () => {

@@ -23,9 +23,9 @@ const sizeStyles = {
 }
 
 const colorStyles = {
-  primary: 'text-primary-600',
+  primary: 'text-[color:var(--accent)]',
   white: 'text-white',
-  gray: 'text-slate-400',
+  gray: 'text-[color:var(--muted)]',
 }
 
 /**
@@ -101,7 +101,7 @@ export function Skeleton({
 }: SkeletonProps) {
   return (
     <div
-      className={`bg-slate-200 animate-pulse ${roundedStyles[rounded]} ${className}`}
+      className={`bg-[color:var(--panel-2)] animate-pulse ${roundedStyles[rounded]} ${className}`}
       style={{
         width: typeof width === 'number' ? `${width}px` : width,
         height: typeof height === 'number' ? `${height}px` : height,

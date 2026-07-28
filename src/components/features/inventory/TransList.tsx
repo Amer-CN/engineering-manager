@@ -14,11 +14,11 @@ interface TransListProps {
 }
 
 const typeConfig: Record<InventoryTransactionType, { label: string; icon: React.ReactNode; color: string }> = {
-  purchase: { label: '采购入库', icon: <Icon name="Download" size={18} />, color: 'text-green-600 bg-green-100' },
-  sale: { label: '销售出库', icon: <Icon name="Upload" size={18} />, color: 'text-red-600 bg-red-100' },
-  adjustment: { label: '库存调整', icon: <Icon name="RefreshCw" size={18} />, color: 'text-blue-600 bg-blue-100' },
-  return_in: { label: '退货入库', icon: <Icon name="Undo" size={18} />, color: 'text-purple-600 bg-purple-100' },
-  return_out: { label: '退货出库', icon: <Icon name="Redo" size={18} />, color: 'text-orange-600 bg-orange-100' }
+  purchase: { label: '采购入库', icon: <Icon name="Download" size={18} />, color: 'text-success-600 bg-success-100' },
+  sale: { label: '销售出库', icon: <Icon name="Upload" size={18} />, color: 'text-danger-600 bg-danger-100' },
+  adjustment: { label: '库存调整', icon: <Icon name="RefreshCw" size={18} />, color: 'text-[color:var(--fg-2)] bg-[color:var(--panel-2)]' },
+  return_in: { label: '退货入库', icon: <Icon name="Undo" size={18} />, color: 'text-success-600 bg-success-100' },
+  return_out: { label: '退货出库', icon: <Icon name="Redo" size={18} />, color: 'text-danger-600 bg-danger-100' }
 }
 
 export const TransList: React.FC<TransListProps> = ({
@@ -41,31 +41,31 @@ export const TransList: React.FC<TransListProps> = ({
   return filteredTransactions.length > 0 ? (
     <div className="space-y-3">
       {filteredTransactions.map(trans => (
-        <div key={trans.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+        <div key={trans.id} className="flex items-center justify-between p-4 bg-[color:var(--panel-2)] rounded-xl">
           <div className="flex items-center gap-4">
             <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg ${typeConfig[trans.type].color}`}>
               {typeConfig[trans.type].icon}
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-medium text-slate-800">{getItemName(trans.itemId)}</span>
+                <span className="font-medium text-[color:var(--fg)]">{getItemName(trans.itemId)}</span>
                 <span className={`px-2 py-0.5 rounded-full text-xs ${typeConfig[trans.type].color}`}>
                   {typeConfig[trans.type].label}
                 </span>
               </div>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-[color:var(--muted)]">
                 单号: {trans.documentNo} • 项目: {getProjectName(trans.projectId || 0)} • 对方: {getPartnerName(trans.counterpartyId || 0)}
               </p>
             </div>
           </div>
           <div className="text-right">
-            <p className={`text-lg font-bold ${
-              trans.type === 'purchase' || trans.type === 'return_in' ? 'text-green-600' : 'text-red-600'
+            <p className={`text-lg font-bold font-mono tabular-nums tracking-tight ${
+              trans.type === 'purchase' || trans.type === 'return_in' ? 'text-success-600' : 'text-danger-600'
             }`}>
               {trans.type === 'purchase' || trans.type === 'return_in' ? '+' : '-'}{trans.quantity}
             </p>
-            <p className="text-sm text-slate-500">¥{formatMoney(trans.totalAmount)}</p>
-            <p className="text-xs text-slate-400">{trans.transactionDate}</p>
+            <p className="text-sm text-[color:var(--muted)] font-mono tabular-nums">¥{formatMoney(trans.totalAmount)}</p>
+            <p className="text-xs text-[color:var(--muted)] font-mono tabular-nums">{trans.transactionDate}</p>
           </div>
         </div>
       ))}

@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../hooks/useAuth'
 import { Icon } from './ui/Icon'
-import ParticleBackground from './ui/ParticleBackground'
 
 const LockScreen: React.FC = () => {
   const { currentUser, unlock } = useAuth()
@@ -34,10 +33,8 @@ const LockScreen: React.FC = () => {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.25 }}
       className="fixed inset-0 z-[100] flex items-center justify-center"
-      style={{ background: 'var(--bg)', backdropFilter: 'blur(8px)' }}
+      style={{ background: 'var(--bg)' }}
     >
-      {/* 粒子背景 */}
-      <ParticleBackground />
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -51,8 +48,8 @@ const LockScreen: React.FC = () => {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.1 }}
-            className="w-20 h-20 mx-auto rounded-full flex items-center justify-center text-3xl font-semibold shadow-2xl mb-4"
-            style={{ background: 'var(--accent)', color: 'var(--bg)' }}
+            className="w-20 h-20 mx-auto rounded-full flex items-center justify-center text-3xl font-semibold shadow-lg mb-4"
+            style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
           >
             {userInitial}
           </motion.div>
@@ -61,23 +58,13 @@ const LockScreen: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <h2 className="text-xl font-semibold" style={{ color: 'var(--fg)' }}>
-              {currentUser?.displayName || currentUser?.username}
+            <h2 className="text-2xl font-bold" style={{ color: 'var(--fg)' }}>
+              系统已锁定
             </h2>
-            <p className="text-sm mt-1" style={{ color: 'var(--muted)' }}>
-              {currentUser?.roleName || currentUser?.roleId}
+            <p className="text-sm mt-1 flex items-center justify-center gap-1" style={{ color: 'var(--muted)' }}>
+              <Icon name="UserCircle" size={14} />
+              {currentUser?.roleName || currentUser?.roleId} - {currentUser?.displayName || currentUser?.username}
             </p>
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.35 }}
-            className="mt-6"
-          >
-            <div className="mx-auto w-7 h-7" style={{ color: 'var(--muted)' }}>
-              <Icon name="Lock" size={28} />
-            </div>
-            <p className="text-sm mt-2" style={{ color: 'var(--muted)' }}>屏幕已锁定</p>
           </motion.div>
         </div>
 

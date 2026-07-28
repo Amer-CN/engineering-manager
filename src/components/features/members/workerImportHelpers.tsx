@@ -9,7 +9,7 @@ export function getConfidenceClass(
   if (!importState) return ''
   const colIdx = importState.mapping[key]
   if (colIdx >= 0 && onGetConfidence(key) >= 50) return 'border-success-300 bg-success-50'
-  if (colIdx >= 0) return 'border-slate-200'
+  if (colIdx >= 0) return 'border-[color:var(--border)]'
   return 'border-danger-300 bg-danger-50'
 }
 
@@ -21,10 +21,10 @@ export function getConfidenceIcon(
   if (!importState) return null
   const colIdx = importState.mapping[key]
   if (colIdx >= 0 && onGetConfidence(key) >= 50) {
-    return <Icon name="CheckCircle" size={14} className="text-emerald-500" />
+    return <Icon name="CheckCircle" size={14} className="text-success-500" />
   }
   if (colIdx >= 0) return null
-  return <Icon name="AlertCircle" size={14} className="text-red-400" />
+  return <Icon name="AlertCircle" size={14} className="text-danger-400" />
 }
 
 export function validateRow(

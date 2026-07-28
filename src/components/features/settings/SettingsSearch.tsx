@@ -17,15 +17,15 @@ export function SettingsSearch({ query, onQueryChange, results, onSelect }: Prop
   return (
     <div className="mb-3">
       <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"><Icon name="Search" size={16} /></span>
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--muted)] pointer-events-none"><Icon name="Search" size={16} /></span>
         <input
           value={query}
           onChange={e => onQueryChange(e.target.value)}
           placeholder="搜索设置..."
-          className="w-full pl-9 pr-8 py-2.5 rounded-xl text-sm border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary-200"
+          className="w-full pl-9 pr-8 py-2.5 rounded-xl text-sm border border-[color:var(--border)] bg-[color:var(--card)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)]"
         />
         {hasQuery && (
-          <button onClick={() => onQueryChange('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600" aria-label="清空搜索">
+          <button onClick={() => onQueryChange('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--muted)] hover:text-[color:var(--fg-2)]" aria-label="清空搜索">
             <Icon name="X" size={14} />
           </button>
         )}
@@ -34,7 +34,7 @@ export function SettingsSearch({ query, onQueryChange, results, onSelect }: Prop
       {hasQuery && (
         <div className="mt-2 space-y-1">
           {results.length === 0 ? (
-            <div className="px-3 py-6 text-center text-sm text-slate-400">未找到匹配的设置</div>
+            <div className="px-3 py-6 text-center text-sm text-[color:var(--muted)]">未找到匹配的设置</div>
           ) : (
             results.map(item => {
               const cat = getCategoryMeta(item.category)
@@ -42,14 +42,14 @@ export function SettingsSearch({ query, onQueryChange, results, onSelect }: Prop
                 <button
                   key={`${item.category}-${item.id}`}
                   onClick={() => onSelect(item)}
-                  className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left hover:bg-slate-100 transition-colors"
+                  className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left hover:bg-[color:var(--panel-2)] transition-colors"
                 >
-                  <span className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-slate-100 text-slate-500">
+                  <span className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 bg-[color:var(--panel-2)] text-[color:var(--muted)]">
                     <Icon name={cat.icon} size={15} />
                   </span>
                   <span className="min-w-0">
-                    <span className="block text-sm text-slate-700 truncate">{item.label}</span>
-                    <span className="block text-micro text-slate-400 truncate">{cat.label}</span>
+                    <span className="block text-sm text-[color:var(--fg-2)] truncate">{item.label}</span>
+                    <span className="block text-micro text-[color:var(--muted)] truncate">{cat.label}</span>
                   </span>
                 </button>
               )

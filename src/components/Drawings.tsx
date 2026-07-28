@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { DataTable } from '@/components/DataTable'
-import FilterBar from './ui/FilterBar'
 import Spinner from './ui/Spinner'
 import { Drawing, Project } from '../types/electron'
-import { Card } from './ui/Card'
 import PageContainer from './ui/PageContainer'
 import { EmptyState } from './ui/EmptyState'
 import { useToastStore } from '@/store/toastStore'
@@ -30,7 +28,6 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
   const [editingDrawing, setEditingDrawing] = useState<Drawing | null>(null)
   const [filterProject, setFilterProject] = useState<number | ''>('')
   const [filterCategory, setFilterCategory] = useState<string>('')
-  const [filterPosition, setFilterPosition] = useState<string>('')
   const [formData, setFormData] = useState<FormDataState>({
   projectId: '',
   name: '',
@@ -208,7 +205,6 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
   const filteredDrawings = drawings.filter(drawing => {
   if (filterProject && drawing.projectId !== filterProject) return false
   if (filterCategory && drawing.category !== filterCategory) return false
-  if (filterPosition && !(drawing.position || '').includes(filterPosition)) return false
   return true
   })
 
@@ -229,8 +225,8 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
   {/* 页面标题 */}
   <div className="flex items-center justify-between mb-8">
   <div>
-  <h1 className="text-2xl font-bold text-slate-800">图纸管理</h1>
-  <p className="text-slate-500 mt-1">上传和管理工程图纸</p>
+  <h1 className="text-base font-semibold tracking-tight text-[color:var(--fg)]">图纸管理</h1>
+  <p className="text-[color:var(--muted)] mt-1">上传和管理工程图纸</p>
   </div>
   <Button
   onClick={() => {
@@ -244,61 +240,34 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
   </Button>
   </div>
 
-  {/* 统计卡片 */}
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-  <Card bordered={false} className="p-4">
-  <p className="text-sm text-slate-500">图纸总数</p>
-  <p className="text-2xl font-bold text-slate-800">{filteredDrawings.length}</p>
-  </Card>
-  <Card bordered={false} className="p-4">
-  <p className="text-sm text-slate-500">涉及项目</p>
-  <p className="text-2xl font-bold text-slate-800">{new Set(filteredDrawings.map(d => d.projectId)).size}</p>
-  </Card>
-  <Card bordered={false} className="p-4">
-  <p className="text-sm text-slate-500">图纸类型</p>
-  <p className="text-2xl font-bold text-slate-800">{new Set(filteredDrawings.map(d => d.category)).size}</p>
-  </Card>
+  {/* S26 Stitch: category pill-tabs + project filter (no stat cards) */}
+  <div className="flex items-center gap-3 mb-6 flex-wrap">
+    <div className="flex items-center gap-1.5">
+      {['', ...categories].map(cat => (
+        <button
+          key={cat}
+          onClick={() => setFilterCategory(cat)}
+          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+            filterCategory === cat
+              ? 'bg-[color:var(--accent)] text-[color:var(--on-accent)]'
+              : 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)]'
+          }`}
+        >
+          {cat || '全部'}
+        </button>
+      ))}
+    </div>
+    <select
+      value={filterProject}
+      onChange={e => setFilterProject(e.target.value ? Number(e.target.value) : '')}
+      className="px-3 py-1.5 border border-[color:var(--border)] rounded-lg text-xs bg-[color:var(--card)]"
+    >
+      <option value="">全部项目</option>
+      {projects.map(project => (
+        <option key={project.id} value={project.id}>{project.name}</option>
+      ))}
+    </select>
   </div>
-
-  {/* 筛选器 */}
-  <FilterBar className="mb-6">
-  <div className="flex items-center gap-2">
-  <label className="text-sm text-slate-600">筛选项目</label>
-  <select
-  value={filterProject}
-  onChange={e => setFilterProject(e.target.value ? Number(e.target.value) : '')}
-  className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-  >
-  <option value="">全部项目</option>
-  {projects.map(project => (
-  <option key={project.id} value={project.id}>{project.name}</option>
-  ))}
-  </select>
-  </div>
-  <div className="flex items-center gap-2">
-  <label className="text-sm text-slate-600">筛选类型</label>
-  <select
-  value={filterCategory}
-  onChange={e => setFilterCategory(e.target.value)}
-  className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-  >
-  <option value="">全部类型</option>
-  {categories.map(cat => (
-  <option key={cat} value={cat}>{cat}</option>
-  ))}
-  </select>
-  </div>
-  <div className="flex items-center gap-2">
-  <label className="text-sm text-slate-600">筛选部位</label>
-  <input
-  type="text"
-  value={filterPosition}
-  onChange={e => setFilterPosition(e.target.value)}
-  className="px-3 py-2 border border-slate-300 rounded-lg text-sm w-36 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-  placeholder="输入部位名称..."
-  />
-  </div>
-  </FilterBar>
 
   {/* 图纸列表 */}
   {filteredDrawings.length > 0 ? (

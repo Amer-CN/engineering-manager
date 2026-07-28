@@ -37,7 +37,7 @@ export const PartnerList: React.FC<PartnerListProps> = ({
       filterOptions: partnerCategories.map(c => ({ label: c.label, value: c.value })),
       filterAccessor: (p) => getPartnerCategoryLabel(p.category),
       render: (partner) => (
-        <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-primary-100 text-primary-700">
+        <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-[color:var(--accent-soft)] text-[color:var(--accent)]">
           {getPartnerCategoryLabel(partner.category)}
         </span>
       )
@@ -68,20 +68,20 @@ export const PartnerList: React.FC<PartnerListProps> = ({
       },
       render: (partner) => {
         if (!partner.projectIds || partner.projectIds.length === 0) {
-          return <span className="text-slate-400 text-xs">未关联</span>
+          return <span className="text-[color:var(--muted)] text-xs">未关联</span>
         }
         return (
           <div className="flex flex-wrap gap-1">
             {partner.projectIds.slice(0, 3).map(projectId => {
               const project = projects.find(p => p.id === projectId)
               return project ? (
-                <span key={projectId} className="px-1.5 py-0.5 bg-primary-100 text-primary-700 text-xs rounded">
+                <span key={projectId} className="px-1.5 py-0.5 bg-[color:var(--accent-soft)] text-[color:var(--accent)] text-xs rounded">
                   {project.name}
                 </span>
               ) : null
             })}
             {partner.projectIds.length > 3 && (
-              <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-xs rounded">
+              <span className="px-1.5 py-0.5 bg-[color:var(--panel-2)] text-[color:var(--fg-2)] text-xs rounded">
                 +{partner.projectIds.length - 3}
               </span>
             )}

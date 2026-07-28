@@ -16,13 +16,13 @@ export function ProjectsHeroBanner({ icon, title, subtitle, metrics }: ProjectsH
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
-      className="relative rounded-2xl mb-6 p-6"
+      className="relative rounded-xl mb-6 p-6"
       style={{ background: 'var(--panel)', border: '1px solid var(--border)', color: 'var(--fg)' }}
     >
       <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
         <div className="flex items-center gap-4">
           <motion.div whileHover={{ rotate: 6, scale: 1.05 }} transition={{ type: 'spring', stiffness: 300, damping: 15 }}
-            className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
+            className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0"
             style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
             <Icon name={icon} size={28} />
           </motion.div>
@@ -39,7 +39,7 @@ export function ProjectsHeroBanner({ icon, title, subtitle, metrics }: ProjectsH
               <React.Fragment key={i}>
                 {i > 0 && <div className="w-px h-10" style={{ background: 'var(--border)' }} />}
                 <div className="text-center min-w-[48px]">
-                  <p className="text-2xl font-bold tabular-nums" style={{ color: 'var(--fg)' }}>{m.value}</p>
+                  <p className="text-numeric-xl font-mono tabular-nums tracking-tight" style={{ color: 'var(--fg)' }}>{m.value}</p>
                   <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>{m.label}</p>
                 </div>
               </React.Fragment>
@@ -75,4 +75,4 @@ export const KPI_CARDS = [
   { key: 'invoices', label: '发票记录', icon: 'Receipt', color: '' },
 ]
 
-export const CARD_HOVER = { y: -4, boxShadow: '0 12px 30px rgba(0,0,0,0.1)', transition: { duration: 0.2 } }
+export const CARD_HOVER = { y: -4, boxShadow: 'var(--shadow-lift)', transition: { duration: 0.2 } }

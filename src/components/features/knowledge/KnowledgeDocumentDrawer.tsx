@@ -44,12 +44,12 @@ const KnowledgeDocumentDrawer: React.FC<KnowledgeDocumentDrawerProps> = ({ doc, 
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="fixed top-0 right-0 bottom-0 w-full max-w-xl bg-white z-50 flex flex-col shadow-xl"
+            className="fixed top-0 right-0 bottom-0 w-full max-w-xl bg-[color:var(--card)] z-50 flex flex-col shadow-xl"
           >
             {/* 头部 */}
-            <div className="flex items-center justify-between p-4 border-b border-slate-200">
+            <div className="flex items-center justify-between p-4 border-b border-[color:var(--border)]">
               <div className="flex-1 min-w-0">
-                <h2 className="text-base font-semibold text-slate-800 truncate">
+                <h2 className="text-base font-semibold text-[color:var(--fg)] truncate">
                   {loading ? '加载中...' : doc?.title || '文档详情'}
                 </h2>
               </div>
@@ -61,7 +61,7 @@ const KnowledgeDocumentDrawer: React.FC<KnowledgeDocumentDrawerProps> = ({ doc, 
             {/* 内容 */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {loading ? (
-                <div className="flex items-center gap-2 text-sm text-slate-500 py-8 justify-center">
+                <div className="flex items-center gap-2 text-sm text-[color:var(--muted)] py-8 justify-center">
                   <Icon name="Loader2" size={16} className="animate-spin" />
                   <span>加载中...</span>
                 </div>
@@ -70,27 +70,27 @@ const KnowledgeDocumentDrawer: React.FC<KnowledgeDocumentDrawerProps> = ({ doc, 
                   {/* 元信息 */}
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="flex gap-1.5">
-                      <span className="text-slate-400">来源：</span>
-                      <span className="text-slate-600">{doc.sourceType || '—'}</span>
+                      <span className="text-[color:var(--muted)]">来源：</span>
+                      <span className="text-[color:var(--fg-2)]">{doc.sourceType || '—'}</span>
                     </div>
                     <div className="flex gap-1.5">
-                      <span className="text-slate-400">时间：</span>
-                      <span className="text-slate-600">{doc.occurredAt || '—'}</span>
+                      <span className="text-[color:var(--muted)]">时间：</span>
+                      <span className="text-[color:var(--fg-2)]">{doc.occurredAt || '—'}</span>
                     </div>
                     <div className="flex gap-1.5">
-                      <span className="text-slate-400">项目ID：</span>
-                      <span className="text-slate-600">{doc.projectId ?? '—'}</span>
+                      <span className="text-[color:var(--muted)]">项目ID：</span>
+                      <span className="text-[color:var(--fg-2)]">{doc.projectId ?? '—'}</span>
                     </div>
                     <div className="flex gap-1.5">
-                      <span className="text-slate-400">分块：</span>
-                      <span className="text-slate-600">{doc.chunkCount} 块</span>
+                      <span className="text-[color:var(--muted)]">分块：</span>
+                      <span className="text-[color:var(--fg-2)]">{doc.chunkCount} 块</span>
                     </div>
                   </div>
 
                   {doc.speakers && (
                     <div className="text-xs">
-                      <span className="text-slate-400">说话人：</span>
-                      <span className="text-slate-600">{formatSpeakers(doc.speakers)}</span>
+                      <span className="text-[color:var(--muted)]">说话人：</span>
+                      <span className="text-[color:var(--fg-2)]">{formatSpeakers(doc.speakers)}</span>
                     </div>
                   )}
 
@@ -102,8 +102,8 @@ const KnowledgeDocumentDrawer: React.FC<KnowledgeDocumentDrawerProps> = ({ doc, 
 
                   {/* 全文 */}
                   <div>
-                    <h3 className="text-sm font-medium text-slate-700 mb-2">全文</h3>
-                    <div className="text-sm text-slate-600 whitespace-pre-wrap break-words p-3 bg-slate-50 rounded-lg max-h-64 overflow-y-auto">
+                    <h3 className="text-sm font-medium text-[color:var(--fg-2)] mb-2">全文</h3>
+                    <div className="text-sm text-[color:var(--fg-2)] whitespace-pre-wrap break-words p-3 bg-[color:var(--panel-2)] rounded-lg max-h-64 overflow-y-auto">
                       {maskKnowledgeText(doc.fullText, masked)}
                     </div>
                   </div>
@@ -111,12 +111,12 @@ const KnowledgeDocumentDrawer: React.FC<KnowledgeDocumentDrawerProps> = ({ doc, 
                   {/* 分块 */}
                   {doc.chunks && doc.chunks.length > 0 && (
                     <div>
-                      <h3 className="text-sm font-medium text-slate-700 mb-2">分块内容</h3>
+                      <h3 className="text-sm font-medium text-[color:var(--fg-2)] mb-2">分块内容</h3>
                       <div className="space-y-2">
                         {doc.chunks.map((chunk, i) => (
-                          <div key={chunk.id || i} className="p-2 border border-slate-100 rounded text-xs">
-                            <span className="text-slate-400">#{chunk.index}</span>
-                            <p className="text-slate-600 mt-1 whitespace-pre-wrap break-words">
+                          <div key={chunk.id || i} className="p-2 border border-[color:var(--border)] rounded text-xs">
+                            <span className="text-[color:var(--muted)]">#{chunk.index}</span>
+                            <p className="text-[color:var(--fg-2)] mt-1 whitespace-pre-wrap break-words">
                               {maskKnowledgeText(chunk.text, masked)}
                             </p>
                           </div>
@@ -126,7 +126,7 @@ const KnowledgeDocumentDrawer: React.FC<KnowledgeDocumentDrawerProps> = ({ doc, 
                   )}
                 </>
               ) : (
-                <div className="text-center text-sm text-slate-400 py-8">文档不存在或无权访问</div>
+                <div className="text-center text-sm text-[color:var(--muted)] py-8">文档不存在或无权访问</div>
               )}
             </div>
           </motion.div>

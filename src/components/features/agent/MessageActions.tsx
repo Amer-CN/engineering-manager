@@ -43,7 +43,7 @@ const MessageActions: React.FC<MessageActionsProps> = ({ content, onResend }) =>
     }
   }
 
-  const btnClass = 'p-1.5 rounded-lg text-slate-300 hover:text-slate-500 hover:bg-slate-100 transition-colors'
+  const btnClass = 'p-1.5 rounded-lg text-[color:var(--border-strong)] hover:text-[color:var(--muted)] hover:bg-[color:var(--panel-2)] transition-colors'
 
   return (
     <motion.div
@@ -62,14 +62,14 @@ const MessageActions: React.FC<MessageActionsProps> = ({ content, onResend }) =>
       )}
       <button
         onClick={() => handleFeedback('up')}
-        className={`${btnClass} ${feedback === 'up' ? 'text-emerald-500' : ''}`}
+        className={`${btnClass} ${feedback === 'up' ? 'text-success-500' : ''}`}
         title="有帮助"
       >
         <Icon name="ThumbsUp" size={13} />
       </button>
       <button
         onClick={() => handleFeedback('down')}
-        className={`${btnClass} ${feedback === 'down' ? 'text-amber-500' : ''}`}
+        className={`${btnClass} ${feedback === 'down' ? 'text-warning-500' : ''}`}
         title="需改进"
       >
         <Icon name="ThumbsDown" size={13} />

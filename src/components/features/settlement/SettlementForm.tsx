@@ -7,6 +7,9 @@ import { SettlementImportModal } from './SettlementImportModal'
 import { FileUploadSection } from './FileUploadSection'
 import { getAPI } from '@/services/api-adapter'
 import { Button } from '../../ui/Button'
+import { FormStepper } from '../../ui/FormStepper'
+
+const SETTLEMENT_STEPS = ['基本信息', '结算明细与核验', '审批签发']
 
 interface SettlementFormDataItem {
   description: string
@@ -147,6 +150,10 @@ export const SettlementForm: React.FC<SettlementFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit} className="p-6">
+      {/* S20 Stitch: 3-step progress stepper */}
+      <div className="mb-6">
+        <FormStepper steps={SETTLEMENT_STEPS} current={0} />
+      </div>
       <div className="grid grid-cols-2 gap-4 mb-6">
         <div>
           <label className="label">结算类型 *</label>
@@ -234,7 +241,7 @@ export const SettlementForm: React.FC<SettlementFormProps> = ({
         />
       </div>
 
-      <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+      <div className="flex items-center justify-end gap-3 pt-4 border-t border-[color:var(--border)]">
         <Button type="button" onClick={onCancel}  variant="secondary">取消</Button>
         <Button type="submit"  variant="primary">{settlement ? '保存修改' : '创建结算单'}</Button>
       </div>

@@ -35,7 +35,7 @@ export function ProjectList({ projects, members, loading, onProjectClick, onEdit
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {[1, 2, 3].map(i => <div key={i} className="rounded-2xl bg-slate-100 animate-pulse h-56" />)}
+          {[1, 2, 3].map(i => <div key={i} className="rounded-xl animate-pulse h-56" style={{ background: 'var(--panel-2)' }} />)}
         </div>
       </div>
     )
@@ -43,8 +43,8 @@ export function ProjectList({ projects, members, loading, onProjectClick, onEdit
 
   if (projects.length === 0) {
     return (
-      <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center shadow-sm">
-        <Icon name="FolderKanban" size={48} className="mx-auto mb-4 text-slate-300" />
+      <div className="rounded-xl p-12 text-center" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+        <Icon name="FolderKanban" size={48} className="mx-auto mb-4 text-[color:var(--border-strong)]" />
         <EmptyState title="暂无项目" description="点击下方按钮创建您的第一个项目" />
         <Button onClick={onAdd}  variant="primary" className="mt-6">
           <Icon name="Plus" size={16} className="inline-block" /> 创建项目
@@ -61,7 +61,7 @@ export function ProjectList({ projects, members, loading, onProjectClick, onEdit
 
   return (
     <motion.div initial="hidden" animate="visible" variants={containerVariants}>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {projects.map((project, index) => {
           const alertItem = alertMap.get(project.name)
           return (

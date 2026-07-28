@@ -36,7 +36,7 @@ const DataTable: React.FC<{ rows: Record<string, unknown>[] }> = ({ rows }) => {
     <div className="overflow-x-auto">
       <table className="w-full text-xs border-collapse">
         <thead>
-          <tr className="text-left text-slate-500 border-b border-slate-200">
+          <tr className="text-left border-b" style={{ color: 'var(--muted)', borderColor: 'var(--border)' }}>
             {columns.map((c) => (
               <th key={c} className="py-1.5 px-2 font-medium whitespace-nowrap">
                 {fieldLabel(c)}
@@ -46,9 +46,9 @@ const DataTable: React.FC<{ rows: Record<string, unknown>[] }> = ({ rows }) => {
         </thead>
         <tbody>
           {shown.map((row, i) => (
-            <tr key={i} className="border-b border-slate-100 last:border-0">
+            <tr key={i} className="border-b last:border-0" style={{ borderColor: 'var(--border)' }}>
               {columns.map((c) => (
-                <td key={c} className="py-1.5 px-2 text-slate-700 whitespace-nowrap">
+                <td key={c} className="py-1.5 px-2 whitespace-nowrap" style={{ color: 'var(--fg-2)' }}>
                   {formatValue(c, row[c])}
                 </td>
               ))}
@@ -60,7 +60,8 @@ const DataTable: React.FC<{ rows: Record<string, unknown>[] }> = ({ rows }) => {
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="mt-1.5 text-xs text-primary-600 hover:text-primary-700 font-medium"
+          className="mt-1.5 text-xs font-medium"
+          style={{ color: 'var(--accent)' }}
         >
           {expanded ? '收起' : `展开全部（共 ${rows.length} 条）`}
         </button>
@@ -74,8 +75,8 @@ const KeyValueGrid: React.FC<{ obj: Record<string, unknown> }> = ({ obj }) => (
   <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
     {Object.entries(obj).map(([k, v]) => (
       <div key={k} className="flex gap-1.5 min-w-0">
-        <span className="text-slate-400 flex-shrink-0">{fieldLabel(k)}:</span>
-        <span className="text-slate-700 break-all">{formatValue(k, v)}</span>
+        <span className="flex-shrink-0" style={{ color: 'var(--muted)' }}>{fieldLabel(k)}:</span>
+        <span className="break-all" style={{ color: 'var(--fg-2)' }}>{formatValue(k, v)}</span>
       </div>
     ))}
   </div>
@@ -84,20 +85,20 @@ const KeyValueGrid: React.FC<{ obj: Record<string, unknown> }> = ({ obj }) => (
 /** 递归渲染任意 result 值 */
 const RenderValue: React.FC<{ value: unknown }> = ({ value }) => {
   if (value === null || value === undefined) {
-    return <span className="text-slate-400 text-xs">暂无数据</span>
+    return <span className="text-xs" style={{ color: 'var(--muted)' }}>暂无数据</span>
   }
   if (isScalar(value)) {
-    return <span className="text-slate-700 text-xs break-words">{formatValue('', value)}</span>
+    return <span className="text-xs break-words" style={{ color: 'var(--fg-2)' }}>{formatValue('', value)}</span>
   }
   if (Array.isArray(value)) {
     if (value.length === 0) {
-      return <span className="text-slate-400 text-xs">暂无数据</span>
+      return <span className="text-xs" style={{ color: 'var(--muted)' }}>暂无数据</span>
     }
     if (isObjectArray(value)) {
       return <DataTable rows={value} />
     }
     return (
-      <span className="text-slate-700 text-xs">
+      <span className="text-xs" style={{ color: 'var(--fg-2)' }}>
         {value.map((v: unknown) => formatValue('', v)).join('、')}
       </span>
     )
@@ -115,7 +116,7 @@ const RenderValue: React.FC<{ value: unknown }> = ({ value }) => {
       {Object.keys(scalarEntries).length > 0 && <KeyValueGrid obj={scalarEntries} />}
       {nestedEntries.map(([k, v]) => (
         <div key={k}>
-          <div className="text-xs font-medium text-slate-500 mb-1">{fieldLabel(k)}</div>
+          <div className="text-xs font-medium mb-1" style={{ color: 'var(--muted)' }}>{fieldLabel(k)}</div>
           <RenderValue value={v} />
         </div>
       ))}
@@ -138,13 +139,13 @@ const ToolResultCard: React.FC<{ result: ToolCallResult }> = ({ result }) => {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 transition-colors"
+        className="w-full flex items-center gap-2 px-3 py-2 hover:bg-[color:var(--panel-2)] transition-colors"
       >
         <span className="flex-shrink-0" style={{ color: result.success ? 'var(--muted)' : 'var(--danger)' }}>
-          <Icon name={result.success ? 'CheckCircle' : 'XCircle'} size={14} />
+          <Icon name={result.success ? 'Database' : 'XCircle'} size={14} />
         </span>
         <span className="font-semibold" style={{ color: 'var(--fg)' }}>
-          {result.success ? `数据来源 · ${toolLabel(result.toolName)}` : toolLabel(result.toolName)}
+          {result.success ? `数据来源：${toolLabel(result.toolName)}` : toolLabel(result.toolName)}
         </span>
         {count !== null && <span style={{ color: 'var(--muted)' }}>· {count} 条</span>}
         <span className="ml-auto" style={{ color: 'var(--muted)' }}>
@@ -154,7 +155,7 @@ const ToolResultCard: React.FC<{ result: ToolCallResult }> = ({ result }) => {
       {open && (
         <div className="px-3 pb-2.5 pt-0.5">
           {result.error ? (
-            <span className="text-red-600">{result.error}</span>
+            <span style={{ color: 'var(--danger)' }}>{result.error}</span>
           ) : result.toolName === 'searchKnowledgeBase' ? (
             <KnowledgeSourceCard result={result.result} />
           ) : (

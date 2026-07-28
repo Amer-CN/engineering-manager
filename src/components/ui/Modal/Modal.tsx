@@ -113,8 +113,8 @@ export function Modal({
   <motion.div
   className={`
   relative
-  bg-white
-  rounded-2xl shadow-2xl
+  bg-[color:var(--card)]
+  rounded-xl shadow-xl
   w-full ${sizeStyles[size]}
   max-h-[90vh] flex flex-col
   ${className}
@@ -128,9 +128,9 @@ export function Modal({
   aria-labelledby={title ? 'modal-title' : undefined}
   >
   {(title || showClose) && (
-  <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+  <div className="flex items-center justify-between px-6 py-4 border-b border-[color:var(--border)]">
   {title && (
-  <h2 id="modal-title" className="text-lg font-semibold text-slate-800">
+  <h2 id="modal-title" className="text-lg font-semibold text-[color:var(--fg)]">
   {title}
   </h2>
   )}
@@ -138,7 +138,7 @@ export function Modal({
   <button
   type="button"
   onClick={onClose}
-  className="p-2 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+  className="p-2 rounded-lg text-[color:var(--muted)] hover:bg-[color:var(--panel-2)] hover:text-[color:var(--fg-2)] transition-colors"
   aria-label="关闭"
   >
   <Icon name="X" size={18} />
@@ -152,7 +152,7 @@ export function Modal({
   </HoverScrollbar>
 
   {footer && (
-  <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
+  <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[color:var(--border)] bg-[color:var(--panel-2)] rounded-b-xl">
   {footer}
   </div>
   )}

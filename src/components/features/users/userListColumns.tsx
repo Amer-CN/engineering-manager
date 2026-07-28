@@ -28,7 +28,7 @@ export function getUserListColumns(deps: UserListColumnsDeps): Column<UserInfo>[
       key: 'username',
       title: '用户名',
       render: (item) => (
-        <span className="font-medium text-slate-800">{item.username}</span>
+        <span className="font-medium text-[color:var(--fg)]">{item.username}</span>
       )
     },
     {
@@ -46,10 +46,10 @@ export function getUserListColumns(deps: UserListColumnsDeps): Column<UserInfo>[
       filterAccessor: (item: UserInfo) => item.roleId,
       render: (item) => (
         <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-          item.roleId === 'admin' ? 'bg-red-100 text-red-700' :
-          item.roleId === 'manager' ? 'bg-blue-100 text-blue-700' :
-          item.roleId === 'accountant' ? 'bg-green-100 text-green-700' :
-          'bg-slate-100 text-slate-700'
+          item.roleId === 'admin' ? 'bg-danger-100 text-danger-700' :
+          item.roleId === 'manager' ? 'bg-[color:var(--accent-soft)] text-[color:var(--accent)]' :
+          item.roleId === 'accountant' ? 'bg-success-100 text-success-700' :
+          'bg-[color:var(--panel-2)] text-[color:var(--fg-2)]'
         }`}>
           {getRoleLabel(item.roleId)}
         </span>
@@ -71,14 +71,14 @@ export function getUserListColumns(deps: UserListColumnsDeps): Column<UserInfo>[
       sortable: true,
       sorter: (a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''),
       render: (item) => (
-        <span className="text-slate-500">{new Date(item.createdAt).toLocaleDateString()}</span>
+        <span className="text-[color:var(--muted)]">{new Date(item.createdAt).toLocaleDateString()}</span>
       )
     },
     {
       key: 'lastLoginAt',
       title: '最后登录',
       render: (item) => (
-        <span className="text-slate-500">
+        <span className="text-[color:var(--muted)]">
           {item.lastLoginAt ? new Date(item.lastLoginAt).toLocaleString() : '从未登录'}
         </span>
       )
@@ -91,7 +91,7 @@ export function getUserListColumns(deps: UserListColumnsDeps): Column<UserInfo>[
           <Button
             onClick={() => onEdit(item)}
             
-           variant="ghost" size="sm" className="text-primary-600">
+           variant="ghost" size="sm" className="text-[color:var(--accent)]">
             编辑
           </Button>
           {item.roleId !== 'admin' && (

@@ -25,9 +25,9 @@ export default function StaffForm({ formData, setFormData, editingMember, dragOv
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
         <Input label="姓名" size="sm" required value={formData.name} onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))} />
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">职位 *</label>
+          <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">职位 *</label>
           <select value={formData.role} onChange={e => setFormData(prev => ({ ...prev, role: e.target.value }))}
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500" required>
+            className="w-full px-4 py-2 border border-[color:var(--border)] rounded-lg focus:ring-2 focus:ring-[color:var(--accent-soft)]" required>
             <option value="">请选择职位</option>
             {staffRoles.map(role => <option key={role.value} value={role.value}>{role.icon} {role.value}</option>)}
           </select>
@@ -52,9 +52,9 @@ export default function StaffForm({ formData, setFormData, editingMember, dragOv
         </div>
         <div className="grid grid-cols-4 gap-4 mt-4">
           <div>
-            <label className="block text-xs text-slate-600 mb-1">性别</label>
+            <label className="block text-xs text-[color:var(--fg-2)] mb-1">性别</label>
             <select value={formData.gender} onChange={e => setFormData(prev => ({ ...prev, gender: e.target.value }))}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 text-sm">
+              className="w-full px-3 py-2 border border-[color:var(--border)] rounded-lg focus:ring-2 focus:ring-[color:var(--accent-soft)] text-sm">
               <option value="">请选择</option>
               <option value="male">男</option><option value="female">女</option>
             </select>
@@ -71,15 +71,15 @@ export default function StaffForm({ formData, setFormData, editingMember, dragOv
       </div>
 
       <div className="mb-6">
-        <label className="block text-sm font-medium text-slate-700 mb-1">劳动合同</label>
+        <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">劳动合同</label>
         <FileUploadArea file={formData.contractFile} fileType={formData.contractFileType} field="contractFile"
           dragOverField={dragOverField} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
           onDelete={(() => onDeleteFile("contractFile", setFormData))}
           inputRef={refs.contractInputRef} onInputChange={((e: React.ChangeEvent<HTMLInputElement>) => onFileChange(e, 'contractFile', setFormData, false, refs.contractInputRef))} />
       </div>
 
-      <div className="mb-6 p-4 bg-blue-50 rounded-lg">
-        <h4 className="font-medium text-slate-800 mb-3"><Icon name="DollarSign" size={16} className="inline-block mr-1" />薪酬信息（元/月）</h4>
+      <div className="mb-6 p-4 bg-[color:var(--panel-2)] rounded-lg">
+        <h4 className="font-medium text-[color:var(--fg)] mb-3"><Icon name="DollarSign" size={16} className="inline-block mr-1" />薪酬信息（元/月）</h4>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {[
             ['基本工资', 'baseSalary'],
@@ -97,8 +97,8 @@ export default function StaffForm({ formData, setFormData, editingMember, dragOv
         <div className="mt-3 flex items-center gap-2">
           <input type="checkbox" id="companyCoversSocial" checked={formData.companyCoversSocial ?? false}
             onChange={e => setFormData(prev => ({ ...prev, companyCoversSocial: e.target.checked }))}
-            className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
-          <label htmlFor="companyCoversSocial" className="text-sm text-slate-600 cursor-pointer">公司承担社保公积金个人部分（不扣工资）</label>
+            className="w-4 h-4 rounded border-[color:var(--border)] text-[color:var(--accent)] focus:ring-[color:var(--accent)]" />
+          <label htmlFor="companyCoversSocial" className="text-sm text-[color:var(--fg-2)] cursor-pointer">公司承担社保公积金个人部分（不扣工资）</label>
         </div>
       </div>
     </>

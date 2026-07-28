@@ -106,7 +106,7 @@ export function WorkerWageHistoryModal({ show, projectWorkerId, workerName, curr
   return (
     <Modal isOpen={show} onClose={onClose} title={workerName} size="lg">
       {ConfirmDialog}
-      <p className="text-xs text-slate-400 mb-4">当前日工资: ¥{latestWage} · 日工资标准记录</p>
+      <p className="text-xs text-[color:var(--muted)] mb-4">当前日工资: ¥{latestWage} · 日工资标准记录</p>
 
         <div className="space-y-4">
           {/* Add button */}
@@ -118,15 +118,15 @@ export function WorkerWageHistoryModal({ show, projectWorkerId, workerName, curr
               setFormNote('')
               setShowForm(true)
             }}
-              className="w-full px-4 py-2 border-2 border-dashed border-slate-300 rounded-lg text-sm text-slate-500 hover:border-amber-400 hover:text-amber-600 transition-colors">
+              className="w-full px-4 py-2 border-2 border-dashed border-[color:var(--border)] rounded-lg text-sm text-[color:var(--muted)] hover:border-warning-400 hover:text-warning-600 transition-colors">
               + 新增日工资标准
             </button>
           )}
 
           {/* Form */}
           {showForm && (
-            <div className="p-4 bg-slate-50 rounded-lg space-y-3">
-              <p className="text-xs font-medium text-slate-500">{editingId ? '编辑日工资标准' : '新增日工资标准'}</p>
+            <div className="p-4 bg-[color:var(--panel-2)] rounded-lg space-y-3">
+              <p className="text-xs font-medium text-[color:var(--muted)]">{editingId ? '编辑日工资标准' : '新增日工资标准'}</p>
               <div className="grid grid-cols-2 gap-3">
                 <Input label="起效月份" size="sm" type="month" required value={formYearMonth} onChange={e => setFormYearMonth(e.target.value)} />
                 <Input label="日工资标准" size="sm" type="number" required value={formDailyWage} onChange={e => setFormDailyWage(e.target.value)}
@@ -145,28 +145,28 @@ export function WorkerWageHistoryModal({ show, projectWorkerId, workerName, curr
 
           {/* History list */}
           {loading ? (
-            <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-6 w-6 border-2 border-amber-500 border-t-transparent" /></div>
+            <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-6 w-6 border-2 border-warning-500 border-t-transparent" /></div>
           ) : history.length === 0 ? (
             <EmptyState icon="Banknote" title="暂无日工资标准记录" className="py-8" />
           ) : (
             <div className="space-y-2">
               {history.map(h => (
-                <div key={h.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                <div key={h.id} className="flex items-center justify-between p-3 bg-[color:var(--panel-2)] rounded-lg">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-slate-800">{h.yearMonth}</span>
-                      <span className="text-sm font-bold text-amber-700">¥{h.dailyWage}</span>
+                      <span className="text-sm font-medium text-[color:var(--fg)]">{h.yearMonth}</span>
+                      <span className="text-sm font-bold text-warning-700">¥{h.dailyWage}</span>
                       {String(h.dailyWage) !== String(currentDailyWage) && (
-                        <span className="text-xs text-slate-400">（当前: ¥{currentDailyWage}）</span>
+                        <span className="text-xs text-[color:var(--muted)]">（当前: ¥{currentDailyWage}）</span>
                       )}
                     </div>
-                    {h.note && <div className="text-xs text-slate-400 mt-0.5">{h.note}</div>}
+                    {h.note && <div className="text-xs text-[color:var(--muted)] mt-0.5">{h.note}</div>}
                   </div>
                   <div className="flex items-center gap-1">
                     <button onClick={() => handleEdit(h)}
-                      className="text-xs text-blue-500 hover:text-blue-700 px-1">编辑</button>
+                      className="text-xs text-[color:var(--accent)] hover:opacity-80 px-1">编辑</button>
                     <button onClick={() => handleDelete(h.id)}
-                      className="text-xs text-red-400 hover:text-red-600 px-1">删除</button>
+                      className="text-xs text-danger-400 hover:text-danger-600 px-1">删除</button>
                   </div>
                 </div>
               ))}

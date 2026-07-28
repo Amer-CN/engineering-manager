@@ -75,7 +75,7 @@ export const InvoiceFilters: React.FC<InvoiceFiltersProps> = ({
   /* 收款模式筛选 */
   <>
   <div className="flex items-center gap-2">
-  <label className="text-sm text-slate-600 whitespace-nowrap">类型:</label>
+  <label className="text-sm whitespace-nowrap text-[color:var(--fg-2)]">类型:</label>
   <select
   value={filterPaymentType}
   onChange={e => onFilterPaymentTypeChange(e.target.value as InvoiceType | '')}
@@ -87,7 +87,7 @@ export const InvoiceFilters: React.FC<InvoiceFiltersProps> = ({
   </select>
   </div>
   <div className="flex items-center gap-2">
-  <label className="text-sm text-slate-600 whitespace-nowrap">项目:</label>
+  <label className="text-sm whitespace-nowrap text-[color:var(--fg-2)]">项目:</label>
   <select
   value={filterPaymentProject}
   onChange={e => onFilterPaymentProjectChange(e.target.value ? Number(e.target.value) : '')}
@@ -104,7 +104,7 @@ export const InvoiceFilters: React.FC<InvoiceFiltersProps> = ({
   <>
   {/* 发票类型 */}
   <div className="flex items-center gap-2">
-  <label className="text-sm text-slate-600 whitespace-nowrap">发票类型:</label>
+  <label className="text-sm whitespace-nowrap text-[color:var(--fg-2)]">发票类型:</label>
   <select
   value={filterType}
   onChange={e => onFilterTypeChange(e.target.value as InvoiceType | '')}
@@ -118,7 +118,7 @@ export const InvoiceFilters: React.FC<InvoiceFiltersProps> = ({
 
   {/* 状态 */}
   <div className="flex items-center gap-2">
-  <label className="text-sm text-slate-600 whitespace-nowrap">状态:</label>
+  <label className="text-sm whitespace-nowrap text-[color:var(--fg-2)]">状态:</label>
   <select
   value={filterStatus}
   onChange={e => onFilterStatusChange(e.target.value as InvoiceStatus | '')}
@@ -135,7 +135,7 @@ export const InvoiceFilters: React.FC<InvoiceFiltersProps> = ({
 
   {/* 项目 */}
   <div className="flex items-center gap-2">
-  <label className="text-sm text-slate-600 whitespace-nowrap">项目:</label>
+  <label className="text-sm whitespace-nowrap text-[color:var(--fg-2)]">项目:</label>
   <select
   value={filterProject}
   onChange={e => onFilterProjectChange(e.target.value ? Number(e.target.value) : '')}
@@ -152,7 +152,7 @@ export const InvoiceFilters: React.FC<InvoiceFiltersProps> = ({
   
   {/* 日期区间 - 两种模式都显示 */}
   <div className="flex items-center gap-2">
-  <label className="text-sm text-slate-600 whitespace-nowrap">日期:</label>
+  <label className="text-sm whitespace-nowrap text-[color:var(--fg-2)]">日期:</label>
   <input
   type="date"
   value={filterDateStart}
@@ -160,7 +160,7 @@ export const InvoiceFilters: React.FC<InvoiceFiltersProps> = ({
   className="input text-sm py-1.5 w-32"
   placeholder="开始日期"
   />
-  <span className="text-slate-400">至</span>
+  <span style={{ color: 'var(--muted)' }}>至</span>
   <input
   type="date"
   value={filterDateEnd}
@@ -174,7 +174,7 @@ export const InvoiceFilters: React.FC<InvoiceFiltersProps> = ({
   {hasFilter && (
   <button
   onClick={handleReset}
-  className="text-sm text-slate-500 hover:text-slate-700 hover:bg-slate-100 px-2 py-1 rounded transition-colors"
+  className="text-sm px-2 py-1 rounded transition-colors text-[color:var(--muted)] hover:text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)]"
   >
   重置筛选
   </button>
@@ -188,7 +188,7 @@ export const InvoiceFilters: React.FC<InvoiceFiltersProps> = ({
   {/* 打印按钮 */}
   <button
   onClick={onPrint}
-  className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors"
+  className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors bg-[color:var(--panel-2)] hover:bg-[color:var(--sidebar-item-hover)] text-[color:var(--fg-2)]"
   >
   <Icon name="Printer" size={14} />
   打印
@@ -197,7 +197,7 @@ export const InvoiceFilters: React.FC<InvoiceFiltersProps> = ({
   {/* 导出Excel按钮 */}
   <button
   onClick={onExportExcel}
-  className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary-50 hover:bg-primary-100 text-primary-700 rounded-lg transition-colors"
+  className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors bg-[color:var(--accent-soft)] hover:bg-[color:var(--accent-soft)] text-[color:var(--accent)]"
   >
   <Icon name="Download" size={14} />
   导出Excel

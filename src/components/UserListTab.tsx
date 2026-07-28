@@ -99,9 +99,9 @@ export const UserListTab: React.FC<UserListTabProps> = ({ users, onRefresh }) =>
         title={editingUser ? '编辑用户' : '添加用户'} size="md"
         footer={<>
           <button type="button" onClick={() => { setShowCreateForm(false); setEditingUser(null) }}
-            className="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl transition-colors">取消</button>
+            className="px-4 py-3 bg-[color:var(--panel-2)] hover:bg-[color:var(--panel-2)] text-[color:var(--fg-2)] font-medium rounded-xl transition-colors">取消</button>
           <button type="submit" form="user-form"
-            className="flex-1 px-4 py-3 bg-primary-600 hover:bg-primary-500 text-white font-medium rounded-xl transition-colors">
+            className="flex-1 px-4 py-3 bg-[color:var(--fg)] hover:opacity-90 text-[color:var(--bg)] font-medium rounded-xl transition-colors">
             {editingUser ? '保存修改' : '创建用户'}
           </button>
         </>}>
@@ -114,9 +114,9 @@ export const UserListTab: React.FC<UserListTabProps> = ({ users, onRefresh }) =>
           <Input label="显示名称" size="sm" type="text" required value={formData.displayName} onChange={e => setFormData({ ...formData, displayName: e.target.value })}
             placeholder="请输入显示名称" />
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">角色 *</label>
+            <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-2">角色 *</label>
             <select value={formData.roleId} onChange={e => setFormData({ ...formData, roleId: e.target.value })}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+              className="w-full px-4 py-3 bg-[color:var(--panel-2)] border border-[color:var(--border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] focus:border-[color:var(--accent)]">
               {ROLE_OPTIONS.map(role => <option key={role.value} value={role.value}>{role.label}</option>)}
             </select>
           </div>
@@ -133,7 +133,7 @@ export const UserListTab: React.FC<UserListTabProps> = ({ users, onRefresh }) =>
         scrollClassName="h-full"
       />
 
-      <div className="mt-6 p-4 bg-slate-50 rounded-xl text-sm text-slate-600">
+      <div className="mt-6 p-4 bg-[color:var(--panel-2)] rounded-xl text-sm text-[color:var(--fg-2)]">
         <p><Icon name="Lightbulb" size={16} className="inline-block mr-1" /><strong>权限说明：</strong>管理员拥有所有权限；项目经理可以管理项目和合同；财务人员负责工资和结算；普通员工只能查看基础信息。</p>
       </div>
     </>

@@ -120,44 +120,44 @@ h1{text-align:center;font-size:18pt;margin-bottom:24px}
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex" onClick={e => e.stopPropagation()}>
+      <div className="bg-[color:var(--card)] rounded-xl shadow-xl w-full max-w-5xl max-h-[90vh] flex" onClick={e => e.stopPropagation()}>
         {/* Left: variables form */}
-        <div className="w-80 flex-shrink-0 border-r border-slate-100 flex flex-col">
-          <div className="px-4 py-3 border-b border-slate-100">
-            <h3 className="text-sm font-semibold text-slate-800">{template.name}</h3>
-            <p className="text-xs text-slate-400">填写变量值</p>
+        <div className="w-80 flex-shrink-0 border-r border-[color:var(--border)] flex flex-col">
+          <div className="px-4 py-3 border-b border-[color:var(--border)]">
+            <h3 className="text-sm font-semibold text-[color:var(--fg)]">{template.name}</h3>
+            <p className="text-xs text-[color:var(--muted)]">填写变量值</p>
           </div>
           <div className="flex-1 overflow-hidden"><HoverScrollbar className="h-full p-4 space-y-3">
             {template.variables.length === 0 ? (
-              <p className="text-xs text-slate-400">此模板没有定义变量</p>
+              <p className="text-xs text-[color:var(--muted)]">此模板没有定义变量</p>
             ) : (
               template.variables.map(v => (
                 <div key={v.key}>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">
+                  <label className="block text-xs font-medium text-[color:var(--fg-2)] mb-1">
                     {v.label || v.key}
-                    {v.required && <span className="text-red-400 ml-0.5">*</span>}
+                    {v.required && <span className="text-danger-400 ml-0.5">*</span>}
                   </label>
                   {v.type === 'date' ? (
                     <input type="date" value={values[v.key] || ''} onChange={e => setValue(v.key, e.target.value)}
-                      className="w-full px-2 py-1.5 border border-slate-200 rounded text-xs" />
+                      className="w-full px-2 py-1.5 border border-[color:var(--border)] rounded text-xs" />
                   ) : v.type === 'number' ? (
                     <input type="number" value={values[v.key] || ''} onChange={e => setValue(v.key, e.target.value)}
-                      className="w-full px-2 py-1.5 border border-slate-200 rounded text-xs" />
+                      className="w-full px-2 py-1.5 border border-[color:var(--border)] rounded text-xs" />
                   ) : v.type === 'select' && v.options ? (
                     <select value={values[v.key] || ''} onChange={e => setValue(v.key, e.target.value)}
-                      className="w-full px-2 py-1.5 border border-slate-200 rounded text-xs">
+                      className="w-full px-2 py-1.5 border border-[color:var(--border)] rounded text-xs">
                       <option value="">-- 请选择 --</option>
                       {v.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                     </select>
                   ) : (
                     <input type="text" value={values[v.key] || ''} onChange={e => setValue(v.key, e.target.value)}
-                      className="w-full px-2 py-1.5 border border-slate-200 rounded text-xs" placeholder={v.defaultValue || `输入${v.label || v.key}`} />
+                      className="w-full px-2 py-1.5 border border-[color:var(--border)] rounded text-xs" placeholder={v.defaultValue || `输入${v.label || v.key}`} />
                   )}
                 </div>
               ))
             )}
           </HoverScrollbar></div>
-          <div className="px-4 py-3 border-t border-slate-100 flex items-center gap-2">
+          <div className="px-4 py-3 border-t border-[color:var(--border)] flex items-center gap-2">
             <Button onClick={handlePrint}  variant="ghost" className="text-xs flex items-center gap-1">
               <Icon name="Printer" size={14} /> 打印
             </Button>
@@ -171,16 +171,16 @@ h1{text-align:center;font-size:18pt;margin-bottom:24px}
 
         {/* Right: preview */}
         <div className="flex-1 flex flex-col min-w-0">
-          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-            <span className="text-xs text-slate-400">预览（仅供参考，排版以下载的 Word 文档为准）</span>
+          <div className="px-4 py-3 border-b border-[color:var(--border)] flex items-center justify-between">
+            <span className="text-xs text-[color:var(--muted)]">预览（仅供参考，排版以下载的 Word 文档为准）</span>
           </div>
           <div className="flex-1 overflow-hidden"><HoverScrollbar className="h-full p-6"><div ref={printRef}>
             {loading ? (
               <div className="flex items-center justify-center h-full">
-                <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary-500 border-t-transparent" />
+                <div className="animate-spin rounded-full h-6 w-6 border-2 border-[color:var(--accent)] border-t-transparent" />
               </div>
             ) : (
-              <div className="border border-slate-200 rounded-lg p-8 bg-white shadow-sm" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewHtml) }} />
+              <div className="border border-[color:var(--border)] rounded-lg p-8 bg-[color:var(--card)] shadow-sm" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewHtml) }} />
             )}
           </div></HoverScrollbar></div>
         </div>

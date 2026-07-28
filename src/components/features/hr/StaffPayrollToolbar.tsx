@@ -41,41 +41,41 @@ const StaffPayrollToolbar: React.FC<StaffPayrollToolbarProps> = ({
 }) => (
   <Card bordered={false} className="px-5 py-3 flex items-center gap-4 flex-wrap flex-shrink-0">
     <div className="flex items-center gap-2">
-      <label className="text-sm font-medium text-slate-600">年份</label>
+      <label className="text-sm font-medium text-[color:var(--fg-2)]">年份</label>
       <select value={filterYear}
         onChange={e => { setFilterYear(e.target.value); setFilterMonth('全部') }}
-        className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
+        className="px-3 py-1.5 border border-[color:var(--border)] rounded-lg text-sm">
         <option value="全部">全部</option>
         {yearOptions.map(y => <option key={y} value={y}>{y}年</option>)}
       </select>
     </div>
     <div className="flex items-center gap-2">
-      <label className="text-sm font-medium text-slate-600">月份</label>
+      <label className="text-sm font-medium text-[color:var(--fg-2)]">月份</label>
       <select value={filterMonth}
         onChange={e => setFilterMonth(e.target.value)}
-        className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
+        className="px-3 py-1.5 border border-[color:var(--border)] rounded-lg text-sm">
         {MONTHS.map(m => <option key={m} value={m}>{m === '全部' ? '全部' : `${m}月`}</option>)}
       </select>
     </div>
     <div className="flex items-center gap-2">
-      <label className="text-sm font-medium text-slate-600">姓名</label>
+      <label className="text-sm font-medium text-[color:var(--fg-2)]">姓名</label>
       <input type="text" placeholder="搜索姓名..."
         value={filterMemberName}
         onChange={e => setFilterMemberName(e.target.value)}
-        className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm w-36 focus:ring-2 focus:ring-primary-500" />
+        className="px-3 py-1.5 border border-[color:var(--border)] rounded-lg text-sm w-36 focus:ring-2 focus:ring-[color:var(--accent-soft)]" />
     </div>
     <div className="flex items-center gap-2">
-      <label className="text-sm font-medium text-slate-600">部门</label>
+      <label className="text-sm font-medium text-[color:var(--fg-2)]">部门</label>
       <select value={filterDept} onChange={e => setFilterDept(e.target.value ? Number(e.target.value) : '')}
-        className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
+        className="px-3 py-1.5 border border-[color:var(--border)] rounded-lg text-sm">
         <option value="">全部</option>
         {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
       </select>
     </div>
     <div className="flex items-center gap-2">
-      <label className="text-sm font-medium text-slate-600">项目</label>
+      <label className="text-sm font-medium text-[color:var(--fg-2)]">项目</label>
       <select value={filterProject} onChange={e => setFilterProject(e.target.value)}
-        className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
+        className="px-3 py-1.5 border border-[color:var(--border)] rounded-lg text-sm">
         <option value="全部">全部</option>
         {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
       </select>
@@ -84,7 +84,7 @@ const StaffPayrollToolbar: React.FC<StaffPayrollToolbarProps> = ({
       const candidates = filteredStaffForGenerate(staff, filterDept, effectiveYearMonth)
       const ready = candidates.filter(s => isAttendanceReady(s.id, effectiveYearMonth, attendances)).length
       return ready < candidates.length ? (
-        <span className="text-xs text-amber-500">考勤{ready}/{candidates.length}</span>
+        <span className="text-xs text-warning-500">考勤{ready}/{candidates.length}</span>
       ) : null
     })()}
     <div className="flex-1" />

@@ -91,7 +91,7 @@ export function CostLedgerForm({ projectId, projectName, initial, onSave, onClos
       <form id="cost-ledger-form" onSubmit={handleSubmit} className="space-y-4">
         {/* 方向选择 */}
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">方向</label>
+          <label className="mb-1 block text-xs font-medium text-[color:var(--fg-2)]">方向</label>
           <div className="flex gap-2">
             {(['expense', 'income'] as const).map(d => (
               <button
@@ -100,8 +100,8 @@ export function CostLedgerForm({ projectId, projectName, initial, onSave, onClos
                 onClick={() => set('direction', d)}
                 className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                   form.direction === d
-                    ? d === 'expense' ? 'border-red-300 bg-red-50 text-red-700' : 'border-emerald-300 bg-emerald-50 text-emerald-700'
-                    : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+                    ? d === 'expense' ? 'border-danger-300 bg-danger-50 text-danger-700' : 'border-success-300 bg-success-50 text-success-700'
+                    : 'border-[color:var(--border)] text-[color:var(--muted)] hover:bg-[color:var(--panel-2)]'
                 }`}
               >
                 {DIRECTION_CONFIG[d].label}
@@ -113,71 +113,71 @@ export function CostLedgerForm({ projectId, projectName, initial, onSave, onClos
         {/* 凭证号 + 日期 + 金额 */}
         <div className="grid grid-cols-3 gap-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">凭证号</label>
+            <label className="mb-1 block text-xs font-medium text-[color:var(--fg-2)]">凭证号</label>
             <Input type="text" value={form.voucherNo ?? ''} onChange={e => set('voucherNo', e.target.value)}
               placeholder="自动" className="font-mono" size="sm" />
-            <p className="mt-0.5 text-xs text-slate-400">留空表示无凭证</p>
+            <p className="mt-0.5 text-xs text-[color:var(--muted)]">留空表示无凭证</p>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">日期 *</label>
+            <label className="mb-1 block text-xs font-medium text-[color:var(--fg-2)]">日期 *</label>
             <Input type="text" value={form.date} onChange={e => set('date', parseDateText(e.target.value))}
               placeholder="YYYY-MM-DD，可粘贴" size="sm" />
-            {errors.date && <p className="mt-0.5 text-xs text-red-500">{errors.date}</p>}
+            {errors.date && <p className="mt-0.5 text-xs text-danger-500">{errors.date}</p>}
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">金额（元）*</label>
+            <label className="mb-1 block text-xs font-medium text-[color:var(--fg-2)]">金额（元）*</label>
             <Input type="number" step="0.01" min="0" value={form.amount || ''} onChange={e => set('amount', parseFloat(e.target.value) || 0)}
               size="sm" />
-            {errors.amount && <p className="mt-0.5 text-xs text-red-500">{errors.amount}</p>}
+            {errors.amount && <p className="mt-0.5 text-xs text-danger-500">{errors.amount}</p>}
           </div>
         </div>
 
         {/* 分类 */}
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">分类 *</label>
+          <label className="mb-1 block text-xs font-medium text-[color:var(--fg-2)]">分类 *</label>
           <CategoryPicker direction={form.direction} value={form.category} onChange={v => set('category', v)} categories={categories} onManage={onManageCategories} />
         </div>
 
         {/* 摘要 */}
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">摘要</label>
+          <label className="mb-1 block text-xs font-medium text-[color:var(--fg-2)]">摘要</label>
           <Input type="text" value={form.summary} onChange={e => set('summary', e.target.value)}
             placeholder={'如"付涂敏备用金"'} maxLength={200}
             size="sm" />
-          {errors.summary && <p className="mt-0.5 text-xs text-red-500">{errors.summary}</p>}
+          {errors.summary && <p className="mt-0.5 text-xs text-danger-500">{errors.summary}</p>}
         </div>
 
         {/* 对方 + 渠道 */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">往来单位/个人 *</label>
+            <label className="mb-1 block text-xs font-medium text-[color:var(--fg-2)]">往来单位/个人 *</label>
             <Input type="text" value={form.counterparty} onChange={e => set('counterparty', e.target.value)}
               placeholder={'如"孙家英"'} size="sm" />
-            {errors.counterparty && <p className="mt-0.5 text-xs text-red-500">{errors.counterparty}</p>}
+            {errors.counterparty && <p className="mt-0.5 text-xs text-danger-500">{errors.counterparty}</p>}
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">{channelLabel} *</label>
+            <label className="mb-1 block text-xs font-medium text-[color:var(--fg-2)]">{channelLabel} *</label>
             <ChannelInput value={form.channel} onChange={v => set('channel', v)} direction={form.direction} />
-            {errors.channel && <p className="mt-0.5 text-xs text-red-500">{errors.channel}</p>}
+            {errors.channel && <p className="mt-0.5 text-xs text-danger-500">{errors.channel}</p>}
           </div>
         </div>
 
         {/* 关联发票 */}
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">关联发票（可选）</label>
+          <label className="mb-1 block text-xs font-medium text-[color:var(--fg-2)]">关联发票（可选）</label>
           <InvoiceLinker projectId={projectId} value={form.linkedInvoiceId} onChange={v => set('linkedInvoiceId', v)} />
         </div>
 
         {/* 备注 */}
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">备注（可选）</label>
+          <label className="mb-1 block text-xs font-medium text-[color:var(--fg-2)]">备注（可选）</label>
           <textarea value={form.notes || ''} onChange={e => set('notes', e.target.value)} rows={2}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+            className="w-full rounded-lg border border-[color:var(--border)] px-3 py-2 text-sm focus:border-[color:var(--accent)] focus:outline-none focus:ring-1 focus:ring-[color:var(--accent)]" />
         </div>
 
         {/* 凭证附件 */}
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">凭证附件（可选）</label>
+          <label className="mb-1 block text-xs font-medium text-[color:var(--fg-2)]">凭证附件（可选）</label>
           <FileUploader files={form.attachments || []} onChange={v => set('attachments', v)} projectName={projectName} />
         </div>
       </form>

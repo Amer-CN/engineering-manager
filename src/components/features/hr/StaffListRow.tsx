@@ -20,24 +20,24 @@ export const StaffListRow = React.memo(function StaffListRow({
   onDelete,
 }: StaffListRowProps) {
   return (
-    <tr className="hover:bg-slate-50">
-      <td className="px-4 py-3 font-medium text-slate-800">{m.name}</td>
-      <td className="px-4 py-3 text-sm text-slate-600">{deptName}</td>
-      <td className="px-4 py-3 text-sm text-slate-600">{m.position || '-'}</td>
-      <td className="px-4 py-3 text-sm text-slate-600">{m.phone || '-'}</td>
+    <tr className="hover:bg-[color:var(--panel-2)]">
+      <td className="px-4 py-3 font-medium text-[color:var(--fg)]">{m.name}</td>
+      <td className="px-4 py-3 text-sm text-[color:var(--fg-2)]">{deptName}</td>
+      <td className="px-4 py-3 text-sm text-[color:var(--fg-2)]">{m.position || '-'}</td>
+      <td className="px-4 py-3 text-sm text-[color:var(--fg-2)]">{m.phone || '-'}</td>
       <td className="px-4 py-3">
         <select value={m.status || 'active'} onChange={e => onStatusChange(m, e.target.value)}
-          className={`px-2 py-1 rounded-full text-xs font-medium border-0 ${HR_STATUS_COLORS[m.status || 'active'] || 'bg-slate-100 text-slate-600'}`}>
+          className={`px-2 py-1 rounded-full text-xs font-medium cursor-pointer ${HR_STATUS_COLORS[m.status || 'active'] || 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)]'}`}>
           {Object.entries(HR_STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
       </td>
-      <td className="px-4 py-3 text-sm text-slate-500">{m.entryDate || '-'}</td>
-      <td className="px-4 py-3 text-sm text-slate-500">{m.leaveDate || '-'}</td>
+      <td className="px-4 py-3 text-sm text-[color:var(--muted)]">{m.entryDate || '-'}</td>
+      <td className="px-4 py-3 text-sm text-[color:var(--muted)]">{m.leaveDate || '-'}</td>
       <td className="px-4 py-3 text-center">
         <div className="flex items-center justify-center gap-1">
-          <Button onClick={() => onEdit(m)}  variant="ghost" size="sm" className="text-indigo-600">编辑</Button>
-          <Button onClick={() => onSalaryHistory(m)}  title="薪资历史" variant="ghost" size="sm" className="text-amber-600">薪资</Button>
-          <Button onClick={() => { if (confirm("确定要删除 " + m.name + " 吗？")) onDelete(m.id) }}  title="删除" variant="ghost" size="sm" className="text-red-500">删除</Button>
+          <Button onClick={() => onEdit(m)}  variant="ghost" size="sm" className="text-[color:var(--accent)]">编辑</Button>
+          <Button onClick={() => onSalaryHistory(m)}  title="薪资历史" variant="ghost" size="sm" className="text-warning-600">薪资</Button>
+          <Button onClick={() => { if (confirm("确定要删除 " + m.name + " 吗？")) onDelete(m.id) }}  title="删除" variant="ghost" size="sm" className="text-danger-500">删除</Button>
         </div>
       </td>
     </tr>

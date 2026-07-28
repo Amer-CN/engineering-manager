@@ -33,30 +33,30 @@ export const InvoiceStats: React.FC<InvoiceStatsProps> = ({ invoices, filteredIn
   <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
   <Card bordered={false} className="p-4">
   <div className="flex items-center gap-3">
-  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center"><Icon name="Upload" size={20} /></div>
+  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}><Icon name="Upload" size={20} /></div>
   <div>
-  <p className="text-xs text-slate-500">开票总额</p>
-  <p className="text-lg font-bold text-blue-600">¥{formatMoney(stats.invoiceOutAmount)}</p>
+  <p className="text-xs" style={{ color: 'var(--muted)' }}>开票总额</p>
+  <p className="text-lg font-bold font-mono tabular-nums tracking-tight" style={{ color: 'var(--fg)' }}>¥{formatMoney(stats.invoiceOutAmount)}</p>
   </div>
   </div>
   </Card>
   <Card bordered={false} className="p-4">
   <div className="flex items-center gap-3">
-  <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center"><Icon name="Download" size={20} /></div>
+  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}><Icon name="Download" size={20} /></div>
   <div>
-  <p className="text-xs text-slate-500">收票总额</p>
-  <p className="text-lg font-bold text-green-600">¥{formatMoney(stats.invoiceInAmount)}</p>
+  <p className="text-xs" style={{ color: 'var(--muted)' }}>收票总额</p>
+  <p className="text-lg font-bold font-mono tabular-nums tracking-tight" style={{ color: 'var(--fg)' }}>¥{formatMoney(stats.invoiceInAmount)}</p>
   </div>
   </div>
   </Card>
   <Card bordered={false} className="p-4">
   <div className="flex items-center gap-3">
-  <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center"><Icon name="LayoutDashboard" size={20} /></div>
+  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}><Icon name="LayoutDashboard" size={20} /></div>
   <div>
-  <p className="text-xs text-slate-500">发票总数</p>
-  <p className="text-lg font-bold text-amber-600 flex items-center gap-2">
+  <p className="text-xs" style={{ color: 'var(--muted)' }}>发票总数</p>
+  <p className="text-lg font-bold flex items-center gap-2 font-mono tabular-nums tracking-tight" style={{ color: 'var(--fg)' }}>
   {stats.totalCount} 张
-  <span className="text-xs font-normal text-slate-400 leading-tight">
+  <span className="text-xs font-normal leading-tight" style={{ color: 'var(--muted)' }}>
   开票{invoiceOut.length}<br />收票{invoiceIn.length}
   </span>
   </p>
@@ -65,19 +65,19 @@ export const InvoiceStats: React.FC<InvoiceStatsProps> = ({ invoices, filteredIn
   </Card>
   <Card bordered={false} className="p-4">
   <div className="flex items-center gap-3">
-  <div className="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center"><Icon name="Shield" size={20} className="text-violet-600" /></div>
+  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}><Icon name="Shield" size={20} /></div>
   <div>
-  <p className="text-xs text-slate-500">专票税额</p>
-  <p className={`text-lg font-bold ${stats.specialTax > 0 ? 'text-violet-600' : 'text-slate-400'}`}>¥{formatMoney(stats.specialTax)}</p>
+  <p className="text-xs" style={{ color: 'var(--muted)' }}>专票税额</p>
+  <p className="text-lg font-bold font-mono tabular-nums tracking-tight" style={{ color: stats.specialTax > 0 ? 'var(--fg)' : 'var(--muted)' }}>¥{formatMoney(stats.specialTax)}</p>
   </div>
   </div>
   </Card>
   <Card bordered={false} className="p-4">
   <div className="flex items-center gap-3">
-  <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center"><Icon name="File" size={20} className="text-slate-600" /></div>
+  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: 'var(--panel-2)', color: 'var(--muted)' }}><Icon name="File" size={20} /></div>
   <div>
-  <p className="text-xs text-slate-500">普票税额</p>
-  <p className={`text-lg font-bold ${stats.regularTax > 0 ? 'text-slate-600' : 'text-slate-400'}`}>¥{formatMoney(stats.regularTax)}</p>
+  <p className="text-xs" style={{ color: 'var(--muted)' }}>普票税额</p>
+  <p className="text-lg font-bold font-mono tabular-nums tracking-tight" style={{ color: stats.regularTax > 0 ? 'var(--fg)' : 'var(--muted)' }}>¥{formatMoney(stats.regularTax)}</p>
   </div>
   </div>
   </Card>

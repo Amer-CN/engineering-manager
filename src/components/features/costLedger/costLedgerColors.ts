@@ -12,8 +12,8 @@ export const COLORS = {
 } as const
 
 export const DIRECTION_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  expense: { label: '支出', color: 'text-red-600', bg: 'bg-red-50' },
-  income:  { label: '收入', color: 'text-emerald-600', bg: 'bg-emerald-50' },
+  expense: { label: '支出', color: 'text-[color:var(--danger)]', bg: 'bg-[color:var(--danger-soft)]' },
+  income:  { label: '收入', color: 'text-[color:var(--success)]', bg: 'bg-[color:var(--success-soft)]' },
 }
 
 export interface CategoryConfig {

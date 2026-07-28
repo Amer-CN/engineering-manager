@@ -139,6 +139,8 @@ input[type="password"]::-ms-clear {
   --sidebar-item-hover: oklch(96.5% 0.011 84);
   --sidebar-item-active: oklch(93.5% 0.014 82);
   --shadow-card: 0 1px 3px oklch(0% 0 0 / 0.07);
+  --shadow-card-hover: 0 4px 12px oklch(0% 0 0 / 0.1);
+  --shadow-lift: 0 8px 24px -4px oklch(0% 0 0 / 0.12);
   --shadow-dropdown: 0 10px 15px -3px oklch(0% 0 0 / 0.1);
   --overlay: oklch(20% 0.01 75 / 0.45);
 }
@@ -272,6 +274,8 @@ input::-webkit-outer-spin-button {
   --sidebar-item-hover: oklch(27.5% 0.004 75);
   --sidebar-item-active: oklch(92% 0.004 80 / 0.14);
   --shadow-card: 0 1px 3px oklch(0% 0 0 / 0.35);
+  --shadow-card-hover: 0 4px 12px oklch(0% 0 0 / 0.4);
+  --shadow-lift: 0 8px 24px -4px oklch(0% 0 0 / 0.5);
   --shadow-dropdown: 0 10px 15px -3px oklch(0% 0 0 / 0.5);
   --overlay: oklch(0% 0 0 / 0.7);
 
@@ -383,6 +387,8 @@ input::-webkit-outer-spin-button {
   --sidebar-item-hover: oklch(97% 0 0);
   --sidebar-item-active: oklch(30% 0 0 / 0.07);
   --shadow-card: 0 1px 3px oklch(0% 0 0 / 0.06);
+  --shadow-card-hover: 0 4px 12px oklch(0% 0 0 / 0.08);
+  --shadow-lift: 0 8px 24px -4px oklch(0% 0 0 / 0.1);
   --shadow-dropdown: 0 10px 15px -3px oklch(0% 0 0 / 0.1);
   --overlay: oklch(20% 0 0 / 0.4);
 
@@ -518,22 +524,7 @@ input::-webkit-outer-spin-button {
   background-color: var(--panel-2);
   color: var(--fg-2);
 }
-/* Graphite primary 色统一到 accent 体系 */
-[data-theme="graphite"] .bg-primary-50 { background-color: var(--accent-soft); }
-[data-theme="graphite"] .bg-primary-100 { background-color: var(--accent-soft); }
-[data-theme="graphite"] .bg-primary-500 { background-color: var(--accent); }
-[data-theme="graphite"] .bg-primary-600 { background-color: var(--accent); }
-[data-theme="graphite"] .hover\:bg-primary-500:hover { background-color: var(--accent-strong); }
-[data-theme="graphite"] .hover\:bg-primary-700:hover { background-color: var(--accent-strong); }
-[data-theme="graphite"] .text-primary-600 { color: var(--accent); }
-[data-theme="graphite"] .text-primary-700 { color: var(--accent); }
-[data-theme="graphite"] .border-primary-200 { border-color: var(--accent-soft); }
-[data-theme="graphite"] .border-primary-300 { border-color: var(--accent-strong); }
-[data-theme="graphite"] .border-primary-400 { border-color: var(--accent-strong); }
-[data-theme="graphite"] .ring-primary-500 { --tw-ring-color: var(--accent); }
-[data-theme="graphite"] .focus\:ring-primary-500:focus { --tw-ring-color: var(--accent); }
-[data-theme="graphite"] .focus\:border-primary-500:focus { border-color: var(--accent-strong); }
-[data-theme="graphite"] .shadow-primary-500\/25 { --tw-shadow-color: var(--accent); opacity: 0.25; }
+/* (Removed: graphite primary-* overrides — no longer needed, all components use --accent token directly) */
 
 /* 白色装饰/进度条调暗 */
 [data-theme="graphite"] .bg-white\/20,
@@ -737,21 +728,21 @@ input::-webkit-outer-spin-button {
    ═══════════════════════════════════════════ */
 /* 简单直接 — WebKit 原生 scrollbar 伪元素 */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
-/* track 浅灰背景，hover 时加深 — 不使用复合选择器，track 始终有背景 */
+/* track transparent — Stitch: clean instrument scrollbar */
 ::-webkit-scrollbar-track {
-  background: rgba(148, 163, 184, 0.06);
-  border-radius: 4px;
+  background: transparent;
+  border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.45);
-  border-radius: 4px;
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 3px;
   min-height: 36px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.75);
+  background: rgba(100, 116, 139, 0.6);
 }
 ::-webkit-scrollbar-corner {
   background: transparent;
@@ -903,22 +894,7 @@ input::-webkit-outer-spin-button {
 
 [data-theme="sandstone"] .btn-warning { color: var(--bg); }
 
-/* Sandstone primary 色暖化 — 按钮/徽章/标签/焦点环全部走暖橙 */
-[data-theme="sandstone"] .bg-primary-50 { background-color: rgb(var(--color-primary-50)); }
-[data-theme="sandstone"] .bg-primary-100 { background-color: rgb(var(--color-primary-100)); }
-[data-theme="sandstone"] .bg-primary-500 { background-color: rgb(var(--color-primary-500)); }
-[data-theme="sandstone"] .bg-primary-600 { background-color: rgb(var(--color-primary-600)); }
-[data-theme="sandstone"] .hover\:bg-primary-500:hover { background-color: rgb(var(--color-primary-500)); }
-[data-theme="sandstone"] .hover\:bg-primary-700:hover { background-color: rgb(var(--color-primary-700)); }
-[data-theme="sandstone"] .text-primary-600 { color: rgb(var(--color-primary-600)); }
-[data-theme="sandstone"] .text-primary-700 { color: rgb(var(--color-primary-700)); }
-[data-theme="sandstone"] .border-primary-200 { border-color: rgb(var(--color-primary-200)); }
-[data-theme="sandstone"] .border-primary-300 { border-color: rgb(var(--color-primary-300)); }
-[data-theme="sandstone"] .border-primary-400 { border-color: rgb(var(--color-primary-400)); }
-[data-theme="sandstone"] .ring-primary-500 { --tw-ring-color: rgb(var(--color-primary-500)); }
-[data-theme="sandstone"] .focus\:ring-primary-500:focus { --tw-ring-color: rgb(var(--color-primary-500)); }
-[data-theme="sandstone"] .focus\:border-primary-500:focus { border-color: rgb(var(--color-primary-500)); }
-[data-theme="sandstone"] .shadow-primary-500\/25 { --tw-shadow-color: rgb(var(--color-primary-500) / 0.25); }
+/* (Removed: sandstone primary-* overrides — no longer needed, all components use --accent token directly) */
 
 /* Sandstone 侧边栏活跃项 */
 [data-theme="sandstone"] aside nav button.bg-slate-100 { background-color: var(--sidebar-item-active); }
@@ -962,11 +938,11 @@ body {
   }
 
   .btn-primary {
-  @apply bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800 shadow-sm hover:shadow-md;
+  @apply bg-[color:var(--accent)] text-[color:var(--on-accent)] hover:opacity-90 active:opacity-80 shadow-sm hover:shadow-md;
   }
 
   .btn-secondary {
-  @apply bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 active:bg-slate-100 shadow-sm;
+  @apply bg-[color:var(--card)] text-[color:var(--fg-2)] border border-[color:var(--border)] hover:bg-[color:var(--panel-2)] active:bg-[color:var(--panel-2)] shadow-sm;
   }
 
   .btn-success {
@@ -982,7 +958,7 @@ body {
   }
 
   .btn-ghost {
-  @apply bg-transparent text-slate-600 hover:bg-slate-100 active:bg-slate-200;
+  @apply bg-transparent text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)] active:bg-[color:var(--panel-2)];
   }
 
   .btn-sm {
@@ -997,11 +973,11 @@ body {
 /* 卡片样式 */
 @layer components {
   .card {
-  @apply bg-white rounded-xl shadow-card hover:shadow-card-hover transition-all duration-200;
+  @apply bg-[color:var(--card)] rounded-xl shadow-card hover:shadow-card-hover transition-all duration-200;
   }
 
   .card-header {
-  @apply px-5 py-4 border-b border-slate-100;
+  @apply px-5 py-4 border-b border-[color:var(--border)];
   }
 
   .card-body {
@@ -1012,10 +988,10 @@ body {
 /* 表单样式 */
 @layer components {
   .input {
-  @apply w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-white text-slate-800
-  placeholder-slate-400 transition-all duration-200
-  focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500
-  hover:border-slate-300;
+  @apply w-full px-4 py-2.5 border border-[color:var(--border)] rounded-lg bg-[color:var(--card)] text-[color:var(--fg)]
+  placeholder-[color:var(--muted)] transition-all duration-200
+  focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] focus:border-[color:var(--accent)]
+  hover:border-[color:var(--border)];
   }
 
   .input-error {
@@ -1023,14 +999,14 @@ body {
   }
 
   .select {
-  @apply w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-white text-slate-800
+  @apply w-full px-4 py-2.5 border border-[color:var(--border)] rounded-lg bg-[color:var(--card)] text-[color:var(--fg)]
   transition-all duration-200 cursor-pointer
-  focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500
-  hover:border-slate-300;
+  focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] focus:border-[color:var(--accent)]
+  hover:border-[color:var(--border)];
   }
 
   .label {
-  @apply block text-sm font-medium text-slate-700 mb-1.5;
+  @apply block text-sm font-medium text-[color:var(--fg-2)] mb-1.5;
   }
 
   .form-group {
@@ -1045,15 +1021,15 @@ body {
   }
 
   .table th {
-  @apply px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider bg-slate-50 border-b border-slate-200;
+  @apply px-4 py-2.5 text-left text-xs font-semibold text-[color:var(--muted)] uppercase tracking-wider bg-[color:var(--panel-2)] border-b border-[color:var(--border)];
   }
 
   .table td {
-  @apply px-4 py-3 border-b border-slate-100;
+  @apply px-4 py-2.5 border-b border-[color:var(--border)];
   }
 
   .table tr:hover td {
-  @apply bg-slate-50;
+  background-color: var(--card-hover);
   }
 }
 
@@ -1063,7 +1039,7 @@ table tbody tr {
   transition: background-color 200ms;
 }
 table tbody tr:hover {
-  background-color: rgb(239 246 255 / var(--row-hover-opacity, 0.6));
+  background-color: var(--card-hover);
 }
 
 /* 模态框样式 */
@@ -1072,7 +1048,7 @@ table tbody tr:hover {
 }
 
 .modal-content {
-  @apply bg-white rounded-2xl shadow-2xl w-full mx-4 max-h-[90vh] overflow-y-auto;
+  @apply bg-[color:var(--card)] rounded-xl shadow-xl w-full mx-4 max-h-[90vh] overflow-y-auto;
   max-width: 32rem;
 }
 
@@ -1082,7 +1058,7 @@ table tbody tr:hover {
 }
 
 .badge-primary {
-  @apply bg-primary-100 text-primary-700;
+  @apply bg-[color:var(--accent-soft)] text-[color:var(--accent)];
 }
 
 .badge-success {
@@ -1098,20 +1074,20 @@ table tbody tr:hover {
 }
 
 .badge-gray {
-  @apply bg-slate-100 text-slate-700;
+  @apply bg-[color:var(--panel-2)] text-[color:var(--fg-2)];
 }
 
 /* 空状态 */
 .empty-state-title {
-  @apply text-lg font-medium text-slate-700 mb-2;
+  @apply text-lg font-medium text-[color:var(--fg-2)] mb-2;
 }
 
 .empty-state-description {
-  @apply text-sm text-slate-500;
+  @apply text-sm text-[color:var(--muted)];
 }
 
 .loading-spinner {
-  @apply animate-spin rounded-full border-2 border-slate-200 border-t-primary-600;
+  @apply animate-spin rounded-full border-2 border-[color:var(--border)] border-t-[color:var(--accent)];
 }
 
 /* 状态指示器 */
@@ -1143,29 +1119,29 @@ button:disabled {
 }
 
 .tooltip::after {
-  @apply absolute hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap z-50;
+  @apply absolute hidden group-hover:block bg-[color:var(--fg)] text-[color:var(--bg)] text-xs px-2 py-1 rounded -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap z-50;
 }
 
 /* 现代化表单增强（兼容现有页面使用） */
 .input-modern {
-  @apply w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800
-  placeholder-slate-400 transition-all duration-300
-  focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 focus:bg-white
-  hover:border-slate-300;
+  @apply w-full px-4 py-3 bg-[color:var(--panel-2)] border border-[color:var(--border)] rounded-xl text-[color:var(--fg)]
+  placeholder-[color:var(--muted)] transition-all duration-300
+  focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] focus:border-[color:var(--accent)] focus:bg-[color:var(--card)]
+  hover:border-[color:var(--border)];
 }
 
 .input-modern-lg {
-  @apply w-full px-5 py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl text-slate-800 text-lg
-  placeholder-slate-400 transition-all duration-300
-  focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 focus:bg-white
-  hover:border-slate-300;
+  @apply w-full px-5 py-4 bg-[color:var(--panel-2)] border-2 border-[color:var(--border)] rounded-2xl text-[color:var(--fg)] text-lg
+  placeholder-[color:var(--muted)] transition-all duration-300
+  focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] focus:border-[color:var(--accent)] focus:bg-[color:var(--card)]
+  hover:border-[color:var(--border)];
 }
 
 .select-modern {
-  @apply w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800
+  @apply w-full px-4 py-3 bg-[color:var(--panel-2)] border border-[color:var(--border)] rounded-xl text-[color:var(--fg)]
   transition-all duration-300 cursor-pointer appearance-none
-  focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 focus:bg-white
-  hover:border-slate-300;
+  focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] focus:border-[color:var(--accent)] focus:bg-[color:var(--card)]
+  hover:border-[color:var(--border)];
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 12px center;

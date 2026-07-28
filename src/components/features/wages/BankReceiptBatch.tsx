@@ -131,10 +131,10 @@ export default function BankReceiptBatch({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-slate-900">银行回单批量解析</h2>
+        <h2 className="text-base font-semibold tracking-tight text-[color:var(--fg)]">银行回单批量解析</h2>
         <button
           onClick={onCancel}
-          className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
+          className="px-4 py-2 text-sm font-medium text-[color:var(--fg-2)] bg-[color:var(--card)] border border-[color:var(--border)] rounded-md hover:bg-[color:var(--panel-2)]"
         >
           返回
         </button>
@@ -161,7 +161,7 @@ export default function BankReceiptBatch({
       <div className="flex justify-end space-x-4">
         <button
           onClick={onCancel}
-          className="px-6 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
+          className="px-6 py-2 text-sm font-medium text-[color:var(--fg-2)] bg-[color:var(--card)] border border-[color:var(--border)] rounded-md hover:bg-[color:var(--panel-2)]"
         >
           取消
         </button>
@@ -171,8 +171,8 @@ export default function BankReceiptBatch({
           className={`
             px-6 py-2 text-sm font-medium text-white rounded-md
             ${(files.length === 0 || status === 'parsing')
-              ? 'bg-slate-400 cursor-not-allowed'
-              : 'bg-primary-600 hover:bg-primary-700'
+              ? 'bg-[color:var(--muted)] cursor-not-allowed'
+              : 'bg-[color:var(--accent)] hover:opacity-90'
             }
           `}
         >

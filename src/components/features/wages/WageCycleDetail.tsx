@@ -96,7 +96,7 @@ export default function WageCycleDetail(props: WageCycleDetailProps) {
     return (
       <PageContainer className="space-y-6">
         <button onClick={() => setAttendanceDetailRecord(null)}
-          className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 transition-colors mb-4">
+          className="flex items-center gap-2 text-sm text-[color:var(--muted)] hover:text-[color:var(--fg-2)] transition-colors mb-4">
           <Icon name="ChevronLeft" size={16} /> 返回考勤列表
         </button>
         <AttendanceDetail record={attendanceDetailRecord} member={undefined}
@@ -120,7 +120,7 @@ export default function WageCycleDetail(props: WageCycleDetailProps) {
 
       {/* 月份选择器 - 统一在父级 */}
       <div className="flex items-center gap-3">
-        <label className="text-sm text-slate-500">月份</label>
+        <label className="text-sm text-[color:var(--muted)]">月份</label>
         <MonthPicker value={selectedMonth} onChange={onChangeMonth} />
       </div>
 
@@ -144,7 +144,7 @@ export default function WageCycleDetail(props: WageCycleDetailProps) {
         )}
 
         {/* Tab Content */}
-        <Card className="border border-slate-200">
+        <Card className="border border-[color:var(--border)]">
           {activeTab === 'attendance' && (
             <AttendanceTab
               selectedProject={selectedProject} selectedMonth={selectedMonth}

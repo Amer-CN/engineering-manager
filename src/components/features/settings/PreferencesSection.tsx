@@ -41,15 +41,15 @@ export function PreferencesSection() {
       {/* ── 默认起始页 ── */}
       <div id="default-start-page" data-setting-anchor className="card">
         <div className="card-header">
-          <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2"><Icon name="Home" size={20} /> 默认起始页</h2>
+          <h2 className="text-lg font-semibold text-[color:var(--fg)] flex items-center gap-2"><Icon name="Home" size={20} /> 默认起始页</h2>
         </div>
         <div className="card-body">
-          <p className="text-sm text-slate-600 mb-3">登录后默认打开的页面。</p>
+          <p className="text-sm text-[color:var(--fg-2)] mb-3">登录后默认打开的页面。</p>
           <div className="relative max-w-xs">
             <select
               value={startPage}
               onChange={e => handleStartPageChange(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-lg text-sm border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary-200 appearance-none cursor-pointer"
+              className="w-full px-3 py-2.5 rounded-lg text-sm border border-[color:var(--border)] bg-[color:var(--card)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] appearance-none cursor-pointer"
               style={{ color: 'var(--fg)' }}
             >
               {NAV_ITEMS.map(item => (
@@ -57,7 +57,7 @@ export function PreferencesSection() {
               ))}
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-              <Icon name="ChevronDown" size={14} className="text-slate-400" />
+              <Icon name="ChevronDown" size={14} className="text-[color:var(--muted)]" />
             </div>
           </div>
         </div>
@@ -66,17 +66,17 @@ export function PreferencesSection() {
       {/* ── 提示停留时长 ── */}
       <div id="toast-duration" data-setting-anchor className="card">
         <div className="card-header">
-          <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2"><Icon name="Bell" size={20} /> 提示停留时长</h2>
+          <h2 className="text-lg font-semibold text-[color:var(--fg)] flex items-center gap-2"><Icon name="Bell" size={20} /> 提示停留时长</h2>
         </div>
         <div className="card-body">
-          <p className="text-sm text-slate-600 mb-3">操作成功/失败等提示消息在屏幕上停留的时间。</p>
+          <p className="text-sm text-[color:var(--fg-2)] mb-3">操作成功/失败等提示消息在屏幕上停留的时间。</p>
           <div className="flex gap-2 max-w-md">
             {TOAST_DURATION_OPTIONS.map(opt => (
               <button key={opt.value} onClick={() => handleToastDurationChange(opt.value)}
                 className={`flex-1 py-2.5 rounded-lg text-sm font-medium border transition-all ${
                   toastDuration === opt.value
-                    ? 'border-primary-500 bg-primary-50 text-primary-700'
-                    : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                    ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]'
+                    : 'border-[color:var(--border)] text-[color:var(--fg-2)] hover:border-[color:var(--border)]'
                 }`}
               >
                 {opt.label}

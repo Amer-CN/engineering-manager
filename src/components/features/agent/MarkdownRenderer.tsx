@@ -69,7 +69,7 @@ export function parseInline(text: string, keyPrefix = ''): React.ReactNode[] {
     switch (rule.type) {
       case 'code':
         nodes.push(
-          <code key={key} className="px-1 py-0.5 rounded bg-slate-100 text-primary-700 font-mono text-xs">
+          <code key={key} className="px-1 py-0.5 rounded bg-[color:var(--panel-2)] text-[color:var(--accent)] font-mono text-xs">
             {match[1]}
           </code>,
         )
@@ -78,7 +78,7 @@ export function parseInline(text: string, keyPrefix = ''): React.ReactNode[] {
         nodes.push(<strong key={key} className="font-semibold">{parseInline(match[1] ?? match[2] ?? '', key)}</strong>)
         break
       case 'strike':
-        nodes.push(<del key={key} className="text-slate-400">{parseInline(match[1], key)}</del>)
+        nodes.push(<del key={key} className="text-[color:var(--muted)]">{parseInline(match[1], key)}</del>)
         break
       case 'italic':
         nodes.push(<em key={key}>{parseInline(match[1], key)}</em>)
@@ -91,7 +91,7 @@ export function parseInline(text: string, keyPrefix = ''): React.ReactNode[] {
               key={key}
               href={href}
               onClick={handleLinkClick}
-              className="text-primary-600 underline underline-offset-2 hover:text-primary-700 break-all"
+              className="text-[color:var(--accent)] underline underline-offset-2 hover:opacity-80 break-all"
             >
               {parseInline(match[1], key)}
             </a>,
@@ -181,7 +181,7 @@ export function parseBlocks(input: string): React.ReactNode[] {
       while (i < lines.length && !/^```\s*$/.test(lines[i])) { codeLines.push(lines[i]); i++ }
       i++ // 跳过结束围栏
       blocks.push(
-        <pre key={`b${key++}`} className="my-2 p-3 rounded-lg bg-slate-800 text-slate-100 text-xs font-mono overflow-x-auto">
+        <pre key={`b${key++}`} className="my-2 p-3 rounded-lg bg-[color:var(--panel-2)] text-[color:var(--fg)] text-xs font-mono overflow-x-auto border border-[color:var(--border)]">
           <code>{codeLines.join('\n')}</code>
         </pre>,
       )
@@ -194,7 +194,7 @@ export function parseBlocks(input: string): React.ReactNode[] {
       const level = heading[1].length
       const big = level <= 2
       blocks.push(
-        <p key={`b${key++}`} className={`${big ? 'text-base' : 'text-sm'} font-semibold text-slate-800 mt-2 mb-1`}>
+        <p key={`b${key++}`} className={`${big ? 'text-base' : 'text-sm'} font-semibold text-[color:var(--fg)] mt-2 mb-1`}>
           {parseInline(heading[2], `b${key}`)}
         </p>,
       )
@@ -204,7 +204,7 @@ export function parseBlocks(input: string): React.ReactNode[] {
 
     // 分割线
     if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) {
-      blocks.push(<hr key={`b${key++}`} className="my-3 border-slate-200" />)
+      blocks.push(<hr key={`b${key++}`} className="my-3 border-[color:var(--border)]" />)
       i++
       continue
     }
@@ -223,7 +223,7 @@ export function parseBlocks(input: string): React.ReactNode[] {
         <div key={`b${kb}`} className="my-2 overflow-x-auto">
           <table className="w-full text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-200 text-left text-slate-500">
+              <tr className="border-b border-[color:var(--border)] text-left text-[color:var(--muted)]">
                 {header.map((h, hi) => (
                   <th key={hi} className="py-1.5 px-2 font-medium whitespace-nowrap">{parseInline(h, `b${kb}h${hi}`)}</th>
                 ))}
@@ -231,9 +231,9 @@ export function parseBlocks(input: string): React.ReactNode[] {
             </thead>
             <tbody>
               {rows.map((r, ri) => (
-                <tr key={ri} className="border-b border-slate-100 last:border-0">
+                <tr key={ri} className="border-b border-[color:var(--border)] last:border-0">
                   {header.map((_, ci) => (
-                    <td key={ci} className="py-1.5 px-2 text-slate-700 align-top">{parseInline(r[ci] ?? '', `b${kb}r${ri}c${ci}`)}</td>
+                    <td key={ci} className="py-1.5 px-2 text-[color:var(--fg-2)] align-top">{parseInline(r[ci] ?? '', `b${kb}r${ri}c${ci}`)}</td>
                   ))}
                 </tr>
               ))}
@@ -252,7 +252,7 @@ export function parseBlocks(input: string): React.ReactNode[] {
         i++
       }
       blocks.push(
-        <blockquote key={`b${key++}`} className="my-2 pl-3 border-l-2 border-slate-300 text-slate-500 italic">
+        <blockquote key={`b${key++}`} className="my-2 pl-3 border-l-2 border-[color:var(--border)] text-[color:var(--muted)] italic">
           {parseInline(quote.join(' '), `b${key}`)}
         </blockquote>,
       )

@@ -37,10 +37,10 @@ const Contracts: React.FC<ContractsProps> = ({ refresh }) => {
   // 加载占位符
   const fallback = (
   <PageContainer>
-  <div className="rounded-2xl bg-slate-100 animate-pulse h-32 mb-6" />
+  <div className="rounded-xl animate-pulse h-32 mb-6 bg-[color:var(--panel-2)]" />
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
   {Array.from({ length: 4 }).map((_, i) => (
-  <div key={i} className="rounded-xl bg-slate-100 animate-pulse h-28" />
+  <div key={i} className="rounded-xl animate-pulse h-28 bg-[color:var(--panel-2)]" />
   ))}
   </div>
   </PageContainer>
@@ -60,7 +60,7 @@ const Contracts: React.FC<ContractsProps> = ({ refresh }) => {
   const setGroupBy = type === 'income' ? setIncomeGroupBy : type === 'expense' ? setExpenseGroupBy : setAgreementGroupBy
 
   return (
-  <Suspense fallback={<div className="p-6 text-slate-400">加载中...</div>}>
+  <Suspense fallback={<div className="p-6 text-[color:var(--muted)]">加载中...</div>}>
   <ContractPage
   refresh={refresh}
   groupBy={groupBy}

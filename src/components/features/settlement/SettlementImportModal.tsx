@@ -94,7 +94,7 @@ export const SettlementImportModal: React.FC<Props> = ({ show, onClose, onImport
       const row = state.previewRows[index]
       if (!row) return null
       const val = row[i]
-      return <span className="text-slate-700 whitespace-nowrap">{val !== undefined && val !== null ? String(val) : ''}</span>
+      return <span className="text-[color:var(--fg-2)] whitespace-nowrap">{val !== undefined && val !== null ? String(val) : ''}</span>
     }
   }))
 
@@ -102,35 +102,35 @@ export const SettlementImportModal: React.FC<Props> = ({ show, onClose, onImport
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[70]" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-[95vw] max-w-5xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
-        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between shrink-0">
-          <h3 className="text-lg font-semibold text-slate-800">导入 Excel 明细</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={20} /></button>
+      <div className="bg-[color:var(--card)] rounded-xl shadow-xl w-[95vw] max-w-5xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="px-6 py-4 border-b border-[color:var(--border)] flex items-center justify-between shrink-0">
+          <h3 className="text-lg font-semibold text-[color:var(--fg)]">导入 Excel 明细</h3>
+          <button onClick={onClose} className="text-[color:var(--muted)] hover:text-[color:var(--fg-2)]"><Icon name="X" size={20} /></button>
         </div>
         <HoverScrollbar className="flex-1 p-6 space-y-4">
           <div className="flex items-center gap-6">
             {state.sheetNames.length > 1 && (
               <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-slate-700">工作表：</label>
+                <label className="text-sm font-medium text-[color:var(--fg-2)]">工作表：</label>
                 <select value={state.activeSheet} onChange={e => switchSheet(e.target.value)} className="select text-sm">
                   {state.sheetNames.map(n => <option key={n} value={n}>{n}</option>)}
                 </select>
               </div>
             )}
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-slate-700">表头行：</label>
+              <label className="text-sm font-medium text-[color:var(--fg-2)]">表头行：</label>
               <select value={state.headerRow} onChange={e => { const hr = parseInt(e.target.value); changeHeaderRow(hr) }} className="select text-sm">
                 {Array.from({ length: 5 }, (_, i) => <option key={i} value={i}>第 {i + 1} 行</option>)}
               </select>
-              <span className="text-xs text-slate-400">（表头之前的行自动跳过）</span>
+              <span className="text-xs text-[color:var(--muted)]">（表头之前的行自动跳过）</span>
             </div>
           </div>
           <div>
-            <label className="text-sm font-medium text-slate-700 block mb-2">列映射（选择每列对应的字段）</label>
+            <label className="text-sm font-medium text-[color:var(--fg-2)] block mb-2">列映射（选择每列对应的字段）</label>
             <div className="grid grid-cols-5 gap-3">
               {([{ key: 'description', label: '材料名称' }, { key: 'spec', label: '规格型号' }, { key: 'unit', label: '单位' }, { key: 'quantity', label: '数量' }, { key: 'unitPrice', label: '单价' }] as const).map(f => (
                 <div key={f.key}>
-                  <label className="text-xs text-slate-500 block mb-1">{f.label}</label>
+                  <label className="text-xs text-[color:var(--muted)] block mb-1">{f.label}</label>
                   <select value={state.mapping[f.key]} onChange={e => setState(p => ({ ...p, mapping: { ...p.mapping, [f.key]: parseInt(e.target.value) } }))} className="select text-sm">
                     <option value={-1}>不导入</option>
                     {state.headers.map((h, i) => <option key={i} value={i}>{h || `列${i + 1}`}</option>)}
@@ -140,8 +140,8 @@ export const SettlementImportModal: React.FC<Props> = ({ show, onClose, onImport
             </div>
           </div>
           <div>
-            <label className="text-sm font-medium text-slate-700 block mb-2">数据预览（前 {state.previewRows.length} 行，共 {state.allRows.length} 行）</label>
-            <HoverScrollbar className="flex-1 max-h-60"><div className="border border-slate-200 rounded-xl overflow-hidden">
+            <label className="text-sm font-medium text-[color:var(--fg-2)] block mb-2">数据预览（前 {state.previewRows.length} 行，共 {state.allRows.length} 行）</label>
+            <HoverScrollbar className="flex-1 max-h-60"><div className="border border-[color:var(--border)] rounded-xl overflow-hidden">
               {state.headers.length > 0 ? (
                 <DataTable
                   data={state.previewRows as unknown as Record<string, unknown>[]}
@@ -152,13 +152,13 @@ export const SettlementImportModal: React.FC<Props> = ({ show, onClose, onImport
                   stickyHeader={true}
                 />
               ) : (
-                <div className="p-4 text-center text-sm text-slate-400">请先选择工作表</div>
+                <div className="p-4 text-center text-sm text-[color:var(--muted)]">请先选择工作表</div>
               )}
             </div></HoverScrollbar>
           </div>
         </HoverScrollbar>
-        <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between shrink-0">
-          <span className="text-sm text-slate-500">将导入 {state.allRows.length} 条明细</span>
+        <div className="px-6 py-4 border-t border-[color:var(--border)] flex items-center justify-between shrink-0">
+          <span className="text-sm text-[color:var(--muted)]">将导入 {state.allRows.length} 条明细</span>
           <div className="flex items-center gap-3">
             <Button type="button" onClick={onClose}  variant="secondary">取消</Button>
             <Button type="button" onClick={confirmImport}  variant="primary">确认导入</Button>

@@ -11,11 +11,11 @@ export const categoryIcons: Record<string, string> = {
 }
 
 export const categoryColors: Record<string, string> = {
-  '建筑图': 'bg-blue-100 text-blue-800',
-  '结构图': 'bg-orange-100 text-orange-800',
-  '电气图': 'bg-yellow-100 text-yellow-800',
-  '给排水图': 'bg-cyan-100 text-cyan-800',
-  '暖通图': 'bg-purple-100 text-purple-800',
-  '装饰图': 'bg-pink-100 text-pink-800',
-  '其他': 'bg-slate-100 text-slate-800'
+  '建筑图': 'bg-[color:var(--panel-2)] text-[color:var(--fg)]',
+  '结构图': 'bg-[color:var(--panel-2)] text-[color:var(--fg)]',
+  '电气图': 'bg-[color:var(--panel-2)] text-[color:var(--fg)]',
+  '给排水图': 'bg-[color:var(--panel-2)] text-[color:var(--fg)]',
+  '暖通图': 'bg-[color:var(--panel-2)] text-[color:var(--fg)]',
+  '装饰图': 'bg-[color:var(--panel-2)] text-[color:var(--fg)]',
+  '其他': 'bg-[color:var(--panel-2)] text-[color:var(--fg)]'
 }

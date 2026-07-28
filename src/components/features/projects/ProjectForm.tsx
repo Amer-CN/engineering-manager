@@ -16,7 +16,7 @@ const statusOptions = [
   { value: 'archived', label: '已归档' },
 ]
 
-const glassInput = 'w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all duration-200'
+const glassInput = 'w-full bg-[color:var(--panel-2)] border border-[color:var(--border)] rounded-xl px-4 py-3 text-sm text-[color:var(--fg)] placeholder-[color:var(--muted)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] focus:border-[color:var(--accent)] transition-all duration-200'
 
 export interface ProjectFormData {
   name: string; description: string; address: string
@@ -69,7 +69,7 @@ export function ProjectForm({ project, members, onSubmit, onCancel }: ProjectFor
   return (
   <motion.div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
   initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
-  <motion.div className="bg-white backdrop-blur-xl border border-slate-200 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+  <motion.div className="bg-[color:var(--card)] backdrop-blur-xl border border-[color:var(--border)] rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
   initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.25 }}>
   {/* Header */}
   <div className="px-6 py-4 rounded-t-2xl" style={{ borderBottom: '1px solid var(--border)', background: 'var(--panel)' }}>
@@ -84,8 +84,8 @@ export function ProjectForm({ project, members, onSubmit, onCancel }: ProjectFor
   </div>
 
   <div>
-  <label className="block text-sm font-medium text-slate-700 mb-1.5">
-  项目负责人 <span className="text-red-500">*</span>
+  <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1.5">
+  项目负责人 <span className="text-danger-500">*</span>
   </label>
   <select value={formData.projectManagerId || ''}
   onChange={e => handleChange('projectManagerId', e.target.value ? Number(e.target.value) : null)}
@@ -96,7 +96,7 @@ export function ProjectForm({ project, members, onSubmit, onCancel }: ProjectFor
   </div>
 
   <div>
-  <label className="block text-sm font-medium text-slate-700 mb-1.5">项目描述</label>
+  <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1.5">项目描述</label>
   <textarea value={formData.description} onChange={e => handleChange('description', e.target.value)}
   className={glassInput} rows={3} placeholder="请输入项目描述" />
   </div>
@@ -116,7 +116,7 @@ export function ProjectForm({ project, members, onSubmit, onCancel }: ProjectFor
 
   <div className="grid grid-cols-2 gap-4">
   <div>
-  <label className="block text-sm font-medium text-slate-700 mb-1.5">项目状态</label>
+  <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1.5">项目状态</label>
   <select value={formData.status} onChange={e => handleChange('status', e.target.value)} className={glassInput}>
   {statusOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
   </select>
@@ -127,7 +127,7 @@ export function ProjectForm({ project, members, onSubmit, onCancel }: ProjectFor
   </div>
   </div>
 
-  <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-slate-200">
+  <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-[color:var(--border)]">
   <Button type="button" onClick={onCancel}  disabled={loading} variant="secondary">取消</Button>
   <Button type="submit"  disabled={loading} variant="primary">
   {loading ? '保存中...' : project ? <><Icon name="Save" size={14} /> 保存</> : <><Icon name="Plus" size={14} /> 创建</>}

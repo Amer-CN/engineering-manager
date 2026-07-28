@@ -65,11 +65,12 @@ export const InvoiceFormFields: React.FC<InvoiceFormFieldsProps> = ({
             <motion.div
               initial={{ opacity: 0, y: -5 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-1 p-2 bg-amber-50 border border-amber-200 rounded-lg"
+              className="mt-1 p-2 rounded-lg"
+              style={{ background: 'var(--warning-soft)', border: '1px solid var(--warning)' }}
             >
               <div className="flex items-center gap-2">
-                <Icon name="AlertTriangle" size={14} className="text-amber-600" />
-                <span className="text-xs text-amber-700">
+                <Icon name="AlertTriangle" size={14} className="text-[color:var(--warning)]" />
+                <span className="text-xs" style={{ color: 'var(--warning)' }}>
                   此发票号已存在（ID: {duplicateInvoice.id}）
                 </span>
               </div>

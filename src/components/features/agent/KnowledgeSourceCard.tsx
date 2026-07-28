@@ -68,7 +68,7 @@ const KnowledgeSourceCard: React.FC<KnowledgeSourceCardProps> = ({ result }) => 
 
   if (!data || !data.hits || data.hits.length === 0) {
     return (
-      <div className="text-xs text-slate-500 p-2">
+      <div className="text-xs text-[color:var(--muted)] p-2">
         <p>知识库检索：无命中结果</p>
       </div>
     )
@@ -81,10 +81,10 @@ const KnowledgeSourceCard: React.FC<KnowledgeSourceCardProps> = ({ result }) => 
     <div className="space-y-2">
       {/* 头部 */}
       <div className="flex items-center gap-2 text-xs">
-        <Icon name="Library" size={14} className="text-primary-500" />
-        <span className="font-semibold text-slate-700">知识库检索</span>
-        <span className="text-slate-400">·</span>
-        <span className="text-slate-500">查询："{data.query}"</span>
+        <Icon name="Library" size={14} className="text-[color:var(--accent)]" />
+        <span className="font-semibold text-[color:var(--fg-2)]">知识库检索</span>
+        <span className="text-[color:var(--muted)]">·</span>
+        <span className="text-[color:var(--muted)]">查询："{data.query}"</span>
         <Badge variant="primary" size="sm">{data.totalHits || hits.length} 条命中</Badge>
       </div>
 
@@ -101,13 +101,13 @@ const KnowledgeSourceCard: React.FC<KnowledgeSourceCardProps> = ({ result }) => 
           return (
             <div
               key={hit.chunkId || i}
-              className={`p-2.5 rounded-lg border border-slate-200 bg-white hover:border-primary-300 hover:shadow-sm transition-all ${
+              className={`p-2.5 rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] hover:border-[color:var(--accent)] hover:shadow-sm transition-all ${
                 docId ? 'cursor-pointer' : ''
               }`}
               onClick={() => docId && handleOpenDocument(docId)}
             >
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-medium text-slate-700 truncate flex-1">{title}</span>
+                <span className="text-xs font-medium text-[color:var(--fg-2)] truncate flex-1">{title}</span>
                 <Badge
                   variant={hitType === 'mixed' ? 'primary' : hitType === 'keyword' ? 'gray' : 'success'}
                   size="sm"
@@ -115,14 +115,14 @@ const KnowledgeSourceCard: React.FC<KnowledgeSourceCardProps> = ({ result }) => 
                   {getHitTypeLabel(hitType)}
                 </Badge>
               </div>
-              <p className="text-xs text-slate-500 line-clamp-2 break-words">
+              <p className="text-xs text-[color:var(--muted)] line-clamp-2 break-words">
                 {maskKnowledgeText(text, masked)}
               </p>
-              <div className="flex items-center gap-2 mt-1 text-xs text-slate-400">
+              <div className="flex items-center gap-2 mt-1 text-xs text-[color:var(--muted)]">
                 {hit.sourceType && <span>{hit.sourceType}</span>}
                 {hit.occurredAt && <span>· {hit.occurredAt}</span>}
                 {hit.speakers && <span>· {formatSpeakers(hit.speakers)}</span>}
-                {docId && <span className="ml-auto text-primary-500">点击查看 →</span>}
+                {docId && <span className="ml-auto text-[color:var(--accent)]">点击查看 →</span>}
               </div>
             </div>
           )
@@ -134,15 +134,15 @@ const KnowledgeSourceCard: React.FC<KnowledgeSourceCardProps> = ({ result }) => 
         <button
           type="button"
           onClick={() => setExpanded(v => !v)}
-          className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+          className="text-xs text-[color:var(--accent)] hover:opacity-80 font-medium"
         >
           {expanded ? '收起' : `查看全部来源（共 ${hits.length} 条）`}
         </button>
       )}
 
       {/* 调试信息折叠区 */}
-      <details className="text-xs text-slate-400">
-        <summary className="cursor-pointer hover:text-slate-500">调试信息</summary>
+      <details className="text-xs text-[color:var(--muted)]">
+        <summary className="cursor-pointer hover:text-[color:var(--muted)]">调试信息</summary>
         <div className="mt-1 space-y-0.5">
           {shown.map((hit, i) => (
             <div key={i} className="flex gap-2">

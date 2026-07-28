@@ -13,10 +13,10 @@ interface ProjectTimelineProps {
 }
 
 const statusColors: Record<string, { bar: string; dot: string; label: string }> = {
-  planning: { bar: 'from-blue-500 to-blue-400', dot: 'bg-blue-500', label: '筹备中' },
-  in_progress: { bar: 'from-emerald-500 to-emerald-400', dot: 'bg-emerald-500', label: '进行中' },
-  completed: { bar: 'from-slate-400 to-slate-300', dot: 'bg-slate-500', label: '已完成' },
-  archived: { bar: 'from-amber-500 to-amber-400', dot: 'bg-amber-500', label: '已归档' },
+  planning: { bar: 'bg-[color:var(--muted)]', dot: 'bg-[color:var(--muted)]', label: '筹备中' },
+  in_progress: { bar: 'bg-[color:var(--success)]', dot: 'bg-[color:var(--success)]', label: '进行中' },
+  completed: { bar: 'bg-[color:var(--accent)]', dot: 'bg-[color:var(--accent)]', label: '已完成' },
+  archived: { bar: 'bg-[color:var(--muted)]', dot: 'bg-[color:var(--muted)]', label: '已归档' },
 }
 
 export function ProjectTimeline({ projects }: ProjectTimelineProps) {
@@ -62,14 +62,14 @@ export function ProjectTimeline({ projects }: ProjectTimelineProps) {
   if (sorted.length === 0) return null
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden mb-6">
+    <div className="bg-[color:var(--card)] border border-[color:var(--border)] rounded-xl shadow-sm overflow-hidden mb-6">
       {/* 卡片头部 */}
-      <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-          <Icon name="Calendar" size={14} className="text-slate-400" />
+      <div className="px-5 py-4 border-b border-[color:var(--border)] flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-[color:var(--fg-2)] flex items-center gap-2">
+          <Icon name="Calendar" size={14} className="text-[color:var(--muted)]" />
           项目时间线
         </h3>
-        <div className="flex items-center gap-3 text-caption text-slate-400">
+        <div className="flex items-center gap-3 text-caption text-[color:var(--muted)]">
           {Object.entries(statusColors).map(([key, val]) => (
             <span key={key} className="flex items-center gap-1">
               <span className={`w-2 h-2 rounded-full ${val.dot}`} />
@@ -83,20 +83,20 @@ export function ProjectTimeline({ projects }: ProjectTimelineProps) {
       <div className="overflow-x-auto">
         <div style={{ minWidth: 700 }}>
           {/* 月份刻度行 */}
-          <div className="flex border-b border-slate-100">
-            <div className="w-[160px] flex-shrink-0 px-5 py-2 bg-slate-50 border-r border-slate-100">
-              <span className="text-caption text-slate-400 font-medium">项目名称</span>
+          <div className="flex border-b border-[color:var(--border)]">
+            <div className="w-[160px] flex-shrink-0 px-5 py-2 bg-[color:var(--panel-2)] border-r border-[color:var(--border)]">
+              <span className="text-caption text-[color:var(--muted)] font-medium">项目名称</span>
             </div>
-            <div className="flex-1 relative h-8 bg-slate-50">
+            <div className="flex-1 relative h-8 bg-[color:var(--panel-2)]">
               {months.map((m, i) => (
-                <span key={i} className="absolute text-caption text-slate-400 top-1/2 -translate-y-1/2 -translate-x-1/2" style={{ left: `${m.ratio * 100}%` }}>
+                <span key={i} className="absolute text-caption text-[color:var(--muted)] top-1/2 -translate-y-1/2 -translate-x-1/2" style={{ left: `${m.ratio * 100}%` }}>
                   {m.label}
                 </span>
               ))}
               {/* 垂直网格线 */}
               <div className="absolute inset-0 flex pointer-events-none">
                 {months.map((m, i) => (
-                  i > 0 && <div key={i} className="border-l border-slate-100" style={{ position: 'absolute', left: `${m.ratio * 100}%`, top: 0, bottom: 0 }} />
+                  i > 0 && <div key={i} className="border-l border-[color:var(--border)]" style={{ position: 'absolute', left: `${m.ratio * 100}%`, top: 0, bottom: 0 }} />
                 ))}
               </div>
             </div>
@@ -113,14 +113,14 @@ export function ProjectTimeline({ projects }: ProjectTimelineProps) {
             const colors = statusColors[p.status] || statusColors.planning
 
             return (
-              <div key={i} className={`flex border-b border-slate-50 hover:bg-slate-50/50 transition-colors ${i === sorted.length - 1 ? 'border-b-0' : ''}`}>
-                <div className="w-[160px] flex-shrink-0 px-5 py-3 border-r border-slate-100 flex flex-col justify-center">
-                  <span className="text-xs font-medium text-slate-700 truncate">{p.name}</span>
-                  <span className="text-caption text-slate-400">{p.budget > 0 ? `¥${(p.budget / 10000).toFixed(1)}万` : ''}</span>
+              <div key={i} className={`flex border-b border-[color:var(--border)] hover:bg-[color:var(--panel-2)]/50 transition-colors ${i === sorted.length - 1 ? 'border-b-0' : ''}`}>
+                <div className="w-[160px] flex-shrink-0 px-5 py-3 border-r border-[color:var(--border)] flex flex-col justify-center">
+                  <span className="text-xs font-medium text-[color:var(--fg-2)] truncate">{p.name}</span>
+                  <span className="text-caption text-[color:var(--muted)]">{p.budget > 0 ? `¥${(p.budget / 10000).toFixed(1)}万` : ''}</span>
                 </div>
                 <div className="flex-1 relative h-12">
                   <div
-                    className={`absolute top-1/2 -translate-y-1/2 h-5 rounded-full bg-gradient-to-r ${colors.bar} opacity-90`}
+                    className={`absolute top-1/2 -translate-y-1/2 h-5 rounded-full ${colors.bar} opacity-90`}
                     style={{ left: `${left}%`, width: `${width}%` }}
                     title={`${p.startDate} 至 ${p.endDate}`}
                   />

@@ -162,23 +162,23 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 4 }}
             transition={{ duration: 0.15 }}
-            className="absolute bottom-full left-0 right-0 mb-2 rounded-xl border border-slate-200 bg-white shadow-lg overflow-hidden z-20"
+            className="absolute bottom-full left-0 right-0 mb-2 rounded-xl border border-[color:var(--border)] bg-[color:var(--panel)] shadow-lg overflow-hidden z-20"
           >
-            <div className="px-3 py-2 border-b border-slate-50">
-              <span className="text-xs font-medium text-slate-400">快捷命令</span>
+            <div className="px-3 py-2 border-b border-[color:var(--border)]">
+              <span className="text-xs font-medium text-[color:var(--muted)]">快捷命令</span>
             </div>
             <div className="max-h-48 overflow-y-auto py-1">
               {filteredCommands.map(cmd => (
                 <button
                   key={cmd.key}
                   onClick={() => selectSlashCommand(cmd.prompt)}
-                  className="w-full flex items-center gap-3 px-3 py-2 hover:bg-slate-50 transition-colors text-left"
+                  className="w-full flex items-center gap-3 px-3 py-2 hover:bg-[color:var(--panel-2)] transition-colors text-left"
                 >
                   <span className="px-1.5 py-0.5 rounded text-xs font-mono font-medium flex-shrink-0" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
                     {cmd.key}
                   </span>
-                  <span className="text-sm text-slate-600">{cmd.label}</span>
-                  <span className="text-xs text-slate-400 truncate flex-1">{cmd.prompt}</span>
+                  <span className="text-sm text-[color:var(--fg-2)]">{cmd.label}</span>
+                  <span className="text-xs text-[color:var(--muted)] truncate flex-1">{cmd.prompt}</span>
                 </button>
               ))}
             </div>
@@ -188,15 +188,15 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
 
       {/* 附件预览 */}
       {attachment && (
-        <div className="mb-2 flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-slate-50">
+        <div className="mb-2 flex items-center gap-2 px-3 py-2 rounded-xl border border-[color:var(--border)] bg-[color:var(--panel-2)]">
           <img
             src={attachment.dataUrl}
             alt={attachment.name}
             className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
           />
-          <span className="text-xs text-slate-600 truncate flex-1">{attachment.name}</span>
+          <span className="text-xs text-[color:var(--fg-2)] truncate flex-1">{attachment.name}</span>
           {ocrLoading && (
-            <span className="text-xs text-primary-500 flex items-center gap-1">
+            <span className="text-xs flex items-center gap-1" style={{ color: 'var(--accent)' }}>
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
@@ -211,7 +211,7 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
             onClick={removeAttachment}
             disabled={ocrLoading}
             aria-label="移除附件"
-            className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-40"
+            className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-[color:var(--muted)] hover:text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)] disabled:opacity-40"
           >
             <Icon name="X" size={14} />
           </button>
@@ -220,13 +220,13 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
 
       {/* OCR 错误提示 */}
       {ocrError && (
-        <div className="mb-2 px-3 py-1.5 rounded-lg bg-red-50 border border-red-200 text-xs text-red-600">
+        <div className="mb-2 px-3 py-1.5 rounded-lg text-xs" style={{ background: 'var(--danger-soft)', border: '1px solid var(--danger)', color: 'var(--danger)' }}>
           {ocrError}
         </div>
       )}
 
       {/* 输入区域 */}
-      <div className="flex items-end gap-2.5 p-2 rounded-2xl border border-slate-200 bg-white shadow-sm focus-within:ring-2 focus-within:ring-primary-400/30 focus-within:border-primary-400 transition-all">
+      <div className="flex items-end gap-2.5 p-2 rounded-[22px] border bg-[color:var(--card)] border-[color:var(--border)] focus-within:ring-2 focus-within:ring-[color:var(--accent-soft)] focus-within:border-[color:var(--accent)] transition-all">
         {/* 隐藏文件输入 */}
         <input
           ref={fileInputRef}
@@ -244,7 +244,7 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
             onClick={() => fileInputRef.current?.click()}
             disabled={disabled || ocrLoading}
             aria-label="上传图片"
-            className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-primary-500 hover:bg-primary-50 disabled:text-slate-300 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors"
+            className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-[color:var(--muted)] hover:text-[color:var(--accent)] hover:bg-[color:var(--accent-soft)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors"
           >
             <Icon name="Paperclip" size={18} />
           </button>
@@ -259,7 +259,7 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
           disabled={disabled}
           placeholder={placeholder}
           rows={1}
-          className="flex-1 px-2 py-2.5 text-sm text-slate-700 placeholder-slate-400 bg-transparent border-0 outline-none resize-none disabled:opacity-50"
+          className="flex-1 px-2 py-2.5 text-sm text-[color:var(--fg)] placeholder-[color:var(--muted)] bg-transparent border-0 outline-none resize-none disabled:opacity-50"
           style={{ minHeight: '40px', maxHeight: '120px' }}
         />
 
@@ -270,7 +270,7 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
               onChange('')
               textareaRef.current?.focus()
             }}
-            className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-slate-300 hover:text-slate-500 hover:bg-slate-50 transition-colors"
+            className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-[color:var(--muted)] hover:text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)] transition-colors"
           >
             <Icon name="X" size={16} />
           </button>

@@ -4,10 +4,10 @@ import { Icon } from '../../ui/Icon'
 
 // 状态配置
 export const statusConfig: Record<SettlementStatus, { label: string; color: string; bgColor: string }> = {
-  draft: { label: '草稿', color: 'text-slate-600', bgColor: 'bg-slate-100' },
-  pending: { label: '未办理', color: 'text-amber-600', bgColor: 'bg-amber-100' },
-  completed: { label: '已办理', color: 'text-emerald-600', bgColor: 'bg-emerald-100' },
-  archived: { label: '已归档', color: 'text-slate-500', bgColor: 'bg-slate-100' },
+  draft: { label: '草稿', color: 'text-[color:var(--muted)]', bgColor: 'bg-[color:var(--panel-2)]' },
+  pending: { label: '未办理', color: 'text-[color:var(--warning)]', bgColor: 'bg-[color:var(--warning-soft)]' },
+  completed: { label: '已办理', color: 'text-[color:var(--success)]', bgColor: 'bg-[color:var(--success-soft)]' },
+  archived: { label: '已归档', color: 'text-[color:var(--muted)]', bgColor: 'bg-[color:var(--panel-2)]' },
 }
 
 export const typeConfig: Record<SettlementType, { label: string; icon: React.ReactNode }> = {

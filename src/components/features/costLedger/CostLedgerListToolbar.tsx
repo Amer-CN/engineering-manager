@@ -32,31 +32,29 @@ export function CostLedgerListToolbar({
   zoomRef, tableRef, zoom, setZoom, betaMode,
 }: CostLedgerListToolbarProps) {
   return (
-    <div className="flex items-center gap-3 border-b border-slate-200 px-6 py-3">
-      <div className="flex gap-1 rounded-lg bg-slate-100 p-0.5">
+    <div className="flex items-center gap-3 border-b px-6 py-3" style={{ borderColor: 'var(--border)' }}>
+      <div className="flex gap-1 rounded-lg p-0.5" style={{ background: 'var(--panel-2)' }}>
         {(['all', 'expense', 'income'] as const).map(f => (
           <button key={f} onClick={() => setFilter(f)}
-            className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
-              filter === f ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-            }`}
+            className="rounded-md px-3 py-1 text-xs font-medium transition-colors"
+            style={filter === f ? { background: 'var(--card)', color: 'var(--fg)', boxShadow: 'var(--shadow-card)' } : { background: 'transparent', color: 'var(--muted)' }}
           >
             {f === 'all' ? '全部' : DIRECTION_CONFIG[f].label}
           </button>
         ))}
       </div>
-      <div className="flex gap-0.5 rounded-lg bg-slate-100 p-0.5">
+      <div className="flex gap-0.5 rounded-lg p-0.5" style={{ background: 'var(--panel-2)' }}>
         {(['level1', 'level2'] as const).map(level => (
           <button key={level} onClick={() => setCategoryLevelAndReset(level)}
-            className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-              categoryLevel === level ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-            }`}
+            className="rounded-md px-2.5 py-1 text-xs font-medium transition-colors"
+            style={categoryLevel === level ? { background: 'var(--card)', color: 'var(--fg)', boxShadow: 'var(--shadow-card)' } : { background: 'transparent', color: 'var(--muted)' }}
           >
             {level === 'level1' ? '一级' : '二级'}
           </button>
         ))}
       </div>
       <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}
-        className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 max-w-[160px]">
+        className="rounded-lg border px-2 py-1 text-xs max-w-[160px] bg-[color:var(--card)] border-[color:var(--border)] text-[color:var(--fg-2)]">
         <option value="all">全部分类</option>
         {categoryLevel === 'level1' ? (
           (['expense', 'income'] as const).map(dir => {
@@ -92,39 +90,39 @@ export function CostLedgerListToolbar({
         )}
       </select>
       {activeFilters > 0 && (
-        <button onClick={clearAll} className="text-xs text-blue-600 hover:text-blue-800">清除 {activeFilters} 个筛选</button>
+        <button onClick={clearAll} className="text-xs text-[color:var(--accent)] hover:text-[color:var(--accent)]">清除 {activeFilters} 个筛选</button>
       )}
       <div className="ml-auto flex items-center gap-2">
         {betaMode ? (
-          <span className="text-xs text-slate-400" title="新表格 Beta 暂不支持打印/导出，请切回经典表格使用">Beta 模式不支持打印/导出</span>
+          <span className="text-xs text-[color:var(--muted)]" title="新表格 Beta 暂不支持打印/导出，请切回经典表格使用">Beta 模式不支持打印/导出</span>
         ) : (<>
         <button
           onClick={() => printCostLedgerList(filtered, categories, categoryLevel, { expense: filterSummary.totalExpense, income: filterSummary.totalIncome, count: filterSummary.count })}
-          className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs text-slate-500 hover:border-slate-300 hover:text-slate-700 hover:bg-slate-50 transition-colors"
+          className="rounded-lg border border-[color:var(--border)] px-2.5 py-1 text-xs text-[color:var(--muted)] hover:border-[color:var(--border-strong)] hover:text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)] transition-colors"
         >
           打印
         </button>
         <button
           onClick={() => exportCostLedgerList(filtered, categories, categoryLevel)}
-          className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs text-slate-500 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+          className="rounded-lg border border-[color:var(--border)] px-2.5 py-1 text-xs text-[color:var(--muted)] hover:border-[color:var(--accent)] hover:text-[color:var(--accent)] hover:bg-[color:var(--accent-soft)] transition-colors"
         >
           导出Excel
         </button>
         </>)}
-        <div className="flex items-center gap-1 border-l border-slate-200 pl-3">
+        <div className="flex items-center gap-1 border-l border-[color:var(--border)] pl-3">
           <Button onClick={() => {
             const n = Math.max(0.5, +(zoomRef.current - 0.1).toFixed(1))
             zoomRef.current = n; localStorage.setItem('costLedgerZoom', String(n)); setZoom(n)
             if (tableRef.current) tableRef.current.style.zoom = String(n)
           }}  variant="secondary" size="sm">−</Button>
-          <span className="text-xs text-slate-500 w-8 text-center font-mono">{Math.round(zoom * 100)}%</span>
+          <span className="text-xs text-[color:var(--muted)] w-8 text-center font-mono">{Math.round(zoom * 100)}%</span>
           <Button onClick={() => {
             const n = Math.min(2, +(zoomRef.current + 0.1).toFixed(1))
             zoomRef.current = n; localStorage.setItem('costLedgerZoom', String(n)); setZoom(n)
             if (tableRef.current) tableRef.current.style.zoom = String(n)
           }}  variant="secondary" size="sm">+</Button>
         </div>
-        <span className="text-xs text-slate-400">
+        <span className="text-xs text-[color:var(--muted)]">
           {filtered.length === entries.length ? `共 ${entries.length} 条` : `筛选 ${filtered.length} / ${entries.length} 条`}
         </span>
       </div>

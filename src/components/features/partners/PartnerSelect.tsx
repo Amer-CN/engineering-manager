@@ -88,45 +88,45 @@ export function PartnerSelect({
   <button
   type="button"
   onClick={() => setIsOpen(!isOpen)}
-  className="w-full px-4 py-2 text-left bg-white border border-slate-300 rounded-lg hover:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+  className="w-full px-4 py-2 text-left bg-[color:var(--card)] border border-[color:var(--border)] rounded-lg hover:border-[color:var(--accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] focus:border-[color:var(--accent)] transition-colors"
   >
   {selectedPartner ? (
   <div className="flex items-center justify-between">
   <div>
-  <div className="font-medium text-slate-800">{selectedPartner.name}</div>
-  <div className="text-xs text-slate-500">{categoryLabels[selectedPartner.category] || selectedPartner.category}</div>
+  <div className="font-medium text-[color:var(--fg)]">{selectedPartner.name}</div>
+  <div className="text-xs text-[color:var(--muted)]">{categoryLabels[selectedPartner.category] || selectedPartner.category}</div>
   </div>
-  <Icon name="ChevronDown" size={16} className="text-slate-400" />
+  <Icon name="ChevronDown" size={16} className="text-[color:var(--muted)]" />
   </div>
   ) : (
-  <span className="text-slate-400">{placeholder}</span>
+  <span className="text-[color:var(--muted)]">{placeholder}</span>
   )}
   </button>
 
   {/* 下拉面板 */}
   {isOpen && (
-  <div className="absolute z-50 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-lg max-h-96 overflow-hidden">
+  <div className="absolute z-50 w-full mt-2 bg-[color:var(--card)] border border-[color:var(--border)] rounded-xl shadow-lg max-h-96 overflow-hidden">
   {/* 搜索框 */}
-  <div className="p-3 border-b border-slate-100">
+  <div className="p-3 border-b border-[color:var(--border)]">
   <input
   type="text"
   value={searchTerm}
   onChange={e => setSearchTerm(e.target.value)}
   placeholder="搜索单位名称、联系人..."
-  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+  className="w-full px-3 py-2 text-sm border border-[color:var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)]"
   autoFocus
   />
   </div>
 
   {/* 分类筛选 */}
-  <div className="p-3 border-b border-slate-100 flex flex-wrap gap-2">
+  <div className="p-3 border-b border-[color:var(--border)] flex flex-wrap gap-2">
   <button
   type="button"
   onClick={() => setFilterCategory('all')}
   className={`px-3 py-1 text-xs rounded-full transition-colors ${
   filterCategory === 'all' 
-  ? 'bg-primary-100 text-primary-700' 
-  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+  ? 'bg-[color:var(--accent-soft)] text-[color:var(--accent)]'
+  : 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)]'
   }`}
   >
   全部
@@ -138,8 +138,8 @@ export function PartnerSelect({
   onClick={() => setFilterCategory(key)}
   className={`px-3 py-1 text-xs rounded-full transition-colors ${
   filterCategory === key 
-  ? 'bg-primary-100 text-primary-700' 
-  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+  ? 'bg-[color:var(--accent-soft)] text-[color:var(--accent)]'
+  : 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)]'
   }`}
   >
   {label}
@@ -152,7 +152,7 @@ export function PartnerSelect({
   {Object.keys(groupedPartners).length > 0 ? (
   Object.entries(groupedPartners).map(([category, partners]) => (
   <div key={category}>
-  <div className="px-3 py-2 text-xs font-medium text-slate-500 bg-slate-50">
+  <div className="px-3 py-2 text-xs font-medium text-[color:var(--muted)] bg-[color:var(--panel-2)]">
   {categoryLabels[category] || category} ({partners.length})
   </div>
   {partners.map(partner => (
@@ -164,26 +164,26 @@ export function PartnerSelect({
   setIsOpen(false)
   setSearchTerm('')
   }}
-  className={`w-full px-3 py-2 text-left hover:bg-slate-50 transition-colors flex items-center justify-between ${
-  value === partner.id ? 'bg-primary-50' : ''
+  className={`w-full px-3 py-2 text-left hover:bg-[color:var(--panel-2)] transition-colors flex items-center justify-between ${
+  value === partner.id ? 'bg-[color:var(--accent-soft)]' : ''
   }`}
   >
   <div>
-  <div className="font-medium text-sm text-slate-800">{partner.name}</div>
-  <div className="text-xs text-slate-500">
+  <div className="font-medium text-sm text-[color:var(--fg)]">{partner.name}</div>
+  <div className="text-xs text-[color:var(--muted)]">
   {partner.contact && <span>{partner.contact} · </span>}
   {partner.phone}
   </div>
   </div>
   {value === partner.id && (
-  <Icon name="Check" size={16} className="text-primary-600" />
+  <Icon name="Check" size={16} className="text-[color:var(--accent)]" />
   )}
   </button>
   ))}
   </div>
   ))
   ) : (
-  <div className="p-4 text-center text-sm text-slate-400">
+  <div className="p-4 text-center text-sm text-[color:var(--muted)]">
   未找到匹配的单位
   </div>
   )}
@@ -191,7 +191,7 @@ export function PartnerSelect({
 
   {/* 清空按钮 */}
   {value && (
-  <div className="p-3 border-t border-slate-100">
+  <div className="p-3 border-t border-[color:var(--border)]">
   <Button
   type="button"
   onClick={() => {

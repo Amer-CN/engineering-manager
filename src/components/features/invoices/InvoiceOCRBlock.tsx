@@ -83,15 +83,12 @@ export const InvoiceOCRBlock: React.FC<InvoiceOCRBlockProps> = ({
         type="button"
         onClick={handleClick}
         disabled={loading}
-        className={` w-full flex items-center justify-center gap-2 transition-all duration-300 ${
-          loading
-            ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0'
-            : 'bg-primary-600 text-white hover:bg-primary-700 rounded-lg font-medium'
-        }`}
+        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all duration-300 disabled:opacity-60"
+        style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
       >
         {loading ? (
           <>
-            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+            <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
             <span className="animate-pulse">AI 正在识别发票内容...</span>
           </>
         ) : (
@@ -106,13 +103,14 @@ export const InvoiceOCRBlock: React.FC<InvoiceOCRBlockProps> = ({
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg"
+          className="p-3 rounded-lg"
+          style={{ background: 'var(--success-soft)', border: '1px solid var(--success)' }}
         >
           <div className="flex items-start gap-2">
-            <Icon name="CheckCircle" size={16} className="text-emerald-600 mt-0.5 flex-shrink-0" />
-            <div className="text-sm text-emerald-700">
+            <Icon name="CheckCircle" size={16} className="mt-0.5 flex-shrink-0 text-[color:var(--success)]" />
+            <div className="text-sm" style={{ color: 'var(--success)' }}>
               <p className="font-medium mb-1">AI 已自动填入以下信息：</p>
-              <p className="text-emerald-600">{result}</p>
+              <p style={{ color: 'var(--success)' }}>{result}</p>
             </div>
           </div>
         </motion.div>

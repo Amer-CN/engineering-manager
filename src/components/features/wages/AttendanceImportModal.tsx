@@ -123,11 +123,11 @@ export const AttendanceImportModal: React.FC<Props> = ({ show, projectId, yearMo
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[70]" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-[95vw] max-w-4xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+      <div className="bg-[color:var(--card)] rounded-xl shadow-xl w-[95vw] max-w-4xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between shrink-0">
-          <h3 className="text-lg font-semibold text-slate-800">导入考勤 — {monthLabel}</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><Icon name="X" size={20} /></button>
+        <div className="px-6 py-4 border-b border-[color:var(--border)] flex items-center justify-between shrink-0">
+          <h3 className="text-lg font-semibold text-[color:var(--fg)]">导入考勤 — {monthLabel}</h3>
+          <button onClick={onClose} className="text-[color:var(--muted)] hover:text-[color:var(--fg-2)]"><Icon name="X" size={20} /></button>
         </div>
 
         <AttendanceImportBody
@@ -143,8 +143,8 @@ export const AttendanceImportModal: React.FC<Props> = ({ show, projectId, yearMo
         />
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between shrink-0">
-          <span className="text-sm text-slate-500">
+        <div className="px-6 py-4 border-t border-[color:var(--border)] flex items-center justify-between shrink-0">
+          <span className="text-sm text-[color:var(--muted)]">
             {matchedRows.length > 0
               ? `将导入 ${matchedCount} 条考勤记录${unmatchedCount > 0 ? `（${unmatchedCount} 条未匹配跳过）` : ''}`
               : '请先选择 Excel 文件'

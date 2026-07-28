@@ -24,15 +24,15 @@ const LABEL: Record<DayStatus, string> = {
 }
 
 const CELL: Record<DayStatus, { bg: string; text: string; ring: string }> = {
-  work: { bg: 'bg-emerald-50 hover:bg-emerald-100', text: 'text-emerald-700', ring: 'ring-emerald-400' },
-  holiday: { bg: 'bg-blue-50 hover:bg-blue-100', text: 'text-blue-700', ring: 'ring-blue-400' },
-  sick_leave:{ bg: 'bg-amber-50 hover:bg-amber-100', text: 'text-amber-700', ring: 'ring-amber-400' },
-  personal_leave: { bg: 'bg-orange-50 hover:bg-orange-100', text: 'text-orange-700', ring: 'ring-orange-400' },
+  work: { bg: 'bg-success-50 hover:bg-success-100', text: 'text-success-700', ring: 'ring-success-400' },
+  holiday: { bg: 'bg-[color:var(--panel-2)] hover:bg-[color:var(--panel-2)]', text: 'text-[color:var(--fg-2)]', ring: 'ring-[color:var(--border-strong)]' },
+  sick_leave:{ bg: 'bg-warning-50 hover:bg-warning-100', text: 'text-warning-700', ring: 'ring-warning-400' },
+  personal_leave: { bg: 'bg-[color:var(--accent-soft)] hover:bg-[color:var(--accent-soft)]', text: 'text-[color:var(--accent)]', ring: 'ring-[color:var(--accent)]' },
 }
 
 const DOT: Record<DayStatus, string> = {
-  work: 'bg-emerald-500', holiday: 'bg-blue-500', sick_leave: 'bg-amber-500',
-  personal_leave: 'bg-orange-500',
+  work: 'bg-success-500', holiday: 'bg-[color:var(--muted)]', sick_leave: 'bg-warning-500',
+  personal_leave: 'bg-[color:var(--accent)]',
 }
 
 const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日']
@@ -171,12 +171,12 @@ export default function AttendanceDetail({
   <Icon name="ChevronLeft" size={18} /><span className="text-sm">返回</span>
   <Icon name="ChevronLeft" size={18} /><span className="text-sm">返回</span>
   </Button>
-  <h2 className="text-lg font-bold text-slate-800">{record.memberName || member?.name || '-'}</h2>
-  <span className="text-sm text-slate-400">{yearMonth}</span>
-  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${member?.memberType === 'staff' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
+  <h2 className="text-lg font-bold text-[color:var(--fg)]">{record.memberName || member?.name || '-'}</h2>
+  <span className="text-sm text-[color:var(--muted)]">{yearMonth}</span>
+  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${member?.memberType === 'staff' ? 'bg-[color:var(--accent-soft)] text-[color:var(--accent)]' : 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)]'}`}>
   {member?.memberType === 'staff' ? '管理' : '工人'}
   </span>
-  <span className="text-xs text-slate-400">{teamName}</span>
+  <span className="text-xs text-[color:var(--muted)]">{teamName}</span>
   </div>
   <div className="flex items-center gap-2">
   <Tooltip content="删除此考勤记录" position="top" delay={300}>
@@ -202,46 +202,46 @@ export default function AttendanceDetail({
 
   {/* 画笔工具栏 */}
   <div className="flex items-center justify-between flex-wrap gap-3">
-  <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+  <div className="flex items-center gap-1 bg-[color:var(--panel-2)] rounded-lg p-1">
   {CYCLE.map(s => (
   <button
   key={s}
   onClick={() => setActiveStatus(s)}
   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
   s === activeStatus
-  ? 'bg-white shadow text-slate-800 ring-1 ring-slate-200'
-  : 'text-slate-500 hover:text-slate-700'
+  ? 'bg-[color:var(--card)] shadow text-[color:var(--fg)] ring-1 ring-[color:var(--border-strong)]'
+  : 'text-[color:var(--muted)] hover:text-[color:var(--fg-2)]'
   }`}
   >
   <span className={`w-2 h-2 rounded-full ${DOT[s]}`} />
   {LABEL[s]}
   </button>
   ))}
-  <div className="w-px h-5 bg-slate-200 mx-0.5" />
+  <div className="w-px h-5 bg-[color:var(--panel-2)] mx-0.5" />
   <button
   onClick={() => setActiveStatus(null)}
   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
   activeStatus === null
-  ? 'bg-white shadow text-slate-800 ring-1 ring-slate-200'
-  : 'text-slate-400 hover:text-slate-600'
+  ? 'bg-[color:var(--card)] shadow text-[color:var(--fg)] ring-1 ring-[color:var(--border-strong)]'
+  : 'text-[color:var(--muted)] hover:text-[color:var(--fg-2)]'
   }`}
   >
-  <span className="w-2 h-2 rounded-full border border-slate-300 bg-white" />
+  <span className="w-2 h-2 rounded-full border border-[color:var(--border)] bg-[color:var(--card)]" />
   清除
   </button>
   </div>
-  <div className="flex items-center gap-3 text-xs text-slate-500">
+  <div className="flex items-center gap-3 text-xs text-[color:var(--muted)]">
   {CYCLE.map(s => (
   <span key={s} className="flex items-center gap-1">
   <span className={`w-2 h-2 rounded-full ${DOT[s]}`}></span>
-  <span className="font-medium text-slate-700">{counts[s]}</span>天
+  <span className="font-medium text-[color:var(--fg-2)]">{counts[s]}</span>天
   </span>
   ))}
   </div>
   </div>
 
   {/* 操作提示 */}
-  <div className="text-xs text-slate-400">
+  <div className="text-xs text-[color:var(--muted)]">
   选一个状态 → <strong>点日期</strong>标记当天 · 按住 <strong>Shift</strong> 再点另一个日期，<strong>整段一起标</strong> · <strong>右键</strong>快速切换单天
   </div>
 
@@ -250,7 +250,7 @@ export default function AttendanceDetail({
   {/* 列头 */}
   <div className="grid grid-cols-7 mb-1">
   {WEEKDAYS.map((wd, i) => (
-  <div key={wd} className={`text-center text-xs py-1 ${i >= 5 ? 'text-slate-300' : 'text-slate-400'}`}>
+  <div key={wd} className={`text-center text-xs py-1 ${i >= 5 ? 'text-[color:var(--border-strong)]' : 'text-[color:var(--muted)]'}`}>
   {wd}
   </div>
   ))}
@@ -263,10 +263,10 @@ export default function AttendanceDetail({
   const isBeforeEntry = day < entryDay
   const status = dailyStatus[day]
   const col = isBeforeEntry 
-  ? { bg: 'bg-slate-100', text: 'text-slate-300', ring: 'ring-slate-200' } 
+  ? { bg: 'bg-[color:var(--panel-2)]', text: 'text-[color:var(--border-strong)]', ring: 'ring-[color:var(--border-strong)]' } 
   : (status && CELL[status as DayStatus] 
   ? CELL[status as DayStatus] 
-  : { bg: 'bg-white', text: 'text-slate-400', ring: 'ring-slate-300' })
+  : { bg: 'bg-[color:var(--card)]', text: 'text-[color:var(--muted)]', ring: 'ring-[color:var(--border-strong)]' })
   const dow = (leadingBlanks + day - 1) % 7
   const isWeekend = dow >= 5
   const isToday = day === todayNum && !isBeforeEntry
@@ -278,8 +278,8 @@ export default function AttendanceDetail({
   onContextMenu={e => handleDayContextMenu(day, e)}
   disabled={isBeforeEntry}
   className={`h-9 rounded-md text-sm font-medium transition-all border
-  ${isBeforeEntry ? 'bg-slate-100 text-slate-300 cursor-not-allowed border-slate-100' : `cursor-pointer ${col.bg} ${col.text} ${isAnchor ? `ring-2 ${col.ring}` : 'border-transparent'} ${isWeekend ? 'bg-opacity-70' : ''} hover:scale-105 hover:shadow-sm`}
-  ${isToday ? 'ring-1 ring-slate-400 shadow-sm' : ''}`}
+  ${isBeforeEntry ? 'bg-[color:var(--panel-2)] text-[color:var(--border-strong)] cursor-not-allowed border-[color:var(--border)]' : `cursor-pointer ${col.bg} ${col.text} ${isAnchor ? `ring-2 ${col.ring}` : 'border-transparent'} ${isWeekend ? 'bg-opacity-70' : ''} hover:scale-105 hover:shadow-sm`}
+  ${isToday ? 'ring-1 ring-[color:var(--border-strong)] shadow-sm' : ''}`}
   title={isBeforeEntry ? '入职前，不计入考勤' : `${day}日 ${(status && LABEL[status as DayStatus]) || '未设'}${isToday ? ' (今天)' : ''}${isAnchor ? ' — Shift+点击其他日期批量涂色' : ''}\n右键: 循环切换`}
   >
   {isBeforeEntry ? <span className="text-caption">-</span> : day}
@@ -290,11 +290,11 @@ export default function AttendanceDetail({
   </div>
 
   {/* 底部：汇总 */}
-  <div className="flex items-center justify-end pt-3 border-t border-slate-100">
-  <div className="text-xs text-slate-500">
-  已标记 <span className="font-medium text-emerald-600">{counts.work + counts.holiday + counts.sick_leave + counts.personal_leave}</span> 天
-  &nbsp;·&nbsp; 出勤 <span className="font-medium text-emerald-600">{counts.work}</span> 天
-  &nbsp;·&nbsp; 未标记 <span className="font-medium text-slate-400">{daysInMonth - (counts.work + counts.holiday + counts.sick_leave + counts.personal_leave)}</span> 天
+  <div className="flex items-center justify-end pt-3 border-t border-[color:var(--border)]">
+  <div className="text-xs text-[color:var(--muted)]">
+  已标记 <span className="font-medium text-success-600">{counts.work + counts.holiday + counts.sick_leave + counts.personal_leave}</span> 天
+  &nbsp;·&nbsp; 出勤 <span className="font-medium text-success-600">{counts.work}</span> 天
+  &nbsp;·&nbsp; 未标记 <span className="font-medium text-[color:var(--muted)]">{daysInMonth - (counts.work + counts.holiday + counts.sick_leave + counts.personal_leave)}</span> 天
   </div>
   </div>
   </Card>

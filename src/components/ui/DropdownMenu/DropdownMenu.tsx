@@ -145,7 +145,7 @@ export function DropdownMenu({
                     className={`
                       w-full flex items-center gap-2 px-4 py-2 text-sm text-left
                       transition-colors
-                      ${item.danger ? 'hover:bg-red-50' : 'hover:bg-slate-50'}
+                      ${item.danger ? 'hover:bg-danger-50' : 'hover:bg-[color:var(--panel-2)]'}
                       ${item.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                     `}
                   >

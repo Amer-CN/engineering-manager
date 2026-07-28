@@ -213,6 +213,6 @@ describe('Pagination', () => {
   it('highlights current page', () => {
     render(<Pagination current={3} total={5} onChange={() => {}} />)
     const activeBtn = screen.getByText('3')
-    expect(activeBtn.className).toContain('bg-primary-600')
+    expect(activeBtn.className).toContain('bg-[color:var(--accent)]')
   })
 })

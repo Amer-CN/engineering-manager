@@ -37,7 +37,7 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
   <div className="flex-shrink-0 px-6 pt-6 pb-2 max-w-[1400px] mx-auto w-full" style={{ background: 'var(--bg)' }}>
   <div className="flex items-end justify-between mb-4">
   <div>
-  <h1 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--fg)' }}>发票管理</h1>
+  <h1 className="text-base font-semibold tracking-tight" style={{ color: 'var(--fg)' }}>发票管理</h1>
   <p className="text-sm mt-1" style={{ color: 'var(--muted)' }}>管理收票、开票及收款业务</p>
   </div>
   <div className="flex items-center gap-3 flex-shrink-0">
@@ -56,11 +56,11 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
   </div>
   </div>
 
-  <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl w-fit mb-4">
-  <button onClick={() => h.setActiveTab('invoices')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${h.activeTab === 'invoices' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}>
+  <div className="flex items-center gap-1 p-1 rounded-xl w-fit mb-4" style={{ background: 'var(--panel-2)' }}>
+  <button onClick={() => h.setActiveTab('invoices')} className="px-4 py-2 rounded-lg text-sm font-medium transition-all" style={h.activeTab === 'invoices' ? { background: 'var(--card)', color: 'var(--fg)', boxShadow: 'var(--shadow-card)' } : { background: 'transparent', color: 'var(--muted)' }}>
   发票列表
   </button>
-  <button onClick={() => h.setActiveTab('payments')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${h.activeTab === 'payments' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}>
+  <button onClick={() => h.setActiveTab('payments')} className="px-4 py-2 rounded-lg text-sm font-medium transition-all" style={h.activeTab === 'payments' ? { background: 'var(--card)', color: 'var(--fg)', boxShadow: 'var(--shadow-card)' } : { background: 'transparent', color: 'var(--muted)' }}>
   回款/付款记录
   </button>
   </div>
@@ -112,48 +112,48 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
   {/* 重复发票弹窗 */}
   {showDuplicates && (
   <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-  <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
-  <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-  <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-2">
-  <Icon name="AlertTriangle" size={20} className="text-amber-500" />
+  <div className="rounded-xl w-full max-w-2xl max-h-[80vh] overflow-hidden" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}>
+  <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)' }}>
+  <h2 className="text-xl font-semibold flex items-center gap-2" style={{ color: 'var(--fg)' }}>
+  <Icon name="AlertTriangle" size={20} className="text-[color:var(--warning)]" />
   重复发票检测
   </h2>
-  <button onClick={() => setShowDuplicates(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+  <button onClick={() => setShowDuplicates(false)} className="text-[color:var(--muted)] hover:text-[color:var(--fg-2)]">✕</button>
   </div>
   <div className="p-6 overflow-y-auto max-h-[calc(80vh-140px)]">
   {duplicateInvoices.length === 0 ? (
   <div className="text-center py-8">
-  <Icon name="CheckCircle" size={48} className="text-emerald-400 mx-auto mb-4" />
-  <p className="text-slate-600">没有发现重复发票</p>
+  <Icon name="CheckCircle" size={48} className="text-[color:var(--success)] mx-auto mb-4" />
+  <p style={{ color: 'var(--fg-2)' }}>没有发现重复发票</p>
   </div>
   ) : (
   <div className="space-y-4">
-  <p className="text-sm text-slate-500 mb-4">
+  <p className="text-sm mb-4" style={{ color: 'var(--muted)' }}>
   发现 {duplicateInvoices.length} 组重复发票，请检查并删除多余的记录。
   </p>
   {duplicateInvoices.map(({ invoiceNo, invoices }) => (
-  <div key={invoiceNo} className="border border-amber-200 rounded-xl p-4 bg-amber-50">
+  <div key={invoiceNo} className="rounded-xl p-4" style={{ background: 'var(--warning-soft)', border: '1px solid var(--warning)' }}>
   <div className="flex items-center justify-between mb-3">
-  <span className="font-mono text-sm font-medium text-amber-800">
+  <span className="font-mono text-sm font-medium" style={{ color: 'var(--fg)' }}>
   发票号: {invoiceNo}
   </span>
-  <span className="text-xs text-amber-600 bg-amber-100 px-2 py-1 rounded-full">
+  <span className="text-xs px-2 py-1 rounded-full" style={{ color: 'var(--warning)', background: 'var(--warning-soft)' }}>
   {invoices.length} 条记录
   </span>
   </div>
   <div className="space-y-2">
   {invoices.map((inv, idx) => (
-  <div key={inv.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
+  <div key={inv.id} className="flex items-center justify-between p-3 rounded-lg" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
   <div className="text-sm">
-  <span className="font-medium text-slate-700">#{idx + 1}</span>
-  <span className="mx-2 text-slate-300">|</span>
-  <span className="text-slate-700">{inv.name || '无名称'}</span>
-  <span className="mx-2 text-slate-300">|</span>
-  <span className="text-emerald-600 font-medium">¥{formatMoney(inv.amount)}</span>
+  <span className="font-medium" style={{ color: 'var(--fg-2)' }}>#{idx + 1}</span>
+  <span className="mx-2" style={{ color: 'var(--border-strong)' }}>|</span>
+  <span style={{ color: 'var(--fg-2)' }}>{inv.name || '无名称'}</span>
+  <span className="mx-2" style={{ color: 'var(--border-strong)' }}>|</span>
+  <span className="font-medium font-mono tabular-nums" style={{ color: 'var(--fg)' }}>¥{formatMoney(inv.amount)}</span>
   {inv.issueDate && (
   <>
-  <span className="mx-2 text-slate-300">|</span>
-  <span className="text-slate-500">{inv.issueDate}</span>
+  <span className="mx-2" style={{ color: 'var(--border-strong)' }}>|</span>
+  <span className="font-mono tabular-nums" style={{ color: 'var(--muted)' }}>{inv.issueDate}</span>
   </>
   )}
   </div>
@@ -185,7 +185,7 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
   </div>
   )}
   </div>
-  <div className="px-6 py-4 border-t border-slate-100 flex justify-end">
+  <div className="px-6 py-4 flex justify-end" style={{ borderTop: '1px solid var(--border)' }}>
   <Button onClick={() => setShowDuplicates(false)}  variant="secondary">关闭</Button>
   </div>
   </div>

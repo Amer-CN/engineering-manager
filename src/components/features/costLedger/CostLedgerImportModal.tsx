@@ -174,18 +174,18 @@ export function CostLedgerImportModal({
   return (
   <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[70]" onClick={onClose}>
   <motion.div
-  className="bg-white rounded-2xl shadow-2xl w-[95vw] max-w-5xl max-h-[92vh] flex flex-col"
+  className="bg-[color:var(--card)] rounded-xl shadow-xl w-[95vw] max-w-5xl max-h-[92vh] flex flex-col"
   initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
   transition={{ type: 'spring', stiffness: 300, damping: 25 }}
   onClick={e => e.stopPropagation()}
   >
   {/* Header */}
-  <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between shrink-0">
+  <div className="px-6 py-4 border-b border-[color:var(--border)] flex items-center justify-between shrink-0">
   <div>
-  <h3 className="text-lg font-semibold text-slate-800">导入成本台账</h3>
-  {projectName && <p className="text-sm text-slate-500 mt-0.5">{projectName}</p>}
+  <h3 className="text-lg font-semibold text-[color:var(--fg)]">导入成本台账</h3>
+  {projectName && <p className="text-sm text-[color:var(--muted)] mt-0.5">{projectName}</p>}
   </div>
-  <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+  <button onClick={onClose} className="text-[color:var(--muted)] hover:text-[color:var(--fg-2)]">
   <Icon name="X" size={20} />
   </button>
   </div>
@@ -193,11 +193,11 @@ export function CostLedgerImportModal({
   {/* Body */}
   <HoverScrollbar className="flex-1 p-6 space-y-4">
   {error && (
-  <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
-  <Icon name="AlertTriangle" size={20} className="text-red-500 shrink-0 mt-0.5" />
+  <div className="p-4 bg-danger-50 border border-danger-200 rounded-xl flex items-start gap-3">
+  <Icon name="AlertTriangle" size={20} className="text-danger-500 shrink-0 mt-0.5" />
   <div>
-  <p className="text-sm font-medium text-red-700">导入失败</p>
-  <p className="text-sm text-red-600 mt-0.5">{error}</p>
+  <p className="text-sm font-medium text-danger-700">导入失败</p>
+  <p className="text-sm text-danger-600 mt-0.5">{error}</p>
   </div>
   </div>
   )}
@@ -223,7 +223,7 @@ export function CostLedgerImportModal({
   </HoverScrollbar>
 
   {/* Footer */}
-  <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-end gap-3 shrink-0">
+  <div className="px-6 py-4 border-t border-[color:var(--border)] flex items-center justify-end gap-3 shrink-0">
   {step === 'file' && <Button onClick={onClose}  variant="ghost" size="sm">取消</Button>}
   {step === 'mapping' && (
   <>
@@ -234,7 +234,7 @@ export function CostLedgerImportModal({
   </Button>
   </>
   )}
-  {step === 'importing' && <p className="text-sm text-slate-400">请稍候……</p>}
+  {step === 'importing' && <p className="text-sm text-[color:var(--muted)]">请稍候……</p>}
   {step === 'done' && (
   <Button onClick={() => { onClose(); onImported() }}
    variant="primary" className="text-sm">

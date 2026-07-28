@@ -1,19 +1,16 @@
 import React, { useState, useRef } from 'react'
 import { HoverScrollbar } from '../../ui/HoverScrollbar'
 import PageContainer from '@/components/ui/PageContainer'
-import FilterBar from '../../ui/FilterBar'
 import { Settlement as SettlementData, SettlementStatus, SettlementType, Project, Partner, Template } from '../../../types/electron'
 import { SettlementList } from './SettlementList'
 import { SettlementForm } from './SettlementForm'
 import { PrintContent } from './SettlementPrintTemplate'
-import { formatMoney } from '../../../utils/format'
 import { Icon } from '../../ui/Icon'
 import { Modal } from '../../ui/Modal/Modal'
 import { TemplateSelectorModal, TemplateGenerate } from '../templates'
 import { useSettlementFilters } from './useSettlementFilters'
 import { useSettlementHandlers } from './useSettlementHandlers'
 import { printSettlement } from './settlementPrintUtil'
-import { Card } from '@/components/ui/Card'
 import { Button } from '../../ui/Button'
 
 interface SettlementProjectDetailProps {
@@ -39,7 +36,7 @@ const SettlementProjectDetail: React.FC<SettlementProjectDetailProps> = ({
 
   const {
     filterType, filterStatus, setFilterType, setFilterStatus,
-    filteredSettlements, stats,
+    filteredSettlements,
   } = useSettlementFilters(settlements)
 
   const {
@@ -64,13 +61,13 @@ const SettlementProjectDetail: React.FC<SettlementProjectDetailProps> = ({
       <div className="flex items-center gap-3 mb-6">
         <button
           onClick={onBack}
-          className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors"
+          className="p-2 rounded-lg hover:bg-[color:var(--panel-2)] text-[color:var(--muted)] hover:text-[color:var(--fg-2)] transition-colors"
         >
           <Icon name="ArrowLeft" size={20} />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">{project.name}</h1>
-          <p className="text-slate-500 mt-1">结算办理</p>
+          <h1 className="text-base font-semibold tracking-tight text-[color:var(--fg)]">{project.name}</h1>
+          <p className="text-[color:var(--muted)] mt-1">结算办理</p>
         </div>
         <div className="flex-1" />
         <Button
@@ -88,58 +85,43 @@ const SettlementProjectDetail: React.FC<SettlementProjectDetailProps> = ({
         </Button>
       </div>
 
-      {/* 统计卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-        <Card bordered={false} className="p-4">
-          <p className="text-sm text-slate-500">结算单总数</p>
-          <p className="text-2xl font-bold text-slate-800">{stats.total}</p>
-        </Card>
-        <Card bordered={false} className="p-4">
-          <p className="text-sm text-slate-500">未办理</p>
-          <p className="text-2xl font-bold text-amber-600">{stats.pending}</p>
-        </Card>
-        <Card bordered={false} className="p-4">
-          <p className="text-sm text-slate-500">已办理</p>
-          <p className="text-2xl font-bold text-emerald-600">{stats.completed}</p>
-        </Card>
-        <Card bordered={false} className="p-4">
-          <p className="text-sm text-slate-500">已归档</p>
-          <p className="text-2xl font-bold text-slate-500">{stats.archived}</p>
-        </Card>
-        <Card bordered={false} className="p-4">
-          <p className="text-sm text-slate-500">结算总金额</p>
-          <p className="text-2xl font-bold text-primary-600">¥{formatMoney(stats.totalAmount)}</p>
-        </Card>
+      {/* S19 Stitch: 类别 pill-tabs (替代下拉 + 取消统计卡片) */}
+      <div className="flex items-center gap-2 mb-6 flex-wrap">
+        {[
+          { value: '', label: '全部' },
+          { value: 'income', label: '收入结算' },
+          { value: 'expense', label: '支出结算' },
+        ].map(opt => (
+          <button
+            key={opt.value}
+            onClick={() => setFilterType(opt.value as SettlementType | '')}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              filterType === opt.value
+                ? 'bg-[color:var(--accent)] text-[color:var(--on-accent)]'
+                : 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)]'
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+        {filterStatus && (
+          <span className="ml-2 text-xs text-[color:var(--muted)]">
+            状态: {filterStatus === 'pending' ? '未办理' : filterStatus === 'completed' ? '已办理' : '已归档'}
+            <button onClick={() => setFilterStatus('')} className="ml-1 text-[color:var(--accent)] hover:opacity-80">×</button>
+          </span>
+        )}
+        <div className="flex-1" />
+        <select
+          value={filterStatus}
+          onChange={e => setFilterStatus(e.target.value as SettlementStatus | '')}
+          className="px-3 py-1.5 border border-[color:var(--border)] rounded-lg text-sm bg-[color:var(--card)]"
+        >
+          <option value="">所有状态</option>
+          <option value="pending">未办理</option>
+          <option value="completed">已办理</option>
+          <option value="archived">已归档</option>
+        </select>
       </div>
-
-      {/* 筛选器 */}
-      <FilterBar className="mb-6">
-        <div className="flex items-center gap-2">
-          <label className="text-sm text-slate-600">结算类型:</label>
-          <select
-            value={filterType}
-            onChange={e => setFilterType(e.target.value as SettlementType | '')}
-            className="select text-sm"
-          >
-            <option value="">全部</option>
-            <option value="income">收入结算</option>
-            <option value="expense">支出结算</option>
-          </select>
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="text-sm text-slate-600">状态:</label>
-          <select
-            value={filterStatus}
-            onChange={e => setFilterStatus(e.target.value as SettlementStatus | '')}
-            className="select text-sm"
-          >
-            <option value="">全部</option>
-            <option value="pending">未办理</option>
-            <option value="completed">已办理</option>
-            <option value="archived">已归档</option>
-          </select>
-        </div>
-      </FilterBar>
 
       {/* 结算单列表 */}
       <HoverScrollbar className="flex-1 min-h-0">

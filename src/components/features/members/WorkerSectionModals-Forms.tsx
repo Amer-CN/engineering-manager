@@ -42,23 +42,23 @@ export function TeamFormModal({
     >
       <form id="team-form" onSubmit={onSubmit}>
         <div className="mb-4">
-          <label className="block text-sm font-medium text-slate-700 mb-1">班组名称 *</label>
+          <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">班组名称 *</label>
           <input
             type="text"
             value={formData.name}
             onChange={e => onChange({ name: e.target.value })}
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+            className="w-full px-4 py-2 border border-[color:var(--border)] rounded-lg focus:ring-2 focus:ring-[color:var(--accent-soft)]"
             placeholder="如：钢筋班、木工班"
             required
           />
         </div>
 
         <div className="mb-4">
-          <label className="block text-sm font-medium text-slate-700 mb-1">所属项目*</label>
+          <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">所属项目*</label>
           <select
             value={formData.projectId || ''}
             onChange={e => onChange({ projectId: e.target.value ? Number(e.target.value) : undefined })}
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+            className="w-full px-4 py-2 border border-[color:var(--border)] rounded-lg focus:ring-2 focus:ring-[color:var(--accent-soft)]"
             required
           >
             <option value="">请选择项目</option>
@@ -69,18 +69,18 @@ export function TeamFormModal({
         </div>
 
         <div className="mb-2">
-          <label className="block text-sm font-medium text-slate-700 mb-1">班组长</label>
+          <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">班组长</label>
           <select
             value={formData.leaderId ?? ''}
             onChange={e => onChange({ leaderId: e.target.value ? Number(e.target.value) : null })}
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+            className="w-full px-4 py-2 border border-[color:var(--border)] rounded-lg focus:ring-2 focus:ring-[color:var(--accent-soft)]"
           >
             <option value="">暂无班组长</option>
             {availableLeaders.map(w => (
               <option key={w.id} value={w.id}>{w.name} - {w.teamName || '未分组'}</option>
             ))}
           </select>
-          <p className="text-xs text-slate-500 mt-1">可以先创建班组，班组长可在之后从工人中选择指定</p>
+          <p className="text-xs text-[color:var(--muted)] mt-1">可以先创建班组，班组长可在之后从工人中选择指定</p>
         </div>
       </form>
     </Modal>
@@ -116,15 +116,15 @@ export function TransferModal({
       }
     >
       <form id="transfer-form" onSubmit={onSubmit}>
-        <div className="mb-4 p-3 bg-slate-50 rounded-lg">
-          <div className="font-medium text-slate-800">{worker?.name}</div>
-          <div className="text-sm text-slate-500">
+        <div className="mb-4 p-3 bg-[color:var(--panel-2)] rounded-lg">
+          <div className="font-medium text-[color:var(--fg)]">{worker?.name}</div>
+          <div className="text-sm text-[color:var(--muted)]">
             当前: {worker?.projectName} / {worker?.teamName}
           </div>
         </div>
 
         <div className="mb-4">
-          <label className="block text-sm font-medium text-slate-700 mb-1">调入班组 *</label>
+          <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">调入班组 *</label>
           <select
             value={formData.toTeamId || ''}
             onChange={e => {
@@ -135,7 +135,7 @@ export function TransferModal({
                 toProjectId: team?.projectId
               })
             }}
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 border border-[color:var(--border)] rounded-lg focus:ring-2 focus:ring-[color:var(--accent)]"
             required
           >
             <option value="">选择调入的班组</option>
@@ -149,22 +149,22 @@ export function TransferModal({
         </div>
 
         <div className="mb-4">
-          <label className="block text-sm font-medium text-slate-700 mb-1">调动日期 *</label>
+          <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">调动日期 *</label>
           <input
             type="date"
             value={formData.transferDate}
             onChange={e => onChange({ transferDate: e.target.value })}
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 border border-[color:var(--border)] rounded-lg focus:ring-2 focus:ring-[color:var(--accent)]"
             required
           />
         </div>
 
         <div className="mb-2">
-          <label className="block text-sm font-medium text-slate-700 mb-1">调动原因</label>
+          <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">调动原因</label>
           <textarea
             value={formData.reason}
             onChange={e => onChange({ reason: e.target.value })}
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 border border-[color:var(--border)] rounded-lg focus:ring-2 focus:ring-[color:var(--accent)]"
             rows={2}
             placeholder="如：项目完工调配、工作需要等"
           />

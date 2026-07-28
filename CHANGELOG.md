@@ -9,6 +9,74 @@
 > **重要**: v0.74.0 → v0.75.3 期间曾过度打 tag (refactor-only sprint 也 bump). 已在 v0.75.3 重新整理 git 历史 (drop 7 个 spurious chore "bump version" commits), 重组成正确的 semver 历史.
 
 
+## v0.83.0 (2026-07-24) — feat: 成本台账新表格(beta) + STT 语音知识库 + 设置页重构 + shadcn/ui 接入
+
+> **SemVer**: minor bump (0.82.1 → 0.83.0), 多项新功能 + 大规模 UI 重构.
+
+### 更新了什么（大白话）
+
+#### 🚀 新功能
+- **成本台账新表格（Beta）**：成本台账页新增基于 TanStack Table 的新版数据网格，支持列冻结、分组、行内编辑，通过 Beta 开关切换启用
+- **语音转文字 + 知识库**：新增语音知识库模块，支持上传音频文件进行语音转写（STT），转写结果可编辑、可检索，转写文本自动入库供 AI 助手查询
+- **命令面板**：新增全局命令面板（Cmd/Ctrl + K），可快速搜索和跳转功能页面
+- **设置页全面重构**：设置页改为侧边栏导航布局，支持搜索快速定位设置项，分为账户、数据存储、偏好、AI 能力、关于等分区
+
+#### ✨ 体验优化
+- **shadcn/ui 组件库接入**：引入 shadcn/ui 组件体系（Dialog、Command、Textarea 等），UI 风格更统一
+- **AI 助手界面优化**：AI 助手页新增 Markdown 渲染器、知识来源卡片、欢迎页，移除旧的 InsightPanel/StatOverview/CapabilityGrid
+- **项目页 HeroBanner 重构**：项目列表页顶部横幅区域视觉优化
+
+#### 🔧 技术优化
+- **仓库清理**：移除误入库的大文件（ASR 模型 *.gguf/*.onnx、音频文件、E2E 构建产物），更新 .gitignore 防止再次入库
+- **设计原型文档**：新增 STITCH-SCREENS.md 设计屏规格文档，涵盖画布约束、三主题锚点屏、组合屏拆分等
+
+### 改动（开发者视角）
+
+#### feat: 成本台账新表格（Beta）
+- **`feat(cost-ledger)`** 1bd2957: TanStack Table grid 骨架
+  - `CostLedgerGrid.tsx`: 新增网格组件（冻结列 + 分组 + 行内编辑）
+  - `EditableCell.tsx`: 可编辑单元格组件
+  - `gridColumns.ts`: 列定义
+- **`feat(costledger)`** de0badb: Beta 开关
+  - `CostLedgerProjectDetail.tsx`: 加 Beta 开关切换新旧表格
+  - `GridStates.tsx`: 网格状态组件（空/加载/错误）
+- **`fix(costledger)`** 3a64e9d: Beta 模式优先级 + 汇总失败处理对齐
+
+#### feat: STT 语音转文字 + 知识库（M4）
+- **后端** (a6b0b74 合并):
+  - `SttEndpoints.cs`: STT 上传/转写/状态查询端点
+  - `KnowledgeEndpoints.cs`: 知识库文档管理端点
+  - `BgeEmbeddingService.cs`: BGE 向量嵌入服务
+  - `KnowledgeBaseService.cs`: 知识库服务（文档分块 + 向量检索 + RAG）
+  - `Stt/` 目录: STT 引擎选择器、GGUF 引擎、GPU 日志解析、安全检查、说话人分离、音频预处理等
+  - migration 028-030: STT 任务表 + 知识库表 + 唯一索引
+- **前端**:
+  - `SpeechKnowledgePage.tsx`: 语音知识库主页面
+  - `TranscriptionWorkspace.tsx`: 转写工作台
+  - `TranscriptEditor.tsx`: 转写结果编辑器
+  - `KnowledgeLibrary.tsx`: 知识库文档列表
+  - `AudioInputCard.tsx` / `AudioRecorder.tsx`: 音频输入/录音
+  - `SttJobList.tsx`: 转写任务列表
+  - `knowledge-client.ts` / `stt-client.ts`: 前端 API 客户端
+
+#### feat: 设置页重构 + shadcn/ui
+- **设置页拆分**: `Settings.tsx` → 侧边栏导航 + 分区组件（AccountSection / DataStorageSection / PreferencesSection / AiCapabilitySection / AboutHelpSection）
+- **SettingsSearch / SettingsNav / ShortcutsReference**: 设置搜索 + 导航 + 快捷键参考
+- **shadcn/ui 组件**: `dialog.tsx` / `command.tsx` / `Textarea/` 新增
+- **CommandPalette.tsx**: 全局命令面板
+- **index.css**: 大幅样式更新（+370 行）
+
+#### chore: 仓库清理
+- **`chore`** a6b0b74: 24 个本地提交合并推送，清理误入库大文件
+  - 移除: asr-engine 模型(*.gguf/*.onnx)、asr-test 音频、E2E bin/obj
+  - 更新 .gitignore + .gitattributes 防再次入库
+  - 源码完整保留，原历史存于本地标签 `backup-before-cleanup`
+
+#### docs: 设计原型
+- **`docs(stitch)`** 5a763ec, 409f83e: STITCH-SCREENS.md 设计屏规格（圆角语义分级、三主题锚点屏、组合屏拆分、1440x900 画布约束）
+
+---
+
 ## v0.82.1 (2026-07-05) — perf: 启动提速（Splash 去死等 + 后端并行化）
 
 > **SemVer**: patch bump (0.82.0 → 0.82.1).

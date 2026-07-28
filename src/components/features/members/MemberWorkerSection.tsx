@@ -27,7 +27,7 @@ const MemberWorkerSection: React.FC<MemberWorkerSectionProps> = (props) => {
   return (
     <Suspense fallback={
       <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-4 border-slate-200 border-t-orange-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-4 border-[color:var(--border)] border-t-orange-500"></div>
       </div>
     }>
       <WorkerSection {...(props as unknown as import('./WorkerSectionModals').WorkerSectionProps)} />

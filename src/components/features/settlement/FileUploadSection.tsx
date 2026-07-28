@@ -64,30 +64,30 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({ files, onF
       {files.length > 0 && (
         <div className="space-y-2 mb-3">
           {files.map((f, i) => (
-            <div key={i} className="border border-slate-200 rounded-lg p-3 bg-slate-50 flex items-center justify-between">
+            <div key={i} className="border border-[color:var(--border)] rounded-lg p-3 bg-[color:var(--panel-2)] flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded bg-primary-100 flex items-center justify-center">
-                  {f.type === 'pdf' ? <Icon name="File" size={16} className="text-primary-600" /> :
-                   f.type === 'excel' ? <Icon name="LayoutDashboard" size={16} className="text-primary-600" /> :
-                   <Icon name="Image" size={16} className="text-primary-600" />}
+                <div className="w-8 h-8 rounded bg-[color:var(--accent-soft)] flex items-center justify-center">
+                  {f.type === 'pdf' ? <Icon name="File" size={16} className="text-[color:var(--accent)]" /> :
+                   f.type === 'excel' ? <Icon name="LayoutDashboard" size={16} className="text-[color:var(--accent)]" /> :
+                   <Icon name="Image" size={16} className="text-[color:var(--accent)]" />}
                 </div>
-                <span className="text-sm text-slate-700 truncate max-w-[300px]">{f.name}</span>
-                <span className="text-xs text-slate-400">{f.type === 'pdf' ? 'PDF' : f.type === 'excel' ? 'Excel' : '图片'}</span>
+                <span className="text-sm text-[color:var(--fg-2)] truncate max-w-[300px]">{f.name}</span>
+                <span className="text-xs text-[color:var(--muted)]">{f.type === 'pdf' ? 'PDF' : f.type === 'excel' ? 'Excel' : '图片'}</span>
               </div>
               <button type="button" onClick={() => handleRemoveFile(i)}
-                className="text-red-400 hover:text-red-600 text-sm">删除</button>
+                className="text-[color:var(--danger)] hover:opacity-70 text-sm">删除</button>
             </div>
           ))}
         </div>
       )}
       <div className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-all ${
-        dragOverFile ? 'border-primary-500 bg-primary-50' : 'border-slate-300 hover:border-primary-400 hover:bg-slate-50'
+        dragOverFile ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)]' : 'border-[color:var(--border-strong)] hover:border-[color:var(--accent)] hover:bg-[color:var(--panel-2)]'
       }`}
         onClick={() => fileInputRef.current?.click()}
         onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
-        <Icon name="Paperclip" size={28} className="text-slate-300 mb-1 mx-auto" />
-        <p className="text-sm font-medium text-slate-600">上传结算凭证（支持多文件）</p>
-        <p className="text-xs text-slate-400 mt-0.5">点击或拖拽上传，JPG/PNG/PDF/XLSX，每文件最大 30MB</p>
+        <Icon name="Paperclip" size={28} className="text-[color:var(--border-strong)] mb-1 mx-auto" />
+        <p className="text-sm font-medium text-[color:var(--fg-2)]">上传结算凭证（支持多文件）</p>
+        <p className="text-xs text-[color:var(--muted)] mt-0.5">点击或拖拽上传，JPG/PNG/PDF/XLSX，每文件最大 30MB</p>
       </div>
     </div>
   )

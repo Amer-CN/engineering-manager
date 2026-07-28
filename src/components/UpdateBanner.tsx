@@ -27,13 +27,13 @@ export function UpdateBanner() {
   if (info.forced) {
     return (
       <div className="fixed inset-0 z-[9999] bg-black/60 flex items-center justify-center">
-        <div className="bg-white rounded-xl shadow-2xl px-8 py-10 max-w-sm w-full mx-4 text-center">
+        <div className="bg-[color:var(--card)] rounded-xl shadow-xl px-8 py-10 max-w-sm w-full mx-4 text-center">
           <div className="text-4xl mb-4">🚀</div>
-          <h2 className="text-lg font-semibold text-slate-900 mb-2">发现新版本</h2>
-          <p className="text-sm text-slate-600 mb-1">
-            <strong className="text-slate-900">{info.latest}</strong>（当前 {info.current}）
+          <h2 className="text-lg font-semibold text-[color:var(--fg)] mb-2">发现新版本</h2>
+          <p className="text-sm text-[color:var(--fg-2)] mb-1">
+            <strong className="text-[color:var(--fg)]">{info.latest}</strong>（当前 {info.current}）
           </p>
-          <p className="text-sm text-red-600 font-medium mb-4">此版本需强制更新</p>
+          <p className="text-sm text-danger-600 font-medium mb-4">此版本需强制更新</p>
 
           {renderProgress(progress, phase, pause, cancel)}
 
@@ -42,34 +42,34 @@ export function UpdateBanner() {
               onClick={download}
               disabled={phase === 'downloading'}
               className={`w-full px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                phase === 'downloading' ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-red-600 text-white hover:bg-red-700'
+                phase === 'downloading' ? 'bg-[color:var(--panel-2)] text-[color:var(--muted)] cursor-not-allowed' : 'bg-danger-600 text-white hover:bg-danger-700'
               }`}
             >
               {phase === 'downloading' ? '准备中...' : '立即更新'}
             </button>
           )}
 
-          {phase === 'done' && <p className="text-sm text-green-600 font-medium mt-3">更新完成，正在重启...</p>}
+          {phase === 'done' && <p className="text-sm text-success-600 font-medium mt-3">更新完成，正在重启...</p>}
 
           {phase === 'paused' && (
             <div className="mt-3 flex items-center justify-center gap-3">
-              <p className="text-xs text-slate-500">下载已暂停</p>
-              <button onClick={resume} className="px-4 py-1.5 rounded text-xs font-medium bg-red-600 text-white hover:bg-red-700">继续下载</button>
-              <button onClick={cancel} className="px-4 py-1.5 rounded text-xs font-medium bg-slate-200 text-slate-600 hover:bg-slate-300">取消</button>
+              <p className="text-xs text-[color:var(--muted)]">下载已暂停</p>
+              <button onClick={resume} className="px-4 py-1.5 rounded text-xs font-medium bg-danger-600 text-white hover:bg-danger-700">继续下载</button>
+              <button onClick={cancel} className="px-4 py-1.5 rounded text-xs font-medium bg-[color:var(--panel-2)] text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)]">取消</button>
             </div>
           )}
 
           {phase === 'cancelled' && (
             <div className="mt-3">
-              <p className="text-xs text-slate-500 mb-2">下载已取消</p>
-              <button onClick={retry} className="px-4 py-1.5 rounded text-xs font-medium bg-red-600 text-white hover:bg-red-700">重新下载</button>
+              <p className="text-xs text-[color:var(--muted)] mb-2">下载已取消</p>
+              <button onClick={retry} className="px-4 py-1.5 rounded text-xs font-medium bg-danger-600 text-white hover:bg-danger-700">重新下载</button>
             </div>
           )}
 
           {phase === 'error' && (
             <div className="mt-3">
-              <p className="text-xs text-red-600 mb-2">{error || '下载出错'}</p>
-              <button onClick={retry} className="px-4 py-1.5 rounded text-xs font-medium bg-red-600 text-white hover:bg-red-700">重试</button>
+              <p className="text-xs text-danger-600 mb-2">{error || '下载出错'}</p>
+              <button onClick={retry} className="px-4 py-1.5 rounded text-xs font-medium bg-danger-600 text-white hover:bg-danger-700">重试</button>
             </div>
           )}
         </div>
@@ -91,16 +91,16 @@ export function UpdateBanner() {
         transition={{ type: 'spring', stiffness: 300, damping: 25 }}
         className="fixed top-2 left-0 right-0 z-[300] flex justify-center pointer-events-none px-4"
       >
-        <div className="bg-amber-50 border border-amber-200 shadow-lg rounded-lg px-4 py-2.5 text-sm pointer-events-auto max-w-2xl w-full">
+        <div className="bg-warning-50 border border-warning-200 shadow-lg rounded-lg px-4 py-2.5 text-sm pointer-events-auto max-w-2xl w-full">
           <div className="flex items-center gap-2">
-            <span className="text-amber-800 flex-1">
+            <span className="text-warning-800 flex-1">
               🚀 发现新版本 <strong>{info.latest}</strong>（当前 {info.current}）
             </span>
 
             {!progress && !isDownloading && phase !== 'done' && phase !== 'cancelled' && (
               <button
                 onClick={download}
-                className="px-3 py-1 rounded text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 flex-shrink-0"
+                className="px-3 py-1 rounded text-xs font-medium bg-[color:var(--accent)] text-[color:var(--on-accent)] hover:opacity-90 flex-shrink-0"
               >
                 立即更新
               </button>
@@ -109,7 +109,7 @@ export function UpdateBanner() {
             {phase === 'downloading' && (
               <button
                 onClick={pause}
-                className="px-3 py-1 rounded text-xs font-medium bg-slate-200 text-slate-600 hover:bg-slate-300 flex-shrink-0"
+                className="px-3 py-1 rounded text-xs font-medium bg-[color:var(--panel-2)] text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)] flex-shrink-0"
               >
                 暂停
               </button>
@@ -118,17 +118,17 @@ export function UpdateBanner() {
             {phase === 'paused' && (
               <button
                 onClick={resume}
-                className="px-3 py-1 rounded text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 flex-shrink-0"
+                className="px-3 py-1 rounded text-xs font-medium bg-[color:var(--accent)] text-[color:var(--on-accent)] hover:opacity-90 flex-shrink-0"
               >
                 继续下载
               </button>
             )}
 
-            {phase === 'done' && <span className="text-xs text-green-600 flex-shrink-0">更新完成，正在重启...</span>}
+            {phase === 'done' && <span className="text-xs text-success-600 flex-shrink-0">更新完成，正在重启...</span>}
             {phase === 'cancelled' && (
               <button
                 onClick={retry}
-                className="px-3 py-1 rounded text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 flex-shrink-0"
+                className="px-3 py-1 rounded text-xs font-medium bg-[color:var(--accent)] text-[color:var(--on-accent)] hover:opacity-90 flex-shrink-0"
               >
                 重新下载
               </button>
@@ -137,7 +137,7 @@ export function UpdateBanner() {
             {phase !== 'downloading' && phase !== 'verifying' && (
               <button
                 onClick={() => setDismissed(true)}
-                className="text-amber-400 hover:text-amber-600 text-lg leading-none flex-shrink-0 ml-1"
+                className="text-warning-400 hover:text-warning-600 text-lg leading-none flex-shrink-0 ml-1"
                 title="稍后再说"
               >
                 &times;
@@ -149,19 +149,19 @@ export function UpdateBanner() {
 
           {phase === 'paused' && progress && (
             <div className="mt-2">
-              <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+              <div className="w-full bg-[color:var(--panel-2)] rounded-full h-2 overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-amber-400"
+                  className="h-full rounded-full bg-warning-400"
                   style={{ width: `${Math.min(progress.percent ?? 0, 100)}%` }}
                 />
               </div>
-              <div className="text-xs text-slate-500 mt-1 flex justify-between items-center">
+              <div className="text-xs text-[color:var(--muted)] mt-1 flex justify-between items-center">
                 <span>已暂停 · {formatBytes(progress.bytesReceived)}{progress.totalBytes ? ` / ${formatBytes(progress.totalBytes)}` : ''}</span>
                 <span className="flex items-center gap-2">
                   {progress.percent != null ? `${progress.percent}%` : ''}
                   <button
                     onClick={cancel}
-                    className="text-slate-400 hover:text-red-500 transition-colors"
+                    className="text-[color:var(--muted)] hover:text-danger-500 transition-colors"
                     title="取消下载"
                   >
                     ✕
@@ -173,8 +173,8 @@ export function UpdateBanner() {
 
           {phase === 'error' && (
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs text-red-600 flex-1">{error || '下载出错'}</span>
-              <button onClick={retry} className="px-2 py-0.5 rounded text-xs font-medium bg-red-600 text-white hover:bg-red-700 flex-shrink-0">重试</button>
+              <span className="text-xs text-danger-600 flex-1">{error || '下载出错'}</span>
+              <button onClick={retry} className="px-2 py-0.5 rounded text-xs font-medium bg-danger-600 text-white hover:bg-danger-700 flex-shrink-0">重试</button>
             </div>
           )}
         </div>
@@ -191,16 +191,16 @@ function renderProgress(progress: any, phase: string, pause?: () => void, cancel
   return (
     <div className="w-full mt-2">
       {phase === 'verifying' ? (
-        <div className="text-xs text-slate-500">正在校验...</div>
+        <div className="text-xs text-[color:var(--muted)]">正在校验...</div>
       ) : (
         <>
-          <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+          <div className="w-full bg-[color:var(--panel-2)] rounded-full h-2 overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all duration-300 ${indeterminate ? 'w-1/3 bg-blue-400 animate-pulse' : 'bg-blue-500'}`}
+              className={`h-full rounded-full transition-all duration-300 ${indeterminate ? 'w-1/3 bg-[color:var(--accent)] animate-pulse' : 'bg-[color:var(--accent)]'}`}
               style={indeterminate ? {} : { width: `${Math.min(pct ?? 0, 100)}%` }}
             />
           </div>
-          <div className="text-xs text-slate-500 mt-1 flex justify-between items-center">
+          <div className="text-xs text-[color:var(--muted)] mt-1 flex justify-between items-center">
             <span>
               {formatBytes(progress.bytesReceived)}
               {progress.totalBytes ? ` / ${formatBytes(progress.totalBytes)}` : ''}
@@ -211,7 +211,7 @@ function renderProgress(progress: any, phase: string, pause?: () => void, cancel
               {pause && phase === 'downloading' && (
                 <button
                   onClick={pause}
-                  className="text-slate-400 hover:text-amber-500 transition-colors ml-1"
+                  className="text-[color:var(--muted)] hover:text-warning-500 transition-colors ml-1"
                   title="暂停下载"
                 >
                   ❚❚
@@ -220,7 +220,7 @@ function renderProgress(progress: any, phase: string, pause?: () => void, cancel
               {cancel && phase === 'downloading' && (
                 <button
                   onClick={cancel}
-                  className="text-slate-400 hover:text-red-500 transition-colors ml-1"
+                  className="text-[color:var(--muted)] hover:text-danger-500 transition-colors ml-1"
                   title="取消下载"
                 >
                   ✕

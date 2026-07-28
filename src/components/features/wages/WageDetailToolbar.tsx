@@ -53,23 +53,23 @@ export function WageDetailToolbar({
     <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
       <div className="flex items-center gap-3 flex-wrap">
         {/* 作用域切换 */}
-        <div className="flex bg-slate-100 rounded-lg p-0.5">
+        <div className="flex bg-[color:var(--panel-2)] rounded-lg p-0.5">
           <button onClick={() => onScopeChange('project')}
-            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${scope === 'project' ? 'bg-white shadow-sm text-amber-700' : 'text-slate-500 hover:text-slate-700'}`}>
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${scope === 'project' ? 'bg-[color:var(--card)] shadow-sm text-warning-700' : 'text-[color:var(--muted)] hover:text-[color:var(--fg-2)]'}`}>
             当前项目
           </button>
           <button onClick={() => onScopeChange('all')}
-            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${scope === 'all' ? 'bg-white shadow-sm text-amber-700' : 'text-slate-500 hover:text-slate-700'}`}>
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${scope === 'all' ? 'bg-[color:var(--card)] shadow-sm text-warning-700' : 'text-[color:var(--muted)] hover:text-[color:var(--fg-2)]'}`}>
             全部项目
           </button>
         </div>
 
         {/* 统一筛选：年份 + 月份 + 姓名 */}
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-slate-600">年份</label>
+          <label className="text-sm font-medium text-[color:var(--fg-2)]">年份</label>
           <select value={filterYear}
             onChange={e => onFilterYearChange(e.target.value, '全部')}
-            className="px-3 py-2 border border-slate-300 rounded-lg text-sm">
+            className="px-3 py-2 border border-[color:var(--border)] rounded-lg text-sm">
             <option value="全部">全部</option>
             {yearOptions.length > 0 ? yearOptions.map(y => <option key={y} value={y}>{y}年</option>)
               : Array.from({ length: 21 }, (_, i) => {
@@ -79,30 +79,30 @@ export function WageDetailToolbar({
           </select>
         </div>
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-slate-600">月份</label>
+          <label className="text-sm font-medium text-[color:var(--fg-2)]">月份</label>
           <select value={filterMonth}
             onChange={e => onFilterMonthChange(e.target.value)}
-            className="px-3 py-2 border border-slate-300 rounded-lg text-sm">
+            className="px-3 py-2 border border-[color:var(--border)] rounded-lg text-sm">
             {MONTHS.map(m => <option key={m} value={m}>{m === '全部' ? '全部' : `${m}月`}</option>)}
           </select>
         </div>
         <input type="text" placeholder="搜索姓名..." value={filterMemberName}
           onChange={e => onFilterMemberNameChange(e.target.value)}
-          className="px-3 py-2 border border-slate-300 rounded-lg text-sm w-40 focus:ring-2 focus:ring-primary-500" />
+          className="px-3 py-2 border border-[color:var(--border)] rounded-lg text-sm w-40 focus:ring-2 focus:ring-[color:var(--accent-soft)]" />
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-slate-600">班组</label>
+          <label className="text-sm font-medium text-[color:var(--fg-2)]">班组</label>
           <select value={filterTeamName} onChange={e => onFilterTeamNameChange(e.target.value)}
-            className="px-3 py-2 border border-slate-300 rounded-lg text-sm">
+            className="px-3 py-2 border border-[color:var(--border)] rounded-lg text-sm">
             <option value="全部">全部班组</option>
             {teamOptions.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
 
         {/* 记录数 */}
-        <span className="text-sm text-slate-500">
+        <span className="text-sm text-[color:var(--muted)]">
           {recordCount} 条记录
           {scope === 'project' && recordCount === 0 && (
-            <span className="text-amber-600 ml-2">（提示：点击"生成工资表"）</span>
+            <span className="text-warning-600 ml-2">（提示：点击"生成工资表"）</span>
           )}
         </span>
       </div>
@@ -112,7 +112,7 @@ export function WageDetailToolbar({
         {scope === 'project' && (
           <button onClick={onGenerateWages}
             disabled={loading || filterYear === '全部' || filterMonth === '全部'}
-            className="bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+            className="bg-[color:var(--accent)] hover:opacity-90 disabled:opacity-50 text-[color:var(--on-accent)] px-4 py-2 rounded-lg text-sm font-medium transition-colors">
             生成工资表
           </button>
         )}
@@ -120,7 +120,7 @@ export function WageDetailToolbar({
         {scope === 'project' && (
           <button onClick={onImportReceipt}
             disabled={receiptParsing || filterYear === '全部' || filterMonth === '全部'}
-            className="bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+            className="bg-[color:var(--accent)] hover:opacity-90 disabled:opacity-50 text-[color:var(--on-accent)] px-4 py-2 rounded-lg text-sm font-medium transition-colors">
             {receiptParsing ? '解析中…' : '导入回单'}
           </button>
         )}

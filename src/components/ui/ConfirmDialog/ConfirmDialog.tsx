@@ -105,7 +105,7 @@ export function ConfirmDialog({
       }
     >
       {content && (
-        <div className="text-slate-600">
+        <div className="text-[color:var(--fg-2)]">
           {content}
         </div>
       )}

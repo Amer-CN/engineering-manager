@@ -10,7 +10,7 @@ vi.mock('lucide-react', () => {
     'ArrowLeftRight', 'ArrowRightLeft', 'ArrowUpCircle', 'BadgeCheck', 'Ban', 'Banknote',
     'BarChart3', 'Bell', 'Bot', 'Briefcase', 'Building2', 'Calendar', 'CalendarCheck', 'Camera',
     'Check', 'CheckCircle', 'ChevronDown', 'ChevronLeft', 'ChevronRight',
-    'ChevronUp', 'ClipboardList', 'ClipboardPen', 'Clock', 'Construction',
+    'ChevronUp', 'ClipboardList', 'ClipboardPen', 'Clock', 'Construction', 'Copy',
     'CreditCard', 'Database', 'DollarSign', 'Download', 'Droplets', 'Edit3', 'Eye', 'EyeOff',
     'File', 'FileCheck', 'FileJson', 'FileSpreadsheet', 'FileText', 'Filter', 'FolderKanban', 'FolderOpen',
     'Globe', 'HardHat', 'HeartPulse', 'HelpCircle', 'Home', 'Image', 'Inbox', 'Info', 'Key', 'Landmark',
@@ -19,7 +19,7 @@ vi.mock('lucide-react', () => {
     'PaintBucket', 'Paperclip', 'Pause', 'Phone', 'PieChart', 'Play', 'Plug', 'Plus', 'Power', 'Printer',
     'Receipt', 'Redo', 'RefreshCw', 'RotateCcw', 'Ruler', 'Save', 'Scan',
     'ScrollText', 'Search', 'Settings', 'Shield', 'ShieldCheck', 'Snowflake', 'Sparkles', 'Square', 'Stamp',
-    'Sun', 'Trash2', 'TrendingDown', 'TrendingUp', 'Truck', 'Undo',
+    'Sun', 'Trash2', 'TrendingDown', 'TrendingUp', 'Truck', 'ThumbsUp', 'ThumbsDown', 'Undo',
     'Upload', 'User', 'UserCheck', 'UserCircle', 'UserCog', 'Users', 'Wallet',
     'WifiOff', 'Wrench', 'X', 'XCircle', 'Zap',
   ]

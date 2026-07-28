@@ -145,33 +145,35 @@ export function CostLedgerProjectDetail({ project, onBack, categories, onManageC
     <div className="flex h-full flex-col">
       {ConfirmDialog}
       {/* 头部：返回 + 项目名 */}
-      <div className="flex items-center gap-4 px-6 py-4 border-b border-slate-200">
+      <div className="flex items-center gap-4 px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
         <button onClick={onBack}
-          className="flex items-center gap-1.5 px-3 py-2 text-sm text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors">
+          className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg transition-colors text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)]">
           <Icon name="ArrowLeft" size={16} />
           <span>返回台账总览</span>
         </button>
-        <span className="w-1.5 h-8 rounded-full bg-amber-500" />
+        <span className="w-1.5 h-8 rounded-full" style={{ background: 'var(--accent)' }} />
         <div>
-          <h2 className="text-lg font-semibold text-slate-800">{project.name}</h2>
-          <p className="text-sm text-slate-500">成本台账</p>
+          <h2 className="text-base font-semibold tracking-tight" style={{ color: 'var(--fg)' }}>{project.name}</h2>
+          <p className="text-sm" style={{ color: 'var(--muted)' }}>成本台账</p>
         </div>
         <div className="flex-1" />
 
         {/* Beta 切换入口 — 低调但明确 */}
-        <div className="flex items-center gap-1 rounded-lg bg-slate-100 p-0.5">
+        <div className="flex items-center gap-1 rounded-lg p-0.5" style={{ background: 'var(--panel-2)' }}>
           <button
             onClick={() => handleSwitchGrid('classic')}
-            className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${gridMode === 'classic' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            className="rounded-md px-2.5 py-1 text-xs font-medium transition-colors"
+            style={gridMode === 'classic' ? { background: 'var(--card)', color: 'var(--fg)', boxShadow: 'var(--shadow-card)' } : { background: 'transparent', color: 'var(--muted)' }}
           >
             经典表格
           </button>
           <button
             onClick={() => handleSwitchGrid('new')}
-            className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors flex items-center gap-1 ${gridMode === 'new' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            className="rounded-md px-2.5 py-1 text-xs font-medium transition-colors flex items-center gap-1"
+            style={gridMode === 'new' ? { background: 'var(--card)', color: 'var(--fg)', boxShadow: 'var(--shadow-card)' } : { background: 'transparent', color: 'var(--muted)' }}
           >
             新表格
-            <span className="rounded bg-blue-100 px-1 py-0.5 text-caption font-semibold text-blue-600">Beta</span>
+            <span className="rounded px-1 py-0.5 text-caption font-semibold" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>Beta</span>
           </button>
         </div>
 
@@ -197,13 +199,14 @@ export function CostLedgerProjectDetail({ project, onBack, categories, onManageC
 
       {/* Beta 提示条 — 仅在新 Grid 模式下显示 */}
       {gridMode === 'new' && (
-        <div className="flex items-center gap-2 px-6 py-2 text-xs text-blue-700 bg-blue-50 border-b border-blue-200">
+        <div className="flex items-center gap-2 px-6 py-2 text-xs" style={{ color: 'var(--fg-2)', background: 'var(--panel-2)', borderBottom: '1px solid var(--border)' }}>
           <Icon name="Info" size={14} />
           <span>你正在使用<strong>新表格 Beta</strong>，可随时切回经典表格。导入/导出/打印请暂用经典表格。</span>
-          {isInternalMode && <span className="ml-1 rounded bg-slate-200 px-1 py-0.5 text-caption text-slate-600">内部调试</span>}
+          {isInternalMode && <span className="ml-1 rounded px-1 py-0.5 text-caption" style={{ background: 'var(--panel-2)', color: 'var(--muted)' }}>内部调试</span>}
           <button
             onClick={() => handleSwitchGrid('classic')}
-            className="ml-auto rounded-md border border-blue-300 px-2 py-0.5 text-xs font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+            className="ml-auto rounded-md px-2 py-0.5 text-xs font-medium transition-colors hover:bg-[color:var(--panel-2)]"
+            style={{ border: '1px solid var(--border)', color: 'var(--accent)' }}
           >
             切回经典表格
           </button>

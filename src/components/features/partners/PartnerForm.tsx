@@ -132,7 +132,7 @@ export const PartnerForm: React.FC<PartnerFormProps> = ({
           fileLabel="营业执照已上传"
           dragOver={licenseDragOver}
           inputRef={licenseInputRef}
-          iconBgClass="bg-blue-100"
+          iconBgClass="bg-[color:var(--panel-2)]"
           onFileSelect={file => processFile(file, (base64, fileType) => setFormData(prev => ({ ...prev, licenseFile: base64, licenseFileType: fileType })))}
           onRemove={() => setFormData(prev => ({ ...prev, licenseFile: '', licenseFileType: '' }))}
           onDragOver={(e) => { e.preventDefault(); setLicenseDragOver(true) }}
@@ -163,7 +163,7 @@ export const PartnerForm: React.FC<PartnerFormProps> = ({
           fileLabel="附件已上传"
           dragOver={otherFilesDragOver}
           inputRef={otherFilesInputRef}
-          iconBgClass="bg-purple-100"
+          iconBgClass="bg-[color:var(--panel-2)]"
           multiple
           onAddMore={() => otherFilesInputRef.current?.click()}
           onFileSelect={file => processFile(file, (base64, fileType) => setFormData(prev => ({ ...prev, otherFiles: prev.otherFiles ? `${prev.otherFiles}|||${base64}` : base64, otherFilesType: prev.otherFilesType ? `${prev.otherFilesType}|||${fileType}` : fileType })))}
@@ -176,7 +176,7 @@ export const PartnerForm: React.FC<PartnerFormProps> = ({
       </div>
 
       {/* 提交按钮 */}
-      <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-200">
+      <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-[color:var(--border)]">
         <Button type="button" onClick={onCancel}  variant="secondary">
           取消
         </Button>

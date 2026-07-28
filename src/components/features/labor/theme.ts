@@ -1,21 +1,21 @@
 /**
  * 工人管理模块主题常量
- * 使用琥珀色系(Amber)，与人事管理的靛蓝色系(Indigo)区分
+ * Bedrock: 模块品牌色已统一为 accent/primary（无独立色系）
  */
 export const LABOR_THEME = {
-  primary: 'amber-600',
-  primaryHover: 'amber-700',
-  primaryRing: 'amber-500',
-  primaryLight: 'amber-100',
-  primaryLighter: 'amber-50',
-  tabIndicator: 'bg-amber-600',
-  spinner: 'border-t-amber-500',
-  text: 'text-amber-600',
-  bg: 'bg-amber-600',
-  bgHover: 'hover:bg-amber-700',
-  bgLight: 'bg-amber-50',
-  border: 'border-amber-200',
-  ring: 'focus:ring-primary-500',
+  primary: '[color:var(--accent)]',
+  primaryHover: '[color:var(--accent)]',
+  primaryRing: '[color:var(--accent-soft)]',
+  primaryLight: '[color:var(--accent-soft)]',
+  primaryLighter: '[color:var(--accent-soft)]',
+  tabIndicator: 'bg-[color:var(--accent)]',
+  spinner: 'border-t-[color:var(--accent)]',
+  text: 'text-[color:var(--accent)]',
+  bg: 'bg-[color:var(--accent)]',
+  bgHover: 'hover:opacity-90',
+  bgLight: 'bg-[color:var(--accent-soft)]',
+  border: 'border-[color:var(--border)]',
+  ring: 'focus:ring-[color:var(--accent-soft)]',
 } as const
 
 export const LABOR_TAB_KEY = 'labor_active_tab'

@@ -36,24 +36,24 @@ const DashboardStatsCard: React.FC<DashboardStatsCardProps> = ({ stats }) => {
             variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { delay: i * 0.03 } } }}
             whileHover={cardHover}
             whileTap={{ scale: 0.98 }}
-            className="bg-white border border-slate-200 rounded-xl shadow-sm p-3 transition-shadow duration-200 cursor-default"
+            className="bg-[color:var(--card)] border border-[color:var(--border)] rounded-xl shadow-sm p-3 transition-shadow duration-200 cursor-default"
           >
             <div className="flex items-center gap-2 mb-1">
               <span className={`w-7 h-7 rounded-lg flex items-center justify-center ${card.color}`}><Icon name={card.icon} size={14} /></span>
-              <span className="text-xs text-slate-400">{card.label}</span>
+              <span className="text-xs text-[color:var(--muted)]">{card.label}</span>
             </div>
-            <p className="text-lg font-bold text-slate-800">
+            <p className="text-lg font-bold font-mono tabular-nums tracking-tight text-[color:var(--fg)]">
               {val.raw !== undefined && val.raw > 999 ? (
                 <CountUp value={val.raw} />
               ) : val.raw !== undefined ? (
                 <CountUp value={val.raw} />
               ) : val.primary}
             </p>
-            <p className="text-xs text-slate-400">{val.secondary}</p>
+            <p className="text-xs text-[color:var(--muted)]">{val.secondary}</p>
             {val.progress !== undefined && (
-              <div className="mt-2 h-1 bg-slate-100 rounded-full overflow-hidden">
+              <div className="mt-2 h-1 bg-[color:var(--panel-2)] rounded-full overflow-hidden">
                 <motion.div
-                  className="h-full bg-primary-500 rounded-full"
+                  className="h-full bg-[color:var(--accent)] rounded-full"
                   initial={{ width: 0 }}
                   animate={{ width: `${val.progress}%` }}
                   transition={{ duration: 1, delay: 0.5 + i * 0.1, ease: 'easeOut' }}

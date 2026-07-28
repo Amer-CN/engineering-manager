@@ -38,10 +38,10 @@ export function calculateHealthScore(
  * 获取健康度评级
  */
 export function getHealthLevel(score: number): { label: string; color: string; bgColor: string } {
-  if (score >= 80) return { label: '健康', color: 'text-emerald-600', bgColor: 'bg-emerald-50' }
-  if (score >= 60) return { label: '良好', color: 'text-blue-600', bgColor: 'bg-blue-50' }
-  if (score >= 40) return { label: '预警', color: 'text-amber-600', bgColor: 'bg-amber-50' }
-  return { label: '危险', color: 'text-red-600', bgColor: 'bg-red-50' }
+  if (score >= 80) return { label: '健康', color: 'text-success-600', bgColor: 'bg-success-50' }
+  if (score >= 60) return { label: '良好', color: 'text-[color:var(--fg-2)]', bgColor: 'bg-[color:var(--panel-2)]' }
+  if (score >= 40) return { label: '预警', color: 'text-warning-600', bgColor: 'bg-warning-50' }
+  return { label: '危险', color: 'text-danger-600', bgColor: 'bg-danger-50' }
 }
 
 /**

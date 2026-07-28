@@ -16,17 +16,17 @@ import { Button } from './ui/Button'
 const PAGE_SIZE = 20
 
 const actionConfig: Record<AuditAction, { label: string; color: string; bgColor: string }> = {
-  create: { label: '创建', color: 'text-green-700', bgColor: 'bg-green-100' },
-  read: { label: '查看', color: 'text-blue-700', bgColor: 'bg-blue-100' },
-  update: { label: '更新', color: 'text-yellow-700', bgColor: 'bg-yellow-100' },
-  delete: { label: '删除', color: 'text-red-700', bgColor: 'bg-red-100' },
-  export: { label: '导出', color: 'text-purple-700', bgColor: 'bg-purple-100' },
-  import: { label: '导入', color: 'text-primary-700', bgColor: 'bg-primary-100' },
-  login: { label: '登录', color: 'text-cyan-700', bgColor: 'bg-cyan-100' },
-  logout: { label: '登出', color: 'text-slate-700', bgColor: 'bg-slate-100' },
-  approve: { label: '审批', color: 'text-pink-700', bgColor: 'bg-pink-100' },
-  lock: { label: '锁定', color: 'text-slate-700', bgColor: 'bg-slate-100' },
-  unlock: { label: '解锁', color: 'text-slate-700', bgColor: 'bg-slate-100' },
+  create: { label: '创建', color: 'text-success-700', bgColor: 'bg-success-100' },
+  read: { label: '查看', color: 'text-[color:var(--fg-2)]', bgColor: 'bg-[color:var(--panel-2)]' },
+  update: { label: '更新', color: 'text-warning-700', bgColor: 'bg-warning-100' },
+  delete: { label: '删除', color: 'text-danger-700', bgColor: 'bg-danger-100' },
+  export: { label: '导出', color: 'text-[color:var(--fg-2)]', bgColor: 'bg-[color:var(--panel-2)]' },
+  import: { label: '导入', color: 'text-[color:var(--accent)]', bgColor: 'bg-[color:var(--accent-soft)]' },
+  login: { label: '登录', color: 'text-[color:var(--fg-2)]', bgColor: 'bg-[color:var(--panel-2)]' },
+  logout: { label: '登出', color: 'text-[color:var(--fg-2)]', bgColor: 'bg-[color:var(--panel-2)]' },
+  approve: { label: '审批', color: 'text-success-700', bgColor: 'bg-success-100' },
+  lock: { label: '锁定', color: 'text-[color:var(--fg-2)]', bgColor: 'bg-[color:var(--panel-2)]' },
+  unlock: { label: '解锁', color: 'text-[color:var(--fg-2)]', bgColor: 'bg-[color:var(--panel-2)]' },
 }
 
 const resourceLabels: Record<string, string> = {
@@ -69,8 +69,8 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
         const { date, time } = formatTimestamp(log.timestamp)
         return (
           <div>
-            <div className="text-sm text-slate-800">{date}</div>
-            <div className="text-xs text-slate-400">{time}</div>
+            <div className="text-sm text-[color:var(--fg)]">{date}</div>
+            <div className="text-xs text-[color:var(--muted)]">{time}</div>
           </div>
         )
       }
@@ -79,15 +79,15 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
       key: 'username', title: '用户',
       render: (log) => (
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-sm font-medium text-primary-700">{(log.username || '?').charAt(0).toUpperCase()}</div>
-          <span className="text-sm text-slate-700">{log.username || '-'}</span>
+          <div className="w-8 h-8 rounded-full bg-[color:var(--accent-soft)] flex items-center justify-center text-sm font-medium text-[color:var(--accent)]">{(log.username || '?').charAt(0).toUpperCase()}</div>
+          <span className="text-sm text-[color:var(--fg-2)]">{log.username || '-'}</span>
         </div>
       )
     },
     {
       key: 'action', title: '操作',
       render: (log) => {
-        const action = actionConfig[log.action] || { label: log.action, color: 'text-slate-700', bgColor: 'bg-slate-100' }
+        const action = actionConfig[log.action] || { label: log.action, color: 'text-[color:var(--fg-2)]', bgColor: 'bg-[color:var(--panel-2)]' }
         return (
           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${action.bgColor} ${action.color}`}>{action.label}</span>
         )
@@ -96,16 +96,16 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
     {
       key: 'resource', title: '资源',
       render: (log) => (
-        <span className="text-slate-600">
+        <span className="text-[color:var(--fg-2)]">
           {resourceLabels[log.resource] || log.resource}
-          {log.resourceName && <div className="text-xs text-slate-400">{log.resourceName}</div>}
+          {log.resourceName && <div className="text-xs text-[color:var(--muted)]">{log.resourceName}</div>}
         </span>
       )
     },
     {
       key: 'description', title: '描述',
       render: (log) => (
-        <span className="text-sm text-slate-700 max-w-xs truncate block">{log.description}</span>
+        <span className="text-sm text-[color:var(--fg-2)] max-w-xs truncate block">{log.description}</span>
       )
     },
     {
@@ -117,7 +117,7 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
     {
       key: 'detail', title: '操作', align: 'center',
       render: (log) => (
-        <Button onClick={() => setSelectedLog(log)}  variant="ghost" size="sm" className="text-primary-600">详情</Button>
+        <Button onClick={() => setSelectedLog(log)}  variant="ghost" size="sm" className="text-[color:var(--accent)]">详情</Button>
       )
     },
   ]
@@ -140,9 +140,9 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
 
   {logs.length === 0 ? (
   <Card bordered={false} className="overflow-hidden p-12 text-center">
-  <Icon name="ClipboardList" size={44} className="text-slate-300 mb-4" />
-  <h3 className="text-lg font-medium text-slate-800 mb-2">暂无操作日志</h3>
-  <p className="text-slate-500">系统还未记录任何操作，或当前筛选条件下无数据</p>
+  <Icon name="ClipboardList" size={44} className="text-[color:var(--border-strong)] mb-4" />
+  <h3 className="text-lg font-medium text-[color:var(--fg)] mb-2">暂无操作日志</h3>
+  <p className="text-[color:var(--muted)]">系统还未记录任何操作，或当前筛选条件下无数据</p>
   </Card>
   ) : (
   <>
@@ -157,13 +157,13 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
     emptyIcon="ClipboardList"
   />
 
-  <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between">
-  <div className="text-sm text-slate-500">第 <span className="font-medium">{page}</span> / <span className="font-medium">{totalPages}</span> 页</div>
+  <div className="px-4 py-3 border-t border-[color:var(--border)] flex items-center justify-between">
+  <div className="text-sm text-[color:var(--muted)]">第 <span className="font-medium">{page}</span> / <span className="font-medium">{totalPages}</span> 页</div>
   <div className="flex items-center gap-2">
   <Button onClick={() => f.setPage(Math.max(1, page - 1))} disabled={page <= 1}  variant="secondary" size="sm" className="disabled:opacity-50 disabled:cursor-not-allowed">上一页</Button>
   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
   const pageNum = Math.max(1, Math.min(totalPages - 4, page - 2)) + i
-  return <Button key={pageNum} onClick={() => f.setPage(pageNum)} variant={pageNum === page ? 'primary' : 'ghost'} size="sm" className={pageNum === page ? undefined : 'text-slate-700'}>{pageNum}</Button>
+  return <Button key={pageNum} onClick={() => f.setPage(pageNum)} variant={pageNum === page ? 'primary' : 'ghost'} size="sm" className={pageNum === page ? undefined : 'text-[color:var(--fg-2)]'}>{pageNum}</Button>
   })}
   <Button onClick={() => f.setPage(Math.min(totalPages, page + 1))} disabled={page >= totalPages}  variant="secondary" size="sm" className="disabled:opacity-50 disabled:cursor-not-allowed">下一页</Button>
   </div>
@@ -179,7 +179,7 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
 const AuditLogs: React.FC<AuditLogsProps> = ({ refresh }) => (
   <div className="max-w-[1400px] mx-auto p-6">
   <div className="flex items-center justify-between mb-6">
-  <div><h1 className="text-2xl font-bold text-slate-800">操作日志</h1><p className="text-slate-500 mt-1">查看系统所有操作记录，追踪谁在什么时间做了什么</p></div>
+  <div><h1 className="text-base font-semibold tracking-tight text-[color:var(--fg)]">操作日志</h1><p className="text-[color:var(--muted)] mt-1">查看系统所有操作记录，追踪谁在什么时间做了什么</p></div>
   </div>
   <AuditLogsContent refresh={refresh} />
   </div>

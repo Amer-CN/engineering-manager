@@ -154,7 +154,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ disabled, onRecorded }) =
           >
             <Icon name="Mic" size={26} className="text-white" />
           </button>
-          <p className="text-sm text-slate-500">点击开始录音</p>
+          <p className="text-sm text-[color:var(--muted)]">点击开始录音</p>
         </>
       ) : (
         <>
@@ -165,10 +165,10 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ disabled, onRecorded }) =
               transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
               className="w-3 h-3 rounded-full bg-danger-500"
             />
-            <span className="text-2xl font-mono font-semibold text-slate-800 tabular-nums">
+            <span className="text-numeric-xl font-mono text-[color:var(--fg)] tabular-nums tracking-tight">
               {formatDuration(seconds)}
             </span>
-            {paused && <span className="text-xs text-slate-400">已暂停</span>}
+            {paused && <span className="text-xs text-[color:var(--muted)]">已暂停</span>}
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={cancel} leftIcon="X">

@@ -57,10 +57,10 @@ const Users: React.FC = () => {
   if (!isAdmin()) {
     return (
       <div className="p-6">
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+        <div className="bg-danger-50 border border-danger-200 rounded-xl p-6 text-center">
           <div className="text-4xl mb-3"><Icon name="Ban" size={48} /></div>
-          <h2 className="text-xl font-semibold text-red-700 mb-2">权限不足</h2>
-          <p className="text-red-600">只有管理员可以访问用户管理页面</p>
+          <h2 className="text-xl font-semibold text-danger-700 mb-2">权限不足</h2>
+          <p className="text-danger-600">只有管理员可以访问用户管理页面</p>
         </div>
       </div>
     )

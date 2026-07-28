@@ -11,14 +11,14 @@ export interface EmptyStateProps {
 
 export const EmptyState: React.FC<EmptyStateProps> = ({ icon, title, description, action, className = '' }) => (
   <div className={`flex flex-col items-center justify-center py-16 text-center ${className}`}>
-  <div className="w-24 h-24 rounded-full bg-slate-100 flex items-center justify-center mb-6">
-  {typeof icon === 'string' ? <Icon name={icon} size={40} className="text-slate-400" /> : (icon || <Icon name="FolderOpen" size={40} className="text-slate-400" />)}
+  <div className="w-16 h-16 rounded-full bg-[color:var(--panel-2)] border border-[color:var(--border)] flex items-center justify-center mb-4">
+  {typeof icon === 'string' ? <Icon name={icon} size={32} className="text-[color:var(--muted)]" /> : (icon || <Icon name="FolderOpen" size={32} className="text-[color:var(--muted)]" />)}
   </div>
 
-  <h3 className="text-lg font-medium text-slate-700 mb-2">{title}</h3>
+  <h3 className="text-base font-semibold text-[color:var(--fg)] mb-1">{title}</h3>
 
   {description && (
-  <p className="text-sm text-slate-500 mb-6 max-w-sm">{description}</p>
+  <p className="text-sm text-[color:var(--muted)] mb-5 max-w-[240px]">{description}</p>
   )}
 
   {action && <div>{action}</div>}

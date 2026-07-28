@@ -109,12 +109,12 @@ const SalaryHistoryModal: React.FC<Props> = ({ member, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <motion.div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 flex flex-col max-h-[80vh]"
+      <motion.div className="bg-[color:var(--card)] rounded-xl shadow-xl w-full max-w-lg mx-4 flex flex-col max-h-[80vh]"
         initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }}>
-        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between flex-shrink-0">
+        <div className="px-6 py-4 border-b border-[color:var(--border)] flex items-center justify-between flex-shrink-0">
           <div>
-            <h2 className="text-lg font-semibold text-slate-800">{member.name} - 薪资历史</h2>
-            <p className="text-xs text-slate-400 mt-0.5">薪酬计算按月份自动匹配对应时段的薪资标准</p>
+            <h2 className="text-lg font-semibold text-[color:var(--fg)]">{member.name} - 薪资历史</h2>
+            <p className="text-xs text-[color:var(--muted)] mt-0.5">薪酬计算按月份自动匹配对应时段的薪资标准</p>
           </div>
           <Button onClick={onClose}  variant="ghost" className="p-1"><Icon name="X" size={18} /></Button>
         </div>
@@ -122,40 +122,40 @@ const SalaryHistoryModal: React.FC<Props> = ({ member, onClose }) => {
         <div className="p-6">
           {!showAdd && (
             <button onClick={() => setShowAdd(true)}
-              className="w-full mb-4 px-4 py-2 border-2 border-dashed border-slate-300 rounded-lg text-sm text-slate-500 hover:border-primary-400 hover:text-primary-600 transition-colors">
+              className="w-full mb-4 px-4 py-2 border-2 border-dashed border-[color:var(--border)] rounded-lg text-sm text-[color:var(--muted)] hover:border-[color:var(--accent)] hover:text-[color:var(--accent)] transition-colors">
               + 新增薪资记录
             </button>
           )}
 
           {showAdd && (
-            <div className="mb-4 p-4 bg-slate-50 rounded-lg space-y-3">
-              <div className="text-xs font-medium text-slate-500">{editingId ? '编辑薪资记录' : '新增薪资记录'}</div>
+            <div className="mb-4 p-4 bg-[color:var(--panel-2)] rounded-lg space-y-3">
+              <div className="text-xs font-medium text-[color:var(--muted)]">{editingId ? '编辑薪资记录' : '新增薪资记录'}</div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-slate-500 mb-1">生效日期 *</label>
+                  <label className="block text-xs text-[color:var(--muted)] mb-1">生效日期 *</label>
                   <input type="date" value={form.effectiveDate} onChange={e => setForm(p => ({ ...p, effectiveDate: e.target.value }))}
-                    className="w-full px-3 py-1.5 border border-slate-300 rounded text-sm" />
+                    className="w-full px-3 py-1.5 border border-[color:var(--border)] rounded text-sm" />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-500 mb-1">基本工资 *</label>
+                  <label className="block text-xs text-[color:var(--muted)] mb-1">基本工资 *</label>
                   <input type="text" inputMode="numeric" value={form.baseSalary} onChange={e => setForm(p => ({ ...p, baseSalary: e.target.value }))}
-                    className="w-full px-3 py-1.5 border border-slate-300 rounded text-sm" placeholder="元/月" />
+                    className="w-full px-3 py-1.5 border border-[color:var(--border)] rounded text-sm" placeholder="元/月" />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-500 mb-1">补助</label>
+                  <label className="block text-xs text-[color:var(--muted)] mb-1">补助</label>
                   <input type="text" inputMode="numeric" value={form.subsidy} onChange={e => setForm(p => ({ ...p, subsidy: e.target.value }))}
-                    className="w-full px-3 py-1.5 border border-slate-300 rounded text-sm" placeholder="0" />
+                    className="w-full px-3 py-1.5 border border-[color:var(--border)] rounded text-sm" placeholder="0" />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-500 mb-1">补助说明</label>
+                  <label className="block text-xs text-[color:var(--muted)] mb-1">补助说明</label>
                   <input type="text" value={form.subsidyNote} onChange={e => setForm(p => ({ ...p, subsidyNote: e.target.value }))}
-                    className="w-full px-3 py-1.5 border border-slate-300 rounded text-sm" placeholder="如：工地艰苦补助" />
+                    className="w-full px-3 py-1.5 border border-[color:var(--border)] rounded text-sm" placeholder="如：工地艰苦补助" />
                 </div>
               </div>
               <div>
-                <label className="block text-xs text-slate-500 mb-1">备注</label>
+                <label className="block text-xs text-[color:var(--muted)] mb-1">备注</label>
                 <input type="text" value={form.note} onChange={e => setForm(p => ({ ...p, note: e.target.value }))}
-                  className="w-full px-3 py-1.5 border border-slate-300 rounded text-sm" placeholder="如：表现优秀调薪" />
+                  className="w-full px-3 py-1.5 border border-[color:var(--border)] rounded text-sm" placeholder="如：表现优秀调薪" />
               </div>
               <div className="flex justify-end gap-2">
                 <Button onClick={cancelForm}  variant="secondary" size="sm">取消</Button>
@@ -165,29 +165,29 @@ const SalaryHistoryModal: React.FC<Props> = ({ member, onClose }) => {
           )}
 
           {loading ? (
-            <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-6 w-6 border-2 border-primary-500 border-t-transparent" /></div>
+            <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-6 w-6 border-2 border-[color:var(--accent)] border-t-transparent" /></div>
           ) : history.length === 0 ? (
-            <div className="text-center py-8 text-sm text-slate-400">暂无薪资历史记录</div>
+            <div className="text-center py-8 text-sm text-[color:var(--muted)]">暂无薪资历史记录</div>
           ) : (
             <div className="space-y-2">
               {history.map((h: any) => (
-                <div key={h.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                <div key={h.id} className="flex items-center justify-between p-3 bg-[color:var(--panel-2)] rounded-lg">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-slate-800">¥{(h.baseSalary || 0).toLocaleString()}</span>
-                      {h.subsidy > 0 && <span className="text-xs text-amber-600 font-medium">+¥{h.subsidy.toLocaleString()}</span>}
+                      <span className="text-sm font-medium text-[color:var(--fg)]">¥{(h.baseSalary || 0).toLocaleString()}</span>
+                      {h.subsidy > 0 && <span className="text-xs text-warning-600 font-medium">+¥{h.subsidy.toLocaleString()}</span>}
                     </div>
-                    <div className="text-xs text-slate-400 mt-0.5">
+                    <div className="text-xs text-[color:var(--muted)] mt-0.5">
                       生效: {h.effectiveDate}
                       {h.note && <span className="ml-2">· {h.note}</span>}
-                      {h.subsidyNote && <span className="ml-2 text-amber-500">· {h.subsidyNote}</span>}
+                      {h.subsidyNote && <span className="ml-2 text-warning-500">· {h.subsidyNote}</span>}
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
                     <button onClick={() => startEdit(h)}
-                      className="text-primary-400 hover:text-primary-600 text-xs px-1">编辑</button>
+                      className="text-[color:var(--accent)] hover:opacity-80 text-xs px-1">编辑</button>
                     <button onClick={() => handleDelete(h.id)}
-                      className="text-red-400 hover:text-red-600 text-xs px-1">删除</button>
+                      className="text-danger-400 hover:text-danger-600 text-xs px-1">删除</button>
                   </div>
                 </div>
               ))}

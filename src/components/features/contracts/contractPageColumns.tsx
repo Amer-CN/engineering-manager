@@ -23,23 +23,23 @@ export function getContractColumns(deps: ContractColumnsDeps): Column<Contract>[
 
   const baseColumns: Column<Contract>[] = [
     { key: 'name', title: '合同名称', render: (item) => (
-      <div className="font-medium text-slate-800">{item.name}
+      <div className="font-medium" style={{ color: 'var(--fg)' }}>{item.name}
         {type === 'agreement' && (item as AgreementContract).agreementType && (
-          <span className="ml-2 px-1.5 py-0.5 text-xs rounded bg-sky-50 text-sky-600 border border-sky-200">
+          <span className="ml-2 px-1.5 py-0.5 text-xs rounded" style={{ background: 'var(--panel-2)', color: 'var(--fg-2)', border: '1px solid var(--border)' }}>
             {AGREEMENT_SUB_TYPE_LABELS[(item as AgreementContract).agreementType] || '协议'}
           </span>
         )}
       </div>
     )},
-    { key: 'contractNo', title: '合同编号', render: (item) => <span className="text-sm text-slate-500">{item.contractNo}</span> },
+    { key: 'contractNo', title: '合同编号', render: (item) => <span className="text-sm font-mono tabular-nums" style={{ color: 'var(--muted)' }}>{item.contractNo}</span> },
     { key: 'partnerId', title: `${config.partnerCategoryDefault}方`, render: (item) => {
       const partner = partners.find(p => p.id === item.partnerId)
-      return <span className="text-sm text-slate-600">{partner?.name || '-'}</span>
+      return <span className="text-sm" style={{ color: 'var(--fg-2)' }}>{partner?.name || '-'}</span>
     }},
     { key: 'amount', title: '合同金额', align: 'right', sortable: true,
       sorter: (a, b) => ((a.amount || 0) - (b.amount || 0)),
       render: (item) => (
-      <span className="font-medium text-slate-800">
+      <span className="font-medium font-mono tabular-nums tracking-tight" style={{ color: 'var(--fg)' }}>
         {type === 'agreement' ? (item.amount ? `¥ ${formatMoney(item.amount)}` : '—') : `¥ ${formatMoney(item.amount)}`}
       </span>
     )},
@@ -49,10 +49,10 @@ export function getContractColumns(deps: ContractColumnsDeps): Column<Contract>[
     const paymentTotal = getContractPaymentTotal(item.id, paymentRecords, config)
     return (
       <div>
-        <div className={`font-medium ${paymentTotal >= (item.amount ?? 0) ? 'text-green-600' : 'text-slate-800'}`}>
+        <div className="font-medium font-mono tabular-nums tracking-tight" style={{ color: paymentTotal >= (item.amount ?? 0) ? 'var(--success)' : 'var(--fg)' }}>
           ¥ {formatMoney(paymentTotal)}
         </div>
-        <div className="text-xs text-slate-400">
+        <div className="text-xs font-mono tabular-nums" style={{ color: 'var(--muted)' }}>
           {(item.amount ?? 0) > 0 ? ((paymentTotal / (item.amount ?? 0)) * 100).toFixed(0) + '%' : '0%'}
         </div>
       </div>
@@ -73,7 +73,7 @@ export function getContractColumns(deps: ContractColumnsDeps): Column<Contract>[
     sortable: true,
     sorter: (a, b) => (a.endDate || '').localeCompare(b.endDate || ''),
     render: (item) => (
-    <span className="text-sm text-slate-500">{item.endDate || '-'}</span>
+    <span className="text-sm font-mono tabular-nums" style={{ color: 'var(--muted)' }}>{item.endDate || '-'}</span>
   )}
 
   const actionsColumn: Column<Contract> = { key: 'actions', title: '操作', align: 'center', render: (item) => (
@@ -88,7 +88,7 @@ export function getContractColumns(deps: ContractColumnsDeps): Column<Contract>[
         </Button>
       </Tooltip>
       )}
-      <Button onClick={() => onEdit(item)}  variant="ghost" size="sm" className="text-primary-600">编辑</Button>
+      <Button onClick={() => onEdit(item)}  variant="ghost" size="sm" className="text-[color:var(--accent)]">编辑</Button>
       <Button onClick={() => onDelete(item.id)}  variant="danger" size="sm">删除</Button>
     </div>
   )}

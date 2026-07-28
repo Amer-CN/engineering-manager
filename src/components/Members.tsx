@@ -53,20 +53,20 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
       {/* 页面标题 */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">员工管理</h1>
-          <p className="text-slate-500 mt-1">管理公司员工与农民工信息</p>
+          <h1 className="text-base font-semibold tracking-tight text-[color:var(--fg)]">员工管理</h1>
+          <p className="text-[color:var(--muted)] mt-1">管理公司员工与农民工信息</p>
         </div>
       </div>
 
       {/* 主 Tab */}
       <Card bordered={false} className="mb-6">
-        <div className="flex border-b border-slate-200">
+        <div className="flex border-b border-[color:var(--border)]">
           <button
             onClick={() => setActiveTab('staff')}
             className={`flex-1 px-6 py-4 text-center font-medium transition-colors ${
               activeTab === 'staff'
-                ? 'text-primary-600 border-b-2 border-primary-600'
-                : 'text-slate-500 hover:text-slate-700'
+                ? 'text-[color:var(--accent)] border-b-2 border-[color:var(--accent)]'
+                : 'text-[color:var(--muted)] hover:text-[color:var(--fg-2)]'
             }`}
           >
             <Icon name="UserCheck" size={16} /> 管理人员 ({staffMembers.length})
@@ -75,8 +75,8 @@ const Members: React.FC<MembersProps> = ({ refresh }) => {
             onClick={() => setActiveTab('worker')}
             className={`flex-1 px-6 py-4 text-center font-medium transition-colors ${
               activeTab === 'worker'
-                ? 'text-orange-600 border-b-2 border-orange-600'
-                : 'text-slate-500 hover:text-slate-700'
+                ? 'text-[color:var(--accent)] border-b-2 border-[color:var(--accent)]'
+                : 'text-[color:var(--muted)] hover:text-[color:var(--fg-2)]'
             }`}
           >
             <Icon name="HardHat" size={16} /> 农民工 ({workerMembers.length})

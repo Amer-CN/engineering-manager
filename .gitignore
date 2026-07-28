@@ -134,6 +134,7 @@ screenshot_step*.png
 
 # 工具 / 会话 / 代理产物（非项目源码）
 .qoder/
+.codely/
 .codely-cli/
 .meituan-catpaw/
 .impeccable/

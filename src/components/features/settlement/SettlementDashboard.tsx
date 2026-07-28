@@ -76,26 +76,26 @@ export default function SettlementDashboard({ settlements, projects, onProjectCl
       {/* 统计卡片 */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card bordered={false} className="p-4">
-          <p className="text-sm text-slate-500">结算项目</p>
-          <p className="text-2xl font-bold text-slate-800">
-            {activeProjects}<span className="text-base font-normal text-slate-400">/{totalProjects}</span>
+          <p className="text-sm" style={{ color: 'var(--muted)' }}>结算项目</p>
+          <p className="text-numeric-xl font-mono tabular-nums tracking-tight" style={{ color: 'var(--fg)' }}>
+            {activeProjects}<span className="text-base font-normal" style={{ color: 'var(--muted)' }}>/{totalProjects}</span>
           </p>
         </Card>
         <Card bordered={false} className="p-4">
-          <p className="text-sm text-slate-500">待办结算</p>
-          <p className={`text-2xl font-bold ${totalPending > 0 ? 'text-amber-600' : 'text-slate-800'}`}>
+          <p className="text-sm" style={{ color: 'var(--muted)' }}>待办结算</p>
+          <p className="text-numeric-xl font-mono tabular-nums tracking-tight" style={{ color: totalPending > 0 ? 'var(--warning)' : 'var(--fg)' }}>
             {totalPending}
           </p>
         </Card>
         <Card bordered={false} className="p-4">
-          <p className="text-sm text-slate-500">结算总笔数</p>
-          <p className="text-2xl font-bold text-slate-800">
+          <p className="text-sm" style={{ color: 'var(--muted)' }}>结算总笔数</p>
+          <p className="text-numeric-xl font-mono tabular-nums tracking-tight" style={{ color: 'var(--fg)' }}>
             {settlements.length}
           </p>
         </Card>
         <Card bordered={false} className="p-4">
-          <p className="text-sm text-slate-500">结算总金额</p>
-          <p className="text-2xl font-bold text-primary-600">¥{formatMoney(totalAmount)}</p>
+          <p className="text-sm" style={{ color: 'var(--muted)' }}>结算总金额</p>
+          <p className="text-numeric-xl font-mono tabular-nums tracking-tight" style={{ color: 'var(--fg)' }}>¥{formatMoney(totalAmount)}</p>
         </Card>
       </div>
 
@@ -103,15 +103,15 @@ export default function SettlementDashboard({ settlements, projects, onProjectCl
       <div>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-lg font-semibold text-slate-800">项目结算概览</h2>
-            <p className="text-sm text-slate-500 mt-0.5">
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--fg)' }}>项目结算概览</h2>
+            <p className="text-sm mt-0.5" style={{ color: 'var(--muted)' }}>
               {activeProjects}/{totalProjects} 个项目有结算记录
             </p>
           </div>
         </div>
 
         {projectSettlementMap.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-200">
+          <div className="rounded-xl" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
             <EmptyState icon="FolderOpen" title="暂无项目数据" />
           </div>
         ) : (

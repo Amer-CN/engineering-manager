@@ -64,9 +64,9 @@ describe('FileDropZone', () => {
   it('applies drag-over style when dragOver=true', async () => {
     const { FileDropZone } = await importModule()
     const { container } = render(<FileDropZone {...baseProps} dragOver={true} />)
-    // 最外层 div 有 border-2 border-dashed，dragOver 时追加 border-primary-500
+    // 最外层 div 有 border-2 border-dashed，dragOver 时追加 border-[color:var(--accent)]
     const zone = container.querySelector('.border-2') as HTMLElement
-    expect(zone?.className).toContain('border-primary-500')
+    expect(zone?.className).toContain('border-[color:var(--accent)]')
   })
 
   it('renders file info when file is provided', async () => {

@@ -42,7 +42,7 @@ const TranscriptionParams: React.FC<TranscriptionParamsProps> = ({
   <Card title="转写参数" padding="md" shadow="sm">
     <div className="space-y-4">
       <div>
-        <label className="text-xs font-medium text-slate-600 mb-2 block">录音类型</label>
+        <label className="text-xs font-medium text-[color:var(--fg-2)] mb-2 block">录音类型</label>
         <div className="flex gap-2">
           {RECORDING_OPTIONS.map(opt => (
             <button
@@ -51,8 +51,8 @@ const TranscriptionParams: React.FC<TranscriptionParamsProps> = ({
               onClick={() => onRecordingTypeChange(opt.value)}
               className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
                 recordingType === opt.value
-                  ? 'bg-primary-50 border-primary-300 text-primary-700'
-                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                  ? 'bg-[color:var(--accent-soft)] border-[color:var(--accent)] text-[color:var(--accent)]'
+                  : 'bg-[color:var(--card)] border-[color:var(--border)] text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)]'
               }`}
             >
               {opt.label}
@@ -63,7 +63,7 @@ const TranscriptionParams: React.FC<TranscriptionParamsProps> = ({
 
       {recordingType === 'multi' && (
         <div>
-          <label className="text-xs font-medium text-slate-600 mb-2 block">说话人数量（可选，留空自动估计）</label>
+          <label className="text-xs font-medium text-[color:var(--fg-2)] mb-2 block">说话人数量（可选，留空自动估计）</label>
           <Input
             type="number"
             min={2}
@@ -76,13 +76,13 @@ const TranscriptionParams: React.FC<TranscriptionParamsProps> = ({
       )}
 
       <div>
-        <label className="text-xs font-medium text-slate-600 mb-2 block">热词 / 上下文（可选）</label>
+        <label className="text-xs font-medium text-[color:var(--fg-2)] mb-2 block">热词 / 上下文（可选）</label>
         <Input
           value={hotwords}
           onChange={(e) => onHotwordsChange(e.target.value)}
           placeholder="人名、项目名、工程术语，用逗号分隔"
         />
-        <p className="text-xs text-slate-400 mt-1">用于提升专有名词识别准确率</p>
+        <p className="text-xs text-[color:var(--muted)] mt-1">用于提升专有名词识别准确率</p>
       </div>
 
       <Button

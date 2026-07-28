@@ -106,11 +106,11 @@ export function ImportMappingStep(props: Props) {
   {/* 工作表选择 */}
   {sheetNames.length > 1 && (
   <div>
-  <label className="text-sm font-medium text-slate-700 block mb-2">工作表</label>
+  <label className="text-sm font-medium text-[color:var(--fg-2)] block mb-2">工作表</label>
   <div className="flex flex-wrap gap-2">
   {sheetNames.map(name => (
   <button key={name} onClick={() => onSwitchSheet(name)}
-  className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${name === activeSheet ? 'bg-primary-50 border-primary-400 text-primary-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+  className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${name === activeSheet ? 'bg-[color:var(--accent-soft)] border-[color:var(--accent)] text-[color:var(--accent)]' : 'bg-[color:var(--card)] border-[color:var(--border)] text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)]'}`}
   >{name}</button>
   ))}
   </div>
@@ -119,18 +119,18 @@ export function ImportMappingStep(props: Props) {
 
   {/* 列映射 */}
   <div>
-  <label className="text-sm font-medium text-slate-700 block mb-2">
+  <label className="text-sm font-medium text-[color:var(--fg-2)] block mb-2">
   列映射（选择 Excel 每列对应的系统字段）
   </label>
   <div className="grid grid-cols-2 gap-3">
   {IMPORT_FIELDS.map(f => (
   <div key={f.key} className="flex items-center gap-2">
-  <span className="text-sm text-slate-600 w-24 shrink-0">
-  {f.label}{f.required && <span className="text-red-400 ml-0.5">*</span>}
+  <span className="text-sm text-[color:var(--fg-2)] w-24 shrink-0">
+  {f.label}{f.required && <span className="text-danger-400 ml-0.5">*</span>}
   </span>
   <select value={mapping[f.key] ?? -1}
   onChange={e => onMappingChange(prev => ({ ...prev, [f.key]: parseInt(e.target.value) }))}
-  className="flex-1 px-2 py-1.5 border border-slate-300 rounded-lg text-sm bg-white">
+  className="flex-1 px-2 py-1.5 border border-[color:var(--border)] rounded-lg text-sm bg-[color:var(--card)]">
   <option value={-1}>— 不导入 —</option>
   {headers.map((h, i) => (
   <option key={i} value={i}>{h || `列 ${i + 1}`}</option>

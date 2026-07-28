@@ -37,20 +37,20 @@ export function TeamWorkerModal({
   const otherTeams = workerTeams.filter(t => t.id !== teamId && t.projectId === projectId)
 
   const columns: Column<Member>[] = [
-    { key: 'name', title: '姓名', render: (item) => <span className="font-medium text-slate-800">{item.name}</span> },
-    { key: 'idCard', title: '身份证号', render: (item) => <span className="text-slate-500 font-mono text-xs">{masked('idCard', item.idCard) || '-'}</span> },
-    { key: 'workerType', title: '工种', render: (item) => <span className="text-slate-600">{item.workerType ? getWorkerTypeLabel(item.workerType) : '-'}</span> },
-    { key: 'dailyWage', title: '日工资', align: 'right', render: (item) => <span className="text-slate-700">{item.dailyWage ? `¥${item.dailyWage}` : '-'}</span> },
-    { key: 'entryDate', title: '进场日期', render: (item) => <span className="text-slate-500 text-xs">{item.entryDate || '-'}</span> },
+    { key: 'name', title: '姓名', render: (item) => <span className="font-medium text-[color:var(--fg)]">{item.name}</span> },
+    { key: 'idCard', title: '身份证号', render: (item) => <span className="text-[color:var(--muted)] font-mono text-xs">{masked('idCard', item.idCard) || '-'}</span> },
+    { key: 'workerType', title: '工种', render: (item) => <span className="text-[color:var(--fg-2)]">{item.workerType ? getWorkerTypeLabel(item.workerType) : '-'}</span> },
+    { key: 'dailyWage', title: '日工资', align: 'right', render: (item) => <span className="text-[color:var(--fg-2)]">{item.dailyWage ? `¥${item.dailyWage}` : '-'}</span> },
+    { key: 'entryDate', title: '进场日期', render: (item) => <span className="text-[color:var(--muted)] text-xs">{item.entryDate || '-'}</span> },
     { key: 'status', title: '状态', align: 'center', render: (item) => <StatusBadge status={item.status} config={WORKER_STATUS} /> },
     { key: 'actions', title: '操作', align: 'right', render: (item) => (
       <div className="flex items-center justify-end gap-1">
         <Button onClick={() => setWageHistoryWorker({ id: item.id, name: item.name, dailyWage: item.dailyWage || 0 })}
-           variant="ghost" size="sm" className="text-amber-600">薪资</Button>
+           variant="ghost" size="sm" className="text-warning-600">薪资</Button>
         {otherTeams.length > 0 && (
           <div className="relative group">
-            <Button  variant="ghost" size="sm" className="text-amber-600">调组</Button>
-            <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg py-1 hidden group-hover:block z-10 min-w-[120px]">
+            <Button  variant="ghost" size="sm" className="text-warning-600">调组</Button>
+            <div className="absolute right-0 top-full mt-1 bg-[color:var(--card)] border border-[color:var(--border)] rounded-lg shadow-lg py-1 hidden group-hover:block z-10 min-w-[120px]">
               {otherTeams.map(t => (
                 <Button key={t.id} onClick={() => onTransferWorker(item.id, t.id)}
                    variant="secondary" size="sm" className="w-full text-left">
@@ -75,7 +75,7 @@ export function TeamWorkerModal({
   size="full"
   footer={
   <div className="flex items-center justify-between w-full">
-  <span className="text-sm text-slate-500">{teamWorkers.length} 名工人</span>
+  <span className="text-sm text-[color:var(--muted)]">{teamWorkers.length} 名工人</span>
   <div className="flex items-center gap-3">
   <Button onClick={() => onAddWorkers(teamId, projectId)}
    variant="primary">
@@ -84,7 +84,7 @@ export function TeamWorkerModal({
   </div>
   </div>
   }>
-  <p className="text-sm text-slate-500 mb-4">共 {teamWorkers.length} 名工人</p>
+  <p className="text-sm text-[color:var(--muted)] mb-4">共 {teamWorkers.length} 名工人</p>
 
   {/* Content */}
   <div>
@@ -102,8 +102,8 @@ export function TeamWorkerModal({
   ) : (
   <div className="text-center py-12">
   <div className="text-6xl mb-4"><Icon name="Users" size={48} /></div>
-  <h3 className="text-lg font-medium text-slate-800 mb-2">该班组暂无工人</h3>
-  <p className="text-slate-500 mb-4">从工人库添加工人到此班组</p>
+  <h3 className="text-lg font-medium text-[color:var(--fg)] mb-2">该班组暂无工人</h3>
+  <p className="text-[color:var(--muted)] mb-4">从工人库添加工人到此班组</p>
   </div>
   )}
   </div>

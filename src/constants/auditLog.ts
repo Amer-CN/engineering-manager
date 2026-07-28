@@ -17,9 +17,9 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
 
 /** 审计级别映射 (badge 颜色) */
 export const LEVEL_COLORS: Record<AuditLevel, string> = {
-  info: 'text-blue-600 bg-blue-50',
-  warning: 'text-yellow-600 bg-yellow-50',
-  error: 'text-red-600 bg-red-50',
+  info: 'text-[color:var(--fg-2)] bg-[color:var(--panel-2)]',
+  warning: 'text-warning-600 bg-warning-50',
+  error: 'text-danger-600 bg-danger-50',
 }
 
 /** 资源标签映射 */

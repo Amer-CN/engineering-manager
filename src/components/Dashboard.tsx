@@ -98,15 +98,15 @@ const Dashboard: React.FC = () => {
   if (loading) {
     return (
       <div className="max-w-[1600px] mx-auto p-6 space-y-6">
-        <div className="rounded-2xl bg-slate-100 animate-pulse h-32" />
+        <div className="rounded-xl bg-[color:var(--panel-2)] animate-pulse h-32" />
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
-            <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }} className="rounded-xl bg-slate-100 animate-pulse h-28" />
+            <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }} className="rounded-xl bg-[color:var(--panel-2)] animate-pulse h-28" />
           ))}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="rounded-xl bg-slate-100 animate-pulse h-80" />
-          <div className="rounded-xl bg-slate-100 animate-pulse h-80" />
+          <div className="rounded-xl bg-[color:var(--panel-2)] animate-pulse h-80" />
+          <div className="rounded-xl bg-[color:var(--panel-2)] animate-pulse h-80" />
         </div>
       </div>
     )
@@ -116,12 +116,12 @@ const Dashboard: React.FC = () => {
     return (
       <div className="flex items-center justify-center h-full">
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center">
-          <Icon name="AlertCircle" size={48} className="text-red-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-slate-700 mb-2">加载失败</h3>
-          <p className="text-slate-500 mb-4">{error}</p>
+          <Icon name="AlertCircle" size={48} className="text-danger-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-[color:var(--fg-2)] mb-2">加载失败</h3>
+          <p className="text-[color:var(--muted)] mb-4">{error}</p>
           <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
             onClick={() => { statsQuery.refetch(); invoicesQuery.refetch() }}
-            className="bg-primary-600 hover:bg-primary-700 text-white text-sm px-4 py-2 rounded-lg transition-colors">重试</motion.button>
+            className="bg-[color:var(--fg)] hover:opacity-90 text-[color:var(--bg)] text-sm px-4 py-2 rounded-lg transition-colors">重试</motion.button>
         </motion.div>
       </div>
     )
@@ -152,8 +152,8 @@ const Dashboard: React.FC = () => {
             {/* ═══ Recent Projects & Invoices ═══ */}
             <motion.section variants={sectionVariant} className="grid grid-cols-1 lg:grid-cols-2 gap-5">
               <Card 
-                title={<span className="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2"><Icon name="FolderKanban" size={14} /> 最近项目</span>}
-                extra={stats?.projectsCount ? <span className="text-xs text-slate-400">{stats.projectsCount} 总计</span> : null}
+                title={<span className="text-sm font-semibold uppercase tracking-wider text-[color:var(--muted)] flex items-center gap-2"><Icon name="FolderKanban" size={14} /> 最近项目</span>}
+                extra={stats?.projectsCount ? <span className="text-xs text-[color:var(--muted)]">{stats.projectsCount} 总计</span> : null}
                 headerDivider
               >
                 {stats?.recentProjects && stats.recentProjects.length > 0 ? (
@@ -172,11 +172,11 @@ const Dashboard: React.FC = () => {
                             <span className="flex items-center justify-center w-full h-full text-xs font-bold" style={{ color: 'var(--muted)' }}>{index + 1}</span>
                           </div>
                           <div className="min-w-0">
-                            <p className="font-medium text-sm truncate group-hover:text-primary-600 transition-colors" style={{ color: 'var(--fg)' }}>{project.name}</p>
-                            <p className="text-xs text-slate-400 truncate mt-0.5">{project.address || '暂无地址'}</p>
+                            <p className="font-medium text-sm truncate group-hover:text-[color:var(--accent)] transition-colors" style={{ color: 'var(--fg)' }}>{project.name}</p>
+                            <p className="text-xs text-[color:var(--muted)] truncate mt-0.5">{project.address || '暂无地址'}</p>
                           </div>
                         </div>
-                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${statusLabels[project.status]?.color || 'bg-slate-100 text-slate-700'}`}>
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${statusLabels[project.status]?.color || 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)]'}`}>
                           <motion.span animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 2, repeat: Infinity }}
                             className={`inline-block w-1.5 h-1.5 rounded-full ${statusLabels[project.status]?.dot} mr-1.5 align-middle`} />{statusLabels[project.status]?.text || project.status}
                         </span>
@@ -184,15 +184,15 @@ const Dashboard: React.FC = () => {
                     ))}
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+                  <div className="flex flex-col items-center justify-center py-12 text-[color:var(--muted)]">
                     <Icon name="FolderKanban" size={32} className="mb-2 opacity-40" /><p className="text-sm">暂无项目</p>
                   </div>
                 )}
               </Card>
 
               <Card 
-                title={<span className="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2"><Icon name="Receipt" size={14} /> 最近发票</span>}
-                extra={stats?.invoicesCount ? <span className="text-xs text-slate-400">{stats.invoicesCount} 总计</span> : null}
+                title={<span className="text-sm font-semibold uppercase tracking-wider text-[color:var(--muted)] flex items-center gap-2"><Icon name="Receipt" size={14} /> 最近发票</span>}
+                extra={stats?.invoicesCount ? <span className="text-xs text-[color:var(--muted)]">{stats.invoicesCount} 总计</span> : null}
                 headerDivider
               >
                 {recentInvoices.length > 0 ? (
@@ -207,33 +207,33 @@ const Dashboard: React.FC = () => {
                         style={{ background: 'var(--bg)' }}
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <p className="font-medium text-slate-800 text-sm truncate">{inv.invoiceNo || '无号'}</p>
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ml-2 ${invoiceStatusLabels[inv.status]?.color || 'bg-slate-100 text-slate-700'}`}>
+                          <p className="font-medium text-[color:var(--fg)] text-sm truncate">{inv.invoiceNo || '无号'}</p>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ml-2 ${invoiceStatusLabels[inv.status]?.color || 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)]'}`}>
                             <motion.span animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 2, repeat: Infinity }}
-                              className={`inline-block w-1.5 h-1.5 rounded-full ${invoiceStatusLabels[inv.status]?.dot || 'bg-slate-400'} mr-1 align-middle`} />{invoiceStatusLabels[inv.status]?.text || inv.status}
+                              className={`inline-block w-1.5 h-1.5 rounded-full ${invoiceStatusLabels[inv.status]?.dot || 'bg-[color:var(--muted)]'} mr-1 align-middle`} />{invoiceStatusLabels[inv.status]?.text || inv.status}
                           </span>
                         </div>
-                        <div className="flex items-center gap-3 text-xs text-slate-500 mb-2">
+                        <div className="flex items-center gap-3 text-xs text-[color:var(--muted)] mb-2">
                           <span className="flex items-center gap-1"><Icon name="Building2" size={12} />{inv.buyerName || inv.sellerName || '未知单位'}</span>
-                          <span className="text-slate-300">|</span>
+                          <span className="text-[color:var(--border-strong)]">|</span>
                           <span className="flex items-center gap-1"><Icon name="DollarSign" size={12} />{formatMoney(inv.amount)}</span>
                         </div>
                         <div className="flex items-center gap-3">
-                          <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                          <div className="flex-1 h-1.5 bg-[color:var(--panel-2)] rounded-full overflow-hidden">
                             <motion.div
-                              className="h-full bg-primary-500 rounded-full"
+                              className="h-full bg-[color:var(--accent)] rounded-full"
                               initial={{ width: 0 }}
                               animate={{ width: `${inv.amount > 0 ? Math.round(inv.receivedAmount / inv.amount * 100) : 0}%` }}
                               transition={{ duration: 0.8, delay: 0.3 + index * 0.1, ease: 'easeOut' }}
                             />
                           </div>
-                          <span className="text-xs text-slate-500 font-medium w-8 text-right">{inv.amount > 0 ? Math.round(inv.receivedAmount / inv.amount * 100) : 0}%</span>
+                          <span className="text-xs text-[color:var(--muted)] font-medium w-8 text-right">{inv.amount > 0 ? Math.round(inv.receivedAmount / inv.amount * 100) : 0}%</span>
                         </div>
                       </motion.div>
                     ))}
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+                  <div className="flex flex-col items-center justify-center py-12 text-[color:var(--muted)]">
                     <Icon name="Receipt" size={32} className="mb-2 opacity-40" /><p className="text-sm">暂无发票</p>
                   </div>
                 )}

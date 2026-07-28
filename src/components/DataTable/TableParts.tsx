@@ -29,7 +29,7 @@ export function TableSkeleton({ columns, rows = 5 }: { columns: Column<never>[];
             <tr key={i} className={TABLE.bodyRow}>
               {columns.map(col => (
                 <td key={col.key} className={TABLE.bodyCell}>
-                  <div className="h-4 bg-slate-200 rounded animate-pulse" />
+                  <div className="h-4 bg-[color:var(--panel-2)] rounded animate-pulse" />
                 </td>
               ))}
             </tr>
@@ -53,7 +53,7 @@ export function TableEmpty({
   return (
     <tr>
       <td colSpan={colSpan} className="px-4 py-16 text-center">
-        <div className="flex flex-col items-center gap-3 text-slate-400">
+        <div className="flex flex-col items-center gap-3 text-[color:var(--muted)]">
           {typeof iconName === 'string' ? (
             <Icon name={iconName} size={32} />
           ) : iconName ? (

@@ -18,11 +18,11 @@ export function ImportFileStep({ selectedBatch, onBatchChange, batches, onFileCh
   <div className="space-y-4">
   {batches && batches.length > 0 && (
   <div className="flex items-center gap-2 justify-center">
-  <span className="text-sm text-slate-500">导入到版本：</span>
+  <span className="text-sm text-[color:var(--muted)]">导入到版本：</span>
   <select
   value={selectedBatch}
   onChange={e => onBatchChange(parseInt(e.target.value))}
-  className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm bg-white"
+  className="px-3 py-1.5 border border-[color:var(--border)] rounded-lg text-sm bg-[color:var(--card)]"
   >
   {batches.map(b => (
   <option key={b.id} value={b.id}>
@@ -31,17 +31,17 @@ export function ImportFileStep({ selectedBatch, onBatchChange, batches, onFileCh
   ))}
   </select>
   {selectedBatch === 0 && (
-  <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">
+  <span className="text-xs text-warning-600 bg-warning-50 px-2 py-1 rounded">
   建议先建新版本再导入
   </span>
   )}
   </div>
   )}
-  <div className="border-2 border-dashed border-slate-300 rounded-xl p-10 text-center hover:border-primary-400 transition-colors">
-  <Icon name="FileSpreadsheet" size={48} className="mx-auto text-slate-400 mb-3" />
-  <p className="text-slate-600 mb-2">选择 Excel 文件（.xlsx / .xls）</p>
-  <p className="text-xs text-slate-400 mb-4">财务导出的台账格式</p>
-  <label className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg cursor-pointer hover:bg-primary-700 transition-colors">
+  <div className="border-2 border-dashed border-[color:var(--border)] rounded-xl p-10 text-center hover:border-[color:var(--accent)] transition-colors">
+  <Icon name="FileSpreadsheet" size={48} className="mx-auto text-[color:var(--muted)] mb-3" />
+  <p className="text-[color:var(--fg-2)] mb-2">选择 Excel 文件（.xlsx / .xls）</p>
+  <p className="text-xs text-[color:var(--muted)] mb-4">财务导出的台账格式</p>
+  <label className="inline-flex items-center gap-2 px-4 py-2 bg-[color:var(--accent)] text-[color:var(--on-accent)] rounded-lg cursor-pointer hover:opacity-90 transition-colors">
   <Icon name="Upload" size={16} />
   选择文件
   <input type="file" accept=".xlsx,.xls" onChange={onFileChange} className="hidden" />

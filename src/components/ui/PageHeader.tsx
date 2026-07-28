@@ -12,23 +12,23 @@ interface PageHeaderProps {
 
 const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, icon, onBack, actions, className = '' }) => {
   return (
-  <div className={`flex items-center justify-between mb-6 ${className}`}>
+  <div className={`flex items-center justify-between pb-4 mb-6 border-b border-[color:var(--border)] ${className}`}>
   <div className="flex items-center gap-3">
   {onBack && (
   <button
   onClick={onBack}
-  className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors"
+  className="p-2 rounded-lg hover:bg-[color:var(--panel-2)] text-[color:var(--muted)] hover:text-[color:var(--fg-2)] transition-colors"
   >
   <Icon name="ArrowLeft" size={20} />
   </button>
   )}
   {icon && !onBack && (
-  <Icon name={icon} size={24} className="text-slate-400" />
+  <Icon name={icon} size={24} className="text-[color:var(--muted)]" />
   )}
   <div>
-  <h1 className="text-2xl font-bold text-slate-800">{title}</h1>
+  <h1 className="text-base font-semibold tracking-tight text-[color:var(--fg)]">{title}</h1>
   {subtitle && (
-  <p className="text-slate-500 mt-1">{subtitle}</p>
+  <p className="text-[color:var(--muted)] mt-1">{subtitle}</p>
   )}
   </div>
   </div>

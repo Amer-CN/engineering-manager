@@ -52,9 +52,9 @@ export function Pagination({
 
   const paginationNumbers = getPaginationNumbers()
 
-  const btnBase = 'flex items-center justify-center min-w-[36px] h-9 px-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500'
-  const btnActive = 'bg-primary-600 text-white shadow-sm'
-  const btnInactive = 'text-slate-600 hover:bg-slate-100:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent'
+  const btnBase = 'flex items-center justify-center min-w-[36px] h-9 px-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-soft)]'
+  const btnActive = 'bg-[color:var(--accent)] text-[color:var(--on-accent)] shadow-sm'
+  const btnInactive = 'text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent'
 
   if (simple) {
   return (
@@ -67,7 +67,7 @@ export function Pagination({
   >
   <Icon name="ChevronLeft" size={16} />
   </button>
-  <span className="text-sm text-slate-600">
+  <span className="text-sm text-[color:var(--fg-2)]">
   {current} / {total}
   </span>
   <button
@@ -85,7 +85,7 @@ export function Pagination({
   return (
   <div className={`flex items-center gap-4 flex-wrap ${className}`}>
   {showTotal && (
-  <span className="text-sm text-slate-500">
+  <span className="text-sm text-[color:var(--muted)]">
   共 {total} 条
   </span>
   )}
@@ -102,7 +102,7 @@ export function Pagination({
 
   {paginationNumbers.map((num, index) => {
   if (num === 'ellipsis') {
-  return <span key={`e-${index}`} className="px-2 text-slate-400">...</span>
+  return <span key={`e-${index}`} className="px-2 text-[color:var(--muted)]">...</span>
   }
   const isActive = current === num
   return (
@@ -129,11 +129,11 @@ export function Pagination({
 
   {onPageSizeChange && (
   <div className="flex items-center gap-2 text-sm">
-  <span className="text-slate-500">每页</span>
+  <span className="text-[color:var(--muted)]">每页</span>
   <select
   value={pageSize}
   onChange={(e) => onPageSizeChange(Number(e.target.value))}
-  className="px-2 py-1 border border-slate-200 rounded-lg text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+  className="px-2 py-1 border border-[color:var(--border)] rounded-lg text-[color:var(--fg-2)] bg-[color:var(--card)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)]"
   >
   {pageSizeOptions.map((size) => (
   <option key={size} value={size}>{size}</option>
@@ -144,7 +144,7 @@ export function Pagination({
 
   {showQuickJumper && (
   <div className="flex items-center gap-2 text-sm">
-  <span className="text-slate-500">跳至</span>
+  <span className="text-[color:var(--muted)]">跳至</span>
   <input
   type="number"
   min={1}
@@ -159,9 +159,9 @@ export function Pagination({
   if (page >= 1 && page <= total) onChange(page)
   }
   }}
-  className="w-16 px-2 py-1 border border-slate-200 rounded-lg text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+  className="w-16 px-2 py-1 border border-[color:var(--border)] rounded-lg text-[color:var(--fg-2)] bg-[color:var(--card)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)]"
   />
-  <span className="text-slate-500">页</span>
+  <span className="text-[color:var(--muted)]">页</span>
   </div>
   )}
   </div>

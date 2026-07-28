@@ -11,6 +11,7 @@ import { NAV_ITEMS, PAGE_IDS, getFilteredSidebarRoutes } from './routes'
 import { MaskProvider, useUserIdSync } from './contexts/MaskContext'
 import { UpdaterProvider } from './hooks/useUpdater'
 import { RequirePermission, RequireAdmin } from './hooks/usePermission'
+import { NoAccessState } from './components/ui/NoAccessState'
 import { useAuth } from './hooks/useAuth'
 import { useRowHoverOpacity } from './hooks/useRowHoverOpacity'
 import { useTheme } from './hooks/useTheme'
@@ -291,9 +292,9 @@ const AppContent: React.FC = () => {
       case 'templates': return <Templates />
       case 'inventory': return <Inventory {...props} />
       case 'invoices': return <Invoices {...props} />
-      case 'knowledge': return <RequirePermission permission="knowledge:read"><SpeechKnowledgePage /></RequirePermission>
-      case 'users': return <RequireAdmin><Users /></RequireAdmin>
-      case 'settings': return <RequirePermission permission="settings:read"><Settings /></RequirePermission>
+      case 'knowledge': return <RequirePermission permission="knowledge:read" fallback={<NoAccessState />}><SpeechKnowledgePage /></RequirePermission>
+      case 'users': return <RequireAdmin fallback={<NoAccessState description="用户管理仅限管理员访问。" />}><Users /></RequireAdmin>
+      case 'settings': return <RequirePermission permission="settings:read" fallback={<NoAccessState />}><Settings /></RequirePermission>
       default: return <Dashboard />
     }
   }
@@ -311,7 +312,7 @@ const AppContent: React.FC = () => {
   const shouldShowTitleBar = !isFullScreen || showTitleBarInFullScreen
 
   return (
-    <div className="h-screen relative overflow-hidden select-none flex flex-col bg-slate-50"
+    <div className="h-screen relative overflow-hidden select-none flex flex-col bg-[color:var(--bg)]"
          style={{
            boxShadow: '0 0 0 1px rgba(0,0,0,0.08), 0 0 20px rgba(0,0,0,0.08)',
          } as React.CSSProperties}>

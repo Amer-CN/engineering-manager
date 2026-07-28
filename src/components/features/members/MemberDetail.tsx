@@ -42,7 +42,7 @@ export function MemberDetail({
 
   const detailTitle = (
     <div className="flex items-center gap-4">
-      <span className="text-xl font-semibold text-slate-800">
+      <span className="text-xl font-semibold text-[color:var(--fg)]">
         {isWorker ? <><Icon name="Construction" size={20} className="inline-block" /> 农民工详情</> : <><Icon name="UserCircle" size={20} className="inline-block" /> 管理人员详情</>}
       </span>
       {isWorker && (
@@ -59,7 +59,7 @@ export function MemberDetail({
     <Modal isOpen onClose={onClose} title={detailTitle} size="full"
       footer={
         <div className="flex items-center justify-between w-full">
-          <div className="text-sm text-slate-500">
+          <div className="text-sm text-[color:var(--muted)]">
             创建时间: {member.createdAt ? new Date(member.createdAt).toLocaleString() : '未知'}
           </div>
           <div className="flex items-center gap-3">
@@ -69,7 +69,7 @@ export function MemberDetail({
             {isWorker && !isLeft && (
               <>
                 {onTransfer && (
-                  <Button onClick={onTransfer}  variant="ghost" size="sm" className="text-primary-600">调组</Button>
+                  <Button onClick={onTransfer}  variant="ghost" size="sm" className="text-[color:var(--accent)]">调组</Button>
                 )}
                 {onLeave && (
                   <Button onClick={onLeave}  variant="ghost" size="sm">离场</Button>
@@ -88,31 +88,27 @@ export function MemberDetail({
       }
     >
       {/* 基本信息卡片 */}
-      <Card className="border border-slate-200 p-6 mb-6">
-        <h3 className="text-lg font-medium text-slate-800 mb-4 flex items-center">
+      <Card className="border border-[color:var(--border)] p-6 mb-6">
+        <h3 className="text-lg font-medium text-[color:var(--fg)] mb-4 flex items-center">
           <span className="mr-2">📋</span>
           基本信息
         </h3>
 
         <div className="flex items-start mb-6">
-          <div className={`w-20 h-20 rounded-full flex items-center justify-center text-3xl mr-6 ${
-            isWorker
-              ? 'bg-gradient-to-br from-orange-400 to-orange-600'
-              : 'bg-gradient-to-br from-primary-400 to-primary-600'
-          } text-white`}>
+          <div className="w-20 h-20 rounded-full flex items-center justify-center text-3xl mr-6" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
             {isWorker ? <Icon name="Construction" size={32} /> : <Icon name="UserCircle" size={32} />}
           </div>
 
           <div className="flex-1">
-            <h4 className="text-2xl font-bold text-slate-800">{member.name}</h4>
-            <p className="text-slate-500 mt-1">
+            <h4 className="text-2xl font-bold text-[color:var(--fg)]">{member.name}</h4>
+            <p className="text-[color:var(--muted)] mt-1">
               {isWorker
                 ? getWorkerTypeLabel(member.workerType || 'other')
                 : member.role || '其他'
               }
             </p>
             {isWorker && member.teamName && (
-              <p className="text-sm text-slate-500 mt-1">
+              <p className="text-sm text-[color:var(--muted)] mt-1">
                 {member.projectName} / {member.teamName}
               </p>
             )}
@@ -133,8 +129,8 @@ export function MemberDetail({
       </Card>
 
       {/* 身份证信息卡片 */}
-      <Card className="border border-slate-200 p-6 mb-6">
-        <h3 className="text-lg font-medium text-slate-800 mb-4 flex items-center">
+      <Card className="border border-[color:var(--border)] p-6 mb-6">
+        <h3 className="text-lg font-medium text-[color:var(--fg)] mb-4 flex items-center">
           <span className="mr-2">🪪</span>
           身份证信息
         </h3>
@@ -173,14 +169,14 @@ export function MemberDetail({
 
       {/* 合同信息卡片 */}
       {member.contractFile && fileUrls.contractFile && (
-        <Card className="border border-slate-200 p-6 mb-6">
-          <h3 className="text-lg font-medium text-slate-800 mb-4 flex items-center">
+        <Card className="border border-[color:var(--border)] p-6 mb-6">
+          <h3 className="text-lg font-medium text-[color:var(--fg)] mb-4 flex items-center">
             <Icon name="FileText" size={18} className="mr-2" />
             劳动合同
           </h3>
           <button
             onClick={() => handlePreview(fileUrls.contractFile!, member.contractFileType === 'pdf' ? 'pdf' : 'image', '劳动合同')}
-            className="text-primary-600 hover:text-primary-700 underline"
+            className="text-[color:var(--accent)] hover:opacity-70 underline"
           >
             {member.contractFileType === 'pdf' ? <><Icon name="FileText" size={14} className="inline-block" /> 查看PDF合同</> : <><Icon name="Image" size={14} className="inline-block" />查看合同图片</>}
           </button>
@@ -189,12 +185,12 @@ export function MemberDetail({
 
       {/* 备注卡片 */}
       {member.remarks && (
-        <Card className="border border-slate-200 p-6 mb-6">
-          <h3 className="text-lg font-medium text-slate-800 mb-4 flex items-center">
+        <Card className="border border-[color:var(--border)] p-6 mb-6">
+          <h3 className="text-lg font-medium text-[color:var(--fg)] mb-4 flex items-center">
             <span className="mr-2">📝</span>
             备注
           </h3>
-          <p className="text-slate-600 whitespace-pre-wrap">{member.remarks}</p>
+          <p className="text-[color:var(--fg-2)] whitespace-pre-wrap">{member.remarks}</p>
         </Card>
       )}
 

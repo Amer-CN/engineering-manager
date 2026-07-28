@@ -149,13 +149,13 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
     <>
       <div className="px-3 pb-2">
         <div className="relative">
-          <Icon name="Search" size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Icon name="Search" size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[color:var(--muted)]" />
           <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="搜索对话..."
-            className="w-full pl-8 pr-3 py-2 text-sm rounded-lg border border-slate-200 bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-400/30 focus:border-primary-400 transition-all" />
+            className="w-full pl-8 pr-3 py-2 text-sm rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] text-[color:var(--fg-2)] placeholder-[color:var(--muted)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] focus:border-[color:var(--accent)] transition-all" />
           {searchQuery && (
             <button onClick={() => setSearchQuery('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500">
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-[color:var(--border-strong)] hover:text-[color:var(--muted)]">
               <Icon name="X" size={14} />
             </button>
           )}
@@ -176,26 +176,26 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
-                <Icon name="Loader2" size={20} className="text-slate-300" />
+                <Icon name="Loader2" size={20} className="text-[color:var(--border-strong)]" />
               </motion.div>
             </div>
           ) : grouped.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Icon name="Inbox" size={32} className="text-slate-200 mb-2" />
-              <p className="text-sm text-slate-400">{searchQuery ? '未找到匹配的对话' : '暂无对话记录'}</p>
-              {!searchQuery && <p className="text-xs text-slate-300 mt-1">点击「新对话」开始</p>}
+              <Icon name="Inbox" size={32} className="text-[color:var(--border-strong)] mb-2" />
+              <p className="text-sm text-[color:var(--muted)]">{searchQuery ? '未找到匹配的对话' : '暂无对话记录'}</p>
+              {!searchQuery && <p className="text-xs text-[color:var(--border-strong)] mt-1">点击「新对话」开始</p>}
             </div>
           ) : (
             grouped.map(group => (
               <div key={group.key} className="mb-3">
-                <p className="text-xs font-medium text-slate-400 px-2 py-1.5">{group.label}</p>
+                <p className="text-xs font-medium text-[color:var(--muted)] px-2 py-1.5">{group.label}</p>
                 <div className="space-y-0.5">
                   {group.items.map(conv => {
                     const isActive = currentConversationId === conv.id
                     const isRenaming = renamingId === conv.id
                     return (
                       <div key={conv.id}
-                        className={`group relative rounded-xl transition-colors ${isActive ? 'bg-primary-50' : 'hover:bg-slate-50'}`}>
+                        className={`group relative rounded-xl transition-colors ${isActive ? 'bg-[color:var(--accent-soft)]' : 'hover:bg-[color:var(--panel-2)]'}`}>
                         {isRenaming ? (
                           <input type="text" value={renameValue}
                             onChange={(e) => setRenameValue(e.target.value)}
@@ -206,29 +206,29 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
                               }
                             }}
                             onBlur={() => commitRename(conv.id)} autoFocus
-                            className="w-full px-3 py-2.5 text-sm rounded-xl border border-primary-400 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-400/30" />
+                            className="w-full px-3 py-2.5 text-sm rounded-xl border border-[color:var(--accent)] bg-[color:var(--card)] text-[color:var(--fg-2)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)]" />
                         ) : (
                           <>
                             <button onClick={() => { onSelectConversation(conv); if (!inline) onClose?.() }}
                               className="w-full text-left px-3 py-2.5 pr-16">
                               <div className="flex items-start justify-between gap-2">
-                                <p className={`text-sm font-medium truncate flex-1 ${isActive ? 'text-primary-700' : 'text-slate-700'}`}>
+                                <p className={`text-sm font-medium truncate flex-1 ${isActive ? 'text-[color:var(--accent)]' : 'text-[color:var(--fg-2)]'}`}>
                                   {conv.title || `对话 ${conv.id}`}
                                 </p>
-                                <span className="text-xs text-slate-400 flex-shrink-0 mt-0.5">{formatTime(conv.updatedAt)}</span>
+                                <span className="text-xs text-[color:var(--muted)] flex-shrink-0 mt-0.5">{formatTime(conv.updatedAt)}</span>
                               </div>
-                              {conv.lastMessage && <p className="text-xs text-slate-400 mt-0.5 truncate">{truncate(conv.lastMessage)}</p>}
+                              {conv.lastMessage && <p className="text-xs text-[color:var(--muted)] mt-0.5 truncate">{truncate(conv.lastMessage)}</p>}
                               <div className="flex items-center gap-2 mt-1">
-                                <span className="text-xs text-slate-300">{conv.messageCount} 条消息</span>
+                                <span className="text-xs text-[color:var(--border-strong)]">{conv.messageCount} 条消息</span>
                               </div>
                             </button>
                             <button onClick={(e) => { e.stopPropagation(); startRename(conv) }}
-                              className="absolute right-9 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-300 hover:text-primary-500 hover:bg-primary-50 opacity-0 group-hover:opacity-100 transition-all"
+                              className="absolute right-9 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-[color:var(--border-strong)] hover:text-[color:var(--accent)] hover:bg-[color:var(--accent-soft)] opacity-0 group-hover:opacity-100 transition-all"
                               title="重命名对话">
                               <Icon name="Edit3" size={14} />
                             </button>
                             <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(conv) }}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+                              className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-[color:var(--border-strong)] hover:text-danger-500 hover:bg-danger-50 opacity-0 group-hover:opacity-100 transition-all"
                               title="删除对话">
                               <Icon name="Trash2" size={14} />
                             </button>
@@ -255,12 +255,12 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
 
   if (inline) {
     return (
-      <div className="flex flex-col h-full bg-white border-l border-slate-100">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-          <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+      <div className="flex flex-col h-full bg-[color:var(--card)] border-l border-[color:var(--border)]">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[color:var(--border)]">
+          <h3 className="text-sm font-semibold text-[color:var(--fg-2)] flex items-center gap-2">
             <Icon name="Inbox" size={16} />对话历史
           </h3>
-          <span className="text-xs text-slate-400">{conversations.length}</span>
+          <span className="text-xs text-[color:var(--muted)]">{conversations.length}</span>
         </div>
         {content}
         {confirmDialog}
@@ -277,12 +277,12 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
             className="fixed inset-0 bg-black/20 z-40 lg:hidden" />
           <motion.aside initial={{ x: -320, opacity: 0 }} animate={{ x: 0, opacity: 1 }}
             exit={{ x: -320, opacity: 0 }} transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-            className="fixed top-0 left-0 bottom-0 w-80 bg-white border-r border-slate-200 z-50 flex flex-col shadow-xl">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-              <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+            className="fixed top-0 left-0 bottom-0 w-80 bg-[color:var(--card)] border-r border-[color:var(--border)] z-50 flex flex-col shadow-xl">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[color:var(--border)]">
+              <h3 className="text-sm font-semibold text-[color:var(--fg-2)] flex items-center gap-2">
                 <Icon name="Inbox" size={16} />对话历史
               </h3>
-              <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors">
+              <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[color:var(--panel-2)] text-[color:var(--muted)] transition-colors">
                 <Icon name="X" size={18} />
               </button>
             </div>

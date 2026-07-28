@@ -27,15 +27,15 @@ export default function TemplateList({
     <div>
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={onBack} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors">
+        <button onClick={onBack} className="p-2 rounded-lg hover:bg-[color:var(--panel-2)] text-[color:var(--muted)] hover:text-[color:var(--fg-2)] transition-colors">
           <Icon name="ArrowLeft" size={20} />
         </button>
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${config.fileType === 'xlsx' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${config.fileType === 'xlsx' ? 'bg-success-50 text-success-600' : 'bg-[color:var(--accent-soft)] text-[color:var(--accent)]'}`}>
           <Icon name={config.icon} size={22} />
         </div>
         <div className="flex-1">
-          <h1 className="text-xl font-bold text-slate-800">{config.label}</h1>
-          <p className="text-sm text-slate-500">{config.description}</p>
+          <h1 className="text-base font-semibold tracking-tight text-[color:var(--fg)]">{config.label}</h1>
+          <p className="text-sm text-[color:var(--muted)]">{config.description}</p>
         </div>
         <Button onClick={onCreate}  variant="primary">
           <Icon name="Plus" size={16} /> 新建模板
@@ -45,23 +45,23 @@ export default function TemplateList({
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         <Card bordered={false} className="p-3">
-          <p className="text-xs text-slate-400">模板总数</p>
-          <p className="text-lg font-bold text-slate-800">{templates.length}</p>
+          <p className="text-xs text-[color:var(--muted)]">模板总数</p>
+          <p className="text-lg font-bold text-[color:var(--fg)]">{templates.length}</p>
         </Card>
         <Card bordered={false} className="p-3">
-          <p className="text-xs text-slate-400">Word 文档</p>
-          <p className="text-lg font-bold text-blue-600">{docxCount}</p>
+          <p className="text-xs text-[color:var(--muted)]">Word 文档</p>
+          <p className="text-lg font-bold text-[color:var(--fg)]">{docxCount}</p>
         </Card>
         <Card bordered={false} className="p-3">
-          <p className="text-xs text-slate-400">Excel 表格</p>
-          <p className="text-lg font-bold text-emerald-600">{xlsxCount}</p>
+          <p className="text-xs text-[color:var(--muted)]">Excel 表格</p>
+          <p className="text-lg font-bold text-success-600">{xlsxCount}</p>
         </Card>
       </div>
 
       {/* Template cards */}
       {templates.length === 0 ? (
-        <div className="text-center py-16 text-slate-400 bg-white rounded-2xl border border-slate-200">
-          <Icon name="FileText" size={48} className="mx-auto mb-3 text-slate-300" />
+        <div className="text-center py-16 text-[color:var(--muted)] bg-[color:var(--card)] rounded-xl border border-[color:var(--border)]">
+          <Icon name="FileText" size={48} className="mx-auto mb-3 text-[color:var(--border-strong)]" />
           <p className="text-lg">此分类暂无模板</p>
           <p className="text-sm mt-1">点击「新建模板」上传 .docx 或 .xlsx 文件</p>
           <Button onClick={onCreate}  variant="primary" className="mt-4 text-sm">创建第一个模板</Button>

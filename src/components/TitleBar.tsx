@@ -102,14 +102,32 @@ const TitleBar: React.FC<TitleBarProps> = ({ onToggleCollapse, collapsed = false
         </button>
         <div className="flex items-center gap-2 ml-0.5">
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none" className="shrink-0" style={{ marginTop: 1 }}>
-            <defs><linearGradient id="mark-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="var(--accent)" /><stop offset="100%" stopColor="var(--violet)" /></linearGradient><mask id="mark-mask"><rect width="18" height="18" fill="white" /><path d="M5 14 L9 6 L13 14 Z" fill="black" /></mask></defs>
-            <path d="M2 15.5 L9 2.5 L16 15.5 Z" fill="url(#mark-grad)" strokeLinejoin="round" mask="url(#mark-mask)" />
+            <defs><mask id="mark-mask"><rect width="18" height="18" fill="white" /><path d="M5 14 L9 6 L13 14 Z" fill="black" /></mask></defs>
+            <path d="M2 15.5 L9 2.5 L16 15.5 Z" fill="var(--accent)" strokeLinejoin="round" mask="url(#mark-mask)" />
           </svg>
           <span className="text-sm font-semibold tracking-tight leading-none" style={{ color: 'var(--fg)', marginTop: 1 }}>工程管家</span>
         </div>
       </div>
 
-      <div className="flex-1" />
+      {/* ── S0 Stitch: 命令面板搜索触发器 ── */}
+      <div className="flex-1 flex items-center justify-center px-4">
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            // 模拟 Ctrl+K 触发 CommandPalette
+            window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }))
+          }}
+          onDoubleClick={e => e.stopPropagation()}
+          className="flex items-center gap-2 rounded-full px-3 py-1 text-xs transition-colors cursor-text max-w-[240px] w-full"
+          style={{ background: 'var(--panel-2)', color: 'var(--muted)' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'var(--panel)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'var(--panel-2)' }}
+          title="搜索 (Ctrl+K)"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <span className="opacity-70 truncate">搜索指令或数据...</span>
+        </button>
+      </div>
 
       {/* ── 全屏按钮 ── */}
       <button

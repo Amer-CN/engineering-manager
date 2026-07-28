@@ -36,16 +36,16 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
       sorter: (a, b) => (a.issueDate || '').localeCompare(b.issueDate || ''),
       render: (item) => (
         <>
-          <div className="font-medium text-slate-800">{item.issueDate}</div>
+          <div className="font-medium font-mono tabular-nums" style={{ color: 'var(--fg)' }}>{item.issueDate}</div>
           <div className="flex items-center gap-1 mt-1">
-            <span className={`px-1.5 py-0.5 rounded text-xs ${item.type === 'invoice_in' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+            <span className="px-1.5 py-0.5 rounded text-xs" style={{ background: 'var(--panel-2)', color: 'var(--fg-2)' }}>
               {item.type === 'invoice_in' ? '收票' : '开票'}
             </span>
             <span className={`px-1.5 py-0.5 rounded text-xs ${getKindConfig(item.invoiceKind).bgColor} ${getKindConfig(item.invoiceKind).color}`}>
               {getKindConfig(item.invoiceKind).label}
             </span>
           </div>
-          <div className="text-xs text-slate-400 mt-1">No.{item.invoiceNo}</div>
+          <div className="text-xs mt-1 font-mono tabular-nums" style={{ color: 'var(--muted)' }}>No.{item.invoiceNo}</div>
         </>
       )
     },
@@ -53,21 +53,21 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
       key: 'name',
       title: '发票名称',
       render: (item) => (
-        <span className="font-medium text-slate-800">{item.name}</span>
+        <span className="font-medium" style={{ color: 'var(--fg)' }}>{item.name}</span>
       )
     },
     {
       key: 'sellerName',
       title: '销售方',
       render: (item) => (
-        <span className="text-slate-600">{item.sellerName || '-'}</span>
+        <span style={{ color: 'var(--fg-2)' }}>{item.sellerName || '-'}</span>
       )
     },
     {
       key: 'buyerName',
       title: '购买方',
       render: (item) => (
-        <span className="text-slate-600">{item.buyerName || '-'}</span>
+        <span style={{ color: 'var(--fg-2)' }}>{item.buyerName || '-'}</span>
       )
     },
     {
@@ -75,7 +75,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
       title: '税率',
       align: 'center',
       render: (item) => (
-        <span className="text-slate-600">{(item.taxRate * 100).toFixed(0)}%</span>
+        <span className="tabular-nums" style={{ color: 'var(--fg-2)' }}>{(item.taxRate * 100).toFixed(0)}%</span>
       )
     },
     {
@@ -86,8 +86,8 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
       sorter: (a, b) => ((a.amount || 0) - (b.amount || 0)),
       render: (item) => (
         <>
-          <div className="font-bold text-slate-800 tabular-nums">¥{formatMoney(item.amount)}</div>
-          <div className="text-xs text-slate-400 tabular-nums">税: ¥{formatMoney(item.taxAmount)}</div>
+          <div className="font-bold font-mono tabular-nums tracking-tight" style={{ color: 'var(--fg)' }}>¥{formatMoney(item.amount)}</div>
+          <div className="text-xs font-mono tabular-nums" style={{ color: 'var(--muted)' }}>税: ¥{formatMoney(item.taxAmount)}</div>
         </>
       )
     },
@@ -97,23 +97,23 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
       align: 'right',
       render: (item) => (
         <>
-          <div className={`font-bold tabular-nums ${item.receivedAmount > 0 ? 'text-green-600' : 'text-slate-400'}`}>
+          <div className="font-bold font-mono tabular-nums tracking-tight" style={{ color: item.receivedAmount > 0 ? 'var(--success)' : 'var(--muted)' }}>
             ¥{formatMoney(item.receivedAmount)}
           </div>
           {item.amount > 0 && item.receivedAmount < item.amount && (
-            <div className="text-xs text-red-500 mt-0.5 tabular-nums">
+            <div className="text-xs mt-0.5 font-mono tabular-nums" style={{ color: 'var(--danger)' }}>
               剩余 ¥{formatMoney(item.amount - item.receivedAmount)}
             </div>
           )}
           {item.amount > 0 && item.receivedAmount > 0 && (
             <div className="mt-0.5">
-              <div className="h-1 bg-slate-200 rounded-full overflow-hidden">
+              <div className="h-1 rounded-full overflow-hidden" style={{ background: 'var(--panel-2)' }}>
                 <div
-                  className={`h-full rounded-full transition-all ${item.receivedAmount >= item.amount ? 'bg-green-500' : 'bg-amber-500'}`}
-                  style={{ width: `${Math.min(item.receivedAmount / item.amount * 100, 100)}%` }}
+                  className="h-full rounded-full transition-all"
+                  style={{ width: `${Math.min(item.receivedAmount / item.amount * 100, 100)}%`, background: item.receivedAmount >= item.amount ? 'var(--success)' : 'var(--warning)' }}
                 />
               </div>
-              <div className="text-xs text-slate-400 mt-0.5">
+              <div className="text-xs mt-0.5 tabular-nums" style={{ color: 'var(--muted)' }}>
                 {Math.round(item.receivedAmount / item.amount * 100)}%
               </div>
             </div>
@@ -163,7 +163,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
             <Tooltip content="预览" position="top" delay={300}>
               <button
                 onClick={() => onPreview(item.fileUrl!, item.fileType === 'pdf' ? 'pdf' : 'image', `${item.invoiceNo} - 发票附件`, 'invoices', item.type === 'invoice_out' ? 'invoice_out' : 'invoice_in', item.projectName, item.projectId ?? undefined)}
-                className="p-1.5 text-slate-500 hover:bg-slate-100 rounded transition-colors"
+                className="p-1.5 rounded transition-colors text-[color:var(--muted)] hover:bg-[color:var(--panel-2)] hover:text-[color:var(--fg-2)]"
               >
                 <Icon name="Eye" size={14} />
               </button>
@@ -172,7 +172,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
           <Tooltip content="打印" position="top" delay={300}>
             <button
               onClick={() => onPrint(item)}
-              className="p-1.5 text-slate-500 hover:bg-slate-100 rounded transition-colors"
+              className="p-1.5 rounded transition-colors text-[color:var(--muted)] hover:bg-[color:var(--panel-2)] hover:text-[color:var(--fg-2)]"
             >
               <Icon name="Printer" size={14} />
             </button>

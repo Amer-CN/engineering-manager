@@ -118,27 +118,27 @@ export const PartnerFormFields: React.FC<PartnerFormFieldsProps> = ({
       {/* 关联项目 */}
       <div className="form-group">
         <label className="label">关联项目</label>
-        <div className="border border-slate-200 rounded-lg p-3 max-h-40 overflow-y-auto bg-slate-50">
+        <div className="border border-[color:var(--border)] rounded-lg p-3 max-h-40 overflow-y-auto bg-[color:var(--panel-2)]">
           {projects.length === 0 ? (
-            <p className="text-slate-400 text-sm">暂无项目，请先添加项目</p>
+            <p className="text-[color:var(--muted)] text-sm">暂无项目，请先添加项目</p>
           ) : (
             <div className="space-y-2">
               {projects.map(project => (
-                <label key={project.id} className="flex items-center cursor-pointer hover:bg-white p-1 rounded transition-colors">
+                <label key={project.id} className="flex items-center cursor-pointer hover:bg-[color:var(--card)] p-1 rounded transition-colors">
                   <input
                     type="checkbox"
                     checked={formData.projectIds.includes(project.id)}
                     onChange={() => toggleProject(project.id)}
-                    className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                    className="w-4 h-4 text-[color:var(--accent)] rounded focus:ring-[color:var(--accent-soft)]"
                   />
-                  <span className="ml-2 text-sm text-slate-700">{project.name}</span>
+                  <span className="ml-2 text-sm text-[color:var(--fg-2)]">{project.name}</span>
                 </label>
               ))}
             </div>
           )}
         </div>
         {formData.projectIds.length > 0 && (
-          <p className="text-xs text-slate-500 mt-1">已选择 {formData.projectIds.length} 个项目</p>
+          <p className="text-xs text-[color:var(--muted)] mt-1">已选择 {formData.projectIds.length} 个项目</p>
         )}
       </div>
 
@@ -177,23 +177,23 @@ export const PartnerFormFields: React.FC<PartnerFormFieldsProps> = ({
 
       {/* 银行账号 */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">银行账号</label>
+        <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">银行账号</label>
         <input
           type="text"
           value={formData.bankAccount}
           onChange={e => setFormData({ ...formData, bankAccount: e.target.value })}
-          className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          className="w-full px-4 py-2 border border-[color:var(--border)] rounded-lg focus:ring-2 focus:ring-[color:var(--accent-soft)] focus:border-[color:var(--accent)]"
         />
       </div>
 
       {/* 开户行 */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">开户行</label>
+        <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">开户行</label>
         <input
           type="text"
           value={formData.bankName}
           onChange={e => setFormData({ ...formData, bankName: e.target.value })}
-          className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          className="w-full px-4 py-2 border border-[color:var(--border)] rounded-lg focus:ring-2 focus:ring-[color:var(--accent-soft)] focus:border-[color:var(--accent)]"
           placeholder="如：中国建设银行XX支行"
         />
       </div>

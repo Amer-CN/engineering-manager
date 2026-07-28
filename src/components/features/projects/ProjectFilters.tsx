@@ -14,8 +14,8 @@ const statusOptions = [
   { value: 'archived', label: '已归档' },
 ]
 
-const inputClass = 'bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all duration-200'
-const selectClass = 'bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500/20 cursor-pointer transition-all duration-200'
+const inputClass = 'bg-[color:var(--card)] border border-[color:var(--border)] rounded-xl px-4 py-2.5 text-sm text-[color:var(--fg)] placeholder-[color:var(--muted)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] focus:border-[color:var(--accent)] transition-all duration-200'
+const selectClass = 'bg-[color:var(--card)] border border-[color:var(--border)] rounded-xl px-3 py-2.5 text-sm text-[color:var(--fg-2)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] cursor-pointer transition-all duration-200'
 
 export interface ProjectFiltersProps {
   searchTerm: string
@@ -38,11 +38,11 @@ export function ProjectFilters({
   const { can } = usePermission()
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-4 mb-6 shadow-sm">
+    <div className="rounded-xl p-4 mb-6" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <div className="relative flex-1 max-w-md">
-            <Icon name="Search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <Icon name="Search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--muted)] pointer-events-none" />
             <input type="text" value={searchTerm} onChange={e => onSearchChange(e.target.value)}
               placeholder="搜索项目名称..." className={`${inputClass} pl-10 w-full`} />
           </div>
@@ -55,7 +55,7 @@ export function ProjectFilters({
           </select>
         </div>
         <div className="flex items-center gap-3">
-          <span className="px-3 py-1 rounded-full bg-primary-50 text-primary-700 text-xs font-medium border border-primary-200">
+          <span className="px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
             共 {projectCount} 个项目
           </span>
           {can('projects:export') && (

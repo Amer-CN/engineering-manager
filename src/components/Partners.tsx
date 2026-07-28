@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from './ui/Icon'
-import { Tabs } from './ui/Tabs'
 import { HoverScrollbar } from './ui/HoverScrollbar'
 import Spinner from './ui/Spinner'
 import { Partner, Supervisor, Project } from '../types/electron'
@@ -100,10 +99,10 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
   return (
     <div className="h-[calc(100vh-60px)] flex flex-col overflow-hidden p-6">
       {/* 页面标题 - 固定高度 */}
-      <div className="flex items-center justify-between mb-5 shrink-0">
+      <div className="flex items-center justify-between mb-5 pb-4 border-b border-[color:var(--border)] shrink-0">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">单位管理</h1>
-          <p className="text-slate-500 mt-1">管理所有往来单位信息</p>
+          <h1 className="text-base font-semibold tracking-tight text-[color:var(--fg)]">单位管理</h1>
+          <p className="text-[color:var(--muted)] mt-1">管理所有往来单位信息</p>
         </div>
         <Button
           onClick={() => {
@@ -121,17 +120,29 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
         </Button>
       </div>
 
-      <Tabs
-        value={activeTab}
-        onChange={(value: string) => setActiveTab(value as UnitType)}
-        tabs={[
-          { key: 'partner', label: '合作单位', icon: 'Building2' },
-          { key: 'supervisor', label: '监管单位', icon: 'Shield' },
-        ]}
-        animated={true}
-        className="flex-1 flex flex-col min-h-0"
-        contentClassName="flex-1 flex flex-col min-h-0"
-      >
+      {/* S21 Stitch: pill-toggle (合作单位/监管单位) */}
+      <div className="flex items-center gap-3 mb-5 shrink-0">
+        <div className="flex items-center gap-1 p-1 rounded-full" style={{ background: 'var(--panel-2)' }}>
+          <button
+            onClick={() => setActiveTab('partner')}
+            className={`px-5 py-2 rounded-full text-sm font-medium transition-colors ${
+              activeTab === 'partner' ? 'bg-[color:var(--accent)] text-[color:var(--on-accent)] shadow-sm' : 'text-[color:var(--fg-2)]'
+            }`}
+          >
+            合作单位
+          </button>
+          <button
+            onClick={() => setActiveTab('supervisor')}
+            className={`px-5 py-2 rounded-full text-sm font-medium transition-colors ${
+              activeTab === 'supervisor' ? 'bg-[color:var(--accent)] text-[color:var(--on-accent)] shadow-sm' : 'text-[color:var(--fg-2)]'
+            }`}
+          >
+            监管单位
+          </button>
+        </div>
+      </div>
+
+      <div className="flex-1 flex flex-col min-h-0">
         {activeTab === 'partner' && (
           <>
             <PartnerList
@@ -143,11 +154,11 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
             {showPartnerModal && (
               <motion.div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
                 <div className="modal-content flex flex-col" style={{ height: 'min(90vh, 800px)' }}>
-                  <div className="px-6 py-4 border-b border-slate-200 bg-white shrink-0 flex items-center justify-between">
-                    <h2 className="text-xl font-semibold text-slate-800">
+                  <div className="px-6 py-4 border-b border-[color:var(--border)] bg-[color:var(--card)] shrink-0 flex items-center justify-between">
+                    <h2 className="text-xl font-semibold text-[color:var(--fg)]">
                       {editingPartner ? '编辑单位' : '添加单位'}
                     </h2>
-                    <button type="button" onClick={() => { setShowPartnerModal(false); setEditingPartner(null) }} className="text-slate-400 hover:text-slate-600 p-1">
+                    <button type="button" onClick={() => { setShowPartnerModal(false); setEditingPartner(null) }} className="text-[color:var(--muted)] hover:text-[color:var(--fg-2)] p-1">
                       <Icon name="X" size={20} />
                     </button>
                   </div>
@@ -184,11 +195,11 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
             {showSupervisorModal && (
               <motion.div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
                 <div className="modal-content flex flex-col" style={{ height: 'min(90vh, 800px)' }}>
-                  <div className="px-6 py-4 border-b border-slate-200 bg-white shrink-0 flex items-center justify-between">
-                    <h2 className="text-xl font-semibold text-slate-800">
+                  <div className="px-6 py-4 border-b border-[color:var(--border)] bg-[color:var(--card)] shrink-0 flex items-center justify-between">
+                    <h2 className="text-xl font-semibold text-[color:var(--fg)]">
                       {editingSupervisor ? '编辑单位' : '添加单位'}
                     </h2>
-                    <button type="button" onClick={() => { setShowSupervisorModal(false); setEditingSupervisor(null) }} className="text-slate-400 hover:text-slate-600 p-1">
+                    <button type="button" onClick={() => { setShowSupervisorModal(false); setEditingSupervisor(null) }} className="text-[color:var(--muted)] hover:text-[color:var(--fg-2)] p-1">
                       <Icon name="X" size={20} />
                     </button>
                   </div>
@@ -210,7 +221,7 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
             )}
           </>
         )}
-      </Tabs>
+      </div>
     </div>
   )
 }

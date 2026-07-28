@@ -106,8 +106,9 @@ module.exports = {
       },
       boxShadow: {
         'soft': '0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04)',
-        'card': '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)',
-        'card-hover': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+        'card': 'var(--shadow-card)',
+        'card-hover': 'var(--shadow-card-hover)',
+        'lift': 'var(--shadow-lift)',
         'lifted': '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
       },
       animation: {
@@ -134,10 +135,13 @@ module.exports = {
       },
       fontFamily: {
         sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
       },
       fontSize: {
         caption: ['0.625rem', { lineHeight: '0.875rem' }],  // 10px — 替代 text-[10px]
         micro: ['0.6875rem', { lineHeight: '1rem' }],        // 11px — 替代 text-[11px]
+        'numeric-xl': ['1.75rem', { lineHeight: '2.125rem', letterSpacing: '-0.03em', fontWeight: '700' }], // 28px — Stitch numeric-xl (KPI 大号数字)
+        'display-lg': ['1.6875rem', { lineHeight: '1.875rem', letterSpacing: '-0.02em', fontWeight: '750' }], // 27px — Stitch display-lg (页面大标题)
       },
     },
   },

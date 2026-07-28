@@ -37,22 +37,22 @@ const MODES: ModeOption[] = [
     label: '录音转写',
     icon: 'Mic',
     desc: '上传录音 · AI 转写 · 校对入库',
-    activeWrap: 'border-primary-300 bg-gradient-to-br from-primary-50/80 to-primary-100/30 shadow-sm shadow-primary-100/50',
-    activeIcon: 'bg-primary-500 text-white shadow-sm shadow-primary-200',
-    activeTitle: 'text-primary-700',
-    activeDesc: 'text-primary-500/80',
-    activeBar: 'bg-primary-500',
+    activeWrap: 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] shadow-sm',
+    activeIcon: 'bg-[color:var(--accent)] text-[color:var(--on-accent)] shadow-sm',
+    activeTitle: 'text-[color:var(--accent)]',
+    activeDesc: 'text-[color:var(--accent)]',
+    activeBar: 'bg-[color:var(--accent)]',
   },
   {
     key: 'library',
     label: '知识库',
     icon: 'Library',
     desc: '全文检索 · 文档管理 · 智能问答',
-    activeWrap: 'border-emerald-300 bg-gradient-to-br from-emerald-50/80 to-emerald-100/30 shadow-sm shadow-emerald-100/50',
-    activeIcon: 'bg-emerald-500 text-white shadow-sm shadow-emerald-200',
-    activeTitle: 'text-emerald-700',
-    activeDesc: 'text-emerald-500/80',
-    activeBar: 'bg-emerald-500',
+    activeWrap: 'border-success-300 bg-[color:var(--success-soft)] shadow-sm',
+    activeIcon: 'bg-success-500 text-white shadow-sm shadow-success-200',
+    activeTitle: 'text-success-700',
+    activeDesc: 'text-success-500/80',
+    activeBar: 'bg-success-500',
   },
 ]
 
@@ -87,9 +87,9 @@ const SpeechKnowledgePage: React.FC = () => {
             <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg shadow-sm" style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}>
               <Icon name="Library" size={16} />
             </span>
-            <h1 className="text-xl font-bold text-slate-800">语音知识库</h1>
+            <h1 className="text-base font-semibold tracking-tight text-[color:var(--fg)]">语音知识库</h1>
           </div>
-          <p className="text-sm text-slate-500 mb-4 pl-[38px]">录音转写 · 校对 · 入库 · 检索</p>
+          <p className="text-sm text-[color:var(--muted)] mb-4 pl-[38px]">录音转写 · 校对 · 入库 · 检索</p>
 
           {/* ── 模式切换卡片 ── */}
           <div className="grid grid-cols-2 gap-3 pb-5">
@@ -105,10 +105,10 @@ const SpeechKnowledgePage: React.FC = () => {
                     group relative flex items-center gap-3 rounded-xl border-2 p-3.5
                     transition-all duration-300 ease-out text-left
                     focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1
-                    focus-visible:ring-slate-400
+                    focus-visible:ring-[color:var(--border-strong)]
                     ${isActive
                       ? mode.activeWrap
-                      : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50'
+                      : 'border-[color:var(--border)] bg-[color:var(--card)] hover:border-[color:var(--border)] hover:bg-[color:var(--panel-2)]/50'
                     }
                   `}
                 >
@@ -119,7 +119,7 @@ const SpeechKnowledgePage: React.FC = () => {
                       transition-all duration-300 shrink-0
                       ${isActive
                         ? mode.activeIcon
-                        : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200 group-hover:text-slate-500'
+                        : 'bg-[color:var(--panel-2)] text-[color:var(--muted)] group-hover:bg-[color:var(--panel-2)] group-hover:text-[color:var(--muted)]'
                       }
                     `}
                   >
@@ -131,7 +131,7 @@ const SpeechKnowledgePage: React.FC = () => {
                     <span
                       className={`
                         text-sm font-semibold transition-colors duration-300
-                        ${isActive ? mode.activeTitle : 'text-slate-600'}
+                        ${isActive ? mode.activeTitle : 'text-[color:var(--fg-2)]'}
                       `}
                     >
                       {mode.label}
@@ -139,7 +139,7 @@ const SpeechKnowledgePage: React.FC = () => {
                     <span
                       className={`
                         text-xs mt-0.5 transition-colors duration-300 truncate
-                        ${isActive ? mode.activeDesc : 'text-slate-400'}
+                        ${isActive ? mode.activeDesc : 'text-[color:var(--muted)]'}
                       `}
                     >
                       {mode.desc}

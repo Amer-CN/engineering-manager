@@ -130,13 +130,13 @@ export function SettingsPiiKeySection() {
     <>
       <div className="card">
         <div className="card-header">
-          <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-[color:var(--fg)] flex items-center gap-2">
             <Icon name="Shield" size={20} /> PII 数据加密密钥
           </h2>
         </div>
         <div className="card-body space-y-4">
           {loading && (
-            <div className="text-sm text-slate-500">加载中...</div>
+            <div className="text-sm text-[color:var(--muted)]">加载中...</div>
           )}
           {error && (
             <div className="bg-danger-50 border border-danger-200 rounded-xl p-3 text-sm text-danger-700">
@@ -146,25 +146,25 @@ export function SettingsPiiKeySection() {
           {info && !error && (
             <>
               <div className="grid grid-cols-3 gap-3 text-sm">
-                <div className="bg-slate-50 rounded-lg p-3">
-                  <div className="text-xs text-slate-500">当前 active key</div>
-                  <div className="font-mono text-base text-slate-800 mt-1">#{info.activeKeyId}</div>
+                <div className="bg-[color:var(--panel-2)] rounded-lg p-3">
+                  <div className="text-xs text-[color:var(--muted)]">当前 active key</div>
+                  <div className="font-mono text-base text-[color:var(--fg)] mt-1">#{info.activeKeyId}</div>
                 </div>
-                <div className="bg-slate-50 rounded-lg p-3">
-                  <div className="text-xs text-slate-500">历史 key 总数</div>
-                  <div className="font-mono text-base text-slate-800 mt-1">{info.totalKeys}</div>
+                <div className="bg-[color:var(--panel-2)] rounded-lg p-3">
+                  <div className="text-xs text-[color:var(--muted)]">历史 key 总数</div>
+                  <div className="font-mono text-base text-[color:var(--fg)] mt-1">{info.totalKeys}</div>
                 </div>
-                <div className="bg-slate-50 rounded-lg p-3">
-                  <div className="text-xs text-slate-500">最近轮换</div>
-                  <div className="text-base text-slate-800 mt-1">
+                <div className="bg-[color:var(--panel-2)] rounded-lg p-3">
+                  <div className="text-xs text-[color:var(--muted)]">最近轮换</div>
+                  <div className="text-base text-[color:var(--fg)] mt-1">
                     {info.latestRetiredAt ?? '从未轮换'}
                   </div>
                 </div>
               </div>
 
-              <div className="bg-info-50 border border-info-200 rounded-xl p-3 text-sm text-info-800">
+              <div className="bg-[color:var(--panel-2)] border border-[color:var(--border)] rounded-xl p-3 text-sm text-[color:var(--fg-2)]">
                 <p className="font-medium"><Icon name="Lightbulb" size={14} className="inline" /> 轮换说明</p>
-                <ul className="mt-1 space-y-1 text-info-700">
+                <ul className="mt-1 space-y-1 text-[color:var(--fg-2)]">
                   <li>• 轮换后, 新写入的 PII 字段 (身份证/手机/银行账号等) 用新 key 加密</li>
                   <li>• 旧 key 保留, 用于解密历史密文 (无数据迁移, 无停机)</li>
                   <li>• 建议定期 (90 天) 轮换; 怀疑 key 泄露时立即轮换</li>

@@ -25,26 +25,26 @@ const staffTableColumns = (
     key: 'name',
     title: '姓名',
     width: '100px',
-    render: item => <span className="font-medium text-slate-800">{item.name}</span>,
+    render: item => <span className="font-medium text-[color:var(--fg)]">{item.name}</span>,
   },
   {
     key: 'role',
     title: '职位',
     width: '120px',
-    render: item => <span className="text-slate-600">{item.role || '-'}</span>,
+    render: item => <span className="text-[color:var(--fg-2)]">{item.role || '-'}</span>,
   },
   {
     key: 'phone',
     title: '电话',
     width: '130px',
-    render: (item: any) => <span className="text-slate-600 text-sm">{masked('phone', item.phone) || '-'}</span>,
+    render: (item: any) => <span className="text-[color:var(--fg-2)] text-sm">{masked('phone', item.phone) || '-'}</span>,
   },
   {
     key: 'idCard',
     title: '身份证号',
     width: '170px',
     render: item => (
-      <span className="text-slate-500 text-xs font-mono">{masked('idCard', item.idCard) || '-'}</span>
+      <span className="text-[color:var(--muted)] text-xs font-mono">{masked('idCard', item.idCard) || '-'}</span>
     ),
   },
   {
@@ -62,8 +62,8 @@ const staffTableColumns = (
           }}
           className={`px-2 py-1 text-xs rounded-lg border font-medium cursor-pointer ${
             s === 'active'
-              ? 'bg-green-50 text-green-700 border-green-300'
-              : 'bg-slate-100 text-slate-500 border-slate-300'
+              ? 'bg-success-50 text-success-700 border-success-300'
+              : 'bg-[color:var(--panel-2)] text-[color:var(--muted)] border-[color:var(--border)]'
           }`}
           onClick={e => e.stopPropagation()}
         >
@@ -78,7 +78,7 @@ const staffTableColumns = (
     title: '入职时间',
     width: '110px',
     render: item => (
-      <span className="text-slate-600 text-sm">{item.entryDate || '-'}</span>
+      <span className="text-[color:var(--fg-2)] text-sm">{item.entryDate || '-'}</span>
     ),
   },
   {
@@ -88,7 +88,7 @@ const staffTableColumns = (
     align: 'center',
     render: item => (
       <div className="flex items-center justify-center gap-1" onClick={e => e.stopPropagation()}>
-        <Button onClick={() => onEdit(item)}  variant="ghost" size="sm" className="text-primary-600">
+        <Button onClick={() => onEdit(item)}  variant="ghost" size="sm" className="text-[color:var(--accent)]">
           编辑
         </Button>
         <Button onClick={() => onDelete(item.id)}  variant="danger" size="sm">
@@ -114,11 +114,11 @@ export default function StaffManagementTab({
     <>
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="text-slate-500">共 {filteredStaff.length} 人</div>
+          <div className="text-[color:var(--muted)]">共 {filteredStaff.length} 人</div>
           <select
             value={filterStatus}
             onChange={e => onFilterStatusChange(e.target.value)}
-            className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg"
+            className="px-3 py-1.5 text-sm border border-[color:var(--border)] rounded-lg"
           >
             <option value="all">全部状态</option>
             <option value="active">在职</option>
@@ -127,7 +127,7 @@ export default function StaffManagementTab({
         </div>
         <button
           onClick={onAdd}
-          className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center text-sm"
+          className="bg-[color:var(--accent)] hover:opacity-90 text-[color:var(--on-accent)] px-4 py-2 rounded-lg font-medium transition-colors flex items-center text-sm"
         >
           <Icon name="Plus" size={14} className="mr-1" />
           添加管理人员

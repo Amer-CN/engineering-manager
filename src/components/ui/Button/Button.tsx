@@ -18,17 +18,17 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-  'bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800 shadow-sm hover:shadow-md',
+      'bg-[color:var(--accent)] text-[color:var(--on-accent)] hover:opacity-90 active:opacity-80 shadow-sm hover:shadow-md',
   secondary:
-  'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 active:bg-slate-100 shadow-sm',
+  'bg-[color:var(--card)] text-[color:var(--fg-2)] border border-[color:var(--border)] hover:bg-[color:var(--panel-2)] active:bg-[color:var(--panel-2)] shadow-sm',
   danger:
   'bg-danger-500 text-white hover:bg-danger-600 active:bg-danger-700 shadow-sm hover:shadow-md',
   ghost:
-  'bg-transparent text-slate-600 hover:bg-slate-100',
+  'bg-transparent text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)]',
   link:
-  'bg-transparent text-primary-600 hover:text-primary-700 hover:underline shadow-none',
+      'bg-transparent text-[color:var(--accent)] hover:opacity-80 hover:underline shadow-none',
   outline:
-  'bg-transparent text-primary-600 border border-primary-300 hover:bg-primary-50 active:bg-primary-100',
+      'bg-transparent text-[color:var(--accent)] border border-[color:var(--border)] hover:bg-[color:var(--accent-soft)] active:bg-[color:var(--accent-soft)]',
   success:
   'bg-success-600 text-white hover:bg-success-700 active:bg-success-800 shadow-sm hover:shadow-md',
   warning:
@@ -77,7 +77,7 @@ export function Button({
   const baseClasses = `
   inline-flex items-center justify-center font-medium rounded-lg
   transition-all duration-150 ease-out
-  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500
+  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[color:var(--accent-soft)]
   disabled:opacity-50 disabled:cursor-not-allowed select-none
   ${variantStyles[variant]}
   ${block ? 'w-full' : ''}
@@ -94,7 +94,10 @@ export function Button({
   {...props}
   >
   {loading ? (
+  <>
   <Icon name="Loader2" size={iconSize} className="animate-spin" />
+  {children && !iconOnly && <span>{children}</span>}
+  </>
   ) : (
   <>
   {renderIcon(leftIcon, iconSize)}
