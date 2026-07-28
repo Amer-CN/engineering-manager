@@ -37,8 +37,8 @@ export interface MemberCardProps {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const statusStyles = {
-  active: { label: '在职', color: 'bg-green-100 text-green-700' },
-  left: { label: '已离场', color: 'bg-slate-100 text-slate-700' },
+  active: { label: '在职', color: 'bg-[color:var(--success-soft)] text-[color:var(--success)]' },
+  left: { label: '已离场', color: 'bg-[color:var(--panel-2)] text-[color:var(--muted)]' },
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -127,7 +127,7 @@ export const MemberCard = React.memo(function MemberCard({
 
   {/* 操作 */}
   <div
-  className="flex items-center gap-2 pt-3 border-t border-slate-100"
+  className="flex items-center gap-2 pt-3 border-t border-[color:var(--border)]"
   onClick={(e) => e.stopPropagation()}
   >
   {isWorker ? (
@@ -136,7 +136,7 @@ export const MemberCard = React.memo(function MemberCard({
   {onReEntry && (
   <button
   onClick={() => onReEntry(member)}
-  className="flex-1 px-3 py-2 text-sm text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+  className="flex-1 px-3 py-2 text-sm text-[color:var(--accent)] hover:bg-[color:var(--accent-soft)] rounded-lg transition-colors"
   >
   重新入场
   </button>
@@ -152,14 +152,14 @@ export const MemberCard = React.memo(function MemberCard({
   <>
   <button
   onClick={() => onEdit(member)}
-  className="flex-1 px-3 py-2 text-sm text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+  className="flex-1 px-3 py-2 text-sm text-[color:var(--accent)] hover:bg-[color:var(--accent-soft)] rounded-lg transition-colors"
   >
   编辑
   </button>
   {onTransfer && (
   <button
   onClick={() => onTransfer(member)}
-  className="flex-1 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+  className="flex-1 px-3 py-2 text-sm text-[color:var(--accent)] hover:bg-[color:var(--accent-soft)] rounded-lg transition-colors"
   >
   调组
   </button>
@@ -167,7 +167,7 @@ export const MemberCard = React.memo(function MemberCard({
   {onLeave && (
   <button
   onClick={() => onLeave(member)}
-  className="px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+  className="px-3 py-2 text-sm text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)] rounded-lg transition-colors"
   >
   离场
   </button>
@@ -180,7 +180,7 @@ export const MemberCard = React.memo(function MemberCard({
   {onReEntry && (
   <button
   onClick={() => onReEntry(member)}
-  className="flex-1 px-3 py-2 text-sm text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+  className="flex-1 px-3 py-2 text-sm text-[color:var(--accent)] hover:bg-[color:var(--accent-soft)] rounded-lg transition-colors"
   >
   重新入职
   </button>
@@ -196,14 +196,14 @@ export const MemberCard = React.memo(function MemberCard({
   <>
   <button
   onClick={() => onEdit(member)}
-  className="flex-1 px-3 py-2 text-sm text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+  className="flex-1 px-3 py-2 text-sm text-[color:var(--accent)] hover:bg-[color:var(--accent-soft)] rounded-lg transition-colors"
   >
   编辑
   </button>
   {onLeave && (
   <button
   onClick={() => onLeave(member)}
-  className="px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+  className="px-3 py-2 text-sm text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)] rounded-lg transition-colors"
   >
   离职
   </button>

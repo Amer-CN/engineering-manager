@@ -138,40 +138,40 @@ export default function PayrollPage({ mode }: PayrollPageProps) {
   return (
     <div className="flex flex-col h-full">
       {/* ── 工具栏 ── */}
-      <div className="shrink-0 flex items-center gap-3 px-5 py-3 border-b border-slate-200 bg-white"
+      <div className="shrink-0 flex items-center gap-3 px-5 py-3 border-b border-[color:var(--border)] bg-[color:var(--card)]"
         style={{ minHeight: 50 }}>
 
         {/* 月份选择器 */}
         {activeTab === 'payments' ? (
           <input type="month" value={filterYearMonth} onChange={e => setFilterYearMonth(e.target.value)}
-            className="text-sm font-medium px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white" />
+            className="text-sm font-medium px-2.5 py-1.5 rounded-lg border border-[color:var(--border)] bg-[color:var(--card)]" />
         ) : (
           <input type="month" value={data.selectedMonth} onChange={e => data.setSelectedMonth(e.target.value)}
-            className="text-sm font-medium px-3 py-1.5 rounded-lg border border-slate-200 bg-white" />
+            className="text-sm font-medium px-3 py-1.5 rounded-lg border border-[color:var(--border)] bg-[color:var(--card)]" />
         )}
 
-        <div className="w-px h-5 bg-slate-200" />
+        <div className="w-px h-5 bg-[color:var(--panel-2)]" />
 
         {/* 筛选 */}
         {mode === 'staff' && data.departments.length > 0 && (
           <select value={data.filterDept} onChange={e => data.setFilterDept(e.target.value ? Number(e.target.value) : '')}
-            className="text-sm px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white">
+            className="text-sm px-2.5 py-1.5 rounded-lg border border-[color:var(--border)] bg-[color:var(--card)]">
             <option value="">全部部门</option>
             {data.departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
         )}
         <select value={data.filterProject} onChange={e => data.setFilterProject(e.target.value)}
-          className="text-sm px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white">
+          className="text-sm px-2.5 py-1.5 rounded-lg border border-[color:var(--border)] bg-[color:var(--card)]">
           <option value="全部">{mode === 'staff' ? '全部项目' : '选择项目...'}</option>
           {data.projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
         {mode === 'staff' && (
           <input type="text" value={data.filterName} onChange={e => data.setFilterName(e.target.value)}
-            placeholder="搜索姓名..." className="text-sm px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white w-36" />
+            placeholder="搜索姓名..." className="text-sm px-2.5 py-1.5 rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] w-36" />
         )}
 
         {/* Tab pill 按钮 */}
-        <div className="flex items-center gap-0.5 ml-auto rounded-lg p-0.5 bg-slate-100">
+        <div className="flex items-center gap-0.5 ml-auto rounded-lg p-0.5 bg-[color:var(--panel-2)]">
           {mode === 'staff' ? (
             <>
               <PillBtn active={activeTab === 'attendance'} onClick={() => setActiveTab('attendance')}>考勤</PillBtn>
@@ -199,12 +199,12 @@ export default function PayrollPage({ mode }: PayrollPageProps) {
 
       {/* ── 汇总条（staff） ── */}
       {mode === 'staff' && data.filteredWages.length > 0 && (
-        <div className="shrink-0 flex items-center gap-6 px-5 py-2 text-sm border-b border-slate-200 bg-white">
-          <span className="text-slate-400">{data.filteredWages.length} 人</span>
-          <span><span className="text-slate-400">应发 </span><span className="font-mono tabular-nums font-medium">¥{data.summary.totalNet.toLocaleString()}</span></span>
-          <span><span className="text-slate-400">实发 </span><span className="font-mono tabular-nums font-medium">¥{data.summary.totalPaid.toLocaleString()}</span></span>
+        <div className="shrink-0 flex items-center gap-6 px-5 py-2 text-sm border-b border-[color:var(--border)] bg-[color:var(--card)]">
+          <span className="text-[color:var(--muted)]">{data.filteredWages.length} 人</span>
+          <span><span className="text-[color:var(--muted)]">应发 </span><span className="font-mono tabular-nums font-medium">¥{data.summary.totalNet.toLocaleString()}</span></span>
+          <span><span className="text-[color:var(--muted)]">实发 </span><span className="font-mono tabular-nums font-medium">¥{data.summary.totalPaid.toLocaleString()}</span></span>
           {data.summary.totalDiff !== 0 && (
-            <span><span className="text-slate-400">差额 </span><span className={`font-mono tabular-nums font-medium ${data.summary.totalDiff > 0 ? 'text-red-500' : 'text-emerald-500'}`}>{data.summary.totalDiff > 0 ? '+' : ''}¥{data.summary.totalDiff.toLocaleString()}</span></span>
+            <span><span className="text-[color:var(--muted)]">差额 </span><span className={`font-mono tabular-nums font-medium ${data.summary.totalDiff > 0 ? 'text-danger-500' : 'text-success-500'}`}>{data.summary.totalDiff > 0 ? '+' : ''}¥{data.summary.totalDiff.toLocaleString()}</span></span>
           )}
         </div>
       )}
@@ -228,7 +228,7 @@ export default function PayrollPage({ mode }: PayrollPageProps) {
 function PillBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button onClick={onClick}
-      className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${active ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>
+      className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${active ? 'bg-[color:var(--card)] shadow-sm text-[color:var(--fg)]' : 'text-[color:var(--muted)] hover:text-[color:var(--fg-2)]'}`}>
       {children}
     </button>
   )

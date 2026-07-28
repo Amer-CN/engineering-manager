@@ -115,7 +115,7 @@ export default function WageSummaryTab({ allWageRecords, projectId, projectName 
   if (archived.length === 0) {
     return (
       <div className="p-4">
-        <div className="text-center py-16 text-slate-400">
+        <div className="text-center py-16 text-[color:var(--muted)]">
           <Icon name="BarChart3" size={48} className="mx-auto mb-4" />
           <p className="text-lg">暂无归档数据</p>
           <p className="text-sm mt-1">发放工资后归档，即可在此查看汇总</p>
@@ -128,29 +128,29 @@ export default function WageSummaryTab({ allWageRecords, projectId, projectName 
     <div className="p-4 space-y-5">
       {/* 顶部 KPI */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="bg-green-50 rounded-xl p-5 text-center">
-          <div className="text-xs text-green-600 mb-1">累计发放</div>
-          <div className="text-2xl font-bold text-green-700">¥{totalPaid.toLocaleString()}</div>
+        <div className="bg-success-50 rounded-xl p-5 text-center">
+          <div className="text-xs text-success-600 mb-1">累计发放</div>
+          <div className="text-numeric-xl font-mono tabular-nums tracking-tight text-success-700">¥{totalPaid.toLocaleString()}</div>
         </div>
-        <div className="bg-blue-50 rounded-xl p-5 text-center">
-          <div className="text-xs text-blue-600 mb-1">发放人次</div>
-          <div className="text-2xl font-bold text-blue-700">{archived.length}</div>
+        <div className="bg-[color:var(--panel-2)] rounded-xl p-5 text-center">
+          <div className="text-xs text-[color:var(--muted)] mb-1">发放人次</div>
+          <div className="text-numeric-xl font-mono tabular-nums tracking-tight text-[color:var(--fg)]">{archived.length}</div>
         </div>
-        <div className="bg-amber-50 rounded-xl p-5 text-center">
-          <div className="text-xs text-amber-600 mb-1">覆盖工人</div>
-          <div className="text-2xl font-bold text-amber-700">{totalWorkers}</div>
+        <div className="bg-warning-50 rounded-xl p-5 text-center">
+          <div className="text-xs text-warning-600 mb-1">覆盖工人</div>
+          <div className="text-numeric-xl font-mono tabular-nums tracking-tight text-warning-700">{totalWorkers}</div>
         </div>
       </div>
 
       {/* 班组累计排名（一眼看各班组总发放） */}
       {teamRanking.length > 0 && (
         <div>
-          <h3 className="text-sm font-semibold text-slate-700 mb-2">班组累计发放排名</h3>
+          <h3 className="text-sm font-semibold text-[color:var(--fg-2)] mb-2">班组累计发放排名</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {teamRanking.map(([name, amount]) => (
-              <div key={name} className="bg-white border border-slate-200 rounded-lg px-4 py-2.5 flex items-center justify-between">
-                <span className="text-sm text-slate-700">{name}</span>
-                <span className="text-sm font-medium text-green-600">¥{amount.toLocaleString()}</span>
+              <div key={name} className="bg-[color:var(--card)] border border-[color:var(--border)] rounded-lg px-4 py-2.5 flex items-center justify-between">
+                <span className="text-sm text-[color:var(--fg-2)]">{name}</span>
+                <span className="text-sm font-medium text-success-600">¥{amount.toLocaleString()}</span>
               </div>
             ))}
           </div>
@@ -159,52 +159,52 @@ export default function WageSummaryTab({ allWageRecords, projectId, projectName 
 
       {/* 层级明细：年 → 月 → 班组 */}
       <div>
-        <h3 className="text-sm font-semibold text-slate-700 mb-3">发放明细</h3>
+        <h3 className="text-sm font-semibold text-[color:var(--fg-2)] mb-3">发放明细</h3>
         <div className="space-y-2">
           {byYear.map(([year, yearData]) => {
             const expanded = expandedYears.has(year)
             return (
-              <div key={year} className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+              <div key={year} className="bg-[color:var(--card)] border border-[color:var(--border)] rounded-xl overflow-hidden">
                 {/* 年份行 */}
                 <button onClick={() => toggleYear(year)}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors">
+                  className="w-full flex items-center justify-between px-4 py-3 bg-[color:var(--panel-2)] hover:bg-[color:var(--panel-2)] transition-colors">
                   <div className="flex items-center gap-3">
-                    <span className={`text-sm font-bold text-slate-700 transition-transform ${expanded ? 'rotate-90' : ''}`}>▶</span>
-                    <span className="text-sm font-bold text-slate-800">{year}年</span>
-                    <span className="text-xs text-slate-400">{yearData.recordCount} 条 · {yearData.workerCount} 人</span>
+                    <span className={`text-sm font-bold text-[color:var(--fg-2)] transition-transform ${expanded ? 'rotate-90' : ''}`}>▶</span>
+                    <span className="text-sm font-bold text-[color:var(--fg)]">{year}年</span>
+                    <span className="text-xs text-[color:var(--muted)]">{yearData.recordCount} 条 · {yearData.workerCount} 人</span>
                   </div>
-                  <span className="text-sm font-bold text-green-700">¥{yearData.totalPaid.toLocaleString()}</span>
+                  <span className="text-sm font-bold text-success-700">¥{yearData.totalPaid.toLocaleString()}</span>
                 </button>
 
                 {/* 该年的月份列表 */}
                 {expanded && (
-                  <div className="divide-y divide-slate-100">
+                  <div className="divide-y divide-[color:var(--border)]">
                     {Array.from(yearData.months.entries()).sort(([a], [b]) => a.localeCompare(b)).map(([ym, monthData]) => {
                       const mExpanded = expandedMonths.has(ym)
                       return (
                         <div key={ym}>
                           {/* 月份行 */}
                           <button onClick={() => toggleMonth(ym)}
-                            className="w-full flex items-center justify-between px-6 py-2.5 hover:bg-slate-50 transition-colors">
+                            className="w-full flex items-center justify-between px-6 py-2.5 hover:bg-[color:var(--panel-2)] transition-colors">
                             <div className="flex items-center gap-3">
-                              <span className={`text-xs text-slate-400 transition-transform ${mExpanded ? 'rotate-90' : ''}`}>▶</span>
-                              <span className="text-sm text-slate-700">{parseInt(ym.split('-')[1])}月</span>
-                              <span className="text-xs text-slate-400">{monthData.recordCount} 条 · {monthData.workerCount} 人</span>
+                              <span className={`text-xs text-[color:var(--muted)] transition-transform ${mExpanded ? 'rotate-90' : ''}`}>▶</span>
+                              <span className="text-sm text-[color:var(--fg-2)]">{parseInt(ym.split('-')[1])}月</span>
+                              <span className="text-xs text-[color:var(--muted)]">{monthData.recordCount} 条 · {monthData.workerCount} 人</span>
                             </div>
-                            <span className="text-sm font-bold text-green-600">¥{monthData.totalPaid.toLocaleString()}</span>
+                            <span className="text-sm font-bold text-success-600">¥{monthData.totalPaid.toLocaleString()}</span>
                           </button>
 
                           {/* 班组行 */}
                           {mExpanded && (
-                            <div className="px-10 pb-2 divide-y divide-slate-50">
+                            <div className="px-10 pb-2 divide-y divide-[color:var(--border)]">
                               {Array.from(monthData.teams.entries()).sort(([a], [b]) => a.localeCompare(b)).map(([teamName, teamData]) => (
                                 <div key={teamName} className="flex items-center justify-between py-1.5">
                                   <div className="flex items-center gap-2">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                                    <span className="text-sm text-slate-500">{teamName}</span>
-                                    <span className="text-xs text-slate-400">{teamData.workerCount} 人</span>
+                                    <span className="w-1.5 h-1.5 rounded-full bg-warning-400" />
+                                    <span className="text-sm text-[color:var(--muted)]">{teamName}</span>
+                                    <span className="text-xs text-[color:var(--muted)]">{teamData.workerCount} 人</span>
                                   </div>
-                                  <span className="text-sm text-green-600">¥{teamData.totalPaid.toLocaleString()}</span>
+                                  <span className="text-sm text-success-600">¥{teamData.totalPaid.toLocaleString()}</span>
                                 </div>
                               ))}
                             </div>

@@ -49,9 +49,11 @@ describe('SettlementDashboard', () => {
   test('应显示待办数量', async () => {
     const { default: SettlementDashboard } = await importModule()
     render(React.createElement(SettlementDashboard, baseProps))
-    // draft + pending = 2, should show amber color
-    const amberText = screen.getByText('2', { selector: '.text-amber-600' })
-    expect(amberText).toBeTruthy()
+    // draft + pending = 2，Bedrock 用 warning 语义色（inline style）标注
+    const label = screen.getByText('待办结算')
+    const valueEl = label.nextElementSibling as HTMLElement
+    expect(valueEl?.textContent).toBe('2')
+    expect(valueEl?.getAttribute('style')).toContain('var(--warning)')
   })
 
   test('应渲染项目概览标题', async () => {

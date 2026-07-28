@@ -66,6 +66,18 @@ const StaffList: React.FC = () => {
   const { filterDept, filterStatus, setFilterDept, setFilterStatus, filtered, getDeptName } =
     useStaffListFilters(members, departments)
 
+  // S22 Stitch: global search
+  const [searchQuery, setSearchQuery] = useState('')
+  const searchFiltered = useMemo(() => {
+    if (!searchQuery.trim()) return filtered
+    const q = searchQuery.toLowerCase()
+    return filtered.filter((m: Member) =>
+      (m.name || '').toLowerCase().includes(q) ||
+      (m.idCard || '').toLowerCase().includes(q) ||
+      (m.phone || '').toLowerCase().includes(q)
+    )
+  }, [filtered, searchQuery])
+
   const resetForm = () => {
     setEditing(null)
     setFormData({ ...emptyForm })
@@ -119,32 +131,40 @@ const StaffList: React.FC = () => {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {orphans.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg px-5 py-3 flex items-center justify-between">
-          <span className="text-sm text-amber-800">
+        <div className="bg-warning-50 border border-warning-200 rounded-lg px-5 py-3 flex items-center justify-between">
+          <span className="text-sm text-warning-800">
             <Icon name="AlertTriangle" size={16} className="inline mr-1.5" />
             检测到 {orphans.length} 名人员尚未分配部门
           </span>
           <button onClick={() => setShowBatchModal(true)}
-            className="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm rounded-lg transition-colors">
+            className="px-4 py-1.5 bg-warning-600 hover:bg-warning-700 text-white text-sm rounded-lg transition-colors">
             批量分配
           </button>
         </div>
       )}
 
       <FilterBar className="mb-6">
+        <div className="relative">
+          <Icon name="Search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--muted)]" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="搜索姓名或工号..."
+            className="pl-9 pr-4 h-[34px] w-[240px] border border-[color:var(--border)] rounded-[22px] text-sm bg-[color:var(--card)] text-[color:var(--fg)] placeholder-[color:var(--muted)] focus:border-[color:var(--border-strong)] focus:outline-none transition-colors"
+          />
+        </div>
         <div className="flex items-center gap-2">
-          <label className="text-sm text-slate-500">部门</label>
           <select value={filterDept} onChange={e => setFilterDept(e.target.value ? Number(e.target.value) : '')}
-            className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
-            <option value="">全部</option>
+            className="px-3 py-1.5 border border-[color:var(--border)] rounded-lg text-sm">
+            <option value="">所有部门</option>
             {departments.map((d: Department) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
         </div>
         <div className="flex items-center gap-2">
-          <label className="text-sm text-slate-500">状态</label>
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-            className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
-            <option value="">全部</option>
+            className="px-3 py-1.5 border border-[color:var(--border)] rounded-lg text-sm">
+            <option value="">所有状态</option>
             <option value="active">在职</option>
             <option value="left">离职</option>
           </select>
@@ -156,7 +176,7 @@ const StaffList: React.FC = () => {
       </FilterBar>
 
       <DataTable
-        data={filtered}
+        data={searchFiltered}
         columns={columns}
         rowKey="id"
         useHoverScrollbar={true}

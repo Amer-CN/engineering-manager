@@ -73,7 +73,7 @@ export function MemberFilters({
           placeholder="搜索姓名、电话..."
           className="input pl-10 w-full"
         />
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--muted)]">
           <Icon name="Search" size={16} />
         </span>
       </div>

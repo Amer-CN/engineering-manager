@@ -18,7 +18,7 @@ export const CONFIG: Record<ContractType, TypeConfig> = {
     label: '收入合同', auditResource: 'incomeContracts', partnerLabel: '甲方单位',
     partnerPlaceholder: '选择甲方单位', partnerCategoryDefault: '甲方',
     paymentColumnLabel: '已收款', paymentRecordType: 'invoice_out',
-    accentColor: 'bg-primary-500', accentTextColor: 'text-primary-600', accentBgLight: 'bg-primary-100',
+    accentColor: 'bg-[color:var(--accent)]', accentTextColor: 'text-[color:var(--accent)]', accentBgLight: 'bg-[color:var(--accent-soft)]',
     emptyTitle: '暂无收入合同', emptyDesc: '点击上方按钮添加您的第一份收入合同',
     modalCreateTitle: '新增收入合同', subCategory: 'income', exportType: 'income',
   },
@@ -26,7 +26,7 @@ export const CONFIG: Record<ContractType, TypeConfig> = {
     label: '支出合同', auditResource: 'expenseContracts', partnerLabel: '乙方单位',
     partnerPlaceholder: '选择乙方单位', partnerCategoryDefault: '乙方',
     paymentColumnLabel: '已付款', paymentRecordType: 'invoice_in',
-    accentColor: 'bg-red-500', accentTextColor: 'text-red-600', accentBgLight: 'bg-red-100',
+    accentColor: 'bg-danger-500', accentTextColor: 'text-danger-600', accentBgLight: 'bg-danger-100',
     emptyTitle: '暂无支出合同', emptyDesc: '点击上方按钮添加您的第一份支出合同',
     modalCreateTitle: '新增支出合同', subCategory: 'expense', exportType: 'expense',
   },
@@ -34,7 +34,7 @@ export const CONFIG: Record<ContractType, TypeConfig> = {
     label: '其他协议', auditResource: 'agreementContracts', partnerLabel: '协议方',
     partnerPlaceholder: '选择协议方', partnerCategoryDefault: '协议方',
     paymentColumnLabel: '', paymentRecordType: '',
-    accentColor: 'bg-sky-500', accentTextColor: 'text-sky-600', accentBgLight: 'bg-sky-100',
+    accentColor: 'bg-[color:var(--accent)]', accentTextColor: 'text-[color:var(--accent)]', accentBgLight: 'bg-[color:var(--accent-soft)]',
     emptyTitle: '暂无其他协议', emptyDesc: '点击上方按钮添加第一份协议合同',
     modalCreateTitle: '新增协议合同', subCategory: 'agreement', exportType: 'agreement',
   },
@@ -59,13 +59,13 @@ export async function getApi(type: ContractType) {
 export function getStatusLabel(status: string) { return contractStatuses.find(s => s.value === status)?.label || status }
 export function getStatusColor(status: string) {
   switch (status) {
-    case 'draft': return 'bg-slate-100 text-slate-600'
-    case 'pending': return 'bg-yellow-100 text-yellow-600'
-    case 'active': return 'bg-green-100 text-green-600'
-    case 'expired': return 'bg-orange-100 text-orange-600'
-    case 'terminated': return 'bg-red-100 text-red-600'
-    case 'archived': return 'bg-blue-100 text-blue-600'
-    default: return 'bg-slate-100 text-slate-600'
+    case 'draft': return 'bg-[color:var(--panel-2)] text-[color:var(--muted)]'
+    case 'pending': return 'bg-[color:var(--warning-soft)] text-[color:var(--warning)]'
+    case 'active': return 'bg-[color:var(--success-soft)] text-[color:var(--success)]'
+    case 'expired': return 'bg-[color:var(--warning-soft)] text-[color:var(--warning)]'
+    case 'terminated': return 'bg-[color:var(--danger-soft)] text-[color:var(--danger)]'
+    case 'archived': return 'bg-[color:var(--panel-2)] text-[color:var(--muted)]'
+    default: return 'bg-[color:var(--panel-2)] text-[color:var(--muted)]'
   }
 }
 

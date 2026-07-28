@@ -28,32 +28,32 @@ export const AuditFilterBar: React.FC<AuditFilterBarProps> = ({
   onFilterLevelChange, onKeywordChange, onSearch, onReset, resourceLabels,
 }) => {
   return (
-    <FilterBar className="mb-6 !flex-col !items-stretch">
+    <FilterBar bare className="mb-6 !flex-col !items-stretch">
       <div className="grid grid-cols-6 gap-4">
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">开始日期</label>
+          <label className="block text-xs font-medium text-[color:var(--fg-2)] mb-1">开始日期</label>
           <input
             type="date"
             value={startDate}
             onChange={e => onStartDateChange(e.target.value)}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
+            className="w-full px-3 py-2 border border-[color:var(--border)] rounded-lg text-sm focus:ring-2 focus:ring-[color:var(--accent-soft)]"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">结束日期</label>
+          <label className="block text-xs font-medium text-[color:var(--fg-2)] mb-1">结束日期</label>
           <input
             type="date"
             value={endDate}
             onChange={e => onEndDateChange(e.target.value)}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
+            className="w-full px-3 py-2 border border-[color:var(--border)] rounded-lg text-sm focus:ring-2 focus:ring-[color:var(--accent-soft)]"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">操作类型</label>
+          <label className="block text-xs font-medium text-[color:var(--fg-2)] mb-1">操作类型</label>
           <select
             value={filterAction}
             onChange={e => onFilterActionChange(e.target.value as AuditAction | '')}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
+            className="w-full px-3 py-2 border border-[color:var(--border)] rounded-lg text-sm focus:ring-2 focus:ring-[color:var(--accent-soft)]"
           >
             <option value="">全部</option>
             <option value="create">创建</option>
@@ -65,11 +65,11 @@ export const AuditFilterBar: React.FC<AuditFilterBarProps> = ({
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">资源类型</label>
+          <label className="block text-xs font-medium text-[color:var(--fg-2)] mb-1">资源类型</label>
           <select
             value={filterResource}
             onChange={e => onFilterResourceChange(e.target.value)}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
+            className="w-full px-3 py-2 border border-[color:var(--border)] rounded-lg text-sm focus:ring-2 focus:ring-[color:var(--accent-soft)]"
           >
             <option value="">全部</option>
             {Object.entries(resourceLabels).map(([key, label]) => (
@@ -78,11 +78,11 @@ export const AuditFilterBar: React.FC<AuditFilterBarProps> = ({
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">日志级别</label>
+          <label className="block text-xs font-medium text-[color:var(--fg-2)] mb-1">日志级别</label>
           <select
             value={filterLevel}
             onChange={e => onFilterLevelChange(e.target.value as AuditLevel | '')}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
+            className="w-full px-3 py-2 border border-[color:var(--border)] rounded-lg text-sm focus:ring-2 focus:ring-[color:var(--accent-soft)]"
           >
             <option value="">全部</option>
             <option value="info">信息</option>
@@ -91,20 +91,20 @@ export const AuditFilterBar: React.FC<AuditFilterBarProps> = ({
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">关键词搜索</label>
+          <label className="block text-xs font-medium text-[color:var(--fg-2)] mb-1">关键词搜索</label>
           <input
             type="text"
             value={keyword}
             onChange={e => onKeywordChange(e.target.value)}
             placeholder="搜索用户、描述..."
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
+            className="w-full px-3 py-2 border border-[color:var(--border)] rounded-lg text-sm focus:ring-2 focus:ring-[color:var(--accent-soft)]"
             onKeyPress={e => e.key === 'Enter' && onSearch()}
           />
         </div>
       </div>
-      <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
-        <span className="text-sm text-slate-500">
-          共找到 <span className="font-medium text-slate-700">{total}</span> 条记录
+      <div className="flex items-center justify-between mt-4 pt-4 border-t border-[color:var(--border)]">
+        <span className="text-sm text-[color:var(--muted)]">
+          共找到 <span className="font-medium text-[color:var(--fg-2)]">{total}</span> 条记录
         </span>
         <div className="flex items-center gap-2">
           <Button

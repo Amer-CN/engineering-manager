@@ -28,10 +28,10 @@ export function GpuToggle() {
 
   return (
     <div className="flex items-center gap-2">
-      {needRestart && <span className="text-xs text-amber-600">需重启</span>}
+      {needRestart && <span className="text-xs text-warning-600">需重启</span>}
       <button onClick={toggle}
-        className={`relative w-11 h-6 rounded-full transition-colors ${enabled ? 'bg-emerald-500' : 'bg-slate-300'}`}>
-        <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${enabled ? 'translate-x-5' : ''}`} />
+        className={`relative w-11 h-6 rounded-full transition-colors ${enabled ? 'bg-success-500' : 'bg-[color:var(--panel-2)]'}`}>
+        <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-[color:var(--card)] rounded-full shadow transition-transform ${enabled ? 'translate-x-5' : ''}`} />
       </button>
     </div>
   )

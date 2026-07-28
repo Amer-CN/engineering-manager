@@ -52,33 +52,33 @@ function TabsTrigger({
       disabled={tab.disabled}
       onClick={onClick}
       className={`
-      relative rounded-md font-medium transition-all duration-200
-      focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400
+      relative ${isHero ? 'rounded-md' : ''} font-medium transition-all duration-200
+      focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-soft)]
       ${tabPadding[size]}
       ${fullWidth ? 'flex-1' : ''}
       ${isHero
         ? isActive
-          ? 'text-emerald-300 bg-white/15 rounded-md'
+          ? 'text-success-300 bg-[color:var(--card)]/15 rounded-md'
           : 'text-white/50 hover:text-white/80'
         : isActive
-          ? 'text-primary-600 bg-white shadow-sm rounded-md'
-          : 'text-slate-500 hover:text-slate-700'
+          ? 'text-[color:var(--fg)] border-b-2 border-[color:var(--accent)] -mb-px'
+          : 'text-[color:var(--muted)] hover:text-[color:var(--fg-2)]'
       }
       ${tab.disabled ? 'opacity-50 cursor-not-allowed' : ''}
       `}
     >
-      <span className={`relative z-10 flex items-center justify-center gap-2 ${isActive && isHero ? 'text-emerald-300' : ''}`}>
+      <span className={`relative z-10 flex items-center justify-center gap-2 ${isActive && isHero ? 'text-success-300' : ''}`}>
         {tab.icon && <Icon name={tab.icon} size={14} />}
         {tab.label}
         {tab.badge !== undefined && (
           <span className={`px-1.5 py-0.5 text-xs rounded-full ${
             isHero
               ? isActive
-                ? 'bg-white/20 text-white'
-                : 'bg-white/10 text-white/60'
+                ? 'bg-[color:var(--card)]/20 text-white'
+                : 'bg-[color:var(--card)]/10 text-white/60'
               : isActive
-                ? 'bg-primary-100 text-primary-600'
-                : 'bg-slate-200 text-slate-600'
+                ? 'bg-[color:var(--accent-soft)] text-[color:var(--accent)]'
+                : 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)]'
           }`}>
             {tab.badge}
           </span>
@@ -105,10 +105,10 @@ export function Tabs({
 
   return (
     <div className={`${fullWidth ? 'w-full' : ''} ${className}`}>
-      {/* Tab 按钮容器 */}
+      {/* Tab 按钮容器 — Stitch: underline tabs */}
       <div
-        className={`flex items-center gap-1 rounded-xl p-1 w-fit shrink-0 ${
-          isHero ? 'bg-white/10' : 'bg-slate-100'
+        className={`flex items-center shrink-0 ${
+          isHero ? 'gap-1 rounded-xl p-1 bg-[color:var(--card)]/10' : 'gap-6 border-b border-[color:var(--border)] pb-0'
         }`}
         role="tablist"
         aria-orientation="horizontal"

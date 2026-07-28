@@ -107,7 +107,7 @@ export function Select({
   return (
   <div className={`w-full ${className}`} ref={containerRef}>
   {label && (
-  <label className="block text-sm font-medium text-slate-700 mb-1.5">
+  <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1.5">
   {label}
   </label>
   )}
@@ -118,21 +118,21 @@ export function Select({
   onClick={() => !disabled && setIsOpen(!isOpen)}
   disabled={disabled}
   className={`
-  w-full px-4 py-2.5 bg-white text-left
+  w-full px-4 py-2.5 bg-[color:var(--card)] text-left
   border rounded-lg
   transition-all duration-200
-  focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500
-  hover:border-slate-300:border-slate-500
-  disabled:bg-slate-50:bg-slate-900 disabled:text-slate-500 disabled:cursor-not-allowed
+  focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] focus:border-[color:var(--accent)]
+  hover:border-[color:var(--border)]
+  disabled:bg-[color:var(--panel-2)] disabled:text-[color:var(--muted)] disabled:cursor-not-allowed
   ${error
   ? 'border-danger-500 focus:ring-danger-500/20'
-  : 'border-slate-200'
+  : 'border-[color:var(--border)]'
   }
-  ${isOpen ? 'ring-2 ring-primary-500/20 border-primary-500' : ''}
+  ${isOpen ? 'ring-2 ring-[color:var(--accent-soft)] border-[color:var(--accent)]' : ''}
   `}
   >
   <div className="flex items-center justify-between gap-2">
-  <span className={`truncate ${selectedLabels.length ? 'text-slate-800' : 'text-slate-400'}`}>
+  <span className={`truncate ${selectedLabels.length ? 'text-[color:var(--fg)]' : 'text-[color:var(--muted)]'}`}>
   {selectedLabels.length > 0
   ? (multiple ? selectedLabels.join(', ') : selectedLabels[0])
   : placeholder
@@ -140,11 +140,11 @@ export function Select({
   </span>
   <div className="flex items-center gap-1 flex-shrink-0">
   {clearable && hasValue && (
-  <span onClick={handleClear} className="p-0.5 hover:bg-slate-100:bg-slate-700 rounded transition-colors">
-  <Icon name="X" size={14} className="text-slate-400" />
+  <span onClick={handleClear} className="p-0.5 hover:bg-[color:var(--panel-2)] rounded transition-colors">
+  <Icon name="X" size={14} className="text-[color:var(--muted)]" />
   </span>
   )}
-  <Icon name="ChevronDown" size={16} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+  <Icon name="ChevronDown" size={16} className={`text-[color:var(--muted)] transition-transform ${isOpen ? 'rotate-180' : ''}`} />
   </div>
   </div>
   </button>
@@ -152,22 +152,22 @@ export function Select({
   <AnimatePresence>
   {isOpen && (
   <motion.div
-  className="absolute z-50 w-full mt-1 bg-white rounded-lg shadow-lg border border-slate-200 overflow-hidden"
+  className="absolute z-50 w-full mt-1 bg-[color:var(--card)] rounded-lg shadow-lg border border-[color:var(--border)] overflow-hidden"
   initial={{ opacity: 0, y: -4 }}
   animate={{ opacity: 1, y: 0 }}
   exit={{ opacity: 0, y: -4 }}
   transition={{ duration: 0.15 }}
   >
   {searchable && (
-  <div className="p-2 border-b border-slate-100">
+  <div className="p-2 border-b border-[color:var(--border)]">
   <div className="relative">
-  <Icon name="Search" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+  <Icon name="Search" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--muted)]" />
   <input
   type="text"
   value={searchValue}
   onChange={(e) => setSearchValue(e.target.value)}
   placeholder="搜索..."
-  className="w-full pl-8 pr-3 py-2 border border-slate-200 rounded-lg text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+  className="w-full pl-8 pr-3 py-2 border border-[color:var(--border)] rounded-lg text-sm bg-[color:var(--card)] text-[color:var(--fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)]"
   autoFocus
   />
   </div>
@@ -176,7 +176,7 @@ export function Select({
 
   <HoverScrollbar className="max-h-60">
   {filteredOptions.length === 0 ? (
-  <div className="px-4 py-8 text-sm text-slate-500 text-center">
+  <div className="px-4 py-8 text-sm text-[color:var(--muted)] text-center">
   暂无数据
   </div>
   ) : (
@@ -189,9 +189,9 @@ export function Select({
   className={`
   w-full px-4 py-2.5 text-left text-sm
   transition-colors
-  hover:bg-slate-50:bg-slate-700
+  hover:bg-[color:var(--panel-2)]
   disabled:opacity-50 disabled:cursor-not-allowed
-  ${isSelected(option.value) ? 'bg-primary-50 text-primary-700' : 'text-slate-700'}
+  ${isSelected(option.value) ? 'bg-[color:var(--accent-soft)] text-[color:var(--accent)]' : 'text-[color:var(--fg-2)]'}
   `}
   >
   <div className="flex items-center gap-2">
@@ -200,7 +200,7 @@ export function Select({
   type="checkbox"
   checked={isSelected(option.value)}
   onChange={() => {}}
-  className="w-4 h-4 text-primary-600 rounded border-slate-300 focus:ring-primary-500"
+  className="w-4 h-4 text-[color:var(--accent)] rounded border-[color:var(--border)] focus:ring-[color:var(--accent-soft)]"
   />
   )}
   {option.label}

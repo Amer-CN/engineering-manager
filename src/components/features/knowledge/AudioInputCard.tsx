@@ -74,11 +74,11 @@ const AudioInputCard: React.FC<AudioInputCardProps> = ({
           </div>
         ) : (
           <div className="space-y-3">
-            <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-              <Icon name="FileText" size={20} className="text-slate-500 flex-shrink-0" />
+            <div className="flex items-center gap-3 p-3 bg-[color:var(--panel-2)] rounded-lg">
+              <Icon name="FileText" size={20} className="text-[color:var(--muted)] flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-700 truncate">{selectedFile?.name}</p>
-                {selectedFile && <p className="text-xs text-slate-400">{formatSize(selectedFile.size)}</p>}
+                <p className="text-sm font-medium text-[color:var(--fg-2)] truncate">{selectedFile?.name}</p>
+                {selectedFile && <p className="text-xs text-[color:var(--muted)]">{formatSize(selectedFile.size)}</p>}
               </div>
               {!uploading && (
                 <Button variant="ghost" size="xs" onClick={onClear} leftIcon="X">
@@ -87,7 +87,7 @@ const AudioInputCard: React.FC<AudioInputCardProps> = ({
               )}
             </div>
             <div className="space-y-1">
-              <div className="flex items-center justify-between text-xs text-slate-500">
+              <div className="flex items-center justify-between text-xs text-[color:var(--muted)]">
                 <span>{uploading ? '上传中...' : '准备中...'}</span>
                 <div className="flex items-center gap-2">
                   {uploading && onCancelUpload && (
@@ -102,9 +102,9 @@ const AudioInputCard: React.FC<AudioInputCardProps> = ({
                   <span>{uploadProgress}%</span>
                 </div>
               </div>
-              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-2 bg-[color:var(--panel-2)] rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-primary-500 rounded-full transition-all duration-200"
+                  className="h-full bg-[color:var(--accent)] rounded-full transition-all duration-200"
                   style={{ width: `${uploadProgress}%` }}
                 />
               </div>
@@ -128,7 +128,7 @@ const AudioInputCard: React.FC<AudioInputCardProps> = ({
       />
 
       {/* 分段切换 */}
-      <div className="flex gap-1 p-1 mb-4 bg-slate-100 rounded-lg">
+      <div className="flex gap-1 p-1 mb-4 bg-[color:var(--panel-2)] rounded-lg">
         {([
           { value: 'upload', label: '上传文件', icon: 'Upload' },
           { value: 'record', label: '现场录音', icon: 'Mic' },
@@ -139,8 +139,8 @@ const AudioInputCard: React.FC<AudioInputCardProps> = ({
             onClick={() => setMode(opt.value)}
             className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-sm rounded-md transition-colors ${
               mode === opt.value
-                ? 'bg-white text-primary-700 shadow-sm font-medium'
-                : 'text-slate-500 hover:text-slate-700'
+                ? 'bg-[color:var(--card)] text-[color:var(--accent)] shadow-sm font-medium'
+                : 'text-[color:var(--muted)] hover:text-[color:var(--fg-2)]'
             }`}
           >
             <Icon name={opt.icon} size={15} />
@@ -157,14 +157,14 @@ const AudioInputCard: React.FC<AudioInputCardProps> = ({
           onClick={() => !disabled && inputRef.current?.click()}
           className={`border-2 border-dashed rounded-xl py-10 px-6 text-center cursor-pointer transition-colors ${
             dragOver
-              ? 'border-primary-400 bg-primary-50'
-              : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+              ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)]'
+              : 'border-[color:var(--border)] hover:border-[color:var(--border)] hover:bg-[color:var(--panel-2)]'
           } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
-          <Icon name="Upload" size={32} className="text-slate-400 mx-auto mb-2" />
-          <p className="text-sm text-slate-600 font-medium">拖拽音频文件到此处</p>
-          <p className="text-xs text-slate-400 mt-1">或点击选择文件</p>
-          <p className="text-xs text-slate-400 mt-2">支持 {accept} · 最大 500MB</p>
+          <Icon name="Upload" size={32} className="text-[color:var(--muted)] mx-auto mb-2" />
+          <p className="text-sm text-[color:var(--fg-2)] font-medium">拖拽音频文件到此处</p>
+          <p className="text-xs text-[color:var(--muted)] mt-1">或点击选择文件</p>
+          <p className="text-xs text-[color:var(--muted)] mt-2">支持 {accept} · 最大 500MB</p>
         </div>
       ) : (
         <AudioRecorder disabled={disabled} onRecorded={onFileSelect} />

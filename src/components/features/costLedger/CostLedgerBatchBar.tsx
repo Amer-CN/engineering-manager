@@ -37,7 +37,7 @@ export function CostLedgerBatchBar({ batches, currentBatchId, onChangeBatch, onC
   <div className="flex items-center gap-2">
   {/* Version selector */}
   <div className="flex items-center gap-1.5">
-  <span className="text-xs text-slate-500">版本</span>
+  <span className="text-xs text-[color:var(--muted)]">版本</span>
   {renaming ? (
   <div className="flex items-center gap-1">
   <input autoFocus value={renameValue}
@@ -53,14 +53,14 @@ export function CostLedgerBatchBar({ batches, currentBatchId, onChangeBatch, onC
   if (renameValue.trim()) await onRenameBatch(currentBatchId, renameValue.trim())
   setRenaming(false)
   }}
-  className="w-28 px-2 py-1 border border-blue-400 rounded-lg text-sm bg-white" />
+  className="w-28 px-2 py-1 border border-[color:var(--accent)] rounded-lg text-sm bg-[color:var(--card)]" />
   </div>
   ) : (
   <div className="flex items-center gap-1">
   <select
   value={currentBatchId}
   onChange={e => onChangeBatch(parseInt(e.target.value))}
-  className="px-2 py-1 border border-slate-300 rounded-lg text-sm bg-white"
+  className="px-2 py-1 border border-[color:var(--border)] rounded-lg text-sm bg-[color:var(--card)]"
   >
   {batches.map(b => (
   <option key={b.id} value={b.id}>{b.name}</option>
@@ -68,7 +68,7 @@ export function CostLedgerBatchBar({ batches, currentBatchId, onChangeBatch, onC
   </select>
   <Tooltip content="重命名版本" position="top" delay={300}>
   <button onClick={() => { const cur = batches.find(b => b.id === currentBatchId); setRenameValue(cur?.name || ''); setRenaming(true) }}
-  className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded">
+  className="p-1 text-[color:var(--muted)] hover:text-[color:var(--accent)] hover:bg-[color:var(--accent-soft)] rounded">
   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
   </button>
   </Tooltip>
@@ -85,7 +85,7 @@ export function CostLedgerBatchBar({ batches, currentBatchId, onChangeBatch, onC
   onChange={e => setNewName(e.target.value)}
   onKeyDown={e => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') { setShowNewInput(false); setNewName('') } }}
   placeholder="版本名称"
-  className="w-36 px-2 py-1 border border-slate-300 rounded-lg text-sm"
+  className="w-36 px-2 py-1 border border-[color:var(--border)] rounded-lg text-sm"
   />
   <Button onClick={handleCreate}  variant="primary" className="px-2 py-1 text-xs">确定</Button>
   <Button onClick={() => { setShowNewInput(false); setNewName('') }}  variant="secondary" size="sm">取消</Button>
@@ -98,11 +98,11 @@ export function CostLedgerBatchBar({ batches, currentBatchId, onChangeBatch, onC
 
   {/* Import & Compare */}
   <button onClick={onImport}
-  className="px-3 py-1 text-xs border border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50"
+  className="px-3 py-1 text-xs border border-[color:var(--accent)] text-[color:var(--accent)] rounded-lg hover:bg-[color:var(--accent-soft)]"
   >导入 Excel</button>
   <button onClick={onCompare}
   disabled={batches.length < 2}
-  className="px-3 py-1 text-xs border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 disabled:opacity-40"
+  className="px-3 py-1 text-xs border border-[color:var(--border)] text-[color:var(--fg-2)] rounded-lg hover:bg-[color:var(--panel-2)] disabled:opacity-40"
   >对比版本</button>
 
   {/* Copy version */}
@@ -112,15 +112,15 @@ export function CostLedgerBatchBar({ batches, currentBatchId, onChangeBatch, onC
   const newBatch = await onCopyBatch(currentBatchId, name)
   if (newBatch) onChangeBatch(newBatch.id)
   }}
-  className="px-3 py-1 text-xs border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50"
+  className="px-3 py-1 text-xs border border-[color:var(--border)] text-[color:var(--fg-2)] rounded-lg hover:bg-[color:var(--panel-2)]"
   >复制版本</button>
 
   {/* Delete version (初始版不能删) */}
   {currentBatchId !== 0 && (
   <>
   {confirmDelete === currentBatchId ? (
-  <div className="flex items-center gap-1 bg-red-50 px-2 py-1 rounded-lg border border-red-200">
-  <span className="text-xs text-red-600 whitespace-nowrap">确定删除此版本？数据不可恢复</span>
+  <div className="flex items-center gap-1 bg-danger-50 px-2 py-1 rounded-lg border border-danger-200">
+  <span className="text-xs text-danger-600 whitespace-nowrap">确定删除此版本？数据不可恢复</span>
   <Button onClick={async () => {
   const ok = await onDeleteBatch(currentBatchId)
   if (ok) { onChangeBatch(0); setConfirmDelete(null) }
@@ -131,7 +131,7 @@ export function CostLedgerBatchBar({ batches, currentBatchId, onChangeBatch, onC
   <Tooltip content="删除此版本及数据" position="top" delay={300}>
   <Button onClick={() => setConfirmDelete(currentBatchId)}
   
-   variant="ghost" size="sm" className="text-red-500 hover:text-red-700">
+   variant="ghost" size="sm" className="text-danger-500 hover:text-danger-700">
   <svg className="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
   </Button>
   </Tooltip>

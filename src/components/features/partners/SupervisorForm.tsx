@@ -117,7 +117,7 @@ export const SupervisorForm: React.FC<SupervisorFormProps> = ({
   setRegionName(prev => ({ ...prev, city: e.target.value, district: '' }))
   }}
   disabled={!regionName.province}
-  className="select disabled:bg-slate-100"
+  className="select disabled:bg-[color:var(--panel-2)]"
   >
   <option value="">城市</option>
   {regionName.province && getCities(regionName.province).map(c => (
@@ -128,7 +128,7 @@ export const SupervisorForm: React.FC<SupervisorFormProps> = ({
   value={regionName.district}
   onChange={e => setRegionName(prev => ({ ...prev, district: e.target.value }))}
   disabled={!regionName.city}
-  className="select disabled:bg-slate-100"
+  className="select disabled:bg-[color:var(--panel-2)]"
   >
   <option value="">区县</option>
   {regionName.city && getDistricts(regionName.province, regionName.city).map(d => (
@@ -174,13 +174,13 @@ export const SupervisorForm: React.FC<SupervisorFormProps> = ({
   {/* 关联项目 */}
   <div className="form-group">
   <label className="label">关联项目</label>
-  <div className="border border-slate-200 rounded-lg p-3 max-h-40 overflow-y-auto bg-slate-50">
+  <div className="border border-[color:var(--border)] rounded-lg p-3 max-h-40 overflow-y-auto bg-[color:var(--panel-2)]">
   {projects.length === 0 ? (
-  <p className="text-slate-400 text-sm">暂无项目</p>
+  <p className="text-[color:var(--muted)] text-sm">暂无项目</p>
   ) : (
   <div className="space-y-2">
   {projects.map(project => (
-  <label key={project.id} className="flex items-center cursor-pointer hover:bg-white p-1 rounded transition-colors">
+  <label key={project.id} className="flex items-center cursor-pointer hover:bg-[color:var(--card)] p-1 rounded transition-colors">
   <input
   type="checkbox"
   checked={formData.projectIds.includes(project.id)}
@@ -191,9 +191,9 @@ export const SupervisorForm: React.FC<SupervisorFormProps> = ({
   setFormData(prev => ({ ...prev, projectIds: prev.projectIds.filter(id => id !== project.id) }))
   }
   }}
-  className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+  className="w-4 h-4 text-[color:var(--accent)] rounded focus:ring-[color:var(--accent-soft)]"
   />
-  <span className="ml-2 text-sm text-slate-700">{project.name}</span>
+  <span className="ml-2 text-sm text-[color:var(--fg-2)]">{project.name}</span>
   </label>
   ))}
   </div>
@@ -203,27 +203,27 @@ export const SupervisorForm: React.FC<SupervisorFormProps> = ({
 
   {/* 备注 */}
   <div>
-  <label className="block text-sm font-medium text-slate-700 mb-1">备注</label>
+  <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">备注</label>
   <textarea
   value={formData.remarks}
   onChange={e => setFormData({ ...formData, remarks: e.target.value })}
-  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+  className="w-full px-4 py-2 border border-[color:var(--border)] rounded-lg focus:ring-2 focus:ring-[color:var(--accent-soft)] focus:border-[color:var(--accent)]"
   rows={3}
   />
   </div>
   </div>
 
-  <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-slate-200">
+  <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-[color:var(--border)]">
   <button
   type="button"
   onClick={onCancel}
-  className="px-6 py-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+  className="px-6 py-2 text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)] rounded-lg transition-colors"
   >
   取消
   </button>
   <button
   type="submit"
-  className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
+  className="px-6 py-2 bg-[color:var(--accent)] hover:opacity-90 text-[color:var(--on-accent)] rounded-lg transition-colors"
   >
   {supervisor ? '保存' : '添加'}
   </button>

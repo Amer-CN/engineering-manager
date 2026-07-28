@@ -10,9 +10,9 @@ import type { BankReceiptMatch } from '@/types'
 type BankReceiptMatchWithIndex = BankReceiptMatch & { _index: number }
 
 function getConfidenceColor(confidence: number) {
-  if (confidence >= 80) return 'text-green-600 bg-green-50'
-  if (confidence >= 60) return 'text-yellow-600 bg-yellow-50'
-  return 'text-red-600 bg-red-50'
+  if (confidence >= 80) return 'text-success-600 bg-success-50'
+  if (confidence >= 60) return 'text-warning-600 bg-warning-50'
+  return 'text-danger-600 bg-danger-50'
 }
 
 function getStatusBadge(status: string) {
@@ -45,16 +45,16 @@ export function getMatchColumns(
     { key: 'receiptPath', title: '回单信息', render: (item) => (
       <div>
         <p className="font-medium">{item.parsedDate || '日期未知'}</p>
-        <p className="text-xs text-slate-500">{item.receiptPath.split('/').pop()}</p>
+        <p className="text-xs text-[color:var(--muted)]">{item.receiptPath.split('/').pop()}</p>
       </div>
     )},
     { key: 'parsedName', title: '解析姓名', render: (item) => (
-      <span className={item.parsedName ? 'text-slate-900' : 'text-slate-400'}>
+      <span className={item.parsedName ? 'text-[color:var(--fg)]' : 'text-[color:var(--muted)]'}>
         {item.parsedName || '未识别'}
       </span>
     )},
     { key: 'parsedAmount', title: '解析金额', render: (item) => (
-      <span className="font-medium text-slate-900">¥{item.parsedAmount.toFixed(2)}</span>
+      <span className="font-medium text-[color:var(--fg)]">¥{item.parsedAmount.toFixed(2)}</span>
     )},
     { key: 'matchedWorkerId', title: '匹配工人', render: (item) => (
       <select
@@ -64,7 +64,7 @@ export function getMatchColumns(
           const selectedWorker = workers.find(w => w.id === selectedId)
           handleWorkerChange(item._index, selectedId, selectedWorker?.name || null)
         }}
-        className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="block w-full px-3 py-2 border border-[color:var(--border)] rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--accent)]"
         disabled={item.status === 'archived'}
       >
         <option value="">-- 未匹配 --</option>
@@ -82,7 +82,7 @@ export function getMatchColumns(
           const selectedId = e.target.value ? parseInt(e.target.value) : null
           handleWageChange(item._index, selectedId)
         }}
-        className="block w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="block w-full px-3 py-2 border border-[color:var(--border)] rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--accent)]"
         disabled={item.status === 'archived' || !item.matchedWorkerId}
       >
         <option value="">-- 未匹配 --</option>

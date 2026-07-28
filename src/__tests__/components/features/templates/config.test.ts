@@ -53,12 +53,12 @@ describe('templates/config', () => {
       }
     })
 
-    test('合同模板为紫色', () => {
-      expect(categoryColors.contract).toContain('violet')
+    test('合同模板为中性色', () => {
+      expect(categoryColors.contract).toContain('var(--panel-2)')
     })
 
     test('结算模板为绿色', () => {
-      expect(categoryColors.settlement).toContain('emerald')
+      expect(categoryColors.settlement).toContain('success')
     })
   })
 })

@@ -99,7 +99,7 @@ export function CostLedgerGrid({ rows, loading, error, categories, onEdit, onCha
         <span className="line-clamp-2">
           {categoryLevel === 'level1' && <span className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle" style={{ backgroundColor: getLevel1Color(i.row.original.category, categories) }} />}
           {getCategoryDisplayLabel(i.row.original.category, categoryLevel, categories)}
-          {isCategoryMissing(i.row.original.category, categories) && <span className="ml-1 rounded bg-amber-100 px-1 text-amber-700 text-caption">已删</span>}
+          {isCategoryMissing(i.row.original.category, categories) && <span className="ml-1 rounded px-1 text-caption" style={{ background: 'var(--warning-soft)', color: 'var(--warning)' }}>已删</span>}
         </span>
       ) },
     { id: 'counterparty', accessorKey: 'counterparty', header: '往来单位/个人', meta: { editable: true } },
@@ -107,8 +107,8 @@ export function CostLedgerGrid({ rows, loading, error, categories, onEdit, onCha
     { id: 'amount', accessorKey: 'amount', header: '金额', aggregationFn: 'sum',
       aggregatedCell: (i) => <strong>{fmtMoney(i.getValue())}</strong>,
       cell: (i) => { const v = i.getValue() as number; const ex = i.row.original.direction === 'expense'
-        return <span className={ex ? 'text-red-600' : 'text-emerald-600'}>{ex ? '-' : '+'}{formatMoney(v)}</span> },
-      meta: { align: 'right', editable: true, money: true, cellClass: (_v, r) => r.direction === 'expense' ? 'text-red-600' : 'text-emerald-600' } },
+        return <span className="font-mono tabular-nums" style={{ color: 'var(--fg)' }}>{ex ? '-' : '+'}{formatMoney(v)}</span> },
+      meta: { align: 'right', editable: true, money: true, cellClass: () => 'text-[color:var(--fg)] font-mono tabular-nums' } },
     { id: 'summary', accessorKey: 'summary', header: '摘要', meta: { editable: true } },
     { id: 'notes', accessorKey: 'notes', header: '备注', meta: { editable: true } },
     { id: 'actions', header: '操作', cell: (i) => <RowActions row={i.row.original} onEdit={onEdit} onDelete={handleRowDelete} /> },
@@ -222,9 +222,9 @@ export function CostLedgerGrid({ rows, loading, error, categories, onEdit, onCha
               <tr>
                 <td className="px-3 py-2" colSpan={6}>{activeFilters > 0 ? `筛选结果: ${filterSummary.count} 条` : `合计 ${data.length} 条`}</td>
                 <td className="px-3 py-2 text-right">
-                  <span className="text-red-600">-{formatMoney(filterSummary.totalExpense)}</span>
+                  <span className="font-mono tabular-nums" style={{ color: 'var(--fg)' }}>-{formatMoney(filterSummary.totalExpense)}</span>
                   <span className="mx-1" style={{ color: 'var(--muted)' }}>/</span>
-                  <span className="text-emerald-600">+{formatMoney(filterSummary.totalIncome)}</span>
+                  <span className="font-mono tabular-nums" style={{ color: 'var(--fg)' }}>+{formatMoney(filterSummary.totalIncome)}</span>
                 </td>
                 <td colSpan={3} />
               </tr>

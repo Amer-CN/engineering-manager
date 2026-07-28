@@ -52,15 +52,15 @@ export function Card({
 }: CardProps) {
   return (
   <motion.div
-  whileHover={hoverable || onClick ? { y: -3, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)' } : undefined}
+  whileHover={hoverable || onClick ? { y: -3, boxShadow: 'var(--shadow-lift)' } : undefined}
   transition={{ duration: 0.2 }}
   className={`
   rounded-xl
   ${glass
-  ? 'bg-white/80 backdrop-blur-lg'
-  : 'bg-white'
+  ? 'bg-[color:var(--card)]/80 backdrop-blur-lg'
+  : 'bg-[color:var(--card)]'
   }
-  ${bordered ? 'border border-slate-100' : ''}
+  ${bordered ? 'border border-[color:var(--border)]' : ''}
   ${shadowStyles[shadow]}
   ${onClick ? 'cursor-pointer' : ''}
   ${className}
@@ -68,16 +68,16 @@ export function Card({
   onClick={onClick}
   >
   {(title || subtitle || extra) && (
-  <div className={`${paddingStyles[padding]} ${headerDivider ? 'border-b border-slate-100' : ''}`}>
+  <div className={`${paddingStyles[padding]} ${headerDivider ? 'border-b border-[color:var(--border)]' : ''}`}>
   <div className="flex items-center justify-between">
   <div>
   {title && (
-  <h3 className="text-lg font-semibold text-slate-800">
+  <h3 className="text-lg font-semibold text-[color:var(--fg)]">
   {title}
   </h3>
   )}
   {subtitle && (
-  <p className="text-sm text-slate-500 mt-0.5">
+  <p className="text-sm text-[color:var(--muted)] mt-0.5">
   {subtitle}
   </p>
   )}
@@ -96,7 +96,7 @@ export function Card({
   </div>
 
   {footer && (
-  <div className={`${paddingStyles[padding]} ${footerDivider ? 'border-t border-slate-100 bg-slate-50' : ''} rounded-b-xl`}>
+  <div className={`${paddingStyles[padding]} ${footerDivider ? 'border-t border-[color:var(--border)] bg-[color:var(--panel-2)]' : ''} rounded-b-xl`}>
   {footer}
   </div>
   )}

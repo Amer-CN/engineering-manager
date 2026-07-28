@@ -161,7 +161,7 @@ const KnowledgeLibrary: React.FC<KnowledgeLibraryProps> = ({ openDocId, onOpenDo
         {searchStatus !== 'idle' && (
           <div className="mt-4">
             {searchStatus === 'searching' ? (
-              <div className="flex items-center gap-2 text-sm text-slate-500 py-4 justify-center">
+              <div className="flex items-center gap-2 text-sm text-[color:var(--muted)] py-4 justify-center">
                 <Icon name="Loader2" size={16} className="animate-spin" />
                 <span>搜索中...</span>
               </div>
@@ -169,29 +169,29 @@ const KnowledgeLibrary: React.FC<KnowledgeLibraryProps> = ({ openDocId, onOpenDo
               <EmptyState icon="Search" title="无搜索结果" description="尝试用不同的关键词搜索" />
             ) : (
               <div className="space-y-3">
-                <p className="text-xs text-slate-400">共 {hits.length} 条命中</p>
+                <p className="text-xs text-[color:var(--muted)]">共 {hits.length} 条命中</p>
                 {hits.map((hit, i) => {
                   const hitType = getHitType(hit)
                   return (
                     <div
                       key={i}
-                      className="p-3 rounded-lg border border-slate-200 bg-white hover:border-primary-200 hover:bg-primary-50/30 transition-colors cursor-pointer"
+                      className="p-3 rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] hover:border-[color:var(--accent)] hover:bg-[color:var(--accent-soft)] transition-colors cursor-pointer"
                       onClick={() => openDocument(hit.documentId)}
                     >
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-medium text-slate-700">
+                        <span className="text-sm font-medium text-[color:var(--fg-2)]">
                           {hit.docTitle || hit.title || '未命名文档'}
                         </span>
                         <Badge variant={hitType === 'mixed' ? 'primary' : hitType === 'keyword' ? 'gray' : 'success'} size="sm">
                           {getHitTypeLabel(hitType)}
                         </Badge>
                       </div>
-                      <p className="text-xs text-slate-500 line-clamp-2">
+                      <p className="text-xs text-[color:var(--muted)] line-clamp-2">
                         {maskKnowledgeText(hit.text, masked)}
                       </p>
-                      <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
+                      <div className="flex items-center gap-3 mt-1 text-xs text-[color:var(--muted)]">
                         {hit.sourceType && <span>{hit.sourceType}</span>}
-                        {hit.occurredAt && <span>{hit.occurredAt}</span>}
+                        {hit.occurredAt && <span className="font-mono tabular-nums">{hit.occurredAt}</span>}
                         {hit.speakers && <span>说话人: {formatSpeakers(hit.speakers)}</span>}
                       </div>
                     </div>
@@ -208,7 +208,7 @@ const KnowledgeLibrary: React.FC<KnowledgeLibraryProps> = ({ openDocId, onOpenDo
         extra={<Button variant="ghost" size="xs" onClick={fetchDocs} leftIcon="RefreshCw">刷新</Button>}
       >
         {listLoading ? (
-          <div className="flex items-center gap-2 text-sm text-slate-500 py-8 justify-center">
+          <div className="flex items-center gap-2 text-sm text-[color:var(--muted)] py-8 justify-center">
             <Icon name="Loader2" size={16} className="animate-spin" />
             <span>加载中...</span>
           </div>
@@ -220,12 +220,12 @@ const KnowledgeLibrary: React.FC<KnowledgeLibraryProps> = ({ openDocId, onOpenDo
               {docs.map(doc => (
                 <div
                   key={doc.id}
-                  className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
+                  className="flex items-center gap-3 p-3 rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] hover:bg-[color:var(--panel-2)] transition-colors"
                 >
-                  <Icon name="FileText" size={18} className="text-slate-400 flex-shrink-0" />
+                  <Icon name="FileText" size={18} className="text-[color:var(--muted)] flex-shrink-0" />
                   <div className="flex-1 min-w-0 cursor-pointer" onClick={() => openDocument(doc.id)}>
-                    <p className="text-sm font-medium text-slate-700 truncate">{doc.title}</p>
-                    <div className="flex items-center gap-3 text-xs text-slate-400 mt-0.5">
+                    <p className="text-sm font-medium text-[color:var(--fg-2)] truncate">{doc.title}</p>
+                    <div className="flex items-center gap-3 text-xs text-[color:var(--muted)] mt-0.5">
                       {doc.sourceType && <span>{doc.sourceType}</span>}
                       {doc.occurredAt && <span>{doc.occurredAt}</span>}
                       {doc.chunkCount > 0 && <span>{doc.chunkCount} 块</span>}
@@ -233,7 +233,7 @@ const KnowledgeLibrary: React.FC<KnowledgeLibraryProps> = ({ openDocId, onOpenDo
                     </div>
                   </div>
                   <Button variant="ghost" size="xs" onClick={() => setDeleteTarget(doc)} iconOnly>
-                    <Icon name="Trash2" size={14} className="text-red-400" />
+                    <Icon name="Trash2" size={14} className="text-danger-400" />
                   </Button>
                 </div>
               ))}

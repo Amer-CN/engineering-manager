@@ -194,13 +194,13 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
   {/* 统计卡片 */}
   <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
   <Card bordered={false} className="p-4">
-  <p className="text-sm text-slate-500">模板总数</p>
-  <p className="text-2xl font-bold text-slate-800">{stats.total}</p>
+  <p className="text-sm" style={{ color: 'var(--muted)' }}>模板总数</p>
+  <p className="text-numeric-xl font-mono tabular-nums tracking-tight" style={{ color: 'var(--fg)' }}>{stats.total}</p>
   </Card>
   {Object.entries(templateTypeConfig).map(([type, config]) => (
   <Card bordered={false} className="p-4">
-  <p className="text-sm text-slate-500">{config.label}</p>
-  <p className="text-2xl font-bold text-slate-800">{stats.byType[type] || 0}</p>
+  <p className="text-sm" style={{ color: 'var(--muted)' }}>{config.label}</p>
+  <p className="text-numeric-xl font-mono tabular-nums tracking-tight" style={{ color: 'var(--fg)' }}>{stats.byType[type] || 0}</p>
   </Card>
   ))}
   </div>
@@ -212,33 +212,28 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
   <Card bordered={false} hoverable className="hover:shadow-md transition-all">
   <div className="p-5">
   <div className="flex items-start justify-between mb-4">
-  <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${
-  template.type === 'income' ? 'bg-green-100' :
-  template.type === 'expense' ? 'bg-red-100' :
-  template.type === 'labor' ? 'bg-blue-100' :
-  template.type === 'material' ? 'bg-purple-100' : 'bg-slate-100'
-  }`}>
+  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
   <Icon name={templateTypeConfig[template.type].icon} size={24} />
   </div>
-  <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-medium">
+  <span className="px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'var(--panel-2)', color: 'var(--muted)' }}>
   {templateTypeConfig[template.type].label}
   </span>
   </div>
   
-  <h3 className="text-lg font-semibold text-slate-800 mb-2">{template.name}</h3>
-  <p className="text-sm text-slate-500 mb-4 line-clamp-2">{template.description || '暂无描述'}</p>
+  <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--fg)' }}>{template.name}</h3>
+  <p className="text-sm mb-4 line-clamp-2" style={{ color: 'var(--muted)' }}>{template.description || '暂无描述'}</p>
   
   {template.variables && template.variables.length > 0 && (
   <div className="mb-4">
-  <p className="text-xs text-slate-400 mb-2">模板变量 ({template.variables.length}个)</p>
+  <p className="text-xs mb-2" style={{ color: 'var(--muted)' }}>模板变量 ({template.variables.length}个)</p>
   <div className="flex flex-wrap gap-1">
   {template.variables.slice(0, 3).map((v, idx) => (
-  <span key={idx} className="px-2 py-0.5 bg-primary-50 text-primary-600 rounded text-xs">
+  <span key={idx} className="px-2 py-0.5 rounded text-xs" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
   {v.label || v.key}
   </span>
   ))}
   {template.variables.length > 3 && (
-  <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-xs">
+  <span className="px-2 py-0.5 rounded text-xs" style={{ background: 'var(--panel-2)', color: 'var(--muted)' }}>
   +{template.variables.length - 3}
   </span>
   )}
@@ -246,11 +241,11 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
   </div>
   )}
   
-  <div className="text-xs text-slate-400 mb-4">
+  <div className="text-xs mb-4" style={{ color: 'var(--muted)' }}>
   创建于 {new Date(template.createdAt).toLocaleDateString()}
   </div>
   
-  <div className="flex items-center gap-2 pt-4 border-t border-slate-100">
+  <div className="flex items-center gap-2 pt-4" style={{ borderTop: '1px solid var(--border)' }}>
   <Button
   onClick={() => handleGenerate(template)}
   
@@ -300,11 +295,11 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
   <Button onClick={() => { setShowGenerateModal(false); setSelectedTemplate(null) }}  variant="secondary">取消</Button>
   <Button onClick={handlePrint}  variant="primary"><Icon name="Printer" size={14} /> 打印合同</Button>
   </>}>
-  <p className="text-sm text-slate-500 -mt-2 mb-4">填写模板变量，生成合同文档</p>
+  <p className="text-sm -mt-2 mb-4" style={{ color: 'var(--muted)' }}>填写模板变量，生成合同文档</p>
   <div className="space-y-4">
   {selectedTemplate?.variables?.map(variable => (
   <div key={variable.key}>
-  <label className="label">{variable.label || variable.key}{variable.required && <span className="text-red-500 ml-1">*</span>}</label>
+  <label className="label">{variable.label || variable.key}{variable.required && <span className="ml-1" style={{ color: 'var(--danger)' }}>*</span>}</label>
   {variable.type === 'date' ? (
   <Input size="sm" type="date" value={generateForm[variable.key] || ''} onChange={e => setGenerateForm({ ...generateForm, [variable.key]: e.target.value })} />
   ) : variable.type === 'number' ? (
@@ -314,9 +309,9 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
   )}
   </div>
   ))}
-  <div className="mt-6 pt-6 border-t border-slate-100">
-  <h3 className="font-medium text-slate-800 mb-3">合同预览</h3>
-  <div className="bg-slate-50 rounded-xl p-6 max-h-[300px] overflow-y-auto text-sm leading-relaxed">
+  <div className="mt-6 pt-6" style={{ borderTop: '1px solid var(--border)' }}>
+  <h3 className="font-medium mb-3" style={{ color: 'var(--fg)' }}>合同预览</h3>
+  <div className="rounded-xl p-6 max-h-[300px] overflow-y-auto text-sm leading-relaxed" style={{ background: 'var(--panel-2)' }}>
   {(() => {
   let content = selectedTemplate?.description || ''
   selectedTemplate?.variables?.forEach(v => {

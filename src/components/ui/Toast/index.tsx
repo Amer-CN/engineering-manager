@@ -14,9 +14,9 @@ const icons: Record<string, string> = {
 }
 
 const bgColors: Record<string, string> = {
-  success: 'bg-emerald-500',
-  error: 'bg-red-500',
-  info: 'bg-slate-700'
+  success: 'bg-success-500',
+  error: 'bg-danger-500',
+  info: 'bg-[color:var(--accent)]'
 }
 
 const Toast: React.FC<ToastProps> = ({ toast }) => {
@@ -30,7 +30,7 @@ const Toast: React.FC<ToastProps> = ({ toast }) => {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: -8, scale: 0.95 }}
         transition={{ duration: 0.2 }}
-        className={`fixed top-20 left-1/2 -translate-x-1/2 z-[9999] px-6 py-3 rounded-xl shadow-2xl ${bgColors[toast.type]} text-white`}
+        className={`fixed top-20 left-1/2 -translate-x-1/2 z-[9999] px-6 py-3 rounded-xl shadow-xl ${bgColors[toast.type]} text-white`}
       >
         <div className="flex items-center gap-3">
           <span className="text-lg font-bold">{icons[toast.type]}</span>

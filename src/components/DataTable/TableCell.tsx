@@ -18,12 +18,12 @@ export const TableCell = {
     color?: string
   }) => {
     const colors: Record<string, string> = {
-      primary: 'bg-primary-100 text-primary-700',
-      green: 'bg-green-100 text-green-700',
-      orange: 'bg-orange-100 text-orange-700',
-      red: 'bg-red-100 text-red-700',
-      gray: 'bg-slate-100 text-slate-700',
-      blue: 'bg-blue-100 text-blue-700',
+      primary: 'bg-[color:var(--accent-soft)] text-[color:var(--accent)]',
+      green: 'bg-success-100 text-success-700',
+      orange: 'bg-warning-100 text-warning-700',
+      red: 'bg-danger-100 text-danger-700',
+      gray: 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)]',
+      blue: 'bg-[color:var(--accent-soft)] text-[color:var(--accent)]',
     }
     return (
       <span

@@ -85,25 +85,25 @@ describe('Badge', () => {
   it('applies primary variant by default', () => {
     const { container } = render(<Badge>Default</Badge>)
     const badge = container.querySelector('span')
-    expect(badge?.className).toContain('bg-primary-100')
+    expect(badge?.className).toContain('bg-[color:var(--accent-soft)]')
   })
 
   it('applies success variant', () => {
     const { container } = render(<Badge variant="success">OK</Badge>)
     const badge = container.querySelector('span')
-    expect(badge?.className).toContain('bg-emerald-100')
+    expect(badge?.className).toContain('bg-success-100')
   })
 
   it('applies danger variant', () => {
     const { container } = render(<Badge variant="danger">Error</Badge>)
     const badge = container.querySelector('span')
-    expect(badge?.className).toContain('bg-red-100')
+    expect(badge?.className).toContain('bg-danger-100')
   })
 
   it('applies outlined style', () => {
     const { container } = render(<Badge variant="warning" outlined>Warn</Badge>)
     const badge = container.querySelector('span')
-    expect(badge?.className).toContain('border-amber-300')
+    expect(badge?.className).toContain('border-warning-500/30')
   })
 
   it('applies size sm', () => {

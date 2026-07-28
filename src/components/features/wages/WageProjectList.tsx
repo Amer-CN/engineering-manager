@@ -75,42 +75,42 @@ export default function WageProjectList({ allWageRecords, projects, selectedMont
   return (
     <div>
       {/* 全部项目汇总 */}
-      <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-200 p-4 mb-4">
-        <div className="text-xs font-medium text-amber-600 mb-2">全部项目汇总</div>
+      <div className="bg-[color:var(--warning-soft)] rounded-xl border border-warning-200 p-4 mb-4">
+        <div className="text-xs font-medium text-warning-600 mb-2">全部项目汇总</div>
         <div className="flex items-center gap-6">
           <div>
-            <div className="text-xs text-amber-500">累计应发</div>
-            <div className="text-xl font-bold text-slate-800">¥{overallSummary.totalWages.toFixed(0)}</div>
+            <div className="text-xs text-warning-500">累计应发</div>
+            <div className="text-xl font-bold text-[color:var(--fg)]">¥{overallSummary.totalWages.toFixed(0)}</div>
           </div>
-          <div className="w-px h-8 bg-amber-200" />
+          <div className="w-px h-8 bg-warning-200" />
           <div>
-            <div className="text-xs text-green-500">已发放</div>
-            <div className="text-xl font-bold text-green-600">¥{overallSummary.totalPaid.toFixed(0)}</div>
+            <div className="text-xs text-success-500">已发放</div>
+            <div className="text-xl font-bold text-success-600">¥{overallSummary.totalPaid.toFixed(0)}</div>
           </div>
-          <div className="w-px h-8 bg-amber-200" />
+          <div className="w-px h-8 bg-warning-200" />
           <div>
-            <div className="text-xs text-amber-500">未发放</div>
-            <div className="text-xl font-bold text-amber-600">¥{overallSummary.unpaid.toFixed(0)}</div>
+            <div className="text-xs text-warning-500">未发放</div>
+            <div className="text-xl font-bold text-warning-600">¥{overallSummary.unpaid.toFixed(0)}</div>
           </div>
-          <div className="w-px h-8 bg-amber-200" />
+          <div className="w-px h-8 bg-warning-200" />
           <div>
-            <div className="text-xs text-slate-400">活跃项目</div>
-            <div className="text-xl font-bold text-slate-700">{activeProjects}</div>
+            <div className="text-xs text-[color:var(--muted)]">活跃项目</div>
+            <div className="text-xl font-bold text-[color:var(--fg-2)]">{activeProjects}</div>
           </div>
         </div>
       </div>
 
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-lg font-semibold text-slate-800">项目工资概览</h2>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <h2 className="text-lg font-semibold text-[color:var(--fg)]">项目工资概览</h2>
+          <p className="text-sm text-[color:var(--muted)] mt-0.5">
             {activeProjects}/{totalProjects} 个项目有工资记录
           </p>
         </div>
       </div>
 
       {projectWageMap.length === 0 ? (
-        <div className="text-center py-16 text-slate-400 bg-white rounded-2xl border border-slate-200">
+        <div className="text-center py-16 text-[color:var(--muted)] bg-[color:var(--card)] rounded-xl border border-[color:var(--border)]">
           <p className="text-lg">暂无项目数据</p>
         </div>
       ) : (

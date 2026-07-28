@@ -89,13 +89,13 @@ export function MonthPicker({ value, onChange, className = '' }: MonthPickerProp
         ref={btnRef}
         type="button"
         onClick={handleToggle}
-        className={`flex items-center gap-2 px-3 py-1.5 border border-slate-300 rounded-lg text-sm bg-white hover:border-slate-400 transition-colors focus:ring-2 focus:ring-primary-500 focus:outline-none ${className}`}
+        className={`flex items-center gap-2 px-3 py-1.5 border border-[color:var(--border)] rounded-lg text-sm bg-[color:var(--card)] hover:border-[color:var(--border-strong)] transition-colors focus:ring-2 focus:ring-[color:var(--accent-soft)] focus:outline-none ${className}`}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400 shrink-0">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[color:var(--muted)] shrink-0">
           <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
         </svg>
-        <span className={value ? 'text-slate-700' : 'text-slate-400'}>{displayText}</span>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-slate-400 shrink-0">
+        <span className={value ? 'text-[color:var(--fg-2)]' : 'text-[color:var(--muted)]'}>{displayText}</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[color:var(--muted)] shrink-0">
           <polyline points="6 9 12 15 18 9" />
         </svg>
       </button>
@@ -103,26 +103,26 @@ export function MonthPicker({ value, onChange, className = '' }: MonthPickerProp
       {open && createPortal(
         <div
           ref={popRef}
-          className="fixed z-[100] w-[280px] rounded-xl border border-slate-200 bg-white shadow-xl"
+          className="fixed z-[100] w-[280px] rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] shadow-xl"
           style={{ top: pos.top, left: pos.left }}
         >
           {/* 年份切换 */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-[color:var(--border)]">
             <button
               type="button"
               onClick={prevYear}
-              className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-[color:var(--muted)] hover:bg-[color:var(--panel-2)] hover:text-[color:var(--fg-2)] transition-colors"
               title="上一年"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="15 18 9 12 15 6" />
               </svg>
             </button>
-            <span className="text-sm font-semibold text-slate-700 select-none">{viewYear}年</span>
+            <span className="text-sm font-semibold text-[color:var(--fg-2)] select-none">{viewYear}年</span>
             <button
               type="button"
               onClick={nextYear}
-              className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-[color:var(--muted)] hover:bg-[color:var(--panel-2)] hover:text-[color:var(--fg-2)] transition-colors"
               title="下一年"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -146,10 +146,10 @@ export function MonthPicker({ value, onChange, className = '' }: MonthPickerProp
                   className={[
                     'h-9 rounded-lg text-sm font-medium transition-all',
                     isSelected
-                      ? 'bg-primary-500 text-white shadow-sm'
+                      ? 'bg-[color:var(--accent)] text-[color:var(--on-accent)] shadow-sm'
                       : isToday
-                        ? 'border-2 border-primary-400 text-primary-600 hover:bg-primary-50'
-                        : 'text-slate-600 hover:bg-slate-100',
+                        ? 'border-2 border-[color:var(--accent)] text-[color:var(--accent)] hover:bg-[color:var(--accent-soft)]'
+                        : 'text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)]',
                   ].join(' ')}
                 >
                   {label}

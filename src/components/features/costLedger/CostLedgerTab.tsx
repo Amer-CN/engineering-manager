@@ -99,8 +99,8 @@ export function CostLedgerTab({ projectId, projectName }: CostLedgerTabProps) {
   return (
     <div className="flex h-full flex-col">
       {ConfirmDialog}
-      <div className="flex items-center justify-between border-b border-slate-200 px-6 py-3">
-        <h3 className="text-sm font-semibold text-slate-700">成本台账</h3>
+      <div className="flex items-center justify-between border-b border-[color:var(--border)] px-6 py-3">
+        <h3 className="text-sm font-semibold text-[color:var(--fg-2)]">成本台账</h3>
         <div className="flex items-center gap-3">
           <CostLedgerBatchBar
             batches={batches}

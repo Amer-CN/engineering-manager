@@ -120,12 +120,12 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
   return (
   <>
   <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-  <motion.div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-hidden" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }}>
-  <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-  <h2 className="text-xl font-semibold text-slate-800">
+  <motion.div className="rounded-xl w-full max-w-lg max-h-[90vh] overflow-hidden" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }}>
+  <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)' }}>
+  <h2 className="text-xl font-semibold" style={{ color: 'var(--fg)' }}>
   {isEditing ? '编辑发票' : '新建发票'}
   </h2>
-  <button onClick={onCancel} className="text-slate-400 hover:text-slate-600">✕</button>
+  <button onClick={onCancel} className="text-[color:var(--muted)] hover:text-[color:var(--fg-2)]">✕</button>
   </div>
   
   <form onSubmit={handleSubmit} className="flex flex-col overflow-hidden flex-1">
@@ -153,7 +153,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
       fileLabel={formData.fileType === 'pdf' ? 'PDF文件' : '图片文件'}
       dragOver={dragOverFile}
       inputRef={fileInputRef}
-      iconBgClass="bg-primary-100"
+      iconBgClass="bg-[color:var(--accent-soft)]"
       onPreview={() => setPreviewFile({ data: formData.fileUrl, type: formData.fileType === 'pdf' ? 'pdf' : 'image', title: '发票预览' })}
       onFileSelect={processFile}
       onRemove={() => setFormData(prev => ({ ...prev, fileUrl: '', fileType: '' }))}
@@ -179,7 +179,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
       }))}
     />
   </HoverScrollbar>
-  <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 shrink-0">
+  <div className="flex items-center justify-end gap-3 px-6 py-4 shrink-0" style={{ borderTop: '1px solid var(--border)' }}>
   <Button type="button" onClick={onCancel}  variant="secondary">取消</Button>
   <Button type="submit"  variant="primary">{isEditing ? '保存' : '创建'}</Button>
   </div>

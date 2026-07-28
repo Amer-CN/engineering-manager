@@ -4,18 +4,18 @@ import PageContainer from './ui/PageContainer'
 import { Modal } from './ui/Modal/Modal'
 import PageHeader from './ui/PageHeader'
 import { Tabs } from './ui/Tabs'
-import { InventoryStats, ItemList, ItemForm, TransList, TransForm, MaterialList, MaterialForm } from './features/inventory'
+import { ItemList, ItemForm, TransList, TransForm, MaterialList, MaterialForm } from './features/inventory'
 import { Spinner } from './ui/Loading/Loading'
 import { usePermission } from '../hooks/usePermission.tsx'
 import { useInventoryPage } from '../hooks/useInventoryPage'
 import { Button } from './ui/Button'
 
-const CARD = 'bg-white border border-slate-200 rounded-xl shadow-sm'
+const CARD = 'bg-[color:var(--card)] border border-[color:var(--border)] rounded-xl shadow-sm'
 const categories = ['钢材', '水泥', '混凝土', '木材', '玻璃', '涂料', '管材', '电线电缆', '五金配件', '其他']
 const units = ['吨', '千克', '立方米', '平方米', '米', '根', '个', '套', '卷', '箱']
 const materialCategories = ['主材', '辅材', '设备', '工具', '其他']
 const categoryIcons: Record<string, string> = { '主材': '🏗️', '辅材': '🔩', '设备': '⚙️', '工具': '🔧', '其他': '📦' }
-const categoryColors: Record<string, string> = { '主材': 'bg-orange-100 text-orange-800', '辅材': 'bg-blue-100 text-blue-800', '设备': 'bg-purple-100 text-purple-800', '工具': 'bg-green-100 text-green-800', '其他': 'bg-slate-100 text-slate-800' }
+const categoryColors: Record<string, string> = { '主材': 'bg-[color:var(--panel-2)] text-[color:var(--fg)]', '辅材': 'bg-[color:var(--panel-2)] text-[color:var(--fg)]', '设备': 'bg-[color:var(--panel-2)] text-[color:var(--fg)]', '工具': 'bg-[color:var(--panel-2)] text-[color:var(--fg)]', '其他': 'bg-[color:var(--panel-2)] text-[color:var(--fg)]' }
 
 interface InventoryProps { refresh?: () => void }
 
@@ -47,8 +47,6 @@ const Inventory: React.FC<InventoryProps> = ({ refresh }) => {
   </>}
   />
 
-  <InventoryStats totalItems={h.stats.totalItems} lowStock={h.stats.lowStock} totalValue={h.stats.totalValue} totalMaterials={h.stats.totalMaterials} />
-
   {/* 统一 Tabs 组件 */}
   <Tabs
   value={h.activeTab}
@@ -65,7 +63,7 @@ const Inventory: React.FC<InventoryProps> = ({ refresh }) => {
   <div className="p-6">
   <div className="flex items-center gap-4 mb-6">
   <div className="flex items-center gap-2">
-  <label className="text-sm text-slate-600">物料类别:</label>
+  <label className="text-sm text-[color:var(--fg-2)]">物料类别:</label>
   <select value={h.filterCategory} onChange={e => h.setFilterCategory(e.target.value)} className="select text-sm">
   <option value="">全部</option>
   {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
@@ -82,7 +80,7 @@ const Inventory: React.FC<InventoryProps> = ({ refresh }) => {
   <div className="p-6">
   <div className="flex items-center gap-4 mb-6">
   <div className="flex items-center gap-2">
-  <label className="text-sm text-slate-600">关联项目:</label>
+  <label className="text-sm text-[color:var(--fg-2)]">关联项目:</label>
   <select value={h.filterProject} onChange={e => h.setFilterProject(e.target.value ? Number(e.target.value) : '')} className="select text-sm">
   <option value="">全部</option>
   {h.projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -99,7 +97,7 @@ const Inventory: React.FC<InventoryProps> = ({ refresh }) => {
   <div className="p-6">
   <div className="flex items-center gap-4 mb-6">
   <div className="flex items-center gap-2">
-  <label className="text-sm text-slate-600">关联项目:</label>
+  <label className="text-sm text-[color:var(--fg-2)]">关联项目:</label>
   <select value={h.filterProject} onChange={e => h.setFilterProject(e.target.value ? Number(e.target.value) : '')} className="select text-sm">
   <option value="">全部</option>
   {h.projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}

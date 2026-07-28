@@ -5,7 +5,7 @@
  * 替代 Tauri 的 invoke 和 Electron 的 ipcRenderer
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5048';
+const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:5048';
 const TOKEN_KEY = 'jwt_token';
 const MASK_KEY = 'v120_mask_enabled';
 const PII_PATHS = ['/api/members', '/api/workers', '/api/partners', '/api/project-members'];

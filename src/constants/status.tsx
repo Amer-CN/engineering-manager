@@ -1,4 +1,4 @@
-import { Badge, type BadgeVariant } from '@/components/ui/Badge/Badge'
+import type { BadgeVariant } from '@/components/ui/Badge/Badge'
 
 /**
  * 统一状态标签配置
@@ -74,9 +74,21 @@ export const CONTRACT_STATUS: Record<string, StatusConfig> = {
   terminated: { label: '已终止', variant: 'danger' },
 }
 
+// ── 变体 → 圆点色 + 文字色 映射（Stitch: dot + text, 非 pill badge）──
+const variantDotMap: Record<string, { dot: string; text: string }> = {
+  success: { dot: 'bg-success-500', text: 'text-success-700' },
+  warning: { dot: 'bg-warning-500', text: 'text-warning-700' },
+  danger: { dot: 'bg-danger-500', text: 'text-danger-700' },
+  gray: { dot: 'bg-[color:var(--muted)]', text: 'text-[color:var(--fg-2)]' },
+  primary: { dot: 'bg-primary-500', text: 'text-[color:var(--fg)]' },
+  info: { dot: 'bg-[color:var(--accent)]', text: 'text-[color:var(--fg-2)]' },
+  purple: { dot: 'bg-[color:var(--muted)]', text: 'text-[color:var(--fg-2)]' },
+  orange: { dot: 'bg-warning-500', text: 'text-warning-700' },
+  cyan: { dot: 'bg-[color:var(--muted)]', text: 'text-[color:var(--fg-2)]' },
+}
+
 /**
- * 通用状态标签组件
- * 根据 statusConfig 自动渲染 Badge
+ * 通用状态标签组件 (Stitch: 小圆点 + 文字，取代彩色 pill)
  */
 export function StatusBadge({
   status,
@@ -88,9 +100,12 @@ export function StatusBadge({
   fallback?: string
 }) {
   const cfg = status ? config[status] : null
+  const variant = cfg?.variant ?? 'gray'
+  const colors = variantDotMap[variant] || variantDotMap.gray
   return (
-    <Badge variant={cfg?.variant ?? 'gray'} size="sm" rounded="full">
+    <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${colors.text}`}>
+      <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${colors.dot}`} />
       {cfg?.label ?? fallback}
-    </Badge>
+    </span>
   )
 }

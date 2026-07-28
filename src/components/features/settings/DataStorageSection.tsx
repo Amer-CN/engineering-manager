@@ -46,7 +46,7 @@ export function DataStorageSection({ refresh }: { refresh?: () => void }) {
       {admin && (
         <div id="backup-restore" data-setting-anchor className="card">
           <div className="card-header">
-            <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2"><Icon name="RotateCcw" size={20} /> 备份与恢复</h2>
+            <h2 className="text-lg font-semibold text-[color:var(--fg)] flex items-center gap-2"><Icon name="RotateCcw" size={20} /> 备份与恢复</h2>
           </div>
           <div className="card-body">
             <SnapshotsTab />

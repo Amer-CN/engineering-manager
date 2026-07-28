@@ -57,15 +57,6 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   {/* ── 导航区域 ── */}
   <HoverScrollbar className="flex-1"><nav className={`flex-1 py-3 ${collapsed ? 'overflow-hidden' : ''}`}>
-  {!collapsed && (
-  <motion.div
-  initial={{ opacity: 0 }}
-  animate={{ opacity: 1 }}
-  className="px-4 mb-2"
-  >
-  <p className="text-caption font-semibold uppercase tracking-widest px-1" style={{ color: 'var(--muted)' }}>主菜单</p>
-  </motion.div>
-  )}
   {navItems.map((item) => {
   const isActive = currentPage === item.id
 
@@ -78,8 +69,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   whileHover={{ scale: 1.1 }}
   whileTap={{ scale: 0.93 }}
   title={item.label}
-  className="w-10 h-10 mx-auto rounded-xl flex items-center justify-center transition-colors"
-  style={{ background: isActive ? 'var(--sidebar-item-active)' : 'transparent', color: isActive ? 'var(--accent)' : 'var(--muted)' }}
+  className="w-10 h-10 mx-auto rounded-full flex items-center justify-center transition-colors"
+  style={{ background: isActive ? 'var(--fg)' : 'transparent', color: isActive ? 'var(--bg)' : 'var(--muted)' }}
   onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--sidebar-item-hover)' }}
   onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent' }}
   >
@@ -96,8 +87,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   onClick={() => onNavigate(item.id)}
   whileHover={{ x: 4 }}
   whileTap={{ scale: 0.97 }}
-  className="w-full flex items-center px-3 py-2.5 rounded-xl text-sm font-medium transition-colors duration-200 group relative mb-0.5"
-  style={{ background: isActive ? 'var(--sidebar-item-active)' : 'transparent', color: isActive ? 'var(--accent)' : 'var(--fg-2)' }}
+  className="w-full flex items-center px-3 py-2.5 rounded-full text-xs font-bold tracking-wide transition-colors duration-200 group relative mb-0.5"
+  style={{ background: isActive ? 'var(--fg)' : 'transparent', color: isActive ? 'var(--bg)' : 'var(--fg-2)' }}
   onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--sidebar-item-hover)' }}
   onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent' }}
   >
@@ -108,13 +99,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   <Icon name={item.icon} size={18} />
   </motion.div>
   <span className="ml-3">{item.label}</span>
-  {isActive && (
-  <motion.div
-  layoutId="sidebar-indicator"
-  className="absolute left-0 top-1 bottom-1 w-0.5 rounded-full" style={{ background: 'var(--accent)' }}
-  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-  />
-  )}
   </motion.button>
   </div>
   )
@@ -146,33 +130,43 @@ const Sidebar: React.FC<SidebarProps> = ({
   />
   </div>
   ) : (
-  <div className="p-3">
-  <div className="flex items-center px-3 py-2.5">
-  <DropdownMenu
-  side="top"
-  align="start"
-  sideOffset={8}
-  items={[
-  { key: 'users', label: '用户管理', icon: 'UserCircle', onClick: onUsers },
-  { key: 'settings', label: '系统设置', icon: 'Settings', onClick: onSettings },
-  { key: 'lock', label: '锁定屏幕', icon: 'Lock', onClick: onLock },
-  { key: 'divider', label: '', divider: true },
-  { key: 'logout', label: '退出登录', icon: 'LogOut', danger: true, onClick: onLogout },
-  ]}
-  trigger={
-  <motion.button
-  whileHover={{ scale: 1.1 }}
-  whileTap={{ scale: 0.95 }}
-  className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0 shadow-sm cursor-pointer" style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
+  <div className="p-3 space-y-0.5">
+  {/* 管理入口（对齐 Stitch S0：可见项，不藏在头像下拉里） */}
+  <button
+  onClick={onUsers}
+  className="w-full flex items-center px-3 py-2.5 rounded-full text-xs font-bold tracking-wide transition-colors"
+  style={{ background: 'transparent', color: 'var(--fg-2)' }}
+  onMouseEnter={e => { e.currentTarget.style.background = 'var(--sidebar-item-hover)' }}
+  onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
   >
+  <Icon name="UserCircle" size={18} />
+  <span className="ml-3">用户管理</span>
+  </button>
+  <button
+  onClick={onSettings}
+  className="w-full flex items-center px-3 py-2.5 rounded-full text-xs font-bold tracking-wide transition-colors"
+  style={{ background: 'transparent', color: 'var(--fg-2)' }}
+  onMouseEnter={e => { e.currentTarget.style.background = 'var(--sidebar-item-hover)' }}
+  onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+  >
+  <Icon name="Settings" size={18} />
+  <span className="ml-3">系统设置</span>
+  </button>
+  {/* 当前用户 + 锁定 / 退出 */}
+  <div className="flex items-center gap-2 px-3 pt-3 mt-1 border-t" style={{ borderColor: 'var(--border)' }}>
+  <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0" style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}>
   {currentUser?.displayName?.charAt(0) || currentUser?.username?.charAt(0) || 'A'}
-  </motion.button>
-  }
-  />
-  <div className="ml-3 min-w-0">
-  <div className="text-sm font-medium truncate" style={{ color: 'var(--fg-2)' }}>{currentUser?.displayName || currentUser?.username}</div>
-  <div className="text-xs" style={{ color: 'var(--muted)' }}>{currentUser?.roleName || currentUser?.roleId}</div>
   </div>
+  <div className="min-w-0 flex-1">
+  <div className="text-sm font-medium truncate" style={{ color: 'var(--fg-2)' }}>{currentUser?.displayName || currentUser?.username}</div>
+  <div className="text-xs truncate" style={{ color: 'var(--muted)' }}>{currentUser?.roleName || currentUser?.roleId}</div>
+  </div>
+  <button onClick={onLock} title="锁定屏幕" aria-label="锁定屏幕" className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors flex-shrink-0" style={{ color: 'var(--muted)' }} onMouseEnter={e => { e.currentTarget.style.background = 'var(--sidebar-item-hover)'; e.currentTarget.style.color = 'var(--fg-2)' }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--muted)' }}>
+  <Icon name="Lock" size={16} />
+  </button>
+  <button onClick={onLogout} title="退出登录" aria-label="退出登录" className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors flex-shrink-0" style={{ color: 'var(--muted)' }} onMouseEnter={e => { e.currentTarget.style.background = 'var(--danger-soft)'; e.currentTarget.style.color = 'var(--danger)' }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--muted)' }}>
+  <Icon name="LogOut" size={16} />
+  </button>
   </div>
   </div>
   )}

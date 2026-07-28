@@ -111,26 +111,26 @@ describe('projectHealth.ts', () => {
     it('80+ → 健康', () => {
       const result = getHealthLevel(85)
       expect(result.label).toBe('健康')
-      expect(result.color).toBe('text-emerald-600')
-      expect(result.bgColor).toBe('bg-emerald-50')
+      expect(result.color).toBe('text-success-600')
+      expect(result.bgColor).toBe('bg-success-50')
     })
 
     it('60~79 → 良好', () => {
       const result = getHealthLevel(65)
       expect(result.label).toBe('良好')
-      expect(result.color).toBe('text-blue-600')
+      expect(result.color).toBe('text-[color:var(--fg-2)]')
     })
 
     it('40~59 → 预警', () => {
       const result = getHealthLevel(45)
       expect(result.label).toBe('预警')
-      expect(result.color).toBe('text-amber-600')
+      expect(result.color).toBe('text-warning-600')
     })
 
     it('40 以下 → 危险', () => {
       const result = getHealthLevel(20)
       expect(result.label).toBe('危险')
-      expect(result.color).toBe('text-red-600')
+      expect(result.color).toBe('text-danger-600')
     })
 
     it('边界值：80 → 健康', () => {

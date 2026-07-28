@@ -119,10 +119,10 @@ export default function BankReceiptMatchConfirm({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-slate-900">匹配结果确认</h2>
+        <h2 className="text-base font-semibold tracking-tight text-[color:var(--fg)]">匹配结果确认</h2>
         <button
           onClick={onBack}
-          className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
+          className="px-4 py-2 text-sm font-medium text-[color:var(--fg-2)] bg-[color:var(--card)] border border-[color:var(--border)] rounded-md hover:bg-[color:var(--panel-2)]"
         >
           返回重新上传
         </button>
@@ -148,14 +148,14 @@ export default function BankReceiptMatchConfirm({
       <div className="flex justify-end space-x-4">
         <button
           onClick={onCancel}
-          className="px-6 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
+          className="px-6 py-2 text-sm font-medium text-[color:var(--fg-2)] bg-[color:var(--card)] border border-[color:var(--border)] rounded-md hover:bg-[color:var(--panel-2)]"
         >
           取消
         </button>
         <button
           onClick={handleConfirmAll}
           disabled={confirming}
-          className="px-6 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:bg-slate-400"
+          className="px-6 py-2 text-sm font-medium text-[color:var(--on-accent)] bg-[color:var(--accent)] rounded-md hover:opacity-90 disabled:bg-[color:var(--muted)]"
         >
           {confirming ? '确认中...' : '确认并提交'}
         </button>

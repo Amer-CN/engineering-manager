@@ -117,11 +117,11 @@ export function AiProviderSection() {
   if (status === 'loading') {
     return (
       <div className="card">
-        <div className="card-header"><h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2"><Icon name="Bot" size={20} /> AI 助手设置</h2></div>
+        <div className="card-header"><h2 className="text-lg font-semibold text-[color:var(--fg)] flex items-center gap-2"><Icon name="Bot" size={20} /> AI 助手设置</h2></div>
         <div className="card-body">
           <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary-500 border-t-transparent" />
-            <span className="ml-3 text-sm text-slate-400">加载中...</span>
+            <div className="animate-spin rounded-full h-6 w-6 border-2 border-[color:var(--accent)] border-t-transparent" />
+            <span className="ml-3 text-sm text-[color:var(--muted)]">加载中...</span>
           </div>
         </div>
       </div>
@@ -133,23 +133,23 @@ export function AiProviderSection() {
   return (
     <div className="card">
       <div className="card-header">
-        <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2"><Icon name="Bot" size={20} /> AI 助手设置</h2>
+        <h2 className="text-lg font-semibold text-[color:var(--fg)] flex items-center gap-2"><Icon name="Bot" size={20} /> AI 助手设置</h2>
       </div>
       <div className="card-body space-y-5">
         {/* ── 内置模型开关 ── */}
         <div className="flex items-center justify-between">
           <div>
-            <span className="text-sm font-medium text-slate-700">使用内置免费模型（推荐新手）</span>
-            <p className="text-xs text-slate-400 mt-0.5">关闭后可自定义 API 提供商</p>
+            <span className="text-sm font-medium text-[color:var(--fg-2)]">使用内置免费模型（推荐新手）</span>
+            <p className="text-xs text-[color:var(--muted)] mt-0.5">关闭后可自定义 API 提供商</p>
           </div>
           <button
             type="button"
             role="switch"
             aria-checked={useBuiltIn}
             onClick={() => setUseBuiltIn(v => !v)}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${useBuiltIn ? 'bg-primary-500' : 'bg-slate-300'}`}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${useBuiltIn ? 'bg-[color:var(--accent)]' : 'bg-[color:var(--panel-2)]'}`}
           >
-            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${useBuiltIn ? 'translate-x-6' : 'translate-x-1'}`} />
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-[color:var(--card)] shadow transition-transform ${useBuiltIn ? 'translate-x-6' : 'translate-x-1'}`} />
           </button>
         </div>
 
@@ -162,7 +162,7 @@ export function AiProviderSection() {
             onChange={e => setForm(f => ({ ...f, baseUrl: e.target.value }))}
             disabled={inputDisabled}
             placeholder="https://api.openai.com/v1"
-            className="w-full px-3 py-2.5 rounded-lg text-sm border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary-200 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+            className="w-full px-3 py-2.5 rounded-lg text-sm border border-[color:var(--border)] bg-[color:var(--card)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] disabled:bg-[color:var(--panel-2)] disabled:text-[color:var(--muted)] disabled:cursor-not-allowed"
           />
         </div>
 
@@ -175,7 +175,7 @@ export function AiProviderSection() {
             onChange={e => setApiKey(e.target.value)}
             disabled={inputDisabled}
             placeholder={hasApiKey ? '已配置，留空则保留原密钥' : '请输入 API Key'}
-            className="w-full px-3 py-2.5 rounded-lg text-sm border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary-200 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+            className="w-full px-3 py-2.5 rounded-lg text-sm border border-[color:var(--border)] bg-[color:var(--card)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] disabled:bg-[color:var(--panel-2)] disabled:text-[color:var(--muted)] disabled:cursor-not-allowed"
           />
         </div>
 
@@ -188,7 +188,7 @@ export function AiProviderSection() {
             onChange={e => setForm(f => ({ ...f, model: e.target.value }))}
             disabled={inputDisabled}
             placeholder="gpt-4o-mini"
-            className="w-full px-3 py-2.5 rounded-lg text-sm border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary-200 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+            className="w-full px-3 py-2.5 rounded-lg text-sm border border-[color:var(--border)] bg-[color:var(--card)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] disabled:bg-[color:var(--panel-2)] disabled:text-[color:var(--muted)] disabled:cursor-not-allowed"
           />
         </div>
 
@@ -205,10 +205,10 @@ export function AiProviderSection() {
         </div>
 
         {/* ── 温度滑块 ── */}
-        <div className="pt-4 border-t border-slate-100">
+        <div className="pt-4 border-t border-[color:var(--border)]">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-slate-700">温度</span>
-            <span className="text-sm text-slate-600 tabular-nums flex items-center gap-2">
+            <span className="text-sm font-medium text-[color:var(--fg-2)]">温度</span>
+            <span className="text-sm text-[color:var(--fg-2)] tabular-nums flex items-center gap-2">
               温度 {temperature.toFixed(1)}
               {temperature === 0.7 && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-success-100 text-success-700 text-caption font-medium">
@@ -220,42 +220,42 @@ export function AiProviderSection() {
           <input
             type="range" min={0} max={1} step={0.1} value={temperature}
             onChange={e => setParams(p => ({ ...p, temperature: parseFloat(e.target.value) }))}
-            className="w-full h-1.5 rounded-full appearance-none bg-slate-200 cursor-pointer
+            className="w-full h-1.5 rounded-full appearance-none bg-[color:var(--panel-2)] cursor-pointer
               [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
-              [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary-500
+              [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[color:var(--accent)]
               [&::-webkit-slider-thumb]:shadow-sm [&::-webkit-slider-thumb]:cursor-pointer"
           />
           {/* 三等分标签 */}
           <div className="flex justify-between mt-1.5">
-            <span className="text-caption text-slate-400">精准</span>
-            <span className="text-caption text-slate-400">均衡</span>
-            <span className="text-caption text-slate-400">发散</span>
+            <span className="text-caption text-[color:var(--muted)]">精准</span>
+            <span className="text-caption text-[color:var(--muted)]">均衡</span>
+            <span className="text-caption text-[color:var(--muted)]">发散</span>
           </div>
           {/* 快捷按钮 */}
           <div className="flex gap-2 mt-2">
             <button
               onClick={() => setParams(p => ({ ...p, temperature: 0.2 }))}
-              className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all ${temperature === 0.2 ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}
+              className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all ${temperature === 0.2 ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]' : 'border-[color:var(--border)] text-[color:var(--fg-2)] hover:border-[color:var(--border)]'}`}
             >
               精准 0.2
             </button>
             <button
               onClick={() => setParams(p => ({ ...p, temperature: 0.7 }))}
-              className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all ${temperature === 0.7 ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}
+              className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all ${temperature === 0.7 ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]' : 'border-[color:var(--border)] text-[color:var(--fg-2)] hover:border-[color:var(--border)]'}`}
             >
               均衡 0.7
             </button>
             <button
               onClick={() => setParams(p => ({ ...p, temperature: 1.0 }))}
-              className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all ${temperature === 1.0 ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}
+              className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all ${temperature === 1.0 ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]' : 'border-[color:var(--border)] text-[color:var(--fg-2)] hover:border-[color:var(--border)]'}`}
             >
               发散 1.0
             </button>
           </div>
           {/* 动态说明 */}
-          <p className="text-sm text-slate-600 mt-2">{tempDesc(temperature)}</p>
+          <p className="text-sm text-[color:var(--fg-2)] mt-2">{tempDesc(temperature)}</p>
           {/* 固定解释 */}
-          <p className="text-xs text-slate-400 mt-1.5">
+          <p className="text-xs text-[color:var(--muted)] mt-1.5">
             温度决定 AI 回答的「发挥尺度」：数值越低越稳、越靠谱；越高越有创意、越发散。拿不准就选「均衡」。
           </p>
         </div>

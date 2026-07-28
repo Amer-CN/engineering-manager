@@ -50,7 +50,7 @@ export function CategoryPicker({ direction, value, onChange, categories, onManag
         <select
           value={selectedGroup}
           onChange={e => handleGroupChange(e.target.value)}
-          className="rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] px-2.5 py-2 text-sm focus:border-[color:var(--accent)] focus:outline-none focus:ring-1 focus:ring-[color:var(--accent)]"
         >
           {groupOptions.map(g => (
             <option key={g.name} value={g.name}>{g.name}</option>
@@ -59,7 +59,7 @@ export function CategoryPicker({ direction, value, onChange, categories, onManag
         <select
           value={value}
           onChange={e => onChange(e.target.value)}
-          className="rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] px-2.5 py-2 text-sm focus:border-[color:var(--accent)] focus:outline-none focus:ring-1 focus:ring-[color:var(--accent)]"
         >
           {level2Options.map(c => (
             <option key={c.code} value={c.code}>{c.label}</option>
@@ -67,7 +67,7 @@ export function CategoryPicker({ direction, value, onChange, categories, onManag
         </select>
       </div>
       {onManage && (
-        <button type="button" onClick={onManage} className="text-xs text-blue-600 hover:text-blue-800">
+        <button type="button" onClick={onManage} className="text-xs text-[color:var(--accent)] hover:opacity-80">
           管理分类...
         </button>
       )}

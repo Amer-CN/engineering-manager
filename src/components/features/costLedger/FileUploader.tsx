@@ -58,12 +58,12 @@ export function FileUploader({ files, onChange, projectName }: FileUploaderProps
       {files.length > 0 && (
         <ul className="space-y-1">
           {files.map((f, i) => (
-            <li key={i} className="flex items-center gap-2 rounded bg-slate-50 px-2 py-1 text-xs text-slate-600">
+            <li key={i} className="flex items-center gap-2 rounded bg-[color:var(--panel-2)] px-2 py-1 text-xs text-[color:var(--fg-2)]">
               <span className="flex-1 truncate">{f}</span>
               <button
                 type="button"
                 onClick={() => handlePreview(f)}
-                className="text-blue-400 hover:text-blue-600"
+                className="text-[color:var(--muted)] hover:text-[color:var(--accent)]"
                 title={IMG_EXTS.test(f) ? '预览' : '打开'}
               >
                 {IMG_EXTS.test(f) ? '预览' : '打开'}
@@ -71,7 +71,7 @@ export function FileUploader({ files, onChange, projectName }: FileUploaderProps
               <button
                 type="button"
                 onClick={() => onChange(files.filter((_, j) => j !== i))}
-                className="text-red-400 hover:text-red-600"
+                className="text-danger-400 hover:text-danger-600"
               >
                 ×
               </button>
@@ -82,7 +82,7 @@ export function FileUploader({ files, onChange, projectName }: FileUploaderProps
       <button
         type="button"
         onClick={handleAdd}
-        className="rounded-lg border border-dashed border-slate-300 px-3 py-1.5 text-xs text-slate-500 hover:border-blue-400 hover:text-blue-600"
+        className="rounded-lg border border-dashed border-[color:var(--border)] px-3 py-1.5 text-xs text-[color:var(--muted)] hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]"
       >
         + 上传凭证（可选）
       </button>
@@ -94,14 +94,14 @@ export function FileUploader({ files, onChange, projectName }: FileUploaderProps
           onClick={() => { setPreviewUrl(null); setPreviewLabel('') }}
         >
           <div
-            className="max-h-[90vh] max-w-[90vw] rounded-xl bg-white p-4 shadow-2xl"
+            className="max-h-[90vh] max-w-[90vw] rounded-xl bg-[color:var(--card)] p-4 shadow-xl"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-slate-700 truncate max-w-[70vw]">{previewLabel}</span>
+              <span className="text-sm font-medium text-[color:var(--fg-2)] truncate max-w-[70vw]">{previewLabel}</span>
               <button
                 onClick={() => { setPreviewUrl(null); setPreviewLabel('') }}
-                className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                className="rounded p-1 text-[color:var(--muted)] hover:bg-[color:var(--panel-2)] hover:text-[color:var(--fg-2)]"
               >
                 ✕
               </button>

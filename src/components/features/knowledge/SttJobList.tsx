@@ -55,7 +55,7 @@ const SttJobList: React.FC<SttJobListProps> = ({ refreshTrigger, onSelectJob, se
   return (
     <Card title="历史任务" padding="md" shadow="sm">
       {loading ? (
-        <div className="flex items-center gap-2 text-sm text-slate-500 py-8 justify-center">
+        <div className="flex items-center gap-2 text-sm text-[color:var(--muted)] py-8 justify-center">
           <Icon name="Loader2" size={16} className="animate-spin" />
           <span>加载中...</span>
         </div>
@@ -77,19 +77,19 @@ const SttJobList: React.FC<SttJobListProps> = ({ refreshTrigger, onSelectJob, se
                   onClick={() => onSelectJob(job.id)}
                   className={`w-full text-left p-3 rounded-lg border transition-colors ${
                     selectedJobId === job.id
-                      ? 'bg-primary-50 border-primary-200'
-                      : 'bg-white border-slate-200 hover:bg-slate-50'
+                      ? 'bg-[color:var(--accent-soft)] border-[color:var(--accent)]'
+                      : 'bg-[color:var(--card)] border-[color:var(--border)] hover:bg-[color:var(--panel-2)]'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-medium text-slate-700 truncate">
+                        <span className="text-sm font-medium text-[color:var(--fg-2)] truncate">
                           {job.sourceFile || `任务 #${job.id}`}
                         </span>
                         <Badge variant={cfg.variant} size="sm">{cfg.label}</Badge>
                       </div>
-                      <div className="flex items-center gap-3 text-xs text-slate-400">
+                      <div className="flex items-center gap-3 text-xs text-[color:var(--muted)] font-mono tabular-nums">
                         <span>#{job.id}</span>
                         {job.isMultiSpeaker && <span>多人</span>}
                         {job.durationSec ? <span>音频 {formatTime(job.durationSec)}</span> : null}
@@ -100,10 +100,10 @@ const SttJobList: React.FC<SttJobListProps> = ({ refreshTrigger, onSelectJob, se
                         <span>{job.createdAt}</span>
                       </div>
                       {job.error && (
-                        <p className="text-xs text-red-500 mt-1 truncate">{job.error}</p>
+                        <p className="text-xs text-danger-500 mt-1 truncate">{job.error}</p>
                       )}
                     </div>
-                    <Icon name="ChevronRight" size={16} className="text-slate-400 flex-shrink-0" />
+                    <Icon name="ChevronRight" size={16} className="text-[color:var(--muted)] flex-shrink-0" />
                   </div>
                 </button>
               )

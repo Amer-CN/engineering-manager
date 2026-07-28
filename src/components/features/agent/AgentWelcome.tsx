@@ -9,6 +9,7 @@ import { Icon } from '@/components/ui/Icon'
 import type { SuggestionCardConfig } from '@/types/agent'
 import AgentComposer from './AgentComposer'
 import SuggestionChips from './SuggestionChips'
+import Mascot from './Mascot'
 import { getGreeting } from '@/components/features/dashboard/dashboardConstants'
 
 interface AgentWelcomeProps {
@@ -55,8 +56,9 @@ const AgentWelcome: React.FC<AgentWelcomeProps> = ({
         transition={{ duration: 0.35, ease: 'easeOut' }}
         className="w-full max-w-2xl"
       >
-        {/* 问候（对齐 Stitch ai_1：大号居中问候，无头像/副标） */}
+        {/* AI 管家吉祥物 + 居中问候 */}
         <div className="text-center mb-8">
+          <Mascot size={104} state={loading ? 'thinking' : 'idle'} className="mx-auto mb-5" />
           <h1 className="text-4xl font-bold tracking-tight" style={{ color: 'var(--fg)' }}>
             {getGreeting()}，{username}
           </h1>
@@ -77,7 +79,7 @@ const AgentWelcome: React.FC<AgentWelcomeProps> = ({
           onSend={onSend}
           disabled={loading}
           inputRef={inputRef}
-          placeholder="输入工程指令或查询数据…"
+          placeholder="请输入指令或询问项目状态…"
           centered
         />
 

@@ -63,22 +63,22 @@ export default function WagePaymentRecords() {
   const showPhone = viewMode === 'overdue'
 
   const baseColumns: Column<PaymentRow>[] = [
-    { key: 'projectName', title: '项目名', render: (item) => <span className="text-slate-700">{item.projectName || '-'}</span> },
-    { key: 'yearMonth', title: '月份', render: (item) => <span className="text-slate-700">{item.yearMonth || '-'}</span> },
+    { key: 'projectName', title: '项目名', render: (item) => <span className="text-[color:var(--fg-2)]">{item.projectName || '-'}</span> },
+    { key: 'yearMonth', title: '月份', render: (item) => <span className="text-[color:var(--fg-2)]">{item.yearMonth || '-'}</span> },
     { key: 'workerName', title: '工人姓名', sortable: true, filterable: true,
       sorter: (a, b) => (a.workerName || '').localeCompare(b.workerName || '', 'zh-CN'),
-      render: (item) => <span className="text-slate-700 font-medium">{item.workerName || '-'}</span> },
+      render: (item) => <span className="text-[color:var(--fg-2)] font-medium">{item.workerName || '-'}</span> },
   ]
 
-  const phoneColumn: Column<PaymentRow> = { key: 'workerPhone', title: '联系电话', render: (item) => <span className="text-slate-700">{item.workerPhone || '-'}</span> }
+  const phoneColumn: Column<PaymentRow> = { key: 'workerPhone', title: '联系电话', render: (item) => <span className="text-[color:var(--fg-2)]">{item.workerPhone || '-'}</span> }
 
   const tailColumns: Column<PaymentRow>[] = [
     { key: 'actualWage', title: '应发金额', align: 'right', sortable: true,
       sorter: (a, b) => ((a.actualWage || 0) - (b.actualWage || 0)),
-      render: (item) => <span className="text-slate-700">{item.actualWage?.toFixed(2) || '0.00'}</span> },
+      render: (item) => <span className="text-[color:var(--fg-2)]">{item.actualWage?.toFixed(2) || '0.00'}</span> },
     { key: 'paidAmount', title: '实发金额', align: 'right', sortable: true,
       sorter: (a, b) => ((a.paidAmount || 0) - (b.paidAmount || 0)),
-      render: (item) => <span className="text-slate-700">{item.paidAmount?.toFixed(2) || '0.00'}</span> },
+      render: (item) => <span className="text-[color:var(--fg-2)]">{item.paidAmount?.toFixed(2) || '0.00'}</span> },
     { key: 'paymentStatus', title: '发放状态',
       filterable: 'select',
       filterOptions: [
@@ -90,18 +90,18 @@ export default function WagePaymentRecords() {
       filterAccessor: (item: PaymentRow) => item.paymentStatus || '',
       render: (item) => (
       <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-        item.paymentStatus === '已发清' ? 'bg-green-100 text-green-700' :
-        item.paymentStatus === '部分发放' ? 'bg-yellow-100 text-yellow-700' :
-        item.paymentStatus === '逾期' ? 'bg-red-100 text-red-700' :
-        'bg-slate-100 text-slate-600'
+        item.paymentStatus === '已发清' ? 'bg-success-100 text-success-700' :
+        item.paymentStatus === '部分发放' ? 'bg-warning-100 text-warning-700' :
+        item.paymentStatus === '逾期' ? 'bg-danger-100 text-danger-700' :
+        'bg-[color:var(--panel-2)] text-[color:var(--fg-2)]'
       }`}>
         {item.paymentStatus || '-'}
       </span>
     )},
-    { key: 'paidDate', title: '发放日期', render: (item) => <span className="text-slate-700">{item.paidDate || '-'}</span> },
+    { key: 'paidDate', title: '发放日期', render: (item) => <span className="text-[color:var(--fg-2)]">{item.paidDate || '-'}</span> },
   ]
 
-  const overdueColumn: Column<PaymentRow> = { key: 'overdueDays', title: '逾期天数', align: 'right', render: (item) => <span className="text-red-600 font-medium">{item.overdueDays || 0}</span> }
+  const overdueColumn: Column<PaymentRow> = { key: 'overdueDays', title: '逾期天数', align: 'right', render: (item) => <span className="text-danger-600 font-medium">{item.overdueDays || 0}</span> }
 
   const receiptColumn: Column<PaymentRow> = { key: 'bankReceiptPath', title: '银行回单', render: (item) => (
     item.bankReceiptPath ? (
@@ -112,7 +112,7 @@ export default function WagePaymentRecords() {
           fileName: item.bankReceiptPath!,
           projectName: undefined,
         })}
-        className="text-blue-600 hover:text-blue-800 text-xs"
+        className="text-[color:var(--accent)] hover:opacity-80 text-xs"
       >
         查看
       </button>
@@ -128,13 +128,13 @@ export default function WagePaymentRecords() {
   ]
 
   const renderFilters = () => (
-    <div className="bg-white p-4 rounded-lg border border-slate-200 mb-4 flex flex-wrap items-center gap-4">
+    <div className="bg-[color:var(--card)] p-4 rounded-lg border border-[color:var(--border)] mb-4 flex flex-wrap items-center gap-4">
       <div className="flex items-center gap-2">
-        <label className="text-sm text-slate-600">项目：</label>
+        <label className="text-sm text-[color:var(--fg-2)]">项目：</label>
         <select
           value={filters.projectId || ''}
           onChange={e => handleFilterChange('projectId', e.target.value ? Number(e.target.value) : undefined)}
-          className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg"
+          className="px-3 py-1.5 text-sm border border-[color:var(--border)] rounded-lg"
         >
           <option value="">全部</option>
           {projects.map(p => (
@@ -144,21 +144,21 @@ export default function WagePaymentRecords() {
       </div>
 
       <div className="flex items-center gap-2">
-        <label className="text-sm text-slate-600">月份：</label>
+        <label className="text-sm text-[color:var(--fg-2)]">月份：</label>
         <input
           type="month"
           value={filters.yearMonth || ''}
           onChange={e => handleFilterChange('yearMonth', e.target.value || undefined)}
-          className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg"
+          className="px-3 py-1.5 text-sm border border-[color:var(--border)] rounded-lg"
         />
       </div>
 
       <div className="flex items-center gap-2">
-        <label className="text-sm text-slate-600">状态：</label>
+        <label className="text-sm text-[color:var(--fg-2)]">状态：</label>
         <select
           value={filters.status || '全部'}
           onChange={e => handleFilterChange('status', e.target.value === '全部' ? undefined : e.target.value)}
-          className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg"
+          className="px-3 py-1.5 text-sm border border-[color:var(--border)] rounded-lg"
         >
           <option value="全部">全部</option>
           <option value="已发清">已发清</option>
@@ -170,7 +170,7 @@ export default function WagePaymentRecords() {
 
       <button
         onClick={() => applyFilters({})}
-        className="px-3 py-1.5 text-sm text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50"
+        className="px-3 py-1.5 text-sm text-[color:var(--fg-2)] border border-[color:var(--border)] rounded-lg hover:bg-[color:var(--panel-2)]"
       >
         重置筛选
       </button>
@@ -178,7 +178,7 @@ export default function WagePaymentRecords() {
       <div className="ml-auto">
         <button
           onClick={exportToExcel}
-          className="px-4 py-1.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 flex items-center gap-1"
+          className="px-4 py-1.5 text-sm font-medium text-[color:var(--on-accent)] bg-[color:var(--accent)] rounded-lg hover:opacity-90 flex items-center gap-1"
         >
           <Icon name="Download" size={14} />
           导出 Excel
@@ -192,11 +192,11 @@ export default function WagePaymentRecords() {
       <PageHeader title="工资发放记录"
         actions={<>
           <button onClick={() => { setViewMode('all'); loadPaymentRecords() }}
-            className={`px-4 py-2 text-sm font-medium rounded-lg ${viewMode === 'all' ? 'bg-primary-600 text-white' : 'bg-white text-slate-600 border border-slate-300'}`}>
+            className={`px-4 py-2 text-sm font-medium rounded-lg ${viewMode === 'all' ? 'bg-[color:var(--accent)] text-[color:var(--on-accent)]' : 'bg-[color:var(--card)] text-[color:var(--fg-2)] border border-[color:var(--border)]'}`}>
             全部记录
           </button>
           <button onClick={handleViewOverdue}
-            className={`px-4 py-2 text-sm font-medium rounded-lg ${viewMode === 'overdue' ? 'bg-red-600 text-white' : 'bg-white text-slate-600 border border-slate-300'}`}>
+            className={`px-4 py-2 text-sm font-medium rounded-lg ${viewMode === 'overdue' ? 'bg-danger-600 text-white' : 'bg-[color:var(--card)] text-[color:var(--fg-2)] border border-[color:var(--border)]'}`}>
             欠薪列表
           </button>
         </>}
@@ -204,7 +204,7 @@ export default function WagePaymentRecords() {
 
       {/* 欠薪预警横幅 */}
       {viewMode === 'all' && overdueStats && (
-        <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg flex items-center justify-between">
+        <div className="bg-danger-50 border border-danger-200 text-danger-800 px-4 py-3 rounded-lg flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-sm">
               欠薪预警：涉及 {overdueStats.overdueWorkerCount} 名工人，
@@ -214,7 +214,7 @@ export default function WagePaymentRecords() {
           </div>
           <button
             onClick={handleViewOverdue}
-            className="px-3 py-1 text-sm font-medium text-white bg-red-600 rounded hover:bg-red-700"
+            className="px-3 py-1 text-sm font-medium text-white bg-danger-600 rounded hover:bg-danger-700"
           >
             查看详情
           </button>

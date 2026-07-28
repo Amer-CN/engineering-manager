@@ -24,18 +24,18 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({ chartData }) => {
   return (
     <motion.section variants={sectionVariant} className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
       {/* BarChart — 原生 SVG，无 Recharts hover 干扰 */}
-      <Card title={<span className="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2"><Icon name="BarChart3" size={14} /> 支出分类</span>} headerDivider className="hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] transition-shadow">
+      <Card title={<span className="text-sm font-semibold uppercase tracking-wider text-[color:var(--muted)] flex items-center gap-2"><Icon name="BarChart3" size={14} /> 支出分类</span>} headerDivider className="hover:shadow-lift transition-shadow">
         {chartData.expenseByCategory.length > 0 ? (
           <SimpleBarChart data={chartData.expenseByCategory} colors={CHART_COLORS} formatValue={formatCurrency} />
         ) : (
-          <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+          <div className="flex flex-col items-center justify-center py-12 text-[color:var(--muted)]">
             <Icon name="Wallet" size={32} className="mb-2 opacity-40" /><p className="text-sm">暂无支出数据</p>
           </div>
         )}
       </Card>
 
       {/* Invoice Status PieChart */}
-      <Card title={<span className="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2"><Icon name="PieChart" size={14} /> 发票状态</span>} headerDivider className="hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] transition-shadow">
+      <Card title={<span className="text-sm font-semibold uppercase tracking-wider text-[color:var(--muted)] flex items-center gap-2"><Icon name="PieChart" size={14} /> 发票状态</span>} headerDivider className="hover:shadow-lift transition-shadow">
         {chartData.invoiceStatus.length > 0 ? (
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.4, duration: 0.4 }}
             className="flex items-center h-72">
@@ -55,13 +55,13 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({ chartData }) => {
                 <motion.div key={entry.name} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 + i * 0.1 }}
                   className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
-                  <div className="flex-1 min-w-0"><div className="text-xs text-slate-500 truncate">{invoiceStatusLabels[entry.name]?.text || entry.name}</div><div className="text-sm font-semibold text-slate-800">{entry.value}</div></div>
+                  <div className="flex-1 min-w-0"><div className="text-xs text-[color:var(--muted)] truncate">{invoiceStatusLabels[entry.name]?.text || entry.name}</div><div className="text-sm font-semibold text-[color:var(--fg)]">{entry.value}</div></div>
                 </motion.div>
               ))}
             </div>
           </motion.div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+          <div className="flex flex-col items-center justify-center py-12 text-[color:var(--muted)]">
             <Icon name="Receipt" size={32} className="mb-2 opacity-40" /><p className="text-sm">暂无发票数据</p>
           </div>
         )}

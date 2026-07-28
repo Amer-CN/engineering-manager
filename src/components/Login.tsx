@@ -143,7 +143,7 @@ const Login: React.FC<LoginProps> = () => {
       background: 'var(--bg-2)',
       width: '100vw', height: '100vh',
       display: 'flex', flexDirection: 'column',
-      fontFamily: "'Noto Sans SC', 'Source Han Sans SC', 'Microsoft YaHei', sans-serif",
+      fontFamily: "Inter, 'Noto Sans SC', 'Source Han Sans SC', 'Microsoft YaHei', sans-serif",
     }}>
       {/* ── 标题栏 ── */}
       <div style={{ height: 28, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '0 4px', flexShrink: 0 } as React.CSSProperties} onMouseDown={handleTitleBarMouseDown}>
@@ -171,10 +171,13 @@ const Login: React.FC<LoginProps> = () => {
       ) : (
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 24px 20px' }}>
         {/* Logo */}
-        <svg width="48" height="48" viewBox="0 0 18 18" fill="none" style={{ marginBottom: 14, flexShrink: 0 }}>
-          <defs><linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="var(--accent)" /><stop offset="100%" stopColor="var(--violet)" /></linearGradient><mask id="lg-mask"><rect width="18" height="18" fill="white" /><path d="M5 14 L9 6 L13 14 Z" fill="black" /></mask></defs>
-          <path d="M2 15.5 L9 2.5 L16 15.5 Z" fill="url(#lg)" mask="url(#lg-mask)" />
-        </svg>
+        <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10, flexShrink: 0 }}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--on-accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" />
+          </svg>
+        </div>
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--fg)', marginBottom: 2 }}>工程管家</h2>
+        <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 24 }}>工程项目管理系统</p>
 
         {/* 表单 */}
         <form onSubmit={handleSubmit} style={{ width: '100%', flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -209,7 +212,7 @@ const Login: React.FC<LoginProps> = () => {
 
           <div style={{ marginTop: 'auto' }}>
             <button type="submit" disabled={state.loading}
-              style={{ width: '100%', padding: '8px 0', fontSize: 13, fontWeight: 600, borderRadius: 8, border: 'none', cursor: state.loading ? 'wait' : 'pointer', background: 'var(--accent)', color: 'var(--bg)', letterSpacing: '0.04em', opacity: state.loading ? 0.7 : 1, transition: 'opacity 0.1s' }}>
+              style={{ width: '100%', padding: '8px 0', fontSize: 13, fontWeight: 600, borderRadius: 8, border: 'none', cursor: state.loading ? 'wait' : 'pointer', background: 'var(--accent)', color: 'var(--on-accent)', letterSpacing: '0.04em', opacity: state.loading ? 0.7 : 1, transition: 'opacity 0.1s' }}>
               {state.loading ? '登录中...' : '登 录'}
             </button>
           </div>

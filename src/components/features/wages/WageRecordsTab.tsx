@@ -108,7 +108,7 @@ export default function WageRecordsTab({
             placeholder="0.00"
             onChange={e => onPaymentChange(item.id, 'paidAmount', e.target.value)}
             disabled={!!item.paymentLocked}
-            className={`w-24 px-2 py-1 border rounded text-center text-sm ${item.paymentLocked ? 'bg-slate-100 border-slate-200 text-slate-500 cursor-not-allowed' : 'border-slate-300'}`} />
+            className={`w-24 px-2 py-1 border rounded text-center text-sm ${item.paymentLocked ? 'bg-[color:var(--panel-2)] border-[color:var(--border)] text-[color:var(--muted)] cursor-not-allowed' : 'border-[color:var(--border)]'}`} />
         )
       }
     },
@@ -122,9 +122,9 @@ export default function WageRecordsTab({
             <input type="date" value={paidDate}
               onChange={e => onPaymentChange(item.id, 'paidDate', e.target.value)}
               disabled={!!item.paymentLocked}
-              className={`w-32 px-2 py-1 border rounded text-sm ${item.paymentLocked ? 'bg-slate-100 border-slate-200 text-slate-500 cursor-not-allowed' : 'border-slate-300'}`} />
+              className={`w-32 px-2 py-1 border rounded text-sm ${item.paymentLocked ? 'bg-[color:var(--panel-2)] border-[color:var(--border)] text-[color:var(--muted)] cursor-not-allowed' : 'border-[color:var(--border)]'}`} />
             {item.bankReceiptPath && (
-              <span className="text-green-500 text-xs" title={`凭证: ${item.bankReceiptPath}`}>📎</span>
+              <span className="text-success-500 text-xs" title={`凭证: ${item.bankReceiptPath}`}>📎</span>
             )}
           </div>
         )
@@ -137,7 +137,7 @@ export default function WageRecordsTab({
         const paidAmount = getEditPaidAmount(item, paymentEdits)
         const actualWage = item.actualWage ?? 0
         const diff = (parseFloat(paidAmount) || 0) - actualWage
-        const diffColor = diff > 0.01 ? 'text-red-600' : diff < -0.01 ? 'text-amber-600' : 'text-green-600'
+        const diffColor = diff > 0.01 ? 'text-danger-600' : diff < -0.01 ? 'text-warning-600' : 'text-success-600'
         const diffSign = diff > 0.01 ? '+' : ''
         return (
           <span className={`font-medium ${diffColor}`}>
@@ -155,7 +155,7 @@ export default function WageRecordsTab({
           <input type="checkbox"
             checked={selectedIds.size === filtered.length && filtered.length > 0}
             onChange={toggleAll} className="rounded" />
-          <span className="text-sm text-slate-400">{filtered.length} 条记录</span>
+          <span className="text-sm text-[color:var(--muted)]">{filtered.length} 条记录</span>
           {changedCount > 0 && (
             <Button onClick={onSavePayments}
                variant="success" size="sm">
@@ -171,7 +171,7 @@ export default function WageRecordsTab({
         </div>
         <div className="flex-1" />
         <div className="flex items-center gap-2">
-          <label className="text-sm text-slate-500">月份</label>
+          <label className="text-sm text-[color:var(--muted)]">月份</label>
           <MonthPicker value={filterYearMonth} onChange={onFilterYearMonthChange} />
         </div>
         <div className="flex gap-2">
@@ -208,25 +208,25 @@ export default function WageRecordsTab({
       {/* 回单解析结果 */}
       {receiptResult && (
         <div className="mb-4 shrink-0">
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm flex items-center gap-4 flex-wrap">
-            <span className="font-medium text-blue-800">回单解析结果</span>
-            <span className="text-blue-600">日期: {receiptResult.date || '未识别'}</span>
-            <span className="text-slate-500">总金额: ¥{(receiptResult.totalAmount ?? 0).toFixed(2)}</span>
-            <span className="text-slate-500">成功金额: ¥{(receiptResult.successAmount ?? 0).toFixed(2)}</span>
-            <span className="text-slate-500">明细行: {receiptResult.totalItems} 条</span>
-            <span className="text-green-600 font-medium">✓ 匹配 {receiptResult.matched} 条</span>
+          <div className="p-3 bg-[color:var(--panel-2)] border border-[color:var(--border)] rounded-lg text-sm flex items-center gap-4 flex-wrap">
+            <span className="font-medium text-[color:var(--fg)]">回单解析结果</span>
+            <span className="text-[color:var(--fg-2)]">日期: {receiptResult.date || '未识别'}</span>
+            <span className="text-[color:var(--muted)]">总金额: ¥{(receiptResult.totalAmount ?? 0).toFixed(2)}</span>
+            <span className="text-[color:var(--muted)]">成功金额: ¥{(receiptResult.successAmount ?? 0).toFixed(2)}</span>
+            <span className="text-[color:var(--muted)]">明细行: {receiptResult.totalItems} 条</span>
+            <span className="text-success-600 font-medium">✓ 匹配 {receiptResult.matched} 条</span>
             {receiptResult.failed > 0 && (
-              <span className="text-amber-600">⚠ 未匹配 {receiptResult.failed} 条</span>
+              <span className="text-warning-600">⚠ 未匹配 {receiptResult.failed} 条</span>
             )}
             {receiptResult.totalItems === 0 && receiptResult.rawTextSnippet && (
               <button onClick={() => setShowRawText(!showRawText)}
-                className="text-blue-700 underline hover:text-blue-900 text-xs ml-auto">
+                className="text-[color:var(--accent)] underline hover:opacity-80 text-xs ml-auto">
                 {showRawText ? '收起提取内容' : '查看提取内容'}
               </button>
             )}
           </div>
           {showRawText && receiptResult.rawTextSnippet && (
-            <div className="mt-1 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-xs font-mono whitespace-pre-wrap break-all max-h-48 overflow-auto text-slate-700">
+            <div className="mt-1 p-3 bg-warning-50 border border-warning-200 rounded-lg text-xs font-mono whitespace-pre-wrap break-all max-h-48 overflow-auto text-[color:var(--fg-2)]">
               {receiptResult.rawTextSnippet}
             </div>
           )}

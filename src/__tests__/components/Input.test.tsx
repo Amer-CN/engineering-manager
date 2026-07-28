@@ -119,7 +119,7 @@ describe('Input', () => {
     
     const input = container.querySelector('input')
     expect(input).toBeDisabled()
-    expect(input).toHaveClass('disabled:bg-slate-50')
+    expect(input).toHaveClass('disabled:bg-[color:var(--panel-2)]')
     expect(input).toHaveClass('disabled:cursor-not-allowed')
   })
 

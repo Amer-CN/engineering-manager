@@ -133,9 +133,9 @@ export default function TemplateForm({ template, onSubmit, onCancel }: TemplateF
 
       {/* Category */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">模板分类</label>
+        <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">模板分类</label>
         <select value={formData.category} onChange={e => setFormData(p => ({ ...p, category: e.target.value as TemplateCategory }))}
-          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm">
+          className="w-full px-3 py-2 border border-[color:var(--border)] rounded-lg text-sm">
           {Object.entries(categoryConfig).map(([key, cfg]) => (
             <option key={key} value={key}>{cfg.label}</option>
           ))}
@@ -144,41 +144,41 @@ export default function TemplateForm({ template, onSubmit, onCancel }: TemplateF
 
       {/* Description */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">描述</label>
+        <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">描述</label>
         <textarea value={formData.description} onChange={e => setFormData(p => ({ ...p, description: e.target.value }))}
-          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" rows={2} placeholder="模板用途说明" />
+          className="w-full px-3 py-2 border border-[color:var(--border)] rounded-lg text-sm" rows={2} placeholder="模板用途说明" />
       </div>
 
       {/* File upload */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
+        <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">
           {template ? '替换模板文件（可选）' : '上传模板文件 (.docx / .xlsx) *'}
         </label>
         <div
-          className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors ${dragOver ? 'border-primary-400 bg-primary-50' : 'border-slate-200 hover:border-slate-300'}`}
+          className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors ${dragOver ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)]' : 'border-[color:var(--border)] hover:border-[color:var(--border)]'}`}
           onDragOver={e => { e.preventDefault(); setDragOver(true) }}
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
         >
           {formData.fileName ? (
             <div className="flex items-center justify-center gap-2">
-              <Icon name={formData.fileType === 'xlsx' ? 'FileText' : 'FileText'} size={18} className="text-primary-500" />
-              <span className="text-sm text-slate-700">{formData.fileName}</span>
+              <Icon name={formData.fileType === 'xlsx' ? 'FileText' : 'FileText'} size={18} className="text-[color:var(--accent)]" />
+              <span className="text-sm text-[color:var(--fg-2)]">{formData.fileName}</span>
               <button type="button" onClick={() => setFormData(p => ({ ...p, fileName: '', fileData: '', storedFileName: '' }))}
-                className="text-slate-400 hover:text-red-500 ml-2">
+                className="text-[color:var(--muted)] hover:text-danger-500 ml-2">
                 <Icon name="X" size={14} />
               </button>
             </div>
           ) : (
             <div>
-              <Icon name="Upload" size={24} className="text-slate-300 mx-auto mb-2" />
-              <p className="text-sm text-slate-400">拖拽文件到此处，或
-                <label className="text-primary-500 cursor-pointer hover:text-primary-600"> 点击上传
+              <Icon name="Upload" size={24} className="text-[color:var(--border-strong)] mx-auto mb-2" />
+              <p className="text-sm text-[color:var(--muted)]">拖拽文件到此处，或
+                <label className="text-[color:var(--accent)] cursor-pointer hover:opacity-80"> 点击上传
                   <input type="file" accept=".docx,.xlsx" className="hidden"
                     onChange={e => { const f = e.target.files?.[0]; if (f) handleFileUpload(f); e.target.value = '' }} />
                 </label>
               </p>
-              <p className="text-xs text-slate-400 mt-1">支持 .docx（Word文档）和 .xlsx（Excel表格）</p>
+              <p className="text-xs text-[color:var(--muted)] mt-1">支持 .docx（Word文档）和 .xlsx（Excel表格）</p>
             </div>
           )}
         </div>
@@ -187,37 +187,37 @@ export default function TemplateForm({ template, onSubmit, onCancel }: TemplateF
       {/* Variables */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-slate-700">模板变量</label>
+          <label className="text-sm font-medium text-[color:var(--fg-2)]">模板变量</label>
           <button type="button" onClick={handleAddVariable}
-            className="text-xs text-primary-500 hover:text-primary-600 flex items-center gap-1">
+            className="text-xs text-[color:var(--accent)] hover:opacity-80 flex items-center gap-1">
             <Icon name="Plus" size={12} /> 添加变量
           </button>
         </div>
         {formData.variables.length === 0 ? (
-          <p className="text-xs text-slate-400 py-2">上传模板文件并保存后，系统将自动识别文件中的 {'{{变量名}}'} 占位符为变量。</p>
+          <p className="text-xs text-[color:var(--muted)] py-2">上传模板文件并保存后，系统将自动识别文件中的 {'{{变量名}}'} 占位符为变量。</p>
         ) : (
           <div className="space-y-2">
             {formData.variables.map((v, i) => (
-              <div key={i} className="flex items-center gap-2 bg-slate-50 rounded-lg p-2">
+              <div key={i} className="flex items-center gap-2 bg-[color:var(--panel-2)] rounded-lg p-2">
                 <input type="text" value={v.label} onChange={e => handleUpdateVariable(i, 'label', e.target.value)}
-                  className="w-24 px-2 py-1 border border-slate-200 rounded text-xs" placeholder="中文标签" />
+                  className="w-24 px-2 py-1 border border-[color:var(--border)] rounded text-xs" placeholder="中文标签" />
                 <input type="text" value={v.key} onChange={e => handleUpdateVariable(i, 'key', e.target.value)}
-                  className="w-24 px-2 py-1 border border-slate-200 rounded text-xs font-mono" placeholder="变量名" />
+                  className="w-24 px-2 py-1 border border-[color:var(--border)] rounded text-xs font-mono" placeholder="变量名" />
                 <select value={v.type} onChange={e => handleUpdateVariable(i, 'type', e.target.value)}
-                  className="w-20 px-2 py-1 border border-slate-200 rounded text-xs">
+                  className="w-20 px-2 py-1 border border-[color:var(--border)] rounded text-xs">
                   <option value="text">文本</option>
                   <option value="number">数字</option>
                   <option value="date">日期</option>
                   <option value="select">下拉</option>
                 </select>
                 <input type="text" value={v.defaultValue} onChange={e => handleUpdateVariable(i, 'defaultValue', e.target.value)}
-                  className="flex-1 px-2 py-1 border border-slate-200 rounded text-xs" placeholder="默认值" />
-                <label className="flex items-center gap-1 text-xs text-slate-400">
+                  className="flex-1 px-2 py-1 border border-[color:var(--border)] rounded text-xs" placeholder="默认值" />
+                <label className="flex items-center gap-1 text-xs text-[color:var(--muted)]">
                   <input type="checkbox" checked={v.required} onChange={e => handleUpdateVariable(i, 'required', e.target.checked)} />
                   必填
                 </label>
                 <button type="button" onClick={() => handleRemoveVariable(i)}
-                  className="p-1 text-slate-400 hover:text-red-500 flex-shrink-0">
+                  className="p-1 text-[color:var(--muted)] hover:text-danger-500 flex-shrink-0">
                   <Icon name="X" size={12} />
                 </button>
               </div>
@@ -227,7 +227,7 @@ export default function TemplateForm({ template, onSubmit, onCancel }: TemplateF
       </div>
 
       {/* Actions */}
-      <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100">
+      <div className="flex items-center justify-end gap-3 pt-2 border-t border-[color:var(--border)]">
         <Button type="button" onClick={onCancel}  variant="ghost" className="text-sm">取消</Button>
         <Button type="submit"  variant="primary" className="text-sm">
           {template ? '保存修改' : '创建模板'}

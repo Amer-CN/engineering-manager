@@ -27,7 +27,7 @@ export function TeamsTab({
   return (
     <>
       <div className="flex items-center justify-between mb-6">
-        <div className="text-slate-500">
+        <div className="text-[color:var(--muted)]">
           按项目分类管理班组，共{workerTeams.length} 个班组 </div>
         <div className="flex items-center gap-3">
           <Button onClick={onOpenAddModal}  variant="warning">
@@ -40,12 +40,12 @@ export function TeamsTab({
         <div className="space-y-6">
           {Object.values(teamsByProject).map(projectGroup => (
             <Card bordered={false} className="overflow-hidden">
-              <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+              <div className="px-6 py-3 bg-[color:var(--panel-2)] border-b border-[color:var(--border)] flex items-center justify-between">
                 <div className="flex items-center">
                   <span className="mr-2">📁</span>
-                  <span className="font-medium text-slate-800">{projectGroup.projectName}</span>
+                  <span className="font-medium text-[color:var(--fg)]">{projectGroup.projectName}</span>
                 </div>
-                <span className="text-sm text-slate-500">{projectGroup.teams.length} 个班组</span>
+                <span className="text-sm text-[color:var(--muted)]">{projectGroup.teams.length} 个班组</span>
               </div>
               <div className="p-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -67,8 +67,8 @@ export function TeamsTab({
       ) : (
         <Card bordered={false} className="p-12 text-center">
           <div className="text-6xl mb-4">🏗️</div>
-          <h3 className="text-lg font-medium text-slate-800 mb-2">暂无班组</h3>
-          <p className="text-slate-500 mb-6">请先添加项目，然后创建班组</p>
+          <h3 className="text-lg font-medium text-[color:var(--fg)] mb-2">暂无班组</h3>
+          <p className="text-[color:var(--muted)] mb-6">请先添加项目，然后创建班组</p>
           <Button onClick={onOpenAddModal}  variant="warning">
             添加班组
           </Button>
@@ -106,11 +106,11 @@ export function WorkersTab({
   return (
     <>
       <FilterBar className="mb-6">
-        <span className="text-slate-600 font-medium">筛选：</span>
+        <span className="text-[color:var(--fg-2)] font-medium">筛选：</span>
         <select
           value={filterProject || ''}
           onChange={e => { onFilterProjectChange(e.target.value ? Number(e.target.value) : null); onFilterTeamChange(null) }}
-          className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+          className="px-3 py-2 border border-[color:var(--border)] rounded-lg focus:ring-2 focus:ring-[color:var(--accent-soft)]"
         >
           <option value="">全部项目</option>
           {projects.map(p => (
@@ -120,7 +120,7 @@ export function WorkersTab({
         <select
           value={filterTeam || ''}
           onChange={e => onFilterTeamChange(e.target.value ? Number(e.target.value) : null)}
-          className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+          className="px-3 py-2 border border-[color:var(--border)] rounded-lg focus:ring-2 focus:ring-[color:var(--accent-soft)]"
           disabled={!filterProject}
         >
           <option value="">全部班组</option>
@@ -150,8 +150,8 @@ export function WorkersTab({
       ) : (
         <Card bordered={false} className="p-12 text-center">
           <div className="text-6xl mb-4">🚧</div>
-          <h3 className="text-lg font-medium text-slate-800 mb-2">暂无工人</h3>
-          <p className="text-slate-500 mb-6">请先在班组管理中从工人库添加，或导入 Excel</p>
+          <h3 className="text-lg font-medium text-[color:var(--fg)] mb-2">暂无工人</h3>
+          <p className="text-[color:var(--muted)] mb-6">请先在班组管理中从工人库添加，或导入 Excel</p>
           <Button onClick={onAddWorker}  variant="warning">
             添加工人
           </Button>

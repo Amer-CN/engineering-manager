@@ -37,7 +37,7 @@ const HeroBanner: React.FC<HeroBannerProps> = ({
       className={`mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between ${className}`}
     >
       <div>
-        <h1 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--fg)' }}>{title}</h1>
+        <h1 className="text-display-lg tracking-tight" style={{ color: 'var(--fg)' }}>{title}</h1>
         {subtitle && <p className="text-sm mt-1" style={{ color: 'var(--muted)' }}>{subtitle}</p>}
       </div>
       {metrics.length > 0 && (
@@ -46,7 +46,7 @@ const HeroBanner: React.FC<HeroBannerProps> = ({
             <React.Fragment key={i}>
               {i > 0 && <div className="w-px h-10" style={{ background: 'var(--border)' }} />}
               <div className="text-center min-w-[48px]">
-                <p className="text-2xl font-bold tabular-nums" style={{ color: 'var(--fg)' }}>{m.value}</p>
+                <p className="text-numeric-xl font-mono tabular-nums tracking-tight" style={{ color: 'var(--fg)' }}>{m.value}</p>
                 <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>{m.label}</p>
               </div>
             </React.Fragment>

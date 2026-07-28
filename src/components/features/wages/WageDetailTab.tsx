@@ -147,27 +147,27 @@ export default function WageDetailTab({
 
       {receiptResult && (
         <div className="shrink-0 mb-4 p-3 rounded-lg text-sm">
-          <div className={`rounded-lg p-3 ${receiptResult.failed > 0 ? 'bg-amber-50 border border-amber-200' : 'bg-green-50 border border-green-200'}`}>
+          <div className={`rounded-lg p-3 ${receiptResult.failed > 0 ? 'bg-warning-50 border border-warning-200' : 'bg-success-50 border border-success-200'}`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <span className="font-medium">{receiptResult.date} 回单解析完成</span>
-                <span className="text-green-600">✓ 匹配 {receiptResult.matched} 人</span>
-                {receiptResult?.skippedArchived != null && receiptResult?.skippedArchived > 0 && <span className="text-slate-500">⏭ {receiptResult?.skippedArchived} 人已归档</span>}
-                {receiptResult.failed > 0 && <span className="text-amber-600">✗ 未匹配 {receiptResult.failed} 人</span>}
-                <span className="text-slate-500">共 {receiptResult.totalItems} 笔</span>
-                {receiptResult.totalAmount && <span className="font-mono text-slate-600">总额 ¥{receiptResult.totalAmount.toFixed(2)}</span>}
+                <span className="text-success-600">✓ 匹配 {receiptResult.matched} 人</span>
+                {receiptResult?.skippedArchived != null && receiptResult?.skippedArchived > 0 && <span className="text-[color:var(--muted)]">⏭ {receiptResult?.skippedArchived} 人已归档</span>}
+                {receiptResult.failed > 0 && <span className="text-warning-600">✗ 未匹配 {receiptResult.failed} 人</span>}
+                <span className="text-[color:var(--muted)]">共 {receiptResult.totalItems} 笔</span>
+                {receiptResult.totalAmount && <span className="font-mono text-[color:var(--fg-2)]">总额 ¥{receiptResult.totalAmount.toFixed(2)}</span>}
               </div>
               <div className="flex gap-2">
                 {receiptResult.rawTextSnippet && (
                   <button onClick={() => setShowRawText(!showRawText)}
-                    className="text-xs text-slate-400 hover:text-slate-600 underline">查看原文</button>
+                    className="text-xs text-[color:var(--muted)] hover:text-[color:var(--fg-2)] underline">查看原文</button>
                 )}
                 <button onClick={() => onSavePayments()}
-                  className="text-xs text-blue-600 hover:text-blue-800 font-medium">保存发放</button>
+                  className="text-xs text-[color:var(--accent)] hover:opacity-80 font-medium">保存发放</button>
               </div>
             </div>
             {showRawText && receiptResult.rawTextSnippet && (
-              <pre className="mt-2 p-2 bg-slate-50 rounded text-xs text-slate-500 max-h-32 overflow-y-auto">{receiptResult.rawTextSnippet}</pre>
+              <pre className="mt-2 p-2 bg-[color:var(--panel-2)] rounded text-xs text-[color:var(--muted)] max-h-32 overflow-y-auto">{receiptResult.rawTextSnippet}</pre>
             )}
           </div>
         </div>
@@ -194,18 +194,18 @@ export default function WageDetailTab({
       </div>
 
       {scopeData.length > 0 && (
-        <div className="shrink-0 flex items-center justify-end gap-6 px-4 py-2.5 bg-white border-t border-slate-200 text-sm">
+        <div className="shrink-0 flex items-center justify-end gap-6 px-4 py-2.5 bg-[color:var(--card)] border-t border-[color:var(--border)] text-sm">
           <div className="flex items-center gap-1.5">
-            <span className="text-slate-400">应发</span>
-            <span className="font-semibold text-slate-800">¥{summaryTotals.totalActual.toFixed(2)}</span>
+            <span className="text-[color:var(--muted)]">应发</span>
+            <span className="font-semibold text-[color:var(--fg)]">¥{summaryTotals.totalActual.toFixed(2)}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-slate-400">实发</span>
-            <span className="font-semibold text-green-700">¥{summaryTotals.totalPaid.toFixed(2)}</span>
+            <span className="text-[color:var(--muted)]">实发</span>
+            <span className="font-semibold text-success-700">¥{summaryTotals.totalPaid.toFixed(2)}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-slate-400">差额</span>
-            <span className={`font-semibold ${summaryTotals.totalDiff >= 0 ? 'text-amber-600' : 'text-green-600'}`}>
+            <span className="text-[color:var(--muted)]">差额</span>
+            <span className={`font-semibold ${summaryTotals.totalDiff >= 0 ? 'text-warning-600' : 'text-success-600'}`}>
               {summaryTotals.totalDiff >= 0 ? '未发' : '多发'}¥{Math.abs(summaryTotals.totalDiff).toFixed(2)}
             </span>
           </div>

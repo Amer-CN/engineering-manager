@@ -38,15 +38,15 @@ const PositionEditor: React.FC<PositionEditorProps> = ({ positions, onChange }) 
 
   return (
     <div>
-      <label className="block text-sm font-medium text-slate-700 mb-1">职位列表</label>
+      <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">职位列表</label>
 
       {positions.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-2">
           {positions.map((p, i) => (
-            <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary-50 text-primary-700 text-xs rounded-full">
+            <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-[color:var(--accent-soft)] text-[color:var(--accent)] text-xs rounded-full">
               {p}
               <button type="button" onClick={() => handleRemove(i)}
-                className="hover:text-red-500 transition-colors">&times;</button>
+                className="hover:text-danger-500 transition-colors">&times;</button>
             </span>
           ))}
         </div>
@@ -58,7 +58,7 @@ const PositionEditor: React.FC<PositionEditorProps> = ({ positions, onChange }) 
           containerClassName="flex-1"
           placeholder="输入职位名称，如：部门经理" maxLength={MAX_CHAR} />
           <Button type="button" onClick={handleAdd}
-             variant="ghost" size="sm" className="text-primary-600 whitespace-nowrap">添加</Button>
+             variant="ghost" size="sm" className="text-[color:var(--accent)] whitespace-nowrap">添加</Button>
       </div>
     </div>
   )

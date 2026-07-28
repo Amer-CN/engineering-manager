@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import PageHeader from '@/components/ui/PageHeader'
 import { usePermission } from '@/hooks/usePermission'
+import { useAuth } from '@/hooks/useAuth'
 import { SETTING_CATEGORIES, type SettingCategory, type SettingItem, searchSettings } from '@/constants/settingsIndex'
 import { SettingsNav } from '@/components/features/settings/SettingsNav'
 import { SettingsSearch } from '@/components/features/settings/SettingsSearch'
@@ -11,6 +12,7 @@ import { AiCapabilitySection } from '@/components/features/settings/AiCapability
 import { DataStorageSection } from '@/components/features/settings/DataStorageSection'
 import { PreferencesSection } from '@/components/features/settings/PreferencesSection'
 import { AboutHelpSection } from '@/components/features/settings/AboutHelpSection'
+import { Icon } from '@/components/ui/Icon'
 
 /**
  * 系统设置 (v0.83.0 重构)
@@ -28,6 +30,7 @@ const ACTIVE_KEY = 'settings_active_category'
 
 const Settings: React.FC<SettingsProps> = ({ refresh }) => {
   const { isAdmin } = usePermission()
+  const { currentUser } = useAuth()
   const [active, setActive] = useState<SettingCategory>(() => {
     try {
       const v = localStorage.getItem(ACTIVE_KEY) as SettingCategory | null
@@ -74,8 +77,20 @@ const Settings: React.FC<SettingsProps> = ({ refresh }) => {
       <PageHeader title="系统设置" subtitle="管理应用程序设置" />
 
       <div className="flex gap-6 items-start">
-        {/* 左栏：搜索 + 分类导航 */}
+        {/* 左栏：用户片段 + 搜索 + 分类导航 */}
         <div className="w-60 flex-shrink-0">
+          {/* S33 Stitch: user profile snippet */}
+          {currentUser && (
+            <div className="flex items-center gap-3 mb-5 px-1">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-[color:var(--panel-2)] border border-[color:var(--border)]">
+                <Icon name="User" size={20} className="text-[color:var(--muted)]" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-[color:var(--fg)] truncate">{currentUser.displayName || currentUser.username}</p>
+                <p className="text-xs text-[color:var(--muted)] truncate">{currentUser.roleName || '用户'}</p>
+              </div>
+            </div>
+          )}
           <SettingsSearch query={query} onQueryChange={setQuery} results={results} onSelect={navigateToItem} />
           {!query.trim() && <SettingsNav active={active} onSelect={setActive} />}
         </div>

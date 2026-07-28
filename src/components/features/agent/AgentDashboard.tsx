@@ -286,25 +286,32 @@ const AgentDashboard: React.FC = () => {
           {/* 顶部条：助手标识 + 搜索 + 移动端历史 */}
           <div className="flex items-center justify-between gap-3 px-6 pt-4 pb-2 flex-shrink-0">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-sm">
-                <Icon name="Sparkles" size={16} className="text-white" />
+              <div className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
+                <Icon name="Bot" size={16} />
               </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-slate-700 truncate">工程管理助手</p>
-                {modelName && <p className="text-xs text-slate-400 truncate">{modelName}</p>}
+              <div className="min-w-0 flex items-baseline gap-2">
+                <p className="text-sm font-semibold truncate" style={{ color: 'var(--fg)' }}>AI 管家</p>
+                {modelName && (
+                  <>
+                    <span className="text-xs flex-shrink-0" style={{ color: 'var(--muted)' }}>|</span>
+                    <p className="text-xs truncate" style={{ color: 'var(--muted)' }}>{modelName}</p>
+                  </>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <button
                 onClick={() => setSearchOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-[color:var(--panel-2)]"
+                style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}
               >
                 <Icon name="Search" size={14} />
-                <kbd className="hidden md:inline-flex items-center px-1 py-0.5 rounded bg-slate-100 text-caption text-slate-400 font-mono">⌘K</kbd>
+                <kbd className="hidden md:inline-flex items-center px-1 py-0.5 rounded text-caption font-mono" style={{ background: 'var(--panel-2)', color: 'var(--muted)' }}>⌘K</kbd>
               </button>
               <button
                 onClick={() => setHistoryOpen(true)}
-                className="lg:hidden flex items-center px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                className="lg:hidden flex items-center px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-[color:var(--panel-2)]"
+                style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}
               >
                 <Icon name="Inbox" size={14} />
               </button>
@@ -336,14 +343,14 @@ const AgentDashboard: React.FC = () => {
                   animate={{ opacity: 1, y: 0 }}
                   className="flex items-center gap-3 ml-12 mb-4"
                 >
-                  <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl rounded-bl-md bg-white border border-slate-200 shadow-sm">
+                  <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl rounded-bl-md" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
                     <motion.div
                       animate={{ rotate: 360 }}
                       transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
                     >
-                      <Icon name="Loader2" size={16} className="text-primary-500" />
+                      <Icon name="Loader2" size={16} className="text-[color:var(--accent)]" />
                     </motion.div>
-                    <span className="text-sm text-slate-500">思考中...</span>
+                    <span className="text-sm" style={{ color: 'var(--muted)' }}>思考中...</span>
                   </div>
                 </motion.div>
               )}
@@ -351,7 +358,7 @@ const AgentDashboard: React.FC = () => {
           </HoverScrollbar>
 
           {/* 底部 Composer */}
-          <div className="px-6 py-3 border-t border-slate-100 bg-white/60 backdrop-blur-sm flex-shrink-0">
+          <div className="px-6 py-3 border-t flex-shrink-0" style={{ borderColor: 'var(--border)', background: 'var(--bg)' }}>
             <div className="max-w-3xl mx-auto">
               <AgentComposer
                 value={inputValue}
@@ -360,6 +367,7 @@ const AgentDashboard: React.FC = () => {
                 disabled={loading}
                 inputRef={inputRef}
               />
+              <p className="text-center mt-2 text-xs" style={{ color: 'var(--muted)' }}>AI 可能会产生错误，请核实重要信息。</p>
             </div>
           </div>
         </div>

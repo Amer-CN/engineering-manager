@@ -61,19 +61,19 @@ describe('contractConfig', () => {
 
   describe('getStatusColor', () => {
     test('draft 返回灰色', () => {
-      expect(getStatusColor('draft')).toContain('slate')
+      expect(getStatusColor('draft')).toContain('muted')
     })
 
     test('active 返回绿色', () => {
-      expect(getStatusColor('active')).toContain('green')
+      expect(getStatusColor('active')).toContain('success')
     })
 
     test('terminated 返回红色', () => {
-      expect(getStatusColor('terminated')).toContain('red')
+      expect(getStatusColor('terminated')).toContain('danger')
     })
 
     test('未知状态返回默认灰色', () => {
-      expect(getStatusColor('unknown')).toContain('slate')
+      expect(getStatusColor('unknown')).toContain('muted')
     })
   })
 

@@ -66,7 +66,7 @@ export function CostLedgerTable({
             ].map(([field, label, width]) => (
               <th key={field} className={`${TABLE.headerCell} ${width}`}>
                 <div className="flex items-center">
-                  <span className="cursor-pointer hover:text-slate-700 select-none" onClick={() => toggleSort(field as string)}>
+                  <span className="cursor-pointer hover:text-[color:var(--fg-2)] select-none" onClick={() => toggleSort(field as string)}>
                     {label}{sortField === field ? (sortAsc ? ' ↑' : ' ↓') : ''}
                   </span>
                   {filterCols.includes(field as string) && (
@@ -112,7 +112,7 @@ export function CostLedgerTable({
         <tbody>
           {filtered.length === 0 ? (
             <tr>
-              <td colSpan={10} className="px-4 py-12 text-center text-sm text-slate-400">
+              <td colSpan={10} className="px-4 py-12 text-center text-sm" style={{ color: 'var(--muted)' }}>
                 无匹配结果，请调整筛选条件
               </td>
             </tr>

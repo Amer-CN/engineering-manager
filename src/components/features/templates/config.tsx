@@ -85,11 +85,11 @@ export const categoryConfig: Record<TemplateCategory, CategoryConfig> = {
 }
 
 export const categoryColors: Record<TemplateCategory, string> = {
-  contract:           'text-violet-600 bg-violet-50 border-violet-200',
-  settlement:         'text-emerald-600 bg-emerald-50 border-emerald-200',
-  seal_application:   'text-amber-600 bg-amber-50 border-amber-200',
-  fund_application:   'text-blue-600 bg-blue-50 border-blue-200',
-  official_document:  'text-red-600 bg-red-50 border-red-200',
-  letter:             'text-sky-600 bg-sky-50 border-sky-200',
-  other:              'text-slate-500 bg-slate-100 border-slate-200',
+  contract:           'text-[color:var(--muted)] bg-[color:var(--panel-2)] border-[color:var(--border)]',
+  settlement:         'text-success-600 bg-success-50 border-success-200',
+  seal_application:   'text-warning-600 bg-warning-50 border-warning-200',
+  fund_application:   'text-[color:var(--muted)] bg-[color:var(--panel-2)] border-[color:var(--border)]',
+  official_document:  'text-danger-600 bg-danger-50 border-danger-200',
+  letter:             'text-[color:var(--muted)] bg-[color:var(--panel-2)] border-[color:var(--border)]',
+  other:              'text-[color:var(--muted)] bg-[color:var(--panel-2)] border-[color:var(--border)]',
 }

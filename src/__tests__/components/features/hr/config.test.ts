@@ -13,7 +13,7 @@ describe('HR config', () => {
   })
 
   test('HR_STATUS_COLORS 应有对应样式类', () => {
-    expect(HR_STATUS_COLORS.active).toContain('emerald')
-    expect(HR_STATUS_COLORS.left).toContain('slate')
+    expect(HR_STATUS_COLORS.active).toContain('success')
+    expect(HR_STATUS_COLORS.left).toContain('muted')
   })
 })

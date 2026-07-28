@@ -65,7 +65,7 @@ export default defineConfig({
     // 代理 /api/* 请求到 C# 后端，解决浏览器预览环境跨域/网络限制
     proxy: {
       '/api': {
-        target: 'http://localhost:5048',
+        target: 'http://127.0.0.1:5048',
         changeOrigin: true,
       },
     },

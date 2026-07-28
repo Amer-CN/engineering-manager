@@ -20,6 +20,10 @@ export type { ProjectDetailProps } from './ProjectDetail'
 export { ProjectCard } from './ProjectCard'
 export type { ProjectCardProps } from './ProjectCard'
 
+// 项目表格（S11B）
+export { ProjectTable } from './ProjectTable'
+export type { ProjectTableProps } from './ProjectTable'
+
 // 项目筛选
 export { ProjectFilters } from './ProjectFilters'
 export type { ProjectFiltersProps } from './ProjectFilters'

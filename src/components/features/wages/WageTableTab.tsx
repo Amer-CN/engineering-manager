@@ -70,7 +70,7 @@ export default function WageTableTab({
         .map(t => ({ label: t.name, value: t.name })),
       filterAccessor: (item: any) => item.teamName || '',
       render: (item) => (
-        <span className="text-slate-500">{item.teamName || '-'}</span>
+        <span className="text-[color:var(--muted)]">{item.teamName || '-'}</span>
       )
     },
     {
@@ -98,7 +98,7 @@ export default function WageTableTab({
         return (
           <Input type="number" min={0} step={0.01} value={bonus}
             onChange={e => onBonusDeductionChange(item.id, 'bonus', parseFloat(e.target.value) || 0)}
-            className="w-20 px-2 py-1 border border-slate-300 rounded text-center" />
+            className="w-20 px-2 py-1 border border-[color:var(--border)] rounded text-center" />
         )
       }
     },
@@ -111,7 +111,7 @@ export default function WageTableTab({
         return (
           <Input type="number" min={0} step={0.01} value={deduction}
             onChange={e => onBonusDeductionChange(item.id, 'deduction', parseFloat(e.target.value) || 0)}
-            className="w-20 px-2 py-1 border border-slate-300 rounded text-center" />
+            className="w-20 px-2 py-1 border border-[color:var(--border)] rounded text-center" />
         )
       }
     },
@@ -125,9 +125,9 @@ export default function WageTableTab({
         const previewWage = calcWage(item)
         const changed = edit && previewWage !== (item.actualWage ?? 0)
         return (
-          <span className={`font-bold ${changed ? 'text-amber-600' : 'text-green-600'}`}>
+          <span className={`font-bold ${changed ? 'text-warning-600' : 'text-success-600'}`}>
             ¥{previewWage.toFixed(2)}
-            {changed && <span className="text-xs text-amber-500 ml-1">*</span>}
+            {changed && <span className="text-xs text-warning-500 ml-1">*</span>}
           </span>
         )
       }
@@ -136,7 +136,7 @@ export default function WageTableTab({
 
   const footer = (
     <div className="flex items-center px-4 py-2.5 text-sm font-bold">
-      <span className="text-green-600">
+      <span className="text-success-600">
         合计: ¥{wageRecords.reduce((sum, w) => sum + calcWage(w), 0).toFixed(2)}
       </span>
     </div>
@@ -149,10 +149,10 @@ export default function WageTableTab({
           <input type="checkbox"
             checked={selectedIds.size === wageRecords.length && wageRecords.length > 0}
             onChange={toggleAll} className="rounded" />
-          <div className="text-slate-500">
+          <div className="text-[color:var(--muted)]">
             工资记录: {wageRecords.length} 条
             {attendancesCount === 0 && (
-              <span className="text-amber-600 ml-2">（提示：建议先生成考勤记录）</span>
+              <span className="text-warning-600 ml-2">（提示：建议先生成考勤记录）</span>
             )}
           </div>
           {selectedIds.size > 0 && (

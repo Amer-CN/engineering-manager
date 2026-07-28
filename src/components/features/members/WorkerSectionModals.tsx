@@ -64,26 +64,26 @@ interface TeamCardProps {
 export function TeamCard({ team, workerCount, onEdit, onDelete, onManageWorkers, onTeamWages }: TeamCardProps) {
   const projectName = (team.projectName ?? '')
   return (
-  <div className="border border-slate-200 rounded-lg p-4 hover:border-amber-300 transition-colors">
+  <div className="border border-[color:var(--border)] rounded-lg p-4 hover:border-warning-300 transition-colors">
   <div className="flex items-center justify-between mb-2">
   <div className="flex items-center">
   <Icon name="Users" size={20} className="mr-2" />
-  <span className="font-medium text-slate-800">{team.name}</span>
+  <span className="font-medium text-[color:var(--fg)]">{team.name}</span>
   </div>
   {team.leaderId && team.leaderName && (
-  <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full">
+  <span className="px-2 py-0.5 bg-warning-100 text-warning-700 text-xs rounded-full">
   组长: {team.leaderName}
   </span>
   )}
   </div>
-  <div className="text-sm text-slate-500 mb-3">
+  <div className="text-sm text-[color:var(--muted)] mb-3">
   工人: {workerCount} 人 </div>
-  <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+  <div className="flex items-center gap-2 pt-2 border-t border-[color:var(--border)]">
   {onManageWorkers && (
   <Button
   onClick={() => onManageWorkers(team.id, team.name, team.projectId)}
   
-   variant="ghost" size="sm" className="text-primary-600 flex-1">
+   variant="ghost" size="sm" className="text-[color:var(--accent)] flex-1">
   管理工人
   </Button>
   )}

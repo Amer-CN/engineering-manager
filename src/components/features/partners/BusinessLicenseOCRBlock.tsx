@@ -91,8 +91,8 @@ export const BusinessLicenseOCRBlock: React.FC<BusinessLicenseOCRBlockProps> = (
         disabled={loading}
         className={`w-full flex items-center justify-center gap-2 transition-all duration-300 ${
           loading
-            ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0'
-            : 'bg-primary-600 text-white hover:bg-primary-700 rounded-lg font-medium'
+            ? 'bg-[color:var(--accent)] text-[color:var(--on-accent)] border-0'
+            : 'bg-[color:var(--accent)] text-[color:var(--on-accent)] hover:opacity-90 rounded-lg font-medium'
         }`}
       >
         {loading ? (

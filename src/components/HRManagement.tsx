@@ -26,10 +26,10 @@ const HRManagement: React.FC = () => {
   return (
     <div className="h-[calc(100vh-60px)] flex flex-col overflow-hidden p-6">
       {/* 页面标题 - 固定高度 */}
-      <div className="flex items-center justify-between mb-5 shrink-0">
+      <div className="flex items-center justify-between mb-5 pb-4 border-b border-[color:var(--border)] shrink-0">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">人事管理</h1>
-          <p className="text-slate-500 mt-1">管理人员档案、考勤、薪酬与部门架构</p>
+          <h1 className="text-base font-semibold tracking-tight text-[color:var(--fg)]">人事管理</h1>
+          <p className="text-[color:var(--muted)] mt-1">管理人员档案、考勤、薪酬与部门架构</p>
         </div>
       </div>
 

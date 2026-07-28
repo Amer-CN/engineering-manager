@@ -2,7 +2,6 @@
 
 import React, { useState, useMemo } from 'react'
 import { DataTable, type Column } from '@/components/DataTable'
-import FilterBar from '../../ui/FilterBar'
 import { useMaskedFn } from "@/hooks/useMaskedValue";
 import { Icon } from '../../ui/Icon'
 import type { Member, WorkerTeam } from '../../../types/electron'
@@ -61,11 +60,11 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
     {
       key: 'name', title: '姓名', sortable: true, filterable: true,
       sorter: (a, b) => (a.name || '').localeCompare(b.name || '', 'zh-CN'),
-      render: (w) => <span className="font-medium text-slate-800">{w.name}</span>
+      render: (w) => <span className="font-medium text-[color:var(--fg)]">{w.name}</span>
     },
     {
       key: 'idCard', title: '身份证号', filterable: true,
-      render: (w) => <span className="text-slate-500 font-mono text-xs">{masked('idCard', w.idCard) || '-'}</span>
+      render: (w) => <span className="text-[color:var(--muted)] font-mono text-xs">{masked('idCard', w.idCard) || '-'}</span>
     },
     {
       key: 'age', title: '年龄', align: 'center', sortable: true,
@@ -79,13 +78,13 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
       render: (w) => {
         const age = w.birthDate ? calcAge(w.birthDate) : null
         const isOverage = age !== null && age > 60
-        return <span className={`text-sm font-medium ${isOverage ? 'text-red-600' : 'text-slate-600'}`}>{age !== null ? age : '-'}</span>
+        return <span className={`text-sm font-medium ${isOverage ? 'text-danger-600' : 'text-[color:var(--fg-2)]'}`}>{age !== null ? age : '-'}</span>
       }
     },
     {
       key: 'gender', title: '性别', filterable: 'select',
       filterOptions: [{ label: '男', value: '男' }, { label: '女', value: '女' }],
-      render: (w) => <span className="text-slate-600">{w.gender || '-'}</span>
+      render: (w) => <span className="text-[color:var(--fg-2)]">{w.gender || '-'}</span>
     },
     {
       key: 'workerType', title: '工种', filterable: 'select',
@@ -95,16 +94,16 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
         { label: '安装工', value: '安装工' },
         { label: '后勤', value: '后勤' },
       ],
-      render: (w) => <span className="text-slate-600">{w.workerType ? getWorkerTypeLabel(w.workerType) : '-'}</span>
+      render: (w) => <span className="text-[color:var(--fg-2)]">{w.workerType ? getWorkerTypeLabel(w.workerType) : '-'}</span>
     },
     {
       key: 'dailyWage', title: '日工资', align: 'right', sortable: true, filterable: true,
       sorter: (a, b) => ((a.dailyWage || 0) - (b.dailyWage || 0)),
-      render: (w) => <span className="text-slate-700 font-medium">{w.dailyWage != null ? `¥${w.dailyWage}` : '-'}</span>
+      render: (w) => <span className="text-[color:var(--fg-2)] font-medium">{w.dailyWage != null ? `¥${w.dailyWage}` : '-'}</span>
     },
     {
       key: 'bankAccount', title: '银行卡号', filterable: true,
-      render: (w) => <span className="text-slate-500 font-mono text-xs">{masked('bankAccount', (w as Member & { bankAccount?: string }).bankAccount) || '-'}</span>
+      render: (w) => <span className="text-[color:var(--muted)] font-mono text-xs">{masked('bankAccount', (w as Member & { bankAccount?: string }).bankAccount) || '-'}</span>
     },
     {
       key: 'actions', title: '操作', align: 'right',
@@ -112,13 +111,13 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
         <div className="flex items-center justify-end gap-1">
           <button
             onClick={() => onEditWorker(w)}
-            className="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded"
+            className="px-2 py-1 text-xs text-[color:var(--accent)] hover:bg-[color:var(--accent-soft)] rounded"
           >
             编辑
           </button>
           <button
             onClick={() => setWageModalWorker({ id: (w as Member & { workerId?: number }).workerId || w.id, name: w.name })}
-            className="px-2 py-1 text-xs text-green-600 hover:bg-green-50 rounded"
+            className="px-2 py-1 text-xs text-success-600 hover:bg-success-50 rounded"
           >
             工资
           </button>
@@ -133,48 +132,44 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
     },
   ]
 
+  // 按班组统计人数
+  const teamCounts = useMemo(() => {
+    const counts: Record<number, number> = {}
+    members.forEach(m => { if (m.teamId) counts[m.teamId] = (counts[m.teamId] || 0) + 1 })
+    return counts
+  }, [members])
+
   return (
     <div className="flex flex-col max-h-[calc(100vh-200px)]">
-      {/* 筛选器 */}
-      <FilterBar className="shrink-0 mb-6">
-        <span className="text-slate-600 font-medium">筛选：</span>
-        <select
-          value={filterProject || ''}
-          onChange={e => {
-            setFilterProject(e.target.value ? Number(e.target.value) : null)
-            setFilterTeam(null)
-          }}
-          className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+      {/* S24 Stitch: 班组 pill-tabs */}
+      <div className="flex items-center gap-2 mb-5 flex-wrap">
+        <button
+          onClick={() => { setFilterTeam(null); setFilterProject(null) }}
+          className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+            !filterTeam ? 'bg-[color:var(--accent)] text-[color:var(--on-accent)]' : 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)]'
+          }`}
         >
-          <option value="">全部项目</option>
-          {projects.map(p => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
-        <select
-          value={filterTeam || ''}
-          onChange={e => setFilterTeam(e.target.value ? Number(e.target.value) : null)}
-          className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-          disabled={!filterProject}
-        >
-          <option value="">全部班组</option>
-          {workerTeams.filter(t => !filterProject || t.projectId === filterProject).map(t => (
-            <option key={t.id} value={t.id}>{t.name}</option>
-          ))}
-        </select>
-        <Button
-          onClick={onAddWorker}
-          
-         variant="warning" className="ml-auto  flex items-center">
-          <Icon name="Plus" size={18} className="mr-1" />添加工人
+          全部班组 ({members.length})
+        </button>
+        {workerTeams.map(t => (
+          <button
+            key={t.id}
+            onClick={() => { setFilterTeam(t.id); setFilterProject(t.projectId) }}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              filterTeam === t.id ? 'bg-[color:var(--accent)] text-[color:var(--on-accent)]' : 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)]'
+            }`}
+          >
+            {t.name} ({teamCounts[t.id] || 0})
+          </button>
+        ))}
+        <div className="flex-1" />
+        <Button onClick={onImportClick} variant="secondary" className="flex items-center gap-1.5">
+          <Icon name="Upload" size={16} />导入工人
         </Button>
-        <Button
-          onClick={onImportClick}
-          
-         variant="primary" className="px-5 py-2 flex items-center">
-          <Icon name="Upload" size={18} className="mr-1" />导入Excel
+        <Button onClick={onAddWorker} variant="primary" className="flex items-center gap-1.5">
+          <Icon name="Plus" size={16} />新增
         </Button>
-      </FilterBar>
+      </div>
 
       {/* 工人表格 */}
       {filteredWorkers.length > 0 ? (
@@ -191,8 +186,8 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
       ) : (
         <Card bordered={false} className="p-12 text-center flex-1 flex flex-col items-center justify-center">
           <div className="text-6xl mb-4"><Icon name="Construction" size={48} /></div>
-          <h3 className="text-lg font-medium text-slate-800 mb-2">暂无工人</h3>
-          <p className="text-slate-500 mb-6">请先在班组管理中从工人库添加，或导入 Excel</p>
+          <h3 className="text-lg font-medium text-[color:var(--fg)] mb-2">暂无工人</h3>
+          <p className="text-[color:var(--muted)] mb-6">请先在班组管理中从工人库添加，或导入 Excel</p>
           <Button
             onClick={onAddWorker}
             

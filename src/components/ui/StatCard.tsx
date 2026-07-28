@@ -36,12 +36,12 @@ const StatCard: React.FC<StatCardProps> = ({
   const padding = size === 'sm' ? 'p-3' : 'p-4'
   const iconSize = size === 'sm' ? 'w-7 h-7 rounded-lg' : 'w-10 h-10 rounded-xl'
   const iconFontSize = size === 'sm' ? 16 : 20
-  const valueSize = size === 'sm' ? 'text-lg font-bold' : 'text-2xl font-bold'
+  const valueSize = size === 'sm' ? 'text-lg font-bold font-mono tabular-nums tracking-tight' : 'text-numeric-xl font-mono tabular-nums tracking-tight'
 
-  const labelEl = <p className="text-xs" style={{ color: 'var(--muted)' }}>{label}</p>
+  const labelEl = <p className="text-micro font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--muted)' }}>{label}</p>
   const valueEl = (
     <p
-      className={`${valueSize} truncate tabular-nums ${valueColor}`}
+      className={`${valueSize} truncate font-mono tabular-nums tracking-tight ${valueColor}`}
       style={valueColor ? undefined : { color: 'var(--fg)' }}
       title={typeof value === 'string' ? value : undefined}
     >{value}</p>

@@ -158,16 +158,16 @@ export const TransForm: React.FC<TransFormProps> = ({
             ))}
           </select>
         </div>
-        <div className="bg-slate-50 rounded-xl p-4">
+        <div className="bg-[color:var(--panel-2)] rounded-xl p-4">
           <div className="flex items-center justify-between text-lg">
-            <span className="text-slate-600">合计金额:</span>
-            <span className="font-bold text-primary-600">
+            <span className="text-[color:var(--fg-2)]">合计金额:</span>
+            <span className="font-bold text-[color:var(--accent)]">
               ¥{Math.round(formData.quantity * formData.unitPrice * 100) / 100}
             </span>
           </div>
         </div>
       </div>
-      <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
+      <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-[color:var(--border)]">
         <Button type="button" onClick={onCancel}  variant="secondary">取消</Button>
         <Button type="submit"  variant="primary">确认</Button>
       </div>

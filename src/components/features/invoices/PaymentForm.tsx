@@ -124,30 +124,33 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ initialData, projects,
 
   <div>
   <label className="label">关联发票</label>
-  <div className="border border-slate-200 rounded-lg max-h-48 overflow-y-auto">
+  <div className="rounded-lg max-h-48 overflow-y-auto" style={{ border: '1px solid var(--border)' }}>
   {getAvailableInvoices().length > 0 ? getAvailableInvoices().map(invoice => {
   const detail = formData.invoiceDetails.find(d => d.invoiceId === invoice.id)
   const remaining = invoice.amount - invoice.receivedAmount
   const isSelected = !!detail
   return (
-  <div key={invoice.id} className={`flex items-center gap-3 p-3 border-b border-slate-100 last:border-b-0 cursor-pointer ${isSelected ? 'bg-green-50' : 'hover:bg-slate-50'}`}
+  <div key={invoice.id} className="flex items-center gap-3 p-3 last:border-b-0 cursor-pointer transition-colors"
+  style={{ borderBottom: '1px solid var(--border)', background: isSelected ? 'var(--accent-soft)' : 'transparent' }}
+  onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'var(--panel-2)' }}
+  onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent' }}
   onClick={() => handleInvoiceSelectionChange(invoice.id, !isSelected)}>
-  <input type="checkbox" checked={isSelected} onChange={() => {}} className="w-4 h-4 text-primary-600 rounded pointer-events-none" />
+  <input type="checkbox" checked={isSelected} onChange={() => {}} className="w-4 h-4 rounded pointer-events-none accent-[color:var(--accent)]" />
   <div className="flex-1">
   <div className="flex items-center gap-2">
-  <span className="px-1.5 py-0.5 bg-slate-200 text-slate-600 text-xs rounded font-mono">No.</span>
-  <span className="font-mono text-sm">{invoice.invoiceNo}</span>
-  <span className="text-xs text-slate-500">{invoice.name}</span>
+  <span className="px-1.5 py-0.5 text-xs rounded font-mono" style={{ background: 'var(--panel-2)', color: 'var(--muted)' }}>No.</span>
+  <span className="font-mono text-sm" style={{ color: 'var(--fg)' }}>{invoice.invoiceNo}</span>
+  <span className="text-xs" style={{ color: 'var(--muted)' }}>{invoice.name}</span>
   </div>
-  <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
+  <div className="flex items-center gap-3 text-xs mt-1 font-mono tabular-nums" style={{ color: 'var(--muted)' }}>
   <span>¥{formatMoney(invoice.amount)}</span>
-  <span className="text-green-600">已收 ¥{formatMoney(invoice.receivedAmount)}</span>
-  {remaining > 0 ? <span className="text-amber-600">待收 ¥{formatMoney(remaining)}</span> : <span className="text-green-600">✓ 已收齐</span>}
+  <span style={{ color: 'var(--success)' }}>已收 ¥{formatMoney(invoice.receivedAmount)}</span>
+  {remaining > 0 ? <span style={{ color: 'var(--warning)' }}>待收 ¥{formatMoney(remaining)}</span> : <span style={{ color: 'var(--success)' }}>✓ 已收齐</span>}
   </div>
   </div>
   </div>
   )
-  }) : <div className="p-4 text-center text-slate-500 text-sm">暂无可关联的发票</div>}
+  }) : <div className="p-4 text-center text-sm" style={{ color: 'var(--muted)' }}>暂无可关联的发票</div>}
   </div>
   </div>
 
@@ -185,15 +188,12 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ initialData, projects,
   type="button"
   onClick={() => bankReceiptInputRef.current?.click()}
   disabled={bankReceiptLoading}
-  className={`w-full flex items-center justify-center gap-2 transition-all duration-300 ${
-  bankReceiptLoading
-  ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0'
-  : 'bg-slate-200 text-slate-700 hover:bg-slate-300 rounded-lg font-medium'
-  }`}
+  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all duration-300 disabled:opacity-60"
+  style={bankReceiptLoading ? { background: 'var(--accent)', color: 'var(--on-accent)' } : { background: 'var(--panel-2)', color: 'var(--fg-2)' }}
   >
   {bankReceiptLoading ? (
   <>
-  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+  <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
   <span className="animate-pulse">AI 正在识别银行回单...</span>
   </>
   ) : (

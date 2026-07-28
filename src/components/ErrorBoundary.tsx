@@ -42,22 +42,22 @@ class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '2rem', textAlign: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '2rem', textAlign: 'center', background: 'var(--bg)', color: 'var(--fg)' }}>
           <h2>页面出现异常</h2>
-          <p>抱歉，该页面加载时发生了错误。您可以尝试重新加载。</p>
+          <p style={{ color: 'var(--muted)' }}>抱歉，该页面加载时发生了错误。您可以尝试重新加载。</p>
           {this.state.error && (
             <details style={{ marginBottom: '1rem', maxWidth: 500, width: '100%', textAlign: 'left' }}>
-              <summary style={{ cursor: 'pointer', fontSize: '0.75rem' }}>查看错误详情</summary>
-              <pre style={{ marginTop: '0.5rem', padding: '0.75rem', background: '#f1f5f9', borderRadius: 8, fontSize: '0.75rem', color: '#ef4444', overflow: 'auto', maxHeight: 200, whiteSpace: 'pre-wrap' }}>
+              <summary style={{ cursor: 'pointer', fontSize: '0.75rem', color: 'var(--muted)' }}>查看错误详情</summary>
+              <pre style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'var(--panel-2)', borderRadius: 8, fontSize: '0.75rem', color: 'var(--danger)', overflow: 'auto', maxHeight: 200, whiteSpace: 'pre-wrap', border: '1px solid var(--border)' }}>
                 {this.state.error.message}
               </pre>
             </details>
           )}
           <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button onClick={this.handleReload} style={{ padding: '0.5rem 1.5rem', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer' }}>
+            <button onClick={this.handleReload} style={{ padding: '0.5rem 1.5rem', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--card)', cursor: 'pointer', color: 'var(--fg)' }}>
               重新加载
             </button>
-            <button onClick={this.handleRefreshPage} style={{ padding: '0.5rem 1.5rem', borderRadius: 8, border: 'none', background: '#3b82f6', color: '#fff', cursor: 'pointer' }}>
+            <button onClick={this.handleRefreshPage} style={{ padding: '0.5rem 1.5rem', borderRadius: 8, border: 'none', background: 'var(--accent)', color: 'var(--on-accent)', cursor: 'pointer' }}>
               刷新页面
             </button>
           </div>

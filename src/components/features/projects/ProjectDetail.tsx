@@ -153,22 +153,28 @@ export function ProjectDetail({ project, members, allMembers, onBack, onEdit }: 
   return (
     <PageContainer>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
-        {/* ── 页面头部 ── */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <button onClick={onBack} className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors text-slate-600">
+        {/* ── 页面头部（对齐 Stitch S12：名称 + 状态 + 元信息行 + 编辑） ── */}
+        <div className="flex items-start justify-between gap-4 mb-6">
+          <div className="flex items-start gap-3 min-w-0">
+            <button onClick={onBack} className="p-2 rounded-xl transition-colors flex-shrink-0 hover:bg-[color:var(--sidebar-item-hover)]" style={{ border: '1px solid var(--border)', color: 'var(--fg-2)' }}>
               <Icon name="ArrowLeft" size={18} />
             </button>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold text-slate-800">{project.name}</h1>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h1 className="text-base font-semibold tracking-tight" style={{ color: 'var(--fg)' }}>{project.name}</h1>
                 <StatusBadge status={project.status} config={PROJECT_STATUS} />
               </div>
-              <p className="text-slate-500 text-sm mt-0.5">{project.address || '暂无地址'} · {project.projectManagerName || '暂无负责人'}</p>
+              <div className="flex items-center gap-x-4 gap-y-1 flex-wrap mt-2 text-xs" style={{ color: 'var(--muted)' }}>
+                <span className="inline-flex items-center gap-1"><Icon name="UserCircle" size={12} />{project.projectManagerName || '未指派'}</span>
+                <span className="inline-flex items-center gap-1"><Icon name="MapPin" size={12} />{project.address || '暂无地址'}</span>
+                {(project.startDate || project.endDate) && (
+                  <span className="inline-flex items-center gap-1 tabular-nums"><Icon name="Clock" size={12} />{project.startDate || '—'} 至 {project.endDate || '—'}</span>
+                )}
+              </div>
             </div>
           </div>
           <Button onClick={() => onEdit(project)}  variant="secondary" size="sm">
-            <Icon name="Edit3" size={14} /> 编辑
+            <Icon name="Edit3" size={14} /> 编辑信息
           </Button>
         </div>
 

@@ -190,7 +190,7 @@ export const ItemForm: React.FC<ItemFormProps> = ({
           className="input min-h-[80px]"
         />
       </div>
-      <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
+      <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-[color:var(--border)]">
         <Button type="button" onClick={onCancel}  variant="secondary">取消</Button>
         <Button type="submit"  variant="primary">{item ? '保存' : '添加'}</Button>
       </div>

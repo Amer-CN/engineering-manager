@@ -35,44 +35,30 @@ describe('TemplateDashboard', () => {
 
   afterEach(cleanup)
 
-  test('应渲染模板总数统计', async () => {
+  test('应渲染分类筛选 pill-tabs（S28 Stitch）', async () => {
     const { default: TemplateDashboard } = await importModule()
     render(React.createElement(TemplateDashboard, baseProps as any))
-    expect(screen.getByText('模板总数')).toBeTruthy()
-    expect(screen.getByText('3')).toBeTruthy()
+    expect(screen.getByText('全部模板')).toBeTruthy()
+    // 合同模板 appears as both pill-tab and badge on cards
+    expect(screen.getAllByText('合同模板').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('结算模板').length).toBeGreaterThan(0)
   })
 
-  test('应渲染 Word 和 Excel 模板统计', async () => {
-    const { default: TemplateDashboard } = await importModule()
-    render(React.createElement(TemplateDashboard, baseProps as any))
-    expect(screen.getByText('Word 模板')).toBeTruthy()
-    expect(screen.getByText('Excel 模板')).toBeTruthy()
-  })
-
-  test('应渲染分类卡片', async () => {
+  test('应渲染模板卡片名称', async () => {
     const { default: TemplateDashboard } = await importModule()
     const { container } = render(React.createElement(TemplateDashboard, baseProps as any))
-    // 用 h3 查找分类标题
     const headings = container.querySelectorAll('h3')
-    const labels = Array.from(headings).map(h => h.textContent)
-    expect(labels).toContain('合同模板')
-    expect(labels).toContain('结算模板')
-    expect(labels).toContain('其他')
+    const names = Array.from(headings).map(h => h.textContent)
+    expect(names).toContain('合同A')
+    expect(names).toContain('结算A')
+    expect(names).toContain('合同B')
   })
 
-  test('应显示分类标题', async () => {
+  test('应渲染 3 个模板卡片', async () => {
     const { default: TemplateDashboard } = await importModule()
     const { container } = render(React.createElement(TemplateDashboard, baseProps as any))
-    const h2 = container.querySelector('h2')
-    expect(h2?.textContent).toBe('模板分类')
-  })
-
-  test('分类卡片应显示模板数量', async () => {
-    const { default: TemplateDashboard } = await importModule()
-    render(React.createElement(TemplateDashboard, baseProps as any))
-    // contract has 2 templates
-    expect(screen.getByText('2 个模板')).toBeTruthy()
-    // settlement has 1 template
-    expect(screen.getByText('1 个模板')).toBeTruthy()
+    // Each template renders as a button card
+    const cards = container.querySelectorAll('.grid > button')
+    expect(cards.length).toBe(3)
   })
 })

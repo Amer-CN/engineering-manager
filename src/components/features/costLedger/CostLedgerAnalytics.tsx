@@ -80,7 +80,7 @@ export function CostLedgerAnalytics({ projectId, projectName, categories }: Cost
 
   if (entries.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+      <div className="flex flex-col items-center justify-center py-16 text-[color:var(--muted)]">
         <p className="text-lg">暂无成本台账数据</p>
         <p className="mt-1 text-sm">请先在侧边栏"成本台账"中录入数据</p>
       </div>
@@ -91,22 +91,22 @@ export function CostLedgerAnalytics({ projectId, projectName, categories }: Cost
     <div className="space-y-6">
       {/* KPI Cards */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="rounded-xl border border-red-100 bg-gradient-to-br from-red-50 to-white p-5">
-          <div className="text-xs font-medium uppercase tracking-wider text-red-400">经营支出</div>
-          <div className="mt-2 font-mono text-2xl font-bold text-red-600">{formatMoney(stats.totalExpense)}</div>
-          <div className="mt-1 text-xs text-slate-400">{stats.count} 条记录</div>
+        <div className="rounded-xl border border-danger-100 bg-[color:var(--danger-soft)] p-5">
+          <div className="text-xs font-medium uppercase tracking-wider text-danger-400">经营支出</div>
+          <div className="mt-2 font-mono text-numeric-xl tabular-nums tracking-tight text-danger-600">{formatMoney(stats.totalExpense)}</div>
+          <div className="mt-1 text-xs text-[color:var(--muted)]">{stats.count} 条记录</div>
         </div>
-        <div className="rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white p-5">
-          <div className="text-xs font-medium uppercase tracking-wider text-emerald-400">资金收入</div>
-          <div className="mt-2 font-mono text-2xl font-bold text-emerald-600">{formatMoney(stats.totalIncome)}</div>
-          <div className="mt-1 text-xs text-slate-400">股东投资 + 融资 + 垫资回收</div>
+        <div className="rounded-xl border border-success-100 bg-[color:var(--success-soft)] p-5">
+          <div className="text-xs font-medium uppercase tracking-wider text-success-400">资金收入</div>
+          <div className="mt-2 font-mono text-numeric-xl tabular-nums tracking-tight text-success-600">{formatMoney(stats.totalIncome)}</div>
+          <div className="mt-1 text-xs text-[color:var(--muted)]">股东投资 + 融资 + 垫资回收</div>
         </div>
-        <div className={`rounded-xl border p-5 bg-gradient-to-br ${stats.totalIncome - stats.totalExpense >= 0 ? 'from-emerald-50 to-white border-emerald-100' : 'from-red-50 to-white border-red-100'}`}>
-          <div className="text-xs font-medium uppercase tracking-wider text-slate-400">净{stats.totalIncome - stats.totalExpense >= 0 ? '流入' : '流出'}</div>
-          <div className={`mt-2 font-mono text-2xl font-bold ${stats.totalIncome - stats.totalExpense >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+        <div className={`rounded-xl border p-5 ${stats.totalIncome - stats.totalExpense >= 0 ? 'bg-[color:var(--success-soft)] border-success-100' : 'bg-[color:var(--danger-soft)] border-danger-100'}`}>
+          <div className="text-xs font-medium uppercase tracking-wider text-[color:var(--muted)]">净{stats.totalIncome - stats.totalExpense >= 0 ? '流入' : '流出'}</div>
+          <div className={`mt-2 font-mono text-numeric-xl tabular-nums tracking-tight ${stats.totalIncome - stats.totalExpense >= 0 ? 'text-success-600' : 'text-danger-600'}`}>
             {formatMoney(stats.totalIncome - stats.totalExpense)}
           </div>
-          <div className="mt-1 text-xs text-slate-400">
+          <div className="mt-1 text-xs text-[color:var(--muted)]">
             {stats.totalExpense > 0 ? `收支比 ${((stats.totalIncome / stats.totalExpense) * 100).toFixed(1)}%` : '—'}
           </div>
         </div>
@@ -115,8 +115,8 @@ export function CostLedgerAnalytics({ projectId, projectName, categories }: Cost
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Category Pie */}
-        <div className="rounded-xl border border-slate-200 bg-white p-5">
-          <h3 className="text-sm font-semibold text-slate-700 mb-4">支出分类占比</h3>
+        <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] p-5">
+          <h3 className="text-sm font-semibold text-[color:var(--fg-2)] mb-4">支出分类占比</h3>
           {stats.pieData.length > 0 ? (
             <div className="flex items-start gap-4">
               <div style={{ width: 180, height: 180 }} className="shrink-0">
@@ -137,22 +137,22 @@ export function CostLedgerAnalytics({ projectId, projectName, categories }: Cost
                     <div className="flex items-start gap-1.5 min-w-0">
                       <span className="h-2 w-2 shrink-0 rounded-full mt-1" style={{ backgroundColor: getCategoryColor(d.code, categories as Parameters<typeof getCategoryColor>[1]) || ANALYTICS_FALLBACK_PALETTE[i % ANALYTICS_FALLBACK_PALETTE.length] }} />
                       <span className="flex-1 min-w-0">
-                        <span className="text-slate-600 line-clamp-2 leading-tight">{d.name}</span>
+                        <span className="text-[color:var(--fg-2)] line-clamp-2 leading-tight">{d.name}</span>
                       </span>
                     </div>
-                    <span className="font-mono text-slate-500 ml-2 shrink-0">{formatMoney(d.value)}</span>
+                    <span className="font-mono text-[color:var(--muted)] ml-2 shrink-0">{formatMoney(d.value)}</span>
                   </div>
                 ))}
               </div>
             </div>
           ) : (
-            <p className="text-sm text-slate-400">无支出数据</p>
+            <p className="text-sm text-[color:var(--muted)]">无支出数据</p>
           )}
         </div>
 
         {/* Monthly Trend */}
-        <div className="rounded-xl border border-slate-200 bg-white p-5">
-          <h3 className="text-sm font-semibold text-slate-700 mb-4">月度收支趋势</h3>
+        <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] p-5">
+          <h3 className="text-sm font-semibold text-[color:var(--fg-2)] mb-4">月度收支趋势</h3>
           {stats.trendData.length > 0 ? (
             <SimpleGroupedBarChart
               data={stats.trendData.map((d: Record<string, number | string>) => ({
@@ -165,25 +165,25 @@ export function CostLedgerAnalytics({ projectId, projectName, categories }: Cost
               formatValue={(v) => formatMoney(v)}
             />
           ) : (
-            <p className="text-sm text-slate-400">无月度数据</p>
+            <p className="text-sm text-[color:var(--muted)]">无月度数据</p>
           )}
         </div>
       </div>
 
       {/* Top Counterparties */}
       {stats.topCounterparties.length > 0 && (
-        <div className="rounded-xl border border-slate-200 bg-white p-5">
-          <h3 className="text-sm font-semibold text-slate-700 mb-3">支出 TOP 10 往来方</h3>
+        <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] p-5">
+          <h3 className="text-sm font-semibold text-[color:var(--fg-2)] mb-3">支出 TOP 10 往来方</h3>
           <div className="space-y-1.5">
             {stats.topCounterparties.map(([name, amt], i) => {
               const pct = stats.totalExpense > 0 ? (amt / stats.totalExpense) * 100 : 0
               return (
                 <div key={name} className="flex items-center gap-3">
-                  <span className="w-5 text-right text-xs font-medium text-slate-400">#{i + 1}</span>
-                  <span className="flex-1 text-sm text-slate-700 truncate">{name}</span>
-                  <span className="font-mono text-sm font-medium text-slate-600">{formatMoney(amt)}</span>
-                  <div className="w-16 h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                    <div className="h-full rounded-full bg-red-400" style={{ width: `${Math.min(pct, 100)}%` }} />
+                  <span className="w-5 text-right text-xs font-medium text-[color:var(--muted)]">#{i + 1}</span>
+                  <span className="flex-1 text-sm text-[color:var(--fg-2)] truncate">{name}</span>
+                  <span className="font-mono text-sm font-medium text-[color:var(--fg-2)]">{formatMoney(amt)}</span>
+                  <div className="w-16 h-1.5 rounded-full bg-[color:var(--panel-2)] overflow-hidden">
+                    <div className="h-full rounded-full bg-danger-400" style={{ width: `${Math.min(pct, 100)}%` }} />
                   </div>
                 </div>
               )

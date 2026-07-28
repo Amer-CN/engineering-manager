@@ -93,7 +93,7 @@ export function WorkerPoolForm({ visible, editing, onClose, onSubmit, onSwitchTo
   <div className="flex items-center justify-between w-full">
   <div>
   {editing && onSwitchToFull && (
-  <button type="button" onClick={() => onSwitchToFull(editing)} className="text-sm text-amber-600 hover:text-amber-700 hover:underline">填写完整信息 →</button>
+  <button type="button" onClick={() => onSwitchToFull(editing)} className="text-sm text-warning-600 hover:text-warning-700 hover:underline">填写完整信息 →</button>
   )}
   </div>
   <div className="flex gap-3">
@@ -122,12 +122,12 @@ export function WorkerPoolForm({ visible, editing, onClose, onSubmit, onSwitchTo
   {/* ID Card upload */}
   <div className="grid grid-cols-2 gap-4">
   <div>
-  <label className="block text-sm font-medium text-slate-700 mb-1">身份证人像面</label>
-  <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-slate-200 rounded-lg cursor-pointer hover:border-amber-400 transition-colors">
+  <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">身份证人像面</label>
+  <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-[color:var(--border)] rounded-lg cursor-pointer hover:border-warning-400 transition-colors">
   {form.idCardFront ? (
   <img src={form.idCardFront} className="h-full object-contain rounded" alt="" loading="lazy" />
   ) : (
-  <div className="text-xs text-slate-400 text-center">
+  <div className="text-xs text-[color:var(--muted)] text-center">
   <Icon name="Upload" size={18} className="mx-auto mb-1" />
   {ocrBusy ? '识别中...' : '点击上传'}
   </div>
@@ -136,12 +136,12 @@ export function WorkerPoolForm({ visible, editing, onClose, onSubmit, onSwitchTo
   </label>
   </div>
   <div>
-  <label className="block text-sm font-medium text-slate-700 mb-1">身份证国徽面</label>
-  <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-slate-200 rounded-lg cursor-pointer hover:border-amber-400 transition-colors">
+  <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">身份证国徽面</label>
+  <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-[color:var(--border)] rounded-lg cursor-pointer hover:border-warning-400 transition-colors">
   {form.idCardBack ? (
   <img src={form.idCardBack} className="h-full object-contain rounded" alt="" loading="lazy" />
   ) : (
-  <div className="text-xs text-slate-400 text-center">
+  <div className="text-xs text-[color:var(--muted)] text-center">
   <Icon name="Upload" size={18} className="mx-auto mb-1" />
   {ocrBusy ? '识别中...' : '点击上传'}
   </div>
@@ -154,9 +154,9 @@ export function WorkerPoolForm({ visible, editing, onClose, onSubmit, onSwitchTo
   {/* Auto-filled from OCR */}
   <div className="grid grid-cols-2 gap-4">
   <div>
-  <label className="block text-sm font-medium text-slate-700 mb-1">性别</label>
+  <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">性别</label>
   <select value={form.gender} onChange={e => update({ gender: e.target.value })}
-  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500">
+  className="w-full px-3 py-2 border border-[color:var(--border)] rounded-lg focus:ring-2 focus:ring-[color:var(--accent-soft)]">
   <option value="">未知</option><option value="男">男</option><option value="女">女</option>
   </select>
   </div>
@@ -190,9 +190,9 @@ export function WorkerPoolForm({ visible, editing, onClose, onSubmit, onSwitchTo
   {/* Worker type & wage */}
   <div className="grid grid-cols-2 gap-4">
   <div>
-  <label className="block text-sm font-medium text-slate-700 mb-1">默认工种</label>
+  <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">默认工种</label>
   <select value={form.workerType} onChange={e => update({ workerType: e.target.value })}
-  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500">
+  className="w-full px-3 py-2 border border-[color:var(--border)] rounded-lg focus:ring-2 focus:ring-[color:var(--accent-soft)]">
   <option value="">未设置</option>
   <option value="bricklayer">砌筑工</option>
   <option value="concreter">混凝土工</option>

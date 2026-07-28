@@ -211,8 +211,8 @@ const AgentSearch: React.FC<AgentSearchProps> = ({
     >
       <div className="flex flex-col" style={{ maxHeight: '70vh' }}>
         {/* 搜索输入 */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
-          <Icon name="Search" size={18} className="text-slate-400 flex-shrink-0" />
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-[color:var(--border)]">
+          <Icon name="Search" size={18} className="text-[color:var(--muted)] flex-shrink-0" />
           <input
             ref={inputRef}
             type="text"
@@ -220,9 +220,9 @@ const AgentSearch: React.FC<AgentSearchProps> = ({
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="搜索对话、功能模块，或直接提问..."
-            className="flex-1 text-sm bg-transparent outline-none text-slate-700 placeholder-slate-400"
+            className="flex-1 text-sm bg-transparent outline-none text-[color:var(--fg-2)] placeholder-[color:var(--muted)]"
           />
-          <kbd className="flex-shrink-0 px-1.5 py-0.5 rounded bg-slate-100 text-caption font-mono text-slate-400">
+          <kbd className="flex-shrink-0 px-1.5 py-0.5 rounded bg-[color:var(--panel-2)] text-caption font-mono text-[color:var(--muted)]">
             Esc
           </kbd>
         </div>
@@ -231,15 +231,15 @@ const AgentSearch: React.FC<AgentSearchProps> = ({
         <div ref={listRef} className="flex-1 overflow-y-auto py-2">
           {results.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Icon name="SearchX" size={32} className="text-slate-200 mb-2" />
-              <p className="text-sm text-slate-400">未找到相关结果</p>
+              <Icon name="SearchX" size={32} className="text-[color:var(--border-strong)] mb-2" />
+              <p className="text-sm text-[color:var(--muted)]">未找到相关结果</p>
               {debouncedQuery && (
                 <button
                   onClick={() => {
                     onAsk(debouncedQuery)
                     onClose()
                   }}
-                  className="mt-3 text-xs text-primary-600 hover:text-primary-700 font-medium"
+                  className="mt-3 text-xs text-[color:var(--accent)] hover:opacity-80 font-medium"
                 >
                   向 AI 提问「{debouncedQuery}」
                 </button>
@@ -255,15 +255,15 @@ const AgentSearch: React.FC<AgentSearchProps> = ({
               let groupHeader: React.ReactNode = null
               if (item.type === 'ask' && currentGroup !== 'ask') {
                 currentGroup = 'ask'
-                groupHeader = <p className="text-xs font-medium text-slate-400 px-4 pt-2 pb-1">直接问 AI</p>
+                groupHeader = <p className="text-xs font-medium text-[color:var(--muted)] px-4 pt-2 pb-1">直接问 AI</p>
               } else if (item.type === 'conversation' && currentGroup !== 'conv') {
                 currentGroup = 'conv'
-                groupHeader = <p className="text-xs font-medium text-slate-400 px-4 pt-2 pb-1">
+                groupHeader = <p className="text-xs font-medium text-[color:var(--muted)] px-4 pt-2 pb-1">
                   {debouncedQuery ? '匹配的对话' : '最近对话'}
                 </p>
               } else if (item.type === 'module' && currentGroup !== 'module') {
                 currentGroup = 'module'
-                groupHeader = <p className="text-xs font-medium text-slate-400 px-4 pt-2 pb-1">
+                groupHeader = <p className="text-xs font-medium text-[color:var(--muted)] px-4 pt-2 pb-1">
                   {debouncedQuery ? '匹配的功能' : '常用功能'}
                 </p>
               }
@@ -276,24 +276,24 @@ const AgentSearch: React.FC<AgentSearchProps> = ({
                     onClick={() => handleSelect(item)}
                     onMouseEnter={() => setSelectedIndex(idx)}
                     className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
-                      isSelected ? 'bg-primary-50' : 'hover:bg-slate-50'
+                      isSelected ? 'bg-[color:var(--accent-soft)]' : 'hover:bg-[color:var(--panel-2)]'
                     }`}
                   >
                     {/* 图标 */}
                     <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center">
                       {item.type === 'ask' && (
-                        <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-400 flex items-center justify-center">
+                        <span className="w-8 h-8 rounded-lg bg-[color:var(--accent)] flex items-center justify-center">
                           <Icon name="Sparkles" size={14} className="text-white" />
                         </span>
                       )}
                       {item.type === 'conversation' && (
-                        <span className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
-                          <Icon name="MessageSquare" size={14} className="text-slate-500" />
+                        <span className="w-8 h-8 rounded-lg bg-[color:var(--panel-2)] flex items-center justify-center">
+                          <Icon name="MessageSquare" size={14} className="text-[color:var(--muted)]" />
                         </span>
                       )}
                       {item.type === 'module' && (
-                        <span className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
-                          <Icon name={item.icon} size={14} className="text-slate-500" />
+                        <span className="w-8 h-8 rounded-lg bg-[color:var(--panel-2)] flex items-center justify-center">
+                          <Icon name={item.icon} size={14} className="text-[color:var(--muted)]" />
                         </span>
                       )}
                     </div>
@@ -301,18 +301,18 @@ const AgentSearch: React.FC<AgentSearchProps> = ({
                     {/* 文本 */}
                     <div className="min-w-0 flex-1">
                       <p className={`text-sm font-medium truncate ${
-                        item.type === 'ask' ? 'text-primary-600' : 'text-slate-700'
+                        item.type === 'ask' ? 'text-[color:var(--accent)]' : 'text-[color:var(--fg-2)]'
                       }`}>
                         {item.label}
                       </p>
                       {(item.type === 'conversation' || item.type === 'module') && item.sub && (
-                        <p className="text-xs text-slate-400 truncate">{item.sub}</p>
+                        <p className="text-xs text-[color:var(--muted)] truncate">{item.sub}</p>
                       )}
                     </div>
 
                     {/* 选中指示 */}
                     {isSelected && (
-                      <Icon name="CornerDownLeft" size={14} className="flex-shrink-0 text-slate-400" />
+                      <Icon name="CornerDownLeft" size={14} className="flex-shrink-0 text-[color:var(--muted)]" />
                     )}
                   </button>
                 </div>
@@ -322,22 +322,22 @@ const AgentSearch: React.FC<AgentSearchProps> = ({
         </div>
 
         {/* 底部提示 */}
-        <div className="flex items-center justify-between px-4 py-2 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
-          <div className="flex items-center gap-3 text-xs text-slate-400">
+        <div className="flex items-center justify-between px-4 py-2 border-t border-[color:var(--border)] bg-[color:var(--panel-2)] rounded-b-2xl">
+          <div className="flex items-center gap-3 text-xs text-[color:var(--muted)]">
             <span className="flex items-center gap-1">
-              <kbd className="px-1 py-0.5 rounded bg-white border border-slate-200 font-mono text-caption">↑↓</kbd>
+              <kbd className="px-1 py-0.5 rounded bg-[color:var(--card)] border border-[color:var(--border)] font-mono text-caption">↑↓</kbd>
               导航
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="px-1 py-0.5 rounded bg-white border border-slate-200 font-mono text-caption">↵</kbd>
+              <kbd className="px-1 py-0.5 rounded bg-[color:var(--card)] border border-[color:var(--border)] font-mono text-caption">↵</kbd>
               选择
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="px-1 py-0.5 rounded bg-white border border-slate-200 font-mono text-caption">Esc</kbd>
+              <kbd className="px-1 py-0.5 rounded bg-[color:var(--card)] border border-[color:var(--border)] font-mono text-caption">Esc</kbd>
               关闭
             </span>
           </div>
-          <span className="text-xs text-slate-300">{results.length} 项结果</span>
+          <span className="text-xs text-[color:var(--border-strong)]">{results.length} 项结果</span>
         </div>
       </div>
     </Modal>

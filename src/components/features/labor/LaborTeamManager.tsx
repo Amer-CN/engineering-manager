@@ -100,7 +100,7 @@ const LaborTeamManager: React.FC<LaborTeamManagerProps> = ({
     <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <div className="text-slate-500">
+        <div className="text-[color:var(--muted)]">
           按项目分类管理班组，共 {workerTeams.length} 个班组
         </div>
         <Button
@@ -117,12 +117,12 @@ const LaborTeamManager: React.FC<LaborTeamManagerProps> = ({
         <div className="space-y-6">
           {Object.values(teamsByProject).map(projectGroup => (
             <Card key={projectGroup.projectName} bordered={false} className="overflow-hidden">
-              <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+              <div className="px-6 py-3 bg-[color:var(--panel-2)] border-b border-[color:var(--border)] flex items-center justify-between">
                 <div className="flex items-center">
                   <Icon name="FolderKanban" size={18} className="mr-2" />
-                  <span className="font-medium text-slate-800">{projectGroup.projectName}</span>
+                  <span className="font-medium text-[color:var(--fg)]">{projectGroup.projectName}</span>
                 </div>
-                <span className="text-sm text-slate-500">{projectGroup.teams.length} 个班组</span>
+                <span className="text-sm text-[color:var(--muted)]">{projectGroup.teams.length} 个班组</span>
               </div>
               <div className="p-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -145,8 +145,8 @@ const LaborTeamManager: React.FC<LaborTeamManagerProps> = ({
       ) : (
         <Card bordered={false} className="p-12 text-center">
           <div className="text-6xl mb-4"><Icon name="Building2" size={48} /></div>
-          <h3 className="text-lg font-medium text-slate-800 mb-2">暂无班组</h3>
-          <p className="text-slate-500 mb-6">请先添加项目，然后创建班组</p>
+          <h3 className="text-lg font-medium text-[color:var(--fg)] mb-2">暂无班组</h3>
+          <p className="text-[color:var(--muted)] mb-6">请先添加项目，然后创建班组</p>
           <Button
             onClick={handleAddTeam}
             

@@ -51,15 +51,15 @@ export function formatFieldValue(resource: string, field: string, value: any): s
 
 export function renderAuditDetail(log: AuditLog): React.ReactNode {
   const details = log.details as Record<string, unknown> | undefined
-  if (!details) return <p className="text-slate-500 text-sm">无详细信息</p>
+  if (!details) return <p className="text-[color:var(--muted)] text-sm">无详细信息</p>
 
   if (details.count !== undefined && !details.before && !details.after) {
     return (
       <div className="space-y-2">
         {details.count !== undefined && (
-          <div className="text-sm text-slate-600">数量：<span className="font-medium">{String(details.count)}</span> 条</div>
+          <div className="text-sm text-[color:var(--fg-2)]">数量：<span className="font-medium">{String(details.count)}</span> 条</div>
         )}
-        {String(details.reason) && <div className="text-sm text-slate-600">原因：{String(details.reason)}</div>}
+        {String(details.reason) && <div className="text-sm text-[color:var(--fg-2)]">原因：{String(details.reason)}</div>}
       </div>
     )
   }
@@ -67,10 +67,10 @@ export function renderAuditDetail(log: AuditLog): React.ReactNode {
   if (details.approved !== undefined) {
     return (
       <div className="space-y-2">
-        <div className="text-sm text-slate-600">
-          审批结果：<span className={`font-medium ${(details.approved as boolean) ? 'text-green-600' : 'text-red-600'}`}>{(details.approved as boolean) ? '通过' : '驳回'}</span>
+        <div className="text-sm text-[color:var(--fg-2)]">
+          审批结果：<span className={`font-medium ${(details.approved as boolean) ? 'text-success-600' : 'text-danger-600'}`}>{(details.approved as boolean) ? '通过' : '驳回'}</span>
         </div>
-        {String(details.reason) && <div className="text-sm text-slate-600">原因：{String(details.reason)}</div>}
+        {String(details.reason) && <div className="text-sm text-[color:var(--fg-2)]">原因：{String(details.reason)}</div>}
       </div>
     )
   }
@@ -92,21 +92,21 @@ export function renderAuditDetail(log: AuditLog): React.ReactNode {
       }
     }
     if (changes.length === 0) {
-      return <p className="text-slate-500 text-sm">无字段变更</p>
+      return <p className="text-[color:var(--muted)] text-sm">无字段变更</p>
     }
     return (
       <div className="space-y-2">
         {changes.map(c => (
           <div key={c.field} className="text-sm">
-            <span className="font-medium text-slate-700">{getFieldLabel(log.resource, c.field)}：</span>
-            <span className="text-red-600 line-through mr-2">{c.before}</span>
-            <span className="text-slate-400">→</span>
-            <span className="text-green-600 ml-2">{c.after}</span>
+            <span className="font-medium text-[color:var(--fg-2)]">{getFieldLabel(log.resource, c.field)}：</span>
+            <span className="text-danger-600 line-through mr-2">{c.before}</span>
+            <span className="text-[color:var(--muted)]">→</span>
+            <span className="text-success-600 ml-2">{c.after}</span>
           </div>
         ))}
       </div>
     )
   }
 
-  return <p className="text-slate-500 text-sm">无详细信息</p>
+  return <p className="text-[color:var(--muted)] text-sm">无详细信息</p>
 }

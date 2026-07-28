@@ -30,8 +30,7 @@ const SuggestionChips: React.FC<SuggestionChipsProps> = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2, duration: 0.3 }}
     >
-      <p className="text-xs font-medium mb-2.5" style={{ color: 'var(--muted)' }}>快捷提问</p>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap justify-center gap-2">
         {suggestions.map((sug, i) => (
           <motion.button
             key={i}

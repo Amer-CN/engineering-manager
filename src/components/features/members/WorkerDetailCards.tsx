@@ -12,8 +12,8 @@ export function WorkerDetailCards({ member, onPreview }: WorkerDetailCardsProps)
   return (
     <>
       {/* 工资信息卡片 */}
-      <Card className="border border-slate-200 p-6 mb-6">
-        <h3 className="text-lg font-medium text-slate-800 mb-4 flex items-center">
+      <Card className="border border-[color:var(--border)] p-6 mb-6">
+        <h3 className="text-lg font-medium text-[color:var(--fg)] mb-4 flex items-center">
           <span className="mr-2">💰</span>
           工资信息
         </h3>
@@ -26,8 +26,8 @@ export function WorkerDetailCards({ member, onPreview }: WorkerDetailCardsProps)
       </Card>
 
       {/* 安全档案卡片 */}
-      <Card className="border border-slate-200 p-6 mb-6">
-        <h3 className="text-lg font-medium text-slate-800 mb-4 flex items-center">
+      <Card className="border border-[color:var(--border)] p-6 mb-6">
+        <h3 className="text-lg font-medium text-[color:var(--fg)] mb-4 flex items-center">
           <span className="mr-2">📁</span>
           安全档案
         </h3>

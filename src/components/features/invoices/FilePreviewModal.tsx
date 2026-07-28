@@ -12,7 +12,7 @@ export const FilePreviewModal: React.FC<{
   onClose: () => void
 }> = ({ file, onClose }) => (
   <Modal isOpen onClose={onClose} title={file.title} size="full">
-    <div className="bg-slate-100 rounded-lg p-4" style={{ minHeight: '70vh' }}>
+    <div className="rounded-lg p-4" style={{ minHeight: '70vh', background: 'var(--panel-2)' }}>
       {file.type === 'pdf' ? (
         <iframe src={file.data} className="w-full h-full border-0 rounded" />
       ) : (

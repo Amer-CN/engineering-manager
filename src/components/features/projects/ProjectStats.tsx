@@ -21,12 +21,12 @@ function StatCard({ icon, label, value, accent, valueColor }: {
   icon: React.ReactNode; label: string; value: string; accent?: string; valueColor?: string
 }) {
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 min-w-0">
+    <div className="bg-[color:var(--card)] border border-[color:var(--border)] rounded-xl p-4 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 min-w-0">
       <div className="flex items-center gap-3">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${accent || 'bg-slate-100'} shrink-0`}>{icon}</div>
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${accent || 'bg-[color:var(--panel-2)]'} shrink-0`}>{icon}</div>
         <div className="min-w-0 flex-1">
-          <p className="text-xs text-slate-400 truncate">{label}</p>
-          <p className={`text-lg font-bold ${valueColor || 'text-slate-800'} truncate`} title={value}>{value}</p>
+          <p className="text-xs text-[color:var(--muted)] truncate">{label}</p>
+          <p className={`text-lg font-bold ${valueColor || 'text-[color:var(--fg)]'} truncate`} title={value}>{value}</p>
         </div>
       </div>
     </div>
@@ -36,11 +36,11 @@ function StatCard({ icon, label, value, accent, valueColor }: {
 export function ProjectStats({ budget, stats }: { budget: number; stats: ProjectStatsData }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-6">
-      <StatCard icon={<Icon name="DollarSign" size={20} className="text-emerald-500" />} accent="bg-emerald-50" label="合同价" value={`¥${formatMoney(budget)}`} />
-      <StatCard icon={<Icon name="TrendingDown" size={20} className="text-red-500" />} accent="bg-red-50" label="已支出" value={`¥${formatMoney(stats.totalExpenses)}`} valueColor="text-red-500" />
-      <StatCard icon={<Icon name="UserCircle" size={20} className="text-purple-500" />} accent="bg-purple-50" label="管理人员" value={`${stats.staffCount}人`} />
-      <StatCard icon={<Icon name="Construction" size={20} className="text-amber-500" />} accent="bg-amber-50" label="农民工" value={`${stats.workerCount}人`} />
-      <StatCard icon={<Icon name="Building2" size={20} className="text-slate-500" />} accent="bg-slate-100" label="班组" value={`${stats.teamCount}个`} />
+      <StatCard icon={<Icon name="DollarSign" size={20} className="text-success-500" />} accent="bg-success-50" label="合同价" value={`¥${formatMoney(budget)}`} />
+      <StatCard icon={<Icon name="TrendingDown" size={20} className="text-danger-500" />} accent="bg-danger-50" label="已支出" value={`¥${formatMoney(stats.totalExpenses)}`} valueColor="text-danger-500" />
+      <StatCard icon={<Icon name="UserCircle" size={20} className="text-[color:var(--accent)]" />} accent="bg-[color:var(--accent-soft)]" label="管理人员" value={`${stats.staffCount}人`} />
+      <StatCard icon={<Icon name="Construction" size={20} className="text-warning-500" />} accent="bg-warning-50" label="农民工" value={`${stats.workerCount}人`} />
+      <StatCard icon={<Icon name="Building2" size={20} className="text-[color:var(--muted)]" />} accent="bg-[color:var(--panel-2)]" label="班组" value={`${stats.teamCount}个`} />
     </div>
   )
 }

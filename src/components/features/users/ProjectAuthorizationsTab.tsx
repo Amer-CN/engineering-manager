@@ -36,7 +36,7 @@ export function ProjectAuthorizationsTab() {
       title: '项目',
       sortable: true,
       render: (row, _idx) => (
-        <span className="font-medium text-slate-800">
+        <span className="font-medium text-[color:var(--fg)]">
           {row.project_name || `#${row.project_id}`}
         </span>
       ),
@@ -47,9 +47,9 @@ export function ProjectAuthorizationsTab() {
       sortable: true,
       render: (row, _idx) => (
         <div>
-          <div className="text-slate-800">{row.user_display_name || row.username || row.user_id}</div>
+          <div className="text-[color:var(--fg)]">{row.user_display_name || row.username || row.user_id}</div>
           {row.username && row.user_display_name && (
-            <div className="text-caption text-slate-500">@{row.username}</div>
+            <div className="text-caption text-[color:var(--muted)]">@{row.username}</div>
           )}
         </div>
       ),
@@ -59,14 +59,14 @@ export function ProjectAuthorizationsTab() {
       title: '授权时间',
       sortable: true,
       render: (row, _idx) => (
-        <span className="text-caption text-slate-600">{row.granted_at}</span>
+        <span className="text-caption text-[color:var(--fg-2)]">{row.granted_at}</span>
       ),
     },
     {
       key: 'granted_by',
       title: '授权人',
       render: (row, _idx) => (
-        <span className="text-caption text-slate-600">{row.granted_by}</span>
+        <span className="text-caption text-[color:var(--fg-2)]">{row.granted_by}</span>
       ),
     },
     {
@@ -86,10 +86,10 @@ export function ProjectAuthorizationsTab() {
       {/* 头部: 标题 + 新增授权按钮 */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <Icon name="KeyRound" size={20} className="text-primary-600" />
+          <Icon name="KeyRound" size={20} className="text-[color:var(--accent)]" />
           <div>
-            <h3 className="text-base font-semibold text-slate-800">项目授权管理</h3>
-            <p className="text-caption text-slate-500 mt-0.5">
+            <h3 className="text-base font-semibold text-[color:var(--fg)]">项目授权管理</h3>
+            <p className="text-caption text-[color:var(--muted)] mt-0.5">
               给非 admin 用户授予某个项目的查看权限 (P0-4 越权防护的恢复通道)
             </p>
           </div>
@@ -142,8 +142,8 @@ export function ProjectAuthorizationsTab() {
             options={userOptions}
             placeholder="选择用户"
           />
-          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-            <p className="text-micro text-slate-600">
+          <div className="bg-[color:var(--panel-2)] border border-[color:var(--border)] rounded-lg p-3">
+            <p className="text-micro text-[color:var(--fg-2)]">
               <Icon name="Info" size={12} className="inline mr-1 -mt-0.5" />
               授权后该用户可在该项目下看到所有记录 (admin 仍然能看全表,不受授权限制).
               重复授权返回幂等结果, 不会创建重复记录.
@@ -171,25 +171,25 @@ export function ProjectAuthorizationsTab() {
       >
         {revokeTarget && (
           <div className="space-y-3">
-            <p className="text-sm text-slate-700">
+            <p className="text-sm text-[color:var(--fg-2)]">
               确定撤销以下授权?
             </p>
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm">
+            <div className="bg-[color:var(--panel-2)] border border-[color:var(--border)] rounded-lg p-3 text-sm">
               <div className="flex justify-between py-1">
-                <span className="text-slate-500">项目</span>
-                <span className="font-medium text-slate-800">
+                <span className="text-[color:var(--muted)]">项目</span>
+                <span className="font-medium text-[color:var(--fg)]">
                   {revokeTarget.project_name || `#${revokeTarget.project_id}`}
                 </span>
               </div>
               <div className="flex justify-between py-1">
-                <span className="text-slate-500">用户</span>
-                <span className="font-medium text-slate-800">
+                <span className="text-[color:var(--muted)]">用户</span>
+                <span className="font-medium text-[color:var(--fg)]">
                   {revokeTarget.user_display_name || revokeTarget.username || revokeTarget.user_id}
                 </span>
               </div>
               <div className="flex justify-between py-1">
-                <span className="text-slate-500">授权时间</span>
-                <span className="text-slate-800">{revokeTarget.granted_at}</span>
+                <span className="text-[color:var(--muted)]">授权时间</span>
+                <span className="text-[color:var(--fg)]">{revokeTarget.granted_at}</span>
               </div>
             </div>
             <p className="text-micro text-danger-600">

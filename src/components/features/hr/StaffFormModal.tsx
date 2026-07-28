@@ -62,85 +62,85 @@ const StaffFormModal: React.FC<Props> = ({
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <motion.div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] flex flex-col overflow-hidden"
+      <motion.div className="bg-[color:var(--card)] rounded-xl shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] flex flex-col overflow-hidden"
         initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }}>
-        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between shrink-0">
-          <h2 className="text-lg font-semibold text-slate-800">{editing ? '编辑人员' : '添加人员'}</h2>
+        <div className="px-6 py-4 border-b border-[color:var(--border)] flex items-center justify-between shrink-0">
+          <h2 className="text-lg font-semibold text-[color:var(--fg)]">{editing ? '编辑人员' : '添加人员'}</h2>
           <Button onClick={onRemove}  variant="ghost" className="p-1"><Icon name="X" size={18} /></Button>
         </div>
         <HoverScrollbar className="flex-1"><form onSubmit={onSubmit} className="p-6 space-y-5">
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">姓名 *</label>
+              <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">姓名 *</label>
               <input type="text" value={formData.name} onChange={e => set({ name: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent" required />
+                className="w-full px-3 py-2 border border-[color:var(--border)] rounded-lg text-sm focus:ring-2 focus:ring-[color:var(--accent-soft)] focus:border-[color:var(--accent)]" required />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">性别</label>
+              <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">性别</label>
               <select value={formData.gender} onChange={e => set({ gender: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                className="w-full px-3 py-2 border border-[color:var(--border)] rounded-lg text-sm">
                 <option value="男">男</option><option value="女">女</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">民族</label>
+              <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">民族</label>
               <input type="text" value={formData.ethnicity} onChange={e => set({ ethnicity: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="如：汉族" />
+                className="w-full px-3 py-2 border border-[color:var(--border)] rounded-lg text-sm" placeholder="如：汉族" />
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">出生日期</label>
+              <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">出生日期</label>
               <div className="flex gap-2 items-center">
                 <input type="date" value={formData.birthDate} onChange={e => set({ birthDate: e.target.value })}
-                  className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm" />
-                {formData.birthDate && <span className="text-xs text-primary-600 whitespace-nowrap">{calcAge(formData.birthDate)}</span>}
+                  className="flex-1 px-3 py-2 border border-[color:var(--border)] rounded-lg text-sm" />
+                {formData.birthDate && <span className="text-xs text-[color:var(--accent)] whitespace-nowrap">{calcAge(formData.birthDate)}</span>}
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">手机</label>
+              <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">手机</label>
               <input type="text" value={formData.phone} onChange={e => set({ phone: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                className="w-full px-3 py-2 border border-[color:var(--border)] rounded-lg text-sm" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">邮箱</label>
+              <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">邮箱</label>
               <input type="email" value={formData.email} onChange={e => set({ email: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                className="w-full px-3 py-2 border border-[color:var(--border)] rounded-lg text-sm" />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">身份证号</label>
+            <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">身份证号</label>
             <input type="text" value={formData.idCard} onChange={e => set({ idCard: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+              className="w-full px-3 py-2 border border-[color:var(--border)] rounded-lg text-sm" />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">身份证住址</label>
+            <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">身份证住址</label>
             <input type="text" value={formData.idCardAddress} onChange={e => set({ idCardAddress: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="身份证上的户籍地址" />
+              className="w-full px-3 py-2 border border-[color:var(--border)] rounded-lg text-sm" placeholder="身份证上的户籍地址" />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">部门</label>
+              <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">部门</label>
               <select value={formData.departmentId} onChange={e => set({ departmentId: e.target.value ? Number(e.target.value) : '' })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                className="w-full px-3 py-2 border border-[color:var(--border)] rounded-lg text-sm">
                 <option value="">请选择</option>
                 {departments.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">职位</label>
+              <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">职位</label>
               {(() => {
                 const dept = departments.find((d: any) => d.id === formData.departmentId)
                 const deptPositions: string[] = dept?.positions || []
                 if (deptPositions.length > 0) {
                   return (
                     <select value={formData.position} onChange={e => set({ position: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                      className="w-full px-3 py-2 border border-[color:var(--border)] rounded-lg text-sm">
                       <option value="">请选择</option>
                       {deptPositions.map((p: string) => <option key={p} value={p}>{p}</option>)}
                     </select>
@@ -148,7 +148,7 @@ const StaffFormModal: React.FC<Props> = ({
                 }
                 return (
                   <input type="text" value={formData.position} onChange={e => set({ position: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                    className="w-full px-3 py-2 border border-[color:var(--border)] rounded-lg text-sm"
                     placeholder={formData.departmentId ? '该部门暂无预设职位，请手动输入' : '请先选择部门'} />
                 )
               })()}
@@ -157,35 +157,35 @@ const StaffFormModal: React.FC<Props> = ({
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">入职日期</label>
+              <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">入职日期</label>
               <input type="date" value={formData.entryDate} onChange={e => set({ entryDate: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                className="w-full px-3 py-2 border border-[color:var(--border)] rounded-lg text-sm" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">月基本工资</label>
+              <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">月基本工资</label>
               <input type="number" value={formData.baseSalary} onChange={e => set({ baseSalary: e.target.value ? Number(e.target.value) : '' })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="元/月" />
+                className="w-full px-3 py-2 border border-[color:var(--border)] rounded-lg text-sm" placeholder="元/月" />
             </div>
             {editing && (
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                  <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">
                     离职日期
                     {formData.leaveDate && !formData.reentryDate && (
-                      <span className="ml-2 text-xs text-amber-600">已离职</span>
+                      <span className="ml-2 text-xs text-warning-600">已离职</span>
                     )}
                     {formData.leaveDate && formData.reentryDate && (
-                      <span className="ml-2 text-xs text-emerald-600">已重新入职</span>
+                      <span className="ml-2 text-xs text-success-600">已重新入职</span>
                     )}
                   </label>
                   <input type="date" value={formData.leaveDate} onChange={e => set({ leaveDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                    className="w-full px-3 py-2 border border-[color:var(--border)] rounded-lg text-sm" />
                 </div>
                 {formData.leaveDate && (
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">重新入职日期</label>
+                    <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">重新入职日期</label>
                     <input type="date" value={formData.reentryDate} onChange={e => set({ reentryDate: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                      className="w-full px-3 py-2 border border-[color:var(--border)] rounded-lg text-sm"
                       placeholder="填写此日期表示该员工已重新入职" />
                   </div>
                 )}
@@ -194,12 +194,12 @@ const StaffFormModal: React.FC<Props> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-2">
               身份证照片
-              <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${ocrMode === 'baidu' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>
+              <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${ocrMode === 'baidu' ? 'bg-[color:var(--accent-soft)] text-[color:var(--accent)]' : 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)]'}`}>
                 {ocrMode === 'baidu' ? '百度OCR' : '离线OCR'}
               </span>
-              {ocrLoading && <span className="ml-1 text-xs text-amber-500">识别中...</span>}
+              {ocrLoading && <span className="ml-1 text-xs text-warning-500">识别中...</span>}
             </label>
             <div className="grid grid-cols-2 gap-4">
               {(['idCardFront', 'idCardBack'] as const).map(field => (
@@ -215,7 +215,7 @@ const StaffFormModal: React.FC<Props> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">劳动合同</label>
+            <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-2">劳动合同</label>
             <DropZone
               label="上传劳动合同（支持 JPG/PNG/PDF）"
               preview={formData.contractFile as string}

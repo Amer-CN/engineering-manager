@@ -25,31 +25,31 @@ export type { ReencryptStatus }
 
 export function PiiReencryptSection({ reencryptStatus, progressPct, reencrypting, handleReencrypt }: PiiReencryptSectionProps) {
   return (
-    <div className="border-t border-slate-200 pt-4 mt-4">
-      <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2 mb-3">
+    <div className="border-t border-[color:var(--border)] pt-4 mt-4">
+      <h3 className="text-sm font-semibold text-[color:var(--fg-2)] flex items-center gap-2 mb-3">
         <Icon name="Database" size={16} /> 重新加密历史数据
       </h3>
-      <p className="text-xs text-slate-500 mb-3">
+      <p className="text-xs text-[color:var(--muted)] mb-3">
         轮换 key 后, 旧密文仍可解密但用旧 key 加密。点击下方按钮用当前 active key 重新加密所有 PII 字段。
       </p>
 
       {reencryptStatus && reencryptStatus.status !== 'idle' && (
-        <div className="bg-slate-50 rounded-lg p-3 mb-3 text-sm">
+        <div className="bg-[color:var(--panel-2)] rounded-lg p-3 mb-3 text-sm">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-slate-600">
+            <span className="text-[color:var(--fg-2)]">
               {reencryptStatus.status === 'running' ? '进行中...' :
                reencryptStatus.status === 'completed' ? '已完成' :
                reencryptStatus.status === 'completed_with_errors' ? '完成 (有失败)' : reencryptStatus.status}
             </span>
-            <span className="font-mono text-slate-800">{progressPct}%</span>
+            <span className="font-mono text-[color:var(--fg)]">{progressPct}%</span>
           </div>
-          <div className="w-full bg-slate-200 rounded-full h-2">
+          <div className="w-full bg-[color:var(--panel-2)] rounded-full h-2">
             <div
-              className={`h-2 rounded-full transition-all ${reencryptStatus.status === 'completed' ? 'bg-success-500' : reencryptStatus.status === 'completed_with_errors' ? 'bg-warning-500' : 'bg-primary-500'}`}
+              className={`h-2 rounded-full transition-all ${reencryptStatus.status === 'completed' ? 'bg-success-500' : reencryptStatus.status === 'completed_with_errors' ? 'bg-warning-500' : 'bg-[color:var(--accent)]'}`}
               style={{ width: `${progressPct}%` }}
             />
           </div>
-          <div className="grid grid-cols-3 gap-2 mt-2 text-xs text-slate-500">
+          <div className="grid grid-cols-3 gap-2 mt-2 text-xs text-[color:var(--muted)]">
             <div>已处理: {reencryptStatus.processedRows}/{reencryptStatus.totalRows}</div>
             <div>失败: {reencryptStatus.failedRows}</div>
             <div>当前: {reencryptStatus.currentTable}.{reencryptStatus.currentColumn}</div>
@@ -67,7 +67,7 @@ export function PiiReencryptSection({ reencryptStatus, progressPct, reencrypting
        variant="secondary">
         {reencrypting ? (
           <>
-            <div className="animate-spin rounded-full h-4 w-4 border-2 border-slate-600 border-t-transparent" />
+            <div className="animate-spin rounded-full h-4 w-4 border-2 border-[color:var(--border-strong)] border-t-transparent" />
             re-encrypt 进行中...
           </>
         ) : (

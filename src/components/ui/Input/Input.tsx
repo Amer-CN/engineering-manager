@@ -26,7 +26,7 @@ const sizeStyles: Record<InputSize, string> = {
 
 const statusBorderStyles: Record<InputStatus, string> = {
   default:
-  'border-slate-200 focus:ring-primary-500/20 focus:border-primary-500 hover:border-slate-300:border-slate-500',
+  'border-[color:var(--border)] focus:ring-[color:var(--accent-soft)] focus:border-[color:var(--accent)] hover:border-[color:var(--border)]',
   error:
   'border-danger-500 focus:ring-danger-500/20 focus:border-danger-500',
   warning:
@@ -68,7 +68,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
   {label && (
   <label
   htmlFor={inputId}
-  className="block text-sm font-medium text-slate-700 mb-1.5"
+  className="block text-sm font-medium text-[color:var(--fg-2)] mb-1.5"
   >
   {label}
   {props.required && <span className="text-danger-500 ml-1">*</span>}
@@ -77,7 +77,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
 
   <div className="relative">
   {(leftIcon || leftSection) && (
-  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[color:var(--muted)]">
   {renderIcon(leftIcon, iconSize)}
   {leftSection}
   </div>
@@ -88,14 +88,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
   id={inputId}
   className={`
   w-full
-  bg-white text-slate-800
+  bg-[color:var(--card)] text-[color:var(--fg)]
   border rounded-lg
-  placeholder-slate-400
+  placeholder-[color:var(--muted)]
   transition-all duration-200
   focus:outline-none focus:ring-2
-  disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed
-  
-  :bg-slate-900:text-slate-600
+  disabled:bg-[color:var(--panel-2)] disabled:text-[color:var(--muted)] disabled:cursor-not-allowed
   ${sizeStyles[size]}
   ${statusBorderStyles[resolvedStatus]}
   ${leftIcon || leftSection ? 'pl-10' : ''}
@@ -109,7 +107,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
   />
 
   {(rightIcon || rightSection) && (
-  <div className={`absolute inset-y-0 right-0 pr-3 flex items-center ${rightSection ? '' : 'pointer-events-none'} text-slate-400`}>
+  <div className={`absolute inset-y-0 right-0 pr-3 flex items-center ${rightSection ? '' : 'pointer-events-none'} text-[color:var(--muted)]`}>
   {rightSection}
   {renderIcon(rightIcon, iconSize)}
   </div>
@@ -136,7 +134,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
   {helpText && !error && (
   <p
   id={`${inputId}-help`}
-  className="mt-1.5 text-sm text-slate-500"
+  className="mt-1.5 text-sm text-[color:var(--muted)]"
   >
   {helpText}
   </p>

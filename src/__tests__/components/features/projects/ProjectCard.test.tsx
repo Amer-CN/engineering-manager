@@ -75,14 +75,15 @@ describe('ProjectCard', () => {
     expect(screen.getByText('规划中')).toBeTruthy()
   })
 
-  test('应渲染健康环 SVG', async () => {
+  test('应渲染整体进度与总预算（Bedrock S11A 卡片）', async () => {
     const { ProjectCard } = await importModule()
-    const { container } = render(React.createElement(ProjectCard, {
+    render(React.createElement(ProjectCard, {
       project: baseProject, members: baseMembers, index: 0,
       onClick: mockOnClick, onEdit: mockOnEdit, onDelete: mockOnDelete,
     }))
-    const svg = container.querySelector('svg')
-    expect(svg).toBeTruthy()
+    // 新卡片无 SVG 健康环，改为「整体进度」进度条 + 总预算等宽数字
+    expect(screen.getByText('整体进度')).toBeTruthy()
+    expect(screen.getByText('总预算金额')).toBeTruthy()
   })
 
   test('点击卡片应触发 onClick', async () => {

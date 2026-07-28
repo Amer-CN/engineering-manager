@@ -29,14 +29,14 @@ export function StaffPayrollTable({
       key: 'memberName',
       title: '姓名',
       render: (item) => (
-        <span className="font-medium text-slate-800">{item.memberName || staffMap.get(item.memberId!)?.name || '-'}</span>
+        <span className="font-medium text-[color:var(--fg)]">{item.memberName || staffMap.get(item.memberId!)?.name || '-'}</span>
       )
     },
     {
       key: 'yearMonth',
       title: '月份',
       render: (item) => (
-        <span className="text-slate-600">{item.yearMonth}</span>
+        <span className="text-[color:var(--fg-2)]">{item.yearMonth}</span>
       )
     },
     {
@@ -44,7 +44,7 @@ export function StaffPayrollTable({
       title: '基本工资',
       align: 'right',
       render: (item) => (
-        <span className="text-slate-600">{(item.baseSalary || 0).toLocaleString()}</span>
+        <span className="text-[color:var(--fg-2)] font-mono tabular-nums">{(item.baseSalary || 0).toLocaleString()}</span>
       )
     },
     {
@@ -54,7 +54,7 @@ export function StaffPayrollTable({
       render: (item) => {
         const ym = item.yearMonth
         const wd = ym ? new Date(Number(ym.split('-')[0]), Number(ym.split('-')[1]), 0).getDate() : 30
-        return <span className="text-slate-600">{item.attendanceDays} / {wd}</span>
+        return <span className="text-[color:var(--fg-2)]">{item.attendanceDays} / {wd}</span>
       }
     },
     {
@@ -62,7 +62,7 @@ export function StaffPayrollTable({
       title: '补助',
       align: 'right',
       render: (item) => (
-        <span className="text-amber-600">{(item.subsidy ?? 0) > 0 ? `+${(item.subsidy || 0).toLocaleString()}` : '-'}</span>
+        <span className="text-warning-600 font-mono tabular-nums">{(item.subsidy ?? 0) > 0 ? `+${(item.subsidy || 0).toLocaleString()}` : '-'}</span>
       )
     },
     {
@@ -72,7 +72,7 @@ export function StaffPayrollTable({
       render: (item) => (
         <input type="number" defaultValue={item.deduction || 0}
           onBlur={e => onPaidChange(item, 'deduction', Number(e.target.value))}
-          className="w-20 text-right px-2 py-1 border border-slate-200 rounded text-sm" />
+          className="w-20 text-right px-2 py-1 border border-[color:var(--border)] rounded text-sm" />
       )
     },
     {
@@ -80,7 +80,7 @@ export function StaffPayrollTable({
       title: '应发工资',
       align: 'right',
       render: (item) => (
-        <span className="font-medium text-slate-800">{((item.netSalary || 0) - (item.deduction || 0)).toLocaleString()}</span>
+        <span className="font-medium text-[color:var(--fg)] font-mono tabular-nums">{((item.netSalary || 0) - (item.deduction || 0)).toLocaleString()}</span>
       )
     },
     {
@@ -90,7 +90,7 @@ export function StaffPayrollTable({
       render: (item) => (
         <input type="number" defaultValue={item.paidAmount || ''}
           onBlur={e => onPaidChange(item, 'paidAmount', Number(e.target.value))}
-          className="w-24 text-center px-2 py-1 border border-slate-200 rounded text-sm" placeholder="未发放" />
+          className="w-24 text-center px-2 py-1 border border-[color:var(--border)] rounded text-sm" placeholder="未发放" />
       )
     },
     {
@@ -100,7 +100,7 @@ export function StaffPayrollTable({
       render: (item) => (
         <input type="date" defaultValue={item.paidDate || ''}
           onChange={e => onPaidChange(item, 'paidDate', e.target.value)}
-          className="px-2 py-1 border border-slate-200 rounded text-sm" />
+          className="px-2 py-1 border border-[color:var(--border)] rounded text-sm" />
       )
     },
     {
@@ -110,7 +110,7 @@ export function StaffPayrollTable({
       render: (item) => {
         const diff = (item.netSalary || 0) - (item.deduction || 0) - (item.paidAmount || 0)
         return (
-          <span className={`font-medium ${diff === 0 ? 'text-emerald-600' : diff > 0 ? 'text-amber-600' : 'text-red-600'}`}>
+          <span className={`font-medium font-mono tabular-nums ${diff === 0 ? 'text-success-600' : diff > 0 ? 'text-warning-600' : 'text-danger-600'}`}>
             {diff === 0 ? '已结清' : diff.toLocaleString()}
           </span>
         )
@@ -132,16 +132,16 @@ export function StaffPayrollTable({
   const footer = (
     <div className="flex items-center justify-end gap-6 px-4 py-2.5 text-sm">
       <div className="flex items-center gap-1.5">
-        <span className="text-slate-400">应发</span>
-        <span className="font-semibold text-slate-800">¥{summaryTotals.totalNet.toLocaleString()}</span>
+        <span className="text-[color:var(--muted)]">应发</span>
+        <span className="font-semibold text-[color:var(--fg)] font-mono tabular-nums">¥{summaryTotals.totalNet.toLocaleString()}</span>
       </div>
       <div className="flex items-center gap-1.5">
-        <span className="text-slate-400">实发</span>
-        <span className="font-semibold text-green-700">¥{summaryTotals.totalPaid.toLocaleString()}</span>
+        <span className="text-[color:var(--muted)]">实发</span>
+        <span className="font-semibold text-success-700 font-mono tabular-nums">¥{summaryTotals.totalPaid.toLocaleString()}</span>
       </div>
       <div className="flex items-center gap-1.5">
-        <span className="text-slate-400">{summaryTotals.totalDiff >= 0 ? '未发' : '多发'}</span>
-        <span className={`font-semibold ${summaryTotals.totalDiff === 0 ? 'text-emerald-600' : summaryTotals.totalDiff > 0 ? 'text-amber-600' : 'text-red-600'}`}>
+        <span className="text-[color:var(--muted)]">{summaryTotals.totalDiff >= 0 ? '未发' : '多发'}</span>
+        <span className={`font-semibold font-mono tabular-nums ${summaryTotals.totalDiff === 0 ? 'text-success-600' : summaryTotals.totalDiff > 0 ? 'text-warning-600' : 'text-danger-600'}`}>
           {summaryTotals.totalDiff === 0 ? '已结清' : `¥${Math.abs(summaryTotals.totalDiff).toLocaleString()}`}
         </span>
       </div>

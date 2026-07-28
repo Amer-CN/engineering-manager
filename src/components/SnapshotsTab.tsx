@@ -117,30 +117,30 @@ export const SnapshotsTab: React.FC = () => {
     { key: 'timestamp', title: '时间', render: (item) => (
       <div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-slate-800 font-medium">
+          <span className="text-sm text-[color:var(--fg)] font-medium">
             {(item.timestamp ?? "").replace('T', ' ')}
           </span>
           {item._index === 0 && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-700">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[color:var(--accent-soft)] text-[color:var(--accent)]">
               ← 当前状态
             </span>
           )}
         </div>
         {item.label && (
-          <span className="text-xs text-slate-400 mt-0.5 block">标签：{item.label}</span>
+          <span className="text-xs text-[color:var(--muted)] mt-0.5 block">标签：{item.label}</span>
         )}
       </div>
     )},
-    { key: 'fileSize', title: '大小', render: (item) => <span className="text-sm text-slate-600">{formatSize(item.fileSize)}</span> },
+    { key: 'fileSize', title: '大小', render: (item) => <span className="text-sm text-[color:var(--fg-2)]">{formatSize(item.fileSize)}</span> },
     { key: 'dbSummary', title: '数据概况', render: (item) => (
       <div className="flex flex-wrap gap-1 max-w-xs">
         {Object.entries(item.dbSummary || {}).filter(([, v]) => (v as number) > 0).slice(0, 5).map(([key, val]) => (
-          <span key={key} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-slate-100 text-slate-600">
+          <span key={key} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-[color:var(--panel-2)] text-[color:var(--fg-2)]">
             {SNAPSHOT_TABLE_LABELS[key] || key}: {val as number}
           </span>
         ))}
         {Object.entries(item.dbSummary || {}).filter(([, v]) => (v as number) > 0).length > 5 && (
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-[color:var(--muted)]">
             +{Object.entries(item.dbSummary || {}).filter(([, v]) => (v as number) > 0).length - 5}
           </span>
         )}
@@ -152,7 +152,7 @@ export const SnapshotsTab: React.FC = () => {
           <button
             onClick={() => handleRestore(item)}
             disabled={restoring}
-            className="px-3 py-1.5 text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 rounded-lg hover:bg-amber-100 disabled:opacity-50 transition-colors"
+            className="px-3 py-1.5 text-xs font-medium bg-warning-50 text-warning-700 border border-warning-200 rounded-lg hover:bg-warning-100 disabled:opacity-50 transition-colors"
           >
             {restoring ? '还原中...' : '还原'}
           </button>
@@ -160,7 +160,7 @@ export const SnapshotsTab: React.FC = () => {
         <Tooltip content="删除快照" position="top" delay={300}>
           <button
             onClick={() => handleDelete(item)}
-            className="px-2 py-1.5 text-xs text-slate-400 hover:text-red-500 transition-colors"
+            className="px-2 py-1.5 text-xs text-[color:var(--muted)] hover:text-danger-500 transition-colors"
           >
             <Icon name="Trash2" size={14} />
           </button>
@@ -177,16 +177,16 @@ export const SnapshotsTab: React.FC = () => {
       {/* 工具栏 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold text-slate-800">数据快照</h3>
-          <span className="text-sm text-slate-400">共 {snapshots.length} 个</span>
+          <h3 className="text-lg font-semibold text-[color:var(--fg)]">数据快照</h3>
+          <span className="text-sm text-[color:var(--muted)]">共 {snapshots.length} 个</span>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={handleSetMaxCount}
-            className="px-3 py-1.5 text-sm text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+            className="px-3 py-1.5 text-sm text-[color:var(--fg-2)] border border-[color:var(--border)] rounded-lg hover:bg-[color:var(--panel-2)] transition-colors">
             上限：{maxCount} 个
           </button>
           <button onClick={handleCreate}
-            className="px-4 py-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors">
+            className="px-4 py-1.5 bg-[color:var(--accent)] hover:opacity-90 text-[color:var(--on-accent)] rounded-lg text-sm font-medium transition-colors">
             <span className="flex items-center gap-1.5">
               <Icon name="Plus" size={14} /> 手动创建备份
             </span>
@@ -195,7 +195,7 @@ export const SnapshotsTab: React.FC = () => {
       </div>
 
       {/* 说明 */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
+      <div className="bg-[color:var(--panel-2)] border border-[color:var(--border)] rounded-lg p-3 text-sm text-[color:var(--fg-2)]">
         每次保存数据时自动创建快照。还原到某个时间点后，该时间点之后的所有变更将丢失。
         建议在重大操作前手动创建备份。
       </div>
@@ -203,7 +203,7 @@ export const SnapshotsTab: React.FC = () => {
       {/* 快照列表 */}
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary-500 border-t-transparent" />
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-[color:var(--accent)] border-t-transparent" />
         </div>
       ) : (
         <DataTable

@@ -23,7 +23,7 @@ export function EditableCell<T>({ getValue, row, column, table }: CellContext<T,
       type={meta.editType === 'number' || meta.money ? 'number' : meta.editType === 'date' ? 'date' : 'text'}
       step={meta.money ? '0.01' : undefined}
       inputMode={meta.money ? 'decimal' : undefined}
-      className={`w-full bg-transparent px-1 outline-none focus:ring-1 focus:ring-primary-400 rounded ${meta.cellClass?.(initial, row.original) ?? ''}`}
+      className={`w-full bg-transparent px-1 outline-none focus:ring-1 focus:ring-[color:var(--accent-soft)] rounded ${meta.cellClass?.(initial, row.original) ?? ''}`}
       style={{ color: 'var(--fg)' }}
       value={shown as string}
       onChange={(e) => setValue(meta.money ? (parseFloat(e.target.value) || 0) : e.target.value)}

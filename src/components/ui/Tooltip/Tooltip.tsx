@@ -86,10 +86,10 @@ export function Tooltip({
   }, [])
 
   const arrowClass = {
-  top: 'absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 -mt-1 rotate-45 bg-slate-800',
-  bottom: 'absolute bottom-full left-1/2 -translate-x-1/2 w-2 h-2 -mb-1 rotate-45 bg-slate-800',
-  left: 'absolute left-full top-1/2 -translate-y-1/2 w-2 h-2 -ml-1 rotate-45 bg-slate-800',
-  right: 'absolute right-full top-1/2 -translate-y-1/2 w-2 h-2 -mr-1 rotate-45 bg-slate-800',
+  top: 'absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 -mt-1 rotate-45 bg-[color:var(--fg)]',
+  bottom: 'absolute bottom-full left-1/2 -translate-x-1/2 w-2 h-2 -mb-1 rotate-45 bg-[color:var(--fg)]',
+  left: 'absolute left-full top-1/2 -translate-y-1/2 w-2 h-2 -ml-1 rotate-45 bg-[color:var(--fg)]',
+  right: 'absolute right-full top-1/2 -translate-y-1/2 w-2 h-2 -mr-1 rotate-45 bg-[color:var(--fg)]',
   }[position]
 
 
@@ -117,7 +117,7 @@ export function Tooltip({
   <motion.div
   ref={tooltipRef}
   role="tooltip"
-  className="fixed z-[9999] px-2 py-1 text-xs text-white bg-slate-800 rounded shadow-lg whitespace-normal pointer-events-none"
+  className="fixed z-[9999] px-2 py-1 text-xs text-[color:var(--bg)] bg-[color:var(--fg)] rounded shadow-lg whitespace-normal pointer-events-none"
   style={{ top: tooltipPos.top, left: tooltipPos.left, maxWidth }}
   initial={{ opacity: 0, scale: 0.95 }}
   animate={{ opacity: 1, scale: 1 }}

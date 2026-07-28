@@ -80,20 +80,20 @@ export const SupervisorList: React.FC<SupervisorListProps> = ({
       {/* 统计卡片 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
         <div className="card p-4">
-          <div className="text-2xl font-bold text-primary-600">{stats.total}</div>
-          <div className="text-sm text-slate-500">监管单位总数</div>
+          <div className="text-numeric-xl font-mono tabular-nums tracking-tight text-[color:var(--accent)]">{stats.total}</div>
+          <div className="text-sm text-[color:var(--muted)]">监管单位总数</div>
         </div>
         <div className="card p-4">
-          <div className="text-2xl font-bold text-green-600">{stats.quality}</div>
-          <div className="text-sm text-slate-500">建设口单位</div>
+          <div className="text-numeric-xl font-mono tabular-nums tracking-tight text-success-600">{stats.quality}</div>
+          <div className="text-sm text-[color:var(--muted)]">建设口单位</div>
         </div>
         <div className="card p-4">
-          <div className="text-2xl font-bold text-blue-600">{stats.facility}</div>
-          <div className="text-sm text-slate-500">配套设施单位</div>
+          <div className="text-numeric-xl font-mono tabular-nums tracking-tight text-[color:var(--fg)]">{stats.facility}</div>
+          <div className="text-sm text-[color:var(--muted)]">配套设施单位</div>
         </div>
         <div className="card p-4">
-          <div className="text-2xl font-bold text-orange-600">{stats.withProject}</div>
-          <div className="text-sm text-slate-500">已关联项目</div>
+          <div className="text-numeric-xl font-mono tabular-nums tracking-tight text-[color:var(--fg)]">{stats.withProject}</div>
+          <div className="text-sm text-[color:var(--muted)]">已关联项目</div>
         </div>
       </div>
 
@@ -110,13 +110,13 @@ export const SupervisorList: React.FC<SupervisorListProps> = ({
               sortable: true,
               render: (supervisor) => (
                 <div>
-                  <div className="font-medium text-slate-900">{supervisor.name}</div>
+                  <div className="font-medium text-[color:var(--fg)]">{supervisor.name}</div>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="inline-block px-1.5 py-0.5 bg-primary-100 text-primary-700 text-xs rounded">
+                    <span className="inline-block px-1.5 py-0.5 bg-[color:var(--accent-soft)] text-[color:var(--accent)] text-xs rounded">
                       {getSupervisorCategoryLabel(supervisor.category)}
                     </span>
                     {supervisor.regionName && (
-                      <span className="inline-block px-1.5 py-0.5 bg-slate-100 text-slate-600 text-xs rounded">
+                      <span className="inline-block px-1.5 py-0.5 bg-[color:var(--panel-2)] text-[color:var(--fg-2)] text-xs rounded">
                         <Icon name="MapPin" size={12} className="inline-block" /> {supervisor.regionName}
                       </span>
                     )}

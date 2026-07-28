@@ -66,21 +66,16 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* 头像 */}
-      <motion.div
-        whileHover={{ scale: 1.08 }}
-        className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center"
-        style={
-          isUser
-            ? { background: 'var(--accent-soft)', color: 'var(--accent)' }
-            : { background: 'var(--panel-2)', border: '1px solid var(--border)', color: 'var(--accent)' }
-        }
-      >
-        <Icon
-          name={isUser ? 'UserCircle' : 'Sparkles'}
-          size={18}
-        />
-      </motion.div>
+      {/* 头像（仅助手侧；对齐 Stitch：用户消息不显头像，墨底气泡靠右） */}
+      {!isUser && (
+        <motion.div
+          whileHover={{ scale: 1.08 }}
+          className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center"
+          style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
+        >
+          <Icon name="Bot" size={18} />
+        </motion.div>
+      )}
 
       {/* 气泡主体 */}
       <div className={`max-w-[75%] min-w-[120px] ${isUser ? 'items-end' : 'items-start'} flex flex-col`}>

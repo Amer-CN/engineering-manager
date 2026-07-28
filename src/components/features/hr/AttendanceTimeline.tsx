@@ -99,14 +99,14 @@ const AttendanceTimeline: React.FC<Props> = ({ member, attendances, deptName, on
   }
 
   const fullAttendanceColor = (rate: number) =>
-    rate >= 90 ? 'text-emerald-600' : rate >= 70 ? 'text-amber-600' : 'text-red-600'
+    rate >= 90 ? 'text-success-600' : rate >= 70 ? 'text-warning-600' : 'text-danger-600'
 
   const monthStatusBadge = (a: AttendanceRecord) => {
-    if (!a.dailyStatus || Object.keys(a.dailyStatus).length === 0) return { label: '无数据', cls: 'bg-slate-50 text-slate-400' }
+    if (!a.dailyStatus || Object.keys(a.dailyStatus).length === 0) return { label: '无数据', cls: 'bg-[color:var(--panel-2)] text-[color:var(--muted)]' }
     const dim = getDaysInMonth(a.yearMonth)
     const s = computeAttendanceSummary(a.dailyStatus, dim, getEntryDay(a.yearMonth))
-    if (s.daysOff <= 4) return { label: '全勤', cls: 'bg-emerald-100 text-emerald-700' }
-    return { label: `缺勤${s.daysOff}天`, cls: 'bg-red-100 text-red-700' }
+    if (s.daysOff <= 4) return { label: '全勤', cls: 'bg-success-100 text-success-700' }
+    return { label: `缺勤${s.daysOff}天`, cls: 'bg-danger-100 text-danger-700' }
   }
 
   const handleMonthClick = async (record: AttendanceRecord) => {
@@ -147,16 +147,16 @@ const AttendanceTimeline: React.FC<Props> = ({ member, attendances, deptName, on
     <div className="space-y-4">
       {/* Header */}
       <Card bordered={false} className="px-5 py-4">
-        <button onClick={onBack} className="flex items-center gap-1.5 text-slate-500 hover:text-primary-600 mb-3 transition-colors">
+        <button onClick={onBack} className="flex items-center gap-1.5 text-[color:var(--muted)] hover:text-[color:var(--accent)] mb-3 transition-colors">
           <Icon name="ArrowLeft" size={16} />
           <span className="text-sm">返回考勤列表</span>
         </button>
         <div>
-          <h2 className="text-lg font-semibold text-slate-800">{member.name}</h2>
-          <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
+          <h2 className="text-lg font-semibold text-[color:var(--fg)]">{member.name}</h2>
+          <div className="flex items-center gap-3 text-xs text-[color:var(--muted)] mt-1">
             <span>{deptName}{member.position ? ` · ${member.position}` : ''}</span>
             {entryDate && <span>入职 {entryDate}</span>}
-            {dur && <span className="text-primary-600 font-medium">{dur}</span>}
+            {dur && <span className="text-[color:var(--accent)] font-medium">{dur}</span>}
           </div>
         </div>
       </Card>
@@ -169,10 +169,10 @@ const AttendanceTimeline: React.FC<Props> = ({ member, attendances, deptName, on
         <>
           {/* Year filter pills */}
           <Card bordered={false} className="px-5 py-3 flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-slate-400 mr-1">年份</span>
+            <span className="text-xs text-[color:var(--muted)] mr-1">年份</span>
             {['全部', ...allYears].map(y => (
               <button key={y} onClick={() => setYearFilter(y)}
-                className={`px-2.5 py-1 text-xs rounded-full font-medium transition-colors ${yearFilter === y ? 'bg-primary-100 text-primary-700 ring-1 ring-primary-300' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                className={`px-2.5 py-1 text-xs rounded-full font-medium transition-colors ${yearFilter === y ? 'bg-[color:var(--accent-soft)] text-[color:var(--accent)] ring-1 ring-[color:var(--accent)]' : 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)]'}`}>
                 {y}
               </button>
             ))}
@@ -185,12 +185,12 @@ const AttendanceTimeline: React.FC<Props> = ({ member, attendances, deptName, on
             return (
               <Card key={year} bordered={false} className="overflow-hidden">
                 <button onClick={() => toggleYear(year)}
-                  className="w-full px-5 py-3 flex items-center gap-3 hover:bg-slate-50 transition-colors text-left">
-                  <Icon name={expanded ? 'ChevronDown' : 'ChevronRight'} size={16} className="text-slate-400" />
-                  <span className="text-sm font-semibold text-slate-800">{year}年</span>
-                  <span className="text-xs text-slate-400">{s.total}个月考勤</span>
-                  <span className="text-xs text-slate-400">出勤 {s.workDays}天</span>
-                  <span className="text-xs text-slate-400">缺勤 {s.daysOff}天</span>
+                  className="w-full px-5 py-3 flex items-center gap-3 hover:bg-[color:var(--panel-2)] transition-colors text-left">
+                  <Icon name={expanded ? 'ChevronDown' : 'ChevronRight'} size={16} className="text-[color:var(--muted)]" />
+                  <span className="text-sm font-semibold text-[color:var(--fg)]">{year}年</span>
+                  <span className="text-xs text-[color:var(--muted)]">{s.total}个月考勤</span>
+                  <span className="text-xs text-[color:var(--muted)]">出勤 {s.workDays}天</span>
+                  <span className="text-xs text-[color:var(--muted)]">缺勤 {s.daysOff}天</span>
                   <span className={`text-xs font-medium ${fullAttendanceColor(s.rate)}`}>全勤率 {s.rate}%</span>
                 </button>
                 <AnimatePresence>
@@ -203,9 +203,9 @@ const AttendanceTimeline: React.FC<Props> = ({ member, attendances, deptName, on
                           const month = parseInt(a.yearMonth.split('-')[1])
                           return (
                             <button key={a.id} onClick={() => handleMonthClick(a)}
-                              className="p-2.5 border border-slate-200 rounded-lg hover:border-primary-300 hover:shadow-sm transition-all text-left">
-                              <div className="text-xs font-medium text-slate-700">{month}月</div>
-                              <div className="text-xs text-slate-400 mt-0.5">
+                              className="p-2.5 border border-[color:var(--border)] rounded-lg hover:border-[color:var(--accent)] hover:shadow-sm transition-all text-left">
+                              <div className="text-xs font-medium text-[color:var(--fg-2)]">{month}月</div>
+                              <div className="text-xs text-[color:var(--muted)] mt-0.5">
                                 {a.workDays || 0}天出勤
                               </div>
                               <span className={`inline-block mt-1 px-1.5 py-0.5 rounded text-xs ${badge.cls}`}>

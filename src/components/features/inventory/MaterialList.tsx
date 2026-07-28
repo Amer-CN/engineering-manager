@@ -40,14 +40,14 @@ export const MaterialList: React.FC<MaterialListProps> = ({
       sortable: true,
       sorter: (a, b) => (a.name || '').localeCompare(b.name || '', 'zh-CN'),
       render: (item) => (
-        <div className="font-medium text-slate-800">{item.name}</div>
+        <div className="font-medium text-[color:var(--fg)]">{item.name}</div>
       )
     },
     {
       key: 'projectId',
       title: '所属项目',
       render: (item) => (
-        <span className="text-slate-600">{getProjectName(item.projectId)}</span>
+        <span className="text-[color:var(--fg-2)]">{getProjectName(item.projectId)}</span>
       )
     },
     {
@@ -57,7 +57,7 @@ export const MaterialList: React.FC<MaterialListProps> = ({
       filterOptions: materialCategories.map(c => ({ label: c, value: c })),
       filterAccessor: (item: Material) => item.category,
       render: (item) => (
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${categoryColors[item.category || ''] || 'bg-slate-100 text-slate-800'}`}>
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${categoryColors[item.category || ''] || 'bg-[color:var(--panel-2)] text-[color:var(--fg)]'}`}>
           {categoryIcons[item.category || ''] || <Icon name="Package" size={14} className="inline-block" />} {item.category || '其他'}
         </span>
       )
@@ -66,7 +66,7 @@ export const MaterialList: React.FC<MaterialListProps> = ({
       key: 'unit',
       title: '单位',
       render: (item) => (
-        <span className="text-slate-600">{item.unit || '-'}</span>
+        <span className="text-[color:var(--fg-2)]">{item.unit || '-'}</span>
       )
     },
     {
@@ -76,7 +76,7 @@ export const MaterialList: React.FC<MaterialListProps> = ({
       sortable: true,
       sorter: (a, b) => ((a.quantity || 0) - (b.quantity || 0)),
       render: (item) => (
-        <span className="text-slate-800">{item.quantity.toLocaleString()}</span>
+        <span className="text-[color:var(--fg)]">{item.quantity.toLocaleString()}</span>
       )
     },
     {
@@ -86,7 +86,7 @@ export const MaterialList: React.FC<MaterialListProps> = ({
       sortable: true,
       sorter: (a, b) => ((a.price || 0) - (b.price || 0)),
       render: (item) => (
-        <span className="text-slate-800">¥{formatMoney(item.price)}</span>
+        <span className="text-[color:var(--fg)] font-mono tabular-nums">¥{formatMoney(item.price)}</span>
       )
     },
     {
@@ -94,7 +94,7 @@ export const MaterialList: React.FC<MaterialListProps> = ({
       title: '小计',
       align: 'right',
       render: (item) => (
-        <span className="font-medium text-slate-800">
+        <span className="font-medium text-[color:var(--fg)] font-mono tabular-nums">
           ¥{formatMoney(item.quantity * item.price)}
         </span>
       )
@@ -108,7 +108,7 @@ export const MaterialList: React.FC<MaterialListProps> = ({
           <Button
             onClick={() => onEdit(item)}
             
-           variant="ghost" size="sm" className="text-primary-600">
+           variant="ghost" size="sm" className="text-[color:var(--accent)]">
             编辑
           </Button>
           <Button

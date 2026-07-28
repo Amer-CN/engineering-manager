@@ -38,8 +38,8 @@ export default function BankReceiptDropZone({
           relative border-2 border-dashed rounded-lg p-12 text-center cursor-pointer
           transition-colors duration-200
           ${isDragOver
-            ? 'border-blue-500 bg-blue-50'
-            : 'border-slate-300 bg-slate-50 hover:bg-slate-100'
+            ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)]'
+            : 'border-[color:var(--border)] bg-[color:var(--panel-2)] hover:bg-[color:var(--panel-2)]'
           }
         `}
       >
@@ -55,10 +55,10 @@ export default function BankReceiptDropZone({
         <div className="space-y-4">
           <div className="text-6xl">📄</div>
           <div>
-            <p className="text-lg font-medium text-slate-900">
-              拖拽文件到此处，或 <span className="text-blue-600">点击选择</span>
+            <p className="text-lg font-medium text-[color:var(--fg)]">
+              拖拽文件到此处，或 <span className="text-[color:var(--accent)]">点击选择</span>
             </p>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-sm text-[color:var(--muted)] mt-1">
               支持 jpg、png、pdf 格式，可多选
             </p>
           </div>
@@ -67,14 +67,14 @@ export default function BankReceiptDropZone({
 
       {/* 文件列表 */}
       {files.length > 0 && (
-        <div className="bg-white rounded-lg border border-slate-200 p-4">
+        <div className="bg-[color:var(--card)] rounded-lg border border-[color:var(--border)] p-4">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-medium text-slate-900">
+            <h3 className="text-lg font-medium text-[color:var(--fg)]">
               已选择 {files.length} 个文件
             </h3>
             <button
               onClick={clearFiles}
-              className="text-sm text-red-600 hover:text-red-800"
+              className="text-sm text-danger-600 hover:text-danger-800"
             >
               清空列表
             </button>
@@ -88,13 +88,13 @@ export default function BankReceiptDropZone({
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0, x: 100 }}
-                  className="flex items-center justify-between p-3 bg-slate-50 rounded-md"
+                  className="flex items-center justify-between p-3 bg-[color:var(--panel-2)] rounded-md"
                 >
                   <div className="flex items-center space-x-3">
                     <span className="text-2xl">📄</span>
                     <div>
-                      <p className="text-sm font-medium text-slate-900">{file.name}</p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-sm font-medium text-[color:var(--fg)]">{file.name}</p>
+                      <p className="text-xs text-[color:var(--muted)]">
                         {(file.size / 1024 / 1024).toFixed(2)} MB
                       </p>
                     </div>
@@ -102,7 +102,7 @@ export default function BankReceiptDropZone({
 
                   <button
                     onClick={() => removeFile(index)}
-                    className="text-red-500 hover:text-red-700"
+                    className="text-danger-500 hover:text-danger-700"
                     disabled={isParsing}
                   >
                     ✕

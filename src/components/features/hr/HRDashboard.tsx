@@ -95,15 +95,15 @@ const HRDashboard: React.FC = () => {
   const payrollDiff = data.monthlyPayroll - data.monthlyPayrollEstimated
 
   const kpis = [
-    { label: '在编人数', value: data.totalStaff, unit: '人', icon: 'Users', color: 'bg-indigo-50 text-indigo-600' },
-    { label: '本月入职', value: data.newThisMonth, unit: '人', icon: 'UserCheck', color: 'bg-emerald-50 text-emerald-600' },
-    { label: '本月离职', value: data.leftThisMonth, unit: '人', icon: 'LogOut', color: 'bg-red-50 text-red-600' },
-    { label: '今日在岗', value: data.todayPresent, unit: `人 · 请假${data.todayLeave}`, icon: 'CalendarCheck', color: 'bg-emerald-50 text-emerald-600' },
+    { label: '在编人数', value: data.totalStaff, unit: '人', icon: 'Users', color: 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)]' },
+    { label: '本月入职', value: data.newThisMonth, unit: '人', icon: 'UserCheck', color: 'bg-success-50 text-success-600' },
+    { label: '本月离职', value: data.leftThisMonth, unit: '人', icon: 'LogOut', color: 'bg-danger-50 text-danger-600' },
+    { label: '今日在岗', value: data.todayPresent, unit: `人 · 请假${data.todayLeave}`, icon: 'CalendarCheck', color: 'bg-success-50 text-success-600' },
     {
       label: '月度薪酬', value: data.monthlyPayroll, unit: '元',
-      icon: 'Banknote', color: 'bg-amber-50 text-amber-600',
+      icon: 'Banknote', color: 'bg-warning-50 text-warning-600',
       suffix: data.monthlyPayroll > 0 && payrollDiff !== 0 ? (
-        <span className={`text-xs ${payrollDiff < 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+        <span className={`text-xs ${payrollDiff < 0 ? 'text-success-600' : 'text-warning-600'}`}>
           比预算{payrollDiff < 0 ? '节省' : '超出'} {Math.abs(payrollDiff).toLocaleString()}
         </span>
       ) : null
@@ -117,14 +117,14 @@ const HRDashboard: React.FC = () => {
         {kpis.map((kpi) => (
           <Card key={kpi.label} bordered={false} className="p-5">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-slate-500">{kpi.label}</span>
+              <span className="text-sm text-[color:var(--muted)]">{kpi.label}</span>
               <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${kpi.color}`}>
                 <Icon name={kpi.icon} size={18} />
               </div>
             </div>
             <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-bold text-slate-800">{kpi.value.toLocaleString()}</span>
-              <span className="text-sm text-slate-400">{kpi.unit}</span>
+              <span className="text-numeric-xl font-mono tabular-nums tracking-tight text-[color:var(--fg)]">{kpi.value.toLocaleString()}</span>
+              <span className="text-sm text-[color:var(--muted)]">{kpi.unit}</span>
             </div>
             {kpi.suffix && <div className="mt-1">{kpi.suffix}</div>}
           </Card>
@@ -134,7 +134,7 @@ const HRDashboard: React.FC = () => {
       {/* Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card bordered={false} className="p-6">
-          <h3 className="text-sm font-semibold text-slate-700 mb-4">部门人数分布</h3>
+          <h3 className="text-sm font-semibold text-[color:var(--fg-2)] mb-4">部门人数分布</h3>
           {data.deptDistribution.length > 0 ? (
             <ResponsiveContainer width="100%" height={240}>
               <PieChart>
@@ -145,11 +145,11 @@ const HRDashboard: React.FC = () => {
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex items-center justify-center h-60 text-sm text-slate-400">暂无部门数据</div>
+            <div className="flex items-center justify-center h-60 text-sm text-[color:var(--muted)]">暂无部门数据</div>
           )}
           <div className="flex flex-wrap gap-3 mt-3 justify-center">
             {data.deptDistribution.map((d, i) => (
-              <span key={d.name} className="flex items-center gap-1 text-xs text-slate-600">
+              <span key={d.name} className="flex items-center gap-1 text-xs text-[color:var(--fg-2)]">
                 <span className="w-2.5 h-2.5 rounded-full" style={{ background: CHART_PALETTE[i % CHART_PALETTE.length] }} />{d.name}
               </span>
             ))}
@@ -157,24 +157,24 @@ const HRDashboard: React.FC = () => {
         </Card>
 
         <Card bordered={false} className="p-6">
-          <h3 className="text-sm font-semibold text-slate-700 mb-4">最近入职</h3>
+          <h3 className="text-sm font-semibold text-[color:var(--fg-2)] mb-4">最近入职</h3>
           {data.recentStaff.length > 0 ? (
             <div className="space-y-2">
               {data.recentStaff.map((s) => {
                 const dept = depts.find((d: Department) => d.id === s.departmentId)
                 return (
-                  <div key={s.id} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
+                  <div key={s.id} className="flex items-center justify-between py-2 border-b border-[color:var(--border)] last:border-0">
                     <div>
-                      <span className="text-sm font-medium text-slate-800">{s.name}</span>
-                      <span className="text-xs text-slate-400 ml-2">{dept?.name || ''}{s.position ? ` · ${s.position}` : ''}</span>
+                      <span className="text-sm font-medium text-[color:var(--fg)]">{s.name}</span>
+                      <span className="text-xs text-[color:var(--muted)] ml-2">{dept?.name || ''}{s.position ? ` · ${s.position}` : ''}</span>
                     </div>
-                    <span className="text-xs text-slate-400">{(s as Member).entryDate || s.createdAt?.split('T')[0]}</span>
+                    <span className="text-xs text-[color:var(--muted)]">{(s as Member).entryDate || s.createdAt?.split('T')[0]}</span>
                   </div>
                 )
               })}
             </div>
           ) : (
-            <div className="flex items-center justify-center h-60 text-sm text-slate-400">暂无人员数据</div>
+            <div className="flex items-center justify-center h-60 text-sm text-[color:var(--muted)]">暂无人员数据</div>
           )}
         </Card>
       </div>

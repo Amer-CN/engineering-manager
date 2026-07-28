@@ -1,8 +1,7 @@
-import { useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { Template, TemplateCategory } from '../../../types/electron'
 import { categoryConfig, categoryColors } from './config'
 import { Icon } from '../../ui/Icon'
-import { Card } from '@/components/ui/Card'
 
 interface TemplateDashboardProps {
   templates: Template[]
@@ -11,67 +10,78 @@ interface TemplateDashboardProps {
 }
 
 export default function TemplateDashboard({ templates, stats, onCategoryClick }: TemplateDashboardProps) {
-  const categoryStats = useMemo(() => {
-    const map: Record<string, number> = {}
-    for (const t of templates) {
-      map[t.category] = (map[t.category] || 0) + 1
-    }
-    return map
-  }, [templates])
+  const [filterCategory, setFilterCategory] = useState<TemplateCategory | ''>('')
+
+  const filtered = useMemo(() => {
+    if (!filterCategory) return templates
+    return templates.filter(t => t.category === filterCategory)
+  }, [templates, filterCategory])
+
+  const categories = Object.entries(categoryConfig) as [TemplateCategory, typeof categoryConfig[TemplateCategory]][]
 
   return (
     <div>
-      {/* Global stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <Card bordered={false} className="p-4">
-          <p className="text-sm text-slate-500">模板总数</p>
-          <p className="text-2xl font-bold text-slate-800">{stats.total || templates.length}</p>
-        </Card>
-        <Card bordered={false} className="p-4">
-          <p className="text-sm text-slate-500">Word 模板</p>
-          <p className="text-2xl font-bold text-blue-600">{templates.filter(t => t.fileType === 'docx').length}</p>
-        </Card>
-        <Card bordered={false} className="p-4">
-          <p className="text-sm text-slate-500">Excel 模板</p>
-          <p className="text-2xl font-bold text-emerald-600">{templates.filter(t => t.fileType === 'xlsx').length}</p>
-        </Card>
-        <Card bordered={false} className="p-4">
-          <p className="text-sm text-slate-500">模板分类</p>
-          <p className="text-2xl font-bold text-slate-800">{Object.keys(categoryStats).length}</p>
-        </Card>
+      {/* S28 Stitch: category pill-tabs */}
+      <div className="flex items-center gap-2 mb-6 flex-wrap">
+        <button
+          onClick={() => setFilterCategory('')}
+          className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+            !filterCategory ? 'bg-[color:var(--accent)] text-[color:var(--on-accent)]' : 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)]'
+          }`}
+        >
+          全部模板
+        </button>
+        {categories.map(([key, config]) => (
+          <button
+            key={key}
+            onClick={() => setFilterCategory(key)}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              filterCategory === key ? 'bg-[color:var(--accent)] text-[color:var(--on-accent)]' : 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)]'
+            }`}
+          >
+            {config.label}
+          </button>
+        ))}
       </div>
 
-      {/* Category cards */}
-      <div>
-        <h2 className="text-lg font-semibold text-slate-800 mb-4">模板分类</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {(Object.entries(categoryConfig) as [TemplateCategory, typeof categoryConfig[TemplateCategory]][]).map(([key, config]) => {
-            const count = categoryStats[key] || 0
-            return (
-              <button
-                key={key}
-                onClick={() => onCategoryClick(key)}
-                className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-200 text-left group"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${categoryColors[key].split(' ').slice(0, 2).join(' ')}`}>
-                    <Icon name={config.icon} size={24} />
-                  </div>
-                  <Icon name="ChevronRight" size={16} className="text-slate-300 group-hover:text-slate-500 transition-colors mt-2" />
-                </div>
-                <h3 className="text-sm font-semibold text-slate-800 group-hover:text-primary-600 transition-colors">{config.label}</h3>
-                <p className="text-xs text-slate-400 mt-1">{config.description}</p>
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-50">
-                  <span className="text-xs text-slate-400">{count} 个模板</span>
-                  <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${config.fileType === 'both' ? 'bg-slate-100 text-slate-500' : config.fileType === 'xlsx' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>
-                    {config.fileType === 'both' ? 'Word/Excel' : config.fileType.toUpperCase()}
+      {/* S28 Stitch: template card grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {filtered.map(t => {
+          const config = categoryConfig[t.category]
+          return (
+            <button
+              key={t.id}
+              onClick={() => onCategoryClick(t.category)}
+              className="bg-[color:var(--card)] border border-[color:var(--border)] rounded-xl overflow-hidden shadow-sm hover:shadow-lift hover:-translate-y-0.5 hover:border-[color:var(--accent)] transition-all duration-200 text-left group"
+            >
+              {/* Document preview placeholder */}
+              <div className="h-32 bg-[color:var(--panel-2)] border-b border-[color:var(--border)] flex items-center justify-center">
+                <Icon name={config?.icon || 'FileText'} size={32} className="text-[color:var(--border-strong)]" />
+              </div>
+              {/* Card body */}
+              <div className="p-4">
+                <h3 className="text-sm font-semibold text-[color:var(--fg)] group-hover:text-[color:var(--accent)] transition-colors truncate">{t.name}</h3>
+                <div className="flex items-center justify-between mt-3">
+                  <span className={`text-caption px-1.5 py-0.5 rounded ${categoryColors[t.category] || 'bg-[color:var(--panel-2)] text-[color:var(--muted)]'}`}>
+                    {config?.label || t.category}
+                  </span>
+                  <span className="text-caption text-[color:var(--muted)] font-mono tabular-nums">
+                    <Icon name="Eye" size={12} className="inline mr-0.5" />
+                    {(t as any).usageCount || 0} 次使用
                   </span>
                 </div>
-              </button>
-            )
-          })}
-        </div>
+              </div>
+            </button>
+          )
+        })}
       </div>
+
+      {filtered.length === 0 && (
+        <div className="text-center py-12 text-[color:var(--muted)]">
+          <Icon name="FileText" size={32} className="mx-auto mb-2 text-[color:var(--border-strong)]" />
+          <p className="text-sm">暂无模板</p>
+        </div>
+      )}
     </div>
   )
 }

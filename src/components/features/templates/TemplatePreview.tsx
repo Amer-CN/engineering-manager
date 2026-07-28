@@ -57,19 +57,19 @@ export default function TemplatePreview({ template, onClose }: TemplatePreviewPr
 
   return (
     <Modal isOpen onClose={onClose} title={template.name} size="full">
-      <p className="text-xs text-slate-400 mb-4">{template.fileName}</p>
+      <p className="text-xs text-[color:var(--muted)] mb-4">{template.fileName}</p>
       <div>
         {loading ? (
           <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary-500 border-t-transparent" />
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-[color:var(--accent)] border-t-transparent" />
           </div>
         ) : error ? (
-          <div className="text-center py-16 text-slate-400">
-            <Icon name="AlertCircle" size={32} className="mx-auto mb-3 text-amber-400" />
+          <div className="text-center py-16 text-[color:var(--muted)]">
+            <Icon name="AlertCircle" size={32} className="mx-auto mb-3 text-warning-400" />
             <p>{error}</p>
           </div>
         ) : (
-          <div className="border border-slate-200 rounded-lg p-6 bg-white" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(htmlContent) }} />
+          <div className="border border-[color:var(--border)] rounded-lg p-6 bg-[color:var(--card)]" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(htmlContent) }} />
         )}
       </div>
     </Modal>

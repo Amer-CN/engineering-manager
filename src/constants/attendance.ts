@@ -1,6 +1,6 @@
 import type { DayStatus } from '../types/electron'
 
-export const UNSET_COLOR = 'bg-slate-50 text-slate-400'
+export const UNSET_COLOR = 'bg-[color:var(--panel-2)] text-[color:var(--muted)]'
 
 export interface StatusMeta {
   key: DayStatus | undefined
@@ -10,16 +10,16 @@ export interface StatusMeta {
 
 export const STATUS_META: StatusMeta[] = [
   { key: undefined, label: '未设', color: UNSET_COLOR },
-  { key: 'work', label: '出勤', color: 'bg-emerald-100 text-emerald-700' },
-  { key: 'holiday', label: '法定假', color: 'bg-blue-100 text-blue-700' },
-  { key: 'sick_leave', label: '病假', color: 'bg-amber-100 text-amber-700' },
-  { key: 'personal_leave', label: '事假', color: 'bg-orange-100 text-orange-700' },
+  { key: 'work', label: '出勤', color: 'bg-success-100 text-success-700' },
+  { key: 'holiday', label: '法定假', color: 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)]' },
+  { key: 'sick_leave', label: '病假', color: 'bg-warning-100 text-warning-700' },
+  { key: 'personal_leave', label: '事假', color: 'bg-[color:var(--accent-soft)] text-[color:var(--accent)]' },
 
 ]
 
 export const summaryDot: Record<DayStatus, string> = {
-  work: 'bg-emerald-500', holiday: 'bg-blue-500', sick_leave: 'bg-amber-500',
-  personal_leave: 'bg-orange-500',
+  work: 'bg-success-500', holiday: 'bg-[color:var(--muted)]', sick_leave: 'bg-warning-500',
+  personal_leave: 'bg-[color:var(--accent)]',
 }
 
 export const summaryLabel: Record<DayStatus, string> = {

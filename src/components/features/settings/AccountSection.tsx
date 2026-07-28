@@ -72,21 +72,21 @@ export function AccountSection() {
       {/* ── 我的信息 ── */}
       <div id="my-info" data-setting-anchor className="card">
         <div className="card-header">
-          <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2"><Icon name="User" size={20} /> 我的信息</h2>
+          <h2 className="text-lg font-semibold text-[color:var(--fg)] flex items-center gap-2"><Icon name="User" size={20} /> 我的信息</h2>
         </div>
         <div className="card-body">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-slate-50 rounded-lg p-3">
-              <div className="text-xs text-slate-500">用户名</div>
-              <div className="text-base text-slate-800 mt-1 font-medium">{currentUser?.username || '—'}</div>
+            <div className="bg-[color:var(--panel-2)] rounded-lg p-3">
+              <div className="text-xs text-[color:var(--muted)]">用户名</div>
+              <div className="text-base text-[color:var(--fg)] mt-1 font-medium">{currentUser?.username || '—'}</div>
             </div>
-            <div className="bg-slate-50 rounded-lg p-3">
-              <div className="text-xs text-slate-500">显示名</div>
-              <div className="text-base text-slate-800 mt-1 font-medium">{currentUser?.displayName || '—'}</div>
+            <div className="bg-[color:var(--panel-2)] rounded-lg p-3">
+              <div className="text-xs text-[color:var(--muted)]">显示名</div>
+              <div className="text-base text-[color:var(--fg)] mt-1 font-medium">{currentUser?.displayName || '—'}</div>
             </div>
-            <div className="bg-slate-50 rounded-lg p-3">
-              <div className="text-xs text-slate-500">角色</div>
-              <div className="text-base text-slate-800 mt-1 font-medium">{currentUser?.roleName || '—'}</div>
+            <div className="bg-[color:var(--panel-2)] rounded-lg p-3">
+              <div className="text-xs text-[color:var(--muted)]">角色</div>
+              <div className="text-base text-[color:var(--fg)] mt-1 font-medium">{currentUser?.roleName || '—'}</div>
             </div>
           </div>
         </div>
@@ -95,7 +95,7 @@ export function AccountSection() {
       {/* ── 修改密码 ── */}
       <div id="change-password" data-setting-anchor className="card">
         <div className="card-header">
-          <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2"><Icon name="Lock" size={20} /> 修改密码</h2>
+          <h2 className="text-lg font-semibold text-[color:var(--fg)] flex items-center gap-2"><Icon name="Lock" size={20} /> 修改密码</h2>
         </div>
         <div className="card-body space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -127,13 +127,13 @@ export function AccountSection() {
       {/* ── 隐私脱敏显示 ── */}
       <div id="pii-mask" data-setting-anchor className="card">
         <div className="card-header">
-          <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2"><Icon name="EyeOff" size={20} /> 隐私脱敏显示</h2>
+          <h2 className="text-lg font-semibold text-[color:var(--fg)] flex items-center gap-2"><Icon name="EyeOff" size={20} /> 隐私脱敏显示</h2>
         </div>
         <div className="card-body">
           <div className="flex items-center justify-between">
             <div className="pr-4">
-              <p className="text-sm font-medium text-slate-700">对隐私信息打码显示</p>
-              <p className="text-xs text-slate-400 mt-0.5">开启后，身份证 / 手机号 / 银行账号等以 <span className="font-mono">****</span> 部分显示，防止旁人窥屏</p>
+              <p className="text-sm font-medium text-[color:var(--fg-2)]">对隐私信息打码显示</p>
+              <p className="text-xs text-[color:var(--muted)] mt-0.5">开启后，身份证 / 手机号 / 银行账号等以 <span className="font-mono">****</span> 部分显示，防止旁人窥屏</p>
             </div>
             <button
               type="button"
@@ -141,9 +141,9 @@ export function AccountSection() {
               aria-checked={masked}
               disabled={isSyncing}
               onClick={toggleMask}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${masked ? 'bg-primary-500' : 'bg-slate-300'} ${isSyncing ? 'opacity-60' : ''}`}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${masked ? 'bg-[color:var(--accent)]' : 'bg-[color:var(--panel-2)]'} ${isSyncing ? 'opacity-60' : ''}`}
             >
-              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${masked ? 'translate-x-6' : 'translate-x-1'}`} />
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-[color:var(--card)] shadow transition-transform ${masked ? 'translate-x-6' : 'translate-x-1'}`} />
             </button>
           </div>
         </div>
@@ -152,17 +152,17 @@ export function AccountSection() {
       {/* ── 自动锁屏 ── */}
       <div id="auto-lock" data-setting-anchor className="card">
         <div className="card-header">
-          <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2"><Icon name="Clock" size={20} /> 自动锁屏</h2>
+          <h2 className="text-lg font-semibold text-[color:var(--fg)] flex items-center gap-2"><Icon name="Clock" size={20} /> 自动锁屏</h2>
         </div>
         <div className="card-body">
-          <p className="text-sm text-slate-600 mb-3">无操作达到设定时间后自动锁定屏幕，需重新输入密码解锁。</p>
+          <p className="text-sm text-[color:var(--fg-2)] mb-3">无操作达到设定时间后自动锁定屏幕，需重新输入密码解锁。</p>
           <div className="flex gap-2">
             {AUTO_LOCK_OPTIONS.map(opt => (
               <button key={opt.value} onClick={() => handleAutoLockChange(opt.value)}
                 className={`flex-1 py-2.5 rounded-lg text-sm font-medium border transition-all ${
                   autoLock === opt.value
-                    ? 'border-primary-500 bg-primary-50 text-primary-700'
-                    : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                    ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--fg)]'
+                    : 'border-[color:var(--border)] text-[color:var(--fg-2)] hover:border-[color:var(--border)]'
                 }`}
               >
                 {opt.label}

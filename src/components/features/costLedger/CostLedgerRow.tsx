@@ -15,11 +15,16 @@ interface CostLedgerRowProps {
 export const CostLedgerRow = React.memo(function CostLedgerRow({ entry, categoryLevel, categories, onEdit, onDelete }: CostLedgerRowProps) {
   const dir = DIRECTION_CONFIG[entry.direction]
   return (
-    <tr className="border-b border-slate-100 text-sm table-row-hover">
-      <td className="px-3 py-2 text-center font-mono font-semibold text-slate-700 truncate">{entry.voucherNo || '-'}</td>
-      <td className="px-3 py-2 text-slate-700 whitespace-nowrap">{normalizeDate(entry.date)}</td>
-      <td className="px-3 py-2"><span className={`rounded px-1.5 py-0.5 text-xs font-medium ${dir.bg} ${dir.color}`}>{dir.label}</span></td>
-      <td className="px-3 py-2 text-slate-700 align-top">
+    <tr className="text-sm table-row-hover" style={{ borderBottom: '1px solid var(--border)' }}>
+      <td className="px-3 py-2 text-center font-mono font-semibold truncate tabular-nums" style={{ color: 'var(--fg-2)' }}>{entry.voucherNo || '-'}</td>
+      <td className="px-3 py-2 whitespace-nowrap font-mono tabular-nums" style={{ color: 'var(--fg-2)' }}>{normalizeDate(entry.date)}</td>
+      <td className="px-3 py-2">
+        <span className={`flex items-center gap-1 text-xs ${entry.direction === 'expense' ? 'opacity-70' : ''}`} style={{ color: 'var(--fg)' }}>
+          <span>{entry.direction === 'expense' ? '↓' : '↑'}</span>
+          <span>{dir.label}</span>
+        </span>
+      </td>
+      <td className="px-3 py-2 align-top" style={{ color: 'var(--fg-2)' }}>
         <span className="line-clamp-2">
           {categoryLevel === 'level1' && (
             <span className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle" style={{ backgroundColor: getLevel1Color(entry.category, categories) }} />
@@ -27,24 +32,24 @@ export const CostLedgerRow = React.memo(function CostLedgerRow({ entry, category
           {getCategoryDisplayLabel(entry.category, categoryLevel, categories)}
         </span>
         {isCategoryMissing(entry.category, categories) && (
-          <span className="ml-1 rounded bg-amber-100 px-1 text-amber-700 text-caption" title="分类已删除或禁用">已删</span>
+          <span className="ml-1 rounded px-1 text-caption" style={{ background: 'var(--warning-soft)', color: 'var(--warning)' }} title="分类已删除或禁用">已删</span>
         )}
       </td>
-      <td className="px-3 py-2 font-medium text-slate-700 truncate">{entry.counterparty}</td>
-      <td className="px-3 py-2 text-xs text-slate-600 truncate" title={entry.channel}>{entry.channel}</td>
-      <td className={`px-3 py-2 text-right font-mono font-medium whitespace-nowrap ${entry.direction === 'expense' ? 'text-red-600' : 'text-emerald-600'}`}>
+      <td className="px-3 py-2 font-medium truncate" style={{ color: 'var(--fg-2)' }}>{entry.counterparty}</td>
+      <td className="px-3 py-2 text-xs truncate" title={entry.channel} style={{ color: 'var(--muted)' }}>{entry.channel}</td>
+      <td className="px-3 py-2 text-right font-mono font-medium whitespace-nowrap tabular-nums tracking-tight" style={{ color: 'var(--fg)' }}>
         {entry.direction === 'expense' ? '-' : '+'}{formatMoney(entry.amount)}
       </td>
-      <td className="px-3 py-2 text-xs text-slate-600 truncate" title={entry.summary}>
+      <td className="px-3 py-2 text-xs truncate" title={entry.summary} style={{ color: 'var(--muted)' }}>
         {entry.summary}
-        {entry.linkedInvoiceStatus === 'deleted' && <span className="ml-1 rounded bg-amber-100 px-1 text-amber-700 text-caption">已删发票</span>}
+        {entry.linkedInvoiceStatus === 'deleted' && <span className="ml-1 rounded px-1 text-caption" style={{ background: 'var(--warning-soft)', color: 'var(--warning)' }}>已删发票</span>}
       </td>
-      <td className="px-3 py-2 text-xs text-slate-500 truncate" title={entry.notes || ''}>
+      <td className="px-3 py-2 text-xs truncate" title={entry.notes || ''} style={{ color: 'var(--muted)' }}>
         {entry.notes || '-'}
       </td>
       <td className="px-3 py-2 text-right whitespace-nowrap">
-        <button onClick={() => onEdit(entry)} className="mr-1 text-xs text-blue-600 hover:text-blue-800">编辑</button>
-        <button onClick={() => onDelete(entry.id)} className="text-xs text-red-500 hover:text-red-700">删除</button>
+        <button onClick={() => onEdit(entry)} className="mr-1 text-xs" style={{ color: 'var(--accent)' }}>编辑</button>
+        <button onClick={() => onDelete(entry.id)} className="text-xs" style={{ color: 'var(--danger)' }}>删除</button>
       </td>
     </tr>
   )

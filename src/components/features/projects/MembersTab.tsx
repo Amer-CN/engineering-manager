@@ -16,11 +16,11 @@ interface ProjectMemberRecord extends ProjectMember {
   phone?: string
 }
 
-const CARD = 'bg-white border border-slate-200 rounded-xl shadow-sm'
+const CARD = 'bg-[color:var(--card)] border border-[color:var(--border)] rounded-xl shadow-sm'
 const CARD_HOVER = 'hover:shadow-md transition-all duration-200'
 
 function EmptyState({ text }: { text: string }) {
-  return <div className="flex flex-col items-center justify-center py-12 text-slate-400"><Icon name="Inbox" size={32} className="mb-2 opacity-40" /><p className="text-sm">{text}</p></div>
+  return <div className="flex flex-col items-center justify-center py-12 text-[color:var(--muted)]"><Icon name="Inbox" size={32} className="mb-2 opacity-40" /><p className="text-sm">{text}</p></div>
 }
 
 export function MembersTab({ project, staffMembers, allStaffMembers, workerTeams, members, stats }: {
@@ -104,19 +104,19 @@ export function MembersTab({ project, staffMembers, allStaffMembers, workerTeams
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-2">
-            <span className="w-7 h-7 rounded-lg bg-purple-100 flex items-center justify-center"><Icon name="Users" size={14} className="text-purple-600" /></span>项目人员
-            <span className="text-xs font-normal text-slate-400">({activeRecords.length}人)</span>
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-[color:var(--muted)] flex items-center gap-2">
+            <span className="w-7 h-7 rounded-lg bg-[color:var(--accent-soft)] flex items-center justify-center"><Icon name="Users" size={14} className="text-[color:var(--accent)]" /></span>项目人员
+            <span className="text-xs font-normal text-[color:var(--muted)]">({activeRecords.length}人)</span>
           </h3>
-          <button onClick={() => setShowAddModal(true)} className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"><Icon name="Plus" size={12} /> 添加成员</button>
+          <button onClick={() => setShowAddModal(true)} className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-[color:var(--accent)] hover:opacity-90 text-[color:var(--on-accent)] rounded-lg transition-colors"><Icon name="Plus" size={12} /> 添加成员</button>
         </div>
         {project.projectManagerName && (() => {
           const pm = staffMembers.find(m => m.id === project.projectManagerId)
           return (
-            <div className="p-3 rounded-xl bg-purple-50 border border-purple-200 mb-3">
-              <p className="text-xs text-purple-600 mb-0.5">项目经理</p>
-              <p className="font-medium text-sm text-slate-800">{project.projectManagerName}</p>
-              <p className="text-xs text-slate-400 mt-0.5">{pm?.entryDate || '入职日期未知'} 入职</p>
+            <div className="p-3 rounded-xl bg-[color:var(--accent-soft)] border border-[color:var(--border)] mb-3">
+              <p className="text-xs text-[color:var(--accent)] mb-0.5">项目经理</p>
+              <p className="font-medium text-sm text-[color:var(--fg)]">{project.projectManagerName}</p>
+              <p className="text-xs text-[color:var(--muted)] mt-0.5">{pm?.entryDate || '入职日期未知'} 入职</p>
             </div>
           )
         })()}
@@ -127,50 +127,50 @@ export function MembersTab({ project, staffMembers, allStaffMembers, workerTeams
               return (
                 <div key={m.id} className={`${CARD} ${CARD_HOVER} p-3 flex items-center justify-between`}>
                   <div>
-                    <p className="text-sm font-medium text-slate-800">{m.name}</p>
-                    <p className="text-xs text-slate-500">{m.position || m.role || '-'}</p>
-                    {rec?.joinedAt && <p className="text-xs text-slate-400 mt-0.5">
+                    <p className="text-sm font-medium text-[color:var(--fg)]">{m.name}</p>
+                    <p className="text-xs text-[color:var(--muted)]">{m.position || m.role || '-'}</p>
+                    {rec?.joinedAt && <p className="text-xs text-[color:var(--muted)] mt-0.5">
                       {rec.joinedAt} 加入 ·
                       {m.leaveDate && !m.reentryDate
-                        ? <span className="text-amber-500"> {m.leaveDate} 离职</span>
+                        ? <span className="text-warning-500"> {m.leaveDate} 离职</span>
                         : <span> 在岗</span>}
                     </p>}
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button onClick={() => rec && openTransfer(rec)}  variant="ghost" size="sm" className="text-amber-600 border border-amber-200">调离</Button>
+                    <Button onClick={() => rec && openTransfer(rec)}  variant="ghost" size="sm" className="text-warning-600 border border-warning-200">调离</Button>
                     <Button onClick={() => {
                       if (confirm(`确认将 ${m.name} 从项目中删除？此操作不可撤销。`)) {
                         getAPI().then(api => api.removeProjectMember(rec!.id)).then(() => loadProjectMembers())
                       }
-                    }}  variant="danger" size="sm" className="border border-slate-200">删除</Button>
+                    }}  variant="danger" size="sm" className="border border-[color:var(--border)]">删除</Button>
                   </div>
                 </div>
               )
             })}
           </div>
-        ) : <div className="text-center py-8 text-slate-400 text-sm">{loaded ? '暂无项目人员，点击上方按钮添加' : '加载中...'}</div>}
+        ) : <div className="text-center py-8 text-[color:var(--muted)] text-sm">{loaded ? '暂无项目人员，点击上方按钮添加' : '加载中...'}</div>}
 
         {/* 已调离成员 */}
         {pastRecords.length > 0 && (
           <>
-            <h4 className="text-xs font-medium text-slate-400 mt-4 mb-2">已调离 · {pastRecords.length}人</h4>
+            <h4 className="text-xs font-medium text-[color:var(--muted)] mt-4 mb-2">已调离 · {pastRecords.length}人</h4>
             <div className="space-y-1.5">
               {pastRecords.map(rec => (
-                <div key={rec.id} className="p-2.5 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-between">
+                <div key={rec.id} className="p-2.5 rounded-lg bg-[color:var(--panel-2)] border border-[color:var(--border)] flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-slate-500">{rec.member?.name || staffMembers.find(m => m.id === rec.memberId)?.name || '-'}</p>
-                    <p className="text-xs text-slate-500">{rec.member ? (rec.member.position || rec.member.role || '') : ''}</p>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-sm text-[color:var(--muted)]">{rec.member?.name || staffMembers.find(m => m.id === rec.memberId)?.name || '-'}</p>
+                    <p className="text-xs text-[color:var(--muted)]">{rec.member ? (rec.member.position || rec.member.role || '') : ''}</p>
+                    <p className="text-xs text-[color:var(--muted)]">
                       {rec.joinedAt} 加入 ~ {rec.leftAt} 调离
                       {rec.member && rec.member.leaveDate && !rec.member.reentryDate && (
-                        <span className="text-amber-500 ml-2">· 已离职</span>
+                        <span className="text-warning-500 ml-2">· 已离职</span>
                       )}
                     </p>
                   </div>
                   <Button onClick={() => {
                     getAPI().then(api => api.updateProjectMember(rec.id, { leftAt: '' }))
                       .then(() => loadProjectMembers())
-                  }}  variant="ghost" size="sm" className="text-primary-600 border border-primary-200">恢复</Button>
+                  }}  variant="ghost" size="sm" className="text-[color:var(--accent)] border border-[color:var(--border)]">恢复</Button>
                 </div>
               ))}
             </div>
@@ -178,8 +178,8 @@ export function MembersTab({ project, staffMembers, allStaffMembers, workerTeams
         )}
       </div>
       <div>
-        <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500 mb-3 flex items-center gap-2">
-          <span className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center"><Icon name="Construction" size={14} className="text-amber-600" /></span>农民工 ({stats.workerCount})
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-[color:var(--muted)] mb-3 flex items-center gap-2">
+          <span className="w-7 h-7 rounded-lg bg-warning-100 flex items-center justify-center"><Icon name="Construction" size={14} className="text-warning-600" /></span>农民工 ({stats.workerCount})
         </h3>
         {workerTeams.length > 0 ? (
           <div className="space-y-2">
@@ -187,8 +187,8 @@ export function MembersTab({ project, staffMembers, allStaffMembers, workerTeams
               const tm = projectWorkers.filter((pw: ProjectWorker) => pw.teamId === team.id)
               return (
                 <div key={team.id} className={`${CARD} p-3`}>
-                  <div className="flex items-center justify-between mb-1"><span className="text-sm font-medium text-slate-800">{team.name}</span><span className="text-xs font-medium text-amber-600">{tm.length}人</span></div>
-                  <div className="text-xs text-slate-500">班组长: {team.leaderName || '-'}</div>
+                  <div className="flex items-center justify-between mb-1"><span className="text-sm font-medium text-[color:var(--fg)]">{team.name}</span><span className="text-xs font-medium text-warning-600">{tm.length}人</span></div>
+                  <div className="text-xs text-[color:var(--muted)]">班组长: {team.leaderName || '-'}</div>
                 </div>
               )
             })}
@@ -200,22 +200,22 @@ export function MembersTab({ project, staffMembers, allStaffMembers, workerTeams
       {/* 调离/调转弹窗 */}
       {transferRecord && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setTransferRecord(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6" onClick={e => e.stopPropagation()}>
-            <h3 className="font-semibold text-slate-800 mb-1">调离成员</h3>
-            <p className="text-sm text-slate-500 mb-4">
+          <div className="bg-[color:var(--card)] rounded-xl shadow-xl w-full max-w-sm mx-4 p-6" onClick={e => e.stopPropagation()}>
+            <h3 className="font-semibold text-[color:var(--fg)] mb-1">调离成员</h3>
+            <p className="text-sm text-[color:var(--muted)] mb-4">
               {staffMembers.find(m => m.id === transferRecord.memberId)?.name || ''}
               {' '}· 加入于 {transferRecord.joinedAt}
             </p>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">调离日期 *</label>
+                <label className="block text-xs font-medium text-[color:var(--fg-2)] mb-1">调离日期 *</label>
                 <input type="date" value={transferDate} onChange={e => setTransferDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                  className="w-full px-3 py-2 border border-[color:var(--border)] rounded-lg text-sm" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">调入其他项目（可选）</label>
+                <label className="block text-xs font-medium text-[color:var(--fg-2)] mb-1">调入其他项目（可选）</label>
                 <select value={transferToProject} onChange={e => setTransferToProject(e.target.value ? Number(e.target.value) : '')}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                  className="w-full px-3 py-2 border border-[color:var(--border)] rounded-lg text-sm">
                   <option value="">仅调离，不调入其他项目</option>
                   {projects.map((p: Project) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
@@ -223,9 +223,9 @@ export function MembersTab({ project, staffMembers, allStaffMembers, workerTeams
             </div>
             <div className="flex justify-end gap-2 mt-5">
               <button onClick={() => setTransferRecord(null)}
-                className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">取消</button>
+                className="px-4 py-2 text-sm text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)] rounded-lg">取消</button>
               <button onClick={confirmTransfer}
-                className="px-4 py-2 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700">确认调离</button>
+                className="px-4 py-2 text-sm bg-warning-600 text-white rounded-lg hover:bg-warning-700">确认调离</button>
             </div>
           </div>
         </div>

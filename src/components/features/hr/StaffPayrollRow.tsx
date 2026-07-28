@@ -17,29 +17,29 @@ export const StaffPayrollRow = React.memo(function StaffPayrollRow({
   const wd = ym ? new Date(Number(ym.split('-')[0]), Number(ym.split('-')[1]), 0).getDate() : 30
 
   return (
-    <tr className="hover:bg-slate-50">
-      <td className="px-4 py-3 text-sm font-medium text-slate-800">{wage.memberName || staffName || '-'}</td>
-      <td className="px-4 py-3 text-sm text-slate-600">{ym}</td>
-      <td className="px-4 py-3 text-sm text-slate-600 text-right">{(wage.baseSalary || 0).toLocaleString()}</td>
-      <td className="px-4 py-3 text-sm text-slate-600 text-center">{wage.attendanceDays} / {wd}</td>
-      <td className="px-4 py-3 text-sm text-amber-600 text-right">{wage.subsidy > 0 ? `+${(wage.subsidy || 0).toLocaleString()}` : '-'}</td>
+    <tr className="hover:bg-[color:var(--panel-2)]">
+      <td className="px-4 py-3 text-sm font-medium text-[color:var(--fg)]">{wage.memberName || staffName || '-'}</td>
+      <td className="px-4 py-3 text-sm text-[color:var(--fg-2)] font-mono tabular-nums">{ym}</td>
+      <td className="px-4 py-3 text-sm text-[color:var(--fg-2)] text-right font-mono tabular-nums">{(wage.baseSalary || 0).toLocaleString()}</td>
+      <td className="px-4 py-3 text-sm text-[color:var(--fg-2)] text-center font-mono tabular-nums">{wage.attendanceDays} / {wd}</td>
+      <td className="px-4 py-3 text-sm text-warning-600 text-right font-mono tabular-nums">{wage.subsidy > 0 ? `+${(wage.subsidy || 0).toLocaleString()}` : '-'}</td>
       <td className="px-4 py-3 text-sm text-right">
         <input type="number" defaultValue={wage.deduction || 0}
           onBlur={e => onPaidChange(wage, 'deduction', Number(e.target.value))}
-          className="w-20 text-right px-2 py-1 border border-slate-200 rounded text-sm" />
+          className="w-20 text-right px-2 py-1 border border-[color:var(--border)] rounded text-sm" />
       </td>
-      <td className="px-4 py-3 text-sm font-medium text-slate-800 text-right">{((wage.netSalary || 0) - (wage.deduction || 0)).toLocaleString()}</td>
+      <td className="px-4 py-3 text-sm font-medium text-[color:var(--fg)] text-right font-mono tabular-nums">{((wage.netSalary || 0) - (wage.deduction || 0)).toLocaleString()}</td>
       <td className="px-4 py-3 text-center">
         <input type="number" defaultValue={wage.paidAmount || ''}
           onBlur={e => onPaidChange(wage, 'paidAmount', Number(e.target.value))}
-          className="w-24 text-center px-2 py-1 border border-slate-200 rounded text-sm" placeholder="未发放" />
+          className="w-24 text-center px-2 py-1 border border-[color:var(--border)] rounded text-sm" placeholder="未发放" />
       </td>
       <td className="px-4 py-3 text-center">
         <input type="date" defaultValue={wage.paidDate || ''}
           onChange={e => onPaidChange(wage, 'paidDate', e.target.value)}
-          className="px-2 py-1 border border-slate-200 rounded text-sm" />
+          className="px-2 py-1 border border-[color:var(--border)] rounded text-sm" />
       </td>
-      <td className={`px-4 py-3 text-sm text-right font-medium ${diff === 0 ? 'text-emerald-600' : diff > 0 ? 'text-amber-600' : 'text-red-600'}`}>
+      <td className={`px-4 py-3 text-sm text-right font-medium font-mono tabular-nums ${diff === 0 ? 'text-success-600' : diff > 0 ? 'text-warning-600' : 'text-danger-600'}`}>
         {diff === 0 ? '已结清' : diff.toLocaleString()}
       </td>
       <td className="px-4 py-3 text-center">

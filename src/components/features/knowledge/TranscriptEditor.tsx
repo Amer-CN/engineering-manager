@@ -138,7 +138,7 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
     <div className="space-y-4">
       {/* 标题输入 */}
       <div>
-        <label className="text-xs font-medium text-slate-600 mb-1 block">文档标题</label>
+        <label className="text-xs font-medium text-[color:var(--fg-2)] mb-1 block">文档标题</label>
         <Input
           value={title}
           onChange={(e) => { setTitle(e.target.value); setHasChanges(true) }}
@@ -149,7 +149,7 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
       {/* 音频播放器 — 边听边改 */}
       {audioUrl && (
         <div>
-          <label className="text-xs font-medium text-slate-600 mb-1 block">原始录音</label>
+          <label className="text-xs font-medium text-[color:var(--fg-2)] mb-1 block">原始录音</label>
           <audio ref={audioRef} src={audioUrl} controls preload="metadata" className="w-full h-10" />
         </div>
       )}
@@ -158,21 +158,21 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
       {segments.length > 0 ? (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-medium text-slate-600">说话人分段</label>
+            <label className="text-xs font-medium text-[color:var(--fg-2)]">说话人分段</label>
             <Button variant="ghost" size="xs" onClick={handleRestore} leftIcon="RotateCcw">
               恢复原始
             </Button>
           </div>
           <div className="max-h-96 overflow-y-auto space-y-2 p-1">
             {segments.map((seg, i) => (
-              <div key={i} className="flex gap-2 items-start p-2 rounded-lg border border-slate-200 bg-white">
+              <div key={i} className="flex gap-2 items-start p-2 rounded-lg border border-[color:var(--border)] bg-[color:var(--card)]">
                 <div className="flex-shrink-0 w-20">
-                  <div className="text-xs font-medium text-primary-600">说话人{seg.speaker}</div>
+                  <div className="text-xs font-medium text-[color:var(--accent)]">说话人{seg.speaker}</div>
                   <button
                     type="button"
                     onClick={() => seekTo(seg.start)}
                     disabled={!audioUrl}
-                    className="text-xs text-slate-400 hover:text-primary-600 disabled:hover:text-slate-400 disabled:cursor-default flex items-center gap-0.5 mt-0.5"
+                    className="text-xs text-[color:var(--muted)] hover:text-[color:var(--accent)] disabled:hover:text-[color:var(--muted)] disabled:cursor-default flex items-center gap-0.5 mt-0.5 font-mono tabular-nums"
                     title={audioUrl ? '跳转到此段播放' : undefined}
                   >
                     {audioUrl && <Icon name="Play" size={9} />}
@@ -182,7 +182,7 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
                 <textarea
                   value={seg.text}
                   onChange={(e) => handleSegmentChange(i, 'text', e.target.value)}
-                  className="flex-1 min-h-[40px] text-sm text-slate-700 bg-transparent border-0 outline-none resize-y p-1 rounded focus:bg-slate-50"
+                  className="flex-1 min-h-[40px] text-sm text-[color:var(--fg-2)] bg-transparent border-0 outline-none resize-y p-1 rounded focus:bg-[color:var(--panel-2)]"
                   rows={2}
                 />
               </div>
@@ -192,7 +192,7 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
       ) : (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-medium text-slate-600">转写文本</label>
+            <label className="text-xs font-medium text-[color:var(--fg-2)]">转写文本</label>
             <Button variant="ghost" size="xs" onClick={handleRestore} leftIcon="RotateCcw">
               恢复原始
             </Button>
@@ -200,21 +200,21 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
           <textarea
             value={singleText}
             onChange={(e) => { setSingleText(e.target.value); setHasChanges(true) }}
-            className="w-full min-h-[200px] text-sm text-slate-700 p-3 border border-slate-200 rounded-lg outline-none resize-y focus:border-primary-300 focus:ring-1 focus:ring-primary-200"
+            className="w-full min-h-[200px] text-sm text-[color:var(--fg-2)] p-3 border border-[color:var(--border)] rounded-lg outline-none resize-y focus:border-[color:var(--accent)] focus:ring-1 focus:ring-[color:var(--accent-soft)]"
           />
         </div>
       )}
 
       {/* 脱敏预览 */}
       {masked && displayText && (
-        <div className="p-2 bg-slate-50 rounded text-xs text-slate-500">
-          <span className="text-slate-400">脱敏预览：</span>
+        <div className="p-2 bg-[color:var(--panel-2)] rounded text-xs text-[color:var(--muted)]">
+          <span className="text-[color:var(--muted)]">脱敏预览：</span>
           <span className="break-all">{maskKnowledgeText(displayText, true).substring(0, 200)}...</span>
         </div>
       )}
 
       {/* 入库 */}
-      <div className="flex items-center gap-3 pt-2 border-t border-slate-100">
+      <div className="flex items-center gap-3 pt-2 border-t border-[color:var(--border)]">
         <Button
           variant="success"
           size="md"
@@ -226,7 +226,7 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
           存入知识库
         </Button>
         {hasChanges && (
-          <span className="text-xs text-amber-500">有未保存的修改</span>
+          <span className="text-xs text-warning-500">有未保存的修改</span>
         )}
       </div>
 

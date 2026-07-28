@@ -67,10 +67,10 @@ export default function WorkerForm({ formData, setFormData, projects, workerTeam
         <Input label="工种" size="sm" value={formData.workerType} onChange={e => setFormData(prev => ({ ...prev, workerType: e.target.value }))}
           placeholder="如：钢筋工、木工" />
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">所属项目</label>
+          <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">所属项目</label>
           <select value={formData.projectId || ''}
             onChange={e => { const newProjectId = e.target.value ? Number(e.target.value) : undefined; setFormData(prev => ({ ...prev, projectId: newProjectId, teamId: undefined })) }}
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500" required>
+            className="w-full px-4 py-2 border border-[color:var(--border)] rounded-lg focus:ring-2 focus:ring-[color:var(--accent)]" required>
             <option value="">请选择项目</option>
             {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
@@ -79,16 +79,16 @@ export default function WorkerForm({ formData, setFormData, projects, workerTeam
           onChange={e => setFormData(prev => ({ ...prev, dailyWage: e.target.value ? Number(e.target.value) : undefined }))}
           placeholder="0.00" required />
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-slate-700 mb-1">所属班组</label>
+          <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">所属班组</label>
           <select value={formData.teamId || ''}
             onChange={e => setFormData(prev => ({ ...prev, teamId: e.target.value ? Number(e.target.value) : undefined }))}
-            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 ${!formData.projectId ? 'border-slate-200 bg-slate-100 cursor-not-allowed' : 'border-slate-300'}`}
+            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[color:var(--accent)] ${!formData.projectId ? 'border-[color:var(--border)] bg-[color:var(--panel-2)] cursor-not-allowed' : 'border-[color:var(--border)]'}`}
             required disabled={!formData.projectId}>
             <option value="">{formData.projectId ? '请选择班组' : '请先选择项目'}</option>
             {availableTeams.map(team => <option key={team.id} value={team.id}>{team.name}</option>)}
           </select>
-          {!formData.projectId && <p className="text-xs text-orange-500 mt-1">请先选择项目</p>}
-          {formData.projectId && availableTeams.length === 0 && <p className="text-xs text-red-500 mt-1">该项目下暂无班组，请先添加班组</p>}
+          {!formData.projectId && <p className="text-xs text-warning-500 mt-1">请先选择项目</p>}
+          {formData.projectId && availableTeams.length === 0 && <p className="text-xs text-danger-500 mt-1">该项目下暂无班组，请先添加班组</p>}
         </div>
       </div>
 
@@ -110,9 +110,9 @@ export default function WorkerForm({ formData, setFormData, projects, workerTeam
             inputRef={refs.backInputRef} onInputChange={e => onFileChange(e, 'idCardBack', setFormData, true, refs.backInputRef)} />
         </div>
         <div className="grid grid-cols-4 gap-4 mt-4">
-          <div><label className="block text-xs text-slate-600 mb-1">性别</label>
+          <div><label className="block text-xs text-[color:var(--fg-2)] mb-1">性别</label>
             <select value={formData.gender} onChange={e => setFormData(prev => ({ ...prev, gender: e.target.value }))}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 text-sm">
+              className="w-full px-3 py-2 border border-[color:var(--border)] rounded-lg focus:ring-2 focus:ring-[color:var(--accent)] text-sm">
               <option value="">请选择</option><option value="male">男</option><option value="female">女</option>
             </select></div>
           <Input label="民族" size="sm" value={formData.ethnicity} onChange={e => setFormData(prev => ({ ...prev, ethnicity: e.target.value }))}
@@ -127,7 +127,7 @@ export default function WorkerForm({ formData, setFormData, projects, workerTeam
       </div>
 
       <div className="mb-4">
-        <label className="block text-sm font-medium text-slate-700 mb-1">劳动合同</label>
+        <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">劳动合同</label>
         <FileUploadArea file={formData.contractFile} fileType={formData.contractFileType} field="contractFile"
           dragOverField={dragOverField} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
           onDelete={() => onDeleteFile('contractFile', setFormData)}
@@ -164,8 +164,8 @@ export default function WorkerForm({ formData, setFormData, projects, workerTeam
           disabled={bankCardLoading}
           className={`w-full flex items-center justify-center gap-2 transition-all duration-300 ${
             bankCardLoading
-              ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0'
-              : 'bg-slate-200 text-slate-700 hover:bg-slate-300 rounded-lg font-medium'
+              ? 'bg-[color:var(--accent)] text-[color:var(--on-accent)] border-0'
+              : 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)] rounded-lg font-medium'
           }`}
         >
           {bankCardLoading ? (
@@ -186,8 +186,8 @@ export default function WorkerForm({ formData, setFormData, projects, workerTeam
         <label className="flex items-center cursor-pointer">
           <input type="checkbox" checked={formData.threeLevelEducation}
             onChange={e => setFormData(prev => ({ ...prev, threeLevelEducation: e.target.checked }))}
-            className="w-4 h-4 text-orange-500 rounded focus:ring-orange-500" />
-          <span className="ml-2 text-sm text-slate-700">已完成三级安全教育</span>
+            className="w-4 h-4 text-[color:var(--accent)] rounded focus:ring-[color:var(--accent)]" />
+          <span className="ml-2 text-sm text-[color:var(--fg-2)]">已完成三级安全教育</span>
         </label>
       </div>
 

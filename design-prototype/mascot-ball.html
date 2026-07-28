@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI 管家 · 圆球 IP 预览（对齐 Mascot.tsx / bedrock 原版 .orb）</title>
+<style>
+  :root { --ease: cubic-bezier(0.16,1,0.3,1); }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    font-family:"Inter","Noto Sans SC","PingFang SC",sans-serif;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:30px; min-height:100vh; background:var(--bg); color:var(--fg);
+    transition:background .4s var(--ease), color .4s var(--ease);
+  }
+  /* 三主题变量：取自 App src/index.css 真实值（Paper / Snow / Graphite） */
+  body[data-bg="paper"]{
+    --bg:oklch(98.6% 0.009 85); --panel-2:oklch(96% 0.012 83); --border:oklch(90% 0.012 82);
+    --card:oklch(99.7% 0.005 85); --fg:oklch(23% 0.014 70); --muted:oklch(54% .01 76);
+  }
+  body[data-bg="snow"]{
+    --bg:oklch(99% 0.0015 250); --panel-2:oklch(97.4% 0 0); --border:oklch(90% 0 0);
+    --card:oklch(100% 0 0); --fg:oklch(24% 0 0); --muted:oklch(55% 0 0);
+  }
+  body[data-bg="graphite"]{
+    --bg:oklch(20.5% .003 75); --panel-2:oklch(27.5% 0.004 75); --border:oklch(32% 0.004 75);
+    --card:oklch(25.5% 0.004 75); --fg:oklch(86% 0.003 80); --muted:oklch(60% .008 258);
+  }
+
+  .stage{ display:flex; align-items:flex-end; gap:60px; }
+  .holder{ display:grid; place-items:center; }
+  .orb{ position:relative; width:108px; height:108px; cursor:pointer; }
+  .orb.big{ transform:scale(1.25); }
+  .orb.mini{ transform:scale(0.42); }
+  @keyframes breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.02); } }
+  @keyframes think { 0%,100% { opacity: 1; } 50% { opacity: 0.72; } }
+  .orb .core{
+    position:absolute; inset:0; border-radius:50%;
+    background:var(--panel-2); border:1px solid var(--border);
+    box-shadow: inset 0 -6px 16px -8px rgba(0,0,0,.22), 0 10px 26px -14px rgba(0,0,0,.20);
+    overflow:hidden; animation:breathe 5s var(--ease) infinite;
+  }
+  .orb[data-state="thinking"] .core{ animation:think 1.4s ease-in-out infinite; }
+  .orb .eyes{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; gap:16px; transition:transform .14s ease-out; }
+  .orb .eye{ width:15px; height:15px; border-radius:50%; background:var(--fg); position:relative; }
+  .orb .eye::after{ content:""; position:absolute; width:4px; height:4px; border-radius:50%; background:var(--card); top:3px; right:3px; opacity:.7; }
+  .mini-wrap{ display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .mini-wrap span{ font-size:11px; color:var(--muted); }
+
+  .controls{ display:flex; gap:8px; }
+  .controls button{ font:inherit; font-size:13px; padding:8px 15px; border-radius:9px; cursor:pointer; background:transparent; color:inherit; border:1px solid var(--border); transition:all .15s var(--ease); }
+  .controls button:hover{ transform:translateY(-1px); }
+  .controls button.on{ background:var(--fg); color:var(--bg); border-color:var(--fg); }
+  .bgtoggle{ position:fixed; top:18px; right:18px; display:flex; gap:4px; padding:4px; border:1px solid var(--border); border-radius:10px; }
+  .bgtoggle button{ font:inherit; font-size:12px; padding:5px 12px; border:none; background:none; color:var(--muted); border-radius:7px; cursor:pointer; }
+  .bgtoggle button.on{ background:var(--fg); color:var(--bg); }
+  .caption{ font-size:13px; color:var(--muted); text-align:center; max-width:560px; line-height:1.6; }
+  .caption b{ color:var(--fg); }
+</style>
+</head>
+<body data-bg="paper">
+  <div class="bgtoggle">
+    <button data-set="paper" class="on">纸 Paper</button>
+    <button data-set="snow">雪 Snow</button>
+    <button data-set="graphite">墨 Graphite</button>
+  </div>
+
+  <div class="stage">
+    <div class="holder" style="width:150px;height:150px">
+      <div class="orb big" data-state="idle">
+        <div class="core"></div>
+        <div class="eyes"><span class="eye"></span><span class="eye"></span></div>
+      </div>
+    </div>
+    <div class="mini-wrap">
+      <div class="holder" style="width:48px;height:48px">
+        <div class="orb mini" data-state="idle">
+          <div class="core"></div>
+          <div class="eyes"><span class="eye"></span><span class="eye"></span></div>
+        </div>
+      </div>
+      <span>44px 小尺寸</span>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button data-state="idle" class="on">待机</button>
+    <button data-state="thinking">思考</button>
+    <button data-state="listening">聆听</button>
+    <button data-state="success">完成</button>
+  </div>
+  <p class="caption">移动鼠标 —— 双眼会看着你。这是 <b>Mascot.tsx 同款</b>（1:1 还原 bedrock 原版 .orb）：球身 <b>--panel-2</b>、发丝边 <b>--border</b>、双眼 <b>--fg</b>、高光 <b>--card</b>，全走主题 token；纸主题暖白球墨眼，墨主题自动深底亮眼。</p>
+
+<script>
+  const orbs = [...document.querySelectorAll('.orb')];
+  let follow = { x: 0, y: 0 }, blinking = false, curState = 'idle';
+
+  function render(){
+    orbs.forEach(orb => {
+      const eyes = orb.querySelector('.eyes');
+      let t = '';
+      if (curState === 'thinking') t = 'translateY(-2px)';
+      else if (curState === 'success') t = 'scaleY(0.3)';
+      else t = `translate(${follow.x.toFixed(1)}px,${follow.y.toFixed(1)}px)` + (curState === 'listening' ? ' scale(1.12)' : '');
+      if (blinking && curState !== 'success') t += ' scaleY(0.18)';
+      eyes.style.transform = t;
+    });
+  }
+
+  // 双眼同步跟随鼠标（对齐原版 min(4, dist/40)）
+  const bigOrb = document.querySelector('.orb.big');
+  window.addEventListener('mousemove', e => {
+    if (curState === 'thinking' || curState === 'success') return;
+    const r = bigOrb.getBoundingClientRect(), cx = r.left + r.width/2, cy = r.top + r.height/2;
+    const a = Math.atan2(e.clientY - cy, e.clientX - cx), d = Math.min(4, Math.hypot(e.clientX-cx, e.clientY-cy)/40);
+    follow = { x: Math.cos(a)*d, y: Math.sin(a)*d };
+    render();
+  });
+
+  // 状态切换
+  function setState(s){
+    curState = s;
+    orbs.forEach(orb => orb.dataset.state = s);
+    document.querySelectorAll('.controls button').forEach(b => b.classList.toggle('on', b.dataset.state === s));
+    render();
+  }
+  document.querySelectorAll('.controls button').forEach(b => b.addEventListener('click', () => setState(b.dataset.state)));
+
+  // 眨眼
+  (function blink(){
+    if (curState !== 'success') { blinking = true; render(); setTimeout(() => { blinking = false; render(); }, 150); }
+    setTimeout(blink, 2600 + Math.random()*2800);
+  })();
+
+  // 主题切换
+  document.querySelectorAll('.bgtoggle button').forEach(b => b.addEventListener('click', () => {
+    document.body.dataset.bg = b.dataset.set;
+    document.querySelectorAll('.bgtoggle button').forEach(x => x.classList.toggle('on', x === b));
+  }));
+</script>
+</body>
+</html>

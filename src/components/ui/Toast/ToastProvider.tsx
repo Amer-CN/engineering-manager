@@ -44,10 +44,10 @@ const iconMap: Record<string, string> = {
 }
 
 const colorMap: Record<string, string> = {
-  success: 'bg-emerald-500',
-  error: 'bg-red-500',
-  info: 'bg-slate-700',
-  warning: 'bg-amber-500',
+  success: 'bg-success-500',
+  error: 'bg-danger-500',
+  info: 'bg-[color:var(--accent)]',
+  warning: 'bg-warning-500',
 }
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
@@ -77,7 +77,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -16, scale: 0.95 }}
               transition={{ type: 'spring', stiffness: 400, damping: 25, delay: _i * 0.05 }}
-              className={`${colorMap[toast.type]} text-white px-5 py-3 rounded-xl shadow-2xl pointer-events-auto`}
+              className={`${colorMap[toast.type]} text-white px-5 py-3 rounded-xl shadow-xl pointer-events-auto`}
               role="alert"
               onClick={() => removeToast(toast.id)}
             >

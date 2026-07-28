@@ -13,9 +13,9 @@ export default function OverdueBanner({ stats, onViewDetail }: OverdueBannerProp
   if (!stats || stats.overdueWorkerCount === 0 || !visible) return null
 
   return (
-    <div className="mb-4 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg flex items-center justify-between">
+    <div className="mb-4 bg-danger-50 border border-danger-200 text-danger-800 px-4 py-3 rounded-lg flex items-center justify-between">
       <div className="flex items-center gap-2">
-        <Icon name="AlertTriangle" size={20} className="text-red-600" />
+        <Icon name="AlertTriangle" size={20} className="text-danger-600" />
         <span className="text-sm">
           欠薪预警：涉及 {stats.overdueWorkerCount} 名工人，
           共计 {stats.totalOverdueAmount.toFixed(2)} 元，
@@ -25,13 +25,13 @@ export default function OverdueBanner({ stats, onViewDetail }: OverdueBannerProp
       <div className="flex items-center gap-2">
         <button
           onClick={onViewDetail}
-          className="px-3 py-1 text-sm font-medium text-white bg-red-600 rounded hover:bg-red-700"
+          className="px-3 py-1 text-sm font-medium text-white bg-danger-600 rounded hover:bg-danger-700"
         >
           查看详情
         </button>
         <button
           onClick={() => setVisible(false)}
-          className="text-red-600 hover:text-red-800 text-lg leading-none"
+          className="text-danger-600 hover:text-danger-800 text-lg leading-none"
         >
           ×
         </button>

@@ -239,28 +239,28 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
     <div className="space-y-6">
       {/* 能力检测 */}
       {capLoading ? (
-        <div className="flex items-center gap-2 text-sm text-slate-500">
+        <div className="flex items-center gap-2 text-sm text-[color:var(--muted)]">
           <Icon name="Loader2" size={16} className="animate-spin" />
           <span>检测转写能力...</span>
         </div>
       ) : !canTranscribe ? (
-        <Card padding="md" className="bg-amber-50 border-amber-200">
+        <Card padding="md" className="bg-warning-50 border-warning-200">
           <div className="flex items-start gap-3">
-            <Icon name="AlertTriangle" size={20} className="text-amber-500 flex-shrink-0 mt-0.5" />
+            <Icon name="AlertTriangle" size={20} className="text-warning-500 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-amber-800">语音转写当前不可用</p>
-              <p className="text-xs text-amber-700 mt-1">
+              <p className="text-sm font-medium text-warning-800">语音转写当前不可用</p>
+              <p className="text-xs text-warning-700 mt-1">
                 {capability?.unavailableReason || '需要独立显卡和 ASR 模型'}
               </p>
-              <p className="text-xs text-amber-600 mt-1">云端转写尚未启用</p>
+              <p className="text-xs text-warning-600 mt-1">云端转写尚未启用</p>
             </div>
           </div>
         </Card>
       ) : (
-        <Card padding="sm" className="bg-emerald-50 border-emerald-200">
+        <Card padding="sm" className="bg-success-50 border-success-200">
           <div className="flex items-center gap-2 text-sm">
-            <Icon name="CheckCircle" size={16} className="text-emerald-500" />
-            <span className="text-emerald-800 font-medium">Qwen3-ASR-1.7B 本地模型已就绪</span>
+            <Icon name="CheckCircle" size={16} className="text-success-500" />
+            <span className="text-success-800 font-medium">Qwen3-ASR-1.7B 本地模型已就绪</span>
             {!canDiarize && (
               <Badge variant="warning" size="sm">说话人分离模型未就绪</Badge>
             )}
@@ -307,7 +307,7 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
           }
         >
           {jobLoading ? (
-            <div className="flex items-center gap-2 text-sm text-slate-500">
+            <div className="flex items-center gap-2 text-sm text-[color:var(--muted)]">
               <Icon name="Loader2" size={16} className="animate-spin" />
               <span>加载中...</span>
             </div>
@@ -317,20 +317,20 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
               {(currentJob.status === 'pending' || currentJob.status === 'running' || currentJob.status === 'processing') && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-slate-600">
+                    <span className="text-[color:var(--fg-2)]">
                       {currentJob.status === 'pending' ? '等待处理' : '正在转写'}
                     </span>
-                    <span className="text-slate-400 text-xs">
+                    <span className="text-[color:var(--muted)] text-xs">
                       {currentJob.elapsedSec ? `已耗时 ${currentJob.elapsedSec}s` : ''}
                     </span>
                   </div>
-                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-2 bg-[color:var(--panel-2)] rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-primary-500 rounded-full transition-all duration-500"
+                      className="h-full bg-[color:var(--accent)] rounded-full transition-all duration-500"
                       style={{ width: `${currentJob.progress || 0}%` }}
                     />
                   </div>
-                  <div className="text-xs text-slate-400 text-right">{currentJob.progress || 0}%</div>
+                  <div className="text-xs text-[color:var(--muted)] text-right">{currentJob.progress || 0}%</div>
                 </div>
               )}
 

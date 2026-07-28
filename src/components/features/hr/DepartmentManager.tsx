@@ -90,12 +90,12 @@ const DepartmentManager: React.FC = () => {
   }
 
   const columns: Column<DeptRow>[] = [
-    { key: 'name', title: '部门名称', render: (item) => <span className="font-medium text-slate-800">{item.name}</span> },
-    { key: 'memberCount', title: '人数', render: (item) => <span className="text-sm text-slate-600">{item.memberCount} 人</span> },
-    { key: 'managerId', title: '负责人', render: (item) => <span className="text-sm text-slate-600">{getManagerName(item.managerId)}</span> },
+    { key: 'name', title: '部门名称', render: (item) => <span className="font-medium text-[color:var(--fg)]">{item.name}</span> },
+    { key: 'memberCount', title: '人数', render: (item) => <span className="text-sm text-[color:var(--fg-2)]">{item.memberCount} 人</span> },
+    { key: 'managerId', title: '负责人', render: (item) => <span className="text-sm text-[color:var(--fg-2)]">{getManagerName(item.managerId)}</span> },
     { key: 'actions', title: '操作', align: 'center', render: (item) => (
       <div className="flex items-center justify-center gap-2">
-        <Button onClick={() => openEdit(item)}  variant="ghost" size="sm" className="text-primary-600">编辑</Button>
+        <Button onClick={() => openEdit(item)}  variant="ghost" size="sm" className="text-[color:var(--accent)]">编辑</Button>
         <Button onClick={() => handleDelete(item)}  variant="danger" size="sm">删除</Button>
       </div>
     )},
@@ -109,7 +109,7 @@ const DepartmentManager: React.FC = () => {
     <div className="flex-1 flex flex-col overflow-hidden">
       {ConfirmDialog}
       <FilterBar className="mb-6">
-        <h2 className="text-lg font-semibold text-slate-800">部门列表</h2>
+        <h2 className="text-lg font-semibold text-[color:var(--fg)]">部门列表</h2>
         <div className="flex-1" />
         <Button onClick={() => { resetForm(); setShowForm(true) }} size="sm">
           <span className="mr-1">+</span> 新建部门
@@ -135,20 +135,20 @@ const DepartmentManager: React.FC = () => {
 
       {showForm && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <motion.div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }}>
-            <div className="px-6 py-4 border-b border-slate-200">
-              <h2 className="text-lg font-semibold text-slate-800">{editing ? '编辑部门' : '新建部门'}</h2>
+          <motion.div className="bg-[color:var(--card)] rounded-xl shadow-xl w-full max-w-sm mx-4" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }}>
+            <div className="px-6 py-4 border-b border-[color:var(--border)]">
+              <h2 className="text-lg font-semibold text-[color:var(--fg)]">{editing ? '编辑部门' : '新建部门'}</h2>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">部门名称 *</label>
+                <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">部门名称 *</label>
                 <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" required />
+                  className="w-full px-4 py-2 border border-[color:var(--border)] rounded-lg focus:ring-2 focus:ring-[color:var(--accent-soft)] focus:border-[color:var(--accent)]" required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">负责人</label>
+                <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">负责人</label>
                 <select value={formData.managerId} onChange={e => setFormData({ ...formData, managerId: e.target.value ? Number(e.target.value) : '' })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                  className="w-full px-4 py-2 border border-[color:var(--border)] rounded-lg text-sm focus:ring-2 focus:ring-[color:var(--accent-soft)] focus:border-[color:var(--accent)]">
                   <option value="">暂不指定</option>
                   {members.filter((m: any) => m.memberType === 'staff' || m.memberType === undefined).map((m: any) => (
                     <option key={m.id} value={m.id}>{m.name}</option>

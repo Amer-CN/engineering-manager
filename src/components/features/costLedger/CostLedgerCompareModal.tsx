@@ -52,17 +52,17 @@ export function CostLedgerCompareModal({ show, projectId, batches, categories, o
   return (
     <Modal isOpen={show} onClose={onClose} title="版本对比" size="xl">
       {/* Selector */}
-      <div className="flex items-center gap-4 pb-4 border-b border-slate-100 -mx-6 px-6">
+      <div className="flex items-center gap-4 pb-4 border-b border-[color:var(--border)] -mx-6 px-6">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-slate-500">版本 A</span>
+          <span className="text-sm text-[color:var(--muted)]">版本 A</span>
           <select value={aId} onChange={e => setAId(parseInt(e.target.value))}
             className="select text-sm">
             {batches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
         </div>
-        <span className="text-slate-300 text-lg">vs</span>
+        <span className="text-[color:var(--border-strong)] text-lg">vs</span>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-slate-500">版本 B</span>
+          <span className="text-sm text-[color:var(--muted)]">版本 B</span>
           <select value={bId} onChange={e => setBId(parseInt(e.target.value))}
             className="select text-sm">
             {batches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -95,26 +95,26 @@ export function CostLedgerCompareModal({ show, projectId, batches, categories, o
                   ['结余', summaryA.totalIncome - summaryA.totalExpense, summaryB.totalIncome - summaryB.totalExpense],
                 ].map(([label, va, vb]) => (
                   <tr key={String(label)} className={`${TABLE.bodyRow} font-medium`}>
-                    <td className={`${TABLE.bodyCell} text-slate-700`}>{String(label)}</td>
+                    <td className={`${TABLE.bodyCell} text-[color:var(--fg-2)]`}>{String(label)}</td>
                     <td className={`${TABLE.bodyCell} text-right font-mono`}>{formatMoney(va as number)}</td>
                     <td className={`${TABLE.bodyCell} text-right font-mono`}>{formatMoney(vb as number)}</td>
-                    <td className={`${TABLE.bodyCell} text-right font-mono ${(vb as number) - (va as number) > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                    <td className={`${TABLE.bodyCell} text-right font-mono ${(vb as number) - (va as number) > 0 ? 'text-danger-600' : 'text-success-600'}`}>
                       {(vb as number) - (va as number) >= 0 ? '+' : ''}{formatMoney((vb as number) - (va as number))}
                     </td>
                   </tr>
                 ))}
                 {/* Category breakdown */}
-                <tr><td colSpan={4} className={`${TABLE.bodyCell} text-xs text-slate-400 font-medium pt-4`}>按分类对比</td></tr>
+                <tr><td colSpan={4} className={`${TABLE.bodyCell} text-xs text-[color:var(--muted)] font-medium pt-4`}>按分类对比</td></tr>
                 {[...allCategories].sort().map(code => {
                   const va = summaryA.byCategory[code] || 0
                   const vb = summaryB.byCategory[code] || 0
                   if (va === 0 && vb === 0) return null
                   return (
                     <tr key={code} className={TABLE.bodyRow}>
-                      <td className={`${TABLE.bodyCell} text-slate-600`}>{getCategoryLabel(code, categories)}</td>
-                      <td className={`${TABLE.bodyCell} text-right font-mono text-slate-500 text-xs`}>{va > 0 ? formatMoney(va) : '-'}</td>
-                      <td className={`${TABLE.bodyCell} text-right font-mono text-slate-500 text-xs`}>{vb > 0 ? formatMoney(vb) : '-'}</td>
-                      <td className={`${TABLE.bodyCell} text-right font-mono text-xs ${vb - va > 0 ? 'text-red-600' : vb - va < 0 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                      <td className={`${TABLE.bodyCell} text-[color:var(--fg-2)]`}>{getCategoryLabel(code, categories)}</td>
+                      <td className={`${TABLE.bodyCell} text-right font-mono text-[color:var(--muted)] text-xs`}>{va > 0 ? formatMoney(va) : '-'}</td>
+                      <td className={`${TABLE.bodyCell} text-right font-mono text-[color:var(--muted)] text-xs`}>{vb > 0 ? formatMoney(vb) : '-'}</td>
+                      <td className={`${TABLE.bodyCell} text-right font-mono text-xs ${vb - va > 0 ? 'text-danger-600' : vb - va < 0 ? 'text-success-600' : 'text-[color:var(--muted)]'}`}>
                         {vb - va !== 0 ? `${vb - va >= 0 ? '+' : ''}${formatMoney(vb - va)}` : '-'}
                       </td>
                     </tr>
@@ -123,7 +123,7 @@ export function CostLedgerCompareModal({ show, projectId, batches, categories, o
               </tbody>
             </table>
           ) : (
-            <p className="text-center text-slate-400 py-8">无法加载汇总数据</p>
+            <p className="text-center text-[color:var(--muted)] py-8">无法加载汇总数据</p>
           )}
         </div>
       )}

@@ -193,10 +193,10 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
           </Button>
         )}
         <div className="flex items-center gap-3">
-          <span className={`w-1.5 h-8 rounded-full ${type === 'income' ? 'bg-emerald-500' : type === 'expense' ? 'bg-red-500' : 'bg-sky-500'}`} />
+          <span className="w-1.5 h-8 rounded-full" style={{ background: 'var(--accent)' }} />
           <div>
-            <h2 className="text-lg font-semibold text-slate-800">{config.label}管理</h2>
-            <p className="text-sm text-slate-500">
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--fg)' }}>{config.label}管理</h2>
+            <p className="text-sm" style={{ color: 'var(--muted)' }}>
               {type === 'income' ? '记录和管理所有收入相关合同' : type === 'expense' ? '记录和管理所有支出相关合同（分包、采购等）' : '记录和管理所有协议类合同（框架、合作、赔偿等）'}
             </p>
           </div>
@@ -208,31 +208,31 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
         <div className="flex items-center gap-3">
           {/* 分组方式 */}
           {onGroupByChange && (
-            <div className="flex items-center bg-slate-100 rounded-lg p-1">
+            <div className="flex items-center rounded-lg p-1" style={{ background: 'var(--panel-2)' }}>
               <button onClick={() => onGroupByChange('project')}
-                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${groupBy === 'project' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}>
+                className="px-3 py-1.5 text-sm rounded-md transition-colors" style={groupBy === 'project' ? { background: 'var(--card)', color: 'var(--fg)', boxShadow: 'var(--shadow-card)' } : { background: 'transparent', color: 'var(--muted)' }}>
                 按项目
               </button>
               <button onClick={() => onGroupByChange('role')}
-                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${groupBy === 'role' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}>
+                className="px-3 py-1.5 text-sm rounded-md transition-colors" style={groupBy === 'role' ? { background: 'var(--card)', color: 'var(--fg)', boxShadow: 'var(--shadow-card)' } : { background: 'transparent', color: 'var(--muted)' }}>
                 {type === 'agreement' ? '按协议方' : type === 'income' ? '按甲方' : '按乙方'}
               </button>
               <button onClick={() => onGroupByChange('status')}
-                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${groupBy === 'status' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}>
+                className="px-3 py-1.5 text-sm rounded-md transition-colors" style={groupBy === 'status' ? { background: 'var(--card)', color: 'var(--fg)', boxShadow: 'var(--shadow-card)' } : { background: 'transparent', color: 'var(--muted)' }}>
                 按状态
               </button>
             </div>
           )}
           <input type="text" placeholder="搜索合同名称、编号..." value={searchKeyword}
             onChange={e => setSearchKeyword(e.target.value)}
-            className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent w-64" />
+            className="px-4 py-2 rounded-lg w-64 bg-[color:var(--card)] border border-[color:var(--border)] text-[color:var(--fg)] placeholder-[color:var(--muted)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] focus:border-[color:var(--accent)]" />
           <select value={filterProject} onChange={e => setFilterProject(e.target.value)}
-            className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+            className="px-4 py-2 rounded-lg bg-[color:var(--card)] border border-[color:var(--border)] text-[color:var(--fg-2)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)]">
             <option value="">全部项目</option>
             {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-            className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+            className="px-4 py-2 rounded-lg bg-[color:var(--card)] border border-[color:var(--border)] text-[color:var(--fg-2)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)]">
             <option value="">全部状态</option>
             {contractStatuses.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
@@ -256,12 +256,12 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
       {Object.entries(groupedContracts()).map(([groupName, groupContracts]) => (
         <div key={groupName} className="mb-6">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-slate-700 flex items-center gap-2">
-              <span className={`w-2 h-2 ${config.accentColor} rounded-full`}></span>
+            <h3 className="font-semibold flex items-center gap-2" style={{ color: 'var(--fg-2)' }}>
+              <span className="w-2 h-2 rounded-full" style={{ background: 'var(--accent)' }}></span>
               {groupName}
-              <span className="text-sm font-normal text-slate-400">({groupContracts.length} 份合同)</span>
+              <span className="text-sm font-normal" style={{ color: 'var(--muted)' }}>({groupContracts.length} 份合同)</span>
             </h3>
-            <span className="text-sm text-slate-500">
+            <span className="text-sm font-mono tabular-nums" style={{ color: 'var(--muted)' }}>
               合计: ¥ {formatMoney(groupContracts.reduce((sum, c) => sum + (c.amount || 0), 0))}
             </span>
           </div>

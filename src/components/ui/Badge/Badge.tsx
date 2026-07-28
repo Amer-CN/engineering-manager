@@ -15,39 +15,39 @@ export interface BadgeProps {
 }
 
 const variantStyles: Record<BadgeVariant, string> = {
-  primary: 'bg-primary-100 text-primary-700',
-  success: 'bg-emerald-100 text-emerald-700',
-  warning: 'bg-amber-100 text-amber-700',
-  danger: 'bg-red-100 text-red-700',
-  gray: 'bg-slate-100 text-slate-700',
-  info: 'bg-blue-100 text-blue-700',
-  purple: 'bg-purple-100 text-purple-700',
-  orange: 'bg-orange-100 text-orange-700',
-  cyan: 'bg-cyan-100 text-cyan-700',
+  primary: 'bg-[color:var(--accent-soft)] text-[color:var(--accent)]',
+  success: 'bg-success-100 text-success-700',
+  warning: 'bg-warning-100 text-warning-700',
+  danger: 'bg-danger-100 text-danger-700',
+  gray: 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)]',
+  info: 'bg-[color:var(--accent-soft)] text-[color:var(--accent)]',
+  purple: 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)]',
+  orange: 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)]',
+  cyan: 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)]',
 }
 
 const outlinedStyles: Record<BadgeVariant, string> = {
-  primary: 'border border-primary-300 text-primary-700',
-  success: 'border border-emerald-300 text-emerald-700',
-  warning: 'border border-amber-300 text-amber-700',
-  danger: 'border border-red-300 text-red-700',
-  gray: 'border border-slate-300 text-slate-700',
-  info: 'border border-blue-300 text-blue-700',
-  purple: 'border border-purple-300 text-purple-700',
-  orange: 'border border-orange-300 text-orange-700',
-  cyan: 'border border-cyan-300 text-cyan-700',
+  primary: 'border border-[color:color-mix(in_oklch,var(--accent)_30%,transparent)] text-[color:var(--accent)] bg-transparent',
+  success: 'border border-success-500/30 text-success-600 bg-transparent',
+  warning: 'border border-warning-500/30 text-warning-600 bg-transparent',
+  danger: 'border border-danger-500/30 text-danger-600 bg-transparent',
+  gray: 'border border-[color:var(--border)] text-[color:var(--fg-2)] bg-transparent',
+  info: 'border border-[color:color-mix(in_oklch,var(--accent)_30%,transparent)] text-[color:var(--accent)] bg-transparent',
+  purple: 'border border-[color:var(--border)] text-[color:var(--fg-2)] bg-transparent',
+  orange: 'border border-[color:var(--border)] text-[color:var(--fg-2)] bg-transparent',
+  cyan: 'border border-[color:var(--border)] text-[color:var(--fg-2)] bg-transparent',
 }
 
 const dotVariantStyles: Record<BadgeVariant, string> = {
-  primary: 'bg-primary-500',
-  success: 'bg-emerald-500',
-  warning: 'bg-amber-500',
-  danger: 'bg-red-500',
-  gray: 'bg-slate-500',
-  info: 'bg-blue-500',
-  purple: 'bg-purple-500',
-  orange: 'bg-orange-500',
-  cyan: 'bg-cyan-500',
+  primary: 'bg-[color:var(--accent)]',
+  success: 'bg-success-500',
+  warning: 'bg-warning-500',
+  danger: 'bg-danger-500',
+  gray: 'bg-[color:var(--muted)]',
+  info: 'bg-[color:var(--accent)]',
+  purple: 'bg-[color:var(--muted)]',
+  orange: 'bg-[color:var(--muted)]',
+  cyan: 'bg-[color:var(--muted)]',
 }
 
 const sizeStyles: Record<BadgeSize, string> = {

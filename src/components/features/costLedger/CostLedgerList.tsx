@@ -58,12 +58,12 @@ export function CostLedgerList({ entries, summary, loading, onEdit, onDelete, ca
   }, [filtered])
 
   if (loading) {
-    return <div className="space-y-2 p-6"><div className="h-8 w-full animate-pulse rounded bg-slate-100" /><div className="h-8 w-full animate-pulse rounded bg-slate-100" /><div className="h-8 w-full animate-pulse rounded bg-slate-100" /></div>
+    return <div className="space-y-2 p-6"><div className="h-8 w-full animate-pulse rounded bg-[color:var(--panel-2)]" /><div className="h-8 w-full animate-pulse rounded bg-[color:var(--panel-2)]" /><div className="h-8 w-full animate-pulse rounded bg-[color:var(--panel-2)]" /></div>
   }
 
   if (entries.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+      <div className="flex flex-col items-center justify-center py-16" style={{ color: 'var(--muted)' }}>
         <p className="text-lg">暂无台账记录</p>
         <p className="mt-1 text-sm">点击"新增"添加第一条成本台账</p>
       </div>
@@ -74,6 +74,28 @@ export function CostLedgerList({ entries, summary, loading, onEdit, onDelete, ca
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
+      {/* ═══ S18 KPI Cards (Stitch: 3 cards top, numeric-xl) ═══ */}
+      <div className="grid grid-cols-3 gap-4 px-6 pt-5 pb-4">
+        <div className="bg-[color:var(--card)] border border-[color:var(--border)] rounded-lg p-4 flex flex-col justify-between h-[100px]">
+          <span className="text-micro font-bold uppercase tracking-[0.12em] text-[color:var(--muted)]">收入总计 (¥)</span>
+          <div className="font-mono text-numeric-xl tracking-tight text-[color:var(--fg)] mt-auto">
+            +{formatMoney(filterSummary.totalIncome)}
+          </div>
+        </div>
+        <div className="bg-[color:var(--card)] border border-[color:var(--border)] rounded-lg p-4 flex flex-col justify-between h-[100px]">
+          <span className="text-micro font-bold uppercase tracking-[0.12em] text-[color:var(--muted)]">支出总计 (¥)</span>
+          <div className="font-mono text-numeric-xl tracking-tight text-[color:var(--fg)] mt-auto">
+            -{formatMoney(filterSummary.totalExpense)}
+          </div>
+        </div>
+        <div className="bg-[color:var(--panel-2)] border border-[color:var(--border)] border-t-[3px] border-t-[color:var(--accent)] rounded-lg p-4 flex flex-col justify-between h-[100px] shadow-sm">
+          <span className="text-micro font-bold uppercase tracking-[0.12em] text-[color:var(--fg)]">结余 (¥)</span>
+          <div className="font-mono text-numeric-xl tracking-tight text-[color:var(--fg)] mt-auto">
+            {formatMoney(filterSummary.totalIncome - filterSummary.totalExpense)}
+          </div>
+        </div>
+      </div>
+
       <CostLedgerListToolbar
         filter={filter} categoryFilter={categoryFilter} categoryLevel={categoryLevel}
         setFilter={setFilter} setCategoryFilter={setCategoryFilter} setCategoryLevelAndReset={setCategoryLevelAndReset}
@@ -98,28 +120,9 @@ export function CostLedgerList({ entries, summary, loading, onEdit, onDelete, ca
         tableRef={tableRef} zoom={zoom}
       />
 
-      <div className="sticky bottom-0 border-t-2 border-slate-300 bg-white">
-        <div className="flex items-center justify-between px-6 py-4 text-sm">
-          <span className="text-sm text-slate-600">
-            {activeFilters > 0 ? `筛选结果: ${filterSummary.count} 条` : `合计 ${entries.length} 条`}
-          </span>
-          <div className="flex gap-8 font-mono">
-            <div className="text-right">
-              <div className="text-xs text-slate-600">经营支出</div>
-              <div className="text-lg font-bold text-red-600">{formatMoney(filterSummary.totalExpense)}</div>
-            </div>
-            <div className="text-right">
-              <div className="text-xs text-slate-600">资金收入</div>
-              <div className="text-lg font-bold text-emerald-600">{formatMoney(filterSummary.totalIncome)}</div>
-            </div>
-            <div className="text-right">
-              <div className="text-xs text-slate-600">净{filterSummary.totalIncome - filterSummary.totalExpense >= 0 ? '流入' : '流出'}</div>
-              <div className={`text-lg font-bold ${filterSummary.totalIncome - filterSummary.totalExpense >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                {formatMoney(filterSummary.totalIncome - filterSummary.totalExpense)}
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* S18 Stitch: simple count footer */}
+      <div className="px-6 py-3 text-xs" style={{ borderTop: '1px solid var(--border)', background: 'var(--panel-2)', color: 'var(--muted)' }}>
+        {activeFilters > 0 ? `筛选结果: ${filterSummary.count} 条` : `共 ${entries.length} 条记录`}
       </div>
     </div>
   )

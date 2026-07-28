@@ -70,7 +70,7 @@ export default function AttendanceTab({
         .map(t => ({ label: t.name, value: t.name })),
       filterAccessor: (item: any) => item.teamName || '',
       render: (item) => (
-        <span className="text-slate-500">{(item as AttendanceRow).teamName || '-'}</span>
+        <span className="text-[color:var(--muted)]">{(item as AttendanceRow).teamName || '-'}</span>
       )
     },
     {
@@ -100,8 +100,8 @@ export default function AttendanceTab({
             {summaryItems.map(si => (
               <span key={si.status} className="inline-flex items-center gap-1 whitespace-nowrap">
                 <span className={`w-2 h-2 rounded-full ${summaryDot[si.status]}`}></span>
-                <span className="text-slate-600">{summaryLabel[si.status]}</span>
-                <span className="font-medium text-slate-700">{si.count}天</span>
+                <span className="text-[color:var(--fg-2)]">{summaryLabel[si.status]}</span>
+                <span className="font-medium text-[color:var(--fg-2)]">{si.count}天</span>
               </span>
             ))}
           </div>
@@ -114,11 +114,11 @@ export default function AttendanceTab({
       render: (item) => (
         <div className="flex items-center gap-2">
           <button onClick={() => onOpenDetail(item)}
-            className="text-blue-600 hover:text-blue-800 text-sm font-medium">编辑</button>
+            className="text-[color:var(--accent)] hover:opacity-80 text-sm font-medium">编辑</button>
           <button onClick={() => onOpenHistory?.(((item as AttendanceRow).projectWorkerId ?? 0), item.memberName || '', (item as AttendanceRow).teamName || '')}
-            className="text-indigo-500 hover:text-indigo-700 text-sm">历史</button>
+            className="text-[color:var(--accent)] hover:opacity-80 text-sm">历史</button>
           <button onClick={() => onDelete(item)}
-            className="text-red-400 hover:text-red-600 text-sm">删除</button>
+            className="text-danger-400 hover:text-danger-600 text-sm">删除</button>
         </div>
       )
     }
@@ -131,7 +131,7 @@ export default function AttendanceTab({
           <input type="checkbox"
             checked={selectedIds.size === filteredAttendances.length && filteredAttendances.length > 0}
             onChange={toggleAll} className="rounded" />
-          <div className="text-slate-500">
+          <div className="text-[color:var(--muted)]">
             {filteredAttendances.length} / {attendances.length} 人 | 当月天数: {daysInMonth} 天
           </div>
           {selectedIds.size > 0 && (
