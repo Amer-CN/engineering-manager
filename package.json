@@ -7,6 +7,7 @@
     "sync-version": "node scripts/sync-version.mjs",
     "dev": "vite",
     "check": "node scripts/check-rules.cjs",
+    "check:backend": "node scripts/check-backend-rules.cjs",
     "build:frontend": "node scripts/sync-version.mjs && node scripts/check-rules.cjs && tsc && vite build",
     "build": "vite build",
     "preview": "vite preview",
