@@ -1,6 +1,6 @@
 {
   "name": "installer",
-  "version": "0.85.1",
+  "version": "0.85.2",
   "description": "",
   "main": "index.js",
   "scripts": {
