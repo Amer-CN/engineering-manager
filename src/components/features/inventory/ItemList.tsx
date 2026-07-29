@@ -43,14 +43,17 @@ export const ItemList: React.FC<ItemListProps> = ({
       sortable: true,
       sorter: (a, b) => (a.name || '').localeCompare(b.name || '', 'zh-CN'),
       render: (item) => (
-        <>
-          <div className="font-medium text-[color:var(--fg)]">{item.name}</div>
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded bg-[color:var(--panel-2)] border border-[color:var(--border)] flex items-center justify-center flex-shrink-0 text-[color:var(--muted)]">
+            <Icon name="Package" size={14} />
+          </div>
+          <span className="font-medium text-[color:var(--fg)]">{item.name}</span>
           {item.currentStock <= item.minStock && (
-            <span className="text-xs text-danger-500">
-              <Icon name="AlertTriangle" size={12} className="inline-block" /> 库存不足
+            <span className="inline-flex" title={`低库存预警：当前 ${item.currentStock}，安全线 ${item.minStock}`}>
+              <span className="w-2 h-2 rounded-full bg-danger-500" />
             </span>
           )}
-        </>
+        </div>
       )
     },
     {

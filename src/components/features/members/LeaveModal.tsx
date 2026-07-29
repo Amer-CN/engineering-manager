@@ -1,5 +1,5 @@
 import React from 'react'
-import { Modal } from '../../ui/Modal/Modal'
+import { Drawer } from '../../ui/Drawer'
 import type { Member } from '@/types'
 import { Button } from '../../ui/Button'
 
@@ -28,14 +28,14 @@ export function LeaveModal({
   if (!visible || !worker) return null
 
   return (
-  <Modal isOpen onClose={onClose} title="工人离场" size="md"
+  <Drawer open onClose={onClose} icon="LogOut" title="工人离场"
   footer={
-  <>
+  <div className="flex items-center justify-end gap-3">
   <Button type="button" onClick={onClose}  variant="secondary">取消</Button>
   <Button type="button" onClick={onSubmit}  variant="primary">确认离场</Button>
-  </>
+  </div>
   }>
-  <form onSubmit={onSubmit}>
+  <form onSubmit={onSubmit} className="px-6 py-4">
   <div className="mb-4 p-3 bg-[color:var(--panel-2)] rounded-lg">
   <div className="font-medium text-[color:var(--fg)]">{worker.name}</div>
   <div className="text-sm text-[color:var(--muted)]">
@@ -65,6 +65,6 @@ export function LeaveModal({
   />
   </div>
   </form>
-  </Modal>
+  </Drawer>
   )
 }

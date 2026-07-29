@@ -40,7 +40,7 @@ export function TeamWorkerModal({
     { key: 'name', title: '姓名', render: (item) => <span className="font-medium text-[color:var(--fg)]">{item.name}</span> },
     { key: 'idCard', title: '身份证号', render: (item) => <span className="text-[color:var(--muted)] font-mono text-xs">{masked('idCard', item.idCard) || '-'}</span> },
     { key: 'workerType', title: '工种', render: (item) => <span className="text-[color:var(--fg-2)]">{item.workerType ? getWorkerTypeLabel(item.workerType) : '-'}</span> },
-    { key: 'dailyWage', title: '日工资', align: 'right', render: (item) => <span className="text-[color:var(--fg-2)]">{item.dailyWage ? `¥${item.dailyWage}` : '-'}</span> },
+    { key: 'dailyWage', title: '日工资', align: 'right', render: (item) => <span className="text-[color:var(--fg-2)] font-mono tabular-nums">{item.dailyWage ? `¥${item.dailyWage}` : '-'}</span> },
     { key: 'entryDate', title: '进场日期', render: (item) => <span className="text-[color:var(--muted)] text-xs">{item.entryDate || '-'}</span> },
     { key: 'status', title: '状态', align: 'center', render: (item) => <StatusBadge status={item.status} config={WORKER_STATUS} /> },
     { key: 'actions', title: '操作', align: 'right', render: (item) => (

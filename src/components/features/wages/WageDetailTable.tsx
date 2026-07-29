@@ -39,12 +39,12 @@ export function WageDetailTable({
     ...(scope === 'all' ? [{ key: 'projectName', title: '项目', render: (w: any) => <span className="text-[color:var(--muted)]">{w.projectName || '-'}</span> }] : []),
     { key: 'yearMonth', title: '月份', render: (w) => <span className="text-[color:var(--muted)]">{w.yearMonth}</span> },
     { key: 'workDays', title: '出勤', render: (w) => <span>{w.workDays} 天</span> },
-    { key: 'dailyWage', title: '日薪', render: (w) => <span>¥{w.dailyWage}/天</span> },
+    { key: 'dailyWage', title: '日薪', render: (w) => <span className="font-mono tabular-nums">¥{w.dailyWage}/天</span> },
     {
       key: 'actualWage', title: '应发',
       render: (w) => {
         const actualWage = (w.dailyWage || 0) * (w.workDays || 0)
-        return <span className="font-medium text-success-700">¥{actualWage.toFixed(2)}</span>
+        return <span className="font-medium text-success-700 font-mono tabular-nums">¥{actualWage.toFixed(2)}</span>
       }
     },
     {

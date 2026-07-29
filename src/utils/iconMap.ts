@@ -1,6 +1,6 @@
 import {
   Activity, AlertCircle, AlertTriangle, ArrowDownCircle, ArrowLeft, ArrowLeftRight, ArrowRightLeft, ArrowUpCircle,
-  BadgeCheck, Ban, Banknote, BarChart3, Bell, Bot, Briefcase, Building2,
+  BadgeCheck, Ban, Banknote, BarChart3, Bell, Bot, Braces, Briefcase, Building2,
   Calendar, CalendarCheck, Camera, Check, CheckCircle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ClipboardList, ClipboardPen, Clock, Construction, Copy, CreditCard,
   Database, DollarSign, Download, Droplets,
   Edit3, Eye, EyeOff,
@@ -9,7 +9,8 @@ import {
   HardHat, HeartPulse, HelpCircle, Home,
   Image, Inbox, Info,
   Key,
-  Landmark, LayoutDashboard, Library, Lightbulb, Loader, Loader2, Lock, LogOut,
+  GripVertical,
+  Landmark, LayoutDashboard, Library, Lightbulb, List, Loader, Loader2, Lock, LogOut,
   Mail, MapPin, Menu, Mic, Monitor, Moon, MoreVertical,
   Package, PaintBucket, Paperclip, Pause, Phone, PieChart, Play, Plug, Plus, Power, Printer,
   Receipt, Redo, RefreshCw, RotateCcw, Ruler,
@@ -23,7 +24,7 @@ import {
 
 export const iconMap: Record<string, LucideIcon> = {
   Activity, AlertCircle, AlertTriangle, ArrowDownCircle, ArrowLeft, ArrowLeftRight, ArrowRightLeft, ArrowUpCircle,
-  BadgeCheck, Ban, Banknote, BarChart3, Bell, Bot, Briefcase, Building2,
+  BadgeCheck, Ban, Banknote, BarChart3, Bell, Bot, Braces, Briefcase, Building2,
   Calendar, CalendarCheck, Camera, Check, CheckCircle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ClipboardFile: ClipboardPen, ClipboardList, ClipboardPen, Clock, Construction, Copy, CreditCard,
   Database, DollarSign, Download, Droplets,
   Edit: Edit3, Edit3, Eye, EyeOff,
@@ -32,7 +33,8 @@ export const iconMap: Record<string, LucideIcon> = {
   HardHat, HeartPulse, HelpCircle, Home,
   Image, Inbox, Info,
   Key,
-  Landmark, LayoutDashboard, Library, Lightbulb, Loader, Loader2, Lock, LogOut,
+  GripVertical,
+  Landmark, LayoutDashboard, Library, Lightbulb, List, Loader, Loader2, Lock, LogOut,
   Mail, MapPin, Menu, Mic, Monitor, Moon, MoreVertical,
   Package, PaintBucket, Palette: PaintBucket, Paperclip, Pause, Phone, PieChart, Play, Plug, Plus, Power, Printer,
   Receipt, Redo, RefreshCw, RotateCcw, Ruler,

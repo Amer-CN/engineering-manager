@@ -46,7 +46,8 @@ export function AiProviderSection() {
   const [hasApiKey, setHasApiKey] = useState(false)
   const [params, setParams] = useState<LlmParams>({ temperature: 0.7, maxTokens: 4096 })
   const [status, setStatus] = useState<Status>('loading')
-  const toast = useToastStore()
+  // 按 selector 订阅：全 store 订阅会在 toast 弹出/消失时重建 loadConfig → useEffect 无限重跑（自定义模型卡死根因）
+  const showToast = useToastStore(s => s.showToast)
 
   const { providerName, baseUrl, model } = form
   const { temperature, maxTokens } = params
@@ -54,7 +55,7 @@ export function AiProviderSection() {
   const loadConfig = useCallback(async () => {
     const cfg = await getLlmProviderConfig()
     if (!cfg) {
-      toast.error('加载 AI 配置失败')
+      showToast('加载 AI 配置失败', 'error')
       setStatus('idle')
       return
     }
@@ -71,7 +72,7 @@ export function AiProviderSection() {
       maxTokens: cfg.maxTokens ?? 4096,
     })
     setStatus('idle')
-  }, [toast])
+  }, [showToast])
 
   useEffect(() => {
     loadConfig()
@@ -79,13 +80,13 @@ export function AiProviderSection() {
 
   /** 测试连接 */
   const handleTest = async () => {
-    if (!baseUrl.trim()) { toast.warning('请先填写 Base URL'); return }
-    if (!apiKey.trim()) { toast.warning('测试连接需要填写 API Key（出于安全，已保存的密钥不会回填）'); return }
+    if (!baseUrl.trim()) { showToast('请先填写 Base URL', 'warning'); return }
+    if (!apiKey.trim()) { showToast('测试连接需要填写 API Key（出于安全，已保存的密钥不会回填）', 'warning'); return }
     setStatus('testing')
     try {
       const res = await testLlmProviderConnection({ baseUrl: baseUrl.trim(), apiKey: apiKey.trim() })
-      if (res.success) toast.success(`连接成功，检测到 ${res.data?.modelCount ?? 0} 个模型`)
-      else toast.error(res.error || '连接失败')
+      if (res.success) showToast(`连接成功，检测到 ${res.data?.modelCount ?? 0} 个模型`, 'success')
+      else showToast(res.error || '连接失败', 'error')
     } finally {
       setStatus('idle')
     }
@@ -105,9 +106,9 @@ export function AiProviderSection() {
         maxTokens,              // 原样回传，避免被重置为默认
       }
       const res = await saveLlmProviderConfig(payload)
-      if (!res.success) { toast.error(res.error || '保存失败'); return }
+      if (!res.success) { showToast(res.error || '保存失败', 'error'); return }
       await reloadLlmProviderConfig()   // 立即生效，无需重启
-      toast.success('AI 设置已保存')
+      showToast('AI 设置已保存', 'success')
       await loadConfig()                 // 刷新显示 + hasApiKey，并清空 apiKey 输入
     } finally {
       setStatus('idle')

@@ -72,9 +72,10 @@ export { default as FilterBar } from './FilterBar'
 
 // 表单步骤条 (S20 Stitch)
 export { FormStepper } from './FormStepper'
-
 // 分区标题 (S14 Stitch)
 export { SectionHeader } from './SectionHeader'
+// 侧滑抽屉 (S17 Stitch)
+export { Drawer } from './Drawer'
 
 // Hero 横幅（组件创建后将取消注释）
 // export { HeroBanner } from './HeroBanner'

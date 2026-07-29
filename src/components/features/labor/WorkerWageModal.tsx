@@ -65,7 +65,7 @@ export function WorkerWageModal({ show, workerId, workerName, onClose }: WorkerW
                   {stats.projectBreakdown.map(p => (
                     <div key={p.projectId} className="flex items-center justify-between px-3 py-2 bg-[color:var(--panel-2)] rounded-lg">
                       <span className="text-sm text-[color:var(--fg-2)]">{p.projectName}</span>
-                      <span className="text-sm font-medium text-[color:var(--fg)]">¥{p.total.toLocaleString()}</span>
+                      <span className="text-sm font-medium font-mono tabular-nums text-[color:var(--fg)]">¥{p.total.toLocaleString()}</span>
                     </div>
                   ))}
                 </div>

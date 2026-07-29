@@ -51,8 +51,8 @@ export function TeamWageModal({ show, teamId, teamName, projectId, projectName, 
     { key: 'workerName', title: '姓名', render: (item) => <span className="font-medium text-[color:var(--fg)]">{item.workerName}</span> },
     { key: 'months', title: '月数', align: 'center' },
     { key: 'workDays', title: '出勤天', align: 'center', render: (item) => <span>{item.workDays} 天</span> },
-    { key: 'dailyWage', title: '日薪', align: 'right', render: (item) => <span>¥{item.dailyWage}</span> },
-    { key: 'totalWage', title: '工资', align: 'right', render: (item) => <span className="font-medium text-success-700">¥{item.totalWage.toLocaleString()}</span> },
+    { key: 'dailyWage', title: '日薪', align: 'right', render: (item) => <span className="font-mono tabular-nums">¥{item.dailyWage}</span> },
+    { key: 'totalWage', title: '工资', align: 'right', render: (item) => <span className="font-medium font-mono tabular-nums text-success-700">¥{item.totalWage.toLocaleString()}</span> },
   ]
 
   return (

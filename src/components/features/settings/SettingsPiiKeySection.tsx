@@ -8,7 +8,7 @@ import { Button } from '../../ui/Button'
 
 export function SettingsPiiKeySection() {
   const { confirm, ConfirmDialog } = useConfirm()
-  const { showToast } = useToastStore()
+  const showToast = useToastStore(s => s.showToast)
   const [loading, setLoading] = useState(true)
   const [rotating, setRotating] = useState(false)
   const [reencrypting, setReencrypting] = useState(false)

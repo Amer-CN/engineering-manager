@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Modal } from '../../ui/Modal/Modal'
+import { Drawer } from '../../ui/Drawer'
 import { CategoryPicker } from './CategoryPicker'
 import { ChannelInput } from './ChannelInput'
 import { InvoiceLinker } from './InvoiceLinker'
@@ -80,15 +80,15 @@ export function CostLedgerForm({ projectId, projectName, initial, onSave, onClos
   }
 
   return (
-    <Modal isOpen onClose={onClose} title={initial ? '编辑台账记录' : '新增台账记录'} size="lg"
+    <Drawer open onClose={onClose} icon="Landmark" title={initial ? '编辑台账记录' : '新增台账记录'}
       footer={
-        <>
+        <div className="flex items-center justify-end gap-3">
           <Button type="button" onClick={onClose}  variant="secondary" className="text-sm">取消</Button>
           <Button type="submit" form="cost-ledger-form"  variant="primary" className="text-sm">{initial ? '保存修改' : '保存'}</Button>
-        </>
+        </div>
       }
     >
-      <form id="cost-ledger-form" onSubmit={handleSubmit} className="space-y-4">
+      <form id="cost-ledger-form" onSubmit={handleSubmit} className="space-y-4 px-6 py-4">
         {/* 方向选择 */}
         <div>
           <label className="mb-1 block text-xs font-medium text-[color:var(--fg-2)]">方向</label>
@@ -181,6 +181,6 @@ export function CostLedgerForm({ projectId, projectName, initial, onSave, onClos
           <FileUploader files={form.attachments || []} onChange={v => set('attachments', v)} projectName={projectName} />
         </div>
       </form>
-    </Modal>
+    </Drawer>
   )
 }

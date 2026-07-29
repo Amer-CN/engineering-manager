@@ -10,7 +10,7 @@ import PageHeader from './ui/PageHeader'
 import PageContainer from './ui/PageContainer'
 import { TemplateDashboard, TemplateList, TemplateForm, TemplatePreview, TemplateGenerate } from './features/templates'
 import { logCreate, logUpdate, logDelete } from '../utils/audit'
-import { Modal } from './ui/Modal/Modal'
+import { Drawer } from './ui/Drawer'
 import { getAPI } from '@/services/api-adapter'
 
 type ViewMode = 'dashboard' | 'detail'
@@ -134,11 +134,11 @@ const Templates: React.FC = () => {
           onCreate={handleCreate}
         />
 
-        <Modal isOpen={showModal} onClose={() => { setShowModal(false); setEditingTemplate(null) }}
-          title={editingTemplate ? '编辑模板' : '新建模板'} size="xl">
+        <Drawer open={showModal} onClose={() => { setShowModal(false); setEditingTemplate(null) }}
+          icon="FileText" title={editingTemplate ? '编辑模板' : '新建模板'} width={560}>
           <TemplateForm template={editingTemplate} onSubmit={handleSubmit}
             onCancel={() => { setShowModal(false); setEditingTemplate(null) }} />
-        </Modal>
+        </Drawer>
 
         {/* Preview modal */}
         {previewTemplate && (

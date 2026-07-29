@@ -22,7 +22,7 @@ const {
 
 // ─── framer-motion mock ─────────────────────────────
 vi.mock('framer-motion', () => ({
-  motion: { div: 'div' as any, button: 'button' as any, form: 'form' as any },
+  motion: { div: 'div' as any, button: 'button' as any, form: 'form' as any, aside: 'aside' as any },
   AnimatePresence: ({ children }: any) => React.createElement(React.Fragment, null, children),
 }))
 

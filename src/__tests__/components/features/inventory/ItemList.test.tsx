@@ -27,7 +27,8 @@ describe('ItemList', () => {
 
   test('库存不足应显示警告', () => {
     render(React.createElement(ItemList, baseProps))
-    expect(screen.getByText('库存不足')).toBeTruthy()
+    // S25: 低库存以红色圆点 + title 提示呈现
+    expect(screen.getByTitle(/低库存预警/)).toBeTruthy()
   })
 
   test('点击编辑应触发 onEdit', () => {

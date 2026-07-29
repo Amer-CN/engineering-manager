@@ -117,8 +117,8 @@ describe('InvoiceForm', () => {
         onCancel={mockOnCancel}
       />
     )
-    // 新建模式：标题为"新建发票"
-    expect(screen.getByText('新建发票')).toBeInTheDocument()
+    // 新建模式：抽屉标题为"发票智能录入"（S17）
+    expect(screen.getByText('发票智能录入')).toBeInTheDocument()
     // 取消按钮
     expect(screen.getByText('取消')).toBeInTheDocument()
     // 创建按钮

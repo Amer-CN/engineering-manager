@@ -6,7 +6,7 @@
 import React, { useState, Suspense } from 'react'
 import PageContainer from './ui/PageContainer'
 
-type ContractView = 'dashboard' | 'income' | 'expense' | 'agreement'
+type ContractView = 'dashboard' | 'income' | 'expense' | 'agreement' | 'templates'
 type GroupBy = 'project' | 'role' | 'status'
 
 interface ContractsProps {
@@ -16,6 +16,7 @@ interface ContractsProps {
 // 二级懒加载：进入子页面时才加载对应 chunk
 const ContractDashboard = React.lazy(() => import('./ContractDashboard'))
 const ContractPage = React.lazy(() => import('./ContractPage'))
+const ContractTemplates = React.lazy(() => import('./ContractTemplates'))
 
 const Contracts: React.FC<ContractsProps> = ({ refresh }) => {
   const [view, setView] = useState<ContractView>('dashboard')
@@ -50,6 +51,15 @@ const Contracts: React.FC<ContractsProps> = ({ refresh }) => {
   return (
   <Suspense fallback={fallback}>
   <ContractDashboard refresh={refresh} onNavigate={handleNavigate} />
+  </Suspense>
+  )
+  }
+
+  // 合同模板库（S29 模板编辑器入口）
+  if (view === 'templates') {
+  return (
+  <Suspense fallback={fallback}>
+  <ContractTemplates refresh={refresh} onBack={handleBack} />
   </Suspense>
   )
   }

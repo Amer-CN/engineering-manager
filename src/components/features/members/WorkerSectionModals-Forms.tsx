@@ -1,5 +1,5 @@
 import React from 'react'
-import { Modal } from '../../ui/Modal/Modal'
+import { Drawer } from '../../ui/Drawer'
 import type { Member, WorkerTeam } from '@/types'
 import type { TeamFormData, TransferFormData } from './WorkerSectionModals'
 import { Button } from '../../ui/Button'
@@ -32,15 +32,15 @@ export function TeamFormModal({
   )
 
   return (
-    <Modal isOpen={visible} onClose={onClose} title={editingTeam ? '编辑班组' : '添加班组'} size="md"
+    <Drawer open={visible} onClose={onClose} icon="Users" title={editingTeam ? '编辑班组' : '添加班组'}
       footer={
-        <>
+        <div className="flex items-center justify-end gap-3">
           <Button type="button" onClick={onClose}  variant="secondary">取消</Button>
           <Button type="submit" form="team-form"  variant="warning">{editingTeam ? '保存' : '添加'}</Button>
-        </>
+        </div>
       }
     >
-      <form id="team-form" onSubmit={onSubmit}>
+      <form id="team-form" onSubmit={onSubmit} className="px-6 py-4">
         <div className="mb-4">
           <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">班组名称 *</label>
           <input
@@ -83,7 +83,7 @@ export function TeamFormModal({
           <p className="text-xs text-[color:var(--muted)] mt-1">可以先创建班组，班组长可在之后从工人中选择指定</p>
         </div>
       </form>
-    </Modal>
+    </Drawer>
   )
 }
 
@@ -107,15 +107,15 @@ export function TransferModal({
   onClose
 }: TransferModalProps) {
   return (
-    <Modal isOpen={visible && !!worker} onClose={onClose} title="工人调组" size="md"
+    <Drawer open={visible && !!worker} onClose={onClose} icon="ArrowRightLeft" title="工人调组"
       footer={
-        <>
+        <div className="flex items-center justify-end gap-3">
           <Button type="button" onClick={onClose}  variant="secondary">取消</Button>
           <Button type="submit" form="transfer-form"  variant="primary">确认调组</Button>
-        </>
+        </div>
       }
     >
-      <form id="transfer-form" onSubmit={onSubmit}>
+      <form id="transfer-form" onSubmit={onSubmit} className="px-6 py-4">
         <div className="mb-4 p-3 bg-[color:var(--panel-2)] rounded-lg">
           <div className="font-medium text-[color:var(--fg)]">{worker?.name}</div>
           <div className="text-sm text-[color:var(--muted)]">
@@ -170,6 +170,6 @@ export function TransferModal({
           />
         </div>
       </form>
-    </Modal>
+    </Drawer>
   )
 }

@@ -80,17 +80,17 @@ export default function WageProjectList({ allWageRecords, projects, selectedMont
         <div className="flex items-center gap-6">
           <div>
             <div className="text-xs text-warning-500">累计应发</div>
-            <div className="text-xl font-bold text-[color:var(--fg)]">¥{overallSummary.totalWages.toFixed(0)}</div>
+            <div className="text-xl font-bold text-[color:var(--fg)] font-mono tabular-nums">¥{overallSummary.totalWages.toFixed(0)}</div>
           </div>
           <div className="w-px h-8 bg-warning-200" />
           <div>
             <div className="text-xs text-success-500">已发放</div>
-            <div className="text-xl font-bold text-success-600">¥{overallSummary.totalPaid.toFixed(0)}</div>
+            <div className="text-xl font-bold text-success-600 font-mono tabular-nums">¥{overallSummary.totalPaid.toFixed(0)}</div>
           </div>
           <div className="w-px h-8 bg-warning-200" />
           <div>
             <div className="text-xs text-warning-500">未发放</div>
-            <div className="text-xl font-bold text-warning-600">¥{overallSummary.unpaid.toFixed(0)}</div>
+            <div className="text-xl font-bold text-warning-600 font-mono tabular-nums">¥{overallSummary.unpaid.toFixed(0)}</div>
           </div>
           <div className="w-px h-8 bg-warning-200" />
           <div>

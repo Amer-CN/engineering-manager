@@ -111,7 +111,7 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 pt-4 border-t border-[color:var(--border)]">
             <div className="p-3 rounded-lg bg-[color:var(--panel-2)]">
               <p className="text-caption text-[color:var(--muted)] mb-0.5">合同总额</p>
-              <p className="text-base font-bold text-[color:var(--fg)]">¥{project.budget > 0 ? (project.budget / 10000).toFixed(1) : '-'}万</p>
+              <p className="text-base font-bold text-[color:var(--fg)] font-mono tabular-nums">¥{project.budget > 0 ? (project.budget / 10000).toFixed(1) : '-'}万</p>
             </div>
             <div className="p-3 rounded-lg bg-[color:var(--panel-2)]">
               <p className="text-caption text-[color:var(--muted)] mb-0.5">工期进度</p>
@@ -164,9 +164,9 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
               <div className="w-[160px] h-[160px] flex-shrink-0"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={costDonut} cx="50%" cy="50%" innerRadius={48} outerRadius={72} paddingAngle={3} dataKey="value" strokeWidth={0} animationDuration={1200} animationEasing="ease-out">{costDonut.map((d, i) => <Cell key={i} fill={d.color} />)}</Pie></PieChart></ResponsiveContainer></div>
               <div className="flex-1 space-y-2 text-sm">
                 {costDonut.map((d, i) => (
-                  <div key={i} className="flex items-center justify-between"><div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} /><span className="text-[color:var(--fg-2)]">{d.name}</span></div><span className="font-medium text-[color:var(--fg)]">¥{(d.value / 10000).toFixed(1)}万 <span className="text-xs text-[color:var(--muted)]">{costTotal > 0 ? Math.round(d.value / costTotal * 100) : 0}%</span></span></div>
+                  <div key={i} className="flex items-center justify-between"><div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} /><span className="text-[color:var(--fg-2)]">{d.name}</span></div><span className="font-medium text-[color:var(--fg)] font-mono tabular-nums">¥{(d.value / 10000).toFixed(1)}万 <span className="text-xs text-[color:var(--muted)]">{costTotal > 0 ? Math.round(d.value / costTotal * 100) : 0}%</span></span></div>
                 ))}
-                <div className="pt-2 border-t border-[color:var(--border)] flex justify-between"><span className="text-[color:var(--muted)]">总成本</span><span className="font-bold text-[color:var(--fg)]">¥{(costTotal / 10000).toFixed(1)}万</span></div>
+                <div className="pt-2 border-t border-[color:var(--border)] flex justify-between"><span className="text-[color:var(--muted)]">总成本</span><span className="font-bold text-[color:var(--fg)] font-mono tabular-nums">¥{(costTotal / 10000).toFixed(1)}万</span></div>
               </div>
             </div>
           ) : <EmptyState text="暂无费用数据" />}
@@ -178,7 +178,7 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
         <div className="xl:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Card bordered={false} className="border border-[color:var(--border)] p-4" padding="none">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-[color:var(--muted)] mb-2 flex items-center gap-2"><Icon name="TrendingUp" size={14} className="text-success-500" /> 收入合同</h3>
-            <p className="text-xl font-bold text-success-600 mb-3">¥{stats.incomeTotal > 0 ? (stats.incomeTotal / 10000).toFixed(1) : '0'}万</p>
+            <p className="text-xl font-bold text-success-600 mb-3 font-mono tabular-nums">¥{stats.incomeTotal > 0 ? (stats.incomeTotal / 10000).toFixed(1) : '0'}万</p>
             {incP.length > 0 ? <div className="space-y-2">{incP.slice(0, 4).map(c => (
               <div key={c.id} className="p-2.5 rounded-lg bg-[color:var(--panel-2)] border border-[color:var(--border)]">
                 <div className="flex justify-between mb-1"><span className="text-xs font-medium text-[color:var(--fg-2)] truncate max-w-[120px]">{c.name}</span><span className="text-xs font-bold text-success-600 font-mono tabular-nums">¥{formatMoney(c.amount)}</span></div>
@@ -188,7 +188,7 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
           </Card>
           <Card bordered={false} className="border border-[color:var(--border)] p-4" padding="none">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-[color:var(--muted)] mb-2 flex items-center gap-2"><Icon name="TrendingDown" size={14} className="text-danger-500" /> 支出合同</h3>
-            <p className="text-xl font-bold text-danger-500 mb-3">¥{stats.expenseTotal > 0 ? (stats.expenseTotal / 10000).toFixed(1) : '0'}万</p>
+            <p className="text-xl font-bold text-danger-500 mb-3 font-mono tabular-nums">¥{stats.expenseTotal > 0 ? (stats.expenseTotal / 10000).toFixed(1) : '0'}万</p>
             {expP.length > 0 ? <div className="space-y-2">{expP.slice(0, 4).map(c => (
               <div key={c.id} className="p-2.5 rounded-lg bg-[color:var(--panel-2)] border border-[color:var(--border)]">
                 <div className="flex justify-between mb-1"><span className="text-xs font-medium text-[color:var(--fg-2)] truncate max-w-[120px]">{c.name}</span><span className="text-xs font-bold text-danger-500 font-mono tabular-nums">¥{formatMoney(c.amount)}</span></div>

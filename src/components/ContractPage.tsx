@@ -19,6 +19,7 @@ import { TemplateSelectorModal, TemplateGenerate } from './features/templates'
 import { CONFIG, getApi, getStatusLabel, type ContractType, type Contract } from './features/contracts/contractConfig'
 import { ContractFormModal } from './features/contracts/ContractFormModal'
 import ContractPreviewModal, { type ContractPreviewFile } from './features/contracts/ContractPreviewModal'
+import { ContractKanban } from './features/contracts/ContractKanban'
 import { getContractColumns } from './features/contracts/contractPageColumns'
 import { getAPI } from '@/services/api-adapter'
 import { Button } from './ui/Button'
@@ -50,6 +51,7 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
   const [previewFile, setPreviewFile] = useState<ContractPreviewFile | null>(null)
   const [showTemplateSelector, setShowTemplateSelector] = useState(false)
   const [generatingTemplate, setGeneratingTemplate] = useState<Template | null>(null)
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list')
 
   useEffect(() => {
     getApi(type).then(setApi)
@@ -85,6 +87,20 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
   }
 
   const handleEdit = (contract: Contract) => { setEditingContract(contract); setShowModal(true) }
+
+  // S13 Kanban 拖拽换列 → 更新合同状态
+  const handleKanbanStatusChange = async (contract: Contract, newStatus: string) => {
+    if (!api) return
+    if (!can('contracts:update')) { showToast('您没有编辑合同的权限', 'error'); return }
+    try {
+      await api.updateContract({ ...contract, status: newStatus })
+      showToast(`「${contract.name}」已移至「${getStatusLabel(newStatus)}」`, 'success')
+      loadData(); refresh?.()
+    } catch (error) {
+      console.error('状态更新失败:', error)
+      showToast('状态更新失败', 'error')
+    }
+  }
 
   const handleExport = () => {
     if (!can('contracts:export')) { showToast('您没有导出合同数据的权限', 'error'); return }
@@ -206,8 +222,19 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
       {/* 工具栏 */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          {/* 分组方式 */}
-          {onGroupByChange && (
+          {/* 视图切换：列表 / 看板（S13） */}
+          <div className="flex items-center rounded-lg p-1" style={{ background: 'var(--panel-2)' }}>
+            <button onClick={() => setViewMode('list')} title="列表视图"
+              className="px-3 py-1.5 text-sm rounded-md transition-colors flex items-center gap-1.5" style={viewMode === 'list' ? { background: 'var(--card)', color: 'var(--fg)', boxShadow: 'var(--shadow-card)' } : { background: 'transparent', color: 'var(--muted)' }}>
+              <Icon name="List" size={14} /> 列表
+            </button>
+            <button onClick={() => setViewMode('kanban')} title="看板视图"
+              className="px-3 py-1.5 text-sm rounded-md transition-colors flex items-center gap-1.5" style={viewMode === 'kanban' ? { background: 'var(--card)', color: 'var(--fg)', boxShadow: 'var(--shadow-card)' } : { background: 'transparent', color: 'var(--muted)' }}>
+              <Icon name="LayoutDashboard" size={14} /> 看板
+            </button>
+          </div>
+          {/* 分组方式（仅列表视图） */}
+          {onGroupByChange && viewMode === 'list' && (
             <div className="flex items-center rounded-lg p-1" style={{ background: 'var(--panel-2)' }}>
               <button onClick={() => onGroupByChange('project')}
                 className="px-3 py-1.5 text-sm rounded-md transition-colors" style={groupBy === 'project' ? { background: 'var(--card)', color: 'var(--fg)', boxShadow: 'var(--shadow-card)' } : { background: 'transparent', color: 'var(--muted)' }}>
@@ -253,6 +280,15 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
 
       {/* 分组展示 */}
       <HoverScrollbar className="flex-1 min-h-0">
+      {viewMode === 'kanban' ? (
+        <ContractKanban
+          contracts={filteredContracts}
+          onStatusChange={handleKanbanStatusChange}
+          onCardClick={handleEdit}
+          canEdit={can('contracts:update')}
+        />
+      ) : (
+      <>
       {Object.entries(groupedContracts()).map(([groupName, groupContracts]) => (
         <div key={groupName} className="mb-6">
           <div className="flex items-center justify-between mb-3">
@@ -281,6 +317,8 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
 
       {filteredContracts.length === 0 && (
         <EmptyState icon="ClipboardList" title={config.emptyTitle} description={config.emptyDesc} />
+      )}
+      </>
       )}
       </HoverScrollbar>
 

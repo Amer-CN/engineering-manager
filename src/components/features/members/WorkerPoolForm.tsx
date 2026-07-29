@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Modal } from '../../ui/Modal/Modal'
+import { Drawer } from '../../ui/Drawer'
 import { Icon } from '../../ui/Icon'
 import { Input } from '../../ui/Input/Input'
 import { workerTypeToCode } from './memberFormTypes'
@@ -88,7 +88,7 @@ export function WorkerPoolForm({ visible, editing, onClose, onSubmit, onSwitchTo
   }
 
   return (
-  <Modal isOpen={visible} onClose={onClose} title={editing ? '编辑工人信息' : '添加工人'} size="lg"
+  <Drawer open={visible} onClose={onClose} icon="HardHat" title={editing ? '编辑工人信息' : '添加工人'}
   footer={
   <div className="flex items-center justify-between w-full">
   <div>
@@ -105,7 +105,7 @@ export function WorkerPoolForm({ visible, editing, onClose, onSubmit, onSwitchTo
   </div>
   }
   >
-  <form onSubmit={handleSubmit} className="space-y-4">
+  <form onSubmit={handleSubmit} className="space-y-4 px-6 py-4">
   {/* Basic info */}
   <div className="grid grid-cols-2 gap-4">
   <div>
@@ -214,7 +214,7 @@ export function WorkerPoolForm({ visible, editing, onClose, onSubmit, onSwitchTo
   </div>
   </div>
   </form>
-  </Modal>
+  </Drawer>
   )
 }
 

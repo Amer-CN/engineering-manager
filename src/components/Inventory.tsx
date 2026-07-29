@@ -1,7 +1,7 @@
 import React from 'react'
 import { Icon } from './ui/Icon'
 import PageContainer from './ui/PageContainer'
-import { Modal } from './ui/Modal/Modal'
+import { Drawer } from './ui/Drawer'
 import PageHeader from './ui/PageHeader'
 import { Tabs } from './ui/Tabs'
 import { ItemList, ItemForm, TransList, TransForm, MaterialList, MaterialForm } from './features/inventory'
@@ -112,25 +112,25 @@ const Inventory: React.FC<InventoryProps> = ({ refresh }) => {
   )}
   </Tabs>
 
-  <Modal isOpen={h.showItemModal} onClose={() => { h.setShowItemModal(false); h.setEditingItem(null) }}
-  title={h.editingItem ? '编辑物料' : '添加物料'} size="xl">
+  <Drawer open={h.showItemModal} onClose={() => { h.setShowItemModal(false); h.setEditingItem(null) }}
+  icon="Package" title={h.editingItem ? '编辑物料' : '添加物料'} width={560}>
   <ItemForm item={h.editingItem} partners={h.partners} categories={categories} units={units}
   onSubmit={h.handleItemSubmit} onCancel={() => { h.setShowItemModal(false); h.setEditingItem(null) }} />
-  </Modal>
+  </Drawer>
 
-  <Modal isOpen={h.showTransModal} onClose={() => { h.setShowTransModal(false); h.setTransItem(null) }}
-  title="出入库登记" size="lg">
+  <Drawer open={h.showTransModal} onClose={() => { h.setShowTransModal(false); h.setTransItem(null) }}
+  icon="ArrowLeftRight" title="出入库登记">
   <TransForm items={h.items} projects={h.projects} partners={h.partners}
   defaultItemId={h.transItem?.id} defaultUnitPrice={h.transItem?.purchasePrice}
   onSubmit={h.handleTransSubmit} onCancel={() => { h.setShowTransModal(false); h.setTransItem(null) }} />
-  </Modal>
+  </Drawer>
 
-  <Modal isOpen={h.showMaterialModal} onClose={() => { h.setShowMaterialModal(false); h.setEditingMaterial(null) }}
-  title={h.editingMaterial ? '编辑材料' : '添加项目材料'} size="md">
+  <Drawer open={h.showMaterialModal} onClose={() => { h.setShowMaterialModal(false); h.setEditingMaterial(null) }}
+  icon="Construction" title={h.editingMaterial ? '编辑材料' : '添加项目材料'}>
   <MaterialForm material={h.editingMaterial} projects={h.projects} materialCategories={materialCategories}
   categoryIcons={categoryIcons} onSubmit={h.handleMaterialSubmit}
   onCancel={() => { h.setShowMaterialModal(false); h.setEditingMaterial(null) }} />
-  </Modal>
+  </Drawer>
   </PageContainer>
   )
 }
