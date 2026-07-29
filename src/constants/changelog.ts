@@ -50,6 +50,11 @@ export interface ChangelogVersion {
   groups?: ChangelogGroup[]
 }
 export const versions: ChangelogVersion[] = [
+  { v: 'v0.85.2', date: '2026-07-30', groups: [
+    { label: '🔧 技术优化', items: [
+      '**持续集成恢复全绿**：修复了让自动化测试在服务器上跑不起来的两处历史配置问题（一个测试写死了本机路径、依赖锁定文件未纳入版本库），现在每次提交的自动检查都能正常通过',
+    ] },
+  ] },
   { v: 'v0.85.1', date: '2026-07-30', groups: [
     { label: '🐛 Bug 修复', items: [
       '**多个"新建/保存"功能修好了**：模板管理新建模板、发票的付款/回款登记、图纸上传、出入库登记、支出编辑、台账分类管理等此前保存时会报错的功能，这次全部修复并能正常保存了',
