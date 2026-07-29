@@ -14,7 +14,7 @@ jobs:
     
     strategy:
       matrix:
-        node-version: [18, 20, 22]
+        node-version: [20, 22]
     
     steps:
       - name: Checkout code
@@ -123,9 +123,11 @@ jobs:
         run: dotnet build EngineeringManager.Api/EngineeringManager.Api.csproj
 
       - name: Run backend tests
-        # 排除 SttE2ETests：这些是需要 GB 级 ASR 模型 + 真实转写子进程的可选端到端测试
-        # （模型二进制未纳入版本库，测试文件自身注明用 --filter 选择性运行）
-        run: dotnet test EngineeringManager.Tests/EngineeringManager.Tests.csproj --filter "FullyQualifiedName!~SttE2ETests"
+        # 排除需外部资源的可选端到端测试（CI 无法提供，测试文件自身注明选择性运行）：
+        #   SttE2ETests    — GB 级 ASR 模型 + 真实转写子进程
+        #   BgeE2ETests    — 真实 BGE 嵌入模型（未纳入版本库）
+        #   RealHttp       — Agent 真实 LLM HTTP 调用（需 API key / 网络）
+        run: dotnet test EngineeringManager.Tests/EngineeringManager.Tests.csproj --filter "FullyQualifiedName!~SttE2ETests&FullyQualifiedName!~BgeE2ETests&FullyQualifiedName!~RealHttp"
 
   build:
     name: Full Build (Frontend + Backend)
