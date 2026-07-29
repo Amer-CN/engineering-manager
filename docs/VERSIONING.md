@@ -1,0 +1,106 @@
+# 版本管理与发布（SemVer + 红绿灯）
+
+> 从根 AGENTS.md 下沉（2026-07-29）。主题：SemVer bump 规则、版本号引用位置、tag 策略、changelog 写作规范、红绿灯发布门禁。
+
+## 🔢 版本管理 (v0.75.3 起严格执行 SemVer)
+
+### Bump 规则
+
+| Commit 类型 | Bump 方式 | 例 |
+|------------|----------|---|
+| `feat(...)` 新功能 | **minor**: 0.X.0 | v0.74.0 → v0.75.0 |
+| `fix(...)` bug 修复 | **patch**: 0.X.Y | v0.75.0 → v0.75.1 |
+| `perf(...)` 性能优化 | **patch**: 0.X.Y | |
+| `refactor(...)` 代码重构 | **不 bump** | 版本号不变 |
+| `docs(...)` / `chore(...)` | **不 bump** | 版本号不变 |
+
+### 当前版本: v0.82.1（以 package.json 为唯一真源）
+
+### 历史背景 (重要)
+
+v0.74.0 → v0.85.0 (已 rebase 整理) 期间, 项目曾把 **refactor-only sprint 也当作 minor 版本 bump**, 导致 7 次 spurious `chore: bump version` commits. v0.75.3 已 `git rebase -i ce8cf23` **drop 掉这 7 个 commits**, 重组 git 历史为正确 semver (1 minor + 3 patches + 18 refactors).
+
+### 版本号引用位置（6 处）
+
+**自动同步**（由 `scripts/sync-version.mjs` 从 package.json 读取并写入，`npm run sync-version` 或 `build:frontend` 时自动执行）：
+
+| 位置 | 用途 |
+|------|------|
+| `src/version.ts` | 前端运行时版本常量（`APP_VERSION`） |
+| `EngineeringManager.Api/EngineeringManager.Api.csproj` `<Version>` | 后端程序集版本 |
+| `installer/package.json` | 安装器项目版本 |
+| `installer/src/App.tsx` | 安装器界面显示的版本号（`<WelcomeStep version="x.y.z" />`） |
+
+**手动同步**（bump 版本时需人工修改，脚本不覆盖）：
+
+| 位置 | 用途 |
+|------|------|
+| `src/components/Login.tsx` | 登录页版本 fallback（`__APP_VERSION__` 未注入时的兜底值） |
+| `index.html` | `window.__APP_VERSION__` 占位符（由 vite.config.ts 在构建时从 package.json 替换，无需手动改） |
+
+> **注意**：`index.html` 中的 `<APP_VERSION>` 占位符由 `vite.config.ts` 在每次构建时自动从 `package.json` 读取并替换，因此无需手动修改。实际需手动改的只有 Login.tsx 1 处。
+
+### 何时打 tag
+
+- 每次 minor / patch bump 时, 打完 chore commit 后立刻 `git tag v0.X.Y`
+- refactor-only sprint: **不打 tag**
+
+## 更新日志写作规范 (v0.81.0 起)
+
+**数据源文件**: `src/constants/changelog.ts` — 应用内「设置 → 更新日志」的唯一数据源
+
+**发布同步**: 写完 `changelog.ts` 后, 同步内容到 GitHub Release notes (大白话描述, 与应用内一致)
+
+| 规则 | 说明 |
+|------|------|
+| 语言 | 大白话, 普通人能看懂; 不写代码细节 |
+| 格式 | **所有版本统一用 `groups` 分组格式** (与 GitHub Release 一致) |
+| 条目写法 | `**粗体标题**：大白话描述` — 组件 `renderMarkdownInline` 自动解析粗体 |
+| 分组标题 | `🐛 Bug 修复` / `✨ 体验优化` / `🚀 新功能` / `🔧 技术优化` |
+
+**示例**:
+```typescript
+{ v: 'v0.82.0', date: '2026-07-05', groups: [
+  { label: '🚀 新功能', items: [
+    '**批量导入发票**：现在可以一次拖入多个发票文件，系统自动识别并填好',
+  ] },
+  { label: '🐛 Bug 修复', items: [
+    '**合同金额不显示**：某些合同金额显示为 0 的问题修好了',
+  ] },
+] }
+```
+
+---
+
+## 🚦 红绿灯（v0.71.0 起, v0.79.0 加 tsc）
+
+每个 sprint 收尾 / release 前必跑，0 error 才算合格。完整流程见 [SMOKE-TEST.md](SMOKE-TEST.md)。
+
+```bash
+# 1. 后端编译
+cd "E:\测试\EngineeringManager.Api" && dotnet build 2>&1 | Select-String -Pattern "错误|Build succeeded"
+cd "E:\测试\EngineeringManager.Api" && dotnet build 2>&1 | Select-String -Pattern "(warning|error|生成成功|生成失败|Build)"
+
+# 2. 后端单元测试
+cd "E:\测试\EngineeringManager.Tests" && dotnet test 2>&1 | Select-String -Pattern "通过:|失败:|总计:"
+
+# 3. 前端规则检查
+cd "E:\测试" && npm run check 2>&1 | Select-String -Pattern "HARD FAIL|passed|failed"
+
+# 4. 前端构建
+cd "E:\测试" && npx vite build 2>&1 | Select-String -Pattern "error|success|✓|✗"
+
+# 5. TypeScript 类型检查 (v0.79.0 新增)
+cd "E:\测试" && npx tsc --noEmit --pretty false 2>&1 | Select-String -Pattern "error TS"
+```
+
+**通过标准**：
+
+- 后端 0 错误 0 警告
+- 后端 tests 全部通过（测试套件位于 EngineeringManager.Tests/：Common / Endpoints / Migrations / Security）
+- 前端 check 0 HARD FAIL (73 警告是历史软警告, 不影响)
+- vite build 10-18 秒成功 (依赖并行 CI, 18s 偏慢可接受)
+- **tsc 0 error (v0.79.0 起, 防 unused import / 类型错乱回归)**
+- 前端 vitest 全部通过（mask / useMaskedFn / api-client 等套件）
+
+**5 项全绿才可 git tag v0.x.0**。任何一项红 → 标记 WIP，先修。
