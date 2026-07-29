@@ -115,6 +115,10 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Backend redline static scan
+        # AGENTS.md 后端红线机械化门禁：SQL 参数化 / 端点鉴权覆盖 / catch 日志棘轮
+        run: node scripts/check-backend-rules.cjs
+
       - name: Build backend API
         run: dotnet build EngineeringManager.Api/EngineeringManager.Api.csproj
 
