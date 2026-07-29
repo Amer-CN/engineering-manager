@@ -157,7 +157,7 @@ const Templates: React.FC = () => {
   return (
     <PageContainer>
       {ConfirmDialog}
-      <PageHeader title="模板管理" subtitle="管理文档模板，支持 Word/Excel 文件上传与变量填充" />
+      <PageHeader title="模板管理" subtitle="Word/Excel 文件模板：上传文件、识别 {{变量}}、填值生成文档（在线编辑的合同文本模板请用「合同管理 → 合同模板库」）" />
       <TemplateDashboard
         templates={templates}
         stats={stats}

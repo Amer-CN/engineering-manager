@@ -518,6 +518,15 @@ CREATE TABLE IF NOT EXISTS contract_templates (id INTEGER PRIMARY KEY AUTOINCREM
             try { db.Execute(@"ALTER TABLE invoices ADD COLUMN received_amount REAL DEFAULT 0"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] invoices received_amount: {ex.Message}"); }
             try { db.Execute(@"ALTER TABLE invoices ADD COLUMN settlement_id INTEGER"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] invoices settlement_id: {ex.Message}"); }
 
+            // contract_templates 表迁移：旧库（早期版本建表）缺 content/variables 等列，自愈补齐（重复列报错静默即可）
+            try { db.Execute(@"ALTER TABLE contract_templates ADD COLUMN content TEXT"); } catch { }
+            try { db.Execute(@"ALTER TABLE contract_templates ADD COLUMN variables TEXT"); } catch { }
+            try { db.Execute(@"ALTER TABLE contract_templates ADD COLUMN created_at TEXT"); } catch { }
+            try { db.Execute(@"ALTER TABLE contract_templates ADD COLUMN updated_at TEXT"); } catch { }
+            try { db.Execute(@"ALTER TABLE contract_templates ADD COLUMN created_by INTEGER"); } catch { }
+            try { db.Execute(@"ALTER TABLE contract_templates ADD COLUMN version INTEGER DEFAULT 1"); } catch { }
+            try { db.Execute(@"ALTER TABLE contract_templates ADD COLUMN last_modified_at TEXT"); } catch { }
+
             // payment_records 表迁移
             try
             {

@@ -353,11 +353,33 @@ export const tauriAPI = {
     apiClient.del<void>(`/api/templates/${id}`),
 
   // ────────── 合同模板 ──────────
-  getContractTemplates: () => apiClient.get<ContractTemplate[]>('/api/contract-templates'),
+  // 字段桥接：前端 description/variables[] ↔ 后端 content/variables(JSON 字符串)
+  getContractTemplates: async () => {
+    const res = await apiClient.get<any[]>('/api/contract-templates')
+    if (!res.success || !res.data) return res as any
+    const data = res.data.map(t => ({
+      ...t,
+      // 旧库存在遗留 description 空列，空串也需 fallback 到 content（故用 || 而非 ??）
+      description: t.description || t.content || '',
+      variables: typeof t.variables === 'string' ? (() => { try { return JSON.parse(t.variables) } catch { return [] } })() : (t.variables || []),
+    })) as ContractTemplate[]
+    return { ...res, data }
+  },
   createContractTemplate: (template: Partial<ContractTemplate>) =>
-    apiClient.post<{ id: number }>('/api/contract-templates', template),
-  updateContractTemplate: (id: number, updates: { name?: string; type?: string; description?: string; filePath?: string; fileName?: string; variables?: TemplateVariable[] }) =>
-    apiClient.put<void>('/api/contract-templates', { id, ...updates }),
+    apiClient.post<{ id: number }>('/api/contract-templates', {
+      name: template.name,
+      type: template.type,
+      content: template.description ?? '',
+      variables: JSON.stringify(template.variables || []),
+    }),
+  updateContractTemplate: (template: Partial<ContractTemplate> & { id: number }) =>
+    apiClient.put<void>('/api/contract-templates', {
+      id: template.id,
+      name: template.name,
+      type: template.type,
+      content: template.description ?? '',
+      variables: JSON.stringify(template.variables || []),
+    }),
   deleteContractTemplate: (id: number) =>
     apiClient.del<void>(`/api/contract-templates/${id}`),
 

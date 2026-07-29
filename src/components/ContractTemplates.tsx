@@ -123,7 +123,8 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
 
   const handlePrint = () => {
   if (selectedTemplate) {
-    printContractTemplate(selectedTemplate, formData.description, generateForm)
+    // 修复: 原误传 formData.description(新建表单 state, 生成流程中为空) 导致打印正文恒空
+    printContractTemplate(selectedTemplate, selectedTemplate.description || '', generateForm)
   }
 }
 
@@ -183,7 +184,7 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
   {/* 打印内容容器 */}
   <div ref={printRef} className="hidden print:block"></div>
 
-  <PageHeader title="合同模板" subtitle="管理合同模板，快速生成合同文档" onBack={onBack}
+  <PageHeader title="合同模板" subtitle="在线编辑的文本变量模板：编辑正文、绑定变量、填值后直接打印（Word/Excel 文件模板请用「模板管理」）" onBack={onBack}
   actions={
   <Button onClick={() => { resetForm(); setShowModal(true) }}  variant="primary">
   <span className="text-xl">+</span> 添加模板
