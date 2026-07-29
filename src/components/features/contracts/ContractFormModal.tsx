@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Icon } from '../../ui/Icon'
-import { Modal } from '../../ui/Modal/Modal'
+import { Drawer } from '../../ui/Drawer'
 import { Input } from '../../ui/Input/Input'
 import { PartnerSelect } from '../partners/PartnerSelect'
 import { FileDropZone } from '../partners/FileDropZone'
@@ -113,7 +113,9 @@ export const ContractFormModal: React.FC<Props> = ({ show, type, editingContract
   }
 
   return (
-    <Modal isOpen={show} onClose={onClose}
+    <Drawer open={show} onClose={onClose}
+      icon="FileText"
+      width={560}
       title={
         <div className="flex items-center gap-2">
           <span>{isEditing ? '编辑合同' : config.modalCreateTitle}</span>
@@ -125,14 +127,13 @@ export const ContractFormModal: React.FC<Props> = ({ show, type, editingContract
           <span className="px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'var(--panel-2)', color: 'var(--fg-2)' }}>{config.label}</span>
         </div>
       }
-      size="xl"
       footer={
-        <>
+        <div className="flex items-center justify-end gap-3">
           <Button type="button" onClick={onClose}  variant="secondary">取消</Button>
           <Button type="button" onClick={handleSubmit}  variant="primary">{isEditing ? '保存' : '添加'}</Button>
-        </>
+        </div>
       }>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="px-6 py-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="col-span-2"><Input label="合同名称" type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} size="sm" required /></div>
           <div><label className="block text-sm font-medium mb-1 text-[color:var(--fg-2)]">关联项目 *</label><select value={formData.projectId} onChange={e => setFormData({ ...formData, projectId: parseInt(e.target.value) })} className="select" required><option value="">选择项目</option>{projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
@@ -164,6 +165,6 @@ export const ContractFormModal: React.FC<Props> = ({ show, type, editingContract
           </div>
         </div>
       </form>
-    </Modal>
+    </Drawer>
   )
 }

@@ -29,7 +29,8 @@ const mockToast = vi.hoisted(() => ({
   toasts: [],
 }))
 vi.mock('@/store/toastStore', () => ({
-  useToastStore: () => mockToast,
+  // 组件改用 selector 订阅（useToastStore(s => s.showToast)），mock 需透传 selector
+  useToastStore: (selector?: (s: typeof mockToast) => unknown) => (selector ? selector(mockToast) : mockToast),
 }))
 
 import { AiProviderSection } from '../AiProviderSection'
@@ -108,7 +109,7 @@ describe('AiProviderSection', () => {
     // reload 被调用
     expect(mockReloadLlmProviderConfig).toHaveBeenCalled()
     // toast 成功
-    expect(mockToast.success).toHaveBeenCalledWith('AI 设置已保存')
+    expect(mockToast.showToast).toHaveBeenCalledWith('AI 设置已保存', 'success')
   })
 
   test('自定义模式下 apiKey 为空点"测试" → 出现 warning，testLlmProviderConnection 未被调用', async () => {
@@ -130,7 +131,7 @@ describe('AiProviderSection', () => {
     fireEvent.click(screen.getByText('测试连接'))
 
     await waitFor(() => {
-      expect(mockToast.warning).toHaveBeenCalledWith('测试连接需要填写 API Key（出于安全，已保存的密钥不会回填）')
+      expect(mockToast.showToast).toHaveBeenCalledWith('测试连接需要填写 API Key（出于安全，已保存的密钥不会回填）', 'warning')
     })
 
     // testLlmProviderConnection 未被调用

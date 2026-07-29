@@ -18,7 +18,7 @@ const INK = ['var(--accent)', 'var(--fg-2)', 'var(--muted)', 'var(--border-stron
 
 interface ContractDashboardProps {
   refresh?: () => void
-  onNavigate?: (view: 'income' | 'expense' | 'agreement', opts?: { createNew?: boolean }) => void
+  onNavigate?: (view: 'income' | 'expense' | 'agreement' | 'templates', opts?: { createNew?: boolean }) => void
 }
 
 const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNavigate }) => {
@@ -240,6 +240,16 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
                 <div>
                   <div className="font-medium text-sm" style={{ color: 'var(--fg)' }}>新增支出合同</div>
                   <div className="text-xs" style={{ color: 'var(--muted)' }}>记录采购/分包</div>
+                </div>
+              </button>
+              <button onClick={() => onNavigate?.('templates')}
+                className="w-full p-3 rounded-lg text-left transition-colors flex items-center gap-3 hover:bg-[color:var(--sidebar-item-hover)]" style={{ background: 'var(--panel-2)' }}>
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
+                  <Icon name="FileText" size={18} />
+                </div>
+                <div>
+                  <div className="font-medium text-sm" style={{ color: 'var(--fg)' }}>合同模板库</div>
+                  <div className="text-xs" style={{ color: 'var(--muted)' }}>变量模板维护与生成</div>
                 </div>
               </button>
             </div>

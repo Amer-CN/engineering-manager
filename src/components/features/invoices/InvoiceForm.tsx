@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { InvoiceType, InvoiceKind, InvoiceTaxRate, Project, Partner, IncomeContract, ExpenseContract } from '@/types/electron'
-import { motion } from 'framer-motion'
 import { FileDropZone } from '../partners/FileDropZone'
 import { FilePreviewModal } from './FilePreviewModal'
 import { useInvoiceAmounts } from './useInvoiceAmounts'
@@ -9,6 +8,7 @@ import { HoverScrollbar } from '../../ui/HoverScrollbar'
 import { InvoiceOCRBlock } from './InvoiceOCRBlock'
 import { InvoiceFormFields } from './InvoiceFormFields'
 import { Button } from '../../ui/Button'
+import { Drawer } from '../../ui/Drawer'
 
 export interface InvoiceFormData {
   type: InvoiceType
@@ -119,16 +119,20 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
 
   return (
   <>
-  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-  <motion.div className="rounded-xl w-full max-w-lg max-h-[90vh] overflow-hidden" style={{ background: 'var(--panel)', border: '1px solid var(--border)' }} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.2 }}>
-  <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)' }}>
-  <h2 className="text-xl font-semibold" style={{ color: 'var(--fg)' }}>
-  {isEditing ? '编辑发票' : '新建发票'}
-  </h2>
-  <button onClick={onCancel} className="text-[color:var(--muted)] hover:text-[color:var(--fg-2)]">✕</button>
-  </div>
-  
-  <form onSubmit={handleSubmit} className="flex flex-col overflow-hidden flex-1">
+  {/* S17 发票智能录入 — 右侧抽屉模式 */}
+  <Drawer
+    open
+    onClose={onCancel}
+    icon="Receipt"
+    title={isEditing ? '编辑发票' : '发票智能录入'}
+    footer={
+      <div className="flex items-center justify-end gap-3">
+        <Button type="button" onClick={onCancel} variant="secondary">取消</Button>
+        <Button type="submit" form="invoice-drawer-form" variant="primary">{isEditing ? '保存' : '创建'}</Button>
+      </div>
+    }
+  >
+  <form id="invoice-drawer-form" onSubmit={handleSubmit} className="flex flex-col h-full">
   <HoverScrollbar className="flex-1 px-6 py-4">
     <InvoiceFormFields
       formData={formData}
@@ -179,13 +183,8 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
       }))}
     />
   </HoverScrollbar>
-  <div className="flex items-center justify-end gap-3 px-6 py-4 shrink-0" style={{ borderTop: '1px solid var(--border)' }}>
-  <Button type="button" onClick={onCancel}  variant="secondary">取消</Button>
-  <Button type="submit"  variant="primary">{isEditing ? '保存' : '创建'}</Button>
-  </div>
   </form>
-  </motion.div>
-  </div>
+  </Drawer>
 
   {previewFile && <FilePreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />}
   </>

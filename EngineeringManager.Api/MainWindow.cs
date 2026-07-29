@@ -328,6 +328,8 @@ public class MainWindow : Form
                     case "resize":
                         int w = j.RootElement.GetProperty("width").GetInt32();
                         int h = j.RootElement.GetProperty("height").GetInt32();
+                        // 主界面大窗施加最小尺寸，防止拖得过窄导致布局挤压；登录小窗（300×400）不受限
+                        MinimumSize = (w >= 900) ? new Size(960, 640) : Size.Empty;
                         Size = new Size(w, h); CenterToScreen(); break;
                     case "minimize":        WindowState = FormWindowState.Minimized; break;
                     case "maximize":        ToggleMaximize(); break;

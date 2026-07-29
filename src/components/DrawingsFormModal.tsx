@@ -1,6 +1,6 @@
 import React from 'react'
 import type { Drawing, Project } from '@/types/electron'
-import { Modal } from './ui/Modal/Modal'
+import { Drawer } from './ui/Drawer'
 import { Input } from './ui/Input/Input'
 import { DrawingUploadForm } from './DrawingsUploadForm'
 import { categories } from './drawingsConstants'
@@ -45,17 +45,18 @@ export const DrawingsFormModal: React.FC<DrawingsFormModalProps> = ({
   resetForm
 }) => {
   return (
-    <Modal isOpen={showModal} onClose={() => { if (!uploading) { setShowModal(false); resetForm() } }}
-      title={editingDrawing ? '编辑图纸' : '上传图纸'} size="md"
-      footer={<>
+    <Drawer open={showModal} onClose={() => { if (!uploading) { setShowModal(false); resetForm() } }}
+      icon="Ruler"
+      title={editingDrawing ? '编辑图纸' : '上传图纸'}
+      footer={<div className="flex items-center justify-end gap-3">
         <Button type="button" onClick={() => { if (uploading) return; setShowModal(false); resetForm() }}
           disabled={uploading}  variant="secondary" className="disabled:opacity-50">取消</Button>
         <Button type="submit" form="drawing-form" disabled={uploading}
            variant="primary" className="disabled:opacity-50 disabled:cursor-not-allowed">
           {uploading ? `上传中 ${uploadProgress.current}/${uploadProgress.total}...` : editingDrawing ? '保存' : formData.files.length > 1 ? `上传 (${formData.files.length})` : '上传'}
         </Button>
-      </>}>
-      <form id="drawing-form" onSubmit={handleSubmit}>
+      </div>}>
+      <form id="drawing-form" onSubmit={handleSubmit} className="px-6 py-4">
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1">所属项目*</label>
@@ -91,6 +92,6 @@ export const DrawingsFormModal: React.FC<DrawingsFormModalProps> = ({
           </div>
         </div>
       </form>
-    </Modal>
+    </Drawer>
   )
 }

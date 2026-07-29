@@ -52,7 +52,7 @@ interface ApiResponse<T> {
  */
 async function get<T>(path: string, params?: Record<string, unknown>): Promise<ApiResponse<T>> {
   try {
-    const url = new URL(`${API_BASE}${path}`);
+    const url = new URL(`${API_BASE}${path}`, window.location.origin);
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {

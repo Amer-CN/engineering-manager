@@ -55,7 +55,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
   const [renameValue, setRenameValue] = useState('')
   const committingRef = useRef(false)
   const cancelRenameRef = useRef(false)
-  const toast = useToastStore()
+  const showToast = useToastStore(s => s.showToast)
 
   const loadConversations = useCallback(async () => {
     setLoading(true)
@@ -79,11 +79,11 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
     setConversations(prev => prev.filter(c => c.id !== targetId))
     try {
       const ok = await deleteAgentConversation(targetId)
-      if (ok) { toast.success('对话已删除') }
-      else { rollbackInsert(deleteTarget); toast.error('删除失败') }
-    } catch { rollbackInsert(deleteTarget); toast.error('删除失败') }
+      if (ok) { showToast('对话已删除', 'success') }
+      else { rollbackInsert(deleteTarget); showToast('删除失败', 'error') }
+    } catch { rollbackInsert(deleteTarget); showToast('删除失败', 'error') }
     finally { setDeleting(false); setDeleteTarget(null) }
-  }, [deleteTarget, toast])
+  }, [deleteTarget, showToast])
 
   const startRename = useCallback((conv: { id: number; title: string }) => {
     cancelRenameRef.current = false
@@ -104,16 +104,16 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
     setRenamingId(null)
     try {
       const ok = await renameAgentConversation(convId, newTitle)
-      if (ok) { toast.success('已重命名') }
+      if (ok) { showToast('已重命名', 'success') }
       else {
         setConversations(prev => prev.map(c => c.id === convId && prevTitle ? { ...c, title: prevTitle } : c))
-        toast.error('重命名失败')
+        showToast('重命名失败', 'error')
       }
     } catch {
       setConversations(prev => prev.map(c => c.id === convId && prevTitle ? { ...c, title: prevTitle } : c))
-      toast.error('重命名失败')
+      showToast('重命名失败', 'error')
     } finally { committingRef.current = false }
-  }, [renameValue, conversations, toast])
+  }, [renameValue, conversations, showToast])
 
   const filtered = useMemo(() => {
     if (!searchQuery.trim()) return conversations

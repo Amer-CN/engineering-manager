@@ -17,16 +17,16 @@ interface MessageActionsProps {
 const MessageActions: React.FC<MessageActionsProps> = ({ content, onResend }) => {
   const [copied, setCopied] = useState(false)
   const [feedback, setFeedback] = useState<'up' | 'down' | null>(null)
-  const toast = useToastStore()
+  const showToast = useToastStore(s => s.showToast)
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(content)
       setCopied(true)
-      toast.success('已复制到剪贴板')
+      showToast('已复制到剪贴板', 'success')
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      toast.error('复制失败')
+      showToast('复制失败', 'error')
     }
   }
 
@@ -37,9 +37,9 @@ const MessageActions: React.FC<MessageActionsProps> = ({ content, onResend }) =>
   const handleFeedback = (type: 'up' | 'down') => {
     setFeedback(prev => prev === type ? null : type)
     if (type === 'up') {
-      toast.success('感谢反馈！')
+      showToast('感谢反馈！', 'success')
     } else {
-      toast.info('已记录您的反馈')
+      showToast('已记录您的反馈', 'info')
     }
   }
 

@@ -23,7 +23,7 @@ const AUTO_LOCK_OPTIONS = [
 export function AccountSection() {
   const { currentUser } = useAuth()
   const { masked, toggleMask, isSyncing } = useMask()
-  const toast = useToastStore()
+  const showToast = useToastStore(s => s.showToast)
 
   // 修改密码
   const [oldPwd, setOldPwd] = useState('')
@@ -41,22 +41,22 @@ export function AccountSection() {
   }, [])
 
   const handleChangePassword = async () => {
-    if (!oldPwd) { toast.warning('请输入原密码'); return }
-    if (newPwd.length < 6) { toast.warning('新密码至少 6 位'); return }
-    if (newPwd !== confirmPwd) { toast.warning('两次输入的新密码不一致'); return }
-    if (newPwd === oldPwd) { toast.warning('新密码不能与原密码相同'); return }
+    if (!oldPwd) { showToast('请输入原密码', 'warning'); return }
+    if (newPwd.length < 6) { showToast('新密码至少 6 位', 'warning'); return }
+    if (newPwd !== confirmPwd) { showToast('两次输入的新密码不一致', 'warning'); return }
+    if (newPwd === oldPwd) { showToast('新密码不能与原密码相同', 'warning'); return }
     setChanging(true)
     try {
       const api = await getAPI()
       const res = await api.changeOwnPassword(oldPwd, newPwd)
       if (res.success) {
-        toast.success('密码修改成功')
+        showToast('密码修改成功', 'success')
         setOldPwd(''); setNewPwd(''); setConfirmPwd('')
       } else {
-        toast.error(res.error || '修改失败')
+        showToast(res.error || '修改失败', 'error')
       }
     } catch (e) {
-      toast.error(String(e))
+      showToast(String(e), 'error')
     } finally {
       setChanging(false)
     }

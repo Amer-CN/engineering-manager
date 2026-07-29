@@ -32,8 +32,8 @@ export const WageDetailRow = React.memo(function WageDetailRow({
       {scope === 'all' && <td className="px-3 py-3 text-[color:var(--muted)]">{record.projectName || '-'}</td>}
       <td className="px-3 py-3 text-[color:var(--muted)]">{record.yearMonth}</td>
       <td className="px-3 py-3">{record.workDays} 天</td>
-      <td className="px-3 py-3">¥{record.dailyWage}/天</td>
-      <td className="px-3 py-3 font-medium text-success-700">¥{actualWage.toFixed(2)}</td>
+      <td className="px-3 py-3 font-mono tabular-nums">¥{record.dailyWage}/天</td>
+      <td className="px-3 py-3 font-medium text-success-700 font-mono tabular-nums">¥{actualWage.toFixed(2)}</td>
       <td className="px-3 py-3">
         <input type="text" inputMode="decimal" value={paidAmount}
           placeholder="0.00"

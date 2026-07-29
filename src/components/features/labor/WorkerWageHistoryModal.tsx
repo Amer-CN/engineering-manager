@@ -155,7 +155,7 @@ export function WorkerWageHistoryModal({ show, projectWorkerId, workerName, curr
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-[color:var(--fg)]">{h.yearMonth}</span>
-                      <span className="text-sm font-bold text-warning-700">¥{h.dailyWage}</span>
+                      <span className="text-sm font-bold text-warning-700 font-mono tabular-nums">¥{h.dailyWage}</span>
                       {String(h.dailyWage) !== String(currentDailyWage) && (
                         <span className="text-xs text-[color:var(--muted)]">（当前: ¥{currentDailyWage}）</span>
                       )}

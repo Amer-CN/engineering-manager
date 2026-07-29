@@ -86,7 +86,7 @@ export default function WageTableTab({
       key: 'dailyWage',
       title: '日薪',
       render: (item) => (
-        <span>¥{item.dailyWage ?? '-'}/天</span>
+        <span className="font-mono tabular-nums">¥{item.dailyWage ?? '-'}/天</span>
       )
     },
     {

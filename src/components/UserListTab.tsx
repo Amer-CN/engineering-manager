@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useToastStore } from '@/store/toastStore'
 import { useConfirm } from '@/hooks/useConfirm'
-import { Modal } from './ui/Modal/Modal'
+import { Drawer } from './ui/Drawer'
 import { Input } from './ui/Input/Input'
 import type { UserInfo } from '../types/electron'
 import { Icon } from './ui/Icon'
@@ -95,17 +95,17 @@ export const UserListTab: React.FC<UserListTabProps> = ({ users, onRefresh }) =>
   return (
     <>
       {ConfirmDialog}
-      <Modal isOpen={showCreateForm} onClose={() => { setShowCreateForm(false); setEditingUser(null) }}
-        title={editingUser ? '编辑用户' : '添加用户'} size="md"
-        footer={<>
+      <Drawer open={showCreateForm} onClose={() => { setShowCreateForm(false); setEditingUser(null) }}
+        icon="UserCog" title={editingUser ? '编辑用户' : '添加用户'}
+        footer={<div className="flex items-center gap-3">
           <button type="button" onClick={() => { setShowCreateForm(false); setEditingUser(null) }}
             className="px-4 py-3 bg-[color:var(--panel-2)] hover:bg-[color:var(--panel-2)] text-[color:var(--fg-2)] font-medium rounded-xl transition-colors">取消</button>
           <button type="submit" form="user-form"
             className="flex-1 px-4 py-3 bg-[color:var(--fg)] hover:opacity-90 text-[color:var(--bg)] font-medium rounded-xl transition-colors">
             {editingUser ? '保存修改' : '创建用户'}
           </button>
-        </>}>
-        <form id="user-form" onSubmit={handleSubmit} className="space-y-5">
+        </div>}>
+        <form id="user-form" onSubmit={handleSubmit} className="space-y-5 px-6 py-4">
           <Input label="用户名" size="sm" type="text" required value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })}
             placeholder="请输入用户名" disabled={!!editingUser} />
           <Input label={editingUser ? '新密码（留空保持不变）' : '密码'} size="sm" type="password" required={!editingUser}
@@ -121,7 +121,7 @@ export const UserListTab: React.FC<UserListTabProps> = ({ users, onRefresh }) =>
             </select>
           </div>
         </form>
-      </Modal>
+      </Drawer>
 
       <DataTable
         data={users}

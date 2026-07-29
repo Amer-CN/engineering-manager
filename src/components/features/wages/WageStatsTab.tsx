@@ -39,7 +39,7 @@ export default function WageStatsTab({ wageStats, selectedMonth }: WageStatsTabP
                       <div className="bg-[color:var(--accent)] h-full rounded-full transition-all"
                         style={{ width: `${Math.max(p.percentage, 2)}%` }} />
                     </div>
-                    <span className="text-sm font-medium text-[color:var(--fg-2)] w-20 text-right">¥{p.total.toFixed(0)}</span>
+                    <span className="text-sm font-medium text-[color:var(--fg-2)] w-20 text-right font-mono tabular-nums">¥{p.total.toFixed(0)}</span>
                     <span className="text-xs text-[color:var(--muted)] w-12 text-right">{p.percentage}%</span>
                   </div>
                 ))}

@@ -54,7 +54,7 @@ export function getMatchColumns(
       </span>
     )},
     { key: 'parsedAmount', title: '解析金额', render: (item) => (
-      <span className="font-medium text-[color:var(--fg)]">¥{item.parsedAmount.toFixed(2)}</span>
+      <span className="font-medium text-[color:var(--fg)] font-mono tabular-nums">¥{item.parsedAmount.toFixed(2)}</span>
     )},
     { key: 'matchedWorkerId', title: '匹配工人', render: (item) => (
       <select

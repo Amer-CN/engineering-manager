@@ -150,7 +150,7 @@ export default function WageSummaryTab({ allWageRecords, projectId, projectName 
             {teamRanking.map(([name, amount]) => (
               <div key={name} className="bg-[color:var(--card)] border border-[color:var(--border)] rounded-lg px-4 py-2.5 flex items-center justify-between">
                 <span className="text-sm text-[color:var(--fg-2)]">{name}</span>
-                <span className="text-sm font-medium text-success-600">¥{amount.toLocaleString()}</span>
+                <span className="text-sm font-medium text-success-600 font-mono tabular-nums">¥{amount.toLocaleString()}</span>
               </div>
             ))}
           </div>
@@ -173,7 +173,7 @@ export default function WageSummaryTab({ allWageRecords, projectId, projectName 
                     <span className="text-sm font-bold text-[color:var(--fg)]">{year}年</span>
                     <span className="text-xs text-[color:var(--muted)]">{yearData.recordCount} 条 · {yearData.workerCount} 人</span>
                   </div>
-                  <span className="text-sm font-bold text-success-700">¥{yearData.totalPaid.toLocaleString()}</span>
+                  <span className="text-sm font-bold text-success-700 font-mono tabular-nums">¥{yearData.totalPaid.toLocaleString()}</span>
                 </button>
 
                 {/* 该年的月份列表 */}
@@ -191,7 +191,7 @@ export default function WageSummaryTab({ allWageRecords, projectId, projectName 
                               <span className="text-sm text-[color:var(--fg-2)]">{parseInt(ym.split('-')[1])}月</span>
                               <span className="text-xs text-[color:var(--muted)]">{monthData.recordCount} 条 · {monthData.workerCount} 人</span>
                             </div>
-                            <span className="text-sm font-bold text-success-600">¥{monthData.totalPaid.toLocaleString()}</span>
+                            <span className="text-sm font-bold text-success-600 font-mono tabular-nums">¥{monthData.totalPaid.toLocaleString()}</span>
                           </button>
 
                           {/* 班组行 */}
@@ -204,7 +204,7 @@ export default function WageSummaryTab({ allWageRecords, projectId, projectName 
                                     <span className="text-sm text-[color:var(--muted)]">{teamName}</span>
                                     <span className="text-xs text-[color:var(--muted)]">{teamData.workerCount} 人</span>
                                   </div>
-                                  <span className="text-sm text-success-600">¥{teamData.totalPaid.toLocaleString()}</span>
+                                  <span className="text-sm text-success-600 font-mono tabular-nums">¥{teamData.totalPaid.toLocaleString()}</span>
                                 </div>
                               ))}
                             </div>

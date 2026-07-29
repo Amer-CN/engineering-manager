@@ -5,7 +5,7 @@
  * 但上传使用 XMLHttpRequest 以获得上传进度事件。
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5048'
+const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:5048'
 const TOKEN_KEY = 'jwt_token'
 
 function getToken(): string | null {
@@ -261,7 +261,7 @@ export async function getSttJobs(
 ): Promise<ApiResponse<{ data: SttJobSummary[]; total: number; page: number; size: number }>> {
   try {
     const token = getToken()
-    const url = new URL(`${API_BASE}/api/stt/jobs`)
+    const url = new URL(`${API_BASE}/api/stt/jobs`, window.location.origin)
     url.searchParams.set('page', String(page))
     url.searchParams.set('size', String(size))
     const resp = await fetch(url.toString(), {

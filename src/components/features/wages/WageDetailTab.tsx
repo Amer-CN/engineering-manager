@@ -197,11 +197,11 @@ export default function WageDetailTab({
         <div className="shrink-0 flex items-center justify-end gap-6 px-4 py-2.5 bg-[color:var(--card)] border-t border-[color:var(--border)] text-sm">
           <div className="flex items-center gap-1.5">
             <span className="text-[color:var(--muted)]">应发</span>
-            <span className="font-semibold text-[color:var(--fg)]">¥{summaryTotals.totalActual.toFixed(2)}</span>
+            <span className="font-semibold text-[color:var(--fg)] font-mono tabular-nums">¥{summaryTotals.totalActual.toFixed(2)}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-[color:var(--muted)]">实发</span>
-            <span className="font-semibold text-success-700">¥{summaryTotals.totalPaid.toFixed(2)}</span>
+            <span className="font-semibold text-success-700 font-mono tabular-nums">¥{summaryTotals.totalPaid.toFixed(2)}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-[color:var(--muted)]">差额</span>

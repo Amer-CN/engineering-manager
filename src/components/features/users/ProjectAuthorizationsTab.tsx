@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import { Modal } from '@/components/ui/Modal'
+import { Drawer } from '@/components/ui/Drawer'
 import { DataTable, type Column } from '@/components/DataTable'
 
 /**
@@ -110,24 +111,24 @@ export function ProjectAuthorizationsTab() {
         useHoverScrollbar
       />
 
-      {/* 授权弹窗 */}
-      <Modal
-        isOpen={showGrantModal}
+      {/* 授权抽屉 */}
+      <Drawer
+        open={showGrantModal}
         onClose={() => setShowGrantModal(false)}
+        icon="ShieldCheck"
         title="新增项目授权"
-        size="md"
         footer={
-          <>
+          <div className="flex items-center justify-end gap-3">
             <Button variant="secondary" onClick={() => setShowGrantModal(false)} disabled={grantSubmitting}>
               取消
             </Button>
             <Button variant="primary" onClick={handleGrant} loading={grantSubmitting}>
               授权
             </Button>
-          </>
+          </div>
         }
       >
-        <div className="space-y-4">
+        <div className="space-y-4 px-6 py-4">
           <Select
             label="项目"
             value={grantProjectId === 0 ? "" : String(grantProjectId)}
@@ -150,7 +151,7 @@ export function ProjectAuthorizationsTab() {
             </p>
           </div>
         </div>
-      </Modal>
+      </Drawer>
 
       {/* 撤销确认弹窗 */}
       <Modal

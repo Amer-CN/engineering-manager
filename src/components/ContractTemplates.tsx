@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Icon } from './ui/Icon'
 import { Card } from './ui/Card'
 import PageContainer from './ui/PageContainer'
-import { Modal } from './ui/Modal/Modal'
+import { Drawer } from './ui/Drawer'
 import PageHeader from './ui/PageHeader'
 import { EmptyState } from './ui/EmptyState'
 import { Input } from './ui/Input/Input'
@@ -198,7 +198,7 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
   <p className="text-numeric-xl font-mono tabular-nums tracking-tight" style={{ color: 'var(--fg)' }}>{stats.total}</p>
   </Card>
   {Object.entries(templateTypeConfig).map(([type, config]) => (
-  <Card bordered={false} className="p-4">
+  <Card key={type} bordered={false} className="p-4">
   <p className="text-sm" style={{ color: 'var(--muted)' }}>{config.label}</p>
   <p className="text-numeric-xl font-mono tabular-nums tracking-tight" style={{ color: 'var(--fg)' }}>{stats.byType[type] || 0}</p>
   </Card>
@@ -209,7 +209,7 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
   {templates.length > 0 ? (
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
   {templates.map(template => (
-  <Card bordered={false} hoverable className="hover:shadow-md transition-all">
+  <Card key={template.id} bordered={false} hoverable className="hover:shadow-md transition-all">
   <div className="p-5">
   <div className="flex items-start justify-between mb-4">
   <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
@@ -289,13 +289,14 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
   />
   )}
 
-  <Modal isOpen={showGenerateModal && !!selectedTemplate} onClose={() => { setShowGenerateModal(false); setSelectedTemplate(null) }}
-  title="生成合同" size="xl"
-  footer={<>
+  <Drawer open={showGenerateModal && !!selectedTemplate} onClose={() => { setShowGenerateModal(false); setSelectedTemplate(null) }}
+  icon="Stamp" title="生成合同" width={560}
+  footer={<div className="flex items-center justify-end gap-3">
   <Button onClick={() => { setShowGenerateModal(false); setSelectedTemplate(null) }}  variant="secondary">取消</Button>
   <Button onClick={handlePrint}  variant="primary"><Icon name="Printer" size={14} /> 打印合同</Button>
-  </>}>
-  <p className="text-sm -mt-2 mb-4" style={{ color: 'var(--muted)' }}>填写模板变量，生成合同文档</p>
+  </div>}>
+  <div className="px-6 py-4">
+  <p className="text-sm mb-4" style={{ color: 'var(--muted)' }}>填写模板变量，生成合同文档</p>
   <div className="space-y-4">
   {selectedTemplate?.variables?.map(variable => (
   <div key={variable.key}>
@@ -323,7 +324,8 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
   </div>
   </div>
   </div>
-  </Modal>
+  </div>
+  </Drawer>
   </PageContainer>
   )
 }

@@ -95,7 +95,7 @@ export default function WageRecordsTab({
       sortable: true,
       sorter: (a, b) => ((a.actualWage || 0) - (b.actualWage || 0)),
       render: (item) => (
-        <span className="font-medium">¥{(item.actualWage ?? 0).toFixed(2)}</span>
+        <span className="font-medium font-mono tabular-nums">¥{(item.actualWage ?? 0).toFixed(2)}</span>
       )
     },
     {

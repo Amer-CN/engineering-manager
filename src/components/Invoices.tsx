@@ -104,7 +104,7 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
   )}
   {h.showPaymentModal && (
   <PaymentForm initialData={getPaymentFormData(h.editingPayment)} projects={h.projects} partners={h.partners}
-  invoices={h.invoices} contracts={h.contracts} onSubmit={h.handleSubmitPayment}
+  invoices={h.invoices} contracts={h.contracts} isEditing={!!h.editingPayment} onSubmit={h.handleSubmitPayment}
   onCancel={() => { h.setShowPaymentModal(false); h.setEditingPayment(null) }} />
   )}
   {h.previewFile && <FilePreviewModal file={h.previewFile} onClose={() => h.setPreviewFile(null)} />}

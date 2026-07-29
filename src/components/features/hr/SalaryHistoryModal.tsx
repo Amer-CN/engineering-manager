@@ -174,7 +174,7 @@ const SalaryHistoryModal: React.FC<Props> = ({ member, onClose }) => {
                 <div key={h.id} className="flex items-center justify-between p-3 bg-[color:var(--panel-2)] rounded-lg">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-[color:var(--fg)]">¥{(h.baseSalary || 0).toLocaleString()}</span>
+                      <span className="text-sm font-medium text-[color:var(--fg)] font-mono tabular-nums">¥{(h.baseSalary || 0).toLocaleString()}</span>
                       {h.subsidy > 0 && <span className="text-xs text-warning-600 font-medium">+¥{h.subsidy.toLocaleString()}</span>}
                     </div>
                     <div className="text-xs text-[color:var(--muted)] mt-0.5">

@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react'
 import { InvoiceType, Project, Partner, IncomeContract, ExpenseContract, Invoice } from '@/types/electron'
 import { formatMoney } from '@/utils/format'
 import { parseDateString } from '@/utils/date'
-import { Modal } from '../../ui/Modal/Modal'
+import { Drawer } from '../../ui/Drawer'
 import { Input } from '../../ui/Input/Input'
 import { PaymentFileUpload } from './PaymentFileUpload'
 import { useBankReceiptOCR } from '@/hooks/useBankReceiptOCR'
@@ -20,10 +20,12 @@ export interface PaymentFormProps {
   initialData: PaymentFormData
   projects: Project[]; partners: Partner[]; invoices: Invoice[]
   contracts: { income: IncomeContract[]; expense: ExpenseContract[] }
+  /** 是否为编辑既有记录（新建时 recordDate 默认今天，不能用它判断） */
+  isEditing?: boolean
   onSubmit: (data: PaymentFormData) => void; onCancel: () => void
 }
 
-export const PaymentForm: React.FC<PaymentFormProps> = ({ initialData, projects, partners, invoices, contracts, onSubmit, onCancel }) => {
+export const PaymentForm: React.FC<PaymentFormProps> = ({ initialData, projects, partners, invoices, contracts, isEditing = false, onSubmit, onCancel }) => {
   const [formData, setFormData] = useState<PaymentFormData>(initialData)
   const { processBankReceiptFile } = useBankReceiptOCR()
   const [bankReceiptLoading, setBankReceiptLoading] = useState(false)
@@ -62,20 +64,19 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ initialData, projects,
   (!formData.projectId || inv.projectId === formData.projectId)
   )
 
-  const isEditing = !!initialData.recordDate
   const typeLabel = formData.type === 'invoice_out' ? '回款' : '付款'
 
   return (
-  <Modal isOpen onClose={onCancel}
+  <Drawer open onClose={onCancel}
+  icon="Wallet"
   title={isEditing ? (formData.type === 'invoice_out' ? '编辑回款记录' : '编辑付款记录') : (formData.type === 'invoice_out' ? '回款登记' : '付款登记')}
-  size="xl"
   footer={
-  <>
+  <div className="flex items-center justify-end gap-3">
   <Button type="button" onClick={onCancel}  variant="secondary">取消</Button>
   <Button type="button" onClick={() => onSubmit(formData)}  variant="warning">{isEditing ? '保存' : '登记'}</Button>
-  </>
+  </div>
   }>
-  <form onSubmit={e => { e.preventDefault(); onSubmit(formData) }}>
+  <form onSubmit={e => { e.preventDefault(); onSubmit(formData) }} className="px-6 py-4">
   <div className="space-y-4">
   <div className="grid grid-cols-2 gap-4">
   <div>
@@ -143,7 +144,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ initialData, projects,
   <span className="text-xs" style={{ color: 'var(--muted)' }}>{invoice.name}</span>
   </div>
   <div className="flex items-center gap-3 text-xs mt-1 font-mono tabular-nums" style={{ color: 'var(--muted)' }}>
-  <span>¥{formatMoney(invoice.amount)}</span>
+  <span className="font-mono tabular-nums">¥{formatMoney(invoice.amount)}</span>
   <span style={{ color: 'var(--success)' }}>已收 ¥{formatMoney(invoice.receivedAmount)}</span>
   {remaining > 0 ? <span style={{ color: 'var(--warning)' }}>待收 ¥{formatMoney(remaining)}</span> : <span style={{ color: 'var(--success)' }}>✓ 已收齐</span>}
   </div>
@@ -207,7 +208,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ initialData, projects,
   )}
   </div>
   </form>
-  </Modal>
+  </Drawer>
   )
 }
 

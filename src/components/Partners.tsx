@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
 import { Icon } from './ui/Icon'
-import { HoverScrollbar } from './ui/HoverScrollbar'
+import { Drawer } from './ui/Drawer'
 import Spinner from './ui/Spinner'
 import { Partner, Supervisor, Project } from '../types/electron'
 import { PartnerList, PartnerForm, SupervisorList, SupervisorForm } from './features/partners'
@@ -152,31 +151,18 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
               onDelete={handlePartnerDelete}
             />
             {showPartnerModal && (
-              <motion.div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
-                <div className="modal-content flex flex-col" style={{ height: 'min(90vh, 800px)' }}>
-                  <div className="px-6 py-4 border-b border-[color:var(--border)] bg-[color:var(--card)] shrink-0 flex items-center justify-between">
-                    <h2 className="text-xl font-semibold text-[color:var(--fg)]">
-                      {editingPartner ? '编辑单位' : '添加单位'}
-                    </h2>
-                    <button type="button" onClick={() => { setShowPartnerModal(false); setEditingPartner(null) }} className="text-[color:var(--muted)] hover:text-[color:var(--fg-2)] p-1">
-                      <Icon name="X" size={20} />
-                    </button>
-                  </div>
-                  <div className="flex-1 min-h-0 overflow-hidden">
-                    <HoverScrollbar className="h-full">
-                      <PartnerForm
-                        partner={editingPartner}
-                        projects={projects}
-                        onSubmit={(data) => handlePartnerSubmit(data, editingPartner)}
-                        onCancel={() => {
-                          setShowPartnerModal(false)
-                          setEditingPartner(null)
-                        }}
-                      />
-                    </HoverScrollbar>
-                  </div>
-                </div>
-              </motion.div>
+              <Drawer open onClose={() => { setShowPartnerModal(false); setEditingPartner(null) }}
+                icon="Building2" title={editingPartner ? '编辑单位' : '添加单位'} width={560}>
+                <PartnerForm
+                  partner={editingPartner}
+                  projects={projects}
+                  onSubmit={(data) => handlePartnerSubmit(data, editingPartner)}
+                  onCancel={() => {
+                    setShowPartnerModal(false)
+                    setEditingPartner(null)
+                  }}
+                />
+              </Drawer>
             )}
           </>
         )}
@@ -193,31 +179,18 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
               onDelete={handleSupervisorDelete}
             />
             {showSupervisorModal && (
-              <motion.div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
-                <div className="modal-content flex flex-col" style={{ height: 'min(90vh, 800px)' }}>
-                  <div className="px-6 py-4 border-b border-[color:var(--border)] bg-[color:var(--card)] shrink-0 flex items-center justify-between">
-                    <h2 className="text-xl font-semibold text-[color:var(--fg)]">
-                      {editingSupervisor ? '编辑单位' : '添加单位'}
-                    </h2>
-                    <button type="button" onClick={() => { setShowSupervisorModal(false); setEditingSupervisor(null) }} className="text-[color:var(--muted)] hover:text-[color:var(--fg-2)] p-1">
-                      <Icon name="X" size={20} />
-                    </button>
-                  </div>
-                  <div className="flex-1 min-h-0 overflow-hidden">
-                    <HoverScrollbar className="h-full">
-                      <SupervisorForm
-                        supervisor={editingSupervisor}
-                        projects={projects}
-                        onSubmit={(data) => handleSupervisorSubmit(data, editingSupervisor)}
-                        onCancel={() => {
-                          setShowSupervisorModal(false)
-                          setEditingSupervisor(null)
-                        }}
-                      />
-                    </HoverScrollbar>
-                  </div>
-                </div>
-              </motion.div>
+              <Drawer open onClose={() => { setShowSupervisorModal(false); setEditingSupervisor(null) }}
+                icon="ShieldCheck" title={editingSupervisor ? '编辑单位' : '添加单位'} width={560}>
+                <SupervisorForm
+                  supervisor={editingSupervisor}
+                  projects={projects}
+                  onSubmit={(data) => handleSupervisorSubmit(data, editingSupervisor)}
+                  onCancel={() => {
+                    setShowSupervisorModal(false)
+                    setEditingSupervisor(null)
+                  }}
+                />
+              </Drawer>
             )}
           </>
         )}
