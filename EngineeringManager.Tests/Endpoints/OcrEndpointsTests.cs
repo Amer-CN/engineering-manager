@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.IO;
 using EngineeringManager.Api;
 using Xunit;
 
@@ -9,7 +10,9 @@ namespace EngineeringManager.Tests.Endpoints;
 /// </summary>
 public class OcrEndpointsTests
 {
-    private const string OcrEndpointsPath = @"E:\测试\EngineeringManager.Api\Endpoints\OcrEndpoints.cs";
+    // 从测试程序集位置上溯 4 级到仓库根，再定位 OcrEndpoints.cs（原硬编码绝对路径在 CI/他机上读不到）
+    private static readonly string OcrEndpointsPath = Path.GetFullPath(
+        Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "EngineeringManager.Api", "Endpoints", "OcrEndpoints.cs"));
 
     [Fact]
     public void CatchOcrError_HelperMethodExists()
