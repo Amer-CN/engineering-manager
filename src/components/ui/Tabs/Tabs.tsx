@@ -20,7 +20,7 @@ export interface TabsProps {
   contentClassName?: string
   size?: 'sm' | 'md' | 'lg'
   fullWidth?: boolean
-  variant?: 'default' | 'hero'
+  variant?: 'default' | 'hero' | 'segmented'
 }
 
 const tabPadding: Record<string, string> = {
@@ -42,9 +42,10 @@ function TabsTrigger({
   onClick: () => void
   size?: 'sm' | 'md' | 'lg'
   fullWidth?: boolean
-  variant?: 'default' | 'hero'
+  variant?: 'default' | 'hero' | 'segmented'
 }) {
   const isHero = variant === 'hero'
+  const isSegmented = variant === 'segmented'
   return (
     <button
       role="tab"
@@ -52,7 +53,7 @@ function TabsTrigger({
       disabled={tab.disabled}
       onClick={onClick}
       className={`
-      relative ${isHero ? 'rounded-md' : ''} font-medium transition-all duration-200
+      relative ${isHero ? 'rounded-md' : ''} ${isSegmented ? 'rounded-[7px]' : ''} font-medium transition-all duration-200
       focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-soft)]
       ${tabPadding[size]}
       ${fullWidth ? 'flex-1' : ''}
@@ -60,9 +61,13 @@ function TabsTrigger({
         ? isActive
           ? 'text-success-300 bg-[color:var(--card)]/15 rounded-md'
           : 'text-white/50 hover:text-white/80'
-        : isActive
-          ? 'text-[color:var(--fg)] border-b-2 border-[color:var(--accent)] -mb-px'
-          : 'text-[color:var(--muted)] hover:text-[color:var(--fg-2)]'
+        : isSegmented
+          ? isActive
+            ? 'text-[color:var(--fg)] bg-[color:var(--card)] border border-[color:var(--border)] shadow-[0_1px_2px_rgba(0,0,0,0.05)]'
+            : 'text-[color:var(--muted)] hover:text-[color:var(--fg-2)] border border-transparent'
+          : isActive
+            ? 'text-[color:var(--fg)] border-b-2 border-[color:var(--accent)] -mb-px'
+            : 'text-[color:var(--muted)] hover:text-[color:var(--fg-2)]'
       }
       ${tab.disabled ? 'opacity-50 cursor-not-allowed' : ''}
       `}
@@ -102,13 +107,16 @@ export function Tabs({
 }: TabsProps) {
   const hasFlexLayout = contentClassName?.includes('flex')
   const isHero = variant === 'hero'
+  const isSegmented = variant === 'segmented'
 
   return (
     <div className={`${fullWidth ? 'w-full' : ''} ${className}`}>
-      {/* Tab 按钮容器 — Stitch: underline tabs */}
+      {/* Tab 按钮容器 — Stitch: underline / segmented tabs */}
       <div
         className={`flex items-center shrink-0 ${
-          isHero ? 'gap-1 rounded-xl p-1 bg-[color:var(--card)]/10' : 'gap-6 border-b border-[color:var(--border)] pb-0'
+          isHero ? 'gap-1 rounded-xl p-1 bg-[color:var(--card)]/10'
+          : isSegmented ? 'gap-1 inline-flex p-1 rounded-[11px] border border-[color:var(--border)] bg-[color:var(--panel-2)]'
+          : 'gap-6 border-b border-[color:var(--border)] pb-0'
         }`}
         role="tablist"
         aria-orientation="horizontal"

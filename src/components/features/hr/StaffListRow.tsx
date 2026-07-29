@@ -27,7 +27,7 @@ export const StaffListRow = React.memo(function StaffListRow({
       <td className="px-4 py-3 text-sm text-[color:var(--fg-2)]">{m.phone || '-'}</td>
       <td className="px-4 py-3">
         <select value={m.status || 'active'} onChange={e => onStatusChange(m, e.target.value)}
-          className={`px-2 py-1 rounded-full text-xs font-medium cursor-pointer ${HR_STATUS_COLORS[m.status || 'active'] || 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)]'}`}>
+          className={`status-badge px-2 py-1 rounded-full text-xs font-medium cursor-pointer ${HR_STATUS_COLORS[m.status || 'active'] || 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)]'}`}>
           {Object.entries(HR_STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
       </td>

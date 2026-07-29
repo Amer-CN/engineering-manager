@@ -29,8 +29,8 @@ export const TABLE = {
   /** 粘性表头（配合 overflow-auto 容器使用） */
   stickyHeader: 'sticky top-0 z-10',
 
-  /** <tbody> 表体行 — 顶部分隔线 + 过渡 */
-  bodyRow: 'border-t border-[color:var(--border)] transition-colors',
+  /** <tbody> 表体行 — 顶部分隔线由全局 CSS 加在 <td>（border-separate 下 tr 边框不绘制） */
+  bodyRow: 'transition-colors',
 
   /** <td> 单元格 */
   bodyCell: 'px-4 py-2.5 text-sm text-[color:var(--fg-2)]',

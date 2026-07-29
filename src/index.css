@@ -696,7 +696,7 @@ input::-webkit-outer-spin-button {
 [data-theme="graphite"] textarea::placeholder {
   color: var(--muted);
 }
-[data-theme="graphite"] select {
+[data-theme="graphite"] select:not(.status-badge) {
   background-color: var(--panel);
   color: var(--fg);
   border-color: var(--border);
@@ -882,7 +882,7 @@ input::-webkit-outer-spin-button {
 [data-theme="sandstone"] textarea::placeholder {
   color: var(--muted);
 }
-[data-theme="sandstone"] select {
+[data-theme="sandstone"] select:not(.status-badge) {
   background-color: var(--panel);
   color: var(--fg);
   border-color: var(--border);
@@ -1040,6 +1040,10 @@ table tbody tr {
 }
 table tbody tr:hover {
   background-color: var(--card-hover);
+}
+/* 行分隔线：border-separate 模式下 <tr> 边框不绘制，须加在 <td> 上（s16 清晰分隔观感） */
+table.border-separate tbody tr:not(:first-child) > td {
+  border-top: 1px solid var(--border);
 }
 
 /* 模态框样式 */

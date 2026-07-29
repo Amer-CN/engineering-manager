@@ -46,7 +46,7 @@ export function getStaffListColumns({
       filterAccessor: (m) => m.status || 'active',
       render: (m) => (
       <select value={m.status || 'active'} onChange={e => handleStatusChange(m, e.target.value)}
-        className={`px-2 py-1 rounded-full text-xs font-medium cursor-pointer ${HR_STATUS_COLORS[m.status || 'active'] || 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)]'}`}>
+        className={`status-badge px-2 py-1 rounded-full text-xs font-medium cursor-pointer ${HR_STATUS_COLORS[m.status || 'active'] || 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)]'}`}>
         {Object.entries(HR_STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
       </select>
     )},
