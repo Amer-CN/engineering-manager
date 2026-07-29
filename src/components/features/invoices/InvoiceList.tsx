@@ -142,7 +142,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
             onStatusChange(item.id, e.target.value as InvoiceStatus)
           }}
           onClick={(e) => e.stopPropagation()}
-          className={`px-2 py-1 rounded-full text-xs font-medium border-0 cursor-pointer ${getStatusConfig(item.status, item.type).bgColor} ${getStatusConfig(item.status, item.type).color}`}
+          className={`status-badge px-2 py-1 rounded-full text-xs font-medium border-0 cursor-pointer ${getStatusConfig(item.status, item.type).bgColor} ${getStatusConfig(item.status, item.type).color}`}
           style={{ outline: 'none' }}
         >
           <option value="issued">{getStatusLabel('issued', item.type)}</option>

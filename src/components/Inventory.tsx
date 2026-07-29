@@ -56,11 +56,12 @@ const Inventory: React.FC<InventoryProps> = ({ refresh }) => {
   value={h.activeTab}
   onChange={(value: string) => h.setActiveTab(value as 'items' | 'transactions' | 'projectMaterials')}
   tabs={[
-  { key: 'items', label: '物料库', icon: 'Package' },
+  { key: 'items', label: '物料库存', icon: 'Package' },
   { key: 'transactions', label: '出入库记录', icon: 'ArrowLeftRight' },
   { key: 'projectMaterials', label: '项目材料', icon: 'ClipboardList' },
   ]}
   animated={true}
+  variant="segmented"
   >
   {h.activeTab === 'items' && (
   <div className={`${CARD} mb-6`}>

@@ -48,11 +48,6 @@ export const ItemList: React.FC<ItemListProps> = ({
             <Icon name="Package" size={14} />
           </div>
           <span className="font-medium text-[color:var(--fg)]">{item.name}</span>
-          {item.currentStock <= item.minStock && (
-            <span className="inline-flex" title={`低库存预警：当前 ${item.currentStock}，安全线 ${item.minStock}`}>
-              <span className="w-2 h-2 rounded-full bg-danger-500" />
-            </span>
-          )}
         </div>
       )
     },
@@ -68,7 +63,7 @@ export const ItemList: React.FC<ItemListProps> = ({
     },
     {
       key: 'specifications',
-      title: '规格',
+      title: '规格型号',
       render: (item) => (
         <span className="text-[color:var(--fg-2)]">{item.specifications || '-'}</span>
       )
@@ -83,7 +78,7 @@ export const ItemList: React.FC<ItemListProps> = ({
     },
     {
       key: 'currentStock',
-      title: '库存',
+      title: '库存量',
       align: 'right',
       sortable: true,
       sorter: (a, b) => ((a.currentStock || 0) - (b.currentStock || 0)),
@@ -97,7 +92,7 @@ export const ItemList: React.FC<ItemListProps> = ({
     },
     {
       key: 'purchasePrice',
-      title: '采购价',
+      title: '平均单价',
       align: 'right',
       sortable: true,
       sorter: (a, b) => ((a.purchasePrice || 0) - (b.purchasePrice || 0)),
@@ -106,12 +101,29 @@ export const ItemList: React.FC<ItemListProps> = ({
       )
     },
     {
-      key: 'salePrice',
-      title: '销售价',
+      key: 'totalValue',
+      title: '库存总额',
       align: 'right',
+      sortable: true,
+      sorter: (a, b) => (((a.currentStock || 0) * (a.purchasePrice || 0)) - ((b.currentStock || 0) * (b.purchasePrice || 0))),
       render: (item) => (
-        <span className="text-[color:var(--fg-2)] font-mono tabular-nums">¥{formatMoney(item.salePrice)}</span>
+        // s25：库存总额 = 库存量 × 采购单价，primary 强调色 + 等宽数字
+        <span className="font-medium font-mono tabular-nums text-[color:var(--accent)]">¥{formatMoney((item.currentStock || 0) * (item.purchasePrice || 0))}</span>
       )
+    },
+    {
+      key: 'status',
+      title: '状态',
+      align: 'center',
+      render: (item) => {
+        const low = (item.currentStock || 0) <= (item.minStock || 0)
+        return (
+          // s25：状态圆点（低库存 danger / 正常 ok）
+          <span className="inline-flex items-center justify-center" title={low ? '低库存预警' : '库存正常'}>
+            <span className={`w-2 h-2 rounded-full ${low ? 'bg-danger-500' : 'bg-success-500'}`} />
+          </span>
+        )
+      }
     },
     {
       key: 'actions',
