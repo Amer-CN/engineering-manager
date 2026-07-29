@@ -68,9 +68,6 @@ EngineeringManager.Installer/publish/
 *.pdb
 
 
-# npm lock file (CI uses npm install instead of npm ci)
-package-lock.json
-
 # Tests 构建产物
 EngineeringManager.Tests/bin/
 EngineeringManager.Tests/obj/

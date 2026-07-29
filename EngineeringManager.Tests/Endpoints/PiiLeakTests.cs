@@ -11,7 +11,10 @@ namespace EngineeringManager.Tests.Endpoints;
 /// </summary>
 public class PiiLeakTests
 {
-    private const string EndpointsDir = @"E:\测试\EngineeringManager.Api\Endpoints";
+    // 从测试程序集位置(bin/Debug/net8.0-windows)上溯 4 级到仓库根，再进 API/Endpoints
+    // （原硬编码 E:\测试\... 绝对路径在 CI/他机上读不到文件，导致 14 个 PiiLeakTests 全挂）
+    private static readonly string EndpointsDir = Path.GetFullPath(
+        Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "EngineeringManager.Api", "Endpoints"));
 
     private static string ReadFile(string name) =>
         File.ReadAllText(Path.Combine(EndpointsDir, name));
