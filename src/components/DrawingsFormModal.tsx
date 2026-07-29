@@ -44,8 +44,14 @@ export const DrawingsFormModal: React.FC<DrawingsFormModalProps> = ({
   setShowModal,
   resetForm
 }) => {
+  // 打开时快照初值（files 是 File 对象只比数量）；dirty 时误触关闭先弹确认（Drawer dirty 契约）
+  const snapshot = (d: FormDataState) => JSON.stringify({ ...d, files: d.files.length })
+  const initialSnapshot = React.useRef('')
+  React.useEffect(() => { if (showModal) initialSnapshot.current = snapshot(formData) }, [showModal]) // eslint-disable-line react-hooks/exhaustive-deps
+  const isDirty = showModal && snapshot(formData) !== initialSnapshot.current
+
   return (
-    <Drawer open={showModal} onClose={() => { if (!uploading) { setShowModal(false); resetForm() } }}
+    <Drawer open={showModal} onClose={() => { if (!uploading) { setShowModal(false); resetForm() } }} dirty={isDirty}
       icon="Ruler"
       title={editingDrawing ? '编辑图纸' : '上传图纸'}
       footer={<div className="flex items-center justify-end gap-3">

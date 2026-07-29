@@ -7,6 +7,8 @@ interface SupervisorFormProps {
   projects: Project[]
   onSubmit: (data: any) => void
   onCancel: () => void
+  /** 用户首次编辑时上报（父层据此给 Drawer 传 dirty，误触关闭先弹确认） */
+  onDirtyChange?: () => void
 }
 
 const defaultFormData = {
@@ -23,7 +25,8 @@ export const SupervisorForm: React.FC<SupervisorFormProps> = ({
   supervisor,
   projects,
   onSubmit,
-  onCancel
+  onCancel,
+  onDirtyChange
 }) => {
   const [formData, setFormData] = useState(defaultFormData)
   const [regionName, setRegionName] = useState<{ province: string; city: string; district: string }>({
@@ -67,7 +70,7 @@ export const SupervisorForm: React.FC<SupervisorFormProps> = ({
   }
 
   return (
-  <form onSubmit={handleSubmit} className="p-6">
+  <form onSubmit={handleSubmit} onInput={onDirtyChange} className="p-6">
   <div className="space-y-4">
   {/* 单位名称 */}
   <div className="form-group">

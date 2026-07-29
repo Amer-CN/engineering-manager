@@ -24,6 +24,8 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
 
   const [showPartnerModal, setShowPartnerModal] = useState(false)
   const [editingPartner, setEditingPartner] = useState<Partner | null>(null)
+  // 子表单用户编辑过即 dirty（误触关闭先弹确认），关闭时重置
+  const [formDirty, setFormDirty] = useState<{ partner: boolean; supervisor: boolean }>({ partner: false, supervisor: false })
 
   const [showSupervisorModal, setShowSupervisorModal] = useState(false)
   const [editingSupervisor, setEditingSupervisor] = useState<Supervisor | null>(null)
@@ -151,15 +153,17 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
               onDelete={handlePartnerDelete}
             />
             {showPartnerModal && (
-              <Drawer open onClose={() => { setShowPartnerModal(false); setEditingPartner(null) }}
+              <Drawer open onClose={() => { setShowPartnerModal(false); setEditingPartner(null); setFormDirty(d => ({ ...d, partner: false })) }} dirty={formDirty.partner}
                 icon="Building2" title={editingPartner ? '编辑单位' : '添加单位'} width={560}>
                 <PartnerForm
                   partner={editingPartner}
                   projects={projects}
+                  onDirtyChange={() => setFormDirty(d => ({ ...d, partner: true }))}
                   onSubmit={(data) => handlePartnerSubmit(data, editingPartner)}
                   onCancel={() => {
                     setShowPartnerModal(false)
                     setEditingPartner(null)
+                    setFormDirty(d => ({ ...d, partner: false }))
                   }}
                 />
               </Drawer>
@@ -179,15 +183,17 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
               onDelete={handleSupervisorDelete}
             />
             {showSupervisorModal && (
-              <Drawer open onClose={() => { setShowSupervisorModal(false); setEditingSupervisor(null) }}
+              <Drawer open onClose={() => { setShowSupervisorModal(false); setEditingSupervisor(null); setFormDirty(d => ({ ...d, supervisor: false })) }} dirty={formDirty.supervisor}
                 icon="ShieldCheck" title={editingSupervisor ? '编辑单位' : '添加单位'} width={560}>
                 <SupervisorForm
                   supervisor={editingSupervisor}
                   projects={projects}
+                  onDirtyChange={() => setFormDirty(d => ({ ...d, supervisor: true }))}
                   onSubmit={(data) => handleSupervisorSubmit(data, editingSupervisor)}
                   onCancel={() => {
                     setShowSupervisorModal(false)
                     setEditingSupervisor(null)
+                    setFormDirty(d => ({ ...d, supervisor: false }))
                   }}
                 />
               </Drawer>

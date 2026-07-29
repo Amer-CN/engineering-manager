@@ -7,6 +7,10 @@
  *       中间件必须在 UseAuthentication 之后注册，鉴权白名单不得悄悄扩大
  *   B3. catch 必须写 Console.Error.WriteLine 日志 —— 按文件基线棘轮（ratchet）：
  *       存量记录在 backend-rules-baseline.json，新增无日志 catch 即失败
+ *   B4. 端点 lambda 禁用 dynamic 参数 —— Minimal API 不会给 dynamic 绑 JSON body，
+ *       实际拿到的是 JsonElement/null，历史上已造成 5 个「缺参必 500」端点
+ *       （contract-templates PUT / income PUT / settlements POST+PUT 等）。
+ *       存量按文件基线棘轮，新增即失败；新端点请用强类型 DTO 或 HttpContext 读 body
  *
  * 用法：
  *   node scripts/check-backend-rules.cjs                  # 检查（CI 调用此形式）
@@ -418,6 +422,32 @@ function findUnloggedCatches(file, content, scanned) {
 // 执行
 // ═══════════════════════════════════════════════════════════
 
+// 规则 B4 检测：Map* 调用实参中的 dynamic lambda 参数
+function findDynamicEndpointParams(file, content, scanned) {
+  const { masked } = scanned
+  const results = []
+  const mapRe = /\.\s*Map(Get|Post|Put|Delete|Patch)\s*\(/g
+  let m
+  while ((m = mapRe.exec(masked))) {
+    // 从 Map*( 后括号配对提取整个调用实参段，在其中找 lambda 参数列表的 dynamic
+    let i = m.index + m[0].length
+    let depth = 1
+    const argStart = i
+    while (i < masked.length && depth > 0) {
+      if (masked[i] === '(') depth++
+      else if (masked[i] === ')') depth--
+      i++
+    }
+    const argText = masked.slice(argStart, i - 1)
+    const dynRe = /\bdynamic\s+\w+/g
+    let d
+    while ((d = dynRe.exec(argText))) {
+      results.push({ line: lineOf(content, argStart + d.index) })
+    }
+  }
+  return results
+}
+
 const csFiles = walkCsFiles(API_DIR)
 
 console.log('\n═══ 后端红线 B1：SQL 参数化 ═══')
@@ -453,11 +483,7 @@ for (const file of csFiles) {
 }
 
 if (WRITE_BASELINE) {
-  fs.writeFileSync(BASELINE_PATH, JSON.stringify({
-    _comment: '后端 catch 无日志基线（棘轮：只许减不许增）。重新生成：node scripts/check-backend-rules.cjs --write-baseline，需 code review。',
-    unloggedCatch: currentCounts,
-  }, null, 2) + '\n')
-  console.log(`  基线已写入 ${rel(BASELINE_PATH)}（${Object.keys(currentCounts).length} 个文件，共 ${Object.values(currentCounts).reduce((a, b) => a + b, 0)} 处存量）`)
+  // B4 存量也一并重算（下方 B4 段会填充 dynCounts 后统一写入）
 } else {
   let baseline = { unloggedCatch: {} }
   if (fs.existsSync(BASELINE_PATH)) {
@@ -488,6 +514,54 @@ if (WRITE_BASELINE) {
     }
   }
   if (violations === b2Violations) console.log('  OK  无新增无日志 catch')
+}
+
+console.log('\n═══ 后端红线 B4：端点 lambda 禁用 dynamic 参数（基线棘轮） ═══')
+const b3Violations = violations
+const dynCounts = {}
+const dynDetails = {}
+for (const file of csFiles) {
+  const { content, scanned } = scannedCache.get(file)
+  const found = findDynamicEndpointParams(file, content, scanned)
+  if (found.length > 0) {
+    dynCounts[rel(file)] = found.length
+    dynDetails[rel(file)] = found
+  }
+}
+
+if (WRITE_BASELINE) {
+  fs.writeFileSync(BASELINE_PATH, JSON.stringify({
+    _comment: '后端红线存量基线（棘轮：只许减不许增）。重新生成：node scripts/check-backend-rules.cjs --write-baseline，需 code review。',
+    unloggedCatch: currentCounts,
+    dynamicEndpointParams: dynCounts,
+  }, null, 2) + '\n')
+  console.log(`  基线已写入 ${rel(BASELINE_PATH)}（catch 无日志 ${Object.values(currentCounts).reduce((a, b) => a + b, 0)} 处，dynamic 参数 ${Object.values(dynCounts).reduce((a, b) => a + b, 0)} 处）`)
+} else {
+  let baseline = { dynamicEndpointParams: {} }
+  if (fs.existsSync(BASELINE_PATH)) {
+    baseline = JSON.parse(fs.readFileSync(BASELINE_PATH, 'utf-8'))
+  }
+  const dynAllowed = baseline.dynamicEndpointParams || {}
+  for (const [f, count] of Object.entries(dynCounts)) {
+    const limit = dynAllowed[f] || 0
+    if (count > limit) {
+      console.log(`  HARD FAIL  ${f}: 端点 dynamic 参数从基线 ${limit} 处增加到 ${count} 处。Minimal API 不给 dynamic 绑 body，请用强类型 DTO 或 HttpContext 读 body。位置：`)
+      for (const d of dynDetails[f]) {
+        console.log(`             ${f}:${d.line}`)
+      }
+      violations++
+    } else if (count < limit) {
+      console.log(`  SOFT WARN  ${f}: 端点 dynamic 参数已降到 ${count} 处（基线 ${limit}），建议 --write-baseline 收紧基线`)
+      warnings++
+    }
+  }
+  for (const [f, limit] of Object.entries(dynAllowed)) {
+    if (!(f in dynCounts) && limit > 0) {
+      console.log(`  SOFT WARN  ${f}: 端点 dynamic 参数已清零（基线 ${limit}），建议 --write-baseline 收紧基线`)
+      warnings++
+    }
+  }
+  if (violations === b3Violations) console.log('  OK  无新增端点 dynamic 参数')
 }
 
 // ═══════════════════════════════════════════════════════════

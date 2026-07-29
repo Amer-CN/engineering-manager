@@ -27,9 +27,9 @@ public static class ExpenseEndpoints
         app.MapPost("/api/expenses", async (HttpContext ctx, ExpenseDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO expenses (project_id,category,amount,date,description,vendor,receipt_url,created_by,created_at,updated_at, last_modified_at) VALUES (@ProjectId,@Category,@Amount,@Date,@Description,@Vendor,@ReceiptUrl,@CreatedBy,@Now,@Now, @Now);
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO expenses (project_id,category,amount,date,description,created_by,created_at, last_modified_at) VALUES (@ProjectId,@Category,@Amount,@Date,@Description,@CreatedBy,@Now, @Now);
                 SELECT last_insert_rowid();",
-                new { dto.ProjectId, dto.Category, dto.Amount, dto.Date, dto.Description, dto.Vendor, dto.ReceiptUrl, CreatedBy = uid, Now = Common.NowString() });
+                new { dto.ProjectId, dto.Category, dto.Amount, dto.Date, dto.Description, CreatedBy = uid, Now = Common.NowString() });
             return Common.Ok(id);
         });
 

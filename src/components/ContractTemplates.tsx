@@ -36,8 +36,6 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
   name: '',
   type: 'income' as TemplateType,
   description: '',
-  fileName: '',
-  fileData: '',
   variables: [] as TemplateVariable[]
   })
 
@@ -63,7 +61,6 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
   try {
   const data = {
   ...formData,
-  filePath: formData.fileName,
   variables: formData.variables
   }
   
@@ -89,8 +86,6 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
   name: template.name,
   type: template.type,
   description: template.description,
-  fileName: template.fileName,
-  fileData: '',
   variables: template.variables || []
   })
   setShowModal(true)
@@ -156,8 +151,6 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
   name: '',
   type: 'income',
   description: '',
-  fileName: '',
-  fileData: '',
   variables: []
   })
   }
@@ -291,6 +284,7 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
   )}
 
   <Drawer open={showGenerateModal && !!selectedTemplate} onClose={() => { setShowGenerateModal(false); setSelectedTemplate(null) }}
+  dirty={Object.values(generateForm).some(v => v && v.trim() !== '')}
   icon="Stamp" title="生成合同" width={560}
   footer={<div className="flex items-center justify-end gap-3">
   <Button onClick={() => { setShowGenerateModal(false); setSelectedTemplate(null) }}  variant="secondary">取消</Button>
@@ -318,7 +312,8 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
   let content = selectedTemplate?.description || ''
   selectedTemplate?.variables?.forEach(v => {
   const value = generateForm[v.key] || v.defaultValue || `【${v.label || v.key}】`
-  content = content.replace(new RegExp(`\\{\\{${v.key}\\}\\}`, 'g'), `【${value}】`)
+  // split/join 字面量全替换：key 含正则元字符时 new RegExp 会抛异常或误匹配
+  content = content.split(`{{${v.key}}}`).join(`【${value}】`)
   })
   return content.split('\n').map((line, i) => <p key={i} style={{ textIndent: '2em' }}>{line}</p>)
   })()}

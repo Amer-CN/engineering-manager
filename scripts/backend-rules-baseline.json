@@ -1,5 +1,5 @@
 {
-  "_comment": "后端 catch 无日志基线（棘轮：只许减不许增）。重新生成：node scripts/check-backend-rules.cjs --write-baseline，需 code review。",
+  "_comment": "后端红线存量基线（棘轮：只许减不许增）。重新生成：node scripts/check-backend-rules.cjs --write-baseline，需 code review。",
   "unloggedCatch": {
     "EngineeringManager.Api/Common.cs": 1,
     "EngineeringManager.Api/Endpoints/AgentEndpoints.cs": 3,
@@ -35,5 +35,6 @@
     "EngineeringManager.Api/Services/Stt/SttMutexGuard.cs": 1,
     "EngineeringManager.Api/Services/Stt/SttWorker.cs": 3,
     "EngineeringManager.Api/Services/UpdateService.cs": 6
-  }
+  },
+  "dynamicEndpointParams": {}
 }

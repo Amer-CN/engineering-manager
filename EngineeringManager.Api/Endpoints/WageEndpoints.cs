@@ -96,21 +96,21 @@ public static class WageEndpoints
             return Common.Ok(new { count });
         });
 
-        app.MapPost("/api/attendances/generate", (HttpContext ctx, dynamic dto, IDbConnection db) =>
+        app.MapPost("/api/attendances/generate", (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var scope = CurrentUser.GetDataScope(ctx);
             return Common.Ok(new { count = 0 });
         });
 
-        app.MapPost("/api/attendances/generate-v2", (HttpContext ctx, dynamic dto, IDbConnection db) =>
+        app.MapPost("/api/attendances/generate-v2", (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var scope = CurrentUser.GetDataScope(ctx);
             return Common.Ok(new { count = 0 });
         });
 
-        app.MapPost("/api/attendances/batch-import", (HttpContext ctx, dynamic dto, IDbConnection db) =>
+        app.MapPost("/api/attendances/batch-import", (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var scope = CurrentUser.GetDataScope(ctx);
@@ -235,14 +235,14 @@ public static class WageEndpoints
             return Common.Ok(new { archived = count });
         });
 
-        app.MapPost("/api/wages/match-receipts", (HttpContext ctx, dynamic dto, IDbConnection db) =>
+        app.MapPost("/api/wages/match-receipts", (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var scope = CurrentUser.GetDataScope(ctx);
             return Common.Ok(Array.Empty<object>()); // 绠€鍖栫増
         });
 
-        app.MapPost("/api/wages/confirm-matches", (HttpContext ctx, dynamic dto, IDbConnection db) =>
+        app.MapPost("/api/wages/confirm-matches", (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var scope = CurrentUser.GetDataScope(ctx);

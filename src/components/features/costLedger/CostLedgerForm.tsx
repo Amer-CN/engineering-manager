@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Drawer } from '../../ui/Drawer'
 import { CategoryPicker } from './CategoryPicker'
 import { ChannelInput } from './ChannelInput'
@@ -22,9 +22,15 @@ interface CostLedgerFormProps {
 export function CostLedgerForm({ projectId, projectName, initial, onSave, onClose, categories, onManageCategories }: CostLedgerFormProps) {
   const [form, setForm] = useState(initial || emptyEntry(projectId))
   const [errors, setErrors] = useState<Record<string, string>>({})
+  // 挂载时快照初值（emptyEntry 每次生成新对象，用 ref 快照避免假阳性）；dirty 时误触关闭先弹确认
+  const initialSnapshot = useRef(JSON.stringify(initial || emptyEntry(projectId)))
+  const isDirty = JSON.stringify(form) !== initialSnapshot.current
 
   useEffect(() => {
-    if (initial) setForm(initial)
+    if (initial) {
+      setForm(initial)
+      initialSnapshot.current = JSON.stringify(initial)
+    }
   }, [initial])
 
   const set = (key: string, value: any) => {
@@ -80,7 +86,7 @@ export function CostLedgerForm({ projectId, projectName, initial, onSave, onClos
   }
 
   return (
-    <Drawer open onClose={onClose} icon="Landmark" title={initial ? '编辑台账记录' : '新增台账记录'}
+    <Drawer open onClose={onClose} icon="Landmark" title={initial ? '编辑台账记录' : '新增台账记录'} dirty={isDirty}
       footer={
         <div className="flex items-center justify-end gap-3">
           <Button type="button" onClick={onClose}  variant="secondary" className="text-sm">取消</Button>

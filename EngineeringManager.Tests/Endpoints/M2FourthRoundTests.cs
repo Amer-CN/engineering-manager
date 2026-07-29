@@ -19,7 +19,7 @@ namespace EngineeringManager.Tests.Endpoints;
 /// <summary>
 /// 防止使用 PreInsertHook 的测试类并行执行导致 ObjectDisposedException
 /// </summary>
-[CollectionDefinition("M2FifthRound")]
+[CollectionDefinition("M2FifthRound", DisableParallelization = true)]
 public class M2FifthRoundCollection { }
 
 /// <summary>

@@ -19,7 +19,7 @@ export const templateTypeConfig: Record<TemplateType, { label: string; icon: str
 
 interface Props {
   editingTemplate: ContractTemplate | null
-  formData: { name: string; type: TemplateType; description: string; fileName: string; fileData: string; variables: TemplateVariable[] }
+  formData: { name: string; type: TemplateType; description: string; variables: TemplateVariable[] }
   setFormData: (d: any) => void
   onClose: () => void
   onSubmit: (e: React.FormEvent) => void

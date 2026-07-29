@@ -16,6 +16,8 @@ Thumbs.db
 public/ocr-config.json
 public/seed-data.json
 data/*.db
+data/*.db-wal
+data/*.db-shm
 
 # Claude Code 本地设置 (含个人权限配置和路径)
 .claude/settings.local.json

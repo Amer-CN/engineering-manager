@@ -490,14 +490,14 @@ CREATE TABLE IF NOT EXISTS partners (id INTEGER PRIMARY KEY AUTOINCREMENT, name 
 CREATE TABLE IF NOT EXISTS supervisors (id INTEGER PRIMARY KEY AUTOINCREMENT, region_id INTEGER, name TEXT NOT NULL, category TEXT, contact TEXT, phone TEXT, address TEXT, project_ids TEXT, remarks TEXT, created_at TEXT, updated_at TEXT);
 CREATE TABLE IF NOT EXISTS wages (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, member_id INTEGER, project_worker_id INTEGER, year_month TEXT, daily_wage REAL, work_days REAL, bonus REAL DEFAULT 0, deduction REAL DEFAULT 0, actual_wage REAL, paid_amount REAL, paid_date TEXT, status TEXT DEFAULT 'pending', created_at TEXT, updated_at TEXT);
 CREATE TABLE IF NOT EXISTS attendances (id INTEGER PRIMARY KEY AUTOINCREMENT, member_id INTEGER, project_id INTEGER, project_worker_id INTEGER, year_month TEXT, work_days REAL, days_off INTEGER, is_full_attendance INTEGER, daily_status TEXT, file_url TEXT, file_name TEXT, created_at TEXT, updated_at TEXT);
-CREATE TABLE IF NOT EXISTS settlements (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, partner_id INTEGER, name TEXT, category TEXT, amount REAL, status TEXT DEFAULT 'pending', date TEXT, remark TEXT, files TEXT, invoice_details TEXT, created_at TEXT, updated_at TEXT);
+CREATE TABLE IF NOT EXISTS settlements (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, contract_id INTEGER, partner_id INTEGER, type TEXT, sub_type TEXT, name TEXT, category TEXT, settlement_no TEXT, amount REAL, status TEXT DEFAULT 'pending', settlement_date TEXT, date TEXT, remark TEXT, remarks TEXT, files TEXT, items TEXT, invoice_details TEXT, created_by TEXT, created_at TEXT, updated_at TEXT);
 CREATE TABLE IF NOT EXISTS cost_ledger (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, batch_id INTEGER, voucher_no TEXT, date TEXT, direction TEXT, category TEXT, amount REAL, counterparty TEXT, channel TEXT, summary TEXT, notes TEXT, attachments TEXT, linked_invoice_id INTEGER, created_at TEXT, updated_at TEXT);
 CREATE TABLE IF NOT EXISTS cost_ledger_categories (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, direction TEXT, level1 TEXT, color TEXT, created_at TEXT);
 CREATE TABLE IF NOT EXISTS cost_ledger_match_rules (id INTEGER PRIMARY KEY AUTOINCREMENT, pattern TEXT, category TEXT, direction TEXT, priority INTEGER, created_at TEXT);
 CREATE TABLE IF NOT EXISTS inventory_items (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, category TEXT, unit TEXT, quantity REAL DEFAULT 0, min_quantity REAL, location TEXT, notes TEXT, created_at TEXT, updated_at TEXT);
-CREATE TABLE IF NOT EXISTS inventory_transactions (id INTEGER PRIMARY KEY AUTOINCREMENT, item_id INTEGER, project_id INTEGER, type TEXT, quantity REAL, unit_price REAL, date TEXT, remark TEXT, created_at TEXT);
+CREATE TABLE IF NOT EXISTS inventory_transactions (id INTEGER PRIMARY KEY AUTOINCREMENT, item_id INTEGER, project_id INTEGER, type TEXT, quantity REAL, unit_price REAL, date TEXT, notes TEXT, operator TEXT, remark TEXT, created_by TEXT, created_at TEXT);
 CREATE TABLE IF NOT EXISTS materials (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, category TEXT, unit TEXT, specifications TEXT, supplier TEXT, notes TEXT, created_at TEXT, updated_at TEXT);
-CREATE TABLE IF NOT EXISTS templates (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, type TEXT, category TEXT, content TEXT, variables TEXT, created_at TEXT, updated_at TEXT);
+CREATE TABLE IF NOT EXISTS templates (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, type TEXT, category TEXT, content TEXT, description TEXT, file_name TEXT, stored_file_name TEXT, file_type TEXT, variables TEXT, created_at TEXT, updated_at TEXT);
 CREATE TABLE IF NOT EXISTS audit_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, action TEXT, level TEXT, user_id TEXT, user_name TEXT, resource TEXT, resource_id TEXT, details TEXT, ip_address TEXT, created_at TEXT);
 CREATE TABLE IF NOT EXISTS roles (id TEXT PRIMARY KEY, name TEXT NOT NULL, permissions TEXT, is_system INTEGER DEFAULT 0, created_at TEXT);
 CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, username TEXT UNIQUE NOT NULL, password TEXT, password_hash TEXT NOT NULL, password_salt TEXT, password_hash_version INTEGER DEFAULT 1, salt TEXT, display_name TEXT, role_id TEXT, status TEXT DEFAULT 'active', avatar TEXT, is_default_password INTEGER DEFAULT 0, created_at TEXT, updated_at TEXT);
@@ -507,7 +507,7 @@ CREATE TABLE IF NOT EXISTS salary_history (id INTEGER PRIMARY KEY AUTOINCREMENT,
 CREATE TABLE IF NOT EXISTS worker_teams (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, project_id INTEGER, leader_id INTEGER, remark TEXT, created_at TEXT, updated_at TEXT);
 CREATE TABLE IF NOT EXISTS project_members (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, member_id INTEGER, joined_at TEXT);
 CREATE TABLE IF NOT EXISTS regions (id INTEGER PRIMARY KEY AUTOINCREMENT, province TEXT, city TEXT, district TEXT);
-CREATE TABLE IF NOT EXISTS drawings (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, name TEXT, file_url TEXT, file_name TEXT, file_type TEXT, remark TEXT, created_at TEXT, updated_at TEXT);
+CREATE TABLE IF NOT EXISTS drawings (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, name TEXT, file_url TEXT, file_name TEXT, file_type TEXT, drawing_type TEXT, scale TEXT, notes TEXT, remark TEXT, created_by TEXT, created_at TEXT, updated_at TEXT);
 CREATE TABLE IF NOT EXISTS expenses (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, category TEXT, amount REAL, date TEXT, description TEXT, vendor TEXT, receipt_url TEXT, created_at TEXT, updated_at TEXT);
 CREATE TABLE IF NOT EXISTS contract_templates (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, type TEXT, content TEXT, variables TEXT, created_at TEXT, updated_at TEXT);
 ");
@@ -518,14 +518,14 @@ CREATE TABLE IF NOT EXISTS contract_templates (id INTEGER PRIMARY KEY AUTOINCREM
             try { db.Execute(@"ALTER TABLE invoices ADD COLUMN received_amount REAL DEFAULT 0"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] invoices received_amount: {ex.Message}"); }
             try { db.Execute(@"ALTER TABLE invoices ADD COLUMN settlement_id INTEGER"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] invoices settlement_id: {ex.Message}"); }
 
-            // contract_templates 表迁移：旧库（早期版本建表）缺 content/variables 等列，自愈补齐（重复列报错静默即可）
-            try { db.Execute(@"ALTER TABLE contract_templates ADD COLUMN content TEXT"); } catch { }
-            try { db.Execute(@"ALTER TABLE contract_templates ADD COLUMN variables TEXT"); } catch { }
-            try { db.Execute(@"ALTER TABLE contract_templates ADD COLUMN created_at TEXT"); } catch { }
-            try { db.Execute(@"ALTER TABLE contract_templates ADD COLUMN updated_at TEXT"); } catch { }
-            try { db.Execute(@"ALTER TABLE contract_templates ADD COLUMN created_by INTEGER"); } catch { }
-            try { db.Execute(@"ALTER TABLE contract_templates ADD COLUMN version INTEGER DEFAULT 1"); } catch { }
-            try { db.Execute(@"ALTER TABLE contract_templates ADD COLUMN last_modified_at TEXT"); } catch { }
+            // contract_templates 表迁移：旧库（早期版本建表）缺 content/variables 等列，自愈补齐（重复列报错属预期，记录即可）
+            try { db.Execute(@"ALTER TABLE contract_templates ADD COLUMN content TEXT"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] contract_templates content: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE contract_templates ADD COLUMN variables TEXT"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] contract_templates variables: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE contract_templates ADD COLUMN created_at TEXT"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] contract_templates created_at: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE contract_templates ADD COLUMN updated_at TEXT"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] contract_templates updated_at: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE contract_templates ADD COLUMN created_by INTEGER"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] contract_templates created_by: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE contract_templates ADD COLUMN version INTEGER DEFAULT 1"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] contract_templates version: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE contract_templates ADD COLUMN last_modified_at TEXT"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] contract_templates last_modified_at: {ex.Message}"); }
 
             // payment_records 表迁移
             try

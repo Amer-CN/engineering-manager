@@ -31,9 +31,11 @@ public static class InventoryEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var scope = CurrentUser.GetDataScope(ctx);
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO inventory_items (name,category,unit,quantity,min_quantity,location,notes,created_by,created_at,updated_at, last_modified_at) VALUES (@Name,@Category,@Unit,@Quantity,@MinQuantity,@Location,@Notes,@CreatedBy,@Now,@Now, @Now);
+            // 修复: 列名对齐前端契约(InventoryItem type)与真库 —— code/specifications/purchase_price/sale_price/current_stock/min_stock/max_stock/supplier_id/remarks
+            // (原 quantity/min_quantity/location/notes 是从未与前端匹配的死 schema)
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO inventory_items (code,name,category,unit,specifications,purchase_price,sale_price,current_stock,min_stock,max_stock,supplier_id,remarks,created_by,created_at,updated_at, last_modified_at) VALUES (@Code,@Name,@Category,@Unit,@Specifications,@PurchasePrice,@SalePrice,@CurrentStock,@MinStock,@MaxStock,@SupplierId,@Remarks,@CreatedBy,@Now,@Now, @Now);
                 SELECT last_insert_rowid();",
-                new { dto.Name, dto.Category, dto.Unit, dto.Quantity, dto.MinQuantity, dto.Location, dto.Notes, CreatedBy = uid, Now = now() });
+                new { dto.Code, dto.Name, dto.Category, dto.Unit, dto.Specifications, dto.PurchasePrice, dto.SalePrice, dto.CurrentStock, dto.MinStock, dto.MaxStock, dto.SupplierId, dto.Remarks, CreatedBy = uid, Now = now() });
             return Common.Ok(id);
         });
 
@@ -42,12 +44,12 @@ public static class InventoryEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
-            var affected = await db.ExecuteAsync(@"UPDATE inventory_items SET name=@Name,category=@Category,
-                unit=@Unit,quantity=@Quantity,min_quantity=@MinQuantity,location=@Location,notes=@Notes,
+            var affected = await db.ExecuteAsync(@"UPDATE inventory_items SET code=@Code,name=@Name,category=@Category,
+                unit=@Unit,specifications=@Specifications,purchase_price=@PurchasePrice,sale_price=@SalePrice,current_stock=@CurrentStock,min_stock=@MinStock,max_stock=@MaxStock,supplier_id=@SupplierId,remarks=@Remarks,
                 updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
-                new { dto.Id, dto.Name, dto.Category, dto.Unit, dto.Quantity, dto.MinQuantity, dto.Location, dto.Notes,
+                new { dto.Id, dto.Code, dto.Name, dto.Category, dto.Unit, dto.Specifications, dto.PurchasePrice, dto.SalePrice, dto.CurrentStock, dto.MinStock, dto.MaxStock, dto.SupplierId, dto.Remarks,
                       Uid = uid, IsAdmin = isAdmin, Now = now() });
-            return affected > 0 ? Common.Ok() : Results.Forbid();
+            return await Common.WriteResult(affected, db, "inventory_items", dto.Id ?? 0);
         });
 
         app.MapDelete("/api/inventory/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
@@ -88,9 +90,10 @@ public static class InventoryEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var scope = CurrentUser.GetDataScope(ctx);
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO materials (name,category,unit,specifications,supplier,notes,created_by,created_at,updated_at, last_modified_at) VALUES (@Name,@Category,@Unit,@Specifications,@Supplier,@Notes,@CreatedBy,@Now,@Now, @Now);
+            // 修复: 列名对齐前端契约(Material type)与真库 —— project_id/quantity/price (原 specifications/supplier/notes 是死 schema; 真库 materials 无 updated_at)
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO materials (project_id,name,category,unit,quantity,price,created_by,created_at, last_modified_at) VALUES (@ProjectId,@Name,@Category,@Unit,@Quantity,@Price,@CreatedBy,@Now, @Now);
                 SELECT last_insert_rowid();",
-                new { dto.Name, dto.Category, dto.Unit, dto.Specifications, dto.Supplier, dto.Notes, CreatedBy = uid, Now = now() });
+                new { dto.ProjectId, dto.Name, dto.Category, dto.Unit, dto.Quantity, dto.Price, CreatedBy = uid, Now = now() });
             return Common.Ok(id);
         });
 
@@ -99,11 +102,11 @@ public static class InventoryEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
-            var affected = await db.ExecuteAsync(@"UPDATE materials SET name=@Name,category=@Category,
-                unit=@Unit,specifications=@Specifications,supplier=@Supplier,notes=@Notes,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
-                new { dto.Id, dto.Name, dto.Category, dto.Unit, dto.Specifications, dto.Supplier, dto.Notes,
+            var affected = await db.ExecuteAsync(@"UPDATE materials SET project_id=@ProjectId,name=@Name,category=@Category,
+                unit=@Unit,quantity=@Quantity,price=@Price, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
+                new { dto.Id, dto.ProjectId, dto.Name, dto.Category, dto.Unit, dto.Quantity, dto.Price,
                       Uid = uid, IsAdmin = isAdmin, Now = now() });
-            return affected > 0 ? Common.Ok() : Results.Forbid();
+            return await Common.WriteResult(affected, db, "materials", dto.Id ?? 0);
         });
 
         app.MapDelete("/api/materials/{id}", async (HttpContext ctx, long id, IDbConnection db) =>

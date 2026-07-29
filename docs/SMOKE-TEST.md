@@ -30,6 +30,27 @@ cd "E:\测试" && npx vite build 2>&1 | Select-String -Pattern "error|success|�
 
 ---
 
+## 0.5 数据库列漂移守护（改写端点后必跑，5 分钟）
+
+> **背景**：真实生产库曾走过与 `001_InitialSchema.sql` 不同的迁移历史，导致端点 INSERT/UPDATE 引用的列名与真库实际列不一致（"死 schema" 漂移），POST/PUT 静默 500。M-REVIEW1 批次已全库根治并留下只读检测工具。
+
+**铁律**：判定"哪套列名是对的"时，**前端类型定义（`src/types/electron.d.ts`）+ 真实生产库 = 唯一真契约**；建表脚本/dev 库那套可能是从未匹配过的死 schema。GET 用 `SELECT *` 无法暴露列名，别被它误导。
+
+```bash
+# 列漂移只读检测：扫描所有写端点 INSERT/UPDATE 列 vs 目标库实际列（零写入）
+pwsh scripts/audit-column-drift.ps1 -DbPath "F:\Company Database\engineering.db"   # 真库
+pwsh scripts/audit-column-drift.ps1                                                 # 工作区 dev 库
+
+# 单表结构快照（对照端点 SQL 与前端类型时用）
+pwsh scripts/schema-audit.ps1 -DbPath "F:\Company Database\engineering.db" -Table <表名>
+```
+
+**通过标准**：`✅ 无列漂移`。任何输出 = 端点引用了库中不存在的列，会 500，必须按"前端契约=真库"对齐端点 SQL + 补 migration 规范列。
+
+**验证不污染生产**：用 `PUT 不存在的 id 应返 404 而非 500` 证明列名有效；勿往真库写测试数据。
+
+---
+
 ## 1. 启动应用（1 分钟）
 
 ```bash

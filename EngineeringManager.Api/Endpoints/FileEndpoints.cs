@@ -128,37 +128,106 @@ public static class FileEndpoints
         // 图纸写操作（补全）
         // ═══════════════════════════════════════════════════════════
 
-        app.MapPost("/api/drawings", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
+        app.MapPost("/api/drawings", async (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO drawings (project_id,name,file_url,file_name,drawing_type,scale,notes,created_by,created_at,updated_at, last_modified_at) VALUES (@ProjectId,@Name,@FileUrl,@FileName,@DrawingType,@Scale,@Notes,@CreatedBy,@Now,@Now, @Now); SELECT last_insert_rowid();",
-                new { Now = now(), CreatedBy = uid });
-            return Common.Ok(id);
+            // 修复: 列名对齐前端契约(Drawing type)与真库 —— category/file_path/remarks/position
+            // (原 file_url/drawing_type/scale/notes 是从未与前端匹配的死 schema, 真库/GET/前端均用 file_path)
+            using var reader = new System.IO.StreamReader(ctx.Request.Body);
+            var bodyText = await reader.ReadToEndAsync();
+            var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(bodyText);
+            var fileName = body.TryGetProperty("fileName", out var fn) ? (fn.GetString() ?? "") : "";
+            // 前端发 base64 fileData, 存盘到 uploads/图纸/, file_path 记文件名(与 files/save 范式一致)
+            var filePath = fileName;
+            if (body.TryGetProperty("fileData", out var fd) && fd.ValueKind == System.Text.Json.JsonValueKind.String && !string.IsNullOrEmpty(fd.GetString()))
+            {
+                var baseDir = Path.Combine(ApiConfig.ResolveDataPath(), "uploads");
+                var dir = Path.Combine(baseDir, "图纸");
+                Directory.CreateDirectory(dir);
+                var full = Path.Combine(dir, fileName);
+                if (IsPathSafe(full, baseDir))
+                {
+                    var data = fd.GetString()!;
+                    if (data.Contains(",")) data = data.Split(',')[1];
+                    File.WriteAllBytes(full, Convert.FromBase64String(data));
+                }
+            }
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO drawings (project_id,name,category,file_path,remarks,position,created_by,created_at, last_modified_at) VALUES (@ProjectId,@Name,@Category,@FilePath,@Remarks,@Position,@CreatedBy,@Now, @Now); SELECT last_insert_rowid();",
+                new {
+                    ProjectId = body.TryGetProperty("projectId", out var p) && p.ValueKind == System.Text.Json.JsonValueKind.Number ? (long?)p.GetInt64() : null,
+                    Name = body.TryGetProperty("name", out var n) ? n.GetString() : null,
+                    Category = body.TryGetProperty("category", out var c) ? c.GetString() : null,
+                    FilePath = filePath,
+                    Remarks = body.TryGetProperty("remarks", out var rm) ? rm.GetString() : null,
+                    Position = body.TryGetProperty("position", out var pos) ? pos.GetString() : null,
+                    Now = now(), CreatedBy = uid
+                });
+            return Common.Ok(new { id, filePath });
         });
 
-        app.MapPut("/api/drawings", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
+        app.MapPut("/api/drawings", async (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
-            var affected = await db.ExecuteAsync("UPDATE drawings SET name=@Name,notes=@Notes,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
-                new { Now = now(), Uid = uid, IsAdmin = isAdmin });
-            return affected > 0 ? Common.Ok() : Results.Forbid();
+            // 修复: 列名对齐前端契约; 补 404 语义
+            using var reader = new System.IO.StreamReader(ctx.Request.Body);
+            var bodyText = await reader.ReadToEndAsync();
+            var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(bodyText);
+            var recordId = body.TryGetProperty("id", out var idProp) ? idProp.GetInt64() : 0;
+            var affected = await db.ExecuteAsync("UPDATE drawings SET name=@Name,category=@Category,remarks=@Remarks,position=@Position, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
+                new { Now = now(), Uid = uid, IsAdmin = isAdmin,
+                    Id = recordId,
+                    Name = body.TryGetProperty("name", out var n) ? n.GetString() : null,
+                    Category = body.TryGetProperty("category", out var c) ? c.GetString() : null,
+                    Remarks = body.TryGetProperty("remarks", out var rm) ? rm.GetString() : null,
+                    Position = body.TryGetProperty("position", out var pos) ? pos.GetString() : null
+                });
+            return await Common.WriteResult(affected, db, "drawings", recordId);
         });
 
-        app.MapPut("/api/expenses", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
+        app.MapPut("/api/expenses", async (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
-            var affected = await db.ExecuteAsync(@"UPDATE expenses SET category=@Category,amount=@Amount,date=@Date,description=@Description,vendor=@Vendor,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
-                new { Now = now(), Uid = uid, IsAdmin = isAdmin });
-            return affected > 0 ? Common.Ok() : Results.Forbid();
+            // 修复: 原 dynamic dto 缺参必 500; 并补 404 语义
+            using var reader = new System.IO.StreamReader(ctx.Request.Body);
+            var bodyText = await reader.ReadToEndAsync();
+            var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(bodyText);
+            var recordId = body.TryGetProperty("id", out var idProp) ? idProp.GetInt64() : 0;
+            var affected = await db.ExecuteAsync(@"UPDATE expenses SET category=@Category,amount=@Amount,date=@Date,description=@Description, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
+                new { Now = now(), Uid = uid, IsAdmin = isAdmin,
+                    Id = recordId,
+                    Category = body.TryGetProperty("category", out var c) ? c.GetString() : null,
+                    Amount = body.TryGetProperty("amount", out var a) && a.ValueKind == System.Text.Json.JsonValueKind.Number ? (decimal?)a.GetDouble() : null,
+                    Date = body.TryGetProperty("date", out var d) ? d.GetString() : null,
+                    Description = body.TryGetProperty("description", out var de) ? de.GetString() : null
+                });
+            return await Common.WriteResult(affected, db, "expenses", recordId);
         });
 
-        app.MapPost("/api/inventory/transactions", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
+        app.MapPost("/api/inventory/transactions", async (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO inventory_transactions (item_id,type,quantity,date,notes,operator,created_by,created_at, last_modified_at) VALUES (@ItemId,@Type,@Quantity,@Date,@Notes,@Operator,@CreatedBy,@Now, @Now); SELECT last_insert_rowid();",
-                new { Now = now(), CreatedBy = uid });
+            // 修复: 列名对齐前端契约(InventoryTransaction type)与真库 —— transaction_date/unit_price/total_amount/counterparty_id/document_no
+            // (原 date/notes/operator 是从未与前端匹配的死 schema, 真库用 transaction_date)
+            using var reader = new System.IO.StreamReader(ctx.Request.Body);
+            var bodyText = await reader.ReadToEndAsync();
+            var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(bodyText);
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO inventory_transactions (item_id,type,quantity,unit_price,total_amount,project_id,contract_id,counterparty_id,transaction_date,document_no,remarks,created_by,created_at, last_modified_at) VALUES (@ItemId,@Type,@Quantity,@UnitPrice,@TotalAmount,@ProjectId,@ContractId,@CounterpartyId,@TransactionDate,@DocumentNo,@Remarks,@CreatedBy,@Now, @Now); SELECT last_insert_rowid();",
+                new {
+                    ItemId = body.TryGetProperty("itemId", out var it) && it.ValueKind == System.Text.Json.JsonValueKind.Number ? (long?)it.GetInt64() : null,
+                    Type = body.TryGetProperty("type", out var ty) ? ty.GetString() : null,
+                    Quantity = body.TryGetProperty("quantity", out var q) && q.ValueKind == System.Text.Json.JsonValueKind.Number ? (decimal?)q.GetDouble() : null,
+                    UnitPrice = body.TryGetProperty("unitPrice", out var up) && up.ValueKind == System.Text.Json.JsonValueKind.Number ? (decimal?)up.GetDouble() : null,
+                    TotalAmount = body.TryGetProperty("totalAmount", out var ta) && ta.ValueKind == System.Text.Json.JsonValueKind.Number ? (decimal?)ta.GetDouble() : null,
+                    ProjectId = body.TryGetProperty("projectId", out var p) && p.ValueKind == System.Text.Json.JsonValueKind.Number ? (long?)p.GetInt64() : null,
+                    ContractId = body.TryGetProperty("contractId", out var ci) && ci.ValueKind == System.Text.Json.JsonValueKind.Number ? (long?)ci.GetInt64() : null,
+                    CounterpartyId = body.TryGetProperty("counterpartyId", out var cp) && cp.ValueKind == System.Text.Json.JsonValueKind.Number ? (long?)cp.GetInt64() : null,
+                    TransactionDate = body.TryGetProperty("transactionDate", out var td) ? td.GetString() : null,
+                    DocumentNo = body.TryGetProperty("documentNo", out var dn) ? dn.GetString() : null,
+                    Remarks = body.TryGetProperty("remarks", out var rm) ? rm.GetString() : null,
+                    Now = now(), CreatedBy = uid
+                });
             return Common.Ok(id);
         });
 
@@ -166,14 +235,19 @@ public static class FileEndpoints
         // 文件操作补全
         // ═══════════════════════════════════════════════════════════
 
-        app.MapPost("/api/files/delete", (HttpContext ctx, dynamic dto) =>
+        app.MapPost("/api/files/delete", async (HttpContext ctx) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             try
             {
+                // 修复: 原 dynamic dto 在 Minimal API 不绑 body(运行时必抛) → 改读 body JSON
+                using var reader = new System.IO.StreamReader(ctx.Request.Body);
+                var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(await reader.ReadToEndAsync());
+                var category = body.TryGetProperty("category", out var c) ? (c.GetString() ?? "未分类") : "未分类";
+                var fileName = body.TryGetProperty("fileName", out var f) ? (f.GetString() ?? "") : "";
                 var baseDir = Path.Combine(ApiConfig.ResolveDataPath(), "uploads");
-                var dir = Path.Combine(baseDir, (string)(dto.category ?? "未分类"));
-                var path = Path.Combine(dir, (string)(dto.fileName ?? ""));
+                var dir = Path.Combine(baseDir, category);
+                var path = Path.Combine(dir, fileName);
                 if (!IsPathSafe(path, baseDir)) return Common.Fail("非法路径");
                 if (File.Exists(path)) { File.Delete(path); return Common.Ok(); }
                 return Common.NotFound("文件不存在");
@@ -181,14 +255,19 @@ public static class FileEndpoints
             catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });
 
-        app.MapPost("/api/files/open-external", (HttpContext ctx, dynamic dto) =>
+        app.MapPost("/api/files/open-external", async (HttpContext ctx) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             try
             {
+                // 修复: 原 dynamic dto 不绑 body → 改读 body JSON
+                using var reader = new System.IO.StreamReader(ctx.Request.Body);
+                var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(await reader.ReadToEndAsync());
+                var category = body.TryGetProperty("category", out var c) ? (c.GetString() ?? "未分类") : "未分类";
+                var fileName = body.TryGetProperty("fileName", out var f) ? (f.GetString() ?? "") : "";
                 var baseDir = Path.Combine(ApiConfig.ResolveDataPath(), "uploads");
-                var dir = Path.Combine(baseDir, (string)(dto.category ?? "未分类"));
-                var path = Path.Combine(dir, (string)(dto.fileName ?? ""));
+                var dir = Path.Combine(baseDir, category);
+                var path = Path.Combine(dir, fileName);
                 if (!IsPathSafe(path, baseDir)) return Common.Fail("非法路径");
                 // P0-3: UseShellExecute=true 会用系统默认程序打开文件,必须限制扩展名,
                 // 防止上传 .bat/.exe/.ps1 等可执行文件后被远程执行。
@@ -226,24 +305,31 @@ public static class FileEndpoints
             catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });
 
-        app.MapPost("/api/contracts/save-file", (HttpContext ctx, dynamic dto) =>
+        app.MapPost("/api/contracts/save-file", async (HttpContext ctx) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             try
             {
+                // 修复: 原 dynamic dto 不绑 body → 改读 body JSON
+                using var reader = new System.IO.StreamReader(ctx.Request.Body);
+                var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(await reader.ReadToEndAsync());
+                var subCategory = body.TryGetProperty("subCategory", out var sc) ? (sc.GetString() ?? "income") : "income";
+                var projectName = body.TryGetProperty("projectName", out var pn) ? (pn.GetString() ?? "未分类") : "未分类";
+                var fileName = body.TryGetProperty("fileName", out var fn) ? (fn.GetString() ?? "file") : "file";
+                var fileData = body.TryGetProperty("fileData", out var fd) ? (fd.GetString() ?? "") : "";
                 var baseDir = Path.Combine(ApiConfig.ResolveDataPath(), "uploads");
-                var subDir = (string)(dto.subCategory ?? "income") == "income" ? "收入" : "支出";
-                var dir = Path.Combine(baseDir, (string)(dto.projectName ?? "未分类"), "合同", subDir);
+                var subDir = subCategory == "income" ? "收入" : "支出";
+                var dir = Path.Combine(baseDir, projectName, "合同", subDir);
                 Directory.CreateDirectory(dir);
-                var filePath = Path.Combine(dir, (string)(dto.fileName ?? "file"));
+                var filePath = Path.Combine(dir, fileName);
                 if (!IsPathSafe(filePath, baseDir)) return Common.Fail("非法路径");
-                if (!string.IsNullOrEmpty((string)(dto.fileData ?? "")))
+                if (!string.IsNullOrEmpty(fileData))
                 {
-                    var data = (string)dto.fileData;
+                    var data = fileData;
                     if (data.Contains(",")) data = data.Split(',')[1];
                     File.WriteAllBytes(filePath, Convert.FromBase64String(data));
                 }
-                return Common.Ok(new { fileName = (string)(dto.fileName ?? "") });
+                return Common.Ok(new { fileName });
             }
             catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });

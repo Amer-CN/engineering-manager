@@ -403,13 +403,17 @@ public static class OcrEndpoints
         // 企业工商信息查询
         // ═══════════════════════════════════════════════════════════
 
-        app.MapPost("/api/ocr/company-query", async (dynamic dto, IHttpClientFactory httpClientFactory) =>
+        app.MapPost("/api/ocr/company-query", async (HttpContext ctx, IHttpClientFactory httpClientFactory) =>
         {
             try
             {
-                string companyName = (string)dto.companyName;
-                string apiKey = (string)dto.apiKey;
-                string secretKey = (string)dto.secretKey;
+                // 修复: 原 dynamic dto.companyName 在 Minimal API 不绑 body(运行时必抛) → 改读 body JSON
+                using var reader = new System.IO.StreamReader(ctx.Request.Body);
+                var bodyText = await reader.ReadToEndAsync();
+                var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(bodyText);
+                string companyName = body.TryGetProperty("companyName", out var cn) ? cn.GetString() ?? "" : "";
+                string apiKey = body.TryGetProperty("apiKey", out var ak) ? ak.GetString() ?? "" : "";
+                string secretKey = body.TryGetProperty("secretKey", out var sk) ? sk.GetString() ?? "" : "";
 
                 if (string.IsNullOrWhiteSpace(companyName))
                     return Common.Fail("请输入企业名称", 400);

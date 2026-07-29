@@ -11,6 +11,8 @@ interface TemplateFormProps {
   template?: Template | null
   onSubmit: (data: any) => void
   onCancel: () => void
+  /** 用户首次编辑时上报（父层据此给 Drawer 传 dirty，误触关闭先弹确认） */
+  onDirtyChange?: () => void
 }
 
 const defaultFormData = {
@@ -24,7 +26,7 @@ const defaultFormData = {
   variables: [] as TemplateVariable[],
 }
 
-export default function TemplateForm({ template, onSubmit, onCancel }: TemplateFormProps) {
+export default function TemplateForm({ template, onSubmit, onCancel, onDirtyChange }: TemplateFormProps) {
   const showToast = useToastStore(state => state.showToast)
   const [formData, setFormData] = useState(defaultFormData)
   const [dragOver, setDragOver] = useState(false)
@@ -126,7 +128,7 @@ export default function TemplateForm({ template, onSubmit, onCancel }: TemplateF
   }
 
   return (
-    <form onSubmit={handleSubmit} className="p-6 space-y-5">
+    <form onSubmit={handleSubmit} onInput={onDirtyChange} className="p-6 space-y-5">
       {/* Name */}
       <Input label="模板名称" size="sm" required value={formData.name} onChange={e => setFormData(p => ({ ...p, name: e.target.value }))}
         placeholder="如：工程施工合同模板" />

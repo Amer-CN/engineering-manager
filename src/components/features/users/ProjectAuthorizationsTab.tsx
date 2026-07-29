@@ -115,6 +115,7 @@ export function ProjectAuthorizationsTab() {
       <Drawer
         open={showGrantModal}
         onClose={() => setShowGrantModal(false)}
+        dirty={grantProjectId !== 0 || !!grantUserId}
         icon="ShieldCheck"
         title="新增项目授权"
         footer={

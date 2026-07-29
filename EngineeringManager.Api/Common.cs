@@ -11,6 +11,17 @@ public static class Common
 
     public static IResult Ok(object? data = null) => Results.Ok(new { success = true, data });
 
+    /// <summary>
+    /// 写操作结果：affected==0 时区分「记录不存在→404」与「存在但越权→403」（原先一律 403 导致排障绕路）。
+    /// 存在性只按 id 查（软删记录视为存在→403，与越权同态，避免泄露软删状态）。
+    /// </summary>
+    public static async Task<IResult> WriteResult(int affected, System.Data.IDbConnection db, string table, long id)
+    {
+        if (affected > 0) return Ok();
+        var exists = await Dapper.SqlMapper.ExecuteScalarAsync<long>(db, $"SELECT COUNT(1) FROM [{table}] WHERE id=@Id", new { Id = id });
+        return exists > 0 ? Results.Forbid() : Results.NotFound(new { success = false, error = "记录不存在" });
+    }
+
     /// <summary>业务错误 — HTTP 400</summary>
 
     /// <summary>P1-1: 脱敏异常信息（防泄露绝对路径/堆栈/内部细节给前端）
@@ -158,8 +169,8 @@ record RegionDto(long? Id, string? Province, string? City, string? District);
 record SupervisorDto(long? Id, long? RegionId, string Name, string? Category, string? Contact, string? Phone, string? Address, string? ProjectIds, string? Remarks);
 record ProjectMemberDto(long? Id, long ProjectId, long MemberId, string? JoinedAt);
 record WorkerTeamDto(long? Id, string Name, long? ProjectId, long? LeaderId);
-record InventoryItemDto(long? Id, string Name, string? Category, string? Unit, double? Quantity, double? MinQuantity, string? Location, string? Notes);
-record MaterialDto(long? Id, string Name, string? Category, string? Unit, string? Specifications, string? Supplier, string? Notes);
+record InventoryItemDto(long? Id, string? Code, string Name, string? Category, string? Unit, string? Specifications, double? PurchasePrice, double? SalePrice, double? CurrentStock, double? MinStock, double? MaxStock, long? SupplierId, string? Remarks);
+record MaterialDto(long? Id, long? ProjectId, string Name, string? Category, string? Unit, double? Quantity, double? Price);
 record ExpenseDto(long? Id, long? ProjectId, string? Category, double? Amount, string? Date, string? Description, string? Vendor, string? ReceiptUrl);
 record SalaryHistoryDto(long? Id, long MemberId, string? EffectiveDate, double? BaseSalary, double? Subsidy, string? SubsidyNote, string? Note);
 record ContractTemplateDto(long? Id, string Name, string? Type, string? Content, string? Variables);

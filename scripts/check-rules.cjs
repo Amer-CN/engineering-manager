@@ -250,6 +250,69 @@ if (fileExists(appPath)) {
 // 汇总
 // ═══════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════
+// 铁律：Modal 使用白名单棘轮（写表单必须用 Drawer）
+// M-S15 已完成"20 个写表单 Modal 归零"；交互契约：写操作表单→Drawer，
+// 浏览/预览/确认/选择器→居中 Modal。下列白名单为审查通过的合法 Modal
+// 使用文件（含 ui 库自身），新文件使用 Modal 即 HARD FAIL——写表单请用
+// ui/Drawer；确属浏览/预览类新场景，经 review 后在此登记。
+// ═══════════════════════════════════════════════════════
+
+const MODAL_ALLOWED_FILES = new Set([
+  'src/components/AuditDetailModal.tsx',
+  'src/components/features/agent/AgentSearch.tsx',
+  'src/components/features/costLedger/CategoryManager.tsx',
+  'src/components/features/costLedger/CostLedgerCompareModal.tsx',
+  'src/components/features/invoices/FilePreviewModal.tsx',
+  'src/components/features/labor/TeamWageModal.tsx',
+  'src/components/features/labor/WorkerWageHistoryModal.tsx',
+  'src/components/features/labor/WorkerWageModal.tsx',
+  'src/components/features/members/MemberDetail.tsx',
+  'src/components/features/members/MemberDetailParts.tsx',
+  'src/components/features/members/TeamWorkerModal.tsx',
+  'src/components/features/settings/SettingsChangelog.tsx',
+  'src/components/features/settlement/SettlementProjectDetail.tsx',
+  'src/components/features/templates/TemplatePreview.tsx',
+  'src/components/features/templates/TemplateSelectorModal.tsx',
+  'src/components/features/users/ProjectAuthorizationsTab.tsx',
+  'src/components/ui/ConfirmDialog/ConfirmDialog.tsx',
+])
+
+console.log('\n═══ 铁律：Modal 白名单棘轮（写表单必须用 Drawer） ═══')
+{
+  const modalViolationsBefore = violations
+  const allFiles = walkDir(path.join(SRC, 'components'), (f) => f.endsWith('.tsx') || f.endsWith('.ts'))
+  for (const f of allFiles) {
+    const relPath = path.relative(ROOT, f).replace(/\\/g, '/')
+    if (relPath.includes('__tests__')) continue
+    const content = fs.readFileSync(f, 'utf-8')
+    const usesModal = /from\s+['"][^'"]*ui\/Modal['"]|<Modal[\s>]/.test(content)
+    if (usesModal && !MODAL_ALLOWED_FILES.has(relPath)) {
+      console.log(`  HARD FAIL  ${relPath}: 使用 Modal 但不在白名单。写操作表单必须用 ui/Drawer（S17 交互契约）；确属浏览/预览类场景经 review 后登记到 check-rules.cjs 的 MODAL_ALLOWED_FILES`)
+      violations++
+    }
+  }
+  // 白名单里已不再使用 Modal 的文件 → 提示收紧
+  for (const relPath of MODAL_ALLOWED_FILES) {
+    const abs = path.join(ROOT, relPath)
+    if (!fs.existsSync(abs)) {
+      console.log(`  SOFT WARN  ${relPath}: 白名单文件已删除，建议从 MODAL_ALLOWED_FILES 移除`)
+      warnings++
+      continue
+    }
+    const content = fs.readFileSync(abs, 'utf-8')
+    if (!/from\s+['"][^'"]*ui\/Modal['"]|<Modal[\s>]/.test(content)) {
+      console.log(`  SOFT WARN  ${relPath}: 已不再使用 Modal，建议从 MODAL_ALLOWED_FILES 移除收紧白名单`)
+      warnings++
+    }
+  }
+  if (violations === modalViolationsBefore) console.log('  OK  无白名单外的 Modal 使用')
+}
+
+// ═══════════════════════════════════════════════════════
+// 汇总
+// ═══════════════════════════════════════════════════════
+
 console.log('\n═══════════════════════════════════════')
 console.log(`检查完成: ${violations} 项违规, ${warnings} 项警告`)
 console.log('═══════════════════════════════════════\n')

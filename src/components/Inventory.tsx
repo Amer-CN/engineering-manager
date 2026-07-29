@@ -22,6 +22,10 @@ interface InventoryProps { refresh?: () => void }
 const Inventory: React.FC<InventoryProps> = ({ refresh }) => {
   const { can } = usePermission()
   const h = useInventoryPage(can as (perm: string) => boolean, refresh)
+  // 子表单用户编辑过即 dirty（误触关闭先弹确认），关闭时重置
+  const [itemDirty, setItemDirty] = React.useState(false)
+  const [transDirty, setTransDirty] = React.useState(false)
+  const [materialDirty, setMaterialDirty] = React.useState(false)
 
   if (h.loading) {
   return (
@@ -112,24 +116,27 @@ const Inventory: React.FC<InventoryProps> = ({ refresh }) => {
   )}
   </Tabs>
 
-  <Drawer open={h.showItemModal} onClose={() => { h.setShowItemModal(false); h.setEditingItem(null) }}
+  <Drawer open={h.showItemModal} onClose={() => { h.setShowItemModal(false); h.setEditingItem(null); setItemDirty(false) }} dirty={itemDirty}
   icon="Package" title={h.editingItem ? '编辑物料' : '添加物料'} width={560}>
   <ItemForm item={h.editingItem} partners={h.partners} categories={categories} units={units}
-  onSubmit={h.handleItemSubmit} onCancel={() => { h.setShowItemModal(false); h.setEditingItem(null) }} />
+  onDirtyChange={() => setItemDirty(true)}
+  onSubmit={h.handleItemSubmit} onCancel={() => { h.setShowItemModal(false); h.setEditingItem(null); setItemDirty(false) }} />
   </Drawer>
 
-  <Drawer open={h.showTransModal} onClose={() => { h.setShowTransModal(false); h.setTransItem(null) }}
+  <Drawer open={h.showTransModal} onClose={() => { h.setShowTransModal(false); h.setTransItem(null); setTransDirty(false) }} dirty={transDirty}
   icon="ArrowLeftRight" title="出入库登记">
   <TransForm items={h.items} projects={h.projects} partners={h.partners}
   defaultItemId={h.transItem?.id} defaultUnitPrice={h.transItem?.purchasePrice}
-  onSubmit={h.handleTransSubmit} onCancel={() => { h.setShowTransModal(false); h.setTransItem(null) }} />
+  onDirtyChange={() => setTransDirty(true)}
+  onSubmit={h.handleTransSubmit} onCancel={() => { h.setShowTransModal(false); h.setTransItem(null); setTransDirty(false) }} />
   </Drawer>
 
-  <Drawer open={h.showMaterialModal} onClose={() => { h.setShowMaterialModal(false); h.setEditingMaterial(null) }}
+  <Drawer open={h.showMaterialModal} onClose={() => { h.setShowMaterialModal(false); h.setEditingMaterial(null); setMaterialDirty(false) }} dirty={materialDirty}
   icon="Construction" title={h.editingMaterial ? '编辑材料' : '添加项目材料'}>
   <MaterialForm material={h.editingMaterial} projects={h.projects} materialCategories={materialCategories}
   categoryIcons={categoryIcons} onSubmit={h.handleMaterialSubmit}
-  onCancel={() => { h.setShowMaterialModal(false); h.setEditingMaterial(null) }} />
+  onDirtyChange={() => setMaterialDirty(true)}
+  onCancel={() => { h.setShowMaterialModal(false); h.setEditingMaterial(null); setMaterialDirty(false) }} />
   </Drawer>
   </PageContainer>
   )

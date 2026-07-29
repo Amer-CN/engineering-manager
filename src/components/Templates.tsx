@@ -25,6 +25,8 @@ const Templates: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<TemplateCategory>('contract')
   const [showModal, setShowModal] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null)
+  // 子表单用户编辑过即 dirty（误触关闭先弹确认），关闭时重置
+  const [formDirty, setFormDirty] = useState(false)
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null)
   const [generateTemplate, setGenerateTemplate] = useState<Template | null>(null)
 
@@ -134,10 +136,11 @@ const Templates: React.FC = () => {
           onCreate={handleCreate}
         />
 
-        <Drawer open={showModal} onClose={() => { setShowModal(false); setEditingTemplate(null) }}
+        <Drawer open={showModal} onClose={() => { setShowModal(false); setEditingTemplate(null); setFormDirty(false) }} dirty={formDirty}
           icon="FileText" title={editingTemplate ? '编辑模板' : '新建模板'} width={560}>
           <TemplateForm template={editingTemplate} onSubmit={handleSubmit}
-            onCancel={() => { setShowModal(false); setEditingTemplate(null) }} />
+            onDirtyChange={() => setFormDirty(true)}
+            onCancel={() => { setShowModal(false); setEditingTemplate(null); setFormDirty(false) }} />
         </Drawer>
 
         {/* Preview modal */}
