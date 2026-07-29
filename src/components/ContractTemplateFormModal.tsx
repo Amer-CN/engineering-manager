@@ -7,6 +7,7 @@ import { Icon } from './ui/Icon'
 import { Input } from './ui/Input/Input'
 import { ContractTemplate, TemplateType, TemplateVariable } from '../types/electron'
 import { Button } from './ui/Button'
+import { parseMarkup } from '../utils/templateMarkup'
 
 export const templateTypeConfig: Record<TemplateType, { label: string; icon: string }> = {
   income: { label: '收入合同', icon: 'TrendingUp' },
@@ -28,19 +29,25 @@ interface Props {
   onRemoveVariable: (i: number) => void
 }
 
-/** 预览态：把 {{key}} 渲染为 accent 徽章（S29 画布芯片样式） */
+/** 预览态：按轻量标记渲染（## 条款标题 / **粗体** / *斜体* / {{变量}} 徽章） */
 function renderPreview(text: string) {
-  const parts = text.split(/(\{\{[^}]+\}\})/g)
-  return parts.map((part, i) => {
-    const m = part.match(/^\{\{([^}]+)\}\}$/)
-    if (m) {
-      return (
-        <span key={i} className="inline-flex items-center bg-[color:var(--accent)] text-[color:var(--on-accent)] px-2 py-0.5 rounded-md mx-0.5 font-mono text-xs select-all">
-          {'{'}{m[1]}{'}'}
-        </span>
-      )
-    }
-    return <React.Fragment key={i}>{part}</React.Fragment>
+  return parseMarkup(text).map((line, li) => {
+    const children = line.tokens.map((t, ti) => {
+      switch (t.type) {
+        case 'variable':
+          return (
+            <span key={ti} className="inline-flex items-center bg-[color:var(--accent)] text-[color:var(--on-accent)] px-2 py-0.5 rounded-md mx-0.5 font-mono text-xs select-all">
+              {'{'}{t.content}{'}'}
+            </span>
+          )
+        case 'bold': return <strong key={ti}>{t.content}</strong>
+        case 'italic': return <em key={ti}>{t.content}</em>
+        default: return <React.Fragment key={ti}>{t.content}</React.Fragment>
+      }
+    })
+    return line.heading
+      ? <h2 key={li} className="font-bold mt-4 mb-1">{children}</h2>
+      : <p key={li} className="min-h-[1.5em]">{children}</p>
   })
 }
 
@@ -68,6 +75,40 @@ export const ContractTemplateFormModal: React.FC<Props> = ({
   }
 
   const namedVariables = formData.variables.filter(v => v.key)
+
+  // S29 工具条：包裹选区为行内标记（**粗体** / *斜体*），无选区时插入占位文本
+  const wrapSelection = (mark: string, placeholder: string) => {
+    const el = descRef.current
+    if (!el) return
+    const start = el.selectionStart ?? 0
+    const end = el.selectionEnd ?? start
+    const selected = formData.description.slice(start, end) || placeholder
+    const next = formData.description.slice(0, start) + mark + selected + mark + formData.description.slice(end)
+    setFormData({ ...formData, description: next })
+    requestAnimationFrame(() => {
+      el.focus()
+      el.setSelectionRange(start + mark.length, start + mark.length + selected.length)
+    })
+  }
+
+  // S29 工具条：当前行切换条款标题（行首 "## "）
+  const toggleHeading = () => {
+    const el = descRef.current
+    if (!el) return
+    const pos = el.selectionStart ?? 0
+    const text = formData.description
+    const lineStart = text.lastIndexOf('\n', pos - 1) + 1
+    const isHeading = text.startsWith('## ', lineStart)
+    const next = isHeading
+      ? text.slice(0, lineStart) + text.slice(lineStart + 3)
+      : text.slice(0, lineStart) + '## ' + text.slice(lineStart)
+    const delta = isHeading ? -3 : 3
+    setFormData({ ...formData, description: next })
+    requestAnimationFrame(() => {
+      el.focus()
+      el.setSelectionRange(pos + delta, pos + delta)
+    })
+  }
 
   // 预览模式下 textarea 卸载会绕过 required 校验，提交前手动兜底
   const handleSubmit = (e: React.FormEvent) => {
@@ -120,8 +161,21 @@ export const ContractTemplateFormModal: React.FC<Props> = ({
         <div className="flex-1 flex overflow-hidden min-h-0">
           {/* 左：文档画布（~70%） */}
           <div className="w-[70%] flex flex-col border-r border-[color:var(--border)] bg-[color:var(--panel-2)] overflow-hidden">
-            {/* 工具条：插入变量 chips + 预览切换 */}
+            {/* 工具条：格式化按钮 + 插入变量 chips + 预览切换 */}
             <div className="h-12 bg-[color:var(--panel)] border-b border-[color:var(--border)] flex items-center px-4 gap-1.5 shrink-0 overflow-x-auto">
+              <button type="button" onClick={() => wrapSelection('**', '粗体文字')} disabled={previewMode} title="加粗（**文字**）" aria-label="加粗"
+                className="w-8 h-8 rounded flex items-center justify-center hover:bg-[color:var(--panel-2)] transition-colors text-[color:var(--fg-2)] disabled:opacity-40 shrink-0">
+                <Icon name="Bold" size={15} />
+              </button>
+              <button type="button" onClick={() => wrapSelection('*', '斜体文字')} disabled={previewMode} title="斜体（*文字*）" aria-label="斜体"
+                className="w-8 h-8 rounded flex items-center justify-center hover:bg-[color:var(--panel-2)] transition-colors text-[color:var(--fg-2)] disabled:opacity-40 shrink-0">
+                <Icon name="Italic" size={15} />
+              </button>
+              <button type="button" onClick={toggleHeading} disabled={previewMode} title="条款标题（行首 ## ）" aria-label="条款标题"
+                className="w-8 h-8 rounded flex items-center justify-center hover:bg-[color:var(--panel-2)] transition-colors text-[color:var(--fg-2)] disabled:opacity-40 shrink-0">
+                <Icon name="Heading2" size={15} />
+              </button>
+              <div className="w-px h-4 bg-[color:var(--border)] mx-1 shrink-0" />
               <span className="inline-flex items-center gap-1 text-xs mr-1 shrink-0" style={{ color: 'var(--muted)' }}>
                 <Icon name="Braces" size={12} /> 插入变量
               </span>
@@ -146,7 +200,7 @@ export const ContractTemplateFormModal: React.FC<Props> = ({
             <div className="flex-1 overflow-y-auto p-6 flex justify-center">
               <div className="w-full max-w-3xl bg-[color:var(--card)] border border-[color:var(--border)] shadow-sm rounded-lg min-h-[600px] flex flex-col">
                 {previewMode ? (
-                  <div className="p-10 text-sm leading-relaxed text-[color:var(--fg)] whitespace-pre-wrap">
+                  <div className="p-10 text-sm leading-relaxed text-[color:var(--fg)]">
                     <h1 className="text-center text-lg font-bold mb-6">{formData.name || '未命名模板'}</h1>
                     {renderPreview(formData.description)}
                   </div>

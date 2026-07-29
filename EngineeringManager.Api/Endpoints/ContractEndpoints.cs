@@ -240,11 +240,13 @@ public static class ContractEndpoints
             return Common.Ok(id);
         });
 
-        app.MapPut("/api/contract-templates", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
+        app.MapPut("/api/contract-templates", async (HttpContext ctx, ContractTemplateDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            var affected = await db.ExecuteAsync(@"UPDATE contract_templates SET name=@Name,type=@Type,content=@Content,variables=@Variables,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id",
-                new { Now = now() });
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            // 修复: 原 dynamic dto + 参数只传 Now 导致 @Name/@Id 等全部缺参必 500; 并对齐 DELETE 的 user-dim 越权保护
+            var affected = await db.ExecuteAsync(@"UPDATE contract_templates SET name=@Name,type=@Type,content=@Content,variables=@Variables,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
+                new { dto.Id, dto.Name, Type = dto.Type ?? "contract", dto.Content, dto.Variables, Now = now(), Uid = uid, IsAdmin = isAdmin });
             return affected > 0 ? Common.Ok() : Results.Forbid();
         });
 

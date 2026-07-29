@@ -1,5 +1,6 @@
 import type { ContractTemplate } from '../types/electron'
 import { templateTypeConfig } from '../components/ContractTemplateFormModal'
+import { templateMarkupToPrintHtml } from './templateMarkup'
 
 export function printContractTemplate(
   template: ContractTemplate,
@@ -19,7 +20,7 @@ export function printContractTemplate(
   <div style="text-align: center; font-size: 18pt; font-weight: bold; margin-bottom: 30px;">
     ${templateTypeConfig[template.type].label}
   </div>
-  ${content.split('\n').map(line => `<p style="text-indent: 2em; margin: 10px 0;">${line}</p>`).join('')}
+  ${templateMarkupToPrintHtml(content)}
   <div style="margin-top: 60px; display: flex; justify-content: space-between;">
     <div style="text-align: center; width: 30%;">
       <p>甲方（签章）:</p>

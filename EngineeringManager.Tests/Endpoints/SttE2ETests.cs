@@ -9,17 +9,27 @@ namespace EngineeringManager.Tests.Endpoints;
 /// - 单人录音转写文本
 /// - 多人录音：分离段合并前后对比 + 带说话人标签的转写文本
 /// 
-/// 注意：此测试需要模型和音频文件，运行时间约 3-5 分钟
-/// 运行：dotnet test --filter FullyQualifiedName~SttE2E
+/// 注意：此测试需要模型和音频文件，运行时间约 3-5 分钟（transcribe.exe 异常时可能挂起 10 分钟+）
+/// 默认跳过，防 dotnet test 裸跑/红绿灯被挂起阻塞。手动运行：
+///   $env:RUN_STT_E2E='1'; dotnet test --filter FullyQualifiedName~SttE2E
 /// </summary>
 public class SttE2ETests
 {
     /// <summary>测试音频目录</summary>
     private const string AudioDir = @"e:\测试\asr-test\audios";
 
+    /// <summary>重型 E2E 闸门：未显式开启时跳过（transcribe.exe 挂起会拖死整个测试套件）</summary>
+    private static bool E2EEnabled()
+    {
+        if (Environment.GetEnvironmentVariable("RUN_STT_E2E") == "1") return true;
+        Console.WriteLine("[SKIP] 未设置 RUN_STT_E2E=1，跳过重型 STT E2E（防挂起）");
+        return false;
+    }
+
     [Fact]
     public async Task E2E_MultiSpeaker_DiarizeAndTranscribe()
     {
+        if (!E2EEnabled()) return;
         // 前置检查
         if (!SttModelManager.IsAsrModelAvailable())
         {
@@ -124,6 +134,7 @@ public class SttE2ETests
     [Fact]
     public async Task E2E_SingleSpeaker_Transcribe()
     {
+        if (!E2EEnabled()) return;
         // 前置检查
         if (!SttModelManager.IsAsrModelAvailable())
         {
