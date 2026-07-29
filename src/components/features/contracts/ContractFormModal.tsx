@@ -41,11 +41,14 @@ export const ContractFormModal: React.FC<Props> = ({ show, type, editingContract
   const [dragOverFile, setDragOverFile] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const isEditing = !!editingContract
+  // 打开时快照初值；dirty 时误触关闭先弹确认（Drawer dirty 契约）
+  const initialSnapshot = useRef(JSON.stringify(emptyForm))
+  const isDirty = JSON.stringify(formData) !== initialSnapshot.current
 
   useEffect(() => {
     if (editingContract) {
       const agreementContract = editingContract as AgreementContract
-      setFormData({
+      const filled = {
         projectId: editingContract.projectId, partnerId: editingContract.partnerId || 0,
         contractNo: editingContract.contractNo, name: editingContract.name,
         amount: editingContract.amount || 0, signedDate: editingContract.signedDate,
@@ -54,8 +57,13 @@ export const ContractFormModal: React.FC<Props> = ({ show, type, editingContract
         remarks: editingContract.remarks || '', fileUrl: editingContract.fileUrl || '',
         fileType: editingContract.fileType,
         agreementType: agreementContract.agreementType || 'cooperation',
-      })
-    } else setFormData(emptyForm)
+      }
+      setFormData(filled)
+      initialSnapshot.current = JSON.stringify(filled)
+    } else {
+      setFormData(emptyForm)
+      initialSnapshot.current = JSON.stringify(emptyForm)
+    }
   }, [editingContract, show])
 
   const processFileForUpload = (file: File) => {
@@ -113,7 +121,7 @@ export const ContractFormModal: React.FC<Props> = ({ show, type, editingContract
   }
 
   return (
-    <Drawer open={show} onClose={onClose}
+    <Drawer open={show} onClose={onClose} dirty={isDirty}
       icon="FileText"
       width={560}
       title={

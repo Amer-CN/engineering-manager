@@ -5,7 +5,7 @@ using EngineeringManager.Api.Security;
 namespace EngineeringManager.Api;
 
 /// <summary>
-/// 鍚堝悓 + 鍚堝悓妯℃澘 + 缁撶畻绔偣
+/// 合同 + 合同模板 + 结算端点
 /// </summary>
 public static class ContractEndpoints
 {
@@ -13,17 +13,17 @@ public static class ContractEndpoints
     {
         var now = () => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
-        // 鍚堝悓
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+        // ═══════════════════════════════════════
+        // 合同
+        // ═══════════════════════════════════════
 
         app.MapGet("/api/contracts/income", (HttpContext ctx, IDbConnection db, long? projectId) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
-            // v1.1.0 P0-4 Phase 2: 椤圭洰绾ц〃杩囨护 (created_by OR admin OR project_authorizations)
-            // projectId 鏄洿绐勭殑鏀剁獎, 涓嶈兘婕?
+            // v1.1.0 P0-4 Phase 2: 项目级过滤 (created_by OR admin OR project_authorizations)
+            // projectId 是更窄的收窄条件, 不能漏
             var sql = $@"SELECT * FROM income_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope, "project_id")}";
             if (projectId.HasValue) sql += " AND project_id=@ProjectId";
             sql += " ORDER BY created_at DESC";
@@ -35,7 +35,7 @@ public static class ContractEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
-            // v1.1.0 P0-4 Phase 2: 椤圭洰绾ц〃杩囨护
+            // v1.1.0 P0-4 Phase 2: 项目级过滤
             var sql = $@"SELECT * FROM expense_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope, "project_id")}";
             if (projectId.HasValue) sql += " AND project_id=@ProjectId";
             sql += " ORDER BY created_at DESC";
@@ -47,7 +47,7 @@ public static class ContractEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
-            // v1.1.0 P0-4 Phase 2: 椤圭洰绾ц〃杩囨护
+            // v1.1.0 P0-4 Phase 2: 项目级过滤
             var sql = $@"SELECT * FROM agreement_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope, "project_id")}";
             if (projectId.HasValue) sql += " AND project_id=@ProjectId";
             sql += " ORDER BY created_at DESC";
@@ -72,7 +72,7 @@ public static class ContractEndpoints
         app.MapPost("/api/contracts/income", async (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            // v1.1.0 淇? 鏀圭敤 HttpRequest 璇?body (鍘?dynamic dto 涓嶈 dapper 鑷姩缁戝畾, INSERT 蹇呭け璐?
+            // v1.1.0 修复: 改用 HttpRequest 读 body (原 dynamic dto 不被 dapper 自动绑定, INSERT 必失败)
             using var reader = new System.IO.StreamReader(ctx.Request.Body);
             var bodyText = await reader.ReadToEndAsync();
             var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(bodyText);
@@ -147,14 +147,25 @@ public static class ContractEndpoints
             return Common.Ok(id);
         });
 
-        app.MapPut("/api/contracts/income", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
+        app.MapPut("/api/contracts/income", async (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
+            // 修复: 原 dynamic dto + 参数只传 Uid/IsAdmin/Now 导致 @Id/@Name 等全部缺参必 500(与 expense/agreement 同批改造时漏改)
+            using var reader = new System.IO.StreamReader(ctx.Request.Body);
+            var bodyText = await reader.ReadToEndAsync();
+            var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(bodyText);
+            var recordId = body.TryGetProperty("id", out var idProp) ? idProp.GetInt64() : 0;
             var affected = await db.ExecuteAsync(@"UPDATE income_contracts SET name=@Name,amount=@Amount,status=@Status,remarks=@Remarks,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND " + CurrentUser.UserFilterFragmentForProject(scope),
-                new { Uid = uid, IsAdmin = isAdmin, Now = now() });
-            return affected > 0 ? Common.Ok() : Results.Forbid();
+                new { Uid = uid, IsAdmin = isAdmin, Now = now(),
+                    Id = recordId,
+                    Name = body.TryGetProperty("name", out var n) ? n.GetString() : null,
+                    Amount = body.TryGetProperty("amount", out var a) ? (decimal?)a.GetDouble() : null,
+                    Status = body.TryGetProperty("status", out var st) ? st.GetString() : null,
+                    Remarks = body.TryGetProperty("remarks", out var rm) ? rm.GetString() : null
+                });
+            return await Common.WriteResult(affected, db, "income_contracts", recordId);
         });
 
         app.MapPut("/api/contracts/expense", async (HttpContext ctx, IDbConnection db) =>
@@ -165,15 +176,16 @@ public static class ContractEndpoints
             using var reader = new System.IO.StreamReader(ctx.Request.Body);
             var bodyText = await reader.ReadToEndAsync();
             var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(bodyText);
+            var recordId = body.TryGetProperty("id", out var idProp) ? idProp.GetInt64() : 0;
             var affected = await db.ExecuteAsync(@"UPDATE expense_contracts SET name=@Name,amount=@Amount,status=@Status,remarks=@Remarks,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND " + CurrentUser.UserFilterFragmentForProject(scope),
                 new { Uid = uid, IsAdmin = isAdmin, Now = now(),
-                    Id = body.TryGetProperty("id", out var id) ? id.GetInt64() : 0,
+                    Id = recordId,
                     Name = body.TryGetProperty("name", out var n) ? n.GetString() : null,
                     Amount = body.TryGetProperty("amount", out var a) ? (decimal?)a.GetDouble() : null,
                     Status = body.TryGetProperty("status", out var st) ? st.GetString() : null,
                     Remarks = body.TryGetProperty("remarks", out var rm) ? rm.GetString() : null
                 });
-            return affected > 0 ? Common.Ok() : Results.Forbid();
+            return await Common.WriteResult(affected, db, "expense_contracts", recordId);
         });
 
         app.MapPut("/api/contracts/agreement", async (HttpContext ctx, IDbConnection db) =>
@@ -184,15 +196,16 @@ public static class ContractEndpoints
             using var reader = new System.IO.StreamReader(ctx.Request.Body);
             var bodyText = await reader.ReadToEndAsync();
             var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(bodyText);
+            var recordId = body.TryGetProperty("id", out var idProp) ? idProp.GetInt64() : 0;
             var affected = await db.ExecuteAsync(@"UPDATE agreement_contracts SET name=@Name,amount=@Amount,status=@Status,remarks=@Remarks,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
                 new { Uid = uid, IsAdmin = isAdmin, Now = now(),
-                    Id = body.TryGetProperty("id", out var id) ? id.GetInt64() : 0,
+                    Id = recordId,
                     Name = body.TryGetProperty("name", out var n) ? n.GetString() : null,
                     Amount = body.TryGetProperty("amount", out var a) ? (decimal?)a.GetDouble() : null,
                     Status = body.TryGetProperty("status", out var st) ? st.GetString() : null,
                     Remarks = body.TryGetProperty("remarks", out var rm) ? rm.GetString() : null
                 });
-            return affected > 0 ? Common.Ok() : Results.Forbid();
+            return await Common.WriteResult(affected, db, "agreement_contracts", recordId);
         });
 
         app.MapDelete("/api/contracts/income/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
@@ -200,7 +213,7 @@ public static class ContractEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
-            return (await db.ExecuteAsync("DELETE FROM income_contracts WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
+            return await Common.WriteResult(await db.ExecuteAsync("DELETE FROM income_contracts WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin }), db, "income_contracts", id);
         });
 
         app.MapDelete("/api/contracts/expense/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
@@ -208,7 +221,7 @@ public static class ContractEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
-            return (await db.ExecuteAsync("DELETE FROM expense_contracts WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
+            return await Common.WriteResult(await db.ExecuteAsync("DELETE FROM expense_contracts WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin }), db, "expense_contracts", id);
         });
 
         app.MapDelete("/api/contracts/agreement/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
@@ -216,12 +229,12 @@ public static class ContractEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
-            return (await db.ExecuteAsync("DELETE FROM agreement_contracts WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
+            return await Common.WriteResult(await db.ExecuteAsync("DELETE FROM agreement_contracts WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin }), db, "agreement_contracts", id);
         });
 
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
-        // 鍚堝悓妯℃澘 (鏃?created_by 鍒? 浠?var uid 寮哄埗閴存潈)
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+        // ═══════════════════════════════════════
+        // 合同模板 (以 created_by 列 + var uid 强制鉴权)
+        // ═══════════════════════════════════════
 
         app.MapGet("/api/contract-templates", (HttpContext ctx, IDbConnection db) =>
         {
@@ -236,7 +249,7 @@ public static class ContractEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO contract_templates (name,type,content,variables,created_by,created_at,updated_at, last_modified_at) VALUES (@Name,@Type,@Content,@Variables,@CreatedBy,@Now,@Now, @Now); SELECT last_insert_rowid();",
-                new { dto.Name, Type = dto.Type ?? "contract", dto.Content, dto.Variables, CreatedBy = uid, Now = now() });
+                new { dto.Name, Type = dto.Type ?? "other", dto.Content, dto.Variables, CreatedBy = uid, Now = now() });
             return Common.Ok(id);
         });
 
@@ -246,8 +259,8 @@ public static class ContractEndpoints
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             // 修复: 原 dynamic dto + 参数只传 Now 导致 @Name/@Id 等全部缺参必 500; 并对齐 DELETE 的 user-dim 越权保护
             var affected = await db.ExecuteAsync(@"UPDATE contract_templates SET name=@Name,type=@Type,content=@Content,variables=@Variables,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
-                new { dto.Id, dto.Name, Type = dto.Type ?? "contract", dto.Content, dto.Variables, Now = now(), Uid = uid, IsAdmin = isAdmin });
-            return affected > 0 ? Common.Ok() : Results.Forbid();
+                new { dto.Id, dto.Name, Type = dto.Type ?? "other", dto.Content, dto.Variables, Now = now(), Uid = uid, IsAdmin = isAdmin });
+            return await Common.WriteResult(affected, db, "contract_templates", dto.Id ?? 0);
         });
 
         app.MapDelete("/api/contract-templates/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
@@ -255,11 +268,11 @@ public static class ContractEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
-            return (await db.ExecuteAsync("DELETE FROM contract_templates WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
+            return await Common.WriteResult(await db.ExecuteAsync("DELETE FROM contract_templates WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin }), db, "contract_templates", id);
         });
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
-        // 缁撶畻 (settlements 琛ㄦ棤 created_by 鍒? 浠?var uid 寮哄埗閴存潈)
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+        // ═══════════════════════════════════════
+        // 结算 (settlements 表有 created_by 列, 以 var uid 强制鉴权)
+        // ═══════════════════════════════════════
 
         app.MapGet("/api/settlements", (HttpContext ctx, IDbConnection db, long? projectId) =>
         {
@@ -267,7 +280,7 @@ public static class ContractEndpoints
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             // v1.1.0 P0-4 Phase 2: settlements 琛ㄧ幇鍦ㄦ湁 created_by (migration 014)
-            // 浼樺厛鐢ㄥ唴鑱?SQL 閬垮厤 LEFT JOIN projects 涔熸湁 created_by 鍒楀啿绐?
+            // 优先用内联 SQL 避免 LEFT JOIN projects 时 created_by 列冲突
             var sql = @"SELECT s.*, p.name as project_name
                         FROM settlements s LEFT JOIN projects p ON s.project_id=p.id
                         WHERE (s.created_by=@Uid OR @IsAdmin=1 OR EXISTS(SELECT 1 FROM project_authorizations WHERE project_id=s.project_id AND user_id=@Uid)) AND s.deleted_at IS NULL";
@@ -276,21 +289,54 @@ public static class ContractEndpoints
             return Common.Ok(db.Query(sql, new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }));
         });
 
-        app.MapPost("/api/settlements", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
+        app.MapPost("/api/settlements", async (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO settlements (project_id,name,sub_type,status,settlement_no,amount,settler_id,remarks,created_by,created_at,updated_at, last_modified_at) VALUES (@ProjectId,@Name,@SubType,'pending',@SettlementNo,@Amount,@SettlerId,@Remarks,@CreatedBy,@Now,@Now, @Now);
+            // 修复: 原 dynamic dto + 参数只传 CreatedBy/Now 导致 8 个占位符全缺参必 500; 且 INSERT 引用了真库不存在的 settler_id 列
+            using var reader = new System.IO.StreamReader(ctx.Request.Body);
+            var bodyText = await reader.ReadToEndAsync();
+            var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(bodyText);
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO settlements (project_id,contract_id,partner_id,type,sub_type,status,settlement_no,name,amount,settlement_date,remarks,items,files,created_by,created_at,updated_at, last_modified_at) VALUES (@ProjectId,@ContractId,@PartnerId,@Type,@SubType,'pending',@SettlementNo,@Name,@Amount,@SettlementDate,@Remarks,@Items,@Files,@CreatedBy,@Now,@Now, @Now);
                 SELECT last_insert_rowid();",
-                new { CreatedBy = uid, Now = now() });
+                new {
+                    ProjectId = body.TryGetProperty("projectId", out var p) && p.ValueKind == System.Text.Json.JsonValueKind.Number ? (long?)p.GetInt64() : null,
+                    ContractId = body.TryGetProperty("contractId", out var ci) && ci.ValueKind == System.Text.Json.JsonValueKind.Number ? (long?)ci.GetInt64() : null,
+                    PartnerId = body.TryGetProperty("partnerId", out var pi) && pi.ValueKind == System.Text.Json.JsonValueKind.Number ? (long?)pi.GetInt64() : null,
+                    Type = body.TryGetProperty("type", out var ty) ? ty.GetString() : null,
+                    SubType = body.TryGetProperty("subType", out var sub) ? sub.GetString() : null,
+                    SettlementNo = body.TryGetProperty("settlementNo", out var sn) ? sn.GetString() : null,
+                    Name = body.TryGetProperty("name", out var n) ? n.GetString() : null,
+                    Amount = body.TryGetProperty("amount", out var a) && a.ValueKind == System.Text.Json.JsonValueKind.Number ? (decimal?)a.GetDouble() : null,
+                    SettlementDate = body.TryGetProperty("settlementDate", out var sd) ? sd.GetString() : null,
+                    Remarks = body.TryGetProperty("remarks", out var rm) ? rm.GetString() : null,
+                    Items = body.TryGetProperty("items", out var it) ? it.GetRawText() : "[]",
+                    Files = body.TryGetProperty("files", out var f) ? f.GetRawText() : "[]",
+                    CreatedBy = uid, Now = now()
+                });
             return Common.Ok(id);
         });
 
-        app.MapPut("/api/settlements", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
+        app.MapPut("/api/settlements", async (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            var affected = await db.ExecuteAsync(@"UPDATE settlements SET name=@Name,sub_type=@SubType,amount=@Amount,remarks=@Remarks,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id",
-                new { Now = now() });
-            return affected > 0 ? Common.Ok() : Results.Forbid();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            // 修复: 原 dynamic dto + 参数只传 Now 导致缺参必 500; 并补 user-dim 越权保护(对齐 DELETE)
+            using var reader = new System.IO.StreamReader(ctx.Request.Body);
+            var bodyText = await reader.ReadToEndAsync();
+            var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(bodyText);
+            var recordId = body.TryGetProperty("id", out var idProp) ? idProp.GetInt64() : 0;
+            var affected = await db.ExecuteAsync(@"UPDATE settlements SET name=@Name,sub_type=@SubType,amount=@Amount,settlement_date=@SettlementDate,remarks=@Remarks,items=@Items,files=@Files,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND deleted_at IS NULL AND (created_by=@Uid OR @IsAdmin=1)",
+                new { Uid = uid, IsAdmin = isAdmin, Now = now(),
+                    Id = recordId,
+                    Name = body.TryGetProperty("name", out var n) ? n.GetString() : null,
+                    SubType = body.TryGetProperty("subType", out var sub) ? sub.GetString() : null,
+                    Amount = body.TryGetProperty("amount", out var a) && a.ValueKind == System.Text.Json.JsonValueKind.Number ? (decimal?)a.GetDouble() : null,
+                    SettlementDate = body.TryGetProperty("settlementDate", out var sd) ? sd.GetString() : null,
+                    Remarks = body.TryGetProperty("remarks", out var rm) ? rm.GetString() : null,
+                    Items = body.TryGetProperty("items", out var it) ? it.GetRawText() : "[]",
+                    Files = body.TryGetProperty("files", out var f) ? f.GetRawText() : "[]"
+                });
+            return await Common.WriteResult(affected, db, "settlements", recordId);
         });
 
         app.MapDelete("/api/settlements/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
@@ -298,22 +344,26 @@ public static class ContractEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
-            return (await db.ExecuteAsync("UPDATE settlements SET deleted_at=@Now WHERE id=@Id AND deleted_at IS NULL AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin, Now = now() })) > 0 ? Common.Ok() : Results.Forbid();
+            return await Common.WriteResult(await db.ExecuteAsync("UPDATE settlements SET deleted_at=@Now WHERE id=@Id AND deleted_at IS NULL AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin, Now = now() }), db, "settlements", id);
         });
         app.MapPut("/api/settlements/{id}/process", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            var affected = await db.ExecuteAsync(@"UPDATE settlements SET status='processed',updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id",
-                new { Id = id, Now = now() });
-            return affected > 0 ? Common.Ok() : Results.Forbid();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            // 补 user-dim 越权保护(对齐 DELETE)
+            var affected = await db.ExecuteAsync(@"UPDATE settlements SET status='processed',updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND deleted_at IS NULL AND (created_by=@Uid OR @IsAdmin=1)",
+                new { Id = id, Uid = uid, IsAdmin = isAdmin, Now = now() });
+            return await Common.WriteResult(affected, db, "settlements", id);
         });
 
         app.MapPut("/api/settlements/{id}/unarchive", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            var affected = await db.ExecuteAsync(@"UPDATE settlements SET status='pending',updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id",
-                new { Id = id, Now = now() });
-            return affected > 0 ? Common.Ok() : Results.Forbid();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            // 补 user-dim 越权保护(对齐 DELETE)
+            var affected = await db.ExecuteAsync(@"UPDATE settlements SET status='pending',updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND deleted_at IS NULL AND (created_by=@Uid OR @IsAdmin=1)",
+                new { Id = id, Uid = uid, IsAdmin = isAdmin, Now = now() });
+            return await Common.WriteResult(affected, db, "settlements", id);
         });
     }
 }

@@ -25,6 +25,10 @@ export const UserListTab: React.FC<UserListTabProps> = ({ users, onRefresh }) =>
     displayName: '',
     roleId: 'worker',
   })
+  // 打开时快照初值；dirty 时误触关闭先弹确认（Drawer dirty 契约）
+  const initialSnapshot = React.useRef('')
+  React.useEffect(() => { if (showCreateForm) initialSnapshot.current = JSON.stringify(formData) }, [showCreateForm]) // eslint-disable-line react-hooks/exhaustive-deps
+  const isDirty = showCreateForm && JSON.stringify(formData) !== initialSnapshot.current
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -95,7 +99,7 @@ export const UserListTab: React.FC<UserListTabProps> = ({ users, onRefresh }) =>
   return (
     <>
       {ConfirmDialog}
-      <Drawer open={showCreateForm} onClose={() => { setShowCreateForm(false); setEditingUser(null) }}
+      <Drawer open={showCreateForm} onClose={() => { setShowCreateForm(false); setEditingUser(null) }} dirty={isDirty}
         icon="UserCog" title={editingUser ? '编辑用户' : '添加用户'}
         footer={<div className="flex items-center gap-3">
           <button type="button" onClick={() => { setShowCreateForm(false); setEditingUser(null) }}

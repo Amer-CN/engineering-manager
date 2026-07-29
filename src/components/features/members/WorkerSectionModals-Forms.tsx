@@ -30,9 +30,13 @@ export function TeamFormModal({
       && (!formData.projectId || w.projectId === formData.projectId)
       && (editingTeam ? w.teamId === editingTeam.id : true)
   )
+  // 打开时快照初值（受控组件，formData 来自父层）；dirty 时误触关闭先弹确认
+  const initialSnapshot = React.useRef('')
+  React.useEffect(() => { if (visible) initialSnapshot.current = JSON.stringify(formData) }, [visible]) // eslint-disable-line react-hooks/exhaustive-deps
+  const isDirty = visible && JSON.stringify(formData) !== initialSnapshot.current
 
   return (
-    <Drawer open={visible} onClose={onClose} icon="Users" title={editingTeam ? '编辑班组' : '添加班组'}
+    <Drawer open={visible} onClose={onClose} icon="Users" title={editingTeam ? '编辑班组' : '添加班组'} dirty={isDirty}
       footer={
         <div className="flex items-center justify-end gap-3">
           <Button type="button" onClick={onClose}  variant="secondary">取消</Button>
@@ -106,8 +110,13 @@ export function TransferModal({
   onSubmit,
   onClose
 }: TransferModalProps) {
+  // 打开时快照初值；dirty 时误触关闭先弹确认
+  const initialSnapshot = React.useRef('')
+  React.useEffect(() => { if (visible) initialSnapshot.current = JSON.stringify(formData) }, [visible]) // eslint-disable-line react-hooks/exhaustive-deps
+  const isDirty = visible && JSON.stringify(formData) !== initialSnapshot.current
+
   return (
-    <Drawer open={visible && !!worker} onClose={onClose} icon="ArrowRightLeft" title="工人调组"
+    <Drawer open={visible && !!worker} onClose={onClose} icon="ArrowRightLeft" title="工人调组" dirty={isDirty}
       footer={
         <div className="flex items-center justify-end gap-3">
           <Button type="button" onClick={onClose}  variant="secondary">取消</Button>

@@ -25,7 +25,7 @@
 - 全站金额 mono 巡检：28 处补 `font-mono tabular-nums`（codemod 批量后即删脚本）；SettlementPrintTemplate 为纸质打印模板整体豁免（codemod 曾误伤 2 处，diff 自检时已回滚）
 - **Drawer 组件加固**：补背景滚动锁定（对齐旧 Modal 行为，20 处迁移的体验回归）+ 新增专属单测 `Drawer.test.tsx` 6 用例（渲染/关闭/Esc/footer/滚动锁定）
 
-### 4. Bug 修复（8 项真实缺陷）
+### 4. Bug 修复（8 项，构成注记：6 项存量缺陷 + #4 测试设施问题 + #5 本批迁移引入的回归）
 | # | 缺陷 | 修复 |
 |---|------|------|
 | 1 | PaymentForm 新建误判为编辑（`isEditing=!!recordDate` 而 recordDate 默认今天恒真）| 改显式 `isEditing` prop，Invoices.tsx 传 `!!h.editingPayment` |

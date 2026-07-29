@@ -9,6 +9,8 @@ interface ItemFormProps {
   units: string[]
   onSubmit: (data: any) => void
   onCancel: () => void
+  /** 用户首次编辑时上报（父层据此给 Drawer 传 dirty，误触关闭先弹确认） */
+  onDirtyChange?: () => void
 }
 
 const defaultFormData = {
@@ -27,6 +29,7 @@ const defaultFormData = {
 }
 
 export const ItemForm: React.FC<ItemFormProps> = ({
+  onDirtyChange,
   item,
   partners,
   categories,
@@ -66,7 +69,7 @@ export const ItemForm: React.FC<ItemFormProps> = ({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="p-6">
+    <form onSubmit={handleSubmit} onInput={onDirtyChange} className="p-6">
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="label">物料编码 *</label>

@@ -25,8 +25,8 @@ S29 设计稿工具条的富文本能力落地（v0.84.0 遗留项 2）。技术
 - `renderPreview` 改走 `parseMarkup` token 流：`## `→条款标题 h2、粗体 strong、斜体 em、`{{变量}}`→accent 徽章；容器去掉 whitespace-pre-wrap（改为按行 p/h2 分段）
 
 ## 验收证据
-- tsc 0 · **全量 vitest 165 files 全过** · vite build · check PASSED
-- **dotnet build 0 错误 · dotnet test 644/644 全过（78s 裸跑）**——STT E2E 加 `RUN_STT_E2E=1` 环境变量闸门后，裸跑不再被 transcribe.exe 挂起拖死（此前两次 10 分钟+超时的根因）；重型 E2E 手动跑法见 SttE2ETests.cs 注释
+- tsc 0 · **全量 vitest 165 测试文件 / 1621 用例全过** · vite build · check PASSED · check:backend PASSED
+- **dotnet build 0 错误 · dotnet test 642 通过 + 2 跳过（STT E2E，共 644，裸跑 80s）**——STT E2E 闸门升级为自定义 FactAttribute，未开启时以 xunit Skipped 状态如实上报（而非空跑计入 Passed）；此前 transcribe.exe 挂起致裸跑 10 分钟+超时；重型 E2E 手动跑法见 SttE2ETests.cs 注释
 - 浏览器 DOM 实证：填入 `## 一、合同价款` + `**伍佰万元整**` + `*按进度付款*` + `{{甲方名称}}` → 预览断言 `{strong:"伍佰万元整", em:"按进度付款", h2:"一、合同价款"}` 全对
 - 实拍：`.design-qa/actual/s29b_richtext_preview.png`（预览模式：变量徽章+粗斜体+居中标题）+ `s29b_editor_toolbar.png`（编辑模式：工具条 B/I/H₂ + 插入变量 chip + 纸张 mono 编辑区 + 变量绑定面板全景）
 
@@ -38,7 +38,7 @@ S29 设计稿工具条的富文本能力落地（v0.84.0 遗留项 2）。技术
 | — | 建表漂移：用户真实库的 contract_templates 为早期版本建表，缺 content 等 7 列 | Program.cs EnsureTables 自愈迁移（项目既有 ALTER+catch 模式）|
 | 11 | 打印正文恒空：`handlePrint` 误传 `formData.description`（新建表单 state） | 改传 `selectedTemplate.description` |
 
-**E2E 全链路实证**（真实数据库，用完即删）：创建（富文本+变量+`<script>` 注入探针）→ 列表渲染 → 生成合同填变量 → 打印捕获断言 `{hasStrong, headingLine, varReplaced, scriptEscaped}` 四项全真 → 删除清理归零；PUT 编辑另行实证（改名/改正文/改变量落库 + version 1→2 乐观锁递增 + 越权 PUT 返回 403）
+**E2E 全链路实证**（真实数据库，用完即删）：创建（富文本+变量+`<script>` 注入探针）→ 列表渲染 → 生成合同填变量 → 打印捕获断言 `{hasStrong, headingLine, varReplaced, scriptEscaped}` 四项全真 → 删除清理归零；PUT 编辑另行实证（改名/改正文/改变量落库 + version 字段 1→2 递增（版本号计数，非乐观锁：WHERE 未比对 version） + 越权 PUT 返回 403）
 
 ### 6. 全库表结构漂移审计（排除系统性风险）
 contract_templates 建表漂移曝光后，用 Microsoft.Data.Sqlite 只读审计真实库（F:\Company Database\engineering.db）全部 45+ 表的实际列 vs 代码期望：

@@ -27,6 +27,8 @@ export interface PaymentFormProps {
 
 export const PaymentForm: React.FC<PaymentFormProps> = ({ initialData, projects, partners, invoices, contracts, isEditing = false, onSubmit, onCancel }) => {
   const [formData, setFormData] = useState<PaymentFormData>(initialData)
+  // dirty 判定：与初值任一字段有差异时，误触关闭先弹确认（Drawer dirty 契约）
+  const isDirty = JSON.stringify(formData) !== JSON.stringify(initialData)
   const { processBankReceiptFile } = useBankReceiptOCR()
   const [bankReceiptLoading, setBankReceiptLoading] = useState(false)
   const bankReceiptInputRef = useRef<HTMLInputElement>(null)
@@ -67,7 +69,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ initialData, projects,
   const typeLabel = formData.type === 'invoice_out' ? '回款' : '付款'
 
   return (
-  <Drawer open onClose={onCancel}
+  <Drawer open onClose={onCancel} dirty={isDirty}
   icon="Wallet"
   title={isEditing ? (formData.type === 'invoice_out' ? '编辑回款记录' : '编辑付款记录') : (formData.type === 'invoice_out' ? '回款登记' : '付款登记')}
   footer={

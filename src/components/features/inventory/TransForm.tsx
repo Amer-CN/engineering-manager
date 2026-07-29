@@ -10,6 +10,8 @@ interface TransFormProps {
   defaultUnitPrice?: number
   onSubmit: (data: any) => void
   onCancel: () => void
+  /** 用户首次编辑时上报（父层据此给 Drawer 传 dirty，误触关闭先弹确认） */
+  onDirtyChange?: () => void
 }
 
 const defaultFormData = {
@@ -26,6 +28,7 @@ const defaultFormData = {
 }
 
 export const TransForm: React.FC<TransFormProps> = ({
+  onDirtyChange,
   items,
   projects,
   partners,
@@ -66,7 +69,7 @@ export const TransForm: React.FC<TransFormProps> = ({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="p-6">
+    <form onSubmit={handleSubmit} onInput={onDirtyChange} className="p-6">
       <div className="space-y-4">
         <div>
           <label className="label">物料 *</label>

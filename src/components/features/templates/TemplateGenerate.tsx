@@ -46,7 +46,8 @@ export default function TemplateGenerate({ template, onClose }: TemplateGenerate
       if (result.success && result.data) {
         let html = result.data
         for (const [key, val] of Object.entries(values)) {
-          html = html.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), val || `【${key}】`)
+          // split/join 字面量全替换：key 含正则元字符时 new RegExp 会抛异常或误匹配
+          html = html.split(`{{${key}}}`).join(val || `【${key}】`)
         }
         setPreviewHtml(html)
       } else {

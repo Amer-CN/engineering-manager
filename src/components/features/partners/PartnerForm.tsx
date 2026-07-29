@@ -11,6 +11,8 @@ interface PartnerFormProps {
   projects: Project[]
   onSubmit: (data: any) => void
   onCancel: () => void
+  /** 用户首次编辑时上报（父层据此给 Drawer 传 dirty，误触关闭先弹确认） */
+  onDirtyChange?: () => void
 }
 
 const defaultFormData: PartnerFormData = {
@@ -38,7 +40,8 @@ export const PartnerForm: React.FC<PartnerFormProps> = ({
   partner,
   projects,
   onSubmit,
-  onCancel
+  onCancel,
+  onDirtyChange
 }) => {
   const showToast = useToastStore(state => state.showToast)
   const [formData, setFormData] = useState(defaultFormData)
@@ -119,7 +122,7 @@ export const PartnerForm: React.FC<PartnerFormProps> = ({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="p-6">
+    <form onSubmit={handleSubmit} onInput={onDirtyChange} className="p-6">
       <div className="space-y-4">
         <PartnerFormFields formData={formData} setFormData={setFormData} projects={projects} toggleProject={toggleProject} />
 

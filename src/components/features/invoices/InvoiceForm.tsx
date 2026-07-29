@@ -116,6 +116,8 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
   }
 
   const isEditing = !!initialData.invoiceNo && initialData.invoiceNo !== `INV${Date.now()}`
+  // dirty 判定：表单与初值任一字段有差异（误触 Esc/遮罩关闭时 Drawer 先弹确认，防丢填写中的数据）
+  const isDirty = JSON.stringify(formData) !== JSON.stringify(initialData)
 
   return (
   <>
@@ -125,6 +127,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
     onClose={onCancel}
     icon="Receipt"
     title={isEditing ? '编辑发票' : '发票智能录入'}
+    dirty={isDirty}
     footer={
       <div className="flex items-center justify-end gap-3">
         <Button type="button" onClick={onCancel} variant="secondary">取消</Button>

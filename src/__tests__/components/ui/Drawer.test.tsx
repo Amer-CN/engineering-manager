@@ -77,4 +77,57 @@ describe('Drawer', () => {
     unmount()
     expect(document.body.style.overflow).toBe('')
   })
+
+  // ─── dirty 误触关闭确认（审查建议：20 表单迁入后误触丢数据面放大） ───
+
+  test('dirty 时按 Escape 弹确认层而非直接关闭', () => {
+    const onClose = vi.fn()
+    render(
+      <Drawer open onClose={onClose} title="标题" dirty>
+        <div>内容</div>
+      </Drawer>,
+    )
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(onClose).not.toHaveBeenCalled()
+    expect(screen.getByRole('alertdialog')).toBeTruthy()
+    expect(screen.getByText('放弃修改？')).toBeTruthy()
+  })
+
+  test('dirty 确认层点「放弃修改」后才调用 onClose', () => {
+    const onClose = vi.fn()
+    render(
+      <Drawer open onClose={onClose} title="标题" dirty>
+        <div>内容</div>
+      </Drawer>,
+    )
+    fireEvent.click(screen.getByLabelText('关闭'))
+    expect(onClose).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByText('放弃修改'))
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  test('dirty 确认层点「继续编辑」收起确认且不关闭', () => {
+    const onClose = vi.fn()
+    render(
+      <Drawer open onClose={onClose} title="标题" dirty>
+        <div>内容</div>
+      </Drawer>,
+    )
+    fireEvent.keyDown(window, { key: 'Escape' })
+    fireEvent.click(screen.getByText('继续编辑'))
+    expect(onClose).not.toHaveBeenCalled()
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+  })
+
+  test('dirty=false 时 Escape 直接关闭不弹确认（默认行为不变）', () => {
+    const onClose = vi.fn()
+    render(
+      <Drawer open onClose={onClose} title="标题" dirty={false}>
+        <div>内容</div>
+      </Drawer>,
+    )
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+  })
 })

@@ -150,13 +150,24 @@ public static class SystemEndpoints
             });
         });
 
-        app.MapPost("/api/audit/clear", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
+        app.MapPost("/api/audit/clear", async (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             // 仅 admin 可清空审计
             if (isAdmin == 0) return Results.Forbid();
-            var daysToKeep = (int)(dto.daysToKeep ?? 90);
+            var daysToKeep = 90;
+            // 修复: 原 dynamic dto.daysToKeep 在 Minimal API 不绑 body(运行时必抛) → 改读 body JSON
+            using (var reader = new System.IO.StreamReader(ctx.Request.Body))
+            {
+                var bodyText = await reader.ReadToEndAsync();
+                if (!string.IsNullOrWhiteSpace(bodyText))
+                {
+                    var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(bodyText);
+                    if (body.TryGetProperty("daysToKeep", out var dk) && dk.ValueKind == System.Text.Json.JsonValueKind.Number)
+                        daysToKeep = dk.GetInt32();
+                }
+            }
             var cutoff = DateTime.Now.AddDays(-daysToKeep).ToString("yyyy-MM-dd HH:mm:ss");
             var removed = await db.ExecuteAsync("DELETE FROM audit_logs WHERE created_at < @Cutoff", new { Cutoff = cutoff });
             return Common.Ok(new { removedCount = removed });
@@ -226,7 +237,7 @@ public static class SystemEndpoints
             return Common.Ok();
         });
 
-        app.MapPut("/api/snapshots/max-count", (HttpContext ctx, dynamic dto) =>
+        app.MapPut("/api/snapshots/max-count", (HttpContext ctx) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             return Common.Ok();

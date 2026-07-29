@@ -130,24 +130,57 @@ public static class InvoiceEndpoints
             return Common.Ok(result);
         });
 
-        app.MapPost("/api/payment-records", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
+        app.MapPost("/api/payment-records", async (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // 修复: 原 dynamic dto + 参数只传 CreatedBy/Now 导致 10 个占位符全缺参必 500(与 contract-templates bug#10 同根因)
+            using var reader = new System.IO.StreamReader(ctx.Request.Body);
+            var bodyText = await reader.ReadToEndAsync();
+            var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(bodyText);
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO payment_records (type,amount,record_date,project_id,partner_id,contract_id,invoice_details,remarks,file_url,file_type,created_by,created_at, last_modified_at) VALUES (@Type,@Amount,@RecordDate,@ProjectId,@PartnerId,@ContractId,@InvoiceDetails,@Remarks,@FileUrl,@FileType,@CreatedBy,@Now, @Now);
                 SELECT last_insert_rowid();",
-                new { CreatedBy = uid, Now = now() });
+                new {
+                    Type = body.TryGetProperty("type", out var ty) ? ty.GetString() : null,
+                    Amount = body.TryGetProperty("amount", out var a) && a.ValueKind == System.Text.Json.JsonValueKind.Number ? (decimal?)a.GetDouble() : null,
+                    RecordDate = body.TryGetProperty("recordDate", out var rd) ? rd.GetString() : null,
+                    ProjectId = body.TryGetProperty("projectId", out var p) && p.ValueKind == System.Text.Json.JsonValueKind.Number ? (long?)p.GetInt64() : null,
+                    PartnerId = body.TryGetProperty("partnerId", out var pi) && pi.ValueKind == System.Text.Json.JsonValueKind.Number ? (long?)pi.GetInt64() : null,
+                    ContractId = body.TryGetProperty("contractId", out var ci) && ci.ValueKind == System.Text.Json.JsonValueKind.Number ? (long?)ci.GetInt64() : null,
+                    InvoiceDetails = body.TryGetProperty("invoiceDetails", out var iv) ? (iv.ValueKind == System.Text.Json.JsonValueKind.String ? iv.GetString() : iv.GetRawText()) : null,
+                    Remarks = body.TryGetProperty("remarks", out var rm) ? rm.GetString() : null,
+                    FileUrl = body.TryGetProperty("fileUrl", out var fu) ? fu.GetString() : null,
+                    FileType = body.TryGetProperty("fileType", out var ft) ? ft.GetString() : null,
+                    CreatedBy = uid, Now = now()
+                });
             return Common.Ok(id);
         });
 
-        app.MapPut("/api/payment-records", async (HttpContext ctx, dynamic dto, IDbConnection db) =>
+        app.MapPut("/api/payment-records", async (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            // 修复: 原 dynamic dto + 参数只传 Uid/IsAdmin/Now 导致缺参必 500; 并补 404 语义
+            using var reader = new System.IO.StreamReader(ctx.Request.Body);
+            var bodyText = await reader.ReadToEndAsync();
+            var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(bodyText);
+            var recordId = body.TryGetProperty("id", out var idProp) ? idProp.GetInt64() : 0;
             var affected = await db.ExecuteAsync(@"UPDATE payment_records SET type=@Type,amount=@Amount,record_date=@RecordDate,
                 project_id=@ProjectId,partner_id=@PartnerId,contract_id=@ContractId,invoice_details=@InvoiceDetails,
                 remarks=@Remarks,file_url=@FileUrl,file_type=@FileType, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
-                new { Uid = uid, IsAdmin = isAdmin, Now = now() });
-            return affected > 0 ? Common.Ok() : Results.Forbid();
+                new { Uid = uid, IsAdmin = isAdmin, Now = now(),
+                    Id = recordId,
+                    Type = body.TryGetProperty("type", out var ty) ? ty.GetString() : null,
+                    Amount = body.TryGetProperty("amount", out var a) && a.ValueKind == System.Text.Json.JsonValueKind.Number ? (decimal?)a.GetDouble() : null,
+                    RecordDate = body.TryGetProperty("recordDate", out var rd) ? rd.GetString() : null,
+                    ProjectId = body.TryGetProperty("projectId", out var p) && p.ValueKind == System.Text.Json.JsonValueKind.Number ? (long?)p.GetInt64() : null,
+                    PartnerId = body.TryGetProperty("partnerId", out var pi) && pi.ValueKind == System.Text.Json.JsonValueKind.Number ? (long?)pi.GetInt64() : null,
+                    ContractId = body.TryGetProperty("contractId", out var ci) && ci.ValueKind == System.Text.Json.JsonValueKind.Number ? (long?)ci.GetInt64() : null,
+                    InvoiceDetails = body.TryGetProperty("invoiceDetails", out var iv) ? (iv.ValueKind == System.Text.Json.JsonValueKind.String ? iv.GetString() : iv.GetRawText()) : null,
+                    Remarks = body.TryGetProperty("remarks", out var rm) ? rm.GetString() : null,
+                    FileUrl = body.TryGetProperty("fileUrl", out var fu) ? fu.GetString() : null,
+                    FileType = body.TryGetProperty("fileType", out var ft) ? ft.GetString() : null
+                });
+            return await Common.WriteResult(affected, db, "payment_records", recordId);
         });
 
         app.MapDelete("/api/payment-records/{id}", async (HttpContext ctx, long id, IDbConnection db) =>

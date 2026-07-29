@@ -102,3 +102,4 @@ export function useProjects() {
 3. [ ] 软删除字段：`deleted_at TEXT`（财务表必需）
 4. [ ] 索引：高频查询字段添加索引
 5. [ ] 迁移脚本：创建 `NNN_Description.sql`
+6. [ ] **列名对齐真契约**：端点 INSERT/UPDATE 的列名必须与「前端类型(`src/types/electron.d.ts`) + 真实生产库」一致（二者是唯一真源，建表脚本/dev 库那套可能是从未匹配的死 schema）。改写端点后跑 `pwsh scripts/audit-column-drift.ps1 -DbPath <库>` 必须 `✅ 无列漂移`（详见 docs/SMOKE-TEST.md §0.5）

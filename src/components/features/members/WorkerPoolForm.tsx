@@ -34,20 +34,26 @@ export function WorkerPoolForm({ visible, editing, onClose, onSubmit, onSwitchTo
   const [form, setForm] = useState<WorkerPoolFormData>(defaultWorkerPoolForm)
   const [submitting, setSubmitting] = useState(false)
   const [ocrBusy, setOcrBusy] = useState(false)
+  // 打开时快照初值；dirty 时误触关闭先弹确认（Drawer dirty 契约）
+  const initialSnapshot = React.useRef(JSON.stringify(defaultWorkerPoolForm))
+  const isDirty = JSON.stringify(form) !== initialSnapshot.current
 
   useEffect(() => {
   if (!visible) return
   if (editing) {
-  setForm({
+  const filled = {
   name: editing.name || '', phone: editing.phone || '',
   idCard: editing.idCard || '', idCardFront: '', idCardBack: '',
   gender: editing.gender || '', ethnicity: editing.ethnicity || '',
   birthDate: editing.birthDate || '', idCardAddress: editing.address || '',
   bankAccount: editing.bankAccount || '', bankName: editing.bankName || '', bankLineNo: editing.bankLineNo || '',
   workerType: workerTypeToCode(editing.workerType), dailyWage: editing.dailyWage ? String(editing.dailyWage) : ''
-  })
+  }
+  setForm(filled)
+  initialSnapshot.current = JSON.stringify(filled)
   } else {
   setForm(defaultWorkerPoolForm)
+  initialSnapshot.current = JSON.stringify(defaultWorkerPoolForm)
   }
   }, [visible, editing])
 
@@ -88,7 +94,7 @@ export function WorkerPoolForm({ visible, editing, onClose, onSubmit, onSwitchTo
   }
 
   return (
-  <Drawer open={visible} onClose={onClose} icon="HardHat" title={editing ? '编辑工人信息' : '添加工人'}
+  <Drawer open={visible} onClose={onClose} icon="HardHat" title={editing ? '编辑工人信息' : '添加工人'} dirty={isDirty}
   footer={
   <div className="flex items-center justify-between w-full">
   <div>
