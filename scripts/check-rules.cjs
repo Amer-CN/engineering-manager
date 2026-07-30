@@ -345,6 +345,38 @@ console.log('\n═══ 铁律：辉光白名单（AmbientGlow 仅限启动/登
 }
 
 // ═══════════════════════════════════════════════════════
+// 铁律：辉光旁路软警告（决策 2 补充 —— 堵“手写 radial-gradient 绕过 <AmbientGlow />”）
+// 非辉光白名单文件里出现“大半径 radial-gradient（尺寸 > 100%）”往往是手写环境辉光，
+// 绕过组件收敛。此处仅 SOFT WARN 提示人工复审，不 HARD FAIL（避免误伤合法小半径渐变）。
+// ═══════════════════════════════════════════════════════
+
+console.log('\n═══ 铁律：辉光旁路软警告（radial-gradient 尺寸 > 100%） ═══')
+{
+  const rgFiles = walkDir(SRC, (f) =>
+    (f.endsWith('.tsx') || f.endsWith('.ts') || f.endsWith('.css')) && !f.includes('__tests__'))
+  let rgWarn = 0
+  for (const f of rgFiles) {
+    const relPath = path.relative(ROOT, f).replace(/\\/g, '/')
+    if (AMBIENT_GLOW_ALLOWED_FILES.has(relPath)) continue
+    const content = fs.readFileSync(f, 'utf-8')
+    const re = /radial-gradient\(([^,]*)/gi
+    let m
+    while ((m = re.exec(content)) !== null) {
+      // 只看尺寸段（“at” 之前），避免把位置百分比（at X% Y%）误判为半径
+      const sizePart = m[1].split(/\bat\b/i)[0]
+      const pcts = sizePart.match(/(\d+(?:\.\d+)?)%/g) || []
+      if (pcts.some((p) => parseFloat(p) > 100)) {
+        console.log(`  SOFT WARN  ${relPath}: radial-gradient 尺寸 > 100%，疑似手写环境辉光 —— 请复审是否应收敛进 <AmbientGlow />（DESIGN.md § Stage Surfaces · 决策 2）`)
+        rgWarn++
+        warnings++
+        break
+      }
+    }
+  }
+  if (rgWarn === 0) console.log('  OK  无大半径 radial-gradient 旁路')
+}
+
+// ═══════════════════════════════════════════════════════
 // 铁律：玻璃 / 3D 白名单（决策 3 + Stage-Surface · DESIGN.md § Stage Surfaces）
 // backdrop-filter / backdrop-blur / 3D transform（perspective/transform-style/
 // rotateY/preserve-3d）只允许出现在六类浮层 + Stage-Surface 授权舞台区 +
