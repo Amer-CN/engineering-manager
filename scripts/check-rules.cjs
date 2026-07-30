@@ -357,7 +357,9 @@ console.log('\n═══ 铁律：辉光旁路软警告（radial-gradient 尺寸
   let rgWarn = 0
   for (const f of rgFiles) {
     const relPath = path.relative(ROOT, f).replace(/\\/g, '/')
-    if (AMBIENT_GLOW_ALLOWED_FILES.has(relPath)) continue
+    // Stage-Surface 授权舞台区豁免：聚焦卡左上角光源渐变是契约授权材质（DESIGN.md § Stage
+    // Surfaces），非环境辉光旁路；不豁免会永久挂假阳性，每次审计都要重新排除。
+    if (AMBIENT_GLOW_ALLOWED_FILES.has(relPath) || isStageSurface(relPath)) continue
     const content = fs.readFileSync(f, 'utf-8')
     const re = /radial-gradient\(([^,]*)/gi
     let m
