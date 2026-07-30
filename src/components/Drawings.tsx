@@ -16,6 +16,9 @@ import { Icon } from './ui/Icon'
 import { createDrawingColumns } from './features/drawings/drawingsColumns'
 import { DrawingsGallery } from './features/drawings/DrawingsGallery'
 import { DrawingViewer } from './features/drawings/DrawingViewer'
+import { useDrawingsView } from './features/drawings/useDrawingsView'
+import { buildDrawingStackGroups } from './features/drawings/drawingStackGroups'
+import { FolderStack3D, STACK_GROUP_LIMIT, type StackGroup } from '@/components/ui/FolderStack3D'
 
 interface DrawingsProps {
   refresh?: () => void
@@ -31,8 +34,8 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
   const [editingDrawing, setEditingDrawing] = useState<Drawing | null>(null)
   const [filterProject, setFilterProject] = useState<number | ''>('')
   const [filterCategory, setFilterCategory] = useState<string>('')
-  // S26 Stitch: 画廊 / 列表双视图（画廊为默认）
-  const [viewMode, setViewMode] = useState<'gallery' | 'list'>('gallery')
+  // Stage-Surface 红线：扁平视图默认（列表），堆叠主动进入且选择持久化 localStorage
+  const { viewMode, setViewMode } = useDrawingsView()
   // S27 Stitch: 图纸查看器（Lightbox）
   const [viewerDrawing, setViewerDrawing] = useState<Drawing | null>(null)
   const [formData, setFormData] = useState<FormDataState>({
@@ -222,6 +225,20 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
 
   const columns = createDrawingColumns(getProjectName, handleEdit, handleDelete)
 
+  // FolderStack3D：一张卡 = 一个类别分组；堆叠不受类别筛选影响（它本身就是类别导航），只受项目筛选
+  const stackGroups = buildDrawingStackGroups(
+    filterProject ? drawings.filter(d => d.projectId === filterProject) : drawings,
+  )
+  // 卡数门禁：超 40 强制回退列表（DESIGN.md § Stage Surfaces · 决策 4）
+  const stackAllowed = stackGroups.length > 0 && stackGroups.length <= STACK_GROUP_LIMIT
+  const effectiveView = viewMode === 'stack' && !stackAllowed ? 'list' : viewMode
+
+  // 打开分组 = 带类别筛选回到扁平列表（舞台只做导航与概览，不承载操作）
+  const handleStackOpen = (g: StackGroup) => {
+    setFilterCategory(String(g.id))
+    setViewMode('list')
+  }
+
   if (loading) {
   return <Spinner size="lg" text="加载图纸数据..." />
   }
@@ -236,12 +253,12 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
   <p className="text-[color:var(--muted)] mt-1">查看与管理所有工程图纸及修订版本</p>
   </div>
   <div className="flex items-center gap-3">
-  {/* S26 Stitch: 画廊 / 列表切换 */}
+  {/* S26 画廊 / 列表 + Stage-Surface 堆叠（主动进入）切换 */}
   <div className="inline-flex rounded-lg p-0.5" style={{ background: 'var(--panel-2)' }}>
-    {([['gallery', '画廊', 'Image'], ['list', '列表', 'List']] as const).map(([mode, label, icon]) => {
-      const active = viewMode === mode
+    {([['gallery', '画廊', 'Image'], ['list', '列表', 'List'], ...(stackAllowed ? [['stack', '堆叠', 'FolderKanban']] as const : [])] as ReadonlyArray<readonly [string, string, string]>).map(([mode, label, icon]) => {
+      const active = effectiveView === mode
       return (
-        <button key={mode} onClick={() => setViewMode(mode)}
+        <button key={mode} onClick={() => setViewMode(mode as 'gallery' | 'list' | 'stack')}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
           style={active ? { background: 'var(--card)', color: 'var(--fg)', boxShadow: 'var(--shadow-card)' } : { background: 'transparent', color: 'var(--muted)' }}>
           <Icon name={icon} size={14} />
@@ -292,9 +309,16 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
     </select>
   </div>
 
-  {/* 图纸列表 */}
-  {filteredDrawings.length > 0 ? (
-  viewMode === 'gallery' ? (
+  {/* 图纸列表 / 画廊 / 堆叠舞台 */}
+  {effectiveView === 'stack' ? (
+  /* Stage-Surface 舞台区：只做导航与概览，打开分组回扁平列表 */
+  <FolderStack3D
+    groups={stackGroups}
+    onOpen={handleStackOpen}
+    ariaLabel="图纸类别分组堆叠"
+  />
+  ) : filteredDrawings.length > 0 ? (
+  effectiveView === 'gallery' ? (
   <DrawingsGallery
     drawings={filteredDrawings}
     getProjectName={getProjectName}
