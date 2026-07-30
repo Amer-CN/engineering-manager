@@ -2,6 +2,7 @@ import React from 'react'
 import { DataTable, type Column } from '../../DataTable'
 import { Partner, Project } from '../../../types/electron'
 import { partnerCategories } from '../../../data/regions'
+import { useMaskedFn } from '@/hooks/useMaskedValue'
 import { Button } from '../../ui/Button'
 
 interface PartnerListProps {
@@ -21,6 +22,8 @@ export const PartnerList: React.FC<PartnerListProps> = ({
   onEdit,
   onDelete
 }) => {
+  // S21 Stitch: 电话脱敏中间位
+  const mask = useMaskedFn()
   const columns: Column<Partner>[] = [
     {
       key: 'name',
@@ -53,6 +56,13 @@ export const PartnerList: React.FC<PartnerListProps> = ({
       title: '电话',
       width: '130px',
       filterable: true,
+      render: (partner) => <span className="font-mono text-sm tabular-nums text-[color:var(--fg-2)]">{mask('phone', partner.phone) || '-'}</span>
+    },
+    {
+      key: 'creditCode',
+      title: '统一社会信用代码',
+      width: '180px',
+      render: (partner) => <span className="font-mono text-xs tabular-nums text-[color:var(--muted)]">{partner.creditCode || '-'}</span>
     },
     {
       key: 'projects',

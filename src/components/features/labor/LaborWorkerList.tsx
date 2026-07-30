@@ -96,10 +96,28 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
       ],
       render: (w) => <span className="text-[color:var(--fg-2)]">{w.workerType ? getWorkerTypeLabel(w.workerType) : '-'}</span>
     },
+    // S24 Stitch: 所属班组列
+    {
+      key: 'teamName', title: '所属班组', filterable: true,
+      render: (w) => <span className="text-[color:var(--fg-2)]">{(w as Member & { teamName?: string }).teamName || '-'}</span>
+    },
     {
       key: 'dailyWage', title: '日工资', align: 'right', sortable: true, filterable: true,
       sorter: (a, b) => ((a.dailyWage || 0) - (b.dailyWage || 0)),
       render: (w) => <span className="text-[color:var(--fg-2)] font-medium">{w.dailyWage != null ? `¥${w.dailyWage}` : '-'}</span>
+    },
+    // S24 Stitch: 在场状态药丸（语义琥珀仅用于状态）
+    {
+      key: 'status', title: '在场状态', filterable: 'select',
+      filterOptions: [{ label: '在场', value: 'active' }, { label: '已离场', value: 'left' }],
+      filterAccessor: (w: any) => w.status || 'active',
+      render: (w) => (
+        (w as Member & { status?: string }).status === 'left' ? (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[color:var(--panel-2)] text-[color:var(--muted)] border border-[color:var(--border)]">已离场</span>
+        ) : (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success-500/10 text-success-600 border border-success-500/20">在场</span>
+        )
+      )
     },
     {
       key: 'bankAccount', title: '银行卡号', filterable: true,
