@@ -263,6 +263,7 @@ const MODAL_ALLOWED_FILES = new Set([
   'src/components/features/agent/AgentSearch.tsx',
   'src/components/features/costLedger/CategoryManager.tsx',
   'src/components/features/costLedger/CostLedgerCompareModal.tsx',
+  'src/components/features/contracts/ContractDetailModal.tsx',
   'src/components/features/invoices/FilePreviewModal.tsx',
   'src/components/features/labor/TeamWageModal.tsx',
   'src/components/features/labor/WorkerWageHistoryModal.tsx',
