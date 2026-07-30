@@ -9,7 +9,7 @@
 
     <ApplicationIcon>app.ico</ApplicationIcon>
     <NoWarn>MSB3277;AD0001</NoWarn>
-    <Version>0.90.0</Version>
+    <Version>0.90.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
