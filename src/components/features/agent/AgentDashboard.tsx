@@ -27,6 +27,7 @@ import AgentWelcome from './AgentWelcome'
 import AgentOverlays, { HistorySidebar } from './AgentOverlays'
 import MessageBubble from './MessageBubble'
 import { getFilteredSuggestions } from './suggestions'
+import { useAgentPrefill } from './useAgentPrefill'
 
 const AgentDashboard: React.FC = () => {
   const { currentUser } = useAuth()
@@ -65,6 +66,9 @@ const AgentDashboard: React.FC = () => {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [])
+
+  // ── S31B：外部预填提问（如知识库“问 AI 关于本文”）──
+  useAgentPrefill(setInputValue, () => inputRef.current?.focus())
 
   // ── 拉取当前模型名（顶部徽章展示）──
   useEffect(() => {
@@ -327,11 +331,7 @@ const AgentDashboard: React.FC = () => {
                     key={msg.clientId}
                     message={msg}
                     isUser={msg.role === 'user'}
-                    onResend={
-                      msg.role === 'assistant' && idx > 0
-                        ? () => handleResend(msg.clientId)
-                        : undefined
-                    }
+                    onResend={msg.role === 'assistant' && idx > 0 ? () => handleResend(msg.clientId) : undefined}
                   />
                 ))}
               </AnimatePresence>

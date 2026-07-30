@@ -24,6 +24,15 @@ interface KnowledgeDocumentDrawerProps {
 const KnowledgeDocumentDrawer: React.FC<KnowledgeDocumentDrawerProps> = ({ doc, loading, masked, onClose }) => {
   if (typeof document === 'undefined') return null
 
+  // S31B Stitch: 问 AI 关于本文 — 预填提问并跳转 AI 助手
+  const askAgentAboutDoc = () => {
+    if (!doc) return
+    sessionStorage.setItem('agent:prefill', `请在知识库中查询并总结文档《${doc.title}》的要点`)
+    window.dispatchEvent(new CustomEvent('navigate', { detail: 'dashboard' }))
+    window.dispatchEvent(new Event('agent:prefill'))
+    onClose()
+  }
+
   return createPortal(
     <AnimatePresence>
       {(doc || loading) && (
@@ -47,12 +56,18 @@ const KnowledgeDocumentDrawer: React.FC<KnowledgeDocumentDrawerProps> = ({ doc, 
             className="fixed top-0 right-0 bottom-0 w-full max-w-xl bg-[color:var(--card)] z-50 flex flex-col shadow-xl"
           >
             {/* 头部 */}
-            <div className="flex items-center justify-between p-4 border-b border-[color:var(--border)]">
+            <div className="flex items-center justify-between gap-2 p-4 border-b border-[color:var(--border)]">
               <div className="flex-1 min-w-0">
                 <h2 className="text-base font-semibold text-[color:var(--fg)] truncate">
                   {loading ? '加载中...' : doc?.title || '文档详情'}
                 </h2>
               </div>
+              {/* S31B Stitch: 问 AI 关于本文入口 */}
+              {doc && (
+                <Button variant="secondary" size="xs" onClick={askAgentAboutDoc} leftIcon="Sparkles">
+                  问 AI 关于本文
+                </Button>
+              )}
               <Button variant="ghost" size="xs" onClick={onClose} iconOnly>
                 <Icon name="X" size={18} />
               </Button>

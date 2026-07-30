@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useTheme } from '../hooks/useTheme'
 import { getAPI } from '../services/api-adapter'
+import { useAuthStore } from '@/store/authStore'
 import { useNotifications, type AppNotification } from '../hooks/useNotifications'
 import { NotificationCenter } from './NotificationCenter'
 
@@ -40,6 +41,8 @@ const TitleBar: React.FC<TitleBarProps> = ({ onToggleCollapse, collapsed = false
   // S2 通知中心
   const [notifOpen, setNotifOpen] = useState(false)
   const { notifications, unreadCount, markAllRead, markRead } = useNotifications()
+  // S0 Stitch: 标题栏右侧用户头像
+  const currentUser = useAuthStore(s => s.currentUser)
 
   const handleNotifClick = useCallback((n: AppNotification) => {
     markRead(n.id)
@@ -158,6 +161,39 @@ const TitleBar: React.FC<TitleBarProps> = ({ onToggleCollapse, collapsed = false
           <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full" style={{ background: 'var(--danger)' }} />
         )}
       </button>
+
+      {/* ── S0 设置齿轮 ── */}
+      <button
+        onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('navigate', { detail: 'settings' })) }}
+        onDoubleClick={e => e.stopPropagation()}
+        className="h-full w-[38px] flex items-center justify-center shrink-0"
+        style={{ color: 'var(--muted)' }}
+        onMouseEnter={e => { e.currentTarget.style.background = interaction.hoverBg; e.currentTarget.style.color = interaction.hoverIconColor }}
+        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--muted)' }}
+        aria-label="系统设置" title="系统设置" tabIndex={-1}
+      >
+        <motion.div whileHover={{ scale: interaction.hoverScale }} whileTap={{ scale: interaction.tapScale }} transition={interaction.transition}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        </motion.div>
+      </button>
+
+      {/* ── S0 用户头像（首字母圆，点击进设置-个人账户） ── */}
+      {currentUser && (
+        <button
+          onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('navigate', { detail: 'settings' })) }}
+          onDoubleClick={e => e.stopPropagation()}
+          className="h-full w-[38px] flex items-center justify-center shrink-0"
+          aria-label="个人账户" title={`${currentUser.displayName || currentUser.username}`} tabIndex={-1}
+        >
+          <motion.span
+            whileHover={{ scale: interaction.hoverScale }} whileTap={{ scale: interaction.tapScale }} transition={interaction.transition}
+            className="w-[22px] h-[22px] rounded-full flex items-center justify-center text-caption font-semibold border"
+            style={{ background: 'var(--panel-2)', color: 'var(--fg-2)', borderColor: 'var(--border)' }}
+          >
+            {(currentUser.displayName || currentUser.username || '?').charAt(0)}
+          </motion.span>
+        </button>
+      )}
 
       {/* ── 全屏按钮 ── */}
       <button
