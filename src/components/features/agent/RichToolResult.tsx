@@ -15,8 +15,9 @@ import { motion } from 'framer-motion'
 import { Icon } from '@/components/ui/Icon'
 import type { ToolCallResult } from '@/types/agent'
 import {
-  toolLabel, fieldLabel, formatValue, isObjectArray, isScalar,
+  toolLabel, toolNav, fieldLabel, formatValue, isObjectArray, isScalar,
 } from './richToolResult.utils'
+import { navigateTo } from './types'
 import KnowledgeSourceCard from './KnowledgeSourceCard'
 
 const MAX_ROWS = 8
@@ -128,6 +129,8 @@ const RenderValue: React.FC<{ value: unknown }> = ({ value }) => {
 const ToolResultCard: React.FC<{ result: ToolCallResult }> = ({ result }) => {
   const [open, setOpen] = useState(true)
   const count = Array.isArray(result.result) ? result.result.length : null
+  // S9 Stitch: 数据来源对应模块→底部“打开 XX →”链接
+  const nav = result.success ? toolNav(result.toolName) : null
 
   return (
     <div
@@ -160,6 +163,18 @@ const ToolResultCard: React.FC<{ result: ToolCallResult }> = ({ result }) => {
             <KnowledgeSourceCard result={result.result} />
           ) : (
             <RenderValue value={result.result} />
+          )}
+          {/* S9 Stitch: 打开对应模块链接 */}
+          {nav && (
+            <button
+              type="button"
+              onClick={() => navigateTo(nav.page)}
+              className="mt-2 inline-flex items-center gap-1 text-xs font-medium hover:opacity-80 transition-opacity"
+              style={{ color: 'var(--accent)' }}
+            >
+              打开{nav.label}
+              <Icon name="ArrowRight" size={13} />
+            </button>
           )}
         </div>
       )}
