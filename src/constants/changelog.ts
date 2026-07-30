@@ -50,6 +50,11 @@ export interface ChangelogVersion {
   groups?: ChangelogGroup[]
 }
 export const versions: ChangelogVersion[] = [
+  { v: 'v0.90.1', date: '2026-07-30', groups: [
+    { label: '🐛 Bug 修复', items: [
+      '**修复用户管理“角色权限”标签页崩溃**：之前进入角色权限页会报“页面出现异常”（后端权限字段为 JSON 字符串未解析），现已正常显示四类角色卡片与权限矩阵',
+    ] },
+  ] },
   { v: 'v0.90.0', date: '2026-07-30', groups: [
     { label: '🚀 新功能', items: [
       '**项目概览 AI 洞察**：项目详情概览页新增 AI 洞察区，自动从真实数据提炼成本超支、回款缓慢、工期临近等风险提醒，每条可一键直达对应模块',

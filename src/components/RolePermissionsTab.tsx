@@ -13,6 +13,32 @@ import { Button } from './ui/Button'
 const resourceKeys: PermissionResource[] = ['dashboard', 'projects', 'contracts', 'partners', 'members', 'wages', 'settlement', 'inventory', 'invoices', 'costLedger', 'drawings', 'settings', 'users', 'roles', 'audit_logs']
 const actionKeys: PermissionAction[] = ['read', 'create', 'update', 'delete', 'export', 'import', 'approve']
 
+type RoleRow = { id: string; name: string; description: string; isSystem: boolean; permissions: string[] }
+
+// 后端 /api/roles 直返数据库行：permissions 为 TEXT(JSON 字符串)、is_system 为 0/1、无 description。
+// 这里统一规范化为前端期望的结构，避免 permissions.slice().map 崩溃。
+function normalizeRoles(rows: unknown): RoleRow[] {
+  if (!Array.isArray(rows)) return []
+  return rows.map((raw) => {
+    const r = raw as Record<string, unknown>
+    let perms: string[] = []
+    const p = r.permissions
+    if (Array.isArray(p)) perms = p as string[]
+    else if (typeof p === 'string' && p.trim()) {
+      try { const parsed = JSON.parse(p); if (Array.isArray(parsed)) perms = parsed as string[] } catch { /* 非 JSON 字符串时保持空 */ }
+    }
+    const id = String(r.id ?? '')
+    const fallback = SYSTEM_ROLES.find(sr => sr.id === id)
+    return {
+      id,
+      name: String(r.name ?? fallback?.name ?? id),
+      description: String(r.description ?? fallback?.description ?? ''),
+      isSystem: r.isSystem != null ? Boolean(r.isSystem) : (r.is_system != null ? Boolean(r.is_system) : !!fallback),
+      permissions: perms,
+    }
+  })
+}
+
 export const RolePermissionsTab: React.FC = () => {
   const showToast = useToastStore(state => state.showToast)
   const { confirm, ConfirmDialog } = useConfirm()
@@ -27,7 +53,7 @@ export const RolePermissionsTab: React.FC = () => {
   const api = await getAPI()
   if (api?.getRoles) {
   const result = await api.getRoles()
-  if (result.success && result.data) { setRoles(result.data); setRolesLoading(false); return }
+  if (result.success && result.data) { setRoles(normalizeRoles(result.data)); setRolesLoading(false); return }
   }
   } catch (e) { console.error(e) }
   setRoles(SYSTEM_ROLES.map(r => ({ ...r, permissions: [...r.permissions] })))
@@ -102,7 +128,7 @@ export const RolePermissionsTab: React.FC = () => {
   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
   {ConfirmDialog}
   {roles.map(role => (
-  <Card bordered={false} hoverable className="p-5 hover:shadow-md transition-all">
+  <Card key={role.id} bordered={false} hoverable className="p-5 hover:shadow-md transition-all">
   <div className="flex items-start justify-between mb-3"><div><h4 className="font-semibold text-[color:var(--fg)]">{role.name}</h4><p className="text-xs text-[color:var(--muted)] mt-0.5">{role.description}</p></div>{role.isSystem && <span className="px-2 py-0.5 bg-[color:var(--panel-2)] text-[color:var(--muted)] text-xs rounded-full">系统</span>}</div>
   <div className="flex flex-wrap gap-1 mb-4">{role.permissions.slice(0, 8).map(p => <span key={p} className="px-2 py-0.5 bg-[color:var(--accent-soft)] text-[color:var(--accent)] text-xs rounded">{getPermissionLabel(p as PermissionCode)}</span>)}{role.permissions.length > 8 && <span className="px-2 py-0.5 bg-[color:var(--panel-2)] text-[color:var(--muted)] text-xs rounded">+{role.permissions.length - 8}</span>}</div>
   <div className="flex items-center gap-2 pt-3 border-t border-[color:var(--border)]"><button onClick={() => startEditRole(role.id)} className="flex-1 px-3 py-1.5 text-xs font-medium bg-[color:var(--fg)] text-[color:var(--bg)] rounded-lg hover:opacity-90">编辑权限</button>{role.isSystem && <button onClick={() => handleResetRole(role.id)} className="px-3 py-1.5 text-xs text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)] rounded-lg">重置</button>}</div>
