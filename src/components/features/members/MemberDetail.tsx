@@ -1,17 +1,23 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Modal } from '../../ui/Modal/Modal'
 import { Icon } from '../../ui/Icon'
+import Spinner from '../../ui/Spinner'
+import { EmptyState } from '@/components/ui/EmptyState'
 import type { Member } from '@/types'
-import { getWorkerTypeLabel, calculateAge } from './memberFormTypes'
+import type { AttendanceRecord } from '@/types/electron'
+import { calculateAge } from './memberFormTypes'
 import { useMemberFileUrls } from './useMemberFileUrls'
 import { PreviewModal, InfoItem, Tag, IdCardImages, ManagerSalaryCard } from './MemberDetailParts'
+import { MemberProfileAside, MemberAttendanceTable } from './MemberDetailSections'
 import { WorkerDetailCards } from './WorkerDetailCards'
 import { useMaskedFn } from '@/hooks/useMaskedValue'
+import { getAPI } from '@/services/api-adapter'
 import { Card } from '@/components/ui/Card'
 import { Button } from '../../ui/Button'
 
 export interface MemberDetailProps {
   member: Member
+  deptName?: string
   onClose: () => void
   onEdit?: () => void
   onDelete?: () => void
@@ -20,8 +26,11 @@ export interface MemberDetailProps {
   onReEntry?: () => void
 }
 
+type DetailTab = 'profile' | 'attendance' | 'salary'
+
 export function MemberDetail({
   member,
+  deptName,
   onClose,
   onEdit,
   onDelete,
@@ -32,13 +41,38 @@ export function MemberDetail({
   const masked = useMaskedFn()
   const [previewData, setPreviewData] = useState<{ data: string; type: 'image' | 'pdf'; title: string } | null>(null)
   const fileUrls = useMemberFileUrls(member)
-  
+
   const isWorker = member.memberType === 'worker'
   const isLeft = member.status === 'left'
+
+  // S23 Stitch: 右侧 Tab（基本档案 / 考勤记录 / 薪酬明细）
+  const [activeTab, setActiveTab] = useState<DetailTab>('profile')
+  const [attendances, setAttendances] = useState<AttendanceRecord[] | null>(null)
+  // S23 Stitch: PII 默认脱敏，可点击临时显真
+  const [showIdCard, setShowIdCard] = useState(false)
+
+  useEffect(() => {
+    if (activeTab !== 'attendance' || attendances !== null) return
+    let cancelled = false
+    getAPI()
+      .then(api => api.getAttendancesByMember(member.id))
+      .then(r => { if (!cancelled) setAttendances(r.success ? (r.data ?? []) : []) })
+      .catch(() => { if (!cancelled) setAttendances([]) })
+    return () => { cancelled = true }
+  }, [activeTab, attendances, member.id])
 
   const handlePreview = (data: string, type: 'image' | 'pdf', title: string) => {
     setPreviewData({ data, type, title })
   }
+
+  const tabs: { key: DetailTab; label: string }[] = [
+    { key: 'profile', label: '基本档案' },
+    { key: 'attendance', label: '考勤记录' },
+    ...(!isWorker ? [{ key: 'salary' as DetailTab, label: '薪酬明细' }] : []),
+  ]
+
+  const sortedAttendances = (attendances ?? []).slice()
+    .sort((a, b) => (b.yearMonth || '').localeCompare(a.yearMonth || ''))
 
   const detailTitle = (
     <div className="flex items-center gap-4">
@@ -87,112 +121,116 @@ export function MemberDetail({
         </div>
       }
     >
-      {/* 基本信息卡片 */}
-      <Card className="border border-[color:var(--border)] p-6 mb-6">
-        <h3 className="text-lg font-medium text-[color:var(--fg)] mb-4 flex items-center">
-          <span className="mr-2">📋</span>
-          基本信息
-        </h3>
+      {/* S23 Stitch: 左窄档案栏 + 右 Tab 面板 */}
+      <div className="flex gap-6 items-start">
+        <MemberProfileAside
+          member={member}
+          deptName={deptName}
+          isWorker={isWorker}
+          isLeft={isLeft}
+          masked={masked}
+          showIdCard={showIdCard}
+          onToggleIdCard={() => setShowIdCard(v => !v)}
+        />
 
-        <div className="flex items-start mb-6">
-          <div className="w-20 h-20 rounded-full flex items-center justify-center text-3xl mr-6" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
-            {isWorker ? <Icon name="Construction" size={32} /> : <Icon name="UserCircle" size={32} />}
+        {/* 右侧 Tab 面板 */}
+        <section className="flex-1 min-w-0 bg-[color:var(--card)] border border-[color:var(--border)] rounded-lg overflow-hidden flex flex-col">
+          <div className="flex px-4 pt-2 border-b border-[color:var(--border)] bg-[color:var(--panel-2)] shrink-0">
+            {tabs.map(t => (
+              <button
+                key={t.key}
+                onClick={() => setActiveTab(t.key)}
+                className={activeTab === t.key
+                  ? 'px-4 py-2.5 text-sm font-semibold text-[color:var(--fg)] bg-[color:var(--card)] border-b-2 border-[color:var(--fg)] -mb-px rounded-t-md relative z-10'
+                  : 'px-4 py-2.5 text-sm text-[color:var(--fg-2)] hover:text-[color:var(--fg)] border-b-2 border-transparent rounded-t-md transition-colors'}
+              >
+                {t.label}
+              </button>
+            ))}
           </div>
 
-          <div className="flex-1">
-            <h4 className="text-2xl font-bold text-[color:var(--fg)]">{member.name}</h4>
-            <p className="text-[color:var(--muted)] mt-1">
-              {isWorker
-                ? getWorkerTypeLabel(member.workerType || 'other')
-                : member.role || '其他'
-              }
-            </p>
-            {isWorker && member.teamName && (
-              <p className="text-sm text-[color:var(--muted)] mt-1">
-                {member.projectName} / {member.teamName}
-              </p>
+          <div className="flex-1 p-6">
+            {activeTab === 'profile' && (
+              <>
+                {/* 身份证信息卡片 */}
+                <Card className="border border-[color:var(--border)] p-6 mb-6">
+                  <h3 className="text-lg font-medium text-[color:var(--fg)] mb-4 flex items-center">
+                    <span className="mr-2">🪪</span>
+                    身份证信息
+                  </h3>
+
+                  <div className="grid grid-cols-2 gap-y-3 mb-4">
+                    <InfoItem icon={<Icon name="Key" size={16} />} label="身份证号" value={masked('idCard', member.idCard)} />
+                    <InfoItem icon={<Icon name="UserCircle" size={16} />} label="性别" value={member.gender} />
+                    <InfoItem icon={<Icon name="Users" size={16} />} label="民族" value={member.ethnicity} />
+                    <InfoItem icon={<Icon name="Calendar" size={16} />} label="出生日期" value={member.birthDate} />
+                    {member.birthDate && (
+                      <InfoItem icon={<Icon name="LayoutDashboard" size={16} />} label="年龄" value={calculateAge(member.birthDate)} />
+                    )}
+                  </div>
+
+                  <div className="mt-4">
+                    <InfoItem icon={<Icon name="Home" size={16} />} label="身份证住址" value={masked('idCard', member.idCardAddress)} />
+                  </div>
+
+                  <IdCardImages
+                    idCardFront={member.idCardFront}
+                    idCardBack={member.idCardBack}
+                    fileUrls={fileUrls}
+                    onPreview={handlePreview}
+                  />
+                </Card>
+
+                {/* 农民工专属信息 */}
+                {isWorker && (
+                  <WorkerDetailCards member={member} onPreview={handlePreview} />
+                )}
+
+                {/* 合同信息卡片 */}
+                {member.contractFile && fileUrls.contractFile && (
+                  <Card className="border border-[color:var(--border)] p-6 mb-6">
+                    <h3 className="text-lg font-medium text-[color:var(--fg)] mb-4 flex items-center">
+                      <Icon name="FileText" size={18} className="mr-2" />
+                      劳动合同
+                    </h3>
+                    <button
+                      onClick={() => handlePreview(fileUrls.contractFile!, member.contractFileType === 'pdf' ? 'pdf' : 'image', '劳动合同')}
+                      className="text-[color:var(--accent)] hover:opacity-70 underline"
+                    >
+                      {member.contractFileType === 'pdf' ? <><Icon name="FileText" size={14} className="inline-block" /> 查看PDF合同</> : <><Icon name="Image" size={14} className="inline-block" />查看合同图片</>}
+                    </button>
+                  </Card>
+                )}
+
+                {/* 备注卡片 */}
+                {member.remarks && (
+                  <Card className="border border-[color:var(--border)] p-6 mb-6">
+                    <h3 className="text-lg font-medium text-[color:var(--fg)] mb-4 flex items-center">
+                      <span className="mr-2">📝</span>
+                      备注
+                    </h3>
+                    <p className="text-[color:var(--fg-2)] whitespace-pre-wrap">{member.remarks}</p>
+                  </Card>
+                )}
+              </>
+            )}
+
+            {activeTab === 'attendance' && (
+              attendances === null ? (
+                <Spinner size="md" text="加载考勤记录..." />
+              ) : sortedAttendances.length === 0 ? (
+                <EmptyState icon="CalendarX" title="暂无考勤记录" description="该人员还没有任何月度考勤数据。" />
+              ) : (
+                <MemberAttendanceTable records={sortedAttendances} />
+              )
+            )}
+
+            {activeTab === 'salary' && !isWorker && (
+              <ManagerSalaryCard member={member} />
             )}
           </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-y-3">
-          <InfoItem icon={<Icon name="Phone" size={16} />} label="联系电话" value={member.phone} />
-          <InfoItem icon={<Icon name="Mail" size={16} />} label="电子邮箱" value={member.email} />
-          <InfoItem icon={<Icon name="Calendar" size={16} />} label="进场日期" value={member.entryDate} />
-          {isWorker && (
-            <InfoItem icon={<Icon name="Calendar" size={16} />} label="预计退场" value={member.expectedLeaveDate} />
-          )}
-          {isLeft && member.actualLeaveDate && (
-            <InfoItem icon={<Icon name="HelpCircle" size={16} />} label="实际离场" value={member.actualLeaveDate} highlight />
-          )}
-        </div>
-      </Card>
-
-      {/* 身份证信息卡片 */}
-      <Card className="border border-[color:var(--border)] p-6 mb-6">
-        <h3 className="text-lg font-medium text-[color:var(--fg)] mb-4 flex items-center">
-          <span className="mr-2">🪪</span>
-          身份证信息
-        </h3>
-
-        <div className="grid grid-cols-2 gap-y-3 mb-4">
-          <InfoItem icon={<Icon name="Key" size={16} />} label="身份证号" value={masked('idCard', member.idCard)} />
-          <InfoItem icon={<Icon name="UserCircle" size={16} />} label="性别" value={member.gender} />
-          <InfoItem icon={<Icon name="Users" size={16} />} label="民族" value={member.ethnicity} />
-          <InfoItem icon={<Icon name="Calendar" size={16} />} label="出生日期" value={member.birthDate} />
-          {member.birthDate && (
-            <InfoItem icon={<Icon name="LayoutDashboard" size={16} />} label="年龄" value={calculateAge(member.birthDate)} />
-          )}
-        </div>
-
-        <div className="mt-4">
-          <InfoItem icon={<Icon name="Home" size={16} />} label="身份证住址" value={masked('idCard', member.idCardAddress)} />
-        </div>
-
-        <IdCardImages
-          idCardFront={member.idCardFront}
-          idCardBack={member.idCardBack}
-          fileUrls={fileUrls}
-          onPreview={handlePreview}
-        />
-      </Card>
-
-      {/* 农民工专属信息 */}
-      {isWorker && (
-        <WorkerDetailCards member={member} onPreview={handlePreview} />
-      )}
-
-      {/* 管理人员专属信息 */}
-      {!isWorker && (
-        <ManagerSalaryCard member={member} />
-      )}
-
-      {/* 合同信息卡片 */}
-      {member.contractFile && fileUrls.contractFile && (
-        <Card className="border border-[color:var(--border)] p-6 mb-6">
-          <h3 className="text-lg font-medium text-[color:var(--fg)] mb-4 flex items-center">
-            <Icon name="FileText" size={18} className="mr-2" />
-            劳动合同
-          </h3>
-          <button
-            onClick={() => handlePreview(fileUrls.contractFile!, member.contractFileType === 'pdf' ? 'pdf' : 'image', '劳动合同')}
-            className="text-[color:var(--accent)] hover:opacity-70 underline"
-          >
-            {member.contractFileType === 'pdf' ? <><Icon name="FileText" size={14} className="inline-block" /> 查看PDF合同</> : <><Icon name="Image" size={14} className="inline-block" />查看合同图片</>}
-          </button>
-        </Card>
-      )}
-
-      {/* 备注卡片 */}
-      {member.remarks && (
-        <Card className="border border-[color:var(--border)] p-6 mb-6">
-          <h3 className="text-lg font-medium text-[color:var(--fg)] mb-4 flex items-center">
-            <span className="mr-2">📝</span>
-            备注
-          </h3>
-          <p className="text-[color:var(--fg-2)] whitespace-pre-wrap">{member.remarks}</p>
-        </Card>
-      )}
+        </section>
+      </div>
 
       {previewData && <PreviewModal data={previewData.data} type={previewData.type} title={previewData.title} onClose={() => setPreviewData(null)} />}
     </Modal>
