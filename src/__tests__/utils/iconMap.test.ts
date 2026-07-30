@@ -7,7 +7,7 @@ vi.mock('lucide-react', () => {
   const icons: Record<string, React.FC> = {}
   const iconNames = [
     'Activity', 'AlertCircle', 'AlertTriangle', 'ArrowDownCircle', 'ArrowLeft',
-    'ArrowLeftRight', 'ArrowRightLeft', 'ArrowUpCircle', 'BadgeCheck', 'Ban', 'Banknote',
+    'ArrowLeftRight', 'ArrowRight', 'ArrowRightLeft', 'ArrowUpCircle', 'BadgeCheck', 'Ban', 'Banknote',
     'BarChart3', 'Bell', 'Bold', 'Bot', 'Braces', 'Briefcase', 'Building2', 'Calendar', 'CalendarCheck', 'CalendarX', 'Camera',
     'Check', 'CheckCircle', 'ChevronDown', 'ChevronLeft', 'ChevronRight',
     'ChevronUp', 'ClipboardList', 'ClipboardPen', 'Clock', 'Construction', 'Copy',

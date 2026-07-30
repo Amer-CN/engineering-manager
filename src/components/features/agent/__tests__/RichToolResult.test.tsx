@@ -51,4 +51,22 @@ describe('RichToolResult', () => {
     render(<RichToolResult results={results} />)
     expect(screen.getByText('暂无数据')).toBeTruthy()
   })
+
+  it('S9: 成功结果渲染“打开 XX 模块”跳转链接', () => {
+    const results: ToolCallResult[] = [{
+      toolName: 'getInvoices', toolCallId: 't5', success: true,
+      result: [{ id: 1, invoice_no: 'INV-001', amount: 82500 }],
+    }]
+    render(<RichToolResult results={results} />)
+    expect(screen.getByText('数据来源：发票列表')).toBeTruthy()
+    expect(screen.getByText('打开发票管理')).toBeTruthy()
+  })
+
+  it('S9: 失败结果不渲染跳转链接', () => {
+    const results: ToolCallResult[] = [{
+      toolName: 'getInvoices', toolCallId: 't6', success: false, error: '查询失败',
+    }]
+    render(<RichToolResult results={results} />)
+    expect(screen.queryByText('打开发票管理')).toBeNull()
+  })
 })

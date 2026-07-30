@@ -27,6 +27,29 @@ export function toolLabel(name: string): string {
   return TOOL_LABELS[name] || name
 }
 
+/** 工具名 → 可跳转的模块（S9：富结果卡底部“打开 XX 模块 →”链接） */
+export interface ToolNav { page: string; label: string }
+const TOOL_NAV: Record<string, ToolNav> = {
+  getInvoices: { page: 'invoices', label: '发票管理' },
+  getPendingInvoices: { page: 'invoices', label: '发票管理' },
+  getSettlements: { page: 'settlement', label: '结算办理' },
+  getPendingSettlements: { page: 'settlement', label: '结算办理' },
+  getProjects: { page: 'projects', label: '项目管理' },
+  getProjectDetail: { page: 'projects', label: '项目管理' },
+  getMembers: { page: 'hr', label: '人事管理' },
+  getWorkers: { page: 'labor', label: '工人管理' },
+  getContracts: { page: 'contracts', label: '合同管理' },
+  getInventory: { page: 'inventory', label: '仓库管理' },
+  getCostSummary: { page: 'costLedger', label: '成本台账' },
+  getPartners: { page: 'partners', label: '单位管理' },
+  getDashboardStats: { page: 'dashboard', label: '首页' },
+  searchKnowledgeBase: { page: 'knowledge', label: '语音知识库' },
+}
+
+export function toolNav(name: string): ToolNav | null {
+  return TOOL_NAV[name] || null
+}
+
 /** 字段名 → 中文标签 */
 export const FIELD_LABELS: Record<string, string> = {
   id: 'ID', name: '名称', status: '状态', type: '类型', amount: '金额',
