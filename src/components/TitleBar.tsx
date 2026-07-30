@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useTheme } from '../hooks/useTheme'
 import { getAPI } from '../services/api-adapter'
+import { useNotifications, type AppNotification } from '../hooks/useNotifications'
+import { NotificationCenter } from './NotificationCenter'
 
 type WebViewWindow = Window & { chrome?: { webview?: { postMessage: (msg: string) => void } }; electronAPI?: { [key: string]: (...args: any[]) => any } };
 const getWebview = () => (window as unknown as WebViewWindow).chrome?.webview;
@@ -35,6 +37,15 @@ const TitleBar: React.FC<TitleBarProps> = ({ onToggleCollapse, collapsed = false
   const interaction = useMemo(() => THEME_INTERACTION[scheme], [scheme])
   const [isMaximized, setIsMaximized] = useState(false)
   const [isFullScreen, setIsFullScreen] = useState(false)
+  // S2 通知中心
+  const [notifOpen, setNotifOpen] = useState(false)
+  const { notifications, unreadCount, markAllRead, markRead } = useNotifications()
+
+  const handleNotifClick = useCallback((n: AppNotification) => {
+    markRead(n.id)
+    setNotifOpen(false)
+    if (n.target) window.dispatchEvent(new CustomEvent('navigate', { detail: n.target }))
+  }, [markRead])
 
   useEffect(() => {
     const api = getElectronAPI()
@@ -129,6 +140,25 @@ const TitleBar: React.FC<TitleBarProps> = ({ onToggleCollapse, collapsed = false
         </button>
       </div>
 
+      {/* ── S2 通知铃铛 ── */}
+      <button
+        data-notif-trigger
+        onClick={(e) => { e.stopPropagation(); setNotifOpen(v => !v) }}
+        onDoubleClick={e => e.stopPropagation()}
+        className="relative h-full w-[38px] flex items-center justify-center shrink-0"
+        style={{ color: notifOpen ? 'var(--accent)' : 'var(--muted)' }}
+        onMouseEnter={e => { e.currentTarget.style.background = interaction.hoverBg; if (!notifOpen) e.currentTarget.style.color = interaction.hoverIconColor }}
+        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; if (!notifOpen) e.currentTarget.style.color = 'var(--muted)' }}
+        aria-label="通知中心" title="通知中心" tabIndex={-1}
+      >
+        <motion.div whileHover={{ scale: interaction.hoverScale }} whileTap={{ scale: interaction.tapScale }} transition={interaction.transition}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
+        </motion.div>
+        {unreadCount > 0 && (
+          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full" style={{ background: 'var(--danger)' }} />
+        )}
+      </button>
+
       {/* ── 全屏按钮 ── */}
       <button
         onClick={toggleFullscreen}
@@ -187,6 +217,16 @@ const TitleBar: React.FC<TitleBarProps> = ({ onToggleCollapse, collapsed = false
           </motion.div>
         </button>
       </div>
+
+      {/* S2 通知中心浮层 */}
+      <NotificationCenter
+        open={notifOpen}
+        notifications={notifications}
+        onClose={() => setNotifOpen(false)}
+        onMarkAllRead={markAllRead}
+        onItemClick={handleNotifClick}
+        onViewAll={() => { setNotifOpen(false); window.dispatchEvent(new CustomEvent('navigate', { detail: 'dashboard' })) }}
+      />
     </div>
   )
 }
