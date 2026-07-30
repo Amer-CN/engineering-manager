@@ -118,6 +118,18 @@ Bedrock 把工程管家当成一台**专业驾驶舱级的精密仪器**来对�
 - **Panel / Card**：在底色上以 OKLCH 亮度递增分层，用亮度差 + 1px 发丝边拉开层级，不靠投影。
 - **Content 三级**（正文 / 次级 / 弱化）：均为极低彩度中性，无纯黑纯白。
 
+### 文档名 ↔ `data-theme` 对照
+
+设计文档用 Paper / Snow / Graphite 作契约语汇，代码实现用 `data-theme` 属性值（`src/hooks/useTheme.ts` 的 `ThemeScheme`）。对应关系按 `--bg` 实际值核实（命名反直觉，勿凭名字猜）：
+
+| 文档名（契约语汇） | `data-theme` 值 | `--bg` 实际值（`src/index.css`） |
+|---|---|---|
+| Paper / 暖白纸 | `white` | `oklch(98.6% 0.009 85)`（暖白，hue 85） |
+| Snow / 清冷白 | `sandstone` | `oklch(98.8% 0 0)`（中性冷白，chroma 0） |
+| Graphite / 石墨黑 | `graphite` | `oklch(20.5% 0.003 75)` |
+
+> 文档名为契约语汇，代码取值以 `data-theme` 为准。（Verdant 舞台主题用 `data-theme="verdant"`，属局部舞台区、非用户可选全局外观，不入此表。）
+
 ### State（唯一的彩色，只用于语义）
 - **成功绿 / 警告琥珀 / 危险红**（低饱和）：仅用于状态药丸、告警、趋势方向（如"逾期"红药丸），是全屏几乎唯一出现的彩色。
 
@@ -234,7 +246,7 @@ Bedrock 默认是平的（Flat-By-Default）。但少数屏幕的任务本质是
 
 **The Ambient-Glow Whitelist（决策 2）.** 环境辉光（`AmbientGlow`）只允许出现在三处：**SplashScreen 启动屏**、**Login / LockScreen**、**AI 助手主页**。其余任何屏幕一律无辉光；且辉光不得携带状态语义（不得用辉光颜色表达成功 / 失败）。
 
-**The Glass Whitelist（决策 3）.** `backdrop-filter` 只允许出现在六类浮层：**CommandPalette**、**Modal / Dialog**、**Toast**、**Popover / 下拉**、**顶部浮动 ActivityBar**、**Sidebar 飞出层**；外加经 Stage-Surface 授权的舞台区（FolderStack3D 聚焦卡与其 KPI 浮层）。明确禁止：**DataTable 行**、**Dashboard KPI 卡**、**StatusBar**、**TitleBar**、**输入框**。非聚焦卡一律用「伪砂面」（半透渐变 + 1px 内高光描边），不开 `backdrop-filter`，否则帧率必塔。
+**The Glass Whitelist（决策 3）.** `backdrop-filter` 只允许出现在六类浮层：**CommandPalette**、**Modal / Dialog**、**Toast**、**Popover / 下拉**、**顶部浮动 ActivityBar**、**Sidebar 飞出层**；外加经 Stage-Surface 授权的舞台区（FolderStack3D 聚焦卡与其 KPI 浮层）。明确禁止：**DataTable 行**、**Dashboard KPI 卡**、**StatusBar**、**TitleBar**、**输入框**。非聚焦卡一律用「伪砂面」（半透渐变 + 1px 内高光描边），不开 `backdrop-filter`，否则帧率必塌。
 
 ## Shapes
 
