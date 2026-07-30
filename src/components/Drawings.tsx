@@ -12,7 +12,10 @@ import { categories } from './drawingsConstants'
 import { DrawingsFormModal } from './DrawingsFormModal'
 import type { FormDataState } from './DrawingsFormModal'
 import { Button } from './ui/Button'
+import { Icon } from './ui/Icon'
 import { createDrawingColumns } from './features/drawings/drawingsColumns'
+import { DrawingsGallery } from './features/drawings/DrawingsGallery'
+import { DrawingViewer } from './features/drawings/DrawingViewer'
 
 interface DrawingsProps {
   refresh?: () => void
@@ -28,6 +31,10 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
   const [editingDrawing, setEditingDrawing] = useState<Drawing | null>(null)
   const [filterProject, setFilterProject] = useState<number | ''>('')
   const [filterCategory, setFilterCategory] = useState<string>('')
+  // S26 Stitch: 画廊 / 列表双视图（画廊为默认）
+  const [viewMode, setViewMode] = useState<'gallery' | 'list'>('gallery')
+  // S27 Stitch: 图纸查看器（Lightbox）
+  const [viewerDrawing, setViewerDrawing] = useState<Drawing | null>(null)
   const [formData, setFormData] = useState<FormDataState>({
   projectId: '',
   name: '',
@@ -226,7 +233,22 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
   <div className="flex items-center justify-between mb-8">
   <div>
   <h1 className="text-base font-semibold tracking-tight text-[color:var(--fg)]">图纸管理</h1>
-  <p className="text-[color:var(--muted)] mt-1">上传和管理工程图纸</p>
+  <p className="text-[color:var(--muted)] mt-1">查看与管理所有工程图纸及修订版本</p>
+  </div>
+  <div className="flex items-center gap-3">
+  {/* S26 Stitch: 画廊 / 列表切换 */}
+  <div className="inline-flex rounded-lg p-0.5" style={{ background: 'var(--panel-2)' }}>
+    {([['gallery', '画廊', 'Image'], ['list', '列表', 'List']] as const).map(([mode, label, icon]) => {
+      const active = viewMode === mode
+      return (
+        <button key={mode} onClick={() => setViewMode(mode)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
+          style={active ? { background: 'var(--card)', color: 'var(--fg)', boxShadow: 'var(--shadow-card)' } : { background: 'transparent', color: 'var(--muted)' }}>
+          <Icon name={icon} size={14} />
+          {label}
+        </button>
+      )
+    })}
   </div>
   <Button
   onClick={() => {
@@ -238,6 +260,7 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
   <span className="text-xl mr-2">+</span>
   上传图纸
   </Button>
+  </div>
   </div>
 
   {/* S26 Stitch: category pill-tabs + project filter (no stat cards) */}
@@ -271,6 +294,15 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
 
   {/* 图纸列表 */}
   {filteredDrawings.length > 0 ? (
+  viewMode === 'gallery' ? (
+  <DrawingsGallery
+    drawings={filteredDrawings}
+    getProjectName={getProjectName}
+    onOpen={setViewerDrawing}
+    onEdit={handleEdit}
+    onDelete={handleDelete}
+  />
+  ) : (
   <DataTable
     data={filteredDrawings}
     columns={columns}
@@ -278,9 +310,11 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
     showContainer={true}
     stickyHeader={true}
     useHoverScrollbar={true}
+    onRowClick={(d) => setViewerDrawing(d)}
     emptyText="暂无图纸"
     emptyIcon="Ruler"
   />
+  )
   ) : (
   <EmptyState icon="Ruler" title="暂无图纸" description="点击下方按钮上传您的第一张图纸"
   action={<Button onClick={() => { resetForm(); setShowModal(true) }}  variant="primary" className="px-6 py-3">上传图纸</Button>}
@@ -301,6 +335,15 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
     setShowModal={setShowModal}
     resetForm={resetForm}
   />
+
+  {/* S27 图纸查看器（Lightbox） */}
+  {viewerDrawing && (
+    <DrawingViewer
+      drawing={viewerDrawing}
+      projectName={getProjectName(viewerDrawing.projectId)}
+      onClose={() => setViewerDrawing(null)}
+    />
+  )}
   </PageContainer>
   )
 }
