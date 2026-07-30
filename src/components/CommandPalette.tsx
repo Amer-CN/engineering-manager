@@ -97,6 +97,12 @@ export function CommandPalette() {
           </CommandItem>
         </CommandGroup>
       </CommandList>
+
+      {/* S1 Stitch: 底部发丝分隔提示栏（全中文） */}
+      <div className="flex items-center justify-between px-3 py-2 border-t border-[color:var(--border)] text-xs text-[color:var(--muted)]">
+        <span>↑↓ 切换 · ↵ 选择</span>
+        <span>状态：就绪</span>
+      </div>
     </CommandDialog>
   )
 }

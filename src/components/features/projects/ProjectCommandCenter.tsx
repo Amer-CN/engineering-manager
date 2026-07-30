@@ -15,6 +15,7 @@ import { SimpleBarChart } from '../../ui/SimpleBarChart'
 import { formatMoney } from '@/utils/format'
 import { staggerContainer, sectionVariant } from '@/constants/animations'
 import { ProjectCommandCenterDetail } from './ProjectCommandCenterDetail'
+import { ProjectInsights, ProjectMilestoneTimeline, type InsightItem } from './ProjectInsights'
 
 export interface ProjectCommandCenterProps {
   project: Project; stats: ProjectStatsData; expenseByCategory: Record<string, number>
@@ -43,7 +44,7 @@ function EmptyState({ text }: { text: string }) {
   return <div className="flex flex-col items-center justify-center py-12 text-[color:var(--muted)]"><Icon name="Inbox" size={32} className="mb-2 opacity-40" /><p className="text-sm">{text}</p></div>
 }
 
-export function ProjectCommandCenter({ project, stats, expenseByCategory, materials, incomeContracts, expenseContracts, invoices, partners, paymentRecords }: ProjectCommandCenterProps) {
+export function ProjectCommandCenter({ project, stats, expenseByCategory, materials, incomeContracts, expenseContracts, invoices, partners, paymentRecords, settlements }: ProjectCommandCenterProps) {
   const healthScore = calculateHealthScore(project, stats)
   const healthLevel = getHealthLevel(healthScore)
   const status = statusConfig[project.status] || statusConfig.planning
@@ -68,7 +69,26 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
   const materialTotalAmt = materials.reduce((s, m) => s + m.price * m.quantity, 0)
   const partnerStats = partners.map(p => ({ ...p, incAmt: incomeContracts.filter(c => c.partnerId === p.id).reduce((s, c) => s + c.amount, 0), expAmt: expenseContracts.filter(c => c.partnerId === p.id).reduce((s, c) => s + c.amount, 0) }))
   const unpaidInvoices = invoices.filter(i => i.status === 'partially_paid' || i.status === 'issued').length
-  const hasAlerts = unpaidInvoices > 0 || (project.budget > 0 && stats.totalExpenses > project.budget * 0.85)
+
+  // S12 Stitch ①：AI 项目洞察 — 从真实数据派生（成本风险 / 回款提醒 / 工期提示）
+  const insights: InsightItem[] = []
+  if (project.budget > 0 && stats.totalExpenses > project.budget * 0.85) {
+    insights.push({ icon: 'TrendingDown', level: stats.totalExpenses > project.budget ? 'danger' : 'warning', text: `预算使用率已达 ${Math.round(stats.totalExpenses / project.budget * 100)}%，${stats.totalExpenses > project.budget ? '已超支' : '接近超支'}，建议复核成本台账`, actionLabel: '查看成本', actionPage: 'costLedger' })
+  }
+  if (unpaidInvoices > 0) {
+    insights.push({ icon: 'Receipt', level: 'warning', text: `${unpaidInvoices} 张发票待处理（未付款/部分付款），请及时跟进`, actionLabel: '去处理', actionPage: 'invoices' })
+  }
+  if (stats.incomeTotal > 0 && collectionRate < 40) {
+    insights.push({ icon: 'Wallet', level: 'warning', text: `收款率仅 ${collectionRate}%，资金回笼偏慢，建议跟进回款`, actionLabel: '回款记录', actionPage: 'invoices' })
+  }
+  if (project.status === 'in_progress' && project.endDate) {
+    const daysLeft = Math.ceil((new Date(project.endDate).getTime() - Date.now()) / 86400000)
+    if (daysLeft < 0) insights.push({ icon: 'Clock', level: 'danger', text: `工期已逾期 ${Math.abs(daysLeft)} 天，请关注交付风险` })
+    else if (daysLeft <= 30) insights.push({ icon: 'Clock', level: 'warning', text: `距计划竣工仅剩 ${daysLeft} 天，临近交付` })
+  }
+  if (insights.length === 0) {
+    insights.push({ icon: 'CheckCircle', level: 'ok', text: '项目运行平稳，暂无需要关注的风险项' })
+  }
 
   return (
     <motion.div initial="hidden" animate="visible" variants={staggerContainer}>
@@ -133,20 +153,8 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
         </div>
       </motion.section>
 
-      {/* ═══ 2. Alerts ═══ */}
-      {hasAlerts && (
-        <motion.section variants={sectionVariant} className="mb-6 p-4 rounded-xl bg-warning-50 border border-warning-200">
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-warning-100 flex items-center justify-center flex-shrink-0"><Icon name="AlertTriangle" size={16} className="text-warning-600" /></div>
-            <div className="flex-1 space-y-1">
-              <p className="font-semibold text-warning-700 text-sm">需要关注</p>
-              {unpaidInvoices > 0 && <p className="text-sm text-[color:var(--fg-2)]">{unpaidInvoices} 张发票待处理（未付款/部分付款），请及时跟进</p>}
-              {project.budget > 0 && stats.totalExpenses > project.budget * 0.85 && <p className="text-sm text-[color:var(--fg-2)]">预算使用率 {Math.round(stats.totalExpenses / project.budget * 100)}%，接近超支</p>}
-              {stats.incomeTotal > 0 && collectionRate < 40 && <p className="text-sm text-[color:var(--fg-2)]">收款率仅 {collectionRate}%，资金回笼偏慢</p>}
-            </div>
-          </div>
-        </motion.section>
-      )}
+      {/* ═══ 2. AI 项目洞察（S12 ①，中性表面替代整块铺色横幅） ═══ */}
+      <ProjectInsights items={insights} />
 
       {/* ═══ 3. Finance + Cost ═══ */}
       <motion.section variants={sectionVariant} className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
@@ -212,6 +220,14 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
         materialCount={stats.materialCount}
         materialTotalAmt={materialTotalAmt}
         stats={{ invoiceInTotal: stats.invoiceInTotal, receivedInTotal: stats.receivedInTotal, invoiceOutTotal: stats.invoiceOutTotal, receivedOutTotal: stats.receivedOutTotal }}
+      />
+
+      {/* ═══ 6. 关键里程碑时间线（S12 ④，真实日期推导） ═══ */}
+      <ProjectMilestoneTimeline
+        project={project}
+        incomeContracts={incomeContracts}
+        expenseContracts={expenseContracts}
+        settlements={settlements}
       />
 
       {/* ═══ 7. Info Footer ═══ */}
