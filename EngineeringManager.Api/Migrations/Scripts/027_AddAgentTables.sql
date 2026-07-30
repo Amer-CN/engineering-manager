@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS agent_settings (
     provider_name TEXT NOT NULL DEFAULT 'Agnes',
     base_url TEXT NOT NULL DEFAULT 'https://apihub.agnes-ai.com/v1',
     api_key_enc TEXT,
-    model TEXT NOT NULL DEFAULT 'agnes-2.0-flash',
+    model TEXT NOT NULL DEFAULT 'agnes-2.5-flash',
     temperature REAL DEFAULT 0.7,
     max_tokens INTEGER DEFAULT 4096,
     use_built_in INTEGER DEFAULT 1,
