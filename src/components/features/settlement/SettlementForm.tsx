@@ -7,7 +7,9 @@ import { SettlementImportModal } from './SettlementImportModal'
 import { FileUploadSection } from './FileUploadSection'
 import { getAPI } from '@/services/api-adapter'
 import { Button } from '../../ui/Button'
+import { Icon } from '../../ui/Icon'
 import { FormStepper } from '../../ui/FormStepper'
+import { formatMoney } from '@/utils/format'
 
 const SETTLEMENT_STEPS = ['基本信息', '结算明细与核验', '审批签发']
 
@@ -51,9 +53,12 @@ export const SettlementForm: React.FC<SettlementFormProps> = ({
 }) => {
   const [formData, setFormData] = React.useState(defaultFormData)
   const [taxInclusive, setTaxInclusive] = React.useState(true) // 材料结算：含税/不含税
+  // S20 Stitch: 三步导航（基本信息 / 结算明细与核验 / 审批签发）
+  const [step, setStep] = React.useState(0)
   const isMaterial = formData.subType === 'material'
 
   React.useEffect(() => {
+    setStep(0)
     if (settlement) {
       setFormData({
         projectId: settlement.projectId && settlement.projectId > 0 ? settlement.projectId : '',
@@ -145,15 +150,33 @@ export const SettlementForm: React.FC<SettlementFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    // 非最后一步时（如回车触发）前进而非提交
+    if (step < SETTLEMENT_STEPS.length - 1) {
+      if (step0Valid) setStep(s => s + 1)
+      return
+    }
     onSubmit(formData)
   }
+
+  // 第 1 步必填项校验
+  const step0Valid = formData.name.trim() !== '' && formData.projectId !== '' && formData.partnerId !== ''
+
+  // S20 Stitch: 自动核验 — 明细合计与结算金额一致性（真实数据）
+  const itemsTotal = Math.round(formData.items.reduce((s, it) => s + it.amount, 0) * 100) / 100
+  const verifyDiff = Math.round((formData.amount - itemsTotal) * 100) / 100
+  const hasItems = formData.items.length > 0
+  const verifyPassed = hasItems && Math.abs(verifyDiff) < 0.01
+  const unresolvedCount = hasItems && !verifyPassed ? 1 : 0
 
   return (
     <form onSubmit={handleSubmit} className="p-6">
       {/* S20 Stitch: 3-step progress stepper */}
       <div className="mb-6">
-        <FormStepper steps={SETTLEMENT_STEPS} current={0} />
+        <FormStepper steps={SETTLEMENT_STEPS} current={step} />
       </div>
+
+      {/* 第 1 步：基本信息 */}
+      {step === 0 && (
       <div className="grid grid-cols-2 gap-4 mb-6">
         <div>
           <label className="label">结算类型 *</label>
@@ -215,8 +238,11 @@ export const SettlementForm: React.FC<SettlementFormProps> = ({
           <Input label="结算日期" type="date" value={formData.settlementDate} onChange={e => setFormData({ ...formData, settlementDate: e.target.value })} size="sm" />
         </div>
       </div>
+      )}
 
-      {/* 结算明细 */}
+      {/* 第 2 步：结算明细与核验 */}
+      {step === 1 && (
+      <>
       <SettlementItemsTable
         items={formData.items} isMaterial={isMaterial} taxInclusive={taxInclusive}
         onAdd={addItem} onUpdate={updateItem} onRemove={removeItem}
@@ -228,7 +254,49 @@ export const SettlementForm: React.FC<SettlementFormProps> = ({
         templateInputRef={templateInputRef}
       />
 
-      {/* 结算凭证上传（多文件） */}
+      {/* S20 Stitch: 自动核验结果提示区（通过=绿勾 / 差异=红标+说明） */}
+      <div className="mb-6 border border-[color:var(--border)] rounded-lg overflow-hidden">
+        <div className="px-4 py-2.5 bg-[color:var(--panel-2)] border-b border-[color:var(--border)] text-xs font-bold uppercase tracking-wider text-[color:var(--muted)]">
+          自动核验
+        </div>
+        <div className="p-4 flex items-start gap-3">
+          {!hasItems ? (
+            <>
+              <Icon name="Info" size={18} className="text-[color:var(--muted)] mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-[color:var(--fg)]">尚未录入明细</p>
+                <p className="text-xs text-[color:var(--muted)] mt-0.5">录入或导入结算明细后，系统将自动核验明细合计与结算金额的一致性。</p>
+              </div>
+            </>
+          ) : verifyPassed ? (
+            <>
+              <Icon name="CheckCircle" size={18} className="text-success-600 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-success-600">核验通过</p>
+                <p className="text-xs text-[color:var(--muted)] mt-0.5">
+                  共 <span className="font-mono tabular-nums">{formData.items.length}</span> 行明细，合计 <span className="font-mono tabular-nums">¥{formatMoney(itemsTotal)}</span>，与结算金额一致。
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <Icon name="AlertCircle" size={18} className="text-danger-500 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-danger-600">有差异</p>
+                <p className="text-xs text-[color:var(--muted)] mt-0.5">
+                  明细合计 <span className="font-mono tabular-nums">¥{formatMoney(itemsTotal)}</span> 与结算金额 <span className="font-mono tabular-nums">¥{formatMoney(formData.amount)}</span> 相差 <span className="font-mono tabular-nums text-danger-600">¥{formatMoney(Math.abs(verifyDiff))}</span>，请核对明细或金额。
+                </p>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+      </>
+      )}
+
+      {/* 第 3 步：审批签发（凭证 + 备注） */}
+      {step === 2 && (
+      <>
       <FileUploadSection files={formData.files} onFilesChange={files => setFormData(p => ({ ...p, files }))} />
 
       <div className="mb-6">
@@ -240,10 +308,30 @@ export const SettlementForm: React.FC<SettlementFormProps> = ({
           placeholder="其他说明..."
         />
       </div>
+      </>
+      )}
 
-      <div className="flex items-center justify-end gap-3 pt-4 border-t border-[color:var(--border)]">
+      {/* S20 Stitch: 底部操作条 — 左侧核验异常计数，右侧导航/提交 */}
+      <div className="flex items-center gap-3 pt-4 border-t border-[color:var(--border)]">
+        {step >= 1 && (
+          <span className={`flex items-center gap-1.5 text-sm ${unresolvedCount > 0 ? 'text-danger-600' : 'text-[color:var(--muted)]'}`}>
+            <Icon name={unresolvedCount > 0 ? 'AlertCircle' : 'CheckCircle'} size={15} />
+            未解决异常项: <span className="font-mono tabular-nums">{unresolvedCount}</span>
+          </span>
+        )}
+        <div className="flex-1" />
         <Button type="button" onClick={onCancel}  variant="secondary">取消</Button>
-        <Button type="submit"  variant="primary">{settlement ? '保存修改' : '创建结算单'}</Button>
+        {step > 0 && (
+          <Button type="button" onClick={() => setStep(s => s - 1)} variant="secondary">上一步</Button>
+        )}
+        {step < SETTLEMENT_STEPS.length - 1 ? (
+          <Button type="button" onClick={() => setStep(s => s + 1)} disabled={!step0Valid}
+            title={step0Valid ? undefined : '请先填写结算名称并选择项目与单位'} variant="primary">
+            下一步: {SETTLEMENT_STEPS[step + 1]}
+          </Button>
+        ) : (
+          <Button type="submit"  variant="primary">{settlement ? '保存修改' : '创建结算单'}</Button>
+        )}
       </div>
 
       <SettlementImportModal show={showImportModal} onClose={() => setShowImportModal(false)} onImport={handleImportItems} />

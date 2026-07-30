@@ -11,6 +11,7 @@ import { TemplateSelectorModal, TemplateGenerate } from '../templates'
 import { useSettlementFilters } from './useSettlementFilters'
 import { useSettlementHandlers } from './useSettlementHandlers'
 import { printSettlement } from './settlementPrintUtil'
+import { subTypeConfig } from './config'
 import { Button } from '../../ui/Button'
 
 interface SettlementProjectDetailProps {
@@ -35,7 +36,8 @@ const SettlementProjectDetail: React.FC<SettlementProjectDetailProps> = ({
   const printRef = useRef<HTMLDivElement>(null)
 
   const {
-    filterType, filterStatus, setFilterType, setFilterStatus,
+    filterType, filterSubType, filterStatus,
+    setFilterType, setFilterSubType, setFilterStatus,
     filteredSettlements,
   } = useSettlementFilters(settlements)
 
@@ -85,32 +87,31 @@ const SettlementProjectDetail: React.FC<SettlementProjectDetailProps> = ({
         </Button>
       </div>
 
-      {/* S19 Stitch: 类别 pill-tabs (替代下拉 + 取消统计卡片) */}
+      {/* S19 Stitch: 6 细分类别页签 + 右侧类型/状态下拉 */}
       <div className="flex items-center gap-2 mb-6 flex-wrap">
-        {[
-          { value: '', label: '全部' },
-          { value: 'income', label: '收入结算' },
-          { value: 'expense', label: '支出结算' },
-        ].map(opt => (
+        {[{ value: '', label: '全部' }, ...Object.entries(subTypeConfig).map(([value, cfg]) => ({ value, label: cfg.label }))].map(opt => (
           <button
             key={opt.value}
-            onClick={() => setFilterType(opt.value as SettlementType | '')}
+            onClick={() => setFilterSubType(opt.value)}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-              filterType === opt.value
+              filterSubType === opt.value
                 ? 'bg-[color:var(--accent)] text-[color:var(--on-accent)]'
-                : 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)]'
+                : 'text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)]'
             }`}
           >
             {opt.label}
           </button>
         ))}
-        {filterStatus && (
-          <span className="ml-2 text-xs text-[color:var(--muted)]">
-            状态: {filterStatus === 'pending' ? '未办理' : filterStatus === 'completed' ? '已办理' : '已归档'}
-            <button onClick={() => setFilterStatus('')} className="ml-1 text-[color:var(--accent)] hover:opacity-80">×</button>
-          </span>
-        )}
         <div className="flex-1" />
+        <select
+          value={filterType}
+          onChange={e => setFilterType(e.target.value as SettlementType | '')}
+          className="px-3 py-1.5 border border-[color:var(--border)] rounded-lg text-sm bg-[color:var(--card)]"
+        >
+          <option value="">收支类型</option>
+          <option value="income">收入结算</option>
+          <option value="expense">支出结算</option>
+        </select>
         <select
           value={filterStatus}
           onChange={e => setFilterStatus(e.target.value as SettlementStatus | '')}
