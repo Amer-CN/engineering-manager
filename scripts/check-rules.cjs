@@ -416,8 +416,6 @@ const GLASS_3D_ALLOWED_FILES = new Set([
   'src/components/ui/DropdownMenu/DropdownMenu.tsx',
   // —— 六类浮层：Sidebar 飞出层 ——
   'src/components/Sidebar.tsx',
-  // —— 存量待审：glass-capable UI 原语（opt-in，非本轮重构范围）——
-  'src/components/ui/Card/Card.tsx',
 ])
 
 // Stage-Surface 授权舞台区（目录前缀，下一轮 FolderStack3D 落地）
