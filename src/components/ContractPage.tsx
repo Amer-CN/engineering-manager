@@ -19,6 +19,7 @@ import { TemplateSelectorModal, TemplateGenerate } from './features/templates'
 import { CONFIG, getApi, getStatusLabel, type ContractType, type Contract } from './features/contracts/contractConfig'
 import { ContractFormModal } from './features/contracts/ContractFormModal'
 import ContractPreviewModal, { type ContractPreviewFile } from './features/contracts/ContractPreviewModal'
+import { ContractDetailModal } from './features/contracts/ContractDetailModal'
 import { ContractKanban } from './features/contracts/ContractKanban'
 import { getContractColumns } from './features/contracts/contractPageColumns'
 import { getAPI } from '@/services/api-adapter'
@@ -45,6 +46,8 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editingContract, setEditingContract] = useState<Contract | null>(null)
+  // S14 Stitch: 行/卡片点击先看详情，详情内再进编辑
+  const [detailContract, setDetailContract] = useState<Contract | null>(null)
   const [searchKeyword, setSearchKeyword] = useState('')
   const [filterStatus, setFilterStatus] = useState<string>('')
   const [filterProject, setFilterProject] = useState<string>('')
@@ -87,6 +90,8 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
   }
 
   const handleEdit = (contract: Contract) => { setEditingContract(contract); setShowModal(true) }
+  // S14 Stitch: 打开详情（浏览态）
+  const handleOpenDetail = (contract: Contract) => setDetailContract(contract)
 
   // S13 Kanban 拖拽换列 → 更新合同状态
   const handleKanbanStatusChange = async (contract: Contract, newStatus: string) => {
@@ -284,7 +289,7 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
         <ContractKanban
           contracts={filteredContracts}
           onStatusChange={handleKanbanStatusChange}
-          onCardClick={handleEdit}
+          onCardClick={handleOpenDetail}
           canEdit={can('contracts:update')}
         />
       ) : (
@@ -309,7 +314,7 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
             pagination={false}
             showContainer={true}
             stickyHeader={true}
-            onRowClick={handleEdit}
+            onRowClick={handleOpenDetail}
             emptyText="该分组下暂无合同"
           />
         </div>
@@ -331,6 +336,21 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
       />
 
       <ContractPreviewModal previewFile={previewFile} onClose={() => setPreviewFile(null)} />
+
+      {/* S14 合同详情（浏览态 Modal） */}
+      {detailContract && (
+        <ContractDetailModal
+          contract={detailContract}
+          type={type}
+          config={config}
+          projects={projects}
+          partners={partners}
+          paymentRecords={paymentRecords}
+          onClose={() => setDetailContract(null)}
+          onEdit={() => { const c = detailContract; setDetailContract(null); handleEdit(c) }}
+          onPreviewFile={detailContract.fileUrl ? () => handlePreview(detailContract) : undefined}
+        />
+      )}
 
       {/* 模板选择器 */}
       {showTemplateSelector && (
