@@ -311,6 +311,107 @@ console.log('\n═══ 铁律：Modal 白名单棘轮（写表单必须用 Dra
 }
 
 // ═══════════════════════════════════════════════════════
+// 铁律：辉光白名单（决策 2 · DESIGN.md § Stage Surfaces）
+// 环境辉光抽象为单一 <AmbientGlow /> 组件（决策 2 明确要求“抽成单一
+// <AmbientGlow />”），只允许出现在启动屏 / 登录锁屏 / AI 助手主页三处。
+// 本规则针对 AmbientGlow 组件的 import/使用，不 police 普通 gradient/blur
+// 工具类（那会与 HeroBanner 等大量既有合法用法冲突，且非本轮范围）。
+// 当前仓库 0 处 AmbientGlow 引用 —— 前瞻式约束，AmbientGlow.tsx 落地后自动生效。
+// ═══════════════════════════════════════════════════════
+
+const AMBIENT_GLOW_ALLOWED_FILES = new Set([
+  'src/components/SplashScreen.tsx',
+  'src/components/Login.tsx',
+  'src/components/LockScreen.tsx',
+  'src/components/features/agent/AgentDashboard.tsx', // AI 助手主页（App.tsx 的 Dashboard 路由）
+  'src/components/features/agent/AgentWelcome.tsx',   // AI 助手空态问候区
+  'src/components/ui/AmbientGlow.tsx',                // 组件自身（下一轮落地）
+])
+
+console.log('\n═══ 铁律：辉光白名单（AmbientGlow 仅限启动/登录锁屏/AI主页） ═══')
+{
+  const before = violations
+  const glowRe = /<AmbientGlow[\s/>]|from\s+['"][^'"]*AmbientGlow['"]/
+  const glowFiles = walkTsxFiles(SRC, (f) => !f.includes('__tests__'))
+  for (const f of glowFiles) {
+    const relPath = path.relative(ROOT, f).replace(/\\/g, '/')
+    const content = fs.readFileSync(f, 'utf-8')
+    if (glowRe.test(content) && !AMBIENT_GLOW_ALLOWED_FILES.has(relPath)) {
+      console.log(`  HARD FAIL  ${relPath}: 使用 AmbientGlow 但不在白名单。Ambient-Glow Whitelist 仅允许 SplashScreen / Login·LockScreen / AI 助手主页（DESIGN.md § Stage Surfaces · 决策 2）`)
+      violations++
+    }
+  }
+  if (violations === before) console.log('  OK  无白名单外的 AmbientGlow 使用')
+}
+
+// ═══════════════════════════════════════════════════════
+// 铁律：玻璃 / 3D 白名单（决策 3 + Stage-Surface · DESIGN.md § Stage Surfaces）
+// backdrop-filter / backdrop-blur / 3D transform（perspective/transform-style/
+// rotateY/preserve-3d）只允许出现在六类浮层 + Stage-Surface 授权舞台区 +
+// CSS 变量定义源。其余位置出现即报错，错误信息直指条款名。
+// 存量说明：现存 backdrop-blur 均为 Modal/Dialog/Toast 浮层（决策 3 允许），
+// 已逐一登记；Card.tsx 为 glass-capable UI 原语（opt-in glass 变体），本轮不
+// 重构业务组件，先登记待审——若有消费方对内容/KPI 卡用 <Card glass> 即
+// 违反决策 3，下一轮清理。3D transform 当前 0 处，为 FolderStack3D 预留。
+// ═══════════════════════════════════════════════════════
+
+const GLASS_3D_ALLOWED_FILES = new Set([
+  // —— CSS 变量 / 主题定义源 ——
+  'src/index.css',
+  'src/styles/theme-verdant.css',
+  // —— 六类浮层：CommandPalette ——
+  'src/components/CommandPalette.tsx',
+  // —— 六类浮层：Modal / Dialog 原语 + 现存 Modal 浮层 ——
+  'src/components/ui/Modal/Modal.tsx',
+  'src/components/ui/dialog.tsx',
+  'src/components/features/hr/SalaryHistoryModal.tsx',
+  'src/components/features/hr/BatchDeptAssignModal.tsx',
+  'src/components/features/hr/StaffFormModal.tsx',
+  'src/components/features/hr/DepartmentManager.tsx',
+  'src/components/features/members/WorkerImportModal.tsx',
+  'src/components/features/members/WorkerPickerModal.tsx',
+  'src/components/features/projects/ProjectForm.tsx',
+  'src/components/features/contracts/ContractPreviewModal.tsx',
+  'src/components/features/wages/AttendanceImportModal.tsx',
+  'src/components/features/wages/FileImportDialog.tsx',
+  'src/components/features/costLedger/CostLedgerImportModal.tsx',
+  'src/components/features/templates/TemplateGenerate.tsx',
+  'src/components/features/settlement/SettlementImportModal.tsx',
+  // —— 六类浮层：Toast ——
+  'src/components/ui/Toast/ToastProvider.tsx',
+  'src/components/ui/OCRRecognitionFeedback.tsx',
+  // —— 六类浮层：Popover / 下拉 ——
+  'src/components/ui/DropdownMenu/DropdownMenu.tsx',
+  // —— 六类浮层：Sidebar 飞出层 ——
+  'src/components/Sidebar.tsx',
+  // —— 存量待审：glass-capable UI 原语（opt-in，非本轮重构范围）——
+  'src/components/ui/Card/Card.tsx',
+])
+
+// Stage-Surface 授权舞台区（目录前缀，下一轮 FolderStack3D 落地）
+function isStageSurface(relPath) {
+  return relPath.startsWith('src/components/ui/FolderStack3D/')
+}
+
+console.log('\n═══ 铁律：玻璃 / 3D 白名单（决策 3 + Stage-Surface） ═══')
+{
+  const before = violations
+  const glassRe = /backdrop-filter|backdrop-blur|perspective\(|transform-style|rotateY|preserve-3d/
+  const glassFiles = walkDir(SRC, (f) =>
+    (f.endsWith('.tsx') || f.endsWith('.ts') || f.endsWith('.css')) && !f.includes('__tests__'))
+  for (const f of glassFiles) {
+    const relPath = path.relative(ROOT, f).replace(/\\/g, '/')
+    if (isStageSurface(relPath) || GLASS_3D_ALLOWED_FILES.has(relPath)) continue
+    const content = fs.readFileSync(f, 'utf-8')
+    if (glassRe.test(content)) {
+      console.log(`  HARD FAIL  ${relPath}: Glass Whitelist violation: backdrop-filter/3D transform 只允许用于浮层与 Stage-Surface 授权区（DESIGN.md § Stage Surfaces）`)
+      violations++
+    }
+  }
+  if (violations === before) console.log('  OK  无白名单外的玻璃 / 3D 使用')
+}
+
+// ═══════════════════════════════════════════════════════
 // 汇总
 // ═══════════════════════════════════════════════════════
 
