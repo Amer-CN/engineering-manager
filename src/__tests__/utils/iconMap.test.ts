@@ -15,7 +15,7 @@ vi.mock('lucide-react', () => {
     'File', 'FileCheck', 'FileJson', 'FileSpreadsheet', 'FileText', 'Filter', 'FolderKanban', 'FolderOpen',
     'Globe', 'GripVertical', 'HardHat', 'Heading2', 'HeartPulse', 'HelpCircle', 'Home', 'Image', 'Inbox', 'Info', 'Italic', 'Key', 'Landmark',
     'LayoutDashboard', 'Library', 'Lightbulb', 'List', 'Loader', 'Loader2', 'Lock', 'LogOut', 'Mail',
-    'MapPin', 'Menu', 'Mic', 'Monitor', 'Moon', 'MoreVertical', 'Package',
+    'MapPin', 'Menu', 'Mic', 'Minus', 'Monitor', 'Moon', 'MoreVertical', 'Package',
     'PaintBucket', 'Paperclip', 'Pause', 'Phone', 'PieChart', 'Play', 'Plug', 'Plus', 'Power', 'Printer',
     'Receipt', 'Redo', 'RefreshCw', 'RotateCcw', 'Ruler', 'Save', 'Scan',
     'ScrollText', 'Search', 'Settings', 'Shield', 'ShieldCheck', 'Snowflake', 'Sparkles', 'Square', 'Stamp',
