@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FolderStack3D — 卡面 v0.2 · 工程管家 Bedrock</title>
+<style>
+:root{
+  /* ===== Verdant 主题 token（提案值，与 Bedrock 同构） ===== */
+  --bg:            oklch(14% 0.004 160);
+  --bg-dot:        oklch(22% 0.006 160);
+  --card:          oklch(18% 0.005 160);
+  --panel:         oklch(21% 0.006 160);
+  --fg:            oklch(93% 0.004 160);
+  --fg-muted:      oklch(64% 0.006 160);
+  --border:        oklch(30% 0.008 160);
+  --accent:        oklch(72% 0.20 148);
+  --accent-quiet:  oklch(40% 0.10 148);
+  /* 方案 D：state-ok 四主题统一不位移，靠「明度 22 点 + 饱和度一倍」与品牌绿拉开，
+     再叠作用域隔离（绿在舞台区=聚焦，绿在数据区=正常）与颜色+文字双编码。 */
+  --state-ok:      oklch(50% 0.10 150);
+  --state-warn:    oklch(60% 0.11 70);
+  --state-danger:  oklch(52% 0.16 25);
+  /* ===== Radius / Spacing（沿用 DESIGN.md，未新增数值） ===== */
+  --r-sm:9px; --r-md:10px; --r-lg:16px; --r-xl:22px;
+  --s-xs:6px; --s-sm:10px; --s-md:16px; --s-lg:26px;
+  /* ===== FolderStack3D 几何参数（第 5.3 节建议值） ===== */
+  --stack-persp:1600px;
+  --card-w:250px;
+  --card-h:360px;
+  --step-x:30px;
+  --step-z:-14px;
+  --base-ry:-58deg;
+  --focus-z:90px;
+  --focus-scale:1.04;
+  --window:12;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--fg);
+  font-family:Inter,"Noto Sans SC","Segoe UI",system-ui,sans-serif;
+  font-size:14px; line-height:1.5;
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+/* 极细点阵纹理，透明度极低 */
+body::before{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background-image:radial-gradient(var(--bg-dot) 0.5px, transparent 0.5px);
+  background-size:5px 5px; opacity:.30;
+}
+.app{position:relative; z-index:1; height:100%; display:flex; flex-direction:column}
+
+/* ---------- 顶栏 ---------- */
+.topbar{
+  display:flex; align-items:center; gap:var(--s-md);
+  padding:12px var(--s-lg); border-bottom:1px solid var(--border); flex:none;
+}
+.brand{font-size:16px; font-weight:650; letter-spacing:-.01em}
+.brand span{color:var(--fg-muted); font-weight:400; margin-left:8px; font-size:12px}
+.chip{
+  display:inline-flex; align-items:center; gap:6px;
+  height:30px; padding:0 14px; border-radius:999px;
+  border:1px solid var(--border); background:var(--card);
+  color:var(--fg-muted); font-size:12px; cursor:pointer;
+  transition:border-color .16s, color .16s, background .16s;
+}
+.chip:hover{color:var(--fg); border-color:var(--accent-quiet)}
+.chip[aria-pressed="true"]{color:var(--fg); border-color:var(--accent); background:var(--panel)}
+.chip .n{color:var(--fg); font-variant-numeric:tabular-nums}
+.spacer{flex:1}
+.label{
+  font-size:11px; font-weight:700; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--fg-muted);
+}
+
+/* ---------- 舞台 ---------- */
+.stage{
+  position:relative; flex:1; min-height:0;
+  perspective:var(--stack-persp);
+  perspective-origin:50% 46%;
+  contain:layout paint;
+  outline:none;
+}
+.stage:focus-visible{box-shadow:inset 0 0 0 1px var(--accent)}
+.rail{
+  position:absolute; left:50%; top:50%;
+  width:var(--card-w); height:var(--card-h);
+  margin-left:calc(var(--card-w) / -2 - 150px);
+  margin-top:calc(var(--card-h) / -2);
+  transform-style:preserve-3d;
+}
+.card{
+  position:absolute; inset:0;
+  border-radius:var(--r-xl);
+  transform-style:preserve-3d;
+  /* 伪磨砂：半透渐变 + 1px 内高光描边。不用 backdrop-filter！ */
+  background:linear-gradient(158deg, rgba(255,255,255,.30), rgba(255,255,255,.10) 62%, rgba(255,255,255,.05));
+  border:1px solid rgba(255,255,255,.22);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28), inset 0 0 0 1px rgba(255,255,255,.04);
+  padding:18px 18px 22px;
+  display:flex; flex-direction:column;
+  backface-visibility:hidden;
+  cursor:pointer;
+}
+.card.win{will-change:transform,opacity}
+.card.hide{display:none}
+.card.tail{padding:0; border-color:rgba(255,255,255,.10)}
+.card.tail .body,.card.tail .tab{display:none}
+/* 已翻过的卡：隐去卡面文字，否则大数字会穿透叠到聚焦卡上 */
+.card.past .body{opacity:0}
+/* 远端待翻卡：只保留标签与占位线，不显大数字 —— 否则十几个百分数横排在一�����上会碰在一起 */
+.card.quiet .num,.card.quiet .numlabel,.card.quiet .meta,
+.card.quiet .stats,.card.quiet .st{opacity:0}
+/* 唯一允许真玻璃的地方：聚焦卡 + KPI 浮层 */
+.card.focus{
+  backdrop-filter:blur(14px) saturate(1.1);
+  /* v0.2：绿不再糊满整张，收在左上角当光源，右下退回中性玻璃 */
+  background:
+    radial-gradient(135% 105% at 4% -4%, rgba(34,221,92,.44), rgba(34,221,92,.13) 40%, rgba(34,221,92,0) 68%),
+    linear-gradient(158deg, rgba(255,255,255,.24), rgba(255,255,255,.08) 60%, rgba(255,255,255,.035));
+  border-color:color-mix(in oklch, var(--accent) 55%, transparent);
+}
+.no-glass .card.focus{backdrop-filter:none}
+.card .tab{
+  position:absolute; left:12px; bottom:-1px; height:22px;
+  padding:0 10px; border-radius:0 0 var(--r-sm) var(--r-sm);
+  background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.12); border-top:0;
+  font-size:10px; font-weight:700; letter-spacing:.06em; color:rgba(255,255,255,.72);
+  display:flex; align-items:center; white-space:nowrap;
+}
+.card.focus .tab{background:var(--accent); color:#08210f}
+.body{display:flex; flex-direction:column; height:100%; color:rgba(255,255,255,.86)}
+.body .disc{font-size:15px; font-weight:650; letter-spacing:-.01em}
+.body .meta{font-size:11px; color:rgba(255,255,255,.55); margin-top:3px}
+.body .lines{margin-top:14px; display:flex; flex-direction:column; gap:5px}
+.body .lines i{display:block; height:3px; border-radius:2px; background:rgba(255,255,255,.20)}
+.body .lines i:nth-child(2n){width:82%}
+.body .lines i:nth-child(3n){width:64%}
+.body .num{
+  margin-top:auto; font-size:28px; font-weight:700; letter-spacing:-.03em;
+  font-variant-numeric:tabular-nums; line-height:1;
+}
+.body .num u{text-decoration:none; font-size:14px; color:rgba(255,255,255,.55); margin-left:2px}
+.body .numlabel{font-size:11px; font-weight:700; letter-spacing:.12em; color:rgba(255,255,255,.5); margin-top:6px}
+/* v0.2：卡面从三行加到五行 —— 两个次级指标 + 一行双编码状态 */
+.body .stats{
+  margin-top:12px; display:flex; gap:16px; font-size:11px;
+  color:rgba(255,255,255,.58); padding-top:10px;
+  border-top:1px solid rgba(255,255,255,.10);
+}
+.body .stats b{color:rgba(255,255,255,.92); font-weight:650; font-variant-numeric:tabular-nums}
+.body .st{
+  margin-top:10px; display:flex; align-items:center; gap:6px;
+  font-size:11px; color:rgba(255,255,255,.62);
+}
+/* 状态永远是「颜色 + 文字」双编码，不允许只靠一个色块表意 */
+.body .st i{width:6px; height:6px; border-radius:50%; display:block; background:var(--state-ok)}
+.body .st.warn i{background:var(--state-warn)}
+.body .st.danger i{background:var(--state-danger)}
+
+/* KPI 玻璃浮层胶囊 */
+.kpi{
+  position:absolute; left:50%; top:50%; z-index:40;
+  transform:translate(-436px,-128px);
+  width:196px; padding:14px 16px 12px; border-radius:var(--r-lg);
+  background:rgba(255,255,255,.72); backdrop-filter:blur(18px) saturate(1.2);
+  border:1px solid rgba(255,255,255,.6); color:#1b1b1b;
+  box-shadow:0 18px 50px rgba(0,0,0,.42);
+  transition:opacity .2s;
+}
+.no-glass .kpi{background:rgba(240,240,240,.96); backdrop-filter:none}
+.kpi h4{font-size:13px; font-weight:650; display:flex; justify-content:space-between; align-items:center}
+.kpi h4 em{font-style:normal; color:#6b6b6b; font-weight:400}
+.kpi p{font-size:11px; color:#6b6b6b; margin-top:2px}
+.kpi .big{margin-top:14px; font-size:34px; font-weight:700; letter-spacing:-.03em; font-variant-numeric:tabular-nums; line-height:1}
+.kpi .big u{text-decoration:none; font-size:16px; color:#6b6b6b}
+.kpi .dot{width:7px; height:7px; border-radius:50%; background:var(--accent)}
+
+/* 尾部计数徽标 */
+.tailbadge{
+  position:absolute; left:50%; top:50%; z-index:30;
+  transform:translate(300px,120px);
+  font-size:11px; font-weight:700; letter-spacing:.12em; color:rgba(255,255,255,.42);
+}
+
+/* 详情面板（React 里只在聚焦索引变化时 setState 一次） */
+.detail{
+  position:absolute; right:var(--s-lg); top:50%; transform:translateY(-50%);
+  width:250px; z-index:35;
+}
+.detail .k{font-size:11px; font-weight:700; letter-spacing:.12em; color:var(--fg-muted)}
+.detail h3{font-size:24px; font-weight:700; letter-spacing:-.02em; margin-top:8px}
+.detail table{width:100%; margin-top:18px; border-collapse:collapse; font-size:12px}
+.detail td{padding:8px 0; border-bottom:1px solid var(--border); color:var(--fg-muted)}
+.detail td+td{text-align:right; color:var(--fg); font-variant-numeric:tabular-nums}
+.detail .track{margin-top:20px}
+.detail .track .bar{position:relative; height:1px; background:var(--border); margin:10px 0}
+.detail .track .bar b{position:absolute; left:0; top:0; height:1px; background:var(--accent)}
+.detail .track .bar s{position:absolute; top:-2px; width:5px; height:5px; border-radius:50%; background:var(--accent); transform:translateX(-50%)}
+.detail .track .ends{display:flex; justify-content:space-between; font-size:10px; color:var(--fg-muted)}
+
+/* ---------- 列表视图（等价扁平视图，默认视图�� ---------- */
+.list{position:absolute; inset:0; overflow:auto; padding:var(--s-lg)}
+.list table{width:100%; border-collapse:collapse; font-size:13px}
+.list th{
+  text-align:left; padding:8px 12px; font-size:11px; font-weight:700; letter-spacing:.12em;
+  color:var(--fg-muted); border-bottom:1px solid var(--border); text-transform:uppercase;
+}
+.list td{padding:9px 12px; border-bottom:1px solid var(--border)}
+.list tr:hover td{background:var(--panel)}
+.list td.n{text-align:right; font-variant-numeric:tabular-nums}
+.list tr .act{opacity:0; transition:opacity .14s; color:var(--fg-muted); font-size:11px}
+.list tr:hover .act{opacity:1}
+.hidden{display:none !important}
+
+/* ---------- 状态栏 ---------- */
+.statusbar{
+  flex:none; display:flex; align-items:center; gap:var(--s-md);
+  padding:8px var(--s-lg); border-top:1px solid var(--border);
+  font-size:11px; color:var(--fg-muted);
+}
+.statusbar b{color:var(--fg); font-variant-numeric:tabular-nums; font-weight:650}
+.warn{color:var(--state-warn)}
+
+@media (prefers-reduced-motion: reduce){
+  .rail{display:none}
+}
+.rm-note{display:none}
+.reduced .rail{display:none}
+.reduced .kpi,.reduced .tailbadge{display:none}
+.reduced .rm-note{
+  display:flex; position:absolute; inset:0; align-items:center;
+  gap:12px; padding:0 var(--s-lg); overflow-x:auto;
+}
+.reduced .rm-note .flat{
+  flex:none; width:150px; height:190px; border-radius:var(--r-lg);
+  border:1px solid var(--border); background:var(--card); padding:14px;
+  display:flex; flex-direction:column;
+}
+.reduced .rm-note .flat.on{border-color:var(--accent)}
+.reduced .rm-note .flat .num{margin-top:auto; font-size:24px; font-weight:700; font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar">
+    <div class="brand">图纸管理<span>Drawings · FolderStack3D v0.2（手感已定型）</span></div>
+    <button class="chip" id="c1">专业 <span class="n" id="cnt1">0</span></button>
+    <button class="chip" id="c2">版本集 <span class="n" id="cnt2">0</span></button>
+    <button class="chip">密级 全部 ⌄</button>
+    <div class="spacer"></div>
+    <button class="chip" id="btnStack" aria-pressed="false">堆叠</button>
+    <button class="chip" id="btnList" aria-pressed="true">列表</button>
+  </div>
+
+  <div class="stage" id="stage" tabindex="0" role="listbox" aria-label="图纸专业分组堆叠" aria-activedescendant="card-0">
+    <div class="rail" id="rail"></div>
+    <div class="kpi" id="kpi">
+      <h4><span id="kName">建筑</span><span class="dot"></span></h4>
+      <p id="kRange">Jan 01 – Mar 31</p>
+      <div class="big"><span id="kNum">87</span><u>%</u></div>
+    </div>
+    <div class="tailbadge" id="tailBadge">+0 更多</div>
+    <div class="detail" id="detail"></div>
+    <div class="rm-note" id="rmRail"></div>
+  </div>
+
+  <div class="list" id="list">
+    <table>
+      <thead><tr><th>专业 / 版本集</th><th>图纸数</th><th>最新版本</th><th>已审</th><th></th></tr></thead>
+      <tbody id="listBody"></tbody>
+    </table>
+  </div>
+
+  <div class="statusbar">
+    <span>视图 <b id="sView">列表</b></span>
+    <span>聚焦 <b id="sIdx">1</b> / <b id="sTotal">40</b></span>
+    <span>帧率 <b id="sFps">—</b> fps</span>
+    <span>窗口 ±<b id="sWin">12</b></span>
+    <span id="sDown" class="warn"></span>
+    <div class="spacer"></div>
+    <span>滚轮 / ← → / PageUp·Down / Home·End / Enter / Esc</span>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* =========================================================================
+   FolderStack3D 手感原型
+   目的：只验证手感与性能，不接真实数据、不接 React。
+   契约：一张卡 = 一个分组（专业 / 版本集），不是一行数据。上限 40 张。
+   ========================================================================= */
+
+const DISCIPLINES = [
+  "建筑","结构","给排水","暖通","电气","弱电智能化","消防","幕墙","精装修","景观",
+  "市政道路","桥梁","基坑支护","桩基","钢结构","屋面防水","电梯","燃气","人防","绿建",
+  "总图","边坡治理","管网综合","照明","标识","声学","厨房工艺","医疗专项","实验室","净化",
+  "预制构件","模板脚手","塔吊基础","临水临电","竣工图","变更单","技术核定","图纸会审","作废归档","扫描件"
+];
+const MONTHS = ["01","02","03","04","05","06","07"];
+
+/* 伪随机（固定种子，保证每次打开视觉一致，方便对比手感） */
+let seed = 20260728;
+function rnd(){ seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
+
+const DATA = DISCIPLINES.map((name, i) => ({
+  id: i,
+  name,
+  sheets: 8 + Math.floor(rnd() * 240),
+  rev: "V" + (1 + Math.floor(rnd() * 5)) + "." + Math.floor(rnd() * 9),
+  date: "2026-" + MONTHS[Math.floor(rnd() * MONTHS.length)] + "-" + String(2 + Math.floor(rnd() * 26)).padStart(2, "0"),
+  approved: 42 + Math.floor(rnd() * 58)
+})).map(d => {
+  // 派生字段不再调 rnd()，避免改动字段就把后面所有假数据全重洗一遍，比对视觉会失真
+  const pending = Math.round(d.sheets * (100 - d.approved) / 100);
+  const changes = (d.sheets % 7) + 1;
+  const state = d.approved >= 85 ? ["ok", "会审完成"]
+              : d.approved >= 60 ? ["warn", "待设计回复"]
+              :                    ["danger", "逾期未签发"];
+  return Object.assign(d, { pending, changes, stateKey: state[0], stateText: state[1] });
+});
+const N = DATA.length;
+
+/* ---------- 参数（与 Notion 文档 5.3 节一致） ---------- */
+const P = {
+  // 关键：倒角是**恒定值**，不是每张累加。累加会让远端卡转到侧棱、直接消失，
+  // 而原稿的"一沓文件"观感正来自一组姿态一致的平行薄片。
+  baseRY: -58, focusRY: -16,
+  stepX: 30, stepZ: -14,
+  pastStepX: 150, pastRY: -72,
+  focusZ: 96, focusScale: 1.04,
+  tailStepX: 8, tailStepZ: -4,
+  stiffness: 170, damping: 26,
+  wheelPerCard: 120, snapDelay: 140
+};
+let WINDOW_SIZE = 12;
+let glassOn = true;
+
+/* ---------- 构建 DOM ---------- */
+const rail = document.getElementById("rail");
+const cards = DATA.map((d, i) => {
+  const el = document.createElement("div");
+  el.className = "card";
+  el.id = "card-" + i;
+  el.setAttribute("role", "option");
+  el.setAttribute("aria-selected", "false");
+  el.innerHTML =
+    '<div class="body">' +
+      '<div class="disc">' + d.name + '</div>' +
+      '<div class="meta">' + d.sheets + ' 张 · ' + d.rev + '</div>' +
+      '<div class="lines"><i></i><i></i><i></i></div>' +
+      '<div class="stats"><span>待审 <b>' + d.pending + '</b></span>' +
+                        '<span>变更 <b>' + d.changes + '</b></span></div>' +
+      '<div class="num">' + d.approved + '<u>%</u></div>' +
+      '<div class="numlabel">已审比例</div>' +
+      '<div class="st ' + d.stateKey + '"><i></i>' + d.stateText + '</div>' +
+    '</div>' +
+    '<div class="tab">' + d.name + '</div>';
+  el.addEventListener("click", () => { target = i; kick(); });
+  rail.appendChild(el);
+  return el;
+});
+
+/* 列表视图（等价扁平视图） */
+document.getElementById("listBody").innerHTML = DATA.map(d =>
+  '<tr><td>' + d.name + '</td><td class="n">' + d.sheets + '</td><td>' + d.rev + ' · ' + d.date +
+  '</td><td class="n">' + d.approved + '%</td><td class="n"><span class="act">查看 · 导出 · 归档</span></td></tr>'
+).join("");
+
+/* reduced-motion 降级轨道 */
+document.getElementById("rmRail").innerHTML = DATA.map((d, i) =>
+  '<div class="flat' + (i === 0 ? ' on' : '') + '"><div>' + d.name +
+  '</div><div class="num">' + d.approved + '%</div></div>'
+).join("");
+
+document.getElementById("cnt1").textContent = N;
+document.getElementById("cnt2").textContent = DATA.reduce((a, d) => a + (d.sheets > 100 ? 1 : 0), 0);
+document.getElementById("sTotal").textContent = N;
+
+/* ---------- 状态与物理 ---------- */
+let offset = 0;      // 当前渲染位置（浮点）
+let target = 0;      // 目标索引（浮点，滚轮直接推它）
+let vel = 0;
+let lastFocus = -1;
+let wheelStopTimer = null;
+let running = false;
+let lastT = 0;
+
+const stage = document.getElementById("stage");
+const kpi = document.getElementById("kpi");
+const tailBadge = document.getElementById("tailBadge");
+const detail = document.getElementById("detail");
+
+function kick(){ if (!running) { running = true; lastT = performance.now(); requestAnimationFrame(frame); } }
+
+/* ---- 滚轮归一化 + 首尾释放滚动权（严禁 scroll trapping） ---- */
+stage.addEventListener("wheel", (e) => {
+  let d = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+  if (e.deltaMode === 1) d *= 16;                    // 行
+  else if (e.deltaMode === 2) d *= window.innerHeight; // 页
+  const atStart = target <= 0.001 && d < 0;
+  const atEnd   = target >= N - 1 - 0.001 && d > 0;
+  if (atStart || atEnd) return;   // 不 preventDefault：把滚动权还给页面
+  e.preventDefault();
+  target = Math.min(N - 1, Math.max(0, target + d / P.wheelPerCard));
+  clearTimeout(wheelStopTimer);
+  wheelStopTimer = setTimeout(() => { target = Math.round(target); kick(); }, P.snapDelay);
+  kick();
+}, { passive: false });
+
+/* ---- 键盘 ---- */
+stage.addEventListener("keydown", (e) => {
+  const m = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1, PageDown: 10, PageUp: -10 };
+  if (e.key in m) { target = Math.min(N - 1, Math.max(0, Math.round(target) + m[e.key])); }
+  else if (e.key === "Home") target = 0;
+  else if (e.key === "End") target = N - 1;
+  else if (e.key === "Enter") { flash("打开分组：" + DATA[Math.round(target)].name); return; }
+  else if (e.key === "Escape") { stage.blur(); return; }
+  else return;
+  e.preventDefault();
+  kick();
+});
+
+/* ---------- 每帧：直接写 style，不经过任何框架状态 ---------- */
+function frame(now){
+  const dt = Math.min(0.032, (now - lastT) / 1000) || 0.016;
+  lastT = now;
+
+  // 临界阻尼弹簧：无回弹
+  const a = P.stiffness * (target - offset) - P.damping * vel;
+  vel += a * dt;
+  offset += vel * dt;
+  if (Math.abs(target - offset) < 0.0004 && Math.abs(vel) < 0.02) { offset = target; vel = 0; }
+
+  render();
+  measure(now);
+
+  if (offset !== target || Math.abs(vel) > 0) requestAnimationFrame(frame);
+  else running = false;
+}
+
+function render(){
+  const W = WINDOW_SIZE;
+  for (let i = 0; i < N; i++){
+    const el = cards[i];
+    const d = i - offset;
+
+    if (d < -9 || d > W + 22){ if (!el.classList.contains("hide")) el.className = "card hide"; continue; }
+
+    let x, z, ry, op, sc = 1, cls = "card win";
+    if (d > W){
+      // 深度压缩尾：合并成一片压扁的剪影，复刻原稿右侧那一沓白卡
+      const t = d - W;
+      x  = W * P.stepX + t * P.tailStepX;
+      z  = W * P.stepZ + t * P.tailStepZ;
+      ry = P.baseRY;
+      op = Math.max(0.10, 0.34 - t * 0.010);
+      cls += " tail";
+    } else if (d < -0.5){
+      // v0.2：已翻过的卡不再直接消失，而是向左逐步压缩成一叠薄片，
+      // 留下「我已经翻过这么多」的痕迹（同时仍不遮挡聚焦卡）
+      const t = Math.min(-d, 8);
+      x  = -P.pastStepX - (t - 1) * 13;
+      z  = d * P.stepZ * 0.35;
+      ry = P.pastRY;
+      op = Math.max(0.13, 0.44 - (t - 1) * 0.055);
+      cls += " past";
+    } else {
+      x  = d * P.stepX;
+      z  = d * P.stepZ;
+      const ad = Math.abs(d);
+      op = ad < 1 ? 1 : Math.max(0.46, 1 - (ad - 1) * 0.16);
+      const k = ad < 0.5 ? 1 - ad * 2 : 0;   // 0.5 → 0 时归零，避免跳变
+      ry = P.baseRY + (P.focusRY - P.baseRY) * k;
+      z += P.focusZ * k;
+      sc = 1 + (P.focusScale - 1) * k;
+      if (k > 0) cls += " focus";
+      if (d > 1.2) cls += " quiet";
+    }
+    el.className = cls;
+    el.style.opacity = op.toFixed(3);
+    // 不设 z-index：交给浏览器按 preserve-3d 真实景深排序，
+    // 否则 z-index 会越过 3D 深度，把已翻过的卡盖到聚焦卡上面。
+    el.style.filter  = cls.indexOf("past") >= 0 ? "saturate(.25) brightness(.86)"
+                     : d > 2.5 ? "saturate(.7) brightness(.94)" : "";
+    el.style.transform =
+      "translate3d(" + x.toFixed(2) + "px,0," + z.toFixed(2) + "px) rotateY(" + ry.toFixed(2) + "deg) scale(" + sc.toFixed(3) + ")";
+  }
+
+  // 只有「聚焦索引变化」时才更新周边 UI —— 对应 React 里唯一一次 setState
+  const f = Math.round(offset);
+  if (f !== lastFocus){
+    lastFocus = f;
+    const d = DATA[f];
+    cards.forEach((c, i) => c.setAttribute("aria-selected", i === f ? "true" : "false"));
+    stage.setAttribute("aria-activedescendant", "card-" + f);
+    document.getElementById("kName").textContent = d.name;
+    document.getElementById("kRange").textContent = d.rev + " · " + d.date;
+    document.getElementById("kNum").textContent = d.approved;
+    document.getElementById("sIdx").textContent = f + 1;
+    tailBadge.textContent = "+" + Math.max(0, N - f - WINDOW_SIZE - 1) + " 更多";
+    detail.innerHTML =
+      '<div class="k">专业分组</div><h3>' + d.name + '</h3>' +
+      '<table>' +
+        '<tr><td>图纸数</td><td>' + d.sheets + '</td></tr>' +
+        '<tr><td>当前版本</td><td>' + d.rev + '</td></tr>' +
+        '<tr><td>最新签发</td><td>' + d.date + '</td></tr>' +
+        '<tr><td>已审比例</td><td>' + d.approved + '%</td></tr>' +
+      '</table>' +
+      '<div class="track"><div class="k">图纸会审进度</div>' +
+        '<div class="bar"><b style="width:' + d.approved + '%"></b><s style="left:' + d.approved + '%"></s></div>' +
+        '<div class="ends"><span>提交</span><span>终审签发</span></div>' +
+      '</div>';
+    const flats = document.querySelectorAll("#rmRail .flat");
+    flats.forEach((n, i) => n.classList.toggle("on", i === f));
+  }
+}
+
+/* ---------- 帧率监测 + 自动降级（低于 45fps 持续 500ms） ---------- */
+let fFrames = 0, fStart = 0, badSince = 0, downgraded = false;
+function measure(now){
+  if (!fStart) { fStart = now; fFrames = 0; return; }
+  fFrames++;
+  const dur = now - fStart;
+  if (dur >= 400){
+    const fps = Math.round(fFrames * 1000 / dur);
+    document.getElementById("sFps").textContent = fps;
+    fStart = now; fFrames = 0;
+    if (fps < 45){
+      if (!badSince) badSince = now;
+      else if (now - badSince > 500 && !downgraded) downgrade();
+    } else badSince = 0;
+  }
+}
+function downgrade(){
+  downgraded = true;
+  WINDOW_SIZE = 6;
+  glassOn = false;
+  document.body.classList.add("no-glass");
+  document.getElementById("sWin").textContent = "6";
+  document.getElementById("sDown").textContent = "已自动降级：窗口 ±6 · 关闭玻璃模糊";
+}
+
+function flash(msg){
+  const s = document.getElementById("sDown");
+  s.textContent = msg;
+  setTimeout(() => { if (s.textContent === msg) s.textContent = downgraded ? "已自动降级：窗口 ±6 · 关闭玻璃模糊" : ""; }, 1600);
+}
+
+/* ---------- 视图切换（默认列表，堆叠是主动进入） ---------- */
+const list = document.getElementById("list");
+const bS = document.getElementById("btnStack"), bL = document.getElementById("btnList");
+function setView(v){
+  const stack = v === "stack";
+  bS.setAttribute("aria-pressed", String(stack));
+  bL.setAttribute("aria-pressed", String(!stack));
+  stage.classList.toggle("hidden", !stack);
+  list.classList.toggle("hidden", stack);
+  document.getElementById("sView").textContent = stack ? "堆叠" : "列表";
+  try { localStorage.setItem("drawings.view", v); } catch (e) {}
+  if (stack) { stage.focus(); kick(); }
+}
+bS.onclick = () => setView("stack");
+bL.onclick = () => setView("list");
+
+/* reduced-motion：关 3D，降级为横向轨道 */
+if (window.matchMedia("(prefers-reduced-motion: reduce)").matches){
+  document.body.classList.add("reduced");
+}
+
+let saved = null;
+try { saved = localStorage.getItem("drawings.view"); } catch (e) {}
+setView(saved || "list");
+render();
+</script>
+</body>
+</html>
