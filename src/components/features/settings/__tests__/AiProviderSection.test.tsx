@@ -38,7 +38,7 @@ import { AiProviderSection } from '../AiProviderSection'
 const mockConfig = {
   providerName: 'Agnes',
   baseUrl: 'https://apihub.agnes-ai.com/v1',
-  model: 'agnes-2.0-flash',
+  model: 'agnes-2.5-flash',
   useBuiltIn: true,
   temperature: 0.7,
   maxTokens: 4096,

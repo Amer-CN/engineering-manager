@@ -50,7 +50,7 @@ public class LlmConfigResolver
     // 内置 Agnes 兜底
     private const string BuiltInApiKey = "sk-1RP0oZ6uuxPzeMoBvZT0lDRnIPQKm6783G6KcHEZ9fWtk50A";
     private const string BuiltInBaseUrl = "https://apihub.agnes-ai.com/v1";
-    private const string BuiltInModel = "agnes-2.0-flash";
+    private const string BuiltInModel = "agnes-2.5-flash";
 
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {

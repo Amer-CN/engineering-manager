@@ -172,6 +172,8 @@ public class LlmProviderService : ILlmChatService
         if (route.MaxTokens > 0)
             payload["max_tokens"] = route.MaxTokens;
 
+        AddAgnesThinkingParameters(route, payload);
+
         try
         {
             var client = _httpClientFactory.CreateClient("LlmProvider");
@@ -227,6 +229,8 @@ public class LlmProviderService : ILlmChatService
         if (route.MaxTokens > 0)
             payload["max_tokens"] = route.MaxTokens;
 
+        AddAgnesThinkingParameters(route, payload);
+
         // 分离连接与 yield：try/catch 内不能 yield return
         var connectResult = await ConnectStreamAsync(route, payload);
         if (connectResult.Error != null)
@@ -257,6 +261,27 @@ public class LlmProviderService : ILlmChatService
                 yield return data;
             }
         }
+    }
+
+    /// <summary>
+    /// 为内置 Agnes OpenAI 兼容请求启用 Thinking。
+    /// Agnes 官方在 Chat Completions 格式中仅声明 chat_template_kwargs.enable_thinking；
+    /// thinking.type / budget_tokens 属于 Anthropic 兼容格式，不能直接混入该请求。
+    /// </summary>
+    internal static void AddAgnesThinkingParameters(
+        ModelRouteInfo route,
+        Dictionary<string, object> payload)
+    {
+        if (!route.UseBuiltIn ||
+            !route.Model.Equals("agnes-2.5-flash", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        payload["chat_template_kwargs"] = new Dictionary<string, object>
+        {
+            ["enable_thinking"] = true,
+        };
     }
 
     private async Task<(StreamReader? Reader, string? Error)> ConnectStreamAsync(

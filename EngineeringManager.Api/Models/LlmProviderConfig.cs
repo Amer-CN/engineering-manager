@@ -14,7 +14,7 @@ public record LlmProviderConfig
     [JsonIgnore]
     public string ApiKey { get; init; } = "";
 
-    public string Model { get; init; } = "agnes-2.0-flash";
+    public string Model { get; init; } = "agnes-2.5-flash";
     public bool UseBuiltIn { get; init; } = true;
     public double Temperature { get; init; } = 0.7;
     public int MaxTokens { get; init; } = 4096;

@@ -610,7 +610,7 @@ public static class AgentEndpoints
                     ProviderName = GetStringProp(root, "providerName") ?? "Custom",
                     BaseUrl = GetStringProp(root, "baseUrl") ?? "https://apihub.agnes-ai.com/v1",
                     ApiKey = GetStringProp(root, "apiKey") ?? "",
-                    Model = GetStringProp(root, "model") ?? "agnes-2.0-flash",
+                    Model = GetStringProp(root, "model") ?? "agnes-2.5-flash",
                     UseBuiltIn = GetBoolProp(root, "useBuiltIn"),
                     Temperature = GetDoubleProp(root, "temperature"),
                     MaxTokens = GetIntProp(root, "maxTokens"),
