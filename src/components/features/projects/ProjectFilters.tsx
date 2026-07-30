@@ -8,9 +8,9 @@ import { Button } from '../../ui/Button'
 
 const statusOptions = [
   { value: '', label: '全部状态' },
-  { value: 'planning', label: '筹备中' },
+  { value: 'planning', label: '规划中' },
   { value: 'in_progress', label: '进行中' },
-  { value: 'completed', label: '已完成' },
+  { value: 'completed', label: '已完工' },
   { value: 'archived', label: '已归档' },
 ]
 
