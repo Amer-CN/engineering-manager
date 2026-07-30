@@ -78,4 +78,36 @@ describe('FolderStack3D', () => {
     expect(onOpen).toHaveBeenCalledTimes(1)
     expect(onOpen.mock.calls[0][0].id).toBe('g1')
   })
+
+  // ── 滚轮边界释放与限幅（防无声回归：调换判定顺序/挪 preventDefault 会静默劫持页面滚动）──
+  // targetRef 在 wheel handler 内同步更新，无需等 rAF/弹簧；用 defaultPrevented 作可观察口径。
+  const wheel = (el: Element, deltaY: number) => {
+    const e = new WheelEvent('wheel', { deltaY, deltaMode: 0, cancelable: true, bubbles: true })
+    el.dispatchEvent(e)
+    return e.defaultPrevented
+  }
+
+  it('首尾释放滚动权：边界向外 defaultPrevented=false，中间位置拦截=true', () => {
+    render(<FolderStack3D groups={makeGroups(10)} ariaLabel="边界" />)
+    const stage = screen.getByRole('listbox') as HTMLElement
+    stage.focus() // 激活捕获（document.activeElement === stage）
+    // 在起点向上滚：不拦截，把滚动权还给页面（严禁 scroll trapping）
+    expect(wheel(stage, -100)).toBe(false)
+    // 在起点向下滚：拦截并推进 target
+    expect(wheel(stage, 120)).toBe(true)
+    // 离开起点后向上滚：中间位置必须拦截（判定顺序回归哨兵）
+    expect(wheel(stage, -60)).toBe(true)
+  })
+
+  it('单事件限幅 ±360（=3 卡）：惯性尾巴 ±999 不能飞越', () => {
+    render(<FolderStack3D groups={makeGroups(10)} ariaLabel="限幅" />)
+    const stage = screen.getByRole('listbox') as HTMLElement
+    stage.focus()
+    // +999 若不限幅 target=8.3；限幅后 = 360/120 = 3
+    expect(wheel(stage, 999)).toBe(true)
+    // -400 限幅为 -360 → target 回到 0（若未限幅则停在 ~5.3）
+    expect(wheel(stage, -400)).toBe(true)
+    // 此刻在起点：再向上滚应释放（false）——只有限幅生效才能回到 0
+    expect(wheel(stage, -100)).toBe(false)
+  })
 })
