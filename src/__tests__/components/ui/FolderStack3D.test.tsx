@@ -165,15 +165,24 @@ describe('FolderStack3D', () => {
     expect(options[0].className).not.toContain('fs3d-quiet')
   })
 
-  it('人数徽记：有 people 渲染图标+数字（内联 SVG 非 emoji），缺省整行隐藏', () => {
-    const groups = makeGroups(2).map((g, i) => (i === 0 ? { ...g, people: 4 } : g))
-    render(<FolderStack3D groups={groups} ariaLabel="人数" />)
+  it('徽记：projects badge 渲染 Building2 图标+数字（内联 SVG 非 emoji），缺省整行隐藏', () => {
+    const groups = makeGroups(2).map((g, i) => (i === 0 ? { ...g, badge: { kind: 'projects' as const, value: 3 } } : g))
+    render(<FolderStack3D groups={groups} ariaLabel="徽记" />)
     const options = screen.getAllByRole('option')
-    const people = options[0].querySelector('.fs3d-people')
-    expect(people).not.toBeNull()
-    expect(people!.textContent).toBe('4')
-    expect(people!.querySelector('svg')).not.toBeNull()
+    const badge = options[0].querySelector('.fs3d-people')
+    expect(badge).not.toBeNull()
+    expect(badge!.textContent).toBe('3')
+    expect(badge!.querySelector('svg')).not.toBeNull()
     expect(options[1].querySelector('.fs3d-people')).toBeNull()
+  })
+
+  it('徽记：people badge 渲染 Users 图标+数字', () => {
+    const groups = makeGroups(1).map(g => ({ ...g, badge: { kind: 'people' as const, value: 7 } }))
+    render(<FolderStack3D groups={groups} ariaLabel="人数" />)
+    const badge = screen.getAllByRole('option')[0].querySelector('.fs3d-people')
+    expect(badge).not.toBeNull()
+    expect(badge!.textContent).toBe('7')
+    expect(badge!.querySelector('svg')).not.toBeNull()
   })
 
   it('卡面只留标题与 files 副行，无 KPI/百分比/徽章/底部 tab 残留', () => {

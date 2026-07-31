@@ -107,8 +107,8 @@
 }
 /* DOM 顺序 back → middle → front；后纸逐张右上错位，顶底边形成相同斜阶梯 */
 .fs3d-paper:nth-child(1) {
-  left: calc(var(--fs3d-paper-l) + var(--fs3d-paper-dx) * 2);
-  top: calc(var(--fs3d-paper-t) - var(--fs3d-paper-dy) * 2);
+  left: calc(var(--fs3d-paper-l) + var(--fs3d-paper-dx) + var(--fs3d-paper-dx));
+  top: calc(var(--fs3d-paper-t) - var(--fs3d-paper-dy) - var(--fs3d-paper-dy));
   background: var(--stage-paper-3);
 }
 .fs3d-paper:nth-child(2) {

@@ -13,7 +13,7 @@ const d = (id: number, category: string, projectId: number, createdAt: string): 
   ({ id, name: `图${id}`, category, projectId, createdAt, filePath: `${id}.png`, remarks: '', position: '' } as Drawing)
 
 describe('buildDrawingStackGroups', () => {
-  it('按类别分组：计数 / 项目数 / 最新日期 / 占比', () => {
+  it('按类别分组：计数 / 项目数 / 最新日期 / 占比 / projects badge', () => {
     const groups = buildDrawingStackGroups([
       d(1, '结构图', 1, '2026-07-01'),
       d(2, '结构图', 2, '2026-07-12'),
@@ -30,6 +30,11 @@ describe('buildDrawingStackGroups', () => {
       { label: '占比', value: '50%' },
     ])
     expect(struct.detail).toContainEqual({ label: '最新上传', value: '2026-07-12' })
+    // badge 接线真实 projectCount（结构图覆盖 2 个项目）
+    expect(struct.badge).toEqual({ kind: 'projects', value: 2 })
+    // 建筑图只覆盖 1 个项目
+    const arch = groups.find(g => g.name === '建筑图')!
+    expect(arch.badge).toEqual({ kind: 'projects', value: 1 })
   })
 
   it('空数据返回空数组', () => {
