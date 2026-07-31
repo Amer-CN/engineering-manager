@@ -12,6 +12,7 @@
   --fs3d-card-w: 250px;
   --fs3d-card-h: 360px;
   position: relative;
+  /* 待调值：自绘标题栏 + 页头/筛选栏的实际占高待 WebView2 真机实测轮校准，320px 是估值 */
   height: calc(100vh - 320px);
   min-height: 420px;
   perspective: 1600px;

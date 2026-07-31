@@ -15,6 +15,8 @@ export interface FolderStack3DProps {
   groups: StackGroup[]
   /** Enter / 点击聚焦卡打开分组 */
   onOpen?: (group: StackGroup) => void
+  /** Esc 退出舞台（消费方切回扁平视图）；未提供时回落 blur */
+  onExit?: () => void
   ariaLabel: string
   /** 舞台局部主题（data-theme 只作用于舞台子树，不碰全局外观） */
   stageTheme?: StageTheme
@@ -30,7 +32,7 @@ function useReducedMotion(): boolean {
   )
 }
 
-export function FolderStack3D({ groups, onOpen, ariaLabel, stageTheme = 'verdant' }: FolderStack3DProps) {
+export function FolderStack3D({ groups, onOpen, onExit, ariaLabel, stageTheme = 'verdant' }: FolderStack3DProps) {
   // 防御性截断：>40 应由消费方回退列表，组件兜底不渲染超限卡
   const capped = groups.length > STACK_GROUP_LIMIT ? groups.slice(0, STACK_GROUP_LIMIT) : groups
   const reduced = useReducedMotion()
@@ -38,6 +40,7 @@ export function FolderStack3D({ groups, onOpen, ariaLabel, stageTheme = 'verdant
   const { stageRef, registerCard, handleKeyDown, goTo, focusIndex, downgraded } = useWheelStack({
     count: capped.length,
     onOpen: (i) => { const g = capped[i]; if (g) onOpen?.(g) },
+    onExit,
   })
 
   if (capped.length === 0) return null

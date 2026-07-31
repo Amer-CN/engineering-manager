@@ -64,6 +64,21 @@ describe('FolderStack3D', () => {
     expect(onOpen.mock.calls[0][0].id).toBe('g0')
   })
 
+  it('Esc 退出舞台：调 onExit（交互契约）', () => {
+    const onExit = vi.fn()
+    render(<FolderStack3D groups={makeGroups(3)} onExit={onExit} ariaLabel="退出" />)
+    fireEvent.keyDown(screen.getByRole('listbox'), { key: 'Escape' })
+    expect(onExit).toHaveBeenCalledTimes(1)
+  })
+
+  it('Esc 未接 onExit 时回落 blur，不抛错', () => {
+    render(<FolderStack3D groups={makeGroups(3)} ariaLabel="回落" />)
+    const stage = screen.getByRole('listbox') as HTMLElement
+    stage.focus()
+    expect(() => fireEvent.keyDown(stage, { key: 'Escape' })).not.toThrow()
+    expect(document.activeElement).not.toBe(stage)
+  })
+
   it('prefers-reduced-motion 降级为扁平轨道（无 3D 舞台，选中后再点打开）', () => {
     ;(window as any).matchMedia = vi.fn().mockReturnValue({ matches: true })
     const onOpen = vi.fn()

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { DataTable } from '@/components/DataTable'
 import Spinner from './ui/Spinner'
 import { Drawing, Project } from '../types/electron'
@@ -212,11 +212,11 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
   })
   }
 
-  const filteredDrawings = drawings.filter(drawing => {
+  const filteredDrawings = useMemo(() => drawings.filter(drawing => {
   if (filterProject && drawing.projectId !== filterProject) return false
   if (filterCategory && drawing.category !== filterCategory) return false
   return true
-  })
+  }), [drawings, filterProject, filterCategory])
 
   const getProjectName = (projectId: number) => {
   const project = projects.find(p => p.id === projectId)
@@ -226,8 +226,10 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
   const columns = createDrawingColumns(getProjectName, handleEdit, handleDelete)
 
   // FolderStack3D：一张卡 = 一个类别分组；堆叠不受类别筛选影响（它本身就是类别导航），只受项目筛选
-  const stackGroups = buildDrawingStackGroups(
-    filterProject ? drawings.filter(d => d.projectId === filterProject) : drawings,
+  // useMemo 稳定引用：否则每次渲染新数组 → StackCard 的 memo 永远失效，40 卡全量重渲染
+  const stackGroups = useMemo(
+    () => buildDrawingStackGroups(filterProject ? drawings.filter(d => d.projectId === filterProject) : drawings),
+    [drawings, filterProject],
   )
   // 卡数门禁：超 40 强制回退列表（DESIGN.md § Stage Surfaces · 决策 4）
   const stackAllowed = stackGroups.length > 0 && stackGroups.length <= STACK_GROUP_LIMIT
@@ -315,6 +317,7 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
   <FolderStack3D
     groups={stackGroups}
     onOpen={handleStackOpen}
+    onExit={() => setViewMode('list')}
     ariaLabel="图纸类别分组堆叠"
   />
   ) : filteredDrawings.length > 0 ? (

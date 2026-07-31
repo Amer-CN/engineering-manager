@@ -35,9 +35,11 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v
 interface UseWheelStackOptions {
   count: number
   onOpen?: (index: number) => void
+  /** Esc 退出舞台；未提供时回落 stage.blur() */
+  onExit?: () => void
 }
 
-export function useWheelStack({ count, onOpen }: UseWheelStackOptions) {
+export function useWheelStack({ count, onOpen, onExit }: UseWheelStackOptions) {
   const stageRef = useRef<HTMLDivElement | null>(null)
   const cardElsRef = useRef(new Map<number, HTMLDivElement>())
   const cardRefFnsRef = useRef(new Map<number, (el: HTMLDivElement | null) => void>())
@@ -55,8 +57,10 @@ export function useWheelStack({ count, onOpen }: UseWheelStackOptions) {
   const windowRef = useRef(WINDOW_FULL)
   const countRef = useRef(count)
   const onOpenRef = useRef(onOpen)
+  const onExitRef = useRef(onExit)
   countRef.current = count
   onOpenRef.current = onOpen
+  onExitRef.current = onExit
 
   // deltaMode 换算缓存：挂载 + resize 时算一次，wheel 里绝不触发同步布局
   const lineHeightRef = useRef(16)
@@ -199,8 +203,8 @@ export function useWheelStack({ count, onOpen }: UseWheelStackOptions) {
 
     function onWheelNative(e: WheelEvent) {
       const stage = stageRef.current
-      // 只在指针 hover 舞台内或焦点在舞台内时捕获
-      if (!hoverRef.current && document.activeElement !== stage) return
+      // 只在指针 hover 舞台内或焦点在舞台子树内时捕获
+      if (!hoverRef.current && !stage?.contains(document.activeElement)) return
       // 取绝对值大者，不相加（斜向滑动相加会双倍计数）
       let d = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX
       if (e.deltaMode === 1) d *= lineHeightRef.current
@@ -231,7 +235,12 @@ export function useWheelStack({ count, onOpen }: UseWheelStackOptions) {
       else if (e.key === 'Home') targetRef.current = 0
       else if (e.key === 'End') targetRef.current = n - 1
       else if (e.key === 'Enter') { onOpenRef.current?.(lastEmittedRef.current); return }
-      else if (e.key === 'Escape') { stageRef.current?.blur(); return }
+      else if (e.key === 'Escape') {
+        // 交互契约：Esc 退出舞台（消费方切回扁平视图）；未接 onExit 时回落 blur
+        if (onExitRef.current) onExitRef.current()
+        else stageRef.current?.blur()
+        return
+      }
       else return
       e.preventDefault()
       kick()
