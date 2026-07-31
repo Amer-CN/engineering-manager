@@ -244,7 +244,14 @@ public static class CostLedgerEndpoints
             if (dto.Entries == null || dto.Entries.Count == 0)
                 return Common.Fail("没有可保存的数据");
 
-            var count = 0;
+            // B1 修复：先校验 batch 归属，取不到 = 无权操作该批次
+            var batchProjectId = db.ExecuteScalar<long?>(
+                $"SELECT [project_id] FROM [cost_ledger_batches] WHERE [id]=@BatchId AND {CurrentUser.UserFilterCompany(scope)}",
+                new { BatchId = batchId, Uid = uid, IsAdmin = isAdmin });
+            if (batchProjectId == null)
+                return Results.Json(new { success = false, error = "无权操作该批次" }, statusCode: 403);
+
+            int updated = 0, inserted = 0, skipped = 0;
             using var tx = db.BeginTransaction();
             try
             {
@@ -256,7 +263,7 @@ public static class CostLedgerEndpoints
                     if (row.Id.HasValue && row.Id.Value > 0)
                     {
                         // UPDATE 已有行（附加数据权限过滤，防越权改写）
-                        await db.ExecuteAsync(@"UPDATE [cost_ledger] SET
+                        var affected = await db.ExecuteAsync(@"UPDATE [cost_ledger] SET
                             [voucher_no]=@VoucherNo,[date]=@Date,[direction]=@Direction,[category]=@Category,
                             [amount]=@Amount,[counterparty]=@Counterparty,[channel]=@Channel,
                             [summary]=@Summary,[notes]=@Notes,[updated_at]=@Now,[version]=[version]+1,[last_modified_at]=@Now
@@ -264,18 +271,19 @@ public static class CostLedgerEndpoints
                             new { row.Id, row.VoucherNo, row.Date, row.Direction, row.Category,
                                   Amount = amountCents, row.Counterparty, row.Channel, row.Summary, row.Notes,
                                   BatchId = batchId, Uid = uid, IsAdmin = isAdmin, Now = now() }, tx);
+                        if (affected > 0) updated++; else skipped++;
                     }
                     else
                     {
-                        // INSERT 新行
+                        // INSERT 新行（project_id 一律用 batch 查出的值，忽略 DTO）
                         await db.ExecuteAsync(@"INSERT INTO [cost_ledger]
                             ([project_id],[batch_id],[voucher_no],[date],[direction],[category],[amount],[counterparty],[channel],[summary],[notes],[created_by],[created_at],[updated_at],[last_modified_at])
                             VALUES (@ProjectId,@BatchId,@VoucherNo,@Date,@Direction,@Category,@Amount,@Counterparty,@Channel,@Summary,@Notes,@CreatedBy,@Now,@Now,@Now)",
-                            new { row.ProjectId, BatchId = batchId, row.VoucherNo, row.Date, row.Direction, row.Category,
+                            new { ProjectId = batchProjectId.Value, BatchId = batchId, row.VoucherNo, row.Date, row.Direction, row.Category,
                                   Amount = amountCents, row.Counterparty, row.Channel, row.Summary, row.Notes,
                                   CreatedBy = uid, Now = now() }, tx);
+                        inserted++;
                     }
-                    count++;
                 }
                 tx.Commit();
 
@@ -287,7 +295,7 @@ public static class CostLedgerEndpoints
                         VALUES (@Action,@Level,@UserId,@UserName,@Resource,@ResourceId,@Details,@IpAddress,@CreatedAt)",
                         new { Action = "update", Level = "info", UserId = uid, UserName = uid,
                               Resource = "cost_ledger_sheet", ResourceId = batchId.ToString(),
-                              Details = $"批量保存电子表格 {count} 条",
+                              Details = $"批量保存电子表格 {updated + inserted} 条（跳过 {skipped}）",
                               IpAddress = ctx.Connection.RemoteIpAddress?.ToString() ?? "",
                               CreatedAt = now() });
                 }
@@ -296,7 +304,7 @@ public static class CostLedgerEndpoints
                     Console.Error.WriteLine($"[CostLedger] sheet 审计日志写入失败: {auditEx.Message}");
                 }
 
-                return Common.Ok(new { count });
+                return Common.Ok(new { count = updated + inserted, updated, inserted, skipped });
             }
             catch (Exception ex)
             {

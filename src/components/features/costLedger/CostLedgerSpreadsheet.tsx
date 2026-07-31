@@ -91,7 +91,8 @@ export default function CostLedgerSpreadsheet({
         showToast(res.error || '保存失败', 'error')
       }
     } catch (err) {
-      showToast('保存失败: ' + String(err), 'error')
+      const msg = err instanceof Error ? err.message : String(err)
+      showToast('保存失败: ' + msg, 'error')
     } finally {
       setSaving(false)
     }
