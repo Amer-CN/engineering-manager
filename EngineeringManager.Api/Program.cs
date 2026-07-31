@@ -82,24 +82,25 @@ public static class ApiConfig
     {
         if (_cachedEdition != null) return _cachedEdition;
         // 环境变量优先（用于测试 / CI 隔离）
-        var envEdition = Environment.GetEnvironmentVariable("ENGINEERING_MANAGER_EDITION")?.Trim().ToLowerInvariant();
+        var envRaw = Environment.GetEnvironmentVariable("ENGINEERING_MANAGER_EDITION");
+        var envEdition = envRaw?.Trim().ToLowerInvariant();
         if (!string.IsNullOrEmpty(envEdition))
         {
             if (envEdition != "enterprise" && envEdition != "personal")
             {
                 Console.Error.WriteLine(
-                    $"[ApiConfig] WARNING: unknown edition '{envEdition}' from ENGINEERING_MANAGER_EDITION. " +
+                    $"[ApiConfig] WARNING: unknown edition '{envRaw}' from ENGINEERING_MANAGER_EDITION. " +
                     $"Falling back to 'personal' (enterprise features disabled). " +
                     $"Valid values: personal | enterprise");
             }
             _cachedEdition = envEdition == "enterprise" ? "enterprise" : "personal";
             return _cachedEdition;
         }
+        var configPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "工程管家", "config.json");
         try
         {
-            var configPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "工程管家", "config.json");
             if (File.Exists(configPath))
             {
                 var json = File.ReadAllText(configPath);
@@ -119,7 +120,13 @@ public static class ApiConfig
                 }
             }
         }
-        catch { }
+        catch (Exception ex)
+            {
+                Console.Error.WriteLine(
+                    $"[ApiConfig] WARNING: cannot read config.json at '{configPath}'. " +
+                    $"Falling back to 'personal' (enterprise features disabled). " +
+                    $"Error: {ex.Message}");
+            }
         _cachedEdition = "personal";
         return _cachedEdition;
     }
