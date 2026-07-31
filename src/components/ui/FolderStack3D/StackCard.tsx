@@ -6,11 +6,17 @@
 //   back-shell（平直圆角矩形，无凸耳）
 //   → paper-stack（三张等大纸，刚性平移 + 右上折角，front 带装饰线）
 //   → front-shell（连续圆滑口袋轮廓，内联 SVG path，1px 描线）
-//   → face-content（人数图标+数字 / 标题 / files 副行）
+//   → face-content（徽记图标+数字 / 标题 / files 副行）
 // 颜色全部取 --stage-* token（theme-verdant.css），几何全部走 CSS 变量 + 百分比。
 import { memo } from 'react'
 import { Icon } from '../Icon'
-import type { StackGroup } from './types'
+import type { StackGroup, StackBadge } from './types'
+
+// 徽记图标映射：语义真实指标（人数 / 项目数）
+const BADGE_ICONS: Record<StackBadge['kind'], string> = {
+  people: 'Users',
+  projects: 'Building2',
+}
 
 // 前壳口袋轮廓（viewBox 250×360 = 现有卡逻辑尺寸，preserveAspectRatio=none 可整体缩放）：
 // 左高平台 y=88.2（卡高 24.5%）→ 三次贝塞尔平滑下降 → 右低平台 y=114.8（卡高 31.9%），
@@ -58,12 +64,12 @@ export const StackCard = memo(function StackCard({ group, index, cardId, selecte
         <path d={FRONT_SHELL_PATH} vectorEffect="non-scaling-stroke" />
       </svg>
 
-      {/* 卡面内容：只保留 人数+数字 / 标题 / files 副行（视觉硬规则 7） */}
+      {/* 卡面内容：只保留 徽记图标+数字 / 标题 / files 副行（视觉硬规则 7） */}
       <div className="fs3d-face">
-        {group.people != null && (
+        {group.badge != null && (
           <span className="fs3d-people">
-            <Icon name="Users" className="fs3d-people-icon" strokeWidth={2.4} />
-            {group.people}
+            <Icon name={BADGE_ICONS[group.badge.kind]} className="fs3d-people-icon" strokeWidth={2.4} />
+            {group.badge.value}
           </span>
         )}
         <div className="fs3d-title">{group.name}</div>

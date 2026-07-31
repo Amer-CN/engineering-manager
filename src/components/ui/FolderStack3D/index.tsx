@@ -8,7 +8,7 @@ import { StackCard } from './StackCard'
 import { STACK_GROUP_LIMIT, type StackGroup, type StageTheme } from './types'
 import './stack.css'
 
-export type { StackGroup, StackGroupStat, StageTheme } from './types'
+export type { StackGroup, StackGroupStat, StackBadge, StageTheme } from './types'
 export { STACK_GROUP_LIMIT } from './types'
 
 export interface FolderStack3DProps {

@@ -12,14 +12,20 @@ export interface StackGroupStat {
   value: string | number
 }
 
+/** 卡面徽记：语义真实指标（人数/项目数），缺省时整行隐藏 */
+export interface StackBadge {
+  kind: 'people' | 'projects'
+  value: number
+}
+
 export interface StackGroup {
   id: string | number
   /** 分组名（专业 / 版本集 / 类别） */
   name: string
   /** 卡面次行，如 "98 张 · 最新 2026-07-12" */
   meta?: string
-  /** 卡面人数徽记（母版「人数图标+数字」槽位）；缺省时整行隐藏 */
-  people?: number
+  /** 卡面徽记（母版「图标+数字」槽位）；缺省时整行隐藏 */
+  badge?: StackBadge
   /** 卡面大数字（等宽 tabular） */
   primaryValue: string | number
   primaryUnit?: string

@@ -30,6 +30,7 @@ export function buildDrawingStackGroups(drawings: Drawing[]): StackGroup[] {
         id: cat,
         name: cat,
         meta: latest ? `${list.length} 张 · 最新 ${latest}` : `${list.length} 张`,
+        badge: { kind: 'projects' as const, value: projectCount },
         primaryValue: list.length,
         primaryUnit: '张',
         primaryLabel: '图纸数量',
