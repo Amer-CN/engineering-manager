@@ -76,13 +76,14 @@ public static class ApiConfig
 
     /// <summary>
     /// 读取 config.json 中的 edition 字段（"personal" | "enterprise"），默认 "personal"。
-    /// 启动后缓存，运行期不变。
+    /// 启动后缓存，运行期不变。环境变量 ENGINEERING_MANAGER_EDITION 可覆盖（测试/CI 用）。
+    /// 输入值经 trim + lowercase 规范化，未知值由 EditionFeatures.ValidateEdition() 告警。
     /// </summary>
     public static string GetEdition()
     {
         if (_cachedEdition != null) return _cachedEdition;
         // 环境变量优先（用于测试 / CI 隔离）
-        var envEdition = Environment.GetEnvironmentVariable("ENGINEERING_MANAGER_EDITION");
+        var envEdition = Environment.GetEnvironmentVariable("ENGINEERING_MANAGER_EDITION")?.Trim().ToLowerInvariant();
         if (!string.IsNullOrEmpty(envEdition))
         {
             _cachedEdition = envEdition == "enterprise" ? "enterprise" : "personal";
@@ -99,7 +100,7 @@ public static class ApiConfig
                 using var doc = System.Text.Json.JsonDocument.Parse(json);
                 if (doc.RootElement.TryGetProperty("edition", out var ed) && ed.GetString() is { Length: > 0 } val)
                 {
-                    _cachedEdition = val == "enterprise" ? "enterprise" : "personal";
+                    _cachedEdition = val.Trim().ToLowerInvariant() == "enterprise" ? "enterprise" : "personal";
                     return _cachedEdition;
                 }
             }
@@ -145,7 +146,6 @@ public static class ApiConfig
         builder.Services.AddSingleton<EngineeringManager.Api.Services.IModelRouter, EngineeringManager.Api.Services.ModelRoutingService>();
         builder.Services.AddSingleton<EngineeringManager.Api.Services.AgentToolService>();
         builder.Services.AddSingleton<EngineeringManager.Api.Services.AgentConversationService>();
-        builder.Services.AddSingleton<EngineeringManager.Api.Services.ReportGenerationService>();
         builder.Services.AddSingleton<EngineeringManager.Api.Services.UpdateService>();
 
         // v0.83 STT 语音转文字后台 worker（单并发）
@@ -260,6 +260,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
     public static void ConfigureApp(WebApplication app)
     {
+        // X11.3: 启动时校验 edition 合法性（未知值记 warning）
+        EditionFeatures.ValidateEdition();
+
         // 检测 dist/ 是否存在 → 生产模式
         var distPath = Path.Combine(AppContext.BaseDirectory, "dist");
         IsProduction = Directory.Exists(distPath);
@@ -424,10 +427,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
         // 文件操作 + 图纸
         app.RegisterFileEndpoints();
 
-        // 区域 + 模板 + 费用 + 项目工人杂项
+        // 区域 + 模板 + 项目工人杂项
         app.RegisterRegionEndpoints();
         app.RegisterTemplateEndpoints();
-        app.RegisterExpenseEndpoints();
         app.RegisterProjectWorkerMiscEndpoints();
 
         // OCR（百度）
@@ -448,9 +450,6 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
         // v0.84 M2 知识库
         app.RegisterKnowledgeEndpoints();
-
-        // v1.4.0 报告生成
-        app.RegisterReportEndpoints();
     }
     // ============ P0-1: 从 config.json 读取 dataPath ============
     public static string ResolveDataPath()
@@ -553,7 +552,6 @@ CREATE TABLE IF NOT EXISTS worker_teams (id INTEGER PRIMARY KEY AUTOINCREMENT, n
 CREATE TABLE IF NOT EXISTS project_members (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, member_id INTEGER, joined_at TEXT);
 CREATE TABLE IF NOT EXISTS regions (id INTEGER PRIMARY KEY AUTOINCREMENT, province TEXT, city TEXT, district TEXT);
 CREATE TABLE IF NOT EXISTS drawings (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, name TEXT, file_url TEXT, file_name TEXT, file_type TEXT, drawing_type TEXT, scale TEXT, notes TEXT, remark TEXT, created_by TEXT, created_at TEXT, updated_at TEXT);
-CREATE TABLE IF NOT EXISTS expenses (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, category TEXT, amount REAL, date TEXT, description TEXT, vendor TEXT, receipt_url TEXT, created_at TEXT, updated_at TEXT);
 CREATE TABLE IF NOT EXISTS contract_templates (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, type TEXT, content TEXT, variables TEXT, created_at TEXT, updated_at TEXT);
 ");
 

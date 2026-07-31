@@ -416,11 +416,7 @@ public static class AgentEndpoints
 
             try
             {
-                // scope=deleted 返回"最近删除"（软删除）列表供恢复；默认返回未删除列表（含 archivedAt）
-                var scope = ctx.Request.Query["scope"].ToString();
-                var list = scope == "deleted"
-                    ? await conversations.GetDeletedConversationsAsync(db, uid)
-                    : await conversations.GetConversationsAsync(db, uid);
+                var list = await conversations.GetConversationsAsync(db, uid);
                 return Common.Ok(list);
             }
             catch (Exception ex)
@@ -522,76 +518,6 @@ public static class AgentEndpoints
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"[AgentEndpoints] /api/agent/conversations/{id} PUT 失败: {ex.Message}");
-                return Common.Fail(Common.Sanitize(ex.Message));
-            }
-        });
-
-        // ═══════════════════════════════════════════════════════════
-        // 归档 / 取消归档 / 恢复（软删除）
-        // ═══════════════════════════════════════════════════════════
-
-        app.MapPatch("/api/agent/conversations/{id}/archive", async (
-            HttpContext ctx,
-            long id,
-            IDbConnection db,
-            AgentConversationService conversations) =>
-        {
-            var uid = CurrentUser.GetUserId(ctx);
-            if (string.IsNullOrEmpty(uid))
-                return Common.Fail("未登录", 401);
-
-            try
-            {
-                var ok = await conversations.ArchiveConversationAsync(db, id, uid);
-                return ok ? Common.Ok() : Common.NotFound("对话不存在或无权操作");
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"[AgentEndpoints] /api/agent/conversations/{id}/archive 失败: {ex.Message}");
-                return Common.Fail(Common.Sanitize(ex.Message));
-            }
-        });
-
-        app.MapPatch("/api/agent/conversations/{id}/unarchive", async (
-            HttpContext ctx,
-            long id,
-            IDbConnection db,
-            AgentConversationService conversations) =>
-        {
-            var uid = CurrentUser.GetUserId(ctx);
-            if (string.IsNullOrEmpty(uid))
-                return Common.Fail("未登录", 401);
-
-            try
-            {
-                var ok = await conversations.UnarchiveConversationAsync(db, id, uid);
-                return ok ? Common.Ok() : Common.NotFound("对话不存在或无权操作");
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"[AgentEndpoints] /api/agent/conversations/{id}/unarchive 失败: {ex.Message}");
-                return Common.Fail(Common.Sanitize(ex.Message));
-            }
-        });
-
-        app.MapPatch("/api/agent/conversations/{id}/restore", async (
-            HttpContext ctx,
-            long id,
-            IDbConnection db,
-            AgentConversationService conversations) =>
-        {
-            var uid = CurrentUser.GetUserId(ctx);
-            if (string.IsNullOrEmpty(uid))
-                return Common.Fail("未登录", 401);
-
-            try
-            {
-                var ok = await conversations.RestoreConversationAsync(db, id, uid);
-                return ok ? Common.Ok() : Common.NotFound("对话不存在或无权操作");
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"[AgentEndpoints] /api/agent/conversations/{id}/restore 失败: {ex.Message}");
                 return Common.Fail(Common.Sanitize(ex.Message));
             }
         });
@@ -764,7 +690,7 @@ public static class AgentEndpoints
 
     private static string BuildSystemPrompt(HttpContext ctx, IDbConnection db)
     {
-        // M-EDITION1: 注入用户画像（个人资料字段）
+        // M-EDITION1: inject user profile into system prompt
         var uid = CurrentUser.GetUserId(ctx);
         string profileBlock = "";
         if (!string.IsNullOrEmpty(uid))
@@ -782,16 +708,16 @@ public static class AgentEndpoints
                     string pos = profile.position ?? "";
                     string sp = profile.specialty ?? "";
                     string bd = profile.business_description ?? "";
-                    if (dn.Length > 0) parts.Add($"姓名: {dn}");
-                    if (cn.Length > 0) parts.Add($"公司: {cn}");
-                    if (pos.Length > 0) parts.Add($"职位: {pos}");
-                    if (sp.Length > 0) parts.Add($"工种/专业: {sp}");
-                    if (bd.Length > 0) parts.Add($"主要业务: {bd}");
+                    if (dn.Length > 0) parts.Add($"\u59d3\u540d: {dn}");
+                    if (cn.Length > 0) parts.Add($"\u516c\u53f8: {cn}");
+                    if (pos.Length > 0) parts.Add($"\u804c\u4f4d: {pos}");
+                    if (sp.Length > 0) parts.Add($"\u5de5\u79cd/\u4e13\u4e1a: {sp}");
+                    if (bd.Length > 0) parts.Add($"\u4e3b\u8981\u4e1a\u52a1: {bd}");
                     if (parts.Count > 0)
-                        profileBlock = "\n## 当前用户画像\n" + string.Join("\n", parts.Select(p => "- " + p)) + "\n";
+                        profileBlock = "\n## \u5f53\u524d\u7528\u6237\u753b\u50cf\n" + string.Join("\n", parts.Select(p => "- " + p)) + "\n";
                 }
             }
-            catch { /* 查询失败不影响主流程 */ }
+            catch { /* query failure does not affect main flow */ }
         }
 
         var lines = new string[]
