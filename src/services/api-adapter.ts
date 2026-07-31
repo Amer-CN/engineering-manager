@@ -201,11 +201,6 @@ function createMockAPI() {
     uploadDrawing: async () => ({ success: true, data: { id: 1 } }),
     updateDrawing: async () => ({ success: true }),
     deleteDrawing: async () => ({ success: true }),
-    // 费用
-    getExpenses: async () => ({ success: true, data: [] }),
-    createExpense: async () => ({ success: true, data: { id: 1 } }),
-    updateExpense: async () => ({ success: true }),
-    deleteExpense: async () => ({ success: true }),
     // 库存
     getInventoryItems: async () => ({ success: true, data: [] }),
     createInventoryItem: async () => ({ success: true, data: { id: 1 } }),
