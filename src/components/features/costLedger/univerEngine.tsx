@@ -33,11 +33,13 @@ type USheetData = Record<number, URowData>
 
 function buildSheetData(entries: CostLedgerEntry[]): { data: USheetData; rowCount: number; colCount: number } {
   const data: USheetData = {}
+  const ID_COL = SHEET_COLS.length // 隐藏 id 列索引（M2 修复：行对齐锚点）
   // 表头行
   data[0] = {}
   SHEET_COLS.forEach((col, ci) => {
     data[0][ci] = { v: col.label }
   })
+  data[0][ID_COL] = { v: '__id' } // 隐藏列表头
   // 数据行
   entries.forEach((entry, ri) => {
     const row: URowData = {}
@@ -51,9 +53,10 @@ function buildSheetData(entries: CostLedgerEntry[]): { data: USheetData; rowCoun
         row[ci] = { v: cellStr(raw) }
       }
     })
+    row[ID_COL] = { v: entry.id ?? 0 } // 隐藏 id 列
     data[ri + 1] = { ...row }
   })
-  return { data, rowCount: entries.length + 1, colCount: SHEET_COLS.length }
+  return { data, rowCount: entries.length + 1, colCount: SHEET_COLS.length + 1 }
 }
 
 // ── Univer CSS 迁移到 Shadow DOM ──────────────────────
@@ -122,7 +125,7 @@ async function startUniver(
   const columnData: Record<number, { w: number }> = {}
   SHEET_COLS.forEach((col, i) => { columnData[i] = { w: col.width * 7 } })
 
-  univer.createUnit(2, { // UniverInstanceType.UNIVER_SHEET
+  const workbook = univer.createUnit(2, { // UniverInstanceType.UNIVER_SHEET
       id: 'cost-ledger-workbook',
       sheetOrder: [SHEET_ID],
       name: '成本台账',
@@ -140,6 +143,9 @@ async function startUniver(
         },
       },
   } as any)
+
+  // 存储 workbook 引用供 readUniverEntries 使用
+  ;(univer as any).__workbook = workbook
 
   return univer
 }
@@ -211,52 +217,85 @@ export function UniverMount({ entries, onError, univerRef }: UniverMountProps) {
 
 // ── Univer 数据回读 ────────────────────────────────────
 
-/** 从 Univer 实例读取当前编辑后的单元格数据，映射回 CostLedgerEntry 结构 */
+/** 从 Univer 实例读取当前编辑后的单元格数据，映射回 CostLedgerEntry 结构。
+ * M1 修复：失败时抛错阻止保存，禁止静默回退。
+ * M2 修复：用隐藏 id 列锚定行对齐，防删/插/排序错位。
+ */
 export function readUniverEntries(univer: any, originalEntries: CostLedgerEntry[]): CostLedgerEntry[] {
-  try {
-    const workbook = univer.getActiveWorkbook?.() ?? univer.getUniverSheetInstance?.()
-    if (!workbook) return originalEntries
-    const sheet = workbook.getActiveSheet?.() ?? workbook.getSheetBySheetId?.('cost-ledger-sheet')
-    if (!sheet) return originalEntries
+  const ID_COL = SHEET_COLS.length // 隐藏 id 列索引
 
-    const getCellValue = (row: number, col: number): string => {
+  // 尝试多种方式获取 worksheet（兼容 Univer 0.25.x 不同 API 路径）
+  let sheet: any = null
+  try {
+    // 方式 1: createUnit 返回的 workbook（存在 univer.__workbook 上）
+    const workbook = univer.__workbook
+      ?? univer.getActiveWorkbook?.()
+      ?? univer.getUniverInstanceService?.()?.getCurrentUnitOfType?.(2)
+    if (workbook) {
+      sheet = workbook.getSheetBySheetId?.('cost-ledger-sheet')
+        ?? workbook.getActiveSheet?.()
+    }
+  } catch { /* 继续尝试下一种方式 */ }
+
+  if (!sheet) {
+    // M1: 禁止静默回退——取不到 sheet 说明 Univer API 不兼容，必须报错
+    throw new Error('Univer 电子表格引擎读取失败：无法获取工作表实例，请刷新重试')
+  }
+
+  const getCellValue = (row: number, col: number): string => {
+    try {
       const cell = sheet.getCellMatrix?.()?.getValue?.(row, col)
         ?? sheet.getCell?.(row, col)
       if (!cell) return ''
       return cell.v != null ? String(cell.v) : ''
-    }
-
-    const result: CostLedgerEntry[] = []
-    // 从第 1 行开始（第 0 行是表头）
-    for (let ri = 1; ; ri++) {
-      // 超过原始数据 + 新增行范围时停止
-      const firstCell = getCellValue(ri, 0)
-      const dateCell = getCellValue(ri, 1)
-      // 空行检测：凭证号和日期都为空则停止
-      if (!firstCell && !dateCell && ri > originalEntries.length) break
-      if (ri > originalEntries.length + 100) break // 安全上限
-
-      const directionRaw = getCellValue(ri, 2)
-      const direction = directionRaw === '支出' ? 'expense' : directionRaw === '收入' ? 'income' : (directionRaw || 'expense')
-      const amountYuan = parseFloat(getCellValue(ri, 4)) || 0
-
-      const entry: CostLedgerEntry = {
-        ...(ri - 1 < originalEntries.length ? originalEntries[ri - 1] : {}),
-        voucherNo: getCellValue(ri, 0) || null,
-        date: getCellValue(ri, 1) || null,
-        direction,
-        category: getCellValue(ri, 3) || null,
-        amount: Math.round(amountYuan * 100), // 元→分
-        counterparty: getCellValue(ri, 5) || null,
-        channel: getCellValue(ri, 6) || null,
-        summary: getCellValue(ri, 7) || null,
-        notes: getCellValue(ri, 8) || null,
-      } as CostLedgerEntry
-      result.push(entry)
-    }
-    return result.length > 0 ? result : originalEntries
-  } catch (err) {
-    console.warn('[CostLedgerSpreadsheet] Univer 读取失败，回退原始数据:', err)
-    return originalEntries
+    } catch { return '' }
   }
+
+  // 构建 id → originalEntry 映射（M2: 不依赖数组下标）
+  const entryById = new Map<number, CostLedgerEntry>()
+  originalEntries.forEach(e => { if (e.id) entryById.set(e.id, e) })
+
+  const result: CostLedgerEntry[] = []
+  for (let ri = 1; ; ri++) {
+    const idRaw = getCellValue(ri, ID_COL)
+    const firstCell = getCellValue(ri, 0)
+    const dateCell = getCellValue(ri, 1)
+    // 空行检测
+    if (!idRaw && !firstCell && !dateCell) {
+      if (ri > originalEntries.length) break
+      continue // 跳过中间空行
+    }
+    if (ri > originalEntries.length + 200) break // 安全上限
+
+    const rowId = parseInt(idRaw, 10) || 0
+    const original = rowId > 0 ? entryById.get(rowId) : undefined
+
+    const directionRaw = getCellValue(ri, 2)
+    const direction = directionRaw === '支出' ? 'expense' : directionRaw === '收入' ? 'income' : (directionRaw || 'expense')
+    const amountStr = getCellValue(ri, 4)
+    const amountYuan = parseFloat(amountStr)
+    if (amountStr && isNaN(amountYuan)) {
+      throw new Error(`第 ${ri} 行金额格式无效："${amountStr}"，请修正后重试`)
+    }
+
+    const entry: CostLedgerEntry = {
+      ...(original ?? {}),
+      id: rowId || undefined,
+      voucherNo: getCellValue(ri, 0) || null,
+      date: getCellValue(ri, 1) || null,
+      direction,
+      category: getCellValue(ri, 3) || null,
+      amount: Math.round((amountYuan || 0) * 100), // 元→分
+      counterparty: getCellValue(ri, 5) || null,
+      channel: getCellValue(ri, 6) || null,
+      summary: getCellValue(ri, 7) || null,
+      notes: getCellValue(ri, 8) || null,
+    } as CostLedgerEntry
+    result.push(entry)
+  }
+
+  if (result.length === 0) {
+    throw new Error('Univer 读取结果为空，请确认表格中有数据')
+  }
+  return result
 }

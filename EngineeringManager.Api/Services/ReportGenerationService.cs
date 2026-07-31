@@ -30,9 +30,29 @@ public class ReportGenerationService
     {
         try
         {
+            // ⓪ Scope/Period 白名单校验（防拼写错误导致非预期分支）
+            var validScopes = new[] { "all", "project", "user" };
+            var validPeriods = new[] { "day", "week", "month" };
+            if (!validScopes.Contains(request.Scope))
+                return (false, null, $"无效的 scope 值：{Common.Sanitize(request.Scope ?? "null")}，允许: all/project/user");
+            if (!validPeriods.Contains(request.Period))
+                return (false, null, $"无效的 period 值：{Common.Sanitize(request.Period ?? "null")}，允许: day/week/month");
+
             // ① 权限校验：scope=all 仅 admin
             if (request.Scope == "all" && !isAdmin)
                 return (false, null, "仅管理员可生成全系统报告");
+
+            // B2 修复：scope=project 非 admin 需校验项目授权
+            if (request.Scope == "project" && !isAdmin)
+            {
+                if (!request.ScopeId.HasValue)
+                    return (false, null, "scope=project 时必须指定 scopeId");
+                var hasAccess = await db.ExecuteScalarAsync<int>(
+                    "SELECT COUNT(*) FROM [project_authorizations] WHERE [project_id]=@ProjectId AND [user_id]=@UserId",
+                    new { ProjectId = request.ScopeId.Value, UserId = userId });
+                if (hasAccess == 0)
+                    return (false, null, "无权访问该项目的报告数据");
+            }
 
             // ② 聚合审计日志
             var auditData = await AggregateAuditLogsAsync(db, request, userId, isAdmin);
@@ -154,6 +174,7 @@ public class ReportGenerationService
         }
         else if (request.Scope == "project" && request.ScopeId.HasValue)
         {
+            // B2: 非 admin 的项目授权已在入口校验，此处安全地按 project_id 过滤
             scopeFilter = " AND [project_id] = @ScopeId";
             param.Add("ScopeId", request.ScopeId.Value);
         }
@@ -285,8 +306,14 @@ public class ReportGenerationService
         }
         else if (request.Scope == "project" && request.ScopeId.HasValue)
         {
-            conditions.Add("[resource_id] = @ScopeId");
-            param.Add("ScopeId", request.ScopeId.Value.ToString());
+            // B3 修复：audit_logs.resource_id 是具体资源 ID（发票/合同/工资…），不是 project_id。
+            // 按项目筛审计日志语义不正确，改为按 user_id 过滤（非 admin）或不加额外过滤（admin）。
+            if (!isAdmin)
+            {
+                conditions.Add("[user_id] = @UserId");
+                param.Add("UserId", userId);
+            }
+            // admin + scope=project: 不加额外过滤（全量审计日志供 LLM 参考）
         }
         // scope=all: 不加额外过滤（admin only，已在入口校验）
 
