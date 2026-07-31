@@ -122,8 +122,10 @@ async function startUniver(
   univer.registerPlugin(UniverSheetsFormulaPlugin)
 
   // 列宽数组
-  const columnData: Record<number, { w: number }> = {}
+  const columnData: Record<number, { w: number; hd?: number }> = {}
   SHEET_COLS.forEach((col, i) => { columnData[i] = { w: col.width * 7 } })
+  // N2 修复：隐藏 id 列（hd:1 = hidden，宽度 0）
+  columnData[SHEET_COLS.length] = { w: 0, hd: 1 }
 
   const workbook = univer.createUnit(2, { // UniverInstanceType.UNIVER_SHEET
       id: 'cost-ledger-workbook',
@@ -251,9 +253,19 @@ export function readUniverEntries(univer: any, originalEntries: CostLedgerEntry[
     } catch { return '' }
   }
 
+  // N1 修复：表头探针——校验读取通道兼容性，防止 getCellValue 静默返回空串导致全表清空
+  const headerProbe = SHEET_COLS.map((_, i) => getCellValue(0, i)).join('|')
+  const expectedHeader = SHEET_COLS.map(c => c.label).join('|')
+  if (headerProbe !== expectedHeader) {
+    throw new Error('Univer 单元格读取接口不兼容（表头校验失败），已阻止保存以避免数据损坏')
+  }
+
   // 构建 id → originalEntry 映射（M2: 不依赖数组下标）
   const entryById = new Map<number, CostLedgerEntry>()
   originalEntries.forEach(e => { if (e.id) entryById.set(e.id, e) })
+
+  // N2 修复：重复 id 检测（防复制整行导致两条 UPDATE 打同一行）
+  const seenIds = new Set<number>()
 
   const result: CostLedgerEntry[] = []
   for (let ri = 1; ; ri++) {
@@ -265,9 +277,16 @@ export function readUniverEntries(univer: any, originalEntries: CostLedgerEntry[
       if (ri > originalEntries.length) break
       continue // 跳过中间空行
     }
-    if (ri > originalEntries.length + 200) break // 安全上限
+    if (ri > originalEntries.length + 200) {
+      throw new Error(`数据行超出安全上限（${originalEntries.length + 200} 行），请分批保存`)
+    }
 
     const rowId = parseInt(idRaw, 10) || 0
+    // N2: 重复 id 检测
+    if (rowId > 0 && seenIds.has(rowId)) {
+      throw new Error(`第 ${ri} 行 id 重复（${rowId}），请勿复制整行，新增行请留空 id 列`)
+    }
+    if (rowId > 0) seenIds.add(rowId)
     const original = rowId > 0 ? entryById.get(rowId) : undefined
 
     const directionRaw = getCellValue(ri, 2)

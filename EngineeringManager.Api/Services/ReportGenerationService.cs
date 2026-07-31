@@ -42,15 +42,18 @@ public class ReportGenerationService
             if (request.Scope == "all" && !isAdmin)
                 return (false, null, "仅管理员可生成全系统报告");
 
-            // B2 修复：scope=project 非 admin 需校验项目授权
+            // B2 修复：scope=project 非 admin 需校验项目授权（创建者 OR 授权表）
             if (request.Scope == "project" && !isAdmin)
             {
                 if (!request.ScopeId.HasValue)
                     return (false, null, "scope=project 时必须指定 scopeId");
-                var hasAccess = await db.ExecuteScalarAsync<int>(
+                var isCreator = await db.ExecuteScalarAsync<int>(
+                    "SELECT COUNT(*) FROM [projects] WHERE [id]=@ProjectId AND [created_by]=@UserId",
+                    new { ProjectId = request.ScopeId.Value, UserId = userId });
+                var isAuthorized = await db.ExecuteScalarAsync<int>(
                     "SELECT COUNT(*) FROM [project_authorizations] WHERE [project_id]=@ProjectId AND [user_id]=@UserId",
                     new { ProjectId = request.ScopeId.Value, UserId = userId });
-                if (hasAccess == 0)
+                if (isCreator == 0 && isAuthorized == 0)
                     return (false, null, "无权访问该项目的报告数据");
             }
 

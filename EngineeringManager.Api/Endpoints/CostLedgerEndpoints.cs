@@ -244,12 +244,14 @@ public static class CostLedgerEndpoints
             if (dto.Entries == null || dto.Entries.Count == 0)
                 return Common.Fail("没有可保存的数据");
 
-            // B1 修复：先校验 batch 归属，取不到 = 无权操作该批次
-            var batchProjectId = db.ExecuteScalar<long?>(
-                $"SELECT [project_id] FROM [cost_ledger_batches] WHERE [id]=@BatchId AND {CurrentUser.UserFilterCompany(scope)}",
+            // B1 修复：先校验 batch 归属（口径与 UPDATE 一致：UserFilterWithAuthorizedProjects）
+            // 查 [id] 判存在性，[project_id] 单独取值（解决 long? 二义性）
+            var batchRow = db.QueryFirstOrDefault<dynamic>(
+                $"SELECT [id], [project_id] FROM [cost_ledger_batches] WHERE [id]=@BatchId AND {CurrentUser.UserFilterWithAuthorizedProjects(scope)}",
                 new { BatchId = batchId, Uid = uid, IsAdmin = isAdmin });
-            if (batchProjectId == null)
+            if (batchRow == null)
                 return Results.Json(new { success = false, error = "无权操作该批次" }, statusCode: 403);
+            long batchProjectId = (long)(batchRow.project_id ?? 0L);
 
             int updated = 0, inserted = 0, skipped = 0;
             using var tx = db.BeginTransaction();
@@ -279,7 +281,7 @@ public static class CostLedgerEndpoints
                         await db.ExecuteAsync(@"INSERT INTO [cost_ledger]
                             ([project_id],[batch_id],[voucher_no],[date],[direction],[category],[amount],[counterparty],[channel],[summary],[notes],[created_by],[created_at],[updated_at],[last_modified_at])
                             VALUES (@ProjectId,@BatchId,@VoucherNo,@Date,@Direction,@Category,@Amount,@Counterparty,@Channel,@Summary,@Notes,@CreatedBy,@Now,@Now,@Now)",
-                            new { ProjectId = batchProjectId.Value, BatchId = batchId, row.VoucherNo, row.Date, row.Direction, row.Category,
+                            new { ProjectId = batchProjectId, BatchId = batchId, row.VoucherNo, row.Date, row.Direction, row.Category,
                                   Amount = amountCents, row.Counterparty, row.Channel, row.Summary, row.Notes,
                                   CreatedBy = uid, Now = now() }, tx);
                         inserted++;

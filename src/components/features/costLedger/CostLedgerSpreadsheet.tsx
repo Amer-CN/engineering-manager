@@ -81,12 +81,17 @@ export default function CostLedgerSpreadsheet({
         summary: e.summary || null,
         notes: e.notes || null,
       }))
-      const res = await apiClient.post<{ count: number }>(
+      const res = await apiClient.post<{ count: number; updated: number; inserted: number; skipped: number }>(
         `/api/cost-ledger/${batchId}/sheet`,
         { entries: sheetPayload }
       )
       if (res.success) {
-        showToast(`已保存 ${res.data?.count ?? currentEntries.length} 条记录`, 'success')
+        const d = res.data
+        if (d?.skipped) {
+          showToast(`已保存 ${d.count} 条，${d.skipped} 条无权修改被跳过`, 'warning')
+        } else {
+          showToast(`已保存 ${d?.count ?? currentEntries.length} 条记录`, 'success')
+        }
       } else {
         showToast(res.error || '保存失败', 'error')
       }
