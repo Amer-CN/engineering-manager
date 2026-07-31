@@ -55,7 +55,7 @@ public static class CurrentUser
         scope == DataScope.All ? "(1 = 1)" : $"({createdByCol} = @Uid)";
 
     /// <summary>
-    /// 项目级表过滤 (有 project_id 列, 如 income_contracts / wages / attendances / invoices / cost_ledger / expenses / drawings / inventory_transactions)
+    /// 项目级表过滤 (有 project_id 列, 如 income_contracts / wages / attendances / invoices / cost_ledger / drawings / inventory_transactions)
     /// 逻辑: created_by 自己 OR admin 全表 OR 当前行 project_id 在 admin 授权的 project_authorizations 列表中
     /// 入参:
     ///   projectCol 当前行 project_id 列 (默认 "project_id", 可带表别名如 "pw.project_id")

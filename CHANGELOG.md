@@ -9,6 +9,18 @@
 > **重要**: v0.74.0 → v0.75.3 期间曾过度打 tag (refactor-only sprint 也 bump). 已在 v0.75.3 重新整理 git 历史 (drop 7 个 spurious chore "bump version" commits), 重组成正确的 semver 历史.
 
 
+## v0.87.0 (2026-07-28) — chore: 移除 expenses 遗留表，成本口径统一至 cost_ledger
+
+> **范围**: 移除废弃的 expenses 半成品表与端点；成本数据统一由 cost_ledger 承载。
+
+### 更新了什么（大白话）
+
+#### 🔧 技术优化
+- **移除废弃的“成本管理”遗留模块**：删除从未启用、无页面入口的 expenses 表及其 4 个后端端点（GET/POST/PUT/DELETE），项目成本数据统一由「成本台账」（cost_ledger）承载，消除两套数据可见性口径的分裂
+
+#### 🐛 Bug 修复
+- **成本台账快捷键失效**：修复「工人管理」与「成本台账」快捷键均为 G L 导致成本台账快捷键无法触发的问题（成本台账改为 G E）
+
 ## v0.83.0 (2026-07-24) — feat: 成本台账新表格(beta) + STT 语音知识库 + 设置页重构 + shadcn/ui 接入
 
 > **SemVer**: minor bump (0.82.1 → 0.83.0), 多项新功能 + 大规模 UI 重构.
