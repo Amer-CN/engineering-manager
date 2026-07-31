@@ -26,7 +26,6 @@ export type PermissionResource =
   | 'settlement'
   | 'inventory'
   | 'invoices'
-  | 'expenses'
   | 'costLedger'
   | 'drawings'
   | 'knowledge'
@@ -90,7 +89,6 @@ export const SYSTEM_ROLES: Role[] = [
       'settlement:create', 'settlement:read', 'settlement:update', 'settlement:delete', 'settlement:approve', 'settlement:export',
       'inventory:create', 'inventory:read', 'inventory:update', 'inventory:delete', 'inventory:export', 'inventory:import',
       'invoices:create', 'invoices:read', 'invoices:update', 'invoices:delete', 'invoices:export',
-      'expenses:create', 'expenses:read', 'expenses:update', 'expenses:delete', 'expenses:export',
       'drawings:create', 'drawings:read', 'drawings:update', 'drawings:delete', 'drawings:export', 'drawings:import',
       'knowledge:read',
       'settings:read', 'settings:update',
@@ -114,7 +112,6 @@ export const SYSTEM_ROLES: Role[] = [
       'settlement:create', 'settlement:read', 'settlement:update', 'settlement:export',
       'inventory:create', 'inventory:read', 'inventory:update', 'inventory:export', 'inventory:import',
       'invoices:read', 'invoices:export',
-      'expenses:create', 'expenses:read', 'expenses:update', 'expenses:export',
       'drawings:create', 'drawings:read', 'drawings:update', 'drawings:export', 'drawings:import',
       'knowledge:read',
     ],
@@ -134,7 +131,6 @@ export const SYSTEM_ROLES: Role[] = [
       'settlement:create', 'settlement:read', 'settlement:update', 'settlement:approve', 'settlement:export',
       'inventory:read', 'inventory:export',
       'invoices:create', 'invoices:read', 'invoices:update', 'invoices:delete', 'invoices:export',
-      'expenses:create', 'expenses:read', 'expenses:update', 'expenses:delete', 'expenses:export',
       'audit_logs:read', 'audit_logs:export',
     ],
   },
@@ -151,7 +147,6 @@ export const SYSTEM_ROLES: Role[] = [
       'members:read',
       'inventory:read', 'inventory:export',
       'invoices:read',
-      'expenses:read', 'expenses:export',
       'drawings:read',
     ],
   },
@@ -265,7 +260,6 @@ export const RESOURCE_LABELS: Record<PermissionResource, string> = {
   settlement: '结算办理',
   inventory: '仓库管理',
   invoices: '发票管理',
-  expenses: '成本管理',
   costLedger: '成本台账',
   drawings: '图纸管理',
   knowledge: '语音知识库',

@@ -25,7 +25,6 @@ export type PageId =
   | 'members'
   | 'hr'
   | 'labor'
-  | 'expenses'
   | 'costLedger'
   | 'drawings'
   | 'wages'
@@ -157,16 +156,8 @@ export const routes: RouteMeta[] = [
     id: 'costLedger',
     label: '成本台账',
     icon: 'ClipboardList',
-    shortcut: 'G L',
-    description: '真实项目成本追踪',
-  },
-  {
-    id: 'expenses',
-    label: '成本管理',
-    icon: 'DollarSign',
     shortcut: 'G E',
-    description: '项目成本与支出',
-    showInSidebar: false,
+    description: '真实项目成本追踪',
   },
   
   // ─────────────────────────────────────────────────────────────────────────────
@@ -251,7 +242,6 @@ const SIDEBAR_RESOURCE_MAP: Record<string, string> = {
   templates: 'templates',
   inventory: 'inventory',
   invoices: 'invoices',
-  expenses: 'expenses',
   costLedger: 'costLedger',
   drawings: 'drawings',
   knowledge: 'knowledge',
