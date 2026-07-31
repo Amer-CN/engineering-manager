@@ -7,7 +7,7 @@
 
 import { apiClient, setToken } from './api-client';
 import type {
-  Project, Member, Worker, UserInfo, Department, Material, Expense,
+  Project, Member, Worker, UserInfo, Department, Material,
   Partner, Region, Supervisor, IncomeContract, ExpenseContract, AgreementContract,
   ContractStats, DashboardStats, Settlement,
   Template, TemplateVariable, ContractTemplate,
@@ -447,16 +447,6 @@ export const tauriAPI = {
     apiClient.put<void>('/api/drawings', { id, ...updates }),
   deleteDrawing: (id: number) =>
     apiClient.del<void>(`/api/drawings/${id}`),
-
-  // ────────── 费用 ──────────
-  getExpenses: (projectId?: number) =>
-    apiClient.get<Expense[]>('/api/expenses', { projectId }),
-  createExpense: (expense: Partial<Expense>) =>
-    apiClient.post<{ id: number }>('/api/expenses', expense),
-  updateExpense: (id: number, updates: Partial<Expense>) =>
-    apiClient.put<void>('/api/expenses', { id, ...updates }),
-  deleteExpense: (id: number) =>
-    apiClient.del<void>(`/api/expenses/${id}`),
 
   // ────────── 库存 ──────────
   getInventoryItems: () => apiClient.get<InventoryItem[]>('/api/inventory'),
