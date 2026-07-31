@@ -1,7 +1,7 @@
 /**
  * AgentOverlays — AI 助手浮动层集合
  * HistorySidebar：右栏对话历史（桌面 ≥lg 常驻）
- * AgentOverlays：移动端历史抽屉 + ⌘K 搜索命令面板
+ * AgentOverlays：<lg 历史抽屉（由工具栏/欢迎屏「历史」按钮唤起，任意窄/中屏可达）+ ⌘K 搜索命令面板
  */
 
 import React from 'react'

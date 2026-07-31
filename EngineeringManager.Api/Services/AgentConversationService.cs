@@ -68,18 +68,20 @@ public class AgentConversationService
 
     /// <summary>
     /// 获取用户对话列表（含消息数和最后一条消息摘要）
+    /// 默认过滤软删除（deleted_at IS NULL）；返回 archived_at 供前端区分
+    /// "进行中(archived_at IS NULL)" 与 "已归档" 两组。
     /// </summary>
     public async Task<IEnumerable<object>> GetConversationsAsync(
         IDbConnection db,
         string userId)
     {
         var conversations = await db.QueryAsync<dynamic>(@"
-            SELECT c.id, c.title, c.created_at, c.updated_at,
-                   (SELECT COUNT(*) FROM agent_messages WHERE conversation_id = c.id) as message_count,
-                   (SELECT content FROM agent_messages
+            SELECT c.id, c.title, c.created_at, c.updated_at, c.archived_at,
+                   (SELECT COUNT(*) FROM [agent_messages] WHERE conversation_id = c.id) as message_count,
+                   (SELECT content FROM [agent_messages]
                     WHERE conversation_id = c.id
                     ORDER BY created_at DESC LIMIT 1) as last_message
-            FROM agent_conversations c
+            FROM [agent_conversations] c
             WHERE c.user_id = @UserId AND c.deleted_at IS NULL
             ORDER BY c.updated_at DESC
         ", new { UserId = userId });
@@ -90,6 +92,39 @@ public class AgentConversationService
             title = (string)c.title,
             createdAt = (string)c.created_at,
             updatedAt = (string)c.updated_at,
+            archivedAt = (string?)c.archived_at,
+            messageCount = (long)c.message_count,
+            lastMessage = (string?)c.last_message,
+        });
+    }
+
+    /// <summary>
+    /// 获取用户"最近删除"（软删除）对话列表 — 供恢复入口使用。
+    /// 仅返回 deleted_at IS NOT NULL 的会话，按删除时间倒序。
+    /// </summary>
+    public async Task<IEnumerable<object>> GetDeletedConversationsAsync(
+        IDbConnection db,
+        string userId)
+    {
+        var conversations = await db.QueryAsync<dynamic>(@"
+            SELECT c.id, c.title, c.created_at, c.updated_at, c.archived_at, c.deleted_at,
+                   (SELECT COUNT(*) FROM [agent_messages] WHERE conversation_id = c.id) as message_count,
+                   (SELECT content FROM [agent_messages]
+                    WHERE conversation_id = c.id
+                    ORDER BY created_at DESC LIMIT 1) as last_message
+            FROM [agent_conversations] c
+            WHERE c.user_id = @UserId AND c.deleted_at IS NOT NULL
+            ORDER BY c.deleted_at DESC
+        ", new { UserId = userId });
+
+        return conversations.Select(c => (object)new
+        {
+            id = (long)c.id,
+            title = (string)c.title,
+            createdAt = (string)c.created_at,
+            updatedAt = (string)c.updated_at,
+            archivedAt = (string?)c.archived_at,
+            deletedAt = (string?)c.deleted_at,
             messageCount = (long)c.message_count,
             lastMessage = (string?)c.last_message,
         });
@@ -229,6 +264,51 @@ public class AgentConversationService
               SET title = @Title, updated_at = @Now
               WHERE id = @Id AND user_id = @UserId AND deleted_at IS NULL",
             new { Title = title, Now = now, Id = conversationId, UserId = userId });
+        return affected > 0;
+    }
+
+    /// <summary>
+    /// 归档对话 — 置 archived_at = now（归档 ≠ 删除，仅限未删除会话）。
+    /// 带 user_id 归属校验，参数化 SQL。
+    /// </summary>
+    public async Task<bool> ArchiveConversationAsync(
+        IDbConnection db, long conversationId, string userId)
+    {
+        var now = Common.NowString();
+        var affected = await db.ExecuteAsync(
+            @"UPDATE [agent_conversations]
+              SET archived_at = @Now
+              WHERE id = @Id AND user_id = @UserId AND deleted_at IS NULL",
+            new { Now = now, Id = conversationId, UserId = userId });
+        return affected > 0;
+    }
+
+    /// <summary>
+    /// 取消归档 — 置 archived_at = NULL（仅限未删除会话）。
+    /// </summary>
+    public async Task<bool> UnarchiveConversationAsync(
+        IDbConnection db, long conversationId, string userId)
+    {
+        var affected = await db.ExecuteAsync(
+            @"UPDATE [agent_conversations]
+              SET archived_at = NULL
+              WHERE id = @Id AND user_id = @UserId AND deleted_at IS NULL",
+            new { Id = conversationId, UserId = userId });
+        return affected > 0;
+    }
+
+    /// <summary>
+    /// 恢复软删除的对话 — 置 deleted_at = NULL（仅限已软删除会话）。
+    /// 带 user_id 归属校验，参数化 SQL。
+    /// </summary>
+    public async Task<bool> RestoreConversationAsync(
+        IDbConnection db, long conversationId, string userId)
+    {
+        var affected = await db.ExecuteAsync(
+            @"UPDATE [agent_conversations]
+              SET deleted_at = NULL
+              WHERE id = @Id AND user_id = @UserId AND deleted_at IS NOT NULL",
+            new { Id = conversationId, UserId = userId });
         return affected > 0;
     }
 }

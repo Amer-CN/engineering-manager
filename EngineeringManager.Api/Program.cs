@@ -71,6 +71,47 @@ public static class JwtSecretProvider
 
 public static class ApiConfig
 {
+    // ── M-EDITION1: 版本开关 ──
+    private static string? _cachedEdition;
+
+    /// <summary>
+    /// 读取 config.json 中的 edition 字段（"personal" | "enterprise"），默认 "personal"。
+    /// 启动后缓存，运行期不变。
+    /// </summary>
+    public static string GetEdition()
+    {
+        if (_cachedEdition != null) return _cachedEdition;
+        // 环境变量优先（用于测试 / CI 隔离）
+        var envEdition = Environment.GetEnvironmentVariable("ENGINEERING_MANAGER_EDITION");
+        if (!string.IsNullOrEmpty(envEdition))
+        {
+            _cachedEdition = envEdition == "enterprise" ? "enterprise" : "personal";
+            return _cachedEdition;
+        }
+        try
+        {
+            var configPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "工程管家", "config.json");
+            if (File.Exists(configPath))
+            {
+                var json = File.ReadAllText(configPath);
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                if (doc.RootElement.TryGetProperty("edition", out var ed) && ed.GetString() is { Length: > 0 } val)
+                {
+                    _cachedEdition = val == "enterprise" ? "enterprise" : "personal";
+                    return _cachedEdition;
+                }
+            }
+        }
+        catch { }
+        _cachedEdition = "personal";
+        return _cachedEdition;
+    }
+
+    // X8: IsPersonal / IsEnterprise 已移除。业务代码统一用 EditionFeatures.Has(key)。
+    // edition 值仅通过 GetEdition() 暴露给 EditionFeatures 映射表。
+
     public static void ConfigureServices(WebApplicationBuilder builder)
     {
         // 生产 5048; 测试环境 (ASPNETCORE_ENVIRONMENT=Development) 用 random port 0
@@ -104,6 +145,7 @@ public static class ApiConfig
         builder.Services.AddSingleton<EngineeringManager.Api.Services.IModelRouter, EngineeringManager.Api.Services.ModelRoutingService>();
         builder.Services.AddSingleton<EngineeringManager.Api.Services.AgentToolService>();
         builder.Services.AddSingleton<EngineeringManager.Api.Services.AgentConversationService>();
+        builder.Services.AddSingleton<EngineeringManager.Api.Services.ReportGenerationService>();
         builder.Services.AddSingleton<EngineeringManager.Api.Services.UpdateService>();
 
         // v0.83 STT 语音转文字后台 worker（单并发）
@@ -406,6 +448,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
         // v0.84 M2 知识库
         app.RegisterKnowledgeEndpoints();
+
+        // v1.4.0 报告生成
+        app.RegisterReportEndpoints();
     }
     // ============ P0-1: 从 config.json 读取 dataPath ============
     public static string ResolveDataPath()

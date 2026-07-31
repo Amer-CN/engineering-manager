@@ -6,6 +6,8 @@ import { useMask } from '@/contexts/MaskContext'
 import { useToastStore } from '@/store/toastStore'
 import { getAPI } from '@/services/api-adapter'
 import { PREF_KEYS, loadPref, savePref } from '@/utils/appPrefs'
+import { useHasFeature } from '@/store/editionStore'
+import { ChangePasswordCard } from './ChangePasswordCard'
 
 /** 自动锁屏选项 (分钟, '0'=关闭) */
 const AUTO_LOCK_OPTIONS = [
@@ -24,15 +26,17 @@ export function AccountSection() {
   const { currentUser } = useAuth()
   const { masked, toggleMask, isSyncing } = useMask()
   const showToast = useToastStore(s => s.showToast)
-
-  // 修改密码
-  const [oldPwd, setOldPwd] = useState('')
-  const [newPwd, setNewPwd] = useState('')
-  const [confirmPwd, setConfirmPwd] = useState('')
-  const [changing, setChanging] = useState(false)
+  const hasUserManagement = useHasFeature('userManagement')
 
   // 自动锁屏
   const [autoLock, setAutoLock] = useState('0')
+
+  // M-EDITION1: 个人资料新增字段
+  const [companyName, setCompanyName] = useState('')
+  const [position, setPosition] = useState('')
+  const [specialty, setSpecialty] = useState('')
+  const [businessDesc, setBusinessDesc] = useState('')
+  const [profileSaving, setProfileSaving] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -40,25 +44,30 @@ export function AccountSection() {
     return () => { alive = false }
   }, [])
 
-  const handleChangePassword = async () => {
-    if (!oldPwd) { showToast('请输入原密码', 'warning'); return }
-    if (newPwd.length < 6) { showToast('新密码至少 6 位', 'warning'); return }
-    if (newPwd !== confirmPwd) { showToast('两次输入的新密码不一致', 'warning'); return }
-    if (newPwd === oldPwd) { showToast('新密码不能与原密码相同', 'warning'); return }
-    setChanging(true)
+  // M-EDITION1: 加载个人资料（无 userManagement 能力时显示，即个人版）
+  useEffect(() => {
+    if (hasUserManagement) return
+    let alive = true
+    getAPI().then(api => api?.getUserProfile?.()).then(res => {
+      if (!alive || !res) return
+      setCompanyName(res.company_name || '')
+      setPosition(res.position || '')
+      setSpecialty(res.specialty || '')
+      setBusinessDesc(res.business_description || '')
+    }).catch(() => {})
+    return () => { alive = false }
+  }, [hasUserManagement])
+
+  const handleSaveProfile = async () => {
+    setProfileSaving(true)
     try {
       const api = await getAPI()
-      const res = await api.changeOwnPassword(oldPwd, newPwd)
-      if (res.success) {
-        showToast('密码修改成功', 'success')
-        setOldPwd(''); setNewPwd(''); setConfirmPwd('')
-      } else {
-        showToast(res.error || '修改失败', 'error')
-      }
+      await api.updateUserProfile({ companyName, position, specialty, businessDescription: businessDesc })
+      showToast('个人资料已保存，AI 助手将读取这些信息', 'success')
     } catch (e) {
       showToast(String(e), 'error')
     } finally {
-      setChanging(false)
+      setProfileSaving(false)
     }
   }
 
@@ -92,37 +101,47 @@ export function AccountSection() {
         </div>
       </div>
 
-      {/* ── 修改密码 ── */}
-      <div id="change-password" data-setting-anchor className="card">
+      {/* ── M-EDITION1: 公司与专业信息（无 userManagement 能力时显示） ── */}
+      {!hasUserManagement && (
+      <div id="company-profile" data-setting-anchor className="card">
         <div className="card-header">
-          <h2 className="text-lg font-semibold text-[color:var(--fg)] flex items-center gap-2"><Icon name="Lock" size={20} /> 修改密码</h2>
+          <h2 className="text-lg font-semibold text-[color:var(--fg)] flex items-center gap-2"><Icon name="Building2" size={20} /> 公司与专业信息</h2>
+          <p className="text-xs text-[color:var(--muted)] mt-1">填写后 AI 助手将了解您的业务背景，提供更精准的建议</p>
         </div>
         <div className="card-body space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="label">原密码</label>
-              <input type="password" className="input" value={oldPwd} onChange={e => setOldPwd(e.target.value)} placeholder="请输入原密码" autoComplete="current-password" />
+              <label className="label">公司名称</label>
+              <input className="input" value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="如：某某建筑工程有限公司" />
             </div>
             <div>
-              <label className="label">新密码</label>
-              <input type="password" className="input" value={newPwd} onChange={e => setNewPwd(e.target.value)} placeholder="至少 6 位" autoComplete="new-password" />
+              <label className="label">职位</label>
+              <input className="input" value={position} onChange={e => setPosition(e.target.value)} placeholder="如：项目经理 / 总经理" />
             </div>
             <div>
-              <label className="label">确认新密码</label>
-              <input type="password" className="input" value={confirmPwd} onChange={e => setConfirmPwd(e.target.value)} placeholder="再次输入新密码" autoComplete="new-password" />
+              <label className="label">工种 / 专业</label>
+              <input className="input" value={specialty} onChange={e => setSpecialty(e.target.value)} placeholder="如：土建 / 装修 / 机电" />
+            </div>
+            <div>
+              <label className="label">主要业务描述</label>
+              <input className="input" value={businessDesc} onChange={e => setBusinessDesc(e.target.value)} placeholder="如：承接商业综合体土建总承包" />
             </div>
           </div>
           <div>
-            <Button onClick={handleChangePassword} disabled={changing} variant="primary">
-              {changing ? (
+            <Button onClick={handleSaveProfile} disabled={profileSaving} variant="primary">
+              {profileSaving ? (
                 <><div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" /> 保存中...</>
               ) : (
-                <><Icon name="Save" size={16} /> 保存新密码</>
+                <><Icon name="Save" size={16} /> 保存资料</>
               )}
             </Button>
           </div>
         </div>
       </div>
+      )}
+
+      {/* ── 修改密码 ── */}
+      <ChangePasswordCard />
 
       {/* ── 隐私脱敏显示 ── */}
       <div id="pii-mask" data-setting-anchor className="card">

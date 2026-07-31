@@ -34,6 +34,7 @@ export type PageId =
   | 'inventory'
   | 'invoices'
   | 'knowledge'
+  | 'reports'
   | 'settings'
   | 'users'
 
@@ -193,6 +194,13 @@ export const routes: RouteMeta[] = [
     shortcut: 'G K',
     description: '录音转写与历史沟通检索',
   },
+  {
+    id: 'reports',
+    label: '报告中心',
+    icon: 'FileBarChart',
+    shortcut: 'G R',
+    description: 'AI 一键生成日/周/月报',
+  },
   
   // ─────────────────────────────────────────────────────────────────────────────
   // 系统模块
@@ -255,6 +263,7 @@ const SIDEBAR_RESOURCE_MAP: Record<string, string> = {
   costLedger: 'costLedger',
   drawings: 'drawings',
   knowledge: 'knowledge',
+  reports: 'reports',
   settings: 'settings',
   users: 'users',
 }

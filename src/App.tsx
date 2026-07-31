@@ -16,6 +16,7 @@ import { useAuth } from './hooks/useAuth'
 import { useRowHoverOpacity } from './hooks/useRowHoverOpacity'
 import { useTheme } from './hooks/useTheme'
 import { getLocalPref, PREF_KEYS } from './utils/appPrefs'
+import { useEditionStore, useHasFeature } from './store/editionStore'
 
 // ── 路由级代码分割：每个页面独立 chunk ──
 const Dashboard = lazy(() => import('./components/features/agent/AgentDashboard'))
@@ -33,6 +34,7 @@ const Templates = lazy(() => import('./components/Templates'))
 const Inventory = lazy(() => import('./components/Inventory'))
 const Invoices = lazy(() => import('./components/Invoices'))
 const SpeechKnowledgePage = lazy(() => import('./components/features/knowledge/SpeechKnowledgePage'))
+const ReportsPage = lazy(() => import('./components/features/reports/ReportsIndex'))
 const Settings = lazy(() => import('./components/Settings'))
 const Users = lazy(() => import('./components/Users'))
 import LockScreen from './components/LockScreen'
@@ -85,6 +87,11 @@ const AppContent: React.FC = () => {
   useUserIdSync(currentUser?.userId) // v0.76.0: 登录后从后端拉 PII mask toggle 覆盖 localStorage
   useTheme() // 启动时从 localStorage 读取并设置 data-theme
   useRowHoverOpacity() // 初始化表格行悬停 CSS 变量
+
+  // M-EDITION1 X8: 启动时拉取能力集合
+  const fetchFeatures = useEditionStore(s => s.fetchFeatures)
+  useEffect(() => { fetchFeatures() }, [fetchFeatures])
+  const hasUserManagement = useHasFeature('userManagement')
 
   // 启动动画状态
   const [showSplash, setShowSplash] = useState(true)
@@ -276,6 +283,8 @@ const AppContent: React.FC = () => {
 
   const renderPage = () => {
     const props = { refresh, refreshTrigger }
+    // M-EDITION1 X8: 无 userManagement 能力时冻结页面重定向首页
+    if (!hasUserManagement && currentPage === 'users') return <Dashboard />
     switch (currentPage) {
       case 'dashboard': return <Dashboard />
       case 'projects': return <Projects {...props} />
@@ -293,6 +302,7 @@ const AppContent: React.FC = () => {
       case 'inventory': return <Inventory {...props} />
       case 'invoices': return <Invoices {...props} />
       case 'knowledge': return <RequirePermission permission="knowledge:read" fallback={<NoAccessState />}><SpeechKnowledgePage /></RequirePermission>
+      case 'reports': return <RequirePermission permission="reports:create" fallback={<NoAccessState />}><ReportsPage /></RequirePermission>
       case 'users': return <RequireAdmin fallback={<NoAccessState description="用户管理仅限管理员访问。" />}><Users /></RequireAdmin>
       case 'settings': return <RequirePermission permission="settings:read" fallback={<NoAccessState />}><Settings /></RequirePermission>
       default: return <Dashboard />

@@ -40,6 +40,21 @@ v0.74.0 → v0.85.0 (已 rebase 整理) 期间, 项目曾把 **refactor-only spr
 
 > **注意**：`index.html` 中的 `<APP_VERSION>` 占位符由 `vite.config.ts` 在每次构建时自动从 `package.json` 读取并替换，因此无需手动修改。实际需手动改的只有 Login.tsx 1 处。
 
+### 版本一致性校验（只读门禁）
+
+`node scripts/check-version-consistency.cjs`（`npm run check:version`，CI lint job 自动执行）以 package.json 为真源比对以下引用，不一致 exit 1 并指出文件：
+
+| 覆盖项 | 校验规则 |
+|--------|---------|
+| `src/version.ts`（APP_VERSION） | 严格相等 |
+| `EngineeringManager.Api/EngineeringManager.Api.csproj` `<Version>` | 严格相等 |
+| `installer/package.json` | 严格相等 |
+| `installer/src/App.tsx`（version prop） | 严格相等 |
+| `src/components/Login.tsx`（fallback，人工同步项） | 严格相等 |
+| `update/manifest.json` `latest` | 日常允许滞后（发布产物）但不允许超前；`--release` 模式要求严格相等 |
+
+> `update/manifest.json` 仅在 `npm run release:manifest`（make-manifest.mjs）打包收尾时重新生成，日常滞后于 package.json 属正常状态。发布收尾请跑 `npm run check:version -- --release` 确认全链一致。改动上表任一覆盖项时，须同步修改校验脚本，反之亦然。
+
 ### 何时打 tag
 
 - 每次 minor / patch bump 时, 打完 chore commit 后立刻 `git tag v0.X.Y`
@@ -87,6 +102,9 @@ cd "E:\测试\EngineeringManager.Tests" && dotnet test 2>&1 | Select-String -Pat
 # 3. 前端规则检查
 cd "E:\测试" && npm run check 2>&1 | Select-String -Pattern "HARD FAIL|passed|failed"
 
+# 3b. 版本引用一致性（发布收尾加 -- --release 严格校验 manifest）
+cd "E:\测试" && npm run check:version
+
 # 4. 前端构建
 cd "E:\测试" && npx vite build 2>&1 | Select-String -Pattern "error|success|✓|✗"
 
@@ -99,8 +117,9 @@ cd "E:\测试" && npx tsc --noEmit --pretty false 2>&1 | Select-String -Pattern 
 - 后端 0 错误 0 警告
 - 后端 tests 全部通过（测试套件位于 EngineeringManager.Tests/：Common / Endpoints / Migrations / Security）
 - 前端 check 0 HARD FAIL (73 警告是历史软警告, 不影响)
+- check:version passed（版本引用全链一致；tag 前用 `--release` 严格模式）
 - vite build 10-18 秒成功 (依赖并行 CI, 18s 偏慢可接受)
 - **tsc 0 error (v0.79.0 起, 防 unused import / 类型错乱回归)**
 - 前端 vitest 全部通过（mask / useMaskedFn / api-client 等套件）
 
-**5 项全绿才可 git tag v0.x.0**。任何一项红 → 标记 WIP，先修。
+**全部项目绿才可 git tag v0.x.0**（含 check:version --release）。任何一项红 → 标记 WIP，先修。

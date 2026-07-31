@@ -25,6 +25,7 @@ import { genClientId } from './types'
 import AgentComposer from './AgentComposer'
 import AgentWelcome from './AgentWelcome'
 import AgentOverlays, { HistorySidebar } from './AgentOverlays'
+import AgentTopBar from './AgentTopBar'
 import MessageBubble from './MessageBubble'
 import { getFilteredSuggestions } from './suggestions'
 import { useAgentPrefill } from './useAgentPrefill'
@@ -288,39 +289,12 @@ const AgentDashboard: React.FC = () => {
         {/* 主区 */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* 顶部条：助手标识 + 搜索 + 移动端历史 */}
-          <div className="flex items-center justify-between gap-3 px-6 pt-4 pb-2 flex-shrink-0">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
-                <Icon name="Bot" size={16} />
-              </div>
-              <div className="min-w-0 flex items-baseline gap-2">
-                <p className="text-sm font-semibold truncate" style={{ color: 'var(--fg)' }}>AI 管家</p>
-                {modelName && (
-                  <>
-                    <span className="text-xs flex-shrink-0" style={{ color: 'var(--muted)' }}>|</span>
-                    <p className="text-xs truncate" style={{ color: 'var(--muted)' }}>{modelName}</p>
-                  </>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <button
-                onClick={() => setSearchOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-[color:var(--panel-2)]"
-                style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}
-              >
-                <Icon name="Search" size={14} />
-                <kbd className="hidden md:inline-flex items-center px-1 py-0.5 rounded text-caption font-mono" style={{ background: 'var(--panel-2)', color: 'var(--muted)' }}>⌘K</kbd>
-              </button>
-              <button
-                onClick={() => setHistoryOpen(true)}
-                className="lg:hidden flex items-center px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-[color:var(--panel-2)]"
-                style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}
-              >
-                <Icon name="Inbox" size={14} />
-              </button>
-            </div>
-          </div>
+          <AgentTopBar
+            modelName={modelName}
+            onNewConversation={handleNewConversation}
+            onSearchOpen={() => setSearchOpen(true)}
+            onHistoryOpen={() => setHistoryOpen(true)}
+          />
 
           {/* 消息流 */}
           <HoverScrollbar className="flex-1 px-6">

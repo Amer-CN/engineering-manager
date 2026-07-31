@@ -10,10 +10,12 @@ namespace EngineeringManager.Api;
 /// 知识库端点 (M2)
 ///
 /// - POST   /api/knowledge/documents          手动/从转写入库
-/// - GET    /api/knowledge/search             混合检索（FTS5 + 语义 + RRF）
+/// - GET    /api/knowledge/search             混合检索（FTS5 + 语义 + RRF + 实体偏置）
 /// - GET    /api/knowledge/documents/{id}     文档详情
 /// - DELETE /api/knowledge/documents/{id}     删除文档（级联删 chunks + fts）
 /// - GET    /api/knowledge/documents          文档列表
+/// - GET    /api/knowledge/entity-context     实体关联上下文
+/// - POST   /api/knowledge/seed-entities      全量扫描业务表生成实体种子
 ///
 /// 鉴权沿用 GlobalAuthMiddleware（不在白名单，必须登录）
 /// </summary>
@@ -83,7 +85,9 @@ public static class KnowledgeEndpoints
             IEmbeddingService embedding,
             string q,
             int topK = 10,
-            int? projectId = null) =>
+            int? projectId = null,
+            string? entityType = null,
+            long? entityId = null) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx);
@@ -96,7 +100,7 @@ public static class KnowledgeEndpoints
                     return Common.Fail("搜索关键词不能为空");
 
                 var service = new KnowledgeBaseService(db, embedding);
-                var result = await service.SearchAsync(q, topK, projectId, uid, isAdmin);
+                var result = await service.SearchAsync(q, topK, projectId, uid, isAdmin, entityType, entityId);
 
                 return Results.Ok(new
                 {
@@ -287,6 +291,84 @@ public static class KnowledgeEndpoints
             catch (Exception ex)
             {
                 return Common.ServerError("查询文档列表", ex);
+            }
+        });
+
+        // ═══════════════════════════════════════════════════════════
+        // GET /api/knowledge/entity-context — 实体关联上下文
+        // 权限: knowledge:read
+        // ═══════════════════════════════════════════════════════════
+        app.MapGet("/api/knowledge/entity-context", (
+            HttpContext ctx,
+            IDbConnection db,
+            IEmbeddingService embedding,
+            string entityType,
+            long entityId) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx);
+            if (!CurrentUser.HasPermission(ctx, db, "knowledge:read"))
+                return Results.Json(new { success = false, error = "无权限：需要 knowledge:read" }, statusCode: 403);
+            try
+            {
+                if (string.IsNullOrWhiteSpace(entityType))
+                    return Common.Fail("entityType 不能为空");
+
+                var service = new KnowledgeEntityService(db, embedding);
+                var result = service.GetEntityContextAsync(entityType, entityId, uid, isAdmin);
+
+                return Results.Ok(new
+                {
+                    success = true,
+                    data = new
+                    {
+                        entityType = result.EntityType,
+                        entityId = result.EntityId,
+                        entityName = result.EntityName,
+                        projectId = result.ProjectId,
+                        relatedEntities = result.RelatedEntities.Select(r => new
+                        {
+                            entityType = r.EntityType,
+                            entityId = r.EntityId,
+                            entityName = r.EntityName,
+                        }),
+                        semanticChunks = result.SemanticChunks.Select(c => new
+                        {
+                            id = c.Id,
+                            index = c.Index,
+                            text = c.Text,
+                        }),
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return Common.ServerError("获取实体上下文", ex);
+            }
+        });
+
+        // ═══════════════════════════════════════════════════════════
+        // POST /api/knowledge/seed-entities — 全量扫描业务表生成实体种子
+        // 权限: knowledge:manage (admin)
+        // ═══════════════════════════════════════════════════════════
+        app.MapPost("/api/knowledge/seed-entities", async (
+            HttpContext ctx,
+            IDbConnection db,
+            IEmbeddingService embedding) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx);
+            if (!isAdmin)
+                return Results.Json(new { success = false, error = "无权限：仅管理员可触发全量实体种子扫描" }, statusCode: 403);
+            try
+            {
+                var service = new KnowledgeEntityService(db, embedding);
+                var count = await service.SeedEntitiesAsync();
+                return Results.Ok(new { success = true, data = new { seeded = count } });
+            }
+            catch (Exception ex)
+            {
+                return Common.ServerError("实体种子扫描", ex);
             }
         });
     }
