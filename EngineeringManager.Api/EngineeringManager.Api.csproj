@@ -53,4 +53,7 @@
     <Message Text="✓ Frontend dist/ synced → $(OutDir)dist/" Importance="high" />
   </Target>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="EngineeringManager.Tests" />
+  </ItemGroup>
 </Project>
