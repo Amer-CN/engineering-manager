@@ -5,11 +5,21 @@ namespace EngineeringManager.Tests.Endpoints;
 
 /// <summary>
 /// X12.1: EditionFeatures 映射表正确性测试。
-/// 使用 internal GetFeaturesForEdition() 纯函数验证映射表，
-/// 不依赖环境变量、不依赖反射、不依赖 config.json。
+///
+/// 分两层：
+/// 1. 纯函数层（GetFeaturesForEdition）：验证映射表数据正确性，无外部依赖
+/// 2. 公共 API 集成层（Has / GetActiveFeatures）：验证实际端点走的路径，
+///    需要切换 edition（当前唯一手段是 ENGINEERING_MANAGER_EDITION 环境变量）
+///
+/// F1 连带修改项：第 2 层测试依赖 ENGINEERING_MANAGER_EDITION 环境变量。
+/// F1 移除该变量时，必须同步改造这些测试（改为 config fixture 文件），而不是让它们崩掉。
 /// </summary>
 public class EditionFeaturesTests
 {
+    // ═══════════════════════════════════════════════════════════
+    // 第 1 层：纯函数验证映射表（无环境变量、无反射、无 config.json）
+    // ═══════════════════════════════════════════════════════════
+
     [Fact]
     public void Personal_GetFeaturesForEdition_ReturnsEmpty()
     {
@@ -39,7 +49,7 @@ public class EditionFeaturesTests
     }
 
     [Fact]
-    public void UnknownEdition_ReturnsEmpty()
+    public void UnknownEdition_GetFeaturesForEdition_ReturnsEmpty()
     {
         var features = EditionFeatures.GetFeaturesForEdition("typo-edition");
         Assert.Empty(features);
@@ -48,7 +58,6 @@ public class EditionFeaturesTests
     [Fact]
     public void ReservedKeys_CoverOrphanedKeys()
     {
-        // AllFeatureKeys 中每个键要么属于某 edition，要么在预留白名单
         var personalSet = new HashSet<string>(EditionFeatures.GetFeaturesForEdition("personal"));
         var enterpriseSet = new HashSet<string>(EditionFeatures.GetFeaturesForEdition("enterprise"));
 
@@ -61,10 +70,103 @@ public class EditionFeaturesTests
         }
     }
 
-    [Fact]
-    public void Has_PublicApi_NonExistentKey_ReturnsFalse()
+    // ═══════════════════════════════════════════════════════════
+    // 第 2 层：公共 API 集成测试（走 Has / GetActiveFeatures 实际路径）
+    // 依赖 ENGINEERING_MANAGER_EDITION 环境变量切换 edition。
+    // F1 移除环境变量时必须同步改造为 config fixture。
+    // ═══════════════════════════════════════════════════════════
+
+    private static void SetEdition(string edition)
     {
-        // 覆盖公共入口 Has()：不存在的键必返 false
-        Assert.False(EditionFeatures.Has("nonExistentKey"));
+        Environment.SetEnvironmentVariable("ENGINEERING_MANAGER_EDITION", edition);
+        // 重置缓存（GetEdition 内部无锁，仅 null 检查赋值）
+        var field = typeof(ApiConfig).GetField("_cachedEdition",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        field!.SetValue(null, null);
+    }
+
+    private static void ResetEdition()
+    {
+        Environment.SetEnvironmentVariable("ENGINEERING_MANAGER_EDITION", null);
+        var field = typeof(ApiConfig).GetField("_cachedEdition",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        field!.SetValue(null, null);
+    }
+
+    [Fact]
+    public void Has_Enterprise_UserManagement_True_CloudSync_False()
+    {
+        // 破坏性验证：若 personal 拿回 cloudSync 或 enterprise 丢失 userManagement，此测试红
+        try
+        {
+            SetEdition("enterprise");
+            Assert.True(EditionFeatures.Has(EditionFeatures.UserManagement),
+                "enterprise must have userManagement");
+            Assert.True(EditionFeatures.Has(EditionFeatures.RoleManagement),
+                "enterprise must have roleManagement");
+            Assert.False(EditionFeatures.Has(EditionFeatures.CloudSync),
+                "enterprise must NOT have cloudSync");
+
+            var active = EditionFeatures.GetActiveFeatures();
+            Assert.Equal(5, active.Length);
+        }
+        finally { ResetEdition(); }
+    }
+
+    [Fact]
+    public void Has_Personal_AllFalse()
+    {
+        // 破坏性验证：若 personal 获得任何能力，此测试红
+        try
+        {
+            SetEdition("personal");
+            Assert.False(EditionFeatures.Has(EditionFeatures.UserManagement),
+                "personal must NOT have userManagement");
+            Assert.False(EditionFeatures.Has(EditionFeatures.CloudSync),
+                "personal must NOT have cloudSync");
+
+            var active = EditionFeatures.GetActiveFeatures();
+            Assert.Empty(active);
+        }
+        finally { ResetEdition(); }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // 第 3 层：规范化防线（11.3.1 的 trim + lowercase）
+    // 验证 GetEdition 对 " Enterprise " / "PERSONAL" 等输入正确解析
+    // ═══════════════════════════════════════════════════════════
+
+    [Theory]
+    [InlineData("enterprise", "enterprise")]
+    [InlineData("Enterprise", "enterprise")]
+    [InlineData("ENTERPRISE", "enterprise")]
+    [InlineData(" enterprise ", "enterprise")]
+    [InlineData("personal", "personal")]
+    [InlineData("Personal", "personal")]
+    [InlineData("PERSONAL", "personal")]
+    [InlineData(" personal ", "personal")]
+    [InlineData("typo", "personal")]  // 未知值 fallback 到 personal
+    public void GetEdition_Normalizes_Input(string input, string expected)
+    {
+        try
+        {
+            SetEdition(input);
+            var actual = ApiConfig.GetEdition();
+            Assert.Equal(expected, actual);
+        }
+        finally { ResetEdition(); }
+    }
+
+    [Fact]
+    public void GetActiveFeatures_UnknownEdition_ReturnsEmpty()
+    {
+        // V3 要求：走公共入口 GetActiveFeatures()，未知 edition 返回空数组
+        try
+        {
+            SetEdition("gibberish-edition");
+            var features = EditionFeatures.GetActiveFeatures();
+            Assert.Empty(features);
+        }
+        finally { ResetEdition(); }
     }
 }
