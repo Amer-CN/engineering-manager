@@ -2,8 +2,8 @@
 
 > **M-EDITION1 版本分线** — 个人版 / 企业版功能冻结清单与维护铁律
 >
-> 基线 commit：`5fb0241` / origin/master（2026-07-31）
-> 生效版本：v0.90.1+
+> 基线 commit：`d80020d` / origin/master（2026-08-01）
+> 生效版本：v0.91.0+
 > 真源：本文件 + `docs/enterprise/HANDOFF-STEP1.md` §3
 
 ---
