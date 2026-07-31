@@ -382,10 +382,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
         // 文件操作 + 图纸
         app.RegisterFileEndpoints();
 
-        // 区域 + 模板 + 费用 + 项目工人杂项
+        // 区域 + 模板 + 项目工人杂项
         app.RegisterRegionEndpoints();
         app.RegisterTemplateEndpoints();
-        app.RegisterExpenseEndpoints();
         app.RegisterProjectWorkerMiscEndpoints();
 
         // OCR（百度）
@@ -508,7 +507,6 @@ CREATE TABLE IF NOT EXISTS worker_teams (id INTEGER PRIMARY KEY AUTOINCREMENT, n
 CREATE TABLE IF NOT EXISTS project_members (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, member_id INTEGER, joined_at TEXT);
 CREATE TABLE IF NOT EXISTS regions (id INTEGER PRIMARY KEY AUTOINCREMENT, province TEXT, city TEXT, district TEXT);
 CREATE TABLE IF NOT EXISTS drawings (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, name TEXT, file_url TEXT, file_name TEXT, file_type TEXT, drawing_type TEXT, scale TEXT, notes TEXT, remark TEXT, created_by TEXT, created_at TEXT, updated_at TEXT);
-CREATE TABLE IF NOT EXISTS expenses (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, category TEXT, amount REAL, date TEXT, description TEXT, vendor TEXT, receipt_url TEXT, created_at TEXT, updated_at TEXT);
 CREATE TABLE IF NOT EXISTS contract_templates (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, type TEXT, content TEXT, variables TEXT, created_at TEXT, updated_at TEXT);
 ");
 

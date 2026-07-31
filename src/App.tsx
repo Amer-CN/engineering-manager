@@ -283,7 +283,6 @@ const AppContent: React.FC = () => {
       case 'members': return <Members {...props} />
       case 'hr': return <HRManagement />
       case 'labor': return <LaborManagement />
-      case 'expenses': return <CostLedger />
       case 'costLedger': return <CostLedger />
       case 'drawings': return <Drawings {...props} />
       case 'partners': return <Partners {...props} />
