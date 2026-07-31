@@ -179,8 +179,18 @@ export function useWheelStack({ count, onOpen, onExit }: UseWheelStackOptions) {
       }
     }
 
+    // FPS 采样会话重置：rAF 从停止态重新启动时视为新一轮采样，
+    // 避免空闲时长计入采样窗口导致看门狗误判低 fps 而错误降级（Phase 1.5 Fix）
+    function resetFpsMeasurement() {
+      const m = fpsRef.current
+      m.frames = 0
+      m.start = 0
+      m.badSince = 0
+    }
+
     function kick() {
       if (!runningRef.current) {
+        resetFpsMeasurement()
         runningRef.current = true
         lastTRef.current = performance.now()
         rafRef.current = requestAnimationFrame(frame)
