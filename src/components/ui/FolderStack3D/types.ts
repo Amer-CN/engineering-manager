@@ -18,6 +18,8 @@ export interface StackGroup {
   name: string
   /** 卡面次行，如 "98 张 · 最新 2026-07-12" */
   meta?: string
+  /** 卡面人数徽记（母版「人数图标+数字」槽位）；缺省时整行隐藏 */
+  people?: number
   /** 卡面大数字（等宽 tabular） */
   primaryValue: string | number
   primaryUnit?: string
