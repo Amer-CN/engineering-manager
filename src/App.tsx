@@ -283,6 +283,8 @@ const AppContent: React.FC = () => {
 
   const renderPage = () => {
     const props = { refresh, refreshTrigger }
+    // M-EDITION1 X8: no userManagement -> redirect users page to dashboard
+    if (!hasUserManagement && currentPage === 'users') return <Dashboard />
     // M-EDITION1 X8: 无 userManagement 能力时冻结页面重定向首页
     if (!hasUserManagement && currentPage === 'users') return <Dashboard />
     switch (currentPage) {
@@ -292,7 +294,6 @@ const AppContent: React.FC = () => {
       case 'members': return <Members {...props} />
       case 'hr': return <HRManagement />
       case 'labor': return <LaborManagement />
-      case 'expenses': return <CostLedger />
       case 'costLedger': return <CostLedger />
       case 'drawings': return <Drawings {...props} />
       case 'partners': return <Partners {...props} />
