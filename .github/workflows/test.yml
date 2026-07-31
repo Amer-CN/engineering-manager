@@ -102,6 +102,10 @@ jobs:
       - name: Run linter
         run: npm run check
 
+      - name: Version consistency check
+        # 版本引用一致性只读门禁（真源 package.json）→ docs/VERSIONING.md「版本号引用位置」
+        run: npm run check:version
+
   backend:
     name: Backend Build & Test (.NET 8)
     runs-on: windows-latest
@@ -128,6 +132,73 @@ jobs:
         #   BgeE2ETests    — 真实 BGE 嵌入模型（未纳入版本库）
         #   RealHttp       — Agent 真实 LLM HTTP 调用（需 API key / 网络）
         run: dotnet test EngineeringManager.Tests/EngineeringManager.Tests.csproj --filter "FullyQualifiedName!~SttE2ETests&FullyQualifiedName!~BgeE2ETests&FullyQualifiedName!~RealHttp"
+
+  e2e:
+    name: E2E Critical Paths (Playwright)
+    runs-on: windows-latest
+
+    env:
+      # 数据目录隔离：走 ResolveDataPath() 的环境变量最高优先级，首启自动建库 + seed 默认 admin
+      ENGINEERING_MANAGER_DATA_PATH: ${{ github.workspace }}\.e2e-data
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Build backend API
+        run: dotnet build EngineeringManager.Api/EngineeringManager.Api.csproj
+
+      - name: Start API (--api-only, isolated data path)
+        run: |
+          New-Item -ItemType Directory -Force -Path $env:ENGINEERING_MANAGER_DATA_PATH | Out-Null
+          $apiDir = Join-Path $env:GITHUB_WORKSPACE 'EngineeringManager.Api\bin\Debug\net8.0-windows'
+          # WorkingDirectory 固定到输出目录：content root 取进程当前目录，确保 appsettings.json 可加载
+          Start-Process -FilePath dotnet -WorkingDirectory $apiDir -ArgumentList 'EngineeringManager.Api.dll','--api-only' -RedirectStandardOutput (Join-Path $env:GITHUB_WORKSPACE 'api-e2e.log') -RedirectStandardError (Join-Path $env:GITHUB_WORKSPACE 'api-e2e.err.log')
+
+      - name: Wait for API health (max 60s)
+        run: |
+          $ok = $false
+          for ($i = 0; $i -lt 60; $i++) {
+            try {
+              if ((Invoke-WebRequest -Uri http://localhost:5048/api/health -UseBasicParsing -TimeoutSec 2).StatusCode -eq 200) { $ok = $true; break }
+            } catch { }
+            Start-Sleep -Seconds 1
+          }
+          if (-not $ok) {
+            Get-Content api-e2e.log, api-e2e.err.log -ErrorAction SilentlyContinue
+            throw 'API 未在 60s 内就绪 (http://localhost:5048/api/health)'
+          }
+
+      - name: Run E2E critical paths
+        # 纯 request 级用例，无需 playwright install 浏览器二进制（已验证）
+        # list reporter 失败时直接标出具体用例与断言位置，不静默跳过
+        run: npx playwright test e2e/critical-paths.spec.ts --reporter=list
+
+      - name: Upload E2E failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results
+          path: |
+            test-results/
+            api-e2e.log
+            api-e2e.err.log
+          retention-days: 7
+          if-no-files-found: ignore
 
   build:
     name: Full Build (Frontend + Backend)

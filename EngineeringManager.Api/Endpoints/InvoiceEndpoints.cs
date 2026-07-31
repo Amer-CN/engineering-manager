@@ -1,6 +1,9 @@
 using System.Data;
 using Dapper;
 using EngineeringManager.Api.Security;
+using EngineeringManager.Api.Services;
+using EngineeringManager.Api.Services.Stt;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace EngineeringManager.Api;
 
@@ -45,6 +48,23 @@ public static class InvoiceEndpoints
                 new { dto.ProjectId, dto.SellerId, dto.BuyerId, dto.ContractId, dto.SettlementId, dto.Type, dto.InvoiceKind, dto.InvoiceNo, dto.InvoiceCode,
                       dto.Name, dto.Amount, dto.PriceAmount, dto.TaxRate, dto.TaxAmount, dto.ReceivedAmount, dto.IssueDate,
                       Status = dto.Status ?? "pending", dto.Remarks, dto.FileUrl, dto.FileType, CreatedBy = uid, Now = now() });
+            // fire-and-forget: upsert 实体到知识库种子表
+            var invCapturedId = id;
+            var invName = dto.Name ?? "";
+            var invProjectId = dto.ProjectId;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var scope = ctx.RequestServices.CreateScope();
+                    var sp = scope.ServiceProvider;
+                    var bgDb = sp.GetRequiredService<IDbConnection>();
+                    var bgEmb = sp.GetRequiredService<IEmbeddingService>();
+                    var svc = new KnowledgeEntityService(bgDb, bgEmb);
+                    await svc.UpsertEntityAsync("invoice", invCapturedId, invName, invProjectId);
+                }
+                catch (Exception ex) { Console.Error.WriteLine($"[EntitySeed] invoice upsert 失败: {ex.Message}"); }
+            });
             return Common.Ok(id);
         });
 
@@ -60,6 +80,26 @@ public static class InvoiceEndpoints
                 new { dto.Id, dto.ProjectId, dto.SellerId, dto.BuyerId, dto.ContractId, dto.SettlementId, dto.Type, dto.InvoiceKind, dto.InvoiceNo,
                       dto.InvoiceCode, dto.Name, dto.Amount, dto.PriceAmount, dto.TaxRate, dto.TaxAmount, dto.ReceivedAmount, dto.IssueDate,
                       dto.Status, dto.Remarks, dto.FileUrl, dto.FileType, Uid = uid, IsAdmin = isAdmin, Now = now() });
+            // fire-and-forget: upsert 实体到知识库种子表
+            if (affected > 0 && dto.Id.HasValue)
+            {
+                var invPutId = dto.Id.Value;
+                var invPutName = dto.Name ?? "";
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        using var scope = ctx.RequestServices.CreateScope();
+                        var sp = scope.ServiceProvider;
+                        var bgDb = sp.GetRequiredService<IDbConnection>();
+                        var bgEmb = sp.GetRequiredService<IEmbeddingService>();
+                        var svc = new KnowledgeEntityService(bgDb, bgEmb);
+                        var pid = bgDb.ExecuteScalar<long?>("SELECT [project_id] FROM [invoices] WHERE [id]=@Id", new { Id = invPutId });
+                        await svc.UpsertEntityAsync("invoice", invPutId, invPutName, pid);
+                    }
+                    catch (Exception ex) { Console.Error.WriteLine($"[EntitySeed] invoice PUT upsert 失败: {ex.Message}"); }
+                });
+            }
             return affected > 0 ? Common.Ok() : Results.Forbid();
         });
 

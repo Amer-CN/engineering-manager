@@ -30,6 +30,7 @@ export type PermissionResource =
   | 'costLedger'
   | 'drawings'
   | 'knowledge'
+  | 'reports'
   | 'settings'
   | 'users'
   | 'roles'
@@ -97,6 +98,7 @@ export const SYSTEM_ROLES: Role[] = [
       'users:create', 'users:read', 'users:update', 'users:delete',
       'roles:read', 'roles:update',
       'audit_logs:read', 'audit_logs:export',
+      'reports:create', 'reports:read',
     ],
   },
   {
@@ -117,6 +119,7 @@ export const SYSTEM_ROLES: Role[] = [
       'expenses:create', 'expenses:read', 'expenses:update', 'expenses:export',
       'drawings:create', 'drawings:read', 'drawings:update', 'drawings:export', 'drawings:import',
       'knowledge:read',
+      'reports:create', 'reports:read',
     ],
   },
   {
@@ -136,6 +139,7 @@ export const SYSTEM_ROLES: Role[] = [
       'invoices:create', 'invoices:read', 'invoices:update', 'invoices:delete', 'invoices:export',
       'expenses:create', 'expenses:read', 'expenses:update', 'expenses:delete', 'expenses:export',
       'audit_logs:read', 'audit_logs:export',
+      'reports:create', 'reports:read',
     ],
   },
   {
@@ -269,6 +273,7 @@ export const RESOURCE_LABELS: Record<PermissionResource, string> = {
   costLedger: '成本台账',
   drawings: '图纸管理',
   knowledge: '语音知识库',
+  reports: '报告生成',
   settings: '系统设置',
   users: '用户管理',
   roles: '角色管理',

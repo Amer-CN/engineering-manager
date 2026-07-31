@@ -39,17 +39,13 @@ public class GlobalAuthMiddleware
         }
 
         // 白名单：登录、健康检查、OCR 首次启动引导、Agent 首次启动引导
+        // M-EDITION1 修复: 精确匹配或路径后接 '/'，避免 /api/healthz、/api/auth/loginx 误放行
         var isPublic = PublicPathPrefixes.Any(p =>
-            path.StartsWith(p, StringComparison.OrdinalIgnoreCase));
+            path.Equals(p, StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith(p + "/", StringComparison.OrdinalIgnoreCase));
 
         // /api/config GET 精确放行（登录设置页面需要读配置），PUT 仍需鉴权
         if (!isPublic && path == "/api/config" && HttpMethods.IsGet(context.Request.Method))
-            isPublic = true;
-
-        // /api/config/data-path PUT 精确放行（登录设置页面需要改数据路径，安装后首次启动场景）
-        // 安全性：config.json 位于 %APPDATA%\工程管家，用户本身有文件系统访问权；
-        //         改路径仅重定向数据位置，不泄露已有数据。端点内对已登录用户仍要求 admin。
-        if (!isPublic && path == "/api/config/data-path" && HttpMethods.IsPut(context.Request.Method))
             isPublic = true;
 
         if (isPublic)

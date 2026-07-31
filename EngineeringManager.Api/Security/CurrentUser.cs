@@ -30,9 +30,10 @@ public static class CurrentUser
     public enum DataScope { SelfOnly, AuthorizedProjects, All /*, Company */ }
 
     /// <summary>当前请求的数据范围。行为保持映射:admin→All,其余→AuthorizedProjects
-    /// (其 created_by 分支已覆盖 SelfOnly)。</summary>
+    /// (其 created_by 分支已覆盖 SelfOnly)。
+    /// M-EDITION1 X8: multiUserDataScope 能力关闭时恒返 All（单用户全可见）。</summary>
     public static DataScope GetDataScope(HttpContext ctx) =>
-        IsAdmin(ctx) ? DataScope.All : DataScope.AuthorizedProjects;
+        !EditionFeatures.Has(EditionFeatures.MultiUserDataScope) || IsAdmin(ctx) ? DataScope.All : DataScope.AuthorizedProjects;
 
     /// <summary>
     /// 项目级表过滤片段 (有 project_id 列), 已弃 const UserFilterFragment 改用此方法。
