@@ -265,7 +265,7 @@ public static class SystemEndpoints
                 catch { }
             }
 
-            return Common.Ok(new { dataPath = dataPath ?? defaultPath, defaultPath });
+            return Common.Ok(new { dataPath = dataPath ?? defaultPath, defaultPath, edition = ApiConfig.GetEdition(), features = EditionFeatures.GetActiveFeatures() });
         });
 
         app.MapGet("/api/config/data-path", (HttpContext ctx) =>
@@ -282,10 +282,9 @@ public static class SystemEndpoints
 
         app.MapPut("/api/config/data-path", (HttpContext ctx, System.Text.Json.JsonElement dto) =>
         {
-            // 登录前可配置数据路径（安装后首次启动 / 登录设置页面场景）；
-            // 登录后需 admin 权限才能修改。
-            var uid = CurrentUser.GetUserId(ctx);
-            if (uid != null && !CurrentUser.IsAdmin(ctx))
+            // M-EDITION1 修复: 必须登录且 admin 才能修改数据路径
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            if (!CurrentUser.IsAdmin(ctx))
                 return Results.Forbid();
             try
             {
