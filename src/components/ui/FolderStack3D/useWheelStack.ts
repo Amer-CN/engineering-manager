@@ -25,10 +25,10 @@ export const STACK_PHYSICS = {
 
 const MAX_WHEEL_DELTA = 360   // 单事件限幅 = 3 张卡
 const EDGE_EPS = 0.02         // 首尾释放阈值
+/** 渲染窗口（非挂载窗口）：卡片全量常驻 DOM，视窗外由 rAF 置 fs3d-hide（display:none，
+ *  不参与 paint/layout，≤40 张开销可忽略）；tailCount 与 windowRef 共用同一对常量防魔法数漂移 */
 export const WINDOW_FULL = 12
 export const WINDOW_DOWNGRADED = 6
-/** 挂载窗口比动画窗口各多 2，防止卡片在刚要可见那一帧才挂载导致闪入 */
-export const MOUNT_MARGIN = 2
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
 
@@ -275,7 +275,7 @@ export function useWheelStack({ count, onOpen, onExit }: UseWheelStackOptions) {
     }
   }, [count])
 
-  // 每次提交后同步一次静止画面：新挂载的卡片立即就位（挂载窗口滑动时不闪）
+  // 每次提交后同步一次静止画面：卡片全量常驻 DOM，首渲染/数据变化后立即摆位（无挂载窗口）
   useLayoutEffect(() => {
     engine.renderFrame()
   })

@@ -67,15 +67,22 @@
 .fs3d-card.fs3d-quiet .fs3d-num, .fs3d-card.fs3d-quiet .fs3d-numlabel,
 .fs3d-card.fs3d-quiet .fs3d-meta, .fs3d-card.fs3d-quiet .fs3d-stats,
 .fs3d-card.fs3d-quiet .fs3d-st { opacity: 0; }
-/* 唯一允许真玻璃之一：聚焦卡（绿收在左上角当光源，取 token，不糊满） */
+/* 唯一允许真玻璃之一：聚焦卡（绿收在左上角当光源，取 token，不糊满）
+   兼容打底：WebView2 走 Evergreen（CreateAsync browserExecutableFolder=null）且无最低版本门禁，
+   Chromium <111 不识别 color-mix 时整条声明被丢弃 → 先用原型 v0.2 的固定 rgba 近似绿光源打底，
+   后一条 token 版在新内核自然覆盖（不用 @supports，两条声明覆盖更简洁） */
 .fs3d-card.fs3d-focus {
   backdrop-filter: blur(14px) saturate(1.1);
+  background:
+    radial-gradient(135% 105% at 4% -4%, rgba(34,221,92,.44), rgba(34,221,92,.13) 40%, rgba(34,221,92,0) 68%),
+    linear-gradient(158deg, rgba(255,255,255,.24), rgba(255,255,255,.08) 60%, rgba(255,255,255,.035));
   background:
     radial-gradient(135% 105% at 4% -4%,
       color-mix(in oklch, var(--accent) 44%, transparent),
       color-mix(in oklch, var(--accent) 13%, transparent) 40%,
       transparent 68%),
     linear-gradient(158deg, rgba(255,255,255,.24), rgba(255,255,255,.08) 60%, rgba(255,255,255,.035));
+  border-color: rgba(34,221,92,.55);
   border-color: color-mix(in oklch, var(--accent) 55%, transparent);
 }
 .fs3d-noglass .fs3d-card.fs3d-focus { backdrop-filter: none; }
@@ -120,19 +127,22 @@
 
 /* ---------- KPI 玻璃浮层胶囊（唯一允许真玻璃之二） ---------- */
 .fs3d-kpi {
+  /* 反转色岛：暗舞台上的浅色玻璃浮层，内容色取暗面 token（--panel ≈ 21%，反转岛上表面色即墨色）；
+     次级文字用同变量 + opacity 降档，不新增 token；rgba 白底为契约授权玻璃材质保留 */
+  --fs3d-kpi-fg: var(--panel);
   position: absolute; left: 50%; top: 50%; z-index: 40;
   transform: translate(-436px, -128px);
   width: 196px; padding: 14px 16px 12px; border-radius: 16px;
   background: rgba(255,255,255,.72); backdrop-filter: blur(18px) saturate(1.2);
-  border: 1px solid rgba(255,255,255,.6); color: oklch(20% 0.004 160);
+  border: 1px solid rgba(255,255,255,.6); color: var(--fs3d-kpi-fg);
   box-shadow: 0 18px 50px rgba(0,0,0,.42);
   transition: opacity .2s;
 }
 .fs3d-noglass .fs3d-kpi { background: rgba(240,240,240,.96); backdrop-filter: none; }
 .fs3d-kpi h4 { font-size: 13px; font-weight: 650; display: flex; justify-content: space-between; align-items: center; margin: 0; }
-.fs3d-kpi p { font-size: 11px; color: oklch(50% 0.004 160); margin: 2px 0 0; }
+.fs3d-kpi p { font-size: 11px; color: var(--fs3d-kpi-fg); opacity: .62; margin: 2px 0 0; }
 .fs3d-kpi .fs3d-kpi-big { margin-top: 14px; font-size: 34px; font-weight: 700; letter-spacing: -.03em; font-variant-numeric: tabular-nums; line-height: 1; }
-.fs3d-kpi .fs3d-kpi-big u { text-decoration: none; font-size: 16px; color: oklch(50% 0.004 160); }
+.fs3d-kpi .fs3d-kpi-big u { text-decoration: none; font-size: 16px; color: var(--fs3d-kpi-fg); opacity: .62; }
 .fs3d-kpi .fs3d-kpi-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
 
 /* ---------- 尾部计数徽标 ---------- */

@@ -3,7 +3,7 @@
 // 物理内核见 useWheelStack.ts；卡面见 StackCard.tsx；材质见 stack.css。
 // prefers-reduced-motion: reduce 下不启 3D/rAF，降为横向扁平轨道。
 import { useMemo, useState } from 'react'
-import { useWheelStack } from './useWheelStack'
+import { useWheelStack, WINDOW_FULL, WINDOW_DOWNGRADED } from './useWheelStack'
 import { StackCard } from './StackCard'
 import { STACK_GROUP_LIMIT, type StackGroup, type StageTheme } from './types'
 import './stack.css'
@@ -49,7 +49,8 @@ export function FolderStack3D({ groups, onOpen, onExit, ariaLabel, stageTheme = 
   if (reduced) return <FlatTrack groups={capped} onOpen={onOpen} ariaLabel={ariaLabel} stageTheme={stageTheme} />
 
   const focused = capped[Math.min(focusIndex, capped.length - 1)]
-  const tailCount = Math.max(0, capped.length - focusIndex - (downgraded ? 6 : 12) - 1)
+  // 尾巴计数与物理内核的渲染窗口共用同一对常量，防两处魔法数各自漂移
+  const tailCount = Math.max(0, capped.length - focusIndex - (downgraded ? WINDOW_DOWNGRADED : WINDOW_FULL) - 1)
 
   const handleCardClick = (i: number) => {
     if (i === focusIndex) { onOpen?.(capped[i]); return }
