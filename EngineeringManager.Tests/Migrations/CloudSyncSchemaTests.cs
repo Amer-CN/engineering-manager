@@ -9,7 +9,7 @@ namespace EngineeringManager.Tests.Migrations;
 /// <summary>
 /// v0.77.0 阶段 1: cloud sync schema 验证测试
 /// 验证 migration 024 + 025 实际生效:
-///   - 27 业务表都有 5 列 (version / last_modified_by_device / last_modified_at / sync_status / conflict_marker)
+///   - 26 业务表都有 5 列 (version / last_modified_by_device / last_modified_at / sync_status / conflict_marker)
 ///   - sync_queue + device_registrations 新表存在 + 列对齐
 ///   - 每张业务表的 idx_<table>_version 索引存在
 /// </summary>
@@ -33,7 +33,7 @@ public class CloudSyncSchemaTests : IDisposable
         if (File.Exists(_dbPath)) File.Delete(_dbPath);
     }
 
-    // 27 业务表清单 (与 migration 024 同步)
+    // 26 业务表清单 (与 migration 024 同步；expenses 已于 032 移除)
     public static IEnumerable<object[]> BusinessTables()
     {
         yield return new object[] { "projects" };
@@ -51,7 +51,6 @@ public class CloudSyncSchemaTests : IDisposable
         yield return new object[] { "inventory_items" };
         yield return new object[] { "inventory_transactions" };
         yield return new object[] { "materials" };
-        yield return new object[] { "expenses" };
         yield return new object[] { "drawings" };
         yield return new object[] { "invoices" };
         yield return new object[] { "payment_records" };
@@ -175,5 +174,13 @@ public class CloudSyncSchemaTests : IDisposable
         Assert.Equal("insert", (string)row.operation);
         Assert.Equal(1L, (long)row.version);
         Assert.Equal(0L, (long)row.attempt_count);
+    }
+
+    [Fact]
+    public void ExpensesTable_IsDroppedBy032()
+    {
+        // 032 已 DROP expenses；此断言防止它经由迁移脚本复活
+        var cols = GetTableColumns(_db, "expenses");
+        Assert.Empty(cols);
     }
 }
