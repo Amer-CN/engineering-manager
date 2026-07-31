@@ -251,7 +251,10 @@ public static class CostLedgerEndpoints
                 new { BatchId = batchId, Uid = uid, IsAdmin = isAdmin });
             if (batchRow == null)
                 return Results.Json(new { success = false, error = "无权操作该批次" }, statusCode: 403);
-            long batchProjectId = (long)(batchRow.project_id ?? 0L);
+            // B1: 批次未关联项目时拒绝新增（防止写入 project_id=0 孤儿行）
+            long? batchProjectId = batchRow.project_id != null ? Convert.ToInt64(batchRow.project_id) : null;
+            if (batchProjectId == null && dto.Entries.Any(r => !(r.Id > 0)))
+                return Common.Fail("该批次未关联项目，无法新增行");
 
             int updated = 0, inserted = 0, skipped = 0;
             using var tx = db.BeginTransaction();
@@ -281,7 +284,7 @@ public static class CostLedgerEndpoints
                         await db.ExecuteAsync(@"INSERT INTO [cost_ledger]
                             ([project_id],[batch_id],[voucher_no],[date],[direction],[category],[amount],[counterparty],[channel],[summary],[notes],[created_by],[created_at],[updated_at],[last_modified_at])
                             VALUES (@ProjectId,@BatchId,@VoucherNo,@Date,@Direction,@Category,@Amount,@Counterparty,@Channel,@Summary,@Notes,@CreatedBy,@Now,@Now,@Now)",
-                            new { ProjectId = batchProjectId, BatchId = batchId, row.VoucherNo, row.Date, row.Direction, row.Category,
+                            new { ProjectId = batchProjectId!.Value, BatchId = batchId, row.VoucherNo, row.Date, row.Direction, row.Category,
                                   Amount = amountCents, row.Counterparty, row.Channel, row.Summary, row.Notes,
                                   CreatedBy = uid, Now = now() }, tx);
                         inserted++;
