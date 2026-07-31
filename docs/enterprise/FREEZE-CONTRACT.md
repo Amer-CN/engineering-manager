@@ -68,7 +68,31 @@
 
 ---
 
-## 5. 相关文档
+## 5. 操作纪律
+
+### Worktree 共享 refs 约束
+
+本任务使用 git worktree 隔离。worktree 隔离的是文件互踩，不是仓库互踩。
+**禁止在任一 worktree 内执行影响共享 refs 的破坏性操作：**
+
+- git branch -D（强删分支）
+- git push --force（覆写远端历史）
+- git reflog expire（清除恢复点）
+- git gc --prune=now（立即清除悬空对象）
+
+真正保护这批工作的是已推送到远端的分支，不是 worktree。
+
+### backup/pre-edition-split 不得删除
+
+ackup/pre-edition-split 指向 265e976（混合 4 主题的巨型 commit）。
+该 commit 同时包含另一会话的工作（Reports / Knowledge / CostLedger Grid），
+而远端 eat/folderstack3d-react 仍停在 8708557a。
+
+**在另一会话正式推送其工作之前，禁止删除 ackup/pre-edition-split。**
+
+---
+
+## 6. 相关文档
 
 | 文档 | 路径 |
 |------|------|
