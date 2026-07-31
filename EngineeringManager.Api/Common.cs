@@ -171,7 +171,6 @@ record ProjectMemberDto(long? Id, long ProjectId, long MemberId, string? JoinedA
 record WorkerTeamDto(long? Id, string Name, long? ProjectId, long? LeaderId);
 record InventoryItemDto(long? Id, string? Code, string Name, string? Category, string? Unit, string? Specifications, double? PurchasePrice, double? SalePrice, double? CurrentStock, double? MinStock, double? MaxStock, long? SupplierId, string? Remarks);
 record MaterialDto(long? Id, long? ProjectId, string Name, string? Category, string? Unit, double? Quantity, double? Price);
-record ExpenseDto(long? Id, long? ProjectId, string? Category, double? Amount, string? Date, string? Description, string? Vendor, string? ReceiptUrl);
 record SalaryHistoryDto(long? Id, long MemberId, string? EffectiveDate, double? BaseSalary, double? Subsidy, string? SubsidyNote, string? Note);
 record ContractTemplateDto(long? Id, string Name, string? Type, string? Content, string? Variables);
 record OcrImageDto(string ImageBase64, object? Config)

@@ -185,26 +185,6 @@ public static class FileEndpoints
             return await Common.WriteResult(affected, db, "drawings", recordId);
         });
 
-        app.MapPut("/api/expenses", async (HttpContext ctx, IDbConnection db) =>
-        {
-            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
-            // 修复: 原 dynamic dto 缺参必 500; 并补 404 语义
-            using var reader = new System.IO.StreamReader(ctx.Request.Body);
-            var bodyText = await reader.ReadToEndAsync();
-            var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(bodyText);
-            var recordId = body.TryGetProperty("id", out var idProp) ? idProp.GetInt64() : 0;
-            var affected = await db.ExecuteAsync(@"UPDATE expenses SET category=@Category,amount=@Amount,date=@Date,description=@Description, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
-                new { Now = now(), Uid = uid, IsAdmin = isAdmin,
-                    Id = recordId,
-                    Category = body.TryGetProperty("category", out var c) ? c.GetString() : null,
-                    Amount = body.TryGetProperty("amount", out var a) && a.ValueKind == System.Text.Json.JsonValueKind.Number ? (decimal?)a.GetDouble() : null,
-                    Date = body.TryGetProperty("date", out var d) ? d.GetString() : null,
-                    Description = body.TryGetProperty("description", out var de) ? de.GetString() : null
-                });
-            return await Common.WriteResult(affected, db, "expenses", recordId);
-        });
-
         app.MapPost("/api/inventory/transactions", async (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
