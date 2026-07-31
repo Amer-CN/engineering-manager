@@ -8,7 +8,7 @@ import { useToastStore } from '@/store/toastStore'
 import { useConfirm } from '@/hooks/useConfirm'
 import { logCreate, logUpdate, logDelete } from '../utils/audit'
 import { getAPI } from '@/services/api-adapter'
-import { categories } from './drawingsConstants'
+import { categories, normalizeDrawingCategory } from './drawingsConstants'
 import { DrawingsFormModal } from './DrawingsFormModal'
 import type { FormDataState } from './DrawingsFormModal'
 import { Button } from './ui/Button'
@@ -214,7 +214,8 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
 
   const filteredDrawings = useMemo(() => drawings.filter(drawing => {
   if (filterProject && drawing.projectId !== filterProject) return false
-  if (filterCategory && drawing.category !== filterCategory) return false
+  // 类别比较走归一：脏类别归「其他」，与堆叠分组计数/展示口径一致（B1 方案 C）
+  if (filterCategory && normalizeDrawingCategory(drawing.category) !== filterCategory) return false
   return true
   }), [drawings, filterProject, filterCategory])
 
