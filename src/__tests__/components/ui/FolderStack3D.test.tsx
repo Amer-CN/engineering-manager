@@ -243,31 +243,37 @@ describe('FolderStack3D', () => {
   // measure() 把空闲时长计入采样窗口 → 误判低 fps → 错误降级。修复：kick 从停止态
   // 重启时重置采样会话（见 useWheelStack resetFpsMeasurement）。
 
-  it('A. 空闲恢复不误报：沉降→空闲5s→重启→正常帧率1s，不降级（无 fs3d-noglass）', () => {
+  it('A. 重复「空闲-恢复」不误报：三次 Home 单帧（间隔 5s/1s 空闲）不降级（无 fs3d-noglass）', () => {
     installFpsClock()
     render(<FolderStack3D groups={makeGroups(10)} ariaLabel="空闲恢复" />)
     const stage = screen.getByRole('listbox') as HTMLElement
     stage.focus()
 
-    // 1) 一轮正常 60fps 动画
-    fireEvent.keyDown(stage, { key: 'End' })
-    runFpsFrames(30, 16.7)
-    // 2) 等待弹簧收敛，确认 rAF 停止
-    settleFps()
+    // 第一次：Home（target=0 与初始 pos=0 重合，单帧即沉降停 rAF）
+    fireEvent.keyDown(stage, { key: 'Home' })
+    act(() => stepFpsFrame(16.7))
     expect(rafQueue.length).toBe(0)
 
-    // 3) 模拟空闲至少 5 秒（仅推进时钟，无帧）
+    // 空闲 5 秒（仅推进时钟，无帧）
     fpsClock += 5000
 
-    // 4) 再次启动动画（键盘）
+    // 第二次：Home 单帧
     fireEvent.keyDown(stage, { key: 'Home' })
-    // 5) 正常帧间隔运行至少 1 秒
-    runFpsFrames(60, 16.7)
+    act(() => stepFpsFrame(16.7))
+    expect(rafQueue.length).toBe(0)
 
-    // 6) 断言：未误触发降级
+    // 空闲 1 秒
+    fpsClock += 1000
+
+    // 第三次：Home 单帧
+    fireEvent.keyDown(stage, { key: 'Home' })
+    act(() => stepFpsFrame(16.7))
+    expect(rafQueue.length).toBe(0)
+
+    // 最终：三次空闲-恢复不得误触发降级（守护 resetFpsMeasurement：
+    // 无修复时 measure() 把空闲计入窗口，badSince 跨轮累积 >500ms → 误降级）
     expect(stage.className).not.toContain('fs3d-noglass')
   })
-
   it('B. 真正低帧仍降级：连续 ~30fps 超过 500ms 触发 fs3d-noglass', () => {
     installFpsClock()
     render(<FolderStack3D groups={makeGroups(40)} ariaLabel="低帧降级" />)
