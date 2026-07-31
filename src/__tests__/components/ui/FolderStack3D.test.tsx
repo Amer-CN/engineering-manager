@@ -3,6 +3,7 @@
  * - 正常分支：listbox/option 语义、KPI 浮层、40 张上限截断
  * - 交互：点击聚焦卡 / Enter 打开分组；点击非聚焦卡不误触 onOpen
  * - reduced-motion：降级为横向扁平轨道（无 3D 舞台）
+ * - 卡面（Phase 1 竖版母版）：四层分层、三纸、远端隐藏态类、聚焦态复用
  */
 import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import { FolderStack3D, STACK_GROUP_LIMIT, type StackGroup } from '@/components/ui/FolderStack3D'
@@ -31,7 +32,7 @@ describe('FolderStack3D', () => {
     expect(stage).toBeInTheDocument()
     expect(screen.getAllByRole('option')).toHaveLength(5)
     expect(stage.getAttribute('aria-activedescendant')).toBe('fs3d-card-0')
-    // KPI 胶囊 + 卡面 tab 都含分组名，至少 2 处
+    // 卡面标题 + KPI 胶囊都含分组名，至少 2 处
     expect(screen.getAllByText('分组0').length).toBeGreaterThanOrEqual(2)
   })
 
@@ -124,5 +125,65 @@ describe('FolderStack3D', () => {
     expect(wheel(stage, -400)).toBe(true)
     // 此刻在起点：再向上滚应释放（false）——只有限幅生效才能回到 0
     expect(wheel(stage, -100)).toBe(false)
+  })
+
+  // ── 卡面（Phase 1 竖版文件夹母版 reference-a）：结构与态类契约 ──
+  // 姿态态类由 useWheelStack 的 renderFrame 在 useLayoutEffect 同步直写，
+  // jsdom 下挂载即可断言（无需等 rAF）。
+
+  it('卡面四层分层：后壳 / 三纸（DOM 数量=3） / 连续 SVG 前壳 / 内容层', () => {
+    render(<FolderStack3D groups={makeGroups(4)} ariaLabel="分层" />)
+    const card = screen.getAllByRole('option')[0]
+    expect(card.querySelector('.fs3d-backshell')).not.toBeNull()
+    // 三张等大纸，前纸带装饰性文档线
+    expect(card.querySelectorAll('.fs3d-paper')).toHaveLength(3)
+    expect(card.querySelectorAll('.fs3d-paper-front span')).toHaveLength(7)
+    // 前壳是内联 SVG 单条连续 path（非「矩形+独立凸耳」拼接）
+    const paths = card.querySelectorAll('svg.fs3d-frontshell path')
+    expect(paths).toHaveLength(1)
+    expect(paths[0].getAttribute('d')).toMatch(/^M /)
+    expect(card.querySelector('.fs3d-face')).not.toBeNull()
+  })
+
+  it('聚焦态复用现有接线：rAF 直写 fs3d-focus 态类 + aria-selected，不另造状态源', () => {
+    render(<FolderStack3D groups={makeGroups(4)} ariaLabel="聚焦态" />)
+    const options = screen.getAllByRole('option')
+    expect(options[0].className).toContain('fs3d-focus')
+    expect(options[0].getAttribute('aria-selected')).toBe('true')
+    expect(options[1].className).not.toContain('fs3d-focus')
+    expect(options[1].getAttribute('aria-selected')).toBe('false')
+  })
+
+  it('远端卡挂 fs3d-quiet 态类（CSS 据此隐藏全部文字与图标，≡ 母版 .far）', () => {
+    render(<FolderStack3D groups={makeGroups(8)} ariaLabel="远端" />)
+    const options = screen.getAllByRole('option')
+    // d > 1.2 即远端：索引 2 起应携带 quiet 态类；内容层仍在 DOM（由 CSS opacity 隐藏）
+    expect(options[2].className).toContain('fs3d-quiet')
+    expect(options[3].className).toContain('fs3d-quiet')
+    expect(options[3].querySelector('.fs3d-face')).not.toBeNull()
+    // 聚焦卡不得误挂 quiet
+    expect(options[0].className).not.toContain('fs3d-quiet')
+  })
+
+  it('人数徽记：有 people 渲染图标+数字（内联 SVG 非 emoji），缺省整行隐藏', () => {
+    const groups = makeGroups(2).map((g, i) => (i === 0 ? { ...g, people: 4 } : g))
+    render(<FolderStack3D groups={groups} ariaLabel="人数" />)
+    const options = screen.getAllByRole('option')
+    const people = options[0].querySelector('.fs3d-people')
+    expect(people).not.toBeNull()
+    expect(people!.textContent).toBe('4')
+    expect(people!.querySelector('svg')).not.toBeNull()
+    expect(options[1].querySelector('.fs3d-people')).toBeNull()
+  })
+
+  it('卡面只留标题与 files 副行，无 KPI/百分比/徽章/底部 tab 残留', () => {
+    render(<FolderStack3D groups={makeGroups(3)} ariaLabel="精简" />)
+    const card = screen.getAllByRole('option')[0]
+    expect(card.querySelector('.fs3d-title')!.textContent).toBe('分组0')
+    expect(card.querySelector('.fs3d-files')!.textContent).toBe('1张')
+    // 旧卡面元素必须清除（视觉硬规则 7）
+    for (const sel of ['.fs3d-num', '.fs3d-stats', '.fs3d-st', '.fs3d-tab', '.fs3d-numlabel', '.fs3d-meta']) {
+      expect(card.querySelector(sel)).toBeNull()
+    }
   })
 })

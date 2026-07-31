@@ -31,6 +31,24 @@
   --state-ok:      oklch(50% 0.10 150);
   --state-warn:    oklch(60% 0.11 70);
   --state-danger:  oklch(52% 0.16 25);
+
+  /* ---- Stage-Surface 舞台 token 层（stack.css 只许取 --stage-*） ----
+     基准值 = Verdant 暗舞台；三宿主主题的同色相派生见文件末尾覆盖层 */
+  --stage-bg:          var(--bg);
+  --stage-dot:         var(--bg-dot);
+  --stage-border:      var(--border);
+  --stage-fg:          var(--fg);
+  --stage-fg-muted:    var(--fg-muted);
+  --stage-accent:      var(--accent);          /* 聚焦绿 ≈ #22DD5C，四宿主不变 */
+  --stage-kpi-fg:      oklch(21% 0.006 160);   /* S2 修正：反转岛墨色自持 token，不再借 --panel */
+  --stage-shell:       oklch(92% 0.004 160 / 0.14);   /* 前后壳同一半透明材质（点阵透壳） */
+  --stage-shell-line:  oklch(92% 0.004 160 / 0.30);   /* 1px 描线 */
+  --stage-paper:       oklch(94% 0.004 160);   /* 前纸（完全不透明） */
+  --stage-paper-2:     oklch(87% 0.005 160);   /* 中纸 */
+  --stage-paper-3:     oklch(80% 0.005 160);   /* 后纸 */
+  --stage-paper-fold:  oklch(98% 0.003 160);   /* 右上折角翻片 */
+  --stage-paper-line:  oklch(70% 0.006 160);   /* 装饰性文档线 */
+  --stage-ink:         oklch(95% 0.004 160);   /* 卡面文字/图标（聚焦态改用 --on-accent） */
 }
 
 /* -----------------------------------------------------------------------------
@@ -51,3 +69,63 @@
  *   —— 外加 Stage-Surface 授权的舞台区：FolderStack3D 聚焦卡与其 KPI 浮层。
  *   明确禁止：DataTable 行、Dashboard KPI 卡、StatusBar、TitleBar、输入框。
  * -------------------------------------------------------------------------- */
+
+/* -----------------------------------------------------------------------------
+ * Stage-Surface 宿主派生层：舞台与宿主同色相、背景明度差 ≤ 约 8 点，
+ * 不得在浅色宿主里硬嵌纯黑矩形。只覆盖 --stage-*，不碰全局主题体系。
+ * 聚焦绿 --stage-accent 与深墨 --on-accent 继承 Verdant 层，四宿主不变。
+ * -------------------------------------------------------------------------- */
+
+/* Paper / 暖白纸（data-theme="white"，hue 85）：宿主 bg 98.6% → 舞台 94% */
+[data-theme="white"] [data-theme="verdant"] {
+  --stage-bg:          oklch(94% 0.009 85);
+  --stage-dot:         oklch(84% 0.011 84);
+  --stage-border:      oklch(88% 0.012 82);
+  --stage-fg:          oklch(23% 0.014 70);
+  --stage-fg-muted:    oklch(50% 0.011 74);
+  --stage-kpi-fg:      oklch(23% 0.014 70);
+  --stage-shell:       oklch(30% 0.014 70 / 0.10);   /* 浅舞台上的半透墨壳 */
+  --stage-shell-line:  oklch(30% 0.014 70 / 0.28);
+  --stage-paper:       oklch(99.2% 0.005 85);
+  --stage-paper-2:     oklch(95.5% 0.008 85);
+  --stage-paper-3:     oklch(91.5% 0.010 84);
+  --stage-paper-fold:  oklch(93% 0.010 84);
+  --stage-paper-line:  oklch(80% 0.012 82);
+  --stage-ink:         oklch(25% 0.014 70);
+}
+
+/* Snow / 冷白（data-theme="sandstone"，chroma 0）：宿主 bg 98.8% → 舞台 94.5% */
+[data-theme="sandstone"] [data-theme="verdant"] {
+  --stage-bg:          oklch(94.5% 0 0);
+  --stage-dot:         oklch(84% 0 0);
+  --stage-border:      oklch(88% 0 0);
+  --stage-fg:          oklch(24% 0 0);
+  --stage-fg-muted:    oklch(51% 0 0);
+  --stage-kpi-fg:      oklch(24% 0 0);
+  --stage-shell:       oklch(30% 0 0 / 0.10);
+  --stage-shell-line:  oklch(30% 0 0 / 0.28);
+  --stage-paper:       oklch(99.4% 0 0);
+  --stage-paper-2:     oklch(96% 0 0);
+  --stage-paper-3:     oklch(92% 0 0);
+  --stage-paper-fold:  oklch(93.5% 0 0);
+  --stage-paper-line:  oklch(80% 0 0);
+  --stage-ink:         oklch(26% 0 0);
+}
+
+/* Graphite / 石墨黑（data-theme="graphite"，hue 75）：宿主 bg 20.5% → 舞台 15.5% */
+[data-theme="graphite"] [data-theme="verdant"] {
+  --stage-bg:          oklch(15.5% 0.003 75);
+  --stage-dot:         oklch(24% 0.003 75);
+  --stage-border:      oklch(29% 0.004 75);
+  --stage-fg:          oklch(86% 0.003 80);
+  --stage-fg-muted:    oklch(62% 0.004 78);
+  --stage-kpi-fg:      oklch(22% 0.004 75);
+  --stage-shell:       oklch(92% 0.003 80 / 0.14);
+  --stage-shell-line:  oklch(92% 0.003 80 / 0.30);
+  --stage-paper:       oklch(93% 0.003 80);
+  --stage-paper-2:     oklch(86% 0.003 80);
+  --stage-paper-3:     oklch(79% 0.004 78);
+  --stage-paper-fold:  oklch(97% 0.003 85);
+  --stage-paper-line:  oklch(69% 0.004 78);
+  --stage-ink:         oklch(94% 0.003 80);
+}
