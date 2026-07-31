@@ -182,13 +182,22 @@ public class ReviewFixRegressionTests : ApiTestBase
     }
 
     [Fact]
-    public async Task Expense_Post_NoServerError()
+    public async Task Expenses_AllEndpoints_Removed_Returns404()
     {
         await LoginAdminAsync();
+        // v0.87.0 防复活哨兵：expenses 表及其 4 个端点已移除
+        // （GET/POST/DELETE 原在 ExpenseEndpoints.cs，PUT 原在 FileEndpoints.cs）。
+        // 任一动词重新出现即失败。
+        var get = await Client.GetAsync("/api/expenses");
+        Assert.Equal(HttpStatusCode.NotFound, get.StatusCode);
         var post = await Client.PostAsJsonAsync("/api/expenses",
-            new { projectId = (long?)null, category = "差旅", amount = 300.0, date = "2026-07-01", description = "回归" });
-        Assert.NotEqual(HttpStatusCode.InternalServerError, post.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, post.StatusCode);
+            new { projectId = 1, category = "test", amount = 1.0 });
+        Assert.Equal(HttpStatusCode.NotFound, post.StatusCode);
+        var put = await Client.PutAsJsonAsync("/api/expenses",
+            new { id = 1, category = "test", amount = 1.0 });
+        Assert.Equal(HttpStatusCode.NotFound, put.StatusCode);
+        var del = await Client.DeleteAsync("/api/expenses/1");
+        Assert.Equal(HttpStatusCode.NotFound, del.StatusCode);
     }
 
     [Fact]
