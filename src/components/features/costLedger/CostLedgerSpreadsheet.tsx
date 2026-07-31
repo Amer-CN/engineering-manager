@@ -139,6 +139,7 @@ export default function CostLedgerSpreadsheet({
         <span
           className="rounded px-1.5 py-0.5 text-caption font-semibold"
           style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}
+          title="本视图仅支持修改和新增，删除行请回列表视图操作"
         >
           Beta
         </span>

@@ -290,6 +290,8 @@ export function readUniverEntries(univer: any, originalEntries: CostLedgerEntry[
     if (rowId > 0 && seenIds.has(rowId)) {
       rowId = 0 // 走 INSERT 路径
       duplicatedCount++
+    } else if (rowId > 0 && !entryById.has(rowId)) {
+      rowId = 0 // 未知 id 视为新增，不允许盲写不存在的行
     } else if (rowId > 0) {
       seenIds.add(rowId)
     }
