@@ -7,7 +7,7 @@
 
 import { apiClient, setToken } from './api-client';
 import type {
-  Project, Member, Worker, UserInfo, Department, Material,
+  Project, Member, Worker, UserInfo, Department, Material, Expense,
   Partner, Region, Supervisor, IncomeContract, ExpenseContract, AgreementContract,
   ContractStats, DashboardStats, Settlement,
   Template, TemplateVariable, ContractTemplate,
@@ -176,16 +176,22 @@ export const tauriAPI = {
     apiClient.post<{ id: number }>('/api/contracts/income', contract),
   createExpenseContract: (contract: Partial<ExpenseContract>) =>
     apiClient.post<{ id: number }>('/api/contracts/expense', contract),
+  createAgreementContract: (contract: Partial<AgreementContract>) =>
+    apiClient.post<{ id: number }>('/api/contracts/agreement', contract),
   createContract: (contract: Partial<IncomeContract>) =>
     apiClient.post<{ id: number }>('/api/contracts/income', contract),
   updateIncomeContract: (contract: IncomeContract) =>
     apiClient.put<void>('/api/contracts/income', contract),
   updateExpenseContract: (contract: ExpenseContract) =>
     apiClient.put<void>('/api/contracts/expense', contract),
+  updateAgreementContract: (contract: AgreementContract) =>
+    apiClient.put<void>('/api/contracts/agreement', contract),
   deleteIncomeContract: (id: number) =>
     apiClient.del<void>(`/api/contracts/income/${id}`),
   deleteExpenseContract: (id: number) =>
     apiClient.del<void>(`/api/contracts/expense/${id}`),
+  deleteAgreementContract: (id: number) =>
+    apiClient.del<void>(`/api/contracts/agreement/${id}`),
   deleteContract: (id: number) =>
     apiClient.del<void>(`/api/contracts/income/${id}`),
   getContractStats: () => apiClient.get<ContractStats>('/api/contracts/stats'),
@@ -448,6 +454,16 @@ export const tauriAPI = {
   deleteDrawing: (id: number) =>
     apiClient.del<void>(`/api/drawings/${id}`),
 
+  // ────────── 费用 ──────────
+  getExpenses: (projectId?: number) =>
+    apiClient.get<Expense[]>('/api/expenses', { projectId }),
+  createExpense: (expense: Partial<Expense>) =>
+    apiClient.post<{ id: number }>('/api/expenses', expense),
+  updateExpense: (id: number, updates: Partial<Expense>) =>
+    apiClient.put<void>('/api/expenses', { id, ...updates }),
+  deleteExpense: (id: number) =>
+    apiClient.del<void>(`/api/expenses/${id}`),
+
   // ────────── 库存 ──────────
   getInventoryItems: () => apiClient.get<InventoryItem[]>('/api/inventory'),
   createInventoryItem: (item: Partial<InventoryItem>) =>
@@ -472,11 +488,16 @@ export const tauriAPI = {
     apiClient.del<void>(`/api/materials/${id}`),
 
   // ────────── 配置 ──────────
-  getConfig: () => apiClient.get<{ dataPath: string; defaultPath: string }>('/api/config'),
+  getConfig: () => apiClient.get<{ dataPath: string; defaultPath: string; edition: string; features: string[] }>('/api/config'),
   setDataPath: (path: string) => apiClient.put<void>('/api/config/data-path', { path }),
   getGpuAcceleration: () => apiClient.get<boolean>('/api/config/gpu-acceleration'),
   setGpuAcceleration: (enabled: boolean) =>
     apiClient.put<void>('/api/config/gpu-acceleration', { enabled }),
+
+  // ────────── 个人资料 (M-EDITION1) ──────────
+  getUserProfile: () => apiClient.get<{ display_name: string; company_name: string; position: string; specialty: string; business_description: string }>('/api/user-profile'),
+  updateUserProfile: (profile: { companyName: string; position: string; specialty: string; businessDescription: string }) =>
+    apiClient.put<void>('/api/user-profile', profile),
 
   // ────────── PII Key Rotation (v0.76.0 累计待办 #5) ──────────
   getPiiKeys: () => apiClient.get<{ keys: { id: number; createdAt: string; isActive: boolean }[]; activeKeyId: number; totalKeys: number }>('/api/admin/pii/keys'),
