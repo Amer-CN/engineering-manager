@@ -73,5 +73,89 @@ describe('templateMarkup', () => {
       expect(lines[1].heading).toBe(false)
       expect(lines[1].tokens[1]).toEqual({ type: 'variable', content: '工程名称' })
     })
+
+    test('无序列表 - 前缀', () => {
+      const lines = parseMarkup('- 第一项\n- 第二项')
+      expect(lines[0].listType).toBe('ul')
+      expect(lines[0].listContent).toBe('第一项')
+      expect(lines[1].listType).toBe('ul')
+      expect(lines[1].listContent).toBe('第二项')
+    })
+
+    test('无序列表 * 前缀', () => {
+      const lines = parseMarkup('* 项目A\n* 项目B')
+      expect(lines[0].listType).toBe('ul')
+      expect(lines[0].listContent).toBe('项目A')
+    })
+
+    test('有序列表', () => {
+      const lines = parseMarkup('1. 步骤一\n2. 步骤二\n10. 步骤十')
+      expect(lines[0].listType).toBe('ol')
+      expect(lines[0].listContent).toBe('步骤一')
+      expect(lines[1].listType).toBe('ol')
+      expect(lines[1].listContent).toBe('步骤二')
+      expect(lines[2].listType).toBe('ol')
+      expect(lines[2].listContent).toBe('步骤十')
+    })
+
+    test('混合内容：标题 + 普通行 + 列表', () => {
+      const lines = parseMarkup('## 摘要\n普通段落\n- 列表项\n1. 有序项')
+      expect(lines[0].heading).toBe(true)
+      expect(lines[1].listType).toBeFalsy()
+      expect(lines[2].listType).toBe('ul')
+      expect(lines[3].listType).toBe('ol')
+    })
+
+    test('列表项支持行内标记', () => {
+      const lines = parseMarkup('- **重要** 事项')
+      expect(lines[0].listType).toBe('ul')
+      expect(lines[0].listContent).toBe('**重要** 事项')
+    })
+  })
+
+  describe('templateMarkupToPrintHtml 列表', () => {
+    test('连续无序列表合并为 <ul>', () => {
+      const html = templateMarkupToPrintHtml('- 第一项\n- 第二项')
+      expect(html).toContain('<ul')
+      expect(html).toContain('</ul>')
+      expect(html).toContain('<li')
+      expect(html).toContain('第一项')
+      expect(html).toContain('第二项')
+      expect((html.match(/<li/g) ?? []).length).toBe(2)
+    })
+
+    test('连续有序列表合并为 <ol>', () => {
+      const html = templateMarkupToPrintHtml('1. 步骤一\n2. 步骤二')
+      expect(html).toContain('<ol')
+      expect(html).toContain('</ol>')
+      expect((html.match(/<li/g) ?? []).length).toBe(2)
+    })
+
+    test('列表与段落混合', () => {
+      const html = templateMarkupToPrintHtml('前言\n- 列表项\n后续')
+      expect(html).toContain('<p style="text-indent: 2em')
+      expect(html).toContain('<ul')
+      expect(html).toContain('前言')
+      expect(html).toContain('后续')
+    })
+
+    test('列表项内粗体渲染', () => {
+      const html = templateMarkupToPrintHtml('- **重要** 内容')
+      expect(html).toContain('<strong>重要</strong>')
+    })
+
+    test('列表项防注入', () => {
+      const html = templateMarkupToPrintHtml('- <script>alert(1)</script>')
+      expect(html).not.toContain('<script>')
+      expect(html).toContain('&lt;script&gt;')
+    })
+
+    test('ul/ol 切换时分别输出', () => {
+      const html = templateMarkupToPrintHtml('- 无序\n1. 有序')
+      expect(html).toContain('<ul')
+      expect(html).toContain('</ul>')
+      expect(html).toContain('<ol')
+      expect(html).toContain('</ol>')
+    })
   })
 })

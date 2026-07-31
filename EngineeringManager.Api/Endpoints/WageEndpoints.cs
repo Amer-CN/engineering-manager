@@ -1,6 +1,9 @@
 using System.Data;
 using Dapper;
 using EngineeringManager.Api.Security;
+using EngineeringManager.Api.Services;
+using EngineeringManager.Api.Services.Stt;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace EngineeringManager.Api;
 
@@ -174,6 +177,25 @@ public static class WageEndpoints
                 new { dto.ProjectId, dto.MemberId, dto.ProjectWorkerId, dto.YearMonth, dto.DailyWage,
                       dto.WorkDays, dto.Bonus, dto.Deduction, ActualWage = actualWage,
                       dto.PaidAmount, dto.PaidDate, CreatedBy = uid, Now = now() });
+            // fire-and-forget: upsert 实体到知识库种子表
+            var wageCapturedId = id;
+            var wageProjectId = dto.ProjectId;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var scope = ctx.RequestServices.CreateScope();
+                    var sp = scope.ServiceProvider;
+                    var bgDb = sp.GetRequiredService<IDbConnection>();
+                    var bgEmb = sp.GetRequiredService<IEmbeddingService>();
+                    var svc = new KnowledgeEntityService(bgDb, bgEmb);
+                    // 从库中取 worker name
+                    var workerName = bgDb.ExecuteScalar<string>("SELECT COALESCE(m.name, '未知') FROM wages w LEFT JOIN members m ON w.member_id=m.id WHERE w.id=@Id", new { Id = wageCapturedId }) ?? "未知";
+                    var yearMonth = bgDb.ExecuteScalar<string>("SELECT year_month FROM wages WHERE id=@Id", new { Id = wageCapturedId }) ?? "";
+                    await svc.UpsertEntityAsync("wage", wageCapturedId, $"{workerName} {yearMonth}工资".Trim(), wageProjectId);
+                }
+                catch (Exception ex) { Console.Error.WriteLine($"[EntitySeed] wage upsert 失败: {ex.Message}"); }
+            });
             return Common.Ok(id);
         });
 
@@ -189,6 +211,27 @@ public static class WageEndpoints
                 new { dto.Id, dto.DailyWage, dto.WorkDays, dto.Bonus, dto.Deduction,
                       ActualWage = actualWage, dto.PaidAmount, dto.PaidDate,
                       Uid = uid, IsAdmin = isAdmin, Now = now() });
+            // fire-and-forget: upsert 实体到知识库种子表
+            if (affected > 0 && dto.Id.HasValue)
+            {
+                var wagePutId = dto.Id.Value;
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        using var scope = ctx.RequestServices.CreateScope();
+                        var sp = scope.ServiceProvider;
+                        var bgDb = sp.GetRequiredService<IDbConnection>();
+                        var bgEmb = sp.GetRequiredService<IEmbeddingService>();
+                        var svc = new KnowledgeEntityService(bgDb, bgEmb);
+                        var workerName = bgDb.ExecuteScalar<string>("SELECT COALESCE(m.name, '未知') FROM wages w LEFT JOIN members m ON w.member_id=m.id WHERE w.id=@Id", new { Id = wagePutId }) ?? "未知";
+                        var yearMonth = bgDb.ExecuteScalar<string>("SELECT year_month FROM wages WHERE id=@Id", new { Id = wagePutId }) ?? "";
+                        var pid = bgDb.ExecuteScalar<long?>("SELECT project_id FROM wages WHERE id=@Id", new { Id = wagePutId });
+                        await svc.UpsertEntityAsync("wage", wagePutId, $"{workerName} {yearMonth}工资".Trim(), pid);
+                    }
+                    catch (Exception ex) { Console.Error.WriteLine($"[EntitySeed] wage PUT upsert 失败: {ex.Message}"); }
+                });
+            }
             return affected > 0 ? Common.Ok() : Results.Forbid();
         });
 

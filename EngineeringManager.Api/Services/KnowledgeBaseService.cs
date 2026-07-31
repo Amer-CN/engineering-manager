@@ -274,6 +274,7 @@ public class KnowledgeBaseService
 
     /// <summary>
     /// 混合检索（FTS5 关键词 + 语义向量 → RRF 融合）
+    /// 可选 entityType/entityId 偏置：提升关联实体文档的排名
     /// </summary>
     public async Task<SearchResult> SearchAsync(
         string query,
@@ -281,6 +282,8 @@ public class KnowledgeBaseService
         int? projectId = null,
         string? userId = null,
         bool isAdmin = false,
+        string? entityType = null,
+        long? entityId = null,
         CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(query))
@@ -307,8 +310,31 @@ public class KnowledgeBaseService
             }
         }
 
-        // ③ RRF 融合
-        var fused = RrfFuse(ftsResults, semanticResults, topK);
+        // ②.⑤ 实体偏置：收集需要 boost 的 document_id 集合
+        HashSet<long>? entityBiasDocIds = null;
+        if (!string.IsNullOrEmpty(entityType) && entityId.HasValue)
+        {
+            var biasDocIds = _db.Query<long>(
+                @"SELECT [reference_doc_id] FROM [knowledge_entity_seeds]
+                  WHERE [entity_type] = @EntityType AND [entity_id] = @EntityId AND [reference_doc_id] IS NOT NULL",
+                new { EntityType = entityType, EntityId = entityId.Value }).ToList();
+
+            // 同项目实体文档也参与偏置
+            if (projectId.HasValue)
+            {
+                var projectDocIds = _db.Query<long>(
+                    @"SELECT DISTINCT [reference_doc_id] FROM [knowledge_entity_seeds]
+                      WHERE [project_id] = @ProjectId AND [reference_doc_id] IS NOT NULL",
+                    new { ProjectId = projectId.Value }).ToList();
+                biasDocIds.AddRange(projectDocIds);
+            }
+
+            if (biasDocIds.Count > 0)
+                entityBiasDocIds = new HashSet<long>(biasDocIds);
+        }
+
+        // ③ RRF 融合（含实体偏置）
+        var fused = RrfFuse(ftsResults, semanticResults, topK, entityBiasDocIds);
 
         // ④ 查文档元信息
         var docIds = fused.Select(f => f.ChunkId).Distinct().ToList();
@@ -625,8 +651,9 @@ public class KnowledgeBaseService
     /// <summary>
     /// 倒数排名融合 (Reciprocal Rank Fusion)
     /// score = Σ 1/(k + rank)，k=60
+    /// entityBiasDocIds: 实体偏置文档集合，匹配文档 RRF 分数 ×1.5
     /// </summary>
-    public static List<ChunkMatch> RrfFuse(List<ChunkMatch> ftsResults, List<ChunkMatch> semanticResults, int topK)
+    public static List<ChunkMatch> RrfFuse(List<ChunkMatch> ftsResults, List<ChunkMatch> semanticResults, int topK, HashSet<long>? entityBiasDocIds = null)
     {
         var scores = new Dictionary<long, double>(); // chunkId → rrf score
         var chunkMap = new Dictionary<long, ChunkMatch>(); // chunkId → metadata
@@ -665,9 +692,14 @@ public class KnowledgeBaseService
             .Select(kvp =>
             {
                 var match = chunkMap[kvp.Key];
-                match.RrfScore = kvp.Value;
+                var score = kvp.Value;
+                // 实体偏置：匹配实体文档的 chunk 分数 ×1.5
+                if (entityBiasDocIds != null && entityBiasDocIds.Contains(match.DocumentId))
+                    score *= 1.5;
+                match.RrfScore = score;
                 return match;
             })
+            .OrderByDescending(m => m.RrfScore)
             .ToList();
 
         return fused;

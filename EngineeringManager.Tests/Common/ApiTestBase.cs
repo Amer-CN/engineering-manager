@@ -24,6 +24,8 @@ public class ApiTestBase : IDisposable
         // v1.1.0: 测试环境 env var 必须在 WebApplication.CreateBuilder 之前设 (ApiConfig 用 UseUrls)
         Environment.SetEnvironmentVariable("DISABLE_RATELIMIT", "1");
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
+        // M-EDITION1: 测试环境跑企业版（多用户/角色/权限测试需要）
+        Environment.SetEnvironmentVariable("ENGINEERING_MANAGER_EDITION", "enterprise");
 
         MigrationRunner.Run(ConnectionString);
         SeedTestData();

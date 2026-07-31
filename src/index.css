@@ -1,3 +1,7 @@
+/* Verdant 第四主题（展示型舞台专用，opt-in）— 仅在 Stage-Surface 授权屏启用，不进主题切换器；见 DESIGN.md § Stage Surfaces。
+   放在文件首行以满足 PostCSS/Vite 的 @import 必须置顶要求；[data-theme="verdant"] 选择器权重高于 :root，不影响既有三主题。 */
+@import "./styles/theme-verdant.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

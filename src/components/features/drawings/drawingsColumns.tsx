@@ -1,7 +1,7 @@
 import { type Column } from '@/components/DataTable'
 import { Icon } from '../../ui/Icon'
 import { Button } from '../../ui/Button'
-import { categoryIcons, categoryColors } from '../../drawingsConstants'
+import { categoryIcons, categoryColors, normalizeDrawingCategory } from '../../drawingsConstants'
 import type { Drawing } from '../../../types/electron'
 
 export function createDrawingColumns(
@@ -12,14 +12,14 @@ export function createDrawingColumns(
   return [
     { key: 'name', title: '图纸名称', width: '200px', render: (item) => (
       <div className="flex items-center gap-2">
-        <Icon name={categoryIcons[item.category || ''] || 'File'} size={18} className="text-[color:var(--muted)] shrink-0" />
+        <Icon name={categoryIcons[normalizeDrawingCategory(item.category)] || 'File'} size={18} className="text-[color:var(--muted)] shrink-0" />
         <span className="font-medium text-[color:var(--fg)] truncate">{item.name}</span>
       </div>
     )},
     { key: 'projectId', title: '所属项目', width: '140px', render: (item) => <span className="text-sm text-[color:var(--fg-2)] truncate block">{getProjectName(item.projectId)}</span> },
     { key: 'category', title: '图纸类型', width: '100px', render: (item) => (
-      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${categoryColors[item.category || ''] || 'bg-[color:var(--panel-2)] text-[color:var(--fg)]'}`}>
-        {item.category || '其他'}
+      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${categoryColors[normalizeDrawingCategory(item.category)] || 'bg-[color:var(--panel-2)] text-[color:var(--fg)]'}`}>
+        {normalizeDrawingCategory(item.category)}
       </span>
     )},
     { key: 'position', title: '部位', width: '100px', render: (item) => <span className="text-sm text-[color:var(--fg-2)] truncate block">{item.position || '-'}</span> },
