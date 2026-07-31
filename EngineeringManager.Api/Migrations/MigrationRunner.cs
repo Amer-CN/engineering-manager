@@ -93,7 +93,13 @@ public static class MigrationRunner
             }
             catch (Microsoft.Data.Sqlite.SqliteException ex)
             {
-                if (IsBenignAlterError(ex)) continue;  // 列已存在等，幂等跳过
+                if (IsBenignAlterError(ex))
+                {
+                    // X11.7: 记录被跳过的语句，避免静默丢失迁移信息
+                    var summary = trimmed.Length > 80 ? trimmed.Substring(0, 80) + "..." : trimmed;
+                    Console.WriteLine($"[Migration] 幂等跳过: {summary} ({ex.Message})");
+                    continue;
+                }
                 throw;
             }
         }
