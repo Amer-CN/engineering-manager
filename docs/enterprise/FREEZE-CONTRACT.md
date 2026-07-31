@@ -2,8 +2,8 @@
 
 > **M-EDITION1 版本分线** — 个人版 / 企业版功能冻结清单与维护铁律
 >
-> 基线 commit：`46da1f8` / master（2026-07-31）
-> 生效版本：v0.83.0+
+> 基线 commit：`d80020d` / origin/master（2026-08-01）
+> 生效版本：v0.91.0+
 > 真源：本文件 + `docs/enterprise/HANDOFF-STEP1.md` §3
 
 ---
@@ -47,7 +47,7 @@
 企业版上线前逐条确认：
 
 - [ ] **后端补齐端点级 RBAC** — 当前权限检查仅存在于前端（`src/hooks/usePermission.tsx` RequirePermission/RequireAdmin + `src/hooks/permissionHelpers.tsx` 守卫实现）。后端 `GlobalAuthMiddleware` 只校验登录，不校验权限码。`CurrentUser.HasPermission(ctx, db, "xxx:read")` 方法存在（`Security/CurrentUser.cs` L127-L151）但无任何端点调用它。解冻每个端点时必须同时接入 HasPermission 校验
-- [ ] `GET /api/roles` 等端点移除 `ApiConfig.IsPersonal` gate
+- [ ] `GET /api/roles` 等端点移除 `EditionFeatures.Has(...)` gate（将能力键加入对应 edition 集合）
 - [ ] 前端 `Sidebar.tsx` 恢复「用户管理」入口
 - [ ] 前端 `App.tsx` renderPage 移除 personal 重定向
 - [ ] `DataScope` 恢复按角色映射
@@ -62,13 +62,37 @@
 | 层 | 实现 |
 |----|------|
 | 配置 | `%APPDATA%\工程管家\config.json` → `"edition": "personal" \| "enterprise"` |
-| 后端 | `ApiConfig.GetEdition()` / `ApiConfig.IsPersonal` / `ApiConfig.IsEnterprise` |
-| API | `GET /api/config` 响应含 `edition` 字段 |
-| 前端 | `src/store/editionStore.ts` → `useIsPersonal()` / `useIsEnterprise()` |
+| 后端 | `ApiConfig.GetEdition()` → `EditionFeatures.Has(key)`（禁止 IsPersonal/IsEnterprise） |
+| API | `GET /api/config` 响应含 `edition` + `features` 数组（后端算好下发） |
+| 前端 | `src/store/editionStore.ts` → `useHasFeature(key)`（消费后端下发 features 数组，禁止自建映射） |
 
 ---
 
-## 5. 相关文档
+## 5. 操作纪律
+
+### Worktree 共享 refs 约束
+
+本任务使用 git worktree 隔离。worktree 隔离的是文件互踩，不是仓库互踩。
+**禁止在任一 worktree 内执行影响共享 refs 的破坏性操作：**
+
+- `git branch -D`（强删分支）
+- `git push --force`（覆写远端历史）
+- `git reflog expire`（清除恢复点）
+- `git gc --prune=now`（立即清除悬空对象）
+
+真正保护这批工作的是已推送到远端的分支，不是 worktree。
+
+### backup/pre-edition-split 不得删除
+
+`backup/pre-edition-split` 指向 `265e976`（混合 4 主题的巨型 commit）。
+该 commit 同时包含另一会话的工作（Reports / Knowledge / CostLedger Grid），
+而远端 `feat/folderstack3d-react` 仍停在 `8708557a`。
+
+**在另一会话正式推送其工作之前，禁止删除 `backup/pre-edition-split`。**
+
+---
+
+## 6. 相关文档
 
 | 文档 | 路径 |
 |------|------|
