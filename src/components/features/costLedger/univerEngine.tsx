@@ -222,8 +222,11 @@ export function UniverMount({ entries, onError, univerRef }: UniverMountProps) {
 /** 从 Univer 实例读取当前编辑后的单元格数据，映射回 CostLedgerEntry 结构。
  * M1 修复：失败时抛错阻止保存，禁止静默回退。
  * M2 修复：用隐藏 id 列锚定行对齐，防删/插/排序错位。
+ * N2 修复：重复 id 自愈为新增行（而非拒绝，因 id 列隐藏用户无法自救）。
  */
-export function readUniverEntries(univer: any, originalEntries: CostLedgerEntry[]): CostLedgerEntry[] {
+export interface ReadUniverResult { entries: CostLedgerEntry[]; duplicatedRows: number }
+
+export function readUniverEntries(univer: any, originalEntries: CostLedgerEntry[]): ReadUniverResult {
   const ID_COL = SHEET_COLS.length // 隐藏 id 列索引
 
   // 尝试多种方式获取 worksheet（兼容 Univer 0.25.x 不同 API 路径）
@@ -257,15 +260,16 @@ export function readUniverEntries(univer: any, originalEntries: CostLedgerEntry[
   const headerProbe = SHEET_COLS.map((_, i) => getCellValue(0, i)).join('|')
   const expectedHeader = SHEET_COLS.map(c => c.label).join('|')
   if (headerProbe !== expectedHeader) {
-    throw new Error('Univer 单元格读取接口不兼容（表头校验失败），已阻止保存以避免数据损坏')
+    throw new Error('Univer 表头校验失败：若您修改过表头标题请恢复原样，否则说明读取接口不兼容，已阻止保存')
   }
 
   // 构建 id → originalEntry 映射（M2: 不依赖数组下标）
   const entryById = new Map<number, CostLedgerEntry>()
   originalEntries.forEach(e => { if (e.id) entryById.set(e.id, e) })
 
-  // N2 修复：重复 id 检测（防复制整行导致两条 UPDATE 打同一行）
+  // N2 修复：重复 id 自愈计数
   const seenIds = new Set<number>()
+  let duplicatedCount = 0
 
   const result: CostLedgerEntry[] = []
   for (let ri = 1; ; ri++) {
@@ -281,12 +285,14 @@ export function readUniverEntries(univer: any, originalEntries: CostLedgerEntry[
       throw new Error(`数据行超出安全上限（${originalEntries.length + 200} 行），请分批保存`)
     }
 
-    const rowId = parseInt(idRaw, 10) || 0
-    // N2: 重复 id 检测
+    let rowId = parseInt(idRaw, 10) || 0
+    // N2: 重复 id 自愈——复制行视为新增（而非拒绝，因 id 列隐藏用户无法自救）
     if (rowId > 0 && seenIds.has(rowId)) {
-      throw new Error(`第 ${ri} 行 id 重复（${rowId}），请勿复制整行，新增行请留空 id 列`)
+      rowId = 0 // 走 INSERT 路径
+      duplicatedCount++
+    } else if (rowId > 0) {
+      seenIds.add(rowId)
     }
-    if (rowId > 0) seenIds.add(rowId)
     const original = rowId > 0 ? entryById.get(rowId) : undefined
 
     const directionRaw = getCellValue(ri, 2)
@@ -316,5 +322,5 @@ export function readUniverEntries(univer: any, originalEntries: CostLedgerEntry[
   if (result.length === 0) {
     throw new Error('Univer 读取结果为空，请确认表格中有数据')
   }
-  return result
+  return { entries: result, duplicatedRows: duplicatedCount }
 }

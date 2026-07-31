@@ -62,9 +62,10 @@ export default function CostLedgerSpreadsheet({
     setSaving(true)
     try {
       // 从 Univer 实例读取当前编辑状态（包含用户修改 + 新增行）
-      const currentEntries = univerInstanceRef.current
+      const readResult = univerInstanceRef.current
         ? readUniverEntries(univerInstanceRef.current, entries)
-        : entries
+        : { entries, duplicatedRows: 0 }
+      const currentEntries = readResult.entries
 
       // 构建 POST 载荷：金额已为分（INTEGER）
       const sheetPayload = currentEntries.map(e => ({
@@ -87,11 +88,10 @@ export default function CostLedgerSpreadsheet({
       )
       if (res.success) {
         const d = res.data
-        if (d?.skipped) {
-          showToast(`已保存 ${d.count} 条，${d.skipped} 条无权修改被跳过`, 'warning')
-        } else {
-          showToast(`已保存 ${d?.count ?? currentEntries.length} 条记录`, 'success')
-        }
+        const parts: string[] = [`已保存 ${d?.count ?? currentEntries.length} 条`]
+        if (d?.skipped) parts.push(`${d.skipped} 条无权修改被跳过`)
+        if (readResult.duplicatedRows > 0) parts.push(`${readResult.duplicatedRows} 行复制行已作为新增保存`)
+        showToast(parts.join('，'), d?.skipped ? 'warning' : 'success')
       } else {
         showToast(res.error || '保存失败', 'error')
       }
