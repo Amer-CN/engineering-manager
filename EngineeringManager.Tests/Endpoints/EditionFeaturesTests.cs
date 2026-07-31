@@ -5,98 +5,52 @@ namespace EngineeringManager.Tests.Endpoints;
 
 /// <summary>
 /// X12.1: EditionFeatures 映射表正确性测试。
-/// 验证 personal 为空集、cloudSync 在两个 edition 下都为 false。
+/// 使用 internal GetFeaturesForEdition() 纯函数验证映射表，
+/// 不依赖环境变量、不依赖反射、不依赖 config.json。
 /// </summary>
 public class EditionFeaturesTests
 {
     [Fact]
-    public void Personal_GetActiveFeatures_ReturnsEmpty()
+    public void Personal_GetFeaturesForEdition_ReturnsEmpty()
     {
-        // Arrange: force edition to personal
-        Environment.SetEnvironmentVariable("ENGINEERING_MANAGER_EDITION", "personal");
-        // Reset cached edition via reflection
-        var field = typeof(ApiConfig).GetField("_cachedEdition",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-        field!.SetValue(null, null);
-
-        try
-        {
-            // Act
-            var features = EditionFeatures.GetActiveFeatures();
-
-            // Assert: personal must be empty
-            Assert.Empty(features);
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable("ENGINEERING_MANAGER_EDITION", null);
-            field.SetValue(null, null);
-        }
+        var features = EditionFeatures.GetFeaturesForEdition("personal");
+        Assert.Empty(features);
     }
 
     [Fact]
-    public void CloudSync_IsFalse_InBothEditions()
+    public void Enterprise_GetFeaturesForEdition_Returns5()
     {
-        var field = typeof(ApiConfig).GetField("_cachedEdition",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-
-        // Test personal
-        Environment.SetEnvironmentVariable("ENGINEERING_MANAGER_EDITION", "personal");
-        field!.SetValue(null, null);
-        Assert.False(EditionFeatures.Has(EditionFeatures.CloudSync),
-            "cloudSync must be false in personal");
-
-        // Test enterprise
-        Environment.SetEnvironmentVariable("ENGINEERING_MANAGER_EDITION", "enterprise");
-        field.SetValue(null, null);
-        Assert.False(EditionFeatures.Has(EditionFeatures.CloudSync),
-            "cloudSync must be false in enterprise");
-
-        // Cleanup
-        Environment.SetEnvironmentVariable("ENGINEERING_MANAGER_EDITION", null);
-        field.SetValue(null, null);
+        var features = EditionFeatures.GetFeaturesForEdition("enterprise");
+        Assert.Equal(5, features.Length);
+        Assert.Contains(EditionFeatures.UserManagement, features);
+        Assert.Contains(EditionFeatures.RoleManagement, features);
+        Assert.Contains(EditionFeatures.ProjectAuthorization, features);
+        Assert.Contains(EditionFeatures.MultiUserDataScope, features);
+        Assert.Contains(EditionFeatures.AuditUserFilter, features);
     }
 
     [Fact]
-    public void Enterprise_HasExpectedFeatures()
+    public void CloudSync_NotIn_AnyEdition()
     {
-        var field = typeof(ApiConfig).GetField("_cachedEdition",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-        Environment.SetEnvironmentVariable("ENGINEERING_MANAGER_EDITION", "enterprise");
-        field!.SetValue(null, null);
-
-        try
-        {
-            Assert.True(EditionFeatures.Has(EditionFeatures.UserManagement));
-            Assert.True(EditionFeatures.Has(EditionFeatures.RoleManagement));
-            Assert.True(EditionFeatures.Has(EditionFeatures.ProjectAuthorization));
-            Assert.True(EditionFeatures.Has(EditionFeatures.MultiUserDataScope));
-            Assert.True(EditionFeatures.Has(EditionFeatures.AuditUserFilter));
-            Assert.False(EditionFeatures.Has(EditionFeatures.CloudSync));
-
-            var features = EditionFeatures.GetActiveFeatures();
-            Assert.Equal(5, features.Length);
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable("ENGINEERING_MANAGER_EDITION", null);
-            field.SetValue(null, null);
-        }
+        var personal = EditionFeatures.GetFeaturesForEdition("personal");
+        var enterprise = EditionFeatures.GetFeaturesForEdition("enterprise");
+        Assert.DoesNotContain(EditionFeatures.CloudSync, personal);
+        Assert.DoesNotContain(EditionFeatures.CloudSync, enterprise);
     }
 
     [Fact]
-    public void ReservedKeys_NotInAnyEdition()
+    public void UnknownEdition_ReturnsEmpty()
     {
-        // AllFeatureKeys中不存在「不属于任何edition集合、且未在预留白名单中」的键
-        var personalSet = new HashSet<string>(); // personal is empty
-        var enterpriseSet = new HashSet<string>
-        {
-            EditionFeatures.UserManagement,
-            EditionFeatures.RoleManagement,
-            EditionFeatures.ProjectAuthorization,
-            EditionFeatures.MultiUserDataScope,
-            EditionFeatures.AuditUserFilter,
-        };
+        var features = EditionFeatures.GetFeaturesForEdition("typo-edition");
+        Assert.Empty(features);
+    }
+
+    [Fact]
+    public void ReservedKeys_CoverOrphanedKeys()
+    {
+        // AllFeatureKeys 中每个键要么属于某 edition，要么在预留白名单
+        var personalSet = new HashSet<string>(EditionFeatures.GetFeaturesForEdition("personal"));
+        var enterpriseSet = new HashSet<string>(EditionFeatures.GetFeaturesForEdition("enterprise"));
 
         foreach (var key in EditionFeatures.AllFeatureKeys)
         {
@@ -105,5 +59,12 @@ public class EditionFeaturesTests
             Assert.True(inSomeEdition || isReserved,
                 $"Key '{key}' is neither in any edition nor in ReservedKeys");
         }
+    }
+
+    [Fact]
+    public void Has_PublicApi_NonExistentKey_ReturnsFalse()
+    {
+        // 覆盖公共入口 Has()：不存在的键必返 false
+        Assert.False(EditionFeatures.Has("nonExistentKey"));
     }
 }

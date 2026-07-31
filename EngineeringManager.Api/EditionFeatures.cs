@@ -25,17 +25,14 @@ public static class EditionFeatures
     public const string CloudSync = "cloudSync";
 
     /// <summary>全部已定义的能力键（从常量区派生的唯一列表）。</summary>
-    public static readonly string[] AllFeatureKeys =
-    {
-        UserManagement, RoleManagement, ProjectAuthorization,
-        MultiUserDataScope, AuditUserFilter, CloudSync,
-    };
+    public static readonly System.Collections.Immutable.ImmutableArray<string> AllFeatureKeys =
+        System.Collections.Immutable.ImmutableArray.Create(
+            UserManagement, RoleManagement, ProjectAuthorization,
+            MultiUserDataScope, AuditUserFilter, CloudSync);
 
     /// <summary>预留能力白名单：当前两个 edition 都不启用，未来按需开放。</summary>
-    public static readonly HashSet<string> ReservedKeys = new()
-    {
-        CloudSync,
-    };
+    public static readonly System.Collections.Immutable.ImmutableHashSet<string> ReservedKeys =
+        System.Collections.Immutable.ImmutableHashSet.Create(CloudSync);
 
     // ── edition -> 能力集合映射（唯一映射点，两个 edition 都是显式集合） ──
     private static readonly Dictionary<string, HashSet<string>> EditionMap = new()
@@ -81,16 +78,29 @@ public static class EditionFeatures
         }
     }
 
-    /// <summary>当前 edition 是否拥有指定能力。</summary>
+    /// <summary>当前 edition 是否拥有指定能力。首次调用时自动触发 ValidateEdition。</summary>
     public static bool Has(string featureKey)
     {
+        ValidateEdition();
         var edition = ApiConfig.GetEdition();
         return EditionMap.TryGetValue(edition, out var features) && features.Contains(featureKey);
+    }
+
+    /// <summary>
+    /// 纯函数：返回指定 edition 的能力列表（不读 config，不依赖缓存）。
+    /// 供测试直接验证映射表正确性，无需环境变量或反射。
+    /// </summary>
+    internal static string[] GetFeaturesForEdition(string edition)
+    {
+        return EditionMap.TryGetValue(edition, out var features)
+            ? features.ToArray()
+            : Array.Empty<string>();
     }
 
     /// <summary>当前 edition 的全部能力列表（供 GET /api/config 下发前端）。</summary>
     public static string[] GetActiveFeatures()
     {
+        ValidateEdition();
         var edition = ApiConfig.GetEdition();
         return EditionMap.TryGetValue(edition, out var features)
             ? features.ToArray()
