@@ -2,14 +2,15 @@
 // 语义红线：一张卡 = 一个类别分组，不是一行图纸（DESIGN.md § Stage Surfaces · 决策 4）
 import type { Drawing } from '../../../types/electron'
 import type { StackGroup } from '@/components/ui/FolderStack3D'
-import { categories } from '../../drawingsConstants'
+import { categories, normalizeDrawingCategory } from '../../drawingsConstants'
 
 export function buildDrawingStackGroups(drawings: Drawing[]): StackGroup[] {
   const total = drawings.length
   if (total === 0) return []
   const byCat = new Map<string, Drawing[]>()
   for (const d of drawings) {
-    const cat = d.category && categories.includes(d.category) ? d.category : '其他'
+    // 与筛选/展示共用同一归一函数，保证卡面计数 = 打开后行数 = pill 筛「其他」口径
+    const cat = normalizeDrawingCategory(d.category)
     const list = byCat.get(cat)
     if (list) list.push(d)
     else byCat.set(cat, [d])

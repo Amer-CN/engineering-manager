@@ -7,6 +7,7 @@ import { renderHook, act } from '@testing-library/react'
 import type { Drawing } from '@/types/electron'
 import { buildDrawingStackGroups } from '@/components/features/drawings/drawingStackGroups'
 import { useDrawingsView } from '@/components/features/drawings/useDrawingsView'
+import { normalizeDrawingCategory } from '@/components/drawingsConstants'
 
 const d = (id: number, category: string, projectId: number, createdAt: string): Drawing =>
   ({ id, name: `图${id}`, category, projectId, createdAt, filePath: `${id}.png`, remarks: '', position: '' } as Drawing)
@@ -33,6 +34,29 @@ describe('buildDrawingStackGroups', () => {
 
   it('空数据返回空数组', () => {
     expect(buildDrawingStackGroups([])).toEqual([])
+  })
+})
+
+describe('normalizeDrawingCategory（B1 方案 C：全库唯一归一判定点）', () => {
+  it('合法类别原样返回；脏值/空值归「其他」', () => {
+    expect(normalizeDrawingCategory('结构图')).toBe('结构图')
+    expect(normalizeDrawingCategory('其他')).toBe('其他')
+    expect(normalizeDrawingCategory('结构')).toBe('其他')   // 脏值（旧数据/手输）
+    expect(normalizeDrawingCategory('')).toBe('其他')
+    expect(normalizeDrawingCategory(null)).toBe('其他')
+    expect(normalizeDrawingCategory(undefined)).toBe('其他')
+  })
+
+  it('堆叠分组与筛选口径一致：脏类别图纸计入「其他」卡且能被同一归一筛出', () => {
+    const rows = [
+      d(1, '其他', 1, '2026-07-01'),      // 真「其他」类别
+      d(2, '竖向不存在', 1, '2026-07-02'), // 脏类别
+    ]
+    const other = buildDrawingStackGroups(rows).find(g => g.name === '其他')!
+    expect(other.primaryValue).toBe(2) // 混合桶计数 = 2
+    // 打开卡后的筛选谓词（Drawings.tsx 同款逻辑）必须筛出同样 2 行
+    const visible = rows.filter(r => normalizeDrawingCategory(r.category) === '其他')
+    expect(visible).toHaveLength(2)
   })
 })
 
