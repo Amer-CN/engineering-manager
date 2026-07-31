@@ -61,10 +61,12 @@ public static class CostLedgerEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var scope = CurrentUser.GetDataScope(ctx);
-            var affected = await db.ExecuteAsync(@"UPDATE cost_ledger SET voucher_no=@VoucherNo,date=@Date,direction=@Direction,category=@Category,
-                amount=@Amount,counterparty=@Counterparty,channel=@Channel,summary=@Summary,notes=@Notes,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id",
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var affected = await db.ExecuteAsync($@"UPDATE cost_ledger SET voucher_no=@VoucherNo,date=@Date,direction=@Direction,category=@Category,
+                amount=@Amount,counterparty=@Counterparty,channel=@Channel,summary=@Summary,notes=@Notes,updated_at=@Now, version=version+1, last_modified_at=@Now
+                WHERE id=@Id AND {CurrentUser.UserFilterWithAuthorizedProjects(scope)}",
                 new { dto.VoucherNo, dto.Date, dto.Direction, dto.Category, dto.Amount,
-                      dto.Counterparty, dto.Channel, dto.Summary, dto.Notes, Now = now(), dto.Id });
+                      dto.Counterparty, dto.Channel, dto.Summary, dto.Notes, Now = now(), dto.Id, Uid = uid, IsAdmin = isAdmin });
             return affected > 0 ? Common.Ok() : Results.Forbid();
         });
 
@@ -72,7 +74,8 @@ public static class CostLedgerEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var scope = CurrentUser.GetDataScope(ctx);
-            return (await db.ExecuteAsync("UPDATE cost_ledger SET deleted_at=@Now WHERE id=@Id AND deleted_at IS NULL", new { Id = id, Now = now() })) > 0 ? Common.Ok() : Results.Forbid();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            return (await db.ExecuteAsync($"UPDATE cost_ledger SET deleted_at=@Now WHERE id=@Id AND deleted_at IS NULL AND {CurrentUser.UserFilterWithAuthorizedProjects(scope)}", new { Id = id, Now = now(), Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
         });
 
         app.MapPost("/api/cost-ledger/batch", async (HttpContext ctx, List<CostLedgerEntryDto> entries, IDbConnection db) =>
@@ -181,8 +184,9 @@ public static class CostLedgerEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var scope = CurrentUser.GetDataScope(ctx);
-            var affected = await db.ExecuteAsync("UPDATE cost_ledger_batches SET name=@Name, version=version+1, last_modified_at=@Now WHERE id=@Id",
-                new { Name = dto.NewName ?? "", Now = now(), Id = id });
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var affected = await db.ExecuteAsync($"UPDATE cost_ledger_batches SET name=@Name, version=version+1, last_modified_at=@Now WHERE id=@Id AND {CurrentUser.UserFilterCompany(scope)}",
+                new { Name = dto.NewName ?? "", Now = now(), Id = id, Uid = uid, IsAdmin = isAdmin });
             return affected > 0 ? Common.Ok() : Results.Forbid();
         });
 
@@ -190,7 +194,8 @@ public static class CostLedgerEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var scope = CurrentUser.GetDataScope(ctx);
-            return (await db.ExecuteAsync("DELETE FROM cost_ledger_batches WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Results.Forbid();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            return (await db.ExecuteAsync($"DELETE FROM cost_ledger_batches WHERE id=@Id AND {CurrentUser.UserFilterCompany(scope)}", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
         });
 
         // ═══════════════════════════════════════════════════════════
@@ -212,6 +217,105 @@ public static class CostLedgerEndpoints
                 VALUES (@Pattern,@Category,@Direction,@Priority,COALESCE((SELECT hit_count FROM cost_ledger_match_rules WHERE pattern=@Pattern),0)+1,@Now,@Now)",
                 new { dto.Pattern, dto.Category, dto.Direction, dto.Priority, Now = now() });
             return Common.Ok();
+        });
+
+        // ═══════════════════════════════════════════════════════════
+        // 电子表格序列化端点（Univer Sheet 视图）
+        // ═══════════════════════════════════════════════════════════
+
+        // GET /api/cost-ledger/{batchId}/sheet — 查询 batch 下全部条目，返回 JSON 数组
+        app.MapGet("/api/cost-ledger/{batchId}/sheet", (HttpContext ctx, long batchId, IDbConnection db) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
+            var sql = $"SELECT * FROM [cost_ledger] WHERE [batch_id]=@BatchId AND {CurrentUser.UserFilterCompany(scope)} AND [deleted_at] IS NULL ORDER BY [date] DESC, [id] DESC";
+            var rows = db.Query(sql, new { Uid = uid, IsAdmin = isAdmin, BatchId = batchId });
+            return Common.Ok(rows);
+        });
+
+        // POST /api/cost-ledger/{batchId}/sheet — 批量 upsert 电子表格编辑结果
+        // 金额：INTEGER（分），前端已传分，直接入库；SQL 全参数化；表名 [] 包裹
+        app.MapPost("/api/cost-ledger/{batchId}/sheet", async (HttpContext ctx, long batchId, CostLedgerSheetDto dto, IDbConnection db) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
+            if (dto.Entries == null || dto.Entries.Count == 0)
+                return Common.Fail("没有可保存的数据");
+
+            // B1 修复：先校验 batch 归属（口径与 UPDATE 一致：UserFilterWithAuthorizedProjects）
+            // 查 [id] 判存在性，[project_id] 单独取值（解决 long? 二义性）
+            var batchRow = db.QueryFirstOrDefault<dynamic>(
+                $"SELECT [id], [project_id] FROM [cost_ledger_batches] WHERE [id]=@BatchId AND {CurrentUser.UserFilterWithAuthorizedProjects(scope)}",
+                new { BatchId = batchId, Uid = uid, IsAdmin = isAdmin });
+            if (batchRow == null)
+                return Results.Json(new { success = false, error = "无权操作该批次" }, statusCode: 403);
+            // B1: 批次未关联项目时拒绝新增（防止写入 project_id=0 孤儿行）
+            long? batchProjectId = batchRow.project_id != null ? Convert.ToInt64(batchRow.project_id) : null;
+            if (batchProjectId == null && dto.Entries.Any(r => !(r.Id > 0)))
+                return Common.Fail("该批次未关联项目，无法新增行");
+
+            int updated = 0, inserted = 0, skipped = 0;
+            using var tx = db.BeginTransaction();
+            try
+            {
+                foreach (var row in dto.Entries)
+                {
+                    // 金额强制 INTEGER（分），防御性取整
+                    var amountCents = (long)Math.Round((row.Amount ?? 0));
+
+                    if (row.Id.HasValue && row.Id.Value > 0)
+                    {
+                        // UPDATE 已有行（附加数据权限过滤，防越权改写）
+                        var affected = await db.ExecuteAsync(@"UPDATE [cost_ledger] SET
+                            [voucher_no]=@VoucherNo,[date]=@Date,[direction]=@Direction,[category]=@Category,
+                            [amount]=@Amount,[counterparty]=@Counterparty,[channel]=@Channel,
+                            [summary]=@Summary,[notes]=@Notes,[updated_at]=@Now,[version]=[version]+1,[last_modified_at]=@Now
+                            WHERE [id]=@Id AND [batch_id]=@BatchId AND " + CurrentUser.UserFilterWithAuthorizedProjects(scope),
+                            new { row.Id, row.VoucherNo, row.Date, row.Direction, row.Category,
+                                  Amount = amountCents, row.Counterparty, row.Channel, row.Summary, row.Notes,
+                                  BatchId = batchId, Uid = uid, IsAdmin = isAdmin, Now = now() }, tx);
+                        if (affected > 0) updated++; else skipped++;
+                    }
+                    else
+                    {
+                        // INSERT 新行（project_id 一律用 batch 查出的值，忽略 DTO）
+                        await db.ExecuteAsync(@"INSERT INTO [cost_ledger]
+                            ([project_id],[batch_id],[voucher_no],[date],[direction],[category],[amount],[counterparty],[channel],[summary],[notes],[created_by],[created_at],[updated_at],[last_modified_at])
+                            VALUES (@ProjectId,@BatchId,@VoucherNo,@Date,@Direction,@Category,@Amount,@Counterparty,@Channel,@Summary,@Notes,@CreatedBy,@Now,@Now,@Now)",
+                            new { ProjectId = batchProjectId!.Value, BatchId = batchId, row.VoucherNo, row.Date, row.Direction, row.Category,
+                                  Amount = amountCents, row.Counterparty, row.Channel, row.Summary, row.Notes,
+                                  CreatedBy = uid, Now = now() }, tx);
+                        inserted++;
+                    }
+                }
+                tx.Commit();
+
+                // 审计日志
+                try
+                {
+                    await db.ExecuteAsync(@"INSERT INTO [audit_logs]
+                        ([action],[level],[user_id],[user_name],[resource_type],[resource_id],[details],[ip_address],[created_at])
+                        VALUES (@Action,@Level,@UserId,@UserName,@Resource,@ResourceId,@Details,@IpAddress,@CreatedAt)",
+                        new { Action = "update", Level = "info", UserId = uid, UserName = uid,
+                              Resource = "cost_ledger_sheet", ResourceId = batchId.ToString(),
+                              Details = $"批量保存电子表格 {updated + inserted} 条（跳过 {skipped}）",
+                              IpAddress = ctx.Connection.RemoteIpAddress?.ToString() ?? "",
+                              CreatedAt = now() });
+                }
+                catch (Exception auditEx)
+                {
+                    Console.Error.WriteLine($"[CostLedger] sheet 审计日志写入失败: {auditEx.Message}");
+                }
+
+                return Common.Ok(new { count = updated + inserted, updated, inserted, skipped });
+            }
+            catch (Exception ex)
+            {
+                tx.Rollback();
+                return Common.ServerError("cost-ledger-sheet-save", ex);
+            }
         });
     }
 }

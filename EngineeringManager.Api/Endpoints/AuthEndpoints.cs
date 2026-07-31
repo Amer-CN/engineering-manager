@@ -182,16 +182,21 @@ public static class AuthEndpoints
         // ═══════════════════════════════════════════════════════════
 
         app.MapGet("/api/roles", (IDbConnection db) =>
-            Common.Ok(db.Query("SELECT id, name, permissions FROM roles ORDER BY id")));
+        {
+            if (!EditionFeatures.Has(EditionFeatures.RoleManagement)) return Results.NotFound();
+            return Common.Ok(db.Query("SELECT id, name, permissions FROM roles ORDER BY id"));
+        });
 
         app.MapGet("/api/roles/{id}", (string id, IDbConnection db) =>
         {
+            if (!EditionFeatures.Has(EditionFeatures.RoleManagement)) return Results.NotFound();
             var r = db.QueryFirstOrDefault("SELECT id, name, permissions FROM roles WHERE id=@Id", new { Id = id });
             return r is not null ? Common.Ok(r) : Common.NotFound("角色不存在");
         });
 
         app.MapPut("/api/roles", async (RoleUpdateDto dto, IDbConnection db) =>
         {
+            if (!EditionFeatures.Has(EditionFeatures.RoleManagement)) return Results.NotFound();
             var affected = await db.ExecuteAsync("UPDATE roles SET permissions=@Permissions WHERE id=@Id",
                 new { Id = dto.RoleId, Permissions = dto.Permissions });
             return affected > 0 ? Common.Ok() : Common.NotFound("角色不存在");
@@ -199,6 +204,7 @@ public static class AuthEndpoints
 
         app.MapPost("/api/roles/{id}/reset", (string id, IDbConnection db) =>
         {
+            if (!EditionFeatures.Has(EditionFeatures.RoleManagement)) return Results.NotFound();
             var defaults = Common.GetDefaultPermissions(id);
             if (defaults.Count == 0) return Common.Fail("无默认权限");
             db.Execute("UPDATE roles SET permissions=@Permissions WHERE id=@Id",
@@ -211,16 +217,21 @@ public static class AuthEndpoints
         // ═══════════════════════════════════════════════════════════
 
         app.MapGet("/api/users", (IDbConnection db) =>
-            Common.Ok(db.Query("SELECT id, username, display_name, role_id, status, created_at FROM users ORDER BY created_at DESC")));
+        {
+            if (!EditionFeatures.Has(EditionFeatures.UserManagement)) return Results.NotFound();
+            return Common.Ok(db.Query("SELECT id, username, display_name, role_id, status, created_at FROM users ORDER BY created_at DESC"));
+        });
 
         app.MapGet("/api/users/{id}", (string id, IDbConnection db) =>
         {
+            if (!EditionFeatures.Has(EditionFeatures.UserManagement)) return Results.NotFound();
             var u = db.QueryFirstOrDefault("SELECT id, username, display_name, role_id, status, created_at FROM users WHERE id=@Id", new { Id = id });
             return u is not null ? Common.Ok(u) : Common.NotFound("用户不存在");
         });
 
         app.MapPost("/api/users", async (UserDto dto, IDbConnection db) =>
         {
+            if (!EditionFeatures.Has(EditionFeatures.UserManagement)) return Results.NotFound();
             var salt = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16)).ToLower();
             var hash = Common.HashPassword(dto.Password ?? "", salt, 2);
             var id = dto.Id ?? $"user-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
@@ -232,6 +243,7 @@ public static class AuthEndpoints
 
         app.MapPut("/api/users", async (UserDto dto, IDbConnection db) =>
         {
+            if (!EditionFeatures.Has(EditionFeatures.UserManagement)) return Results.NotFound();
             if (string.IsNullOrEmpty(dto.Password))
             {
                 var affected = await db.ExecuteAsync(@"UPDATE users SET display_name=@DisplayName,role_id=@RoleId,status=@Status WHERE id=@Id",
@@ -250,7 +262,10 @@ public static class AuthEndpoints
         });
 
         app.MapDelete("/api/users/{id}", async (string id, IDbConnection db) =>
-            (await db.ExecuteAsync("DELETE FROM users WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("用户不存在"));
+        {
+            if (!EditionFeatures.Has(EditionFeatures.UserManagement)) return Results.NotFound();
+            return (await db.ExecuteAsync("DELETE FROM users WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("用户不存在");
+        });
 
         // v0.72.0: PII 数据回填 (老库 PII 明文 → _enc 列加密)
         // 策略: 遍历 4 张表, 查 _enc 为空的记录, 加密原明文列写入 _enc
@@ -340,6 +355,7 @@ public static class AuthEndpoints
 
         app.MapGet("/api/admin/project-authorizations", (HttpContext ctx, IDbConnection db) =>
         {
+            if (!EditionFeatures.Has(EditionFeatures.ProjectAuthorization)) return Results.NotFound();
             var uid = CurrentUser.GetUserId(ctx);
             if (string.IsNullOrEmpty(uid)) return Common.Fail("未登录");
             if (!CurrentUser.IsAdmin(ctx)) return Results.Forbid();
@@ -353,6 +369,7 @@ public static class AuthEndpoints
 
         app.MapGet("/api/admin/project-authorizations/by-user/{userId}", (HttpContext ctx, string userId, IDbConnection db) =>
         {
+            if (!EditionFeatures.Has(EditionFeatures.ProjectAuthorization)) return Results.NotFound();
             var uid = CurrentUser.GetUserId(ctx);
             if (string.IsNullOrEmpty(uid)) return Common.Fail("未登录");
             if (!CurrentUser.IsAdmin(ctx)) return Results.Forbid();
@@ -364,6 +381,7 @@ public static class AuthEndpoints
 
         app.MapPost("/api/admin/project-authorizations", async (HttpContext ctx, HttpRequest req, IDbConnection db) =>
         {
+            if (!EditionFeatures.Has(EditionFeatures.ProjectAuthorization)) return Results.NotFound();
             var uid = CurrentUser.GetUserId(ctx);
             if (string.IsNullOrEmpty(uid)) return Common.Fail("未登录");
             if (!CurrentUser.IsAdmin(ctx)) return Results.Forbid();
@@ -392,6 +410,7 @@ public static class AuthEndpoints
 
         app.MapDelete("/api/admin/project-authorizations/{projectId}/{userId}", (HttpContext ctx, long projectId, string userId, IDbConnection db) =>
         {
+            if (!EditionFeatures.Has(EditionFeatures.ProjectAuthorization)) return Results.NotFound();
             var uid = CurrentUser.GetUserId(ctx);
             if (string.IsNullOrEmpty(uid)) return Common.Fail("未登录");
             if (!CurrentUser.IsAdmin(ctx)) return Results.Forbid();
@@ -460,6 +479,42 @@ public static class AuthEndpoints
                 return Common.Fail($"Decrypt 失败: {Common.Sanitize(ex.Message)}");
             }
         });
+
+        // ═══════════════════════════════════════════════════════════
+        // M-EDITION1: 个人资料（个人版新增字段）
+        // ═══════════════════════════════════════════════════════════
+
+        app.MapGet("/api/user-profile", (HttpContext ctx, IDbConnection db) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx);
+            if (string.IsNullOrEmpty(uid)) return Common.Fail("未登录");
+            var row = db.QueryFirstOrDefault(
+                @"SELECT display_name, company_name, position, specialty, business_description
+                  FROM users WHERE id=@Uid", new { Uid = uid });
+            return row is not null ? Common.Ok(row) : Common.NotFound("用户不存在");
+        });
+
+        app.MapPut("/api/user-profile", async (HttpContext ctx, HttpRequest req, IDbConnection db) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx);
+            if (string.IsNullOrEmpty(uid)) return Common.Fail("未登录");
+            UserProfileDto dto;
+            try
+            {
+                using var reader = new System.IO.StreamReader(req.Body);
+                var bodyText = await reader.ReadToEndAsync();
+                dto = System.Text.Json.JsonSerializer.Deserialize<UserProfileDto>(bodyText,
+                    new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new UserProfileDto();
+            }
+            catch (Exception ex) { return Common.Fail($"参数解析失败: {Common.Sanitize(ex.Message)}"); }
+
+            var affected = await db.ExecuteAsync(
+                @"UPDATE users SET company_name=@CompanyName, position=@Position,
+                  specialty=@Specialty, business_description=@BusinessDescription
+                  WHERE id=@Uid",
+                new { uid, dto.CompanyName, dto.Position, dto.Specialty, dto.BusinessDescription });
+            return affected > 0 ? Common.Ok() : Common.NotFound("用户不存在");
+        });
     }
 
     public class UnmaskPiiDto
@@ -472,6 +527,14 @@ public static class AuthEndpoints
     {
         public long ProjectId { get; set; }
         public string UserId { get; set; } = "";
+    }
+
+    public class UserProfileDto
+    {
+        public string CompanyName { get; set; } = "";
+        public string Position { get; set; } = "";
+        public string Specialty { get; set; } = "";
+        public string BusinessDescription { get; set; } = "";
     }
 }
 

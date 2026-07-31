@@ -113,10 +113,24 @@ Bedrock 把工程管家当成一台**专业驾驶舱级的精密仪器**来对�
 
 ### Neutral（三主题的底与面）
 - **Paper / 暖白纸**（默认旗舰）：底 `oklch(98.6% 0.009 85)`，暖白如优质打印纸，不发灰。
-- **Snow / 清冷白**：底 `oklch(99% 0.0015 250)`，最干净锐利的报表视图。
+- **Snow / 清冷白**：底 `oklch(98.8% 0 0)`（chroma 0 中性冷白，代码真值，见下方对照表），最干净锐利的报表视图。
 - **Graphite / 石墨黑**：底 `oklch(20.5% 0.003 75)` ≈ Notion #191919 柔和石墨，字 `oklch(86% 0.003 80)` ≈ #D4D4D4，中性无色偏（不偏蓝）。
 - **Panel / Card**：在底色上以 OKLCH 亮度递增分层，用亮度差 + 1px 发丝边拉开层级，不靠投影。
 - **Content 三级**（正文 / 次级 / 弱化）：均为极低彩度中性，无纯黑纯白。
+
+### 文档名 ↔ `data-theme` 对照
+
+设计文档用 Paper / Snow / Graphite 作契约语汇，代码实现用 `data-theme` 属性值（`src/hooks/useTheme.ts` 的 `ThemeScheme`）。对应关系按 `--bg` 实际值核实（命名反直觉，勿凭名字猜）：
+
+| 文档名（契约语汇） | `data-theme` 值 | `--bg` 实际值（`src/index.css`） |
+|---|---|---|
+| Paper / 暖白纸 | `white` | `oklch(98.6% 0.009 85)`（暖白，hue 85） |
+| Snow / 清冷白 | `sandstone` | `oklch(98.8% 0 0)`（中性冷白，chroma 0） |
+| Graphite / 石墨黑 | `graphite` | `oklch(20.5% 0.003 75)` |
+
+> 文档名为契约语汇，代码取值以 `data-theme` 为准。（Verdant 舞台主题用 `data-theme="verdant"`，属局部舞台区、非用户可选全局外观，不入此表。）
+>
+> ⚠ **命名是反的，勿照名字选主题**：叫 `sandstone`（砂岩，听着暖）的实为 chroma 0 的绝对中性冷白（Snow）；叫 `white` 的反而带 hue 85 暖调（Paper）。改名牵连 `useTheme.ts` + 切换器 + 测试快照 + design.qa.yaml，爆炸半径大于收益，故不改名、以本表记账。
 
 ### State（唯一的彩色，只用于语义）
 - **成功绿 / 警告琥珀 / 危险红**（低饱和）：仅用于状态药丸、告警、趋势方向（如"逾期"红药丸），是全屏几乎唯一出现的彩色。
@@ -125,6 +139,30 @@ Bedrock 把工程管家当成一台**专业驾驶舱级的精密仪器**来对�
 **The Single Token Rule.** 所有颜色必须走语义 token（surface / content / border / accent / state-*）。禁止在组件里硬编码 `bg-white`、`slate-*`、hex 值。换主题只改 `:root` 变量，绝不再写 `[data-theme] .bg-slate-100 {}` 这类覆盖补丁。
 
 **The Color-For-Meaning-Only Rule.** 界面主色是**墨色**（非彩色），靠明度对比承担强调。真正的彩色（绿 / 琥珀 / 红）只允许表达**语义状态**，任意一屏彩色占比应极小。禁止把彩色当装饰底色，禁止电光蓝 / 霓虹等"信号色"式点缀。
+
+### Verdant / 苍绿（第四主题，展示型舞台专用）
+
+物理场景：**夜间的展示屏 / 投屏汇报**。它不是日常作业主题，不得设为默认，只在被 Stage-Surface 授权的屏上启用。
+
+| Token | 值 | 说明 |
+|---|---|---|
+| `--bg` | `oklch(14% 0.004 160)` | 暗底，色相 160，极低彩度，不偏蓝 |
+| `--bg-dot` | `oklch(22% 0.006 160)` | 点阵纹理，`opacity ≤ .30`，间距 5px |
+| `--card` / `--panel` | `oklch(18% 0.005 160)` / `oklch(21% 0.006 160)` | 仍按亮度递增分层 |
+| `--fg` / `--fg-muted` | `oklch(93% 0.004 160)` / `oklch(64% 0.006 160)` | 正文 / 弱化 |
+| `--border` | `oklch(30% 0.008 160)` | 1px 发丝线 |
+| `--accent` | `oklch(72% 0.20 148)` ≈ `#22DD5C` | **本主题唯一的彩色主色例外** |
+| `--accent-quiet` | `oklch(40% 0.10 148)` | hover 描边 / 静音态 |
+| `--on-accent` | `oklch(18% 0.03 148)` | accent 底上的文字 |
+| `--state-ok` / `--state-warn` / `--state-danger` | `oklch(50% 0.10 150)` / `oklch(60% 0.11 70)` / `oklch(52% 0.16 25)` | **四主题统一，禁止在 Verdant 下位移** |
+
+实现文件：`src/styles/theme-verdant.css`（只新增变量，不触碰 Paper / Snow / Graphite，符合 Bridge-Not-Overwrite）。
+
+**The Green-Scope Rule（决策 1 · 方案 D）.** Verdant 下 `--accent` 与 `--state-ok` 同为绿色相，不拆色、不位移，而是靠四道防线消歧：
+1. **矮参数可分**：两者同色相但明度差 22 点、饱和度差一倍（`72%/0.20` vs `50%/0.10`）。
+2. **作用域消歧**：绿在**舞台区**永远读作「聚焦 / 当前节点」；绿在**数据区**永远读作「状态正常」。
+3. **物理隔离**：由 Stage-Surface 第 ① 条保证两种语义不在同一区域共存。
+4. **双编码**：状态一律「颜色 + 文字」，绝不允许单靠色块表意（兼容色觉障碍与灰度打印）。
 
 ### shadcn ↔ Bedrock Token 映射
 
@@ -189,6 +227,29 @@ Bedrock 的布局服务于「驾驶舱级信息密度」：主框架为固定侧
 
 **The Glass-Only-Floats Rule.** backdrop-filter 毛玻璃只允许用于**浮层**（命令面板、弹出菜单、toast）。禁止给标题栏、输入框、卡片等常驻内容元素默认加玻璃 —— 那正是"一眼假 AI"的元凶。
 
+## Stage Surfaces（舞台化表面）
+
+Bedrock 默认是平的（Flat-By-Default）。但少数屏幕的任务本质是「在一堆东西里翻找」而不是「逐行核对数据」，允许以受约束的方式使用 3D / 玻璃 / 辉光。这类区域称为**舞台区**。
+
+**The Stage-Surface Rule.** 一个区域要被当作舞台区，必须同时满足四个条件，缺一不可：
+
+1. **不承载可编辑数据**。舞台区只做导航与概览；录入、改值、批量操作一律回到扁平视图。
+2. **存在等价的扁平视图**，且扁平视图是**默认**视图（舞台是主动进入的，选择持久化）。
+3. **颜色全取自 token**，不得为视觉效果新开硬编码色值。
+4. **绿只用于聚焦卡与当前节点**，不得拿来底色铺满。
+
+首个授权区域：`FolderStack3D`（首个试点 `src/components/Drawings.tsx`）。语义红线：**一张卡 = 一个分组**（专业 / 版本集），**不是一行数据**，卡数上限 40。超过则强制回退列表。
+
+**验收门（四条全部通过才能合入）**：
+- WebView2 集成显卡下 ≥ 55fps；低于 45fps 持续 500ms 自动降级（窗口 ±6 + 关玻璃模糊）。
+- `prefers-reduced-motion: reduce` 下关 3D，降为横向扁平轨道。
+- 首尾释放滚动权，严禁 scroll trapping；键盘（← → PageUp/Down Home/End Enter Esc）与 `role=listbox` 完备。
+- 每帧直写 style，聚焦索引变化才 `setState` 一次。
+
+**The Ambient-Glow Whitelist（决策 2）.** 环境辉光（`AmbientGlow`）只允许出现在三处：**SplashScreen 启动屏**、**Login / LockScreen**、**AI 助手主页**。其余任何屏幕一律无辉光；且辉光不得携带状态语义（不得用辉光颜色表达成功 / 失败）。
+
+**The Glass Whitelist（决策 3）.** `backdrop-filter` 只允许出现在六类浮层：**CommandPalette**、**Modal / Dialog**、**Toast**、**Popover / 下拉**、**顶部浮动 ActivityBar**、**Sidebar 飞出层**；外加经 Stage-Surface 授权的舞台区（FolderStack3D 聚焦卡与其 KPI 浮层）。明确禁止：**DataTable 行**、**Dashboard KPI 卡**、**StatusBar**、**TitleBar**、**输入框**。非聚焦卡一律用「伪砂面」（半透渐变 + 1px 内高光描边），不开 `backdrop-filter`，否则帧率必塌。
+
 ## Shapes
 
 形状语言由统一的圆角标尺与发丝级边界构成，见 frontmatter `rounded`：sm 9px（按钮 / chip / 导航项）、md 10px、lg 16px（卡片 / 容器）、xl 22px（对话输入等大圆角胶囊）。
@@ -243,6 +304,8 @@ AI 主页中央的助手形象。当前为**扁平中性占位**（墨色圆形 
 - **Do** 用背景染色 + 图标高亮表达导航选中态。
 - **Do** 把玻璃质感只留给命令面板等浮层（The Glass-Only-Floats Rule）。
 - **Do** 为每套主题写一句"物理场景"来强制明暗决策：Paper = 白天办公室、像优质打印纸；Snow = 需要最干净锐利的报表视图；Graphite = 夜间 / 偏好暗色、Notion 式柔和石墨。
+- **Do** 把 3D / 玻璃 / 辉光限在 Stage-Surface 授权区域，并为每个区域写明等价扁平视图。
+- **Do** 状态一律颜色 + 文字双编码（The Green-Scope Rule 第 4 条）。
 
 ### Don't:
 - **Don't** 硬编码 `bg-white`、`slate-*` 或 hex 颜色，也不要再写 `[data-theme] .bg-slate-x {}` 覆盖补丁。
@@ -253,6 +316,8 @@ AI 主页中央的助手形象。当前为**扁平中性占位**（墨色圆形 
 - **Don't** 用渐变文字（`background-clip: text` + 渐变）；强调靠字重与字号。
 - **Don't** 加不传达状态的装饰动画（飘浮圆点、无意义 pulse-glow）；也不要给静止卡片挂重投影。
 - **Don't** 用纯 `#000` / `#fff`；中性色一律向品牌色相染极低彩度。
+- **Don't** 在舞台区放可编辑数据，也不要把堆叠当成表格用（一张卡 ≠ 一行数据）。
+- **Don't** 给非白名单元素加 `backdrop-filter`，也不要为 Verdant 单独造一套 state token。
 
 ## Implementation Status
 

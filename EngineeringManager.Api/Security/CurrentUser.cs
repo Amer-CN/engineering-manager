@@ -19,20 +19,20 @@ public static class CurrentUser
 
     /// <summary>当前用户是否为 admin 角色（admin role claim 由登录端点写入）。</summary>
     public static bool IsAdmin(HttpContext ctx) =>
-        // 登录端点 JWT 写入的 role claim 是中文"管理员"或英文"admin" (取决于 role.name)
-        // 兼容两种: 中文 roleName + 英文 roleId
-        ctx.User?.HasClaim("http://schemas.microsoft.com/ws/2008/06/identity/claims/role", "管理员")
-        ?? ctx.User?.HasClaim("http://schemas.microsoft.com/ws/2008/06/identity/claims/role", "admin")
-        ?? false;
+        // 登录端点 JWT 写入的 role claim 是中文“管理员”或英文“admin” (取决于 role.name)
+        // M7 修复：用 || 替代 ??（?? 在 ctx.User 非 null 时永不短路到第二分支）
+        (ctx.User?.HasClaim("http://schemas.microsoft.com/ws/2008/06/identity/claims/role", "管理员") ?? false)
+        || (ctx.User?.HasClaim("http://schemas.microsoft.com/ws/2008/06/identity/claims/role", "admin") ?? false);
 
     // ── v0.80 D-1: 数据范围枚举(替代 @IsAdmin 布尔字面量;参考若依 @DataScope) ──
     /// <summary>数据可见范围。Company 预留(需先加 company_id/org_id 列,当前库无此锚点)。</summary>
     public enum DataScope { SelfOnly, AuthorizedProjects, All /*, Company */ }
 
     /// <summary>当前请求的数据范围。行为保持映射:admin→All,其余→AuthorizedProjects
-    /// (其 created_by 分支已覆盖 SelfOnly)。</summary>
+    /// (其 created_by 分支已覆盖 SelfOnly)。
+    /// M-EDITION1 X8: multiUserDataScope 能力关闭时恒返 All（单用户全可见）。</summary>
     public static DataScope GetDataScope(HttpContext ctx) =>
-        IsAdmin(ctx) ? DataScope.All : DataScope.AuthorizedProjects;
+        !EditionFeatures.Has(EditionFeatures.MultiUserDataScope) || IsAdmin(ctx) ? DataScope.All : DataScope.AuthorizedProjects;
 
     /// <summary>
     /// 项目级表过滤片段 (有 project_id 列), 已弃 const UserFilterFragment 改用此方法。

@@ -103,7 +103,9 @@ public static class Common
             // idCard / idCardAddress / 其他: 走 MaskIdCard 规则 (前 4 后 4 中间 ****)
             _ => MaskIdCard(value),
         };
-    }    /// <summary>当前时间字符串（yyyy-MM-dd HH:mm:ss）— 避免在每个端点文件中重复定义</summary>
+    }
+
+    /// <summary>当前时间字符串（yyyy-MM-dd HH:mm:ss）— 避免在每个端点文件中重复定义</summary>
     public static string NowString() => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
     public static string HashPassword(string password, string salt, int version = 2)
@@ -129,16 +131,19 @@ public static class Common
                     "costLedger:create","costLedger:read","costLedger:update","costLedger:delete",
                     "settings:read","settings:update","users:create","users:read","users:update","users:delete",
                     "roles:read","roles:update","audit_logs:read","audit_logs:export",
+                    "reports:create","reports:read",
                     "labor:read","safeQuery:read","knowledge:read"],
         "manager" => ["dashboard:read","projects:read","projects:update","contracts:read","contracts:update",
                       "partners:read","members:read","wages:read","settlement:read","invoices:read",
                       "inventory:read",
                       "costLedger:read","settings:read","users:read","roles:read","audit_logs:read",
+                      "reports:create","reports:read",
                       "labor:read","safeQuery:read","knowledge:read"],
         "accountant" => ["dashboard:read","projects:read","contracts:read","members:read",
                          "wages:create","wages:read","wages:update","settlement:read","invoices:create",
                          "invoices:read","invoices:update","costLedger:create","costLedger:read",
                          "costLedger:update","settings:read","audit_logs:read","audit_logs:export",
+                         "reports:create","reports:read",
                          "labor:read"],
         "worker" => ["dashboard:read","projects:read","members:read","wages:read"],
         _ => []
@@ -179,6 +184,8 @@ record OcrImageDto(string ImageBase64, object? Config)
     public string ImageBase64 { get; init; } = ImageBase64;
 }
 record CostLedgerEntryDto(long? Id, long? ProjectId, long? BatchId, string? VoucherNo, string? Date, string? Direction, string? Category, double? Amount, string? Counterparty, string? Channel, string? Summary, string? Notes);
+record CostLedgerSheetEntry(long? Id, long? ProjectId, long? BatchId, string? VoucherNo, string? Date, string? Direction, string? Category, double? Amount, string? Counterparty, string? Channel, string? Summary, string? Notes);
+record CostLedgerSheetDto(List<CostLedgerSheetEntry>? Entries);
 record CostLedgerCategoryDto(long? Id, string? Name, string? Direction, string? Level1, string? Color);
 record CostLedgerBatchDto(long? Id, long? ProjectId, string? Name, string? NewName);
 record CostLedgerMatchRuleDto(string? Pattern, string? Category, string? Direction, int? Priority);

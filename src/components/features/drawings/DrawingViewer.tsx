@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Icon } from '../../ui/Icon'
 import { readUploadedFile, FILE_CATEGORIES } from '../../../services/fileService'
 import { isImageDrawing } from './DrawingsGallery'
+import { normalizeDrawingCategory } from '../../drawingsConstants'
 import type { Drawing } from '../../../types/electron'
 
 const ZOOM_STEPS = [0.5, 0.75, 1, 1.25, 1.5, 2, 3]
@@ -121,7 +122,7 @@ export function DrawingViewer({ drawing, projectName, onClose }: DrawingViewerPr
             <div className="flex flex-col gap-3.5 text-sm">
               {[
                 ['所属项目', projectName],
-                ['图纸类型', drawing.category || '其他'],
+                ['图纸类型', normalizeDrawingCategory(drawing.category)],
                 ['部位', drawing.position || '-'],
                 ['上传日期', new Date(drawing.createdAt).toLocaleDateString('zh-CN')],
               ].map(([label, value]) => (

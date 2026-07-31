@@ -1,3 +1,4 @@
 {
-  "dataPath": "./data"
+  "dataPath": "./data",
+  "edition": "personal"
 }

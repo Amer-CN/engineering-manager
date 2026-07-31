@@ -160,3 +160,7 @@ asr-engine/qwen_asr_gguf/inference/bin/
 # E2E 构建产物
 EngineeringManager.E2E/bin/
 EngineeringManager.E2E/obj/
+
+# Playwright artifacts (local/CI generated)
+test-results/
+playwright-report/

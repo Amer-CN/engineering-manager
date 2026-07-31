@@ -1,0 +1,32 @@
+/**
+ * report-client.ts — 报告生成 API 客户端
+ *
+ * 调用 POST /api/reports/generate 生成 Markdown 格式报告
+ */
+
+import { apiClient } from './api-client'
+
+export interface ReportRequest {
+  period: 'day' | 'week' | 'month'
+  startDate?: string
+  endDate?: string
+  scope: 'all' | 'project' | 'user'
+  scopeId?: number
+  actionFilter?: string[]
+}
+
+export interface ReportResponse {
+  markdown: string
+  timestamp: string
+}
+
+/**
+ * 生成报告
+ */
+export function generateReport(request: ReportRequest): Promise<{
+  success: boolean
+  data?: ReportResponse
+  error?: string
+}> {
+  return apiClient.post<ReportResponse>('/api/reports/generate', request)
+}
