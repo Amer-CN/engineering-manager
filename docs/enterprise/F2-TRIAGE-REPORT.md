@@ -278,3 +278,49 @@ CREATE TABLE IF NOT EXISTS users (
 | MigrationRunner 按全名排序 | `MigrationRunner.cs` L32-L35 |
 | PERMISSION-SNAPSHOT 为步骤 1 产出 | `git status` 显示 `docs/enterprise/` 为 untracked |
 | HasPermission 无调用者 | grep 全库仅定义处 1 命中 |
+
+
+---
+
+## 11.6 技术债登记：反射测试脆弱性
+
+**涉及测试**：`AgentKnowledgeToolTests.E2_SystemPrompt_ContainsKnowledgeSecurityWarning`
+和 `E3_SystemPrompt_ContainsSearchKnowledgeBaseGuidance`
+
+**被反射调用的方法**：`AgentEndpoints.BuildSystemPrompt(HttpContext, IDbConnection)`
+（private static，通过 BindingFlags.NonPublic | BindingFlags.Static 访问）
+
+**风险**：方法签名一变即抛 TargetParameterCountException，编译期无保护。
+AgentEndpoints 是 F1 之后还要继续动的区域（AI 助手功能迭代）。
+
+**建议修复方向**（不在本轮实施）：
+- 将 BuildSystemPrompt 改为 internal + InternalsVisibleTo 测试项目
+- 或提取为独立 service 类（如 SystemPromptBuilder），通过 DI 注入，测试直接构造
+
+---
+
+## 11.8 修正：265e976 处置方案
+
+### 方案 B 风险纠正
+
+原报告写「改写已有 commit（但尚未推送，安全）」——**错误**。
+`backup/pre-edition-split` 已在 X10.1 把 265e976 推到远端。
+rebase 后 backup 分支仍指向旧 265e976，会留下两份并行历史。
+
+### 方案 C 前置条件问题
+
+方案 C 依赖另一会话配合推送，而对方至今一次都没推送过。
+该前置条件不在我们控制内。
+
+### Fallback 方案（不依赖另一会话）
+
+**方案 D：feat/edition-split 独立合入 master，265e976 自然失效**
+
+1. `feat/edition-split` 通过 PR 合入 master（M-EDITION1 干净 6+commit）
+2. 另一会话的工作（Reports / Knowledge / Univer）仍在 265e976 中
+3. 另一会话最终需要基于合入后的 master 重新 rebase/cherry-pick 自己的工作
+4. 265e976 中的 M-EDITION1 部分在 master 已有等价版本，rebase 时自动 drop（git 检测 patch 已应用）
+5. `backup/pre-edition-split` 保留至另一会话完成推送后可删除
+
+**优点**：不依赖另一会话配合，不需要 force-push，不改写已推送历史。
+**缺点**：另一会话 rebase 时会看到 M-EDITION1 冲突（但 git rerere 或手动 resolve 即可）。

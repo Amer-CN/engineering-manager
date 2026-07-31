@@ -82,7 +82,7 @@ public static class ApiConfig
     {
         if (_cachedEdition != null) return _cachedEdition;
         // 环境变量优先（用于测试 / CI 隔离）
-        var envEdition = Environment.GetEnvironmentVariable("ENGINEERING_MANAGER_EDITION");
+        var envEdition = Environment.GetEnvironmentVariable("ENGINEERING_MANAGER_EDITION")?.Trim().ToLowerInvariant();
         if (!string.IsNullOrEmpty(envEdition))
         {
             if (envEdition != "enterprise" && envEdition != "personal")
