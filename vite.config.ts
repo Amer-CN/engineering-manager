@@ -92,6 +92,9 @@ export default defineConfig({
           if (id.includes('node_modules/lucide-react')) {
             return 'vendor-icons'
           }
+          if (id.includes('node_modules/@univerjs')) {
+            return 'vendor-univer'
+          }
           if (id.includes('node_modules')) {
             const match = id.match(/node_modules\/([^/]+)/)
             if (match) {

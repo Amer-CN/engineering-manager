@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, Suspense } from 'react'
 import { CostLedgerList } from './CostLedgerList'
 import { CostLedgerForm } from './CostLedgerForm'
 import { CostLedgerBatchBar } from './CostLedgerBatchBar'
@@ -12,6 +12,9 @@ import { CostLedgerImportModal, learnFromEdit } from './CostLedgerImportModal'
 import type { CostLedgerEntry, CostLedgerSummary, Project, CostLedgerCategory } from '@/types'
 import { getAPI } from '@/services/api-adapter'
 import { Button } from '../../ui/Button'
+
+// React.lazy：Univer 电子表格按需加载（vendor-univer chunk）
+const CostLedgerSpreadsheet = React.lazy(() => import('./CostLedgerSpreadsheet'))
 
 interface CostLedgerProjectDetailProps {
   project: Project
@@ -49,6 +52,7 @@ export function CostLedgerProjectDetail({ project, onBack, categories, onManageC
   const [showImport, setShowImport] = useState(false)
   const [showCompare, setShowCompare] = useState(false)
   const [editing, setEditing] = useState<CostLedgerEntry | null>(null)
+  const [spreadsheetView, setSpreadsheetView] = useState(false)
 
   // Beta 模式状态
   const [gridMode, setGridMode] = useState<'new' | 'classic'>(readGridMode)
@@ -159,6 +163,18 @@ export function CostLedgerProjectDetail({ project, onBack, categories, onManageC
         <div className="flex-1" />
 
         {/* Beta 切换入口 — 低调但明确 */}
+        {/* 电子表格视图入口 */}
+        <button
+          onClick={() => setSpreadsheetView(v => !v)}
+          className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors"
+          style={spreadsheetView
+            ? { background: 'var(--accent-soft)', color: 'var(--accent)' }
+            : { border: '1px solid var(--border)', color: 'var(--fg-2)' }}
+        >
+          <Icon name="Table" size={13} />
+          <span>电子表格</span>
+        </button>
+
         <div className="flex items-center gap-1 rounded-lg p-0.5" style={{ background: 'var(--panel-2)' }}>
           <button
             onClick={() => handleSwitchGrid('classic')}
@@ -215,7 +231,23 @@ export function CostLedgerProjectDetail({ project, onBack, categories, onManageC
 
       {/* 内容区 */}
       <div className="flex-1 min-h-0 flex flex-col">
-        {gridMode === 'new' ? (
+        {spreadsheetView ? (
+          <Suspense fallback={
+            <div className="flex h-full items-center justify-center" style={{ color: 'var(--muted)' }}>
+              <div className="flex flex-col items-center gap-3">
+                <div className="h-7 w-7 animate-spin rounded-full border-2" style={{ borderColor: 'var(--border)', borderTopColor: 'var(--accent)' }} />
+                <span className="text-sm">加载电子表格引擎…</span>
+              </div>
+            </div>
+          }>
+            <CostLedgerSpreadsheet
+              projectId={project.id}
+              batchId={batchId}
+              categories={categories}
+              onClose={() => setSpreadsheetView(false)}
+            />
+          </Suspense>
+        ) : gridMode === 'new' ? (
           <CostLedgerGrid
             key={batchId}
             rows={entries}

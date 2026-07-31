@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react'
 import { Icon } from '../../ui/Icon'
 import { readUploadedFile, FILE_CATEGORIES } from '../../../services/fileService'
-import { categoryIcons } from '../../drawingsConstants'
+import { categoryIcons, normalizeDrawingCategory } from '../../drawingsConstants'
 import type { Drawing } from '../../../types/electron'
 
 const IMAGE_EXT = /\.(png|jpe?g|webp|gif|bmp)$/i
@@ -33,7 +33,7 @@ function Thumb({ drawing, projectName }: { drawing: Drawing; projectName: string
   }
   return (
     <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-[color:var(--muted)]">
-      <Icon name={categoryIcons[drawing.category || ''] || 'FileText'} size={36} />
+      <Icon name={categoryIcons[normalizeDrawingCategory(drawing.category)] || 'FileText'} size={36} />
       <span className="text-xs font-mono uppercase">{(drawing.filePath || '').split('.').pop() || 'FILE'}</span>
     </div>
   )
@@ -65,7 +65,7 @@ export function DrawingsGallery({ drawings, getProjectName, onOpen, onEdit, onDe
             <p className="text-sm font-semibold text-[color:var(--fg)] truncate">{d.name}</p>
             <div className="flex items-center gap-1.5 mt-1.5 min-w-0">
               <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-[color:var(--panel-2)] text-[color:var(--fg-2)] shrink-0">
-                {d.category || '其他'}
+                {normalizeDrawingCategory(d.category)}
               </span>
               <span className="text-xs text-[color:var(--muted)] truncate">{getProjectName(d.projectId)}</span>
             </div>

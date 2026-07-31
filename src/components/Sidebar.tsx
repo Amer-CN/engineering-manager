@@ -4,6 +4,7 @@ import { Icon } from './ui/Icon'
 import { DropdownMenu } from './ui/DropdownMenu'
 import { HoverScrollbar } from './ui/HoverScrollbar'
 import { type PageId } from '../routes'
+import { useHasFeature } from '../store/editionStore'
 // APP_VERSION 从 window.__APP_VERSION__ 读取（由 index.html 注入）
 
 export interface NavItem {
@@ -41,6 +42,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   noBackground = false,
 }) => {
   const sidebarW = collapsed ? 56 : 256
+  const hasUserManagement = useHasFeature('userManagement')
 
   return (
   <motion.aside
@@ -112,7 +114,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   align="start"
   sideOffset={8}
   items={[
-  { key: 'users', label: '用户管理', icon: 'UserCircle', onClick: onUsers },
+  ...(hasUserManagement ? [{ key: 'users', label: '用户管理', icon: 'UserCircle', onClick: onUsers }] : []),
   { key: 'settings', label: '系统设置', icon: 'Settings', onClick: onSettings },
   { key: 'lock', label: '锁定屏幕', icon: 'Lock', onClick: onLock },
   { key: 'divider', label: '', divider: true },
@@ -132,6 +134,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   ) : (
   <div className="p-3 space-y-0.5">
   {/* 管理入口（对齐 Stitch S0：可见项，不藏在头像下拉里） */}
+  {hasUserManagement && (
   <button
   onClick={onUsers}
   className="w-full flex items-center px-3 py-2.5 rounded-full text-xs font-bold tracking-wide transition-colors"
@@ -142,6 +145,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   <Icon name="UserCircle" size={18} />
   <span className="ml-3">用户管理</span>
   </button>
+  )}
   <button
   onClick={onSettings}
   className="w-full flex items-center px-3 py-2.5 rounded-full text-xs font-bold tracking-wide transition-colors"

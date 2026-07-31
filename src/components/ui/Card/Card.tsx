@@ -13,7 +13,6 @@ export interface CardProps {
   hoverable?: boolean
   shadow?: 'none' | 'sm' | 'md' | 'lg'
   padding?: CardPadding
-  glass?: boolean
   headerDivider?: boolean
   footerDivider?: boolean
   className?: string
@@ -44,7 +43,6 @@ export function Card({
   hoverable = false,
   shadow = 'sm',
   padding = 'md',
-  glass = false,
   headerDivider = true,
   footerDivider = true,
   className = '',
@@ -56,10 +54,7 @@ export function Card({
   transition={{ duration: 0.2 }}
   className={`
   rounded-xl
-  ${glass
-  ? 'bg-[color:var(--card)]/80 backdrop-blur-lg'
-  : 'bg-[color:var(--card)]'
-  }
+  bg-[color:var(--card)]
   ${bordered ? 'border border-[color:var(--border)]' : ''}
   ${shadowStyles[shadow]}
   ${onClick ? 'cursor-pointer' : ''}

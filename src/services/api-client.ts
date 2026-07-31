@@ -134,6 +134,32 @@ async function put<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
 }
 
 /**
+ * PATCH 请求
+ */
+async function patch<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
+  try {
+    const resp = await fetch(`${API_BASE}${path}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (resp.status === 401) setToken(null);
+    if (!resp.ok) {
+      try {
+        const errBody = await resp.json();
+        if (errBody?.error) return { success: false, error: errBody.error };
+      } catch { /* non-JSON response */ }
+      return { success: false, error: `HTTP ${resp.status}: ${resp.statusText}` };
+    }
+    const raw = await resp.json();
+    return convertKeysToCamelCase(raw);
+  } catch (err) {
+    console.error(`[API] PATCH ${path} 失败:`, err);
+    return { success: false, error: String(err) };
+  }
+}
+
+/**
  * DELETE 请求
  */
 async function del<T>(path: string): Promise<ApiResponse<T>> {
@@ -155,7 +181,7 @@ async function del<T>(path: string): Promise<ApiResponse<T>> {
   }
 }
 
-export const apiClient = { get, post, put, del };
+export const apiClient = { get, post, put, patch, del };
 
 export const piiKeyApi = {
   getPiiKeys: () => apiClient.get<{ keys: any[]; activeKeyId: number; totalKeys: number }>('/api/admin/pii/keys'),

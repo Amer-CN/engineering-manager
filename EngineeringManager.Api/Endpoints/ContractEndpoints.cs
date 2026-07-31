@@ -1,6 +1,9 @@
 using System.Data;
 using Dapper;
 using EngineeringManager.Api.Security;
+using EngineeringManager.Api.Services;
+using EngineeringManager.Api.Services.Stt;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace EngineeringManager.Api;
 
@@ -93,6 +96,23 @@ public static class ContractEndpoints
                     CreatedBy = uid,
                     Now = now()
                 });
+            // fire-and-forget: upsert 实体到知识库种子表
+            var contractName = body.TryGetProperty("name", out var cn) ? cn.GetString() ?? "" : "";
+            var contractProjectId = body.TryGetProperty("projectId", out var cp) ? (long?)cp.GetInt64() : null;
+            var capturedId = id;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var scope = ctx.RequestServices.CreateScope();
+                    var sp = scope.ServiceProvider;
+                    var bgDb = sp.GetRequiredService<IDbConnection>();
+                    var bgEmb = sp.GetRequiredService<IEmbeddingService>();
+                    var svc = new KnowledgeEntityService(bgDb, bgEmb);
+                    await svc.UpsertEntityAsync("income_contract", capturedId, contractName, contractProjectId);
+                }
+                catch (Exception ex) { Console.Error.WriteLine($"[EntitySeed] income_contract upsert 失败: {ex.Message}"); }
+            });
             return Common.Ok(id);
         });
 
@@ -119,6 +139,23 @@ public static class ContractEndpoints
                     CreatedBy = uid,
                     Now = now()
                 });
+            // fire-and-forget: upsert 实体到知识库种子表
+            var expContractName = body.TryGetProperty("name", out var ecn) ? ecn.GetString() ?? "" : "";
+            var expContractProjectId = body.TryGetProperty("projectId", out var ecp) ? (long?)ecp.GetInt64() : null;
+            var expCapturedId = id;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var scope = ctx.RequestServices.CreateScope();
+                    var sp = scope.ServiceProvider;
+                    var bgDb = sp.GetRequiredService<IDbConnection>();
+                    var bgEmb = sp.GetRequiredService<IEmbeddingService>();
+                    var svc = new KnowledgeEntityService(bgDb, bgEmb);
+                    await svc.UpsertEntityAsync("expense_contract", expCapturedId, expContractName, expContractProjectId);
+                }
+                catch (Exception ex) { Console.Error.WriteLine($"[EntitySeed] expense_contract upsert 失败: {ex.Message}"); }
+            });
             return Common.Ok(id);
         });
 
@@ -165,6 +202,27 @@ public static class ContractEndpoints
                     Status = body.TryGetProperty("status", out var st) ? st.GetString() : null,
                     Remarks = body.TryGetProperty("remarks", out var rm) ? rm.GetString() : null
                 });
+            // fire-and-forget: upsert 实体到知识库种子表
+            if (affected > 0)
+            {
+                var putName = body.TryGetProperty("name", out var pn) ? pn.GetString() ?? "" : "";
+                var putRecordId = recordId;
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        using var scope = ctx.RequestServices.CreateScope();
+                        var sp = scope.ServiceProvider;
+                        var bgDb = sp.GetRequiredService<IDbConnection>();
+                        var bgEmb = sp.GetRequiredService<IEmbeddingService>();
+                        var svc = new KnowledgeEntityService(bgDb, bgEmb);
+                        // 从库中取最新的 project_id
+                        var pid = bgDb.ExecuteScalar<long?>("SELECT [project_id] FROM [income_contracts] WHERE [id]=@Id", new { Id = putRecordId });
+                        await svc.UpsertEntityAsync("income_contract", putRecordId, putName, pid);
+                    }
+                    catch (Exception ex) { Console.Error.WriteLine($"[EntitySeed] income_contract PUT upsert 失败: {ex.Message}"); }
+                });
+            }
             return await Common.WriteResult(affected, db, "income_contracts", recordId);
         });
 
@@ -185,6 +243,26 @@ public static class ContractEndpoints
                     Status = body.TryGetProperty("status", out var st) ? st.GetString() : null,
                     Remarks = body.TryGetProperty("remarks", out var rm) ? rm.GetString() : null
                 });
+            // fire-and-forget: upsert 实体到知识库种子表
+            if (affected > 0)
+            {
+                var putName = body.TryGetProperty("name", out var pn) ? pn.GetString() ?? "" : "";
+                var putRecordId = recordId;
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        using var scope = ctx.RequestServices.CreateScope();
+                        var sp = scope.ServiceProvider;
+                        var bgDb = sp.GetRequiredService<IDbConnection>();
+                        var bgEmb = sp.GetRequiredService<IEmbeddingService>();
+                        var svc = new KnowledgeEntityService(bgDb, bgEmb);
+                        var pid = bgDb.ExecuteScalar<long?>("SELECT [project_id] FROM [expense_contracts] WHERE [id]=@Id", new { Id = putRecordId });
+                        await svc.UpsertEntityAsync("expense_contract", putRecordId, putName, pid);
+                    }
+                    catch (Exception ex) { Console.Error.WriteLine($"[EntitySeed] expense_contract PUT upsert 失败: {ex.Message}"); }
+                });
+            }
             return await Common.WriteResult(affected, db, "expense_contracts", recordId);
         });
 
@@ -313,6 +391,23 @@ public static class ContractEndpoints
                     Files = body.TryGetProperty("files", out var f) ? f.GetRawText() : "[]",
                     CreatedBy = uid, Now = now()
                 });
+            // fire-and-forget: upsert 实体到知识库种子表
+            var stlName = body.TryGetProperty("name", out var sn2) ? sn2.GetString() ?? "" : "";
+            var stlProjectId = body.TryGetProperty("projectId", out var sp2) && sp2.ValueKind == System.Text.Json.JsonValueKind.Number ? (long?)sp2.GetInt64() : null;
+            var stlCapturedId = id;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var scope = ctx.RequestServices.CreateScope();
+                    var ssp = scope.ServiceProvider;
+                    var bgDb = ssp.GetRequiredService<IDbConnection>();
+                    var bgEmb = ssp.GetRequiredService<IEmbeddingService>();
+                    var svc = new KnowledgeEntityService(bgDb, bgEmb);
+                    await svc.UpsertEntityAsync("settlement", stlCapturedId, stlName, stlProjectId);
+                }
+                catch (Exception ex) { Console.Error.WriteLine($"[EntitySeed] settlement upsert 失败: {ex.Message}"); }
+            });
             return Common.Ok(id);
         });
 
@@ -336,6 +431,26 @@ public static class ContractEndpoints
                     Items = body.TryGetProperty("items", out var it) ? it.GetRawText() : "[]",
                     Files = body.TryGetProperty("files", out var f) ? f.GetRawText() : "[]"
                 });
+            // fire-and-forget: upsert 实体到知识库种子表
+            if (affected > 0)
+            {
+                var stlPutName = body.TryGetProperty("name", out var spn) ? spn.GetString() ?? "" : "";
+                var stlPutRecordId = recordId;
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        using var scope = ctx.RequestServices.CreateScope();
+                        var ssp = scope.ServiceProvider;
+                        var bgDb = ssp.GetRequiredService<IDbConnection>();
+                        var bgEmb = ssp.GetRequiredService<IEmbeddingService>();
+                        var svc = new KnowledgeEntityService(bgDb, bgEmb);
+                        var pid = bgDb.ExecuteScalar<long?>("SELECT [project_id] FROM [settlements] WHERE [id]=@Id", new { Id = stlPutRecordId });
+                        await svc.UpsertEntityAsync("settlement", stlPutRecordId, stlPutName, pid);
+                    }
+                    catch (Exception ex) { Console.Error.WriteLine($"[EntitySeed] settlement PUT upsert 失败: {ex.Message}"); }
+                });
+            }
             return await Common.WriteResult(affected, db, "settlements", recordId);
         });
 

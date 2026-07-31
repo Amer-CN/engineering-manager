@@ -17,7 +17,7 @@ const importGallery = () => import('@/components/features/drawings/DrawingsGalle
 const importViewer = () => import('@/components/features/drawings/DrawingViewer')
 
 const drawings: Drawing[] = [
-  { id: 1, projectId: 1, name: '一期 A1 楼结构平面图', category: '结构', filePath: 'a1.png', remarks: '', position: '1-4层', createdAt: '2026-07-01' },
+  { id: 1, projectId: 1, name: '一期 A1 楼结构平面图', category: '结构图', filePath: 'a1.png', remarks: '', position: '1-4层', createdAt: '2026-07-01' },
   { id: 2, projectId: 1, name: '地下车库暖通总图', category: '机电', filePath: 'b2.pdf', remarks: '审核中', createdAt: '2026-07-02' },
 ]
 
@@ -31,11 +31,15 @@ describe('DrawingsGallery (S26)', () => {
   beforeEach(() => vi.clearAllMocks())
   afterEach(() => cleanup())
 
-  it('渲染画廊卡片：图纸名/类别 chip/项目名', async () => {
+  it('渲染画廊卡片：图纸名/类别 chip/项目名；脏类别归一为「其他」', async () => {
     const { DrawingsGallery } = await importGallery()
     render(<DrawingsGallery drawings={drawings} getProjectName={getProjectName} onOpen={onOpen} onEdit={onEdit} onDelete={onDelete} />)
     expect(screen.getByText('一期 A1 楼结构平面图')).toBeInTheDocument()
-    expect(screen.getByText('结构')).toBeInTheDocument()
+    // 合法类别原样显示
+    expect(screen.getByText('结构图')).toBeInTheDocument()
+    // 脏类别 '机电' 不在 categories 内 → 归一显示「其他」（B1 方案 C）
+    expect(screen.getByText('其他')).toBeInTheDocument()
+    expect(screen.queryByText('机电')).toBeNull()
     expect(screen.getAllByText('一期 A1 综合楼').length).toBe(2)
   })
 

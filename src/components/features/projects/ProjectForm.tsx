@@ -16,7 +16,7 @@ const statusOptions = [
   { value: 'archived', label: '已归档' },
 ]
 
-const glassInput = 'w-full bg-[color:var(--panel-2)] border border-[color:var(--border)] rounded-xl px-4 py-3 text-sm text-[color:var(--fg)] placeholder-[color:var(--muted)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] focus:border-[color:var(--accent)] transition-all duration-200'
+const inputCls = 'w-full bg-[color:var(--panel-2)] border border-[color:var(--border)] rounded-xl px-4 py-3 text-sm text-[color:var(--fg)] placeholder-[color:var(--muted)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] focus:border-[color:var(--accent)] transition-all duration-200'
 
 export interface ProjectFormData {
   name: string; description: string; address: string
@@ -89,7 +89,7 @@ export function ProjectForm({ project, members, onSubmit, onCancel }: ProjectFor
   </label>
   <select value={formData.projectManagerId || ''}
   onChange={e => handleChange('projectManagerId', e.target.value ? Number(e.target.value) : null)}
-  className={glassInput} required>
+  className={inputCls} required>
   <option value="">请选择项目负责人</option>
   {staffMembers.map(m => <option key={m.id} value={m.id}>{m.name} - {m.role}</option>)}
   </select>
@@ -98,7 +98,7 @@ export function ProjectForm({ project, members, onSubmit, onCancel }: ProjectFor
   <div>
   <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1.5">项目描述</label>
   <textarea value={formData.description} onChange={e => handleChange('description', e.target.value)}
-  className={glassInput} rows={3} placeholder="请输入项目描述" />
+  className={inputCls} rows={3} placeholder="请输入项目描述" />
   </div>
 
   <div>
@@ -117,7 +117,7 @@ export function ProjectForm({ project, members, onSubmit, onCancel }: ProjectFor
   <div className="grid grid-cols-2 gap-4">
   <div>
   <label className="block text-sm font-medium text-[color:var(--fg-2)] mb-1.5">项目状态</label>
-  <select value={formData.status} onChange={e => handleChange('status', e.target.value)} className={glassInput}>
+  <select value={formData.status} onChange={e => handleChange('status', e.target.value)} className={inputCls}>
   {statusOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
   </select>
   </div>

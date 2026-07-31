@@ -1,6 +1,9 @@
 ﻿using System.Data;
 using Dapper;
 using EngineeringManager.Api.Security;
+using EngineeringManager.Api.Services;
+using EngineeringManager.Api.Services.Stt;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace EngineeringManager.Api;
 
@@ -58,6 +61,22 @@ public static class PartnerEndpoints
                       dto.BusinessScope, dto.TaxType, ProjectIds = dto.ProjectIds ?? "[]", CreatedBy = uid, Now = now(),
                       PhoneEnc = pii.Encrypt(dto.Phone ?? ""), BankAccountEnc = pii.Encrypt(dto.BankAccount ?? ""),
                       CreditCodeEnc = pii.Encrypt(dto.CreditCode ?? ""), TaxNumberEnc = pii.Encrypt(dto.TaxNumber ?? "") });
+            // fire-and-forget: upsert 实体到知识库种子表
+            var partnerCapturedId = id;
+            var partnerName = dto.Name ?? "";
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var scope = ctx.RequestServices.CreateScope();
+                    var sp = scope.ServiceProvider;
+                    var bgDb = sp.GetRequiredService<IDbConnection>();
+                    var bgEmb = sp.GetRequiredService<IEmbeddingService>();
+                    var svc = new KnowledgeEntityService(bgDb, bgEmb);
+                    await svc.UpsertEntityAsync("partner", partnerCapturedId, partnerName, null);
+                }
+                catch (Exception ex) { Console.Error.WriteLine($"[EntitySeed] partner upsert 失败: {ex.Message}"); }
+            });
             return Common.Ok(id);
         });
                 app.MapPut("/api/partners", async (HttpContext ctx, PartnerDto dto, IDbConnection db) =>
@@ -79,6 +98,25 @@ public static class PartnerEndpoints
                       Uid = uid, IsAdmin = isAdmin,
                       PhoneEnc = pii.Encrypt(dto.Phone ?? ""), BankAccountEnc = pii.Encrypt(dto.BankAccount ?? ""),
                       CreditCodeEnc = pii.Encrypt(dto.CreditCode ?? ""), TaxNumberEnc = pii.Encrypt(dto.TaxNumber ?? "") });
+            // fire-and-forget: upsert 实体到知识库种子表
+            if (affected > 0 && dto.Id.HasValue)
+            {
+                var partnerPutId = dto.Id.Value;
+                var partnerPutName = dto.Name ?? "";
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        using var scope = ctx.RequestServices.CreateScope();
+                        var sp = scope.ServiceProvider;
+                        var bgDb = sp.GetRequiredService<IDbConnection>();
+                        var bgEmb = sp.GetRequiredService<IEmbeddingService>();
+                        var svc = new KnowledgeEntityService(bgDb, bgEmb);
+                        await svc.UpsertEntityAsync("partner", partnerPutId, partnerPutName, null);
+                    }
+                    catch (Exception ex) { Console.Error.WriteLine($"[EntitySeed] partner PUT upsert 失败: {ex.Message}"); }
+                });
+            }
             return affected > 0 ? Common.Ok() : Results.Forbid();
         });
         app.MapDelete("/api/partners/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
