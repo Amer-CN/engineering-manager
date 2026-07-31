@@ -82,9 +82,16 @@ public static class ApiConfig
     {
         if (_cachedEdition != null) return _cachedEdition;
         // 环境变量优先（用于测试 / CI 隔离）
-        var envEdition = Environment.GetEnvironmentVariable("ENGINEERING_MANAGER_EDITION");
+        var envEdition = Environment.GetEnvironmentVariable("ENGINEERING_MANAGER_EDITION")?.Trim().ToLowerInvariant();
         if (!string.IsNullOrEmpty(envEdition))
         {
+            if (envEdition != "enterprise" && envEdition != "personal")
+            {
+                Console.Error.WriteLine(
+                    $"[ApiConfig] WARNING: unknown edition '{envEdition}' from ENGINEERING_MANAGER_EDITION. " +
+                    $"Falling back to 'personal' (enterprise features disabled). " +
+                    $"Valid values: personal | enterprise");
+            }
             _cachedEdition = envEdition == "enterprise" ? "enterprise" : "personal";
             return _cachedEdition;
         }
@@ -99,7 +106,15 @@ public static class ApiConfig
                 using var doc = System.Text.Json.JsonDocument.Parse(json);
                 if (doc.RootElement.TryGetProperty("edition", out var ed) && ed.GetString() is { Length: > 0 } val)
                 {
-                    _cachedEdition = val == "enterprise" ? "enterprise" : "personal";
+                    var normalized = val.Trim().ToLowerInvariant();
+                    if (normalized != "enterprise" && normalized != "personal")
+                    {
+                        Console.Error.WriteLine(
+                            $"[ApiConfig] WARNING: unknown edition '{val}' in config.json. " +
+                            $"Falling back to 'personal' (enterprise features disabled). " +
+                            $"Valid values: personal | enterprise");
+                    }
+                    _cachedEdition = normalized == "enterprise" ? "enterprise" : "personal";
                     return _cachedEdition;
                 }
             }
@@ -260,6 +275,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
     public static void ConfigureApp(WebApplication app)
     {
+        // X11.3: trigger edition first-parse at startup (warnings surface early)
+        EditionFeatures.ValidateEdition();
+
         // 检测 dist/ 是否存在 → 生产模式
         var distPath = Path.Combine(AppContext.BaseDirectory, "dist");
         IsProduction = Directory.Exists(distPath);
