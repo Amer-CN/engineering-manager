@@ -9,6 +9,8 @@ namespace EngineeringManager.Api;
 ///
 /// 新增能力时：在常量区加键 + 在对应 edition 的显式集合中添加。
 /// 两个 edition 都使用【显式集合】，不用补集计算（补集无法表达「两者都不启用」的预留能力）。
+/// 未知 edition 由 ApiConfig.GetEdition() 兜成 personal（fail-closed 到最小权限），
+/// EditionFeatures 侧的空集分支是防御性冗余（不可达但保留）。
 ///
 /// 缓存策略：ApiConfig.GetEdition() 进程启动时读一次并缓存（_cachedEdition），
 /// 此后 Has() 每次调用仅做 Dictionary.TryGetValue + HashSet.Contains，无文件 I/O。
@@ -56,9 +58,9 @@ public static class EditionFeatures
     private static readonly object _validateLock = new();
 
     /// <summary>
-    /// 启动时校验 edition 是否在映射表内。未知值记 warning。
-    /// fallback 行为：Has() 对未知 edition 返回 false（空集语义，最保守方向）。
-    /// 应在 app 启动后、首次请求前调用一次。
+    /// 启动时触发 GetEdition() 首次解析（确保配置错误在启动时暴露而非首次请求时）。
+    /// 未知 edition 的告警由 ApiConfig.GetEdition() 内部输出（实际 fallback 发生处）。
+    /// 本方法不再独立告警——GetEdition() 永不返回未知值（已规范化为 personal/enterprise）。
     /// </summary>
     public static void ValidateEdition()
     {
@@ -68,12 +70,13 @@ public static class EditionFeatures
             if (_validated) return;
             _validated = true;
             var edition = ApiConfig.GetEdition();
+            // GetEdition() 已保证返回值必为 "personal" 或 "enterprise"。
+            // 以下分支为防御性冗余（生产不可达）。
             if (!EditionMap.ContainsKey(edition))
             {
                 Console.Error.WriteLine(
-                    $"[EditionFeatures] WARNING: unknown edition '{edition}' in config.json. " +
-                    $"Valid values: {string.Join(", ", EditionMap.Keys)}. " +
-                    $"All features will be disabled (empty set fallback).");
+                    $"[EditionFeatures] DEFENSIVE: edition '{edition}' not in EditionMap. " +
+                    $"This should be unreachable (GetEdition normalizes to personal/enterprise).");
             }
         }
     }

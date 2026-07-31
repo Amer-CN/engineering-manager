@@ -51,6 +51,8 @@ public class EditionFeaturesTests
     [Fact]
     public void UnknownEdition_GetFeaturesForEdition_ReturnsEmpty()
     {
+        // 防御性测试：纯函数对未知 edition 返回空集。
+        // 生产不可达（GetEdition 已规范化），但保留以防 EditionMap 被误改。
         var features = EditionFeatures.GetFeaturesForEdition("typo-edition");
         Assert.Empty(features);
     }
@@ -158,14 +160,46 @@ public class EditionFeaturesTests
     }
 
     [Fact]
-    public void GetActiveFeatures_UnknownEdition_ReturnsEmpty()
+    public void GetActiveFeatures_UnknownEdition_FallsBackToPersonal()
     {
-        // V3 要求：走公共入口 GetActiveFeatures()，未知 edition 返回空数组
+        // V8: 未知 edition 由 GetEdition() 规范化为 personal（fail-closed 到最小权限）
+        // 实际路径：gibberish -> GetEdition 返回 "personal" -> personal 能力集（当前为空）
+        // 注意：此测试验证的是 fallback 到 personal 的行为，不是"未知->空集"
         try
         {
             SetEdition("gibberish-edition");
+            var edition = ApiConfig.GetEdition();
+            Assert.Equal("personal", edition); // 确认 fallback 目标
             var features = EditionFeatures.GetActiveFeatures();
-            Assert.Empty(features);
+            // personal 当前为空集，所以结果为空——但原因是 personal 为空，不是"未知=空"
+            Assert.Equal(EditionFeatures.GetFeaturesForEdition("personal"), features);
+        }
+        finally { ResetEdition(); }
+    }
+
+    [Fact]
+    public void GetEdition_UnknownValue_OutputsWarning()
+    {
+        // V8 核心举证：未知 edition 时告警确实被输出到 Console.Error
+        try
+        {
+            var originalErr = Console.Error;
+            using var sw = new System.IO.StringWriter();
+            Console.SetError(sw);
+            try
+            {
+                SetEdition("enterpirse"); // 典型拼错
+                var edition = ApiConfig.GetEdition();
+                Assert.Equal("personal", edition);
+            }
+            finally
+            {
+                Console.SetError(originalErr);
+            }
+            var output = sw.ToString();
+            Assert.Contains("unknown edition", output);
+            Assert.Contains("enterpirse", output);
+            Assert.Contains("personal", output);
         }
         finally { ResetEdition(); }
     }
