@@ -161,6 +161,8 @@ public static class ApiConfig
 
                 builder.Services.AddScoped<IDbConnection>(_ =>
         {
+            // 连接工厂只负责创建/打开连接：建表与迁移已移至启动期 InitializeDatabase 一次性执行，
+            // 避免每个 Scoped 连接重跑迁移（冷启动慢 + 迁移日志重复的根因）
             var dbPath = Path.Combine(ResolveDataPath(), "engineering.db");
             var dir = Path.GetDirectoryName(dbPath)!;
             if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
@@ -169,17 +171,7 @@ public static class ApiConfig
             using var cmd = conn.CreateCommand();
             cmd.CommandText = "PRAGMA journal_mode=WAL";
             cmd.ExecuteNonQuery();
-            EnsureTables(conn);
-
-            // v0.80: is_default_password 列迁移（幂等）
-            try { conn.Execute(@"ALTER TABLE users ADD COLUMN is_default_password INTEGER DEFAULT 0"); } catch { }
-
-            // v0.80: 种子管理员（仅在 users 空表时触发）
-            SeedDefaultAdmin(conn);
-
-            // v0.72.0: 跑 migrations 脚本 (idempotent, 自动跳过已跑的)
-            // 实际跑: 011 加 _enc 列, 012 users 表 password_hash+salt+version 迁移
-            EngineeringManager.Api.Migrations.MigrationRunner.Run($"Data Source={dbPath}");            return conn;
+            return conn;
         });
 
 
@@ -478,6 +470,48 @@ builder.Services.ConfigureHttpJsonOptions(options =>
             Console.Error.WriteLine($"[ResolveDataPath] 读取 config.json 失败: {ex.Message}");
         }
         return defaultPath;
+    }
+
+    /// <summary>
+    /// 应用启动期一次性数据库初始化：建目录 → 打开初始化连接 → EnsureTables → 幂等列迁移 →
+    /// 种子管理员 → MigrationRunner.Run → 关闭连接。必须在开始接受请求前完成。
+    /// </summary>
+    public static void InitializeDatabase()
+    {
+        var dbPath = Path.Combine(ResolveDataPath(), "engineering.db");
+        var dir = Path.GetDirectoryName(dbPath)!;
+        if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+        using var conn = new SqliteConnection($"Data Source={dbPath}");
+        conn.Open();
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = "PRAGMA journal_mode=WAL";
+            cmd.ExecuteNonQuery();
+        }
+        EnsureTables(conn);
+        // v0.80: is_default_password 列迁移（幂等）
+        try { conn.Execute(@"ALTER TABLE users ADD COLUMN is_default_password INTEGER DEFAULT 0"); } catch { }
+        // v0.80: 种子管理员（仅在 users 空表时触发）
+        SeedDefaultAdmin(conn);
+        // v0.72.0: 跑 migrations 脚本（idempotent，自动跳过已跑的）
+        EngineeringManager.Api.Migrations.MigrationRunner.Run($"Data Source={dbPath}");
+    }
+
+    /// <summary>
+    /// 启动期初始化（带失败处理）：失败则记录完整异常并以非零码退出，
+    /// 不允许带着半迁移数据库继续监听端口。
+    /// </summary>
+    public static void InitializeDatabaseOrExit()
+    {
+        try
+        {
+            InitializeDatabase();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[Startup] 数据库初始化失败，应用以非零码退出: {ex}");
+            Environment.Exit(1);
+        }
     }
 
     // ============ P0-7: 建表逻辑 ============

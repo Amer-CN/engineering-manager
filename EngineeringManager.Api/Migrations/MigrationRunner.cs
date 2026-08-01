@@ -38,7 +38,6 @@ public static class MigrationRunner
         {
             if (applied.Contains(name)) continue;
 
-            Console.WriteLine($"[Migration] 执行: {name}");
             using var stream = assembly.GetManifestResourceStream(name)!;
             using var reader = new StreamReader(stream);
             var sql = reader.ReadToEnd();
@@ -52,7 +51,7 @@ public static class MigrationRunner
                     new { Name = name, Time = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") },
                     transaction: transaction);
                 transaction.Commit();
-                Console.WriteLine($"[Migration] 完成: {name}");
+                Console.WriteLine($"[Migration] 已应用: {name}");
             }
             catch (Exception ex)
             {
