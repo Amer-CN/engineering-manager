@@ -15,6 +15,7 @@
 
 import { create } from 'zustand'
 import { getAPI } from '@/services/api-adapter'
+import type { EditionFeatureKey } from '@/constants/editionFeatures'
 
 interface EditionState {
   /** 后端下发的能力集合。null=未就绪, []=personal, 非空=enterprise */
@@ -53,7 +54,7 @@ export const useEditionStore = create<EditionState>((set) => ({
  * 未就绪（features=null）时返回 false（fail-safe，不闪现企业功能）。
  * 用法：const canManageUsers = useHasFeature('userManagement')
  */
-export const useHasFeature = (key: string) =>
+export const useHasFeature = (key: EditionFeatureKey) =>
   useEditionStore(s => s.features !== null && s.features.includes(key))
 
 /** 能力是否已加载（供 App.tsx 首屏时序判断） */

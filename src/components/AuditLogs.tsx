@@ -15,6 +15,7 @@ import { AuditFilterBar } from './AuditFilterBar'
 import { AuditDetailModal } from './AuditDetailModal'
 import { Button } from './ui/Button'
 import { useHasFeature } from '@/store/editionStore'
+import { EDITION_FEATURE_KEYS } from '@/constants/editionFeatures'
 
 const PAGE_SIZE = 20
 
@@ -212,7 +213,7 @@ export const AuditLogsContent: React.FC<{ refresh?: () => void }> = ({ refresh }
 }
 
 const AuditLogs: React.FC<AuditLogsProps> = ({ refresh }) => {
-  const hasAuditUserFilter = useHasFeature('auditUserFilter')
+  const hasAuditUserFilter = useHasFeature(EDITION_FEATURE_KEYS.AuditUserFilter)
   return (
   <div className="max-w-[1400px] mx-auto p-6">
   <div className="flex items-center justify-between mb-6">

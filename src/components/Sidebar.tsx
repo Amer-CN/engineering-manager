@@ -5,6 +5,7 @@ import { DropdownMenu } from './ui/DropdownMenu'
 import { HoverScrollbar } from './ui/HoverScrollbar'
 import { type PageId } from '../routes'
 import { useHasFeature } from '../store/editionStore'
+import { EDITION_FEATURE_KEYS } from '@/constants/editionFeatures'
 // APP_VERSION 从 window.__APP_VERSION__ 读取（由 index.html 注入）
 
 export interface NavItem {
@@ -42,7 +43,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   noBackground = false,
 }) => {
   const sidebarW = collapsed ? 56 : 256
-  const hasUserManagement = useHasFeature('userManagement')
+  const hasUserManagement = useHasFeature(EDITION_FEATURE_KEYS.UserManagement)
 
   return (
   <motion.aside

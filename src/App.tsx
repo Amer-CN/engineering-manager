@@ -17,6 +17,7 @@ import { useRowHoverOpacity } from './hooks/useRowHoverOpacity'
 import { useTheme } from './hooks/useTheme'
 import { getLocalPref, PREF_KEYS } from './utils/appPrefs'
 import { useEditionStore, useHasFeature } from './store/editionStore'
+import { EDITION_FEATURE_KEYS } from '@/constants/editionFeatures'
 
 // ── 路由级代码分割：每个页面独立 chunk ──
 const Dashboard = lazy(() => import('./components/features/agent/AgentDashboard'))
@@ -91,7 +92,7 @@ const AppContent: React.FC = () => {
   // M-EDITION1 X8: 启动时拉取能力集合
   const fetchFeatures = useEditionStore(s => s.fetchFeatures)
   useEffect(() => { fetchFeatures() }, [fetchFeatures])
-  const hasUserManagement = useHasFeature('userManagement')
+  const hasUserManagement = useHasFeature(EDITION_FEATURE_KEYS.UserManagement)
 
   // 启动动画状态
   const [showSplash, setShowSplash] = useState(true)

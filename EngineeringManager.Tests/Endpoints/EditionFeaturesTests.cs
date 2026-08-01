@@ -28,15 +28,20 @@ public class EditionFeaturesTests
     }
 
     [Fact]
-    public void Enterprise_GetFeaturesForEdition_Returns5()
+    public void Enterprise_GetFeaturesForEdition_ExactlyThese5Keys()
     {
+        // 18.3(a): 精确集合相等（不是 Contains 逐个——那不排除多出来的键）
         var features = EditionFeatures.GetFeaturesForEdition("enterprise");
-        Assert.Equal(5, features.Length);
-        Assert.Contains(EditionFeatures.UserManagement, features);
-        Assert.Contains(EditionFeatures.RoleManagement, features);
-        Assert.Contains(EditionFeatures.ProjectAuthorization, features);
-        Assert.Contains(EditionFeatures.MultiUserDataScope, features);
-        Assert.Contains(EditionFeatures.AuditUserFilter, features);
+        var expected = new HashSet<string>
+        {
+            EditionFeatures.UserManagement,
+            EditionFeatures.RoleManagement,
+            EditionFeatures.ProjectAuthorization,
+            EditionFeatures.MultiUserDataScope,
+            EditionFeatures.AuditUserFilter,
+        };
+        var actual = new HashSet<string>(features);
+        Assert.Equal(expected, actual); // 集合相等：多一个少一个都红
     }
 
     [Fact]

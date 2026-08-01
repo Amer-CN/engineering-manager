@@ -7,6 +7,7 @@ import { useToastStore } from '@/store/toastStore'
 import { getAPI } from '@/services/api-adapter'
 import { PREF_KEYS, loadPref, savePref } from '@/utils/appPrefs'
 import { useHasFeature } from '@/store/editionStore'
+import { EDITION_FEATURE_KEYS } from '@/constants/editionFeatures'
 import { ChangePasswordCard } from './ChangePasswordCard'
 
 /** 自动锁屏选项 (分钟, '0'=关闭) */
@@ -26,7 +27,7 @@ export function AccountSection() {
   const { currentUser } = useAuth()
   const { masked, toggleMask, isSyncing } = useMask()
   const showToast = useToastStore(s => s.showToast)
-  const hasUserManagement = useHasFeature('userManagement')
+  const hasUserManagement = useHasFeature(EDITION_FEATURE_KEYS.UserManagement)
 
   // 自动锁屏
   const [autoLock, setAutoLock] = useState('0')
