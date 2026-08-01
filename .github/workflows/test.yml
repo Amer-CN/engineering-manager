@@ -159,13 +159,16 @@ jobs:
       - name: Install frontend dependencies
         run: npm install
 
-      - name: Build backend API
-        run: dotnet build EngineeringManager.Api/EngineeringManager.Api.csproj
+      - name: Restore backend API
+        run: dotnet restore EngineeringManager.Api/EngineeringManager.Api.csproj
+
+      - name: Build backend API (Release)
+        run: dotnet build EngineeringManager.Api/EngineeringManager.Api.csproj --configuration Release --no-restore
 
       - name: Start API (--api-only, isolated data path)
         run: |
           New-Item -ItemType Directory -Force -Path $env:ENGINEERING_MANAGER_DATA_PATH | Out-Null
-          $apiDir = Join-Path $env:GITHUB_WORKSPACE 'EngineeringManager.Api\bin\Debug\net8.0-windows'
+          $apiDir = Join-Path $env:GITHUB_WORKSPACE 'EngineeringManager.Api\bin\Release\net8.0-windows'
           # WorkingDirectory 固定到输出目录：content root 取进程当前目录，确保 appsettings.json 可加载
           Start-Process -FilePath dotnet -WorkingDirectory $apiDir -ArgumentList 'EngineeringManager.Api.dll','--api-only' -RedirectStandardOutput (Join-Path $env:GITHUB_WORKSPACE 'api-e2e.log') -RedirectStandardError (Join-Path $env:GITHUB_WORKSPACE 'api-e2e.err.log')
 
