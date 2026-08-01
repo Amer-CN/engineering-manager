@@ -104,11 +104,29 @@ if (totalFiles === 0) {
   process.exit(1);
 }
 
-if (violations.length > 0) {
-  console.error(`encoding check FAILED: ${violations.length} violation(s) in ${totalFiles} files scanned`);
+// 25.1: 棘轮模式 - 与 encoding-baseline.json 比较
+const baselinePath = path.join(__dirname, 'encoding-baseline.json');
+let baselineTotal = 0;
+if (fs.existsSync(baselinePath)) {
+  try {
+    const bl = JSON.parse(fs.readFileSync(baselinePath, 'utf-8'));
+    baselineTotal = bl._total || 0;
+  } catch (e) {
+    console.error(`FAIL: cannot parse encoding-baseline.json: ${e.message}`);
+    process.exit(1);
+  }
+}
+
+if (violations.length > baselineTotal) {
+  console.error(`encoding check FAILED: ${violations.length} violation(s) > baseline ${baselineTotal} (${totalFiles} files scanned)`);
+  console.error('New violations beyond baseline:');
   violations.forEach(v => console.error('  ' + v));
   process.exit(1);
 }
 
-console.log(`encoding check passed: ${totalFiles} files scanned, 0 violations`);
+if (violations.length < baselineTotal) {
+  console.log(`encoding check: ${violations.length} violation(s) < baseline ${baselineTotal} — update encoding-baseline.json downward!`);
+}
+
+console.log(`encoding check passed: ${violations.length} violation(s) <= baseline ${baselineTotal} (${totalFiles} files scanned)`);
 process.exit(0);

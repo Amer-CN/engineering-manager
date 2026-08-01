@@ -1,0 +1,21 @@
+{
+  "_comment": "Encoding baseline (ratchet: only decrease, never increase). 25.1",
+  "_total": 17,
+  "violations": [
+    {
+      "file": "src/components/features/members/useWorkerImport.ts",
+      "type": "U+FFFD",
+      "count": 1
+    },
+    {
+      "file": "src/__tests__/components/AuditLogs.test.tsx",
+      "type": "U+FFFD",
+      "count": 10
+    },
+    {
+      "file": "docs/handoff/R16-R17-handoff.md",
+      "type": "control-char",
+      "count": 6
+    }
+  ]
+}

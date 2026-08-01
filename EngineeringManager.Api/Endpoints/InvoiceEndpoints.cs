@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace EngineeringManager.Api;
 
 /// <summary>
-/// 鍙戠エ + 鏀朵粯娆捐褰曠鐐?
+    // ═══ 发票 + 收付款记录端点 ═══
 /// </summary>
 public static class InvoiceEndpoints
 {
@@ -16,9 +16,9 @@ public static class InvoiceEndpoints
     {
         var now = () => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
-        // 鍙戠エ
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+    // ═══ 发票 + 收付款记录端点 ═══
+    // ═══ 发票 + 收付款记录端点 ═══
+    // ═══ 发票 + 收付款记录端点 ═══
 
         app.MapGet("/api/invoices", (HttpContext ctx, IDbConnection db, long? projectId) =>
         {
@@ -110,9 +110,9 @@ public static class InvoiceEndpoints
             return (await db.ExecuteAsync("UPDATE invoices SET deleted_at=@Now WHERE id=@Id AND deleted_at IS NULL AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin, Now = now() })) > 0 ? Common.Ok() : Results.Forbid();
         });
 
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+    // ═══ 发票 + 收付款记录端点 ═══
         // 鏀朵粯娆捐褰?
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+    // ═══ 发票 + 收付款记录端点 ═══
 
         app.MapGet("/api/payment-records", (HttpContext ctx, IDbConnection db, string? paymentType, long? projectId) =>
         {

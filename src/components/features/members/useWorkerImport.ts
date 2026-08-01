@@ -133,6 +133,7 @@ function detectCSVEncoding(buffer: ArrayBuffer): string {
   try {
     const decoder = new TextDecoder('utf-8', { fatal: true })
     const text = decoder.decode(buffer)
+    // check-encoding:exempt — U+FFFD here is intentional regex target (encoding health check)
     const replacementRatio = (text.match(/�/g) || []).length / Math.max(text.length, 1)
     if (replacementRatio > 0.01) throw new Error('High replacement char ratio')
     return 'utf-8'
