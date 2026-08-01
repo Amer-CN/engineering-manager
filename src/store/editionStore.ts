@@ -21,6 +21,8 @@ interface EditionState {
   /** 后端下发的能力集合。null=未就绪, []=personal, 非空=enterprise */
   features: string[] | null
   loaded: boolean
+  /** 24.1: edition 降级警告（正常路径为 null） */
+  warning: string | null
   fetchFeatures: () => Promise<void>
 }
 
@@ -28,6 +30,7 @@ export const useEditionStore = create<EditionState>((set) => ({
   // 8F.2: 初值 null = 未就绪（区别于 [] = personal）
   features: null,
   loaded: false,
+  warning: null,
 
   fetchFeatures: async () => {
     try {
@@ -38,10 +41,16 @@ export const useEditionStore = create<EditionState>((set) => ({
       }
       const res = await api.getConfig()
       const feats = (res as any)?.features
+      const warn = (res as any)?.warning ?? null
       set({
         features: Array.isArray(feats) ? feats : [],
         loaded: true,
+        warning: warn,
       })
+      // 24.1: 降级警告展示给用户
+      if (warn) {
+        import('@/store/toastStore').then(m => m.useToastStore.getState().showToast(warn, 'error'))
+      }
     } catch {
       // 后端不可用时 fallback 到 personal 行为（空集）
       set({ features: [], loaded: true })

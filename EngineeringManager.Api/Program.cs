@@ -73,6 +73,7 @@ public static class ApiConfig
 {
     // ── M-EDITION1: 版本开关 ──
     private static string? _cachedEdition;
+    private static string? _editionWarning;
 
     /// <summary>
     /// 读取 config.json 中的 edition 字段（"personal" | "enterprise"），默认 "personal"。
@@ -88,10 +89,8 @@ public static class ApiConfig
         {
             if (envEdition != "enterprise" && envEdition != "personal")
             {
-                Console.Error.WriteLine(
-                    $"[ApiConfig] WARNING: unknown edition '{envRaw}' from ENGINEERING_MANAGER_EDITION. " +
-                    $"Falling back to 'personal' (enterprise features disabled). " +
-                    $"Valid values: personal | enterprise");
+                _editionWarning = $"配置文件未生效：环境变量 ENGINEERING_MANAGER_EDITION 值 '{envRaw}' 无法识别，已按个人版运行。有效值：personal | enterprise";
+                Console.Error.WriteLine($"[ApiConfig] WARNING: {_editionWarning}");
             }
             _cachedEdition = envEdition == "enterprise" ? "enterprise" : "personal";
             return _cachedEdition;
@@ -110,10 +109,8 @@ public static class ApiConfig
                     var normalized = val.Trim().ToLowerInvariant();
                     if (normalized != "enterprise" && normalized != "personal")
                     {
-                        Console.Error.WriteLine(
-                            $"[ApiConfig] WARNING: unknown edition '{val}' in config.json. " +
-                            $"Falling back to 'personal' (enterprise features disabled). " +
-                            $"Valid values: personal | enterprise");
+                        _editionWarning = $"配置文件 edition 值 '{val}' 无法识别，已按个人版运行。路径：{configPath}；有效值：personal | enterprise";
+                        Console.Error.WriteLine($"[ApiConfig] WARNING: {_editionWarning}");
                     }
                     _cachedEdition = normalized == "enterprise" ? "enterprise" : "personal";
                     return _cachedEdition;
@@ -122,14 +119,15 @@ public static class ApiConfig
         }
         catch (Exception ex)
             {
-                Console.Error.WriteLine(
-                    $"[ApiConfig] WARNING: cannot read config.json at '{configPath}'. " +
-                    $"Falling back to 'personal' (enterprise features disabled). " +
-                    $"Error: {ex.Message}");
+                _editionWarning = $"配置文件读取失败，已按个人版运行。路径：{configPath}；原因：{ex.Message}";
+                Console.Error.WriteLine($"[ApiConfig] WARNING: {_editionWarning}");
             }
         _cachedEdition = "personal";
         return _cachedEdition;
     }
+
+    /// <summary>edition 解析降级时的警告信息（正常路径为 null）。</summary>
+    public static string? EditionWarning => _editionWarning;
 
     // X8: old edition boolean properties removed. Business code uses EditionFeatures.Has(key).
     // edition 值仅通过 GetEdition() 暴露给 EditionFeatures 映射表。

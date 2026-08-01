@@ -265,7 +265,16 @@ public static class SystemEndpoints
                 catch { }
             }
 
-            return Common.Ok(new { dataPath = dataPath ?? defaultPath, defaultPath, edition = ApiConfig.GetEdition(), features = EditionFeatures.GetActiveFeatures() });
+            var response = new Dictionary<string, object>
+            {
+                ["dataPath"] = dataPath ?? defaultPath,
+                ["defaultPath"] = defaultPath,
+                ["edition"] = ApiConfig.GetEdition(),
+                ["features"] = EditionFeatures.GetActiveFeatures()
+            };
+            if (ApiConfig.EditionWarning != null)
+                response["warning"] = ApiConfig.EditionWarning;
+            return Common.Ok(response);
         });
 
         app.MapGet("/api/config/data-path", (HttpContext ctx) =>

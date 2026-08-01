@@ -6,11 +6,12 @@
   "scripts": {
     "sync-version": "node scripts/sync-version.mjs",
     "dev": "vite",
-    "check": "node scripts/check-rules.cjs && npm run check:edition && npm run test:gate && npm run check:feature-keys",
+    "check": "node scripts/check-rules.cjs && npm run check:edition && npm run test:gate && npm run check:feature-keys && npm run check:encoding",
     "check:backend": "node scripts/check-backend-rules.cjs",
     "check:edition": "node scripts/check-edition-gate.cjs",
     "test:gate": "node scripts/__tests__/check-edition-gate.selftest.cjs",
     "check:feature-keys": "node scripts/check-feature-keys.cjs",
+    "check:encoding": "node scripts/check-encoding.cjs",
     "check:version": "node scripts/check-version-consistency.cjs",
     "build:frontend": "node scripts/sync-version.mjs && node scripts/check-rules.cjs && tsc && vite build",
     "build": "vite build",
