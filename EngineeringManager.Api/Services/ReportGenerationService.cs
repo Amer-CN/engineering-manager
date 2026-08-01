@@ -103,6 +103,7 @@ public class ReportGenerationService
         }
         catch (OperationCanceledException)
         {
+            Console.Error.WriteLine("[ReportGeneration] 报告生成超时（30s，已取消）");
             return (false, null, "报告生成超时（30s），请缩小时间范围或筛选条件后重试");
         }
         catch (Exception ex)

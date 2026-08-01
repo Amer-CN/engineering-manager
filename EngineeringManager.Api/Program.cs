@@ -489,8 +489,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
             cmd.ExecuteNonQuery();
         }
         EnsureTables(conn);
-        // v0.80: is_default_password 列迁移（幂等）
-        try { conn.Execute(@"ALTER TABLE users ADD COLUMN is_default_password INTEGER DEFAULT 0"); } catch { }
+        // v0.80: is_default_password 列迁移（幂等；先探测列是否存在，避免依赖静默 catch）
+        if (conn.ExecuteScalar<int>("SELECT COUNT(*) FROM pragma_table_info('users') WHERE name='is_default_password'") == 0)
+            conn.Execute(@"ALTER TABLE users ADD COLUMN is_default_password INTEGER DEFAULT 0");
         // v0.80: 种子管理员（仅在 users 空表时触发）
         SeedDefaultAdmin(conn);
         // v0.72.0: 跑 migrations 脚本（idempotent，自动跳过已跑的）

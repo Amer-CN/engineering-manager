@@ -791,7 +791,7 @@ public static class AgentEndpoints
                         profileBlock = "\n## 当前用户画像\n" + string.Join("\n", parts.Select(p => "- " + p)) + "\n";
                 }
             }
-            catch { /* 查询失败不影响主流程 */ }
+            catch (Exception ex) { Console.Error.WriteLine($"[Agent] 构建用户画像失败（不影响主流程）: {ex.Message}"); }
         }
 
         var lines = new string[]
