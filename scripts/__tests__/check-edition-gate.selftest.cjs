@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * check-edition-gate.test.cjs — 门禁用效性外部测试
+ * check-edition-gate.selftest.cjs — 门禁用效性外部测试
  *
  * 流程：
  * 1. 在 src/ 下创建临时探针文件（扫描范围内，不参与 dotnet build）
@@ -9,7 +9,7 @@
  * 4. finally 删除探针文件（无论成功失败）
  * 5. 再跑一次，断言退出码 === 0
  *
- * 用法：node scripts/__tests__/check-edition-gate.test.cjs
+ * 用法：node scripts/__tests__/check-edition-gate.selftest.cjs
  */
 
 const { execSync } = require('child_process');

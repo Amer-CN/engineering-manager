@@ -22,7 +22,7 @@ const ALLOWED_FILES = [
   'EngineeringManager.Api/EditionFeatures.cs',
   'src/store/editionStore.ts',
   'scripts/check-edition-gate.cjs',
-  'scripts/__tests__/check-edition-gate.test.cjs',
+  'scripts/__tests__/check-edition-gate.selftest.cjs',
 ];
 
 // 禁止的模式（含不带 ApiConfig. 前缀的裸形式）
