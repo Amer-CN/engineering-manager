@@ -48,21 +48,29 @@ function parseBackendKeys() {
   return keys;
 }
 
-// 解析前端：从 editionFeatures.ts 提取 EDITION_FEATURE_KEYS 的值
+// 解析前端：从 editionFeatures.ts 的 EDITION_FEATURE_KEYS 对象块内提取值
 function parseFrontendKeys() {
   const file = path.join(ROOT, 'src', 'constants', 'editionFeatures.ts');
   const content = fs.readFileSync(file, 'utf-8');
 
-  // 提取所有引号内的值（'userManagement' 等）
+  // 21.2: 先定位 EDITION_FEATURE_KEYS = { ... } 块，只在块内提取
+  const blockMatch = content.match(/EDITION_FEATURE_KEYS\s*=\s*\{([\s\S]*?)\}\s*as\s+const/);
+  if (!blockMatch) {
+    console.error('FAIL: cannot find EDITION_FEATURE_KEYS block in editionFeatures.ts');
+    process.exit(1);
+  }
+  const block = blockMatch[1];
+
+  // 在块内提取值（兼容单引号/双引号/反引号）
   const keys = new Set();
-  const re = /:\s*'([^']+)'/g;
+  const re = /:\s*['"`]([^'"`]+)['"`]/g;
   let m;
-  while ((m = re.exec(content)) !== null) {
+  while ((m = re.exec(block)) !== null) {
     keys.add(m[1]);
   }
 
   if (keys.size === 0) {
-    console.error('FAIL: cannot extract any keys from editionFeatures.ts');
+    console.error('FAIL: cannot extract any keys from EDITION_FEATURE_KEYS block');
     process.exit(1);
   }
   return keys;
