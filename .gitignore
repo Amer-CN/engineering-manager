@@ -164,3 +164,6 @@ EngineeringManager.E2E/obj/
 # Playwright artifacts (local/CI generated)
 test-results/
 playwright-report/
+
+# 19.2: gate test probe (temp file, never commit)
+scripts/__gate_probe.tmp.cjs

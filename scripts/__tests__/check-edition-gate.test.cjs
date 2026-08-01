@@ -19,7 +19,7 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..', '..');
 const GATE = path.join(ROOT, 'scripts', 'check-edition-gate.cjs');
 // 临时探针：在 src/ 下（SCAN_DIRS 内），不在 ALLOWED_FILES 内，不参与 dotnet build
-const PROBE = path.join(ROOT, 'src', '__gate_probe.tmp.ts');
+const PROBE = path.join(ROOT, 'scripts', '__gate_probe.tmp.cjs');
 
 function runGate() {
   try {
@@ -29,6 +29,9 @@ function runGate() {
     return { code: e.status, output: (e.stderr || '') + (e.stdout || '') };
   }
 }
+
+// 19.2(b): 幂等启动——先删除上次崩溃残留的探针
+try { fs.unlinkSync(PROBE); } catch {}
 
 // 18.1(a): 不在 try 内 process.exit，先存结果，finally 清理后统一退出
 let failure = null;
@@ -41,7 +44,7 @@ try {
   const result1 = runGate();
   if (result1.code !== 1) {
     failure = `FAIL: expected exit 1 after planting violation, got ${result1.code}`;
-  } else if (!result1.output.includes('__gate_probe.tmp.ts')) {
+  } else if (!result1.output.includes('__gate_probe.tmp.cjs')) {
     failure = `FAIL: output does not mention probe file. Output: ${result1.output.slice(0, 200)}`;
   } else {
     console.log('PASS: gate detects planted violation (exit 1, mentions probe)');

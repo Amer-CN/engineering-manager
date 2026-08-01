@@ -10,6 +10,7 @@
     "check:backend": "node scripts/check-backend-rules.cjs",
     "check:edition": "node scripts/check-edition-gate.cjs",
     "test:gate": "node scripts/__tests__/check-edition-gate.test.cjs",
+    "check:feature-keys": "node scripts/check-feature-keys.cjs",
     "check:version": "node scripts/check-version-consistency.cjs",
     "build:frontend": "node scripts/sync-version.mjs && node scripts/check-rules.cjs && tsc && vite build",
     "build": "vite build",
