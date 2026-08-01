@@ -2,11 +2,14 @@
 /**
  * check-edition-gate.cjs — M-EDITION1 X8.5 门禁
  *
- * 规则：除 EditionFeatures.cs 和 editionStore.ts 自身外，
- * 全库出现 IsPersonal / IsEnterprise / useIsPersonal / useIsEnterprise 直接判断即 HARD FAIL。
+ * 规则：除豁免文件外，全库出现 IsPersonal / IsEnterprise / useIsPersonal / useIsEnterprise
+ * 直接判断即 HARD FAIL。
  *
  * 用法：node scripts/check-edition-gate.cjs
  * 退出码：0=通过，1=违规
+ *
+ * 扫描范围：EngineeringManager.Api, EngineeringManager.Tests, src, scripts, e2e
+ * 豁免：EditionFeatures.cs, editionStore.ts, check-edition-gate.cjs（按相对路径精确匹配）
  */
 
 const fs = require('fs');
@@ -14,68 +17,39 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
 
-// 允许包含这些模式的文件（映射表自身）
+// 豁免文件（相对路径精确匹配，不按 basename）
 const ALLOWED_FILES = [
-  'EditionFeatures.cs',
-  'editionStore.ts',
-  'check-edition-gate.cjs',  // 本脚本自身
+  'EngineeringManager.Api/EditionFeatures.cs',
+  'src/store/editionStore.ts',
+  'scripts/check-edition-gate.cjs',
+  'scripts/__tests__/check-edition-gate.test.cjs',
 ];
 
-// 禁止的模式
+// 禁止的模式（含不带 ApiConfig. 前缀的裸形式）
 const FORBIDDEN_PATTERNS = [
   /ApiConfig\.IsPersonal/,
   /ApiConfig\.IsEnterprise/,
   /useIsPersonal/,
   /useIsEnterprise/,
+  /\bIsPersonal\b/,
+  /\bIsEnterprise\b/,
+  /\bisPersonal\b/,
+  /\bisEnterprise\b/,
 ];
 
 // 扫描范围
-
-// ═══════════════════════════════════════════════════════════
-// 8F.3: --self-test 模式：证明门禁真的能拦住违规
-// 用法：node scripts/check-edition-gate.cjs --self-test
-// ═══════════════════════════════════════════════════════════
-if (process.argv.includes('--self-test')) {
-  const fs = require('fs');
-  const os = require('os');
-  const tmpDir = fs.mkdtempSync(require('path').join(os.tmpdir(), 'edition-gate-test-'));
-  const tmpFile = require('path').join(tmpDir, 'Violation.cs');
-  fs.writeFileSync(tmpFile, 'public class X { bool y = ApiConfig.IsPersonal; }');
-
-  // Scan the temp file
-  const content = fs.readFileSync(tmpFile, 'utf-8');
-  const lines = content.split('\n');
-  let found = false;
-  for (let i = 0; i < lines.length; i++) {
-    for (const pat of FORBIDDEN_PATTERNS) {
-      if (pat.test(lines[i])) { found = true; break; }
-    }
-    if (found) break;
-  }
-
-  // Cleanup
-  fs.unlinkSync(tmpFile);
-  fs.rmdirSync(tmpDir);
-
-  if (found) {
-    console.log('✅ self-test PASSED: gate correctly detects IsPersonal violation');
-    process.exit(0);
-  } else {
-    console.error('❌ self-test FAILED: gate did NOT detect planted IsPersonal violation');
-    process.exit(1);
-  }
-}
-
 const SCAN_DIRS = [
   'EngineeringManager.Api',
   'EngineeringManager.Tests',
   'src',
+  'scripts',
+  'e2e',
 ];
 
 const SKIP_DIRS = new Set(['node_modules', 'bin', 'obj', 'dist', '.git']);
-const SCAN_EXTS = new Set(['.cs', '.ts', '.tsx']);
+const SCAN_EXTS = new Set(['.cs', '.ts', '.tsx', '.cjs', '.mjs']);
 
-/** 纯 fs 递归收集文件，不走 shell */
+/** 纯 fs 递归收集文件 */
 function collectFiles(dir) {
   const results = [];
   let entries;
@@ -97,8 +71,9 @@ let violations = [];
 for (const dir of SCAN_DIRS) {
   const files = collectFiles(path.join(ROOT, dir));
   for (const file of files) {
-    const basename = path.basename(file);
-    if (ALLOWED_FILES.some(a => basename === a)) continue;
+    const rel = path.relative(ROOT, file).replace(/\\/g, '/');
+    // 相对路径精确匹配豁免
+    if (ALLOWED_FILES.includes(rel)) continue;
 
     let content;
     try { content = fs.readFileSync(file, 'utf-8'); } catch { continue; }
@@ -107,7 +82,6 @@ for (const dir of SCAN_DIRS) {
     for (let i = 0; i < lines.length; i++) {
       for (const pat of FORBIDDEN_PATTERNS) {
         if (pat.test(lines[i])) {
-          const rel = path.relative(ROOT, file);
           violations.push(`${rel}:${i + 1}  ${lines[i].trim()}`);
         }
       }
@@ -116,13 +90,13 @@ for (const dir of SCAN_DIRS) {
 }
 
 if (violations.length > 0) {
-  console.error('❌ HARD FAIL: edition 门禁违规（禁止直接使用 IsPersonal/IsEnterprise/useIsPersonal）');
-  console.error('   业务代码必须通过 EditionFeatures.Has(key)（后端）或 useHasFeature(key)（前端）判断能力。');
+  console.error('HARD FAIL: edition gate violations (IsPersonal/IsEnterprise/useIsPersonal/isPersonal)');
+  console.error('Business code must use EditionFeatures.Has(key) (backend) or useHasFeature(key) (frontend).');
   console.error('');
   violations.forEach(v => console.error('  ' + v));
-  console.error(`\n共 ${violations.length} 处违规。`);
+  console.error(`\nTotal: ${violations.length} violation(s).`);
   process.exit(1);
 } else {
-  console.log('✅ edition 门禁通过：无 IsPersonal/IsEnterprise 直接判断泄漏。');
+  console.log('edition gate passed: no IsPersonal/IsEnterprise leaks.');
   process.exit(0);
 }

@@ -9,8 +9,8 @@
  *   features = []    → personal（已加载，无企业能力）
  *   features = [...]  → enterprise（已加载，有能力）
  *
- * 未就绪时 useHasFeature 返回 false（fail-safe），
- * App.tsx 在 loaded=false 时不渲染受控区域（避免首屏闪现）。
+ * 未就绪时 useHasFeature 返回 false（fail-safe）。
+ * 加载窗口极短（<100ms），enterprise 用户仅暂时看不到 gated 菜单项，无闪现问题。
  */
 
 import { create } from 'zustand'

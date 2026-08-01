@@ -131,7 +131,7 @@ public static class ApiConfig
         return _cachedEdition;
     }
 
-    // X8: IsPersonal / IsEnterprise 已移除。业务代码统一用 EditionFeatures.Has(key)。
+    // X8: old edition boolean properties removed. Business code uses EditionFeatures.Has(key).
     // edition 值仅通过 GetEdition() 暴露给 EditionFeatures 映射表。
 
     public static void ConfigureServices(WebApplicationBuilder builder)
