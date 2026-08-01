@@ -38,4 +38,17 @@ if (fs.existsSync(installerApp)) {
   console.log(`[sync-version] 已写入 installer/src/App.tsx → ${v}`)
 }
 
+// 5) src/components/Login.tsx 登录页版本 fallback（原人工同步项，纳入自动化避免漏更）
+const loginTsx = 'src/components/Login.tsx'
+if (fs.existsSync(loginTsx)) {
+  let content = fs.readFileSync(loginTsx, 'utf-8')
+  const next = content.replace(/(__APP_VERSION__\s*\|\|\s*')[\d.]+(')/, `$1${v}$2`)
+  if (next !== content) {
+    fs.writeFileSync(loginTsx, next)
+    console.log(`[sync-version] 已写入 Login.tsx fallback → ${v}`)
+  } else {
+    console.log(`[sync-version] Login.tsx fallback 已是 ${v}（无变更）`)
+  }
+}
+
 console.log(`[sync-version] 完成：版本号 ${v} 已同步至所有位置`)
