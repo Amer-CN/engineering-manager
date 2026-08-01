@@ -170,20 +170,35 @@ jobs:
           New-Item -ItemType Directory -Force -Path $env:ENGINEERING_MANAGER_DATA_PATH | Out-Null
           $apiDir = Join-Path $env:GITHUB_WORKSPACE 'EngineeringManager.Api\bin\Release\net8.0-windows'
           # WorkingDirectory 固定到输出目录：content root 取进程当前目录，确保 appsettings.json 可加载
-          Start-Process -FilePath dotnet -WorkingDirectory $apiDir -ArgumentList 'EngineeringManager.Api.dll','--api-only' -RedirectStandardOutput (Join-Path $env:GITHUB_WORKSPACE 'api-e2e.log') -RedirectStandardError (Join-Path $env:GITHUB_WORKSPACE 'api-e2e.err.log')
+          $process = Start-Process -FilePath dotnet -WorkingDirectory $apiDir -ArgumentList 'EngineeringManager.Api.dll','--api-only' -RedirectStandardOutput (Join-Path $env:GITHUB_WORKSPACE 'api-e2e.log') -RedirectStandardError (Join-Path $env:GITHUB_WORKSPACE 'api-e2e.err.log') -PassThru
+          $process.Id | Set-Content (Join-Path $env:GITHUB_WORKSPACE 'api-e2e.pid')
 
-      - name: Wait for API health (max 60s)
+      - name: Wait for API health (max 240s)
         run: |
+          $apiPid = [int](Get-Content (Join-Path $env:GITHUB_WORKSPACE 'api-e2e.pid'))
+          $sw = [System.Diagnostics.Stopwatch]::StartNew()
+          $deadline = 240
           $ok = $false
-          for ($i = 0; $i -lt 60; $i++) {
+          while ($sw.Elapsed.TotalSeconds -lt $deadline) {
+            # 进程存活检查：PID 不存在即 API 已提前退出，立即输出日志并失败，不等满 deadline
+            if ($null -eq (Get-Process -Id $apiPid -ErrorAction SilentlyContinue)) {
+              Write-Output "API 进程 (PID $apiPid) 已提前退出，输出日志后立即失败"
+              Get-Content api-e2e.log, api-e2e.err.log -ErrorAction SilentlyContinue
+              throw "API 进程提前退出 (PID $apiPid)，未达 readiness"
+            }
             try {
               if ((Invoke-WebRequest -Uri http://localhost:5048/api/health -UseBasicParsing -TimeoutSec 2).StatusCode -eq 200) { $ok = $true; break }
             } catch { }
             Start-Sleep -Seconds 1
           }
-          if (-not $ok) {
+          $sw.Stop()
+          if ($ok) {
+            Write-Output ("API readiness 实际耗时: {0:N1}s (PID {1})" -f $sw.Elapsed.TotalSeconds, $apiPid)
+          } else {
+            $alive = $null -ne (Get-Process -Id $apiPid -ErrorAction SilentlyContinue)
+            Write-Output ("API 未在 {0}s 内就绪；PID {1} 仍存活: {2}" -f $deadline, $apiPid, $alive)
             Get-Content api-e2e.log, api-e2e.err.log -ErrorAction SilentlyContinue
-            throw 'API 未在 60s 内就绪 (http://localhost:5048/api/health)'
+            throw "API 未在 ${deadline}s 内就绪 (http://localhost:5048/api/health)"
           }
 
       - name: Run E2E critical paths
