@@ -30,6 +30,42 @@ const FORBIDDEN_PATTERNS = [
 ];
 
 // 扫描范围
+
+// ═══════════════════════════════════════════════════════════
+// 8F.3: --self-test 模式：证明门禁真的能拦住违规
+// 用法：node scripts/check-edition-gate.cjs --self-test
+// ═══════════════════════════════════════════════════════════
+if (process.argv.includes('--self-test')) {
+  const fs = require('fs');
+  const os = require('os');
+  const tmpDir = fs.mkdtempSync(require('path').join(os.tmpdir(), 'edition-gate-test-'));
+  const tmpFile = require('path').join(tmpDir, 'Violation.cs');
+  fs.writeFileSync(tmpFile, 'public class X { bool y = ApiConfig.IsPersonal; }');
+
+  // Scan the temp file
+  const content = fs.readFileSync(tmpFile, 'utf-8');
+  const lines = content.split('\n');
+  let found = false;
+  for (let i = 0; i < lines.length; i++) {
+    for (const pat of FORBIDDEN_PATTERNS) {
+      if (pat.test(lines[i])) { found = true; break; }
+    }
+    if (found) break;
+  }
+
+  // Cleanup
+  fs.unlinkSync(tmpFile);
+  fs.rmdirSync(tmpDir);
+
+  if (found) {
+    console.log('✅ self-test PASSED: gate correctly detects IsPersonal violation');
+    process.exit(0);
+  } else {
+    console.error('❌ self-test FAILED: gate did NOT detect planted IsPersonal violation');
+    process.exit(1);
+  }
+}
+
 const SCAN_DIRS = [
   'EngineeringManager.Api',
   'EngineeringManager.Tests',

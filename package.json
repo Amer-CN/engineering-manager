@@ -6,8 +6,9 @@
   "scripts": {
     "sync-version": "node scripts/sync-version.mjs",
     "dev": "vite",
-    "check": "node scripts/check-rules.cjs",
+    "check": "node scripts/check-rules.cjs && node scripts/check-edition-gate.cjs",
     "check:backend": "node scripts/check-backend-rules.cjs",
+    "check:edition": "node scripts/check-edition-gate.cjs",
     "check:version": "node scripts/check-version-consistency.cjs",
     "build:frontend": "node scripts/sync-version.mjs && node scripts/check-rules.cjs && tsc && vite build",
     "build": "vite build",
