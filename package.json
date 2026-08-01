@@ -6,7 +6,7 @@
   "scripts": {
     "sync-version": "node scripts/sync-version.mjs",
     "dev": "vite",
-    "check": "node scripts/check-rules.cjs && node scripts/check-edition-gate.cjs && node scripts/__tests__/check-edition-gate.test.cjs",
+    "check": "node scripts/check-rules.cjs && npm run check:edition && npm run test:gate && npm run check:feature-keys",
     "check:backend": "node scripts/check-backend-rules.cjs",
     "check:edition": "node scripts/check-edition-gate.cjs",
     "test:gate": "node scripts/__tests__/check-edition-gate.test.cjs",
