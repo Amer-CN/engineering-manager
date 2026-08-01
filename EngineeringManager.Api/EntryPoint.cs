@@ -17,6 +17,7 @@ public static class EntryPoint
             var builder = WebApplication.CreateBuilder(args);
             ApiConfig.ConfigureServices(builder);
             var app = builder.Build();
+            ApiConfig.InitializeDatabaseOrExit();
             ApiConfig.ConfigureApp(app);
             app.Run();
             return;
@@ -74,6 +75,7 @@ public static class EntryPoint
             var builder = WebApplication.CreateBuilder(args);
             ApiConfig.ConfigureServices(builder);
             var app = builder.Build();
+            ApiConfig.InitializeDatabaseOrExit();
             ApiConfig.ConfigureApp(app);
             app.Run();
         });
