@@ -99,3 +99,20 @@
 | 步骤 1 交接 | `docs/enterprise/HANDOFF-STEP1.md` |
 | 权限矩阵快照 | `docs/enterprise/PERMISSION-SNAPSHOT.md` |
 | 项目导航 | `AGENTS.md`「版本分线」章节 |
+
+
+---
+
+## 7. CI 预存红清单（只减不增）
+
+基线：d80020d（four-themes merge）引入，5fb0241（merge 前）全绿。
+证据：GitHub Actions run 30656905289（master, d80020d）。
+规则：清单外任何 job 红 = 不通过。新增豁免需单独批准。
+
+| # | Job | 红因 | 基线证据 | 数量 | 登记 |
+|---|-----|------|----------|------|------|
+| 1 | Backend Build & Test | check-backend-rules 28 项（22 B1 token 口径误报 + 7 B3 catch 无日志，扣 1 已修） | run 30656905289 | 28 项 | TD-BACKEND-28 |
+| 2 | E2E Critical Paths | API 60s 启动超时（CI runner 环境） | run 30656905289 | 1 job | TD-E2E-TIMEOUT |
+| 3 | Unit Tests (22) | ConversationHistory.test.tsx 6 个稳定失败（waitFor 找不到「今天的对话」） | run 30656905289 | 6 tests | TD-VITEST-CONVHIST |
+
+注：Unit Tests (20) 在 d80020d 为 cancelled（被 22 的失败触发取消），非独立红因。
