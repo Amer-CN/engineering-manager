@@ -324,3 +324,15 @@ rebase 后 backup 分支仍指向旧 265e976，会留下两份并行历史。
 
 **优点**：不依赖另一会话配合，不需要 force-push，不改写已推送历史。
 **缺点**：另一会话 rebase 时会看到 M-EDITION1 冲突（但 git rerere 或手动 resolve 即可）。
+
+
+---
+
+## 22.3 跨线修复移交：Login.tsx 版本 fallback
+
+Login.tsx 的版本 fallback 在 d80020d 后滞后于 package.json（0.90.1 vs 0.91.0），
+导致 CI lint job 的 check:version 步骤红。
+该修复已在 feat/edition-split 的 f40a03d 上做过（1 行），master 线合并时注意去重。
+另建议排查是否还有其他版本号引用位置滞后（check:version 只覆盖
+package.json / docs/VERSIONING.md / installer/package.json / Login.tsx，
+且它不在 npm run check 链路里，本机开发永远看不到这个红）。
