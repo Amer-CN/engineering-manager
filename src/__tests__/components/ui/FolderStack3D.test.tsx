@@ -4,8 +4,9 @@
  * - 交互：点击聚焦卡 / Enter 打开分组；点击非聚焦卡不误触 onOpen
  * - reduced-motion：降级为横向扁平轨道（无 3D 舞台）
  * - 卡面（Phase 1 竖版母版）：四层分层、三纸、远端隐藏态类、聚焦态复用
+ * - FPS 看门狗（Phase 1.5 Fix）：rAF 停止后重启重置采样窗口（空闲恢复不误报 / 真低帧仍降级）
  */
-import { render, screen, cleanup, fireEvent } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent, act } from '@testing-library/react'
 import { FolderStack3D, STACK_GROUP_LIMIT, type StackGroup } from '@/components/ui/FolderStack3D'
 
 const makeGroups = (n: number): StackGroup[] =>
@@ -19,11 +20,52 @@ const makeGroups = (n: number): StackGroup[] =>
     detail: [{ label: '图纸数', value: i + 1 }],
   }))
 
+// ── rAF 时钟 harness：确定性驱动 useWheelStack 的 frame/measure（FPS 看门狗测试）──
+// jsdom 无真实合成器帧；用受控时钟 + 手动 rAF 队列逐帧推进，精确控制帧间隔以模拟 60/30fps。
+let fpsClock = 0
+let rafQueue: Array<(t: number) => void> = []
+
+function installFpsClock() {
+  fpsClock = 0
+  rafQueue = []
+  vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+    rafQueue.push(cb)
+    return rafQueue.length
+  })
+  vi.stubGlobal('cancelAnimationFrame', (_id: number) => { /* noop：测试内不依赖取消 */ })
+  vi.spyOn(performance, 'now').mockImplementation(() => fpsClock)
+}
+
+// 推进一帧：时钟 += dt，冲刷当前排队的 rAF 回调（回调内会再排队下一帧）
+function stepFpsFrame(dt: number) {
+  fpsClock += dt
+  const q = rafQueue
+  rafQueue = []
+  q.forEach((cb) => cb(fpsClock))
+}
+
+// 以固定帧间隔运行 n 帧（包在 act 内刷新 React 更新）
+function runFpsFrames(n: number, interval: number) {
+  act(() => {
+    for (let i = 0; i < n; i++) stepFpsFrame(interval)
+  })
+}
+
+// 步进直到弹簧收敛、rAF 停止（rafQueue 清空）
+function settleFps(interval = 16.7, maxFrames = 1200) {
+  act(() => {
+    for (let i = 0; i < maxFrames && rafQueue.length > 0; i++) stepFpsFrame(interval)
+  })
+}
+
 describe('FolderStack3D', () => {
   afterEach(() => {
     cleanup()
     // 清掉 reduced-motion mock，避免串测
     delete (window as any).matchMedia
+    // 清掉 FPS 时钟的 rAF/performance mock，避免串测
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
   })
 
   it('渲染 listbox 语义与全部分组卡，KPI 浮层显示聚焦分组', () => {
@@ -194,5 +236,61 @@ describe('FolderStack3D', () => {
     for (const sel of ['.fs3d-num', '.fs3d-stats', '.fs3d-st', '.fs3d-tab', '.fs3d-numlabel', '.fs3d-meta']) {
       expect(card.querySelector(sel)).toBeNull()
     }
+  })
+
+  // ── FPS 看门狗（Phase 1.5 Fix）：rAF 停止后重启须重置采样窗口 ──
+  // 根因：fpsRef 的 start/frames/badSince 在 rAF 停止后保留，下次 kick 恢复时
+  // measure() 把空闲时长计入采样窗口 → 误判低 fps → 错误降级。修复：kick 从停止态
+  // 重启时重置采样会话（见 useWheelStack resetFpsMeasurement）。
+
+  it('A. 重复「空闲-恢复」不误报：三次 Home 单帧（间隔 5s/1s 空闲）不降级（无 fs3d-noglass）', () => {
+    installFpsClock()
+    render(<FolderStack3D groups={makeGroups(10)} ariaLabel="空闲恢复" />)
+    const stage = screen.getByRole('listbox') as HTMLElement
+    stage.focus()
+
+    // 第一次：Home（target=0 与初始 pos=0 重合，单帧即沉降停 rAF）
+    fireEvent.keyDown(stage, { key: 'Home' })
+    act(() => stepFpsFrame(16.7))
+    expect(rafQueue.length).toBe(0)
+
+    // 空闲 5 秒（仅推进时钟，无帧）
+    fpsClock += 5000
+
+    // 第二次：Home 单帧
+    fireEvent.keyDown(stage, { key: 'Home' })
+    act(() => stepFpsFrame(16.7))
+    expect(rafQueue.length).toBe(0)
+
+    // 空闲 1 秒
+    fpsClock += 1000
+
+    // 第三次：Home 单帧
+    fireEvent.keyDown(stage, { key: 'Home' })
+    act(() => stepFpsFrame(16.7))
+    expect(rafQueue.length).toBe(0)
+
+    // 最终：三次空闲-恢复不得误触发降级（守护 resetFpsMeasurement：
+    // 无修复时 measure() 把空闲计入窗口，badSince 跨轮累积 >500ms → 误降级）
+    expect(stage.className).not.toContain('fs3d-noglass')
+  })
+  it('B. 真正低帧仍降级：连续 ~30fps 超过 500ms 触发 fs3d-noglass', () => {
+    installFpsClock()
+    render(<FolderStack3D groups={makeGroups(40)} ariaLabel="低帧降级" />)
+    const stage = screen.getByRole('listbox') as HTMLElement
+    stage.focus()
+
+    // 连续 ~30fps（33ms 帧间隔）；每 2 帧推进一次滚轮保持弹簧运动（target 向末尾移动，不沉降）
+    act(() => {
+      for (let i = 0; i < 40; i++) {
+        if (i % 2 === 0) {
+          stage.dispatchEvent(new WheelEvent('wheel', { deltaY: 120, deltaMode: 0, cancelable: true, bubbles: true }))
+        }
+        stepFpsFrame(33)
+      }
+    })
+
+    // 40 帧 × 33ms ≈ 1320ms > 500ms，fps≈30 < 45 → 必须降级（证明修复未破坏真实降级）
+    expect(stage.className).toContain('fs3d-noglass')
   })
 })
