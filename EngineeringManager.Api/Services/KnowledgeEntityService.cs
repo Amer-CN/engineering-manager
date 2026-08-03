@@ -272,9 +272,9 @@ public class KnowledgeEntityService
             case "income_contract":
             case "expense_contract":
             {
-                var contractTable = entityType == "income_contract" ? "income_contracts" : "expense_contracts";
+                var tableName = entityType == "income_contract" ? "income_contracts" : "expense_contracts";
                 var row = _db.QueryFirstOrDefault<dynamic>(
-                    $"SELECT [project_id] FROM [{contractTable}] WHERE [id]=@EntityId",
+                    $"SELECT [project_id] FROM [{tableName}] WHERE [id]=@EntityId",
                     new { EntityId = entityId });
                 if (row?.project_id != null)
                     AddSeed(related, "project", (long)row.project_id);
