@@ -163,40 +163,39 @@ jobs:
       - name: Build backend API
         run: dotnet build EngineeringManager.Api/EngineeringManager.Api.csproj
 
-      - name: Start API (--api-only, isolated data path)
+      - name: E2E (start API + wait + run in one step)
+        # A1: GitHub Actions runner 在步骤结束时清理该步骤启动的子进程（2026-08 行为），
+        # 跨步骤的 API 进程必死（0 字节日志 + 端口永不监听）。
+        # 解法：启动 + 等待 + Playwright 全部合并进一个步骤，进程生命周期完全在步骤内。
         run: |
           New-Item -ItemType Directory -Force -Path $env:ENGINEERING_MANAGER_DATA_PATH | Out-Null
           $apiDir = Join-Path $env:GITHUB_WORKSPACE 'EngineeringManager.Api\bin\Debug\net8.0-windows'
-          # WorkingDirectory 固定到输出目录：content root 取进程当前目录，确保 appsettings.json 可加载
-          # 注意：不带 -PassThru。实测 -PassThru 使 pwsh 退出时进程被 runner 清理（步骤间死亡），
-          # 不带 -PassThru 的 Start-Process 子进程可跨步骤存活（60s 版已验证 180s+）。
-          Start-Process -FilePath dotnet -WorkingDirectory $apiDir -ArgumentList 'EngineeringManager.Api.dll','--api-only' -RedirectStandardOutput (Join-Path $env:GITHUB_WORKSPACE 'api-e2e.log') -RedirectStandardError (Join-Path $env:GITHUB_WORKSPACE 'api-e2e.err.log')
-
-      - name: Wait for API health (max 180s, 2s poll, port-liveness check)
-        run: |
-          # A1: 无法用 PID 跟踪进程（Start-Process -PassThru 会致进程在步骤间被清理），
-          # 改用「5048 端口监听」做存活检查：进程退出 → 端口消失 → 立即失败并打印日志。
-          $ok = $false
-          for ($i = 0; $i -lt 90; $i++) {
-            $listening = Get-NetTCPConnection -LocalPort 5048 -State Listen -ErrorAction SilentlyContinue
-            if ($listening) {
+          $apiProc = Start-Process -FilePath dotnet -WorkingDirectory $apiDir -ArgumentList 'EngineeringManager.Api.dll','--api-only' -RedirectStandardOutput (Join-Path $env:GITHUB_WORKSPACE 'api-e2e.log') -RedirectStandardError (Join-Path $env:GITHUB_WORKSPACE 'api-e2e.err.log') -PassThru
+          Write-Host "API started PID=$($apiProc.Id)"
+          try {
+            $ok = $false
+            for ($i = 0; $i -lt 90; $i++) {
+              if (-not (Get-Process -Id $apiProc.Id -ErrorAction SilentlyContinue)) {
+                Write-Host "API process exited early (PID $($apiProc.Id)); logs:"
+                Get-Content api-e2e.log, api-e2e.err.log -ErrorAction SilentlyContinue
+                throw "API process exited before ready; see api-e2e.err.log above"
+              }
               try {
                 if ((Invoke-WebRequest -Uri http://localhost:5048/api/health -UseBasicParsing -TimeoutSec 2).StatusCode -eq 200) { $ok = $true; break }
               } catch { }
+              Start-Sleep -Seconds 2
             }
-            Start-Sleep -Seconds 2
+            if (-not $ok) {
+              Write-Host 'API 未在 180s 内就绪；日志：'
+              Get-Content api-e2e.log, api-e2e.err.log -ErrorAction SilentlyContinue
+              throw 'API 未在 180s 内就绪 (http://localhost:5048/api/health)'
+            }
+            # 纯 request 级用例，无需 playwright install 浏览器二进制（已验证）
+            npx playwright test e2e/critical-paths.spec.ts --reporter=list
+            if ($LASTEXITCODE -ne 0) { throw "playwright exit code $LASTEXITCODE" }
+          } finally {
+            Stop-Process -Id $apiProc.Id -Force -ErrorAction SilentlyContinue
           }
-          if (-not $ok) {
-            Write-Host 'API 未在 180s 内就绪；端口 5048 监听状态：'
-            Get-NetTCPConnection -LocalPort 5048 -ErrorAction SilentlyContinue | Select-Object State,OwningProcess
-            Get-Content api-e2e.log, api-e2e.err.log -ErrorAction SilentlyContinue
-            throw 'API 未在 180s 内就绪 (http://localhost:5048/api/health)'
-          }
-
-      - name: Run E2E critical paths
-        # 纯 request 级用例，无需 playwright install 浏览器二进制（已验证）
-        # list reporter 失败时直接标出具体用例与断言位置，不静默跳过
-        run: npx playwright test e2e/critical-paths.spec.ts --reporter=list
 
       - name: Upload E2E failure artifacts
         if: failure()
