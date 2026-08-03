@@ -103,6 +103,7 @@ public class ReportGenerationService
         }
         catch (OperationCanceledException)
         {
+            Console.Error.WriteLine("[ReportGeneration] 报告生成超时（30s，已取消）");
             return (false, null, "报告生成超时（30s），请缩小时间范围或筛选条件后重试");
         }
         catch (Exception ex)
@@ -123,30 +124,30 @@ public class ReportGenerationService
         IDbConnection db, ReportRequest request, string userId, bool isAdmin)
     {
         var where = BuildAuditWhere(request, userId, isAdmin);
-        var sql = where.sql;
+        var filter = where.sql;
         var param = where.param;
 
         // 分组统计：action
         var actionCounts = (await db.QueryAsync(
-            $"SELECT [action], COUNT(*) AS [count] FROM [audit_logs] {sql} GROUP BY [action]", param)).ToList();
+            $"SELECT [action], COUNT(*) AS [count] FROM [audit_logs] {filter} GROUP BY [action]", param)).ToList();
 
         // 分组统计：resource_type
         var resourceCounts = (await db.QueryAsync(
-            $"SELECT [resource_type], COUNT(*) AS [count] FROM [audit_logs] {sql} GROUP BY [resource_type]", param)).ToList();
+            $"SELECT [resource_type], COUNT(*) AS [count] FROM [audit_logs] {filter} GROUP BY [resource_type]", param)).ToList();
 
         // 分组统计：user
         var userCounts = (await db.QueryAsync(
-            $"SELECT [user_id], [user_name], COUNT(*) AS [count] FROM [audit_logs] {sql} GROUP BY [user_id], [user_name] ORDER BY [count] DESC LIMIT 10",
+            $"SELECT [user_id], [user_name], COUNT(*) AS [count] FROM [audit_logs] {filter} GROUP BY [user_id], [user_name] ORDER BY [count] DESC LIMIT 10",
             param)).ToList();
 
         // 留痕明细（上限 50 条）
         var details = (await db.QueryAsync(
-            $"SELECT [action], [user_name], [resource_type], [resource_id], [details], [created_at] FROM [audit_logs] {sql} ORDER BY [created_at] DESC LIMIT 50",
+            $"SELECT [action], [user_name], [resource_type], [resource_id], [details], [created_at] FROM [audit_logs] {filter} ORDER BY [created_at] DESC LIMIT 50",
             param)).ToList();
 
         // 总数
         var totalCount = await db.ExecuteScalarAsync<int>(
-            $"SELECT COUNT(*) FROM [audit_logs] {sql}", param);
+            $"SELECT COUNT(*) FROM [audit_logs] {filter}", param);
 
         return new AuditAggregate
         {
@@ -163,27 +164,7 @@ public class ReportGenerationService
     /// </summary>
     private async Task<KpiAggregate> AggregateKpiAsync(IDbConnection db, ReportRequest request, string userId, bool isAdmin)
     {
-        var (startDate, endDate) = ResolveDateRange(request);
-        var param = new DynamicParameters();
-        param.Add("StartDate", startDate);
-        param.Add("EndDate", endDate);
-
-        // 构建 scope 过滤条件（非 admin 不允许看全公司数据）
-        var scopeFilter = "";
-        if (request.Scope == "user" || (!isAdmin && request.Scope != "project"))
-        {
-            scopeFilter = " AND [created_by] = @UserId";
-            param.Add("UserId", userId);
-        }
-        else if (request.Scope == "project" && request.ScopeId.HasValue)
-        {
-            // B2: 非 admin 的项目授权已在入口校验，此处安全地按 project_id 过滤
-            scopeFilter = " AND [project_id] = @ScopeId";
-            param.Add("ScopeId", request.ScopeId.Value);
-        }
-        // scope=all + isAdmin: 不加额外过滤
-
-        var dateFilter = "[created_at] >= @StartDate AND [created_at] <= @EndDate";
+        var (filter, param) = BuildKpiFilter(request, userId, isAdmin);
 
         int contractCount = 0, invoiceCount = 0, settlementCount = 0, wageCount = 0;
         double contractAmount = 0, invoiceAmount = 0, settlementAmount = 0, wageAmount = 0;
@@ -192,27 +173,27 @@ public class ReportGenerationService
         {
             // 收入合同
             contractCount = await db.ExecuteScalarAsync<int>(
-                $"SELECT COUNT(*) FROM [income_contracts] WHERE {dateFilter}{scopeFilter}", param);
+                $"SELECT COUNT(*) FROM [income_contracts]{filter}", param);
             contractAmount = await db.ExecuteScalarAsync<double>(
-                $"SELECT COALESCE(SUM([amount]), 0) FROM [income_contracts] WHERE {dateFilter}{scopeFilter}", param);
+                $"SELECT COALESCE(SUM([amount]), 0) FROM [income_contracts]{filter}", param);
 
             // 发票
             invoiceCount = await db.ExecuteScalarAsync<int>(
-                $"SELECT COUNT(*) FROM [invoices] WHERE {dateFilter}{scopeFilter}", param);
+                $"SELECT COUNT(*) FROM [invoices]{filter}", param);
             invoiceAmount = await db.ExecuteScalarAsync<double>(
-                $"SELECT COALESCE(SUM([amount]), 0) FROM [invoices] WHERE {dateFilter}{scopeFilter}", param);
+                $"SELECT COALESCE(SUM([amount]), 0) FROM [invoices]{filter}", param);
 
             // 结算
             settlementCount = await db.ExecuteScalarAsync<int>(
-                $"SELECT COUNT(*) FROM [settlements] WHERE {dateFilter}{scopeFilter}", param);
+                $"SELECT COUNT(*) FROM [settlements]{filter}", param);
             settlementAmount = await db.ExecuteScalarAsync<double>(
-                $"SELECT COALESCE(SUM([amount]), 0) FROM [settlements] WHERE {dateFilter}{scopeFilter}", param);
+                $"SELECT COALESCE(SUM([amount]), 0) FROM [settlements]{filter}", param);
 
             // 工资
             wageCount = await db.ExecuteScalarAsync<int>(
-                $"SELECT COUNT(*) FROM [wages] WHERE {dateFilter}{scopeFilter}", param);
+                $"SELECT COUNT(*) FROM [wages]{filter}", param);
             wageAmount = await db.ExecuteScalarAsync<double>(
-                $"SELECT COALESCE(SUM([actual_wage]), 0) FROM [wages] WHERE {dateFilter}{scopeFilter}", param);
+                $"SELECT COALESCE(SUM([actual_wage]), 0) FROM [wages]{filter}", param);
         }
         catch (Exception ex)
         {
@@ -226,6 +207,41 @@ public class ReportGenerationService
             SettlementCount = settlementCount, SettlementAmount = settlementAmount,
             WageCount = wageCount, WageAmount = wageAmount,
         };
+    }
+
+    /// <summary>
+    /// 构建 KPI 聚合过滤子句：参数化 conditions + string.Join 组装，仅插值本地构造的 filter，
+    /// 所有值经 Dapper @参数传递（B1：不插值用户输入 / 字段名 / 排序名 / scope 原文）。
+    /// internal 暴露以供单测校验各 scope/日期组合口径一致。
+    /// </summary>
+    internal static (string Filter, DynamicParameters Param) BuildKpiFilter(ReportRequest request, string userId, bool isAdmin)
+    {
+        var (startDate, endDate) = ResolveDateRange(request);
+        var param = new DynamicParameters();
+        var conditions = new List<string>();
+
+        // ResolveDateRange 保证返回非空日期区间（请求日期或 Period 默认值）
+        conditions.Add("[created_at] >= @StartDate");
+        param.Add("StartDate", startDate);
+        conditions.Add("[created_at] <= @EndDate");
+        param.Add("EndDate", endDate);
+
+        // scope 过滤（非 admin 不允许看全公司数据）
+        if (request.Scope == "user" || (!isAdmin && request.Scope != "project"))
+        {
+            conditions.Add("[created_by] = @UserId");
+            param.Add("UserId", userId);
+        }
+        else if (request.Scope == "project" && request.ScopeId.HasValue)
+        {
+            // B2: 非 admin 的项目授权已在入口校验，此处安全地按 project_id 过滤
+            conditions.Add("[project_id] = @ScopeId");
+            param.Add("ScopeId", request.ScopeId.Value);
+        }
+        // scope=all + isAdmin: 不加额外过滤
+
+        var filter = conditions.Count == 0 ? string.Empty : " WHERE " + string.Join(" AND ", conditions);
+        return (filter, param);
     }
 
     private static string BuildUserPrompt(
