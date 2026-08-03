@@ -168,9 +168,19 @@ jobs:
           New-Item -ItemType Directory -Force -Path $env:ENGINEERING_MANAGER_DATA_PATH | Out-Null
           $apiDir = Join-Path $env:GITHUB_WORKSPACE 'EngineeringManager.Api\bin\Debug\net8.0-windows'
           # WorkingDirectory 固定到输出目录：content root 取进程当前目录，确保 appsettings.json 可加载
+          $dllPath = Join-Path $apiDir 'EngineeringManager.Api.dll'
+          Write-Host "apiDir exists: $(Test-Path $apiDir)"
+          Write-Host "dll exists: $(Test-Path $dllPath)"
+          Write-Host "dotnet resolves to: $((Get-Command dotnet -ErrorAction SilentlyContinue).Source)"
           $p = Start-Process -FilePath dotnet -WorkingDirectory $apiDir -ArgumentList 'EngineeringManager.Api.dll','--api-only' -RedirectStandardOutput (Join-Path $env:GITHUB_WORKSPACE 'api-e2e.log') -RedirectStandardError (Join-Path $env:GITHUB_WORKSPACE 'api-e2e.err.log') -PassThru
           # A1: 记录 PID 供 Wait 步骤做进程存活检查（进程退出 → 立即失败，不等满超时）
           $p.Id | Out-File -FilePath (Join-Path $env:GITHUB_WORKSPACE 'api-e2e.pid') -Encoding ascii
+          Start-Sleep -Seconds 3
+          $alive = Get-Process -Id $p.Id -ErrorAction SilentlyContinue
+          Write-Host "3s later: PID=$($p.Id) alive=$([bool]$alive) HasExited=$($p.HasExited) ExitCode=$($p.ExitCode)"
+          $log = Join-Path $env:GITHUB_WORKSPACE 'api-e2e.log'
+          $err = Join-Path $env:GITHUB_WORKSPACE 'api-e2e.err.log'
+          Write-Host "log size: $((Get-Item $log -ErrorAction SilentlyContinue).Length) err size: $((Get-Item $err -ErrorAction SilentlyContinue).Length)"
 
       - name: Wait for API health (max 180s, 2s poll, process-liveness check)
         run: |
