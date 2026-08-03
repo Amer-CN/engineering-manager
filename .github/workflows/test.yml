@@ -13,6 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     
     strategy:
+      fail-fast: false  # A2: 矩阵取消方向翻转过两次，关掉 fail-fast 让两条 node 都跑完
       matrix:
         node-version: [20, 22]
     
@@ -167,20 +168,31 @@ jobs:
           New-Item -ItemType Directory -Force -Path $env:ENGINEERING_MANAGER_DATA_PATH | Out-Null
           $apiDir = Join-Path $env:GITHUB_WORKSPACE 'EngineeringManager.Api\bin\Debug\net8.0-windows'
           # WorkingDirectory 固定到输出目录：content root 取进程当前目录，确保 appsettings.json 可加载
-          Start-Process -FilePath dotnet -WorkingDirectory $apiDir -ArgumentList 'EngineeringManager.Api.dll','--api-only' -RedirectStandardOutput (Join-Path $env:GITHUB_WORKSPACE 'api-e2e.log') -RedirectStandardError (Join-Path $env:GITHUB_WORKSPACE 'api-e2e.err.log')
+          $p = Start-Process -FilePath dotnet -WorkingDirectory $apiDir -ArgumentList 'EngineeringManager.Api.dll','--api-only' -RedirectStandardOutput (Join-Path $env:GITHUB_WORKSPACE 'api-e2e.log') -RedirectStandardError (Join-Path $env:GITHUB_WORKSPACE 'api-e2e.err.log') -PassThru
+          # A1: 记录 PID 供 Wait 步骤做进程存活检查（进程退出 → 立即失败，不等满超时）
+          $p.Id | Out-File -FilePath (Join-Path $env:GITHUB_WORKSPACE 'api-e2e.pid') -Encoding ascii
 
-      - name: Wait for API health (max 60s)
+      - name: Wait for API health (max 180s, 2s poll, process-liveness check)
         run: |
+          # A1: 从 PID 文件读取 API 进程，轮询前先确认存活；进程已退出则立即失败并打印日志
+          $pidFile = Join-Path $env:GITHUB_WORKSPACE 'api-e2e.pid'
+          $apiPid = [int](Get-Content $pidFile -ErrorAction Stop)
           $ok = $false
-          for ($i = 0; $i -lt 60; $i++) {
+          for ($i = 0; $i -lt 90; $i++) {
+            $proc = Get-Process -Id $apiPid -ErrorAction SilentlyContinue
+            if (-not $proc) {
+              Write-Host "API process (PID $apiPid) exited unexpectedly before becoming ready"
+              Get-Content api-e2e.log, api-e2e.err.log -ErrorAction SilentlyContinue
+              throw "API process exited before ready (PID $apiPid); see api-e2e.err.log above"
+            }
             try {
               if ((Invoke-WebRequest -Uri http://localhost:5048/api/health -UseBasicParsing -TimeoutSec 2).StatusCode -eq 200) { $ok = $true; break }
             } catch { }
-            Start-Sleep -Seconds 1
+            Start-Sleep -Seconds 2
           }
           if (-not $ok) {
             Get-Content api-e2e.log, api-e2e.err.log -ErrorAction SilentlyContinue
-            throw 'API 未在 60s 内就绪 (http://localhost:5048/api/health)'
+            throw 'API 未在 180s 内就绪 (http://localhost:5048/api/health)'
           }
 
       - name: Run E2E critical paths
