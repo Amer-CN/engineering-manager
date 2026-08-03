@@ -168,39 +168,27 @@ jobs:
           New-Item -ItemType Directory -Force -Path $env:ENGINEERING_MANAGER_DATA_PATH | Out-Null
           $apiDir = Join-Path $env:GITHUB_WORKSPACE 'EngineeringManager.Api\bin\Debug\net8.0-windows'
           # WorkingDirectory 固定到输出目录：content root 取进程当前目录，确保 appsettings.json 可加载
-          $dllPath = Join-Path $apiDir 'EngineeringManager.Api.dll'
-          Write-Host "apiDir exists: $(Test-Path $apiDir)"
-          Write-Host "dll exists: $(Test-Path $dllPath)"
-          Write-Host "dotnet resolves to: $((Get-Command dotnet -ErrorAction SilentlyContinue).Source)"
-          $p = Start-Process -FilePath dotnet -WorkingDirectory $apiDir -ArgumentList 'EngineeringManager.Api.dll','--api-only' -RedirectStandardOutput (Join-Path $env:GITHUB_WORKSPACE 'api-e2e.log') -RedirectStandardError (Join-Path $env:GITHUB_WORKSPACE 'api-e2e.err.log') -PassThru
-          # A1: 记录 PID 供 Wait 步骤做进程存活检查（进程退出 → 立即失败，不等满超时）
-          $p.Id | Out-File -FilePath (Join-Path $env:GITHUB_WORKSPACE 'api-e2e.pid') -Encoding ascii
-          Start-Sleep -Seconds 3
-          $alive = Get-Process -Id $p.Id -ErrorAction SilentlyContinue
-          Write-Host "3s later: PID=$($p.Id) alive=$([bool]$alive) HasExited=$($p.HasExited) ExitCode=$($p.ExitCode)"
-          $log = Join-Path $env:GITHUB_WORKSPACE 'api-e2e.log'
-          $err = Join-Path $env:GITHUB_WORKSPACE 'api-e2e.err.log'
-          Write-Host "log size: $((Get-Item $log -ErrorAction SilentlyContinue).Length) err size: $((Get-Item $err -ErrorAction SilentlyContinue).Length)"
+          # 注意：不带 -PassThru。实测 -PassThru 使 pwsh 退出时进程被 runner 清理（步骤间死亡），
+          # 不带 -PassThru 的 Start-Process 子进程可跨步骤存活（60s 版已验证 180s+）。
+          Start-Process -FilePath dotnet -WorkingDirectory $apiDir -ArgumentList 'EngineeringManager.Api.dll','--api-only' -RedirectStandardOutput (Join-Path $env:GITHUB_WORKSPACE 'api-e2e.log') -RedirectStandardError (Join-Path $env:GITHUB_WORKSPACE 'api-e2e.err.log')
 
-      - name: Wait for API health (max 180s, 2s poll, process-liveness check)
+      - name: Wait for API health (max 180s, 2s poll, port-liveness check)
         run: |
-          # A1: 从 PID 文件读取 API 进程，轮询前先确认存活；进程已退出则立即失败并打印日志
-          $pidFile = Join-Path $env:GITHUB_WORKSPACE 'api-e2e.pid'
-          $apiPid = [int](Get-Content $pidFile -ErrorAction Stop)
+          # A1: 无法用 PID 跟踪进程（Start-Process -PassThru 会致进程在步骤间被清理），
+          # 改用「5048 端口监听」做存活检查：进程退出 → 端口消失 → 立即失败并打印日志。
           $ok = $false
           for ($i = 0; $i -lt 90; $i++) {
-            $proc = Get-Process -Id $apiPid -ErrorAction SilentlyContinue
-            if (-not $proc) {
-              Write-Host "API process (PID $apiPid) exited unexpectedly before becoming ready"
-              Get-Content api-e2e.log, api-e2e.err.log -ErrorAction SilentlyContinue
-              throw "API process exited before ready (PID $apiPid); see api-e2e.err.log above"
+            $listening = Get-NetTCPConnection -LocalPort 5048 -State Listen -ErrorAction SilentlyContinue
+            if ($listening) {
+              try {
+                if ((Invoke-WebRequest -Uri http://localhost:5048/api/health -UseBasicParsing -TimeoutSec 2).StatusCode -eq 200) { $ok = $true; break }
+              } catch { }
             }
-            try {
-              if ((Invoke-WebRequest -Uri http://localhost:5048/api/health -UseBasicParsing -TimeoutSec 2).StatusCode -eq 200) { $ok = $true; break }
-            } catch { }
             Start-Sleep -Seconds 2
           }
           if (-not $ok) {
+            Write-Host 'API 未在 180s 内就绪；端口 5048 监听状态：'
+            Get-NetTCPConnection -LocalPort 5048 -ErrorAction SilentlyContinue | Select-Object State,OwningProcess
             Get-Content api-e2e.log, api-e2e.err.log -ErrorAction SilentlyContinue
             throw 'API 未在 180s 内就绪 (http://localhost:5048/api/health)'
           }
