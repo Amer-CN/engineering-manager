@@ -409,7 +409,8 @@ function findUnloggedCatches(file, content, scanned) {
       i++
     }
     const body = content.slice(bodyStart, i - 1)
-    const hasLog = /Console\s*\.\s*Error\s*\.\s*WriteLine/.test(body)
+    // 认可三类日志：Console.Error.WriteLine（静态/迁移上下文）、ILogger 结构化日志（LogError/LogWarning/...，D-B3 裁决优先项）、Common.ServerError（内部已记录异常）
+    const hasLog = /Console\s*\.\s*Error\s*\.\s*WriteLine/.test(body) || /\bLog(Error|Critical|Warning|Information|Debug|Trace)\s*\(/.test(body) || /Common\s*\.\s*ServerError\s*\(/.test(body)
     const rethrows = /\bthrow\b/.test(body)
     if (!hasLog && !rethrows) {
       results.push({ line: lineOf(content, m.index), empty: body.trim() === '' })
