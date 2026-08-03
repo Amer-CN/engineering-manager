@@ -1,21 +1,13 @@
 {
-  "_comment": "Encoding baseline (ratchet: only decrease, never increase). 25.1",
-  "_total": 17,
+  "_comment": "Encoding baseline (ratchet: only decrease, never increase). 26.3: 17→1 after AuditLogs+R16-R17 fix. Remaining 1 is intentional regex target in useWorkerImport.ts (exempt).",
+  "_total": 1,
   "violations": [
     {
       "file": "src/components/features/members/useWorkerImport.ts",
       "type": "U+FFFD",
-      "count": 1
-    },
-    {
-      "file": "src/__tests__/components/AuditLogs.test.tsx",
-      "type": "U+FFFD",
-      "count": 10
-    },
-    {
-      "file": "docs/handoff/R16-R17-handoff.md",
-      "type": "control-char",
-      "count": 6
+      "count": 1,
+      "exempt": true,
+      "reason": "Intentional regex target — U+FFFD is matched as part of an encoding health check regex (see check-encoding:exempt comment in source)"
     }
   ]
 }
