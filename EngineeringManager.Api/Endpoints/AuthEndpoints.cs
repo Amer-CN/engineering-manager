@@ -183,20 +183,20 @@ public static class AuthEndpoints
 
         app.MapGet("/api/roles", (IDbConnection db) =>
         {
-            if (!EditionFeatures.Has(EditionFeatures.RoleManagement)) return Results.NotFound();
+            if (!EditionFeatures.Has(EditionFeatures.RoleManagement)) return Results.Json(new { success = false, error = "角色管理为企业版能力，个人版不可用" }, statusCode: 403);
             return Common.Ok(db.Query("SELECT id, name, permissions FROM roles ORDER BY id"));
         });
 
         app.MapGet("/api/roles/{id}", (string id, IDbConnection db) =>
         {
-            if (!EditionFeatures.Has(EditionFeatures.RoleManagement)) return Results.NotFound();
+            if (!EditionFeatures.Has(EditionFeatures.RoleManagement)) return Results.Json(new { success = false, error = "角色管理为企业版能力，个人版不可用" }, statusCode: 403);
             var r = db.QueryFirstOrDefault("SELECT id, name, permissions FROM roles WHERE id=@Id", new { Id = id });
             return r is not null ? Common.Ok(r) : Common.NotFound("角色不存在");
         });
 
         app.MapPut("/api/roles", async (RoleUpdateDto dto, IDbConnection db) =>
         {
-            if (!EditionFeatures.Has(EditionFeatures.RoleManagement)) return Results.NotFound();
+            if (!EditionFeatures.Has(EditionFeatures.RoleManagement)) return Results.Json(new { success = false, error = "角色管理为企业版能力，个人版不可用" }, statusCode: 403);
             var affected = await db.ExecuteAsync("UPDATE roles SET permissions=@Permissions WHERE id=@Id",
                 new { Id = dto.RoleId, Permissions = dto.Permissions });
             return affected > 0 ? Common.Ok() : Common.NotFound("角色不存在");
@@ -204,7 +204,7 @@ public static class AuthEndpoints
 
         app.MapPost("/api/roles/{id}/reset", (string id, IDbConnection db) =>
         {
-            if (!EditionFeatures.Has(EditionFeatures.RoleManagement)) return Results.NotFound();
+            if (!EditionFeatures.Has(EditionFeatures.RoleManagement)) return Results.Json(new { success = false, error = "角色管理为企业版能力，个人版不可用" }, statusCode: 403);
             var defaults = Common.GetDefaultPermissions(id);
             if (defaults.Count == 0) return Common.Fail("无默认权限");
             db.Execute("UPDATE roles SET permissions=@Permissions WHERE id=@Id",
@@ -218,20 +218,20 @@ public static class AuthEndpoints
 
         app.MapGet("/api/users", (IDbConnection db) =>
         {
-            if (!EditionFeatures.Has(EditionFeatures.UserManagement)) return Results.NotFound();
+            if (!EditionFeatures.Has(EditionFeatures.UserManagement)) return Results.Json(new { success = false, error = "用户管理为企业版能力，个人版不可用" }, statusCode: 403);
             return Common.Ok(db.Query("SELECT id, username, display_name, role_id, status, created_at FROM users ORDER BY created_at DESC"));
         });
 
         app.MapGet("/api/users/{id}", (string id, IDbConnection db) =>
         {
-            if (!EditionFeatures.Has(EditionFeatures.UserManagement)) return Results.NotFound();
+            if (!EditionFeatures.Has(EditionFeatures.UserManagement)) return Results.Json(new { success = false, error = "用户管理为企业版能力，个人版不可用" }, statusCode: 403);
             var u = db.QueryFirstOrDefault("SELECT id, username, display_name, role_id, status, created_at FROM users WHERE id=@Id", new { Id = id });
             return u is not null ? Common.Ok(u) : Common.NotFound("用户不存在");
         });
 
         app.MapPost("/api/users", async (UserDto dto, IDbConnection db) =>
         {
-            if (!EditionFeatures.Has(EditionFeatures.UserManagement)) return Results.NotFound();
+            if (!EditionFeatures.Has(EditionFeatures.UserManagement)) return Results.Json(new { success = false, error = "用户管理为企业版能力，个人版不可用" }, statusCode: 403);
             var salt = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16)).ToLower();
             var hash = Common.HashPassword(dto.Password ?? "", salt, 2);
             var id = dto.Id ?? $"user-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
@@ -243,7 +243,7 @@ public static class AuthEndpoints
 
         app.MapPut("/api/users", async (UserDto dto, IDbConnection db) =>
         {
-            if (!EditionFeatures.Has(EditionFeatures.UserManagement)) return Results.NotFound();
+            if (!EditionFeatures.Has(EditionFeatures.UserManagement)) return Results.Json(new { success = false, error = "用户管理为企业版能力，个人版不可用" }, statusCode: 403);
             if (string.IsNullOrEmpty(dto.Password))
             {
                 var affected = await db.ExecuteAsync(@"UPDATE users SET display_name=@DisplayName,role_id=@RoleId,status=@Status WHERE id=@Id",
@@ -263,7 +263,7 @@ public static class AuthEndpoints
 
         app.MapDelete("/api/users/{id}", async (string id, IDbConnection db) =>
         {
-            if (!EditionFeatures.Has(EditionFeatures.UserManagement)) return Results.NotFound();
+            if (!EditionFeatures.Has(EditionFeatures.UserManagement)) return Results.Json(new { success = false, error = "用户管理为企业版能力，个人版不可用" }, statusCode: 403);
             return (await db.ExecuteAsync("DELETE FROM users WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Common.NotFound("用户不存在");
         });
 
@@ -355,7 +355,7 @@ public static class AuthEndpoints
 
         app.MapGet("/api/admin/project-authorizations", (HttpContext ctx, IDbConnection db) =>
         {
-            if (!EditionFeatures.Has(EditionFeatures.ProjectAuthorization)) return Results.NotFound();
+            if (!EditionFeatures.Has(EditionFeatures.ProjectAuthorization)) return Results.Json(new { success = false, error = "项目授权为企业版能力，个人版不可用" }, statusCode: 403);
             var uid = CurrentUser.GetUserId(ctx);
             if (string.IsNullOrEmpty(uid)) return Common.Fail("未登录");
             if (!CurrentUser.IsAdmin(ctx)) return Results.Forbid();
@@ -369,7 +369,7 @@ public static class AuthEndpoints
 
         app.MapGet("/api/admin/project-authorizations/by-user/{userId}", (HttpContext ctx, string userId, IDbConnection db) =>
         {
-            if (!EditionFeatures.Has(EditionFeatures.ProjectAuthorization)) return Results.NotFound();
+            if (!EditionFeatures.Has(EditionFeatures.ProjectAuthorization)) return Results.Json(new { success = false, error = "项目授权为企业版能力，个人版不可用" }, statusCode: 403);
             var uid = CurrentUser.GetUserId(ctx);
             if (string.IsNullOrEmpty(uid)) return Common.Fail("未登录");
             if (!CurrentUser.IsAdmin(ctx)) return Results.Forbid();
@@ -381,7 +381,7 @@ public static class AuthEndpoints
 
         app.MapPost("/api/admin/project-authorizations", async (HttpContext ctx, HttpRequest req, IDbConnection db) =>
         {
-            if (!EditionFeatures.Has(EditionFeatures.ProjectAuthorization)) return Results.NotFound();
+            if (!EditionFeatures.Has(EditionFeatures.ProjectAuthorization)) return Results.Json(new { success = false, error = "项目授权为企业版能力，个人版不可用" }, statusCode: 403);
             var uid = CurrentUser.GetUserId(ctx);
             if (string.IsNullOrEmpty(uid)) return Common.Fail("未登录");
             if (!CurrentUser.IsAdmin(ctx)) return Results.Forbid();
@@ -410,7 +410,7 @@ public static class AuthEndpoints
 
         app.MapDelete("/api/admin/project-authorizations/{projectId}/{userId}", (HttpContext ctx, long projectId, string userId, IDbConnection db) =>
         {
-            if (!EditionFeatures.Has(EditionFeatures.ProjectAuthorization)) return Results.NotFound();
+            if (!EditionFeatures.Has(EditionFeatures.ProjectAuthorization)) return Results.Json(new { success = false, error = "项目授权为企业版能力，个人版不可用" }, statusCode: 403);
             var uid = CurrentUser.GetUserId(ctx);
             if (string.IsNullOrEmpty(uid)) return Common.Fail("未登录");
             if (!CurrentUser.IsAdmin(ctx)) return Results.Forbid();

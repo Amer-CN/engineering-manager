@@ -13,10 +13,15 @@ import { AuditLogsContent } from './AuditLogs'
 import { ProjectAuthorizationsTab } from '@/components/features/users/ProjectAuthorizationsTab'
 import { getAPI } from '@/services/api-adapter'
 import { UserListTab } from './UserListTab'
+import { useHasFeature } from '@/store/editionStore'
+import { EDITION_FEATURE_KEYS } from '@/constants/editionFeatures'
 
 const Users: React.FC = () => {
   const { isAdmin } = usePermission()
   const auth = useAuth()
+  // F3: Tab 级能力 gate（防御性——整页已被 UserManagement gate 冻结，双保险）
+  const hasRoleManagement = useHasFeature(EDITION_FEATURE_KEYS.RoleManagement)
+  const hasProjectAuthorization = useHasFeature(EDITION_FEATURE_KEYS.ProjectAuthorization)
   const [users, setUsers] = useState<UserInfo[]>([])
   const [activeTab, setActiveTab] = useState('user_list')
 
@@ -80,8 +85,8 @@ const Users: React.FC = () => {
           onChange={setActiveTab}
           tabs={[
             { key: 'user_list', label: '用户列表', icon: 'Users' },
-            { key: 'role_permissions', label: '角色权限', icon: 'Shield' },
-            { key: 'project_authorizations', label: '项目授权', icon: 'KeyRound' },
+            ...(hasRoleManagement ? [{ key: 'role_permissions', label: '角色权限', icon: 'Shield' as const }] : []),
+            ...(hasProjectAuthorization ? [{ key: 'project_authorizations', label: '项目授权', icon: 'KeyRound' as const }] : []),
             { key: 'audit_logs', label: '操作日志', icon: 'ClipboardList' },
           ]}
         />
@@ -89,8 +94,8 @@ const Users: React.FC = () => {
 
       {activeTab === 'user_list' && <UserListTab users={users} onRefresh={loadUsers} />}
 
-      {activeTab === 'role_permissions' && <RolePermissionsTab />}
-      {activeTab === 'project_authorizations' && <ProjectAuthorizationsTab />}
+      {activeTab === 'role_permissions' && hasRoleManagement && <RolePermissionsTab />}
+      {activeTab === 'project_authorizations' && hasProjectAuthorization && <ProjectAuthorizationsTab />}
 
       {activeTab === 'audit_logs' && (
         <AuditLogsContent refresh={undefined} />

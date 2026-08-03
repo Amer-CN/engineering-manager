@@ -112,7 +112,11 @@
 | # | Job | 红因 | 基线证据 | 数量 | 登记 |
 |---|-----|------|----------|------|------|
 | 1 | Backend Build & Test | check-backend-rules 28 项（22 B1 token 口径误报 + 7 B3 catch 无日志，扣 1 已修） | run 30656905289 | 28 项 | TD-BACKEND-28 |
-| 2 | E2E Critical Paths | API 60s 启动超时（CI runner 环境） | run 30656905289 | 1 job | TD-E2E-TIMEOUT |
+| 2 | ~~E2E Critical Paths~~ | ~~API 60s 启动超时（CI runner 环境）~~ | run 30656905289 | ~~1 job~~ | ~~TD-E2E-TIMEOUT~~ |
 | 3 | Unit Tests (22) | ConversationHistory.test.tsx 6 个稳定失败（waitFor 找不到「今天的对话」） | run 30656905289 | 6 tests | TD-VITEST-CONVHIST |
 
 注：Unit Tests (20) 在 d80020d 为 cancelled（被 22 的失败触发取消），非独立红因。
+
+### TD 出栈记录（棘轮只减不增）
+
+- **TD-E2E-TIMEOUT 出栈（2026-08-03）**：根因非「API 启动慢」，而是 GitHub Actions runner 在步骤结束时清理该步骤启动的子进程（2026-08 行为变化），跨步骤的 API 进程必死（0 字节日志 + 端口永不监听）。修复：E2E 的「启动 API + 等待就绪 + Playwright」合并为单个步骤（进程生命周期完全在步骤内），并在 finally 中 Stop-Process 清理。验证：run 30833294697 E2E job success。

@@ -99,11 +99,13 @@ public static class SystemEndpoints
         app.MapGet("/api/audit/logs", (HttpContext ctx, IDbConnection db, int page = 1, int pageSize = 20) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            // F3: 审计按用户筛选 = AuditUserFilter 企业版能力。
+            // personal 下 admin 也无权看全部用户日志（退化为只看自己），不抛错、不返回全部。
+            var canViewAllUsers = CurrentUser.IsAdmin(ctx) && EditionFeatures.Has(EditionFeatures.AuditUserFilter);
             var offset = (page - 1) * pageSize;
             var total = db.ExecuteScalar<int>("SELECT COUNT(*) FROM audit_logs");
-            // admin 看全部, 普通用户只看自己
-            var sql = isAdmin == 1
+            // 有 AuditUserFilter 的 admin 看全部, 其余只看自己
+            var sql = canViewAllUsers
                 ? "SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT @PageSize OFFSET @Offset"
                 : "SELECT * FROM audit_logs WHERE user_id=@Uid ORDER BY created_at DESC LIMIT @PageSize OFFSET @Offset";
             var logs = db.Query(sql, new { Uid = uid, PageSize = pageSize, Offset = offset });
