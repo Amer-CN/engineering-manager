@@ -5,14 +5,9 @@ namespace EngineeringManager.Tests.Endpoints;
 
 /// <summary>
 /// X12.1: EditionFeatures 映射表正确性测试。
-///
-/// 分两层：
-/// 1. 纯函数层（GetFeaturesForEdition）：验证映射表数据正确性，无外部依赖
-/// 2. 公共 API 集成层（Has / GetActiveFeatures）：验证实际端点走的路径，
-///    需要切换 edition（当前唯一手段是 ENGINEERING_MANAGER_EDITION 环境变量）
-///
-/// F1 连带修改项：第 2 层测试依赖 ENGINEERING_MANAGER_EDITION 环境变量。
-/// F1 移除该变量时，必须同步改造这些测试（改为 config fixture 文件），而不是让它们崩掉。
+/// 27.2 F1 改造：删除 SetEdition/ResetEdition（反射改 _cachedEdition + 环境变量切换），
+/// 改为直接调 EditionResolver.Resolve（纯函数）+ Path.GetTempFileName() 造 config fixture。
+/// 端点级 warning 透传测试见 SystemEndpointsConfigTests。
 /// </summary>
 public class EditionFeaturesTests
 {
@@ -78,69 +73,124 @@ public class EditionFeaturesTests
     }
 
     // ═══════════════════════════════════════════════════════════
-    // 第 2 层：公共 API 集成测试（走 Has / GetActiveFeatures 实际路径）
-    // 依赖 ENGINEERING_MANAGER_EDITION 环境变量切换 edition。
-    // F1 移除环境变量时必须同步改造为 config fixture。
+    // 第 2 层（27.2 F1）：EditionResolver.Resolve 纯函数测试
+    // 用 Path.GetTempFileName() 造 config fixture，无环境变量、无反射。
     // ═══════════════════════════════════════════════════════════
 
-    private static void SetEdition(string edition)
+    private static string WriteFixture(string json)
     {
-        Environment.SetEnvironmentVariable("ENGINEERING_MANAGER_EDITION", edition);
-        // 重置缓存（GetEdition 内部无锁，仅 null 检查赋值）
-        var field = typeof(ApiConfig).GetField("_cachedEdition",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-        field!.SetValue(null, null);
+        var path = Path.GetTempFileName();
+        File.WriteAllText(path, json);
+        return path;
     }
 
-    private static void ResetEdition()
+    private static void DeleteFixture(string path)
     {
-        Environment.SetEnvironmentVariable("ENGINEERING_MANAGER_EDITION", null);
-        var field = typeof(ApiConfig).GetField("_cachedEdition",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-        field!.SetValue(null, null);
+        try { if (File.Exists(path)) File.Delete(path); } catch { }
     }
 
+    // 用例 1: env=enterprise，config 不存在 → enterprise，无 warning
     [Fact]
-    public void Has_Enterprise_UserManagement_True_CloudSync_False()
+    public void Resolve_EnvEnterprise_ConfigMissing_Enterprise_NoWarning()
     {
-        // 破坏性验证：若 personal 拿回 cloudSync 或 enterprise 丢失 userManagement，此测试红
+        var configPath = Path.GetTempFileName(); // 存在但无 edition 字段 → 走 env 优先
         try
         {
-            SetEdition("enterprise");
-            Assert.True(EditionFeatures.Has(EditionFeatures.UserManagement),
-                "enterprise must have userManagement");
-            Assert.True(EditionFeatures.Has(EditionFeatures.RoleManagement),
-                "enterprise must have roleManagement");
-            Assert.False(EditionFeatures.Has(EditionFeatures.CloudSync),
-                "enterprise must NOT have cloudSync");
-
-            var active = EditionFeatures.GetActiveFeatures();
-            Assert.Equal(5, active.Length);
+            var r = EditionResolver.Resolve("enterprise", configPath);
+            Assert.Equal("enterprise", r.Edition);
+            Assert.Null(r.Warning);
         }
-        finally { ResetEdition(); }
+        finally { DeleteFixture(configPath); }
     }
 
+    // 用例 2: env=null，config 内容合法 enterprise → enterprise，无 warning
     [Fact]
-    public void Has_Personal_AllFalse()
+    public void Resolve_NoEnv_ConfigEnterprise_Enterprise_NoWarning()
     {
-        // 破坏性验证：若 personal 获得任何能力，此测试红
+        var configPath = WriteFixture("{\"edition\": \"enterprise\"}");
         try
         {
-            SetEdition("personal");
-            Assert.False(EditionFeatures.Has(EditionFeatures.UserManagement),
-                "personal must NOT have userManagement");
-            Assert.False(EditionFeatures.Has(EditionFeatures.CloudSync),
-                "personal must NOT have cloudSync");
-
-            var active = EditionFeatures.GetActiveFeatures();
-            Assert.Empty(active);
+            var r = EditionResolver.Resolve(null, configPath);
+            Assert.Equal("enterprise", r.Edition);
+            Assert.Null(r.Warning);
         }
-        finally { ResetEdition(); }
+        finally { DeleteFixture(configPath); }
+    }
+
+    // 用例 3: env=null，config 文件不存在 → personal，无 warning
+    [Fact]
+    public void Resolve_NoEnv_ConfigMissing_Personal_NoWarning()
+    {
+        var configPath = Path.Combine(Path.GetTempPath(), $"nope-{Guid.NewGuid()}.json");
+        var r = EditionResolver.Resolve(null, configPath);
+        Assert.Equal("personal", r.Edition);
+        Assert.Null(r.Warning);
+    }
+
+    // 用例 4: env=null，config 是坏 JSON → personal，有 warning，warning 含路径
+    // (15.1(c)/24.1(c) 欠的债：config 读取失败可在单测中可靠触发)
+    [Fact]
+    public void Resolve_NoEnv_ConfigBadJson_Personal_WarningContainsPath()
+    {
+        var configPath = WriteFixture("{ this is not valid json !!! ");
+        try
+        {
+            var r = EditionResolver.Resolve(null, configPath);
+            Assert.Equal("personal", r.Edition);
+            Assert.NotNull(r.Warning);
+            Assert.Contains(configPath, r.Warning!);
+            Assert.Contains("配置文件读取失败", r.Warning!);
+        }
+        finally { DeleteFixture(configPath); }
+    }
+
+    // 用例 5: env=null，config 路径指向一个目录（读取抛异常）→ personal，有 warning
+    [Fact]
+    public void Resolve_NoEnv_ConfigPathIsDirectory_Personal_Warning()
+    {
+        var dirPath = Path.Combine(Path.GetTempPath(), $"cfg-dir-{Guid.NewGuid()}");
+        Directory.CreateDirectory(dirPath);
+        try
+        {
+            var r = EditionResolver.Resolve(null, dirPath);
+            Assert.Equal("personal", r.Edition);
+            Assert.NotNull(r.Warning);
+            Assert.Contains(dirPath, r.Warning!);
+        }
+        finally { try { Directory.Delete(dirPath); } catch { } }
+    }
+
+    // 用例 6: env="ENTERPRISE " 带空格大写 → enterprise（归一化）
+    [Fact]
+    public void Resolve_EnvEnterpriseWithSpacesAndUpper_NormalizedToEnterprise()
+    {
+        var configPath = Path.GetTempFileName();
+        try
+        {
+            var r = EditionResolver.Resolve(" ENTERPRISE ", configPath);
+            Assert.Equal("enterprise", r.Edition);
+            Assert.Null(r.Warning);
+        }
+        finally { DeleteFixture(configPath); }
+    }
+
+    // 用例 7: env="typo" → personal + 告警
+    [Fact]
+    public void Resolve_EnvTypo_Personal_Warning()
+    {
+        var configPath = Path.GetTempFileName();
+        try
+        {
+            var r = EditionResolver.Resolve("typo", configPath);
+            Assert.Equal("personal", r.Edition);
+            Assert.NotNull(r.Warning);
+            Assert.Contains("typo", r.Warning!);
+        }
+        finally { DeleteFixture(configPath); }
     }
 
     // ═══════════════════════════════════════════════════════════
-    // 第 3 层：规范化防线（11.3.1 的 trim + lowercase）
-    // 验证 GetEdition 对 " Enterprise " / "PERSONAL" 等输入正确解析
+    // 第 3 层：规范化防线（11.3.1 的 trim + lowercase）— 经 Resolve 纯函数
     // ═══════════════════════════════════════════════════════════
 
     [Theory]
@@ -153,59 +203,38 @@ public class EditionFeaturesTests
     [InlineData("PERSONAL", "personal")]
     [InlineData(" personal ", "personal")]
     [InlineData("typo", "personal")]  // 未知值 fallback 到 personal
-    public void GetEdition_Normalizes_Input(string input, string expected)
+    public void Resolve_Normalizes_Input(string input, string expected)
     {
+        var configPath = Path.GetTempFileName();
         try
         {
-            SetEdition(input);
-            var actual = ApiConfig.GetEdition();
-            Assert.Equal(expected, actual);
+            var r = EditionResolver.Resolve(input, configPath);
+            Assert.Equal(expected, r.Edition);
         }
-        finally { ResetEdition(); }
+        finally { DeleteFixture(configPath); }
     }
 
     [Fact]
-    public void GetActiveFeatures_UnknownEdition_FallsBackToPersonal()
-    {
-        // V8: 未知 edition 由 GetEdition() 规范化为 personal（fail-closed 到最小权限）
-        // 实际路径：gibberish -> GetEdition 返回 "personal" -> personal 能力集（当前为空）
-        // 注意：此测试验证的是 fallback 到 personal 的行为，不是"未知->空集"
-        try
-        {
-            SetEdition("gibberish-edition");
-            var edition = ApiConfig.GetEdition();
-            Assert.Equal("personal", edition); // 确认 fallback 目标
-            var features = EditionFeatures.GetActiveFeatures();
-            // personal 当前为空集，所以结果为空——但原因是 personal 为空，不是"未知=空"
-            Assert.Equal(EditionFeatures.GetFeaturesForEdition("personal"), features);
-        }
-        finally { ResetEdition(); }
-    }
-
-    [Fact]
-    public void GetEdition_UnknownValue_OutputsWarning()
+    public void Resolve_UnknownEnvValue_OutputsWarning()
     {
         // V8 核心举证：未知 edition 时告警确实被输出到 Console.Error
+        var configPath = Path.GetTempFileName();
+        var originalErr = Console.Error;
+        using var sw = new System.IO.StringWriter();
+        Console.SetError(sw);
         try
         {
-            var originalErr = Console.Error;
-            using var sw = new System.IO.StringWriter();
-            Console.SetError(sw);
-            try
-            {
-                SetEdition("enterpirse"); // 典型拼错
-                var edition = ApiConfig.GetEdition();
-                Assert.Equal("personal", edition);
-            }
-            finally
-            {
-                Console.SetError(originalErr);
-            }
-            var output = sw.ToString();
-            Assert.Contains("unknown edition", output);
-            Assert.Contains("enterpirse", output);
-            Assert.Contains("personal", output);
+            var r = EditionResolver.Resolve("enterpirse", configPath); // 典型拼错
+            Assert.Equal("personal", r.Edition);
+            Assert.NotNull(r.Warning);
         }
-        finally { ResetEdition(); }
+        finally
+        {
+            Console.SetError(originalErr);
+            DeleteFixture(configPath);
+        }
+        var output = sw.ToString();
+        Assert.Contains("enterpirse", output);
+        Assert.Contains("personal", output);
     }
 }

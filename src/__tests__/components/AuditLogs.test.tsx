@@ -4,6 +4,7 @@
  *
  * 策略：localStorage 预置数据 + 调用真实 queryAuditLogs，不过 mock。
  * 注意：vi.mock() 路径必须与被测代码的 import 路径完全一致，alias @/ 开头。
+ * 注释于 27.1 轮由推断重建（历史版本 f8dda4a/777075d 已损坏，GBK 残留可恢复部分与推断一致）
  */
 
 /// <reference types="node" />

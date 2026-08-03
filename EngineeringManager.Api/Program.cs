@@ -78,51 +78,18 @@ public static class ApiConfig
     /// <summary>
     /// 读取 config.json 中的 edition 字段（"personal" | "enterprise"），默认 "personal"。
     /// 启动后缓存，运行期不变。
+    /// 27.2 F1: 薄壳——解析逻辑在 EditionResolver.Resolve（纯函数，可单测）。
     /// </summary>
     public static string GetEdition()
     {
         if (_cachedEdition != null) return _cachedEdition;
-        // 环境变量优先（用于测试 / CI 隔离）
-        var envRaw = Environment.GetEnvironmentVariable("ENGINEERING_MANAGER_EDITION");
-        var envEdition = envRaw?.Trim().ToLowerInvariant();
-        if (!string.IsNullOrEmpty(envEdition))
-        {
-            if (envEdition != "enterprise" && envEdition != "personal")
-            {
-                _editionWarning = $"配置文件未生效：环境变量 ENGINEERING_MANAGER_EDITION 值 '{envRaw}' 无法识别，已按个人版运行。有效值：personal | enterprise";
-                Console.Error.WriteLine($"[ApiConfig] WARNING: {_editionWarning}");
-            }
-            _cachedEdition = envEdition == "enterprise" ? "enterprise" : "personal";
-            return _cachedEdition;
-        }
         var configPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "工程管家", "config.json");
-        try
-        {
-            if (File.Exists(configPath))
-            {
-                var json = File.ReadAllText(configPath);
-                using var doc = System.Text.Json.JsonDocument.Parse(json);
-                if (doc.RootElement.TryGetProperty("edition", out var ed) && ed.GetString() is { Length: > 0 } val)
-                {
-                    var normalized = val.Trim().ToLowerInvariant();
-                    if (normalized != "enterprise" && normalized != "personal")
-                    {
-                        _editionWarning = $"配置文件 edition 值 '{val}' 无法识别，已按个人版运行。路径：{configPath}；有效值：personal | enterprise";
-                        Console.Error.WriteLine($"[ApiConfig] WARNING: {_editionWarning}");
-                    }
-                    _cachedEdition = normalized == "enterprise" ? "enterprise" : "personal";
-                    return _cachedEdition;
-                }
-            }
-        }
-        catch (Exception ex)
-            {
-                _editionWarning = $"配置文件读取失败，已按个人版运行。路径：{configPath}；原因：{ex.Message}";
-                Console.Error.WriteLine($"[ApiConfig] WARNING: {_editionWarning}");
-            }
-        _cachedEdition = "personal";
+        var envRaw = Environment.GetEnvironmentVariable("ENGINEERING_MANAGER_EDITION");
+        var resolution = EditionResolver.Resolve(envRaw, configPath);
+        _cachedEdition = resolution.Edition;
+        _editionWarning = resolution.Warning;
         return _cachedEdition;
     }
 

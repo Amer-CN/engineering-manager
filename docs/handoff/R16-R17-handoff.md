@@ -101,7 +101,7 @@ Start-Process -FilePath
 
 ## 四、红绿灯基线
 
-`ash
+```bash
 # 后端编译
 cd "E:\测试\EngineeringManager.Api" && dotnet build
 # 期望: 0 错误 0 警告
