@@ -394,7 +394,7 @@ public static class AuthEndpoints
                 var bodyText = await reader.ReadToEndAsync();
                 dto = System.Text.Json.JsonSerializer.Deserialize<ProjectAuthDto>(bodyText, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new ProjectAuthDto();
             }
-            catch (Exception ex) { return Common.Fail($"参数解析失败: {Common.Sanitize(ex.Message)}"); }
+            catch (Exception ex) { Console.Error.WriteLine($"[Auth] 用户资料更新参数解析失败: {ex.Message}"); return Common.Fail($"参数解析失败: {Common.Sanitize(ex.Message)}"); }
             if (dto.ProjectId <= 0 || string.IsNullOrEmpty(dto.UserId)) return Common.Fail("projectId 与 userId 必填");
 
             // 幂等插入
