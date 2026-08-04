@@ -155,4 +155,57 @@ public class ProjectAuthzIsolationTests : ApiTestBase
             DeleteWorkerUser();
         }
     }
+
+    /// <summary>
+    /// R4.2: 非 admin 对「他人创建且未授权项目」的合同 PUT 必须 0 affected（不得 500）。
+    /// 原 UserFilterFragmentForProject 生成引用 @ProjectId 的 EXISTS，而 PUT 的 Dapper
+    /// 参数对象无 @ProjectId → 非 admin 必 500；且 @ProjectId 与行无关联（非行级过滤）。
+    /// 删除该方法、改用 UserFilterWithAuthorizedProjects 后：UPDATE ... WHERE id=@Id AND
+    /// (created_by=@Uid OR EXISTS(行级相关)) → 未授权行 affected=0，返回非 500。
+    /// </summary>
+    [Fact]
+    public async Task IncomeContract_Put_UnauthorizedProject_ZeroAffected_No500()
+    {
+        var oldEdition = SwitchEdition("personal");
+        try
+        {
+            CreateWorkerUser();
+            SeedProjectAuthzData();
+
+            // worker 登录
+            var workerLogin = await Client.PostAsJsonAsync("/api/auth/login", new { username = WorkerUsername, password = Password });
+            if (!workerLogin.IsSuccessStatusCode)
+                throw new Exception("worker login failed: " + workerLogin.StatusCode + " " + await workerLogin.Content.ReadAsStringAsync());
+            SetAuth(ExtractToken(await workerLogin.Content.ReadAsStringAsync()));
+
+            // 取「未授权项目他人记录」的 id
+            long unauthorizedId;
+            using (var conn = new SqliteConnection(ConnectionString))
+            {
+                conn.Open();
+                unauthorizedId = conn.ExecuteScalar<long>("SELECT id FROM income_contracts WHERE name = 'R3-unauthorized-other'");
+            }
+
+            // PUT 改名为 'R3-hacked'：未授权 → 不得 500，且行必须未被改动
+            var put = await Client.PutAsJsonAsync("/api/contracts/income", new
+            {
+                id = unauthorizedId,
+                name = "R3-hacked",
+                amount = 999.0,
+                status = "active",
+                remarks = "越权尝试",
+            });
+            Assert.NotEqual(HttpStatusCode.InternalServerError, put.StatusCode);
+
+            using var check = new SqliteConnection(ConnectionString);
+            check.Open();
+            var nameAfter = check.ExecuteScalar<string>("SELECT name FROM income_contracts WHERE id = @Id", new { Id = unauthorizedId });
+            Assert.Equal("R3-unauthorized-other", nameAfter); // 0 affected：行未被改写
+        }
+        finally
+        {
+            SwitchEdition(oldEdition);
+            DeleteWorkerUser();
+        }
+    }
 }

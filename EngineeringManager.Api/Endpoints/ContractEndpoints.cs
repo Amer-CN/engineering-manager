@@ -194,7 +194,7 @@ public static class ContractEndpoints
             var bodyText = await reader.ReadToEndAsync();
             var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(bodyText);
             var recordId = body.TryGetProperty("id", out var idProp) ? idProp.GetInt64() : 0;
-            var affected = await db.ExecuteAsync(@"UPDATE income_contracts SET name=@Name,amount=@Amount,status=@Status,remarks=@Remarks,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND " + CurrentUser.UserFilterFragmentForProject(scope),
+            var affected = await db.ExecuteAsync(@"UPDATE income_contracts SET name=@Name,amount=@Amount,status=@Status,remarks=@Remarks,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND " + CurrentUser.UserFilterWithAuthorizedProjects(scope, "income_contracts.project_id"),
                 new { Uid = uid, IsAdmin = isAdmin, Now = now(),
                     Id = recordId,
                     Name = body.TryGetProperty("name", out var n) ? n.GetString() : null,
@@ -235,7 +235,7 @@ public static class ContractEndpoints
             var bodyText = await reader.ReadToEndAsync();
             var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(bodyText);
             var recordId = body.TryGetProperty("id", out var idProp) ? idProp.GetInt64() : 0;
-            var affected = await db.ExecuteAsync(@"UPDATE expense_contracts SET name=@Name,amount=@Amount,status=@Status,remarks=@Remarks,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND " + CurrentUser.UserFilterFragmentForProject(scope),
+            var affected = await db.ExecuteAsync(@"UPDATE expense_contracts SET name=@Name,amount=@Amount,status=@Status,remarks=@Remarks,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND " + CurrentUser.UserFilterWithAuthorizedProjects(scope, "expense_contracts.project_id"),
                 new { Uid = uid, IsAdmin = isAdmin, Now = now(),
                     Id = recordId,
                     Name = body.TryGetProperty("name", out var n) ? n.GetString() : null,

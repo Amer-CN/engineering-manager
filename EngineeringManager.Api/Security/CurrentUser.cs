@@ -38,16 +38,12 @@ public static class CurrentUser
         IsAdmin(ctx) ? DataScope.All : DataScope.AuthorizedProjects;
 
     /// <summary>
-    /// 项目级表过滤片段 (有 project_id 列), 已弃 const UserFilterFragment 改用此方法。
-    /// All→(1=1); 非 All→created_by ∨ 授权项目。
+    /// 项目级表过滤片段 (有 project_id 列)。
+    /// R4.2: UserFilterFragmentForProject 已删除——它生成的 EXISTS 引用 @ProjectId，
+    /// 而调用点（PUT /api/contracts/income·expense）的 Dapper 参数对象无此参数 → 非 admin 必 500；
+    /// 且 @ProjectId 与被操作行无关联（非行级过滤）。调用点已改用
+    /// UserFilterWithAuthorizedProjects（表名限定列，行级相关子查询，与 R4.1 语义一致）。
     /// </summary>
-    public static string UserFilterFragmentForProject(DataScope scope) =>
-        scope == DataScope.All
-            ? "(1 = 1)"
-            : @"
-        (created_by = @Uid
-         OR EXISTS(SELECT 1 FROM project_authorizations
-                   WHERE project_id = @ProjectId AND user_id = @Uid))";
 
     /// <summary>
     /// 公司维度表过滤 (无 project_id 列, 如 projects / members / workers / partners / supervisors / inventory_items / materials)

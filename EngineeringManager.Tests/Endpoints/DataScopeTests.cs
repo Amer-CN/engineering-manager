@@ -70,23 +70,8 @@ public class DataScopeTests
         Assert.Contains("pw.project_id", sql);
     }
 
-    [Fact]
-    public void UserFilterFragmentForProject_AllScope_ReturnsOneEqOne()
-    {
-        var sql = EngineeringManager.Api.Security.CurrentUser.UserFilterFragmentForProject(
-            EngineeringManager.Api.Security.CurrentUser.DataScope.All);
-        Assert.Equal("(1 = 1)", sql);
-    }
-
-    [Fact]
-    public void UserFilterFragmentForProject_AuthorizedProjects_ContainsNoIsAdmin()
-    {
-        var sql = EngineeringManager.Api.Security.CurrentUser.UserFilterFragmentForProject(
-            EngineeringManager.Api.Security.CurrentUser.DataScope.AuthorizedProjects);
-        Assert.Contains("created_by = @Uid", sql);
-        Assert.Contains("EXISTS", sql);
-        Assert.DoesNotContain("IsAdmin", sql);
-    }
+    // R4.2: UserFilterFragmentForProject 已删除（@ProjectId 缺参与非行级过滤），
+    // 原两条单元测试随之移除；行为覆盖由 ProjectAuthzIsolationTests 端点级测试承担。
 
     // ════════ SafeQueryValidator 不生成 @IsAdmin ════════
 
