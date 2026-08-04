@@ -1,9 +1,23 @@
 using System.Data;
+using System.Text.Json;
 using Dapper;
 using EngineeringManager.Api.Security;
 using EngineeringManager.Api.Services;
 using EngineeringManager.Api.Services.Stt;
 using Microsoft.Extensions.DependencyInjection;
+
+// ═══════════════════════════════════════════════════════════════
+// wages 单位契约（v0.92.0 起强制执行）：
+//   · 库内一律「分」：金额列 INTEGER 整数（迁移 003），含 wages 表金额列
+//     （daily_wage / bonus / deduction / actual_wage / paid_amount）与
+//     project_workers.daily_wage
+//   · API 对外一律「元」：请求体接收元，响应返回元
+//   · 换算只允许发生在 ToFen（元→分）/ ToYuan（分→元）两个 helper 内，
+//     禁止在别处散写 ×100 / ÷100（含 SQL 表达式）
+//   · work_days 是天数（REAL），不是金额，不参与换算
+//   · salary_history / wage_history 是独立表，本契约不覆盖（各自保持现状）
+//   · 新增端点若涉及 wages / project_workers 金额列，必须走 ToFen / ToYuan
+// ═══════════════════════════════════════════════════════════════
 
 namespace EngineeringManager.Api;
 
@@ -17,7 +31,7 @@ public static class WageEndpoints
         // 鑰冨嫟
         // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 
-        app.MapGet("/api/attendances", (HttpContext ctx, IDbConnection db, long? projectId, string? yearMonth) =>
+        app.MapGet("/api/attendances", (HttpContext ctx, IDbConnection db, long? projectId, string? yearMonth, long? memberId) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var scope = CurrentUser.GetDataScope(ctx);
@@ -32,11 +46,12 @@ public static class WageEndpoints
             var conditions = new List<string>();
             if (projectId.HasValue) conditions.Add("a.project_id=@ProjectId");
             if (!string.IsNullOrEmpty(yearMonth)) conditions.Add("a.year_month=@YearMonth");
+            if (memberId.HasValue) conditions.Add("a.member_id = @MemberId");
             // v1.1.0 P0-4 Phase 2: 鎬绘槸鍔?user-dim 杩囨护
             conditions.Add(CurrentUser.UserFilterWithAuthorizedProjects(scope, "a.project_id", "a.created_by"));
             sql += " WHERE " + string.Join(" AND ", conditions);
             sql += " ORDER BY a.updated_at DESC";
-            return Common.Ok(db.Query(sql, new { ProjectId = projectId, YearMonth = yearMonth, Uid = uid, IsAdmin = isAdmin }));
+            return Common.Ok(db.Query(sql, new { ProjectId = projectId, YearMonth = yearMonth, MemberId = memberId, Uid = uid, IsAdmin = isAdmin }));
         });
 
         app.MapPost("/api/attendances", async (HttpContext ctx, AttendanceDto dto, IDbConnection db) =>
@@ -85,15 +100,17 @@ public static class WageEndpoints
             return Common.Ok(new { deleted = count });
         });
 
-        app.MapPost("/api/attendances/batch-create", async (HttpContext ctx, List<dynamic> records, IDbConnection db) =>
+        app.MapPost("/api/attendances/batch-create", async (HttpContext ctx, List<JsonElement> records, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var scope = CurrentUser.GetDataScope(ctx);
             var count = 0;
             foreach (var dto in records)
             {
+                // 前端无调用方；字段名按 camelCase 约定（对应 AttendanceBatchItem）
+                var item = JsonSerializer.Deserialize<AttendanceBatchItem>(dto.GetRawText(), WebJson) ?? throw new InvalidDataException("batch-create: 考勤记录反序列化失败");
                 await db.ExecuteAsync(@"INSERT INTO attendances (member_id,project_id,project_worker_id,year_month,work_days,days_off,is_full_attendance,daily_status,created_by,created_at,updated_at, last_modified_at) VALUES (@MemberId,@ProjectId,@ProjectWorkerId,@YearMonth,@WorkDays,@DaysOff,@IsFullAttendance,@DailyStatus,@CreatedBy,@Now,@Now, @Now)",
-                    new { Now = now(), CreatedBy = uid });
+                    new { item.MemberId, item.ProjectId, item.ProjectWorkerId, item.YearMonth, item.WorkDays, item.DaysOff, item.IsFullAttendance, item.DailyStatus, CreatedBy = uid, Now = now() });
                 count++;
             }
             return Common.Ok(new { count });
@@ -144,7 +161,8 @@ public static class WageEndpoints
             conditions.Add("w.deleted_at IS NULL");
             sql += " WHERE " + string.Join(" AND ", conditions);
             sql += " ORDER BY w.updated_at DESC";
-            return Common.Ok(db.Query(sql, new { ProjectId = projectId, YearMonth = yearMonth, Uid = uid, IsAdmin = isAdmin }));
+            // 金额列分→元（单位契约：库内分、API 元）
+            return Common.Ok(ToYuanRows(db.Query(sql, new { ProjectId = projectId, YearMonth = yearMonth, Uid = uid, IsAdmin = isAdmin })));
         });
 
         app.MapGet("/api/wages/stats", (HttpContext ctx, IDbConnection db, long? projectId, string? yearMonth) =>
@@ -160,7 +178,7 @@ public static class WageEndpoints
             var w = " WHERE " + string.Join(" AND ", where);
             return Common.Ok(new
             {
-                totalWage = db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(actual_wage),0) FROM wages{w}", new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId, YearMonth = yearMonth }),
+                totalWage = ToYuan(db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(actual_wage),0) FROM wages{w}", new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId, YearMonth = yearMonth })),
                 count = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM wages{w}", new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId, YearMonth = yearMonth }),
             });
         });
@@ -169,14 +187,20 @@ public static class WageEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var scope = CurrentUser.GetDataScope(ctx);
+            // WageDto 金额为元（double? 接收），落库前统一 ToFen 转分（单位契约）
             var actualWage = dto.ActualWage ?? (dto.DailyWage * dto.WorkDays + dto.Bonus - dto.Deduction);
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO wages (project_id,member_id,project_worker_id,year_month,daily_wage,work_days,bonus,deduction,
                  actual_wage,paid_amount,paid_date,created_by,created_at,updated_at, last_modified_at) VALUES (@ProjectId,@MemberId,@ProjectWorkerId,@YearMonth,@DailyWage,@WorkDays,@Bonus,@Deduction,
                         @ActualWage,@PaidAmount,@PaidDate,@CreatedBy,@Now,@Now, @Now);
                 SELECT last_insert_rowid();",
-                new { dto.ProjectId, dto.MemberId, dto.ProjectWorkerId, dto.YearMonth, dto.DailyWage,
-                      dto.WorkDays, dto.Bonus, dto.Deduction, ActualWage = actualWage,
-                      dto.PaidAmount, dto.PaidDate, CreatedBy = uid, Now = now() });
+                new { dto.ProjectId, dto.MemberId, dto.ProjectWorkerId, dto.YearMonth,
+                      DailyWage = ToFen(dto.DailyWage ?? 0),
+                      dto.WorkDays,
+                      Bonus = ToFen(dto.Bonus ?? 0),
+                      Deduction = ToFen(dto.Deduction ?? 0),
+                      ActualWage = ToFen(actualWage ?? 0),
+                      PaidAmount = dto.PaidAmount.HasValue ? ToFen(dto.PaidAmount.Value) : (long?)null,
+                      dto.PaidDate, CreatedBy = uid, Now = now() });
             // fire-and-forget: upsert 实体到知识库种子表
             var wageCapturedId = id;
             var wageProjectId = dto.ProjectId;
@@ -205,11 +229,18 @@ public static class WageEndpoints
             var scope = CurrentUser.GetDataScope(ctx);
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var actualWage = dto.ActualWage ?? (dto.DailyWage * dto.WorkDays + dto.Bonus - dto.Deduction);
+            // WageDto 金额为元，落库前 ToFen 转分（单位契约）
             var affected = await db.ExecuteAsync(@"UPDATE wages SET daily_wage=@DailyWage,work_days=@WorkDays,
                 bonus=@Bonus,deduction=@Deduction,actual_wage=@ActualWage,paid_amount=@PaidAmount,
                 paid_date=@PaidDate,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
-                new { dto.Id, dto.DailyWage, dto.WorkDays, dto.Bonus, dto.Deduction,
-                      ActualWage = actualWage, dto.PaidAmount, dto.PaidDate,
+                new { dto.Id,
+                      DailyWage = ToFen(dto.DailyWage ?? 0),
+                      dto.WorkDays,
+                      Bonus = ToFen(dto.Bonus ?? 0),
+                      Deduction = ToFen(dto.Deduction ?? 0),
+                      ActualWage = ToFen(actualWage ?? 0),
+                      PaidAmount = dto.PaidAmount.HasValue ? ToFen(dto.PaidAmount.Value) : (long?)null,
+                      dto.PaidDate,
                       Uid = uid, IsAdmin = isAdmin, Now = now() });
             // fire-and-forget: upsert 实体到知识库种子表
             if (affected > 0 && dto.Id.HasValue)
@@ -311,7 +342,8 @@ public static class WageEndpoints
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             sql += " AND " + CurrentUser.UserFilterWithAuthorizedProjects(scope, "w.project_id", "w.created_by");
             sql += " ORDER BY w.paid_date DESC";
-            return Common.Ok(db.Query(sql, new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId, YearMonth = yearMonth }));
+            // 金额列分→元（单位契约）
+            return Common.Ok(ToYuanRows(db.Query(sql, new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId, YearMonth = yearMonth })));
         });
 
         app.MapGet("/api/wages/overdue-stats", (HttpContext ctx, IDbConnection db, long? projectId) =>
@@ -326,7 +358,7 @@ public static class WageEndpoints
             return Common.Ok(new
             {
                 count = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM wages{w}", new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId, CurrentMonth = DateTime.Now.ToString("yyyy-MM") }),
-                amount = db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(actual_wage),0) FROM wages{w}", new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId, CurrentMonth = DateTime.Now.ToString("yyyy-MM") }),
+                amount = ToYuan(db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(actual_wage),0) FROM wages{w}", new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId, CurrentMonth = DateTime.Now.ToString("yyyy-MM") })),
             });
         });
 
@@ -345,23 +377,62 @@ public static class WageEndpoints
             // v1.1.0 P0-4 Phase 2: 鍔?user-dim
             sql += " AND " + CurrentUser.UserFilterWithAuthorizedProjects(scope, "w.project_id");
             sql += " ORDER BY w.year_month DESC";
-            return Common.Ok(db.Query(sql, new { ProjectId = projectId, CurrentMonth = DateTime.Now.ToString("yyyy-MM") }));
+            // 金额列分→元（单位契约）
+            return Common.Ok(ToYuanRows(db.Query(sql, new { ProjectId = projectId, CurrentMonth = DateTime.Now.ToString("yyyy-MM") })));
         });
 
-        app.MapPost("/api/wages/batch-save", async (HttpContext ctx, List<dynamic> records, IDbConnection db) =>
+        app.MapPost("/api/wages/batch-save", async (HttpContext ctx, List<JsonElement> records, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var scope = CurrentUser.GetDataScope(ctx);
-            var count = 0;
+            var saved = 0;
+            var skipped = 0;
+            var skippedItems = new List<object>();
             foreach (var dto in records)
             {
-                await db.ExecuteAsync(@"INSERT OR REPLACE INTO wages
+                // 字段名与前端 WageRecord（src/types/electron.d.ts）camelCase 一致；
+                // 前端金额单位为元，wages 表金额列为 INTEGER（分，迁移 003）→ 入库前 ×100 转分
+                var item = JsonSerializer.Deserialize<WageBatchItem>(dto.GetRawText(), WebJson) ?? throw new InvalidDataException("batch-save: 工资记录反序列化失败");
+                // 必填校验：唯一索引 (project_id, project_worker_id, year_month) 三列均不允许 NULL
+                //（SQLite 中 NULL 互不相等，含 NULL 的行会绕开唯一约束造成重复）
+                if (!item.ProjectId.HasValue || !item.ProjectWorkerId.HasValue || string.IsNullOrEmpty(item.YearMonth))
+                    throw new BadHttpRequestException($"batch-save: projectId / projectWorkerId / yearMonth 必填（第 {saved + skipped + 1} 条）");
+                // 显式 upsert（035 部分唯一索引 ux_wages_pw_month 为冲突目标）：
+                // DO UPDATE 只更新业务字段与 updated_at，绝不触碰 created_by / created_at /
+                // paid_amount / paid_date / status / deleted_at 等列；
+                // 已发款行（paid_amount != 0）跳过不更新（changes()=0），计入 skipped
+                var affected = await db.ExecuteAsync(@"INSERT INTO wages
                     (project_id,project_worker_id,year_month,daily_wage,work_days,bonus,deduction,actual_wage,created_by,created_at,updated_at)
-                    VALUES (@ProjectId,@ProjectWorkerId,@YearMonth,@DailyWage,@WorkDays,@Bonus,@Deduction,@ActualWage,@CreatedBy,@Now,@Now)",
-                    new { Now = now(), CreatedBy = uid });
-                count++;
+                    VALUES (@ProjectId,@ProjectWorkerId,@YearMonth,@DailyWage,@WorkDays,@Bonus,@Deduction,@ActualWage,@CreatedBy,@Now,@Now)
+                    ON CONFLICT(project_id, project_worker_id, year_month) WHERE deleted_at IS NULL
+                    DO UPDATE SET
+                        daily_wage = excluded.daily_wage,
+                        work_days  = excluded.work_days,
+                        bonus      = excluded.bonus,
+                        deduction  = excluded.deduction,
+                        actual_wage = excluded.actual_wage,
+                        updated_at = excluded.updated_at
+                    WHERE COALESCE(wages.paid_amount, 0) = 0",
+                    new {
+                        item.ProjectId, item.ProjectWorkerId, item.YearMonth,
+                        DailyWage = ToFen(item.DailyWage),
+                        item.WorkDays,
+                        Bonus = ToFen(item.Bonus),
+                        Deduction = ToFen(item.Deduction),
+                        ActualWage = ToFen(item.ActualWage),
+                        CreatedBy = uid, Now = now()
+                    });
+                if (affected > 0)
+                {
+                    saved++;
+                }
+                else
+                {
+                    skipped++;
+                    skippedItems.Add(new { projectWorkerId = item.ProjectWorkerId, yearMonth = item.YearMonth });
+                }
             }
-            return Common.Ok(new { saved = count });
+            return Common.Ok(new { saved, skipped, skippedItems });
         });
 
         // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
@@ -459,9 +530,49 @@ public static class WageEndpoints
                         ORDER BY wr.name";
             var details = db.Query(sql, new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId, TeamId = teamId }).ToList();
             var workerCount = details.Count;
-            var teamTotal = details.Sum(d => (double)(d.total_wage ?? 0));
-            return Common.Ok(new { workerCount, teamTotal, details });
+            // 分→元（单位契约）：SUM(actual_wage) 与 project_workers.daily_wage 均为分（003 迁移）
+            var teamTotal = details.Sum(d => ToYuan((decimal)(d.total_wage ?? 0)));
+            var rows = details.Select(d => new
+            {
+                worker_name = (string)d.worker_name,
+                daily_wage = ToYuan(Convert.ToInt64(d.daily_wage ?? 0)),
+                months = d.months,
+                work_days = d.work_days,
+                total_wage = ToYuan((decimal)(d.total_wage ?? 0)),
+            }).ToArray();
+            return Common.Ok(new { workerCount, teamTotal, details = rows });
         });
     }
+
+    // 前端金额单位为元；表列为 INTEGER（分，迁移 003）→ ×100 转分
+    private static long ToFen(double yuan) => (long)Math.Round(yuan * 100);
+
+    // 分→元（API 响应侧，与 ToFen 配对；单位契约见文件头部）
+    private static decimal ToYuan(long fen) => fen / 100m;
+    private static decimal ToYuan(decimal fen) => fen / 100m;
+
+    // 批量查询行：把 wages 金额列（分）转成元后输出；work_days 为天数不转。
+    // 仅用于 SELECT w.* 类端点（GET /api/wages、payment-records、overdue-list）
+    private static IDictionary<string, object?>[] ToYuanRows(IEnumerable<dynamic> rows)
+    {
+        var moneyCols = new[] { "daily_wage", "bonus", "deduction", "actual_wage", "paid_amount" };
+        return rows.Select(r =>
+        {
+            var d = (IDictionary<string, object?>)r;
+            foreach (var k in moneyCols)
+                if (d.TryGetValue(k, out var v) && v != null && !(v is DBNull))
+                    d[k] = ToYuan(Convert.ToInt64(v));
+            return d;
+        }).ToArray();
+    }
+
+    // 反序列化前端 camelCase 字段需用 Web 默认选项（camelCase + 大小写不敏感）
+    private static readonly JsonSerializerOptions WebJson = new(JsonSerializerDefaults.Web);
 }
+
+// B-1: 批量写入 DTO —— 字段名与前端 WageRecord（src/types/electron.d.ts）camelCase 一致
+record WageBatchItem(long? ProjectId, long? ProjectWorkerId, string? YearMonth, double DailyWage, double WorkDays, double Bonus, double Deduction, double ActualWage);
+
+// batch-create 无前端调用方；camelCase 命名对齐 SQL 参数
+record AttendanceBatchItem(long? MemberId, long? ProjectId, long? ProjectWorkerId, string? YearMonth, double WorkDays, long? DaysOff, long? IsFullAttendance, string? DailyStatus);
 
