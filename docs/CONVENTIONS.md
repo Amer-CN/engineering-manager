@@ -103,3 +103,11 @@ export function useProjects() {
 4. [ ] 索引：高频查询字段添加索引
 5. [ ] 迁移脚本：创建 `NNN_Description.sql`
 6. [ ] **列名对齐真契约**：端点 INSERT/UPDATE 的列名必须与「前端类型(`src/types/electron.d.ts`) + 真实生产库」一致（二者是唯一真源，建表脚本/dev 库那套可能是从未匹配的死 schema）。改写端点后跑 `pwsh scripts/audit-column-drift.ps1 -DbPath <库>` 必须 `✅ 无列漂移`（详见 docs/SMOKE-TEST.md §0.5）
+
+## 自动化检查的边界
+
+- 有确定答案的一致性检查（列表比对、命名规范、差集）一律写脚本，不用 LLM
+- 实测 LLM 在此类任务上可用率约 25%，且会虚构不存在的标识符
+- 所有提取型脚本必须有哨兵：提取到 0 条要报错，不能当作「没有问题」
+- 提取型脚本的判据必须限定在目标区域（如文件前 5 行的抬头区），否则正文里任何旧版本号/历史标记（如「v0.84.0 起」）都会被误当成待同步项
+- **mock API 不得对后端未实现的端点返回 success**，否则开发期全绿、生产期崩溃（已发生：batchSaveWages 在 mock 返回成功，真后端 500）
