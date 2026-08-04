@@ -232,7 +232,8 @@ function checkSqlRules(file, content, scanned) {
       while (k < content.length && /\s/.test(content[k])) k++
       const next = content.substr(k, 2)
       const isStringNext = content[k] === '"' || next === '$"' || next === '@"' || content.substr(k, 3) === '$@"' || content.substr(k, 3) === '@$"'
-      const after = content.slice(k, k + 80)
+      // R4.2: 切片窗口 80 → 240（UserFilter 带表名限定列后调用文本可超 80 字符，截断会漏配白名单）
+      const after = content.slice(k, k + 240)
       if (!isStringNext && !ALLOWED_CONCAT_AFTER.some(re => re.test(after))) {
         console.log(`  HARD FAIL  ${rel(file)}:${lineNo}: SQL 字符串使用 + 拼接变量，必须改用 Dapper @参数`)
         violations++
@@ -243,7 +244,7 @@ function checkSqlRules(file, content, scanned) {
     if (content[p] === '+') {
       let q = p - 1
       while (q >= 0 && /\s/.test(content[q])) q--
-      const before2 = content.slice(Math.max(0, p - 80), p)
+      const before2 = content.slice(Math.max(0, p - 240), p)
       if (content[q] !== '"' && !ALLOWED_CONCAT_BEFORE.some(re => re.test(before2))) {
         console.log(`  HARD FAIL  ${rel(file)}:${lineNo}: SQL 字符串被变量 + 拼接，必须改用 Dapper @参数`)
         violations++
