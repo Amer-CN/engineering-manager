@@ -39,18 +39,26 @@ function fileExists(filePath) {
 
 const SIZE_LIMITS = {
   // 目录匹配模式 → { hard: 硬上限, soft: 软上限, glob: 匹配模式 }
+  // 作用域说明（A3 裁决，2026-08-04）：行数红线管控【生产组件】复杂度，
+  // __tests__/ 目录与 *.test.tsx 是测试文件——长测试文件属正常（fixture/断言多），
+  // 把测试文件算进行数警告是规则作用域划错，不是个案豁免。
+  // 因此两个 filter 统一排除 __tests__/ 与 *.test.tsx；测试文件质量由 test 职责
+  // 约束（断言有效性/破坏自证），不适用生产行数红线。若未来出现「生产组件」与
+  // 测试逻辑混排导致红线被绕过的情况，再按当时证据收紧，不恢复对测试文件的行数告警。
   pageComponents: {
     dir: path.join(SRC, 'components'),
     hard: 500,
     soft: 350,
-    // 只匹配顶层 .tsx（非 features/, 非 ui/）
-    filter: (f) => f.endsWith('.tsx') && !f.includes('\\features\\') && !f.includes('\\ui\\') && !f.includes('/features/') && !f.includes('/ui/'),
+    // 只匹配顶层 .tsx（非 features/, 非 ui/），排除测试文件
+    filter: (f) => f.endsWith('.tsx') && !f.includes('\\features\\') && !f.includes('\\ui\\') && !f.includes('/features/') && !f.includes('/ui/')
+      && !f.includes('__tests__') && !f.endsWith('.test.tsx'),
   },
   featureComponents: {
     dir: path.join(SRC, 'components', 'features'),
     hard: 400,
     soft: 250,
-    filter: (f) => f.endsWith('.tsx'),
+    // 排除 __tests__/ 与 *.test.tsx（见上方作用域说明）
+    filter: (f) => f.endsWith('.tsx') && !f.includes('__tests__') && !f.endsWith('.test.tsx'),
   },
   hooks: {
     dir: path.join(SRC, 'hooks'),
