@@ -6,9 +6,10 @@
   "scripts": {
     "sync-version": "node scripts/sync-version.mjs",
     "dev": "vite",
-    "check": "node scripts/check-rules.cjs",
+    "check": "node scripts/check-rules.cjs && node scripts/check-permission-matrix.cjs && node scripts/check-migration-naming.cjs",
     "check:backend": "node scripts/check-backend-rules.cjs",
     "check:version": "node scripts/check-version-consistency.cjs",
+    "report:bridge": "node .llm-matrix/gates/scripts/gate3-bridge-orphan.mjs",
     "build:frontend": "node scripts/sync-version.mjs && node scripts/check-rules.cjs && tsc && vite build",
     "build": "vite build",
     "preview": "vite preview",

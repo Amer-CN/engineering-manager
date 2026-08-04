@@ -164,3 +164,23 @@ EngineeringManager.E2E/obj/
 # Playwright artifacts (local/CI generated)
 test-results/
 playwright-report/
+
+# LLM 分析产物（AI 生成内容准确率约 25%，不可直接引用）
+# 保留可信产出：gates/scripts/、findings/FIX-PLAN.md、findings/STUB-ENDPOINTS.md、findings/PERMISSION-GAPS.md
+# 其余 LLM 生成内容（raw/structured/reports/INDEX 等）一律不入库
+.llm-pairs/
+.llm-matrix/*
+!.llm-matrix/gates/
+.llm-matrix/gates/*
+!.llm-matrix/gates/scripts/
+!.llm-matrix/findings/
+.llm-matrix/findings/*
+!.llm-matrix/findings/FIX-PLAN.md
+!.llm-matrix/findings/STUB-ENDPOINTS.md
+!.llm-matrix/findings/PERMISSION-GAPS.md
+
+# 一次性分析残留（上一轮审计的 _*.py/_*.cjs 调试脚本、临时数据库等）
+# 不入库、不删除，留在本地。仓库内 0 个已跟踪文件以 `_` 开头，根锚定忽略安全
+/_*
+.fs3d-verify/
+docs/repowiki-cross-agent-discussion.md
