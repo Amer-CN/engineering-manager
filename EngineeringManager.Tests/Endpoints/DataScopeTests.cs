@@ -125,11 +125,24 @@ public class DataScopeTests
     [Fact]
     public void GetTableFilter_ProjectTable_AuthorizedProjects_UsesProjectAuth()
     {
+        // R4.1 新契约：项目级表必须带 tableAlias（限定列），否则 fail-closed 守卫抛异常
         var sql = EngineeringManager.Api.Services.SafeQueryValidator.GetTableFilter(
             EngineeringManager.Api.Security.CurrentUser.DataScope.AuthorizedProjects,
-            "invoices");
+            "invoices", "i");
         Assert.Contains("EXISTS", sql);
-        Assert.Contains("project_authorizations", sql);
+        Assert.Contains("project_authorizations pa", sql);
+        Assert.Contains("pa.project_id = i.project_id", sql);
         Assert.DoesNotContain("IsAdmin", sql);
+    }
+
+    [Fact]
+    public void GetTableFilter_ProjectTable_WithoutAlias_ThrowsFailClosed()
+    {
+        // R4.1 fail-closed：项目级表无别名 → 裸 project_id 会退化为恒真 EXISTS（越权），守卫必须抛
+        var ex = Assert.Throws<ArgumentException>(() =>
+            EngineeringManager.Api.Services.SafeQueryValidator.GetTableFilter(
+                EngineeringManager.Api.Security.CurrentUser.DataScope.AuthorizedProjects,
+                "invoices"));
+        Assert.Contains("projectCol", ex.Message);
     }
 }
