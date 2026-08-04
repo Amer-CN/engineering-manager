@@ -115,7 +115,7 @@
 |---|-----|------|----------|------|------|
 | 1 | Backend Redline Static Scan（28.3 起独立 job） | check-backend-rules 28 项（22 B1 token 口径误报 + 7 B3 catch 无日志，扣 1 已修） | run 30656905289 | 28 项 | TD-BACKEND-28 |
 | 2 | ~~E2E Critical Paths~~ | ~~API 60s 启动超时（CI runner 环境）~~ | run 30656905289 | ~~1 job~~ | ~~TD-E2E-TIMEOUT~~ |
-| 3 | Unit Tests (22) | ConversationHistory.test.tsx 6 个稳定失败（waitFor 找不到「今天的对话」） | run 30656905289 | 6 tests | TD-VITEST-CONVHIST |
+| 3 | ~~Unit Tests (22)~~ | ~~ConversationHistory.test.tsx 6 个稳定失败（waitFor 找不到「今天的对话」）~~ | run 30656905289 | ~~6 tests~~ | ~~TD-VITEST-CONVHIST~~ |
 | 4 | Backend Build & Test（filter 排除 5 条 M2 测试） | 5 条 Model_* 测试需真实 BGE 模型文件预存在（与 BgeE2ETests 同族）；CI 无确定性供给步骤，新 VM 必红 | run 30885122149（红）/ 30885991410、30888639643（绿） | 5 tests | TD-M2-REALMODEL |
 
 注：Unit Tests (20) 在 d80020d 为 cancelled（被 22 的失败触发取消），非独立红因。
@@ -130,6 +130,8 @@
 - **解除条件**：CI 增加确定性模型准备步骤（如 actions/cache 或显式下载到 GetEngineDir() 路径），验证连续绿后移除 filter 排除项并将本条目移出清单。
 
 ### TD 出栈记录（棘轮只减不增）
+
+- **TD-VITEST-CONVHIST 出栈（2026-08-04，R3.4）**：根因 = 测试 mock 过时——组件 `loadConversations` 用 `Promise.all([getAgentConversations(), getDeletedAgentConversations()])`（ConversationHistory.tsx 原 L74-77），测试 mock 缺 `getDeletedAgentConversations`（agent-client.ts:111 真实导出）→ 加载必抛 → silent catch → 列表恒空 → 6 条全挂在 `getByText('今天的对话')`。修复 = 补齐 mock（不弱化任何断言）；顺带按 M-REFACTOR1 把组件拆到 177 行（useConversationList hook）。验证：vitest 1725 total / 0 failed；check 警告 14→13。移除依据：6 条失败已修绿且全量 0 failed。
 
 - **TD-E2E-TIMEOUT 出栈（2026-08-03）**：修复为 E2E 的「启动 API + 等待就绪 + Playwright」合并为单个步骤（进程生命周期完全在步骤内，finally 中 Stop-Process 清理）。验证：run 30833294697 E2E job success。
   - **根因归因（已降级为假说，28.4c）**：「GitHub Actions runner 2026-08 起清理跨步骤子进程」是**未经证实的假说**。证据只支持「8/1 能跨步骤存活、8/3 不能」，不支持具体机制（可能是 runner 行为变化，也可能是 -PassThru 引入的句柄变化等其他原因）。**单步骤方案的有效性不依赖该假说成立**——无论根因是什么，进程生命周期完全在步骤内即可规避。
