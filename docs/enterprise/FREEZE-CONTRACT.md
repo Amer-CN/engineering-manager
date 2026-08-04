@@ -29,8 +29,10 @@
 ### 后端逻辑分支（冻结但保留代码）
 
 - `SYSTEM_ROLES` 多角色分支（`src/types/permissions.ts`）
-- `DataScope` 多用户分支（`CurrentUser.cs`）— personal 恒返 `All`
+- `DataScope` 多用户分支（`CurrentUser.cs`）— F6-3 起由【角色维度】决定：admin→`All`，其余→`AuthorizedProjects`（自有 `created_by` ∨ 授权项目）；personal 不再恒返 `All`（原 X8「能力开关关闭时恒返 All」语义已移除）
 - 审计按用户筛选（`SystemEndpoints.cs` L106-L108）
+- **`multiUserDataScope` 能力键 = 契约占位键，当前无行为绑定** — 数据可见范围现由角色维度决定（admin→All，其余→自有+授权项目），不再由版本能力开关决定。`MultiUserDataScope` 保留（后端 `EditionFeatures.cs` + 前端 `src/constants/editionFeatures.ts`，check:feature-keys 要求 6 键同步），全仓无任何 `Has()` 生产调用；**不得删除**（删除会红键同步门禁与 EditionFeaturesTests 精确集合断言）
+- **个人版冻结的是写入通道，不是既有数据的可见性** — 存量 enterprise 库降级为 personal 后 `project_authorizations` 表数据仍在：写端点 403 冻结，但 `UserFilterWithAuthorizedProjects` 的 `EXISTS(SELECT 1 FROM project_authorizations ...)` 对既有授权数据仍会命中（R1 曾表述为「表为空」，不准确，此处纠正）
 
 ---
 
@@ -128,6 +130,6 @@
 | # | 登记 | 债 | 说明 |
 |---|------|-----|------|
 | 1 | TD-XUNIT-SERIAL | xUnit 全局 disableParallelization | `_cachedEdition` 是全局可变静态，xUnit 并行会互相污染（EditionFreezeEndpointsTests 切换 edition 与依赖 enterprise 的测试类竞态）。已 `[assembly: CollectionBehavior(DisableTestParallelization = true)]`，代价：dotnet test 串行 5m29s。根治方向：edition 判定脱离静态缓存（F1 已让映射测试退役反射，但端点测试仍依赖）。 |
-| 2 | TD-EDITION-REFLECT | 端点冻结测试用反射改 `_cachedEdition` | F1 已让【映射】测试退役「反射改 _cachedEdition + 环境变量」手法（改为 Resolve 纯函数），但【端点】测试（EditionFreezeEndpointsTests）又复活了它：用「临时设 env + 反射清缓存」在端点级切换 edition。如实写明：这是 GetEdition 薄壳静态缓存 + config 路径硬编码 %APPDATA% 的必然结果，端点级无干净状态可拿。根治方向：GetEdition 可注入 configPath（F2 范围）。 |
+| 2 | TD-EDITION-REFLECT | 端点冻结测试用反射改 `_cachedEdition` | F1 已让【映射】测试退役「反射改 _cachedEdition + 环境变量」手法（改为 Resolve 纯函数），但【端点】测试（EditionFreezeEndpointsTests）又复活了它：用「临时设 env + 反射清缓存」在端点级切换 edition。如实写明：这是 GetEdition 薄壳静态缓存 + config 路径硬编码 %APPDATA% 的必然结果，端点级无干净状态可拿。根治方向：GetEdition 可注入 configPath（F2 范围）。**新增端点级冻结/隔离测试沿用反射切换，已知代价：必须串行 + 需自行还原全局状态（R2.3 已为 CostLedgerIsolationTests 补齐「存旧值→finally 还原 env + 删除注入用户」的还原纪律）。** |
 | 3 | TD-E2E-ROOTCAUSE-HYPOTHESIS | E2E 根因归因未证实 | 「runner 清理跨步骤子进程」是假说（见上）。单步骤方案有效性不依赖该假说，但若真因是 -PassThru 句柄变化等其他机制，其他 job 的后台进程也可能受影响，需留意。 |
 
