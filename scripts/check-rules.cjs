@@ -123,11 +123,16 @@ for (const pair of TWIN_PAIRS) {
 // 铁律四：useState 数量检查
 // ═══════════════════════════════════════════════════════════
 
+// 铁律四：useState 数量检查
+// 作用域与行数规则一致（A3 裁决，2026-08-04）：排除 __tests__/ 与 *.test.tsx——
+// 该规则管控生产组件状态复杂度，测试文件的 useState 数量不属其约束范围
+// （与行数红线同一原则：规则作用域划错，不是个案豁免）。
+
 console.log('\n═══ 铁律四：useState 数量检查 ═══')
 
 const pageComponentDir = path.join(SRC, 'components')
 const topLevelTsxFiles = fs.readdirSync(pageComponentDir)
-  .filter(f => f.endsWith('.tsx'))
+  .filter(f => f.endsWith('.tsx') && !f.endsWith('.test.tsx') && !f.includes('__tests__'))
   .map(f => path.join(pageComponentDir, f))
 
 for (const file of topLevelTsxFiles) {
@@ -142,8 +147,9 @@ for (const file of topLevelTsxFiles) {
   }
 }
 
-// features 组件也检查
-const featureFiles = walkDir(path.join(SRC, 'components', 'features'), f => f.endsWith('.tsx'))
+// features 组件也检查（排除 __tests__/ 与 *.test.tsx，与行数规则同作用域）
+const featureFiles = walkDir(path.join(SRC, 'components', 'features'),
+  f => f.endsWith('.tsx') && !f.includes('__tests__') && !f.endsWith('.test.tsx'))
 for (const file of featureFiles) {
   const count = countUseState(file)
   const rel = path.relative(ROOT, file)
