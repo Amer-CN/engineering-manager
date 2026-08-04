@@ -512,7 +512,7 @@ public static class AuthEndpoints
                 @"UPDATE users SET company_name=@CompanyName, position=@Position,
                   specialty=@Specialty, business_description=@BusinessDescription
                   WHERE id=@Uid",
-                new { uid, dto.CompanyName, dto.Position, dto.Specialty, dto.BusinessDescription });
+                new { Uid = uid, dto.CompanyName, dto.Position, dto.Specialty, dto.BusinessDescription });
             return affected > 0 ? Common.Ok() : Common.NotFound("用户不存在");
         });
     }

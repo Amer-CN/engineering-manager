@@ -30,9 +30,12 @@ public static class CurrentUser
 
     /// <summary>当前请求的数据范围。行为保持映射:admin→All,其余→AuthorizedProjects
     /// (其 created_by 分支已覆盖 SelfOnly)。
-    /// M-EDITION1 X8: multiUserDataScope 能力关闭时恒返 All（单用户全可见）。</summary>
+    /// F6-3 修复: 非 admin 恒隔离（personal 版亦不例外）——若个人版存在多账号，
+    /// 非 admin 用户必须只能看到自己的记录（created_by=@Uid），否则构成越权。
+    /// 原 X8 语义「multiUserDataScope 关闭时恒返 All」在多账号场景下是安全缺陷，
+    /// 已由 F6-3 测试暴露并修正。admin 仍恒 All（全可见）。</summary>
     public static DataScope GetDataScope(HttpContext ctx) =>
-        !EditionFeatures.Has(EditionFeatures.MultiUserDataScope) || IsAdmin(ctx) ? DataScope.All : DataScope.AuthorizedProjects;
+        IsAdmin(ctx) ? DataScope.All : DataScope.AuthorizedProjects;
 
     /// <summary>
     /// 项目级表过滤片段 (有 project_id 列), 已弃 const UserFilterFragment 改用此方法。

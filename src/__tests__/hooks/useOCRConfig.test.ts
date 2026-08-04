@@ -40,10 +40,12 @@ describe('useOCRConfig', () => {
   it('初始加载配置和状态', async () => {
     const { useOCRConfig } = await import('@/hooks/useOCRConfig')
     const { result } = renderHook(() => useOCRConfig())
+    // 29.1: ocrConfig 初值即 defined（initialConfig），仅等它会在 initializeBuiltInConfig()
+    // 异步链完成前放行，导致 ocrStatus 断言偶发 undefined（并发竞态）。
+    // 必须等 ocrStatus 就绪（checkOCRStatus 已 resolve）再断言。
     await waitFor(() => {
-      expect(result.current.ocrConfig).toBeDefined()
       expect(result.current.ocrStatus).toBeDefined()
-    })
+    }, { timeout: 5000 })
     expect(result.current.ocrConfig.provider).toBe('offline')
     expect(result.current.ocrStatus?.online).toBe(true)
   })

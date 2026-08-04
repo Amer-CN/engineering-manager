@@ -68,10 +68,27 @@ describe('Users.tsx F3 tab gates', () => {
     // Tab 层 gate：personal 下「角色权限」Tab 不渲染（queryByText 断言——破坏 useHasFeature 时变红，非恒真）
     const roleTab = screen.queryByText('角色权限')
     expect(roleTab).toBeNull()
-    // content 层 gate（防御性）：即使 activeTab 被切到 role_permissions（Tab gate 被破坏时），
-    // 内容分支 activeTab==='role_permissions' && hasRoleManagement 仍由 useHasFeature 兜底。
-    // Users 不暴露 activeTab 注入，此断言覆盖默认 user_list 下内容不渲染的事实路径。
     expect(screen.queryByTestId('role-permissions-tab')).toBeNull()
     expect(screen.queryByTestId('project-authz-tab')).toBeNull()
+  })
+
+  it('content gate: hasRoleManagement guard blocks content even when activeTab is role_permissions', async () => {
+    // 29.2: 真正覆盖内容层守卫的后半段（&& hasRoleManagement）。
+    // 步骤：enterprise 渲染 → 点击「角色权限」Tab（activeTab 真实切到 role_permissions 且内容渲染）
+    //       → features 改为 personal 重渲染 → activeTab 仍是 role_permissions，但内容必须消失。
+    useEditionStore.setState({ features: ['userManagement', 'roleManagement'], loaded: true })
+    render(<Users />)
+    // Tab 存在且可点击
+    const roleTab = screen.getByText('角色权限')
+    const { fireEvent } = require('@testing-library/react')
+    fireEvent.click(roleTab)
+    // enterprise 下内容渲染（证明 activeTab 已切换 + 前半段条件满足）
+    expect(screen.queryByTestId('role-permissions-tab')).toBeTruthy()
+    // 切到 personal：features=[] → hasRoleManagement=false → 内容守卫必须拦截
+    const { act } = require('@testing-library/react')
+    act(() => {
+      useEditionStore.setState({ features: [], loaded: true })
+    })
+    expect(screen.queryByTestId('role-permissions-tab')).toBeNull()
   })
 })

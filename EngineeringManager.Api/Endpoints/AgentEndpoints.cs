@@ -762,7 +762,8 @@ public static class AgentEndpoints
     // 辅助方法
     // ═══════════════════════════════════════════════════════════════
 
-    private static string BuildSystemPrompt(HttpContext ctx, IDbConnection db)
+    // 11.6: internal + InternalsVisibleTo 供测试直接调用（替代反射）
+    internal static string BuildSystemPrompt(HttpContext ctx, IDbConnection db)
     {
         // M-EDITION1: 注入用户画像（个人资料字段）
         var uid = CurrentUser.GetUserId(ctx);

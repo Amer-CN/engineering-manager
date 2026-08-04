@@ -1,11 +1,28 @@
 import { renderHook, act, waitFor } from '@testing-library/react'
 
+// 29.1: mock getAPI——根因：getAPI() 在 isElectron=false 时走 checkCSharpApi()
+// (fetch /api/health 2s 超时) 再 fallback 到 createMockAPI()（无 getDepartments），
+// loading 变 false 晚于 waitFor 默认 1000ms → 并发偶发失败。mock 后不碰真实 fetch。
+const mockGetDepartments = vi.fn()
+const mockCreateDepartment = vi.fn()
+const mockUpdateDepartment = vi.fn()
+const mockDeleteDepartment = vi.fn()
+const mockAPI = {
+  getDepartments: mockGetDepartments,
+  createDepartment: mockCreateDepartment,
+  updateDepartment: mockUpdateDepartment,
+  deleteDepartment: mockDeleteDepartment,
+}
+vi.mock('@/services/api-adapter', () => ({
+  getAPI: vi.fn().mockResolvedValue(mockAPI),
+}))
+
 describe('useDepartments', () => {
   let ea: Record<string, any>
 
   beforeEach(() => {
     vi.clearAllMocks()
-    ea = window.electronAPI as Record<string, any>
+    ea = mockAPI as unknown as Record<string, any>
   })
 
   it('挂载时自动加载部门列表', async () => {
