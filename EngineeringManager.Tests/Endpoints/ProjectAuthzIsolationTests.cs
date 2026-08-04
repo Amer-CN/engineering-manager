@@ -107,9 +107,12 @@ public class ProjectAuthzIsolationTests : ApiTestBase
         // 授权行：worker 对 P1 有授权
         conn.Execute("INSERT INTO project_authorizations (project_id, user_id) VALUES (1, @WorkerId)", new { WorkerId }, tx);
 
-        // 三条记录
+        // 三条记录（分支隔离：每条记录只被一个分支支撑）
+        //   R3-own 在未授权项目 P2 上 → 仅 created_by 分支可见（破坏 created_by 必红）
+        //   R3-authorized-other 在授权项目 P1 上、他人创建 → 仅 EXISTS 分支可见（破坏 EXISTS 必红）
+        //   R3-unauthorized-other 在未授权项目 P2 上、他人创建 → 两个分支都不可命中
         conn.Execute(@"INSERT INTO income_contracts (project_id, name, amount, counterparty, status, created_by, created_at, updated_at)
-            VALUES (1, 'R3-own', 100, 'x', 'draft', @WorkerId, @Now, @Now)", new { WorkerId, Now = now }, tx);
+            VALUES (2, 'R3-own', 100, 'x', 'draft', @WorkerId, @Now, @Now)", new { WorkerId, Now = now }, tx);
         conn.Execute(@"INSERT INTO income_contracts (project_id, name, amount, counterparty, status, created_by, created_at, updated_at)
             VALUES (1, 'R3-authorized-other', 200, 'x', 'draft', '1', @Now, @Now)", new { Now = now }, tx);
         conn.Execute(@"INSERT INTO income_contracts (project_id, name, amount, counterparty, status, created_by, created_at, updated_at)
