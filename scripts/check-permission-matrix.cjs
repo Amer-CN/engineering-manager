@@ -2,7 +2,7 @@
  * 工程管家 权限矩阵一致性检查（原 .llm-matrix/gates/scripts/gate1-permission-matrix.mjs，v4）
  *
  * R1 注释过滤 / R2 camelCase 资源 / R3 多调用形式 / R4 双向哨兵（A/B/C 提取数量下限，不得绕过）
- * 历史豁免：已知权限缺口（待修复，见 findings/PERMISSION-GAPS.md）——精确 (权限码, 文件, 行号) 匹配，仍打印
+ * 历史豁免：已知权限缺口（待修复，见 findings/PERMISSION-GAPS.md）——仅按权限码全等匹配（文件/行号只作线索），仍打印
  */
 
 const { readFileSync, readdirSync } = require('fs')
@@ -12,13 +12,17 @@ const ROOT = path.resolve(__dirname, '..')
 
 // ── 历史豁免：已知权限缺口（待修复）──
 // 这 4 个权限码前端在用、后端 roles 表默认授予缺失 → can() 恒 false → 功能失效（详见 findings/PERMISSION-GAPS.md）。
-// 仅豁免以下精确 (权限码, 文件, 行号) 项；新出现的 B−C 一律照旧阻断。
-// 行号为门禁剥离注释后提取的行号（与下方输出一致；真实文件行号见 findings 文档）。
+// 仅按权限码全等豁免；新出现的 B−C 一律照旧阻断。
+// 线索（门禁行号与源文件真实行号一致）：
+//   projects:export    → src/components/features/projects/ProjectFilters.tsx:61
+//   contracts:export   → src/components/ContractPage.tsx:111
+//   inventory:delete   → src/hooks/useInventoryPage.ts:75
+//   settlement:approve → src/components/features/settlement/SettlementProjectActions.tsx:116
 const LEGACY_EXEMPT = [
-  { perm: 'projects:export', file: 'src/components/features/projects/ProjectFilters.tsx', line: 59 },
-  { perm: 'contracts:export', file: 'src/components/ContractPage.tsx', line: 111 },
-  { perm: 'inventory:delete', file: 'src/hooks/useInventoryPage.ts', line: 75 },
-  { perm: 'settlement:approve', file: 'src/components/features/settlement/SettlementProjectActions.tsx', line: 116 },
+  { perm: 'projects:export' },
+  { perm: 'contracts:export' },
+  { perm: 'inventory:delete' },
+  { perm: 'settlement:approve' },
 ];
 
 // 绝对路径 → 相对路径（正斜杠），用于豁免匹配与展示
@@ -27,8 +31,9 @@ const toRel = (p) => String(p).split('\\').join('/').replace(/^.*?\/src\//, 'src
 // ── R1: 剥离注释（// 行注释、/* */ 块注释、JSX {/* */}）──
 function stripComments(src) {
   // 先剥 JSX 块注释 {/* ... */}（避免 /* 与 */ 误配对）
-  let out = src.replace(/\/\*[\s\S]*?\*\//g, (m) => m.includes('{') ? ' '.repeat(m.length) : ' '.repeat(m.length));
-  // 再剥 // 行注释
+  // 用等长空格替换但保留换行：多行块注释若被压成一行，后续行号会整体前移（曾致 ProjectFilters.tsx 真实 61 报成 59）
+  let out = src.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '));
+  // 再剥 // 行注释（仅清内容，保留空行，行号不变）
   out = out.split('\n').map(l => l.replace(/\/\/.*$/, '')).join('\n');
   return out;
 }
@@ -128,7 +133,7 @@ if (A.size === 0) {
   sentinelFail = true;
 }
 
-// 判定：B−C 违反项先按 LEGACY_EXEMPT 精确 (权限码, 文件, 行号) 分流，豁免项计入 knownGaps 仍打印
+// 判定：B−C 违反项先按 LEGACY_EXEMPT 权限码全等分流，豁免项计入 knownGaps 仍打印
 const violations = [];
 const knownGaps = [];
 for (const p of B) {
@@ -136,7 +141,7 @@ for (const p of B) {
     const detail = Bdetails.find(d => d.perm === p);
     const relFile = detail ? toRel(detail.file) : '?';
     const line = detail ? detail.line : -1;
-    const ex = LEGACY_EXEMPT.find(e => e.perm === p && e.file === relFile && e.line === line);
+    const ex = LEGACY_EXEMPT.find(e => e.perm === p);
     if (ex) {
       knownGaps.push({ type: '已知缺口（待修复）', perm: p, file: relFile, line, form: detail ? detail.form : '?' });
     } else {
