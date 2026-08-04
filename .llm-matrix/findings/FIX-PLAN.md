@@ -37,3 +37,18 @@ getAttendancesByMember: (memberId: number, yearMonth?: string) => apiClient.get<
 - `src/types/electron.d.ts:1138` 签名同步（若 Electron 侧也有该接口）
 - 前端调用点 `MemberDetail.tsx:58` 传参无需改（memberId 已在第一个参数）
 - 测试建议：`EngineeringManager.Tests` 加一个 `GET /api/attendances?memberId=` 冒烟（参照 `UserDimPhase2Tests.Wages_Get_Smoke_Structure` 写法）
+
+---
+
+# 待办：batch-save 响应新增 skipped，前端需提示
+
+状态: 待前端实现（后端已完成，v0.92.0）
+
+- 背景: `POST /api/wages/batch-save` 改为显式 upsert 后，已发款行
+  （paid_amount != 0）会被跳过不更新。响应从 `{ saved }` 扩展为
+  `{ saved, skipped, skippedItems: [{ projectWorkerId, yearMonth }] }`。
+- 后端已返回多出的字段，不影响现有调用；前端（useWageActions.ts
+  handleSaveWages / handleSavePayments）目前只读 `r.success`。
+- 待办: 前端读取 `skipped`/`skippedItems`，在 saved > 0 且 skipped > 0 时
+  提示「N 条已发款记录未更新」，并用 skippedItems 指出是哪几条
+  （按 projectWorkerId + yearMonth 定位）。

@@ -252,7 +252,7 @@ export const tauriAPI = {
   getAttendances: (projectId?: number, yearMonth?: string) =>
     apiClient.get<AttendanceRecord[]>('/api/attendances', { projectId, yearMonth }),
   getAttendancesByMember: (memberId: number, yearMonth?: string) =>
-    apiClient.get<AttendanceRecord[]>(`/api/attendances/member/${memberId}`, { yearMonth }),
+    apiClient.get<AttendanceRecord[]>('/api/attendances', { memberId, yearMonth }),
   createAttendance: (record: Partial<AttendanceRecord>) =>
     apiClient.post<{ id: number }>('/api/attendances', record),
   updateAttendance: (record: AttendanceRecord) =>
