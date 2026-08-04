@@ -66,6 +66,17 @@ const checks = [
     extract: (c) => (c.match(/__APP_VERSION__\s*\|\|\s*'([\d.]+)'/) || [])[1],
     desc: '登录页版本 fallback（人工同步项）',
   },
+  // AGENTS.md 抬头版本号（仅前 5 行抬头区域，正文历史标记如「v0.84.0 起」不参与比对）
+  {
+    file: 'AGENTS.md',
+    extract: (c) => (c.split('\n').slice(0, 5).join('\n').match(/v(\d+\.\d+\.\d+)/) || [])[1],
+    desc: '根 AGENTS.md 抬头版本',
+  },
+  {
+    file: 'src/components/AGENTS.md',
+    extract: (c) => (c.split('\n').slice(0, 5).join('\n').match(/v(\d+\.\d+\.\d+)/) || [])[1],
+    desc: '前端组件 AGENTS.md 抬头版本',
+  },
 ]
 
 let failures = 0
@@ -107,6 +118,29 @@ try {
   }
 } catch (e) {
   console.error(`[version-check] FAIL: 无法读取/解析 update/manifest.json: ${e.message}`)
+  failures++
+}
+
+// ═══════════════════════════════════════════════════════════
+// CHANGELOG.md：天然含历史版本号，日常允许滞后（CHANGELOG 可能还未更新到当
+// 前版本），仅 --release 模式要求最新版本号与 package.json 一致
+// ═══════════════════════════════════════════════════════════
+
+try {
+  const changelog = read('CHANGELOG.md')
+  const changelogLatest = (changelog.match(/^##\s*v?(\d+\.\d+\.\d+)/m) || [])[1]
+  if (!changelogLatest) {
+    console.error('[version-check] FAIL: CHANGELOG.md 未匹配到版本号')
+    failures++
+  } else if (RELEASE_MODE && changelogLatest !== truth) {
+    console.error(`[version-check] FAIL: CHANGELOG.md 最新版本 = ${changelogLatest}，发布模式要求严格等于 package.json = ${truth}`)
+    failures++
+  } else if (!RELEASE_MODE && compareSemver(changelogLatest, truth) > 0) {
+    console.error(`[version-check] FAIL: CHANGELOG.md 最新版本 = ${changelogLatest} 超前于 package.json = ${truth}`)
+    failures++
+  }
+} catch (e) {
+  console.error(`[version-check] FAIL: 无法读取/解析 CHANGELOG.md: ${e.message}`)
   failures++
 }
 
