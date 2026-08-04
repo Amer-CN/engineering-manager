@@ -150,9 +150,14 @@ jobs:
       - name: Run backend tests
         # 排除需外部资源的可选端到端测试（CI 无法提供，测试文件自身注明选择性运行）：
         #   SttE2ETests    — GB 级 ASR 模型 + 真实转写子进程
-        #   BgeE2ETests    — 真实 BGE 嵌入模型（未纳入版本库）
+        #   BgeE2ETests    — 真实 BGE 嵌入模型（未纳入版本库）——注意 !~BgeE2ETests 同时
+        #                   排除 BgeE2ETestsV2（E2E_RealBge，CI 上从未执行过）
         #   RealHttp       — Agent 真实 LLM HTTP 调用（需 API key / 网络）
-        run: dotnet test EngineeringManager.Tests/EngineeringManager.Tests.csproj --filter "FullyQualifiedName!~SttE2ETests&FullyQualifiedName!~BgeE2ETests&FullyQualifiedName!~RealHttp"
+        #   M2 Model_* ×5  — R3.2 并入：与 BgeE2ETests 同族（需真实 BGE 模型文件预存在）。
+        #                   根因/证据/解除条件见 FREEZE-CONTRACT.md TD-M2-REALMODEL。
+        #                   精确到 5 条依赖模型的测试；Model_MissingModel_StatusUnavailable
+        #                   与 Model_DownloadInterrupted_NoFinalFile 不依赖模型，继续在 CI 执行。
+        run: dotnet test EngineeringManager.Tests/EngineeringManager.Tests.csproj --filter "FullyQualifiedName!~SttE2ETests&FullyQualifiedName!~BgeE2ETests&FullyQualifiedName!~RealHttp&FullyQualifiedName!~M2FourthRoundTests.Model_ConcurrentEnsure_Only1Download&FullyQualifiedName!~M2FourthRoundTests.Model_CorruptModelFile_SelfHealAndRedownload&FullyQualifiedName!~M2FourthRoundTests.Model_CorruptVocab_SelfHealAndRedownload&FullyQualifiedName!~M2FourthRoundTests.Model_ResidualTmpFile_CleanedBeforeDownload&FullyQualifiedName!~M2FourthRoundTests.Model_ResetAfterHeal_EnterReady"
 
   e2e:
     name: E2E Critical Paths (Playwright)
