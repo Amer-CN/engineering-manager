@@ -188,7 +188,8 @@ public static class WageEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var scope = CurrentUser.GetDataScope(ctx);
             // WageDto 金额为元（double? 接收），落库前统一 ToFen 转分（单位契约）
-            var actualWage = dto.ActualWage ?? (dto.DailyWage * dto.WorkDays + dto.Bonus - dto.Deduction);
+            var (ok, actualWage, missing) = TryResolveActualWage(dto);
+            if (!ok) return Results.BadRequest(new { success = false, error = $"POST /api/wages: actualWage 缺失且推算所需字段缺失: {missing}" });
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO wages (project_id,member_id,project_worker_id,year_month,daily_wage,work_days,bonus,deduction,
                  actual_wage,paid_amount,paid_date,created_by,created_at,updated_at, last_modified_at) VALUES (@ProjectId,@MemberId,@ProjectWorkerId,@YearMonth,@DailyWage,@WorkDays,@Bonus,@Deduction,
                         @ActualWage,@PaidAmount,@PaidDate,@CreatedBy,@Now,@Now, @Now);
@@ -198,7 +199,7 @@ public static class WageEndpoints
                       dto.WorkDays,
                       Bonus = ToFen(dto.Bonus ?? 0),
                       Deduction = ToFen(dto.Deduction ?? 0),
-                      ActualWage = ToFen(actualWage ?? 0),
+                      ActualWage = ToFen(actualWage),
                       PaidAmount = dto.PaidAmount.HasValue ? ToFen(dto.PaidAmount.Value) : (long?)null,
                       dto.PaidDate, CreatedBy = uid, Now = now() });
             // fire-and-forget: upsert 实体到知识库种子表
@@ -228,7 +229,8 @@ public static class WageEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var scope = CurrentUser.GetDataScope(ctx);
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
-            var actualWage = dto.ActualWage ?? (dto.DailyWage * dto.WorkDays + dto.Bonus - dto.Deduction);
+            var (ok, actualWage, missing) = TryResolveActualWage(dto);
+            if (!ok) return Results.BadRequest(new { success = false, error = $"PUT /api/wages: actualWage 缺失且推算所需字段缺失: {missing}" });
             // WageDto 金额为元，落库前 ToFen 转分（单位契约）
             var affected = await db.ExecuteAsync(@"UPDATE wages SET daily_wage=@DailyWage,work_days=@WorkDays,
                 bonus=@Bonus,deduction=@Deduction,actual_wage=@ActualWage,paid_amount=@PaidAmount,
@@ -238,7 +240,7 @@ public static class WageEndpoints
                       dto.WorkDays,
                       Bonus = ToFen(dto.Bonus ?? 0),
                       Deduction = ToFen(dto.Deduction ?? 0),
-                      ActualWage = ToFen(actualWage ?? 0),
+                      ActualWage = ToFen(actualWage),
                       PaidAmount = dto.PaidAmount.HasValue ? ToFen(dto.PaidAmount.Value) : (long?)null,
                       dto.PaidDate,
                       Uid = uid, IsAdmin = isAdmin, Now = now() });
@@ -395,8 +397,18 @@ public static class WageEndpoints
                 var item = JsonSerializer.Deserialize<WageBatchItem>(dto.GetRawText(), WebJson) ?? throw new InvalidDataException("batch-save: 工资记录反序列化失败");
                 // 必填校验：唯一索引 (project_id, project_worker_id, year_month) 三列均不允许 NULL
                 //（SQLite 中 NULL 互不相等，含 NULL 的行会绕开唯一约束造成重复）
+                // 直接返回 400：全局 UseExceptionHandler 会把异常包成 500 通用消息
                 if (!item.ProjectId.HasValue || !item.ProjectWorkerId.HasValue || string.IsNullOrEmpty(item.YearMonth))
-                    throw new BadHttpRequestException($"batch-save: projectId / projectWorkerId / yearMonth 必填（第 {saved + skipped + 1} 条）");
+                    return Results.BadRequest(new { success = false, error = $"batch-save: projectId / projectWorkerId / yearMonth 必填（第 {saved + skipped + 1} 条）" });
+                // 金额字段缺省（JSON 无此键）→ 400 指出缺哪些，不许静默当 0 保存
+                var missingMoney = new List<string>();
+                if (!item.DailyWage.HasValue) missingMoney.Add("dailyWage");
+                if (!item.WorkDays.HasValue) missingMoney.Add("workDays");
+                if (!item.Bonus.HasValue) missingMoney.Add("bonus");
+                if (!item.Deduction.HasValue) missingMoney.Add("deduction");
+                if (!item.ActualWage.HasValue) missingMoney.Add("actualWage");
+                if (missingMoney.Count > 0)
+                    return Results.BadRequest(new { success = false, error = $"batch-save: 第 {saved + skipped + 1} 条缺失金额字段: {string.Join(", ", missingMoney)}" });
                 // 显式 upsert（035 部分唯一索引 ux_wages_pw_month 为冲突目标）：
                 // DO UPDATE 只更新业务字段与 updated_at，绝不触碰 created_by / created_at /
                 // paid_amount / paid_date / status / deleted_at 等列；
@@ -415,11 +427,11 @@ public static class WageEndpoints
                     WHERE COALESCE(wages.paid_amount, 0) = 0",
                     new {
                         item.ProjectId, item.ProjectWorkerId, item.YearMonth,
-                        DailyWage = ToFen(item.DailyWage),
-                        item.WorkDays,
-                        Bonus = ToFen(item.Bonus),
-                        Deduction = ToFen(item.Deduction),
-                        ActualWage = ToFen(item.ActualWage),
+                        DailyWage = ToFen(item.DailyWage!.Value),
+                        WorkDays = item.WorkDays!.Value,
+                        Bonus = ToFen(item.Bonus!.Value),
+                        Deduction = ToFen(item.Deduction!.Value),
+                        ActualWage = ToFen(item.ActualWage!.Value),
                         CreatedBy = uid, Now = now()
                     });
                 if (affected > 0)
@@ -530,12 +542,14 @@ public static class WageEndpoints
                         ORDER BY wr.name";
             var details = db.Query(sql, new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId, TeamId = teamId }).ToList();
             var workerCount = details.Count;
-            // 分→元（单位契约）：SUM(actual_wage) 与 project_workers.daily_wage 均为分（003 迁移）
+            // SUM(w.actual_wage) 来自 wages 表 → 分，ToYuan 转元（单位契约）
             var teamTotal = details.Sum(d => ToYuan((decimal)(d.total_wage ?? 0)));
             var rows = details.Select(d => new
             {
                 worker_name = (string)d.worker_name,
-                daily_wage = ToYuan(Convert.ToInt64(d.daily_wage ?? 0)),
+                // project_workers.daily_wage 仍为元直通（ProjectWorkerMiscEndpoints 写入侧
+                // 未走 ToFen），库内是元；不做 ÷100，属全仓单位问题，不在 wages 收口范围
+                daily_wage = d.daily_wage,
                 months = d.months,
                 work_days = d.work_days,
                 total_wage = ToYuan((decimal)(d.total_wage ?? 0)),
@@ -546,6 +560,22 @@ public static class WageEndpoints
 
     // 前端金额单位为元；表列为 INTEGER（分，迁移 003）→ ×100 转分
     private static long ToFen(double yuan) => (long)Math.Round(yuan * 100);
+
+    // actualWage 缺省推算：任一推算字段缺失 → 显式 400（不许静默归零：
+    // 曾因 ?? 0 兜底导致前端少传 bonus 时落库 actual_wage=0，显示「实发 0 元」）
+    // 注意：不能抛 BadHttpRequestException —— 全局 UseExceptionHandler 会把
+    // 一切未处理异常包成 500 通用消息，400 与字段名都会丢失
+    private static (bool Ok, double Value, string? Missing) TryResolveActualWage(WageDto dto)
+    {
+        if (dto.ActualWage.HasValue) return (true, dto.ActualWage.Value, null);
+        var missing = new List<string>();
+        if (!dto.DailyWage.HasValue) missing.Add("dailyWage");
+        if (!dto.WorkDays.HasValue) missing.Add("workDays");
+        if (!dto.Bonus.HasValue) missing.Add("bonus");
+        if (!dto.Deduction.HasValue) missing.Add("deduction");
+        if (missing.Count > 0) return (false, 0, string.Join(", ", missing));
+        return (true, dto.DailyWage!.Value * dto.WorkDays!.Value + dto.Bonus!.Value - dto.Deduction!.Value, null);
+    }
 
     // 分→元（API 响应侧，与 ToFen 配对；单位契约见文件头部）
     private static decimal ToYuan(long fen) => fen / 100m;
@@ -571,7 +601,10 @@ public static class WageEndpoints
 }
 
 // B-1: 批量写入 DTO —— 字段名与前端 WageRecord（src/types/electron.d.ts）camelCase 一致
-record WageBatchItem(long? ProjectId, long? ProjectWorkerId, string? YearMonth, double DailyWage, double WorkDays, double Bonus, double Deduction, double ActualWage);
+// 金额字段前端单位为元；表列为 INTEGER（分，迁移 003），入库经 ToFen 转分。
+// 金额字段用可空 double 接收：缺省（JSON 无此键）与 0（显式 0）区分，
+// 缺省在 batch-save 中按缺失字段返回 400，不许静默当 0 保存
+record WageBatchItem(long? ProjectId, long? ProjectWorkerId, string? YearMonth, double? DailyWage, double? WorkDays, double? Bonus, double? Deduction, double? ActualWage);
 
 // batch-create 无前端调用方；camelCase 命名对齐 SQL 参数
 record AttendanceBatchItem(long? MemberId, long? ProjectId, long? ProjectWorkerId, string? YearMonth, double WorkDays, long? DaysOff, long? IsFullAttendance, string? DailyStatus);
