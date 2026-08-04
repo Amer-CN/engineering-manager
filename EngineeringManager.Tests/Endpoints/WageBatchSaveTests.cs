@@ -212,4 +212,122 @@ public class WageBatchSaveTests : ApiTestBase
         var data = await GetDataAsync(resp);
         Assert.Equal(4450m, data.GetProperty("totalWage").GetDecimal());  // 445000 分 → 4450 元
     }
+
+    // ── D-7 回归 ─────────────────────────────────────────────
+
+    [Fact]
+    public async Task TeamWages_DailyWage_ReturnsYuanDirect()
+    {
+        var token = await LoginAsync();
+        SetAuth(token);
+
+        // project_workers.daily_wage 为元直通（ProjectWorkerMiscEndpoints 写入侧未走 ToFen），
+        // 写入 200 元后 team-wages 必须原样返回 200，不得 ÷100 成 2
+        long pwId;
+        using (var conn = new SqliteConnection(ConnectionString))
+        {
+            var workerId = conn.ExecuteScalar<long>("INSERT INTO workers (name) VALUES ('D7测试工人'); SELECT last_insert_rowid();");
+            conn.Execute(@"INSERT INTO project_workers (worker_id,project_id,team_id,daily_wage,status)
+                VALUES (@W,@P,@T,200,'active')",
+                new { W = workerId, P = TestProjectId, T = 9003L });
+            pwId = conn.ExecuteScalar<long>("SELECT last_insert_rowid();");
+        }
+
+        // wages 行（actual_wage 走分契约）造一条，让 JOIN 命中
+        await Client.PostAsJsonAsync("/api/wages/batch-save",
+            new[] { WageBody(TestProjectId, pwId, TestYearMonth, actualWage: 4450) });
+
+        var resp = await Client.GetAsync($"/api/team-wages?projectId={TestProjectId}&teamId=9003");
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var data = await GetDataAsync(resp);
+        var details = data.GetProperty("details");
+        var row = details.EnumerateArray().First();
+        Assert.Equal(200.0, row.GetProperty("daily_wage").GetDouble());   // 元直通，不是 2
+        Assert.Equal(4450.0, row.GetProperty("total_wage").GetDouble());  // wages 分 → 元
+    }
+
+    [Fact]
+    public async Task BatchSave_MissingBonus_Returns400()
+    {
+        var token = await LoginAsync();
+        SetAuth(token);
+
+        // 缺 bonus/deduction → 400 且报文指出缺失字段，库内不得新增行
+        var resp = await Client.PostAsJsonAsync("/api/wages/batch-save", new[]
+        {
+            new { projectId = TestProjectId, projectWorkerId = TestPwId, yearMonth = TestYearMonth,
+                  dailyWage = 200, workDays = 22, actualWage = 4450 },
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        var body = await resp.Content.ReadAsStringAsync();
+        Assert.Contains("bonus", body);
+        Assert.Contains("deduction", body);
+
+        using var conn = new SqliteConnection(ConnectionString);
+        Assert.Equal(0, conn.ExecuteScalar<int>("SELECT COUNT(*) FROM wages"));
+    }
+
+    [Fact]
+    public async Task PostWages_MissingBonus_Returns400()
+    {
+        var token = await LoginAsync();
+        SetAuth(token);
+
+        // 缺 bonus/deduction/actualWage → 400 且报文指出缺失字段，库内不得新增行
+        var resp = await Client.PostAsJsonAsync("/api/wages", new
+        {
+            projectId = TestProjectId, projectWorkerId = TestPwId, yearMonth = TestYearMonth,
+            dailyWage = 200, workDays = 22,
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        var body = await resp.Content.ReadAsStringAsync();
+        Assert.Contains("bonus", body);
+        Assert.Contains("deduction", body);
+
+        using var conn = new SqliteConnection(ConnectionString);
+        Assert.Equal(0, conn.ExecuteScalar<int>("SELECT COUNT(*) FROM wages"));
+    }
+
+    [Fact]
+    public async Task PostWages_PaidNull_ThenBatchSave_Updates()
+    {
+        var token = await LoginAsync();
+        SetAuth(token);
+
+        // POST /api/wages 建一行（不带 paidAmount → 落库 paid_amount IS NULL，真 NULL 不是 0）
+        var createResp = await Client.PostAsJsonAsync("/api/wages", new
+        {
+            projectId = TestProjectId, projectWorkerId = TestPwId, yearMonth = TestYearMonth,
+            dailyWage = 200, workDays = 22, bonus = 100, deduction = 50, actualWage = 4450,
+        });
+        Assert.Equal(HttpStatusCode.OK, createResp.StatusCode);
+        using (var conn = new SqliteConnection(ConnectionString))
+        {
+            var paid = conn.ExecuteScalar<object?>(
+                "SELECT paid_amount FROM wages WHERE project_id=@P AND project_worker_id=@W AND year_month=@Y",
+                new { P = TestProjectId, W = TestPwId, Y = TestYearMonth });
+            Assert.True(paid is null or DBNull, $"paid_amount 应为 NULL，实际: {paid}");
+        }
+
+        // batch-save 保存同一业务键 → COALESCE(NULL,0)=0 → 正常更新，skipped=0
+        var resp = await Client.PostAsJsonAsync("/api/wages/batch-save",
+            new[] { WageBody(TestProjectId, TestPwId, TestYearMonth, dailyWage: 300, actualWage: 300 * 22) });
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var data = await GetDataAsync(resp);
+        Assert.Equal(1, data.GetProperty("saved").GetInt32());
+        Assert.Equal(0, data.GetProperty("skipped").GetInt32());
+
+        using (var conn = new SqliteConnection(ConnectionString))
+        {
+            var row = conn.QueryFirst(
+                "SELECT daily_wage, actual_wage, paid_amount FROM wages WHERE project_id=@P AND project_worker_id=@W AND year_month=@Y",
+                new { P = TestProjectId, W = TestPwId, Y = TestYearMonth });
+            Assert.Equal(30000L, (long)row.daily_wage);   // 300 元已更新
+            Assert.Equal(300 * 22 * 100L, (long)row.actual_wage);
+            Assert.True(row.paid_amount is null or DBNull, "paid_amount 仍应为 NULL");
+            Assert.Equal(1, conn.ExecuteScalar<int>(
+                "SELECT COUNT(*) FROM wages WHERE project_id=@P AND project_worker_id=@W AND year_month=@Y",
+                new { P = TestProjectId, W = TestPwId, Y = TestYearMonth }));
+        }
+    }
 }
