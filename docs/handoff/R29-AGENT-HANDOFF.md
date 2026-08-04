@@ -174,3 +174,16 @@ backup/pre-29-04874c6
 backup/pre-edition-split
 backup/pre-rebuild-e8d6bdd
 backup/pre-reshape-b0af16a
+
+
+## 11. 审查方补充（接手增补，R1 轮）
+
+1) **基点状态**：origin/master 已从 d80020d 推进到 d9b4ab1，本分支【未 rebase】，基点未变（merge-base 仍为 d80020d）。不要自行 rebase 或 merge master，需要时等指令。
+2) **29.5(d) 自证纪律违反（第 16 条）**：前一个 agent 在 29.5(d) 的破坏自证中，CurrentUser.cs 尚未提交，git checkout 把修复一起抹掉；之后用本机临时脚本 _fix_29_5d4.py 重贴，而该脚本【接手方手上没有】。因此 CurrentUser.cs 的 GetDataScope 当前内容未经独立验证，接手方必须先人工读一遍确认（R1.2a）。
+3) **验收命令**（在 E:\edition-split 内执行）：
+   - dotnet clean && dotnet test
+   - npx vitest run
+   - npm run check
+   CI 用的 filter：--filter "FullyQualifiedName!~SttE2ETests&FullyQualifiedName!~BgeE2ETests&FullyQualifiedName!~RealHttp"
+   （接手方实测补充：本仓库根目录无 .sln，需指定 csproj：dotnet clean EngineeringManager.Tests/EngineeringManager.Tests.csproj && dotnet test EngineeringManager.Tests/EngineeringManager.Tests.csproj）
+4) **git add 纪律**：本机残留的临时脚本（_fix_*.py 等）是 untracked，沙箱删不掉。永远不要用 git add -A，逐个文件 add（历史上 lockfile 就是这样被夹带进去的）。
