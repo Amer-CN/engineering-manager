@@ -9,10 +9,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 // ── Mocks ──
 const mockGetAgentConversations = vi.hoisted(() => vi.fn())
+const mockGetDeletedAgentConversations = vi.hoisted(() => vi.fn())
 const mockDeleteAgentConversation = vi.hoisted(() => vi.fn())
 const mockRenameAgentConversation = vi.hoisted(() => vi.fn())
 vi.mock('@/services/agent-client', () => ({
   getAgentConversations: mockGetAgentConversations,
+  getDeletedAgentConversations: mockGetDeletedAgentConversations,
   deleteAgentConversation: mockDeleteAgentConversation,
   renameAgentConversation: mockRenameAgentConversation,
 }))
@@ -57,6 +59,9 @@ describe('ConversationHistory', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetAgentConversations.mockResolvedValue(mockConversations)
+    // R3.4: 组件 loadConversations 用 Promise.all 同时拉取「最近删除」列表，
+    // mock 缺该函数会导致加载必抛、列表恒空（6 条测试全部挂在此处）。
+    mockGetDeletedAgentConversations.mockResolvedValue([])
     mockDeleteAgentConversation.mockResolvedValue(true)
     mockRenameAgentConversation.mockResolvedValue(true)
   })
