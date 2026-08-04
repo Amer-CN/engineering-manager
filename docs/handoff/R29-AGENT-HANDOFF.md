@@ -1,7 +1,7 @@
 # R29 Agent 交接文档
 
 ## 0. 一句话现状
-分支 feat/edition-split，HEAD = 01eea4088f255708faf5467a098f58daf30e823d。
+分支 feat/edition-split，HEAD = b6894b9fcb29ce05e188e6813b3542ca06d6df7f（R4.4 文档提交前的最后代码 HEAD；R4 报告给出最终 HEAD）。
 上一个执行 agent 因 credits 耗尽在 29.5(d) F6-3 自证完成后停止。
 
 ## 1. 这是什么任务
@@ -42,35 +42,35 @@
 补充：豁免三条件 = 基线实测证据 + 技术债登记 + 进入只减不增的固定清单；
       新增豁免必须停下来问人，不得自行添加。
 
-## 4. 当前基线数字（接手方的靶子）
-- dotnet test 全量：692 通过 / 0 失败 / 2 跳过（总计 694）
-- dotnet test CI filter 口径：688 / 0 / 0
-  （filter: FullyQualifiedName!~SttE2ETests&!~BgeE2ETests&!~RealHttp；
-   分项实测：SttE2E 2 + BgeE2E 1 + RealHttp 3 = 6，694-6=688 闭合）
-- npx vitest run：1724 total / 6 failed（6 = TD-VITEST-CONVHIST）
-- npm run check：exit 0，encoding 1 <= baseline 1
-- 29.x 已改变的数字（增量归因）：
-  * vitest 总数不变（1724）；useDepartments/useOCRConfig 偶发失败已修（修的是时序/mock，
-    不加用例）；UsersFreeze 加了 1 条内容层测试 → 1725？【未知——29.x 改动后未跑过全量，
-    接手方第一件事：跑全量确认新数字】
-  * dotnet：新增 3 个测试文件（AiProfilePromptTests 2 + CostLedgerIsolationTests 2 +
-    UserProfileIsolationTests 2 = 6 条）→ 全量应为 700 total【未验证】
+## 4. 当前基线数字（R4 实测，2026-08-05）
+- dotnet test 全量：700 通过 / 0 失败 / 2 跳过（总计 702）→ R4 增加 ProjectAuthzIsolationTests 2 条
+  （R4.1 三断言 + R4.2 PUT 越权）= 704 total
+- dotnet test CI filter 口径：693 / 0 / 0
+  （filter 现含 TD-M2-REALMODEL 的 5 条排除：704 − 6（SttE2E 2 + BgeE2E 1 + RealHttp 3）− 5 = 693 闭合）
+- npx vitest run：1725 total / 0 failed（TD-VITEST-CONVHIST 已出栈）
+- npm run check：exit 0，13 项警告，encoding 1 <= baseline 1（正式登记于 FREEZE-CONTRACT §7）
+- check:backend：28 项（TD-BACKEND-28，R4.1c 新增 B5 规则后仍为 28，0 新增）
 
-## 5. CI 七个 job 与预期状态（.github/workflows/test.yml）
+## 5. CI 八个 job 与预期状态（.github/workflows/test.yml）
 Lint ✅ / TypeScript Check ✅ / E2E Critical Paths ✅ /
-Backend Build & Test ✅ / Backend Redline Static Scan ❌（在册）/
-Unit Tests (20) ❌ / Unit Tests (22) ❌（在册）/ Full Build（依赖失败则 skipped）
+Backend Build & Test ✅（filter 排除 SttE2E/BgeE2E/RealHttp + TD-M2-REALMODEL 5 条）/
+Backend Redline Static Scan ❌（在册 TD-BACKEND-28）/
+Unit Tests (20) ✅（TD-VITEST-CONVHIST 出栈后转绿）/ Unit Tests (22) ✅（同）/
+Full Build（依赖全绿时真跑，R3 起 ✅）
 【豁免清单外任何红 = 不通过。】
 
-## 6. 豁免清单（棘轮：只减不增）
+## 6. 豁免清单（棘轮：只减不增；与 FREEZE-CONTRACT §7 对齐）
 - TD-BACKEND-28：backend-redline job 28 项红线违规
-- TD-VITEST-CONVHIST：ConversationHistory 6 条稳定失败
-- encoding-baseline = 1：useWorkerImport.ts 的 U+FFFD 是有意正则
+  （口径统一：= 22 B1 token 口径误报 + 7 B3 catch 无日志，扣 1 已修；R4.1c 新增 B5 规则后仍为 28）
+- TD-M2-REALMODEL（R4 入册）：M2 5 条 Model_* 测试需真实 BGE 模型预存在，
+  CI 无确定性供给 → 并入 filter 排除；解除条件 = CI 加确定性模型准备步骤
+- encoding-baseline = 1：useWorkerImport.ts 的 U+FFFD 是有意正则（已正式登记 FREEZE-CONTRACT §7）
 - TD-XUNIT-SERIAL：_cachedEdition 是全局可变静态，已全局关闭 xUnit 并行
 - TD-EDITION-REFLECT：端点冻结测试仍用反射改 _cachedEdition
 - TD-E2E-ROOTCAUSE-HYPOTHESIS：跨步骤子进程被清理是【未证实假说】，
   单步骤方案的有效性不依赖该假说
 - （TD-E2E-TIMEOUT 已出栈，E2E 已转绿）
+- （TD-VITEST-CONVHIST 已出栈（R3.4）：mock 缺 getDeletedAgentConversations，vitest 1725/0）
 - （29.2 选了 (a)，未新增 TD-FREEZE-CONTENT-GATE）
 
 ## 7. 29.1–29.5 逐项进度（如实写）

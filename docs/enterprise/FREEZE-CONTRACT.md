@@ -129,6 +129,13 @@
 - **代价**：这 5 条在 CI 不再执行（本地仍全量执行——本机模型存在，已验证 7/7 全绿）；CI 后端 total 相应 −5。
 - **解除条件**：CI 增加确定性模型准备步骤（如 actions/cache 或显式下载到 GetEngineDir() 路径），验证连续绿后移除 filter 排除项并将本条目移出清单。
 
+### encoding-baseline = 1 正式登记（R4.4，豁免三条件第 2 条补齐）
+
+- **债**：check-encoding 报 1 处 U+FFFD（src/utils/useWorkerImport.ts），为有意正则（编码检测逻辑），非乱码。
+- **基线**：encoding 门禁口径 violation(s) <= baseline 1；基线文件 = scripts/check-encoding.cjs 的 baseline 常量。
+- **证据**：npm run check 输出 "encoding check passed: 1 violation(s) <= baseline 1"；R2-R4 三轮实测恒为 1。
+- **棘轮**：只减不增——若 useWorkerImport.ts 的 U+FFFD 被移除，baseline 同步降为 0。
+
 ### TD 出栈记录（棘轮只减不增）
 
 - **TD-VITEST-CONVHIST 出栈（2026-08-04，R3.4）**：根因 = 测试 mock 过时——组件 `loadConversations` 用 `Promise.all([getAgentConversations(), getDeletedAgentConversations()])`（ConversationHistory.tsx 原 L74-77），测试 mock 缺 `getDeletedAgentConversations`（agent-client.ts:111 真实导出）→ 加载必抛 → silent catch → 列表恒空 → 6 条全挂在 `getByText('今天的对话')`。修复 = 补齐 mock（不弱化任何断言）；顺带按 M-REFACTOR1 把组件拆到 177 行（useConversationList hook）。验证：vitest 1725 total / 0 failed；check 警告 14→13。移除依据：6 条失败已修绿且全量 0 failed。
