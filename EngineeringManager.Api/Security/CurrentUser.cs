@@ -60,19 +60,34 @@ public static class CurrentUser
     /// <summary>
     /// 项目级表过滤 (有 project_id 列, 如 income_contracts / wages / attendances / invoices / cost_ledger / drawings / inventory_transactions)
     /// 逻辑: created_by 自己 OR admin 全表 OR 当前行 project_id 在 admin 授权的 project_authorizations 列表中
+    ///
+    /// R4.1 结构性修复（退化 EXISTS）：
+    ///   - projectCol 必填且必须为「表名.列名」限定形式（如 "income_contracts.project_id"）。
+    ///     裸列名会在子查询内解析到 project_authorizations.project_id 自身 → project_id = project_id
+    ///     恒真 → EXISTS 退化为「用户有任意一条授权记录就全项目可见」（越权，R3.1 实测钉出）。
+    ///   - 子查询表加别名 pa 并全限定，确保与调用点外层的行做相关子查询。
+    ///   - 运行期守卫 fail-closed：projectCol 不含 '.' 时抛 ArgumentException ——
+    ///     宁可 500 也不静默越权（编译器逼出调用点 + 守卫兜住运行期拼错）。
+    ///   - createdByCol 不加此约束（它不在子查询作用域内，无自比较风险）。
     /// 入参:
-    ///   projectCol 当前行 project_id 列 (默认 "project_id", 可带表别名如 "pw.project_id")
+    ///   projectCol 当前行 project_id 列（必填，表限定，如 "w.project_id" / "income_contracts.project_id"）
     ///   createdByCol 当前行 created_by 列 (默认 "created_by", 当主查询 JOIN 多个有 created_by 的表时需带表别名如 "i.created_by")
     /// </summary>
     public static string UserFilterWithAuthorizedProjects(
         DataScope scope,
-        string projectCol = "project_id",
-        string createdByCol = "created_by") =>
-        scope == DataScope.All
+        string projectCol,
+        string createdByCol = "created_by")
+    {
+        if (!projectCol.Contains('.'))
+            throw new ArgumentException(
+                $"UserFilterWithAuthorizedProjects: projectCol 必须是「表名.列名」限定形式（当前值 '{projectCol}'）——裸列名会退化为恒真 EXISTS 造成越权（R4.1 fail-closed，宁可 500 不静默越权）",
+                nameof(projectCol));
+        return scope == DataScope.All
             ? "(1 = 1)"
             : $@"({createdByCol} = @Uid
-            OR EXISTS(SELECT 1 FROM project_authorizations
-                      WHERE project_id = {projectCol} AND user_id = @Uid))";
+            OR EXISTS(SELECT 1 FROM project_authorizations pa
+                      WHERE pa.project_id = {projectCol} AND pa.user_id = @Uid))";
+    }
 
     // ── v0.80 D-2: PII 字段权限分级 ──
 

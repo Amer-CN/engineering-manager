@@ -40,9 +40,9 @@ public class DataScopeTests
     [Fact]
     public void UserFilterWithAuthorizedProjects_AllScope_ReturnsOneEqOne()
     {
-        // All → (1 = 1)
+        // All → (1 = 1)（R4.1 起 projectCol 必填且须表限定，测试用限定名）
         var sql = EngineeringManager.Api.Security.CurrentUser.UserFilterWithAuthorizedProjects(
-            EngineeringManager.Api.Security.CurrentUser.DataScope.All);
+            EngineeringManager.Api.Security.CurrentUser.DataScope.All, "income_contracts.project_id");
         Assert.Equal("(1 = 1)", sql);
     }
 
@@ -52,10 +52,11 @@ public class DataScopeTests
         // AuthorizedProjects → (created_by = @Uid OR EXISTS ...)，不含 @IsAdmin
         var sql = EngineeringManager.Api.Security.CurrentUser.UserFilterWithAuthorizedProjects(
             EngineeringManager.Api.Security.CurrentUser.DataScope.AuthorizedProjects,
-            "project_id", "created_by");
+            "income_contracts.project_id", "created_by");
         Assert.Contains("created_by = @Uid", sql);
         Assert.Contains("EXISTS", sql);
-        Assert.Contains("project_authorizations", sql);
+        Assert.Contains("project_authorizations pa", sql);
+        Assert.Contains("pa.project_id = income_contracts.project_id", sql);
         Assert.DoesNotContain("IsAdmin", sql);
     }
 

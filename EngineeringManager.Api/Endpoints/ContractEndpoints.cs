@@ -27,7 +27,7 @@ public static class ContractEndpoints
             var scope = CurrentUser.GetDataScope(ctx);
             // v1.1.0 P0-4 Phase 2: 项目级过滤 (created_by OR admin OR project_authorizations)
             // projectId 是更窄的收窄条件, 不能漏
-            var sql = $@"SELECT * FROM income_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope, "project_id")}";
+            var sql = $@"SELECT * FROM income_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope, "income_contracts.project_id")}";
             if (projectId.HasValue) sql += " AND project_id=@ProjectId";
             sql += " ORDER BY created_at DESC";
             return Common.Ok(db.Query(sql, new { ProjectId = projectId, Uid = uid, IsAdmin = isAdmin }));
@@ -39,7 +39,7 @@ public static class ContractEndpoints
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             // v1.1.0 P0-4 Phase 2: 项目级过滤
-            var sql = $@"SELECT * FROM expense_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope, "project_id")}";
+            var sql = $@"SELECT * FROM expense_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope, "expense_contracts.project_id")}";
             if (projectId.HasValue) sql += " AND project_id=@ProjectId";
             sql += " ORDER BY created_at DESC";
             return Common.Ok(db.Query(sql, new { ProjectId = projectId, Uid = uid, IsAdmin = isAdmin }));
@@ -51,7 +51,7 @@ public static class ContractEndpoints
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             // v1.1.0 P0-4 Phase 2: 项目级过滤
-            var sql = $@"SELECT * FROM agreement_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope, "project_id")}";
+            var sql = $@"SELECT * FROM agreement_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope, "agreement_contracts.project_id")}";
             if (projectId.HasValue) sql += " AND project_id=@ProjectId";
             sql += " ORDER BY created_at DESC";
             return Common.Ok(db.Query(sql, new { ProjectId = projectId, Uid = uid, IsAdmin = isAdmin }));
@@ -65,10 +65,10 @@ public static class ContractEndpoints
             // v1.1.0 P0-4 Phase 2: stats 涔熸寜 user-dim 杩囨护 (admin 鐪嬪叏琛? 鍏朵粬鐪嬭嚜宸?鎺堟潈)
             return Common.Ok(new
             {
-                incomeCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM income_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope)}", new { Uid = uid, IsAdmin = isAdmin }),
-                expenseCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM expense_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope)}", new { Uid = uid, IsAdmin = isAdmin }),
-                incomeTotal = db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(amount),0) FROM income_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope)}", new { Uid = uid, IsAdmin = isAdmin }),
-                expenseTotal = db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(amount),0) FROM expense_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope)}", new { Uid = uid, IsAdmin = isAdmin }),
+                incomeCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM income_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope, "income_contracts.project_id")}", new { Uid = uid, IsAdmin = isAdmin }),
+                expenseCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM expense_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope, "expense_contracts.project_id")}", new { Uid = uid, IsAdmin = isAdmin }),
+                incomeTotal = db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(amount),0) FROM income_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope, "income_contracts.project_id")}", new { Uid = uid, IsAdmin = isAdmin }),
+                expenseTotal = db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(amount),0) FROM expense_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope, "expense_contracts.project_id")}", new { Uid = uid, IsAdmin = isAdmin }),
             });
         });
 
