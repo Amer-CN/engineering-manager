@@ -142,4 +142,101 @@ public class CostLedgerIsolationTests : ApiTestBase
         }
         finally { SwitchEdition("enterprise"); }
     }
+
+    /// <summary>
+    /// F6-3 正向对照 (a)：worker 自己创建的记录【必须看得到】。
+    /// 现有两条纯否定断言无法区分「隔离」与「全空」——若过滤逻辑坏成
+    /// 「非 admin 什么都看不见」，那两条照样全绿。本条堵住该回归形态。
+    /// </summary>
+    [Fact]
+    public async Task CostLedger_WorkerSeesOwnRecord_PersonalEdition()
+    {
+        try
+        {
+            SwitchEdition("personal");
+            var (_, workerToken) = await LoginAndCreateWorkerAsync();
+
+            // worker 自己插入一条 cost_ledger 记录
+            SetAuth(workerToken);
+            var create = await Client.PostAsJsonAsync("/api/cost-ledger", new
+            {
+                projectId = (long?)null,
+                batchId = (long?)null,
+                voucherNo = "F6-P1",
+                date = "2026-08-04",
+                direction = "out",
+                category = "测试",
+                amount = 300,
+                counterparty = "x",
+                channel = "x",
+                summary = "F6 worker 自有记录",
+            });
+            create.EnsureSuccessStatusCode();
+
+            // worker 查列表——必须看得到自己的记录
+            var get = await Client.GetAsync("/api/cost-ledger");
+            Assert.Equal(HttpStatusCode.OK, get.StatusCode);
+            var json = await get.Content.ReadFromJsonAsync<JsonElement>();
+            var items = json.GetProperty("data").EnumerateArray().ToList();
+            Assert.Contains(items, it => it.TryGetProperty("summary", out var s) && s.GetString() == "F6 worker 自有记录");
+        }
+        finally { SwitchEdition("enterprise"); }
+    }
+
+    /// <summary>
+    /// F6-3 正向对照 (b)：同一次请求里 worker【看得到自己的】且【看不到 admin 的】。
+    /// 一次断言两个方向，同时堵住「全空」（(a) 已堵）与「全可见」两种坏法。
+    /// </summary>
+    [Fact]
+    public async Task CostLedger_WorkerSeesOwnAndNotAdmins_SameRequest_PersonalEdition()
+    {
+        try
+        {
+            SwitchEdition("personal");
+            var (adminToken, workerToken) = await LoginAndCreateWorkerAsync();
+
+            // admin 插入一条
+            SetAuth(adminToken);
+            var createAdmin = await Client.PostAsJsonAsync("/api/cost-ledger", new
+            {
+                projectId = (long?)null,
+                batchId = (long?)null,
+                voucherNo = "F6-P2A",
+                date = "2026-08-04",
+                direction = "out",
+                category = "测试",
+                amount = 400,
+                counterparty = "x",
+                channel = "x",
+                summary = "F6 admin 记录",
+            });
+            createAdmin.EnsureSuccessStatusCode();
+
+            // worker 插入一条自己的
+            SetAuth(workerToken);
+            var createWorker = await Client.PostAsJsonAsync("/api/cost-ledger", new
+            {
+                projectId = (long?)null,
+                batchId = (long?)null,
+                voucherNo = "F6-P2B",
+                date = "2026-08-04",
+                direction = "out",
+                category = "测试",
+                amount = 500,
+                counterparty = "x",
+                channel = "x",
+                summary = "F6 worker 自有记录2",
+            });
+            createWorker.EnsureSuccessStatusCode();
+
+            // 同一次 GET：自己的可见，admin 的不可见
+            var get = await Client.GetAsync("/api/cost-ledger");
+            Assert.Equal(HttpStatusCode.OK, get.StatusCode);
+            var json = await get.Content.ReadFromJsonAsync<JsonElement>();
+            var items = json.GetProperty("data").EnumerateArray().ToList();
+            Assert.Contains(items, it => it.TryGetProperty("summary", out var s) && s.GetString() == "F6 worker 自有记录2");
+            Assert.DoesNotContain(items, it => it.TryGetProperty("summary", out var s) && s.GetString() == "F6 admin 记录");
+        }
+        finally { SwitchEdition("enterprise"); }
+    }
 }
