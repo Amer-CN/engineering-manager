@@ -31,12 +31,15 @@ public class CostLedgerIsolationTests : ApiTestBase
     private void SetAuth(string token) =>
         Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-    private static void SwitchEdition(string? edition)
+    private static string? SwitchEdition(string? edition)
     {
+        // R2.3(b): 先存旧值，finally 还原（不硬编码回 enterprise）
+        var old = Environment.GetEnvironmentVariable("ENGINEERING_MANAGER_EDITION");
         Environment.SetEnvironmentVariable("ENGINEERING_MANAGER_EDITION", edition);
         var t = typeof(ApiConfig);
         t.GetField("_cachedEdition", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!.SetValue(null, null);
         t.GetField("_editionWarning", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!.SetValue(null, null);
+        return old;
     }
 
     private async Task<(string adminToken, string workerToken)> LoginAndCreateWorkerAsync()
@@ -71,12 +74,27 @@ public class CostLedgerIsolationTests : ApiTestBase
         return (adminToken, workerToken);
     }
 
+    /// <summary>
+    /// R2.3(a): f6-worker-1 用户由本类注入测试库，测试结束必须清理，
+    /// 防止污染「数一数 users 表」之类的后续断言（当前为 per-test 临时库，
+    /// 潜在风险；若未来测试改用共享库则为实害）。
+    /// </summary>
+    private void DeleteWorkerUser()
+    {
+        using var conn = new Microsoft.Data.Sqlite.SqliteConnection(ConnectionString);
+        conn.Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "DELETE FROM users WHERE id = @Id";
+        cmd.Parameters.AddWithValue("@Id", "f6-worker-1");
+        cmd.ExecuteNonQuery();
+    }
+
     [Fact]
     public async Task CostLedger_WorkerCannotSeeAdminsRecords()
     {
+        var oldEdition = SwitchEdition("enterprise");
         try
         {
-            SwitchEdition("enterprise");
             var (adminToken, workerToken) = await LoginAndCreateWorkerAsync();
 
             // admin 插入一条 cost_ledger 记录
@@ -104,15 +122,15 @@ public class CostLedgerIsolationTests : ApiTestBase
             var items = json.GetProperty("data").EnumerateArray().ToList();
             Assert.DoesNotContain(items, it => it.TryGetProperty("summary", out var s) && s.GetString() == "F6 越权测试记录");
         }
-        finally { SwitchEdition("enterprise"); }
+        finally { SwitchEdition(oldEdition); DeleteWorkerUser(); }
     }
 
     [Fact]
     public async Task CostLedger_PersonalEdition_WorkerAlsoCannotSeeAdminsRecords()
     {
+        var oldEdition = SwitchEdition("personal");
         try
         {
-            SwitchEdition("personal");
             var (adminToken, workerToken) = await LoginAndCreateWorkerAsync();
 
             // admin 插入一条 cost_ledger 记录
@@ -140,7 +158,7 @@ public class CostLedgerIsolationTests : ApiTestBase
             var items = json.GetProperty("data").EnumerateArray().ToList();
             Assert.DoesNotContain(items, it => it.TryGetProperty("summary", out var s) && s.GetString() == "F6 个人版越权测试记录");
         }
-        finally { SwitchEdition("enterprise"); }
+        finally { SwitchEdition(oldEdition); DeleteWorkerUser(); }
     }
 
     /// <summary>
@@ -151,9 +169,9 @@ public class CostLedgerIsolationTests : ApiTestBase
     [Fact]
     public async Task CostLedger_WorkerSeesOwnRecord_PersonalEdition()
     {
+        var oldEdition = SwitchEdition("personal");
         try
         {
-            SwitchEdition("personal");
             var (_, workerToken) = await LoginAndCreateWorkerAsync();
 
             // worker 自己插入一条 cost_ledger 记录
@@ -180,7 +198,7 @@ public class CostLedgerIsolationTests : ApiTestBase
             var items = json.GetProperty("data").EnumerateArray().ToList();
             Assert.Contains(items, it => it.TryGetProperty("summary", out var s) && s.GetString() == "F6 worker 自有记录");
         }
-        finally { SwitchEdition("enterprise"); }
+        finally { SwitchEdition(oldEdition); DeleteWorkerUser(); }
     }
 
     /// <summary>
@@ -190,9 +208,9 @@ public class CostLedgerIsolationTests : ApiTestBase
     [Fact]
     public async Task CostLedger_WorkerSeesOwnAndNotAdmins_SameRequest_PersonalEdition()
     {
+        var oldEdition = SwitchEdition("personal");
         try
         {
-            SwitchEdition("personal");
             var (adminToken, workerToken) = await LoginAndCreateWorkerAsync();
 
             // admin 插入一条
@@ -237,6 +255,6 @@ public class CostLedgerIsolationTests : ApiTestBase
             Assert.Contains(items, it => it.TryGetProperty("summary", out var s) && s.GetString() == "F6 worker 自有记录2");
             Assert.DoesNotContain(items, it => it.TryGetProperty("summary", out var s) && s.GetString() == "F6 admin 记录");
         }
-        finally { SwitchEdition("enterprise"); }
+        finally { SwitchEdition(oldEdition); DeleteWorkerUser(); }
     }
 }
