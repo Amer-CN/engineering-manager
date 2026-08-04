@@ -116,8 +116,18 @@
 | 1 | Backend Redline Static Scan（28.3 起独立 job） | check-backend-rules 28 项（22 B1 token 口径误报 + 7 B3 catch 无日志，扣 1 已修） | run 30656905289 | 28 项 | TD-BACKEND-28 |
 | 2 | ~~E2E Critical Paths~~ | ~~API 60s 启动超时（CI runner 环境）~~ | run 30656905289 | ~~1 job~~ | ~~TD-E2E-TIMEOUT~~ |
 | 3 | Unit Tests (22) | ConversationHistory.test.tsx 6 个稳定失败（waitFor 找不到「今天的对话」） | run 30656905289 | 6 tests | TD-VITEST-CONVHIST |
+| 4 | Backend Build & Test（filter 排除 5 条 M2 测试） | 5 条 Model_* 测试需真实 BGE 模型文件预存在（与 BgeE2ETests 同族）；CI 无确定性供给步骤，新 VM 必红 | run 30885122149（红）/ 30885991410、30888639643（绿） | 5 tests | TD-M2-REALMODEL |
 
 注：Unit Tests (20) 在 d80020d 为 cancelled（被 22 的失败触发取消），非独立红因。
+
+### TD-M2-REALMODEL 登记（R3.2，审查方批准的唯一条目；棘轮只减不增）
+
+- **根因（一句话）**：M2 的 5 条 Model_* 测试断言真实 BGE 模型文件必须预存在（`Assert.True(File.Exists(realModel))`，M2FourthRoundTests.cs 断言行 290/343/378/436/484），CI 无确定性供给（模型未纳入版本库、workflow 无下载步骤），而套件内所有触发真实下载（hf-mirror.com，bge-small-zh-v1.5.onnx 94.8MB）的路径（POST /api/knowledge/documents → KnowledgeBaseService.IngestAsync → BgeEmbeddingService.EnsureModelAsync，KnowledgeBaseService.cs:153-158；POST /api/contracts/income fire-and-forget）在串行执行序中全部晚于这 5 条测试 → 新 VM 上 5 条必红。
+- **实测证据指针**：红 run 30885122149（01eea40，`Failed: 5, Passed: 689, Total: 694`，断言行 290/343/378/436/484）；绿 run 30885991410（fcbbc65，0 失败）、30888639643（b2bcd22，0 失败）。本地闭环复现（2026-08-04）：移走本机模型（GetEngineDir 路径 E:\asr-engine\embedding）→ 同 5 条、同断言行失败；单跑 WritePermission_AdminUser_CanWrite_Returns200（POST /api/knowledge/documents）→ 94.8MB 模型真实下载落地 GetEngineDir()/embedding/（文件时间戳实测）；再跑 5 条 → 全绿。
+- **绿 run 机制（已证实，非「不可控」）**：GitHub Windows runner 池 VM 状态跨 job 保留——上一 job 的运行内下载落在 runner 的 `D:\asr-engine\embedding\`（GetEngineDir 兜底路径），对本次 run 的 5 条（~40s 处执行）太晚，但对复用到同一 VM 的下一 job 生效 → 绿。红 run = 该 VM 恰好冷启动/被轮换。
+- **附带发现**：E2E_RealBge（类 `BgeE2ETestsV2`）FQN 含 "BgeE2ETests"，早被原 filter `!~BgeE2ETests` 排除，CI 上从未执行（handoff 分项「BgeE2E 1」即它）——红 run 上它「通过」是未运行，不是模型可用。
+- **代价**：这 5 条在 CI 不再执行（本地仍全量执行——本机模型存在，已验证 7/7 全绿）；CI 后端 total 相应 −5。
+- **解除条件**：CI 增加确定性模型准备步骤（如 actions/cache 或显式下载到 GetEngineDir() 路径），验证连续绿后移除 filter 排除项并将本条目移出清单。
 
 ### TD 出栈记录（棘轮只减不增）
 
