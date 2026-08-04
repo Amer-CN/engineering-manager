@@ -51,7 +51,9 @@ v0.74.0 → v0.85.0 (已 rebase 整理) 期间, 项目曾把 **refactor-only spr
 | `installer/package.json` | 严格相等 |
 | `installer/src/App.tsx`（version prop） | 严格相等 |
 | `src/components/Login.tsx`（fallback，人工同步项） | 严格相等 |
+| `AGENTS.md` / `src/components/AGENTS.md`（抬头版本号） | 严格相等 |
 | `update/manifest.json` `latest` | 日常允许滞后（发布产物）但不允许超前；`--release` 模式要求严格相等 |
+| `CHANGELOG.md`（最新版本号） | 日常允许滞后（天然含历史版本号）但不允许超前；`--release` 模式要求严格相等 |
 
 > `update/manifest.json` 仅在 `npm run release:manifest`（make-manifest.mjs）打包收尾时重新生成，日常滞后于 package.json 属正常状态。发布收尾请跑 `npm run check:version -- --release` 确认全链一致。改动上表任一覆盖项时，须同步修改校验脚本，反之亦然。
 
