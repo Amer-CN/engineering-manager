@@ -172,7 +172,6 @@ const ALLOWED_SQL_INTERPOLATIONS = new Set([
   'scope.Filter',
   'scopeFilter.Filter',
   'CurrentUser.UserFilterCompany(scope)',
-  'CurrentUser.UserFilterWithAuthorizedProjects(scope)',
   'createdByCol',
   'projectCol',
   'encCol',
@@ -185,13 +184,20 @@ const ALLOWED_SQL_INTERPOLATIONS = new Set([
   'values',
 ])
 
+// R4.1: UserFilterWithAuthorizedProjects 的插值形态——第二实参必须是「表名.列名」字面量
+// （裸列名会退化为恒真 EXISTS 造成越权，见规则 B5）。用模式而非逐条枚举（表名会增长）。
+const ALLOWED_SQL_INTERPOLATION_PATTERNS = [
+  /^CurrentUser\s*\.\s*UserFilterWithAuthorizedProjects\(\s*scope\s*,\s*"[A-Za-z_]+\.project_id"\s*(?:,\s*"[A-Za-z_\.]+"\s*)?\)$/,
+]
+
 // 受控 + 拼接白名单（AGENTS.md 认可的租户隔离 filter helper 与常量条件组装）
+// R4.1: UserFilter 拼接形态允许可选的「表名.列名」限定列字面量（如 scope, "wages.project_id"）
 const ALLOWED_CONCAT_AFTER = [
-  /^CurrentUser\s*\.\s*UserFilter\w*\s*\(\s*scope\s*\)/, // 租户隔离 SQL 片段 helper
+  /^CurrentUser\s*\.\s*UserFilter\w*\s*\(\s*scope\s*(?:,\s*"[A-Za-z_]+\.project_id"\s*)?\)/, // 租户隔离 SQL 片段 helper
   /^string\s*\.\s*Join\s*\(\s*"[^"]*"\s*,\s*conditions\s*\)/, // 常量条件列表组装
 ]
 const ALLOWED_CONCAT_BEFORE = [
-  /CurrentUser\s*\.\s*UserFilter\w*\s*\(\s*scope\s*\)\s*$/,
+  /CurrentUser\s*\.\s*UserFilter\w*\s*\(\s*scope\s*(?:,\s*"[A-Za-z_]+\.project_id"\s*)?\)\s*$/,
   /string\s*\.\s*Join\s*\(\s*"[^"]*"\s*,\s*conditions\s*\)\s*$/,
 ]
 
@@ -207,7 +213,7 @@ function checkSqlRules(file, content, scanned) {
       let m
       while ((m = exprRe.exec(lit.text.replace(/\{\{|\}\}/g, '  ')))) {
         const expr = m[1].split(':')[0].trim() // 去掉格式说明符
-        if (!ALLOWED_SQL_INTERPOLATIONS.has(expr)) {
+        if (!ALLOWED_SQL_INTERPOLATIONS.has(expr) && !ALLOWED_SQL_INTERPOLATION_PATTERNS.some(re => re.test(expr))) {
           console.log(`  HARD FAIL  ${rel(file)}:${lineOf(content, lit.start + m.index)}: SQL 插值 {${expr}} 不在受控白名单，必须改用 Dapper @参数`)
           violations++
         }
@@ -459,6 +465,32 @@ for (const file of csFiles) {
   checkSqlRules(file, content, scanned)
 }
 if (violations === 0) console.log('  OK  未发现拼接/越权插值 SQL')
+
+// ═══════════════════════════════════════════════════════════
+// 规则 B5（R4.1c）：UserFilterWithAuthorizedProjects 第二实参必须为含 '.' 的字符串字面量
+// 退化 EXISTS 结构性防线：裸列名（如 "project_id"）在 EXISTS 子查询内解析到
+// project_authorizations.project_id 自身 → project_id = project_id 恒真 →
+// 「用户有任意一条授权记录就全项目可见」（越权，R3.1 实测钉出）。
+// 编译器已强制 projectCol 必填（R4.1a 删除默认值），本规则进一步强制「表名.列名」
+// 字面量形态，堵住运行期拼错与变量间接传入。
+// ═══════════════════════════════════════════════════════════
+console.log('\n═══ 后端红线 B5：UserFilterWithAuthorizedProjects 限定列 ═══')
+const b0Violations = violations
+const ufRe = /UserFilterWithAuthorizedProjects\s*\(\s*([^,()]+?)\s*,\s*([^,()]+?)\s*(?:,|\))/g
+const qualifiedColLiteral = /^"[^"]*\.[^"]*"$/
+for (const file of csFiles) {
+  const { masked } = scannedCache.get(file)
+  let m
+  while ((m = ufRe.exec(masked))) {
+    const colArg = m[2].trim()
+    if (!qualifiedColLiteral.test(colArg)) {
+      const line = lineOf(fs.readFileSync(file, 'utf-8'), m.index)
+      console.log(`  HARD FAIL  ${rel(file)}:${line}: UserFilterWithAuthorizedProjects 第二实参必须是含 '.' 的字符串字面量（当前 '${colArg}'）——裸列名会退化为恒真 EXISTS 越权（R4.1）`)
+      violations++
+    }
+  }
+}
+if (violations === b0Violations) console.log('  OK  全部调用点均使用表名限定的 projectCol 字面量')
 
 console.log('\n═══ 后端红线 B2：端点鉴权覆盖 ═══')
 const b1Violations = violations
