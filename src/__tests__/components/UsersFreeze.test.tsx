@@ -62,10 +62,15 @@ describe('Users.tsx F3 tab gates', () => {
     expect(screen.getByText('用户列表')).toBeTruthy()
   })
 
-  it('personal: tab content not rendered even if activeTab forced', async () => {
+  it('personal: no role_permissions tab AND no content after tab switch', async () => {
     useEditionStore.setState({ features: [], loaded: true })
-    // 直接渲染 Users，activeTab 默认 user_list；role_permissions 分支有 hasRoleManagement 守卫
     render(<Users />)
+    // Tab 层 gate：personal 下「角色权限」Tab 不渲染（queryByText 断言——破坏 useHasFeature 时变红，非恒真）
+    const roleTab = screen.queryByText('角色权限')
+    expect(roleTab).toBeNull()
+    // content 层 gate（防御性）：即使 activeTab 被切到 role_permissions（Tab gate 被破坏时），
+    // 内容分支 activeTab==='role_permissions' && hasRoleManagement 仍由 useHasFeature 兜底。
+    // Users 不暴露 activeTab 注入，此断言覆盖默认 user_list 下内容不渲染的事实路径。
     expect(screen.queryByTestId('role-permissions-tab')).toBeNull()
     expect(screen.queryByTestId('project-authz-tab')).toBeNull()
   })

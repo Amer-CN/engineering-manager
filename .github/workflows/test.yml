@@ -107,6 +107,30 @@ jobs:
         # 版本引用一致性只读门禁（真源 package.json）→ docs/VERSIONING.md「版本号引用位置」
         run: npm run check:version
 
+  backend-redline:
+    # 28.3: static scan 独立成 job——它红不再短路 backend 的 build + dotnet test。
+    # TD-BACKEND-28 预存 28 项红线违规，短期不修；此前它挡在 backend job 第一步，
+    # 导致 Run backend tests 永远 skipped（18 个新后端测试在 CI 上从未运行过）。
+    name: Backend Redline Static Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Backend redline static scan
+        # AGENTS.md 后端红线机械化门禁：SQL 参数化 / 端点鉴权覆盖 / catch 日志棘轮
+        run: node scripts/check-backend-rules.cjs
+
   backend:
     name: Backend Build & Test (.NET 8)
     runs-on: windows-latest
@@ -119,10 +143,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-
-      - name: Backend redline static scan
-        # AGENTS.md 后端红线机械化门禁：SQL 参数化 / 端点鉴权覆盖 / catch 日志棘轮
-        run: node scripts/check-backend-rules.cjs
 
       - name: Build backend API
         run: dotnet build EngineeringManager.Api/EngineeringManager.Api.csproj

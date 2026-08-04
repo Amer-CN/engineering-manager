@@ -111,7 +111,7 @@
 
 | # | Job | 红因 | 基线证据 | 数量 | 登记 |
 |---|-----|------|----------|------|------|
-| 1 | Backend Build & Test | check-backend-rules 28 项（22 B1 token 口径误报 + 7 B3 catch 无日志，扣 1 已修） | run 30656905289 | 28 项 | TD-BACKEND-28 |
+| 1 | Backend Redline Static Scan（28.3 起独立 job） | check-backend-rules 28 项（22 B1 token 口径误报 + 7 B3 catch 无日志，扣 1 已修） | run 30656905289 | 28 项 | TD-BACKEND-28 |
 | 2 | ~~E2E Critical Paths~~ | ~~API 60s 启动超时（CI runner 环境）~~ | run 30656905289 | ~~1 job~~ | ~~TD-E2E-TIMEOUT~~ |
 | 3 | Unit Tests (22) | ConversationHistory.test.tsx 6 个稳定失败（waitFor 找不到「今天的对话」） | run 30656905289 | 6 tests | TD-VITEST-CONVHIST |
 
@@ -119,4 +119,15 @@
 
 ### TD 出栈记录（棘轮只减不增）
 
-- **TD-E2E-TIMEOUT 出栈（2026-08-03）**：根因非「API 启动慢」，而是 GitHub Actions runner 在步骤结束时清理该步骤启动的子进程（2026-08 行为变化），跨步骤的 API 进程必死（0 字节日志 + 端口永不监听）。修复：E2E 的「启动 API + 等待就绪 + Playwright」合并为单个步骤（进程生命周期完全在步骤内），并在 finally 中 Stop-Process 清理。验证：run 30833294697 E2E job success。
+- **TD-E2E-TIMEOUT 出栈（2026-08-03）**：修复为 E2E 的「启动 API + 等待就绪 + Playwright」合并为单个步骤（进程生命周期完全在步骤内，finally 中 Stop-Process 清理）。验证：run 30833294697 E2E job success。
+  - **根因归因（已降级为假说，28.4c）**：「GitHub Actions runner 2026-08 起清理跨步骤子进程」是**未经证实的假说**。证据只支持「8/1 能跨步骤存活、8/3 不能」，不支持具体机制（可能是 runner 行为变化，也可能是 -PassThru 引入的句柄变化等其他原因）。**单步骤方案的有效性不依赖该假说成立**——无论根因是什么，进程生命周期完全在步骤内即可规避。
+  - **已确立的事实（28.4c）**：单步骤方案在包含 F1（EditionResolver）的代码上跑绿，反证 F1 未破坏 API 启动。
+
+### 技术债登记（28.4，只登记不修）
+
+| # | 登记 | 债 | 说明 |
+|---|------|-----|------|
+| 1 | TD-XUNIT-SERIAL | xUnit 全局 disableParallelization | `_cachedEdition` 是全局可变静态，xUnit 并行会互相污染（EditionFreezeEndpointsTests 切换 edition 与依赖 enterprise 的测试类竞态）。已 `[assembly: CollectionBehavior(DisableTestParallelization = true)]`，代价：dotnet test 串行 5m29s。根治方向：edition 判定脱离静态缓存（F1 已让映射测试退役反射，但端点测试仍依赖）。 |
+| 2 | TD-EDITION-REFLECT | 端点冻结测试用反射改 `_cachedEdition` | F1 已让【映射】测试退役「反射改 _cachedEdition + 环境变量」手法（改为 Resolve 纯函数），但【端点】测试（EditionFreezeEndpointsTests）又复活了它：用「临时设 env + 反射清缓存」在端点级切换 edition。如实写明：这是 GetEdition 薄壳静态缓存 + config 路径硬编码 %APPDATA% 的必然结果，端点级无干净状态可拿。根治方向：GetEdition 可注入 configPath（F2 范围）。 |
+| 3 | TD-E2E-ROOTCAUSE-HYPOTHESIS | E2E 根因归因未证实 | 「runner 清理跨步骤子进程」是假说（见上）。单步骤方案有效性不依赖该假说，但若真因是 -PassThru 句柄变化等其他机制，其他 job 的后台进程也可能受影响，需留意。 |
+
