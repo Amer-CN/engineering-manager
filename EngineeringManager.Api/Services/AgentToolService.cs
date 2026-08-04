@@ -146,17 +146,20 @@ public class AgentToolService
     private static Task<object> ExecuteGetDashboardStats(IDbConnection db, string uid, CurrentUser.DataScope scope)
     {
         var companyFilter = CurrentUser.UserFilterCompany(scope, "created_by");
-        var projectFilter = CurrentUser.UserFilterWithAuthorizedProjects(scope, "project_id", "created_by");
+        // R4.1: 一个片段被三张表复用 → 按表分别构造限定列（裸 "project_id" 会退化为恒真 EXISTS）
+        var projectFilterInvoices = CurrentUser.UserFilterWithAuthorizedProjects(scope, "invoices.project_id", "created_by");
+        var projectFilterSettlements = CurrentUser.UserFilterWithAuthorizedProjects(scope, "settlements.project_id", "created_by");
+        var projectFilterCostLedger = CurrentUser.UserFilterWithAuthorizedProjects(scope, "cost_ledger.project_id", "created_by");
         var p = new { Uid = uid, IsAdmin = 0 };
 
         var projectsCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM projects WHERE {companyFilter}", p);
         var membersCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM members WHERE {companyFilter}", p);
         var workersCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM workers WHERE {companyFilter}", p);
-        var invoicesCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM invoices WHERE {projectFilter}", p);
-        var settlementsCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM settlements WHERE {projectFilter}", p);
+        var invoicesCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM invoices WHERE {projectFilterInvoices}", p);
+        var settlementsCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM settlements WHERE {projectFilterSettlements}", p);
         var inProgressProjects = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM projects WHERE status='active' AND {companyFilter}", p);
-        var totalIncome = db.ExecuteScalar<double>($"SELECT COALESCE(SUM(amount), 0) FROM cost_ledger WHERE direction='income' AND {projectFilter}", p);
-        var totalExpense = db.ExecuteScalar<double>($"SELECT COALESCE(SUM(amount), 0) FROM cost_ledger WHERE direction='expense' AND {projectFilter}", p);
+        var totalIncome = db.ExecuteScalar<double>($"SELECT COALESCE(SUM(amount), 0) FROM cost_ledger WHERE direction='income' AND {projectFilterCostLedger}", p);
+        var totalExpense = db.ExecuteScalar<double>($"SELECT COALESCE(SUM(amount), 0) FROM cost_ledger WHERE direction='expense' AND {projectFilterCostLedger}", p);
 
         var recentProjects = db.Query($@"
             SELECT id, name, status FROM projects
@@ -367,7 +370,7 @@ public class AgentToolService
     private static Task<object> ExecuteGetCostSummary(IDbConnection db, JsonElement args, string uid, CurrentUser.DataScope scope)
     {
         var projectId = GetOptionalIntArg(args, "projectId");
-        var filter = CurrentUser.UserFilterWithAuthorizedProjects(scope, "project_id", "created_by");
+        var filter = CurrentUser.UserFilterWithAuthorizedProjects(scope, "cost_ledger.project_id", "created_by");
         var projectFilter = projectId.HasValue
             ? $"{filter} AND project_id = @ProjectId"
             : filter;
