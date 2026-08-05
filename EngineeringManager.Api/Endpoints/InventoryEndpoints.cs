@@ -55,6 +55,8 @@ public static class InventoryEndpoints
         app.MapDelete("/api/inventory/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // C-4: 服务端权限检查（门禁5；码经 037 追加，仅 admin）
+            if (!CurrentUser.HasPermission(ctx, db, "inventory:delete")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             return (await db.ExecuteAsync("DELETE FROM inventory_items WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
@@ -112,6 +114,8 @@ public static class InventoryEndpoints
         app.MapDelete("/api/materials/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // C-4: 服务端权限检查（门禁5；码经 037 追加，仅 admin）
+            if (!CurrentUser.HasPermission(ctx, db, "inventory:delete")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             return (await db.ExecuteAsync("DELETE FROM materials WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
