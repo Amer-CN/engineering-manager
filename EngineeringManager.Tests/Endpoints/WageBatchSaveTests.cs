@@ -330,4 +330,116 @@ public class WageBatchSaveTests : ApiTestBase
                 new { P = TestProjectId, W = TestPwId, Y = TestYearMonth }));
         }
     }
+
+    // ── D-9 回归：batch-payment ──────────────────────────────
+
+    private async Task<long> SeedWageRowAsync(double dailyWage = 200, double actualWage = 4450)
+    {
+        var token = await LoginAsync();
+        SetAuth(token);
+        await Client.PostAsJsonAsync("/api/wages/batch-save",
+            new[] { WageBody(TestProjectId, TestPwId, TestYearMonth, dailyWage, 22, 100, 50, actualWage) });
+        using var conn = new SqliteConnection(ConnectionString);
+        return conn.ExecuteScalar<long>(
+            "SELECT id FROM wages WHERE project_id=@P AND project_worker_id=@W AND year_month=@Y",
+            new { P = TestProjectId, W = TestPwId, Y = TestYearMonth });
+    }
+
+    [Fact]
+    public async Task BatchPayment_UpdatesPaidColumns_InDatabase()
+    {
+        var id = await SeedWageRowAsync();
+        var token = await LoginAsync();
+        SetAuth(token);
+
+        var resp = await Client.PostAsJsonAsync("/api/wages/batch-payment",
+            new[] { new { id, paidAmount = 4450, paidDate = "2026-08-05" } });
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var data = await GetDataAsync(resp);
+        Assert.Equal(1, data.GetProperty("saved").GetInt32());
+        Assert.Equal(0, data.GetProperty("skipped").GetInt32());
+
+        using var conn = new SqliteConnection(ConnectionString);
+        var row = conn.QueryFirst("SELECT paid_amount, paid_date, bank_receipt_path FROM wages WHERE id=@Id", new { Id = id });
+        Assert.Equal(445000L, (long)row.paid_amount);      // 4450 元 → 分
+        Assert.Equal("2026-08-05", (string)row.paid_date);
+        Assert.True(row.bank_receipt_path is null or DBNull);
+    }
+
+    [Fact]
+    public async Task BatchPayment_MissingPaidDate_Returns400()
+    {
+        var id = await SeedWageRowAsync();
+        var token = await LoginAsync();
+        SetAuth(token);
+
+        var resp = await Client.PostAsJsonAsync("/api/wages/batch-payment",
+            new[] { new { id, paidAmount = 4450 } });   // 缺 paidDate
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        var body = await resp.Content.ReadAsStringAsync();
+        Assert.Contains("paidDate", body);
+        Assert.Contains("第 1 条", body);
+
+        using var conn = new SqliteConnection(ConnectionString);
+        var paid = conn.ExecuteScalar<object?>("SELECT paid_amount FROM wages WHERE id=@Id", new { Id = id });
+        Assert.Equal(0L, Convert.ToInt64(paid));   // batch-save 建行 paid_amount 走 DEFAULT 0，缺字段时不得有变化
+    }
+
+    [Fact]
+    public async Task BatchPayment_LockedRow_IsSkipped()
+    {
+        var id = await SeedWageRowAsync();
+        using (var conn = new SqliteConnection(ConnectionString))
+        {
+            conn.Execute("UPDATE wages SET payment_locked=1 WHERE id=@Id", new { Id = id });
+        }
+        var token = await LoginAsync();
+        SetAuth(token);
+
+        var resp = await Client.PostAsJsonAsync("/api/wages/batch-payment",
+            new[] { new { id, paidAmount = 4450, paidDate = "2026-08-05" } });
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var data = await GetDataAsync(resp);
+        Assert.Equal(0, data.GetProperty("saved").GetInt32());
+        Assert.Equal(1, data.GetProperty("skipped").GetInt32());
+        Assert.Equal(id, data.GetProperty("skippedItems")[0].GetProperty("id").GetInt64());
+
+        using var verifyConn = new SqliteConnection(ConnectionString);
+        var paid = verifyConn.ExecuteScalar<object?>("SELECT paid_amount FROM wages WHERE id=@Id", new { Id = id });
+        Assert.Equal(0L, Convert.ToInt64(paid));   // 锁定行付款列不得变化（仍为 DEFAULT 0）
+    }
+
+    [Fact]
+    public async Task BatchPayment_DoesNotTouchWageColumns()
+    {
+        var id = await SeedWageRowAsync();
+        using (var conn = new SqliteConnection(ConnectionString))
+        {
+            var before = conn.QueryFirst(
+                "SELECT daily_wage, work_days, bonus, deduction, actual_wage FROM wages WHERE id=@Id", new { Id = id });
+            Assert.Equal(20000L, (long)before.daily_wage);
+            Assert.Equal(22.0, (double)before.work_days);
+            Assert.Equal(10000L, (long)before.bonus);
+            Assert.Equal(5000L, (long)before.deduction);
+            Assert.Equal(445000L, (long)before.actual_wage);
+        }
+        var token = await LoginAsync();
+        SetAuth(token);
+
+        var resp = await Client.PostAsJsonAsync("/api/wages/batch-payment",
+            new[] { new { id, paidAmount = 4450, paidDate = "2026-08-05" } });
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var data = await GetDataAsync(resp);
+        Assert.Equal(1, data.GetProperty("saved").GetInt32());
+
+        using var verifyConn = new SqliteConnection(ConnectionString);
+        var after = verifyConn.QueryFirst(
+            "SELECT daily_wage, work_days, bonus, deduction, actual_wage, paid_amount FROM wages WHERE id=@Id", new { Id = id });
+        Assert.Equal(20000L, (long)after.daily_wage);
+        Assert.Equal(22.0, (double)after.work_days);
+        Assert.Equal(10000L, (long)after.bonus);
+        Assert.Equal(5000L, (long)after.deduction);
+        Assert.Equal(445000L, (long)after.actual_wage);
+        Assert.Equal(445000L, (long)after.paid_amount);
+    }
 }

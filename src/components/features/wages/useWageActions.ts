@@ -137,10 +137,11 @@ export function useWageActions({
     if (paymentEdits.size === 0) { showToast('没有需要保存的修改', 'info'); return }
     const updated = wages.map(w => {
       const edit = paymentEdits.get(w.id)
-      if (!edit) return w
-      return { ...w, paidAmount: parseFloat(edit.paidAmount) || 0, paidDate: edit.paidDate, bankReceiptPath: edit.bankReceiptPath ?? w.bankReceiptPath, updatedAt: new Date().toISOString() }
-    })
-    const r = await (await getAPI()).batchSaveWages(updated)
+      if (!edit) return null
+      // 只发付款四字段，不整行展开（batch-payment 端点只看这四列）
+      return { id: w.id, paidAmount: parseFloat(edit.paidAmount) || 0, paidDate: edit.paidDate, bankReceiptPath: edit.bankReceiptPath ?? w.bankReceiptPath }
+    }).filter((x): x is { id: number; paidAmount: number; paidDate: string; bankReceiptPath: string | undefined } => x !== null)
+    const r = await (await getAPI()).batchSavePayments(updated)
     if (r.success) { showToast('发放记录已保存', 'success'); setPaymentEdits(new Map()); await loadData() }
     else showToast(r.error || '保存失败', 'error')
   }, [paymentEdits, wages, loadData, showToast])
