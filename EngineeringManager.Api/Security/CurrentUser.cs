@@ -61,9 +61,12 @@ public static class CurrentUser
     ///   - projectCol 必填且必须为「表名.列名」限定形式（如 "income_contracts.project_id"）。
     ///     裸列名会在子查询内解析到 project_authorizations.project_id 自身 → project_id = project_id
     ///     恒真 → EXISTS 退化为「用户有任意一条授权记录就全项目可见」（越权，R3.1 实测钉出）。
-    ///   - 子查询表加别名 pa 并全限定，确保与调用点外层的行做相关子查询。
-    ///   - 运行期守卫 fail-closed：projectCol 不含 '.' 时抛 ArgumentException ——
+    ///   - 子查询表加别名 pa_authz 并全限定，确保与调用点外层的行做相关子查询。
+    ///   - 运行期守卫 fail-closed（R4.1）：projectCol 不含 '.' 时抛 ArgumentException ——
     ///     宁可 500 也不静默越权（编译器逼出调用点 + 守卫兜住运行期拼错）。
+    ///   - 限定符黑名单（R5.2）：限定符等于 pa_authz / project_authorizations（忽略大小写）时抛
+    ///     ArgumentException——这两种限定符都会让子查询自比较恒真（与授权表自身比），守卫与 B5
+    ///     双重拦截，封死「改别名绕过」的残留洞。
     ///   - createdByCol 不加此约束（它不在子查询作用域内，无自比较风险）。
     /// 入参:
     ///   projectCol 当前行 project_id 列（必填，表限定，如 "w.project_id" / "income_contracts.project_id"）
@@ -78,11 +81,17 @@ public static class CurrentUser
             throw new ArgumentException(
                 $"UserFilterWithAuthorizedProjects: projectCol 必须是「表名.列名」限定形式（当前值 '{projectCol}'）——裸列名会退化为恒真 EXISTS 造成越权（R4.1 fail-closed，宁可 500 不静默越权）",
                 nameof(projectCol));
+        var qualifier = projectCol.Substring(0, projectCol.IndexOf('.')).Trim();
+        if (string.Equals(qualifier, "pa_authz", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(qualifier, "project_authorizations", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException(
+                $"UserFilterWithAuthorizedProjects: projectCol 限定符 '{qualifier}' 与授权子查询自身别名/表名冲突 → 自比较恒真 → 越权（R5.2 黑名单）",
+                nameof(projectCol));
         return scope == DataScope.All
             ? "(1 = 1)"
             : $@"({createdByCol} = @Uid
-            OR EXISTS(SELECT 1 FROM project_authorizations pa
-                      WHERE pa.project_id = {projectCol} AND pa.user_id = @Uid))";
+            OR EXISTS(SELECT 1 FROM project_authorizations pa_authz
+                      WHERE pa_authz.project_id = {projectCol} AND pa_authz.user_id = @Uid))";
     }
 
     // ── v0.80 D-2: PII 字段权限分级 ──

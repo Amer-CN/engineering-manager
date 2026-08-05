@@ -55,8 +55,8 @@ public class DataScopeTests
             "income_contracts.project_id", "created_by");
         Assert.Contains("created_by = @Uid", sql);
         Assert.Contains("EXISTS", sql);
-        Assert.Contains("project_authorizations pa", sql);
-        Assert.Contains("pa.project_id = income_contracts.project_id", sql);
+        Assert.Contains("project_authorizations pa_authz", sql);
+        Assert.Contains("pa_authz.project_id = income_contracts.project_id", sql);
         Assert.DoesNotContain("IsAdmin", sql);
     }
 
@@ -131,7 +131,7 @@ public class DataScopeTests
             "invoices", "i");
         Assert.Contains("EXISTS", sql);
         Assert.Contains("project_authorizations pa", sql);
-        Assert.Contains("pa.project_id = i.project_id", sql);
+        Assert.Contains("pa_authz.project_id = i.project_id", sql);
         Assert.DoesNotContain("IsAdmin", sql);
     }
 
@@ -144,8 +144,21 @@ public class DataScopeTests
             EngineeringManager.Api.Security.CurrentUser.DataScope.AuthorizedProjects,
             "invoices");
         Assert.Contains("EXISTS", sql);
-        Assert.Contains("pa.project_id = invoices.project_id", sql);
+        Assert.Contains("pa_authz.project_id = invoices.project_id", sql);
         Assert.DoesNotContain("IsAdmin", sql);
+    }
+
+    [Fact]
+    public void UserFilterWithAuthorizedProjects_AuthzQualifier_ThrowsBlacklist()
+    {
+        // R5.2(d): 限定符黑名单——pa_authz / project_authorizations 作限定符 → 自比较恒真 → 必抛
+        var ex1 = Assert.Throws<ArgumentException>(() =>
+            EngineeringManager.Api.Security.CurrentUser.UserFilterWithAuthorizedProjects(
+                EngineeringManager.Api.Security.CurrentUser.DataScope.AuthorizedProjects, "pa_authz.project_id"));
+        Assert.Contains("自比较恒真", ex1.Message);
+        Assert.Throws<ArgumentException>(() =>
+            EngineeringManager.Api.Security.CurrentUser.UserFilterWithAuthorizedProjects(
+                EngineeringManager.Api.Security.CurrentUser.DataScope.AuthorizedProjects, "project_authorizations.project_id"));
     }
 
     [Fact]

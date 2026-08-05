@@ -495,7 +495,17 @@ for (const file of csFiles) {
   let m
   while ((m = ufRe.exec(content))) {
     const colArg = m[2].trim()
-    if (qualifiedColLiteral.test(colArg)) continue // 表名.列名 字面量：合规
+    if (qualifiedColLiteral.test(colArg)) {
+      // R5.2(c): 限定符黑名单——限定符等于授权子查询自身别名/表名 → 自比较恒真 → 违规
+      const dotIdx = colArg.indexOf('.')
+      const qualifier = (dotIdx === -1 ? colArg.slice(1, -1) : colArg.slice(1, dotIdx)).trim().toLowerCase()
+      if (qualifier === 'pa_authz' || qualifier === 'project_authorizations') {
+        const line = lineOf(content, m.index)
+        console.log(`  HARD FAIL  ${rel(file)}:${line}: UserFilterWithAuthorizedProjects 第二实参限定符 '${qualifier}' 与授权子查询自身别名/表名冲突 → 自比较恒真 → 越权（R5.2 黑名单）`)
+        violations++
+      }
+      continue // 表名.列名 字面量（非黑名单）：合规
+    }
     // 标识符实参：仅 SafeQueryValidator.cs 内（GetTableFilter 动态构造列名）合法，见上注释
     if (!file.includes('SafeQueryValidator.cs')) {
       const line = lineOf(content, m.index)

@@ -448,6 +448,7 @@ public class AgentToolService
         }
         catch (Exception ex)
         {
+            Console.Error.WriteLine($"[AgentToolService] runSafeQuery 校验异常: {ex.Message}");
             var guardError = $"校验异常: {Common.Sanitize(ex.Message)}";
             SafeQueryValidator.LogAudit(db, uid, sql, null, false, guardError);
             return new { success = false, error = guardError };
