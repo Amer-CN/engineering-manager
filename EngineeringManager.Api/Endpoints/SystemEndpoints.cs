@@ -527,9 +527,11 @@ public static class SystemEndpoints
             catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });
 
-        app.MapPost("/api/restore", (HttpContext ctx) =>
+        app.MapPost("/api/restore", (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // C-4 T1: 用桌面备份覆盖 engineering.db，仅 settings:update（admin）——破坏性端点
+            if (!CurrentUser.HasPermission(ctx, db, "settings:update")) return Results.Forbid();
             try
             {
                 var desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
@@ -579,6 +581,8 @@ public static class SystemEndpoints
         app.MapPost("/api/sqlite/migrate", (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // C-4 T1: DELETE FROM 全表 + JSON 重灌，仅 settings:update（admin）——破坏性端点
+            if (!CurrentUser.HasPermission(ctx, db, "settings:update")) return Results.Forbid();
             try
             {
                 var dataPath = ApiConfig.ResolveDataPath();
