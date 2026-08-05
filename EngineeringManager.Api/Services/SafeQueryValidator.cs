@@ -226,6 +226,27 @@ public static class SafeQueryValidator
         if (referencedTables.Count == 0)
             return new ValidationResult(false, null, null, "未找到有效的表名");
 
+        // 7.5 R6.5: 用户别名撞内部保留别名——验证层显式拒绝（可解释错误 + 审计），
+        // 不让用户可控输入触达 CurrentUser guard throw。
+        // R5.1 必答更正：此前 "FROM invoices pa_authz" 能一路触达 guard（fail-closed 但属
+        // 意外路径，异常消息泄漏内部实现细节如 R5.2 黑名单）。现在验证层返回明确错误，
+        // guard throw 退化为纯内部兜底（仅防御未来非用户输入路径）。
+        foreach (var occ in occurrences)
+        {
+            var q = occ.Qualifier.Trim();
+            while (q.Length >= 2
+                   && ((q[0] == '[' && q[^1] == ']')
+                       || (q[0] == '"' && q[^1] == '"')
+                       || (q[0] == '`' && q[^1] == '`')))
+                q = q.Substring(1, q.Length - 2).Trim();
+            if (string.Equals(q, "pa_authz", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(q, "project_authorizations", StringComparison.OrdinalIgnoreCase))
+            {
+                return new ValidationResult(false, null, null,
+                    $"别名 '{occ.Qualifier}' 与内部授权子查询保留别名冲突，请更换别名（R6.5 fail-closed）");
+            }
+        }
+
         // 8. 校验列白名单
         try
         {
@@ -824,17 +845,20 @@ public static class SafeQueryValidator
     {
         try
         {
+            // R6.5: 修正 INSERT 列——audit_logs 表无 description 列（表结构：action/level/
+            // user_id/user_name/resource/resource_id/details/ip_address/created_at），
+            // 旧语句含 description 列导致 INSERT 恒失败被 catch 吞掉、审计从未落库
+            // （R6.5 测试首度暴露）。结果信息并入 details。
             db.Execute(@"
-                INSERT INTO audit_logs (action, level, user_id, resource, details, description, created_at)
-                VALUES (@Action, @Level, @UserId, @Resource, @Details, @Description, @CreatedAt)",
+                INSERT INTO audit_logs (action, level, user_id, resource, details, created_at)
+                VALUES (@Action, @Level, @UserId, @Resource, @Details, @CreatedAt)",
                 new
                 {
                     Action = "safe_query",
                     Level = success ? "info" : "warning",
                     UserId = uid,
                     Resource = "agent_tool",
-                    Details = $"Original: {originalSql}\nRewritten: {rewrittenSql}",
-                    Description = success ? "Safe query executed" : $"Safe query rejected: {error}",
+                    Details = $"Original: {originalSql}\nRewritten: {rewrittenSql}\nResult: {(success ? "success" : $"rejected: {error}")}",
                     CreatedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                 });
         }
