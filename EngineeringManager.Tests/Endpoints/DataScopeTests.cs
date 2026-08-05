@@ -136,13 +136,29 @@ public class DataScopeTests
     }
 
     [Fact]
-    public void GetTableFilter_ProjectTable_WithoutAlias_ThrowsFailClosed()
+    public void GetTableFilter_ProjectTable_WithoutAlias_UsesTableQualifier()
     {
-        // R4.1 fail-closed：项目级表无别名 → 裸 project_id 会退化为恒真 EXISTS（越权），守卫必须抛
-        var ex = Assert.Throws<ArgumentException>(() =>
-            EngineeringManager.Api.Services.SafeQueryValidator.GetTableFilter(
-                EngineeringManager.Api.Security.CurrentUser.DataScope.AuthorizedProjects,
-                "invoices"));
-        Assert.Contains("projectCol", ex.Message);
+        // R5.1: 无别名时 GetTableFilter 用【表名】做限定符（R4.1 守卫对裸列 fail-closed，
+        // 生产路径不允许触达守卫 throw）→ 返回行级相关子查询，含表名限定的 project_id
+        var sql = EngineeringManager.Api.Services.SafeQueryValidator.GetTableFilter(
+            EngineeringManager.Api.Security.CurrentUser.DataScope.AuthorizedProjects,
+            "invoices");
+        Assert.Contains("EXISTS", sql);
+        Assert.Contains("pa.project_id = invoices.project_id", sql);
+        Assert.DoesNotContain("IsAdmin", sql);
+    }
+
+    [Fact]
+    public void UserFilterWithAuthorizedProjects_BareColumn_ThrowsInBothScopes()
+    {
+        // R5.1(c): fail-closed 由真正的非法输入直接钉住（不借生产路径）。
+        // 守卫先于 scope 判断是有意设计：裸列名在 admin（All）路径同样炸，缺陷不只在非 admin 暴露。
+        var ex1 = Assert.Throws<ArgumentException>(() =>
+            EngineeringManager.Api.Security.CurrentUser.UserFilterWithAuthorizedProjects(
+                EngineeringManager.Api.Security.CurrentUser.DataScope.AuthorizedProjects, "project_id"));
+        Assert.Contains("projectCol", ex1.Message);
+        Assert.Throws<ArgumentException>(() =>
+            EngineeringManager.Api.Security.CurrentUser.UserFilterWithAuthorizedProjects(
+                EngineeringManager.Api.Security.CurrentUser.DataScope.All, "project_id"));
     }
 }

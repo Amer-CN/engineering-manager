@@ -290,7 +290,9 @@ public static class SafeQueryValidator
     /// </summary>
     public static string GetTableFilter(Security.CurrentUser.DataScope scope, string table, string tableAlias = "")
     {
-        var colPrefix = string.IsNullOrEmpty(tableAlias) ? "" : $"{tableAlias}.";
+        // R5.1: 无别名时用【表名】做限定符（R4.1 守卫对裸列 fail-closed，生产路径不允许触达守卫 throw）。
+        // 副作用：createdByCol 同样变为 "{table}.created_by"（SQLite 表名限定合法）。
+        var colPrefix = string.IsNullOrEmpty(tableAlias) ? $"{table}." : $"{tableAlias}.";
         var createdByCol = $"{colPrefix}created_by";
 
         if (CompanyLevelTables.Contains(table))

@@ -439,8 +439,19 @@ public class AgentToolService
         if (string.IsNullOrWhiteSpace(sql))
             return new { success = false, error = "SQL 不能为空" };
 
-        // 2. 验证并改写 SQL
-        var validation = SafeQueryValidator.ValidateAndRewrite(sql, uid, scope);
+        // 2. 验证并改写 SQL（R5.1e: 任何守卫/校验异常必须留审计，不许静默——原实现异常会逃逸到
+        //    ExecuteToolAsync 全局 catch，LogAudit 不执行，失败不留痕）
+        ValidationResult validation;
+        try
+        {
+            validation = SafeQueryValidator.ValidateAndRewrite(sql, uid, scope);
+        }
+        catch (Exception ex)
+        {
+            var guardError = $"校验异常: {Common.Sanitize(ex.Message)}";
+            SafeQueryValidator.LogAudit(db, uid, sql, null, false, guardError);
+            return new { success = false, error = guardError };
+        }
         if (!validation.IsValid)
         {
             // 记录审计日志
