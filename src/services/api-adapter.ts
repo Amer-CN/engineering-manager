@@ -42,14 +42,16 @@ export async function getAPI() {
   // 优先使用 Electron API
   if (isElectron) {
     const api = window.electronAPI as any;
-    // D-9-4: 外部 preload 不在本仓，batchSavePayments 若未实现则显式报错
+    // D-9-4/D-10-2: 外部 preload 不在本仓，以下方法若未实现则显式报错
     //（避免裸 TypeError，与 generateProjectWages 同型；preload 同步后自动走真实实现）
-    if (typeof api?.batchSavePayments !== 'function') {
+    const notImplemented = ['batchSavePayments', 'batchUnarchiveWages']
+    const missing = notImplemented.filter((m) => typeof api?.[m] !== 'function')
+    if (missing.length > 0) {
       return new Proxy(api, {
         get(target, prop) {
-          if (prop === 'batchSavePayments') {
+          if (missing.includes(prop as string)) {
             return async () => {
-              throw new Error('Electron 路径未实现 batchSavePayments（需外部 preload 同步）')
+              throw new Error(`Electron 路径未实现 ${String(prop)}（需外部 preload 同步）`)
             }
           }
           return (target as any)[prop]

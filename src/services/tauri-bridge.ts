@@ -298,6 +298,9 @@ export const tauriAPI = {
     apiClient.get<{ id: number; projectId: number; memberId?: number; projectWorkerId?: number; yearMonth: string; actualWage: number; paidAmount?: number; workerName?: string; workerPhone?: string; projectName?: string; overdueDays: number; overdueAmount: number; paymentStatus: string; createdAt: string; updatedAt: string }[]>('/api/wages/overdue-list', { projectId }),
   batchArchiveWages: (ids: number[]) =>
     apiClient.post<{ archived: number }>('/api/wages/archive', ids),
+  // D-10-2: 批量解锁（payment_locked 1→0），与 archive 对称；前端 UI 未接，仅 bridge 层
+  batchUnarchiveWages: (ids: number[]) =>
+    apiClient.post<{ unarchived: number }>('/api/wages/batch-unarchive', ids),
   batchSaveWages: (records: WageRecord[]) =>
     apiClient.post<{ updated: number }>('/api/wages/batch-save', records),
   // D-9: 批量付款写入——按 id 定位，只写付款列（paidAmount 单位为元，后端 ToFen 存分）
