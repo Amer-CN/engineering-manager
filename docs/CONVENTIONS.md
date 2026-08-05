@@ -111,3 +111,24 @@ export function useProjects() {
 - 所有提取型脚本必须有哨兵：提取到 0 条要报错，不能当作「没有问题」
 - 提取型脚本的判据必须限定在目标区域（如文件前 5 行的抬头区），否则正文里任何旧版本号/历史标记（如「v0.84.0 起」）都会被误当成待同步项
 - **mock API 不得对后端未实现的端点返回 success**，否则开发期全绿、生产期崩溃（已发生：batchSaveWages 在 mock 返回成功，真后端 500）
+
+## API 响应键名契约（v0.92.0 起）
+
+- **键名转换只有一处：`src/services/api-client.ts` 的 `convertKeysToCamelCase`**（含 `_` 且非 `custom_` 前缀 → camelCase，递归作用于数组/嵌套对象）。`get/post/put/patch/del` 五个方法结尾全部经过它。
+- 后端一律输出与 DB 列名一致的 snake_case（如 `daily_wage`、`worker_name`）——这是列名的原样投影，读代码能直接对上 PRAGMA。
+- **不得**在 C# 侧再实现一份 camelCase 输出。否则同一条规则在两处各写一份，且规则必须永远保持一致（`custom_` 前缀这条例外尤其容易漏）——这正是本仓历史缺陷模式「同一事实两处各写一份」的又一例。
+- 前端类型（如 `WageRecord`，`src/types/electron.d.ts`）永远按 camelCase 声明，与 api-client 转换后的形状一致。
+- 为什么：曾有提案让后端 ToYuanRows 改输出 camelCase。被否——功能收益为零（前端拿到的一律 camelCase），却凭空制造第二份转换规则。
+
+## 排查前后端字段映射的判据（v0.92.0 起）
+
+- 判断「某个字段前端拿不拿得到、键名是什么」时，必须看**整条链路上所有映射层**，不能只看最靠近调用点的那一层。
+- 本仓 HTTP 路径：`组件 → hook → api-adapter → tauri-bridge（纯直通） → api-client（有转换） → 后端`。转换发生在**倒数第二层**（api-client），bridge 是直通的。
+- 为什么：D-8 查证曾只读到 tauri-bridge 就下结论「键名无转换」，漏了 bridge 下面还有一层 api-client——同一结论两人先后各栽一次。判据错误会导致基于错误前提的重构方向（当时险些在后端再造一份 camelCase 输出）。
+
+## 已踩坑清单（写入文档，勿再犯）
+
+- **单位换算的边界是「写入路径的集合」，不是「表或列的集合」**。判据：该列的所有写入路径是否已统一走换算（如 `project_workers.daily_wage` 写入侧仍元直通，则读出侧不得 ÷100；`wages` 写入侧已走 ToFen，读出侧才 ToYuan）。
+- **唯一没有测试覆盖的分支，就是唯一错的分支**。team-wages 的 `pw.daily_wage` 曾因「003 声明该列为分」而反向 ÷100（日薪 200 显示成 2），而 D-4/D-5 的测试恰好都没覆盖它。
+- **校验必须直接 `return Results.BadRequest(...)`，不能抛异常**。`Program.cs:330` 的全局 `UseExceptionHandler` 会把一切未处理异常包成 500 + 通用消息「服务器内部错误」，异常里的 400 状态码与字段名全部丢失。
+- **`schema_versions` 表存的是嵌入资源全名**（如 `EngineeringManager.Api.Migrations.Scripts.003_MoneyRealToInteger.sql`），不是文件名；查迁移应用状态时按此匹配。
