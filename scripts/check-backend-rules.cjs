@@ -617,28 +617,43 @@ if (violations === b0Violations) console.log('  OK  全部调用点均使用表�
 console.log(`  B5 例外放行 ${b5ExemptCount} 处（SafeQueryValidator.cs 动态构造，行为由 R5.1(b)(c)(d) 测试钉住）`)
 
 // ═══════════════════════════════════════════════════════════
-// 规则 B6（R5.4b）：消灭手写 project_authorizations 过滤副本
-// 手写过滤副本的独有签名是 SELECT 1 FROM project_authorizations（EXISTS 子查询形态）——
+// 规则 B6（R5.4b + R6.4 收紧）：消灭手写 project_authorizations 过滤副本
+// 手写过滤副本的两个独有签名：
+//   形态 A：EXISTS(SELECT 1 FROM project_authorizations ...)——表名可带标识符引号
+//     （[project_authorizations] / "project_authorizations" / `project_authorizations`，
+//      R6.4 G5 带引号形式）。
+//   形态 B（R6.4 G5 新增）：相关比较——project_id = x.project_id 或 x.project_id = project_id
+//     （一边裸列一边「表限定列」，限定符不是 @ 参数）。这是过滤副本的灵魂：把授权表的
+//     project_id 与当前行的列做相关比较；限定符是 @ 参数（@ProjectId）或双限定比较
+//     （pa.project_id = p.id）则不是过滤副本（管理端点参数化收窄 / JOIN ON）。
 // 谁手写一个 EXISTS(SELECT 1 FROM project_authorizations WHERE project_id=project_id ...)
-// 就会命中，且若删掉限定符即退化为恒真（B5 对绕过 helper 的副本不可见，B6 兜底）。
+// 就会命中 A，且若删掉限定符即退化为恒真（B5 对绕过 helper 的副本不可见，B6 兜底）。
 // 作用域界定（非白名单）：project_authorizations 表自身的【管理端点】
 // （AuthEndpoints /api/admin/project-authorizations：SELECT pa.* / SELECT COUNT(*) /
-// INSERT INTO project_authorizations）不是过滤副本，天然不匹配 SELECT 1 FROM 签名，
-// 故规则仅命中过滤形态；若未来出现其他 SELECT 1 FROM project_authorizations 用法，
-// 先报偏差再处理，不自行加白名单。
+// INSERT INTO project_authorizations / DELETE，KnowledgeBaseService.CanAccessProject 的
+// COUNT(*)）不是过滤副本：形态 A 仅命中 SELECT 1 FROM，形态 B 仅命中「裸列 vs 限定列」
+// 的 project_id 相关比较，管理端点全部 @ 参数或双限定，故负向对照保持绿色
+// （AuthEndpoints 5 条 SQL + CanAccessProject COUNT，R6.4 已实测）。
+// 若未来出现其他形态，先报偏差再处理，不自行加白名单。
+// R6.4 G3 修复：去掉 /g 标志——全局正则 test() 复用 lastIndex 会交替漏检（同一文件
+// 内两个副本时第二个可能被跳过）。
 // ═══════════════════════════════════════════════════════════
-console.log('\n═══ 后端红线 B6：手写 project_authorizations 过滤副本 ═══')
+console.log('\n═══ 后端红线 B6：手写 project_authorizations 过滤副本（SELECT 1 + 相关比较） ═══')
 const b6Before = violations
-const b6Re = /SELECT\s+1\s+FROM\s+project_authorizations/gi
+const b6FormA = /SELECT\s+1\s+FROM\s+[\["`]?project_authorizations[\]"`]?/i
+const b6FormB = /(?:\[?project_id\]?\s*=\s*(?:\[[^\]]+\]|"[^"]+"|`[^`]+`|[A-Za-z_][A-Za-z0-9_]*)\.project_id)|(?:(?:\[[^\]]+\]|"[^"]+"|`[^`]+`|[A-Za-z_][A-Za-z0-9_]*)\.project_id\s*=\s*\[?project_id\]?)/i
 for (const file of csFiles) {
   if (file.includes('Security' + path.sep + 'CurrentUser.cs')) continue // helper 本体豁免
   const content = fs.readFileSync(file, 'utf-8')
   // 用 scanCs 的 literals 只查 SQL 字符串字面量（注释/普通文本不误伤）
   const { literals } = scanCs(content)
   for (const lit of literals) {
-    if (b6Re.test(lit.text)) {
+    let hit = null
+    if (b6FormA.test(lit.text)) hit = `形态A SELECT 1 FROM [project_authorizations]`
+    else if (b6FormB.test(lit.text)) hit = `形态B project_id 相关比较（project_id = x.project_id / x.project_id = project_id，限定符非 @ 参数）`
+    if (hit) {
       const line = lineOf(content, lit.start)
-      console.log(`  HARD FAIL  ${rel(file)}:${line}: SQL 字面量含手写 project_authorizations 过滤副本（SELECT 1 FROM project_authorizations）——必须迁移到 CurrentUser.UserFilterWithAuthorizedProjects（B6，R5.4）`)
+      console.log(`  HARD FAIL  ${rel(file)}:${line}: SQL 字面量含手写 project_authorizations 过滤副本（${hit}）——必须迁移到 CurrentUser.UserFilterWithAuthorizedProjects（B6，R5.4/R6.4）`)
       violations++
     }
   }
