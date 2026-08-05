@@ -303,8 +303,10 @@ export const tauriAPI = {
   // D-10-2: 批量解锁（payment_locked 1→0），与 archive 对称；前端 UI 未接，仅 bridge 层
   batchUnarchiveWages: (ids: number[]) =>
     apiClient.post<{ unarchived: number }>('/api/wages/batch-unarchive', ids),
+  // batchSaveWages：后端 D-6 起返回 { saved, skipped, skippedItems }（batch-save 实际响应），
+  // 声明类型此前谎报 { updated } —— 纯类型修正，无运行时变化
   batchSaveWages: (records: WageRecord[]) =>
-    apiClient.post<{ updated: number }>('/api/wages/batch-save', records),
+    apiClient.post<{ saved: number; skipped: number; skippedItems: { projectWorkerId: number; yearMonth: string }[] }>('/api/wages/batch-save', records),
   // D-9: 批量付款写入——按 id 定位，只写付款列（paidAmount 单位为元，后端 ToFen 存分）
   batchSavePayments: (records: { id: number; paidAmount: number; paidDate: string; bankReceiptPath?: string }[]) =>
     apiClient.post<{ saved: number; skipped: number; skippedItems: { id: number }[] }>('/api/wages/batch-payment', records),
