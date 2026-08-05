@@ -184,3 +184,12 @@
 - **G18（小，只登记不修）**：保留别名拒绝不覆盖列限定符形态（`WHERE pa_authz.project_id = 'P1'` 能过验证层，靠 SQLite 作用域 + DryRun 兜底，错误文案回吐 pa_authz）。登记不修；根治方向：列校验阶段对保留限定符（归一化后）的列引用同样拒绝。
 - **G19（小，只登记不修）**：限定符归一化逻辑三处手写副本（CurrentUser.NormalizeQualifier / SafeQueryValidator 7.5 步内联 while / 门禁 normalizeSqlQualifier）。登记不修；根治方向：提取共享静态工具（如 Common.NormalizeSqlIdentifier），三处调用同一实现。
 
+
+### R8 实证记录（G20/G21 已修 + G22 实证 + 只登记不修项）
+
+- **G20 WHERE OR 优先级击穿（严重，已修 + 实证指针）**：先红实证——`WHERE id = 0 OR 1 = 1` 注入后为 `WHERE (过滤) AND id = 0 OR 1 = 1`（AND 优先 → OR 恒真）→ 全表含 amount=300；`WHERE amount = 300 OR amount = 300` → 直出 300。修复 = 注入形态改 `WHERE ({filterClause}) AND ({userWhere})`，userWhere 终点 = 顶层 GROUP/ORDER/LIMIT 最靠前者或串尾（终点定位在 MaskSqlLiterals 副本上，G12 教训）。覆盖 = 2 OR PoC + NOT + 3 尾子句组合 + 正向对照（11 测试）。破坏自证：去括弧 → 2 红 → 还原 → 全绿。
+- **G21 CTE 主体零校验（严重，已修 + 实证指针）**：先红实证——`WITH invoices AS (SELECT s.id ... FROM settlements s) SELECT ... FROM invoices`（CTE 名伪装白名单表 + created_by 伪装）→ 泄漏全部 settlements 行；`WITH invoices AS (... FROM audit_logs)` → **穿透 ForbiddenTables**（WITH 子句不在 select.From，从未被 CollectTables 校验）。修复 = `query.With != null` → fail-closed 拒绝（文案与 7.6 同族 + 「暂不支持 WITH/CTE」）+ 工具描述更新。覆盖 = 3 CTE 形态拒绝 + 正向对照。破坏自证：条件恒 false → 3 红 → 还原 → 全绿。
+- **G22 CI 棘轮生效（已实证）**：workflow 改 `code=0; node ... || code=$?`（R8.3 审查方指定，if-cmd 后取 $? 语义含歧义）。CI 级双向实证：run 号（绿/红/回绿）见 R8 报告必答 3；`RATCHET BROKEN: N 项违规 != 登记基线 28` 为失败判定输出。
+- **G26（只登记不修）**：表达式类型枚举缺口——R8.4 fail-closed default 上线后，任何未枚举的 Expression 子类型会 throw 并打印类型名（宁可拒绝不静默）。当前已枚举 LiteralValue/Wildcard/QualifiedWildcard（无列引用叶子）。未来新增类型由人决定补枚举或保持拒绝；登记不修。
+- **G27（只登记不修）**：audit_logs 幽灵列类缺陷根治方向——R8.7(c) 全仓清单显示写侧 6 处 INSERT（含 [audit_logs] 方括号形态）+ 读侧 ReportGenerationService 均已对齐 resource 列；但「列名与 DDL 漂移」这类错误已在 6 处 INSERT + 3 处 SELECT 上重复发生（description / resource_type），证明人工对齐不可靠。根治方向：门禁新增「列存在性」规则——扫描 audit_logs 相关 SQL 字面量的列清单与 Program.cs:535 DDL 逐列比对，漂移即 HARD FAIL。登记不修（R8 范围外）。
+
