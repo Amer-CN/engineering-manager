@@ -159,7 +159,7 @@ function createMockAPI() {
     batchImportAttendances: async () => ({ success: true, data: { created: 0, updated: 0 } }),
     // 工资
     getWages: async () => ({ success: true, data: [] }),
-    generateForProject: async () => ({ success: true, data: { newCount: 0, archivedSkipped: 0 } }),
+    generateProjectWages: async () => ({ success: true, data: [], newCount: 0, archivedSkipped: 0 }),
     createWage: async () => ({ success: true, data: { id: 1 } }),
     updateWage: async () => ({ success: true }),
     deleteWage: async () => ({ success: true }),
