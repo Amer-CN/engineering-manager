@@ -53,12 +53,16 @@ export function useWagePayments({
     if (paymentEdits.size === 0) { showToast('没有需要保存的修改', 'info'); return }
     setLoading(true)
     try {
+      let skippedEmpty = 0
       const updated = allWageRecords.map(w => {
         const edit = paymentEdits.get(w.id)
         if (!edit) return null
+        const paidAmount = parseFloat(edit.paidAmount)
+        if (!Number.isFinite(paidAmount)) { skippedEmpty++; return null }  // 空串/非法 → 跳过该行，不发 0
         // 只发付款四字段，不整行展开（batch-payment 端点只看这四列）
-        return { id: w.id, paidAmount: parseFloat(edit.paidAmount) || 0, paidDate: edit.paidDate, bankReceiptPath: edit.bankReceiptPath ?? w.bankReceiptPath }
+        return { id: w.id, paidAmount, paidDate: edit.paidDate, bankReceiptPath: edit.bankReceiptPath ?? w.bankReceiptPath }
       }).filter((x): x is { id: number; paidAmount: number; paidDate: string; bankReceiptPath: string | undefined } => x !== null)
+      if (skippedEmpty > 0) showToast(`实发金额为空的行已跳过（${skippedEmpty} 条），如需清除请用「清除发放记录」`, 'warning')
       const result = await (await getAPI()).batchSavePayments(updated)
       if (result.success) { showToast('发放记录已保存', 'success'); setPaymentEdits(new Map()); await loadAllRecords(); await loadStats() }
       else showToast(result.error || '保存失败', 'error')
