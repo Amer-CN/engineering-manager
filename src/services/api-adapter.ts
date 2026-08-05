@@ -41,7 +41,22 @@ async function getCachedAPI() {
 export async function getAPI() {
   // 优先使用 Electron API
   if (isElectron) {
-    return window.electronAPI;
+    const api = window.electronAPI as any;
+    // D-9-4: 外部 preload 不在本仓，batchSavePayments 若未实现则显式报错
+    //（避免裸 TypeError，与 generateProjectWages 同型；preload 同步后自动走真实实现）
+    if (typeof api?.batchSavePayments !== 'function') {
+      return new Proxy(api, {
+        get(target, prop) {
+          if (prop === 'batchSavePayments') {
+            return async () => {
+              throw new Error('Electron 路径未实现 batchSavePayments（需外部 preload 同步）')
+            }
+          }
+          return (target as any)[prop]
+        },
+      })
+    }
+    return api;
   }
 
   // 检测 C# API（HTTP 模式）
@@ -251,6 +266,7 @@ function createMockAPI() {
     getWageOverdueList: async () => ({ success: true, data: [] }),
     batchArchiveWages: async () => ({ success: true, data: { archived: 0 } }),
     batchSaveWages: async () => ({ success: true, data: { saved: 0 } }),
+    batchSavePayments: async () => ({ success: true, data: { saved: 0, skipped: 0, skippedItems: [] } }),
     // 成本台账匹配规则
     getCostLedgerMatchRules: async () => ({ success: true, data: [] }),
     saveCostLedgerMatchRule: async () => ({ success: true, data: { id: 1 } }),

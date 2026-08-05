@@ -1162,6 +1162,7 @@ export interface ElectronAPI {
   createWage: (record: Partial<WageRecord>) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
   updateWage: (record: WageRecord) => Promise<{ success: boolean; error?: string }>
   batchSaveWages: (records: WageRecord[]) => Promise<{ success: boolean; data?: any; error?: string }>
+  batchSavePayments: (records: { id: number; paidAmount: number; paidDate: string; bankReceiptPath?: string }[]) => Promise<{ success: boolean; data?: { saved: number; skipped: number; skippedItems: { id: number }[] }; error?: string }>
   deleteWage: (id: number) => Promise<{ success: boolean; error?: string }>
   batchDeleteWages: (ids: number[]) => Promise<{ success: boolean; data?: { deleted: number }; error?: string }>
   batchClearPayments: (ids: number[]) => Promise<{ success: boolean; data?: { cleared: number }; error?: string }>

@@ -412,7 +412,8 @@ public static class WageEndpoints
                 // 显式 upsert（035 部分唯一索引 ux_wages_pw_month 为冲突目标）：
                 // DO UPDATE 只更新业务字段与 updated_at，绝不触碰 created_by / created_at /
                 // paid_amount / paid_date / status / deleted_at 等列；
-                // 已发款行（paid_amount != 0）跳过不更新（changes()=0），计入 skipped
+                // 跳过条件含两件事：paid_amount != 0（自动「已发款」保护）与
+                // payment_locked = 1（人工归档锁定）——两个独立语义，不是同一事实两处
                 var affected = await db.ExecuteAsync(@"INSERT INTO wages
                     (project_id,project_worker_id,year_month,daily_wage,work_days,bonus,deduction,actual_wage,created_by,created_at,updated_at)
                     VALUES (@ProjectId,@ProjectWorkerId,@YearMonth,@DailyWage,@WorkDays,@Bonus,@Deduction,@ActualWage,@CreatedBy,@Now,@Now)
@@ -424,7 +425,8 @@ public static class WageEndpoints
                         deduction  = excluded.deduction,
                         actual_wage = excluded.actual_wage,
                         updated_at = excluded.updated_at
-                    WHERE COALESCE(wages.paid_amount, 0) = 0",
+                    WHERE COALESCE(wages.paid_amount, 0) = 0
+                      AND COALESCE(wages.payment_locked, 0) = 0",
                     new {
                         item.ProjectId, item.ProjectWorkerId, item.YearMonth,
                         DailyWage = ToFen(item.DailyWage!.Value),
@@ -443,6 +445,52 @@ public static class WageEndpoints
                     skipped++;
                     skippedItems.Add(new { projectWorkerId = item.ProjectWorkerId, yearMonth = item.YearMonth });
                 }
+            }
+            return Common.Ok(new { saved, skipped, skippedItems });
+        });
+
+        // POST /api/wages/batch-payment — 批量付款写入（D-9）
+        // 付款列与工资列由两个端点分管：batch-save 只管工资列，本端点只管付款列。
+        // 守卫是两件事：paid_amount（自动「已发款」保护）在 batch-save 侧；
+        // payment_locked（人工归档锁定）在本端点侧。
+        // 注意：PUT /api/wages 单条目前无守卫（既有行为，batch-payment 落地后收窄，见记档）
+        app.MapPost("/api/wages/batch-payment", async (HttpContext ctx, List<JsonElement> records, IDbConnection db) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var scope = CurrentUser.GetDataScope(ctx);
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var saved = 0;
+            var skipped = 0;
+            var skippedItems = new List<object>();
+            var index = 0;
+            foreach (var dto in records)
+            {
+                index++;
+                var item = JsonSerializer.Deserialize<WagePaymentItem>(dto.GetRawText(), WebJson) ?? throw new InvalidDataException("batch-payment: 付款记录反序列化失败");
+                // 必填校验：id / paidAmount / paidDate（直接 400，全局 handler 会把异常吞成 500）
+                var missing = new List<string>();
+                if (!item.Id.HasValue) missing.Add("id");
+                if (!item.PaidAmount.HasValue) missing.Add("paidAmount");
+                if (string.IsNullOrEmpty(item.PaidDate)) missing.Add("paidDate");
+                if (missing.Count > 0)
+                    return Results.BadRequest(new { success = false, error = $"batch-payment: 第 {index} 条缺失字段: {string.Join(", ", missing)}" });
+                // 只 SET 付款列 + 时间戳/版本；一个工资列都不许出现在 SET 里。
+                // saved 取 ExecuteAsync 实际影响行数累加（不许用入参长度）
+                var affected = await db.ExecuteAsync(@"UPDATE wages SET
+                        paid_amount=@PaidAmount, paid_date=@PaidDate, bank_receipt_path=@BankReceiptPath,
+                        updated_at=@Now, version=version+1, last_modified_at=@Now
+                    WHERE id=@Id AND deleted_at IS NULL
+                      AND COALESCE(payment_locked, 0) = 0
+                      AND (created_by=@Uid OR @IsAdmin=1)",
+                    new {
+                        Id = item.Id,
+                        PaidAmount = ToFen(item.PaidAmount!.Value),
+                        PaidDate = item.PaidDate,
+                        BankReceiptPath = item.BankReceiptPath,
+                        Uid = uid, IsAdmin = isAdmin, Now = now()
+                    });
+                if (affected > 0) saved++;
+                else { skipped++; skippedItems.Add(new { id = item.Id }); }
             }
             return Common.Ok(new { saved, skipped, skippedItems });
         });
@@ -608,4 +656,8 @@ record WageBatchItem(long? ProjectId, long? ProjectWorkerId, string? YearMonth, 
 
 // batch-create 无前端调用方；camelCase 命名对齐 SQL 参数
 record AttendanceBatchItem(long? MemberId, long? ProjectId, long? ProjectWorkerId, string? YearMonth, double WorkDays, long? DaysOff, long? IsFullAttendance, string? DailyStatus);
+
+// batch-payment 入参：按 id 定位（行必然已存在），只写付款列；
+// paidAmount 单位为元（ToFen 落库），用可空类型区分「缺省」与 0
+record WagePaymentItem(long? Id, double? PaidAmount, string? PaidDate, string? BankReceiptPath);
 
