@@ -150,7 +150,7 @@ public class WageAttendanceGenerateTests : ApiTestBase
         Assert.Equal(1, json.GetProperty("data").GetProperty("count").GetInt32());
 
         // pw1 的 20 天不被默认全勤覆盖
-        var row1 = QueryAttendanceRow(pwId: pw1);
+        var row1 = QueryAttendanceRow(pwId: pw1)!;
         Assert.NotNull(row1);
         Assert.Equal(20.0, (double)row1.work_days);
     }
@@ -199,7 +199,7 @@ public class WageAttendanceGenerateTests : ApiTestBase
         var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal(1, json.GetProperty("data").GetProperty("count").GetInt32());
 
-        var row = QueryAttendanceRow(memberId: memberId);
+        var row = QueryAttendanceRow(memberId: memberId)!;
         Assert.NotNull(row);
         Assert.Equal(31.0, (double)row.work_days);
         Assert.Equal(memberId, (long)row.member_id);

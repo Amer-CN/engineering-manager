@@ -284,7 +284,7 @@ public class WageGenerateTests : ApiTestBase
         Assert.Equal(0, json.GetProperty("newCount").GetInt32());
         Assert.Equal(0, json.GetProperty("archivedSkipped").GetInt32());
 
-        var row = QueryWageRow(pw1);
+        var row = QueryWageRow(pw1)!;
         Assert.NotNull(row);
         Assert.Equal(30000L, (long)row.daily_wage);
         Assert.Equal(22.0, (double)row.work_days);

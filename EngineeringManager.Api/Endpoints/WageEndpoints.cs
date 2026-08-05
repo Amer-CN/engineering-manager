@@ -640,7 +640,7 @@ public static class WageEndpoints
                           AND (project_worker_id=@PwId OR (project_worker_id IS NULL AND member_id=@MemberId))",
                     new { ProjectId = projectId, YearMonth = dto.YearMonth, PwId = pwId, MemberId = memberId });
                 if (existing != null
-                    && (Convert.ToInt64(existing.paid_amount ?? 0) != 0 || Convert.ToInt64(existing.payment_locked ?? 0) == 1))
+                    && (Convert.ToInt64(existing!.paid_amount ?? 0) != 0 || Convert.ToInt64(existing!.payment_locked ?? 0) == 1))
                 { archivedSkipped++; continue; }
                 var bonusFen = existing != null ? Convert.ToInt64(existing.bonus ?? 0) : 0L;
                 var deductionFen = existing != null ? Convert.ToInt64(existing.deduction ?? 0) : 0L;

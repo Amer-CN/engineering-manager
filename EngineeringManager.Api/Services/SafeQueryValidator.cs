@@ -170,7 +170,7 @@ public static class SafeQueryValidator
         Query query;
         try
         {
-            query = stmt.AsQuery();
+            query = stmt.AsQuery()!;
         }
         catch
         {
@@ -208,7 +208,7 @@ public static class SafeQueryValidator
 
         try
         {
-            CollectTables(select.From, aliasToTable, referencedTables);
+            CollectTables(select.From!, aliasToTable, referencedTables);
         }
         catch (ValidationException ex)
         {
@@ -259,7 +259,7 @@ public static class SafeQueryValidator
             // ORDER BY 引用投影别名的标识符放行
             if (query.OrderBy != null)
             {
-                foreach (var ob in query.OrderBy.Expressions)
+                foreach (var ob in query.OrderBy.Expressions!)
                 {
                     if (ob.Expression is Expression.Identifier oid
                         && projectionAliases.Contains(oid.Ident.Value))
@@ -321,13 +321,13 @@ public static class SafeQueryValidator
     {
         foreach (var tableWithJoins in fromClause)
         {
-            CollectTableFromFactor(tableWithJoins.Relation, aliasToTable, referencedTables);
+            CollectTableFromFactor(tableWithJoins.Relation!, aliasToTable, referencedTables);
 
             if (tableWithJoins.Joins != null)
             {
                 foreach (var join in tableWithJoins.Joins)
                 {
-                    CollectTableFromFactor(join.Relation, aliasToTable, referencedTables);
+                    CollectTableFromFactor(join.Relation!, aliasToTable, referencedTables);
                 }
             }
         }
@@ -388,7 +388,7 @@ public static class SafeQueryValidator
             throw new ValidationException("子查询中不支持集合操作");
         }
 
-        CollectTables(subSelect.From, parentAliasToTable, parentReferencedTables);
+        CollectTables(subSelect.From!, parentAliasToTable, parentReferencedTables);
         ValidateProjection(subSelect.Projection, parentAliasToTable, parentReferencedTables);
 
         // 额外校验子查询自己的 WHERE/GROUP/ORDER（嵌套子查询的场景）
@@ -403,7 +403,7 @@ public static class SafeQueryValidator
         }
         if (subQuery.OrderBy != null)
         {
-            foreach (var ob in subQuery.OrderBy.Expressions)
+            foreach (var ob in subQuery.OrderBy.Expressions!)
                 ValidateExpressionColumns(ob.Expression, parentAliasToTable, parentReferencedTables);
         }
     }
@@ -499,7 +499,7 @@ public static class SafeQueryValidator
             // 校验函数参数中的列引用（COUNT(*) 的 * 是 Wildcard，天然放行）
             if (func.Args is FunctionArguments.List argList)
             {
-                foreach (var arg in argList.ArgumentList.Args)
+                foreach (var arg in argList!.ArgumentList.Args!)
                 {
                     if (arg is FunctionArg.Unnamed unnamed)
                     {
@@ -555,7 +555,7 @@ public static class SafeQueryValidator
         }
         else if (expr is Expression.InSubquery inSubquery)
         {
-            ValidateExpressionColumns(inSubquery.Expression, aliasToTable, referencedTables);
+            ValidateExpressionColumns(inSubquery.Expression!, aliasToTable, referencedTables);
             ValidateDerivedQuery(inSubquery.SubQuery, aliasToTable, referencedTables);
         }
         else if (expr is Expression.Exists exists)
@@ -570,7 +570,7 @@ public static class SafeQueryValidator
         }
         else if (expr is Expression.Like like)
         {
-            ValidateExpressionColumns(like.Expression, aliasToTable, referencedTables);
+            ValidateExpressionColumns(like.Expression!, aliasToTable, referencedTables);
             ValidateExpressionColumns(like.Pattern, aliasToTable, referencedTables);
         }
         else if (expr is Expression.IsNull isNull)

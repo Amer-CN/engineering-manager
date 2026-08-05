@@ -6,6 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWindowsForms>true</UseWindowsForms>
     <IsPackable>false</IsPackable>
+    <!-- WebView2.Wpf 传递引用与 UseWindowsForms 的既有 WindowsBase 4.0/5.0 冲突（基线既有，非代码问题） -->
+    <NoWarn>$(NoWarn);MSB3277</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
