@@ -185,6 +185,8 @@
 - **G19（小，只登记不修）**：限定符归一化逻辑三处手写副本（CurrentUser.NormalizeQualifier / SafeQueryValidator 7.5 步内联 while / 门禁 normalizeSqlQualifier）。登记不修；根治方向：提取共享静态工具（如 Common.NormalizeSqlIdentifier），三处调用同一实现。
 
 
+- 开源口径已确认：MIT，仓库有意公开；企业版差异化在服务不在代码授权。依据：README.md 许可证段（R8.10 补 LICENSE 文件）
+
 ### R8 实证记录（G20/G21 已修 + G22 实证 + 只登记不修项）
 
 - **G20 WHERE OR 优先级击穿（严重，已修 + 实证指针）**：先红实证——`WHERE id = 0 OR 1 = 1` 注入后为 `WHERE (过滤) AND id = 0 OR 1 = 1`（AND 优先 → OR 恒真）→ 全表含 amount=300；`WHERE amount = 300 OR amount = 300` → 直出 300。修复 = 注入形态改 `WHERE ({filterClause}) AND ({userWhere})`，userWhere 终点 = 顶层 GROUP/ORDER/LIMIT 最靠前者或串尾（终点定位在 MaskSqlLiterals 副本上，G12 教训）。覆盖 = 2 OR PoC + NOT + 3 尾子句组合 + 正向对照（11 测试）。破坏自证：去括弧 → 2 红 → 还原 → 全绿。
