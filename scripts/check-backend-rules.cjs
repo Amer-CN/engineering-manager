@@ -523,6 +523,18 @@ function splitTopLevelCommas(text) {
   return parts
 }
 
+/** R6.2(G4): SQL 标识符限定符归一化——剥离首尾空白与标识符引号（[] / "" / ``）后转小写 */
+function normalizeSqlQualifier(q) {
+  let s = q.trim()
+  while (s.length >= 2 &&
+         ((s[0] === '[' && s[s.length - 1] === ']') ||
+          (s[0] === '"' && s[s.length - 1] === '"') ||
+          (s[0] === '`' && s[s.length - 1] === '`'))) {
+    s = s.slice(1, -1).trim()
+  }
+  return s.toLowerCase()
+}
+
 for (const file of csFiles) {
   const content = fs.readFileSync(file, 'utf-8')
   b5CallStartRe.lastIndex = 0
@@ -564,11 +576,12 @@ for (const file of csFiles) {
         b5Fail(file, content, m.index, `B5 第二实参字符串字面量不含 '.'（裸列名，退化 EXISTS 越权）："${col}"`)
         continue
       }
-      const qualifier = col.slice(0, col.indexOf('.')).trim().toLowerCase()
+      const rawQualifier = col.slice(0, col.indexOf('.')).trim()
+      const qualifier = normalizeSqlQualifier(rawQualifier)
       if (b5Blacklist.has(qualifier)) {
-        b5Fail(file, content, m.index, `B5 第二实参限定符 '${qualifier}' 与授权子查询自身别名/表名冲突 → 自比较恒真 → 越权（R5.2 黑名单）`)
+        b5Fail(file, content, m.index, `B5 第二实参限定符 '${rawQualifier}'（归一化后 '${qualifier}'）与授权子查询自身别名/表名冲突 → 自比较恒真 → 越权（R5.2 黑名单 / R6.2 去引号）`)
       }
-      continue // 合规：表名.列名 字面量且限定符不在黑名单
+      continue // 合规：表名.列名 字面量且限定符（归一化后）不在黑名单
     }
     // 非字面量实参：仅 SafeQueryValidator.cs 内（GetTableFilter 动态构造列名）显式例外
     if (file.includes('SafeQueryValidator.cs')) { b5ExemptCount++; continue }

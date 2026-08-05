@@ -38,6 +38,21 @@ public static class CurrentUser
         IsAdmin(ctx) ? DataScope.All : DataScope.AuthorizedProjects;
 
     /// <summary>
+    /// R6.2(G4): SQL 标识符限定符归一化——剥离首尾空白与标识符引号（[] / " " / ` `），
+    /// 用于黑名单比较。方括号/反引号包裹的 pa_authz 若不剥离会绕过黑名单 → 自比较恒真复活。
+    /// </summary>
+    private static string NormalizeQualifier(string qualifier)
+    {
+        var q = qualifier.Trim();
+        while (q.Length >= 2
+               && ((q[0] == '[' && q[^1] == ']')
+                   || (q[0] == '"' && q[^1] == '"')
+                   || (q[0] == '`' && q[^1] == '`')))
+            q = q.Substring(1, q.Length - 2).Trim();
+        return q;
+    }
+
+    /// <summary>
     /// 项目级表过滤片段 (有 project_id 列)。
     /// R4.2: UserFilterFragmentForProject 已删除——它生成的 EXISTS 引用 @ProjectId，
     /// 而调用点（PUT /api/contracts/income·expense）的 Dapper 参数对象无此参数 → 非 admin 必 500；
@@ -81,11 +96,11 @@ public static class CurrentUser
             throw new ArgumentException(
                 $"UserFilterWithAuthorizedProjects: projectCol 必须是「表名.列名」限定形式（当前值 '{projectCol}'）——裸列名会退化为恒真 EXISTS 造成越权（R4.1 fail-closed，宁可 500 不静默越权）",
                 nameof(projectCol));
-        var qualifier = projectCol.Substring(0, projectCol.IndexOf('.')).Trim();
+        var qualifier = NormalizeQualifier(projectCol.Substring(0, projectCol.IndexOf('.')));
         if (string.Equals(qualifier, "pa_authz", StringComparison.OrdinalIgnoreCase)
             || string.Equals(qualifier, "project_authorizations", StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException(
-                $"UserFilterWithAuthorizedProjects: projectCol 限定符 '{qualifier}' 与授权子查询自身别名/表名冲突 → 自比较恒真 → 越权（R5.2 黑名单）",
+                $"UserFilterWithAuthorizedProjects: projectCol 限定符 '{projectCol.Substring(0, projectCol.IndexOf('.'))}' 与授权子查询自身别名/表名冲突 → 自比较恒真 → 越权（R5.2 黑名单，R6.2 去引号归一化）",
                 nameof(projectCol));
         return scope == DataScope.All
             ? "(1 = 1)"

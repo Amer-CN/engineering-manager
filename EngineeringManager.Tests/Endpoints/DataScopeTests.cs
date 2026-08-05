@@ -162,6 +162,22 @@ public class DataScopeTests
     }
 
     [Fact]
+    public void UserFilterWithAuthorizedProjects_QuotedAuthzQualifier_ThrowsBlacklist()
+    {
+        // R6.2(G4): SQL 标识符引号包裹的授权限定符同样必抛（去引号归一化后命中黑名单）——
+        // 方括号/反引号形态此前能同时绕过守卫与 B5，自比较恒真复活
+        Assert.Throws<ArgumentException>(() =>
+            EngineeringManager.Api.Security.CurrentUser.UserFilterWithAuthorizedProjects(
+                EngineeringManager.Api.Security.CurrentUser.DataScope.AuthorizedProjects, "[pa_authz].project_id"));
+        Assert.Throws<ArgumentException>(() =>
+            EngineeringManager.Api.Security.CurrentUser.UserFilterWithAuthorizedProjects(
+                EngineeringManager.Api.Security.CurrentUser.DataScope.AuthorizedProjects, "`pa_authz`.project_id"));
+        Assert.Throws<ArgumentException>(() =>
+            EngineeringManager.Api.Security.CurrentUser.UserFilterWithAuthorizedProjects(
+                EngineeringManager.Api.Security.CurrentUser.DataScope.AuthorizedProjects, "[project_authorizations].project_id"));
+    }
+
+    [Fact]
     public void UserFilterWithAuthorizedProjects_BareColumn_ThrowsInBothScopes()
     {
         // R5.1(c): fail-closed 由真正的非法输入直接钉住（不借生产路径）。
