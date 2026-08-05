@@ -170,7 +170,7 @@ public static class CostLedgerEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var scope = CurrentUser.GetDataScope(ctx);
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO cost_ledger_batches (project_id,name,created_by,created_at, last_modified_at) VALUES (@ProjectId,@Name,@CreatedBy,@Now, @Now); SELECT last_insert_rowid();",
-                new { dto.ProjectId, dto.Name, Now = now() });
+                new { dto.ProjectId, dto.Name, CreatedBy = uid, Now = now() });
             return Common.Ok(id);
         });
 
@@ -181,7 +181,7 @@ public static class CostLedgerEndpoints
             var original = db.QueryFirstOrDefault("SELECT * FROM cost_ledger_batches WHERE id=@Id", new { Id = id });
             if (original == null) return Common.NotFound("批次不存在");
             var newId = await db.ExecuteScalarAsync<long>(@"INSERT INTO cost_ledger_batches (project_id,name,created_by,created_at, last_modified_at) VALUES (@ProjectId,@Name,@CreatedBy,@Now, @Now); SELECT last_insert_rowid();",
-                new { ProjectId = (long)original.project_id, Name = dto.NewName ?? "", Now = now() });
+                new { ProjectId = (long)original.project_id, Name = dto.NewName ?? "", CreatedBy = uid, Now = now() });
             return Common.Ok(new { id = newId });
         });
 
