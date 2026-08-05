@@ -453,21 +453,24 @@ wages:read
 | contracts | DELETE /api/contracts/{income,expense,agreement}/{id} | `WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)` | created_by 独占 | — | ❌ **同资源内 PUT/DELETE 不一致**（删除保持） |
 | cost_ledger | PUT /api/cost-ledger | `WHERE id=@Id AND {UserFilterWithAuthorizedProjects(scope, "cost_ledger.project_id")}` | **授权项目口径** | 授权项目（R5.5） | ✅ 一致 |
 | cost_ledger | DELETE /api/cost-ledger/{id} | 同 | **授权项目口径** | — | ✅（R5.5 已对齐） |
-| cost_ledger_batches | PUT /api/cost-ledger/batches/{id} | `WHERE id=@Id AND {UserFilterCompany(scope)}` | UserFilterCompany（created_by 仅） | 授权项目（GET R5.5） | ❌ 不一致 |
-| cost_ledger_batches | DELETE /api/cost-ledger/batches/{id} | 同 | UserFilterCompany | — | ❌（删除保持） |
+| cost_ledger_batches | PUT /api/cost-ledger/batches/{id} | `WHERE id=@Id AND {UserFilterCompany(scope)}` | UserFilterCompany（函数体 CurrentUser.cs:69 `scope == DataScope.All ? "(1 = 1)" : $"({createdByCol} = @Uid)"` → 非 admin 时仅 created_by） | 授权项目（GET R5.5） | ❌ 不一致 |
+| cost_ledger_batches | DELETE /api/cost-ledger/batches/{id} | 同 | UserFilterCompany（同上函数体） | — | ❌（删除保持） |
 
-### R9 施工面（读授权、写 created_by 的 PUT/PATCH 端点）
+### R9 施工面（读授权、写 created_by 的 PUT/PATCH 端点，R8.13(d) 订正为 7 项）
 
-1. drawings PUT / api/drawings
+1. drawings PUT /api/drawings
 2. attendances PUT /api/attendances
 3. wages PUT /api/wages（含批量生成路径）
 4. invoices PUT /api/invoices（+ PUT /api/invoices/{id}/status）
 5. payment_records PUT /api/payment-records
 6. settlements PUT /api/settlements（+ PUT /{id}/process、/{id}/unarchive）
-7. contracts 三表 DELETE（同资源内 PUT 已授权、DELETE 未）
-8. cost_ledger_batches PUT（读侧已授权、写侧 UserFilterCompany）
+7. cost_ledger_batches PUT（读侧已授权、写侧 UserFilterCompany）
 
 **删除端点全部保持 created_by 独占**（方案丙：不可删他人记录）；cost_ledger PUT/DELETE 已是授权口径（R5.5），不属于施工面。
+
+### 已登记不修（R8.13(d)）
+
+- contracts 三表 DELETE 为 created_by 独占，与同资源 PUT（授权口径）不一致，按方案丙有意保留，不列入 R9 施工面。
 
 ### 跨人修改审计（R9 一并落地）
 

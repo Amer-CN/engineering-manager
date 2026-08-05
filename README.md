@@ -73,7 +73,7 @@ npm run dev
 build-installer.bat
 ```
 
-打包完成后，安装包位于 `release/EngineeringManager-Setup-<版本号>.exe`（例：`release/EngineeringManager-Setup-0.82.1.exe`）。
+打包完成后，安装包位于 `release/EngineeringManager-Setup-<版本号>.exe`（例：`release/EngineeringManager-Setup-0.91.0.exe`）。
 
 ## 📝 使用说明
 
