@@ -23,9 +23,12 @@ public static class CostLedgerEndpoints
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             // v1.1.0 P0-4 Phase 2: cost_ledger 表现在有 created_by (migration 014)
+            // R5.5 裁决：写不得宽于读——读侧 UserFilterCompany 提升为
+            // UserFilterWithAuthorizedProjects（与 PUT/DELETE/sheet UPDATE 写侧口径对齐，
+            // 消除「能改/删自己看不到的行」的越权面；授权项目内协作语义为 F6-3 既定）
             var conditions = new List<string>();
             if (projectId.HasValue) conditions.Add("project_id=@ProjectId");
-            conditions.Add(CurrentUser.UserFilterCompany(scope));
+            conditions.Add(CurrentUser.UserFilterWithAuthorizedProjects(scope, "cost_ledger.project_id"));
             conditions.Add("deleted_at IS NULL");
             var sql = "SELECT * FROM cost_ledger WHERE " + string.Join(" AND ", conditions) + " ORDER BY date DESC";
             return Common.Ok(db.Query(sql, new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }));
@@ -37,8 +40,9 @@ public static class CostLedgerEndpoints
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             // v1.1.0 P0-4 Phase 2: cost_ledger 现在有 created_by
+            // R5.5 裁决：读侧提升为 UserFilterWithAuthorizedProjects（与写侧对齐）
             var projectFilter = projectId.HasValue ? " AND project_id=@ProjectId" : "";
-            var userFilter = $" AND {CurrentUser.UserFilterCompany(scope)}";
+            var userFilter = $" AND {CurrentUser.UserFilterWithAuthorizedProjects(scope, "cost_ledger.project_id")}";
             return Common.Ok(new
             {
                 totalCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM cost_ledger WHERE 1=1{projectFilter}{userFilter} AND deleted_at IS NULL", new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }),
@@ -157,7 +161,8 @@ public static class CostLedgerEndpoints
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             // v1.1.0 P0-4 Phase 2: cost_ledger_batches 现在有 created_by (migration 020), 完整 user-dim
-            return Common.Ok(db.Query($"SELECT * FROM cost_ledger_batches WHERE project_id=@ProjectId AND {CurrentUser.UserFilterCompany(scope)} ORDER BY created_at DESC", new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }));
+            // R5.5 裁决：读侧提升为 UserFilterWithAuthorizedProjects（与 sheet 写侧批次校验对齐）
+            return Common.Ok(db.Query($"SELECT * FROM cost_ledger_batches WHERE project_id=@ProjectId AND {CurrentUser.UserFilterWithAuthorizedProjects(scope, "cost_ledger_batches.project_id")} ORDER BY created_at DESC", new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }));
         });
 
         app.MapPost("/api/cost-ledger/batches", async (HttpContext ctx, CostLedgerBatchDto dto, IDbConnection db) =>
@@ -229,7 +234,7 @@ public static class CostLedgerEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
-            var sql = $"SELECT * FROM [cost_ledger] WHERE [batch_id]=@BatchId AND {CurrentUser.UserFilterCompany(scope)} AND [deleted_at] IS NULL ORDER BY [date] DESC, [id] DESC";
+            var sql = $"SELECT * FROM [cost_ledger] WHERE [batch_id]=@BatchId AND {CurrentUser.UserFilterWithAuthorizedProjects(scope, "cost_ledger.project_id")} AND [deleted_at] IS NULL ORDER BY [date] DESC, [id] DESC";
             var rows = db.Query(sql, new { Uid = uid, IsAdmin = isAdmin, BatchId = batchId });
             return Common.Ok(rows);
         });

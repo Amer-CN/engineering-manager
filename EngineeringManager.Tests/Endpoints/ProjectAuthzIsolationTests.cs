@@ -262,4 +262,57 @@ public class ProjectAuthzIsolationTests : ApiTestBase
             DeleteWorkerUser();
         }
     }
+
+    /// <summary>
+    /// R5.5(b): GET /api/cost-ledger 读侧三分支（写不得宽于读裁决落地后的读侧行为）。
+    /// 读侧 UserFilterCompany → UserFilterWithAuthorizedProjects 后，worker 应能读到
+    /// 授权项目下他人创建的行（与写侧一致）；own 在未授权项目 P2（仅 created_by 分支）、
+    /// authorized-other 在 P1（仅 EXISTS 分支）、unauthorized-other 在 P2（两分支都不可命中）。
+    /// </summary>
+    [Fact]
+    public async Task CostLedgerGet_Worker_ThreeBranches()
+    {
+        var oldEdition = SwitchEdition("personal");
+        try
+        {
+            CreateWorkerUser();
+            using (var conn = new SqliteConnection(ConnectionString))
+            {
+                conn.Open();
+                var now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                conn.Execute("INSERT INTO projects (id, name, created_by, created_at) VALUES (1, '授权项目P1', '1', @Now)", new { Now = now });
+                conn.Execute("INSERT INTO projects (id, name, created_by, created_at) VALUES (2, '未授权项目P2', '1', @Now)", new { Now = now });
+                conn.Execute("INSERT INTO project_authorizations (project_id, user_id) VALUES (1, @WorkerId)", new { WorkerId });
+                conn.Execute(@"INSERT INTO cost_ledger (project_id, voucher_no, date, direction, category, amount, summary, created_by, created_at, updated_at)
+                    VALUES (2, 'R5-1', '2026-08-05', 'out', '测试', 100, 'R5-own', @WorkerId, @Now, @Now)", new { WorkerId, Now = now });
+                conn.Execute(@"INSERT INTO cost_ledger (project_id, voucher_no, date, direction, category, amount, summary, created_by, created_at, updated_at)
+                    VALUES (1, 'R5-2', '2026-08-05', 'out', '测试', 200, 'R5-authorized-other', '1', @Now, @Now)", new { Now = now });
+                conn.Execute(@"INSERT INTO cost_ledger (project_id, voucher_no, date, direction, category, amount, summary, created_by, created_at, updated_at)
+                    VALUES (2, 'R5-3', '2026-08-05', 'out', '测试', 300, 'R5-unauthorized-other', '1', @Now, @Now)", new { Now = now });
+            }
+
+            // worker 登录
+            var workerLogin = await Client.PostAsJsonAsync("/api/auth/login", new { username = WorkerUsername, password = Password });
+            if (!workerLogin.IsSuccessStatusCode)
+                throw new Exception("worker login failed: " + workerLogin.StatusCode + " " + await workerLogin.Content.ReadAsStringAsync());
+            SetAuth(ExtractToken(await workerLogin.Content.ReadAsStringAsync()));
+
+            var get = await Client.GetAsync("/api/cost-ledger");
+            Assert.Equal(HttpStatusCode.OK, get.StatusCode);
+            var json = await get.Content.ReadFromJsonAsync<JsonElement>();
+            var items = json.GetProperty("data").EnumerateArray().ToList();
+
+            // 正向1：created_by 分支
+            Assert.Contains(items, it => it.TryGetProperty("summary", out var s) && s.GetString() == "R5-own");
+            // 正向2：EXISTS 分支（R5.5 提升读侧后，授权项目他人行可读）
+            Assert.Contains(items, it => it.TryGetProperty("summary", out var s) && s.GetString() == "R5-authorized-other");
+            // 反向1：未授权项目不可见
+            Assert.DoesNotContain(items, it => it.TryGetProperty("summary", out var s) && s.GetString() == "R5-unauthorized-other");
+        }
+        finally
+        {
+            SwitchEdition(oldEdition);
+            DeleteWorkerUser();
+        }
+    }
 }
