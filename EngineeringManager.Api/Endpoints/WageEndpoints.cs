@@ -510,8 +510,99 @@ public static class WageEndpoints
             return Common.Ok(new { saved, skipped, skippedItems });
         });
 
+        // POST /api/wages/generate — 生成工资表（窗口 D：接通「生成工资表」全链路）
+        // 语义：
+        //   · 源 = (projectId, yearMonth) 的考勤行；逐行 upsert 工资行，天然幂等
+        //   · 日薪来源：worker 路径取 project_workers.daily_wage，staff 路径取
+        //     members.daily_wage。两者读到的都是「元」直通值（ProjectWorkerMisc/
+        //     MemberEndpoints 写入侧未走 ToFen，库内是元；与工人工库页面显示一致），
+        //     落 wages 前 ToFen 转分 —— wages 金额列按单位契约必须是分
+        //   · 已存在工资行：paid_amount≠0 或 payment_locked=1（已发款/已归档）
+        //     → 跳过（archivedSkipped++），绝不触碰；可写行 → 只刷新
+        //     daily_wage / work_days / actual_wage，保留手工录入的 bonus/deduction
+        //   · 响应 = { success, data: 全量工资行(元), newCount, archivedSkipped }
+        //     data 为数组 + 顶层计数，对齐前端 electron.d.ts generateProjectWages
+        //     契约（result.data 直接用 .length）；不用 Common.Ok 是为了让
+        //     newCount / archivedSkipped 与 data 同层
+        app.MapPost("/api/wages/generate", (HttpContext ctx, WageGenerateDto dto, IDbConnection db) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var scope = CurrentUser.GetDataScope(ctx);
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            if (dto is null || dto.ProjectId is not long projectId || string.IsNullOrEmpty(dto.YearMonth))
+                return Results.BadRequest(new { success = false, error = "generate: projectId / yearMonth 必填" });
+            var atts = db.Query(@"SELECT a.project_worker_id, a.member_id, COALESCE(a.work_days, 0) AS work_days,
+                                  COALESCE(pw.daily_wage, 0) AS pw_daily_wage, COALESCE(m.daily_wage, 0) AS m_daily_wage
+                                  FROM attendances a
+                                  LEFT JOIN project_workers pw ON a.project_worker_id = pw.id
+                                  LEFT JOIN members m ON a.member_id = m.id
+                                  WHERE a.project_id=@ProjectId AND a.year_month=@YearMonth
+                                    AND " + CurrentUser.UserFilterWithAuthorizedProjects(scope, "a.project_id", "a.created_by"),
+                new { ProjectId = projectId, YearMonth = dto.YearMonth, Uid = uid, IsAdmin = isAdmin }).ToList();
+            var newCount = 0;
+            var archivedSkipped = 0;
+            foreach (var att in atts)
+            {
+                var pwId = att.project_worker_id as long?;
+                var memberId = att.member_id as long?;
+                // 两 id 均空的行无法归属，不生成
+                double? dailyWageYuan = pwId.HasValue ? Convert.ToDouble(att.pw_daily_wage ?? 0)
+                    : memberId.HasValue ? Convert.ToDouble(att.m_daily_wage ?? 0) : null;
+                if (dailyWageYuan is null) continue;
+                var workDays = Convert.ToDouble(att.work_days ?? 0);
+                var dailyFen = ToFen(dailyWageYuan.Value);
+                // 唯一键定位既有行：worker 路径按 project_worker_id（035 唯一索引同键），
+                // staff 路径（无 project_worker_id）按 member_id；@PwId 为 NULL 时
+                // project_worker_id=@PwId 不命中任何行，两路径互不串扰
+                var existing = db.QueryFirstOrDefault(@"SELECT id, bonus, deduction,
+                        COALESCE(paid_amount, 0) AS paid_amount, COALESCE(payment_locked, 0) AS payment_locked
+                        FROM wages
+                        WHERE project_id=@ProjectId AND year_month=@YearMonth AND deleted_at IS NULL
+                          AND (project_worker_id=@PwId OR (project_worker_id IS NULL AND member_id=@MemberId))",
+                    new { ProjectId = projectId, YearMonth = dto.YearMonth, PwId = pwId, MemberId = memberId });
+                if (existing != null
+                    && (Convert.ToInt64(existing.paid_amount ?? 0) != 0 || Convert.ToInt64(existing.payment_locked ?? 0) == 1))
+                { archivedSkipped++; continue; }
+                var bonusFen = existing != null ? Convert.ToInt64(existing.bonus ?? 0) : 0L;
+                var deductionFen = existing != null ? Convert.ToInt64(existing.deduction ?? 0) : 0L;
+                var actualFen = (long)Math.Round(dailyFen * workDays) + bonusFen - deductionFen;
+                if (existing != null)
+                {
+                    db.Execute(@"UPDATE wages SET daily_wage=@DailyFen, work_days=@WorkDays,
+                            actual_wage=@ActualFen, updated_at=@Now, version=version+1, last_modified_at=@Now
+                        WHERE id=@Id AND deleted_at IS NULL
+                          AND COALESCE(paid_amount,0)=0 AND COALESCE(payment_locked,0)=0",
+                        new { DailyFen = dailyFen, WorkDays = workDays, ActualFen = actualFen, Id = (long)existing.id, Now = now() });
+                }
+                else
+                {
+                    db.Execute(@"INSERT INTO wages (project_id,member_id,project_worker_id,year_month,daily_wage,work_days,bonus,deduction,
+                         actual_wage,created_by,created_at,updated_at,last_modified_at) VALUES (@ProjectId,@MemberId,@ProjectWorkerId,@YearMonth,@DailyFen,@WorkDays,@BonusFen,@DeductionFen,
+                                @ActualFen,@CreatedBy,@Now,@Now,@Now)",
+                        new { ProjectId = projectId, MemberId = memberId, ProjectWorkerId = pwId, YearMonth = dto.YearMonth,
+                              DailyFen = dailyFen, WorkDays = workDays, BonusFen = 0L, DeductionFen = 0L,
+                              ActualFen = actualFen, CreatedBy = uid, Now = now() });
+                    newCount++;
+                }
+            }
+            // 返回生成后该项目+月份的工资全量（与 GET /api/wages 同型，金额分→元）
+            var rows = db.Query(@"SELECT w.*, COALESCE(m.name, wr.name) as worker_name, p.name as project_name,
+                            wt.name as team_name
+                            FROM wages w
+                            LEFT JOIN members m ON w.member_id=m.id
+                            LEFT JOIN project_workers pw ON w.project_worker_id=pw.id
+                            LEFT JOIN workers wr ON pw.worker_id=wr.id
+                            LEFT JOIN worker_teams wt ON pw.team_id=wt.id
+                            LEFT JOIN projects p ON w.project_id=p.id
+                            WHERE w.project_id=@ProjectId AND w.year_month=@YearMonth AND w.deleted_at IS NULL
+                              AND " + CurrentUser.UserFilterWithAuthorizedProjects(scope, "w.project_id", "w.created_by") + @"
+                            ORDER BY w.updated_at DESC",
+                new { ProjectId = projectId, YearMonth = dto.YearMonth, Uid = uid, IsAdmin = isAdmin });
+            return Results.Ok(new { success = true, data = ToYuanRows(rows), newCount, archivedSkipped });
+        });
+
         // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
-        // 钖祫鍘嗗彶 (鏃?created_by 鍒? 浠呭姞 var uid 寮哄埗閴存潈)
+        // 钖祫鍘嗗彶 (鏃?created_by 鍒? 浠呭姞 var uid 寮哄埗閴存潈)
         // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
 
         app.MapGet("/api/salary-history/{memberId}", (HttpContext ctx, long memberId, IDbConnection db) =>
@@ -675,4 +766,7 @@ record AttendanceBatchItem(long? MemberId, long? ProjectId, long? ProjectWorkerI
 // batch-payment 入参：按 id 定位（行必然已存在），只写付款列；
 // paidAmount 单位为元（ToFen 落库），用可空类型区分「缺省」与 0
 record WagePaymentItem(long? Id, double? PaidAmount, string? PaidDate, string? BankReceiptPath);
+
+// generate 入参：projectId + yearMonth（camelCase 由 Web 默认反序列化绑定）
+record WageGenerateDto(long? ProjectId, string? YearMonth);
 

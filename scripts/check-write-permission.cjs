@@ -142,6 +142,7 @@ const EXEMPT = [
   { path: '/api/wages/batch-unarchive', reason: 'G2 暂缓：wages:update 待前端补码后执行' },
   { path: '/api/wages/batch-save', reason: 'G2 暂缓：wages:update 待前端补码后执行' },
   { path: '/api/wages/batch-payment', reason: 'G2 暂缓：wages:update 待前端补码后执行' },
+  { path: '/api/wages/generate', reason: 'G2 暂缓：wages:create 待前端补码后执行' },
   { path: '/api/salary-history', reason: 'G2 暂缓：wages:create 待前端补码后执行' },
   { path: '/api/salary-history/{id}', reason: 'G2 暂缓：wages:delete 待前端补码后执行' },
 ];

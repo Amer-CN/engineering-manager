@@ -273,8 +273,10 @@ export const tauriAPI = {
   // ────────── 工资 ──────────
   getWages: (projectId?: number, yearMonth?: string) =>
     apiClient.get<WageRecord[]>('/api/wages', { projectId, yearMonth }),
-  generateForProject: (projectId: number, yearMonth: string) =>
-    apiClient.post<{ newCount: number; archivedSkipped: number }>('/api/wages/generate', { projectId, yearMonth }),
+  // generateProjectWages：前端两个调用点（useWageTable/useWageActions）都用此名；
+  // 响应 data 为 WageRecord[]（electron.d.ts 契约），newCount/archivedSkipped 在信封同层
+  generateProjectWages: (projectId: number, yearMonth: string) =>
+    apiClient.post<WageRecord[]>('/api/wages/generate', { projectId, yearMonth }),
   createWage: (record: Partial<WageRecord>) => apiClient.post<{ id: number }>('/api/wages', record),
   updateWage: (record: WageRecord) => apiClient.put<void>('/api/wages', record),
   deleteWage: (id: number) => apiClient.del<void>(`/api/wages/${id}`),
