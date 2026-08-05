@@ -874,7 +874,7 @@ public class AgentToolService
         registry.Add(new AgentTool
         {
             Name = "runSafeQuery",
-            Description = "受限只读查询：可以执行自定义 SELECT 查询，但有严格的安全限制（仅允许白名单表/列，自动注入权限过滤，强制 LIMIT）。仅支持单层 SELECT——不支持子查询/嵌套查询（R7.1 起 fail-closed 拒绝，过滤必须注入到表所在作用域）",
+            Description = "受限只读查询：可以执行自定义 SELECT 查询，但有严格的安全限制（仅允许白名单表/列，自动注入权限过滤，强制 LIMIT）。仅支持单层 SELECT——不支持子查询/嵌套查询（R7.1 起 fail-closed 拒绝）、不支持 WITH/CTE（R8.2 起 fail-closed 拒绝）",
             Parameters = BuildParams(new Dictionary<string, object>
             {
                 ["sql"] = new { type = "string", description = "要执行的 SQL 查询语句（仅 SELECT）" },

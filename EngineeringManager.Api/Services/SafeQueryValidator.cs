@@ -194,6 +194,16 @@ public static class SafeQueryValidator
             return new ValidationResult(false, null, null, "不支持 UNION/INTERSECT/EXCEPT 等集合操作");
         }
 
+        // 4.5 R8.2(G21): CTE 主体零校验——WITH 子句的 Query 不在 select.From 里，从未被
+        // CollectTables/ForbiddenTables 校验（PoC-C 实测：CTE 名伪装白名单表名穿透过滤读
+        // settlements；PoC-D 实测：CTE 主体 FROM audit_logs 穿透 ForbiddenTables）。
+        // fail-closed：一切 WITH 形态拒绝，文案与 7.6 同族并写明暂不支持。
+        if (query.With != null)
+        {
+            return new ValidationResult(false, null, null,
+                "暂不支持 WITH/CTE（R8.2 fail-closed）：CTE 主体无法被逐表校验（G21）。请将查询改写为普通 SELECT。");
+        }
+
         // 5. ForbiddenKeywords 二次兜底（检查原始 SQL）
         foreach (var keyword in ForbiddenKeywords)
         {
@@ -751,9 +761,18 @@ public static class SafeQueryValidator
         var whereIdx = FindTopLevelKeyword(masked, "WHERE");
         if (whereIdx >= 0)
         {
-            // 在顶层 WHERE 后插入
+            // R8.1(G20): 用户 WHERE 段整体括起——WHERE ({filterClause}) AND ({userWhere})。
+            // 不括则 "WHERE (过滤) AND id = 0 OR 1 = 1" 被 OR 击穿恒真（G20 PoC-A/B 实测
+            // 全表/直出 300）。userWhere 终点 = 顶层 GROUP/ORDER/LIMIT 最靠前者或串尾
+            // （终点定位在掩码副本上算，偏移与原文一致——G12 教训）。
             var insertAt = whereIdx + "WHERE".Length;
-            return sql.Substring(0, insertAt) + $" {filterClause} AND" + sql.Substring(insertAt);
+            var gIdx = FindTopLevelKeyword(masked, "GROUP");
+            var oIdx = FindTopLevelKeyword(masked, "ORDER");
+            var lIdx = FindTopLevelKeyword(masked, "LIMIT");
+            var ends = new[] { gIdx, oIdx, lIdx }.Where(x => x >= 0).ToArray();
+            var whereEnd = ends.Length > 0 ? ends.Min() : sql.Length;
+            var userWhere = sql.Substring(insertAt, whereEnd - insertAt);
+            return sql.Substring(0, insertAt) + $" ({filterClause}) AND ({userWhere})" + sql.Substring(whereEnd);
         }
 
         // 无顶层 WHERE：在顶层 GROUP BY / ORDER BY / LIMIT 之前插入
