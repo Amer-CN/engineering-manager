@@ -185,7 +185,9 @@
 - **G19（小，只登记不修）**：限定符归一化逻辑三处手写副本（CurrentUser.NormalizeQualifier / SafeQueryValidator 7.5 步内联 while / 门禁 normalizeSqlQualifier）。登记不修；根治方向：提取共享静态工具（如 Common.NormalizeSqlIdentifier），三处调用同一实现。
 
 
-- 开源口径已确认：MIT，仓库有意公开；企业版差异化在服务不在代码授权。依据：README.md 许可证段（R8.10 补 LICENSE 文件）
+- 开源口径已确认：MIT
+- R8.12 manager 写权限裁决（方案丙：可读可改不可删，删除限 created_by/admin，跨人修改落审计）已登记 → 施工面盘点见 PERMISSION-SNAPSHOT.md「R8.12 manager 写权限裁决与施工面盘点」
+，仓库有意公开；企业版差异化在服务不在代码授权。依据：README.md 许可证段（R8.10 补 LICENSE 文件）
 
 ### R8 实证记录（G20/G21 已修 + G22 实证 + 只登记不修项）
 

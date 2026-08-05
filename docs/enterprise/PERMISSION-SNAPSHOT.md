@@ -423,3 +423,52 @@ wages:read
 - 每个角色的权限条数为源码逐项统计：admin 前端 51 / 后端 45；manager 前端 39 / 后端 18；accountant 前端 34 / 后端 18；worker 前端 13 / 后端 4。
 - 差异判定规则：某「资源 × 动作」组合，若四个角色在前后端两侧的持有情况完全相同则记为「一致」，否则记为「差异」。据此本快照差异合计 **55 条**（A 20 / B 19 / C 4 / D 10 / E 2）。
 - 本文件仅为基线快照，不改动任何权限定义 / 迁移；差异修复留待企业版解冻时统一处理。
+
+---
+
+## R8.12 manager 写权限裁决与施工面盘点（2026-08-06）
+
+**裁决（R9 落地，本轮只盘点不改代码）**：方案丙 —— manager 对其被授权项目内的记录：
+可读、可改，**不可删**。删除仍限记录创建人本人或 admin。所有跨人修改必须落审计
+（action 中标注被改记录的 created_by 与操作人 uid 不同）。仅影响企业版；个人版单用户不受影响。
+
+### 施工面盘点（9 类资源 PUT/PATCH/DELETE，grep 原文）
+
+| 资源 | 方法/路由 | WHERE 子句原文（grep） | 当前写侧口径 | 读侧口径 | 读写一致？ |
+|---|---|---|---|---|---|
+| drawings | PUT /api/drawings | `WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)` | created_by 独占 | 授权项目（GET 含 UserFilterWithAuthorizedProjects） | ❌ 不一致 |
+| drawings | DELETE /api/drawings/{id} | 同 | created_by 独占 | — | ❌（R9 保持删除限 created_by） |
+| attendances | PUT /api/attendances | `WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)` | created_by 独占 | 授权项目 | ❌ 不一致 |
+| attendances | DELETE /api/attendances/{id} | 同 | created_by 独占 | — | ❌（删除保持） |
+| wages | PUT /api/wages | `WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)` | created_by 独占 | 授权项目（GET 三分支） | ❌ 不一致 |
+| wages | DELETE /api/wages/{id} | 同（软删 `deleted_at=@Now`） | created_by 独占 | — | ❌（删除保持） |
+| invoices | PUT /api/invoices | `WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)` | created_by 独占 | 授权项目（GET R5.4） | ❌ 不一致 |
+| invoices | DELETE /api/invoices/{id} | 同（软删） | created_by 独占 | — | ❌（删除保持） |
+| payment_records | PUT /api/payment-records | `WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)` | created_by 独占 | 授权项目 | ❌ 不一致 |
+| payment_records | DELETE /api/payment-records/{id} | 同（软删） | created_by 独占 | — | ❌（删除保持） |
+| settlements | PUT /api/settlements | `WHERE id=@Id AND deleted_at IS NULL AND (created_by=@Uid OR @IsAdmin=1)` | created_by 独占 | 授权项目（GET R5.4） | ❌ 不一致 |
+| settlements | DELETE /api/settlements/{id} | 同（WriteResult） | created_by 独占 | — | ❌（删除保持） |
+| settlements | PUT /{id}/process、/{id}/unarchive | 同 | created_by 独占 | — | ❌ 不一致 |
+| contracts | PUT /api/contracts/income（expense/agreement 同构） | `WHERE id=@Id AND {UserFilterWithAuthorizedProjects(scope, "income_contracts.project_id")}` | **授权项目口径** | 授权项目 | ✅ 一致 |
+| contracts | DELETE /api/contracts/{income,expense,agreement}/{id} | `WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)` | created_by 独占 | — | ❌ **同资源内 PUT/DELETE 不一致**（删除保持） |
+| cost_ledger | PUT /api/cost-ledger | `WHERE id=@Id AND {UserFilterWithAuthorizedProjects(scope, "cost_ledger.project_id")}` | **授权项目口径** | 授权项目（R5.5） | ✅ 一致 |
+| cost_ledger | DELETE /api/cost-ledger/{id} | 同 | **授权项目口径** | — | ✅（R5.5 已对齐） |
+| cost_ledger_batches | PUT /api/cost-ledger/batches/{id} | `WHERE id=@Id AND {UserFilterCompany(scope)}` | UserFilterCompany（created_by 仅） | 授权项目（GET R5.5） | ❌ 不一致 |
+| cost_ledger_batches | DELETE /api/cost-ledger/batches/{id} | 同 | UserFilterCompany | — | ❌（删除保持） |
+
+### R9 施工面（读授权、写 created_by 的 PUT/PATCH 端点）
+
+1. drawings PUT / api/drawings
+2. attendances PUT /api/attendances
+3. wages PUT /api/wages（含批量生成路径）
+4. invoices PUT /api/invoices（+ PUT /api/invoices/{id}/status）
+5. payment_records PUT /api/payment-records
+6. settlements PUT /api/settlements（+ PUT /{id}/process、/{id}/unarchive）
+7. contracts 三表 DELETE（同资源内 PUT 已授权、DELETE 未）
+8. cost_ledger_batches PUT（读侧已授权、写侧 UserFilterCompany）
+
+**删除端点全部保持 created_by 独占**（方案丙：不可删他人记录）；cost_ledger PUT/DELETE 已是授权口径（R5.5），不属于施工面。
+
+### 跨人修改审计（R9 一并落地）
+
+PUT/PATCH 生效行 created_by ≠ 操作人 uid 时，写 audit_logs（action 含修改人 + 被改记录 created_by）。
