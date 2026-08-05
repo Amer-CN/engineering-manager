@@ -35,13 +35,23 @@ function md5Of(p) { return crypto.createHash('md5').update(fs.readFileSync(p)).d
 console.log(`[redline] script: ${path.resolve(__filename)}`)
 console.log(`[redline] script-md5: ${md5Of(path.resolve(__filename))}`)
 console.log(`[redline] baseline-md5: ${md5Of(BASELINE_PATH)}`)
+console.log(`[redline] count-md5: ${md5Of(COUNT_PATH)}`)
 
-// R7.6(b): TD-BACKEND-28 登记基线（expected 违规数）。棘轮语义：
+// R7.6(b) + R8.6(G25): TD-BACKEND-28 登记基线（expected 违规数）。棘轮语义：
 //   violations == 0            → exit 0（真绿）
 //   violations == expected     → exit 1（登记红，CI 允许——R7.6(c) workflow 语义）
 //   violations != 0 && != expected → exit 2（棘轮破坏：多了/少了都需人工核查）
+// R8.6: count 文件缺失/解析失败 → 不许静默降级（此前 catch 后 expectedCount=null 会
+// 走旧逻辑 exit 1，等同 fail-open）——直接 exit 2 + 明确文案。
 let expectedCount = null
-try { expectedCount = JSON.parse(fs.readFileSync(COUNT_PATH, 'utf-8')).expected } catch { }
+try {
+  expectedCount = JSON.parse(fs.readFileSync(COUNT_PATH, 'utf-8')).expected
+  if (typeof expectedCount !== 'number' || !Number.isInteger(expectedCount) || expectedCount < 0)
+    throw new Error('expected 字段必须是正整数')
+} catch (e) {
+  console.error(`[redline] FATAL: ${COUNT_PATH} 缺失或解析失败（${e.message}）——TD-BACKEND-28 棘轮基准必须存在，fail-closed（R8.6 G25，退出码 2）`)
+  process.exit(2)
+}
 
 let violations = 0
 let warnings = 0
@@ -633,9 +643,12 @@ if (violations === b0Violations) console.log('  OK  全部调用点均使用表�
 console.log(`  B5 例外放行 ${b5ExemptCount} 处（SafeQueryValidator.cs 动态构造，行为由 R5.1(b)(c)(d) 测试钉住）`)
 
 // ═══════════════════════════════════════════════════════════
-// 规则 B5 伴生（R7.7a G13）：名为 scope 的变量赋值右侧必须是 GetDataScope 运行时调用。
-// 首参门禁只认「名字叫 scope」——`var scope = CurrentUser.DataScope.All;` 可整体绕过
-// （G13 实测推断）。在掩码副本（注释被掩掉）上扫描 var scope = ...; 形态。
+// 规则 B5 伴生（R7.7a G13 + R8.5 G24 扩面）：名为 scope 的变量【任何赋值形态】右侧
+// 必须是 GetDataScope 运行时调用。首参门禁只认「名字叫 scope」——硬编码赋值可整体绕过。
+// R8.5 覆盖三种形态：
+//   形态1：var scope = ...;（R7.7 已有）
+//   形态2：CurrentUser.DataScope scope = ...;（显式类型声明）
+//   形态3：scope = ...;（后续重新赋值，行首形态，排除 var/类型声明前缀）
 // 纪律 17 偏差（R7.7 实测）：字面规则「右侧非 GetDataScope 一律 FAIL」会误伤合法的
 // DI `var scope = ctx.RequestServices.CreateScope()`（System.IServiceScope，类型与
 // DataScope 枚举不同、不可能传给 UserFilter*）——收紧为「右侧含 DataScope 标识符且
@@ -643,24 +656,33 @@ console.log(`  B5 例外放行 ${b5ExemptCount} 处（SafeQueryValidator.cs 动�
 // 用 matchAll（无 lastIndex 状态残留，R6.4 G3 教训直接应用）。
 // ═══════════════════════════════════════════════════════════
 const b5ScopeBefore = violations
+const b5ScopeRhsOk = (rhs) =>
+  /^(?:Security\s*\.\s*)?CurrentUser\s*\.\s*GetDataScope\s*\(/.test(rhs)
+  // R7.7 实测放行：`isAdmin ? DataScope.All : DataScope.AuthorizedProjects` 三目是
+  // GetDataScope(ctx) 的同构运行时判定（CurrentUser.cs:37-38 = IsAdmin ? All : AuthorizedProjects），
+  // 非硬编码绕过（KnowledgeBaseService.BuildScopeFilter 无 ctx，R5.4 语义等价迁移，
+  // 行为由 ProjectAuthzIsolationTests 三分支钉住）——已登记 FREEZE-CONTRACT 备注表。
+  || /^isAdmin\s*\?\s*(?:Security\s*\.\s*)?CurrentUser\s*\.\s*DataScope\.All\s*:\s*(?:Security\s*\.\s*)?CurrentUser\s*\.\s*DataScope\.AuthorizedProjects$/i.test(rhs)
+const b5ScopeForms = [
+  { name: 'var 声明', re: /\bvar\s+scope\s*=(?!=)\s*([^;]+);/g },
+  { name: '显式类型声明', re: /\b(?:Security\s*\.\s*)?CurrentUser\s*\.\s*DataScope\s+scope\s*=(?!=)\s*([^;]+);/g },
+  { name: '重新赋值', re: /^[ \t]*scope\s*=(?!=)\s*([^;]+);/gm },
+]
 for (const file of csFiles) {
   const content = fs.readFileSync(file, 'utf-8')
   const { masked } = scanCs(content)
-  for (const match of masked.matchAll(/\bvar\s+scope\s*=\s*([^;]+);/g)) {
-    const rhs = match[1].trim()
-    if (/^(?:Security\s*\.\s*)?CurrentUser\s*\.\s*GetDataScope\s*\(/.test(rhs)) continue
-    // R7.7 实测放行：`isAdmin ? DataScope.All : DataScope.AuthorizedProjects` 三目是
-    // GetDataScope(ctx) 的同构运行时判定（CurrentUser.cs:37-38 = IsAdmin ? All : AuthorizedProjects），
-    // 非硬编码绕过（KnowledgeBaseService.BuildScopeFilter 无 ctx，R5.4 语义等价迁移，
-    // 行为由 ProjectAuthzIsolationTests 三分支钉住）——已登记 FREEZE-CONTRACT 备注表。
-    if (/^isAdmin\s*\?\s*(?:Security\s*\.\s*)?CurrentUser\s*\.\s*DataScope\.All\s*:\s*(?:Security\s*\.\s*)?CurrentUser\s*\.\s*DataScope\.AuthorizedProjects$/i.test(rhs)) continue
-    if (!/\bDataScope\b/.test(rhs)) continue // DI CreateScope 等非 DataScope 形态合法
-    const line = lineOf(content, match.index)
-    console.log(`  HARD FAIL  ${rel(file)}:${line}: B5 伴生规则 var scope = ${rhs.slice(0, 60)}——scope 必须来自 CurrentUser.GetDataScope(ctx)（R7.7 G13，硬编码 DataScope.All 可绕过首参门禁）`)
-    violations++
+  for (const form of b5ScopeForms) {
+    for (const match of masked.matchAll(form.re)) {
+      const rhs = match[1].trim()
+      if (b5ScopeRhsOk(rhs)) continue
+      if (!/\bDataScope\b/.test(rhs)) continue // DI CreateScope 等非 DataScope 形态合法
+      const line = lineOf(content, match.index)
+      console.log(`  HARD FAIL  ${rel(file)}:${line}: B5 伴生规则（${form.name}）scope = ${rhs.slice(0, 60)}——scope 必须来自 CurrentUser.GetDataScope(ctx)（R7.7 G13 / R8.5 G24，硬编码 DataScope 可绕过首参门禁）`)
+      violations++
+    }
   }
 }
-if (violations === b5ScopeBefore) console.log('  OK  全部 var scope 赋值均来自 GetDataScope（B5 伴生规则）')
+if (violations === b5ScopeBefore) console.log('  OK  全部 scope 赋值均来自 GetDataScope（B5 伴生规则，三形态）')
 
 // ═══════════════════════════════════════════════════════════
 // 规则 B6（R5.4b + R6.4 + R7.7 收紧）：消灭手写 project_authorizations 过滤副本

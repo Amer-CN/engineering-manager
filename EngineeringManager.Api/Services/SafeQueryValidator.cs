@@ -690,6 +690,23 @@ public static class SafeQueryValidator
         {
             ValidateDerivedQuery(subquery.Query, aliasToTable, referencedTables, occurrences, depth + 1);
         }
+        else if (expr is Expression.LiteralValue
+                 || expr is Expression.Wildcard
+                 || expr is Expression.QualifiedWildcard)
+        {
+            // R8.4 处置（补进枚举）：LiteralValue（标量常量：数字/字符串/布尔/NULL）、
+            // Wildcard/QualifiedWildcard（如 COUNT(*) 参数）不含列引用、无数据范围风险，
+            // 原注释「无需递归」声明的语义——补显式枚举让声明成为代码（14 个变红测试
+            // 全系 LiteralValue 分支缺失所致，REPLACE 函数参数 / 1 = 1 / i.id = 3 等）。
+        }
+        else
+        {
+            // R8.4(G23): fail-closed default——未知表达式类型不再静默放行。
+            // 静态推断会被 TDD 测试钉住：新增表达式类型若未枚举，此 throw 会暴露
+            // （同时拒绝该查询，宁可 500/拒绝也不静默跳过列校验）。
+            throw new ValidationException(
+                $"不支持的表达式类型：{expr.GetType().Name}（R8.4 fail-closed，未枚举的表达式分支）");
+        }
         // LiteralValue / Wildcard / QualifiedWildcard / 等不含列引用，无需递归
     }
 
