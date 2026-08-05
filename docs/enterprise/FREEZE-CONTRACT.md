@@ -131,10 +131,10 @@
 
 
 
-### 门禁口径变化备注表（R4/R5，TD-BACKEND-28 条目下）
+### 门禁口径变化备注表（R4/R5/R6，TD-BACKEND-28 条目下）
 
-**重要**：TD-BACKEND-28 的 28 这个数字在 R4/R5 多轮口径调整后仍为 28，
-「28 不变」≠「口径不变」。以下逐项记录 R4/R5 对 check-backend-rules 的门禁口径变化，
+**重要**：TD-BACKEND-28 的 28 这个数字在 R4/R5/R6 多轮口径调整后仍为 28，
+「28 不变」≠「口径不变」。以下逐项记录 R4/R5/R6 对 check-backend-rules 的门禁口径变化，
 下一轮以本表为基准比对，任何新增放宽必须在此登记。
 
 | # | 变化 | 类型 | 原因/说明 |
@@ -147,6 +147,9 @@
 | 6 | B5 限定符黑名单：pa_authz / project_authorizations（R5.2） | 收紧 | 自引用限定符 → 自比较恒真 → 越权；守卫与 B5 双重拦截 |
 | 7 | B6 新增：手写 project_authorizations 过滤副本（SELECT 1 FROM project_authorizations 签名） | 收紧（新规则） | 消灭绕过 helper 的手写副本（R5.4 迁移 settlements/invoices/BuildScopeFilter 三处）；白名单为空；授权表自身管理端点（SELECT pa.* / INSERT INTO）天然不匹配该签名 |
 | 8 | B3 catch 日志（无变化） | — | R5.1(e) 新增 runSafeQuery 校验 catch 已含 Console.Error.WriteLine，未触基线 |
+| 9 | B5 限定符引用归一化：剥离 [] / "" / `` 后比对黑名单（R6.2） | 收紧 | G4：带引号的 "[pa_authz].project_id" / "`pa_authz`.project_id" / "[project_authorizations].project_id" 此前绕过黑名单（限定符原样比对）→ 恒真自比较越权；守卫 NormalizeQualifier + B5 normalizeSqlQualifier 双重归一化；DataScopeTests 回归测试钉住 3 形态 |
+| 10 | B5 首参门禁：必须为 scope 变量或 CurrentUser.GetDataScope(ctx)；硬编码 DataScope.All → HARD FAIL；同规则覆盖 UserFilterCompany（R6.3） | 收紧（新签名） | G2：调用点硬编码 DataScope.All 作首参 → UserFilter* 返回 (1=1) 恒真 → 全员可见全部数据；现有全部调用点均合规（存量 28 不变），破坏性自证（ContractEndpoints/MemberEndpoints 合成 .All）双红后还原 |
+| 11 | B6 收紧（R6.4）：修复 lastIndex bug（去掉 /g 标志）+ 新增形态 B「相关比较」签名（project_id = x.project_id / x.project_id = project_id，限定符非 @ 参数）+ 形态 A 支持带引号表名 | 收紧（修复+新签名） | G3：全局正则 test() 复用 lastIndex 交替漏检（同文件两个副本时第二个被跳过）；G5：SELECT 1 FROM 签名过窄，相关比较/JOIN ON 裸右/带引号表名形态可绕过；负向对照（AuthEndpoints 5 条 SQL + CanAccessProject COUNT）实测保持绿色；5 形态自证 fixture 全部命中后删除 |
 ### encoding-baseline = 1 正式登记（R4.4，豁免三条件第 2 条补齐）
 
 - **债**：check-encoding 报 1 处 U+FFFD（src/utils/useWorkerImport.ts），为有意正则（编码检测逻辑），非乱码。
@@ -169,4 +172,5 @@
 | 1 | TD-XUNIT-SERIAL | xUnit 全局 disableParallelization | `_cachedEdition` 是全局可变静态，xUnit 并行会互相污染（EditionFreezeEndpointsTests 切换 edition 与依赖 enterprise 的测试类竞态）。已 `[assembly: CollectionBehavior(DisableTestParallelization = true)]`，代价：dotnet test 串行 5m29s。根治方向：edition 判定脱离静态缓存（F1 已让映射测试退役反射，但端点测试仍依赖）。 |
 | 2 | TD-EDITION-REFLECT | 端点冻结测试用反射改 `_cachedEdition` | F1 已让【映射】测试退役「反射改 _cachedEdition + 环境变量」手法（改为 Resolve 纯函数），但【端点】测试（EditionFreezeEndpointsTests）又复活了它：用「临时设 env + 反射清缓存」在端点级切换 edition。如实写明：这是 GetEdition 薄壳静态缓存 + config 路径硬编码 %APPDATA% 的必然结果，端点级无干净状态可拿。根治方向：GetEdition 可注入 configPath（F2 范围）。**新增端点级冻结/隔离测试沿用反射切换，已知代价：必须串行 + 需自行还原全局状态（R2.3 已为 CostLedgerIsolationTests 补齐「存旧值→finally 还原 env + 删除注入用户」的还原纪律）。** |
 | 3 | TD-E2E-ROOTCAUSE-HYPOTHESIS | E2E 根因归因未证实 | 「runner 清理跨步骤子进程」是假说（见上）。单步骤方案有效性不依赖该假说，但若真因是 -PassThru 句柄变化等其他机制，其他 job 的后台进程也可能受影响，需留意。 |
+| 4 | TD-PERM-MATRIX-DRIFT（R6.7 G10） | agent 工具路径 GetUserPermissions 硬编码 Common.GetDefaultPermissions，与前端 HasPermission 读取 DB roles.permissions 口径不一致 | 实测（R6.7 测试钉住）：worker 默认权限 = [dashboard/projects/members/wages:read]，不含 safeQuery:read；manager 含。但 DB roles.permissions 若被管理员自定义（或默认种子与硬编码漂移），agent 路径仍按硬编码判定 → 两端权限口径可能不一致（一边放行一边拒绝）。风险方向：agent 路径更严格（默认值不含自定义放行）→ 无越权，只有可用性差异。仅登记不修复（R6.7）；根治方向：GetUserPermissions 改为读 DB roles.permissions（与 HasPermission 同源），需统一缓存策略与 fail-closed 语义。 |
 
