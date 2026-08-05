@@ -142,6 +142,8 @@ public static class CostLedgerEndpoints
         app.MapPost("/api/cost-ledger/categories/reset", (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // C-4 T1: 全表清空分类，仅 settings:update（admin）——破坏性端点
+            if (!CurrentUser.HasPermission(ctx, db, "settings:update")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             db.Execute("DELETE FROM cost_ledger_categories");
             return Common.Ok();
