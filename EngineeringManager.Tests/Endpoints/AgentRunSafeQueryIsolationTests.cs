@@ -127,6 +127,14 @@ public class AgentRunSafeQueryIsolationTests : ApiTestBase
 
         // 反向1（泄漏断言）：未授权项目他人记录的 amount（300）不得出现在结果里
         Assert.DoesNotContain(rows, r => r.GetProperty("amount").GetDouble() == 300);
+
+        // R7.5(G17): 正向对照——过滤不得过头。ON 1=1 交叉连接 3×3=9 对，双过滤注入
+        // （a 与 b 各一条）作用于每对：两行都必须可见 → own×own + own×auth + auth×own +
+        // auth×auth = 4 行 {100,100,200,200}。返回 0 行也能通过反向断言，必须同时钉住
+        // 可见数据全部返回（审查方 R7.5 口径：行数==4、amount 集合=={100,200}）。
+        Assert.Equal(4, rows.Count);
+        var amounts = rows.Select(r => r.GetProperty("amount").GetDouble()).OrderBy(x => x).ToList();
+        Assert.Equal(new[] { 100d, 100d, 200d, 200d }, amounts);
     }
 
     /// <summary>
