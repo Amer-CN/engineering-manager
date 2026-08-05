@@ -216,7 +216,8 @@ public static class SystemEndpoints
         app.MapGet("/api/snapshots/max-count", (HttpContext ctx) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            return Common.Ok(200);
+            // 窗口 E：STUB 显式错误化 —— 此前硬编码 Ok(200)，设置上限被静默丢弃
+            return Common.Fail("snapshots/max-count 未实现（STUB）：快照上限设置尚未接通", 501);
         });
 
         app.MapPost("/api/snapshots/{id}/restore", (HttpContext ctx, string id) =>
@@ -240,7 +241,8 @@ public static class SystemEndpoints
         app.MapPut("/api/snapshots/max-count", (HttpContext ctx) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            return Common.Ok();
+            // 窗口 E：STUB 显式错误化 —— 此前静默 Ok()，前端弹「上限已设为 N」实际未落库
+            return Common.Fail("snapshots/max-count 未实现（STUB）：快照上限设置尚未接通", 501);
         });
 
         // ═══════════════════════════════════════════════════════════
@@ -498,12 +500,14 @@ public static class SystemEndpoints
         app.MapPost("/api/health/export-json", (HttpContext ctx) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            return Common.Ok(new { exported = 0 });
+            // 窗口 E：STUB 显式错误化 —— 不再返回假 exported=0
+            return Common.Fail("export-json 未实现（STUB）：JSON 数据导出尚未接通", 501);
         });
         app.MapPost("/api/health/reconcile", (HttpContext ctx) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            return Common.Ok(new { reconciled = true });
+            // 窗口 E：STUB 显式错误化 —— 不再返回假 reconciled=true
+            return Common.Fail("reconcile 未实现（STUB）：数据对账尚未接通", 501);
         });
 
         // ═══════════════════════════════════════════════════════════
@@ -570,12 +574,8 @@ public static class SystemEndpoints
         app.MapPost("/api/sqlite/enable", (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            try
-            {
-                var tableCount = db.ExecuteScalar<int>("SELECT COUNT(*) FROM sqlite_master WHERE type='table'");
-                return Common.Ok(new { success = true, message = $"SQLite 已就绪，{tableCount} 张表" });
-            }
-            catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
+            // 窗口 E：STUB 显式错误化 —— 数据已原生 SQLite，「启用」是历史占位，不再假成功
+            return Common.Fail("sqlite/enable 未实现（STUB）：数据已原生 SQLite，无需启用", 501);
         });
 
         app.MapPost("/api/sqlite/migrate", (HttpContext ctx, IDbConnection db) =>

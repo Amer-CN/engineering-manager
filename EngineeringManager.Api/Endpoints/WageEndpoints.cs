@@ -116,25 +116,101 @@ public static class WageEndpoints
             return Common.Ok(new { count });
         });
 
-        app.MapPost("/api/attendances/generate", (HttpContext ctx, IDbConnection db) =>
+        // POST /api/attendances/generate — 生成默认考勤（staff 路径，窗口 E 接通本体）
+        // 语义：为 (projectId, yearMonth) 下尚未有考勤行的 memberId 补一行
+        //   「默认全勤」记录（work_days=当月天数，daily_status 全 work，与人事模块
+        //   「生成默认考勤 → 全勤 → 编辑调整」行为一致）；已有行一律跳过，天然幂等。
+        // 响应 = { success, data: { count } }，count 为本轮新建行数
+        app.MapPost("/api/attendances/generate", (HttpContext ctx, AttendanceGenerateDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var scope = CurrentUser.GetDataScope(ctx);
-            return Common.Ok(new { count = 0 });
+            if (dto is null || !dto.ProjectId.HasValue || string.IsNullOrEmpty(dto.YearMonth))
+                return Results.BadRequest(new { success = false, error = "generate: projectId / yearMonth 必填" });
+            if (!TryParseYearMonth(dto.YearMonth, out var year, out var month))
+                return Results.BadRequest(new { success = false, error = $"generate: yearMonth 格式须为 YYYY-MM，收到: {dto.YearMonth}" });
+            var projectId = dto.ProjectId.Value;
+            var days = DateTime.DaysInMonth(year, month);
+            var count = 0;
+            foreach (var memberId in dto.MemberIds ?? new List<long>())
+            {
+                var exists = db.ExecuteScalar<int>("SELECT COUNT(*) FROM attendances WHERE project_id=@ProjectId AND year_month=@YearMonth AND member_id=@MemberId",
+                    new { ProjectId = projectId, YearMonth = dto.YearMonth, MemberId = memberId });
+                if (exists > 0) continue;
+                db.Execute(@"INSERT INTO attendances (member_id,project_id,year_month,work_days,days_off,is_full_attendance,daily_status,created_by,created_at,updated_at,last_modified_at)
+                    VALUES (@MemberId,@ProjectId,@YearMonth,@WorkDays,0,1,@DailyStatus,@CreatedBy,@Now,@Now,@Now)",
+                    new { MemberId = memberId, ProjectId = projectId, YearMonth = dto.YearMonth,
+                          WorkDays = days, DailyStatus = AllWorkStatusJson(days), CreatedBy = uid, Now = now() });
+                count++;
+            }
+            return Common.Ok(new { count });
         });
 
-        app.MapPost("/api/attendances/generate-v2", (HttpContext ctx, IDbConnection db) =>
+        // POST /api/attendances/generate-v2 — 生成默认考勤（worker 路径，窗口 E 接通本体）
+        // 语义同上，按 project_worker_id 定位（工资页「生成考勤」按钮走此端点，
+        // 前端传该项目活跃工人的 pwIds）；worker 行 member_id 为 NULL
+        app.MapPost("/api/attendances/generate-v2", (HttpContext ctx, AttendanceGenerateV2Dto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var scope = CurrentUser.GetDataScope(ctx);
-            return Common.Ok(new { count = 0 });
+            if (dto is null || !dto.ProjectId.HasValue || string.IsNullOrEmpty(dto.YearMonth))
+                return Results.BadRequest(new { success = false, error = "generate-v2: projectId / yearMonth 必填" });
+            if (!TryParseYearMonth(dto.YearMonth, out var year, out var month))
+                return Results.BadRequest(new { success = false, error = $"generate-v2: yearMonth 格式须为 YYYY-MM，收到: {dto.YearMonth}" });
+            var projectId = dto.ProjectId.Value;
+            var days = DateTime.DaysInMonth(year, month);
+            var count = 0;
+            foreach (var pwId in dto.ProjectWorkerIds ?? new List<long>())
+            {
+                var exists = db.ExecuteScalar<int>("SELECT COUNT(*) FROM attendances WHERE project_id=@ProjectId AND year_month=@YearMonth AND project_worker_id=@PwId",
+                    new { ProjectId = projectId, YearMonth = dto.YearMonth, PwId = pwId });
+                if (exists > 0) continue;
+                db.Execute(@"INSERT INTO attendances (member_id,project_id,project_worker_id,year_month,work_days,days_off,is_full_attendance,daily_status,created_by,created_at,updated_at,last_modified_at)
+                    VALUES (NULL,@ProjectId,@PwId,@YearMonth,@WorkDays,0,1,@DailyStatus,@CreatedBy,@Now,@Now,@Now)",
+                    new { ProjectId = projectId, PwId = pwId, YearMonth = dto.YearMonth,
+                          WorkDays = days, DailyStatus = AllWorkStatusJson(days), CreatedBy = uid, Now = now() });
+                count++;
+            }
+            return Common.Ok(new { count });
         });
 
-        app.MapPost("/api/attendances/batch-import", (HttpContext ctx, IDbConnection db) =>
+        // POST /api/attendances/batch-import — 按出勤天数批量导入（Excel 导入路径）
+        // 语义：按 (projectId, yearMonth, projectWorkerId) 定位；存在 → 只刷新 work_days
+        //   （不动手工 daily_status / days_off），updated++；不存在 → 新建行，created++
+        // 响应 = { success, data: { created, updated } }
+        app.MapPost("/api/attendances/batch-import", (HttpContext ctx, AttendanceImportDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var scope = CurrentUser.GetDataScope(ctx);
-            return Common.Ok(new { created = 0, updated = 0 });
+            if (dto is null || !dto.ProjectId.HasValue || string.IsNullOrEmpty(dto.YearMonth))
+                return Results.BadRequest(new { success = false, error = "batch-import: projectId / yearMonth 必填" });
+            var projectId = dto.ProjectId.Value;
+            var created = 0;
+            var updated = 0;
+            var index = 0;
+            foreach (var item in dto.Records ?? new List<AttendanceImportItem>())
+            {
+                index++;
+                if (!item.ProjectWorkerId.HasValue || !item.WorkDays.HasValue)
+                    return Results.BadRequest(new { success = false, error = $"batch-import: 第 {index} 条缺失 projectWorkerId / workDays" });
+                var existingId = db.ExecuteScalar<long?>("SELECT id FROM attendances WHERE project_id=@ProjectId AND year_month=@YearMonth AND project_worker_id=@PwId",
+                    new { ProjectId = projectId, YearMonth = dto.YearMonth, PwId = item.ProjectWorkerId });
+                if (existingId.HasValue)
+                {
+                    db.Execute(@"UPDATE attendances SET work_days=@WorkDays,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id",
+                        new { WorkDays = item.WorkDays.Value, Id = existingId.Value, Now = now() });
+                    updated++;
+                }
+                else
+                {
+                    db.Execute(@"INSERT INTO attendances (member_id,project_id,project_worker_id,year_month,work_days,created_by,created_at,updated_at,last_modified_at)
+                        VALUES (NULL,@ProjectId,@PwId,@YearMonth,@WorkDays,@CreatedBy,@Now,@Now,@Now)",
+                        new { ProjectId = projectId, PwId = item.ProjectWorkerId, YearMonth = dto.YearMonth,
+                              WorkDays = item.WorkDays.Value, CreatedBy = uid, Now = now() });
+                    created++;
+                }
+            }
+            return Common.Ok(new { created, updated });
         });
 
         // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
@@ -324,18 +400,21 @@ public static class WageEndpoints
             return Common.Ok(new { unarchived = count });
         });
 
+        // 窗口 E：STUB 显式错误化 —— 批量回单匹配/确认未接通，不再假成功
+        // （回单解析走 OCR 是真功能，批量应用到工资单的这两步仍是占位；
+        //   此前返回空数组/0 让前端弹「成功确认 0 条」，用户无感知地丢失操作）
         app.MapPost("/api/wages/match-receipts", (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var scope = CurrentUser.GetDataScope(ctx);
-            return Common.Ok(Array.Empty<object>()); // 绠€鍖栫増
+            return Common.Fail("match-receipts 未实现（STUB）：批量回单匹配未接通，请逐条填写发放记录", 501);
         });
 
         app.MapPost("/api/wages/confirm-matches", (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var scope = CurrentUser.GetDataScope(ctx);
-            return Common.Ok(new { updated = 0 }); // 绠€鍖栫増
+            return Common.Fail("confirm-matches 未实现（STUB）：批量回单确认未接通，请逐条填写发放记录", 501);
         });
 
         app.MapGet("/api/wages/payment-records", (HttpContext ctx, IDbConnection db, long? projectId, string? yearMonth) =>
@@ -752,6 +831,22 @@ public static class WageEndpoints
 
     // 反序列化前端 camelCase 字段需用 Web 默认选项（camelCase + 大小写不敏感）
     private static readonly JsonSerializerOptions WebJson = new(JsonSerializerDefaults.Web);
+
+    // 窗口 E：考勤默认全勤的 daily_status JSON（{"1":"work",...,"N":"work"}）
+    private static string AllWorkStatusJson(int days) =>
+        JsonSerializer.Serialize(Enumerable.Range(1, days).ToDictionary(d => d, _ => "work"));
+
+    // 窗口 E：yearMonth 严格 YYYY-MM 校验（非法 → 400，不许 DaysInMonth 抛 500）
+    private static bool TryParseYearMonth(string yearMonth, out int year, out int month)
+    {
+        year = 0;
+        month = 0;
+        if (string.IsNullOrEmpty(yearMonth)) return false;
+        var parts = yearMonth.Split('-');
+        if (parts.Length != 2) return false;
+        return int.TryParse(parts[0], out year) && int.TryParse(parts[1], out month)
+            && year is >= 1 and <= 9999 && month is >= 1 and <= 12;
+    }
 }
 
 // B-1: 批量写入 DTO —— 字段名与前端 WageRecord（src/types/electron.d.ts）camelCase 一致
@@ -769,4 +864,11 @@ record WagePaymentItem(long? Id, double? PaidAmount, string? PaidDate, string? B
 
 // generate 入参：projectId + yearMonth（camelCase 由 Web 默认反序列化绑定）
 record WageGenerateDto(long? ProjectId, string? YearMonth);
+
+// 窗口 E：考勤生成/导入入参 —— camelCase 对齐 tauri-bridge 载荷
+// （generate 传 memberIds，generate-v2 传 projectWorkerIds，batch-import 传 records）
+record AttendanceGenerateDto(long? ProjectId, string? YearMonth, List<long>? MemberIds);
+record AttendanceGenerateV2Dto(long? ProjectId, string? YearMonth, List<long>? ProjectWorkerIds);
+record AttendanceImportDto(long? ProjectId, string? YearMonth, List<AttendanceImportItem>? Records);
+record AttendanceImportItem(long? ProjectWorkerId, double? WorkDays);
 

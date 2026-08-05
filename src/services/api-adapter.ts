@@ -154,9 +154,11 @@ function createMockAPI() {
     deleteAttendance: async () => ({ success: true }),
     batchDeleteAttendances: async () => ({ success: true, data: { deleted: 0 } }),
     batchCreateAttendances: async () => ({ success: true, data: { count: 0 } }),
-    generateDefaultAttendances: async () => ({ success: true, data: { count: 0 } }),
-    generateDefaultAttendancesV2: async () => ({ success: true, data: { count: 0 } }),
-    batchImportAttendances: async () => ({ success: true, data: { created: 0, updated: 0 } }),
+    // 窗口 E：mock 诚实化 —— 后端已实现本体，mock 无真实逻辑，不许假成功
+    // （与 OCR 同型：`Mock 环境不支持 X`，浏览器开发态点「生成考勤」会得到真实报错而非假 toast）
+    generateDefaultAttendances: async () => ({ success: false, error: 'Mock 环境不支持生成考勤（需连接后端 API）' }),
+    generateDefaultAttendancesV2: async () => ({ success: false, error: 'Mock 环境不支持生成考勤（需连接后端 API）' }),
+    batchImportAttendances: async () => ({ success: false, error: 'Mock 环境不支持导入考勤（需连接后端 API）' }),
     // 工资
     getWages: async () => ({ success: true, data: [] }),
     generateProjectWages: async () => ({ success: true, data: [], newCount: 0, archivedSkipped: 0 }),
@@ -167,8 +169,9 @@ function createMockAPI() {
     batchClearPayments: async () => ({ success: true, data: { cleared: 0 } }),
     archiveWages: async () => ({ success: true, data: { archived: 0 } }),
     getWageStats: async () => ({ success: true, data: { totalWage: 0, count: 0, projectBreakdown: [] } }),
-    matchBankReceiptItems: async () => ({ success: true, data: [] }),
-    batchConfirmMatches: async () => ({ success: true, data: { updated: 0 } }),
+    // 窗口 E：mock 诚实化 —— 回单批量匹配/确认后端为显式 501 STUB，mock 不许假成功
+    matchBankReceiptItems: async () => ({ success: false, error: 'Mock 环境不支持回单批量匹配（需连接后端 API）' }),
+    batchConfirmMatches: async () => ({ success: false, error: 'Mock 环境不支持回单批量确认（需连接后端 API）' }),
     // 审计日志
     auditLog: async () => ({ success: true }),
     auditQuery: async () => ({ success: true, data: { items: [], total: 0, page: 1, pageSize: 20, totalPages: 0 } }),
@@ -208,11 +211,12 @@ function createMockAPI() {
     // 数据健康
     dataConsistencyCheck: async () => ({ success: true, data: { tables: [], consistent: true } }),
     dataIntegrityCheck: async () => ({ success: true, data: { ok: true } }),
-    dataExportJson: async () => ({ success: true, data: { exported: 0 } }),
-    dataReconcile: async () => ({ success: true, data: { reconciled: true } }),
+    // 窗口 E：mock 诚实化 —— 后端为显式 501 STUB 的端点，mock 如实报错
+    dataExportJson: async () => ({ success: false, error: 'Mock 环境不支持导出 JSON（需连接后端 API）' }),
+    dataReconcile: async () => ({ success: false, error: 'Mock 环境不支持数据对账（需连接后端 API）' }),
     // SQLite
     sqliteStatus: async () => ({ success: true, data: { ready: true, mode: 'sqlite' } }),
-    sqliteEnable: async () => ({ success: true }),
+    sqliteEnable: async () => ({ success: false, error: 'Mock 环境不支持 sqlite 启用（需连接后端 API）' }),
     sqliteMigrate: async () => ({ success: true }),
     sqliteGetReadMode: async () => ({ success: true, data: 'sqlite' }),
     sqliteSetReadMode: async () => ({ success: true }),
