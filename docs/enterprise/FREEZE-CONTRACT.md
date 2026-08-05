@@ -129,6 +129,24 @@
 - **代价**：这 5 条在 CI 不再执行（本地仍全量执行——本机模型存在，已验证 7/7 全绿）；CI 后端 total 相应 −5。
 - **解除条件**：CI 增加确定性模型准备步骤（如 actions/cache 或显式下载到 GetEngineDir() 路径），验证连续绿后移除 filter 排除项并将本条目移出清单。
 
+
+
+### 门禁口径变化备注表（R4/R5，TD-BACKEND-28 条目下）
+
+**重要**：TD-BACKEND-28 的 28 这个数字在 R4/R5 多轮口径调整后仍为 28，
+「28 不变」≠「口径不变」。以下逐项记录 R4/R5 对 check-backend-rules 的门禁口径变化，
+下一轮以本表为基准比对，任何新增放宽必须在此登记。
+
+| # | 变化 | 类型 | 原因/说明 |
+|---|------|------|----------|
+| 1 | B1 插值白名单新增：projectFilterInvoices / projectFilterSettlements / projectFilterCostLedger | 放宽（逐条枚举） | R4.1 修复 AgentToolService dashboard 时按表拆分过滤器片段，三个新片段名入白名单 |
+| 2 | B1 新增机制：ALLOWED_SQL_INTERPOLATION_PATTERNS（正则模式白名单） | 放宽（机制升级） | R4.1 后 UserFilterWithAuthorizedProjects 带表名限定列实参，精确字符串枚举不可行（表名会增长），改正则模式匹配 |
+| 3 | B1 拼接切片窗口 80 → 240（before/after 两侧） | 放宽（窗口扩大） | 限定列调用文本超 80 字符被截断导致白名单失配（R4.2 实测）——这是扫描窗口修正，不是放行新形态 |
+| 4 | B5 例外 1 处：SafeQueryValidator.cs GetTableFilter 动态构造列名 | 显式例外 | projectCol 由 tableAlias 运行时拼装；行为由 R5.1(b)(c)(d) 测试钉住；B5 打印「例外放行 N 处」不许静默 |
+| 5 | B5 从形状匹配改为全枚举（R5.3） | 收紧（fail-open → fail-closed） | 形状不匹配的调用点（方法调用首参/插值串/成员访问实参）此前静默跳过；现一律 HARD FAIL |
+| 6 | B5 限定符黑名单：pa_authz / project_authorizations（R5.2） | 收紧 | 自引用限定符 → 自比较恒真 → 越权；守卫与 B5 双重拦截 |
+| 7 | B6 新增：手写 project_authorizations 过滤副本（SELECT 1 FROM project_authorizations 签名） | 收紧（新规则） | 消灭绕过 helper 的手写副本（R5.4 迁移 settlements/invoices/BuildScopeFilter 三处）；白名单为空；授权表自身管理端点（SELECT pa.* / INSERT INTO）天然不匹配该签名 |
+| 8 | B3 catch 日志（无变化） | — | R5.1(e) 新增 runSafeQuery 校验 catch 已含 Console.Error.WriteLine，未触基线 |
 ### encoding-baseline = 1 正式登记（R4.4，豁免三条件第 2 条补齐）
 
 - **债**：check-encoding 报 1 处 U+FFFD（src/utils/useWorkerImport.ts），为有意正则（编码检测逻辑），非乱码。
