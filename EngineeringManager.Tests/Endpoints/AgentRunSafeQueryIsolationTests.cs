@@ -236,4 +236,29 @@ public class AgentRunSafeQueryIsolationTests : ApiTestBase
         Assert.DoesNotContain("R5.2 黑名单", error);
         Assert.DoesNotContain("校验异常", error);
     }
+
+    /// <summary>
+    /// R7.4(c): 成功路径审计——正常 runSafeQuery 必须落库 level='info' 行，
+    /// details 含 Rewritten 原文与 Result: success（G16(c)）。
+    /// </summary>
+    [Fact]
+    public async Task RunSafeQuery_SuccessPath_AuditInfoRow_WithRewrittenSql()
+    {
+        SeedData();
+
+        var args = JsonDocument.Parse("{\"sql\":\"SELECT id, amount FROM invoices\"}").RootElement;
+        var tools = new AgentToolService(new FakeEmbeddingService());
+        using var conn = new SqliteConnection(ConnectionString);
+        conn.Open();
+
+        var result = await tools.ExecuteToolAsync("runSafeQuery", args, CreateManagerContext(), conn);
+        Assert.True(result.Success, "runSafeQuery 工具应成功： " + (result.Error ?? ""));
+
+        var details = conn.ExecuteScalar<string>(
+            "SELECT details FROM audit_logs WHERE action='safe_query' AND level='info' AND user_id=@Uid ORDER BY rowid DESC LIMIT 1",
+            new { Uid = ManagerUid });
+        Assert.NotNull(details);
+        Assert.Contains("Rewritten: SELECT id, amount FROM invoices", details);
+        Assert.Contains("Result: success", details);
+    }
 }

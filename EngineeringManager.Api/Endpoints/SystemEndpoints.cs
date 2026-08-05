@@ -118,7 +118,7 @@ public static class SystemEndpoints
             try
             {
                 await db.ExecuteAsync(@"INSERT INTO audit_logs
-                    (action,level,user_id,user_name,resource_type,resource_id,details,ip_address,created_at)
+                    (action,level,user_id,user_name,resource,resource_id,details,ip_address,created_at)
                     VALUES (@Action,@Level,@UserId,@UserName,@Resource,@ResourceId,@Details,@IpAddress,@CreatedAt)",
                     new { entry.Action, Level = entry.Level ?? "info", entry.UserId, entry.UserName,
                           Resource = entry.Resource, ResourceId = entry.ResourceId,
@@ -147,7 +147,7 @@ public static class SystemEndpoints
                 totalCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM audit_logs{w}", param),
                 todayCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM audit_logs WHERE created_at >= @Today{userFilter}", new { Uid = uid, Today = todayStr }),
                 actionCounts = db.Query($"SELECT action, COUNT(*) as count FROM audit_logs{w} GROUP BY action", param),
-                resourceCounts = db.Query($"SELECT resource_type, COUNT(*) as count FROM audit_logs{w} GROUP BY resource_type", param),
+                resourceCounts = db.Query($"SELECT resource, COUNT(*) as count FROM audit_logs{w} GROUP BY resource", param),
                 topUsers = isAdmin == 1 ? db.Query($"SELECT user_id, user_name, COUNT(*) as count FROM audit_logs{w} GROUP BY user_id, user_name ORDER BY count DESC LIMIT 10", param) : Array.Empty<object>(),
             });
         });
