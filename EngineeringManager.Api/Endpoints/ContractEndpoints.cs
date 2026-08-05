@@ -187,6 +187,8 @@ public static class ContractEndpoints
         app.MapPut("/api/contracts/income", async (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // C-4: 服务端权限检查（门禁5）
+            if (!CurrentUser.HasPermission(ctx, db, "contracts:update")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             // 修复: 原 dynamic dto + 参数只传 Uid/IsAdmin/Now 导致 @Id/@Name 等全部缺参必 500(与 expense/agreement 同批改造时漏改)
@@ -229,6 +231,8 @@ public static class ContractEndpoints
         app.MapPut("/api/contracts/expense", async (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // C-4: 服务端权限检查（门禁5）
+            if (!CurrentUser.HasPermission(ctx, db, "contracts:update")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             using var reader = new System.IO.StreamReader(ctx.Request.Body);
@@ -269,6 +273,8 @@ public static class ContractEndpoints
         app.MapPut("/api/contracts/agreement", async (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // C-4: 服务端权限检查（门禁5）
+            if (!CurrentUser.HasPermission(ctx, db, "contracts:update")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             using var reader = new System.IO.StreamReader(ctx.Request.Body);
@@ -289,6 +295,8 @@ public static class ContractEndpoints
         app.MapDelete("/api/contracts/income/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // C-4: 服务端权限检查（门禁5）
+            if (!CurrentUser.HasPermission(ctx, db, "contracts:delete")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             return await Common.WriteResult(await db.ExecuteAsync("DELETE FROM income_contracts WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin }), db, "income_contracts", id);
@@ -297,6 +305,8 @@ public static class ContractEndpoints
         app.MapDelete("/api/contracts/expense/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // C-4: 服务端权限检查（门禁5）
+            if (!CurrentUser.HasPermission(ctx, db, "contracts:delete")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             return await Common.WriteResult(await db.ExecuteAsync("DELETE FROM expense_contracts WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin }), db, "expense_contracts", id);
@@ -305,6 +315,8 @@ public static class ContractEndpoints
         app.MapDelete("/api/contracts/agreement/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // C-4: 服务端权限检查（门禁5）
+            if (!CurrentUser.HasPermission(ctx, db, "contracts:delete")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             return await Common.WriteResult(await db.ExecuteAsync("DELETE FROM agreement_contracts WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin }), db, "agreement_contracts", id);
@@ -457,6 +469,8 @@ public static class ContractEndpoints
         app.MapDelete("/api/settlements/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // C-4: 服务端权限检查（门禁5）
+            if (!CurrentUser.HasPermission(ctx, db, "settlement:delete")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             return await Common.WriteResult(await db.ExecuteAsync("UPDATE settlements SET deleted_at=@Now WHERE id=@Id AND deleted_at IS NULL AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin, Now = now() }), db, "settlements", id);
@@ -464,6 +478,8 @@ public static class ContractEndpoints
         app.MapPut("/api/settlements/{id}/process", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // C-4: 服务端权限检查（门禁5；码经 037 追加，admin+accountant）
+            if (!CurrentUser.HasPermission(ctx, db, "settlement:approve")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             // 补 user-dim 越权保护(对齐 DELETE)
             var affected = await db.ExecuteAsync(@"UPDATE settlements SET status='processed',updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND deleted_at IS NULL AND (created_by=@Uid OR @IsAdmin=1)",
