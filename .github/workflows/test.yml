@@ -133,11 +133,10 @@ jobs:
         # 退出码 2（棘轮破坏：违规数 != 28）视为失败。
         shell: bash
         run: |
-          # GHA bash 默认 -e：node 非零退出会中止 step，必须先捕获
-          if node scripts/check-backend-rules.cjs; then
-            exit 0
-          fi
-          code=$?
+          # R8.3(G22): 显式捕获 node 退出码（if-cmd 后取 $? 语义含歧义）——
+          # code=0 初始化 + `|| code=$?`：0 真绿 / 1 登记红（允许）/ 2 棘轮破坏（失败）
+          code=0
+          node scripts/check-backend-rules.cjs || code=$?
           if [ "$code" -eq 1 ]; then
             echo "::notice::Registered red baseline (TD-BACKEND-28, expected count in scripts/backend-redline-count.json). Allowed."
             exit 0

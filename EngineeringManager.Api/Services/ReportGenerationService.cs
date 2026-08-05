@@ -132,7 +132,7 @@ public class ReportGenerationService
 
         // 分组统计：resource_type
         var resourceCounts = (await db.QueryAsync(
-            $"SELECT [resource_type], COUNT(*) AS [count] FROM [audit_logs] {sql} GROUP BY [resource_type]", param)).ToList();
+            $"SELECT [resource], COUNT(*) AS [count] FROM [audit_logs] {sql} GROUP BY [resource]", param)).ToList();
 
         // 分组统计：user
         var userCounts = (await db.QueryAsync(
@@ -141,7 +141,7 @@ public class ReportGenerationService
 
         // 留痕明细（上限 50 条）
         var details = (await db.QueryAsync(
-            $"SELECT [action], [user_name], [resource_type], [resource_id], [details], [created_at] FROM [audit_logs] {sql} ORDER BY [created_at] DESC LIMIT 50",
+            $"SELECT [action], [user_name], [resource], [resource_id], [details], [created_at] FROM [audit_logs] {sql} ORDER BY [created_at] DESC LIMIT 50",
             param)).ToList();
 
         // 总数
