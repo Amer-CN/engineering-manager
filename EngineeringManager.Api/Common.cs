@@ -138,7 +138,7 @@ public static class Common
                       "partners:read","members:read","wages:read","settlement:read","invoices:read",
                       "inventory:read","inventory:create","inventory:update",
                       "costLedger:read","settings:read","users:read","roles:read","audit_logs:read",
-                      "drawings:create","drawings:update",
+                      "drawings:create","drawings:read","drawings:update",
                       "reports:create","reports:read",
                       "labor:read","safeQuery:read","knowledge:read"],
         "accountant" => ["dashboard:read","projects:read","contracts:read","contracts:export","members:read",
