@@ -311,6 +311,19 @@ public static class WageEndpoints
             return Common.Ok(new { archived = count });
         });
 
+        // 与 archive 对称的解锁端点：payment_locked 1 → 0（D-10-2）
+        app.MapPost("/api/wages/batch-unarchive", async (HttpContext ctx, List<long> ids, IDbConnection db) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var scope = CurrentUser.GetDataScope(ctx);
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var count = 0;
+            foreach (var id in ids)
+                count += await db.ExecuteAsync("UPDATE wages SET payment_locked=0,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
+                    new { Id = id, Uid = uid, IsAdmin = isAdmin, Now = now() });
+            return Common.Ok(new { unarchived = count });
+        });
+
         app.MapPost("/api/wages/match-receipts", (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
@@ -475,9 +488,11 @@ public static class WageEndpoints
                 if (missing.Count > 0)
                     return Results.BadRequest(new { success = false, error = $"batch-payment: 第 {index} 条缺失字段: {string.Join(", ", missing)}" });
                 // 只 SET 付款列 + 时间戳/版本；一个工资列都不许出现在 SET 里。
+                // bank_receipt_path 缺省 = 不改（COALESCE），清空必须走 batch-clear-payments；
+                // paid_date 为必填（上方 400 兜底），无缺省问题。
                 // saved 取 ExecuteAsync 实际影响行数累加（不许用入参长度）
                 var affected = await db.ExecuteAsync(@"UPDATE wages SET
-                        paid_amount=@PaidAmount, paid_date=@PaidDate, bank_receipt_path=@BankReceiptPath,
+                        paid_amount=@PaidAmount, paid_date=@PaidDate, bank_receipt_path=COALESCE(@BankReceiptPath, bank_receipt_path),
                         updated_at=@Now, version=version+1, last_modified_at=@Now
                     WHERE id=@Id AND deleted_at IS NULL
                       AND COALESCE(payment_locked, 0) = 0

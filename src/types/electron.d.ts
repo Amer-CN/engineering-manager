@@ -1167,6 +1167,7 @@ export interface ElectronAPI {
   batchDeleteWages: (ids: number[]) => Promise<{ success: boolean; data?: { deleted: number }; error?: string }>
   batchClearPayments: (ids: number[]) => Promise<{ success: boolean; data?: { cleared: number }; error?: string }>
   batchArchivePayments: (ids: number[]) => Promise<{ success: boolean; data?: { archived: number }; error?: string }>
+  batchUnarchiveWages: (ids: number[]) => Promise<{ success: boolean; data?: { unarchived: number }; error?: string }>
   getWageStats: (yearMonth?: string, projectId?: number) => Promise<{ success: boolean; data?: WageStats; error?: string }>
   parseBankReceipt: (sourcePath: string, projectName?: string, yearMonth?: string) => Promise<{ success: boolean; data?: ParsedBankReceipt; error?: string }>
   batchParseBankReceipts: (filePaths: string[], projectId?: number, yearMonth?: string) => Promise<{ success: boolean; data?: BatchParseResult; error?: string }>

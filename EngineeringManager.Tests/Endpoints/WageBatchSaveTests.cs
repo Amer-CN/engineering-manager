@@ -367,6 +367,67 @@ public class WageBatchSaveTests : ApiTestBase
     }
 
     [Fact]
+    public async Task BatchPayment_MissingBankReceiptPath_KeepsExisting()
+    {
+        var id = await SeedWageRowAsync();
+        using (var conn = new SqliteConnection(ConnectionString))
+        {
+            conn.Execute("UPDATE wages SET bank_receipt_path='/x/y.pdf' WHERE id=@Id", new { Id = id });
+        }
+        var token = await LoginAsync();
+        SetAuth(token);
+
+        // 只带 id/paidAmount/paidDate，不带 bankReceiptPath → 不得清空既有回单路径
+        var resp = await Client.PostAsJsonAsync("/api/wages/batch-payment",
+            new[] { new { id, paidAmount = 4450, paidDate = "2026-08-05" } });
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var data = await GetDataAsync(resp);
+        Assert.Equal(1, data.GetProperty("saved").GetInt32());
+
+        using var verifyConn = new SqliteConnection(ConnectionString);
+        var path = verifyConn.ExecuteScalar<string>("SELECT bank_receipt_path FROM wages WHERE id=@Id", new { Id = id });
+        Assert.Equal("/x/y.pdf", path);   // 缺省 = 不改；清空必须走 batch-clear-payments
+    }
+
+    [Fact]
+    public async Task BatchUnarchive_ThenBatchPayment_Succeeds()
+    {
+        var id = await SeedWageRowAsync();
+        var token = await LoginAsync();
+        SetAuth(token);
+
+        // 归档 → 锁定，付款被跳过
+        var arch = await Client.PostAsJsonAsync("/api/wages/archive", new[] { id });
+        Assert.Equal(HttpStatusCode.OK, arch.StatusCode);
+        var archData = await GetDataAsync(arch);
+        Assert.Equal(1, archData.GetProperty("archived").GetInt32());
+        using (var conn = new SqliteConnection(ConnectionString))
+        {
+            Assert.Equal(1L, conn.ExecuteScalar<long>("SELECT payment_locked FROM wages WHERE id=@Id", new { Id = id }));
+        }
+
+        // 解锁 → 付款应成功
+        var unarch = await Client.PostAsJsonAsync("/api/wages/batch-unarchive", new[] { id });
+        Assert.Equal(HttpStatusCode.OK, unarch.StatusCode);
+        var unarchData = await GetDataAsync(unarch);
+        Assert.Equal(1, unarchData.GetProperty("unarchived").GetInt32());
+        using (var conn = new SqliteConnection(ConnectionString))
+        {
+            Assert.Equal(0L, conn.ExecuteScalar<long>("SELECT payment_locked FROM wages WHERE id=@Id", new { Id = id }));
+        }
+
+        var pay = await Client.PostAsJsonAsync("/api/wages/batch-payment",
+            new[] { new { id, paidAmount = 4450, paidDate = "2026-08-05" } });
+        Assert.Equal(HttpStatusCode.OK, pay.StatusCode);
+        var payData = await GetDataAsync(pay);
+        Assert.Equal(1, payData.GetProperty("saved").GetInt32());
+        using (var conn = new SqliteConnection(ConnectionString))
+        {
+            Assert.Equal(445000L, conn.ExecuteScalar<long>("SELECT paid_amount FROM wages WHERE id=@Id", new { Id = id }));
+        }
+    }
+
+    [Fact]
     public async Task BatchPayment_MissingPaidDate_Returns400()
     {
         var id = await SeedWageRowAsync();
