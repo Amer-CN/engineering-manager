@@ -10,21 +10,6 @@ const path = require('path')
 
 const ROOT = path.resolve(__dirname, '..')
 
-// ── 历史豁免：已知权限缺口（待修复）──
-// 这 4 个权限码前端在用、后端 roles 表默认授予缺失 → can() 恒 false → 功能失效（详见 findings/PERMISSION-GAPS.md）。
-// 仅按权限码全等豁免；新出现的 B−C 一律照旧阻断。
-// 线索（门禁行号与源文件真实行号一致）：
-//   projects:export    → src/components/features/projects/ProjectFilters.tsx:61
-//   contracts:export   → src/components/ContractPage.tsx:111
-//   inventory:delete   → src/hooks/useInventoryPage.ts:75
-//   settlement:approve → src/components/features/settlement/SettlementProjectActions.tsx:116
-const LEGACY_EXEMPT = [
-  { perm: 'projects:export' },
-  { perm: 'contracts:export' },
-  { perm: 'inventory:delete' },
-  { perm: 'settlement:approve' },
-];
-
 // 绝对路径 → 相对路径（正斜杠），用于豁免匹配与展示
 const toRel = (p) => String(p).split('\\').join('/').replace(/^.*?\/src\//, 'src/');
 
@@ -133,20 +118,15 @@ if (A.size === 0) {
   sentinelFail = true;
 }
 
-// 判定：B−C 违反项先按 LEGACY_EXEMPT 权限码全等分流，豁免项计入 knownGaps 仍打印
+// 判定：B−C 违反项（历史 LEGACY_EXEMPT 已于窗口 C 随 037 迁移删除——4 个缺码
+// 已补入 GetDefaultPermissions，B−C 应为 0；再出现一律阻断）
 const violations = [];
-const knownGaps = [];
 for (const p of B) {
   if (!C.has(p)) {
     const detail = Bdetails.find(d => d.perm === p);
     const relFile = detail ? toRel(detail.file) : '?';
     const line = detail ? detail.line : -1;
-    const ex = LEGACY_EXEMPT.find(e => e.perm === p);
-    if (ex) {
-      knownGaps.push({ type: '已知缺口（待修复）', perm: p, file: relFile, line, form: detail ? detail.form : '?' });
-    } else {
-      violations.push({ type: 'B-C', perm: p, file: relFile, line, form: detail ? detail.form : '?' });
-    }
+    violations.push({ type: 'B-C', perm: p, file: relFile, line, form: detail ? detail.form : '?' });
   }
 }
 for (const p of B) {
@@ -169,10 +149,6 @@ console.log(`违反: ${violations.length}`);
 for (const v of violations) {
   if (v.file) console.log(`  ${v.type}: ${v.perm} @ ${v.file}:${v.line} (${v.form})`);
   else console.log(`  ${v.type}: ${v.perm} (${v.detail})`);
-}
-console.log(`已知缺口（待修复）: ${knownGaps.length} 条`);
-for (const v of knownGaps) {
-  console.log(`  已知缺口: ${v.perm} @ ${v.file}:${v.line} (${v.form})`);
 }
 
 if (sentinelFail) {
