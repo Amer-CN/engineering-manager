@@ -132,3 +132,5 @@ export function useProjects() {
 - **唯一没有测试覆盖的分支，就是唯一错的分支**。team-wages 的 `pw.daily_wage` 曾因「003 声明该列为分」而反向 ÷100（日薪 200 显示成 2），而 D-4/D-5 的测试恰好都没覆盖它。
 - **校验必须直接 `return Results.BadRequest(...)`，不能抛异常**。`Program.cs:330` 的全局 `UseExceptionHandler` 会把一切未处理异常包成 500 + 通用消息「服务器内部错误」，异常里的 400 状态码与字段名全部丢失。
 - **`schema_versions` 表存的是嵌入资源全名**（如 `EngineeringManager.Api.Migrations.Scripts.003_MoneyRealToInteger.sql`），不是文件名；查迁移应用状态时按此匹配。
+- **Dapper dynamic + LEFT JOIN 未命中 = DBNull，不是 null，`?? 0` 兜不住**。`Convert.ToDouble(row.col)` 对 DBNull 抛 InvalidCastException → 500；`?? 0` 只在值是 null 时兜底。兜底必须在 SQL 侧 `COALESCE(col, 0)`（窗口 D generate 端点实测复现）。
+- **DapperRow 对「未 SELECT 的列」返回 null 而非报错**（TryGetValue 静默兜底），`(long)null` 抛 RuntimeBinderException → 500。用 dynamic 行时，**SELECT 列表就是契约**：要读的列必须显式 SELECT 出来（窗口 D generate 端点既有行查询漏 SELECT id 实测复现）。

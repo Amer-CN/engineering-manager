@@ -80,7 +80,7 @@ public abstract class AgentIntegrationTestBase : ApiTestBase
         conn.Execute(
             "INSERT INTO projects (name, status, created_by, created_at, updated_at) VALUES (@Name, 'active', @CreatedBy, @Now, @Now)",
             new { Name = name, CreatedBy = createdBy, Now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") });
-        return (long)conn.ExecuteScalar("SELECT last_insert_rowid()");
+        return Convert.ToInt64(conn.ExecuteScalar("SELECT last_insert_rowid()"));
     }
 
     /// <summary>授权用户访问项目</summary>

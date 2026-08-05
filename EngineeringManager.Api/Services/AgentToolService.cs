@@ -663,7 +663,7 @@ public class AgentToolService
             {
                 if (dict.TryGetValue(field, out var val) && val is string str && !string.IsNullOrEmpty(str))
                 {
-                    dict[field] = Common.MaskPiiField(field, str, access);
+                    dict[field] = Common.MaskPiiField(field, str, access) ?? str;
                 }
             }
             return dict;

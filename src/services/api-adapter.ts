@@ -42,9 +42,9 @@ export async function getAPI() {
   // 优先使用 Electron API
   if (isElectron) {
     const api = window.electronAPI as any;
-    // D-9-4/D-10-2: 外部 preload 不在本仓，以下方法若未实现则显式报错
-    //（避免裸 TypeError，与 generateProjectWages 同型；preload 同步后自动走真实实现）
-    const notImplemented = ['batchSavePayments', 'batchUnarchiveWages']
+    // D-9-4/D-10-2/R-E1: 外部 preload 不在本仓，以下方法若未实现则显式报错
+    //（避免裸 TypeError；preload 同步后自动走真实实现）
+    const notImplemented = ['batchSavePayments', 'batchUnarchiveWages', 'generateProjectWages']
     const missing = notImplemented.filter((m) => typeof api?.[m] !== 'function')
     if (missing.length > 0) {
       return new Proxy(api, {

@@ -80,13 +80,12 @@ public class SttMutexGuardTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
         {
-            await SttMutexGuard.WithMutexAsync(
+            await SttMutexGuard.WithMutexAsync<int>(
                 mutex, lockObj, () => isRunning, v => isRunning = v,
                 async () =>
                 {
                     await Task.Yield();
                     throw new InvalidOperationException("工作异常");
-                    return 0; // unreachable
                 });
         });
 
@@ -262,13 +261,12 @@ public class SttMutexGuardTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
         {
-            await SttMutexGuard.WithMutexAsync(
+            await SttMutexGuard.WithMutexAsync<int>(
                 mutex, lockObj, () => isRunning, v => isRunning = v,
                 async () =>
                 {
                     await Task.Yield();
                     throw new InvalidOperationException("test");
-                    return 0;
                 });
         });
 

@@ -267,7 +267,7 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
                 var dict = (IDictionary<string, object>)row;
                 if (dict.TryGetValue("positions", out var pos) && pos is string posStr && !string.IsNullOrEmpty(posStr))
                 {
-                    try { dict["positions"] = System.Text.Json.JsonSerializer.Deserialize<List<string>>(posStr); }
+                    try { dict["positions"] = System.Text.Json.JsonSerializer.Deserialize<List<string>>(posStr) ?? new List<string>(); }
                     catch { dict["positions"] = new List<string>(); }
                 }
             }
