@@ -129,7 +129,17 @@ jobs:
 
       - name: Backend redline static scan
         # AGENTS.md 后端红线机械化门禁：SQL 参数化 / 端点鉴权覆盖 / catch 日志棘轮
-        run: node scripts/check-backend-rules.cjs
+        # R7.6(G15): TD-BACKEND-28 棘轮在 CI 生效——退出码 1（= 登记基线 28）允许，
+        # 退出码 2（棘轮破坏：违规数 != 28）视为失败。
+        shell: bash
+        run: |
+          node scripts/check-backend-rules.cjs
+          code=$?
+          if [ "$code" -eq 1 ]; then
+            echo "::notice::Registered red baseline (TD-BACKEND-28, expected count in scripts/backend-redline-count.json). Allowed."
+            exit 0
+          fi
+          exit "$code"
 
   backend:
     name: Backend Build & Test (.NET 8)

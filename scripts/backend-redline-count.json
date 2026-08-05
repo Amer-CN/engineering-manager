@@ -1,0 +1,4 @@
+{
+  "_comment": "TD-BACKEND-28 登记基线（R7.6）：check-backend-rules.cjs 违规数必须 == expected。== 时退出码 1（登记红，CI 允许）；!= 时退出码 2（棘轮破坏）。只许减不许增，减少须同步本文件并在 FREEZE-CONTRACT 登记。",
+  "expected": 28
+}

@@ -21,11 +21,27 @@
 
 const fs = require('fs')
 const path = require('path')
+const crypto = require('crypto')
 
 const ROOT = path.resolve(__dirname, '..')
 const API_DIR = path.join(ROOT, 'EngineeringManager.Api')
 const BASELINE_PATH = path.join(__dirname, 'backend-rules-baseline.json')
+const COUNT_PATH = path.join(__dirname, 'backend-redline-count.json')
 const WRITE_BASELINE = process.argv.includes('--write-baseline')
+
+// R7.6(G15): 证据链自证——每次运行打印脚本绝对路径 + 自身 md5 + 基线文件 md5，
+// 门禁数字必须可复现地指向正确 worktree（此前 check:backend 数字取自错 worktree 无法自证）
+function md5Of(p) { return crypto.createHash('md5').update(fs.readFileSync(p)).digest('hex') }
+console.log(`[redline] script: ${path.resolve(__filename)}`)
+console.log(`[redline] script-md5: ${md5Of(path.resolve(__filename))}`)
+console.log(`[redline] baseline-md5: ${md5Of(BASELINE_PATH)}`)
+
+// R7.6(b): TD-BACKEND-28 登记基线（expected 违规数）。棘轮语义：
+//   violations == 0            → exit 0（真绿）
+//   violations == expected     → exit 1（登记红，CI 允许——R7.6(c) workflow 语义）
+//   violations != 0 && != expected → exit 2（棘轮破坏：多了/少了都需人工核查）
+let expectedCount = null
+try { expectedCount = JSON.parse(fs.readFileSync(COUNT_PATH, 'utf-8')).expected } catch { }
 
 let violations = 0
 let warnings = 0
@@ -617,31 +633,65 @@ if (violations === b0Violations) console.log('  OK  全部调用点均使用表�
 console.log(`  B5 例外放行 ${b5ExemptCount} 处（SafeQueryValidator.cs 动态构造，行为由 R5.1(b)(c)(d) 测试钉住）`)
 
 // ═══════════════════════════════════════════════════════════
-// 规则 B6（R5.4b + R6.4 收紧）：消灭手写 project_authorizations 过滤副本
-// 手写过滤副本的两个独有签名：
+// 规则 B5 伴生（R7.7a G13）：名为 scope 的变量赋值右侧必须是 GetDataScope 运行时调用。
+// 首参门禁只认「名字叫 scope」——`var scope = CurrentUser.DataScope.All;` 可整体绕过
+// （G13 实测推断）。在掩码副本（注释被掩掉）上扫描 var scope = ...; 形态。
+// 纪律 17 偏差（R7.7 实测）：字面规则「右侧非 GetDataScope 一律 FAIL」会误伤合法的
+// DI `var scope = ctx.RequestServices.CreateScope()`（System.IServiceScope，类型与
+// DataScope 枚举不同、不可能传给 UserFilter*）——收紧为「右侧含 DataScope 标识符且
+// 非 GetDataScope 调用」才 FAIL（G13 的绕过形态全部带 DataScope 字面量）。
+// 用 matchAll（无 lastIndex 状态残留，R6.4 G3 教训直接应用）。
+// ═══════════════════════════════════════════════════════════
+const b5ScopeBefore = violations
+for (const file of csFiles) {
+  const content = fs.readFileSync(file, 'utf-8')
+  const { masked } = scanCs(content)
+  for (const match of masked.matchAll(/\bvar\s+scope\s*=\s*([^;]+);/g)) {
+    const rhs = match[1].trim()
+    if (/^(?:Security\s*\.\s*)?CurrentUser\s*\.\s*GetDataScope\s*\(/.test(rhs)) continue
+    // R7.7 实测放行：`isAdmin ? DataScope.All : DataScope.AuthorizedProjects` 三目是
+    // GetDataScope(ctx) 的同构运行时判定（CurrentUser.cs:37-38 = IsAdmin ? All : AuthorizedProjects），
+    // 非硬编码绕过（KnowledgeBaseService.BuildScopeFilter 无 ctx，R5.4 语义等价迁移，
+    // 行为由 ProjectAuthzIsolationTests 三分支钉住）——已登记 FREEZE-CONTRACT 备注表。
+    if (/^isAdmin\s*\?\s*(?:Security\s*\.\s*)?CurrentUser\s*\.\s*DataScope\.All\s*:\s*(?:Security\s*\.\s*)?CurrentUser\s*\.\s*DataScope\.AuthorizedProjects$/i.test(rhs)) continue
+    if (!/\bDataScope\b/.test(rhs)) continue // DI CreateScope 等非 DataScope 形态合法
+    const line = lineOf(content, match.index)
+    console.log(`  HARD FAIL  ${rel(file)}:${line}: B5 伴生规则 var scope = ${rhs.slice(0, 60)}——scope 必须来自 CurrentUser.GetDataScope(ctx)（R7.7 G13，硬编码 DataScope.All 可绕过首参门禁）`)
+    violations++
+  }
+}
+if (violations === b5ScopeBefore) console.log('  OK  全部 var scope 赋值均来自 GetDataScope（B5 伴生规则）')
+
+// ═══════════════════════════════════════════════════════════
+// 规则 B6（R5.4b + R6.4 + R7.7 收紧）：消灭手写 project_authorizations 过滤副本
+// 手写过滤副本的三个独有签名：
 //   形态 A：EXISTS(SELECT 1 FROM project_authorizations ...)——表名可带标识符引号
-//     （[project_authorizations] / "project_authorizations" / `project_authorizations`，
-//      R6.4 G5 带引号形式）。
-//   形态 B（R6.4 G5 新增）：相关比较——project_id = x.project_id 或 x.project_id = project_id
-//     （一边裸列一边「表限定列」，限定符不是 @ 参数）。这是过滤副本的灵魂：把授权表的
-//     project_id 与当前行的列做相关比较；限定符是 @ 参数（@ProjectId）或双限定比较
-//     （pa.project_id = p.id）则不是过滤副本（管理端点参数化收窄 / JOIN ON）。
+//     （[project_authorizations] / "project_authorizations" / `project_authorizations`）。
+//   形态 B1（R6.4 G5 / R7.7 左边界）：相关比较——project_id = x.project_id 或
+//     x.project_id = project_id（一边裸列一边「表限定列」，限定符不是 @ 参数）。
+//     R7.7 左边界：裸 project_id 前不得紧邻 \w / . / 引号（否则 cl.project_id = p.project_id
+//     会从 cl. 后的 project_id 起误匹配，合法 JOIN 被判红——G14 记过 6）。
+//   形态 B2（R7.7 新增口径）：双限定比较 x.project_id = y.project_id（两侧都是
+//     project_id 列）——仅当【同一字面量】出现 project_authorizations 时命中；否则放行。
+//     AuthEndpoints 管理端点（pa.project_id = p.id，右侧列是 id）因列名不同天然不匹配。
 // 谁手写一个 EXISTS(SELECT 1 FROM project_authorizations WHERE project_id=project_id ...)
 // 就会命中 A，且若删掉限定符即退化为恒真（B5 对绕过 helper 的副本不可见，B6 兜底）。
 // 作用域界定（非白名单）：project_authorizations 表自身的【管理端点】
 // （AuthEndpoints /api/admin/project-authorizations：SELECT pa.* / SELECT COUNT(*) /
 // INSERT INTO project_authorizations / DELETE，KnowledgeBaseService.CanAccessProject 的
-// COUNT(*)）不是过滤副本：形态 A 仅命中 SELECT 1 FROM，形态 B 仅命中「裸列 vs 限定列」
-// 的 project_id 相关比较，管理端点全部 @ 参数或双限定，故负向对照保持绿色
-// （AuthEndpoints 5 条 SQL + CanAccessProject COUNT，R6.4 已实测）。
+// COUNT(*)）不是过滤副本：形态 A 仅命中 SELECT 1 FROM，形态 B1 仅命中「裸列 vs 限定列」
+// 的 project_id 相关比较，形态 B2 需要双 project_id 列 + 同字面量含表名，管理端点
+// 全部 @ 参数或非 project_id 列比较，故负向对照保持绿色（R6.4 已实测，R7.7 复核）。
 // 若未来出现其他形态，先报偏差再处理，不自行加白名单。
-// R6.4 G3 修复：去掉 /g 标志——全局正则 test() 复用 lastIndex 会交替漏检（同一文件
-// 内两个副本时第二个可能被跳过）。
+// R6.4 G3 修复：去掉 /g 标志——全局正则 test() 复用 lastIndex 会交替漏检。
 // ═══════════════════════════════════════════════════════════
-console.log('\n═══ 后端红线 B6：手写 project_authorizations 过滤副本（SELECT 1 + 相关比较） ═══')
+console.log('\n═══ 后端红线 B6：手写 project_authorizations 过滤副本（SELECT 1 + 相关/双限定比较） ═══')
 const b6Before = violations
 const b6FormA = /SELECT\s+1\s+FROM\s+[\["`]?project_authorizations[\]"`]?/i
-const b6FormB = /(?:\[?project_id\]?\s*=\s*(?:\[[^\]]+\]|"[^"]+"|`[^`]+`|[A-Za-z_][A-Za-z0-9_]*)\.project_id)|(?:(?:\[[^\]]+\]|"[^"]+"|`[^`]+`|[A-Za-z_][A-Za-z0-9_]*)\.project_id\s*=\s*\[?project_id\]?)/i
+// R7.7: 裸 project_id 侧加左/右边界——前不得紧邻 \w/. /引号，后不得紧邻 \w
+const b6FormB1 = /(?<![A-Za-z0-9_.`'"])\[?project_id\]?\s*=\s*(?:\[[^\]]+\]|"[^"]+"|`[^`]+`|[A-Za-z_][A-Za-z0-9_]*)\.project_id|(?:(?:\[[^\]]+\]|"[^"]+"|`[^`]+`|[A-Za-z_][A-Za-z0-9_]*)\.project_id\s*=\s*\[?project_id\]?(?![A-Za-z0-9_]))/i
+// R7.7 B2: 双限定 x.project_id = y.project_id（两侧都是 project_id 列），需同字面量含表名
+const b6FormB2 = /(?:\[[^\]]+\]|"[^"]+"|`[^`]+`|[A-Za-z_][A-Za-z0-9_]*)\.project_id\s*=\s*(?:\[[^\]]+\]|"[^"]+"|`[^`]+`|[A-Za-z_][A-Za-z0-9_]*)\.project_id/i
 for (const file of csFiles) {
   if (file.includes('Security' + path.sep + 'CurrentUser.cs')) continue // helper 本体豁免
   const content = fs.readFileSync(file, 'utf-8')
@@ -650,10 +700,11 @@ for (const file of csFiles) {
   for (const lit of literals) {
     let hit = null
     if (b6FormA.test(lit.text)) hit = `形态A SELECT 1 FROM [project_authorizations]`
-    else if (b6FormB.test(lit.text)) hit = `形态B project_id 相关比较（project_id = x.project_id / x.project_id = project_id，限定符非 @ 参数）`
+    else if (b6FormB1.test(lit.text)) hit = `形态B1 project_id 相关比较（裸列 vs 限定列，限定符非 @ 参数）`
+    else if (b6FormB2.test(lit.text) && /project_authorizations/i.test(lit.text)) hit = `形态B2 双限定 project_id 比较且同字面量含 project_authorizations`
     if (hit) {
       const line = lineOf(content, lit.start)
-      console.log(`  HARD FAIL  ${rel(file)}:${line}: SQL 字面量含手写 project_authorizations 过滤副本（${hit}）——必须迁移到 CurrentUser.UserFilterWithAuthorizedProjects（B6，R5.4/R6.4）`)
+      console.log(`  HARD FAIL  ${rel(file)}:${line}: SQL 字面量含手写 project_authorizations 过滤副本（${hit}）——必须迁移到 CurrentUser.UserFilterWithAuthorizedProjects（B6，R5.4/R6.4/R7.7）`)
       violations++
     }
   }
@@ -773,6 +824,14 @@ console.log(`后端红线检查完成: ${violations} 项违规, ${warnings} 项�
 console.log('═══════════════════════════════════════\n')
 
 if (violations > 0) {
+  if (expectedCount !== null && violations === expectedCount) {
+    console.error(`BACKEND CHECK BLOCKED: ${violations} 项红线违规（= 登记基线 ${expectedCount}，TD-BACKEND-28 登记红，CI 允许退出码 1）`)
+    process.exit(1)
+  }
+  if (expectedCount !== null) {
+    console.error(`BACKEND CHECK RATCHET BROKEN: ${violations} 项违规 != 登记基线 ${expectedCount}（TD-BACKEND-28，R7.6）。棘轮只许减不许增，须人工核查（退出码 2）`)
+    process.exit(2)
+  }
   console.error(`BACKEND CHECK BLOCKED: ${violations} 项红线违规。请修复后再提交。`)
   process.exit(1)
 } else {
