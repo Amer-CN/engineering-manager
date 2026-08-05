@@ -106,6 +106,8 @@ public static class ProjectEndpoints
         app.MapPost("/api/projects", async (HttpContext ctx, ProjectDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // C-4: 服务端权限检查（门禁5）
+            if (!CurrentUser.HasPermission(ctx, db, "projects:create")) return Results.Forbid();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO projects (name,description,address,start_date,end_date,status,budget,project_manager_id,created_by,created_at,updated_at, last_modified_at) VALUES (@Name,@Description,@Address,@StartDate,@EndDate,@Status,@Budget,@ProjectManagerId,@CreatedBy,@Now,@Now, @Now);
                 SELECT last_insert_rowid();",
                 new { dto.Name, dto.Description, dto.Address, dto.StartDate, dto.EndDate,
@@ -129,6 +131,8 @@ public static class ProjectEndpoints
         app.MapDelete("/api/projects/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // C-4: 服务端权限检查（门禁5）
+            if (!CurrentUser.HasPermission(ctx, db, "projects:delete")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             return (await db.ExecuteAsync("DELETE FROM projects WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
         });
