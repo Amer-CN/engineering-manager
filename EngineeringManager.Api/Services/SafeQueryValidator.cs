@@ -27,6 +27,12 @@ public static class SafeQueryValidator
     /// <summary>
     /// 表名 → 允许查询的列名集合
     /// </summary>
+    /// <summary>
+    /// R6.1(G1): 表出现点（每个 FROM/JOIN 实例一条，含子查询合并），用于逐实例注入过滤——
+    /// 同一张表多次引用（self-join / JOIN 同表）时每个实例都必须被过滤，
+    /// Qualifier = 别名（有别名时）或表名（无别名时）。
+    /// </summary>
+    private readonly record struct TableOccurrence(string Qualifier, string Table);
     public static readonly Dictionary<string, HashSet<string>> TableWhitelist = new(StringComparer.OrdinalIgnoreCase)
     {
         ["projects"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -205,10 +211,12 @@ public static class SafeQueryValidator
         // 7. 收集所有被引用表并校验
         var aliasToTable = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var referencedTables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // R6.1(G1): 逐实例出现点（self-join / JOIN 同表时每实例一条）
+        var occurrences = new List<TableOccurrence>();
 
         try
         {
-            CollectTables(select.From, aliasToTable, referencedTables);
+            CollectTables(select.From, aliasToTable, referencedTables, occurrences);
         }
         catch (ValidationException ex)
         {
@@ -221,7 +229,7 @@ public static class SafeQueryValidator
         // 8. 校验列白名单
         try
         {
-            ValidateProjection(select.Projection, aliasToTable, referencedTables);
+            ValidateProjection(select.Projection, aliasToTable, referencedTables, occurrences);
         }
         catch (ValidationException ex)
         {
@@ -240,20 +248,20 @@ public static class SafeQueryValidator
         try
         {
             if (select.Selection != null)
-                ValidateExpressionColumns(select.Selection, aliasToTable, referencedTables);
+                ValidateExpressionColumns(select.Selection, aliasToTable, referencedTables, occurrences);
 
             // HAVING 引用投影别名时放行（SQLite 允许）
             if (!(select.Having is Expression.Identifier hid
                   && projectionAliases.Contains(hid.Ident.Value)))
             {
                 if (select.Having != null)
-                    ValidateExpressionColumns(select.Having, aliasToTable, referencedTables);
+                    ValidateExpressionColumns(select.Having, aliasToTable, referencedTables, occurrences);
             }
 
             if (select.GroupBy is GroupByExpression.Expressions groupByExprs)
             {
                 foreach (var ge in groupByExprs.ColumnNames)
-                    ValidateExpressionColumns(ge, aliasToTable, referencedTables);
+                    ValidateExpressionColumns(ge, aliasToTable, referencedTables, occurrences);
             }
 
             // ORDER BY 引用投影别名的标识符放行
@@ -264,7 +272,7 @@ public static class SafeQueryValidator
                     if (ob.Expression is Expression.Identifier oid
                         && projectionAliases.Contains(oid.Ident.Value))
                         continue;
-                    ValidateExpressionColumns(ob.Expression, aliasToTable, referencedTables);
+                    ValidateExpressionColumns(ob.Expression, aliasToTable, referencedTables, occurrences);
                 }
             }
         }
@@ -276,8 +284,8 @@ public static class SafeQueryValidator
         // 9. 使用 AST 回写 SQL 作为基础
         var rewrittenSql = query.ToSql();
 
-        // 10. 强制注入用户过滤（字符串层面）
-        rewrittenSql = InjectUserFilterAstAware(rewrittenSql, aliasToTable, referencedTables, scope);
+        // 10. 强制注入用户过滤（字符串层面，逐实例——R6.1 G1 修复）
+        rewrittenSql = InjectUserFilterAstAware(rewrittenSql, occurrences, scope);
 
         // 11. 强制 LIMIT（字符串兜底）
         rewrittenSql = EnsureLimit(rewrittenSql, 100);
@@ -319,29 +327,31 @@ public static class SafeQueryValidator
     private static void CollectTables(
         Sequence<TableWithJoins> fromClause,
         Dictionary<string, string> aliasToTable,
-        HashSet<string> referencedTables)
+        HashSet<string> referencedTables,
+        List<TableOccurrence> occurrences)
     {
         foreach (var tableWithJoins in fromClause)
         {
-            CollectTableFromFactor(tableWithJoins.Relation, aliasToTable, referencedTables);
+            CollectTableFromFactor(tableWithJoins.Relation, aliasToTable, referencedTables, occurrences);
 
             if (tableWithJoins.Joins != null)
             {
                 foreach (var join in tableWithJoins.Joins)
                 {
-                    CollectTableFromFactor(join.Relation, aliasToTable, referencedTables);
+                    CollectTableFromFactor(join.Relation, aliasToTable, referencedTables, occurrences);
                 }
             }
         }
     }
 
     /// <summary>
-    /// 从单个 TableFactor 中提取表信息
+    /// 从单个 TableFactor 中提取表信息（R6.1: 每个出现点记入 occurrences——self-join 时每实例一条）
     /// </summary>
     private static void CollectTableFromFactor(
         TableFactor factor,
         Dictionary<string, string> aliasToTable,
-        HashSet<string> referencedTables)
+        HashSet<string> referencedTables,
+        List<TableOccurrence> occurrences)
     {
         if (factor is TableFactor.Table table)
         {
@@ -352,6 +362,7 @@ public static class SafeQueryValidator
                 alias = table.Alias.Name.Value;
 
             referencedTables.Add(tableName);
+            occurrences.Add(new TableOccurrence(string.IsNullOrEmpty(alias) ? tableName : alias!, tableName));
 
             if (!string.IsNullOrEmpty(alias))
                 aliasToTable[alias] = tableName;
@@ -364,7 +375,7 @@ public static class SafeQueryValidator
         }
         else if (factor is TableFactor.Derived derived)
         {
-            ValidateDerivedQuery(derived.SubQuery, aliasToTable, referencedTables);
+            ValidateDerivedQuery(derived.SubQuery, aliasToTable, referencedTables, occurrences);
         }
         else
         {
@@ -378,7 +389,8 @@ public static class SafeQueryValidator
     private static void ValidateDerivedQuery(
         Query subQuery,
         Dictionary<string, string> parentAliasToTable,
-        HashSet<string> parentReferencedTables)
+        HashSet<string> parentReferencedTables,
+        List<TableOccurrence> parentOccurrences)
     {
         Select subSelect;
         try
@@ -390,23 +402,23 @@ public static class SafeQueryValidator
             throw new ValidationException("子查询中不支持集合操作");
         }
 
-        CollectTables(subSelect.From, parentAliasToTable, parentReferencedTables);
-        ValidateProjection(subSelect.Projection, parentAliasToTable, parentReferencedTables);
+        CollectTables(subSelect.From, parentAliasToTable, parentReferencedTables, parentOccurrences);
+        ValidateProjection(subSelect.Projection, parentAliasToTable, parentReferencedTables, parentOccurrences);
 
         // 额外校验子查询自己的 WHERE/GROUP/ORDER（嵌套子查询的场景）
         if (subSelect.Selection != null)
-            ValidateExpressionColumns(subSelect.Selection, parentAliasToTable, parentReferencedTables);
+            ValidateExpressionColumns(subSelect.Selection, parentAliasToTable, parentReferencedTables, parentOccurrences);
         if (subSelect.Having != null)
-            ValidateExpressionColumns(subSelect.Having, parentAliasToTable, parentReferencedTables);
+            ValidateExpressionColumns(subSelect.Having, parentAliasToTable, parentReferencedTables, parentOccurrences);
         if (subSelect.GroupBy is GroupByExpression.Expressions gbSub)
         {
             foreach (var ge in gbSub.ColumnNames)
-                ValidateExpressionColumns(ge, parentAliasToTable, parentReferencedTables);
+                ValidateExpressionColumns(ge, parentAliasToTable, parentReferencedTables, parentOccurrences);
         }
         if (subQuery.OrderBy != null)
         {
             foreach (var ob in subQuery.OrderBy.Expressions)
-                ValidateExpressionColumns(ob.Expression, parentAliasToTable, parentReferencedTables);
+                ValidateExpressionColumns(ob.Expression, parentAliasToTable, parentReferencedTables, parentOccurrences);
         }
     }
 
@@ -416,7 +428,8 @@ public static class SafeQueryValidator
     private static void ValidateProjection(
         Sequence<SelectItem> projection,
         Dictionary<string, string> aliasToTable,
-        HashSet<string> referencedTables)
+        HashSet<string> referencedTables,
+        List<TableOccurrence> occurrences)
     {
         foreach (var item in projection)
         {
@@ -444,7 +457,7 @@ public static class SafeQueryValidator
                 continue;
             }
 
-            ValidateExpressionColumns(expr, aliasToTable, referencedTables);
+            ValidateExpressionColumns(expr, aliasToTable, referencedTables, occurrences);
         }
     }
 
@@ -454,7 +467,8 @@ public static class SafeQueryValidator
     private static void ValidateExpressionColumns(
         Expression expr,
         Dictionary<string, string> aliasToTable,
-        HashSet<string> referencedTables)
+        HashSet<string> referencedTables,
+        List<TableOccurrence> occurrences)
     {
         if (expr is Expression.Identifier ident)
         {
@@ -507,7 +521,7 @@ public static class SafeQueryValidator
                     {
                         if (unnamed.FunctionArgExpression is FunctionArgExpression.FunctionExpression fe)
                         {
-                            ValidateExpressionColumns(fe.Expression, aliasToTable, referencedTables);
+                            ValidateExpressionColumns(fe.Expression, aliasToTable, referencedTables, occurrences);
                         }
                     }
                 }
@@ -515,115 +529,115 @@ public static class SafeQueryValidator
         }
         else if (expr is Expression.BinaryOp binOp)
         {
-            ValidateExpressionColumns(binOp.Left, aliasToTable, referencedTables);
-            ValidateExpressionColumns(binOp.Right, aliasToTable, referencedTables);
+            ValidateExpressionColumns(binOp.Left, aliasToTable, referencedTables, occurrences);
+            ValidateExpressionColumns(binOp.Right, aliasToTable, referencedTables, occurrences);
         }
         else if (expr is Expression.UnaryOp unaryOp)
         {
-            ValidateExpressionColumns(unaryOp.Expression, aliasToTable, referencedTables);
+            ValidateExpressionColumns(unaryOp.Expression, aliasToTable, referencedTables, occurrences);
         }
         else if (expr is Expression.Case caseExpr)
         {
             if (caseExpr.Operand != null)
-                ValidateExpressionColumns(caseExpr.Operand, aliasToTable, referencedTables);
+                ValidateExpressionColumns(caseExpr.Operand, aliasToTable, referencedTables, occurrences);
             foreach (var cond in caseExpr.Conditions)
-                ValidateExpressionColumns(cond, aliasToTable, referencedTables);
+                ValidateExpressionColumns(cond, aliasToTable, referencedTables, occurrences);
             foreach (var res in caseExpr.Results)
-                ValidateExpressionColumns(res, aliasToTable, referencedTables);
+                ValidateExpressionColumns(res, aliasToTable, referencedTables, occurrences);
             if (caseExpr.ElseResult != null)
-                ValidateExpressionColumns(caseExpr.ElseResult, aliasToTable, referencedTables);
+                ValidateExpressionColumns(caseExpr.ElseResult, aliasToTable, referencedTables, occurrences);
         }
         else if (expr is Expression.Cast cast)
         {
-            ValidateExpressionColumns(cast.Expression, aliasToTable, referencedTables);
+            ValidateExpressionColumns(cast.Expression, aliasToTable, referencedTables, occurrences);
         }
         else if (expr is Expression.Extract extract)
         {
-            ValidateExpressionColumns(extract.Expression, aliasToTable, referencedTables);
+            ValidateExpressionColumns(extract.Expression, aliasToTable, referencedTables, occurrences);
         }
         else if (expr is Expression.Substring substring)
         {
-            ValidateExpressionColumns(substring.Expression, aliasToTable, referencedTables);
+            ValidateExpressionColumns(substring.Expression, aliasToTable, referencedTables, occurrences);
             if (substring.SubstringFrom != null)
-                ValidateExpressionColumns(substring.SubstringFrom, aliasToTable, referencedTables);
+                ValidateExpressionColumns(substring.SubstringFrom, aliasToTable, referencedTables, occurrences);
             if (substring.SubstringFor != null)
-                ValidateExpressionColumns(substring.SubstringFor, aliasToTable, referencedTables);
+                ValidateExpressionColumns(substring.SubstringFor, aliasToTable, referencedTables, occurrences);
         }
         else if (expr is Expression.InList inList)
         {
-            ValidateExpressionColumns(inList.Expression, aliasToTable, referencedTables);
+            ValidateExpressionColumns(inList.Expression, aliasToTable, referencedTables, occurrences);
             foreach (var item in inList.List)
-                ValidateExpressionColumns(item, aliasToTable, referencedTables);
+                ValidateExpressionColumns(item, aliasToTable, referencedTables, occurrences);
         }
         else if (expr is Expression.InSubquery inSubquery)
         {
-            ValidateExpressionColumns(inSubquery.Expression, aliasToTable, referencedTables);
-            ValidateDerivedQuery(inSubquery.SubQuery, aliasToTable, referencedTables);
+            ValidateExpressionColumns(inSubquery.Expression, aliasToTable, referencedTables, occurrences);
+            ValidateDerivedQuery(inSubquery.SubQuery, aliasToTable, referencedTables, occurrences);
         }
         else if (expr is Expression.Exists exists)
         {
-            ValidateDerivedQuery(exists.SubQuery, aliasToTable, referencedTables);
+            ValidateDerivedQuery(exists.SubQuery, aliasToTable, referencedTables, occurrences);
         }
         else if (expr is Expression.Between between)
         {
-            ValidateExpressionColumns(between.Expression, aliasToTable, referencedTables);
-            ValidateExpressionColumns(between.Low, aliasToTable, referencedTables);
-            ValidateExpressionColumns(between.High, aliasToTable, referencedTables);
+            ValidateExpressionColumns(between.Expression, aliasToTable, referencedTables, occurrences);
+            ValidateExpressionColumns(between.Low, aliasToTable, referencedTables, occurrences);
+            ValidateExpressionColumns(between.High, aliasToTable, referencedTables, occurrences);
         }
         else if (expr is Expression.Like like)
         {
-            ValidateExpressionColumns(like.Expression, aliasToTable, referencedTables);
-            ValidateExpressionColumns(like.Pattern, aliasToTable, referencedTables);
+            ValidateExpressionColumns(like.Expression, aliasToTable, referencedTables, occurrences);
+            ValidateExpressionColumns(like.Pattern, aliasToTable, referencedTables, occurrences);
         }
         else if (expr is Expression.IsNull isNull)
         {
-            ValidateExpressionColumns(isNull.Expression, aliasToTable, referencedTables);
+            ValidateExpressionColumns(isNull.Expression, aliasToTable, referencedTables, occurrences);
         }
         else if (expr is Expression.IsNotNull isNotNull)
         {
-            ValidateExpressionColumns(isNotNull.Expression, aliasToTable, referencedTables);
+            ValidateExpressionColumns(isNotNull.Expression, aliasToTable, referencedTables, occurrences);
         }
         else if (expr is Expression.IsTrue isTrue)
         {
-            ValidateExpressionColumns(isTrue.Expression, aliasToTable, referencedTables);
+            ValidateExpressionColumns(isTrue.Expression, aliasToTable, referencedTables, occurrences);
         }
         else if (expr is Expression.IsNotTrue isNotTrue)
         {
-            ValidateExpressionColumns(isNotTrue.Expression, aliasToTable, referencedTables);
+            ValidateExpressionColumns(isNotTrue.Expression, aliasToTable, referencedTables, occurrences);
         }
         else if (expr is Expression.IsFalse isFalse)
         {
-            ValidateExpressionColumns(isFalse.Expression, aliasToTable, referencedTables);
+            ValidateExpressionColumns(isFalse.Expression, aliasToTable, referencedTables, occurrences);
         }
         else if (expr is Expression.IsNotFalse isNotFalse)
         {
-            ValidateExpressionColumns(isNotFalse.Expression, aliasToTable, referencedTables);
+            ValidateExpressionColumns(isNotFalse.Expression, aliasToTable, referencedTables, occurrences);
         }
         else if (expr is Expression.IsUnknown isUnknown)
         {
-            ValidateExpressionColumns(isUnknown.Expression, aliasToTable, referencedTables);
+            ValidateExpressionColumns(isUnknown.Expression, aliasToTable, referencedTables, occurrences);
         }
         else if (expr is Expression.IsNotUnknown isNotUnknown)
         {
-            ValidateExpressionColumns(isNotUnknown.Expression, aliasToTable, referencedTables);
+            ValidateExpressionColumns(isNotUnknown.Expression, aliasToTable, referencedTables, occurrences);
         }
         else if (expr is Expression.IsDistinctFrom isDistinct)
         {
-            ValidateExpressionColumns(isDistinct.Expression1, aliasToTable, referencedTables);
-            ValidateExpressionColumns(isDistinct.Expression2, aliasToTable, referencedTables);
+            ValidateExpressionColumns(isDistinct.Expression1, aliasToTable, referencedTables, occurrences);
+            ValidateExpressionColumns(isDistinct.Expression2, aliasToTable, referencedTables, occurrences);
         }
         else if (expr is Expression.IsNotDistinctFrom isNotDistinct)
         {
-            ValidateExpressionColumns(isNotDistinct.Expression1, aliasToTable, referencedTables);
-            ValidateExpressionColumns(isNotDistinct.Expression2, aliasToTable, referencedTables);
+            ValidateExpressionColumns(isNotDistinct.Expression1, aliasToTable, referencedTables, occurrences);
+            ValidateExpressionColumns(isNotDistinct.Expression2, aliasToTable, referencedTables, occurrences);
         }
         else if (expr is Expression.Nested nested)
         {
-            ValidateExpressionColumns(nested.Expression, aliasToTable, referencedTables);
+            ValidateExpressionColumns(nested.Expression, aliasToTable, referencedTables, occurrences);
         }
         else if (expr is Expression.Subquery subquery)
         {
-            ValidateDerivedQuery(subquery.Query, aliasToTable, referencedTables);
+            ValidateDerivedQuery(subquery.Query, aliasToTable, referencedTables, occurrences);
         }
         // LiteralValue / Wildcard / QualifiedWildcard / 等不含列引用，无需递归
     }
@@ -669,21 +683,19 @@ public static class SafeQueryValidator
     /// </summary>
     private static string InjectUserFilterAstAware(
         string sql,
-        Dictionary<string, string> aliasToTable,
-        HashSet<string> referencedTables,
+        List<TableOccurrence> occurrences,
         Security.CurrentUser.DataScope scope)
     {
         var filters = new List<string>();
 
-        foreach (var table in referencedTables)
+        // R6.1(G1): 逐实例注入——同一张白名单表多次引用（self-join / JOIN 同表 / 子查询合并）时，
+        // 每个出现点都生成自己的过滤片段（无别名实例用表名限定、有别名用别名限定）。
+        // 修复前：referencedTables 是 HashSet（同表折叠成一条）+ FirstOrDefault 只取第一个别名
+        // → 第二个实例完全无过滤 → 他人数据经未过滤实例直接可读（R6.1(a) 实证）。
+        foreach (var occ in occurrences)
         {
-            if (!TableWhitelist.ContainsKey(table)) continue;
-
-            // 查找该表在查询中的别名
-            var alias = aliasToTable.FirstOrDefault(
-                kvp => string.Equals(kvp.Value, table, StringComparison.OrdinalIgnoreCase)).Key;
-
-            filters.Add(GetTableFilter(scope, table, alias ?? ""));
+            if (!TableWhitelist.ContainsKey(occ.Table)) continue;
+            filters.Add(GetTableFilter(scope, occ.Table, occ.Qualifier));
         }
 
         if (filters.Count == 0)

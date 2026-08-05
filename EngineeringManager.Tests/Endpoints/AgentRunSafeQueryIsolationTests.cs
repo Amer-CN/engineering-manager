@@ -99,4 +99,33 @@ public class AgentRunSafeQueryIsolationTests : ApiTestBase
         // 反向1：未授权项目下他人行不可见
         Assert.DoesNotContain(3L, rows);
     }
+
+    /// <summary>
+    /// R6.1(a): G1 self-join 泄漏实证——【修复前必须红】。
+    /// 同一白名单表出现两次（FROM invoices a JOIN invoices b），
+    /// InjectUserFilterAstAware 用 HashSet 折叠 + FirstOrDefault 只取第一个别名 → 只为 a
+    /// 注入过滤，b 完全无过滤 → 未授权项目他人记录的 amount（300）直接可读。
+    /// 断言：结果中不得出现 amount=300（unauthorized-other 的金额）。
+    /// </summary>
+    [Fact]
+    public async Task RunSafeQuery_Manager_SelfJoinInvoices_NoUnauthorizedLeak()
+    {
+        SeedData(); // own(P2) / authorized-other(P1) / unauthorized-other(P2)，金额 100/200/300
+
+        var args = JsonDocument.Parse("{\"sql\":\"SELECT a.id, b.amount FROM invoices a JOIN invoices b ON 1=1\"}").RootElement;
+        var tools = new AgentToolService(new FakeEmbeddingService());
+        using var conn = new SqliteConnection(ConnectionString);
+        conn.Open();
+
+        var result = await tools.ExecuteToolAsync("runSafeQuery", args, CreateManagerContext(), conn);
+
+        Assert.True(result.Success, "runSafeQuery 工具应成功： " + (result.Error ?? ""));
+        var resultObj = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
+            JsonSerializer.Serialize(result.Result))!;
+        Assert.True(resultObj["success"].GetBoolean(), "内层 success 应为 true");
+        var rows = resultObj["data"].EnumerateArray().ToList();
+
+        // 反向1（泄漏断言）：未授权项目他人记录的 amount（300）不得出现在结果里
+        Assert.DoesNotContain(rows, r => r.GetProperty("amount").GetDouble() == 300);
+    }
 }
