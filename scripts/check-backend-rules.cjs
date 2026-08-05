@@ -471,50 +471,112 @@ for (const file of csFiles) {
 if (violations === 0) console.log('  OK  未发现拼接/越权插值 SQL')
 
 // ═══════════════════════════════════════════════════════════
-// 规则 B5（R4.1c）：UserFilterWithAuthorizedProjects 第二实参必须为含 '.' 的字符串字面量
-// 退化 EXISTS 结构性防线：裸列名（如 "project_id"）在 EXISTS 子查询内解析到
-// project_authorizations.project_id 自身 → project_id = project_id 恒真 →
-// 「用户有任意一条授权记录就全项目可见」（越权，R3.1 实测钉出）。
-// 编译器已强制 projectCol 必填（R4.1a 删除默认值），本规则进一步强制「表名.列名」
-// 字面量形态，堵住运行期拼错。
+// 规则 B5（R4.1c / R5.3 全枚举）：UserFilterWithAuthorizedProjects 第二实参必须为
+// 「含 '.' 且限定符不在黑名单」的字符串字面量
+// 退化 EXISTS 结构性防线：裸列名（如 "project_id"）或自引用限定符（pa_authz /
+// project_authorizations）在 EXISTS 子查询内自比较恒真 → 「用户有任意一条授权记录
+// 就全项目可见」（越权，R3.1 实测钉出）。
 //
+// R5.3 重写：不再用形状匹配（形状不匹配会【静默跳过】，fail-open），改为
+// /UserFilterWithAuthorizedProjects\s*\(/g 枚举【全部】出现点 → 括号配对切出实参文本
+// → 顶层逗号切分 → 第二实参必须是合规字面量；其余一切形态（变量 / 成员访问 /
+// 插值串 / 首参是方法调用 / 无法解析）一律 HARD FAIL 并打印实际实参。
 // 实现说明：必须在【原始源码】上扫描而非 masked——$@"...{...}" 插值字符串内的
 // 嵌套引号会让 scanCs 提前结束字符串扫描、把整个调用表达式掩掉（实测 2026-08-05）。
 // 允许的例外：SafeQueryValidator.GetTableFilter 用 tableAlias 动态构造列名
-// （"{alias}project_id"），其安全性由 CurrentUser 的 fail-closed 运行时守卫兜底
-// （别名缺失时抛 500 而非退化为恒真 EXISTS），属规则边界内唯一合法的变量实参点。
+// （"{alias}project_id"），其安全性由 CurrentUser 的 fail-closed 运行时守卫兜底，
+// 且行为已由 R5.1(b)(c)(d) 测试钉住——例外【显式计数打印】，不许静默放行。
 // ═══════════════════════════════════════════════════════════
-console.log('\n═══ 后端红线 B5：UserFilterWithAuthorizedProjects 限定列 ═══')
+console.log('\n═══ 后端红线 B5：UserFilterWithAuthorizedProjects 限定列（全枚举） ═══')
 const b0Violations = violations
-// 第一组=scope 表达式（标识符/成员访问），第二组=第二实参（引号字面量 或 标识符）
-const ufRe = /UserFilterWithAuthorizedProjects\(\s*([A-Za-z_][A-Za-z0-9_.]*)\s*,\s*((?:"[^"]*")|[A-Za-z_][A-Za-z0-9_]*)\s*(?:,|\))/g
-const qualifiedColLiteral = /^"[^"]*\.[^"]*"$/
+const b5CallStartRe = /UserFilterWithAuthorizedProjects\s*\(/g
+const b5Blacklist = new Set(['pa_authz', 'project_authorizations'])
+let b5ExemptCount = 0
+
+function b5Fail(file, content, idx, detail) {
+  const line = lineOf(content, idx)
+  console.log(`  HARD FAIL  ${rel(file)}:${line}: ${detail}`)
+  violations++
+}
+
+/** 顶层逗号切分（跳过字符串字面量内的逗号），返回字符串数组 */
+function splitTopLevelCommas(text) {
+  const parts = []
+  let depth = 0
+  let inStr = null
+  let cur = ''
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i]
+    if (inStr) {
+      cur += c
+      if (c === '\\') { cur += text[++i] ?? ''; continue }
+      if (c === inStr) inStr = null
+      continue
+    }
+    if (c === '"' || c === "'") { inStr = c; cur += c; continue }
+    if (c === '(' || c === '[' || c === '{') { depth++; cur += c; continue }
+    if (c === ')' || c === ']' || c === '}') { depth--; cur += c; continue }
+    if (c === ',' && depth === 0) { parts.push(cur); cur = ''; continue }
+    cur += c
+  }
+  parts.push(cur)
+  return parts
+}
+
 for (const file of csFiles) {
   const content = fs.readFileSync(file, 'utf-8')
-  ufRe.lastIndex = 0
+  b5CallStartRe.lastIndex = 0
   let m
-  while ((m = ufRe.exec(content))) {
-    const colArg = m[2].trim()
-    if (qualifiedColLiteral.test(colArg)) {
-      // R5.2(c): 限定符黑名单——限定符等于授权子查询自身别名/表名 → 自比较恒真 → 违规
-      const dotIdx = colArg.indexOf('.')
-      const qualifier = (dotIdx === -1 ? colArg.slice(1, -1) : colArg.slice(1, dotIdx)).trim().toLowerCase()
-      if (qualifier === 'pa_authz' || qualifier === 'project_authorizations') {
-        const line = lineOf(content, m.index)
-        console.log(`  HARD FAIL  ${rel(file)}:${line}: UserFilterWithAuthorizedProjects 第二实参限定符 '${qualifier}' 与授权子查询自身别名/表名冲突 → 自比较恒真 → 越权（R5.2 黑名单）`)
-        violations++
+  while ((m = b5CallStartRe.exec(content))) {
+    // 跳过方法定义本身（public static string UserFilterWithAuthorizedProjects(...)）
+    const lineStart = content.lastIndexOf('\n', m.index) + 1
+    if (/public\s+static\s+string\s+$/.test(content.slice(lineStart, m.index))) continue
+
+    // 括号配对切出实参文本
+    let i = m.index + m[0].length
+    let depth = 1
+    let inStr = null
+    const argStart = i
+    while (i < content.length && depth > 0) {
+      const c = content[i]
+      if (inStr) {
+        if (c === '\\') { i += 2; continue }
+        if (c === inStr) inStr = null
+      } else if (c === '"' || c === "'") inStr = c
+      else if (c === '(') depth++
+      else if (c === ')') depth--
+      i++
+    }
+    if (depth !== 0) {
+      b5Fail(file, content, m.index, 'B5 无法解析调用点（括号未配对），必须人工核查')
+      continue
+    }
+    const args = splitTopLevelCommas(content.slice(argStart, i - 1))
+    if (args.length < 2) {
+      b5Fail(file, content, m.index, `B5 实参不足（${args.length} 个）：${content.slice(argStart, i - 1).trim().slice(0, 60)}`)
+      continue
+    }
+    const secondArg = args[1].trim()
+    const lit = /^"([^"]*)"$/.exec(secondArg)
+    if (lit) {
+      const col = lit[1]
+      if (!col.includes('.')) {
+        b5Fail(file, content, m.index, `B5 第二实参字符串字面量不含 '.'（裸列名，退化 EXISTS 越权）："${col}"`)
+        continue
       }
-      continue // 表名.列名 字面量（非黑名单）：合规
+      const qualifier = col.slice(0, col.indexOf('.')).trim().toLowerCase()
+      if (b5Blacklist.has(qualifier)) {
+        b5Fail(file, content, m.index, `B5 第二实参限定符 '${qualifier}' 与授权子查询自身别名/表名冲突 → 自比较恒真 → 越权（R5.2 黑名单）`)
+      }
+      continue // 合规：表名.列名 字面量且限定符不在黑名单
     }
-    // 标识符实参：仅 SafeQueryValidator.cs 内（GetTableFilter 动态构造列名）合法，见上注释
-    if (!file.includes('SafeQueryValidator.cs')) {
-      const line = lineOf(content, m.index)
-      console.log(`  HARD FAIL  ${rel(file)}:${line}: UserFilterWithAuthorizedProjects 第二实参必须是含 '.' 的字符串字面量（当前 '${colArg}'）——裸列名会退化为恒真 EXISTS 越权（R4.1）`)
-      violations++
-    }
+    // 非字面量实参：仅 SafeQueryValidator.cs 内（GetTableFilter 动态构造列名）显式例外
+    if (file.includes('SafeQueryValidator.cs')) { b5ExemptCount++; continue }
+    b5Fail(file, content, m.index, `B5 第二实参非字符串字面量（变量/成员访问/插值串/方法调用）：${secondArg.slice(0, 80)}`)
   }
 }
 if (violations === b0Violations) console.log('  OK  全部调用点均使用表名限定的 projectCol 字面量')
+console.log(`  B5 例外放行 ${b5ExemptCount} 处（SafeQueryValidator.cs 动态构造，行为由 R5.1(b)(c)(d) 测试钉住）`)
 
 console.log('\n═══ 后端红线 B2：端点鉴权覆盖 ═══')
 const b1Violations = violations
