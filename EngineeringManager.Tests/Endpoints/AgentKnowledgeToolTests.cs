@@ -427,9 +427,9 @@ public class AgentKnowledgeToolTests
         using var db = CreateDb();
 
         db.Execute("INSERT INTO projects (name, status, created_by, created_at, updated_at) VALUES ('项目A', 'active', 'admin', '2026-01-01', '2026-01-01')");
-        var projectAId = (long)db.ExecuteScalar("SELECT last_insert_rowid()");
+        var projectAId = Convert.ToInt64(db.ExecuteScalar("SELECT last_insert_rowid()"));
         db.Execute("INSERT INTO projects (name, status, created_by, created_at, updated_at) VALUES ('项目B', 'active', 'admin', '2026-01-01', '2026-01-01')");
-        var projectBId = (long)db.ExecuteScalar("SELECT last_insert_rowid()");
+        var projectBId = Convert.ToInt64(db.ExecuteScalar("SELECT last_insert_rowid()"));
 
         db.Execute("INSERT INTO project_authorizations (project_id, user_id) VALUES (@Pid, 'user3')",
             new { Pid = projectAId });
@@ -462,9 +462,9 @@ public class AgentKnowledgeToolTests
 
         // 实际创建项目
         db.Execute("INSERT INTO projects (name, status, created_by, created_at, updated_at) VALUES ('项目A', 'active', 'admin', '2026-01-01', '2026-01-01')");
-        var projectAId = (long)db.ExecuteScalar("SELECT last_insert_rowid()");
+        var projectAId = Convert.ToInt64(db.ExecuteScalar("SELECT last_insert_rowid()"));
         db.Execute("INSERT INTO projects (name, status, created_by, created_at, updated_at) VALUES ('项目B', 'active', 'admin', '2026-01-01', '2026-01-01')");
-        var projectBId = (long)db.ExecuteScalar("SELECT last_insert_rowid()");
+        var projectBId = Convert.ToInt64(db.ExecuteScalar("SELECT last_insert_rowid()"));
 
         // user3 只有 projectA 授权
         db.Execute("INSERT INTO project_authorizations (project_id, user_id) VALUES (@Pid, 'user3')",
@@ -509,9 +509,9 @@ public class AgentKnowledgeToolTests
 
         // 实际创建项目
         db.Execute("INSERT INTO projects (name, status, created_by, created_at, updated_at) VALUES ('项目A', 'active', 'admin-user', '2026-01-01', '2026-01-01')");
-        var projectAId = (long)db.ExecuteScalar("SELECT last_insert_rowid()");
+        var projectAId = Convert.ToInt64(db.ExecuteScalar("SELECT last_insert_rowid()"));
         db.Execute("INSERT INTO projects (name, status, created_by, created_at, updated_at) VALUES ('项目B', 'active', 'admin-user', '2026-01-01', '2026-01-01')");
-        var projectBId = (long)db.ExecuteScalar("SELECT last_insert_rowid()");
+        var projectBId = Convert.ToInt64(db.ExecuteScalar("SELECT last_insert_rowid()"));
 
         var docAId = await IngestDocument(db, "项目A的预算讨论内容", "项目A文档", "admin-user", (int)projectAId);
         var docBId = await IngestDocument(db, "项目B的预算讨论内容", "项目B文档", "admin-user", (int)projectBId);

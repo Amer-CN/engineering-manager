@@ -17,7 +17,7 @@ public class AuthEndpointsTests : ApiTestBase
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.True(json.GetProperty("success").GetBoolean());
-        Assert.True(json.GetProperty("data").GetProperty("token").GetString().Length > 0);
+        Assert.True(json.GetProperty("data").GetProperty("token").GetString()!.Length > 0);
     }
 
     [Fact]

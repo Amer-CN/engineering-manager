@@ -30,7 +30,7 @@ public static class SpeakerLabelNormalizer
     /// <returns>归一化后的 segments（与输入同一引用）</returns>
     public static List<SttSegment> Normalize(List<SttSegment> segments)
     {
-        if (segments == null || segments.Count == 0) return segments;
+        if (segments == null || segments.Count == 0) return segments!;
 
         var speakerMap = new Dictionary<int, int>(); // original → normalized (1-based)
         var nextId = 1;

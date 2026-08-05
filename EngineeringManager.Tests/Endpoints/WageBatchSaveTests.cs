@@ -83,7 +83,7 @@ public class WageBatchSaveTests : ApiTestBase
         Assert.Equal(0, data.GetProperty("skipped").GetInt32());
 
         // 落库为分：200 元 → 20000 分
-        var row = QueryWageRow(TestProjectId, TestPwId, TestYearMonth, deletedAt: null);
+        var row = QueryWageRow(TestProjectId, TestPwId, TestYearMonth, deletedAt: null)!;
         Assert.NotNull(row);
         Assert.Equal(20000L, (long)row.daily_wage);
         Assert.Equal(10000L, (long)row.bonus);
@@ -161,7 +161,7 @@ public class WageBatchSaveTests : ApiTestBase
         Assert.Equal(TestYearMonth, skipped[0].GetProperty("yearMonth").GetString());
 
         // 金额列与付款信息保持不变
-        var row = QueryWageRow(TestProjectId, TestPwId, TestYearMonth, deletedAt: null);
+        var row = QueryWageRow(TestProjectId, TestPwId, TestYearMonth, deletedAt: null)!;
         Assert.NotNull(row);
         Assert.Equal(20000L, (long)row.daily_wage);   // 未被 300 元覆盖
         Assert.Equal(10000L, (long)row.paid_amount);  // 付款信息未动
@@ -190,11 +190,11 @@ public class WageBatchSaveTests : ApiTestBase
 
         // 共 2 行：软删行原样 + 新插活行（deleted_at IS NULL）
         Assert.Equal(2, CountWageRows(TestProjectId, TestPwId, TestYearMonth));
-        var softDeleted = QueryWageRow(TestProjectId, TestPwId, TestYearMonth, deletedAt: "2026-08-02 00:00:00");
+        var softDeleted = QueryWageRow(TestProjectId, TestPwId, TestYearMonth, deletedAt: "2026-08-02 00:00:00")!;
         Assert.NotNull(softDeleted);
         Assert.Equal(99999L, (long)softDeleted.daily_wage);        // 软删行未被触碰
         Assert.Equal("2026-08-02 00:00:00", (string)softDeleted.deleted_at);
-        var active = QueryWageRow(TestProjectId, TestPwId, TestYearMonth, deletedAt: null);
+        var active = QueryWageRow(TestProjectId, TestPwId, TestYearMonth, deletedAt: null)!;
         Assert.NotNull(active);
         Assert.Equal(20000L, (long)active.daily_wage);             // 新行写入 200 元 → 20000 分
     }

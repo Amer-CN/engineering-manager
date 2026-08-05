@@ -707,7 +707,7 @@ public class SttMonitorLoopTests
 
         Assert.True(loop.GpuConfirmed);
         Assert.True(loop.OffloadConfirmed);
-        Assert.NotEmpty(loop.ConfirmedDeviceName);
+        Assert.NotEmpty(loop.ConfirmedDeviceName!);
     }
 
     [Fact]
@@ -739,7 +739,7 @@ public class SttMonitorLoopTests
 
         Assert.True(loop.GpuConfirmed);
         Assert.True(loop.OffloadConfirmed);
-        Assert.NotEmpty(loop.ConfirmedDeviceName);
+        Assert.NotEmpty(loop.ConfirmedDeviceName!);
     }
 
     [Fact]
@@ -763,7 +763,7 @@ public class SttMonitorLoopTests
 
         Assert.True(loop.GpuConfirmed);
         Assert.True(loop.OffloadConfirmed);
-        Assert.NotEmpty(loop.ConfirmedDeviceName);
+        Assert.NotEmpty(loop.ConfirmedDeviceName!);
     }
 
     [Fact]
@@ -798,7 +798,7 @@ public class SttMonitorLoopTests
 
         Assert.True(loop.GpuConfirmed);
         Assert.True(loop.OffloadConfirmed);
-        Assert.NotEmpty(loop.ConfirmedDeviceName);
+        Assert.NotEmpty(loop.ConfirmedDeviceName!);
     }
 
     [Fact]
@@ -880,7 +880,7 @@ public class SttMonitorLoopTests
 
         loop.CheckOnce(DateTime.UtcNow);
 
-        Assert.NotEmpty(loop.ConfirmedDeviceName);
+        Assert.NotEmpty(loop.ConfirmedDeviceName!);
         Assert.Contains("RX 580", loop.ConfirmedDeviceName);
     }
 
@@ -1035,7 +1035,7 @@ public class SttMonitorLoopTests
         loop.CheckOnce(startTime);
         Assert.True(loop.GpuConfirmed);
         Assert.True(loop.OffloadConfirmed);
-        Assert.NotEmpty(loop.ConfirmedDeviceName);
+        Assert.NotEmpty(loop.ConfirmedDeviceName!);
 
         // 第三次调用：状态保持（不会重置）
         loop.CheckOnce(startTime);

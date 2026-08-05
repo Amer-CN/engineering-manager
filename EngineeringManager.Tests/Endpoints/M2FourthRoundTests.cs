@@ -28,7 +28,7 @@ public class M2FifthRoundCollection { }
 [Collection("M2FifthRound")]
 public class M2FourthRoundTests : IDisposable
 {
-    private SqliteConnection _conn;
+    private SqliteConnection _conn = null!;
 
     private SqliteConnection CreateConn()
     {
@@ -468,7 +468,7 @@ public class M2FourthRoundTests : IDisposable
     }
 
     [Fact]
-    public async Task Model_ResetAfterHeal_EnterReady()
+    public Task Model_ResetAfterHeal_EnterReady()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), $"bge-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
@@ -506,6 +506,7 @@ public class M2FourthRoundTests : IDisposable
             SttModelManager.SetDownloadDelegate(null);
             try { Directory.Delete(tempDir, true); } catch { }
         }
+        return Task.CompletedTask;
     }
 
     [Fact]
