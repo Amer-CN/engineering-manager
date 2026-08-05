@@ -723,18 +723,12 @@ public class KnowledgeBaseService
     /// </summary>
     public static ScopeFilter BuildScopeFilter(bool isAdmin, string? userId, int? projectId)
     {
-        if (isAdmin)
-        {
-            if (projectId.HasValue)
-                return new ScopeFilter("d.project_id = @ProjectId", null, projectId.Value);
-            return new ScopeFilter("(1 = 1)", null, 0);
-        }
-
-        // 非 admin 基础范围：created_by = uid OR 当前行的 project_id 在授权列表中
-        // 注意: EXISTS 必须关联 d.project_id（当前行），不能用 @ProjectId
-        var baseFilter = @"(d.created_by = @Uid
-               OR EXISTS(SELECT 1 FROM project_authorizations pa
-                         WHERE pa.project_id = d.project_id AND pa.user_id = @Uid))";
+        // R5.4: 手写 project_authorizations 过滤副本迁移到 helper（B6 门禁抓出第三处）。
+        // 语义逐位等价：admin → "(1 = 1)"（All）；非 admin → created_by ∨ 关联 d.project_id
+        // 的授权 EXISTS（AuthorizedProjects）。注意: EXISTS 必须关联 d.project_id（当前行），
+        // 不能用 @ProjectId——helper 的表名限定列正是行级相关子查询。
+        var scope = isAdmin ? Security.CurrentUser.DataScope.All : Security.CurrentUser.DataScope.AuthorizedProjects;
+        var baseFilter = Security.CurrentUser.UserFilterWithAuthorizedProjects(scope, "d.project_id", "d.created_by");
 
         // 有 projectId 时，在基础范围外追加 AND d.project_id = @ProjectId
         if (projectId.HasValue)

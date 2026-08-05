@@ -359,9 +359,10 @@ public static class ContractEndpoints
             var scope = CurrentUser.GetDataScope(ctx);
             // v1.1.0 P0-4 Phase 2: settlements 琛ㄧ幇鍦ㄦ湁 created_by (migration 014)
             // 优先用内联 SQL 避免 LEFT JOIN projects 时 created_by 列冲突
-            var sql = @"SELECT s.*, p.name as project_name
+            // R5.4: 手写 project_authorizations 副本迁移到 helper（B6 门禁要求；语义等价）
+            var sql = $@"SELECT s.*, p.name as project_name
                         FROM settlements s LEFT JOIN projects p ON s.project_id=p.id
-                        WHERE (s.created_by=@Uid OR @IsAdmin=1 OR EXISTS(SELECT 1 FROM project_authorizations WHERE project_id=s.project_id AND user_id=@Uid)) AND s.deleted_at IS NULL";
+                        WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope, "s.project_id", "s.created_by")} AND s.deleted_at IS NULL";
             if (projectId.HasValue) sql += " AND s.project_id=@ProjectId";
             sql += " ORDER BY s.created_at DESC";
             return Common.Ok(db.Query(sql, new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }));

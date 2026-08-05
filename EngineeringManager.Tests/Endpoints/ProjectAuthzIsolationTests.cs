@@ -208,4 +208,58 @@ public class ProjectAuthzIsolationTests : ApiTestBase
             DeleteWorkerUser();
         }
     }
+
+    /// <summary>
+    /// R5.4(d): GET /api/settlements 迁移 helper 后可见性对照——三分支（分支隔离法同上：
+    /// own 在未授权项目 P2，仅 created_by 分支；authorized-other 在 P1，仅 EXISTS 分支；
+    /// unauthorized-other 在 P2，两分支都不可命中）。
+    /// 迁移前该端点用手写内联副本（语义等价但绕过 B5/B6 门禁），且零端点测试覆盖；
+    /// 本测试钉住迁移后的可见性行为（R5.4 迁移不得改变可见性）。
+    /// </summary>
+    [Fact]
+    public async Task SettlementsGet_Worker_ThreeBranches()
+    {
+        var oldEdition = SwitchEdition("personal");
+        try
+        {
+            CreateWorkerUser();
+            using (var conn = new SqliteConnection(ConnectionString))
+            {
+                conn.Open();
+                var now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                conn.Execute("INSERT INTO projects (id, name, created_by, created_at) VALUES (1, '授权项目P1', '1', @Now)", new { Now = now });
+                conn.Execute("INSERT INTO projects (id, name, created_by, created_at) VALUES (2, '未授权项目P2', '1', @Now)", new { Now = now });
+                conn.Execute("INSERT INTO project_authorizations (project_id, user_id) VALUES (1, @WorkerId)", new { WorkerId });
+                conn.Execute(@"INSERT INTO settlements (project_id, name, amount, status, created_by, created_at, updated_at)
+                    VALUES (2, 'R5-own', 100, 'pending', @WorkerId, @Now, @Now)", new { WorkerId, Now = now });
+                conn.Execute(@"INSERT INTO settlements (project_id, name, amount, status, created_by, created_at, updated_at)
+                    VALUES (1, 'R5-authorized-other', 200, 'pending', '1', @Now, @Now)", new { Now = now });
+                conn.Execute(@"INSERT INTO settlements (project_id, name, amount, status, created_by, created_at, updated_at)
+                    VALUES (2, 'R5-unauthorized-other', 300, 'pending', '1', @Now, @Now)", new { Now = now });
+            }
+
+            // worker 登录
+            var workerLogin = await Client.PostAsJsonAsync("/api/auth/login", new { username = WorkerUsername, password = Password });
+            if (!workerLogin.IsSuccessStatusCode)
+                throw new Exception("worker login failed: " + workerLogin.StatusCode + " " + await workerLogin.Content.ReadAsStringAsync());
+            SetAuth(ExtractToken(await workerLogin.Content.ReadAsStringAsync()));
+
+            var get = await Client.GetAsync("/api/settlements");
+            Assert.Equal(HttpStatusCode.OK, get.StatusCode);
+            var json = await get.Content.ReadFromJsonAsync<JsonElement>();
+            var items = json.GetProperty("data").EnumerateArray().ToList();
+
+            // 正向1：created_by 分支
+            Assert.Contains(items, it => it.TryGetProperty("name", out var n) && n.GetString() == "R5-own");
+            // 正向2：EXISTS 分支
+            Assert.Contains(items, it => it.TryGetProperty("name", out var n) && n.GetString() == "R5-authorized-other");
+            // 反向1：未授权项目不可见
+            Assert.DoesNotContain(items, it => it.TryGetProperty("name", out var n) && n.GetString() == "R5-unauthorized-other");
+        }
+        finally
+        {
+            SwitchEdition(oldEdition);
+            DeleteWorkerUser();
+        }
+    }
 }

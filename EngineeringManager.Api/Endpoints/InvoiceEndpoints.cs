@@ -24,18 +24,22 @@ public static class InvoiceEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var scope = CurrentUser.GetDataScope(ctx);
             // v1.1.0 P0-4 Phase 2: 鍐呰仈 SQL 閬垮厤 JOIN partners/projects 涔熸湁 created_by 鍒楃殑鍐茬獊
-            var sql = @"SELECT i.*, p.name as project_name,
+            // R5.4: 手写 project_authorizations 副本迁移到 helper（B6 门禁要求；语义等价：
+            //   inline (i.created_by=@Uid OR @IsAdmin=1 OR EXISTS(authz)) ≡ helper 的
+            //   created_by ∨ 授权项目；admin 侧 scope=All → (1=1)，均全可见）
+            var sql = $@"SELECT i.*, p.name as project_name,
                                seller.name as sellerName, buyer.name as buyerName,
                                CASE WHEN i.type='invoice_in' THEN seller.name ELSE buyer.name END as partner_name
                         FROM invoices i
                         LEFT JOIN projects p ON i.project_id=p.id
                         LEFT JOIN partners seller ON i.seller_id=seller.id
                         LEFT JOIN partners buyer ON i.buyer_id=buyer.id
-                        WHERE (i.created_by=@Uid OR @IsAdmin=1 OR EXISTS(SELECT 1 FROM project_authorizations WHERE project_id=i.project_id AND user_id=@Uid)) AND i.deleted_at IS NULL";
+                        WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope, "i.project_id", "i.created_by")} AND i.deleted_at IS NULL";
             if (projectId.HasValue) sql += " AND i.project_id=@ProjectId";
             sql += " ORDER BY i.created_at DESC";
-            return Common.Ok(db.Query(sql, new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }));
+            return Common.Ok(db.Query(sql, new { Uid = uid, ProjectId = projectId }));
         });
 
         app.MapPost("/api/invoices", async (HttpContext ctx, InvoiceDto dto, IDbConnection db) =>

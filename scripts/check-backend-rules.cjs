@@ -578,6 +578,35 @@ for (const file of csFiles) {
 if (violations === b0Violations) console.log('  OK  全部调用点均使用表名限定的 projectCol 字面量')
 console.log(`  B5 例外放行 ${b5ExemptCount} 处（SafeQueryValidator.cs 动态构造，行为由 R5.1(b)(c)(d) 测试钉住）`)
 
+// ═══════════════════════════════════════════════════════════
+// 规则 B6（R5.4b）：消灭手写 project_authorizations 过滤副本
+// 手写过滤副本的独有签名是 SELECT 1 FROM project_authorizations（EXISTS 子查询形态）——
+// 谁手写一个 EXISTS(SELECT 1 FROM project_authorizations WHERE project_id=project_id ...)
+// 就会命中，且若删掉限定符即退化为恒真（B5 对绕过 helper 的副本不可见，B6 兜底）。
+// 作用域界定（非白名单）：project_authorizations 表自身的【管理端点】
+// （AuthEndpoints /api/admin/project-authorizations：SELECT pa.* / SELECT COUNT(*) /
+// INSERT INTO project_authorizations）不是过滤副本，天然不匹配 SELECT 1 FROM 签名，
+// 故规则仅命中过滤形态；若未来出现其他 SELECT 1 FROM project_authorizations 用法，
+// 先报偏差再处理，不自行加白名单。
+// ═══════════════════════════════════════════════════════════
+console.log('\n═══ 后端红线 B6：手写 project_authorizations 过滤副本 ═══')
+const b6Before = violations
+const b6Re = /SELECT\s+1\s+FROM\s+project_authorizations/gi
+for (const file of csFiles) {
+  if (file.includes('Security' + path.sep + 'CurrentUser.cs')) continue // helper 本体豁免
+  const content = fs.readFileSync(file, 'utf-8')
+  // 用 scanCs 的 literals 只查 SQL 字符串字面量（注释/普通文本不误伤）
+  const { literals } = scanCs(content)
+  for (const lit of literals) {
+    if (b6Re.test(lit.text)) {
+      const line = lineOf(content, lit.start)
+      console.log(`  HARD FAIL  ${rel(file)}:${line}: SQL 字面量含手写 project_authorizations 过滤副本（SELECT 1 FROM project_authorizations）——必须迁移到 CurrentUser.UserFilterWithAuthorizedProjects（B6，R5.4）`)
+      violations++
+    }
+  }
+}
+if (violations === b6Before) console.log('  OK  无手写 project_authorizations 过滤副本（B6 白名单为空）')
+
 console.log('\n═══ 后端红线 B2：端点鉴权覆盖 ═══')
 const b1Violations = violations
 for (const file of csFiles) {
