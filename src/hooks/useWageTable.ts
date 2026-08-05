@@ -33,7 +33,7 @@ export function useWageTable({
     setLoading(true)
     try {
       const result = await (await getAPI()).generateProjectWages(selectedProject.id, selectedMonth)
-      if (result.success && result.data) { showToast(`已生成 ${result.data.length} 条工资记录`, 'success'); await loadWages(); await loadAllRecords(); setEditingWages(new Map()) }
+      if (result.success && result.data) { showToast(`已生成 ${result.newCount ?? 0} 条工资记录`, 'success'); await loadWages(); await loadAllRecords(); setEditingWages(new Map()) }
       else showToast(result.error || '生成工资表失败', 'error')
     } catch (error: unknown) { showToast(error instanceof Error ? error.message : '生成工资表失败', 'error') }
     finally { setLoading(false) }

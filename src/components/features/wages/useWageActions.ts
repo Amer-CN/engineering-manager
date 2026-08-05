@@ -91,7 +91,7 @@ export function useWageActions({
   const handleGenerateWages = useCallback(async () => {
     if (!selectedProject) return
     const r = await (await getAPI()).generateProjectWages(selectedProject.id, selectedMonth)
-    if (r.success && r.data) { showToast(`已生成 ${r.data.length} 条工资`, 'success'); setEditingWages(new Map()); await loadData() }
+    if (r.success && r.data) { showToast(`已生成 ${r.newCount ?? 0} 条工资`, 'success'); setEditingWages(new Map()); await loadData() }
     else showToast(r.error || '生成工资表失败', 'error')
   }, [selectedProject, selectedMonth, loadData, showToast])
 
