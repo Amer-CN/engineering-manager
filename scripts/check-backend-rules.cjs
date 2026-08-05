@@ -471,25 +471,31 @@ for (const file of csFiles) {
 if (violations === 0) console.log('  OK  未发现拼接/越权插值 SQL')
 
 // ═══════════════════════════════════════════════════════════
-// 规则 B5（R4.1c / R5.3 全枚举）：UserFilterWithAuthorizedProjects 第二实参必须为
-// 「含 '.' 且限定符不在黑名单」的字符串字面量
+// 规则 B5（R4.1c / R5.3 全枚举 + R6.3 首参门禁）：
+// UserFilterWithAuthorizedProjects 第二实参必须为「含 '.' 且限定符不在黑名单」的
+// 字符串字面量；UserFilterCompany 与 UserFilterWithAuthorizedProjects 的【首参】必须是
+// scope 变量或 CurrentUser.GetDataScope(ctx) 运行时调用（R6.3 G2）。
 // 退化 EXISTS 结构性防线：裸列名（如 "project_id"）或自引用限定符（pa_authz /
 // project_authorizations）在 EXISTS 子查询内自比较恒真 → 「用户有任意一条授权记录
 // 就全项目可见」（越权，R3.1 实测钉出）。
 //
 // R5.3 重写：不再用形状匹配（形状不匹配会【静默跳过】，fail-open），改为
-// /UserFilterWithAuthorizedProjects\s*\(/g 枚举【全部】出现点 → 括号配对切出实参文本
-// → 顶层逗号切分 → 第二实参必须是合规字面量；其余一切形态（变量 / 成员访问 /
-// 插值串 / 首参是方法调用 / 无法解析）一律 HARD FAIL 并打印实际实参。
+// /(UserFilterWithAuthorizedProjects|UserFilterCompany)\s*\(/g 枚举【全部】出现点 →
+// 括号配对切出实参文本 → 顶层逗号切分 → 首参必须是 scope/GetDataScope（R6.3），
+// UserFilterWithAuthorizedProjects 第二实参必须是合规字面量；其余一切形态
+// （变量 / 成员访问 / 插值串 / 首参是方法调用 / 无法解析）一律 HARD FAIL 并打印实际实参。
+// R6.3 门禁动机：调用点若硬编码 DataScope.All 作首参，UserFilter* 返回 (1 = 1) 恒真
+// → 所有用户可见全部数据（越权）。首参必须是运行时推导的 scope（GetDataScope 按
+// IsAdmin 判定），硬编码 .All 直接 HARD FAIL。
 // 实现说明：必须在【原始源码】上扫描而非 masked——$@"...{...}" 插值字符串内的
 // 嵌套引号会让 scanCs 提前结束字符串扫描、把整个调用表达式掩掉（实测 2026-08-05）。
 // 允许的例外：SafeQueryValidator.GetTableFilter 用 tableAlias 动态构造列名
 // （"{alias}project_id"），其安全性由 CurrentUser 的 fail-closed 运行时守卫兜底，
 // 且行为已由 R5.1(b)(c)(d) 测试钉住——例外【显式计数打印】，不许静默放行。
 // ═══════════════════════════════════════════════════════════
-console.log('\n═══ 后端红线 B5：UserFilterWithAuthorizedProjects 限定列（全枚举） ═══')
+console.log('\n═══ 后端红线 B5：UserFilter* 限定列 + scope 首参门禁（全枚举） ═══')
 const b0Violations = violations
-const b5CallStartRe = /UserFilterWithAuthorizedProjects\s*\(/g
+const b5CallStartRe = /(UserFilterWithAuthorizedProjects|UserFilterCompany)\s*\(/g
 const b5Blacklist = new Set(['pa_authz', 'project_authorizations'])
 let b5ExemptCount = 0
 
@@ -497,6 +503,23 @@ function b5Fail(file, content, idx, detail) {
   const line = lineOf(content, idx)
   console.log(`  HARD FAIL  ${rel(file)}:${line}: ${detail}`)
   violations++
+}
+
+/**
+ * R6.3(G2): UserFilter* 首参门禁——必须是 scope 局部变量或 CurrentUser.GetDataScope(ctx)
+ * 运行时调用；硬编码 DataScope.All（恒真 (1=1)）或任何未知来源一律 HARD FAIL。
+ * 返回 true 表示通过。
+ */
+function b5FirstArgCheck(fnName, firstArg, file, content, idx) {
+  const a = firstArg.trim()
+  if (a === 'scope') return true
+  if (/^(?:Security\s*\.\s*)?CurrentUser\s*\.\s*GetDataScope\s*\(/.test(a)) return true
+  if (/\bDataScope\s*\.\s*All\b/.test(a)) {
+    b5Fail(file, content, idx, `B5 ${fnName} 首参硬编码 ${a.slice(0, 50)}（DataScope.All → (1 = 1) 恒真，过滤失效 → 全员可见全部数据，R6.3 G2）`)
+    return false
+  }
+  b5Fail(file, content, idx, `B5 ${fnName} 首参必须是 scope 变量或 CurrentUser.GetDataScope(ctx)（当前 '${a.slice(0, 60)}'，未知来源 fail-closed，R6.3 G2）`)
+  return false
 }
 
 /** 顶层逗号切分（跳过字符串字面量内的逗号），返回字符串数组 */
@@ -564,10 +587,12 @@ for (const file of csFiles) {
       continue
     }
     const args = splitTopLevelCommas(content.slice(argStart, i - 1))
-    if (args.length < 2) {
-      b5Fail(file, content, m.index, `B5 实参不足（${args.length} 个）：${content.slice(argStart, i - 1).trim().slice(0, 60)}`)
+    if (args.length === 0 || (m[1] === 'UserFilterWithAuthorizedProjects' && args.length < 2)) {
+      b5Fail(file, content, m.index, `B5 ${m[1]} 实参不足（${args.length} 个）：${content.slice(argStart, i - 1).trim().slice(0, 60)}`)
       continue
     }
+    if (!b5FirstArgCheck(m[1], args[0], file, content, m.index)) continue
+    if (m[1] !== 'UserFilterWithAuthorizedProjects') continue // UserFilterCompany 只需首参门禁
     const secondArg = args[1].trim()
     const lit = /^"([^"]*)"$/.exec(secondArg)
     if (lit) {
