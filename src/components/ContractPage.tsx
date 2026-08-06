@@ -276,10 +276,12 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
               <Icon name="Download" size={16} /> 导出
             </Button>
           )}
+          {can('contracts:create') && (
           <Button onClick={() => { setEditingContract(null); setShowModal(true) }}
              variant="primary" className="px-5 py-2 flex items-center">
             <span className="text-lg mr-1">+</span>新增合同
           </Button>
+          )}
         </div>
       </div>
 

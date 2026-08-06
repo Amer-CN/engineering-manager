@@ -6,6 +6,7 @@ import { PartnerSelect } from '../partners/PartnerSelect'
 import { FileDropZone } from '../partners/FileDropZone'
 import { logCreate, logUpdate } from '../../../utils/audit'
 import { useToastStore } from '@/store/toastStore'
+import { usePermission } from '@/hooks/usePermission'
 import { paymentMethods, contractStatuses } from '../../../data/regions'
 import type { Project, Partner, AgreementSubType } from '../../../types/electron'
 import type { Contract, ContractType } from './contractConfig'
@@ -37,6 +38,7 @@ const emptyForm = {
 export const ContractFormModal: React.FC<Props> = ({ show, type, editingContract, projects, partners, api, onClose, onSuccess, onShowTemplateSelector }) => {
   const config = CONFIG[type]
   const showToast = useToastStore(state => state.showToast)
+  const { can } = usePermission()
   const [formData, setFormData] = useState(emptyForm)
   const [dragOverFile, setDragOverFile] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -87,6 +89,12 @@ export const ContractFormModal: React.FC<Props> = ({ show, type, editingContract
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    // G2 B3: 合同新建/编辑（含附件上传 save-file 路径）→ contracts:create / contracts:update
+    const need = isEditing ? 'contracts:update' : 'contracts:create'
+    if (!can(need as 'contracts:create')) {
+      showToast(isEditing ? '您没有编辑合同的权限' : '您没有创建合同的权限', 'error')
+      return
+    }
     if (!formData.name.trim()) { showToast('请输入合同名称', 'error'); return }
     if (!formData.projectId) { showToast('请选择关联项目', 'error'); return }
     if (type !== 'agreement' && (!formData.amount || formData.amount <= 0)) { showToast('请输入有效的合同金额', 'error'); return }
