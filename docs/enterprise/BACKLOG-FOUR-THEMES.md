@@ -2,7 +2,7 @@
 
 > 来源：`docs/handoff/four-themes-review-context.md` 第六节「审查建议聚焦」（10 条）。
 > 会话（2026-08-01, 265e976, 分支 feat/folderstack3d-react）已关闭；遗留项由
-> feat/edition-split 流水线接管。本表核对基准 = 2026-08-06 feat/edition-split HEAD。
+> feat/edition-split 流水线接管。本表核对基准 = 2026-08-06 feat/edition-split HEAD（f2d69ff1dd1a8ace076aab50251e50bc93b7bdfe）。
 > 状态定义：已修 / 未修 / 不适用 / 已被后续改动覆盖。红线级问题在【状态】列标红。
 
 | # | 条目原文（摘要） | 当前状态 | 证据（grep/读码原文） |
@@ -24,7 +24,7 @@
 | 优先级 | 条目 | 建议 |
 |---|---|---|
 | P1 | #7 fire-and-forget `ctx.RequestServices` ObjectDisposed | 改 `IServiceScopeFactory`（原审建议），列入修复轮（R9 或之后）；现兜底（catch + seed 补救）下风险=实体索引缺失，非越权 |
-| P2 | #2 KPI scope 细粒度 | 已在长队列（AggregateKpiAsync），跟踪长队列即可 |
+| P2 | #2ii AggregateKpiAsync 返回全 0 | 已在长队列（AggregateKpiAsync 返回全 0），跟踪长队列即可（#2i KPI scope 越权已修，不再出现在未修表） |
 | P3 | #5 Univer 浏览器实测 | 需真实浏览器验证（Univer 0.25.x），无自动化手段，标注环境依赖 |
 
 ## 与既有队列重合标注（不重复登记）
@@ -32,4 +32,4 @@
 - #2 KPI scope ↔ 长队列（AggregateKpiAsync KPI scope）
 - #8 组件行数 ↔ M-REFACTOR1（12 个文件）+ npm check 行数 SOFT WARN
 - #9 SQL 参数化 ↔ B1 门禁 + TD-BACKEND-28（21 B1 token 口径误报 + 7 B3）
-- #10 金额 INTEGER ↔ AGENTS.md 红线 5（已满足）
+- #10 金额 INTEGER ↔ 长队列「金额 double vs INTEGER（分）」；判定=部分，AGENTS.md 红线 5 未满足（R8.13(b) 实测：Program.cs 运行 DDL 仍 REAL；R8.14.2 生产库实测：7 表金额列全 REAL、值为元、无混存，003 迁移记录与实际 schema 脱节）
