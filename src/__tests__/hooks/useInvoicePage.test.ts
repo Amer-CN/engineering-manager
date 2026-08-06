@@ -1,6 +1,7 @@
 import { renderHook, act, waitFor } from '@testing-library/react'
 
 // Mock dependencies
+vi.mock('@/hooks/usePermission', () => ({ usePermission: () => ({ can: () => true, canAny: () => true, isAdmin: () => true, isLoggedIn: () => true }) }))
 vi.mock('@/utils/audit', () => ({
   logCreate: vi.fn(),
   logUpdate: vi.fn(),

@@ -112,6 +112,10 @@ cd "E:\测试" && npx vite build 2>&1 | Select-String -Pattern "error|success|�
 
 # 5. TypeScript 类型检查 (v0.79.0 新增)
 cd "E:\测试" && npx tsc --noEmit --pretty false 2>&1 | Select-String -Pattern "error TS"
+
+# 6. 前端单元测试 (M-FIX1 F5 补入命令行；教训：G2 连推 9 笔前端改动没跑过一次 vitest,
+#    导致 15 个 mock 契约漂移测试红到 M-FIX1 才被发现——每次提交前必跑)
+cd "E:\测试" && npx vitest run 2>&1 | Select-String -Pattern "Test Files|Tests|failed"
 ```
 
 **通过标准**：
