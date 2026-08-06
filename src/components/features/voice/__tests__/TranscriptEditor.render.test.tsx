@@ -22,6 +22,11 @@ vi.mock('@/hooks/useToast', () => ({
   useToastContext: () => ({ showToast: vi.fn() }),
 }))
 
+// M3：文件夹选择依赖数据层，测试中 stub（真实查询需 QueryClientProvider）
+vi.mock('@/hooks/data/useKnowledgeFolders', () => ({
+  useKnowledgeFolders: () => ({ data: [] }),
+}))
+
 vi.mock('@/contexts/MaskContext', () => ({
   useMask: () => ({ masked: false, setMasked: vi.fn(), toggleMask: vi.fn(), isSyncing: false, isHydrated: true }),
 }))
