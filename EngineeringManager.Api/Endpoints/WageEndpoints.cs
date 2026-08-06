@@ -332,18 +332,22 @@ public static class WageEndpoints
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var (ok, actualWage, missing) = TryResolveActualWage(dto);
             if (!ok) return Results.BadRequest(new { success = false, error = $"PUT /api/wages: actualWage 缺失且推算所需字段缺失: {missing}" });
+            // 窗口 H-2（D-9 落地）：PUT 只管工资列（D-6 契约「PUT 只管工资列，
+            // 付款走 batch-payment」）。SET 不含 paid_amount/paid_date/bank_receipt_path；
+            // WHERE 守卫已发款/已归档行（COALESCE 兜 NULL），其工资列不再被单条 PUT 覆盖。
+            // 被守卫拦截（affected=0）→ 409 显式消息（区别于 403 权限拒绝），不许静默。
             // WageDto 金额为元，落库前 ToFen 转分（单位契约）
             var affected = await db.ExecuteAsync(@"UPDATE wages SET daily_wage=@DailyWage,work_days=@WorkDays,
-                bonus=@Bonus,deduction=@Deduction,actual_wage=@ActualWage,paid_amount=@PaidAmount,
-                paid_date=@PaidDate,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
+                bonus=@Bonus,deduction=@Deduction,actual_wage=@ActualWage,updated_at=@Now,
+                version=version+1, last_modified_at=@Now
+                WHERE id=@Id AND deleted_at IS NULL AND (created_by=@Uid OR @IsAdmin=1)
+                  AND COALESCE(paid_amount,0)=0 AND COALESCE(payment_locked,0)=0",
                 new { dto.Id,
                       DailyWage = ToFen(dto.DailyWage ?? 0),
                       dto.WorkDays,
                       Bonus = ToFen(dto.Bonus ?? 0),
                       Deduction = ToFen(dto.Deduction ?? 0),
                       ActualWage = ToFen(actualWage),
-                      PaidAmount = dto.PaidAmount.HasValue ? ToFen(dto.PaidAmount.Value) : (long?)null,
-                      dto.PaidDate,
                       Uid = uid, IsAdmin = isAdmin, Now = now() });
             // fire-and-forget: upsert 实体到知识库种子表
             if (affected > 0 && dto.Id.HasValue)
@@ -366,7 +370,14 @@ public static class WageEndpoints
                     catch (Exception ex) { Console.Error.WriteLine($"[EntitySeed] wage PUT upsert 失败: {ex.Message}"); }
                 });
             }
-            return affected > 0 ? Common.Ok() : Results.Forbid();
+            if (affected > 0) return Common.Ok();
+            // affected=0 的两类：行不存在/无归属权限（403）vs 已发款/已归档被守卫拦截（409）
+            var rowExists = dto.Id.HasValue && db.ExecuteScalar<int>(
+                "SELECT COUNT(*) FROM wages WHERE id=@Id AND deleted_at IS NULL",
+                new { Id = dto.Id }) > 0;
+            if (rowExists)
+                return Results.Json(new { success = false, error = "该行已发款或已归档，工资列不可再单条修改（付款请走批量付款，归档请先解锁）" }, statusCode: 409);
+            return Results.Forbid();
         });
 
         app.MapDelete("/api/wages/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
@@ -584,7 +595,9 @@ public static class WageEndpoints
         // 付款列与工资列由两个端点分管：batch-save 只管工资列，本端点只管付款列。
         // 守卫是两件事：paid_amount（自动「已发款」保护）在 batch-save 侧；
         // payment_locked（人工归档锁定）在本端点侧。
-        // 注意：PUT /api/wages 单条目前无守卫（既有行为，batch-payment 落地后收窄，见记档）
+        // 窗口 H-2（D-9 落地）：PUT /api/wages 单条已收窄为工资列 only——
+        // SET 无付款列 + WHERE 守卫已发款/已归档行；付款写入一律走本端点
+        // 或 batch-clear-payments（取消发放）。
         app.MapPost("/api/wages/batch-payment", async (HttpContext ctx, List<JsonElement> records, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();

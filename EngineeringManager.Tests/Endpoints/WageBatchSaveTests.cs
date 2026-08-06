@@ -503,4 +503,116 @@ public class WageBatchSaveTests : ApiTestBase
         Assert.Equal(445000L, (long)after.actual_wage);
         Assert.Equal(445000L, (long)after.paid_amount);
     }
+
+    // ── 窗口 H-2（D-9 落地）：PUT /api/wages 收窄为工资列 only ──────────
+
+    /// <summary>PUT /api/wages：未发款行 → 200 且付款列不被改动（SET 已无付款列）。</summary>
+    [Fact]
+    public async Task PutWages_UnpaidRow_UpdatesWageColumns_LeavesPaymentColumns()
+    {
+        var id = await SeedWageRowAsync();
+        var token = await LoginAsync();
+        SetAuth(token);
+
+        // 载荷即使带 paidAmount/paidDate，SET 也不含付款列（收窄后忽略）
+        var resp = await Client.PutAsJsonAsync("/api/wages",
+            new { id, projectId = TestProjectId, projectWorkerId = TestPwId, yearMonth = TestYearMonth,
+                  dailyWage = 300, workDays = 22, bonus = 100, deduction = 50, actualWage = 6650,
+                  paidAmount = 9999, paidDate = "2026-08-31" });
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+
+        using var conn = new SqliteConnection(ConnectionString);
+        var row = conn.QueryFirst(
+            "SELECT daily_wage, bonus, deduction, actual_wage, paid_amount, paid_date FROM wages WHERE id=@Id", new { Id = id });
+        Assert.Equal(30000L, (long)row.daily_wage);      // 300 元 → 分
+        Assert.Equal(10000L, (long)row.bonus);
+        Assert.Equal(5000L, (long)row.deduction);
+        Assert.Equal(665000L, (long)row.actual_wage);
+        // 付款列不得被 PUT 改动：仍是 batch-save 后的 0（003 迁移 DEFAULT 0；NULL 也等价 0）
+        Assert.Equal(0L, (long)row.paid_amount);
+        Assert.True(row.paid_date is null or DBNull, "PUT 不得写入 paid_date");
+    }
+
+    /// <summary>PUT /api/wages：已发款行（paid_amount>0）→ 409 且工资列不变。</summary>
+    [Fact]
+    public async Task PutWages_PaidRow_Returns409_WageColumnsUnchanged()
+    {
+        var id = await SeedWageRowAsync();
+        // 先走 batch-payment 发款（4450 元）
+        var token = await LoginAsync();
+        SetAuth(token);
+        var pay = await Client.PostAsJsonAsync("/api/wages/batch-payment",
+            new[] { new { id, paidAmount = 4450, paidDate = "2026-08-05" } });
+        Assert.Equal(HttpStatusCode.OK, pay.StatusCode);
+
+        var resp = await Client.PutAsJsonAsync("/api/wages",
+            new { id, projectId = TestProjectId, projectWorkerId = TestPwId, yearMonth = TestYearMonth,
+                  dailyWage = 300, workDays = 22, bonus = 100, deduction = 50, actualWage = 6650 });
+        Assert.Equal(HttpStatusCode.Conflict, resp.StatusCode);  // 已发款 → 409 显式消息（非 403 权限）
+
+        using var conn = new SqliteConnection(ConnectionString);
+        var row = conn.QueryFirst(
+            "SELECT daily_wage, bonus, deduction, actual_wage, paid_amount FROM wages WHERE id=@Id", new { Id = id });
+        Assert.Equal(20000L, (long)row.daily_wage);      // 工资列未被覆盖
+        Assert.Equal(10000L, (long)row.bonus);
+        Assert.Equal(5000L, (long)row.deduction);
+        Assert.Equal(445000L, (long)row.actual_wage);
+        Assert.Equal(445000L, (long)row.paid_amount);    // 付款列原样
+    }
+
+    /// <summary>PUT /api/wages：已归档行（payment_locked=1）→ 409 且工资列不变。</summary>
+    [Fact]
+    public async Task PutWages_LockedRow_Returns409_WageColumnsUnchanged()
+    {
+        var id = await SeedWageRowAsync();
+        var token = await LoginAsync();
+        SetAuth(token);
+
+        // 归档 → payment_locked=1
+        var arch = await Client.PostAsJsonAsync("/api/wages/archive", new[] { id });
+        Assert.Equal(HttpStatusCode.OK, arch.StatusCode);
+
+        var resp = await Client.PutAsJsonAsync("/api/wages",
+            new { id, projectId = TestProjectId, projectWorkerId = TestPwId, yearMonth = TestYearMonth,
+                  dailyWage = 300, workDays = 22, bonus = 100, deduction = 50, actualWage = 6650 });
+        Assert.Equal(HttpStatusCode.Conflict, resp.StatusCode);
+
+        using var conn = new SqliteConnection(ConnectionString);
+        var row = conn.QueryFirst("SELECT daily_wage, actual_wage FROM wages WHERE id=@Id", new { Id = id });
+        Assert.Equal(20000L, (long)row.daily_wage);
+        Assert.Equal(445000L, (long)row.actual_wage);
+    }
+
+    /// <summary>PUT /api/wages：付款用途仍走 batch-payment（200，付款列写入）。</summary>
+    [Fact]
+    public async Task PutWages_PaymentUseCase_StillGoesThroughBatchPayment()
+    {
+        var id = await SeedWageRowAsync();
+        var token = await LoginAsync();
+        SetAuth(token);
+
+        var pay = await Client.PostAsJsonAsync("/api/wages/batch-payment",
+            new[] { new { id, paidAmount = 4450, paidDate = "2026-08-05" } });
+        Assert.Equal(HttpStatusCode.OK, pay.StatusCode);
+        var data = await GetDataAsync(pay);
+        Assert.Equal(1, data.GetProperty("saved").GetInt32());
+
+        using var conn = new SqliteConnection(ConnectionString);
+        var row = conn.QueryFirst("SELECT paid_amount, paid_date FROM wages WHERE id=@Id", new { Id = id });
+        Assert.Equal(445000L, (long)row.paid_amount);
+        Assert.Equal("2026-08-05", (string)row.paid_date);
+    }
+
+    /// <summary>PUT /api/wages：行不存在 → 403（与既有行为一致，非 409）。</summary>
+    [Fact]
+    public async Task PutWages_NonexistentRow_Returns403()
+    {
+        var token = await LoginAsync();
+        SetAuth(token);
+
+        var resp = await Client.PutAsJsonAsync("/api/wages",
+            new { id = 999999, projectId = TestProjectId, projectWorkerId = TestPwId, yearMonth = TestYearMonth,
+                  dailyWage = 300, workDays = 22, bonus = 0, deduction = 0, actualWage = 6600 });
+        Assert.Equal(HttpStatusCode.Forbidden, resp.StatusCode);
+    }
 }
