@@ -8,7 +8,7 @@ import {
   getHitType,
   getHitTypeLabel,
   formatSpeakers,
-} from '../knowledgeTextMask'
+} from '@/utils/knowledgeTextMask'
 
 describe('maskKnowledgeText', () => {
   it('masked=false 时原样返回', () => {
