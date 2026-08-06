@@ -16,6 +16,7 @@ import { useStaffFormActions } from './useStaffFormActions'
 import { getStaffListColumns } from './staffListColumns'
 import { useMaskedFn } from '@/hooks/useMaskedValue'
 import { getAPI } from '@/services/api-adapter'
+import { usePermission } from '@/hooks/usePermission'
 import type { Member, Department } from '@/types/electron'
 
 const emptyForm: StaffFormData = {
@@ -27,6 +28,7 @@ const emptyForm: StaffFormData = {
 
 const StaffList: React.FC = () => {
   const showToast = useToastStore(state => state.showToast)
+  const { can } = usePermission()
   const { ConfirmDialog } = useConfirm()
   const mask = useMaskedFn()
   const [members, setMembers] = useState<Member[]>([] as Member[])
@@ -111,6 +113,8 @@ const StaffList: React.FC = () => {
   }
 
   const handleStatusChange = useCallback(async (member: Member, newStatus: string) => {
+    // G2 B5: 人员状态切换 → members:update
+    if (!can('members:update')) { showToast('您没有变更状态的权限', 'error'); return }
     await (await getAPI()).updateMember({ ...member, status: newStatus })
     loadData()
     showToast('状态已更新', 'success')

@@ -4,6 +4,7 @@ import { Icon } from '../../ui/Icon'
 import { useToastStore } from '@/store/toastStore'
 import { logUpdate } from '../../../utils/audit'
 import { getAPI } from '@/services/api-adapter'
+import { usePermission } from '@/hooks/usePermission'
 import { HoverScrollbar } from '../../ui/HoverScrollbar'
 import { Button } from '../../ui/Button'
 import type { Member, Department } from '@/types'
@@ -16,10 +17,13 @@ interface Props {
 
 const BatchDeptAssignModal: React.FC<Props> = ({ orphans, departments, onClose, onDone }) => {
   const showToast = useToastStore(state => state.showToast)
+  const { can } = usePermission()
   const [batchDeptId, setBatchDeptId] = useState<number | ''>('')
   const [selected, setSelected] = useState<Set<number>>(new Set(orphans.map((m: Member) => m.id)))
 
   const handleAssign = async () => {
+    // G2 B5: 批量调部门 → members:update
+    if (!can('members:update')) { showToast('您没有调整部门的权限', 'error'); return }
     if (!batchDeptId) { showToast('请选择目标部门', 'error'); return }
     if (selected.size === 0) { showToast('请选择要分配的人员', 'error'); return }
     try {

@@ -3,6 +3,7 @@ import type { Member, WorkerTeam, WorkerStatus } from '../../../../types/electro
 import { useToastStore } from '@/store/toastStore'
 import { useConfirm } from '../../../../hooks/useConfirm'
 import { getAPI } from '@/services/api-adapter'
+import { usePermission } from '@/hooks/usePermission'
 import { useMemberOperations } from '../../members/useMemberOperations'
 import { useTeamOps } from '../../members/useTeamOps'
 import type { WorkerFormData } from '../../members/memberFormTypes'
@@ -58,6 +59,7 @@ export function useLaborOperations({
 }: UseLaborOperationsOptions): UseLaborOperationsReturn {
   const showToast = useToastStore(state => state.showToast)
   const { confirm, ConfirmDialog } = useConfirm()
+  const { can } = usePermission()
   const originalMemberFileRef = useRef<Record<number, Record<string, string>>>({})
 
   // Member operations (from useMemberOperations)
@@ -84,6 +86,8 @@ export function useLaborOperations({
 
   // Wrap delete member with confirm dialog
   const handleDeleteMember = useCallback(async (id: number) => {
+    // G2 B5: 删除成员 → members:delete
+    if (!can('members:delete')) { showToast('您没有删除成员的权限', 'error'); return }
     const memberToDelete = members.find(m => m.id === id)
     const ok = await confirm({
       title: '确认删除',
@@ -102,6 +106,9 @@ export function useLaborOperations({
 
   // Pool worker operations
   const handleSubmitPoolWorker = useCallback(async (formData: any, editingWorker?: any | null) => {
+    // G2 B5: 工人池新增/编辑 → members:create / members:update
+    const need = editingWorker ? 'members:update' : 'members:create'
+    if (!can(need as 'members:create')) { showToast(editingWorker ? '您没有编辑工人的权限' : '您没有新增工人的权限', 'error'); return }
     const data = {
       name: formData.name,
       phone: formData.phone,
@@ -146,6 +153,8 @@ export function useLaborOperations({
   }, [loadData, showToast])
 
   const handleDeletePoolWorker = useCallback(async (workerId: number) => {
+    // G2 B5: 删除工人 → members:delete
+    if (!can('members:delete')) { showToast('您没有删除工人的权限', 'error'); return }
     const worker = members.find(m => (m as Member & { workerId?: number }).workerId === workerId || m.id === workerId)
     const ok = await confirm({
       title: '确认删除',
@@ -169,6 +178,8 @@ export function useLaborOperations({
 
   // Project worker operations
   const handleBatchAddWorkers = useCallback(async (entries: any[]) => {
+    // G2 B5: 批量添加工人 → members:create
+    if (!can('members:create')) { showToast('您没有添加工人的权限', 'error'); return }
     try {
       const result = await (await getAPI()).batchCreateProjectWorkers(entries)
       if (result.success) {
@@ -183,6 +194,8 @@ export function useLaborOperations({
   }, [loadData, showToast])
 
   const handleUpdateProjectWorker = useCallback(async (pwId: number, data: Record<string, unknown>) => {
+    // G2 B5: 项目工人编辑 → members:update
+    if (!can('members:update')) { showToast('您没有编辑工人的权限', 'error'); return }
     try {
       const result = await (await getAPI()).updateProjectWorker({ id: pwId, ...data })
       if (result.success) {
@@ -197,6 +210,8 @@ export function useLaborOperations({
   }, [loadData, showToast])
 
   const handleDeleteProjectWorker = useCallback(async (pwId: number) => {
+    // G2 B5: 移除项目工人 → members:delete
+    if (!can('members:delete')) { showToast('您没有移除工人的权限', 'error'); return }
     try {
       const result = await (await getAPI()).deleteProjectWorker(pwId)
       if (result.success) {
@@ -211,6 +226,8 @@ export function useLaborOperations({
   }, [loadData, showToast])
 
   const handleTeamWorkerTransfer = useCallback(async (pwId: number, toTeamId: number) => {
+    // G2 B5: 调组 → members:update
+    if (!can('members:update')) { showToast('您没有调整班组的权限', 'error'); return }
     try {
       const result = await (await getAPI()).updateProjectWorker({ id: pwId, teamId: toTeamId })
       if (result.success) {
@@ -266,6 +283,8 @@ export function useLaborOperations({
     actualLeaveDate: string,
     remarks: string
   ) => {
+    // G2 B5: 工人离场 → members:update
+    if (!can('members:update')) { showToast('您没有办理离场的权限', 'error'); return }
     try {
       const result = await (await getAPI()).updateMember({
         ...worker,
@@ -286,6 +305,8 @@ export function useLaborOperations({
 
   // 工人重新入职
   const handleWorkerReEntry = useCallback(async (worker: Member) => {
+    // G2 B5: 重新入职 → members:update
+    if (!can('members:update')) { showToast('您没有办理重新入职的权限', 'error'); return }
     try {
       const result = await (await getAPI()).updateMember({
         ...worker,
@@ -306,6 +327,8 @@ export function useLaborOperations({
 
   // 员工状态变更
   const handleStaffStatusChange = useCallback(async (member: Member, status: string) => {
+    // G2 B5: 员工状态变更 → members:update
+    if (!can('members:update')) { showToast('您没有变更状态的权限', 'error'); return }
     try {
       const result = await (await getAPI()).updateMember({
         ...member,

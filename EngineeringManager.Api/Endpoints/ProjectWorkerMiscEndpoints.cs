@@ -14,6 +14,8 @@ public static class ProjectWorkerMiscEndpoints
         app.MapPost("/api/project-workers/batch", async (HttpContext ctx, List<ProjectWorkerDto> records, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B5: 项目工人批量添加 → members:create
+            if (!CurrentUser.HasPermission(ctx, db, "members:create")) return Results.Forbid();
             var count = 0;
             foreach (var dto in records)
             {
@@ -27,6 +29,8 @@ public static class ProjectWorkerMiscEndpoints
         app.MapPut("/api/project-workers", async (HttpContext ctx, ProjectWorkerDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B5: 项目工人写操作 → members:update
+            if (!CurrentUser.HasPermission(ctx, db, "members:update")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var affected = await db.ExecuteAsync(@"UPDATE project_workers SET team_id=@TeamId,daily_wage=@DailyWage,worker_type=@WorkerType,entry_date=@EntryDate,status=@Status, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
                 new { dto.Id, dto.TeamId, dto.DailyWage, dto.WorkerType, dto.EntryDate, dto.Status, Uid = uid, IsAdmin = isAdmin });
