@@ -1,0 +1,127 @@
+/**
+ * GlassCarousel + CarouselControls 测试
+ *
+ * 1. 舞台渲染：6 卡全量注册（gc-card）、悬浮信息卡、圆点导航、控制按钮
+ * 2. 步进/圆点交互：聚焦索引变化（fake timers 驱动 lerp 收敛）
+ * 3. 参数抽屉：默认关闭、打开后滑块可见、自动循环默认关闭、重置恢复真值
+ * 4. reduced-motion → 平铺列表（gc-flat-track，无 3D）
+ */
+
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent, act } from '@testing-library/react'
+import { GlassCarousel } from '../GlassCarousel'
+import { CarouselControls } from '../CarouselControls'
+
+function stubMatchMedia(matches: boolean) {
+  const mq = { matches, addEventListener: vi.fn(), removeEventListener: vi.fn() }
+  vi.stubGlobal('matchMedia', vi.fn(() => mq))
+  return mq
+}
+
+describe('GlassCarousel — 舞台渲染', () => {
+  beforeEach(() => {
+    stubMatchMedia(false)
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('渲染全部文件夹卡 + 悬浮信息卡 + 圆点导航 + 控制按钮', () => {
+    render(<GlassCarousel />)
+
+    // 6 张演示文件夹卡全量注册
+    const cards = document.querySelectorAll('.gc-card')
+    expect(cards.length).toBe(6)
+
+    // 悬浮信息卡显示当前聚焦文件夹（首个 = 安全生产资料）
+    expect(screen.getAllByText('安全生产资料').length).toBeGreaterThan(0) // Badge + 卡片 Pocket
+    expect(screen.getAllByText('92%').length).toBeGreaterThan(0)
+
+    // 圆点 6 个，首个选中
+    const dots = screen.getAllByRole('button', { name: /第 \d 个文件夹/ })
+    expect(dots.length).toBe(6)
+    expect(dots[0].className).toContain('gc-dot--active')
+
+    // 控制按钮：参数 / 上 / 下
+    expect(screen.getByRole('button', { name: '调整 3D 视效参数' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '上一个文件夹' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '下一个文件夹' })).toBeInTheDocument()
+  })
+
+  it('点下一个 → 聚焦变化（lerp 收敛后第二个圆点选中）', async () => {
+    vi.useFakeTimers()
+    render(<GlassCarousel />)
+
+    fireEvent.click(screen.getByRole('button', { name: '下一个文件夹' }))
+    act(() => { vi.advanceTimersByTime(2000) })
+
+    const dots = screen.getAllByRole('button', { name: /第 \d 个文件夹/ })
+    expect(dots[1].className).toContain('gc-dot--active')
+    expect(screen.getAllByText('合同与往来文件').length).toBeGreaterThan(0)
+    vi.useRealTimers()
+  })
+
+  it('点击圆点直达对应文件夹', async () => {
+    vi.useFakeTimers()
+    render(<GlassCarousel />)
+
+    fireEvent.click(screen.getAllByRole('button', { name: /第 \d 个文件夹/ })[4])
+    act(() => { vi.advanceTimersByTime(2000) })
+
+    expect(screen.getAllByText('结算与支付凭证').length).toBeGreaterThan(0)
+    vi.useRealTimers()
+  })
+
+  it('reduced-motion → 平铺列表（无 3D）', () => {
+    stubMatchMedia(true)
+    render(<GlassCarousel />)
+    expect(document.querySelector('.gc-flat-track')).not.toBeNull()
+    expect(document.querySelector('.gc-card')).toBeNull()
+  })
+})
+
+describe('CarouselControls — 参数抽屉', () => {
+  const baseProps = {
+    showControls: false,
+    onToggleControls: vi.fn(),
+    onStepPrev: vi.fn(),
+    onStepNext: vi.fn(),
+    isPlaying: false,
+    onTogglePlaying: vi.fn(),
+    scrollSpeed: 1,
+    onScrollSpeedChange: vi.fn(),
+    rotateYAngle: -26,
+    onRotateYChange: vi.fn(),
+    rotateXAngle: 10,
+    onRotateXChange: vi.fn(),
+    itemSpacing: 75,
+    onSpacingChange: vi.fn(),
+  }
+
+  it('默认隐藏参数抽屉；打开后渲染滑块与自动循环开关', () => {
+    const { rerender } = render(<CarouselControls {...baseProps} />)
+    expect(screen.queryByText('3D 视效设置')).toBeNull()
+
+    rerender(<CarouselControls {...baseProps} showControls={true} />)
+    expect(screen.getByText('3D 视效设置')).toBeInTheDocument()
+    expect(screen.getByRole('slider', { name: 'Y 轴旋转角度' })).toBeInTheDocument()
+    expect(screen.getByRole('slider', { name: '文件夹重叠间距' })).toBeInTheDocument()
+  })
+
+  it('自动循环默认关闭（管理场景非海报）', () => {
+    render(<CarouselControls {...baseProps} showControls={true} />)
+    const toggle = screen.getByText('自动循环').closest('button')!
+    expect(toggle.textContent).toContain('关闭')
+    fireEvent.click(toggle)
+    expect(baseProps.onTogglePlaying).toHaveBeenCalledTimes(1)
+  })
+
+  it('重置恢复参数真值（rotateY -26 / rotateX 10 / spacing 75 / speed 1）', () => {
+    render(<CarouselControls {...baseProps} showControls={true} rotateYAngle={-40} itemSpacing={120} scrollSpeed={2} />)
+    fireEvent.click(screen.getByText('重置'))
+    expect(baseProps.onRotateYChange).toHaveBeenCalledWith(-26)
+    expect(baseProps.onRotateXChange).toHaveBeenCalledWith(10)
+    expect(baseProps.onSpacingChange).toHaveBeenCalledWith(75)
+    expect(baseProps.onScrollSpeedChange).toHaveBeenCalledWith(1)
+  })
+})
