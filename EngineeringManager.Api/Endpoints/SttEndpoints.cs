@@ -62,6 +62,9 @@ public static class SttEndpoints
                     return Common.Fail("非法路径");
 
                 // 流式写入 .uploading 临时文件，完成后原子改名
+                // H-4（M4 flaky 根治）：用 finally 兜底清理——catch 只删「抛异常」路径，
+                // 若 RequestAborted 在 await using 释放与 catch 之间竞态，临时文件会残留。
+                // finally 在任何退出路径（成功改名后 temp 已不存在=无操作 / 异常=删除）都执行。
                 try
                 {
                     await using (var fileStream = File.Create(tempPath))
@@ -70,11 +73,28 @@ public static class SttEndpoints
                     }
                     File.Move(tempPath, finalPath);
                 }
-                catch
+                finally
                 {
-                    // 上传中断或失败时清理不完整临时文件
-                    try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { }
-                    throw;
+                    // 成功路径：File.Move 后 tempPath 已不存在，删除是无操作；
+                    // 失败/取消路径：删除不完整临时文件。
+                    // H-4（M4 flaky 根治）：取消时 CopyToAsync 抛异常，await using 释放
+                    // 文件句柄与 finally 删除之间在 Windows 上有竞态——File.Delete 可能抛
+                    // 共享冲突（IOException / UnauthorizedAccessException）。最宽兜底 +
+                    // 记录异常类型（不静默吞死），重试 5 次×100ms。
+                    for (var attempt = 0; attempt < 5 && File.Exists(tempPath); attempt++)
+                    {
+                        try
+                        {
+                            File.Delete(tempPath);
+                            break;
+                        }
+                        catch (Exception ex)
+                        {
+                            if (attempt == 4)
+                                Console.Error.WriteLine($"[SttEndpoints] .uploading 清理失败(重试5次仍锁住): {tempPath} — {ex.GetType().Name}: {ex.Message}");
+                            await Task.Delay(100);
+                        }
+                    }
                 }
 
                 // 返回相对 uploads/ 的路径，可直接传给 POST /api/stt/transcribe
