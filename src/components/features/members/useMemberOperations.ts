@@ -1,6 +1,7 @@
 import type { Member, WorkerStatus, Project } from '../../../types/electron'
 import { logCreate, logUpdate, logDelete } from '../../../utils/audit'
 import { getAPI } from '@/services/api-adapter'
+import { usePermission } from '@/hooks/usePermission'
 import { processFileFields, guessFileExt, FILE_CATEGORIES } from '../../../services/fileService'
 import type { StaffFormData, WorkerFormData } from './memberFormTypes'
 
@@ -23,8 +24,11 @@ function stripEmpties(obj: Record<string, unknown>) {
 export function useMemberOperations({
   editingStaff, editingWorker, projects, originalMemberFileRef, loadData, showToast, onSuccess
 }: SubmitMemberOptions) {
+  const { can } = usePermission()
 
   const handleDeleteMember = async (id: number, members: Member[]) => {
+    // G2 B5: 删除人员 → members:delete
+    if (!can('members:delete')) { showToast('您没有删除人员的权限', 'error'); return }
     if (!confirm('确定要删除该成员吗？')) return
     try {
       const memberToDelete = members.find(m => m.id === id)
@@ -47,6 +51,12 @@ export function useMemberOperations({
   }
 
   const handleSubmitStaff = async (data: StaffFormData | WorkerFormData) => {
+    // G2 B5: 人员新增/编辑（含 worker/pw 联动建档）→ members:create / members:update
+    const need = editingStaff ? 'members:update' : 'members:create'
+    if (!can(need as 'members:create')) {
+      showToast(editingStaff ? '您没有编辑人员的权限' : '您没有新增人员的权限', 'error')
+      return
+    }
     try {
       let submitFileData: Record<string, unknown> = data as any
       if (editingStaff) {
@@ -123,6 +133,12 @@ export function useMemberOperations({
   }
 
   const handleSubmitWorker = async (data: StaffFormData | WorkerFormData) => {
+    // G2 B5: 工人新增/编辑 → members:create / members:update
+    const need = editingWorker ? 'members:update' : 'members:create'
+    if (!can(need as 'members:create')) {
+      showToast(editingWorker ? '您没有编辑工人的权限' : '您没有新增工人的权限', 'error')
+      return
+    }
     try {
       let submitFileData: Record<string, unknown> = data as any
       if (editingWorker) {

@@ -67,6 +67,12 @@ export function useStaffFormActions({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    // G2 B5: 人员新增/编辑 → members:create / members:update
+    const need = editing ? 'members:update' : 'members:create'
+    if (!can(need as 'members:create')) {
+      showToast(editing ? '您没有编辑人员的权限' : '您没有新增人员的权限', 'error')
+      return
+    }
     if (!formData.name.trim()) { showToast('请输入姓名', 'error'); return }
     try {
       let payload: any = {
