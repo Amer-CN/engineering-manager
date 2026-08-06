@@ -1,4 +1,11 @@
 /**
+ * DISABLED (2026-08-05, R7.8 worktree evidence-chain remediation)
+ * 本 worktree（E:\测试，master 分支）的脚本版本与 feat/edition-split 不一致，
+ * 在此运行会产出无法自证的门禁数字（R6 曾误用导致 check:backend 数字失真）。
+ * 门禁一律以 E:\edition-split\scripts\check-backend-rules.cjs 为准
+ * （运行时会打印脚本绝对路径 + md5 自证，见 R7.6）。
+ */
+/**
  * 工程管家 后端 C# 红线检查脚本（机械化门禁）
  *
  * 覆盖 AGENTS.md 已声明的三条后端红线：
