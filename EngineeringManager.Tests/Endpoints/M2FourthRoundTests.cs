@@ -46,6 +46,7 @@ public class M2FourthRoundTests : IDisposable
                 full_text   TEXT NOT NULL,
                 speakers    TEXT,
                 occurred_at TEXT,
+                folder_id   INTEGER,
                 created_at  TEXT NOT NULL,
                 updated_at  TEXT NOT NULL,
                 created_by  TEXT NOT NULL
@@ -666,6 +667,7 @@ public class BgeE2ETestsV2
                 full_text   TEXT NOT NULL,
                 speakers    TEXT,
                 occurred_at TEXT,
+                folder_id   INTEGER,
                 created_at  TEXT NOT NULL,
                 updated_at  TEXT NOT NULL,
                 created_by  TEXT NOT NULL
@@ -955,6 +957,7 @@ public class M2FifthRoundConcurrentTests : IDisposable
                 full_text   TEXT NOT NULL,
                 speakers    TEXT,
                 occurred_at TEXT,
+                folder_id   INTEGER,
                 created_at  TEXT NOT NULL,
                 updated_at  TEXT NOT NULL,
                 created_by  TEXT NOT NULL

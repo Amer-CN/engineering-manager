@@ -9,8 +9,9 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Icon } from '@/components/ui/Icon'
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { useToastContext } from '@/hooks/useToast'
+import { useKnowledgeFolders } from '@/hooks/data/useKnowledgeFolders'
 import { maskKnowledgeText } from '@/utils/knowledgeTextMask'
 import type { SttJobDetail, SttSegment } from '@/services/stt-client'
 
@@ -19,7 +20,7 @@ interface TranscriptEditorProps {
   masked: boolean
   /** 本地音频播放 URL（录音/上传当次可用，历史任务为空）*/
   audioUrl?: string | null
-  onIngest: (correctedText: string, segments: SttSegment[], title: string, projectId?: number, occurredAt?: string) => void
+  onIngest: (correctedText: string, segments: SttSegment[], title: string, projectId?: number, occurredAt?: string, folderId?: number | null) => void
 }
 
 function formatTimestamp(seconds: number): string {
@@ -54,7 +55,10 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
   const [title, setTitle] = useState('')
   const [hasChanges, setHasChanges] = useState(false)
   const [ingesting, setIngesting] = useState(false)
-  const [showConfirm, setShowConfirm] = useState(false)
+  // M3：入库前文件夹选择（voice → 选文件夹 → 建文档）
+  const [showFolderPicker, setShowFolderPicker] = useState(false)
+  const [pickFolderId, setPickFolderId] = useState<number | null>(null)
+  const { data: folders } = useKnowledgeFolders()
   const [originalSegments, setOriginalSegments] = useState<SttSegment[]>([])
 
   // 初始化
@@ -95,13 +99,8 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
     showToast('已恢复原始转写', 'info')
   }, [originalSegments, job.text, showToast])
 
-  // 入库
-  const handleIngestClick = useCallback(() => {
-    setShowConfirm(true)
-  }, [])
 
   const handleIngestConfirm = useCallback(async () => {
-    setShowConfirm(false)
     setIngesting(true)
 
     let correctedText = ''
@@ -122,10 +121,16 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
       return
     }
 
-    await onIngest(correctedText, correctedSegments, title.trim() || job.sourceFile || `任务 #${job.id}`)
+    await onIngest(correctedText, correctedSegments, title.trim() || job.sourceFile || `任务 #${job.id}`, undefined, undefined, pickFolderId)
     setIngesting(false)
     setHasChanges(false)
-  }, [segments, singleText, job, title, onIngest, showToast])
+  }, [segments, singleText, job, title, onIngest, showToast, pickFolderId])
+
+  // M3：入库前先弹文件夹选择（可选；不选 = 不放入文件夹）
+  const handleIngestClick = () => {
+    setPickFolderId(null)
+    setShowFolderPicker(true)
+  }
 
   const displayText = useMemo(() => {
     if (segments.length > 0) {
@@ -230,14 +235,51 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
         )}
       </div>
 
-      <ConfirmDialog
-        isOpen={showConfirm}
-        title="存入知识库"
-        content={`确认将校对后的文本存入知识库？${hasChanges ? '（包含您的修改）' : ''}`}
-        confirmText="确认入库"
-        onConfirm={handleIngestConfirm}
-        onClose={() => setShowConfirm(false)}
-      />
+      {/* M3：文件夹选择弹窗（存入知识库前） */}
+      <Dialog open={showFolderPicker} onOpenChange={setShowFolderPicker}>
+        <DialogContent className="sm:max-w-md">
+          <DialogTitle>存入知识库</DialogTitle>
+          <DialogDescription>选择目标文件夹（可选；不选则作为未分类文档）</DialogDescription>
+          <div className="space-y-2 pt-2 max-h-64 overflow-auto">
+            <button
+              onClick={() => setPickFolderId(null)}
+              className={`w-full flex items-center gap-2 p-2.5 rounded-lg border text-left text-sm transition-colors ${
+                pickFolderId === null
+                  ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)]'
+                  : 'border-[color:var(--border)] bg-[color:var(--card)] hover:bg-[color:var(--panel-2)]'
+              }`}
+            >
+              <span className="flex-1">不放入文件夹</span>
+            </button>
+            {(folders ?? []).map((f) => (
+              <button
+                key={f.id}
+                onClick={() => setPickFolderId(f.id)}
+                className={`w-full flex items-center gap-2 p-2.5 rounded-lg border text-left text-sm transition-colors ${
+                  pickFolderId === f.id
+                    ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)]'
+                    : 'border-[color:var(--border)] bg-[color:var(--card)] hover:bg-[color:var(--panel-2)]'
+                }`}
+              >
+                <span className="flex-1 min-w-0 truncate">{f.name}</span>
+                <span className="text-xs text-[color:var(--muted)]">{f.docCount} 文档</span>
+              </button>
+            ))}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" size="md" onClick={() => setShowFolderPicker(false)}>取消</Button>
+            <Button
+              variant="success"
+              size="md"
+              loading={ingesting}
+              disabled={ingesting}
+              onClick={() => { setShowFolderPicker(false); handleIngestConfirm() }}
+            >
+              确认入库
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
