@@ -7,6 +7,7 @@
 import { useRef, useEffect, useState, useCallback } from 'react'
 import { apiClient } from '@/services/api-client'
 import { useToastStore } from '@/store/toastStore'
+import { usePermission } from '@/hooks/usePermission'
 import { Icon } from '@/components/ui/Icon'
 import { exportCostLedgerList } from './printExport'
 import { UniverMount, readUniverEntries } from './univerEngine'
@@ -25,6 +26,7 @@ export default function CostLedgerSpreadsheet({
   projectId, batchId, categories, onClose,
 }: CostLedgerSpreadsheetProps) {
   const showToast = useToastStore(state => state.showToast)
+  const { can } = usePermission()
   const [entries, setEntries] = useState<CostLedgerEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -58,6 +60,8 @@ export default function CostLedgerSpreadsheet({
 
   // 保存（显式提交，从 Univer 实例回读编辑数据）
   const handleSave = async () => {
+    // G2 B9: 电子表格保存 → costLedger:update
+    if (!can('costLedger:update')) { showToast('您没有保存台账的权限', 'error'); return }
     if (!batchId || entries.length === 0) return
     setSaving(true)
     try {

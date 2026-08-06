@@ -49,6 +49,8 @@ public static class CostLedgerEndpoints
         app.MapPost("/api/cost-ledger", async (HttpContext ctx, CostLedgerEntryDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B9: 台账写操作 → costLedger:create
+            if (!CurrentUser.HasPermission(ctx, db, "costLedger:create")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO cost_ledger (project_id,batch_id,voucher_no,date,direction,category,amount,counterparty,channel,summary,notes,created_by,created_at,updated_at, last_modified_at) VALUES (@ProjectId,@BatchId,@VoucherNo,@Date,@Direction,@Category,@Amount,@Counterparty,@Channel,@Summary,@Notes,@CreatedBy,@Now,@Now, @Now);
                 SELECT last_insert_rowid();",
@@ -60,6 +62,8 @@ public static class CostLedgerEndpoints
         app.MapPut("/api/cost-ledger", async (HttpContext ctx, CostLedgerEntryDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B9: 台账写操作 → costLedger:update
+            if (!CurrentUser.HasPermission(ctx, db, "costLedger:update")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var affected = await db.ExecuteAsync($@"UPDATE cost_ledger SET voucher_no=@VoucherNo,date=@Date,direction=@Direction,category=@Category,
@@ -73,6 +77,8 @@ public static class CostLedgerEndpoints
         app.MapDelete("/api/cost-ledger/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B9: 台账写操作 → costLedger:delete
+            if (!CurrentUser.HasPermission(ctx, db, "costLedger:delete")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             return (await db.ExecuteAsync($"UPDATE cost_ledger SET deleted_at=@Now WHERE id=@Id AND deleted_at IS NULL AND {CurrentUser.UserFilterWithAuthorizedProjects(scope)}", new { Id = id, Now = now(), Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
@@ -81,6 +87,8 @@ public static class CostLedgerEndpoints
         app.MapPost("/api/cost-ledger/batch", async (HttpContext ctx, List<CostLedgerEntryDto> entries, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B9: 台账批量导入 → costLedger:create
+            if (!CurrentUser.HasPermission(ctx, db, "costLedger:create")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             var count = 0;
             foreach (var dto in entries)
@@ -116,6 +124,8 @@ public static class CostLedgerEndpoints
         app.MapPost("/api/cost-ledger/categories", async (HttpContext ctx, CostLedgerCategoryDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B9: 分类配置 → costLedger:update
+            if (!CurrentUser.HasPermission(ctx, db, "costLedger:update")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO cost_ledger_categories (label,direction,level1,color)
                 VALUES (@Name,@Direction,@Level1,@Color); SELECT last_insert_rowid();",
@@ -126,6 +136,8 @@ public static class CostLedgerEndpoints
         app.MapPut("/api/cost-ledger/categories", async (HttpContext ctx, CostLedgerCategoryDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B9: 分类配置 → costLedger:update
+            if (!CurrentUser.HasPermission(ctx, db, "costLedger:update")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             var affected = await db.ExecuteAsync(@"UPDATE cost_ledger_categories SET label=@Name,direction=@Direction,level1=@Level1,color=@Color WHERE id=@Id",
                 new { dto.Name, dto.Direction, dto.Level1, dto.Color, dto.Id });
@@ -135,6 +147,8 @@ public static class CostLedgerEndpoints
         app.MapDelete("/api/cost-ledger/categories/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B9: 分类配置 → costLedger:update
+            if (!CurrentUser.HasPermission(ctx, db, "costLedger:update")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             return (await db.ExecuteAsync("DELETE FROM cost_ledger_categories WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Results.Forbid();
         });
@@ -165,26 +179,32 @@ public static class CostLedgerEndpoints
         app.MapPost("/api/cost-ledger/batches", async (HttpContext ctx, CostLedgerBatchDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B9: 批次写操作 → costLedger:create（补既有缺参 bug：INSERT 引用 @CreatedBy 但参数对象缺 CreatedBy）
+            if (!CurrentUser.HasPermission(ctx, db, "costLedger:create")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO cost_ledger_batches (project_id,name,created_by,created_at, last_modified_at) VALUES (@ProjectId,@Name,@CreatedBy,@Now, @Now); SELECT last_insert_rowid();",
-                new { dto.ProjectId, dto.Name, Now = now() });
+                new { dto.ProjectId, dto.Name, CreatedBy = uid, Now = now() });
             return Common.Ok(id);
         });
 
         app.MapPost("/api/cost-ledger/batches/{id}/copy", async (HttpContext ctx, long id, CostLedgerBatchDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B9: 批次复制 → costLedger:create（补既有缺参 bug：INSERT 引用 @CreatedBy 但参数对象缺 CreatedBy）
+            if (!CurrentUser.HasPermission(ctx, db, "costLedger:create")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             var original = db.QueryFirstOrDefault("SELECT * FROM cost_ledger_batches WHERE id=@Id", new { Id = id });
             if (original == null) return Common.NotFound("批次不存在");
             var newId = await db.ExecuteScalarAsync<long>(@"INSERT INTO cost_ledger_batches (project_id,name,created_by,created_at, last_modified_at) VALUES (@ProjectId,@Name,@CreatedBy,@Now, @Now); SELECT last_insert_rowid();",
-                new { ProjectId = (long)original.project_id, Name = dto.NewName ?? "", Now = now() });
+                new { ProjectId = (long)original.project_id, Name = dto.NewName ?? "", CreatedBy = uid, Now = now() });
             return Common.Ok(new { id = newId });
         });
 
         app.MapPut("/api/cost-ledger/batches/{id}", async (HttpContext ctx, long id, CostLedgerBatchDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B9: 批次写操作 → costLedger:update
+            if (!CurrentUser.HasPermission(ctx, db, "costLedger:update")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var affected = await db.ExecuteAsync($"UPDATE cost_ledger_batches SET name=@Name, version=version+1, last_modified_at=@Now WHERE id=@Id AND {CurrentUser.UserFilterCompany(scope)}",
@@ -195,6 +215,8 @@ public static class CostLedgerEndpoints
         app.MapDelete("/api/cost-ledger/batches/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B9: 批次删除 → costLedger:delete
+            if (!CurrentUser.HasPermission(ctx, db, "costLedger:delete")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             return (await db.ExecuteAsync($"DELETE FROM cost_ledger_batches WHERE id=@Id AND {CurrentUser.UserFilterCompany(scope)}", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
@@ -214,6 +236,8 @@ public static class CostLedgerEndpoints
         app.MapPost("/api/cost-ledger/match-rules", async (HttpContext ctx, CostLedgerMatchRuleDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B9: 匹配规则（学习/删除合并）→ costLedger:update
+            if (!CurrentUser.HasPermission(ctx, db, "costLedger:update")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             await db.ExecuteAsync(@"INSERT OR REPLACE INTO cost_ledger_match_rules (pattern,category,direction,priority,hit_count,created_at,updated_at)
                 VALUES (@Pattern,@Category,@Direction,@Priority,COALESCE((SELECT hit_count FROM cost_ledger_match_rules WHERE pattern=@Pattern),0)+1,@Now,@Now)",
@@ -241,6 +265,8 @@ public static class CostLedgerEndpoints
         app.MapPost("/api/cost-ledger/{batchId}/sheet", async (HttpContext ctx, long batchId, CostLedgerSheetDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B9: 电子表格保存 → costLedger:update
+            if (!CurrentUser.HasPermission(ctx, db, "costLedger:update")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             if (dto.Entries == null || dto.Entries.Count == 0)
