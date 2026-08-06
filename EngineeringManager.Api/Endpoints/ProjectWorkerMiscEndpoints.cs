@@ -36,6 +36,8 @@ public static class ProjectWorkerMiscEndpoints
         app.MapPut("/api/invoices/{id}/status", async (HttpContext ctx, long id, InvoiceStatusDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B4: 发票状态切换 → invoices:update
+            if (!CurrentUser.HasPermission(ctx, db, "invoices:update")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var affected = await db.ExecuteAsync("UPDATE invoices SET status=@Status,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
                 new { Status = dto.Status, Now = Common.NowString(), Id = id, Uid = uid, IsAdmin = isAdmin });

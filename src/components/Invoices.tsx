@@ -12,6 +12,7 @@ import {
 import { getInvoiceFormData, getPaymentFormData } from './features/invoices/constants'
 import { FilePreviewModal } from './features/invoices/FilePreviewModal'
 import { useDuplicateInvoices } from './features/invoices/useDuplicateInvoices'
+import { usePermission } from '@/hooks/usePermission'
 import { Icon } from './ui/Icon'
 import { Button } from './ui/Button'
 
@@ -19,6 +20,7 @@ interface InvoicesProps { refresh?: () => void }
 
 const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
   const showToast = useToastStore(state => state.showToast)
+  const { can } = usePermission()
   const h = useInvoicePage(refresh)
   const [showDuplicates, setShowDuplicates] = useState(false)
 
@@ -47,12 +49,16 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
   检测到 {duplicateInvoices.length} 组重复发票
   </Button>
   )}
+  {can('invoices:create') && (
   <Button onClick={() => { h.setEditingPayment(null); h.setShowPaymentModal(true) }} variant="secondary">
   <span className="text-xl leading-none">+</span> 回款/付款登记
   </Button>
+  )}
+  {can('invoices:create') && (
   <Button onClick={() => { h.setEditingInvoice(null); h.setShowInvoiceModal(true) }}  variant="primary">
   <span className="text-xl leading-none">+</span> 新建发票
   </Button>
+  )}
   </div>
   </div>
 
