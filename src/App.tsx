@@ -33,7 +33,8 @@ const Settlement = lazy(() => import('./components/Settlement'))
 const Templates = lazy(() => import('./components/Templates'))
 const Inventory = lazy(() => import('./components/Inventory'))
 const Invoices = lazy(() => import('./components/Invoices'))
-const SpeechKnowledgePage = lazy(() => import('./components/features/knowledge/SpeechKnowledgePage'))
+const KnowledgeHomePage = lazy(() => import('./components/features/knowledge/KnowledgeHomePage'))
+const VoiceTranscribePage = lazy(() => import('./components/features/voice/VoiceTranscribePage'))
 const ReportsPage = lazy(() => import('./components/features/reports/ReportsIndex'))
 const Settings = lazy(() => import('./components/Settings'))
 const Users = lazy(() => import('./components/Users'))
@@ -300,7 +301,8 @@ const AppContent: React.FC = () => {
       case 'templates': return <Templates />
       case 'inventory': return <Inventory {...props} />
       case 'invoices': return <Invoices {...props} />
-      case 'knowledge': return <RequirePermission permission="knowledge:read" fallback={<NoAccessState />}><SpeechKnowledgePage /></RequirePermission>
+      case 'knowledge': return <RequirePermission permission="knowledge:read" fallback={<NoAccessState />}><KnowledgeHomePage /></RequirePermission>
+      case 'voice': return <RequirePermission permission="voice:read" fallback={<NoAccessState />}><VoiceTranscribePage /></RequirePermission>
       case 'reports': return <RequirePermission permission="reports:create" fallback={<NoAccessState />}><ReportsPage /></RequirePermission>
       case 'users': return <RequireAdmin fallback={<NoAccessState description="用户管理仅限管理员访问。" />}><Users /></RequireAdmin>
       case 'settings': return <RequirePermission permission="settings:read" fallback={<NoAccessState />}><Settings /></RequirePermission>
