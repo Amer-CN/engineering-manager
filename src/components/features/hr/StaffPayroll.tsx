@@ -5,6 +5,7 @@ import Spinner from '../../ui/Spinner'
 import { useToastStore } from '@/store/toastStore'
 import { computeAttendanceSummary } from '../../../constants/attendance'
 import { getAPI } from '@/services/api-adapter'
+import { usePermission } from '@/hooks/usePermission'
 import {
   filteredStaffForGenerate,
   getAttendanceForMember,
@@ -26,6 +27,7 @@ type StaffWageRecord = WageRecord & {
 
 const StaffPayroll: React.FC = () => {
   const showToast = useToastStore(state => state.showToast)
+  const { can, canAny } = usePermission()
   const [staff, setStaff] = useState<Member[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [projects, setProjects] = useState<Project[]>([])
@@ -70,6 +72,8 @@ const StaffPayroll: React.FC = () => {
   } = f
 
   const generatePayroll = async () => {
+    // G2 B2: 生成薪酬（create+update 混合）→ wages:create / wages:update
+    if (!canAny(['wages:create', 'wages:update'])) { showToast('您没有生成薪酬的权限', 'error'); return }
     if (filterYear === '全部' || filterMonth === '全部') {
       showToast('请选择具体的年份和月份', 'warning')
       return
@@ -130,6 +134,8 @@ const StaffPayroll: React.FC = () => {
   }
 
   const handleDeleteWage = async (wage: StaffWageRecord) => {
+    // G2 B2: 删除薪酬 → wages:delete
+    if (!can('wages:delete')) { showToast('您没有删除薪酬的权限', 'error'); return }
     if (!confirm(`确认删除 ${wage.memberName || ''} ${wage.yearMonth} 的薪酬记录？此操作不可撤销。`)) return
     try {
       const result = await (await getAPI()).deleteWage(wage.id)
@@ -175,6 +181,8 @@ const StaffPayroll: React.FC = () => {
   }
 
   const handleDeleteAllMonth = async () => {
+    // G2 B2: 删除整月薪酬 → wages:delete
+    if (!can('wages:delete')) { showToast('您没有删除薪酬的权限', 'error'); return }
     if (filterYear === '全部' || filterMonth === '全部') {
       showToast('请选择具体的年份和月份', 'warning')
       return
@@ -192,6 +200,8 @@ const StaffPayroll: React.FC = () => {
   }
 
   const handlePaidChange = async (wage: StaffWageRecord, field: string, value: string | number | null) => {
+    // G2 B2: 实发金额编辑 → wages:update
+    if (!can('wages:update')) { showToast('您没有编辑薪酬的权限', 'error'); return }
     const updated = { ...wage, [field]: value }
     await (await getAPI()).updateWage(updated)
     loadData()

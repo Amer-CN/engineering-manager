@@ -4,6 +4,7 @@ import { Icon } from '../../ui/Icon'
 import { useToastStore } from '@/store/toastStore'
 import { logCreate, logDelete } from '../../../utils/audit'
 import { getAPI } from '@/services/api-adapter'
+import { usePermission } from '@/hooks/usePermission'
 import { Button } from '../../ui/Button'
 interface Props {
   member: any
@@ -20,6 +21,7 @@ const emptyEntry = (defaultSalary: number) => ({
 
 const SalaryHistoryModal: React.FC<Props> = ({ member, onClose }) => {
   const showToast = useToastStore(state => state.showToast)
+  const { can } = usePermission()
   const [history, setHistory] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
@@ -36,6 +38,8 @@ const SalaryHistoryModal: React.FC<Props> = ({ member, onClose }) => {
   }, [member.id])
 
   const handleSave = async () => {
+    // G2 B2: 薪资历史写操作 → wages:create
+    if (!can('wages:create')) { showToast('您没有登记薪资的权限', 'error'); return }
     if (!form.baseSalary) { showToast('请输入基本工资', 'error'); return }
     if (!form.effectiveDate) { showToast('请选择生效日期', 'error'); return }
     const payload = {
@@ -88,6 +92,8 @@ const SalaryHistoryModal: React.FC<Props> = ({ member, onClose }) => {
   }
 
   const handleDelete = async (id: number) => {
+    // G2 B2: 删除薪资记录 → wages:delete
+    if (!can('wages:delete')) { showToast('您没有删除薪资记录的权限', 'error'); return }
     if (!confirm('确定删除该薪资记录吗？')) return
     // 删除前记录一下被删条目的信息
     const deletedEntry = history.find(h => h.id === id)

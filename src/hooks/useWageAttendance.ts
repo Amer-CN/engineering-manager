@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import type { AttendanceRecord } from '@/types'
 import { getAPI } from '@/services/api-adapter'
+import { usePermission } from './usePermission'
 
 interface UseWageAttendanceOptions {
   selectedProject: { id: number } | null
@@ -16,6 +17,8 @@ export function useWageAttendance({
   selectedProject, selectedMonth, workerPwIds,
   setAttendances, setLoading, showToast, confirm,
 }: UseWageAttendanceOptions) {
+  const { can } = usePermission()
+
   const loadAttendances = useCallback(async () => {
     if (!selectedProject) return
     try {
@@ -25,6 +28,8 @@ export function useWageAttendance({
   }, [selectedProject, selectedMonth])
 
   const handleGenerateAttendance = async () => {
+    // G2 B2: 生成考勤 → wages:create
+    if (!can('wages:create')) { showToast('您没有生成考勤的权限', 'error'); return }
     if (!selectedProject) return
     if (workerPwIds.length === 0) {
       showToast('该项目没有活跃工人，请先在项目详情页→人员管理中添加工人班组', 'warning'); return
@@ -39,6 +44,8 @@ export function useWageAttendance({
   }
 
   const handleDeleteAttendance = async (record: AttendanceRecord) => {
+    // G2 B2: 删除考勤 → wages:delete
+    if (!can('wages:delete')) { showToast('您没有删除考勤的权限', 'error'); return }
     const ok = await confirm({
       title: '确认删除',
       content: `确认删除 ${record.memberName || '该工人'} 的考勤记录吗？`,
