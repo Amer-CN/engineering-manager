@@ -18,6 +18,7 @@ namespace EngineeringManager.Tests.Endpoints;
 /// 数据隔离：构造函数设置 ENGINEERING_MANAGER_DATA_PATH=临时目录（handler 运行时读取），
 /// 避免快照/config.json 写入真实 AppData；backup 写桌面，仅测 worker 403（写前拦截）。
 /// </summary>
+[Collection("G2 Env-Isolated WritePermission Tests")]
 public class WritePermissionB1Tests : ApiTestBase, IDisposable
 {
     private const string AdminUser = "admin";

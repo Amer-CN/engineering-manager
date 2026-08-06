@@ -285,9 +285,11 @@ public static class FileEndpoints
             catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });
 
-        app.MapPost("/api/contracts/save-file", async (HttpContext ctx) =>
+        app.MapPost("/api/contracts/save-file", async (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B3: 合同附件上传 → contracts:update
+            if (!CurrentUser.HasPermission(ctx, db, "contracts:update")) return Results.Forbid();
             try
             {
                 // 修复: 原 dynamic dto 不绑 body → 改读 body JSON
