@@ -162,13 +162,25 @@
 
 | 批次 | 模块 | path 数 | 状态 |
 |------|------|---------|------|
-| B1 | settings 系 + O1 + 快照/备份 + 0 警告固化 | 6+2 | 待拍板 |
-| B2 | wages+attendances+salary-history 系 + O3 + PUT /api/wages 收窄 | 18 | 待拍板 |
-| B3 | contracts+settlements+contract-templates 系 | 8 | 待拍板 |
-| B4 | invoices+payment-records 系 | 5 | 待拍板 |
-| B5 | members+workers+project-workers+departments+worker-teams 系 | 11 | 待拍板 |
-| B6 | partners+supervisors 系 | 4 | 待拍板 |
-| B7 | projects+project-members 系 | 3 | 待拍板 |
-| B8 | inventory+materials+transactions+drawings 系 | 5 | 待拍板 |
-| B9 | cost-ledger 全家 | 10 | 待拍板 |
-| 合计 | | 70 | 待拍板 |
+| B1 | settings 系 + O1 + 快照/备份 + 0 警告固化 | 6+2 | ✅ 完成（fd98d97） |
+| B2 | wages+attendances+salary-history 系 + O3 + generate-v2 归属 | 18 | ✅ 完成（cc41919）；PUT /api/wages 收窄 defer 至前端 4 处 updateWage 付款用途改走 batch-payment 后 |
+| B3 | contracts+settlements+contract-templates 系 | 8 | ✅ 完成（9993c94） |
+| B4 | invoices+payment-records 系 | 5 | ✅ 完成（589160f） |
+| B5 | members+workers+project-workers+departments+worker-teams 系 | 11 | ✅ 完成（db0088e） |
+| B6 | partners+supervisors 系 | 4 | ✅ 完成（981793b） |
+| B7 | projects+project-members 系 | 3 | ✅ 完成（ede9b14） |
+| B8 | inventory+materials+transactions+drawings 系 | 5 | ✅ 完成（d1433a2） |
+| B9 | cost-ledger 全家 | 10 | ✅ 完成（fe6b395） |
+| 合计 | | 70 | ✅ **G2 豁免清零**（EXEMPT 剩 39 = 白名单/STUB/用户自助/基础设施） |
+
+## 6. 执行总结（G2 收官）
+
+- **90 端点实例全部加码**（70 path，含 20 条双方法 path 同批完成）；门禁5 合规 39 → 130，0 违反。
+- 后端测试累计 +96（WritePermissionB1-B9）；前端门控测试 +9（B1 SnapshotsTab ×4、B2 WageActions ×5）；全量 814 通过 / 2 跳过。
+- 既有 bug 修复 6 处（被测试暴露，均为匿名参数对象缺参导致生产路径必 500）：
+  audit_logs 列名 resource_type→resource（7 处引用）、PUT members/workers 缺 Now、
+  project-members INSERT 缺 Now、cost-ledger batches/copy INSERT 缺 CreatedBy；
+  前端桥接断链 2 处（batchArchivePayments→batchArchiveWages、saveCostLedgerMatchRules→saveCostLedgerMatchRule）。
+- 测试基建：G2EnvIsolatedCollection 串行化 env 隔离测试类（B1/B3/B8 数据路径隔离，防并行污染）。
+- 角色 id 漂移记录：001 种子是 finance，GetDefaultPermissions/037 用 accountant——C 窗口已知范围外，测试补建角色行。
+- 遗留：PUT /api/wages 收窄（D-9 记档，defer）；SettlementProjectActions 等死代码链未动。
