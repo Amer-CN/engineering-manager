@@ -54,6 +54,12 @@ export function useInventoryPage(
 
   // Item CRUD
   const handleItemSubmit = useCallback(async (data: any) => {
+    // G2 B8: 物料项新增/编辑 → inventory:create / inventory:update
+    const need = editingItem ? 'inventory:update' : 'inventory:create'
+    if (!can(need as 'inventory:create')) {
+      showToast(editingItem ? '您没有编辑物料的权限' : '您没有新增物料的权限', 'error')
+      return
+    }
     try {
       if (editingItem) {
         await (await getAPI()).updateInventoryItem({ ...editingItem, ...data })
@@ -88,6 +94,8 @@ export function useInventoryPage(
 
   // Transaction
   const handleTransSubmit = useCallback(async (data: any) => {
+    // G2 B8: 出入库登记 → inventory:create
+    if (!can('inventory:create')) { showToast('您没有登记出入库的权限', 'error'); return }
     const selectedItem = items.find(i => i.id === data.itemId)
     try {
       await (await getAPI()).createInventoryTransaction(data)
@@ -103,6 +111,12 @@ export function useInventoryPage(
 
   // Material CRUD
   const handleMaterialSubmit = useCallback(async (data: any) => {
+    // G2 B8: 材料新增/编辑 → inventory:create / inventory:update
+    const need = editingMaterial ? 'inventory:update' : 'inventory:create'
+    if (!can(need as 'inventory:create')) {
+      showToast(editingMaterial ? '您没有编辑材料的权限' : '您没有新增材料的权限', 'error')
+      return
+    }
     try {
       if (editingMaterial) {
         await (await getAPI()).updateMaterial({ ...editingMaterial, ...data })

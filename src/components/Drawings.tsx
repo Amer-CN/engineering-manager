@@ -8,6 +8,7 @@ import { useToastStore } from '@/store/toastStore'
 import { useConfirm } from '@/hooks/useConfirm'
 import { logCreate, logUpdate, logDelete } from '../utils/audit'
 import { getAPI } from '@/services/api-adapter'
+import { usePermission } from '@/hooks/usePermission'
 import { categories, normalizeDrawingCategory } from './drawingsConstants'
 import { DrawingsFormModal } from './DrawingsFormModal'
 import type { FormDataState } from './DrawingsFormModal'
@@ -27,6 +28,7 @@ interface DrawingsProps {
 const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
   const showToast = useToastStore(state => state.showToast)
   const { confirm, ConfirmDialog } = useConfirm()
+  const { can } = usePermission()
   const [drawings, setDrawings] = useState<Drawing[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
@@ -88,6 +90,12 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault()
+  // G2 B8: 图纸上传/编辑 → drawings:create / drawings:update
+  const need = editingDrawing ? 'drawings:update' : 'drawings:create'
+  if (!can(need as 'drawings:create')) {
+  showToast(editingDrawing ? '您没有编辑图纸的权限' : '您没有上传图纸的权限', 'error')
+  return
+  }
 
   if (!editingDrawing && formData.files.length === 0) {
   showToast('请选择要上传的文件', 'error')
@@ -186,6 +194,8 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
   }
 
   const handleDelete = async (id: number) => {
+  // G2 B8: 图纸删除 → drawings:delete
+  if (!can('drawings:delete')) { showToast('您没有删除图纸的权限', 'error'); return }
   const ok = await confirm({ title: '确认删除', content: '确定要删除这张图纸吗？', confirmVariant: 'danger' })
   if (ok) {
   try {
