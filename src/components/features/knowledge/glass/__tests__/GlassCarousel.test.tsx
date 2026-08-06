@@ -11,6 +11,17 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { GlassCarousel } from '../GlassCarousel'
 import { CarouselControls } from '../CarouselControls'
+import type { FolderItem } from '../types'
+
+/** 测试 fixture（M2 demoData 下线后自含） */
+const FIXTURES: FolderItem[] = [
+  { id: 'f1', title: '安全生产资料', englishTitle: 'SAFETY', period: '2026 · 上半年', progress: 92, memberCount: 6, category: '安全', documents: [] },
+  { id: 'f2', title: '合同与往来文件', englishTitle: 'CONTRACTS', period: '2026 · Q1-Q2', progress: 78, memberCount: 4, category: '合同', documents: [] },
+  { id: 'f3', title: '图纸与变更单', englishTitle: 'DRAWINGS', period: '项目 A 施工期', progress: 65, memberCount: 5, category: '技术', documents: [] },
+  { id: 'f4', title: '人员与考勤档案', englishTitle: 'HR', period: '2026 年度', progress: 84, memberCount: 3, category: '人事', documents: [] },
+  { id: 'f5', title: '结算与支付凭证', englishTitle: 'SETTLEMENT', period: '2026 · Q2', progress: 45, memberCount: 4, category: '财务', documents: [] },
+  { id: 'f6', title: '会议纪要与沟通', englishTitle: 'MOM', period: '2026 · 上半年', progress: 95, memberCount: 2, category: '沟通', documents: [] },
+]
 
 function stubMatchMedia(matches: boolean) {
   const mq = { matches, addEventListener: vi.fn(), removeEventListener: vi.fn() }
@@ -27,7 +38,7 @@ describe('GlassCarousel — 舞台渲染', () => {
   })
 
   it('渲染全部文件夹卡 + 悬浮信息卡 + 圆点导航 + 控制按钮', () => {
-    render(<GlassCarousel />)
+    render(<GlassCarousel folders={FIXTURES} />)
 
     // 6 张演示文件夹卡全量注册
     const cards = document.querySelectorAll('.gc-card')
@@ -50,7 +61,7 @@ describe('GlassCarousel — 舞台渲染', () => {
 
   it('点下一个 → 聚焦变化（lerp 收敛后第二个圆点选中）', async () => {
     vi.useFakeTimers()
-    render(<GlassCarousel />)
+    render(<GlassCarousel folders={FIXTURES} />)
 
     fireEvent.click(screen.getByRole('button', { name: '下一个文件夹' }))
     act(() => { vi.advanceTimersByTime(2000) })
@@ -63,7 +74,7 @@ describe('GlassCarousel — 舞台渲染', () => {
 
   it('点击圆点直达对应文件夹', async () => {
     vi.useFakeTimers()
-    render(<GlassCarousel />)
+    render(<GlassCarousel folders={FIXTURES} />)
 
     fireEvent.click(screen.getAllByRole('button', { name: /第 \d 个文件夹/ })[4])
     act(() => { vi.advanceTimersByTime(2000) })
@@ -74,9 +85,14 @@ describe('GlassCarousel — 舞台渲染', () => {
 
   it('reduced-motion → 平铺列表（无 3D）', () => {
     stubMatchMedia(true)
-    render(<GlassCarousel />)
+    render(<GlassCarousel folders={FIXTURES} />)
     expect(document.querySelector('.gc-flat-track')).not.toBeNull()
     expect(document.querySelector('.gc-card')).toBeNull()
+  })
+
+  it('空数组 → 不渲染舞台（空态由页面层处理）', () => {
+    const { container } = render(<GlassCarousel folders={[]} />)
+    expect(container.innerHTML).toBe('')
   })
 })
 

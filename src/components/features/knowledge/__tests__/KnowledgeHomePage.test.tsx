@@ -72,6 +72,19 @@ vi.mock('../glass/GlassCarousel', () => ({
   GlassCarousel: () => React.createElement('div', { 'data-testid': 'gc-stage' }, '轮播舞台'),
 }))
 
+// Mock 数据层 hooks（M3 真实数据；测试聚焦页面接线）
+const { mockFolders, mockCreateFolder } = vi.hoisted(() => ({
+  mockFolders: [] as Array<{ id: number; name: string; englishName: string | null; projectId: number | null; category: string | null; docCount: number }>,
+  mockCreateFolder: { mutateAsync: vi.fn(async () => ({ success: true, data: { id: 1 } })), isPending: false },
+}))
+vi.mock('@/hooks/data/useKnowledgeFolders', () => ({
+  useKnowledgeFolders: () => ({ data: mockFolders, isLoading: false }),
+  useCreateKnowledgeFolder: () => mockCreateFolder,
+}))
+vi.mock('@/hooks/data/useProjects', () => ({
+  useProjects: () => ({ data: [{ id: 1, name: '项目 A' }, { id: 2, name: '项目 B' }] }),
+}))
+
 // ═══════════════════════════════════════════════════════════════
 // sessionStorage mock
 // ═══════════════════════════════════════════════════════════════
@@ -105,9 +118,11 @@ describe('KnowledgeHomePage — sessionStorage consumption', () => {
     mockMaskState.masked = false
     lastLibraryProps.openDocId = null
     lastLibraryProps.onOpenDocIdConsumed = null
+    mockFolders.length = 0
   })
 
   it('M2：渲染 3D 轮播舞台 + 文档库（双区）', () => {
+    mockFolders.push({ id: 3, name: '安全生产资料', englishName: 'SAFETY', projectId: null, category: '安全', docCount: 5 })
     render(<KnowledgeHomePage />)
     expect(screen.getByTestId('gc-stage')).toBeInTheDocument()
     expect(screen.getByTestId('kl')).toBeInTheDocument()
@@ -190,6 +205,39 @@ describe('KnowledgeHomePage — sessionStorage consumption', () => {
       expect(screen.getByTestId('kl')).toBeInTheDocument()
     })
     expect(typeof lastLibraryProps.onOpenDocIdConsumed).toBe('function')
+  })
+})
+
+// ═══════════════════════════════════════════════════════════════
+// Tests: M3 数据接入（项目筛选 / 空态 / 轮播接线）
+// ═══════════════════════════════════════════════════════════════
+
+describe('KnowledgeHomePage — M3 数据接入', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockFolders.length = 0
+  })
+
+  it('有文件夹时渲染轮播舞台（数据经 useKnowledgeFolders 接线）', async () => {
+    mockFolders.push({ id: 3, name: '安全生产资料', englishName: 'SAFETY', projectId: null, category: '安全', docCount: 5 })
+    render(<KnowledgeHomePage />)
+    expect(screen.getByTestId('gc-stage')).toBeInTheDocument()
+    expect(screen.getByTestId('kl')).toBeInTheDocument()
+  })
+
+  it('空文件夹 → 渲染 EmptyState（知识库为空）', () => {
+    render(<KnowledgeHomePage />)
+    expect(screen.getByText('知识库为空')).toBeInTheDocument()
+    expect(screen.queryByTestId('gc-stage')).toBeNull()
+  })
+
+  it('项目筛选下拉存在（全部项目 + 项目 A/B）', () => {
+    render(<KnowledgeHomePage />)
+    const select = screen.getByLabelText('按项目筛选文件夹')
+    expect(select).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: '全部项目（含跨项目通用）' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: '项目 A' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: '项目 B' })).toBeInTheDocument()
   })
 })
 

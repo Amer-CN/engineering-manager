@@ -37,13 +37,15 @@ export const FolderInfoBadge: React.FC<FolderInfoBadgeProps> = ({ folder }) => {
       {/* period 副行（等宽） */}
       <div className="text-micro text-slate-400 font-mono mb-4">{folder.period}</div>
 
-      {/* 进度大数字 + emerald 呼吸绿点 */}
+      {/* 进度大数字 + emerald 呼吸绿点（progress 为空时隐藏数字块，M3 补强 ⑤） */}
       <div className="flex items-end justify-between mt-2">
-        <div className="text-3xl font-light tracking-tight flex items-baseline gap-0.5">
-          <span>{folder.progress}</span>
-          <span className="text-lg text-slate-400 font-normal">%</span>
-        </div>
-        <div className="relative flex items-center justify-center">
+        {folder.progress != null && (
+          <div className="text-3xl font-light tracking-tight flex items-baseline gap-0.5">
+            <span>{folder.progress}</span>
+            <span className="text-lg text-slate-400 font-normal">%</span>
+          </div>
+        )}
+        <div className="relative flex items-center justify-center ml-auto">
           <div className="gc-dot-live" />
         </div>
       </div>

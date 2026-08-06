@@ -22,8 +22,8 @@ export interface FolderItem {
   englishTitle?: string
   /** 创建周期 / 项目阶段，如 "2026 · Q2" */
   period: string
-  /** 0-100 文档完成度 */
-  progress: number
+  /** 0-100 文档完成度；可空（未设置时 badge 隐藏进度块） */
+  progress: number | null
   /** 关联人数或文档数 */
   memberCount: number
   highlightColor?: 'emerald' | 'cyan' | 'purple' | 'amber' | 'blue'
