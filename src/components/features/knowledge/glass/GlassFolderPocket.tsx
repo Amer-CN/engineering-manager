@@ -44,7 +44,7 @@ export const GlassFolderPocket: React.FC<GlassFolderPocketProps> = ({ folder, is
               : 'bg-black/30 text-white border border-white/25'
           }`}
         >
-          {folder.progress}%
+          {folder.progress != null ? `${folder.progress}%` : '—'}
         </span>
       </div>
 
