@@ -130,7 +130,7 @@ public class ReportGenerationService
         var actionCounts = (await db.QueryAsync(
             $"SELECT [action], COUNT(*) AS [count] FROM [audit_logs] {sql} GROUP BY [action]", param)).ToList();
 
-        // 分组统计：resource_type
+        // 分组统计：resource
         var resourceCounts = (await db.QueryAsync(
             $"SELECT [resource], COUNT(*) AS [count] FROM [audit_logs] {sql} GROUP BY [resource]", param)).ToList();
 
@@ -252,7 +252,7 @@ public class ReportGenerationService
         {
             sb.AppendLine("按资源类型:");
             foreach (var row in audit.ResourceCounts)
-                sb.AppendLine($"- {row.resource_type}: {row.count} 次");
+                sb.AppendLine($"- {row.resource}: {row.count} 次"); // R8.14.1(G28): 消费端列名对齐 SQL（R8.7 只改了 SQL 侧，此处漏改）
             sb.AppendLine();
         }
 
@@ -278,7 +278,7 @@ public class ReportGenerationService
             sb.AppendLine("## 最近操作明细（最多 50 条）");
             foreach (var d in audit.Details)
             {
-                sb.AppendLine($"- [{d.created_at}] {d.user_name} {d.action} {d.resource_type}({d.resource_id}) {d.details}");
+                sb.AppendLine($"- [{d.created_at}] {d.user_name} {d.action} {d.resource}({d.resource_id}) {d.details}"); // R8.14.1(G28)
             }
         }
 
