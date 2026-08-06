@@ -70,13 +70,24 @@ public class ReportAuditPromptTests : ApiTestBase
 
         var prompt = fake.CapturedUserPrompt;
         Assert.NotNull(prompt);
-        // R8.14.1(b) 必答证据：dump 完整 prompt（Dapper 对缺失列的行为判定）
-        var evidence = "===PROMPT-BEGIN===" + System.Environment.NewLine + prompt + System.Environment.NewLine + "===PROMPT-END===";
-        try { System.IO.File.WriteAllText(@"C:\Users\Admin\AppData\Local\Temp\g28-prompt.txt", evidence); } catch { }
-        // 按资源类型段落：含 'invoice' 与 'contract'（G28：.resource_type 不存在 → 列缺失）
-        Assert.Contains("invoice", prompt);
-        Assert.Contains("contract", prompt);
-        // 最近操作明细行：含 'invoice'
-        Assert.Contains("invoice", prompt);
+
+        // R8.15.3(a): 分段断言——「按资源类型」与「最近操作明细」两个段落独立判红
+        var resourceSectionStart = prompt.IndexOf("按资源类型:", StringComparison.Ordinal);
+        var detailsSectionStart = prompt.IndexOf("## 最近操作明细", StringComparison.Ordinal);
+        Assert.True(resourceSectionStart >= 0, "prompt 应有「按资源类型」段落");
+        Assert.True(detailsSectionStart >= 0, "prompt 应有「最近操作明细」段落");
+
+        var resourceSection = prompt.Substring(resourceSectionStart, detailsSectionStart - resourceSectionStart);
+        var detailsSection = prompt.Substring(detailsSectionStart);
+
+        // 资源类型段：含 invoice 与 contract，且不含「- : 」空资源名形态（G28 空洞）
+        Assert.Contains("invoice", resourceSection);
+        Assert.Contains("contract", resourceSection);
+        Assert.DoesNotContain("- : ", resourceSection);
+
+        // 明细段：含 invoice，且不含资源名缺失后的空洞形态（如 " (101)" 前无资源名）
+        Assert.Contains("invoice", detailsSection);
+        Assert.DoesNotContain(" (101)", detailsSection);
+        Assert.DoesNotContain(" (201)", detailsSection);
     }
 }
