@@ -5,6 +5,15 @@
  */
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// ⚠️ 展示默认值声明（窗口 H-3）
+// SYSTEM_ROLES 是「展示用默认角色权限」静态表，仅供 RolePermissionsTab 回退展示
+// （API 不可用时）与 getPermissionLabel 渲染用。运行时权限真源是 roles 表
+// permissions JSON（038 迁移 + 后端 GetDefaultPermissions 函数）。
+// 因此本表必须与 EngineeringManager.Api/Common.cs GetDefaultPermissions 逐码对齐
+// （037 后真源）；任何角色权限内容变更都要改后端，本表只镜像展示，不许先改本表。
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // 权限定义
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -29,11 +38,14 @@ export type PermissionResource =
   | 'costLedger'
   | 'drawings'
   | 'knowledge'
+  | 'voice'
   | 'reports'
   | 'settings'
   | 'users'
   | 'roles'
   | 'audit_logs'
+  | 'labor'
+  | 'safeQuery'
 
 /**
  * 权限定义
@@ -80,23 +92,24 @@ export const SYSTEM_ROLES: Role[] = [
     description: '系统管理员，拥有所有权限',
     isSystem: true,
     permissions: [
-      // 所有资源的完全权限
-      'dashboard:read', 'dashboard:export',
-      'projects:create', 'projects:read', 'projects:update', 'projects:delete', 'projects:export', 'projects:import',
-      'contracts:create', 'contracts:read', 'contracts:update', 'contracts:delete', 'contracts:approve', 'contracts:export', 'contracts:import',
-      'partners:create', 'partners:read', 'partners:update', 'partners:delete', 'partners:export', 'partners:import',
-      'members:create', 'members:read', 'members:update', 'members:delete', 'members:export', 'members:import',
-      'wages:create', 'wages:read', 'wages:update', 'wages:delete', 'wages:approve', 'wages:export',
-      'settlement:create', 'settlement:read', 'settlement:update', 'settlement:delete', 'settlement:approve', 'settlement:export',
-      'inventory:create', 'inventory:read', 'inventory:update', 'inventory:delete', 'inventory:export', 'inventory:import',
-      'invoices:create', 'invoices:read', 'invoices:update', 'invoices:delete', 'invoices:export',
-      'drawings:create', 'drawings:read', 'drawings:update', 'drawings:delete', 'drawings:export', 'drawings:import',
-      'knowledge:read',
+      // 与 Common.GetDefaultPermissions("admin") 逐码对齐（H-3）
+      'dashboard:read',
+      'projects:create', 'projects:read', 'projects:update', 'projects:delete', 'projects:export',
+      'contracts:create', 'contracts:read', 'contracts:update', 'contracts:delete', 'contracts:export',
+      'partners:create', 'partners:read', 'partners:update', 'partners:delete',
+      'members:create', 'members:read', 'members:update', 'members:delete',
+      'wages:create', 'wages:read', 'wages:update', 'wages:delete',
+      'settlement:create', 'settlement:read', 'settlement:update', 'settlement:delete', 'settlement:approve',
+      'inventory:create', 'inventory:read', 'inventory:update', 'inventory:delete',
+      'invoices:create', 'invoices:read', 'invoices:update', 'invoices:delete',
+      'costLedger:create', 'costLedger:read', 'costLedger:update', 'costLedger:delete',
+      'drawings:create', 'drawings:read', 'drawings:update', 'drawings:delete',
       'settings:read', 'settings:update',
       'users:create', 'users:read', 'users:update', 'users:delete',
       'roles:read', 'roles:update',
       'audit_logs:read', 'audit_logs:export',
       'reports:create', 'reports:read',
+      'labor:read', 'safeQuery:read', 'knowledge:read', 'voice:read',
     ],
   },
   {
@@ -105,18 +118,21 @@ export const SYSTEM_ROLES: Role[] = [
     description: '项目管理人员，拥有项目相关所有权限',
     isSystem: true,
     permissions: [
-      'dashboard:read', 'dashboard:export',
-      'projects:create', 'projects:read', 'projects:update', 'projects:delete', 'projects:export', 'projects:import',
-      'contracts:create', 'contracts:read', 'contracts:update', 'contracts:approve', 'contracts:export', 'contracts:import',
-      'partners:create', 'partners:read', 'partners:update', 'partners:export',
-      'members:create', 'members:read', 'members:update', 'members:export',
-      'wages:read', 'wages:export',
-      'settlement:create', 'settlement:read', 'settlement:update', 'settlement:export',
-      'inventory:create', 'inventory:read', 'inventory:update', 'inventory:export', 'inventory:import',
-      'invoices:read', 'invoices:export',
-      'drawings:create', 'drawings:read', 'drawings:update', 'drawings:export', 'drawings:import',
-      'knowledge:read',
+      // 与 Common.GetDefaultPermissions("manager") 逐码对齐（H-3）
+      'dashboard:read',
+      'projects:read', 'projects:update', 'projects:export',
+      'contracts:read', 'contracts:update', 'contracts:export',
+      'partners:read',
+      'members:read',
+      'wages:read',
+      'settlement:read',
+      'invoices:read',
+      'inventory:read', 'inventory:create', 'inventory:update',
+      'costLedger:read',
+      'settings:read', 'users:read', 'roles:read', 'audit_logs:read',
+      'drawings:create', 'drawings:read', 'drawings:update',
       'reports:create', 'reports:read',
+      'labor:read', 'safeQuery:read', 'knowledge:read', 'voice:read',
     ],
   },
   {
@@ -125,17 +141,19 @@ export const SYSTEM_ROLES: Role[] = [
     description: '财务管理人员，负责账务和发票',
     isSystem: true,
     permissions: [
-      'dashboard:read', 'dashboard:export',
-      'projects:read', 'projects:export',
-      'contracts:read', 'contracts:approve', 'contracts:export',
-      'partners:read', 'partners:export',
-      'members:read', 'members:export',
-      'wages:create', 'wages:read', 'wages:update', 'wages:approve', 'wages:export',
-      'settlement:create', 'settlement:read', 'settlement:update', 'settlement:approve', 'settlement:export',
-      'inventory:read', 'inventory:export',
-      'invoices:create', 'invoices:read', 'invoices:update', 'invoices:delete', 'invoices:export',
+      // 与 Common.GetDefaultPermissions("accountant") 逐码对齐（H-3）
+      'dashboard:read',
+      'projects:read',
+      'contracts:read', 'contracts:export',
+      'members:read',
+      'wages:create', 'wages:read', 'wages:update',
+      'settlement:read', 'settlement:approve',
+      'invoices:create', 'invoices:read', 'invoices:update',
+      'costLedger:create', 'costLedger:read', 'costLedger:update',
+      'settings:read',
       'audit_logs:read', 'audit_logs:export',
       'reports:create', 'reports:read',
+      'labor:read',
     ],
   },
   {
@@ -144,14 +162,12 @@ export const SYSTEM_ROLES: Role[] = [
     description: '普通员工，只有查看权限',
     isSystem: true,
     permissions: [
+      // 与 Common.GetDefaultPermissions("worker") 逐码对齐（H-3）
       'dashboard:read',
       'projects:read', 'projects:export',
-      'contracts:read', 'contracts:export',
-      'partners:read',
+      'contracts:export',
       'members:read',
-      'inventory:read', 'inventory:export',
-      'invoices:read',
-      'drawings:read',
+      'wages:read',
     ],
   },
 ]
@@ -266,12 +282,15 @@ export const RESOURCE_LABELS: Record<PermissionResource, string> = {
   invoices: '发票管理',
   costLedger: '成本台账',
   drawings: '图纸管理',
-  knowledge: '语音知识库',
+  knowledge: '知识库',
+  voice: '语音转文字',
   reports: '报告生成',
   settings: '系统设置',
   users: '用户管理',
   roles: '角色管理',
   audit_logs: '审计日志',
+  labor: '劳务管理',
+  safeQuery: '安全查询',
 }
 
 /**
