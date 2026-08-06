@@ -275,7 +275,7 @@ public static class CostLedgerEndpoints
             // B1 修复：先校验 batch 归属（口径与 UPDATE 一致：UserFilterWithAuthorizedProjects）
             // 查 [id] 判存在性，[project_id] 单独取值（解决 long? 二义性）
             var batchRow = db.QueryFirstOrDefault<dynamic>(
-                $"SELECT [id], [project_id] FROM [cost_ledger_batches] WHERE [id]=@BatchId AND {CurrentUser.UserFilterWithAuthorizedProjects(scope, "cost_ledger.project_id")}",
+                $"SELECT [id], [project_id] FROM [cost_ledger_batches] WHERE [id]=@BatchId AND {CurrentUser.UserFilterWithAuthorizedProjects(scope, "cost_ledger_batches.project_id")}",
                 new { BatchId = batchId, Uid = uid, IsAdmin = isAdmin });
             if (batchRow == null)
                 return Results.Json(new { success = false, error = "无权操作该批次" }, statusCode: 403);
