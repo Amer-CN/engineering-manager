@@ -6,11 +6,12 @@
  * 卡片 3D transform 由 useCarouselEngine 每帧直写（.gc-card 注册层，聚焦索引才 setState）。
  * 交互：滚轮（原生 passive:false + 首尾 EDGE_EPS 释放）、拖拽吸附、圆点/步进跳转。
  * 降级：reduced-motion → 横向平铺列表；低帧 → 舞台挂 gc-noglass 关玻璃。
- * 数据：M2 演示数据（DEMO_FOLDERS）；M3 换 useKnowledgeFolders() 并支持项目筛选。
+ * 数据：M3 起受控 props（KnowledgeHomePage 从 useKnowledgeFolders 提供，支持项目筛选）；
+ *       空数组不渲染（页面级空态由外层 EmptyState 处理）。
  */
 
 import React, { useState, useEffect } from 'react'
-import { DEMO_FOLDERS } from './demoData'
+import type { FolderItem } from './types'
 import { useCarouselEngine } from './useCarouselEngine'
 import { GlassFolderCard } from './GlassFolderCard'
 import { FolderInfoBadge } from './FolderInfoBadge'
@@ -19,8 +20,12 @@ import './glassCarousel.css'
 
 const STAGE_HEIGHT_CLASS = 'relative w-full h-[380px] sm:h-[420px] flex items-center justify-center cursor-grab touch-pan-y mt-16 sm:mt-8'
 
-export const GlassCarousel: React.FC = () => {
-  const folders = DEMO_FOLDERS
+interface GlassCarouselProps {
+  folders: FolderItem[]
+}
+
+export const GlassCarousel: React.FC<GlassCarouselProps> = ({ folders }) => {
+  if (!folders || folders.length === 0) return null
 
   const [isPlaying, setIsPlaying] = useState(false) // §2.3：自动播放默认关闭
   const [scrollSpeed, setScrollSpeed] = useState(1)
