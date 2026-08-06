@@ -55,8 +55,42 @@ export function PayrollTable({
                 onPaidChange={async (wage: PayrollWage, field: string, value: number | string) => {
                   // G2 B2: 实发金额编辑 → wages:update
                   if (!can('wages:update')) { showToast('您没有编辑薪酬的权限', 'error'); return }
-                  await (await getAPI()).updateWage({ ...wage, [field]: value })
-                  await data.loadData()
+                  const api = await getAPI()
+                  // 窗口 H-2（D-9 落地）：PUT /api/wages 已收窄为工资列 only——
+                  // 付款列写入一律走 batch-payment / batch-clear-payments。
+                  // 按「编辑后的行内最终状态」路由，不是按编辑的字段：
+                  //   · 工资列（deduction）→ PUT；已发款/已归档行被守卫拒绝时如实 toast
+                  //   · paidAmount > 0 且 paidDate 有值 → batchSavePayments（载荷用最终值）
+                  //   · paidAmount 清空/0 → batchClearPayments（「取消发放」语义）
+                  //   · paidAmount > 0 但 paidDate 空 → toast 提示，不写库
+                  const edited: PayrollWage = { ...wage, [field]: value }
+                  if (field === 'deduction') {
+                    const r = await api.updateWage(edited)
+                    if (!r.success) showToast(r.error || '更新失败', 'error')
+                    else { await data.loadData(); showToast('已更新', 'success') }
+                    return
+                  }
+                  // 付款列：按最终状态路由
+                  const amount = typeof edited.paidAmount === 'number' ? edited.paidAmount : Number(edited.paidAmount || 0)
+                  const date = edited.paidDate ? String(edited.paidDate) : ''
+                  if (amount > 0 && date) {
+                    const r = await api.batchSavePayments([{ id: wage.id, paidAmount: amount, paidDate: date, bankReceiptPath: wage.bankReceiptPath }])
+                    // 真实后端成功：saved=1；api-adapter mock（dev 环境）返回 saved=0/skipped=0，
+                    // 以 r.success 为准，避免 mock 态误报失败
+                    const handled = (r.data?.saved ?? 0) > 0 || (r.data?.skipped ?? 0) > 0
+                    if (r.success && (handled || !r.data)) { await data.loadData(); showToast('发放记录已保存', 'success') }
+                    else showToast(r.error || '发放记录保存失败', 'error')
+                    return
+                  }
+                  if (amount <= 0) {
+                    // 清空/0 → 取消发放（与「清除发放记录」按钮同路径）
+                    const r = await api.batchClearPayments([wage.id])
+                    if (r.success) { await data.loadData(); showToast('发放记录已清除', 'success') }
+                    else showToast(r.error || '清除发放记录失败', 'error')
+                    return
+                  }
+                  // amount > 0 但 date 空 → 不发残缺付款
+                  showToast('请填写发放日期', 'warning')
                 }}
               />
             ) : (
