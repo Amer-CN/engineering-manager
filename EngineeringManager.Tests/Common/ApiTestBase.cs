@@ -26,6 +26,14 @@ public class ApiTestBase : IDisposable
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
         // M-EDITION1: 测试环境跑企业版（多用户/角色/权限测试需要）
         Environment.SetEnvironmentVariable("ENGINEERING_MANAGER_EDITION", "enterprise");
+        // H-4（M4ThirdRound flaky 根治）：测试默认隔离数据路径到临时目录——
+        // 此前不设 ENGINEERING_MANAGER_DATA_PATH，测试落盘（上传/stt/快照/知识库）
+        // 写真实 %APPDATA%\工程管家，且 M4ThirdRound / M4SttUpload 并行共享
+        // uploads/stt/1 目录（.uploading 临时文件跨测试竞态 → 偶发失败）。
+        // 统一固定共享临时路径：并行类读到同一路径无切换竞态；
+        // 需要更细隔离的类（如 G2 B1/B3/B8）按既有模式在实例内覆盖+Dispose 恢复。
+        Environment.SetEnvironmentVariable("ENGINEERING_MANAGER_DATA_PATH",
+            Path.Combine(Path.GetTempPath(), "em-test-data"));
 
         MigrationRunner.Run(ConnectionString);
         SeedTestData();
