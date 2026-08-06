@@ -89,10 +89,6 @@ const EXEMPT = [
   { path: '/api/inventory/transactions', reason: 'G2 暂缓：inventory:create 待前端补码后执行' },
   { path: '/api/inventory', reason: 'G2 暂缓：inventory:create/update 待前端补码后执行' },
   { path: '/api/materials', reason: 'G2 暂缓：inventory:create/update 待前端补码后执行' },
-  { path: '/api/invoices', reason: 'G2 暂缓：invoices:create/update 待前端补码后执行' },
-  { path: '/api/invoices/{id}', reason: 'G2 暂缓：invoices:delete 待前端补码后执行' },
-  { path: '/api/payment-records', reason: 'G2 暂缓：invoices:create/update 待前端补码后执行' },
-  { path: '/api/payment-records/{id}', reason: 'G2 暂缓：invoices:delete 待前端补码后执行' },
   { path: '/api/members', reason: 'G2 暂缓：members:create/update 待前端补码后执行' },
   { path: '/api/members/{id}', reason: 'G2 暂缓：members:delete 待前端补码后执行' },
   { path: '/api/workers', reason: 'G2 暂缓：members:create/update 待前端补码后执行' },
@@ -111,7 +107,6 @@ const EXEMPT = [
   { path: '/api/projects/{id}', reason: 'G2 暂缓：projects:update 待前端补码后执行' },
   { path: '/api/project-members', reason: 'G2 暂缓：projects:update 待前端补码后执行' },
   { path: '/api/project-members/{id}', reason: 'G2 暂缓：projects:update 待前端补码后执行' },
-  { path: '/api/invoices/{id}/status', reason: 'G2 暂缓：invoices:update 待前端补码后执行' },
 ];
 
 // ── 提取（R1）──

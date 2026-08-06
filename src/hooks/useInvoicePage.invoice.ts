@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { getAPI } from '@/services/api-adapter'
 import { processFileFields, guessFileExt, readUploadedFile } from '../services/fileService'
 import { useToastStore } from '@/store/toastStore'
+import { usePermission } from './usePermission'
 import { logCreate, logUpdate, logDelete, logApprove } from '../utils/audit'
 import { getInvoiceCategory } from './useInvoicePage.helpers'
 import type { Invoice, InvoiceStatus, Project } from '../types/electron'
@@ -20,8 +21,11 @@ export interface UseInvoicePageInvoiceActionsDeps {
 export function useInvoicePageInvoiceActions(deps: UseInvoicePageInvoiceActionsDeps) {
   const { projects, invoices, editingInvoice, originalFileRef, loadData, refresh, setEditingInvoice, setShowInvoiceModal } = deps
   const showToast = useToastStore(state => state.showToast)
+  const { can } = usePermission()
 
   const handleEditInvoice = useCallback(async (invoice: Invoice) => {
+    // G2 B4: 发票编辑 → invoices:update
+    if (!can('invoices:update')) { showToast('您没有编辑发票的权限', 'error'); return }
     if (invoice.fileUrl && !invoice.fileUrl.startsWith('data:')) {
       originalFileRef.current[invoice.id] = invoice.fileUrl
       const cat = getInvoiceCategory(invoice.type)
@@ -33,6 +37,12 @@ export function useInvoicePageInvoiceActions(deps: UseInvoicePageInvoiceActionsD
   }, [originalFileRef, setEditingInvoice, setShowInvoiceModal])
 
   const handleSubmitInvoice = useCallback(async (data: any) => {
+    // G2 B4: 发票新建/编辑 → invoices:create / invoices:update
+    const need = editingInvoice ? 'invoices:update' : 'invoices:create'
+    if (!can(need as 'invoices:create')) {
+      showToast(editingInvoice ? '您没有编辑发票的权限' : '您没有创建发票的权限', 'error')
+      return
+    }
     try {
       let fileData = data
       if (editingInvoice && data.fileUrl?.startsWith('data:')) {
@@ -64,6 +74,8 @@ export function useInvoicePageInvoiceActions(deps: UseInvoicePageInvoiceActionsD
   }, [editingInvoice, projects, loadData, refresh, showToast, originalFileRef, setEditingInvoice, setShowInvoiceModal])
 
   const handleDeleteInvoice = useCallback(async (id: number) => {
+    // G2 B4: 发票删除 → invoices:delete
+    if (!can('invoices:delete')) { showToast('您没有删除发票的权限', 'error'); return }
     if (!confirm('确定要删除这张发票吗？')) return
     try {
       const target = invoices.find(i => i.id === id)
@@ -74,6 +86,8 @@ export function useInvoicePageInvoiceActions(deps: UseInvoicePageInvoiceActionsD
   }, [invoices, loadData, refresh])
 
   const handleStatusChange = useCallback(async (id: number, status: InvoiceStatus) => {
+    // G2 B4: 发票状态切换 → invoices:update
+    if (!can('invoices:update')) { showToast('您没有变更发票状态的权限', 'error'); return }
     try {
       await (await getAPI()).updateInvoiceStatus(id, status)
       const invoice = invoices.find(i => i.id === id)
