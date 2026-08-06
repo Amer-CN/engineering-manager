@@ -163,7 +163,7 @@
 | 批次 | 模块 | path 数 | 状态 |
 |------|------|---------|------|
 | B1 | settings 系 + O1 + 快照/备份 + 0 警告固化 | 6+2 | ✅ 完成（fd98d97） |
-| B2 | wages+attendances+salary-history 系 + O3 + generate-v2 归属 | 18 | ✅ 完成（cc41919）；PUT /api/wages 收窄 defer 至前端 4 处 updateWage 付款用途改走 batch-payment 后 |
+| B2 | wages+attendances+salary-history 系 + O3 + generate-v2 归属 | 18 | ✅ 完成（cc41919）；PUT /api/wages 收窄已落地（H-2，D-9 关闭：SET 工资列 only + 已发款/已归档守卫，付款走 batch-payment/batch-clear-payments） |
 | B3 | contracts+settlements+contract-templates 系 | 8 | ✅ 完成（9993c94） |
 | B4 | invoices+payment-records 系 | 5 | ✅ 完成（589160f） |
 | B5 | members+workers+project-workers+departments+worker-teams 系 | 11 | ✅ 完成（db0088e） |
@@ -183,4 +183,4 @@
   前端桥接断链 2 处（batchArchivePayments→batchArchiveWages、saveCostLedgerMatchRules→saveCostLedgerMatchRule）。
 - 测试基建：G2EnvIsolatedCollection 串行化 env 隔离测试类（B1/B3/B8 数据路径隔离，防并行污染）。
 - 角色 id 漂移记录：001 种子是 finance，GetDefaultPermissions/037 用 accountant——C 窗口已知范围外，测试补建角色行。
-- 遗留：PUT /api/wages 收窄（D-9 记档，defer）；SettlementProjectActions 等死代码链未动。
+- 遗留：SettlementProjectActions 等死代码链未动。
