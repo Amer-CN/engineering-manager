@@ -57,6 +57,8 @@ public static class WageEndpoints
         app.MapPost("/api/attendances", async (HttpContext ctx, AttendanceDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B2: 考勤写操作 → wages:create
+            if (!CurrentUser.HasPermission(ctx, db, "wages:create")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO attendances (member_id,project_id,project_worker_id,year_month,work_days,days_off,is_full_attendance,
                  daily_status,file_url,file_name,created_by,created_at,updated_at, last_modified_at) VALUES (@MemberId,@ProjectId,@ProjectWorkerId,@YearMonth,@WorkDays,@DaysOff,@IsFullAttendance,
@@ -71,6 +73,8 @@ public static class WageEndpoints
         app.MapPut("/api/attendances", async (HttpContext ctx, AttendanceDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B2: 考勤写操作 → wages:update
+            if (!CurrentUser.HasPermission(ctx, db, "wages:update")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var affected = await db.ExecuteAsync(@"UPDATE attendances SET work_days=@WorkDays,days_off=@DaysOff,
@@ -84,6 +88,8 @@ public static class WageEndpoints
         app.MapDelete("/api/attendances/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B2: 考勤写操作 → wages:delete
+            if (!CurrentUser.HasPermission(ctx, db, "wages:delete")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             return (await db.ExecuteAsync("DELETE FROM attendances WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
@@ -92,6 +98,8 @@ public static class WageEndpoints
         app.MapPost("/api/attendances/batch-delete", async (HttpContext ctx, List<long> ids, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B2: 考勤写操作 → wages:delete
+            if (!CurrentUser.HasPermission(ctx, db, "wages:delete")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var count = 0;
@@ -103,6 +111,8 @@ public static class WageEndpoints
         app.MapPost("/api/attendances/batch-create", async (HttpContext ctx, List<JsonElement> records, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B2: 考勤写操作 → wages:create
+            if (!CurrentUser.HasPermission(ctx, db, "wages:create")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             var count = 0;
             foreach (var dto in records)
@@ -124,6 +134,8 @@ public static class WageEndpoints
         app.MapPost("/api/attendances/generate", (HttpContext ctx, AttendanceGenerateDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B2: 考勤生成 → wages:create
+            if (!CurrentUser.HasPermission(ctx, db, "wages:create")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             if (dto is null || !dto.ProjectId.HasValue || string.IsNullOrEmpty(dto.YearMonth))
                 return Results.BadRequest(new { success = false, error = "generate: projectId / yearMonth 必填" });
@@ -152,6 +164,8 @@ public static class WageEndpoints
         app.MapPost("/api/attendances/generate-v2", (HttpContext ctx, AttendanceGenerateV2Dto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B2: 考勤生成 → wages:create
+            if (!CurrentUser.HasPermission(ctx, db, "wages:create")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             if (dto is null || !dto.ProjectId.HasValue || string.IsNullOrEmpty(dto.YearMonth))
                 return Results.BadRequest(new { success = false, error = "generate-v2: projectId / yearMonth 必填" });
@@ -160,8 +174,13 @@ public static class WageEndpoints
             var projectId = dto.ProjectId.Value;
             var days = DateTime.DaysInMonth(year, month);
             var count = 0;
+            var skipped = new List<long>();
             foreach (var pwId in dto.ProjectWorkerIds ?? new List<long>())
             {
+                // G2 B2 特任务: pwId 必须属于 projectId（防跨项目写入他人考勤），不属于的跳过并记响应
+                var belongs = db.ExecuteScalar<int>("SELECT COUNT(*) FROM project_workers WHERE id=@PwId AND project_id=@ProjectId",
+                    new { PwId = pwId, ProjectId = projectId });
+                if (belongs == 0) { skipped.Add(pwId); continue; }
                 var exists = db.ExecuteScalar<int>("SELECT COUNT(*) FROM attendances WHERE project_id=@ProjectId AND year_month=@YearMonth AND project_worker_id=@PwId",
                     new { ProjectId = projectId, YearMonth = dto.YearMonth, PwId = pwId });
                 if (exists > 0) continue;
@@ -171,7 +190,7 @@ public static class WageEndpoints
                           WorkDays = days, DailyStatus = AllWorkStatusJson(days), CreatedBy = uid, Now = now() });
                 count++;
             }
-            return Common.Ok(new { count });
+            return Common.Ok(new { count, skipped });
         });
 
         // POST /api/attendances/batch-import — 按出勤天数批量导入（Excel 导入路径）
@@ -181,6 +200,8 @@ public static class WageEndpoints
         app.MapPost("/api/attendances/batch-import", (HttpContext ctx, AttendanceImportDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B2: 考勤导入 → wages:create
+            if (!CurrentUser.HasPermission(ctx, db, "wages:create")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             if (dto is null || !dto.ProjectId.HasValue || string.IsNullOrEmpty(dto.YearMonth))
                 return Results.BadRequest(new { success = false, error = "batch-import: projectId / yearMonth 必填" });
@@ -262,6 +283,8 @@ public static class WageEndpoints
         app.MapPost("/api/wages", async (HttpContext ctx, WageDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B2: 工资写操作 → wages:create
+            if (!CurrentUser.HasPermission(ctx, db, "wages:create")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             // WageDto 金额为元（double? 接收），落库前统一 ToFen 转分（单位契约）
             var (ok, actualWage, missing) = TryResolveActualWage(dto);
@@ -303,6 +326,8 @@ public static class WageEndpoints
         app.MapPut("/api/wages", async (HttpContext ctx, WageDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B2: 工资写操作 → wages:update
+            if (!CurrentUser.HasPermission(ctx, db, "wages:update")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var (ok, actualWage, missing) = TryResolveActualWage(dto);
@@ -347,6 +372,8 @@ public static class WageEndpoints
         app.MapDelete("/api/wages/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B2: 工资写操作 → wages:delete
+            if (!CurrentUser.HasPermission(ctx, db, "wages:delete")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             return (await db.ExecuteAsync("UPDATE wages SET deleted_at=@Now WHERE id=@Id AND deleted_at IS NULL AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin, Now = now() })) > 0 ? Common.Ok() : Results.Forbid();
@@ -355,6 +382,8 @@ public static class WageEndpoints
         app.MapPost("/api/wages/batch-delete", async (HttpContext ctx, List<long> ids, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B2: 工资写操作 → wages:delete
+            if (!CurrentUser.HasPermission(ctx, db, "wages:delete")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var count = 0;
@@ -366,6 +395,8 @@ public static class WageEndpoints
         app.MapPost("/api/wages/batch-clear-payments", async (HttpContext ctx, List<long> ids, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B2: 工资写操作 → wages:update
+            if (!CurrentUser.HasPermission(ctx, db, "wages:update")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var count = 0;
@@ -378,6 +409,8 @@ public static class WageEndpoints
         app.MapPost("/api/wages/archive", async (HttpContext ctx, List<long> ids, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B2: 工资写操作 → wages:update
+            if (!CurrentUser.HasPermission(ctx, db, "wages:update")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var count = 0;
@@ -391,6 +424,8 @@ public static class WageEndpoints
         app.MapPost("/api/wages/batch-unarchive", async (HttpContext ctx, List<long> ids, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B2: 工资写操作 → wages:update
+            if (!CurrentUser.HasPermission(ctx, db, "wages:update")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var count = 0;
@@ -478,7 +513,10 @@ public static class WageEndpoints
         app.MapPost("/api/wages/batch-save", async (HttpContext ctx, List<JsonElement> records, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B2: 工资批量保存 → wages:update
+            if (!CurrentUser.HasPermission(ctx, db, "wages:update")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var saved = 0;
             var skipped = 0;
             var skippedItems = new List<object>();
@@ -518,7 +556,8 @@ public static class WageEndpoints
                         actual_wage = excluded.actual_wage,
                         updated_at = excluded.updated_at
                     WHERE COALESCE(wages.paid_amount, 0) = 0
-                      AND COALESCE(wages.payment_locked, 0) = 0",
+                      AND COALESCE(wages.payment_locked, 0) = 0
+                      AND (wages.created_by = @Uid OR @IsAdmin = 1)",
                     new {
                         item.ProjectId, item.ProjectWorkerId, item.YearMonth,
                         DailyWage = ToFen(item.DailyWage!.Value),
@@ -526,7 +565,7 @@ public static class WageEndpoints
                         Bonus = ToFen(item.Bonus!.Value),
                         Deduction = ToFen(item.Deduction!.Value),
                         ActualWage = ToFen(item.ActualWage!.Value),
-                        CreatedBy = uid, Now = now()
+                        CreatedBy = uid, Uid = uid, IsAdmin = isAdmin, Now = now()
                     });
                 if (affected > 0)
                 {
@@ -549,6 +588,8 @@ public static class WageEndpoints
         app.MapPost("/api/wages/batch-payment", async (HttpContext ctx, List<JsonElement> records, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B2: 批量付款写入 → wages:update
+            if (!CurrentUser.HasPermission(ctx, db, "wages:update")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var saved = 0;
@@ -606,6 +647,8 @@ public static class WageEndpoints
         app.MapPost("/api/wages/generate", (HttpContext ctx, WageGenerateDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B2: 生成工资表 → wages:create
+            if (!CurrentUser.HasPermission(ctx, db, "wages:create")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             if (dto is null || dto.ProjectId is not long projectId || string.IsNullOrEmpty(dto.YearMonth))
@@ -697,6 +740,8 @@ public static class WageEndpoints
         app.MapDelete("/api/salary-history/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B2: 薪资历史 → wages:delete
+            if (!CurrentUser.HasPermission(ctx, db, "wages:delete")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             return (await db.ExecuteAsync("DELETE FROM salary_history WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
@@ -705,6 +750,8 @@ public static class WageEndpoints
         app.MapPost("/api/salary-history", async (HttpContext ctx, SalaryHistoryDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B2: 薪资历史 → wages:create
+            if (!CurrentUser.HasPermission(ctx, db, "wages:create")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO salary_history (member_id,effective_date,base_salary,subsidy,subsidy_note,note,created_by,created_at, last_modified_at) VALUES (@MemberId,@EffectiveDate,@BaseSalary,@Subsidy,@SubsidyNote,@Note,@CreatedBy,@Now, @Now);
                 SELECT last_insert_rowid();",

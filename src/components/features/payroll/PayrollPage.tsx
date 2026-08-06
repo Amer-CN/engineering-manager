@@ -10,6 +10,7 @@ import type { Member } from '@/types'
 import { useConfirm } from '@/hooks/useConfirm'
 import { useToastStore } from '@/store/toastStore'
 import { getAPI } from '@/services/api-adapter'
+import { usePermission } from '@/hooks/usePermission'
 
 // worker 模式操作
 import { useWageActions } from '../wages/useWageActions'
@@ -26,6 +27,7 @@ export default function PayrollPage({ mode }: PayrollPageProps) {
   const data = usePayrollData({ mode })
   const { confirm, ConfirmDialog } = useConfirm()
   const showToast = useToastStore(state => state.showToast)
+  const { can, canAny } = usePermission()
   const [activeTab, setActiveTab] = useState<TabId>(mode === 'staff' ? 'payroll' : 'attendance')
   const [filterYearMonth, setFilterYearMonth] = useState(() => new Date().toISOString().slice(0, 7))
 
@@ -57,6 +59,8 @@ export default function PayrollPage({ mode }: PayrollPageProps) {
 
   // staff: 生成薪酬
   const handleGeneratePayroll = useCallback(async () => {
+    // G2 B2: 生成薪酬（create+update 混合）→ wages:create / wages:update
+    if (!canAny(['wages:create', 'wages:update'])) { showToast('您没有生成薪酬的权限', 'error'); return }
     if (!data.selectedMonth) { showToast('请选择月份', 'warning'); return }
     const ok = await confirm({ title: '生成薪酬', content: `确定生成 ${data.selectedMonth} 的薪酬记录？`, confirmVariant: 'primary' })
     if (!ok) return
@@ -107,6 +111,8 @@ export default function PayrollPage({ mode }: PayrollPageProps) {
 
   // staff: 删除本月
   const handleDeleteMonth = useCallback(async () => {
+    // G2 B2: 删除薪酬 → wages:delete
+    if (!can('wages:delete')) { showToast('您没有删除薪酬的权限', 'error'); return }
     const ok = await confirm({ title: '删除本月薪酬', content: `确定删除 ${data.selectedMonth} 的所有薪酬记录？此操作不可撤销。`, confirmVariant: 'danger' })
     if (!ok) return
     try {

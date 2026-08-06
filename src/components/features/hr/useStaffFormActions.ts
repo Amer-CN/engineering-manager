@@ -3,6 +3,7 @@ import { processFileFields, FILE_CATEGORIES, guessFileExt } from '../../../servi
 import { recognizeIdCard, getOCRConfig } from '../../../services/ocr'
 import { logCreate, logUpdate } from '../../../utils/audit'
 import { getAPI } from '@/services/api-adapter'
+import { usePermission } from '@/hooks/usePermission'
 
 const readFileAsDataURL = (file: File): Promise<string> =>
   new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(r.result as string); r.onerror = reject; r.readAsDataURL(file) })
@@ -23,6 +24,7 @@ export function useStaffFormActions({
   editing, formData, setFormData, fileDirty, setFileDirty,
   setOcrLoading, resetForm, loadData, showToast,
 }: UseStaffFormActionsParams) {
+  const { can } = usePermission()
 
   const handleFileDrop = async (field: string, file: File) => {
     if (file.size > 10 * 1024 * 1024) { showToast('文件不能超过10MB', 'error'); return }
@@ -109,7 +111,8 @@ export function useStaffFormActions({
         : await memberApi.createMember(payload)
       if (result.success) {
         const memberId = editing ? editing.id : result.data?.id
-        if (memberId && formData.baseSalary && formData.entryDate) {
+        // G2 B2: 入职初始薪资同步 → wages:create（无码角色跳过同步，不干扰人员保存主流程）
+        if (memberId && formData.baseSalary && formData.entryDate && can('wages:create')) {
           const changed = !editing || Number(editing.baseSalary) !== Number(formData.baseSalary)
           if (changed) {
             const salaryApi = await getAPI()

@@ -1,5 +1,6 @@
 import type { WageRecord } from '@/types'
 import { getAPI } from '@/services/api-adapter'
+import { usePermission } from './usePermission'
 
 export function useWagePaymentOps(deps: {
   allWageRecords: WageRecord[]
@@ -14,8 +15,11 @@ export function useWagePaymentOps(deps: {
   loadStats: () => Promise<void>
 }) {
   const { allWageRecords, paymentEdits, setPaymentEdits, selectedWageIds, setSelectedWageIds, setLoading, showToast, confirm, loadAllRecords, loadStats } = deps
+  const { can } = usePermission()
 
   const handleBatchDeleteWages = async () => {
+    // G2 B2: 清除发放 → wages:update
+    if (!can('wages:update')) { showToast('您没有清除发放的权限', 'error'); return }
     if (selectedWageIds.size === 0) return
     const ok = await confirm({ title: '确认清除', content: `确认清除选中的 ${selectedWageIds.size} 条发放记录吗？（不会删除工资记录本身）`, confirmVariant: 'danger' })
     if (!ok) return
@@ -31,6 +35,8 @@ export function useWagePaymentOps(deps: {
   }
 
   const handleBatchArchivePayments = async () => {
+    // G2 B2: 归档发放 → wages:update（顺带修复桥接断链：batchArchivePayments 无定义 → batchArchiveWages）
+    if (!can('wages:update')) { showToast('您没有归档发放的权限', 'error'); return }
     const toArchive = selectedWageIds.size > 0 ? Array.from(selectedWageIds) : allWageRecords.filter(w => !w.paymentLocked).map(w => w.id)
     if (toArchive.length === 0) { showToast('没有可归档的记录', 'info'); return }
     const prompt = selectedWageIds.size > 0
@@ -39,7 +45,7 @@ export function useWagePaymentOps(deps: {
     const ok = await confirm({ title: '确认归档', content: prompt, confirmVariant: 'primary' })
     if (!ok) return
     try {
-      const result = await (await getAPI()).batchArchivePayments(toArchive)
+      const result = await (await getAPI()).batchArchiveWages(toArchive)
       if (result.success && result.data) {
         showToast(`已归档 ${result.data?.archived ?? toArchive.length} 条发放记录`, 'success')
         setSelectedWageIds(new Set()); await loadAllRecords(); setPaymentEdits(new Map())
@@ -58,6 +64,8 @@ export function useWagePaymentOps(deps: {
   }
 
   const handleSavePayments = async () => {
+    // G2 B2: 保存发放 → wages:update
+    if (!can('wages:update')) { showToast('您没有登记发放的权限', 'error'); return }
     if (paymentEdits.size === 0) { showToast('没有需要保存的修改', 'info'); return }
     setLoading(true)
     try {

@@ -8,6 +8,8 @@ import { StaffPayrollTable } from '../hr/StaffPayrollTable'
 import StaffAttendance from '../hr/StaffAttendance'
 import type { useWageActions } from '../wages/useWageActions'
 import { getAPI } from '@/services/api-adapter'
+import { usePermission } from '@/hooks/usePermission'
+import { useToastStore } from '@/store/toastStore'
 
 type TabId = 'attendance' | 'wages' | 'payments' | 'payroll'
 
@@ -30,6 +32,8 @@ export function PayrollTable({
   mode, activeTab, data, selectedProject, projectAttendances, projectWages,
   daysInMonth, wageActions, paymentFilteredWages, filterYearMonth, setFilterYearMonth, confirm,
 }: PayrollTableProps) {
+  const { can } = usePermission()
+  const showToast = useToastStore(state => state.showToast)
   return (
     <div className="flex-1 min-h-0 overflow-hidden">
       {mode === 'staff' ? (
@@ -41,12 +45,16 @@ export function PayrollTable({
                 filteredWages={data.filteredWages} staff={data.people} departments={data.departments}
                 summaryTotals={data.summary}
                 onDeleteWage={async (wage: PayrollWage) => {
+                  // G2 B2: 删除薪酬 → wages:delete
+                  if (!can('wages:delete')) { showToast('您没有删除薪酬的权限', 'error'); return }
                   const ok = await confirm({ title: '确认删除', content: `确认删除 ${wage.memberName || ''} ${wage.yearMonth} 的薪酬？`, confirmVariant: 'danger' })
                   if (!ok) return
                   await (await getAPI()).deleteWage(wage.id)
                   await data.loadData()
                 }}
                 onPaidChange={async (wage: PayrollWage, field: string, value: number | string) => {
+                  // G2 B2: 实发金额编辑 → wages:update
+                  if (!can('wages:update')) { showToast('您没有编辑薪酬的权限', 'error'); return }
                   await (await getAPI()).updateWage({ ...wage, [field]: value })
                   await data.loadData()
                 }}

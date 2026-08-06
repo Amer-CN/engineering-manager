@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 
 import type { Project, WorkerTeam, AttendanceRecord, WageRecord, WageStats } from '@/types'
 import { getAPI } from '@/services/api-adapter'
+import { usePermission } from './usePermission'
 import { useBankReceipt } from '../components/features/wages/useBankReceipt'
 import { useWageAttendance } from './useWageAttendance'
 import { useWageTable } from './useWageTable'
@@ -13,6 +14,7 @@ import { useWageProjectWorkers } from './useWageProjectWorkers'
 export type { ViewMode, ProjectWorkerItem, UseWageManagementOptions }
 
 export default function useWageManagement({ showToast, confirm }: UseWageManagementOptions) {
+  const { can } = usePermission()
   const [projects, setProjects] = useState<Project[]>([])
   const [workerTeams, setWorkerTeams] = useState<WorkerTeam[]>([])
   const [view, setView] = useState<ViewMode>('dashboard')
@@ -49,6 +51,8 @@ export default function useWageManagement({ showToast, confirm }: UseWageManagem
   useEffect(() => { loadAttendances() }, [loadAttendances])
 
   const handleBatchDeleteAttendances = async () => {
+    // G2 B2: 批量删除考勤 → wages:delete
+    if (!can('wages:delete')) { showToast('您没有删除考勤的权限', 'error'); return }
     if (selectedAttendanceIds.size === 0) return
     const ok = await confirm({ title: '确认删除', content: `确认删除选中的 ${selectedAttendanceIds.size} 条考勤记录吗？`, confirmVariant: 'danger' })
     if (!ok) return
@@ -65,6 +69,8 @@ export default function useWageManagement({ showToast, confirm }: UseWageManagem
   useEffect(() => { loadWages() }, [loadWages])
 
   const handleBatchDeleteWageTable = async () => {
+    // G2 B2: 批量删除工资 → wages:delete
+    if (!can('wages:delete')) { showToast('您没有删除工资的权限', 'error'); return }
     if (selectedWageTableIds.size === 0) return
     const ok = await confirm({ title: '确认删除', content: `确认删除选中的 ${selectedWageTableIds.size} 条工资记录吗？`, confirmVariant: 'danger' })
     if (!ok) return

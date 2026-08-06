@@ -6,6 +6,7 @@ import { computeAttendanceSummary } from '../../../constants/attendance'
 import type { AttendanceRecord, Member } from '../../../types/electron'
 import AttendanceDetail from '../../AttendanceDetail'
 import { getAPI } from '@/services/api-adapter'
+import { usePermission } from '@/hooks/usePermission'
 import { Card } from '@/components/ui/Card'
 
 function getDaysInMonth(yearMonth: string): number {
@@ -39,6 +40,7 @@ function durationStr(entryDate: string | null): string {
 }
 
 const AttendanceTimeline: React.FC<Props> = ({ member, attendances, deptName, onBack, onSaved }) => {
+  const { can } = usePermission()
   const [expandedYears, setExpandedYears] = useState<Set<string>>(() => {
     // Expand current year by default
     const thisYear = String(new Date().getFullYear())
@@ -112,6 +114,8 @@ const AttendanceTimeline: React.FC<Props> = ({ member, attendances, deptName, on
   const handleMonthClick = async (record: AttendanceRecord) => {
     const ym = record.yearMonth
     if (!record.dailyStatus || Object.keys(record.dailyStatus).length === 0) {
+      // G2 B2: 自动补全全勤 → wages:update（无码只查看不写入）
+      if (!can('wages:update')) { setDetailRecord(record); setDetailYearMonth(ym); return }
       // Auto-fill defaults if empty
       const dailyStatus: Record<number, string> = {}
       for (let d = 1; d <= getDaysInMonth(ym); d++) dailyStatus[d] = 'work'
