@@ -46,11 +46,49 @@ public class R8G30PoCTests : ApiTestBase
         return (inner, audit);
     }
 
+    /// <summary>
+    /// R8.15.1(b): 三态解析——任何路径都不许把「拿不到数据」翻译成「没泄漏」。
+    /// 有数据 / 被拒绝 / 解析失败 显式区分，调用方必须按期望形态断言。
+    /// </summary>
+    private enum Outcome { HasData, Rejected, ParseFailure }
+
+    private static Outcome Classify(string inner)
+    {
+        using var doc = JsonDocument.Parse(inner);
+        if (doc.RootElement.TryGetProperty("data", out var data))
+            return Outcome.HasData;
+        if (doc.RootElement.TryGetProperty("error", out _))
+            return Outcome.Rejected;
+        return Outcome.ParseFailure;
+    }
+
     private static bool Has300(string inner)
     {
         using var doc = JsonDocument.Parse(inner);
-        if (!doc.RootElement.TryGetProperty("data", out var data)) return false;
+        if (!doc.RootElement.TryGetProperty("data", out var data))
+            throw new InvalidOperationException("Has300 不允许在无 data 的响应上调用（R8.15.1(b)：不得把被拒绝/解析失败翻译成没泄漏）：" + inner);
         return data.EnumerateArray().Any(r => r.GetProperty("amount").GetDouble() == 300);
+    }
+
+    /// <summary>
+    /// R8.15.2 修复后：直接调 ValidateAndRewrite——不抛异常、返回固定拒绝文案
+    /// （G32 实证：修复前此处抛 NRE，堆栈 5 帧见 R8.15 报告）。
+    /// </summary>
+    [Fact]
+    public void R8152_DirectValidate_NoTableSubquery_RejectedNoThrow()
+    {
+        using var conn = new SqliteConnection(ConnectionString);
+        conn.Open();
+        var now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        conn.Execute("INSERT INTO projects (id, name, created_by, created_at) VALUES (1, 'P1', '1', @Now)", new { Now = now });
+        conn.Execute("INSERT INTO invoices (id, project_id, name, amount, status, created_by, created_at, updated_at) VALUES (1, 1, 'x', 1, 'pending', '1', @Now, @Now)", new { Now = now });
+        var r = SafeQueryValidator.ValidateAndRewrite(
+            "SELECT id, amount FROM invoices WHERE id IN (SELECT 1 ORDER BY 1) OR 1 = 1",
+            "u1", EngineeringManager.Api.Security.CurrentUser.DataScope.AuthorizedProjects);
+        Assert.False(r.IsValid, "无表子查询必须被拒绝（G32 fail-closed）");
+        Assert.Contains("无表子查询暂不支持", r.Error);
+        Assert.DoesNotContain("Object reference", r.Error);
+        Assert.DoesNotContain("NullReference", r.Error);
     }
 
     [Fact]
@@ -61,7 +99,15 @@ public class R8G30PoCTests : ApiTestBase
         _output.WriteLine(inner);
         _output.WriteLine("=== PoC-1 audit ===");
         _output.WriteLine(audit);
-        Assert.False(Has300(inner), "PoC-1 泄漏 300（G30 成立）");
+        // R8.15.1(d): 设计性拒绝断言（不再是「没泄漏」）——当前必红（NRE 文案）
+        var outcome = Classify(inner);
+        Assert.Equal(Outcome.Rejected, outcome);
+        using var doc = JsonDocument.Parse(inner);
+        var error = doc.RootElement.GetProperty("error").GetString();
+        Assert.DoesNotContain("Object reference", error);
+        Assert.DoesNotContain("Exception", error);
+        Assert.DoesNotContain("NullReference", error);
+        Assert.Contains("无表子查询暂不支持", error); // R8.15.2 固定拒绝文案
     }
 
     [Fact]
@@ -72,7 +118,15 @@ public class R8G30PoCTests : ApiTestBase
         _output.WriteLine(inner);
         _output.WriteLine("=== PoC-2 audit ===");
         _output.WriteLine(audit);
-        Assert.False(Has300(inner), "PoC-2 泄漏 300（G30 成立）");
+        // R8.15.1(c): 正向对照——不得只断言「坏东西不在」
+        Assert.Equal(Outcome.HasData, Classify(inner));
+        using var doc = JsonDocument.Parse(inner);
+        var rows = doc.RootElement.GetProperty("data").EnumerateArray().ToList();
+        Assert.Equal(2, rows.Count); // own(100) + authorized(200)
+        var ids = rows.Select(r => r.GetProperty("id").GetInt64()).ToList();
+        Assert.Contains(1L, ids);
+        Assert.Contains(2L, ids);
+        Assert.DoesNotContain(rows, r => r.GetProperty("amount").GetDouble() == 300);
     }
 
     [Fact]
@@ -83,6 +137,35 @@ public class R8G30PoCTests : ApiTestBase
         _output.WriteLine(inner);
         _output.WriteLine("=== PoC-3 audit ===");
         _output.WriteLine(audit);
-        Assert.False(Has300(inner), "PoC-3 泄漏 300（G30 成立）");
+        // R8.15.1(c): 正向对照
+        Assert.Equal(Outcome.HasData, Classify(inner));
+        using var doc = JsonDocument.Parse(inner);
+        var rows = doc.RootElement.GetProperty("data").EnumerateArray().ToList();
+        Assert.Equal(2, rows.Count);
+        var ids = rows.Select(r => r.GetProperty("id").GetInt64()).ToList();
+        Assert.Contains(1L, ids);
+        Assert.Contains(2L, ids);
+        Assert.DoesNotContain(rows, r => r.GetProperty("amount").GetDouble() == 300);
+    }
+
+    /// <summary>R8.15.2(d): 三条零表子查询探针——设计性拒绝（文案匹配 + 无 NRE 字样）</summary>
+    [Theory]
+    [InlineData("SELECT id, amount FROM invoices WHERE id IN (SELECT 1 ORDER BY 1) OR 1 = 1")]
+    [InlineData("SELECT id, amount FROM invoices WHERE id = (SELECT 1 LIMIT 1) OR 1 = 1")]
+    [InlineData("SELECT id, amount FROM invoices WHERE EXISTS (SELECT 1) OR 1 = 1")]
+    public async Task ZeroTableSubquery_Rejected_WithFixedWording(string sql)
+    {
+        var (inner, audit) = await Run(sql);
+        _output.WriteLine("=== ZERO-TABLE inner ===");
+        _output.WriteLine(inner);
+        _output.WriteLine("=== ZERO-TABLE audit ===");
+        _output.WriteLine(audit);
+        Assert.Equal(Outcome.Rejected, Classify(inner));
+        using var doc = JsonDocument.Parse(inner);
+        var error = doc.RootElement.GetProperty("error").GetString();
+        Assert.Contains("无表子查询暂不支持", error);
+        Assert.DoesNotContain("Object reference", error);
+        Assert.DoesNotContain("NullReference", error);
+        Assert.DoesNotContain("Exception", error);
     }
 }
