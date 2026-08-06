@@ -74,16 +74,6 @@ const EXEMPT = [
   { path: '/api/regions/{id}', reason: '基础字典（省市区静态数据）' },
   { path: '/api/audit/logs', reason: '审计日志写入端点' },
   // G2 暂缓（拍板 C：前端未用权限码的业务写端点，待前端补 can() 后 C-4 二期执行）
-  { path: '/api/cost-ledger', reason: 'G2 暂缓：costLedger:create/update 待前端补码后执行' },
-  { path: '/api/cost-ledger/{id}', reason: 'G2 暂缓：costLedger:delete 待前端补码后执行' },
-  { path: '/api/cost-ledger/batch', reason: 'G2 暂缓：costLedger:create 待前端补码后执行' },
-  { path: '/api/cost-ledger/categories', reason: 'G2 暂缓：costLedger:update 待前端补码后执行' },
-  { path: '/api/cost-ledger/categories/{id}', reason: 'G2 暂缓：costLedger:update 待前端补码后执行' },
-  { path: '/api/cost-ledger/batches', reason: 'G2 暂缓：costLedger:create 待前端补码后执行' },
-  { path: '/api/cost-ledger/batches/{id}/copy', reason: 'G2 暂缓：costLedger:create 待前端补码后执行' },
-  { path: '/api/cost-ledger/batches/{id}', reason: 'G2 暂缓：costLedger:update/delete 待前端补码后执行' },
-  { path: '/api/cost-ledger/match-rules', reason: 'G2 暂缓：costLedger:update 待前端补码后执行' },
-  { path: '/api/cost-ledger/{batchId}/sheet', reason: 'G2 暂缓：costLedger:update 待前端补码后执行' },
 ];
 
 // ── 提取（R1）──

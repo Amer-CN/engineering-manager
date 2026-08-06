@@ -7,6 +7,7 @@ import { CostLedgerGrid } from './CostLedgerGrid'
 import { useCostLedgerBatches } from '@/hooks/useCostLedgerBatches'
 import { Icon } from '@/components/ui/Icon'
 import { useToastStore } from '@/store/toastStore'
+import { usePermission } from '@/hooks/usePermission'
 import { useConfirm } from '@/hooks/useConfirm'
 import { CostLedgerImportModal, learnFromEdit } from './CostLedgerImportModal'
 import type { CostLedgerEntry, CostLedgerSummary, Project, CostLedgerCategory } from '@/types'
@@ -41,6 +42,7 @@ function setBetaEnabled(enabled: boolean) {
 
 export function CostLedgerProjectDetail({ project, onBack, categories, onManageCategories }: CostLedgerProjectDetailProps) {
   const showToast = useToastStore(state => state.showToast)
+  const { can } = usePermission()
   const { confirm, ConfirmDialog } = useConfirm()
   const { batches, createBatch, copyBatch, renameBatch, deleteBatch } = useCostLedgerBatches(project.id)
   const [batchId, setBatchId] = useState<number>(0)
@@ -103,6 +105,12 @@ export function CostLedgerProjectDetail({ project, onBack, categories, onManageC
   useEffect(() => { load() }, [load])
 
   const handleSave = async (data: any) => {
+    // G2 B9: 台账新增/编辑 → costLedger:create / costLedger:update
+    const need = editing ? 'costLedger:update' : 'costLedger:create'
+    if (!can(need as 'costLedger:create')) {
+      showToast(editing ? '您没有编辑台账的权限' : '您没有新增台账的权限', 'error')
+      return
+    }
     const api = await getAPI()
     if (editing) {
       const res = await api.updateCostLedger(editing.id, data)
@@ -130,6 +138,8 @@ export function CostLedgerProjectDetail({ project, onBack, categories, onManageC
   }
 
   const handleDelete = async (id: number) => {
+    // G2 B9: 台账删除 → costLedger:delete
+    if (!can('costLedger:delete')) { showToast('您没有删除台账的权限', 'error'); return }
     const api = await getAPI()
     const ok = await confirm({ title: '确认删除', content: '确认删除这条台账记录？', confirmVariant: 'danger' })
     if (!ok) return
