@@ -377,6 +377,14 @@ public static class SafeQueryValidator
         List<TableOccurrence> occurrences,
         int depth)
     {
+        // R8.16.1(G32 补完): 顶层无 FROM 查询（SELECT 1 / SELECT 1 ORDER BY 1）→
+        // fromClause 为 null → foreach 直接 NRE（此前仅防了 ValidateDerivedQuery 的调用点，
+        // ValidateAndRewrite 步骤 7 的 CollectTables(select.From, ...) 未防，且该处 try 只
+        // catch ValidationException，NRE 穿透整个校验器——探针 A/B 实测「校验异常: Object
+        // reference...」）。在空引用点本身防，任何调用点传 null 都不再 NRE。
+        // 注意：子查询路径的 null 由 ValidateDerivedQuery 的无表子查询 throw 显式拒绝
+        // （不许 return 空过——空过会让 depth>0 的 occurrence 收不到，7.6 就拦不住）。
+        if (fromClause == null) return;
         foreach (var tableWithJoins in fromClause)
         {
             CollectTableFromFactor(tableWithJoins.Relation, aliasToTable, referencedTables, occurrences, depth);
