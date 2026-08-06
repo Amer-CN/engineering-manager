@@ -34,9 +34,9 @@ public static class KnowledgeEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx);
-            // 服务端权限检查：必须拥有 knowledge:read 权限
-            if (!CurrentUser.HasPermission(ctx, db, "knowledge:read"))
-                return Results.Json(new { success = false, error = "无权限：需要 knowledge:read" }, statusCode: 403);
+            // 服务端权限检查：入库是写操作，必须拥有 knowledge:create 权限（M3 收严）
+            if (!CurrentUser.HasPermission(ctx, db, "knowledge:create"))
+                return Results.Json(new { success = false, error = "无权限：需要 knowledge:create" }, statusCode: 403);
             try
             {
                 if (string.IsNullOrWhiteSpace(dto.Text))
@@ -55,6 +55,7 @@ public static class KnowledgeEndpoints
                     sourceType: dto.SourceType ?? "manual",
                     sourceRef: dto.SourceRef,
                     projectId: dto.ProjectId,
+                    folderId: dto.FolderId,
                     createdBy: uid,
                     segments: null,
                     occurredAt: dto.OccurredAt);
@@ -229,6 +230,78 @@ public static class KnowledgeEndpoints
         });
 
         // ═══════════════════════════════════════════════════════════
+        // PUT /api/knowledge/documents/{id} — 文档归入/移出文件夹（M3）
+        // 白名单：请求体只收 {folderId}（null = 移出文件夹）；其余字段一律忽略。
+        // 权限: knowledge:update
+        // ═══════════════════════════════════════════════════════════
+        app.MapPut("/api/knowledge/documents/{id}", async (
+            HttpContext ctx,
+            IDbConnection db,
+            long id,
+            FolderAssignDto dto) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            if (!CurrentUser.HasPermission(ctx, db, "knowledge:update"))
+                return Results.Json(new { success = false, error = "无权限：需要 knowledge:update" }, statusCode: 403);
+            try
+            {
+                // 文档归属校验：文档存在且在当前用户范围内
+                var docOwned = db.ExecuteScalar<int>(
+                    @"SELECT COUNT(*) FROM knowledge_documents d
+                      WHERE d.id = @Id AND d.deleted_at IS NULL
+                        AND (d.created_by = @Uid OR @IsAdmin = 1)",
+                    new { Id = id, Uid = uid, IsAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0 }) > 0;
+                if (!docOwned)
+                    return Common.NotFound("文档不存在或无权操作");
+
+                // 目标文件夹存在性 + 可见性校验（null = 移出，跳过）
+                if (dto.FolderId.HasValue)
+                {
+                    var folderOk = db.ExecuteScalar<int>(
+                        @"SELECT COUNT(*) FROM knowledge_folders f
+                          WHERE f.id = @FolderId AND f.deleted_at IS NULL",
+                        new { dto.FolderId }) > 0;
+                    if (!folderOk)
+                        return Common.Fail("目标文件夹不存在或已删除");
+                }
+
+                await db.ExecuteAsync(
+                    "UPDATE knowledge_documents SET folder_id = @FolderId, updated_at = @Now WHERE id = @Id",
+                    new { Id = id, FolderId = dto.FolderId, Now = Common.NowString() });
+
+                // 审计
+                try
+                {
+                    await db.ExecuteAsync(@"INSERT INTO audit_logs
+                        (action, level, user_id, user_name, resource, resource_id, details, ip_address, created_at)
+                        VALUES (@Action, @Level, @UserId, @UserName, @Resource, @ResourceId, @Details, @IpAddress, @CreatedAt)",
+                        new
+                        {
+                            Action = "update",
+                            Level = "info",
+                            UserId = uid,
+                            UserName = db.ExecuteScalar<string>("SELECT display_name FROM users WHERE id = @Uid", new { Uid = uid }) ?? uid,
+                            Resource = "knowledge_documents",
+                            ResourceId = id.ToString(),
+                            Details = $"{{\"event\":\"assign_folder\",\"folderId\":{dto.FolderId?.ToString() ?? "null"}}}",
+                            IpAddress = ctx.Connection.RemoteIpAddress?.ToString() ?? "",
+                            CreatedAt = Common.NowString(),
+                        });
+                }
+                catch (Exception auditEx)
+                {
+                    Console.Error.WriteLine($"[Audit] 写入失败: {auditEx.Message}");
+                }
+
+                return Common.Ok();
+            }
+            catch (Exception ex)
+            {
+                return Common.ServerError("文档归文件夹", ex);
+            }
+        });
+
+        // ═══════════════════════════════════════════════════════════
         // GET /api/knowledge/documents — 文档列表
         // 复用 BuildScopeFilter 统一构造数据范围过滤
         // ═══════════════════════════════════════════════════════════
@@ -382,5 +455,6 @@ public class KnowledgeIngestDto
     public string? SourceType { get; set; }       // call/meeting/upload/manual
     public string? SourceRef { get; set; }         // 如 stt_job.id
     public int? ProjectId { get; set; }
+    public long? FolderId { get; set; }
     public string? OccurredAt { get; set; }
 }

@@ -133,14 +133,14 @@ public static class Common
                     "settings:read","settings:update","users:create","users:read","users:update","users:delete",
                     "roles:read","roles:update","audit_logs:read","audit_logs:export",
                     "reports:create","reports:read",
-                    "labor:read","safeQuery:read","knowledge:read","voice:read"],
+                    "labor:read","safeQuery:read","knowledge:read","knowledge:create","knowledge:update","knowledge:delete","voice:read"],
         "manager" => ["dashboard:read","projects:read","projects:update","projects:export","contracts:read","contracts:update","contracts:export",
                       "partners:read","members:read","wages:read","settlement:read","invoices:read",
                       "inventory:read","inventory:create","inventory:update",
                       "costLedger:read","settings:read","users:read","roles:read","audit_logs:read",
                       "drawings:create","drawings:read","drawings:update",
                       "reports:create","reports:read",
-                      "labor:read","safeQuery:read","knowledge:read","voice:read"],
+                      "labor:read","safeQuery:read","knowledge:read","knowledge:create","knowledge:update","knowledge:delete","voice:read"],
         "accountant" => ["dashboard:read","projects:read","contracts:read","contracts:export","members:read",
                          "wages:create","wages:read","wages:update","settlement:read","settlement:approve","invoices:create",
                          "invoices:read","invoices:update","costLedger:create","costLedger:read",
@@ -170,6 +170,8 @@ record AttendanceDto(long? Id, long? MemberId, long? ProjectId, long? ProjectWor
 record WageDto(long? Id, long? ProjectId, long? MemberId, long? ProjectWorkerId, string? YearMonth, double? DailyWage, double? WorkDays, double? Bonus, double? Deduction, double? ActualWage, double? PaidAmount, string? PaidDate);
 record DepartmentDto(string Name, long? ManagerId, List<string>? Positions);
 record DepartmentUpdateDto(long Id, string Name, long? ManagerId, List<string>? Positions);
+record KnowledgeFolderDto(string? Name, string? EnglishName, long? ProjectId, string? Category);
+record FolderAssignDto(long? FolderId);
 record AuditLogDto(string Action, string? Level, string? UserId, string? UserName, string? Resource, string? ResourceId, string? Details, string? Description, string? IpAddress, string? CreatedAt);
 record FileSaveDto(string? Category, string? SubCategory, string? FileName, string? FileData, string? ProjectName);
 record RegionDto(long? Id, string? Province, string? City, string? District);
