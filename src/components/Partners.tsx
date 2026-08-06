@@ -6,6 +6,7 @@ import { Partner, Supervisor, Project } from '../types/electron'
 import { PartnerList, PartnerForm, SupervisorList, SupervisorForm } from './features/partners'
 import { readUploadedFile, FILE_CATEGORIES } from '../services/fileService'
 import { usePartnerActions } from './features/partners/usePartnerActions'
+import { usePermission } from '@/hooks/usePermission'
 import { getAPI } from '@/services/api-adapter'
 import { Button } from './ui/Button'
 
@@ -16,6 +17,7 @@ interface PartnersProps {
 type UnitType = 'partner' | 'supervisor'
 
 const Partners: React.FC<PartnersProps> = ({ refresh }) => {
+  const { can } = usePermission()
   const [activeTab, setActiveTab] = useState<UnitType>('partner')
   const [partners, setPartners] = useState<Partner[]>([])
   const [supervisors, setSupervisors] = useState<Supervisor[]>([])
@@ -105,6 +107,7 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
           <h1 className="text-base font-semibold tracking-tight text-[color:var(--fg)]">单位管理</h1>
           <p className="text-[color:var(--muted)] mt-1">管理所有往来单位信息</p>
         </div>
+        {can('partners:create') && (
         <Button
           onClick={() => {
             if (activeTab === 'partner') {
@@ -119,6 +122,7 @@ const Partners: React.FC<PartnersProps> = ({ refresh }) => {
          variant="primary" size="sm">
           <Icon name="Plus" size={14} /> 添加{activeTab === 'partner' ? '合作单位' : '监管单位'}
         </Button>
+        )}
       </div>
 
       {/* S21 Stitch: pill-toggle (合作单位/监管单位) */}

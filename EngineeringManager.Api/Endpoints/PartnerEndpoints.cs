@@ -47,6 +47,8 @@ public static class PartnerEndpoints
                 app.MapPost("/api/partners", async (HttpContext ctx, PartnerDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B6: 单位写操作 → partners:create
+            if (!CurrentUser.HasPermission(ctx, db, "partners:create")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             // v1.2.0: PII 字段加密
             var pii = ctx.RequestServices.GetRequiredService<EngineeringManager.Api.Security.PiiProtector>();
@@ -82,6 +84,8 @@ public static class PartnerEndpoints
                 app.MapPut("/api/partners", async (HttpContext ctx, PartnerDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B6: 单位写操作 → partners:update
+            if (!CurrentUser.HasPermission(ctx, db, "partners:update")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             // v1.2.0: PII 字段加密
@@ -122,6 +126,8 @@ public static class PartnerEndpoints
         app.MapDelete("/api/partners/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B6: 单位删除 → partners:delete
+            if (!CurrentUser.HasPermission(ctx, db, "partners:delete")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             return (await db.ExecuteAsync("DELETE FROM partners WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
@@ -148,6 +154,8 @@ public static class PartnerEndpoints
                 app.MapPost("/api/supervisors", async (HttpContext ctx, SupervisorDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B6: 监管单位写操作 → partners:create
+            if (!CurrentUser.HasPermission(ctx, db, "partners:create")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             // v1.2.0: phone 字段加密
             var pii = ctx.RequestServices.GetRequiredService<EngineeringManager.Api.Security.PiiProtector>();
@@ -163,6 +171,8 @@ public static class PartnerEndpoints
                 app.MapPut("/api/supervisors", async (HttpContext ctx, SupervisorDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B6: 监管单位写操作 → partners:update
+            if (!CurrentUser.HasPermission(ctx, db, "partners:update")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             // v1.2.0: phone 字段加密
@@ -179,6 +189,8 @@ public static class PartnerEndpoints
         app.MapDelete("/api/supervisors/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B6: 监管单位删除 → partners:delete
+            if (!CurrentUser.HasPermission(ctx, db, "partners:delete")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             return (await db.ExecuteAsync("DELETE FROM supervisors WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
