@@ -134,3 +134,4 @@ export function useProjects() {
 - **`schema_versions` 表存的是嵌入资源全名**（如 `EngineeringManager.Api.Migrations.Scripts.003_MoneyRealToInteger.sql`），不是文件名；查迁移应用状态时按此匹配。
 - **Dapper dynamic + LEFT JOIN 未命中 = DBNull，不是 null，`?? 0` 兜不住**。`Convert.ToDouble(row.col)` 对 DBNull 抛 InvalidCastException → 500；`?? 0` 只在值是 null 时兜底。兜底必须在 SQL 侧 `COALESCE(col, 0)`（窗口 D generate 端点实测复现）。
 - **DapperRow 对「未 SELECT 的列」返回 null 而非报错**（TryGetValue 静默兜底），`(long)null` 抛 RuntimeBinderException → 500。用 dynamic 行时，**SELECT 列表就是契约**：要读的列必须显式 SELECT 出来（窗口 D generate 端点既有行查询漏 SELECT id 实测复现）。
+- **Dapper 匿名参数对象缺参/列名拼错，编译器完全静默，运行时必 500**——G2 一轮暴露 6 处：PUT members/workers 缺 Now、project-members 缺 Now、batches/copy 缺 CreatedBy、audit 列名 resource_type（7 处引用）。判据：新写/改写 Dapper 调用后，**参数对象键名必须与 SQL 占位符逐一对账**；唯一没测试覆盖的分支就是唯一错的分支。
