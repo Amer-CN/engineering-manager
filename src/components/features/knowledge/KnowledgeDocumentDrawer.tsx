@@ -11,7 +11,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Icon } from '@/components/ui/Icon'
-import { maskKnowledgeText, formatSpeakers } from './knowledgeTextMask'
+import { maskKnowledgeText, formatSpeakers } from '@/utils/knowledgeTextMask'
 import type { KnowledgeDocumentDetail } from '@/services/knowledge-client'
 
 interface KnowledgeDocumentDrawerProps {
