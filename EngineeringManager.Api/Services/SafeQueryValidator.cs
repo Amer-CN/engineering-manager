@@ -521,7 +521,11 @@ public static class SafeQueryValidator
             }
             else
             {
-                continue;
+                // R8.16.2(G35): fail-closed——未知 SelectItem 类型不再静默跳过列白名单校验
+                // （R8.4 G23 在兄弟函数里的同款分支漏改）。若未来新增 SelectItem 子类型
+                // 且未枚举，此 throw 会暴露并拒绝查询。
+                throw new ValidationException(
+                    $"不支持的投影项类型：{item.GetType().Name}（R8.16.2 fail-closed）");
             }
 
             ValidateExpressionColumns(expr, aliasToTable, referencedTables, occurrences, depth);
@@ -783,8 +787,11 @@ public static class SafeQueryValidator
             filters.Add(GetTableFilter(scope, occ.Table, occ.Qualifier));
         }
 
+        // R8.16.3(G36): 零过滤器兜底 fail-closed——拿不到过滤器就原样返回未注入过滤的
+        // SQL 是 fail-open（若未来某表不在白名单分支漏判，整条查询无过滤执行）。
+        // 改 throw ValidationException，由 ValidateAndRewrite 既有 catch 转 ValidationResult。
         if (filters.Count == 0)
-            return sql;
+            throw new ValidationException("未能为任何表生成过滤条件，拒绝执行（R8.16.3 fail-closed）");
 
         var filterClause = string.Join(" AND ", filters);
 

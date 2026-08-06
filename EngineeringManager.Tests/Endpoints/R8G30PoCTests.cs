@@ -62,14 +62,6 @@ public class R8G30PoCTests : ApiTestBase
         return Outcome.ParseFailure;
     }
 
-    private static bool Has300(string inner)
-    {
-        using var doc = JsonDocument.Parse(inner);
-        if (!doc.RootElement.TryGetProperty("data", out var data))
-            throw new InvalidOperationException("Has300 不允许在无 data 的响应上调用（R8.15.1(b)：不得把被拒绝/解析失败翻译成没泄漏）：" + inner);
-        return data.EnumerateArray().Any(r => r.GetProperty("amount").GetDouble() == 300);
-    }
-
     /// <summary>
     /// R8.15.2 修复后：直接调 ValidateAndRewrite——不抛异常、返回固定拒绝文案
     /// （G32 实证：修复前此处抛 NRE，堆栈 5 帧见 R8.15 报告）。
