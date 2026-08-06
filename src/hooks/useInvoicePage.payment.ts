@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { getAPI } from '@/services/api-adapter'
 import { processFileFields, guessFileExt, readUploadedFile } from '../services/fileService'
 import { useToastStore } from '@/store/toastStore'
+import { usePermission } from './usePermission'
 import { logCreate, logUpdate, logDelete } from '../utils/audit'
 import { getPaymentCategory } from './useInvoicePage.helpers'
 import type { PaymentRecord, Project } from '../types/electron'
@@ -19,8 +20,11 @@ export interface UseInvoicePagePaymentActionsDeps {
 export function useInvoicePagePaymentActions(deps: UseInvoicePagePaymentActionsDeps) {
   const { projects, paymentRecords, editingPayment, originalPaymentFileRef, loadData, setEditingPayment, setShowPaymentModal } = deps
   const showToast = useToastStore(state => state.showToast)
+  const { can } = usePermission()
 
   const handleEditPayment = useCallback(async (record: PaymentRecord) => {
+    // G2 B4: 收付款记录编辑 → invoices:update
+    if (!can('invoices:update')) { showToast('您没有编辑收付款记录的权限', 'error'); return }
     if (record.fileUrl && !record.fileUrl.startsWith('data:')) {
       originalPaymentFileRef.current[record.id] = record.fileUrl
       const cat = getPaymentCategory(record.type)
@@ -32,6 +36,12 @@ export function useInvoicePagePaymentActions(deps: UseInvoicePagePaymentActionsD
   }, [originalPaymentFileRef, setEditingPayment, setShowPaymentModal])
 
   const handleSubmitPayment = useCallback(async (data: any) => {
+    // G2 B4: 收付款记录新建/编辑 → invoices:create / invoices:update
+    const need = editingPayment ? 'invoices:update' : 'invoices:create'
+    if (!can(need as 'invoices:create')) {
+      showToast(editingPayment ? '您没有编辑收付款记录的权限' : '您没有登记收付款的权限', 'error')
+      return
+    }
     try {
       let fileData = data
       if (editingPayment && data.fileUrl?.startsWith('data:')) {
@@ -63,6 +73,8 @@ export function useInvoicePagePaymentActions(deps: UseInvoicePagePaymentActionsD
   }, [editingPayment, projects, loadData, showToast, originalPaymentFileRef, setEditingPayment, setShowPaymentModal])
 
   const handleDeletePayment = useCallback(async (id: number) => {
+    // G2 B4: 收付款记录删除 → invoices:delete
+    if (!can('invoices:delete')) { showToast('您没有删除收付款记录的权限', 'error'); return }
     if (!confirm('确定要删除这条记录吗？')) return
     try {
       const target = paymentRecords.find(p => p.id === id)

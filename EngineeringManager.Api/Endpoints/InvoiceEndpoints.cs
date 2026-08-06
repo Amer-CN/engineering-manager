@@ -41,6 +41,8 @@ public static class InvoiceEndpoints
         app.MapPost("/api/invoices", async (HttpContext ctx, InvoiceDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B4: 发票写操作 → invoices:create
+            if (!CurrentUser.HasPermission(ctx, db, "invoices:create")) return Results.Forbid();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO invoices (project_id,seller_id,buyer_id,contract_id,settlement_id,type,invoice_kind,invoice_no,invoice_code,name,
                  amount,price_amount,tax_rate,tax_amount,received_amount,issue_date,status,remarks,file_url,file_type,created_by,created_at,updated_at, last_modified_at) VALUES (@ProjectId,@SellerId,@BuyerId,@ContractId,@SettlementId,@Type,@InvoiceKind,@InvoiceNo,@InvoiceCode,@Name,
                         @Amount,@PriceAmount,@TaxRate,@TaxAmount,@ReceivedAmount,@IssueDate,@Status,@Remarks,@FileUrl,@FileType,@CreatedBy,@Now,@Now, @Now);
@@ -71,6 +73,8 @@ public static class InvoiceEndpoints
         app.MapPut("/api/invoices", async (HttpContext ctx, InvoiceDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B4: 发票写操作 → invoices:update
+            if (!CurrentUser.HasPermission(ctx, db, "invoices:update")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var affected = await db.ExecuteAsync(@"UPDATE invoices SET project_id=@ProjectId,seller_id=@SellerId,
                 buyer_id=@BuyerId,contract_id=@ContractId,settlement_id=@SettlementId,type=@Type,invoice_kind=@InvoiceKind,
@@ -106,6 +110,8 @@ public static class InvoiceEndpoints
         app.MapDelete("/api/invoices/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B4: 发票写操作 → invoices:delete
+            if (!CurrentUser.HasPermission(ctx, db, "invoices:delete")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             return (await db.ExecuteAsync("UPDATE invoices SET deleted_at=@Now WHERE id=@Id AND deleted_at IS NULL AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin, Now = now() })) > 0 ? Common.Ok() : Results.Forbid();
         });
@@ -173,6 +179,8 @@ public static class InvoiceEndpoints
         app.MapPost("/api/payment-records", async (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B4: 收付款记录 → invoices:create
+            if (!CurrentUser.HasPermission(ctx, db, "invoices:create")) return Results.Forbid();
             // 修复: 原 dynamic dto + 参数只传 CreatedBy/Now 导致 10 个占位符全缺参必 500(与 contract-templates bug#10 同根因)
             using var reader = new System.IO.StreamReader(ctx.Request.Body);
             var bodyText = await reader.ReadToEndAsync();
@@ -198,6 +206,8 @@ public static class InvoiceEndpoints
         app.MapPut("/api/payment-records", async (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B4: 收付款记录 → invoices:update
+            if (!CurrentUser.HasPermission(ctx, db, "invoices:update")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             // 修复: 原 dynamic dto + 参数只传 Uid/IsAdmin/Now 导致缺参必 500; 并补 404 语义
             using var reader = new System.IO.StreamReader(ctx.Request.Body);
@@ -226,6 +236,8 @@ public static class InvoiceEndpoints
         app.MapDelete("/api/payment-records/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B4: 收付款记录 → invoices:delete
+            if (!CurrentUser.HasPermission(ctx, db, "invoices:delete")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             return (await db.ExecuteAsync("UPDATE payment_records SET deleted_at=@Now WHERE id=@Id AND deleted_at IS NULL AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin, Now = now() })) > 0 ? Common.Ok() : Results.Forbid();
         });
