@@ -124,7 +124,8 @@ jobs:
         run: node scripts/check-backend-rules.cjs
 
       - name: Build backend API
-        run: dotnet build EngineeringManager.Api/EngineeringManager.Api.csproj
+        # G2 B1 0 警告固化：-warnaserror 把任何编译器警告升为错误，机械强制「0 错误 0 警告」红线
+        run: dotnet build EngineeringManager.Api/EngineeringManager.Api.csproj -warnaserror
 
       - name: Run backend tests
         # 排除需外部资源的可选端到端测试（CI 无法提供，测试文件自身注明选择性运行）：
@@ -163,7 +164,7 @@ jobs:
         run: dotnet restore EngineeringManager.Api/EngineeringManager.Api.csproj
 
       - name: Build backend API (Release)
-        run: dotnet build EngineeringManager.Api/EngineeringManager.Api.csproj --configuration Release --no-restore
+        run: dotnet build EngineeringManager.Api/EngineeringManager.Api.csproj --configuration Release --no-restore -warnaserror
 
       - name: Run API and E2E critical paths
         run: |
@@ -275,7 +276,7 @@ jobs:
         run: npx vite build
 
       - name: Build backend (.NET)
-        run: dotnet build EngineeringManager.Api/EngineeringManager.Api.csproj
+        run: dotnet build EngineeringManager.Api/EngineeringManager.Api.csproj -warnaserror
 
       - name: Upload frontend build artifacts
         uses: actions/upload-artifact@v4

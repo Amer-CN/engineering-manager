@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getAPI } from '@/services/api-adapter'
+import { usePermission } from '@/hooks/usePermission'
 
 /**
  * GPU 加速开关 (读写 api.getGpuAcceleration / api.setGpuAcceleration)
@@ -8,6 +9,7 @@ import { getAPI } from '@/services/api-adapter'
 export function GpuToggle() {
   const [enabled, setEnabled] = useState(true)
   const [needRestart, setNeedRestart] = useState(false)
+  const { can } = usePermission()
 
   useEffect(() => {
     ;(async () => {
@@ -19,6 +21,8 @@ export function GpuToggle() {
   }, [])
 
   const toggle = async () => {
+    // G2 B1: 写系统配置 → settings:update
+    if (!can('settings:update')) return
     const res = await (await getAPI()).setGpuAcceleration(!enabled)
     if (res.success) {
       setEnabled(res.enabled)
@@ -29,8 +33,8 @@ export function GpuToggle() {
   return (
     <div className="flex items-center gap-2">
       {needRestart && <span className="text-xs text-warning-600">需重启</span>}
-      <button onClick={toggle}
-        className={`relative w-11 h-6 rounded-full transition-colors ${enabled ? 'bg-success-500' : 'bg-[color:var(--panel-2)]'}`}>
+      <button onClick={toggle} disabled={!can('settings:update')}
+        className={`relative w-11 h-6 rounded-full transition-colors ${enabled ? 'bg-success-500' : 'bg-[color:var(--panel-2)]'} ${!can('settings:update') ? 'opacity-50 cursor-not-allowed' : ''}`}>
         <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-[color:var(--card)] rounded-full shadow transition-transform ${enabled ? 'translate-x-5' : ''}`} />
       </button>
     </div>

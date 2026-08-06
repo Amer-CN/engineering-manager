@@ -113,12 +113,15 @@ public static class SystemEndpoints
         app.MapPost("/api/audit/logs", async (HttpContext ctx, AuditLogDto entry, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B1 O1: user_id/user_name 从 JWT 派生（uid + name claim），不信任 DTO 字段——
+            // 审计身份以服务端认证为准，防伪造（SECURITY-AUDIT.md P1-4 声称修复后迁移回归）
+            var userName = ctx.User?.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
             try
             {
                 await db.ExecuteAsync(@"INSERT INTO audit_logs
-                    (action,level,user_id,user_name,resource_type,resource_id,details,ip_address,created_at)
-                    VALUES (@Action,@Level,@UserId,@UserName,@Resource,@ResourceId,@Details,@IpAddress,@CreatedAt)",
-                    new { entry.Action, Level = entry.Level ?? "info", entry.UserId, entry.UserName,
+                    (action,level,user_id,user_name,resource,resource_id,details,ip_address,created_at)
+                    VALUES (@Action,@Level,@Uid,@UserName,@Resource,@ResourceId,@Details,@IpAddress,@CreatedAt)",
+                    new { entry.Action, Level = entry.Level ?? "info", Uid = uid, UserName = userName,
                           Resource = entry.Resource, ResourceId = entry.ResourceId,
                           Details = entry.Details ?? entry.Description, IpAddress = entry.IpAddress, CreatedAt = entry.CreatedAt ?? now() });
                 return Common.Ok();
@@ -145,7 +148,7 @@ public static class SystemEndpoints
                 totalCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM audit_logs{w}", param),
                 todayCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM audit_logs WHERE created_at >= @Today{userFilter}", new { Uid = uid, Today = todayStr }),
                 actionCounts = db.Query($"SELECT action, COUNT(*) as count FROM audit_logs{w} GROUP BY action", param),
-                resourceCounts = db.Query($"SELECT resource_type, COUNT(*) as count FROM audit_logs{w} GROUP BY resource_type", param),
+                resourceCounts = db.Query($"SELECT resource, COUNT(*) as count FROM audit_logs{w} GROUP BY resource", param),
                 topUsers = isAdmin == 1 ? db.Query($"SELECT user_id, user_name, COUNT(*) as count FROM audit_logs{w} GROUP BY user_id, user_name ORDER BY count DESC LIMIT 10", param) : Array.Empty<object>(),
             });
         });
@@ -195,6 +198,8 @@ public static class SystemEndpoints
         app.MapPost("/api/snapshots", (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B1: 快照创建与备份/删除同属数据外泄相邻端点 → settings:update（快照内含整库数据）
+            if (!CurrentUser.HasPermission(ctx, db, "settings:update")) return Results.Forbid();
             var snapshotDir = Path.Combine(ApiConfig.ResolveDataPath(), "db-snapshots");
             Directory.CreateDirectory(snapshotDir);
             var dbPath = Path.Combine(ApiConfig.ResolveDataPath(), "engineering.db");
@@ -204,9 +209,11 @@ public static class SystemEndpoints
             return Common.Ok(new { id = Path.GetFileNameWithoutExtension(snapshotName), name = snapshotName });
         });
 
-        app.MapDelete("/api/snapshots/{id}", (HttpContext ctx, string id) =>
+        app.MapDelete("/api/snapshots/{id}", (HttpContext ctx, string id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B1: 快照删除 = 删整库副本文件 → settings:update
+            if (!CurrentUser.HasPermission(ctx, db, "settings:update")) return Results.Forbid();
             var snapshotDir = Path.Combine(ApiConfig.ResolveDataPath(), "db-snapshots");
             var path = Path.Combine(snapshotDir, $"{id}.db");
             if (File.Exists(path)) { File.Delete(path); return Common.Ok(); }
@@ -381,9 +388,11 @@ public static class SystemEndpoints
             }
         });
 
-        app.MapPut("/api/config/gpu-acceleration", (HttpContext ctx, System.Text.Json.JsonElement body) =>
+        app.MapPut("/api/config/gpu-acceleration", (HttpContext ctx, System.Text.Json.JsonElement body, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B1: 写 config.json 系统配置 → settings:update
+            if (!CurrentUser.HasPermission(ctx, db, "settings:update")) return Results.Forbid();
             try
             {
                 var enabled = body.GetProperty("enabled").GetBoolean();
@@ -514,9 +523,11 @@ public static class SystemEndpoints
         // 登录前工具端点（备份/恢复/诊断）
         // ═══════════════════════════════════════════════════════════
 
-        app.MapPost("/api/backup", (HttpContext ctx) =>
+        app.MapPost("/api/backup", (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B1: 备份 = 整库导出到桌面（数据外泄相邻）→ settings:update
+            if (!CurrentUser.HasPermission(ctx, db, "settings:update")) return Results.Forbid();
             try
             {
                 var dbPath = ApiConfig.ResolveDataPath();
@@ -631,9 +642,11 @@ public static class SystemEndpoints
             catch (Exception ex) { return Common.Ok(new { success = false, migratedTables = 0, totalRows = 0, verificationPassed = false, errors = new List<string> { Common.Sanitize(ex.Message) }, warnings = new List<string>(), duration = 0 }); }
         });
 
-        app.MapPut("/api/sqlite/read-mode", (HttpContext ctx, System.Text.Json.JsonElement body) =>
+        app.MapPut("/api/sqlite/read-mode", (HttpContext ctx, System.Text.Json.JsonElement body, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B1: 切换读取模式 = 系统级配置 → settings:update
+            if (!CurrentUser.HasPermission(ctx, db, "settings:update")) return Results.Forbid();
             try
             {
                 var mode = body.GetProperty("mode").GetString();

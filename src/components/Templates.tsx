@@ -12,12 +12,14 @@ import { TemplateDashboard, TemplateList, TemplateForm, TemplatePreview, Templat
 import { logCreate, logUpdate, logDelete } from '../utils/audit'
 import { Drawer } from './ui/Drawer'
 import { getAPI } from '@/services/api-adapter'
+import { usePermission } from '@/hooks/usePermission'
 
 type ViewMode = 'dashboard' | 'detail'
 
 const Templates: React.FC = () => {
   const showToast = useToastStore(state => state.showToast)
   const { confirm, ConfirmDialog } = useConfirm()
+  const { can } = usePermission()
   const [templates, setTemplates] = useState<Template[]>([])
   const [stats, setStats] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
@@ -62,16 +64,20 @@ const Templates: React.FC = () => {
   }
 
   const handleCreate = () => {
+    // G2 B1: 模板管理写操作 → settings:update
+    if (!can('settings:update')) { showToast('您没有管理模板的权限', 'error'); return }
     setEditingTemplate(null)
     setShowModal(true)
   }
 
   const handleEdit = (template: Template) => {
+    if (!can('settings:update')) { showToast('您没有管理模板的权限', 'error'); return }
     setEditingTemplate(template)
     setShowModal(true)
   }
 
   const handleDelete = async (id: number) => {
+    if (!can('settings:update')) { showToast('您没有管理模板的权限', 'error'); return }
     const ok = await confirm({ title: '确认删除', content: '确定删除此模板？关联文件也将被删除。', confirmVariant: 'danger' })
     if (!ok) return
     try {
@@ -90,6 +96,7 @@ const Templates: React.FC = () => {
   }
 
   const handleSubmit = async (formData: any) => {
+    if (!can('settings:update')) { showToast('您没有管理模板的权限', 'error'); return }
     try {
       if (editingTemplate) {
         const result = await (await getAPI()).updateTemplate({ ...editingTemplate, ...formData })

@@ -21,6 +21,8 @@ public static class TemplateEndpoints
         app.MapDelete("/api/templates/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B1: 模板删除 → settings:update
+            if (!CurrentUser.HasPermission(ctx, db, "settings:update")) return Results.Forbid();
             return (await db.ExecuteAsync("DELETE FROM templates WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Results.Forbid();
         });
 
@@ -38,6 +40,8 @@ public static class TemplateEndpoints
         app.MapPost("/api/templates", async (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B1: 模板创建 → settings:update
+            if (!CurrentUser.HasPermission(ctx, db, "settings:update")) return Results.Forbid();
             // 修复: 原 dynamic dto + 参数只传 Now 导致 6 个占位符全缺参必 500(与 contract-templates bug#10 同根因); 并补 variables 列写入(真库有列而原 SQL 漏写, 变量编辑静默丢)
             using var reader = new System.IO.StreamReader(ctx.Request.Body);
             var bodyText = await reader.ReadToEndAsync();
@@ -60,6 +64,8 @@ public static class TemplateEndpoints
         app.MapPut("/api/templates", async (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B1: 模板更新 → settings:update
+            if (!CurrentUser.HasPermission(ctx, db, "settings:update")) return Results.Forbid();
             // 修复: 原 dynamic dto + 参数只传 Now 导致缺参必 500; 并补 variables 列更新与 404 语义
             using var reader = new System.IO.StreamReader(ctx.Request.Body);
             var bodyText = await reader.ReadToEndAsync();
