@@ -102,12 +102,13 @@ public class MFix1RedTests : ApiTestBase
     }
 
     [Fact]
-    public async Task F1d_ContractsIncomePut_NoMissingParam_AdminPath()
+    public async Task F1d_ContractsIncomePut_AdminSmoke()
     {
-        // 偏差修正（纪律 17，第二轮）：当前 master（ef371cb，G2 后）合同 PUT 已无缺参 500——
-        // admin 的 scope=All 使 UserFilterFragmentForProject 返回 (1 = 1)，@ProjectId 分支不执行。
-        // 缺参 500 只在「企业版非 admin + AuthorizedProjects」触发，但该路径被 HasPermission
-        // 权限门先拦。故 PUT 对 admin 返回 OK（正常）。此测试钉住「PUT 不再 500」。
+        // M-FIX2 X5 补正：此测试只是【admin 冒烟】——admin 的 scope=All 使过滤器为 (1 = 1)，
+        // M-FIX1 F3 修的 UserFilterFragmentForProject 那行（企业版非 admin 才走）在此不执行。
+        // 非 admin 路径被 HasPermission(contracts:update) 门先拦（X3 实测：旧逗号串 roles 下
+        // manager 的 contracts:update=False → Forbidden 到不了 SQL），故无法用非 admin 测「PUT 不 500」。
+        // UserFilterFragmentForProject 已删除（同一笔提交），此处不再解释其行为。
         Seed();
         var login = await Client.PostAsJsonAsync("/api/auth/login", new { username = "admin", password = "admin123" });
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);

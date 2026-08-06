@@ -130,11 +130,12 @@ jobs:
       - name: Run backend tests
         # 排除需外部资源的可选端到端测试（CI 无法提供，测试文件自身注明选择性运行）：
         #   SttE2ETests    — GB 级 ASR 模型 + 真实转写子进程
-        #   BgeE2ETests    — 真实 BGE 嵌入模型（未纳入版本库）
-        #   BgeE2ETestsV2  — 同族真实 BGE 模型 + 外部文件 e:\测试\results_06b.json（M-FIX1 F7 显式登记，不再靠前缀误伤）
-        #   Model_*        — M2 真实 BGE 模型下载/损坏自愈测试（TD-M2-REALMODEL 族，CI 无确定性模型供给）
+        #   BgeE2ETests    — 真实 BGE 嵌入模型（未纳入版本库）；前缀 !~BgeE2ETests 连带覆盖 BgeE2ETestsV2
+        #                    （M-FIX2 X4 回滚：M-FIX1 F7 曾加 !~BgeE2ETestsV2 伪装条目——前缀已覆盖，删除之）
         #   RealHttp       — Agent 真实 LLM HTTP 调用（需 API key / 网络）
-        run: dotnet test EngineeringManager.Tests/EngineeringManager.Tests.csproj --filter "FullyQualifiedName!~SttE2ETests&FullyQualifiedName!~BgeE2ETests&FullyQualifiedName!~BgeE2ETestsV2&FullyQualifiedName!~M2FourthRoundTests.Model_&FullyQualifiedName!~RealHttp"
+        # M-FIX2 X4 回滚：!~M2FourthRoundTests.Model_ 已移除——F7 前 master CI 实测 Model_* 全绿
+        #   （run 31096559390 失败全是 vitest 15 红，Model_* 0 失败），F7 排掉它们是砍覆盖。
+        run: dotnet test EngineeringManager.Tests/EngineeringManager.Tests.csproj --filter "FullyQualifiedName!~SttE2ETests&FullyQualifiedName!~BgeE2ETests&FullyQualifiedName!~RealHttp"
 
   e2e:
     name: E2E Critical Paths (Playwright)
