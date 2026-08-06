@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/Input'
 import { Icon } from '@/components/ui/Icon'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToastContext } from '@/hooks/useToast'
-import { maskKnowledgeText } from './knowledgeTextMask'
+import { maskKnowledgeText } from '../knowledge/knowledgeTextMask'
 import type { SttJobDetail, SttSegment } from '@/services/stt-client'
 
 interface TranscriptEditorProps {

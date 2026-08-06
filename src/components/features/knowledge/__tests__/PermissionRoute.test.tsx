@@ -6,7 +6,7 @@
  * - RequirePermission 组件：无权限时渲染 fallback
  * - RequireAdmin 组件：admin 用户渲染子组件
  * - RequireAdmin 组件：非 admin 用户渲染 fallback
- * - 路由级：knowledge:read 权限缺失时 SpeechKnowledgePage 不可见
+ * - 路由级：knowledge:read / voice:read 权限缺失时对应页面不可见
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
@@ -50,6 +50,7 @@ function makeUser(overrides: Partial<AuthContext> = {}): AuthContext {
       'costLedger:read', 'costLedger:create', 'costLedger:update', 'costLedger:delete',
       'drawings:read', 'drawings:create', 'drawings:update', 'drawings:delete',
       'knowledge:read', 'knowledge:create', 'knowledge:update', 'knowledge:delete',
+      'voice:read',
       'settings:read', 'settings:create', 'settings:update', 'settings:delete',
       'users:read', 'users:create', 'users:update', 'users:delete',
       'roles:read', 'roles:create', 'roles:update', 'roles:delete',
@@ -224,7 +225,7 @@ describe('路由级权限守卫 — knowledge:read', () => {
 
   it('worker 用户无法访问 knowledge 路由', () => {
     // 模拟 App.tsx 中的路由守卫逻辑：
-    // case 'knowledge': return <RequirePermission permission="knowledge:read"><SpeechKnowledgePage /></RequirePermission>
+    // case 'knowledge': return <RequirePermission permission="knowledge:read"><KnowledgeHomePage /></RequirePermission>
     setCurrentUser(makeWorkerUser())
 
     const MockKnowledgePage = () => React.createElement('div', { 'data-testid': 'knowledge-page' }, '语音知识库')
@@ -269,5 +270,63 @@ describe('路由级权限守卫 — knowledge:read', () => {
     )
 
     expect(screen.getByTestId('knowledge-page')).toBeInTheDocument()
+  })
+})
+
+// ═══════════════════════════════════════════════════════════════
+// Tests: 模拟路由级守卫 — voice
+// ═══════════════════════════════════════════════════════════════
+
+describe('路由级权限守卫 — voice:read', () => {
+  beforeEach(() => { setCurrentUser(null) })
+  afterEach(() => { setCurrentUser(null) })
+
+  it('worker 用户无法访问 voice 路由', () => {
+    // 模拟 App.tsx 中的路由守卫逻辑：
+    // case 'voice': return <RequirePermission permission="voice:read"><VoiceTranscribePage /></RequirePermission>
+    setCurrentUser(makeWorkerUser())
+
+    const MockVoicePage = () => React.createElement('div', { 'data-testid': 'voice-page' }, '语音转文字')
+
+    render(
+      <RequirePermission permission="voice:read">
+        <MockVoicePage />
+      </RequirePermission>
+    )
+
+    // worker 没有 voice:read 权限，不应渲染页面
+    expect(screen.queryByTestId('voice-page')).not.toBeInTheDocument()
+  })
+
+  it('admin 用户可以访问 voice 路由', () => {
+    setCurrentUser(makeUser())
+
+    const MockVoicePage = () => React.createElement('div', { 'data-testid': 'voice-page' }, '语音转文字')
+
+    render(
+      <RequirePermission permission="voice:read">
+        <MockVoicePage />
+      </RequirePermission>
+    )
+
+    expect(screen.getByTestId('voice-page')).toBeInTheDocument()
+  })
+
+  it('manager 用户（有 voice:read）可以访问 voice 路由', () => {
+    setCurrentUser(makeUser({
+      roleId: 'manager',
+      roleName: '经理',
+      username: 'manager1',
+    }))
+
+    const MockVoicePage = () => React.createElement('div', { 'data-testid': 'voice-page' }, '语音转文字')
+
+    render(
+      <RequirePermission permission="voice:read">
+        <MockVoicePage />
+      </RequirePermission>
+    )
+
+    expect(screen.getByTestId('voice-page')).toBeInTheDocument()
   })
 })
