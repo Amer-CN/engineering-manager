@@ -118,6 +118,8 @@ public static class ProjectEndpoints
         app.MapPut("/api/projects/{id}", async (HttpContext ctx, long id, ProjectDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B7: 项目编辑 → projects:update
+            if (!CurrentUser.HasPermission(ctx, db, "projects:update")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var affected = await db.ExecuteAsync(@"UPDATE projects SET name=@Name,description=@Description,
                 address=@Address,start_date=@StartDate,end_date=@EndDate,status=@Status,budget=@Budget,
@@ -153,17 +155,21 @@ public static class ProjectEndpoints
         app.MapPost("/api/project-members", async (HttpContext ctx, ProjectMemberDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B7: 项目成员 → projects:update
+            if (!CurrentUser.HasPermission(ctx, db, "projects:update")) return Results.Forbid();
             var exists = db.ExecuteScalar<int>("SELECT COUNT(*) FROM project_members WHERE project_id=@ProjectId AND member_id=@MemberId",
                 new { dto.ProjectId, dto.MemberId }) > 0;
             if (exists) return Common.Fail("该成员已在项目中");
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO project_members (project_id,member_id,joined_at, last_modified_at) VALUES (@ProjectId,@MemberId,@JoinedAt, @Now); SELECT last_insert_rowid();",
-                new { dto.ProjectId, dto.MemberId, JoinedAt = dto.JoinedAt ?? now() });
+                new { dto.ProjectId, dto.MemberId, JoinedAt = dto.JoinedAt ?? now(), Now = now() });
             return Common.Ok(id);
         });
 
         app.MapDelete("/api/project-members/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B7: 项目成员 → projects:update
+            if (!CurrentUser.HasPermission(ctx, db, "projects:update")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             return (await db.ExecuteAsync("DELETE FROM project_members WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
         });

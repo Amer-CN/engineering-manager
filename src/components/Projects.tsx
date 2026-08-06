@@ -49,6 +49,8 @@ const Projects: React.FC<{ refresh?: () => void }> = ({ refresh }) => {
     else showToast(r.error || '失败', 'error')
   }
   const handleSubmit = async (data: ProjectFormData) => {
+    // G2 B7: 项目编辑 → projects:update
+    if (editingProject && !can('projects:update')) { showToast('您没有编辑项目的权限', 'error'); return }
     try {
       if (editingProject) {
         const r = await (await getAPI()).updateProject({ ...editingProject, ...data })

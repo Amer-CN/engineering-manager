@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Icon } from '../../ui/Icon'
 import { getAPI } from '@/services/api-adapter'
+import { usePermission } from '@/hooks/usePermission'
 import type { Project, Member, WorkerTeam, ProjectWorker, ProjectMember } from '@/types'
 import type { ProjectStatsData } from './ProjectStats'
 import { AddMemberModal } from './AddMemberModal'
@@ -26,6 +27,7 @@ function EmptyState({ text }: { text: string }) {
 export function MembersTab({ project, staffMembers, allStaffMembers, workerTeams, members, stats }: {
   project: Project; staffMembers: Member[]; allStaffMembers: Member[]; workerTeams: WorkerTeam[]; members: Member[]; stats: ProjectStatsData
 }) {
+  const { can } = usePermission()
   const [projectRecords, setProjectRecords] = useState<ProjectMemberRecord[]>([])
   const [projectWorkers, setProjectWorkers] = useState<ProjectWorker[]>([])
   const [showAddModal, setShowAddModal] = useState(false)
@@ -57,6 +59,8 @@ export function MembersTab({ project, staffMembers, allStaffMembers, workerTeams
   }
 
   const handleAdd = async (memberId: number, joinedAt?: string) => {
+    // G2 B7: 添加项目成员 → projects:update
+    if (!can('projects:update')) return { success: false, error: '您没有管理项目成员的权限' }
     const r = await (await getAPI()).addProjectMember(project.id, memberId, joinedAt)
     if (r.success) loadProjectMembers()
     return r
@@ -71,6 +75,8 @@ export function MembersTab({ project, staffMembers, allStaffMembers, workerTeams
 
   // 确认调离
   const confirmTransfer = async () => {
+    // G2 B7: 调离/调入 → projects:update
+    if (!can('projects:update')) return
     if (!transferRecord || !transferDate) return
     const api = await getAPI()
     await api.updateProjectMember(transferRecord.id, { leftAt: transferDate })
@@ -139,6 +145,8 @@ export function MembersTab({ project, staffMembers, allStaffMembers, workerTeams
                   <div className="flex items-center gap-2">
                     <Button onClick={() => rec && openTransfer(rec)}  variant="ghost" size="sm" className="text-warning-600 border border-warning-200">调离</Button>
                     <Button onClick={() => {
+                      // G2 B7: 移除项目成员 → projects:update
+                      if (!can('projects:update')) return
                       if (confirm(`确认将 ${m.name} 从项目中删除？此操作不可撤销。`)) {
                         getAPI().then(api => api.removeProjectMember(rec!.id)).then(() => loadProjectMembers())
                       }
