@@ -120,6 +120,8 @@ public static class FileEndpoints
         app.MapDelete("/api/drawings/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B8: 图纸写操作 → drawings:delete
+            if (!CurrentUser.HasPermission(ctx, db, "drawings:delete")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             return (await db.ExecuteAsync("DELETE FROM drawings WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
         });
@@ -131,6 +133,8 @@ public static class FileEndpoints
         app.MapPost("/api/drawings", async (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B8: 图纸写操作 → drawings:create
+            if (!CurrentUser.HasPermission(ctx, db, "drawings:create")) return Results.Forbid();
             // 修复: 列名对齐前端契约(Drawing type)与真库 —— category/file_path/remarks/position
             // (原 file_url/drawing_type/scale/notes 是从未与前端匹配的死 schema, 真库/GET/前端均用 file_path)
             using var reader = new System.IO.StreamReader(ctx.Request.Body);
@@ -168,6 +172,8 @@ public static class FileEndpoints
         app.MapPut("/api/drawings", async (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B8: 图纸写操作 → drawings:update
+            if (!CurrentUser.HasPermission(ctx, db, "drawings:update")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             // 修复: 列名对齐前端契约; 补 404 语义
             using var reader = new System.IO.StreamReader(ctx.Request.Body);
@@ -188,6 +194,8 @@ public static class FileEndpoints
         app.MapPost("/api/inventory/transactions", async (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B8: 出入库登记 → inventory:create
+            if (!CurrentUser.HasPermission(ctx, db, "inventory:create")) return Results.Forbid();
             // 修复: 列名对齐前端契约(InventoryTransaction type)与真库 —— transaction_date/unit_price/total_amount/counterparty_id/document_no
             // (原 date/notes/operator 是从未与前端匹配的死 schema, 真库用 transaction_date)
             using var reader = new System.IO.StreamReader(ctx.Request.Body);

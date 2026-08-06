@@ -84,11 +84,6 @@ const EXEMPT = [
   { path: '/api/cost-ledger/batches/{id}', reason: 'G2 暂缓：costLedger:update/delete 待前端补码后执行' },
   { path: '/api/cost-ledger/match-rules', reason: 'G2 暂缓：costLedger:update 待前端补码后执行' },
   { path: '/api/cost-ledger/{batchId}/sheet', reason: 'G2 暂缓：costLedger:update 待前端补码后执行' },
-  { path: '/api/drawings', reason: 'G2 暂缓：drawings:create/update 待前端补码后执行' },
-  { path: '/api/drawings/{id}', reason: 'G2 暂缓：drawings:delete 待前端补码后执行' },
-  { path: '/api/inventory/transactions', reason: 'G2 暂缓：inventory:create 待前端补码后执行' },
-  { path: '/api/inventory', reason: 'G2 暂缓：inventory:create/update 待前端补码后执行' },
-  { path: '/api/materials', reason: 'G2 暂缓：inventory:create/update 待前端补码后执行' },
 ];
 
 // ── 提取（R1）──
