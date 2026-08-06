@@ -21,8 +21,11 @@ namespace EngineeringManager.Tests.Endpoints;
 /// 4. segments 校验完整性（连续 1..N、数量/长度限制、不传 segments 保留原始元数据）
 /// 5. 响应契约一致性（create job / ingest / list 均包裹在 data 中）
 /// 6. knowledge:read 权限覆盖（详情/删除/手动入库/STT ingest）
+///
+/// H-4 flaky 根治：与 M4SttUploadAndIngestTests 共用串行集合（同写
+/// uploads/stt/1 目录，.uploading 临时文件跨测试竞态）。
 /// </summary>
-[Collection("M4ThirdRound")]
+[Collection("M4 Stt Upload Serialized")]
 public class M4ThirdRoundTests : ApiTestBase
 {
     private static string ExtractTokenFromJson(string json)
@@ -203,11 +206,19 @@ public class M4ThirdRoundTests : ApiTestBase
         var resp = await Client.PostAsync("/api/stt/upload", form);
         Assert.True(resp.IsSuccessStatusCode);
 
-        // 验证没有 .uploading 临时文件残留
+        // 验证没有 .uploading 临时文件残留（H-4：轮询至 5s，避免服务端清理滞后）
         var dataPath = ApiConfig.ResolveDataPath();
         var sttDir = Path.Combine(dataPath, "uploads", "stt", "1");
-        var uploadingFiles = Directory.GetFiles(sttDir, "*.uploading", SearchOption.TopDirectoryOnly);
-        Assert.Empty(uploadingFiles);
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        List<string> leftover = new();
+        while (DateTime.UtcNow < deadline)
+        {
+            var files = Directory.GetFiles(sttDir, "*.uploading", SearchOption.TopDirectoryOnly);
+            if (files.Length == 0) break;
+            leftover = files.ToList();
+            await Task.Delay(200);
+        }
+        Assert.Empty(leftover);
     }
 
     [Fact]
@@ -296,12 +307,19 @@ public class M4ThirdRoundTests : ApiTestBase
 
         await uploadTask;
 
-        // 验证 .uploading 临时文件已被清理
-        // 服务端 catch 块会删除 .uploading 文件，但可能有短暂延迟
-        await Task.Delay(2000);
-        var uploadingFiles = Directory.GetFiles(sttDir, "*.uploading", SearchOption.TopDirectoryOnly);
-        Assert.True(uploadingFiles.Length == 0,
-            $"应无 .uploading 残留，但有 {uploadingFiles.Length} 个: {string.Join(", ", uploadingFiles)}");
+        // 验证 .uploading 临时文件已被清理——轮询断言（H-4 根治：固定 Task.Delay
+        // 在慢 CI 上不足、快机子上过度，改轮询至 10s 超时，确定性不等死）
+        var cleanupDeadline = DateTime.UtcNow.AddSeconds(10);
+        var leftover = new List<string>();
+        while (DateTime.UtcNow < cleanupDeadline)
+        {
+            var files = Directory.GetFiles(sttDir, "*.uploading", SearchOption.TopDirectoryOnly);
+            if (files.Length == 0) break;
+            leftover = files.ToList();
+            await Task.Delay(200);
+        }
+        Assert.True(leftover.Count == 0,
+            $"应无 .uploading 残留，但有 {leftover.Count} 个: {string.Join(", ", leftover)}");
     }
 
     // ═══════════════════════════════════════════════════════════

@@ -132,7 +132,8 @@ jobs:
         #   SttE2ETests    — GB 级 ASR 模型 + 真实转写子进程
         #   BgeE2ETests    — 真实 BGE 嵌入模型（未纳入版本库）
         #   RealHttp       — Agent 真实 LLM HTTP 调用（需 API key / 网络）
-        run: dotnet test EngineeringManager.Tests/EngineeringManager.Tests.csproj --filter "FullyQualifiedName!~SttE2ETests&FullyQualifiedName!~BgeE2ETests&FullyQualifiedName!~RealHttp"
+        # H-4: -warnaserror 让 Tests 项目警告同样被 CI 机械拦截（此前只拦 API 项目）
+        run: dotnet test EngineeringManager.Tests/EngineeringManager.Tests.csproj -warnaserror --filter "FullyQualifiedName!~SttE2ETests&FullyQualifiedName!~BgeE2ETests&FullyQualifiedName!~RealHttp"
 
   e2e:
     name: E2E Critical Paths (Playwright)
