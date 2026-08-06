@@ -128,7 +128,7 @@ public static class AuthEndpoints
                 try
                 {
                     await db.ExecuteAsync(@"INSERT INTO audit_logs
-                        (action, level, user_id, user_name, resource_type, resource_id, details, ip_address, created_at)
+                        (action, level, user_id, user_name, resource, resource_id, details, ip_address, created_at)
                         VALUES (@Action, @Level, @UserId, @UserName, @Resource, @ResourceId, @Details, @IpAddress, @CreatedAt)",
                         new
                         {

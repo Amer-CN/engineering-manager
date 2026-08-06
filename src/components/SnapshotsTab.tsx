@@ -11,11 +11,13 @@ import { useToastStore } from '@/store/toastStore'
 import { useConfirm } from '../hooks/useConfirm'
 import type { SnapshotInfo } from '../types/electron'
 import { getAPI } from '@/services/api-adapter'
+import { usePermission } from '@/hooks/usePermission'
 import { SNAPSHOT_TABLE_LABELS } from '../constants/snapshots'
 
 export const SnapshotsTab: React.FC = () => {
   const showToast = useToastStore(state => state.showToast)
   const { confirm, ConfirmDialog } = useConfirm()
+  const { can } = usePermission()
   const [snapshots, setSnapshots] = useState<SnapshotInfo[]>([])
   const [maxCount, setMaxCount] = useState(200)
   const [loading, setLoading] = useState(true)
@@ -41,6 +43,8 @@ export const SnapshotsTab: React.FC = () => {
   useEffect(() => { loadSnapshots() }, [])
 
   const handleCreate = async () => {
+    // G2 B1: 快照创建/备份 → settings:update
+    if (!can('settings:update')) { showToast('您没有备份数据的权限', 'error'); return }
     const result = await (await getAPI()).createSnapshot('手动备份')
     if (result.success) {
       showToast('备份创建成功', 'success')
@@ -76,6 +80,8 @@ export const SnapshotsTab: React.FC = () => {
   }
 
   const handleDelete = async (snap: SnapshotInfo) => {
+    // G2 B1: 快照删除 → settings:update
+    if (!can('settings:update')) { showToast('您没有删除快照的权限', 'error'); return }
     const ok = await confirm({
       title: '删除快照',
       content: `确定删除 ${snap.timestamp.replace('T', ' ')} 的快照吗？此操作不可撤销。`,
@@ -158,12 +164,14 @@ export const SnapshotsTab: React.FC = () => {
           </button>
         )}
         <Tooltip content="删除快照" position="top" delay={300}>
+          {can('settings:update') && (
           <button
             onClick={() => handleDelete(item)}
             className="px-2 py-1.5 text-xs text-[color:var(--muted)] hover:text-danger-500 transition-colors"
           >
             <Icon name="Trash2" size={14} />
           </button>
+          )}
         </Tooltip>
       </div>
     )},
@@ -185,12 +193,14 @@ export const SnapshotsTab: React.FC = () => {
             className="px-3 py-1.5 text-sm text-[color:var(--fg-2)] border border-[color:var(--border)] rounded-lg hover:bg-[color:var(--panel-2)] transition-colors">
             上限：{maxCount} 个
           </button>
+          {can('settings:update') && (
           <button onClick={handleCreate}
             className="px-4 py-1.5 bg-[color:var(--accent)] hover:opacity-90 text-[color:var(--on-accent)] rounded-lg text-sm font-medium transition-colors">
             <span className="flex items-center gap-1.5">
               <Icon name="Plus" size={14} /> 手动创建备份
             </span>
           </button>
+          )}
         </div>
       </div>
 
