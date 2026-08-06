@@ -21,7 +21,7 @@ import {
   type KnowledgeDocumentSummary,
   type KnowledgeDocumentDetail,
 } from '@/services/knowledge-client'
-import { maskKnowledgeText, getHitType, getHitTypeLabel, formatSpeakers } from './knowledgeTextMask'
+import { maskKnowledgeText, getHitType, getHitTypeLabel, formatSpeakers } from '@/utils/knowledgeTextMask'
 import KnowledgeDocumentDrawer from './KnowledgeDocumentDrawer'
 
 interface KnowledgeLibraryProps {
