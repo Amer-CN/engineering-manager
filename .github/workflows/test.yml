@@ -135,7 +135,8 @@ jobs:
         #   RealHttp       — Agent 真实 LLM HTTP 调用（需 API key / 网络）
         # M-FIX2 X4 回滚：!~M2FourthRoundTests.Model_ 已移除——F7 前 master CI 实测 Model_* 全绿
         #   （run 31096559390 失败全是 vitest 15 红，Model_* 0 失败），F7 排掉它们是砍覆盖。
-        run: dotnet test EngineeringManager.Tests/EngineeringManager.Tests.csproj --filter "FullyQualifiedName!~SttE2ETests&FullyQualifiedName!~BgeE2ETests&FullyQualifiedName!~RealHttp"
+        # H-4: -warnaserror 让 Tests 项目警告同样被 CI 机械拦截（此前只拦 API 项目）
+        run: dotnet test EngineeringManager.Tests/EngineeringManager.Tests.csproj -warnaserror --filter "FullyQualifiedName!~SttE2ETests&FullyQualifiedName!~BgeE2ETests&FullyQualifiedName!~RealHttp"
 
   e2e:
     name: E2E Critical Paths (Playwright)
