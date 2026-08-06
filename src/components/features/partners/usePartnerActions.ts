@@ -3,6 +3,7 @@ import { useConfirm } from '@/hooks/useConfirm'
 import { guessFileExt, deleteUploadedFile, uploadFile, FILE_CATEGORIES } from '../../../services/fileService'
 import { logCreate, logUpdate, logDelete } from '../../../utils/audit'
 import { getAPI } from '@/services/api-adapter'
+import { usePermission } from '@/hooks/usePermission'
 import type { Partner, Supervisor, Project } from '../../../types/electron'
 
 interface UsePartnerActionsOptions {
@@ -16,8 +17,15 @@ interface UsePartnerActionsOptions {
 export function usePartnerActions({ partners, supervisors, projects, loadData, refresh }: UsePartnerActionsOptions) {
   const showToast = useToastStore(state => state.showToast)
   const { confirm } = useConfirm()
+  const { can } = usePermission()
 
   const handlePartnerSubmit = async (formData: any, editingPartner: Partner | null) => {
+    // G2 B6: 单位新增/编辑 → partners:create / partners:update
+    const need = editingPartner ? 'partners:update' : 'partners:create'
+    if (!can(need as 'partners:create')) {
+      showToast(editingPartner ? '您没有编辑单位的权限' : '您没有新增单位的权限', 'error')
+      return
+    }
     try {
       let processed = { ...formData }
 
@@ -87,6 +95,8 @@ export function usePartnerActions({ partners, supervisors, projects, loadData, r
   }
 
   const handlePartnerDelete = async (id: number) => {
+    // G2 B6: 单位删除 → partners:delete
+    if (!can('partners:delete')) { showToast('您没有删除单位的权限', 'error'); return }
     const ok = await confirm({ title: '确认删除', content: '确定要删除这个合作单位吗？', confirmVariant: 'danger' })
     if (!ok) return
     try {
@@ -119,6 +129,12 @@ export function usePartnerActions({ partners, supervisors, projects, loadData, r
   }
 
   const handleSupervisorSubmit = async (formData: any, editingSupervisor: Supervisor | null) => {
+    // G2 B6: 监管单位新增/编辑 → partners:create / partners:update
+    const need = editingSupervisor ? 'partners:update' : 'partners:create'
+    if (!can(need as 'partners:create')) {
+      showToast(editingSupervisor ? '您没有编辑监管单位的权限' : '您没有新增监管单位的权限', 'error')
+      return
+    }
     try {
       if (editingSupervisor) {
         await (await getAPI()).updateSupervisor({ ...editingSupervisor, ...formData })
@@ -137,6 +153,8 @@ export function usePartnerActions({ partners, supervisors, projects, loadData, r
   }
 
   const handleSupervisorDelete = async (id: number) => {
+    // G2 B6: 监管单位删除 → partners:delete
+    if (!can('partners:delete')) { showToast('您没有删除监管单位的权限', 'error'); return }
     const ok = await confirm({ title: '确认删除', content: '确定要删除这个监管单位吗？', confirmVariant: 'danger' })
     if (!ok) return
     try {
