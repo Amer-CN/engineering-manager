@@ -91,4 +91,4 @@
 - **G43** M-FIX1 F2 批量替换填错 3 处表名（X2 本轮修）：cost_ledger_batches 归属校验误用 cost_ledger.project_id；AgentToolService getDashboardStats 单 projectFilter 喂 4 表；getCostSummary 误用 invoices.project_id。
 - **G44** 同上（G43 的另一处：X2(c) 拆分后每表独立变量）。
 - **G45** F7 提交说明与 diff 不符：说明写「replace prefix」但 !~BgeE2ETests 没动（X4 本轮处理）。
-- **G46** manager 合同 PUT Forbidden 未查清（X3 本轮查：权限门拒绝 vs SQL 影响 0 行二选一）。
+- **G46 manager 合同 PUT Forbidden 已查清（M-FIX2 X3）**：测试库 roles.manager.permissions = `project:read,project:write,wage:read,...`（旧逗号串格式）→ `HasPermission` 的 `JsonSerializer.Deserialize<string[]>` 对逗号串抛异常 → catch false → manager 对 contracts:update / costLedger:update 全 False → 合同 PUT/cost-ledger 写被权限门拦 → Forbidden。**定性：manager 在生产上不能改合同/台账 = G2 引入的功能回归**（G2 假设 roles.permissions 是 JSON 数组，旧库/测试库是逗号串）→ 与方案丙「经理可改」直接冲突。修复归 R9 方案丙施工面（旧逗号串 roles 需 037 式迁移转 JSON），本轮只查清不修改。
