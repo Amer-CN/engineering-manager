@@ -5,6 +5,7 @@
 import type { CostLedgerMatchRule } from '@/types'
 import { logCreate } from '@/utils/audit'
 import { getAPI } from '@/services/api-adapter'
+import { hasPermission } from '@/types/permissions'
 
 interface ParsedRow {
   date: string; voucherNo: string; summary: string; counterparty: string
@@ -41,7 +42,7 @@ export async function learnFromOverrides(
   parseAllRows: () => ParsedRow[],
 ): Promise<{ count: number; merged?: CostLedgerMatchRule[] }> {
   const api = await getAPI()
-  if (!api?.getCostLedgerMatchRules || !api?.saveCostLedgerMatchRules) return { count: 0 }
+  if (!api?.getCostLedgerMatchRules || !api?.saveCostLedgerMatchRule) return { count: 0 }
 
   const rows = parseAllRows()
   const changedRows = rows.filter(
@@ -86,7 +87,7 @@ export async function learnFromOverrides(
   }
 
   const merged = [...existingMap.values()]
-  const res = await api.saveCostLedgerMatchRules(merged)
+  const res = await api.saveCostLedgerMatchRule(merged)
   return res?.success ? { count: newRules.size, merged } : { count: 0 }
 }
 
@@ -96,6 +97,8 @@ export async function executeBatchImport(
   entries: ReturnType<typeof buildImportEntries>,
   selectedBatch: number,
 ): Promise<{ success: boolean; count?: number; error?: string }> {
+  // G2 B9: 批量导入 → costLedger:create
+  if (!hasPermission('costLedger:create')) return { success: false, error: '您没有导入台账的权限' }
   const api = await getAPI()
   if (!api) return { success: false, error: 'API not available' }
 

@@ -1,5 +1,6 @@
 import type { CostLedgerMatchRule, CostLedgerCategory } from '@/types'
 import { getAPI } from '@/services/api-adapter'
+import { usePermission } from '@/hooks/usePermission'
 import { Button } from '../../ui/Button'
 
 interface Props {
@@ -10,18 +11,23 @@ interface Props {
 }
 
 export function LearningRulesView({ rules, categories, confirm, setRules }: Props) {
+  const { can } = usePermission()
   const handleDelete = async (i: number) => {
+    // G2 B9: 学习规则 → costLedger:update
+    if (!can('costLedger:update')) return
     const api = await getAPI()
     const remaining = rules.filter((_, j) => j !== i)
-    const res = await api.saveCostLedgerMatchRules(remaining)
+    const res = await api.saveCostLedgerMatchRule(remaining)
     if (res?.success) setRules(remaining)
   }
 
   const handleClearAll = async () => {
+    // G2 B9: 学习规则 → costLedger:update
+    if (!can('costLedger:update')) return
     const ok = await confirm({ title: '确认清空', content: '确定清空所有学习规则？', confirmVariant: 'danger' })
     if (!ok) return
     const api = await getAPI()
-    const res = await api.saveCostLedgerMatchRules([])
+    const res = await api.saveCostLedgerMatchRule([])
     if (res?.success) setRules([])
   }
 

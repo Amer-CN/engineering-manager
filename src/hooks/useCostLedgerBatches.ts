@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { CostLedgerBatch } from '@/types'
 import { getAPI } from '@/services/api-adapter'
+import { usePermission } from './usePermission'
 
 export function useCostLedgerBatches(projectId: number) {
+  const { can } = usePermission()
   const [batches, setBatches] = useState<CostLedgerBatch[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -18,6 +20,8 @@ export function useCostLedgerBatches(projectId: number) {
   useEffect(() => { load() }, [load])
 
   const createBatch = useCallback(async (name: string) => {
+    // G2 B9: 新建批次 → costLedger:create
+    if (!can('costLedger:create')) return null
     const api = await getAPI()
     const res = await api.createCostLedgerBatch(projectId, name)
     if (res?.success) {
@@ -28,6 +32,8 @@ export function useCostLedgerBatches(projectId: number) {
   }, [projectId])
 
   const deleteBatch = useCallback(async (batchId: number) => {
+    // G2 B9: 删除批次 → costLedger:delete
+    if (!can('costLedger:delete')) return false
     const api = await getAPI()
     const res = await api.deleteCostLedgerBatch(projectId, batchId)
     if (res?.success) {
@@ -38,6 +44,8 @@ export function useCostLedgerBatches(projectId: number) {
   }, [projectId])
 
   const copyBatch = useCallback(async (sourceBatchId: number, name: string) => {
+    // G2 B9: 复制批次 → costLedger:create
+    if (!can('costLedger:create')) return null
     const api = await getAPI()
     const res = await api.copyCostLedgerBatch(projectId, sourceBatchId, name)
     if (res?.success) {
@@ -48,6 +56,8 @@ export function useCostLedgerBatches(projectId: number) {
   }, [projectId])
 
   const renameBatch = useCallback(async (batchId: number, name: string) => {
+    // G2 B9: 批次重命名 → costLedger:update
+    if (!can('costLedger:update')) return false
     const api = await getAPI()
     const res = await api.renameCostLedgerBatch(projectId, batchId, name)
     if (res?.success) {

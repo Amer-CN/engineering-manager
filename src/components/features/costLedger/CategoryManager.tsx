@@ -6,6 +6,7 @@ import type { CostLedgerCategory, CostLedgerMatchRule } from '@/types'
 import { COLORS } from './costLedgerColors'
 import { getLevel1GroupsMerged, HIERARCHY_GROUP_NAMES } from './config'
 import { getAPI } from '@/services/api-adapter'
+import { usePermission } from '@/hooks/usePermission'
 import { LearningRulesView } from './LearningRulesView'
 import { CategoryManagerGroupList } from './CategoryManagerGroupList'
 import { Button } from '../../ui/Button'
@@ -28,6 +29,7 @@ export type AddState =
 export function CategoryManager({ categories, onClose, onRefresh }: CategoryManagerProps) {
   const { confirm, ConfirmDialog } = useConfirm()
   const showToast = useToastStore(state => state.showToast)
+  const { can } = usePermission()
   const [tab, setTab] = useState<'expense' | 'income'>('expense')
   const [viewRules, setViewRules] = useState(false)
   const [edit, setEdit] = useState<EditState>(null)
@@ -57,6 +59,8 @@ export function CategoryManager({ categories, onClose, onRefresh }: CategoryMana
     setError('')
   }
   const saveEditL2 = async () => {
+    // G2 B9: 分类配置 → costLedger:update
+    if (!can('costLedger:update')) { setError('您没有管理分类的权限'); return }
     if (!edit || edit.type !== 'l2') return
     if (!edit.name.trim()) { setError('名称不能为空'); return }
     const api = await getAPI()
@@ -70,6 +74,8 @@ export function CategoryManager({ categories, onClose, onRefresh }: CategoryMana
     setError('')
   }
   const saveEditL1 = async () => {
+    // G2 B9: 分类配置 → costLedger:update
+    if (!can('costLedger:update')) { setError('您没有管理分类的权限'); return }
     if (!edit || edit.type !== 'l1') return
     const oldName = edit.group
     const newName = edit.name.trim()
@@ -93,6 +99,8 @@ export function CategoryManager({ categories, onClose, onRefresh }: CategoryMana
 
   // ── Delete level1 group (custom only) ──
   const handleDeleteL1 = async (group: { name: string; codes: string[] }) => {
+    // G2 B9: 分类配置 → costLedger:update
+    if (!can('costLedger:update')) { showToast('您没有管理分类的权限', 'error'); return }
     const customCats = group.codes.map(code => customs.find(c => c.code === code)).filter(Boolean) as CostLedgerCategory[]
     if (customCats.length === 0) return
     const ok = await confirm({ title: '确认删除', content: `确定删除一级分类"${group.name}"及其下的 ${customCats.length} 个自定义二级分类？`, confirmVariant: 'danger' })
@@ -107,6 +115,8 @@ export function CategoryManager({ categories, onClose, onRefresh }: CategoryMana
 
   // ── Delete level2 ──
   const handleDeleteL2 = async (cat: CostLedgerCategory) => {
+    // G2 B9: 分类配置 → costLedger:update
+    if (!can('costLedger:update')) { showToast('您没有管理分类的权限', 'error'); return }
     const ok = await confirm({ title: '确认删除', content: `确定删除分类"${cat.label}"？已有台账记录引用时不可删除。`, confirmVariant: 'danger' })
     if (!ok) return
     const api = await getAPI()
@@ -117,6 +127,8 @@ export function CategoryManager({ categories, onClose, onRefresh }: CategoryMana
 
   // ── Create level2 under a group ──
   const handleCreateL2 = async () => {
+    // G2 B9: 分类配置 → costLedger:update
+    if (!can('costLedger:update')) { setError('您没有管理分类的权限'); return }
     if (!add || add.type !== 'l2') return
     if (!add.label.trim()) { setError('名称不能为空'); return }
     const api = await getAPI()
@@ -128,6 +140,8 @@ export function CategoryManager({ categories, onClose, onRefresh }: CategoryMana
 
   // ── Create level1 + first level2 ──
   const handleCreateL1 = async () => {
+    // G2 B9: 分类配置 → costLedger:update
+    if (!can('costLedger:update')) { setError('您没有管理分类的权限'); return }
     if (!add || add.type !== 'l1') return
     if (!add.groupName.trim()) { setError('一级分类名不能为空'); return }
     if (mergedGroups.some(g => g.name === add.groupName.trim())) {

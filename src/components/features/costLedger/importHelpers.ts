@@ -12,7 +12,7 @@ export async function learnFromEdit(
   summary: string, counterparty: string, notes: string, categoryCode: string, direction: string
 ): Promise<number> {
   const api = await getAPI()
-  if (!api?.getCostLedgerMatchRules || !api?.saveCostLedgerMatchRules) return 0
+  if (!api?.getCostLedgerMatchRules || !api?.saveCostLedgerMatchRule) return 0
   const text = ((summary || '') + ' ' + (counterparty || '') + ' ' + (notes || '')).trim()
   if (!text) return 0
   const stopWords = ['的', '了', '在', '是', '有', '和', '与', '及', '或', ' ', '', null, undefined]
@@ -41,6 +41,6 @@ export async function learnFromEdit(
   existingMap.set(key, rule)
   }
   }
-  await api.saveCostLedgerMatchRules([...existingMap.values()])
+  await api.saveCostLedgerMatchRule([...existingMap.values()])
   return newRules.size
 }
