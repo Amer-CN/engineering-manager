@@ -67,6 +67,11 @@ vi.mock('../KnowledgeLibrary', () => ({
   },
 }))
 
+// Mock GlassCarousel — 3D 轮播舞台（jsdom 无真实 3D；舞台自身测试在 glass/__tests__ 覆盖）
+vi.mock('../glass/GlassCarousel', () => ({
+  GlassCarousel: () => React.createElement('div', { 'data-testid': 'gc-stage' }, '轮播舞台'),
+}))
+
 // ═══════════════════════════════════════════════════════════════
 // sessionStorage mock
 // ═══════════════════════════════════════════════════════════════
@@ -100,6 +105,12 @@ describe('KnowledgeHomePage — sessionStorage consumption', () => {
     mockMaskState.masked = false
     lastLibraryProps.openDocId = null
     lastLibraryProps.onOpenDocIdConsumed = null
+  })
+
+  it('M2：渲染 3D 轮播舞台 + 文档库（双区）', () => {
+    render(<KnowledgeHomePage />)
+    expect(screen.getByTestId('gc-stage')).toBeInTheDocument()
+    expect(screen.getByTestId('kl')).toBeInTheDocument()
   })
 
   it('consumes pendingDocId from sessionStorage → passes openDocId to KnowledgeLibrary', async () => {
