@@ -43,14 +43,12 @@ public class WritePermissionB2Tests : ApiTestBase
         conn.Execute(@"INSERT OR IGNORE INTO users (id, username, password, password_hash, password_salt, password_hash_version, display_name, role_id, status, created_at)
             VALUES ('3', @U, @P, @H, @S, 2, '财务', 'accountant', 'active', @Now)",
             new { U = AccountantUser, P = AccountantPassword, H = accHash, S = accSalt, Now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") });
-        // 001 种子角色 id 是 finance，而 GetDefaultPermissions/037 用 accountant（既有漂移）——
-        // 测试环境补建 accountant 角色行，使会计登录后可被 HasPermission 查权
-        conn.Execute("INSERT OR IGNORE INTO roles (id, name, permissions, is_system, created_at) VALUES ('accountant', '财务', '[]', 1, @Now)",
-            new { Now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") });
+        // 038（窗口 H P1）落地后：accountant 角色行由迁移建（permissions =
+        // GetDefaultPermissions("accountant") 原样 JSON，含 wages:create/read/update），
+        // 001 时代的 finance 种子行已删、finance 用户已重映射为 accountant。
+        // 此处不再补建/改写 accountant 行（旧临时方案已清，见 H-1 commit）。
         conn.Execute("UPDATE roles SET permissions=@P WHERE id='worker'",
             new { P = "[\"dashboard:read\",\"projects:read\",\"wages:read\",\"projects:export\",\"contracts:export\"]" });
-        conn.Execute("UPDATE roles SET permissions=@P WHERE id='accountant'",
-            new { P = "[\"dashboard:read\",\"projects:read\",\"contracts:read\",\"wages:read\",\"wages:create\",\"wages:update\",\"wages:approve\",\"wages:export\",\"invoices:create\",\"invoices:read\",\"invoices:update\",\"invoices:delete\"]" });
         conn.Execute("UPDATE roles SET permissions=@P WHERE id='admin'",
             new { P = "[\"dashboard:read\",\"projects:create\",\"projects:read\",\"projects:update\",\"projects:delete\",\"projects:export\",\"contracts:create\",\"contracts:read\",\"contracts:update\",\"contracts:delete\",\"contracts:approve\",\"contracts:export\",\"settlement:create\",\"settlement:read\",\"settlement:update\",\"settlement:delete\",\"settlement:approve\",\"inventory:create\",\"inventory:read\",\"inventory:update\",\"inventory:delete\",\"drawings:create\",\"drawings:read\",\"drawings:update\",\"drawings:delete\",\"users:create\",\"users:read\",\"users:update\",\"users:delete\",\"roles:read\",\"roles:update\",\"settings:read\",\"settings:update\",\"wages:create\",\"wages:read\",\"wages:update\",\"wages:delete\",\"wages:approve\",\"members:create\",\"members:read\",\"members:update\",\"members:delete\"]" });
     }
