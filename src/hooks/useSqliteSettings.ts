@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { SqliteStatus, ReadMode } from '../types/electron'
 import { getAPI } from '@/services/api-adapter'
+import { usePermission } from './usePermission'
 
 interface MigrationResult {
   success: boolean
@@ -19,6 +20,7 @@ interface Message {
 }
 
 export function useSqliteSettings() {
+  const { can } = usePermission()
   const [status, setStatus] = useState<SqliteStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [enabling, setEnabling] = useState(false)
@@ -52,10 +54,11 @@ export function useSqliteSettings() {
     try {
       const result = await api.enableSqlite()
       if (result.success) {
-        setMessage({ type: 'success', text: result.message })
+        // 信封无 message 字段（成功时 error 为 undefined）→ 用静态文案
+        setMessage({ type: 'success', text: 'SQLite 已启用' })
         await refreshStatus()
       } else {
-        setMessage({ type: 'error', text: result.message || '启用 SQLite 失败' })
+        setMessage({ type: 'error', text: result.error || '启用 SQLite 失败' })
       }
     } catch (e) {
       setMessage({ type: 'error', text: `启用失败: ${e instanceof Error ? e.message : String(e)}` })
@@ -97,6 +100,11 @@ export function useSqliteSettings() {
   }, [refreshStatus])
 
   const handleSetReadMode = useCallback(async (mode: ReadMode) => {
+    // G2 B1: 切换读取模式 → settings:update
+    if (!can('settings:update')) {
+      setMessage({ type: 'error', text: '您没有修改系统设置的权限' })
+      return
+    }
     const api = await getAPI()
     if (!api?.setSqliteReadMode) {
       setMessage({ type: 'error', text: '读取模式切换功能不可用' })
