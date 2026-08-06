@@ -15,8 +15,11 @@ namespace EngineeringManager.Tests.Endpoints;
 /// 测试项:
 /// 1. multipart 音频上传（成功/不支持格式/超过上限/未登录/中文文件名/安全路径）
 /// 2. corrected ingest（不带 body 兼容/带校对文本/带 segments/无权 projectId/幂等/job ownership）
+///
+/// H-4 flaky 根治：与 M4ThirdRoundTests 共用串行集合（同写 uploads/stt/1
+/// 目录，.uploading 临时文件跨测试竞态）。
 /// </summary>
-[Collection("M4SttUpload")]
+[Collection("M4 Stt Upload Serialized")]
 public class M4SttUploadAndIngestTests : ApiTestBase
 {
     private static string ExtractTokenFromJson(string json)
