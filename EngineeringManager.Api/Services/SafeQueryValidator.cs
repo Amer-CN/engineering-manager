@@ -451,6 +451,15 @@ public static class SafeQueryValidator
             throw new ValidationException("子查询中不支持集合操作");
         }
 
+        // R8.15.2(G32): 无表子查询（如 SELECT 1 ORDER BY 1）→ subSelect.From 为 null →
+        // CollectTables 的 foreach 直接 NRE（堆栈实测抛出点 CollectTables:380，被外层
+        // catch 兜成「校验异常: Object reference...」文案）。此处显式 fail-closed，
+        // 不许靠 catch 兜（NRE 文案会回传前端）。
+        if (subSelect.From == null)
+        {
+            throw new ValidationException(
+                "无表子查询暂不支持：子查询必须引用白名单内的表（R8.15.2 fail-closed）。");
+        }
         CollectTables(subSelect.From, parentAliasToTable, parentReferencedTables, parentOccurrences, depth);
         ValidateProjection(subSelect.Projection, parentAliasToTable, parentReferencedTables, parentOccurrences, depth);
 
