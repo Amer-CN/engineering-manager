@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import type { WageRecord } from '@/types'
 import { getAPI } from '@/services/api-adapter'
+import { usePermission } from './usePermission'
 
 interface UseWageTableOptions {
   selectedProject: { id: number } | null
@@ -20,6 +21,7 @@ export function useWageTable({
   setWageRecords, setEditingWages, setLoading,
   showToast, loadAllRecords, loadStats,
 }: UseWageTableOptions) {
+  const { can } = usePermission()
   const loadWages = useCallback(async () => {
     if (!selectedProject) return
     try {
@@ -29,6 +31,8 @@ export function useWageTable({
   }, [selectedProject, selectedMonth])
 
   const handleGenerateWages = async () => {
+    // G2 B2: 生成工资表 → wages:create
+    if (!can('wages:create')) { showToast('您没有生成工资表的权限', 'error'); return }
     if (!selectedProject) return
     setLoading(true)
     try {
@@ -44,6 +48,8 @@ export function useWageTable({
   }
 
   const handleSaveWages = async () => {
+    // G2 B2: 保存工资表 → wages:update
+    if (!can('wages:update')) { showToast('您没有保存工资表的权限', 'error'); return }
     if (editingWages.size === 0) { showToast('没有需要保存的修改', 'info'); return }
     setLoading(true)
     try {

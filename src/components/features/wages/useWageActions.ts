@@ -6,6 +6,7 @@ import { useState, useCallback } from 'react'
 import { useToastStore } from '@/store/toastStore'
 import { getAPI } from '@/services/api-adapter'
 import { useConfirm } from '@/hooks/useConfirm'
+import { usePermission } from '@/hooks/usePermission'
 import type { Project, WorkerTeam, AttendanceRecord, WageRecord } from '@/types'
 
 interface UseWageActionsOptions {
@@ -22,6 +23,7 @@ export function useWageActions({
 }: UseWageActionsOptions) {
   const showToast = useToastStore(state => state.showToast)
   const { confirm, ConfirmDialog } = useConfirm()
+  const { can } = usePermission()
 
   // 选中状态
   const [selectedAttendanceIds, setSelectedAttendanceIds] = useState<Set<number>>(new Set())
@@ -44,6 +46,8 @@ export function useWageActions({
   // ── 考勤操作 ──
 
   const handleGenerateAttendance = useCallback(async () => {
+    // G2 B2: 生成考勤 → wages:create
+    if (!can('wages:create')) { showToast('您没有生成考勤的权限', 'error'); return }
     if (!selectedProject) return
     try {
       const api = await getAPI()
@@ -61,6 +65,8 @@ export function useWageActions({
   }, [])
 
   const handleDeleteAttendance = useCallback(async (record: AttendanceRecord) => {
+    // G2 B2: 删除考勤 → wages:delete
+    if (!can('wages:delete')) { showToast('您没有删除考勤的权限', 'error'); return }
     const ok = await confirm({ title: '确认删除', content: `确认删除 ${record.memberName || '该工人'} 的考勤？`, confirmVariant: 'danger' })
     if (!ok) return
     const r = await (await getAPI()).deleteAttendance(record.id)
@@ -69,6 +75,8 @@ export function useWageActions({
   }, [confirm, loadData, showToast])
 
   const handleBatchDeleteAttendance = useCallback(async () => {
+    // G2 B2: 批量删除考勤 → wages:delete
+    if (!can('wages:delete')) { showToast('您没有删除考勤的权限', 'error'); return }
     if (selectedAttendanceIds.size === 0) return
     const ok = await confirm({ title: '确认删除', content: `确认删除选中的 ${selectedAttendanceIds.size} 条考勤？`, confirmVariant: 'danger' })
     if (!ok) return
@@ -78,6 +86,8 @@ export function useWageActions({
   }, [selectedAttendanceIds, confirm, loadData, showToast])
 
   const handleImportAttendance = useCallback(async (data: { projectWorkerId: number; workDays: number; workerName: string }[]) => {
+    // G2 B2: 导入考勤 → wages:create
+    if (!can('wages:create')) { showToast('您没有导入考勤的权限', 'error'); return }
     if (!selectedProject) return
     try {
       const r = await (await getAPI()).batchImportAttendances(selectedProject.id, selectedMonth, data)
@@ -89,6 +99,8 @@ export function useWageActions({
   // ── 工资表操作 ──
 
   const handleGenerateWages = useCallback(async () => {
+    // G2 B2: 生成工资表 → wages:create
+    if (!can('wages:create')) { showToast('您没有生成工资表的权限', 'error'); return }
     if (!selectedProject) return
     const r = await (await getAPI()).generateProjectWages(selectedProject.id, selectedMonth)
     if (r.success && r.data) { showToast(`已生成 ${r.newCount ?? 0} 条工资`, 'success'); setEditingWages(new Map()); await loadData() }
@@ -100,6 +112,8 @@ export function useWageActions({
   }, [])
 
   const handleSaveWages = useCallback(async () => {
+    // G2 B2: 保存工资表 → wages:update
+    if (!can('wages:update')) { showToast('您没有保存工资表的权限', 'error'); return }
     if (editingWages.size === 0) { showToast('没有需要保存的修改', 'info'); return }
     const updated = wages.map(w => {
       const edit = editingWages.get(w.id)
@@ -113,6 +127,8 @@ export function useWageActions({
   }, [editingWages, wages, loadData, showToast])
 
   const handleBatchDeleteWages = useCallback(async () => {
+    // G2 B2: 批量删除工资 → wages:delete
+    if (!can('wages:delete')) { showToast('您没有删除工资的权限', 'error'); return }
     if (selectedWageTableIds.size === 0) return
     const ok = await confirm({ title: '确认删除', content: `确认删除选中的 ${selectedWageTableIds.size} 条工资？`, confirmVariant: 'danger' })
     if (!ok) return
@@ -134,6 +150,8 @@ export function useWageActions({
   }, [wages])
 
   const handleSavePayments = useCallback(async () => {
+    // G2 B2: 保存发放 → wages:update
+    if (!can('wages:update')) { showToast('您没有登记发放的权限', 'error'); return }
     if (paymentEdits.size === 0) { showToast('没有需要保存的修改', 'info'); return }
     let skippedEmpty = 0
     const updated = wages.map(w => {
@@ -151,6 +169,8 @@ export function useWageActions({
   }, [paymentEdits, wages, loadData, showToast])
 
   const handleBatchDeletePayments = useCallback(async () => {
+    // G2 B2: 清除发放 → wages:update
+    if (!can('wages:update')) { showToast('您没有清除发放的权限', 'error'); return }
     if (selectedWageIds.size === 0) return
     const ok = await confirm({ title: '确认清除', content: `确认清除选中的 ${selectedWageIds.size} 条发放记录？`, confirmVariant: 'danger' })
     if (!ok) return
@@ -160,11 +180,13 @@ export function useWageActions({
   }, [selectedWageIds, confirm, loadData, showToast])
 
   const handleBatchArchivePayments = useCallback(async () => {
+    // G2 B2: 归档发放 → wages:update（顺带修复桥接断链：batchArchivePayments 无定义 → batchArchiveWages）
+    if (!can('wages:update')) { showToast('您没有归档发放的权限', 'error'); return }
     const toArchive = selectedWageIds.size > 0 ? Array.from(selectedWageIds) : wages.filter(w => !w.paymentLocked).map(w => w.id)
     if (toArchive.length === 0) { showToast('没有可归档的记录', 'info'); return }
     const ok = await confirm({ title: '确认归档', content: `确认归档 ${toArchive.length} 条发放记录？归档后不可修改。`, confirmVariant: 'primary' })
     if (!ok) return
-    const r = await (await getAPI()).batchArchivePayments(toArchive)
+    const r = await (await getAPI()).batchArchiveWages(toArchive)
     if (r.success) { showToast(`已归档 ${r.data?.archived ?? toArchive.length} 条`, 'success'); setSelectedWageIds(new Set()); setPaymentEdits(new Map()); await loadData() }
     else showToast(r.error || '归档失败', 'error')
   }, [selectedWageIds, wages, confirm, loadData, showToast])

@@ -9,6 +9,7 @@ import { useToastStore } from '@/store/toastStore'
 import { Icon } from './ui/Icon'
 import { Card } from './ui/Card'
 import { getAPI } from '@/services/api-adapter'
+import { usePermission } from '@/hooks/usePermission'
 import { Tooltip } from './ui/Tooltip/Tooltip'
 import { Button } from './ui/Button'
 
@@ -60,6 +61,7 @@ export default function AttendanceDetail({
   record, member, teamName, yearMonth, daysInMonth, projectName, onBack, onSaved,
 }: AttendanceDetailProps) {
   const showToast = useToastStore(state => state.showToast)
+  const { can } = usePermission()
 
   // 入职日：若 member.entryDate 落在当前月份内，取其日号；否则从1号开始
   const [year, month] = yearMonth.split('-').map(Number)
@@ -149,6 +151,8 @@ export default function AttendanceDetail({
 
   // 保存
   const handleSave = async () => {
+  // G2 B2: 保存考勤 → wages:update
+  if (!can('wages:update')) { showToast('您没有编辑考勤的权限', 'error'); return }
   setSaving(true)
   try {
   const result = await (await getAPI()).updateAttendance({ ...record, dailyStatus })
@@ -181,6 +185,8 @@ export default function AttendanceDetail({
   <div className="flex items-center gap-2">
   <Tooltip content="删除此考勤记录" position="top" delay={300}>
   <Button onClick={async () => {
+  // G2 B2: 删除考勤 → wages:delete
+  if (!can('wages:delete')) { showToast('您没有删除考勤的权限', 'error'); return }
   if (!confirm(`确认删除 ${record.memberName || member?.name || '该员工'} ${yearMonth} 的考勤记录吗？此操作不可撤销。`)) return
   try {
   const result = await (await getAPI()).deleteAttendance(record.id)

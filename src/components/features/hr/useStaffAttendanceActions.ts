@@ -3,6 +3,7 @@ import { useToastStore } from '@/store/toastStore'
 import { logCreate, logDelete } from '../../../utils/audit'
 import { computeAttendanceSummary } from '../../../constants/attendance'
 import { getAPI } from '@/services/api-adapter'
+import { usePermission } from '@/hooks/usePermission'
 import { getDaysInMonth, formatMonthLabel } from './staffAttendanceUtils'
 import type { AttendanceRecord, Member, Department } from '../../../types/electron'
 
@@ -28,6 +29,7 @@ interface UseStaffAttendanceActionsParams {
 
 export function useStaffAttendanceActions(params: UseStaffAttendanceActionsParams) {
   const showToast = useToastStore(state => state.showToast)
+  const { can } = usePermission()
   const {
     filteredStaff, selectedIds, setSelectedIds, currentMonthAttendances,
     daysInMonth, yearMonth, allAttendances, staff, loadData,
@@ -37,6 +39,8 @@ export function useStaffAttendanceActions(params: UseStaffAttendanceActionsParam
   } = params
 
   const handleGenerateDefaults = useCallback(async () => {
+    // G2 B2: 生成默认考勤 → wages:create
+    if (!can('wages:create')) { showToast('您没有生成考勤的权限', 'error'); return }
     if (filteredStaff.length === 0) { showToast('没有可生成考勤的人员', 'info'); return }
     try {
       let created = 0
@@ -54,6 +58,8 @@ export function useStaffAttendanceActions(params: UseStaffAttendanceActionsParam
   }, [filteredStaff, currentMonthAttendances, daysInMonth, yearMonth, loadData, showToast])
 
   const handleDelete = useCallback(async (record: AttendanceRecord) => {
+    // G2 B2: 删除考勤 → wages:delete
+    if (!can('wages:delete')) { showToast('您没有删除考勤的权限', 'error'); return }
     const ok = await confirm({ title: '确认删除', content: `确定删除 ${record.memberName || '该员工'} ${formatMonthLabel(record.yearMonth || '')} 的考勤记录吗？此操作不可撤销。`, confirmVariant: 'danger' })
     if (!ok) return
     try {
@@ -64,6 +70,8 @@ export function useStaffAttendanceActions(params: UseStaffAttendanceActionsParam
   }, [confirm, loadData, showToast])
 
   const handleBatchDelete = useCallback(async () => {
+    // G2 B2: 批量删除考勤 → wages:delete
+    if (!can('wages:delete')) { showToast('您没有删除考勤的权限', 'error'); return }
     if (selectedIds.size === 0) return
     const ok = await confirm({ title: '确认删除', content: `确认删除选中的 ${selectedIds.size} 条考勤记录吗？此操作不可撤销。`, confirmVariant: 'danger' })
     if (!ok) return
@@ -101,6 +109,8 @@ export function useStaffAttendanceActions(params: UseStaffAttendanceActionsParam
     if (!member) { showToast('人员不存在', 'error'); return }
     const record = getAttendanceForMemberMonth(memberId, ym)
     if (!record) {
+      // G2 B2: 历史月份自动建档 → wages:create（无码只可查看已有记录，不自动创建）
+      if (!can('wages:create')) { showToast('该月份无考勤记录，且您没有创建考勤的权限', 'error'); return }
       const dailyStatus: Record<number, string> = {}
       for (let d = 1; d <= getDaysInMonth(ym); d++) dailyStatus[d] = 'work'
       try {

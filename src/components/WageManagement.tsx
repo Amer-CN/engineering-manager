@@ -14,10 +14,12 @@ import WageStatsTab from './features/wages/WageStatsTab'
 import WageProjectList from './features/wages/WageProjectList'
 import { getAPI } from '@/services/api-adapter'
 import useWageManagement from '../hooks/useWageManagement'
+import { usePermission } from '@/hooks/usePermission'
 
 export default function WageManagement() {
   const { showToast } = useToastContext()
   const { confirm, ConfirmDialog } = useConfirm()
+  const { can } = usePermission()
 
   const hook = useWageManagement({ showToast, confirm })
   const {
@@ -76,6 +78,8 @@ export default function WageManagement() {
         onBack={() => { setView('dashboard'); setAttendanceDetailRecord(null); loadStats() }}
         projectWorkerList={projectWorkerList.map(p => ({ id: p.pwId, name: p.name, teamName: p.teamName, idCard: p.idCard }))}
         onImportAttendance={async (data) => {
+          // G2 B2: 导入考勤 → wages:create
+          if (!can('wages:create')) { showToast('您没有导入考勤的权限', 'error'); return }
           if (!selectedProject) return
           setLoading(true)
           try {
