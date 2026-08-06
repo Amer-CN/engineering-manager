@@ -261,7 +261,7 @@ public static class CostLedgerEndpoints
         });
 
         // POST /api/cost-ledger/{batchId}/sheet — 批量 upsert 电子表格编辑结果
-        // 金额：INTEGER（分），前端已传分，直接入库；SQL 全参数化；表名 [] 包裹
+        // 金额：REAL（元），直接存 double（M-FIX1 F6 修正：原注释撒谎说 INTEGER 分 + 强制取整丢小数）；SQL 全参数化；表名 [] 包裹
         app.MapPost("/api/cost-ledger/{batchId}/sheet", async (HttpContext ctx, long batchId, CostLedgerSheetDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
@@ -290,8 +290,8 @@ public static class CostLedgerEndpoints
             {
                 foreach (var row in dto.Entries)
                 {
-                    // 金额强制 INTEGER（分），防御性取整
-                    var amountCents = (long)Math.Round((row.Amount ?? 0));
+                    // M-FIX1 F6: 金额 REAL（元）——直接存 double，不做 (long) 取整（此前撒谎注释「INTEGER 分」+ 强制取整丢小数）
+                    var amountCents = row.Amount ?? 0;
 
                     if (row.Id.HasValue && row.Id.Value > 0)
                     {
