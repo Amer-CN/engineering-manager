@@ -67,6 +67,8 @@ public static class MemberEndpoints
 app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B5: 人员写操作 → members:create
+            if (!CurrentUser.HasPermission(ctx, db, "members:create")) return Results.Forbid();
             // v1.2.0: PII 字段加密
             var pii = ctx.RequestServices.GetRequiredService<EngineeringManager.Api.Security.PiiProtector>();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO members (name,phone,email,member_type,role,id_card,gender,ethnicity,birth_date,id_card_address,
@@ -86,6 +88,8 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
                 app.MapPut("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B5: 人员写操作 → members:update
+            if (!CurrentUser.HasPermission(ctx, db, "members:update")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             // v1.2.0: PII 字段加密
@@ -100,12 +104,14 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
                       Uid = uid, IsAdmin = isAdmin, dto.Gender, dto.Ethnicity, dto.BirthDate, dto.IdCardAddress, dto.BaseSalary,
                       dto.DailyWage, dto.EntryDate, dto.Status, dto.DepartmentId, dto.Position,
                       IdCardEnc = pii.Encrypt(dto.IdCard ?? ""), IdCardAddressEnc = pii.Encrypt(dto.IdCardAddress ?? ""),
-                      PhoneEnc = pii.Encrypt(dto.Phone ?? ""), BankAccountEnc = pii.Encrypt("") });
+                      PhoneEnc = pii.Encrypt(dto.Phone ?? ""), BankAccountEnc = pii.Encrypt(""), Now = now() });
             return affected > 0 ? Common.Ok() : Results.Forbid();
         });
         app.MapDelete("/api/members/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B5: 人员写操作 → members:delete
+            if (!CurrentUser.HasPermission(ctx, db, "members:delete")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             return (await db.ExecuteAsync("DELETE FROM members WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
@@ -154,6 +160,8 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
                 app.MapPost("/api/workers", async (HttpContext ctx, WorkerDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B5: 工人写操作 → members:create
+            if (!CurrentUser.HasPermission(ctx, db, "members:create")) return Results.Forbid();
             // v1.2.0: PII 字段加密 (PiiProtector 注入)
             var pii = ctx.RequestServices.GetRequiredService<EngineeringManager.Api.Security.PiiProtector>();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO workers (name,id_card,gender,phone,address,bank_account,bank_name,worker_type,daily_wage,
@@ -170,6 +178,8 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
                 app.MapPut("/api/workers", async (HttpContext ctx, WorkerDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B5: 工人写操作 → members:update
+            if (!CurrentUser.HasPermission(ctx, db, "members:update")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             // v1.2.0: PII 字段加密
@@ -182,12 +192,14 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
                 new { dto.Id, dto.Name, dto.IdCard, dto.Gender, dto.Phone, dto.Address, dto.BankAccount,
                       dto.BankName, dto.WorkerType, dto.DailyWage, Uid = uid, IsAdmin = isAdmin,
                       IdCardEnc = pii.Encrypt(dto.IdCard ?? ""), PhoneEnc = pii.Encrypt(dto.Phone ?? ""),
-                      AddressEnc = pii.Encrypt(dto.Address ?? ""), BankAccountEnc = pii.Encrypt(dto.BankAccount ?? "") });
+                      AddressEnc = pii.Encrypt(dto.Address ?? ""), BankAccountEnc = pii.Encrypt(dto.BankAccount ?? ""), Now = now() });
             return affected > 0 ? Common.Ok() : Results.Forbid();
         });
         app.MapDelete("/api/workers/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B5: 工人写操作 → members:delete
+            if (!CurrentUser.HasPermission(ctx, db, "members:delete")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             return (await db.ExecuteAsync("DELETE FROM workers WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
@@ -235,6 +247,8 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
                 app.MapPost("/api/project-workers", async (HttpContext ctx, ProjectWorkerDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B5: 项目工人写操作 → members:create
+            if (!CurrentUser.HasPermission(ctx, db, "members:create")) return Results.Forbid();
             // v1.2.0: project-workers 不直接存 PII (JOIN workers 表), 加密仍加 0 _enc 列
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO project_workers (worker_id,project_id,team_id,daily_wage,worker_type,entry_date,status,created_by,created_at, last_modified_at) VALUES (@WorkerId,@ProjectId,@TeamId,@DailyWage,@WorkerType,@EntryDate,@Status,@CreatedBy,@Now, @Now);
                 SELECT last_insert_rowid();",
@@ -245,6 +259,8 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
         app.MapDelete("/api/project-workers/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B5: 项目工人写操作 → members:delete
+            if (!CurrentUser.HasPermission(ctx, db, "members:delete")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             return (await db.ExecuteAsync("DELETE FROM project_workers WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
@@ -277,6 +293,8 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
         app.MapPost("/api/departments", async (HttpContext ctx, DepartmentDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B5: 部门写操作 → members:create
+            if (!CurrentUser.HasPermission(ctx, db, "members:create")) return Results.Forbid();
             var positionsJson = System.Text.Json.JsonSerializer.Serialize(dto.Positions ?? new List<string>());
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO departments (name,manager_id,positions,created_by,created_at, last_modified_at) VALUES (@Name,@ManagerId,@Positions,@CreatedBy,@Now, @Now); SELECT last_insert_rowid();",
                 new { dto.Name, dto.ManagerId, Positions = positionsJson, CreatedBy = uid, Now = now() });
@@ -286,6 +304,8 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
         app.MapPut("/api/departments", async (HttpContext ctx, DepartmentUpdateDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B5: 部门写操作 → members:update
+            if (!CurrentUser.HasPermission(ctx, db, "members:update")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             var positionsJson = System.Text.Json.JsonSerializer.Serialize(dto.Positions ?? new List<string>());
@@ -301,6 +321,8 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
         app.MapDelete("/api/departments/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B5: 部门写操作 → members:delete
+            if (!CurrentUser.HasPermission(ctx, db, "members:delete")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             return (await db.ExecuteAsync("DELETE FROM departments WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
@@ -331,6 +353,8 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
         app.MapPost("/api/worker-teams", async (HttpContext ctx, WorkerTeamDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B5: 班组写操作 → members:create
+            if (!CurrentUser.HasPermission(ctx, db, "members:create")) return Results.Forbid();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO worker_teams (name,project_id,leader_id,created_by,created_at,updated_at, last_modified_at) VALUES (@Name,@ProjectId,@LeaderId,@CreatedBy,@Now,@Now, @Now); SELECT last_insert_rowid();",
                 new { dto.Name, dto.ProjectId, dto.LeaderId, CreatedBy = uid, Now = now() });
             return Common.Ok(id);
@@ -339,6 +363,8 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
         app.MapPut("/api/worker-teams", async (HttpContext ctx, WorkerTeamDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B5: 班组写操作 → members:update
+            if (!CurrentUser.HasPermission(ctx, db, "members:update")) return Results.Forbid();
             var affected = await db.ExecuteAsync(@"UPDATE worker_teams SET name=COALESCE(@Name,name),
                 leader_id=@LeaderId,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id",
                 new { dto.Id, dto.Name, dto.LeaderId, Now = now() });
@@ -348,6 +374,8 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
         app.MapDelete("/api/worker-teams/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B5: 班组写操作 → members:delete
+            if (!CurrentUser.HasPermission(ctx, db, "members:delete")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             return (await db.ExecuteAsync("DELETE FROM worker_teams WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();

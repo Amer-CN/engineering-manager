@@ -1,6 +1,7 @@
 import { type Column } from '@/components/DataTable'
 import { HR_STATUS_LABELS, HR_STATUS_COLORS } from './config'
 import { getAPI } from '@/services/api-adapter'
+import { hasPermission } from '@/types/permissions'
 import { Button } from '../../ui/Button'
 import type { Member, Department } from '@/types/electron'
 
@@ -67,7 +68,9 @@ export function getStaffListColumns({
         onClick={e => e.stopPropagation()}>
         <Button onClick={() => openEdit(m)}  variant="ghost" size="sm" className="text-[color:var(--accent)]">编辑</Button>
         <Button onClick={() => setSalaryHistoryMember(m)}  title="薪资历史" variant="ghost" size="sm" className="text-warning-600">薪资</Button>
+        {hasPermission('members:delete') && (
         <Button onClick={() => { if (window.confirm('确定要删除 ' + m.name + ' 吗？')) { getAPI().then(api => api.deleteMember(m.id)).then(r => { if (r.success) { showToast('已删除', 'success'); loadData() } else { showToast(r.error || '删除失败', 'error') } }) } }}  title="删除" variant="ghost" size="sm" className="text-danger-500">删除</Button>
+        )}
       </div>
     )},
   ]

@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react'
 import { getAPI } from '@/services/api-adapter'
+import { usePermission } from '@/hooks/usePermission'
 
 export interface WorkerImportRow {
   name: string
@@ -215,6 +216,7 @@ function extractGender(idCard: string): string | undefined {
 }
 
 export function useWorkerImport(existingIdCards: Set<string>) {
+  const { can } = usePermission()
   const [importState, setImportState] = useState<ImportState | null>(null)
   const [progress, setProgress] = useState<ImportProgress | null>(null)
   const [result, setResult] = useState<ImportResult | null>(null)
@@ -395,6 +397,8 @@ export function useWorkerImport(existingIdCards: Set<string>) {
     createMember: (data: Record<string, unknown>) => Promise<{ success: boolean; data?: Record<string, unknown>; error?: string }>,
     onComplete: () => void
   ) => {
+    // G2 B5: Excel 导入工人（create/updateWorker 混合）→ members:create
+    if (!can('members:create')) { return }
     if (!importState) return
     setPhase('importing')
     setProgress({ completed: 0, total: importState.allRows.length, percent: 0, currentName: '' })
