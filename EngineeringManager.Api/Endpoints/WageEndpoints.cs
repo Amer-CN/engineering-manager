@@ -270,7 +270,7 @@ public static class WageEndpoints
             var where = new List<string>();
             if (projectId.HasValue) where.Add("project_id=@ProjectId");
             if (!string.IsNullOrEmpty(yearMonth)) where.Add("year_month=@YearMonth");
-            where.Add(CurrentUser.UserFilterWithAuthorizedProjects(scope));
+            where.Add(CurrentUser.UserFilterWithAuthorizedProjects(scope, "wages.project_id"));
             where.Add("deleted_at IS NULL");
             var w = " WHERE " + string.Join(" AND ", where);
             return Common.Ok(new
@@ -482,8 +482,8 @@ public static class WageEndpoints
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             // v1.1.0 P0-4 Phase 2: 鎬绘槸鍔?user-dim
             var w = projectId.HasValue
-                ? " WHERE project_id=@ProjectId AND deleted_at IS NULL AND paid_amount IS NULL AND year_month < @CurrentMonth AND " + CurrentUser.UserFilterWithAuthorizedProjects(scope)
-                : " WHERE deleted_at IS NULL AND paid_amount IS NULL AND year_month < @CurrentMonth AND " + CurrentUser.UserFilterWithAuthorizedProjects(scope);
+                ? " WHERE project_id=@ProjectId AND deleted_at IS NULL AND paid_amount IS NULL AND year_month < @CurrentMonth AND " + CurrentUser.UserFilterWithAuthorizedProjects(scope, "wages.project_id")
+                : " WHERE deleted_at IS NULL AND paid_amount IS NULL AND year_month < @CurrentMonth AND " + CurrentUser.UserFilterWithAuthorizedProjects(scope, "wages.project_id");
             return Common.Ok(new
             {
                 count = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM wages{w}", new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId, CurrentMonth = DateTime.Now.ToString("yyyy-MM") }),

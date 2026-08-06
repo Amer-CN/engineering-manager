@@ -173,6 +173,17 @@ const ALLOWED_SQL_INTERPOLATIONS = new Set([
   'scopeFilter.Filter',
   'CurrentUser.UserFilterCompany(scope)',
   'CurrentUser.UserFilterWithAuthorizedProjects(scope)',
+  // M-FIX1 F4: 表限定 projectCol 形态（B7 保证实参含 '.')
+  'CurrentUser.UserFilterWithAuthorizedProjects(scope, "income_contracts.project_id")',
+  'CurrentUser.UserFilterWithAuthorizedProjects(scope, "expense_contracts.project_id")',
+  'CurrentUser.UserFilterWithAuthorizedProjects(scope, "agreement_contracts.project_id")',
+  'CurrentUser.UserFilterWithAuthorizedProjects(scope, "cost_ledger.project_id")',
+  'CurrentUser.UserFilterWithAuthorizedProjects(scope, "cost_ledger_batches.project_id")',
+  'CurrentUser.UserFilterWithAuthorizedProjects(scope, "drawings.project_id")',
+  'CurrentUser.UserFilterWithAuthorizedProjects(scope, "wages.project_id")',
+  'CurrentUser.UserFilterWithAuthorizedProjects(scope, "invoices.project_id")',
+  'CurrentUser.UserFilterWithAuthorizedProjects(scope, "income_contracts.project_id", "created_by")',
+  'CurrentUser.UserFilterWithAuthorizedProjects(scope, "expense_contracts.project_id", "created_by")',
   'createdByCol',
   'projectCol',
   'encCol',
@@ -186,12 +197,13 @@ const ALLOWED_SQL_INTERPOLATIONS = new Set([
 ])
 
 // 受控 + 拼接白名单（AGENTS.md 认可的租户隔离 filter helper 与常量条件组装）
+// M-FIX1 F4: UserFilterWithAuthorizedProjects 现在必填表限定 projectCol（如 scope, "income_contracts.project_id"）
 const ALLOWED_CONCAT_AFTER = [
-  /^CurrentUser\s*\.\s*UserFilter\w*\s*\(\s*scope\s*\)/, // 租户隔离 SQL 片段 helper
+  /^CurrentUser\s*\.\s*UserFilter\w*\s*\(\s*scope\s*(?:,\s*"[A-Za-z_]+\.project_id"\s*(?:,\s*"[A-Za-z_\.]+"\s*)?)?\)/, // 租户隔离 SQL 片段 helper（表限定列）
   /^string\s*\.\s*Join\s*\(\s*"[^"]*"\s*,\s*conditions\s*\)/, // 常量条件列表组装
 ]
 const ALLOWED_CONCAT_BEFORE = [
-  /CurrentUser\s*\.\s*UserFilter\w*\s*\(\s*scope\s*\)\s*$/,
+  /CurrentUser\s*\.\s*UserFilter\w*\s*\(\s*scope\s*(?:,\s*"[A-Za-z_]+\.project_id"\s*(?:,\s*"[A-Za-z_\.]+"\s*)?)?\)\s*$/,
   /string\s*\.\s*Join\s*\(\s*"[^"]*"\s*,\s*conditions\s*\)\s*$/,
 ]
 
@@ -223,7 +235,7 @@ function checkSqlRules(file, content, scanned) {
       while (k < content.length && /\s/.test(content[k])) k++
       const next = content.substr(k, 2)
       const isStringNext = content[k] === '"' || next === '$"' || next === '@"' || content.substr(k, 3) === '$@"' || content.substr(k, 3) === '@$"'
-      const after = content.slice(k, k + 80)
+      const after = content.slice(k, k + 240) // M-FIX1 F4: 窗口 80→240（表限定 UserFilter 调用 82 字符被截断漏配）
       if (!isStringNext && !ALLOWED_CONCAT_AFTER.some(re => re.test(after))) {
         console.log(`  HARD FAIL  ${rel(file)}:${lineNo}: SQL 字符串使用 + 拼接变量，必须改用 Dapper @参数`)
         violations++
@@ -564,6 +576,51 @@ if (WRITE_BASELINE) {
   }
   if (violations === b3Violations) console.log('  OK  无新增端点 dynamic 参数')
 }
+
+// ═══════════════════════════════════════════════════════════
+// 规则 B7（M-FIX1 F4）：UserFilterWithAuthorizedProjects 限定列门禁
+//   - 禁止单参调用（projectCol 必填，默认值已删除）
+//   - 禁止第二个实参是不含 '.' 的字符串字面量（裸列 → EXISTS 自比较恒真越权）
+// 边界（G34）：只遍历 EngineeringManager.Api/（csFiles 已是该目录），
+// 测试目录不在扫描范围——测试代码中的单参/裸列调用需人工保证。
+// ═══════════════════════════════════════════════════════════
+console.log('\n═══ 后端红线 B7：UserFilterWithAuthorizedProjects 限定列 ═══')
+const b7Violations = violations
+const b7Re = /UserFilterWithAuthorizedProjects\s*\(/g
+for (const file of csFiles) {
+  const content = fs.readFileSync(file, 'utf-8')
+  b7Re.lastIndex = 0
+  let m
+  while ((m = b7Re.exec(content))) {
+    // 跳过方法定义本身
+    const lineStart = content.lastIndexOf('\n', m.index) + 1
+    if (/public\s+static\s+string\s+$/.test(content.slice(lineStart, m.index))) continue
+    // 括号配对切出实参
+    let i = m.index + m[0].length
+    let depth = 1, inStr = null
+    const argStart = i
+    while (i < content.length && depth > 0) {
+      const c = content[i]
+      if (inStr) { if (c === '\\') { i += 2; continue } if (c === inStr) inStr = null }
+      else if (c === '"' || c === "'") inStr = c
+      else if (c === '(') depth++
+      else if (c === ')') depth--
+      i++
+    }
+    const args = content.slice(argStart, i - 1).split(',').map(a => a.trim())
+    if (args.length < 2) {
+      console.log(`  HARD FAIL  ${rel(file)}:${lineOf(content, m.index)}: B7 单参调用（projectCol 必填，禁止用默认裸列）：${content.slice(argStart, i - 1).slice(0, 60)}`)
+      violations++
+      continue
+    }
+    const lit = /^"([^"]*)"$/.exec(args[1])
+    if (lit && !lit[1].includes('.')) {
+      console.log(`  HARD FAIL  ${rel(file)}:${lineOf(content, m.index)}: B7 第二实参为裸列 "${lit[1]}"（须表限定如 income_contracts.project_id，否则 EXISTS 自比较恒真越权）`)
+      violations++
+    }
+  }
+}
+if (violations === b7Violations) console.log('  OK  全部调用点均为表限定列（B7）')
 
 // ═══════════════════════════════════════════════════════════
 // 汇总
