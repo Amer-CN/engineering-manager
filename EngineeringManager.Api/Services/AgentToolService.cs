@@ -146,7 +146,7 @@ public class AgentToolService
     private static Task<object> ExecuteGetDashboardStats(IDbConnection db, string uid, CurrentUser.DataScope scope)
     {
         var companyFilter = CurrentUser.UserFilterCompany(scope, "created_by");
-        var projectFilter = CurrentUser.UserFilterWithAuthorizedProjects(scope, "project_id", "created_by");
+        var projectFilter = CurrentUser.UserFilterWithAuthorizedProjects(scope, "invoices.project_id", "created_by");
         var p = new { Uid = uid, IsAdmin = 0 };
 
         var projectsCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM projects WHERE {companyFilter}", p);
@@ -367,7 +367,7 @@ public class AgentToolService
     private static Task<object> ExecuteGetCostSummary(IDbConnection db, JsonElement args, string uid, CurrentUser.DataScope scope)
     {
         var projectId = GetOptionalIntArg(args, "projectId");
-        var filter = CurrentUser.UserFilterWithAuthorizedProjects(scope, "project_id", "created_by");
+        var filter = CurrentUser.UserFilterWithAuthorizedProjects(scope, "invoices.project_id", "created_by");
         var projectFilter = projectId.HasValue
             ? $"{filter} AND project_id = @ProjectId"
             : filter;
