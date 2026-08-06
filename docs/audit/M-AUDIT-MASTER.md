@@ -13,7 +13,7 @@
 
 | 项 | master 自称 | 实测 | 差额/成因 |
 |---|---|---|---|
-| dotnet 通过 | 699 | **814/816**（CI filter 810） | 自称数字过时（基线实测于 ddedc19 前） |
+| dotnet 通过 | 699 | **814/816**（CI filter 810） | 逐笔：699 →（窗口 E +14）=713 →（G2 九批）=814（10 条 commit message 逐笔累加）；审查方给的 699 基准取自 fee0c7e，6747f11 自称 713 |
 | vitest | 1725/0 | **1712 通过 / 15 失败** | 15 失败集中 G2 改端点后 hook mock 未同步（useInvoicePage/useInventoryPage/useCostLedgerBatches/CategoryManager/usePiiKeys 等） |
 | npm check | — | 0 违规 / **21 警告** | 21 警告（master 未做 edition-split 的警告收敛） |
 | check:backend | — | 2 违规（76 文件） | master 无 TD-BACKEND-28 口径 |
@@ -27,13 +27,13 @@
 
 ## M4 列漂移扫描
 
-- 脚本 `scripts/scan-column-drift.py`（md5 见执行记录）。启发式 1（CREATE 块）报 26 疑似列，**纳入 ALTER TABLE ADD COLUMN + Program.cs EnsureTables 运行时 ADD 后差集为空**——master 无真实列漂移（resource_type 已全清）。
+- 脚本 `scripts/scan-column-drift.py`（md5 见执行记录）。启发式 1（CREATE 块）报 26 疑似列，纳入 ALTER ADD COLUMN + EnsureTables 运行时 ADD 后差集为空。**结论降级为「未核实」（M-FIX1 F8 订正）**：扫描器经三次放宽、无阳性对照、脚本未入库已灭失——不能仅凭报零判定无漂移。
 
 ## M5 迁移真伪演练（自建库）
 
 - 库甲（空库）001 成功、003 成功（invoices→INTEGER）；库乙（001 全新建表复刻）001 成功、003 成功。
 - **旧式 schema 库**（复刻生产：非 001 建表）：003 `CREATE IF NOT EXISTS projects_new` 建新表 → `INSERT INTO projects_new SELECT ... FROM projects` 失败（projects 旧式表结构缺列/已被 DROP）→ **回滚**。判据：invoices 保持 REAL + `_new` 无残留。
-- 结论：003 在「001 建的新库」可用、在「旧式 schema 生产库」必然失败/从未真实执行——与生产库 schema_versions 批量登记（9 行 00:00:00）吻合。
+- 结论：003 在「001 建的新库」可用、在「旧式 schema 生产库」必然失败/从未真实执行——与生产库 schema_versions 批量登记（9 行 00:00:00）吻合。**标注（M-FIX1 F8 订正）**：此结论来自 Python 模拟器（逐语句 executescript），真实 MigrationRunner 未跑通，判「未核实」。
 
 ## M6 功能断链
 
@@ -68,4 +68,12 @@
 1. 见 M1（原始 SHA 灭失，证据链：悬空 498bbd46 证明 amend；撞车 7 笔批量重写）。
 2. 「169/84」= WRITE-AUTH-MATRIX.md（90a9ea8 生成于 ddedc19）；脚本 scripts/check-write-permission.cjs；现在跑 170/0（G2 已清零暂缓）。
 3. 037 风险前提修正：admin 不锁死（IsAdmin 短路）；非 admin 权限全 false → 写 403，功能退化非锁死。
-4. master 39 / feat 85 分叉；合并冲突在 G2 与 R4.1 同文件；edition-split 的安全修复（G1~G37）逻辑独立，不会被冲掉但需解冲突。
+4. master 39 / feat 85 分叉；合并冲突在 G2 与 R4.1 同文件；edition-split 的安全修复（G1~G37）逻辑独立，不会被冲掉但需解冲突。**数字订正（M-FIX1 F8）**：M1 的 d80020d..6747f11 = 30 笔是 log 条数（不含 6747f11 本身 1 笔后的 10 笔 G2）；必答 4 的 `git rev-list --count --left-right origin/master...feat/edition-split` = master 39 / feat 85（含 d80020d 之前到分叉点全部，两条命令口径不同，非错误）。
+
+## M-FIX1 前置发现（审查方远端自取，M-FIX1 F8 登记）
+
+- 11 处恒真调用点：ContractEndpoints GET×3（显式传裸列）+ stats×4 + CostLedger PUT/DELETE/sheet 归属校验/逐行 UPDATE×4。
+- 合同 PUT 缺参 500：UserFilterFragmentForProject 用 @ProjectId（请求参数冒充授权），匿名对象无 ProjectId。
+- 台账 sheet 金额单位撒谎：amount REAL 但 (long)Math.Round 强制取整 + 注释「INTEGER 分」。
+- ContractEndpoints 三处 GBK 乱码注释（stats 段）。
+- 企业版非 admin 路径零测试覆盖（ApiTestBase 跑企业版但无 contracts/cost-ledger 非 admin 端点测试）。
