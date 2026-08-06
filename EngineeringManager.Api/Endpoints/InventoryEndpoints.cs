@@ -30,6 +30,8 @@ public static class InventoryEndpoints
         app.MapPost("/api/inventory", async (HttpContext ctx, InventoryItemDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B8: 物料项写操作 → inventory:create
+            if (!CurrentUser.HasPermission(ctx, db, "inventory:create")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             // 修复: 列名对齐前端契约(InventoryItem type)与真库 —— code/specifications/purchase_price/sale_price/current_stock/min_stock/max_stock/supplier_id/remarks
             // (原 quantity/min_quantity/location/notes 是从未与前端匹配的死 schema)
@@ -42,6 +44,8 @@ public static class InventoryEndpoints
         app.MapPut("/api/inventory", async (HttpContext ctx, InventoryItemDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B8: 物料项写操作 → inventory:update
+            if (!CurrentUser.HasPermission(ctx, db, "inventory:update")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             var affected = await db.ExecuteAsync(@"UPDATE inventory_items SET code=@Code,name=@Name,category=@Category,
@@ -91,6 +95,8 @@ public static class InventoryEndpoints
         app.MapPost("/api/materials", async (HttpContext ctx, MaterialDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B8: 材料写操作 → inventory:create
+            if (!CurrentUser.HasPermission(ctx, db, "inventory:create")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             // 修复: 列名对齐前端契约(Material type)与真库 —— project_id/quantity/price (原 specifications/supplier/notes 是死 schema; 真库 materials 无 updated_at)
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO materials (project_id,name,category,unit,quantity,price,created_by,created_at, last_modified_at) VALUES (@ProjectId,@Name,@Category,@Unit,@Quantity,@Price,@CreatedBy,@Now, @Now);
@@ -102,6 +108,8 @@ public static class InventoryEndpoints
         app.MapPut("/api/materials", async (HttpContext ctx, MaterialDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B8: 材料写操作 → inventory:update
+            if (!CurrentUser.HasPermission(ctx, db, "inventory:update")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             var affected = await db.ExecuteAsync(@"UPDATE materials SET project_id=@ProjectId,name=@Name,category=@Category,
