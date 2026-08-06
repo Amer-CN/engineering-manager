@@ -19,9 +19,29 @@ namespace EngineeringManager.Tests.Endpoints;
 /// H-4 flaky 根治：与 M4ThirdRoundTests 共用串行集合（同写 uploads/stt/1
 /// 目录，.uploading 临时文件跨测试竞态）。
 /// </summary>
-[Collection("M4 Stt Upload Serialized")]
-public class M4SttUploadAndIngestTests : ApiTestBase
+[Collection("G2 Env-Isolated WritePermission Tests")]
+public class M4SttUploadAndIngestTests : ApiTestBase, IDisposable
 {
+    // H-4 flaky 根治：每实例独立数据路径（同 M4ThirdRoundTests），隔离真实
+    // API 服务（并发会话 5048 进程）与 G2 集合的 env var 切换竞态。
+    private readonly string _isolatedDataPath;
+    private readonly string? _oldDataPath;
+
+    public M4SttUploadAndIngestTests()
+    {
+        _isolatedDataPath = Path.Combine(Path.GetTempPath(), $"m4-stt-data-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_isolatedDataPath);
+        _oldDataPath = Environment.GetEnvironmentVariable("ENGINEERING_MANAGER_DATA_PATH");
+        Environment.SetEnvironmentVariable("ENGINEERING_MANAGER_DATA_PATH", _isolatedDataPath);
+    }
+
+    void IDisposable.Dispose()
+    {
+        Environment.SetEnvironmentVariable("ENGINEERING_MANAGER_DATA_PATH", _oldDataPath);
+        try { if (Directory.Exists(_isolatedDataPath)) Directory.Delete(_isolatedDataPath, true); } catch { }
+        base.Dispose();
+    }
+
     private static string ExtractTokenFromJson(string json)
     {
         var marker = "\"token\":\"";
@@ -180,9 +200,9 @@ public class M4SttUploadAndIngestTests : ApiTestBase
         using var doc = JsonDocument.Parse(body);
         var filePath = doc.RootElement.GetProperty("data").GetProperty("filePath").GetString();
 
-        // 验证文件实际写入磁盘
-        var dataPath = ApiConfig.ResolveDataPath();
-        var fullPath = Path.Combine(dataPath, "uploads", filePath!);
+        // 验证文件实际写入磁盘（H-4：用实例固定 _isolatedDataPath，避免并行集合
+        // 覆盖进程 env var 导致目录错位）
+        var fullPath = Path.Combine(_isolatedDataPath, "uploads", filePath!);
         Assert.True(File.Exists(fullPath), $"文件应存在于 {fullPath}");
 
         // 验证文件内容
