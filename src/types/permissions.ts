@@ -109,7 +109,7 @@ export const SYSTEM_ROLES: Role[] = [
       'roles:read', 'roles:update',
       'audit_logs:read', 'audit_logs:export',
       'reports:create', 'reports:read',
-      'labor:read', 'safeQuery:read', 'knowledge:read', 'voice:read',
+      'labor:read', 'safeQuery:read', 'knowledge:read', 'knowledge:create', 'knowledge:update', 'knowledge:delete', 'voice:read',
     ],
   },
   {
@@ -132,7 +132,7 @@ export const SYSTEM_ROLES: Role[] = [
       'settings:read', 'users:read', 'roles:read', 'audit_logs:read',
       'drawings:create', 'drawings:read', 'drawings:update',
       'reports:create', 'reports:read',
-      'labor:read', 'safeQuery:read', 'knowledge:read', 'voice:read',
+      'labor:read', 'safeQuery:read', 'knowledge:read', 'knowledge:create', 'knowledge:update', 'knowledge:delete', 'voice:read',
     ],
   },
   {
