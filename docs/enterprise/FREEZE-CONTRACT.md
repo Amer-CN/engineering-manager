@@ -202,4 +202,8 @@
 - **G29 AggregateKpiAsync 的 catch 静默吞异常（只登记不修）**：ReportGenerationService.cs:214-217 `catch (Exception ex) { Console.Error.WriteLine(...) }`——异常被吞 → KPI 返回全 0（宿主无人看 Console.Error）+ ex.Message 未经 Sanitize 直接入日志文本。与 G26/长队列「AggregateKpiAsync 返回全 0」同源。根治方向：聚合失败返回结构化错误并回传前端（Sanitize 后）。登记不修。
 - **G30 尾子句定位器括号内关键字（R8.14.3 结论：不成立，审查方撤回条件满足）**：三条 PoC 实测——① `WHERE id IN (SELECT 1 ORDER BY 1) OR 1 = 1`：子查询 → 7.6 深度拒绝（fail-closed，错误文案 NRE 但无泄漏）；② `WHERE name LIKE '%ORDER BY%' OR 1 = 1`：MaskSqlLiterals 掩码 → 定位器不命中 → OR 在括号内（返回 {100,200}）；③ `WHERE id = 1 /* GROUP BY */ OR 1 = 1`：注释被 SQLite 忽略、注入括号保持完整（返回 {100,200}）。三条均无 300 泄漏 → G30 不成立；三条已作为正向对照测试提交（R8G30PoCTests）。
 - **G31 UserFilterCompany 命名撒谎（只登记不修，R9 一并重命名）**：函数名 Company（公司级）但函数体是 `created_by = @Uid`（个人级，CurrentUser.cs:69），比 UserFilterWithAuthorizedProjects 还严；每个读代码的人都会被误导。R9 重命名（如 UserFilterOwnOnly）。登记不修。
+- **G32 无表子查询 NRE（R8.15.2 已修，实证指针）**：`SELECT id IN (SELECT 1 ORDER BY 1)` → `subSelect.From == null` → CollectTables:380 foreach NRE，被外层 catch 兜成「校验异常: Object reference...」回传前端。修复 = ValidateDerivedQuery 入口显式 fail-closed（固定文案「无表子查询暂不支持：子查询必须引用白名单内的表（R8.15.2 fail-closed）。」）。堆栈 5 帧 + 外层 catch 原文见 R8.15 报告必答。测试：3 条零表探针 Theory + 直接调用层测试 + PoC-1 设计性拒绝断言。
+- **G33 G30 结论订正**：原「G30 不成立」表述撤回；精确结论为「当前不可达依赖 7.6 深度 fail-closed，非定位器自身健壮；7.6 放宽即需重测」。PoC-1 由「没泄漏」改为「设计性拒绝」断言（R8.15.1），三条 PoC 保留为正向对照。
+- **G34 门禁不扫 EngineeringManager.Tests/（只登记不修）**：静态扫描（check-backend-rules.cjs）csFiles 仅遍历 EngineeringManager.Api/，测试代码可写空 catch 与恒真断言（R8.15.1(a) 恒真实证即为测试代码）。R9 或专轮评估是否把静态扫描扩到测试目录。登记不修。
+- **003 迁移记录脱节（红线级，指向 M-AUDIT M5）**：生产库 schema_versions 记录 003 已执行（2026-06-12），但物理表结构从未转换（7 表金额列仍 REAL；invoices 为旧式自定义 schema；salary_history 仍 REAL；无 _new 残留表）。机制判定见 R8.15 报告必答（R8.15.5）；修复归 M-AUDIT 之后统一处理，本轮只回答不修复。
 

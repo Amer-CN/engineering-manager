@@ -56,7 +56,7 @@ npx vite build                                   # dist/ 会被 dotnet build/run
 2. 不得绕过权限检查：前端敏感操作必须用 `usePermission` hook；后端 `/api/*` 默认经 `GlobalAuthMiddleware` 强制鉴权
 3. 不得在组件中直接操作 localStorage，使用 `AuthContext`
 4. SQL 必须参数化（Dapper @Param），表名 `[]` 包裹，严禁字符串拼接
-5. 金额字段一律 `INTEGER`（分），禁止浮点
+5. 金额字段：当前事实为 7 张金额表（invoices/wages/settlements/income_contracts/payment_records/cost_ledger/project_workers）金额列均为 `REAL`、单位为元，C# DTO 为 `double?`，全链路无 ×100 换算（R8.13(b)/R8.14.2 实证）。`003_MoneyRealToInteger.sql` 在 `schema_versions` 中记为已执行，但物理表结构从未转换（R8.14.2 实证）。**【禁止】**任何人不得让 003 生效、不得新写把金额转为 INTEGER 分的迁移，除非同时改造 C# 全部写读路径并提供换算回归测试——违反将导致所有金额变为百分之一。原「金额必须 INTEGER（分）」表述作废，记为历史决策与现实不符（R8.15.4 拆弹）
 6. 组件硬性约束（违反 build 检查失败）：`<PageContainer>` / `<Button>` / `<Card>`、slate-* 不用 gray-*、text-caption/micro 不用任意值字号
 7. 新页面开发 Checklist（8 条）与新增表/字段 Checklist（5 条）→ [docs/CONVENTIONS.md](docs/CONVENTIONS.md)，写页面/建表前逐条确认
 
