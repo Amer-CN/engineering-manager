@@ -75,6 +75,8 @@ public static class ContractEndpoints
         app.MapPost("/api/contracts/income", async (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B3: 合同写操作 → contracts:create
+            if (!CurrentUser.HasPermission(ctx, db, "contracts:create")) return Results.Forbid();
             // v1.1.0 修复: 改用 HttpRequest 读 body (原 dynamic dto 不被 dapper 自动绑定, INSERT 必失败)
             using var reader = new System.IO.StreamReader(ctx.Request.Body);
             var bodyText = await reader.ReadToEndAsync();
@@ -119,6 +121,8 @@ public static class ContractEndpoints
         app.MapPost("/api/contracts/expense", async (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B3: 合同写操作 → contracts:create
+            if (!CurrentUser.HasPermission(ctx, db, "contracts:create")) return Results.Forbid();
             using var reader = new System.IO.StreamReader(ctx.Request.Body);
             var bodyText = await reader.ReadToEndAsync();
             var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(bodyText);
@@ -162,6 +166,8 @@ public static class ContractEndpoints
         app.MapPost("/api/contracts/agreement", async (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B3: 合同写操作 → contracts:create
+            if (!CurrentUser.HasPermission(ctx, db, "contracts:create")) return Results.Forbid();
             using var reader = new System.IO.StreamReader(ctx.Request.Body);
             var bodyText = await reader.ReadToEndAsync();
             var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(bodyText);
@@ -338,6 +344,8 @@ public static class ContractEndpoints
         app.MapPost("/api/contract-templates", async (HttpContext ctx, ContractTemplateDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B3: 合同模板（属合同模块）→ contracts:update
+            if (!CurrentUser.HasPermission(ctx, db, "contracts:update")) return Results.Forbid();
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO contract_templates (name,type,content,variables,created_by,created_at,updated_at, last_modified_at) VALUES (@Name,@Type,@Content,@Variables,@CreatedBy,@Now,@Now, @Now); SELECT last_insert_rowid();",
                 new { dto.Name, Type = dto.Type ?? "other", dto.Content, dto.Variables, CreatedBy = uid, Now = now() });
             return Common.Ok(id);
@@ -346,6 +354,8 @@ public static class ContractEndpoints
         app.MapPut("/api/contract-templates", async (HttpContext ctx, ContractTemplateDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B3: 合同模板 → contracts:update
+            if (!CurrentUser.HasPermission(ctx, db, "contracts:update")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             // 修复: 原 dynamic dto + 参数只传 Now 导致 @Name/@Id 等全部缺参必 500; 并对齐 DELETE 的 user-dim 越权保护
             var affected = await db.ExecuteAsync(@"UPDATE contract_templates SET name=@Name,type=@Type,content=@Content,variables=@Variables,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
@@ -356,6 +366,8 @@ public static class ContractEndpoints
         app.MapDelete("/api/contract-templates/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B3: 合同模板 → contracts:update
+            if (!CurrentUser.HasPermission(ctx, db, "contracts:update")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             return await Common.WriteResult(await db.ExecuteAsync("DELETE FROM contract_templates WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Uid = uid, IsAdmin = isAdmin }), db, "contract_templates", id);
@@ -382,6 +394,8 @@ public static class ContractEndpoints
         app.MapPost("/api/settlements", async (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B3: 结算单写操作 → settlement:create
+            if (!CurrentUser.HasPermission(ctx, db, "settlement:create")) return Results.Forbid();
             // 修复: 原 dynamic dto + 参数只传 CreatedBy/Now 导致 8 个占位符全缺参必 500; 且 INSERT 引用了真库不存在的 settler_id 列
             using var reader = new System.IO.StreamReader(ctx.Request.Body);
             var bodyText = await reader.ReadToEndAsync();
@@ -426,6 +440,8 @@ public static class ContractEndpoints
         app.MapPut("/api/settlements", async (HttpContext ctx, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B3: 结算单写操作 → settlement:update
+            if (!CurrentUser.HasPermission(ctx, db, "settlement:update")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             // 修复: 原 dynamic dto + 参数只传 Now 导致缺参必 500; 并补 user-dim 越权保护(对齐 DELETE)
             using var reader = new System.IO.StreamReader(ctx.Request.Body);
@@ -490,6 +506,8 @@ public static class ContractEndpoints
         app.MapPut("/api/settlements/{id}/unarchive", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B3: 结算单取消归档 → settlement:update
+            if (!CurrentUser.HasPermission(ctx, db, "settlement:update")) return Results.Forbid();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             // 补 user-dim 越权保护(对齐 DELETE)
             var affected = await db.ExecuteAsync(@"UPDATE settlements SET status='pending',updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND deleted_at IS NULL AND (created_by=@Uid OR @IsAdmin=1)",

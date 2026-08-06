@@ -12,6 +12,7 @@ import { useConfirm } from '@/hooks/useConfirm'
 import { Spinner } from './ui/Loading/Loading'
 import { ContractTemplateFormModal, templateTypeConfig } from './ContractTemplateFormModal'
 import { getAPI } from '@/services/api-adapter'
+import { usePermission } from '@/hooks/usePermission'
 import { printContractTemplate } from '../utils/printContractTemplate'
 import { Button } from './ui/Button'
 
@@ -23,6 +24,7 @@ interface ContractTemplatesProps {
 const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }) => {
   const showToast = useToastStore(state => state.showToast)
   const { confirm, ConfirmDialog } = useConfirm()
+  const { can } = usePermission()
   const [templates, setTemplates] = useState<ContractTemplate[]>([])
 
   const [loading, setLoading] = useState(true)
@@ -58,6 +60,11 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
 
   const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault()
+  // G2 B3: 合同模板写操作 → contracts:update
+  if (!can('contracts:update')) {
+  showToast('您没有管理合同模板的权限', 'error')
+  return
+  }
   try {
   const data = {
   ...formData,
@@ -81,6 +88,11 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
   }
 
   const handleEdit = (template: ContractTemplate) => {
+  // G2 B3: 合同模板编辑 → contracts:update
+  if (!can('contracts:update')) {
+  showToast('您没有管理合同模板的权限', 'error')
+  return
+  }
   setEditingTemplate(template)
   setFormData({
   name: template.name,
@@ -92,6 +104,11 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
   }
 
   const handleDelete = async (id: number) => {
+  // G2 B3: 合同模板删除 → contracts:update
+  if (!can('contracts:update')) {
+  showToast('您没有管理合同模板的权限', 'error')
+  return
+  }
   const ok = await confirm({ title: '确认删除', content: '确定要删除这个模板吗？', confirmVariant: 'danger' })
   if (ok) {
   try {
