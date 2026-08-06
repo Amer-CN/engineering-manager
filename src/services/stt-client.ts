@@ -92,6 +92,7 @@ export interface SttIngestPayload {
   segments?: SttSegment[]
   title?: string
   projectId?: number
+  folderId?: number | null
   occurredAt?: string
 }
 
