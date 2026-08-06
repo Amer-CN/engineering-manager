@@ -250,6 +250,12 @@ Bedrock 默认是平的（Flat-By-Default）。但少数屏幕的任务本质是
 
 **The Glass Whitelist（决策 3）.** `backdrop-filter` 只允许出现在六类浮层：**CommandPalette**、**Modal / Dialog**、**Toast**、**Popover / 下拉**、**顶部浮动 ActivityBar**、**Sidebar 飞出层**；外加经 Stage-Surface 授权的舞台区（FolderStack3D 聚焦卡与其 KPI 浮层）。明确禁止：**DataTable 行**、**Dashboard KPI 卡**、**StatusBar**、**TitleBar**、**输入框**。非聚焦卡一律用「伪砂面」（半透渐变 + 1px 内高光描边），不开 `backdrop-filter`，否则帧率必塌。
 
+**GlassCarousel 舞台区授权（2026-08-06 决策 · 知识库首页 3D 玻璃文件夹轮播）.** `features/knowledge/glass/` 为第二个 Stage-Surface 授权区，视觉蓝本 = AI Studio 参考项目（3D Glass Folder Carousel）：
+- **旧约束作废**：FolderStack3D Phase 2 的「紧密堆叠 / 禁止选中放大抽出 / 禁止 Cover Flow 展开 / 禁止 z-index 遮挡」等约束全部作废（旧设计失败后的过度矫正，见 docs/handoff/HANDOFF-knowledge-3d-carousel.md §〇）。选中卡允许 scale 1.03、上浮 36px、纸张扇形展开、emerald 玻璃前袋、z-index 排遮挡。
+- **颜色内聚**：舞台区内 emerald 系只经 `glassCarousel.css` 的 `--gc-*` 变量（或舞台容器内联 token）使用，不散落组件任意值；舞台外一切普通 UI（弹窗 / 按钮 / 表单）走 primary + slate，禁止 emerald 泄露出舞台。
+- **玻璃授权**：前袋、悬浮信息卡、控制按钮属本授权区（不受 Glass Whitelist 常驻元素禁令约束，舞台区内可开 backdrop-blur）。
+- **验收门与 FolderStack3D 一致**：≥55fps；低帧降级（关玻璃模糊 + 缩渲染窗口）；`prefers-reduced-motion` 降为横向扁平轨道；首尾释放滚动权，严禁 scroll trapping；每帧直写 style，聚焦索引变化才 setState 一次。
+
 ## Shapes
 
 形状语言由统一的圆角标尺与发丝级边界构成，见 frontmatter `rounded`：sm 9px（按钮 / chip / 导航项）、md 10px、lg 16px（卡片 / 容器）、xl 22px（对话输入等大圆角胶囊）。

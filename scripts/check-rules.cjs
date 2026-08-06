@@ -420,9 +420,11 @@ const GLASS_3D_ALLOWED_FILES = new Set([
   'src/components/Sidebar.tsx',
 ])
 
-// Stage-Surface 授权舞台区（目录前缀，下一轮 FolderStack3D 落地）
+// Stage-Surface 授权舞台区（目录前缀）：FolderStack3D（试点）+ GlassCarousel
+// （知识库首页 3D 玻璃文件夹轮播，DESIGN.md § Stage Surfaces 增补条目 2026-08-06）
 function isStageSurface(relPath) {
   return relPath.startsWith('src/components/ui/FolderStack3D/')
+    || relPath.startsWith('src/components/features/knowledge/glass/')
 }
 
 console.log('\n═══ 铁律：玻璃 / 3D 白名单（决策 3 + Stage-Surface） ═══')
