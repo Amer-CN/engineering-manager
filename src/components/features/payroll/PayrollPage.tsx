@@ -91,8 +91,13 @@ export default function PayrollPage({ mode }: PayrollPageProps) {
           const record = { memberId: s.id, projectId: null as unknown as number, yearMonth: ym, baseSalary, subsidy, attendanceDays: summary.workDays, bonus: 0, deduction: 0, netSalary }
           const existing = data.wages.find((w) => w.memberId === s.id && w.yearMonth === ym)
           const api = await getAPI()
-          if (existing) await api.updateWage(existing.id, record)
-          else await api.createWage(record)
+          // H-2（G2 矩阵 §4-C + D-9 落地）：updateWage/createWage 均只收一个
+          // WageRecord；netSalary 是前端展示字段，WageDto 只绑定 actualWage——
+          // 2 参数签名会丢 id、netSalary 不落库导致 PUT/POST 400。
+          // 合并既有行（保留 dailyWage/workDays/actualWage 等工资列）+ 本次重算值。
+          const payload = { ...record, actualWage: netSalary }
+          if (existing) await api.updateWage({ ...existing, ...payload, id: existing.id })
+          else await api.createWage(payload)
           ok2++
         } catch { fail++ }
       }
