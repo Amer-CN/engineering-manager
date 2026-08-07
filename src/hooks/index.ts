@@ -34,10 +34,8 @@ export type { UseFileUploadOptions, UseFileUploadReturn, UploadedFile } from './
 
 export { useProjects } from './useProjects'
 export { useMembers } from './useMembers'
-export { useWorkerTeams, useWorkerTransfers } from './useWorkerTeams'
-export { usePartners } from './usePartners'
-export { useRegions, useSupervisors } from './useRegionsAndSupervisors'
-export { useInvoices, usePaymentRecords } from './useInvoices'
+// J-3: 死链清理 —— useWorkerTeams/usePartners/useRegions/useSupervisors/
+// useInvoices/usePaymentRecords 零活调用方（barrel 亦零消费者），文件已删
 export { useInvoicePage } from './useInvoicePage'
 export { useInventoryPage } from './useInventoryPage'
 export { useDataPath } from './useDataPath'
