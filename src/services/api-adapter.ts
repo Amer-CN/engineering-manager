@@ -44,7 +44,8 @@ export async function getAPI() {
     const api = window.electronAPI as any;
     // D-9-4/D-10-2/R-E1: 外部 preload 不在本仓，以下方法若未实现则显式报错
     //（避免裸 TypeError；preload 同步后自动走真实实现）
-    const notImplemented = ['batchSavePayments', 'batchUnarchiveWages', 'generateProjectWages']
+    // M-FIX8 T4(b): K-1 删 batchUnarchiveWages（三层）时漏删此处守卫数组条目（全仓唯一残留），已移除
+    const notImplemented = ['batchSavePayments', 'generateProjectWages']
     const missing = notImplemented.filter((m) => typeof api?.[m] !== 'function')
     if (missing.length > 0) {
       return new Proxy(api, {
