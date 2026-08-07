@@ -26,12 +26,13 @@
 ## 测试基座对齐说明
 ApiTestBase.SeedTestData 用 `INSERT OR REPLACE` + `GetDefaultPermissions` JSON 覆盖 roles 三行
 （manager name 改「经理」对齐映射）——这是生产【应有】状态，非当前生产库现状。
-生产修复见 R9（下方 039 草案）。
+生产修复见 R9（下方 042 草案）。
+> **改号说明（M-FIX7 U3）**：原 039 号已被 M 窗口 PR #9 占用（039_AddKnowledgeFolders.sql），R9 roles 归一迁移改为 042。
 
-## R9 迁移 039 草案（M-FIX4 Z6，只写文档不执行）
+## R9 迁移 042 草案（M-FIX4 Z6 起草，M-FIX7 U3 改号）
 
 ### 方案 A：迁移转 JSON + name 归一
-- **动作**：039 迁移把 manager/worker 的 permissions 逗号串转 JSON 数组 + 把 manager 的 name 从「项目经理」改为「经理」（对齐 HasPermission/ResolveRole 映射）；accountant 已由 038 修好。
+- **动作**：042 迁移把 manager/worker 的 permissions 逗号串转 JSON 数组 + 把 manager 的 name 从「项目经理」改为「经理」（对齐 HasPermission/ResolveRole 映射）；accountant 已由 038 修好。
 - **SQL 草案**：
   ```sql
   -- 1) permissions 逗号串转 JSON 数组
