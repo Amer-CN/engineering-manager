@@ -43,6 +43,24 @@ public class MFix2RedTests : ApiTestBase
         conn.Execute("INSERT INTO cost_ledger_batches (id, project_id, name, created_by, created_at, last_modified_at) VALUES (10, 1, 'B1', '1', @Now, @Now)", new { Now = now });
         conn.Execute(@"INSERT INTO cost_ledger (id, project_id, batch_id, voucher_no, date, direction, category, amount, summary, created_by, created_at, updated_at)
             VALUES (1, 1, 10, 'V1', '2026-08-06', 'out', '测试', 100, 'F2', '1', @Now, @Now)", new { Now = now });
+        // Z2(a): P1 授权数据（invoices/settlements 各一行）
+        // Z2(c): P1 expense 行（direction='expense'，供 getCostSummary 的 expense 统计）
+        conn.Execute(@"INSERT INTO cost_ledger (id, project_id, batch_id, voucher_no, date, direction, category, amount, summary, created_by, created_at, updated_at)
+            VALUES (3, 1, 10, 'V3', '2026-08-06', 'expense', '测试', 100, 'P1-expense', '1', @Now, @Now)", new { Now = now });
+        conn.Execute(@"INSERT INTO invoices (id, project_id, name, amount, status, created_by, created_at, updated_at)
+            VALUES (1, 1, 'inv-P1', 1000, 'pending', '1', @Now, @Now)", new { Now = now });
+        conn.Execute(@"INSERT INTO settlements (id, project_id, name, amount, status, created_by, created_at, updated_at)
+            VALUES (1, 1, 'sett-P1', 1000, 'pending', '1', @Now, @Now)", new { Now = now });
+        // Z2(a): P2 越权行（created_by='other'，不该被 manager 看到）——覆盖 getDashboardStats 查的每张表
+        conn.Execute("INSERT INTO cost_ledger_batches (id, project_id, name, created_by, created_at, last_modified_at) VALUES (11, 2, 'B2-P2', 'other', @Now, @Now)", new { Now = now });
+        conn.Execute(@"INSERT INTO cost_ledger (id, project_id, batch_id, voucher_no, date, direction, category, amount, summary, created_by, created_at, updated_at)
+            VALUES (2, 2, 11, 'V2', '2026-08-06', 'out', '测试', 200, 'P2-other', 'other', @Now, @Now)", new { Now = now });
+        conn.Execute(@"INSERT INTO cost_ledger (id, project_id, batch_id, voucher_no, date, direction, category, amount, summary, created_by, created_at, updated_at)
+            VALUES (4, 2, 11, 'V4', '2026-08-06', 'expense', '测试', 200, 'P2-expense', 'other', @Now, @Now)", new { Now = now });
+        conn.Execute(@"INSERT INTO invoices (id, project_id, name, amount, status, created_by, created_at, updated_at)
+            VALUES (2, 2, 'inv-P2', 2000, 'pending', 'other', @Now, @Now)", new { Now = now });
+        conn.Execute(@"INSERT INTO settlements (id, project_id, name, amount, status, created_by, created_at, updated_at)
+            VALUES (2, 2, 'sett-P2', 2000, 'pending', 'other', @Now, @Now)", new { Now = now });
         // manager 用户（roles 表需 manager 行有 dashboard:read/costLedger:read）
         var salt = "test-salt-1234567890123456";
         var hash = EngineeringManager.Api.Common.HashPassword("admin123", salt, 2);
@@ -74,9 +92,6 @@ public class MFix2RedTests : ApiTestBase
                 new { Hash = EngineeringManager.Api.Common.HashPassword("admin123", "test-salt-1234567890123456", 2), Salt = "test-salt-1234567890123456", Now = now });
             // 越权行：P2 批次 + P2 cost_ledger（不该被 accountant 看到）
             conn.Execute("INSERT INTO project_authorizations (project_id, user_id) VALUES (1, 'mfix-acc')");
-            conn.Execute("INSERT INTO cost_ledger_batches (id, project_id, name, created_by, created_at, last_modified_at) VALUES (11, 2, 'B2-P2', 'other', @Now, @Now)", new { Now = now });
-            conn.Execute(@"INSERT INTO cost_ledger (id, project_id, batch_id, voucher_no, date, direction, category, amount, summary, created_by, created_at, updated_at)
-                VALUES (2, 2, 11, 'V2', '2026-08-06', 'out', '测试', 200, 'P2-other', 'other', @Now, @Now)", new { Now = now });
         }
         var login = await Client.PostAsJsonAsync("/api/auth/login", new { username = "mfix-acc", password = "admin123" });
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
@@ -114,10 +129,12 @@ public class MFix2RedTests : ApiTestBase
         conn.Open();
         var result = await tools.ExecuteToolAsync("getDashboardStats", JsonDocument.Parse("{}").RootElement, ctx, conn);
         Assert.True(result.Success, "getDashboardStats 不应报 SQL 错误: " + (result.Error ?? ""));
-        // Y4(b) 正反成对：数据含 P1 的 cost_ledger 行，不含 P2 越权行
-        var json = System.Text.Json.Nodes.JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(result.Result))!;
-        // dashboard 返回含 totalExpense（P1 的 100）——断言结构存在且无 SQL 错误
-        Assert.NotNull(json);
+        // Z2(b) 正反成对：P1 数据在（invoices 1 行 + settlements 1 行 + cost_ledger expense 100），P2 越权不在
+        var text = System.Text.Json.JsonSerializer.Serialize(result.Result);
+        // 正向：P1 的 cost_ledger expense 100（方向 out）应统计到 totalExpense
+        Assert.Contains("invoicesCount", text);
+        Assert.DoesNotContain("2000", text); // P2 invoices/settlements 金额 2000 不得出现
+        Assert.DoesNotContain("200", text);  // P2 cost_ledger 金额 200 不得出现（P1 是 100）
     }
 
     [Fact]
@@ -141,7 +158,9 @@ public class MFix2RedTests : ApiTestBase
         // Y4(b) 正反成对：getCostSummary 返回各项目汇总——须含 P1（授权）不含 P2（未授权）
         var data = System.Text.Json.Nodes.JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(result.Result))!;
         var text = data.ToJsonString();
-        Assert.Contains("projectId", text); // 汇总结构含 projectId 字段
-        Assert.DoesNotContain("\"projectId\":2", text); // P2（未授权）不在结果
+        // Z2(c) 偏差：getCostSummary 返回 {totalIncome,totalExpense,netTotal,...} 汇总，无 projectId 字段。
+        // 改断金额：P1 cost_ledger expense=100（方向 out）在、P2 越权 expense=200 不在。
+        Assert.Contains("\"totalExpense\":100", text); // P1 授权 expense 100 在
+        Assert.DoesNotContain("\"totalExpense\":200", text); // P2 越权 expense 200 不在
     }
 }
