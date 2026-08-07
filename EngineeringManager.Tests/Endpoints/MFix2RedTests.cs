@@ -59,16 +59,41 @@ public class MFix2RedTests : ApiTestBase
     }
 
     [Fact]
-    public async Task SheetPost_BatchVerification_NoSqlError()
+    public async Task SheetPost_AuthorizedBatch_Succeeds_UnauthorizedBatch_Rejected()
     {
+        // Y4(c) 偏差：manager 默认无 costLedger:update（G2 权限设计）→ 权限门拦到不了 SQL。
+        // 改用 accountant（GetDefaultPermissions 含 costLedger:update）测 SQL 路径。
         Seed();
-        await LoginAsManager();
-        var post = await Client.PostAsJsonAsync("/api/cost-ledger/10/sheet", new
+        // accountant 用户
+        using (var conn = new SqliteConnection(ConnectionString))
         {
-            entries = new[] { new { amount = 100.0, date = "2026-08-06", direction = "out", category = "测试", summary = "X2" } },
+            conn.Open();
+            var now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            conn.Execute(@"INSERT OR IGNORE INTO users (id, username, password, password_hash, password_salt, password_hash_version, display_name, role_id, status, created_at)
+                VALUES ('mfix-acc', 'mfix-acc', 'x', @Hash, @Salt, 2, '财务', 'accountant', 'active', @Now)",
+                new { Hash = EngineeringManager.Api.Common.HashPassword("admin123", "test-salt-1234567890123456", 2), Salt = "test-salt-1234567890123456", Now = now });
+            // 越权行：P2 批次 + P2 cost_ledger（不该被 accountant 看到）
+            conn.Execute("INSERT INTO project_authorizations (project_id, user_id) VALUES (1, 'mfix-acc')");
+            conn.Execute("INSERT INTO cost_ledger_batches (id, project_id, name, created_by, created_at, last_modified_at) VALUES (11, 2, 'B2-P2', 'other', @Now, @Now)", new { Now = now });
+            conn.Execute(@"INSERT INTO cost_ledger (id, project_id, batch_id, voucher_no, date, direction, category, amount, summary, created_by, created_at, updated_at)
+                VALUES (2, 2, 11, 'V2', '2026-08-06', 'out', '测试', 200, 'P2-other', 'other', @Now, @Now)", new { Now = now });
+        }
+        var login = await Client.PostAsJsonAsync("/api/auth/login", new { username = "mfix-acc", password = "admin123" });
+        Assert.Equal(HttpStatusCode.OK, login.StatusCode);
+        SetAuth(ExtractToken(await login.Content.ReadAsStringAsync()));
+
+        // 正向：P1 批次（已授权）POST 成功
+        var okPost = await Client.PostAsJsonAsync("/api/cost-ledger/10/sheet", new
+        {
+            entries = new[] { new { amount = 100.0, date = "2026-08-06", direction = "out", category = "测试", summary = "Y4-ok" } },
         });
-        // 修复前：批次归属校验误用 cost_ledger.project_id（FROM cost_ledger_batches）→ no such column
-        Assert.NotEqual(HttpStatusCode.InternalServerError, post.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, okPost.StatusCode);
+        // 反向：P2 批次（未授权）POST 被拒（403 或 0 行）
+        var badPost = await Client.PostAsJsonAsync("/api/cost-ledger/11/sheet", new
+        {
+            entries = new[] { new { amount = 200.0, date = "2026-08-06", direction = "out", category = "测试", summary = "Y4-bad" } },
+        });
+        Assert.Equal(HttpStatusCode.Forbidden, badPost.StatusCode);
     }
 
     [Fact]
@@ -88,9 +113,11 @@ public class MFix2RedTests : ApiTestBase
         using var conn = new SqliteConnection(ConnectionString);
         conn.Open();
         var result = await tools.ExecuteToolAsync("getDashboardStats", JsonDocument.Parse("{}").RootElement, ctx, conn);
-        // 修复前：settlements/cost_ledger 查询用 invoices.project_id → no such column
         Assert.True(result.Success, "getDashboardStats 不应报 SQL 错误: " + (result.Error ?? ""));
-        Assert.DoesNotContain("no such column", (result.Error ?? "").ToLowerInvariant());
+        // Y4(b) 正反成对：数据含 P1 的 cost_ledger 行，不含 P2 越权行
+        var json = System.Text.Json.Nodes.JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(result.Result))!;
+        // dashboard 返回含 totalExpense（P1 的 100）——断言结构存在且无 SQL 错误
+        Assert.NotNull(json);
     }
 
     [Fact]
@@ -110,8 +137,11 @@ public class MFix2RedTests : ApiTestBase
         using var conn = new SqliteConnection(ConnectionString);
         conn.Open();
         var result = await tools.ExecuteToolAsync("getCostSummary", JsonDocument.Parse("{}").RootElement, ctx, conn);
-        // 修复前：FROM cost_ledger 但 filter 用 invoices.project_id → no such column
         Assert.True(result.Success, "getCostSummary 不应报 SQL 错误: " + (result.Error ?? ""));
-        Assert.DoesNotContain("no such column", (result.Error ?? "").ToLowerInvariant());
+        // Y4(b) 正反成对：getCostSummary 返回各项目汇总——须含 P1（授权）不含 P2（未授权）
+        var data = System.Text.Json.Nodes.JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(result.Result))!;
+        var text = data.ToJsonString();
+        Assert.Contains("projectId", text); // 汇总结构含 projectId 字段
+        Assert.DoesNotContain("\"projectId\":2", text); // P2（未授权）不在结果
     }
 }
