@@ -365,4 +365,136 @@ public class ReceiptMatchTests : ApiTestBase
 
         Assert.Equal(HttpStatusCode.Forbidden, resp.StatusCode);
     }
+
+    // ── M-FIX8 T4(e)：I 窗口登记的未授权项目确认缺口（R9）──
+    // 反例：accountant（有 wages:update、非 admin）确认「他人（admin）创建的、未授权项目」的工资行。
+    // 修复前：UPDATE 只校验 created_by/admin，无项目授权校验 → 未授权项目的行也 saved（越权）。
+    // 修复后：未授权项目行被拒（skipped），已授权项目行可确认（saved）——双分支对照。
+    [Fact]
+    public async Task Confirm_UnauthorizedProject_OthersRow_Rejected_Authorized_Saved()
+    {
+        // accountant 用户（有 wages:update，非 admin）
+        const string accUid = "acc-unauth-project";
+        using (var conn = new SqliteConnection(ConnectionString))
+        {
+            conn.Open();
+            var salt = "acc-unauth-salt-12345";
+            var hash = EngineeringManager.Api.Common.HashPassword("acc123", salt, 2);
+            conn.Execute(@"INSERT OR IGNORE INTO users (id, username, password, password_hash, password_salt, password_hash_version, display_name, role_id, status, created_at)
+                VALUES (@Id, @Username, @Password, @Hash, @Salt, @Version, @DisplayName, @RoleId, @Status, @Now)",
+                new
+                {
+                    Id = accUid, Username = "acc-unauth", Password = "acc123", Hash = hash, Salt = salt,
+                    Version = 2, DisplayName = "财务", RoleId = "accountant", Status = "active", Now
+                });
+            // accountant 默认集不含 wages:update → 显式给全
+            conn.Execute("UPDATE roles SET permissions=@P WHERE id='accountant'",
+                new { P = "[\"wages:create\",\"wages:read\",\"wages:update\"]" });
+        }
+        SetAuth(await LoginAsync("acc-unauth", "acc123"));
+
+        // 未授权项目 9302（无 project_authorizations 给 acc-unauth）；已授权项目 9303
+        using (var conn = new SqliteConnection(ConnectionString))
+        {
+            conn.Open();
+            conn.Execute("INSERT OR IGNORE INTO projects (id, name, created_by, created_at) VALUES (9302, 'P-unauth', '1', @Now)", new { Now });
+            conn.Execute("INSERT OR IGNORE INTO projects (id, name, created_by, created_at) VALUES (9303, 'P-authz', '1', @Now)", new { Now });
+            conn.Execute("INSERT OR IGNORE INTO project_authorizations (project_id, user_id) VALUES (9303, @Uid)", new { Uid = accUid });
+        }
+        // 两个项目各造一条「admin 创建」的工资行（他人行）
+        long unauthWageId, authzWageId;
+        using (var conn = new SqliteConnection(ConnectionString))
+        {
+            conn.Open();
+            foreach (var (proj, by) in new[] { (9302L, "1"), (9303L, "1") })
+            {
+                var workerId = conn.ExecuteScalar<long>(
+                    "INSERT INTO workers (name, created_at) VALUES ('越权工人', @Now); SELECT last_insert_rowid();", new { Now });
+                var pwId = conn.ExecuteScalar<long>(@"INSERT INTO project_workers (worker_id,project_id,team_id,daily_wage,worker_type,entry_date,status,created_by,created_at,last_modified_at)
+                    VALUES (@W,@P,NULL,300,'瓦工','2026-01-01','active',@By,@Now,@Now); SELECT last_insert_rowid();",
+                    new { W = workerId, P = proj, By = by, Now });
+                conn.Execute(@"INSERT INTO wages (project_id,project_worker_id,year_month,actual_wage,paid_amount,payment_locked,created_by,created_at,updated_at)
+                    VALUES (@P,@PW,'2026-07',500000,NULL,0,@By,@Now,@Now)",
+                    new { P = proj, PW = pwId, By = by, Now });
+            }
+            unauthWageId = conn.ExecuteScalar<long>("SELECT id FROM wages WHERE project_id=9302");
+            authzWageId = conn.ExecuteScalar<long>("SELECT id FROM wages WHERE project_id=9303");
+        }
+
+        // 未授权项目行（admin 创建，非本人）→ 应 skipped（不写）
+        // 已授权项目行（admin 创建，非本人）→ 应 saved（项目授权放行）
+        var json = await PostConfirmAsync(new[]
+        {
+            new { wageId = unauthWageId, paidAmount = 5000.0, paidDate = "2026-07-15", bankReceiptPath = @"C:\receipts\unauth.jpg" },
+            new { wageId = authzWageId, paidAmount = 5000.0, paidDate = "2026-07-15", bankReceiptPath = @"C:\receipts\authz.jpg" },
+        }, expectOk: true);
+        Assert.Equal(1, json.GetProperty("data").GetProperty("saved").GetInt32());
+        Assert.Equal(1, json.GetProperty("data").GetProperty("skipped").GetInt32());
+        Assert.Equal(unauthWageId, json.GetProperty("data").GetProperty("skippedItems")[0].GetProperty("id").GetInt64());
+
+        // 正向断言：未授权行付款列确实未被写（断言 NULL，非否定式）
+        using (var conn = new SqliteConnection(ConnectionString))
+        {
+            conn.Open();
+            var paid = conn.ExecuteScalar<long?>("SELECT paid_amount FROM wages WHERE id=@Id", new { Id = unauthWageId });
+            Assert.Null(paid);
+            var paidDate = conn.ExecuteScalar<string?>("SELECT paid_date FROM wages WHERE id=@Id", new { Id = unauthWageId });
+            Assert.Null(paidDate);
+            // 已授权行已写入（正向对照）
+            Assert.Equal(500000L, conn.ExecuteScalar<long>("SELECT paid_amount FROM wages WHERE id=@Id", new { Id = authzWageId }));
+        }
+    }
+
+    // ── M-FIX8 T4(e) 配套：创建者对自己的行仍可确认（防修复过度收紧）──
+    // 读侧（match-receipts）语义：created_by=@Uid OR 项目授权。写侧修复后应对齐——
+    // 自己创建的未授权项目行（数据归属权在自己）仍应可确认，不能被误伤。
+    [Fact]
+    public async Task Confirm_OwnRow_UnauthorizedProject_StillSaved()
+    {
+        const string accUid = "acc-own-unauth";
+        using (var conn = new SqliteConnection(ConnectionString))
+        {
+            conn.Open();
+            var salt = "acc-own-unauth-salt-12";
+            var hash = EngineeringManager.Api.Common.HashPassword("acc123", salt, 2);
+            conn.Execute(@"INSERT OR IGNORE INTO users (id, username, password, password_hash, password_salt, password_hash_version, display_name, role_id, status, created_at)
+                VALUES (@Id, @Username, @Password, @Hash, @Salt, @Version, @DisplayName, @RoleId, @Status, @Now)",
+                new
+                {
+                    Id = accUid, Username = "acc-own-unauth", Password = "acc123", Hash = hash, Salt = salt,
+                    Version = 2, DisplayName = "财务", RoleId = "accountant", Status = "active", Now
+                });
+            conn.Execute("UPDATE roles SET permissions=@P WHERE id='accountant'",
+                new { P = "[\"wages:create\",\"wages:read\",\"wages:update\"]" });
+        }
+        SetAuth(await LoginAsync("acc-own-unauth", "acc123"));
+
+        long ownWageId;
+        using (var conn = new SqliteConnection(ConnectionString))
+        {
+            conn.Open();
+            conn.Execute("INSERT OR IGNORE INTO projects (id, name, created_by, created_at) VALUES (9304, 'P-own', '1', @Now)", new { Now });
+            var workerId = conn.ExecuteScalar<long>(
+                "INSERT INTO workers (name, created_at) VALUES ('本人工人', @Now); SELECT last_insert_rowid();", new { Now });
+            var pwId = conn.ExecuteScalar<long>(@"INSERT INTO project_workers (worker_id,project_id,team_id,daily_wage,worker_type,entry_date,status,created_by,created_at,last_modified_at)
+                VALUES (@W,@P,NULL,300,'瓦工','2026-01-01','active',@By,@Now,@Now); SELECT last_insert_rowid();",
+                new { W = workerId, P = 9304, By = accUid, Now });
+            conn.Execute(@"INSERT INTO wages (project_id,project_worker_id,year_month,actual_wage,paid_amount,payment_locked,created_by,created_at,updated_at)
+                VALUES (@P,@PW,'2026-07',500000,NULL,0,@By,@Now,@Now)",
+                new { P = 9304, PW = pwId, By = accUid, Now });
+            ownWageId = conn.ExecuteScalar<long>("SELECT id FROM wages WHERE project_id=9304");
+        }
+
+        var json = await PostConfirmAsync(new[]
+        {
+            new { wageId = ownWageId, paidAmount = 5000.0, paidDate = "2026-07-15", bankReceiptPath = @"C:\receipts\own.jpg" },
+        }, expectOk: true);
+        // 自己创建的行（未授权项目）→ 数据归属权在自己，仍可确认
+        Assert.Equal(1, json.GetProperty("data").GetProperty("saved").GetInt32());
+        using (var conn = new SqliteConnection(ConnectionString))
+        {
+            conn.Open();
+            Assert.Equal(500000L, conn.ExecuteScalar<long>("SELECT paid_amount FROM wages WHERE id=@Id", new { Id = ownWageId }));
+        }
+    }
 }
