@@ -88,7 +88,8 @@
 
 ## M-FIX1 后置发现（M-FIX2 X1 登记 G43-G46）
 
-- **G43** M-FIX1 F2 批量替换填错 3 处表名（X2 本轮修）：cost_ledger_batches 归属校验误用 cost_ledger.project_id；AgentToolService getDashboardStats 单 projectFilter 喂 4 表；getCostSummary 误用 invoices.project_id。
-- **G44** 同上（G43 的另一处：X2(c) 拆分后每表独立变量）。
+- **G43（M-FIX3 Y6 拆分）** cost_ledger_batches 归属校验错表名：`FROM [cost_ledger_batches]` 却传 `cost_ledger.project_id`（M-FIX2 X2 已修 → cost_ledger_batches.project_id）。
+- **G44（M-FIX3 Y6 拆分）** AgentToolService 两处错表名：getDashboardStats 单 projectFilter 喂 4 表（settlements/cost_ledger 用 invoices 前缀）、getCostSummary FROM cost_ledger 用 invoices 前缀（M-FIX2 X2 已修 → 拆三变量 + cost_ledger.project_id）。
+- **Y2 更正**：Model_* 为 **7 个**测试（非 5），其中 5 个依赖本机 asr-engine/embedding 真实模型（破坏实测改名后红），2 个测缺失路径不需模型；CI 重新排除 + docs/ci/CI-EXCLUSIONS.md 登记。
 - **G45** F7 提交说明与 diff 不符：说明写「replace prefix」但 !~BgeE2ETests 没动（X4 本轮处理）。
 - **G46 manager 合同 PUT Forbidden 已查清（M-FIX2 X3）**：测试库 roles.manager.permissions = `project:read,project:write,wage:read,...`（旧逗号串格式）→ `HasPermission` 的 `JsonSerializer.Deserialize<string[]>` 对逗号串抛异常 → catch false → manager 对 contracts:update / costLedger:update 全 False → 合同 PUT/cost-ledger 写被权限门拦 → Forbidden。**定性：manager 在生产上不能改合同/台账 = G2 引入的功能回归**（G2 假设 roles.permissions 是 JSON 数组，旧库/测试库是逗号串）→ 与方案丙「经理可改」直接冲突。修复归 R9 方案丙施工面（旧逗号串 roles 需 037 式迁移转 JSON），本轮只查清不修改。
