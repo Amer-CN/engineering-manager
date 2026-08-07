@@ -6,6 +6,7 @@
  */
 
 import { apiClient, setToken } from './api-client';
+import { recognizeBankReceipt } from './ocr/bankReceipt';
 import type {
   Project, Member, Worker, UserInfo, Department, Material,
   Partner, Supervisor, IncomeContract, ExpenseContract, AgreementContract,
@@ -20,7 +21,7 @@ import type {
   CostLedgerEntry, CostLedgerBatch, CostLedgerMatchRule, CostLedgerSummary, CostLedgerCategory,
   WorkerTeam, ProjectWorker, ProjectMember, Drawing,
   SqliteStatus,
-  ReceiptMatchInput, MatchReceiptResult, ConfirmMatchPair,
+  ReceiptMatchInput, MatchReceiptResult, ConfirmMatchPair, ParsedBankReceipt,
   StoredAuth,
 } from '../types/electron';
 
@@ -272,6 +273,65 @@ export const tauriAPI = {
     apiClient.post<{ matches: MatchReceiptResult[] }>('/api/wages/match-receipts', { projectId, yearMonth, receipts }),
   batchConfirmMatches: (pairs: ConfirmMatchPair[]) =>
     apiClient.post<{ saved: number; skipped: number; skippedItems: { id: number }[] }>('/api/wages/confirm-matches', pairs),
+  // K-2: C#/HTTP 模式批量回单解析 —— 前端循环调既有单张解析 POST /api/ocr/bank-receipt
+  //（门禁5 豁免的无状态 OCR）：并发上限 3、逐文件错误隔离（单张失败 → failedFiles，不拖死整批）、
+  // 保持输入顺序；返回形状与 electron.d.ts BatchParseResult 契约逐字段一致（J-1 useBankReceiptBatch 消费）。
+  // Electron 模式零变化：getAPI() 优先 preload 契约，本实现只补 C#/HTTP/Tauri 模式。
+  batchParseBankReceipts: async (filePaths: string[], _projectId?: number, _yearMonth?: string) => {
+    const CONCURRENCY = 3
+    const results: (ParsedBankReceipt | null)[] = new Array(filePaths.length).fill(null)
+    const failedFiles: ({ path: string; error: string } | null)[] = new Array(filePaths.length).fill(null)
+    let cursor = 0
+    const worker = async () => {
+      while (cursor < filePaths.length) {
+        const idx = cursor++
+        const filePath = filePaths[idx]
+        try {
+          // 1) 读取已保存的回单文件（BankReceiptBatch 保存约定：category 'wages'）
+          const fileRes = await tauriAPI.readFile({ category: 'wages', subCategory: 'bank-receipts', fileName: filePath })
+          if (!fileRes.success || !fileRes.data) {
+            failedFiles[idx] = { path: filePath, error: fileRes.error || '读取回单文件失败' }
+            continue
+          }
+          // 2) 既有单张解析（百度银行回单 OCR，无状态；dataUrl 去前缀后传 base64）
+          const imageBase64 = fileRes.data.dataUrl.split(',')[1] || fileRes.data.dataUrl
+          const ocrRes = await recognizeBankReceipt(imageBase64)
+          if (!ocrRes.success || !ocrRes.bankReceipt) {
+            failedFiles[idx] = { path: filePath, error: ocrRes.error || '回单解析失败' }
+            continue
+          }
+          const br = ocrRes.bankReceipt
+          results[idx] = {
+            date: br.transactionDate || '',
+            totalAmount: br.amount,
+            successAmount: br.amount,
+            failCount: 0,
+            items: [{
+              name: br.payeeName || br.payerName || '',
+              amount: br.amount,
+              status: '成功',
+              account: br.payeeAccount || undefined,
+            }],
+            receiptPath: filePath,
+            rawTextSnippet: ocrRes.text ? ocrRes.text.slice(0, 500) : undefined,
+          }
+        } catch (error: any) {
+          failedFiles[idx] = { path: filePath, error: error?.message || '回单解析失败' }
+        }
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, filePaths.length) }, () => worker()))
+    return {
+      success: true,
+      data: {
+        successCount: results.filter((r): r is ParsedBankReceipt => r !== null).length,
+        failCount: failedFiles.filter((f): f is { path: string; error: string } => f !== null).length,
+        results: results.filter((r): r is ParsedBankReceipt => r !== null),
+        matches: [],
+        failedFiles: failedFiles.filter((f): f is { path: string; error: string } => f !== null),
+      },
+    }
+  },
   getWagePaymentRecords: (projectId?: number, yearMonth?: string) =>
     apiClient.get<WageRecord[]>('/api/wages/payment-records', { projectId, yearMonth }),
   getWageOverdueStats: (projectId?: number) =>
