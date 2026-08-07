@@ -58,10 +58,7 @@ const EXEMPT = [
   { path: '/api/ocr/bank-statement', reason: '无状态 OCR 识别（不写业务库）' },
   { path: '/api/ocr/general-receipt', reason: '无状态 OCR 识别（不写业务库）' },
   { path: '/api/ocr/company-query', reason: '无状态 OCR 识别（不写业务库）' },
-  // STUB 空操作端点（显式 501 未实现，不写库）
-  { path: '/api/health/export-json', reason: 'STUB：显式 501 未实现，不写库' },
-  { path: '/api/health/reconcile', reason: 'STUB：显式 501 未实现，不写库' },
-  { path: '/api/sqlite/enable', reason: 'STUB：显式 501 未实现，不写库' },
+  // J-4：export-json / reconcile / sqlite-enable 端点已删除（前端零调用），豁免随之移除
   { path: '/api/diagnose', reason: '只读诊断（PRAGMA），无数据写' },
   // 基础设施：文件 / 字典 / 审计 / 备份
   { path: '/api/files/save', reason: '通用文件基础设施（IsPathSafe 防穿越）' },

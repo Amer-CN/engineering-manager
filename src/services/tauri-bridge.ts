@@ -522,7 +522,6 @@ export const tauriAPI = {
   sqliteStatus: () => apiClient.get<SqliteStatus>('/api/sqlite/status'),
   getSqliteStatus: () => apiClient.get<SqliteStatus>('/api/sqlite/status'),
   sqliteEnable: () => apiClient.post<void>('/api/sqlite/enable'),
-  enableSqlite: () => apiClient.post<void>('/api/sqlite/enable'),
   sqliteMigrate: () => apiClient.post<void>('/api/sqlite/migrate'),
   migrateToSqlite: () => apiClient.post<void>('/api/sqlite/migrate'),
   sqliteGetReadMode: () => apiClient.get<string>('/api/sqlite/read-mode'),

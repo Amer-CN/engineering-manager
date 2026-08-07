@@ -10,19 +10,17 @@ import { SqliteTableSummary } from './features/settings/SqliteTableSummary'
 interface Props {
   status: SqliteStatus | null
   loading: boolean
-  enabling: boolean
   migrating: boolean
   switching: boolean
   message: { type: 'success' | 'error' | 'info' | 'warning'; text: string } | null
-  onEnable: () => void
   onMigrate: () => void
   onRemigrate: () => void
   onSetReadMode: (mode: ReadMode) => void
 }
 
 export const SettingsSqliteSection: React.FC<Props> = ({
-  status, loading, enabling, migrating, switching, message,
-  onEnable, onMigrate, onRemigrate, onSetReadMode,
+  status, loading, migrating, switching, message,
+  onMigrate, onRemigrate, onSetReadMode,
 }) => {
   if (loading) {
     return (

@@ -211,12 +211,8 @@ function createMockAPI() {
     // 数据健康
     dataConsistencyCheck: async () => ({ success: true, data: { tables: [], consistent: true } }),
     dataIntegrityCheck: async () => ({ success: true, data: { ok: true } }),
-    // 窗口 E：mock 诚实化 —— 后端为显式 501 STUB 的端点，mock 如实报错
-    dataExportJson: async () => ({ success: false, error: 'Mock 环境不支持导出 JSON（需连接后端 API）' }),
-    dataReconcile: async () => ({ success: false, error: 'Mock 环境不支持数据对账（需连接后端 API）' }),
     // SQLite
     sqliteStatus: async () => ({ success: true, data: { ready: true, mode: 'sqlite' } }),
-    sqliteEnable: async () => ({ success: false, error: 'Mock 环境不支持 sqlite 启用（需连接后端 API）' }),
     sqliteMigrate: async () => ({ success: true }),
     sqliteGetReadMode: async () => ({ success: true, data: 'sqlite' }),
     sqliteSetReadMode: async () => ({ success: true }),

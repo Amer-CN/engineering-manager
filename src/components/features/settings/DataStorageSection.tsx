@@ -31,11 +31,9 @@ export function DataStorageSection({ refresh }: { refresh?: () => void }) {
         <SettingsSqliteSection
           status={sqlite.status}
           loading={sqlite.loading}
-          enabling={sqlite.enabling}
           migrating={sqlite.migrating}
           switching={sqlite.switching}
           message={sqlite.message}
-          onEnable={sqlite.handleEnable}
           onMigrate={sqlite.handleMigrate}
           onRemigrate={sqlite.handleRemigrate}
           onSetReadMode={sqlite.handleSetReadMode}

@@ -295,22 +295,8 @@ public class WageAttendanceGenerateTests : ApiTestBase
     }
 
     /// <summary>
-    /// 窗口 E：其余 STUB 显式错误化 —— 所有未接通端点返回 501 + 明确「未实现」，
-    /// 不再返回 HTTP 200 假成功结构（此前 match-receipts 空数组 / confirm-matches 0 等）
+    /// 窗口 E：其余 STUB 显式错误化 —— 未接通端点返回 501 + 明确「未实现」。
+    /// J-4：export-json / reconcile / sqlite-enable 三端点已删除（前端零调用），
+    /// 501 断言随端点删除（测试数 −3）。
     /// </summary>
-    [Theory]
-    [InlineData("/api/health/export-json", "export-json")]
-    [InlineData("/api/health/reconcile", "reconcile")]
-    [InlineData("/api/sqlite/enable", "sqlite/enable")]
-    public async Task StubEndpoints_ReturnExplicit501(string path, string name)
-    {
-        var token = await LoginAsync();
-        SetAuth(token);
-
-        var resp = await Client.PostAsync(path, new StringContent("{}", System.Text.Encoding.UTF8, "application/json"));
-        Assert.Equal(HttpStatusCode.NotImplemented, resp.StatusCode);
-        var body = await resp.Content.ReadAsStringAsync();
-        Assert.Contains("未实现", body);
-        Assert.Contains(name, body);
-    }
 }
