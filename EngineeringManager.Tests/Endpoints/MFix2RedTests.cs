@@ -129,12 +129,12 @@ public class MFix2RedTests : ApiTestBase
         conn.Open();
         var result = await tools.ExecuteToolAsync("getDashboardStats", JsonDocument.Parse("{}").RootElement, ctx, conn);
         Assert.True(result.Success, "getDashboardStats 不应报 SQL 错误: " + (result.Error ?? ""));
-        // Z2(b) 正反成对：P1 数据在（invoices 1 行 + settlements 1 行 + cost_ledger expense 100），P2 越权不在
+        // Z2(b) 正反成对：invoicesCount/settlementsCount 各 1（P1），P2 越权行不得计入
         var text = System.Text.Json.JsonSerializer.Serialize(result.Result);
-        // 正向：P1 的 cost_ledger expense 100（方向 out）应统计到 totalExpense
-        Assert.Contains("invoicesCount", text);
-        Assert.DoesNotContain("2000", text); // P2 invoices/settlements 金额 2000 不得出现
-        Assert.DoesNotContain("200", text);  // P2 cost_ledger 金额 200 不得出现（P1 是 100）
+        Assert.Contains("\"invoicesCount\":1", text); // 正向：仅 P1 发票 1 张
+        Assert.Contains("\"settlementsCount\":1", text); // 正向：仅 P1 结算 1 笔
+        Assert.DoesNotContain("\"invoicesCount\":2", text); // 反向：隔离失效会变 2（P2 泄漏）
+        Assert.DoesNotContain("\"settlementsCount\":2", text);
     }
 
     [Fact]
