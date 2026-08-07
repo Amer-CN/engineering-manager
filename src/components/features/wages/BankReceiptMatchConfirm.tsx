@@ -1,120 +1,144 @@
 /**
- * 银行回单批量解析 - 匹配结果确认组件
+ * 银行回单批量解析 - 匹配候选确认组件（J-1 重做为候选 UI）
  *
  * 功能：
- * 1. 表格展示：回单信息 | 匹配工人 | 匹配工资记录 | 匹配置信度
- * 2. 支持手动调整（下拉选择正确工人/工资记录）
- * 3. 批量确认（一键确认所有高置信度匹配）
+ * 1. 每张回单展示 match-receipts 返回的候选列表（score + 理由文案）
+ * 2. 用户每回单选一个候选或「跳过」（默认跳过，不产生配对）
+ * 3. 确认按钮 can('wages:update') 渲染守卫 + handler 守卫；只发用户确认了的配对
  */
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { DataTable } from '@/components/DataTable'
 import { useToastStore } from '@/store/toastStore'
-import type { BatchParseResult, BankReceiptMatch } from '@/types'
-import { getMatchColumns } from './BankReceiptMatchColumns'
-import { MatchConfirmStatsBar } from './MatchConfirmStatsBar'
+import type { ConfirmMatchPair, MatchReceiptResult } from '@/types'
 
 interface BankReceiptMatchConfirmProps {
-  parseResult: BatchParseResult
-  workers: { id: number; name: string }[]
-  wageRecords: { id: number; memberName?: string; actualWage: number; yearMonth: string }[]
-  projectId?: number
+  matchResults: MatchReceiptResult[]
   yearMonth?: string
-  onConfirm: (confirmedMatches: BankReceiptMatch[]) => void
+  canUpdate: boolean
+  confirming: boolean
+  onConfirm: (pairs: ConfirmMatchPair[]) => void
   onBack: () => void
   onCancel: () => void
 }
 
+interface Selection {
+  receiptIndex: number
+  wageId: number | null
+}
+
 export default function BankReceiptMatchConfirm({
-  parseResult,
-  workers,
-  wageRecords,
+  matchResults,
+  canUpdate,
+  confirming,
   onConfirm,
   onBack,
   onCancel,
 }: BankReceiptMatchConfirmProps) {
   const showToast = useToastStore(state => state.showToast)
 
-  const [matches, setMatches] = useState<BankReceiptMatch[]>(parseResult.matches)
-  const [confirming, setConfirming] = useState(false)
+  // 每回单的候选选择：wageId 为 null = 跳过
+  const [selections, setSelections] = useState<Selection[]>(() =>
+    matchResults.map((_, i) => ({ receiptIndex: i, wageId: null }))
+  )
 
-  const stats = useMemo(() => {
-    const total = matches.length
-    const matched = matches.filter(m => m.status === 'matched').length
-    const unmatched = matches.filter(m => m.status === 'unmatched').length
-    const ambiguous = matches.filter(m => m.status === 'ambiguous').length
-    const archived = matches.filter(m => m.status === 'archived').length
-    const highConfidence = matches.filter(m => m.confidence >= 80 && m.status !== 'archived').length
-
-    return { total, matched, unmatched, ambiguous, archived, highConfidence }
-  }, [matches])
-
-  const handleWorkerChange = useCallback((index: number, workerId: number | null, workerName: string | null) => {
-    setMatches(prev => {
-      const next = [...prev]
-      next[index] = {
-        ...next[index],
-        matchedWorkerId: workerId,
-        matchedWorkerName: workerName,
-        status: workerId ? 'ambiguous' : 'unmatched',
-        confidence: workerId ? 60 : 0,
-      }
-      return next
-    })
+  const selectCandidate = useCallback((receiptIndex: number, wageId: number) => {
+    setSelections(prev => prev.map(s =>
+      s.receiptIndex === receiptIndex ? { ...s, wageId } : s
+    ))
   }, [])
 
-  const handleWageChange = useCallback((index: number, wageId: number | null) => {
-    setMatches(prev => {
-      const next = [...prev]
-      next[index] = {
-        ...next[index],
-        matchedWageId: wageId,
-        status: wageId ? 'ambiguous' : 'unmatched',
-        confidence: wageId ? Math.min(next[index].confidence, 70) : 0,
-      }
-      return next
-    })
-  }, [])
-
-  const handleBatchConfirm = useCallback(async () => {
-    const highConfMatches = matches.filter(m => m.confidence >= 80 && m.status !== 'archived' && m.matchedWageId)
-
-    if (highConfMatches.length === 0) {
-      showToast('没有可自动确认的高置信度匹配', 'warning')
+  const handleConfirm = useCallback(() => {
+    // G2 B2: handler 守卫（渲染守卫已由父级控制，双保险）
+    if (!canUpdate) {
+      showToast('您没有登记发放的权限', 'error')
       return
     }
-
-    setConfirming(true)
-    try {
-      await onConfirm(highConfMatches)
-      showToast(`已确认 ${highConfMatches.length} 条高置信度匹配`, 'success')
-    } catch (error: any) {
-      showToast(error.message || '确认失败', 'error')
-    } finally {
-      setConfirming(false)
+    const pairs: ConfirmMatchPair[] = []
+    for (let i = 0; i < matchResults.length; i++) {
+      const sel = selections.find(s => s.receiptIndex === i)
+      const match = matchResults[i]
+      if (!sel?.wageId) continue // 跳过：不发
+      const candidate = match.candidates.find(c => c.wageId === sel.wageId)
+      if (!candidate) continue
+      pairs.push({
+        wageId: candidate.wageId,
+        paidAmount: match.amount ?? candidate.amount,
+        paidDate: match.date || '',
+        bankReceiptPath: match.receiptPath || '',
+      })
     }
-  }, [matches, onConfirm, showToast])
+    onConfirm(pairs)
+  }, [canUpdate, matchResults, selections, onConfirm, showToast])
 
-  const handleConfirmAll = useCallback(async () => {
-    const validMatches = matches.filter(m => m.matchedWageId && m.status !== 'archived')
+  const columns = [
+    {
+      key: 'receipt',
+      title: '回单',
+      render: (item: any) => (
+        <div>
+          <p className="font-medium">{item.date || '日期未知'}</p>
+          <p className="text-xs text-[color:var(--muted)]">{item.receiptPath?.split('/').pop() || '-'}</p>
+          {item.counterparty && <p className="text-xs text-[color:var(--fg-2)]">对方: {item.counterparty}</p>}
+        </div>
+      ),
+    },
+    {
+      key: 'amount',
+      title: '回单金额',
+      render: (item: any) => (
+        <span className="font-medium text-[color:var(--fg)] font-mono tabular-nums">
+          ¥{(item.amount ?? 0).toFixed(2)}
+        </span>
+      ),
+    },
+    {
+      key: 'candidates',
+      title: '候选匹配（按分数排序）',
+      render: (item: any, rowIndex: number) => {
+        if (item.candidates.length === 0) {
+          return <span className="text-[color:var(--muted)] text-sm">无候选</span>
+        }
+        return (
+          <div className="space-y-2">
+            {item.candidates.map((c: any) => (
+              <label
+                key={c.wageId}
+                className={`flex items-start gap-2 p-2 rounded-md border cursor-pointer text-sm ${
+                  selections.find(s => s.receiptIndex === rowIndex)?.wageId === c.wageId
+                    ? 'border-[color:var(--accent)] bg-[color:var(--panel-2)]'
+                    : 'border-[color:var(--border)] hover:bg-[color:var(--panel-2)]'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name={`receipt-${rowIndex}`}
+                  checked={selections.find(s => s.receiptIndex === rowIndex)?.wageId === c.wageId}
+                  onChange={() => selectCandidate(rowIndex, c.wageId)}
+                  className="mt-1"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-[color:var(--fg)]">{c.workerName || '未命名'}</span>
+                    <span className="text-xs text-[color:var(--fg-2)]">{c.yearMonth || '-'}</span>
+                    <span className="text-success-600 font-mono text-xs">¥{(c.amount ?? 0).toFixed(2)}</span>
+                    <span className="ml-auto px-1.5 py-0.5 text-xs rounded-full bg-[color:var(--panel-2)] text-[color:var(--accent)] font-medium">
+                      分数 {c.score}
+                    </span>
+                  </div>
+                  {c.reasons?.length > 0 && (
+                    <p className="text-xs text-[color:var(--fg-2)] mt-0.5">{c.reasons.join('；')}</p>
+                  )}
+                </div>
+              </label>
+            ))}
+          </div>
+        )
+      },
+    },
+  ]
 
-    if (validMatches.length === 0) {
-      showToast('没有可确认的匹配', 'warning')
-      return
-    }
-
-    setConfirming(true)
-    try {
-      await onConfirm(validMatches)
-      showToast(`已确认 ${validMatches.length} 条匹配`, 'success')
-    } catch (error: any) {
-      showToast(error.message || '确认失败', 'error')
-    } finally {
-      setConfirming(false)
-    }
-  }, [matches, onConfirm, showToast])
-
-  const columns = getMatchColumns(workers, wageRecords, handleWorkerChange, handleWageChange)
-  const dataWithIndex = matches.map((m, i) => ({ ...m, _index: i }))
+  const dataWithIndex = matchResults.map((m, i) => ({ ...m, _index: i }))
+  const confirmedCount = selections.filter(s => s.wageId !== null).length
 
   return (
     <div className="space-y-6">
@@ -128,17 +152,16 @@ export default function BankReceiptMatchConfirm({
         </button>
       </div>
 
-      <MatchConfirmStatsBar
-        stats={stats}
-        confirming={confirming}
-        onBatchConfirm={handleBatchConfirm}
-        onConfirmAll={handleConfirmAll}
-      />
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-[color:var(--fg-2)]">
+          共 {matchResults.length} 张回单，已选 {confirmedCount} 条配对（未选 = 跳过）
+        </span>
+      </div>
 
       <DataTable
         data={dataWithIndex}
-        columns={columns}
-        rowKey={(item) => `${item._index}`}
+        columns={columns as any}
+        rowKey={(item: any) => `${item._index}`}
         pagination={false}
         showContainer={true}
         stickyHeader={true}
@@ -152,13 +175,15 @@ export default function BankReceiptMatchConfirm({
         >
           取消
         </button>
-        <button
-          onClick={handleConfirmAll}
-          disabled={confirming}
-          className="px-6 py-2 text-sm font-medium text-[color:var(--on-accent)] bg-[color:var(--accent)] rounded-md hover:opacity-90 disabled:bg-[color:var(--muted)]"
-        >
-          {confirming ? '确认中...' : '确认并提交'}
-        </button>
+        {canUpdate && (
+          <button
+            onClick={handleConfirm}
+            disabled={confirming}
+            className="px-6 py-2 text-sm font-medium text-[color:var(--on-accent)] bg-[color:var(--accent)] rounded-md hover:opacity-90 disabled:bg-[color:var(--muted)]"
+          >
+            {confirming ? '确认中...' : `确认并提交（${confirmedCount}）`}
+          </button>
+        )}
       </div>
     </div>
   )

@@ -99,6 +99,11 @@ export type {
   ParsedBankReceipt,
   BatchParseResult,
   BankReceiptMatch,
+  // I-2 契约（回单批量匹配/确认真实形状）
+  ReceiptMatchInput,
+  ReceiptMatchCandidate,
+  MatchReceiptResult,
+  ConfirmMatchPair,
 
   // Electron API
   ElectronAPI,

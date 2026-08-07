@@ -1,9 +1,10 @@
 import { useCallback } from 'react'
 import type { Project, WorkerTeam, WageRecord, WageStats } from '@/types'
+import type { ViewMode } from './useWageManagementTypes'
 import { getAPI } from '@/services/api-adapter'
 
 export function useWageDataLoader(deps: {
-  view: 'dashboard' | 'cycle'
+  view: ViewMode
   selectedProject: Project | null
   selectedMonth: string
   setLoading: (b: boolean) => void
@@ -28,7 +29,8 @@ export function useWageDataLoader(deps: {
 
   const loadAllRecords = useCallback(async () => {
     try {
-      const projectId = view === 'cycle' ? selectedProject?.id : undefined
+      // cycle/batch 视图都按项目加载（批量回单候选基于项目工资行）
+      const projectId = view === 'cycle' || view === 'batch' ? selectedProject?.id : undefined
       const result = await (await getAPI()).getWages(projectId, undefined)
       if (result.success && result.data) setAllWageRecords(result.data)
     } catch (error) { console.error('加载工资记录失败:', error) }

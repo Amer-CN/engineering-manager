@@ -17,6 +17,8 @@ interface WageRecordsTabProps {
   onPaymentChange: (recordId: number, field: 'paidAmount' | 'paidDate', value: string | number) => void
   onSavePayments: () => void
   onBankReceiptUpload: (pdfPath: string) => void
+  onOpenBatchReceipt: () => void
+  showBatchReceipt?: boolean
   receiptParsing: boolean
   receiptResult: { matched: number; failed: number; totalItems: number; date: string; receiptPath: string; totalAmount?: number; successAmount?: number; rawTextSnippet?: string } | null
   toggleSelect: (id: number) => void
@@ -41,8 +43,9 @@ export default function WageRecordsTab({
   selectedIds, paymentEdits,
   onFilterYearMonthChange, onFilterNameChange,
   onPaymentChange, onSavePayments,
-  onBankReceiptUpload, receiptParsing, receiptResult,
+  onBankReceiptUpload, onOpenBatchReceipt, receiptParsing, receiptResult,
   toggleSelect, toggleAll, onBatchDelete, onBatchArchive,
+  showBatchReceipt,
 }: WageRecordsTabProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [showRawText, setShowRawText] = useState(false)
@@ -181,6 +184,15 @@ export default function WageRecordsTab({
             <Icon name="Lock" size={14} />
             归档
           </Button>
+          {showBatchReceipt && (
+            <Button
+              onClick={onOpenBatchReceipt}
+
+             variant="primary" size="sm" className="flex items-center gap-1">
+              <Icon name="FileText" size={14} />
+              批量回单
+            </Button>
+          )}
           <Button
             onClick={() => fileInputRef.current?.click()}
             disabled={receiptParsing}
