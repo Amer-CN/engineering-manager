@@ -1,4 +1,5 @@
 import { renderHook, act, waitFor } from '@testing-library/react'
+vi.mock('@/hooks/usePermission', () => ({ usePermission: () => ({ can: () => true, canAny: () => true, isAdmin: () => true, isLoggedIn: () => true }) }))
 
 describe('useDepartments', () => {
   let ea: Record<string, any>

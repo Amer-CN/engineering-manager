@@ -5,6 +5,10 @@
 import { renderHook, act, waitFor } from '@testing-library/react'
 
 // Mock dependencies
+vi.mock('@/hooks/usePermission', () => ({ usePermission: () => ({ can: () => true, canAny: () => true, isAdmin: () => true, isLoggedIn: () => true }) }))
+const __invApi = vi.hoisted(() => ({}))
+vi.mock('@/services/api-adapter', () => ({ getAPI: async () => __invApi }))
+
 vi.mock('@/utils/audit', () => ({
   logCreate: vi.fn(),
   logUpdate: vi.fn(),
@@ -36,7 +40,7 @@ describe('useInventoryPage', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    ea = window.electronAPI as Record<string, any>
+    ea = __invApi as Record<string, any>
     ea.getInventoryItems = vi.fn().mockResolvedValue({ success: true, data: mockItems })
     ea.getInventoryTransactions = vi.fn().mockResolvedValue({ success: true, data: mockTransactions })
     ea.getMaterials = vi.fn().mockResolvedValue({ success: true, data: mockMaterials })
@@ -51,7 +55,7 @@ describe('useInventoryPage', () => {
     ea.deleteMaterial = vi.fn().mockResolvedValue({ success: true })
   })
 
-  const can = (perm: string) => perm === 'inventory:delete'
+  const can = (perm: string) => ['inventory:delete', 'inventory:create', 'inventory:update'].includes(perm) // M-FIX1 F5: G2 加了 create/update 权限门
 
   it('挂载时加载所有数据', async () => {
     const { useInventoryPage } = await import('@/hooks/useInventoryPage')

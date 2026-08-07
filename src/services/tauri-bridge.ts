@@ -20,7 +20,7 @@ import type {
   CostLedgerEntry, CostLedgerBatch, CostLedgerMatchRule, CostLedgerSummary, CostLedgerCategory,
   WorkerTeam, ProjectWorker, ProjectMember, Drawing,
   SqliteStatus,
-  BankReceiptMatch,
+  ReceiptMatchInput, MatchReceiptResult, ConfirmMatchPair,
   StoredAuth,
 } from '../types/electron';
 
@@ -288,10 +288,11 @@ export const tauriAPI = {
     apiClient.post<{ archived: number }>('/api/wages/archive', ids),
   getWageStats: (projectId?: number, yearMonth?: string) =>
     apiClient.get<WageStats>('/api/wages/stats', { projectId, yearMonth }),
-  matchBankReceiptItems: (projectId?: number, yearMonth?: string, items?: BankReceiptMatch[]) =>
-    apiClient.post<{ matches: BankReceiptMatch[] }>('/api/wages/match-receipts', { projectId, yearMonth, items }),
-  batchConfirmMatches: (matches: BankReceiptMatch[], yearMonth?: string) =>
-    apiClient.post<{ updated: number }>('/api/wages/confirm-matches', { matches, yearMonth }),
+  // I-2 契约（C# 后端真实形状）：match 纯读打分（wages:read），confirm 显式配对写付款列（wages:update）
+  matchBankReceiptItems: (projectId: number, yearMonth?: string, receipts?: ReceiptMatchInput[]) =>
+    apiClient.post<{ matches: MatchReceiptResult[] }>('/api/wages/match-receipts', { projectId, yearMonth, receipts }),
+  batchConfirmMatches: (pairs: ConfirmMatchPair[]) =>
+    apiClient.post<{ saved: number; skipped: number; skippedItems: { id: number }[] }>('/api/wages/confirm-matches', pairs),
   getWagePaymentRecords: (projectId?: number, yearMonth?: string) =>
     apiClient.get<WageRecord[]>('/api/wages/payment-records', { projectId, yearMonth }),
   getWageOverdueStats: (projectId?: number) =>

@@ -24,8 +24,9 @@ namespace EngineeringManager.Tests.Endpoints;
 ///      已存在只刷新 work_days（updated++）
 ///   7. 缺字段 → 400；空 records → 200 {0,0}
 /// 覆盖（STUB 显式错误化）：
-///   8. match-receipts / confirm-matches / export-json / reconcile / sqlite-enable /
-///      snapshots-max-count(GET+PUT) → 501 + 明确「未实现」错误信息（不再假成功）
+///   8. export-json / reconcile / sqlite-enable → 501 + 明确「未实现」错误信息（不再假成功）
+///      （I-1 起 snapshots-max-count、I-2 起 match-receipts/confirm-matches 已接通本体，
+///       501 测试移除 → WritePermissionB1Tests / ReceiptMatchTests）
 /// </summary>
 public class WageAttendanceGenerateTests : ApiTestBase
 {
@@ -298,8 +299,6 @@ public class WageAttendanceGenerateTests : ApiTestBase
     /// 不再返回 HTTP 200 假成功结构（此前 match-receipts 空数组 / confirm-matches 0 等）
     /// </summary>
     [Theory]
-    [InlineData("/api/wages/match-receipts", "match-receipts")]
-    [InlineData("/api/wages/confirm-matches", "confirm-matches")]
     [InlineData("/api/health/export-json", "export-json")]
     [InlineData("/api/health/reconcile", "reconcile")]
     [InlineData("/api/sqlite/enable", "sqlite/enable")]
@@ -313,21 +312,5 @@ public class WageAttendanceGenerateTests : ApiTestBase
         var body = await resp.Content.ReadAsStringAsync();
         Assert.Contains("未实现", body);
         Assert.Contains(name, body);
-    }
-
-    [Theory]
-    [InlineData("/api/snapshots/max-count")]
-    public async Task StubEndpoints_GetPut_ReturnExplicit501(string path)
-    {
-        var token = await LoginAsync();
-        SetAuth(token);
-
-        var respGet = await Client.GetAsync(path);
-        Assert.Equal(HttpStatusCode.NotImplemented, respGet.StatusCode);
-        Assert.Contains("未实现", await respGet.Content.ReadAsStringAsync());
-
-        var respPut = await Client.PutAsync(path, new StringContent("{\"count\":100}", System.Text.Encoding.UTF8, "application/json"));
-        Assert.Equal(HttpStatusCode.NotImplemented, respPut.StatusCode);
-        Assert.Contains("未实现", await respPut.Content.ReadAsStringAsync());
     }
 }
