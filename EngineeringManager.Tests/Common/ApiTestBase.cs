@@ -74,10 +74,11 @@ public class ApiTestBase : IDisposable
         var salt = "test-salt-1234567890123456";
         var hash = EngineeringManager.Api.Common.HashPassword("admin123", salt, 2);
 
-        // M-FIX3 Y3(c): 测试基座对齐生产【应有】状态——roles 的 manager/accountant/worker
-        // 三行用 GetDefaultPermissions JSON 数组覆盖（001:489 的旧逗号串会导致
-        // HasPermission 的 Deserialize<string[]> 抛异常 → 非 admin 全 403，测不到真路径）。
-        // 注意：这只改测试基座；生产库的旧逗号串未修（R9 做数据迁移）。
+        // M-FIX3 Y3(c) / M-FIX4 Z5: 测试基座对齐生产【应有】状态——roles 三行用
+        // GetDefaultPermissions JSON 数组覆盖 + name 对齐 HasPermission 映射（「经理」）。
+        // 生产库与此不一致：逗号串（001:489）+ name「项目经理」（映射只认「经理」）+
+        // finance/accountant id 不一致——差异清单见 docs/findings/ROLE-IDENTITY-DEFECTS.md。
+        // 注意：这只改测试基座；生产库未修（R9 做数据迁移）。
         conn.Execute("INSERT OR REPLACE INTO roles (id, name, permissions, is_system, created_at) VALUES (@Id, @Name, @Perms, 1, @Now)",
             new { Id = "manager", Name = "经理", Perms = System.Text.Json.JsonSerializer.Serialize(EngineeringManager.Api.Common.GetDefaultPermissions("manager")), Now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") });
         conn.Execute("INSERT OR REPLACE INTO roles (id, name, permissions, is_system, created_at) VALUES (@Id, @Name, @Perms, 1, @Now)",
