@@ -322,4 +322,143 @@ public class WritePermissionB1Tests : ApiTestBase, IDisposable
         Assert.Equal("worker", (string)row.user_name);
         Assert.NotEqual("999", (string)row.user_id);
     }
+
+    // ── I-1：快照上限 max-count（GET 任何登录用户可读 / PUT settings:update，域 1..100）──
+
+    private static string ConfigPath(string dataPath) => Path.Combine(dataPath, "config.json");
+
+    [Fact]
+    public async Task MaxCount_Get_DefaultIs10_ForAnyLoggedInUser()
+    {
+        SeedWorkerWithJsonRoles();
+        // worker 无 settings:update，但 GET 与 /api/config 同级 —— 登录即可读
+        var token = await LoginAsync(WorkerUser, WorkerPassword);
+
+        var resp = await AuthedAsync(token, HttpMethod.Get, "/api/snapshots/max-count");
+
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(10, json.GetProperty("data").GetProperty("maxCount").GetInt32());
+        Assert.False(File.Exists(ConfigPath(_isolatedDataPath)), "未设置时不应产生 config.json");
+    }
+
+    [Fact]
+    public async Task Worker_MaxCountPut_Returns403_AndNoConfigWritten()
+    {
+        SeedWorkerWithJsonRoles();
+        var token = await LoginAsync(WorkerUser, WorkerPassword);
+
+        var resp = await AuthedAsync(token, HttpMethod.Put, "/api/snapshots/max-count", new { count = 5 });
+
+        Assert.Equal(HttpStatusCode.Forbidden, resp.StatusCode);
+        Assert.False(File.Exists(ConfigPath(_isolatedDataPath)), "worker 403 后不应写 config.json");
+    }
+
+    [Fact]
+    public async Task Admin_MaxCountPut_Returns200_Roundtrip()
+    {
+        SeedWorkerWithJsonRoles();
+        var token = await LoginAsync(AdminUser, AdminPassword);
+
+        var put = await AuthedAsync(token, HttpMethod.Put, "/api/snapshots/max-count", new { count = 30 });
+        Assert.Equal(HttpStatusCode.OK, put.StatusCode);
+        var putJson = await put.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(30, putJson.GetProperty("data").GetProperty("maxCount").GetInt32());
+
+        // 落库：config.json 合并写（仅增 snapshotMaxCount 键，不覆盖已有键）
+        Assert.True(File.Exists(ConfigPath(_isolatedDataPath)), "admin 应写 config.json");
+        var config = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(File.ReadAllText(ConfigPath(_isolatedDataPath)))!;
+        Assert.Equal(30, config["snapshotMaxCount"].GetInt32());
+
+        // 往返：GET 读回同一值
+        var get = await AuthedAsync(token, HttpMethod.Get, "/api/snapshots/max-count");
+        Assert.Equal(HttpStatusCode.OK, get.StatusCode);
+        var getJson = await get.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(30, getJson.GetProperty("data").GetProperty("maxCount").GetInt32());
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(101)]
+    public async Task MaxCountPut_OutOfRange_Returns400(int count)
+    {
+        SeedWorkerWithJsonRoles();
+        var token = await LoginAsync(AdminUser, AdminPassword);
+
+        var resp = await AuthedAsync(token, HttpMethod.Put, "/api/snapshots/max-count", new { count });
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        Assert.Contains("1～100", await resp.Content.ReadAsStringAsync());
+        Assert.False(File.Exists(ConfigPath(_isolatedDataPath)), "非法值不应写 config.json");
+    }
+
+    [Theory]
+    [InlineData("\"abc\"")]   // 非数：字符串
+    [InlineData("3.5")]       // 非数：小数（TryGetInt32 拒绝）
+    [InlineData("{}")]        // 缺 count 键
+    public async Task MaxCountPut_NonNumber_Returns400(string body)
+    {
+        SeedWorkerWithJsonRoles();
+        var token = await LoginAsync(AdminUser, AdminPassword);
+
+        var req = new HttpRequestMessage(HttpMethod.Put, "/api/snapshots/max-count");
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        req.Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json");
+        var resp = await Client.SendAsync(req);
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        Assert.Contains("1～100", await resp.Content.ReadAsStringAsync());
+        Assert.False(File.Exists(ConfigPath(_isolatedDataPath)), "非法值不应写 config.json");
+    }
+
+    [Fact]
+    public async Task Snapshots_CreatePrunesOldest_WhenExceedsMaxCount()
+    {
+        SeedWorkerWithJsonRoles();
+        var token = await LoginAsync(AdminUser, AdminPassword);
+
+        // 预置 3 个旧快照（时间戳命名天然有序：文件名倒序 = 新→旧）
+        var snapDir = Path.Combine(_isolatedDataPath, "db-snapshots");
+        Directory.CreateDirectory(snapDir);
+        foreach (var name in new[] { "snapshot-20260101-000000.db", "snapshot-20260102-000000.db", "snapshot-20260103-000000.db" })
+            File.WriteAllText(Path.Combine(snapDir, name), "seed");
+
+        // 上限设 3 → 再创建 1 个 → 4 个超出上限，最旧（20260101）被修剪，剩余 3 个
+        var put = await AuthedAsync(token, HttpMethod.Put, "/api/snapshots/max-count", new { count = 3 });
+        Assert.Equal(HttpStatusCode.OK, put.StatusCode);
+
+        var create = await AuthedAsync(token, HttpMethod.Post, "/api/snapshots");
+        Assert.Equal(HttpStatusCode.OK, create.StatusCode);
+
+        var files = Directory.GetFiles(snapDir, "*.db").Select(Path.GetFileName).ToArray();
+        Assert.Equal(3, files.Length);
+        Assert.DoesNotContain("snapshot-20260101-000000.db", files);
+        Assert.Contains("snapshot-20260102-000000.db", files);
+        Assert.Contains("snapshot-20260103-000000.db", files);
+        // 最新创建的快照保留
+        var createdId = (await create.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("data").GetProperty("id").GetString();
+        Assert.Contains(files, f => f!.StartsWith(createdId!, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Snapshots_CreateBelowMaxCount_KeepsAll()
+    {
+        SeedWorkerWithJsonRoles();
+        var token = await LoginAsync(AdminUser, AdminPassword);
+
+        // 上限 100（默认 10 同理：文件数少于上限时一个不删）
+        var put = await AuthedAsync(token, HttpMethod.Put, "/api/snapshots/max-count", new { count = 100 });
+        Assert.Equal(HttpStatusCode.OK, put.StatusCode);
+
+        var snapDir = Path.Combine(_isolatedDataPath, "db-snapshots");
+        Directory.CreateDirectory(snapDir);
+        foreach (var name in new[] { "snapshot-20260101-000000.db", "snapshot-20260102-000000.db" })
+            File.WriteAllText(Path.Combine(snapDir, name), "seed");
+
+        var create = await AuthedAsync(token, HttpMethod.Post, "/api/snapshots");
+        Assert.Equal(HttpStatusCode.OK, create.StatusCode);
+
+        Assert.Equal(3, Directory.GetFiles(snapDir, "*.db").Length);
+    }
 }

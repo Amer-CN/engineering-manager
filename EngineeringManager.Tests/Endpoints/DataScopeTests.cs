@@ -42,7 +42,7 @@ public class DataScopeTests
     {
         // All → (1 = 1)
         var sql = EngineeringManager.Api.Security.CurrentUser.UserFilterWithAuthorizedProjects(
-            EngineeringManager.Api.Security.CurrentUser.DataScope.All);
+            EngineeringManager.Api.Security.CurrentUser.DataScope.All, "income_contracts.project_id");
         Assert.Equal("(1 = 1)", sql);
     }
 
@@ -52,7 +52,7 @@ public class DataScopeTests
         // AuthorizedProjects → (created_by = @Uid OR EXISTS ...)，不含 @IsAdmin
         var sql = EngineeringManager.Api.Security.CurrentUser.UserFilterWithAuthorizedProjects(
             EngineeringManager.Api.Security.CurrentUser.DataScope.AuthorizedProjects,
-            "project_id", "created_by");
+            "income_contracts.project_id", "created_by");
         Assert.Contains("created_by = @Uid", sql);
         Assert.Contains("EXISTS", sql);
         Assert.Contains("project_authorizations", sql);
@@ -70,22 +70,16 @@ public class DataScopeTests
     }
 
     [Fact]
-    public void UserFilterFragmentForProject_AllScope_ReturnsOneEqOne()
+    public void UserFilterWithAuthorizedProjects_BareProjectCol_ThrowsFailClosed()
     {
-        var sql = EngineeringManager.Api.Security.CurrentUser.UserFilterFragmentForProject(
-            EngineeringManager.Api.Security.CurrentUser.DataScope.All);
-        Assert.Equal("(1 = 1)", sql);
+        // M-FIX1 F2(b): 裸列被运行时守卫拒绝（裸列在 EXISTS 内自比较恒真 → 越权）
+        var ex = Assert.Throws<System.ArgumentException>(() =>
+            EngineeringManager.Api.Security.CurrentUser.UserFilterWithAuthorizedProjects(
+                EngineeringManager.Api.Security.CurrentUser.DataScope.AuthorizedProjects,
+                "project_id"));
+        Assert.Contains("表限定", ex.Message);
     }
 
-    [Fact]
-    public void UserFilterFragmentForProject_AuthorizedProjects_ContainsNoIsAdmin()
-    {
-        var sql = EngineeringManager.Api.Security.CurrentUser.UserFilterFragmentForProject(
-            EngineeringManager.Api.Security.CurrentUser.DataScope.AuthorizedProjects);
-        Assert.Contains("created_by = @Uid", sql);
-        Assert.Contains("EXISTS", sql);
-        Assert.DoesNotContain("IsAdmin", sql);
-    }
 
     // ════════ SafeQueryValidator 不生成 @IsAdmin ════════
 

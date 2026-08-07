@@ -290,7 +290,8 @@ public static class SafeQueryValidator
     /// </summary>
     public static string GetTableFilter(Security.CurrentUser.DataScope scope, string table, string tableAlias = "")
     {
-        var colPrefix = string.IsNullOrEmpty(tableAlias) ? "" : $"{tableAlias}.";
+        // M-FIX1: 无别名时用表名做限定符（裸列会被 UserFilterWithAuthorizedProjects 守卫拒绝）
+        var colPrefix = string.IsNullOrEmpty(tableAlias) ? $"{table}." : $"{tableAlias}.";
         var createdByCol = $"{colPrefix}created_by";
 
         if (CompanyLevelTables.Contains(table))

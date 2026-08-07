@@ -19,7 +19,8 @@ export const SnapshotsTab: React.FC = () => {
   const { confirm, ConfirmDialog } = useConfirm()
   const { can } = usePermission()
   const [snapshots, setSnapshots] = useState<SnapshotInfo[]>([])
-  const [maxCount, setMaxCount] = useState(200)
+  // I-1：与后端缺省一致（GET 未设置时返回 10）；窗口 E 曾默认 200，与后端域 1..100 脱节
+  const [maxCount, setMaxCount] = useState(10)
   const [loading, setLoading] = useState(true)
   const [restoring, setRestoring] = useState(false)
 
@@ -98,11 +99,12 @@ export const SnapshotsTab: React.FC = () => {
   }
 
   const handleSetMaxCount = async () => {
-    const input = prompt('设置最大快照数量（50～1000）：', String(maxCount))
+    // I-1：域与后端一致（1～100）；窗口 E 曾提示 50～1000，服务端只认 1..100 → 越界必 400
+    const input = prompt('设置最大快照数量（1～100）：', String(maxCount))
     if (!input) return
     const n = parseInt(input, 10)
-    if (isNaN(n) || n < 50 || n > 1000) {
-      showToast('请输入 50～1000 之间的数字', 'error')
+    if (isNaN(n) || n < 1 || n > 100) {
+      showToast('请输入 1～100 之间的数字', 'error')
       return
     }
     const result = await (await getAPI()).setMaxSnapshots(n)
