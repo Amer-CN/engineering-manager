@@ -129,6 +129,11 @@ public static class KnowledgeFolderEndpoints
                 if (string.IsNullOrWhiteSpace(dto.Name))
                     return Common.Fail("文件夹名称不能为空");
 
+                // M-FIX8 T2 (G58)：目标文件夹本身必须可访问（created_by 本人或项目已授权），
+                // 不能只校验请求里带的新 ProjectId——否则他人文件夹被零范围 UPDATE。
+                if (!KnowledgeBaseService.CanAccessFolder(db, id, uid, isAdmin))
+                    return Results.Json(new { success = false, error = "无权操作该文件夹" }, statusCode: 403);
+
                 if (dto.ProjectId.HasValue && !KnowledgeBaseService.CanAccessProject(db, (int)dto.ProjectId.Value, uid, isAdmin))
                     return Results.Json(new { success = false, error = "无权操作该项目" }, statusCode: 403);
 
@@ -161,11 +166,17 @@ public static class KnowledgeFolderEndpoints
         app.MapDelete("/api/knowledge/folders/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx);
             if (!CurrentUser.HasPermission(ctx, db, "knowledge:delete"))
                 return Results.Json(new { success = false, error = "无权限：需要 knowledge:delete" }, statusCode: 403);
 
             try
             {
+                // M-FIX8 T2 (G58)：DELETE 前必须先验证文件夹可访问——必须在 BeginTransaction 之前，
+                // 否则他人文件夹被零范围 UPDATE 软删。
+                if (!KnowledgeBaseService.CanAccessFolder(db, id, uid, isAdmin))
+                    return Results.Json(new { success = false, error = "无权操作该文件夹" }, statusCode: 403);
+
                 using var tx = db.BeginTransaction();
                 // 1. 软删文件夹
                 var affected = await db.ExecuteAsync(
@@ -210,16 +221,9 @@ public static class KnowledgeFolderEndpoints
 
             try
             {
-                // 文件夹可见性检查（与列表同 scope；admin 直接可见）
-                var folderVisible = isAdmin || db.ExecuteScalar<int>(
-                    @"SELECT COUNT(*) FROM knowledge_folders f
-                      WHERE f.id = @Id AND f.deleted_at IS NULL
-                        AND (f.created_by = @Uid
-                          OR EXISTS(SELECT 1 FROM project_authorizations pa
-                                    WHERE pa.project_id = f.project_id AND pa.user_id = @Uid))",
-                    new { Id = id, Uid = uid }) > 0;
-
-                if (!folderVisible)
+                // M-FIX8 T2 (G58)：与 PUT/DELETE 共用唯一判定 CanAccessFolder（范围表达式逐字一致）。
+                // 文件夹不存在（含已删除）也返回不可访问 → 404 语义不变。
+                if (!KnowledgeBaseService.CanAccessFolder(db, id, uid, isAdmin))
                     return Common.NotFound("文件夹不存在或无权访问");
 
                 var offset = (page - 1) * size;

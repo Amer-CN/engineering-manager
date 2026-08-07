@@ -91,6 +91,30 @@ public class KnowledgeBaseService
     }
 
     // ═══════════════════════════════════════════════════════════
+    // 文件夹访问权限（M-FIX8 T2 / G58）
+    // ═══════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// 检查用户是否有权操作指定知识库文件夹（写权限，M-FIX8 T2 G58 修复）。
+    /// admin 可操作所有文件夹；非 admin 仅限自己创建（created_by=@Uid）或
+    /// 所在项目已被授权（project_authorizations）的文件夹。
+    /// 范围表达式与 GET /api/knowledge/folders/{id}/documents 内联 SQL 逐字一致，
+    /// 本方法是唯一共享判定（三处：PUT 开头 / DELETE 开头 / GET {id}/documents）。
+    /// </summary>
+    public static bool CanAccessFolder(IDbConnection db, long folderId, string userId, bool isAdmin)
+    {
+        if (isAdmin) return true;
+        var count = db.ExecuteScalar<int>(
+            @"SELECT COUNT(*) FROM knowledge_folders f
+              WHERE f.id = @Id AND f.deleted_at IS NULL
+                AND (f.created_by = @Uid
+                  OR EXISTS(SELECT 1 FROM project_authorizations pa
+                            WHERE pa.project_id = f.project_id AND pa.user_id = @Uid))",
+            new { Id = folderId, Uid = userId });
+        return count > 0;
+    }
+
+    // ═══════════════════════════════════════════════════════════
     // IngestAsync（幂等 + 事务）
     // ═══════════════════════════════════════════════════════════
 
