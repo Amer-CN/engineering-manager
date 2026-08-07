@@ -568,6 +568,51 @@ export const tauriAPI = {
   saveFile: (options: { category: string; subCategory: string; fileData: string; fileName: string; projectName?: string | null }) => apiClient.post<{ fileName: string }>('/api/files/save', options),
   readFile: (options: { category: string; subCategory: string; fileName: string; projectName?: string | null }) => apiClient.get<{ dataUrl: string; mimeType: string }>('/api/files/read', options),
   deleteFile: (options: { category: string; subCategory: string; fileName: string; projectName?: string | null }) => apiClient.post<void>('/api/files/delete', options),
+  // L-1: 用系统默认程序打开已上传文件（前端 2 处活调用方：FileUploader 非图片预览 / WagePaymentRecords 查看回单）
+  // 对齐 FileEndpoints /api/files/open-external handler：只消费 { category, fileName }（subCategory/projectName 原样透传无害）；
+  // 后端按 {uploads}/{category}/{fileName} 定位 + 扩展名白名单 + UseShellExecute。
+  // 如实报错：HTTP/业务失败经 apiClient 信封 { success:false, error } 原样返回，不吞错、不假成功。
+  openExternalFile: (options: { category: string; subCategory: string; fileName: string; projectName?: string }) =>
+    apiClient.post<null>('/api/files/open-external', options),
+  // L-1: 单文件版 K-2 回单解析链路（readFile 读 base64 → recognizeBankReceipt），返回形状与
+  // electron.d.ts parseBankReceipt 声明逐字段一致（ParsedBankReceipt：date/totalAmount/successAmount/
+  // failCount/items/receiptPath/rawTextSnippet）；错误如实上抛（读取失败/OCR 失败 → success:false + error）。
+  // 读取路径与 batchParseBankReceipts 保持一致（category 'wages'/subCategory 'bank-receipts'，K-2 保存约定）。
+  parseBankReceipt: async (sourcePath: string, projectName?: string, _yearMonth?: string) => {
+    try {
+      // 1) 读取已保存的回单文件（K-2 保存约定：category 'wages'/subCategory 'bank-receipts'）
+      const fileRes = await tauriAPI.readFile({ category: 'wages', subCategory: 'bank-receipts', fileName: sourcePath, projectName: projectName || null })
+      if (!fileRes.success || !fileRes.data) {
+        return { success: false, error: fileRes.error || '读取回单文件失败' }
+      }
+      // 2) 既有单张解析（百度银行回单 OCR，无状态；dataUrl 去前缀后传 base64）
+      const imageBase64 = fileRes.data.dataUrl.split(',')[1] || fileRes.data.dataUrl
+      const ocrRes = await recognizeBankReceipt(imageBase64)
+      if (!ocrRes.success || !ocrRes.bankReceipt) {
+        return { success: false, error: ocrRes.error || '回单解析失败' }
+      }
+      const br = ocrRes.bankReceipt
+      return {
+        success: true,
+        data: {
+          date: br.transactionDate || '',
+          totalAmount: br.amount,
+          successAmount: br.amount,
+          failCount: 0,
+          items: [{
+            name: br.payeeName || br.payerName || '',
+            amount: br.amount,
+            status: '成功',
+            account: br.payeeAccount || undefined,
+          }],
+          receiptPath: sourcePath,
+          rawTextSnippet: ocrRes.text ? ocrRes.text.slice(0, 500) : undefined,
+        } as ParsedBankReceipt,
+      }
+    } catch (error: any) {
+      return { success: false, error: error?.message || '回单解析失败' }
+    }
+  },
 
   // ────────── 合同文件 ──────────
   readContractFile: (fileName: string, subCategory: string, projectName?: string | null) =>
