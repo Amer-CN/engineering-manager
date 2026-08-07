@@ -529,19 +529,6 @@ public static class SystemEndpoints
             return Common.Ok(columns);
         });
 
-        app.MapPost("/api/health/export-json", (HttpContext ctx) =>
-        {
-            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            // 窗口 E：STUB 显式错误化 —— 不再返回假 exported=0
-            return Common.Fail("export-json 未实现（STUB）：JSON 数据导出尚未接通", 501);
-        });
-        app.MapPost("/api/health/reconcile", (HttpContext ctx) =>
-        {
-            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            // 窗口 E：STUB 显式错误化 —— 不再返回假 reconciled=true
-            return Common.Fail("reconcile 未实现（STUB）：数据对账尚未接通", 501);
-        });
-
         // ═══════════════════════════════════════════════════════════
         // 登录前工具端点（备份/恢复/诊断）
         // ═══════════════════════════════════════════════════════════
@@ -604,13 +591,6 @@ public static class SystemEndpoints
         // ═══════════════════════════════════════════════════════════
         // SQLite 管理端点
         // ═══════════════════════════════════════════════════════════
-
-        app.MapPost("/api/sqlite/enable", (HttpContext ctx, IDbConnection db) =>
-        {
-            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            // 窗口 E：STUB 显式错误化 —— 数据已原生 SQLite，「启用」是历史占位，不再假成功
-            return Common.Fail("sqlite/enable 未实现（STUB）：数据已原生 SQLite，无需启用", 501);
-        });
 
         app.MapPost("/api/sqlite/migrate", (HttpContext ctx, IDbConnection db) =>
         {

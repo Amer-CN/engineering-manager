@@ -12,10 +12,11 @@
 - **I-1 已完成（快照上限本体）**：`/api/snapshots/max-count`（GET+PUT）接通 —— 存储 config.json 的 `snapshotMaxCount` 键（ResolveDataPath 下合并写，不覆盖已有键）；GET 任何登录用户可读、缺省默认 10；PUT `settings:update` 守卫、域 1..100、越界/非数 400；POST /api/snapshots 创建后按上限修剪最旧快照（失败只记日志不影响创建）；门禁5 删 max-count 豁免；前端 SnapshotsTab 域对齐 1..100、默认 10
 - **I-2 已完成（回单批量匹配/确认本体）**：`/api/wages/match-receipts`（wages:read，纯读打分：金额分相等准入 + 姓名互相包含 + 日期同月/相邻月，每回单 candidates 数组）与 `/api/wages/confirm-matches`（wages:update，显式配对逐条写付款列+回单路径，守卫与 batch-payment 完全一致，响应 { saved, skipped, skippedItems }）接通；前端契约收口（tauri-bridge/electron.d.ts 对齐真实形状，api-adapter mock 保持诚实报错）；门禁5 豁免 -2；`match-receipts`/`confirm-matches` 501 测试移除 → ReceiptMatchTests 接替
 - **J-1 已完成（前端批量确认接线）**：`useBankReceiptBatch` 复活为活体（裁决：接线走它，理由：场景专用钩子，两段式 match/confirm 逻辑集中不散落组件）——解析完成自动构造 ReceiptMatchInput[]（成功明细金额>0 展开）调 `matchBankReceiptItems` 拿每回单候选；`BankReceiptMatchConfirm` 重做为候选 UI（score + 理由文案，用户每回单选一个候选或跳过）；确认按钮 `can('wages:update')` 渲染守卫 + handler 守卫，只发用户确认了的配对，toast 如实报 saved/skipped（skippedItems 列出 id）；`WageBatchViews` 接线走该钩子并接入 WageManagement（ViewMode 加 'batch'，records tab 加「批量回单」入口）；旧 BankReceiptMatchColumns/MatchConfirmStatsBar（旧模型组件）随重做零引用删除
-- **E-3 已完成（mock 诚实化）**：`api-adapter.ts` 中与上述端点对应的 mock（generate/generate-v2/batch-import/match/confirm/export-json/reconcile/sqlite-enable）从假成功改为 `{ success: false, error: 'Mock 环境不支持 X（需连接后端 API）' }`（与 OCR mock 同型）
+- **J-4 已完成（三个 501 端点删除，清单闭环）**：`/api/health/export-json`、`/api/health/reconcile`（前端零调用：dataExportJson/dataReconcile 无活调用方）、`/api/sqlite/enable`（原启用按钮链 handleEnable→SettingsSqliteSection 的 onEnable/enabling 实为死 prop，JSX 未渲染按钮）——端点删除 + 按钮链清理 + 区块文案如实更新（数据已原生 SQLite，常态显示）；门禁5 删 3 条 STUB 豁免：写端点 170 → 167（133 合规 / 34 豁免实例）；WageAttendanceGenerateTests 501 Theory 三行随删（测试 −3）；api-adapter mock 的 dataExportJson/dataReconcile/sqliteEnable 同步删；bridge 的 enableSqlite（调用方 handleEnable 被删）同 commit 删，sqliteEnable/dataExportJson/exportJson/dataReconcile/reconcile 零调用按 J-3 规则列清单不删
+- **E-3 已完成（mock 诚实化）**：`api-adapter.ts` 中与上述端点对应的 mock（generate/generate-v2/batch-import/match/confirm/export-json/reconcile/sqlite-enable）从假成功改为 `{ success: false, error: 'Mock 环境不支持 X（需连接后端 API）' }`（与 OCR mock 同型；J-4 后 export-json/reconcile/sqlite-enable 的 mock 已随端点删除）
 - **E-4 已完成（门禁5 豁免同步）**：3 个考勤端点从「STUB 不写库」豁免移入 G2 暂缓（wages:create，与 /api/wages/generate 同批同待遇）；其余 STUB 豁免理由更新为「显式 501 未实现」。门禁5 复跑 170 端点 0 违反
 - **测试**：WageAttendanceGenerateTests +14（生成幂等/跳过/400、导入 upsert/400/空、7 个 STUB 端点 501），全量 713 通过 / 2 跳过 / 0 失败；npm run check 门禁1/2/5 全绿；check:version ✓；tsc --noEmit 0 错误；vite build ✓
-- **遗留（不属本窗口）**：`batch-create` 仍无前端调用方；`/api/health/export-json`、`/api/health/reconcile`、`/api/sqlite/enable` 仍为显式 501（J-4 裁决）
+- **遗留（不属本窗口）**：`batch-create` 仍无前端调用方
 
 ## 1. 原清单（窗口 E 前状态，保留供追溯）
 

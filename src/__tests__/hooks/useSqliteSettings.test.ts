@@ -16,7 +16,6 @@ describe('useSqliteSettings', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     ;(window.electronAPI as any).getSqliteStatus = vi.fn()
-    ;(window.electronAPI as any).enableSqlite = vi.fn()
     ;(window.electronAPI as any).migrateToSqlite = vi.fn()
     ;(window.electronAPI as any).setSqliteReadMode = vi.fn()
   })
@@ -28,37 +27,7 @@ describe('useSqliteSettings', () => {
     expect(result.current.status?.ready).toBe(false)
   })
 
-  test('handleEnable 成功后应刷新状态', async () => {
-    ;(window.electronAPI as any).getSqliteStatus
-      .mockResolvedValueOnce(makeStatus())
-      .mockResolvedValueOnce(makeStatus({ ready: true, dbSize: 848000, summary: { 'table1': 1000 } }))
-    ;(window.electronAPI as any).enableSqlite.mockResolvedValue({ success: true, message: 'SQLite 已启用' })
-
-    const { result } = renderHook(() => useSqliteSettings())
-    await waitFor(() => expect(result.current.loading).toBe(false))
-
-    await act(async () => {
-      await result.current.handleEnable()
-    })
-
-    expect(result.current.enabling).toBe(false)
-    expect(result.current.message).toEqual({ type: 'success', text: 'SQLite 已启用' })
-    expect(result.current.status?.ready).toBe(true)
-  })
-
-  test('handleEnable 失败时应显示错误', async () => {
-    ;(window.electronAPI as any).getSqliteStatus.mockResolvedValue(makeStatus())
-    ;(window.electronAPI as any).enableSqlite.mockResolvedValue({ success: false, message: '启用 SQLite 失败' })
-
-    const { result } = renderHook(() => useSqliteSettings())
-    await waitFor(() => expect(result.current.loading).toBe(false))
-
-    await act(async () => {
-      await result.current.handleEnable()
-    })
-
-    expect(result.current.message).toEqual({ type: 'error', text: '启用 SQLite 失败' })
-  })
+  // J-4: handleEnable 已随 /api/sqlite/enable 端点删除（数据已原生 SQLite，无需启用动作）
 
   test('handleMigrate 成功后应显示统计', async () => {
     ;(window.electronAPI as any).getSqliteStatus.mockResolvedValue(makeStatus({ ready: true }))
