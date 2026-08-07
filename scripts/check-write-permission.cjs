@@ -61,7 +61,6 @@ const EXEMPT = [
   // STUB 空操作端点（显式 501 未实现，不写库）
   { path: '/api/wages/match-receipts', reason: 'STUB：显式 501 未实现，不写库' },
   { path: '/api/wages/confirm-matches', reason: 'STUB：显式 501 未实现，不写库' },
-  { path: '/api/snapshots/max-count', reason: 'STUB：显式 501 未实现，不写库' },
   { path: '/api/health/export-json', reason: 'STUB：显式 501 未实现，不写库' },
   { path: '/api/health/reconcile', reason: 'STUB：显式 501 未实现，不写库' },
   { path: '/api/sqlite/enable', reason: 'STUB：显式 501 未实现，不写库' },

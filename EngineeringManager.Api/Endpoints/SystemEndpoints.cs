@@ -206,6 +206,15 @@ public static class SystemEndpoints
             var snapshotName = $"snapshot-{DateTime.Now:yyyyMMdd-HHmmss}.db";
             var snapshotPath = Path.Combine(snapshotDir, snapshotName);
             File.Copy(dbPath, snapshotPath);
+            // I-1：创建成功后按 snapshotMaxCount 修剪最旧快照（文件名倒序 = 时间戳新→旧，
+            // 超出上限的最旧快照删除）；修剪失败只记日志，不影响创建结果
+            try
+            {
+                var maxCount = ReadSnapshotMaxCount();
+                foreach (var old in Directory.GetFiles(snapshotDir, "*.db").OrderByDescending(f => f).Skip(maxCount))
+                    File.Delete(old);
+            }
+            catch (Exception ex) { Console.Error.WriteLine($"[Snapshots] 修剪失败: {Common.Sanitize(ex.Message)}"); }
             return Common.Ok(new { id = Path.GetFileNameWithoutExtension(snapshotName), name = snapshotName });
         });
 
@@ -223,8 +232,8 @@ public static class SystemEndpoints
         app.MapGet("/api/snapshots/max-count", (HttpContext ctx) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            // 窗口 E：STUB 显式错误化 —— 此前硬编码 Ok(200)，设置上限被静默丢弃
-            return Common.Fail("snapshots/max-count 未实现（STUB）：快照上限设置尚未接通", 501);
+            // I-1：任何登录用户可读（与 /api/config 同级）；缺省默认 10
+            return Common.Ok(new { maxCount = ReadSnapshotMaxCount() });
         });
 
         app.MapPost("/api/snapshots/{id}/restore", (HttpContext ctx, string id) =>
@@ -245,11 +254,25 @@ public static class SystemEndpoints
             return Common.Ok();
         });
 
-        app.MapPut("/api/snapshots/max-count", (HttpContext ctx) =>
+        app.MapPut("/api/snapshots/max-count", (HttpContext ctx, System.Text.Json.JsonElement body, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            // 窗口 E：STUB 显式错误化 —— 此前静默 Ok()，前端弹「上限已设为 N」实际未落库
-            return Common.Fail("snapshots/max-count 未实现（STUB）：快照上限设置尚未接通", 501);
+            // G2 B1: 写系统级配置 → settings:update（与 B1 settings 批一致）
+            if (!CurrentUser.HasPermission(ctx, db, "settings:update")) return Results.Forbid();
+            // 入参 int：越界/非数 → 400 显式消息（前端 setMaxSnapshots 发 { count }）
+            // 注意：非 Object body（裸字符串/裸数字）下 TryGetProperty 会抛
+            // InvalidOperationException → 必须先 ValueKind 前置守卫，否则 500
+            if (body.ValueKind != System.Text.Json.JsonValueKind.Object
+                || !body.TryGetProperty("count", out var countProp)
+                || countProp.ValueKind != System.Text.Json.JsonValueKind.Number
+                || !countProp.TryGetInt32(out var count) || count < 1 || count > 100)
+                return Common.Fail("快照上限须为 1～100 的整数", 400);
+            try
+            {
+                WriteSnapshotMaxCount(count);
+                return Common.Ok(new { maxCount = count });
+            }
+            catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });
 
         // ═══════════════════════════════════════════════════════════
@@ -666,6 +689,47 @@ public static class SystemEndpoints
             }
             catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // I-1: config.json 的 snapshotMaxCount 读写（与 gpuAcceleration/read-mode
+    // 同款合并写模式：只动本键，不覆盖已有键）；读缺省默认 10，
+    // 配置损坏/越界值一律兜底默认 10
+    // ═══════════════════════════════════════════════════════════
+
+    private const int DefaultSnapshotMaxCount = 10;
+
+    private static int ReadSnapshotMaxCount()
+    {
+        var configPath = Path.Combine(ApiConfig.ResolveDataPath(), "config.json");
+        if (!File.Exists(configPath)) return DefaultSnapshotMaxCount;
+        try
+        {
+            var json = File.ReadAllText(configPath);
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("snapshotMaxCount", out var v)
+                && v.ValueKind == System.Text.Json.JsonValueKind.Number
+                && v.TryGetInt32(out var n) && n is >= 1 and <= 100)
+                return n;
+        }
+        catch { /* 配置损坏 → 兜底默认 */ }
+        return DefaultSnapshotMaxCount;
+    }
+
+    private static void WriteSnapshotMaxCount(int count)
+    {
+        var configPath = Path.Combine(ApiConfig.ResolveDataPath(), "config.json");
+        var config = new Dictionary<string, object>();
+        if (File.Exists(configPath))
+        {
+            var json = File.ReadAllText(configPath);
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            foreach (var prop in doc.RootElement.EnumerateObject())
+                config[prop.Name] = prop.Value.Clone();
+        }
+        config["snapshotMaxCount"] = count;
+        File.WriteAllText(configPath, System.Text.Json.JsonSerializer.Serialize(config,
+            new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
     }
 }
 
