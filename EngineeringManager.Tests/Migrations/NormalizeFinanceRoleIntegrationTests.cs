@@ -21,6 +21,15 @@ namespace EngineeringManager.Tests.Migrations;
 ///   → 应用 038 → 用 ApiConfig 启动真实 API 宿主（IDbConnection 指向该库）
 ///   → 该用户登录（038 已把 role_id 重映射为 accountant）→ POST /api/wages
 ///   空载荷 → 断言非 403。
+///
+/// M-FIX8 T5(b) W4 订正（交叉引用 docs/findings/ROLE-IDENTITY-DEFECTS.md）：
+/// 本测试的 pre-038 老库 seed（见 BuildPre038DbAndApply038）给 manager 的 name
+/// 逐字是「项目经理」（001 种子形态，第 1 层证据），而 CurrentUser.cs:132
+/// HasPermission 中文映射只认「经理」（第 2 层）——两层不一致导致 manager
+/// 登录后 HasPermission 恒 false（role id='项目经理' 查 roles 无行 → 全权限码
+/// 403）。038 只修 finance→accountant，不碰 manager name，故经理在修复前
+/// 「全瘫」（003-004 层）。生产【应有】状态由 042 迁移把 manager name 改「经理」
+/// （对齐映射），本测试不重复构造该场景，仅保留 finance 归一主路径 + 交叉引用。
 /// </summary>
 public class NormalizeFinanceRoleIntegrationTests : IDisposable
 {
