@@ -12,6 +12,7 @@ import PageContainer from './ui/PageContainer'
 import WageCycleDetail from './features/wages/WageCycleDetail'
 import WageStatsTab from './features/wages/WageStatsTab'
 import WageProjectList from './features/wages/WageProjectList'
+import { useWageBatchViews } from './features/wages/WageBatchViews'
 import { getAPI } from '@/services/api-adapter'
 import useWageManagement from '../hooks/useWageManagement'
 import { usePermission } from '@/hooks/usePermission'
@@ -40,8 +41,27 @@ export default function WageManagement() {
     toggleWageTableSelect, toggleAllWageTable,
     toggleWageSelect, toggleAllWages,
     receiptParsing, receiptResult, handleBankReceiptUpload,
-    loadAttendances, loadStats,
+    loadAttendances, loadStats, loadWages, loadAllRecords,
   } = hook
+
+  // J-1: 批量回单视图（上传 → 解析 → match 候选 → 确认落库），接线走 useBankReceiptBatch
+  const batchViews = useWageBatchViews({
+    selectedProject,
+    selectedMonth,
+    loadWages,
+    loadAllRecords,
+    onViewChange: setView,
+  })
+
+  if (view === 'batch' && selectedProject) {
+    return (
+      <PageContainer className="space-y-6">
+        <PageHeader title={`${selectedProject.name} · 批量回单`} onBack={() => setView('cycle')} />
+        {batchViews.renderBatchView()}
+        {ConfirmDialog}
+      </PageContainer>
+    )
+  }
 
   if (view === 'cycle' && selectedProject) {
     return (
@@ -67,6 +87,7 @@ export default function WageManagement() {
         allWageRecords={allWageRecords} paymentEdits={paymentEdits}
         onPaymentChange={handlePaymentChange} onSavePayments={handleSavePayments}
         onBankReceiptUpload={handleBankReceiptUpload}
+        onOpenBatchReceipt={() => setView('batch')}
         receiptParsing={receiptParsing} receiptResult={receiptResult}
         onBatchDeleteWages={handleBatchDeleteWages}
         onBatchArchivePayments={handleBatchArchivePayments}

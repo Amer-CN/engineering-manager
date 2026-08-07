@@ -56,6 +56,7 @@ interface WageCycleDetailProps {
   toggleAllWages: () => void
   // Bank receipt
   onBankReceiptUpload: (pdfPath: string) => void
+  onOpenBatchReceipt: () => void
   receiptParsing: boolean
   receiptResult: { matched: number; failed: number; totalItems: number; date: string; receiptPath: string; totalAmount?: number; successAmount?: number } | null
   // Filter
@@ -79,7 +80,7 @@ export default function WageCycleDetail(props: WageCycleDetailProps) {
     onBatchDeleteWageTable, selectedWageTableIds, toggleWageTableSelect, toggleAllWageTable,
     allWageRecords, paymentEdits, onPaymentChange, onSavePayments,
     onBatchDeleteWages, onBatchArchivePayments, selectedWageIds, toggleWageSelect, toggleAllWages,
-    onBankReceiptUpload, receiptParsing, receiptResult,
+    onBankReceiptUpload, onOpenBatchReceipt, receiptParsing, receiptResult,
     filterMemberName, setFilterMemberName, loading, onChangeMonth, onBack,
     projectWorkerList, onImportAttendance,
   } = props
@@ -179,7 +180,8 @@ export default function WageCycleDetail(props: WageCycleDetailProps) {
               onFilterYearMonthChange={setFilterYearMonth}
               onFilterNameChange={setFilterMemberName}
               onPaymentChange={onPaymentChange} onSavePayments={onSavePayments}
-              onBankReceiptUpload={onBankReceiptUpload}
+              onBankReceiptUpload={onBankReceiptUpload} onOpenBatchReceipt={onOpenBatchReceipt}
+              showBatchReceipt={true}
               receiptParsing={receiptParsing} receiptResult={receiptResult}
               toggleSelect={toggleWageSelect} toggleAll={toggleAllWages}
               onBatchDelete={onBatchDeleteWages} onBatchArchive={onBatchArchivePayments}
