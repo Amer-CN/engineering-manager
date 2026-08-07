@@ -165,8 +165,8 @@ public class MFix2RedTests : ApiTestBase
         // Z2(c) 偏差：getCostSummary 返回 {totalIncome,totalExpense,netTotal,...} 汇总，无 projectId 字段。
         // 改断金额：P1 cost_ledger expense=100（方向 out）在、P2 越权 expense=200 不在。
         var csNode = System.Text.Json.Nodes.JsonNode.Parse(text)!;
-        Assert.Equal(100, csNode["totalExpense"]!.GetValue<int>()); // V2(b) 缺陷锁定：direction='out' 的 777 不被计入（写侧能存、读侧统计不到，G53 锁定）
-        // V3：Equal 已钉死 100，out 777 不进统计由 V2(b) 独立数据行证明，NotEqual 是恒真死代码已删
-        Assert.NotEqual(200, csNode["totalExpense"]!.GetValue<int>()); // P2 越权 200 不在
+        Assert.Equal(100, csNode["totalExpense"]!.GetValue<int>()); // V2(b) 缺陷锁定：direction='out' 的 777 不被计入（写侧能存、读侧统计不到，G53 锁定）。
+        // P2 越权 expense=200 不在：由 Equal 钉死 100 隐含（P2 若被计入 totalExpense 必≠100）；
+        // 越权隔离的独立证明见 F1d/F1b（P2 行被拒/不可见）。M-FIX7 U4 补删。
     }
 }
