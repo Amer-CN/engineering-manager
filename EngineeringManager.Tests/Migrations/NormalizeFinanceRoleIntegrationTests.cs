@@ -109,7 +109,20 @@ public class NormalizeFinanceRoleIntegrationTests : IDisposable
         var noComments = string.Join("\n", sql.Split('\n').Where(l => !l.TrimStart().StartsWith("--")));
         using var tx = conn.BeginTransaction();
         foreach (var stmt in noComments.Split(';', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).Where(s => s.Length > 0))
-            conn.Execute(stmt, transaction: tx);
+        {
+            try
+            {
+                conn.Execute(stmt, transaction: tx);
+            }
+            catch (Microsoft.Data.Sqlite.SqliteException ex)
+            {
+                // 与 MigrationRunner.ExecuteScriptIdempotent 一致：良性错误幂等跳过
+                var benign = ex.SqliteErrorCode == 1 && (
+                    ex.Message.Contains("duplicate column name", StringComparison.OrdinalIgnoreCase) ||
+                    ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase));
+                if (!benign) throw;
+            }
+        }
         tx.Commit();
     }
 

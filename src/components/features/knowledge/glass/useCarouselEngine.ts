@@ -2,7 +2,7 @@
  * useCarouselEngine — 3D 玻璃文件夹轮播引擎（有界模式）
  *
  * 蓝本：参考项目 FolderCarousel（AI Studio 3D Glass Folder Carousel）的视效参数；
- * 物理内核沿用旧 FolderStack3D/useWheelStack 的「每帧直写 style + 聚焦索引才 setState」模式
+ * 物理内核沿用既有舞台引擎模式（旧 FolderStack3D/useWheelStack，已于 M4 下线）的「每帧直写 style + 聚焦索引才 setState」
  * （DESIGN.md Stage-Surface 验收门：每帧直写，聚焦索引变化才 setState 一次）。
  *
  * 有界决策（2026-08-06 产品拍板，交接文档 §2.3「无限循环保留」作废）：

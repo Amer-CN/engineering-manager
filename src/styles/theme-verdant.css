@@ -66,7 +66,7 @@
  *   SplashScreen / Login·LockScreen / AI 助手主页
  * 决策 3 · 玻璃材质白名单（backdrop-filter 只允许出现在这六类浮层）
  *   CommandPalette、Modal/Dialog、Toast、Popover、顶部浮动 ActivityBar、Sidebar 飞出层
- *   —— 外加 Stage-Surface 授权的舞台区：FolderStack3D 聚焦卡与其 KPI 浮层。
+ *   —— 外加 Stage-Surface 授权的舞台区：GlassCarousel 聚焦卡与其悬浮信息卡（旧 FolderStack3D 已于 M4 下线）。
  *   明确禁止：DataTable 行、Dashboard KPI 卡、StatusBar、TitleBar、输入框。
  * -------------------------------------------------------------------------- */
 
