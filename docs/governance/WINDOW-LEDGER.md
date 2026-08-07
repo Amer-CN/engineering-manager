@@ -18,8 +18,15 @@
 | G2 窗口 | 未知会话 | 已合入 master | 早期 | FRONTEND-GATING-MATRIX（G2 端点前端门控） | 已停 | 已合 | 已合 | FRONTEND-GATING-MATRIX.md:1 |
 | H 窗口 | 未知会话 | 已合入 master（f41ec6f） | d80020d 后 | f41ec6f 2026-08-07 | 已停 | 已合 | 已合 | M-AUDIT 提交史 |
 | I 窗口 | 未知会话 | **已删 window-i-stub**；两笔 rebase 后推 master | f41ec6f | adfd29bc(I-1)/8e49d4b(I-2) 07:33:57Z | **已推完（推的 master CI 红，M-FIX6 修复中）** | 已合（rebase） | I 窗口推了，M-FIX6 接管修复 | ls-remote 历史 + commit message |
+| J 窗口 | 未知会话 | 已合入 master | adfd29b | 75d79fc(J-1)/49a76f3(J-2)/fb51c42(J-3)/11a9c02(J-4) | 已合 | 已合 | 已合 | master git log（J-4 报门禁5=167 系**旧基线作废**，实测 171） |
 | M 窗口 | 未知会话 | feat/knowledge-3d-carousel（PR #9） | 25b823e（M-FIX6） | 1f4e0440(09:20:11Z)+8fa86e7b(041) | 已合（PR #9 网页端合并 c6aa5e99 10:37:37Z） | 已合 | owner 网页端 | PR #9 diff |
+| K 窗口 | 未知会话 | 已合入 master | 11a9c02（J-4） | 8fdcffa(K-1)/6c7890b(K-2)/ad4ce22(K-3)，**直推非 rebase** | 已合（master tip=ad4ce22） | 已合 | 直推 master | master git log |
 | M-FIX 线 | 审查方驱动 | fix/pr9-reconcile → master | 逐轮 | 25b823e(M-FIX6) | 在跑 | 逐轮推 master | 本会话 | 各轮报告 |
+
+## K 窗口数字核实（M-FIX8 T3/T5 追加）
+- K-2 验收自报「dotnet test 859 过 / 3 跳过 / 862 总计、门禁5=171」。
+- **859/862 系假绿基线**：本地 build 不带 -warnaserror，master 当时树上 CS8619（KnowledgeFolderEndpoints.cs:41）+ CS8604（AppendKnowledgeVoiceCodesMigrationTests.cs:142）被当警告吞掉。M-FIX8 T1 修复后，ad4ce22 实测 dotnet build 红（两个 error，见上表 M 窗口行 CS8619），带 -warnaserror 全量 test 为 **848 过 / 1 跳过 / 849**（T3 实测）。
+- 门禁5=171 正确（137 合规 / 34 豁免），K 三笔「后端端点零改动」成立（K-1/K-2 纯前端）。171 相对 I 窗口末 170 的 +1：PR#9 知识库端点（POST/PUT/DELETE folders + PUT documents = +4）净增，J-4 删 3 个 501 端点（MapPost STUB）−3，170+4−3=171。**J-4 报 167 是错误基线（漏算 PR#9 已合入的 +4，只算了 −3），作废**。
 
 ## M 窗口占用（U5 记录）
 - 占用迁移号 039/040/041（AddKnowledgeFolders/AddKnowledgeDocumentsSoftDelete/AppendKnowledgeVoiceCodes）→ R9 roles 迁移改 042。
