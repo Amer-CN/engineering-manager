@@ -46,6 +46,10 @@ public class MFix2RedTests : ApiTestBase
         // Z2(a): P1 授权数据（invoices/settlements 各一行）
         // Z2(c) + M-FIX5 W1(G53): P1 expense 行（direction='expense'，供 getCostSummary 的 expense 统计——
         // 这两行是为迎合 Agent 查询词汇而造，与写侧曾传 direction='out' 不一致，见 DIRECTION-VOCAB-DEFECT.md）
+        // V2(b) M-FIX6: 缺陷锁定——写侧能存 direction='out'（无 CHECK 约束），读侧按 expense/income 统计不到。
+        // 此行不被计入 totalExpense，正是「存得进、统计不到」缺陷被测试锁住（不是 bug 复现失败）。
+        conn.Execute(@"INSERT INTO cost_ledger (id, project_id, batch_id, voucher_no, date, direction, category, amount, summary, created_by, created_at, updated_at)
+            VALUES (5, 1, 10, 'V5', '2026-08-06', 'out', '测试', 777, 'P1-out-locked', '1', @Now, @Now)", new { Now = now });
         conn.Execute(@"INSERT INTO cost_ledger (id, project_id, batch_id, voucher_no, date, direction, category, amount, summary, created_by, created_at, updated_at)
             VALUES (3, 1, 10, 'V3', '2026-08-06', 'expense', '测试', 100, 'P1-expense', '1', @Now, @Now)", new { Now = now });
         conn.Execute(@"INSERT INTO invoices (id, project_id, name, amount, status, created_by, created_at, updated_at)
@@ -133,10 +137,8 @@ public class MFix2RedTests : ApiTestBase
         // Z2(b) 正反成对：invoicesCount/settlementsCount 各 1（P1），P2 越权行不得计入
         var text = System.Text.Json.JsonSerializer.Serialize(result.Result);
         var node = System.Text.Json.Nodes.JsonNode.Parse(text)!;
-        Assert.Equal(1, node["invoicesCount"]!.GetValue<int>()); // W2 解析取值：前缀吞噬防 :10/:12
+        Assert.Equal(1, node["invoicesCount"]!.GetValue<int>()); // W2 解析取值：前缀吞噬防 :10/:12（V3 删恒真 NotEqual）
         Assert.Equal(1, node["settlementsCount"]!.GetValue<int>());
-        Assert.NotEqual(2, node["invoicesCount"]!.GetValue<int>()); // 隔离失效会变 2
-        Assert.NotEqual(2, node["settlementsCount"]!.GetValue<int>());
     }
 
     [Fact]
@@ -163,7 +165,8 @@ public class MFix2RedTests : ApiTestBase
         // Z2(c) 偏差：getCostSummary 返回 {totalIncome,totalExpense,netTotal,...} 汇总，无 projectId 字段。
         // 改断金额：P1 cost_ledger expense=100（方向 out）在、P2 越权 expense=200 不在。
         var csNode = System.Text.Json.Nodes.JsonNode.Parse(text)!;
-        Assert.Equal(100, csNode["totalExpense"]!.GetValue<int>()); // W2 解析取值：P1 授权 expense 100（防 1000 命中）
+        Assert.Equal(100, csNode["totalExpense"]!.GetValue<int>()); // V2(b) 缺陷锁定：direction='out' 的 777 不被计入（写侧能存、读侧统计不到，G53 锁定）
+        // V3：Equal 已钉死 100，out 777 不进统计由 V2(b) 独立数据行证明，NotEqual 是恒真死代码已删
         Assert.NotEqual(200, csNode["totalExpense"]!.GetValue<int>()); // P2 越权 200 不在
     }
 }
