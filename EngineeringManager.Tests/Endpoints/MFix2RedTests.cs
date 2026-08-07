@@ -132,10 +132,11 @@ public class MFix2RedTests : ApiTestBase
         Assert.True(result.Success, "getDashboardStats 不应报 SQL 错误: " + (result.Error ?? ""));
         // Z2(b) 正反成对：invoicesCount/settlementsCount 各 1（P1），P2 越权行不得计入
         var text = System.Text.Json.JsonSerializer.Serialize(result.Result);
-        Assert.Contains("\"invoicesCount\":1", text); // 正向：仅 P1 发票 1 张
-        Assert.Contains("\"settlementsCount\":1", text); // 正向：仅 P1 结算 1 笔
-        Assert.DoesNotContain("\"invoicesCount\":2", text); // 反向：隔离失效会变 2（P2 泄漏）
-        Assert.DoesNotContain("\"settlementsCount\":2", text);
+        var node = System.Text.Json.Nodes.JsonNode.Parse(text)!;
+        Assert.Equal(1, node["invoicesCount"]!.GetValue<int>()); // W2 解析取值：前缀吞噬防 :10/:12
+        Assert.Equal(1, node["settlementsCount"]!.GetValue<int>());
+        Assert.NotEqual(2, node["invoicesCount"]!.GetValue<int>()); // 隔离失效会变 2
+        Assert.NotEqual(2, node["settlementsCount"]!.GetValue<int>());
     }
 
     [Fact]
@@ -161,7 +162,8 @@ public class MFix2RedTests : ApiTestBase
         var text = data.ToJsonString();
         // Z2(c) 偏差：getCostSummary 返回 {totalIncome,totalExpense,netTotal,...} 汇总，无 projectId 字段。
         // 改断金额：P1 cost_ledger expense=100（方向 out）在、P2 越权 expense=200 不在。
-        Assert.Contains("\"totalExpense\":100", text); // P1 授权 expense 100 在
-        Assert.DoesNotContain("\"totalExpense\":200", text); // P2 越权 expense 200 不在
+        var csNode = System.Text.Json.Nodes.JsonNode.Parse(text)!;
+        Assert.Equal(100, csNode["totalExpense"]!.GetValue<int>()); // W2 解析取值：P1 授权 expense 100（防 1000 命中）
+        Assert.NotEqual(200, csNode["totalExpense"]!.GetValue<int>()); // P2 越权 200 不在
     }
 }
