@@ -386,7 +386,7 @@ console.log('\n═══ 铁律：辉光旁路软警告（radial-gradient 尺寸
 // 存量说明：现存 backdrop-blur 均为 Modal/Dialog/Toast 浮层（决策 3 允许），
 // 已逐一登记；Card.tsx 为 glass-capable UI 原语（opt-in glass 变体），本轮不
 // 重构业务组件，先登记待审——若有消费方对内容/KPI 卡用 <Card glass> 即
-// 违反决策 3，下一轮清理。3D transform 当前 0 处，为 FolderStack3D 预留。
+// 违反决策 3，下一轮清理。3D transform 当前仅授权舞台区（FolderStack3D 已下线，GlassCarousel 保留）。
 // ═══════════════════════════════════════════════════════
 
 const GLASS_3D_ALLOWED_FILES = new Set([
@@ -420,11 +420,10 @@ const GLASS_3D_ALLOWED_FILES = new Set([
   'src/components/Sidebar.tsx',
 ])
 
-// Stage-Surface 授权舞台区（目录前缀）：FolderStack3D（试点）+ GlassCarousel
-// （知识库首页 3D 玻璃文件夹轮播，DESIGN.md § Stage Surfaces 增补条目 2026-08-06）
+// Stage-Surface 授权舞台区（目录前缀）：GlassCarousel（知识库首页 3D 玻璃文件夹轮播，
+// DESIGN.md § Stage Surfaces 增补条目 2026-08-06；旧 FolderStack3D 已于 M4 下线）
 function isStageSurface(relPath) {
-  return relPath.startsWith('src/components/ui/FolderStack3D/')
-    || relPath.startsWith('src/components/features/knowledge/glass/')
+  return relPath.startsWith('src/components/features/knowledge/glass/')
 }
 
 console.log('\n═══ 铁律：玻璃 / 3D 白名单（决策 3 + Stage-Surface） ═══')
