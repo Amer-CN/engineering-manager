@@ -79,7 +79,7 @@ public class ApiTestBase : IDisposable
         // HasPermission 的 Deserialize<string[]> 抛异常 → 非 admin 全 403，测不到真路径）。
         // 注意：这只改测试基座；生产库的旧逗号串未修（R9 做数据迁移）。
         conn.Execute("INSERT OR REPLACE INTO roles (id, name, permissions, is_system, created_at) VALUES (@Id, @Name, @Perms, 1, @Now)",
-            new { Id = "manager", Name = "项目经理", Perms = System.Text.Json.JsonSerializer.Serialize(EngineeringManager.Api.Common.GetDefaultPermissions("manager")), Now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") });
+            new { Id = "manager", Name = "经理", Perms = System.Text.Json.JsonSerializer.Serialize(EngineeringManager.Api.Common.GetDefaultPermissions("manager")), Now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") });
         conn.Execute("INSERT OR REPLACE INTO roles (id, name, permissions, is_system, created_at) VALUES (@Id, @Name, @Perms, 1, @Now)",
             new { Id = "accountant", Name = "财务", Perms = System.Text.Json.JsonSerializer.Serialize(EngineeringManager.Api.Common.GetDefaultPermissions("accountant")), Now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") });
         conn.Execute("INSERT OR REPLACE INTO roles (id, name, permissions, is_system, created_at) VALUES (@Id, @Name, @Perms, 1, @Now)",

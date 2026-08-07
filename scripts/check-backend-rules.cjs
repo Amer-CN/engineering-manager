@@ -182,6 +182,7 @@ const ALLOWED_SQL_INTERPOLATIONS = new Set([
   'filter',
   'userFilter',
   'projectFilter',
+  // M-FIX2 X2 拆分产物（getDashboardStats 单 filter 误喂 4 表 → 按表拆分）
   'projectFilterInvoices',
   'projectFilterSettlements',
   'projectFilterCostLedger',
