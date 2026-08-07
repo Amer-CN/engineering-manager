@@ -9,6 +9,8 @@
 
     <ApplicationIcon>app.ico</ApplicationIcon>
     <NoWarn>MSB3277;AD0001</NoWarn>
+    <!-- M-FIX8 T-1: 本地与 CI 编译参数对齐，CI 带 -warnaserror，本地不带 flag 同样把警告当错误 -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Version>0.91.0</Version>
   </PropertyGroup>
 
