@@ -875,6 +875,43 @@ export interface BankReceiptMatch {
   remark?: string
 }
 
+// ============ 银行回单批量匹配/确认（I-2 契约，C# 后端真实形状） ============
+
+/** 回单匹配入参：一张 OCR 回单（amount 单位为元；date 为 yyyy-MM-dd 或 yyyy-MM） */
+export interface ReceiptMatchInput {
+  amount: number
+  date?: string
+  counterparty?: string
+  receiptPath?: string
+}
+
+/** 单张回单的候选工资行（score 为命中规则数权重和，reasons 为命中理由文案） */
+export interface ReceiptMatchCandidate {
+  wageId: number
+  workerName: string | null
+  amount: number
+  yearMonth: string | null
+  score: number
+  reasons: string[]
+}
+
+/** 单张回单的匹配结果（candidates 为空数组 = 无候选） */
+export interface MatchReceiptResult {
+  receiptPath?: string
+  date?: string
+  counterparty?: string
+  amount?: number
+  candidates: ReceiptMatchCandidate[]
+}
+
+/** 回单确认配对：显式指定工资行 + 付款列 + 回单路径（bankReceiptPath 必填） */
+export interface ConfirmMatchPair {
+  wageId: number
+  paidAmount: number
+  paidDate: string
+  bankReceiptPath: string
+}
+
 
 // ============ 项目成员关联 ============
 export interface ProjectMember {
@@ -1171,7 +1208,7 @@ export interface ElectronAPI {
   getWageStats: (yearMonth?: string, projectId?: number) => Promise<{ success: boolean; data?: WageStats; error?: string }>
   parseBankReceipt: (sourcePath: string, projectName?: string, yearMonth?: string) => Promise<{ success: boolean; data?: ParsedBankReceipt; error?: string }>
   batchParseBankReceipts: (filePaths: string[], projectId?: number, yearMonth?: string) => Promise<{ success: boolean; data?: BatchParseResult; error?: string }>
-  batchConfirmMatches: (matches: BankReceiptMatch[], yearMonth?: string) => Promise<{ success: boolean; data?: { updated: number }; error?: string }>
+  batchConfirmMatches: (pairs: ConfirmMatchPair[]) => Promise<{ success: boolean; data?: { saved: number; skipped: number; skippedItems: { id: number }[] }; error?: string }>
 
   // ============ 工资发放记录（A3） ============
   getWagePaymentRecords: (filters?: { projectId?: number; yearMonth?: string; status?: string }) => Promise<{ success: boolean; data?: any[]; error?: string }>
