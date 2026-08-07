@@ -6,13 +6,14 @@ using Xunit;
 namespace EngineeringManager.Tests.Migrations;
 
 /// <summary>
-/// M3：039 知识库文件夹迁移测试
+/// M3/M4：039 知识库文件夹 + 040 文档软删列迁移测试
 ///
 /// 覆盖：
 ///   · 全新库（MigrationRunner.Run 全量）→ knowledge_folders 表存在、含软删/项目列，
-///     knowledge_documents 挂上 folder_id 列、三个索引存在
+///     knowledge_documents 挂上 folder_id 与 deleted_at 列、三个索引存在
 ///   · pre-039 库态（knowledge_documents 无 folder_id、无 folders 表）→ 跑 039 →
 ///     表建好、列补上、历史文档 folder_id 为 NULL
+///   · pre-040 库态（有 folder_id 无 deleted_at，即 039 已应用的老库）→ 跑 040 → 补列
 ///   · 幂等：连跑两次不报错不重复（ADD COLUMN 被 MigrationRunner 良性吞掉）
 /// </summary>
 public class KnowledgeFoldersMigrationTests : IDisposable
@@ -113,9 +114,10 @@ public class KnowledgeFoldersMigrationTests : IDisposable
         Assert.Contains("created_by", cols);
         Assert.Contains("deleted_at", cols);   // 补强 ①：软删列
 
-        // knowledge_documents 已挂 folder_id
+        // knowledge_documents 已挂 folder_id 与 deleted_at（039 + 040）
         var docCols = conn.Query<string>("SELECT name FROM pragma_table_info('knowledge_documents')").ToList();
         Assert.Contains("folder_id", docCols);
+        Assert.Contains("deleted_at", docCols);
 
         // 三个索引存在
         var idxs = conn.Query<string>(
@@ -170,5 +172,79 @@ public class KnowledgeFoldersMigrationTests : IDisposable
         var idxCount = conn.ExecuteScalar<int>(
             "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='idx_knowledge_documents_folder'");
         Assert.Equal(1, idxCount);
+    }
+
+    /// <summary>独立执行 040 脚本（剥注释 + 按 ; 切分 + 良性错误吞掉）。</summary>
+    private void Apply040()
+    {
+        var asm = typeof(MigrationRunner).Assembly;
+        var name = asm.GetManifestResourceNames()
+            .First(n => n.EndsWith("040_AddKnowledgeDocumentsSoftDelete.sql"));
+        using var stream = asm.GetManifestResourceStream(name)!;
+        using var reader = new StreamReader(stream);
+        var sql = reader.ReadToEnd();
+        var noComments = string.Join("\n", sql.Split('\n')
+            .Where(l => !l.TrimStart().StartsWith("--")));
+        using var conn = new SqliteConnection(_connStr);
+        conn.Open();
+        using var tx = conn.BeginTransaction();
+        foreach (var stmt in noComments.Split(';', StringSplitOptions.RemoveEmptyEntries)
+            .Select(s => s.Trim()).Where(s => s.Length > 0))
+        {
+            try { conn.Execute(stmt, transaction: tx); }
+            catch (Microsoft.Data.Sqlite.SqliteException ex)
+            {
+                var benign = ex.SqliteErrorCode == 1 && (
+                    ex.Message.Contains("duplicate column name", StringComparison.OrdinalIgnoreCase) ||
+                    ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase));
+                if (!benign) throw;
+            }
+        }
+        tx.Commit();
+    }
+
+    /// <summary>pre-040 库态（039 已应用：有 folder_id 无 deleted_at，等同正式库现状）→ 跑 040 → 补列。</summary>
+    [Fact]
+    public void Pre040State_NoDeletedAt_040AddsColumn_KeepsData()
+    {
+        ApplyPre039State();
+        Apply039();
+
+        using (var conn = new SqliteConnection(_connStr))
+        {
+            conn.Open();
+            conn.Execute(@"INSERT INTO knowledge_folders (name, project_id, created_at, updated_at, created_by)
+                VALUES ('安全资料', NULL, @Now, @Now, @U)",
+                new { Now = "2026-08-07 00:00:00", U = "u-1" });
+            conn.Execute(@"UPDATE knowledge_documents SET folder_id = 1 WHERE id = 1");
+        }
+
+        Apply040();
+
+        using var conn2 = new SqliteConnection(_connStr);
+        conn2.Open();
+        var hasDeletedAt = conn2.ExecuteScalar<int>(
+            "SELECT COUNT(*) FROM pragma_table_info('knowledge_documents') WHERE name='deleted_at'");
+        Assert.Equal(1, hasDeletedAt);
+        // 既有行数据未被破坏，folder_id 保留，deleted_at 为 NULL（= 未删除）
+        var doc = conn2.QueryFirst<dynamic>("SELECT title, folder_id, deleted_at FROM knowledge_documents WHERE id = 1");
+        Assert.Equal("历史文档", (string)doc.title);
+        Assert.Equal(1L, (long)doc.folder_id);
+        Assert.Null(doc.deleted_at);
+    }
+
+    /// <summary>040 幂等：连跑两次无错。</summary>
+    [Fact]
+    public void Migration040_Idempotent_RunTwiceNoError()
+    {
+        ApplyPre039State();
+        Apply039();
+        Apply040();
+        Apply040();
+
+        using var conn = new SqliteConnection(_connStr);
+        conn.Open();
+        Assert.Equal(1, conn.ExecuteScalar<int>(
+            "SELECT COUNT(*) FROM pragma_table_info('knowledge_documents') WHERE name='deleted_at'"));
     }
 }
