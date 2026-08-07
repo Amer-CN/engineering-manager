@@ -43,7 +43,7 @@ public static class KnowledgeFolderEndpoints
                         Filter = @"(f.created_by = @Uid
                               OR EXISTS(SELECT 1 FROM project_authorizations pa
                                         WHERE pa.project_id = f.project_id AND pa.user_id = @Uid))",
-                        Uid = uid, ProjectId = (int?)projectId,
+                        Uid = (string?)uid, ProjectId = (int?)projectId,
                     };
 
                 var folders = db.Query<dynamic>(
