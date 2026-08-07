@@ -68,7 +68,7 @@ public static class CostLedgerEndpoints
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var affected = await db.ExecuteAsync($@"UPDATE cost_ledger SET voucher_no=@VoucherNo,date=@Date,direction=@Direction,category=@Category,
                 amount=@Amount,counterparty=@Counterparty,channel=@Channel,summary=@Summary,notes=@Notes,updated_at=@Now, version=version+1, last_modified_at=@Now
-                WHERE id=@Id AND {CurrentUser.UserFilterWithAuthorizedProjects(scope)}",
+                WHERE id=@Id AND {CurrentUser.UserFilterWithAuthorizedProjects(scope, "cost_ledger.project_id")}",
                 new { dto.VoucherNo, dto.Date, dto.Direction, dto.Category, dto.Amount,
                       dto.Counterparty, dto.Channel, dto.Summary, dto.Notes, Now = now(), dto.Id, Uid = uid, IsAdmin = isAdmin });
             return affected > 0 ? Common.Ok() : Results.Forbid();
@@ -81,7 +81,7 @@ public static class CostLedgerEndpoints
             if (!CurrentUser.HasPermission(ctx, db, "costLedger:delete")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
-            return (await db.ExecuteAsync($"UPDATE cost_ledger SET deleted_at=@Now WHERE id=@Id AND deleted_at IS NULL AND {CurrentUser.UserFilterWithAuthorizedProjects(scope)}", new { Id = id, Now = now(), Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
+            return (await db.ExecuteAsync($"UPDATE cost_ledger SET deleted_at=@Now WHERE id=@Id AND deleted_at IS NULL AND {CurrentUser.UserFilterWithAuthorizedProjects(scope, "cost_ledger.project_id")}", new { Id = id, Now = now(), Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
         });
 
         app.MapPost("/api/cost-ledger/batch", async (HttpContext ctx, List<CostLedgerEntryDto> entries, IDbConnection db) =>
@@ -261,7 +261,7 @@ public static class CostLedgerEndpoints
         });
 
         // POST /api/cost-ledger/{batchId}/sheet — 批量 upsert 电子表格编辑结果
-        // 金额：INTEGER（分），前端已传分，直接入库；SQL 全参数化；表名 [] 包裹
+        // 金额：REAL（元），直接存 double（M-FIX1 F6 修正：原注释撒谎说 INTEGER 分 + 强制取整丢小数）；SQL 全参数化；表名 [] 包裹
         app.MapPost("/api/cost-ledger/{batchId}/sheet", async (HttpContext ctx, long batchId, CostLedgerSheetDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
@@ -275,7 +275,7 @@ public static class CostLedgerEndpoints
             // B1 修复：先校验 batch 归属（口径与 UPDATE 一致：UserFilterWithAuthorizedProjects）
             // 查 [id] 判存在性，[project_id] 单独取值（解决 long? 二义性）
             var batchRow = db.QueryFirstOrDefault<dynamic>(
-                $"SELECT [id], [project_id] FROM [cost_ledger_batches] WHERE [id]=@BatchId AND {CurrentUser.UserFilterWithAuthorizedProjects(scope)}",
+                $"SELECT [id], [project_id] FROM [cost_ledger_batches] WHERE [id]=@BatchId AND {CurrentUser.UserFilterWithAuthorizedProjects(scope, "cost_ledger_batches.project_id")}",
                 new { BatchId = batchId, Uid = uid, IsAdmin = isAdmin });
             if (batchRow == null)
                 return Results.Json(new { success = false, error = "无权操作该批次" }, statusCode: 403);
@@ -290,8 +290,8 @@ public static class CostLedgerEndpoints
             {
                 foreach (var row in dto.Entries)
                 {
-                    // 金额强制 INTEGER（分），防御性取整
-                    var amountCents = (long)Math.Round((row.Amount ?? 0));
+                    // M-FIX1 F6: 金额 REAL（元）——直接存 double，不做 (long) 取整（此前撒谎注释「INTEGER 分」+ 强制取整丢小数）
+                    var amountCents = row.Amount ?? 0;
 
                     if (row.Id.HasValue && row.Id.Value > 0)
                     {
@@ -300,7 +300,7 @@ public static class CostLedgerEndpoints
                             [voucher_no]=@VoucherNo,[date]=@Date,[direction]=@Direction,[category]=@Category,
                             [amount]=@Amount,[counterparty]=@Counterparty,[channel]=@Channel,
                             [summary]=@Summary,[notes]=@Notes,[updated_at]=@Now,[version]=[version]+1,[last_modified_at]=@Now
-                            WHERE [id]=@Id AND [batch_id]=@BatchId AND " + CurrentUser.UserFilterWithAuthorizedProjects(scope),
+                            WHERE [id]=@Id AND [batch_id]=@BatchId AND " + CurrentUser.UserFilterWithAuthorizedProjects(scope, "cost_ledger.project_id"),
                             new { row.Id, row.VoucherNo, row.Date, row.Direction, row.Category,
                                   Amount = amountCents, row.Counterparty, row.Channel, row.Summary, row.Notes,
                                   BatchId = batchId, Uid = uid, IsAdmin = isAdmin, Now = now() }, tx);

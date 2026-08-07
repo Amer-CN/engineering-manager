@@ -12,6 +12,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { CategoryManager } from '@/components/features/costLedger/CategoryManager'
 import type { CostLedgerCategory } from '@/types'
+vi.mock('@/hooks/usePermission', () => ({ usePermission: () => ({ can: () => true, canAny: () => true, isAdmin: () => true, isLoggedIn: () => true }) }))
 
 // ── Mock window.electronAPI ──
 beforeEach(() => {

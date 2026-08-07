@@ -35,18 +35,6 @@ public static class CurrentUser
         !EditionFeatures.Has(EditionFeatures.MultiUserDataScope) || IsAdmin(ctx) ? DataScope.All : DataScope.AuthorizedProjects;
 
     /// <summary>
-    /// 项目级表过滤片段 (有 project_id 列), 已弃 const UserFilterFragment 改用此方法。
-    /// All→(1=1); 非 All→created_by ∨ 授权项目。
-    /// </summary>
-    public static string UserFilterFragmentForProject(DataScope scope) =>
-        scope == DataScope.All
-            ? "(1 = 1)"
-            : @"
-        (created_by = @Uid
-         OR EXISTS(SELECT 1 FROM project_authorizations
-                   WHERE project_id = @ProjectId AND user_id = @Uid))";
-
-    /// <summary>
     /// 公司维度表过滤 (无 project_id 列, 如 projects / members / workers / partners / supervisors / inventory_items / materials)
     /// 简单看: 创建人 OR admin
     /// 入参: createdByCol 当前行 created_by 列 (默认 "created_by", 当主查询 JOIN 多个有 created_by 的表时需带表别名如 "m.created_by")
@@ -63,13 +51,21 @@ public static class CurrentUser
     /// </summary>
     public static string UserFilterWithAuthorizedProjects(
         DataScope scope,
-        string projectCol = "project_id",
-        string createdByCol = "created_by") =>
-        scope == DataScope.All
-            ? "(1 = 1)"
-            : $@"({createdByCol} = @Uid
-            OR EXISTS(SELECT 1 FROM project_authorizations
-                      WHERE project_id = {projectCol} AND user_id = @Uid))";
+        string projectCol,
+        string createdByCol = "created_by")
+    {
+        // M-FIX1 F2(b): 运行时守卫——裸列在 EXISTS 子查询内会解析到 project_authorizations
+        // 自身，产生 project_id = project_id 自比较恒真 → 非 admin 用户有任意授权即全项目
+        // 可见（越权，M-FIX1 F1b/F1c 先红实证）。修复前默认 projectCol="project_id" 是裸列。
+        if (projectCol == null || !projectCol.Contains('.'))
+            throw new ArgumentException(
+                $"projectCol 必须是表限定列（如 income_contracts.project_id），收到裸列 '{projectCol}'（M-FIX1 fail-closed）");
+        if (scope == DataScope.All) return "(1 = 1)";
+        // M-FIX1 F2(c): 子查询表加别名 pa_authz，左边也限定——避免与任何外层裸 project_id 混淆。
+        return $@"({createdByCol} = @Uid
+        OR EXISTS(SELECT 1 FROM project_authorizations pa_authz
+                  WHERE pa_authz.project_id = {projectCol} AND pa_authz.user_id = @Uid))";
+    }
 
     // ── v0.80 D-2: PII 字段权限分级 ──
 

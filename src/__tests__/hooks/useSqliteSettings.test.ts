@@ -1,3 +1,4 @@
+vi.mock('@/hooks/usePermission', () => ({ usePermission: () => ({ can: () => true, canAny: () => true, isAdmin: () => true, isLoggedIn: () => true }) }))
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { useSqliteSettings } from '@/hooks/useSqliteSettings'
 
@@ -47,7 +48,7 @@ describe('useSqliteSettings', () => {
 
   test('handleEnable 失败时应显示错误', async () => {
     ;(window.electronAPI as any).getSqliteStatus.mockResolvedValue(makeStatus())
-    ;(window.electronAPI as any).enableSqlite.mockResolvedValue({ success: false, message: '初始化失败' })
+    ;(window.electronAPI as any).enableSqlite.mockResolvedValue({ success: false, message: '启用 SQLite 失败' })
 
     const { result } = renderHook(() => useSqliteSettings())
     await waitFor(() => expect(result.current.loading).toBe(false))
@@ -56,7 +57,7 @@ describe('useSqliteSettings', () => {
       await result.current.handleEnable()
     })
 
-    expect(result.current.message).toEqual({ type: 'error', text: '初始化失败' })
+    expect(result.current.message).toEqual({ type: 'error', text: '启用 SQLite 失败' })
   })
 
   test('handleMigrate 成功后应显示统计', async () => {

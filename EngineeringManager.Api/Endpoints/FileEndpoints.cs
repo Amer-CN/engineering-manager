@@ -112,7 +112,7 @@ public static class FileEndpoints
             // v1.1.0 P0-4 Phase 2: 总加 user-dim
             var conditions = new List<string>();
             if (projectId.HasValue) conditions.Add("project_id=@ProjectId");
-            conditions.Add(CurrentUser.UserFilterWithAuthorizedProjects(scope));
+            conditions.Add(CurrentUser.UserFilterWithAuthorizedProjects(scope, "drawings.project_id"));
             var sql = "SELECT * FROM drawings WHERE " + string.Join(" AND ", conditions) + " ORDER BY created_at DESC";
             return Common.Ok(db.Query(sql, new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }));
         });
