@@ -446,21 +446,125 @@ public static class WageEndpoints
             return Common.Ok(new { unarchived = count });
         });
 
-        // 窗口 E：STUB 显式错误化 —— 批量回单匹配/确认未接通，不再假成功
-        // （回单解析走 OCR 是真功能，批量应用到工资单的这两步仍是占位；
-        //   此前返回空数组/0 让前端弹「成功确认 0 条」，用户无感知地丢失操作）
-        app.MapPost("/api/wages/match-receipts", (HttpContext ctx, IDbConnection db) =>
+        // ═══════════════════════════════════════════════════════════
+        // I-2: 回单批量匹配 / 确认（propose-confirm，绝不自动写）
+        // 匹配是纯读打分（wages:read），确认才写付款列（wages:update，
+        // 守卫与 batch-payment 完全一致）——两个端点分管「建议」与「落库」两步
+        // ═══════════════════════════════════════════════════════════
+
+        // POST /api/wages/match-receipts — 批量回单匹配（纯读，一行不写）
+        // 入参 = { projectId, yearMonth?, receipts: [{ amount(元), date, counterparty, receiptPath }] }
+        // 对每张回单在项目范围内找候选工资行（deleted_at IS NULL AND paid_amount IS NULL
+        // 且未归档；已发款/已归档行永不进候选），按优先级打分：
+        //   ①金额分相等（ToFen 后等值）—— 候选准入，容差外不进候选
+        //   ②工人姓名与 counterparty 互相包含（任一方向）
+        //   ③回单日期与 year_month 同月或相邻月
+        // 响应 = 每回单一个 candidates 数组（wageId/workerName/amount(元)/yearMonth/score
+        // + 命中理由文案），无候选给空数组
+        app.MapPost("/api/wages/match-receipts", (HttpContext ctx, MatchReceiptsDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B2: 回单匹配是工资读取操作（纯读）→ wages:read
+            if (!CurrentUser.HasPermission(ctx, db, "wages:read")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
-            return Common.Fail("match-receipts 未实现（STUB）：批量回单匹配未接通，请逐条填写发放记录", 501);
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            if (dto is null || !dto.ProjectId.HasValue || dto.Receipts is null)
+                return Results.BadRequest(new { success = false, error = "match-receipts: projectId / receipts 必填" });
+            var projectId = dto.ProjectId.Value;
+            // 候选行：项目内、未软删、未发款（paid_amount IS NULL）、未归档（payment_locked=0）；
+            // user-dim 过滤与 GET /api/wages 同规则
+            var rows = db.Query(@"SELECT w.id, w.year_month, w.actual_wage,
+                            COALESCE(m.name, wr.name) AS worker_name
+                            FROM wages w
+                            LEFT JOIN members m ON w.member_id=m.id
+                            LEFT JOIN project_workers pw ON w.project_worker_id=pw.id
+                            LEFT JOIN workers wr ON pw.worker_id=wr.id
+                            WHERE w.project_id=@ProjectId AND w.deleted_at IS NULL
+                              AND w.paid_amount IS NULL AND COALESCE(w.payment_locked,0)=0
+                              AND " + CurrentUser.UserFilterWithAuthorizedProjects(scope, "w.project_id", "w.created_by"),
+                new { ProjectId = projectId, Uid = uid, IsAdmin = isAdmin }).ToList();
+            var matches = new List<object>();
+            foreach (var receipt in dto.Receipts)
+            {
+                // 单张回单缺金额 → 无法参与金额匹配，按空候选返回（不整单 400）
+                if (receipt is null || !receipt.Amount.HasValue)
+                {
+                    matches.Add(new { receiptPath = receipt?.ReceiptPath, date = receipt?.Date,
+                                      counterparty = receipt?.Counterparty, amount = receipt?.Amount,
+                                      candidates = Array.Empty<object>() });
+                    continue;
+                }
+                var amountFen = ToFen(receipt.Amount.Value);
+                var candidates = new List<(long WageId, string? WorkerName, decimal Amount, string? YearMonth, int Score, List<string> Reasons)>();
+                foreach (var r in rows)
+                {
+                    var actualFen = Convert.ToInt64(r.actual_wage ?? 0);
+                    if (actualFen != amountFen) continue; // ① 金额分相等（容差外不进候选）
+                    var workerName = (string?)r.worker_name;
+                    var score = 3; // ① 金额分相等（候选准入，最高优先级）
+                    var reasons = new List<string> { "金额分相等" };
+                    // ② 工人姓名与 counterparty 互相包含（任一方向）
+                    var nameHit = !string.IsNullOrWhiteSpace(workerName)
+                        && !string.IsNullOrWhiteSpace(receipt.Counterparty)
+                        && (workerName.Contains(receipt.Counterparty) || receipt.Counterparty.Contains(workerName));
+                    if (nameHit) { score += 2; reasons.Add("姓名互相包含"); }
+                    // ③ 回单日期与 year_month 同月或相邻月
+                    if (IsSameOrAdjacentMonth(receipt.Date, (string?)r.year_month)) { score += 1; reasons.Add("日期与工资月份同月或相邻"); }
+                    candidates.Add((Convert.ToInt64(r.id), workerName, ToYuan(actualFen), (string?)r.year_month, score, reasons));
+                }
+                // 分数高（命中规则多）排前：等值金额+姓名命中排第一
+                candidates.Sort((a, b) => b.Score.CompareTo(a.Score));
+                matches.Add(new
+                {
+                    receiptPath = receipt.ReceiptPath, date = receipt.Date,
+                    counterparty = receipt.Counterparty, amount = receipt.Amount,
+                    candidates = candidates.Select(c => new { wageId = c.WageId, workerName = c.WorkerName,
+                        amount = c.Amount, yearMonth = c.YearMonth, score = c.Score, reasons = c.Reasons })
+                });
+            }
+            return Common.Ok(new { matches });
         });
 
-        app.MapPost("/api/wages/confirm-matches", (HttpContext ctx, IDbConnection db) =>
+        // POST /api/wages/confirm-matches — 批量回单确认（显式配对，绝不自动匹配写库）
+        // 入参 = 显式配对数组 [{ wageId, paidAmount(元), paidDate, bankReceiptPath }]
+        // 逐对写入，守卫与 batch-payment 完全一致（行存在、deleted_at IS NULL、
+        // payment_locked=0、created_by/admin）；缺字段逐条 400；语义等价于
+        // 「带回单路径的 batch-payment」（bankReceiptPath 必填，区别于 batch-payment 的可选）
+        app.MapPost("/api/wages/confirm-matches", async (HttpContext ctx, List<ConfirmMatchPairDto> pairs, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B2: 回单确认写付款列 → wages:update
+            if (!CurrentUser.HasPermission(ctx, db, "wages:update")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
-            return Common.Fail("confirm-matches 未实现（STUB）：批量回单确认未接通，请逐条填写发放记录", 501);
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            var saved = 0;
+            var skipped = 0;
+            var skippedItems = new List<object>();
+            var index = 0;
+            foreach (var pair in pairs ?? new List<ConfirmMatchPairDto>())
+            {
+                index++;
+                // 缺字段逐条 400（与 batch-payment 同风格），不许静默跳过
+                var missing = new List<string>();
+                if (!pair.WageId.HasValue) missing.Add("wageId");
+                if (!pair.PaidAmount.HasValue) missing.Add("paidAmount");
+                if (string.IsNullOrEmpty(pair.PaidDate)) missing.Add("paidDate");
+                if (string.IsNullOrEmpty(pair.BankReceiptPath)) missing.Add("bankReceiptPath");
+                if (missing.Count > 0)
+                    return Results.BadRequest(new { success = false, error = $"confirm-matches: 第 {index} 条缺失字段: {string.Join(", ", missing)}" });
+                // 只 SET 付款列 + 回单路径 + 时间戳/版本；守卫与 batch-payment 完全一致
+                var affected = await db.ExecuteAsync(@"UPDATE wages SET
+                        paid_amount=@PaidAmount, paid_date=@PaidDate, bank_receipt_path=@BankReceiptPath,
+                        updated_at=@Now, version=version+1, last_modified_at=@Now
+                    WHERE id=@Id AND deleted_at IS NULL
+                      AND COALESCE(payment_locked, 0) = 0
+                      AND (created_by=@Uid OR @IsAdmin=1)",
+                    new { Id = pair.WageId, PaidAmount = ToFen(pair.PaidAmount!.Value), PaidDate = pair.PaidDate,
+                          BankReceiptPath = pair.BankReceiptPath, Uid = uid, IsAdmin = isAdmin, Now = now() });
+                if (affected > 0) saved++;
+                else { skipped++; skippedItems.Add(new { id = pair.WageId }); }
+            }
+            return Common.Ok(new { saved, skipped, skippedItems });
         });
 
         app.MapGet("/api/wages/payment-records", (HttpContext ctx, IDbConnection db, long? projectId, string? yearMonth) =>
@@ -907,6 +1011,18 @@ public static class WageEndpoints
         return int.TryParse(parts[0], out year) && int.TryParse(parts[1], out month)
             && year is >= 1 and <= 9999 && month is >= 1 and <= 12;
     }
+
+    // I-2: 回单日期（yyyy-MM-dd / yyyy-MM）与工资 year_month（yyyy-MM）同月或相邻月
+    private static bool IsSameOrAdjacentMonth(string? date, string? yearMonth)
+    {
+        if (string.IsNullOrEmpty(date) || string.IsNullOrEmpty(yearMonth)) return false;
+        var d = date.Split('-');
+        var m = yearMonth.Split('-');
+        if (d.Length < 2 || m.Length != 2) return false;
+        if (!int.TryParse(d[0], out var dYear) || !int.TryParse(d[1], out var dMonth)
+            || !int.TryParse(m[0], out var mYear) || !int.TryParse(m[1], out var mMonth)) return false;
+        return Math.Abs((dYear * 12 + dMonth) - (mYear * 12 + mMonth)) <= 1;
+    }
 }
 
 // B-1: 批量写入 DTO —— 字段名与前端 WageRecord（src/types/electron.d.ts）camelCase 一致
@@ -931,4 +1047,14 @@ record AttendanceGenerateDto(long? ProjectId, string? YearMonth, List<long>? Mem
 record AttendanceGenerateV2Dto(long? ProjectId, string? YearMonth, List<long>? ProjectWorkerIds);
 record AttendanceImportDto(long? ProjectId, string? YearMonth, List<AttendanceImportItem>? Records);
 record AttendanceImportItem(long? ProjectWorkerId, double? WorkDays);
+
+// I-2: 回单批量匹配入参（match-receipts）—— receipts 每项为一张 OCR 回单
+// （amount 单位为元，候选准入走 ToFen 后等值）；yearMonth 为契约兼容保留，
+// 候选范围按设计仅限项目内，月份关系走规则③打分
+record ReceiptMatchDto(string? Date, double? Amount, string? Counterparty, string? ReceiptPath);
+record MatchReceiptsDto(long? ProjectId, string? YearMonth, List<ReceiptMatchDto>? Receipts);
+
+// I-2: 回单确认配对（confirm-matches）—— 与 batch-payment 同守卫，
+// 但 bankReceiptPath 必填（本端点语义 = 带回单路径的付款，区别于 batch-payment 的可选）
+record ConfirmMatchPairDto(long? WageId, double? PaidAmount, string? PaidDate, string? BankReceiptPath);
 
