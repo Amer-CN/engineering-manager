@@ -44,7 +44,8 @@ public class MFix2RedTests : ApiTestBase
         conn.Execute(@"INSERT INTO cost_ledger (id, project_id, batch_id, voucher_no, date, direction, category, amount, summary, created_by, created_at, updated_at)
             VALUES (1, 1, 10, 'V1', '2026-08-06', 'out', '测试', 100, 'F2', '1', @Now, @Now)", new { Now = now });
         // Z2(a): P1 授权数据（invoices/settlements 各一行）
-        // Z2(c): P1 expense 行（direction='expense'，供 getCostSummary 的 expense 统计）
+        // Z2(c) + M-FIX5 W1(G53): P1 expense 行（direction='expense'，供 getCostSummary 的 expense 统计——
+        // 这两行是为迎合 Agent 查询词汇而造，与写侧曾传 direction='out' 不一致，见 DIRECTION-VOCAB-DEFECT.md）
         conn.Execute(@"INSERT INTO cost_ledger (id, project_id, batch_id, voucher_no, date, direction, category, amount, summary, created_by, created_at, updated_at)
             VALUES (3, 1, 10, 'V3', '2026-08-06', 'expense', '测试', 100, 'P1-expense', '1', @Now, @Now)", new { Now = now });
         conn.Execute(@"INSERT INTO invoices (id, project_id, name, amount, status, created_by, created_at, updated_at)
@@ -100,13 +101,13 @@ public class MFix2RedTests : ApiTestBase
         // 正向：P1 批次（已授权）POST 成功
         var okPost = await Client.PostAsJsonAsync("/api/cost-ledger/10/sheet", new
         {
-            entries = new[] { new { amount = 100.0, date = "2026-08-06", direction = "out", category = "测试", summary = "Y4-ok" } },
+            entries = new[] { new { amount = 100.0, date = "2026-08-06", direction = "expense", category = "测试", summary = "Y4-ok" } },
         });
         Assert.Equal(HttpStatusCode.OK, okPost.StatusCode);
         // 反向：P2 批次（未授权）POST 被拒（403 或 0 行）
         var badPost = await Client.PostAsJsonAsync("/api/cost-ledger/11/sheet", new
         {
-            entries = new[] { new { amount = 200.0, date = "2026-08-06", direction = "out", category = "测试", summary = "Y4-bad" } },
+            entries = new[] { new { amount = 200.0, date = "2026-08-06", direction = "expense", category = "测试", summary = "Y4-bad" } },
         });
         Assert.Equal(HttpStatusCode.Forbidden, badPost.StatusCode);
     }
