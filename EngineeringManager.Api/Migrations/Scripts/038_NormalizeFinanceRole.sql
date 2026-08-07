@@ -26,6 +26,13 @@
 -- 幂等论证：a 用 INSERT OR IGNORE（PK 冲突跳过）；b/c 的 UPDATE/DELETE 条件命中
 --   行已不存在则自然无操作；连跑两次不报错不重复。
 
+-- 0. legacy 防御（2026-08-07 M3 评审追加）：老库（如 F:\Company Database 同款库态）的
+--    roles 表可能没有 created_at 列（001 之前的手工演进 schema），038 的 INSERT 会直接
+--    撞「no such column」。SQLite 无 ADD COLUMN IF NOT EXISTS——配合 MigrationRunner
+--    的良性错误吞掉（duplicate column name）实现幂等：已有列 → 跳过；缺失 → 补列
+--    （可空，老行留 NULL，不强制回填、不造数据）。
+ALTER TABLE roles ADD COLUMN created_at TEXT;
+
 -- a. 确保 accountant 行存在（permissions 从 Common.GetDefaultPermissions("accountant") 原样提取）
 INSERT OR IGNORE INTO roles (id, name, permissions, is_system, created_at) VALUES
 ('accountant', '财务', '["dashboard:read","projects:read","contracts:read","contracts:export","members:read","wages:create","wages:read","wages:update","settlement:read","settlement:approve","invoices:create","invoices:read","invoices:update","costLedger:create","costLedger:read","costLedger:update","settings:read","audit_logs:read","audit_logs:export","reports:create","reports:read","labor:read"]', 1, datetime('now'));
