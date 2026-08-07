@@ -115,6 +115,7 @@ public class KnowledgeBaseService
         string createdBy,
         List<SttSegment>? segments = null,
         string? occurredAt = null,
+        long? folderId = null,
         CancellationToken ct = default)
     {
         // 幂等检查（快速路径）：非 manual 来源 + 有 sourceRef + created_by → 查已有文档
@@ -188,10 +189,10 @@ public class KnowledgeBaseService
             {
                 docId = _db.QuerySingle<long>(@"
                     INSERT INTO knowledge_documents
-                        (source_type, source_ref, project_id, title, full_text, speakers,
+                        (source_type, source_ref, project_id, folder_id, title, full_text, speakers,
                          occurred_at, created_at, updated_at, created_by)
                     VALUES
-                        (@SourceType, @SourceRef, @ProjectId, @Title, @FullText, @Speakers,
+                        (@SourceType, @SourceRef, @ProjectId, @FolderId, @Title, @FullText, @Speakers,
                          @OccurredAt, @Now, @Now, @CreatedBy);
                     SELECT last_insert_rowid();",
                     new
@@ -199,6 +200,7 @@ public class KnowledgeBaseService
                         SourceType = sourceType,
                         SourceRef = sourceRef,
                         ProjectId = projectId,
+                        FolderId = folderId,
                         Title = title,
                         FullText = cleanedText,
                         Speakers = speakersJson,

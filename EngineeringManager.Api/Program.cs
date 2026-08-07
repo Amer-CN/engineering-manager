@@ -439,6 +439,8 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
         // v0.84 M2 知识库
         app.RegisterKnowledgeEndpoints();
+        // M3 知识库文件夹
+        app.RegisterKnowledgeFolderEndpoints();
 
         // v1.4.0 报告生成
         app.RegisterReportEndpoints();

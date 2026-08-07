@@ -14,7 +14,7 @@ Object.defineProperty(window, 'sessionStorage', { value: sessionStorageMock })
 
 /**
  * 测试 sessionStorage 的 pendingDocId 消费逻辑
- * 模拟 KnowledgeSourceCard 写入 → SpeechKnowledgePage 读取并清除
+ * 模拟 KnowledgeSourceCard 写入 → KnowledgeHomePage 读取并清除
  */
 describe('sessionStorage pendingDocId mechanism', () => {
   beforeEach(() => {
@@ -35,7 +35,7 @@ describe('sessionStorage pendingDocId mechanism', () => {
     // 写入
     sessionStorageMock.setItem('knowledge:pendingDocId', '99')
 
-    // 模拟 SpeechKnowledgePage useEffect 中的读取逻辑
+    // 模拟 KnowledgeHomePage useEffect 中的读取逻辑
     const pending = sessionStorageMock.getItem('knowledge:pendingDocId')
     expect(pending).toBe('99')
 

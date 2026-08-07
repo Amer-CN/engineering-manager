@@ -350,9 +350,9 @@ public static class SttEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx);
-            // 服务端权限检查：入库到知识库需要 knowledge:read 权限
-            if (!CurrentUser.HasPermission(ctx, db, "knowledge:read"))
-                return Results.Json(new { success = false, error = "无权限：需要 knowledge:read" }, statusCode: 403);
+            // 服务端权限检查：入库是写操作，必须拥有 knowledge:create 权限（M3 收严）
+            if (!CurrentUser.HasPermission(ctx, db, "knowledge:create"))
+                return Results.Json(new { success = false, error = "无权限：需要 knowledge:create" }, statusCode: 403);
             try
             {
                 // 1. 查 STT job（含用户维度过滤 — job 必须属于当前用户）
@@ -481,6 +481,7 @@ public static class SttEndpoints
                     sourceType: "call",
                     sourceRef: id.ToString(),
                     projectId: projectId,
+                    folderId: dto?.FolderId,
                     createdBy: uid,
                     segments: segments,
                     occurredAt: dto?.OccurredAt ?? (string?)job.created_at);
@@ -534,6 +535,7 @@ public class SttIngestDto
     public List<SttSegmentDto>? Segments { get; set; }
     public string? Title { get; set; }
     public int? ProjectId { get; set; }
+    public long? FolderId { get; set; }
     public string? OccurredAt { get; set; }
 }
 
