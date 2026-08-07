@@ -7,6 +7,7 @@
 ## 0. 执行状态（2026-08-05 拍板后更新 · 审查整改后 v2）
 
 - **拍板**：Q1 认可（037+GetDefaultPermissions+permissions.ts 同 commit）· Q2 选 C（G2 暂缓，本轮 = G1 + T1 高危 + T3 迁移）
+- **Q3 终裁（2026-08-07）**：角色授予矩阵维持现状已拍板——不新增/不调整角色-权限授予关系（窗口 K 记档）
 - **C-3 已完成**：`037_AppendPermissionCodesToRoles.sql`（21 条 UPDATE：9 缺码 + drawings:read，幂等 append + JSON 守卫：旧格式 'all'/逗号串跳过、NULL/[] 重建——sqlite 四种形态验证通过）；Common.cs GetDefaultPermissions 同步 10 码；permissions.ts 静态 SYSTEM_ROLES 核对一致（无改动）；门禁1 LEGACY_EXEMPT 删除（B−C 0 违反）；Issue #5 已回帖（issuecomment-5190187160）
 - **C-4 已完成（T1+T2 共 20 端点）**：G1 12 + users/roles 5 + **T1 破坏性 3（sqlite/migrate、restore、cost-ledger/categories/reset → settings:update）**，保留 created_by/IsAdmin SQL 第二道防线
 - **C-5 已完成**：scripts/check-write-permission.cjs（哨兵 ≥40；合规 = HasPermission / !IsAdmin / !isAdmin / isAdmin==0；豁免清单 46 设计 + 84 G2 暂缓带理由）；接入 npm run check；反自检通过（临时无检查端点 → exit 1）
