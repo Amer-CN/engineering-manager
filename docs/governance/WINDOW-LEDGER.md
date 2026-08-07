@@ -1,24 +1,27 @@
-# WINDOW-LEDGER.md — 并行窗口台账（M-FIX5 W3 建立）
+# WINDOW-LEDGER.md — 并行窗口台账（M-FIX6 V4 重写）
 
-> 目的：多窗口并行开发时，谁在跑、谁没跑、合并顺序必须有一张表可查。
-> 基准：本表以 2026-08-07 M-FIX5 实测 ls-remote 为准。
+> 本表核对时刻：2026-08-07 16:10 (UTC+8，精确到分)
+> 规则：每轮必须更新「master 当前 tip」行；窗口至少列 D/E/H/I/M-FIX 线。
 
-| 窗口名 | 归谁 | 当前分支 | 分叉基线 | 最后一笔 SHA+时间 | 是否还在跑 | 合并顺序 | 谁负责合 |
-|---|---|---|---|---|---|---|---|
-| H 窗口（H-1..H-4c） | 未知会话 | 已合入 master（f41ec6f） | d80020d 之后 | f41ec6f 2026-08-07 | **已停**（master 后续由 M-FIX 线推） | 已合 | 已合 |
-| I 窗口（I-1/I-2） | 未知会话 | window-i-stub = fc441a1 | f41ec6f | fc441a1 2026-08-07 06:26Z | **待定**（本轮只对账不合并） | 未定 | 未定（建议 M-FIX 线评估后合） |
-| M-FIX 线（本会话） | 审查方驱动 | fix/direction-vocab → master | 逐轮 | 1b66a2b 2026-08-07 | 在跑 | 逐轮推 master | 本会话 |
+| 本表核对时刻 | 2026-08-07 16:10 (UTC+8) |
+|---|---|
+| **master 当前 tip** | `8e49d4b2816650ed5a30b09716b72157f02e61b5` |
+| tip 归属窗口 | I 窗口（I-2，rebase 到 746aa99 之上） |
+| tip 推送时刻 | 2026-08-07 07:33:57Z（committer 时间） |
 
-## 关键事实（W3(a) 实测）
-- I 窗口 2 笔：I-1 `1313a75` snapshots max-count（06:02Z）、I-2 `fc441a1` wages 回单匹配（06:26Z），均从 f41ec6f 分叉。
-- master 当前 = 1b66a2b（H 窗口 + M-FIX4 已合）；master 领先 I 窗口分叉点 6 笔（H 窗口）。
+| 窗口名 | 归谁 | 当前分支 | 分叉基线 | 最后一笔 SHA+时间 | 是否还在跑 | 合并顺序 | 谁负责合 | 证据出处 |
+|---|---|---|---|---|---|---|---|---|
+| C 窗口 | 未知会话 | 已合入 master | 早期 | WRITE-AUTH-MATRIX（窗口 C 产出） | 已停 | 已合 | 已合 | .llm-matrix/findings/WRITE-AUTH-MATRIX.md:1 |
+| D 窗口 | 未知会话 | 已合入 master | 早期 | STUB-ENDPOINTS「窗口 D 积压记档」 | 已停 | 已合 | 已合 | .llm-matrix/findings/STUB-ENDPOINTS.md:10 |
+| E 窗口 | 未知会话 | 已合入 master | 早期 | E-1..E-4（考勤 STUB 转本体，713 通过） | 已停 | 已合 | 已合 | STUB-ENDPOINTS.md:10-16 |
+| G2 窗口 | 未知会话 | 已合入 master | 早期 | FRONTEND-GATING-MATRIX（G2 端点前端门控） | 已停 | 已合 | 已合 | FRONTEND-GATING-MATRIX.md:1 |
+| H 窗口 | 未知会话 | 已合入 master（f41ec6f） | d80020d 后 | f41ec6f 2026-08-07 | 已停 | 已合 | 已合 | M-AUDIT 提交史 |
+| I 窗口 | 未知会话 | **已删 window-i-stub**；两笔 rebase 后推 master | f41ec6f | adfd29bc(I-1)/8e49d4b(I-2) 07:33:57Z | **已推完（推的 master CI 红，M-FIX6 修复中）** | 已合（rebase） | I 窗口推了，M-FIX6 接管修复 | ls-remote 历史 + commit message |
+| M-FIX 线 | 审查方驱动 | fix/window-reconcile → master | 逐轮 | 1b66a2b(W3/W4) | 在跑 | 逐轮推 master | 本会话 | 各轮报告 |
 
-## I 窗口合并建议（W3(d)）
-- **是否进 master**：建议进（I-1/I-2 是「STUB 转本体」的正向功能，且门禁5 豁免已 −2/−1）。
-- **谁来合/何时**：M-FIX 线下一轮评估（本轮只对账不 merge），需先解决门禁5 豁免与 master 的 4 条排除 filter 的计数差异。
-- **预判冲突**：WageEndpoints.cs（I-2 +133/−7 vs master H-2 wages 改动）、scripts/check-write-permission.cjs（I 窗口 −2 豁免 vs master 门禁5 计数）、测试计数基线（I 窗口 +368 ReceiptMatchTests vs master 833）。
+## 已知未纳管风险
+- **任何窗口都能直接 push master，无分支保护**：I 窗口未经评审 rebase 推 master（CI 红），H/D/E 窗口也曾直接推。master 无 PR 门禁、无「必须绿 CI 才可推」机制。
+- 多套台账并行（.llm-matrix/ vs docs/findings vs docs/audit），真源不明。
 
-## 治理结论（W3(b)）
-- 门禁5（check-write-permission.cjs）与 check-backend-rules.cjs **并行独立**，无重复但需协调（都是扫 Endpoints）。
-- .llm-matrix/ 与 docs/findings、docs/audit **多套台账并行，真源不明**——建议 R9 统一真源（FRONTEND-GATING-MATRIX 自称真源 vs docs/findings 冲突）。
-- 门禁5 豁免机制 **不满足纪律 14**（无基线文件/无 count.json/无 md5/无只减不增棘轮）——R9 需补齐。
+## 推送秩序建议（V4(d) 一句话）
+**master 只能由单一受控通道推送（审查方驱动的 M-FIX 线），其他窗口一律先推独立分支 + 评审后由该通道合并——因为无分支保护时任何窗口直接推都会产生「CI 红上 master」事故（I 窗口已验证）。**
