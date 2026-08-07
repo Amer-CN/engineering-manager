@@ -102,20 +102,28 @@ public class MFix1RedTests : ApiTestBase
     }
 
     [Fact]
-    public async Task F1d_ContractsIncomePut_AdminSmoke()
+    public async Task F1d_ContractsIncomePut_Manager_AuthorizedOk_UnauthorizedRejected()
     {
-        // M-FIX2 X5 补正：此测试只是【admin 冒烟】——admin 的 scope=All 使过滤器为 (1 = 1)，
-        // M-FIX1 F3 修的 UserFilterFragmentForProject 那行（企业版非 admin 才走）在此不执行。
-        // 非 admin 路径被 HasPermission(contracts:update) 门先拦（X3 实测：旧逗号串 roles 下
-        // manager 的 contracts:update=False → Forbidden 到不了 SQL），故无法用非 admin 测「PUT 不 500」。
-        // UserFilterFragmentForProject 已删除（同一笔提交），此处不再解释其行为。
+        // M-FIX3 Y5：Y3 基座 JSON 化后 manager 的 contracts:update=True（GetDefaultPermissions 含），
+        // 可走企业版非 admin 真路径。改 P1（已授权）合同成功；P2（未授权）合同不成功。
+        CreateManagerUser();
         Seed();
-        var login = await Client.PostAsJsonAsync("/api/auth/login", new { username = "admin", password = "admin123" });
-        Assert.Equal(HttpStatusCode.OK, login.StatusCode);
-        SetAuth(ExtractToken(await login.Content.ReadAsStringAsync()));
+        await LoginAsManager();
 
-        var put = await Client.PutAsJsonAsync("/api/contracts/income",
-            new { id = 1L, name = "改后", amount = 150, status = "draft", remarks = "x" });
-        Assert.Equal(HttpStatusCode.OK, put.StatusCode); // 不再 500
+        // 正向：P1 合同（id2，授权项目）可改
+        var okPut = await Client.PutAsJsonAsync("/api/contracts/income",
+            new { id = 2L, name = "P1-改后", amount = 250, status = "draft", remarks = "ok" });
+        Assert.Equal(HttpStatusCode.OK, okPut.StatusCode);
+        using (var conn = new SqliteConnection(ConnectionString))
+        {
+            conn.Open();
+            var name = conn.ExecuteScalar<string>("SELECT name FROM income_contracts WHERE id=2");
+            Assert.Equal("P1-改后", name); // 改到了
+        }
+
+        // 反向：P2 合同（id3，未授权）不可改
+        var badPut = await Client.PutAsJsonAsync("/api/contracts/income",
+            new { id = 3L, name = "P2-越权改", amount = 350, status = "draft", remarks = "bad" });
+        Assert.Equal(HttpStatusCode.Forbidden, badPut.StatusCode); // 越权被拒
     }
 }
