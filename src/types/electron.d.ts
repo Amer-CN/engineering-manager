@@ -1254,7 +1254,6 @@ export interface ElectronAPI {
 
   // ============ SQLite 状态管理 ============
   getSqliteStatus: () => Promise<{ success: boolean; ready: boolean; migrated: boolean; dbPath: string | null; dbSize: number | null; summary: Record<string, number> | null; readMode: 'dual' | 'sqlite-primary' | 'json-only'; error?: string }>
-  enableSqlite: () => Promise<{ success: boolean; message: string }>
   migrateToSqlite: (force?: boolean) => Promise<{ success: boolean; migratedTables: number; totalRows: number; verificationPassed: boolean; errors: string[]; warnings: string[]; duration: number; message?: string }>
   getSqliteReadMode: () => Promise<{ success: boolean; readMode: 'dual' | 'sqlite-primary' | 'json-only' }>
   setSqliteReadMode: (mode: 'dual' | 'sqlite-primary' | 'json-only') => Promise<{ success: boolean; readMode: 'dual' | 'sqlite-primary' | 'json-only'; error?: string }>

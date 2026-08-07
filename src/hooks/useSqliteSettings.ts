@@ -23,7 +23,6 @@ export function useSqliteSettings() {
   const { can } = usePermission()
   const [status, setStatus] = useState<SqliteStatus | null>(null)
   const [loading, setLoading] = useState(true)
-  const [enabling, setEnabling] = useState(false)
   const [migrating, setMigrating] = useState(false)
   const [switching, setSwitching] = useState(false)
   const [message, setMessage] = useState<Message | null>(null)
@@ -41,30 +40,6 @@ export function useSqliteSettings() {
 
   useEffect(() => {
     refreshStatus()
-  }, [refreshStatus])
-
-  const handleEnable = useCallback(async () => {
-    const api = await getAPI()
-    if (!api?.enableSqlite) {
-      setMessage({ type: 'error', text: 'SQLite 功能不可用' })
-      return
-    }
-    setEnabling(true)
-    setMessage(null)
-    try {
-      const result = await api.enableSqlite()
-      if (result.success) {
-        // 信封无 message 字段（成功时 error 为 undefined）→ 用静态文案
-        setMessage({ type: 'success', text: 'SQLite 已启用' })
-        await refreshStatus()
-      } else {
-        setMessage({ type: 'error', text: result.error || '启用 SQLite 失败' })
-      }
-    } catch (e) {
-      setMessage({ type: 'error', text: `启用失败: ${e instanceof Error ? e.message : String(e)}` })
-    } finally {
-      setEnabling(false)
-    }
   }, [refreshStatus])
 
   const handleMigrate = useCallback(async (force = false) => {
@@ -138,13 +113,11 @@ export function useSqliteSettings() {
   return {
     status,
     loading,
-    enabling,
     migrating,
     switching,
     message,
     setMessage,
     refreshStatus,
-    handleEnable,
     handleMigrate,
     handleRemigrate,
     handleSetReadMode,
