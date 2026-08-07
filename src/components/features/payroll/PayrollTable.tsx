@@ -149,6 +149,8 @@ export function PayrollTable({
               onPaymentChange={wageActions.handlePaymentChange}
               onSavePayments={wageActions.handleSavePayments}
               onBankReceiptUpload={wageActions.handleBankReceiptUpload}
+              onOpenBatchReceipt={() => {}}
+              showBatchReceipt={false}
               receiptParsing={wageActions.receiptParsing}
               receiptResult={wageActions.receiptResult}
               toggleSelect={wageActions.toggleWageSelect}

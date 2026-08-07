@@ -3,47 +3,61 @@
  *
  * 包含 Batch 和 Batch Confirm 两个视图
  * 从 WageManagement.tsx 提取，避免文件过长
+ * J-1: 接线走 useBankReceiptBatch 活体（解析 → match → 候选确认 → 落库）
  */
 import { useState } from 'react'
-import type { BatchParseResult } from '@/types'
+import type { BatchParseResult, ConfirmMatchPair } from '@/types'
+import { usePermission } from '@/hooks/usePermission'
+import { useBankReceiptBatch } from '@/hooks/useBankReceiptBatch'
 import BankReceiptBatch from './BankReceiptBatch'
 import BankReceiptMatchConfirm from './BankReceiptMatchConfirm'
 
 interface WageBatchViewsProps {
   selectedProject: { id: number; name: string } | null
   selectedMonth: string
-  allWageRecords: any[]
+  loadWages: () => Promise<void>
+  loadAllRecords: () => Promise<void>
   onViewChange: (view: 'dashboard' | 'cycle') => void
 }
 
 export function useWageBatchViews({
   selectedProject,
   selectedMonth,
-  allWageRecords,
+  loadWages,
+  loadAllRecords,
   onViewChange,
 }: WageBatchViewsProps) {
-  const [batchResult, setBatchResult] = useState<BatchParseResult | null>(null)
+  const { can } = usePermission()
   const [view, setView] = useState<'batch' | 'batch-confirm'>('batch')
 
+  const batch = useBankReceiptBatch({
+    selectedProjectId: selectedProject?.id,
+    selectedMonth,
+    loadWages,
+    loadAllRecords,
+  })
+
   const handleBatchParseComplete = (result: BatchParseResult) => {
-    setBatchResult(result)
     setView('batch-confirm')
+    // 解析完成即触发 match（wages:read 纯读，无需额外门控）
+    batch.handleBatchParseComplete(result)
   }
 
   const handleBatchCancel = () => {
-    setBatchResult(null)
+    batch.handleBatchCancel()
     setView('batch')
     onViewChange('cycle')
   }
 
   const handleBatchBack = () => {
-    setBatchResult(null)
+    batch.handleBatchBack()
     setView('batch')
   }
 
-  const handleBatchConfirm = async (confirmedMatches: any[]) => {
-    // 确认后返回 cycle 视图
-    setBatchResult(null)
+  const handleBatchConfirm = async (pairs: ConfirmMatchPair[]) => {
+    // 真调 confirm-matches，只发用户确认了的配对；失败留在确认视图
+    const ok = await batch.handleBatchConfirm(pairs)
+    if (!ok) return
     setView('batch')
     onViewChange('cycle')
   }
@@ -63,14 +77,13 @@ export function useWageBatchViews({
       )
     }
 
-    if (view === 'batch-confirm' && batchResult) {
+    if (view === 'batch-confirm') {
       return (
         <BankReceiptMatchConfirm
-          parseResult={batchResult}
-          workers={[]}
-          wageRecords={allWageRecords}
-          projectId={selectedProject?.id}
+          matchResults={batch.matchResults ?? []}
           yearMonth={selectedMonth}
+          canUpdate={can('wages:update')}
+          confirming={batch.confirming}
           onConfirm={handleBatchConfirm}
           onBack={handleBatchBack}
           onCancel={handleBatchCancel}

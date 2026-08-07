@@ -1,16 +1,15 @@
 /**
- * BankReceiptMatchConfirm.tsx 测试
+ * BankReceiptMatchConfirm.tsx 测试（J-1 重写：候选 UI 契约）
  *
  * 测试重点：
- * 1. 渲染测试：模态框显示/隐藏
- * 2. 匹配结果显示：正确显示匹配的员工和金额
- * 3. 确认操作：点击确认按钮调用回调
- * 4. 拒绝操作：点击拒绝按钮调用回调
- * 5. 错误处理：API 调用失败时的错误提示
+ * 1. 渲染：每回单展示候选（score + 理由文案），无候选显示「无候选」
+ * 2. 确认：只发用户确认了的配对（未选 = 跳过，不发）
+ * 3. 权限：无 wages:update 时确认按钮不渲染
+ * 4. 按钮：返回/取消触发回调
  */
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import BankReceiptMatchConfirm from '@/components/features/wages/BankReceiptMatchConfirm'
-import type { BatchParseResult, BankReceiptMatch } from '@/types'
+import type { MatchReceiptResult } from '@/types'
 
 // ── Mock useToastStore（Zustand store） ─
 const mockShowToast = vi.fn()
@@ -38,51 +37,42 @@ vi.mock('framer-motion', () => {
   }
 })
 
-// ── 辅助：构造 mock 数据 ──
-function makeParseResult(overrides: Partial<BatchParseResult> = {}): BatchParseResult {
-  return {
-    success: true,
-    totalRows: 2,
-    matches: [
-      {
-        parsedName: '张三',
-        parsedAmount: 5000,
-        parsedDate: '2025-03-15',
-        receiptPath: '/tmp/receipt1.jpg',
-        matchedWorkerId: 1,
-        matchedWorkerName: '张三',
-        matchedWageId: 101,
-        confidence: 85,
-        status: 'matched',
-      },
-      {
-        parsedName: '李四',
-        parsedAmount: 4200,
-        parsedDate: '2025-03-20',
-        receiptPath: '/tmp/receipt2.jpg',
-        matchedWorkerId: null,
-        matchedWorkerName: null,
-        matchedWageId: null,
-        confidence: 30,
-        status: 'unmatched',
-      },
-    ],
+// ── 辅助：构造 mock 数据（I-2 契约真实形状） ──
+function makeMatchResults(): MatchReceiptResult[] {
+  return [
+    {
+      receiptPath: '/tmp/receipt1.jpg',
+      date: '2026-07-15',
+      counterparty: '张三',
+      amount: 5000,
+      candidates: [
+        { wageId: 101, workerName: '张三', amount: 5000, yearMonth: '2026-07', score: 6, reasons: ['金额分相等', '姓名互相包含', '日期与工资月份同月或相邻'] },
+        { wageId: 102, workerName: '李四', amount: 5000, yearMonth: '2026-07', score: 4, reasons: ['金额分相等'] },
+      ],
+    },
+    {
+      receiptPath: '/tmp/receipt2.jpg',
+      date: '2026-07-20',
+      counterparty: '王五',
+      amount: 4200,
+      candidates: [],
+    },
+  ]
+}
+
+function renderConfirm(overrides: Partial<Parameters<typeof BankReceiptMatchConfirm>[0]> = {}) {
+  const props = {
+    matchResults: makeMatchResults(),
+    yearMonth: '2026-07',
+    canUpdate: true,
+    confirming: false,
+    onConfirm: vi.fn(),
+    onBack: vi.fn(),
+    onCancel: vi.fn(),
     ...overrides,
   }
-}
-
-function makeWorkers() {
-  return [
-    { id: 1, name: '张三' },
-    { id: 2, name: '李四' },
-  ]
-}
-
-function makeWageRecords() {
-  return [
-    { id: 101, memberName: '张三', actualWage: 5000, yearMonth: '2025-03' },
-    { id: 102, memberName: '李四', actualWage: 4200, yearMonth: '2025-03' },
-  ]
+  render(<BankReceiptMatchConfirm {...props} />)
+  return props
 }
 
 // ── 测试套件 ──
@@ -91,183 +81,81 @@ describe('BankReceiptMatchConfirm', () => {
     vi.clearAllMocks()
   })
 
-  test('渲染：传入 parseResult 后显示匹配结果表格', () => {
-    const onConfirm = vi.fn()
-    const onBack = vi.fn()
-    const onCancel = vi.fn()
-    const result = makeParseResult()
+  test('渲染：展示回单信息与候选（分数 + 理由文案）', () => {
+    renderConfirm()
 
-    render(
-      <BankReceiptMatchConfirm
-        parseResult={result}
-        workers={makeWorkers()}
-        wageRecords={makeWageRecords()}
-        onConfirm={onConfirm}
-        onBack={onBack}
-        onCancel={onCancel}
-      />
-    )
-
-    // 显示标题
     expect(screen.getByText('匹配结果确认')).toBeTruthy()
-    // 显示解析金额
-    expect(screen.getByText('¥5000.00')).toBeTruthy()
-    expect(screen.getByText('¥4200.00')).toBeTruthy()
-    // 显示统计卡片
-    expect(screen.getByText('总计')).toBeTruthy()
+    // 候选 1 的分数与理由文案
+    expect(screen.getByText('分数 6')).toBeTruthy()
+    expect(screen.getByText(/姓名互相包含/)).toBeTruthy()
+    expect(screen.getAllByText(/张三/).length).toBeGreaterThan(0)
+    // 无候选的回单
+    expect(screen.getByText('无候选')).toBeTruthy()
+    // 汇总：共 2 张回单
+    expect(screen.getByText(/共 2 张回单/)).toBeTruthy()
   })
 
-  test('渲染：空匹配结果时仍显示统计（0条）', () => {
-    const onConfirm = vi.fn()
-    const onBack = vi.fn()
-    const onCancel = vi.fn()
-    const result = makeParseResult({ matches: [], totalRows: 0 })
+  test('确认：只发用户确认了的配对（未选 = 跳过，不发）', async () => {
+    const { onConfirm } = renderConfirm()
 
-    render(
-      <BankReceiptMatchConfirm
-        parseResult={result}
-        workers={[]}
-        wageRecords={[]}
-        onConfirm={onConfirm}
-        onBack={onBack}
-        onCancel={onCancel}
-      />
-    )
+    // 选中第一张回单的候选 wageId=101
+    const radios = screen.getAllByRole('radio')
+    fireEvent.click(radios[0])
 
-    expect(screen.getByText('匹配结果确认')).toBeTruthy()
-    // 总计应为 0
-    const totalEls = screen.getAllByText('0')
-    expect(totalEls.length).toBeGreaterThan(0)
+    // 第二张回单无候选，保持跳过
+    const buttons = screen.getAllByText(/确认并提交/)
+    fireEvent.click(buttons[buttons.length - 1])
+
+    await waitFor(() => {
+      expect(onConfirm).toHaveBeenCalledOnce()
+    })
+    const pairs = onConfirm.mock.calls[0][0]
+    // 只发已确认配对（1 条），跳过的不出现
+    expect(pairs).toEqual([
+      { wageId: 101, paidAmount: 5000, paidDate: '2026-07-15', bankReceiptPath: '/tmp/receipt1.jpg' },
+    ])
+  })
+
+  test('确认：全部跳过时不发任何配对', async () => {
+    const { onConfirm } = renderConfirm()
+
+    const buttons = screen.getAllByText(/确认并提交/)
+    fireEvent.click(buttons[buttons.length - 1])
+
+    await waitFor(() => {
+      expect(onConfirm).toHaveBeenCalledOnce()
+    })
+    expect(onConfirm.mock.calls[0][0]).toEqual([])
+  })
+
+  test('权限：无 wages:update 时确认按钮不渲染', () => {
+    renderConfirm({ canUpdate: false })
+
+    // 无「确认并提交」按钮
+    expect(screen.queryByText(/确认并提交/)).toBeNull()
+    // 返回/取消仍在
+    expect(screen.getByText('返回重新上传')).toBeTruthy()
+    expect(screen.getByText('取消')).toBeTruthy()
   })
 
   test('按钮：点击"返回重新上传"触发 onBack', () => {
-    const onBack = vi.fn()
-    render(
-      <BankReceiptMatchConfirm
-        parseResult={makeParseResult()}
-        workers={makeWorkers()}
-        wageRecords={makeWageRecords()}
-        onConfirm={vi.fn()}
-        onBack={onBack}
-        onCancel={vi.fn()}
-      />
-    )
-
+    const { onBack } = renderConfirm()
     fireEvent.click(screen.getByText('返回重新上传'))
     expect(onBack).toHaveBeenCalledOnce()
   })
 
   test('按钮：点击"取消"触发 onCancel', () => {
-    const onCancel = vi.fn()
-    render(
-      <BankReceiptMatchConfirm
-        parseResult={makeParseResult()}
-        workers={makeWorkers()}
-        wageRecords={makeWageRecords()}
-        onConfirm={vi.fn()}
-        onBack={vi.fn()}
-        onCancel={onCancel}
-      />
-    )
-
+    const { onCancel } = renderConfirm()
     fireEvent.click(screen.getByText('取消'))
     expect(onCancel).toHaveBeenCalledOnce()
   })
 
-  test('统计：置信度≥80% 的高置信度匹配数量正确', () => {
-    const result = makeParseResult()
-    render(
-      <BankReceiptMatchConfirm
-        parseResult={result}
-        workers={makeWorkers()}
-        wageRecords={makeWageRecords()}
-        onConfirm={vi.fn()}
-        onBack={vi.fn()}
-        onCancel={vi.fn()}
-      />
-    )
+  test('确认中：按钮禁用', async () => {
+    const { onConfirm } = renderConfirm({ confirming: true })
 
-    // 高置信度匹配数量为 1（第一条 confidence=85）
-    // 查找包含「高置信度」的段落，其兄弟元素应为「1」
-    const el = screen.getByText((content, el) =>
-      content === '1' && el?.tagName === 'SPAN'
-    )
-    expect(el).toBeTruthy()
-  })
-
-  test('底部确认按钮：点击"确认并提交"触发 onConfirm（有有效匹配时）', async () => {
-    const onConfirm = vi.fn()
-    render(
-      <BankReceiptMatchConfirm
-        parseResult={makeParseResult()}
-        workers={makeWorkers()}
-        wageRecords={makeWageRecords()}
-        onConfirm={onConfirm}
-        onBack={vi.fn()}
-        onCancel={vi.fn()}
-      />
-    )
-
-    // 组件内有两个「确认并提交」按钮（顶部和底部），取最后一个
-    const buttons = screen.getAllByText('确认并提交')
-    fireEvent.click(buttons[buttons.length - 1])
-    // onConfirm 被调用，传入有效匹配（matchedWageId 非 null 的）
-    await waitFor(() => {
-      expect(onConfirm).toHaveBeenCalledOnce()
-    })
-    const calledArg = onConfirm.mock.calls[0][0]
-    expect(Array.isArray(calledArg)).toBe(true)
-  })
-
-  test('一键确认高置信度：有高置信度匹配时点击触发 onConfirm', async () => {
-    const onConfirm = vi.fn()
-    render(
-      <BankReceiptMatchConfirm
-        parseResult={makeParseResult()}
-        workers={makeWorkers()}
-        wageRecords={makeWageRecords()}
-        onConfirm={onConfirm}
-        onBack={vi.fn()}
-        onCancel={vi.fn()}
-      />
-    )
-
-    const btn = screen.getByText(/一键确认高置信度/)
-    fireEvent.click(btn)
-    await waitFor(() => {
-      expect(onConfirm).toHaveBeenCalledOnce()
-    })
-  })
-
-  test('一键确认高置信度：无高置信度匹配时按钮为禁用状态', () => {
-    const result = makeParseResult({
-      matches: [
-        {
-          parsedName: '张三',
-          parsedAmount: 5000,
-          parsedDate: '2025-03-15',
-          receiptPath: '/tmp/r.jpg',
-          matchedWorkerId: null,
-          matchedWorkerName: null,
-          matchedWageId: null,
-          confidence: 30,
-          status: 'unmatched',
-        },
-      ],
-    })
-    render(
-      <BankReceiptMatchConfirm
-        parseResult={result}
-        workers={makeWorkers()}
-        wageRecords={makeWageRecords()}
-        onConfirm={vi.fn()}
-        onBack={vi.fn()}
-        onCancel={vi.fn()}
-      />
-    )
-
-    // 无高置信度匹配时按钮应为禁用状态
-    const btn = screen.getByText(/一键确认高置信度/)
-    expect(btn).toBeDisabled()
+    const buttons = screen.getAllByText('确认中...')
+    expect(buttons.length).toBeGreaterThan(0)
+    expect(buttons[0]).toBeDisabled()
+    expect(onConfirm).not.toHaveBeenCalled()
   })
 })

@@ -1,4 +1,4 @@
-export type ViewMode = 'dashboard' | 'cycle'
+export type ViewMode = 'dashboard' | 'cycle' | 'batch'
 
 export interface ProjectWorkerItem {
   pwId: number
