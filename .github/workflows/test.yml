@@ -133,10 +133,13 @@ jobs:
         #   BgeE2ETests    — 真实 BGE 嵌入模型（未纳入版本库）；前缀 !~BgeE2ETests 连带覆盖 BgeE2ETestsV2
         #                    （M-FIX2 X4 回滚：M-FIX1 F7 曾加 !~BgeE2ETestsV2 伪装条目——前缀已覆盖，删除之）
         #   RealHttp       — Agent 真实 LLM HTTP 调用（需 API key / 网络）
-        # M-FIX2 X4 回滚：!~M2FourthRoundTests.Model_ 已移除——F7 前 master CI 实测 Model_* 全绿
-        #   （run 31096559390 失败全是 vitest 15 红，Model_* 0 失败），F7 排掉它们是砍覆盖。
+        # M-FIX2 X4 曾回滚 !~M2FourthRoundTests.Model_ 并写下「F7 前实测 Model_* 全绿」——
+        # 那是错误推断（M-FIX3 Y2 更正）：run 31096559390 的 backend job 在静态检查步骤即失败，
+        # dotnet test 一行没跑，Model_* 从未执行。M-FIX3 Y2 本机破坏性实测（改名 asr-engine/embedding）
+        # 证明 Model_* 依赖本机真实 BGE 模型 → CI 上必红 → 重新排除。
+        # 排除依据见 docs/ci/CI-EXCLUSIONS.md（纪律 14 登记）。
         # H-4: -warnaserror 让 Tests 项目警告同样被 CI 机械拦截（此前只拦 API 项目）
-        run: dotnet test EngineeringManager.Tests/EngineeringManager.Tests.csproj -warnaserror --filter "FullyQualifiedName!~SttE2ETests&FullyQualifiedName!~BgeE2ETests&FullyQualifiedName!~RealHttp"
+        run: dotnet test EngineeringManager.Tests/EngineeringManager.Tests.csproj -warnaserror --filter "FullyQualifiedName!~SttE2ETests&FullyQualifiedName!~BgeE2ETests&FullyQualifiedName!~M2FourthRoundTests.Model_&FullyQualifiedName!~RealHttp"
 
   e2e:
     name: E2E Critical Paths (Playwright)
