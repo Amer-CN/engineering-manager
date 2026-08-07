@@ -21,6 +21,12 @@ namespace EngineeringManager.Tests.Migrations;
 ///   → 应用 038 → 用 ApiConfig 启动真实 API 宿主（IDbConnection 指向该库）
 ///   → 该用户登录（038 已把 role_id 重映射为 accountant）→ POST /api/wages
 ///   空载荷 → 断言非 403。
+///
+/// M-FIX5 W4 订正：登录端点把【role name】写进 ClaimTypes.Role（不是 role_id）。
+/// 此测试能过是因为 038 建的 accountant 行 name='财务' 恰好在 HasPermission/ResolveRole
+/// 的中文映射表里（CurrentUser.cs:133）；对照 manager 的 name='项目经理' 不在映射表
+/// （CurrentUser.cs:132 只认「经理」）→ 这正是 ROLE-IDENTITY-DEFECTS.md 第②层缺陷。
+/// 交叉引用：docs/findings/ROLE-IDENTITY-DEFECTS.md。
 /// </summary>
 public class NormalizeFinanceRoleIntegrationTests : IDisposable
 {
