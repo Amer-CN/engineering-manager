@@ -208,13 +208,14 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
   }, [showToast, startPolling, setAudio])
 
   // 入库
-  const handleIngest = useCallback(async (correctedText: string, segments: SttSegment[], title: string, projectId?: number, occurredAt?: string) => {
+  const handleIngest = useCallback(async (correctedText: string, segments: SttSegment[], title: string, projectId?: number, occurredAt?: string, folderId?: number | null) => {
     if (!currentJob) return
     const res = await sttClient.ingestSttJob(currentJob.id, {
       text: correctedText,
       segments: segments.length > 0 ? segments : undefined,
       title,
       projectId,
+      folderId,
       occurredAt,
     })
     if (res.success && res.data) {

@@ -17,7 +17,7 @@ import React, { useState } from 'react'
 import { Icon } from '@/components/ui/Icon'
 import { Badge } from '@/components/ui/Badge'
 import { useMask } from '@/contexts/MaskContext'
-import { maskKnowledgeText, getHitType, getHitTypeLabel, formatSpeakers } from '../knowledge/knowledgeTextMask'
+import { maskKnowledgeText, getHitType, getHitTypeLabel, formatSpeakers } from '@/utils/knowledgeTextMask'
 
 interface KnowledgeHitItem {
   documentId?: number

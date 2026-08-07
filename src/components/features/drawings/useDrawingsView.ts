@@ -1,7 +1,7 @@
-// useDrawingsView.ts — 图纸视图模式（Stage-Surface 红线：扁平视图是默认，舞台是主动进入且选择持久化）
+// useDrawingsView.ts — 图纸视图模式（堆叠舞台已于 M4 下线，仅保留画廊/列表）
 import { useEffect, useState } from 'react'
 
-export type DrawingsViewMode = 'gallery' | 'list' | 'stack'
+export type DrawingsViewMode = 'gallery' | 'list'
 
 const KEY = 'drawings.view'
 
@@ -9,9 +9,9 @@ export function useDrawingsView() {
   const [viewMode, setViewMode] = useState<DrawingsViewMode>(() => {
     try {
       const v = localStorage.getItem(KEY)
-      if (v === 'gallery' || v === 'list' || v === 'stack') return v
+      if (v === 'gallery' || v === 'list') return v
     } catch { /* localStorage 不可用时静默走默认 */ }
-    return 'list' // 默认列表（DESIGN.md § Stage Surfaces 第 ② 条）
+    return 'list' // 默认列表
   })
 
   useEffect(() => {
