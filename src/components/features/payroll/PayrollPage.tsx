@@ -55,6 +55,7 @@ export default function PayrollPage({ mode }: PayrollPageProps) {
     selectedProject, selectedMonth: data.selectedMonth,
     workerTeams: data.workerTeams, attendances: projectAttendances,
     wages: projectWages, loadData: data.loadData,
+    setLoading: data.setLoading, // J-2: 保存发放 loading 指示（handleSavePayments 核心注入）
   })
 
   // staff: 生成薪酬
