@@ -85,7 +85,6 @@ function createMockAPI() {
     createProject: async () => ({ success: true, data: { id: 1 } }),
     updateProject: async () => ({ success: true }),
     deleteProject: async () => ({ success: true }),
-    getProject: async () => ({ success: true, data: null }),
     // 成员
     getMembers: async () => ({ success: true, data: [] }),
     createMember: async () => ({ success: true, data: { id: 1 } }),
@@ -145,7 +144,6 @@ function createMockAPI() {
     saveFile: async () => ({ success: true, data: { fileName: '' } }),
     readFile: async () => ({ success: true, data: { dataUrl: '', mimeType: '' } }),
     deleteFile: async () => ({ success: true }),
-    openFileExternal: async () => ({ success: true }),
     // 考勤
     getAttendances: async () => ({ success: true, data: [] }),
     getAttendancesByMember: async () => ({ success: true, data: [] }),
@@ -153,10 +151,8 @@ function createMockAPI() {
     updateAttendance: async () => ({ success: true }),
     deleteAttendance: async () => ({ success: true }),
     batchDeleteAttendances: async () => ({ success: true, data: { deleted: 0 } }),
-    batchCreateAttendances: async () => ({ success: true, data: { count: 0 } }),
     // 窗口 E：mock 诚实化 —— 后端已实现本体，mock 无真实逻辑，不许假成功
     // （与 OCR 同型：`Mock 环境不支持 X`，浏览器开发态点「生成考勤」会得到真实报错而非假 toast）
-    generateDefaultAttendances: async () => ({ success: false, error: 'Mock 环境不支持生成考勤（需连接后端 API）' }),
     generateDefaultAttendancesV2: async () => ({ success: false, error: 'Mock 环境不支持生成考勤（需连接后端 API）' }),
     batchImportAttendances: async () => ({ success: false, error: 'Mock 环境不支持导入考勤（需连接后端 API）' }),
     // 工资
@@ -167,16 +163,12 @@ function createMockAPI() {
     deleteWage: async () => ({ success: true }),
     batchDeleteWages: async () => ({ success: true, data: { deleted: 0 } }),
     batchClearPayments: async () => ({ success: true, data: { cleared: 0 } }),
-    archiveWages: async () => ({ success: true, data: { archived: 0 } }),
     getWageStats: async () => ({ success: true, data: { totalWage: 0, count: 0, projectBreakdown: [] } }),
     // 窗口 E：mock 诚实化 —— 回单批量匹配/确认后端为显式 501 STUB，mock 不许假成功
     matchBankReceiptItems: async () => ({ success: false, error: 'Mock 环境不支持回单批量匹配（需连接后端 API）' }),
     batchConfirmMatches: async () => ({ success: false, error: 'Mock 环境不支持回单批量确认（需连接后端 API）' }),
     // 审计日志
     auditLog: async () => ({ success: true }),
-    auditQuery: async () => ({ success: true, data: { items: [], total: 0, page: 1, pageSize: 20, totalPages: 0 } }),
-    auditStats: async () => ({ success: true, data: { totalCount: 0, todayCount: 0, actionCounts: {}, resourceCounts: {}, topUsers: [] } }),
-    auditClear: async () => ({ success: true, data: { removedCount: 0 } }),
     // 角色权限
     getRoles: async () => ({ success: true, data: [] }),
     updateRole: async () => ({ success: true }),
@@ -191,31 +183,16 @@ function createMockAPI() {
     ocrBaiduBankStatement: async () => ({ success: false, error: 'Mock 环境不支持 OCR' }),
     ocrBaiduGeneralReceipt: async () => ({ success: false, error: 'Mock 环境不支持 OCR' }),
     ocrBaiduCompanyQuery: async () => ({ success: false, error: 'Mock 环境不支持 OCR' }),
-    ocrCheckNetwork: async () => ({ success: true, data: false }),
     ocrClearTokenCache: async () => ({ success: true, data: true }),
     ocrGetStats: async () => ({ success: true, data: { idCard: 0, invoice: 0, bankCard: 0, businessLicense: 0, bankReceipt: 0, permit: 0, bankStatement: 0, generalReceipt: 0, companyQuery: 0, lastReset: '' } }),
     // 认证
-    authLogin: async () => ({ success: true, data: { id: '1', username: 'admin', role_id: 'admin' } }),
     changeOwnPassword: async () => ({ success: true, data: { changed: true } }),
-    authGetAllUsers: async () => ({ success: true, data: [] }),
-    authGetCurrentUser: async () => ({ success: true, data: null }),
-    authCreateUser: async () => ({ success: true, data: { id: '1' } }),
-    authUpdateUser: async () => ({ success: true }),
-    authDeleteUser: async () => ({ success: true }),
     // 配置
     getConfig: async () => ({ success: true, data: { dataPath: '', defaultPath: '', gpuAcceleration: true } }),
     getDataPath: async () => ({ success: true, data: '' }),
     setDataPath: async () => ({ success: true }),
     getGpuAcceleration: async () => ({ success: true, data: true }),
     setGpuAcceleration: async () => ({ success: true }),
-    // 数据健康
-    dataConsistencyCheck: async () => ({ success: true, data: { tables: [], consistent: true } }),
-    dataIntegrityCheck: async () => ({ success: true, data: { ok: true } }),
-    // SQLite
-    sqliteStatus: async () => ({ success: true, data: { ready: true, mode: 'sqlite' } }),
-    sqliteMigrate: async () => ({ success: true }),
-    sqliteGetReadMode: async () => ({ success: true, data: 'sqlite' }),
-    sqliteSetReadMode: async () => ({ success: true }),
     // 图纸
     getDrawings: async () => ({ success: true, data: [] }),
     uploadDrawing: async () => ({ success: true, data: { id: 1 } }),
@@ -233,10 +210,6 @@ function createMockAPI() {
     createMaterial: async () => ({ success: true, data: { id: 1 } }),
     updateMaterial: async () => ({ success: true }),
     deleteMaterial: async () => ({ success: true }),
-    // 区域
-    getRegions: async () => ({ success: true, data: [] }),
-    createRegion: async () => ({ success: true, data: { id: 1 } }),
-    deleteRegion: async () => ({ success: true }),
     // 监管单位
     getSupervisors: async () => ({ success: true, data: [] }),
     createSupervisor: async () => ({ success: true, data: { id: 1 } }),

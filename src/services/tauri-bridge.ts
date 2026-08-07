@@ -8,7 +8,7 @@
 import { apiClient, setToken } from './api-client';
 import type {
   Project, Member, Worker, UserInfo, Department, Material,
-  Partner, Region, Supervisor, IncomeContract, ExpenseContract, AgreementContract,
+  Partner, Supervisor, IncomeContract, ExpenseContract, AgreementContract,
   ContractStats, DashboardStats, Settlement,
   Template, TemplateVariable, ContractTemplate,
   InventoryItem, InventoryTransaction,
@@ -28,9 +28,7 @@ import type {
 
 export const tauriAPI = {
   // ────────── 系统 ──────────
-  getAppVersion: () => '1.0.0',
   getDataPath: () => apiClient.get<string>('/api/config/data-path'),
-  getUploadsPath: () => apiClient.get<string>('/api/config/uploads-path'),
   openDevTools: () => {
     if ((window as any).chrome?.webview)
       (window as any).chrome.webview.postMessage(JSON.stringify({ action: 'devtools' }));
@@ -76,8 +74,6 @@ export const tauriAPI = {
     }
     return result;
   },
-  authLogin: (username: string, password: string) =>
-    apiClient.post<StoredAuth & { token: string }>('/api/auth/login', { username, password }),
   // v0.83.0: 用户自助修改密码 (校验旧密码 + JWT uid, 任意角色可用)
   changeOwnPassword: (oldPassword: string, newPassword: string) =>
     apiClient.post<{ changed: boolean }>('/api/auth/change-password', { oldPassword, newPassword }),
@@ -86,22 +82,15 @@ export const tauriAPI = {
 
   // ────────── 用户管理 ──────────
   getAllUsers: () => apiClient.get<UserInfo[]>('/api/users'),
-  authGetAllUsers: () => apiClient.get<UserInfo[]>('/api/users'),
   getUser: (id: string) => apiClient.get<UserInfo>(`/api/users/${id}`),
-  authGetCurrentUser: (id: string) => apiClient.get<UserInfo>(`/api/users/${id}`),
   createUser: (user: { username: string; password: string; displayName: string; roleId: string }) => apiClient.post<{ id: string }>('/api/users', user),
-  authCreateUser: (user: { username: string; password: string; displayName: string; roleId: string }) => apiClient.post<{ id: string }>('/api/users', user),
   updateUser: (user: { id: string; displayName?: string; roleId?: string; status?: string; password?: string }) => apiClient.put<void>('/api/users', user),
-  authUpdateUser: (user: { id: string; displayName?: string; roleId?: string; status?: string; password?: string }) => apiClient.put<void>('/api/users', user),
   deleteUser: (id: string) => apiClient.del<void>(`/api/users/${id}`),
-  authDeleteUser: (id: string) => apiClient.del<void>(`/api/users/${id}`),
 
   // ────────── 项目授权管理 (admin only, P0-4 闭环 UI) ──────────
   // 4 个端点: GET list / GET by-user / POST 授权 (幂等) / DELETE 撤销
   getProjectAuthorizations: () =>
     apiClient.get<{ projectId: number; userId: string; grantedAt: string }[]>('/api/admin/project-authorizations'),
-  getProjectAuthorizationsByUser: (userId: string) =>
-    apiClient.get<{ projectId: number; userId: string; grantedAt: string }[]>(`/api/admin/project-authorizations/by-user/${userId}`),
   grantProjectAuthorization: (projectId: number, userId: string) =>
     apiClient.post<{ granted: boolean }>('/api/admin/project-authorizations', { projectId, userId }),
   revokeProjectAuthorization: (projectId: number, userId: string) =>
@@ -109,20 +98,16 @@ export const tauriAPI = {
 
 
   // ────────── 用户偏好 (v0.75.0 PII Mask toggle 多设备同步) ──────────
-  getUserPreferences: () => apiClient.get<Record<string, string>>('/api/user-preferences'),
   getUserPreference: (key: string) =>
     apiClient.get<{ key: string; value: string }>(`/api/user-preferences/${key}`),
   putUserPreference: (key: string, value: string) =>
     apiClient.put<{ updated: number }>(`/api/user-preferences/${key}`, { value }),
-  putUserPreferences: (prefs: Record<string, string>) =>
-    apiClient.put<{ updated: number }>('/api/user-preferences', prefs),
 
   // ────────── 仪表盘 ──────────
   getDashboardStats: () => apiClient.get<DashboardStats>('/api/dashboard/stats'),
 
   // ────────── 项目 ──────────
   getProjects: () => apiClient.get<Project[]>('/api/projects'),
-  getProject: (id: number) => apiClient.get<Project>(`/api/projects/${id}`),
   createProject: (project: Partial<Project>) => apiClient.post<{ id: number }>('/api/projects', project),
   updateProject: (project: Project) => apiClient.put<void>(`/api/projects/${project.id}`, project),
   deleteProject: (id: number) => apiClient.del<void>(`/api/projects/${id}`),
@@ -261,10 +246,6 @@ export const tauriAPI = {
     apiClient.del<void>(`/api/attendances/${id}`),
   batchDeleteAttendances: (ids: number[]) =>
     apiClient.post<{ deleted: number }>('/api/attendances/batch-delete', ids),
-  batchCreateAttendances: (records: Partial<AttendanceRecord>[]) =>
-    apiClient.post<{ created: number; updated: number }>('/api/attendances/batch-create', records),
-  generateDefaultAttendances: (projectId: number, yearMonth: string, memberIds: number[]) =>
-    apiClient.post<{ count: number }>('/api/attendances/generate', { projectId, yearMonth, memberIds }),
   generateDefaultAttendancesV2: (projectId: number, yearMonth: string, projectWorkerIds: number[]) =>
     apiClient.post<{ count: number }>('/api/attendances/generate-v2', { projectId, yearMonth, projectWorkerIds }),
   batchImportAttendances: (projectId: number, yearMonth: string, records: { projectWorkerId: number; workDays: number }[]) =>
@@ -284,8 +265,6 @@ export const tauriAPI = {
     apiClient.post<{ deleted: number }>('/api/wages/batch-delete', ids),
   batchClearPayments: (ids: number[]) =>
     apiClient.post<{ cleared: number }>('/api/wages/batch-clear-payments', ids),
-  archiveWages: (ids: number[]) =>
-    apiClient.post<{ archived: number }>('/api/wages/archive', ids),
   getWageStats: (projectId?: number, yearMonth?: string) =>
     apiClient.get<WageStats>('/api/wages/stats', { projectId, yearMonth }),
   // I-2 契约（C# 后端真实形状）：match 纯读打分（wages:read），confirm 显式配对写付款列（wages:update）
@@ -301,9 +280,6 @@ export const tauriAPI = {
     apiClient.get<{ id: number; projectId: number; memberId?: number; projectWorkerId?: number; yearMonth: string; actualWage: number; paidAmount?: number; workerName?: string; workerPhone?: string; projectName?: string; overdueDays: number; overdueAmount: number; paymentStatus: string; createdAt: string; updatedAt: string }[]>('/api/wages/overdue-list', { projectId }),
   batchArchiveWages: (ids: number[]) =>
     apiClient.post<{ archived: number }>('/api/wages/archive', ids),
-  // D-10-2: 批量解锁（payment_locked 1→0），与 archive 对称；前端 UI 未接，仅 bridge 层
-  batchUnarchiveWages: (ids: number[]) =>
-    apiClient.post<{ unarchived: number }>('/api/wages/batch-unarchive', ids),
   // batchSaveWages：后端 D-6 起返回 { saved, skipped, skippedItems }（batch-save 实际响应），
   // 声明类型此前谎报 { updated } —— 纯类型修正，无运行时变化
   batchSaveWages: (records: WageRecord[]) =>
@@ -337,11 +313,7 @@ export const tauriAPI = {
     };
     return apiClient.post<void>('/api/audit/logs', normalized);
   },
-  auditQuery: (query: { action?: string; level?: string; userId?: string; resource?: string; resourceId?: string; startDate?: string; endDate?: string; page?: number; pageSize?: number }) => apiClient.get<{ total: number; page: number; pageSize: number; data: AuditLogEntry[] }>('/api/audit/logs', query),
   queryAuditLogs: (query: { action?: string; level?: string; userId?: string; resource?: string; resourceId?: string; startDate?: string; endDate?: string; page?: number; pageSize?: number }) => apiClient.get<{ total: number; page: number; pageSize: number; data: AuditLogEntry[] }>('/api/audit/logs', query),
-  auditStats: (days?: number) => apiClient.get<{ total: number; byAction: Record<string, number>; byLevel: Record<string, number>; byResource: Record<string, number> }>('/api/audit/stats', { days }),
-  auditClear: (daysToKeep: number) =>
-    apiClient.post<{ removedCount: number }>('/api/audit/clear', { daysToKeep }),
 
   // ────────── 角色权限 ──────────
   getRoles: () => apiClient.get<{ id: string; name: string; permissions: string[] }[]>('/api/roles'),
@@ -417,14 +389,6 @@ export const tauriAPI = {
   restoreSnapshot: (id: string) => apiClient.post<void>(`/api/snapshots/${id}/restore`),
   deleteSnapshot: (id: string) => apiClient.del<void>(`/api/snapshots/${id}`),
   setMaxSnapshots: (count: number) => apiClient.put<void>('/api/snapshots/max-count', { count }),
-  backupDatabase: () => apiClient.post<{ path: string; size: number }>('/api/backup'),
-  restoreDatabase: () => apiClient.post<{ restored: boolean }>('/api/restore'),
-  diagnoseDatabase: () => apiClient.post<{ status: string; tables: { name: string; count: number }[] }>('/api/diagnose'),
-
-  // ────────── 区域 ──────────
-  getRegions: () => apiClient.get<Region[]>('/api/regions'),
-  createRegion: (region: Partial<Region>) => apiClient.post<{ id: number }>('/api/regions', region),
-  deleteRegion: (id: number) => apiClient.del<void>(`/api/regions/${id}`),
 
   // ────────── 监管单位 ──────────
   getSupervisors: () => apiClient.get<Supervisor[]>('/api/supervisors'),
@@ -509,25 +473,12 @@ export const tauriAPI = {
   getPiiReencryptStatus: () => apiClient.get<{ status: 'idle' | 'running' | 'completed' | 'failed'; progress: number; total: number; errors: string[] }>('/api/admin/pii/reencrypt/status'),
 
   // ────────── 数据健康 ──────────
-  dataConsistencyCheck: () => apiClient.get<{ consistent: boolean; discrepancies: { table: string; json: number; sqlite: number }[] }>('/api/health/consistency'),
   consistencyCheck: () => apiClient.get<{ consistent: boolean; discrepancies: { table: string; json: number; sqlite: number }[] }>('/api/health/consistency'),
-  dataIntegrityCheck: () => apiClient.get<{ status: string; message: string }>('/api/health/integrity'),
   integrityCheck: () => apiClient.get<{ status: string; message: string }>('/api/health/integrity'),
-  dataExportJson: () => apiClient.post<{ path: string }>('/api/health/export-json'),
-  exportJson: () => apiClient.post<{ path: string }>('/api/health/export-json'),
-  dataReconcile: () => apiClient.post<{ reconciled: boolean; details: string }>('/api/health/reconcile'),
-  reconcile: () => apiClient.post<{ reconciled: boolean; details: string }>('/api/health/reconcile'),
 
   // ────────── SQLite 设置 ──────────
-  sqliteStatus: () => apiClient.get<SqliteStatus>('/api/sqlite/status'),
   getSqliteStatus: () => apiClient.get<SqliteStatus>('/api/sqlite/status'),
-  sqliteEnable: () => apiClient.post<void>('/api/sqlite/enable'),
-  sqliteMigrate: () => apiClient.post<void>('/api/sqlite/migrate'),
   migrateToSqlite: () => apiClient.post<void>('/api/sqlite/migrate'),
-  sqliteGetReadMode: () => apiClient.get<string>('/api/sqlite/read-mode'),
-  getSqliteReadMode: () => apiClient.get<string>('/api/sqlite/read-mode'),
-  sqliteSetReadMode: (mode: string) =>
-    apiClient.put<void>('/api/sqlite/read-mode', { mode }),
   setSqliteReadMode: (mode: string) =>
     apiClient.put<void>('/api/sqlite/read-mode', { mode }),
 
@@ -550,7 +501,6 @@ export const tauriAPI = {
     apiClient.post<{ text?: string; generalReceipt?: { text: string; amount: number; date: string } }>('/api/ocr/general-receipt', { imageBase64, config }),
   ocrBaiduCompanyQuery: (companyName: string, config: { apiKey: string; secretKey: string }) =>
     apiClient.post<{ text?: string; businessLicense?: { creditCode: string; companyName: string; legalPerson: string; registeredCapital: string; address: string; businessScope: string; establishDate: string; expireDate: string } }>('/api/ocr/company-query', { companyName, config }),
-  ocrCheckNetwork: () => apiClient.get<boolean>('/api/ocr/check-network'),
   ocrClearTokenCache: () => apiClient.post<boolean>('/api/ocr/clear-token-cache'),
   ocrGetStats: () => apiClient.get<{ idCard: number; invoice: number; bankCard: number; businessLicense: number; bankReceipt: number; permit: number; bankStatement: number; generalReceipt: number; companyQuery: number; lastReset: string }>('/api/ocr/stats'),
 
@@ -558,7 +508,6 @@ export const tauriAPI = {
   saveFile: (options: { category: string; subCategory: string; fileData: string; fileName: string; projectName?: string | null }) => apiClient.post<{ fileName: string }>('/api/files/save', options),
   readFile: (options: { category: string; subCategory: string; fileName: string; projectName?: string | null }) => apiClient.get<{ dataUrl: string; mimeType: string }>('/api/files/read', options),
   deleteFile: (options: { category: string; subCategory: string; fileName: string; projectName?: string | null }) => apiClient.post<void>('/api/files/delete', options),
-  openFileExternal: (options: { category: string; subCategory: string; fileName: string; projectName?: string | null }) => apiClient.post<void>('/api/files/open-external', options),
 
   // ────────── 合同文件 ──────────
   readContractFile: (fileName: string, subCategory: string, projectName?: string | null) =>
