@@ -33,6 +33,7 @@ export type PageId =
   | 'inventory'
   | 'invoices'
   | 'knowledge'
+  | 'voice'
   | 'reports'
   | 'settings'
   | 'users'
@@ -180,10 +181,17 @@ export const routes: RouteMeta[] = [
   },
   {
     id: 'knowledge',
-    label: '语音知识库',
+    label: '知识库',
     icon: 'Library',
     shortcut: 'G K',
-    description: '录音转写与历史沟通检索',
+    description: '文档资料库与知识检索',
+  },
+  {
+    id: 'voice',
+    label: '语音转文字',
+    icon: 'Mic',
+    shortcut: 'G A',
+    description: '录音与转写流水线',
   },
   {
     id: 'reports',
@@ -253,6 +261,7 @@ const SIDEBAR_RESOURCE_MAP: Record<string, string> = {
   costLedger: 'costLedger',
   drawings: 'drawings',
   knowledge: 'knowledge',
+  voice: 'voice',
   reports: 'reports',
   settings: 'settings',
   users: 'users',

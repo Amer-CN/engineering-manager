@@ -81,7 +81,20 @@ public class NormalizeFinanceRoleMigrationTests : IDisposable
             .Select(s => s.Trim())
             .Where(s => s.Length > 0);
         foreach (var stmt in stmts)
-            conn.Execute(stmt, transaction: tx);
+        {
+            try
+            {
+                conn.Execute(stmt, transaction: tx);
+            }
+            catch (Microsoft.Data.Sqlite.SqliteException ex)
+            {
+                // 与 MigrationRunner.ExecuteScriptIdempotent 一致：良性错误幂等跳过
+                var benign = ex.SqliteErrorCode == 1 && (
+                    ex.Message.Contains("duplicate column name", StringComparison.OrdinalIgnoreCase) ||
+                    ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase));
+                if (!benign) throw;
+            }
+        }
         tx.Commit();
     }
 
@@ -202,5 +215,79 @@ public class NormalizeFinanceRoleMigrationTests : IDisposable
         Assert.Equal("accountant", conn.ExecuteScalar<string>("SELECT role_id FROM users WHERE username='finuser'"));
         Assert.Equal(0, conn.ExecuteScalar<int>("SELECT COUNT(*) FROM roles WHERE id='finance'"));
         Assert.Equal(0, conn.ExecuteScalar<int>("SELECT COUNT(*) FROM roles WHERE id='finance'"));
+    }
+
+    /// <summary>构造 legacy 老库态：roles 表无 created_at 列（001 之前手工演进 schema，
+    /// 与 F:\Company Database 同款——038 修复前的启动阻断根因）。</summary>
+    private void ApplyLegacySchema()
+    {
+        using var conn = new SqliteConnection(_connStr);
+        conn.Open();
+        conn.Execute(@"
+            CREATE TABLE roles (
+                id TEXT PRIMARY KEY, name TEXT NOT NULL, permissions TEXT, is_system INTEGER DEFAULT 0);
+            CREATE TABLE users (
+                id TEXT PRIMARY KEY, username TEXT UNIQUE NOT NULL, password TEXT,
+                password_hash TEXT, password_salt TEXT, password_hash_version INTEGER DEFAULT 1,
+                salt TEXT, display_name TEXT, role_id TEXT, status TEXT DEFAULT 'active',
+                avatar TEXT, created_at TEXT, updated_at TEXT);
+            INSERT OR IGNORE INTO roles (id, name, permissions, is_system) VALUES
+                ('admin', '管理员', 'all', 1),
+                ('manager', '项目经理', 'project:read', 1),
+                ('finance', '财务', 'invoice:read', 1),
+                ('worker', '工人', 'attendance:read', 1);
+            INSERT INTO users (id, username, password_hash, password_salt, password_hash_version, display_name, role_id, status, created_at)
+                VALUES ('u-fin', 'finuser', 'x', 'x', 2, '财务用户', 'finance', 'active', '2026-01-01 00:00:00');");
+    }
+
+    /// <summary>legacy 库态（无 created_at）→ 跑 038 → 通过：created_at 补列、accountant 行建好、
+    /// finance 用户重映射、老行 created_at 留 NULL（不造数据）。</summary>
+    [Fact]
+    public void LegacySchema_NoCreatedAt_038Succeeds_DataCorrect()
+    {
+        ApplyLegacySchema();
+        Apply038();
+
+        using var conn = new SqliteConnection(_connStr);
+        conn.Open();
+
+        // created_at 列已补上（可空）
+        var hasCol = conn.ExecuteScalar<int>(
+            "SELECT COUNT(*) FROM pragma_table_info('roles') WHERE name='created_at'");
+        Assert.Equal(1, hasCol);
+
+        // accountant 行建好，权限 JSON 与 GetDefaultPermissions 一致
+        var accountant = conn.QueryFirstOrDefault<RoleRow>(
+            "SELECT id, name, permissions FROM roles WHERE id='accountant'");
+        Assert.NotNull(accountant);
+        Assert.Equal("accountant", accountant.Id);
+        Assert.Equal("财务", accountant.Name);
+        var expectedJson = System.Text.Json.JsonSerializer.Serialize(
+            EngineeringManager.Api.Common.GetDefaultPermissions("accountant"));
+        Assert.Equal(expectedJson, accountant.Permissions);
+
+        // finance 用户重映射、finance 行删除
+        Assert.Equal("accountant", conn.ExecuteScalar<string>("SELECT role_id FROM users WHERE username='finuser'"));
+        Assert.Equal(0, conn.ExecuteScalar<int>("SELECT COUNT(*) FROM roles WHERE id='finance'"));
+
+        // 老行 created_at 留 NULL（不强制回填、不造数据）
+        var adminCreatedAtIsNull = conn.ExecuteScalar<int>(
+            "SELECT COUNT(*) FROM roles WHERE id='admin' AND created_at IS NULL");
+        Assert.Equal(1, adminCreatedAtIsNull);
+    }
+
+    /// <summary>legacy 库态连跑两次 038 → 无错（ALTER 的 duplicate column name 被良性吞掉）。</summary>
+    [Fact]
+    public void LegacySchema_Idempotent_RunTwiceNoError()
+    {
+        ApplyLegacySchema();
+        Apply038();
+        Apply038();
+
+        using var conn = new SqliteConnection(_connStr);
+        conn.Open();
+        Assert.Equal(1, conn.ExecuteScalar<int>("SELECT COUNT(*) FROM roles WHERE id='accountant'"));
+        Assert.Equal(1, conn.ExecuteScalar<int>(
+            "SELECT COUNT(*) FROM pragma_table_info('roles') WHERE name='created_at'"));
     }
 }

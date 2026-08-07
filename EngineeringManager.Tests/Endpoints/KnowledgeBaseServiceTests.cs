@@ -40,6 +40,7 @@ public class KnowledgeBaseServiceTests
                 full_text   TEXT NOT NULL,
                 speakers    TEXT,
                 occurred_at TEXT,
+                folder_id   INTEGER,
                 created_at  TEXT NOT NULL,
                 updated_at  TEXT NOT NULL,
                 created_by  TEXT NOT NULL

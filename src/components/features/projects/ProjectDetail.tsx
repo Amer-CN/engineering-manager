@@ -15,11 +15,12 @@ import { Icon } from '../../ui/Icon'
 import { Spinner } from '../../ui/Loading/Loading'
 import { Tabs } from '../../ui/Tabs'
 import { ContractsTab, InvoicesTab, MembersTab, PartnersTab } from './ProjectDetailTabs'
+import { ProjectKnowledgeTab } from './ProjectKnowledgeTab'
 import { StatusBadge, PROJECT_STATUS } from '@/constants/status'
 import { getAPI } from '@/services/api-adapter'
 import { Button } from '../../ui/Button'
 
-type DetailTab = 'overview' | 'contracts' | 'invoices' | 'members' | 'expenses' | 'partners'
+type DetailTab = 'overview' | 'contracts' | 'invoices' | 'members' | 'expenses' | 'partners' | 'knowledge'
 
 export interface ProjectDetailProps {
   project: Project; members: Member[]; allMembers?: Member[]
@@ -148,6 +149,7 @@ export function ProjectDetail({ project, members, allMembers, onBack, onEdit }: 
     { id: 'members' as DetailTab, label: '人员管理', icon: 'Users' },
     { id: 'expenses' as DetailTab, label: '费用明细', icon: 'DollarSign' },
     { id: 'partners' as DetailTab, label: '关联单位', icon: 'Building2' },
+    { id: 'knowledge' as DetailTab, label: '项目知识库', icon: 'Library' },
   ]
 
   return (
@@ -197,6 +199,7 @@ export function ProjectDetail({ project, members, allMembers, onBack, onEdit }: 
               {detailTab === 'members' && <MembersTab project={project} staffMembers={staffMembers} allStaffMembers={allStaffMembers} workerTeams={workerTeams} members={members} stats={stats} />}
               {detailTab === 'expenses' && <CostLedgerAnalytics projectId={project.id} projectName={project.name} categories={categories} />}
               {detailTab === 'partners' && <PartnersTab partners={partners} />}
+              {detailTab === 'knowledge' && <ProjectKnowledgeTab projectId={project.id} />}
             </>
           )}
         </Tabs>

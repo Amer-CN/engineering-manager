@@ -1,15 +1,15 @@
 /**
- * SpeechKnowledgePage 集成测试
+ * KnowledgeHomePage 集成测试
  *
- * 真实渲染 SpeechKnowledgePage 组件，验证：
- * 1. sessionStorage pendingDocId 消费 → 自动切换到知识库 Tab + 传入 openDocId
- * 2. 无 pendingDocId 时默认显示录音转写 Tab
+ * 真实渲染 KnowledgeHomePage 组件，验证：
+ * 1. sessionStorage pendingDocId 消费 → 传入 openDocId 给 KnowledgeLibrary
+ * 2. 无 pendingDocId 时正常渲染知识库
  * 3. 恶意 HTML 防护（XSS）— 通过真实渲染 KnowledgeDocumentDrawer 验证
  * 4. MaskContext 脱敏联动
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor, act, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import React from 'react'
 
 // ═══════════════════════════════════════════════════════════════
@@ -57,13 +57,6 @@ vi.mock('react-dom', async () => {
   return { ...actual, createPortal: (node: React.ReactNode) => node }
 })
 
-// Mock TranscriptionWorkspace (heavy component tree)
-vi.mock('../TranscriptionWorkspace', () => ({
-  default: function MockTW() {
-    return React.createElement('div', { 'data-testid': 'tw' }, '录音转写')
-  },
-}))
-
 // Mock KnowledgeLibrary — 捕获 openDocId prop
 vi.mock('../KnowledgeLibrary', () => ({
   default: function MockKL(props: { openDocId?: number | null; onOpenDocIdConsumed?: () => void }) {
@@ -72,6 +65,24 @@ vi.mock('../KnowledgeLibrary', () => ({
     return React.createElement('div', { 'data-testid': 'kl' },
       `知识库(openDocId=${props.openDocId ?? 'null'})`)
   },
+}))
+
+// Mock GlassCarousel — 3D 轮播舞台（jsdom 无真实 3D；舞台自身测试在 glass/__tests__ 覆盖）
+vi.mock('../glass/GlassCarousel', () => ({
+  GlassCarousel: () => React.createElement('div', { 'data-testid': 'gc-stage' }, '轮播舞台'),
+}))
+
+// Mock 数据层 hooks（M3 真实数据；测试聚焦页面接线）
+const { mockFolders, mockCreateFolder } = vi.hoisted(() => ({
+  mockFolders: [] as Array<{ id: number; name: string; englishName: string | null; projectId: number | null; category: string | null; docCount: number }>,
+  mockCreateFolder: { mutateAsync: vi.fn(async () => ({ success: true, data: { id: 1 } })), isPending: false },
+}))
+vi.mock('@/hooks/data/useKnowledgeFolders', () => ({
+  useKnowledgeFolders: () => ({ data: mockFolders, isLoading: false }),
+  useCreateKnowledgeFolder: () => mockCreateFolder,
+}))
+vi.mock('@/hooks/data/useProjects', () => ({
+  useProjects: () => ({ data: [{ id: 1, name: '项目 A' }, { id: 2, name: '项目 B' }] }),
 }))
 
 // ═══════════════════════════════════════════════════════════════
@@ -93,69 +104,77 @@ Object.defineProperty(window, 'sessionStorage', { value: sessionStorageMock })
 // Import components after mocks
 // ═══════════════════════════════════════════════════════════════
 
-import SpeechKnowledgePage from '../SpeechKnowledgePage'
+import KnowledgeHomePage from '../KnowledgeHomePage'
 import KnowledgeDocumentDrawer from '../KnowledgeDocumentDrawer'
 
 // ═══════════════════════════════════════════════════════════════
-// Tests: SpeechKnowledgePage sessionStorage 消费
+// Tests: KnowledgeHomePage sessionStorage 消费
 // ═══════════════════════════════════════════════════════════════
 
-describe('SpeechKnowledgePage — sessionStorage consumption', () => {
+describe('KnowledgeHomePage — sessionStorage consumption', () => {
   beforeEach(() => {
     sessionStorageMock.clear()
     vi.clearAllMocks()
     mockMaskState.masked = false
     lastLibraryProps.openDocId = null
     lastLibraryProps.onOpenDocIdConsumed = null
+    mockFolders.length = 0
   })
 
-  it('consumes pendingDocId from sessionStorage → switches to library tab + passes openDocId', async () => {
+  it('M2：渲染 3D 轮播舞台 + 文档库（双区）', () => {
+    mockFolders.push({ id: 3, name: '安全生产资料', englishName: 'SAFETY', projectId: null, category: '安全', docCount: 5 })
+    render(<KnowledgeHomePage />)
+    expect(screen.getByTestId('gc-stage')).toBeInTheDocument()
+    expect(screen.getByTestId('kl')).toBeInTheDocument()
+  })
+
+  it('consumes pendingDocId from sessionStorage → passes openDocId to KnowledgeLibrary', async () => {
     sessionStorageMock.setItem('knowledge:pendingDocId', '42')
 
-    render(<SpeechKnowledgePage />)
+    render(<KnowledgeHomePage />)
 
     expect(sessionStorageMock.getItem).toHaveBeenCalledWith('knowledge:pendingDocId')
     expect(sessionStorageMock.removeItem).toHaveBeenCalledWith('knowledge:pendingDocId')
 
-    // 应自动切换到知识库 Tab
+    // 渲染知识库，openDocId=42 应传入 KnowledgeLibrary
     await waitFor(() => {
       expect(screen.getByTestId('kl')).toBeInTheDocument()
     })
-
-    // openDocId=42 应传入 KnowledgeLibrary
     expect(lastLibraryProps.openDocId).toBe(42)
   })
 
   it('removes pendingDocId after consumption (one-time only)', async () => {
     sessionStorageMock.setItem('knowledge:pendingDocId', '99')
 
-    render(<SpeechKnowledgePage />)
+    render(<KnowledgeHomePage />)
 
     expect(sessionStorageMock.removeItem).toHaveBeenCalledWith('knowledge:pendingDocId')
   })
 
-  it('does not consume when sessionStorage is empty → stays on transcription tab', async () => {
-    render(<SpeechKnowledgePage />)
+  it('does not consume when sessionStorage is empty → renders library normally', async () => {
+    render(<KnowledgeHomePage />)
 
     expect(sessionStorageMock.removeItem).not.toHaveBeenCalledWith('knowledge:pendingDocId')
-    expect(screen.getByTestId('tw')).toBeInTheDocument()
+    expect(screen.getByTestId('kl')).toBeInTheDocument()
+    expect(lastLibraryProps.openDocId).toBeNull()
   })
 
   it('ignores invalid (NaN) pendingDocId', async () => {
     sessionStorageMock.setItem('knowledge:pendingDocId', 'abc')
 
-    render(<SpeechKnowledgePage />)
+    render(<KnowledgeHomePage />)
 
     // removeItem 仍被调用（清除无效值）
     expect(sessionStorageMock.removeItem).toHaveBeenCalledWith('knowledge:pendingDocId')
-    // 不切换 Tab（NaN 被忽略）
-    expect(screen.getByTestId('tw')).toBeInTheDocument()
+    // NaN 被忽略：不传 openDocId
+    expect(screen.getByTestId('kl')).toBeInTheDocument()
+    expect(lastLibraryProps.openDocId).toBeNull()
   })
 
-  it('switches to library tab when valid pendingDocId present', async () => {
+  it('passes openDocId when valid pendingDocId present', async () => {
     sessionStorageMock.setItem('knowledge:pendingDocId', '55')
 
-    render(<SpeechKnowledgePage />)
+    render(<KnowledgeHomePage />)
 
     await waitFor(() => {
       expect(screen.getByTestId('kl')).toBeInTheDocument()
@@ -166,40 +185,59 @@ describe('SpeechKnowledgePage — sessionStorage consumption', () => {
   it('pendingDocId consumed once — re-render does not re-consume', async () => {
     sessionStorageMock.setItem('knowledge:pendingDocId', '77')
 
-    const { rerender } = render(<SpeechKnowledgePage />)
+    const { rerender } = render(<KnowledgeHomePage />)
 
     await waitFor(() => {
       expect(screen.getByTestId('kl')).toBeInTheDocument()
     })
 
     const removeCallsBefore = sessionStorageMock.removeItem.mock.calls.length
-    rerender(<SpeechKnowledgePage />)
+    rerender(<KnowledgeHomePage />)
     expect(sessionStorageMock.removeItem.mock.calls.length).toBe(removeCallsBefore)
   })
 
   it('passes onOpenDocIdConsumed callback to KnowledgeLibrary', async () => {
     sessionStorageMock.setItem('knowledge:pendingDocId', '42')
 
-    render(<SpeechKnowledgePage />)
+    render(<KnowledgeHomePage />)
 
     await waitFor(() => {
       expect(screen.getByTestId('kl')).toBeInTheDocument()
     })
     expect(typeof lastLibraryProps.onOpenDocIdConsumed).toBe('function')
   })
+})
 
-  it('can manually switch to library tab when no pendingDocId', async () => {
-    render(<SpeechKnowledgePage />)
+// ═══════════════════════════════════════════════════════════════
+// Tests: M3 数据接入（项目筛选 / 空态 / 轮播接线）
+// ═══════════════════════════════════════════════════════════════
 
-    // 默认在录音转写 Tab
-    expect(screen.getByTestId('tw')).toBeInTheDocument()
+describe('KnowledgeHomePage — M3 数据接入', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockFolders.length = 0
+  })
 
-    // 点击知识库 Tab
-    act(() => { fireEvent.click(screen.getByText('知识库')) })
+  it('有文件夹时渲染轮播舞台（数据经 useKnowledgeFolders 接线）', async () => {
+    mockFolders.push({ id: 3, name: '安全生产资料', englishName: 'SAFETY', projectId: null, category: '安全', docCount: 5 })
+    render(<KnowledgeHomePage />)
+    expect(screen.getByTestId('gc-stage')).toBeInTheDocument()
+    expect(screen.getByTestId('kl')).toBeInTheDocument()
+  })
 
-    await waitFor(() => {
-      expect(screen.getByTestId('kl')).toBeInTheDocument()
-    })
+  it('空文件夹 → 渲染 EmptyState（知识库为空）', () => {
+    render(<KnowledgeHomePage />)
+    expect(screen.getByText('知识库为空')).toBeInTheDocument()
+    expect(screen.queryByTestId('gc-stage')).toBeNull()
+  })
+
+  it('项目筛选下拉存在（全部项目 + 项目 A/B）', () => {
+    render(<KnowledgeHomePage />)
+    const select = screen.getByLabelText('按项目筛选文件夹')
+    expect(select).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: '全部项目（含跨项目通用）' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: '项目 A' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: '项目 B' })).toBeInTheDocument()
   })
 })
 
