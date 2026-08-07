@@ -712,7 +712,7 @@ public static class SystemEndpoints
                 && v.TryGetInt32(out var n) && n is >= 1 and <= 100)
                 return n;
         }
-        catch { /* 配置损坏 → 兜底默认 */ }
+        catch (Exception ex) { Console.Error.WriteLine($"[SystemEndpoints] snapshots/max-count 配置损坏: {ex.Message}"); }
         return DefaultSnapshotMaxCount;
     }
 
