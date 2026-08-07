@@ -131,6 +131,7 @@ public static class WageEndpoints
         //   「默认全勤」记录（work_days=当月天数，daily_status 全 work，与人事模块
         //   「生成默认考勤 → 全勤 → 编辑调整」行为一致）；已有行一律跳过，天然幂等。
         // 响应 = { success, data: { count } }，count 为本轮新建行数
+        // （2026-08-07 原作者拍板：维持全勤预填，与人事模块一致）
         app.MapPost("/api/attendances/generate", (HttpContext ctx, AttendanceGenerateDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
@@ -161,6 +162,7 @@ public static class WageEndpoints
         // POST /api/attendances/generate-v2 — 生成默认考勤（worker 路径，窗口 E 接通本体）
         // 语义同上，按 project_worker_id 定位（工资页「生成考勤」按钮走此端点，
         // 前端传该项目活跃工人的 pwIds）；worker 行 member_id 为 NULL
+        // （2026-08-07 原作者拍板：维持全勤预填，与人事模块一致）
         app.MapPost("/api/attendances/generate-v2", (HttpContext ctx, AttendanceGenerateV2Dto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
