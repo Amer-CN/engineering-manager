@@ -947,7 +947,6 @@ export interface ElectronAPI {
   setGpuAcceleration: (enabled: boolean) => Promise<{ success: boolean; enabled: boolean; needRestart: boolean }>
   consistencyCheck: () => Promise<{ success: boolean; data?: { consistent: boolean; discrepancies: { table: string; json: number; sqlite: number }[] } }>
   integrityCheck: () => Promise<{ success: boolean; data?: { status: string; message: string } }>
-  exportJson: () => Promise<{ success: boolean; message?: string }>
 
   // 认证
   login: (username: string, password: string) => Promise<{ success: boolean; data?: StoredAuth; error?: string }>
@@ -987,7 +986,6 @@ export interface ElectronAPI {
   deleteWorkerTeam: (id: number) => Promise<{ success: boolean; error?: string }>
 
   // 工人调动记录
-  getWorkerTransferRecords: (workerId: number) => Promise<{ success: boolean; data?: WorkerTransferRecord[]; error?: string }>
   createWorkerTransfer: (record: Partial<WorkerTransferRecord>) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
 
   // 全局工人信息库
@@ -997,7 +995,6 @@ export interface ElectronAPI {
   deleteWorker: (id: number) => Promise<{ success: boolean; error?: string }>
   getWorkerStats: (workerId: number) => Promise<{ success: boolean; data?: { projectCount: number; totalEarnings: number; projectBreakdown: { projectId: number; projectName: string; total: number }[] }; error?: string }>
   getTeamWages: (projectId: number, teamId: number) => Promise<{ success: boolean; data?: { teamId: number; teamName: string; workerCount: number; teamTotal: number; details: { workerName: string; months: number; workDays: number; dailyWage: number; totalWage: number }[] }; error?: string }>
-  fixWorkerData: () => Promise<{ success: boolean; data?: { clearedBank: number; filledGender: number }; error?: string }>
 
   // 项目用工关系
   getProjectWorkers: (projectId: number) => Promise<{ success: boolean; data?: (ProjectWorker & { worker?: Worker })[]; error?: string }>
@@ -1012,12 +1009,6 @@ export interface ElectronAPI {
   updateMaterial: (material: Material) => Promise<{ success: boolean; error?: string }>
   deleteMaterial: (id: number) => Promise<{ success: boolean; error?: string }>
 
-  // 费用
-  getExpenses: (projectId?: number) => Promise<{ success: boolean; data?: Expense[]; error?: string }>
-  createExpense: (expense: Partial<Expense>) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
-  updateExpense: (expense: Expense) => Promise<{ success: boolean; error?: string }>
-  deleteExpense: (id: number) => Promise<{ success: boolean; error?: string }>
-
   // 成本台账
   getCostLedger: (projectId: number, batchId?: number) => Promise<{ success: boolean; data?: CostLedgerEntry[]; error?: string }>
   createCostLedger: (entry: Omit<CostLedgerEntry, 'id' | 'createdAt' | 'updatedAt'>) => Promise<{ success: boolean; data?: CostLedgerEntry; error?: string; warning?: string }>
@@ -1029,7 +1020,6 @@ export interface ElectronAPI {
   renameCostLedgerBatch: (projectId: number, batchId: number, name: string) => Promise<{ success: boolean; error?: string }>
   deleteCostLedgerBatch: (projectId: number, batchId: number) => Promise<{ success: boolean; error?: string }>
   getCostLedgerMatchRules: () => Promise<{ success: boolean; data?: CostLedgerMatchRule[]; error?: string }>
-  saveCostLedgerMatchRules: (rules: CostLedgerMatchRule[]) => Promise<{ success: boolean; count?: number; error?: string }>
   updateCostLedger: (id: number, changes: Partial<CostLedgerEntry>) => Promise<{ success: boolean; data?: CostLedgerEntry; error?: string }>
   deleteCostLedger: (id: number) => Promise<{ success: boolean; error?: string }>
   getCostLedgerCategories: (direction?: string) => Promise<{ success: boolean; data?: CostLedgerCategory[]; error?: string }>
@@ -1060,15 +1050,9 @@ export interface ElectronAPI {
 
   // 合作单位
   getPartners: () => Promise<{ success: boolean; data?: Partner[]; error?: string }>
-  getProjectPartners: (projectId: number) => Promise<{ success: boolean; data?: Partner[]; error?: string }>
   createPartner: (partner: Partial<Partner>) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
   updatePartner: (partner: Partner) => Promise<{ success: boolean; error?: string }>
   deletePartner: (id: number) => Promise<{ success: boolean; error?: string }>
-
-  // 地区
-  getRegions: () => Promise<{ success: boolean; data?: Region[]; error?: string }>
-  createRegion: (region: Partial<Region>) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
-  deleteRegion: (id: number) => Promise<{ success: boolean; error?: string }>
 
   // 监管单位
   getSupervisors: () => Promise<{ success: boolean; data?: Supervisor[]; error?: string }>
@@ -1082,21 +1066,11 @@ export interface ElectronAPI {
   updateIncomeContract: (contract: IncomeContract) => Promise<{ success: boolean; error?: string }>
   deleteIncomeContract: (id: number) => Promise<{ success: boolean; error?: string }>
 
-  // 收入记录
-  getIncomeRecords: (contractId: number) => Promise<{ success: boolean; data?: IncomeRecord[]; error?: string }>
-  createIncomeRecord: (record: Partial<IncomeRecord>) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
-  deleteIncomeRecord: (id: number) => Promise<{ success: boolean; error?: string }>
-
   // 支出合同
   getExpenseContracts: (projectId?: number) => Promise<{ success: boolean; data?: ExpenseContract[]; error?: string }>
   createExpenseContract: (contract: Partial<ExpenseContract>) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
   updateExpenseContract: (contract: ExpenseContract) => Promise<{ success: boolean; error?: string }>
   deleteExpenseContract: (id: number) => Promise<{ success: boolean; error?: string }>
-
-  // 支出记录
-  getExpenseRecords: (contractId: number) => Promise<{ success: boolean; data?: ExpenseRecord[]; error?: string }>
-  createExpenseRecord: (record: Partial<ExpenseRecord>) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
-  deleteExpenseRecord: (id: number) => Promise<{ success: boolean; error?: string }>
 
   // 其他协议
   getAgreementContracts: (projectId?: number) => Promise<{ success: boolean; data?: AgreementContract[]; error?: string }>
@@ -1109,7 +1083,6 @@ export interface ElectronAPI {
 
   // 统计
   getDashboardStats: () => Promise<{ success: boolean; data?: DashboardStats; error?: string }>
-  getUploadsPath: () => Promise<string>
 
   // 统一文件服务
   saveFile: (options: { category: string; subCategory: string; fileData: string; fileName: string; projectName?: string | null }) =>
@@ -1117,8 +1090,6 @@ export interface ElectronAPI {
   readFile: (options: { category: string; subCategory: string; fileName: string; projectName?: string | null }) =>
     Promise<{ success: boolean; data?: { dataUrl: string; mimeType: string }; error?: string }>
   deleteFile: (options: { category: string; subCategory: string; fileName: string; projectName?: string | null }) =>
-    Promise<{ success: boolean; error?: string }>
-  openFileExternal: (options: { category: string; subCategory: string; fileName: string; projectName?: string | null }) =>
     Promise<{ success: boolean; error?: string }>
 
   // 合同附件文件存储
@@ -1138,7 +1109,6 @@ export interface ElectronAPI {
   createContractTemplate: (template: Partial<ContractTemplate>) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
   updateContractTemplate: (template: ContractTemplate) => Promise<{ success: boolean; error?: string }>
   deleteContractTemplate: (id: number) => Promise<{ success: boolean; error?: string }>
-  generateContractFromTemplate: (templateId: number, variables: Record<string, string>) => Promise<{ success: boolean; data?: { html: string }; error?: string }>
 
   // ============ 模板管理（新版） ============
   getTemplates: (category?: TemplateCategory) => Promise<{ success: boolean; data?: Template[]; error?: string }>
@@ -1175,7 +1145,6 @@ export interface ElectronAPI {
   getAttendancesByMember: (memberId: number, yearMonth?: string) => Promise<{ success: boolean; data?: AttendanceRecord[]; error?: string }>
   createAttendance: (record: Partial<AttendanceRecord>) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
   updateAttendance: (record: AttendanceRecord) => Promise<{ success: boolean; error?: string }>
-  generateDefaultAttendances: (projectId: number, yearMonth: string, memberIds: number[]) => Promise<{ success: boolean; data?: { count: number }; error?: string }>
   generateDefaultAttendancesV2: (projectId: number, yearMonth: string, projectWorkerIds: number[]) => Promise<{ success: boolean; data?: { count: number }; error?: string }>
   batchImportAttendances: (projectId: number, yearMonth: string, records: { projectWorkerId: number; workDays: number }[]) => Promise<{ success: boolean; data?: { created: number; updated: number }; error?: string }>
   deleteAttendance: (id: number) => Promise<{ success: boolean; data?: any; error?: string }>
@@ -1204,7 +1173,6 @@ export interface ElectronAPI {
   batchDeleteWages: (ids: number[]) => Promise<{ success: boolean; data?: { deleted: number }; error?: string }>
   batchClearPayments: (ids: number[]) => Promise<{ success: boolean; data?: { cleared: number }; error?: string }>
   batchArchivePayments: (ids: number[]) => Promise<{ success: boolean; data?: { archived: number }; error?: string }>
-  batchUnarchiveWages: (ids: number[]) => Promise<{ success: boolean; data?: { unarchived: number }; error?: string }>
   getWageStats: (yearMonth?: string, projectId?: number) => Promise<{ success: boolean; data?: WageStats; error?: string }>
   parseBankReceipt: (sourcePath: string, projectName?: string, yearMonth?: string) => Promise<{ success: boolean; data?: ParsedBankReceipt; error?: string }>
   batchParseBankReceipts: (filePaths: string[], projectId?: number, yearMonth?: string) => Promise<{ success: boolean; data?: BatchParseResult; error?: string }>
@@ -1248,14 +1216,12 @@ export interface ElectronAPI {
   ocrBaiduBankStatement: (imageBase64: string, config: { apiKey: string; secretKey: string }) => Promise<{ success: boolean; text?: string; bankStatement?: { transactions: Array<{ date: string; time: string; amount: number; balance: number; type: string; counterparty: string; remark: string }>; accountNumber: string; bankName: string }; error?: string }>
   ocrBaiduGeneralReceipt: (imageBase64: string, config: { apiKey: string; secretKey: string }) => Promise<{ success: boolean; text?: string; generalReceipt?: { text: string; amount: number; date: string }; error?: string }>
   ocrBaiduCompanyQuery: (companyName: string, config: { apiKey: string; secretKey: string }) => Promise<{ success: boolean; text?: string; businessLicense?: { creditCode: string; companyName: string; legalPerson: string; registeredCapital: string; address: string; businessScope: string; establishDate: string; expireDate: string }; error?: string }>
-  ocrCheckNetwork: () => Promise<boolean>
   ocrClearTokenCache: () => Promise<boolean>
   ocrGetStats: () => Promise<{ idCard: number; invoice: number; bankCard: number; businessLicense: number; bankReceipt: number; permit: number; bankStatement: number; generalReceipt: number; companyQuery: number; lastReset: string }>
 
   // ============ SQLite 状态管理 ============
   getSqliteStatus: () => Promise<{ success: boolean; ready: boolean; migrated: boolean; dbPath: string | null; dbSize: number | null; summary: Record<string, number> | null; readMode: 'dual' | 'sqlite-primary' | 'json-only'; error?: string }>
   migrateToSqlite: (force?: boolean) => Promise<{ success: boolean; migratedTables: number; totalRows: number; verificationPassed: boolean; errors: string[]; warnings: string[]; duration: number; message?: string }>
-  getSqliteReadMode: () => Promise<{ success: boolean; readMode: 'dual' | 'sqlite-primary' | 'json-only' }>
   setSqliteReadMode: (mode: 'dual' | 'sqlite-primary' | 'json-only') => Promise<{ success: boolean; readMode: 'dual' | 'sqlite-primary' | 'json-only'; error?: string }>
 }
 
