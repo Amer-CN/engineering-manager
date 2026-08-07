@@ -68,6 +68,8 @@ export interface PayrollData {
   loadData: () => Promise<void>
   generating: boolean
   setGenerating: (v: boolean) => void
+  // J-2: 暴露 setLoading（handleSavePayments 核心的 loading 指示注入点）
+  setLoading: (v: boolean) => void
 }
 
 type ApiOk<T = Record<string, unknown>[]> = { success: boolean; data: T }
@@ -245,6 +247,6 @@ export function usePayrollData({ mode }: PayrollDataOptions): PayrollData {
     filterDept, setFilterDept, filterProject, setFilterProject,
     filterName, setFilterName,
     people, attendances, wages, filteredWages, summary,
-    loadData, generating, setGenerating,
+    loadData, generating, setGenerating, setLoading,
   }
 }

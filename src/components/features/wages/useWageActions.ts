@@ -7,6 +7,7 @@ import { useToastStore } from '@/store/toastStore'
 import { getAPI } from '@/services/api-adapter'
 import { useConfirm } from '@/hooks/useConfirm'
 import { usePermission } from '@/hooks/usePermission'
+import { savePaymentsCore } from '@/hooks/useWagePaymentOps'
 import type { Project, WorkerTeam, AttendanceRecord, WageRecord } from '@/types'
 
 interface UseWageActionsOptions {
@@ -16,10 +17,11 @@ interface UseWageActionsOptions {
   attendances: AttendanceRecord[]
   wages: WageRecord[]
   loadData: () => Promise<void>
+  setLoading?: (b: boolean) => void
 }
 
 export function useWageActions({
-  selectedProject, selectedMonth, workerTeams, attendances, wages, loadData,
+  selectedProject, selectedMonth, workerTeams, attendances, wages, loadData, setLoading,
 }: UseWageActionsOptions) {
   const showToast = useToastStore(state => state.showToast)
   const { confirm, ConfirmDialog } = useConfirm()
@@ -149,24 +151,14 @@ export function useWageActions({
     })
   }, [wages])
 
-  const handleSavePayments = useCallback(async () => {
-    // G2 B2: 保存发放 → wages:update
-    if (!can('wages:update')) { showToast('您没有登记发放的权限', 'error'); return }
-    if (paymentEdits.size === 0) { showToast('没有需要保存的修改', 'info'); return }
-    let skippedEmpty = 0
-    const updated = wages.map(w => {
-      const edit = paymentEdits.get(w.id)
-      if (!edit) return null
-      const paidAmount = parseFloat(edit.paidAmount)
-      if (!Number.isFinite(paidAmount)) { skippedEmpty++; return null }  // 空串/非法 → 跳过该行，不发 0
-      // 只发付款四字段，不整行展开（batch-payment 端点只看这四列）
-      return { id: w.id, paidAmount, paidDate: edit.paidDate, bankReceiptPath: edit.bankReceiptPath ?? w.bankReceiptPath }
-    }).filter((x): x is { id: number; paidAmount: number; paidDate: string; bankReceiptPath: string | undefined } => x !== null)
-    if (skippedEmpty > 0) showToast(`实发金额为空的行已跳过（${skippedEmpty} 条），如需清除请用「清除发放记录」`, 'warning')
-    const r = await (await getAPI()).batchSavePayments(updated)
-    if (r.success) { showToast('发放记录已保存', 'success'); setPaymentEdits(new Map()); await loadData() }
-    else showToast(r.error || '保存失败', 'error')
-  }, [paymentEdits, wages, loadData, showToast])
+  const handleSavePayments = useCallback(() => savePaymentsCore({
+    can, showToast,
+    records: wages,
+    paymentEdits, setPaymentEdits,
+    // J-2: 刷新注入（Payroll 语境，维持现状：loadData 刷新 payroll 页自身数据）
+    refresh: loadData,
+    setLoading,
+  }), [can, showToast, wages, paymentEdits, setPaymentEdits, loadData, setLoading])
 
   const handleBatchDeletePayments = useCallback(async () => {
     // G2 B2: 清除发放 → wages:update
