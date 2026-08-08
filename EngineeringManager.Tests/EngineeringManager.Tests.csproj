@@ -8,6 +8,8 @@
     <IsPackable>false</IsPackable>
     <!-- WebView2.Wpf 传递引用与 UseWindowsForms 的既有 WindowsBase 4.0/5.0 冲突（基线既有，非代码问题） -->
     <NoWarn>$(NoWarn);MSB3277</NoWarn>
+    <!-- M-FIX8 T-1: 本地与 CI 编译参数对齐，CI 带 -warnaserror，本地不带 flag 同样把警告当错误 -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>
