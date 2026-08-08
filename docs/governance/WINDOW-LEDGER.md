@@ -21,6 +21,7 @@
 | J 窗口 | 未知会话 | 已合入 master | adfd29b | 75d79fc(J-1)/49a76f3(J-2)/fb51c42(J-3)/11a9c02(J-4) | 已合 | 已合 | 已合 | master git log（J-4 报门禁5=167 系**旧基线作废**，实测 171） |
 | M 窗口 | 未知会话 | feat/knowledge-3d-carousel（PR #9） | 25b823e（M-FIX6） | 1f4e0440(09:20:11Z)+8fa86e7b(041) | 已合（PR #9 网页端合并 c6aa5e99 10:37:37Z） | 已合 | owner 网页端 | PR #9 diff |
 | K 窗口 | 未知会话 | 已合入 master | 11a9c02（J-4） | 8fdcffa(K-1)/6c7890b(K-2)/ad4ce22(K-3)，**直推非 rebase** | 已合（master tip=ad4ce22） | 已合 | 直推 master | master git log |
+| N 窗口 | 未知会话 | 已合入 master | ad4ce22（K-3） | 50ee395，**1 笔直推** | 已合（master tip=50ee395） | 已合 | 直推 master | master git log（N 窗口只修 API 侧 CS8619，**Tests 侧 CS8604 漏修 → master CI 仍红**，G67） |
 | M-FIX 线 | 审查方驱动 | fix/pr9-reconcile → master | 逐轮 | 25b823e(M-FIX6) | 在跑 | 逐轮推 master | 本会话 | 各轮报告 |
 
 ## K 窗口数字核实（M-FIX9 W2 订正 M-FIX8 错误结论）
@@ -31,9 +32,12 @@
   - 两环境同数 → 862 稳定真值。编译修复（T1）不改变用例总数 ✓
   - 跳过恒 3：M4ThirdRound.UploadAudio_CancelledMidStream（[Fact(Skip=)]）+ SttE2ETests
     E2E_MultiSpeaker/E2E_SingleSpeaker（[SttE2EFact] RUN_STT_E2E≠1）
-- **M-FIX8 报的 848/1/849 是错误测量**（带 --filter 排除 E2E + 编译失败缓存污染），作废。
-  13 例差额（862−849）全部来自该错误测量，非用例增减。fix/mfix9 tip = **868 / 865 / 3**
-  （+6 = M-FIX8 T2 四例 + T4(e) 两例）。
+- **M-FIX8 报的 848/1/849 是带 --filter 的口径数，与无 filter 全量 862 的差额 = 13 是 CI filter 口径常数**：
+  全量（862）含 4 类被 CI 的 --filter 排除的用例（SttE2ETests / BgeE2ETests / M2FourthRoundTests.Model_ /
+  RealHttp），自 M-FIX4 起每轮恒为 13（M-FIX4: 833 vs 820 即同一口径），跳过 3→1 是因为
+  4 类被排除的用例里有 2 个 SttE2E 本身是跳过项（不算进 filter 后的跳过数）。**不是错误测量，
+  是两个口径不许混着比**。fix/mfix9 tip 无 filter 全量 = **868 / 865 / 3**（+6 = M-FIX8 T2 四例 + T4(e) 两例）；
+  带 CI 同款 --filter 的口径 = 855 过 / 1 跳过（868−13）。
 - 门禁5=171 正确（137 合规 / 34 豁免），K 三笔「后端端点零改动」成立（K-1/K-2 纯前端）。171 相对 I 窗口末 170 的 +1：PR#9 知识库端点（POST/PUT/DELETE folders + PUT documents = +4）净增，J-4 删 3 个 501 端点（MapPost STUB）−3，170+4−3=171。**J-4 报 167 是错误基线（漏算 PR#9 已合入的 +4，只算了 −3），作废**。
 
 ## M 窗口占用（U5 记录）
