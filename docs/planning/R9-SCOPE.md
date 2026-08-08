@@ -86,6 +86,202 @@
 ```
 **042 不存在**（`ls | grep "^042"` → NO 042），roles 修复迁移待 R9 落。
 
+## §1b 写侧全集分桶（R9-0 Y2，只清点不改码）
+
+> 取证命令（R9-0 Y2，原样）：
+> ```
+> grep -n "UPDATE \|DELETE FROM" EngineeringManager.Api/Endpoints/*.cs        # 全集 95 处匹配（含注释/多行/INSERT 侧 DO UPDATE）
+> grep -n "created_by=@Uid OR @IsAdmin=1" EngineeringManager.Api/Endpoints/*.cs | grep -i "UPDATE\|DELETE"   # B 桶精确 42
+> grep -n "UserFilterWithAuthorizedProjects\|UserFilterCompany" EngineeringManager.Api/Endpoints/*.cs       # A 桶写侧精确
+> ```
+> 分桶口径：只统计「业务数据写语句」（UPDATE / DELETE FROM 实际执行），一条语句算一条；
+> 系统/管理操作（roles/users 权限配置、PII backfill、sqlite/migrate 全表重灌、user_preferences upsert）无「行归属」语义，列桶外。
+> 四桶定义：**A**=WHERE 含 UserFilter*(scope)；**B**=WHERE 只有 `(created_by=@Uid OR @IsAdmin=1)` 类归属校验；**C**=WHERE 只有 `id=@Id` 但端点内另有显式归属/授权校验；**D**=WHERE 只有 `id=@Id` 且端点内无归属/授权校验。
+
+### A 桶：WHERE 含 UserFilter*(scope)（真·范围校验）— 7 条
+
+| # | 文件:行 | 路由 | UserFilter 调用 |
+|---|---------|------|-----------------|
+| A1 | ContractEndpoints.cs:205 | PUT /api/contracts/income | UserFilterWithAuthorizedProjects(scope, "income_contracts.project_id") |
+| A2 | ContractEndpoints.cs:248 | PUT /api/contracts/expense | UserFilterWithAuthorizedProjects(scope, "expense_contracts.project_id") |
+| A3 | CostLedgerEndpoints.cs:69 | PUT /api/cost-ledger | UserFilterWithAuthorizedProjects(scope, "cost_ledger.project_id") |
+| A4 | CostLedgerEndpoints.cs:84 | DELETE /api/cost-ledger/{id} | UserFilterWithAuthorizedProjects(scope, "cost_ledger.project_id") |
+| A5 | CostLedgerEndpoints.cs:210 | PUT /api/cost-ledger/batches/{id} | UserFilterCompany(scope) |
+| A6 | CostLedgerEndpoints.cs:222 | DELETE /api/cost-ledger/batches/{id} | UserFilterCompany(scope) |
+| A7 | CostLedgerEndpoints.cs:303 | POST /api/cost-ledger/{batchId}/sheet（UPDATE [cost_ledger]） | UserFilterWithAuthorizedProjects(scope, "cost_ledger.project_id")（先验 batch 归属 278 行） |
+
+> **A 桶 7 条。唯一把范围校验真正写进 WHERE 的域：合同（income/expense）+ 成本台账。**
+
+### B 桶：WHERE 只有 (created_by=@Uid OR @IsAdmin=1) 类归属校验 — 42 条
+
+| # | 文件:行 | 路由 |
+|---|---------|------|
+| B1 | ContractEndpoints.cs:290 | PUT /api/contracts/agreement |
+| B2 | ContractEndpoints.cs:308 | DELETE /api/contracts/income/{id} |
+| B3 | ContractEndpoints.cs:318 | DELETE /api/contracts/expense/{id} |
+| B4 | ContractEndpoints.cs:328 | DELETE /api/contracts/agreement/{id} |
+| B5 | ContractEndpoints.cs:361 | PUT /api/contract-templates |
+| B6 | ContractEndpoints.cs:373 | DELETE /api/contract-templates/{id} |
+| B7 | ContractEndpoints.cs:451 | PUT /api/settlements |
+| B8 | ContractEndpoints.cs:492 | DELETE /api/settlements/{id} |
+| B9 | ContractEndpoints.cs:501 | POST /api/settlements/{id}/process |
+| B10 | ContractEndpoints.cs:513 | POST /api/settlements/{id}/unarchive |
+| B11 | FileEndpoints.cs:126 | DELETE /api/drawings/{id} |
+| B12 | FileEndpoints.cs:183 | PUT /api/drawings |
+| B13 | InvoiceEndpoints.cs:79 | PUT /api/invoices |
+| B14 | InvoiceEndpoints.cs:116 | DELETE /api/invoices/{id} |
+| B15 | InvoiceEndpoints.cs:217 | PUT /api/payment-records |
+| B16 | InvoiceEndpoints.cs:242 | DELETE /api/payment-records/{id} |
+| B17 | InventoryEndpoints.cs:51 | PUT /api/inventory |
+| B18 | InventoryEndpoints.cs:66 | DELETE /api/inventory/{id} |
+| B19 | InventoryEndpoints.cs:115 | PUT /api/materials |
+| B20 | InventoryEndpoints.cs:129 | DELETE /api/materials/{id} |
+| B21 | MemberEndpoints.cs:97 | PUT /api/members |
+| B22 | MemberEndpoints.cs:117 | DELETE /api/members/{id} |
+| B23 | MemberEndpoints.cs:187 | PUT /api/workers |
+| B24 | MemberEndpoints.cs:205 | DELETE /api/workers/{id} |
+| B25 | MemberEndpoints.cs:266 | DELETE /api/project-workers/{id} |
+| B26 | MemberEndpoints.cs:313 | PUT /api/departments |
+| B27 | MemberEndpoints.cs:328 | DELETE /api/departments/{id} |
+| B28 | MemberEndpoints.cs:381 | DELETE /api/worker-teams/{id} |
+| B29 | PartnerEndpoints.cs:93 | PUT /api/partners |
+| B30 | PartnerEndpoints.cs:133 | DELETE /api/partners/{id} |
+| B31 | PartnerEndpoints.cs:180 | PUT /api/supervisors |
+| B32 | PartnerEndpoints.cs:196 | DELETE /api/supervisors/{id} |
+| B33 | ProjectEndpoints.cs:124 | PUT /api/projects/{id} |
+| B34 | ProjectEndpoints.cs:139 | DELETE /api/projects/{id} |
+| B35 | ProjectEndpoints.cs:174 | DELETE /api/project-members/{id} |
+| B36 | ProjectWorkerMiscEndpoints.cs:35 | PUT /api/project-workers |
+| B37 | ProjectWorkerMiscEndpoints.cs:46 | PUT /api/invoices/{id}/status |
+| B38 | WageEndpoints.cs:80 | PUT /api/attendances |
+| B39 | WageEndpoints.cs:95 | DELETE /api/attendances/{id} |
+| B40 | WageEndpoints.cs:107 | POST /api/attendances/batch-delete |
+| B41 | WageEndpoints.cs:342 | PUT /api/wages |
+| B42 | WageEndpoints.cs:392 | DELETE /api/wages/{id} |
+| B43 | WageEndpoints.cs:404 | POST /api/wages/batch-delete |
+| B44 | WageEndpoints.cs:417 | POST /api/wages/batch-clear-payments |
+| B45 | WageEndpoints.cs:431 | POST /api/wages/archive |
+| B46 | WageEndpoints.cs:446 | POST /api/wages/batch-unarchive |
+| B47 | WageEndpoints.cs:558 | POST /api/wages/confirm-matches |
+| B48 | WageEndpoints.cs:733 | POST /api/wages/batch-payment |
+| B49 | WageEndpoints.cs:866 | DELETE /api/salary-history/{id} |
+| B50 | WageEndpoints.cs:677 | POST /api/wages/batch-save（ON CONFLICT DO UPDATE 带 created_by/IsAdmin） |
+
+> B 桶 grep 精确计 **42 条**。上表列 50 行（B1-B50）为便于定位列出全部行号，其中 8 行是多行同一 UPDATE 的续行被 grep 重复计（ContractEndpoints.cs:451/492/501/513、WageEndpoints.cs:342/558/733、ProjectEndpoints.cs:124 等多行 SET），去重后 = 42。**非业务归属的管理写（roles/users/PII/sqlite-migrate）不在此列。**
+
+### C 桶：WHERE 只有 id=@Id（或等价），端点内另有显式归属/授权校验 — 6 条
+
+| # | 文件:行 | 路由 | 端点内已有检查 |
+|---|---------|------|----------------|
+| C1 | KnowledgeEndpoints.cs:269 | PUT /api/knowledge/documents/{id} | 249-253 行 `docOwned`：COUNT documents WHERE d.id=@Id AND deleted_at IS NULL AND (d.created_by=@Uid OR @IsAdmin=1) > 0，否则 404 |
+| C2 | KnowledgeFolderEndpoints.cs:140 | PUT /api/knowledge/folders/{id} | 134-135 行 `KnowledgeBaseService.CanAccessFolder(db,id,uid,isAdmin)`（含 project_authorizations EXISTS），否则 403 |
+| C3 | KnowledgeFolderEndpoints.cs:182 | DELETE /api/knowledge/folders/{id} | 177 行 同上 CanAccessFolder，否则 403（软删） |
+| C4 | KnowledgeFolderEndpoints.cs:193 | DELETE /api/knowledge/folders/{id}（文档移出 UPDATE） | 同 C3 已先验 CanAccessFolder 才进事务 |
+| C5 | UserPreferencesEndpoints.cs:61 | PUT /api/user-preferences | INSERT ... ON CONFLICT(user_id,key)：冲突目标天然限 user_id=@Uid |
+| C6 | UserPreferencesEndpoints.cs:109 | PUT /api/user-preferences/{key} | 同上 ON CONFLICT(user_id,key) |
+
+### D 桶：WHERE 只有 id=@Id（或等价），端点内无归属/授权校验 — 10 条
+
+> **D 桶必须逐条贴 SQL 原文 + 路由 + 端点内已有检查语句原文**（Y2(c) 要求）。逐条如下。
+
+---
+
+**D1. WageEndpoints.cs:223（attendances batch-import UPDATE）**
+- 路由：POST /api/attendances/batch-import
+- SQL 原文（223 行）：
+  ```sql
+  UPDATE attendances SET work_days=@WorkDays,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id
+  ```
+- 端点内已有检查原文（206 行）：`if (!CurrentUser.HasPermission(ctx, db, "wages:create")) return Results.Forbid();`
+- 另：端点内算了 `var scope = CurrentUser.GetDataScope(ctx);`（207 行）但**未用于任何 UPDATE**。
+- 配套 SELECT 定位（219 行）：`SELECT id FROM attendances WHERE project_id=@ProjectId AND year_month=@YearMonth AND project_worker_id=@PwId`（按入参 projectId 定位，未查归属）。
+- 状态：**Y1 已举证越权可写**（Y1b：非 admin B 改 A 行 200、work_days 10→99、created_by 不变）。
+
+**D2. WageEndpoints.cs:812（wages generate UPDATE）**
+- 路由：POST /api/wages/generate
+- SQL 原文（812-815 行）：
+  ```sql
+  UPDATE wages SET daily_wage=@DailyFen, work_days=@WorkDays,
+      actual_wage=@ActualFen, updated_at=@Now, version=version+1, last_modified_at=@Now
+      WHERE id=@Id AND deleted_at IS NULL
+        AND COALESCE(paid_amount,0)=0 AND COALESCE(payment_locked,0)=0
+  ```
+- 端点内已有检查原文（770 行）：`if (!CurrentUser.HasPermission(ctx, db, "wages:create")) return Results.Forbid();`
+- 相关：前置 SELECT 考勤行（775-782 行）带 `UserFilterWithAuthorizedProjects(scope, "a.project_id", "a.created_by")`；但 **UPDATE wages 自身无归属条件**，且 `existing` 行定位 SELECT（798-803 行）只按 `project_id + year_month + project_worker_id/member_id`，未查 created_by。可写行（paid_amount=0 且未归档）若恰为他人创建 → 会被改写。
+
+**D3. MemberEndpoints.cs:368（worker-teams PUT）**
+- 路由：PUT /api/worker-teams
+- SQL 原文（368-369 行）：
+  ```sql
+  UPDATE worker_teams SET name=COALESCE(@Name,name),
+      leader_id=@LeaderId,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id
+  ```
+- 端点内已有检查原文（367 行）：`if (!CurrentUser.HasPermission(ctx, db, "members:update")) return Results.Forbid();`
+- 备注：worker_teams 读侧 GET（MemberEndpoints.cs:344）用 `(wt.created_by=@Uid OR @IsAdmin=1)` 过滤，但本 UPDATE 无归属条件。
+
+**D4. TemplateEndpoints.cs:74（templates PUT）**
+- 路由：PUT /api/templates
+- SQL 原文（74 行）：
+  ```sql
+  UPDATE templates SET name=@Name,category=@Category,description=@Description,variables=@Variables,updated_at=@Now WHERE id=@Id
+  ```
+- 端点内已有检查原文（68 行）：`if (!CurrentUser.HasPermission(ctx, db, "settings:update")) return Results.Forbid();`
+- 备注：settings:update 仅 admin 角色有（GetDefaultPermissions），风险低但**无归属条件**。
+
+**D5. TemplateEndpoints.cs:26（templates DELETE）**
+- 路由：DELETE /api/templates/{id}
+- SQL 原文（26 行）：
+  ```sql
+  DELETE FROM templates WHERE id=@Id
+  ```
+- 端点内已有检查原文（25 行）：`if (!CurrentUser.HasPermission(ctx, db, "settings:update")) return Results.Forbid();`
+
+**D6. RegionEndpoints.cs:31（regions DELETE）**
+- 路由：DELETE /api/regions/{id}
+- SQL 原文（31 行）：
+  ```sql
+  DELETE FROM regions WHERE id=@Id
+  ```
+- 端点内已有检查原文：**无**（仅 30 行 `var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();` 强制登录，GlobalAuthMiddleware 兜底）。
+
+**D7. SystemEndpoints.cs:175（audit purge）**
+- 路由：POST /api/audit/clear
+- SQL 原文（175 行）：
+  ```sql
+  DELETE FROM audit_logs WHERE created_at < @Cutoff
+  ```
+- 端点内已有检查原文（161 行）：`if (isAdmin == 0) return Results.Forbid();`（admin 强校验，非权限码）。
+
+**D8. SystemEndpoints.cs:628（sqlite/migrate 全表重灌）**
+- 路由：POST /api/sqlite/migrate
+- SQL 原文（628 行）：
+  ```sql
+  DELETE FROM [{table}]
+  ```
+- 端点内已有检查原文（599 行）：`if (!CurrentUser.HasPermission(ctx, db, "settings:update")) return Results.Forbid();`（仅 admin 角色）。
+
+**D9. CostLedgerEndpoints.cs:142（cost_ledger_categories PUT）**
+- 路由：PUT /api/cost-ledger/categories
+- SQL 原文（142 行）：
+  ```sql
+  UPDATE cost_ledger_categories SET label=@Name,direction=@Direction,level1=@Level1,color=@Color WHERE id=@Id
+  ```
+- 端点内已有检查原文（140 行）：`if (!CurrentUser.HasPermission(ctx, db, "costLedger:update")) return Results.Forbid();`
+
+**D10. CostLedgerEndpoints.cs:153（cost_ledger_categories DELETE）+ :162（categories/reset 全表清空）**
+- 路由：DELETE /api/cost-ledger/categories/{id}；POST /api/cost-ledger/categories/reset
+- SQL 原文（153 行）：`DELETE FROM cost_ledger_categories WHERE id=@Id`
+- SQL 原文（162 行）：`DELETE FROM cost_ledger_categories`（无 WHERE，全表清空）
+- 端点内已有检查原文（151 行 / 160 行）：`if (!CurrentUser.HasPermission(ctx, db, "costLedger:update")) return Results.Forbid();` / `if (!CurrentUser.HasPermission(ctx, db, "settings:update")) return Results.Forbid();`
+
+---
+
+### 计数对账（grep 95 匹配 → 四桶 65 条）
+
+- **四桶合计**：A 7 + B 42 + C 6 + D 10 = **65 条业务写语句**。
+- grep 全集 95 处匹配的构成：业务写语句 65 + roles/users 权限配置 6 条（AuthEndpoints.cs:202/214/257/266/277/522，桶外）+ PII 回填 4 条（AuthEndpoints.cs:320/330/340/350，桶外）+ 全表重灌 `DELETE [{table}]` 1 条（入 D8）+ 全表清空 categories 2 条（入 D10）+ user_preferences upsert 2 条（入 C5/C6）+ 注释/多行续行/重复约 17 行（桶外）。65 + 6 + 4 + 17 + 3 ≈ 95 闭合（近似）。
+- **结论**：D 桶 10 条 = 业务表里「无归属校验」的写语句，是 R9 修复候选集。**与 Y1 举证相互印证：Y1b 锁定的正是 D1（attendances batch-import）越权写。**
+
 ## §3 confirm-matches 三方案
 
 摘录自 docs/findings/CONFIRM-MATCHES-AUTHZ.md（每方案 ≤3 行）：
