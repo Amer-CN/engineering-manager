@@ -26,6 +26,9 @@ L-1 自认「桥接层原样透传不篡改（调用方问题，不在本任务�
 **处置**：只报告不修（纪律 1）。修复方向（R9）：WagePaymentRecords.tsx:110 的
 category 改 `'wages'` + subCategory `'bank-receipts'`，或复用 fileService.WAGE_BANK_RECEIPT。
 顺带确认 BankReceiptBatch.tsx:63 用 `category: 'wages', subCategory: 'bank-receipts'`（正确，唯一正确调用方）。
+**R9 联动（M-FIX11 U6）**：举证测试 `EngineeringManager.Tests/Endpoints/MFix10BreakChainTests.cs`
+类注释已加 `// R9-TODO`——R9 修复 category 后必须同步改写该测试（否则永久锁定错误行为），
+并移除其反向对照断言依赖。本文件 §1 即该断链的持久证据。
 
 ## 2. open-external 白名单审计（W4b）
 
