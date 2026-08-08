@@ -366,12 +366,14 @@ public class ReceiptMatchTests : ApiTestBase
         Assert.Equal(HttpStatusCode.Forbidden, resp.StatusCode);
     }
 
-    // ── M-FIX8 T4(e)：I 窗口登记的未授权项目确认缺口（R9）──
-    // 反例：accountant（有 wages:update、非 admin）确认「他人（admin）创建的、未授权项目」的工资行。
-    // 修复前：UPDATE 只校验 created_by/admin，无项目授权校验 → 未授权项目的行也 saved（越权）。
-    // 修复后：未授权项目行被拒（skipped），已授权项目行可确认（saved）——双分支对照。
+    // ── M-FIX9 W1：锁定现状（回滚 T4(e) 生产 SQL 后的行为）──
+    // 反例：accountant（有 wages:update、非 admin）确认「他人（admin）创建的」工资行。
+    // 现状 WHERE = (created_by=@Uid OR @IsAdmin=1)：非 admin 只能确认自己创建的行，
+    // 他人创建的行无论项目是否授权一律 skipped（无 EXISTS 授权分支）。
+    // 本测试锁定的是现状而非目标态：R9 方案丙（见 docs/findings/CONFIRM-MATCHES-AUTHZ.md）
+    // 将改为「未授权项目一律拒绝 + 跨人修改落审计 + 仅企业版」，届时本测试必须同步改断言。
     [Fact]
-    public async Task Confirm_UnauthorizedProject_OthersRow_Rejected_Authorized_Saved()
+    public async Task Confirm_OthersRow_AlwaysSkipped_NonAdmin()
     {
         // accountant 用户（有 wages:update，非 admin）
         const string accUid = "acc-unauth-project";
@@ -421,33 +423,30 @@ public class ReceiptMatchTests : ApiTestBase
             authzWageId = conn.ExecuteScalar<long>("SELECT id FROM wages WHERE project_id=9303");
         }
 
-        // 未授权项目行（admin 创建，非本人）→ 应 skipped（不写）
-        // 已授权项目行（admin 创建，非本人）→ 应 saved（项目授权放行）
+        // 现状：他人创建的行（无论项目是否授权）→ 非 admin 一律 skipped（saved=0 / skipped=2）
         var json = await PostConfirmAsync(new[]
         {
             new { wageId = unauthWageId, paidAmount = 5000.0, paidDate = "2026-07-15", bankReceiptPath = @"C:\receipts\unauth.jpg" },
             new { wageId = authzWageId, paidAmount = 5000.0, paidDate = "2026-07-15", bankReceiptPath = @"C:\receipts\authz.jpg" },
         }, expectOk: true);
-        Assert.Equal(1, json.GetProperty("data").GetProperty("saved").GetInt32());
-        Assert.Equal(1, json.GetProperty("data").GetProperty("skipped").GetInt32());
-        Assert.Equal(unauthWageId, json.GetProperty("data").GetProperty("skippedItems")[0].GetProperty("id").GetInt64());
+        Assert.Equal(0, json.GetProperty("data").GetProperty("saved").GetInt32());
+        Assert.Equal(2, json.GetProperty("data").GetProperty("skipped").GetInt32());
 
-        // 正向断言：未授权行付款列确实未被写（断言 NULL，非否定式）
+        // 正向断言：两行付款列确实未被写（断言 NULL，非否定式）
         using (var conn = new SqliteConnection(ConnectionString))
         {
             conn.Open();
-            var paid = conn.ExecuteScalar<long?>("SELECT paid_amount FROM wages WHERE id=@Id", new { Id = unauthWageId });
-            Assert.Null(paid);
-            var paidDate = conn.ExecuteScalar<string?>("SELECT paid_date FROM wages WHERE id=@Id", new { Id = unauthWageId });
-            Assert.Null(paidDate);
-            // 已授权行已写入（正向对照）
-            Assert.Equal(500000L, conn.ExecuteScalar<long>("SELECT paid_amount FROM wages WHERE id=@Id", new { Id = authzWageId }));
+            var paid1 = conn.ExecuteScalar<long?>("SELECT paid_amount FROM wages WHERE id=@Id", new { Id = unauthWageId });
+            Assert.Null(paid1);
+            var paid2 = conn.ExecuteScalar<long?>("SELECT paid_amount FROM wages WHERE id=@Id", new { Id = authzWageId });
+            Assert.Null(paid2);
         }
     }
 
-    // ── M-FIX8 T4(e) 配套：创建者对自己的行仍可确认（防修复过度收紧）──
-    // 读侧（match-receipts）语义：created_by=@Uid OR 项目授权。写侧修复后应对齐——
-    // 自己创建的未授权项目行（数据归属权在自己）仍应可确认，不能被误伤。
+    // ── M-FIX9 W1：锁定现状（创建者对自己的行可确认，跨项目不限）──
+    // 现状 WHERE = (created_by=@Uid OR @IsAdmin=1)：创建者可确认自己创建的任何行（跨项目不限）。
+    // ⚠️ 本条锁定的是现状而非目标态。R9 方案丙（docs/findings/CONFIRM-MATCHES-AUTHZ.md）将改为：
+    // 未授权项目一律拒绝 + 跨人修改落审计 + 仅企业版。届时本条必须同步改断言。
     [Fact]
     public async Task Confirm_OwnRow_UnauthorizedProject_StillSaved()
     {
