@@ -555,20 +555,12 @@ public static class WageEndpoints
                 if (missing.Count > 0)
                     return Results.BadRequest(new { success = false, error = $"confirm-matches: 第 {index} 条缺失字段: {string.Join(", ", missing)}" });
                 // 只 SET 付款列 + 回单路径 + 时间戳/版本；守卫与 batch-payment 完全一致
-                // M-FIX8 T4(e) 修复：补项目授权校验（与 match-receipts 读侧 UserFilterWithAuthorizedProjects
-                // 同语义）——非 admin 对自己创建的行仍需其 project_id 在 project_authorizations 内，
-                // 否则未授权项目的行被零项目范围确认（I 窗口 R9 缺口，先红实证 saved=1）。
                 var affected = await db.ExecuteAsync(@"UPDATE wages SET
                         paid_amount=@PaidAmount, paid_date=@PaidDate, bank_receipt_path=@BankReceiptPath,
                         updated_at=@Now, version=version+1, last_modified_at=@Now
                     WHERE id=@Id AND deleted_at IS NULL
                       AND COALESCE(payment_locked, 0) = 0
-                      AND (
-                          created_by=@Uid
-                          OR @IsAdmin=1
-                          OR EXISTS(SELECT 1 FROM project_authorizations pa
-                                    WHERE pa.project_id = wages.project_id AND pa.user_id = @Uid)
-                      )",
+                      AND (created_by=@Uid OR @IsAdmin=1)",
                     new { Id = pair.WageId, PaidAmount = ToFen(pair.PaidAmount!.Value), PaidDate = pair.PaidDate,
                           BankReceiptPath = pair.BankReceiptPath, Uid = uid, IsAdmin = isAdmin, Now = now() });
                 if (affected > 0) saved++;
