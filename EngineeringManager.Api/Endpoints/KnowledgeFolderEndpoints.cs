@@ -36,15 +36,13 @@ public static class KnowledgeFolderEndpoints
             try
             {
                 // 与文档侧一致的范围：admin 全量；非 admin 仅自己创建或项目授权
-                var scope = isAdmin
-                    ? new { Filter = "(1 = 1)", Uid = (string?)null, ProjectId = (int?)projectId }
-                    : new
-                    {
-                        Filter = @"(f.created_by = @Uid
-                              OR EXISTS(SELECT 1 FROM project_authorizations pa
-                                        WHERE pa.project_id = f.project_id AND pa.user_id = @Uid))",
-                        Uid = uid, ProjectId = (int?)projectId,
-                    };
+                // 单匿名类型（避免两个匿名类型三元 → CS8619 可空性不一致）
+                var filter = isAdmin
+                    ? "(1 = 1)"
+                    : @"(f.created_by = @Uid
+                          OR EXISTS(SELECT 1 FROM project_authorizations pa
+                                    WHERE pa.project_id = f.project_id AND pa.user_id = @Uid))";
+                var scope = new { Filter = filter, Uid = (string?)(isAdmin ? null : uid), ProjectId = (int?)projectId };
 
                 var folders = db.Query<dynamic>(
                     $@"SELECT f.id, f.name, f.english_name, f.project_id, f.category,
