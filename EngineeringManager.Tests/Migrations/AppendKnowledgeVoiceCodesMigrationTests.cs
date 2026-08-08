@@ -139,7 +139,7 @@ public class AppendKnowledgeVoiceCodesMigrationTests : IDisposable
         var admin = conn.ExecuteScalar<string>("SELECT permissions FROM roles WHERE id='admin'");
         foreach (var code in FOUR_CODES)
         {
-            var count = System.Text.RegularExpressions.Regex.Matches(admin, System.Text.RegularExpressions.Regex.Escape($"\"{code}\"")).Count;
+            var count = System.Text.RegularExpressions.Regex.Matches(admin ?? "", System.Text.RegularExpressions.Regex.Escape($"\"{code}\"")).Count;
             Assert.Equal(1, count);
         }
     }
