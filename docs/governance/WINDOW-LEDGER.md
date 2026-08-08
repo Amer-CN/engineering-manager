@@ -23,9 +23,17 @@
 | K 窗口 | 未知会话 | 已合入 master | 11a9c02（J-4） | 8fdcffa(K-1)/6c7890b(K-2)/ad4ce22(K-3)，**直推非 rebase** | 已合（master tip=ad4ce22） | 已合 | 直推 master | master git log |
 | M-FIX 线 | 审查方驱动 | fix/pr9-reconcile → master | 逐轮 | 25b823e(M-FIX6) | 在跑 | 逐轮推 master | 本会话 | 各轮报告 |
 
-## K 窗口数字核实（M-FIX8 T3/T5 追加）
+## K 窗口数字核实（M-FIX9 W2 订正 M-FIX8 错误结论）
 - K-2 验收自报「dotnet test 859 过 / 3 跳过 / 862 总计、门禁5=171」。
-- **859/862 系假绿基线**：本地 build 不带 -warnaserror，master 当时树上 CS8619（KnowledgeFolderEndpoints.cs:41）+ CS8604（AppendKnowledgeVoiceCodesMigrationTests.cs:142）被当警告吞掉。M-FIX8 T1 修复后，ad4ce22 实测 dotnet build 红（两个 error，见上表 M 窗口行 CS8619），带 -warnaserror 全量 test 为 **848 过 / 1 跳过 / 849**（T3 实测）。
+- **859/3/862 是真值**（M-FIX8 曾误判「假绿」，W2 clean 实测推翻）：
+  - ad4ce22 不带 -warnaserror（K/L 环境）clean 全量 = **862 总 / 859 过 / 3 跳过**
+  - 167f03a（T1 已修 CS8619/CS8604）带 -warnaserror clean 全量 = **862 / 859 / 3**
+  - 两环境同数 → 862 稳定真值。编译修复（T1）不改变用例总数 ✓
+  - 跳过恒 3：M4ThirdRound.UploadAudio_CancelledMidStream（[Fact(Skip=)]）+ SttE2ETests
+    E2E_MultiSpeaker/E2E_SingleSpeaker（[SttE2EFact] RUN_STT_E2E≠1）
+- **M-FIX8 报的 848/1/849 是错误测量**（带 --filter 排除 E2E + 编译失败缓存污染），作废。
+  13 例差额（862−849）全部来自该错误测量，非用例增减。fix/mfix9 tip = **868 / 865 / 3**
+  （+6 = M-FIX8 T2 四例 + T4(e) 两例）。
 - 门禁5=171 正确（137 合规 / 34 豁免），K 三笔「后端端点零改动」成立（K-1/K-2 纯前端）。171 相对 I 窗口末 170 的 +1：PR#9 知识库端点（POST/PUT/DELETE folders + PUT documents = +4）净增，J-4 删 3 个 501 端点（MapPost STUB）−3，170+4−3=171。**J-4 报 167 是错误基线（漏算 PR#9 已合入的 +4，只算了 −3），作废**。
 
 ## M 窗口占用（U5 记录）
