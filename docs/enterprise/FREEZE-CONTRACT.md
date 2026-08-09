@@ -96,7 +96,19 @@
 ### G74 闭环（写侧全集清点已交付）
 
 - `docs/planning/R9-SCOPE.md` §1b：写侧全集四桶分类 = **A 7 / B 42 / C 6 / D 10 = 65 条业务写语句**（grep 95 匹配对账）
-- D 桶（无归属校验写语句）10 条为 R9 修复候选集，G73 已处理其中 D1 的 UPDATE 分支
+- D 桶（无归属校验写语句）10 条为 R9 修复候选集，G73 已处理其中 D1 的 UPDATE 分支，D2 本轮处理（见下）
+
+### D2 已修（generate UPDATE 归属守卫）
+
+- 端点：`POST /api/wages/generate`（`WageEndpoints.cs`）
+- 修复：UPDATE 分支 WHERE 追加 `AND (created_by=@Uid OR @IsAdmin=1)`（对齐 `PUT /api/wages` 既有守卫）；新增 `ownershipSkipped` int 计数与响应字段（照 archivedSkipped 先例，不换结构）；INSERT 分支未动（归 G75）
+- 实证指针（fix/r9-2 三笔 commit + 破坏自证）：
+  - `5e75492` — Z1(b) 初版 GenB 目标态断言（expected-red；后被裁决不可达，见下）
+  - `fb0f871` — Z1 续(a) 重建 GenB（`GenB_OwnAttendance_ForeignWageRow_CannotOverwrite`：B 自建考勤 + A 建工资行 → 触达 UPDATE 守卫）
+  - `e515be9` — Z1(c) 修复 + 3/3 绿
+  - 破坏自证：临时删守卫 → GenB 红（`Expected: 20000, Actual: 30000`，A 的工资行被 B 重算）→ `git checkout --` 还原 → 3/3 绿 → porcelain 空
+- 威胁模型定稿：**enterprise 下可触达面被考勤源 scope 过滤收窄**——generate 的考勤源 SELECT 带 `UserFilterWithAuthorizedProjects(scope, "a.project_id", "a.created_by")`，非 admin 只能读到自建或已授权项目的考勤行，故只有「自建或授权考勤行 + 他人/未授权工资行」的组合能走到 UPDATE；守卫经「自建考勤 + 他人工资行」路径实证。个人版单 admin 天然免疫（GetDataScope 恒返 All 且 IsAdmin 恒真）。
+- 留痕一句：本轮任务书初版误述测试基座为 personal，执行方纪律 17 停手纠正（实测基座 = enterprise，ApiTestBase.cs:28），审查方已撤回该陈述并裁决方案 A 变体。
 
 ### G75 新登记（只登记不修）
 
@@ -105,7 +117,7 @@
   - `generate` / `generate-v2`（考勤生成，INSERT 侧）
   - `batch-create`（考勤批量创建）
 - 根治方向：**方案丙项目级写入门坎**（未授权项目一律拒绝，与 confirm-matches 方案丙对齐）
-- 排期：**R9-2 与 D2 同轮评估**
+- 排期：**R9-3 评估**（D2 已修，G75 从 R9-2 顺延）
 
 ### D6 备注（审查方 R9-1 读码发现）
 
