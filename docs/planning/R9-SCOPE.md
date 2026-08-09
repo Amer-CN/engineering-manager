@@ -195,7 +195,7 @@
 - 端点内已有检查原文（206 行）：`if (!CurrentUser.HasPermission(ctx, db, "wages:create")) return Results.Forbid();`
 - 另：端点内算了 `var scope = CurrentUser.GetDataScope(ctx);`（207 行）但**未用于任何 UPDATE**。
 - 配套 SELECT 定位（219 行）：`SELECT id FROM attendances WHERE project_id=@ProjectId AND year_month=@YearMonth AND project_worker_id=@PwId`（按入参 projectId 定位，未查归属）。
-- 状态：**R9-0 Y1 已举证越权可写**（Y1b：非 admin B 改 A 行 200、work_days 10→99、created_by 不变）。**R9-1 G73 已修 UPDATE 分支**（WHERE 现为 `id=@Id AND (created_by=@Uid OR @IsAdmin=1)`，新增 skipped 返回归属拦截项；INSERT 分支归 G75）。
+- 状态：**R9-0 Y1 已举证越权可写**（Y1b：非 admin B 改 A 行 200、work_days 10→99、created_by 不变）。**R9-1 G73 已修 UPDATE 分支**（WHERE 现为 `id=@Id AND (created_by=@Uid OR @IsAdmin=1)`，新增 skipped 返回归属拦截项）。**R9-3 G75 已修 INSERT 分支**（项目级写入门：batch-import 循环前 `CanWriteProject`，未授权项目 → 403；行级守卫 R9-1 保留）。
 
 **D2. WageEndpoints.cs:812（wages generate UPDATE）—— 已修（R9-2）**
 - 路由：POST /api/wages/generate
