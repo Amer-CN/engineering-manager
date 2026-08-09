@@ -22,17 +22,21 @@ namespace EngineeringManager.Tests.Endpoints;
 /// 任何持 wages:create 的非 admin 调同 projectId+yearMonth 的 generate，
 /// 可重算他人创建的未发款未归档工资行（daily_wage / work_days / actual_wage 三列）。
 ///
-/// 测试基座事实：跑 personal 版 → GetDataScope 恒返 All → generate 的考勤源 SELECT
-/// 对 B 返回 (1=1)，B 能读到 A 创建的考勤行——所以 GenB 不需要绕授权，
-/// A 建考勤 + A 建工资行，B 直接调 generate 即触达那条 UPDATE。
+/// 测试基座事实：基座 = enterprise（ApiTestBase.cs:28 设 ENGINEERING_MANAGER_EDITION=enterprise），
+/// 非 admin 的 GetDataScope = AuthorizedProjects（EditionFeatures enterprise 启用 MultiUserDataScope）。
+/// 因此 generate 的考勤源 SELECT 的 UserFilterWithAuthorizedProjects(scope,"a.project_id","a.created_by")
+/// 对 B 过滤掉 A 创建的考勤行 → 若 A 建考勤，B 的 atts 为空、触达不到 UPDATE。
+/// 初版 GenB（commit 5e75492，A 建考勤 + A 建工资行）因此红在「考勤源 scope 过滤」而非 UPDATE 守卫
+/// ——R9-2 偏差裁决（纪律 17）认定该搭建不可达。本版改为「B 自建考勤（进 B scope）+ A 建工资行
+/// （existing 定位 SELECT 不 filter，B 能读到）」确保触达 UPDATE 归属守卫。
 ///
 /// 用户：userA = admin（建行方）；userB = accountant（非 admin、无项目授权、
 ///       默认权限集含 wages:create + wages:update —— GetDefaultPermissions 查证，
 ///       非手动 UPDATE roles）。金额断言一律用「分」的 DB 原始值。
 ///
 /// 本文件锁定【目标态】（D2 修复后）：GenB 断言 B 改不动（三列保持原值、
-/// created_by 仍 A、version 未动、响应 ownershipSkipped >= 1）。
-/// 修复前（洞还在）GenB 必须红：A 的行被 B 重算，且无 ownershipSkipped 字段。
+/// created_by 仍 A、version 未动、响应 ownershipSkipped >= 1、newCount == 0）。
+/// 修复前（洞还在）GenB 必须红：A 的工资行被 B 重算（三列值变、version 动）。
 /// </summary>
 public class R9WageGenerateAuthzTests : ApiTestBase
 {
@@ -144,10 +148,12 @@ public class R9WageGenerateAuthzTests : ApiTestBase
         }
     }
 
-    // ── GenB：目标态（修复前必须红）—— B（非 admin）重算 A 创建的工资行 → 改不动 ──
-    // 修复前：A 的行被 B 重算（三列值变、version 动），且无 ownershipSkipped 字段 → 红。
+    // ── GenB：目标态（修复前必须红）—— B（非 admin）调 generate，改写 A 创建的工资行 → 改不动 ──
+    // 搭建：考勤行 created_by=B（进 B 的 scope，确保 atts 非空、触达 UPDATE）；
+    //       工资行 created_by=A（admin）——existing 定位 SELECT 不 filter，B 能读到 → UPDATE 被归属守卫拦。
+    // 修复前：A 的工资行被 B 重算（三列值变、version 动）→ 红。
     [Fact]
-    public async Task GenB_OtherUser_Generate_CannotOverwriteForeignRow()
+    public async Task GenB_OwnAttendance_ForeignWageRow_CannotOverwrite()
     {
         // B：accountant —— 默认权限集含 wages:create/wages:update；非 admin；无项目授权
         using (var conn = new SqliteConnection(ConnectionString))
@@ -165,9 +171,10 @@ public class R9WageGenerateAuthzTests : ApiTestBase
         }
         SetAuth(await LoginAsync(OtherUsername));
 
-        // A（admin）建考勤（22 天、日薪 300 元） + 工资行（初值 20000 分 / 20 天 / 400000 分）
-        var pw = SeedProjectWorker("GenB-目标工人", AdminUid, dailyWage: 300);
-        SeedAttendance(pw, 22, AdminUid);
+        // B 自建考勤（22 天，日薪 300 元）→ 进 B 的 scope，atts 非空
+        var pw = SeedProjectWorker("GenB-目标工人", OtherUid, dailyWage: 300);
+        SeedAttendance(pw, 22, OtherUid);
+        // A（admin）建工资行：初值 20000 分 / 20 天 / 400000 分（与 generate 重算结果不同）
         long wageId;
         using (var conn = new SqliteConnection(ConnectionString))
         {
@@ -180,11 +187,8 @@ public class R9WageGenerateAuthzTests : ApiTestBase
 
         var json = await PostGenerateAsync(TestProjectId, TestYearMonth);
 
-        // 目标态：B 改不动 → 行三列保持原值、created_by 仍 A、version 未动、ownershipSkipped >= 1
-        Assert.Equal(0, json.GetProperty("newCount").GetInt32());
-        var ownershipSkipped = json.GetProperty("ownershipSkipped").GetInt32();
-        Assert.True(ownershipSkipped >= 1, $"ownershipSkipped 应 >= 1，实际 {ownershipSkipped}");
-
+        // 目标态：B 改不动 → 行三列保持原值、created_by 仍 A、version 未动（DB 断言前置，
+        // 让修复前（stash 摘除）红在「值变了」而非响应键缺失——贴合任务书 Z1 续(b) 预期）
         using (var conn = new SqliteConnection(ConnectionString))
         {
             var row = conn.QueryFirst("SELECT daily_wage, work_days, actual_wage, created_by, version FROM wages WHERE id=@Id", new { Id = wageId });
@@ -194,6 +198,11 @@ public class R9WageGenerateAuthzTests : ApiTestBase
             Assert.Equal(AdminUid, (string)row.created_by);   // 归属仍是 A
             Assert.Equal(1L, (long)row.version);              // version 未动
         }
+
+        // 目标态：响应 newCount==0、ownershipSkipped >= 1（B 被归属拦截）
+        Assert.Equal(0, json.GetProperty("newCount").GetInt32());
+        var ownershipSkipped = json.GetProperty("ownershipSkipped").GetInt32();
+        Assert.True(ownershipSkipped >= 1, $"ownershipSkipped 应 >= 1，实际 {ownershipSkipped}");
     }
 
     // ── GenC：反向对照 —— 同一个 B，考勤行与工资行都是 B 自己创建 → 正常重算 ──
