@@ -329,7 +329,7 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
         });
 
         // ═══════════════════════════════════════════════════════════
-        // 班组 (worker_teams 表无 created_by, 仅 var uid 强制鉴权)
+        // 班组 (worker_teams 表有 created_by（v1.1.0 起），写侧守卫见 PUT/DELETE)
         // ═══════════════════════════════════════════════════════════
 
         app.MapGet("/api/worker-teams", (HttpContext ctx, IDbConnection db, long? projectId) =>
@@ -365,9 +365,11 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             // G2 B5: 班组写操作 → members:update
             if (!CurrentUser.HasPermission(ctx, db, "members:update")) return Results.Forbid();
+            // R9-6 D3 归属守卫（对齐同文件 DELETE /api/worker-teams/{id}）
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var affected = await db.ExecuteAsync(@"UPDATE worker_teams SET name=COALESCE(@Name,name),
-                leader_id=@LeaderId,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id",
-                new { dto.Id, dto.Name, dto.LeaderId, Now = now() });
+                leader_id=@LeaderId,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
+                new { dto.Id, dto.Name, dto.LeaderId, Uid = uid, IsAdmin = isAdmin, Now = now() });
             return affected > 0 ? Common.Ok() : Results.Forbid();
         });
 
