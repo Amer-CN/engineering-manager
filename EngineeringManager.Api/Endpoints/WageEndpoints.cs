@@ -764,10 +764,10 @@ public static class WageEndpoints
         //   · 已存在工资行：paid_amount≠0 或 payment_locked=1（已发款/已归档）
         //     → 跳过（archivedSkipped++），绝不触碰；可写行 → 只刷新
         //     daily_wage / work_days / actual_wage，保留手工录入的 bonus/deduction
-        //   · 响应 = { success, data: 全量工资行(元), newCount, archivedSkipped }
+        //   · 响应 = { success, data: 全量工资行(元), newCount, archivedSkipped, ownershipSkipped }
         //     data 为数组 + 顶层计数，对齐前端 electron.d.ts generateProjectWages
         //     契约（result.data 直接用 .length）；不用 Common.Ok 是为了让
-        //     newCount / archivedSkipped 与 data 同层
+        //     newCount / archivedSkipped / ownershipSkipped 与 data 同层
         app.MapPost("/api/wages/generate", (HttpContext ctx, WageGenerateDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
@@ -787,6 +787,7 @@ public static class WageEndpoints
                 new { ProjectId = projectId, YearMonth = dto.YearMonth, Uid = uid, IsAdmin = isAdmin }).ToList();
             var newCount = 0;
             var archivedSkipped = 0;
+            var ownershipSkipped = 0;
             foreach (var att in atts)
             {
                 var pwId = att.project_worker_id as long?;
@@ -814,11 +815,15 @@ public static class WageEndpoints
                 var actualFen = (long)Math.Round(dailyFen * workDays) + bonusFen - deductionFen;
                 if (existing != null)
                 {
-                    db.Execute(@"UPDATE wages SET daily_wage=@DailyFen, work_days=@WorkDays,
+                    // UPDATE 归属守卫（R9-2 D2 修复，对齐 PUT /api/wages）：
+                    // 非 admin 只能重算自己创建的工资行；被归属拦截（affected=0）→ ownershipSkipped++
+                    var affected = db.Execute(@"UPDATE wages SET daily_wage=@DailyFen, work_days=@WorkDays,
                             actual_wage=@ActualFen, updated_at=@Now, version=version+1, last_modified_at=@Now
                         WHERE id=@Id AND deleted_at IS NULL
-                          AND COALESCE(paid_amount,0)=0 AND COALESCE(payment_locked,0)=0",
-                        new { DailyFen = dailyFen, WorkDays = workDays, ActualFen = actualFen, Id = (long)existing.id, Now = now() });
+                          AND COALESCE(paid_amount,0)=0 AND COALESCE(payment_locked,0)=0
+                          AND (created_by=@Uid OR @IsAdmin=1)",
+                        new { DailyFen = dailyFen, WorkDays = workDays, ActualFen = actualFen, Id = (long)existing.id, Uid = uid, IsAdmin = isAdmin, Now = now() });
+                    if (affected == 0) ownershipSkipped++;
                 }
                 else
                 {
@@ -844,7 +849,7 @@ public static class WageEndpoints
                               AND " + CurrentUser.UserFilterWithAuthorizedProjects(scope, "w.project_id", "w.created_by") + @"
                             ORDER BY w.updated_at DESC",
                 new { ProjectId = projectId, YearMonth = dto.YearMonth, Uid = uid, IsAdmin = isAdmin });
-            return Results.Ok(new { success = true, data = ToYuanRows(rows), newCount, archivedSkipped });
+            return Results.Ok(new { success = true, data = ToYuanRows(rows), newCount, archivedSkipped, ownershipSkipped });
         });
 
         // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
