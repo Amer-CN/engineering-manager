@@ -237,13 +237,14 @@
   ```
 - 端点内已有检查原文（25 行）：`if (!CurrentUser.HasPermission(ctx, db, "settings:update")) return Results.Forbid();`
 
-**D6. RegionEndpoints.cs:31（regions DELETE）**
-- 路由：DELETE /api/regions/{id}
+**D6. RegionEndpoints.cs:31（regions DELETE）—— 已修（R9-5），POST 同族一并修复**
+- 路由：DELETE /api/regions/{id}（+ POST /api/regions 同族，原登记仅 DELETE、POST 由审查方 R9-1 读码补记、本轮一并修复）
 - SQL 原文（31 行）：
   ```sql
   DELETE FROM regions WHERE id=@Id
   ```
 - 端点内已有检查原文：**无**（仅 30 行 `var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();` 强制登录，GlobalAuthMiddleware 兜底）。
+- 状态：**R9-5 已修**——POST + DELETE 两写端点加 `settings:update` 权限码门（regions 为全局省市区字典，无归属/项目维度，复用设置域码，不新立码族）；GET 读路径不动。实证：`R9RegionWriteGateTests.cs`（worker 反向 403、admin 正向 200）。
 
 **D7. SystemEndpoints.cs:175（audit purge）**
 - 路由：POST /api/audit/clear

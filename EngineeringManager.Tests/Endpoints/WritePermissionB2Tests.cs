@@ -307,6 +307,18 @@ public class WritePermissionB2Tests : ApiTestBase
     public async Task Accountant_BatchSave_OtherOwnersRow_Skipped()
     {
         SeedUsersWithJsonRoles();
+        // R9-4 G76 两层防线适配：补 projects 行 + 授权种子使 accountant
+        // 过项目级门（CanWriteProject 授权分支）、抵达 DO UPDATE 行级守卫——
+        // skipped/saved 证明拦截发生在行级而非项目级（与 R9-3 Y1b 同款适配）
+        using (var seedConn = new SqliteConnection(ConnectionString))
+        {
+            seedConn.Open();
+            var now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            seedConn.Execute("INSERT OR IGNORE INTO projects (id, name, created_by, created_at) VALUES (1, @Name, '1', @Now)",
+                new { Name = "B2 项目", Now = now });
+            seedConn.Execute("INSERT OR IGNORE INTO project_authorizations (project_id, user_id, granted_by, granted_at) VALUES (1, '3', '1', @Now)",
+                new { Now = now });
+        }
         // admin(uid=1) 创建工资行，会计(uid=3) 有 wages:update 但非行创建者
         SeedProjectWorker(1, 1, 200);
         SeedWage(1, 1, 1, "2026-07", 440000, "1");
@@ -333,6 +345,18 @@ public class WritePermissionB2Tests : ApiTestBase
     public async Task Accountant_BatchSave_OwnRow_Saved()
     {
         SeedUsersWithJsonRoles();
+        // R9-4 G76 两层防线适配：补 projects 行 + 授权种子使 accountant
+        // 过项目级门（CanWriteProject 授权分支）、抵达 DO UPDATE 行级守卫——
+        // skipped/saved 证明拦截发生在行级而非项目级（与 R9-3 Y1b 同款适配）
+        using (var seedConn = new SqliteConnection(ConnectionString))
+        {
+            seedConn.Open();
+            var now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            seedConn.Execute("INSERT OR IGNORE INTO projects (id, name, created_by, created_at) VALUES (1, @Name, '1', @Now)",
+                new { Name = "B2 项目", Now = now });
+            seedConn.Execute("INSERT OR IGNORE INTO project_authorizations (project_id, user_id, granted_by, granted_at) VALUES (1, '3', '1', @Now)",
+                new { Now = now });
+        }
         // 会计自己创建的行（created_by='3'）→ 本人行可保存（O3 守卫不误伤）
         SeedProjectWorker(1, 1, 200);
         SeedWage(1, 1, 1, "2026-07", 440000, "3");
