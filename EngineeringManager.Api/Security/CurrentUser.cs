@@ -145,4 +145,25 @@ public static class CurrentUser
         }
         catch { return false; }
     }
+
+    /// <summary>
+    /// 方案丙创建侧项目级写入门坎（R9-3 G75）——未授权且非本人项目一律拒绝。
+    /// 语义（三级）：admin → true；projects.created_by == uid → true；
+    ///   EXISTS(project_authorizations WHERE project_id=@P AND user_id=@Uid) → true；否则 false。
+    /// 子查询形态与 UserFilterWithAuthorizedProjects 同族（别名 + 限定列）。
+    /// 个人版单 admin 恒真（IsAdmin 恒真短路），行为不变。
+    /// </summary>
+    public static bool CanWriteProject(HttpContext ctx, IDbConnection db, long projectId)
+    {
+        if (IsAdmin(ctx)) return true;
+        var uid = GetUserId(ctx);
+        if (uid == null) return false;
+        return db.ExecuteScalar<int>(
+            @"SELECT COUNT(*) FROM projects p
+              WHERE p.id = @P
+                AND (p.created_by = @Uid
+                     OR EXISTS(SELECT 1 FROM project_authorizations pa
+                               WHERE pa.project_id = p.id AND pa.user_id = @Uid))",
+            new { P = projectId, Uid = uid }) > 0;
+    }
 }

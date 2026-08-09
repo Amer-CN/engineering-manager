@@ -134,8 +134,7 @@ public class R9WageGenerateAuthzTests : ApiTestBase
 
         // 响应：newCount=0（行已存在，走更新）；ownershipSkipped 应为 0（owner 不被拦）
         Assert.Equal(0, json.GetProperty("newCount").GetInt32());
-        if (json.TryGetProperty("ownershipSkipped", out var os))
-            Assert.Equal(0, os.GetInt32());
+        Assert.Equal(0, json.GetProperty("ownershipSkipped").GetInt32());
 
         using (var conn = new SqliteConnection(ConnectionString))
         {
@@ -242,8 +241,7 @@ public class R9WageGenerateAuthzTests : ApiTestBase
 
         // B 自己的行 → 正常重算（30000 分 / 22 天 / 660000 分）
         Assert.Equal(0, json.GetProperty("newCount").GetInt32());
-        if (json.TryGetProperty("ownershipSkipped", out var os))
-            Assert.Equal(0, os.GetInt32());
+        Assert.Equal(0, json.GetProperty("ownershipSkipped").GetInt32());
 
         using (var conn = new SqliteConnection(ConnectionString))
         {
