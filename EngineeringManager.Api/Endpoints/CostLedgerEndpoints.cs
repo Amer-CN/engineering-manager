@@ -124,8 +124,8 @@ public static class CostLedgerEndpoints
         app.MapPost("/api/cost-ledger/categories", async (HttpContext ctx, CostLedgerCategoryDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            // G2 B9: 分类配置 → costLedger:update
-            if (!CurrentUser.HasPermission(ctx, db, "costLedger:update")) return Results.Forbid();
+            // R9-7 D9/D10 收紧：分类字典归 settings:update（原作者 2026-08-09 拍板）
+            if (!CurrentUser.HasPermission(ctx, db, "settings:update")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO cost_ledger_categories (label,direction,level1,color)
                 VALUES (@Name,@Direction,@Level1,@Color); SELECT last_insert_rowid();",
@@ -136,8 +136,8 @@ public static class CostLedgerEndpoints
         app.MapPut("/api/cost-ledger/categories", async (HttpContext ctx, CostLedgerCategoryDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            // G2 B9: 分类配置 → costLedger:update
-            if (!CurrentUser.HasPermission(ctx, db, "costLedger:update")) return Results.Forbid();
+            // R9-7 D9/D10 收紧：分类字典归 settings:update（原作者 2026-08-09 拍板）
+            if (!CurrentUser.HasPermission(ctx, db, "settings:update")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             var affected = await db.ExecuteAsync(@"UPDATE cost_ledger_categories SET label=@Name,direction=@Direction,level1=@Level1,color=@Color WHERE id=@Id",
                 new { dto.Name, dto.Direction, dto.Level1, dto.Color, dto.Id });
@@ -147,8 +147,8 @@ public static class CostLedgerEndpoints
         app.MapDelete("/api/cost-ledger/categories/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            // G2 B9: 分类配置 → costLedger:update
-            if (!CurrentUser.HasPermission(ctx, db, "costLedger:update")) return Results.Forbid();
+            // R9-7 D9/D10 收紧：分类字典归 settings:update（原作者 2026-08-09 拍板）
+            if (!CurrentUser.HasPermission(ctx, db, "settings:update")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             return (await db.ExecuteAsync("DELETE FROM cost_ledger_categories WHERE id=@Id", new { Id = id })) > 0 ? Common.Ok() : Results.Forbid();
         });
