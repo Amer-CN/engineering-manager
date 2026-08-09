@@ -127,6 +127,15 @@
 - 测试：`EngineeringManager.Tests/Endpoints/R9CreatePathProjectGateTests.cs`
 - 禁止清单遵守：未把任何行级守卫放宽为「授权项目可改他人行」（方案丙更新侧，另排）
 
+### 两层防线定稿（R9-3 W2，G75 与 G73 的叠加关系）
+
+- **项目级门（G75，创建侧，方案丙）在前**：`CanWriteProject` —— 能否「写这个项目」（admin / 项目创建者 / 项目授权任一即放行）。
+- **行级守卫（G73，更新侧现状语义）在后**：`(created_by=@Uid OR @IsAdmin=1)` —— 能否「改这一行」。
+- **判别信号**：`403` = 项目级门拦（非 admin 且无授权/非本人项目）；`200 + skipped` = 项目级门过、行级守卫拦（有项目授权但改的是他人创建的行）。
+- **测试适配（R9-3 W1）**：Y1b 补「projects 行 + project_authorizations 行」两个种子（缺一不可——CanWriteProject 的 SQL 以 projects 行为锚，光补授权查不到项目行照样 403），使 B 过项目级门、抵达行级守卫，断言不变（200 + skipped 成立，证明拦人的是行级守卫而非项目门）。
+- **Y1d 新增（正向对照）**：B + 授权种子 + B 自己创建的考勤行 → import → 200 + updated==1 + skipped 空（两层叠加不过度拦截合法主流程）。
+- 留痕一句：本轮任务书 Z5 靶子未预见 Y1b 交互（G75 项目级门遮蔽 G73 行级守卫测试场景），审查方第 2 次规格认账，执行方纪律 17 停手纠正。
+
 ### G76 新登记（只登记不修，排 R9-4）
 
 - **wages 创建侧同族**：`POST /api/wages` 与 `batch-save` 的 INSERT/upsert 分支无项目门坎（与 G75 同族：创建工资行可落在未授权项目）
