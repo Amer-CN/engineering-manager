@@ -198,18 +198,21 @@ public static class WageEndpoints
         // POST /api/attendances/batch-import — 按出勤天数批量导入（Excel 导入路径）
         // 语义：按 (projectId, yearMonth, projectWorkerId) 定位；存在 → 只刷新 work_days
         //   （不动手工 daily_status / days_off），updated++；不存在 → 新建行，created++
-        // 响应 = { success, data: { created, updated } }
+        // UPDATE 分支归属守卫（R9-1 G73 修复，对齐 PUT /api/attendances）。
+        // 响应 = { success, data: { created, updated, skipped } }
         app.MapPost("/api/attendances/batch-import", (HttpContext ctx, AttendanceImportDto dto, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             // G2 B2: 考勤导入 → wages:create
             if (!CurrentUser.HasPermission(ctx, db, "wages:create")) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             if (dto is null || !dto.ProjectId.HasValue || string.IsNullOrEmpty(dto.YearMonth))
                 return Results.BadRequest(new { success = false, error = "batch-import: projectId / yearMonth 必填" });
             var projectId = dto.ProjectId.Value;
             var created = 0;
             var updated = 0;
+            var skipped = new List<long>();
             var index = 0;
             foreach (var item in dto.Records ?? new List<AttendanceImportItem>())
             {
@@ -220,9 +223,11 @@ public static class WageEndpoints
                     new { ProjectId = projectId, YearMonth = dto.YearMonth, PwId = item.ProjectWorkerId });
                 if (existingId.HasValue)
                 {
-                    db.Execute(@"UPDATE attendances SET work_days=@WorkDays,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id",
-                        new { WorkDays = item.WorkDays.Value, Id = existingId.Value, Now = now() });
-                    updated++;
+                    // 归属守卫：非 admin 只能刷新自己创建的行（对齐 PUT /api/attendances）；未命中 → skipped
+                    var affected = db.Execute(@"UPDATE attendances SET work_days=@WorkDays,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
+                        new { WorkDays = item.WorkDays.Value, Id = existingId.Value, Uid = uid, IsAdmin = isAdmin, Now = now() });
+                    if (affected > 0) updated++;
+                    else skipped.Add(item.ProjectWorkerId.Value);
                 }
                 else
                 {
@@ -233,7 +238,7 @@ public static class WageEndpoints
                     created++;
                 }
             }
-            return Common.Ok(new { created, updated });
+            return Common.Ok(new { created, updated, skipped });
         });
 
         // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
