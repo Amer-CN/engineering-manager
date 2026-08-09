@@ -19,7 +19,7 @@
   WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)
   ```
 - GetDataScope / UserFilter*：**写了 `var scope = GetDataScope(ctx)`（78 行）但 UPDATE 未用 scope**（写侧只 created_by/IsAdmin）
-- 附带：`WageEndpoints.cs:223` 有 `UPDATE attendances SET work_days=@WorkDays,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id`（**无任何守卫条件**）
+- 附带：`WageEndpoints.cs:223` 有 `UPDATE attendances SET work_days=@WorkDays,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id`（**UPDATE 分支 R9-1 已修**：WHERE 现为 `id=@Id AND (created_by=@Uid OR @IsAdmin=1)`，对齐本条 PUT 守卫；INSERT 分支归 G75，另行处理）
 
 ### 3. wages PUT（工资更新）
 - 文件:行：`EngineeringManager.Api/Endpoints/WageEndpoints.cs:342`（单条工资）
@@ -186,16 +186,16 @@
 
 ---
 
-**D1. WageEndpoints.cs:223（attendances batch-import UPDATE）**
+**D1. WageEndpoints.cs:223（attendances batch-import UPDATE）—— UPDATE 分支已修（R9-1）**
 - 路由：POST /api/attendances/batch-import
-- SQL 原文（223 行）：
+- SQL 原文（223 行，R9-0 清点时）：
   ```sql
   UPDATE attendances SET work_days=@WorkDays,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id
   ```
 - 端点内已有检查原文（206 行）：`if (!CurrentUser.HasPermission(ctx, db, "wages:create")) return Results.Forbid();`
 - 另：端点内算了 `var scope = CurrentUser.GetDataScope(ctx);`（207 行）但**未用于任何 UPDATE**。
 - 配套 SELECT 定位（219 行）：`SELECT id FROM attendances WHERE project_id=@ProjectId AND year_month=@YearMonth AND project_worker_id=@PwId`（按入参 projectId 定位，未查归属）。
-- 状态：**Y1 已举证越权可写**（Y1b：非 admin B 改 A 行 200、work_days 10→99、created_by 不变）。
+- 状态：**R9-0 Y1 已举证越权可写**（Y1b：非 admin B 改 A 行 200、work_days 10→99、created_by 不变）。**R9-1 G73 已修 UPDATE 分支**（WHERE 现为 `id=@Id AND (created_by=@Uid OR @IsAdmin=1)`，新增 skipped 返回归属拦截项；INSERT 分支归 G75）。
 
 **D2. WageEndpoints.cs:812（wages generate UPDATE）**
 - 路由：POST /api/wages/generate
