@@ -311,6 +311,9 @@ public static class WageEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             // G2 B2: 工资写操作 → wages:create
             if (!CurrentUser.HasPermission(ctx, db, "wages:create")) return Results.Forbid();
+            // R9-4 G76 项目级写入门：创建工资行必须落在可写项目（projectId 必填）
+            if (!dto.ProjectId.HasValue) return Results.BadRequest(new { success = false, error = "POST /api/wages: projectId 必填" });
+            if (!CurrentUser.CanWriteProject(ctx, db, dto.ProjectId.Value)) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             // WageDto 金额为元（double? 接收），落库前统一 ToFen 转分（单位契约）
             var (ok, actualWage, missing) = TryResolveActualWage(dto);
@@ -656,6 +659,16 @@ public static class WageEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             // G2 B2: 工资批量保存 → wages:update
             if (!CurrentUser.HasPermission(ctx, db, "wages:update")) return Results.Forbid();
+            // R9-4 G76 项目级写入门：先收集 distinct ProjectId；空 → 400；任一门不过 → 整单 403
+            var projectIds = new HashSet<long>();
+            foreach (var r in records)
+            {
+                var item0 = JsonSerializer.Deserialize<WageBatchItem>(r.GetRawText(), WebJson) ?? throw new InvalidDataException("batch-save: 工资记录反序列化失败");
+                if (item0.ProjectId.HasValue) projectIds.Add(item0.ProjectId.Value);
+            }
+            if (projectIds.Count == 0) return Results.BadRequest(new { success = false, error = "batch-save: 所有记录缺 projectId" });
+            foreach (var pid in projectIds)
+                if (!CurrentUser.CanWriteProject(ctx, db, pid)) return Results.Forbid();
             var scope = CurrentUser.GetDataScope(ctx);
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var saved = 0;
