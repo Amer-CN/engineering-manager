@@ -75,3 +75,39 @@
 | 步骤 1 交接 | `docs/enterprise/HANDOFF-STEP1.md` |
 | 权限矩阵快照 | `docs/enterprise/PERMISSION-SNAPSHOT.md` |
 | 项目导航 | `AGENTS.md`「版本分线」章节 |
+
+---
+
+## 6. 安全修复登记（R9-1，写侧归属守卫）
+
+> 本节点按 R9 系列安全审查登记写侧归属守卫进展。G 编号由审查方（M-FIX/R9 轮）命名，
+> 与 §1 冻结清单无关，属「数据范围 / 归属校验」缺陷跟踪。
+
+### G73 已修（batch-import UPDATE 归属守卫）
+
+- 端点：`POST /api/attendances/batch-import`（`WageEndpoints.cs`）
+- 修复：UPDATE 分支 WHERE 由 `id=@Id` 改为 `id=@Id AND (created_by=@Uid OR @IsAdmin=1)`（对齐 `PUT /api/attendances` 既有守卫）；新增 `skipped` 数组返回被归属拦截的 projectWorkerId（照 generate-v2 先例）；INSERT 分支未动（归 G75）
+- 实证指针（fix/r9-1 三笔 commit）：
+  - `f9952ef` — Z1(a) 翻转 Y1b 目标态断言（先红：Y1b updated==1、Y1a skipped 键缺失，EXIT≠0）
+  - `65fc5db` — Z1(b) 修复 + 3/3 绿
+  - 破坏自证：临时删守卫 → Y1b 红（updated==1）→ `git checkout --` 还原 → 3/3 绿 → porcelain 空
+- 测试：`EngineeringManager.Tests/Endpoints/R9AttendanceImportAuthzTests.cs`（Y1b 改名 `CannotOverwriteForeignRow`）
+
+### G74 闭环（写侧全集清点已交付）
+
+- `docs/planning/R9-SCOPE.md` §1b：写侧全集四桶分类 = **A 7 / B 42 / C 6 / D 10 = 65 条业务写语句**（grep 95 匹配对账）
+- D 桶（无归属校验写语句）10 条为 R9 修复候选集，G73 已处理其中 D1 的 UPDATE 分支
+
+### G75 新登记（只登记不修）
+
+- 创建路径无项目归属校验（INSERT 分支）：
+  - `batch-import` INSERT 分支（`WageEndpoints.cs`）
+  - `generate` / `generate-v2`（考勤生成，INSERT 侧）
+  - `batch-create`（考勤批量创建）
+- 根治方向：**方案丙项目级写入门坎**（未授权项目一律拒绝，与 confirm-matches 方案丙对齐）
+- 排期：**R9-2 与 D2 同轮评估**
+
+### D6 备注（审查方 R9-1 读码发现）
+
+- `DELETE /api/regions/{id}`（`RegionEndpoints.cs:31`）已记 D6（WHERE 仅 `id=@Id`、无权限码）
+- 补充：`POST /api/regions`（`RegionEndpoints.cs:20`）**同样无权限码**（仅强制登录）——与 D6 同属「区域配置写无权限门」面，评估时一并处理
