@@ -136,11 +136,18 @@
 - **Y1d 新增（正向对照）**：B + 授权种子 + B 自己创建的考勤行 → import → 200 + updated==1 + skipped 空（两层叠加不过度拦截合法主流程）。
 - 留痕一句：本轮任务书 Z5 靶子未预见 Y1b 交互（G75 项目级门遮蔽 G73 行级守卫测试场景），审查方第 2 次规格认账，执行方纪律 17 停手纠正。
 
-### G76 新登记（只登记不修，排 R9-4）
+### G76 已修（wages 创建侧项目门，CanWriteProject 零新增直接复用）
 
-- **wages 创建侧同族**：`POST /api/wages` 与 `batch-save` 的 INSERT/upsert 分支无项目门坎（与 G75 同族：创建工资行可落在未授权项目）
-- 修复方向：**R9-3 的 `CanWriteProject` helper 可直接复用**（wages 行同样挂 project_id）
-- 排期：R9-4 评估
+- **范围**：`POST /api/wages` 与 `batch-save` 的 INSERT/upsert 分支无项目门坎（与 G75 同族：创建工资行可落在未授权项目）。
+- 修复形态：**`CurrentUser.CanWriteProject` 零新增直接复用**（一行新 helper 代码都没写）：
+  1. `POST /api/wages`：`HasPermission("wages:create")` 之后、INSERT 之前——`dto.ProjectId`（long?，可空）缺失 → 400「projectId 必填」；否则 `CanWriteProject` 不过 → 403
+  2. `batch-save`：照 batch-create 同款——先预扫收集 distinct ProjectId；空 → 400；任一门不过 → 整单 403，再进写循环；**DO UPDATE 行级守卫原地不动**
+- 实证指针（fix/r9-4 两笔 commit + 破坏自证）：
+  - `e9806cd` — 6 条测试（反向×2 无授权→403、正向×2 admin→200 含「分」断言、授权×2 projects+authorization 种子→200）；先红 2 反向全红（Actual OK）
+  - `2df226b` — POST /api/wages + batch-save 两调用点接线 → 6/6 绿
+  - 破坏自证 A：CanWriteProject 改恒 true → 2 反向全红（Expected Forbidden / Actual OK）→ 还原
+  - 破坏自证 B：摘掉 batch-save 门 → 只有它的反向红（证明逐点接线）→ 还原 → 6/6 绿 → porcelain 空
+- 测试：`EngineeringManager.Tests/Endpoints/R9WageCreateGateTests.cs`
 
 ### D6 备注（审查方 R9-1 读码发现）
 
