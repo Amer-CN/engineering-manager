@@ -10,7 +10,7 @@ using Xunit;
 namespace EngineeringManager.Tests.Endpoints;
 
 /// <summary>
-/// R9-0 Y1：attendances batch-import 越权举证（锁定现状，不修复）。
+/// R9-1 Z1：attendances batch-import 越权防御（G73 修复）。
 ///
 /// 缺陷背景（R9-SCOPE.md §1）：POST /api/attendances/batch-import 里那条
 ///   UPDATE attendances SET work_days=@WorkDays,updated_at=@Now, version=version+1,
@@ -22,10 +22,12 @@ namespace EngineeringManager.Tests.Endpoints;
 ///
 /// 用户：userA = admin（建行方）；userB = accountant（非 admin、无项目授权、
 ///       但默认权限集含 wages:create + wages:update —— 见 GetDefaultPermissions，
-///       非手动 UPDATE roles，符合 R9-0 禁止清单第 8 条）。
+///       非手动 UPDATE roles）。
 ///
-/// 本文件锁定的是【现状】：Y1b 断言 B 能越权改写他人行。R9 修复后
-/// 断言必须翻转为「B 改不动」，届时删除对应注释。
+/// 本文件锁定【目标态】（G73 修复后）：Y1b 断言 B 改不动（HTTP 200 + created==0 +
+/// updated==0 + skipped 含该 projectWorkerId + work_days 仍 10 + created_by 仍 A）。
+/// R9-0 时本用例名 Y1b_OtherUser_BatchImport_CurrentlyOverwritesForeignRow 锁定的是现状
+/// （B 能改写 200/10→99），R9-1 Z1(a) 翻转并改名为 ...CannotOverwriteForeignRow。
 /// </summary>
 public class R9AttendanceImportAuthzTests : ApiTestBase
 {
@@ -103,6 +105,8 @@ public class R9AttendanceImportAuthzTests : ApiTestBase
         // 存在行 → updated=1（不是 created）
         Assert.Equal(0, json.GetProperty("data").GetProperty("created").GetInt32());
         Assert.Equal(1, json.GetProperty("data").GetProperty("updated").GetInt32());
+        // 正向对照强化：owner 更新自己行 → 无归属拦截，skipped 为空数组
+        Assert.Equal(0, json.GetProperty("data").GetProperty("skipped").GetArrayLength());
 
         using (var conn = new SqliteConnection(ConnectionString))
         {
@@ -111,12 +115,11 @@ public class R9AttendanceImportAuthzTests : ApiTestBase
         }
     }
 
-    // ── Y1b：越权举证 —— B（非 admin、无项目授权、持 wages:create）改 A 创建的行 ──
-    // 现状断言：HTTP 200、work_days 10→99、created_by 仍是 A（即 UPDATE 只按 id 命中，无归属守卫）。
-    // R9-TODO(写侧对齐/G73): 本用例锁定缺陷现状。R9 修复后本断言必须翻转为
-    // 「B 改不动（affected=0 或 403）」，翻转时删除本注释。
+    // ── Y1b：越权防御目标态 —— B（非 admin、无项目授权、持 wages:create）改 A 创建的行 → 改不动 ──
+    // 目标态断言（G73 修复后）：HTTP 200、created==0、updated==0、skipped 含该 projectWorkerId、
+    // work_days 仍 10.0、created_by 仍 A（admin）。修复前（洞还在）本用例红。
     [Fact]
-    public async Task Y1b_OtherUser_BatchImport_CurrentlyOverwritesForeignRow()
+    public async Task Y1b_OtherUser_BatchImport_CannotOverwriteForeignRow()
     {
         // B：accountant —— 默认权限集含 wages:create/wages:update（GetDefaultPermissions
         // 已查证，非手动 UPDATE roles）；非 admin；无任何 project_authorizations。
@@ -141,13 +144,16 @@ public class R9AttendanceImportAuthzTests : ApiTestBase
 
         var json = await PostBatchImportAsync(TestProjectId, TestYearMonth,
             new[] { new { projectWorkerId = pw, workDays = 99.0 } });
+        // 目标态：B 改不动 → created==0、updated==0、skipped 含该 projectWorkerId
         Assert.Equal(0, json.GetProperty("data").GetProperty("created").GetInt32());
-        Assert.Equal(1, json.GetProperty("data").GetProperty("updated").GetInt32());
+        Assert.Equal(0, json.GetProperty("data").GetProperty("updated").GetInt32());
+        var skipped = json.GetProperty("data").GetProperty("skipped");
+        Assert.Contains(pw, skipped.EnumerateArray().Select(x => x.GetProperty("projectWorkerId").GetInt64()));
 
         using (var conn = new SqliteConnection(ConnectionString))
         {
             var row = conn.QueryFirst("SELECT work_days, created_by, version FROM attendances WHERE id=@Id", new { Id = attId });
-            Assert.Equal(99.0, (double)row.work_days);       // 现状：被 B 改写
+            Assert.Equal(10.0, (double)row.work_days);       // 未被 B 改写
             Assert.Equal(AdminUid, (string)row.created_by);  // 归属仍是 A
         }
     }
