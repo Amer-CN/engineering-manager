@@ -168,3 +168,15 @@
   - 破坏自证 B：摘 DELETE 门 → 仅 Reverse2（DELETE）红 → 还原 → 4/4 绿 → porcelain 空
 - **Z1(b) 影响面扫描结果**：测试工程与前端 src 均无 `api/regions` 既有调用（grep 零命中）→ 无需适配既有测试。
 - 测试：`EngineeringManager.Tests/Endpoints/R9RegionWriteGateTests.cs`
+
+### D3 已修（worker-teams PUT 归属守卫）
+
+- 端点：`PUT /api/worker-teams`（`MemberEndpoints.cs`）
+- 修复形态：**对齐手足 `DELETE /api/worker-teams/{id}` 的行级守卫**——WHERE 由 `id=@Id` 改为 `id=@Id AND (created_by=@Uid OR @IsAdmin=1)`，补 `var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;` 与 `Uid/IsAdmin` 参数；顺手纠正班组节头撒谎注释（「无 created_by」→「有 created_by（v1.1.0 起）」）。
+- **读侧早已按 created_by 过滤（GET `(wt.created_by=@Uid OR @IsAdmin=1)`）、写侧补齐对称**一句。
+- 实证指针（fix/r9-6 两笔 commit + 破坏自证）：
+  - `57f78f6` — 3 条测试（反向×1 自定义角色 r9-6-lead 改他人行 → 403 + name 不变、正向×2 admin/本人行 → 200）；先红 Reverse1 红（Actual OK，name 被改写 = 漏洞实证）
+  - `c4aba11` — PUT 守卫接线 → 3/3 绿
+  - 破坏自证：临时摘守卫（WHERE 还原 id=@Id）→ Reverse1 红（Expected Forbidden / Actual OK）→ checkout 还原 → 3/3 绿 → porcelain 空
+- **可达性定稿**：`members:update` 默认仅 admin 持有（GetDefaultPermissions 查证）；但企业版角色权限可编辑（`PUT /api/roles` + RoleUpdateDto），admin 给任意角色加该码后路径即现实可达——**守卫补的是配置路径，非纯理论纵深**。测试以自定义角色行（`r9-6-lead`，name==id 走 HasPermission id 直通）模拟该配置，不动任何默认角色行。
+- 测试：`EngineeringManager.Tests/Endpoints/R9WorkerTeamGuardTests.cs`
