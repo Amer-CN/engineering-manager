@@ -195,11 +195,11 @@
 - 端点内已有检查原文（206 行）：`if (!CurrentUser.HasPermission(ctx, db, "wages:create")) return Results.Forbid();`
 - 另：端点内算了 `var scope = CurrentUser.GetDataScope(ctx);`（207 行）但**未用于任何 UPDATE**。
 - 配套 SELECT 定位（219 行）：`SELECT id FROM attendances WHERE project_id=@ProjectId AND year_month=@YearMonth AND project_worker_id=@PwId`（按入参 projectId 定位，未查归属）。
-- 状态：**R9-0 Y1 已举证越权可写**（Y1b：非 admin B 改 A 行 200、work_days 10→99、created_by 不变）。**R9-1 G73 已修 UPDATE 分支**（WHERE 现为 `id=@Id AND (created_by=@Uid OR @IsAdmin=1)`，新增 skipped 返回归属拦截项；INSERT 分支归 G75）。
+- 状态：**R9-0 Y1 已举证越权可写**（Y1b：非 admin B 改 A 行 200、work_days 10→99、created_by 不变）。**R9-1 G73 已修 UPDATE 分支**（WHERE 现为 `id=@Id AND (created_by=@Uid OR @IsAdmin=1)`，新增 skipped 返回归属拦截项）。**R9-3 G75 已修 INSERT 分支**（项目级写入门：batch-import 循环前 `CanWriteProject`，未授权项目 → 403；行级守卫 R9-1 保留）。
 
-**D2. WageEndpoints.cs:812（wages generate UPDATE）**
+**D2. WageEndpoints.cs:812（wages generate UPDATE）—— 已修（R9-2）**
 - 路由：POST /api/wages/generate
-- SQL 原文（812-815 行）：
+- SQL 原文（812-815 行，R9-0 清点时）：
   ```sql
   UPDATE wages SET daily_wage=@DailyFen, work_days=@WorkDays,
       actual_wage=@ActualFen, updated_at=@Now, version=version+1, last_modified_at=@Now
@@ -208,6 +208,7 @@
   ```
 - 端点内已有检查原文（770 行）：`if (!CurrentUser.HasPermission(ctx, db, "wages:create")) return Results.Forbid();`
 - 相关：前置 SELECT 考勤行（775-782 行）带 `UserFilterWithAuthorizedProjects(scope, "a.project_id", "a.created_by")`；但 **UPDATE wages 自身无归属条件**，且 `existing` 行定位 SELECT（798-803 行）只按 `project_id + year_month + project_worker_id/member_id`，未查 created_by。可写行（paid_amount=0 且未归档）若恰为他人创建 → 会被改写。
+- 状态：**R9-2 已修 UPDATE 分支**（WHERE 追加 `AND (created_by=@Uid OR @IsAdmin=1)`，新增 ownershipSkipped 响应字段；INSERT 分支归 G75）。实证：`R9WageGenerateAuthzTests.cs` GenB（B 自建考勤 + A 建工资行，修复前红 20000→30000、修复后 3/3 绿）。
 
 **D3. MemberEndpoints.cs:368（worker-teams PUT）**
 - 路由：PUT /api/worker-teams
