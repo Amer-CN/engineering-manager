@@ -74,6 +74,7 @@
 - **第②层** role name 不匹配：001 种子 manager name=「项目经理」，映射（CurrentUser.cs:132）只认「经理」→ `SELECT ... WHERE id='项目经理'` 无行 → HasPermission false。
 - **第③层** 同一 name 不匹配打到 ResolveRole：manager claim=「项目经理」→ `PiiRole.None` → PII 全脱敏。修复归属 R9（与②同源）。
 - **第④层** finance vs accountant：已由 038 修好；但 038 没碰 manager name 和逗号串 → 经理仍全瘫。
+- **第⑤层** HasPermission 角色解析（R9-6 发现并册）：JWT role claim 以角色 name 为载体（`AuthEndpoints` login：`role?.name ?? role_id`），HasPermission 只映射四个内置中文名（管理员/经理/财务/工人），未命中按 id 直通查 roles——后果：**name≠id 的自定义角色 fail-closed**（permissions 永不生效，企业版自定义角色功能的潜伏缺陷）；测试侧规避 = 自定义角色 name 与 id 同值。修复归属 042 roles 迁移轨道。
 - 生产【应有】状态：042 迁移把 manager/worker 逗号串转 JSON + manager name 改「经理」（对齐映射）。
 
 迁移目录末尾 5 项（无 042 开头脚本，确认）：
@@ -210,7 +211,7 @@
 - 相关：前置 SELECT 考勤行（775-782 行）带 `UserFilterWithAuthorizedProjects(scope, "a.project_id", "a.created_by")`；但 **UPDATE wages 自身无归属条件**，且 `existing` 行定位 SELECT（798-803 行）只按 `project_id + year_month + project_worker_id/member_id`，未查 created_by。可写行（paid_amount=0 且未归档）若恰为他人创建 → 会被改写。
 - 状态：**R9-2 已修 UPDATE 分支**（WHERE 追加 `AND (created_by=@Uid OR @IsAdmin=1)`，新增 ownershipSkipped 响应字段；INSERT 分支归 G75）。实证：`R9WageGenerateAuthzTests.cs` GenB（B 自建考勤 + A 建工资行，修复前红 20000→30000、修复后 3/3 绿）。
 
-**D3. MemberEndpoints.cs:368（worker-teams PUT）**
+**D3. MemberEndpoints.cs:368（worker-teams PUT）—— 已修（R9-6）**
 - 路由：PUT /api/worker-teams
 - SQL 原文（368-369 行）：
   ```sql
@@ -219,6 +220,7 @@
   ```
 - 端点内已有检查原文（367 行）：`if (!CurrentUser.HasPermission(ctx, db, "members:update")) return Results.Forbid();`
 - 备注：worker_teams 读侧 GET（MemberEndpoints.cs:344）用 `(wt.created_by=@Uid OR @IsAdmin=1)` 过滤，但本 UPDATE 无归属条件。
+- 状态：**R9-6 已修**——WHERE 追加 `AND (created_by=@Uid OR @IsAdmin=1)`（对齐手足 DELETE）。实证：`R9WorkerTeamGuardTests.cs`（自定义角色 r9-6-lead 反向 403、admin/本人行正向 200）。
 
 **D4. TemplateEndpoints.cs:74（templates PUT）**
 - 路由：PUT /api/templates
