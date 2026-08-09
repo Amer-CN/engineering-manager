@@ -148,7 +148,7 @@ public class R9AttendanceImportAuthzTests : ApiTestBase
         Assert.Equal(0, json.GetProperty("data").GetProperty("created").GetInt32());
         Assert.Equal(0, json.GetProperty("data").GetProperty("updated").GetInt32());
         var skipped = json.GetProperty("data").GetProperty("skipped");
-        Assert.Contains(pw, skipped.EnumerateArray().Select(x => x.GetProperty("projectWorkerId").GetInt64()));
+        Assert.Contains(pw, skipped.EnumerateArray().Select(x => x.GetInt64()));
 
         using (var conn = new SqliteConnection(ConnectionString))
         {
