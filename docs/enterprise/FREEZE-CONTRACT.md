@@ -155,7 +155,16 @@
 - 判别信号沿用：`403` = 项目门拦；`200 + skipped` = 行级守卫拦。
 - 留痕：本轮任务书 Z5 靶子未预见既有 B2 交互（与 R9-3 Y1b 同族），审查方第 3 次规格认账；流程修复 = 门禁/守卫类任务书自此必须含既有测试影响面扫描（已入 CONVENTIONS）。
 
-### D6 备注（审查方 R9-1 读码发现）
+### D6 已修（regions 写端点权限码门）
 
-- `DELETE /api/regions/{id}`（`RegionEndpoints.cs:31`）已记 D6（WHERE 仅 `id=@Id`、无权限码）
-- 补充：`POST /api/regions`（`RegionEndpoints.cs:20`）**同样无权限码**（仅强制登录）——与 D6 同属「区域配置写无权限门」面，评估时一并处理
+- **范围**：`POST /api/regions` 与 `DELETE /api/regions/{id}` 两写端点无权限码（GET 读路径全员可用，字典下拉框依赖，不动）。原登记仅 DELETE，POST 由审查方 R9-1 读码补记、本轮一并修复。
+- 修复形态：**`settings:update` 权限码门**——`GetUserId` 之后、写之前 `if (!CurrentUser.HasPermission(ctx, db, "settings:update")) return Results.Forbid();`。
+- **权限码归属决策理由**：regions 是全局省市区字典（无 project_id / created_by），行级守卫与项目级门均不适用；字典维护属设置域 → 复用 `settings:update`（admin 默认持有；worker/accountant 默认无——GetDefaultPermissions 查证）。**不新立 regions 码族**——那会动迁移默认、前端权限矩阵与 PERMISSION-SNAPSHOT，收益为零。
+- DELETE 既有「0 行受影响 → Forbid」怪癖原位保留（非本轮范围）。
+- 实证指针（fix/r9-5 两笔 commit + 破坏自证）：
+  - `b59fb0e` — 4 条测试（反向×2 worker 无 settings:update → 403 且无副作用、正向×2 admin → 200 且副作用发生）；先红 2 反向全红（Actual OK）
+  - `928e894` — POST + DELETE 两调用点接线 → 4/4 绿
+  - 破坏自证 A：摘 POST 门 → 仅 Reverse1（POST）红 → 还原
+  - 破坏自证 B：摘 DELETE 门 → 仅 Reverse2（DELETE）红 → 还原 → 4/4 绿 → porcelain 空
+- **Z1(b) 影响面扫描结果**：测试工程与前端 src 均无 `api/regions` 既有调用（grep 零命中）→ 无需适配既有测试。
+- 测试：`EngineeringManager.Tests/Endpoints/R9RegionWriteGateTests.cs`
