@@ -96,16 +96,51 @@
 ### G74 闭环（写侧全集清点已交付）
 
 - `docs/planning/R9-SCOPE.md` §1b：写侧全集四桶分类 = **A 7 / B 42 / C 6 / D 10 = 65 条业务写语句**（grep 95 匹配对账）
-- D 桶（无归属校验写语句）10 条为 R9 修复候选集，G73 已处理其中 D1 的 UPDATE 分支
+- D 桶（无归属校验写语句）10 条为 R9 修复候选集，G73 已处理其中 D1 的 UPDATE 分支，D2 本轮处理（见下）
 
-### G75 新登记（只登记不修）
+### D2 已修（generate UPDATE 归属守卫）
 
-- 创建路径无项目归属校验（INSERT 分支）：
-  - `batch-import` INSERT 分支（`WageEndpoints.cs`）
-  - `generate` / `generate-v2`（考勤生成，INSERT 侧）
-  - `batch-create`（考勤批量创建）
-- 根治方向：**方案丙项目级写入门坎**（未授权项目一律拒绝，与 confirm-matches 方案丙对齐）
-- 排期：**R9-2 与 D2 同轮评估**
+- 端点：`POST /api/wages/generate`（`WageEndpoints.cs`）
+- 修复：UPDATE 分支 WHERE 追加 `AND (created_by=@Uid OR @IsAdmin=1)`（对齐 `PUT /api/wages` 既有守卫）；新增 `ownershipSkipped` int 计数与响应字段（照 archivedSkipped 先例，不换结构）；INSERT 分支未动（归 G75）
+- 实证指针（fix/r9-2 三笔 commit + 破坏自证）：
+  - `5e75492` — Z1(b) 初版 GenB 目标态断言（expected-red；后被裁决不可达，见下）
+  - `fb0f871` — Z1 续(a) 重建 GenB（`GenB_OwnAttendance_ForeignWageRow_CannotOverwrite`：B 自建考勤 + A 建工资行 → 触达 UPDATE 守卫）
+  - `e515be9` — Z1(c) 修复 + 3/3 绿
+  - 破坏自证：临时删守卫 → GenB 红（`Expected: 20000, Actual: 30000`，A 的工资行被 B 重算）→ `git checkout --` 还原 → 3/3 绿 → porcelain 空
+- 威胁模型定稿：**enterprise 下可触达面被考勤源 scope 过滤收窄**——generate 的考勤源 SELECT 带 `UserFilterWithAuthorizedProjects(scope, "a.project_id", "a.created_by")`，非 admin 只能读到自建或已授权项目的考勤行，故只有「自建或授权考勤行 + 他人/未授权工资行」的组合能走到 UPDATE；守卫经「自建考勤 + 他人工资行」路径实证。个人版单 admin 天然免疫（GetDataScope 恒返 All 且 IsAdmin 恒真）。
+- 留痕一句：本轮任务书初版误述测试基座为 personal，执行方纪律 17 停手纠正（实测基座 = enterprise，ApiTestBase.cs:28），审查方已撤回该陈述并裁决方案 A 变体。
+
+### G75 已修（创建路径项目级写入门坎，范围扩面 4→5）
+
+- **范围扩面说明**：登记时 4 处（batch-import INSERT / generate / generate-v2 / batch-create），审查方主动扩面至 **5 处**——补 `POST /api/attendances` 单条（与四处同族，不修它就是半修）。
+- 修复形态：`CurrentUser.CanWriteProject(ctx, db, projectId)`（方案丙创建侧门坎，签名风格照 HasPermission）——三级判定：admin → true；`projects.created_by == uid` → true；`EXISTS(SELECT 1 FROM project_authorizations pa WHERE pa.project_id=p.id AND pa.user_id=@Uid)` → true；否则 false。子查询形态与 UserFilterWithAuthorizedProjects 同族（别名 + 限定列）。
+- 五端点接线（均在 HasPermission("wages:create") 之后、任何写之前）：
+  1. `POST /api/attendances`（单条）：`dto.ProjectId` 可空，为空 → 400「projectId 必填」；否则 `CanWriteProject` 不过 → 403
+  2. `batch-create`：逐条反序列化后先收集 distinct ProjectId；空集合 → 400；任一门不过 → 整单 403
+  3. `generate` / 4. `generate-v2`：对已验证 `dto.ProjectId.Value` 一道门（循环之前）
+  5. `batch-import`：对已验证 projectId 一道门（循环之前）；**UPDATE 行级守卫（R9-1 第二层防线）原地保留**
+- 实证指针（fix/r9-3 两笔 commit + 破坏自证）：
+  - `0d21ef6` — 12 条测试（反向×5 无授权→403、正向×5 admin→200、授权×2 project_authorizations 种子→200）；先红 5 反向全红（Actual OK）
+  - `b3df8ec` — CanWriteProject helper + 5 端点接线 + GenA/GenC 硬化 → 12/12 绿
+  - 破坏自证 A：CanWriteProject 改恒 true → 5 反向全红（Expected Forbidden / Actual OK）→ 还原
+  - 破坏自证 B：摘掉 batch-create 门 → 只有它的反向红（证明逐点接线）→ 还原 → 12/12 绿 → porcelain 空
+- 测试：`EngineeringManager.Tests/Endpoints/R9CreatePathProjectGateTests.cs`
+- 禁止清单遵守：未把任何行级守卫放宽为「授权项目可改他人行」（方案丙更新侧，另排）
+
+### 两层防线定稿（R9-3 W2，G75 与 G73 的叠加关系）
+
+- **项目级门（G75，创建侧，方案丙）在前**：`CanWriteProject` —— 能否「写这个项目」（admin / 项目创建者 / 项目授权任一即放行）。
+- **行级守卫（G73，更新侧现状语义）在后**：`(created_by=@Uid OR @IsAdmin=1)` —— 能否「改这一行」。
+- **判别信号**：`403` = 项目级门拦（非 admin 且无授权/非本人项目）；`200 + skipped` = 项目级门过、行级守卫拦（有项目授权但改的是他人创建的行）。
+- **测试适配（R9-3 W1）**：Y1b 补「projects 行 + project_authorizations 行」两个种子（缺一不可——CanWriteProject 的 SQL 以 projects 行为锚，光补授权查不到项目行照样 403），使 B 过项目级门、抵达行级守卫，断言不变（200 + skipped 成立，证明拦人的是行级守卫而非项目门）。
+- **Y1d 新增（正向对照）**：B + 授权种子 + B 自己创建的考勤行 → import → 200 + updated==1 + skipped 空（两层叠加不过度拦截合法主流程）。
+- 留痕一句：本轮任务书 Z5 靶子未预见 Y1b 交互（G75 项目级门遮蔽 G73 行级守卫测试场景），审查方第 2 次规格认账，执行方纪律 17 停手纠正。
+
+### G76 新登记（只登记不修，排 R9-4）
+
+- **wages 创建侧同族**：`POST /api/wages` 与 `batch-save` 的 INSERT/upsert 分支无项目门坎（与 G75 同族：创建工资行可落在未授权项目）
+- 修复方向：**R9-3 的 `CanWriteProject` helper 可直接复用**（wages 行同样挂 project_id）
+- 排期：R9-4 评估
 
 ### D6 备注（审查方 R9-1 读码发现）
 
