@@ -10,6 +10,7 @@ using Xunit;
 namespace EngineeringManager.Tests.Endpoints;
 
 /// <summary>
+/// // R9-TODO：修复 WagePaymentRecords.tsx:110 的 category 后，必须同步改写本测试，否则它会永久锁定错误行为。
 /// M-FIX10 V2(b)：WagePaymentRecords「查看回单」断链举证（只锁定现状，不改生产代码）。
 ///
 /// 事实（L-WINDOW-AUDIT.md §1）：
@@ -74,5 +75,7 @@ public class MFix10BreakChainTests : ApiTestBase
         System.Console.WriteLine($"[BREAKCHAIN-EVIDENCE] status={(int)resp.StatusCode} body={body}");
         Assert.Contains("文件不存在", body);
         Assert.Contains("\"success\":false", body);
+        // 反向对照（U6(b)）：错误 category 指向的目录确实没有这个文件（即不是文件不存在，而是路径错位）
+        Assert.False(File.Exists(Path.Combine(dataPath, "uploads", "bank_receipts", fileName)), "对照：错误 category 指向的目录确实没有这个文件");
     }
 }
