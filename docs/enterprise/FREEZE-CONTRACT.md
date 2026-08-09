@@ -149,6 +149,12 @@
   - 破坏自证 B：摘掉 batch-save 门 → 只有它的反向红（证明逐点接线）→ 还原 → 6/6 绿 → porcelain 空
 - 测试：`EngineeringManager.Tests/Endpoints/R9WageCreateGateTests.cs`
 
+### 两层防线适配（R9-4 W2）
+
+- `WritePermissionB2Tests` 两个 O3 用例（`Accountant_BatchSave_OtherOwnersRow_Skipped` / `Accountant_BatchSave_OwnRow_Saved`）原用 `projectId=1` 但无 projects 行种子，G76 门下 403 遮蔽行级守卫场景；补 projects 行 + project_authorizations 行（项目 1 → accountant uid='3'，授权分支）使其过门抵达 DO UPDATE 守卫，断言不变（skipped/saved 语义保留）。
+- 判别信号沿用：`403` = 项目门拦；`200 + skipped` = 行级守卫拦。
+- 留痕：本轮任务书 Z5 靶子未预见既有 B2 交互（与 R9-3 Y1b 同族），审查方第 3 次规格认账；流程修复 = 门禁/守卫类任务书自此必须含既有测试影响面扫描（已入 CONVENTIONS）。
+
 ### D6 备注（审查方 R9-1 读码发现）
 
 - `DELETE /api/regions/{id}`（`RegionEndpoints.cs:31`）已记 D6（WHERE 仅 `id=@Id`、无权限码）
