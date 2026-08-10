@@ -264,19 +264,21 @@
   ```
 - 端点内已有检查原文（599 行）：`if (!CurrentUser.HasPermission(ctx, db, "settings:update")) return Results.Forbid();`（仅 admin 角色）。
 
-**D9. CostLedgerEndpoints.cs:142（cost_ledger_categories PUT）**
+**D9. CostLedgerEndpoints.cs:142（cost_ledger_categories PUT）—— 已修（R9-7）**
 - 路由：PUT /api/cost-ledger/categories
 - SQL 原文（142 行）：
   ```sql
   UPDATE cost_ledger_categories SET label=@Name,direction=@Direction,level1=@Level1,color=@Color WHERE id=@Id
   ```
 - 端点内已有检查原文（140 行）：`if (!CurrentUser.HasPermission(ctx, db, "costLedger:update")) return Results.Forbid();`
+- 状态：**R9-7 已修**——PUT 码 `costLedger:update` → `settings:update`（全局共享字典归 admin 管，作者 2026-08-09 拍板；POST/DELETE 同族一并收紧）。实证：`R9CategoryGateTests.cs`。
 
-**D10. CostLedgerEndpoints.cs:153（cost_ledger_categories DELETE）+ :162（categories/reset 全表清空）**
+**D10. CostLedgerEndpoints.cs:153（cost_ledger_categories DELETE）+ :162（categories/reset 全表清空）—— 已修（R9-7）**
 - 路由：DELETE /api/cost-ledger/categories/{id}；POST /api/cost-ledger/categories/reset
 - SQL 原文（153 行）：`DELETE FROM cost_ledger_categories WHERE id=@Id`
 - SQL 原文（162 行）：`DELETE FROM cost_ledger_categories`（无 WHERE，全表清空）
 - 端点内已有检查原文（151 行 / 160 行）：`if (!CurrentUser.HasPermission(ctx, db, "costLedger:update")) return Results.Forbid();` / `if (!CurrentUser.HasPermission(ctx, db, "settings:update")) return Results.Forbid();`
+- 状态：**R9-7 已修 DELETE**（码 `costLedger:update` → `settings:update`）；**reset 本已 settings:update，本轮不动（测试 Pin1 钉住）**；POST 同族扩面一并收紧。实证：`R9CategoryGateTests.cs`。
 
 ---
 
