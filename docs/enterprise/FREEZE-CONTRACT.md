@@ -192,3 +192,16 @@
   - 破坏自证 A/B/C：POST/PUT/DELETE 逐点回退 `costLedger:update` → 仅对应反向红 → 还原 → 7/7 绿 → porcelain 空
 - **Z1(b) 扫描处置一句话**：既有测试中 categories 写端点全部 worker（无码→403）或 admin（→200），无「非 admin 预期 200」用例 → 无需适配。
 - 测试：`EngineeringManager.Tests/Endpoints/R9CategoryGateTests.cs`
+
+### D4/D5/D7/D8 闭卷（D 桶清零，R9-8 零生产代码）
+
+四者皆**全局/纯管理操作**（模板配置 / 审计清理 / 数据库迁移），无行归属语义可补；admin-only 门（`settings:update` 权限码或 `isAdmin` 强校验）即充分控制。逐端点门原文引用 + 覆盖证据：
+
+| 端点 | 门原文 | 覆盖证据 |
+|------|--------|----------|
+| D4 PUT /api/templates | `TemplateEndpoints.cs:68` `if (!HasPermission(ctx, db, "settings:update")) return Forbid();` | 既有 `WritePermissionB1Tests.Worker_TemplatesUpdate_Returns403` |
+| D5 DELETE /api/templates/{id} | `TemplateEndpoints.cs:25` 同 | 既有 `WritePermissionB1Tests.Worker_TemplatesDelete_Returns403`（:282） |
+| D7 POST /api/audit/clear | `SystemEndpoints.cs:161` `if (isAdmin == 0) return Forbid();` | 本轮钉住 `R9AdminGatePinTests.D7_AuditClear_Worker_Returns403_AndOldLogsStay`（Z1 清点 D7 缺覆盖） |
+| D8 POST /api/sqlite/migrate | `SystemEndpoints.cs:599` `settings:update` 门 | 既有 `WritePermissionT1Tests.Worker_SqliteMigrate_Returns403` |
+
+- **收尾声明：D 桶 10/10 处置完毕**——D1/D2/D3/D6/D9/D10 修复（R9-1/2/3/5/6/7），D4/D5/D7/D8 闭卷（R9-8）——无归属校验写语句面清零。
