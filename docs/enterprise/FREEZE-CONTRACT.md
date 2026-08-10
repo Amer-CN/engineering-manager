@@ -180,3 +180,15 @@
   - 破坏自证：临时摘守卫（WHERE 还原 id=@Id）→ Reverse1 红（Expected Forbidden / Actual OK）→ checkout 还原 → 3/3 绿 → porcelain 空
 - **可达性定稿**：`members:update` 默认仅 admin 持有（GetDefaultPermissions 查证）；但企业版角色权限可编辑（`PUT /api/roles` + RoleUpdateDto），admin 给任意角色加该码后路径即现实可达——**守卫补的是配置路径，非纯理论纵深**。测试以自定义角色行（`r9-6-lead`，name==id 走 HasPermission id 直通）模拟该配置，不动任何默认角色行。
 - 测试：`EngineeringManager.Tests/Endpoints/R9WorkerTeamGuardTests.cs`
+
+### D9/D10 已修（cost_ledger_categories 写端点权限码收紧）
+
+- 端点：`POST / PUT / DELETE /api/cost-ledger/categories`（`CostLedgerEndpoints.cs`）三处，码 `costLedger:update` → `settings:update`。
+- **决策记录**：分类是全局共享字典（无 created_by / project_id），无归属/项目维度；作者 2026-08-09 拍板归 admin 管——**accountant 失去分类管理入口为有意行为变更**（与 regions、reset 端点一致）。`reset` 本已 `settings:update` 不动（测试 Pin1 钉住）；GET 读路径不动。
+- **POST 同族扩面说明**：D 桶原登记仅 PUT/DELETE（D9/D10），POST 一并收紧（不修即半修）。
+- 实证指针（fix/r9-7 两笔 commit + 破坏自证）：
+  - `0f65cb4` — 7 条测试（反向×3 accountant 无 settings:update → 403 且无副作用、正向×3 admin → 200、钉住×1 accountant reset → 403）；先红恰好 3 反向全红（Actual OK = 旧门 costLedger:update 放行 accountant）
+  - `050c3f1` — 三调用点码替换 → 7/7 绿
+  - 破坏自证 A/B/C：POST/PUT/DELETE 逐点回退 `costLedger:update` → 仅对应反向红 → 还原 → 7/7 绿 → porcelain 空
+- **Z1(b) 扫描处置一句话**：既有测试中 categories 写端点全部 worker（无码→403）或 admin（→200），无「非 admin 预期 200」用例 → 无需适配。
+- 测试：`EngineeringManager.Tests/Endpoints/R9CategoryGateTests.cs`
