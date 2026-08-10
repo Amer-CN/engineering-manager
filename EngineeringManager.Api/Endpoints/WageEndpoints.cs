@@ -357,19 +357,35 @@ public static class WageEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             // G2 B2: 工资写操作 → wages:update
             if (!CurrentUser.HasPermission(ctx, db, "wages:update")) return Results.Forbid();
-            var scope = CurrentUser.GetDataScope(ctx);
-            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var (ok, actualWage, missing) = TryResolveActualWage(dto);
             if (!ok) return Results.BadRequest(new { success = false, error = $"PUT /api/wages: actualWage 缺失且推算所需字段缺失: {missing}" });
+            // R9-9 方案丙更新侧：授权项目跨人可改 + audit（B41）
+            // 预读行归属与锁状态（C# 单点裁决归属，SQL WHERE 不再含 created_by/IsAdmin）
+            if (!dto.Id.HasValue) return Results.Forbid();
+            var row = db.QueryFirstOrDefault(
+                "SELECT created_by, project_id, COALESCE(paid_amount,0) AS paid, COALESCE(payment_locked,0) AS locked FROM wages WHERE id=@Id AND deleted_at IS NULL",
+                new { Id = dto.Id.Value });
+            // 行不存在 → 维持现状「不存在=403」语义（Pin5 钉住）
+            if (row == null) return Results.Forbid();
+            // 锁最先：已发款/已归档 → 409（admin/授权也不例外）
+            var paid = Convert.ToInt64(row.paid ?? 0);
+            var locked = Convert.ToInt64(row.locked ?? 0);
+            if (paid != 0 || locked != 0)
+                return Results.Json(new { success = false, error = "该行已发款或已归档，工资列不可再单条修改（付款请走批量付款，归档请先解锁）" }, statusCode: 409);
+            // 归属裁决：Denied → 403；AllowedViaAuthorization → 跨人修改落 audit（同事务 fail-closed）
+            var createdBy = row.created_by as string;
+            var projectId = row.project_id as long?;
+            var access = RowWriteGate.Classify(ctx, db, createdBy, projectId);
+            if (access == RowWriteOutcome.Denied) return Results.Forbid();
+
             // 窗口 H-2（D-9 落地）：PUT 只管工资列（D-6 契约「PUT 只管工资列，
             // 付款走 batch-payment」）。SET 不含 paid_amount/paid_date/bank_receipt_path；
-            // WHERE 守卫已发款/已归档行（COALESCE 兜 NULL），其工资列不再被单条 PUT 覆盖。
-            // 被守卫拦截（affected=0）→ 409 显式消息（区别于 403 权限拒绝），不许静默。
-            // WageDto 金额为元，落库前 ToFen 转分（单位契约）
+            // 锁条件保留在 WHERE（行级兜底，理论不可达）；归属条件移出 SQL（C# 单点裁决）。
+            using var tx = db.BeginTransaction();
             var affected = await db.ExecuteAsync(@"UPDATE wages SET daily_wage=@DailyWage,work_days=@WorkDays,
                 bonus=@Bonus,deduction=@Deduction,actual_wage=@ActualWage,updated_at=@Now,
                 version=version+1, last_modified_at=@Now
-                WHERE id=@Id AND deleted_at IS NULL AND (created_by=@Uid OR @IsAdmin=1)
+                WHERE id=@Id AND deleted_at IS NULL
                   AND COALESCE(paid_amount,0)=0 AND COALESCE(payment_locked,0)=0",
                 new { dto.Id,
                       DailyWage = ToFen(dto.DailyWage ?? 0),
@@ -377,8 +393,15 @@ public static class WageEndpoints
                       Bonus = ToFen(dto.Bonus ?? 0),
                       Deduction = ToFen(dto.Deduction ?? 0),
                       ActualWage = ToFen(actualWage),
-                      Uid = uid, IsAdmin = isAdmin, Now = now() });
-            // fire-and-forget: upsert 实体到知识库种子表
+                      Now = now() }, tx);
+            if (access == RowWriteOutcome.AllowedViaAuthorization)
+            {
+                // 跨人修改落审计（fail-closed：审计写不进 → 事务回滚 → 修改不生效）
+                AuditWriter.CrossUserEdit(db, tx, ctx, "wages", dto.Id.Value, "PUT /api/wages", createdBy, projectId);
+            }
+            tx.Commit();
+
+            // fire-and-forget: upsert 实体到知识库种子表（Commit 后原条件原样）
             if (affected > 0 && dto.Id.HasValue)
             {
                 var wagePutId = dto.Id.Value;
@@ -400,13 +423,8 @@ public static class WageEndpoints
                 });
             }
             if (affected > 0) return Common.Ok();
-            // affected=0 的两类：行不存在/无归属权限（403）vs 已发款/已归档被守卫拦截（409）
-            var rowExists = dto.Id.HasValue && db.ExecuteScalar<int>(
-                "SELECT COUNT(*) FROM wages WHERE id=@Id AND deleted_at IS NULL",
-                new { Id = dto.Id }) > 0;
-            if (rowExists)
-                return Results.Json(new { success = false, error = "该行已发款或已归档，工资列不可再单条修改（付款请走批量付款，归档请先解锁）" }, statusCode: 409);
-            return Results.Forbid();
+            // affected=0（锁竞态兜底，理论不可达——锁已在预读拦截）→ 409 消息原文
+            return Results.Json(new { success = false, error = "该行已发款或已归档，工资列不可再单条修改（付款请走批量付款，归档请先解锁）" }, statusCode: 409);
         });
 
         app.MapDelete("/api/wages/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
