@@ -222,7 +222,7 @@
 - 备注：worker_teams 读侧 GET（MemberEndpoints.cs:344）用 `(wt.created_by=@Uid OR @IsAdmin=1)` 过滤，但本 UPDATE 无归属条件。
 - 状态：**R9-6 已修**——WHERE 追加 `AND (created_by=@Uid OR @IsAdmin=1)`（对齐手足 DELETE）。实证：`R9WorkerTeamGuardTests.cs`（自定义角色 r9-6-lead 反向 403、admin/本人行正向 200）。
 
-**D4. TemplateEndpoints.cs:74（templates PUT）**
+**D4. TemplateEndpoints.cs:74（templates PUT）—— 闭卷（R9-8，零生产代码）**
 - 路由：PUT /api/templates
 - SQL 原文（74 行）：
   ```sql
@@ -230,14 +230,16 @@
   ```
 - 端点内已有检查原文（68 行）：`if (!CurrentUser.HasPermission(ctx, db, "settings:update")) return Results.Forbid();`
 - 备注：settings:update 仅 admin 角色有（GetDefaultPermissions），风险低但**无归属条件**。
+- 状态：**R9-8 闭卷**——已 settings:update 门（TemplateEndpoints.cs:68），全局/纯管理操作（模板配置）无行归属语义可补，admin-only 门即充分控制；覆盖 = WritePermissionB1Tests.Worker_TemplatesUpdate_Returns403。
 
-**D5. TemplateEndpoints.cs:26（templates DELETE）**
+**D5. TemplateEndpoints.cs:26（templates DELETE）—— 闭卷（R9-8，零生产代码）**
 - 路由：DELETE /api/templates/{id}
 - SQL 原文（26 行）：
   ```sql
   DELETE FROM templates WHERE id=@Id
   ```
 - 端点内已有检查原文（25 行）：`if (!CurrentUser.HasPermission(ctx, db, "settings:update")) return Results.Forbid();`
+- 状态：**R9-8 闭卷**——已 settings:update 门（:25），admin-only 门即充分控制；覆盖 = WritePermissionB1Tests.Worker_TemplatesDelete_Returns403。
 
 **D6. RegionEndpoints.cs:31（regions DELETE）—— 已修（R9-5），POST 同族一并修复**
 - 路由：DELETE /api/regions/{id}（+ POST /api/regions 同族，原登记仅 DELETE、POST 由审查方 R9-1 读码补记、本轮一并修复）
@@ -248,21 +250,23 @@
 - 端点内已有检查原文：**无**（仅 30 行 `var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();` 强制登录，GlobalAuthMiddleware 兜底）。
 - 状态：**R9-5 已修**——POST + DELETE 两写端点加 `settings:update` 权限码门（regions 为全局省市区字典，无归属/项目维度，复用设置域码，不新立码族）；GET 读路径不动。实证：`R9RegionWriteGateTests.cs`（worker 反向 403、admin 正向 200）。
 
-**D7. SystemEndpoints.cs:175（audit purge）**
+**D7. SystemEndpoints.cs:175（audit purge）—— 闭卷（R9-8，零生产代码）**
 - 路由：POST /api/audit/clear
 - SQL 原文（175 行）：
   ```sql
   DELETE FROM audit_logs WHERE created_at < @Cutoff
   ```
 - 端点内已有检查原文（161 行）：`if (isAdmin == 0) return Results.Forbid();`（admin 强校验，非权限码）。
+- 状态：**R9-8 闭卷**——isAdmin==0 强校验（SystemEndpoints.cs:161），审计清理纯管理操作无行归属语义，admin-only 门即充分控制；覆盖 = 本轮钉住 `R9AdminGatePinTests.D7_AuditClear_Worker_Returns403_AndOldLogsStay`（Z1 清点 D7 缺覆盖）。
 
-**D8. SystemEndpoints.cs:628（sqlite/migrate 全表重灌）**
+**D8. SystemEndpoints.cs:628（sqlite/migrate 全表重灌）—— 闭卷（R9-8，零生产代码）**
 - 路由：POST /api/sqlite/migrate
 - SQL 原文（628 行）：
   ```sql
   DELETE FROM [{table}]
   ```
 - 端点内已有检查原文（599 行）：`if (!CurrentUser.HasPermission(ctx, db, "settings:update")) return Results.Forbid();`（仅 admin 角色）。
+- 状态：**R9-8 闭卷**——已 settings:update 门（:599），数据库迁移纯管理操作，admin-only 门即充分控制；覆盖 = WritePermissionT1Tests.Worker_SqliteMigrate_Returns403。
 
 **D9. CostLedgerEndpoints.cs:142（cost_ledger_categories PUT）—— 已修（R9-7）**
 - 路由：PUT /api/cost-ledger/categories
@@ -287,6 +291,7 @@
 - **四桶合计**：A 7 + B 42 + C 6 + D 10 = **65 条业务写语句**。
 - grep 全集 95 处匹配的构成：业务写语句 65 + roles/users 权限配置 6 条（AuthEndpoints.cs:202/214/257/266/277/522，桶外）+ PII 回填 4 条（AuthEndpoints.cs:320/330/340/350，桶外）+ 全表重灌 `DELETE [{table}]` 1 条（入 D8）+ 全表清空 categories 2 条（入 D10）+ user_preferences upsert 2 条（入 C5/C6）+ 注释/多行续行/重复约 17 行（桶外）。65 + 6 + 4 + 17 + 3 ≈ 95 闭合（近似）。
 - **结论**：D 桶 10 条 = 业务表里「无归属校验」的写语句，是 R9 修复候选集。**与 Y1 举证相互印证：Y1b 锁定的正是 D1（attendances batch-import）越权写。**
+- **D 桶 10/10 处置完毕（R9-8 清零声明）**：D1/D2/D3/D6/D9/D10 修复（R9-1/2/3/5/6/7），D4/D5/D7/D8 闭卷（R9-8，零生产代码——全局/纯管理操作，admin-only 门即充分控制）——**无归属校验写语句面清零**。
 
 ## §3 confirm-matches 三方案
 
