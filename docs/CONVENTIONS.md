@@ -141,4 +141,5 @@ export function useProjects() {
 - **判定命令成败禁止用管道（纪律 18，M-FIX12）**——`cmd | tail` 会把 `$?` 变成管道最后一个命令（tail/grep）的退出码，丢失原命令的成败信号（前三轮丢失退出码的根因）。一律写成：
   `<命令> > out.txt 2>&1 ; echo "EXIT=$?"` 先取 EXIT，再 `tail -20 out.txt` 读文件。任何「编译通过」「测试全绿」的结论必须以这种无管道方式取到的 EXIT 为准。
 - **门禁/守卫类改动任务书必须含「既有测试影响面扫描」（纪律，R9-4 W2 登记）**——新增/收紧安全门（权限门、项目级写入门、行级守卫等）会遮蔽或改变既有测试的场景：非 admin 调用方若未配项目/授权种子，会被新门提前 403 拦下，导致既有「行级守卫 skipped/saved」类用例变红（红在门而非守卫）。任务书必做两件事：① grep 受影响端点的既有测试调用点、枚举非 admin 调用方；② 验收靶子必须列出受影响既有测试的处置（补种子适配或改断言，二选一）。出处：R9-3 Y1b / R9-4 WritePermissionB2Tests 两次纪律 17 停手，均为任务书规格缺口。
+- **测试项目 NuGet 包禁止对运行时敏感依赖使用浮动版本（如 10.\*）**——必须与被测项目钉死同一精确版本。出处：R9-10 Z0，Tests 的 `Microsoft.Data.Sqlite 10.*` 在新 worktree 拉到 10.4，暴露 012 迁移双引号字符串被解析为列名，全量测试 1ms 全挂；同提交旧 worktree（仍 resolve 到 10.0.8）全绿。CI 全新 restore 同风险。
 - **改动 E2E 测试类名/方法名前缀必须同步 CI filter（M-FIX12 W5(c) 纪律）**——CI filter 靠子串命中排除类（`BgeE2ETests` 命中 `BgeE2ETestsV2`、`M2FourthRoundTests.Model_` 命中方法名前缀），改名即 filter 静默失效 → 被排除测试重进 CI 跑真实模型必红 + 13 常数口径破坏。改任何 E2E 类名/方法名前缀前：同步改 test.yml 的 `--filter` 与 docs/ci/CI-EXCLUSIONS.md，并重测两口径四数（全量 vs filter，差额必须仍为 13）。
