@@ -216,4 +216,10 @@
   - `00a90af` — 6 条测试（Red1 授权跨人 200+audit、Pin1 无授权 403、Pin2 本人 200 无 audit、Pin3 admin 200、Pin4 锁行授权 409、Pin5 不存在 403）；先红 Red1+Pin1 双红（Actual Conflict = 旧版 409 混同）
   - `13592a7` — RowWriteGate.cs（Classify + AuditWriter）+ PUT /api/wages 重排 → 6/6 绿
   - 破坏自证：Classify AllowedViaAuthorization 分支临时 return Denied → Red1 红（Expected OK / Actual Forbidden）→ 还原 → 6/6 绿 → porcelain 空
+- **批次 1b（R9-10，B48 batch-payment + B50 batch-save）**：
+  - `384f97d` — 8 条测试 + B2 OtherOwnersRow 翻转 SavedWithAudit（Pin4 重定义 = 项目创建者改他人行 → Denied → skipped；Pin5 = 授权 + 本人行 → saved 无 audit）；先红 Red1+Red2 + B2 改名条红
+  - `bfe3ff8` — batch-payment/batch-save 两循环体预读 + Classify + audit → 8/8 + 19/19 绿
+  - 破坏自证 A/B：batch-payment/batch-save 循环内授权分支当 Denied → 仅 Red1 / 仅 Red2+B2 红 → 还原 → 双绿 → porcelain 空
+- **①「项目创建者 ≠ 行编辑权」设计澄清**：G75/G76 项目门放行创建，但 `RowWriteGate.Classify` 无「项目创建者」分支——改他人创建的行只认 `project_authorizations`（B41/B48/B50 一致；Pin4 实证：项目创建者改他人行 → Denied → skipped）。
+- **② 留痕**：任务书 Z3 初版 Pin4/Pin5 用「无授权」构造 batch-save 行级场景，被既有 G76 预扫整单 403 遮蔽（到不了行级）——审查方第 6 次规格认账，执行方纪律 17 停手纠正；修正为 Pin4=项目创建者改他人行（Denied 唯一可达路径）、Pin5=授权+本人行。
 - **旧版 PUT /api/wages 尾部 409/403 混同修正（新发现）**：旧版 affected=0 时 rowExists 分支把「无归属权限」误报为 409（已发款/已归档），注释声称的「无归属权限（403）」区分并不存在（注释撒谎同族）；修复后语义：不存在→403 / 锁定→409 / 未授权→403 / 授权跨人→200+audit / 本人或 admin→200；**Pin1 为行为翻转测试（409→403）**，先红阶段 Red1+Pin1 双红为正确形态。留痕：任务书误信注释预期「当前 403」，实测 409——审查方第 5 次规格认账，执行方纪律 17 停手纠正。
