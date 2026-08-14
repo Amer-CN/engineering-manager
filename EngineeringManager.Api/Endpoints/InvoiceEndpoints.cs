@@ -75,16 +75,40 @@ public static class InvoiceEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             // G2 B4: 发票写操作 → invoices:update
             if (!CurrentUser.HasPermission(ctx, db, "invoices:update")) return Results.Forbid();
-            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            // R9-12 方案丙更新侧：授权项目跨人可改 + audit（B13）
+            // 预读行归属（C# 单点裁决归属，SQL WHERE 不再含 created_by/IsAdmin）。
+            // 本端点无 G75 项目门（无 CanWriteProject），分层 = HasPermission → Classify；
+            // invoices 无锁列，故无 409 档；预读不加 deleted_at，与现状 WHERE 一致（Pin4 钉住）。
+            if (!dto.Id.HasValue) return Results.Forbid();
+            var row = db.QueryFirstOrDefault(
+                "SELECT created_by, project_id FROM invoices WHERE id=@Id",
+                new { Id = dto.Id.Value });
+            // 行不存在 → 维持现状「不存在=403」语义（Pin4 钉住，未改 WriteResult 的 404）
+            if (row == null) return Results.Forbid();
+            // 归属裁决：Denied → 403；AllowedViaAuthorization → 跨人修改落 audit（同事务 fail-closed）
+            var createdBy = row.created_by as string;
+            var projectId = row.project_id as long?;
+            var access = RowWriteGate.Classify(ctx, db, createdBy, projectId);
+            if (access == RowWriteOutcome.Denied) return Results.Forbid();
+
+            // 归属条件移出 SQL（C# 单点裁决）；无锁列故 WHERE 只留 id
+            using var tx = db.BeginTransaction();
             var affected = await db.ExecuteAsync(@"UPDATE invoices SET project_id=@ProjectId,seller_id=@SellerId,
                 buyer_id=@BuyerId,contract_id=@ContractId,settlement_id=@SettlementId,type=@Type,invoice_kind=@InvoiceKind,
                 invoice_no=@InvoiceNo,invoice_code=@InvoiceCode,name=@Name,amount=@Amount,price_amount=@PriceAmount,
                 tax_rate=@TaxRate,tax_amount=@TaxAmount,received_amount=@ReceivedAmount,issue_date=@IssueDate,
-                status=@Status,remarks=@Remarks,file_url=@FileUrl,file_type=@FileType,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
+                status=@Status,remarks=@Remarks,file_url=@FileUrl,file_type=@FileType,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id",
                 new { dto.Id, dto.ProjectId, dto.SellerId, dto.BuyerId, dto.ContractId, dto.SettlementId, dto.Type, dto.InvoiceKind, dto.InvoiceNo,
                       dto.InvoiceCode, dto.Name, dto.Amount, dto.PriceAmount, dto.TaxRate, dto.TaxAmount, dto.ReceivedAmount, dto.IssueDate,
-                      dto.Status, dto.Remarks, dto.FileUrl, dto.FileType, Uid = uid, IsAdmin = isAdmin, Now = now() });
-            // fire-and-forget: upsert 实体到知识库种子表
+                      dto.Status, dto.Remarks, dto.FileUrl, dto.FileType, Now = now() }, tx);
+            if (access == RowWriteOutcome.AllowedViaAuthorization)
+            {
+                // 跨人修改落审计（fail-closed：审计写不进 → 事务回滚 → 修改不生效）
+                AuditWriter.CrossUserEdit(db, tx, ctx, "invoices", dto.Id.Value, "PUT /api/invoices", createdBy, projectId);
+            }
+            tx.Commit();
+
+            // fire-and-forget: upsert 实体到知识库种子表（Commit 后原条件原样）
             if (affected > 0 && dto.Id.HasValue)
             {
                 var invPutId = dto.Id.Value;
