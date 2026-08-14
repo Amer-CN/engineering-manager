@@ -281,20 +281,43 @@ public static class ContractEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             // C-4: 服务端权限检查（门禁5）
             if (!CurrentUser.HasPermission(ctx, db, "contracts:update")) return Results.Forbid();
-            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             using var reader = new System.IO.StreamReader(ctx.Request.Body);
             var bodyText = await reader.ReadToEndAsync();
             var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(bodyText);
             var recordId = body.TryGetProperty("id", out var idProp) ? idProp.GetInt64() : 0;
-            var affected = await db.ExecuteAsync(@"UPDATE agreement_contracts SET name=@Name,amount=@Amount,status=@Status,remarks=@Remarks,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
-                new { Uid = uid, IsAdmin = isAdmin, Now = now(),
+            // R9-14 方案丙更新侧：授权项目跨人可改 + audit（B1）
+            // 预读行归属（C# 单点裁决归属，SQL WHERE 不再含 created_by/IsAdmin）。
+            // 本端点无 G75 项目门（无 CanWriteProject），分层 = HasPermission → Classify；
+            // agreement_contracts 无锁列，故无 409 档；预读不加 deleted_at，与现状 WHERE 一致。
+            var row = db.QueryFirstOrDefault(
+                "SELECT created_by, project_id FROM agreement_contracts WHERE id=@Id",
+                new { Id = recordId });
+            // 行不存在 → 404（照 WriteResult 语义，现状可观察保留；Pin4 钉住）
+            if (row == null) return Results.NotFound(new { success = false, error = "记录不存在" });
+            // 归属裁决：Denied → 403；AllowedViaAuthorization → 跨人修改落 audit（同事务 fail-closed）
+            var createdBy = row.created_by as string;
+            var projectId = row.project_id as long?;
+            var access = RowWriteGate.Classify(ctx, db, createdBy, projectId);
+            if (access == RowWriteOutcome.Denied) return Results.Forbid();
+
+            // 归属条件移出 SQL（C# 单点裁决）；无锁列故 WHERE 只留 id
+            using var tx = db.BeginTransaction();
+            var affected = await db.ExecuteAsync(@"UPDATE agreement_contracts SET name=@Name,amount=@Amount,status=@Status,remarks=@Remarks,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id",
+                new { Now = now(),
                     Id = recordId,
                     Name = body.TryGetProperty("name", out var n) ? n.GetString() : null,
                     Amount = body.TryGetProperty("amount", out var a) ? (decimal?)a.GetDouble() : null,
                     Status = body.TryGetProperty("status", out var st) ? st.GetString() : null,
                     Remarks = body.TryGetProperty("remarks", out var rm) ? rm.GetString() : null
-                });
+                }, tx);
+            if (access == RowWriteOutcome.AllowedViaAuthorization)
+            {
+                // 跨人修改落审计（fail-closed：审计写不进 → 事务回滚 → 修改不生效）
+                AuditWriter.CrossUserEdit(db, tx, ctx, "agreement_contracts", recordId, "PUT /api/contracts/agreement", createdBy, projectId);
+            }
+            tx.Commit();
+            // affected>0 → 200；竞态兜底走 WriteResult（404/403 现状语义）
             return await Common.WriteResult(affected, db, "agreement_contracts", recordId);
         });
 
