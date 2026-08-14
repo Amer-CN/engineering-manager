@@ -205,3 +205,21 @@
 | D8 POST /api/sqlite/migrate | `SystemEndpoints.cs:599` `settings:update` 门 | 既有 `WritePermissionT1Tests.Worker_SqliteMigrate_Returns403` |
 
 - **收尾声明：D 桶 10/10 处置完毕**——D1/D2/D3/D6/D9/D10 修复（R9-1/2/3/5/6/7），D4/D5/D7/D8 闭卷（R9-8）——无归属校验写语句面清零。
+
+### 方案丙大对齐总纲（B 桶更新侧，R9-9 起）
+
+- **既定裁决（原作者 2026-08-10 拍板，全部沿用）**：授权项目内可改不可删 + 跨人修改落 audit（fail-closed 必备件）+ 仅企业版（由 `GetDataScope` 天然承担，零新开关）；公司锚定实体与 projects 行本身维持 created_by（Q1）；A 桶 7 条同补 audit（Q2，并入批次 3）。
+- **审查方细化裁决（本轮新增）**：B44/B45/B46（付款清空/归档锁定/解锁）对授权跨人不放宽，维持 created_by/admin，随登记入册。
+- **四层设计**：① `RowWriteGate.Classify` 四态（AllowedOwn/AllowedViaAuthorization/Denied，C# 单点裁决）；② audit fail-closed 同事务（`AuditWriter.CrossUserEdit` 不写 try/catch，审计写不进 → 事务回滚）；③ 仅企业版由 GetDataScope 承担（个人版恒 All、IsAdmin 恒真 → 永远 AllowedOwn）；④ 锁在授权分支之前（已发款/已归档 → 409，admin/授权也不例外）。
+- **分批计划**：1a=B41 本轮；1b=B48+B50 下一轮（含 B2 既有用例语义翻转预告）；2=考勤 B38；3=合同域+A 桶 audit；4=图纸/材料/项目工人；5=收尾对账；confirm-matches 专列。
+- **本批实证指针（fix/r9-9 两笔 commit + 破坏自证）**：
+  - `00a90af` — 6 条测试（Red1 授权跨人 200+audit、Pin1 无授权 403、Pin2 本人 200 无 audit、Pin3 admin 200、Pin4 锁行授权 409、Pin5 不存在 403）；先红 Red1+Pin1 双红（Actual Conflict = 旧版 409 混同）
+  - `13592a7` — RowWriteGate.cs（Classify + AuditWriter）+ PUT /api/wages 重排 → 6/6 绿
+  - 破坏自证：Classify AllowedViaAuthorization 分支临时 return Denied → Red1 红（Expected OK / Actual Forbidden）→ 还原 → 6/6 绿 → porcelain 空
+- **批次 1b（R9-10，B48 batch-payment + B50 batch-save）**：
+  - `384f97d` — 8 条测试 + B2 OtherOwnersRow 翻转 SavedWithAudit（Pin4 重定义 = 项目创建者改他人行 → Denied → skipped；Pin5 = 授权 + 本人行 → saved 无 audit）；先红 Red1+Red2 + B2 改名条红
+  - `bfe3ff8` — batch-payment/batch-save 两循环体预读 + Classify + audit → 8/8 + 19/19 绿
+  - 破坏自证 A/B：batch-payment/batch-save 循环内授权分支当 Denied → 仅 Red1 / 仅 Red2+B2 红 → 还原 → 双绿 → porcelain 空
+- **①「项目创建者 ≠ 行编辑权」设计澄清**：G75/G76 项目门放行创建，但 `RowWriteGate.Classify` 无「项目创建者」分支——改他人创建的行只认 `project_authorizations`（B41/B48/B50 一致；Pin4 实证：项目创建者改他人行 → Denied → skipped）。
+- **② 留痕**：任务书 Z3 初版 Pin4/Pin5 用「无授权」构造 batch-save 行级场景，被既有 G76 预扫整单 403 遮蔽（到不了行级）——审查方第 6 次规格认账，执行方纪律 17 停手纠正；修正为 Pin4=项目创建者改他人行（Denied 唯一可达路径）、Pin5=授权+本人行。
+- **旧版 PUT /api/wages 尾部 409/403 混同修正（新发现）**：旧版 affected=0 时 rowExists 分支把「无归属权限」误报为 409（已发款/已归档），注释声称的「无归属权限（403）」区分并不存在（注释撒谎同族）；修复后语义：不存在→403 / 锁定→409 / 未授权→403 / 授权跨人→200+audit / 本人或 admin→200；**Pin1 为行为翻转测试（409→403）**，先红阶段 Red1+Pin1 双红为正确形态。留痕：任务书误信注释预期「当前 403」，实测 409——审查方第 5 次规格认账，执行方纪律 17 停手纠正。

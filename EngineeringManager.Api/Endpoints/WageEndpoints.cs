@@ -357,19 +357,35 @@ public static class WageEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             // G2 B2: 工资写操作 → wages:update
             if (!CurrentUser.HasPermission(ctx, db, "wages:update")) return Results.Forbid();
-            var scope = CurrentUser.GetDataScope(ctx);
-            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var (ok, actualWage, missing) = TryResolveActualWage(dto);
             if (!ok) return Results.BadRequest(new { success = false, error = $"PUT /api/wages: actualWage 缺失且推算所需字段缺失: {missing}" });
+            // R9-9 方案丙更新侧：授权项目跨人可改 + audit（B41）
+            // 预读行归属与锁状态（C# 单点裁决归属，SQL WHERE 不再含 created_by/IsAdmin）
+            if (!dto.Id.HasValue) return Results.Forbid();
+            var row = db.QueryFirstOrDefault(
+                "SELECT created_by, project_id, COALESCE(paid_amount,0) AS paid, COALESCE(payment_locked,0) AS locked FROM wages WHERE id=@Id AND deleted_at IS NULL",
+                new { Id = dto.Id.Value });
+            // 行不存在 → 维持现状「不存在=403」语义（Pin5 钉住）
+            if (row == null) return Results.Forbid();
+            // 锁最先：已发款/已归档 → 409（admin/授权也不例外）
+            var paid = Convert.ToInt64(row.paid ?? 0);
+            var locked = Convert.ToInt64(row.locked ?? 0);
+            if (paid != 0 || locked != 0)
+                return Results.Json(new { success = false, error = "该行已发款或已归档，工资列不可再单条修改（付款请走批量付款，归档请先解锁）" }, statusCode: 409);
+            // 归属裁决：Denied → 403；AllowedViaAuthorization → 跨人修改落 audit（同事务 fail-closed）
+            var createdBy = row.created_by as string;
+            var projectId = row.project_id as long?;
+            var access = RowWriteGate.Classify(ctx, db, createdBy, projectId);
+            if (access == RowWriteOutcome.Denied) return Results.Forbid();
+
             // 窗口 H-2（D-9 落地）：PUT 只管工资列（D-6 契约「PUT 只管工资列，
             // 付款走 batch-payment」）。SET 不含 paid_amount/paid_date/bank_receipt_path；
-            // WHERE 守卫已发款/已归档行（COALESCE 兜 NULL），其工资列不再被单条 PUT 覆盖。
-            // 被守卫拦截（affected=0）→ 409 显式消息（区别于 403 权限拒绝），不许静默。
-            // WageDto 金额为元，落库前 ToFen 转分（单位契约）
+            // 锁条件保留在 WHERE（行级兜底，理论不可达）；归属条件移出 SQL（C# 单点裁决）。
+            using var tx = db.BeginTransaction();
             var affected = await db.ExecuteAsync(@"UPDATE wages SET daily_wage=@DailyWage,work_days=@WorkDays,
                 bonus=@Bonus,deduction=@Deduction,actual_wage=@ActualWage,updated_at=@Now,
                 version=version+1, last_modified_at=@Now
-                WHERE id=@Id AND deleted_at IS NULL AND (created_by=@Uid OR @IsAdmin=1)
+                WHERE id=@Id AND deleted_at IS NULL
                   AND COALESCE(paid_amount,0)=0 AND COALESCE(payment_locked,0)=0",
                 new { dto.Id,
                       DailyWage = ToFen(dto.DailyWage ?? 0),
@@ -377,8 +393,15 @@ public static class WageEndpoints
                       Bonus = ToFen(dto.Bonus ?? 0),
                       Deduction = ToFen(dto.Deduction ?? 0),
                       ActualWage = ToFen(actualWage),
-                      Uid = uid, IsAdmin = isAdmin, Now = now() });
-            // fire-and-forget: upsert 实体到知识库种子表
+                      Now = now() }, tx);
+            if (access == RowWriteOutcome.AllowedViaAuthorization)
+            {
+                // 跨人修改落审计（fail-closed：审计写不进 → 事务回滚 → 修改不生效）
+                AuditWriter.CrossUserEdit(db, tx, ctx, "wages", dto.Id.Value, "PUT /api/wages", createdBy, projectId);
+            }
+            tx.Commit();
+
+            // fire-and-forget: upsert 实体到知识库种子表（Commit 后原条件原样）
             if (affected > 0 && dto.Id.HasValue)
             {
                 var wagePutId = dto.Id.Value;
@@ -400,13 +423,8 @@ public static class WageEndpoints
                 });
             }
             if (affected > 0) return Common.Ok();
-            // affected=0 的两类：行不存在/无归属权限（403）vs 已发款/已归档被守卫拦截（409）
-            var rowExists = dto.Id.HasValue && db.ExecuteScalar<int>(
-                "SELECT COUNT(*) FROM wages WHERE id=@Id AND deleted_at IS NULL",
-                new { Id = dto.Id }) > 0;
-            if (rowExists)
-                return Results.Json(new { success = false, error = "该行已发款或已归档，工资列不可再单条修改（付款请走批量付款，归档请先解锁）" }, statusCode: 409);
-            return Results.Forbid();
+            // affected=0（锁竞态兜底，理论不可达——锁已在预读拦截）→ 409 消息原文
+            return Results.Json(new { success = false, error = "该行已发款或已归档，工资列不可再单条修改（付款请走批量付款，归档请先解锁）" }, statusCode: 409);
         });
 
         app.MapDelete("/api/wages/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
@@ -669,8 +687,6 @@ public static class WageEndpoints
             if (projectIds.Count == 0) return Results.BadRequest(new { success = false, error = "batch-save: 所有记录缺 projectId" });
             foreach (var pid in projectIds)
                 if (!CurrentUser.CanWriteProject(ctx, db, pid)) return Results.Forbid();
-            var scope = CurrentUser.GetDataScope(ctx);
-            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var saved = 0;
             var skipped = 0;
             var skippedItems = new List<object>();
@@ -698,20 +714,50 @@ public static class WageEndpoints
                 // paid_amount / paid_date / status / deleted_at 等列；
                 // 跳过条件含两件事：paid_amount != 0（自动「已发款」保护）与
                 // payment_locked = 1（人工归档锁定）——两个独立语义，不是同一事实两处
-                var affected = await db.ExecuteAsync(@"INSERT INTO wages
+                // R9-10 方案丙更新侧（B50）：预读行归属 → Classify 单点裁决 → 授权跨人 + audit；
+                // 无行 → 走 INSERT 分支（创建，无 audit——创建侧已有 G76 门）
+                var existing = db.QueryFirstOrDefault(
+                    "SELECT id, created_by, project_id, COALESCE(paid_amount,0) AS paid, COALESCE(payment_locked,0) AS locked FROM wages WHERE project_id=@P AND project_worker_id=@PW AND year_month=@Y AND deleted_at IS NULL",
+                    new { P = item.ProjectId.Value, PW = item.ProjectWorkerId.Value, Y = item.YearMonth });
+                if (existing != null)
+                {
+                    // 锁先：paid/locked → skipped（现状语义）
+                    if (Convert.ToInt64(existing.paid ?? 0) != 0 || Convert.ToInt64(existing.locked ?? 0) != 0)
+                    { skipped++; skippedItems.Add(new { projectWorkerId = item.ProjectWorkerId, yearMonth = item.YearMonth }); continue; }
+                    var existingCreatedBy = existing.created_by as string;
+                    var existingProjectId = existing.project_id as long?;
+                    var access = RowWriteGate.Classify(ctx, db, existingCreatedBy, existingProjectId);
+                    // Denied → skipped（现状语义）
+                    if (access == RowWriteOutcome.Denied)
+                    { skipped++; skippedItems.Add(new { projectWorkerId = item.ProjectWorkerId, yearMonth = item.YearMonth }); continue; }
+
+                    using var tx = db.BeginTransaction();
+                    var affected = await db.ExecuteAsync(@"UPDATE wages SET
+                            daily_wage=@DailyWage, work_days=@WorkDays, bonus=@Bonus, deduction=@Deduction,
+                            actual_wage=@ActualWage, updated_at=@Now, version=version+1, last_modified_at=@Now
+                        WHERE id=@Id AND deleted_at IS NULL
+                          AND COALESCE(paid_amount,0)=0 AND COALESCE(payment_locked,0)=0",
+                        new { Id = (long)existing.id,
+                              DailyWage = ToFen(item.DailyWage!.Value),
+                              WorkDays = item.WorkDays!.Value,
+                              Bonus = ToFen(item.Bonus!.Value),
+                              Deduction = ToFen(item.Deduction!.Value),
+                              ActualWage = ToFen(item.ActualWage!.Value),
+                              Now = now() }, tx);
+                    if (access == RowWriteOutcome.AllowedViaAuthorization)
+                    {
+                        // 跨人修改落审计（fail-closed：审计写不进 → 事务回滚 → 更新不生效）
+                        AuditWriter.CrossUserEdit(db, tx, ctx, "wages", (long)existing.id, "POST /api/wages/batch-save", existingCreatedBy, existingProjectId);
+                    }
+                    tx.Commit();
+                    if (affected > 0) saved++;
+                    else { skipped++; skippedItems.Add(new { projectWorkerId = item.ProjectWorkerId, yearMonth = item.YearMonth }); }
+                    continue;
+                }
+                // 无行 → INSERT 新建（创建，无 audit——创建侧已有 G76 门）
+                var affectedInsert = await db.ExecuteAsync(@"INSERT INTO wages
                     (project_id,project_worker_id,year_month,daily_wage,work_days,bonus,deduction,actual_wage,created_by,created_at,updated_at)
-                    VALUES (@ProjectId,@ProjectWorkerId,@YearMonth,@DailyWage,@WorkDays,@Bonus,@Deduction,@ActualWage,@CreatedBy,@Now,@Now)
-                    ON CONFLICT(project_id, project_worker_id, year_month) WHERE deleted_at IS NULL
-                    DO UPDATE SET
-                        daily_wage = excluded.daily_wage,
-                        work_days  = excluded.work_days,
-                        bonus      = excluded.bonus,
-                        deduction  = excluded.deduction,
-                        actual_wage = excluded.actual_wage,
-                        updated_at = excluded.updated_at
-                    WHERE COALESCE(wages.paid_amount, 0) = 0
-                      AND COALESCE(wages.payment_locked, 0) = 0
-                      AND (wages.created_by = @Uid OR @IsAdmin = 1)",
+                    VALUES (@ProjectId,@ProjectWorkerId,@YearMonth,@DailyWage,@WorkDays,@Bonus,@Deduction,@ActualWage,@CreatedBy,@Now,@Now)",
                     new {
                         item.ProjectId, item.ProjectWorkerId, item.YearMonth,
                         DailyWage = ToFen(item.DailyWage!.Value),
@@ -719,17 +765,10 @@ public static class WageEndpoints
                         Bonus = ToFen(item.Bonus!.Value),
                         Deduction = ToFen(item.Deduction!.Value),
                         ActualWage = ToFen(item.ActualWage!.Value),
-                        CreatedBy = uid, Uid = uid, IsAdmin = isAdmin, Now = now()
+                        CreatedBy = uid, Now = now()
                     });
-                if (affected > 0)
-                {
-                    saved++;
-                }
-                else
-                {
-                    skipped++;
-                    skippedItems.Add(new { projectWorkerId = item.ProjectWorkerId, yearMonth = item.YearMonth });
-                }
+                if (affectedInsert > 0) saved++;
+                else { skipped++; skippedItems.Add(new { projectWorkerId = item.ProjectWorkerId, yearMonth = item.YearMonth }); }
             }
             return Common.Ok(new { saved, skipped, skippedItems });
         });
@@ -746,8 +785,6 @@ public static class WageEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             // G2 B2: 批量付款写入 → wages:update
             if (!CurrentUser.HasPermission(ctx, db, "wages:update")) return Results.Forbid();
-            var scope = CurrentUser.GetDataScope(ctx);
-            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var saved = 0;
             var skipped = 0;
             var skippedItems = new List<object>();
@@ -767,19 +804,40 @@ public static class WageEndpoints
                 // bank_receipt_path 缺省 = 不改（COALESCE），清空必须走 batch-clear-payments；
                 // paid_date 为必填（上方 400 兜底），无缺省问题。
                 // saved 取 ExecuteAsync 实际影响行数累加（不许用入参长度）
+                // R9-10 方案丙更新侧（B48）：预读行归属 → Classify 单点裁决 → 授权跨人 + audit
+                var itemId = item.Id!.Value; // 必填校验已保证 HasValue（上方 400 兜底）
+                var row = db.QueryFirstOrDefault(
+                    "SELECT created_by, project_id, COALESCE(payment_locked,0) AS locked FROM wages WHERE id=@Id AND deleted_at IS NULL",
+                    new { Id = itemId });
+                // 行不存在 → skipped（现状语义）
+                if (row == null) { skipped++; skippedItems.Add(new { id = item.Id }); continue; }
+                // locked → skipped（现状语义，锁在授权分支之前）
+                if (Convert.ToInt64(row.locked ?? 0) != 0) { skipped++; skippedItems.Add(new { id = item.Id }); continue; }
+                var createdBy = row.created_by as string;
+                var projectId = row.project_id as long?;
+                var access = RowWriteGate.Classify(ctx, db, createdBy, projectId);
+                // Denied → skipped（现状可观察不变）
+                if (access == RowWriteOutcome.Denied) { skipped++; skippedItems.Add(new { id = item.Id }); continue; }
+
+                using var tx = db.BeginTransaction();
                 var affected = await db.ExecuteAsync(@"UPDATE wages SET
                         paid_amount=@PaidAmount, paid_date=@PaidDate, bank_receipt_path=COALESCE(@BankReceiptPath, bank_receipt_path),
                         updated_at=@Now, version=version+1, last_modified_at=@Now
                     WHERE id=@Id AND deleted_at IS NULL
-                      AND COALESCE(payment_locked, 0) = 0
-                      AND (created_by=@Uid OR @IsAdmin=1)",
+                      AND COALESCE(payment_locked, 0) = 0",
                     new {
                         Id = item.Id,
                         PaidAmount = ToFen(item.PaidAmount!.Value),
                         PaidDate = item.PaidDate,
                         BankReceiptPath = item.BankReceiptPath,
-                        Uid = uid, IsAdmin = isAdmin, Now = now()
-                    });
+                        Now = now()
+                    }, tx);
+                if (access == RowWriteOutcome.AllowedViaAuthorization)
+                {
+                    // 跨人修改落审计（fail-closed：审计写不进 → 事务回滚 → 付款不生效）
+                    AuditWriter.CrossUserEdit(db, tx, ctx, "wages", itemId, "POST /api/wages/batch-payment", createdBy, projectId);
+                }
+                tx.Commit();
                 if (affected > 0) saved++;
                 else { skipped++; skippedItems.Add(new { id = item.Id }); }
             }
