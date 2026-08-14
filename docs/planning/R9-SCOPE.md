@@ -170,6 +170,11 @@
 
 > B 桶 grep 精确计 **42 条**。上表列 50 行（B1-B50）为便于定位列出全部行号，其中 8 行是多行同一 UPDATE 的续行被 grep 重复计（ContractEndpoints.cs:451/492/501/513、WageEndpoints.cs:342/558/733、ProjectEndpoints.cs:124 等多行 SET），去重后 = 42。**非业务归属的管理写（roles/users/PII/sqlite-migrate）不在此列。**
 
+> **方案丙标注（R9-9 起）**：
+> - **B41（PUT /api/wages）—— 已对齐方案丙（R9-9）**：授权项目内跨人可改 + 跨人修改落 audit（fail-closed 同事务），归属裁决由 C# `RowWriteGate.Classify` 单点承担（SQL WHERE 移除 created_by/IsAdmin）；锁在授权分支之前（已发款/已归档 → 409）；旧版「409/403 混同」修正（无归属权限不再误报 409）。实证：`R9WageCrossUserEditTests.cs`。
+> - **B48（batch-payment）/ B50（batch-save）—— 已对齐方案丙（R9-10）**：循环内预读行归属 → Classify 单点裁决 → 授权跨人 + audit（fail-closed 同事务），归属条件移出 SQL；锁在授权分支之前（paid/locked → skipped）；batch-save 无行 → INSERT 新建（创建侧 G76 门，无 audit）。实证：`R9WageBatchCrossUserTests.cs` + B2 OtherOwnersRow 翻转 SavedWithAudit。
+> - **B44/B45/B46（付款清空/归档锁定/解锁）—— 方案丙例外（不放宽，R9-9 登记）**：审查方细化裁决对授权跨人不放宽，维持 created_by/admin 现状，随登记入册。
+
 ### C 桶：WHERE 只有 id=@Id（或等价），端点内另有显式归属/授权校验 — 6 条
 
 | # | 文件:行 | 路由 | 端点内已有检查 |

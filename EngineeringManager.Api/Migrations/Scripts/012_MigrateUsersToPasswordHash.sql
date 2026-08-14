@@ -18,8 +18,9 @@ ALTER TABLE users ADD COLUMN password_hash_version INTEGER DEFAULT 1;
 --    新库: password_salt 已有值 (登录时设), 不覆盖
 --    老库 (有 salt 列): 复制 salt 到 password_salt
 --    老库 (无 salt 列): 用 legacy-salt 占位
+--    字符串字面量必须单引号；双引号会被 SQLite 当标识符（R9-10 由 10.4 严格模式暴露）
 UPDATE users SET
-    password_salt = COALESCE(password_salt, "legacy-salt-needs-reset"),
+    password_salt = COALESCE(password_salt, 'legacy-salt-needs-reset'),
     password_hash_version = COALESCE(password_hash_version, 1)
 WHERE password_hash IS NULL OR password_hash = '';
 

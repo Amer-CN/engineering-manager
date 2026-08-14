@@ -301,15 +301,15 @@ public class WritePermissionB2Tests : ApiTestBase
         Assert.Equal(HttpStatusCode.Forbidden, resp.StatusCode);
     }
 
-    // ── O3：batch-save 归属守卫——他人创建的行不再被覆盖 ──
+    // ── O3：batch-save 方案丙翻转——授权项目可改他人行 + audit（R9-10）──
 
     [Fact]
-    public async Task Accountant_BatchSave_OtherOwnersRow_Skipped()
+    public async Task Accountant_BatchSave_OtherOwnersRow_SavedWithAudit()
     {
         SeedUsersWithJsonRoles();
-        // R9-4 G76 两层防线适配：补 projects 行 + 授权种子使 accountant
-        // 过项目级门（CanWriteProject 授权分支）、抵达 DO UPDATE 行级守卫——
-        // skipped/saved 证明拦截发生在行级而非项目级（与 R9-3 Y1b 同款适配）
+        // R9-10 方案丙翻转（预告）：R9-4 适配两层防线后本用例钉的是「授权过项目门、
+        // 行级守卫拦 → skipped」；方案丙下放宽为授权项目可改他人行 + audit，
+        // 本断言随语义翻转。OwnRow_Saved 不动。
         using (var seedConn = new SqliteConnection(ConnectionString))
         {
             seedConn.Open();
@@ -319,7 +319,7 @@ public class WritePermissionB2Tests : ApiTestBase
             seedConn.Execute("INSERT OR IGNORE INTO project_authorizations (project_id, user_id, granted_by, granted_at) VALUES (1, '3', '1', @Now)",
                 new { Now = now });
         }
-        // admin(uid=1) 创建工资行，会计(uid=3) 有 wages:update 但非行创建者
+        // admin(uid=1) 创建工资行，会计(uid=3) 有 wages:update + 项目授权
         SeedProjectWorker(1, 1, 200);
         SeedWage(1, 1, 1, "2026-07", 440000, "1");
         var token = await LoginAsync(AccountantUser, AccountantPassword);
@@ -329,16 +329,20 @@ public class WritePermissionB2Tests : ApiTestBase
 
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
         var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
-        // 他人行 → DO UPDATE 不命中（created_by 守卫）→ saved=0, skipped=1
-        Assert.Equal(0, json.GetProperty("data").GetProperty("saved").GetInt32());
-        Assert.Equal(1, json.GetProperty("data").GetProperty("skipped").GetInt32());
+        // 方案丙：授权项目可改他人行 → saved=1, skipped=0
+        Assert.Equal(1, json.GetProperty("data").GetProperty("saved").GetInt32());
+        Assert.Equal(0, json.GetProperty("data").GetProperty("skipped").GetInt32());
 
-        // 库中该行未被覆盖：daily_wage 仍为 20000 分（=200 元），actual_wage 仍为 440000 分
+        // 库中该行被改写：daily_wage 30000 分（=300 元），actual_wage 660000 分
         using var conn = new SqliteConnection(ConnectionString);
         conn.Open();
         var row = conn.QueryFirst("SELECT daily_wage, actual_wage FROM wages WHERE id=1");
-        Assert.Equal(20000L, Convert.ToInt64(row.daily_wage));
-        Assert.Equal(440000L, Convert.ToInt64(row.actual_wage));
+        Assert.Equal(30000L, Convert.ToInt64(row.daily_wage));
+        Assert.Equal(660000L, Convert.ToInt64(row.actual_wage));
+
+        // audit_logs 增一行（cross_user_edit、resource=wages、resource_id=该行、user_id='3'）
+        Assert.Equal(1L, conn.ExecuteScalar<long>(
+            "SELECT COUNT(*) FROM audit_logs WHERE action='cross_user_edit' AND resource='wages' AND resource_id='1' AND user_id='3'"));
     }
 
     [Fact]
