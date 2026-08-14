@@ -232,16 +232,32 @@ public static class InvoiceEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             // G2 B4: 收付款记录 → invoices:update
             if (!CurrentUser.HasPermission(ctx, db, "invoices:update")) return Results.Forbid();
-            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             // 修复: 原 dynamic dto + 参数只传 Uid/IsAdmin/Now 导致缺参必 500; 并补 404 语义
             using var reader = new System.IO.StreamReader(ctx.Request.Body);
             var bodyText = await reader.ReadToEndAsync();
             var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(bodyText);
             var recordId = body.TryGetProperty("id", out var idProp) ? idProp.GetInt64() : 0;
+            // R9-13 方案丙更新侧：授权项目跨人可改 + audit（B15）
+            // 预读行归属（C# 单点裁决归属，SQL WHERE 不再含 created_by/IsAdmin）。
+            // 本端点无 G75 项目门（无 CanWriteProject），分层 = HasPermission → Classify；
+            // payment_records 无锁列，故无 409 档；预读不加 deleted_at，与现状 WHERE 一致。
+            var row = db.QueryFirstOrDefault(
+                "SELECT created_by, project_id FROM payment_records WHERE id=@Id",
+                new { Id = recordId });
+            // 行不存在 → 404（照 WriteResult 语义，现状可观察保留；Pin4 钉住）
+            if (row == null) return Results.NotFound(new { success = false, error = "记录不存在" });
+            // 归属裁决：Denied → 403；AllowedViaAuthorization → 跨人修改落 audit（同事务 fail-closed）
+            var createdBy = row.created_by as string;
+            var projectId = row.project_id as long?;
+            var access = RowWriteGate.Classify(ctx, db, createdBy, projectId);
+            if (access == RowWriteOutcome.Denied) return Results.Forbid();
+
+            // 归属条件移出 SQL（C# 单点裁决）；无锁列故 WHERE 只留 id
+            using var tx = db.BeginTransaction();
             var affected = await db.ExecuteAsync(@"UPDATE payment_records SET type=@Type,amount=@Amount,record_date=@RecordDate,
                 project_id=@ProjectId,partner_id=@PartnerId,contract_id=@ContractId,invoice_details=@InvoiceDetails,
-                remarks=@Remarks,file_url=@FileUrl,file_type=@FileType, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
-                new { Uid = uid, IsAdmin = isAdmin, Now = now(),
+                remarks=@Remarks,file_url=@FileUrl,file_type=@FileType, version=version+1, last_modified_at=@Now WHERE id=@Id",
+                new { Now = now(),
                     Id = recordId,
                     Type = body.TryGetProperty("type", out var ty) ? ty.GetString() : null,
                     Amount = body.TryGetProperty("amount", out var a) && a.ValueKind == System.Text.Json.JsonValueKind.Number ? (decimal?)a.GetDouble() : null,
@@ -253,7 +269,14 @@ public static class InvoiceEndpoints
                     Remarks = body.TryGetProperty("remarks", out var rm) ? rm.GetString() : null,
                     FileUrl = body.TryGetProperty("fileUrl", out var fu) ? fu.GetString() : null,
                     FileType = body.TryGetProperty("fileType", out var ft) ? ft.GetString() : null
-                });
+                }, tx);
+            if (access == RowWriteOutcome.AllowedViaAuthorization)
+            {
+                // 跨人修改落审计（fail-closed：审计写不进 → 事务回滚 → 修改不生效）
+                AuditWriter.CrossUserEdit(db, tx, ctx, "payment_records", recordId, "PUT /api/payment-records", createdBy, projectId);
+            }
+            tx.Commit();
+            // affected>0 → 200；竞态兜底走 WriteResult（404/403 现状语义）
             return await Common.WriteResult(affected, db, "payment_records", recordId);
         });
 
