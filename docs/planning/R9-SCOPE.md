@@ -175,6 +175,7 @@
 > - **B48（batch-payment）/ B50（batch-save）—— 已对齐方案丙（R9-10）**：循环内预读行归属 → Classify 单点裁决 → 授权跨人 + audit（fail-closed 同事务），归属条件移出 SQL；锁在授权分支之前（paid/locked → skipped）；batch-save 无行 → INSERT 新建（创建侧 G76 门，无 audit）。实证：`R9WageBatchCrossUserTests.cs` + B2 OtherOwnersRow 翻转 SavedWithAudit。
 > - **B38（PUT /api/attendances）—— 已对齐方案丙（R9-11）**：预读行归属（created_by+project_id）→ Classify 单点裁决 → 授权跨人 + audit（fail-closed 同事务），归属条件移出 SQL（WHERE 只留 id）；无锁列（无 paid_amount/payment_locked）故无 409 档；行不存在与未授权均 403（现状语义）。实证：`R9AttendanceCrossUserEditTests.cs`。
 > - **B13（PUT /api/invoices）/ B37（PUT /api/invoices/{id}/status）—— 已对齐方案丙（R9-12）**：预读行归属（created_by+project_id）→ Classify 单点裁决 → 授权跨人 + audit（fail-closed 同事务），归属条件移出 SQL（WHERE 只留 id）；无锁列（无 paid_amount/payment_locked）故无 409 档；行不存在与未授权均 403（现状语义，未改 WriteResult 的 404）；B13 知识库种子 fire-and-forget 保留在 Commit 之后（原条件原样）；发票金额单位「元」直传直存（无 ToFen）。实证：`R9InvoiceCrossUserEditTests.cs`。
+> - **B15（PUT /api/payment-records）—— 已对齐方案丙（R9-13）**：预读行归属（created_by+project_id）→ Classify 单点裁决 → 授权跨人 + audit（fail-closed 同事务），归属条件移出 SQL（WHERE 只留 id）；无锁列故无 409 档；**行不存在 → 404 / Denied → 403（WriteResult 可观察语义保留，未改 WriteResult 本体，竞态兜底仍走 WriteResult）**；金额单位「元」直传直存（无 ToFen）。实证：`R9PaymentRecordCrossUserEditTests.cs`。
 > - **B44/B45/B46（付款清空/归档锁定/解锁）—— 方案丙例外（不放宽，R9-9 登记）**：审查方细化裁决对授权跨人不放宽，维持 created_by/admin 现状，随登记入册。
 
 ### C 桶：WHERE 只有 id=@Id（或等价），端点内另有显式归属/授权校验 — 6 条
