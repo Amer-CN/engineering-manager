@@ -225,6 +225,11 @@
   - `92d7701` — PUT /api/attendances 预读行归属（created_by+project_id）→ Classify 单点裁决 → 授权跨人 + audit（fail-closed 同事务），归属条件移出 SQL → 6/6 绿
   - 破坏自证：Classify 授权分支当 Denied → 仅 Red1 红（Expected OK / Actual Forbidden）→ 还原 → 6/6 绿 → porcelain 空
   - 无锁列（attendances 无 paid_amount/payment_locked）故无 409 档；行不存在与未授权均 403（现状语义，Pin4 钉住）。
+- **批次 3a（R9-12，B13 PUT /api/invoices + B37 PUT /api/invoices/{id}/status）**：
+  - `737ce53` — 10 条测试（B13 6 条：Red1 授权跨人 200+audit、Pin1 无授权 403 无 audit、Pin2 本人 200 无 audit、Pin3 admin 200、Pin4 不存在 403、Pin5 项目创建者改他人行 403；B37 4 条：Red2 授权跨人改状态 200+audit、Pin6 无授权 403、Pin7 本人 200 无 audit、Pin8 不存在 403）；先红**恰好 Red1+Red2 双红 + 8 绿**（两端点无 409/403 混同）
+  - `036c651` — 两端点预读行归属（created_by+project_id）→ Classify 单点裁决 → 授权跨人 + audit（fail-closed 同事务），归属条件移出 SQL；B13 知识库种子 fire-and-forget 保留在 Commit 之后（原条件原样）→ 10/10 绿
+  - 破坏自证 A：B13 授权分支当 Denied → 仅 Red1 红；B：B37 授权分支当 Denied → 仅 Red2 红 → 还原 → 10/10 绿 → porcelain 空
+  - 无锁列（invoices 无 paid_amount/payment_locked）故无 409 档；不存在仍 403（维持现状，未改 WriteResult 的 404）；发票金额单位是「元」直传直存（无 ToFen）。
 - **①「项目创建者 ≠ 行编辑权」设计澄清**：G75/G76 项目门放行创建，但 `RowWriteGate.Classify` 无「项目创建者」分支——改他人创建的行只认 `project_authorizations`（B41/B48/B50 一致；Pin4 实证：项目创建者改他人行 → Denied → skipped）。
 - **② 留痕**：任务书 Z3 初版 Pin4/Pin5 用「无授权」构造 batch-save 行级场景，被既有 G76 预扫整单 403 遮蔽（到不了行级）——审查方第 6 次规格认账，执行方纪律 17 停手纠正；修正为 Pin4=项目创建者改他人行（Denied 唯一可达路径）、Pin5=授权+本人行。
 - **旧版 PUT /api/wages 尾部 409/403 混同修正（新发现）**：旧版 affected=0 时 rowExists 分支把「无归属权限」误报为 409（已发款/已归档），注释声称的「无归属权限（403）」区分并不存在（注释撒谎同族）；修复后语义：不存在→403 / 锁定→409 / 未授权→403 / 授权跨人→200+audit / 本人或 admin→200；**Pin1 为行为翻转测试（409→403）**，先红阶段 Red1+Pin1 双红为正确形态。留痕：任务书误信注释预期「当前 403」，实测 409——审查方第 5 次规格认账，执行方纪律 17 停手纠正。
