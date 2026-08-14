@@ -465,14 +465,33 @@ public static class ContractEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             // G2 B3: 结算单写操作 → settlement:update
             if (!CurrentUser.HasPermission(ctx, db, "settlement:update")) return Results.Forbid();
-            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             // 修复: 原 dynamic dto + 参数只传 Now 导致缺参必 500; 并补 user-dim 越权保护(对齐 DELETE)
             using var reader = new System.IO.StreamReader(ctx.Request.Body);
             var bodyText = await reader.ReadToEndAsync();
             var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(bodyText);
             var recordId = body.TryGetProperty("id", out var idProp) ? idProp.GetInt64() : 0;
-            var affected = await db.ExecuteAsync(@"UPDATE settlements SET name=@Name,sub_type=@SubType,amount=@Amount,settlement_date=@SettlementDate,remarks=@Remarks,items=@Items,files=@Files,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND deleted_at IS NULL AND (created_by=@Uid OR @IsAdmin=1)",
-                new { Uid = uid, IsAdmin = isAdmin, Now = now(),
+            // R9-15 方案丙更新侧：授权项目跨人可改 + audit（B7）
+            // 预读行归属与软删态（C# 单点裁决归属，SQL WHERE 不再含 created_by/IsAdmin）。
+            // 本端点无 G75 项目门（无 CanWriteProject），分层 = HasPermission → Classify；
+            // settlements 无锁列，故无 409 档。预读**不加** deleted_at IS NULL——
+            // 否则软删行会被误判成 404；软删 = 行还在但改不了 → 403（Pin6 钉住）。
+            var row = db.QueryFirstOrDefault(
+                "SELECT created_by, project_id, deleted_at FROM settlements WHERE id=@Id",
+                new { Id = recordId });
+            // 行不存在 → 404（照 WriteResult 语义，现状可观察保留；Pin4 钉住）
+            if (row == null) return Results.NotFound(new { success = false, error = "记录不存在" });
+            // 软删行 → 403（维持现状：WriteResult 对软删行 COUNT>0 → 403；Pin6 钉住）
+            if (!string.IsNullOrEmpty(row.deleted_at as string)) return Results.Forbid();
+            // 归属裁决：Denied → 403；AllowedViaAuthorization → 跨人修改落 audit（同事务 fail-closed）
+            var createdBy = row.created_by as string;
+            var projectId = row.project_id as long?;
+            var access = RowWriteGate.Classify(ctx, db, createdBy, projectId);
+            if (access == RowWriteOutcome.Denied) return Results.Forbid();
+
+            // 归属条件移出 SQL（C# 单点裁决）；无锁列故 WHERE 只留 id + 软删兜底
+            using var tx = db.BeginTransaction();
+            var affected = await db.ExecuteAsync(@"UPDATE settlements SET name=@Name,sub_type=@SubType,amount=@Amount,settlement_date=@SettlementDate,remarks=@Remarks,items=@Items,files=@Files,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND deleted_at IS NULL",
+                new { Now = now(),
                     Id = recordId,
                     Name = body.TryGetProperty("name", out var n) ? n.GetString() : null,
                     SubType = body.TryGetProperty("subType", out var sub) ? sub.GetString() : null,
@@ -481,8 +500,15 @@ public static class ContractEndpoints
                     Remarks = body.TryGetProperty("remarks", out var rm) ? rm.GetString() : null,
                     Items = body.TryGetProperty("items", out var it) ? it.GetRawText() : "[]",
                     Files = body.TryGetProperty("files", out var f) ? f.GetRawText() : "[]"
-                });
-            // fire-and-forget: upsert 实体到知识库种子表
+                }, tx);
+            if (access == RowWriteOutcome.AllowedViaAuthorization)
+            {
+                // 跨人修改落审计（fail-closed：审计写不进 → 事务回滚 → 修改不生效）
+                AuditWriter.CrossUserEdit(db, tx, ctx, "settlements", recordId, "PUT /api/settlements", createdBy, projectId);
+            }
+            tx.Commit();
+
+            // fire-and-forget: upsert 实体到知识库种子表（Commit 后原条件原样）
             if (affected > 0)
             {
                 var stlPutName = body.TryGetProperty("name", out var spn) ? spn.GetString() ?? "" : "";
@@ -502,6 +528,7 @@ public static class ContractEndpoints
                     catch (Exception ex) { Console.Error.WriteLine($"[EntitySeed] settlement PUT upsert 失败: {ex.Message}"); }
                 });
             }
+            // affected>0 → 200；竞态兜底走 WriteResult（404/403 现状语义）
             return await Common.WriteResult(affected, db, "settlements", recordId);
         });
 
