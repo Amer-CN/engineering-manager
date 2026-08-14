@@ -78,13 +78,35 @@ public static class WageEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             // G2 B2: 考勤写操作 → wages:update
             if (!CurrentUser.HasPermission(ctx, db, "wages:update")) return Results.Forbid();
-            var scope = CurrentUser.GetDataScope(ctx);
-            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            // R9-11 方案丙更新侧：授权项目跨人可改 + audit（B38）
+            // 预读行归属（C# 单点裁决归属，SQL WHERE 不再含 created_by/IsAdmin）。
+            // 本端点无 G75 项目门（无 CanWriteProject），分层 = HasPermission → Classify；
+            // attendances 无锁列（paid_amount/payment_locked），故无 409 档。
+            if (!dto.Id.HasValue) return Results.Forbid();
+            var row = db.QueryFirstOrDefault(
+                "SELECT created_by, project_id FROM attendances WHERE id=@Id",
+                new { Id = dto.Id.Value });
+            // 行不存在 → 维持现状「不存在=403」语义（Pin4 钉住）
+            if (row == null) return Results.Forbid();
+            // 归属裁决：Denied → 403；AllowedViaAuthorization → 跨人修改落 audit（同事务 fail-closed）
+            var createdBy = row.created_by as string;
+            var projectId = row.project_id as long?;
+            var access = RowWriteGate.Classify(ctx, db, createdBy, projectId);
+            if (access == RowWriteOutcome.Denied) return Results.Forbid();
+
+            // 归属条件移出 SQL（C# 单点裁决）；无锁列故 WHERE 只留 id
+            using var tx = db.BeginTransaction();
             var affected = await db.ExecuteAsync(@"UPDATE attendances SET work_days=@WorkDays,days_off=@DaysOff,
                 is_full_attendance=@IsFullAttendance,daily_status=@DailyStatus,file_url=@FileUrl,
-                file_name=@FileName,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
+                file_name=@FileName,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id",
                 new { dto.Id, dto.WorkDays, dto.DaysOff, dto.IsFullAttendance, dto.DailyStatus,
-                      dto.FileUrl, dto.FileName, Uid = uid, IsAdmin = isAdmin, Now = now() });
+                      dto.FileUrl, dto.FileName, Now = now() }, tx);
+            if (access == RowWriteOutcome.AllowedViaAuthorization)
+            {
+                // 跨人修改落审计（fail-closed：审计写不进 → 事务回滚 → 修改不生效）
+                AuditWriter.CrossUserEdit(db, tx, ctx, "attendances", dto.Id.Value, "PUT /api/attendances", createdBy, projectId);
+            }
+            tx.Commit();
             return affected > 0 ? Common.Ok() : Results.Forbid();
         });
 
