@@ -247,6 +247,11 @@
   - 无锁列（settlements 无 paid_amount/payment_locked）故无 409 档；金额单位「元」直传直存（无 ToFen）。
 - **方案丙例外（R9-16，B9 process + B10 unarchive）**：审查方已裁 B9/B10 比照 B44/B45/B46——**状态机不放宽**，授权项目内跨人调 process/unarchive 仍 403（created_by/admin 守卫 + WriteResult 可观察保留），零生产代码，只钉住现状。
   - `2d28444` — PIN-ONLY 2 条测试（PinB9：accountant r9-16-acc 持 settlement:approve + 授权 → PUT /api/settlements/{id}/process 改 admin 建行 → 403 + status 不变 + 无 audit；PinB10：自定义角色 r9-16-una（name==id，settlement:update）+ 授权 → PUT /api/settlements/{id}/unarchive 改 admin 建行 → 403 + status 不变 + 无 audit）；定向 2/2 绿（无先红翻转，现状已成立）
+- **A 桶 A1（R9-17，PUT /api/contracts/income 补 audit）**：A 桶 WHERE 已含 UserFilterWithAuthorizedProjects——授权项目内跨人**原本就能改（HTTP 200）**，本轮只补 Classify 单点 + ViaAuthz 同事务 audit，**不是从 403 放宽到 200**。**先红 = 200 缺 audit（audit 计数 1 vs 0），不是 403**——与 B 桶各轮（403→200）形态相反，实证留痕。
+  - `fc22c7f` — 6 条测试，**自定义角色 r9-17-inc（id==name，permissions 含 contracts:update；accountant 默认集无此码，走 HasPermission id 直通；仅 INSERT 新 roles 行，未动内置角色）**（Red1 授权跨人 200+audit、Pin1 无授权 403 无 audit、Pin2 本人 200 无 audit、Pin3 admin 200、Pin4 不存在 404、Pin5 项目创建者改他人行 403）；先红**恰好 Red1 一红 + 5 绿**，Red1 失败点为 audit 计数（Expected 1 / Actual 0）
+  - `cd19dd6` — PUT /api/contracts/income 预读行归属（created_by+project_id）→ Classify 单点裁决 → 授权跨人 + audit（fail-closed 同事务）；**UserFilter/created_by/IsAdmin 移出 SQL（未用的 isAdmin/scope 删除）**；行不存在 → 404 / Denied → 403（WriteResult 可观察语义保留，竞态兜底仍走 WriteResult）；知识库种子 fire-and-forget 保留在 Commit 后（原条件原样）→ 6/6 绿
+  - 破坏自证：仅 A1 授权分支当 Denied（同文件 B1/B7 唯一定位）→ 仅 Red1 红（**此时失败形态变为 Expected OK / Actual Forbidden 403**，与先红 audit 失败区分）→ 还原 → 6/6 绿 → porcelain 空
+  - 无锁列（income_contracts 无 paid_amount/payment_locked）故无 409 档；金额单位「元」直传直存（无 ToFen）。
 - **①「项目创建者 ≠ 行编辑权」设计澄清**：G75/G76 项目门放行创建，但 `RowWriteGate.Classify` 无「项目创建者」分支——改他人创建的行只认 `project_authorizations`（B41/B48/B50 一致；Pin4 实证：项目创建者改他人行 → Denied → skipped）。
 - **② 留痕**：任务书 Z3 初版 Pin4/Pin5 用「无授权」构造 batch-save 行级场景，被既有 G76 预扫整单 403 遮蔽（到不了行级）——审查方第 6 次规格认账，执行方纪律 17 停手纠正；修正为 Pin4=项目创建者改他人行（Denied 唯一可达路径）、Pin5=授权+本人行。
 - **旧版 PUT /api/wages 尾部 409/403 混同修正（新发现）**：旧版 affected=0 时 rowExists 分支把「无归属权限」误报为 409（已发款/已归档），注释声称的「无归属权限（403）」区分并不存在（注释撒谎同族）；修复后语义：不存在→403 / 锁定→409 / 未授权→403 / 授权跨人→200+audit / 本人或 admin→200；**Pin1 为行为翻转测试（409→403）**，先红阶段 Red1+Pin1 双红为正确形态。留痕：任务书误信注释预期「当前 403」，实测 409——审查方第 5 次规格认账，执行方纪律 17 停手纠正。
