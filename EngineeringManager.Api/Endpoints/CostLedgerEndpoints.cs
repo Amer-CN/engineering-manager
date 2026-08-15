@@ -64,13 +64,36 @@ public static class CostLedgerEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             // G2 B9: 台账写操作 → costLedger:update
             if (!CurrentUser.HasPermission(ctx, db, "costLedger:update")) return Results.Forbid();
-            var scope = CurrentUser.GetDataScope(ctx);
-            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+            // R9-19 A 桶 A3：授权项目内跨人原本即可改（UserFilter 授权 EXISTS 命中 → 200），
+            // 本轮补 Classify 单点 + ViaAuthz 同事务 audit（不是从 403 放宽到 200）。
+            // 预读行归属（C# 单点裁决归属，SQL WHERE 不再含 UserFilter/created_by/IsAdmin）。
+            // cost_ledger 无锁列，故无 409 档；PUT WHERE 现状无 deleted_at——预读也不加
+            // deleted_at IS NULL（软删行若 UserFilter 命中现状可被改，本轮不改这个可观察）。
+            if (!dto.Id.HasValue) return Results.Forbid();
+            var row = db.QueryFirstOrDefault(
+                "SELECT created_by, project_id FROM cost_ledger WHERE id=@Id",
+                new { Id = dto.Id.Value });
+            // 行不存在 → 403（收尾非 WriteResult，现状 Forbid 语义钉住；Pin4 钉 403 不是 404）
+            if (row == null) return Results.Forbid();
+            // 归属裁决：Denied → 403；AllowedViaAuthorization → 跨人修改落 audit（同事务 fail-closed）
+            var createdBy = row.created_by as string;
+            var projectId = row.project_id as long?;
+            var access = RowWriteGate.Classify(ctx, db, createdBy, projectId);
+            if (access == RowWriteOutcome.Denied) return Results.Forbid();
+
+            // 归属条件移出 SQL（C# 单点裁决）；无锁列故 WHERE 只留 id
+            using var tx = db.BeginTransaction();
             var affected = await db.ExecuteAsync($@"UPDATE cost_ledger SET voucher_no=@VoucherNo,date=@Date,direction=@Direction,category=@Category,
                 amount=@Amount,counterparty=@Counterparty,channel=@Channel,summary=@Summary,notes=@Notes,updated_at=@Now, version=version+1, last_modified_at=@Now
-                WHERE id=@Id AND {CurrentUser.UserFilterWithAuthorizedProjects(scope, "cost_ledger.project_id")}",
+                WHERE id=@Id",
                 new { dto.VoucherNo, dto.Date, dto.Direction, dto.Category, dto.Amount,
-                      dto.Counterparty, dto.Channel, dto.Summary, dto.Notes, Now = now(), dto.Id, Uid = uid, IsAdmin = isAdmin });
+                      dto.Counterparty, dto.Channel, dto.Summary, dto.Notes, Now = now(), dto.Id }, tx);
+            if (access == RowWriteOutcome.AllowedViaAuthorization)
+            {
+                // 跨人修改落审计（fail-closed：审计写不进 → 事务回滚 → 修改不生效）
+                AuditWriter.CrossUserEdit(db, tx, ctx, "cost_ledger", dto.Id.Value, "PUT /api/cost-ledger", createdBy, projectId);
+            }
+            tx.Commit();
             return affected > 0 ? Common.Ok() : Results.Forbid();
         });
 
