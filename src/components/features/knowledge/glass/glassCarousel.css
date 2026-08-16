@@ -103,8 +103,13 @@
   user-select: none;
   cursor: grab;
   transform-style: preserve-3d;
+  transition: transform 0.3s ease-out;
 }
 .gc-card-inner:active { cursor: grabbing; }
+/* 非选中卡 hover 轻微抬起（参考项目 hover:scale-[1.015]，忠实度修复） */
+.gc-card:not([data-gc-active="1"]) .gc-card-inner:hover {
+  transform: scale(1.015);
+}
 
 /* 后盖板 */
 .gc-back {
