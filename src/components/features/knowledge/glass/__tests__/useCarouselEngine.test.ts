@@ -205,6 +205,31 @@ describe('useCarouselEngine — 有界模式', () => {
     expect(result.current.reducedMotion).toBe(true)
   })
 
+  it('loop 模式：末尾 stepNext 回绕到 0（不做有界封死）', () => {
+    const { result } = renderHook(() => useCarouselEngine({ count, loop: true }))
+    registerAll(result)
+
+    act(() => { result.current.dotGoTo(count - 1) })
+    act(() => { vi.advanceTimersByTime(2000) })
+    expect(result.current.focusIndex).toBe(count - 1)
+
+    act(() => { result.current.stepNext() })
+    act(() => { vi.advanceTimersByTime(2000) })
+    expect(result.current.focusIndex).toBe(0) // 回绕（参考项目取模语义）
+  })
+
+  it('loop 模式：末尾 wheel 朝外仍 preventDefault（无边界不释放）', () => {
+    const { result } = renderHook(() => useCarouselEngine({ count, loop: true }))
+    registerAll(result)
+
+    act(() => { result.current.dotGoTo(count - 1) })
+    act(() => { vi.advanceTimersByTime(2000) })
+
+    const evt = new WheelEvent('wheel', { deltaY: 100, cancelable: true })
+    act(() => { result.current.onWheelNative(evt) })
+    expect(evt.defaultPrevented).toBe(true) // loop 无首尾释放
+  })
+
   it('数据量变化：count 变小时位置被 clamp 回界内', () => {
     const { result, rerender } = renderHook<ReturnType<typeof useCarouselEngine>, { n: number }>(
       (props) => useCarouselEngine({ count: props.n }),

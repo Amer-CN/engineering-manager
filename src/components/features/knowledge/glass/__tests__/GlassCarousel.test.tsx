@@ -104,6 +104,8 @@ describe('CarouselControls — 参数抽屉', () => {
     onStepNext: vi.fn(),
     isPlaying: false,
     onTogglePlaying: vi.fn(),
+    isLoop: false,
+    onToggleLoop: vi.fn(),
     scrollSpeed: 1,
     onScrollSpeedChange: vi.fn(),
     rotateYAngle: -26,
@@ -139,5 +141,16 @@ describe('CarouselControls — 参数抽屉', () => {
     expect(baseProps.onRotateXChange).toHaveBeenCalledWith(10)
     expect(baseProps.onSpacingChange).toHaveBeenCalledWith(75)
     expect(baseProps.onScrollSpeedChange).toHaveBeenCalledWith(1)
+  })
+
+  it('无限循环开关：默认关闭，点击触发回调', () => {
+    const { rerender } = render(<CarouselControls {...baseProps} showControls={true} />)
+    const btn = screen.getByText('无限循环').closest('button')!
+    expect(btn.textContent).toContain('关闭')
+    fireEvent.click(btn)
+    expect(baseProps.onToggleLoop).toHaveBeenCalledTimes(1)
+
+    rerender(<CarouselControls {...baseProps} showControls={true} isLoop={true} />)
+    expect(screen.getByText('无限循环').closest('button')!.textContent).toContain('开启')
   })
 })

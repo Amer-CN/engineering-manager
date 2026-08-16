@@ -18,6 +18,9 @@ import { createDrawingColumns } from './features/drawings/drawingsColumns'
 import { DrawingsGallery } from './features/drawings/DrawingsGallery'
 import { DrawingViewer } from './features/drawings/DrawingViewer'
 import { useDrawingsView } from './features/drawings/useDrawingsView'
+import { buildDrawingStackGroups, STACK_GROUP_LIMIT } from './features/drawings/drawingStackGroups'
+import { GlassCarousel } from './features/knowledge/glass/GlassCarousel'
+import type { FolderItem } from './features/knowledge/glass/types'
 
 interface DrawingsProps {
   refresh?: () => void
@@ -234,6 +237,35 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
 
   const columns = createDrawingColumns(getProjectName, handleEdit, handleDelete)
 
+  // GlassCarousel 堆叠：一张卡 = 一个类别分组；只受项目筛选（类别导航本身不受类别筛选）
+  // useMemo 稳定引用；卡数门禁：超 STACK_GROUP_LIMIT 强制回退列表（DESIGN.md § Stage Surfaces）
+  const stackGroups = useMemo(
+    () => buildDrawingStackGroups(filterProject ? drawings.filter(d => d.projectId === filterProject) : drawings),
+    [drawings, filterProject],
+  )
+  const stackAllowed = stackGroups.length > 0 && stackGroups.length <= STACK_GROUP_LIMIT
+  const effectiveView = viewMode === 'stack' && !stackAllowed ? 'list' : viewMode
+
+  // 轮播分组数据 → GlassCarousel 模型（memberCount=张数、progress 可空）
+  const carouselFolders: FolderItem[] = useMemo(
+    () => stackGroups.map(g => ({
+      id: String(g.id),
+      title: g.name,
+      period: g.meta ?? '图纸分组',
+      progress: null,
+      memberCount: Number(g.primaryValue) || 0,
+      category: g.name,
+      documents: [],
+    })),
+    [stackGroups],
+  )
+
+  // 打开分组 = 带类别筛选回到扁平列表（舞台只做导航与概览，不承载操作）
+  const handleStackOpen = (folder: FolderItem) => {
+    setFilterCategory(folder.category)
+    setViewMode('list')
+  }
+
   if (loading) {
   return <Spinner size="lg" text="加载图纸数据..." />
   }
@@ -248,12 +280,12 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
   <p className="text-[color:var(--muted)] mt-1">查看与管理所有工程图纸及修订版本</p>
   </div>
   <div className="flex items-center gap-3">
-  {/* 画廊 / 列表切换（堆叠舞台已于 M4 下线） */}
+  {/* 画廊 / 列表 / 堆叠舞台（GlassCarousel，主动进入）切换 */}
   <div className="inline-flex rounded-lg p-0.5" style={{ background: 'var(--panel-2)' }}>
-    {([['gallery', '画廊', 'Image'], ['list', '列表', 'List']] as ReadonlyArray<readonly [string, string, string]>).map(([mode, label, icon]) => {
+    {([['gallery', '画廊', 'Image'], ['list', '列表', 'List'], ...(stackAllowed ? [['stack', '堆叠', 'FolderKanban']] as const : [])] as ReadonlyArray<readonly [string, string, string]>).map(([mode, label, icon]) => {
       const active = viewMode === mode
       return (
-        <button key={mode} onClick={() => setViewMode(mode as 'gallery' | 'list')}
+        <button key={mode} onClick={() => setViewMode(mode as 'gallery' | 'list' | 'stack')}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
           style={active ? { background: 'var(--card)', color: 'var(--fg)', boxShadow: 'var(--shadow-card)' } : { background: 'transparent', color: 'var(--muted)' }}>
           <Icon name={icon} size={14} />
@@ -304,8 +336,11 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
     </select>
   </div>
 
-  {/* 图纸列表 / 画廊（FolderStack3D 堆叠舞台已于 M4 下线，见 HANDOFF §〇） */}
-  {filteredDrawings.length > 0 ? (
+  {/* 图纸列表 / 画廊 / GlassCarousel 堆叠舞台 */}
+  {effectiveView === 'stack' ? (
+  /* Stage-Surface 舞台区：只做导航与概览，打开分组回扁平列表 */
+  <GlassCarousel folders={carouselFolders} onFolderClick={handleStackOpen} />
+  ) : filteredDrawings.length > 0 ? (
   viewMode === 'gallery' ? (
   <DrawingsGallery
     drawings={filteredDrawings}
