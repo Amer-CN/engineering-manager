@@ -1,7 +1,7 @@
-// useDrawingsView.ts — 图纸视图模式（堆叠舞台已于 M4 下线，仅保留画廊/列表）
+// useDrawingsView.ts — 图纸视图模式（忠实度批：stack 改接 GlassCarousel 回归）
 import { useEffect, useState } from 'react'
 
-export type DrawingsViewMode = 'gallery' | 'list'
+export type DrawingsViewMode = 'gallery' | 'list' | 'stack'
 
 const KEY = 'drawings.view'
 
@@ -9,7 +9,7 @@ export function useDrawingsView() {
   const [viewMode, setViewMode] = useState<DrawingsViewMode>(() => {
     try {
       const v = localStorage.getItem(KEY)
-      if (v === 'gallery' || v === 'list') return v
+      if (v === 'gallery' || v === 'list' || v === 'stack') return v
     } catch { /* localStorage 不可用时静默走默认 */ }
     return 'list' // 默认列表
   })

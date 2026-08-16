@@ -120,6 +120,8 @@ export interface UseCarouselEngineOptions {
   rotateXAngle?: number
   isPlaying?: boolean
   scrollSpeed?: number
+  /** 无限循环模式（参考项目原生体验）：wrap 最近距离渲染、无边界、环形跳转。默认 false（有界）。 */
+  loop?: boolean
 }
 
 export function useCarouselEngine({
@@ -129,6 +131,7 @@ export function useCarouselEngine({
   rotateXAngle = GC_PARAMS.rotateXAngle,
   isPlaying = false,
   scrollSpeed = 1,
+  loop = false,
 }: UseCarouselEngineOptions) {
   const stageRef = useRef<HTMLDivElement | null>(null)
   const cardElsRef = useRef(new Map<number, HTMLDivElement>())
@@ -154,7 +157,9 @@ export function useCarouselEngine({
   const rotateXAngleRef = useRef(rotateXAngle)
   const isPlayingRef = useRef(isPlaying)
   const scrollSpeedRef = useRef(scrollSpeed)
+  const loopRef = useRef(loop)
   countRef.current = count
+  loopRef.current = loop
   itemSpacingRef.current = itemSpacing
   rotateYAngleRef.current = rotateYAngle
   rotateXAngleRef.current = rotateXAngle
@@ -180,9 +185,23 @@ export function useCarouselEngine({
       const n = countRef.current
       const R = windowRef.current
       const pos = posRef.current
-      const focus = clamp(Math.round(pos), 0, Math.max(0, n - 1))
+      const isLoop = loopRef.current && n > 1
+      // loop：聚焦索引取模映射（无限虚拟位置 → 物理索引）
+      const focus = isLoop
+        ? ((Math.round(pos) % n) + n) % n
+        : clamp(Math.round(pos), 0, Math.max(0, n - 1))
       for (const [i, el] of cardElsRef.current) {
-        if (i < focus - R || i > focus + R) {
+        // loop：物理卡到虚拟位置的环形最近距离（参考项目 slot % n 语义）
+        let offset = i - pos
+        if (isLoop) {
+          const half = n / 2
+          if (offset > half) offset -= n
+          else if (offset < -half) offset += n
+        }
+        const outOfWindow = isLoop
+          ? Math.abs(offset) > R
+          : i < focus - R || i > focus + R
+        if (outOfWindow) {
           if (lastWrittenRef.current.get(el) !== 'gc-hide') {
             lastWrittenRef.current.set(el, 'gc-hide')
             el.style.visibility = 'hidden'
@@ -190,7 +209,7 @@ export function useCarouselEngine({
           continue
         }
         const t = computeCardTransform({
-          slot: i, pos, itemSpacing: itemSpacingRef.current,
+          slot: offset, pos: 0, itemSpacing: itemSpacingRef.current,
           rotateYAngle: rotateYAngleRef.current, rotateXAngle: rotateXAngleRef.current,
         })
         const key = `${t.transform}|${t.opacity.toFixed(3)}|${t.zIndex}`
@@ -273,16 +292,21 @@ export function useCarouselEngine({
       if (e.deltaMode === 1) d *= 32
       else if (e.deltaMode === 2) d *= 300
       d = clamp(d, -MAX_WHEEL_DELTA, MAX_WHEEL_DELTA)
-      const atStart = posRef.current <= EDGE_EPS && d < 0
-      const atEnd = posRef.current >= n - 1 - EDGE_EPS && d > 0
+      // loop 模式无边界（永不释放滚动权）；有界模式首尾 EDGE_EPS 释放
+      const atStart = !loopRef.current && posRef.current <= EDGE_EPS && d < 0
+      const atEnd = !loopRef.current && posRef.current >= n - 1 - EDGE_EPS && d > 0
       if (atStart || atEnd) return
       e.preventDefault()
       targetRef.current = null // 打断吸附，跟手
-      posRef.current = clamp(posRef.current + d * WHEEL_SENSITIVITY, 0, n - 1)
+      posRef.current = loopRef.current
+        ? posRef.current + d * WHEEL_SENSITIVITY
+        : clamp(posRef.current + d * WHEEL_SENSITIVITY, 0, n - 1)
       renderFrame()
       if (wheelTimerRef.current) clearTimeout(wheelTimerRef.current)
       wheelTimerRef.current = setTimeout(() => {
-        targetRef.current = clamp(Math.round(posRef.current), 0, n - 1)
+        targetRef.current = loopRef.current
+          ? Math.round(posRef.current)
+          : clamp(Math.round(posRef.current), 0, n - 1)
         kick()
       }, SNAP_DELAY)
     }
@@ -298,32 +322,48 @@ export function useCarouselEngine({
       const deltaX = e.clientX - dragRef.current.startX
       // 像素 → 索引：deltaX / (spacing*1.2)
       const indexDelta = -deltaX / (itemSpacingRef.current * 1.2)
-      posRef.current = clamp(dragRef.current.startIndex + indexDelta, 0, countRef.current - 1)
+      const raw = dragRef.current.startIndex + indexDelta
+      posRef.current = loopRef.current ? raw : clamp(raw, 0, countRef.current - 1)
       renderFrame()
     }
 
     function handlePointerUp(_e?: React.PointerEvent<HTMLDivElement>) {
       if (!dragRef.current.active) return
       dragRef.current.active = false
-      // 松手吸附最近整数槽
-      targetRef.current = clamp(Math.round(posRef.current), 0, countRef.current - 1)
+      // 松手吸附最近整数槽（loop 不 clamp）
+      const snapped = Math.round(posRef.current)
+      targetRef.current = loopRef.current ? snapped : clamp(snapped, 0, countRef.current - 1)
       kick()
     }
 
     function stepNext() {
       const base = targetRef.current ?? posRef.current
-      targetRef.current = clamp(Math.round(base) + 1, 0, countRef.current - 1)
+      const t = Math.round(base) + 1
+      targetRef.current = loopRef.current ? t : clamp(t, 0, countRef.current - 1)
       kick()
     }
 
     function stepPrev() {
       const base = targetRef.current ?? posRef.current
-      targetRef.current = clamp(Math.round(base) - 1, 0, countRef.current - 1)
+      const t = Math.round(base) - 1
+      targetRef.current = loopRef.current ? t : clamp(t, 0, countRef.current - 1)
       kick()
     }
 
     function dotGoTo(index: number) {
-      targetRef.current = clamp(index, 0, countRef.current - 1)
+      if (loopRef.current) {
+        // 环形最短路径（参考项目 diff 折半语义）
+        const n = countRef.current
+        const cur = Math.round(posRef.current)
+        const curIdx = ((cur % n) + n) % n
+        let diff = index - curIdx
+        const half = n / 2
+        if (diff > half) diff -= n
+        else if (diff < -half) diff += n
+        targetRef.current = cur + diff
+      } else {
+        targetRef.current = clamp(index, 0, countRef.current - 1)
+      }
       kick()
     }
 
