@@ -34,6 +34,7 @@ export type PageId =
   | 'invoices'
   | 'knowledge'
   | 'voice'
+  | 'writing'
   | 'reports'
   | 'settings'
   | 'users'
@@ -194,6 +195,13 @@ export const routes: RouteMeta[] = [
     description: '录音与转写流水线',
   },
   {
+    id: 'writing',
+    label: '写作中心',
+    icon: 'PenLine',
+    shortcut: 'G X',
+    description: '公文起草与文档写作',
+  },
+  {
     id: 'reports',
     label: '报告中心',
     icon: 'FileBarChart',
@@ -262,6 +270,7 @@ const SIDEBAR_RESOURCE_MAP: Record<string, string> = {
   drawings: 'drawings',
   knowledge: 'knowledge',
   voice: 'voice',
+  writing: 'writing',
   reports: 'reports',
   settings: 'settings',
   users: 'users',

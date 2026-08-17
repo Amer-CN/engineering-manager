@@ -53,8 +53,8 @@ export interface WritingListResponse {
 // ═══════════════════════════════════════════════════════════════════
 
 /** 文体 / 风格可选项（单源真值，后端 WritingSkillService 提供） */
-export function fetchWritingDocTypes(): Promise<{ success: boolean; data?: WritingDocTypes; error?: string }> {
-  return apiClient.get<WritingDocTypes>('/api/writing/doc-types')
+export function fetchWritingDocTypes(): Promise<{ success: boolean; data?: WritingDocTypesResponse; error?: string }> {
+  return apiClient.get<WritingDocTypesResponse>('/api/writing/doc-types')
 }
 
 /** 文档列表（分页 + 文体过滤） */
