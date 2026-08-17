@@ -102,9 +102,10 @@ public static class CostLedgerEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             // G2 B9: 台账写操作 → costLedger:delete
             if (!CurrentUser.HasPermission(ctx, db, "costLedger:delete")) return Results.Forbid();
-            var scope = CurrentUser.GetDataScope(ctx);
+            // R9-20 A 桶 A4 收紧翻转：方案丙 = 授权项目内可改不可删——DELETE 不对授权跨人开放，
+            // UserFilter 移出 WHERE 回到 created_by/admin（与 B 桶 DELETE 对齐；无 Classify、无 audit）。
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
-            return (await db.ExecuteAsync($"UPDATE cost_ledger SET deleted_at=@Now WHERE id=@Id AND deleted_at IS NULL AND {CurrentUser.UserFilterWithAuthorizedProjects(scope, "cost_ledger.project_id")}", new { Id = id, Now = now(), Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
+            return (await db.ExecuteAsync($"UPDATE cost_ledger SET deleted_at=@Now WHERE id=@Id AND deleted_at IS NULL AND (created_by=@Uid OR @IsAdmin=1)", new { Id = id, Now = now(), Uid = uid, IsAdmin = isAdmin })) > 0 ? Common.Ok() : Results.Forbid();
         });
 
         app.MapPost("/api/cost-ledger/batch", async (HttpContext ctx, List<CostLedgerEntryDto> entries, IDbConnection db) =>
