@@ -262,11 +262,15 @@ export function useCarouselEngine({
           posRef.current += diff * LERP_FACTOR
         }
       } else if (isPlayingRef.current) {
-        // 有界自动播放：clamp 到边界自然停
+        // 自动播放：loop 无限增长（renderFrame wrap 渲染）；有界 clamp 到边界自然停
         const step = AUTOPLAY_STEP * scrollSpeedRef.current * dt
-        const next = clamp(posRef.current + step, 0, n - 1)
-        posRef.current = next
-        if (next >= n - 1 || next <= 0) isPlayingRef.current = false
+        if (loopRef.current && countRef.current > 1) {
+          posRef.current += step
+        } else {
+          const next = clamp(posRef.current + step, 0, n - 1)
+          posRef.current = next
+          if (next >= n - 1 || next <= 0) isPlayingRef.current = false
+        }
       }
       renderFrame()
       measure(now)
@@ -384,6 +388,14 @@ export function useCarouselEngine({
     return fn
   }
 
+  // —— 实时预览（交互忠实度）：旋转/间距/loop 变化 → 立即重摆；播放开关 → 唤醒 rAF ——
+  useEffect(() => {
+    engine.renderFrame()
+  }, [itemSpacing, rotateYAngle, rotateXAngle, loop, engine])
+  useEffect(() => {
+    if (isPlaying) engine.kick()
+  }, [isPlaying, engine])
+
   // 数据量变化：clamp 位置与聚焦，防越界
   useEffect(() => {
     const max = Math.max(0, count - 1)
@@ -421,6 +433,10 @@ export function useCarouselEngine({
     stepNext: engine.stepNext,
     stepPrev: engine.stepPrev,
     dotGoTo: engine.dotGoTo,
+    /** 立即用当前参数重摆全部卡（参数实时预览入口） */
+    renderNow: engine.renderFrame,
+    /** 唤醒 rAF（自动播放开启 / 数据变化时） */
+    kickNow: engine.kick,
     focusIndex,
     downgraded,
     reducedMotion,
