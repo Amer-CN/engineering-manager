@@ -17,6 +17,8 @@ interface CarouselControlsProps {
   onStepNext: () => void
   isPlaying: boolean
   onTogglePlaying: () => void
+  isLoop: boolean
+  onToggleLoop: () => void
   scrollSpeed: number
   onScrollSpeedChange: (v: number) => void
   rotateYAngle: number
@@ -34,6 +36,8 @@ export const CarouselControls: React.FC<CarouselControlsProps> = ({
   onStepNext,
   isPlaying,
   onTogglePlaying,
+  isLoop,
+  onToggleLoop,
   scrollSpeed,
   onScrollSpeedChange,
   rotateYAngle,
@@ -83,6 +87,15 @@ export const CarouselControls: React.FC<CarouselControlsProps> = ({
               自动循环
             </span>
             <span className={`font-mono ${isPlaying ? 'text-emerald-400' : 'text-slate-400'}`}>{isPlaying ? '开启' : '关闭'}</span>
+          </button>
+
+          {/* 无限循环模式（参考项目原生体验；默认有界——首尾释放滚动权） */}
+          <button
+            onClick={onToggleLoop}
+            className="w-full flex items-center justify-between rounded-lg border border-white/15 bg-white/5 px-3 py-2 hover:bg-white/10"
+          >
+            <span>无限循环</span>
+            <span className={`font-mono ${isLoop ? 'text-emerald-400' : 'text-slate-400'}`}>{isLoop ? '开启' : '关闭'}</span>
           </button>
 
           <SliderRow label="滚动速度" value={`${scrollSpeed.toFixed(1)}x`} min={0.2} max={3} step={0.1} valueNum={scrollSpeed} onChange={onScrollSpeedChange} />

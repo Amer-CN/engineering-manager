@@ -22,12 +22,15 @@ const STAGE_HEIGHT_CLASS = 'relative w-full h-[380px] sm:h-[420px] flex items-ce
 
 interface GlassCarouselProps {
   folders: FolderItem[]
+  /** 卡片点击（选中卡/任意卡；缺省无动作——知识库首页 M2 决策纯展示） */
+  onFolderClick?: (folder: FolderItem) => void
 }
 
-export const GlassCarousel: React.FC<GlassCarouselProps> = ({ folders }) => {
+export const GlassCarousel: React.FC<GlassCarouselProps> = ({ folders, onFolderClick }) => {
   if (!folders || folders.length === 0) return null
 
   const [isPlaying, setIsPlaying] = useState(false) // §2.3：自动播放默认关闭
+  const [isLoop, setIsLoop] = useState(false) // 忠实度修复：无限循环模式（默认有界）
   const [scrollSpeed, setScrollSpeed] = useState(1)
   const [rotateYAngle, setRotateYAngle] = useState(-26)
   const [rotateXAngle, setRotateXAngle] = useState(10)
@@ -41,6 +44,7 @@ export const GlassCarousel: React.FC<GlassCarouselProps> = ({ folders }) => {
     rotateXAngle,
     isPlaying,
     scrollSpeed,
+    loop: isLoop,
   })
 
   const activeFolder = folders[engine.focusIndex] ?? folders[0]
@@ -89,6 +93,8 @@ export const GlassCarousel: React.FC<GlassCarouselProps> = ({ folders }) => {
           onStepNext={engine.stepNext}
           isPlaying={isPlaying}
           onTogglePlaying={() => setIsPlaying(v => !v)}
+          isLoop={isLoop}
+          onToggleLoop={() => setIsLoop(v => !v)}
           scrollSpeed={scrollSpeed}
           onScrollSpeedChange={setScrollSpeed}
           rotateYAngle={rotateYAngle}
@@ -116,7 +122,7 @@ export const GlassCarousel: React.FC<GlassCarouselProps> = ({ folders }) => {
         <div className="relative w-full h-full flex items-center justify-center" style={{ transformStyle: 'preserve-3d' }}>
           {folders.map((f, i) => (
             <div key={f.id} ref={engine.registerCard(i)} className="gc-card">
-              <GlassFolderCard folder={f} isActive={i === engine.focusIndex} />
+              <GlassFolderCard folder={f} isActive={i === engine.focusIndex} onClick={onFolderClick ? () => onFolderClick(f) : undefined} />
             </div>
           ))}
         </div>
