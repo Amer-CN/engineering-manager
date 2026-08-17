@@ -205,6 +205,78 @@ describe('useCarouselEngine — 有界模式', () => {
     expect(result.current.reducedMotion).toBe(true)
   })
 
+  it('loop 模式：末尾 stepNext 回绕到 0（不做有界封死）', () => {
+    const { result } = renderHook(() => useCarouselEngine({ count, loop: true }))
+    registerAll(result)
+
+    act(() => { result.current.dotGoTo(count - 1) })
+    act(() => { vi.advanceTimersByTime(2000) })
+    expect(result.current.focusIndex).toBe(count - 1)
+
+    act(() => { result.current.stepNext() })
+    act(() => { vi.advanceTimersByTime(2000) })
+    expect(result.current.focusIndex).toBe(0) // 回绕（参考项目取模语义）
+  })
+
+  it('loop 模式：末尾 wheel 朝外仍 preventDefault（无边界不释放）', () => {
+    const { result } = renderHook(() => useCarouselEngine({ count, loop: true }))
+    registerAll(result)
+
+    act(() => { result.current.dotGoTo(count - 1) })
+    act(() => { vi.advanceTimersByTime(2000) })
+
+    const evt = new WheelEvent('wheel', { deltaY: 100, cancelable: true })
+    act(() => { result.current.onWheelNative(evt) })
+    expect(evt.defaultPrevented).toBe(true) // loop 无首尾释放
+  })
+
+  it('交互忠实度：参数变化触发实时重摆（renderNow 直写卡 transform）', () => {
+    const { result, rerender } = renderHook<
+      ReturnType<typeof useCarouselEngine>,
+      { spacing: number }
+    >((props) => useCarouselEngine({ count, itemSpacing: props.spacing }), { initialProps: { spacing: 75 } })
+    registerAll(result)
+    act(() => { result.current.renderNow?.() }) // 初始摆位一次
+
+    // 卡[1] 在 spacing=75 下的 translateX
+    expect(els[1].style.transform).toContain('translate3d(75.00px')
+    // 改变 spacing → 实时重摆（无需手动 step/滚动）
+    rerender({ spacing: 100 })
+    act(() => { })
+    expect(els[1].style.transform).toContain('translate3d(100.00px')
+  })
+
+  it('交互忠实度：自动循环开启 → 自动推进播放（loop 无限）', () => {
+    const { result, rerender } = renderHook<ReturnType<typeof useCarouselEngine>, { play: boolean }>(
+      (props) => useCarouselEngine({ count, isPlaying: props.play, loop: true }),
+      { initialProps: { play: false } },
+    )
+    registerAll(result)
+    act(() => { result.current.renderNow?.() })
+
+    // 开启自动循环 → 1.5s 后应已推进到卡1（0.35/s × 1.5 ≈ 0.5，聚焦取模到 1）
+    rerender({ play: true })
+    act(() => { vi.advanceTimersByTime(1600) })
+    expect(els[1].dataset.gcActive).toBe('1')
+    expect(result.current.focusIndex).toBe(1)
+  })
+
+  it('loop 自动播放无限推进（wrap 下聚焦持续环转，不 clamp 停边界）', () => {
+    const { result, rerender } = renderHook<ReturnType<typeof useCarouselEngine>, { play: boolean }>(
+      (props) => useCarouselEngine({ count, isPlaying: props.play, loop: true }),
+      { initialProps: { play: false } },
+    )
+    registerAll(result)
+    act(() => { result.current.renderNow?.() })
+
+    rerender({ play: true })
+    // 长时间自动播放越过末尾（pos 增长超过 n）→ wrap 聚焦仍合法（不 clamp 停住）
+    act(() => { vi.advanceTimersByTime(4000) }) // pos ≈ 1.4 ≈ 5 卡 × 时间…… 0.35×4 = 1.4，仍 < 5
+    act(() => { vi.advanceTimersByTime(12000) }) // 累计 ~5.6，越过 count=5 → wrap 回
+    expect(result.current.focusIndex).toBeGreaterThanOrEqual(0)
+    expect(result.current.focusIndex).toBeLessThan(count)
+  })
+
   it('数据量变化：count 变小时位置被 clamp 回界内', () => {
     const { result, rerender } = renderHook<ReturnType<typeof useCarouselEngine>, { n: number }>(
       (props) => useCarouselEngine({ count: props.n }),
