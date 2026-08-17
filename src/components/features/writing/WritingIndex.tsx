@@ -11,23 +11,43 @@ import { usePermission, RequirePermission } from "@/hooks/usePermission";
 import { useToast } from "@/hooks/useToast";
 import {
   fetchWritingDocs,
+  fetchWritingDocTypes,
   createWritingDoc,
   deleteWritingDoc,
+  type WritingDoc,
 } from "@/services/writing-client";
+
+interface DocTypeOption {
+  code: string;
+  label: string;
+  group: string;
+}
+
+/** 拆平分组后的文体选项（单一 map 渲染，避免嵌套返回 JSX） */
+function flattenDocTypes(
+  groups: { group: string; types: { code: string; label: string }[] }[] | undefined,
+): DocTypeOption[] {
+  if (!groups) return [];
+  const out: DocTypeOption[] = [];
+  for (const g of groups) {
+    for (const t of g.types) {
+      out.push({ code: t.code, label: t.label, group: g.group });
+    }
+  }
+  return out;
+}
 
 const WritingIndex: React.FC = () => {
   const { can } = usePermission();
   const { showToast } = useToast();
-  const [docs, setDocs] = useState<unknown[]>([]);
+  const [docs, setDocs] = useState<WritingDoc[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [size] = useState(10);
-  const [docType] = useState("");
+  const [docType, setDocType] = useState("");
+  const [options, setOptions] = useState<DocTypeOption[]>([]);
   const [loading, setLoading] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<{
-    id: number;
-    title: string;
-  } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<WritingDoc | null>(null);
 
   const loadDocs = useCallback(() => {
     setLoading(true);
@@ -47,6 +67,13 @@ const WritingIndex: React.FC = () => {
   useEffect(() => {
     loadDocs();
   }, [loadDocs]);
+
+  // 文体选项（单一真源）
+  useEffect(() => {
+    void fetchWritingDocTypes().then((res) => {
+      if (res.success && res.data) setOptions(flattenDocTypes(res.data.groups));
+    });
+  }, []);
 
   const handleCreate = () => {
     if (!can("writing:create")) {
@@ -95,16 +122,37 @@ const WritingIndex: React.FC = () => {
                 写作中心
               </h1>
               <p className="text-xs" style={{ color: "var(--muted)" }}>
-                AI 起草公文、会议纪要、周报等
+                AI 起草公文、会议纪要、周报等，支持 30 种文体
               </p>
             </div>
           </div>
-          {can("writing:create") && (
-            <Button onClick={handleCreate}>
-              <Icon name="Sparkles" size={16} />
-              新建文档
-            </Button>
-          )}
+
+          <div className="flex items-center gap-2">
+            <select
+              aria-label="文体筛选"
+              value={docType}
+              onChange={(e) => {
+                setDocType(e.target.value);
+                setPage(1);
+              }}
+              className="h-9 px-3 rounded-lg text-sm border"
+              style={{ borderColor: "var(--border)", background: "var(--panel)", color: "var(--fg)" }}
+            >
+              <option value="">全部文体</option>
+              {options.map((t) => (
+                <option key={t.code} value={t.code}>
+                  {t.group} / {t.label}
+                </option>
+              ))}
+            </select>
+
+            {can("writing:create") && (
+              <Button onClick={handleCreate}>
+                <Icon name="Sparkles" size={16} />
+                新建文档
+              </Button>
+            )}
+          </div>
         </div>
 
         {loading ? (
@@ -115,30 +163,28 @@ const WritingIndex: React.FC = () => {
             title="还没有文档"
             description="点击「新建文档」开始你的第一篇公文写作"
             action={
-              can("writing:create") ? (
-                <Button onClick={handleCreate}>新建文档</Button>
-              ) : undefined
+              can("writing:create") ? <Button onClick={handleCreate}>新建文档</Button> : undefined
             }
           />
         ) : (
           <Card>
-            {docs.map((d: unknown, i: number) => (
+            {docs.map((d) => (
               <div
-                key={i}
+                key={d.id}
                 className="flex items-center justify-between px-5 py-4 border-b"
                 style={{ borderColor: "var(--border)" }}
               >
-                <span style={{ color: "var(--fg)" }}>
-                  {(d as { title?: string }).title ?? ""}
-                </span>
+                <div>
+                  <div className="text-sm font-medium" style={{ color: "var(--fg)" }}>
+                    {d.title}
+                  </div>
+                  <div className="text-xs" style={{ color: "var(--muted)" }}>
+                    {d.docType} · {formatTime(d.updatedAt)}
+                  </div>
+                </div>
                 {can("writing:delete") && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() =>
-                      setDeleteTarget(d as { id: number; title: string })
-                    }
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(d)}>
+                    <Icon name="Trash2" size={15} />
                     删除
                   </Button>
                 )}
@@ -169,5 +215,10 @@ const WritingIndex: React.FC = () => {
     </RequirePermission>
   );
 };
+
+function formatTime(s: string): string {
+  if (!s) return "";
+  return s.slice(0, 16).replace("T", " ");
+}
 
 export default WritingIndex;
