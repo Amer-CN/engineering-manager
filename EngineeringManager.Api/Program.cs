@@ -146,6 +146,7 @@ public static class ApiConfig
         builder.Services.AddSingleton<EngineeringManager.Api.Services.AgentToolService>();
         builder.Services.AddSingleton<EngineeringManager.Api.Services.AgentConversationService>();
         builder.Services.AddSingleton<EngineeringManager.Api.Services.ReportGenerationService>();
+        builder.Services.AddSingleton<EngineeringManager.Api.Services.WritingSkillService>();
         builder.Services.AddSingleton<EngineeringManager.Api.Services.UpdateService>();
 
         // v0.83 STT 语音转文字后台 worker（单并发）
@@ -441,6 +442,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
         app.RegisterKnowledgeEndpoints();
         // M3 知识库文件夹
         app.RegisterKnowledgeFolderEndpoints();
+
+        // v0.92 写作中心
+        app.RegisterWritingEndpoints();
 
         // v1.4.0 报告生成
         app.RegisterReportEndpoints();
