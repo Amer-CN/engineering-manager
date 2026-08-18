@@ -193,10 +193,12 @@ public sealed class WritingSkillService
         }
         catch (OperationCanceledException)
         {
+            Console.Error.WriteLine("[WritingSkill] AI 改写超时（45s）");
             return (false, null, "AI 改写超时（45s），请重试或缩短所选文字");
         }
         catch (Exception ex)
         {
+            Console.Error.WriteLine($"[WritingSkill] AI 改写失败: {ex.Message}");
             return (false, null, $"AI 改写失败: {Common.Sanitize(ex.Message)}");
         }
     }
@@ -313,8 +315,9 @@ public sealed class WritingSkillService
             var delta = choices[0].GetProperty("delta");
             return delta.TryGetProperty("content", out var content) ? content.GetString() : null;
         }
-        catch
+        catch (Exception ex)
         {
+            Console.Error.WriteLine($"[WritingSkill] 流式 chunk 解析失败: {ex.Message}");
             return null;
         }
     }

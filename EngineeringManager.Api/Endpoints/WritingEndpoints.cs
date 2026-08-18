@@ -88,18 +88,19 @@ public static class WritingEndpoints
                     conditions.Add("[doc_type] = @DocType");
                     p.Add("DocType", docType);
                 }
-                var where = string.Join(" AND ", conditions);
+                var filter = string.Join(" AND ", conditions);
 
                 p.Add("Size", size);
                 p.Add("Offset", offset);
 
-                var items = db.Query(@"SELECT id, title, doc_type, style_id, project_id, source_type, source_ref,
+                var items = db.Query($@"SELECT id, title, doc_type, style_id, project_id, source_type, source_ref,
                                            created_by, created_at, updated_at
                                        FROM [writing_documents]
-                                       WHERE " + where + @" ORDER BY [updated_at] DESC LIMIT @Size OFFSET @Offset",
+                                       WHERE {filter}
+                                       ORDER BY [updated_at] DESC LIMIT @Size OFFSET @Offset",
                     (object)p).ToList();
 
-                var total = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM [writing_documents] WHERE {where}", p);
+                var total = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM [writing_documents] WHERE {filter}", p);
 
                 return Results.Ok(new
                 {
