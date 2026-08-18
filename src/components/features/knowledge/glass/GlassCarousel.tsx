@@ -29,8 +29,8 @@ interface GlassCarouselProps {
 export const GlassCarousel: React.FC<GlassCarouselProps> = ({ folders, onFolderClick }) => {
   if (!folders || folders.length === 0) return null
 
-  const [isPlaying, setIsPlaying] = useState(false) // §2.3：自动播放默认关闭
-  const [isLoop, setIsLoop] = useState(false) // 忠实度修复：无限循环模式（默认有界）
+  const [isPlaying, setIsPlaying] = useState(true) // MARKER_XYZ_123 // 自动循环默认开启（参考项目原生行为，产品拍板）
+  const [isLoop, setIsLoop] = useState(true) // 无限循环默认开启：无缝环转（参考项目原生行为）
   const [scrollSpeed, setScrollSpeed] = useState(1)
   const [rotateYAngle, setRotateYAngle] = useState(-26)
   const [rotateXAngle, setRotateXAngle] = useState(10)
