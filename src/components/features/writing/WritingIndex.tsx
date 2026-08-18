@@ -11,6 +11,7 @@ import { usePermission, RequirePermission } from "@/hooks/usePermission";
 import { useToast } from "@/hooks/useToast";
 import { useWritingPrefill, type WritingPrefill } from "@/hooks/useWritingPrefill";
 import WritingEditor from "./WritingEditor";
+import WritingWizard from "./WritingWizard";
 import {
   fetchWritingDocs,
   fetchWritingDocTypes,
@@ -51,6 +52,7 @@ const WritingIndex: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<WritingDoc | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [wizardOpen, setWizardOpen] = useState(false);
 
   const loadDocs = useCallback(() => {
     setLoading(true);
@@ -83,14 +85,37 @@ const WritingIndex: React.FC = () => {
       showToast("无权限", "error");
       return;
     }
+    setWizardOpen(true);
+  };
+
+  // R1 向导：AI 起草 → 建文档 → 进编辑器自动开起草面板（素材/风格已定）
+  const handleWizardDraft = (opts: { title: string; docType: string; styleId: string; material: string }) => {
     void createWritingDoc({
-      title: "未命名文档",
-      docType: docType || undefined,
+      title: opts.title,
+      docType: opts.docType,
+      styleId: opts.styleId,
+      contentMd: "",
     }).then((res) => {
-      if (res.success) {
-        showToast("已创建", "success");
+      if (res.success && res.data?.id) {
         loadDocs();
-        if (res.data?.id) setEditingId(res.data.id);
+        sessionStorage.setItem("writing:draftMaterial", JSON.stringify({ material: opts.material, docId: res.data.id }));
+        setEditingId(res.data.id);
+      } else {
+        showToast(res.error || "新建失败", "error");
+      }
+    });
+  };
+
+  // R1 向导：空白文档 → 建文档 → 直接进编辑器手写
+  const handleWizardBlank = (opts: { title: string; docType: string }) => {
+    void createWritingDoc({
+      title: opts.title,
+      docType: opts.docType,
+      contentMd: "",
+    }).then((res) => {
+      if (res.success && res.data?.id) {
+        loadDocs();
+        setEditingId(res.data.id);
       } else {
         showToast(res.error || "新建失败", "error");
       }
@@ -163,7 +188,7 @@ const WritingIndex: React.FC = () => {
                 写作中心
               </h1>
               <p className="text-xs" style={{ color: "var(--muted)" }}>
-                AI 起草公文、会议纪要、周报等，支持 30 种文体
+                给素材让 AI 成文，或空白手写；选中文字随时 AI 改写
               </p>
             </div>
           </div>
@@ -202,7 +227,7 @@ const WritingIndex: React.FC = () => {
           <EmptyState
             icon="FileText"
             title="还没有文档"
-            description="点击「新建文档」开始你的第一篇公文写作"
+            description="选文体、给素材，AI 起草或空白手写都可以"
             action={
               can("writing:create") ? <Button onClick={handleCreate}>新建文档</Button> : undefined
             }
@@ -252,6 +277,14 @@ const WritingIndex: React.FC = () => {
           content="删除后不可恢复，确定删除？"
           confirmText="删除"
           confirmVariant="danger"
+        />
+
+        {/* R1 新建向导：文体 → 素材 → 风格 → AI 起草 / 空白手写 */}
+        <WritingWizard
+          open={wizardOpen}
+          onClose={() => setWizardOpen(false)}
+          onDraft={handleWizardDraft}
+          onBlank={handleWizardBlank}
         />
       </PageContainer>
     </RequirePermission>
