@@ -15,12 +15,12 @@ interface WritingDraftPanelProps {
 }
 
 const STYLES = [
-  { id: "S1", name: "数据驱动型", desc: "量化指标为主线，少形容词多数字" },
-  { id: "S2", name: "问题导向型", desc: "发现问题→分析→对策" },
-  { id: "S3", name: "成果清单型", desc: "举措+成效，高度结构化" },
-  { id: "S4", name: "故事叙事型", desc: "典型案例切入，增强感染力" },
-  { id: "S5", name: "高位对标型", desc: "对照上级精神/政策，政治站位" },
-  { id: "S6", name: "精要速报型", desc: "极限压缩，2-3 句/项" },
+  { id: "S6", name: "简洁", desc: "要点直给" },
+  { id: "S3", name: "标准", desc: "成果清单式" },
+  { id: "S1", name: "详实", desc: "数据详尽" },
+  { id: "S2", name: "问题导向", desc: "发现→分析→对策" },
+  { id: "S4", name: "叙事", desc: "案例切入" },
+  { id: "S5", name: "高位对标", desc: "对照上级精神" },
 ];
 
 const WritingDraftPanel: React.FC<WritingDraftPanelProps> = ({ docId, docType, styleId, material, title, onGenerated, onClose }) => {
@@ -32,6 +32,8 @@ const WritingDraftPanel: React.FC<WritingDraftPanelProps> = ({ docId, docType, s
   const [materialText, setMaterialText] = useState(material ?? "");
   const [generating, setGenerating] = useState(false);
   const [streamText, setStreamText] = useState("");
+  // 高级选项（文体/风格/详略度）：无预填时展开引导选择，有预填时收起
+  const [advanced, setAdvanced] = useState(!docType);
 
   useEffect(() => {
     void fetchWritingDocTypes().then((res) => {
@@ -99,64 +101,77 @@ const WritingDraftPanel: React.FC<WritingDraftPanelProps> = ({ docId, docType, s
           </button>
         </div>
 
-        {/* 文体（分组下拉） */}
-        <label className="text-xs font-medium block mb-1" style={{ color: "var(--fg-2)" }}>
-          文体
-        </label>
-        <select
-          value={selDocType}
-          onChange={(e) => setSelDocType(e.target.value)}
-          className="w-full h-9 px-3 rounded-lg text-sm border mb-4"
-          style={{ borderColor: "var(--border)", background: "var(--panel)", color: "var(--fg)" }}
+        {/* 高级选项：文体/风格/详略度（预填时收起） */}
+        <button
+          onClick={() => setAdvanced((v) => !v)}
+          className="flex items-center gap-1 text-xs font-medium mb-2"
+          style={{ color: "var(--muted)" }}
         >
-          <option value="">请选择文体…</option>
-          {groups.map((g) => (
-            <optgroup key={g.group} label={g.group}>
-              {g.types.map((t) => (
-                <option key={t.code} value={t.code}>
-                  {t.label}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
-
-        {/* 风格（S1-S6 单选） */}
-        <label className="text-xs font-medium block mb-1" style={{ color: "var(--fg-2)" }}>
-          风格
-        </label>
-        <div className="grid grid-cols-3 gap-2 mb-4">
-          {STYLES.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => setSelStyle(s.id)}
-              className={`px-3 py-2 rounded-lg border text-left text-xs ${
-                selStyle === s.id ? "border-[color:var(--accent)]" : ""
-              }`}
-              style={{
-                borderColor: selStyle === s.id ? "var(--accent)" : "var(--border)",
-                background: selStyle === s.id ? "var(--accent-soft)" : "var(--panel)",
-                color: "var(--fg)",
-              }}
-              title={s.desc}
+          <Icon name={advanced ? "ChevronUp" : "ChevronDown"} size={13} />
+          高级选项（文体 / 风格 / 详略度）
+        </button>
+        {advanced && (
+          <div className="mb-4">
+            {/* 文体（分组下拉） */}
+            <label className="text-xs font-medium block mb-1" style={{ color: "var(--fg-2)" }}>
+              文体
+            </label>
+            <select
+              value={selDocType}
+              onChange={(e) => setSelDocType(e.target.value)}
+              className="w-full h-9 px-3 rounded-lg text-sm border mb-3"
+              style={{ borderColor: "var(--border)", background: "var(--panel)", color: "var(--fg)" }}
             >
-              <div className="font-bold">{s.id} {s.name}</div>
-            </button>
-          ))}
-        </div>
+              <option value="">请选择文体…</option>
+              {groups.map((g) => (
+                <optgroup key={g.group} label={g.group}>
+                  {g.types.map((t) => (
+                    <option key={t.code} value={t.code}>
+                      {t.label}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
 
-        {/* 详略度 1-5 */}
-        <label className="text-xs font-medium block mb-1" style={{ color: "var(--fg-2)" }}>
-          详略度：{detail}（1=极简，5=详实）
-        </label>
-        <input
-          type="range"
-          min={1}
-          max={5}
-          value={detail}
-          onChange={(e) => setDetail(Number(e.target.value))}
-          className="w-full mb-4"
-        />
+            {/* 风格（三档优先 + 全部） */}
+            <label className="text-xs font-medium block mb-1" style={{ color: "var(--fg-2)" }}>
+              风格
+            </label>
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              {STYLES.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => setSelStyle(s.id)}
+                  className={`px-3 py-2 rounded-lg border text-left text-xs ${
+                    selStyle === s.id ? "border-[color:var(--accent)]" : ""
+                  }`}
+                  style={{
+                    borderColor: selStyle === s.id ? "var(--accent)" : "var(--border)",
+                    background: selStyle === s.id ? "var(--accent-soft)" : "var(--panel)",
+                    color: "var(--fg)",
+                  }}
+                  title={s.desc}
+                >
+                  <div className="font-bold">{s.name}</div>
+                </button>
+              ))}
+            </div>
+
+            {/* 详略度 1-5 */}
+            <label className="text-xs font-medium block mb-1" style={{ color: "var(--fg-2)" }}>
+              详略度：{detail}（1=极简，5=详实）
+            </label>
+            <input
+              type="range"
+              min={1}
+              max={5}
+              value={detail}
+              onChange={(e) => setDetail(Number(e.target.value))}
+              className="w-full"
+            />
+          </div>
+        )}
 
         {/* 素材 */}
         <label className="text-xs font-medium block mb-1" style={{ color: "var(--fg-2)" }}>
