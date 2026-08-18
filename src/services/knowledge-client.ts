@@ -215,10 +215,48 @@ export async function deleteKnowledgeDocument(id: number): Promise<ApiResponse<n
   }
 }
 
+/** POST /api/knowledge/documents — 文档入库（写作中心「存入知识库」用） */
+export async function ingestKnowledgeDocument(body: {
+  text: string
+  title: string
+  sourceType?: string
+  sourceRef?: string
+  projectId?: number
+  folderId?: number | null
+}): Promise<ApiResponse<{ documentId: number; idempotent: boolean; hasEmbeddings: boolean }>> {
+  try {
+    const token = getToken()
+    const resp = await fetch(`${API_BASE}/api/knowledge/documents`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(body),
+    })
+    if (resp.status === 401) {
+      try { localStorage.removeItem(TOKEN_KEY) } catch { /* */ }
+    }
+    if (!resp.ok) {
+      try {
+        const errBody = await resp.json()
+        if (errBody?.error) return { success: false, error: errBody.error }
+      } catch { /* */ }
+      return { success: false, error: `HTTP ${resp.status}: ${resp.statusText}` }
+    }
+    const raw = await resp.json()
+    return convertKeysToCamelCase(raw)
+  } catch (err) {
+    console.error('[Knowledge] ingestKnowledgeDocument 失败:', err)
+    return { success: false, error: String(err) }
+  }
+}
+
 /** 导出统一的 knowledgeClient */
 export const knowledgeClient = {
   searchKnowledge,
   listKnowledgeDocuments,
   getKnowledgeDocument,
   deleteKnowledgeDocument,
+  ingestKnowledgeDocument,
 }

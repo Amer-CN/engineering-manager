@@ -39,6 +39,7 @@ export type PermissionResource =
   | 'drawings'
   | 'knowledge'
   | 'voice'
+  | 'writing'
   | 'reports'
   | 'settings'
   | 'users'
@@ -110,6 +111,7 @@ export const SYSTEM_ROLES: Role[] = [
       'audit_logs:read', 'audit_logs:export',
       'reports:create', 'reports:read',
       'labor:read', 'safeQuery:read', 'knowledge:read', 'knowledge:create', 'knowledge:update', 'knowledge:delete', 'voice:read',
+      'writing:read', 'writing:create', 'writing:update', 'writing:delete',
     ],
   },
   {
@@ -133,6 +135,7 @@ export const SYSTEM_ROLES: Role[] = [
       'drawings:create', 'drawings:read', 'drawings:update',
       'reports:create', 'reports:read',
       'labor:read', 'safeQuery:read', 'knowledge:read', 'knowledge:create', 'knowledge:update', 'knowledge:delete', 'voice:read',
+      'writing:read', 'writing:create', 'writing:update', 'writing:delete',
     ],
   },
   {
@@ -284,6 +287,7 @@ export const RESOURCE_LABELS: Record<PermissionResource, string> = {
   drawings: '图纸管理',
   knowledge: '知识库',
   voice: '语音转文字',
+  writing: '写作中心',
   reports: '报告生成',
   settings: '系统设置',
   users: '用户管理',
