@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/compone
 import { useToastContext } from '@/hooks/useToast'
 import { useKnowledgeFolders } from '@/hooks/data/useKnowledgeFolders'
 import { maskKnowledgeText } from '@/utils/knowledgeTextMask'
+import { writeWritingPrefill } from '@/hooks/useWritingPrefill'
 import type { SttJobDetail, SttSegment } from '@/services/stt-client'
 
 interface TranscriptEditorProps {
@@ -132,6 +133,23 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
     setShowFolderPicker(true)
   }
 
+  // W3：生成会议纪要 → 跳写作中心，预填素材/文体/source_ref
+  const handleWriteMinutes = () => {
+    const text = displayText?.trim()
+    if (!text) {
+      showToast('转写内容为空，无法生成会议纪要', 'error')
+      return
+    }
+    writeWritingPrefill({
+      material: text,
+      docType: 'minutes_items',
+      styleId: 'S1',
+      sourceType: 'stt',
+      sourceRef: String(job.id),
+      title: `${title.trim() || '会议'}纪要`,
+    })
+  }
+
   const displayText = useMemo(() => {
     if (segments.length > 0) {
       return rebuildFullText(segments)
@@ -229,6 +247,14 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
           leftIcon="Database"
         >
           存入知识库
+        </Button>
+        <Button
+          variant="primary"
+          size="md"
+          onClick={handleWriteMinutes}
+          leftIcon="PenLine"
+        >
+          生成会议纪要
         </Button>
         {hasChanges && (
           <span className="text-xs text-warning-500">有未保存的修改</span>
