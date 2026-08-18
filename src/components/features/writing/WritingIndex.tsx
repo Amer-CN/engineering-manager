@@ -9,6 +9,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { NoAccessState } from "@/components/ui/NoAccessState";
 import { usePermission, RequirePermission } from "@/hooks/usePermission";
 import { useToast } from "@/hooks/useToast";
+import { useWritingPrefill, type WritingPrefill } from "@/hooks/useWritingPrefill";
 import WritingEditor from "./WritingEditor";
 import {
   fetchWritingDocs,
@@ -95,6 +96,35 @@ const WritingIndex: React.FC = () => {
       }
     });
   };
+
+  // W3：消费外部预填（如语音页「生成会议纪要」）→ 自动建文档并进编辑器
+  const handlePrefill = (p: WritingPrefill) => {
+    if (!can("writing:create")) {
+      showToast("无权限", "error");
+      return;
+    }
+    void createWritingDoc({
+      title: p.title || "会议纪要",
+      docType: p.docType || "minutes_items",
+      styleId: p.styleId || "S1",
+      sourceType: p.sourceType || "stt",
+      sourceRef: p.sourceRef,
+      contentMd: "",
+    }).then((res) => {
+      if (res.success) {
+        showToast("已创建，可开始起草", "success");
+        loadDocs();
+        if (res.data?.id) {
+          // 把素材暂存到 sessionStorage，由编辑器读入填充素材
+          sessionStorage.setItem("writing:draftMaterial", JSON.stringify({ material: p.material ?? "", docId: res.data.id }));
+          setEditingId(res.data.id);
+        }
+      } else {
+        showToast(res.error || "创建失败", "error");
+      }
+    });
+  };
+  useWritingPrefill(handlePrefill);
 
   const handleDelete = () => {
     if (!deleteTarget) return;
