@@ -8,7 +8,7 @@
  * M2 演示数据已下线（demoData.ts 删除）。
  */
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect } from 'react'
 import PageContainer from '@/components/ui/PageContainer'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -20,8 +20,7 @@ import { useToastContext } from '@/hooks/useToast'
 import { usePermission } from '@/hooks/usePermission'
 import { useProjects } from '@/hooks/data/useProjects'
 import { useKnowledgeFolders, useCreateKnowledgeFolder } from '@/hooks/data/useKnowledgeFolders'
-import { GlassCarousel } from './glass/GlassCarousel'
-import type { FolderItem } from './glass/types'
+import { KnowledgeCarouselStage } from './glass-integration/KnowledgeCarouselStage'
 import KnowledgeLibrary from './KnowledgeLibrary'
 
 const KnowledgeHomePage: React.FC = () => {
@@ -49,20 +48,7 @@ const KnowledgeHomePage: React.FC = () => {
     }
   }, [])
 
-  // API 文件夹 → 轮播模型：memberCount=文档数、englishTitle=english_name、progress 可空（M3 补强 ⑤）
-  const carouselFolders: FolderItem[] = useMemo(
-    () => (folders ?? []).map((f) => ({
-      id: String(f.id),
-      title: f.name,
-      englishTitle: f.englishName ?? undefined,
-      period: f.category ?? '知识库',
-      progress: null,
-      memberCount: f.docCount,
-      category: f.category ?? '知识库',
-      documents: [],
-    })),
-    [folders],
-  )
+
 
   const handleCreateFolder = async () => {
     const name = newFolderName.trim()
@@ -115,8 +101,8 @@ const KnowledgeHomePage: React.FC = () => {
             <span>加载文件夹中...</span>
           </div>
         </Card>
-      ) : carouselFolders.length > 0 ? (
-        <GlassCarousel folders={carouselFolders} />
+      ) : (folders ?? []).length > 0 ? (
+        <KnowledgeCarouselStage folders={folders ?? []} />
       ) : (
         <Card padding="lg" shadow="sm" className="mb-4">
           <EmptyState
