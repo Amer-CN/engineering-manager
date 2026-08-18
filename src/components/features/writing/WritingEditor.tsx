@@ -10,6 +10,9 @@ import { Markdown } from "@tiptap/markdown";
 import { Icon } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/hooks/useToast";
+import { ingestKnowledgeDocument } from "@/services/knowledge-client";
+import { exportMarkdownAsDocx } from "@/utils/docxExport";
+import WritingDraftPanel from "./WritingDraftPanel";
 import {
   fetchWritingDoc,
   updateWritingDoc,
@@ -54,6 +57,8 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
   const [slashQuery, setSlashQuery] = useState("");
   const [aiBusy, setAiBusy] = useState(false);
   const [aiMenu, setAiMenu] = useState<{ top: number; left: number } | null>(null);
+  const [draftOpen, setDraftOpen] = useState(false);
+  const [draftMaterial, setDraftMaterial] = useState("");
   const saveTimer = useRef<number | null>(null);
 
   // ── 编辑器（Markdown 序列化由 @tiptap/markdown 的 storage.markdown 提供）──
@@ -105,6 +110,18 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
         setDoc(res.data);
         setTitle(res.data.title);
         editor?.commands.setContent(res.data.contentMd || "");
+        // W3：若存在匹配本文档的起草素材（语音页「生成会议纪要」预填），自动打开起草面板
+        try {
+          const raw = sessionStorage.getItem("writing:draftMaterial");
+          if (raw) {
+            const dm = JSON.parse(raw) as { material: string; docId: number };
+            if (dm.docId === docId) {
+              sessionStorage.removeItem("writing:draftMaterial");
+              setDraftMaterial(dm.material);
+              setDraftOpen(true);
+            }
+          }
+        } catch { /* 忽略坏 JSON */ }
       } else {
         showToast(res.error || "加载失败", "error");
       }
@@ -120,6 +137,37 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
     setSaveState(res.success ? "saved" : "idle");
     if (!res.success) showToast(res.error || "保存失败", "error");
   }, [editor, docId, title, showToast]);
+
+  // W3：存入知识库
+  const handleIngestToKnowledge = async () => {
+    if (!editor) return;
+    const md = (editor.storage.markdown as unknown as { getMarkdown: () => string }).getMarkdown();
+    if (!md.trim()) {
+      showToast("内容为空，无法入库", "error");
+      return;
+    }
+    const res = await ingestKnowledgeDocument({
+      text: md,
+      title: title.trim() || "未命名文档",
+      sourceType: doc?.sourceType === "stt" ? "call" : "manual",
+      sourceRef: doc?.sourceRef ?? undefined,
+      projectId: doc?.projectId ?? undefined,
+    });
+    if (res.success) {
+      showToast(`已存入知识库（文档 #${res.data?.documentId ?? ""}）`, "success");
+    } else {
+      showToast(res.error || "入库失败", "error");
+    }
+  };
+
+  // W3：导出 docx
+  const handleExportDocx = () => {
+    if (!editor) return;
+    const md = (editor.storage.markdown as unknown as { getMarkdown: () => string }).getMarkdown();
+    void exportMarkdownAsDocx(md, title.trim() || "未命名文档").catch(() => {
+      showToast("导出失败", "error");
+    });
+  };
 
   // 卸载前：若还有未触发的防抖保存，立即落盘（避免最后一击丢失）
   useEffect(() => {
@@ -218,7 +266,39 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
         <span className="text-xs shrink-0" style={{ color: "var(--muted)" }}>
           {saveState === "saving" ? "保存中…" : saveState === "saved" ? "已保存" : ""}
         </span>
+        {/* W3：AI 起草 / 存入知识库 / 导出 docx */}
+        <div className="flex items-center gap-2 shrink-0">
+          <Button variant="ghost" size="sm" onClick={() => setDraftOpen(true)}>
+            <Icon name="Sparkles" size={15} />
+            起草
+          </Button>
+          <Button variant="ghost" size="sm" onClick={handleIngestToKnowledge}>
+            <Icon name="Database" size={15} />
+            存知识库
+          </Button>
+          <Button variant="ghost" size="sm" onClick={handleExportDocx}>
+            <Icon name="FileDown" size={15} />
+            导出
+          </Button>
+        </div>
       </div>
+
+      {/* 起草面板（W3） */}
+      {draftOpen && (
+        <WritingDraftPanel
+          docId={docId}
+          docType={doc?.docType}
+          styleId={doc?.styleId ?? undefined}
+          material={draftMaterial || undefined}
+          title={title}
+          onGenerated={(content) => {
+            editor?.commands.setContent(content);
+            setDraftOpen(false);
+            void saveDoc();
+          }}
+          onClose={() => setDraftOpen(false)}
+        />
+      )}
 
       {/* 编辑器 */}
       <div className="flex-1 overflow-y-auto px-8 py-6">
