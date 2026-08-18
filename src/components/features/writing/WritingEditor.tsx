@@ -10,6 +10,7 @@ import { Markdown } from "@tiptap/markdown";
 import { Icon } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/hooks/useToast";
+import { usePermission } from "@/hooks/usePermission";
 import { ingestKnowledgeDocument } from "@/services/knowledge-client";
 import { exportMarkdownAsDocx } from "@/utils/docxExport";
 import WritingDraftPanel from "./WritingDraftPanel";
@@ -50,6 +51,7 @@ interface WritingEditorProps {
 
 const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
   const { showToast } = useToast();
+  const { can } = usePermission();
   const [doc, setDoc] = useState<WritingDoc | null>(null);
   const [title, setTitle] = useState("");
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
@@ -272,10 +274,12 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
             <Icon name="Sparkles" size={15} />
             起草
           </Button>
-          <Button variant="ghost" size="sm" onClick={handleIngestToKnowledge}>
-            <Icon name="Database" size={15} />
-            存知识库
-          </Button>
+          {can("knowledge:create") && (
+            <Button variant="ghost" size="sm" onClick={handleIngestToKnowledge}>
+              <Icon name="Database" size={15} />
+              存知识库
+            </Button>
+          )}
           <Button variant="ghost" size="sm" onClick={handleExportDocx}>
             <Icon name="FileDown" size={15} />
             导出
