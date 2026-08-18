@@ -1,0 +1,164 @@
+/**
+ * writing-client.ts — 写作中心 API 客户端
+ *
+ * 后端 WritingEndpoints，snake_case 出参经 api-client convertKeysToCamelCase 转 camelCase。
+ */
+
+import { apiClient } from './api-client'
+
+// ═══════════════════════════════════════════════════════════════════
+// 类型
+// ═══════════════════════════════════════════════════════════════════
+
+export interface WritingDocType {
+  code: string
+  label: string
+  group: string
+}
+
+export interface WritingStyleOption {
+  id: string
+  name: string
+  description: string
+}
+
+export interface WritingDocTypesResponse {
+  groups: { group: string; types: { code: string; label: string }[] }[]
+  styles: WritingStyleOption[]
+}
+
+export interface WritingDoc {
+  id: number
+  title: string
+  docType: string
+  styleId: string | null
+  projectId: number | null
+  sourceType: string
+  sourceRef: string | null
+  contentMd: string
+  createdBy: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface WritingListResponse {
+  total: number
+  page: number
+  size: number
+  items: WritingDoc[]
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// API
+// ═══════════════════════════════════════════════════════════════════
+
+/** 文体 / 风格可选项（单源真值，后端 WritingSkillService 提供） */
+export function fetchWritingDocTypes(): Promise<{ success: boolean; data?: WritingDocTypesResponse; error?: string }> {
+  return apiClient.get<WritingDocTypesResponse>('/api/writing/doc-types')
+}
+
+/** 文档列表（分页 + 文体过滤） */
+export function fetchWritingDocs(params: { docType?: string; page?: number; size?: number } = {}): Promise<{
+  success: boolean
+  data?: WritingListResponse
+  error?: string
+}> {
+  const q = new URLSearchParams()
+  if (params.docType) q.set('docType', params.docType)
+  if (params.page) q.set('page', String(params.page))
+  if (params.size) q.set('size', String(params.size))
+  const suffix = q.toString() ? `?${q.toString()}` : ''
+  return apiClient.get<WritingListResponse>(`/api/writing/documents${suffix}`)
+}
+
+/** 文档详情 */
+export function fetchWritingDoc(id: number): Promise<{ success: boolean; data?: WritingDoc; error?: string }> {
+  return apiClient.get<WritingDoc>(`/api/writing/documents/${id}`)
+}
+
+/** 新建文档 */
+export function createWritingDoc(body: {
+  title: string
+  docType?: string
+  styleId?: string
+  contentMd?: string
+  projectId?: number
+  sourceType?: string
+  sourceRef?: string
+}): Promise<{ success: boolean; data?: { id: number; createdAt: string }; error?: string }> {
+  return apiClient.post<{ id: number; createdAt: string }>('/api/writing/documents', body)
+}
+
+/** 保存编辑 */
+export function updateWritingDoc(id: number, body: { title?: string; contentMd?: string; projectId?: number }): Promise<{
+  success: boolean
+  data?: unknown
+  error?: string
+}> {
+  return apiClient.put<unknown>(`/api/writing/documents/${id}`, body)
+}
+
+/** 软删 */
+export function deleteWritingDoc(id: number): Promise<{ success: boolean; error?: string }> {
+  return apiClient.del<unknown>(`/api/writing/documents/${id}`)
+}
+
+/** 行内改写：返回替换文本 */
+export function writingAssist(body: {
+  instruction: string
+  selectedText: string
+  customInstruction?: string
+  docType?: string
+  styleId?: string
+  contextBefore?: string
+  protectedSpans?: string[]
+}): Promise<{ success: boolean; data?: { text: string }; error?: string }> {
+  return apiClient.post<{ text: string }>('/api/writing/assist', body)
+}
+
+/**
+ * 整篇起草（SSE 流式优先，失败退非流式）。
+ * events: {type:'content',text} | {type:'done',content} | {type:'error',error}
+ */
+export async function streamingDraft(
+  body: {
+    docType: string
+    title?: string
+    audience?: string
+    material: string
+    styleId: string
+    detailLevel: number
+  },
+  onEvent: (e: { type: 'content'; text: string } | { type: 'done'; content: string } | { type: 'error'; error: string }) => void,
+): Promise<boolean> {
+  try {
+    const resp = await fetch('/api/writing/draft', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    if (!resp.ok || !resp.body) return false
+    const reader = resp.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      let idx: number
+      while ((idx = buffer.indexOf('\n')) >= 0) {
+        const line = buffer.slice(0, idx).trim()
+        buffer = buffer.slice(idx + 1)
+        if (!line.startsWith('data: ')) continue
+        try {
+          onEvent(JSON.parse(line.slice(6)))
+        } catch {
+          /* 忽略坏帧 */
+        }
+      }
+    }
+    return true
+  } catch {
+    return false
+  }
+}

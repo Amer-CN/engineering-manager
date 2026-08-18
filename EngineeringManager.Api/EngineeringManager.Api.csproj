@@ -43,6 +43,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Migrations\Scripts\*.sql" />
+    <EmbeddedResource Include="Resources\WritingSkill\*.md" />
   </ItemGroup>
 
   <!--
