@@ -121,12 +121,15 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
     if (!res.success) showToast(res.error || "保存失败", "error");
   }, [editor, docId, title, showToast]);
 
-  // 卸载前清掉未触发的保存计时器
+  // 卸载前：若还有未触发的防抖保存，立即落盘（避免最后一击丢失）
   useEffect(() => {
     return () => {
-      if (saveTimer.current) window.clearTimeout(saveTimer.current);
+      if (saveTimer.current) {
+        window.clearTimeout(saveTimer.current);
+        void saveDoc();
+      }
     };
-  }, []);
+  }, [saveDoc]);
 
   // ── 斜杠菜单：插入块 ──
   const slashItems: SlashItem[] = [
@@ -144,7 +147,15 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
   );
 
   const runSlash = (item: SlashItem) => {
-    if (editor) item.run(editor);
+    if (editor) {
+      // 删除刚输入的 "/"（光标前一个字符），再执行命令
+      const { from } = editor.state.selection;
+      const before = editor.state.doc.textBetween(from - 1, from, " ");
+      if (before === "/") {
+        editor.chain().focus().deleteRange({ from: from - 1, to: from }).run();
+      }
+      item.run(editor);
+    }
     setSlashOpen(false);
   };
 
