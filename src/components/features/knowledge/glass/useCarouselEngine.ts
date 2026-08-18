@@ -191,12 +191,18 @@ export function useCarouselEngine({
         ? ((Math.round(pos) % n) + n) % n
         : clamp(Math.round(pos), 0, Math.max(0, n - 1))
       for (const [i, el] of cardElsRef.current) {
-        // loop：物理卡到虚拟位置的环形最近距离（参考项目 slot % n 语义）
-        let offset = i - pos
+        // loop：物理卡到虚拟位置的环形最近距离（参考项目 slot % n 语义）。
+        // 必须先把 pos 归一化到 [0, n)——若直接用无限增长的 pos 减完只做一次 ±n 调整，
+        // pos 超过 n + n/2 后一次调整不够，offset 整体漂移 → 卡片全部飘出屏幕（真机已复现）
+        let offset: number
         if (isLoop) {
+          const posMod = ((pos % n) + n) % n
           const half = n / 2
-          if (offset > half) offset -= n
+          offset = i - posMod
+          if (offset >= half) offset -= n
           else if (offset < -half) offset += n
+        } else {
+          offset = i - pos
         }
         const outOfWindow = isLoop
           ? Math.abs(offset) > R
@@ -388,13 +394,15 @@ export function useCarouselEngine({
     return fn
   }
 
-  // —— 实时预览（交互忠实度）：旋转/间距/loop 变化 → 立即重摆；播放开关 → 唤醒 rAF ——
+  // —— 实时预览（交互忠实度）：旋转/间距/loop 变化 → 立即重摆；播放相关变化 → 唤醒 rAF ——
+  // kick 幂等（runningRef 守卫）：isPlaying/loop/scrollSpeed 任一变化时确保循环在跑，
+  // 覆盖「有界播到边界引擎自停后切 loop」这条此前不会重新 kick 的路径
   useEffect(() => {
     engine.renderFrame()
   }, [itemSpacing, rotateYAngle, rotateXAngle, loop, engine])
   useEffect(() => {
     if (isPlaying) engine.kick()
-  }, [isPlaying, engine])
+  }, [isPlaying, loop, scrollSpeed, engine])
 
   // 数据量变化：clamp 位置与聚焦，防越界
   useEffect(() => {

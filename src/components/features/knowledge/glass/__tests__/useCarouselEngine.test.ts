@@ -277,6 +277,33 @@ describe('useCarouselEngine — 有界模式', () => {
     expect(result.current.focusIndex).toBeLessThan(count)
   })
 
+  it('loop 长时间自动播放无飘移（真机 bug 回归：pos 超过 n 后卡片不得漂出屏幕）', () => {
+    const { result, rerender } = renderHook<ReturnType<typeof useCarouselEngine>, { play: boolean }>(
+      (props) => useCarouselEngine({ count, isPlaying: props.play, loop: true }),
+      { initialProps: { play: false } },
+    )
+    registerAll(result)
+    act(() => { result.current.renderNow?.() })
+
+    rerender({ play: true })
+    // 累计 pos ≈ 0.35 × 18s = 6.3，远超 count=5 —— 老代码此处 offset 单次调整不够、
+    // 全部卡漂出屏幕；新代码（pos 先归一化到 [0,n)）所有卡必须留在环形窗口内
+    act(() => { vi.advanceTimersByTime(18000) })
+
+    const spacing = 75
+    const bound = (count / 2 + 0.6) * spacing // 环形半圈 + 余量
+    for (const el of els) {
+      expect(el.style.visibility).not.toBe('hidden')
+      const m = el.style.transform.match(/translate3d\((-?[\d.]+)px/)
+      expect(m).not.toBeNull()
+      const x = Math.abs(parseFloat(m![1]))
+      expect(x).toBeLessThanOrEqual(bound)
+    }
+    // 聚焦始终合法
+    expect(result.current.focusIndex).toBeGreaterThanOrEqual(0)
+    expect(result.current.focusIndex).toBeLessThan(count)
+  })
+
   it('数据量变化：count 变小时位置被 clamp 回界内', () => {
     const { result, rerender } = renderHook<ReturnType<typeof useCarouselEngine>, { n: number }>(
       (props) => useCarouselEngine({ count: props.n }),

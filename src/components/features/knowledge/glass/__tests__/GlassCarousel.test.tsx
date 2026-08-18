@@ -59,12 +59,21 @@ describe('GlassCarousel — 舞台渲染', () => {
     expect(screen.getByRole('button', { name: '下一个文件夹' })).toBeInTheDocument()
   })
 
+  it('自动循环默认开启：渲染后无需任何操作即自动推进（参考项目原生行为）', async () => {
+    vi.useFakeTimers()
+    render(<GlassCarousel folders={FIXTURES} />)
+    act(() => { vi.advanceTimersByTime(1600) }) // 0.35/s × 1.6s ≈ 0.56 → 聚焦 1
+    const dots = screen.getAllByRole('button', { name: /第 \d 个文件夹/ })
+    expect(dots[1].className).toContain('gc-dot--active')
+    vi.useRealTimers()
+  })
+
   it('点下一个 → 聚焦变化（lerp 收敛后第二个圆点选中）', async () => {
     vi.useFakeTimers()
     render(<GlassCarousel folders={FIXTURES} />)
 
     fireEvent.click(screen.getByRole('button', { name: '下一个文件夹' }))
-    act(() => { vi.advanceTimersByTime(2000) })
+    act(() => { vi.advanceTimersByTime(700) }) // 收敛即断言（autoplay 默认开着会继续推进）
 
     const dots = screen.getAllByRole('button', { name: /第 \d 个文件夹/ })
     expect(dots[1].className).toContain('gc-dot--active')
@@ -77,7 +86,7 @@ describe('GlassCarousel — 舞台渲染', () => {
     render(<GlassCarousel folders={FIXTURES} />)
 
     fireEvent.click(screen.getAllByRole('button', { name: /第 \d 个文件夹/ })[4])
-    act(() => { vi.advanceTimersByTime(2000) })
+    act(() => { vi.advanceTimersByTime(700) })
 
     expect(screen.getAllByText('结算与支付凭证').length).toBeGreaterThan(0)
     vi.useRealTimers()
