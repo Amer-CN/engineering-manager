@@ -35,6 +35,7 @@ export type PageId =
   | 'knowledge'
   | 'voice'
   | 'writing'
+  | 'carouselDemo'
   | 'reports'
   | 'settings'
   | 'users'
@@ -200,6 +201,12 @@ export const routes: RouteMeta[] = [
     icon: 'PenLine',
     shortcut: 'G X',
     description: '公文起草与文档写作',
+  },
+  {
+    id: 'carouselDemo',
+    label: '轮播演示',
+    icon: 'Sparkles',
+    description: '3D 玻璃文件夹轮播（参考项目复刻演示）',
   },
   {
     id: 'reports',

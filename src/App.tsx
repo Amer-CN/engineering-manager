@@ -35,6 +35,7 @@ const Inventory = lazy(() => import('./components/Inventory'))
 const Invoices = lazy(() => import('./components/Invoices'))
 const KnowledgeHomePage = lazy(() => import('./components/features/knowledge/KnowledgeHomePage'))
 const VoiceTranscribePage = lazy(() => import('./components/features/voice/VoiceTranscribePage'))
+const CarouselDemoPage = lazy(() => import('./components/features/carousel-demo/CarouselDemoPage'))
 const WritingIndex = lazy(() => import('./components/features/writing/WritingIndex'))
 const ReportsPage = lazy(() => import('./components/features/reports/ReportsIndex'))
 const Settings = lazy(() => import('./components/Settings'))
@@ -304,6 +305,7 @@ const AppContent: React.FC = () => {
       case 'invoices': return <Invoices {...props} />
       case 'knowledge': return <RequirePermission permission="knowledge:read" fallback={<NoAccessState />}><KnowledgeHomePage /></RequirePermission>
       case 'voice': return <RequirePermission permission="voice:read" fallback={<NoAccessState />}><VoiceTranscribePage /></RequirePermission>
+      case 'carouselDemo': return <CarouselDemoPage />
       case 'writing': return <RequirePermission permission="writing:read" fallback={<NoAccessState />}><WritingIndex /></RequirePermission>
       case 'reports': return <RequirePermission permission="reports:create" fallback={<NoAccessState />}><ReportsPage /></RequirePermission>
       case 'users': return <RequireAdmin fallback={<NoAccessState description="用户管理仅限管理员访问。" />}><Users /></RequireAdmin>
