@@ -70,8 +70,10 @@ const WritingDraftPanel: React.FC<WritingDraftPanelProps> = ({ docId, docType, s
         }
       },
     ).then((ok) => {
-      if (!ok && !generating) {
-        // fetch 网络失败且未收到 done
+      // SSE 网络失败 / 流静默中断：复位 generating，避免按钮卡 loading
+      if (!ok) {
+        setGenerating(false);
+        showToast("生成连接失败，请重试", "error");
       }
     });
   };
