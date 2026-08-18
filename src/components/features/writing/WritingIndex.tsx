@@ -9,6 +9,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { NoAccessState } from "@/components/ui/NoAccessState";
 import { usePermission, RequirePermission } from "@/hooks/usePermission";
 import { useToast } from "@/hooks/useToast";
+import WritingEditor from "./WritingEditor";
 import {
   fetchWritingDocs,
   fetchWritingDocTypes,
@@ -48,6 +49,7 @@ const WritingIndex: React.FC = () => {
   const [options, setOptions] = useState<DocTypeOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<WritingDoc | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   const loadDocs = useCallback(() => {
     setLoading(true);
@@ -87,6 +89,7 @@ const WritingIndex: React.FC = () => {
       if (res.success) {
         showToast("已创建", "success");
         loadDocs();
+        if (res.data?.id) setEditingId(res.data.id);
       } else {
         showToast(res.error || "新建失败", "error");
       }
@@ -105,6 +108,14 @@ const WritingIndex: React.FC = () => {
       }
     });
   };
+
+  if (editingId != null) {
+    return (
+      <RequirePermission permission="writing:update" fallback={<NoAccessState />}>
+        <WritingEditor docId={editingId} onBack={() => { setEditingId(null); loadDocs(); }} />
+      </RequirePermission>
+    );
+  }
 
   return (
     <RequirePermission permission="writing:read" fallback={<NoAccessState />}>
@@ -171,8 +182,9 @@ const WritingIndex: React.FC = () => {
             {docs.map((d) => (
               <div
                 key={d.id}
-                className="flex items-center justify-between px-5 py-4 border-b"
+                className="flex items-center justify-between px-5 py-4 border-b cursor-pointer hover:bg-[color:var(--panel-2)]"
                 style={{ borderColor: "var(--border)" }}
+                onClick={() => setEditingId(d.id)}
               >
                 <div>
                   <div className="text-sm font-medium" style={{ color: "var(--fg)" }}>
