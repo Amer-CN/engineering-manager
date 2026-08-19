@@ -47,21 +47,10 @@ export const KnowledgeCarouselStage: React.FC<KnowledgeCarouselStageProps> = ({
 
   return (
     <div
-      className="gc-stage-iso relative w-full overflow-hidden select-none rounded-3xl"
-      style={{ background: 'var(--bg)' }}
+      className="gc-stage-iso relative w-full select-none"
+      style={{ background: 'transparent' }}
     >
-      {/* 背景氛围光（原版 AmbientView 语义，铺在主题背景上） */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[140px]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[300px] bg-emerald-500/15 rounded-full blur-[160px]" />
-        <div
-          className={`absolute inset-0 ${
-            isDark
-              ? 'bg-gradient-to-b from-black/25 via-transparent to-black/20'
-              : 'bg-gradient-to-b from-transparent via-transparent to-transparent'
-          }`}
-        />
-      </div>
+      {/* 零背景（用户拍板）：无任何氛围光/光晕——3D 文件夹直接悬浮在应用背景上 */}
 
       <div className="relative min-h-[calc(100vh-3rem)] flex flex-col justify-between">
         {/* 右上工具行（原版头部右侧语义：新建文件夹；主题适配配色） */}
@@ -72,8 +61,7 @@ export const KnowledgeCarouselStage: React.FC<KnowledgeCarouselStageProps> = ({
               className="px-4 py-2.5 rounded-2xl text-xs font-semibold backdrop-blur-md transition-all flex items-center gap-2 border shadow-lg"
               style={{
                 background: 'var(--card)',
-                borderColor: 'var(--border)',
-                color: 'var(--fg)',
+          color: 'var(--fg)',
               }}
             >
               <span className="text-emerald-500 text-base leading-none">+</span>
@@ -114,8 +102,7 @@ export const KnowledgeCarouselStage: React.FC<KnowledgeCarouselStageProps> = ({
 
         {/* 底部状态条（原版 footer 语义：当前聚焦 + 查看并管理文件夹文档） */}
         <footer
-          className="relative z-30 px-6 sm:px-10 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 border-t"
-          style={{ borderColor: 'var(--border)' }}
+          className="relative z-30 px-6 sm:px-10 py-4 flex flex-col sm:flex-row items-center justify-between gap-3"
         >
           <div className="flex items-center gap-3 text-xs">
             <span
