@@ -71,8 +71,7 @@ export const KnowledgeCarouselStage: React.FC<KnowledgeCarouselStageProps> = ({
               className="px-4 py-2.5 rounded-2xl text-xs font-semibold backdrop-blur-md transition-all flex items-center gap-2 border shadow-lg"
               style={{
                 background: 'var(--card)',
-                borderColor: 'var(--border)',
-                color: 'var(--fg)',
+          color: 'var(--fg)',
               }}
             >
               <span className="text-emerald-500 text-base leading-none">+</span>
@@ -113,8 +112,7 @@ export const KnowledgeCarouselStage: React.FC<KnowledgeCarouselStageProps> = ({
 
         {/* 底部状态条（原版 footer 语义：当前聚焦 + 查看并管理文件夹文档） */}
         <footer
-          className="relative z-30 px-6 sm:px-10 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 border-t"
-          style={{ borderColor: 'var(--border)' }}
+          className="relative z-30 px-6 sm:px-10 py-4 flex flex-col sm:flex-row items-center justify-between gap-3"
         >
           <div className="flex items-center gap-3 text-xs">
             <span
