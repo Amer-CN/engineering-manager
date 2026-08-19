@@ -49,6 +49,18 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
   const startIndex = useRef<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
+  // 容器宽度监听：卡片轨道半径按实际宽度自适应（边缘卡贴边进出，用户拍板 A）
+  const [containerWidth, setContainerWidth] = useState(1200);
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => setContainerWidth(el.clientWidth);
+    update();
+    if (typeof ResizeObserver === 'undefined') return; // jsdom 测试环境无 RO，用初值
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // Calculate actual active original index
   const normalizedIndex = Math.round(virtualIndex);
@@ -410,7 +422,8 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
           }}
         >
           {(() => {
-            const VISIBLE_RADIUS = 8;
+            // 轨道半径自适应容器宽：保证边缘卡正好顶到容器左右边界（而非居中留白）
+            const VISIBLE_RADIUS = Math.min(24, Math.max(4, Math.ceil((containerWidth / 2) / itemSpacing) + 1));
             const currentSlot = Math.round(virtualIndex);
             const minSlot = currentSlot - VISIBLE_RADIUS;
             const maxSlot = currentSlot + VISIBLE_RADIUS;
@@ -450,7 +463,8 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
               const rotateZ = -3 - activeFactor * 2.5 + offset * 0.2;
 
               // Opacity fade strictly for extreme edge items
-              const opacity = absOffset <= 6 ? 1 : Math.max(0, 1 - (absOffset - 6) * 0.25);
+              const fadeStart = VISIBLE_RADIUS - 2;
+              const opacity = absOffset <= fadeStart ? 1 : Math.max(0, 1 - (absOffset - fadeStart) * 0.25);
 
               return (
                 <div
