@@ -67,9 +67,9 @@ vi.mock('../KnowledgeLibrary', () => ({
   },
 }))
 
-// Mock GlassCarousel — 3D 轮播舞台（jsdom 无真实 3D；舞台自身测试在 glass/__tests__ 覆盖）
-vi.mock('../glass/GlassCarousel', () => ({
-  GlassCarousel: () => React.createElement('div', { 'data-testid': 'gc-stage' }, '轮播舞台'),
+// Mock KnowledgeCarouselStage — 3D 轮播舞台（jsdom 无真实 3D；引擎为参考项目原版，视觉验证走浏览器实测）
+vi.mock('../glass-integration/KnowledgeCarouselStage', () => ({
+  KnowledgeCarouselStage: () => React.createElement('div', { 'data-testid': 'gc-stage' }, '轮播舞台'),
 }))
 
 // Mock 数据层 hooks（M3 真实数据；测试聚焦页面接线）

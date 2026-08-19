@@ -19,8 +19,8 @@ import { DrawingsGallery } from './features/drawings/DrawingsGallery'
 import { DrawingViewer } from './features/drawings/DrawingViewer'
 import { useDrawingsView } from './features/drawings/useDrawingsView'
 import { buildDrawingStackGroups, STACK_GROUP_LIMIT } from './features/drawings/drawingStackGroups'
-import { GlassCarousel } from './features/knowledge/glass/GlassCarousel'
-import type { FolderItem } from './features/knowledge/glass/types'
+import { FolderCarousel } from './features/knowledge/glass-integration/FolderCarousel'
+import type { FolderItem } from './features/knowledge/glass-integration/types'
 
 interface DrawingsProps {
   refresh?: () => void
@@ -246,13 +246,13 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
   const stackAllowed = stackGroups.length > 0 && stackGroups.length <= STACK_GROUP_LIMIT
   const effectiveView = viewMode === 'stack' && !stackAllowed ? 'list' : viewMode
 
-  // 轮播分组数据 → GlassCarousel 模型（memberCount=张数、progress 可空）
+  // 轮播分组数据 → 参考项目 FolderItem 模型（memberCount=张数）
   const carouselFolders: FolderItem[] = useMemo(
     () => stackGroups.map(g => ({
       id: String(g.id),
       title: g.name,
       period: g.meta ?? '图纸分组',
-      progress: null,
+      progress: 60,
       memberCount: Number(g.primaryValue) || 0,
       category: g.name,
       documents: [],
@@ -338,8 +338,10 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
 
   {/* 图纸列表 / 画廊 / GlassCarousel 堆叠舞台 */}
   {effectiveView === 'stack' ? (
-  /* Stage-Surface 舞台区：只做导航与概览，打开分组回扁平列表 */
-  <GlassCarousel folders={carouselFolders} onFolderClick={handleStackOpen} />
+  /* Stage-Surface 舞台区：只做导航与概览，打开分组回扁平列表（参考项目原版引擎） */
+  <div className="bg-black rounded-2xl overflow-hidden">
+    <FolderCarousel folders={carouselFolders} theme="dark" onFolderClick={handleStackOpen} />
+  </div>
   ) : filteredDrawings.length > 0 ? (
   viewMode === 'gallery' ? (
   <DrawingsGallery
