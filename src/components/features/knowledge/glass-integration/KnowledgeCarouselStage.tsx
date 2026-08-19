@@ -48,7 +48,7 @@ export const KnowledgeCarouselStage: React.FC<KnowledgeCarouselStageProps> = ({
   return (
     <div
       className="gc-stage-iso relative w-full select-none"
-      style={{ background: 'transparent' }}
+      style={{ background: 'var(--bg)' }}
     >
       {/* 背景氛围光：应用自己的柔光色（--accent-soft 随三主题自动变），融合而非照搬 demo 的 emerald —— 接缝修复：背景融为一体 */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
