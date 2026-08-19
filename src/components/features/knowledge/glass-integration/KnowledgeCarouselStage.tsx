@@ -47,8 +47,13 @@ export const KnowledgeCarouselStage: React.FC<KnowledgeCarouselStageProps> = ({
 
   return (
     <div
-      className="gc-stage-iso relative w-full overflow-hidden select-none rounded-3xl"
-      style={{ background: 'var(--bg)' }}
+      className="gc-stage-iso relative w-full overflow-hidden select-none"
+      style={{
+        background: 'var(--card)',
+        borderRadius: '16px',
+        border: '1px solid var(--border)',
+        boxShadow: 'var(--shadow-card, 0 1px 3px rgba(0,0,0,0.05))',
+      }}
     >
       {/* 背景氛围光（原版 AmbientView 语义，铺在主题背景上） */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
