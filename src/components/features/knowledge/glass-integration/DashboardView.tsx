@@ -39,7 +39,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <main className="flex-1 flex flex-col min-w-0 overflow-y-auto">
 
         {/* Workspace Body Grid */}
-        <div className="p-8 space-y-6">
+        <div className="pb-4 space-y-4">
           {/* Metric Stats Header Cards (4 Top Cards) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className={`p-5 rounded-3xl border flex items-center justify-between ${isDark ? 'bg-zinc-900/70 border-zinc-800' : 'bg-white border-zinc-200/80 shadow-sm'}`}>
