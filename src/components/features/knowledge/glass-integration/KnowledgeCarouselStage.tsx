@@ -50,17 +50,7 @@ export const KnowledgeCarouselStage: React.FC<KnowledgeCarouselStageProps> = ({
       className="gc-stage-iso relative w-full select-none"
       style={{ background: 'transparent' }}
     >
-      {/* 背景氛围光：应用自己的柔光色（--accent-soft 随三主题自动变），融合而非照搬 demo 的 emerald —— 接缝修复：背景融为一体 */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div
-          className="absolute top-0 left-1/4 w-[500px] h-[500px] rounded-full blur-[200px] opacity-35"
-          style={{ background: 'var(--accent-soft)' }}
-        />
-        <div
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[300px] rounded-full blur-[220px] opacity-35"
-          style={{ background: 'var(--accent-soft)' }}
-        />
-      </div>
+      {/* 零背景（用户拍板）：无任何氛围光/光晕——3D 文件夹直接悬浮在应用背景上 */}
 
       <div className="relative min-h-[calc(100vh-3rem)] flex flex-col justify-between">
         {/* 右上工具行（原版头部右侧语义：新建文件夹；主题适配配色） */}

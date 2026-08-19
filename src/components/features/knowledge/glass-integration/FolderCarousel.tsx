@@ -400,11 +400,8 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
           perspectiveOrigin: '50% 50%',
         }}
       >
-        {/* Subtle Ambient Stage Glow Floor */}
-        <div
-          className="absolute bottom-6 w-[80%] h-12 blur-3xl rounded-full pointer-events-none"
-          style={{ background: 'var(--accent-soft)' }}
-        />
+
+        {/* 零背景（用户拍板）：地光已删 */}
 
         <div
           className="relative w-full h-full flex items-center justify-center"
