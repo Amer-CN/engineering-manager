@@ -12,7 +12,6 @@
  */
 
 import React, { useState, useEffect } from 'react'
-import PageContainer from '@/components/ui/PageContainer'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
@@ -80,22 +79,27 @@ const KnowledgeHomePage: React.FC = () => {
   }
 
   return (
-    <PageContainer maxWidth="full">
-      {/* 页头：与应用其他页面同款（标题 + 副标题）——接缝修复：进页面先"打招呼" */}
-      <section className="flex items-end justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-base font-semibold tracking-tight" style={{ color: 'var(--fg)' }}>知识库</h1>
-          <p className="text-sm mt-1.5" style={{ color: 'var(--muted)' }}>共 {items.length} 个文件夹</p>
-        </div>
-      </section>
+    <div className="w-full">
+      {/* 页头：与其他页面同款（带页边距） */}
+      <div className="px-6 mx-auto max-w-[1600px]">
+        <section className="flex items-end justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-base font-semibold tracking-tight" style={{ color: 'var(--fg)' }}>知识库</h1>
+            <p className="text-sm mt-1.5" style={{ color: 'var(--muted)' }}>共 {items.length} 个文件夹</p>
+          </div>
+        </section>
+      </div>
 
+      {/* 舞台：全幅无边距铺满（用户拍板：与界面融为一体，去一圈边距） */}
       {isLoading ? (
+        <div className="px-6 mx-auto max-w-[1600px]">
         <Card padding="lg" shadow="sm">
           <div className="flex items-center gap-2 text-sm py-10 justify-center" style={{ color: 'var(--muted)' }}>
             <Icon name="Loader2" size={16} className="animate-spin" />
             <span>加载文件夹中...</span>
           </div>
         </Card>
+        </div>
       ) : items.length > 0 ? (
         <KnowledgeCarouselStage
           folders={items}
@@ -103,6 +107,7 @@ const KnowledgeHomePage: React.FC = () => {
           onAddFolder={can('knowledge:create') ? () => setShowCreate(true) : undefined}
         />
       ) : (
+        <div className="px-6 mx-auto max-w-[1600px]">
         <Card padding="lg" shadow="sm">
           <EmptyState
             icon="Library"
@@ -117,6 +122,7 @@ const KnowledgeHomePage: React.FC = () => {
             }
           />
         </Card>
+        </div>
       )}
 
       {/* 新建文件夹（原版弹窗 → 真实入库） */}
@@ -134,7 +140,7 @@ const KnowledgeHomePage: React.FC = () => {
         onClose={() => setDetailFolder(null)}
         theme={carouselTheme}
       />
-    </PageContainer>
+    </div>
   )
 }
 
