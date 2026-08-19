@@ -1,13 +1,14 @@
 /**
- * WritingWizard — 新建文档向导（R1 交互重设计）
+ * WritingWizard — 新建文档向导（R2：右侧 Drawer 形态）
  *
- * 三步一屏：高频文体大卡片（≤8 + 更多折叠）→ 素材输入 → 风格三档
- * 双出路并排：「AI 起草」（进编辑器流式生成）/「空白文档」（纯手动写）
- * 后端 30 种文体契约不变，仅前端收拢展示。
+ * 形态对齐仓库/发票的表单惯例（S17 Drawer 480px 侧滑）：
+ *   · 纵向步骤：高频文体卡（≤8）→ 更多文体折叠 → 标题/素材 → 风格三档
+ *   · footer 固定「空白文档（手写）/ AI 起草」双出路
+ *   · dirty 防误关：选了文体或写了素材，Esc/遮罩/X 先弹确认
  */
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Drawer } from "@/components/ui/Drawer";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { useToast } from "@/hooks/useToast";
@@ -37,7 +38,7 @@ const PINNED_TYPES = [
 /** 风格三档 → 后端 S1-S6 映射 */
 const STYLE_TIERS = [
   { tier: "简洁", styleId: "S6", desc: "要点直给，适合日常快报" },
-  { tier: "标准", styleId: "S3", desc: "成果清单式，结构清晰（推荐）", recommended: true },
+  { tier: "标准", styleId: "S3", desc: "成果清单式，结构清晰（推荐）" },
   { tier: "详实", styleId: "S1", desc: "数据详尽，适合正式汇报" },
 ];
 
@@ -66,6 +67,8 @@ const WritingWizard: React.FC<WritingWizardProps> = ({ open, onClose, onDraft, o
 
   const selected = PINNED_TYPES.find((t) => t.code === docType) ?? moreTypes.find((t) => t.code === docType);
   const selectedLabel = selected?.label ?? "";
+  // 选了文体或写了任何内容 = 有进度，误关需确认
+  const dirty = !!docType || !!title.trim() || !!material.trim();
 
   const reset = () => {
     setDocType("");
@@ -91,15 +94,33 @@ const WritingWizard: React.FC<WritingWizardProps> = ({ open, onClose, onDraft, o
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) { reset(); onClose(); } }}>
-      <DialogContent className="sm:max-w-2xl max-h-[88vh] overflow-y-auto">
-        <DialogTitle>新建文档</DialogTitle>
-        <DialogDescription>选文体 → 给素材 → AI 起草或空白手写，两条路都行</DialogDescription>
-
+    <Drawer
+      open={open}
+      onClose={() => { reset(); onClose(); }}
+      icon="PenLine"
+      title="新建文档"
+      dirty={dirty}
+      width={480}
+      footer={
+        <div className="flex items-center gap-2 w-full">
+          <Button variant="outline" className="flex-1" onClick={handleBlank}>
+            <Icon name="PenLine" size={15} />
+            空白文档（手写）
+          </Button>
+          <Button className="flex-1" onClick={handleDraft}>
+            <Icon name="Sparkles" size={15} />
+            AI 起草
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-5">
         {/* ① 文体 */}
-        <div className="pt-3">
-          <div className="text-xs font-medium mb-2" style={{ color: "var(--fg-2)" }}>① 选文体</div>
-          <div className="grid grid-cols-4 gap-2">
+        <section>
+          <div className="text-xs font-medium mb-2" style={{ color: "var(--fg-2)" }}>
+            ① 选文体
+          </div>
+          <div className="grid grid-cols-2 gap-2">
             {PINNED_TYPES.map((t) => (
               <button
                 key={t.code}
@@ -110,13 +131,14 @@ const WritingWizard: React.FC<WritingWizardProps> = ({ open, onClose, onDraft, o
                   background: docType === t.code ? "var(--accent-soft)" : "var(--panel)",
                 }}
               >
-                <Icon name={t.icon} size={18} />
-                <div className="text-sm font-medium mt-1.5" style={{ color: "var(--fg)" }}>{t.label}</div>
-                <div className="text-xs mt-0.5 leading-tight" style={{ color: "var(--muted)" }}>{t.desc}</div>
+                <div className="flex items-center gap-2">
+                  <Icon name={t.icon} size={16} />
+                  <span className="text-sm font-medium" style={{ color: "var(--fg)" }}>{t.label}</span>
+                </div>
+                <div className="text-xs mt-1 leading-tight" style={{ color: "var(--muted)" }}>{t.desc}</div>
               </button>
             ))}
           </div>
-          {/* 更多文体（折叠） */}
           <button
             onClick={() => setShowMore((v) => !v)}
             className="mt-2 text-xs flex items-center gap-1"
@@ -127,7 +149,7 @@ const WritingWizard: React.FC<WritingWizardProps> = ({ open, onClose, onDraft, o
           </button>
           {showMore && (
             <div className="mt-2 max-h-44 overflow-y-auto rounded-lg border p-2" style={{ borderColor: "var(--border)" }}>
-              <div className="grid grid-cols-3 gap-1.5">
+              <div className="grid grid-cols-2 gap-1.5">
                 {moreTypes.map((t) => (
                   <button
                     key={t.code}
@@ -146,11 +168,13 @@ const WritingWizard: React.FC<WritingWizardProps> = ({ open, onClose, onDraft, o
               </div>
             </div>
           )}
-        </div>
+        </section>
 
         {/* ② 标题 + 素材 */}
-        <div className="pt-4">
-          <div className="text-xs font-medium mb-2" style={{ color: "var(--fg-2)" }}>② 标题与素材（AI 起草时必填素材）</div>
+        <section>
+          <div className="text-xs font-medium mb-2" style={{ color: "var(--fg-2)" }}>
+            ② 标题与素材（AI 起草时必填素材）
+          </div>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -161,21 +185,23 @@ const WritingWizard: React.FC<WritingWizardProps> = ({ open, onClose, onDraft, o
           <textarea
             value={material}
             onChange={(e) => setMaterial(e.target.value)}
-            placeholder={"列出关键信息即可，AI 来成文：\n· 时间/地点/事项\n· 关键数据（用 [[双括号]] 括住的数字不会被改动）\n· 涉及人员/单位\n\n例：8月12日项目部召开安全专题会，参会[[42]]人，排查隐患[[15]]项，已整改[[12]]项，剩余[[3]]项本周五前完成。"}
+            placeholder={"列出关键信息即可，AI 来成文：\n· 时间/地点/事项\n· 关键数据（用 [[双括号]] 括住的数字不会被改动）\n· 涉及人员/单位\n\n例：8月12日项目部召开安全专题会，参会[[42]]人，排查隐患[[15]]项，已整改[[12]]项。"}
             className="w-full min-h-[110px] p-3 text-sm rounded-lg border resize-y"
             style={{ borderColor: "var(--border)", background: "var(--panel)", color: "var(--fg)" }}
           />
-        </div>
+        </section>
 
         {/* ③ 风格（仅 AI 起草用） */}
-        <div className="pt-4">
-          <div className="text-xs font-medium mb-2" style={{ color: "var(--fg-2)" }}>③ 风格（AI 起草时生效）</div>
-          <div className="grid grid-cols-3 gap-2">
+        <section>
+          <div className="text-xs font-medium mb-2" style={{ color: "var(--fg-2)" }}>
+            ③ 风格（AI 起草时生效）
+          </div>
+          <div className="space-y-2">
             {STYLE_TIERS.map((s) => (
               <button
                 key={s.tier}
                 onClick={() => setStyleId(s.styleId)}
-                className="rounded-lg border px-3 py-2 text-left"
+                className="w-full rounded-lg border px-3 py-2 text-left"
                 style={{
                   borderColor: styleId === s.styleId ? "var(--accent)" : "var(--border)",
                   background: styleId === s.styleId ? "var(--accent-soft)" : "var(--panel)",
@@ -183,28 +209,15 @@ const WritingWizard: React.FC<WritingWizardProps> = ({ open, onClose, onDraft, o
               >
                 <div className="text-sm font-medium" style={{ color: "var(--fg)" }}>
                   {s.tier}
-                  {s.recommended && <span className="ml-1 text-xs" style={{ color: "var(--accent)" }}>推荐</span>}
+                  {s.styleId === "S3" && <span className="ml-1 text-xs" style={{ color: "var(--accent)" }}>推荐</span>}
                 </div>
                 <div className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>{s.desc}</div>
               </button>
             ))}
           </div>
-        </div>
-
-        {/* 双出路 */}
-        <div className="flex items-center justify-end gap-2 pt-5">
-          <Button variant="ghost" onClick={onClose}>取消</Button>
-          <Button variant="outline" onClick={handleBlank}>
-            <Icon name="PenLine" size={15} />
-            空白文档（手写）
-          </Button>
-          <Button onClick={handleDraft}>
-            <Icon name="Sparkles" size={15} />
-            AI 起草
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </section>
+      </div>
+    </Drawer>
   );
 };
 
