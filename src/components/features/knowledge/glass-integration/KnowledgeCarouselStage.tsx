@@ -52,9 +52,9 @@ export const KnowledgeCarouselStage: React.FC<KnowledgeCarouselStageProps> = ({
     >
       {/* 零背景（用户拍板）：无任何氛围光/光晕——3D 文件夹直接悬浮在应用背景上 */}
 
-      <div className="relative min-h-[calc(100vh-3rem)] flex flex-col justify-between">
+      <div className="relative flex flex-col justify-between">
         {/* 右上工具行（原版头部右侧语义：新建文件夹；主题适配配色） */}
-        <div className="relative z-30 flex justify-end gap-3 px-6 sm:px-12 pt-6">
+        <div className="relative z-30 flex justify-end gap-3 px-6 sm:px-12">
           {onAddFolder && (
             <button
               onClick={onAddFolder}
@@ -102,7 +102,7 @@ export const KnowledgeCarouselStage: React.FC<KnowledgeCarouselStageProps> = ({
 
         {/* 底部状态条（原版 footer 语义：当前聚焦 + 查看并管理文件夹文档） */}
         <footer
-          className="relative z-30 px-6 sm:px-10 py-4 flex flex-col sm:flex-row items-center justify-between gap-3"
+          className="relative z-30 px-6 sm:px-10 py-2 flex flex-col sm:flex-row items-center justify-between gap-3"
         >
           <div className="flex items-center gap-3 text-xs">
             <span
