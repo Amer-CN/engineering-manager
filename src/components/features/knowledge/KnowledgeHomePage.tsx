@@ -81,6 +81,14 @@ const KnowledgeHomePage: React.FC = () => {
 
   return (
     <PageContainer maxWidth="full">
+      {/* 页头：与应用其他页面同款（标题 + 副标题）——接缝修复：进页面先"打招呼" */}
+      <section className="flex items-end justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-base font-semibold tracking-tight" style={{ color: 'var(--fg)' }}>知识库</h1>
+          <p className="text-sm mt-1.5" style={{ color: 'var(--muted)' }}>共 {items.length} 个文件夹</p>
+        </div>
+      </section>
+
       {isLoading ? (
         <Card padding="lg" shadow="sm">
           <div className="flex items-center gap-2 text-sm py-10 justify-center" style={{ color: 'var(--muted)' }}>
