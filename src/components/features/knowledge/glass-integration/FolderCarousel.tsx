@@ -8,6 +8,7 @@ interface FolderCarouselProps {
   folders: FolderItem[];
   theme?: 'dark' | 'light';
   onSelectFolder?: (folder: FolderItem) => void;
+  onFolderClick?: (folder: FolderItem) => void;
   selectedFolderId?: string;
 }
 
@@ -15,6 +16,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
   folders,
   theme = 'dark',
   onSelectFolder,
+  onFolderClick,
   selectedFolderId,
 }) => {
   // If no folders provided
@@ -219,7 +221,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
 
   const handleCardClick = (slot: number, folder: FolderItem) => {
     targetIndexRef.current = slot;
-    if (onSelectFolder) onSelectFolder(folder);
+    if (onFolderClick) onFolderClick(folder);
   };
 
   return (
