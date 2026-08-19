@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { Drawer } from "@/components/ui/Drawer";
@@ -11,6 +11,8 @@ interface WritingDraftPanelProps {
   styleId?: string;
   material?: string;
   title?: string;
+  /** 素材已预填时挂载后自动触发生成（一步到位，免二次点击） */
+  autoStart?: boolean;
   onGenerated: (content: string) => void;
   onClose: () => void;
 }
@@ -24,7 +26,7 @@ const STYLES = [
   { id: "S5", name: "高位对标", desc: "对照上级精神" },
 ];
 
-const WritingDraftPanel: React.FC<WritingDraftPanelProps> = ({ docId, docType, styleId, material, title, onGenerated, onClose }) => {
+const WritingDraftPanel: React.FC<WritingDraftPanelProps> = ({ docId, docType, styleId, material, title, autoStart, onGenerated, onClose }) => {
   const { showToast } = useToast();
   const [groups, setGroups] = useState<WritingDocTypesResponse["groups"]>([]);
   const [selDocType, setSelDocType] = useState(docType ?? "");
@@ -41,6 +43,15 @@ const WritingDraftPanel: React.FC<WritingDraftPanelProps> = ({ docId, docType, s
       if (res.success && res.data) setGroups(res.data.groups ?? []);
     });
   }, []);
+
+  // 一步到位：素材预填时挂载后自动触发生成
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (!autoStart || autoStarted.current) return;
+    autoStarted.current = true;
+    handleGenerate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStart]);
 
   const handleGenerate = () => {
     if (!selDocType) {
@@ -113,7 +124,7 @@ const WritingDraftPanel: React.FC<WritingDraftPanelProps> = ({ docId, docType, s
         </div>
       }
     >
-      <div className="space-y-4">
+      <div className="space-y-4" style={{ padding: "20px 24px" }}>
 
         {/* 高级选项：文体/风格/详略度（预填时收起） */}
         <button
