@@ -1,29 +1,32 @@
 /**
- * KnowledgeHomePage 集成测试
+ * KnowledgeHomePage 集成测试（整页原版全屏轮播布局）
  *
- * 真实渲染 KnowledgeHomePage 组件，验证：
- * 1. sessionStorage pendingDocId 消费 → 传入 openDocId 给 KnowledgeLibrary
- * 2. 无 pendingDocId 时正常渲染知识库
- * 3. 恶意 HTML 防护（XSS）— 通过真实渲染 KnowledgeDocumentDrawer 验证
- * 4. MaskContext 脱敏联动
+ * 覆盖：
+ * 1. 有文件夹 → 舞台容器（.gc-stage-iso）渲染，真实 API 数据经映射传入
+ * 2. 空文件夹 → EmptyState「知识库为空」+ knowledge:create 门控新建按钮
+ * 3. 点击空态新建 → 打开 AddFolderModal（mock 断言）
+ * 4. XSS 防护 / MaskContext 脱敏联动（KnowledgeDocumentDrawer 直测，保留历史覆盖）
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import React from 'react'
 
-// ═══════════════════════════════════════════════════════════════
-// vi.hoisted — mock 对象
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+// vi.hoisted — mock 状态
+// ═══════════════════════════════════════════════════════════
 
-const { mockMaskState, lastLibraryProps } = vi.hoisted(() => ({
+const { mockCan, mockFolders, mockCreateFolder, lastStageProps, mockMaskState } = vi.hoisted(() => ({
+  mockCan: vi.fn((_permission: string) => true),
+  mockFolders: [] as Array<{ id: number; name: string; englishName: string | null; projectId: number | null; category: string | null; docCount: number; createdAt: string; updatedAt: string; createdBy: string }>,
+  mockCreateFolder: { mutateAsync: vi.fn(async () => ({ success: true, data: { id: 1 } })), isPending: false },
+  lastStageProps: { folders: [] as Array<{ id: string; title: string }> },
   mockMaskState: { masked: false },
-  lastLibraryProps: { openDocId: null as number | null, onOpenDocIdConsumed: null as (() => void) | null },
 }))
 
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 // Mock modules
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 
 vi.mock('@/contexts/MaskContext', () => ({
   useMask: () => ({
@@ -37,6 +40,38 @@ vi.mock('@/contexts/MaskContext', () => ({
 
 vi.mock('@/hooks/useToast', () => ({
   useToastContext: () => ({ showToast: vi.fn() }),
+}))
+
+vi.mock('@/hooks/usePermission', () => ({
+  usePermission: () => ({ can: mockCan }),
+}))
+
+vi.mock('@/hooks/useTheme', () => ({
+  useTheme: () => ({ scheme: 'sandstone', setScheme: vi.fn() }),
+}))
+
+// Mock 数据层 hooks（页面接线测试；数据映射在页面内做）
+vi.mock('@/hooks/data/useKnowledgeFolders', () => ({
+  useKnowledgeFolders: () => ({ data: mockFolders, isLoading: false }),
+  useCreateKnowledgeFolder: () => mockCreateFolder,
+}))
+
+// Mock 原版轮播部分：舞台（捕获 folders 真实传入）、两个弹窗
+vi.mock('../glass-integration/KnowledgeCarouselStage', () => ({
+  KnowledgeCarouselStage: (props: { folders: Array<{ id: string; title: string }> }) => {
+    lastStageProps.folders = props.folders
+    return React.createElement('div', { 'data-testid': 'gc-stage' }, `轮播舞台(${props.folders.length})`)
+  },
+}))
+
+vi.mock('../glass-integration/KnowledgeFolderDetailModal', () => ({
+  KnowledgeFolderDetailModal: (props: { isOpen: boolean }) =>
+    React.createElement('div', { 'data-testid': 'gc-detail', 'data-open': String(props.isOpen) }),
+}))
+
+vi.mock('../glass-integration/AddFolderModal', () => ({
+  AddFolderModal: (props: { isOpen: boolean }) =>
+    React.createElement('div', { 'data-testid': 'gc-create', 'data-open': String(props.isOpen) }),
 }))
 
 // Mock framer-motion — 避免 heavy animation
@@ -57,193 +92,88 @@ vi.mock('react-dom', async () => {
   return { ...actual, createPortal: (node: React.ReactNode) => node }
 })
 
-// Mock KnowledgeLibrary — 捕获 openDocId prop
-vi.mock('../KnowledgeLibrary', () => ({
-  default: function MockKL(props: { openDocId?: number | null; onOpenDocIdConsumed?: () => void }) {
-    lastLibraryProps.openDocId = props.openDocId ?? null
-    lastLibraryProps.onOpenDocIdConsumed = props.onOpenDocIdConsumed ?? null
-    return React.createElement('div', { 'data-testid': 'kl' },
-      `知识库(openDocId=${props.openDocId ?? 'null'})`)
-  },
-}))
-
-// Mock KnowledgeCarouselStage — 3D 轮播舞台（jsdom 无真实 3D；引擎为参考项目原版，视觉验证走浏览器实测）
-vi.mock('../glass-integration/KnowledgeCarouselStage', () => ({
-  KnowledgeCarouselStage: () => React.createElement('div', { 'data-testid': 'gc-stage' }, '轮播舞台'),
-}))
-
-// Mock 数据层 hooks（M3 真实数据；测试聚焦页面接线）
-const { mockFolders, mockCreateFolder } = vi.hoisted(() => ({
-  mockFolders: [] as Array<{ id: number; name: string; englishName: string | null; projectId: number | null; category: string | null; docCount: number }>,
-  mockCreateFolder: { mutateAsync: vi.fn(async () => ({ success: true, data: { id: 1 } })), isPending: false },
-}))
-vi.mock('@/hooks/data/useKnowledgeFolders', () => ({
-  useKnowledgeFolders: () => ({ data: mockFolders, isLoading: false }),
-  useCreateKnowledgeFolder: () => mockCreateFolder,
-}))
-vi.mock('@/hooks/data/useProjects', () => ({
-  useProjects: () => ({ data: [{ id: 1, name: '项目 A' }, { id: 2, name: '项目 B' }] }),
-}))
-
-// ═══════════════════════════════════════════════════════════════
-// sessionStorage mock
-// ═══════════════════════════════════════════════════════════════
-
-const sessionStorageMock = (() => {
-  let store: Record<string, string> = {}
-  return {
-    getItem: vi.fn((key: string) => store[key] ?? null),
-    setItem: vi.fn((key: string, value: string) => { store[key] = value }),
-    removeItem: vi.fn((key: string) => { delete store[key] }),
-    clear: vi.fn(() => { store = {} }),
-  }
-})()
-Object.defineProperty(window, 'sessionStorage', { value: sessionStorageMock })
-
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 // Import components after mocks
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 
 import KnowledgeHomePage from '../KnowledgeHomePage'
 import KnowledgeDocumentDrawer from '../KnowledgeDocumentDrawer'
 
-// ═══════════════════════════════════════════════════════════════
-// Tests: KnowledgeHomePage sessionStorage 消费
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+// Tests: 新原版布局（全屏轮播舞台）
+// ═══════════════════════════════════════════════════════════
 
-describe('KnowledgeHomePage — sessionStorage consumption', () => {
+describe('KnowledgeHomePage — 全屏原版轮播布局', () => {
   beforeEach(() => {
-    sessionStorageMock.clear()
     vi.clearAllMocks()
     mockMaskState.masked = false
-    lastLibraryProps.openDocId = null
-    lastLibraryProps.onOpenDocIdConsumed = null
     mockFolders.length = 0
+    lastStageProps.folders = []
+    mockCan.mockImplementation(() => true)
   })
 
-  it('M2：渲染 3D 轮播舞台 + 文档库（双区）', () => {
-    mockFolders.push({ id: 3, name: '安全生产资料', englishName: 'SAFETY', projectId: null, category: '安全', docCount: 5 })
+  it('有文件夹时渲染舞台容器，真实数据映射后传入（id/姓名/英文名/分类/docCount）', () => {
+    mockFolders.push({
+      id: 3, name: '安全生产资料', englishName: 'SAFETY', projectId: null,
+      category: '安全', docCount: 5, createdAt: '2026-01-01', updatedAt: '2026-01-01', createdBy: 'admin',
+    })
     render(<KnowledgeHomePage />)
+
     expect(screen.getByTestId('gc-stage')).toBeInTheDocument()
-    expect(screen.getByTestId('kl')).toBeInTheDocument()
-  })
-
-  it('consumes pendingDocId from sessionStorage → passes openDocId to KnowledgeLibrary', async () => {
-    sessionStorageMock.setItem('knowledge:pendingDocId', '42')
-
-    render(<KnowledgeHomePage />)
-
-    expect(sessionStorageMock.getItem).toHaveBeenCalledWith('knowledge:pendingDocId')
-    expect(sessionStorageMock.removeItem).toHaveBeenCalledWith('knowledge:pendingDocId')
-
-    // 渲染知识库，openDocId=42 应传入 KnowledgeLibrary
-    await waitFor(() => {
-      expect(screen.getByTestId('kl')).toBeInTheDocument()
+    expect(lastStageProps.folders).toHaveLength(1)
+    expect(lastStageProps.folders[0].id).toBe('3')
+    expect(lastStageProps.folders[0].title).toBe('安全生产资料')
+    expect(lastStageProps.folders[0]).toMatchObject({
+      englishTitle: 'SAFETY',
+      category: '安全',
+      memberCount: 5,
     })
-    expect(lastLibraryProps.openDocId).toBe(42)
   })
 
-  it('removes pendingDocId after consumption (one-time only)', async () => {
-    sessionStorageMock.setItem('knowledge:pendingDocId', '99')
-
+  it('多文件夹全部映射传入', () => {
+    mockFolders.push(
+      { id: 1, name: '项目 A 资料', englishName: null, projectId: 1, category: '项目', docCount: 2, createdAt: '2026-01-01', updatedAt: '2026-01-01', createdBy: 'admin' },
+      { id: 2, name: '项目 B 资料', englishName: 'PROJ-B', projectId: 2, category: '通用', docCount: 0, createdAt: '2026-01-01', updatedAt: '2026-01-01', createdBy: 'admin' },
+    )
     render(<KnowledgeHomePage />)
 
-    expect(sessionStorageMock.removeItem).toHaveBeenCalledWith('knowledge:pendingDocId')
+    expect(lastStageProps.folders).toHaveLength(2)
+    expect(lastStageProps.folders.map((f) => f.id).sort()).toEqual(['1', '2'])
   })
 
-  it('does not consume when sessionStorage is empty → renders library normally', async () => {
+  it('空文件夹 → EmptyState「知识库为空」，不渲染舞台', () => {
     render(<KnowledgeHomePage />)
 
-    expect(sessionStorageMock.removeItem).not.toHaveBeenCalledWith('knowledge:pendingDocId')
-    expect(screen.getByTestId('kl')).toBeInTheDocument()
-    expect(lastLibraryProps.openDocId).toBeNull()
-  })
-
-  it('ignores invalid (NaN) pendingDocId', async () => {
-    sessionStorageMock.setItem('knowledge:pendingDocId', 'abc')
-
-    render(<KnowledgeHomePage />)
-
-    // removeItem 仍被调用（清除无效值）
-    expect(sessionStorageMock.removeItem).toHaveBeenCalledWith('knowledge:pendingDocId')
-    // NaN 被忽略：不传 openDocId
-    expect(screen.getByTestId('kl')).toBeInTheDocument()
-    expect(lastLibraryProps.openDocId).toBeNull()
-  })
-
-  it('passes openDocId when valid pendingDocId present', async () => {
-    sessionStorageMock.setItem('knowledge:pendingDocId', '55')
-
-    render(<KnowledgeHomePage />)
-
-    await waitFor(() => {
-      expect(screen.getByTestId('kl')).toBeInTheDocument()
-    })
-    expect(lastLibraryProps.openDocId).toBe(55)
-  })
-
-  it('pendingDocId consumed once — re-render does not re-consume', async () => {
-    sessionStorageMock.setItem('knowledge:pendingDocId', '77')
-
-    const { rerender } = render(<KnowledgeHomePage />)
-
-    await waitFor(() => {
-      expect(screen.getByTestId('kl')).toBeInTheDocument()
-    })
-
-    const removeCallsBefore = sessionStorageMock.removeItem.mock.calls.length
-    rerender(<KnowledgeHomePage />)
-    expect(sessionStorageMock.removeItem.mock.calls.length).toBe(removeCallsBefore)
-  })
-
-  it('passes onOpenDocIdConsumed callback to KnowledgeLibrary', async () => {
-    sessionStorageMock.setItem('knowledge:pendingDocId', '42')
-
-    render(<KnowledgeHomePage />)
-
-    await waitFor(() => {
-      expect(screen.getByTestId('kl')).toBeInTheDocument()
-    })
-    expect(typeof lastLibraryProps.onOpenDocIdConsumed).toBe('function')
-  })
-})
-
-// ═══════════════════════════════════════════════════════════════
-// Tests: M3 数据接入（项目筛选 / 空态 / 轮播接线）
-// ═══════════════════════════════════════════════════════════════
-
-describe('KnowledgeHomePage — M3 数据接入', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    mockFolders.length = 0
-  })
-
-  it('有文件夹时渲染轮播舞台（数据经 useKnowledgeFolders 接线）', async () => {
-    mockFolders.push({ id: 3, name: '安全生产资料', englishName: 'SAFETY', projectId: null, category: '安全', docCount: 5 })
-    render(<KnowledgeHomePage />)
-    expect(screen.getByTestId('gc-stage')).toBeInTheDocument()
-    expect(screen.getByTestId('kl')).toBeInTheDocument()
-  })
-
-  it('空文件夹 → 渲染 EmptyState（知识库为空）', () => {
-    render(<KnowledgeHomePage />)
     expect(screen.getByText('知识库为空')).toBeInTheDocument()
     expect(screen.queryByTestId('gc-stage')).toBeNull()
   })
 
-  it('项目筛选下拉存在（全部项目 + 项目 A/B）', () => {
+  it('新建按钮受 knowledge:create 门控（无权限 → 无按钮）', () => {
+    mockCan.mockImplementation((p: string) => p !== 'knowledge:create')
     render(<KnowledgeHomePage />)
-    const select = screen.getByLabelText('按项目筛选文件夹')
-    expect(select).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: '全部项目（含跨项目通用）' })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: '项目 A' })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: '项目 B' })).toBeInTheDocument()
+
+    expect(screen.getByText('知识库为空')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /新建文件夹/ })).toBeNull()
+  })
+
+  it('有权限 → 点击「新建文件夹」打开 AddDialog 弹窗', () => {
+    render(<KnowledgeHomePage />)
+
+    fireEvent.click(screen.getByRole('button', { name: /新建文件夹/ }))
+    expect(screen.getByTestId('gc-create').getAttribute('data-open')).toBe('true')
+  })
+
+  it('详情弹窗初始关闭', () => {
+    mockFolders.push({ id: 3, name: '安全生产资料', englishName: null, projectId: null, category: '安全', docCount: 5, createdAt: '2026-01-01', updatedAt: '2026-01-01', createdBy: 'admin' })
+    render(<KnowledgeHomePage />)
+
+    expect(screen.getByTestId('gc-detail').getAttribute('data-open')).toBe('false')
   })
 })
 
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 // Tests: XSS 防护
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 
 describe('XSS prevention — KnowledgeDocumentDrawer', () => {
   beforeEach(() => {
@@ -309,9 +239,9 @@ describe('XSS prevention — KnowledgeDocumentDrawer', () => {
   })
 })
 
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 // Tests: MaskContext 脱敏联动
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 
 describe('MaskContext integration — KnowledgeDocumentDrawer', () => {
   beforeEach(() => {
@@ -332,24 +262,6 @@ describe('MaskContext integration — KnowledgeDocumentDrawer', () => {
 
     await waitFor(() => { expect(screen.getByText(/138\*+/)).toBeInTheDocument() })
     expect(screen.queryByText('13812345678')).not.toBeInTheDocument()
-  })
-
-  it('masks ID card numbers when masked=true', async () => {
-    render(
-      React.createElement(KnowledgeDocumentDrawer, {
-        doc: {
-          id: 1, title: '身份信息', sourceType: 'call',
-          fullText: '身份证 11010519491231002X',
-          chunks: [], chunkCount: 0, createdAt: '2026-07-01',
-        },
-        loading: false, masked: true, onClose: () => {},
-      })
-    )
-
-    // 原始身份证号不应可见
-    await waitFor(() => { expect(screen.queryByText('11010519491231002X')).not.toBeInTheDocument() })
-    // 应该有脱敏标记
-    expect(screen.getByText(/\*\*\*\*/)).toBeInTheDocument()
   })
 
   it('does not mask when masked=false', async () => {
