@@ -1621,3 +1621,22 @@ button:disabled {
   padding: 0 1px;
   border-radius: 2px;
 }
+
+/* ═══ 知识库 3D 轮播舞台样式隔离（.gc-stage-iso）═══
+ * 背景：下方各主题的「Tailwind 通用类覆盖」（[data-theme=…] .bg-white/.card → var(--card)）
+ * 会把原版组件的纸面（bg-white/bg-zinc-100/bg-zinc-200…）染成主题卡色——石墨黑下纸变黑根因。
+ * 方案：舞台容器挂 .gc-stage-iso，容器内将原版组件实际用到的 bg 类重置回原值（!important
+ * 对抗主题覆盖）。类清单按原版 GlassFolderCard/FolderCarousel/FloatingPreviewBadge 实扫，
+ * 只重置实际出现的类，不无脑全量重置。 */
+.gc-stage-iso .bg-white { background-color: #fff !important; }
+.gc-stage-iso .bg-zinc-50 { background-color: #fafafa !important; }
+.gc-stage-iso .bg-zinc-100 { background-color: #f4f4f5 !important; }
+.gc-stage-iso .bg-zinc-200 { background-color: #e4e4e7 !important; }
+.gc-stage-iso .bg-zinc-300 { background-color: #d4d4d8 !important; }
+.gc-stage-iso .bg-zinc-400 { background-color: #a1a1aa !important; }
+.gc-stage-iso .bg-white\/10 { background-color: rgb(255 255 255 / 0.10) !important; }
+.gc-stage-iso .bg-white\/20 { background-color: rgb(255 255 255 / 0.20) !important; }
+.gc-stage-iso .bg-white\/30 { background-color: rgb(255 255 255 / 0.30) !important; }
+.gc-stage-iso .bg-white\/80 { background-color: rgb(255 255 255 / 0.80) !important; }
+.gc-stage-iso .bg-white\/90 { background-color: rgb(255 255 255 / 0.90) !important; }
+.gc-stage-iso .bg-white\/95 { background-color: rgb(255 255 255 / 0.95) !important; }
