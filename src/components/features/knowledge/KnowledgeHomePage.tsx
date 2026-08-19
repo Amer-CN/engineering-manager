@@ -80,17 +80,7 @@ const KnowledgeHomePage: React.FC = () => {
 
   return (
     <div className="w-full" style={{ background: 'var(--bg)' }}>
-      {/* 页头：与其他页面同款（带页边距） */}
-      <div className="px-6 mx-auto max-w-[1600px]">
-        <section className="flex items-end justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-base font-semibold tracking-tight" style={{ color: 'var(--fg)' }}>知识库</h1>
-            <p className="text-sm mt-1.5" style={{ color: 'var(--muted)' }}>共 {items.length} 个文件夹</p>
-          </div>
-        </section>
-      </div>
-
-      {/* 舞台：全幅无边距铺满（用户拍板：与界面融为一体，去一圈边距） */}
+      {/* 页头已删（用户拍板：砍掉上部空间，页面一屏到底） */}
       {isLoading ? (
         <div className="px-6 mx-auto max-w-[1600px]">
         <Card padding="lg" shadow="sm">

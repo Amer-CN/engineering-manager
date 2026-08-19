@@ -45,8 +45,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Top Header Bar */}
         <header className={`px-8 py-4 border-b flex items-center justify-between ${isDark ? 'bg-zinc-900/60 border-zinc-800' : 'bg-white border-zinc-200/80'}`}>
           <div>
-            <h1 className="text-xl font-bold tracking-tight">任务管理</h1>
-            <p className="text-xs text-zinc-400 mt-0.5">高效规划 · 智能协同 · 结果驱动</p>
+            <h1 className="text-xl font-bold tracking-tight">知识库</h1>
+            <p className="text-xs text-zinc-400 mt-0.5">文件夹 · 文档 · 检索</p>
           </div>
 
           {/* Search Input */}

@@ -317,6 +317,7 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
           docType={doc?.docType}
           styleId={doc?.styleId ?? undefined}
           material={draftMaterial || undefined}
+          autoStart={!!draftMaterial}
           title={title}
           onGenerated={(content) => {
             editor?.commands.setContent(content);
