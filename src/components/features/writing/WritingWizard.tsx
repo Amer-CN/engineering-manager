@@ -114,7 +114,7 @@ const WritingWizard: React.FC<WritingWizardProps> = ({ open, onClose, onDraft, o
         </div>
       }
     >
-      <div className="space-y-5">
+      <div className="space-y-5" style={{ padding: "20px 24px" }}>
         {/* ① 文体 */}
         <section>
           <div className="text-xs font-medium mb-2" style={{ color: "var(--fg-2)" }}>
