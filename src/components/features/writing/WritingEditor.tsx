@@ -7,6 +7,11 @@ import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Markdown } from "@tiptap/markdown";
+import TaskList from "@tiptap/extension-task-list";
+import TaskItem from "@tiptap/extension-task-item";
+import Image from "@tiptap/extension-image";
+import Highlight from "@tiptap/extension-highlight";
+import { TextStyle, Color } from "@tiptap/extension-text-style";
 import { Icon } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/hooks/useToast";
@@ -14,6 +19,7 @@ import { usePermission } from "@/hooks/usePermission";
 import { ingestKnowledgeDocument } from "@/services/knowledge-client";
 import { exportMarkdownAsDocx } from "@/utils/docxExport";
 import WritingDraftPanel from "./WritingDraftPanel";
+import EditorToolbar from "./EditorToolbar";
 import {
   fetchWritingDoc,
   updateWritingDoc,
@@ -21,9 +27,8 @@ import {
   type WritingDoc,
 } from "@/services/writing-client";
 
-// ═══════════════════════════════════════════════════════════════════
-// 斜杠菜单 / 行内 AI 命令定义
-// ═══════════════════════════════════════════════════════════════════
+/** 粘贴图片体积上限：超过则拒绝插入（base64 内嵌会直接撑大 contentMd，防止数据库膨胀） */
+const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 
 interface SlashItem {
   label: string;
@@ -39,10 +44,6 @@ const AI_ACTIONS = [
   { id: "expand", label: "扩写", icon: "Maximize2" },
   { id: "shorten", label: "缩写", icon: "Minimize2" },
 ] as const;
-
-// ═══════════════════════════════════════════════════════════════════
-// 组件
-// ═══════════════════════════════════════════════════════════════════
 
 interface WritingEditorProps {
   docId: number;
@@ -69,6 +70,12 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
       }),
+      TaskList,
+      TaskItem,
+      Image.configure({ allowBase64: true }),
+      TextStyle,
+      Color,
+      Highlight,
       Table.configure({ resizable: true }),
       TableRow,
       TableHeader,
@@ -86,13 +93,25 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
           void saveDoc();
           return true;
         }
-        // / 唤起斜杠菜单（行为处输入 `/`）
         if (event.key === "/" && !event.ctrlKey && !event.metaKey) {
           setSlashOpen(true);
           setSlashQuery("");
           return false;
         }
         return false;
+      },
+      handlePaste: (_view, event) => {
+        const img = Array.from(event.clipboardData?.items ?? []).find((i) => i.type.startsWith("image/"));
+        if (!img) return false;
+        const file = img.getAsFile();
+        if (!file) return true;
+        if (file.size > MAX_IMAGE_BYTES) {
+          showToast("截图超过 2MB，已拒绝插入（防数据库膨胀）", "error");
+          return true;
+        }
+        const reader = new FileReader(); reader.readAsDataURL(file);
+        reader.onload = () => editor?.chain().focus().setImage({ src: String(reader.result) }).run();
+        return true;
       },
     },
     onUpdate: () => {
@@ -188,6 +207,10 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
     { label: "三级标题", hint: "Heading 3", icon: "Heading3", run: (e) => e.chain().focus().toggleHeading({ level: 3 }).run() },
     { label: "无序列表", hint: "Bullet List", icon: "List", run: (e) => e.chain().focus().toggleBulletList().run() },
     { label: "有序列表", hint: "Ordered List", icon: "ListOrdered", run: (e) => e.chain().focus().toggleOrderedList().run() },
+    { label: "任务清单", hint: "Task List", icon: "Square", run: (e) => e.chain().focus().toggleTaskList().run() },
+    { label: "代码块", hint: "Code Block", icon: "Braces", run: (e) => e.chain().focus().toggleCodeBlock().run() },
+    { label: "高亮", hint: "Highlight", icon: "PaintBucket", run: (e) => e.chain().focus().toggleHighlight().run() },
+    { label: "图片", hint: "URL / 粘贴截图", icon: "Image", run: (e) => { const url = window.prompt("输入图片 URL（也可直接粘贴截图）"); if (url) e.chain().focus().setImage({ src: url.trim() }).run(); } },
     { label: "表格", hint: "Table 2×2", icon: "Table", run: (e) => e.chain().focus().insertTable({ rows: 2, cols: 2, withHeaderRow: true }).run() },
     { label: "引用", hint: "Blockquote", icon: "Quote", run: (e) => e.chain().focus().toggleBlockquote().run() },
     { label: "分割线", hint: "Horizontal Rule", icon: "Minus", run: (e) => e.chain().focus().setHorizontalRule().run() },
@@ -304,6 +327,7 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
         />
       )}
 
+      <EditorToolbar editor={editor} />
       {/* 编辑器 */}
       <div className="flex-1 overflow-y-auto px-8 py-6">
         <div className="max-w-3xl mx-auto">
