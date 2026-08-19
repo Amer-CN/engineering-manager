@@ -12,11 +12,19 @@ import { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, Ta
  *   - 表格（简单解析 | a | b |）→ docx Table
  *   - 引用 > → 缩进 + 灰色
  *   - 分割线 --- → 空段
- *   - 正文 → 仿宋风格（FangSong 在 Windows 可用；macOS 回落 SimSun）
+ *   - 正文 → 仿宋_GB2312 3 号（16pt），行距固定 28 磅，首行缩进 2 字符
+ *   - 标题字体按 GB/T 9704-2012：文档标题宋体（小标宋回落）加粗 2 号居中；
+ *     一级标题（一、）黑体 3 号；二级标题（（一））楷体_GB2312 3 号；三级标题（1.）仿宋_GB2312 3 号
  */
 
-const FONT_BODY = "FangSong";
-const FONT_HEADING = "SimHei";
+// GB/T 9704-2012《党政机关公文格式》字体字号（字号 half-point：2号=22pt→44，3号=16pt→32）
+const FONT_TITLE = "宋体"; // 文档标题（小标宋体，Windows 无小标宋，回落到宋体）
+const FONT_H1 = "黑体"; // 一级标题（一、）
+const FONT_H2 = "楷体_GB2312"; // 二级标题（（一））
+const FONT_BODY = "仿宋_GB2312"; // 正文 / 三级标题（1.）
+
+/** 行距固定 28 磅（1/20 磅单位：28*20=560） */
+const LINE_SPACING_28PT = { line: 560, lineRule: "exact" as const };
 
 /** 图片最大渲染宽度（pt，A4 版心约 451pt） */
 const IMG_MAX_WIDTH = 440;
@@ -93,17 +101,17 @@ function mdLineToParagraph(ml: MdLine): Paragraph {
       return new Paragraph({
         heading: HeadingLevel.HEADING_1,
         alignment: AlignmentType.CENTER,
-        children: [new TextRun({ text: ml.text, bold: true, font: FONT_HEADING, size: 44 })],
+        children: [new TextRun({ text: ml.text, bold: true, font: FONT_H1, size: 32 })],
       });
     case "h2":
       return new Paragraph({
         heading: HeadingLevel.HEADING_2,
-        children: [new TextRun({ text: ml.text, bold: true, font: FONT_HEADING, size: 36 })],
+        children: [new TextRun({ text: ml.text, bold: true, font: FONT_H2, size: 32 })],
       });
     case "h3":
       return new Paragraph({
         heading: HeadingLevel.HEADING_3,
-        children: [new TextRun({ text: ml.text, bold: true, font: FONT_HEADING, size: 32 })],
+        children: [new TextRun({ text: ml.text, bold: true, font: FONT_BODY, size: 32 })],
       });
     case "task":
       return new Paragraph({
@@ -125,7 +133,11 @@ function mdLineToParagraph(ml: MdLine): Paragraph {
       return new Paragraph({ children: [new TextRun({ text: "───────", color: "CCCCCC" })] });
     case "para":
     default:
-      return new Paragraph({ spacing: { after: 120 }, children: parseInline(ml.text) });
+      return new Paragraph({
+        spacing: { after: 120, ...LINE_SPACING_28PT },
+        indent: { firstLine: 640 },
+        children: parseInline(ml.text),
+      });
   }
 }
 
@@ -242,12 +254,12 @@ export async function exportMarkdownAsDocx(markdown: string, title: string): Pro
   const lines = markdown.split("\n");
   const children: (Paragraph | Table)[] = [];
 
-  // 文档标题（黑体居中，公文头）
+  // 文档标题（宋体加粗 2 号居中，公文头）
   children.push(
     new Paragraph({
       alignment: AlignmentType.CENTER,
       spacing: { after: 240 },
-      children: [new TextRun({ text: title || "未命名文档", bold: true, font: FONT_HEADING, size: 48 })],
+      children: [new TextRun({ text: title || "未命名文档", bold: true, font: FONT_TITLE, size: 44 })],
     }),
   );
 
@@ -315,7 +327,7 @@ export async function exportMarkdownAsDocx(markdown: string, title: string): Pro
     sections: [{ children }],
     styles: {
       default: {
-        document: { run: { font: FONT_BODY, size: 24 } },
+        document: { run: { font: FONT_BODY, size: 32 } },
       },
     },
   });
