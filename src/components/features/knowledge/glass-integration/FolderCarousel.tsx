@@ -38,9 +38,9 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
   // Auto scroll state
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [scrollSpeed, setScrollSpeed] = useState<number>(1); // 1 = normal speed
-  const [rotateYAngle, setRotateYAngle] = useState<number>(-26); // Default 3D angle matching image
+  const [rotateYAngle, setRotateYAngle] = useState<number>(22); // 朝右（正角度卡面更朝观众，内容可读性好；引擎自动翻转深度与遮挡方向）
   const [rotateXAngle, setRotateXAngle] = useState<number>(10);
-  const [itemSpacing, setItemSpacing] = useState<number>(75); // Overlap pitch in px
+  const [itemSpacing, setItemSpacing] = useState<number>(90); // 90px：标题+进度 pill 完整可见的临界值加余量
   const [showControls, setShowControls] = useState<boolean>(false);
 
   // Dragging state
@@ -313,9 +313,9 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
             <span>3D 文件夹视效设置</span>
             <button
               onClick={() => {
-                setRotateYAngle(-26);
+                setRotateYAngle(22);
                 setRotateXAngle(10);
-                setItemSpacing(75);
+                setItemSpacing(90);
                 setScrollSpeed(1);
               }}
               className="text-emerald-400 flex items-center gap-1 hover:underline"
