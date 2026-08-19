@@ -1429,3 +1429,45 @@ button:disabled {
   25%  { box-shadow: 0 0 0 3px var(--accent); }
   100% { box-shadow: 0 0 0 3px rgba(0, 0, 0, 0); }
 }
+
+/* ═══ 写作中心 · tiptap 编辑器 ═══
+   裸 .tiptap 高度塌缩会导致"点不到、打不了字"——min-height 撑起点击热区 */
+.tiptap {
+  min-height: 420px;
+  padding: 4px 2px;
+  outline: none;
+  cursor: text;
+}
+.tiptap p {
+  line-height: 1.9;
+  margin: 0 0 0.6em;
+}
+.tiptap h1 { font-size: 1.5em; font-weight: 700; margin: 1em 0 0.5em; }
+.tiptap h2 { font-size: 1.3em; font-weight: 700; margin: 0.9em 0 0.4em; }
+.tiptap h3 { font-size: 1.15em; font-weight: 700; margin: 0.8em 0 0.4em; }
+.tiptap ul { list-style: disc; padding-left: 1.5em; margin: 0.5em 0; }
+.tiptap ol { list-style: decimal; padding-left: 1.5em; margin: 0.5em 0; }
+.tiptap blockquote {
+  border-left: 3px solid var(--border);
+  padding-left: 1em;
+  color: var(--muted);
+  margin: 0.6em 0;
+}
+.tiptap table { border-collapse: collapse; width: 100%; margin: 0.6em 0; }
+.tiptap th, .tiptap td {
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  text-align: left;
+}
+.tiptap th { background: var(--panel-2); font-weight: 600; }
+.tiptap hr { border: none; border-top: 1px solid var(--border); margin: 1em 0; }
+/* 占位符 */
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--muted);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+/* 行内 AI 菜单浮层与编辑器间距 */
+.tiptap:focus-visible { outline: none; }
