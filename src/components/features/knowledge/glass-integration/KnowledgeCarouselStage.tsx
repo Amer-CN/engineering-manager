@@ -55,16 +55,15 @@ export const KnowledgeCarouselStage: React.FC<KnowledgeCarouselStageProps> = ({
         boxShadow: 'var(--shadow-card, 0 1px 3px rgba(0,0,0,0.05))',
       }}
     >
-      {/* 背景氛围光（原版 AmbientView 语义，铺在主题背景上） */}
+      {/* 背景氛围光：应用自己的柔光色（--accent-soft 随三主题自动变），融合而非照搬 demo 的 emerald —— 接缝修复：背景融为一体 */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[140px]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[300px] bg-emerald-500/15 rounded-full blur-[160px]" />
         <div
-          className={`absolute inset-0 ${
-            isDark
-              ? 'bg-gradient-to-b from-black/25 via-transparent to-black/20'
-              : 'bg-gradient-to-b from-transparent via-transparent to-transparent'
-          }`}
+          className="absolute top-0 left-1/4 w-[500px] h-[500px] rounded-full blur-[140px]"
+          style={{ background: 'var(--accent-soft)' }}
+        />
+        <div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[300px] rounded-full blur-[160px]"
+          style={{ background: 'var(--accent-soft)' }}
         />
       </div>
 
