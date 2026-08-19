@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
+import { Drawer } from "@/components/ui/Drawer";
 import { useToast } from "@/hooks/useToast";
 import { fetchWritingDocTypes, streamingDraft, type WritingDocTypesResponse } from "@/services/writing-client";
 
@@ -86,20 +87,33 @@ const WritingDraftPanel: React.FC<WritingDraftPanelProps> = ({ docId, docType, s
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
-      <div
-        className="w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl border shadow-xl p-6"
-        style={{ background: "var(--panel)", borderColor: "var(--border)" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-bold" style={{ color: "var(--fg)" }}>
-            AI 起草
-          </h2>
-          <button onClick={onClose} className="text-sm" style={{ color: "var(--muted)" }}>
-            关闭
-          </button>
+    <Drawer
+      open
+      onClose={onClose}
+      icon="Sparkles"
+      title="AI 起草"
+      dirty={!!materialText.trim() || !!streamText}
+      width={480}
+      footer={
+        <div className="flex items-center gap-2 w-full">
+          <Button
+            className="flex-1"
+            onClick={handleGenerate}
+            loading={generating}
+            disabled={generating}
+          >
+            <Icon name="Sparkles" size={15} />
+            {generating ? "生成中…" : "生成"}
+          </Button>
+          {streamText && !generating && (
+            <Button variant="success" className="flex-1" onClick={handleApply}>
+              应用内容
+            </Button>
+          )}
         </div>
+      }
+    >
+      <div className="space-y-4">
 
         {/* 高级选项：文体/风格/详略度（预填时收起） */}
         <button
@@ -185,30 +199,17 @@ const WritingDraftPanel: React.FC<WritingDraftPanelProps> = ({ docId, docType, s
           style={{ borderColor: "var(--border)", background: "var(--panel)", color: "var(--fg)" }}
         />
 
-        {/* 生成按钮 + 流式预览 */}
-        <div className="flex items-center gap-2 mt-4">
-          <Button onClick={handleGenerate} loading={generating} disabled={generating}>
-            <Icon name="Sparkles" size={16} />
-            生成
-          </Button>
-          {streamText && !generating && (
-            <Button variant="success" onClick={handleApply}>
-              应用内容
-            </Button>
-          )}
-        </div>
-
         {/* 流式输出预览 */}
         {(generating || streamText) && (
           <div
-            className="mt-4 p-3 rounded-lg border text-sm whitespace-pre-wrap max-h-64 overflow-y-auto"
+            className="p-3 rounded-lg border text-sm whitespace-pre-wrap max-h-64 overflow-y-auto"
             style={{ borderColor: "var(--border)", background: "var(--panel-2)", color: "var(--fg)" }}
           >
             {generating ? `${streamText}…` : streamText}
           </div>
         )}
       </div>
-    </div>
+    </Drawer>
   );
 };
 
