@@ -328,9 +328,8 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
       )}
 
       <EditorToolbar editor={editor} />
-      {/* 编辑器 */}
-      <div className="flex-1 overflow-y-auto px-8 py-6">
-        <div className="max-w-3xl mx-auto">
+      <div className="flex-1 overflow-y-auto flex justify-center bg-[color:var(--panel-2)] py-6">
+        <div className="a4-paper">
           <EditorContent editor={editor} />
         </div>
       </div>
