@@ -39,7 +39,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [activeTab, setActiveTab] = useState<'all' | 'mine' | 'joined'>('all');
 
   return (
-    <div className={`min-h-screen w-full flex ${isDark ? 'bg-zinc-950 text-zinc-100' : 'bg-[#f4f6fa] text-zinc-800'}`}>
+    <div className={`min-h-screen w-full flex ${isDark ? 'text-zinc-100' : 'text-zinc-800'}`}>
       {/* --- CENTER MAIN CONTENT AREA --- */}
       <main className="flex-1 flex flex-col min-w-0 overflow-y-auto">
         {/* Top Header Bar */}
