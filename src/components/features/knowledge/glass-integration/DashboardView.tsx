@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
-import { Search,
+import {
+  Search,
+  Bell,
+  Mail,
+  Plus,
   CheckCircle2,
   Clock,
   AlertCircle,
@@ -31,12 +35,50 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   theme = 'light',
 }) => {
   const isDark = theme === 'dark';
+  const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'mine' | 'joined'>('all');
 
   return (
     <div className={`min-h-screen w-full flex ${isDark ? 'text-zinc-100' : 'text-zinc-800'}`}>
       {/* --- CENTER MAIN CONTENT AREA --- */}
       <main className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+        {/* Top Header Bar */}
+        <header className={`px-8 py-4 border-b flex items-center justify-between ${isDark ? 'bg-zinc-900/60 border-zinc-800' : 'bg-white border-zinc-200/80'}`}>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight">任务管理</h1>
+            <p className="text-xs text-zinc-400 mt-0.5">高效规划 · 智能协同 · 结果驱动</p>
+          </div>
+
+          {/* Search Input */}
+          <div className="flex items-center gap-4">
+            <div className={`relative w-72 flex items-center px-3 py-2 rounded-2xl border text-xs ${isDark ? 'bg-zinc-800/60 border-zinc-700 text-white' : 'bg-zinc-100 border-zinc-200 text-zinc-800'}`}>
+              <Search className="w-4 h-4 text-zinc-400 mr-2" />
+              <input
+                type="text"
+                placeholder="搜索任务、项目或文件..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="bg-transparent border-none outline-none w-full placeholder-zinc-400 text-xs"
+              />
+              <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono text-zinc-400 bg-white/20 rounded border border-zinc-300 dark:border-zinc-700">⌘ K</kbd>
+            </div>
+
+            {/* Quick Action Icons */}
+            <button className={`p-2 rounded-xl border ${isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-zinc-100 border-zinc-200'} relative`}>
+              <Bell className="w-4 h-4 text-zinc-500" />
+              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-500" />
+            </button>
+
+            <button className={`p-2 rounded-xl border ${isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-zinc-100 border-zinc-200'}`}>
+              <Mail className="w-4 h-4 text-zinc-500" />
+            </button>
+
+            <button className="px-4 py-2 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold shadow-lg shadow-emerald-500/25 flex items-center gap-1.5 transition-all">
+              <Plus className="w-4 h-4" />
+              <span>新增任务</span>
+            </button>
+          </div>
+        </header>
 
         {/* Workspace Body Grid */}
         <div className="p-8 space-y-6">
