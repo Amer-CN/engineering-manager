@@ -1471,3 +1471,153 @@ button:disabled {
 }
 /* 行内 AI 菜单浮层与编辑器间距 */
 .tiptap:focus-visible { outline: none; }
+
+/* ═══ R3：写作中心顶部工具栏 ═══ */
+.em-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.em-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fg-2);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+.em-toolbar-btn:hover { background: var(--panel-2); }
+.em-toolbar-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.em-toolbar-btn.is-active { color: var(--accent); background: var(--accent-soft); }
+.em-toolbar-sep {
+  width: 1px;
+  height: 18px;
+  margin: 0 5px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+/* 文字颜色按钮（A + 当前色条） */
+.em-color-btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  font-size: 13px;
+  font-weight: 600;
+}
+.em-color-underline {
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+  margin-bottom: 2px;
+}
+.em-color-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 22px);
+  gap: 6px;
+}
+.em-color-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  padding: 0;
+  cursor: pointer;
+}
+.em-color-swatch:hover { outline: 2px solid var(--accent-soft); }
+.em-color-clear {
+  font-size: 11px;
+  color: var(--fg-2);
+  background: var(--panel-2);
+}
+.em-toolbar-pop {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 60;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+}
+.em-toolbar-url { display: flex; align-items: center; gap: 6px; }
+.em-url-input {
+  width: 200px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--fg);
+  font-size: 12px;
+}
+.em-url-input:focus { outline: none; border-color: var(--accent); }
+.em-url-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  cursor: pointer;
+}
+.em-url-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.em-h { font-weight: 700; font-size: 13px; letter-spacing: 0.02em; }
+
+/* ═══ R3：任务清单 / 图片 / 高亮 ═══ */
+.tiptap ul[data-type="taskList"] { list-style: none; padding-left: 0; }
+.tiptap ul[data-type="taskList"] > li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0.15em 0;
+}
+.tiptap ul[data-type="taskList"] > li > label {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  margin-top: 0.35em;
+  cursor: pointer;
+}
+.tiptap ul[data-type="taskList"] input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+}
+.tiptap ul[data-type="taskList"] > li > div { flex: 1; min-width: 0; }
+.tiptap ul[data-type="taskList"] p { margin: 0 0 0.15em; }
+.tiptap img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0.6em 0;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+.tiptap mark {
+  background: #fde047;
+  color: inherit;
+  padding: 0 1px;
+  border-radius: 2px;
+}

@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
+import { reportCrash } from '../lib/crash'
 
 // ── 类型定义 ──
 interface Props {
@@ -25,6 +26,17 @@ class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     console.error('ErrorBoundary 捕获到错误:', error)
     console.error('组件堆栈:', errorInfo.componentStack)
+    // ── 上报（恢复自 crash 系统）──
+    void reportCrash({
+      kind: 'react',
+      message: error.message || String(error),
+      errorMessage: error.message,
+      errorType: error.name || 'Error',
+      stack: error.stack,
+      componentStack: errorInfo.componentStack ?? undefined,
+      view: typeof window !== 'undefined' ? window.location.pathname : '',
+      label: 'ErrorBoundary',
+    })
   }
 
   private handleReload = (): void => {
@@ -70,4 +82,3 @@ class ErrorBoundary extends Component<Props, State> {
 }
 
 export default ErrorBoundary
-
