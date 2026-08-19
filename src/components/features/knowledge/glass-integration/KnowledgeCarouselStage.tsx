@@ -54,7 +54,7 @@ export const KnowledgeCarouselStage: React.FC<KnowledgeCarouselStageProps> = ({
 
       <div className="relative flex flex-col justify-between">
         {/* 右上工具行（原版头部右侧语义：新建文件夹；主题适配配色） */}
-        <div className="relative z-30 flex justify-end gap-3 px-6 sm:px-12">
+        <div className="absolute top-4 right-4 z-40 flex gap-3">
           {onAddFolder && (
             <button
               onClick={onAddFolder}
