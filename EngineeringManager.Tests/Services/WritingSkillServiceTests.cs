@@ -93,6 +93,23 @@ public class WritingSkillServiceTests
     }
 
     [Fact]
+    public void 起草prompt注入国标格式规范_行内改写不注入()
+    {
+        // format-spec.md 已作为第 4 份嵌入资源加载：draft system 含其全文特征，
+        // 证明 LoadEmbedded("WritingSkill.format-spec.md") 成功
+        var (draftSystem, _) = _skill.BuildDraftPrompts(Draft());
+        Assert.Contains("GB/T 9704", draftSystem);
+        Assert.Contains("仿宋_GB2312", draftSystem);
+        Assert.Contains("28 磅", draftSystem);
+
+        // 行内改写不需要版式规范：assist system 不含国标内容
+        var req = new WritingAssistRequest("rewrite", "选中文字",
+            CustomInstruction: null, DocType: "summary", StyleId: "S1", ContextBefore: null, ProtectedSpans: null);
+        var (assistSystem, _) = _skill.BuildAssistPrompts(req);
+        Assert.DoesNotContain("GB/T 9704", assistSystem);
+    }
+
+    [Fact]
     public void 素材超长被截断到上限()
     {
         var (_, user) = _skill.BuildDraftPrompts(Draft(material: new string('甲', 22000)));
