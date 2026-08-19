@@ -340,7 +340,7 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
   {effectiveView === 'stack' ? (
   /* Stage-Surface 舞台区：只做导航与概览，打开分组回扁平列表（参考项目原版引擎） */
   <div className="bg-black rounded-2xl overflow-hidden">
-    <FolderCarousel folders={carouselFolders} theme="dark" onSelectFolder={(f) => handleStackOpen(f)} />
+    <FolderCarousel folders={carouselFolders} theme="dark" onFolderClick={handleStackOpen} />
   </div>
   ) : filteredDrawings.length > 0 ? (
   viewMode === 'gallery' ? (
