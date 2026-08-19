@@ -79,7 +79,7 @@ const KnowledgeHomePage: React.FC = () => {
   }
 
   return (
-    <div className="w-full">
+    <div className="w-full" style={{ background: 'var(--bg)' }}>
       {/* 页头：与其他页面同款（带页边距） */}
       <div className="px-6 mx-auto max-w-[1600px]">
         <section className="flex items-end justify-between gap-4 mb-6">
