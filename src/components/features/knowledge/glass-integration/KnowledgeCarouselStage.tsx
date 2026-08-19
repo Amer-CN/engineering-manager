@@ -15,6 +15,8 @@ import React, { useState } from 'react'
 import { Eye } from 'lucide-react'
 import { useTheme } from '@/hooks/useTheme'
 import { FolderCarousel } from './FolderCarousel'
+import { DashboardView } from './DashboardView'
+import type { ViewMode } from './types'
 import type { FolderItem } from './types'
 
 interface KnowledgeCarouselStageProps {
@@ -36,6 +38,8 @@ export const KnowledgeCarouselStage: React.FC<KnowledgeCarouselStageProps> = ({
   const isDark = scheme === 'graphite'
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  // 双视图（demo 原版语义）：ambient 轮播 ↔ dashboard 看板
+  const [viewMode, setViewMode] = useState<ViewMode>('ambient')
 
   if (folders.length === 0) return null
 
@@ -61,8 +65,8 @@ export const KnowledgeCarouselStage: React.FC<KnowledgeCarouselStageProps> = ({
 
       <div className="relative min-h-[calc(100vh-3rem)] flex flex-col justify-between">
         {/* 右上工具行（原版头部右侧语义：新建文件夹；主题适配配色） */}
-        {onAddFolder && (
-          <div className="relative z-30 flex justify-end px-6 sm:px-12 pt-6">
+        <div className="relative z-30 flex justify-end gap-3 px-6 sm:px-12 pt-6">
+          {onAddFolder && (
             <button
               onClick={onAddFolder}
               className="px-4 py-2.5 rounded-2xl text-xs font-semibold backdrop-blur-md transition-all flex items-center gap-2 border shadow-lg"
@@ -75,19 +79,38 @@ export const KnowledgeCarouselStage: React.FC<KnowledgeCarouselStageProps> = ({
               <span className="text-emerald-500 text-base leading-none">+</span>
               <span>新建文件夹</span>
             </button>
-          </div>
-        )}
+          )}
+          <button
+            onClick={() => setViewMode(v => v === 'ambient' ? 'dashboard' : 'ambient')}
+            className="px-4 py-2.5 rounded-2xl text-xs font-semibold transition-all flex items-center gap-2 border shadow-lg text-white"
+            style={{ background: '#10b981', borderColor: '#34d399' }}
+          >
+            {viewMode === 'ambient' ? '切换至完整工作区 (看板)' : '返回 3D 沉浸视角'}
+          </button>
+        </div>
 
-        {/* 主区 = 原版引擎（全宽轮播） */}
-        <main className="relative z-20 flex-1 flex flex-col justify-center">
-          <FolderCarousel
-            folders={folders}
-            theme={isDark ? 'dark' : 'light'}
-            selectedFolderId={activeFolder.id}
-            onSelectFolder={(f) => setSelectedId(f.id)}
-            onFolderClick={onOpenDetail}
-          />
-        </main>
+        {/* 主区：ambient = 原版轮播 / dashboard = 原版看板（demo 双视图语义） */}
+        {viewMode === 'ambient' ? (
+          <main className="relative z-20 flex-1 flex flex-col justify-center">
+            <FolderCarousel
+              folders={folders}
+              theme={isDark ? 'dark' : 'light'}
+              selectedFolderId={activeFolder.id}
+              onSelectFolder={(f) => setSelectedId(f.id)}
+              onFolderClick={onOpenDetail}
+            />
+          </main>
+        ) : (
+          <main className="relative z-20 flex-1 overflow-auto">
+            <DashboardView
+              folders={folders}
+              selectedFolder={activeFolder}
+              onSelectFolder={(f) => setSelectedId(f.id)}
+              onOpenFolderDetail={() => onOpenDetail(activeFolder)}
+              theme={isDark ? 'dark' : 'light'}
+            />
+          </main>
+        )}
 
         {/* 底部状态条（原版 footer 语义：当前聚焦 + 查看并管理文件夹文档） */}
         <footer
