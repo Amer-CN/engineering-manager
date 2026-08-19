@@ -103,6 +103,7 @@ public sealed class WritingSkillService
     private readonly string _skillMd;
     private readonly string _templatesMd;
     private readonly string _phraseLibraryMd;
+    private readonly string _formatSpecMd;
     private readonly IReadOnlyDictionary<string, DocType> _docTypeMap;
     private readonly IReadOnlyDictionary<string, StyleSpec> _styleMap;
 
@@ -112,6 +113,7 @@ public sealed class WritingSkillService
         _skillMd = LoadEmbedded("WritingSkill.SKILL.md");
         _templatesMd = LoadEmbedded("WritingSkill.templates.md");
         _phraseLibraryMd = LoadEmbedded("WritingSkill.phrase-library.md");
+        _formatSpecMd = LoadEmbedded("WritingSkill.format-spec.md");
         _docTypeMap = DocTypes.ToDictionary(d => d.Code, StringComparer.OrdinalIgnoreCase);
         _styleMap = Styles.ToDictionary(s => s.Id, StringComparer.OrdinalIgnoreCase);
     }
@@ -228,6 +230,9 @@ public sealed class WritingSkillService
         sb.AppendLine(ExtractSkillSection("五、"));       // Protected Spans 事实保护
         sb.AppendLine();
         sb.AppendLine(ExtractSkillSection("六、"));       // 输出规范
+        sb.AppendLine();
+        sb.AppendLine("## GB/T 9704 格式规范（全文，起草结构的版式依据）");
+        sb.AppendLine(_formatSpecMd);
         sb.AppendLine();
         sb.AppendLine("## 本次文体框架模板");
         sb.AppendLine(ExtractTemplateBody(docType));
