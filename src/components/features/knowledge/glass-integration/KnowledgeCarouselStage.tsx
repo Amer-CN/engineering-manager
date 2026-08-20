@@ -100,7 +100,8 @@ export const KnowledgeCarouselStage: React.FC<KnowledgeCarouselStageProps> = ({
           </main>
         )}
 
-        {/* 底部状态条（原版 footer 语义：当前聚焦 + 查看并管理文件夹文档） */}
+        {/* 底部状态条：仅 3D 沉浸视角显示（看板态不渲染不占高度——用户指正） */}
+        {viewMode === 'ambient' && (
         <footer
           className="relative z-30 px-6 sm:px-10 py-2 flex flex-col sm:flex-row items-center justify-between gap-3"
         >
@@ -132,6 +133,7 @@ export const KnowledgeCarouselStage: React.FC<KnowledgeCarouselStageProps> = ({
             查看并管理文件夹文档
           </button>
         </footer>
+        )}
       </div>
     </div>
   )
