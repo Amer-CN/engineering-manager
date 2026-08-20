@@ -266,6 +266,16 @@
   - `98d721d` — DELETE /api/cost-ledger/{id} WHERE 收紧为 `(created_by=@Uid OR @IsAdmin=1)`（删除未用 scope）；授权跨人 delete 200→403；4/4 绿（Red1 授权跨人 403、Pin1 本人行 created_by=Uid 200、Pin2 admin 行 created_by=admin 200、Pin3 无授权 403）
   - 破坏自证：临时换回 UserFilter 形态（补回 `var scope = CurrentUser.GetDataScope(ctx);`，字符串拼接 `...AND {CurrentUser.UserFilterWithAuthorizedProjects(scope, "cost_ledger.project_id")}`）→ 授权跨人 hit UserFilter → 200 → **仅 Red1 红（Expected Forbidden / Actual OK，方向与 B 系各轮相反）**；还原 → 4/4 绿 → porcelain 空（不产生 commit）
   - 无锁列（cost_ledger 无 paid_amount/payment_locked）故无 409 档；金额单位「元」直传直存（无 ToFen）。
+- **A 桶收尾（R9-21，A5 PUT batches 翻转 + A6 DELETE 钉住 + A7 sheet per-row audit）**：
+  - **A5（PUT /api/cost-ledger/batches/{id}）—— B 桶形态翻转 403→200**：现状 WHERE `UserFilterCompany(scope)`（非 All = created_by=@Uid，授权跨人 403，B 桶形态），对齐方案丙：预读行归属（created_by+project_id）→ Classify 单点裁决 → 授权跨人可改 + ViaAuthz 同事务 audit（fail-closed）；归属条件移出 SQL（WHERE 只留 id，改后未用的 scope/isAdmin 删除）；行不存在 → 403（Ok/Forbid 收尾保留，未引入 WriteResult 404）；无锁列故无 409 档。**行为人用内置 accountant r9-21-bat（默认集含 costLedger:update，未 UPDATE/INSERT roles）**。
+  - **A6（DELETE /api/cost-ledger/batches/{id}）—— 方案丙例外钉住（零生产代码）**：现状同 UserFilterCompany（非 All = 仅创建者可删），已符合方案丙「可改不可删」，本轮 PIN-ONLY 不改码。**accountant 默认集无 costLedger:delete → 行为人用自定义角色 r9-21-del（id==name，permissions 含 costLedger:delete；仅 INSERT 新 roles 行，未动内置角色）**。
+  - **A7（POST /api/cost-ledger/{batchId}/sheet）—— A 桶形态补 per-row audit**：行 UPDATE 分支 WHERE 已含 UserFilterWithAuthorizedProjects——授权跨人行**原本就能改（HTTP 200）**，本轮只在**实际发生跨人改写时**同事务补 per-row `cross_user_edit`（resource='cost_ledger'）；预读 id+batch_id → Classify 单点（不手写 EXISTS）；批次门、INSERT 分支、批次摘要 audit（action='update'、resource='cost_ledger_sheet'）与行 UPDATE 的 UserFilter 原样不动，per-row 与摘要 audit 并存。**行为人用内置 accountant r9-21-sht（默认集含 costLedger:update，未 UPDATE/INSERT roles）**。
+  - `0af962f` — A5+A6 EXPECTED-RED 8 条测试（`R9BatchCrossUserEditTests.cs`）：先红**恰好 Red1 一红 + 7 绿**（Red1 = Expected OK / Actual Forbidden，B 桶形态）；A6 Pin6/Pin7 钉现状 2/2 绿
+  - `2666dcd` — A5 修复（如上）→ 定向 `--filter FullyQualifiedName~R9Batch` 8/8 绿
+  - 破坏自证 A5：仅 A5 授权分支并入 Denied（`access==Denied || access==AllowedViaAuthorization`）→ 恰好仅 Red1 红（Expected OK / Actual Forbidden）→ 还原 → 8/8 绿 → porcelain 空（不产生 commit）
+  - `5690ec5` — A7 EXPECTED-RED 5 条测试（`R9SheetCrossUserEditTests.cs`）：先红**恰好 Red1 一红 + 4 绿**（Red1 失败点为 audit 计数 Expected 1 / Actual 0，A 桶形态，HTTP 已 200）
+  - `22e5758` — A7 修复（如上）→ 定向 `--filter FullyQualifiedName~R9Sheet` 5/5 绿
+  - 破坏自证 A7：per-row audit 条件临时改 `if (false)`（本项目 TreatWarningsAsErrors，CS0162 以 #pragma 抑制）→ 恰好仅 Red1 红（audit 计数 Expected 1 / Actual 0）→ 还原 → 5/5 绿 → porcelain 空（不产生 commit）
 - **①「项目创建者 ≠ 行编辑权」设计澄清**：G75/G76 项目门放行创建，但 `RowWriteGate.Classify` 无「项目创建者」分支——改他人创建的行只认 `project_authorizations`（B41/B48/B50 一致；Pin4 实证：项目创建者改他人行 → Denied → skipped）。
 - **② 留痕**：任务书 Z3 初版 Pin4/Pin5 用「无授权」构造 batch-save 行级场景，被既有 G76 预扫整单 403 遮蔽（到不了行级）——审查方第 6 次规格认账，执行方纪律 17 停手纠正；修正为 Pin4=项目创建者改他人行（Denied 唯一可达路径）、Pin5=授权+本人行。
 - **旧版 PUT /api/wages 尾部 409/403 混同修正（新发现）**：旧版 affected=0 时 rowExists 分支把「无归属权限」误报为 409（已发款/已归档），注释声称的「无归属权限（403）」区分并不存在（注释撒谎同族）；修复后语义：不存在→403 / 锁定→409 / 未授权→403 / 授权跨人→200+audit / 本人或 admin→200；**Pin1 为行为翻转测试（409→403）**，先红阶段 Red1+Pin1 双红为正确形态。留痕：任务书误信注释预期「当前 403」，实测 409——审查方第 5 次规格认账，执行方纪律 17 停手纠正。
