@@ -51,7 +51,7 @@ describe('api-client PII Mask 自动注入', () => {
     const { apiClient } = await import('@/services/api-client')
     await apiClient.get('/api/members')
 
-    expect(capture.url).toBe('http://localhost:5048/api/members')
+    expect(capture.url).toBe('http://localhost:3000/api/members')
     expect(capture.url).not.toContain('unmask=')
   })
 
@@ -63,7 +63,7 @@ describe('api-client PII Mask 自动注入', () => {
     const { apiClient } = await import('@/services/api-client')
     await apiClient.get('/api/members')
 
-    expect(capture.url).toBe('http://localhost:5048/api/members?unmask=true')
+    expect(capture.url).toBe('http://localhost:3000/api/members?unmask=true')
   })
 
   it('masked=true 时 GET /api/projects (非 PII) 不加 ?unmask=true', async () => {
@@ -174,7 +174,7 @@ describe('api-client PII Mask 自动注入', () => {
     const { apiClient } = await import('@/services/api-client')
     await apiClient.post('/api/members', { name: 'test' })
 
-    expect(capture.url).toBe('http://localhost:5048/api/members')
+    expect(capture.url).toBe('http://localhost:3000/api/members')
     expect(capture.url).not.toContain('unmask=')
   })
 })
