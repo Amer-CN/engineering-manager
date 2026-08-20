@@ -13,6 +13,9 @@ interface FolderCarouselProps {
   onSelectFolder?: (folder: FolderItem) => void;
   onFolderClick?: (folder: FolderItem) => void;
   selectedFolderId?: string;
+  /** 垂直铺满模式：仅父链提供确定高度时可开（沉浸页 Stage 高度链）。
+      看板嵌入预览等无高度父链场景必须 false——透视区失去固定高会塌成 0（f56b069 看板细条根因） */
+  fillHeight?: boolean;
 }
 
 export const FolderCarousel: React.FC<FolderCarouselProps> = ({
@@ -21,6 +24,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
   onSelectFolder,
   onFolderClick,
   selectedFolderId,
+  fillHeight = false,
 }) => {
   // If no folders provided
   if (!folders || folders.length === 0) return null;
@@ -247,7 +251,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
   };
 
   return (
-    <div className="relative w-full flex flex-col items-center select-none overflow-hidden py-2">
+    <div className={`relative w-full flex flex-col items-center select-none overflow-hidden py-2 ${fillHeight ? 'flex-1 min-h-0 justify-center' : ''}`}>
       {/* Floating Preview Badge (Positioned at top-left / center of carousel) */}
       <div className="absolute top-4 left-6 md:left-12 z-40 transition-all duration-300">
         <FloatingPreviewBadge
@@ -416,7 +420,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerUp}
-        className="w-full h-[360px] sm:h-[400px] flex items-center justify-center cursor-grab touch-pan-y relative mt-6 sm:mt-4"
+        className={`w-full flex items-center justify-center cursor-grab touch-pan-y relative ${fillHeight ? 'flex-1 min-h-0' : 'h-[360px] sm:h-[400px] mt-6 sm:mt-4'}`}
         style={{
           perspective: '1400px',
           perspectiveOrigin: '50% 50%',
