@@ -39,8 +39,7 @@ export const KnowledgeCarouselStage: React.FC<KnowledgeCarouselStageProps> = ({
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
   // 双视图（demo 原版语义）：ambient 轮播 ↔ dashboard 看板
-  // 默认完整工作区看板（用户拍板：进知识库先看板，3D 沉浸是主动进入）
-  const [viewMode, setViewMode] = useState<ViewMode>('dashboard')
+  const [viewMode, setViewMode] = useState<ViewMode>('ambient')
 
   if (folders.length === 0) return null
 
@@ -49,11 +48,11 @@ export const KnowledgeCarouselStage: React.FC<KnowledgeCarouselStageProps> = ({
   return (
     <div
       className="gc-stage-iso relative w-full select-none"
-      style={{ background: 'transparent', height: 'calc(100vh - 84px)' }}
+      style={{ background: 'transparent' }}
     >
       {/* 零背景（用户拍板）：无任何氛围光/光晕——3D 文件夹直接悬浮在应用背景上 */}
 
-      <div className="relative flex flex-col justify-between h-full">
+      <div className="relative flex flex-col justify-between">
         {/* 右上工具行：仅 3D 沉浸视角显示（看板态不占高度——用户指正，同 footer 规则）。
             看板态的返回入口由 DashboardView header 上的按钮承接（Stage 传 onBackToAmbient） */}
         {viewMode === 'ambient' && (
@@ -83,7 +82,7 @@ export const KnowledgeCarouselStage: React.FC<KnowledgeCarouselStageProps> = ({
 
         {/* 主区：ambient = 原版轮播 / dashboard = 原版看板（demo 双视图语义） */}
         {viewMode === 'ambient' ? (
-          <main className="relative z-20 flex-1 flex flex-col min-h-0">
+          <main className="relative z-20 flex-1 flex flex-col justify-center">
             <FolderCarousel
               folders={folders}
               theme={isDark ? 'dark' : 'light'}

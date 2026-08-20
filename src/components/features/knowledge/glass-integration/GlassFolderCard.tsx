@@ -35,7 +35,7 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
       onClick={onClick}
       className={`
         relative group cursor-pointer select-none
-        w-[205px] sm:w-[220px] h-[272px] sm:h-[286px]
+        w-[230px] sm:w-[245px] h-[305px] sm:h-[320px]
         flex-shrink-0 transition-all duration-300 ease-out
         ${isActive ? 'scale-[1.03]' : 'hover:scale-[1.015]'}
       `}
