@@ -64,7 +64,7 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
   const [draftMaterial, setDraftMaterial] = useState("");
   const saveTimer = useRef<number | null>(null);
 
-  // ── 编辑器（Markdown 序列化由 @tiptap/markdown 的 storage.markdown 提供）──
+  // ── 编辑器（Markdown 序列化由 editor.getMarkdown() 提供）──
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -153,7 +153,7 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
   const saveDoc = useCallback(async () => {
     if (!editor) return;
     setSaveState("saving");
-    const md = (editor.storage.markdown as unknown as { getMarkdown: () => string }).getMarkdown();
+    const md = editor.getMarkdown();
     const res = await updateWritingDoc(docId, { title: title.trim() || "未命名文档", contentMd: md });
     setSaveState(res.success ? "saved" : "idle");
     if (!res.success) showToast(res.error || "保存失败", "error");
@@ -162,7 +162,7 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
   // W3：存入知识库
   const handleIngestToKnowledge = async () => {
     if (!editor) return;
-    const md = (editor.storage.markdown as unknown as { getMarkdown: () => string }).getMarkdown();
+    const md = editor.getMarkdown();
     if (!md.trim()) {
       showToast("内容为空，无法入库", "error");
       return;
@@ -184,7 +184,7 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
   // W3：导出 docx
   const handleExportDocx = () => {
     if (!editor) return;
-    const md = (editor.storage.markdown as unknown as { getMarkdown: () => string }).getMarkdown();
+    const md = editor.getMarkdown();
     void exportMarkdownAsDocx(md, title.trim() || "未命名文档").catch(() => {
       showToast("导出失败", "error");
     });
@@ -278,7 +278,7 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
     <div className="h-full flex flex-col">
       {/* 顶部条：返回 + 标题 + 保存状态 */}
       <div className="flex items-center gap-3 px-5 py-3 border-b" style={{ borderColor: "var(--border)" }}>
-        <Button variant="ghost" size="sm" onClick={onBack}>
+        <Button variant="ghost" size="sm" onClick={onBack} aria-label="返回列表">
           <Icon name="ArrowLeft" size={16} />
         </Button>
         <input
