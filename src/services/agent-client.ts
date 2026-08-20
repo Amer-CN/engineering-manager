@@ -274,7 +274,7 @@ export interface AgentStreamCallbacks {
 }
 
 const AGENT_STREAM_BASE =
-  import.meta.env.VITE_API_BASE ?? 'http://localhost:5048'
+  import.meta.env.VITE_API_BASE ?? ''
 
 /**
  * 流式发送 Agent 消息。逐块回调；出错/环境不支持时抛异常，交给调用方回退到 sendAgentMessage。
