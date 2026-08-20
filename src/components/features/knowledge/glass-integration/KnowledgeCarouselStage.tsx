@@ -53,29 +53,32 @@ export const KnowledgeCarouselStage: React.FC<KnowledgeCarouselStageProps> = ({
       {/* 零背景（用户拍板）：无任何氛围光/光晕——3D 文件夹直接悬浮在应用背景上 */}
 
       <div className="relative flex flex-col justify-between">
-        {/* 右上工具行（原版头部右侧语义：新建文件夹；主题适配配色） */}
-        <div className="relative z-30 flex justify-end gap-3 px-6 sm:px-12">
-          {onAddFolder && (
+        {/* 右上工具行：仅 3D 沉浸视角显示（看板态不占高度——用户指正，同 footer 规则）。
+            看板态的返回入口由 DashboardView header 上的按钮承接（Stage 传 onBackToAmbient） */}
+        {viewMode === 'ambient' && (
+          <div className="relative z-30 flex justify-end gap-3 px-6 sm:px-12">
+            {onAddFolder && (
+              <button
+                onClick={onAddFolder}
+                className="px-4 py-2.5 rounded-2xl text-xs font-semibold backdrop-blur-md transition-all flex items-center gap-2 border shadow-lg"
+                style={{
+                  background: 'var(--card)',
+                  color: 'var(--fg)',
+                }}
+              >
+                <span className="text-emerald-500 text-base leading-none">+</span>
+                <span>新建文件夹</span>
+              </button>
+            )}
             <button
-              onClick={onAddFolder}
-              className="px-4 py-2.5 rounded-2xl text-xs font-semibold backdrop-blur-md transition-all flex items-center gap-2 border shadow-lg"
-              style={{
-                background: 'var(--card)',
-          color: 'var(--fg)',
-              }}
+              onClick={() => setViewMode('dashboard')}
+              className="px-4 py-2.5 rounded-2xl text-xs font-semibold transition-all flex items-center gap-2 border shadow-lg text-white"
+              style={{ background: '#10b981', borderColor: '#34d399' }}
             >
-              <span className="text-emerald-500 text-base leading-none">+</span>
-              <span>新建文件夹</span>
+              切换至完整工作区 (看板)
             </button>
-          )}
-          <button
-            onClick={() => setViewMode(v => v === 'ambient' ? 'dashboard' : 'ambient')}
-            className="px-4 py-2.5 rounded-2xl text-xs font-semibold transition-all flex items-center gap-2 border shadow-lg text-white"
-            style={{ background: '#10b981', borderColor: '#34d399' }}
-          >
-            {viewMode === 'ambient' ? '切换至完整工作区 (看板)' : '返回 3D 沉浸视角'}
-          </button>
-        </div>
+          </div>
+        )}
 
         {/* 主区：ambient = 原版轮播 / dashboard = 原版看板（demo 双视图语义） */}
         {viewMode === 'ambient' ? (
@@ -95,6 +98,7 @@ export const KnowledgeCarouselStage: React.FC<KnowledgeCarouselStageProps> = ({
               selectedFolder={activeFolder}
               onSelectFolder={(f) => setSelectedId(f.id)}
               onOpenFolderDetail={() => onOpenDetail(activeFolder)}
+              onBackToAmbient={() => setViewMode('ambient')}
               theme={isDark ? 'dark' : 'light'}
             />
           </main>
