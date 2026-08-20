@@ -237,7 +237,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
   };
 
   return (
-    <div className="relative w-full flex flex-col items-center select-none overflow-hidden py-2">
+    <div className="relative w-full flex-1 flex flex-col items-center justify-center select-none overflow-hidden py-2 min-h-0">
       {/* Floating Preview Badge (Positioned at top-left / center of carousel) */}
       <div className="absolute top-4 left-6 md:left-12 z-40 transition-all duration-300">
         <FloatingPreviewBadge
@@ -406,9 +406,9 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerUp}
-        className="w-full h-[360px] sm:h-[400px] flex items-center justify-center cursor-grab touch-pan-y relative mt-6 sm:mt-4"
+        className="w-full flex-1 min-h-0 flex items-center justify-center cursor-grab touch-pan-y relative"
         style={{
-          perspective: '1400px',
+          perspective: '1800px', // 镜头拉远（用户拍板：3D 文件夹整体缩小）
           perspectiveOrigin: '50% 50%',
         }}
       >
