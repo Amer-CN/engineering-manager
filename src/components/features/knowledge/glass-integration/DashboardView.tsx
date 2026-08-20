@@ -39,14 +39,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [activeTab, setActiveTab] = useState<'all' | 'mine' | 'joined'>('all');
 
   return (
-    <div className={`min-h-screen w-full flex ${isDark ? 'bg-zinc-950 text-zinc-100' : 'bg-[#f4f6fa] text-zinc-800'}`}>
+    <div className={`min-h-screen w-full flex ${isDark ? 'text-zinc-100' : 'text-zinc-800'}`}>
       {/* --- CENTER MAIN CONTENT AREA --- */}
       <main className="flex-1 flex flex-col min-w-0 overflow-y-auto">
         {/* Top Header Bar */}
         <header className={`px-8 py-4 border-b flex items-center justify-between ${isDark ? 'bg-zinc-900/60 border-zinc-800' : 'bg-white border-zinc-200/80'}`}>
           <div>
-            <h1 className="text-xl font-bold tracking-tight">任务管理</h1>
-            <p className="text-xs text-zinc-400 mt-0.5">高效规划 · 智能协同 · 结果驱动</p>
+            <h1 className="text-xl font-bold tracking-tight">知识库</h1>
+            <p className="text-xs text-zinc-400 mt-0.5">文件夹 · 文档 · 检索</p>
           </div>
 
           {/* Search Input */}
@@ -142,8 +142,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           {/* --- 3D GLASS FOLDER INFINITE CAROUSEL CONTAINER SECTION --- */}
-          <div className={`p-6 rounded-3xl border ${isDark ? 'bg-zinc-900/80 border-zinc-800' : 'bg-gradient-to-b from-white to-blue-50/30 border-zinc-200/80 shadow-sm'}`}>
-            <div className="flex items-center justify-between mb-2">
+          <div className={`py-4 rounded-3xl border overflow-hidden ${isDark ? 'bg-zinc-900/80 border-zinc-800' : 'bg-gradient-to-b from-white to-blue-50/30 border-zinc-200/80 shadow-sm'}`}>
+            <div className="flex items-center justify-between px-4">
               <div className="flex items-center gap-3">
                 <h2 className="text-base font-bold">任务看板 (3D 文件夹归档)</h2>
                 <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl text-xs font-medium">
