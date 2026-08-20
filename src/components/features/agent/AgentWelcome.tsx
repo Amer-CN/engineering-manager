@@ -9,7 +9,7 @@ import { Icon } from '@/components/ui/Icon'
 import type { SuggestionCardConfig } from '@/types/agent'
 import AgentComposer from './AgentComposer'
 import SuggestionChips from './SuggestionChips'
-import Mascot from './Mascot'
+import Mascot, { type MascotState } from './Mascot'
 import { getGreeting } from '@/components/features/dashboard/dashboardConstants'
 
 interface AgentWelcomeProps {
@@ -23,6 +23,10 @@ interface AgentWelcomeProps {
   inputRef: React.RefObject<HTMLTextAreaElement>
   suggestions: SuggestionCardConfig[]
   onOpenHistory: () => void
+  /** mascot 表情状态（由 AgentDashboard 方向推导，替换旧的 loading 硬编码） */
+  mascotState: MascotState
+  /** 紧凑模式：首次提问流式回复期间，欢迎区块让出下方给消息流 */
+  compact?: boolean
 }
 
 const AgentWelcome: React.FC<AgentWelcomeProps> = ({
@@ -36,8 +40,10 @@ const AgentWelcome: React.FC<AgentWelcomeProps> = ({
   inputRef,
   suggestions,
   onOpenHistory,
+  mascotState,
+  compact = false,
 }) => (
-  <div className="flex-1 flex flex-col min-w-0">
+  <div className={compact ? 'flex flex-col min-w-0 flex-shrink-0' : 'flex-1 flex flex-col min-w-0'}>
     {/* 顶部：移动端历史按钮 */}
     <div className="flex items-center justify-end px-6 pt-4 flex-shrink-0">
       <button
@@ -49,7 +55,7 @@ const AgentWelcome: React.FC<AgentWelcomeProps> = ({
       </button>
     </div>
 
-    <div className="flex-1 flex flex-col items-center justify-center px-6 -mt-8">
+    <div className={compact ? 'flex flex-col items-center px-6 py-4' : 'flex-1 flex flex-col items-center justify-center px-6 -mt-8'}>
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -57,8 +63,8 @@ const AgentWelcome: React.FC<AgentWelcomeProps> = ({
         className="w-full max-w-2xl"
       >
         {/* AI 管家吉祥物 + 居中问候 */}
-        <div className="text-center mb-8">
-          <Mascot size={104} state={loading ? 'thinking' : 'idle'} className="mx-auto mb-5" />
+        <div className={compact ? 'text-center mb-4' : 'text-center mb-8'}>
+          <Mascot size={compact ? 84 : 104} state={mascotState} className="mx-auto mb-5" />
           <h1 className="text-4xl font-bold tracking-tight" style={{ color: 'var(--fg)' }}>
             {getGreeting()}，{username}
           </h1>
