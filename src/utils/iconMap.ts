@@ -13,7 +13,7 @@ import {
   GripVertical,
   Landmark, LayoutDashboard, Library, Lightbulb, Link, List, ListOrdered, Loader, Loader2, Lock, LogOut,
   Mail, MapPin, Menu, Maximize2, MessageSquare, Mic, Minus, Minimize2, Monitor, Moon, MoreVertical,
-  Package, PaintBucket, Palette, Paperclip, Pause, PenLine, Phone, PieChart, Play, Plug, Plus, Power, Printer,
+  Package, PaintBucket,  Paperclip, Pause, PenLine, Phone, PieChart, Play, Plug, Plus, Power, Printer,
   Quote,
   Receipt, Redo, Redo2, RefreshCcw, RefreshCw, RotateCcw, RotateCw, Ruler,
   Save, Scan, ScrollText, Search, SearchX, Settings, Shield, ShieldCheck, Snowflake, Sparkles, Square, SquareCheck, Stamp, Sun,
