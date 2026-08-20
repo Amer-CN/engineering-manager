@@ -208,6 +208,7 @@ export function HoverScrollbar({ children, className = '', threshold = 15 }: Hov
       <div
         ref={containerRef}
         className="h-full overflow-auto hide-native-scrollbar"
+        style={{ overscrollBehavior: 'contain' }}
       >
         {children}
       </div>
