@@ -1472,6 +1472,18 @@ button:disabled {
 /* 行内 AI 菜单浮层与编辑器间距 */
 .tiptap:focus-visible { outline: none; }
 
+/* ═══ R5：A4 纸张模式 — 白纸黑字，不随深色主题 ═══ */
+.a4-paper {
+  width: 794px;
+  min-height: 1123px;
+  background: #fff;
+  border-radius: 2px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  padding: 96px 120px;
+}
+.a4-paper .tiptap { color: #1f2328; }
+.a4-paper .tiptap p.is-editor-empty:first-child::before { color: #9ca3af; }
+
 /* ═══ R3：写作中心顶部工具栏 ═══ */
 .em-toolbar {
   display: flex;
