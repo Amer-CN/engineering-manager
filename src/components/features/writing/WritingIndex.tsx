@@ -221,53 +221,57 @@ const WritingIndex: React.FC = () => {
           </div>
         </div>
 
-        {loading ? (
-          <div className="flex justify-center py-16">加载中…</div>
-        ) : docs.length === 0 ? (
-          <EmptyState
-            icon="FileText"
-            title="还没有文档"
-            description="选文体、给素材，AI 起草或空白手写都可以"
-            action={
-              can("writing:create") ? <Button onClick={handleCreate}>新建文档</Button> : undefined
-            }
-          />
-        ) : (
-          <Card>
-            {docs.map((d) => (
-              <div
-                key={d.id}
-                className="flex items-center justify-between px-5 py-4 border-b cursor-pointer hover:bg-[color:var(--panel-2)]"
-                style={{ borderColor: "var(--border)" }}
-                onClick={() => setEditingId(d.id)}
-              >
-                <div>
-                  <div className="text-sm font-medium" style={{ color: "var(--fg)" }}>
-                    {d.title}
-                  </div>
-                  <div className="text-xs" style={{ color: "var(--muted)" }}>
-                    {d.docType} · {formatTime(d.updatedAt)}
-                  </div>
-                </div>
-                {can("writing:delete") && (
-                  <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(d)}>
-                    <Icon name="Trash2" size={15} />
-                    删除
-                  </Button>
-                )}
-              </div>
-            ))}
-            <div className="px-5 py-4">
-              <Pagination
-                current={page}
-                total={total}
-                pageSize={size}
-                onChange={setPage}
-                showTotal
+        {/* 固定高度列表卡片：列表区恒占 10 条高度，分页条固定底部 */}
+        <Card className="flex flex-col overflow-hidden min-h-[640px]">
+          <div className="flex-1 flex flex-col justify-start">
+            {loading ? (
+              <div className="flex justify-center py-16" style={{ color: "var(--muted)" }}>加载中…</div>
+            ) : docs.length === 0 ? (
+              <EmptyState
+                icon="FileText"
+                title="还没有文档"
+                description="选文体、给素材，AI 起草或空白手写都可以"
+                action={
+                  can("writing:create") ? <Button onClick={handleCreate}>新建文档</Button> : undefined
+                }
               />
-            </div>
-          </Card>
-        )}
+            ) : (
+              docs.map((d) => (
+                <div
+                  key={d.id}
+                  className="flex items-center justify-between px-5 py-4 border-b cursor-pointer hover:bg-[color:var(--panel-2)]"
+                  style={{ borderColor: "var(--border)" }}
+                  onClick={() => setEditingId(d.id)}
+                >
+                  <div>
+                    <div className="text-sm font-medium" style={{ color: "var(--fg)" }}>
+                      {d.title}
+                    </div>
+                    <div className="text-xs" style={{ color: "var(--muted)" }}>
+                      {d.docType} · {formatTime(d.updatedAt)}
+                    </div>
+                  </div>
+                  {can("writing:delete") && (
+                    <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(d)}>
+                      <Icon name="Trash2" size={15} />
+                      删除
+                    </Button>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+          {/* 底部固定分页条：total 换算为总页数（Pagination.total 语义是页数不是条数） */}
+          <div className="px-5 py-4 border-t" style={{ borderColor: "var(--border)" }}>
+            <Pagination
+              current={page}
+              total={Math.max(1, Math.ceil(total / size))}
+              pageSize={size}
+              onChange={setPage}
+              showTotal
+            />
+          </div>
+        </Card>
 
         <ConfirmDialog
           isOpen={deleteTarget != null}
