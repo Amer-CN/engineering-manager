@@ -12,7 +12,6 @@
  */
 
 import React, { useState, useEffect } from 'react'
-import PageContainer from '@/components/ui/PageContainer'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
@@ -80,14 +79,17 @@ const KnowledgeHomePage: React.FC = () => {
   }
 
   return (
-    <PageContainer maxWidth="full">
+    <div className="w-full" style={{ background: 'var(--bg)' }}>
+      {/* 页头已删（用户拍板：砍掉上部空间，页面一屏到底） */}
       {isLoading ? (
+        <div className="px-6 mx-auto max-w-[1600px]">
         <Card padding="lg" shadow="sm">
           <div className="flex items-center gap-2 text-sm py-10 justify-center" style={{ color: 'var(--muted)' }}>
             <Icon name="Loader2" size={16} className="animate-spin" />
             <span>加载文件夹中...</span>
           </div>
         </Card>
+        </div>
       ) : items.length > 0 ? (
         <KnowledgeCarouselStage
           folders={items}
@@ -95,6 +97,7 @@ const KnowledgeHomePage: React.FC = () => {
           onAddFolder={can('knowledge:create') ? () => setShowCreate(true) : undefined}
         />
       ) : (
+        <div className="px-6 mx-auto max-w-[1600px]">
         <Card padding="lg" shadow="sm">
           <EmptyState
             icon="Library"
@@ -109,6 +112,7 @@ const KnowledgeHomePage: React.FC = () => {
             }
           />
         </Card>
+        </div>
       )}
 
       {/* 新建文件夹（原版弹窗 → 真实入库） */}
@@ -126,7 +130,7 @@ const KnowledgeHomePage: React.FC = () => {
         onClose={() => setDetailFolder(null)}
         theme={carouselTheme}
       />
-    </PageContainer>
+    </div>
   )
 }
 
