@@ -1,4 +1,4 @@
-// useDrawingsView.ts — 图纸视图模式（堆叠舞台已于 M4 下线，仅保留画廊/列表）
+// useDrawingsView.ts — 图纸视图模式（用户裁决：轮播只留知识库，图纸回画廊/列表二视图）
 import { useEffect, useState } from 'react'
 
 export type DrawingsViewMode = 'gallery' | 'list'
