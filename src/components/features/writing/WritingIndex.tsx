@@ -252,7 +252,14 @@ const WritingIndex: React.FC = () => {
                     </div>
                   </div>
                   {can("writing:delete") && (
-                    <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(d)}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteTarget(d);
+                      }}
+                    >
                       <Icon name="Trash2" size={15} />
                       删除
                     </Button>
