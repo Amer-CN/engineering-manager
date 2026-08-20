@@ -339,6 +339,15 @@ public static class CostLedgerEndpoints
 
                     if (row.Id.HasValue && row.Id.Value > 0)
                     {
+                        // R9-21 A 桶收尾 A7：UPDATE 分支预读行归属 → Classify 单点（不手写 EXISTS），
+                        // 授权跨人实际改写时同事务补 per-row cross_user_edit（fail-closed）；
+                        // 批次门、INSERT 分支、批次摘要 audit 与行 UPDATE 的 UserFilter 原样不动。
+                        var existing = db.QueryFirstOrDefault(
+                            "SELECT created_by, project_id FROM cost_ledger WHERE id=@Id AND batch_id=@BatchId",
+                            new { Id = row.Id.Value, BatchId = batchId }, tx);
+                        var rowCreatedBy = existing?.created_by as string;
+                        var rowProjectId = existing?.project_id as long?;
+                        var rowAccess = existing == null ? RowWriteOutcome.Denied : RowWriteGate.Classify(ctx, db, rowCreatedBy, rowProjectId);
                         // UPDATE 已有行（附加数据权限过滤，防越权改写）
                         var affected = await db.ExecuteAsync(@"UPDATE [cost_ledger] SET
                             [voucher_no]=@VoucherNo,[date]=@Date,[direction]=@Direction,[category]=@Category,
@@ -348,7 +357,13 @@ public static class CostLedgerEndpoints
                             new { row.Id, row.VoucherNo, row.Date, row.Direction, row.Category,
                                   Amount = amountCents, row.Counterparty, row.Channel, row.Summary, row.Notes,
                                   BatchId = batchId, Uid = uid, IsAdmin = isAdmin, Now = now() }, tx);
-                        if (affected > 0) updated++; else skipped++;
+                        if (affected > 0)
+                        {
+                            updated++;
+                            if (rowAccess == RowWriteOutcome.AllowedViaAuthorization)
+                                AuditWriter.CrossUserEdit(db, tx, ctx, "cost_ledger", row.Id.Value, "POST /api/cost-ledger/{batchId}/sheet", rowCreatedBy, rowProjectId);
+                        }
+                        else skipped++;
                     }
                     else
                     {
