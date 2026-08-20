@@ -229,10 +229,30 @@ public static class CostLedgerEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             // G2 B9: 批次写操作 → costLedger:update
             if (!CurrentUser.HasPermission(ctx, db, "costLedger:update")) return Results.Forbid();
-            var scope = CurrentUser.GetDataScope(ctx);
-            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
-            var affected = await db.ExecuteAsync($"UPDATE cost_ledger_batches SET name=@Name, version=version+1, last_modified_at=@Now WHERE id=@Id AND {CurrentUser.UserFilterCompany(scope)}",
-                new { Name = dto.NewName ?? "", Now = now(), Id = id, Uid = uid, IsAdmin = isAdmin });
+            // R9-21 A 桶收尾 A5：B 桶形态翻转——现状 WHERE UserFilterCompany（非 All = created_by=@Uid，
+            // 授权跨人 403），对齐方案丙：预读 → Classify 单点 → 授权跨人可改（403→200）+ 同事务 audit。
+            // 预读行归属（C# 单点裁决归属，SQL WHERE 不再含 UserFilter/created_by/IsAdmin）。
+            var row = db.QueryFirstOrDefault(
+                "SELECT created_by, project_id FROM cost_ledger_batches WHERE id=@Id",
+                new { Id = id });
+            // 行不存在 → 403（收尾非 WriteResult，现状 Ok/Forbid 语义钉住）
+            if (row == null) return Results.Forbid();
+            // 归属裁决：Denied → 403；AllowedViaAuthorization → 跨人修改落 audit（同事务 fail-closed）
+            var createdBy = row.created_by as string;
+            var projectId = row.project_id as long?;
+            var access = RowWriteGate.Classify(ctx, db, createdBy, projectId);
+            if (access == RowWriteOutcome.Denied) return Results.Forbid();
+
+            // 归属条件移出 SQL（C# 单点裁决）；无锁列故无 409 档、WHERE 只留 id
+            using var tx = db.BeginTransaction();
+            var affected = await db.ExecuteAsync(@"UPDATE cost_ledger_batches SET name=@Name, version=version+1, last_modified_at=@Now WHERE id=@Id",
+                new { Name = dto.NewName ?? "", Now = now(), Id = id }, tx);
+            if (access == RowWriteOutcome.AllowedViaAuthorization)
+            {
+                // 跨人修改落审计（fail-closed：审计写不进 → 事务回滚 → 修改不生效）
+                AuditWriter.CrossUserEdit(db, tx, ctx, "cost_ledger_batches", id, "PUT /api/cost-ledger/batches/{id}", createdBy, projectId);
+            }
+            tx.Commit();
             return affected > 0 ? Common.Ok() : Results.Forbid();
         });
 
