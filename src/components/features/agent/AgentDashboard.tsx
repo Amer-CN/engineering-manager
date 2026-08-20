@@ -29,6 +29,7 @@ import AgentTopBar from './AgentTopBar'
 import MessageBubble from './MessageBubble'
 import { getFilteredSuggestions } from './suggestions'
 import { useAgentPrefill } from './useAgentPrefill'
+import Mascot, { type MascotState } from './Mascot'
 
 const AgentDashboard: React.FC = () => {
   const { currentUser } = useAuth()
@@ -48,6 +49,33 @@ const AgentDashboard: React.FC = () => {
 
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  // ── mascot 状态推导 + 首次响应视图切换 ──
+  const [mascotState, setMascotState] = useState<MascotState>('idle')
+  /** 首次响应已结束（含 success/error 短暂展示）→ 此后进入对话视图 */
+const [firstDone, setFirstDone] = useState(false)
+  const firstDoneRef = useRef(false)
+  /** 首轮视图切换定时器是否仍挂起（若在 success/error 窗内被新一轮发送清掉，需同步补位） */
+  const pendingFirstDoneRef = useRef(false)
+  const mascotTimer = useRef<number | undefined>(undefined)
+
+  /** 响应收尾：展示 success/error 窗口后回落 idle；首轮结束时定时切到对话视图 */
+  const finishRound = useCallback((ok: boolean, ms: number) => {
+    setMascotState(ok ? 'success' : 'error')
+    window.clearTimeout(mascotTimer.current)
+    // 首轮视图切换由该定时器执行，挂起期间标记 pending；被清掉时由 handleSend 补位置位
+    if (!firstDoneRef.current) pendingFirstDoneRef.current = true
+    mascotTimer.current = window.setTimeout(() => {
+      pendingFirstDoneRef.current = false
+      setMascotState('idle')
+      if (!firstDoneRef.current) {
+        firstDoneRef.current = true
+        setFirstDone(true)
+      }
+    }, ms)
+  }, [])
+
+  useEffect(() => () => { if (mascotTimer.current) window.clearTimeout(mascotTimer.current) }, [])
 
   // ── 自动滚动 ──
   useEffect(() => {
@@ -90,6 +118,17 @@ const AgentDashboard: React.FC = () => {
       const content = (overrideContent ?? inputValue).trim()
       if (!content || loading) return
 
+      // 新一轮发送：清掉上一轮残留的 success/error 回切定时器，进入 thinking。
+      // 若被清掉的是首轮挂起的视图切换定时器，须同步补位置位 firstDone——
+      // 否则第二轮仍停在欢迎区，圆球会再次出现（违反「第二次提问不再显示圆球」）。
+      window.clearTimeout(mascotTimer.current)
+      if (!firstDoneRef.current && pendingFirstDoneRef.current) {
+        firstDoneRef.current = true
+        setFirstDone(true)
+        pendingFirstDoneRef.current = false
+      }
+      setMascotState('thinking')
+
       const userClientId = genClientId()
       const assistantClientId = genClientId()
 
@@ -113,11 +152,21 @@ const AgentDashboard: React.FC = () => {
 
       const request = { message: content, ...(conversationId ? { conversationId } : {}) }
 
+      // 首次正文到达前记录，避免 tool 期间重复置 replying
+      let repliedOnce = false
+
       try {
         const callbacks: AgentStreamCallbacks = {
           onConversationId: (id) => setConversationId(id),
-          onTool: (name) => patchAssistant({ content: `🔧 正在查询：${name}…` }),
+          onTool: (name) => {
+            patchAssistant({ content: `🔧 正在查询：${name}…` })
+            setMascotState('searching')
+          },
           onContent: (text) => {
+            if (!repliedOnce) {
+              repliedOnce = true
+              setMascotState('replying')
+            }
             // 第一段正文到达时，清掉「正在查询」提示
             setMessages((prev) =>
               prev.map((m) => {
@@ -137,9 +186,11 @@ const AgentDashboard: React.FC = () => {
               }),
             )
             setRefreshTrigger((v) => v + 1) // 刷新洞察/统计
+            finishRound(true, 1200)          // 主流程正常完成
           },
           onError: (err) => {
             patchAssistant({ sending: false, content: `❌ 出错了：${err}` })
+            finishRound(false, 1600)        // 主流程出错
           },
         }
 
@@ -156,14 +207,17 @@ const AgentDashboard: React.FC = () => {
               toolCalls: resp.toolCalls,
             })
             setRefreshTrigger((v) => v + 1)
+            finishRound(true, 1200)
           } else {
             patchAssistant({ sending: false, content: `❌ ${resp.error ?? '请求失败'}` })
+            finishRound(false, 1600)
           }
         } catch (e) {
           patchAssistant({
             sending: false,
             content: `❌ 请求失败：${e instanceof Error ? e.message : '未知错误'}`,
           })
+          finishRound(false, 1600)
         }
       } finally {
         setLoading(false)
@@ -171,7 +225,7 @@ const AgentDashboard: React.FC = () => {
         setTimeout(() => inputRef.current?.focus(), 50)
       }
     },
-    [inputValue, loading, conversationId],
+    [inputValue, loading, conversationId, finishRound],
   )
 
   /** 加载历史对话 */
@@ -189,6 +243,12 @@ const AgentDashboard: React.FC = () => {
             toolCalls: m.toolCalls,
           }))
           setMessages(mapped)
+          if (mapped.length > 0) {
+            // 有历史消息 → 直接以对话视图呈现，跳过首次欢迎区
+            firstDoneRef.current = true
+            setFirstDone(true)
+            pendingFirstDoneRef.current = false
+          }
         } else {
           setMessages([])
         }
@@ -206,6 +266,12 @@ const AgentDashboard: React.FC = () => {
     setMessages([])
     setConversationId(null)
     setInputValue('')
+    // 重置「首次响应」标记与 mascot，回到欢迎区
+    firstDoneRef.current = false
+    setFirstDone(false)
+    pendingFirstDoneRef.current = false
+    setMascotState('idle')
+    window.clearTimeout(mascotTimer.current)
     setTimeout(() => inputRef.current?.focus(), 100)
   }, [])
 
@@ -232,6 +298,9 @@ const AgentDashboard: React.FC = () => {
 
   const isEmpty = messages.length === 0
 
+  /** 首次响应结束前保持欢迎布局（空态 + 首轮流式期间都走这里） */
+  const showWelcome = !firstDone
+
   const lastMsg = messages[messages.length - 1]
   const showThinking =
     loading &&
@@ -240,24 +309,43 @@ const AgentDashboard: React.FC = () => {
       (!!lastMsg.sending && !lastMsg.content))
 
   // ═══════════════════════════════════════════════════════════════
-  // 空态：居中欢迎工作台
+  // 欢迎区（空态居中工作台 / 首轮流式期间：欢迎区保持在顶部，回复渲染其下）
   // ═══════════════════════════════════════════════════════════════
-  if (isEmpty) {
+  if (showWelcome) {
     return (
       <>
         <div className="flex h-[calc(100vh-120px)]">
-          <AgentWelcome
-            username={username}
-            modelName={modelName}
-            providerName={providerName}
-            inputValue={inputValue}
-            onInputChange={setInputValue}
-            onSend={handleSend}
-            loading={loading}
-            inputRef={inputRef}
-            suggestions={suggestionCards}
-            onOpenHistory={() => setHistoryOpen(true)}
-          />
+          <div className="flex-1 flex flex-col min-w-0">
+            <AgentWelcome
+              username={username}
+              modelName={modelName}
+              providerName={providerName}
+              inputValue={inputValue}
+              onInputChange={setInputValue}
+              onSend={handleSend}
+              loading={loading}
+              inputRef={inputRef}
+              suggestions={suggestionCards}
+              onOpenHistory={() => setHistoryOpen(true)}
+              mascotState={mascotState}
+              compact={!isEmpty}
+            />
+            {/* 首轮流式回复：渲染在欢迎区下方，直到底部滚动区 */}
+            {!isEmpty && (
+              <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 pb-4 min-h-0">
+                <div className="max-w-3xl mx-auto">
+                  {messages.map((msg, idx) => (
+                    <MessageBubble
+                      key={msg.clientId}
+                      message={msg}
+                      isUser={msg.role === 'user'}
+                      onResend={msg.role === 'assistant' && idx > 0 ? () => handleResend(msg.clientId) : undefined}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
           <HistorySidebar
             conversationId={conversationId}
             onSelectConversation={handleSelectConversation}
@@ -295,6 +383,12 @@ const AgentDashboard: React.FC = () => {
             onSearchOpen={() => setSearchOpen(true)}
             onHistoryOpen={() => setHistoryOpen(true)}
           />
+
+          {/* 对话期间常驻小圆球：实时表达 AI 工作状态（thinking/searching/replying
+              轮转、success 短暂展示后回 idle、error；空闲/待命时回 idle 不消失） */}
+          <div className="flex justify-center pt-3 flex-shrink-0" style={{ overflow: 'visible' }}>
+            <Mascot size={68} state={mascotState} />
+          </div>
 
           {/* 消息流 */}
           <HoverScrollbar className="flex-1 px-6">
