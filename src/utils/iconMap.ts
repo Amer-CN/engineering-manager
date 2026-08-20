@@ -40,7 +40,7 @@ export const iconMap: Record<string, LucideIcon> = {
   GripVertical,
   Landmark, LayoutDashboard, Library, Lightbulb, Link, List, ListOrdered, Loader, Loader2, Lock, LogOut,
   Mail, MapPin, Menu, Maximize2, MessageSquare, Mic, Minus, Minimize2, Monitor, Moon, MoreVertical,
-  Package, PaintBucket, Palette, Paperclip, Pause, PenLine, Phone, PieChart, Play, Plug, Plus, Power, Printer,
+  Package, PaintBucket, Palette: PaintBucket, Paperclip, Pause, PenLine, Phone, PieChart, Play, Plug, Plus, Power, Printer,
   Quote,
   Receipt, Redo, Redo2, RefreshCcw, RefreshCw, RotateCcw, RotateCw, Ruler,
   Save, Scan, ScrollText, Search, SearchX, Settings, Shield, ShieldCheck, Snowflake, Sparkles, Square, SquareCheck, Stamp, Sun,
@@ -49,6 +49,7 @@ export const iconMap: Record<string, LucideIcon> = {
   Undo, Undo2, Upload, User, UserCheck, UserCircle, UserCog, Users,
   Wallet, Wand2, WifiOff, Wrench,
   X, XCircle, Zap,
+  ClipboardFile: ClipboardPen,
 }
 
 export function getIcon(name: string): LucideIcon | undefined {
