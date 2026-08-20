@@ -5,7 +5,9 @@
  * 替代 Tauri 的 invoke 和 Electron 的 ipcRenderer
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:5048';
+// 同源相对路径：生产/桌面端前后端同端口（WebView2 加载本地 dist），dev 由 Vite 代理。
+// 硬编码 localhost 会在 IPv6 优先环境解析到 ::1 而后端只监听 127.0.0.1 → fetch failed。
+const API_BASE = import.meta.env.VITE_API_BASE ?? '';
 const TOKEN_KEY = 'jwt_token';
 const MASK_KEY = 'v120_mask_enabled';
 const PII_PATHS = ['/api/members', '/api/workers', '/api/partners', '/api/project-members'];

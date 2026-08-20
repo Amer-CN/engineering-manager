@@ -4,7 +4,7 @@
  * 复用 api-client.ts 的认证 token 和 snake_case → camelCase 转换
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:5048'
+const API_BASE = import.meta.env.VITE_API_BASE ?? ''
 const TOKEN_KEY = 'jwt_token'
 
 function getToken(): string | null {
