@@ -39,7 +39,8 @@ export const KnowledgeCarouselStage: React.FC<KnowledgeCarouselStageProps> = ({
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
   // 双视图（demo 原版语义）：ambient 轮播 ↔ dashboard 看板
-  const [viewMode, setViewMode] = useState<ViewMode>('ambient')
+  // 默认 = 完整工作区看板（知识库首页）；3D 沉浸视角为看板内的子页面（用户拍板）
+  const [viewMode, setViewMode] = useState<ViewMode>('dashboard')
 
   if (folders.length === 0) return null
 
