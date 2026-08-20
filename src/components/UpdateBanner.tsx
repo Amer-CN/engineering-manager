@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useUpdater } from '../hooks/useUpdater'
 
@@ -15,10 +15,20 @@ function formatSpeed(bps: number): string {
 
 export function UpdateBanner() {
   const { info, progress, phase, error, check, download, cancel, pause, resume, retry, setInfo } = useUpdater()
-  const [dismissed, setDismissed] = useState(false)
+  // 记住已忽略的版本号：同一版本忽略后不再弹，之后发布更新的版本时重新提示
+  const [dismissedFor, setDismissedFor] = useState<string | null>(null)
+  const phaseRef = useRef(phase)
+  phaseRef.current = phase
 
   useEffect(() => {
     check().then(r => { if (!r) setInfo(null) }).catch(() => {})
+    // 运行中每 12 小时复查一次新版本；下载/校验/暂停/完成期间跳过，避免打断更新流程
+    const timer = setInterval(() => {
+      const p = phaseRef.current
+      if (p === 'checking' || p === 'downloading' || p === 'verifying' || p === 'paused' || p === 'done') return
+      check().then(r => { if (!r) setInfo(null) }).catch(() => {})
+    }, 12 * 60 * 60 * 1000)
+    return () => clearInterval(timer)
   }, [])
 
   if (!info?.hasUpdate) return null
@@ -78,7 +88,7 @@ export function UpdateBanner() {
   }
 
   // 非强更：悬浮固定通知条（不挤压布局，可关闭）
-  if (dismissed) return null
+  if (dismissedFor === info.latest) return null
 
   const isDownloading = phase === 'downloading' || phase === 'verifying'
 
@@ -136,7 +146,7 @@ export function UpdateBanner() {
 
             {phase !== 'downloading' && phase !== 'verifying' && (
               <button
-                onClick={() => setDismissed(true)}
+                onClick={() => setDismissedFor(info.latest)}
                 className="text-warning-400 hover:text-warning-600 text-lg leading-none flex-shrink-0 ml-1"
                 title="稍后再说"
               >

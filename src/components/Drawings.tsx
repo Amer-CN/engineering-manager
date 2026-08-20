@@ -222,7 +222,7 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
 
   const filteredDrawings = useMemo(() => drawings.filter(drawing => {
   if (filterProject && drawing.projectId !== filterProject) return false
-  // 类别比较走归一：脏类别归「其他」，与堆叠分组计数/展示口径一致（B1 方案 C）
+  // 类别比较走归一：脏类别归「其他」，与类别 pill 筛选口径一致
   if (filterCategory && normalizeDrawingCategory(drawing.category) !== filterCategory) return false
   return true
   }), [drawings, filterProject, filterCategory])
@@ -248,9 +248,9 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
   <p className="text-[color:var(--muted)] mt-1">查看与管理所有工程图纸及修订版本</p>
   </div>
   <div className="flex items-center gap-3">
-  {/* 画廊 / 列表切换（堆叠舞台已于 M4 下线） */}
+  {/* 画廊 / 列表 切换 */}
   <div className="inline-flex rounded-lg p-0.5" style={{ background: 'var(--panel-2)' }}>
-    {([['gallery', '画廊', 'Image'], ['list', '列表', 'List']] as ReadonlyArray<readonly [string, string, string]>).map(([mode, label, icon]) => {
+    {([['gallery', '画廊', 'Image'], ['list', '列表', 'List']] as const).map(([mode, label, icon]) => {
       const active = viewMode === mode
       return (
         <button key={mode} onClick={() => setViewMode(mode as 'gallery' | 'list')}
@@ -304,7 +304,7 @@ const Drawings: React.FC<DrawingsProps> = ({ refresh }) => {
     </select>
   </div>
 
-  {/* 图纸列表 / 画廊（FolderStack3D 堆叠舞台已于 M4 下线，见 HANDOFF §〇） */}
+  {/* 图纸列表 / 画廊 */}
   {filteredDrawings.length > 0 ? (
   viewMode === 'gallery' ? (
   <DrawingsGallery
