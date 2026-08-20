@@ -314,7 +314,7 @@ const [firstDone, setFirstDone] = useState(false)
   if (showWelcome) {
     return (
       <>
-        <div className="flex h-[calc(100vh-120px)]">
+        <div className="flex h-[calc(100vh-60px)]">
           <div className="flex-1 flex flex-col min-w-0">
             <AgentWelcome
               username={username}
@@ -373,7 +373,7 @@ const [firstDone, setFirstDone] = useState(false)
   // ═══════════════════════════════════════════════════════════════
   return (
     <>
-      <div className="flex h-[calc(100vh-120px)]">
+      <div className="flex h-[calc(100vh-60px)]">
         {/* 主区 */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* 顶部条：助手标识 + 搜索 + 移动端历史 */}

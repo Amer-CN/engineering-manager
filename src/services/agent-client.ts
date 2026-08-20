@@ -49,14 +49,12 @@ export async function sendAgentMessage(
  * 获取用户的对话列表
  */
 export async function getAgentConversations(): Promise<AgentConversation[]> {
-  const result = await apiClient.get<{ success: boolean; data: AgentConversation[] }>(
-    '/api/agent/conversations'
-  )
+  const result = await apiClient.get<AgentConversation[]>('/api/agent/conversations')
   if (!result.success || !result.data) {
     console.warn('[AgentClient] 获取对话列表失败:', result.error)
     return []
   }
-  return result.data.data || []
+  return result.data
 }
 
 /**
@@ -66,14 +64,14 @@ export async function getAgentConversations(): Promise<AgentConversation[]> {
 export async function getAgentConversationDetail(
   conversationId: number
 ): Promise<AgentConversationDetail | null> {
-  const result = await apiClient.get<{ success: boolean; data: AgentConversationDetail }>(
+  const result = await apiClient.get<AgentConversationDetail>(
     `/api/agent/conversations/${conversationId}`
   )
   if (!result.success || !result.data) {
     console.warn('[AgentClient] 获取对话详情失败:', result.error)
     return null
   }
-  return result.data.data || null
+  return result.data
 }
 
 /**
@@ -109,7 +107,7 @@ export async function renameAgentConversation(
  * 获取“最近删除”（软删除）对话列表，供恢复入口使用
  */
 export async function getDeletedAgentConversations(): Promise<AgentConversation[]> {
-  const result = await apiClient.get<{ success: boolean; data: AgentConversation[] }>(
+  const result = await apiClient.get<AgentConversation[]>(
     '/api/agent/conversations',
     { scope: 'deleted' }
   )
@@ -117,7 +115,7 @@ export async function getDeletedAgentConversations(): Promise<AgentConversation[
     console.warn('[AgentClient] 获取最近删除列表失败:', result.error)
     return []
   }
-  return result.data.data || []
+  return result.data
 }
 
 /**
@@ -167,14 +165,12 @@ export async function restoreConversation(
  * 检查 LLM 配置状态（白名单，无需登录）
  */
 export async function getLlmProviderStatus(): Promise<LlmProviderStatus | null> {
-  const result = await apiClient.get<{ success: boolean; data: LlmProviderStatus }>(
-    '/api/agent/setup/status'
-  )
+  const result = await apiClient.get<LlmProviderStatus>('/api/agent/setup/status')
   if (!result.success || !result.data) {
     console.warn('[AgentClient] 获取 LLM 状态失败:', result.error)
     return null
   }
-  return result.data.data || null
+  return result.data
 }
 
 /**
@@ -230,22 +226,19 @@ export async function getLlmProviderConfig(): Promise<{
   hasApiKey: boolean
 } | null> {
   const result = await apiClient.get<{
-    success: boolean
-    data: {
-      providerName: string
-      baseUrl: string
-      model: string
-      useBuiltIn: boolean
-      temperature: number
-      maxTokens: number
-      hasApiKey: boolean
-    }
+    providerName: string
+    baseUrl: string
+    model: string
+    useBuiltIn: boolean
+    temperature: number
+    maxTokens: number
+    hasApiKey: boolean
   }>('/api/agent/config')
   if (!result.success || !result.data) {
     console.warn('[AgentClient] 获取 LLM 配置失败:', result.error)
     return null
   }
-  return result.data.data || null
+  return result.data
 }
 
 /**

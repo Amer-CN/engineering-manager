@@ -139,8 +139,6 @@ interface StateCfg {
   follow: boolean
   /** 是否随机眨眼 */
   blink: boolean
-  /** thinking 专用：头顶椭圆环带 */
-  orbit: boolean
   /** replying 专用：小圆嘴（静态可辨"正在说话"） */
   mouth: boolean
   /** 身体动素：idle 呼吸 / think 缓晃 / scan 高频轻颤 / pulse 脉动 / pop 上弹 / shake 摇头 */
@@ -155,7 +153,6 @@ const STATE_CONFIG: Record<ResolvedState, StateCfg> = {
     exprIds: [CENTERED_EXPR_ID],
     follow: true,
     blink: true,
-    orbit: false,
     mouth: false,
     body: 'idle',
   },
@@ -164,7 +161,6 @@ const STATE_CONFIG: Record<ResolvedState, StateCfg> = {
     stepMs: 1500,
     follow: false,
     blink: true,
-    orbit: true,
     mouth: false,
     body: 'think',
   },
@@ -173,7 +169,6 @@ const STATE_CONFIG: Record<ResolvedState, StateCfg> = {
     stepMs: 300,
     follow: false,
     blink: false,
-    orbit: false,
     mouth: false,
     body: 'scan',
   },
@@ -182,7 +177,6 @@ const STATE_CONFIG: Record<ResolvedState, StateCfg> = {
     stepMs: 760,
     follow: false,
     blink: true,
-    orbit: false,
     mouth: true,
     body: 'pulse',
   },
@@ -192,7 +186,6 @@ const STATE_CONFIG: Record<ResolvedState, StateCfg> = {
     stepMs: 600,
     follow: false,
     blink: false,
-    orbit: false,
     mouth: false,
     body: 'pop',
   },
@@ -201,7 +194,6 @@ const STATE_CONFIG: Record<ResolvedState, StateCfg> = {
     stepMs: 800,
     follow: false,
     blink: false,
-    orbit: false,
     mouth: false,
     body: 'shake',
   },
@@ -210,7 +202,6 @@ const STATE_CONFIG: Record<ResolvedState, StateCfg> = {
     exprIds: [13],
     follow: false,
     blink: false,
-    orbit: false,
     mouth: false,
     body: 'idle',
   },
@@ -464,7 +455,6 @@ const Mascot = ({ size = 96, state = 'idle', follow = true, className }: MascotP
   const eyeLRef = useRef<SVGPathElement>(null)
   const eyeRRef = useRef<SVGPathElement>(null)
   const flashRef = useRef<SVGCircleElement>(null)
-  const haloRef = useRef<SVGPathElement>(null)
   const mouthRef = useRef<SVGEllipseElement>(null)
   const particlesRef = useRef<SVGGElement>(null)
   const engineRef = useRef<Engine | null>(null)
@@ -500,16 +490,8 @@ const Mascot = ({ size = 96, state = 'idle', follow = true, className }: MascotP
       `translate(${e.get('bx').toFixed(2)} ${e.get('by').toFixed(2)}) rotate(${e.get('br').toFixed(2)} ${CX} ${CY}) scale(${e.get('bs').toFixed(3)})`,
     )
 
-    // thinking 常驻环带（其余状态隐藏）
-    const hc = STATE_CONFIG[m.state]
-    if (hc.orbit) {
-      haloRef.current?.setAttribute('d', haloD(((m.now / 1000) * 9) % 360))
-      haloRef.current?.setAttribute('opacity', '0.65')
-    } else {
-      haloRef.current?.setAttribute('opacity', '0')
-    }
-
     // replying 小圆嘴（其余状态隐藏）
+    const hc = STATE_CONFIG[m.state]
     mouthRef.current?.setAttribute('opacity', hc.mouth ? '0.85' : '0')
 
     // error 红色特征（两段）：前 0.5s 从峰值 0.35 衰减到常亮红晕 0.18，
@@ -784,7 +766,7 @@ const Mascot = ({ size = 96, state = 'idle', follow = true, className }: MascotP
 
       // 犯困阶段：idle 且无鼠标交互满 45s → 眯眼犯困（表情 15 + 身体下垂）
       //（60s 才入 sleep；鼠标一动由 onInteract 清 drowsy，直接回正视）
-      if (m.state === 'idle' && !m.sleeping && !m.drowsy && now - m.lastInteractAt >= 45000) {
+      if (m.state === 'idle' && !m.sleeping && !m.drowsy && now - m.lastInteractAt >= 15000) {
         m.drowsy = true
         m.drowsyAt = now
         m.glanceExpr = null
@@ -792,7 +774,7 @@ const Mascot = ({ size = 96, state = 'idle', follow = true, className }: MascotP
       }
 
       // 自动打盹：idle 且无鼠标交互（mousemove/click）超过 60s → 切 sleep（闭眼 + 极慢呼吸）
-      if (m.state === 'idle' && !m.sleeping && now - m.lastInteractAt >= 60000) {
+      if (m.state === 'idle' && !m.sleeping && now - m.lastInteractAt >= 30000) {
         m.sleeping = true
         m.state = 'sleep'
         // 打盹清掉点击/瞟眼残留，避免与闭眼表情叠加
@@ -965,9 +947,6 @@ const Mascot = ({ size = 96, state = 'idle', follow = true, className }: MascotP
         {/* replying 嘴：开口椭圆（正在说话，paint 直写 opacity），画布下部 */}
         <ellipse ref={mouthRef} cx={CX} cy={170} rx="5" ry="6.5" fill="oklch(26% 0.015 70)" opacity="0" />
 
-        {/* thinking：头顶椭圆环带（常驻，缓慢旋转，y≈40） */}
-        <path ref={haloRef} fill="none" stroke="var(--success)" strokeWidth="3" strokeLinecap="round" opacity="0" />
-
         {/* success 撒花粒子容器（成功时按需挂载 ≤14 个） */}
         <g ref={particlesRef} />
       </svg>
@@ -976,21 +955,3 @@ const Mascot = ({ size = 96, state = 'idle', follow = true, className }: MascotP
 }
 
 export default Mascot
-
-/* ══════════════ thinking 头顶椭圆环带弧线（写给 paint 用） ══════════════ */
-
-/** 环绕大半圈，随角度旋转 */
-function haloD(angleDeg: number): string {
-  const HX = GROK_CANVAS.w / 2
-  const HY = 40
-  const RX = 80
-  const RY = 26
-  const SW = 150
-  const a0 = ((angleDeg - SW) * Math.PI) / 180
-  const a1 = ((angleDeg + SW) * Math.PI) / 180
-  const x0 = HX + RX * Math.cos(a0)
-  const y0 = HY + RY * Math.sin(a0)
-  const x1 = HX + RX * Math.cos(a1)
-  const y1 = HY + RY * Math.sin(a1)
-  return `M ${x0.toFixed(2)} ${y0.toFixed(2)} A ${RX} ${RY} 0 1 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`
-}
