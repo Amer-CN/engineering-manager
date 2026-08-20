@@ -1,179 +1,136 @@
 /**
- * KnowledgeHomePage — 知识库首页
+ * KnowledgeHomePage — 知识库首页（整页 = 参考项目原版全屏轮播布局）
  *
- * M3：真实数据打通——
- *   - 3D 轮播接 useKnowledgeFolders（支持项目筛选）
- *   - 空态：EmptyState + knowledge:create 门控的「新建文件夹」
- *   - 下方文档库与检索（KnowledgeLibrary，既有能力零回退）
- * M2 演示数据已下线（demoData.ts 删除）。
+ * 用户拍板：以参考项目 demo 页为基础，不做旧集成修补。本轮：
+ *   - 壳裁剪：无 WB 头部/看板/主题按钮/底部页脚条，页面 = 应用壳 + 全屏轮播舞台
+ *   - 三主题真适配：代码在 KnowledgeCarouselStage（graphite→dark、sandstone/white→light，
+ *     舞台背景用 --bg token，纸面由 .gc-stage-iso 隔离重置）
+ *   - 数据真实：folders 来自 useKnowledgeFolders；AddFolderModal → createKnowledgeFolder
+ *     真实入库；详情弹窗 → listFolderDocuments 只读展示
+ *   - 空态：EmptyState + knowledge:create 门控新建
+ *   - KnowledgeLibrary 保留在代码中不再渲染（文档浏览走详情弹窗）
  */
 
-import React, { useState, useEffect, useMemo } from 'react'
-import PageContainer from '@/components/ui/PageContainer'
+import React, { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
 import { Icon } from '@/components/ui/Icon'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { useToastContext } from '@/hooks/useToast'
 import { usePermission } from '@/hooks/usePermission'
-import { useProjects } from '@/hooks/data/useProjects'
+import { useTheme } from '@/hooks/useTheme'
 import { useKnowledgeFolders, useCreateKnowledgeFolder } from '@/hooks/data/useKnowledgeFolders'
-import { GlassCarousel } from './glass/GlassCarousel'
-import type { FolderItem } from './glass/types'
-import KnowledgeLibrary from './KnowledgeLibrary'
+import type { KnowledgeFolder } from '@/services/knowledge-folders'
+import { KnowledgeCarouselStage } from './glass-integration/KnowledgeCarouselStage'
+import { KnowledgeFolderDetailModal } from './glass-integration/KnowledgeFolderDetailModal'
+import { AddFolderModal } from './glass-integration/AddFolderModal'
+import type { FolderItem } from './glass-integration/types'
+
+/** API 文件夹 → 参考项目 FolderItem（progress 后端暂无口径，沿用既有占位 60） */
+const toFolderItem = (f: KnowledgeFolder): FolderItem => ({
+  id: String(f.id),
+  title: f.name,
+  englishTitle: f.englishName ?? undefined,
+  period: f.category ?? '知识库',
+  progress: 60,
+  memberCount: f.docCount,
+  category: f.category ?? '知识库',
+  documents: [],
+})
 
 const KnowledgeHomePage: React.FC = () => {
   const { showToast } = useToastContext()
   const { can } = usePermission()
-  const [openDocId, setOpenDocId] = useState<number | null>(null)
+  const { scheme } = useTheme()
 
-  // ── 项目筛选（null = 全部，含跨项目通用资料）──
-  const [projectId, setProjectId] = useState<number | null>(null)
-  const { data: projects } = useProjects()
-  const { data: folders, isLoading } = useKnowledgeFolders(projectId ?? undefined)
+  // ── 数据：全部文件夹（跨项目通用；原版布局无筛选条）──
+  const { data: folders, isLoading } = useKnowledgeFolders()
+  const [items, setItems] = useState<FolderItem[]>([])
+  useEffect(() => {
+    if (folders) setItems(folders.map(toFolderItem))
+  }, [folders])
 
-  // ── 新建文件夹 ──
+  // ── 新建文件夹（knowleadge 门控；AddFolderModal 原版交互）──
   const [showCreate, setShowCreate] = useState(false)
-  const [newFolderName, setNewFolderName] = useState('')
   const createFolder = useCreateKnowledgeFolder()
 
-  // 挂载时检查是否有来自 Agent 来源卡片 / 语音转写入库的 pendingDocId（可靠机制，不依赖事件时序）
-  useEffect(() => {
-    const pending = sessionStorage.getItem('knowledge:pendingDocId')
-    if (pending) {
-      sessionStorage.removeItem('knowledge:pendingDocId')
-      const docId = parseInt(pending, 10)
-      if (!isNaN(docId)) setOpenDocId(docId)
-    }
-  }, [])
+  // ── 详情弹窗目标 ──
+  const [detailFolder, setDetailFolder] = useState<FolderItem | null>(null)
 
-  // API 文件夹 → 轮播模型：memberCount=文档数、englishTitle=english_name、progress 可空（M3 补强 ⑤）
-  const carouselFolders: FolderItem[] = useMemo(
-    () => (folders ?? []).map((f) => ({
-      id: String(f.id),
-      title: f.name,
-      englishTitle: f.englishName ?? undefined,
-      period: f.category ?? '知识库',
-      progress: null,
-      memberCount: f.docCount,
-      category: f.category ?? '知识库',
-      documents: [],
-    })),
-    [folders],
-  )
+  // 三主题映射（弹窗同源）：graphite → dark；sandstone/white → light
+  const carouselTheme: 'dark' | 'light' = scheme === 'graphite' ? 'dark' : 'light'
 
-  const handleCreateFolder = async () => {
-    const name = newFolderName.trim()
-    if (!name) {
-      showToast('文件夹名称不能为空', 'error')
+  const handleCreateFolder = async (item: FolderItem) => {
+    const res = await createFolder.mutateAsync({
+      name: item.title,
+      englishName: item.englishTitle || null,
+      category: item.category,
+    })
+    if (!res.success) {
+      showToast(res.error || '创建失败', 'error')
       return
     }
-    const res = await createFolder.mutateAsync({ name, projectId })
-    if (res.success) {
-      showToast('文件夹已创建', 'success')
-      setShowCreate(false)
-      setNewFolderName('')
-    } else {
-      showToast(res.error || '创建失败', 'error')
-    }
+    // 入库成功 → 本地立即补一张卡（refetch 后与服务端一致）
+    setItems((prev) => [
+      { ...item, id: String(res.data?.id ?? item.id), documents: [] },
+      ...prev,
+    ])
+    showToast('文件夹已创建', 'success')
   }
 
   return (
-    <PageContainer maxWidth="wide">
-      {/* ── 项目筛选 + 新建（primary/slate 普通组件，非舞台区）── */}
-      <Card padding="md" shadow="sm" className="mb-4">
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-[color:var(--muted)]">项目筛选</span>
-            <select
-              value={projectId ?? ''}
-              onChange={(e) => setProjectId(e.target.value === '' ? null : Number(e.target.value))}
-              className="rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] px-2.5 py-2 text-sm focus:border-[color:var(--accent)] focus:outline-none focus:ring-1 focus:ring-[color:var(--accent)]"
-              aria-label="按项目筛选文件夹"
-            >
-              <option value="">全部项目（含跨项目通用）</option>
-              {(projects ?? []).map((p: { id: number; name: string }) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </div>
-          {can('knowledge:create') && (
-            <Button variant="primary" size="sm" leftIcon="FolderPlus" onClick={() => setShowCreate(true)}>
-              新建文件夹
-            </Button>
-          )}
-        </div>
-      </Card>
-
-      {/* ── 3D 玻璃文件夹轮播舞台（Stage-Surface 授权区；空态 → EmptyState + 新建）── */}
+    <div className="w-full" style={{ background: 'var(--bg)' }}>
+      {/* 页头已删（用户拍板：砍掉上部空间，页面一屏到底） */}
       {isLoading ? (
-        <Card padding="lg" shadow="sm" className="mb-4">
-          <div className="flex items-center gap-2 text-sm text-[color:var(--muted)] py-8 justify-center">
+        <div className="px-6 mx-auto max-w-[1600px]">
+        <Card padding="lg" shadow="sm">
+          <div className="flex items-center gap-2 text-sm py-10 justify-center" style={{ color: 'var(--muted)' }}>
             <Icon name="Loader2" size={16} className="animate-spin" />
             <span>加载文件夹中...</span>
           </div>
         </Card>
-      ) : carouselFolders.length > 0 ? (
-        <GlassCarousel folders={carouselFolders} />
+        </div>
+      ) : items.length > 0 ? (
+        <KnowledgeCarouselStage
+          folders={items}
+          onOpenDetail={(f) => setDetailFolder(f)}
+          onAddFolder={can('knowledge:create') ? () => setShowCreate(true) : undefined}
+        />
       ) : (
-        <Card padding="lg" shadow="sm" className="mb-4">
+        <div className="px-6 mx-auto max-w-[1600px]">
+        <Card padding="lg" shadow="sm">
           <EmptyState
             icon="Library"
             title="知识库为空"
             description="创建文件夹后，可通过语音转写入库或手动添加文档"
-            action={can('knowledge:create') ? (
-              <Button variant="primary" size="sm" leftIcon="FolderPlus" onClick={() => setShowCreate(true)}>
-                新建文件夹
-              </Button>
-            ) : undefined}
+            action={
+              can('knowledge:create') ? (
+                <Button variant="primary" size="sm" leftIcon="FolderPlus" onClick={() => setShowCreate(true)}>
+                  新建文件夹
+                </Button>
+              ) : undefined
+            }
           />
         </Card>
+        </div>
       )}
 
-      {/* ── 文档库与检索（零回退）── */}
-      <Card padding="none" shadow="md" className="overflow-hidden">
-        <div className="px-6 pt-5 pb-0">
-          <div className="flex items-center gap-2.5 mb-1">
-            <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg shadow-sm" style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}>
-              <Icon name="Library" size={16} />
-            </span>
-            <h1 className="text-base font-semibold tracking-tight text-[color:var(--fg)]">知识库</h1>
-          </div>
-          <p className="text-sm text-[color:var(--muted)] mb-4 pl-[38px]">文档资料库与知识检索</p>
-        </div>
+      {/* 新建文件夹（原版弹窗 → 真实入库） */}
+      <AddFolderModal
+        isOpen={showCreate}
+        onClose={() => setShowCreate(false)}
+        onAddFolder={handleCreateFolder}
+        theme={carouselTheme}
+      />
 
-        <div className="p-6 pt-0">
-          <KnowledgeLibrary openDocId={openDocId} onOpenDocIdConsumed={() => setOpenDocId(null)} />
-        </div>
-      </Card>
-
-      {/* ── 新建文件夹弹窗 ── */}
-      <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="sm:max-w-md">
-          <DialogTitle>新建文件夹</DialogTitle>
-          <DialogDescription>
-            {projectId != null ? '新文件夹将归属当前筛选的项目' : '新建跨项目通用资料文件夹'}
-          </DialogDescription>
-          <div className="space-y-4 pt-2">
-            <Input
-              value={newFolderName}
-              onChange={(e) => setNewFolderName(e.target.value)}
-              placeholder="文件夹名称（如：安全生产资料）"
-              onKeyDown={(e) => { if (e.key === 'Enter') handleCreateFolder() }}
-              autoFocus
-            />
-            <div className="flex justify-end gap-2">
-              <Button variant="ghost" size="md" onClick={() => setShowCreate(false)}>取消</Button>
-              <Button variant="primary" size="md" loading={createFolder.isPending} onClick={handleCreateFolder}>
-                创建
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </PageContainer>
+      {/* 详情弹窗（真实文档只读展示） */}
+      <KnowledgeFolderDetailModal
+        folder={detailFolder}
+        isOpen={detailFolder != null}
+        onClose={() => setDetailFolder(null)}
+        theme={carouselTheme}
+      />
+    </div>
   )
 }
 

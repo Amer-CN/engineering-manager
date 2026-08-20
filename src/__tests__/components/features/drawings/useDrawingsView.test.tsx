@@ -1,8 +1,8 @@
 /**
  * 图纸视图模式测试（useDrawingsView）
  *
- * M4：FolderStack3D 堆叠舞台下线后，视图仅剩画廊/列表；
- * 覆盖：默认列表、切换持久化、非法值回落、旧 'stack' 持久化值回落（老用户平滑降级）。
+ * 用户裁决轮播只留知识库后：图纸仅画廊/列表二视图；
+ * 覆盖：默认列表、切换持久化、非法值回落、历史 stack 值回落默认。
  */
 import { renderHook, act } from '@testing-library/react'
 import { describe, it, expect, beforeEach } from 'vitest'
@@ -30,7 +30,7 @@ describe('useDrawingsView', () => {
     expect(result.current.viewMode).toBe('list')
   })
 
-  it('旧 stack 持久化值回落默认列表（M4 舞台下线后老用户平滑降级）', () => {
+  it('历史 stack 持久化值回落默认列表（轮播已从图纸管理移除）', () => {
     localStorage.setItem('drawings.view', 'stack')
     const { result } = renderHook(() => useDrawingsView())
     expect(result.current.viewMode).toBe('list')
