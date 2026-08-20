@@ -4,6 +4,9 @@ import { FolderItem } from './types';
 import { GlassFolderCard } from './GlassFolderCard';
 import { FloatingPreviewBadge } from './FloatingPreviewBadge';
 
+// 滚轮步进阈值（单位：卡）：标准齿轮滚轮一格 ≈0.35 卡（100px × 0.0035），阈值 0.25 保证一格必触发且不会单格双跳
+const WHEEL_STEP_THRESHOLD = 0.25;
+
 interface FolderCarouselProps {
   folders: FolderItem[];
   theme?: 'dark' | 'light';
@@ -104,6 +107,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
 
       if (!isDragging.current) {
         if (targetIndexRef.current !== null) {
+          autoplayRampRef.current = 0; // 吸附期间自动播放速度归零，结束后重新渐起
           // Lerp towards target index smoothly
           const diff = targetIndexRef.current - virtualIndexRef.current;
           if (Math.abs(diff) < 0.001) {
@@ -111,13 +115,15 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
             virtualIndexRef.current = targetIndexRef.current;
             targetIndexRef.current = null;
           } else {
-            const nextVal = virtualIndexRef.current + diff * 0.18;
+            const nextVal = virtualIndexRef.current + diff * 0.12;
             setVirtualIndex(nextVal);
             virtualIndexRef.current = nextVal;
           }
         } else if (isPlaying) {
           // Continuous smooth infinite auto-play (no resets, no clamping jumps)
-          const step = 0.35 * scrollSpeed * delta;
+          // 吸附/拖拽结束后斜坡渐起（≈0.33s 从 0 到全速），消除 0→全速的速度断点
+          autoplayRampRef.current = Math.min(1, autoplayRampRef.current + delta * 3);
+          const step = 0.35 * scrollSpeed * delta * autoplayRampRef.current;
           const nextVal = virtualIndexRef.current + step;
           setVirtualIndex(nextVal);
           virtualIndexRef.current = nextVal;
@@ -140,6 +146,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
   const handlePointerDown = (e: React.PointerEvent) => {
     isDragging.current = true;
     targetIndexRef.current = null;
+    autoplayRampRef.current = 0;
     startX.current = e.clientX;
     startIndex.current = virtualIndexRef.current;
     if (containerRef.current) {
@@ -171,6 +178,10 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
 
   // Ref for wheel debounce timeout
   const wheelTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // 滚轮累积器（单位：卡）：攒满阈值才步进一整张，残余量停歇后清零
+  const wheelAccumRef = useRef<number>(0);
+  // 自动播放斜坡因子：吸附/拖拽期间为 0，结束后 ≈0.33s 渐起回全速（初值 1 = 首屏自动播放立即全速）
+  const autoplayRampRef = useRef<number>(1);
 
   // Native non-passive wheel event listener for maximum responsiveness ("跟手") and 0-latency tracking
   useEffect(() => {
@@ -180,28 +191,27 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
     const onWheelNative = (e: WheelEvent) => {
       e.preventDefault();
 
-      // Cancel any ongoing lerp snapping while actively wheeling
-      targetIndexRef.current = null;
-
       let delta = e.deltaX !== 0 ? e.deltaX : e.deltaY;
 
       // Handle OS/Browser deltaMode (0: pixels, 1: lines, 2: pages)
       if (e.deltaMode === 1) delta *= 32;
       else if (e.deltaMode === 2) delta *= 300;
 
-      // Map wheel delta directly to virtual index step for instant response
-      const sensitivity = 0.0035;
-      const step = delta * sensitivity;
+      // 累积滚动量（单位：卡），跨阈值即步进一整张：一节齿轮 ≈0.35 卡必触发；
+      // 连续快滚时基于当前目标继续累步，由 lerp 动画平滑滑向目标卡
+      wheelAccumRef.current += delta * 0.0035;
+      if (Math.abs(wheelAccumRef.current) >= WHEEL_STEP_THRESHOLD) {
+        const direction = wheelAccumRef.current > 0 ? 1 : -1;
+        const base = targetIndexRef.current !== null ? targetIndexRef.current : Math.round(virtualIndexRef.current);
+        targetIndexRef.current = base + direction;
+        wheelAccumRef.current = 0;
+      }
 
-      const nextVal = virtualIndexRef.current + step;
-      virtualIndexRef.current = nextVal;
-      setVirtualIndex(nextVal);
-
-      // Debounce snap to nearest folder slot after scrolling pauses
+      // 滚动停歇后清零残余累积量：不足一格的滚动不再留下"走半张又弹回"的中间态
       if (wheelTimeoutRef.current) clearTimeout(wheelTimeoutRef.current);
       wheelTimeoutRef.current = setTimeout(() => {
-        targetIndexRef.current = Math.round(virtualIndexRef.current);
-      }, 120);
+        wheelAccumRef.current = 0;
+      }, 200);
     };
 
     el.addEventListener('wheel', onWheelNative, { passive: false });
