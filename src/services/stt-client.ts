@@ -5,7 +5,7 @@
  * 但上传使用 XMLHttpRequest 以获得上传进度事件。
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:5048'
+const API_BASE = import.meta.env.VITE_API_BASE ?? ''
 const TOKEN_KEY = 'jwt_token'
 
 function getToken(): string | null {

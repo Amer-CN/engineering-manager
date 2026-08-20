@@ -132,9 +132,15 @@ export async function streamingDraft(
   onEvent: (e: { type: 'content'; text: string } | { type: 'done'; content: string } | { type: 'error'; error: string }) => void,
 ): Promise<boolean> {
   try {
+    // 与 api-client 同源：SSE 请求同样必须带 Bearer token（缺失会 401）
+    let token: string | null = null
+    try { token = localStorage.getItem('jwt_token') } catch { /* ignore */ }
     const resp = await fetch('/api/writing/draft', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify(body),
     })
     if (!resp.ok || !resp.body) return false
