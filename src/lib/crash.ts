@@ -174,16 +174,20 @@ function installGlobalHandlers(): void {
       url = resolveUrl(input)
       if (!ok && !reporting && !isOwnEndpoint(url)) {
         addBreadcrumb('api', `HTTP ${status} ${url}`)
-        void reportCrash({
-          kind: 'fetch',
-          message: `HTTP ${status} ${redact(url)}`,
-          errorMessage: `HTTP ${status}`,
-          errorType: 'HTTPError',
-          stack: undefined,
-          topFrame: String(status),
-          label: 'fetch',
-          view: window.location.pathname,
-        })
+        // 4xx 是业务正常态（401 未登录/404 不存在等），只记面包屑不弹窗；
+        // 仅 5xx（服务端错误）才当 crash 弹层，避免登录前 /api/config 401 等把用户挡死
+        if (status >= 500) {
+          void reportCrash({
+            kind: 'fetch',
+            message: `HTTP ${status} ${redact(url)}`,
+            errorMessage: `HTTP ${status}`,
+            errorType: 'HTTPError',
+            stack: undefined,
+            topFrame: String(status),
+            label: 'fetch',
+            view: window.location.pathname,
+          })
+        }
       }
       return response
     } catch (err) {

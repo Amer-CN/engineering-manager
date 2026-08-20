@@ -278,7 +278,7 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
     <div className="h-full flex flex-col">
       {/* 顶部条：返回 + 标题 + 保存状态 */}
       <div className="flex items-center gap-3 px-5 py-3 border-b" style={{ borderColor: "var(--border)" }}>
-        <Button variant="ghost" size="sm" onClick={onBack}>
+        <Button variant="ghost" size="sm" onClick={onBack} aria-label="返回列表">
           <Icon name="ArrowLeft" size={16} />
         </Button>
         <input
