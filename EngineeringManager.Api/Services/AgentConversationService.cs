@@ -77,7 +77,8 @@ public class AgentConversationService
     {
         var conversations = await db.QueryAsync<dynamic>(@"
             SELECT c.id, c.title, c.created_at, c.updated_at, c.archived_at,
-                   (SELECT COUNT(*) FROM [agent_messages] WHERE conversation_id = c.id) as message_count,
+                   (SELECT COUNT(CASE WHEN role IN ('user','assistant') THEN 1 END)
+                    FROM [agent_messages] WHERE conversation_id = c.id) as message_count,
                    (SELECT content FROM [agent_messages]
                     WHERE conversation_id = c.id
                     ORDER BY created_at DESC LIMIT 1) as last_message
@@ -108,7 +109,8 @@ public class AgentConversationService
     {
         var conversations = await db.QueryAsync<dynamic>(@"
             SELECT c.id, c.title, c.created_at, c.updated_at, c.archived_at, c.deleted_at,
-                   (SELECT COUNT(*) FROM [agent_messages] WHERE conversation_id = c.id) as message_count,
+                   (SELECT COUNT(CASE WHEN role IN ('user','assistant') THEN 1 END)
+                    FROM [agent_messages] WHERE conversation_id = c.id) as message_count,
                    (SELECT content FROM [agent_messages]
                     WHERE conversation_id = c.id
                     ORDER BY created_at DESC LIMIT 1) as last_message
@@ -151,7 +153,7 @@ public class AgentConversationService
             SELECT id, role, content, tool_calls, tool_call_id, name, created_at
             FROM agent_messages
             WHERE conversation_id = @ConversationId
-            ORDER BY created_at ASC
+            ORDER BY created_at ASC, id ASC
         ", new { ConversationId = conversationId });
 
         var messageList = messages.Select(m =>
@@ -187,7 +189,24 @@ public class AgentConversationService
     }
 
     /// <summary>
+    /// 校验对话归属：存在、属于该用户且未软删除。
+    /// 供 chat / chat-stream 写入前做越权校验（同 detail 的归属口径）。
+    /// </summary>
+    public async Task<bool> IsConversationOwnedAsync(
+        IDbConnection db,
+        long conversationId,
+        string userId)
+    {
+        var count = await db.ExecuteScalarAsync<long>(@"
+            SELECT COUNT(*) FROM [agent_conversations]
+            WHERE id = @Id AND user_id = @UserId AND deleted_at IS NULL
+        ", new { Id = conversationId, UserId = userId });
+        return count > 0;
+    }
+
+    /// <summary>
     /// 获取最近 N 条消息（用于 LLM 上下文），返回 AgentMessage 列表
+    /// 按 id DESC 取最近 N 条后内存反转为时间正序
     /// </summary>
     public async Task<List<AgentMessage>> GetMessagesForLlmAsync(
         IDbConnection db,
@@ -198,9 +217,11 @@ public class AgentConversationService
             SELECT role, content, tool_calls, tool_call_id, name
             FROM agent_messages
             WHERE conversation_id = @ConversationId
-            ORDER BY created_at ASC
+            ORDER BY id DESC
             LIMIT @Limit
         ", new { ConversationId = conversationId, Limit = limit });
+        // 反转为时间正序，供 LLM 按对话顺序消费
+        rows = rows.Reverse();
 
         var messages = new List<AgentMessage>();
         foreach (var row in rows)

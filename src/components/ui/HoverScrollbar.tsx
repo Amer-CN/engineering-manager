@@ -146,6 +146,10 @@ export function HoverScrollbar({ children, className = '', threshold = 15 }: Hov
 
       const onMouseMove = (e: MouseEvent) => {
         if (!isDragging.current) return
+        // 拖拽期间吃掉默认行为与冒泡：防止指针带出容器时原生滚动接管外层，
+        // 出现"拖滚动条带着整页滚"的穿透
+        e.preventDefault()
+        e.stopPropagation()
         const deltaY = e.clientY - dragStartY.current
         const { scrollHeight, clientHeight } = el
         const thumbHeight = thumbHeightRef.current
@@ -208,7 +212,14 @@ export function HoverScrollbar({ children, className = '', threshold = 15 }: Hov
       <div
         ref={containerRef}
         className="h-full overflow-auto hide-native-scrollbar"
-        style={{ overscrollBehavior: 'contain' }}
+        onWheel={(e) => {
+          // WebView2 兜底：容器可滚时吃掉滚轮事件并自己滚，绝不外传
+          //（防侧边栏滚轮带动整页）；滚到头时也不冒泡给页面
+          const el = e.currentTarget
+          if (el.scrollHeight > el.clientHeight) {
+            e.stopPropagation()
+          }
+        }}
       >
         {children}
       </div>

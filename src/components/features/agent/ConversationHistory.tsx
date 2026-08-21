@@ -23,6 +23,8 @@ interface ConversationHistoryProps {
   currentConversationId?: number | null
   onSelectConversation: (conversation: AgentConversation) => void
   onNewConversation: () => void
+  /** 删除的会话正是当前打开的会话时触发（父组件据此重置会话流，避免继续发送写入已删除会话） */
+  onCurrentConversationDeleted?: () => void
   open?: boolean
   onClose?: () => void
   inline?: boolean
@@ -51,12 +53,13 @@ const GROUP_ORDER: GroupKey[] = ['today', 'yesterday', 'earlier']
 const isArchived = (c: AgentConversation): boolean => !!c.archivedAt
 
 const ConversationHistory: React.FC<ConversationHistoryProps> = ({
-  currentConversationId, onSelectConversation, onNewConversation,
+  currentConversationId, onSelectConversation, onNewConversation, onCurrentConversationDeleted,
   open = false, onClose, inline = false, refreshTrigger = 0,
 }) => {
   const [conversations, setConversations] = useState<AgentConversation[]>([])
   const [deletedConversations, setDeletedConversations] = useState<AgentConversation[]>([])
   const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<AgentConversation | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -70,6 +73,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
 
   const loadConversations = useCallback(async () => {
     setLoading(true)
+    setLoadError(false)
     try {
       const [active, deleted] = await Promise.all([
         getAgentConversations(),
@@ -77,7 +81,9 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
       ])
       setConversations(active)
       setDeletedConversations(deleted)
-    } catch { /* silent */ } finally { setLoading(false) }
+    } catch {
+      setLoadError(true)
+    } finally { setLoading(false) }
   }, [])
 
   useEffect(() => { loadConversations() }, [loadConversations, refreshTrigger])
@@ -95,6 +101,8 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
           { ...target, deletedAt: new Date().toISOString() }, ...prev,
         ])
         showToast('对话已删除', 'success')
+        // 删除的正是当前打开的会话 → 重置会话流，避免继续发送写入已删除会话（黑洞）
+        if (currentConversationId === target.id) onCurrentConversationDeleted?.()
       } else {
         setConversations(prev => [...prev, target])
         showToast('删除失败', 'error')
@@ -103,7 +111,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
       setConversations(prev => [...prev, target])
       showToast('删除失败', 'error')
     } finally { setDeleting(false); setDeleteTarget(null) }
-  }, [deleteTarget, showToast])
+  }, [deleteTarget, showToast, currentConversationId, onCurrentConversationDeleted])
 
   // ── 归档 ──
   const handleArchive = useCallback(async (conv: AgentConversation) => {
@@ -277,6 +285,15 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
               <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
                 <Icon name="Loader2" size={20} className="text-[color:var(--border-strong)]" />
               </motion.div>
+            </div>
+          ) : loadError ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Icon name="AlertCircle" size={32} className="text-[color:var(--border-strong)] mb-2" />
+              <p className="text-sm text-[color:var(--muted)]">加载失败，请检查网络</p>
+              <button onClick={loadConversations}
+                className="mt-3 px-3 py-1.5 rounded-lg text-sm border border-[color:var(--border)] hover:bg-[color:var(--panel-2)] text-[color:var(--fg-2)] transition-colors">
+                重试
+              </button>
             </div>
           ) : isAllEmpty ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">

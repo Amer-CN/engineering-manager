@@ -37,11 +37,13 @@ public static class AgentEndpoints
 
             try
             {
-                // 1. 创建或获取对话
+                // 1. 创建或获取对话（带归属校验，防越权写入他人会话）
                 long conversationId;
                 if (request.ConversationId.HasValue)
                 {
                     conversationId = request.ConversationId.Value;
+                    if (!await conversations.IsConversationOwnedAsync(db, conversationId, uid))
+                        return Common.NotFound("对话不存在");
                 }
                 else
                 {
@@ -218,11 +220,16 @@ public static class AgentEndpoints
 
             try
             {
-                // 1. 创建或获取对话
+                // 1. 创建或获取对话（带归属校验，防越权写入他人会话）
                 long conversationId;
                 if (request.ConversationId.HasValue)
                 {
                     conversationId = request.ConversationId.Value;
+                    if (!await conversations.IsConversationOwnedAsync(db, conversationId, uid))
+                    {
+                        await WriteSSE(ctx, new { type = "error", error = "对话不存在" });
+                        return;
+                    }
                 }
                 else
                 {
