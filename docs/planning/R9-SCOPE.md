@@ -107,9 +107,9 @@
 | A2 | ContractEndpoints.cs:248 | PUT /api/contracts/expense | UserFilterWithAuthorizedProjects(scope, "expense_contracts.project_id") |
 | A3 | CostLedgerEndpoints.cs:69 | PUT /api/cost-ledger | UserFilterWithAuthorizedProjects(scope, "cost_ledger.project_id") |
 | A4 | CostLedgerEndpoints.cs:100 | DELETE /api/cost-ledger/{id} | ~~UserFilterWithAuthorizedProjects~~ → `(created_by=@Uid OR @IsAdmin=1)`（收紧翻转 200→403，R9-20 已改） |
-| A5 | CostLedgerEndpoints.cs:210 | PUT /api/cost-ledger/batches/{id} | UserFilterCompany(scope) |
-| A6 | CostLedgerEndpoints.cs:222 | DELETE /api/cost-ledger/batches/{id} | UserFilterCompany(scope) |
-| A7 | CostLedgerEndpoints.cs:303 | POST /api/cost-ledger/{batchId}/sheet（UPDATE [cost_ledger]） | UserFilterWithAuthorizedProjects(scope, "cost_ledger.project_id")（先验 batch 归属 278 行） |
+| A5 | CostLedgerEndpoints.cs:210 | PUT /api/cost-ledger/batches/{id} | ~~UserFilterCompany~~ → Classify 单点 + ViaAuthz 同事务 audit（翻转 403→200，R9-21 已改） |
+| A6 | CostLedgerEndpoints.cs:222 | DELETE /api/cost-ledger/batches/{id} | UserFilterCompany(scope)（例外钉住：仅创建者可删，R9-21 未改码） |
+| A7 | CostLedgerEndpoints.cs:303 | POST /api/cost-ledger/{batchId}/sheet（UPDATE [cost_ledger]） | UserFilterWithAuthorizedProjects(scope, "cost_ledger.project_id")（先验 batch 归属 278 行）+ per-row cross_user_edit audit（R9-21 已补） |
 
 > **A 桶 7 条。唯一把范围校验真正写进 WHERE 的域：合同（income/expense）+ 成本台账。**
 
