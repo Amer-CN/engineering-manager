@@ -24,7 +24,7 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
   onCurrentConversationDeleted,
   refreshTrigger,
 }) => (
-  <div className="hidden md:block w-80 flex-shrink-0">
+  <div className="hidden md:block w-80 flex-shrink-0 min-h-0">
     <ConversationHistory
       inline
       currentConversationId={conversationId}
