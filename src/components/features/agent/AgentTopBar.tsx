@@ -33,8 +33,11 @@ const AgentTopBar: React.FC<AgentTopBarProps> = ({
         onClick={onNewConversation}
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-[color:var(--panel-2)]"
         style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}
-        title="开始新对话"
+        title="返回欢迎页 / 开始新对话"
       >
+        <Icon name="ArrowLeft" size={14} />
+        <span className="hidden sm:inline">返回</span>
+        <span className="hidden sm:inline" style={{ color: 'var(--muted)' }}>·</span>
         <Icon name="Plus" size={14} />
         <span className="hidden sm:inline">新对话</span>
       </button>
