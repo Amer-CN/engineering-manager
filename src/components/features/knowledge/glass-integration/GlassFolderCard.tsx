@@ -125,18 +125,19 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
       <div
         className={`
           absolute inset-x-6 bottom-0 pointer-events-none overflow-hidden z-0
-          ${
-            isActive
-              ? 'bg-[color:var(--gc-active-deep,#022c22)] border-t border-[color:var(--gc-active-border-a40,#34d39966)]'
-              : isDark
-              ? 'bg-zinc-900 border-t border-white/20'
-              : 'bg-zinc-300 border-t border-zinc-400'
-          }
+          ${isDark ? 'bg-zinc-900 border-t border-white/20' : 'bg-zinc-300 border-t border-zinc-400'}
         `}
         style={{
           height: '12px',
           transformOrigin: 'bottom center',
           transform: 'rotateX(-90deg)',
+          // 底封边随 af 混入选中色（同曲线，与覆盖层同步）
+          background: `color-mix(in srgb, var(--gc-active-deep, #022c22) ${Math.round(af * 100)}%, ${
+            isDark ? '#18181b' : '#d4d4d8'
+          })`,
+          borderTopColor: `color-mix(in srgb, var(--gc-active-border-a40, #34d39966) ${Math.round(af * 100)}%, ${
+            isDark ? 'rgba(255,255,255,0.2)' : '#a1a1aa'
+          })`,
         }}
       >
         <div className="absolute inset-0 bg-gradient-to-r from-white/10 via-transparent to-white/10 pointer-events-none" />
@@ -318,13 +319,14 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
           <div
             className={`
               inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold
-              backdrop-blur-md transition-colors duration-75 ease-out shadow-md
-              ${
-                isActive
-                  ? 'bg-white/30 text-white border border-white/40'
-                  : 'bg-black/30 dark:bg-white/20 border border-white/30 text-white'
-              }
+              backdrop-blur-md shadow-md
+              bg-black/30 dark:bg-white/20 border border-white/30 text-white
             `}
+            style={{
+              // 随 af 混入选中态白玻璃（同曲线，避免文字与覆盖层脱节）
+              background: `color-mix(in srgb, rgba(255,255,255,0.3) ${Math.round(af * 100)}%, rgba(0,0,0,0.3))`,
+              borderColor: `color-mix(in srgb, rgba(255,255,255,0.4) ${Math.round(af * 100)}%, rgba(255,255,255,0.3))`,
+            }}
           >
             <Users className="w-3.5 h-3.5" />
             <span>{folder.memberCount}</span>
@@ -333,12 +335,14 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
           <div
             className={`
               text-xs font-mono font-extrabold px-2 py-0.5 rounded-lg backdrop-blur-md shadow-sm
-              ${
-                isActive
-                  ? 'bg-[color:var(--gc-active-deep-a60,#064e3b99)] text-[color:var(--gc-active-border,#a7f3d0)] border border-[color:var(--gc-active-border-a40,#6ee7b766)]'
-                  : 'bg-black/30 text-white border border-white/25'
-              }
+              bg-black/30 text-white border border-white/25
             `}
+            style={{
+              // 随 af 混入选中态徽标底/字色（同曲线）
+              background: `color-mix(in srgb, var(--gc-active-deep-a60, #064e3b99) ${Math.round(af * 100)}%, rgba(0,0,0,0.3))`,
+              color: `color-mix(in srgb, var(--gc-active-border, #a7f3d0) ${Math.round(af * 100)}%, #fff)`,
+              borderColor: `color-mix(in srgb, var(--gc-active-border-a40, #6ee7b766) ${Math.round(af * 100)}%, rgba(255,255,255,0.25))`,
+            }}
           >
             {folder.progress}%
           </div>
@@ -347,15 +351,16 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
         <div className="mt-auto" style={{ transform: 'translate3d(0px, 0px, 8px)' }}>
           <div
             className={`
-              text-lg font-extrabold tracking-tight truncate transition-colors duration-75 ease-out
-              ${
-                isActive
-                  ? 'text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]'
-                  : isDark
-                  ? 'text-zinc-100 group-hover:text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]'
-                  : 'text-zinc-900 group-hover:text-black'
-              }
+              text-lg font-extrabold tracking-tight truncate
+              ${isDark ? 'text-zinc-100 group-hover:text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]' : 'text-zinc-900 group-hover:text-black'}
             `}
+            style={{
+              // 标题随 af 混成白色（选中态），与覆盖层同一条曲线
+              color: `color-mix(in srgb, #fff ${Math.round(af * 100)}%, ${
+                isDark ? '#f4f4f5' : '#18181b'
+              })`,
+              textShadow: af > 0.05 ? `0 2px 8px rgba(0,0,0,${(0.6 * af).toFixed(2)})` : undefined,
+            }}
           >
             {folder.title}
           </div>
