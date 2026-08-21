@@ -212,7 +212,7 @@ const AgentDashboard: React.FC = () => {
                   {getGreeting()}，{username}
                 </h1>
                 {modelName && (
-                  <div className="inline-flex items-center gap-1.5 mt-6 px-2.5 py-1 rounded-lg" style={{ background: 'var(--panel-2)', border: '1px solid var(--border)' }}>
+                  <div className="inline-flex items-center gap-1.5 mt-6 mb-8 px-2.5 py-1 rounded-lg" style={{ background: 'var(--panel-2)', border: '1px solid var(--border)' }}>
                     <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--success)' }} />
                     <span className="text-xs font-medium" style={{ color: 'var(--muted)' }}>
                       {providerName ? `${providerName} · ` : ''}{modelName}
@@ -238,7 +238,7 @@ const AgentDashboard: React.FC = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1, transition: { delay: 0.15 } }}
                 exit={{ opacity: 0, transition: { duration: 0.2 } }}
-                className="flex-shrink-0 px-6 pb-4"
+                className="flex-shrink-0 px-6 pt-5 pb-6"
               >
                 <div className="max-w-2xl mx-auto">
                   <SuggestionChips
