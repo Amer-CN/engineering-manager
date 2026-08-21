@@ -77,20 +77,10 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
             borderColor: 'var(--gc-active-border-a80, #34d399cc)',
           }}
         />
-        {/* Top Tab Notch */}
+        {/* Top Tab Notch — 颜色全部 af 混色（同一条身体曲线，无布尔翻转） */}
         <div
-          className={`
-            absolute top-0 left-0 w-32 h-8 rounded-br-2xl border-r border-b flex items-center px-3 gap-1.5
-            ${
-              isActive
-                ? 'bg-[color:var(--gc-active,#047857)] border-[color:var(--gc-active-border,#10b981)] text-[color:var(--gc-active-ink,#fff)]'
-                : isDark
-                ? 'bg-zinc-800 border-zinc-700 text-white/90'
-                : 'bg-zinc-100 border-zinc-300 text-zinc-800'
-            }
-          `}
+          className="absolute top-0 left-0 w-32 h-8 rounded-br-2xl border-r border-b flex items-center px-3 gap-1.5"
           style={{
-            // 标签盖颜色随 af 混入：进入时黑得渐进、退出时褪得渐进（同曲线）
             background: `color-mix(in srgb, var(--gc-active, #047857) ${Math.round(af * 100)}%, ${
               isDark ? '#27272a' : '#f4f4f5'
             })`,
@@ -98,7 +88,7 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
               isDark ? '#3f3f46' : '#d4d4d8'
             })`,
             color: `color-mix(in srgb, var(--gc-active-ink, #fff) ${Math.round(af * 100)}%, ${
-              isDark ? 'rgba(255,255,255,0.9)' : '#3f3f46'
+              isDark ? '#e4e4e7' : '#52525b'
             })`,
           }}
         >
