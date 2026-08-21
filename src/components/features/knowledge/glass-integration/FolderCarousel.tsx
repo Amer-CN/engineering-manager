@@ -275,7 +275,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
           `}
           title={isPlaying ? '暂停自动滚动' : '开启循环滚动'}
         >
-          {isPlaying ? <Pause className="w-4 h-4 text-emerald-400" /> : <Play className="w-4 h-4 text-emerald-400" />}
+          {isPlaying ? <Pause className="w-4 h-4 text-[color:var(--gc-active-border,#34d399)]" /> : <Play className="w-4 h-4 text-[color:var(--gc-active-border,#34d399)]" />}
           <span className="hidden sm:inline">{isPlaying ? '循环中' : '已暂停'}</span>
         </button>
 
@@ -285,7 +285,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
             p-3 rounded-full backdrop-blur-md transition-all duration-200 border shadow-lg
             ${
               showControls
-                ? 'bg-emerald-500 text-white border-emerald-400'
+                ? 'bg-[color:var(--gc-active,#10b981)] text-[color:var(--gc-active-ink,#fff)] border-[color:var(--gc-active-border,#34d399)]'
                 : isDark
                 ? 'bg-zinc-900/70 border-white/20 text-white hover:bg-zinc-800'
                 : 'bg-white/80 border-white/80 text-zinc-900 hover:bg-white'
@@ -525,7 +525,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
                 h-2 rounded-full transition-all duration-300
                 ${
                   isSelected
-                    ? 'w-7 bg-emerald-500 shadow-[0_0_10px_#10b981]'
+                    ? 'w-7 bg-[color:var(--gc-active,#10b981)] shadow-[0_0_10px_#10b981]'
                     : isDark
                     ? 'w-2 bg-white/20 hover:bg-white/40'
                     : 'w-2 bg-black/20 hover:bg-black/40'
