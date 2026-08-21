@@ -23,6 +23,11 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
 }) => {
   const isDark = theme === 'dark';
 
+  // 连续聚焦因子：0=完全偏离中心 1=正中。纸张/前袋动画由它逐帧插值驱动，
+  // 与轮播位置共用同一条运动曲线（替代 isActive 布尔触发的独立 500ms CSS 时钟）
+  const af = Math.max(0, 1 - Math.abs(offset));
+  const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
   // Guarantee 3 rich document items for internal paper stack
   const docs = folder.documents.length >= 3 ? folder.documents : [
     { id: 'd1', title: '核心 Loop 算法重构说明', code: 'DOC-2025-01', priority: '高' as const, status: '进行中' as const, date: '2025-05-20', assignee: 'David' },
@@ -130,12 +135,10 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
           className={`
             absolute top-0 inset-x-2.5 h-[250px] rounded-xl p-3 bg-zinc-200 text-zinc-800
             border-t-2 border-l-2 border-b-2 border-r-2 border-t-white border-l-white border-b-zinc-400 border-r-zinc-400
-            transition-all duration-500 ease-out flex flex-col justify-between overflow-hidden shadow-md
+            flex flex-col justify-between overflow-hidden shadow-md
           `}
           style={{
-            transform: isActive
-              ? 'translate3d(-8px, -24px, 3px) rotate(-4deg)'
-              : 'translate3d(0px, 16px, 3px) rotate(0deg)',
+            transform: `translate3d(${lerp(0, -8, af)}px, ${lerp(16, -24, af)}px, 3px) rotate(${lerp(0, -4, af)}deg)`,
           }}
         >
           <div>
@@ -166,12 +169,10 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
           className={`
             absolute top-1 inset-x-1.5 h-[255px] rounded-xl p-3 bg-zinc-100 text-zinc-900
             border-t-2 border-l-2 border-b-2 border-r-2 border-t-white border-l-white border-b-zinc-400 border-r-zinc-400
-            transition-all duration-500 ease-out flex flex-col justify-between overflow-hidden shadow-md
+            flex flex-col justify-between overflow-hidden shadow-md
           `}
           style={{
-            transform: isActive
-              ? 'translate3d(8px, -16px, 6px) rotate(3.5deg)'
-              : 'translate3d(0px, 18px, 6px) rotate(0deg)',
+            transform: `translate3d(${lerp(0, 8, af)}px, ${lerp(18, -16, af)}px, 6px) rotate(${lerp(0, 3.5, af)}deg)`,
           }}
         >
           <div>
@@ -205,12 +206,10 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
           className={`
             absolute top-2 inset-x-0 h-[265px] rounded-xl p-3.5
             border-t-2 border-l-2 border-b-2 border-r-2 border-t-white border-l-white border-b-zinc-300 border-r-zinc-300 bg-white text-zinc-900
-            transition-all duration-500 ease-out flex flex-col justify-between overflow-hidden shadow-lg
+            flex flex-col justify-between overflow-hidden shadow-lg
           `}
           style={{
-            transform: isActive
-              ? 'translate3d(0px, -6px, 9px) rotate(-0.5deg)'
-              : 'translate3d(0px, 20px, 9px) rotate(0deg)',
+            transform: `translate3d(0px, ${lerp(20, -6, af)}px, 9px) rotate(${lerp(0, -0.5, af)}deg)`,
           }}
         >
           <div>
@@ -264,7 +263,7 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
         className={`
           absolute bottom-0 inset-x-0 h-[158px] rounded-b-[22px] rounded-t-2xl p-4
           flex flex-col justify-between backdrop-blur-2xl border-t-2 border-x-2 border-b-2
-          transition-all duration-300 ease-out
+          transition-colors duration-300
           ${
             isActive
               ? 'bg-gradient-to-b from-emerald-500/85 via-emerald-600/90 to-emerald-800/95 border-emerald-300/80 text-white shadow-lg'
@@ -275,9 +274,7 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
         `}
         style={{
           transformOrigin: 'bottom center',
-          transform: isActive
-            ? 'translate3d(0px, 0px, 10px) rotateX(-4.5deg)'
-            : 'translate3d(0px, 0px, 10px) rotateX(-1deg)',
+          transform: `translate3d(0px, 0px, 10px) rotateX(${lerp(-1, -4.5, af)}deg)`,
           transformStyle: 'preserve-3d',
         }}
       >
