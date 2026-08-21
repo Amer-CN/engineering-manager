@@ -932,6 +932,8 @@ body {
 .hide-native-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;
+  /* 滚动到底后不再向外层传播（防止侧边栏滚动带动整页） */
+  overscroll-behavior: contain;
 }
 
 /* 按钮样式 — @deprecated 请使用 <Button variant="X" size="Y"> 组件。
