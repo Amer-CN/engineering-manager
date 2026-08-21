@@ -522,7 +522,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
               key={f.id}
               onClick={() => handleDotClick(i)}
               className={`
-                h-2 rounded-full transition-all duration-300
+                h-2 rounded-full transition-all duration-75
                 ${
                   isSelected
                     ? 'w-7 bg-[color:var(--gc-active,#10b981)] shadow-[0_0_10px_var(--gc-active,#10b981)]'
