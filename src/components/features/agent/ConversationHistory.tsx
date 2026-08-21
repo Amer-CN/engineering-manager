@@ -282,7 +282,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
   // ── 渲染内容 ──
   const content = (
     <>
-      <div className="px-3 pb-2">
+      <div className="px-3 pt-3 pb-2">
         <div className="relative">
           <Icon name="Search" size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[color:var(--muted)]" />
           <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
