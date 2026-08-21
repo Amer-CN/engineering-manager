@@ -110,12 +110,34 @@ public static class InventoryEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             // G2 B8: 材料写操作 → inventory:update
             if (!CurrentUser.HasPermission(ctx, db, "inventory:update")) return Results.Forbid();
-            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
-            var scope = CurrentUser.GetDataScope(ctx);
+            // R9-22 批次 4 B19：B 桶形态翻转——现状 WHERE created_by/IsAdmin（授权跨人 403），
+            // 对齐方案丙：预读行归属 → Classify 单点裁决 → 授权跨人可改（403→200）+ 同事务 audit。
+            // 预读行归属（C# 单点裁决归属，SQL WHERE 不再含 created_by/IsAdmin）。
+            var row = db.QueryFirstOrDefault(
+                "SELECT created_by, project_id FROM materials WHERE id=@Id",
+                new { Id = dto.Id ?? 0 });
+            // 行不存在 → 404（WriteResult 收尾语义保持）
+            if (row == null) return Results.NotFound(new { success = false, error = "记录不存在" });
+            // 归属裁决：Denied → 403；AllowedViaAuthorization → 跨人修改落 audit（同事务 fail-closed）
+            var createdBy = row.created_by as string;
+            var projectId = row.project_id as long?;
+            var access = RowWriteGate.Classify(ctx, db, createdBy, projectId);
+            if (access == RowWriteOutcome.Denied) return Results.Forbid();
+
+            // 归属条件移出 SQL（C# 单点裁决）；无锁列故无 409 档、WHERE 只留 id
+            // （列集照原样：project_id/name/category/unit/quantity/price + version+1/last_modified_at，
+            //  不设 updated_at——真库 materials 无此列）
+            using var tx = db.BeginTransaction();
             var affected = await db.ExecuteAsync(@"UPDATE materials SET project_id=@ProjectId,name=@Name,category=@Category,
-                unit=@Unit,quantity=@Quantity,price=@Price, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
+                unit=@Unit,quantity=@Quantity,price=@Price, version=version+1, last_modified_at=@Now WHERE id=@Id",
                 new { dto.Id, dto.ProjectId, dto.Name, dto.Category, dto.Unit, dto.Quantity, dto.Price,
-                      Uid = uid, IsAdmin = isAdmin, Now = now() });
+                      Now = now() }, tx);
+            if (access == RowWriteOutcome.AllowedViaAuthorization)
+            {
+                // 跨人修改落审计（fail-closed：审计写不进 → 事务回滚 → 修改不生效）
+                AuditWriter.CrossUserEdit(db, tx, ctx, "materials", dto.Id ?? 0, "PUT /api/materials", createdBy, projectId);
+            }
+            tx.Commit();
             return await Common.WriteResult(affected, db, "materials", dto.Id ?? 0);
         });
 
