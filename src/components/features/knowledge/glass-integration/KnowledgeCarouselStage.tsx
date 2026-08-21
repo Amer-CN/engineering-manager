@@ -72,7 +72,7 @@ export const KnowledgeCarouselStage: React.FC<KnowledgeCarouselStageProps> = ({
                   color: 'var(--fg)',
                 }}
               >
-                <span className="text-emerald-500 text-base leading-none">+</span>
+                <span className="text-[color:var(--gc-active,#10b981)] text-base leading-none">+</span>
                 <span>新建文件夹</span>
               </button>
             )}

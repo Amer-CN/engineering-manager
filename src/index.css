@@ -932,6 +932,8 @@ body {
 .hide-native-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;
+  /* 滚动到底后不再向外层传播（防止侧边栏滚动带动整页） */
+  overscroll-behavior: contain;
 }
 
 /* 按钮样式 — @deprecated 请使用 <Button variant="X" size="Y"> 组件。
@@ -1632,6 +1634,17 @@ button:disabled {
   color: inherit;
   padding: 0 1px;
   border-radius: 2px;
+}
+
+/* ═══ 知识库 3D 轮播主题桥接（--gc-* → 主题 token）═══
+ * DESIGN.md 颜色内聚：舞台区 emerald 系经 --gc-* 变量使用。
+ * 净白（white）：--accent 是深暖褐，active 卡走主题色（用户拍板 2026-08-21）；
+ * graphite/sandstone 无彩色 accent，回退 emerald 原版绿色（保持现状）。 */
+[data-theme="white"] .gc-stage-iso {
+  --gc-active: var(--accent);              /* active 卡主色（原 emerald-500/600/700 阶）*/
+  --gc-active-deep: var(--accent-strong);  /* 深一阶（原 emerald-800/900/950 阶）*/
+  --gc-active-border: var(--accent);       /* active 边框/描边（原 emerald-300/400 阶）*/
+  --gc-active-ink: var(--on-accent);       /* active 上文字（原 white）*/
 }
 
 /* ═══ 知识库 3D 轮播舞台样式隔离（.gc-stage-iso）═══

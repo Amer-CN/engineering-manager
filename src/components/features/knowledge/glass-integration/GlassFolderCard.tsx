@@ -57,7 +57,7 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
           transition-colors duration-300 shadow-xl flex flex-col justify-between
           ${
             isActive
-              ? 'bg-gradient-to-br from-emerald-800 via-emerald-900 to-emerald-950 border-emerald-400/80 shadow-emerald-950/60'
+              ? 'bg-gradient-to-br from-[color:var(--gc-active,#065f46)] via-[color:var(--gc-active-deep,#064e3b)] to-[color:var(--gc-active-deep,#022c22)] border-[color:var(--gc-active-border,#34d399)]/80 shadow-emerald-950/60'
               : isDark
               ? 'bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950 border-zinc-600/60 shadow-black/90 group-hover:border-zinc-500'
               : 'bg-gradient-to-br from-white via-zinc-100 to-zinc-200 border-zinc-300 shadow-zinc-400/40'
@@ -74,7 +74,7 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
             absolute top-0 left-0 w-32 h-8 rounded-br-2xl border-r border-b flex items-center px-3 gap-1.5
             ${
               isActive
-                ? 'bg-emerald-700 border-emerald-500 text-white'
+                ? 'bg-[color:var(--gc-active,#047857)] border-[color:var(--gc-active-border,#10b981)] text-[color:var(--gc-active-ink,#fff)]'
                 : isDark
                 ? 'bg-zinc-800 border-zinc-700 text-white/90'
                 : 'bg-zinc-100 border-zinc-300 text-zinc-800'
@@ -106,7 +106,7 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
           absolute inset-x-6 bottom-0 pointer-events-none overflow-hidden z-0
           ${
             isActive
-              ? 'bg-emerald-950 border-t border-emerald-400/40'
+              ? 'bg-[color:var(--gc-active-deep,#022c22)] border-t border-[color:var(--gc-active-border,#34d399)]/40'
               : isDark
               ? 'bg-zinc-900 border-t border-white/20'
               : 'bg-zinc-300 border-t border-zinc-400'
@@ -266,7 +266,7 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
           transition-colors duration-300
           ${
             isActive
-              ? 'bg-gradient-to-b from-emerald-500/85 via-emerald-600/90 to-emerald-800/95 border-emerald-300/80 text-white shadow-lg'
+              ? 'bg-gradient-to-b from-[color:var(--gc-active,#10b981)]/85 via-[color:var(--gc-active,#059669)]/90 to-[color:var(--gc-active-deep,#065f46)]/95 border-[color:var(--gc-active-border,#6ee7b7)]/80 text-[color:var(--gc-active-ink,#fff)] shadow-lg'
               : isDark
               ? 'bg-gradient-to-b from-zinc-800/85 via-zinc-900/90 to-black/95 border-white/30 text-white shadow-lg group-hover:border-white/50'
               : 'bg-gradient-to-b from-white/95 via-white/85 to-zinc-100/90 border-white/90 text-zinc-900 shadow-md'
@@ -305,7 +305,7 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
               text-xs font-mono font-extrabold px-2 py-0.5 rounded-lg backdrop-blur-md shadow-sm
               ${
                 isActive
-                  ? 'bg-emerald-950/60 text-emerald-200 border border-emerald-300/40'
+                  ? 'bg-[color:var(--gc-active-deep,#064e3b)]/60 text-[color:var(--gc-active-border,#a7f3d0)] border border-[color:var(--gc-active-border,#6ee7b7)]/40'
                   : 'bg-black/30 text-white border border-white/25'
               }
             `}
