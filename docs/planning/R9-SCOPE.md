@@ -128,14 +128,14 @@
 | B9 | ContractEndpoints.cs:501 | POST /api/settlements/{id}/process |
 | B10 | ContractEndpoints.cs:513 | POST /api/settlements/{id}/unarchive |
 | B11 | FileEndpoints.cs:126 | DELETE /api/drawings/{id} |
-| B12 | FileEndpoints.cs:183 | PUT /api/drawings |
+| B12 | FileEndpoints.cs:183 | PUT /api/drawings | ~~created_by/IsAdmin~~ → Classify 单点 + ViaAuthz 同事务 audit（R9-22 已改） |
 | B13 | InvoiceEndpoints.cs:79 | PUT /api/invoices |
 | B14 | InvoiceEndpoints.cs:116 | DELETE /api/invoices/{id} |
 | B15 | InvoiceEndpoints.cs:217 | PUT /api/payment-records |
 | B16 | InvoiceEndpoints.cs:242 | DELETE /api/payment-records/{id} |
 | B17 | InventoryEndpoints.cs:51 | PUT /api/inventory |
 | B18 | InventoryEndpoints.cs:66 | DELETE /api/inventory/{id} |
-| B19 | InventoryEndpoints.cs:115 | PUT /api/materials |
+| B19 | InventoryEndpoints.cs:115 | PUT /api/materials | ~~created_by/IsAdmin~~ → Classify 单点 + ViaAuthz 同事务 audit（R9-22 已改） |
 | B20 | InventoryEndpoints.cs:129 | DELETE /api/materials/{id} |
 | B21 | MemberEndpoints.cs:97 | PUT /api/members |
 | B22 | MemberEndpoints.cs:117 | DELETE /api/members/{id} |
@@ -152,7 +152,7 @@
 | B33 | ProjectEndpoints.cs:124 | PUT /api/projects/{id} |
 | B34 | ProjectEndpoints.cs:139 | DELETE /api/projects/{id} |
 | B35 | ProjectEndpoints.cs:174 | DELETE /api/project-members/{id} |
-| B36 | ProjectWorkerMiscEndpoints.cs:35 | PUT /api/project-workers |
+| B36 | ProjectWorkerMiscEndpoints.cs:35 | PUT /api/project-workers | ~~created_by/IsAdmin~~ → Classify 单点 + ViaAuthz 同事务 audit（R9-22 已改；现状恒 500 @Now 缺参，修复顺带补传） |
 | B37 | ProjectWorkerMiscEndpoints.cs:46 | PUT /api/invoices/{id}/status |
 | B38 | WageEndpoints.cs:80 | PUT /api/attendances |
 | B39 | WageEndpoints.cs:95 | DELETE /api/attendances/{id} |
@@ -187,6 +187,9 @@
 > - **A5（PUT /api/cost-ledger/batches/{id}）—— 已对齐方案丙（R9-21，B 桶形态翻转 403→200）**：现状 WHERE `UserFilterCompany(scope)`（非 All = created_by=@Uid，授权跨人 403，B 桶形态），预读行归属（created_by+project_id）→ Classify 单点裁决 → 授权跨人可改 + ViaAuthz 同事务 audit（fail-closed）；归属条件移出 SQL（WHERE 只留 id，改后未用的 scope/isAdmin 删除）；行不存在 → 403（Ok/Forbid 收尾保留，未引入 WriteResult 404）；无锁列故无 409 档。**行为人用内置 accountant r9-21-bat（默认集含 costLedger:update，未 UPDATE/INSERT roles）**。实证：`R9BatchCrossUserEditTests.cs`（修复笔 `2666dcd`）。
 > - **A6（DELETE /api/cost-ledger/batches/{id}）—— 方案丙例外钉住（R9-21，零生产代码）**：现状同 UserFilterCompany（非 All = 仅创建者可删），已符合方案丙「可改不可删」，本轮 PIN-ONLY 不改码（与 B44/B45/B46、B9/B10 例外同族）。**行为人用自定义角色 r9-21-del（id==name，permissions 含 costLedger:delete——accountant 默认集无此码；仅 INSERT 新 roles 行，不动内置角色）**。实证：`R9BatchCrossUserEditTests.cs` Pin6/Pin7（授权跨人 403 行仍在 / 本人删 200）。
 > - **A7（POST /api/cost-ledger/{batchId}/sheet）—— 已补 per-row audit（R9-21，A 桶形态 200 缺 audit）**：行 UPDATE 分支 WHERE 已含 UserFilterWithAuthorizedProjects——授权跨人行原本就能改（HTTP 200），本轮只在实际发生跨人改写时同事务补 per-row `cross_user_edit`（resource='cost_ledger'）；预读 id+batch_id → Classify 单点（不手写 EXISTS）；批次门、INSERT 分支、批次摘要 audit（action='update'、resource='cost_ledger_sheet'）与行 UPDATE 的 UserFilter 原样不动，per-row 与摘要 audit 并存；无锁列故无 409 档；金额单位「元」直传直存（无 ToFen）。**行为人用内置 accountant r9-21-sht（默认集含 costLedger:update，未 UPDATE/INSERT roles）**。实证：`R9SheetCrossUserEditTests.cs`（修复笔 `22e5758`）。
+> - **B12（PUT /api/drawings）—— 已对齐方案丙（R9-22，B 桶形态翻转 403→200）**：现状 WHERE `created_by/IsAdmin`（授权跨人 403，B 桶形态），预读行归属（created_by+project_id）→ Classify 单点裁决 → 授权跨人可改 + ViaAuthz 同事务 audit（fail-closed）；归属条件移出 SQL（WHERE 只留 id，未用的 isAdmin 删除）；行不存在 → 404（WriteResult 收尾保留）；无锁列故无 409 档；body 走 StreamReader；列集照原样 name/category/remarks/position + version+1/last_modified_at。**行为人用自定义角色 r9-22-b4（id==name，permissions 含 drawings:update——accountant 默认集无此码；仅 INSERT 新 roles 行，不动内置角色）**。实证：`R9DrawingCrossUserEditTests.cs`（预期红笔 `ad34af6` / 修复笔 `4988e06`）。
+> - **B19（PUT /api/materials）—— 已对齐方案丙（R9-22，B 桶形态翻转 403→200，与 B12 同构）**：现状 WHERE `created_by/IsAdmin`，预读行归属 → Classify 单点 → 授权跨人 + audit（fail-closed 同事务）；归属条件移出 SQL（WHERE 只留 id，未用的 isAdmin/scope 删除）；行不存在 → 404（WriteResult 收尾保留）；**UPDATE 列集照原样不设 updated_at（真库 materials 无此列）**；无锁列故无 409 档；body 走 MaterialDto。**行为人同批次 4 共用自定义角色 r9-22-b4**。实证：`R9MaterialCrossUserEditTests.cs`（预期红笔 `8560d88` / 修复笔 `756f73e`）。
+> - **B36（PUT /api/project-workers）—— 已对齐方案丙（R9-22，B 桶形态翻转 403→200，含恒 500 修正）**：现状 WHERE `created_by/IsAdmin`，预读行归属 → Classify 单点 → 授权跨人 + audit（fail-closed 同事务）；归属条件移出 SQL（WHERE 只留 id，未用的 isAdmin 删除）；行不存在 → 403（Ok/Forbid 收尾保留，未引入 WriteResult 404）；daily_wage 沿用工资域惯例「分」原样直传不换算；无锁列故无 409 档；body 走 ProjectWorkerDto。**偏差留痕：现状该端点对任何请求恒 500（UPDATE 含 @Now 但参数对象从未传 Now，Dapper 抛 InvalidOperationException）——预期红「恰好 Red1 一红」不可实现（实测 6/6 全红 InternalServerError），测试与修复合一笔 `4de16ae` 提交，修复顺带补传 Now 使端点首次可用；同文件 B37 未碰（破坏自证用 project_workers 预读上下文唯一定位）**。**行为人同批次 4 共用自定义角色 r9-22-b4**。实证：`R9ProjectWorkerCrossUserEditTests.cs`（测试+修复合一笔 `4de16ae`）。
 
 ### C 桶：WHERE 只有 id=@Id（或等价），端点内另有显式归属/授权校验 — 6 条
 
