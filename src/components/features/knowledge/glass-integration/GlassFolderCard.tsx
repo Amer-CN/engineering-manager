@@ -54,11 +54,9 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
       <div
         className={`
           absolute inset-0 rounded-[22px] border-2 overflow-hidden
-          transition-colors duration-75 ease-out shadow-xl flex flex-col justify-between
+          shadow-xl flex flex-col justify-between
           ${
-            isActive
-              ? 'bg-gradient-to-br from-[color:var(--gc-active,#065f46)] via-[color:var(--gc-active-deep,#064e3b)] to-[color:var(--gc-active-deep,#022c22)] border-[color:var(--gc-active-border-a80,#34d399cc)] shadow-black/60'
-              : isDark
+            isDark
               ? 'bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950 border-zinc-600/60 shadow-black/90 group-hover:border-zinc-500'
               : 'bg-gradient-to-br from-white via-zinc-100 to-zinc-200 border-zinc-300 shadow-zinc-400/40'
           }
@@ -68,6 +66,17 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
           transformStyle: 'preserve-3d',
         }}
       >
+        {/* 选中色覆盖层：透明度 = af（与抬升/文档展开同一条曲线）——
+            卡抬到多高黑色就有多深，回落时颜色跟着身体一起褪去，无翻转时刻 */}
+        <div
+          className="absolute inset-0 rounded-[22px] border-2 pointer-events-none"
+          style={{
+            opacity: af,
+            background:
+              'linear-gradient(to bottom right, var(--gc-active, #065f46), var(--gc-active-deep, #064e3b) 50%, var(--gc-active-deep, #022c22))',
+            borderColor: 'var(--gc-active-border-a80, #34d399cc)',
+          }}
+        />
         {/* Top Tab Notch */}
         <div
           className={`
@@ -80,6 +89,18 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
                 : 'bg-zinc-100 border-zinc-300 text-zinc-800'
             }
           `}
+          style={{
+            // 标签盖颜色随 af 混入：进入时黑得渐进、退出时褪得渐进（同曲线）
+            background: `color-mix(in srgb, var(--gc-active, #047857) ${Math.round(af * 100)}%, ${
+              isDark ? '#27272a' : '#f4f4f5'
+            })`,
+            borderColor: `color-mix(in srgb, var(--gc-active-border, #10b981) ${Math.round(af * 100)}%, ${
+              isDark ? '#3f3f46' : '#d4d4d8'
+            })`,
+            color: `color-mix(in srgb, var(--gc-active-ink, #fff) ${Math.round(af * 100)}%, ${
+              isDark ? 'rgba(255,255,255,0.9)' : '#3f3f46'
+            })`,
+          }}
         >
           <Folder className="w-3.5 h-3.5 text-[color:var(--gc-icon,#34d399)]" />
           <span className="text-[10px] font-mono font-bold tracking-wider uppercase truncate">
@@ -263,11 +284,8 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
         className={`
           absolute bottom-0 inset-x-0 h-[158px] rounded-b-[22px] rounded-t-2xl p-4
           flex flex-col justify-between backdrop-blur-2xl border-t-2 border-x-2 border-b-2
-          transition-colors duration-75 ease-out
           ${
-            isActive
-              ? 'bg-gradient-to-b from-[color:var(--gc-active-a85,#10b981d9)] via-[color:var(--gc-active-a90,#059669e6)] to-[color:var(--gc-active-deep-a95,#065f46f2)] border-[color:var(--gc-active-border-a80,#6ee7b7cc)] text-[color:var(--gc-active-ink,#fff)] shadow-lg'
-              : isDark
+            isDark
               ? 'bg-gradient-to-b from-zinc-800/85 via-zinc-900/90 to-black/95 border-white/30 text-white shadow-lg group-hover:border-white/50'
               : 'bg-gradient-to-b from-white/95 via-white/85 to-zinc-100/90 border-white/90 text-zinc-900 shadow-md'
           }
@@ -278,6 +296,18 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
           transformStyle: 'preserve-3d',
         }}
       >
+        {/* 前袋选中色覆盖层：透明度 = af，同一条身体曲线（后盖板同款机制） */}
+        <div
+          className="absolute inset-0 rounded-b-[22px] rounded-t-2xl pointer-events-none"
+          style={{
+            opacity: af,
+            background:
+              'linear-gradient(to bottom, var(--gc-active-a85, #10b981d9), var(--gc-active-a90, #059669e6) 55%, var(--gc-active-deep-a95, #065f46f2))',
+            borderColor: 'var(--gc-active-border-a80, #6ee7b7cc)',
+            borderWidth: '2px',
+            borderStyle: 'solid',
+          }}
+        />
         {/* Rounded Bottom Glass Rim Specular Reflection */}
         <div className="absolute bottom-0 inset-x-0 h-3 rounded-b-[20px] bg-gradient-to-t from-white/30 via-white/10 to-transparent pointer-events-none" />
 
