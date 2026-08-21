@@ -20,7 +20,7 @@ export const FloatingPreviewBadge: React.FC<FloatingPreviewBadgeProps> = ({
       onClick={onClick}
       className={`
         group relative cursor-pointer select-none
-        w-[240px] md:w-[260px] p-5 rounded-2xl
+        w-[200px] md:w-[216px] p-4 rounded-2xl
         transition-all duration-300 ease-out
         hover:scale-105 hover:-translate-y-1
         ${
