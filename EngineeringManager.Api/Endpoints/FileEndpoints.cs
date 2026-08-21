@@ -174,20 +174,40 @@ public static class FileEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             // G2 B8: 图纸写操作 → drawings:update
             if (!CurrentUser.HasPermission(ctx, db, "drawings:update")) return Results.Forbid();
-            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
-            // 修复: 列名对齐前端契约; 补 404 语义
+            // R9-22 批次 4 B12：B 桶形态翻转——现状 WHERE created_by/IsAdmin（授权跨人 403），
+            // 对齐方案丙：预读行归属 → Classify 单点裁决 → 授权跨人可改（403→200）+ 同事务 audit。
+            // 预读行归属（C# 单点裁决归属，SQL WHERE 不再含 created_by/IsAdmin）。
             using var reader = new System.IO.StreamReader(ctx.Request.Body);
             var bodyText = await reader.ReadToEndAsync();
             var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(bodyText);
             var recordId = body.TryGetProperty("id", out var idProp) ? idProp.GetInt64() : 0;
-            var affected = await db.ExecuteAsync("UPDATE drawings SET name=@Name,category=@Category,remarks=@Remarks,position=@Position, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
-                new { Now = now(), Uid = uid, IsAdmin = isAdmin,
-                    Id = recordId,
+            var row = db.QueryFirstOrDefault(
+                "SELECT created_by, project_id FROM drawings WHERE id=@Id",
+                new { Id = recordId });
+            // 行不存在 → 404（WriteResult 收尾语义保持）
+            if (row == null) return Results.NotFound(new { success = false, error = "记录不存在" });
+            // 归属裁决：Denied → 403；AllowedViaAuthorization → 跨人修改落 audit（同事务 fail-closed）
+            var createdBy = row.created_by as string;
+            var projectId = row.project_id as long?;
+            var access = RowWriteGate.Classify(ctx, db, createdBy, projectId);
+            if (access == RowWriteOutcome.Denied) return Results.Forbid();
+
+            // 归属条件移出 SQL（C# 单点裁决）；无锁列故无 409 档、WHERE 只留 id
+            // （列集照原样：name/category/remarks/position + version+1/last_modified_at）
+            using var tx = db.BeginTransaction();
+            var affected = await db.ExecuteAsync("UPDATE drawings SET name=@Name,category=@Category,remarks=@Remarks,position=@Position, version=version+1, last_modified_at=@Now WHERE id=@Id",
+                new { Now = now(), Id = recordId,
                     Name = body.TryGetProperty("name", out var n) ? n.GetString() : null,
                     Category = body.TryGetProperty("category", out var c) ? c.GetString() : null,
                     Remarks = body.TryGetProperty("remarks", out var rm) ? rm.GetString() : null,
                     Position = body.TryGetProperty("position", out var pos) ? pos.GetString() : null
-                });
+                }, tx);
+            if (access == RowWriteOutcome.AllowedViaAuthorization)
+            {
+                // 跨人修改落审计（fail-closed：审计写不进 → 事务回滚 → 修改不生效）
+                AuditWriter.CrossUserEdit(db, tx, ctx, "drawings", recordId, "PUT /api/drawings", createdBy, projectId);
+            }
+            tx.Commit();
             return await Common.WriteResult(affected, db, "drawings", recordId);
         });
 
