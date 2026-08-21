@@ -1639,12 +1639,30 @@ button:disabled {
 /* ═══ 知识库 3D 轮播主题桥接（--gc-* → 主题 token）═══
  * DESIGN.md 颜色内聚：舞台区 emerald 系经 --gc-* 变量使用。
  * 净白（white）：--accent 是深暖褐，active 卡走主题色（用户拍板 2026-08-21）；
- * graphite/sandstone 无彩色 accent，回退 emerald 原版绿色（保持现状）。 */
+ * graphite/sandstone 无彩色 accent，回退 emerald 原版绿色（保持现状）。
+ * 注意：TW3 不支持 var() 任意值 + /透明度 修饰符（类会静默丢），
+ * 需要透明度的位置一律用下方的 -a 系 color-mix 变量，类名不带修饰符。 */
+.gc-stage-iso {
+  /* 回退层：emerald 原版绿（graphite/sandstone 直接命中，视觉零变化） */
+  --gc-active: #10b981;
+  --gc-active-deep: #064e3b;
+  --gc-active-border: #34d399;
+  --gc-active-ink: #fff;
+}
 [data-theme="white"] .gc-stage-iso {
   --gc-active: var(--accent);              /* active 卡主色（原 emerald-500/600/700 阶）*/
   --gc-active-deep: var(--accent-strong);  /* 深一阶（原 emerald-800/900/950 阶）*/
   --gc-active-border: var(--accent);       /* active 边框/描边（原 emerald-300/400 阶）*/
   --gc-active-ink: var(--on-accent);       /* active 上文字（原 white）*/
+}
+/* 透明度层：color-mix 在使用点把变量混上透明度（TW3 修饰符的替代） */
+.gc-stage-iso {
+  --gc-active-a85: color-mix(in srgb, var(--gc-active) 85%, transparent);
+  --gc-active-a90: color-mix(in srgb, var(--gc-active) 90%, transparent);
+  --gc-active-deep-a95: color-mix(in srgb, var(--gc-active-deep) 95%, transparent);
+  --gc-active-deep-a60: color-mix(in srgb, var(--gc-active-deep) 60%, transparent);
+  --gc-active-border-a80: color-mix(in srgb, var(--gc-active-border) 80%, transparent);
+  --gc-active-border-a40: color-mix(in srgb, var(--gc-active-border) 40%, transparent);
 }
 
 /* ═══ 知识库 3D 轮播舞台样式隔离（.gc-stage-iso）═══
