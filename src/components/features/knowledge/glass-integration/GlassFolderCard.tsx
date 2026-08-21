@@ -36,16 +36,17 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
   ];
 
   return (
-    <div
+      <div
       onClick={onClick}
       className={`
         relative group cursor-pointer select-none
         w-[230px] sm:w-[245px] h-[305px] sm:h-[320px]
-        flex-shrink-0 transition-transform duration-75 ease-out
-        ${isActive ? 'scale-[1.03]' : 'hover:scale-[1.015]'}
+        flex-shrink-0 hover:scale-[1.015]
       `}
       style={{
         transformStyle: 'preserve-3d',
+        // 缩放同曲线：卡抬到多高放大到多少（af 驱动，消灭 isActive 半路跳变 1.03）
+        transform: `scale(${(1 + af * 0.03).toFixed(4)})`,
       }}
     >
       {/* =========================================================================
