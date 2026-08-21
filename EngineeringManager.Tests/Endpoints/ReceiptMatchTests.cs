@@ -366,14 +366,15 @@ public class ReceiptMatchTests : ApiTestBase
         Assert.Equal(HttpStatusCode.Forbidden, resp.StatusCode);
     }
 
-    // ── M-FIX9 W1：锁定现状（回滚 T4(e) 生产 SQL 后的行为）──
-    // 反例：accountant（有 wages:update、非 admin）确认「他人（admin）创建的」工资行。
-    // 现状 WHERE = (created_by=@Uid OR @IsAdmin=1)：非 admin 只能确认自己创建的行，
-    // 他人创建的行无论项目是否授权一律 skipped（无 EXISTS 授权分支）。
-    // 本测试锁定的是现状而非目标态：R9 方案丙（见 docs/findings/CONFIRM-MATCHES-AUTHZ.md）
-    // 将改为「未授权项目一律拒绝 + 跨人修改落审计 + 仅企业版」，届时本测试必须同步改断言。
+    // ── M-FIX9 W1：原锁定现状，R9-23 B47 预告翻转已执行（先例 R9-10 B2）──
+    // accountant（有 wages:update、非 admin）确认「他人（admin）创建的」工资行。
+    // 旧现状 WHERE = (created_by=@Uid OR @IsAdmin=1)：非 admin 只能确认自己创建的行，
+    // 他人创建的行无论项目是否授权一律 skipped。R9-23 B47 confirm-matches 已按方案丙
+    // 对齐（Classify 单点 + ViaAuthz 同事务 audit）：未授权项目 9302 仍 skipped；
+    // 已授权项目 9303 → saved + paid_amount 落库 + cross_user_edit 落审计。
+    // 本测试随语义翻转改写断言（M-FIX9 注释预定翻转，规格认账第 8 次）。
     [Fact]
-    public async Task Confirm_OthersRow_AlwaysSkipped_NonAdmin()
+    public async Task Confirm_OthersRow_UnauthorizedSkipped_AuthorizedSavedWithAudit()
     {
         // accountant 用户（有 wages:update，非 admin）
         const string accUid = "acc-unauth-project";
@@ -423,23 +424,28 @@ public class ReceiptMatchTests : ApiTestBase
             authzWageId = conn.ExecuteScalar<long>("SELECT id FROM wages WHERE project_id=9303");
         }
 
-        // 现状：他人创建的行（无论项目是否授权）→ 非 admin 一律 skipped（saved=0 / skipped=2）
+        // 翻转后：未授权项目 9302 行仍 skipped；已授权项目 9303 行 saved（saved=1 / skipped=1）
         var json = await PostConfirmAsync(new[]
         {
             new { wageId = unauthWageId, paidAmount = 5000.0, paidDate = "2026-07-15", bankReceiptPath = @"C:\receipts\unauth.jpg" },
             new { wageId = authzWageId, paidAmount = 5000.0, paidDate = "2026-07-15", bankReceiptPath = @"C:\receipts\authz.jpg" },
         }, expectOk: true);
-        Assert.Equal(0, json.GetProperty("data").GetProperty("saved").GetInt32());
-        Assert.Equal(2, json.GetProperty("data").GetProperty("skipped").GetInt32());
+        Assert.Equal(1, json.GetProperty("data").GetProperty("saved").GetInt32());
+        Assert.Equal(1, json.GetProperty("data").GetProperty("skipped").GetInt32());
 
-        // 正向断言：两行付款列确实未被写（断言 NULL，非否定式）
+        // 正向断言：未授权行付款列未被写（NULL）；已授权行付款列已写（分）
         using (var conn = new SqliteConnection(ConnectionString))
         {
             conn.Open();
             var paid1 = conn.ExecuteScalar<long?>("SELECT paid_amount FROM wages WHERE id=@Id", new { Id = unauthWageId });
             Assert.Null(paid1);
             var paid2 = conn.ExecuteScalar<long?>("SELECT paid_amount FROM wages WHERE id=@Id", new { Id = authzWageId });
-            Assert.Null(paid2);
+            Assert.Equal(500000L, paid2);
+            // 已授权跨人确认 → 同事务落 cross_user_edit 审计（行为人 = acc-unauth）
+            var auditCount = conn.ExecuteScalar<long>(
+                "SELECT COUNT(*) FROM audit_logs WHERE action='cross_user_edit' AND resource='wages' AND resource_id=@Id AND user_id=@U",
+                new { Id = authzWageId.ToString(), U = accUid });
+            Assert.Equal(1L, auditCount);
         }
     }
 
