@@ -49,6 +49,11 @@ export function useAgentConversationFlow({
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [mascotState, setMascotState] = useState<MascotState>('idle')
 
+  /** 当前会话 id 的 ref 镜像：流式回调比对「流所属会话 == 当前会话」用 */
+  const conversationIdRef = useRef<number | null>(null)
+  /** 在途流式请求的 AbortController：切换/新建会话时 abort 旧流 */
+  const abortRef = useRef<AbortController | null>(null)
+
   /** 首次响应已结束（含 success/error 短暂展示）→ 此后进入对话视图 */
   const [firstDone, setFirstDone] = useState(false)
   const firstDoneRef = useRef(false)
@@ -117,14 +122,31 @@ export function useAgentConversationFlow({
       // 首次正文到达前记录，避免 tool 期间重复置 replying
       let repliedOnce = false
 
+      // 流式竞态防护：记录本轮流式所属会话（新会话首轮为 null，收到 conversation_id 后回填），
+      // 回调落地前比对 conversationIdRef（当前会话镜像）；会话切换会 abort，双保险。
+      let streamConvId = conversationId
+      // P2-7：本轮是否已从流里收到 conversationId（= 服务端已建会话并落库 user 消息）
+      let receivedId = false
+      const controller = new AbortController()
+      abortRef.current = controller
+      const isStale = () => controller.signal.aborted || conversationIdRef.current !== streamConvId
+
       try {
         const callbacks: AgentStreamCallbacks = {
-          onConversationId: (id) => setConversationId(id),
+          onConversationId: (id) => {
+            if (isStale()) return
+            streamConvId = id
+            receivedId = true
+            conversationIdRef.current = id
+            setConversationId(id)
+          },
           onTool: (name) => {
+            if (isStale()) return
             patchAssistant({ content: `🔧 正在查询：${name}…` })
             setMascotState('searching')
           },
           onContent: (text) => {
+            if (isStale()) return
             if (!repliedOnce) {
               repliedOnce = true
               setMascotState('replying')
@@ -139,6 +161,7 @@ export function useAgentConversationFlow({
             )
           },
           onDone: ({ toolCalls, message }) => {
+            if (isStale()) return
             setMessages((prev) =>
               prev.map((m) => {
                 if (m.clientId !== assistantClientId) return m
@@ -151,18 +174,38 @@ export function useAgentConversationFlow({
             finishRound(true, 1200)          // 主流程正常完成
           },
           onError: (err) => {
+            if (isStale()) return
             patchAssistant({ sending: false, content: `❌ 出错了：${err}` })
             finishRound(false, 1600)        // 主流程出错
           },
         }
 
-        await sendAgentMessageStream(request, callbacks)
+        await sendAgentMessageStream(request, callbacks, controller.signal)
       } catch {
+        // 流被 abort（用户切换/新建会话）：放弃本轮，不回退、不落地状态
+        if (controller.signal.aborted) return
+        // P2-7：已收到 conversationId = user 消息已入库，重发非流式会造成重复入库；
+        // 以已收到的内容收尾（有正文则保留，无正文则提示中断）。
+        if (receivedId) {
+          if (repliedOnce) {
+            patchAssistant({ sending: false })
+            finishRound(true, 1200)
+          } else {
+            patchAssistant({ sending: false, content: '❌ 连接中断，回复未送达' })
+            finishRound(false, 1600)
+          }
+          return
+        }
         // 2) 流式失败 → 无缝回退到非流式（现有逻辑保持不变）
         try {
           const resp = await sendAgentMessage(request)
+          if (isStale()) return
           if (resp.success) {
-            if (resp.conversationId) setConversationId(resp.conversationId)
+            if (resp.conversationId) {
+              streamConvId = resp.conversationId
+              conversationIdRef.current = resp.conversationId
+              setConversationId(resp.conversationId)
+            }
             patchAssistant({
               sending: false,
               content: resp.message?.content ?? '',
@@ -182,9 +225,11 @@ export function useAgentConversationFlow({
           finishRound(false, 1600)
         }
       } finally {
-        setLoading(false)
-        setRefreshTrigger((v) => v + 1)
-        setTimeout(() => inputRef.current?.focus(), 50)
+        if (!controller.signal.aborted) {
+          setLoading(false)
+          setRefreshTrigger((v) => v + 1)
+          setTimeout(() => inputRef.current?.focus(), 50)
+        }
       }
     },
     [inputValue, loading, conversationId, finishRound],
@@ -193,17 +238,24 @@ export function useAgentConversationFlow({
   /** 加载历史对话 */
   const handleSelectConversation = useCallback(
     async (conv: AgentConversation) => {
+      // 切换会话：abort 旧流并同步会话镜像，避免旧流回调写入新会话视图
+      abortRef.current?.abort()
+      abortRef.current = null
+      conversationIdRef.current = conv.id
       setLoading(true)
       setConversationId(conv.id)
       try {
         const detail = await getAgentConversationDetail(conv.id)
         if (detail && detail.messages) {
-          const mapped: LocalMessage[] = detail.messages.map(m => ({
-            clientId: genClientId(),
-            role: m.role as LocalMessage['role'],
-            content: m.content,
-            toolCalls: m.toolCalls,
-          }))
+          // tool 行是给 LLM 的工具结果 JSON，不渲染为消息气泡
+          const mapped: LocalMessage[] = detail.messages
+            .filter(m => m.role !== 'tool')
+            .map(m => ({
+              clientId: genClientId(),
+              role: m.role as LocalMessage['role'],
+              content: m.content,
+              toolCalls: m.toolCalls,
+            }))
           setMessages(mapped)
           if (mapped.length > 0) {
             // 有历史消息 → 直接以对话视图呈现，跳过首次欢迎区
@@ -225,9 +277,14 @@ export function useAgentConversationFlow({
 
   /** 新建对话 */
   const handleNewConversation = useCallback(() => {
+    // 新建会话：abort 旧流并同步会话镜像（被 abort 的流不执行 finally 清理，这里兜底复位 loading）
+    abortRef.current?.abort()
+    abortRef.current = null
+    conversationIdRef.current = null
     setMessages([])
     setConversationId(null)
     setInputValue('')
+    setLoading(false)
     // 重置「首次响应」标记与 mascot，回到欢迎区
     firstDoneRef.current = false
     setFirstDone(false)
