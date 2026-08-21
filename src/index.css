@@ -1665,6 +1665,21 @@ button:disabled {
   --gc-active-border-a80: color-mix(in srgb, var(--gc-active-border) 80%, transparent);
   --gc-active-border-a40: color-mix(in srgb, var(--gc-active-border) 40%, transparent);
 }
+.gc-stage-iso {
+  /* 新增语义层 */
+  --gc-icon: #34d399;   /* 常显小图标绿（Folder 图标等，原 emerald-400）*/
+  --gc-soft: #d1fae5;   /* 淡色底（原 emerald-100 语义，纸面徽标底）*/
+  --gc-soft-border: #a7f3d0; /* 淡边框（原 emerald-200）*/
+  --gc-a10: color-mix(in srgb, var(--gc-active) 10%, transparent);
+  --gc-a20: color-mix(in srgb, var(--gc-active) 20%, transparent);  /* 辉光/淡底 20% */
+  --gc-a30: color-mix(in srgb, var(--gc-active) 30%, transparent);
+  --gc-icon-a50: color-mix(in srgb, var(--gc-icon) 50%, transparent); /* ping 圈 */
+}
+[data-theme="sandstone"] .gc-stage-iso {
+  --gc-icon: var(--accent-strong);      /* 灰阶图标（深，可读）*/
+  --gc-soft: color-mix(in srgb, var(--accent) 10%, white);  /* 灰阶淡底 */
+  --gc-soft-border: color-mix(in srgb, var(--accent) 22%, white);
+}
 
 /* ═══ 知识库 3D 轮播舞台样式隔离（.gc-stage-iso）═══
  * 背景：下方各主题的「Tailwind 通用类覆盖」（[data-theme=…] .bg-white/.card → var(--card)）

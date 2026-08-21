@@ -15,8 +15,6 @@ export const AddFolderModal: React.FC<AddFolderModalProps> = ({
   onAddFolder,
   theme = 'dark',
 }) => {
-  if (!isOpen) return null;
-
   const isDark = theme === 'dark';
   const [title, setTitle] = useState('');
   const [englishTitle, setEnglishTitle] = useState('');
@@ -25,6 +23,8 @@ export const AddFolderModal: React.FC<AddFolderModalProps> = ({
   const [description, setDescription] = useState('');
   const [progress, setProgress] = useState(50);
   const [memberCount, setMemberCount] = useState(3);
+
+  if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,7 +70,7 @@ export const AddFolderModal: React.FC<AddFolderModalProps> = ({
       >
         <div className="flex items-center justify-between pb-3 border-b border-white/10">
           <div className="flex items-center gap-2 font-bold text-lg">
-            <FolderPlus className="w-5 h-5 text-emerald-400" />
+            <FolderPlus className="w-5 h-5 text-[color:var(--gc-icon,#34d399)]" />
             <span>新建 3D 玻璃文件夹</span>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-full bg-white/10 hover:bg-white/20">
@@ -130,7 +130,7 @@ export const AddFolderModal: React.FC<AddFolderModalProps> = ({
           <div>
             <div className="flex justify-between text-zinc-400 mb-1 font-medium">
               <span>初始完成进度</span>
-              <span className="font-mono text-emerald-400">{progress}%</span>
+              <span className="font-mono text-[color:var(--gc-icon,#34d399)]">{progress}%</span>
             </div>
             <input
               type="range"
@@ -138,7 +138,7 @@ export const AddFolderModal: React.FC<AddFolderModalProps> = ({
               max="100"
               value={progress}
               onChange={(e) => setProgress(parseInt(e.target.value))}
-              className="w-full accent-emerald-500 cursor-pointer"
+              className="w-full accent-[color:var(--gc-active,#10b981)] cursor-pointer"
             />
           </div>
 
@@ -163,7 +163,7 @@ export const AddFolderModal: React.FC<AddFolderModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold shadow-lg shadow-emerald-500/30"
+              className="px-5 py-2.5 rounded-xl bg-[color:var(--gc-active,#10b981)] hover:bg-[color:var(--gc-active-deep,#059669)] text-white font-semibold shadow-lg shadow-black/30"
             >
               创建并加入循环
             </button>
