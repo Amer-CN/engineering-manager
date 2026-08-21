@@ -54,7 +54,7 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
       <div
         className={`
           absolute inset-0 rounded-[22px] border-2 overflow-hidden
-          transition-none shadow-xl flex flex-col justify-between
+          transition-colors duration-100 ease-out shadow-xl flex flex-col justify-between
           ${
             isActive
               ? 'bg-gradient-to-br from-[color:var(--gc-active,#065f46)] via-[color:var(--gc-active-deep,#064e3b)] to-[color:var(--gc-active-deep,#022c22)] border-[color:var(--gc-active-border-a80,#34d399cc)] shadow-black/60'
@@ -263,7 +263,7 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
         className={`
           absolute bottom-0 inset-x-0 h-[158px] rounded-b-[22px] rounded-t-2xl p-4
           flex flex-col justify-between backdrop-blur-2xl border-t-2 border-x-2 border-b-2
-          transition-none
+          transition-colors duration-100 ease-out
           ${
             isActive
               ? 'bg-gradient-to-b from-[color:var(--gc-active-a85,#10b981d9)] via-[color:var(--gc-active-a90,#059669e6)] to-[color:var(--gc-active-deep-a95,#065f46f2)] border-[color:var(--gc-active-border-a80,#6ee7b7cc)] text-[color:var(--gc-active-ink,#fff)] shadow-lg'
@@ -288,7 +288,7 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
           <div
             className={`
               inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold
-              backdrop-blur-md transition-none shadow-md
+              backdrop-blur-md transition-colors duration-100 ease-out shadow-md
               ${
                 isActive
                   ? 'bg-white/30 text-white border border-white/40'
@@ -317,7 +317,7 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
         <div className="mt-auto" style={{ transform: 'translate3d(0px, 0px, 8px)' }}>
           <div
             className={`
-              text-lg font-extrabold tracking-tight truncate transition-none
+              text-lg font-extrabold tracking-tight truncate transition-colors duration-100 ease-out
               ${
                 isActive
                   ? 'text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]'
