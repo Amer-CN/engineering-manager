@@ -141,6 +141,7 @@ const AgentDashboard: React.FC = () => {
             conversationId={conversationId}
             onSelectConversation={handleSelectConversation}
             onNewConversation={handleNewConversation}
+            onCurrentConversationDeleted={handleNewConversation}
             refreshTrigger={refreshTrigger}
           />
         </div>
@@ -148,6 +149,7 @@ const AgentDashboard: React.FC = () => {
           conversationId={conversationId}
           onSelectConversation={handleSelectConversation}
           onNewConversation={handleNewConversation}
+          onCurrentConversationDeleted={handleNewConversation}
           refreshTrigger={refreshTrigger}
           historyOpen={historyOpen}
           onHistoryClose={() => setHistoryOpen(false)}
