@@ -163,7 +163,7 @@
 | B44 | WageEndpoints.cs:417 | POST /api/wages/batch-clear-payments |
 | B45 | WageEndpoints.cs:431 | POST /api/wages/archive |
 | B46 | WageEndpoints.cs:446 | POST /api/wages/batch-unarchive |
-| B47 | WageEndpoints.cs:558 | POST /api/wages/confirm-matches |
+| B47 | WageEndpoints.cs:558 | POST /api/wages/confirm-matches | ~~created_by/IsAdmin~~ → Classify 单点 + audit（R9-23 已改） |
 | B48 | WageEndpoints.cs:733 | POST /api/wages/batch-payment |
 | B49 | WageEndpoints.cs:866 | DELETE /api/salary-history/{id} |
 | B50 | WageEndpoints.cs:677 | POST /api/wages/batch-save（ON CONFLICT DO UPDATE 带 created_by/IsAdmin） |
@@ -190,6 +190,7 @@
 > - **B12（PUT /api/drawings）—— 已对齐方案丙（R9-22，B 桶形态翻转 403→200）**：现状 WHERE `created_by/IsAdmin`（授权跨人 403，B 桶形态），预读行归属（created_by+project_id）→ Classify 单点裁决 → 授权跨人可改 + ViaAuthz 同事务 audit（fail-closed）；归属条件移出 SQL（WHERE 只留 id，未用的 isAdmin 删除）；行不存在 → 404（WriteResult 收尾保留）；无锁列故无 409 档；body 走 StreamReader；列集照原样 name/category/remarks/position + version+1/last_modified_at。**行为人用自定义角色 r9-22-b4（id==name，permissions 含 drawings:update——accountant 默认集无此码；仅 INSERT 新 roles 行，不动内置角色）**。实证：`R9DrawingCrossUserEditTests.cs`（预期红笔 `ad34af6` / 修复笔 `4988e06`）。
 > - **B19（PUT /api/materials）—— 已对齐方案丙（R9-22，B 桶形态翻转 403→200，与 B12 同构）**：现状 WHERE `created_by/IsAdmin`，预读行归属 → Classify 单点 → 授权跨人 + audit（fail-closed 同事务）；归属条件移出 SQL（WHERE 只留 id，未用的 isAdmin/scope 删除）；行不存在 → 404（WriteResult 收尾保留）；**UPDATE 列集照原样不设 updated_at（真库 materials 无此列）**；无锁列故无 409 档；body 走 MaterialDto。**行为人同批次 4 共用自定义角色 r9-22-b4**。实证：`R9MaterialCrossUserEditTests.cs`（预期红笔 `8560d88` / 修复笔 `756f73e`）。
 > - **B36（PUT /api/project-workers）—— 已对齐方案丙（R9-22，B 桶形态翻转 403→200，含恒 500 修正）**：现状 WHERE `created_by/IsAdmin`，预读行归属 → Classify 单点 → 授权跨人 + audit（fail-closed 同事务）；归属条件移出 SQL（WHERE 只留 id，未用的 isAdmin 删除）；行不存在 → 403（Ok/Forbid 收尾保留，未引入 WriteResult 404）；daily_wage 沿用工资域惯例「分」原样直传不换算；无锁列故无 409 档；body 走 ProjectWorkerDto。**偏差留痕：现状该端点对任何请求恒 500（UPDATE 含 @Now 但参数对象从未传 Now，Dapper 抛 InvalidOperationException）——预期红「恰好 Red1 一红」不可实现（实测 6/6 全红 InternalServerError），测试与修复合一笔 `4de16ae` 提交，修复顺带补传 Now 使端点首次可用；同文件 B37 未碰（破坏自证用 project_workers 预读上下文唯一定位）**。**行为人同批次 4 共用自定义角色 r9-22-b4**。实证：`R9ProjectWorkerCrossUserEditTests.cs`（测试+修复合一笔 `4de16ae`）。
+> - **B47（POST /api/wages/confirm-matches）—— 已对齐方案丙（R9-23，B48 模板对齐，confirm-matches 专列）**：语义等价「带回单路径的 batch-payment」（bankReceiptPath 必填保持、缺字段 400 整单语义保持）；逐对预读行归属（created_by+project_id）→ 锁在授权分支之前（locked → skipped）→ Classify 单点裁决 → Denied skipped / ViaAuthz UPDATE + 同事务 cross_user_edit audit（fail-closed，归属条件移出 SQL）；**无 403 形态——Denied 走 skipped 计数（现状可观察不变）**；读侧 match-receipts 候选过滤本已含 UserFilterWithAuthorizedProjects（对称，零改动）；金额 API 元 → ToFen 落库（既有行为照原样）。**既有用例翻转豁免 ×1（裁决 A）：ReceiptMatchTests.Confirm_OthersRow_AlwaysSkipped_NonAdmin 改名 Confirm_OthersRow_UnauthorizedSkipped_AuthorizedSavedWithAudit（M-FIX9 注释预定翻转，先例 R9-10 B2；规格认账第 8 次）**。**行为人用内置 accountant r9-23-acc（默认集含 wages:update，未 UPDATE/INSERT roles）**。实证：`R9ConfirmMatchCrossUserTests.cs`（预期红笔 `a40254f` / 修复笔 `ddc6cd3`）。
 
 ### C 桶：WHERE 只有 id=@Id（或等价），端点内另有显式归属/授权校验 — 6 条
 
