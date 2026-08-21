@@ -25,6 +25,8 @@ interface DashboardViewProps {
   onSelectFolder: (folder: FolderItem) => void;
   onOpenFolderDetail: () => void;
   theme?: 'dark' | 'light';
+  /** 返回 3D 沉浸视角（塞进 header 右侧，不占新高度） */
+  onBackToAmbient?: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -32,6 +34,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   selectedFolder,
   onSelectFolder,
   onOpenFolderDetail,
+  onBackToAmbient,
   theme = 'light',
 }) => {
   const isDark = theme === 'dark';
@@ -77,6 +80,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <Plus className="w-4 h-4" />
               <span>新增任务</span>
             </button>
+            {onBackToAmbient && (
+              <button
+                onClick={onBackToAmbient}
+                className="px-4 py-2 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold shadow-lg shadow-emerald-500/25 flex items-center gap-1.5 transition-all"
+              >
+                返回 3D 沉浸视角
+              </button>
+            )}
           </div>
         </header>
 
