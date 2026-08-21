@@ -344,7 +344,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
                 setItemSpacing(90);
                 setScrollSpeed(1);
               }}
-              className="text-emerald-400 flex items-center gap-1 hover:underline"
+              className="text-[color:var(--gc-icon,#34d399)] flex items-center gap-1 hover:underline"
             >
               <RotateCcw className="w-3 h-3" /> 重置
             </button>
@@ -362,7 +362,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
               step="0.1"
               value={scrollSpeed}
               onChange={(e) => setScrollSpeed(parseFloat(e.target.value))}
-              className="w-full accent-emerald-500 cursor-pointer"
+              className="w-full accent-[color:var(--gc-active,#10b981)] cursor-pointer"
             />
           </div>
 
@@ -377,7 +377,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
               max="60"
               value={rotateYAngle}
               onChange={(e) => setRotateYAngle(parseInt(e.target.value))}
-              className="w-full accent-emerald-500 cursor-pointer"
+              className="w-full accent-[color:var(--gc-active,#10b981)] cursor-pointer"
             />
           </div>
 
@@ -392,7 +392,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
               max="30"
               value={rotateXAngle}
               onChange={(e) => setRotateXAngle(parseInt(e.target.value))}
-              className="w-full accent-emerald-500 cursor-pointer"
+              className="w-full accent-[color:var(--gc-active,#10b981)] cursor-pointer"
             />
           </div>
 
@@ -407,7 +407,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
               max="140"
               value={itemSpacing}
               onChange={(e) => setItemSpacing(parseInt(e.target.value))}
-              className="w-full accent-emerald-500 cursor-pointer"
+              className="w-full accent-[color:var(--gc-active,#10b981)] cursor-pointer"
             />
           </div>
         </div>
@@ -525,7 +525,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
                 h-2 rounded-full transition-all duration-300
                 ${
                   isSelected
-                    ? 'w-7 bg-[color:var(--gc-active,#10b981)] shadow-[0_0_10px_#10b981]'
+                    ? 'w-7 bg-[color:var(--gc-active,#10b981)] shadow-[0_0_10px_var(--gc-active,#10b981)]'
                     : isDark
                     ? 'w-2 bg-white/20 hover:bg-white/40'
                     : 'w-2 bg-black/20 hover:bg-black/40'

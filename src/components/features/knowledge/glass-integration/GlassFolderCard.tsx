@@ -54,10 +54,10 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
       <div
         className={`
           absolute inset-0 rounded-[22px] border-2 overflow-hidden
-          transition-colors duration-300 shadow-xl flex flex-col justify-between
+          transition-colors duration-75 shadow-xl flex flex-col justify-between
           ${
             isActive
-              ? 'bg-gradient-to-br from-[color:var(--gc-active,#065f46)] via-[color:var(--gc-active-deep,#064e3b)] to-[color:var(--gc-active-deep,#022c22)] border-[color:var(--gc-active-border-a80,#34d399cc)] shadow-emerald-950/60'
+              ? 'bg-gradient-to-br from-[color:var(--gc-active,#065f46)] via-[color:var(--gc-active-deep,#064e3b)] to-[color:var(--gc-active-deep,#022c22)] border-[color:var(--gc-active-border-a80,#34d399cc)] shadow-black/60'
               : isDark
               ? 'bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950 border-zinc-600/60 shadow-black/90 group-hover:border-zinc-500'
               : 'bg-gradient-to-br from-white via-zinc-100 to-zinc-200 border-zinc-300 shadow-zinc-400/40'
@@ -81,7 +81,7 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
             }
           `}
         >
-          <Folder className="w-3.5 h-3.5 text-emerald-400" />
+          <Folder className="w-3.5 h-3.5 text-[color:var(--gc-icon,#34d399)]" />
           <span className="text-[10px] font-mono font-bold tracking-wider uppercase truncate">
             {folder.englishTitle || 'ARCHIVE'}
           </span>
@@ -144,7 +144,7 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
           <div>
             {/* Top Index Tag for Paper 3 */}
             <div className="flex items-center justify-between text-[9px] font-mono text-zinc-600 border-b border-zinc-300 pb-1">
-              <span className="font-bold text-emerald-800 bg-emerald-100 px-1.5 py-0.2 rounded">{docs[2]?.code || 'DOC-03'}</span>
+              <span className="font-bold text-[color:var(--gc-active-deep,#065f46)] bg-[color:var(--gc-soft,#d1fae5)] px-1.5 py-0.2 rounded">{docs[2]?.code || 'DOC-03'}</span>
               <span className="px-1 py-0.2 bg-zinc-300 rounded text-zinc-800 text-[8px] font-bold">
                 {docs[2]?.priority || '常规'}
               </span>
@@ -215,7 +215,7 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
           <div>
             <div className="flex items-center justify-between border-b border-zinc-200 pb-1.5 mb-2">
               <div className="flex items-center gap-1.5">
-                <FileText className="w-3.5 h-3.5 text-emerald-600" />
+                <FileText className="w-3.5 h-3.5 text-[color:var(--gc-active,#059669)]" />
                 <span className="text-[10px] font-bold font-mono tracking-wider text-zinc-800">
                   {docs[0]?.code || 'DOC-2025-01'}
                 </span>
@@ -224,7 +224,7 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
                 className={`text-[8px] px-1.5 py-0.3 rounded-full font-extrabold ${
                   docs[0]?.priority === '高'
                     ? 'bg-red-100 text-red-700 border border-red-200'
-                    : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                    : 'bg-[color:var(--gc-soft,#d1fae5)] text-[color:var(--gc-active-deep,#047857)] border border-[color:var(--gc-soft-border,#a7f3d0)]'
                 }`}
               >
                 {docs[0]?.priority || '高'}优先级
@@ -237,7 +237,7 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
 
             <div className="mt-2 flex items-center justify-between text-[9px] bg-zinc-50 p-1.5 rounded-lg border border-zinc-200 shadow-sm">
               <span className="text-zinc-700 font-bold truncate">负责人: {docs[0]?.assignee || 'David'}</span>
-              <span className="text-emerald-600 font-extrabold">{docs[0]?.status || '进行中'}</span>
+              <span className="text-[color:var(--gc-active,#059669)] font-extrabold">{docs[0]?.status || '进行中'}</span>
             </div>
 
             <div className="space-y-1.5 opacity-60 mt-4">
@@ -263,7 +263,7 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
         className={`
           absolute bottom-0 inset-x-0 h-[158px] rounded-b-[22px] rounded-t-2xl p-4
           flex flex-col justify-between backdrop-blur-2xl border-t-2 border-x-2 border-b-2
-          transition-colors duration-300
+          transition-colors duration-75
           ${
             isActive
               ? 'bg-gradient-to-b from-[color:var(--gc-active-a85,#10b981d9)] via-[color:var(--gc-active-a90,#059669e6)] to-[color:var(--gc-active-deep-a95,#065f46f2)] border-[color:var(--gc-active-border-a80,#6ee7b7cc)] text-[color:var(--gc-active-ink,#fff)] shadow-lg'
@@ -288,7 +288,7 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
           <div
             className={`
               inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold
-              backdrop-blur-md transition-colors shadow-md
+              backdrop-blur-md transition-colors duration-75 shadow-md
               ${
                 isActive
                   ? 'bg-white/30 text-white border border-white/40'
@@ -317,7 +317,7 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
         <div className="mt-auto" style={{ transform: 'translate3d(0px, 0px, 8px)' }}>
           <div
             className={`
-              text-lg font-extrabold tracking-tight truncate transition-colors duration-300
+              text-lg font-extrabold tracking-tight truncate transition-colors duration-75
               ${
                 isActive
                   ? 'text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]'

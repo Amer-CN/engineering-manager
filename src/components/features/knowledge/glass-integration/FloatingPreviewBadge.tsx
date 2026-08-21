@@ -34,7 +34,7 @@ export const FloatingPreviewBadge: React.FC<FloatingPreviewBadgeProps> = ({
       <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/50 to-transparent rounded-t-2xl" />
 
       {/* Internal Emerald Glow gradient patch */}
-      <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none" />
+      <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-[color:var(--gc-a20,#10b98133)] rounded-full blur-2xl pointer-events-none" />
 
       {/* Title & Arrow */}
       <div className="flex items-center justify-between mb-1">
@@ -65,8 +65,8 @@ export const FloatingPreviewBadge: React.FC<FloatingPreviewBadgeProps> = ({
 
         {/* Emerald Glowing Indicator */}
         <div className="relative flex items-center justify-center">
-          <div className="absolute w-4 h-4 bg-emerald-400/50 rounded-full animate-ping" />
-          <div className="w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-zinc-900 shadow-[0_0_12px_#34d399]" />
+          <div className="absolute w-4 h-4 bg-[color:var(--gc-icon-a50,#34d39980)] rounded-full animate-ping" />
+          <div className="w-3.5 h-3.5 rounded-full bg-[color:var(--gc-icon,#34d399)] border-2 border-zinc-900 shadow-[0_0_12px_var(--gc-icon,#34d399)]" />
         </div>
       </div>
     </div>
