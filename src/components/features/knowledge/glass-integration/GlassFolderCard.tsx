@@ -155,7 +155,7 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
           <div>
             {/* Top Index Tag for Paper 3 */}
             <div className="flex items-center justify-between text-[9px] font-mono text-zinc-600 border-b border-zinc-300 pb-1">
-              <span className="font-bold text-[color:var(--gc-active-deep,#065f46)] bg-[color:var(--gc-soft,#d1fae5)] px-1.5 py-0.2 rounded">{docs[2]?.code || 'DOC-03'}</span>
+              <span className="font-bold text-[color:var(--gc-on-paper,#065f46)] bg-[color:var(--gc-soft,#d1fae5)] px-1.5 py-0.2 rounded">{docs[2]?.code || 'DOC-03'}</span>
               <span className="px-1 py-0.2 bg-zinc-300 rounded text-zinc-800 text-[8px] font-bold">
                 {docs[2]?.priority || '常规'}
               </span>
@@ -226,7 +226,7 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
           <div>
             <div className="flex items-center justify-between border-b border-zinc-200 pb-1.5 mb-2">
               <div className="flex items-center gap-1.5">
-                <FileText className="w-3.5 h-3.5 text-[color:var(--gc-active,#059669)]" />
+                <FileText className="w-3.5 h-3.5 text-[color:var(--gc-on-paper,#059669)]" />
                 <span className="text-[10px] font-bold font-mono tracking-wider text-zinc-800">
                   {docs[0]?.code || 'DOC-2025-01'}
                 </span>
@@ -235,7 +235,7 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
                 className={`text-[8px] px-1.5 py-0.3 rounded-full font-extrabold ${
                   docs[0]?.priority === '高'
                     ? 'bg-red-100 text-red-700 border border-red-200'
-                    : 'bg-[color:var(--gc-soft,#d1fae5)] text-[color:var(--gc-active-deep,#047857)] border border-[color:var(--gc-soft-border,#a7f3d0)]'
+                    : 'bg-[color:var(--gc-soft,#d1fae5)] text-[color:var(--gc-on-paper,#047857)] border border-[color:var(--gc-soft-border,#a7f3d0)]'
                 }`}
               >
                 {docs[0]?.priority || '高'}优先级
@@ -248,7 +248,7 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
 
             <div className="mt-2 flex items-center justify-between text-[9px] bg-zinc-50 p-1.5 rounded-lg border border-zinc-200 shadow-sm">
               <span className="text-zinc-700 font-bold truncate">负责人: {docs[0]?.assignee || 'David'}</span>
-              <span className="text-[color:var(--gc-active,#059669)] font-extrabold">{docs[0]?.status || '进行中'}</span>
+              <span className="text-[color:var(--gc-on-paper,#059669)] font-extrabold">{docs[0]?.status || '进行中'}</span>
             </div>
 
             <div className="space-y-1.5 opacity-60 mt-4">
