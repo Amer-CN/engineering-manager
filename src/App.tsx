@@ -360,7 +360,7 @@ const AppContent: React.FC = () => {
         <AnimatePresence>
           {isLocked && <LockScreen />}
         </AnimatePresence>
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto min-h-0">
           <UpdateBanner />
           {/* 默认密码提示 — 悬浮浮动，不挤压布局 */}
           <AnimatePresence>
@@ -380,7 +380,7 @@ const AppContent: React.FC = () => {
             )}
           </AnimatePresence>
           <AnimatePresence mode="wait">
-            <motion.div key={currentPage} className="min-h-full"
+            <motion.div key={currentPage} className="h-full"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               transition={{ duration: 0.15, ease: 'easeOut' }}>
               <Suspense fallback={<PageLoader />}>

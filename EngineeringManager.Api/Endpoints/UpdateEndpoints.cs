@@ -1,3 +1,5 @@
+using System.Data;
+using EngineeringManager.Api.Security;
 using EngineeringManager.Api.Services;
 
 namespace EngineeringManager.Api;
@@ -64,12 +66,20 @@ public static class UpdateEndpoints
         });
 
         // 装包 + 重启（不变）
-        app.MapPost("/api/update/apply", (UpdateService svc, ApplyRequest req) =>
+        app.MapPost("/api/update/apply", (HttpContext ctx, IDbConnection db, UpdateService svc, ApplyRequest req) =>
         {
             try
             {
+                // 安全表 #1: 安装更新属系统级操作 → settings:update（与 snapshots/backup 同档）
+                if (!CurrentUser.HasPermission(ctx, db, "settings:update")) return Results.Forbid();
                 if (string.IsNullOrWhiteSpace(req.Path))
                     return Common.Fail("缺少安装包路径");
+
+                // 安全表 #1: 路径锁定——安装包必须位于 UpdatesDir 内，防任意路径 Process.Start
+                var updatesDir = Path.GetFullPath(svc.UpdatesDir);
+                if (!updatesDir.EndsWith(Path.DirectorySeparatorChar)) updatesDir += Path.DirectorySeparatorChar;
+                if (!Path.GetFullPath(req.Path).StartsWith(updatesDir, StringComparison.OrdinalIgnoreCase))
+                    return Common.Fail("安装包路径非法");
 
                 svc.ApplyAndExit(req.Path);
                 return Common.Ok(new { message = "正在启动安装器..." });

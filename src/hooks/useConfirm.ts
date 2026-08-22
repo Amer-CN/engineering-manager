@@ -12,12 +12,14 @@ interface ConfirmOptions {
 interface ConfirmState extends ConfirmOptions {
   isOpen: boolean
   onConfirm: () => void
+  onCancel: () => void
 }
 
 const INITIAL_STATE: ConfirmState = {
   isOpen: false,
   content: '',
   onConfirm: () => {},
+  onCancel: () => {},
 }
 
 /**
@@ -48,13 +50,18 @@ export function useConfirm() {
           resolve(true)
           setState(s => ({ ...s, isOpen: false }))
         },
+        onCancel: () => {
+          resolve(false)
+          setState(s => ({ ...s, isOpen: false }))
+        },
       })
     })
   }, [])
 
   const handleClose = useCallback(() => {
+    state.onCancel()
     setState(s => ({ ...s, isOpen: false }))
-  }, [])
+  }, [state])
 
   const ConfirmDialogElement = ConfirmDialog({
     isOpen: state.isOpen,
