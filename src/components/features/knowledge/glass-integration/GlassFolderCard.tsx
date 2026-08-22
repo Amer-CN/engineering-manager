@@ -36,13 +36,12 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
   ];
 
   return (
-    <div
+      <div
       onClick={onClick}
       className={`
         relative group cursor-pointer select-none
         w-[230px] sm:w-[245px] h-[305px] sm:h-[320px]
-        flex-shrink-0 transition-all duration-300 ease-out
-        ${isActive ? 'scale-[1.03]' : 'hover:scale-[1.015]'}
+        flex-shrink-0 hover:scale-[1.015] transition-transform duration-75 ease-out
       `}
       style={{
         transformStyle: 'preserve-3d',
@@ -54,11 +53,9 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
       <div
         className={`
           absolute inset-0 rounded-[22px] border-2 overflow-hidden
-          transition-colors duration-300 shadow-xl flex flex-col justify-between
+          shadow-xl flex flex-col justify-between
           ${
-            isActive
-              ? 'bg-gradient-to-br from-emerald-800 via-emerald-900 to-emerald-950 border-emerald-400/80 shadow-emerald-950/60'
-              : isDark
+            isDark
               ? 'bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950 border-zinc-600/60 shadow-black/90 group-hover:border-zinc-500'
               : 'bg-gradient-to-br from-white via-zinc-100 to-zinc-200 border-zinc-300 shadow-zinc-400/40'
           }
@@ -68,20 +65,33 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
           transformStyle: 'preserve-3d',
         }}
       >
-        {/* Top Tab Notch */}
+        {/* 选中色覆盖层：透明度 = af（与抬升/文档展开同一条曲线）——
+            卡抬到多高黑色就有多深，回落时颜色跟着身体一起褪去，无翻转时刻 */}
         <div
-          className={`
-            absolute top-0 left-0 w-32 h-8 rounded-br-2xl border-r border-b flex items-center px-3 gap-1.5
-            ${
-              isActive
-                ? 'bg-emerald-700 border-emerald-500 text-white'
-                : isDark
-                ? 'bg-zinc-800 border-zinc-700 text-white/90'
-                : 'bg-zinc-100 border-zinc-300 text-zinc-800'
-            }
-          `}
+          className="absolute inset-0 rounded-[22px] border-2 pointer-events-none"
+          style={{
+            opacity: af,
+            background:
+              'linear-gradient(to bottom right, var(--gc-active, #065f46), var(--gc-active-deep, #064e3b) 50%, var(--gc-active-deep, #022c22))',
+            borderColor: 'var(--gc-active-border-a80, #34d399cc)',
+          }}
+        />
+        {/* Top Tab Notch — 颜色全部 af 混色（同一条身体曲线，无布尔翻转） */}
+        <div
+          className="absolute top-0 left-0 w-32 h-8 rounded-br-2xl border-r border-b flex items-center px-3 gap-1.5"
+          style={{
+            background: `color-mix(in srgb, var(--gc-active, #047857) ${Math.round(af * 100)}%, ${
+              isDark ? '#27272a' : '#f4f4f5'
+            })`,
+            borderColor: `color-mix(in srgb, var(--gc-active-border, #10b981) ${Math.round(af * 100)}%, ${
+              isDark ? '#3f3f46' : '#d4d4d8'
+            })`,
+            color: `color-mix(in srgb, var(--gc-active-ink, #fff) ${Math.round(af * 100)}%, ${
+              isDark ? '#e4e4e7' : '#52525b'
+            })`,
+          }}
         >
-          <Folder className="w-3.5 h-3.5 text-emerald-400" />
+          <Folder className="w-3.5 h-3.5 text-[color:var(--gc-icon,#34d399)]" />
           <span className="text-[10px] font-mono font-bold tracking-wider uppercase truncate">
             {folder.englishTitle || 'ARCHIVE'}
           </span>
@@ -104,18 +114,19 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
       <div
         className={`
           absolute inset-x-6 bottom-0 pointer-events-none overflow-hidden z-0
-          ${
-            isActive
-              ? 'bg-emerald-950 border-t border-emerald-400/40'
-              : isDark
-              ? 'bg-zinc-900 border-t border-white/20'
-              : 'bg-zinc-300 border-t border-zinc-400'
-          }
+          ${isDark ? 'bg-zinc-900 border-t border-white/20' : 'bg-zinc-300 border-t border-zinc-400'}
         `}
         style={{
           height: '12px',
           transformOrigin: 'bottom center',
           transform: 'rotateX(-90deg)',
+          // 底封边随 af 混入选中色（同曲线，与覆盖层同步）
+          background: `color-mix(in srgb, var(--gc-active-deep, #022c22) ${Math.round(af * 100)}%, ${
+            isDark ? '#18181b' : '#d4d4d8'
+          })`,
+          borderTopColor: `color-mix(in srgb, var(--gc-active-border-a40, #34d39966) ${Math.round(af * 100)}%, ${
+            isDark ? 'rgba(255,255,255,0.2)' : '#a1a1aa'
+          })`,
         }}
       >
         <div className="absolute inset-0 bg-gradient-to-r from-white/10 via-transparent to-white/10 pointer-events-none" />
@@ -144,7 +155,7 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
           <div>
             {/* Top Index Tag for Paper 3 */}
             <div className="flex items-center justify-between text-[9px] font-mono text-zinc-600 border-b border-zinc-300 pb-1">
-              <span className="font-bold text-emerald-800 bg-emerald-100 px-1.5 py-0.2 rounded">{docs[2]?.code || 'DOC-03'}</span>
+              <span className="font-bold text-[color:var(--gc-on-paper,#065f46)] bg-[color:var(--gc-soft,#d1fae5)] px-1.5 py-0.2 rounded">{docs[2]?.code || 'DOC-03'}</span>
               <span className="px-1 py-0.2 bg-zinc-300 rounded text-zinc-800 text-[8px] font-bold">
                 {docs[2]?.priority || '常规'}
               </span>
@@ -215,7 +226,7 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
           <div>
             <div className="flex items-center justify-between border-b border-zinc-200 pb-1.5 mb-2">
               <div className="flex items-center gap-1.5">
-                <FileText className="w-3.5 h-3.5 text-emerald-600" />
+                <FileText className="w-3.5 h-3.5 text-[color:var(--gc-on-paper,#059669)]" />
                 <span className="text-[10px] font-bold font-mono tracking-wider text-zinc-800">
                   {docs[0]?.code || 'DOC-2025-01'}
                 </span>
@@ -224,7 +235,7 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
                 className={`text-[8px] px-1.5 py-0.3 rounded-full font-extrabold ${
                   docs[0]?.priority === '高'
                     ? 'bg-red-100 text-red-700 border border-red-200'
-                    : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                    : 'bg-[color:var(--gc-soft,#d1fae5)] text-[color:var(--gc-on-paper,#047857)] border border-[color:var(--gc-soft-border,#a7f3d0)]'
                 }`}
               >
                 {docs[0]?.priority || '高'}优先级
@@ -237,7 +248,7 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
 
             <div className="mt-2 flex items-center justify-between text-[9px] bg-zinc-50 p-1.5 rounded-lg border border-zinc-200 shadow-sm">
               <span className="text-zinc-700 font-bold truncate">负责人: {docs[0]?.assignee || 'David'}</span>
-              <span className="text-emerald-600 font-extrabold">{docs[0]?.status || '进行中'}</span>
+              <span className="text-[color:var(--gc-on-paper,#059669)] font-extrabold">{docs[0]?.status || '进行中'}</span>
             </div>
 
             <div className="space-y-1.5 opacity-60 mt-4">
@@ -263,11 +274,8 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
         className={`
           absolute bottom-0 inset-x-0 h-[158px] rounded-b-[22px] rounded-t-2xl p-4
           flex flex-col justify-between backdrop-blur-2xl border-t-2 border-x-2 border-b-2
-          transition-colors duration-300
           ${
-            isActive
-              ? 'bg-gradient-to-b from-emerald-500/85 via-emerald-600/90 to-emerald-800/95 border-emerald-300/80 text-white shadow-lg'
-              : isDark
+            isDark
               ? 'bg-gradient-to-b from-zinc-800/85 via-zinc-900/90 to-black/95 border-white/30 text-white shadow-lg group-hover:border-white/50'
               : 'bg-gradient-to-b from-white/95 via-white/85 to-zinc-100/90 border-white/90 text-zinc-900 shadow-md'
           }
@@ -278,6 +286,18 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
           transformStyle: 'preserve-3d',
         }}
       >
+        {/* 前袋选中色覆盖层：透明度 = af，同一条身体曲线（后盖板同款机制） */}
+        <div
+          className="absolute inset-0 rounded-b-[22px] rounded-t-2xl pointer-events-none"
+          style={{
+            opacity: af,
+            background:
+              'linear-gradient(to bottom, var(--gc-active-a85, #10b981d9), var(--gc-active-a90, #059669e6) 55%, var(--gc-active-deep-a95, #065f46f2))',
+            borderColor: 'var(--gc-active-border-a80, #6ee7b7cc)',
+            borderWidth: '2px',
+            borderStyle: 'solid',
+          }}
+        />
         {/* Rounded Bottom Glass Rim Specular Reflection */}
         <div className="absolute bottom-0 inset-x-0 h-3 rounded-b-[20px] bg-gradient-to-t from-white/30 via-white/10 to-transparent pointer-events-none" />
 
@@ -288,13 +308,14 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
           <div
             className={`
               inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold
-              backdrop-blur-md transition-colors shadow-md
-              ${
-                isActive
-                  ? 'bg-white/30 text-white border border-white/40'
-                  : 'bg-black/30 dark:bg-white/20 border border-white/30 text-white'
-              }
+              backdrop-blur-md shadow-md
+              bg-black/30 dark:bg-white/20 border border-white/30 text-white
             `}
+            style={{
+              // 随 af 混入选中态白玻璃（同曲线，避免文字与覆盖层脱节）
+              background: `color-mix(in srgb, rgba(255,255,255,0.3) ${Math.round(af * 100)}%, rgba(0,0,0,0.3))`,
+              borderColor: `color-mix(in srgb, rgba(255,255,255,0.4) ${Math.round(af * 100)}%, rgba(255,255,255,0.3))`,
+            }}
           >
             <Users className="w-3.5 h-3.5" />
             <span>{folder.memberCount}</span>
@@ -303,29 +324,38 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
           <div
             className={`
               text-xs font-mono font-extrabold px-2 py-0.5 rounded-lg backdrop-blur-md shadow-sm
-              ${
-                isActive
-                  ? 'bg-emerald-950/60 text-emerald-200 border border-emerald-300/40'
-                  : 'bg-black/30 text-white border border-white/25'
-              }
+              bg-black/30 text-white border border-white/25
             `}
+            style={{
+              // 随 af 混入选中态徽标底/字色（同曲线）
+              background: `color-mix(in srgb, var(--gc-active-deep-a60, #064e3b99) ${Math.round(af * 100)}%, rgba(0,0,0,0.3))`,
+              color: `color-mix(in srgb, var(--gc-active-border, #a7f3d0) ${Math.round(af * 100)}%, #fff)`,
+              borderColor: `color-mix(in srgb, var(--gc-active-border-a40, #6ee7b766) ${Math.round(af * 100)}%, rgba(255,255,255,0.25))`,
+            }}
           >
             {folder.progress}%
           </div>
         </div>
 
-        <div className="mt-auto" style={{ transform: 'translate3d(0px, 0px, 8px)' }}>
+        <div
+          className="mt-auto"
+          style={{
+            transform: 'translate3d(0px, 0px, 8px)',
+            // 标题+副题随 af 混入主题选中墨色（浅色选中卡如石墨黑奶油需要深字，不再写死白）
+            color: `color-mix(in srgb, var(--gc-active-ink, #fff) ${Math.round(af * 100)}%, ${
+              isDark ? '#f4f4f5' : '#18181b'
+            })`,
+          }}
+        >
           <div
             className={`
-              text-lg font-extrabold tracking-tight truncate transition-colors duration-300
-              ${
-                isActive
-                  ? 'text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]'
-                  : isDark
-                  ? 'text-zinc-100 group-hover:text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]'
-                  : 'text-zinc-900 group-hover:text-black'
-              }
+              text-lg font-extrabold tracking-tight truncate
+              ${isDark ? 'text-zinc-100 group-hover:text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]' : 'text-zinc-900 group-hover:text-black'}
             `}
+            style={{
+              color: 'inherit',
+              textShadow: af > 0.05 ? `0 2px 8px rgba(0,0,0,${(0.6 * af).toFixed(2)})` : undefined,
+            }}
           >
             {folder.title}
           </div>

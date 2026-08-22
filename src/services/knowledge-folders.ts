@@ -45,6 +45,8 @@ export interface KnowledgeFolder {
   updatedAt: string
   createdBy: string
   docCount: number
+  /** 文档级最近活动（MAX(updated_at)）；空文件夹为 null */
+  lastActivityAt?: string | null
 }
 
 export interface KnowledgeFolderDocument {
