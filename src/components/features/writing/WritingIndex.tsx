@@ -17,6 +17,7 @@ import {
   fetchWritingDocs,
   fetchWritingDocTypes,
   fetchWritingFolders,
+  fetchNextWritingStyle,
   createWritingDoc,
   createWritingFolder,
   deleteWritingDoc,
@@ -129,22 +130,24 @@ const WritingIndex: React.FC = () => {
       return;
     }
     setWizardOpen(true);
-  };  // R1 向导：AI 起草 → 建文档 → 进编辑器自动开起草面板（素材/风格已定）
-  const handleWizardDraft = (opts: { title: string; docType: string; styleId: string; material: string }) => {
-    void createWritingDoc({
-      title: opts.title,
-      docType: opts.docType,
-      styleId: opts.styleId,
-      contentMd: "",
-    }).then((res) => {
-      if (res.success && res.data?.id) {
-        loadDocs();
-        sessionStorage.setItem("writing:draftMaterial", JSON.stringify({ material: opts.material, docId: res.data.id }));
-        setEditingId(res.data.id);
-      } else {
-        showToast(res.error || "新建失败", "error");
-      }
-    });
+  };  // R1 向导：AI 起草 → 建文档 → 进编辑器自动开起草面板；R4「自动轮换」先查 next-style
+  // 拿真实编号（库里不落 "auto"，失败 toast 回落 S3）；styleLabel 供拼「本周风格」标注
+  const handleWizardDraft = async (opts: { title: string; docType: string; styleId: string; material: string }) => {
+    let styleId = opts.styleId;
+    let styleLabel = "";
+    if (opts.styleId === "auto") {
+      const res = await fetchNextWritingStyle(opts.docType);
+      const next = res.success && res.data ? res.data : null;
+      styleId = next ? next.styleId : "S3";
+      if (next) styleLabel = `${next.styleId} ${next.styleName}`;
+      else showToast(res.error || "风格轮换查询失败，已回落 S3", "error");
+    }
+    const cre = await createWritingDoc({ title: opts.title, docType: opts.docType, styleId, contentMd: "" });
+    if (!cre.success || !cre.data?.id) return showToast(cre.error || "新建失败", "error");
+    loadDocs();
+    sessionStorage.setItem("writing:draftMaterial", JSON.stringify({ material: opts.material, docId: cre.data.id, ...(styleLabel && { styleLabel }) }));
+    if (styleLabel) sessionStorage.setItem("writing:styleLabel", JSON.stringify({ styleLabel, docId: cre.data.id }));
+    setEditingId(cre.data.id);
   };
 
   // R1 向导：空白文档 → 建文档 → 直接进编辑器手写
