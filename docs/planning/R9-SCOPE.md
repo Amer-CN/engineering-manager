@@ -321,3 +321,27 @@
 - **方案 A 维持现状**：WHERE 保持 `(created_by=@Uid OR @IsAdmin=1)`；非 admin 只能确认自己创建的行（跨项目不限）；风险 = 「项目已授权、他人创建」的行无法确认（功能不对称残留），无越权面扩大。
 - **方案 B 加 EXISTS 放宽**：WHERE 加 `OR EXISTS(project_authorizations ...)`；补对称但只可能让更多行被 UPDATE（动钱），且未带「跨人修改落 audit + 仅企业版」两必备件 → M-FIX9 W1 已回滚。
 - **方案 C 收紧为必须项目授权（方案丙）**：未授权项目一律拒绝（自己创建的行也受约束）+ 跨人修改落 audit_logs + 仅企业版生效；需同步改读侧 match-receipts；破坏「创建者跨项目管理」现状语义。
+
+## §2.5 剩余风险登记（R9-24 批次 5 收尾对账，只登记不修）
+
+> 全仓扫尾：Endpoints 目录残留 `(created_by=@Uid OR @IsAdmin=1)` 形态 **45 处**，Services 目录零残留。归类：
+> ① **例外在册**（约 8 处）：B44/B45/B46（WageEndpoints.cs:484/498/513）、B9/B10（InvoiceEndpoints DELETE 软删 :140/:289）等——审查方裁决不放宽，维持现状；
+> ② **方案丙范围外写面**（约 37 处）：DELETE 族（drawings/inventory_items/materials/partners/supervisors/attendances/wages/salary_history/income_contracts/expense_contracts/agreement_contracts/contract_templates/settlements/members/workers/project_workers/departments/worker_teams/projects/project_members）与 contract_templates PUT、settlements process/unarchive 状态机、attendances batch-import UPDATE——「可改不可删」原则不覆盖 DELETE 与非业务归属域。
+>
+> 完整 file:line 清单（45 处）：
+> ContractEndpoints.cs:377,387,397,430,442,457,588,597,609（9）
+> MemberEndpoints.cs:25,102,117,191,205,266,315,328,344,371,383（11）
+> WageEndpoints.cs:120,132,268,459,471,484,498,513,956,1008（10）
+> PartnerEndpoints.cs:98,133,183,196（4）
+> ProjectEndpoints.cs:126,139,174（3）
+> InventoryEndpoints.cs:53,66,151（3）
+> InvoiceEndpoints.cs:35,140,289（3，其中 140/289 为 B9/B10 例外在册）
+> CostLedgerEndpoints.cs:108（1，A4 收紧后形态）
+> FileEndpoints.cs:126（1）
+
+## §4 批次 5 对账结论（R9-24）
+
+- 已对齐更新侧 **13/13 一致**（B41/B47/B50/B48/B38/B13/B37/B15/B1/B7/B12/B19/B36——Classify 单点 + audit 在场、SQL WHERE 无 created_by/IsAdmin，逐条代码亲读核对）。
+- 例外 **5/5 一致**（B44/B45/B46 MapPost 动词在册相符；B9/B10 钉住测试在场）。
+- A 桶 **7/7 一致**（A1/A2/A3/A5/A7 补 audit；A4 收紧 403；A6 钉住）。
+- 残留 `(created_by=@Uid OR @IsAdmin=1)` 形态 45 处 → §2.5 剩余风险登记（例外在册约 8 + 方案丙范围外约 37），零生产改动，待后续轮次裁夺。
