@@ -243,7 +243,8 @@ public class LlmConfigResolver
     {
         if (currentModel.StartsWith("agnes-", StringComparison.OrdinalIgnoreCase))
         {
-            return new List<string> { "agnes-2.5-flash", "agnes-2.5-pro", "agnes-2.5-lite" };
+            // 2026-08-22 实测 /v1/models 返回的对话模型（剔除 image/video 系列）
+            return new List<string> { "agnes-2.5-pro", "agnes-2.5-flash", "agnes-2.0-flash", "agnes-2.5-pro-alpha" };
         }
         return new List<string> { currentModel };
     }
