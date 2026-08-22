@@ -38,6 +38,11 @@ public static class AuthEndpoints
             if (computedHash != (string)user.password_hash)
                 return Common.Fail("用户名或密码错误");
 
+            // P0-5: 停用账户禁止登录 (status 为空/NULL 视为 active, 防误伤老库空值用户)
+            var status = user.status as string;
+            if (!string.IsNullOrEmpty(status) && status != "active")
+                return Common.Fail("账户已被停用，请联系管理员");
+
             // 获取角色信息
             var role = db.QueryFirstOrDefault(
                 "SELECT id, name, permissions FROM roles WHERE id = @Id",

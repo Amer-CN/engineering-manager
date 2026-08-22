@@ -223,6 +223,9 @@ public static class SystemEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             // G2 B1: 快照删除 = 删整库副本文件 → settings:update
             if (!CurrentUser.HasPermission(ctx, db, "settings:update")) return Results.Forbid();
+            // 安全表 #7: id 白名单校验，防 ..\xxx 路径穿越删/覆盖任意 .db 文件
+            if (!System.Text.RegularExpressions.Regex.IsMatch(id, @"^[A-Za-z0-9_-]+$"))
+                return Common.Fail("快照 ID 非法");
             var snapshotDir = Path.Combine(ApiConfig.ResolveDataPath(), "db-snapshots");
             var path = Path.Combine(snapshotDir, $"{id}.db");
             if (File.Exists(path)) { File.Delete(path); return Common.Ok(); }
@@ -240,6 +243,9 @@ public static class SystemEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             if (!CurrentUser.IsAdmin(ctx)) return Common.Fail("仅管理员可恢复快照");
+            // 安全表 #7: id 白名单校验，防 ..\xxx 路径穿越覆盖任意 .db 文件
+            if (!System.Text.RegularExpressions.Regex.IsMatch(id, @"^[A-Za-z0-9_-]+$"))
+                return Common.Fail("快照 ID 非法");
             var snapshotDir = Path.Combine(ApiConfig.ResolveDataPath(), "db-snapshots");
             var path = Path.Combine(snapshotDir, $"{id}.db");
             if (!File.Exists(path)) return Results.Forbid();

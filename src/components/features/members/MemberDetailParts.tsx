@@ -26,7 +26,7 @@ export function InfoItem({ icon, label, value, highlight }: { icon: React.ReactN
   return (<div className="flex items-start"><span className="text-[color:var(--muted)] mr-2">{icon}</span><div className="flex-1"><span className="text-sm text-[color:var(--muted)]">{label}: </span><span className={`text-sm ${highlight ? 'text-success-600 font-medium' : 'text-[color:var(--fg)]'}`}>{value}</span></div></div>)
 }
 
-export function Tag({ label, variant = 'success' }: { label: string; variant?: 'success' | 'warning' | 'info' | 'danger' }) {
+export function Tag({ label, variant = 'success' }: { label: React.ReactNode; variant?: 'success' | 'warning' | 'info' | 'danger' }) {
   const v = { success: 'bg-success-100 text-success-700', warning: 'bg-warning-100 text-warning-700', info: 'bg-[color:var(--accent-soft)] text-[color:var(--accent)]', danger: 'bg-danger-100 text-danger-700' }
   return <span className={`px-2 py-1 rounded text-xs ${v[variant]}`}>{label}</span>
 }

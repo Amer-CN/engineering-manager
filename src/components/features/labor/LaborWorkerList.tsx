@@ -7,6 +7,7 @@ import { Icon } from '../../ui/Icon'
 import type { Member, WorkerTeam } from '../../../types/electron'
 import { WorkerWageModal } from './WorkerWageModal'
 import { getWorkerTypeLabel } from '../../../utils'
+import { calcAge } from '../../../utils/member'
 import { Card } from '@/components/ui/Card'
 import { Button } from '../../ui/Button'
 
@@ -19,16 +20,6 @@ interface LaborWorkerListProps {
   onEditWorker: (worker: any) => void
   onDeleteWorker: (workerId: number) => void
   onImportClick: () => void
-}
-
-function calcAge(birthDate: string): number {
-  const birth = new Date(birthDate)
-  if (isNaN(birth.getTime())) return 0
-  const today = new Date()
-  let age = today.getFullYear() - birth.getFullYear()
-  const m = today.getMonth() - birth.getMonth()
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--
-  return age
 }
 
 const LaborWorkerList: React.FC<LaborWorkerListProps> = ({

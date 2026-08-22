@@ -197,7 +197,8 @@ public class UserDimFilterTests : ApiTestBase
         SetAuth(worker);
         var authzResp = await Client.PostAsJsonAsync("/api/admin/project-authorizations",
             new { projectId, userId = worker1Id });
-        Assert.True((int)authzResp.StatusCode >= 400, "worker 调管理端点应被禁, 实际 " + authzResp.StatusCode);
+        // 被测端点对非 admin 返回 Results.Forbid() → 403（AuthEndpoints.cs MapPost 分支）
+        Assert.Equal(HttpStatusCode.Forbidden, authzResp.StatusCode);
     }
 
     [Fact]

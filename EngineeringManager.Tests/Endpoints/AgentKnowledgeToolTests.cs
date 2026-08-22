@@ -712,12 +712,12 @@ public class AgentKnowledgeToolTests
             JsonSerializer.Serialize(result.Result))!;
         var hits = resultObj["hits"].Deserialize<JsonElement[]>()!;
 
-        if (hits.Length > 0)
-        {
-            var hitJson = hits[0].GetRawText();
-            Assert.DoesNotContain("embedding", hitJson.ToLower());
-            Assert.DoesNotContain("created_by", hitJson.ToLower());
-        }
+        // 空结果时泄漏检查无意义：先断言检索确实返回了结果
+        Assert.True(hits.Length >= 1, "检索应返回结果（否则泄漏检查无意义）");
+
+        var hitJson = hits[0].GetRawText();
+        Assert.DoesNotContain("embedding", hitJson.ToLower());
+        Assert.DoesNotContain("created_by", hitJson.ToLower());
     }
 }
 

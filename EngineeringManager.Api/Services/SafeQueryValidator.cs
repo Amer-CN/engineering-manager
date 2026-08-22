@@ -714,13 +714,42 @@ public static class SafeQueryValidator
     /// <summary>
     /// 返回顶层（括号深度 0）第一个关键字的位置，没有则 -1。
     /// 避免命中子查询内的同名关键字。
+    /// 字符串字面量状态机：单引号内的内容（含关键字与括号）一律跳过，
+    /// SQLite 转义规则为两个连续单引号（''）表示字面量内部的一个单引号。
+    /// 双引号在 SQLite 中是标识符引用，保守起见同样跳过。
     /// </summary>
     private static int FindTopLevelKeyword(string sql, string keyword)
     {
         int depth = 0;
+        bool inSingleQuote = false;
+        bool inDoubleQuote = false;
         for (int i = 0; i + keyword.Length <= sql.Length; i++)
         {
             var c = sql[i];
+
+            if (inSingleQuote)
+            {
+                // '' → 字面量内的转义单引号，保持字面量态；单个 ' → 退出
+                if (c == '\'')
+                {
+                    if (i + 1 < sql.Length && sql[i + 1] == '\'') i++;
+                    else inSingleQuote = false;
+                }
+                continue;
+            }
+            if (inDoubleQuote)
+            {
+                // "" → 标识符内的转义双引号
+                if (c == '"')
+                {
+                    if (i + 1 < sql.Length && sql[i + 1] == '"') i++;
+                    else inDoubleQuote = false;
+                }
+                continue;
+            }
+
+            if (c == '\'') { inSingleQuote = true; continue; }
+            if (c == '"') { inDoubleQuote = true; continue; }
             if (c == '(') { depth++; continue; }
             if (c == ')') { depth--; continue; }
             if (depth != 0) continue;

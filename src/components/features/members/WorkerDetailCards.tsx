@@ -34,7 +34,9 @@ export function WorkerDetailCards({ member, onPreview }: WorkerDetailCardsProps)
 
         <div className="flex flex-wrap gap-2 mb-4">
           <Tag
-            label={member.threeLevelEducation ? '<Icon name="Check" size={12} className="inline-block" />三级安全教育已完成' : '<Icon name="X" size={12} className="inline-block" />三级安全教育未完成'}
+            label={member.threeLevelEducation
+              ? <><Icon name="Check" size={12} className="inline-block" />三级安全教育已完成</>
+              : <><Icon name="X" size={12} className="inline-block" />三级安全教育未完成</>}
             variant={member.threeLevelEducation ? 'success' : 'warning'}
           />
         </div>
