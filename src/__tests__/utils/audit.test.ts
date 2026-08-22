@@ -244,18 +244,19 @@ describe('audit.ts', () => {
     })
 
     it('应优先从 electronAPI 查询（如果成功）', async () => {
+      // R9-P1: 桥接层信封为 { total, page, pageSize, data }，queryAuditLogs 映射为 items/totalPages
       const mockResult = {
-        items: [{ id: 'mock_log' }],
         total: 1,
         page: 1,
         pageSize: 20,
-        totalPages: 1,
+        data: [{ id: 'mock_log' }],
       }
       mockQueryAuditLogs.mockResolvedValueOnce({ success: true, data: mockResult })
 
       const result = await queryAuditLogs()
       expect(result.total).toBe(1)
       expect(result.items[0].id).toBe('mock_log')
+      expect(result.totalPages).toBe(1)
     })
   })
 

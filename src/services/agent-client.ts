@@ -49,14 +49,12 @@ export async function sendAgentMessage(
  * 获取用户的对话列表
  */
 export async function getAgentConversations(): Promise<AgentConversation[]> {
-  const result = await apiClient.get<{ success: boolean; data: AgentConversation[] }>(
-    '/api/agent/conversations'
-  )
+  const result = await apiClient.get<AgentConversation[]>('/api/agent/conversations')
   if (!result.success || !result.data) {
     console.warn('[AgentClient] 获取对话列表失败:', result.error)
     return []
   }
-  return result.data.data || []
+  return result.data
 }
 
 /**
@@ -66,14 +64,14 @@ export async function getAgentConversations(): Promise<AgentConversation[]> {
 export async function getAgentConversationDetail(
   conversationId: number
 ): Promise<AgentConversationDetail | null> {
-  const result = await apiClient.get<{ success: boolean; data: AgentConversationDetail }>(
+  const result = await apiClient.get<AgentConversationDetail>(
     `/api/agent/conversations/${conversationId}`
   )
   if (!result.success || !result.data) {
     console.warn('[AgentClient] 获取对话详情失败:', result.error)
     return null
   }
-  return result.data.data || null
+  return result.data
 }
 
 /**
@@ -109,7 +107,7 @@ export async function renameAgentConversation(
  * 获取“最近删除”（软删除）对话列表，供恢复入口使用
  */
 export async function getDeletedAgentConversations(): Promise<AgentConversation[]> {
-  const result = await apiClient.get<{ success: boolean; data: AgentConversation[] }>(
+  const result = await apiClient.get<AgentConversation[]>(
     '/api/agent/conversations',
     { scope: 'deleted' }
   )
@@ -117,7 +115,7 @@ export async function getDeletedAgentConversations(): Promise<AgentConversation[
     console.warn('[AgentClient] 获取最近删除列表失败:', result.error)
     return []
   }
-  return result.data.data || []
+  return result.data
 }
 
 /**
@@ -164,21 +162,28 @@ export async function restoreConversation(
 // ═══════════════════════════════════════════════════════════════
 
 /**
+ * 获取可选模型清单（>1 个时前端显示模型选择器）
+ */
+export async function getAgentModels(): Promise<string[]> {
+  const result = await apiClient.get<{ models: string[]; current: string }>('/api/agent/models')
+  if (!result.success || !result.data) return []
+  return result.data.models || []
+}
+
+/**
  * 检查 LLM 配置状态（白名单，无需登录）
  */
 export async function getLlmProviderStatus(): Promise<LlmProviderStatus | null> {
-  const result = await apiClient.get<{ success: boolean; data: LlmProviderStatus }>(
-    '/api/agent/setup/status'
-  )
+  const result = await apiClient.get<LlmProviderStatus>('/api/agent/setup/status')
   if (!result.success || !result.data) {
     console.warn('[AgentClient] 获取 LLM 状态失败:', result.error)
     return null
   }
-  return result.data.data || null
+  return result.data
 }
 
 /**
- * 测试 LLM 连接（白名单，无需登录）
+ * 测试 LLM 连接（需登录）
  * @param request 测试请求（baseUrl + apiKey）
  */
 export async function testLlmProviderConnection(
@@ -230,22 +235,19 @@ export async function getLlmProviderConfig(): Promise<{
   hasApiKey: boolean
 } | null> {
   const result = await apiClient.get<{
-    success: boolean
-    data: {
-      providerName: string
-      baseUrl: string
-      model: string
-      useBuiltIn: boolean
-      temperature: number
-      maxTokens: number
-      hasApiKey: boolean
-    }
+    providerName: string
+    baseUrl: string
+    model: string
+    useBuiltIn: boolean
+    temperature: number
+    maxTokens: number
+    hasApiKey: boolean
   }>('/api/agent/config')
   if (!result.success || !result.data) {
     console.warn('[AgentClient] 获取 LLM 配置失败:', result.error)
     return null
   }
-  return result.data.data || null
+  return result.data
 }
 
 /**
@@ -265,16 +267,20 @@ export interface AgentStreamCallbacks {
   onConversationId?: (conversationId: number) => void
   onTool?: (name: string) => void
   onContent?: (text: string) => void
+  /** 思考过程分片（reasoning 模型的 reasoning_content 流；与正文分开发） */
+  onReasoning?: (text: string) => void
   onDone?: (payload: {
     conversationId: number
     toolCalls?: ToolCallResult[]
     message?: string
+    /** 本轮 token 用量（后端末 chunk 采集；缺省不显示） */
+    usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number }
   }) => void
   onError?: (error: string) => void
 }
 
 const AGENT_STREAM_BASE =
-  import.meta.env.VITE_API_BASE ?? 'http://localhost:5048'
+  import.meta.env.VITE_API_BASE ?? ''
 
 /**
  * 流式发送 Agent 消息。逐块回调；出错/环境不支持时抛异常，交给调用方回退到 sendAgentMessage。
@@ -349,6 +355,7 @@ function dispatchSseEvent(
       toolCalls?: ToolCallResult[]
       message?: string
       error?: string
+      usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number }
     }
     try {
       evt = JSON.parse(jsonStr)
@@ -367,11 +374,15 @@ function dispatchSseEvent(
       case 'content':
         callbacks.onContent?.(evt.text ?? '')
         break
+      case 'reasoning':
+        callbacks.onReasoning?.(evt.text ?? '')
+        break
       case 'done':
         callbacks.onDone?.({
           conversationId: evt.conversationId ?? 0,
           toolCalls: evt.toolCalls,
           message: evt.message,
+          usage: evt.usage,
         })
         break
       case 'error':

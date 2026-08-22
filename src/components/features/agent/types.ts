@@ -11,6 +11,12 @@ export interface LocalMessage {
   content?: string
   toolCalls?: AgentMessage['toolCalls']
   sending?: boolean
+  /** 消息时间戳（ms；历史恢复时由后端 createdAt 解析） */
+  at?: number
+  /** 耗时（秒；仅 assistant 消息，从发送到完成的时长） */
+  durationSec?: number
+  /** 思考过程（reasoning_content 流式聚合；reasoning 模型才有） */
+  reasoning?: string
 }
 
 /** 生成客户端消息 id */

@@ -153,13 +153,15 @@ public class LlmProviderService : ILlmChatService
     /// </summary>
     public async Task<ChatCompletionResponse?> ChatAsync(
         List<AgentMessage> messages,
-        List<object>? tools = null)
+        List<object>? tools = null,
+        string? model = null,
+        string? reasoningEffort = null)
     {
         var route = _router.GetRoute("chat");
 
         var payload = new Dictionary<string, object>
         {
-            ["model"] = route.Model,
+            ["model"] = model ?? route.Model,
             ["messages"] = messages,
         };
 
@@ -171,6 +173,11 @@ public class LlmProviderService : ILlmChatService
 
         if (route.MaxTokens > 0)
             payload["max_tokens"] = route.MaxTokens;
+
+        // 推理档位（仅显式传入时携带；2026-08-22 实测 Agnes 合法值：
+        // none/low/medium/high/max——非法值 400 拒。前端 off 档此处置空不发 = none 行为）
+        if (!string.IsNullOrWhiteSpace(reasoningEffort) && reasoningEffort != "off")
+            payload["reasoning_effort"] = reasoningEffort;
 
         AddAgnesThinkingParameters(route, payload);
 
@@ -209,13 +216,15 @@ public class LlmProviderService : ILlmChatService
     /// </summary>
     public async IAsyncEnumerable<string> ChatStreamAsync(
         List<AgentMessage> messages,
-        List<object>? tools = null)
+        List<object>? tools = null,
+        string? model = null,
+        string? reasoningEffort = null)
     {
         var route = _router.GetRoute("chat-stream");
 
         var payload = new Dictionary<string, object>
         {
-            ["model"] = route.Model,
+            ["model"] = model ?? route.Model,
             ["messages"] = messages,
             ["stream"] = true,
         };
@@ -228,6 +237,11 @@ public class LlmProviderService : ILlmChatService
 
         if (route.MaxTokens > 0)
             payload["max_tokens"] = route.MaxTokens;
+
+        // 推理档位（仅显式传入时携带；2026-08-22 实测 Agnes 合法值：
+        // none/low/medium/high/max——非法值 400 拒。前端 off 档此处置空不发 = none 行为）
+        if (!string.IsNullOrWhiteSpace(reasoningEffort) && reasoningEffort != "off")
+            payload["reasoning_effort"] = reasoningEffort;
 
         AddAgnesThinkingParameters(route, payload);
 

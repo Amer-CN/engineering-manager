@@ -88,45 +88,14 @@ export function useMemberOperations({
           return
         }
       } else {
-        // Create Worker in global pool, then ProjectWorker
-        try {
-          const d = data as unknown as Record<string, unknown>
-          const api = await getAPI()
-          const workerRes = await api.createWorker({
-            name: data.name,
-            idCard: data.idCard,
-            gender: data.gender,
-            birthDate: data.birthDate,
-            ethnicity: data.ethnicity,
-            phone: data.phone,
-            address: data.idCardAddress,
-            bankAccount: d.wageBankAccount,
-            bankName: d.wageBankName
-          })
-          if (!workerRes.success || !workerRes.data) {
-            showToast(workerRes.error || '创建工人失败', 'error')
-            return
-          }
-          const workerId = workerRes.data.id
-          const pwRes = await api.createProjectWorker({
-            workerId,
-            projectId: d.projectId || 0,
-            teamId: d.teamId,
-            dailyWage: Number(d.dailyWage) || 0,
-            workerType: d.workerType || 'other',
-            entryDate: data.entryDate || new Date().toISOString().split('T')[0],
-            status: 'active' as WorkerStatus
-          })
-          if (pwRes.success) {
-            logCreate('workers', data.name, workerId, data as unknown as Record<string, unknown>)
-            onSuccess()
-            showToast('创建成功', 'success')
-          } else {
-            showToast(pwRes.error || '创建用工关系失败', 'error')
-          }
-        } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : '创建失败'
-          showToast(msg, 'error')
+        // Create staff member（携带 processFileFields 处理后的文件字段）
+        const result = await (await getAPI()).createMember(submitData as Partial<Member>)
+        if (result.success) {
+          logCreate('members', (submitData as any).name || '', result.data?.id, submitData)
+          onSuccess()
+          showToast('创建成功', 'success')
+        } else {
+          showToast(result.error || '创建失败', 'error')
         }
       }
     } catch (error: unknown) { const msg = error instanceof Error ? error.message : '保存失败'; showToast(msg, 'error') }

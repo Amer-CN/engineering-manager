@@ -30,7 +30,9 @@ const SuggestionChips: React.FC<SuggestionChipsProps> = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2, duration: 0.3 }}
     >
-      <div className="flex flex-wrap justify-center gap-2">
+      {/* 紧凑建议组（K3 审查改版）：gap-1.5 收拢 + xs 字号 + muted 基调，
+          从属于上方输入框而不是漂浮 */}
+      <div className="flex flex-wrap justify-center gap-1.5">
         {suggestions.map((sug, i) => (
           <motion.button
             key={i}
@@ -41,15 +43,15 @@ const SuggestionChips: React.FC<SuggestionChipsProps> = ({
             whileTap={disabled ? undefined : { scale: 0.97 }}
             onClick={() => !disabled && onSelect(sug.prompt)}
             disabled={disabled}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}
-            onMouseEnter={e => { if (!disabled) { e.currentTarget.style.background = 'var(--accent-soft)'; e.currentTarget.style.borderColor = 'var(--accent-strong)' } }}
-            onMouseLeave={e => { if (!disabled) { e.currentTarget.style.background = 'var(--card)'; e.currentTarget.style.borderColor = 'var(--border)' } }}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--muted)' }}
+            onMouseEnter={e => { if (!disabled) { e.currentTarget.style.background = 'var(--accent-soft)'; e.currentTarget.style.borderColor = 'var(--accent-strong)'; e.currentTarget.style.color = 'var(--fg-2)' } }}
+            onMouseLeave={e => { if (!disabled) { e.currentTarget.style.background = 'var(--card)'; e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--muted)' } }}
           >
             <span style={{ color: 'var(--muted)' }}>
-              <Icon name={sug.icon} size={14} />
+              <Icon name={sug.icon} size={12} />
             </span>
-            <span className="font-medium">{sug.title}</span>
+            <span>{sug.title}</span>
           </motion.button>
         ))}
       </div>

@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { recognizeBusinessLicense, initializeBuiltInConfig, type OCRResult } from '../services/ocr'
+import { recognizeBusinessLicense, type OCRResult } from '../services/ocr'
 import { useToastStore } from '../store/toastStore'
 
 interface BusinessLicenseOCRData {
@@ -79,9 +79,6 @@ export function useBusinessLicenseOCR(): UseBusinessLicenseOCRReturn {
       showToast(error, 'error')
       return null
     }
-
-    // 确保 OCR 配置已加载
-    await initializeBuiltInConfig()
 
     try {
       if (file.type === 'application/pdf') {

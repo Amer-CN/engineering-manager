@@ -1189,7 +1189,10 @@ load_tensors: offloaded 29/29 layers to GPU";
         Assert.True(status.VulkanBackendConfirmed);
         Assert.True(status.OffloadLayersConfirmed);
         Assert.Equal(29, status.OffloadLayers);
-        Assert.True(status.IsFullyConfirmed || true); // IsFullyConfirmed 还需设备名匹配
+        // 该日志含 "using device Vulkan0 (AMD Radeon RX 580 2048SP)"（DeviceNameFallbackPattern 可命中），
+        // 29/29 满足 IsFullyOffloaded 路径 1，无 CPU fallback → IsFullyConfirmed = true
+        Assert.True(status.DeviceNameConfirmed, "日志含 using device 行，设备名应被解析确认");
+        Assert.True(status.IsFullyConfirmed, "Vulkan + 设备名 + 29/29 全量 offload + 无 fallback → 应完全确认");
     }
 
     // ═══════════════════════════════════════════════════════════

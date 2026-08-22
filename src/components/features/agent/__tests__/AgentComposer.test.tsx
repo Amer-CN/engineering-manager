@@ -21,7 +21,7 @@ describe('AgentComposer 附件 OCR', () => {
     const { container } = render(
       <AgentComposer value="" onChange={() => {}} onSend={() => {}} />,
     )
-    const uploadBtn = screen.getByLabelText('上传图片') as HTMLButtonElement
+    const uploadBtn = screen.getByLabelText('添加附件') as HTMLButtonElement
     expect(uploadBtn.disabled).toBe(false)
     expect(container.querySelector('input[type="file"]')).toBeTruthy()
   })

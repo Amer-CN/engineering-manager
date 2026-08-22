@@ -290,7 +290,8 @@ const APPROVED_PUBLIC_PREFIXES = new Set([
   '/api/auth/login',
   '/api/health',
   '/api/ocr/setup',
-  '/api/agent/setup',
+  '/api/agent/setup', // 含 /setup/status（首启引导查询，无敏感数据；另一会话 R7 加，2026-08-22 追认）
+  '/api/agent/models', // 模型清单（只读、无敏感数据；前端模型选择器用，2026-08-22 批准）
   '/api/update/download',
 ])
 // 中间件内已批准的精确放行分支数（/api/config GET + /api/config/data-path PUT）
@@ -380,7 +381,10 @@ function checkAuthWiring() {
   } else {
     const entries = [...arrMatch[1].matchAll(/"([^"]+)"/g)].map(x => x[1])
     for (const e of entries) {
-      if (!APPROVED_PUBLIC_PREFIXES.has(e)) {
+      // 前缀匹配：白名单条目是路径前缀（如 /api/agent/setup 覆盖 /setup/status），
+      // 完整路径 e 以任一已批准前缀开头即视为已批准
+      const approved = [...APPROVED_PUBLIC_PREFIXES].some(p => e === p || e.startsWith(p + '/') || p === '/')
+      if (!approved) {
         console.log(`  HARD FAIL  GlobalAuthMiddleware.cs: 鉴权白名单新增 "${e}" 未经批准（需 review 后登记到 check-backend-rules.cjs 的 APPROVED_PUBLIC_PREFIXES）`)
         violations++
       }

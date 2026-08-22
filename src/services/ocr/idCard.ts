@@ -6,15 +6,9 @@ import { currentConfig } from './config'
 import { getAPI } from '../api-adapter'
 import { checkNetwork, baiduOcrError } from './utils'
 
-async function baiduOCR(imageBase64: string, config: { baidu?: { apiKey: string; secretKey: string } }): Promise<OCRResult> {
-  if (!config.baidu?.apiKey || !config.baidu?.secretKey) {
-    return { success: false, error: '百度OCR未配置API Key' }
-  }
+async function baiduOCR(imageBase64: string): Promise<OCRResult> {
   try {
-    const result = await (await getAPI()).ocrBaiduIdCard(imageBase64, {
-      apiKey: config.baidu.apiKey,
-      secretKey: config.baidu.secretKey
-    })
+    const result = await (await getAPI()).ocrBaiduIdCard(imageBase64)
     return result as OCRResult
   } catch (error: unknown) {
     console.error('[渲染进程] 百度OCR IPC 调用失败:', error)
@@ -69,10 +63,10 @@ function parseIdCard(idCard: string): { gender?: string; birthDate?: string } {
 export async function recognizeIdCard(imageBase64: string): Promise<OCRResult> {
   const { provider, enabled } = currentConfig
   if (!enabled) return { success: false, error: 'OCR功能已禁用' }
-  if (provider === 'baidu' && currentConfig.baidu?.apiKey) {
+  if (provider === 'baidu') {
     const isOnline = await checkNetwork()
     if (!isOnline) return offlineOCR(imageBase64)
-    const result = await baiduOCR(imageBase64, currentConfig)
+    const result = await baiduOCR(imageBase64)
     if (!result.success) {
       const fallbackResult = await offlineOCR(imageBase64)
       if (fallbackResult.success) return { ...fallbackResult, error: '百度OCR失败，已使用本地识别: ' + result.error }

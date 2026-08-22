@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { getAPI } from '@/services/api-adapter'
+import { usePermission } from '@/hooks/usePermission'
 
 export function useDataPath(refresh?: () => void) {
   const [dataPath, setDataPath] = useState('')
@@ -7,6 +8,7 @@ export function useDataPath(refresh?: () => void) {
   const [loading, setLoading] = useState(true)
   const [migrating, setMigrating] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const { can } = usePermission()
 
   const loadConfig = useCallback(async () => {
     try {
@@ -25,6 +27,11 @@ export function useDataPath(refresh?: () => void) {
   useEffect(() => { loadConfig() }, [loadConfig])
 
   const handleChangeDataPath = useCallback(async () => {
+    // R8-P1: 数据路径迁移属敏感操作 → settings:update
+    if (!can('settings:update')) {
+      setMessage({ type: 'error', text: '您没有修改数据路径的权限' })
+      return
+    }
     setMessage(null)
     try {
       const api = await getAPI()
@@ -55,9 +62,14 @@ export function useDataPath(refresh?: () => void) {
     } finally {
       setMigrating(false)
     }
-  }, [refresh])
+  }, [refresh, can])
 
   const handleResetToDefault = useCallback(async () => {
+    // R8-P1: 数据路径迁移属敏感操作 → settings:update
+    if (!can('settings:update')) {
+      setMessage({ type: 'error', text: '您没有修改数据路径的权限' })
+      return
+    }
     setMigrating(true); setMessage(null)
     try {
       const api = await getAPI()
@@ -77,7 +89,7 @@ export function useDataPath(refresh?: () => void) {
     } finally {
       setMigrating(false)
     }
-  }, [defaultPath, refresh])
+  }, [defaultPath, refresh, can])
 
   return { dataPath, defaultPath, loading, migrating, message, handleChangeDataPath, handleResetToDefault }
 }
