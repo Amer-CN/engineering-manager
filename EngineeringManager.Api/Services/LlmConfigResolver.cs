@@ -278,8 +278,10 @@ public class LlmConfigResolver
     {
         if (currentModel.StartsWith("agnes-", StringComparison.OrdinalIgnoreCase))
         {
-            // 2026-08-22 实测 /v1/models 返回的对话模型（剔除 image/video 系列）
-            return new List<string> { "agnes-2.5-pro", "agnes-2.5-flash", "agnes-2.0-flash", "agnes-2.5-pro-alpha" };
+            // 2026-08-22 实测 /v1/models + 官方 wiki 核实：
+            // 2.5-flash 当前免费（20RPM）；2.0-flash 免费层可调；
+            // 2.5-pro / pro-alpha 付费（$0.45/$0.90 每百万 token，免费 key 需开通权限）
+            return new List<string> { "agnes-2.5-flash", "agnes-2.0-flash", "agnes-2.5-pro", "agnes-2.5-pro-alpha" };
         }
         return new List<string> { currentModel };
     }
