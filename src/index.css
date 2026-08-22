@@ -1682,6 +1682,16 @@ button:disabled {
   --gc-soft: color-mix(in srgb, var(--accent) 10%, white);  /* 灰阶淡底 */
   --gc-soft-border: color-mix(in srgb, var(--accent) 22%, white);
 }
+[data-theme="white"] .gc-stage-iso {
+  /* 暖白纸：accent 深暖褐 = 主题身份色（用户拍板 2026-08-22，否决 violet）*/
+  --gc-active: var(--accent);                                        /* oklch(28% .02 74) 深暖褐 */
+  --gc-active-deep: oklch(15% 0.015 74);                             /* 墨褐深端（同净白 ink 深度补偿）*/
+  --gc-active-border: color-mix(in srgb, var(--accent) 45%, white);  /* 亮褐描边 */
+  --gc-active-ink: var(--on-accent);
+  --gc-icon: var(--accent);
+  --gc-soft: color-mix(in srgb, var(--accent) 12%, white);
+  --gc-soft-border: color-mix(in srgb, var(--accent) 25%, white);
+}
 
 /* ═══ 知识库 3D 轮播舞台样式隔离（.gc-stage-iso）═══
  * 背景：下方各主题的「Tailwind 通用类覆盖」（[data-theme=…] .bg-white/.card → var(--card)）
