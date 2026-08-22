@@ -163,7 +163,7 @@ export const AddFolderModal: React.FC<AddFolderModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 rounded-xl bg-[color:var(--gc-active,#10b981)] hover:bg-[color:var(--gc-active-deep,#059669)] text-white font-semibold shadow-lg shadow-black/30"
+              className="px-5 py-2.5 rounded-xl bg-[color:var(--gc-active,#10b981)] hover:bg-[color:var(--gc-active-deep,#059669)] text-[color:var(--gc-active-ink,#fff)] font-semibold shadow-lg shadow-black/30"
             >
               创建并加入循环
             </button>
