@@ -87,7 +87,8 @@ export default function WageCycleDetail(props: WageCycleDetailProps) {
 
   const [activeTab, setActiveTab] = useState<CycleTab>('attendance')
   const [showImportModal, setShowImportModal] = useState(false)
-  const [filterYearMonth, setFilterYearMonth] = useState(selectedMonth)
+  const [overrideMonth, setOverrideMonth] = useState<string | null>(null)
+  const filterYearMonth = overrideMonth ?? selectedMonth
   const daysInMonth = getDaysInMonth(selectedMonth)
 
   // Attendance detail sub-page
@@ -177,7 +178,7 @@ export default function WageCycleDetail(props: WageCycleDetailProps) {
               filterMemberName={filterMemberName}
               selectedIds={selectedWageIds}
               paymentEdits={paymentEdits}
-              onFilterYearMonthChange={setFilterYearMonth}
+              onFilterYearMonthChange={setOverrideMonth}
               onFilterNameChange={setFilterMemberName}
               onPaymentChange={onPaymentChange} onSavePayments={onSavePayments}
               onBankReceiptUpload={onBankReceiptUpload} onOpenBatchReceipt={onOpenBatchReceipt}

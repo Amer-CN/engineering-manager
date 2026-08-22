@@ -10,11 +10,13 @@ namespace EngineeringManager.Api;
 /// </summary>
 public static class FileEndpoints
 {
-    /// <summary>校验路径是否在允许的目录内，防止路径遍历攻击</summary>
+    /// <summary>校验路径是否在允许的目录内，防止路径遍历攻击。
+    /// 安全表 #6: base 末尾补目录分隔符，防 uploads_evil 通过 uploads 前缀检查。</summary>
     private static bool IsPathSafe(string fullPath, string allowedBase)
     {
         var resolved = Path.GetFullPath(fullPath);
         var baseResolved = Path.GetFullPath(allowedBase);
+        if (!baseResolved.EndsWith(Path.DirectorySeparatorChar)) baseResolved += Path.DirectorySeparatorChar;
         return resolved.StartsWith(baseResolved, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -53,7 +55,9 @@ public static class FileEndpoints
                 var baseDir = Path.Combine(ApiConfig.ResolveDataPath(), "uploads");
                 var dir = Path.Combine(baseDir, dto.Category ?? "未分类");
                 Directory.CreateDirectory(dir);
-                var filePath = Path.Combine(dir, dto.FileName ?? "file");
+                // 安全表 #5: 文件名归一，防内嵌路径（..\xxx / a/b）越出分类目录
+                var fileName = Path.GetFileName(dto.FileName ?? "file");
+                var filePath = Path.Combine(dir, fileName);
                 if (!IsPathSafe(filePath, baseDir)) return Common.Fail("非法路径");
                 if (!string.IsNullOrEmpty(dto.FileData))
                 {
@@ -61,7 +65,7 @@ public static class FileEndpoints
                     if (data.Contains(",")) data = data.Split(',')[1];
                     File.WriteAllBytes(filePath, Convert.FromBase64String(data));
                 }
-                return Common.Ok(new { fileName = dto.FileName });
+                return Common.Ok(new { fileName });
             }
             catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });
@@ -174,20 +178,40 @@ public static class FileEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             // G2 B8: 图纸写操作 → drawings:update
             if (!CurrentUser.HasPermission(ctx, db, "drawings:update")) return Results.Forbid();
-            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
-            // 修复: 列名对齐前端契约; 补 404 语义
+            // R9-22 批次 4 B12：B 桶形态翻转——现状 WHERE created_by/IsAdmin（授权跨人 403），
+            // 对齐方案丙：预读行归属 → Classify 单点裁决 → 授权跨人可改（403→200）+ 同事务 audit。
+            // 预读行归属（C# 单点裁决归属，SQL WHERE 不再含 created_by/IsAdmin）。
             using var reader = new System.IO.StreamReader(ctx.Request.Body);
             var bodyText = await reader.ReadToEndAsync();
             var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(bodyText);
             var recordId = body.TryGetProperty("id", out var idProp) ? idProp.GetInt64() : 0;
-            var affected = await db.ExecuteAsync("UPDATE drawings SET name=@Name,category=@Category,remarks=@Remarks,position=@Position, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
-                new { Now = now(), Uid = uid, IsAdmin = isAdmin,
-                    Id = recordId,
+            var row = db.QueryFirstOrDefault(
+                "SELECT created_by, project_id FROM drawings WHERE id=@Id",
+                new { Id = recordId });
+            // 行不存在 → 404（WriteResult 收尾语义保持）
+            if (row == null) return Results.NotFound(new { success = false, error = "记录不存在" });
+            // 归属裁决：Denied → 403；AllowedViaAuthorization → 跨人修改落 audit（同事务 fail-closed）
+            var createdBy = row.created_by as string;
+            var projectId = row.project_id as long?;
+            var access = RowWriteGate.Classify(ctx, db, createdBy, projectId);
+            if (access == RowWriteOutcome.Denied) return Results.Forbid();
+
+            // 归属条件移出 SQL（C# 单点裁决）；无锁列故无 409 档、WHERE 只留 id
+            // （列集照原样：name/category/remarks/position + version+1/last_modified_at）
+            using var tx = db.BeginTransaction();
+            var affected = await db.ExecuteAsync("UPDATE drawings SET name=@Name,category=@Category,remarks=@Remarks,position=@Position, version=version+1, last_modified_at=@Now WHERE id=@Id",
+                new { Now = now(), Id = recordId,
                     Name = body.TryGetProperty("name", out var n) ? n.GetString() : null,
                     Category = body.TryGetProperty("category", out var c) ? c.GetString() : null,
                     Remarks = body.TryGetProperty("remarks", out var rm) ? rm.GetString() : null,
                     Position = body.TryGetProperty("position", out var pos) ? pos.GetString() : null
-                });
+                }, tx);
+            if (access == RowWriteOutcome.AllowedViaAuthorization)
+            {
+                // 跨人修改落审计（fail-closed：审计写不进 → 事务回滚 → 修改不生效）
+                AuditWriter.CrossUserEdit(db, tx, ctx, "drawings", recordId, "PUT /api/drawings", createdBy, projectId);
+            }
+            tx.Commit();
             return await Common.WriteResult(affected, db, "drawings", recordId);
         });
 
@@ -232,7 +256,7 @@ public static class FileEndpoints
                 using var reader = new System.IO.StreamReader(ctx.Request.Body);
                 var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(await reader.ReadToEndAsync());
                 var category = body.TryGetProperty("category", out var c) ? (c.GetString() ?? "未分类") : "未分类";
-                var fileName = body.TryGetProperty("fileName", out var f) ? (f.GetString() ?? "") : "";
+                var fileName = Path.GetFileName(body.TryGetProperty("fileName", out var f) ? (f.GetString() ?? "") : "");
                 var baseDir = Path.Combine(ApiConfig.ResolveDataPath(), "uploads");
                 var dir = Path.Combine(baseDir, category);
                 var path = Path.Combine(dir, fileName);

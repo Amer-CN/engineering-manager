@@ -47,10 +47,50 @@ public class LlmConfigResolver
     private readonly IConfiguration _configuration;
     private LlmProviderConfig _config;
 
-    // 内置 Agnes 兜底
-    private const string BuiltInApiKey = "sk-1RP0oZ6uuxPzeMoBvZT0lDRnIPQKm6783G6KcHEZ9fWtk50A";
+    // 内置 Agnes 兜底（出厂免费通道，开箱即用）
+    // key 以「异或混淆分片」形式嵌入（方案4）：明文不出现在源码/程序集字符串表，
+    // 运行时重组。环境变量 AGNES_BUILTIN_API_KEY / appsettings Agnes:ApiKey 可覆盖
+    // （高级用户换自己的通道，留空 = 用出厂 key）。
     private const string BuiltInBaseUrl = "https://apihub.agnes-ai.com/v1";
     private const string BuiltInModel = "agnes-2.5-flash";
+    // 分片与掩码（Base64）：enc = key XOR mask，A/B 为 enc 前后两段
+    private const string KeyPartA = "NgYOBjkBAhl7Ti9MOCA2EnlLMDhiIGlfMRhYIRJg";
+    private const string KeyPartB = "JiwDRHwDIXEODmtyMWhUIVUTbwkB";
+    private const string KeyMask = "RW0jN2tRMnYheFo5QHBMdzQkck44dFkzdUo2aEIxbUE1c0QwZkc=";
+
+    private static string? _builtInKeyCache;
+
+    private string BuiltInApiKey
+    {
+        get
+        {
+            // 优先级：环境变量 > appsettings > 出厂混淆 key（开箱即用）
+            var env = Environment.GetEnvironmentVariable("AGNES_BUILTIN_API_KEY");
+            if (!string.IsNullOrEmpty(env)) return env;
+            var cfg = _configuration["Agnes:ApiKey"];
+            if (!string.IsNullOrEmpty(cfg)) return cfg;
+            return _builtInKeyCache ??= ReassembleKey();
+        }
+    }
+
+    /// <summary>重组出厂 key：base64 解码分片拼接后与掩码逐字节异或</summary>
+    private static string ReassembleKey()
+    {
+        try
+        {
+            var enc = Convert.FromBase64String(KeyPartA + KeyPartB);
+            var mask = Convert.FromBase64String(KeyMask);
+            var chars = new char[enc.Length];
+            for (var i = 0; i < enc.Length; i++)
+                chars[i] = (char)(enc[i] ^ mask[i % mask.Length]);
+            return new string(chars);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[LlmConfigResolver] 出厂 key 分片重组失败（按未配置处理）: {ex.Message}");
+            return "";
+        }
+    }
 
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
@@ -211,6 +251,7 @@ public class LlmConfigResolver
                 UseBuiltIn = false,
                 Temperature = overrideTemp,
                 MaxTokens = overrideMax,
+                AvailableModels = BuildModelList(envModel ?? "gpt-4o-mini"),
             };
         }
 
@@ -225,7 +266,24 @@ public class LlmConfigResolver
             UseBuiltIn = true,
             Temperature = overrideTemp,
             MaxTokens = overrideMax,
+            AvailableModels = BuildModelList(BuiltInModel),
         };
+    }
+
+    /// <summary>
+    /// 组装可选模型清单：Agnes 内置固定系列；其他 provider 返回当前模型单元素
+    /// （无公开 list-models 凭据约定，避免泄漏 key；前端拿到单模型时隐藏选择器）
+    /// </summary>
+    private static List<string> BuildModelList(string currentModel)
+    {
+        if (currentModel.StartsWith("agnes-", StringComparison.OrdinalIgnoreCase))
+        {
+            // 2026-08-22 官方 wiki 核实：仅 2.5-flash 免费（促销 $0，20RPM）；
+            // pro / pro-alpha 付费（$0.45/$0.90 每百万 token）——按用户拍板只保留免费款，
+            // 付费模型不进默认清单（用户自定义 provider 配置不受此限）
+            return new List<string> { "agnes-2.5-flash" };
+        }
+        return new List<string> { currentModel };
     }
 
     /// <summary>
@@ -272,6 +330,7 @@ public class LlmConfigResolver
                 UseBuiltIn = persisted.UseBuiltIn,
                 Temperature = persisted.Temperature,
                 MaxTokens = persisted.MaxTokens,
+                AvailableModels = BuildModelList(persisted.Model ?? BuiltInModel),
             };
         }
         catch (Exception ex)

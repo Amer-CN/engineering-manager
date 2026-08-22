@@ -721,6 +721,45 @@ public class UpdateServiceTests
 
         Directory.Delete(tmpDir, true);
     }
+
+    // ── 测试 14：manifest 省略 sha256 → 校验必须失败（不允许无校验值放行） ──
+    [Fact]
+    public async Task T14_VerifySha256_EmptyHash_ReturnsFalse()
+    {
+        var tmpDir = Path.Combine(Path.GetTempPath(), $"updtest-{Guid.NewGuid()}");
+        Directory.CreateDirectory(tmpDir);
+        var partPath = Path.Combine(tmpDir, "file.exe.part");
+        await File.WriteAllBytesAsync(partPath, FakeExeData[..64]);
+
+        // 空 / 空白哈希都必须拒绝
+        Assert.False(await UpdateService.VerifySha256Async(partPath, ""));
+        Assert.False(await UpdateService.VerifySha256Async(partPath, "   "));
+
+        Directory.Delete(tmpDir, true);
+    }
+
+    // ── 测试 15：正例 — 真实文件 + 用文件内容算出的正确哈希 → 必须放行 ──
+    // （T14 只测了拒绝空哈希；本例确保拒绝逻辑没有误伤正常包）
+    [Fact]
+    public async Task T15_VerifySha256_RealFileCorrectHash_ReturnsTrue()
+    {
+        var tmpDir = Path.Combine(Path.GetTempPath(), $"updtest-{Guid.NewGuid()}");
+        Directory.CreateDirectory(tmpDir);
+        var partPath = Path.Combine(tmpDir, "file.exe.part");
+
+        // 写入真实数据（非定长内存数组的复用，模拟真实下载产物）
+        var data = GenerateFakeData(4096);
+        await File.WriteAllBytesAsync(partPath, data);
+
+        // 用文件实际内容计算哈希后回填 → 校验必须通过
+        var correctHash = ComputeSha256(data);
+        Assert.True(await UpdateService.VerifySha256Async(partPath, correctHash));
+
+        // 大小写不敏感的哈希表示也应通过（hex 大小写等价）
+        Assert.True(await UpdateService.VerifySha256Async(partPath, correctHash.ToLowerInvariant()));
+
+        Directory.Delete(tmpDir, true);
+    }
 }
 
 /// <summary>返回部分数据后抛 IOException 的流（模拟连接中断）</summary>

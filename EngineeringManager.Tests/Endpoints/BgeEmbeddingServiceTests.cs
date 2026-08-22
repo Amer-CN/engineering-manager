@@ -19,16 +19,20 @@ public class BgeEmbeddingServiceTests
     [Fact]
     public void IsAvailable_WhenModelMissing_ReturnsFalse()
     {
-        // 模型不存在时，IsAvailable 应返回 false
-        // BgeEmbeddingService 构造时不自动初始化
+        // 按 SttModelManager.IsEmbeddingModelAvailable() 分支：
+        // 模型文件齐全且校验通过 → TryInitialize 成功 → Ready；否则 → Unavailable
         var svc = new BgeEmbeddingService();
+        _ = svc.IsAvailable; // 触发 TryInitialize
 
-        // 由于模型文件可能存在于本机（开发环境），我们检查状态而非断言 false
-        // 关键: 状态不是 Failed（Failed 表示文件存在但损坏）
-        var status = svc.Status;
-        Assert.True(status == BgeEmbeddingService.ModelStatus.Ready
-                  || status == BgeEmbeddingService.ModelStatus.Unavailable,
-            $"状态应为 Ready 或 Unavailable，实际: {status}");
+        if (SttModelManager.IsEmbeddingModelAvailable())
+        {
+            Assert.Equal(BgeEmbeddingService.ModelStatus.Ready, svc.Status);
+        }
+        else
+        {
+            // 文件缺失 → Unavailable（不是 Failed：Failed 表示文件存在但损坏）
+            Assert.Equal(BgeEmbeddingService.ModelStatus.Unavailable, svc.Status);
+        }
     }
 
     [Fact]

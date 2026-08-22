@@ -52,7 +52,7 @@ public static class MemberEndpoints
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
             // v1.1.0 P0-4 Phase 2: 单条也加 user-dim 过滤 (防 ID 枚举越权)
-            var m = db.QueryFirstOrDefault($"SELECT * FROM members WHERE id=@Id AND {CurrentUser.UserFilterCompany(scope, "m.created_by")}", new { Id = id, Uid = uid, IsAdmin = isAdmin });
+            var m = db.QueryFirstOrDefault($"SELECT * FROM members m WHERE id=@Id AND {CurrentUser.UserFilterCompany(scope, "m.created_by")}", new { Id = id, Uid = uid, IsAdmin = isAdmin });
             if (m is null) return Common.NotFound("成员不存在");
             // v0.76.0 累计待办 #1: PII ACL — 同上 /api/members, 返回 dict 屏蔽 PII
             var piiAccess = CurrentUser.GetPiiAccess(ctx);

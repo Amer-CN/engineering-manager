@@ -261,6 +261,21 @@ builder.Services.ConfigureHttpJsonOptions(options =>
         {
             Console.WriteLine($"[App] 生产模式：托管前端静态文件 {distPath}");
 
+            // 0. 安全：ocr-config.json 含百度密钥，禁止经 HTTP 下发（含静态文件与 SPA 回退两条路径；
+            //    后端 LoadOcrConfig 仍可从本地路径读取该文件做兼容回退）。
+            //    OnPrepareResponse 无法阻止中间件写出文件体（实测 404 状态码下 body 仍下发），
+            //    SPA 回退 MapWhen 也会拦截该路径返回 index.html，故用内联中间件在两者之前终结请求。
+            app.Use(async (ctx, next) =>
+            {
+                if (string.Equals(ctx.Request.Path.Value, "/ocr-config.json", StringComparison.OrdinalIgnoreCase))
+                {
+                    ctx.Response.StatusCode = StatusCodes.Status404NotFound;
+                    ctx.Response.Headers["Cache-Control"] = "no-cache, no-store";
+                    return;
+                }
+                await next();
+            });
+
             // 1. SPA 默认文件（index.html）
             app.UseDefaultFiles(new DefaultFilesOptions
             {
