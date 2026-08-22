@@ -80,6 +80,17 @@ export function fetchWritingDocs(params: { docType?: string; folderId?: number; 
   return apiClient.get<WritingListResponse>(`/api/writing/documents${suffix}`)
 }
 
+/** 风格轮换（R4）：按本人该文体上次用的风格返回下一个（S1-S6 循环），lastStyleId 可为 null */
+export interface WritingNextStyle {
+  styleId: string
+  styleName: string
+  lastStyleId: string | null
+}
+
+export function fetchNextWritingStyle(docType: string): Promise<{ success: boolean; data?: WritingNextStyle; error?: string }> {
+  return apiClient.get<WritingNextStyle>('/api/writing/next-style', { docType })
+}
+
 /** 文档详情 */
 export function fetchWritingDoc(id: number): Promise<{ success: boolean; data?: WritingDoc; error?: string }> {
   return apiClient.get<WritingDoc>(`/api/writing/documents/${id}`)
