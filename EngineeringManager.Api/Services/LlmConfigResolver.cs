@@ -47,15 +47,50 @@ public class LlmConfigResolver
     private readonly IConfiguration _configuration;
     private LlmProviderConfig _config;
 
-    // 内置 Agnes 兜底
-    // API key 不再入源码：优先环境变量 AGNES_BUILTIN_API_KEY，其次 appsettings 的 Agnes:ApiKey
+    // 内置 Agnes 兜底（出厂免费通道，开箱即用）
+    // key 以「异或混淆分片」形式嵌入（方案4）：明文不出现在源码/程序集字符串表，
+    // 运行时重组。环境变量 AGNES_BUILTIN_API_KEY / appsettings Agnes:ApiKey 可覆盖
+    // （高级用户换自己的通道，留空 = 用出厂 key）。
     private const string BuiltInBaseUrl = "https://apihub.agnes-ai.com/v1";
     private const string BuiltInModel = "agnes-2.5-flash";
+    // 分片与掩码（Base64）：enc = key XOR mask，A/B 为 enc 前后两段
+    private const string KeyPartA = "NgYOBjkBAhl7Ti9MOCA2EnlLMDhiIGlfMRhYIRJg";
+    private const string KeyPartB = "JiwDRHwDIXEODmtyMWhUIVUTbwkB";
+    private const string KeyMask = "RW0jN2tRMnYheFo5QHBMdzQkck44dFkzdUo2aEIxbUE1c0QwZkc=";
 
-    private string BuiltInApiKey =>
-        Environment.GetEnvironmentVariable("AGNES_BUILTIN_API_KEY")
-        ?? _configuration["Agnes:ApiKey"]
-        ?? "";
+    private static string? _builtInKeyCache;
+
+    private string BuiltInApiKey
+    {
+        get
+        {
+            // 优先级：环境变量 > appsettings > 出厂混淆 key（开箱即用）
+            var env = Environment.GetEnvironmentVariable("AGNES_BUILTIN_API_KEY");
+            if (!string.IsNullOrEmpty(env)) return env;
+            var cfg = _configuration["Agnes:ApiKey"];
+            if (!string.IsNullOrEmpty(cfg)) return cfg;
+            return _builtInKeyCache ??= ReassembleKey();
+        }
+    }
+
+    /// <summary>重组出厂 key：base64 解码分片拼接后与掩码逐字节异或</summary>
+    private static string ReassembleKey()
+    {
+        try
+        {
+            var enc = Convert.FromBase64String(KeyPartA + KeyPartB);
+            var mask = Convert.FromBase64String(KeyMask);
+            var chars = new char[enc.Length];
+            for (var i = 0; i < enc.Length; i++)
+                chars[i] = (char)(enc[i] ^ mask[i % mask.Length]);
+            return new string(chars);
+        }
+        catch
+        {
+            // 分片损坏（理论不可能）：返回空，上层按未配置处理
+            return "";
+        }
+    }
 
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
