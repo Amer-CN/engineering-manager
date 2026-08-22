@@ -13,6 +13,7 @@ interface HistorySidebarProps {
   conversationId: number | null
   onSelectConversation: (conv: AgentConversation) => void
   onNewConversation: () => void
+  onCurrentConversationDeleted?: () => void
   refreshTrigger: number
 }
 
@@ -20,14 +21,16 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
   conversationId,
   onSelectConversation,
   onNewConversation,
+  onCurrentConversationDeleted,
   refreshTrigger,
 }) => (
-  <div className="hidden md:block w-80 flex-shrink-0">
+  <div className="hidden md:block w-80 flex-shrink-0 min-h-0">
     <ConversationHistory
       inline
       currentConversationId={conversationId}
       onSelectConversation={onSelectConversation}
       onNewConversation={onNewConversation}
+      onCurrentConversationDeleted={onCurrentConversationDeleted}
       refreshTrigger={refreshTrigger}
     />
   </div>
@@ -45,6 +48,7 @@ const AgentOverlays: React.FC<AgentOverlaysProps> = ({
   conversationId,
   onSelectConversation,
   onNewConversation,
+  onCurrentConversationDeleted,
   refreshTrigger,
   historyOpen,
   onHistoryClose,
@@ -60,6 +64,7 @@ const AgentOverlays: React.FC<AgentOverlaysProps> = ({
       currentConversationId={conversationId}
       onSelectConversation={onSelectConversation}
       onNewConversation={onNewConversation}
+      onCurrentConversationDeleted={onCurrentConversationDeleted}
       refreshTrigger={refreshTrigger}
     />
 

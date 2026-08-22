@@ -13,7 +13,6 @@ export type { OCRProvider, OCRConfig, OCRResult } from './types'
 export {
   defaultOCRConfig,
   initialConfig,
-  initializeBuiltInConfig,
   setOCRConfig,
   saveOCRConfig,
   getOCRConfig,

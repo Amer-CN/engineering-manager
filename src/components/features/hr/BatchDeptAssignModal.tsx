@@ -27,16 +27,24 @@ const BatchDeptAssignModal: React.FC<Props> = ({ orphans, departments, onClose, 
     if (!batchDeptId) { showToast('请选择目标部门', 'error'); return }
     if (selected.size === 0) { showToast('请选择要分配的人员', 'error'); return }
     try {
-      let count = 0
+      let successCount = 0
+      let failCount = 0
       for (const id of selected) {
         const m = orphans.find((x: Member) => x.id === id)
         if (m) {
-          await (await getAPI()).updateMember({ ...m, departmentId: batchDeptId as number })
-          count++
+          const result = await (await getAPI()).updateMember({ ...m, departmentId: batchDeptId as number })
+          if (result.success) successCount++
+          else failCount++
         }
       }
-      showToast(`已将 ${count} 名人员分配到目标部门`, 'success')
-      logUpdate('members', `${count} 名员工批量调部门`, 0, { departmentId: batchDeptId, count })
+      if (failCount === 0) {
+        showToast(`已将 ${successCount} 名人员分配到目标部门`, 'success')
+      } else if (successCount === 0) {
+        showToast(`分配失败，${failCount} 名人员均未成功`, 'error')
+      } else {
+        showToast(`分配完成：成功 ${successCount} 名、失败 ${failCount} 名`, 'error')
+      }
+      logUpdate('members', `${successCount} 名员工批量调部门`, 0, { departmentId: batchDeptId, count: successCount, failed: failCount })
       onDone()
     } catch (e: unknown) { showToast(e instanceof Error ? e.message : '批量分配失败', 'error') }
   }

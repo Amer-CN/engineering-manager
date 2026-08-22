@@ -10,18 +10,29 @@ const isElectron = typeof window !== 'undefined' && window.electronAPI !== undef
 const isTauri = typeof window !== 'undefined' && ((window as any).__TAURI__ !== undefined || (window as any).__TAURI_INTERNALS__ !== undefined);
 
 // C# API 检测
+// R9-P1: 失败结果不永久缓存（否则后端慢启动 → 全会话锁死 mock）。
+// 成功才固化 true；失败保持 null，下一次 getAPI() 调用重新探测。
 let csharpApiAvailable: boolean | null = null;
+let csharpApiProbe: Promise<boolean> | null = null;
 
 async function checkCSharpApi(): Promise<boolean> {
-  if (csharpApiAvailable !== null) return csharpApiAvailable;
-  try {
-    // 使用相对路径，dev 模式通过 Vite 代理转发到 C# 后端
-    const resp = await fetch('/api/health', { signal: AbortSignal.timeout(2000) });
-    csharpApiAvailable = resp.ok;
-  } catch {
-    csharpApiAvailable = false;
+  if (csharpApiAvailable === true) return true;
+  // 探测中复用同一个 Promise（并发防抖）
+  if (!csharpApiProbe) {
+    csharpApiProbe = (async () => {
+      try {
+        // 使用相对路径，dev 模式通过 Vite 代理转发到 C# 后端
+        const resp = await fetch('/api/health', { signal: AbortSignal.timeout(2000) });
+        if (resp.ok) csharpApiAvailable = true;
+        return csharpApiAvailable === true;
+      } catch {
+        return false;
+      } finally {
+        csharpApiProbe = null;
+      }
+    })();
   }
-  return csharpApiAvailable;
+  return csharpApiProbe;
 }
 
 // 动态导入 API（延迟加载）

@@ -13,13 +13,20 @@ public class GlobalAuthMiddleware
 {
     private readonly RequestDelegate _next;
 
+    // 安全表 #2/#8: 精确免鉴权集合（EventSource 不带 Authorization header，stream 必须保留；
+    // download 触发本身免鉴权是既有产品语义——useUpdater 启动检查时机可能未登录）
+    private static readonly string[] PublicExactPaths = new[]
+    {
+        "/api/update/download",
+        "/api/update/download/stream"
+    };
+
     private static readonly string[] PublicPathPrefixes = new[]
     {
         "/api/auth/login",
         "/api/health",
         "/api/ocr/setup",
-        "/api/agent/setup",
-        "/api/update/download"
+        "/api/agent/setup/status"
     };
 
     public GlobalAuthMiddleware(RequestDelegate next)
@@ -38,11 +45,14 @@ public class GlobalAuthMiddleware
             return;
         }
 
-        // 白名单：登录、健康检查、OCR 首次启动引导、Agent 首次启动引导
+        // 白名单：登录、健康检查、OCR 首次启动引导、Agent setup/status、更新下载（exact: download/stream）
         // M-EDITION1 修复: 精确匹配或路径后接 '/'，避免 /api/healthz、/api/auth/loginx 误放行
-        var isPublic = PublicPathPrefixes.Any(p =>
-            path.Equals(p, StringComparison.OrdinalIgnoreCase) ||
-            path.StartsWith(p + "/", StringComparison.OrdinalIgnoreCase));
+        // 安全表 #2/#8: 先查 exact 集合，再查 prefix 集合（prefix 不再含 /api/update/download 宽前缀
+        // 与 /api/agent/setup 宽前缀，cancel/save/test 等子路径全部收回鉴权）
+        var isPublic = PublicExactPaths.Any(p => path.Equals(p, StringComparison.OrdinalIgnoreCase))
+            || PublicPathPrefixes.Any(p =>
+                path.Equals(p, StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith(p + "/", StringComparison.OrdinalIgnoreCase));
 
         // /api/config GET 精确放行（登录设置页面需要读配置），PUT 仍需鉴权
         if (!isPublic && path == "/api/config" && HttpMethods.IsGet(context.Request.Method))

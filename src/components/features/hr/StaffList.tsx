@@ -115,9 +115,13 @@ const StaffList: React.FC = () => {
   const handleStatusChange = useCallback(async (member: Member, newStatus: string) => {
     // G2 B5: 人员状态切换 → members:update
     if (!can('members:update')) { showToast('您没有变更状态的权限', 'error'); return }
-    await (await getAPI()).updateMember({ ...member, status: newStatus })
-    loadData()
-    showToast('状态已更新', 'success')
+    const result = await (await getAPI()).updateMember({ ...member, status: newStatus })
+    if (result.success) {
+      loadData()
+      showToast('状态已更新', 'success')
+    } else {
+      showToast(result.error || '状态更新失败', 'error')
+    }
   }, [loadData, showToast])
 
   const { handleFileDrop, handleSubmit } = useStaffFormActions({

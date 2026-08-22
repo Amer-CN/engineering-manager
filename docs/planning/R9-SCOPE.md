@@ -106,10 +106,10 @@
 | A1 | ContractEndpoints.cs:205 | PUT /api/contracts/income | UserFilterWithAuthorizedProjects(scope, "income_contracts.project_id") |
 | A2 | ContractEndpoints.cs:248 | PUT /api/contracts/expense | UserFilterWithAuthorizedProjects(scope, "expense_contracts.project_id") |
 | A3 | CostLedgerEndpoints.cs:69 | PUT /api/cost-ledger | UserFilterWithAuthorizedProjects(scope, "cost_ledger.project_id") |
-| A4 | CostLedgerEndpoints.cs:84 | DELETE /api/cost-ledger/{id} | UserFilterWithAuthorizedProjects(scope, "cost_ledger.project_id") |
-| A5 | CostLedgerEndpoints.cs:210 | PUT /api/cost-ledger/batches/{id} | UserFilterCompany(scope) |
-| A6 | CostLedgerEndpoints.cs:222 | DELETE /api/cost-ledger/batches/{id} | UserFilterCompany(scope) |
-| A7 | CostLedgerEndpoints.cs:303 | POST /api/cost-ledger/{batchId}/sheet（UPDATE [cost_ledger]） | UserFilterWithAuthorizedProjects(scope, "cost_ledger.project_id")（先验 batch 归属 278 行） |
+| A4 | CostLedgerEndpoints.cs:100 | DELETE /api/cost-ledger/{id} | ~~UserFilterWithAuthorizedProjects~~ → `(created_by=@Uid OR @IsAdmin=1)`（收紧翻转 200→403，R9-20 已改） |
+| A5 | CostLedgerEndpoints.cs:210 | PUT /api/cost-ledger/batches/{id} | ~~UserFilterCompany~~ → Classify 单点 + ViaAuthz 同事务 audit（翻转 403→200，R9-21 已改） |
+| A6 | CostLedgerEndpoints.cs:222 | DELETE /api/cost-ledger/batches/{id} | UserFilterCompany(scope)（例外钉住：仅创建者可删，R9-21 未改码） |
+| A7 | CostLedgerEndpoints.cs:303 | POST /api/cost-ledger/{batchId}/sheet（UPDATE [cost_ledger]） | UserFilterWithAuthorizedProjects(scope, "cost_ledger.project_id")（先验 batch 归属 278 行）+ per-row cross_user_edit audit（R9-21 已补） |
 
 > **A 桶 7 条。唯一把范围校验真正写进 WHERE 的域：合同（income/expense）+ 成本台账。**
 
@@ -128,14 +128,14 @@
 | B9 | ContractEndpoints.cs:501 | POST /api/settlements/{id}/process |
 | B10 | ContractEndpoints.cs:513 | POST /api/settlements/{id}/unarchive |
 | B11 | FileEndpoints.cs:126 | DELETE /api/drawings/{id} |
-| B12 | FileEndpoints.cs:183 | PUT /api/drawings |
+| B12 | FileEndpoints.cs:183 | PUT /api/drawings | ~~created_by/IsAdmin~~ → Classify 单点 + ViaAuthz 同事务 audit（R9-22 已改） |
 | B13 | InvoiceEndpoints.cs:79 | PUT /api/invoices |
 | B14 | InvoiceEndpoints.cs:116 | DELETE /api/invoices/{id} |
 | B15 | InvoiceEndpoints.cs:217 | PUT /api/payment-records |
 | B16 | InvoiceEndpoints.cs:242 | DELETE /api/payment-records/{id} |
 | B17 | InventoryEndpoints.cs:51 | PUT /api/inventory |
 | B18 | InventoryEndpoints.cs:66 | DELETE /api/inventory/{id} |
-| B19 | InventoryEndpoints.cs:115 | PUT /api/materials |
+| B19 | InventoryEndpoints.cs:115 | PUT /api/materials | ~~created_by/IsAdmin~~ → Classify 单点 + ViaAuthz 同事务 audit（R9-22 已改） |
 | B20 | InventoryEndpoints.cs:129 | DELETE /api/materials/{id} |
 | B21 | MemberEndpoints.cs:97 | PUT /api/members |
 | B22 | MemberEndpoints.cs:117 | DELETE /api/members/{id} |
@@ -152,7 +152,7 @@
 | B33 | ProjectEndpoints.cs:124 | PUT /api/projects/{id} |
 | B34 | ProjectEndpoints.cs:139 | DELETE /api/projects/{id} |
 | B35 | ProjectEndpoints.cs:174 | DELETE /api/project-members/{id} |
-| B36 | ProjectWorkerMiscEndpoints.cs:35 | PUT /api/project-workers |
+| B36 | ProjectWorkerMiscEndpoints.cs:35 | PUT /api/project-workers | ~~created_by/IsAdmin~~ → Classify 单点 + ViaAuthz 同事务 audit（R9-22 已改；现状恒 500 @Now 缺参，修复顺带补传） |
 | B37 | ProjectWorkerMiscEndpoints.cs:46 | PUT /api/invoices/{id}/status |
 | B38 | WageEndpoints.cs:80 | PUT /api/attendances |
 | B39 | WageEndpoints.cs:95 | DELETE /api/attendances/{id} |
@@ -163,7 +163,7 @@
 | B44 | WageEndpoints.cs:417 | POST /api/wages/batch-clear-payments |
 | B45 | WageEndpoints.cs:431 | POST /api/wages/archive |
 | B46 | WageEndpoints.cs:446 | POST /api/wages/batch-unarchive |
-| B47 | WageEndpoints.cs:558 | POST /api/wages/confirm-matches |
+| B47 | WageEndpoints.cs:558 | POST /api/wages/confirm-matches | ~~created_by/IsAdmin~~ → Classify 单点 + audit（R9-23 已改） |
 | B48 | WageEndpoints.cs:733 | POST /api/wages/batch-payment |
 | B49 | WageEndpoints.cs:866 | DELETE /api/salary-history/{id} |
 | B50 | WageEndpoints.cs:677 | POST /api/wages/batch-save（ON CONFLICT DO UPDATE 带 created_by/IsAdmin） |
@@ -182,6 +182,15 @@
 > - **B9（PUT /api/settlements/{id}/process）/ B10（PUT /api/settlements/{id}/unarchive）—— 方案丙例外（不放宽，R9-16 登记）**：审查方已裁比照 B44/B45/B46——**状态机不放宽**，授权项目内跨人调 process/unarchive 仍 403（created_by/admin 守卫 + WriteResult 可观察保留），零生产代码。实证：`R9SettlementProcessUnarchivePinTests.cs`（PinB9 accountant 持 settlement:approve / PinB10 自定义角色 r9-16-una 持 settlement:update，均 403 + status 不变 + 无 audit）。
 > - **A1（PUT /api/contracts/income）—— 已对齐方案丙（R9-17，A 桶补 audit）**：A 桶 WHERE 已含 UserFilterWithAuthorizedProjects——授权项目内跨人**原本就能改（HTTP 200）**，本轮只补 Classify 单点 + ViaAuthz 同事务 audit（**不是从 403 放宽到 200**；先红 = 200 缺 audit，不是 403）；UserFilter/created_by/IsAdmin 移出 SQL（未用的 isAdmin/scope 删除）；行不存在 → 404 / Denied → 403（WriteResult 可观察语义保留，未改 WriteResult 本体，竞态兜底仍走 WriteResult）；无锁列故无 409 档；知识库种子 fire-and-forget 保留在 Commit 后（原条件原样）；金额单位「元」直传直存（无 ToFen）。**行为人用自定义角色 r9-17-inc（id==name，permissions 含 contracts:update——accountant 默认集无此码，走 HasPermission id 直通；仅 INSERT 新 roles 行，未动内置角色）**。实证：`R9IncomeContractCrossUserEditTests.cs`。
 > - **A2（PUT /api/contracts/expense）—— 已对齐方案丙（R9-18，A 桶补 audit，与 A1 同构）**：授权项目内跨人原本就能改（HTTP 200，UserFilter EXISTS 命中），本轮只补 Classify 单点 + ViaAuthz 同事务 audit（**不是从 403 放宽到 200**；先红 = 200 缺 audit，不是 403）；UserFilter/created_by/IsAdmin 移出 SQL（未用的 isAdmin/scope 删除）；行不存在 → 404 / Denied → 403（WriteResult 可观察语义保留，未改 WriteResult 本体，竞态兜底仍走 WriteResult）；无锁列故无 409 档；知识库种子 fire-and-forget 保留在 Commit 后（原条件原样）；金额单位「元」直传直存（无 ToFen）。**行为人用自定义角色 r9-18-exp（id==name，permissions 含 contracts:update——走 HasPermission id 直通；仅 INSERT 新 roles 行，未动内置角色）**。实证：`R9ExpenseContractCrossUserEditTests.cs`。
+> - **A3（PUT /api/cost-ledger）—— 已对齐方案丙（R9-19，A 桶补 audit，与 A1/A2 同构）**：授权项目内跨人原本就能改（HTTP 200，UserFilter EXISTS 命中），本轮只补 Classify 单点 + ViaAuthz 同事务 audit（**不是从 403 放宽到 200**；先红 = 200 缺 audit，不是 403）；UserFilter/created_by/IsAdmin 移出 SQL（未用的 isAdmin/scope 删除）；**行不存在 → 403（收尾非 WriteResult，Ok/Forbid 保留，未改成 WriteResult 404）；预读不加 deleted_at（现状 WHERE 无 deleted_at，软删行可观察不改）**；无锁列故无 409 档；无知识库种子；金额单位「元」直传直存（无 ToFen）。**行为人用内置 accountant r9-19-acc（默认集含 costLedger:update，未 UPDATE/INSERT roles）**。实证：`R9CostLedgerCrossUserEditTests.cs`。
+> - **A4（DELETE /api/cost-ledger/{id}）—— 已收紧翻转（R9-20，A 桶唯一收紧）**：WHERE 从 `UserFilterWithAuthorizedProjects(scope, "cost_ledger.project_id")` 收紧为 `(created_by=@Uid OR @IsAdmin=1)`；**收紧方向 200→403（授权项目内跨人 DELETE 不再放开，方案丙「可改不可删」在 DELETE 侧落地）**，**与 A1-A3 补 audit 轮（只补 audit 不翻方向）相反**；不加 Classify、不加 audit；未用 scope 删除；软删 UPDATE + `deleted_at IS NULL` + Ok/Forbid 收尾保留（行不存在/无授权 → 403，非 404）；无锁列故无 409 档；金额单位「元」直传直存（无 ToFen）。**行为人用自定义角色 r9-20-del（id==name，permissions 含 costLedger:delete——accountant 默认集无 costLedger:delete；仅 INSERT 新 roles 行，不动内置角色）**。实证：`R9CostLedgerDeleteGuardTests.cs`（修复笔 `98d721d`）。
+> - **A5（PUT /api/cost-ledger/batches/{id}）—— 已对齐方案丙（R9-21，B 桶形态翻转 403→200）**：现状 WHERE `UserFilterCompany(scope)`（非 All = created_by=@Uid，授权跨人 403，B 桶形态），预读行归属（created_by+project_id）→ Classify 单点裁决 → 授权跨人可改 + ViaAuthz 同事务 audit（fail-closed）；归属条件移出 SQL（WHERE 只留 id，改后未用的 scope/isAdmin 删除）；行不存在 → 403（Ok/Forbid 收尾保留，未引入 WriteResult 404）；无锁列故无 409 档。**行为人用内置 accountant r9-21-bat（默认集含 costLedger:update，未 UPDATE/INSERT roles）**。实证：`R9BatchCrossUserEditTests.cs`（修复笔 `2666dcd`）。
+> - **A6（DELETE /api/cost-ledger/batches/{id}）—— 方案丙例外钉住（R9-21，零生产代码）**：现状同 UserFilterCompany（非 All = 仅创建者可删），已符合方案丙「可改不可删」，本轮 PIN-ONLY 不改码（与 B44/B45/B46、B9/B10 例外同族）。**行为人用自定义角色 r9-21-del（id==name，permissions 含 costLedger:delete——accountant 默认集无此码；仅 INSERT 新 roles 行，不动内置角色）**。实证：`R9BatchCrossUserEditTests.cs` Pin6/Pin7（授权跨人 403 行仍在 / 本人删 200）。
+> - **A7（POST /api/cost-ledger/{batchId}/sheet）—— 已补 per-row audit（R9-21，A 桶形态 200 缺 audit）**：行 UPDATE 分支 WHERE 已含 UserFilterWithAuthorizedProjects——授权跨人行原本就能改（HTTP 200），本轮只在实际发生跨人改写时同事务补 per-row `cross_user_edit`（resource='cost_ledger'）；预读 id+batch_id → Classify 单点（不手写 EXISTS）；批次门、INSERT 分支、批次摘要 audit（action='update'、resource='cost_ledger_sheet'）与行 UPDATE 的 UserFilter 原样不动，per-row 与摘要 audit 并存；无锁列故无 409 档；金额单位「元」直传直存（无 ToFen）。**行为人用内置 accountant r9-21-sht（默认集含 costLedger:update，未 UPDATE/INSERT roles）**。实证：`R9SheetCrossUserEditTests.cs`（修复笔 `22e5758`）。
+> - **B12（PUT /api/drawings）—— 已对齐方案丙（R9-22，B 桶形态翻转 403→200）**：现状 WHERE `created_by/IsAdmin`（授权跨人 403，B 桶形态），预读行归属（created_by+project_id）→ Classify 单点裁决 → 授权跨人可改 + ViaAuthz 同事务 audit（fail-closed）；归属条件移出 SQL（WHERE 只留 id，未用的 isAdmin 删除）；行不存在 → 404（WriteResult 收尾保留）；无锁列故无 409 档；body 走 StreamReader；列集照原样 name/category/remarks/position + version+1/last_modified_at。**行为人用自定义角色 r9-22-b4（id==name，permissions 含 drawings:update——accountant 默认集无此码；仅 INSERT 新 roles 行，不动内置角色）**。实证：`R9DrawingCrossUserEditTests.cs`（预期红笔 `ad34af6` / 修复笔 `4988e06`）。
+> - **B19（PUT /api/materials）—— 已对齐方案丙（R9-22，B 桶形态翻转 403→200，与 B12 同构）**：现状 WHERE `created_by/IsAdmin`，预读行归属 → Classify 单点 → 授权跨人 + audit（fail-closed 同事务）；归属条件移出 SQL（WHERE 只留 id，未用的 isAdmin/scope 删除）；行不存在 → 404（WriteResult 收尾保留）；**UPDATE 列集照原样不设 updated_at（真库 materials 无此列）**；无锁列故无 409 档；body 走 MaterialDto。**行为人同批次 4 共用自定义角色 r9-22-b4**。实证：`R9MaterialCrossUserEditTests.cs`（预期红笔 `8560d88` / 修复笔 `756f73e`）。
+> - **B36（PUT /api/project-workers）—— 已对齐方案丙（R9-22，B 桶形态翻转 403→200，含恒 500 修正）**：现状 WHERE `created_by/IsAdmin`，预读行归属 → Classify 单点 → 授权跨人 + audit（fail-closed 同事务）；归属条件移出 SQL（WHERE 只留 id，未用的 isAdmin 删除）；行不存在 → 403（Ok/Forbid 收尾保留，未引入 WriteResult 404）；daily_wage 沿用工资域惯例「分」原样直传不换算；无锁列故无 409 档；body 走 ProjectWorkerDto。**偏差留痕：现状该端点对任何请求恒 500（UPDATE 含 @Now 但参数对象从未传 Now，Dapper 抛 InvalidOperationException）——预期红「恰好 Red1 一红」不可实现（实测 6/6 全红 InternalServerError），测试与修复合一笔 `4de16ae` 提交，修复顺带补传 Now 使端点首次可用；同文件 B37 未碰（破坏自证用 project_workers 预读上下文唯一定位）**。**行为人同批次 4 共用自定义角色 r9-22-b4**。实证：`R9ProjectWorkerCrossUserEditTests.cs`（测试+修复合一笔 `4de16ae`）。
+> - **B47（POST /api/wages/confirm-matches）—— 已对齐方案丙（R9-23，B48 模板对齐，confirm-matches 专列）**：语义等价「带回单路径的 batch-payment」（bankReceiptPath 必填保持、缺字段 400 整单语义保持）；逐对预读行归属（created_by+project_id）→ 锁在授权分支之前（locked → skipped）→ Classify 单点裁决 → Denied skipped / ViaAuthz UPDATE + 同事务 cross_user_edit audit（fail-closed，归属条件移出 SQL）；**无 403 形态——Denied 走 skipped 计数（现状可观察不变）**；读侧 match-receipts 候选过滤本已含 UserFilterWithAuthorizedProjects（对称，零改动）；金额 API 元 → ToFen 落库（既有行为照原样）。**既有用例翻转豁免 ×1（裁决 A）：ReceiptMatchTests.Confirm_OthersRow_AlwaysSkipped_NonAdmin 改名 Confirm_OthersRow_UnauthorizedSkipped_AuthorizedSavedWithAudit（M-FIX9 注释预定翻转，先例 R9-10 B2；规格认账第 8 次）**。**行为人用内置 accountant r9-23-acc（默认集含 wages:update，未 UPDATE/INSERT roles）**。实证：`R9ConfirmMatchCrossUserTests.cs`（预期红笔 `a40254f` / 修复笔 `ddc6cd3`）。
 
 ### C 桶：WHERE 只有 id=@Id（或等价），端点内另有显式归属/授权校验 — 6 条
 
@@ -312,3 +321,29 @@
 - **方案 A 维持现状**：WHERE 保持 `(created_by=@Uid OR @IsAdmin=1)`；非 admin 只能确认自己创建的行（跨项目不限）；风险 = 「项目已授权、他人创建」的行无法确认（功能不对称残留），无越权面扩大。
 - **方案 B 加 EXISTS 放宽**：WHERE 加 `OR EXISTS(project_authorizations ...)`；补对称但只可能让更多行被 UPDATE（动钱），且未带「跨人修改落 audit + 仅企业版」两必备件 → M-FIX9 W1 已回滚。
 - **方案 C 收紧为必须项目授权（方案丙）**：未授权项目一律拒绝（自己创建的行也受约束）+ 跨人修改落 audit_logs + 仅企业版生效；需同步改读侧 match-receipts；破坏「创建者跨项目管理」现状语义。
+
+## §2.5 剩余风险登记（R9-24 批次 5 收尾对账，只登记不修；R9-24 修正笔勘误）
+
+> 全仓扫尾：Endpoints 目录残留 `(created_by=@Uid OR @IsAdmin=1)` 形态 **45 处**，Services 目录零残留。归类：
+> ① **例外在册，精确 6 处**：B44/B45/B46（WageEndpoints.cs:484/498/513）+ B9/B10（ContractEndpoints.cs:597/609，settlements process/unarchive 状态机，R9-16 裁不放宽）+ A4（CostLedgerEndpoints.cs:108，R9-20 有意收紧后形态）——审查方裁决不放宽/有意收紧，维持现状；
+> ② **A6（DELETE /api/cost-ledger/batches/{id}）不在本 grep 口径**（45 处 = 精确匹配 `created_by=@Uid OR @IsAdmin=1`，A6 用的是 UserFilterCompany 形态），单列一句：属例外钉住（R9-21 PIN-ONLY），**不计入 45**；
+> ③ **方案丙范围外 39 处（45 − 6）**：DELETE 族（drawings/inventory_items/materials/partners/supervisors/attendances/wages/salary_history/income_contracts/expense_contracts/agreement_contracts/contract_templates/settlements/members/workers/project_workers/departments/worker_teams/projects/project_members）与 contract_templates PUT、attendances batch-import UPDATE——「可改不可删」原则不覆盖 DELETE 与非业务归属域；**含 B14/B16（InvoiceEndpoints.cs:140/289，DELETE invoices/payment_records 软删）**。
+> ④（勘误留痕）初版 ① 把 B9/B10 误写为「InvoiceEndpoints DELETE 软删 :140/:289」（张冠李戴，该两处实为 B14/B16 范围外 DELETE 族）、② 误把「settlements process/unarchive 状态机」列入范围外（它是例外在册本体）——报告正文正确、登记文档误写，审查方验收核出，纪律 17 同源，本修正笔一并勘误。
+>
+> 完整 file:line 清单（45 处）：
+> ContractEndpoints.cs:377,387,397,430,442,457,588,597,609（9；其中 597/609 为 B9/B10 例外在册，:588 为 settlements DELETE 软删归范围外）
+> MemberEndpoints.cs:25,102,117,191,205,266,315,328,344,371,383（11）
+> WageEndpoints.cs:120,132,268,459,471,484,498,513,956,1008（10；其中 484/498/513 为 B44/B45/B46 例外在册）
+> PartnerEndpoints.cs:98,133,183,196（4）
+> ProjectEndpoints.cs:126,139,174（3）
+> InventoryEndpoints.cs:53,66,151（3）
+> InvoiceEndpoints.cs:35,140,289（3，其中 140/289 为 B14/B16 范围外 DELETE 族）
+> CostLedgerEndpoints.cs:108（1，A4 收紧后形态，例外在册）
+> FileEndpoints.cs:126（1）
+
+## §4 批次 5 对账结论（R9-24）
+
+- 已对齐更新侧 **13/13 一致**（B41/B47/B50/B48/B38/B13/B37/B15/B1/B7/B12/B19/B36——Classify 单点 + audit 在场、SQL WHERE 无 created_by/IsAdmin，逐条代码亲读核对）。
+- 例外 **5/5 一致**（B44/B45/B46 MapPost 动词在册相符；B9/B10 = settlements process/unarchive 状态机不放宽，钉住测试在场）。
+- A 桶 **7/7 一致**（A1/A2/A3/A5/A7 补 audit；A4 收紧 403；A6 钉住）。
+- 残留 `(created_by=@Uid OR @IsAdmin=1)` 形态 45 处 → §2.5 剩余风险登记（例外在册精确 6 + A6 单列不计入 + 方案丙范围外 39），零生产改动，待后续轮次裁夺。
