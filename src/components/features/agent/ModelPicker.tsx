@@ -86,10 +86,28 @@ const ModelPicker: React.FC<ModelPickerProps> = ({
                   key={m}
                   type="button"
                   onClick={() => { onModelChange(m); setModelOpen(false) }}
-                  className="w-full text-left px-3 py-2 text-xs hover:bg-[color:var(--panel-2)] transition-colors truncate"
-                  style={{ color: model === m ? 'var(--accent)' : 'var(--fg-2)', fontWeight: model === m ? 600 : 400 }}
+                  className="w-full flex items-center justify-between gap-2 px-3 py-2 text-xs hover:bg-[color:var(--panel-2)] transition-colors"
                 >
-                  {m}
+                  <span className="truncate" style={{ color: model === m ? 'var(--accent)' : 'var(--fg-2)', fontWeight: model === m ? 600 : 400 }}>
+                    {m}
+                  </span>
+                  {m.includes('pro') && (
+                    <span
+                      className="flex-shrink-0 px-1.5 py-0.5 rounded text-micro"
+                      style={{ background: 'var(--warning-soft)', color: 'var(--warning)' }}
+                      title="付费模型：按 token 计费"
+                    >
+                      付费
+                    </span>
+                  )}
+                  {!m.includes('pro') && (
+                    <span
+                      className="flex-shrink-0 px-1.5 py-0.5 rounded text-micro"
+                      style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}
+                    >
+                      免费
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
