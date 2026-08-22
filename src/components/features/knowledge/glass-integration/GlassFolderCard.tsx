@@ -337,17 +337,23 @@ export const GlassFolderCard: React.FC<GlassFolderCardProps> = ({
           </div>
         </div>
 
-        <div className="mt-auto" style={{ transform: 'translate3d(0px, 0px, 8px)' }}>
+        <div
+          className="mt-auto"
+          style={{
+            transform: 'translate3d(0px, 0px, 8px)',
+            // 标题+副题随 af 混入主题选中墨色（浅色选中卡如石墨黑奶油需要深字，不再写死白）
+            color: `color-mix(in srgb, var(--gc-active-ink, #fff) ${Math.round(af * 100)}%, ${
+              isDark ? '#f4f4f5' : '#18181b'
+            })`,
+          }}
+        >
           <div
             className={`
               text-lg font-extrabold tracking-tight truncate
               ${isDark ? 'text-zinc-100 group-hover:text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]' : 'text-zinc-900 group-hover:text-black'}
             `}
             style={{
-              // 标题随 af 混成白色（选中态），与覆盖层同一条曲线
-              color: `color-mix(in srgb, #fff ${Math.round(af * 100)}%, ${
-                isDark ? '#f4f4f5' : '#18181b'
-              })`,
+              color: 'inherit',
               textShadow: af > 0.05 ? `0 2px 8px rgba(0,0,0,${(0.6 * af).toFixed(2)})` : undefined,
             }}
           >
