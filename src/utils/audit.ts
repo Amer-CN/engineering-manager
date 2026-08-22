@@ -320,7 +320,15 @@ export async function queryAuditLogs(query: AuditLogQuery = {}): Promise<AuditLo
     if (api.queryAuditLogs) {
       const result = await api.queryAuditLogs(query)
       if (result.success && result.data) {
-        return result.data as AuditLogResult
+        // R9-P1: 桥接层返回 { total, page, pageSize, data }（无 items/totalPages），映射为 AuditLogResult 形状
+        const raw = result.data as { total: number; page: number; pageSize: number; data: AuditLog[] }
+        return {
+          items: raw.data,
+          total: raw.total,
+          page: raw.page,
+          pageSize: raw.pageSize,
+          totalPages: Math.ceil(raw.total / raw.pageSize),
+        }
       }
     }
   } catch (err) { console.warn('[Audit] 后端查询失败:', err) }

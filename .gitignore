@@ -185,3 +185,6 @@ playwright-report/
 /_*
 .fs3d-verify/
 docs/repowiki-cross-agent-discussion.md
+
+# R9 安全审查工作简报（勿提交）
+.work/

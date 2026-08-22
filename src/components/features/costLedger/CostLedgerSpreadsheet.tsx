@@ -1,7 +1,7 @@
 /**
  * 成本台账 Univer 真电子表格视图
  * Shadow DOM 隔离 Univer 全局 CSS，React.lazy 动态导入，vendor-univer chunk
- * 列映射：凭证号/日期/方向/分类/金额(分→元)/对方单位/渠道/摘要/备注
+ * 列映射：凭证号/日期/方向/分类/金额(元)/对方单位/渠道/摘要/备注
  */
 
 import { useRef, useEffect, useState, useCallback } from 'react'
@@ -71,7 +71,7 @@ export default function CostLedgerSpreadsheet({
         : { entries, duplicatedRows: 0 }
       const currentEntries = readResult.entries
 
-      // 构建 POST 载荷：金额已为分（INTEGER）
+      // 构建 POST 载荷：金额以元存储
       const sheetPayload = currentEntries.map(e => ({
         id: e.id || null,
         projectId,
@@ -80,7 +80,7 @@ export default function CostLedgerSpreadsheet({
         date: e.date || null,
         direction: e.direction || 'expense',
         category: e.category || null,
-        amount: typeof e.amount === 'number' ? e.amount : 0, // 金额保持分
+        amount: typeof e.amount === 'number' ? e.amount : 0, // 金额以元存储
         counterparty: e.counterparty || null,
         channel: e.channel || null,
         summary: e.summary || null,

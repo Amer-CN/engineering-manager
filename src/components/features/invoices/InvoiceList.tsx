@@ -177,14 +177,16 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
               <Icon name="Printer" size={14} />
             </button>
           </Tooltip>
-          <Tooltip content="编辑" position="top" delay={300}>
-            <Button
-              onClick={() => onEdit(item)}
-              
-             variant="ghost" size="sm">
-              <Icon name="Edit" size={14} />
-            </Button>
-          </Tooltip>
+          {item.status !== 'cancelled' && item.status !== 'red_flushed' && (
+            <Tooltip content="编辑" position="top" delay={300}>
+              <Button
+                onClick={() => onEdit(item)}
+
+               variant="ghost" size="sm">
+                <Icon name="Edit" size={14} />
+              </Button>
+            </Tooltip>
+          )}
           <Tooltip content="删除" position="top" delay={300}>
             <Button
               onClick={() => onDelete(item.id)}

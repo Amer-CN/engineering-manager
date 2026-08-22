@@ -19,10 +19,6 @@ export const SHEET_COLS: ColDef[] = [
   { key: 'notes', label: '备注', width: 22 },
 ]
 
-/** 分→元显示 */
-function centsToYuan(v: unknown): string {
-  return typeof v === 'number' ? (v / 100).toFixed(2) : ''
-}
 function cellStr(val: unknown): string { return val == null ? '' : String(val) }
 
 // ── Univer 单元格数据构建 ──────────────────────────────
@@ -46,7 +42,9 @@ function buildSheetData(entries: CostLedgerEntry[]): { data: USheetData; rowCoun
     SHEET_COLS.forEach((col, ci) => {
       const raw = entry[col.key]
       if (col.key === 'amount') {
-        row[ci] = { v: parseFloat(centsToYuan(raw)) }
+        // 金额以元存储：number 直接用；字符串按 parseFloat 解析，解析失败（含空）置 null 避免 NaN 单元格
+        const amt = typeof raw === 'number' ? raw : parseFloat(String(raw ?? ''))
+        row[ci] = { v: isNaN(amt) ? null : amt }
       } else if (col.key === 'direction') {
         row[ci] = { v: raw === 'expense' ? '支出' : raw === 'income' ? '收入' : cellStr(raw) }
       } else {
@@ -312,7 +310,7 @@ export function readUniverEntries(univer: any, originalEntries: CostLedgerEntry[
       date: getCellValue(ri, 1) || null,
       direction,
       category: getCellValue(ri, 3) || null,
-      amount: Math.round((amountYuan || 0) * 100), // 元→分
+      amount: amountYuan || 0, // 金额以元存储（空/无效金额归 0，与原容错一致）
       counterparty: getCellValue(ri, 5) || null,
       channel: getCellValue(ri, 6) || null,
       summary: getCellValue(ri, 7) || null,

@@ -29,19 +29,31 @@ public class SttEngineSelectorTests
     }
 
     [Fact]
-    public void CanUseLocalStt_ReturnsBoolean()
+    public void CanUseLocalStt_ResultConsistentWithUnavailableReason()
     {
-        // 只要不抛异常就行
-        var result = SttEngineSelector.CanUseLocalStt();
-        _ = result; // true or false 都行，取决于测试机器
+        // CanUseLocalStt() 与 GetUnavailableReason() 语义一致：
+        // 不可用 → reason 非空字符串；可用 → reason 为空串（见 SttEngineSelector 实现）
+        var canUse = SttEngineSelector.CanUseLocalStt();
+        var reason = SttEngineSelector.GetUnavailableReason();
+        if (canUse)
+        {
+            Assert.True(string.IsNullOrEmpty(reason),
+                $"CanUseLocalStt=true 时 reason 应为空串，实际: \"{reason}\"");
+        }
+        else
+        {
+            Assert.False(string.IsNullOrEmpty(reason),
+                "CanUseLocalStt=false 时 reason 应给出非空说明");
+        }
     }
 
     [Fact]
-    public void GetUnavailableReason_ReturnsString()
+    public void GetUnavailableReason_MatchesCanUseLocalStt()
     {
+        var canUse = SttEngineSelector.CanUseLocalStt();
         var reason = SttEngineSelector.GetUnavailableReason();
-        Assert.NotNull(reason);
-        // 如果可用，reason 应为空字符串；如果不可用，应有说明
+        Assert.True(canUse == string.IsNullOrEmpty(reason),
+            $"reason 与可用性不一致: canUse={canUse}, reason=\"{reason}\"");
     }
 }
 
@@ -62,17 +74,32 @@ public class DiarizationServiceTests
     }
 
     [Fact]
-    public void IsDiarizationModelAvailable_ReturnsBoolean()
+    public void IsDiarizationModelAvailable_ResultConsistentWithModelFiles()
     {
+        // IsDiarizationModelAvailable 是纯文件存在性检查（GetEngineDir 下两个模型文件），
+        // 断言其返回值与磁盘状态一致（防"探针不崩"式空过）
         var result = SttModelManager.IsDiarizationModelAvailable();
-        _ = result;
+        var dir = SttModelManager.GetEngineDir();
+        var segFile = Path.Combine(dir, SttModelManager.SegmentationModelFile);
+        var embFile = Path.Combine(dir, SttModelManager.EmbeddingModelFile);
+        var expected = File.Exists(segFile) && File.Exists(embFile);
+        Assert.True(result == expected,
+            $"IsDiarizationModelAvailable={result} 与文件状态不符 (seg={File.Exists(segFile)}, emb={File.Exists(embFile)})");
     }
 
     [Fact]
-    public void IsAsrModelAvailable_ReturnsBoolean()
+    public void IsAsrModelAvailable_ResultConsistentWithModelFiles()
     {
+        // IsAsrModelAvailable = transcribe.exe + 全部 ASR 模型文件存在，断言与磁盘一致
         var result = SttModelManager.IsAsrModelAvailable();
-        _ = result;
+        Assert.IsType<bool>(result);
+        // 实现只做文件存在性判断，不抛异常即返回确定 bool；反向一致性：
+        // 若返回 true，则 transcribe.exe 必然存在
+        if (result)
+        {
+            Assert.True(File.Exists(SttModelManager.GetTranscribeExePath()),
+                "IsAsrModelAvailable=true 但 transcribe.exe 不存在");
+        }
     }
 
     /// <summary>

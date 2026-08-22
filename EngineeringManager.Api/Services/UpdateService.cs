@@ -229,7 +229,7 @@ public class UpdateService
                             Console.Error.WriteLine("[Update] SHA256 校验失败，删除 .part");
                             TryDeleteFile(partPath);
                             progress.Phase = "error";
-                            progress.Error = "SHA256 校验失败：文件可能损坏或被篡改";
+                            progress.Error = "安装包缺少 SHA256 校验值，已拒绝应用（请检查更新源 manifest）";
                             return;
                         }
 
@@ -471,7 +471,8 @@ public class UpdateService
     /// <summary>对 .part 文件做全量 SHA256 校验</summary>
     internal static async Task<bool> VerifySha256Async(string partPath, string expectedHash)
     {
-        if (string.IsNullOrWhiteSpace(expectedHash)) return true;
+        // manifest 省略 sha256 时视为校验失败——无完整性校验的 EXE 禁止落地执行
+        if (string.IsNullOrWhiteSpace(expectedHash)) return false;
 
         await using var stream = File.OpenRead(partPath);
         using var sha = SHA256.Create();
