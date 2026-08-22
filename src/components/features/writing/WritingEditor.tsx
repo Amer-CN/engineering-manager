@@ -11,6 +11,7 @@ import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import Image from "@tiptap/extension-image";
 import Highlight from "@tiptap/extension-highlight";
+import { ProtectedSpan } from "./protectedSpan";
 import { TextStyle, Color } from "@tiptap/extension-text-style";
 import { Icon } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/Button";
@@ -76,6 +77,7 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
       TextStyle,
       Color,
       Highlight,
+      ProtectedSpan,
       Table.configure({ resizable: true }),
       TableRow,
       TableHeader,
@@ -130,7 +132,9 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
       if (res.success && res.data) {
         setDoc(res.data);
         setTitle(res.data.title);
-        editor?.commands.setContent(res.data.contentMd || "");
+        // contentType: "markdown" 由 @tiptap/markdown 注入（core 的 SetContentOptions 类型未声明，需 as never），
+        // 不传则按 HTML 解析，[[...]] / **...** 等 markdown 语法会变成字面文本
+        editor?.commands.setContent(res.data.contentMd || "", { contentType: "markdown" } as never);
         // W3：若存在匹配本文档的起草素材（语音页「生成会议纪要」预填），自动打开起草面板
         try {
           const raw = sessionStorage.getItem("writing:draftMaterial");
@@ -308,7 +312,7 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
           autoStart={!!draftMaterial}
           title={title}
           onGenerated={(content) => {
-            editor?.commands.setContent(content);
+            editor?.commands.setContent(content, { contentType: "markdown" } as never);
             setDraftOpen(false);
             void saveDoc();
           }}
