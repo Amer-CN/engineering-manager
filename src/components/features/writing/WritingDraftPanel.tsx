@@ -17,6 +17,20 @@ interface WritingDraftPanelProps {
   onClose: () => void;
 }
 
+/** R4 风格轮换：取与当前 docId 匹配的 sessionStorage 风格标注（用后即删，防重复插） */
+const consumeStyleLabel = (docId: number): string | null => {
+  try {
+    const raw = sessionStorage.getItem("writing:styleLabel");
+    if (!raw) return null;
+    const entry = JSON.parse(raw) as { styleLabel?: string; docId?: number };
+    if (entry.docId !== docId) return null;
+    sessionStorage.removeItem("writing:styleLabel");
+    return entry.styleLabel ?? null;
+  } catch {
+    return null;
+  }
+};
+
 const STYLES = [
   { id: "S6", name: "简洁", desc: "要点直给" },
   { id: "S3", name: "标准", desc: "成果清单式" },
@@ -53,6 +67,13 @@ const WritingDraftPanel: React.FC<WritingDraftPanelProps> = ({ docId, docType, s
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoStart]);
 
+  // R4 风格轮换：有本文档的标注时，生成文本开头拼「本周风格」blockquote 并 toast 提示
+  const emitGenerated = (content: string) => {
+    const label = consumeStyleLabel(docId);
+    if (label) showToast(`本周风格：${label}`, "success");
+    onGenerated(label ? `> 本周风格：${label}\n\n${content}` : content);
+  };
+
   const handleGenerate = () => {
     if (!selDocType) {
       showToast("请选择文体", "error");
@@ -77,7 +98,7 @@ const WritingDraftPanel: React.FC<WritingDraftPanelProps> = ({ docId, docType, s
           setStreamText((prev) => prev + e.text);
         } else if (e.type === "done") {
           setGenerating(false);
-          onGenerated(e.content);
+          emitGenerated(e.content);
         } else if (e.type === "error") {
           setGenerating(false);
           showToast(e.error || "生成失败", "error");
@@ -93,7 +114,7 @@ const WritingDraftPanel: React.FC<WritingDraftPanelProps> = ({ docId, docType, s
   };
 
   const handleApply = () => {
-    if (streamText.trim()) onGenerated(streamText);
+    if (streamText.trim()) emitGenerated(streamText);
     else showToast("还没有生成内容", "error");
   };
 

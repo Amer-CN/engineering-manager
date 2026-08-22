@@ -12,6 +12,7 @@ namespace EngineeringManager.Api;
 ///
 /// - GET    /api/writing/doc-types           文体/风格可选项（单源真值）
 /// - GET    /api/writing/documents         文档列表（软删过滤 + 归属隔离）
+/// - GET    /api/writing/next-style        风格轮换（上次风格 +1 回绕，周报类记忆）
 /// - POST   /api/writing/documents         新建文档
 /// - GET    /api/writing/documents/{id}    文档详情
 /// - PUT    /api/writing/documents/{id}    保存编辑
@@ -142,6 +143,52 @@ public static class WritingEndpoints
             catch (Exception ex)
             {
                 return Common.ServerError("写作中心文档列表", ex);
+            }
+        });
+
+        // ─────────────────────────────────────────────────────────
+        // GET /api/writing/next-style?docType=xxx — 风格轮换（R4）
+        // 语义：本人 + 该文体 + 有 style_id + 未软删的最新一篇为「上次」，
+        // 返回 Styles 顺序数组的下一个（末尾回绕 S1）；无历史 / 历史 style_id
+        // 非法返回 S1。admin 也只轮换自己的（「我的周报节奏」语义）。
+        // ─────────────────────────────────────────────────────────
+        app.MapGet("/api/writing/next-style", (
+            HttpContext ctx,
+            IDbConnection db,
+            WritingSkillService skill,
+            string? docType = null) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            if (!CurrentUser.HasPermission(ctx, db, "writing:read"))
+                return Results.Json(new { success = false, error = "无权限：需要 writing:read" }, statusCode: 403);
+            try
+            {
+                if (string.IsNullOrWhiteSpace(docType) || !skill.TryGetDocType(docType, out _))
+                    return Common.Fail("未知文体类型");
+
+                var lastStyleId = db.ExecuteScalar<string?>(@"
+                    SELECT style_id FROM [writing_documents]
+                    WHERE doc_type = @DocType AND created_by = @Uid
+                      AND style_id IS NOT NULL AND deleted_at IS NULL
+                    ORDER BY created_at DESC LIMIT 1",
+                    new { DocType = docType.Trim(), Uid = uid });
+
+                var styles = skill.GetStyles();
+                var idx = lastStyleId is null
+                    ? -1
+                    : styles.Select((s, i) => new { s.Id, i })
+                        .FirstOrDefault(x => string.Equals(x.Id, lastStyleId, StringComparison.OrdinalIgnoreCase))?.i ?? -1;
+                var next = idx >= 0 ? styles[(idx + 1) % styles.Count] : styles[0];
+
+                return Results.Ok(new
+                {
+                    success = true,
+                    data = new { styleId = next.Id, styleName = next.Name, lastStyleId },
+                });
+            }
+            catch (Exception ex)
+            {
+                return Common.ServerError("写作中心风格轮换", ex);
             }
         });
 
