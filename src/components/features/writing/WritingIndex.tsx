@@ -12,13 +12,19 @@ import { useToast } from "@/hooks/useToast";
 import { useWritingPrefill, type WritingPrefill } from "@/hooks/useWritingPrefill";
 import WritingEditor from "./WritingEditor";
 import WritingWizard from "./WritingWizard";
+import WritingFolderFilter from "./WritingFolderFilter";
 import {
   fetchWritingDocs,
   fetchWritingDocTypes,
+  fetchWritingFolders,
   createWritingDoc,
+  createWritingFolder,
   deleteWritingDoc,
+  moveWritingDoc,
   type WritingDoc,
+  type WritingFolder,
 } from "@/services/writing-client";
+import { DropdownMenu } from "@/components/ui/DropdownMenu";
 
 interface DocTypeOption {
   code: string;
@@ -49,6 +55,8 @@ const WritingIndex: React.FC = () => {
   const [size] = useState(10);
   const [docType, setDocType] = useState("");
   const [options, setOptions] = useState<DocTypeOption[]>([]);
+  const [folders, setFolders] = useState<WritingFolder[]>([]);
+  const [folderFilter, setFolderFilter] = useState<string>(""); // ""=全部, "0"=未分组, "N"=文件夹 id
   const [loading, setLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<WritingDoc | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -56,18 +64,17 @@ const WritingIndex: React.FC = () => {
 
   const loadDocs = useCallback(() => {
     setLoading(true);
-    void fetchWritingDocs({ docType: docType || undefined, page, size }).then(
-      (res) => {
-        setLoading(false);
-        if (res.success && res.data) {
-          setDocs(res.data.items || []);
-          setTotal(res.data.total || 0);
-        } else {
-          showToast(res.error || "获取失败", "error");
-        }
-      },
-    );
-  }, [docType, page, size, showToast]);
+    const folderId = folderFilter === "" ? undefined : Number(folderFilter);
+    void fetchWritingDocs({ docType: docType || undefined, folderId, page, size }).then((res) => {
+      setLoading(false);
+      if (res.success && res.data) {
+        setDocs(res.data.items || []);
+        setTotal(res.data.total || 0);
+      } else {
+        showToast(res.error || "获取失败", "error");
+      }
+    });
+  }, [docType, folderFilter, page, size, showToast]);
 
   useEffect(() => {
     loadDocs();
@@ -80,15 +87,49 @@ const WritingIndex: React.FC = () => {
     });
   }, []);
 
+  // R3：文件夹列表
+  const loadFolders = useCallback(() => {
+    void fetchWritingFolders().then((res) => {
+      if (res.success && res.data) setFolders(res.data);
+    });
+  }, []);
+  useEffect(() => {
+    loadFolders();
+  }, [loadFolders]);
+
+  // R3：新建文件夹（window.prompt 简单实现）
+  const handleCreateFolder = () => {
+    const name = window.prompt("新建文件夹名称：");
+    if (!name || !name.trim()) return;
+    void createWritingFolder(name.trim()).then((res) => {
+      if (res.success) {
+        showToast("文件夹已创建", "success");
+        loadFolders();
+      } else {
+        showToast(res.error || "创建失败", "error");
+      }
+    });
+  };
+
+  // R3：移入/移出文件夹
+  const handleMoveDoc = (doc: WritingDoc, folderId: number | null) => {
+    void moveWritingDoc(doc.id, folderId).then((res) => {
+      if (res.success) {
+        showToast(folderId == null ? "已移出文件夹" : "已移入文件夹", "success");
+        loadDocs();
+      } else {
+        showToast(res.error || "移动失败", "error");
+      }
+    });
+  };
+
   const handleCreate = () => {
     if (!can("writing:create")) {
       showToast("无权限", "error");
       return;
     }
     setWizardOpen(true);
-  };
-
-  // R1 向导：AI 起草 → 建文档 → 进编辑器自动开起草面板（素材/风格已定）
+  };  // R1 向导：AI 起草 → 建文档 → 进编辑器自动开起草面板（素材/风格已定）
   const handleWizardDraft = (opts: { title: string; docType: string; styleId: string; material: string }) => {
     void createWritingDoc({
       title: opts.title,
@@ -206,11 +247,21 @@ const WritingIndex: React.FC = () => {
             >
               <option value="">全部文体</option>
               {options.map((t) => (
-                <option key={t.code} value={t.code}>
-                  {t.group} / {t.label}
-                </option>
+                <option key={t.code} value={t.code}>{t.group} / {t.label}</option>
               ))}
             </select>
+
+            {/* R3：文件夹筛选（0=未分组）+ 新建文件夹入口 */}
+            <WritingFolderFilter
+              folders={folders}
+              value={folderFilter}
+              onChange={(v) => {
+                setFolderFilter(v);
+                setPage(1);
+              }}
+              onCreate={handleCreateFolder}
+              canCreate={can("writing:create")}
+            />
 
             {can("writing:create") && (
               <Button onClick={handleCreate}>
@@ -236,36 +287,71 @@ const WritingIndex: React.FC = () => {
                 }
               />
             ) : (
-              docs.map((d) => (
-                <div
-                  key={d.id}
-                  className="flex items-center justify-between px-5 py-4 border-b cursor-pointer hover:bg-[color:var(--panel-2)]"
-                  style={{ borderColor: "var(--border)" }}
-                  onClick={() => setEditingId(d.id)}
-                >
-                  <div>
-                    <div className="text-sm font-medium" style={{ color: "var(--fg)" }}>
-                      {d.title}
+              docs.map((d) => {
+                const folderName = folders.find((f) => f.id === d.folderId)?.name;
+                return (
+                  <div
+                    key={d.id}
+                    className="flex items-center justify-between px-5 py-4 border-b cursor-pointer hover:bg-[color:var(--panel-2)]"
+                    style={{ borderColor: "var(--border)" }}
+                    onClick={() => setEditingId(d.id)}
+                  >
+                    <div>
+                      <div className="text-sm font-medium" style={{ color: "var(--fg)" }}>
+                        {d.title}
+                      </div>
+                      <div className="text-xs" style={{ color: "var(--muted)" }}>
+                        {d.docType} · {formatTime(d.updatedAt)}
+                        {folderName && ` · ${folderName}`}
+                      </div>
                     </div>
-                    <div className="text-xs" style={{ color: "var(--muted)" }}>
-                      {d.docType} · {formatTime(d.updatedAt)}
+                    {/* 容器拦住冒泡：点击「移入/删除」不触发行点击进编辑器；
+                        DropdownMenu 的开关 toggle div 在本容器内层，先于此拦截收到冒泡，菜单可正常打开 */}
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      {/* R3：移入/移出文件夹 */}
+                      {can("writing:update") && folders.length > 0 && (
+                        <DropdownMenu
+                          align="end"
+                          trigger={
+                            <Button variant="ghost" size="sm">
+                              <Icon name="FolderOpen" size={15} />
+                              移入
+                            </Button>
+                          }
+                          items={[
+                            ...folders.map((f) => ({
+                              key: `f-${f.id}`,
+                              label: f.name,
+                              disabled: d.folderId === f.id,
+                              onClick: () => handleMoveDoc(d, f.id),
+                            })),
+                            {
+                              key: "move-out",
+                              label: "移出文件夹",
+                              divider: true,
+                              disabled: d.folderId == null,
+                              onClick: () => handleMoveDoc(d, null),
+                            },
+                          ]}
+                        />
+                      )}
+                      {can("writing:delete") && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteTarget(d);
+                          }}
+                        >
+                          <Icon name="Trash2" size={15} />
+                          删除
+                        </Button>
+                      )}
                     </div>
                   </div>
-                  {can("writing:delete") && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteTarget(d);
-                      }}
-                    >
-                      <Icon name="Trash2" size={15} />
-                      删除
-                    </Button>
-                  )}
-                </div>
-              ))
+                );
+              })
             )}
           </div>
           {/* 底部固定分页条：total 换算为总页数（Pagination.total 语义是页数不是条数） */}

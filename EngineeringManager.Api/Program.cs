@@ -460,6 +460,8 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
         // v0.92 写作中心
         app.RegisterWritingEndpoints();
+        // R3 写作中心文件夹
+        app.RegisterWritingFolderEndpoints();
 
         // v1.4.0 报告生成
         app.RegisterReportEndpoints();
