@@ -76,14 +76,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <Mail className="w-4 h-4 text-zinc-500" />
             </button>
 
-            <button className="px-4 py-2 rounded-2xl bg-[color:var(--gc-active,#10b981)] hover:bg-[color:var(--gc-active-deep,#059669)] text-white text-xs font-semibold shadow-lg shadow-black/25 flex items-center gap-1.5 transition-all">
+            <button className="px-4 py-2 rounded-2xl bg-[color:var(--gc-active,#10b981)] hover:bg-[color:var(--gc-active-deep,#059669)] text-[color:var(--gc-active-ink,#fff)] text-xs font-semibold shadow-lg shadow-black/25 flex items-center gap-1.5 transition-all">
               <Plus className="w-4 h-4" />
               <span>新增任务</span>
             </button>
             {onBackToAmbient && (
               <button
                 onClick={onBackToAmbient}
-                className="px-4 py-2 rounded-2xl bg-[color:var(--gc-active,#10b981)] hover:bg-[color:var(--gc-active-deep,#059669)] text-white text-xs font-semibold shadow-lg shadow-black/25 flex items-center gap-1.5 transition-all"
+                className="px-4 py-2 rounded-2xl bg-[color:var(--gc-active,#10b981)] hover:bg-[color:var(--gc-active-deep,#059669)] text-[color:var(--gc-active-ink,#fff)] text-xs font-semibold shadow-lg shadow-black/25 flex items-center gap-1.5 transition-all"
               >
                 返回 3D 沉浸视角
               </button>
@@ -158,13 +158,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div className="flex items-center gap-3">
                 <h2 className="text-base font-bold">任务看板 (3D 文件夹归档)</h2>
                 <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl text-xs font-medium">
-                  <button onClick={() => setActiveTab('all')} className={`px-3 py-1 rounded-lg transition-all ${activeTab === 'all' ? 'bg-white dark:bg-zinc-700 shadow-xs font-semibold' : 'text-zinc-500'}`}>
+                  <button onClick={() => setActiveTab('all')} className={`px-3 py-1 rounded-lg transition-all ${activeTab === 'all' ? 'bg-white dark:bg-zinc-700 shadow-xs font-semibold text-zinc-800' : 'text-zinc-500'}`}>
                     全部任务
                   </button>
-                  <button onClick={() => setActiveTab('mine')} className={`px-3 py-1 rounded-lg transition-all ${activeTab === 'mine' ? 'bg-white dark:bg-zinc-700 shadow-xs font-semibold' : 'text-zinc-500'}`}>
+                  <button onClick={() => setActiveTab('mine')} className={`px-3 py-1 rounded-lg transition-all ${activeTab === 'mine' ? 'bg-white dark:bg-zinc-700 shadow-xs font-semibold text-zinc-800' : 'text-zinc-500'}`}>
                     我负责的
                   </button>
-                  <button onClick={() => setActiveTab('joined')} className={`px-3 py-1 rounded-lg transition-all ${activeTab === 'joined' ? 'bg-white dark:bg-zinc-700 shadow-xs font-semibold' : 'text-zinc-500'}`}>
+                  <button onClick={() => setActiveTab('joined')} className={`px-3 py-1 rounded-lg transition-all ${activeTab === 'joined' ? 'bg-white dark:bg-zinc-700 shadow-xs font-semibold text-zinc-800' : 'text-zinc-500'}`}>
                     我参与的
                   </button>
                 </div>
@@ -300,7 +300,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           <button
             onClick={onOpenFolderDetail}
-            className="w-full py-2 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-xs font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
+            className="w-full py-2 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-800 text-xs font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
           >
             查看建议详情与完整文档
           </button>
@@ -310,7 +310,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
           <button
             onClick={onOpenFolderDetail}
-            className="w-full py-2.5 rounded-2xl bg-[color:var(--gc-active,#10b981)] hover:bg-[color:var(--gc-active-deep,#059669)] text-white font-semibold text-xs shadow-md shadow-black/20 transition-all"
+            className="w-full py-2.5 rounded-2xl bg-[color:var(--gc-active,#10b981)] hover:bg-[color:var(--gc-active-deep,#059669)] text-[color:var(--gc-active-ink,#fff)] font-semibold text-xs shadow-md shadow-black/20 transition-all"
           >
             编辑任务与文件夹文件
           </button>
