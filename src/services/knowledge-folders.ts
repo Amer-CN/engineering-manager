@@ -11,7 +11,7 @@
  *   PUT    /api/knowledge/documents/{id}     — 文档归入/移出文件夹（白名单只收 folderId）
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? ''
+const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:5048'
 const TOKEN_KEY = 'jwt_token'
 
 function getToken(): string | null {
@@ -45,6 +45,8 @@ export interface KnowledgeFolder {
   updatedAt: string
   createdBy: string
   docCount: number
+  /** 文档级最近活动（MAX(updated_at)）；空文件夹为 null */
+  lastActivityAt?: string | null
 }
 
 export interface KnowledgeFolderDocument {
