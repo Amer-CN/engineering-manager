@@ -147,9 +147,12 @@ public static class ProjectEndpoints
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             // v0.75.0: 后端响应层不再 mask
-            return Common.Ok(db.Query(@"SELECT pm.*, m.name as member_name, m.role as member_role, m.member_type, m.phone
+            // 安全表 #4: 数据范围过滤——仅本人创建或已授权项目内可见（admin 由 filter 内部处理为全可见）
+            var scope = CurrentUser.GetDataScope(ctx);
+            return Common.Ok(db.Query($@"SELECT pm.*, m.name as member_name, m.role as member_role, m.member_type, m.phone
                           FROM project_members pm LEFT JOIN members m ON pm.member_id=m.id
-                          WHERE pm.project_id=@ProjectId ORDER BY pm.joined_at DESC", new { ProjectId = projectId }));
+                          WHERE pm.project_id=@ProjectId AND {CurrentUser.UserFilterWithAuthorizedProjects(scope, "pm.project_id")}
+                          ORDER BY pm.joined_at DESC", new { ProjectId = projectId, Uid = uid }));
         });
 
         app.MapPost("/api/project-members", async (HttpContext ctx, ProjectMemberDto dto, IDbConnection db) =>

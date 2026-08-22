@@ -19,6 +19,33 @@ export function usePartnerActions({ partners, supervisors, projects, loadData, r
   const { confirm } = useConfirm()
   const { can } = usePermission()
 
+  // 安全表 #3 豁免: GET /api/partners 列表已按角色 PII mask（如 138****1234），
+  // 编辑表单回填掩码值后直接提交会把掩码存库。提交前检测含 '*' 的 PII 字段，
+  // 用原记录值替换（掩码 = 用户未改动该字段）。
+  // 注: PUT /api/partners 为全字段 UPDATE，不能剔除字段（Dapper 缺参），只能回填原值。
+  const PARTNER_PII_FIELDS = ['phone', 'bankAccount', 'taxNumber', 'creditCode'] as const
+  const unmaskPartnerPii = (processed: Record<string, any>, editing: Partner | null) => {
+    if (!editing) return processed
+    const restored = { ...processed }
+    for (const field of PARTNER_PII_FIELDS) {
+      if (typeof restored[field] === 'string' && restored[field].includes('*')) {
+        ;(restored as any)[field] = (editing as any)[field] ?? ''
+      }
+    }
+    return restored
+  }
+  const SUPERVISOR_PII_FIELDS = ['phone'] as const
+  const unmaskSupervisorPii = (processed: Record<string, any>, editing: Supervisor | null) => {
+    if (!editing) return processed
+    const restored = { ...processed }
+    for (const field of SUPERVISOR_PII_FIELDS) {
+      if (typeof restored[field] === 'string' && restored[field].includes('*')) {
+        ;(restored as any)[field] = (editing as any)[field] ?? ''
+      }
+    }
+    return restored
+  }
+
   const handlePartnerSubmit = async (formData: any, editingPartner: Partner | null) => {
     // G2 B6: 单位新增/编辑 → partners:create / partners:update
     const need = editingPartner ? 'partners:update' : 'partners:create'
@@ -29,12 +56,14 @@ export function usePartnerActions({ partners, supervisors, projects, loadData, r
     try {
       let processed = { ...formData }
 
+      // R6-P1: stringify 前先存数组副本用于项目名计算（原顺序 stringify 后 [0] 取到字符 '['）
+      const projectIdsArr: number[] = Array.isArray(processed.projectIds) ? processed.projectIds : []
       if (Array.isArray(processed.projectIds)) {
         processed.projectIds = JSON.stringify(processed.projectIds)
       }
 
-      const partnerProjectName = processed.projectIds?.length > 0
-        ? projects.find(p => p.id === processed.projectIds[0])?.name || null
+      const partnerProjectName = projectIdsArr.length > 0
+        ? projects.find(p => p.id === projectIdsArr[0])?.name || null
         : null
 
       if (processed.licenseFile && processed.licenseFile.startsWith('data:')) {
@@ -77,6 +106,8 @@ export function usePartnerActions({ partners, supervisors, projects, loadData, r
       }
 
       if (editingPartner) {
+        // 安全表 #3 豁免: 掩码字段回填原记录值（见 unmaskPartnerPii 注释）
+        processed = unmaskPartnerPii(processed, editingPartner) as any
         await (await getAPI()).updatePartner({ ...editingPartner, ...processed })
         logUpdate('partners', processed.name, editingPartner.id, { before: editingPartner, after: processed })
       } else {
@@ -102,29 +133,42 @@ export function usePartnerActions({ partners, supervisors, projects, loadData, r
     try {
       const partnerToDelete = partners.find(p => p.id === id)
 
-      if (partnerToDelete) {
-        const delProjName = partnerToDelete.projectIds?.length > 0
-          ? projects.find(p => p.id === partnerToDelete.projectIds[0])?.name || null
-          : null
-        await deleteUploadedFile(FILE_CATEGORIES.PARTNER_LICENSE.category, FILE_CATEGORIES.PARTNER_LICENSE.subCategory, partnerToDelete.licenseFile, delProjName)
-        if (partnerToDelete.otherFiles) {
-          const parts = partnerToDelete.otherFiles.split('|||')
-          for (const part of parts) {
-            if (part && !part.startsWith('data:')) {
-              await deleteUploadedFile(FILE_CATEGORIES.PARTNER_ATTACHMENT.category, FILE_CATEGORIES.PARTNER_ATTACHMENT.subCategory, part, delProjName)
-            }
-          }
-        }
-      }
-
+      // R6-P1: 先删记录成功后再清理附件文件（原顺序 deletePartner 失败时文件已删不可恢复）
       await (await getAPI()).deletePartner(id)
 
       logDelete('partners', partnerToDelete?.name || '合作单位', id)
 
+      if (partnerToDelete) {
+        // R6-P1: projectIds 运行时可能是 JSON 字符串（DB 存 stringify 结果），先 typeof 判断再取
+        let delIds: number[] = []
+        const rawIds: unknown = partnerToDelete.projectIds
+        if (Array.isArray(rawIds)) delIds = rawIds
+        else if (typeof rawIds === 'string' && rawIds) {
+          try { const parsed = JSON.parse(rawIds); if (Array.isArray(parsed)) delIds = parsed } catch { /* 忽略非法 JSON */ }
+        }
+        const delProjName = delIds.length > 0
+          ? projects.find(p => p.id === delIds[0])?.name || null
+          : null
+        try {
+          await deleteUploadedFile(FILE_CATEGORIES.PARTNER_LICENSE.category, FILE_CATEGORIES.PARTNER_LICENSE.subCategory, partnerToDelete.licenseFile, delProjName)
+          if (partnerToDelete.otherFiles) {
+            const parts = partnerToDelete.otherFiles.split('|||')
+            for (const part of parts) {
+              if (part && !part.startsWith('data:')) {
+                await deleteUploadedFile(FILE_CATEGORIES.PARTNER_ATTACHMENT.category, FILE_CATEGORIES.PARTNER_ATTACHMENT.subCategory, part, delProjName)
+              }
+            }
+          }
+        } catch (fileErr) {
+          console.error('附件清理失败:', fileErr) // 文件残留可接受，记录已删
+        }
+      }
+
       loadData()
       refresh?.()
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('删除失败:', error)
+      try { showToast((error instanceof Error ? error.message : '删除失败'), 'error') } catch (e) { console.warn('[Partners] showToast失败:', e) }
     }
   }
 
@@ -137,8 +181,10 @@ export function usePartnerActions({ partners, supervisors, projects, loadData, r
     }
     try {
       if (editingSupervisor) {
-        await (await getAPI()).updateSupervisor({ ...editingSupervisor, ...formData })
-        logUpdate('partners', formData.name, editingSupervisor.id, { before: editingSupervisor, after: formData })
+        // 安全表 #3 豁免: 掩码字段回填原记录值（见 unmaskSupervisorPii 注释）
+        const processed = unmaskSupervisorPii(formData, editingSupervisor)
+        await (await getAPI()).updateSupervisor({ ...editingSupervisor, ...processed })
+        logUpdate('partners', formData.name, editingSupervisor.id, { before: editingSupervisor, after: processed })
       } else {
         const result = await (await getAPI()).createSupervisor(formData)
         if (result.success && result.data) {

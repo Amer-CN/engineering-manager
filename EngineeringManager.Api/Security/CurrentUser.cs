@@ -80,9 +80,9 @@ public static class CurrentUser
     private static readonly IReadOnlyDictionary<PiiRole, HashSet<string>> PiiReadable =
         new Dictionary<PiiRole, HashSet<string>>
         {
-            [PiiRole.Admin]      = new(StringComparer.OrdinalIgnoreCase) { "id_card", "idCard", "phone", "bank_account", "bankAccount", "address", "id_card_address", "idCardAddress" },
-            [PiiRole.Accountant] = new(StringComparer.OrdinalIgnoreCase) { "id_card", "idCard", "phone", "bank_account", "bankAccount", "address", "id_card_address", "idCardAddress" },
-            [PiiRole.Manager]    = new(StringComparer.OrdinalIgnoreCase) { "id_card", "idCard", "phone", "bank_account", "bankAccount", "address", "id_card_address", "idCardAddress" },
+            [PiiRole.Admin]      = new(StringComparer.OrdinalIgnoreCase) { "id_card", "idCard", "phone", "bank_account", "bankAccount", "address", "id_card_address", "idCardAddress", "taxNumber", "creditCode" },
+            [PiiRole.Accountant] = new(StringComparer.OrdinalIgnoreCase) { "id_card", "idCard", "phone", "bank_account", "bankAccount", "address", "id_card_address", "idCardAddress", "taxNumber", "creditCode" },
+            [PiiRole.Manager]    = new(StringComparer.OrdinalIgnoreCase) { "id_card", "idCard", "phone", "bank_account", "bankAccount", "address", "id_card_address", "idCardAddress", "taxNumber", "creditCode" },
             [PiiRole.Worker]     = new(StringComparer.OrdinalIgnoreCase) { },
             [PiiRole.None]       = new(StringComparer.OrdinalIgnoreCase) { },
         };

@@ -4,6 +4,10 @@ interface HoverScrollbarProps {
   children: React.ReactNode
   className?: string
   threshold?: number
+  /** 滚动容器 ref 转发（外部需要 scrollTo / 读取滚动位置时用） */
+  scrollRef?: React.MutableRefObject<HTMLDivElement | null>
+  /** 滚动事件透传（外部检测"用户是否脱离底部"等场景） */
+  onScrollCapture?: React.UIEventHandler<HTMLDivElement>
 }
 
 /**
@@ -11,7 +15,7 @@ interface HoverScrollbarProps {
  * 完全自绘滚动条，不使用原生滚动条
  * 鼠标靠近时自动变大，支持拖拽和滚轮
  */
-export function HoverScrollbar({ children, className = '', threshold = 15 }: HoverScrollbarProps) {
+export function HoverScrollbar({ children, className = '', threshold = 15, scrollRef, onScrollCapture }: HoverScrollbarProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const thumbRef = useRef<HTMLDivElement>(null)
   const trackRef = useRef<HTMLDivElement>(null)
@@ -67,6 +71,21 @@ export function HoverScrollbar({ children, className = '', threshold = 15 }: Hov
     }
   }, [updateThumb])
 
+  // 滚轮滚动链阻断（非 passive 原生监听）：容器可滚时 preventDefault 阻断
+  // WebView2 把滚动传播给外层页面，并手动滚动本容器 —— 「滚轮只滚这里」。
+  // React 合成 onWheel 是 passive 的，preventDefault 无效，故用原生监听。
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const onWheel = (e: WheelEvent) => {
+      if (el.scrollHeight <= el.clientHeight) return // 不可滚：放行外层
+      e.preventDefault()
+      el.scrollTop += e.deltaY
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [])
+
   // 鼠标靠近检测 — 变大/变小
   useEffect(() => {
     const el = containerRef.current
@@ -104,7 +123,13 @@ export function HoverScrollbar({ children, className = '', threshold = 15 }: Hov
 
     const checkNear = (mouseX: number, mouseY: number) => {
       if (isDragging.current) return
-      const rect = el.getBoundingClientRect()
+      // 用 relative 外层做检测基准：track 画在外层右缘（absolute right:0），
+      // 若外层带 padding（如消息流 px-6），滚动内容容器的右缘会比 track 左移
+      // 一段 padding，用内容容器检测会出现「贴近滚动条不触发、隔 24px 才触发」
+      // 的错位——以外层为准，检测边界与 track 视觉位置始终一致
+      const outer = track.parentElement
+      if (!outer) return
+      const rect = outer.getBoundingClientRect()
       const distRight = rect.right - mouseX
       const inVertical = mouseY >= rect.top && mouseY <= rect.bottom
       const near = inVertical && distRight >= -5 && distRight <= threshold
@@ -208,18 +233,17 @@ export function HoverScrollbar({ children, className = '', threshold = 15 }: Hov
   }, [updateThumb])
 
   return (
-    <div className={`relative ${className}`}>
+    /* min-h-0：flex 上下文中允许压缩到内容高度以下（否则 flex-1 的本组件会被
+       内容撑爆、内部滚动容器跟着长高 → 滚动失效且撑破外层布局） */
+    <div className={`relative min-h-0 ${className}`}>
       <div
-        ref={containerRef}
-        className="h-full overflow-auto hide-native-scrollbar"
-        onWheel={(e) => {
-          // WebView2 兜底：容器可滚时吃掉滚轮事件并自己滚，绝不外传
-          //（防侧边栏滚轮带动整页）；滚到头时也不冒泡给页面
-          const el = e.currentTarget
-          if (el.scrollHeight > el.clientHeight) {
-            e.stopPropagation()
-          }
+        ref={(node) => {
+          // 同步内部 containerRef 与外部转发的 scrollRef
+          ;(containerRef as React.MutableRefObject<HTMLDivElement | null>).current = node
+          if (scrollRef) scrollRef.current = node
         }}
+        onScroll={onScrollCapture}
+        className="h-full overflow-auto hide-native-scrollbar"
       >
         {children}
       </div>
