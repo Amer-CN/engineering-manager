@@ -119,7 +119,10 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
             virtualIndexRef.current = targetIndexRef.current;
             targetIndexRef.current = null;
           } else {
-            const nextVal = virtualIndexRef.current + diff * 0.12;
+            // 帧率无关的指数衰减：0.12/帧 @60fps ⇔ 1-0.88^(dt·60)，
+            // 高刷屏（120/144Hz）吸附手感与 60Hz 完全一致
+            const step = (1 - Math.pow(0.88, delta * 60)) * diff;
+            const nextVal = virtualIndexRef.current + step;
             setVirtualIndex(nextVal);
             virtualIndexRef.current = nextVal;
           }
