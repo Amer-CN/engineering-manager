@@ -43,7 +43,9 @@ public class FakeLlmChatService : ILlmChatService
 
     public Task<ChatCompletionResponse?> ChatAsync(
         List<AgentMessage> messages,
-        List<object>? tools = null)
+        List<object>? tools = null,
+        string? model = null,
+        string? reasoningEffort = null)
     {
         // 深拷贝记录请求
         var recorded = new List<AgentMessage>(messages.Count);
@@ -112,7 +114,9 @@ public class FakeLlmChatService : ILlmChatService
 
     public async IAsyncEnumerable<string> ChatStreamAsync(
         List<AgentMessage> messages,
-        List<object>? tools = null)
+        List<object>? tools = null,
+        string? model = null,
+        string? reasoningEffort = null)
     {
         // 记录请求
         _recordedRequests.Add(new List<AgentMessage>(messages));

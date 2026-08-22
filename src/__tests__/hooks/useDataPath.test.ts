@@ -1,5 +1,10 @@
 import { renderHook, act, cleanup, waitFor } from '@testing-library/react'
 
+// R8-P1: useDataPath 入口新增 settings:update 权限门，测试环境默认放行
+vi.mock('../../hooks/usePermission', () => ({
+  usePermission: () => ({ can: () => true }),
+}))
+
 afterEach(cleanup)
 
 describe('useDataPath', () => {

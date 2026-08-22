@@ -555,10 +555,9 @@ public class M2FourthRoundTests : IDisposable
     // ═══════════════════════════════════════════════════════════
 
     [Fact]
-    public async Task WritePermission_UnauthorizedUser_DbNotModified()
+    public void CanAccess_Project_ReturnsFalse_ForUnauthorizedUser()
     {
         var conn = CreateConn();
-        var svc = new KnowledgeBaseService(conn, new FakeEmbeddingService());
 
         // user1 创建 project A
         conn.Execute("INSERT INTO projects (id, name, created_by, created_at) VALUES (1, '项目A', 'user1', '2026-01-01 00:00:00')");
@@ -567,32 +566,9 @@ public class M2FourthRoundTests : IDisposable
         var canAccess = KnowledgeBaseService.CanAccessProject(conn, 1, "user2", isAdmin: false);
         Assert.False(canAccess);
 
-        // 验证: 如果 CanAccessProject 返回 false，端点层应返回 403，不调用 IngestAsync
-        // 模拟端点逻辑: 先检查权限，无权则不入库
-        var docsBefore = conn.ExecuteScalar<int>("SELECT COUNT(*) FROM knowledge_documents");
-        var chunksBefore = conn.ExecuteScalar<int>("SELECT COUNT(*) FROM knowledge_chunks");
-        var ftsBefore = conn.ExecuteScalar<int>("SELECT COUNT(*) FROM knowledge_fts");
-
-        // 模拟: 端点检查权限后拒绝，不执行 IngestAsync
-        if (!canAccess)
-        {
-            // 端点返回 403，不入库
-        }
-        else
-        {
-            await svc.IngestAsync("无权文本", "无权标题", "call", "unauthorized-test", 1, "user2");
-        }
-
-        // 验证: 数据库未新增
-        var docsAfter = conn.ExecuteScalar<int>("SELECT COUNT(*) FROM knowledge_documents");
-        var chunksAfter = conn.ExecuteScalar<int>("SELECT COUNT(*) FROM knowledge_chunks");
-        var ftsAfter = conn.ExecuteScalar<int>("SELECT COUNT(*) FROM knowledge_fts");
-
-        Assert.Equal(docsBefore, docsAfter);
-        Assert.Equal(chunksBefore, chunksAfter);
-        Assert.Equal(ftsBefore, ftsAfter);
-
-        Console.WriteLine($"[Test] 无权用户写入被拒: docs={docsAfter}(期望{docsBefore}), chunks={chunksAfter}(期望{chunksBefore}), fts={ftsAfter}(期望{ftsBefore})");
+        // user1（创建者）与 admin 有权（对照，确保 false 不是实现恒假）
+        Assert.True(KnowledgeBaseService.CanAccessProject(conn, 1, "user1", isAdmin: false));
+        Assert.True(KnowledgeBaseService.CanAccessProject(conn, 1, "user2", isAdmin: true));
     }
 
     [Fact]

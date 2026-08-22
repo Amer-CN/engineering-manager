@@ -50,7 +50,7 @@ const HRDashboard: React.FC = () => {
         const getEntryDate = (m: Member) => m.entryDate || (m.createdAt ? m.createdAt.split('T')[0] : null)
         const newThisMonth = staff.filter((m: Member) => (getEntryDate(m) || '').startsWith(thisMonth)).length
         const activeStaff = staff.filter((m: Member) => m.status !== 'left')
-        const leftThisMonth = staff.filter((m: Member) => m.status === 'left').length
+        const leftThisMonth = staff.filter((m: Member) => m.status === 'left' && (m.leaveDate || '').startsWith(thisMonth)).length
 
         // Actual payroll from wage records
         const monthlyPayroll = wages.reduce((sum: number, w: WageRecord) => { const r = w as WageRecord & Record<string, unknown>; return sum + (((r.netSalary as number) || 0) + (w.bonus || 0) - (w.deduction || 0)) }, 0)

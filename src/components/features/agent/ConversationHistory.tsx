@@ -1,5 +1,5 @@
-/** ConversationHistory — 对话历史（右栏常驻/抽屉 + 搜索 + 重命名 + 归档/取消归档 + 删除/恢复） */
-
+/** ConversationHistory — 对话历史（右栏常驻/抽屉 + 搜索 + 重命名 + 归档/取消归档 + 删除/恢复 + 置顶 + 批量管理）
+ *  分组纯逻辑在 conversationGrouping.ts（CI 行数门禁拆分） */
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Icon } from '@/components/ui/Icon'
@@ -16,7 +16,11 @@ import {
   restoreConversation,
 } from '@/services/agent-client'
 import type { AgentConversation } from '@/types/agent'
-import { ConversationHistoryItem, CollapsibleSection } from './ConversationHistoryItem'
+import { getPinnedConversationIds, setPinnedConversationIds } from '@/utils/conversationPins'
+import { buildConversationGroups, isArchived } from './conversationGrouping'
+import { ConversationHistoryItem } from './ConversationHistoryItem'
+import ConversationListBody from './ConversationListBody'
+import BatchActionBar from './BatchActionBar'
 import type { ItemVariant } from './ConversationHistoryItem'
 
 interface ConversationHistoryProps {
@@ -31,27 +35,6 @@ interface ConversationHistoryProps {
   refreshTrigger?: number
 }
 
-type GroupKey = 'today' | 'yesterday' | 'earlier'
-
-function getGroupKey(iso: string): GroupKey {
-  try {
-    const d = new Date(iso)
-    const now = new Date()
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    const yesterday = new Date(today.getTime() - 86400000)
-    if (d >= today) return 'today'
-    if (d >= yesterday) return 'yesterday'
-    return 'earlier'
-  } catch {
-    return 'earlier'
-  }
-}
-
-const GROUP_LABELS: Record<GroupKey, string> = { today: '今天', yesterday: '昨天', earlier: '更早' }
-const GROUP_ORDER: GroupKey[] = ['today', 'yesterday', 'earlier']
-
-const isArchived = (c: AgentConversation): boolean => !!c.archivedAt
-
 const ConversationHistory: React.FC<ConversationHistoryProps> = ({
   currentConversationId, onSelectConversation, onNewConversation, onCurrentConversationDeleted,
   open = false, onClose, inline = false, refreshTrigger = 0,
@@ -62,11 +45,15 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
   const [loadError, setLoadError] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<AgentConversation | null>(null)
+  const [batchDeleteTargets, setBatchDeleteTargets] = useState<AgentConversation[] | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [renamingId, setRenamingId] = useState<number | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [archivedOpen, setArchivedOpen] = useState(false)
   const [deletedOpen, setDeletedOpen] = useState(false)
+  const [batchMode, setBatchMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [pinnedIds, setPinnedIds] = useState<number[]>(() => getPinnedConversationIds())
   const committingRef = useRef(false)
   const cancelRenameRef = useRef(false)
   const showToast = useToastStore(s => s.showToast)
@@ -90,28 +77,30 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
 
   // ── 删除（软删除）：从进行中/已归档移除，乐观放入「最近删除」 ──
   const handleDelete = useCallback(async () => {
-    if (!deleteTarget) return
+    const targets = batchDeleteTargets ?? (deleteTarget ? [deleteTarget] : [])
+    if (targets.length === 0) return
     setDeleting(true)
-    const target = deleteTarget
-    setConversations(prev => prev.filter(c => c.id !== target.id))
+    const ids = new Set(targets.map(t => t.id))
+    setConversations(prev => prev.filter(c => !ids.has(c.id)))
     try {
-      const ok = await deleteAgentConversation(target.id)
-      if (ok) {
-        setDeletedConversations(prev => [
-          { ...target, deletedAt: new Date().toISOString() }, ...prev,
-        ])
-        showToast('对话已删除', 'success')
-        // 删除的正是当前打开的会话 → 重置会话流，避免继续发送写入已删除会话（黑洞）
-        if (currentConversationId === target.id) onCurrentConversationDeleted?.()
-      } else {
-        setConversations(prev => [...prev, target])
-        showToast('删除失败', 'error')
-      }
+      await Promise.all(targets.map(t => deleteAgentConversation(t.id)))
+      setDeletedConversations(prev => [
+        ...targets.map(t => ({ ...t, deletedAt: new Date().toISOString() })),
+        ...prev,
+      ])
+      showToast(`已删除 ${targets.length} 个对话`, 'success')
+      // 删除的正是当前打开的会话 → 重置会话流，避免继续发送写入已删除会话（黑洞）
+      if (currentConversationId != null && ids.has(currentConversationId)) onCurrentConversationDeleted?.()
     } catch {
-      setConversations(prev => [...prev, target])
+      setConversations(prev => [...prev, ...targets])
       showToast('删除失败', 'error')
-    } finally { setDeleting(false); setDeleteTarget(null) }
-  }, [deleteTarget, showToast, currentConversationId, onCurrentConversationDeleted])
+    } finally {
+      setDeleting(false)
+      setDeleteTarget(null)
+      setBatchDeleteTargets(null)
+      setSelectedIds(new Set())
+    }
+  }, [deleteTarget, batchDeleteTargets, showToast, currentConversationId, onCurrentConversationDeleted])
 
   // ── 归档 ──
   const handleArchive = useCallback(async (conv: AgentConversation) => {
@@ -168,6 +157,15 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
     }
   }, [showToast])
 
+  // ── 置顶/取消置顶（localStorage 持久化） ──
+  const handleTogglePin = useCallback((conv: AgentConversation) => {
+    setPinnedIds(prev => {
+      const next = prev.includes(conv.id) ? prev.filter(id => id !== conv.id) : [...prev, conv.id]
+      setPinnedConversationIds(next)
+      return next
+    })
+  }, [])
+
   const startRename = useCallback((conv: { id: number; title: string }) => {
     cancelRenameRef.current = false
     setRenamingId(conv.id); setRenameValue(conv.title)
@@ -204,28 +202,53 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
     return (c.title || '').toLowerCase().includes(q) || (c.lastMessage || '').toLowerCase().includes(q)
   }, [searchQuery])
 
-  // 进行中（未归档）按日期分组
-  const groupedOngoing = useMemo(() => {
-    const ongoing = conversations.filter(c => !isArchived(c) && matchesQuery(c))
-    const map = new Map<GroupKey, AgentConversation[]>()
-    for (const conv of ongoing) {
-      const key = getGroupKey(conv.updatedAt)
-      if (!map.has(key)) map.set(key, [])
-      map.get(key)!.push(conv)
-    }
-    return GROUP_ORDER.filter(k => map.has(k)).map(k => ({ key: k, label: GROUP_LABELS[k], items: map.get(k)! }))
-  }, [conversations, matchesQuery])
+  const pinnedSet = useMemo(() => new Set(pinnedIds), [pinnedIds])
 
-  const archivedItems = useMemo(
-    () => conversations.filter(c => isArchived(c) && matchesQuery(c)),
-    [conversations, matchesQuery])
+  // 四组数据（置顶 / 进行中按日期分档 / 已归档 / 最近删除）——纯逻辑在 conversationGrouping.ts
+  const { pinnedItems, groupedOngoing, archivedItems, deletedItems, isAllEmpty } = useMemo(
+    () => buildConversationGroups(conversations, deletedConversations, pinnedSet, matchesQuery),
+    [conversations, deletedConversations, pinnedSet, matchesQuery],
+  )
 
-  const deletedItems = useMemo(
-    () => deletedConversations.filter(matchesQuery),
-    [deletedConversations, matchesQuery])
+  // ── 批量模式 ──
+  const enterBatchMode = useCallback(() => {
+    setBatchMode(true)
+    setSelectedIds(new Set())
+  }, [])
 
-  const ongoingCount = groupedOngoing.reduce((n, g) => n + g.items.length, 0)
-  const isAllEmpty = ongoingCount === 0 && archivedItems.length === 0 && deletedItems.length === 0
+  const exitBatchMode = useCallback(() => {
+    setBatchMode(false)
+    setSelectedIds(new Set())
+  }, [])
+
+  const toggleCheck = useCallback((id: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
+
+  // 批量归档：逐条调用现有 archiveConversation，失败静默（toast 已有提示）
+  const handleBatchArchive = useCallback(async () => {
+    const targets = conversations.filter(c => !isArchived(c) && selectedIds.has(c.id))
+    if (targets.length === 0) return
+    await Promise.all(targets.map(conv => archiveConversation(conv.id)))
+    setConversations(prev => {
+      const now = new Date().toISOString()
+      const ids = new Set(targets.map(t => t.id))
+      return prev.map(c => ids.has(c.id) ? { ...c, archivedAt: now } : c)
+    })
+    showToast(`已归档 ${targets.length} 个对话`, 'success')
+    exitBatchMode()
+  }, [conversations, selectedIds, showToast, exitBatchMode])
+
+  const handleBatchDelete = useCallback(() => {
+    const targets = conversations.filter(c => !isArchived(c) && selectedIds.has(c.id))
+    if (targets.length === 0) return
+    setBatchDeleteTargets(targets)
+  }, [conversations, selectedIds])
 
   /** 渲染单条会话行（传给 CollapsibleSection 的回调） */
   const renderItem = (conv: AgentConversation, variant: ItemVariant) => (
@@ -248,13 +271,18 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
       handleUnarchive={handleUnarchive}
       handleRestore={handleRestore}
       setDeleteTarget={setDeleteTarget}
+      batchMode={batchMode && variant !== 'deleted'}
+      checked={selectedIds.has(conv.id)}
+      onToggleCheck={toggleCheck}
+      pinned={variant === 'active' && pinnedSet.has(conv.id)}
+      onTogglePin={variant === 'active' ? handleTogglePin : undefined}
     />
   )
 
   // ── 渲染内容 ──
   const content = (
     <>
-      <div className="px-3 pb-2">
+      <div className="px-3 pt-3 pb-2">
         <div className="relative">
           <Icon name="Search" size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[color:var(--muted)]" />
           <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
@@ -276,66 +304,50 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
           style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}>
           <Icon name="Plus" size={16} />新对话
         </motion.button>
+        {!batchMode && (
+          <button onClick={enterBatchMode}
+            className="mt-2 flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs text-[color:var(--muted)] hover:text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)] transition-colors"
+            title="批量管理对话">
+            <Icon name="SquareCheck" size={14} />多选
+          </button>
+        )}
       </div>
 
       <HoverScrollbar className="flex-1">
         <div className="px-2 pb-4">
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
-                <Icon name="Loader2" size={20} className="text-[color:var(--border-strong)]" />
-              </motion.div>
-            </div>
-          ) : loadError ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Icon name="AlertCircle" size={32} className="text-[color:var(--border-strong)] mb-2" />
-              <p className="text-sm text-[color:var(--muted)]">加载失败，请检查网络</p>
-              <button onClick={loadConversations}
-                className="mt-3 px-3 py-1.5 rounded-lg text-sm border border-[color:var(--border)] hover:bg-[color:var(--panel-2)] text-[color:var(--fg-2)] transition-colors">
-                重试
-              </button>
-            </div>
-          ) : isAllEmpty ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Icon name="Inbox" size={32} className="text-[color:var(--border-strong)] mb-2" />
-              <p className="text-sm text-[color:var(--muted)]">{searchQuery ? '未找到匹配的对话' : '暂无对话记录'}</p>
-              {!searchQuery && <p className="text-xs text-[color:var(--border-strong)] mt-1">点击「新对话」开始</p>}
-            </div>
-          ) : (
-            <>
-              {/* 进行中：按日期分组 */}
-              {groupedOngoing.map(group => (
-                <div key={group.key} className="mb-3">
-                  <p className="text-xs font-medium text-[color:var(--muted)] px-2 py-1.5">{group.label}</p>
-                  <div className="space-y-0.5">
-                    {group.items.map(conv => renderItem(conv, 'active'))}
-                  </div>
-                </div>
-              ))}
-
-              {/* 已归档（可折叠） */}
-              {archivedItems.length > 0 && (
-                <CollapsibleSection
-                  label="已归档" count={archivedItems.length}
-                  isOpen={archivedOpen} onToggle={() => setArchivedOpen(o => !o)}
-                  items={archivedItems} variant="archived" renderItem={renderItem} />
-              )}
-
-              {/* 最近删除（可折叠，可恢复） */}
-              {deletedItems.length > 0 && (
-                <CollapsibleSection
-                  label="最近删除" count={deletedItems.length}
-                  isOpen={deletedOpen} onToggle={() => setDeletedOpen(o => !o)}
-                  items={deletedItems} variant="deleted" renderItem={renderItem} />
-              )}
-            </>
-          )}
+          <ConversationListBody
+            groups={{ pinnedItems, groupedOngoing, archivedItems, deletedItems, isAllEmpty }}
+            loading={loading}
+            loadError={loadError}
+            searchQuery={searchQuery}
+            archivedOpen={archivedOpen}
+            deletedOpen={deletedOpen}
+            onToggleArchived={() => setArchivedOpen(o => !o)}
+            onToggleDeleted={() => setDeletedOpen(o => !o)}
+            onRetry={loadConversations}
+            renderItem={renderItem}
+          />
         </div>
       </HoverScrollbar>
+
+      {/* 批量模式底部操作条 */}
+      {batchMode && (
+        <BatchActionBar
+          selectedCount={selectedIds.size}
+          onBatchDelete={handleBatchDelete}
+          onBatchArchive={handleBatchArchive}
+          onExit={exitBatchMode}
+        />
+      )}
     </>
   )
 
-  const confirmDialog = (
+  const confirmDialog = batchDeleteTargets ? (
+    <ConfirmDialog isOpen onClose={() => setBatchDeleteTargets(null)} onConfirm={handleDelete}
+      title="批量删除对话"
+      content={`确定要删除所选的 ${batchDeleteTargets.length} 个对话吗？删除后可在「最近删除」中恢复。`}
+      confirmText="删除" confirmVariant="danger" loading={deleting} />
+  ) : (
     <ConfirmDialog isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={handleDelete}
       title="删除对话"
       content={`确定要删除「${deleteTarget?.title || `对话 ${deleteTarget?.id}`}」吗？删除后可在「最近删除」中恢复。`}

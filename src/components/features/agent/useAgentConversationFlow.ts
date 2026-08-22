@@ -23,6 +23,10 @@ export interface UseAgentConversationFlowOptions {
   inputValue: string
   setInputValue: Dispatch<SetStateAction<string>>
   inputRef: RefObject<HTMLTextAreaElement>
+  /** 本次会话覆盖模型（null = 跟随后端配置默认） */
+  model?: string | null
+  /** 推理档位 off/low/medium/high（off = 不传） */
+  reasoningLevel?: string
 }
 
 export interface UseAgentConversationFlowResult {
@@ -36,14 +40,22 @@ export interface UseAgentConversationFlowResult {
   handleSelectConversation: (conv: AgentConversation) => Promise<void>
   handleNewConversation: () => void
   handleResend: (assistantClientId: string) => void
+  /** 上下文用量（最近一轮 prompt tokens；null = 未知） */
+  contextTokens: number | null
+  /** 分叉：截断消息列表到指定下标（含）并置空会话 */
+  handleForkTo: (idx: number) => void
 }
 
 export function useAgentConversationFlow({
   inputValue,
   setInputValue,
   inputRef,
+  model = null,
+  reasoningLevel = 'off',
 }: UseAgentConversationFlowOptions): UseAgentConversationFlowResult {
   const [messages, setMessages] = useState<LocalMessage[]>([])
+  /** 上下文用量（最近一轮 prompt_tokens——近似当前会话上下文规模；ContextMeter 用） */
+  const [contextTokens, setContextTokens] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [conversationId, setConversationId] = useState<number | null>(null)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
@@ -77,7 +89,7 @@ export function useAgentConversationFlow({
     }, ms)
   }, [])
 
-  useEffect(() => () => { if (mascotTimer.current) window.clearTimeout(mascotTimer.current) }, [])
+  useEffect(() => () => { if (mascotTimer.current) window.clearTimeout(mascotTimer.current); abortRef.current?.abort() }, [])
 
   /** 发送消息（流式优先，失败回退非流式） */
   const handleSend = useCallback(
@@ -98,26 +110,35 @@ export function useAgentConversationFlow({
 
       const userClientId = genClientId()
       const assistantClientId = genClientId()
+      const sentAt = Date.now()
 
       // 1) 追加用户消息 + 助手占位（流式逐字填充）
       setMessages((prev) => [
         ...prev,
-        { clientId: userClientId, role: 'user', content },
-        { clientId: assistantClientId, role: 'assistant', content: '', sending: true },
+        { clientId: userClientId, role: 'user', content, at: sentAt },
+        { clientId: assistantClientId, role: 'assistant', content: '', sending: true, at: sentAt },
       ])
       if (overrideContent === undefined) setInputValue('')
       setLoading(true)
 
-      // 局部工具：按 clientId 更新助手占位
+      // 局部工具：按 clientId 更新助手占位（收尾自动带上本轮耗时）
       const patchAssistant = (patch: Partial<LocalMessage>) => {
+        const done = 'sending' in patch && patch.sending === false
         setMessages((prev) =>
           prev.map((m) =>
-            m.clientId === assistantClientId ? { ...m, ...patch } : m,
+            m.clientId === assistantClientId
+              ? { ...m, ...patch, ...(done ? { durationSec: Math.round((Date.now() - sentAt) / 1000) } : {}) }
+              : m,
           ),
         )
       }
 
-      const request = { message: content, ...(conversationId ? { conversationId } : {}) }
+      const request = {
+        message: content,
+        ...(conversationId ? { conversationId } : {}),
+        ...(model ? { model } : {}),
+        ...(reasoningLevel && reasoningLevel !== 'off' ? { reasoningLevel } : {}),
+      }
 
       // 首次正文到达前记录，避免 tool 期间重复置 replying
       let repliedOnce = false
@@ -160,14 +181,26 @@ export function useAgentConversationFlow({
               }),
             )
           },
-          onDone: ({ toolCalls, message }) => {
+          onReasoning: (text) => {
             if (isStale()) return
+            // 思考过程流式聚合到独立字段（前端折叠展示，不混入正文）
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.clientId === assistantClientId
+                  ? { ...m, reasoning: (m.reasoning ?? '') + text }
+                  : m,
+              ),
+            )
+          },
+          onDone: ({ toolCalls, message, usage }) => {
+            if (isStale()) return
+            if (usage) setContextTokens(usage.prompt_tokens)
             setMessages((prev) =>
               prev.map((m) => {
                 if (m.clientId !== assistantClientId) return m
                 // 若正文仍是「🔧 正在查询」占位（工具跑完但模型没产出正文），视为无正文
                 const streamed = m.content && !m.content.startsWith('🔧') ? m.content : ''
-                return { ...m, sending: false, toolCalls, content: streamed || message || '' }
+                return { ...m, sending: false, toolCalls, content: streamed || message || '', durationSec: Math.round((Date.now() - sentAt) / 1000) }
               }),
             )
             setRefreshTrigger((v) => v + 1) // 刷新洞察/统计
@@ -320,9 +353,22 @@ export function useAgentConversationFlow({
     refreshTrigger,
     mascotState,
     firstDone,
+    contextTokens,
     handleSend,
     handleSelectConversation,
     handleNewConversation,
     handleResend,
+    /** 分叉：截断消息列表到指定下标（含）并置空会话——下次发送自动建新会话 */
+    handleForkTo: (idx: number) => {
+      abortRef.current?.abort()
+      abortRef.current = null
+      setMessages(prev => prev.slice(0, idx + 1))
+      conversationIdRef.current = null
+      setConversationId(null)
+      setLoading(false)
+      firstDoneRef.current = true
+      setFirstDone(true)
+      pendingFirstDoneRef.current = false
+    },
   }
 }

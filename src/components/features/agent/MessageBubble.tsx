@@ -7,7 +7,7 @@
  */
 
 import React, { useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Icon } from '@/components/ui/Icon'
 import type { AgentMessage, AgentMessageResponse, ToolCallResult } from '@/types/agent'
 import MessageActions from './MessageActions'
@@ -17,10 +17,20 @@ import MarkdownRenderer from './MarkdownRenderer'
 interface MessageBubbleProps {
   /** 消息数据 */
   message: AgentMessage | AgentMessageResponse | (AgentMessage & { clientId?: string; sending?: boolean })
+  /** 消息时间戳（ms；本地新消息/历史恢复时提供） */
+  at?: number
+  /** 本轮回复耗时（秒；仅 assistant 完成态） */
+  durationSec?: number
+  /** 思考过程（reasoning 模型流式聚合；折叠展示） */
+  reasoning?: string
   /** 是否为当前用户发送的消息 */
   isUser: boolean
   /** 重发回调（重跑上一条 user 消息） */
   onResend?: () => void
+  /** user 消息：编辑（内容回填输入框） */
+  onEdit?: () => void
+  /** assistant 消息：分叉（以该消息为起点派生新对话） */
+  onFork?: () => void
 }
 
 /** 解析 toolCalls — 支持 ToolCall[] 和 ToolCallResult[] 两种形态 */
@@ -43,8 +53,9 @@ function extractToolResults(
   }))
 }
 
-const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend }) => {
+const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend, onEdit, onFork, at, durationSec, reasoning }) => {
   const [hovered, setHovered] = useState(false)
+  const [reasoningOpen, setReasoningOpen] = useState(false)
   const content = message.content || ''
   const toolResults = extractToolResults(
     (message as AgentMessage).toolCalls
@@ -56,6 +67,15 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend
   if (!isUser && isSending && !content && toolResults.length === 0) {
     return null
   }
+
+  /** 时间戳（HH:MM；无则隐藏） */
+  const timeText = at
+    ? new Date(at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+    : null
+  /** StatsLine：AI 回复完成后的耗时小字 */
+  const statsText = !isUser && durationSec != null && durationSec > 0
+    ? `${durationSec}s`
+    : null
 
   return (
     <motion.div
@@ -77,13 +97,17 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend
         </motion.div>
       )}
 
-      {/* 气泡主体 */}
-      <div className={`max-w-[75%] min-w-[120px] ${isUser ? 'items-end' : 'items-start'} flex flex-col`}>
+      {/* 气泡主体（DSH MessageItem 布局：气泡列 + 操作/统计行在下方，gap 6px。
+          用户列右对齐 max-width min(525px,82%)；AI 列左对齐 75%） */}
+      <div
+        className={`flex flex-col gap-1.5 min-w-[120px] ${isUser ? 'items-end' : 'items-start'}`}
+        style={isUser ? { maxWidth: 'min(525px, 82%)' } : { maxWidth: '75%' }}
+      >
         {/* 文字内容：用户消息纯文本，AI 消息走 Markdown 渲染 */}
         {content && (
           <div
-            className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed break-words ${
-              isUser ? 'rounded-br-md whitespace-pre-wrap' : 'rounded-bl-md'
+            className={`px-4 py-2.5 text-sm leading-relaxed break-words ${
+              isUser ? 'rounded-[22px] rounded-br-md whitespace-pre-wrap' : 'rounded-2xl rounded-bl-md'
             }`}
             style={
               isUser
@@ -95,11 +119,44 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend
           </div>
         )}
 
+        {/* ReasoningRow（DSH 风格）：思考过程折叠行——reasoning 模型才有，默认收起 */}
+        {!isUser && reasoning && reasoning.trim().length > 0 && (
+          <div className="w-full">
+            <button
+              type="button"
+              onClick={() => setReasoningOpen(v => !v)}
+              className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs transition-colors hover:bg-[color:var(--panel-2)]"
+              style={{ color: 'var(--muted)' }}
+            >
+              <Icon name="Brain" size={12} />
+              <span>{reasoningOpen ? '收起思考过程' : '思考过程'}</span>
+              <motion.span animate={{ rotate: reasoningOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                <Icon name="ChevronDown" size={12} />
+              </motion.span>
+            </button>
+            <AnimatePresence>
+              {reasoningOpen && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div
+                    className="mt-1 px-3 py-2.5 rounded-xl text-xs leading-relaxed whitespace-pre-wrap max-h-64 overflow-y-auto"
+                    style={{ background: 'var(--panel-2)', color: 'var(--muted)', border: '1px solid var(--border)' }}
+                  >
+                    {reasoning}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+
         {/* Tool Call 结果（富卡片） */}
         {toolResults.length > 0 && <RichToolResult results={toolResults} />}
-
-        {/* ═══ RichToolResult 接入点（第二批富卡片渲染） ═══ */}
-        {/* 当后端返回结构化 tool result 时，在此处渲染富卡片组件 */}
 
         {/* 已完成但无任何内容（如达到最大工具轮次后无最终文本）→ 占位提示，避免空气泡 */}
         {!isUser && !isSending && !content && toolResults.length === 0 && (
@@ -111,10 +168,20 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend
           </div>
         )}
 
-        {/* AI 消息操作条 */}
-        {!isUser && content && hovered && (
-          <MessageActions content={content} onResend={onResend} />
-        )}
+        {/* 底部行：操作条 · 耗时 StatsLine · 时间戳（DSH：气泡下方 gap 6px）。
+            操作条常驻占位（opacity 切换而不是条件渲染）——hover 显形时不再挤压布局 */}
+        <div className={`flex items-center gap-2 text-micro ${isUser ? 'flex-row-reverse' : ''}`} style={{ color: 'var(--muted)' }}>
+          {!isUser && content && (
+            <div
+              className="transition-opacity duration-150"
+              style={{ opacity: hovered ? 1 : 0, pointerEvents: hovered ? 'auto' : 'none' }}
+            >
+              <MessageActions content={content} onResend={onResend} onEdit={onEdit} onFork={onFork} />
+            </div>
+          )}
+          {statsText && <span title="本轮回复耗时">{statsText}</span>}
+          {timeText && <span>{timeText}</span>}
+        </div>
       </div>
     </motion.div>
   )

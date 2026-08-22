@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { OCRConfig, OCRProvider, setOCRConfig, getOCRConfig, checkOCRStatus, getProviderName, saveOCRConfig, initialConfig, initializeBuiltInConfig } from '../services/ocr'
+import { OCRConfig, OCRProvider, setOCRConfig, getOCRConfig, checkOCRStatus, getProviderName, saveOCRConfig, initialConfig } from '../services/ocr'
 
 export function useOCRConfig() {
   const [ocrConfig, setOcrConfigState] = useState<OCRConfig>(initialConfig)
@@ -19,7 +19,7 @@ export function useOCRConfig() {
   }, [])
 
   useEffect(() => {
-    initializeBuiltInConfig().then(() => { loadOCRConfig() })
+    loadOCRConfig()
   }, [loadOCRConfig])
 
   const handleSaveOCRConfig = useCallback(() => {

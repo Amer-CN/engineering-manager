@@ -75,10 +75,10 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ initialData, projects,
   footer={
   <div className="flex items-center justify-end gap-3">
   <Button type="button" onClick={onCancel}  variant="secondary">取消</Button>
-  <Button type="button" onClick={() => onSubmit(formData)}  variant="warning">{isEditing ? '保存' : '登记'}</Button>
+          <Button type="submit" form="payment-form" variant="warning">{isEditing ? '保存' : '登记'}</Button>
   </div>
   }>
-  <form onSubmit={e => { e.preventDefault(); onSubmit(formData) }} className="px-6 py-4">
+  <form id="payment-form" onSubmit={e => { e.preventDefault(); onSubmit(formData) }} className="px-6 py-4">
   <div className="space-y-4">
   <div className="grid grid-cols-2 gap-4">
   <div>

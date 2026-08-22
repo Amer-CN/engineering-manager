@@ -18,8 +18,8 @@ const AgentTopBar: React.FC<AgentTopBarProps> = ({
       <div className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
         <Icon name="Bot" size={16} />
       </div>
-      <div className="min-w-0 flex items-baseline gap-2">
-        <p className="text-sm font-semibold truncate" style={{ color: 'var(--fg)' }}>AI 管家</p>
+      <div className="min-w-0 flex items-center gap-3">
+        <p className="text-sm font-semibold flex-shrink-0" style={{ color: 'var(--fg)' }}>AI 管家</p>
         {modelName && (
           <>
             <span className="text-xs flex-shrink-0" style={{ color: 'var(--muted)' }}>|</span>
