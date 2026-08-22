@@ -211,30 +211,24 @@ const AgentDashboard: React.FC = () => {
             )}
           </AnimatePresence>
 
-          {/* Mascot：欢迎态居中大球 → 对话态顶部小球。
-              等比缩放过渡：容器保持 104px 基准占位，仅用 scale(0.654=68/104) +
-              容器 margin 补间位移 —— transform 的 scale 天然等比，球全程不变形
-              （layout 补间会对宽高独立插值，中段拉成椭圆，故弃用） */}
-          <motion.div
-            animate={
-              chatMode
-                ? { scale: 0.654, marginTop: -36, marginBottom: -68 * 0.346 }
-                : { scale: 1, marginTop: 0, marginBottom: 0 }
-            }
-            transition={{ type: 'spring', stiffness: 260, damping: 30 }}
-            className={
-              chatMode
-                ? 'flex justify-center flex-shrink-0'
-                : 'flex justify-center flex-shrink-0 flex-1 items-start pt-16'
-            }
-            style={{ overflow: 'visible' }}
-          >
-            <Mascot size={104} state={mascotState} />
-          </motion.div>
+          {/* Mascot 状态头像（K3 审查改版）：不再占据欢迎页中心——缩为 32px，
+              欢迎态嵌在输入框左侧（随 AI 状态变表情），对话态在 TopBar 下常驻。
+              等比缩放过渡（scale 补间，球不变形） */}
+          {chatMode && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 30 }}
+              className="flex justify-center flex-shrink-0 pt-2"
+              style={{ overflow: 'visible' }}
+            >
+              <Mascot size={40} state={mascotState} />
+            </motion.div>
+          )}
 
           {/* 欢迎形态：窄屏历史入口（TopBar 仅对话形态显示，此处补欢迎态的入口） */}
           {!chatMode && (
-            <div className="flex items-center justify-end px-6 flex-shrink-0 -mt-24 relative z-10">
+            <div className="flex items-center justify-end px-6 pt-4 flex-shrink-0">
               <button
                 onClick={() => setHistoryOpen(true)}
                 className="lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
@@ -246,32 +240,63 @@ const AgentDashboard: React.FC = () => {
             </div>
           )}
 
-          {/* 问候区：欢迎形态展示（居中），对话形态整体淡出卸载 */}
+          {/* 欢迎态主轴（K3 审查改版）：问候语 → 输入框 → 建议，垂直居中一组，
+              同一 max-w 网格；球缩进输入框做状态头像（见 Composer 内 mascotSlot）。
+              对话形态整组淡出卸载 */}
           <AnimatePresence>
             {!chatMode && (
               <motion.div
                 key="greeting"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -24, transition: { duration: 0.25, ease: EASE } }}
-                className="flex-shrink-0 text-center px-6 -mt-6"
+                className="flex-1 flex flex-col items-center justify-center px-6 gap-5 min-h-0"
               >
-                <h1 className="text-4xl font-bold tracking-tight" style={{ color: 'var(--fg)' }}>
-                  {getGreeting()}，{username}
-                </h1>
-                {modelName && (
-                  <div className="inline-flex items-center gap-1.5 mt-6 mb-8 px-2.5 py-1 rounded-lg" style={{ background: 'var(--panel-2)', border: '1px solid var(--border)' }}>
-                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--success)' }} />
-                    <span className="text-xs font-medium" style={{ color: 'var(--muted)' }}>
+                <div className="text-center">
+                  <h1 className="text-4xl font-bold tracking-tight" style={{ color: 'var(--fg)' }}>
+                    {getGreeting()}，{username}
+                  </h1>
+                  {modelName && (
+                    <p className="mt-3 text-xs" style={{ color: 'var(--muted)' }}>
+                      <span className="inline-block w-1.5 h-1.5 rounded-full align-middle mr-1.5" style={{ background: 'var(--success)' }} />
                       {providerName ? `${providerName} · ` : ''}{modelName}
-                    </span>
-                  </div>
-                )}
+                    </p>
+                  )}
+                </div>
+
+                {/* 输入框 + 状态球头像：同一宽度网格（max-w-2xl），紧凑主轴 */}
+                <div className="w-full max-w-2xl">
+                  <AgentComposer
+                    value={inputValue}
+                    onChange={setInputValue}
+                    onSend={handleSend}
+                    disabled={loading}
+                    inputRef={inputRef}
+                    placeholder={composerPlaceholder}
+                    centered={false}
+                    mascot={<Mascot size={32} state={mascotState} />}
+                    toolbarSlot={
+                      <ModelPicker
+                        model={pickModel}
+                        onModelChange={setPickModel}
+                        reasoningLevel={reasoningLevel}
+                        onReasoningLevelChange={setReasoningLevel}
+                      />
+                    }
+                  />
+                </div>
+
+                {/* 快捷建议：紧随输入框的从属组（同一网格） */}
+                <SuggestionChips
+                  suggestions={suggestionCards}
+                  onSelect={handleSend}
+                  disabled={loading}
+                />
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* 消息流：常驻挂载（首轮流式期间即出现，占据问候区让出的空间） */}
+          {/* 消息流：常驻挂载（首轮流式期间即出现，占据欢迎区让出的空间） */}
           {chatMode && (
             <div className="relative flex-1 min-h-0">
               <HoverScrollbar className="h-full px-6" scrollRef={scrollRef} onScrollCapture={handleScroll}>
@@ -298,63 +323,34 @@ const AgentDashboard: React.FC = () => {
             </div>
           )}
 
-          {/* 快捷提问：欢迎形态展示于输入框下 */}
-          <AnimatePresence>
-            {!chatMode && (
-              <motion.div
-                key="chips"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1, transition: { delay: 0.15 } }}
-                exit={{ opacity: 0, transition: { duration: 0.2 } }}
-                className="flex-shrink-0 px-6 pt-5 pb-6"
-              >
-                <div className="max-w-2xl mx-auto">
-                  <SuggestionChips
-                    suggestions={suggestionCards}
-                    onSelect={handleSend}
-                    disabled={loading}
-                  />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Composer：欢迎态跟随居中（chips 上方留白由 flex 分配）→ 对话态锚定底部。
-              单实例，layout 动画补间位置 */}
-          <motion.div
-            layout
-            transition={LAYOUT_TRANSITION}
-            className={
-              chatMode
-                ? 'px-6 py-3 border-t flex-shrink-0'
-                : 'flex-1 flex items-start justify-center px-6 pb-6'
-            }
-            style={
-              chatMode
-                ? { borderColor: 'var(--border)', background: 'var(--bg)' }
-                : undefined
-            }
-          >
-            <div className={chatMode ? 'max-w-3xl mx-auto w-full' : 'max-w-2xl w-full'}>
-              <AgentComposer
-                value={inputValue}
-                onChange={setInputValue}
-                onSend={handleSend}
-                disabled={loading}
-                inputRef={inputRef}
-                placeholder={composerPlaceholder}
-                centered={!chatMode}
-                toolbarSlot={
-                  <ModelPicker
-                    model={pickModel}
-                    onModelChange={setPickModel}
-                    reasoningLevel={reasoningLevel}
-                    onReasoningLevelChange={setReasoningLevel}
-                  />
-                }
-              />
-            </div>
-          </motion.div>
+          {/* Composer：对话态锚定底部（欢迎态已内联到问候组内，此处仅对话态渲染） */}
+          {chatMode && (
+            <motion.div
+              layout
+              transition={LAYOUT_TRANSITION}
+              className="px-6 py-3 border-t flex-shrink-0"
+              style={{ borderColor: 'var(--border)', background: 'var(--bg)' }}
+            >
+              <div className="max-w-3xl mx-auto w-full">
+                <AgentComposer
+                  value={inputValue}
+                  onChange={setInputValue}
+                  onSend={handleSend}
+                  disabled={loading}
+                  inputRef={inputRef}
+                  placeholder={composerPlaceholder}
+                  toolbarSlot={
+                    <ModelPicker
+                      model={pickModel}
+                      onModelChange={setPickModel}
+                      reasoningLevel={reasoningLevel}
+                      onReasoningLevelChange={setReasoningLevel}
+                    />
+                  }
+                />
+              </div>
+            </motion.div>
+          )}
         </div>
 
         {/* 右栏：对话历史 */}

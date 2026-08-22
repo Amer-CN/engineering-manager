@@ -81,11 +81,12 @@ export const ConversationHistoryItem: React.FC<ConversationHistoryItemProps> = (
                 <p className={`text-sm font-medium truncate flex-1 ${isActive ? 'text-[color:var(--accent)]' : 'text-[color:var(--fg-2)]'}`}>
                   {conv.title || `对话 ${conv.id}`}
                 </p>
-                <span className="text-xs text-[color:var(--muted)] flex-shrink-0 mt-0.5">{formatTime(conv.updatedAt)}</span>
+                <span className="text-micro text-[color:var(--muted)] flex-shrink-0 mt-0.5">{formatTime(conv.updatedAt)}</span>
               </div>
-              {conv.lastMessage && <p className="text-xs text-[color:var(--muted)] mt-0.5 truncate">{truncate(conv.lastMessage)}</p>}
+              {/* 摘要降噪（K3 审查）：更弱的颜色 + 单行截短，不与标题抢对比度 */}
+              {conv.lastMessage && <p className="text-micro text-[color:var(--border-strong)] mt-0.5 truncate">{truncate(conv.lastMessage, 20)}</p>}
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs text-[color:var(--border-strong)]">{conv.messageCount} 条消息</span>
+                <span className="text-micro text-[color:var(--border-strong)]">{conv.messageCount} 条</span>
               </div>
             </button>
           ) : (
@@ -95,7 +96,7 @@ export const ConversationHistoryItem: React.FC<ConversationHistoryItemProps> = (
                   {conv.title || `对话 ${conv.id}`}
                 </p>
               </div>
-              {conv.lastMessage && <p className="text-xs text-[color:var(--border-strong)] mt-0.5 truncate">{truncate(conv.lastMessage)}</p>}
+              {conv.lastMessage && <p className="text-micro text-[color:var(--border-strong)] mt-0.5 truncate">{truncate(conv.lastMessage, 20)}</p>}
             </div>
           )}
 
