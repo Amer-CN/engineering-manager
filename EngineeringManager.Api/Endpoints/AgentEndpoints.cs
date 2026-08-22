@@ -362,7 +362,10 @@ public static class AgentEndpoints
                                 {
                                     lastUsage = JsonSerializer.Deserialize<ChatUsage>(usageProp.GetRawText());
                                 }
-                                catch { /* usage 解析失败不影响正文 */ }
+                                catch (Exception ex)
+                                {
+                                    Console.Error.WriteLine($"[AgentEndpoints] usage 解析失败（不影响正文）: {ex.Message}");
+                                }
                             }
 
                             var delta = root
