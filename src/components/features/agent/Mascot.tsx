@@ -166,14 +166,16 @@ const Mascot = ({ size = 96, state = 'idle', follow = true, className }: MascotP
       const dx = evt.clientX - cx
       const dy = evt.clientY - cy
       const dist = Math.hypot(dx, dy)
-      // 范围跟随：鼠标进入球周围 6×半径内才跟随，超出则偏移归零（球回自己
-      // 的表情状态）；范围内幅度随距离增长，46px 封顶（约眼宽 130%）
+      // 范围跟随：鼠标进入球周围 10×半径内才跟随，超出则偏移归零（球回自己
+      // 的表情状态）；范围内幅度随距离增长，52px 封顶。
+      // 10×（原 6×，用户拍板 2026-08-22）：覆盖整个对话区——鼠标移到输入框
+      // 打字时眼睛保持看向用户方向（"正在看你输入"的注视感）
       const ballRpx = BALL_R * (r.height / GROK_CANVAS.h)
-      if (dist > ballRpx * 6) {
+      if (dist > ballRpx * 10) {
         dom.pulseOff.current = ZERO_OFF
         return
       }
-      const mag = Math.min(46, 12 + dist * 0.06)
+      const mag = Math.min(52, 12 + dist * 0.06)
       const u = dist > 0 ? 1 / dist : 0
       dom.pulseOff.current = { x: dx * u * mag, y: dy * u * mag }
     }
