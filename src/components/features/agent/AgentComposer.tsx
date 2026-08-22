@@ -1,10 +1,4 @@
-/**
- * AgentComposer — AI 助手输入框组件
- *
- * 自适应 textarea + 斜杠命令 + 附件（图片 OCR / 文档文本注入 / 拖拽）+ 发送按钮
- * Enter 发送 / Shift+Enter 换行；ModelPicker 插槽（模型选择 + 思考等级）
- * 复用于空态居中和对话态底部
- */
+/** AgentComposer — 输入框（自适应 textarea + 斜杠命令 + 附件 + 拖拽 + ModelPicker 插槽） */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -217,7 +211,6 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
 
   return (
     <div className={`relative ${centered ? 'max-w-2xl mx-auto' : ''}`}>
-      {/* 斜杠命令浮层 */}
       <AnimatePresence>
         {showSlashMenu && filteredCommands.length > 0 && (
           <motion.div
@@ -249,7 +242,6 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
         )}
       </AnimatePresence>
 
-      {/* 附件预览 */}
       {attachment && (
         <div className="mb-2 flex items-center gap-2 px-3 py-2 rounded-xl border border-[color:var(--border)] bg-[color:var(--panel-2)]">
           <img
@@ -281,41 +273,21 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
         </div>
       )}
 
-      {/* OCR 错误提示 */}
       {ocrError && (
         <div className="mb-2 px-3 py-1.5 rounded-lg text-xs" style={{ background: 'var(--danger-soft)', border: '1px solid var(--danger)', color: 'var(--danger)' }}>
           {ocrError}
         </div>
       )}
 
-      {/* 文档附件 chips */}
-      {docAttachments.length > 0 && (
-        <div className="mb-2 flex flex-wrap gap-2">
-          {docAttachments.map(d => (
-            <div key={d.name} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[color:var(--border)] bg-[color:var(--panel-2)]">
-              <Icon name="FileText" size={13} className="text-[color:var(--muted)]" />
-              <span className="text-xs text-[color:var(--fg-2)] max-w-40 truncate">{d.name}</span>
-              <button
-                type="button"
-                onClick={() => removeDocAttachment(d.name)}
-                aria-label={`移除 ${d.name}`}
-                className="w-5 h-5 rounded flex items-center justify-center text-[color:var(--muted)] hover:text-[color:var(--fg-2)] hover:bg-[color:var(--card)] transition-colors"
-              >
-                <Icon name="X" size={11} />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
+      <DocAttachmentChips items={docAttachments} onRemove={removeDocAttachment} />
 
-      {/* 输入区域（支持拖拽文件） */}
+      {/* 胶囊输入卡（DSH 布局：textarea 上 / 操作行下；整卡拖拽目标） */}
       <div
         onDragOver={(e) => { e.preventDefault(); if (!disabled) setDragOver(true) }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
-        className={`flex items-end gap-2.5 p-2 rounded-[22px] border bg-[color:var(--card)] border-[color:var(--border)] focus-within:ring-2 focus-within:ring-[color:var(--accent-soft)] focus-within:border-[color:var(--accent)] transition-all ${dragOver ? 'ring-2 ring-[color:var(--accent)] border-[color:var(--accent)]' : ''}`}
+        className={`flex flex-col gap-2 pt-2.5 pb-2 px-2.5 rounded-[22px] border bg-[color:var(--card)] border-[color:var(--border)] focus-within:ring-2 focus-within:ring-[color:var(--accent-soft)] focus-within:border-[color:var(--accent)] transition-all ${dragOver ? 'ring-2 ring-[color:var(--accent)] border-[color:var(--accent)]' : ''}`}
       >
-        {/* 隐藏文件输入（多选） */}
         <input
           ref={fileInputRef}
           type="file"
@@ -326,20 +298,6 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
           onChange={handleFileChange}
         />
 
-        {/* 附件按钮（图片 OCR + 文档注入） */}
-        <Tooltip content="附件（图片自动识别 / 文档注入内容）" position="top">
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={disabled || ocrLoading}
-            aria-label="添加附件"
-            className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-[color:var(--muted)] hover:text-[color:var(--accent)] hover:bg-[color:var(--accent-soft)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors"
-          >
-            <Icon name="Paperclip" size={18} />
-          </button>
-        </Tooltip>
-
-        {/* Textarea */}
         <textarea
           ref={textareaRef}
           value={value}
@@ -348,48 +306,91 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
           disabled={disabled}
           placeholder={placeholder}
           rows={1}
-          className="flex-1 px-2 py-2.5 text-sm text-[color:var(--fg)] placeholder-[color:var(--muted)] bg-transparent border-0 outline-none resize-none disabled:opacity-50"
-          style={{ minHeight: '40px', maxHeight: '120px' }}
+          className="w-full px-2 py-1.5 text-sm text-[color:var(--fg)] placeholder-[color:var(--muted)] bg-transparent border-0 outline-none resize-none disabled:opacity-50"
+          style={{ minHeight: '36px', maxHeight: '120px' }}
         />
 
-        {/* 清空按钮 */}
-        {value && !disabled && (
-          <button
-            onClick={() => {
-              onChange('')
-              textareaRef.current?.focus()
-            }}
-            className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-[color:var(--muted)] hover:text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)] transition-colors"
-          >
-            <Icon name="X" size={16} />
-          </button>
-        )}
-
-        {/* 工具区插槽（ModelPicker：模型选择 + 思考等级） */}
-        {toolbarSlot}
-
-        {/* 发送按钮 */}
-        <motion.button
-          whileHover={canSend ? { scale: 1.05 } : undefined}
-          whileTap={canSend ? { scale: 0.95 } : undefined}
-          onClick={() => void doSend()}
-          aria-label="发送"
-          disabled={!canSend}
-          className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center shadow-sm disabled:opacity-30 disabled:cursor-not-allowed transition-opacity"
-          style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
-        >
-          {disabled || ocrLoading ? (
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+        {/* 操作行：左（附件 + ModelPicker）· 右（清空 + 发送） */}
+        <div className="flex items-center gap-1.5">
+          <Tooltip content="附件（图片自动识别 / 文档注入内容）" position="top">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={disabled || ocrLoading}
+              aria-label="添加附件"
+              className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center text-[color:var(--muted)] hover:text-[color:var(--accent)] hover:bg-[color:var(--accent-soft)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors"
             >
-              <Icon name="Loader2" size={18} />
-            </motion.div>
-          ) : (
-            <Icon name="ArrowUpCircle" size={18} />
+              <Icon name="Paperclip" size={16} />
+            </button>
+          </Tooltip>
+
+          {/* 工具区插槽（ModelPicker：模型选择 + 思考等级） */}
+          {toolbarSlot}
+
+          <div className="flex-1" />
+
+          {/* 清空按钮 */}
+          {value && !disabled && (
+            <button
+              onClick={() => {
+                onChange('')
+                textareaRef.current?.focus()
+              }}
+              className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center text-[color:var(--muted)] hover:text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)] transition-colors"
+            >
+              <Icon name="X" size={14} />
+            </button>
           )}
-        </motion.button>
+
+          {/* 发送按钮 */}
+          <motion.button
+            whileHover={canSend ? { scale: 1.05 } : undefined}
+            whileTap={canSend ? { scale: 0.95 } : undefined}
+            onClick={() => void doSend()}
+            aria-label="发送"
+            disabled={!canSend}
+            className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center shadow-sm disabled:opacity-30 disabled:cursor-not-allowed transition-opacity"
+            style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
+          >
+            {disabled || ocrLoading ? (
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              >
+                <Icon name="Loader2" size={16} />
+              </motion.div>
+            ) : (
+              <Icon name="ArrowUpCircle" size={16} />
+            )}
+          </motion.button>
+        </div>
       </div>
+    </div>
+  )
+}
+
+/** 文档附件 chips（文件内私有，主组件行数门禁拆分） */
+function DocAttachmentChips({ items, onRemove }: {
+  items: { name: string; text: string }[]
+  onRemove: (name: string) => void
+}) {
+  if (items.length === 0) return null
+  return (
+    <div className="mb-2 flex flex-wrap gap-2">
+      {items.map(d => (
+        <div key={d.name} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[color:var(--border)] bg-[color:var(--panel-2)]">
+          <Icon name="FileText" size={13} className="text-[color:var(--muted)]" />
+          <span className="text-xs text-[color:var(--fg-2)] max-w-40 truncate">{d.name}</span>
+          <button
+            type="button"
+            onClick={() => onRemove(d.name)}
+            aria-label={`移除 ${d.name}`}
+            className="w-5 h-5 rounded flex items-center justify-center text-[color:var(--muted)] hover:text-[color:var(--fg-2)] hover:bg-[color:var(--card)] transition-colors"
+          >
+            <Icon name="X" size={11} />
+          </button>
+        </div>
+      ))}
     </div>
   )
 }

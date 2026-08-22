@@ -106,21 +106,25 @@ export function useAgentConversationFlow({
 
       const userClientId = genClientId()
       const assistantClientId = genClientId()
+      const sentAt = Date.now()
 
       // 1) 追加用户消息 + 助手占位（流式逐字填充）
       setMessages((prev) => [
         ...prev,
-        { clientId: userClientId, role: 'user', content },
-        { clientId: assistantClientId, role: 'assistant', content: '', sending: true },
+        { clientId: userClientId, role: 'user', content, at: sentAt },
+        { clientId: assistantClientId, role: 'assistant', content: '', sending: true, at: sentAt },
       ])
       if (overrideContent === undefined) setInputValue('')
       setLoading(true)
 
-      // 局部工具：按 clientId 更新助手占位
+      // 局部工具：按 clientId 更新助手占位（收尾自动带上本轮耗时）
       const patchAssistant = (patch: Partial<LocalMessage>) => {
+        const done = 'sending' in patch && patch.sending === false
         setMessages((prev) =>
           prev.map((m) =>
-            m.clientId === assistantClientId ? { ...m, ...patch } : m,
+            m.clientId === assistantClientId
+              ? { ...m, ...patch, ...(done ? { durationSec: Math.round((Date.now() - sentAt) / 1000) } : {}) }
+              : m,
           ),
         )
       }
@@ -173,6 +177,17 @@ export function useAgentConversationFlow({
               }),
             )
           },
+          onReasoning: (text) => {
+            if (isStale()) return
+            // 思考过程流式聚合到独立字段（前端折叠展示，不混入正文）
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.clientId === assistantClientId
+                  ? { ...m, reasoning: (m.reasoning ?? '') + text }
+                  : m,
+              ),
+            )
+          },
           onDone: ({ toolCalls, message }) => {
             if (isStale()) return
             setMessages((prev) =>
@@ -180,7 +195,7 @@ export function useAgentConversationFlow({
                 if (m.clientId !== assistantClientId) return m
                 // 若正文仍是「🔧 正在查询」占位（工具跑完但模型没产出正文），视为无正文
                 const streamed = m.content && !m.content.startsWith('🔧') ? m.content : ''
-                return { ...m, sending: false, toolCalls, content: streamed || message || '' }
+                return { ...m, sending: false, toolCalls, content: streamed || message || '', durationSec: Math.round((Date.now() - sentAt) / 1000) }
               }),
             )
             setRefreshTrigger((v) => v + 1) // 刷新洞察/统计

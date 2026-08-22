@@ -183,7 +183,7 @@ export async function getLlmProviderStatus(): Promise<LlmProviderStatus | null> 
 }
 
 /**
- * 测试 LLM 连接（白名单，无需登录）
+ * 测试 LLM 连接（需登录）
  * @param request 测试请求（baseUrl + apiKey）
  */
 export async function testLlmProviderConnection(
@@ -267,6 +267,8 @@ export interface AgentStreamCallbacks {
   onConversationId?: (conversationId: number) => void
   onTool?: (name: string) => void
   onContent?: (text: string) => void
+  /** 思考过程分片（reasoning 模型的 reasoning_content 流；与正文分开发） */
+  onReasoning?: (text: string) => void
   onDone?: (payload: {
     conversationId: number
     toolCalls?: ToolCallResult[]
@@ -368,6 +370,9 @@ function dispatchSseEvent(
         break
       case 'content':
         callbacks.onContent?.(evt.text ?? '')
+        break
+      case 'reasoning':
+        callbacks.onReasoning?.(evt.text ?? '')
         break
       case 'done':
         callbacks.onDone?.({
