@@ -85,9 +85,9 @@ public class LlmConfigResolver
                 chars[i] = (char)(enc[i] ^ mask[i % mask.Length]);
             return new string(chars);
         }
-        catch
+        catch (Exception ex)
         {
-            // 分片损坏（理论不可能）：返回空，上层按未配置处理
+            Console.Error.WriteLine($"[LlmConfigResolver] 出厂 key 分片重组失败（按未配置处理）: {ex.Message}");
             return "";
         }
     }
