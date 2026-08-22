@@ -157,6 +157,9 @@ const AgentDashboard: React.FC = () => {
             onResend={msg.role === 'assistant' && idx > 0 ? () => handleResend(msg.clientId) : undefined}
             onEdit={msg.role === 'user' ? () => handleEditMessage(msg.content ?? '') : undefined}
             onFork={msg.role === 'assistant' ? () => handleForkMessage(idx) : undefined}
+            at={msg.at}
+            durationSec={msg.durationSec}
+            reasoning={msg.reasoning}
           />
         ))}
       </AnimatePresence>
@@ -350,7 +353,6 @@ const AgentDashboard: React.FC = () => {
                   />
                 }
               />
-              <p className="text-center mt-2 text-xs" style={{ color: 'var(--muted)' }}>AI 可能会产生错误，请核实重要信息。</p>
             </div>
           </motion.div>
         </div>
