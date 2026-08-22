@@ -195,4 +195,14 @@ public record AgentChatRequest
     [JsonPropertyName("conversationId")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public long? ConversationId { get; init; }
+
+    /// <summary>本次调用覆盖默认模型（空 = 用配置默认）</summary>
+    [JsonPropertyName("model")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Model { get; init; }
+
+    /// <summary>推理档位（off/low/medium/high；空 = 不传，仅支持 reasoning 的模型生效）</summary>
+    [JsonPropertyName("reasoningLevel")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ReasoningLevel { get; init; }
 }

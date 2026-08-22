@@ -6,6 +6,8 @@ interface HoverScrollbarProps {
   threshold?: number
   /** 滚动容器 ref 转发（外部需要 scrollTo / 读取滚动位置时用） */
   scrollRef?: React.MutableRefObject<HTMLDivElement | null>
+  /** 滚动事件透传（外部检测"用户是否脱离底部"等场景） */
+  onScrollCapture?: React.UIEventHandler<HTMLDivElement>
 }
 
 /**
@@ -13,7 +15,7 @@ interface HoverScrollbarProps {
  * 完全自绘滚动条，不使用原生滚动条
  * 鼠标靠近时自动变大，支持拖拽和滚轮
  */
-export function HoverScrollbar({ children, className = '', threshold = 15, scrollRef }: HoverScrollbarProps) {
+export function HoverScrollbar({ children, className = '', threshold = 15, scrollRef, onScrollCapture }: HoverScrollbarProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const thumbRef = useRef<HTMLDivElement>(null)
   const trackRef = useRef<HTMLDivElement>(null)
@@ -240,6 +242,7 @@ export function HoverScrollbar({ children, className = '', threshold = 15, scrol
           ;(containerRef as React.MutableRefObject<HTMLDivElement | null>).current = node
           if (scrollRef) scrollRef.current = node
         }}
+        onScroll={onScrollCapture}
         className="h-full overflow-auto hide-native-scrollbar"
       >
         {children}
