@@ -44,7 +44,6 @@ const AgentDashboard: React.FC = () => {
   const [historyOpen, setHistoryOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [modelName, setModelName] = useState('')
-  const [providerName, setProviderName] = useState('')
   /** ModelPicker 状态：null = 跟随配置默认模型 */
   const [pickModel, setPickModel] = useState<string | null>(null)
   const [reasoningLevel, setReasoningLevel] = useState<ReasoningLevel>('off')
@@ -135,7 +134,6 @@ const AgentDashboard: React.FC = () => {
     let cancelled = false
     getLlmProviderConfig().then(cfg => {
       if (cancelled || !cfg) return
-      setProviderName(cfg.providerName || '')
       setModelName(cfg.model || '')
     }).catch(() => { /* silent */ })
     return () => { cancelled = true }
@@ -258,12 +256,7 @@ const AgentDashboard: React.FC = () => {
                   <h1 className="text-4xl font-bold tracking-tight" style={{ color: 'var(--fg)' }}>
                     {getGreeting()}，{username}
                   </h1>
-                  {modelName && (
-                    <p className="mt-3 text-xs" style={{ color: 'var(--muted)' }}>
-                      <span className="inline-block w-1.5 h-1.5 rounded-full align-middle mr-1.5" style={{ background: 'var(--success)' }} />
-                      {providerName ? `${providerName} · ` : ''}{modelName}
-                    </p>
-                  )}
+                  {/* 模型名不在欢迎页显示（用户拍板）：输入框 ModelPicker 已带「默认/模型名」，此处重复 */}
                 </div>
 
                 {/* 输入框 + 状态球头像：同一宽度网格（max-w-2xl），紧凑主轴 */}

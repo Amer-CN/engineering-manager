@@ -119,7 +119,10 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
             virtualIndexRef.current = targetIndexRef.current;
             targetIndexRef.current = null;
           } else {
-            const nextVal = virtualIndexRef.current + diff * 0.12;
+            // 帧率无关的指数衰减：0.12/帧 @60fps ⇔ 1-0.88^(dt·60)，
+            // 高刷屏（120/144Hz）吸附手感与 60Hz 完全一致
+            const step = (1 - Math.pow(0.88, delta * 60)) * diff;
+            const nextVal = virtualIndexRef.current + step;
             setVirtualIndex(nextVal);
             virtualIndexRef.current = nextVal;
           }
@@ -275,7 +278,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
           `}
           title={isPlaying ? '暂停自动滚动' : '开启循环滚动'}
         >
-          {isPlaying ? <Pause className="w-4 h-4 text-emerald-400" /> : <Play className="w-4 h-4 text-emerald-400" />}
+          {isPlaying ? <Pause className="w-4 h-4 text-[color:var(--gc-active-border,#34d399)]" /> : <Play className="w-4 h-4 text-[color:var(--gc-active-border,#34d399)]" />}
           <span className="hidden sm:inline">{isPlaying ? '循环中' : '已暂停'}</span>
         </button>
 
@@ -285,7 +288,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
             p-3 rounded-full backdrop-blur-md transition-all duration-200 border shadow-lg
             ${
               showControls
-                ? 'bg-emerald-500 text-white border-emerald-400'
+                ? 'bg-[color:var(--gc-active,#10b981)] text-[color:var(--gc-active-ink,#fff)] border-[color:var(--gc-active-border,#34d399)]'
                 : isDark
                 ? 'bg-zinc-900/70 border-white/20 text-white hover:bg-zinc-800'
                 : 'bg-white/80 border-white/80 text-zinc-900 hover:bg-white'
@@ -344,7 +347,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
                 setItemSpacing(90);
                 setScrollSpeed(1);
               }}
-              className="text-emerald-400 flex items-center gap-1 hover:underline"
+              className="text-[color:var(--gc-icon,#34d399)] flex items-center gap-1 hover:underline"
             >
               <RotateCcw className="w-3 h-3" /> 重置
             </button>
@@ -362,7 +365,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
               step="0.1"
               value={scrollSpeed}
               onChange={(e) => setScrollSpeed(parseFloat(e.target.value))}
-              className="w-full accent-emerald-500 cursor-pointer"
+              className="w-full accent-[color:var(--gc-active,#10b981)] cursor-pointer"
             />
           </div>
 
@@ -377,7 +380,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
               max="60"
               value={rotateYAngle}
               onChange={(e) => setRotateYAngle(parseInt(e.target.value))}
-              className="w-full accent-emerald-500 cursor-pointer"
+              className="w-full accent-[color:var(--gc-active,#10b981)] cursor-pointer"
             />
           </div>
 
@@ -392,7 +395,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
               max="30"
               value={rotateXAngle}
               onChange={(e) => setRotateXAngle(parseInt(e.target.value))}
-              className="w-full accent-emerald-500 cursor-pointer"
+              className="w-full accent-[color:var(--gc-active,#10b981)] cursor-pointer"
             />
           </div>
 
@@ -407,7 +410,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
               max="140"
               value={itemSpacing}
               onChange={(e) => setItemSpacing(parseInt(e.target.value))}
-              className="w-full accent-emerald-500 cursor-pointer"
+              className="w-full accent-[color:var(--gc-active,#10b981)] cursor-pointer"
             />
           </div>
         </div>
@@ -477,7 +480,9 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
               const rotateZ = -3 - activeFactor * 2.5 + offset * 0.2;
 
               // Opacity fade strictly for extreme edge items
-              const fadeStart = VISIBLE_RADIUS - 2;
+              // 淡入带只盖屏幕外边缘（窗口半径仅比屏宽多 1 卡余量）：
+              // 若压进可见区，入屏卡会带半透明"幽灵态"直到完整入屏才突变实体（用户实测指正）
+              const fadeStart = VISIBLE_RADIUS - 1;
               const opacity = absOffset <= fadeStart ? 1 : Math.max(0, 1 - (absOffset - fadeStart) * 0.25);
 
               return (
@@ -522,10 +527,10 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
               key={f.id}
               onClick={() => handleDotClick(i)}
               className={`
-                h-2 rounded-full transition-all duration-300
+                h-2 rounded-full transition-all duration-75
                 ${
                   isSelected
-                    ? 'w-7 bg-emerald-500 shadow-[0_0_10px_#10b981]'
+                    ? 'w-7 bg-[color:var(--gc-active,#10b981)] shadow-[0_0_10px_var(--gc-active,#10b981)]'
                     : isDark
                     ? 'w-2 bg-white/20 hover:bg-white/40'
                     : 'w-2 bg-black/20 hover:bg-black/40'

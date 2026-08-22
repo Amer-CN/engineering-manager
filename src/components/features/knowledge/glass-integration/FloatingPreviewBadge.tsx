@@ -15,6 +15,14 @@ export const FloatingPreviewBadge: React.FC<FloatingPreviewBadgeProps> = ({
 }) => {
   const isDark = theme === 'dark';
 
+  // 三态活动灯：暗灰=空文件夹 / 常亮=7天无变动 / 呼吸=7天内有增删改
+  const docCount = folder.docCount ?? folder.memberCount ?? 0
+  const hasActivity =
+    docCount > 0 &&
+    folder.lastActivityAt != null &&
+    Date.now() - new Date(folder.lastActivityAt).getTime() < 7 * 24 * 3600 * 1000
+  const lampState: 'empty' | 'active' | 'idle' = docCount === 0 ? 'empty' : hasActivity ? 'active' : 'idle'
+
   return (
     <div
       onClick={onClick}
@@ -30,11 +38,13 @@ export const FloatingPreviewBadge: React.FC<FloatingPreviewBadgeProps> = ({
         }
       `}
     >
+      <style>{`@keyframes gcLampBreathe { 0%,100% { opacity: .35; transform: scale(.85) } 50% { opacity: 1; transform: scale(1.15) } }`}</style>
+
       {/* Top Gloss Highlight */}
       <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/50 to-transparent rounded-t-2xl" />
 
       {/* Internal Emerald Glow gradient patch */}
-      <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none" />
+      <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-[color:var(--gc-a20,#10b98133)] rounded-full blur-2xl pointer-events-none" />
 
       {/* Title & Arrow */}
       <div className="flex items-center justify-between mb-1">
@@ -58,15 +68,39 @@ export const FloatingPreviewBadge: React.FC<FloatingPreviewBadgeProps> = ({
       <div className="flex items-end justify-between mt-2">
         <div>
           <div className="text-3xl font-light tracking-tight font-sans flex items-baseline gap-0.5">
-            <span>{folder.progress}</span>
-            <span className="text-lg text-zinc-400 font-normal">%</span>
+            <span>{docCount}</span>
+            <span className="text-lg text-zinc-400 font-normal">篇</span>
           </div>
         </div>
 
-        {/* Emerald Glowing Indicator */}
-        <div className="relative flex items-center justify-center">
-          <div className="absolute w-4 h-4 bg-emerald-400/50 rounded-full animate-ping" />
-          <div className="w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-zinc-900 shadow-[0_0_12px_#34d399]" />
+        {/* 三态活动灯：空=暗灰 / 活=呼吸 / 在架=常亮（数据：docCount + lastActivityAt） */}
+        <div
+          className="relative flex items-center justify-center"
+          title={lampState === 'empty' ? '空文件夹' : lampState === 'active' ? '近期有文档变动' : '档案在架'}
+        >
+          {lampState === 'active' && (
+            <div
+              className="absolute w-4 h-4 rounded-full"
+              style={{
+                background: 'var(--gc-icon-a50, #34d39980)',
+                animation: 'gcLampBreathe 2.4s ease-in-out infinite',
+              }}
+            />
+          )}
+          <div
+            className="w-3.5 h-3.5 rounded-full border-2 border-zinc-900"
+            style={{
+              background:
+                lampState === 'empty'
+                  ? 'var(--muted, #71717a)'
+                  : 'var(--gc-icon, #34d399)',
+              boxShadow:
+                lampState === 'empty'
+                  ? 'none'
+                  : '0 0 12px var(--gc-icon, #34d399)',
+              opacity: lampState === 'idle' ? 0.75 : 1,
+            }}
+          />
         </div>
       </div>
     </div>

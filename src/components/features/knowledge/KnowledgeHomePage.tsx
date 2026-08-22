@@ -26,14 +26,16 @@ import { KnowledgeFolderDetailModal } from './glass-integration/KnowledgeFolderD
 import { AddFolderModal } from './glass-integration/AddFolderModal'
 import type { FolderItem } from './glass-integration/types'
 
-/** API 文件夹 → 参考项目 FolderItem（progress 后端暂无口径，沿用既有占位 60） */
+/** API 文件夹 → 参考项目 FolderItem（progress 占位保留（旧看板 UI 引用）；徽章完成度已改真实文档数（S1）） */
 const toFolderItem = (f: KnowledgeFolder): FolderItem => ({
   id: String(f.id),
   title: f.name,
   englishTitle: f.englishName ?? undefined,
   period: f.category ?? '知识库',
-  progress: 60,
+  progress: 60,               // 保留字段（看板甘特图等旧 UI 仍引用），徽章不再用它
   memberCount: f.docCount,
+  docCount: f.docCount,
+  lastActivityAt: f.lastActivityAt ?? null,
   category: f.category ?? '知识库',
   documents: [],
 })
