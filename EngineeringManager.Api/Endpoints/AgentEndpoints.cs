@@ -82,7 +82,8 @@ public static class AgentEndpoints
 
                 for (int round = 0; round < maxRounds; round++)
                 {
-                    var response = await llm.ChatAsync(llmMessages, availableTools);
+                    var response = await llm.ChatAsync(llmMessages, availableTools, request.Model,
+                        request.ReasoningLevel == "off" ? null : request.ReasoningLevel);
 
                     if (response == null)
                     {
@@ -271,7 +272,8 @@ public static class AgentEndpoints
 
                 for (int round = 0; round < maxRounds; round++)
                 {
-                    var response = await llm.ChatAsync(llmMessages, availableTools);
+                    var response = await llm.ChatAsync(llmMessages, availableTools, request.Model,
+                        request.ReasoningLevel == "off" ? null : request.ReasoningLevel);
 
                     if (response == null)
                     {
@@ -344,7 +346,8 @@ public static class AgentEndpoints
                     var finalContentBuilder = new StringBuilder();
 
                     // 使用流式 API 输出最终回复
-                    await foreach (var chunk in llm.ChatStreamAsync(llmMessages))
+                    await foreach (var chunk in llm.ChatStreamAsync(llmMessages, null, request.Model,
+                        request.ReasoningLevel == "off" ? null : request.ReasoningLevel))
                     {
                         try
                         {
@@ -627,6 +630,28 @@ public static class AgentEndpoints
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"[AgentEndpoints] /api/agent/setup/status 失败: {ex.Message}");
+                return Common.Fail(Common.Sanitize(ex.Message));
+            }
+        });
+
+        // ═══════════════════════════════════════════════════════════
+        // 可选模型清单（供前端模型选择器；单模型返回时前端隐藏选择器）
+        // ═══════════════════════════════════════════════════════════
+
+        app.MapGet("/api/agent/models", (LlmProviderService llm) =>
+        {
+            try
+            {
+                var config = llm.GetConfig();
+                return Common.Ok(new
+                {
+                    models = config.AvailableModels,
+                    current = config.Model,
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[AgentEndpoints] /api/agent/models 失败: {ex.Message}");
                 return Common.Fail(Common.Sanitize(ex.Message));
             }
         });

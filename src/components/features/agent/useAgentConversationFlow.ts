@@ -23,6 +23,10 @@ export interface UseAgentConversationFlowOptions {
   inputValue: string
   setInputValue: Dispatch<SetStateAction<string>>
   inputRef: RefObject<HTMLTextAreaElement>
+  /** 本次会话覆盖模型（null = 跟随后端配置默认） */
+  model?: string | null
+  /** 推理档位 off/low/medium/high（off = 不传） */
+  reasoningLevel?: string
 }
 
 export interface UseAgentConversationFlowResult {
@@ -36,12 +40,16 @@ export interface UseAgentConversationFlowResult {
   handleSelectConversation: (conv: AgentConversation) => Promise<void>
   handleNewConversation: () => void
   handleResend: (assistantClientId: string) => void
+  /** 分叉：截断消息列表到指定下标（含）并置空会话 */
+  handleForkTo: (idx: number) => void
 }
 
 export function useAgentConversationFlow({
   inputValue,
   setInputValue,
   inputRef,
+  model = null,
+  reasoningLevel = 'off',
 }: UseAgentConversationFlowOptions): UseAgentConversationFlowResult {
   const [messages, setMessages] = useState<LocalMessage[]>([])
   const [loading, setLoading] = useState(false)
@@ -117,7 +125,12 @@ export function useAgentConversationFlow({
         )
       }
 
-      const request = { message: content, ...(conversationId ? { conversationId } : {}) }
+      const request = {
+        message: content,
+        ...(conversationId ? { conversationId } : {}),
+        ...(model ? { model } : {}),
+        ...(reasoningLevel && reasoningLevel !== 'off' ? { reasoningLevel } : {}),
+      }
 
       // 首次正文到达前记录，避免 tool 期间重复置 replying
       let repliedOnce = false
@@ -324,5 +337,17 @@ export function useAgentConversationFlow({
     handleSelectConversation,
     handleNewConversation,
     handleResend,
+    /** 分叉：截断消息列表到指定下标（含）并置空会话——下次发送自动建新会话 */
+    handleForkTo: (idx: number) => {
+      abortRef.current?.abort()
+      abortRef.current = null
+      setMessages(prev => prev.slice(0, idx + 1))
+      conversationIdRef.current = null
+      setConversationId(null)
+      setLoading(false)
+      firstDoneRef.current = true
+      setFirstDone(true)
+      pendingFirstDoneRef.current = false
+    },
   }
 }

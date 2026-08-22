@@ -48,9 +48,14 @@ public class LlmConfigResolver
     private LlmProviderConfig _config;
 
     // 内置 Agnes 兜底
-    private const string BuiltInApiKey = "sk-1RP0oZ6uuxPzeMoBvZT0lDRnIPQKm6783G6KcHEZ9fWtk50A";
+    // API key 不再入源码：优先环境变量 AGNES_BUILTIN_API_KEY，其次 appsettings 的 Agnes:ApiKey
     private const string BuiltInBaseUrl = "https://apihub.agnes-ai.com/v1";
     private const string BuiltInModel = "agnes-2.5-flash";
+
+    private string BuiltInApiKey =>
+        Environment.GetEnvironmentVariable("AGNES_BUILTIN_API_KEY")
+        ?? _configuration["Agnes:ApiKey"]
+        ?? "";
 
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
@@ -211,6 +216,7 @@ public class LlmConfigResolver
                 UseBuiltIn = false,
                 Temperature = overrideTemp,
                 MaxTokens = overrideMax,
+                AvailableModels = BuildModelList(envModel ?? "gpt-4o-mini"),
             };
         }
 
@@ -225,7 +231,21 @@ public class LlmConfigResolver
             UseBuiltIn = true,
             Temperature = overrideTemp,
             MaxTokens = overrideMax,
+            AvailableModels = BuildModelList(BuiltInModel),
         };
+    }
+
+    /// <summary>
+    /// 组装可选模型清单：Agnes 内置固定系列；其他 provider 返回当前模型单元素
+    /// （无公开 list-models 凭据约定，避免泄漏 key；前端拿到单模型时隐藏选择器）
+    /// </summary>
+    private static List<string> BuildModelList(string currentModel)
+    {
+        if (currentModel.StartsWith("agnes-", StringComparison.OrdinalIgnoreCase))
+        {
+            return new List<string> { "agnes-2.5-flash", "agnes-2.5-pro", "agnes-2.5-lite" };
+        }
+        return new List<string> { currentModel };
     }
 
     /// <summary>
@@ -272,6 +292,7 @@ public class LlmConfigResolver
                 UseBuiltIn = persisted.UseBuiltIn,
                 Temperature = persisted.Temperature,
                 MaxTokens = persisted.MaxTokens,
+                AvailableModels = BuildModelList(persisted.Model ?? BuiltInModel),
             };
         }
         catch (Exception ex)

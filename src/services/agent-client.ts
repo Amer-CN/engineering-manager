@@ -162,6 +162,15 @@ export async function restoreConversation(
 // ═══════════════════════════════════════════════════════════════
 
 /**
+ * 获取可选模型清单（>1 个时前端显示模型选择器）
+ */
+export async function getAgentModels(): Promise<string[]> {
+  const result = await apiClient.get<{ models: string[]; current: string }>('/api/agent/models')
+  if (!result.success || !result.data) return []
+  return result.data.models || []
+}
+
+/**
  * 检查 LLM 配置状态（白名单，无需登录）
  */
 export async function getLlmProviderStatus(): Promise<LlmProviderStatus | null> {

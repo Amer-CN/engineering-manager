@@ -1,8 +1,8 @@
 /**
  * AgentComposer — AI 助手输入框组件
  *
- * 自适应 textarea + 斜杠命令 + 附件占位 + 发送按钮
- * Enter 发送 / Shift+Enter 换行
+ * 自适应 textarea + 斜杠命令 + 附件（图片 OCR / 文档文本注入 / 拖拽）+ 发送按钮
+ * Enter 发送 / Shift+Enter 换行；ModelPicker 插槽（模型选择 + 思考等级）
  * 复用于空态居中和对话态底部
  */
 
@@ -12,6 +12,7 @@ import { Icon } from '@/components/ui/Icon'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { recognizeReceiptText } from '@/services/agent-client'
 import { SLASH_COMMANDS } from './types'
+import type { ReactNode } from 'react'
 
 interface AgentComposerProps {
   value: string
@@ -22,9 +23,16 @@ interface AgentComposerProps {
   placeholder?: string
   /** 是否居中样式（空态用） */
   centered?: boolean
+  /** 输入框左下工具区插槽（ModelPicker 等） */
+  toolbarSlot?: ReactNode
 }
 
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024 // 4MB
+const MAX_TEXT_BYTES = 100 * 1024 // 100KB
+/** 可注入文本内容的扩展名（其余类型只附文件名清单） */
+const TEXT_EXTENSIONS = ['.txt', '.md', '.csv', '.json', '.log', '.xml', '.yml', '.yaml', '.ts', '.js', '.cs', '.sql']
+
+const isTextFile = (name: string) => TEXT_EXTENSIONS.some(ext => name.toLowerCase().endsWith(ext))
 
 const AgentComposer: React.FC<AgentComposerProps> = ({
   value,
@@ -32,8 +40,9 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
   onSend,
   disabled = false,
   inputRef,
-  placeholder = '输入你的问题...  (Shift+Enter 换行,  / 打开快捷命令)',
+  placeholder = '向 AI 管家提问…（Shift+Enter 换行，/ 快捷命令）',
   centered = false,
+  toolbarSlot,
 }) => {
   const innerRef = useRef<HTMLTextAreaElement>(null)
   const textareaRef = inputRef || innerRef
@@ -43,6 +52,9 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
   const [attachment, setAttachment] = useState<{ name: string; dataUrl: string } | null>(null)
   const [ocrLoading, setOcrLoading] = useState(false)
   const [ocrError, setOcrError] = useState<string | null>(null)
+  /** 文档附件（文本内容注入）：文件名 → 文本 */
+  const [docAttachments, setDocAttachments] = useState<{ name: string; text: string }[]>([])
+  const [dragOver, setDragOver] = useState(false)
 
   // ── 自适应高度 ──
   const adjustHeight = useCallback(() => {
@@ -68,25 +80,46 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
   }, [value])
 
   const canSend =
-    (value.trim().length > 0 || !!attachment) && !disabled && !ocrLoading
+    (value.trim().length > 0 || !!attachment || docAttachments.length > 0) && !disabled && !ocrLoading
 
-  // ── 选择图片文件 ──
+  // ── 处理文件（图片 → OCR 附件；文本文档 → 内容注入附件）──
+  const handleFiles = useCallback((files: FileList | File[]) => {
+    const list = Array.from(files)
+    for (const file of list) {
+      if (file.type.startsWith('image/')) {
+        if (file.size > MAX_IMAGE_BYTES) { setOcrError('图片过大（上限 4MB）'); continue }
+        const reader = new FileReader()
+        reader.onload = () => {
+          setOcrError(null)
+          setAttachment({ name: file.name, dataUrl: String(reader.result) })
+        }
+        reader.onerror = () => setOcrError('图片读取失败')
+        reader.readAsDataURL(file)
+      } else if (isTextFile(file.name)) {
+        if (file.size > MAX_TEXT_BYTES) {
+          // 超大文本只附文件名
+          setDocAttachments(prev => [...prev, { name: file.name, text: `（文件过大，未读取内容）` }])
+          continue
+        }
+        const reader = new FileReader()
+        reader.onload = () => {
+          setDocAttachments(prev => [...prev, { name: file.name, text: String(reader.result) }])
+        }
+        reader.onerror = () => setOcrError('文档读取失败')
+        reader.readAsText(file)
+      } else {
+        // 非图片非文本：附文件名清单
+        setDocAttachments(prev => [...prev, { name: file.name, text: `（${file.type || '未知类型'}，未读取内容）` }])
+      }
+    }
+  }, [])
+
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0]
+      if (e.target.files?.length) handleFiles(e.target.files)
       e.target.value = '' // 允许重复选择同一文件
-      if (!file) return
-      if (!file.type.startsWith('image/')) { setOcrError('仅支持图片文件'); return }
-      if (file.size > MAX_IMAGE_BYTES) { setOcrError('图片过大（上限 4MB）'); return }
-      const reader = new FileReader()
-      reader.onload = () => {
-        setOcrError(null)
-        setAttachment({ name: file.name, dataUrl: String(reader.result) })
-      }
-      reader.onerror = () => setOcrError('图片读取失败')
-      reader.readAsDataURL(file)
     },
-    [],
+    [handleFiles],
   )
 
   const removeAttachment = useCallback(() => {
@@ -94,10 +127,31 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
     setOcrError(null)
   }, [])
 
-  // ── 发送（含附件 OCR）──
+  const removeDocAttachment = useCallback((name: string) => {
+    setDocAttachments(prev => prev.filter(d => d.name !== name))
+  }, [])
+
+  // ── 拖拽 ──
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(false)
+    if (disabled || ocrLoading) return
+    if (e.dataTransfer.files?.length) handleFiles(e.dataTransfer.files)
+  }, [disabled, ocrLoading, handleFiles])
+
+  // ── 发送（图片 OCR + 文档文本注入）──
   const doSend = useCallback(async () => {
     if (!canSend) return
     const typed = value.trim()
+
+    // 文档附件注入：文本内容拼入消息
+    let docPart = ''
+    if (docAttachments.length > 0) {
+      docPart = docAttachments
+        .map(d => `【附件：${d.name}】\n${d.text}`)
+        .join('\n\n')
+    }
+
     if (attachment) {
       setOcrLoading(true)
       setOcrError(null)
@@ -105,11 +159,12 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
         const res = await recognizeReceiptText(attachment.dataUrl)
         if (!res.success) { setOcrError(res.error || '图片识别失败'); return }
         const ocrText = (res.text || '').trim()
-        const combined = [typed, ocrText ? `【附件图片识别文字】\n${ocrText}` : '']
+        const combined = [typed, ocrText ? `【附件图片识别文字】\n${ocrText}` : '', docPart]
           .filter(Boolean)
           .join('\n\n')
         if (!combined) { setOcrError('未识别到文字，请补充问题或更换图片'); return }
         setAttachment(null)
+        setDocAttachments([])
         onChange('')
         onSend(combined)
       } finally {
@@ -117,8 +172,16 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
       }
       return
     }
+
+    if (docAttachments.length > 0) {
+      const combined = [typed, docPart].filter(Boolean).join('\n\n')
+      setDocAttachments([])
+      onChange('')
+      onSend(combined)
+      return
+    }
     onSend()
-  }, [canSend, value, attachment, onChange, onSend])
+  }, [canSend, value, attachment, docAttachments, onChange, onSend])
 
   // ── 键盘事件 ──
   const handleKeyDown = useCallback(
@@ -225,25 +288,51 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
         </div>
       )}
 
-      {/* 输入区域 */}
-      <div className="flex items-end gap-2.5 p-2 rounded-[22px] border bg-[color:var(--card)] border-[color:var(--border)] focus-within:ring-2 focus-within:ring-[color:var(--accent-soft)] focus-within:border-[color:var(--accent)] transition-all">
-        {/* 隐藏文件输入 */}
+      {/* 文档附件 chips */}
+      {docAttachments.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-2">
+          {docAttachments.map(d => (
+            <div key={d.name} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[color:var(--border)] bg-[color:var(--panel-2)]">
+              <Icon name="FileText" size={13} className="text-[color:var(--muted)]" />
+              <span className="text-xs text-[color:var(--fg-2)] max-w-40 truncate">{d.name}</span>
+              <button
+                type="button"
+                onClick={() => removeDocAttachment(d.name)}
+                aria-label={`移除 ${d.name}`}
+                className="w-5 h-5 rounded flex items-center justify-center text-[color:var(--muted)] hover:text-[color:var(--fg-2)] hover:bg-[color:var(--card)] transition-colors"
+              >
+                <Icon name="X" size={11} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 输入区域（支持拖拽文件） */}
+      <div
+        onDragOver={(e) => { e.preventDefault(); if (!disabled) setDragOver(true) }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={handleDrop}
+        className={`flex items-end gap-2.5 p-2 rounded-[22px] border bg-[color:var(--card)] border-[color:var(--border)] focus-within:ring-2 focus-within:ring-[color:var(--accent-soft)] focus-within:border-[color:var(--accent)] transition-all ${dragOver ? 'ring-2 ring-[color:var(--accent)] border-[color:var(--accent)]' : ''}`}
+      >
+        {/* 隐藏文件输入（多选） */}
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept="image/*,.txt,.md,.csv,.json,.log,.xml,.yml,.yaml,.ts,.js,.cs,.sql"
+          multiple
           className="hidden"
-          aria-label="选择图片文件"
+          aria-label="选择附件"
           onChange={handleFileChange}
         />
 
-        {/* 附件按钮（图片 OCR） */}
-        <Tooltip content="上传图片（自动识别文字）" position="top">
+        {/* 附件按钮（图片 OCR + 文档注入） */}
+        <Tooltip content="附件（图片自动识别 / 文档注入内容）" position="top">
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={disabled || ocrLoading}
-            aria-label="上传图片"
+            aria-label="添加附件"
             className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-[color:var(--muted)] hover:text-[color:var(--accent)] hover:bg-[color:var(--accent-soft)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors"
           >
             <Icon name="Paperclip" size={18} />
@@ -275,6 +364,9 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
             <Icon name="X" size={16} />
           </button>
         )}
+
+        {/* 工具区插槽（ModelPicker：模型选择 + 思考等级） */}
+        {toolbarSlot}
 
         {/* 发送按钮 */}
         <motion.button

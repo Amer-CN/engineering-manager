@@ -26,6 +26,7 @@ import { getFilteredSuggestions } from './suggestions'
 import { useAgentPrefill } from './useAgentPrefill'
 import { useAgentConversationFlow } from './useAgentConversationFlow'
 import Mascot from './Mascot'
+import ModelPicker, { type ReasoningLevel } from './ModelPicker'
 import { getGreeting } from '@/components/features/dashboard/dashboardConstants'
 import SuggestionChips from './SuggestionChips'
 
@@ -43,6 +44,11 @@ const AgentDashboard: React.FC = () => {
   const [searchOpen, setSearchOpen] = useState(false)
   const [modelName, setModelName] = useState('')
   const [providerName, setProviderName] = useState('')
+  /** ModelPicker 状态：null = 跟随配置默认模型 */
+  const [pickModel, setPickModel] = useState<string | null>(null)
+  const [reasoningLevel, setReasoningLevel] = useState<ReasoningLevel>('off')
+  /** 用户是否主动上滚（暂停自动跟随，出现"回到底部"按钮） */
+  const [autoFollow, setAutoFollow] = useState(true)
 
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -57,18 +63,55 @@ const AgentDashboard: React.FC = () => {
     handleSelectConversation,
     handleNewConversation,
     handleResend,
-  } = useAgentConversationFlow({ inputValue, setInputValue, inputRef })
+    handleForkTo,
+  } = useAgentConversationFlow({
+    inputValue, setInputValue, inputRef,
+    model: pickModel, reasoningLevel,
+  })
 
   /** 对话形态：按下发送瞬间（首条消息入列）即切换；反向（新对话清空）自动回欢迎形态 */
   const chatMode = messages.length > 0
   const suggestionCards = getFilteredSuggestions(can)
 
-  // ── 自动滚动 ──
+  /** 状态化占位文案（复刻 ZCode 规格） */
+  const composerPlaceholder = loading
+    ? '初始化任务中…'
+    : chatMode
+      ? '提出后续问题…（Shift+Enter 换行）'
+      : '向 AI 管家提问…（/ 快捷命令，可拖入文件）'
+
+  /** user 消息编辑：内容回填输入框并聚焦（由用户改后手动重发） */
+  const handleEditMessage = (content: string) => {
+    setInputValue(content)
+    setTimeout(() => inputRef.current?.focus(), 50)
+  }
+
+  /** assistant 消息分叉：截断到该消息（含）作为新对话起点 */
+  const handleForkMessage = (idx: number) => {
+    handleForkTo(idx)
+  }
+
+  // ── 自动滚动（用户上滚时暂停跟随）──
   useEffect(() => {
-    if (scrollRef.current) {
+    if (scrollRef.current && autoFollow) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
-  }, [messages, loading])
+  }, [messages, loading, autoFollow])
+
+  /** 滚动容器上滚检测：距底 >150px 视为脱离跟随 */
+  const handleScroll = () => {
+    const el = scrollRef.current
+    if (!el) return
+    const away = el.scrollHeight - el.scrollTop - el.clientHeight > 150
+    setAutoFollow(!away)
+  }
+
+  const scrollToBottom = () => {
+    const el = scrollRef.current
+    if (!el) return
+    el.scrollTop = el.scrollHeight
+    setAutoFollow(true)
+  }
 
   // ── ⌘K / Ctrl+K 唤起搜索 ──
   useEffect(() => {
@@ -112,6 +155,8 @@ const AgentDashboard: React.FC = () => {
             message={msg}
             isUser={msg.role === 'user'}
             onResend={msg.role === 'assistant' && idx > 0 ? () => handleResend(msg.clientId) : undefined}
+            onEdit={msg.role === 'user' ? () => handleEditMessage(msg.content ?? '') : undefined}
+            onFork={msg.role === 'assistant' ? () => handleForkMessage(idx) : undefined}
           />
         ))}
       </AnimatePresence>
@@ -225,9 +270,29 @@ const AgentDashboard: React.FC = () => {
 
           {/* 消息流：常驻挂载（首轮流式期间即出现，占据问候区让出的空间） */}
           {chatMode && (
-            <HoverScrollbar className="flex-1 px-6" scrollRef={scrollRef}>
-              {messageList}
-            </HoverScrollbar>
+            <div className="relative flex-1 min-h-0">
+              <HoverScrollbar className="h-full px-6" scrollRef={scrollRef} onScrollCapture={handleScroll}>
+                {messageList}
+              </HoverScrollbar>
+
+              {/* 滚动到底部（用户上滚脱离跟随时出现） */}
+              <AnimatePresence>
+                {!autoFollow && (
+                  <motion.button
+                    key="scroll-bottom"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    onClick={scrollToBottom}
+                    aria-label="滚动到底部"
+                    className="absolute bottom-3 right-6 z-10 w-9 h-9 rounded-full flex items-center justify-center shadow-lg transition-colors"
+                    style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}
+                  >
+                    <Icon name="ChevronDown" size={16} />
+                  </motion.button>
+                )}
+              </AnimatePresence>
+            </div>
           )}
 
           {/* 快捷提问：欢迎形态展示于输入框下 */}
@@ -274,8 +339,16 @@ const AgentDashboard: React.FC = () => {
                 onSend={handleSend}
                 disabled={loading}
                 inputRef={inputRef}
-                placeholder="请输入指令或询问项目状态…"
+                placeholder={composerPlaceholder}
                 centered={!chatMode}
+                toolbarSlot={
+                  <ModelPicker
+                    model={pickModel}
+                    onModelChange={setPickModel}
+                    reasoningLevel={reasoningLevel}
+                    onReasoningLevelChange={setReasoningLevel}
+                  />
+                }
               />
               <p className="text-center mt-2 text-xs" style={{ color: 'var(--muted)' }}>AI 可能会产生错误，请核实重要信息。</p>
             </div>
