@@ -13,7 +13,7 @@ namespace EngineeringManager.Api;
 /// Agent AI 助手端点 — 基于 LLM function calling 的智能查询
 ///
 /// 路由分组: /api/agent
-/// 权限控制: 聊天/对话需登录; setup 为白名单; setup/save 需 admin
+/// 权限控制: 聊天/对话需登录; setup/status 白名单; setup/test 需登录; setup/save 需 admin
 /// </summary>
 public static class AgentEndpoints
 {
@@ -356,6 +356,16 @@ public static class AgentEndpoints
                                 .GetProperty("choices")[0]
                                 .GetProperty("delta");
 
+                            if (delta.TryGetProperty("reasoning_content", out var reasoningProp))
+                            {
+                                // 思考过程分流：单独事件类型，前端折叠展示（不混入正文）
+                                var reasoning = reasoningProp.GetString();
+                                if (!string.IsNullOrEmpty(reasoning))
+                                {
+                                    await WriteSSE(ctx, new { type = "reasoning", text = reasoning });
+                                }
+                            }
+
                             if (delta.TryGetProperty("content", out var contentProp))
                             {
                                 var text = contentProp.GetString();
@@ -657,7 +667,7 @@ public static class AgentEndpoints
         });
 
         // ═══════════════════════════════════════════════════════════
-        // 测试连接（白名单，无需登录）
+        // 测试连接（需登录）
         // ═══════════════════════════════════════════════════════════
 
         app.MapPost("/api/agent/setup/test", async (
