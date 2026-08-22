@@ -177,4 +177,39 @@ public class PiiProtectorTests : IDisposable
     {
         Assert.Throws<InvalidOperationException>(() => _pii.Rotate(_db, "test"));
     }
+
+    [Fact]
+    public void Encrypt_SamePlaintext_Twice_ProducesDifferentCiphertexts()
+    {
+        // AES-GCM 每次加密使用随机 nonce → 同明文两次加密密文必须不同
+        // （若 nonce 变成固定值/复用，GCM 会泄露明文相关性，本测试变红）
+        _pii.Initialize(_db);
+        var plain = "13911112222";
+        var c1 = _pii.Encrypt(plain);
+        var c2 = _pii.Encrypt(plain);
+
+        Assert.NotEqual(c1, c2);
+        // 密文 base64 中不得包含明文子串
+        Assert.DoesNotContain(plain, c1);
+        Assert.DoesNotContain(plain, c2);
+        // 两密文均可正常解密回明文（确保不是"坏"密文凑出来的不同）
+        Assert.Equal(plain, _pii.Decrypt(c1));
+        Assert.Equal(plain, _pii.Decrypt(c2));
+    }
+
+    [Fact]
+    public void Decrypt_TamperedCiphertext_ThrowsCryptographicException()
+    {
+        // 篡改密文最后 1 字节（GCM 认证标签校验必须失败 → AesGcm.Decrypt 抛 CryptographicException）
+        _pii.Initialize(_db);
+        var plain = "tamper-test-13800138000";
+        var cipher = _pii.Encrypt(plain);
+
+        var data = Convert.FromBase64String(cipher);
+        data[^1] ^= 0xFF; // 翻转最后一个密文字节
+        var tampered = Convert.ToBase64String(data);
+
+        Assert.ThrowsAny<System.Security.Cryptography.CryptographicException>(
+            () => _pii.Decrypt(tampered));
+    }
 }

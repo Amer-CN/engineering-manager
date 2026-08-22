@@ -48,16 +48,19 @@ export const PaymentList: React.FC<PaymentListProps> = ({
     },
     {
       key: 'invoiceInfos', title: '关联发票',
-      render: (record) => (
-        <div className="flex flex-col gap-1.5">
-          {(record as PaymentRecord & { invoiceInfos?: { invoiceNo: string; invoiceName: string; invoiceAmount: number }[] }).invoiceInfos?.map((info: any) => (
-            <div key={info.invoiceId} className="text-xs">
-              <div className="font-mono" style={{ color: 'var(--fg-2)' }}>{info.invoiceNo}</div>
-              <div className="mt-0.5 font-mono tabular-nums" style={{ color: 'var(--muted)' }}>开票金额 ¥{formatMoney(info.invoiceAmount)}</div>
-            </div>
-          )) || <span className="text-xs" style={{ color: 'var(--muted)' }}>-</span>}
-        </div>
-      )
+      render: (record) => {
+        const invoiceInfos = (record as PaymentRecord & { invoiceInfos?: { invoiceNo: string; invoiceName: string; invoiceAmount: number }[] }).invoiceInfos || []
+        return (
+          <div className="flex flex-col gap-1.5">
+            {invoiceInfos.length > 0 ? invoiceInfos.map((info: any, idx: number) => (
+              <div key={info.invoiceNo ?? idx} className="text-xs">
+                <div className="font-mono" style={{ color: 'var(--fg-2)' }}>{info.invoiceNo}</div>
+                <div className="mt-0.5 font-mono tabular-nums" style={{ color: 'var(--muted)' }}>开票金额 ¥{formatMoney(info.invoiceAmount)}</div>
+              </div>
+            )) : <span className="text-xs" style={{ color: 'var(--muted)' }}>-</span>}
+          </div>
+        )
+      }
     },
     {
       key: 'amount', title: '金额', align: 'right',

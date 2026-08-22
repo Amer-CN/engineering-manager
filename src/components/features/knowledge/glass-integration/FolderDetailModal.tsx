@@ -20,13 +20,13 @@ export const FolderDetailModal: React.FC<FolderDetailModalProps> = ({
   theme = 'dark',
   readonly: isReadonly = false,
 }) => {
-  if (!isOpen || !folder) return null;
-
   const isDark = theme === 'dark';
   const [newDocTitle, setNewDocTitle] = useState('');
   const [newDocCode, setNewDocCode] = useState('');
   const [newDocPriority, setNewDocPriority] = useState<'高' | '中' | '低'>('中');
   const [isAddingDoc, setIsAddingDoc] = useState(false);
+
+  if (!isOpen || !folder) return null;
 
   const handleAddDocument = (e: React.FormEvent) => {
     e.preventDefault();
