@@ -168,10 +168,16 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend
           </div>
         )}
 
-        {/* 底部行：操作条（hover）· 耗时 StatsLine · 时间戳（DSH：气泡下方 gap 6px） */}
+        {/* 底部行：操作条 · 耗时 StatsLine · 时间戳（DSH：气泡下方 gap 6px）。
+            操作条常驻占位（opacity 切换而不是条件渲染）——hover 显形时不再挤压布局 */}
         <div className={`flex items-center gap-2 text-micro ${isUser ? 'flex-row-reverse' : ''}`} style={{ color: 'var(--muted)' }}>
-          {!isUser && content && hovered && (
-            <MessageActions content={content} onResend={onResend} onEdit={onEdit} onFork={onFork} />
+          {!isUser && content && (
+            <div
+              className="transition-opacity duration-150"
+              style={{ opacity: hovered ? 1 : 0, pointerEvents: hovered ? 'auto' : 'none' }}
+            >
+              <MessageActions content={content} onResend={onResend} onEdit={onEdit} onFork={onFork} />
+            </div>
           )}
           {statsText && <span title="本轮回复耗时">{statsText}</span>}
           {timeText && <span>{timeText}</span>}

@@ -40,6 +40,8 @@ export interface UseAgentConversationFlowResult {
   handleSelectConversation: (conv: AgentConversation) => Promise<void>
   handleNewConversation: () => void
   handleResend: (assistantClientId: string) => void
+  /** 上下文用量（最近一轮 prompt tokens；null = 未知） */
+  contextTokens: number | null
   /** 分叉：截断消息列表到指定下标（含）并置空会话 */
   handleForkTo: (idx: number) => void
 }
@@ -52,6 +54,8 @@ export function useAgentConversationFlow({
   reasoningLevel = 'off',
 }: UseAgentConversationFlowOptions): UseAgentConversationFlowResult {
   const [messages, setMessages] = useState<LocalMessage[]>([])
+  /** 上下文用量（最近一轮 prompt_tokens——近似当前会话上下文规模；ContextMeter 用） */
+  const [contextTokens, setContextTokens] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [conversationId, setConversationId] = useState<number | null>(null)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
@@ -188,8 +192,9 @@ export function useAgentConversationFlow({
               ),
             )
           },
-          onDone: ({ toolCalls, message }) => {
+          onDone: ({ toolCalls, message, usage }) => {
             if (isStale()) return
+            if (usage) setContextTokens(usage.prompt_tokens)
             setMessages((prev) =>
               prev.map((m) => {
                 if (m.clientId !== assistantClientId) return m
@@ -348,6 +353,7 @@ export function useAgentConversationFlow({
     refreshTrigger,
     mascotState,
     firstDone,
+    contextTokens,
     handleSend,
     handleSelectConversation,
     handleNewConversation,

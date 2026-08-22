@@ -273,6 +273,8 @@ export interface AgentStreamCallbacks {
     conversationId: number
     toolCalls?: ToolCallResult[]
     message?: string
+    /** 本轮 token 用量（后端末 chunk 采集；缺省不显示） */
+    usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number }
   }) => void
   onError?: (error: string) => void
 }
@@ -353,6 +355,7 @@ function dispatchSseEvent(
       toolCalls?: ToolCallResult[]
       message?: string
       error?: string
+      usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number }
     }
     try {
       evt = JSON.parse(jsonStr)
@@ -379,6 +382,7 @@ function dispatchSseEvent(
           conversationId: evt.conversationId ?? 0,
           toolCalls: evt.toolCalls,
           message: evt.message,
+          usage: evt.usage,
         })
         break
       case 'error':

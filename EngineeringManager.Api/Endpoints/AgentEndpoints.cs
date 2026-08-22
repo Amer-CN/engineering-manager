@@ -346,13 +346,26 @@ public static class AgentEndpoints
                     var finalContentBuilder = new StringBuilder();
 
                     // 使用流式 API 输出最终回复
+                    ChatUsage? lastUsage = null;
                     await foreach (var chunk in llm.ChatStreamAsync(llmMessages, null, request.Model,
                         request.ReasoningLevel == "off" ? null : request.ReasoningLevel))
                     {
                         try
                         {
                             var chunkDoc = JsonDocument.Parse(chunk);
-                            var delta = chunkDoc.RootElement
+                            var root = chunkDoc.RootElement;
+
+                            // 末 chunk 携带 usage（OpenAI 兼容流：仅最后一个 chunk 带）
+                            if (root.TryGetProperty("usage", out var usageProp) && usageProp.ValueKind == JsonValueKind.Object)
+                            {
+                                try
+                                {
+                                    lastUsage = JsonSerializer.Deserialize<ChatUsage>(usageProp.GetRawText());
+                                }
+                                catch { /* usage 解析失败不影响正文 */ }
+                            }
+
+                            var delta = root
                                 .GetProperty("choices")[0]
                                 .GetProperty("delta");
 
@@ -394,12 +407,13 @@ public static class AgentEndpoints
                         await conversations.SaveMessageAsync(db, conversationId, finalMsg);
                     }
 
-                    // 发送完成信号
+                    // 发送完成信号（带本轮 token 用量：上下文余量/缓存统计的 ContextMeter 用）
                     await WriteSSE(ctx, new
                     {
                         type = "done",
                         conversationId,
                         toolCalls = toolResults,
+                        usage = lastUsage,
                     });
 
                     return;

@@ -27,6 +27,7 @@ import { useAgentPrefill } from './useAgentPrefill'
 import { useAgentConversationFlow } from './useAgentConversationFlow'
 import Mascot from './Mascot'
 import ModelPicker, { type ReasoningLevel } from './ModelPicker'
+import ContextMeter from './ContextMeter'
 import { getGreeting } from '@/components/features/dashboard/dashboardConstants'
 import SuggestionChips from './SuggestionChips'
 
@@ -59,6 +60,7 @@ const AgentDashboard: React.FC = () => {
     loading,
     refreshTrigger,
     mascotState,
+    contextTokens,
     handleSend,
     handleSelectConversation,
     handleNewConversation,
@@ -276,12 +278,15 @@ const AgentDashboard: React.FC = () => {
                     centered={false}
                     mascot={<Mascot size={32} state={mascotState} />}
                     toolbarSlot={
-                      <ModelPicker
-                        model={pickModel}
-                        onModelChange={setPickModel}
-                        reasoningLevel={reasoningLevel}
-                        onReasoningLevelChange={setReasoningLevel}
-                      />
+                      <>
+                        <ModelPicker
+                          model={pickModel}
+                          onModelChange={setPickModel}
+                          reasoningLevel={reasoningLevel}
+                          onReasoningLevelChange={setReasoningLevel}
+                        />
+                        <ContextMeter contextTokens={contextTokens} />
+                      </>
                     }
                   />
                 </div>
@@ -340,12 +345,15 @@ const AgentDashboard: React.FC = () => {
                   inputRef={inputRef}
                   placeholder={composerPlaceholder}
                   toolbarSlot={
-                    <ModelPicker
-                      model={pickModel}
-                      onModelChange={setPickModel}
-                      reasoningLevel={reasoningLevel}
-                      onReasoningLevelChange={setReasoningLevel}
-                    />
+                    <>
+                      <ModelPicker
+                        model={pickModel}
+                        onModelChange={setPickModel}
+                        reasoningLevel={reasoningLevel}
+                        onReasoningLevelChange={setReasoningLevel}
+                      />
+                      <ContextMeter contextTokens={contextTokens} />
+                    </>
                   }
                 />
               </div>
