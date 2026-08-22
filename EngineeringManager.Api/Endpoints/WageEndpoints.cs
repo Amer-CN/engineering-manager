@@ -604,8 +604,6 @@ public static class WageEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             // G2 B2: 回单确认写付款列 → wages:update
             if (!CurrentUser.HasPermission(ctx, db, "wages:update")) return Results.Forbid();
-            var scope = CurrentUser.GetDataScope(ctx);
-            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var saved = 0;
             var skipped = 0;
             var skippedItems = new List<object>();
@@ -621,15 +619,37 @@ public static class WageEndpoints
                 if (string.IsNullOrEmpty(pair.BankReceiptPath)) missing.Add("bankReceiptPath");
                 if (missing.Count > 0)
                     return Results.BadRequest(new { success = false, error = $"confirm-matches: 第 {index} 条缺失字段: {string.Join(", ", missing)}" });
-                // 只 SET 付款列 + 回单路径 + 时间戳/版本；守卫与 batch-payment 完全一致
+                // 只 SET 付款列 + 回单路径 + 时间戳/版本；语义等价于「带回单路径的 batch-payment」
+                // saved 取 ExecuteAsync 实际影响行数累加（不许用入参长度）
+                // R9-23 方案丙更新侧（B47，照 B48 模板）：逐对预读行归属 → 锁在授权分支之前 →
+                // Classify 单点裁决 → Denied skipped / ViaAuthz UPDATE + 同事务 audit（归属移出 SQL）
+                var row = db.QueryFirstOrDefault(
+                    "SELECT created_by, project_id, COALESCE(payment_locked,0) AS locked FROM wages WHERE id=@Id AND deleted_at IS NULL",
+                    new { Id = pair.WageId });
+                // 行不存在 → skipped（现状语义）
+                if (row == null) { skipped++; skippedItems.Add(new { id = pair.WageId }); continue; }
+                // locked → skipped（现状语义，锁在授权分支之前）
+                if (Convert.ToInt64(row.locked ?? 0) != 0) { skipped++; skippedItems.Add(new { id = pair.WageId }); continue; }
+                var createdBy = row.created_by as string;
+                var projectId = row.project_id as long?;
+                var access = RowWriteGate.Classify(ctx, db, createdBy, projectId);
+                // Denied → skipped（现状可观察不变；本端点无 403 形态，只走计数）
+                if (access == RowWriteOutcome.Denied) { skipped++; skippedItems.Add(new { id = pair.WageId }); continue; }
+
+                using var tx = db.BeginTransaction();
                 var affected = await db.ExecuteAsync(@"UPDATE wages SET
                         paid_amount=@PaidAmount, paid_date=@PaidDate, bank_receipt_path=@BankReceiptPath,
                         updated_at=@Now, version=version+1, last_modified_at=@Now
                     WHERE id=@Id AND deleted_at IS NULL
-                      AND COALESCE(payment_locked, 0) = 0
-                      AND (created_by=@Uid OR @IsAdmin=1)",
+                      AND COALESCE(payment_locked, 0) = 0",
                     new { Id = pair.WageId, PaidAmount = ToFen(pair.PaidAmount!.Value), PaidDate = pair.PaidDate,
-                          BankReceiptPath = pair.BankReceiptPath, Uid = uid, IsAdmin = isAdmin, Now = now() });
+                          BankReceiptPath = pair.BankReceiptPath, Now = now() }, tx);
+                if (access == RowWriteOutcome.AllowedViaAuthorization)
+                {
+                    // 跨人修改落审计（fail-closed：审计写不进 → 事务回滚 → 付款不生效）
+                    AuditWriter.CrossUserEdit(db, tx, ctx, "wages", pair.WageId!.Value, "POST /api/wages/confirm-matches", createdBy, projectId);
+                }
+                tx.Commit();
                 if (affected > 0) saved++;
                 else { skipped++; skippedItems.Add(new { id = pair.WageId }); }
             }

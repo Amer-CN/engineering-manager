@@ -31,9 +31,35 @@ public static class ProjectWorkerMiscEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             // G2 B5: 项目工人写操作 → members:update
             if (!CurrentUser.HasPermission(ctx, db, "members:update")) return Results.Forbid();
-            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
-            var affected = await db.ExecuteAsync(@"UPDATE project_workers SET team_id=@TeamId,daily_wage=@DailyWage,worker_type=@WorkerType,entry_date=@EntryDate,status=@Status, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
-                new { dto.Id, dto.TeamId, dto.DailyWage, dto.WorkerType, dto.EntryDate, dto.Status, Uid = uid, IsAdmin = isAdmin, Now = Common.NowString() });
+            // R9-22 批次 4 B36：B 桶形态翻转——现状 WHERE created_by/IsAdmin（授权跨人 403），
+            // 对齐方案丙：预读行归属 → Classify 单点裁决 → 授权跨人可改（403→200）+ 同事务 audit。
+            // 预读行归属（C# 单点裁决归属，SQL WHERE 不再含 created_by/IsAdmin）。
+            // 注：现状该端点对任何请求恒 500（UPDATE 含 @Now 但参数对象从未传 Now，Dapper 抛
+            // InvalidOperationException）——授权跨人 403 只是「从未被执行到的声明语义」，本轮
+            // 修复顺带补传 Now 使端点首次可用（与 B12/B19 的差异，见 FREEZE-CONTRACT 批次 4 登记）。
+            var row = db.QueryFirstOrDefault(
+                "SELECT created_by, project_id FROM project_workers WHERE id=@Id",
+                new { Id = dto.Id ?? 0 });
+            // 行不存在 → 403（Ok/Forbid 收尾语义保持，未引入 WriteResult 404）
+            if (row == null) return Results.Forbid();
+            // 归属裁决：Denied → 403；AllowedViaAuthorization → 跨人修改落 audit（同事务 fail-closed）
+            var createdBy = row.created_by as string;
+            var projectId = row.project_id as long?;
+            var access = RowWriteGate.Classify(ctx, db, createdBy, projectId);
+            if (access == RowWriteOutcome.Denied) return Results.Forbid();
+
+            // 归属条件移出 SQL（C# 单点裁决）；无锁列故无 409 档、WHERE 只留 id
+            // （列集照原样：team_id/daily_wage/worker_type/entry_date/status + version+1/last_modified_at；
+            //  daily_wage 沿用工资域惯例「分」，原样直传不换算；补传 Now——见上注）
+            using var tx = db.BeginTransaction();
+            var affected = await db.ExecuteAsync(@"UPDATE project_workers SET team_id=@TeamId,daily_wage=@DailyWage,worker_type=@WorkerType,entry_date=@EntryDate,status=@Status, version=version+1, last_modified_at=@Now WHERE id=@Id",
+                new { dto.Id, dto.TeamId, dto.DailyWage, dto.WorkerType, dto.EntryDate, dto.Status, Now = Common.NowString() }, tx);
+            if (access == RowWriteOutcome.AllowedViaAuthorization)
+            {
+                // 跨人修改落审计（fail-closed：审计写不进 → 事务回滚 → 修改不生效）
+                AuditWriter.CrossUserEdit(db, tx, ctx, "project_workers", dto.Id ?? 0, "PUT /api/project-workers", createdBy, projectId);
+            }
+            tx.Commit();
             return affected > 0 ? Common.Ok() : Results.Forbid();
         });
 
