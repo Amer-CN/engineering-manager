@@ -18,4 +18,7 @@ public record LlmProviderConfig
     public bool UseBuiltIn { get; init; } = true;
     public double Temperature { get; init; } = 0.7;
     public int MaxTokens { get; init; } = 4096;
+
+    /// <summary>当前 provider 可选模型清单（供前端模型选择器；空 = 前端隐藏选择器）</summary>
+    public List<string> AvailableModels { get; init; } = new();
 }

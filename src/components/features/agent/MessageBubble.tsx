@@ -21,6 +21,10 @@ interface MessageBubbleProps {
   isUser: boolean
   /** 重发回调（重跑上一条 user 消息） */
   onResend?: () => void
+  /** user 消息：编辑（内容回填输入框） */
+  onEdit?: () => void
+  /** assistant 消息：分叉（以该消息为起点派生新对话） */
+  onFork?: () => void
 }
 
 /** 解析 toolCalls — 支持 ToolCall[] 和 ToolCallResult[] 两种形态 */
@@ -43,7 +47,7 @@ function extractToolResults(
   }))
 }
 
-const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend }) => {
+const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend, onEdit, onFork }) => {
   const [hovered, setHovered] = useState(false)
   const content = message.content || ''
   const toolResults = extractToolResults(
@@ -113,7 +117,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend
 
         {/* AI 消息操作条 */}
         {!isUser && content && hovered && (
-          <MessageActions content={content} onResend={onResend} />
+          <MessageActions content={content} onResend={onResend} onEdit={onEdit} onFork={onFork} />
         )}
       </div>
     </motion.div>
