@@ -11,7 +11,7 @@
  *   PUT    /api/knowledge/documents/{id}     — 文档归入/移出文件夹（白名单只收 folderId）
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:5048'
+const API_BASE = import.meta.env.VITE_API_BASE ?? ''
 const TOKEN_KEY = 'jwt_token'
 
 function getToken(): string | null {
