@@ -50,7 +50,7 @@ export const startDownload = async (): Promise<boolean> => {
 export const subscribeDownloadProgress = (
   onProgress: (p: DownloadProgress) => void
 ): EventSource => {
-  const base = import.meta.env.VITE_API_BASE ?? 'http://localhost:5048'
+  const base = import.meta.env.VITE_API_BASE ?? ''
   const es = new EventSource(`${base}/api/update/download/stream`)
   es.onmessage = (e) => {
     try {

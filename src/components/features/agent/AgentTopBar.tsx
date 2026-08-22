@@ -18,8 +18,8 @@ const AgentTopBar: React.FC<AgentTopBarProps> = ({
       <div className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
         <Icon name="Bot" size={16} />
       </div>
-      <div className="min-w-0 flex items-baseline gap-2">
-        <p className="text-sm font-semibold truncate" style={{ color: 'var(--fg)' }}>AI 管家</p>
+      <div className="min-w-0 flex items-center gap-3">
+        <p className="text-sm font-semibold flex-shrink-0" style={{ color: 'var(--fg)' }}>AI 管家</p>
         {modelName && (
           <>
             <span className="text-xs flex-shrink-0" style={{ color: 'var(--muted)' }}>|</span>
@@ -33,8 +33,11 @@ const AgentTopBar: React.FC<AgentTopBarProps> = ({
         onClick={onNewConversation}
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-[color:var(--panel-2)]"
         style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}
-        title="开始新对话"
+        title="返回欢迎页 / 开始新对话"
       >
+        <Icon name="ArrowLeft" size={14} />
+        <span className="hidden sm:inline">返回</span>
+        <span className="hidden sm:inline" style={{ color: 'var(--muted)' }}>·</span>
         <Icon name="Plus" size={14} />
         <span className="hidden sm:inline">新对话</span>
       </button>

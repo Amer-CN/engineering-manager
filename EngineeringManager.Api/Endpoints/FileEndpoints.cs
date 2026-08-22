@@ -10,11 +10,13 @@ namespace EngineeringManager.Api;
 /// </summary>
 public static class FileEndpoints
 {
-    /// <summary>校验路径是否在允许的目录内，防止路径遍历攻击</summary>
+    /// <summary>校验路径是否在允许的目录内，防止路径遍历攻击。
+    /// 安全表 #6: base 末尾补目录分隔符，防 uploads_evil 通过 uploads 前缀检查。</summary>
     private static bool IsPathSafe(string fullPath, string allowedBase)
     {
         var resolved = Path.GetFullPath(fullPath);
         var baseResolved = Path.GetFullPath(allowedBase);
+        if (!baseResolved.EndsWith(Path.DirectorySeparatorChar)) baseResolved += Path.DirectorySeparatorChar;
         return resolved.StartsWith(baseResolved, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -53,7 +55,9 @@ public static class FileEndpoints
                 var baseDir = Path.Combine(ApiConfig.ResolveDataPath(), "uploads");
                 var dir = Path.Combine(baseDir, dto.Category ?? "未分类");
                 Directory.CreateDirectory(dir);
-                var filePath = Path.Combine(dir, dto.FileName ?? "file");
+                // 安全表 #5: 文件名归一，防内嵌路径（..\xxx / a/b）越出分类目录
+                var fileName = Path.GetFileName(dto.FileName ?? "file");
+                var filePath = Path.Combine(dir, fileName);
                 if (!IsPathSafe(filePath, baseDir)) return Common.Fail("非法路径");
                 if (!string.IsNullOrEmpty(dto.FileData))
                 {
@@ -61,7 +65,7 @@ public static class FileEndpoints
                     if (data.Contains(",")) data = data.Split(',')[1];
                     File.WriteAllBytes(filePath, Convert.FromBase64String(data));
                 }
-                return Common.Ok(new { fileName = dto.FileName });
+                return Common.Ok(new { fileName });
             }
             catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });
@@ -252,7 +256,7 @@ public static class FileEndpoints
                 using var reader = new System.IO.StreamReader(ctx.Request.Body);
                 var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(await reader.ReadToEndAsync());
                 var category = body.TryGetProperty("category", out var c) ? (c.GetString() ?? "未分类") : "未分类";
-                var fileName = body.TryGetProperty("fileName", out var f) ? (f.GetString() ?? "") : "";
+                var fileName = Path.GetFileName(body.TryGetProperty("fileName", out var f) ? (f.GetString() ?? "") : "");
                 var baseDir = Path.Combine(ApiConfig.ResolveDataPath(), "uploads");
                 var dir = Path.Combine(baseDir, category);
                 var path = Path.Combine(dir, fileName);

@@ -466,6 +466,7 @@ public static class SttEngineSelector
         if (!SttSafetyChecker.IsVramDetectionReliable(gpu.VramDetectionMethod))
             return $"显存检测方式不可靠（{gpu.VramDetectionMethod}），需要注册表或 DXGI 检测";
 
-        return "未知原因";
+        // 全部检查通过 → 本地 STT 可用，无不可用原因（空串约定见 CanUseLocalStt 一致性）
+        return "";
     }
 }
