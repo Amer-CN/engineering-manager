@@ -15,6 +15,10 @@ export interface FolderItem {
   period: string; // e.g. "2025 · Q2" or "Jan 01 - Mar 31"
   progress: number; // 0 to 100
   memberCount: number;
+  /** 真实文档数（活动灯判定与展示口径） */
+  docCount?: number
+  /** 文档级最近活动 ISO 时间；null=空文件夹 */
+  lastActivityAt?: string | null
   highlightColor?: 'emerald' | 'cyan' | 'purple' | 'amber' | 'blue';
   category: string;
   documents: DocumentItem[];

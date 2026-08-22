@@ -48,7 +48,9 @@ public static class KnowledgeFolderEndpoints
                     $@"SELECT f.id, f.name, f.english_name, f.project_id, f.category,
                               f.created_at, f.updated_at, f.created_by,
                               (SELECT COUNT(*) FROM knowledge_documents d
-                                WHERE d.folder_id = f.id AND d.deleted_at IS NULL) AS doc_count
+                                WHERE d.folder_id = f.id AND d.deleted_at IS NULL) AS doc_count,
+                              (SELECT MAX(d.updated_at) FROM knowledge_documents d
+                                WHERE d.folder_id = f.id AND d.deleted_at IS NULL) AS last_activity_at
                        FROM knowledge_folders f
                        WHERE f.deleted_at IS NULL
                          AND {scope.Filter}
@@ -67,6 +69,7 @@ public static class KnowledgeFolderEndpoints
                     updatedAt = f.updated_at,
                     createdBy = f.created_by,
                     docCount = f.doc_count,
+                    lastActivityAt = f.last_activity_at,
                 }));
             }
             catch (Exception ex)
