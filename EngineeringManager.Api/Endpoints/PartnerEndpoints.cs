@@ -28,17 +28,18 @@ public static class PartnerEndpoints
             // v1.1.0 P0-4 Phase 2: 公司维度表过滤
             var rows = db.Query($@"SELECT * FROM partners WHERE {CurrentUser.UserFilterCompany(scope)} ORDER BY name",
                 new { Uid = uid, IsAdmin = isAdmin }).ToList();
-            // v0.75.0: 后端响应层不再 mask
+            // 安全表 #3: PII 字段按角色脱敏（admin/accountant/manager 明文，其余前4后4掩码）
+            var piiAccess = CurrentUser.GetPiiAccess(ctx);
             var masked = rows.Select(p => new
             {
                 id = p.id, name = p.name, category = p.category, contact = p.contact,
                 address = p.address, bank_name = p.bank_name, tax_type = p.project_ids, project_ids = p.project_ids,
                 created_at = p.created_at, updated_at = p.updated_at,
-                phone = p.phone as string,
+                phone = Common.MaskPiiField("phone", p.phone as string, piiAccess),
                 email = p.email,
-                bank_account = p.bank_account as string,
-                tax_number = p.tax_number as string,
-                credit_code = p.credit_code as string,
+                bank_account = Common.MaskPiiField("bankAccount", p.bank_account as string, piiAccess),
+                tax_number = Common.MaskPiiField("taxNumber", p.tax_number as string, piiAccess),
+                credit_code = Common.MaskPiiField("creditCode", p.credit_code as string, piiAccess),
                 registered_address = p.registered_address, business_scope = p.business_scope
             });
             return Common.Ok(masked);
@@ -142,13 +143,20 @@ public static class PartnerEndpoints
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var scope = CurrentUser.GetDataScope(ctx);
-            // v0.74.0 公司维度表过滤 + v0.75.0 后端响应层不再 mask
+            // v0.74.0 公司维度表过滤 + 安全表 #3: phone 按角色脱敏（dict 后处理，与 partners 同款）
+            var piiAccess = CurrentUser.GetPiiAccess(ctx);
             var rows = db.Query($@"SELECT s.*, CASE WHEN r.province IS NOT NULL THEN r.province||'-'||r.city||'-'||r.district ELSE '' END as region_name
                           FROM supervisors s LEFT JOIN regions r ON s.region_id=r.id
                           WHERE {CurrentUser.UserFilterCompany(scope)}
                           ORDER BY s.created_at DESC",
-                          new { Uid = uid, IsAdmin = isAdmin });
-            return Common.Ok(rows);
+                          new { Uid = uid, IsAdmin = isAdmin }).ToList();
+            var masked = rows.Select(s =>
+            {
+                var dict = (IDictionary<string, object?>)s;
+                dict["phone"] = Common.MaskPiiField("phone", s.phone as string, piiAccess);
+                return s;
+            });
+            return Common.Ok(masked);
         });
 
                 app.MapPost("/api/supervisors", async (HttpContext ctx, SupervisorDto dto, IDbConnection db) =>

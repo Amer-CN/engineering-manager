@@ -139,12 +139,12 @@ export default function WageRecordsTab({
       render: (item) => {
         const paidAmount = getEditPaidAmount(item, paymentEdits)
         const actualWage = item.actualWage ?? 0
-        const diff = (parseFloat(paidAmount) || 0) - actualWage
-        const diffColor = diff > 0.01 ? 'text-danger-600' : diff < -0.01 ? 'text-warning-600' : 'text-success-600'
-        const diffSign = diff > 0.01 ? '+' : ''
+        const diff = actualWage - (parseFloat(paidAmount) || 0)
+        const diffColor = diff > 0.01 ? 'text-warning-600' : diff < -0.01 ? 'text-danger-600' : 'text-success-600'
+        const diffSign = diff > 0.01 ? '-' : diff < -0.01 ? '+' : ''
         return (
           <span className={`font-medium ${diffColor}`}>
-            {diffSign}¥{diff.toFixed(2)}
+            {diffSign}¥{Math.abs(diff).toFixed(2)}
           </span>
         )
       }

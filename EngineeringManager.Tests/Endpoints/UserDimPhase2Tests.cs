@@ -299,8 +299,11 @@ public class UserDimPhase2Tests : ApiTestBase
         Assert.NotNull(targetRow);
         // v0.75.0: 默认 GET 返明文
         var defaultBank = targetRow.Value.GetProperty("bank_account").GetString() ?? "";
-        Assert.False(defaultBank.Contains("*") && defaultBank.Length >= 8,
-            $"默认 GET bank_account 应为明文, 实际: {defaultBank}");
+        // 明文即不含掩码符（拆开断言：空串不得借 && 短路通过）
+        Assert.False(defaultBank.Contains("*"),
+            $"默认 GET bank_account 应为明文（不含 *），实际: {defaultBank}");
+        Assert.True(defaultBank.Length >= 8,
+            $"默认 GET bank_account 应为明文卡号（长度 >= 8），实际: \"{defaultBank}\"");
 
         // ?unmask=true GET
         var unmaskedGet = await Client.GetAsync("/api/partners?unmask=true");
