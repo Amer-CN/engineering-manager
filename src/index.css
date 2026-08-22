@@ -1527,6 +1527,14 @@ button:disabled {
   background: var(--border);
   flex-shrink: 0;
 }
+/* R2：Protected Span — [[...]] 受保护内容黄色高亮（amber 底纹 + 虚线边框示意） */
+.prose .protected-span {
+  background: #fef3c7;
+  color: #92400e;
+  border-bottom: 1px dashed #f59e0b;
+  border-radius: 2px;
+  padding: 0 2px;
+}
 /* 文字颜色按钮（A + 当前色条） */
 .em-color-btn {
   display: inline-flex;
