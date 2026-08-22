@@ -17,9 +17,9 @@ import { Button } from "@/components/ui/Button";
 import { useToast } from "@/hooks/useToast";
 import { usePermission } from "@/hooks/usePermission";
 import { ingestKnowledgeDocument } from "@/services/knowledge-client";
-import { exportMarkdownAsDocx } from "@/utils/docxExport";
 import WritingDraftPanel from "./WritingDraftPanel";
 import EditorToolbar from "./EditorToolbar";
+import WritingExportMenu from "./WritingExportMenu";
 import {
   fetchWritingDoc,
   updateWritingDoc,
@@ -181,15 +181,6 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
     }
   };
 
-  // W3：导出 docx
-  const handleExportDocx = () => {
-    if (!editor) return;
-    const md = editor.getMarkdown();
-    void exportMarkdownAsDocx(md, title.trim() || "未命名文档").catch(() => {
-      showToast("导出失败", "error");
-    });
-  };
-
   // 卸载前：若还有未触发的防抖保存，立即落盘（避免最后一击丢失）
   useEffect(() => {
     return () => {
@@ -303,10 +294,7 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
               存知识库
             </Button>
           )}
-          <Button variant="ghost" size="sm" onClick={handleExportDocx}>
-            <Icon name="FileDown" size={15} />
-            导出
-          </Button>
+          <WritingExportMenu editor={editor} title={title.trim() || "未命名文档"} />
         </div>
       </div>
 
