@@ -36,7 +36,15 @@ export interface WritingDoc {
   sourceType: string
   sourceRef: string | null
   contentMd: string
+  folderId: number | null
   createdBy: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface WritingFolder {
+  id: number
+  name: string
   createdAt: string
   updatedAt: string
 }
@@ -57,14 +65,15 @@ export function fetchWritingDocTypes(): Promise<{ success: boolean; data?: Writi
   return apiClient.get<WritingDocTypesResponse>('/api/writing/doc-types')
 }
 
-/** 文档列表（分页 + 文体过滤） */
-export function fetchWritingDocs(params: { docType?: string; page?: number; size?: number } = {}): Promise<{
+/** 文档列表（分页 + 文体过滤 + 文件夹过滤：folderId=0 表示未分组） */
+export function fetchWritingDocs(params: { docType?: string; folderId?: number; page?: number; size?: number } = {}): Promise<{
   success: boolean
   data?: WritingListResponse
   error?: string
 }> {
   const q = new URLSearchParams()
   if (params.docType) q.set('docType', params.docType)
+  if (params.folderId != null) q.set('folderId', String(params.folderId))
   if (params.page) q.set('page', String(params.page))
   if (params.size) q.set('size', String(params.size))
   const suffix = q.toString() ? `?${q.toString()}` : ''
@@ -101,6 +110,35 @@ export function updateWritingDoc(id: number, body: { title?: string; contentMd?:
 /** 软删 */
 export function deleteWritingDoc(id: number): Promise<{ success: boolean; error?: string }> {
   return apiClient.del<unknown>(`/api/writing/documents/${id}`)
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// 文件夹（R3）
+// ═══════════════════════════════════════════════════════════════════
+
+/** 文件夹列表（软删过滤） */
+export function fetchWritingFolders(): Promise<{ success: boolean; data?: WritingFolder[]; error?: string }> {
+  return apiClient.get<WritingFolder[]>('/api/writing/folders')
+}
+
+/** 新建文件夹 */
+export function createWritingFolder(name: string): Promise<{ success: boolean; data?: { id: number; name: string }; error?: string }> {
+  return apiClient.post<{ id: number; name: string }>('/api/writing/folders', { name })
+}
+
+/** 文件夹改名 */
+export function renameWritingFolder(id: number, name: string): Promise<{ success: boolean; error?: string }> {
+  return apiClient.put<unknown>(`/api/writing/folders/${id}`, { name })
+}
+
+/** 软删文件夹（其文档 folder_id 置 NULL，回到未分组） */
+export function deleteWritingFolder(id: number): Promise<{ success: boolean; error?: string }> {
+  return apiClient.del<unknown>(`/api/writing/folders/${id}`)
+}
+
+/** 文档移入/移出文件夹（folderId=null 移出） */
+export function moveWritingDoc(id: number, folderId: number | null): Promise<{ success: boolean; error?: string }> {
+  return apiClient.put<unknown>(`/api/writing/documents/${id}/folder`, { folderId })
 }
 
 /** 行内改写：返回替换文本 */
