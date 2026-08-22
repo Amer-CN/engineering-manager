@@ -69,21 +69,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {/* Quick Action Icons */}
             <button className={`p-2 rounded-xl border ${isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-zinc-100 border-zinc-200'} relative`}>
               <Bell className="w-4 h-4 text-zinc-500" />
-              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-500" />
+              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[color:var(--gc-active,#10b981)]" />
             </button>
 
             <button className={`p-2 rounded-xl border ${isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-zinc-100 border-zinc-200'}`}>
               <Mail className="w-4 h-4 text-zinc-500" />
             </button>
 
-            <button className="px-4 py-2 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold shadow-lg shadow-emerald-500/25 flex items-center gap-1.5 transition-all">
+            <button className="px-4 py-2 rounded-2xl bg-[color:var(--gc-active,#10b981)] hover:bg-[color:var(--gc-active-deep,#059669)] text-[color:var(--gc-active-ink,#fff)] text-xs font-semibold shadow-lg shadow-black/25 flex items-center gap-1.5 transition-all">
               <Plus className="w-4 h-4" />
               <span>新增任务</span>
             </button>
             {onBackToAmbient && (
               <button
                 onClick={onBackToAmbient}
-                className="px-4 py-2 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold shadow-lg shadow-emerald-500/25 flex items-center gap-1.5 transition-all"
+                className="px-4 py-2 rounded-2xl bg-[color:var(--gc-active,#10b981)] hover:bg-[color:var(--gc-active-deep,#059669)] text-[color:var(--gc-active-ink,#fff)] text-xs font-semibold shadow-lg shadow-black/25 flex items-center gap-1.5 transition-all"
               >
                 返回 3D 沉浸视角
               </button>
@@ -99,7 +99,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div>
                 <div className="text-xs text-zinc-400 font-medium">今日待办</div>
                 <div className="text-2xl font-bold font-sans mt-1">12 <span className="text-xs font-normal text-zinc-400">项任务</span></div>
-                <div className="text-[11px] text-emerald-500 font-medium flex items-center gap-1 mt-2">
+                <div className="text-[11px] text-[color:var(--gc-active,#10b981)] font-medium flex items-center gap-1 mt-2">
                   <TrendingUp className="w-3 h-3" />
                   <span>较昨日 ↑ 20%</span>
                 </div>
@@ -113,12 +113,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div>
                 <div className="text-xs text-zinc-400 font-medium">进行中</div>
                 <div className="text-2xl font-bold font-sans mt-1">28 <span className="text-xs font-normal text-zinc-400">项任务</span></div>
-                <div className="text-[11px] text-emerald-500 font-medium flex items-center gap-1 mt-2">
+                <div className="text-[11px] text-[color:var(--gc-active,#10b981)] font-medium flex items-center gap-1 mt-2">
                   <TrendingUp className="w-3 h-3" />
                   <span>较昨日 ↑ 8%</span>
                 </div>
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-2xl bg-[color:var(--gc-a20,#10b9811a)] text-[color:var(--gc-active,#10b981)] flex items-center justify-center">
                 <TrendingUp className="w-6 h-6" />
               </div>
             </div>
@@ -127,7 +127,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div>
                 <div className="text-xs text-zinc-400 font-medium">已完成</div>
                 <div className="text-2xl font-bold font-sans mt-1">56 <span className="text-xs font-normal text-zinc-400">项任务</span></div>
-                <div className="text-[11px] text-emerald-500 font-medium flex items-center gap-1 mt-2">
+                <div className="text-[11px] text-[color:var(--gc-active,#10b981)] font-medium flex items-center gap-1 mt-2">
                   <TrendingUp className="w-3 h-3" />
                   <span>较昨日 ↑ 15%</span>
                 </div>
@@ -141,7 +141,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div>
                 <div className="text-xs text-zinc-400 font-medium">逾期任务</div>
                 <div className="text-2xl font-bold font-sans mt-1">3 <span className="text-xs font-normal text-zinc-400">项任务</span></div>
-                <div className="text-[11px] text-emerald-500 font-medium flex items-center gap-1 mt-2">
+                <div className="text-[11px] text-[color:var(--gc-active,#10b981)] font-medium flex items-center gap-1 mt-2">
                   <TrendingDown className="w-3 h-3" />
                   <span>较昨日 ↓ 40%</span>
                 </div>
@@ -158,13 +158,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div className="flex items-center gap-3">
                 <h2 className="text-base font-bold">任务看板 (3D 文件夹归档)</h2>
                 <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl text-xs font-medium">
-                  <button onClick={() => setActiveTab('all')} className={`px-3 py-1 rounded-lg transition-all ${activeTab === 'all' ? 'bg-white dark:bg-zinc-700 shadow-xs font-semibold' : 'text-zinc-500'}`}>
+                  <button onClick={() => setActiveTab('all')} className={`px-3 py-1 rounded-lg transition-all ${activeTab === 'all' ? 'bg-white dark:bg-zinc-700 shadow-xs font-semibold text-zinc-800' : 'text-zinc-500'}`}>
                     全部任务
                   </button>
-                  <button onClick={() => setActiveTab('mine')} className={`px-3 py-1 rounded-lg transition-all ${activeTab === 'mine' ? 'bg-white dark:bg-zinc-700 shadow-xs font-semibold' : 'text-zinc-500'}`}>
+                  <button onClick={() => setActiveTab('mine')} className={`px-3 py-1 rounded-lg transition-all ${activeTab === 'mine' ? 'bg-white dark:bg-zinc-700 shadow-xs font-semibold text-zinc-800' : 'text-zinc-500'}`}>
                     我负责的
                   </button>
-                  <button onClick={() => setActiveTab('joined')} className={`px-3 py-1 rounded-lg transition-all ${activeTab === 'joined' ? 'bg-white dark:bg-zinc-700 shadow-xs font-semibold' : 'text-zinc-500'}`}>
+                  <button onClick={() => setActiveTab('joined')} className={`px-3 py-1 rounded-lg transition-all ${activeTab === 'joined' ? 'bg-white dark:bg-zinc-700 shadow-xs font-semibold text-zinc-800' : 'text-zinc-500'}`}>
                     我参与的
                   </button>
                 </div>
@@ -195,7 +195,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className={`p-6 rounded-3xl border ${isDark ? 'bg-zinc-900/80 border-zinc-800' : 'bg-white border-zinc-200/80 shadow-sm'}`}>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <div className="w-1.5 h-4 bg-emerald-500 rounded-full" />
+                <div className="w-1.5 h-4 bg-[color:var(--gc-active,#10b981)] rounded-full" />
                 <h3 className="text-sm font-bold">项目时间线</h3>
                 <span className="text-xs font-mono text-zinc-400">2025年5月</span>
               </div>
@@ -210,7 +210,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div className="flex items-center gap-3 text-xs">
                 <span className="w-20 font-medium truncate">需求评审</span>
                 <div className="flex-1 bg-zinc-100 dark:bg-zinc-800 h-7 rounded-xl relative overflow-hidden flex items-center px-3">
-                  <div className="absolute left-[15%] w-[35%] h-5 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-lg flex items-center px-2 text-[10px] font-semibold">
+                  <div className="absolute left-[15%] w-[35%] h-5 bg-[color:var(--gc-a20,#10b98133)] text-[color:var(--gc-active-deep,#059669)] dark:text-[color:var(--gc-icon,#34d399)] border border-[color:var(--gc-a30,#10b9814d)] rounded-lg flex items-center px-2 text-[10px] font-semibold">
                     需求评审会 5.18 - 5.24
                   </div>
                 </div>
@@ -242,7 +242,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <aside className={`w-80 flex-shrink-0 border-l p-6 space-y-6 ${isDark ? 'bg-zinc-900/90 border-zinc-800' : 'bg-white border-zinc-200/80'}`}>
         <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800">
           <div className="flex items-center gap-2 font-bold text-sm">
-            <Sparkles className="w-4 h-4 text-emerald-500" />
+            <Sparkles className="w-4 h-4 text-[color:var(--gc-active,#10b981)]" />
             <span>智能详情</span>
           </div>
           <Search className="w-4 h-4 text-zinc-400 cursor-pointer" />
@@ -254,7 +254,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-base">{selectedFolder.documents[0]?.title || selectedFolder.title}</h3>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 font-semibold border border-emerald-500/30">
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[color:var(--gc-a20,#10b98126)] text-[color:var(--gc-active,#10b981)] font-semibold border border-[color:var(--gc-a30,#10b9814d)]">
               高优先级
             </span>
           </div>
@@ -281,14 +281,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
             <div className="flex items-center justify-between">
               <span className="text-zinc-400">当前进度</span>
-              <span className="font-medium text-emerald-500 font-mono">{selectedFolder.progress}%</span>
+              <span className="font-medium text-[color:var(--gc-active,#10b981)] font-mono">{selectedFolder.progress}%</span>
             </div>
           </div>
         </div>
 
         {/* AI Assistant Recommendations Box */}
-        <div className={`p-4 rounded-2xl border space-y-3 ${isDark ? 'bg-zinc-800/40 border-emerald-500/30' : 'bg-emerald-50/50 border-emerald-200'}`}>
-          <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+        <div className={`p-4 rounded-2xl border space-y-3 ${isDark ? 'bg-zinc-800/40 border-[color:var(--gc-a30,#10b9814d)]' : 'bg-[color:var(--gc-a10,#10b9811a)] border-[color:var(--gc-soft-border,#a7f3d0)]'}`}>
+          <div className="flex items-center gap-2 text-xs font-bold text-[color:var(--gc-active-deep,#059669)] dark:text-[color:var(--gc-icon,#34d399)]">
             <Sparkles className="w-3.5 h-3.5" />
             <span>AI 助手建议</span>
           </div>
@@ -300,7 +300,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           <button
             onClick={onOpenFolderDetail}
-            className="w-full py-2 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-xs font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
+            className="w-full py-2 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-800 text-xs font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
           >
             查看建议详情与完整文档
           </button>
@@ -310,7 +310,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
           <button
             onClick={onOpenFolderDetail}
-            className="w-full py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-xs shadow-md shadow-emerald-500/20 transition-all"
+            className="w-full py-2.5 rounded-2xl bg-[color:var(--gc-active,#10b981)] hover:bg-[color:var(--gc-active-deep,#059669)] text-[color:var(--gc-active-ink,#fff)] font-semibold text-xs shadow-md shadow-black/20 transition-all"
           >
             编辑任务与文件夹文件
           </button>

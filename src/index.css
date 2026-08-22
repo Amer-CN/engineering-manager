@@ -1636,6 +1636,79 @@ button:disabled {
   border-radius: 2px;
 }
 
+/* ═══ 知识库 3D 轮播主题桥接（--gc-* → 主题 token）═══
+ * DESIGN.md 颜色内聚：舞台区 emerald 系经 --gc-* 变量使用。
+ * 主题标签映射（StatusBar.tsx）：white=暖白纸、graphite=石墨黑、sandstone=净白。
+ * 净白（sandstone）为主题色灰阶（accent 零彩度）→ active 卡走灰阶（用户拍板 2026-08-21）；
+ * 暖白纸（white）/石墨黑（graphite）暂保持 emerald 原版绿色（后续按用户节奏逐主题定色）。
+ * 注意：TW3 不支持 var() 任意值 + /透明度 修饰符（类会静默丢），
+ * 需要透明度的位置一律用下方的 -a 系 color-mix 变量，类名不带修饰符。 */
+.gc-stage-iso {
+  /* 回退层：emerald 原版绿（未桥接主题直接命中，视觉零变化） */
+  --gc-active: #10b981;
+  --gc-active-deep: #064e3b;
+  --gc-active-border: #34d399;
+  --gc-active-ink: #fff;
+  --gc-on-paper: #059669;  /* 纸面墨（纸恒为浅色，纸上强调色取深阶；原 emerald-600）*/
+}
+[data-theme="sandstone"] .gc-stage-iso {
+  --gc-active: var(--accent);              /* active 卡主色（原 emerald-500/600/700 阶）*/
+  /* 深端不接 accent-strong(22%)：该 token 为小控件校准，卡片是全页最大英雄面；
+     且无彩灰比同亮度饱和色（emerald-950）感知更浅 → 舞台专用墨色炭黑（非纯黑：纸感主题防"洞"）*/
+  --gc-active-deep: oklch(13% 0 0);
+  --gc-active-border: var(--accent);       /* active 边框/描边（原 emerald-300/400 阶）*/
+  --gc-active-ink: var(--on-accent);       /* active 上文字（原 white）*/
+}
+/* 透明度层：color-mix 在使用点把变量混上透明度（TW3 修饰符的替代） */
+.gc-stage-iso {
+  --gc-active-a85: color-mix(in srgb, var(--gc-active) 85%, transparent);
+  --gc-active-a90: color-mix(in srgb, var(--gc-active) 90%, transparent);
+  --gc-active-deep-a95: color-mix(in srgb, var(--gc-active-deep) 95%, transparent);
+  --gc-active-deep-a60: color-mix(in srgb, var(--gc-active-deep) 60%, transparent);
+  --gc-active-border-a80: color-mix(in srgb, var(--gc-active-border) 80%, transparent);
+  --gc-active-border-a40: color-mix(in srgb, var(--gc-active-border) 40%, transparent);
+}
+.gc-stage-iso {
+  /* 新增语义层 */
+  --gc-icon: #34d399;   /* 常显小图标绿（Folder 图标等，原 emerald-400）*/
+  --gc-soft: #d1fae5;   /* 淡色底（原 emerald-100 语义，纸面徽标底）*/
+  --gc-soft-border: #a7f3d0; /* 淡边框（原 emerald-200）*/
+  --gc-a10: color-mix(in srgb, var(--gc-active) 10%, transparent);
+  --gc-a20: color-mix(in srgb, var(--gc-active) 20%, transparent);  /* 辉光/淡底 20% */
+  --gc-a30: color-mix(in srgb, var(--gc-active) 30%, transparent);
+  --gc-icon-a50: color-mix(in srgb, var(--gc-icon) 50%, transparent); /* ping 圈 */
+}
+[data-theme="sandstone"] .gc-stage-iso {
+  --gc-icon: var(--accent-strong);      /* 灰阶图标（深，可读）*/
+  --gc-on-paper: var(--accent);         /* 纸面墨：灰阶深墨 */
+  --gc-soft: color-mix(in srgb, var(--accent) 10%, white);  /* 灰阶淡底 */
+  --gc-soft-border: color-mix(in srgb, var(--accent) 22%, white);
+}
+[data-theme="white"] .gc-stage-iso {
+  /* 暖白纸：焦糖琥珀（用户拍板 2026-08-22 第二轮，深暖褐与净白墨色趋同被否）。
+     取主题 warning 暖色家族（hue 70 琥珀）——舞台特区不受应用"洗彩"约束 */
+  --gc-active: var(--warning);                                        /* oklch(60% .11 70) 焦糖琥珀 */
+  --gc-active-deep: oklch(36% 0.08 55);                               /* 深咖啡 */
+  --gc-active-border: color-mix(in srgb, var(--warning) 40%, white);  /* 淡金描边 */
+  --gc-active-ink: var(--on-accent);
+  --gc-on-paper: color-mix(in srgb, var(--warning) 70%, black);       /* 纸面墨：中深焦糖（纸上元素加深保对比）*/
+  --gc-icon: color-mix(in srgb, var(--warning) 80%, black);           /* 中焦糖小图标 */
+  --gc-soft: color-mix(in srgb, var(--warning) 14%, white);           /* 琥珀淡底 */
+  --gc-soft-border: color-mix(in srgb, var(--warning) 28%, white);
+}
+[data-theme="graphite"] .gc-stage-iso {
+  /* 石墨黑：奶油白反转强调（与侧边栏激活项/主按钮同语义；用户拍板 2026-08-22）。
+     亮卡需深字——标题/副题走 --gc-active-ink；纸面元素走 --gc-on-paper（奶油白上纸会隐形）*/
+  --gc-active: var(--accent);                                        /* oklch(92% .004 80) 奶油白 */
+  --gc-active-deep: oklch(74% 0.008 80);                             /* 暖石暗端 */
+  --gc-active-border: var(--accent-strong);                          /* 近白描边 */
+  --gc-active-ink: var(--on-accent);                                 /* 深字（浅卡）*/
+  --gc-on-paper: var(--on-accent);                                   /* 纸面墨：暖深灰 */
+  --gc-icon: var(--accent);                                          /* 奶油白图标（暗色 chrome 上）*/
+  --gc-soft: color-mix(in srgb, var(--accent) 14%, white);
+  --gc-soft-border: color-mix(in srgb, var(--accent) 28%, white);
+}
+
 /* ═══ 知识库 3D 轮播舞台样式隔离（.gc-stage-iso）═══
  * 背景：下方各主题的「Tailwind 通用类覆盖」（[data-theme=…] .bg-white/.card → var(--card)）
  * 会把原版组件的纸面（bg-white/bg-zinc-100/bg-zinc-200…）染成主题卡色——石墨黑下纸变黑根因。
