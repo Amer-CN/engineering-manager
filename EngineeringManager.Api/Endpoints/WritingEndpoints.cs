@@ -63,6 +63,7 @@ public static class WritingEndpoints
             HttpContext ctx,
             IDbConnection db,
             string? docType = null,
+            int? folderId = null,
             int page = 1,
             int size = 20) =>
         {
@@ -88,13 +89,24 @@ public static class WritingEndpoints
                     conditions.Add("[doc_type] = @DocType");
                     p.Add("DocType", docType);
                 }
+                // folderId 取值语义（R3）：缺省/null = 不过滤；0 = 未分组（folder_id IS NULL）；>0 = 该文件夹
+                if (folderId.HasValue)
+                {
+                    if (folderId.Value == 0)
+                        conditions.Add("[folder_id] IS NULL");
+                    else
+                    {
+                        conditions.Add("[folder_id] = @FolderId");
+                        p.Add("FolderId", folderId.Value);
+                    }
+                }
                 var filter = string.Join(" AND ", conditions);
 
                 p.Add("Size", size);
                 p.Add("Offset", offset);
 
                 var items = db.Query($@"SELECT id, title, doc_type, style_id, project_id, source_type, source_ref,
-                                           created_by, created_at, updated_at
+                                           folder_id, created_by, created_at, updated_at
                                        FROM [writing_documents]
                                        WHERE {filter}
                                        ORDER BY [updated_at] DESC LIMIT @Size OFFSET @Offset",
@@ -119,6 +131,7 @@ public static class WritingEndpoints
                             projectId = r.project_id,
                             sourceType = r.source_type,
                             sourceRef = r.source_ref,
+                            folderId = r.folder_id,
                             createdBy = r.created_by,
                             createdAt = r.created_at,
                             updatedAt = r.updated_at,
