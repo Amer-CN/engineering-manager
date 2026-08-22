@@ -15,17 +15,14 @@ interface AgentComposerProps {
   disabled?: boolean
   inputRef?: React.RefObject<HTMLTextAreaElement>
   placeholder?: string
-  /** 是否居中样式（空态用） */
   centered?: boolean
-  /** 输入框左下工具区插槽（ModelPicker 等） */
   toolbarSlot?: ReactNode
+  mascot?: ReactNode
 }
 
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024 // 4MB
 const MAX_TEXT_BYTES = 100 * 1024 // 100KB
-/** 可注入文本内容的扩展名（其余类型只附文件名清单） */
 const TEXT_EXTENSIONS = ['.txt', '.md', '.csv', '.json', '.log', '.xml', '.yml', '.yaml', '.ts', '.js', '.cs', '.sql']
-
 const isTextFile = (name: string) => TEXT_EXTENSIONS.some(ext => name.toLowerCase().endsWith(ext))
 
 const AgentComposer: React.FC<AgentComposerProps> = ({
@@ -37,6 +34,7 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
   placeholder = '向 AI 管家提问…（Shift+Enter 换行，/ 快捷命令）',
   centered = false,
   toolbarSlot,
+  mascot,
 }) => {
   const innerRef = useRef<HTMLTextAreaElement>(null)
   const textareaRef = inputRef || innerRef
@@ -220,9 +218,7 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
             transition={{ duration: 0.15 }}
             className="absolute bottom-full left-0 right-0 mb-2 rounded-xl border border-[color:var(--border)] bg-[color:var(--panel)] shadow-lg overflow-hidden z-20"
           >
-            <div className="px-3 py-2 border-b border-[color:var(--border)]">
-              <span className="text-xs font-medium text-[color:var(--muted)]">快捷命令</span>
-            </div>
+            <div className="px-3 py-2 border-b border-[color:var(--border)] text-xs font-medium text-[color:var(--muted)]">快捷命令</div>
             <div className="max-h-48 overflow-y-auto py-1">
               {filteredCommands.map(cmd => (
                 <button
@@ -252,10 +248,7 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
           <span className="text-xs text-[color:var(--fg-2)] truncate flex-1">{attachment.name}</span>
           {ocrLoading && (
             <span className="text-xs flex items-center gap-1" style={{ color: 'var(--accent)' }}>
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-              >
+              <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
                 <Icon name="Loader2" size={14} />
               </motion.div>
               识别中…
@@ -298,17 +291,25 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
           onChange={handleFileChange}
         />
 
-        <textarea
-          ref={textareaRef}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          disabled={disabled}
-          placeholder={placeholder}
-          rows={1}
-          className="w-full px-2 py-1.5 text-sm text-[color:var(--fg)] placeholder-[color:var(--muted)] bg-transparent border-0 outline-none resize-none disabled:opacity-50"
-          style={{ minHeight: '36px', maxHeight: '120px' }}
-        />
+        {/* 文本行：Mascot 状态头像（可选） + textarea 横向排布 */}
+        <div className="flex items-start gap-2">
+          {mascot && (
+            <div className="flex-shrink-0 pt-1" style={{ overflow: 'visible' }}>
+              {mascot}
+            </div>
+          )}
+          <textarea
+            ref={textareaRef}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={disabled}
+            placeholder={placeholder}
+            rows={1}
+            className="flex-1 px-2 py-1.5 text-sm text-[color:var(--fg)] placeholder-[color:var(--muted)] bg-transparent border-0 outline-none resize-none disabled:opacity-50"
+            style={{ minHeight: '36px', maxHeight: '120px' }}
+          />
+        </div>
 
         {/* 操作行：左（附件 + ModelPicker）· 右（清空 + 发送） */}
         <div className="flex items-center gap-1.5">

@@ -85,7 +85,7 @@ export function useAgentConversationFlow({
     }, ms)
   }, [])
 
-  useEffect(() => () => { if (mascotTimer.current) window.clearTimeout(mascotTimer.current) }, [])
+  useEffect(() => () => { if (mascotTimer.current) window.clearTimeout(mascotTimer.current); abortRef.current?.abort() }, [])
 
   /** 发送消息（流式优先，失败回退非流式） */
   const handleSend = useCallback(
