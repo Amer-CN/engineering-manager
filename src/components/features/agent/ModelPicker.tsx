@@ -1,14 +1,14 @@
 /**
- * ModelPicker — 输入框旁的模型选择 + 思考等级选择（复刻 ZCode 交互规格）
- * 模型列表来自 GET /api/agent/models（单模型时隐藏选择器，只留思考等级）。
- * 思考等级 off/low/medium/high → 请求体 reasoningLevel 透传（后端映射 reasoning_effort）。
+ * ModelPicker — 输入框操作行内的模型名显示 + 思考等级（简化三档：快速/标准/深度）
+ * 模型列表来自 GET /api/agent/models；当前模型名常显在操作行（点击可切换，单模型时纯展示）。
+ * 思考等级 off/medium/high → reasoning_effort 透传（实测 Agnes 合法值 none/low/medium/high/max）。
  */
 
 import React, { useState, useRef, useEffect } from 'react'
 import { Icon } from '@/components/ui/Icon'
 import { getAgentModels } from '@/services/agent-client'
 
-export type ReasoningLevel = 'off' | 'low' | 'medium' | 'high' | 'max'
+export type ReasoningLevel = 'off' | 'medium' | 'high'
 
 interface ModelPickerProps {
   /** 所选模型（null = 用后端默认） */
@@ -20,10 +20,8 @@ interface ModelPickerProps {
 
 const LEVEL_OPTIONS: { key: ReasoningLevel; label: string; icon: string }[] = [
   { key: 'off', label: '快速', icon: 'Zap' },
-  { key: 'low', label: '低', icon: 'Brain' },
-  { key: 'medium', label: '中', icon: 'Brain' },
+  { key: 'medium', label: '标准', icon: 'Brain' },
   { key: 'high', label: '深度', icon: 'Brain' },
-  { key: 'max', label: '极深', icon: 'Brain' },
 ]
 
 const ModelPicker: React.FC<ModelPickerProps> = ({
@@ -55,22 +53,24 @@ const ModelPicker: React.FC<ModelPickerProps> = ({
 
   const showModelPicker = models.length > 1
   const currentLevel = LEVEL_OPTIONS.find(o => o.key === reasoningLevel) ?? LEVEL_OPTIONS[0]
+  const activeModelName = model ?? models[0]
 
   return (
     <div ref={rootRef} className="flex items-center gap-1.5">
-      {showModelPicker && (
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => { setModelOpen(v => !v); setLevelOpen(false) }}
-            className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-colors hover:bg-[color:var(--panel-2)]"
-            style={{ color: 'var(--muted)' }}
-            title="选择本次对话使用的模型"
-          >
-            <Icon name="Cpu" size={13} />
-            <span className="max-w-32 truncate">{model ?? '默认'}</span>
-            <Icon name="ChevronDown" size={12} />
-          </button>
+      {/* 模型名常显在操作行（②改版）：多模型可点击切换，单模型纯展示 */}
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => { if (showModelPicker) { setModelOpen(v => !v); setLevelOpen(false) } }}
+          disabled={!showModelPicker}
+          className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-colors hover:bg-[color:var(--panel-2)] disabled:cursor-default"
+          style={{ color: 'var(--muted)' }}
+          title={showModelPicker ? '选择本次对话使用的模型' : activeModelName}
+        >
+          <Icon name="Cpu" size={13} />
+          <span className="max-w-32 truncate">{activeModelName ?? '默认'}</span>
+          {showModelPicker && <Icon name="ChevronDown" size={12} />}
+        </button>
           {modelOpen && (
             <div className="absolute bottom-full left-0 mb-1.5 min-w-44 rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] shadow-lg overflow-hidden z-30">
               <button
@@ -112,10 +112,9 @@ const ModelPicker: React.FC<ModelPickerProps> = ({
               ))}
             </div>
           )}
-        </div>
-      )}
+      </div>
 
-      {/* 思考等级 */}
+      {/* 思考等级（简化三档：快速/标准/深度） */}
       <div className="relative">
         <button
           type="button"
