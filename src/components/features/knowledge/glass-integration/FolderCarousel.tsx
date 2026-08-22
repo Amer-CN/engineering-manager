@@ -480,7 +480,9 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
               const rotateZ = -3 - activeFactor * 2.5 + offset * 0.2;
 
               // Opacity fade strictly for extreme edge items
-              const fadeStart = VISIBLE_RADIUS - 2;
+              // 淡入带只盖屏幕外边缘（窗口半径仅比屏宽多 1 卡余量）：
+              // 若压进可见区，入屏卡会带半透明"幽灵态"直到完整入屏才突变实体（用户实测指正）
+              const fadeStart = VISIBLE_RADIUS - 1;
               const opacity = absOffset <= fadeStart ? 1 : Math.max(0, 1 - (absOffset - fadeStart) * 0.25);
 
               return (
