@@ -174,7 +174,8 @@ public class LlmProviderService : ILlmChatService
         if (route.MaxTokens > 0)
             payload["max_tokens"] = route.MaxTokens;
 
-        // 推理档位（OpenAI 风格 reasoning_effort；仅显式传入时携带）
+        // 推理档位（仅显式传入时携带；2026-08-22 实测 Agnes 合法值：
+        // none/low/medium/high/max——非法值 400 拒。前端 off 档此处置空不发 = none 行为）
         if (!string.IsNullOrWhiteSpace(reasoningEffort) && reasoningEffort != "off")
             payload["reasoning_effort"] = reasoningEffort;
 
@@ -237,7 +238,8 @@ public class LlmProviderService : ILlmChatService
         if (route.MaxTokens > 0)
             payload["max_tokens"] = route.MaxTokens;
 
-        // 推理档位（OpenAI 风格 reasoning_effort；仅显式传入时携带）
+        // 推理档位（仅显式传入时携带；2026-08-22 实测 Agnes 合法值：
+        // none/low/medium/high/max——非法值 400 拒。前端 off 档此处置空不发 = none 行为）
         if (!string.IsNullOrWhiteSpace(reasoningEffort) && reasoningEffort != "off")
             payload["reasoning_effort"] = reasoningEffort;
 

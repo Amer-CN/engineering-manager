@@ -8,7 +8,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { Icon } from '@/components/ui/Icon'
 import { getAgentModels } from '@/services/agent-client'
 
-export type ReasoningLevel = 'off' | 'low' | 'medium' | 'high'
+export type ReasoningLevel = 'off' | 'low' | 'medium' | 'high' | 'max'
 
 interface ModelPickerProps {
   /** 所选模型（null = 用后端默认） */
@@ -23,6 +23,7 @@ const LEVEL_OPTIONS: { key: ReasoningLevel; label: string; icon: string }[] = [
   { key: 'low', label: '低', icon: 'Brain' },
   { key: 'medium', label: '中', icon: 'Brain' },
   { key: 'high', label: '深度', icon: 'Brain' },
+  { key: 'max', label: '极深', icon: 'Brain' },
 ]
 
 const ModelPicker: React.FC<ModelPickerProps> = ({
