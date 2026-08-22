@@ -12,6 +12,10 @@
 export interface AgentChatRequest {
   message: string
   conversationId?: number
+  /** 本次调用覆盖默认模型（空 = 跟随配置） */
+  model?: string
+  /** 推理档位 off/low/medium/high（off/空 = 不传） */
+  reasoningLevel?: string
 }
 
 /** 聊天响应 */

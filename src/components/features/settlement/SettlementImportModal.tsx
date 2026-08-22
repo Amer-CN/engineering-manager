@@ -42,7 +42,21 @@ const autoMap = (headers: string[]) => {
 
 export const SettlementImportModal: React.FC<Props> = ({ show, onClose, onImport }) => {
   const [state, setState] = useState<ImportState>(defaultImportState)
-  const [wbBuffer] = useState<ArrayBuffer | null>(null)
+  const [wbBuffer, setWbBuffer] = useState<ArrayBuffer | null>(null)
+
+  // R1-P1: 补文件读取入口（原 wbBuffer 无 setter 恒 null，导入弹窗死功能）
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const buffer = await file.arrayBuffer()
+      setWbBuffer(buffer)
+      const XLSX = await import('xlsx')
+      const wb = XLSX.read(buffer, { type: 'array' })
+      setState(p => ({ ...p, sheetNames: wb.SheetNames }))
+      loadSheet(wb, wb.SheetNames[0])
+    } catch (err) { console.warn('[SettlementImport] 读取文件失败:', err) }
+  }
 
   const loadSheet = async (wb: import('xlsx').WorkBook, sheetName: string, hRow?: number) => {
     const XLSX = await import('xlsx')
@@ -109,6 +123,10 @@ export const SettlementImportModal: React.FC<Props> = ({ show, onClose, onImport
         </div>
         <HoverScrollbar className="flex-1 p-6 space-y-4">
           <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-[color:var(--fg-2)]">Excel 文件：</label>
+              <input type="file" accept=".xlsx,.xls" onChange={handleFileSelect} className="text-sm" />
+            </div>
             {state.sheetNames.length > 1 && (
               <div className="flex items-center gap-2">
                 <label className="text-sm font-medium text-[color:var(--fg-2)]">工作表：</label>
@@ -152,7 +170,7 @@ export const SettlementImportModal: React.FC<Props> = ({ show, onClose, onImport
                   stickyHeader={true}
                 />
               ) : (
-                <div className="p-4 text-center text-sm text-[color:var(--muted)]">请先选择工作表</div>
+                <div className="p-4 text-center text-sm text-[color:var(--muted)]">请先选择 Excel 文件</div>
               )}
             </div></HoverScrollbar>
           </div>

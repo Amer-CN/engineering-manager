@@ -51,13 +51,18 @@ const SalaryHistoryModal: React.FC<Props> = ({ member, onClose }) => {
       note: form.note
     }
     const api = await getAPI()
-    if (editingId) {
-      // Update existing — delete old + create new (no update IPC)
-      await api.deleteSalaryHistory(editingId)
-      setHistory(prev => prev.filter(h => h.id !== editingId))
-    }
+    // R2-P1: 编辑=先 create 新记录成功后再 delete 旧记录（原顺序 create 失败时旧记录已丢）
     const res = await api.createSalaryHistory(payload)
     if (res.success) {
+      if (editingId) {
+        // Update existing — create new + delete old (no update IPC)
+        const delRes = await api.deleteSalaryHistory(editingId)
+        if (delRes.success) {
+          setHistory(prev => prev.filter(h => h.id !== editingId))
+        } else {
+          showToast(delRes.error || '旧记录删除失败，请手动删除', 'error')
+        }
+      }
       logCreate('members', `${member.name} 薪资记录`, member.id, { baseSalary: form.baseSalary, effectiveDate: form.effectiveDate })
       // B→A 同步：如果修改的是入职日期的初始薪资，回写到 member.baseSalary
       if (form.effectiveDate === member.entryDate) {

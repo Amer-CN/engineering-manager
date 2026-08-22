@@ -7,6 +7,7 @@ import { HoverScrollbar } from '../../ui/HoverScrollbar'
 import type { Project } from '@/types/electron'
 import type { Member, WorkerTeam } from '../../../types/electron'
 import { CHART_PALETTE } from './laborColors'
+import { calcAge } from '../../../utils/member'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 
 interface LaborDashboardProps {
@@ -24,8 +25,7 @@ const LaborDashboard: React.FC<LaborDashboardProps> = ({ members, projects, work
   const leftWorkers = members.filter(m => m.status === 'left').length
   const overAgeWorkers = members.filter(m => {
     if (!m.birthDate) return false
-    const age = Math.floor((Date.now() - new Date(m.birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
-    return age > 60
+    return calcAge(m.birthDate) > 60
   }).length
 
   // Project distribution for pie chart

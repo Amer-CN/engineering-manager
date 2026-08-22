@@ -98,4 +98,93 @@ public class SafeQueryValidatorTests
         Assert.NotNull(result.RewrittenSql);
         Assert.Contains("LIMIT 100", result.RewrittenSql, StringComparison.OrdinalIgnoreCase);
     }
+
+    // ════════ 负例：字符串字面量绕过（安全表 #16） ════════
+    // FindTopLevelKeyword 原先只数括号深度、不识别字符串引号，
+    // 导致 ' WHERE 1=1' 字面量内的 WHERE 被当成顶层 WHERE，行级过滤器被插进字面量内。
+
+    // DataScope.Company 已从枚举移除，用 SelfOnly（非 All → 注入 created_by = @Uid 过滤器）
+    private static readonly EngineeringManager.Api.Security.CurrentUser.DataScope RestrictedScope =
+        EngineeringManager.Api.Security.CurrentUser.DataScope.SelfOnly;
+
+    /// <summary>去掉 SQL 里的单引号字符串字面量内容，用于断言过滤器在字面量之外</summary>
+    private static string StripStringLiterals(string sql)
+    {
+        var sb = new System.Text.StringBuilder();
+        bool inQuote = false;
+        for (int i = 0; i < sql.Length; i++)
+        {
+            var c = sql[i];
+            if (inQuote)
+            {
+                if (c == '\'')
+                {
+                    if (i + 1 < sql.Length && sql[i + 1] == '\'') i++; // '' 转义
+                    else inQuote = false;
+                }
+                continue;
+            }
+            if (c == '\'') { inQuote = true; continue; }
+            sb.Append(c);
+        }
+        return sb.ToString();
+    }
+
+    [Fact]
+    public void ValidateAndRewrite_WhereInsideStringLiteral_FilterInjectedOutsideLiteral()
+    {
+        // PoC：注入的行级过滤器被插进 ' WHERE 1=1' 字面量内 → 真实查询无行级过滤（RLS 绕过）
+        var sql = "SELECT ' WHERE 1=1', name FROM projects";
+        var result = SafeQueryValidator.ValidateAndRewrite(sql, TestUid, RestrictedScope);
+
+        Assert.True(result.IsValid, $"查询应该通过: {result.Error}");
+        Assert.NotNull(result.RewrittenSql);
+        // 改写结果去掉字符串字面量后必须仍含 created_by 过滤（过滤器位于字面量之外）
+        Assert.Contains("created_by", StripStringLiterals(result.RewrittenSql), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ValidateAndRewrite_LimitInsideStringLiteral_RealLimitStillEnforced()
+    {
+        // PoC：WHERE name = ' LIMIT 999999' → 字面量内的 LIMIT 不能被当成顶层 LIMIT
+        // （FindTopLevelKeyword 若不跳过字符串字面量，会把字面量内的 LIMIT 当真，改写错位）
+        var sql = "SELECT name FROM projects WHERE name = ' LIMIT 999999'";
+        var result = SafeQueryValidator.ValidateAndRewrite(sql, TestUid, TestScope);
+
+        Assert.True(result.IsValid, $"查询应该通过: {result.Error}");
+        Assert.NotNull(result.RewrittenSql);
+        // 剥掉字符串字面量后必须存在真实 LIMIT 100（自动注入的那个）
+        Assert.Contains("LIMIT 100", StripStringLiterals(result.RewrittenSql), StringComparison.OrdinalIgnoreCase);
+        // 且字面量外不得残留 LIMIT 999999（旧漏洞会把 999999 当成已有 LIMIT 不再注入/错改）
+        Assert.DoesNotContain("999999", StripStringLiterals(result.RewrittenSql), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ValidateAndRewrite_OrderByLimitInsideStringLiteral_RealLimitEnforced()
+    {
+        // PoC：ORDER BY 'LIMIT 999999' → 字面量内的 LIMIT 吞失真实 LIMIT
+        var sql = "SELECT name FROM projects ORDER BY 'LIMIT 999999'";
+        var result = SafeQueryValidator.ValidateAndRewrite(sql, TestUid, TestScope);
+
+        Assert.True(result.IsValid, $"查询应该通过: {result.Error}");
+        Assert.NotNull(result.RewrittenSql);
+        // 改写后必须仍含真实的 LIMIT 100（不能被字面量吞掉）
+        // 先剥掉字符串字面量再断言：裸 Contains 在旧漏洞代码上会命中 'LIMIT 999999' 被改写成的字面量内 'LIMIT 100'，属恒真
+        Assert.Contains("LIMIT 100", StripStringLiterals(result.RewrittenSql), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ValidateAndRewrite_CommentInjection_RowFilterStillInjected()
+    {
+        // PoC：SELECT name FROM projects -- WHERE 1=1
+        // AST 回写会丢掉注释 → 无顶层 WHERE → InjectUserFilterAstAware 以 "WHERE <filter>" 追加。
+        // 若注释处理丢失了行级过滤器（SelfOnly 下 created_by 过滤消失），本测试变红。
+        var sql = "SELECT name FROM projects -- WHERE 1=1";
+        var result = SafeQueryValidator.ValidateAndRewrite(sql, TestUid, RestrictedScope);
+
+        Assert.True(result.IsValid, $"查询应该通过: {result.Error}");
+        Assert.NotNull(result.RewrittenSql);
+        // 改写结果去掉字符串字面量后必须仍含 created_by 过滤（无论 WHERE 是追加还是插入形式）
+        Assert.Contains("created_by", StripStringLiterals(result.RewrittenSql), StringComparison.OrdinalIgnoreCase);
+    }
 }

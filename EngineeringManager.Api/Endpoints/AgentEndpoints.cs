@@ -13,7 +13,7 @@ namespace EngineeringManager.Api;
 /// Agent AI 助手端点 — 基于 LLM function calling 的智能查询
 ///
 /// 路由分组: /api/agent
-/// 权限控制: 聊天/对话需登录; setup 为白名单; setup/save 需 admin
+/// 权限控制: 聊天/对话需登录; setup/status 白名单; setup/test 需登录; setup/save 需 admin
 /// </summary>
 public static class AgentEndpoints
 {
@@ -37,11 +37,13 @@ public static class AgentEndpoints
 
             try
             {
-                // 1. 创建或获取对话
+                // 1. 创建或获取对话（带归属校验，防越权写入他人会话）
                 long conversationId;
                 if (request.ConversationId.HasValue)
                 {
                     conversationId = request.ConversationId.Value;
+                    if (!await conversations.IsConversationOwnedAsync(db, conversationId, uid))
+                        return Common.NotFound("对话不存在");
                 }
                 else
                 {
@@ -80,7 +82,8 @@ public static class AgentEndpoints
 
                 for (int round = 0; round < maxRounds; round++)
                 {
-                    var response = await llm.ChatAsync(llmMessages, availableTools);
+                    var response = await llm.ChatAsync(llmMessages, availableTools, request.Model,
+                        request.ReasoningLevel == "off" ? null : request.ReasoningLevel);
 
                     if (response == null)
                     {
@@ -218,11 +221,16 @@ public static class AgentEndpoints
 
             try
             {
-                // 1. 创建或获取对话
+                // 1. 创建或获取对话（带归属校验，防越权写入他人会话）
                 long conversationId;
                 if (request.ConversationId.HasValue)
                 {
                     conversationId = request.ConversationId.Value;
+                    if (!await conversations.IsConversationOwnedAsync(db, conversationId, uid))
+                    {
+                        await WriteSSE(ctx, new { type = "error", error = "对话不存在" });
+                        return;
+                    }
                 }
                 else
                 {
@@ -264,7 +272,8 @@ public static class AgentEndpoints
 
                 for (int round = 0; round < maxRounds; round++)
                 {
-                    var response = await llm.ChatAsync(llmMessages, availableTools);
+                    var response = await llm.ChatAsync(llmMessages, availableTools, request.Model,
+                        request.ReasoningLevel == "off" ? null : request.ReasoningLevel);
 
                     if (response == null)
                     {
@@ -337,14 +346,41 @@ public static class AgentEndpoints
                     var finalContentBuilder = new StringBuilder();
 
                     // 使用流式 API 输出最终回复
-                    await foreach (var chunk in llm.ChatStreamAsync(llmMessages))
+                    ChatUsage? lastUsage = null;
+                    await foreach (var chunk in llm.ChatStreamAsync(llmMessages, null, request.Model,
+                        request.ReasoningLevel == "off" ? null : request.ReasoningLevel))
                     {
                         try
                         {
                             var chunkDoc = JsonDocument.Parse(chunk);
-                            var delta = chunkDoc.RootElement
+                            var root = chunkDoc.RootElement;
+
+                            // 末 chunk 携带 usage（OpenAI 兼容流：仅最后一个 chunk 带）
+                            if (root.TryGetProperty("usage", out var usageProp) && usageProp.ValueKind == JsonValueKind.Object)
+                            {
+                                try
+                                {
+                                    lastUsage = JsonSerializer.Deserialize<ChatUsage>(usageProp.GetRawText());
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.Error.WriteLine($"[AgentEndpoints] usage 解析失败（不影响正文）: {ex.Message}");
+                                }
+                            }
+
+                            var delta = root
                                 .GetProperty("choices")[0]
                                 .GetProperty("delta");
+
+                            if (delta.TryGetProperty("reasoning_content", out var reasoningProp))
+                            {
+                                // 思考过程分流：单独事件类型，前端折叠展示（不混入正文）
+                                var reasoning = reasoningProp.GetString();
+                                if (!string.IsNullOrEmpty(reasoning))
+                                {
+                                    await WriteSSE(ctx, new { type = "reasoning", text = reasoning });
+                                }
+                            }
 
                             if (delta.TryGetProperty("content", out var contentProp))
                             {
@@ -374,12 +410,13 @@ public static class AgentEndpoints
                         await conversations.SaveMessageAsync(db, conversationId, finalMsg);
                     }
 
-                    // 发送完成信号
+                    // 发送完成信号（带本轮 token 用量：上下文余量/缓存统计的 ContextMeter 用）
                     await WriteSSE(ctx, new
                     {
                         type = "done",
                         conversationId,
                         toolCalls = toolResults,
+                        usage = lastUsage,
                     });
 
                     return;
@@ -625,7 +662,29 @@ public static class AgentEndpoints
         });
 
         // ═══════════════════════════════════════════════════════════
-        // 测试连接（白名单，无需登录）
+        // 可选模型清单（供前端模型选择器；单模型返回时前端隐藏选择器）
+        // ═══════════════════════════════════════════════════════════
+
+        app.MapGet("/api/agent/models", (LlmProviderService llm) =>
+        {
+            try
+            {
+                var config = llm.GetConfig();
+                return Common.Ok(new
+                {
+                    models = config.AvailableModels,
+                    current = config.Model,
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[AgentEndpoints] /api/agent/models 失败: {ex.Message}");
+                return Common.Fail(Common.Sanitize(ex.Message));
+            }
+        });
+
+        // ═══════════════════════════════════════════════════════════
+        // 测试连接（需登录）
         // ═══════════════════════════════════════════════════════════
 
         app.MapPost("/api/agent/setup/test", async (

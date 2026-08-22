@@ -32,6 +32,19 @@ export function getRoleLabel(role: string | undefined | null): string {
   return found?.label || role
 }
 
+/**
+ * 按出生日期精确计算周岁年龄（年月日比较，与日历一致）
+ */
+export function calcAge(birthDate: string): number {
+  const birth = new Date(birthDate)
+  if (isNaN(birth.getTime())) return 0
+  const today = new Date()
+  let age = today.getFullYear() - birth.getFullYear()
+  const m = today.getMonth() - birth.getMonth()
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--
+  return age
+}
+
 // 重新导出常量，保持向后兼容
 export {
   workerTypes,
