@@ -1652,7 +1652,9 @@ button:disabled {
 }
 [data-theme="sandstone"] .gc-stage-iso {
   --gc-active: var(--accent);              /* active 卡主色（原 emerald-500/600/700 阶）*/
-  --gc-active-deep: var(--accent-strong);  /* 深一阶（原 emerald-800/900/950 阶）*/
+  /* 深端不接 accent-strong(22%)：该 token 为小控件校准，卡片是全页最大英雄面；
+     且无彩灰比同亮度饱和色（emerald-950）感知更浅 → 舞台专用墨色炭黑（非纯黑：纸感主题防"洞"）*/
+  --gc-active-deep: oklch(13% 0 0);
   --gc-active-border: var(--accent);       /* active 边框/描边（原 emerald-300/400 阶）*/
   --gc-active-ink: var(--on-accent);       /* active 上文字（原 white）*/
 }
