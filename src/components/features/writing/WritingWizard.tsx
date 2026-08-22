@@ -2,7 +2,7 @@
  * WritingWizard — 新建文档向导（R2：右侧 Drawer 形态）
  *
  * 形态对齐仓库/发票的表单惯例（S17 Drawer 480px 侧滑）：
- *   · 纵向步骤：高频文体卡（≤8）→ 更多文体折叠 → 标题/素材 → 风格三档
+ *   · 纵向步骤：高频文体卡（≤8）→ 更多文体折叠 → 标题/素材 → 风格四档
  *   · footer 固定「空白文档（手写）/ AI 起草」双出路
  *   · dirty 防误关：选了文体或写了素材，Esc/遮罩/X 先弹确认
  */
@@ -23,23 +23,24 @@ interface WritingWizardProps {
   onBlank: (opts: { title: string; docType: string }) => void;
 }
 
-/** 高频文体（展示优先级排序；code 对齐后端 WritingSkillService 注册表） */
+/** 高频文体（展示优先级排序；code/group 对齐后端 WritingSkillService 注册表） */
 const PINNED_TYPES = [
-  { code: "minutes_items", label: "会议纪要", desc: "班子会/专题会/协调会记录成文", icon: "Users" },
-  { code: "notice_general", label: "工作通知", desc: "对内对外发布事项通知", icon: "Bell" },
-  { code: "weekly_report", label: "周报/日报", desc: "周期性工作进展汇报", icon: "CalendarDays" },
-  { code: "summary", label: "工作总结", desc: "阶段工作回顾与成效", icon: "ClipboardCheck" },
-  { code: "briefing_material", label: "汇报材料", desc: "向上级汇报的专项材料", icon: "Presentation" },
-  { code: "notice_meeting", label: "会议通知", desc: "召集会议的时间地点议程", icon: "Mail" },
-  { code: "survey_problem", label: "情况说明", desc: "问题经过、原因与处理说明", icon: "FileSearch" },
-  { code: "plan", label: "工作计划", desc: "下阶段任务与安排", icon: "Target" },
+  { code: "minutes_items", label: "会议纪要", desc: "班子会/专题会/协调会记录成文", icon: "Users", group: "会议纪要" },
+  { code: "notice_general", label: "工作通知", desc: "对内对外发布事项通知", icon: "Bell", group: "通知" },
+  { code: "weekly_report", label: "周报/日报", desc: "周期性工作进展汇报", icon: "CalendarDays", group: "周报汇报" },
+  { code: "summary", label: "工作总结", desc: "阶段工作回顾与成效", icon: "ClipboardCheck", group: "简报总结" },
+  { code: "briefing_material", label: "汇报材料", desc: "向上级汇报的专项材料", icon: "Presentation", group: "周报汇报" },
+  { code: "notice_meeting", label: "会议通知", desc: "召集会议的时间地点议程", icon: "Mail", group: "通知" },
+  { code: "survey_problem", label: "情况说明", desc: "问题经过、原因与处理说明", icon: "FileSearch", group: "调研报告" },
+  { code: "plan", label: "工作计划", desc: "下阶段任务与安排", icon: "Target", group: "计划方案" },
 ];
 
-/** 风格三档 → 后端 S1-S6 映射 */
+/** 风格四档 → 后端 S1-S6 映射；auto 在 Index 层经 next-style 端点 resolve 为真实编号 */
 const STYLE_TIERS = [
   { tier: "简洁", styleId: "S6", desc: "要点直给，适合日常快报" },
   { tier: "标准", styleId: "S3", desc: "成果清单式，结构清晰（推荐）" },
   { tier: "详实", styleId: "S1", desc: "数据详尽，适合正式汇报" },
+  { tier: "自动轮换", styleId: "auto", desc: "记住上次风格，S1-S6 每周自动换，避免一个腔调" },
 ];
 
 const WritingWizard: React.FC<WritingWizardProps> = ({ open, onClose, onDraft, onBlank }) => {
@@ -76,6 +77,12 @@ const WritingWizard: React.FC<WritingWizardProps> = ({ open, onClose, onDraft, o
     setMaterial("");
     setStyleId("S3");
     setShowMore(false);
+  };
+
+  // 选文体同时定风格默认：周报汇报组默认「自动轮换」（R4），其余保持 S3
+  const pickDocType = (code: string, group: string) => {
+    setDocType(code);
+    setStyleId(group === "周报汇报" ? "auto" : "S3");
   };
 
   const handleDraft = () => {
@@ -124,7 +131,7 @@ const WritingWizard: React.FC<WritingWizardProps> = ({ open, onClose, onDraft, o
             {PINNED_TYPES.map((t) => (
               <button
                 key={t.code}
-                onClick={() => setDocType(t.code)}
+                onClick={() => pickDocType(t.code, t.group)}
                 className="rounded-xl border p-3 text-left transition-colors"
                 style={{
                   borderColor: docType === t.code ? "var(--accent)" : "var(--border)",
@@ -153,7 +160,7 @@ const WritingWizard: React.FC<WritingWizardProps> = ({ open, onClose, onDraft, o
                 {moreTypes.map((t) => (
                   <button
                     key={t.code}
-                    onClick={() => setDocType(t.code)}
+                    onClick={() => pickDocType(t.code, t.group)}
                     className="rounded-lg border px-2 py-1.5 text-left text-xs"
                     style={{
                       borderColor: docType === t.code ? "var(--accent)" : "var(--border)",
@@ -210,6 +217,7 @@ const WritingWizard: React.FC<WritingWizardProps> = ({ open, onClose, onDraft, o
                 <div className="text-sm font-medium" style={{ color: "var(--fg)" }}>
                   {s.tier}
                   {s.styleId === "S3" && <span className="ml-1 text-xs" style={{ color: "var(--accent)" }}>推荐</span>}
+                  {s.styleId === "auto" && <span className="ml-1 text-xs" style={{ color: "var(--accent)" }}>周报推荐</span>}
                 </div>
                 <div className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>{s.desc}</div>
               </button>
