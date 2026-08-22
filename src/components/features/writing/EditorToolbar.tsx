@@ -29,6 +29,7 @@ import {
   Table2,
   RemoveFormatting,
   Highlighter,
+  Shield,
 } from "lucide-react";
 
 /** 文字颜色预设（CSS 命名色，避免硬编码 hex、跟随主题感知） */
@@ -55,6 +56,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
         underline: editor.isActive("underline"),
         strike: editor.isActive("strike"),
         highlight: editor.isActive("highlight"),
+        protectedSpan: editor.isActive("protectedSpan"),
         color: (editor.getAttributes("textStyle").color as string | null) ?? null,
         h1: editor.isActive("heading", { level: 1 }),
         h2: editor.isActive("heading", { level: 2 }),
@@ -123,6 +125,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
       {btn(state.underline, "下划线", () => editor.chain().focus().toggleUnderline().run(), <Underline size={15} />)}
       {btn(state.strike, "删除线", () => editor.chain().focus().toggleStrike().run(), <Strikethrough size={15} />)}
       {btn(state.highlight, "高亮", () => editor.chain().focus().toggleHighlight().run(), <Highlighter size={15} />)}
+      {btn(state.protectedSpan, "保护标记（Protected Span）：选中文字后包裹 [[ ]]", () => editor.chain().focus().toggleProtectedSpan().run(), <Shield size={15} />)}
 
       <span className="em-toolbar-sep" />
 
