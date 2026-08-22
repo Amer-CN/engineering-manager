@@ -1649,6 +1649,7 @@ button:disabled {
   --gc-active-deep: #064e3b;
   --gc-active-border: #34d399;
   --gc-active-ink: #fff;
+  --gc-on-paper: #059669;  /* 纸面墨（纸恒为浅色，纸上强调色取深阶；原 emerald-600）*/
 }
 [data-theme="sandstone"] .gc-stage-iso {
   --gc-active: var(--accent);              /* active 卡主色（原 emerald-500/600/700 阶）*/
@@ -1679,18 +1680,33 @@ button:disabled {
 }
 [data-theme="sandstone"] .gc-stage-iso {
   --gc-icon: var(--accent-strong);      /* 灰阶图标（深，可读）*/
+  --gc-on-paper: var(--accent);         /* 纸面墨：灰阶深墨 */
   --gc-soft: color-mix(in srgb, var(--accent) 10%, white);  /* 灰阶淡底 */
   --gc-soft-border: color-mix(in srgb, var(--accent) 22%, white);
 }
 [data-theme="white"] .gc-stage-iso {
-  /* 暖白纸：accent 深暖褐 = 主题身份色（用户拍板 2026-08-22，否决 violet）*/
-  --gc-active: var(--accent);                                        /* oklch(28% .02 74) 深暖褐 */
-  --gc-active-deep: oklch(15% 0.015 74);                             /* 墨褐深端（同净白 ink 深度补偿）*/
-  --gc-active-border: color-mix(in srgb, var(--accent) 45%, white);  /* 亮褐描边 */
+  /* 暖白纸：焦糖琥珀（用户拍板 2026-08-22 第二轮，深暖褐与净白墨色趋同被否）。
+     取主题 warning 暖色家族（hue 70 琥珀）——舞台特区不受应用"洗彩"约束 */
+  --gc-active: var(--warning);                                        /* oklch(60% .11 70) 焦糖琥珀 */
+  --gc-active-deep: oklch(36% 0.08 55);                               /* 深咖啡 */
+  --gc-active-border: color-mix(in srgb, var(--warning) 40%, white);  /* 淡金描边 */
   --gc-active-ink: var(--on-accent);
-  --gc-icon: var(--accent);
-  --gc-soft: color-mix(in srgb, var(--accent) 12%, white);
-  --gc-soft-border: color-mix(in srgb, var(--accent) 25%, white);
+  --gc-on-paper: color-mix(in srgb, var(--warning) 70%, black);       /* 纸面墨：中深焦糖（纸上元素加深保对比）*/
+  --gc-icon: color-mix(in srgb, var(--warning) 80%, black);           /* 中焦糖小图标 */
+  --gc-soft: color-mix(in srgb, var(--warning) 14%, white);           /* 琥珀淡底 */
+  --gc-soft-border: color-mix(in srgb, var(--warning) 28%, white);
+}
+[data-theme="graphite"] .gc-stage-iso {
+  /* 石墨黑：奶油白反转强调（与侧边栏激活项/主按钮同语义；用户拍板 2026-08-22）。
+     亮卡需深字——标题/副题走 --gc-active-ink；纸面元素走 --gc-on-paper（奶油白上纸会隐形）*/
+  --gc-active: var(--accent);                                        /* oklch(92% .004 80) 奶油白 */
+  --gc-active-deep: oklch(74% 0.008 80);                             /* 暖石暗端 */
+  --gc-active-border: var(--accent-strong);                          /* 近白描边 */
+  --gc-active-ink: var(--on-accent);                                 /* 深字（浅卡）*/
+  --gc-on-paper: var(--on-accent);                                   /* 纸面墨：暖深灰 */
+  --gc-icon: var(--accent);                                          /* 奶油白图标（暗色 chrome 上）*/
+  --gc-soft: color-mix(in srgb, var(--accent) 14%, white);
+  --gc-soft-border: color-mix(in srgb, var(--accent) 28%, white);
 }
 
 /* ═══ 知识库 3D 轮播舞台样式隔离（.gc-stage-iso）═══
