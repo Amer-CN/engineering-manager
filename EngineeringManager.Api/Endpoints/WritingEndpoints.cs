@@ -218,8 +218,24 @@ public static class WritingEndpoints
                     return Common.Fail("无效的 sourceType，允许: manual/stt");
 
                 // 文体白名单（草稿阶段可先存后起草，故允许任意已注册文体）
-                if (!string.IsNullOrWhiteSpace(dto.DocType) && !skill.TryGetDocType(dto.DocType, out _))
-                    return Common.Fail("未知文体类型");
+                // R9 归一化：命中注册表后用标准 dt.Code 入库（"SUMMARY" → "summary"，
+                // next-style 等按 doc_type 精确匹配的查询才不会被大小写变体分裂）
+                string? docType = null;
+                if (!string.IsNullOrWhiteSpace(dto.DocType))
+                {
+                    if (!skill.TryGetDocType(dto.DocType, out var dt))
+                        return Common.Fail("未知文体类型");
+                    docType = dt.Code;
+                }
+
+                // R9 归一化：styleId 非空白必须命中注册表，用标准 s.Id 入库；空白存 NULL
+                string? styleId = null;
+                if (!string.IsNullOrWhiteSpace(dto.StyleId))
+                {
+                    if (!skill.TryGetStyle(dto.StyleId, out var s))
+                        return Common.Fail("未知风格");
+                    styleId = s.Id;
+                }
 
                 if (dto.ProjectId.HasValue && !KnowledgeBaseService.CanAccessProject(db, dto.ProjectId.Value, uid, isAdmin))
                     return Results.Json(new { success = false, error = "无权操作该项目" }, statusCode: 403);
@@ -232,8 +248,8 @@ public static class WritingEndpoints
                     new
                     {
                         Title = title,
-                        DocType = (dto.DocType ?? "").Trim(),
-                        StyleId = (dto.StyleId ?? "").Trim(),
+                        DocType = docType ?? "",
+                        StyleId = styleId,
                         Content = dto.ContentMd ?? "",
                         ProjectId = dto.ProjectId,
                         SourceType = sourceType,
@@ -323,6 +339,11 @@ public static class WritingEndpoints
                     new { Id = id, Uid = uid, IsAdmin = isAdmin ? 1 : 0 }) > 0;
                 if (!owned)
                     return Common.NotFound("文档不存在或无权操作");
+
+                // R9 空 PUT 不假更新：全字段空（Title 空白 且 ContentMd null 且 ProjectId null）
+                // 直接成功返回，不 UPDATE、不 bump updated_at、不写审计
+                if (string.IsNullOrWhiteSpace(dto.Title) && dto.ContentMd is null && !dto.ProjectId.HasValue)
+                    return Common.Ok();
 
                 var sets = new List<string> { "[updated_at] = @Now" };
                 var p = new DynamicParameters();
@@ -528,7 +549,8 @@ public static class WritingEndpoints
                 new
                 {
                     Action = action,
-                    Level = "info",
+                    // delete 为破坏性操作，对齐 WritingFolderEndpoints 先例记 warning
+                    Level = action == "delete" ? "warning" : "info",
                     UserId = uid,
                     UserName = userName,
                     Resource = "writing_documents",
