@@ -23,6 +23,12 @@ interface MessageBubbleProps {
   durationSec?: number
   /** 思考过程（reasoning 模型流式聚合；折叠展示） */
   reasoning?: string
+  /** 历史版本正文（重发产生；branchPicker） */
+  versions?: string[]
+  /** 当前展示版本：-1/缺省 = 最新流；0..n-1 = versions 下标 */
+  activeVersion?: number
+  /** 版本切换：dir=-1 向旧 / +1 向新 */
+  onSwitchVersion?: (dir: -1 | 1) => void
   /** 是否为当前用户发送的消息 */
   isUser: boolean
   /** 重发回调（重跑上一条 user 消息） */
@@ -53,10 +59,15 @@ function extractToolResults(
   }))
 }
 
-const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend, onEdit, onFork, at, durationSec, reasoning }) => {
+const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend, onEdit, onFork, at, durationSec, reasoning, versions, activeVersion, onSwitchVersion }) => {
   const [hovered, setHovered] = useState(false)
   const [reasoningOpen, setReasoningOpen] = useState(false)
   const content = message.content || ''
+  /** 展示正文（branchPicker）：activeVersion>=0 取历史版本，否则最新流 */
+  const displayBody = (activeVersion != null && activeVersion >= 0 && versions?.length)
+    ? (versions[activeVersion] ?? content)
+    : content
+  const isHistorical = activeVersion != null && activeVersion >= 0
   const toolResults = extractToolResults(
     (message as AgentMessage).toolCalls
   )
@@ -103,6 +114,16 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend
         className={`flex flex-col gap-1.5 min-w-[120px] ${isUser ? 'items-end' : 'items-start'}`}
         style={isUser ? { maxWidth: 'min(525px, 82%)' } : { maxWidth: '75%' }}
       >
+        {/* 历史版本角标（展示非最新流时） */}
+        {isHistorical && (
+          <span
+            className="self-end text-micro px-1.5 py-0.5 rounded"
+            style={{ background: 'var(--panel-2)', color: 'var(--muted)' }}
+          >
+            历史版本
+          </span>
+        )}
+
         {/* 文字内容：用户消息纯文本，AI 消息走 Markdown 渲染 */}
         {content && (
           <div
@@ -115,7 +136,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend
                 : { background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg)' }
             }
           >
-            {isUser ? content : <MarkdownRenderer content={content} />}
+            {isUser ? displayBody : <MarkdownRenderer content={displayBody} />}
           </div>
         )}
 
@@ -171,6 +192,30 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend
         {/* 底部行：操作条 · 耗时 StatsLine · 时间戳（DSH：气泡下方 gap 6px）。
             操作条常驻占位（opacity 切换而不是条件渲染）——hover 显形时不再挤压布局 */}
         <div className={`flex items-center gap-2 text-micro ${isUser ? 'flex-row-reverse' : ''}`} style={{ color: 'var(--muted)' }}>
+          {/* branchPicker 版本切换器：‹n/m›（仅多版本 assistant 消息；常驻渲染有信息价值） */}
+          {!isUser && versions && versions.length > 0 && onSwitchVersion && (
+            <span className="flex items-center gap-0.5">
+              <button
+                type="button"
+                onClick={() => onSwitchVersion(-1)}
+                aria-label="上一个版本"
+                className="px-1 rounded transition-colors hover:bg-[color:var(--panel-2)]"
+                style={{ color: 'var(--muted)' }}
+              >
+                <Icon name="ChevronLeft" size={12} />
+              </button>
+              <span>{(activeVersion ?? -1) + 2}/{versions.length + 1}</span>
+              <button
+                type="button"
+                onClick={() => onSwitchVersion(1)}
+                aria-label="下一个版本"
+                className="px-1 rounded transition-colors hover:bg-[color:var(--panel-2)]"
+                style={{ color: 'var(--muted)' }}
+              >
+                <Icon name="ChevronRight" size={12} />
+              </button>
+            </span>
+          )}
           {!isUser && content && (
             <div
               className="transition-opacity duration-150"
@@ -179,7 +224,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend
               <MessageActions content={content} onResend={onResend} onEdit={onEdit} onFork={onFork} />
             </div>
           )}
-          {statsText && <span title="本轮回复耗时">{statsText}</span>}
+          {statsText && !isHistorical && <span title="本轮回复耗时">{statsText}</span>}
           {timeText && <span>{timeText}</span>}
         </div>
       </div>

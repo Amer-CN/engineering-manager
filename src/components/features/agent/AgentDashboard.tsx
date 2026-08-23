@@ -64,6 +64,7 @@ const AgentDashboard: React.FC = () => {
     handleSelectConversation,
     handleNewConversation,
     handleResend,
+    handleSwitchVersion,
     handleForkTo,
   } = useAgentConversationFlow({
     inputValue, setInputValue, inputRef,
@@ -160,6 +161,9 @@ const AgentDashboard: React.FC = () => {
             at={msg.at}
             durationSec={msg.durationSec}
             reasoning={msg.reasoning}
+            versions={msg.versions}
+            activeVersion={msg.activeVersion}
+            onSwitchVersion={msg.versions && msg.versions.length > 0 ? (dir) => handleSwitchVersion(msg.clientId, dir) : undefined}
           />
         ))}
       </AnimatePresence>
