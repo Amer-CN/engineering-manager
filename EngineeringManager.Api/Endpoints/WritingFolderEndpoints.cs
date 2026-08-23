@@ -1,4 +1,5 @@
 using System.Data;
+using System.Text.Json;
 using Dapper;
 using EngineeringManager.Api.Security;
 
@@ -82,7 +83,7 @@ public static class WritingFolderEndpoints
                     new { Name = name, Now = now, Uid = uid });
 
                 await WriteAuditAsync(db, ctx, uid, "create", "writing_folders", id,
-                    $"{{\"event\":\"create_folder\",\"name\":\"{name}\"}}");
+                    JsonSerializer.Serialize(new { @event = "create_folder", name = name }));
 
                 return Common.Ok(new { id, name });
             }
@@ -121,7 +122,7 @@ public static class WritingFolderEndpoints
                     return Common.NotFound("文件夹不存在或已删除");
 
                 await WriteAuditAsync(db, ctx, uid, "update", "writing_folders", id,
-                    $"{{\"event\":\"rename_folder\",\"name\":\"{name}\"}}");
+                    JsonSerializer.Serialize(new { @event = "rename_folder", name = name }));
 
                 return Common.Ok();
             }
@@ -164,7 +165,7 @@ public static class WritingFolderEndpoints
                 tx.Commit();
 
                 await WriteAuditAsync(db, ctx, uid, "delete", "writing_folders", id,
-                    "{\"event\":\"soft_delete_folder\"}");
+                    JsonSerializer.Serialize(new { @event = "soft_delete_folder" }));
 
                 return Common.Ok();
             }
@@ -215,7 +216,7 @@ public static class WritingFolderEndpoints
                     return Common.NotFound("文档不存在或已删除");
 
                 await WriteAuditAsync(db, ctx, uid, "update", "writing_documents", id,
-                    $"{{\"event\":\"move_folder\",\"folderId\":{(dto.FolderId?.ToString() ?? "null")}}}");
+                    JsonSerializer.Serialize(new { @event = "move_folder", folderId = dto.FolderId }));
 
                 return Common.Ok();
             }

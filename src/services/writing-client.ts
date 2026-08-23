@@ -172,6 +172,8 @@ const API_BASE = import.meta.env.VITE_API_BASE ?? ''
  * 整篇起草（SSE 流式优先，失败退非流式）。
  * events: {type:'content',text} | {type:'done',content} | {type:'error',error}
  * signal：可选 AbortSignal，面板关闭时中止底层 fetch。
+ * 返回值：连接失败时携带后端具体错误文案（null = 无文案，如网络层异常/被 abort），
+ * 成功建立连接返回 undefined。调用方据返回值 toast，替代通用「生成连接失败」。
  */
 export async function streamingDraft(
   body: {
@@ -184,7 +186,7 @@ export async function streamingDraft(
   },
   onEvent: (e: { type: 'content'; text: string } | { type: 'done'; content: string } | { type: 'error'; error: string }) => void,
   signal?: AbortSignal,
-): Promise<boolean> {
+): Promise<string | null | undefined> {
   try {
     // 与 api-client 同源：SSE 请求同样必须带 Bearer token（缺失会 401）
     let token: string | null = null
@@ -198,7 +200,22 @@ export async function streamingDraft(
       body: JSON.stringify(body),
       signal,
     })
-    if (!resp.ok || !resp.body) return false
+    if (!resp.ok || !resp.body) {
+      if (resp.ok) return null // 无 body 但 2xx：无具体文案
+      // 读 body 提取后端 error 字段（json {success:false,error}），取不到用原文截断 120 字
+      try {
+        const text = await resp.text()
+        let msg = text
+        try {
+          const parsed = JSON.parse(text) as { error?: string }
+          if (parsed && typeof parsed.error === 'string' && parsed.error) msg = parsed.error
+        } catch { /* 非 JSON，用原文 */ }
+        msg = msg.trim().slice(0, 120)
+        return msg || null
+      } catch {
+        return null
+      }
+    }
     const reader = resp.body.getReader()
     const decoder = new TextDecoder()
     let buffer = ''
@@ -218,8 +235,8 @@ export async function streamingDraft(
         }
       }
     }
-    return true
+    return undefined
   } catch {
-    return false
+    return null
   }
 }
