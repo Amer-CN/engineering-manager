@@ -220,6 +220,61 @@ public class WritingFolderTests : ApiTestBase
         Assert.Equal(JsonValueKind.Null, doc.GetProperty("folderId").ValueKind);
     }
 
+    // ── 删除仅限创建者（admin 豁免）：非创建者 403，创建者/admin 可删 ──
+
+    /// <summary>建第二个有 writing:delete 权限的用户（manager 角色），用于验证「非创建者删除被拒」。</summary>
+    private void SeedOtherManager()
+    {
+        using var conn = new SqliteConnection(ConnectionString);
+        conn.Open();
+        const string otherPassword = "admin123";
+        var salt = "other-manager-salt-12345678";
+        var hash = EngineeringManager.Api.Common.HashPassword(otherPassword, salt, 2);
+        conn.Execute(@"
+            INSERT OR IGNORE INTO users (id, username, password, password_hash, password_salt, password_hash_version, display_name, role_id, status, created_at)
+            VALUES (@Id, @Username, @Password, @Hash, @Salt, @Version, @DisplayName, @RoleId, @Status, @Now)",
+            new
+            {
+                Id = "other-manager",
+                Username = "folder-other",
+                Password = otherPassword,
+                Hash = hash,
+                Salt = salt,
+                Version = 2,
+                DisplayName = "另一位经理",
+                RoleId = "manager",
+                Status = "active",
+                Now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+            });
+    }
+
+    [Fact]
+    public async Task 删除文件夹_仅创建者可删_他人403_admin豁免()
+    {
+        SeedOtherManager();
+        var adminToken = await LoginAsync(AdminUser, AdminPassword);
+        var otherToken = await LoginAsync("folder-other", "admin123");
+
+        // admin 建的文件夹：非创建者 manager 有 writing:delete 也被拒，文件夹仍存在
+        var adminFolder = await CreateFolder(adminToken, "admin 的文件夹");
+        var denyResp = await AuthedAsync(otherToken, HttpMethod.Delete, $"/api/writing/folders/{adminFolder}");
+        Assert.Equal(HttpStatusCode.Forbidden, denyResp.StatusCode);
+        var foldersAfterDeny = await GetData(
+            await AuthedAsync(adminToken, HttpMethod.Get, "/api/writing/folders"));
+        Assert.Contains(foldersAfterDeny.EnumerateArray(), f => f.GetProperty("id").GetInt64() == adminFolder);
+
+        // 创建者本人可删自己的
+        var creatorToken = otherToken;
+        var otherFolder = await CreateFolder(creatorToken, "other 自己的文件夹");
+        var selfResp = await AuthedAsync(creatorToken, HttpMethod.Delete, $"/api/writing/folders/{otherFolder}");
+        Assert.True(selfResp.IsSuccessStatusCode, $"创建者删除自己文件夹应成功：{selfResp.StatusCode}");
+
+        // admin 豁免：可删他人文件夹
+        var otherFolder2 = await CreateFolder(creatorToken, "other 的第二个文件夹");
+        var adminResp = await AuthedAsync(adminToken, HttpMethod.Delete, $"/api/writing/folders/{otherFolder2}");
+        Assert.True(adminResp.IsSuccessStatusCode, $"admin 删除他人文件夹应成功：{adminResp.StatusCode}");
+    }
+
     // ── 数据库直查：软删文件夹事务正确落库 ──
 
     [Fact]

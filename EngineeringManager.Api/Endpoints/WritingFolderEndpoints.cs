@@ -11,12 +11,14 @@ namespace EngineeringManager.Api;
 /// - GET    /api/writing/folders                    文件夹列表（软删过滤，全员可见）
 /// - POST   /api/writing/folders                    建文件夹
 /// - PUT    /api/writing/folders/{id}               改名
-/// - DELETE /api/writing/folders/{id}               软删 + 文档移出（事务）
+/// - DELETE /api/writing/folders/{id}               软删 + 文档移出（事务；仅创建者，admin 豁免）
 /// - PUT    /api/writing/documents/{id}/folder      文档移入/移出文件夹
 ///
 /// 权限复用现有 writing:read/create/update/delete 码（不新增）。
-/// 文件夹不强制归属隔离：列表全员可见（writing:read）；文档的 created_by
-/// 隔离逻辑不变（非 admin 只能动自己的文档）。
+/// 文件夹不强制归属隔离：列表全员可见（writing:read）、全员可建/改名/移入文档；
+/// 文档的 created_by 隔离逻辑不变（非 admin 只能动自己的文档）。
+/// 例外——删除仅限创建者（admin 豁免）：删文件夹会连带把他人文档移出该文件夹，
+/// 属跨用户影响，不开放给非创建者。
 /// 审计：写操作落 audit_logs（失败不影响主流程，模式与 WritingEndpoints 一致）。
 /// </summary>
 public static class WritingFolderEndpoints
@@ -145,6 +147,15 @@ public static class WritingFolderEndpoints
 
             try
             {
+                // 删除仅限创建者（admin 豁免）：删文件夹会连带把他人文档移出该文件夹，属跨用户影响
+                var owner = await db.ExecuteScalarAsync<string>(
+                    "SELECT created_by FROM writing_folders WHERE id = @Id AND deleted_at IS NULL",
+                    new { Id = id });
+                if (owner == null)
+                    return Common.NotFound("文件夹不存在或已删除");
+                if (owner != uid && !CurrentUser.IsAdmin(ctx))
+                    return Results.Json(new { success = false, error = "仅文件夹创建者可删除" }, statusCode: 403);
+
                 using var tx = db.BeginTransaction();
                 // 1. 软删文件夹
                 var affected = await db.ExecuteAsync(
