@@ -1,5 +1,6 @@
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
+import { stripProtectedSpans } from "./docxExport";
 
 /**
  * 红头文件模板导出（GB/T 9704）
@@ -139,6 +140,7 @@ function injectBodyParagraphs(xml: string, items: RedHeaderParaItem[]): string {
 }
 
 export async function exportRedHeaderDocx(markdown: string, meta: RedHeaderMeta): Promise<void> {
+  markdown = stripProtectedSpans(markdown);
   const res = await fetch(TEMPLATE_URL);
   if (!res.ok) throw new Error(`模板加载失败（${res.status}）`);
   const templateBuf = await res.arrayBuffer();
