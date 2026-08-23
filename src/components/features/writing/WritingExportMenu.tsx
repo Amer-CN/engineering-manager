@@ -81,13 +81,16 @@ const WritingExportMenu: React.FC<WritingExportMenuProps> = ({ editor, title }) 
     };
   }, []);
 
-  // 普通导出（沿用 docxExport 公文样式）
+  // 普通导出（沿用 docxExport 公文样式）；busy 防连点（生成中禁用，双击不会并发两次）
   const handlePlain = () => {
-    if (!editor) return;
+    if (!editor || busy) return;
     setMenuOpen(false);
-    void exportMarkdownAsDocx(editor.getMarkdown(), title).catch(() => {
-      showToast("导出失败", "error");
-    });
+    setBusy(true);
+    void exportMarkdownAsDocx(editor.getMarkdown(), title)
+      .catch(() => {
+        showToast("导出失败", "error");
+      })
+      .finally(() => setBusy(false));
   };
 
   // 红头导出：校验必填 → exportRedHeaderDocx
@@ -111,8 +114,10 @@ const WritingExportMenu: React.FC<WritingExportMenuProps> = ({ editor, title }) 
       showToast("红头文件已生成下载", "success");
       setRedOpen(false);
       setMenuOpen(false);
-    } catch {
-      showToast("红头导出失败", "error");
+    } catch (e) {
+      // 具体报错：拼进后端/异常消息，msg 为空回退原文案
+      const msg = (e as Error).message;
+      showToast(msg ? `红头导出失败：${msg}` : "红头导出失败", "error");
     } finally {
       setBusy(false);
     }
@@ -139,7 +144,8 @@ const WritingExportMenu: React.FC<WritingExportMenuProps> = ({ editor, title }) 
 
   return (
     <div className="relative" ref={rootRef}>
-      <Button variant="ghost" size="sm" onClick={() => setMenuOpen((v) => !v)}>
+      {/* 导出按钮：busy（普通/红头生成中）时禁用，防连点并发两次导出 */}
+      <Button variant="ghost" size="sm" onClick={() => setMenuOpen((v) => !v)} disabled={busy}>
         <Icon name="FileDown" size={15} />
         导出
       </Button>
@@ -151,7 +157,8 @@ const WritingExportMenu: React.FC<WritingExportMenuProps> = ({ editor, title }) 
         >
           <button
             onClick={handlePlain}
-            className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[color:var(--panel-2)]"
+            disabled={busy}
+            className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[color:var(--panel-2)] disabled:opacity-50"
             style={{ color: "var(--fg)" }}
           >
             <Icon name="FileText" size={15} />
@@ -159,7 +166,8 @@ const WritingExportMenu: React.FC<WritingExportMenuProps> = ({ editor, title }) 
           </button>
           <button
             onClick={() => setRedOpen(true)}
-            className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[color:var(--panel-2)]"
+            disabled={busy}
+            className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[color:var(--panel-2)] disabled:opacity-50"
             style={{ color: "var(--fg)" }}
           >
             <Icon name="Landmark" size={15} />
