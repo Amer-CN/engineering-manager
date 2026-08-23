@@ -12,7 +12,12 @@ namespace EngineeringManager.Tests.Services;
 /// </summary>
 public class WritingSkillServiceSafetyTests
 {
-    /// <summary>可配置 yield 序列的 ILlmChatService stub（未用成员抛 NotSupportedException）</summary>
+    /// <summary>
+    /// 可配置 yield 序列的 ILlmChatService stub（未用成员抛 NotSupportedException）。
+    /// 双签名兼容：master 提交版接口为 4 参（含 model/reasoningEffort），并行会话工作区
+    /// 未提交版为 2 参——两组重载保证 CI（编译提交版）与本地（编译工作区版）均可实现接口；
+    /// 逻辑集中在 4 参版，2 参转发。并行会话落地后可删多余重载。
+    /// </summary>
     private sealed class StubLlmChatService : ILlmChatService
     {
         private readonly string[] _chunks;
@@ -20,10 +25,13 @@ public class WritingSkillServiceSafetyTests
 
         public StubLlmChatService(params string[] chunks) => _chunks = chunks;
 
-        public Task<ChatCompletionResponse?> ChatAsync(List<AgentMessage> messages, List<object>? tools = null)
-            => throw new NotSupportedException();
+        public Task<ChatCompletionResponse?> ChatAsync(List<AgentMessage> messages, List<object>? tools = null, string? model = null, string? reasoningEffort = null)
+            => Task.FromResult<ChatCompletionResponse?>(null);
 
-        public async IAsyncEnumerable<string> ChatStreamAsync(List<AgentMessage> messages, List<object>? tools = null)
+        public Task<ChatCompletionResponse?> ChatAsync(List<AgentMessage> messages, List<object>? tools = null)
+            => ChatAsync(messages, tools, null, null);
+
+        public async IAsyncEnumerable<string> ChatStreamAsync(List<AgentMessage> messages, List<object>? tools = null, string? model = null, string? reasoningEffort = null)
         {
             LastMessages = messages;
             foreach (var c in _chunks)
@@ -31,6 +39,11 @@ public class WritingSkillServiceSafetyTests
                 await Task.Yield();
                 yield return c;
             }
+        }
+
+        public async IAsyncEnumerable<string> ChatStreamAsync(List<AgentMessage> messages, List<object>? tools = null)
+        {
+            await foreach (var token in ChatStreamAsync(messages, tools, null, null)) yield return token;
         }
     }
 
