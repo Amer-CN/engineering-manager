@@ -229,6 +229,13 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
     });
     setAiBusy(false);
     if (res.success && res.data) {
+      // 网络往返期间用户可能继续编辑，from/to 是请求前的陈旧位置——
+      // 替换错段落比改写失败更糟，先校验选区文本未变再插入（R5 竞态守卫，随 R6 重写重新植入）
+      const currentText = editor.state.doc.textBetween(from, to, " ");
+      if (currentText !== selected) {
+        showToast("等待期间原文已被编辑，AI 结果与选区不再对应，未插入", "error");
+        return;
+      }
       editor.chain().focus().insertContentAt({ from, to }, res.data.text).run();
     } else {
       showToast(res.error || "AI 改写失败", "error");
