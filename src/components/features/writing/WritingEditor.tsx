@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/useToast";
 import { usePermission } from "@/hooks/usePermission";
 import { ingestKnowledgeDocument } from "@/services/knowledge-client";
 import WritingDraftPanel from "./WritingDraftPanel";
-import WritingSlashMenu from "./WritingSlashMenu";
+import WritingSlashMenu, { useSlashMenu } from "./WritingSlashMenu";
 import WritingCheckPanel from "./WritingCheckPanel";
 import EditorToolbar from "./EditorToolbar";
 import WritingExportMenu from "./WritingExportMenu";
@@ -53,8 +53,6 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
   const [doc, setDoc] = useState<WritingDoc | null>(null);
   const [title, setTitle] = useState("");
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
-  const [slashOpen, setSlashOpen] = useState(false);
-  const [slashQuery, setSlashQuery] = useState("");
   const [aiBusy, setAiBusy] = useState(false);
   const [aiMenu, setAiMenu] = useState<{ top: number; left: number } | null>(null);
   const [draftOpen, setDraftOpen] = useState(false);
@@ -62,6 +60,10 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
   const [checkOpen, setCheckOpen] = useState(false);
   const saveTimer = useRef<number | null>(null);
   const { zoom, reset, bindRef } = useA4Zoom();
+  // R7：斜杠菜单状态机（焦点不离开编辑器，详见 WritingSlashMenu 注释）
+  const slash = useSlashMenu();
+  const slashRef = useRef(slash);
+  slashRef.current = slash;
 
   // ── 编辑器（Markdown 序列化由 editor.getMarkdown() 提供）──
   const editor = useEditor({
@@ -93,12 +95,8 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
           void saveDoc();
           return true;
         }
-        if (event.key === "/" && !event.ctrlKey && !event.metaKey) {
-          setSlashOpen(true);
-          setSlashQuery("");
-          return false;
-        }
-        return false;
+        // R7：斜杠菜单键盘导航/唤起（"/" 照常插入文档，过滤词由 onUpdate 提取）
+        return slashRef.current.handleKeyDown(event);
       },
       handlePaste: (_view, event) => {
         const img = Array.from(event.clipboardData?.items ?? []).find((i) => i.type.startsWith("image/"));
@@ -115,6 +113,8 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
       },
     },
     onUpdate: () => {
+      // R7：斜杠菜单开着时从文档提取 "/" 之后的过滤词（"/" 被删或出现空白则收起）
+      if (editorRef.current) slashRef.current.onDocUpdate(editorRef.current);
       // 变更 → 2s 防抖自动保存
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
       setSaveState("saving");
@@ -125,6 +125,12 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
   });
 
   // ── 加载文档 ──
+  // editor ref：useEditor 的 onUpdate/handleKeyDown 闭包里拿不到 editor 变量本身，用 ref 镜像
+  const editorRef = useRef<NonNullable<ReturnType<typeof useEditor>> | null>(null);
+  useEffect(() => {
+    editorRef.current = editor ?? null;
+    slash.attach(editor ?? null);
+  }, [editor, slash.attach]);
   useEffect(() => {
     void fetchWritingDoc(docId).then((res) => {
       if (res.success && res.data) {
@@ -324,14 +330,16 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
         <WritingCheckPanel editor={editor} open={checkOpen} onClose={() => setCheckOpen(false)} />
       )}
 
-      {/* 斜杠菜单 */}
+      {/* 斜杠菜单（R7：光标定位、焦点留编辑器、↑↓Enter 键盘导航） */}
       {editor && (
         <WritingSlashMenu
           editor={editor}
-          open={slashOpen}
-          query={slashQuery}
-          onQueryChange={setSlashQuery}
-          onClose={() => setSlashOpen(false)}
+          open={slash.open}
+          query={slash.query}
+          index={slash.index}
+          onHoverIndex={slash.setIndex}
+          onSelect={slash.execute}
+          onClose={slash.close}
         />
       )}
 
