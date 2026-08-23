@@ -438,11 +438,23 @@ public static class WritingEndpoints
 
             try
             {
+                // 取消保护：客户端断开（RequestAborted）或 5 分钟上限即停止消费 LLM 流
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ctx.RequestAborted);
+                cts.CancelAfter(TimeSpan.FromMinutes(5));
+
                 var full = new System.Text.StringBuilder();
                 await foreach (var token in skill.StreamDraftAsync(dto))
                 {
+                    if (cts.Token.IsCancellationRequested) break;
                     full.Append(token);
                     await WriteSseAsync(ctx, new { type = "content", text = token });
+                }
+
+                // 空产出守卫：LLM 失败静默结束时不下发空 done（前端会把空串写进已有文档）
+                if (full.Length == 0)
+                {
+                    await WriteSseAsync(ctx, new { type = "error", error = "AI 未返回内容，请重试" });
+                    return;
                 }
 
                 var content = WritingSkillService.StripProtectedMarkers(full.ToString().Trim());
@@ -450,6 +462,8 @@ public static class WritingEndpoints
             }
             catch (Exception ex)
             {
+                // 客户端已断开：响应管道已废弃，不再向其写任何东西
+                if (ctx.RequestAborted.IsCancellationRequested) return;
                 Console.Error.WriteLine($"[Writing] 起草失败: {ex.Message}");
                 await WriteSseAsync(ctx, new { type = "error", error = $"起草失败: {Common.Sanitize(ex.Message)}" });
             }
