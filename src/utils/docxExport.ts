@@ -29,6 +29,21 @@ const LINE_SPACING_28PT = { line: 560, lineRule: "exact" as const };
 /** 图片最大渲染宽度（pt，A4 版心约 451pt） */
 const IMG_MAX_WIDTH = 440;
 
+/**
+ * 剥掉 [[...]] Protected Span 标记（导出清洗）。
+ * 正则与 protectedSpan.ts 的 markdownTokenizer 一致（非贪婪、内容不含方括号）；
+ * 嵌套残壳时从最内层剥起，循环 replace 到不动点（上限 3 轮防死循环）。
+ */
+export function stripProtectedSpans(markdown: string): string {
+  let out = markdown;
+  for (let i = 0; i < 3; i++) {
+    const next = out.replace(/\[\[([^\[\]]+?)\]\]/g, "$1");
+    if (next === out) break;
+    out = next;
+  }
+  return out;
+}
+
 interface MdLine {
   text: string;
   kind: "h1" | "h2" | "h3" | "ul" | "ol" | "quote" | "hr" | "table" | "task" | "image" | "para";
@@ -251,6 +266,7 @@ async function markdownImageParagraphs(line: string): Promise<Paragraph[]> {
 }
 
 export async function exportMarkdownAsDocx(markdown: string, title: string): Promise<void> {
+  markdown = stripProtectedSpans(markdown);
   const lines = markdown.split("\n");
   const children: (Paragraph | Table)[] = [];
 
