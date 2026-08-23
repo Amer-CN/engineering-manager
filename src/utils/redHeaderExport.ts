@@ -1,6 +1,6 @@
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
-import { stripProtectedSpans } from "./docxExport";
+import { stripProtectedSpans, stripStyleAnnotationLines } from "./docxExport";
 
 /**
  * 红头文件模板导出（GB/T 9704）
@@ -55,7 +55,12 @@ function classifyPara(line: string): RedHeaderParaItem | null {
   if (/^#\s+/.test(t)) return { text: t.replace(/^#\s+/, ""), is_h1: true };
   if (/^##\s+/.test(t)) return { text: t.replace(/^##\s+/, ""), is_h2: true };
   if (/^###\s+/.test(t)) return { text: t.replace(/^###\s+/, ""), is_h3: true };
+  // 任务清单（- [ ] / - [x]）：勾选转 ☑ 未勾转 ☐，按普通段落回落（红头模板无任务列表样式）
+  const task = /^[-*]\s+\[([ xX])\]\s+/.exec(t);
+  if (task) return { text: `${task[1].toLowerCase() === "x" ? "☑" : "☐"} ${t.slice(task[0].length)}`, is_para: true };
   if (/^[-*]\s+/.test(t)) return { text: t.replace(/^[-*]\s+/, ""), is_list: true };
+  // blockquote：剥 "> " 前缀按普通段落回落（普通引用不再带 ">" 字面量；风格标注行已在入口剔除）
+  if (/^>\s?/.test(t)) return { text: t.replace(/^>\s?/, ""), is_para: true };
   return { text: t, is_para: true };
 }
 
@@ -141,6 +146,7 @@ function injectBodyParagraphs(xml: string, items: RedHeaderParaItem[]): string {
 
 export async function exportRedHeaderDocx(markdown: string, meta: RedHeaderMeta): Promise<void> {
   markdown = stripProtectedSpans(markdown);
+  markdown = stripStyleAnnotationLines(markdown);
   const res = await fetch(TEMPLATE_URL);
   if (!res.ok) throw new Error(`模板加载失败（${res.status}）`);
   const templateBuf = await res.arrayBuffer();
