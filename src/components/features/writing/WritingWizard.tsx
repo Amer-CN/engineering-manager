@@ -56,8 +56,9 @@ const WritingWizard: React.FC<WritingWizardProps> = ({ open, onClose, onDraft, o
     if (!open) return;
     void fetchWritingDocTypes().then((res) => {
       if (res.success && res.data) setAllTypes(res.data.groups ?? []);
+      else showToast("文体选项加载失败，请刷新重试", "error");
     });
-  }, [open]);
+  }, [open, showToast]);
 
   // 「更多文体」= 全量 - 高频
   const pinnedCodes = useMemo(() => new Set(PINNED_TYPES.map((t) => t.code)), []);

@@ -67,8 +67,9 @@ const WritingDraftPanel: React.FC<WritingDraftPanelProps> = ({ docId, docType, s
   useEffect(() => {
     void fetchWritingDocTypes().then((res) => {
       if (res.success && res.data) setGroups(res.data.groups ?? []);
+      else showToast("文体选项加载失败，请刷新重试", "error");
     });
-  }, []);
+  }, [showToast]);
 
   // 一步到位：素材预填时挂载后自动触发生成
   const autoStarted = useRef(false);
@@ -131,10 +132,13 @@ const WritingDraftPanel: React.FC<WritingDraftPanelProps> = ({ docId, docType, s
         }
       },
       controller.signal,
-    ).then((ok) => {
-      if (!ok) {
-        // fetch 被用户关面板 abort（discardedRef=true）→ 静默；其余网络失败才提示
-        if (!discardedRef.current) showToast("生成连接失败，请重试", "error");
+    ).then((failMsg) => {
+      if (failMsg !== undefined) {
+        // 连接失败：failMsg 为后端具体文案（null = 网络层异常无文案，回退通用提示）；
+        // fetch 被用户关面板 abort（discardedRef=true）→ 静默
+        if (!discardedRef.current) {
+          showToast(failMsg ?? "生成连接失败，请重试", "error");
+        }
         return;
       }
       // SSE 流静默截断（未收到 done/error 即结束）→ 提示，避免用户误以为生成完成

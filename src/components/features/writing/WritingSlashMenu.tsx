@@ -111,7 +111,8 @@ export function useSlashMenu() {
           return false;
         }
       }
-      if (event.key === "/" && !event.ctrlKey && !event.metaKey) {
+      // IME 组合中不唤起（中文输入法选词阶段的 "/" 不应打开菜单）
+      if (event.key === "/" && !event.ctrlKey && !event.metaKey && !event.isComposing) {
         const ed = editorRef.current;
         if (ed?.isActive("codeBlock")) return false; // 代码块内不唤起
         setOpen(true);
