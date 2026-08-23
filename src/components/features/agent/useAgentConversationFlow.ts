@@ -36,10 +36,12 @@ export interface UseAgentConversationFlowResult {
   refreshTrigger: number
   mascotState: MascotState
   firstDone: boolean
-  handleSend: (overrideContent?: string) => Promise<void>
+  handleSend: (overrideContent?: string, opts?: { inheritVersions?: string[] }) => Promise<void>
   handleSelectConversation: (conv: AgentConversation) => Promise<void>
   handleNewConversation: () => void
   handleResend: (assistantClientId: string) => void
+  /** 版本切换：dir=-1 向旧 / +1 向新 */
+  handleSwitchVersion: (clientId: string, dir: -1 | 1) => void
   /** 上下文用量（最近一轮 prompt tokens；null = 未知） */
   contextTokens: number | null
   /** 分叉：截断消息列表到指定下标（含）并置空会话 */
@@ -91,9 +93,9 @@ export function useAgentConversationFlow({
 
   useEffect(() => () => { if (mascotTimer.current) window.clearTimeout(mascotTimer.current); abortRef.current?.abort() }, [])
 
-  /** 发送消息（流式优先，失败回退非流式） */
+  /** 发送消息（流式优先，失败回退非流式；opts.inheritVersions = 重发时继承的历史版本） */
   const handleSend = useCallback(
-    async (overrideContent?: string) => {
+    async (overrideContent?: string, opts?: { inheritVersions?: string[] }) => {
       const content = (overrideContent ?? inputValue).trim()
       if (!content || loading) return
 
@@ -112,11 +114,16 @@ export function useAgentConversationFlow({
       const assistantClientId = genClientId()
       const sentAt = Date.now()
 
-      // 1) 追加用户消息 + 助手占位（流式逐字填充）
+      // 1) 追加用户消息 + 助手占位（流式逐字填充；重发时占位继承历史版本→版本切换器可用）
       setMessages((prev) => [
         ...prev,
         { clientId: userClientId, role: 'user', content, at: sentAt },
-        { clientId: assistantClientId, role: 'assistant', content: '', sending: true, at: sentAt },
+        {
+          clientId: assistantClientId, role: 'assistant', content: '', sending: true, at: sentAt,
+          ...(opts?.inheritVersions && opts.inheritVersions.length > 0
+            ? { versions: opts.inheritVersions, activeVersion: -1 }
+            : {}),
+        },
       ])
       if (overrideContent === undefined) setInputValue('')
       setLoading(true)
@@ -327,23 +334,45 @@ export function useAgentConversationFlow({
     setTimeout(() => inputRef.current?.focus(), 100)
   }, [])
 
-  /** 重发（按目标 AI 气泡的 clientId 定位其前一条 user 消息并重发） */
+  /** 重发（branchPicker 版）：旧回复存 versions 不丢弃，重发完成后再现版本切换器 */
   const handleResend = useCallback(
     (assistantClientId: string) => {
       const aIdx = messages.findIndex(m => m.clientId === assistantClientId)
       if (aIdx < 0) return
-      // 向前找最近的一条 user 消息
       let uIdx = -1
       for (let i = aIdx - 1; i >= 0; i--) {
         if (messages[i].role === 'user') { uIdx = i; break }
       }
       if (uIdx < 0) return
       const userContent = messages[uIdx].content ?? ''
-      // 截断到该 user 消息之前（移除这条 user 及其之后的所有消息），再重新发送
+      const oldMsg = messages[aIdx]
+      // 版本打包：旧版本列表 + 当前正文（当前流也成历史）
+      const oldVersions = [...(oldMsg.versions ?? []), ...(oldMsg.content ? [oldMsg.content] : [])]
+      // 截断到 user 前，重发时把 oldVersions 注入新 assistant 占位
       setMessages(prev => prev.slice(0, uIdx))
-      setTimeout(() => handleSend(userContent), 50)
+      setTimeout(() => handleSend(userContent, { inheritVersions: oldVersions }), 50)
     },
     [messages, handleSend],
+  )
+
+  /** 版本切换（branchPicker）：dir=-1 向旧 / +1 向新；越过最新边界回 -1（最新流） */
+  const handleSwitchVersion = useCallback(
+    (clientId: string, dir: -1 | 1) => {
+      setMessages(prev => prev.map(m => {
+        if (m.clientId !== clientId || !m.versions || m.versions.length === 0) return m
+        const cur = m.activeVersion ?? -1
+        let next: number
+        if (dir === -1) {
+          next = cur === -1 ? m.versions.length - 1 : cur - 1
+          if (next < 0) return m // 已在最旧
+        } else {
+          next = cur + 1
+          if (next >= m.versions.length) next = -1 // 越过最新回 content
+        }
+        return { ...m, activeVersion: next }
+      }))
+    },
+    [],
   )
 
   return {
@@ -358,6 +387,7 @@ export function useAgentConversationFlow({
     handleSelectConversation,
     handleNewConversation,
     handleResend,
+    handleSwitchVersion,
     /** 分叉：截断消息列表到指定下标（含）并置空会话——下次发送自动建新会话 */
     handleForkTo: (idx: number) => {
       abortRef.current?.abort()
