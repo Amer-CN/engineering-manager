@@ -59,7 +59,7 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
   const [draftMaterial, setDraftMaterial] = useState("");
   const [checkOpen, setCheckOpen] = useState(false);
   const saveTimer = useRef<number | null>(null);
-  const { zoom, reset, bindRef } = useA4Zoom();
+  const { zoom, reset, bindRef, bindWheelRef } = useA4Zoom();
   // R7：斜杠菜单状态机（焦点不离开编辑器，详见 WritingSlashMenu 注释）
   const slash = useSlashMenu();
   const slashRef = useRef(slash);
@@ -190,14 +190,22 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
   };
 
   // 卸载前：若还有未触发的防抖保存，立即落盘（避免最后一击丢失）
+  // saveDoc 存 ref + 空依赖：卸载 effect 只在真卸载时跑一次，
+  // 不随 saveDoc 变化（title 每键都变）反复重挂——否则每次重挂的 cleanup
+  // 会在防抖窗口内提前触发 PUT，造成每键一次请求。
+  const saveDocRef = useRef(saveDoc);
+  useEffect(() => {
+    saveDocRef.current = saveDoc;
+  });
   useEffect(() => {
     return () => {
       if (saveTimer.current) {
         window.clearTimeout(saveTimer.current);
-        void saveDoc();
+        saveTimer.current = null;
+        void saveDocRef.current();
       }
     };
-  }, [saveDoc]);
+  }, []);
 
   // ── 行内 AI：选中文字 → 浮出菜单 → 调 /api/writing/assist ──
   const handleSelectionChange = useCallback(() => {
@@ -323,10 +331,13 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
         />
       )}
 
-      <EditorToolbar editor={editor} />
-      <div className="flex-1 overflow-y-auto flex justify-center bg-[color:var(--panel-2)] py-6">
-        <div className="a4-paper" ref={bindRef}>
-          <EditorContent editor={editor} />
+      {/* R9：Ctrl+滚轮缩放监听范围 = 工具栏 + 纸张滚动区（wheel 监听挂此 wrapper） */}
+      <div ref={bindWheelRef} className="flex-1 flex flex-col min-h-0">
+        <EditorToolbar editor={editor} />
+        <div className="flex-1 overflow-y-auto flex justify-center bg-[color:var(--panel-2)] py-6">
+          <div className="a4-paper" ref={bindRef}>
+            <EditorContent editor={editor} />
+          </div>
         </div>
       </div>
 
@@ -352,7 +363,7 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
       {aiMenu && editor && (
         <div
           className="fixed z-50 flex items-center gap-1 rounded-xl border shadow-lg px-2 py-1.5 bg-white"
-          style={{ borderColor: "var(--border)", top: aiMenu.top - 40, left: Math.min(aiMenu.left, window.innerWidth - 280) }}
+          style={{ borderColor: "var(--border)", top: Math.max(8, aiMenu.top - 40), left: Math.min(aiMenu.left, window.innerWidth - 280) }}
         >
           {AI_ACTIONS.map((a) => (
             <button
