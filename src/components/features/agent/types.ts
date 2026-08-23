@@ -17,6 +17,17 @@ export interface LocalMessage {
   durationSec?: number
   /** 思考过程（reasoning_content 流式聚合；reasoning 模型才有） */
   reasoning?: string
+  /** 历史版本正文（重发产生，追加序；不含当前 content）。展示规则：activeVersion>=0 取 versions[activeVersion]，否则取 content（最新流） */
+  versions?: string[]
+  /** 当前展示版本：-1/缺省 = 最新（content 本身）；0..n-1 = versions 下标。发送/上下文永远用 content */
+  activeVersion?: number
+}
+
+/** 消息展示正文派生（版本切换器用） */
+export function displayContent(m: LocalMessage): string {
+  return m.activeVersion != null && m.activeVersion >= 0 && m.versions
+    ? (m.versions[m.activeVersion] ?? m.content ?? '')
+    : (m.content ?? '')
 }
 
 /** 生成客户端消息 id */
