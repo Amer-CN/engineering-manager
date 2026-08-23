@@ -44,6 +44,17 @@ export function stripProtectedSpans(markdown: string): string {
   return out;
 }
 
+/**
+ * 整行剔除「> 本周风格：…」风格标注行（R4 风格轮换写进正文的元信息，公文导出不得携带）。
+ * 兼容「>本周风格」无空格写法与前导空白；其余 blockquote 行不动（由 classify 各自处理）。
+ */
+export function stripStyleAnnotationLines(markdown: string): string {
+  return markdown
+    .split("\n")
+    .filter((line) => !/^\s*>\s*本周风格：/.test(line))
+    .join("\n");
+}
+
 interface MdLine {
   text: string;
   kind: "h1" | "h2" | "h3" | "ul" | "ol" | "quote" | "hr" | "table" | "task" | "image" | "para";
@@ -267,6 +278,7 @@ async function markdownImageParagraphs(line: string): Promise<Paragraph[]> {
 
 export async function exportMarkdownAsDocx(markdown: string, title: string): Promise<void> {
   markdown = stripProtectedSpans(markdown);
+  markdown = stripStyleAnnotationLines(markdown);
   const lines = markdown.split("\n");
   const children: (Paragraph | Table)[] = [];
 
