@@ -52,6 +52,18 @@ const WritingDraftPanel: React.FC<WritingDraftPanelProps> = ({ docId, docType, s
   // 高级选项（文体/风格/详略度）：无预填时展开引导选择，有预填时收起
   const [advanced, setAdvanced] = useState(!docType);
 
+  // R8 止血：中止控制器 + 丢弃标志——关面板/卸载后中止 fetch，且 done 到达不再写文档
+  const abortRef = useRef<AbortController | null>(null);
+  const discardedRef = useRef(false);
+
+  // 卸载清理：中止进行中的流并置丢弃标志（emitGenerated 据此拒写）
+  useEffect(() => {
+    return () => {
+      discardedRef.current = true;
+      abortRef.current?.abort();
+    };
+  }, []);
+
   useEffect(() => {
     void fetchWritingDocTypes().then((res) => {
       if (res.success && res.data) setGroups(res.data.groups ?? []);
@@ -69,9 +81,17 @@ const WritingDraftPanel: React.FC<WritingDraftPanelProps> = ({ docId, docType, s
 
   // R4 风格轮换：有本文档的标注时，生成文本开头拼「本周风格」blockquote 并 toast 提示
   const emitGenerated = (content: string) => {
+    if (discardedRef.current) return; // 面板已关闭/卸载，结果作废不写文档
     const label = consumeStyleLabel(docId);
     if (label) showToast(`本周风格：${label}`, "success");
     onGenerated(label ? `> 本周风格：${label}\n\n${content}` : content);
+  };
+
+  // 关闭面板：先中止流 + 置丢弃标志，再走外层 onClose
+  const handleClose = () => {
+    discardedRef.current = true;
+    abortRef.current?.abort();
+    onClose();
   };
 
   const handleGenerate = () => {
@@ -85,6 +105,11 @@ const WritingDraftPanel: React.FC<WritingDraftPanelProps> = ({ docId, docType, s
     }
     setGenerating(true);
     setStreamText("");
+    const controller = new AbortController();
+    abortRef.current = controller;
+    discardedRef.current = false;
+    // doneReceived：error 事件也算流已终结论（避免错误 toast 之外再叠加中断 toast）
+    let doneReceived = false;
     void streamingDraft(
       {
         docType: selDocType,
@@ -94,22 +119,29 @@ const WritingDraftPanel: React.FC<WritingDraftPanelProps> = ({ docId, docType, s
         detailLevel: detail,
       },
       (e) => {
+        if (discardedRef.current) return; // 已丢弃：事件一律不处理
         if (e.type === "content") {
           setStreamText((prev) => prev + e.text);
         } else if (e.type === "done") {
-          setGenerating(false);
+          doneReceived = true;
           emitGenerated(e.content);
         } else if (e.type === "error") {
-          setGenerating(false);
+          doneReceived = true;
           showToast(e.error || "生成失败", "error");
         }
       },
+      controller.signal,
     ).then((ok) => {
-      // SSE 网络失败 / 流静默中断：复位 generating，避免按钮卡 loading
       if (!ok) {
-        setGenerating(false);
-        showToast("生成连接失败，请重试", "error");
+        // fetch 被用户关面板 abort（discardedRef=true）→ 静默；其余网络失败才提示
+        if (!discardedRef.current) showToast("生成连接失败，请重试", "error");
+        return;
       }
+      // SSE 流静默截断（未收到 done/error 即结束）→ 提示，避免用户误以为生成完成
+      if (!doneReceived && !discardedRef.current) showToast("生成连接中断", "error");
+    }).finally(() => {
+      // generating 统一复位：正常结束 / 中断 / abort 都走这里，杜绝按钮永久卡 loading
+      setGenerating(false);
     });
   };
 
@@ -121,7 +153,7 @@ const WritingDraftPanel: React.FC<WritingDraftPanelProps> = ({ docId, docType, s
   return (
     <Drawer
       open
-      onClose={onClose}
+      onClose={handleClose}
       icon="Sparkles"
       title="AI 起草"
       dirty={!!materialText.trim() || !!streamText}

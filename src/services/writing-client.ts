@@ -165,9 +165,13 @@ export function writingAssist(body: {
   return apiClient.post<{ text: string }>('/api/writing/assist', body)
 }
 
+// 同源相对路径，与 api-client.ts 同源定义一致（API_BASE 未从那边导出，此处同样声明）
+const API_BASE = import.meta.env.VITE_API_BASE ?? ''
+
 /**
  * 整篇起草（SSE 流式优先，失败退非流式）。
  * events: {type:'content',text} | {type:'done',content} | {type:'error',error}
+ * signal：可选 AbortSignal，面板关闭时中止底层 fetch。
  */
 export async function streamingDraft(
   body: {
@@ -179,18 +183,20 @@ export async function streamingDraft(
     detailLevel: number
   },
   onEvent: (e: { type: 'content'; text: string } | { type: 'done'; content: string } | { type: 'error'; error: string }) => void,
+  signal?: AbortSignal,
 ): Promise<boolean> {
   try {
     // 与 api-client 同源：SSE 请求同样必须带 Bearer token（缺失会 401）
     let token: string | null = null
     try { token = localStorage.getItem('jwt_token') } catch { /* ignore */ }
-    const resp = await fetch('/api/writing/draft', {
+    const resp = await fetch(`${API_BASE}/api/writing/draft`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: JSON.stringify(body),
+      signal,
     })
     if (!resp.ok || !resp.body) return false
     const reader = resp.body.getReader()

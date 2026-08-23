@@ -310,6 +310,11 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
           autoStart={!!draftMaterial}
           title={title}
           onGenerated={(content) => {
+            // R8 止血第二道防线：空/纯空白内容不得清空已有文档（后端 error 块、空产出已拦一道）
+            if (!content.trim()) {
+              showToast("AI 未返回内容", "error");
+              return;
+            }
             editor?.commands.setContent(content, { contentType: "markdown" } as never);
             setDraftOpen(false);
             void saveDoc();

@@ -309,16 +309,31 @@ public sealed class WritingSkillService
         };
     }
 
-    /// <summary>从 LLM 流式原始 JSON 块中提取 choices[0].delta.content</summary>
+    /// <summary>
+    /// 从 LLM 流式原始 JSON 块中提取 choices[0].delta.content。
+    /// 顶层含 "error" 属性（LlmProviderService 连接失败时下发 {"error":"..."}）→ 抛异常，
+    /// 由端点 catch 转成 SSE type:"error" 事件，避免静默丢弃导致空内容清空文档。
+    /// </summary>
     private static string? TryExtractContentDelta(string chunk)
     {
         try
         {
             using var doc = JsonDocument.Parse(chunk);
+            if (doc.RootElement.TryGetProperty("error", out var err))
+            {
+                var msg = err.ValueKind == JsonValueKind.String ? err.GetString() : err.ToString();
+                throw new InvalidOperationException(msg ?? "LLM 流式返回错误");
+            }
             if (!doc.RootElement.TryGetProperty("choices", out var choices) || choices.GetArrayLength() == 0)
                 return null;
-            var delta = choices[0].GetProperty("delta");
+            // finish 块 choices[0] 无 delta → 静默跳过（TryGetProperty，不误报解析失败日志）
+            if (!choices[0].TryGetProperty("delta", out var delta))
+                return null;
             return delta.TryGetProperty("content", out var content) ? content.GetString() : null;
+        }
+        catch (InvalidOperationException)
+        {
+            throw; // error 块识别结果直通上层，不吞成解析失败
         }
         catch (Exception ex)
         {
