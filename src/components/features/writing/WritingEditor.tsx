@@ -19,8 +19,11 @@ import { useToast } from "@/hooks/useToast";
 import { usePermission } from "@/hooks/usePermission";
 import { ingestKnowledgeDocument } from "@/services/knowledge-client";
 import WritingDraftPanel from "./WritingDraftPanel";
+import WritingSlashMenu from "./WritingSlashMenu";
+import WritingCheckPanel from "./WritingCheckPanel";
 import EditorToolbar from "./EditorToolbar";
 import WritingExportMenu from "./WritingExportMenu";
+import { useA4Zoom } from "@/hooks/useA4Zoom";
 import {
   fetchWritingDoc,
   updateWritingDoc,
@@ -30,13 +33,6 @@ import {
 
 /** 粘贴图片体积上限：超过则拒绝插入（base64 内嵌会直接撑大 contentMd，防止数据库膨胀） */
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
-
-interface SlashItem {
-  label: string;
-  hint: string;
-  icon: string;
-  run: (editor: NonNullable<ReturnType<typeof useEditor> extends infer T ? (T extends null ? never : T) : never>) => void;
-}
 
 /** 行内 AI 动作（与后端 /api/writing/assist 的 instruction 对齐） */
 const AI_ACTIONS = [
@@ -63,7 +59,9 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
   const [aiMenu, setAiMenu] = useState<{ top: number; left: number } | null>(null);
   const [draftOpen, setDraftOpen] = useState(false);
   const [draftMaterial, setDraftMaterial] = useState("");
+  const [checkOpen, setCheckOpen] = useState(false);
   const saveTimer = useRef<number | null>(null);
+  const { zoom, reset, bindRef } = useA4Zoom();
 
   // ── 编辑器（Markdown 序列化由 editor.getMarkdown() 提供）──
   const editor = useEditor({
@@ -195,38 +193,6 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
     };
   }, [saveDoc]);
 
-  // ── 斜杠菜单：插入块 ──
-  const slashItems: SlashItem[] = [
-    { label: "一级标题", hint: "Heading 1", icon: "Heading1", run: (e) => e.chain().focus().toggleHeading({ level: 1 }).run() },
-    { label: "二级标题", hint: "Heading 2", icon: "Heading2", run: (e) => e.chain().focus().toggleHeading({ level: 2 }).run() },
-    { label: "三级标题", hint: "Heading 3", icon: "Heading3", run: (e) => e.chain().focus().toggleHeading({ level: 3 }).run() },
-    { label: "无序列表", hint: "Bullet List", icon: "List", run: (e) => e.chain().focus().toggleBulletList().run() },
-    { label: "有序列表", hint: "Ordered List", icon: "ListOrdered", run: (e) => e.chain().focus().toggleOrderedList().run() },
-    { label: "任务清单", hint: "Task List", icon: "Square", run: (e) => e.chain().focus().toggleTaskList().run() },
-    { label: "代码块", hint: "Code Block", icon: "Braces", run: (e) => e.chain().focus().toggleCodeBlock().run() },
-    { label: "高亮", hint: "Highlight", icon: "PaintBucket", run: (e) => e.chain().focus().toggleHighlight().run() },
-    { label: "图片", hint: "URL / 粘贴截图", icon: "Image", run: (e) => { const url = window.prompt("输入图片 URL（也可直接粘贴截图）"); if (url) e.chain().focus().setImage({ src: url.trim() }).run(); } },
-    { label: "表格", hint: "Table 2×2", icon: "Table", run: (e) => e.chain().focus().insertTable({ rows: 2, cols: 2, withHeaderRow: true }).run() },
-    { label: "引用", hint: "Blockquote", icon: "Quote", run: (e) => e.chain().focus().toggleBlockquote().run() },
-    { label: "分割线", hint: "Horizontal Rule", icon: "Minus", run: (e) => e.chain().focus().setHorizontalRule().run() },
-  ];
-  const filteredSlash = slashItems.filter(
-    (s) => !slashQuery || s.label.includes(slashQuery) || s.hint.toLowerCase().includes(slashQuery.toLowerCase()),
-  );
-
-  const runSlash = (item: SlashItem) => {
-    if (editor) {
-      // 删除刚输入的 "/"（光标前一个字符），再执行命令
-      const { from } = editor.state.selection;
-      const before = editor.state.doc.textBetween(from - 1, from, " ");
-      if (before === "/") {
-        editor.chain().focus().deleteRange({ from: from - 1, to: from }).run();
-      }
-      item.run(editor);
-    }
-    setSlashOpen(false);
-  };
-
   // ── 行内 AI：选中文字 → 浮出菜单 → 调 /api/writing/assist ──
   const handleSelectionChange = useCallback(() => {
     if (!editor) return;
@@ -286,7 +252,7 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
         <span className="text-xs shrink-0" style={{ color: "var(--muted)" }}>
           {saveState === "saving" ? "保存中…" : saveState === "saved" ? "已保存" : ""}
         </span>
-        {/* W3：AI 起草 / 存入知识库 / 导出 docx */}
+        {/* W3：AI 起草 / 存入知识库 / 导出 docx / R6 交稿体检 */}
         <div className="flex items-center gap-2 shrink-0">
           <Button variant="ghost" size="sm" onClick={() => setDraftOpen(true)}>
             <Icon name="Sparkles" size={15} />
@@ -298,8 +264,27 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
               存知识库
             </Button>
           )}
+          <Button variant="ghost" size="sm" onClick={() => setCheckOpen(true)} disabled={!editor}>
+            <Icon name="FileCheck" size={15} />
+            体检
+          </Button>
           <WritingExportMenu editor={editor} title={title.trim() || "未命名文档"} />
         </div>
+      </div>
+
+      {/* R6：A4 缩放百分比（Ctrl+滚轮缩放，双击重置） */}
+      <div
+        className="flex items-center justify-end px-5 py-1 border-b"
+        style={{ borderColor: "var(--border)", background: "var(--panel)" }}
+      >
+        <button
+          onDoubleClick={reset}
+          title="Ctrl+滚轮缩放 A4 纸张；双击此数字重置 100%"
+          className="text-xs select-none cursor-default"
+          style={{ color: "var(--muted)" }}
+        >
+          {Math.round(zoom * 100)}%
+        </button>
       </div>
 
       {/* 起草面板（W3） */}
@@ -322,46 +307,25 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
 
       <EditorToolbar editor={editor} />
       <div className="flex-1 overflow-y-auto flex justify-center bg-[color:var(--panel-2)] py-6">
-        <div className="a4-paper">
+        <div className="a4-paper" ref={bindRef}>
           <EditorContent editor={editor} />
         </div>
       </div>
 
+      {/* 交稿体检面板（R6） */}
+      {editor && (
+        <WritingCheckPanel editor={editor} open={checkOpen} onClose={() => setCheckOpen(false)} />
+      )}
+
       {/* 斜杠菜单 */}
-      {slashOpen && editor && (
-        <div
-          className="absolute z-50 w-64 rounded-xl border shadow-lg overflow-hidden bg-white"
-          style={{ borderColor: "var(--border)", left: 80, top: 80 }}
-        >
-          <div className="px-3 py-2 border-b text-xs" style={{ borderColor: "var(--border)", color: "var(--muted)" }}>
-            插入
-          </div>
-          <input
-            autoFocus
-            value={slashQuery}
-            onChange={(e) => setSlashQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") setSlashOpen(false);
-            }}
-            placeholder="搜索命令…"
-            className="w-full px-3 py-2 text-sm bg-transparent focus:outline-none"
-            style={{ color: "var(--fg)" }}
-          />
-          <div className="max-h-64 overflow-y-auto">
-            {filteredSlash.map((item) => (
-              <button
-                key={item.label}
-                onClick={() => runSlash(item)}
-                className="w-full flex items-center gap-3 px-3 py-2 text-left text-sm hover:bg-[color:var(--panel-2)]"
-                style={{ color: "var(--fg)" }}
-              >
-                <Icon name={item.icon} size={16} />
-                <span className="flex-1">{item.label}</span>
-                <span className="text-xs" style={{ color: "var(--muted)" }}>{item.hint}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+      {editor && (
+        <WritingSlashMenu
+          editor={editor}
+          open={slashOpen}
+          query={slashQuery}
+          onQueryChange={setSlashQuery}
+          onClose={() => setSlashOpen(false)}
+        />
       )}
 
       {/* 行内 AI 菜单（选中文字后浮出） */}
