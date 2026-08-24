@@ -11,7 +11,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Drawer } from "@/components/ui/Drawer";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
-import { useToast } from "@/hooks/useToast";
+import { useToastContext } from "@/components/ui/Toast/ToastProvider";
 import { fetchWritingDocTypes } from "@/services/writing-client";
 
 interface WritingWizardProps {
@@ -44,7 +44,7 @@ const STYLE_TIERS = [
 ];
 
 const WritingWizard: React.FC<WritingWizardProps> = ({ open, onClose, onDraft, onBlank }) => {
-  const { showToast } = useToast();
+  const { showToast } = useToastContext();
   const [allTypes, setAllTypes] = useState<{ group: string; types: { code: string; label: string }[] }[]>([]);
   const [docType, setDocType] = useState("");
   const [title, setTitle] = useState("");
