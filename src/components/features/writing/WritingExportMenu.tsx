@@ -10,7 +10,7 @@ import React, { useEffect, useRef, useState } from "react";
 import type { Editor } from "@tiptap/core";
 import { Icon } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/Button";
-import { useToast } from "@/hooks/useToast";
+import { useToastContext } from "@/components/ui/Toast/ToastProvider";
 import { exportMarkdownAsDocx } from "@/utils/docxExport";
 import { exportRedHeaderDocx } from "@/utils/redHeaderExport";
 
@@ -46,7 +46,7 @@ const inputStyle = {
 const labelStyle = { color: "var(--fg-2)" } as const;
 
 const WritingExportMenu: React.FC<WritingExportMenuProps> = ({ editor, title }) => {
-  const { showToast } = useToast();
+  const { showToast } = useToastContext();
   const [menuOpen, setMenuOpen] = useState(false);
   const [redOpen, setRedOpen] = useState(false);
   const [busy, setBusy] = useState(false);

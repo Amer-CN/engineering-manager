@@ -8,7 +8,7 @@ import { Pagination } from "@/components/ui/Pagination";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { NoAccessState } from "@/components/ui/NoAccessState";
 import { usePermission, RequirePermission } from "@/hooks/usePermission";
-import { useToast } from "@/hooks/useToast";
+import { useToastContext } from "@/components/ui/Toast/ToastProvider";
 import { useWritingPrefill, type WritingPrefill } from "@/hooks/useWritingPrefill";
 import WritingEditor from "./WritingEditor";
 import WritingWizard from "./WritingWizard";
@@ -49,7 +49,7 @@ function flattenDocTypes(
 
 const WritingIndex: React.FC = () => {
   const { can } = usePermission();
-  const { showToast } = useToast();
+  const { showToast } = useToastContext();
   const [docs, setDocs] = useState<WritingDoc[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
