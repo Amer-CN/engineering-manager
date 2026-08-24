@@ -256,11 +256,22 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
     }
   };
 
+  // 返回列表：先把挂起的防抖保存立即落盘（含标题），完成后再刷新列表——
+  // 否则列表 GET 与落盘 PUT 竞速，会显示旧标题（验收反馈）
+  const handleBack = async () => {
+    if (saveTimer.current) {
+      window.clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+    }
+    await saveDoc();
+    onBack();
+  };
+
   return (
     <div className="h-full flex flex-col">
       {/* 顶部条：返回 + 标题 + 保存状态 */}
       <div className="flex items-center gap-3 px-5 py-3 border-b" style={{ borderColor: "var(--border)" }}>
-        <Button variant="ghost" size="sm" onClick={onBack} aria-label="返回列表">
+        <Button variant="ghost" size="sm" onClick={() => void handleBack()} aria-label="返回列表">
           <Icon name="ArrowLeft" size={16} />
         </Button>
         <input
