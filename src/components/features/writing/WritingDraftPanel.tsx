@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { Drawer } from "@/components/ui/Drawer";
-import { useToast } from "@/hooks/useToast";
+import { useToastContext } from "@/components/ui/Toast/ToastProvider";
 import { fetchWritingDocTypes, streamingDraft, type WritingDocTypesResponse } from "@/services/writing-client";
 
 interface WritingDraftPanelProps {
@@ -41,7 +41,7 @@ const STYLES = [
 ];
 
 const WritingDraftPanel: React.FC<WritingDraftPanelProps> = ({ docId, docType, styleId, material, title, autoStart, onGenerated, onClose }) => {
-  const { showToast } = useToast();
+  const { showToast } = useToastContext();
   const [groups, setGroups] = useState<WritingDocTypesResponse["groups"]>([]);
   const [selDocType, setSelDocType] = useState(docType ?? "");
   const [selStyle, setSelStyle] = useState(styleId ?? "S1");

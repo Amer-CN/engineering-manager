@@ -15,7 +15,7 @@ import { ProtectedSpan } from "./protectedSpan";
 import { TextStyle, Color } from "@tiptap/extension-text-style";
 import { Icon } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/Button";
-import { useToast } from "@/hooks/useToast";
+import { useToastContext } from "@/components/ui/Toast/ToastProvider";
 import { usePermission } from "@/hooks/usePermission";
 import { ingestKnowledgeDocument } from "@/services/knowledge-client";
 import WritingDraftPanel from "./WritingDraftPanel";
@@ -48,7 +48,7 @@ interface WritingEditorProps {
 }
 
 const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
-  const { showToast } = useToast();
+  const { showToast } = useToastContext();
   const { can } = usePermission();
   const [doc, setDoc] = useState<WritingDoc | null>(null);
   const [title, setTitle] = useState("");

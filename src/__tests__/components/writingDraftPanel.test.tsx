@@ -21,11 +21,11 @@ vi.mock("@/services/writing-client", () => ({
 
 // 模块级 spy：组件任意时刻渲染捕获的都是同一个 showToast 引用
 const toastSpy = vi.fn();
-vi.mock("@/hooks/useToast", () => ({
-  useToast: () => ({ showToast: toastSpy }),
+vi.mock("@/components/ui/Toast/ToastProvider", () => ({
+  useToastContext: () => ({ showToast: toastSpy }),
 }));
 
-import { useToast } from "@/hooks/useToast";
+import { useToastContext } from "@/components/ui/Toast/ToastProvider";
 
 const mockedStream = vi.mocked(writingClient.streamingDraft);
 
