@@ -1474,14 +1474,43 @@ button:disabled {
 /* 行内 AI 菜单浮层与编辑器间距 */
 .tiptap:focus-visible { outline: none; }
 
-/* ═══ R5：A4 纸张模式 — 白纸黑字，不随深色主题 ═══ */
+/* ═══ R5：A4 纸张模式 — 白纸黑字，不随深色主题 ═══
+   R11：连续分页纸——内容超出一页后视觉上自动出现下一张纸。
+   一整卷连续白纸 + repeating-linear-gradient 按页高画「页底白 → 灰缝 → 页顶白」循环，
+   纯 CSS 无 JS 计算，不碰编辑器；页高 1123px / 缝 24px 与单页时代尺寸一致。 */
 .a4-paper {
+  --a4-page-h: 1123px;
+  --a4-gap: 24px;
+  position: relative;
   width: 794px;
-  min-height: 1123px;
-  background: #fff;
-  border-radius: 2px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  min-height: var(--a4-page-h);
   padding: 96px 120px;
+  border-radius: 2px;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      #fff 0,
+      #fff var(--a4-page-h),
+      var(--panel-2) var(--a4-page-h),
+      var(--panel-2) calc(var(--a4-page-h) + var(--a4-gap))
+    );
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+/* 页缝分割线：灰缝中央 1px 细线，强化「两张纸」的视觉边界 */
+.a4-paper::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(var(--a4-page-h) + var(--a4-gap) / 2 - 0.5px),
+    rgba(0, 0, 0, 0.1) calc(var(--a4-page-h) + var(--a4-gap) / 2 - 0.5px),
+    rgba(0, 0, 0, 0.1) calc(var(--a4-page-h) + var(--a4-gap) / 2 + 0.5px),
+    transparent calc(var(--a4-page-h) + var(--a4-gap) / 2 + 0.5px),
+    transparent calc(var(--a4-page-h) + var(--a4-gap))
+  );
 }
 .a4-paper .tiptap { color: #1f2328; }
 .a4-paper .tiptap p.is-editor-empty:first-child::before { color: #9ca3af; }
