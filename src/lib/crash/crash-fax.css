@@ -1,0 +1,863 @@
+/*══
+ * 错误上报弹窗「反馈专线 FX-01」样式
+ * 来源：F:/AIXM/pomme-ui（PommeToys 前端逆向复刻样本，HEAD 2f5cdc7）。像素级规格经
+ * 4K 帧实测 + 二进制逆向校准，本文件由脚本按行区间抽取，尺寸/时序/注释逐字节未改动。
+ *   · @font-face   panel.css L12-18（latin 可变字体）
+ *   · 令牌         :root L20-67 / [data-theme=dark] L69-93 / .pt-try L98-234
+ *   · 扳机开关     .pt-sw L696-727
+ *   · 传真机本体   .fx-*  L1127-1689
+ * 与样本的唯一差异是主题挂载：样本用全局 html[data-theme]，此处改为容器级
+ * .crash-fax--dark（crash/fax-overlay.ts 跟随系统 prefers-color-scheme 挂摘），
+ * 避免污染工程管家全站主题。三主题（Bedrock token）适配为阶段二，本阶段恒为样本配色。
+ ══*/
+
+/* ttf 兜底只服务不支持 woff2 的老引擎，WebView2(Chromium) 走不到，故不带入 */
+@font-face {
+  font-family: "InstrumentSansWeb";
+  src: url("fonts/InstrumentSans-latin-wght.woff2") format("woff2");
+  font-weight: 400 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── 浮层脚手架：样本是页面内嵌区块，此处作为模态层的定位与遮罩（不含传真机自身尺寸）── */
+.crash-fax {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  padding: 24px 16px;
+  background: rgba(0, 0, 0, .5);
+  color-scheme: light;
+}
+.crash-fax .fx-block { flex: none; }
+
+/* ── 令牌 · 亮（样本 :root 中传真机实际用到的部分 + .pt-try 全量）── */
+.crash-fax {
+  --panel:     #EBE6DA;   /* panel gray (secondary button) */
+  --panel-dn:  #E1DBCC;
+  --seam:      #E4DED0;   /* hairline seam (never a shadow sink) */
+  --ink:       #2B2925;   /* ink — never pure black */
+  --ink-2:     #6A645D;
+  --fine:      #6E6658;
+  --stage-ink:  #EFE9DC;
+  --stage-fine: #A79E8C;
+  --mono-ui: ui-monospace, SFMono-Regular, "SF Mono", Menlo, "Roboto Mono", monospace;
+  --dk-lip:  rgba(255, 255, 255, .9);           /* 受光的上唇/高光 */
+  --pp-1: #FDFBF4; --pp-2: #FAF6EA;             /* 纸 */
+  --pp-edge: rgba(120, 108, 84, .08);
+  --pp-hole: #CFC5A8; --pp-hole-hi: rgba(255, 255, 255, .95);   /* 走纸孔 + 孔下缘高光 */
+  --pp-perf: #DDD5BE;                           /* 骑缝虚线 */
+  --pp-rule: #D4CBB3;                           /* 纸上点线/虚线 */
+  --pp-ink: #34322C; --pp-fine: #8B8474;        /* 纸上墨色 */
+  --sh-lift: 0 2px 4px rgba(43,41,37,.06), 0 22px 48px -20px rgba(43,41,37,.28);
+  /* ——— 机身实色 token（BrandTheme.swift 的 dynamic(light:dark:)，逐位照抄）——— */
+  --pt-paper:        #FBF7F0;   /* BrandTheme.paperNS —— 机身底 */
+  --pt-surface:      #F5F0E6;   /* BrandTheme.surface —— 甲板/键帽面 */
+  --pt-ink:          #2B2925;   /* BrandTheme.ink */
+  --pt-ink2:         #6E6A62;   /* BrandTheme.ink2 */
+  --pt-hairline:     #D9D2C4;   /* BrandTheme.hairline */
+  --pt-accent:       #E8483F;   /* BrandTheme.accent */
+  --pt-knob:         #FFFFFF;   /* BrandTheme.knob —— 白塑料钮帽 */
+  --pt-cap-face:     #FFFFFF;   /* BrandTheme.capFace —— 甲板功能键 */
+  --pt-graphite:     #3A352F;   /* BrandTheme.graphite —— 石墨键帽 */
+  --pt-graphite-ink: #F7F2E9;   /* BrandTheme.graphiteInk（两主题同值） */
+  --pt-track-off:    #D9D2C4;   /* BrandTheme.switchTrackOff */
+  --pt-well:         #EFE8D9;   /* BrandTheme.keyWellSurface —— 当前模式键的沉底面 */
+  --pt-well-border:  #CCC4B2;   /* BrandTheme.keyWellBorder */
+  --pt-hatch:        rgba(43, 41, 37, .045); /* BrandTheme.hatchPlate */
+
+  /* ——— 函数式 token。BrandTheme 里它们是 dynamicAlpha(light:…, dark:…)：
+     edgeHighlight(a) = 白 a / 白 a×0.13     dropShadow(a) = ink a / 黑 a×1.8
+     recess(a)        = ink a / 黑 a×2.4     knobRim(a)    = ink a / 黑 a×1.7
+     rule(a)          = hairline a / #6B6156 a×0.95
+     用到哪个 alpha 就在这里落一个变量，**不要在下面直接写 rgba()** —— 暗色那套
+     全靠这一块整体覆盖，散落的字面量会在暗色下失灵。 ——— */
+  --pt-hi-75:  rgba(255, 255, 255, .75);    /* edgeHighlight(0.75) 键帽顶棱 */
+  --pt-hi-55:  rgba(255, 255, 255, .55);    /* edgeHighlight(0.55) 甲板顶棱 / 上屏下缘 */
+  --pt-hi-50:  rgba(255, 255, 255, .50);    /* edgeHighlight(0.50) 导轨 / 拨杆槽 / 里程表下缘 */
+  --pt-hi-40:  rgba(255, 255, 255, .40);    /* edgeHighlight(0.40) SERVICE 铭牌顶缘 */
+  --pt-hi-16:  rgba(255, 255, 255, .16);    /* 拨杆手柄顶部成型光 */
+  --pt-sh-09:  rgba(43, 41, 37, .09);       /* dropShadow(0.09) 甲板 */
+  --pt-sh-10:  rgba(43, 41, 37, .10);       /* dropShadow(0.10) 键帽静置/按下 */
+  --pt-sh-18:  rgba(43, 41, 37, .18);       /* dropShadow(0.18) 键帽悬停 / 推子钮 / 石墨帽 */
+  --pt-sh-28:  rgba(43, 41, 37, .28);       /* dropShadow(0.28) 授权拨杆手柄 */
+  --pt-sh-30:  rgba(43, 41, 37, .30);       /* dropShadow(0.30) I/O 钮 / 音效旋钮 */
+  --pt-sh-35:  rgba(43, 41, 37, .35);       /* dropShadow(0.35) 电源拨杆手柄 */
+  --pt-rc-06:  rgba(43, 41, 37, .06);       /* recess(0.06) 挡位导轨 */
+  --pt-rc-045: rgba(43, 41, 37, .045);      /* recess(0.045) 铭牌悬停 */
+  --pt-rc-10:  rgba(43, 41, 37, .10);       /* recess(0.10) 铭牌按下 */
+  --pt-rc-07:  rgba(43, 41, 37, .07);       /* recess(0.07) 拨杆槽 */
+  --pt-rc-14:  rgba(43, 41, 37, .14);       /* recess(0.14) 导轨顶部渐变 */
+  --pt-rc-16:  rgba(43, 41, 37, .16);       /* recess(0.16) 拨杆槽顶部渐变 */
+  --pt-rc-18:  rgba(43, 41, 37, .18);       /* recess(0.18) 拨杆导向槽 */
+  --pt-rc-20:  rgba(43, 41, 37, .20);       /* recess(0.20) 键帽井内阴影 */
+  --pt-kr-06:  rgba(43, 41, 37, .06);       /* knobRim(0.06) 旋钮橙点圈 */
+  --pt-kr-08:  rgba(43, 41, 37, .08);       /* knobRim(0.08) 白钮帽圈 */
+  --pt-kr-13:  rgba(43, 41, 37, .13);       /* knobRim(0.13) 挡位滑块圈 */
+  --pt-kr-14:  rgba(43, 41, 37, .14);       /* knobRim(0.14) 授权拨杆手柄 */
+  --pt-ru-45:  rgba(217, 210, 196, .45);    /* rule(0.45) 行间细线 */
+  --pt-ru-65:  rgba(217, 210, 196, .65);    /* rule(0.65) 小标题细线 */
+  --pt-ru-100: rgb(217, 210, 196);          /* rule(1) 从属行走线 */
+
+  /* ——— 上屏 token（BrandTheme.Screen）。玻璃永远是深色 —— 屏幕就是这样 ——
+     所以除 paper / rim / innerEdge / drumWell / vuOff / odoCell 六个随外观变，
+     其余都是 fixed() 常量，暗色块里不覆盖。 ——— */
+  --pt-sc-paper:   #1C1916;   /* Screen.paper */
+  --pt-sc-rim:     #15120F;   /* Screen.rim */
+  --pt-sc-inner:   rgba(255, 255, 255, .04);   /* Screen.innerEdge */
+  --pt-sc-ink:     #F2EDE6;   /* Screen.ink（fixed） */
+  --pt-sc-ink2:    #A8A29A;   /* Screen.ink2（fixed） */
+  --pt-sc-hair:    #413A32;   /* Screen.hairline（fixed） */
+  --pt-sc-dotoff:  #8A8175;   /* Screen.dotOff（fixed） */
+  --pt-sc-accent:  #FF6B62;   /* Screen.accent（fixed） */
+  --pt-sc-green:   #4FD467;   /* Screen.green（fixed） */
+  --pt-sc-well:    #221D18;   /* Screen.drumWell */
+  --pt-sc-idle:    #676056;   /* Screen.drumIdle（fixed） */
+  --pt-sc-vuoff:   #332D26;   /* Screen.vuOff */
+  --pt-sc-odocell: #26211B;   /* Screen.odoCell */
+  --pt-sc-odorim:  #3A342C;   /* Screen.odoRim（fixed） */
+  --pt-sc-dimtext: #837B70;   /* Screen.dimText（fixed） */
+  --pt-sc-dimname: #8A837A;   /* Screen.dimName（fixed） */
+  --pt-sc-etch:    #6F675C;   /* Screen.etch（fixed） */
+  --pt-sc-matrix:  rgba(242, 237, 230, .028);  /* Screen.matrixDot（fixed） */
+
+  /* ——— 几何 ——— */
+  --pt-w: 540px;              /* HandheldWindowGeometry.width */
+  --pt-h: 760px;              /* HandheldWindowGeometry.preferredHeight */
+  --pt-inset: 16px;           /* DeckMetric.contentInset & 机身左右内衬 */
+  --pt-deck-w: 508px;         /* = 540 − 16×2，甲板传送带上每格的宽 */
+  --pt-deck-gap: 18px;        /* HandheldRootView.deckTransport 的 gap */
+  --pt-scale: 1;              /* 窄屏整体缩放，由 panel.js fitStage 写到 .pt-rig */
+
+  /* 甲板正文用系统面（App 里正文与控件走 SF Pro），标题/刻字用 Instrument Sans */
+  --pt-font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
+    "PingFang TC", "Hiragino Sans", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  --pt-font-disp: "InstrumentSansWeb", -apple-system, BlinkMacSystemFont, "SF Pro Rounded",
+    "PingFang SC", "PingFang TC", "Hiragino Sans", "Microsoft YaHei", sans-serif;
+  --pt-font-paper: "Kaiti SC", "STKaitiSC-Regular", STKaiti, KaiTi, "KaiTi SC",
+    "楷体", var(--pt-font-ui);   /* 正文输入区楷体（官方 RuledPaperTextView 回退链顺序：
+                                    Kaiti SC→STKaitiSC-Regular→STKaiti；仅输入框用，其余纸面=系统字） */}
+
+/* ── 令牌 · 暗（样本 [data-theme="dark"] + [data-theme="dark"] .pt-try）── */
+.crash-fax--dark {
+  color-scheme: dark;
+  --panel: #2E2921; --panel-dn: #3A3329;
+  --ink: #EFEAE0;  --ink-2: #A79E8F;  --fine: #9A9182;
+  --dk-lip:  rgba(255, 255, 255, .07);
+  --pp-1: #37322A; --pp-2: #322D26;
+  --pp-edge: rgba(255, 255, 255, .06);
+  --pp-hole: #17140F;                          /* 孔是洞，暗色下更该黑 */
+  --pp-hole-hi: rgba(255, 255, 255, .07);
+  --pp-perf: #4C443A;
+  --pp-rule: #4C443A;
+  --pp-ink: #E6DFD0; --pp-fine: #9C9486;
+  --pt-paper:        #1C1916;
+  --pt-surface:      #2A2622;
+  --pt-ink:          #F2EDE6;
+  --pt-ink2:         #A8A29A;
+  --pt-hairline:     #413A32;
+  --pt-accent:       #FF6B62;
+  --pt-knob:         #F3EEE6;
+  --pt-cap-face:     #39332C;
+  --pt-graphite:     #4A443C;
+  --pt-track-off:    #4E463C;
+  --pt-well:         #211D19;
+  --pt-well-border:  #4A4239;
+  --pt-hatch:        rgba(255, 255, 255, .05);
+  --pt-hi-75:  rgba(255, 255, 255, .0975);
+  --pt-hi-55:  rgba(255, 255, 255, .0715);
+  --pt-hi-50:  rgba(255, 255, 255, .065);
+  --pt-hi-40:  rgba(255, 255, 255, .052);
+  --pt-hi-16:  rgba(255, 255, 255, .0208);
+  --pt-sh-09:  rgba(0, 0, 0, .162);
+  --pt-sh-10:  rgba(0, 0, 0, .18);
+  --pt-sh-18:  rgba(0, 0, 0, .324);
+  --pt-sh-28:  rgba(0, 0, 0, .504);
+  --pt-sh-30:  rgba(0, 0, 0, .54);
+  --pt-sh-35:  rgba(0, 0, 0, .63);
+  --pt-rc-06:  rgba(0, 0, 0, .144);
+  --pt-rc-045: rgba(0, 0, 0, .108);
+  --pt-rc-10:  rgba(0, 0, 0, .24);
+  --pt-rc-07:  rgba(0, 0, 0, .168);
+  --pt-rc-14:  rgba(0, 0, 0, .336);
+  --pt-rc-16:  rgba(0, 0, 0, .384);
+  --pt-rc-18:  rgba(0, 0, 0, .432);
+  --pt-rc-20:  rgba(0, 0, 0, .48);
+  --pt-kr-06:  rgba(0, 0, 0, .102);
+  --pt-kr-08:  rgba(0, 0, 0, .136);
+  --pt-kr-13:  rgba(0, 0, 0, .221);
+  --pt-kr-14:  rgba(0, 0, 0, .238);
+  --pt-ru-45:  rgba(107, 97, 86, .4275);
+  --pt-ru-65:  rgba(107, 97, 86, .6175);
+  --pt-ru-100: rgba(107, 97, 86, .95);
+  --pt-sc-paper:   #131110;
+  --pt-sc-rim:     #4C443B;
+  --pt-sc-inner:   rgba(255, 255, 255, .09);
+  --pt-sc-well:    #191512;
+  --pt-sc-vuoff:   #2A241E;
+  --pt-sc-odocell: #1C1813;}
+
+/* ── 扳机开关（样本 L696-727，挂在 .fx-attach 内）── */
+.pt-sw {
+  position: relative; flex: none; width: 46px; height: 24px;
+  appearance: none; border: 0; padding: 0; cursor: pointer;
+  background: var(--pt-track-off); border-radius: 999px;
+  background-image: linear-gradient(rgba(0, 0, 0, .20), rgba(0, 0, 0, 0) 28%);
+  box-shadow: 0 1px 0 var(--pt-hi-55);
+  transition: background-color 180ms cubic-bezier(.3, 1.3, .4, 1);
+}
+
+.pt-sw[aria-checked="true"] {
+  background-color: var(--pt-accent);
+  background-image: linear-gradient(rgba(0, 0, 0, .30), rgba(0, 0, 0, 0) 28%);
+}
+
+.pt-sw .i {                 /* IEC 60417-5007「I」竖杠 2×9 */
+  position: absolute; left: 11px; top: 7.5px; width: 2px; height: 9px;
+  border-radius: 1px; background: #fff;
+}
+
+.pt-sw .o {                 /* IEC 60417-5008「O」圆环 φ9 */
+  position: absolute; right: 7px; top: 7.5px; width: 9px; height: 9px;
+  border-radius: 50%; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .8);
+}
+
+.pt-sw .k {                 /* 白钮帽：外探 1pt，落一道柔影 */
+  position: absolute; top: -1px; left: -1px; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--pt-knob);
+  box-shadow: inset 0 0 0 1px var(--pt-kr-08), 0 2px 3px var(--pt-sh-30);
+  transition: transform 180ms cubic-bezier(.3, 1.3, .4, 1);
+}
+
+.pt-sw[aria-checked="true"] .k { transform: translateX(22px); }
+
+/* ── 传真机本体（样本 L1127-1689 逐字节；仅主题选择器由 html[data-theme] 改为容器类）── */
+.fx-block {
+  --fx-lcd-1: #272522; --fx-lcd-2: #282623;            /* LCD 微噪黑 */
+  --fx-key-idle: #EFEAE2; --fx-key-ink-idle: #453F3B;   /* 模式键未选中（提亮：比底板亮一档如官版） */
+  --fx-key-ink-cur: #453F3B;                               /* 选中键帽文字色（随主题） */
+  --fx-key-seam: rgba(66, 58, 42, .10); --fx-key-riser: #CBC5BE;
+  --fx-cap-1: #BCBAB7; --fx-cap-2: #ECE9E7;              /* feedCap 灰过渡 */
+  --fx-cage-1: #E3DED8; --fx-cage-2: #DDD7D0;            /* 纸笼底板（浅灰，纸影对比用） */
+  --fx-rcp-1: #F0EFE6;              /* 回执纸：官方热敏纸纯色（亮暗两值，非渐变） */
+  --fx-rcp-ok: #2E8B57;                                   /* 回执结果行强调（官方截图：中深绿） */
+  --fx-ramp-1: #A5A09E; --fx-ramp-2: #B8B5AF; --fx-ramp-3: #94948C; /* 台面斜坡 */
+}
+.crash-fax--dark .fx-block {
+  --fx-lcd-1: #221F1B; --fx-lcd-2: #26221D;
+  --fx-key-idle: #37322A; --fx-key-ink-idle: #B5AC9C;
+  --fx-key-ink-cur: #E6DFD0;
+  --fx-key-seam: rgba(255, 255, 255, .06); --fx-key-riser: #211D18;
+  --fx-cap-1: #262119; --fx-cap-2: #3A342B;
+  --fx-cage-1: #3E382E; --fx-cage-2: #352F27;            /* 纸笼底板：夜色暖灰，略亮于纸面保层次 */
+  --fx-rcp-1: #37322A;
+  --fx-rcp-ok: #55D695;
+  --fx-ramp-1: #211D18; --fx-ramp-2: #2E2921; --fx-ramp-3: #1A1712;
+}
+/* ————— 机身（.fx-block：奶油机壳，亮 #E9E4E0-#DCD7D1 系）————— */
+.fx-block {                        /* = .pt-chassis 同款壳（2026-08-23 所有者定：
+                                        传真机外壳照抄主界面，不再做独立机壳） */
+  position: relative; width: min(580px, 100%); margin: 0 auto;
+  border-radius: 12px;
+  background: var(--pt-paper);
+  box-shadow: 0 0 0 1px var(--pt-hairline), var(--sh-lift);
+  font-family: var(--pt-font-ui);
+  color: var(--pt-ink);
+  display: flex; flex-direction: column;
+  overflow: hidden; text-align: left;
+}
+.fx { position: relative; display: flex; flex-direction: column;
+  padding: 9px var(--pt-inset) 16px; margin: -9px 0 0;
+  }
+.fx-lcd { margin-top: 9px; }           /* = pt-body 顶间隙（ledge→内容 9px），标题栏与 LCD 不再贴死 */
+.fx-shoulder { position: relative; height: 28px; flex: none;
+  margin: 0 calc(var(--pt-inset) * -1); }   /* 灯行贴顶贴边（=pt-ledge 在 chassis 顶层的观感） */
+
+/* ————— 台肩 bezelRow（42px：奶油底 + 左红绿灯 + 标题，底部 2px 暗线 #7D7875）————— */
+/* 与主面板 pt-ledge 同款窗饰（同一个软件的同一层壳） */
+.fx-lights { position: absolute; left: 20px; top: 12.5px; display: flex; gap: 8px;   /* = .pt-lights */
+  pointer-events: none; }
+.fx-lights i { width: 12px; height: 12px; border-radius: 50%;        /* = .pt-lights i */
+  box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .12); }
+.fx-lights i:nth-child(1) { background: #FF5F57; }   /* = .pt-lights 红 */
+.fx-lights i:nth-child(2) { background: #FEBC2E; }   /* = .pt-lights 黄 */
+.fx-lights i:nth-child(3) { background: #28C840; }   /* = .pt-lights 绿 */
+.fx-linetag {                        /* 标题：与三灯中轴线严格同高（top 同为 12.5px、行盒同 12px——盒中心=灯中心） */
+  position: absolute; right: 16px; top: 13.5px; height: 12px; line-height: 12px;   /* 13.5=灯盒12.5+字面视觉下沉1px */
+  font-family: var(--pt-font-disp); font-size: 9.5px; font-weight: 600;
+  letter-spacing: 1.6px; color: var(--pt-ink2); white-space: nowrap;
+}
+
+/* ————— LCD 状态条 FaxScreenView（54px：圆角 10、#272522→#282623 微噪黑、上边 1px 亮线）————— */
+.fx-lcd {
+  /* 尺寸全部 4K 帧 20s 实测（.work/spec/step2-lcd.md，比例尺 ×0.2947）：
+     黑条宽 1791→528（左右内缩 10px）、高 223→65.7、
+     内边距 上17.1 左19.5 右23.3 下15.9 */
+  position: relative; border-radius: 10px; overflow: hidden;
+  height: 65.7px; margin: 9px 0 0;                /* 宽度统一（所有者定）：LCD/模式键/进纸口/控制条同宽=内容区 548px */
+  padding: 0 23.3px 0 19.5px;
+  align-items: stretch;
+  display: flex; align-items: stretch; justify-content: space-between; gap: 16px;
+  background: linear-gradient(180deg, var(--fx-lcd-1) 0%, var(--fx-lcd-2) 100%);
+  box-shadow: inset 0 3px 9px rgba(0, 0, 0, .62), inset 0 0 0 1px rgba(255, 255, 255, .05),
+    0 1px 0 var(--dk-lip);
+}
+.fx-lcd::before {                  /* 微噪底纹（材质非点阵） */
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(circle at 1px 1px, rgba(239, 233, 220, .07) .6px, transparent .7px) 0 0 / 4px 4px;
+}
+.fx-lcd::after {                   /* 上边 1px 亮线 #292626→#211E1E */
+  content: ''; position: absolute; left: 0; right: 0; top: 0; height: 1px; pointer-events: none;
+  background: linear-gradient(90deg, #292626 0%, #211E1E 100%);
+}
+/* LCD 内部四行全部绝对定位到官版字面坐标（4K 实测，step2-lcd.md）：
+   主行字面中心距顶 25.8px、小字行字面中心距顶 45.2px。不再用流式排版——
+   流式的盒对齐永远差字面偏移（中文字/等宽数字/基线各不相同） */
+.fx-lcd-left { position: absolute; left: 19.5px; right: 23.3px; top: 0; bottom: 0; }
+.fx-lcd-right { position: absolute; right: 23.3px; top: 0; bottom: 0; text-align: right; }
+.fx-st-line {                     /* 主行：字面中心对齐距顶 25.8px（18px 字盒高 20 → top 15.8） */
+  position: absolute; left: 0; top: 16px; margin: 0;
+  display: flex; align-items: baseline; gap: 8px; white-space: nowrap;
+}
+.fx-st-zh {                        /* 4K 实测字面高 17.7 → 18px（step2-lcd.md） */
+  font-size: 18px; font-weight: 700; letter-spacing: 0.03em; line-height: 1.1;
+  color: var(--stage-ink);
+}
+.fx-caret { flex: none; width: 2.5px; height: 14px; background: var(--pt-sc-accent); animation: fx-caret 1.1s steps(1) infinite; }
+@keyframes fx-caret { 50% { opacity: 0; } }
+.fx:not([data-fx-phase="ready"]) .fx-caret { display: none; }
+.fx-st-sub {                       /* 小字行：字面中心距顶 45.2px（10px 字盒高 12 → top 39.2） */
+  position: absolute; left: 0; top: 39.5px; margin: 0;
+}
+.fx-st-en {                        /* mono 小字 */
+  margin: 0; font-family: var(--mono-ui); font-size: 10px; font-weight: 600;
+  letter-spacing: 0.12em; color: var(--stage-fine);
+  font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.fx-lcd-right { flex: none; text-align: right; }
+.fx-count {                        /* 主行右：字面中心距顶 25.8px（15.5px 盒 → top 18） */
+  position: absolute; right: 0; top: 17px; margin: 0;
+  font-family: var(--mono-ui); font-size: 15.5px; font-weight: 700; line-height: 1.0;
+  color: var(--stage-ink); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.fx-count-cap {                    /* 小字行右：字面中心距顶 45.2px（同左栏 READY 行） */
+  position: absolute; right: 0; top: 45.5px; margin: 0; font-family: var(--mono-ui); font-size: 9.5px; font-weight: 600;
+  letter-spacing: 0.1em; color: var(--stage-fine); text-transform: uppercase; white-space: nowrap;
+}
+
+/* ————— 模式键 categoryKeys ×2（大胶囊：两键等宽、间距 6、高 40、圆角 19）—————
+   选中态 = 键帽 #DFD7CC + 键帽内一条深色内嵌带（高约 6px、几乎全键宽），
+   选中文字在带内（#E9E4DF 系）——不是红点（差异要点 1）；
+   未选中 = #E3DDD6 无带、文字 #453F3B（差异要点 2）。 */
+.fx-modes { display: flex; gap: 8px; margin-top: 12.7px; }   /* 键缝加大（所有者反馈嫌挤） */
+.fx-mode {                         /* 配方照抄主面板 .pt-key（所有者指定参考） */
+  position: relative; flex: 1 1 0; min-width: 0; height: 44px;
+  appearance: none; font-family: inherit; cursor: pointer;
+  border: 1px solid var(--pt-hairline); border-radius: 9px; padding: 0;
+  background: var(--pt-surface); color: var(--fx-key-ink-idle);
+  background-image: linear-gradient(var(--pt-hi-75), var(--pt-hi-75));
+  background-repeat: no-repeat; background-size: 100% 1px; background-position: top;
+  white-space: nowrap; overflow: hidden;
+  box-shadow: 0 2px 0 var(--pt-hairline), 0 4px 6px var(--pt-sh-10);
+  transition: transform 100ms cubic-bezier(.3, .7, .4, 1), box-shadow 100ms cubic-bezier(.3, .7, .4, 1), background-color 120ms ease;
+}
+.fx-mode:hover { background: color-mix(in srgb, var(--fx-key-idle) 92%, #000); }
+.fx-mode:active { transform: translateY(2px); box-shadow: inset 0 0 0 1px var(--fx-key-seam), 0 0 0 var(--fx-key-riser); }
+.fx-mode:focus-visible { outline: 2px solid var(--pt-accent); outline-offset: 3px; }
+/* 键帽内嵌带：常驻结构，选中时着色显形（带内放选中文字） */
+/* 官网实测（12.png x110-174）：键帽上无任何色带——深色像素全是文字笔画。
+   文字两行（英文小字 + 中文粗体）直接印在键帽上。 */
+.fx-mode .band { display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100%; gap: 3px; }                    /* 两行：上英文下中文；行距 3px 呼吸（所有者反馈字行挤） */
+.fx-mode .band .en { font-family: var(--mono-ui); font-size: 11px;   /* 官版对比图实测字面 7.7px（mono 字面率~0.7） */
+  font-weight: 600; letter-spacing: .12em; opacity: .7; line-height: 1; }
+.fx-mode .band .zh { font-size: 12px; font-weight: 800; line-height: 1; }  /* 官版对比图实测字面 11.5px */
+.fx-mode.cur { color: var(--fx-key-ink-cur, var(--fx-key-ink-idle)); }   /* 键帽文字色（选中/未选中同族，随主题） */
+.fx-mode.cur {                        /* 选中态配方照抄 .pt-key[aria-checked]（所有者指定主面板参考） */
+  transform: translateY(2px);
+  background-color: var(--pt-well); background-image: none;
+  border: 1px solid var(--pt-well-border);
+  box-shadow: inset 0 3px 4px var(--pt-rc-20);
+}
+
+/* 选中/未选中文字色由 --fx-key-ink-idle 与下方选中规则控制 */
+.fx-mode:disabled { opacity: .4; cursor: default; }
+
+/* ————— 进纸口标注行（23px：左侧小字 + 右延细线）————— */
+.fx-feed { display: flex; align-items: center; gap: 12px; margin: 17px 0 8px; }
+.fx-feed .fl-lb {
+  font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em;
+  color: var(--ink-2); white-space: nowrap;
+}
+.fx-feed .fl-rule { flex: 1; height: 1px; background: var(--seam); }
+
+/* ————— 进纸槽 FaxFeedSlot（11px 斜渐变黑条：上暗 #211C1A 下亮 #36312E，底 1px 亮边 #58534F）—————
+   差异要点 3：替换原口沿板+窄缝结构。 */
+.fx-slot { position: relative; z-index: 3; height: 13px; margin: 0; border-radius: 3px 3px 0 0;  /* 4K 实测槽高 44px→13px */
+  /* 2026-08-23 所有者定：纸要插进中央黑缝并盖掉槽的下边界（像收纸入缝）。
+     槽只保留【上壁+缝】实体，下半透明被纸覆盖；z-index 3 盖纸顶 */
+  background: linear-gradient(180deg,
+    #191614 0%, #0C0A09 46%,                  /* 上壁口沿 */
+    #000 50%, #000 88%,                       /* 中央黑缝延至底部（纸顶插在缝里、被缝前壁压住） */
+    #141110 100%);                            /* 底缘微亮收口 */
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .9);
+}
+
+.crash-fax--dark .fx-slot { filter: brightness(.82); }
+
+/* ————— 灰过渡 feedCap（20px：#BCBAB7→#ECE9E7 从暗到亮竖直渐变，出纸口盖板斜坡）—————
+   差异要点 4：纸从这里长出来。 */
+.fx-feed-cap { position: relative; z-index: 1; height: 20px; margin: 0;
+  background: linear-gradient(180deg, var(--fx-cap-1) 0%, var(--fx-cap-2) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25); }
+
+/* ————— 纸笼（纸从灰过渡带里长出，顶裁在盖板斜坡下）————— */
+.fx-cage { position: relative; z-index: 2; margin: -26px 0 0; padding: 0 16px 30px; overflow: hidden;
+  border-radius: 0 0 12px 12px;   /* 底板圆角收尾（所有者：底板止于键行上方） */  /* 纸顶贴槽底；slot 实体段下延压住纸顶 2px=插缝观感 */
+  /* 底板（2026-08-23 所有者修正：浅灰——底板要浅，纸回收时的深灰阴影才有对比空间）。
+     底部止于控制条上方并圆角收尾（不越过发送按钮） */
+  background: linear-gradient(180deg, var(--fx-cage-1) 0%, var(--fx-cage-2) 100%);
+  border-radius: 0 0 10px 10px; }
+
+/* ————— 传真纸 FaxBayView（纸色 #ECE9E7：比台面略亮偏灰）————— */
+.fx-paper {                        /* 悬浮纸（用户：'纸悬浮在底板上，有深灰阴影'）：
+                                  左右收窄露出底板、三层柔化阴影 */
+  position: relative; border-radius: 0 0 3px 3px;
+  margin: 0 14px;
+  background: linear-gradient(180deg, var(--pp-1) 0%, var(--pp-2) 100%);
+  box-shadow:
+    0 2px 5px rgba(66, 58, 42, .26),
+    0 10px 22px -6px rgba(66, 58, 42, .34),
+    0 24px 38px -14px rgba(66, 58, 42, .24),
+    inset 0 0 0 1px var(--pp-edge);
+  transition: transform 900ms cubic-bezier(.25, .9, .3, 1);
+}
+.fx-paper::before {                 /* 槽沿投在纸上的影：纸是从灰过渡带里长出来的 */
+  content: ''; position: absolute; left: 0; right: 0; top: 0; height: 11px; pointer-events: none;
+  background: linear-gradient(180deg, rgba(40, 33, 24, .28), rgba(40, 33, 24, .08) 60%, rgba(40, 33, 24, 0));
+}
+.fx-paper { transition: none; }   /* 走纸与新纸降下均 JS 步进（官方同构一步一响，均速）；CSS 过渡禁用防叠加加速 */
+.fx-paper.up { transform: translateY(-118%); }  /* up=完全藏入位（步进末态同值，作后备） */
+.fx-holes {                          /* 走纸孔列：孔径 5px、纵向步进 22px，孔区渐变 #DAD5CF→#C9C4BF */
+  position: absolute; top: 0; bottom: 0; width: 26px; pointer-events: none;
+  background-image:
+    radial-gradient(circle at 50% 50%, var(--pp-hole) 0 2.5px, transparent 2.7px),
+    radial-gradient(circle at 50% calc(50% + 1.2px), var(--pp-hole-hi) 0 2.8px, transparent 3px);
+  background-size: 26px 22px; background-repeat: repeat-y;
+}
+.fx-holes.l { left: 0; border-right: 1px dashed var(--pp-perf); }
+.fx-holes.r { right: 0; border-left: 1px dashed var(--pp-perf); }
+.fx-light-catch {                    /* 纸受光面：顶部白色高光条（lightCatch） */
+  position: absolute; left: 26px; right: 26px; top: 0; height: 8px;
+  pointer-events: none; background: linear-gradient(180deg, rgba(255, 255, 255, .5), rgba(255, 255, 255, 0));
+}
+.crash-fax--dark .fx-light-catch { background: linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, 0)); }
+.fx-sheet { margin: 0 26px; padding: 15px 16px 14px; text-align: left; }
+
+/* ————— 纸头字段（.pp-head + .pp-fields）————— */
+.fx-p-head { display: flex; align-items: baseline; gap: 10px; }
+.fx-brand { font-size: 13px; font-weight: 700; letter-spacing: 0.12em; color: var(--pp-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fx-no { margin-left: auto; font-family: var(--mono-ui); font-size: 11.5px; font-weight: 600; letter-spacing: 0.06em; color: var(--pp-fine); font-variant-numeric: tabular-nums; }
+.fx-p-meta { margin-top: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 3px 22px; }
+.fx-p-meta p { margin: 0; font-size: 11.5px; color: var(--pp-fine); letter-spacing: 0.03em; display: flex; align-items: baseline; gap: 4px; padding: 0; min-width: 0; }
+.fx-p-meta p em { font-style: normal; flex: none; color: var(--pp-fine); }
+.fx-p-meta p b { margin-left: 5px; font-family: var(--mono-ui); font-weight: 600; color: var(--pp-ink); font-variant-numeric: tabular-nums; min-width: 0; }
+.fx-email { flex: 1 1 auto; min-width: 0; box-sizing: border-box; height: 17px; padding: 0;
+  appearance: none; border: 0; border-bottom: 1px dotted var(--pp-rule); outline: none; background: transparent;
+  font: 400 11.5px/17px var(--pt-font-ui); color: var(--pp-ink); border-radius: 0; }
+.fx-email::placeholder { color: var(--pp-fine); }
+.fx-email:focus { border-bottom-color: var(--pt-accent); }
+.fx-email:disabled { opacity: .6; }
+
+/* ————— 类别印章（.pp-stamp + 逆向 0.5° 微旋转）————— */
+.fx-stamp-row { margin-top: 12px; display: flex; align-items: center; gap: 14px; }
+.fx-stamp {
+  display: inline-block; transform: rotate(-0.5deg);
+  font-size: 13.5px; font-weight: 800; letter-spacing: 0.28em; white-space: nowrap;
+  color: var(--pt-accent); padding: 5px 11px 5px 15px;
+  border: 2.2px solid var(--pt-accent); border-radius: 7px;
+  background: color-mix(in srgb, var(--pt-accent) 5%, transparent);
+}
+/* 盖章动画（官方 select 闭包 withAnimation + PressStamp.land 同构；所有者描述「像盖章一样盖上去」）：
+   scale 1.6→1 spring 回弹叩击 + opacity 0→1。transform-origin 左上=印章从斜上方落下 */
+.fx-stamp.stamping {
+  animation: fx-stamp-land 380ms cubic-bezier(.2, 1.4, .4, 1);
+  transform-origin: 20% 30%;
+}
+@keyframes fx-stamp-land {
+  0%   { transform: scale(1.6) rotate(-3deg); opacity: 0; }
+  55%  { transform: scale(.94) rotate(-.2deg); opacity: 1; }   /* 叩击过冲：先压过头 */
+  100% { transform: scale(1) rotate(-.5deg); opacity: 1; }
+}
+.fx-stamp.sug { color: #5557D2; border-color: #5557D2; background: color-mix(in srgb, #5557D2 5%, transparent); }
+.crash-fax--dark .fx-stamp.sug { color: #9492F5; border-color: #9492F5; background: color-mix(in srgb, #9492F5 5%, transparent); }
+.fx-stamp-note { font-size: 11px; line-height: 1.5; color: var(--pp-fine); }
+
+/* ————— 正文横线信纸输入区（纸上墨色体系）————— */
+/* 开关两态重新分配纸内空间（官版 1.png vs 6.png）：
+   关=大书写区（10 行格线）无虚线框；开=书写区收 2 行 + 机器信息框。
+   两态纸内总占用相同（100+13+81 = 244），纸与整页高度恒定。 */
+.fx-body { position: relative; margin-top: 10px; }
+.fx-body::before {                  /* 横线信纸 RuledTextView：行距 25px（1.png 实测 y342/367/392 等差数列） */
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(180deg, transparent 0 24px, var(--pp-rule) 24px 25px);
+}
+.fx-input {
+  position: relative; display: block; width: 100%; box-sizing: border-box;
+  height: 100px; min-height: 0;                      /* 高度锁死，不许内容撑高 */
+  padding: 0 2px; resize: none; outline: none; border: 0; background: transparent;
+  font: 400 12.5px/25px var(--pt-font-paper); color: var(--pp-ink);   /* 楷体=官方正文输入字体（RuledPaperTextView.caret 三级回退链实锤：Kaiti SC→STKaitiSC→STKaiti 16pt）；行高=横线周期 25px */
+  overflow-y: auto; scrollbar-width: none;           /* 多行正文框内滚动（官版纸固定大小） */
+}
+.fx-input::-webkit-scrollbar { display: none; }
+/* 关态书写区放大高度由 panel.js fxResizeInput 实测设定（各宽度布局尺寸不同，固定值会错位） */
+.fx-input::placeholder { color: var(--pp-fine); }
+.fx-input:disabled { opacity: .75; }
+
+/* ————— 宿主免疫层（移植必需，样版无对应）—————
+   宿主 src/index.css:693 与 :879 用 [data-theme="graphite"|"sandstone"] input:not(...)… textarea
+   给全站表单控件刷应用面板色，特异性约 (0,5,1)；而 sandstone 是默认主题（index.html 预置 +
+   useTheme.ts 默认值），故 .fx-email/.fx-input 的纸面令牌 (0,1,0) 必被盖掉——
+   传真纸上的输入框会变成应用底色 + 应用墨色（暗色下深底深字直接不可读）。
+   浮层是「纸」，不吃宿主主题，故此处把三条被劫持的声明钉回纸面令牌。 */
+.crash-fax .fx-email,
+.crash-fax .fx-input {
+  background-color: transparent !important;
+  color: var(--pp-ink) !important;
+}
+.crash-fax .fx-email { border-bottom-color: var(--pp-rule) !important; }
+.crash-fax .fx-email:focus { border-bottom-color: var(--pt-accent) !important; }
+.crash-fax .fx-email::placeholder,
+.crash-fax .fx-input::placeholder { color: var(--pp-fine) !important; }
+
+/* ————— 随附机器信息虚线框（.pp-box + .pp-row 虚线引导）————— */
+/* 显隐只切换可见性（开关不塌页）；关态书写区放大吃掉这块（见 .fx-input 规则） */
+.fx-minfo-clip { margin-top: 13px; transition: opacity 280ms ease, visibility 0s; }
+/* 关态脱流让位书写区（配平见 panel.js）。脱流后 absolute 无 top 约束会漂到
+   文档末尾且塌宽（492→151px），280ms 淡出期间可见 = 底部残影——故关态立即
+   隐藏不做淡出；开态回流的瞬间位置正确，保留淡入 */
+.fx[data-fx-attach="off"] .fx-minfo-clip { opacity: 0; visibility: hidden; transition: none; position: absolute; }
+.fx-minfo { overflow: hidden; min-height: 0; border: 1px dashed var(--pp-rule); border-radius: 8px; padding: 10px 13px 9px; }
+.fx-minfo .bt { margin: 0 0 5px; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pp-fine); }
+.fx-minfo p { margin: 0; display: flex; align-items: baseline; gap: 11px; font-size: 12px; color: var(--pp-ink); padding: 2px 0; }
+.fx-minfo p em { font-style: normal; flex: none; width: 52px; color: var(--pp-fine); }
+.fx-minfo p b { font-family: var(--mono-ui); font-weight: 600; color: var(--pp-ink); font-variant-numeric: tabular-nums; }
+.fx-privacy { margin: 11px 0 0; font-size: 10.5px; line-height: 1.7; color: var(--pp-fine); }
+
+/* ————— 回执 FaxReceiptView（纸色 #E1DCD6 暗于传真纸，层叠在传真纸前方；宽≈纸宽 80%）—————
+   差异要点 6：回执用独立纸色变量（--fx-rcp-*），与传真纸 --pp-* 区分。 */
+.fx-receipt {
+  position: absolute; top: 0; left: 50%; width: 80%; z-index: 3;
+  transform: translate(-50%, -103%); opacity: 0; pointer-events: none;
+}
+.fx[data-fx-phase="sent"] .fx-receipt {
+  transform: translate(-50%, 0); opacity: 1;
+  /* 官方 sent→printed 是同一条连续动画（SwiftUI 在飞重定向保速度）；
+     CSS 做不到接力保速——两段 1300ms ease-out 接棒会让速度在停死点跳变 6 倍（实测顿挫），
+     故合为一条 2600ms（=官方两段时长之和）一气呵成 */
+  transition: transform 2600ms ease-out, opacity 220ms ease;
+}
+.fx[data-fx-phase="printed"] .fx-receipt {
+  transform: translate(-50%, 0); opacity: 1; cursor: pointer; pointer-events: auto;
+  /* printed 只接管交互态（可点击撕纸），transform 与 sent 同值不触发新过渡 */
+  transition: transform 2600ms ease-out;
+}
+.fx[data-fx-phase="tearing"] .fx-receipt {
+  transform: translate(-50%, 0); opacity: 1; pointer-events: none;
+  /* 官方两段式（视频第一轮 11.57-13.50 实测）：撕断 270ms（3 顿挫）→ 150ms 静默 →
+     掉落 ~1.3s（重力加速）。合计 ~1.7s 与官方 ~1.9s 同量级 */
+  animation: fx-tear-snap 420ms steps(3, end), fx-tear-drop 900ms cubic-bezier(.5, 0, .85, .5) 420ms forwards;
+}
+/* 撕断：3 顿挫（steps 分格=急促撕断感），每格下拽 4px 并微旋转（纸被撕歪） */
+@keyframes fx-tear-snap {
+  0%   { transform: translate(-50%, 0) rotate(0deg); }
+  33%  { transform: translate(-49.5%, 4px) rotate(-.6deg); }
+  66%  { transform: translate(-50.5%, 2px) rotate(.5deg); }
+  100% { transform: translate(-50%, 4px) rotate(-.3deg); }
+}
+/* 掉落：从撕断末位加速坠出画面（官方 1.3s 中段最强加速） */
+@keyframes fx-tear-drop {
+  0%   { transform: translate(-50%, 4px) rotate(-.3deg); opacity: 1; }
+  100% { transform: translate(-50%, 140px) rotate(2deg); opacity: 0; }
+}
+.fx-receipt .body {
+  position: relative; overflow: hidden; text-align: center;
+  margin: 0 26px; padding: 14px 41px 16px;   /* 官方红箭头实测：文字距纸边 10%（409px×10%≈41px；内容占比 80%） */
+  background: var(--fx-rcp-1);                  /* 官方截图：热敏纸纯色（无渐变，暗色走变量） */
+  color: var(--pp-ink);
+  box-shadow: 0 12px 22px -12px rgba(66, 58, 42, .45),
+              inset 1px 0 0 var(--pp-edge), inset -1px 0 0 var(--pp-edge), inset 0 1px 0 var(--pp-edge);   /* 底边不描：描了会成横线把纸与锯齿隔成两截 */
+}
+.fx-receipt .body::before {          /* 槽沿投在纸上的影（与 .fx-paper::before 同族） */
+  content: ''; position: absolute; left: 0; right: 0; top: 0; height: 11px; pointer-events: none;
+  background: linear-gradient(180deg, rgba(40, 33, 24, .28), rgba(40, 33, 24, .08) 60%, rgba(40, 33, 24, 0));
+}
+.fx-receipt .ttl { margin: 0; font-size: 15px; font-weight: 800; letter-spacing: 0.5em; text-indent: 0.5em; line-height: 1.2; color: var(--pp-ink); }  /* 官方截图：字距宽松、居中（text-indent 补末字空隙） */
+.fx-receipt .sub { margin: 4px 0 0; font-family: var(--mono-ui); font-size: 8.5px; font-weight: 500; letter-spacing: 0.22em; text-indent: 0.22em; color: var(--pp-fine); text-transform: uppercase; }  /* 官方：细字重、大字距 */
+.fx-receipt .rule { margin: 11px auto; width: 86%; border-top: 1px dashed #CFCFC5; }  /* 官方：浅灰虚线 #CCC 系 */
+.fx-receipt dl { margin: 0; display: inline-block; text-align: left; width: 100%; }   /* 官方：字段区占满内容区（边距即 body padding 的 10%） */
+.fx-receipt dl div { display: flex; align-items: baseline; font-size: 11px; line-height: 1.75; color: var(--pp-ink); padding: 0; }   /* 官方：中等字号+统一深墨 */  /* 官方：行距宽松（1.8）、墨色 #444-#555 */
+.fx-receipt dt { flex: none; width: 3.2em; color: var(--pp-ink); }   /* 官方：标签与值同深墨（低清下仍清晰的关键） */
+.fx-receipt dd { margin: 0; flex: 1; text-align: right; font-family: var(--mono-ui); font-weight: 400; font-variant-numeric: tabular-nums; color: var(--pp-ink); }   /* 官方：常规字重、统一深墨 */  /* 官方：值右对齐到统一右缘 */
+.fx-receipt [data-fx-r-result] { color: var(--fx-rcp-ok); }   /* 结果行「OK · 已送达」绿色强调 */
+.fx-receipt .thanks { margin: 4px 0 0; font-size: 10px; font-weight: 400; line-height: 1.5; color: #777776; }  /* 官方：感谢语中灰、常规字重 */
+.fx-receipt .tear-hint { margin: 3px 0 0; font-size: 8.5px; font-weight: 400; line-height: 1.5; color: #AAA9A0; }  /* 官方：提示行更小更淡 */
+.fx-receipt .teeth {               /* 底边锯齿（撕纸边）— 官方截图：等腰大三角、约 31 齿。
+                                      实现：clip-path polygon 单元素精确三角（弃 linear-gradient
+                                      拼合——45°渐变线在非正方形格画不出等腰、双渐变衔接有混色缝、
+                                      渐变底色致齿身上下色差）；纯色填充、边缘无混色。 */
+  height: 12px;
+  margin: -1px 26px 0;            /* 左右与 body 同宽（26px 缩进）+上提 1px 咬合；上轮缺 26px=两侧超宽 */
+  background: var(--fx-rcp-1);        /* 与 body 同纯色（齿=纸的延伸） */
+  -webkit-clip-path: polygon(0% 0%, 100% 0%, 100.00% 100%, 98.39% 20%, 96.77% 100%, 95.16% 20%, 93.55% 100%, 91.94% 20%, 90.32% 100%, 88.71% 20%, 87.10% 100%, 85.48% 20%, 83.87% 100%, 82.26% 20%, 80.65% 100%, 79.03% 20%, 77.42% 100%, 75.81% 20%, 74.19% 100%, 72.58% 20%, 70.97% 100%, 69.35% 20%, 67.74% 100%, 66.13% 20%, 64.52% 100%, 62.90% 20%, 61.29% 100%, 59.68% 20%, 58.06% 100%, 56.45% 20%, 54.84% 100%, 53.23% 20%, 51.61% 100%, 50.00% 20%, 48.39% 100%, 46.77% 20%, 45.16% 100%, 43.55% 20%, 41.94% 100%, 40.32% 20%, 38.71% 100%, 37.10% 20%, 35.48% 100%, 33.87% 20%, 32.26% 100%, 30.65% 20%, 29.03% 100%, 27.42% 20%, 25.81% 100%, 24.19% 20%, 22.58% 100%, 20.97% 20%, 19.35% 100%, 17.74% 20%, 16.13% 100%, 14.52% 20%, 12.90% 100%, 11.29% 20%, 9.68% 100%, 8.06% 20%, 6.45% 100%, 4.84% 20%, 3.23% 100%, 1.61% 20%, 0% 100%);
+  clip-path: polygon(0% 0%, 100% 0%, 100.00% 100%, 98.39% 20%, 96.77% 100%, 95.16% 20%, 93.55% 100%, 91.94% 20%, 90.32% 100%, 88.71% 20%, 87.10% 100%, 85.48% 20%, 83.87% 100%, 82.26% 20%, 80.65% 100%, 79.03% 20%, 77.42% 100%, 75.81% 20%, 74.19% 100%, 72.58% 20%, 70.97% 100%, 69.35% 20%, 67.74% 100%, 66.13% 20%, 64.52% 100%, 62.90% 20%, 61.29% 100%, 59.68% 20%, 58.06% 100%, 56.45% 20%, 54.84% 100%, 53.23% 20%, 51.61% 100%, 50.00% 20%, 48.39% 100%, 46.77% 20%, 45.16% 100%, 43.55% 20%, 41.94% 100%, 40.32% 20%, 38.71% 100%, 37.10% 20%, 35.48% 100%, 33.87% 20%, 32.26% 100%, 30.65% 20%, 29.03% 100%, 27.42% 20%, 25.81% 100%, 24.19% 20%, 22.58% 100%, 20.97% 20%, 19.35% 100%, 17.74% 20%, 16.13% 100%, 14.52% 20%, 12.90% 100%, 11.29% 20%, 9.68% 100%, 8.06% 20%, 6.45% 100%, 4.84% 20%, 3.23% 100%, 1.61% 20%, 0% 100%);
+  /* 无 drop-shadow：描边滤镜会让齿色偏离纸色=「两截感」；一体纯色即可 */
+}
+
+/* ————— 底控台面 FaxDeckView（60px 奶油渐变）+ 台面斜坡（15px 灰渐变）————— */
+.fx-controls {                     /* 键行区=外壳浅色（所有者：不是全灰——底板只加长下移量，不铺键行区） */
+  display: flex; align-items: center; gap: 14px; margin-top: 0;
+  margin-bottom: -16px;             /* 键行下移贴底：吃掉 fx padding-bottom */
+  padding: 18px 0 14px 2px;          /* 键行下移（灰线删除后占位还原）：开关/清除/发送整体贴向底部 */
+  text-align: left;
+}
+.fx-ramp {                             /* 台面斜坡：#A5A09E→#B8B5AF→#94948C */
+  height: 15px; margin: 0 2px; border-radius: 0 0 4px 4px;
+  background: linear-gradient(180deg, var(--fx-ramp-1) 0%, var(--fx-ramp-2) 55%, var(--fx-ramp-3) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12);
+}
+.fx-attach { display: flex; align-items: center; gap: 8px; flex: 1 1 auto; min-width: 0; }
+.fx-attach .fx-trigger { transform: scale(.82); transform-origin: left center; }  /* 主面板开关整只复用，等比 82% 适配传真机尺寸 */
+.fx-attach-copy b { display: block; font-size: 11.5px; font-weight: 500; line-height: 1.5; color: var(--fine); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fx-attach-copy span { display: block; margin-top: 2px; font-size: 10.5px; line-height: 1.5; color: var(--fine); opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* LINE 指示灯：待命灰 / 摘机·拨号灭 / 接通·传送·已送达·回执打印·占线红闪（0.3s 拍方波）/ 撕回执·换纸绿 */
+.fx-lamp-wrap { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: none; }
+                                       /* 官版：LINE 文字在灯正下方（灯=横长条） */
+.fx-line-silk { font-family: var(--mono-ui); font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; color: var(--ink-2); }
+.fx-lamp { width: 12px; height: 12px; border-radius: 50%;      /* 官版：圆形灯（所有者指正） */
+  background: linear-gradient(180deg, #8A8580 0%, #6E6963 100%);
+  opacity: .55; box-shadow: inset 0 1px 2px rgba(0,0,0,.25); }
+.fx[data-fx-phase="connecting"] .fx-lamp,
+.fx[data-fx-phase="sending"] .fx-lamp,
+.fx[data-fx-phase="sent"] .fx-lamp,
+.fx[data-fx-phase="printed"] .fx-lamp,
+.fx[data-fx-phase="busy"] .fx-lamp {
+  background: var(--pt-accent); opacity: 1;
+  box-shadow: 0 0 6px color-mix(in srgb, var(--pt-accent) 60%, transparent);
+  animation: fx-blink .6s steps(1) infinite;
+}
+.fx[data-fx-phase="tearing"] .fx-lamp,
+.fx[data-fx-phase="loading"] .fx-lamp {
+  background: var(--pt-sc-green); opacity: 1;
+  box-shadow: 0 0 6px color-mix(in srgb, var(--pt-sc-green) 60%, transparent);
+}
+@keyframes fx-blink { 50% { opacity: .2; } }
+
+/* ————— 底控台面按键 FaxKeyStyle —————
+   三源交叉定值（fax-full-spec.md）：
+   · 12.png 像素实测（亮色）：CLEAR 57×34 键帽 #ECEAED 冷白、无渐变、底边 1px #D0CCC3；
+     TRANSMIT 86×35 键帽 #DB534D→#DB4D48（渐变极浅）、侧壁 2px #A23B38、顶部 1px 白高光
+     alpha 0.35；两键间距 11px；LINE 灯在 CLEAR 左。 */
+.fx-controls {
+  --fx-send-top-1: #DB534D; --fx-send-top-2: #DB4D48; --fx-send-riser: #A23B38;
+  --fx-send-catch: .35;
+}
+.crash-fax--dark .fx-controls {
+  --fx-send-top-1: #D2453C; --fx-send-top-2: #BC3A32; --fx-send-riser: #7E241E;
+  --fx-send-catch: .08;
+}
+
+/* 按键文字：中文粗体在上 + 英文小字在下（两行） */
+.fx-clear .zh, .fx-send .zh { display: block; font-weight: 800; font-size: 12.5px; line-height: 1.25; }
+.fx-clear .en, .fx-send .en { display: block; font-family: var(--mono-ui); font-weight: 600; font-size: 8.5px; letter-spacing: .12em; line-height: 1.35; opacity: .8; }
+
+/* 清除 CLEAR：配方照抄主面板 .pt-key（有源码，所有者指定参考）。旧的冷白扁平配方
+   （#ECEAED 实测版）已整体废弃删除——其 :active 带 :not(:disabled) 特异性高于新配方，
+   按压时会把新配方的下沉态整个压掉（残余 box-shadow 也会渗出）。 */
+.fx-clear {
+  flex: none; appearance: none; cursor: pointer; text-align: center;
+  width: 60px; height: 43px; box-sizing: border-box;
+  border: 1px solid var(--pt-hairline); border-radius: 9px; padding: 4px 8px;
+  background: var(--pt-cap-face);
+  background-image: linear-gradient(var(--pt-hi-75), var(--pt-hi-75));
+  background-repeat: no-repeat; background-size: 100% 1px; background-position: top;
+  color: var(--pt-ink);
+  font-family: inherit; letter-spacing: .05em;
+  display: flex; flex-direction: column; justify-content: center; gap: 1px;
+  box-shadow: 0 2px 0 var(--pt-hairline), 0 4px 6px var(--pt-sh-10);
+  transition: transform 100ms cubic-bezier(.3, .7, .4, 1), box-shadow 100ms cubic-bezier(.3, .7, .4, 1);
+}
+.fx-clear:disabled { opacity: .5; cursor: default; }
+.crash-fax--dark .fx-clear {
+  background: var(--panel); color: var(--ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 1px 0 var(--panel-dn);
+}
+
+/* 发送 TRANSMIT：红键帽（渐变极浅）+ 2px 深红侧壁（实测 86×35、圆角 8、#DB534D→#DB4D48）*/
+.fx-clear:hover:not(:disabled) { filter: brightness(1.02); }
+.fx-clear:focus-visible { outline: 2px solid var(--pt-accent); outline-offset: 3px; }
+.fx-clear:active:not(:disabled) {          /* 按压配方照抄 .pt-key:active */
+  transform: translateY(2px); background-image: none;
+  box-shadow: 0 1px 2px var(--pt-sh-10), inset 0 2px 3px var(--pt-rc-20);
+}
+.fx-send {                        /* 配方照抄主面板 .pt-key（所有者指定参考；红面版与清除键同构） */
+  flex: none; appearance: none; cursor: pointer; text-align: center; position: relative;
+  width: 103px; height: 43px; box-sizing: border-box;
+  border: 1px solid var(--fx-send-riser); border-radius: 9px; padding: 4px 10px;
+  background-image:
+    linear-gradient(rgba(255, 224, 218, var(--fx-send-catch)), rgba(255, 224, 218, var(--fx-send-catch))),  /* 顶部 1px 高光 */
+    linear-gradient(180deg, var(--fx-send-top-1), var(--fx-send-top-2));   /* 红面（与高光同为 image 层，防被顶掉） */
+  background-repeat: no-repeat; background-size: 100% 1px, 100% 100%; background-position: top, center;
+  color: #FFF;
+  font-family: inherit; letter-spacing: .05em; line-height: 1.1;
+  display: flex; flex-direction: column; justify-content: center; gap: 1px;
+  box-shadow: 0 2px 0 var(--fx-send-riser), 0 4px 6px var(--pt-sh-10);
+  transition: transform 100ms cubic-bezier(.3, .7, .4, 1), box-shadow 100ms cubic-bezier(.3, .7, .4, 1), filter 120ms ease;
+}
+.fx-send .zh { font-size: 13px; font-weight: 700; line-height: 1; }
+.fx-send .en { font-family: var(--mono-ui); font-size: 8.5px; font-weight: 600; letter-spacing: .1em; line-height: 1; opacity: .92; }
+.fx-send:hover:not(:disabled) { filter: brightness(1.04); }
+.fx-send:active:not(:disabled) {      /* 按压配方照抄 .pt-key:active */
+  /* 样本 L1600 有一行悬空续写（box-shadow 已在上一行以 ; 收尾）：浏览器容错直接丢弃，
+     实测渲染里从来没有这层 0 0 0 riser 扩散阴影。PostCSS 不容错会让 build 失败，
+     故删除该行——效果与样本实测渲染逐像素一致。 */
+  transform: translateY(2px); background-image: none; background-color: var(--fx-send-top-2);
+  box-shadow: 0 1px 2px var(--pt-sh-10), inset 0 2px 3px rgba(66, 20, 14, .28);
+}
+.fx-send:focus-visible { outline: 2px solid var(--pt-accent); outline-offset: 3px; }
+.fx-send:disabled {
+  filter: saturate(.35) brightness(.85);
+  color: rgba(255, 255, 255, .72);
+  cursor: default; box-shadow: 0 1px 0 var(--fx-send-riser);
+}
+.fx[data-fx-phase="printed"] .fx-send,
+.fx[data-fx-phase="tearing"] .fx-send { filter: none; }
+
+/* 两键紧挨（实测间距 11px） */
+.fx-controls .fx-lamp-wrap { margin-right: 2px; }
+
+/* 传送阶段：正文/邮箱/模式键/开关不可交互（disabled 属性由 JS 同步） */
+.fx[data-fx-phase="offhook"] .fx-input,
+.fx[data-fx-phase="dialing"] .fx-input,
+.fx[data-fx-phase="connecting"] .fx-input,
+.fx[data-fx-phase="sending"] .fx-input,
+.fx[data-fx-phase="sent"] .fx-input,
+.fx[data-fx-phase="printed"] .fx-input,
+.fx[data-fx-phase="tearing"] .fx-input,
+.fx[data-fx-phase="loading"] .fx-input,
+.fx[data-fx-phase="busy"] .fx-input { pointer-events: none; }
+
+/* 减动效：走纸/撕纸动画跳过，状态直达 */
+@media (prefers-reduced-motion: reduce) {
+  .fx-paper, .fx-receipt, .fx-minfo-clip { transition: none; }
+  .fx[data-fx-phase="tearing"] .fx-receipt { animation: none; opacity: 0; }
+  .fx-caret { animation: none; }
+  .fx-stamp.stamping { animation: none; }   /* 盖章动画豁免：reduce 直接呈现（样版原样） */
+}
+
+/* ————— @720px 缩档（官网 media 查询对应参数，传真机零件同步缩一档）————— */
+@media (max-width: 720px) {
+  .fx-block { border-radius: 12px; }               /* = pt-chassis（壳已统一，断点同步） */
+  .fx-lcd { height: 65.7px; }
+  .fx-st-zh { font-size: 18px; }
+  .fx-st-en { font-size: 9px; margin-top: 2px; }
+  .fx-count { font-size: 15.5px; }
+  .fx-count-cap { font-size: 9.5px; margin-top: 3px; }
+  .fx-feed { margin: 13px 0 7px; }
+  .fx-feed .fl-lb { font-size: 9px; }
+  .fx-feed-cap { height: 14px; }
+  .fx-cage { margin-top: -14px; padding: 0 8px 30px; }   /* 底 30 与主规则一致（底板加长量） */
+  .fx-holes { width: 15px; background-size: 15px 22px;
+    background-image: radial-gradient(circle at 50% 50%, var(--pp-hole) 0 2.1px, transparent 2.3px); }
+  .fx-light-catch { left: 15px; right: 15px; height: 6px; }
+  .fx-sheet { margin: 0 15px; padding: 11px 9px 10px; }
+  .fx-brand { font-size: 9.5px; letter-spacing: .05em; }
+  .fx-no { font-size: 8.5px; }
+  .fx-p-meta { grid-template-columns: 1fr 1fr; gap: 2px 10px; margin-top: 6px; }
+  .fx-p-meta p { font-size: 8.5px; }
+  .fx-p-meta p b { margin-left: 6px; }
+  .fx-email { height: 13px; font-size: 8.5px; line-height: 13px; }
+  .fx-stamp-row { margin: 10px 0 2px; gap: 11px; }
+  .fx-stamp { font-size: 9.5px; letter-spacing: .16em; padding: 3px 7px 3px 10px; border-width: 1.5px; }
+  .fx-stamp-note { font-size: 8px; }
+  .fx-body { margin-top: 8px; }
+  .fx-body::before { background: repeating-linear-gradient(180deg, transparent 0 19px, var(--pp-rule) 19px 20px); }
+  .fx-input { min-height: 80px; font-size: 9.5px; line-height: 20px; }   /* 行高=横线周期 20px（防穿字）；80=20×4 整行 */
+  .fx-minfo-clip { margin-top: 9px; }
+  .fx-minfo { padding: 7px 9px 6px; }
+  .fx-minfo .bt { font-size: 8px; margin-bottom: 2px; letter-spacing: .06em; }
+  .fx-minfo p { font-size: 8.5px; padding: .5px 0; gap: 6px; }
+  .fx-minfo p em { width: 34px; }
+  .fx-privacy { margin-top: 7px; font-size: 8px; line-height: 1.55; }
+  .fx-receipt .body { margin: 0 15px; padding: 10px 33px 12px; }   /* 窄屏同步官方 10% 边距（326px×10%≈33px） */
+  .fx-receipt .ttl { font-size: 10.5px; letter-spacing: .2em; }
+  .fx-receipt .sub { font-size: 7px; }
+  .fx-receipt dl div { font-size: 8px; }
+  .fx-receipt .thanks { font-size: 8.5px; }
+  .fx-receipt .tear-hint { font-size: 7px; }
+  .fx-receipt .teeth { height: 10px; margin: -1px 15px 0; }   /* 窄屏 margin 跟 body 同步 15px（否则两侧超宽） */
+  .fx-controls { flex-wrap: wrap; gap: 9px; padding: 9px 0 8px 2px; }   /* margin-top 交给主规则（接 cage 底板） */
+  .fx-attach-copy b { font-size: 9.5px; }
+  .fx-attach-copy span { font-size: 9px; line-height: 1.45; }
+  .fx-ramp { height: 11px; }
+}
+
+/* 窄屏：页面壳与传真机区块收边 */
+@media (max-width: 639px) {
+  .pt-page-head { padding: 20px 16px 0; }
+}
+
+
+.fx-mode { position: relative; }
+.fx-mode.cur::after {                /* 官方选中键右上角红点 */
+  content: ''; position: absolute; top: 8px; right: 10px; width: 4.4px; height: 4.4px;  /* 4K 帧与新对比图折中：距顶 7-8、距右 10-17 */
+  border-radius: 50%; background: var(--pt-sc-accent);
+}
+
+/* ————— 错误摘要区（工程管家增补，样本传真单无此区）—————
+   只读、等宽小字、细虚线框、纸墨色——视觉必须是「已打印在纸上的故障记录」，
+   与 .fx-minfo 同一套语言（虚线 --pp-rule 框 + --pp-fine 标签 + --mono-ui 正文）。
+   高度全部封顶：500 字 message 与展开后的堆栈都不得把纸撑破。 */
+.fx-errclip { margin-top: 13px; }
+.fx-errclip:empty { display: none; }         /* 无 message 且无堆栈：整区不占位 */
+.fx-err-cap { margin: 0 0 5px; font-size: 11px; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--pp-fine); }
+.fx-err-msg { margin: 0; padding: 9px 11px; border: 1px dashed var(--pp-rule); border-radius: 8px;
+  font-family: var(--mono-ui); font-size: 11px; line-height: 1.6; color: var(--pp-ink);
+  white-space: pre-wrap; word-break: break-word; max-height: 108px; overflow: auto; }
+.fx-err-fold { margin-top: 6px; }
+.fx-err-fold summary { list-style: none; cursor: pointer; font-size: 10.5px; letter-spacing: .04em;
+  color: var(--pp-fine); }
+.fx-err-fold summary::-webkit-details-marker { display: none; }
+.fx-err-fold summary::before { content: '▸'; font-family: var(--mono-ui); margin-right: 4px; }
+.fx-err-fold[open] summary::before { content: '▾'; }
+.fx-err-rows { margin-top: 5px; padding: 9px 11px; border: 1px dashed var(--pp-rule); border-radius: 8px; }
+.fx-err-row { margin: 0; }
+.fx-err-row + .fx-err-row { margin-top: 8px; }
+.fx-err-row .k { display: block; margin-bottom: 2px; font-size: 10px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--pp-fine); }
+.fx-err-row .v { margin: 0; font-family: var(--mono-ui); font-size: 10.5px; line-height: 1.55;
+  color: var(--pp-ink); white-space: pre-wrap; word-break: break-all;
+  max-height: 132px; overflow: auto; }
+
+/* 底控台多一枚 COPY 键（样本没有）后，拨杆文案可用宽度收窄：flex 子项默认
+   min-width:auto 会让样本自带的 nowrap+ellipsis 完全不生效（副标题压到 LINE 灯上），
+   补 min-width:0 让省略号按官方配方归位。 */
+.fx-attach-copy { min-width: 0; }
+
+/* 窄屏：与 .fx-minfo 同款收一档（官方窄屏字号族） */
+@media (max-width: 720px) {
+  .fx-errclip { margin-top: 9px; }
+  .fx-err-cap { font-size: 8px; margin-bottom: 2px; letter-spacing: .06em; }
+  .fx-err-msg { padding: 7px 9px; font-size: 8.5px; line-height: 1.5; max-height: 84px; }
+  .fx-err-fold { margin-top: 4px; }
+  .fx-err-fold summary { font-size: 8px; }
+  .fx-err-rows { margin-top: 4px; padding: 7px 9px; }
+  .fx-err-row .k { font-size: 7.5px; }
+  .fx-err-row .v { font-size: 8px; max-height: 96px; }
+}
