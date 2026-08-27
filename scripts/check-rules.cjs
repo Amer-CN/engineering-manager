@@ -414,8 +414,8 @@ const GLASS_3D_ALLOWED_FILES = new Set([
   'src/components/features/costLedger/CostLedgerImportModal.tsx',
   'src/components/features/templates/TemplateGenerate.tsx',
   'src/components/features/settlement/SettlementImportModal.tsx',
-  // —— 六类浮层：错误上报弹窗（Modal/Dialog 类浮层，DESIGN.md Glass Whitelist 六类浮层第 2 条；玻璃为 crash.ts 卡片 backdrop-filter）——
-  'src/lib/crash.ts',
+  // —— 错误上报浮层（原 src/lib/crash.ts）已于传真机移植中改为 src/lib/crash/ 目录：
+  //    机身=不透明金属 + 纸，零 backdrop-filter / 零 3D，故不再需要玻璃白名单登记 ——
   // —— 六类浮层：Toast ——
   'src/components/ui/Toast/ToastProvider.tsx',
   'src/components/ui/OCRRecognitionFeedback.tsx',
