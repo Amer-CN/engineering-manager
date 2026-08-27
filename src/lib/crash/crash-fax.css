@@ -36,7 +36,7 @@
   --fine:      #6E6658;
   --stage-ink:  #EFE9DC;
   --stage-fine: #A79E8C;
-  -  --mono-ui: JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --mono-ui: JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --dk-lip:  rgba(255, 255, 255, .9);           /* 受光的上唇/高光 */
   --pp-1: #FDFBF4; --pp-2: #FAF6EA;             /* 纸 */
   --pp-edge: rgba(120, 108, 84, .08);
