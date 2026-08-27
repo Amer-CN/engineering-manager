@@ -270,15 +270,22 @@
 
 /* ————— 台肩 bezelRow（42px：奶油底 + 左红绿灯 + 标题，底部 2px 暗线 #7D7875）————— */
 /* 与主面板 pt-ledge 同款窗饰（同一个软件的同一层壳） */
-.fx-lights { position: absolute; left: 20px; top: 12.5px; display: flex; gap: 8px;   /* = .pt-lights */
+.fx-lights { position: absolute; right: 20px; top: 12.5px; display: flex; gap: 8px;   /* = .pt-lights */
   pointer-events: none; }
 .fx-lights i { width: 12px; height: 12px; border-radius: 50%;        /* = .pt-lights i */
   box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .12); }
 .fx-lights i:nth-child(1) { background: #FF5F57; }   /* = .pt-lights 红 */
 .fx-lights i:nth-child(2) { background: #FEBC2E; }   /* = .pt-lights 黄 */
 .fx-lights i:nth-child(3) { background: #28C840; }   /* = .pt-lights 绿 */
+/* 红灯 = 关闭键（brief #4：点击关窗）：可点 + hover 提亮；黄/绿保持装饰（cursor:default 无点击） */
+.fx-lights i:first-child { pointer-events: auto; cursor: pointer; }
+.fx-lights i:first-child:hover {
+  filter: brightness(1.35) saturate(1.15);
+  box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .12), 0 0 8px rgba(255, 95, 87, .85);
+}
+.fx-lights i:not(:first-child) { cursor: default; }
 .fx-linetag {                        /* 标题：与三灯中轴线严格同高（top 同为 12.5px、行盒同 12px——盒中心=灯中心） */
-  position: absolute; right: 16px; top: 13.5px; height: 12px; line-height: 12px;   /* 13.5=灯盒12.5+字面视觉下沉1px */
+  position: absolute; left: 16px; top: 13.5px; height: 12px; line-height: 12px;   /* 13.5=灯盒12.5+字面视觉下沉1px */
   font-family: var(--pt-font-disp); font-size: 9.5px; font-weight: 600;
   letter-spacing: 1.6px; color: var(--pt-ink2); white-space: nowrap;
 }
@@ -433,11 +440,12 @@
 }
 .fx-paper { transition: none; }   /* 走纸与新纸降下均 JS 步进（官方同构一步一响，均速）；CSS 过渡禁用防叠加加速 */
 .fx-paper.up { transform: translateY(-118%); }  /* up=完全藏入位（步进末态同值，作后备） */
-.fx-holes {                          /* 走纸孔列：孔径 5px、纵向步进 22px，孔区渐变 #DAD5CF→#C9C4BF */
-  position: absolute; top: 0; bottom: 0; width: 26px; pointer-events: none;
+.fx-holes {                          /* 走纸孔列：单圆孔（弃双层错位渐变——叠出菱形棱角）、
+                                       孔径 6.8px（半径 3.4，比原 5px 大）、纵向步进 22px；
+                                       bottom 收进 28px：任何纸高下末孔都完整落在纸内、不贴下缘不越界 */
+  position: absolute; top: 0; bottom: 28px; width: 26px; pointer-events: none;
   background-image:
-    radial-gradient(circle at 50% 50%, var(--pp-hole) 0 2.5px, transparent 2.7px),
-    radial-gradient(circle at 50% calc(50% + 1.2px), var(--pp-hole-hi) 0 2.8px, transparent 3px);
+    radial-gradient(circle at 50% 50%, var(--pp-hole) 0 3.4px, transparent 3.7px);
   background-size: 26px 22px; background-repeat: repeat-y;
 }
 .fx-holes.l { left: 0; border-right: 1px dashed var(--pp-perf); }
@@ -587,16 +595,16 @@
   content: ''; position: absolute; left: 0; right: 0; top: 0; height: 11px; pointer-events: none;
   background: linear-gradient(180deg, rgba(40, 33, 24, .28), rgba(40, 33, 24, .08) 60%, rgba(40, 33, 24, 0));
 }
-.fx-receipt .ttl { margin: 0; font-size: 15px; font-weight: 800; letter-spacing: 0.5em; text-indent: 0.5em; line-height: 1.2; color: var(--pp-ink); }  /* 官方截图：字距宽松、居中（text-indent 补末字空隙） */
-.fx-receipt .sub { margin: 4px 0 0; font-family: var(--mono-ui); font-size: 8.5px; font-weight: 500; letter-spacing: 0.22em; text-indent: 0.22em; color: var(--pp-fine); text-transform: uppercase; }  /* 官方：细字重、大字距 */
+.fx-receipt .ttl { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: 0.5em; text-indent: 0.5em; line-height: 1.2; color: var(--pp-ink); }  /* 官方截图：字距宽松、居中（text-indent 补末字空隙） */
+.fx-receipt .sub { margin: 4px 0 0; font-family: var(--mono-ui); font-size: 10.5px; font-weight: 600; letter-spacing: 0.22em; text-indent: 0.22em; color: var(--pp-fine); text-transform: uppercase; }  /* 官方：细字重、大字距 */
 .fx-receipt .rule { margin: 11px auto; width: 86%; border-top: 1px dashed #CFCFC5; }  /* 官方：浅灰虚线 #CCC 系 */
 .fx-receipt dl { margin: 0; display: inline-block; text-align: left; width: 100%; }   /* 官方：字段区占满内容区（边距即 body padding 的 10%） */
-.fx-receipt dl div { display: flex; align-items: baseline; font-size: 11px; line-height: 1.75; color: var(--pp-ink); padding: 0; }   /* 官方：中等字号+统一深墨 */  /* 官方：行距宽松（1.8）、墨色 #444-#555 */
-.fx-receipt dt { flex: none; width: 3.2em; color: var(--pp-ink); }   /* 官方：标签与值同深墨（低清下仍清晰的关键） */
-.fx-receipt dd { margin: 0; flex: 1; text-align: right; font-family: var(--mono-ui); font-weight: 400; font-variant-numeric: tabular-nums; color: var(--pp-ink); }   /* 官方：常规字重、统一深墨 */  /* 官方：值右对齐到统一右缘 */
+.fx-receipt dl div { display: flex; align-items: baseline; font-size: 13px; line-height: 1.75; color: var(--pp-ink); padding: 0; }   /* 官方：中等字号+统一深墨 */  /* 官方：行距宽松（1.8）、墨色 #444-#555 */
+.fx-receipt dt { flex: none; width: 3.2em; font-weight: 600; color: var(--pp-fine); }   /* brief #1：标签降一档（--pp-fine）与值分层 */
+.fx-receipt dd { margin: 0; flex: 1; text-align: right; font-family: var(--mono-ui); font-weight: 600; font-variant-numeric: tabular-nums; color: var(--pp-ink); }   /* brief #1：值加粗 600 + 深墨，低清下仍清晰 */
 .fx-receipt [data-fx-r-result] { color: var(--fx-rcp-ok); }   /* 结果行「OK · 已送达」绿色强调 */
-.fx-receipt .thanks { margin: 4px 0 0; font-size: 10px; font-weight: 400; line-height: 1.5; color: #777776; }  /* 官方：感谢语中灰、常规字重 */
-.fx-receipt .tear-hint { margin: 3px 0 0; font-size: 8.5px; font-weight: 400; line-height: 1.5; color: #AAA9A0; }  /* 官方：提示行更小更淡 */
+.fx-receipt .thanks { margin: 4px 0 0; font-size: 12px; font-weight: 500; line-height: 1.5; color: #6E6A62; }  /* brief #1：感谢语提亮（--pt-ink2 系） */
+.fx-receipt .tear-hint { margin: 3px 0 0; font-size: 10.5px; font-weight: 500; line-height: 1.5; color: var(--pp-fine); }  /* brief #1：提示行加大提亮 */
 .fx-receipt .teeth {               /* 底边锯齿（撕纸边）— 官方截图：等腰大三角、约 31 齿。
                                       实现：clip-path polygon 单元素精确三角（弃 linear-gradient
                                       拼合——45°渐变线在非正方形格画不出等腰、双渐变衔接有混色缝、
@@ -764,7 +772,7 @@
   .fx-feed-cap { height: 14px; }
   .fx-cage { margin-top: -14px; padding: 0 8px 30px; }   /* 底 30 与主规则一致（底板加长量） */
   .fx-holes { width: 15px; background-size: 15px 22px;
-    background-image: radial-gradient(circle at 50% 50%, var(--pp-hole) 0 2.1px, transparent 2.3px); }
+    background-image: radial-gradient(circle at 50% 50%, var(--pp-hole) 0 2.9px, transparent 3.2px); }
   .fx-light-catch { left: 15px; right: 15px; height: 6px; }
   .fx-sheet { margin: 0 15px; padding: 11px 9px 10px; }
   .fx-brand { font-size: 9.5px; letter-spacing: .05em; }
@@ -786,11 +794,11 @@
   .fx-minfo p em { width: 34px; }
   .fx-privacy { margin-top: 7px; font-size: 8px; line-height: 1.55; }
   .fx-receipt .body { margin: 0 15px; padding: 10px 33px 12px; }   /* 窄屏同步官方 10% 边距（326px×10%≈33px） */
-  .fx-receipt .ttl { font-size: 10.5px; letter-spacing: .2em; }
-  .fx-receipt .sub { font-size: 7px; }
-  .fx-receipt dl div { font-size: 8px; }
-  .fx-receipt .thanks { font-size: 8.5px; }
-  .fx-receipt .tear-hint { font-size: 7px; }
+  .fx-receipt .ttl { font-size: 12px; letter-spacing: .2em; }
+  .fx-receipt .sub { font-size: 8.5px; }
+  .fx-receipt dl div { font-size: 9.5px; }
+  .fx-receipt .thanks { font-size: 10px; }
+  .fx-receipt .tear-hint { font-size: 8.5px; }
   .fx-receipt .teeth { height: 10px; margin: -1px 15px 0; }   /* 窄屏 margin 跟 body 同步 15px（否则两侧超宽） */
   .fx-controls { flex-wrap: wrap; gap: 9px; padding: 9px 0 8px 2px; }   /* margin-top 交给主规则（接 cage 底板） */
   .fx-attach-copy b { font-size: 9.5px; }

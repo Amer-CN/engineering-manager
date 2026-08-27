@@ -256,7 +256,7 @@ export async function reportCrash(payload: CrashPayload): Promise<boolean> {
     buildCommit: opts.buildCommit,
     channel: opts.channel,
     os: detectOS(),
-    arch: (navigator.platform || 'unknown').slice(0, 32),
+    arch: detectArchSync(),
     language: navigator.language,
     breadcrumbs: breadcrumbs.slice(-opts.maxBreadcrumbs),
   }
@@ -274,6 +274,17 @@ export async function reportCrash(payload: CrashPayload): Promise<boolean> {
   overlayEl = handle.el
   overlayTearDown = handle.tearDown
   lastShownAt = now
+
+  // 64 位精修：优先 userAgentData 高熵值（WebView2=Chromium 可用）；与同步嗅探结果不一致时
+  // 更新内存 payload（wire/复制文本同源）与传真单纸面（系统/架构行）
+  void detectArch().then((a) => {
+    if (!a || a === full.arch) return
+    full.arch = a
+    const osEl = handle.el.querySelector<HTMLElement>('[data-fx-mos]')
+    if (osEl) osEl.textContent = `${full.os ?? ''} (${a})`
+    const archEl = handle.el.querySelector<HTMLElement>('[data-fx-march]')
+    if (archEl) archEl.textContent = a
+  })
 
   return waitForUserDecision()
 }
@@ -647,6 +658,33 @@ export function detectOS(): string {
   if (/Android/.test(ua)) return 'Android'
   if (/iPhone|iPad|iPod/.test(ua)) return 'iOS'
   return 'Unknown'
+}
+
+/** 同步 64 位检测：UA 含 Win64|x64|WOW64 → x64，否则 x86。
+    navigator.platform 恒返回 "Win32"（历史遗留 API 名，与位数无关），弃用。 */
+function detectArchSync(): string {
+  return /Win64|x64|WOW64/.test(navigator.userAgent) ? 'x64' : 'x86'
+}
+
+/** 64 位检测：优先 navigator.userAgentData 高熵值（WebView2=Chromium 可用），
+    fallback 同步嗅探 navigator.userAgent。结果仅 x64 / x86。 */
+async function detectArch(): Promise<string> {
+  const uaData = (
+    navigator as unknown as {
+      userAgentData?: {
+        getHighEntropyValues?: (hints: string[]) => Promise<{ bitness?: string }>
+      }
+    }
+  ).userAgentData
+  if (uaData && typeof uaData.getHighEntropyValues === 'function') {
+    try {
+      const { bitness } = await uaData.getHighEntropyValues(['architecture', 'bitness'])
+      return bitness === '64' ? 'x64' : 'x86'
+    } catch {
+      /* 高熵值不可得：落入同步嗅探 */
+    }
+  }
+  return detectArchSync()
 }
 
 export function isCrashReporterInitialized(): boolean {

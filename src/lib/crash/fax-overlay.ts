@@ -49,9 +49,6 @@ export interface FaxOverlayHandle {
   tearDown: () => void
 }
 
-/** 传送完成（回执撕下、新纸落位）后自动收窗的停留时长 */
-const AUTO_CLOSE_MS = 3000
-
 /** 收件方（传真单上的投递对象，非机身贴牌） */
 const FAX_DESK = '工程管家'
 
@@ -114,6 +111,7 @@ const FX_ZH: Record<string, string> = {
   'fx.okDelivered': 'OK · 已送达',
   'fx.thanks': '谢谢。每一张我们都会读。',
   'fx.tearHint': '点回执撕下 · 机器回到待命',
+  'fx.close': '关闭',
   'fx.errCap': '故障记录 · ERROR LOG',
   'fx.errFold': '技术详情',
 }
@@ -278,8 +276,12 @@ export function showFaxOverlay(
   const stZh = h('span', 'fx-st-zh')
   const stEn = h('span', 'fx-st-en')
   const countEl = h('p', 'fx-count')
+  /* 红灯 = 关闭键（brief #4）：title 提示 + 点击走忽略路径（不发送、tearDown 清理） */
+  const lightRed = h('i')
+  lightRed.dataset.fxClose = ''
+  lightRed.setAttribute('title', t('fx.close'))
   const shoulder = h('div', 'fx-shoulder', [
-    h('span', 'fx-lights', [h('i'), h('i'), h('i')]),
+    h('span', 'fx-lights', [lightRed, h('i'), h('i')]),
     h('span', 'fx-linetag', [t('fx.line') + ' FEEDBACK LINE FX-01']),
   ])
   const lcd = h('div', 'fx-lcd', [
@@ -332,9 +334,12 @@ export function showFaxOverlay(
   const mOs = h('b')
   const mArch = h('b')
   const mLang = h('b')
+  mOs.dataset.fxMos = ''
+  mArch.dataset.fxMarch = ''
   mLang.dataset.fxMlang = ''
   setText(mVersion, payload.version ?? '')
-  setText(mOs, payload.os ?? '')
+  /* 系统行带架构：Windows (x64)（brief #3，真机可一眼认出位数） */
+  setText(mOs, (payload.os || '') + (payload.arch ? ` (${payload.arch})` : ''))
   setText(mArch, payload.arch ?? '')
   setText(mLang, payload.language ?? '')
   const minfo = h('div', 'fx-minfo', [
@@ -469,7 +474,6 @@ export function showFaxOverlay(
   let fxNumber = '' /* 真实指纹单号（样本此处为随机 fxRef()） */
   let fxPct = 0
   let netResult: boolean | null = null
-  let autoCloseTimer: ReturnType<typeof setTimeout> | null = null
   const FX_BUSY_PHASES = ['offhook', 'dialing', 'connecting', 'sending', 'sent', 'printed', 'tearing', 'loading', 'busy']
 
   /** LCD 右下小行读数（机器刻字，不翻译；busy 分支为工程管家扩展=失败态带单号） */
@@ -874,51 +878,14 @@ export function showFaxOverlay(
         playFax('fax-load-' + (1 + dropStep++ % 3), 1)
       }, 120) /* 官方掉落摩擦间隔 */
     }, 420) /* 撕断动画 420ms 后掉落开始（=静默 150ms 后） */
-    setTimeout(() => {
-      /* 换纸段官方真相：无 load 调用（全二进制零引用），吞纸声=feedSheet 复用
-         （feed-1/2/3 mod-3 循环 @0x10023a6d0）。时序：点击→撕断 270ms→掉落 ~1.3s→换纸 */
+    /* brief #4：撕下即收工（printed 才可撕=本次传送已成功）——函号推进后关闭浮层。
+       不再自动收窗、不再换新纸：回执常驻直到用户主动撕下/红灯/Esc */
+    fxSfxTo(() => {
+      if (fxPhase !== 'tearing') return
       fxSerial += 1
       advanceLetterNo(fxSerial)
-      setText(noEl, 'NO.' + fxPad(fxSerial, 4))
-      setText(dateEl, fxNow().date)
-      body.value = ''
-      fxCountUpdate()
-      fxSetPhase('loading')
-      let swallowStep = 0 /* 换纸段独立 mod-3 计数（feedStep 在发送闭包内不可达） */
-      playFax('fax-feed-' + (1 + swallowStep++ % 3), 1) /* 吞纸首声立即 */
-      fxSfxIv(() => {
-        if (fxPhase !== 'loading') { fxSfxClear(); return }
-        playFax('fax-feed-' + (1 + swallowStep++ % 3), 1)
-      }, 107) /* 吞纸段与官方步进同钟（吞纸 1100ms，约 10 声） */
-      setTimeout(() => {
-        fxSfxClear() /* 吞纸结束：停 feed 循环 */
-        /* 新纸步进降下（官方慢慢出纸）：从 -118% 每 107ms 一步匀速回 0；
-           降下窗=新纸打印窗，print mod-3 循环伴纸同响——纸是被打印声"顶"出来的 */
-        const fresh0 = performance.now()
-        let freshStep = 0
-        playFax('fax-print-' + (1 + freshStep++ % 3), 0.5) /* 打印首声与纸出同刻 */
-        fxSfxIv(() => {
-          if (fxPhase !== 'loading') { fxSfxClear(); return }
-          playFax('fax-print-' + (1 + freshStep++ % 3), 0.5)
-        }, 100) /* 官方 const 池 100ms（打印步进），低音量（新纸打印弱于回执） */
-        fxSfxTo(function down(): void {
-          if (fxPhase !== 'loading') { fxSfxClear(); return }
-          const kk = Math.min(1, (performance.now() - fresh0) / 2000)
-          paper.style.transform = 'translateY(' + (-118 * (1 - kk)).toFixed(2) + '%)'
-          if (kk >= 1) return /* 终值由 ready 切换统一归零（防两时钟竞争残留） */
-          fxSfxTo(down, 107)
-        }, 107)
-        fxSfxTo(() => {
-          fxSfxClear() /* 纸落位即停打印声（音画同刻收） */
-          paper.style.transform = 'translateY(0)' /* 强制归零：步进末帧残余 -0.97%≈3px 会压标题 */
-          fxSetPhase('ready')
-          /* 新纸不重打机器信息：吞纸时 fxPrintRestore 已恢复完整文字（真传真机吐出的
-             就是成品单）；打字机效果只在首载与开关从 off 打开时演示。
-             工程管家增量：一次上报闭环已完整（回执已撕、新纸已就位）→ 稍停后收窗 */
-          autoCloseTimer = setTimeout(() => close(true), AUTO_CLOSE_MS)
-        }, REDUCED ? 0 : 2000) /* 新纸打印段 */
-      }, REDUCED ? 0 : 1100) /* 换纸吞纸 */
-    }, REDUCED ? 0 : 1350) /* 撕断 420 + 掉落 900 ≈ 官方点击→换纸间隔（实测 ~1.3s） */
+      close(true)
+    }, REDUCED ? 0 : 1350) /* 撕断 420 + 掉落 900 ≈ 回执坠出画面后收窗 */
   }
 
   // CLEAR：点按清纸；长按 1.5 秒演示占线
@@ -965,13 +932,15 @@ export function showFaxOverlay(
 
   sendBtn.addEventListener('click', fxSend)
   receipt.addEventListener('click', fxTear)
+  /* 红灯 = 关闭：任何相位都可关（与忽略/Esc 同路径：不发送、走 tearDown 清理） */
+  lightRed.addEventListener('click', () => close(false))
 
-  // 关闭：Esc 仅非 busy 相位（传送途中忽略）
+  // 关闭：Esc 仅非 busy 相位（传送途中忽略）；sent/printed 是终态（回执已出）允许 Esc 收窗
   let closed = false
   const onKey = (e: KeyboardEvent): void => {
     if (e.key !== 'Escape') return
-    if (FX_BUSY_PHASES.indexOf(fxPhase) >= 0) return
-    close(false)
+    if (FX_BUSY_PHASES.indexOf(fxPhase) >= 0 && fxPhase !== 'sent' && fxPhase !== 'printed') return
+    close(fxPhase === 'sent' || fxPhase === 'printed')
   }
   document.addEventListener('keydown', onKey)
 
@@ -985,7 +954,6 @@ export function showFaxOverlay(
   function tearDown(): void {
     document.removeEventListener('keydown', onKey)
     fxClearUp()
-    if (autoCloseTimer) { clearTimeout(autoCloseTimer); autoCloseTimer = null }
     fxPrintTk++ /* 取消打字机链 */
     fxSfxHold = false
     fxSfxClear()
