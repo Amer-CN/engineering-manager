@@ -87,6 +87,7 @@ const NOTE_MAX_CHUNKS = 8
  * 原始 kind → 线上 Worker 枚举（zod: ["crash","exception","feedback","performance"]）。
  * 传真机浮层上 kind 由模式键决定，这张表只用于【推导浮层初始档位】：
  * console → 建议档、其余 → 报错档，因此用户不动模式键时发送结果与旧契约逐位一致。
+ * feedback → 建议档（openFaxFeedback 主动反馈专线：一打开就是 SUGGESTION 键选中）。
  */
 const KIND_TO_WIRE: Record<string, string> = {
   unhandled: 'exception',
@@ -94,6 +95,7 @@ const KIND_TO_WIRE: Record<string, string> = {
   react: 'exception',
   console: 'feedback',
   fetch: 'exception',
+  feedback: 'feedback',
 }
 
 /** 模式键 → Worker kind（BUG REPORT=exception，SUGGESTION=feedback） */
@@ -262,9 +264,19 @@ export async function reportCrash(payload: CrashPayload): Promise<boolean> {
   }
 
   // 展示传真机浮层（原生 DOM），由用户决定是否 TRANSMIT
+  // 主动反馈（kind='feedback'）：wire.message 以用户正文首行为准（≤200 字，空则
+  // 固定兜底），让每条建议按自己的首行独立成指纹聚合组，不挤进同一组；正文全文仍走
+  // {cat:'note'} 面包屑（契约与复制文本逐位照旧）。composeWirePayload 一行未动。
+  const wireFor = (input: FaxReportInput): CrashPayload => {
+    if (full.kind === 'feedback') {
+      const head = (input.note.split('\n')[0] ?? '').trim()
+      full.message = head.slice(0, 200) || '用户反馈'
+    }
+    return composeWirePayload(full, input)
+  }
   const handle: FaxOverlayHandle = showFaxOverlay(full, dupKey, {
-    send: (input) => deliver(composeWirePayload(full, input)),
-    computeNumber: (input) => computeReportNumber(composeWirePayload(full, input)),
+    send: (input) => deliver(wireFor(input)),
+    computeNumber: (input) => computeReportNumber(wireFor(input)),
     copyText: (input) => buildCopyText(full, input),
     onClosed: () => {
       overlayEl = null
@@ -287,6 +299,25 @@ export async function reportCrash(payload: CrashPayload): Promise<boolean> {
   })
 
   return waitForUserDecision()
+}
+
+/**
+ * 设置页「反馈专线」入口：不依赖报错，用户随时主动打开传真机提建议/反馈。
+ * - 初始档位=功能建议（KIND_TO_WIRE['feedback']='feedback' → showFaxOverlay 收到 'sug'），
+ *   纸面无线错误摘要（message 留空、无 stack/componentStack/topFrame，契约容忍无值路径）
+ * - wire kind=feedback 由模式键推导（sug→feedback）；user 正文首行作 wire.message（wireFor）
+ * - 正文全文照旧走 {cat:'note'} 面包屑、发件邮箱 {cat:'contact'}、单号照常计算
+ * - 已有弹窗（含 crash 弹窗）时重复调用不叠加：沿用 reportCrash 的 overlayEl 守卫
+ * - reportCrash 对外签名不变，本函数只是用一个 kind='feedback' 的正常 payload 进同一管道
+ */
+export function openFaxFeedback(): void {
+  if (!opts) return // 未初始化（main.tsx 启动即 init，正常不会走到这里）
+  void reportCrash({
+    kind: 'feedback',
+    message: '', // wire 层由正文首行刷新，这里留空避免纸面出现伪错误摘要
+    label: 'manual-feedback',
+    view: window.location.pathname,
+  })
 }
 
 // ── 发送链路契约（对齐 cloudflare-worker/index.js zod schema）──

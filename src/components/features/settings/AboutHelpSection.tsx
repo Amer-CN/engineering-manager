@@ -2,11 +2,12 @@ import { useState } from 'react'
 import { AboutSection } from './AboutSection'
 import { ShortcutsReference } from './ShortcutsReference'
 import { DevToolsSection } from './DevToolsSection'
+import { FaxFeedbackCard } from './FaxFeedbackCard'
 import SettingsChangelog from './SettingsChangelog'
 
 /**
  * 关于与帮助面板 (v0.83.0 设置页重构)
- * 子区: 关于(版本/更新/更新日志) / 快捷键参考 / 开发者工具(控制台 + GPU 加速)
+ * 子区: 关于(版本/更新/更新日志) / 反馈专线 / 快捷键参考 / 开发者工具(控制台 + GPU 加速)
  */
 export function AboutHelpSection() {
   const [showChangelog, setShowChangelog] = useState(false)
@@ -16,6 +17,8 @@ export function AboutHelpSection() {
       <div id="app-version" data-setting-anchor>
         <AboutSection onShowChangelog={() => setShowChangelog(true)} />
       </div>
+
+      <FaxFeedbackCard />
 
       <ShortcutsReference />
 
