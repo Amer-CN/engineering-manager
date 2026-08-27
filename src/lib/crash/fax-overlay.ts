@@ -350,7 +350,7 @@ export function showFaxOverlay(
   const errClip = h('div', 'fx-errclip')
 
   const sheet = h('div', 'fx-sheet', [
-    h('div', 'fx-p-head', [h('span', 'fx-brand', ['POMMETOYS · ' + t('fx.sheetTitle')]), noEl]),
+    h('div', 'fx-p-head', [h('span', 'fx-brand', ['工程管家 · ' + t('fx.sheetTitle')]), noEl]),
     h('div', 'fx-p-meta', [
       h('p', undefined, [h('em', undefined, [t('fx.to')]), h('b', undefined, [FAX_DESK + ' ' + t('fx.desk')])]),
       h('p', undefined, [h('em', undefined, [t('fx.date')]), dateEl]),
@@ -403,7 +403,7 @@ export function showFaxOverlay(
   const receipt = h('div', 'fx-receipt', [
     h('div', 'body', [
       h('p', 'ttl', [t('fx.rcpTitle')]),
-      h('p', 'sub', ['TRANSMISSION REPORT']),
+      h('p', 'sub', ['报 告 回 执']),
       h('div', 'rule'),
       dl,
       h('div', 'rule'),
@@ -478,12 +478,12 @@ export function showFaxOverlay(
     switch (p) {
       case 'ready': return 'READY · ' + n.stamp + ' ' + n.week
       case 'offhook': return 'OFF HOOK'
-      case 'dialing': return 'DIALING · POMME-TOYS'
-      case 'connecting': return 'CONNECT · 14.4K'
+      case 'dialing': return 'DIALING · 工程管家'
+      case 'connecting': return 'CONNECT · '
       case 'sending': return 'SENDING · P.01 · ' + (fxPct || 10) + '%'
-      case 'sent': return 'TRANSMISSION OK'
-      case 'printed': return 'TEAR OFF · NO.' + fxPad(fxSerial, 4)
-      case 'tearing': return 'TEAR OFF · NO.' + fxPad(fxSerial, 4)
+      case 'sent': return '报 告 已 送 达'
+      case 'printed': return '撕 下 · NO.' + fxPad(fxSerial, 4)
+      case 'tearing': return '撕 下 · NO.' + fxPad(fxSerial, 4)
       case 'loading': return 'LOADING · NO.' + fxPad(fxSerial, 4)
       case 'busy': return fxNumber ? 'BUSY · ' + fxNumber : ''
       default: return ''
