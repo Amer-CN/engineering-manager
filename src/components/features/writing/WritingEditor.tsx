@@ -21,6 +21,8 @@ import { ingestKnowledgeDocument } from "@/services/knowledge-client";
 import WritingDraftPanel from "./WritingDraftPanel";
 import WritingSlashMenu, { useSlashMenu } from "./WritingSlashMenu";
 import WritingCheckPanel from "./WritingCheckPanel";
+import WritingPreviewModal from "./WritingPreviewModal";
+import WritingAiMenu from "./WritingAiMenu";
 import EditorToolbar from "./EditorToolbar";
 import WritingExportMenu from "./WritingExportMenu";
 import { useA4Zoom } from "@/hooks/useA4Zoom";
@@ -33,14 +35,6 @@ import {
 
 /** 粘贴图片体积上限：超过则拒绝插入（base64 内嵌会直接撑大 contentMd，防止数据库膨胀） */
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
-
-/** 行内 AI 动作（与后端 /api/writing/assist 的 instruction 对齐） */
-const AI_ACTIONS = [
-  { id: "rewrite", label: "改写", icon: "Wand2" },
-  { id: "polish", label: "润色", icon: "Sparkles" },
-  { id: "expand", label: "扩写", icon: "Maximize2" },
-  { id: "shorten", label: "缩写", icon: "Minimize2" },
-] as const;
 
 interface WritingEditorProps {
   docId: number;
@@ -58,6 +52,9 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
   const [draftOpen, setDraftOpen] = useState(false);
   const [draftMaterial, setDraftMaterial] = useState("");
   const [checkOpen, setCheckOpen] = useState(false);
+  // R13 预览态：打印预览弹窗（打开时对当前 markdown 做快照，非实时同步）
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewSnapshot, setPreviewSnapshot] = useState({ markdown: "", title: "" });
   const saveTimer = useRef<number | null>(null);
   const { zoom, reset, bindRef, bindWheelRef } = useA4Zoom();
   // R7：斜杠菜单状态机（焦点不离开编辑器，详见 WritingSlashMenu 注释）
@@ -300,6 +297,19 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
             <Icon name="FileCheck" size={15} />
             体检
           </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={!editor}
+            onClick={() => {
+              // 快照式预览：打开瞬间定格当前内容（编辑与预览是两个态，不做实时同步）
+              setPreviewSnapshot({ markdown: editor?.getMarkdown() ?? "", title });
+              setPreviewOpen(true);
+            }}
+          >
+            <Icon name="Eye" size={15} />
+            预览
+          </Button>
           <WritingExportMenu editor={editor} title={title.trim() || "未命名文档"} />
         </div>
       </div>
@@ -357,6 +367,14 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
         <WritingCheckPanel editor={editor} open={checkOpen} onClose={() => setCheckOpen(false)} />
       )}
 
+      {/* 打印预览（R13 三态之「预览态」：浏览器真实 A4 分页） */}
+      <WritingPreviewModal
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        markdown={previewSnapshot.markdown}
+        title={previewSnapshot.title}
+      />
+
       {/* 斜杠菜单（R7：光标定位、焦点留编辑器、↑↓Enter 键盘导航） */}
       {editor && (
         <WritingSlashMenu
@@ -370,25 +388,9 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
         />
       )}
 
-      {/* 行内 AI 菜单（选中文字后浮出） */}
+      {/* 行内 AI 菜单（选中文字后浮出，R13 抽成 WritingAiMenu） */}
       {aiMenu && editor && (
-        <div
-          className="fixed z-50 flex items-center gap-1 rounded-xl border shadow-lg px-2 py-1.5 bg-white"
-          style={{ borderColor: "var(--border)", top: Math.max(8, aiMenu.top - 40), left: Math.min(aiMenu.left, window.innerWidth - 280) }}
-        >
-          {AI_ACTIONS.map((a) => (
-            <button
-              key={a.id}
-              onClick={() => void runAiAction(a.id)}
-              disabled={aiBusy}
-              className="flex items-center gap-1 px-2 py-1 text-xs rounded-lg hover:bg-[color:var(--panel-2)] disabled:opacity-50"
-              style={{ color: "var(--fg)" }}
-            >
-              <Icon name={a.icon} size={13} />
-              {a.label}
-            </button>
-          ))}
-        </div>
+        <WritingAiMenu position={aiMenu} busy={aiBusy} onAction={(id) => void runAiAction(id)} />
       )}
     </div>
   );
