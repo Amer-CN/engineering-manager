@@ -2,7 +2,6 @@
  * 错误上报弹窗「反馈专线 FX-01」样式
  * 来源：F:/AIXM/pomme-ui（PommeToys 前端逆向复刻样本，HEAD 2f5cdc7）。像素级规格经
  * 4K 帧实测 + 二进制逆向校准，本文件由脚本按行区间抽取，尺寸/时序/注释逐字节未改动。
- *   · @font-face   panel.css L12-18（latin 可变字体）
  *   · 令牌         :root L20-67 / [data-theme=dark] L69-93 / .pt-try L98-234
  *   · 扳机开关     .pt-sw L696-727
  *   · 传真机本体   .fx-*  L1127-1689
@@ -11,12 +10,6 @@
  * 避免污染工程管家全站主题。三主题（Bedrock token）适配为阶段二，本阶段恒为样本配色。
  ══*/
 
-/* ttf 兜底只服务不支持 woff2 的老引擎，WebView2(Chromium) 走不到，故不带入 */
-@font-face {
-  font-family: "InstrumentSansWeb";
-  src: url("fonts/InstrumentSans-latin-wght.woff2") format("woff2");
-  font-weight: 400 600;
-  font-style: normal;
   font-display: swap;
 }
 
@@ -45,7 +38,7 @@
   --fine:      #6E6658;
   --stage-ink:  #EFE9DC;
   --stage-fine: #A79E8C;
-  --mono-ui: ui-monospace, SFMono-Regular, "SF Mono", Menlo, "Roboto Mono", monospace;
+  -  --mono-ui: JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --dk-lip:  rgba(255, 255, 255, .9);           /* 受光的上唇/高光 */
   --pp-1: #FDFBF4; --pp-2: #FAF6EA;             /* 纸 */
   --pp-edge: rgba(120, 108, 84, .08);
@@ -136,7 +129,7 @@
   /* 甲板正文用系统面（App 里正文与控件走 SF Pro），标题/刻字用 Instrument Sans */
   --pt-font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
     "PingFang TC", "Hiragino Sans", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
-  --pt-font-disp: "InstrumentSansWeb", -apple-system, BlinkMacSystemFont, "SF Pro Rounded",
+  --pt-font-disp: , -apple-system, BlinkMacSystemFont, "SF Pro Rounded",
     "PingFang SC", "PingFang TC", "Hiragino Sans", "Microsoft YaHei", sans-serif;
   --pt-font-paper: "Kaiti SC", "STKaitiSC-Regular", STKaiti, KaiTi, "KaiTi SC",
     "楷体", var(--pt-font-ui);   /* 正文输入区楷体（官方 RuledPaperTextView 回退链顺序：
