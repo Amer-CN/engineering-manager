@@ -3,6 +3,7 @@ import { Icon } from '@/components/ui/Icon'
 import { useTheme, ThemeScheme } from '@/hooks/useTheme'
 import { useRowHoverOpacity } from '@/hooks/useRowHoverOpacity'
 import { useFontSize, FontSizeOption } from '@/hooks/useFontSize'
+import { isSfxEnabled, setSfxEnabled } from '@/lib/sfx'
 
 /**
  * v0.76.0 累计待办 #7: Settings 剩余拆分 — 外观主题卡片
@@ -16,6 +17,7 @@ export function AppearanceSection() {
     if (typeof window === 'undefined') return 'SimSun, serif'
     return localStorage.getItem('app-export-font') || 'SimSun, serif'
   })
+  const [sfxOn, setSfxOn] = useState(() => isSfxEnabled())
 
   return (
     <div className="card">
@@ -69,6 +71,28 @@ export function AppearanceSection() {
               <button key={s.id} onClick={() => setFontSize(s.id)}
                 className={`flex-1 px-4 py-1.5 text-sm font-medium rounded-md transition-all ${
                   fontSize === s.id
+                    ? 'bg-[color:var(--card)] text-[color:var(--fg)] shadow-sm border border-[color:var(--border)]'
+                    : 'text-[color:var(--fg-2)] hover:text-[color:var(--fg)]'
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── 界面音效 */}
+        <div className="mt-5 pt-4 border-t border-[color:var(--border)]">
+          <span className="text-sm font-medium text-[color:var(--fg-2)]">界面音效</span>
+          <p className="text-xs text-[color:var(--muted)] mt-0.5 mb-3">报错传真机等界面操作音效，关闭后完全静音（动画与流程不变）</p>
+          <div className="flex bg-[color:var(--panel-2)] rounded-lg p-1 border border-[color:var(--border)]">
+            {([
+              { id: true as const, label: '开' },
+              { id: false as const, label: '关' },
+            ]).map(s => (
+              <button key={String(s.id)} onClick={() => { setSfxOn(s.id); setSfxEnabled(s.id) }}
+                className={`flex-1 px-4 py-1.5 text-sm font-medium rounded-md transition-all ${
+                  sfxOn === s.id
                     ? 'bg-[color:var(--card)] text-[color:var(--fg)] shadow-sm border border-[color:var(--border)]'
                     : 'text-[color:var(--fg-2)] hover:text-[color:var(--fg)]'
                 }`}
