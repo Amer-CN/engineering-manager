@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using EngineeringManager.Api.Uninstall;
 
 namespace EngineeringManager.Api;
 
@@ -23,11 +24,17 @@ public static class EntryPoint
             return;
         }
 
-        // 桌面模式：STA 主线程 + WebView2
         // ⚠️ 这些必须最先调用，在任何 COM 初始化之前
         Application.SetHighDpiMode(HighDpiMode.SystemAware);
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
+
+        // 卸载模式：主 exe --uninstall，极简 WinForms 确认 + 进度窗（不用 WebView2/React）
+        if (args.Contains("--uninstall"))
+        {
+            RunUninstall();
+            return;
+        }
 
         // 记录启动前已有的 node 进程 PID（退出时不杀这些）
         var existingNodePids = new HashSet<int>();
@@ -110,6 +117,18 @@ public static class EntryPoint
         catch { }
 
         Console.WriteLine("[App] Done.");
+        Environment.Exit(0);
+    }
+
+    /// <summary>
+    /// 卸载模式：installPath = AppContext.BaseDirectory（主 exe 就在安装目录里）。
+    /// 弹极简 WinForms 确认框 + 进度窗，执行删除后由 detached cmd.exe 在进程退出后删整个安装目录。
+    /// </summary>
+    private static void RunUninstall()
+    {
+        var installPath = AppContext.BaseDirectory;
+        Console.WriteLine($"[Uninstall] Install path: {installPath}");
+        Application.Run(new UninstallForm(installPath));
         Environment.Exit(0);
     }
 }
