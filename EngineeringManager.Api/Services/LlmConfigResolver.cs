@@ -20,6 +20,7 @@ internal class PersistedLlmConfig
     public bool UseBuiltIn { get; set; }
     public double Temperature { get; set; }
     public int MaxTokens { get; set; }
+    public List<string>? AvailableModels { get; set; }
     public string? UpdatedAt { get; set; }
 }
 
@@ -179,10 +180,16 @@ public class LlmConfigResolver
             UseBuiltIn = newConfig.UseBuiltIn,
             Temperature = newConfig.Temperature,
             MaxTokens = newConfig.MaxTokens,
+            AvailableModels = newConfig.AvailableModels,
             UpdatedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
         };
 
         Directory.CreateDirectory(dataPath);
+        // 空清单兜底：前端没传清单时按当前模型生成单元素，避免把清单存成空
+        var modelsToSave = newConfig.AvailableModels is { Count: > 0 }
+            ? newConfig.AvailableModels
+            : BuildModelList(newConfig.Model);
+        persisted.AvailableModels = modelsToSave;
         var json = JsonSerializer.Serialize(persisted, new JsonSerializerOptions { WriteIndented = true });
         await File.WriteAllTextAsync(filePath, json);
 
@@ -198,6 +205,7 @@ public class LlmConfigResolver
                 UseBuiltIn = newConfig.UseBuiltIn,
                 Temperature = newConfig.Temperature,
                 MaxTokens = newConfig.MaxTokens,
+                AvailableModels = modelsToSave,
             };
         }
 
@@ -321,16 +329,26 @@ public class LlmConfigResolver
                 }
             }
 
+            // 模型清单：优先用保存时「获取模型列表」拉到的完整清单；
+            // 旧配置文件没有该字段时回退为当前模型单元素（前端隐藏选择器）。
+            // 当前模型必须始终在清单内（手填了列表外的模型名时补进去，否则前端选择器不显示它）
+            var model = persisted.Model ?? BuiltInModel;
+            var models = persisted.AvailableModels?
+                .Where(m => !string.IsNullOrWhiteSpace(m))
+                .ToList() ?? BuildModelList(model);
+            if (!models.Contains(model, StringComparer.OrdinalIgnoreCase))
+                models.Insert(0, model);
+
             return new LlmProviderConfig
             {
                 ProviderName = persisted.ProviderName ?? "Custom",
                 BaseUrl = persisted.BaseUrl ?? BuiltInBaseUrl,
                 ApiKey = apiKey,
-                Model = persisted.Model ?? BuiltInModel,
+                Model = model,
                 UseBuiltIn = persisted.UseBuiltIn,
                 Temperature = persisted.Temperature,
                 MaxTokens = persisted.MaxTokens,
-                AvailableModels = BuildModelList(persisted.Model ?? BuiltInModel),
+                AvailableModels = models,
             };
         }
         catch (Exception ex)

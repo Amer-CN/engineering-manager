@@ -9,6 +9,7 @@ import {
   reloadLlmProviderConfig,
 } from '@/services/agent-client'
 import type { LlmProviderConfig } from '@/types/agent'
+import { PROVIDER_PRESETS, MAX_TOKEN_PRESETS, PresetButton, ModelSelectList } from './aiProviderSettingsParts'
 
 /** 温度档位描述（纯函数，组件外） */
 function tempDesc(t: number): string {
@@ -17,7 +18,16 @@ function tempDesc(t: number): string {
   return '💡 发散模式：更有创意、更活泼，适合头脑风暴、写文案。'
 }
 
-/** 表单字段（providerName / baseUrl / model 合并为一个对象，控制 useState 数量） */
+/** 统一文本输入框样式（Base URL / API Key / 模型名共用） */
+const INPUT_CLS = 'w-full px-3 py-2.5 rounded-lg text-sm border border-[color:var(--border)] bg-[color:var(--card)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] disabled:bg-[color:var(--panel-2)] disabled:text-[color:var(--muted)] disabled:cursor-not-allowed'
+
+/** 温度滑块样式（含 webkit 滑块拇指） */
+const RANGE_CLS = `w-full h-1.5 rounded-full appearance-none bg-[color:var(--panel-2)] cursor-pointer
+  [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
+  [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[color:var(--accent)]
+  [&::-webkit-slider-thumb]:shadow-sm [&::-webkit-slider-thumb]:cursor-pointer`
+
+/** 表单字段（合并为一个对象，控制 useState 数量） */
 interface FormFields {
   providerName: string
   baseUrl: string
@@ -30,14 +40,15 @@ interface LlmParams {
   maxTokens: number
 }
 
-type Status = 'loading' | 'idle' | 'saving' | 'testing'
+type Status = 'loading' | 'idle' | 'saving' | 'testing' | 'fetchingModels'
 
 /**
  * AI 助手设置卡片
  * - 内置/自定义模型切换
- * - Base URL / API Key / 模型名
+ * - 服务商预设（自动填 Base URL）/ Base URL / API Key
+ * - 获取模型列表（/models 拉取，选中即回填模型名，手填兜底）
  * - 测试连接
- * - 温度滑块（精准/均衡/发散）
+ * - 温度滑块（精准/均衡/发散）+ maxTokens
  */
 export function AiProviderSection() {
   const [useBuiltIn, setUseBuiltIn] = useState(true)
@@ -46,6 +57,9 @@ export function AiProviderSection() {
   const [hasApiKey, setHasApiKey] = useState(false)
   const [params, setParams] = useState<LlmParams>({ temperature: 0.7, maxTokens: 4096 })
   const [status, setStatus] = useState<Status>('loading')
+  /** 「获取模型列表」拉到的清单（保存时随配置持久化） */
+  const [availableModels, setAvailableModels] = useState<string[]>([])
+  const [modelSearch, setModelSearch] = useState('')
   // 按 selector 订阅：全 store 订阅会在 toast 弹出/消失时重建 loadConfig → useEffect 无限重跑（自定义模型卡死根因）
   const showToast = useToastStore(s => s.showToast)
 
@@ -71,6 +85,7 @@ export function AiProviderSection() {
       temperature: cfg.temperature ?? 0.7,
       maxTokens: cfg.maxTokens ?? 4096,
     })
+    setAvailableModels(cfg.availableModels?.length ? cfg.availableModels : (cfg.model ? [cfg.model] : []))
     setStatus('idle')
   }, [showToast])
 
@@ -78,13 +93,45 @@ export function AiProviderSection() {
     loadConfig()
   }, [loadConfig])
 
+  /** 选中预设服务商：自动填 providerName + baseUrl */
+  const handlePickPreset = (name: string) => {
+    const preset = PROVIDER_PRESETS.find(p => p.name === name)
+    if (!preset) return
+    setForm(f => ({ ...f, providerName: preset.name, baseUrl: preset.baseUrl }))
+  }
+
+  /** 调用连接类接口前的公共校验（地址 + 密钥） */
+  const requireUrlAndKey = (): { baseUrl: string; apiKey: string } | null => {
+    if (!baseUrl.trim()) { showToast('请先填写 Base URL', 'warning'); return null }
+    if (!apiKey.trim()) { showToast('需要填写 API Key（出于安全，已保存的密钥不会回填）', 'warning'); return null }
+    return { baseUrl: baseUrl.trim(), apiKey: apiKey.trim() }
+  }
+
+  /** 获取模型列表（OpenAI 兼容 /models 端点） */
+  const handleFetchModels = async () => {
+    const input = requireUrlAndKey()
+    if (!input) return
+    setStatus('fetchingModels')
+    try {
+      const res = await testLlmProviderConnection(input)
+      if (res.success && res.data?.models?.length) {
+        setAvailableModels(res.data.models)
+        showToast(`获取成功，共 ${res.data.models.length} 个模型`, 'success')
+      } else {
+        showToast(res.error || res.message || '获取模型列表失败', 'error')
+      }
+    } finally {
+      setStatus('idle')
+    }
+  }
+
   /** 测试连接 */
   const handleTest = async () => {
-    if (!baseUrl.trim()) { showToast('请先填写 Base URL', 'warning'); return }
-    if (!apiKey.trim()) { showToast('测试连接需要填写 API Key（出于安全，已保存的密钥不会回填）', 'warning'); return }
+    const input = requireUrlAndKey()
+    if (!input) return
     setStatus('testing')
     try {
-      const res = await testLlmProviderConnection({ baseUrl: baseUrl.trim(), apiKey: apiKey.trim() })
+      const res = await testLlmProviderConnection(input)
       if (res.success) showToast(`连接成功，检测到 ${res.data?.modelCount ?? 0} 个模型`, 'success')
       else showToast(res.error || '连接失败', 'error')
     } finally {
@@ -96,6 +143,10 @@ export function AiProviderSection() {
   const handleSave = async () => {
     setStatus('saving')
     try {
+      // 模型清单：确保当前手填的模型在清单内（选了列表模型或沿用旧清单时原样保存）
+      const models = model.trim() && !availableModels.includes(model.trim())
+        ? [model.trim(), ...availableModels]
+        : availableModels
       const payload: LlmProviderConfig = {
         providerName: providerName.trim() || (useBuiltIn ? 'Agnes' : 'Custom'),
         baseUrl: baseUrl.trim(),
@@ -104,6 +155,7 @@ export function AiProviderSection() {
         useBuiltIn,
         temperature,
         maxTokens,              // 原样回传，避免被重置为默认
+        availableModels: models,
       }
       const res = await saveLlmProviderConfig(payload)
       if (!res.success) { showToast(res.error || '保存失败', 'error'); return }
@@ -129,7 +181,8 @@ export function AiProviderSection() {
     )
   }
 
-  const inputDisabled = useBuiltIn || status === 'saving'
+  const inputDisabled = useBuiltIn || status === 'saving' || status === 'fetchingModels' || status === 'testing'
+  const busy = status !== 'idle'
 
   return (
     <div className="card">
@@ -154,6 +207,22 @@ export function AiProviderSection() {
           </button>
         </div>
 
+        {/* ── 服务商预设（快捷选 Base URL）── */}
+        <div>
+          <label className="label">服务商（常用预设，选中自动填地址）</label>
+          <select
+            value={PROVIDER_PRESETS.some(p => p.baseUrl === baseUrl) ? PROVIDER_PRESETS.find(p => p.baseUrl === baseUrl)!.name : ''}
+            onChange={e => e.target.value && handlePickPreset(e.target.value)}
+            disabled={inputDisabled}
+            className={INPUT_CLS}
+          >
+            <option value="">自定义 / 不在列表中</option>
+            {PROVIDER_PRESETS.map(p => (
+              <option key={p.name} value={p.name}>{p.name}</option>
+            ))}
+          </select>
+        </div>
+
         {/* ── Base URL ── */}
         <div>
           <label className="label">Base URL</label>
@@ -163,7 +232,7 @@ export function AiProviderSection() {
             onChange={e => setForm(f => ({ ...f, baseUrl: e.target.value }))}
             disabled={inputDisabled}
             placeholder="https://api.openai.com/v1"
-            className="w-full px-3 py-2.5 rounded-lg text-sm border border-[color:var(--border)] bg-[color:var(--card)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] disabled:bg-[color:var(--panel-2)] disabled:text-[color:var(--muted)] disabled:cursor-not-allowed"
+            className={INPUT_CLS}
           />
         </div>
 
@@ -176,21 +245,49 @@ export function AiProviderSection() {
             onChange={e => setApiKey(e.target.value)}
             disabled={inputDisabled}
             placeholder={hasApiKey ? '已配置，留空则保留原密钥' : '请输入 API Key'}
-            className="w-full px-3 py-2.5 rounded-lg text-sm border border-[color:var(--border)] bg-[color:var(--card)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] disabled:bg-[color:var(--panel-2)] disabled:text-[color:var(--muted)] disabled:cursor-not-allowed"
+            className={INPUT_CLS}
           />
         </div>
 
-        {/* ── 模型名 ── */}
+        {/* ── 获取模型列表 + 模型选择 ── */}
         <div>
-          <label className="label">模型名</label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="label mb-0">模型名</label>
+            <button
+              type="button"
+              onClick={handleFetchModels}
+              disabled={inputDisabled}
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-colors hover:bg-[color:var(--panel-2)] disabled:cursor-not-allowed disabled:opacity-50"
+              style={{ color: 'var(--accent)' }}
+            >
+              <Icon name="RefreshCw" size={12} className={status === 'fetchingModels' ? 'animate-spin' : ''} />
+              {status === 'fetchingModels' ? '获取中...' : '获取模型列表'}
+            </button>
+          </div>
+
+          {/* 模型选择列表（拉到清单后展示；点选即回填模型名） */}
+          {availableModels.length > 0 && !useBuiltIn && (
+            <ModelSelectList
+              models={availableModels}
+              current={model}
+              search={modelSearch}
+              onSearch={setModelSearch}
+              onSelect={m => setForm(f => ({ ...f, model: m }))}
+            />
+          )}
+
+          {/* 手填兜底：列表外模型照填 */}
           <input
             type="text"
             value={model}
             onChange={e => setForm(f => ({ ...f, model: e.target.value }))}
             disabled={inputDisabled}
-            placeholder="gpt-4o-mini"
-            className="w-full px-3 py-2.5 rounded-lg text-sm border border-[color:var(--border)] bg-[color:var(--card)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] disabled:bg-[color:var(--panel-2)] disabled:text-[color:var(--muted)] disabled:cursor-not-allowed"
+            placeholder="gpt-4o-mini（也可从上方列表选择）"
+            className={INPUT_CLS}
           />
+          <p className="text-xs text-[color:var(--muted)] mt-1">
+            填好地址和密钥后点「获取模型列表」可直接挑选；清单外或本地模型可手动填写。
+          </p>
         </div>
 
         {/* ── 测试连接 ── */}
@@ -199,7 +296,7 @@ export function AiProviderSection() {
             variant="secondary"
             size="sm"
             onClick={handleTest}
-            disabled={status === 'testing' || useBuiltIn}
+            disabled={busy || useBuiltIn}
           >
             <Icon name="Plug" size={14} /> {status === 'testing' ? '测试中...' : '测试连接'}
           </Button>
@@ -221,10 +318,7 @@ export function AiProviderSection() {
           <input
             type="range" min={0} max={1} step={0.1} value={temperature}
             onChange={e => setParams(p => ({ ...p, temperature: parseFloat(e.target.value) }))}
-            className="w-full h-1.5 rounded-full appearance-none bg-[color:var(--panel-2)] cursor-pointer
-              [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
-              [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[color:var(--accent)]
-              [&::-webkit-slider-thumb]:shadow-sm [&::-webkit-slider-thumb]:cursor-pointer"
+            className={RANGE_CLS}
           />
           {/* 三等分标签 */}
           <div className="flex justify-between mt-1.5">
@@ -234,24 +328,9 @@ export function AiProviderSection() {
           </div>
           {/* 快捷按钮 */}
           <div className="flex gap-2 mt-2">
-            <button
-              onClick={() => setParams(p => ({ ...p, temperature: 0.2 }))}
-              className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all ${temperature === 0.2 ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]' : 'border-[color:var(--border)] text-[color:var(--fg-2)] hover:border-[color:var(--border)]'}`}
-            >
-              精准 0.2
-            </button>
-            <button
-              onClick={() => setParams(p => ({ ...p, temperature: 0.7 }))}
-              className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all ${temperature === 0.7 ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]' : 'border-[color:var(--border)] text-[color:var(--fg-2)] hover:border-[color:var(--border)]'}`}
-            >
-              均衡 0.7
-            </button>
-            <button
-              onClick={() => setParams(p => ({ ...p, temperature: 1.0 }))}
-              className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all ${temperature === 1.0 ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]' : 'border-[color:var(--border)] text-[color:var(--fg-2)] hover:border-[color:var(--border)]'}`}
-            >
-              发散 1.0
-            </button>
+            <PresetButton label="精准 0.2" active={temperature === 0.2} onClick={() => setParams(p => ({ ...p, temperature: 0.2 }))} />
+            <PresetButton label="均衡 0.7" active={temperature === 0.7} onClick={() => setParams(p => ({ ...p, temperature: 0.7 }))} />
+            <PresetButton label="发散 1.0" active={temperature === 1.0} onClick={() => setParams(p => ({ ...p, temperature: 1.0 }))} />
           </div>
           {/* 动态说明 */}
           <p className="text-sm text-[color:var(--fg-2)] mt-2">{tempDesc(temperature)}</p>
@@ -261,13 +340,34 @@ export function AiProviderSection() {
           </p>
         </div>
 
+        {/* ── 最大输出 Tokens ── */}
+        <div className="pt-4 border-t border-[color:var(--border)]">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-[color:var(--fg-2)]">最大输出长度（maxTokens）</span>
+            <span className="text-sm text-[color:var(--fg-2)] tabular-nums">{maxTokens.toLocaleString()} tokens</span>
+          </div>
+          <div className="flex gap-2">
+            {MAX_TOKEN_PRESETS.map(v => (
+              <PresetButton
+                key={v}
+                label={`${(v / 1024).toFixed(0)}K`}
+                active={maxTokens === v}
+                onClick={() => setParams(p => ({ ...p, maxTokens: v }))}
+              />
+            ))}
+          </div>
+          <p className="text-xs text-[color:var(--muted)] mt-1.5">
+            单次回答的长度上限。长报告/长文写作选 16K，日常问答 4K 足够。
+          </p>
+        </div>
+
         {/* ── 保存 ── */}
         <div className="pt-2">
           <Button
             variant="primary"
             size="md"
             onClick={handleSave}
-            disabled={status === 'saving'}
+            disabled={busy}
           >
             <Icon name="Save" size={16} /> {status === 'saving' ? '保存中...' : '保存'}
           </Button>
