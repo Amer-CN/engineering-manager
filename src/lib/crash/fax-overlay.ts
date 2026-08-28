@@ -16,6 +16,7 @@
  */
 
 import { SOUND_DATA, GAIN_TRIM, DECK_BASIS, MASTER_VOL } from './crash-fax-sfx'
+import { isSfxEnabled } from '../sfx'
 import {
   advanceLetterNo,
   copyTextToClipboard,
@@ -128,6 +129,7 @@ let waPredecoded = false
 let gestureReady = false
 
 function ensureAudio(): void {
+  if (!isSfxEnabled()) return /* 界面音效关闭：完全不创建 AudioContext（门控入口） */
   if (waCtx) return
   try {
     waCtx = new AudioContext()
@@ -192,6 +194,7 @@ function predecodeAll(): void {
 }
 
 function playFile(name: string, gain: number): void {
+  if (!isSfxEnabled()) return /* 界面音效关闭：已建 ctx 也不播（防「先开声后关掉」残留播放） */
   if (!gestureReady) return /* 手势前不出声 */
   ensureAudio()
   waBuf(name) /* 触发懒解码 */
