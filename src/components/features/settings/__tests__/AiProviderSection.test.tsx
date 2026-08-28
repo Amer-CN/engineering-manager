@@ -42,6 +42,7 @@ const mockConfig = {
   useBuiltIn: true,
   temperature: 0.7,
   maxTokens: 4096,
+  availableModels: ['agnes-2.5-flash'],
   hasApiKey: false,
 }
 
@@ -131,10 +132,139 @@ describe('AiProviderSection', () => {
     fireEvent.click(screen.getByText('测试连接'))
 
     await waitFor(() => {
-      expect(mockToast.showToast).toHaveBeenCalledWith('测试连接需要填写 API Key（出于安全，已保存的密钥不会回填）', 'warning')
+      expect(mockToast.showToast).toHaveBeenCalledWith('需要填写 API Key（出于安全，已保存的密钥不会回填）', 'warning')
     })
 
     // testLlmProviderConnection 未被调用
     expect(mockTestLlmProviderConnection).not.toHaveBeenCalled()
+  })
+
+  test('点"获取模型列表" → 拉到清单后展示可搜索列表，点选模型回填模型名，保存时清单随配置回传', async () => {
+    mockGetLlmProviderConfig.mockResolvedValue({
+      ...mockConfig,
+      useBuiltIn: false,
+      providerName: 'DeepSeek',
+      baseUrl: 'https://api.deepseek.com/v1',
+      model: 'deepseek-chat',
+      availableModels: ['deepseek-chat'],
+      hasApiKey: true,
+    })
+    mockTestLlmProviderConnection.mockResolvedValue({
+      success: true,
+      data: { models: ['deepseek-chat', 'deepseek-reasoner'], modelCount: 2 },
+    })
+
+    render(<AiProviderSection />)
+
+    await waitFor(() => {
+      expect(screen.getByText('AI 助手设置')).toBeTruthy()
+    })
+
+    // 填 API Key（已保存密钥不回填，需现填才能拉列表）
+    fireEvent.change(screen.getByPlaceholderText('已配置，留空则保留原密钥'), {
+      target: { value: 'sk-test' },
+    })
+
+    // 点"获取模型列表"
+    fireEvent.click(screen.getByText('获取模型列表'))
+
+    await waitFor(() => {
+      expect(mockTestLlmProviderConnection).toHaveBeenCalledWith({
+        baseUrl: 'https://api.deepseek.com/v1',
+        apiKey: 'sk-test',
+      })
+    })
+    await waitFor(() => {
+      expect(mockToast.showToast).toHaveBeenCalledWith('获取成功，共 2 个模型', 'success')
+    })
+
+    // 列表出现两个模型，点选 deepseek-reasoner
+    fireEvent.click(screen.getByText('deepseek-reasoner'))
+    expect((screen.getByPlaceholderText('gpt-4o-mini（也可从上方列表选择）') as HTMLInputElement).value)
+      .toBe('deepseek-reasoner')
+
+    // 保存 → payload 带上完整清单
+    fireEvent.click(screen.getByText('保存'))
+    await waitFor(() => {
+      expect(mockSaveLlmProviderConfig).toHaveBeenCalledTimes(1)
+    })
+    const payload = mockSaveLlmProviderConfig.mock.calls[0][0]
+    expect(payload.model).toBe('deepseek-reasoner')
+    expect(payload.availableModels).toEqual(['deepseek-chat', 'deepseek-reasoner'])
+  })
+
+  test('手填清单外模型保存 → 清单补入该模型（前端保证当前模型在列表内）', async () => {
+    mockGetLlmProviderConfig.mockResolvedValue({
+      ...mockConfig,
+      useBuiltIn: false,
+      providerName: 'Custom',
+      baseUrl: 'https://api.example.com/v1',
+      model: 'deepseek-chat',
+      availableModels: ['deepseek-chat', 'deepseek-reasoner'],
+      hasApiKey: true,
+    })
+
+    render(<AiProviderSection />)
+
+    await waitFor(() => {
+      expect(screen.getByText('AI 助手设置')).toBeTruthy()
+    })
+
+    // 手动改模型名为清单外的自定义模型
+    fireEvent.change(screen.getByPlaceholderText('gpt-4o-mini（也可从上方列表选择）'), {
+      target: { value: 'my-local-model' },
+    })
+
+    fireEvent.click(screen.getByText('保存'))
+    await waitFor(() => {
+      expect(mockSaveLlmProviderConfig).toHaveBeenCalledTimes(1)
+    })
+    const payload = mockSaveLlmProviderConfig.mock.calls[0][0]
+    expect(payload.model).toBe('my-local-model')
+    expect(payload.availableModels).toContain('my-local-model')
+    expect(payload.availableModels).toContain('deepseek-chat')
+  })
+
+  test('选服务商预设 → Base URL 自动填充', async () => {
+    mockGetLlmProviderConfig.mockResolvedValue({
+      ...mockConfig,
+      useBuiltIn: false,
+      providerName: '',
+      baseUrl: '',
+      model: '',
+      availableModels: [],
+      hasApiKey: false,
+    })
+
+    render(<AiProviderSection />)
+
+    await waitFor(() => {
+      expect(screen.getByText('AI 助手设置')).toBeTruthy()
+    })
+
+    // 选择 DeepSeek 预设
+    fireEvent.change(screen.getByDisplayValue('自定义 / 不在列表中'), {
+      target: { value: 'DeepSeek' },
+    })
+
+    const baseUrlInput = screen.getByPlaceholderText('https://api.openai.com/v1') as HTMLInputElement
+    expect(baseUrlInput.value).toBe('https://api.deepseek.com/v1')
+  })
+
+  test('maxTokens 快捷档位 → 点 8K 后保存 payload 带上 8192', async () => {
+    render(<AiProviderSection />)
+
+    await waitFor(() => {
+      expect(screen.getByText(/温度 0\.7/)).toBeTruthy()
+    })
+
+    fireEvent.click(screen.getByText('8K'))
+
+    fireEvent.click(screen.getByText('保存'))
+    await waitFor(() => {
+      expect(mockSaveLlmProviderConfig).toHaveBeenCalledTimes(1)
+    })
+    const payload = mockSaveLlmProviderConfig.mock.calls[0][0]
+    expect(payload.maxTokens).toBe(8192)
   })
 })
