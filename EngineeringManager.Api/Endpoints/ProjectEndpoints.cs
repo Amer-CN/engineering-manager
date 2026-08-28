@@ -168,6 +168,32 @@ public static class ProjectEndpoints
             return Common.Ok(id);
         });
 
+        app.MapPut("/api/project-members", async (HttpContext ctx, ProjectMemberDto dto, IDbConnection db) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // G2 B7: 项目成员 → projects:update
+            if (!CurrentUser.HasPermission(ctx, db, "projects:update")) return Results.Forbid();
+            if (dto.Id is null || dto.Id.Value <= 0) return Common.Fail("缺少成员记录 id");
+            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+
+            // 只更新请求中显式携带的字段（joinedAt / leftAt 均可选，允许只传其一；空字符串视为 NULL）
+            var sets = new List<string>();
+            var p = new DynamicParameters();
+            if (dto.JoinedAt is not null) { sets.Add("[joined_at]=@JoinedAt"); p.Add("JoinedAt", string.IsNullOrEmpty(dto.JoinedAt) ? null : dto.JoinedAt); }
+            if (dto.LeftAt is not null) { sets.Add("[left_at]=@LeftAt"); p.Add("LeftAt", string.IsNullOrEmpty(dto.LeftAt) ? null : dto.LeftAt); }
+            if (sets.Count == 0) return Common.Fail("没有可更新的字段");
+            p.Add("Id", dto.Id);
+            p.Add("Uid", uid);
+            p.Add("IsAdmin", isAdmin);
+            p.Add("Now", now());
+
+            // 跨人写入守卫：照抄同文件 DELETE 的实际写法（created_by=@Uid OR @IsAdmin=1）
+            var affected = await db.ExecuteAsync(
+                $"UPDATE [project_members] SET {string.Join(", ", sets)}, [last_modified_at]=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
+                p);
+            return await Common.WriteResult(affected, db, "project_members", dto.Id.Value);
+        });
+
         app.MapDelete("/api/project-members/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();

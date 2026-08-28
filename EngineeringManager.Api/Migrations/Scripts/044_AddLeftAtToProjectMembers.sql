@@ -1,0 +1,11 @@
+-- 044: project_members 补 left_at 列（项目成员调离日期）
+--
+-- 背景：前端 MembersTab「调离/恢复」调 PUT /api/project-members（body 传
+--       leftAt），但 project_members 表自建表（001）起只有 joined_at，无
+--       left_at 列，导致调离/恢复 404 断链，且 GET 也无法返回调离状态。
+--
+-- 语义（幂等、守卫，可在任意库态安全重跑；MigrationRunner 的
+--   ExecuteScriptIdempotent 会吞掉 "duplicate column name" 等良性错误）：
+--   a. project_members 加 left_at 列（可空、无默认值）——与 joined_at 同型
+--      TEXT，既有行留 NULL = 未调离。
+ALTER TABLE [project_members] ADD COLUMN [left_at] TEXT NULL;
