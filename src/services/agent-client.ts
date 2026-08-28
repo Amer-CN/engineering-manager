@@ -232,6 +232,8 @@ export async function getLlmProviderConfig(): Promise<{
   useBuiltIn: boolean
   temperature: number
   maxTokens: number
+  /** 可选模型清单（保存时「获取模型列表」的结果；单元素 = 前端隐藏选择器） */
+  availableModels?: string[]
   hasApiKey: boolean
 } | null> {
   const result = await apiClient.get<{
@@ -241,6 +243,7 @@ export async function getLlmProviderConfig(): Promise<{
     useBuiltIn: boolean
     temperature: number
     maxTokens: number
+    availableModels?: string[]
     hasApiKey: boolean
   }>('/api/agent/config')
   if (!result.success || !result.data) {

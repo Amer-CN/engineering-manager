@@ -747,6 +747,8 @@ public static class AgentEndpoints
                     UseBuiltIn = GetBoolProp(root, "useBuiltIn"),
                     Temperature = GetDoubleProp(root, "temperature"),
                     MaxTokens = GetIntProp(root, "maxTokens"),
+                    // 「获取模型列表」拉到的清单随配置一起持久化（空 = 后端按当前模型兜底单元素）
+                    AvailableModels = GetStringListProp(root, "availableModels") ?? new List<string>(),
                 };
 
                 await llm.SaveUserConfigAsync(config);
@@ -780,6 +782,7 @@ public static class AgentEndpoints
                     config.UseBuiltIn,
                     config.Temperature,
                     config.MaxTokens,
+                    config.AvailableModels,
                     hasApiKey = !string.IsNullOrEmpty(config.ApiKey),
                 });
             }
@@ -1006,6 +1009,24 @@ public static class AgentEndpoints
     {
         if (root.TryGetProperty(name, out var prop) && prop.ValueKind == JsonValueKind.String)
             return prop.GetString();
+        return null;
+    }
+
+    private static List<string>? GetStringListProp(JsonElement root, string name)
+    {
+        if (root.TryGetProperty(name, out var prop) && prop.ValueKind == JsonValueKind.Array)
+        {
+            var list = new List<string>();
+            foreach (var item in prop.EnumerateArray())
+            {
+                if (item.ValueKind == JsonValueKind.String)
+                {
+                    var s = item.GetString();
+                    if (!string.IsNullOrWhiteSpace(s)) list.Add(s);
+                }
+            }
+            return list;
+        }
         return null;
     }
 

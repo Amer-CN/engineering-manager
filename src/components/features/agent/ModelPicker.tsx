@@ -34,7 +34,8 @@ const ModelPicker: React.FC<ModelPickerProps> = ({
 
   useEffect(() => {
     let cancelled = false
-    getAgentModels().then(list => { if (!cancelled && list.length > 1) setModels(list) })
+    // 单模型也记录：自定义 provider 配置后常显模型名（修复「配置了自定义模型仍显示默认」）
+    getAgentModels().then(list => { if (!cancelled && list.length > 0) setModels(list) })
       .catch(() => { /* 静默：列表不可用时隐藏选择器 */ })
     return () => { cancelled = true }
   }, [])
@@ -68,6 +69,7 @@ const ModelPicker: React.FC<ModelPickerProps> = ({
           title={showModelPicker ? '选择本次对话使用的模型' : activeModelName}
         >
           <Icon name="Cpu" size={13} />
+          {/* 单模型时也常显模型名（而非「默认」）；列表为空（接口失败）才回退「默认」 */}
           <span className="max-w-32 truncate">{activeModelName ?? '默认'}</span>
           {showModelPicker && <Icon name="ChevronDown" size={12} />}
         </button>
