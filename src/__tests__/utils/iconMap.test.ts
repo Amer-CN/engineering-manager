@@ -16,7 +16,7 @@ vi.mock('lucide-react', () => {
     'GitFork', 'Globe', 'GripVertical', 'HardHat', 'Heading1', 'Heading2', 'Heading3', 'HeartPulse', 'HelpCircle', 'Home', 'Image', 'Inbox', 'Info', 'Italic', 'Key', 'KeyRound', 'Landmark',
     'LayoutDashboard', 'Library', 'Lightbulb', 'Link', 'List', 'ListOrdered', 'Loader', 'Loader2', 'Lock', 'LogOut', 'Mail',
     'MapPin', 'Maximize2', 'Menu', 'MessageSquare', 'Mic', 'Minimize2', 'Minus', 'Monitor', 'Moon', 'MoreVertical', 'Package',
-    'PaintBucket', 'Palette', 'Paperclip', 'Pause', 'Pencil', 'PenLine', 'Phone', 'PieChart', 'Play', 'Plug', 'Plus', 'Power', 'Presentation', 'Printer',
+    'PaintBucket', 'Palette', 'Paperclip', 'Pause', 'Pencil', 'PenLine', 'Phone', 'PieChart', 'Pin', 'PinOff', 'Play', 'Plug', 'Plus', 'Power', 'Presentation', 'Printer',
     'Quote',
     'Receipt', 'Redo', 'Redo2', 'RefreshCcw', 'RefreshCw', 'RotateCcw', 'RotateCw', 'Ruler', 'Save', 'Scan',
     'ScrollText', 'Search', 'SearchX', 'Settings', 'Shield', 'ShieldCheck', 'Snowflake', 'Sparkles', 'Square', 'SquareCheck', 'Stamp',
