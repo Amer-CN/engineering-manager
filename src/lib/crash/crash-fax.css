@@ -442,11 +442,13 @@
 .fx-paper.up { transform: translateY(-118%); }  /* up=完全藏入位（步进末态同值，作后备） */
 .fx-holes {                          /* 走纸孔列：单圆孔（弃双层错位渐变——叠出菱形棱角）、
                                        孔径 6.8px（半径 3.4，比原 5px 大）、纵向步进 22px；
-                                       bottom 收进 28px：任何纸高下末孔都完整落在纸内、不贴下缘不越界 */
-  position: absolute; top: 0; bottom: 28px; width: 26px; pointer-events: none;
+                                       铺满整纸高，background-position-y: bottom 使平铺自纸底向上排——
+                                       末孔恒贴纸底（任何纸高下不再"少一孔"），不满一格的余量留在顶部（藏在出纸槽内不可见） */
+  position: absolute; top: 0; bottom: 0; width: 26px; pointer-events: none;
   background-image:
     radial-gradient(circle at 50% 50%, var(--pp-hole) 0 3.4px, transparent 3.7px);
   background-size: 26px 22px; background-repeat: repeat-y;
+  background-position-y: bottom;
 }
 .fx-holes.l { left: 0; border-right: 1px dashed var(--pp-perf); }
 .fx-holes.r { right: 0; border-left: 1px dashed var(--pp-perf); }
