@@ -53,24 +53,6 @@ copy /Y public\ocr-config.json "%APP_DIR%\ocr-config.json" >nul
 copy /Y public\seed-data.json "%APP_DIR%\seed-data.json" >nul
 echo    OK
 
-:: 4b. Build & stage uninstaller (frontend + single-file exe) -> app-files\uninstall\
-echo.
-echo [uninstaller] Building uninstaller frontend...
-cd uninstaller
-call npx vite build
-if errorlevel 1 ( echo X UNINSTALLER FRONTEND FAILED & pause & exit /b 1 )
-cd ..
-echo [uninstaller] Publishing uninstaller exe...
-dotnet publish EngineeringManager.Uninstaller -c Release -o release-uninstaller
-if errorlevel 1 ( echo X UNINSTALLER PUBLISH FAILED & pause & exit /b 1 )
-if exist "%APP_DIR%\uninstall" rmdir /s /q "%APP_DIR%\uninstall"
-xcopy /E /I /Q /Y release-uninstaller "%APP_DIR%\uninstall" >nul
-del "%APP_DIR%\uninstall\*.pdb" >nul 2>&1
-ren "%APP_DIR%\uninstall\EngineeringManager.Uninstaller.exe" 工程管家卸载.exe
-xcopy /E /I /Q /Y uninstaller\dist "%APP_DIR%\uninstall\uninstaller" >nul
-rmdir /s /q release-uninstaller 2>nul
-echo    OK
-
 :: 5. Create payload.zip (app-files + installer/dist)
 echo.
 echo [5/6] Creating payload.zip...
