@@ -50,6 +50,18 @@ export interface ChangelogVersion {
   groups?: ChangelogGroup[]
 }
 export const versions: ChangelogVersion[] = [
+  { v: 'v0.92.0', date: '2026-08-29', groups: [
+    { label: '🚀 新功能', items: [
+      '**报错上报不再需要梯子**：错误反馈改走自有国内可直连地址（crash.emcrash.dpdns.org），开箱即用，无需任何配置',
+      '**界面音效开关**：设置 → 外观新增「界面音效」，默认开启；不想听传真机声音的可一键关闭（动画保留）',
+    ] },
+    { label: '🐛 Bug 修复', items: [
+      '**传真机走纸孔与虚线铺满整纸**：之前两侧圆点列和骑缝虚线在纸底会缺一截，现在一直贴到底边',
+    ] },
+    { label: '🔧 技术优化', items: [
+      '**错误上报服务器源码修复**：仓库内的 Worker 源码备份从单行损坏状态恢复为可部署状态（线上服务本身无变化）',
+    ] },
+  ] },
   { v: 'v0.90.1', date: '2026-07-30', groups: [
     { label: '🐛 Bug 修复', items: [
       '**修复用户管理“角色权限”标签页崩溃**：之前进入角色权限页会报“页面出现异常”（后端权限字段为 JSON 字符串未解析），现已正常显示四类角色卡片与权限矩阵',
