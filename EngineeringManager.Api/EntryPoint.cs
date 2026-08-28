@@ -128,7 +128,9 @@ public static class EntryPoint
     {
         var installPath = AppContext.BaseDirectory;
         Console.WriteLine($"[Uninstall] Install path: {installPath}");
-        Application.Run(new UninstallForm(installPath));
-        Environment.Exit(0);
+        var form = new UninstallForm(installPath);
+        Application.Run(form);
+        // 卸载失败（或异常中断）非 0 退出，供外界判断卸载是否真正完成
+        Environment.Exit(form.UninstallSucceeded ? 0 : 1);
     }
 }

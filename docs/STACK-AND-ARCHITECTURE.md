@@ -55,15 +55,15 @@ SQLite (engineering.db) ← 数据存储路径由用户配置
 | `src/services/tauri-bridge.ts` | API 桥接层（前端调用的统一接口） |
 | `src/services/api-adapter.ts` | 环境检测 + API 选择 |
 | `EngineeringManager.Installer/` | 安装器（WinForms + WebView2 + React 前端） |
-| `EngineeringManager.Uninstaller/` | 卸载器（WinForms + WebView2 + React 前端） |
+| `EngineeringManager.Api/Uninstall/` | 卸载器（合并进主程序，`Api.exe --uninstall` 启动极简 WinForms 卸载窗；独立 `EngineeringManager.Uninstaller/` 目录保留存档） |
 
 ## 📦 打包与部署
 
 - **平时只构建不打包**：修改代码 → `vite build`（约5-10秒）→ `dotnet run`（csproj 的 `SyncFrontendDist` Target 自动同步 dist/ 到 C# 输出目录）→ dev模式测试 → 用户通知才生成安装包
 - 安装包：`release\EngineeringManager-Setup-<版本号>.exe`（例：`release\EngineeringManager-Setup-0.82.0.exe`，见 `build-installer.bat`）
-- 打包脚本：`build-installer.bat` / `release.bat`（构建前端 + C# 发布 + payload.zip 打包 + 安装器；卸载器 vite build + publish 后铺入 `app-files\uninstall\`）
-- **卸载器接线**：安装时写 `<安装目录>\uninstall\uninstaller.json` + 注册「程序和功能」卸载项（HKCU，DisplayName=工程管家）；卸载时先把自身复制到 `%TEMP%` 再重启副本删除安装目录（避免 exe 自锁），数据存储路径永不删。
-- 优化后安装包大小：~198MB（去除了 WPF 运行时、重复字体、未使用依赖）
+- 打包脚本：`build-installer.bat` / `release.bat`（构建前端 + C# 发布 + payload.zip 打包 + 安装器）
+- **卸载接线**：安装时注册「程序和功能」卸载项（HKCU，DisplayName=工程管家，UninstallString=`"<安装目录>\EngineeringManager.Api.exe" --uninstall`）；卸载时主程序以 `--uninstall` 模式启动极简 WinForms 卸载窗，删程序文件/快捷方式/注册表/配置目录后，由 detached cmd.exe 延时约 2 秒删除整个安装目录（含 exe 自身），数据存储路径永不删。
+- 优化后安装包大小：约 158MB（启用 ReadyToRun 后略有增大，以实际发布为准）
 
 ## 📐 数据架构铁律
 
@@ -76,7 +76,7 @@ SQLite (engineering.db) ← 数据存储路径由用户配置
 | %APPDATA%\工程管家 | config.json（指向数据路径） | 可删除 |
 
 - 所有数据操作使用 `ApiConfig.ResolveDataPath()`，22 处调用，0 处使用 AppData
-- 卸载器绝不碰数据存储路径，不提供"删除数据"选项
+- 卸载（`Api.exe --uninstall`）绝不碰数据存储路径，不提供"删除数据"选项
 - 文件操作（上传/读取/删除）均有 `IsPathSafe` 路径遍历防护
 - 快照恢复前自动备份当前数据库（`db.pre-restore-时间戳`）
 - config.json 写入采用合并策略，不覆盖已有配置

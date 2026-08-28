@@ -157,7 +157,8 @@ public class UninstallService
         try
         {
             var safePath = installPath.TrimEnd('\\');
-            var deleteCmd = $"/c timeout /t 2 /nobreak >nul & rmdir /s /q \"{safePath}\"";
+            // timeout 依赖控制台输入，CreateNoWindow 下会立即失败；ping -n 3 约 2 秒，免控制台可用
+            var deleteCmd = $"/c ping -n 3 127.0.0.1 >nul & rmdir /s /q \"{safePath}\"";
             Process.Start(new ProcessStartInfo("cmd.exe", deleteCmd)
             {
                 UseShellExecute = false,

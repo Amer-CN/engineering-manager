@@ -149,7 +149,7 @@ public class InstallerService
         // 写入数据存储路径配置（更新模式下：若用户未显式改动则保留现有 config.json）
         WriteDataPathConfig(dataPath, isUpdate);
 
-        // 注册卸载信息（uninstaller.json + "程序和功能"注册表项）
+        // 注册卸载信息（"程序和功能"注册表项，UninstallString = Api.exe --uninstall）
         onProgress(98, "正在注册卸载信息...");
         RegisterUninstaller(targetPath);
 

@@ -15,6 +15,12 @@ public class UninstallForm : Form
     private readonly Button _cancelButton;
     private readonly Panel _progressPanel;
 
+    private bool _uninstallRunning;
+    private bool _uninstallCompleted;
+
+    /// <summary>卸载是否成功（EntryPoint 据此决定退出码；未实际执行卸载的取消不算失败）。</summary>
+    public bool UninstallSucceeded { get; private set; } = true;
+
     private static readonly string LogFile = Path.Combine(Path.GetTempPath(), "uninstaller-log.txt");
 
     private static void Log(string msg)
@@ -115,9 +121,21 @@ public class UninstallForm : Form
         Controls.Add(_progressPanel);
     }
 
+    protected override void OnFormClosing(FormClosingEventArgs e)
+    {
+        // 卸载进行中禁止关闭（X / Alt+F4）；完成后恢复正常关闭
+        if (_uninstallRunning && !_uninstallCompleted)
+        {
+            e.Cancel = true;
+            _statusLabel.Text = "卸载进行中，请稍候...";
+        }
+        base.OnFormClosing(e);
+    }
+
     private async Task StartUninstall()
     {
         // 切换到进度面板
+        _uninstallRunning = true;
         _confirmButton.Visible = false;
         _cancelButton.Visible = false;
         _progressPanel.Visible = true;
@@ -126,17 +144,26 @@ public class UninstallForm : Form
         Log($"[UninstallForm] 开始卸载: {_installPath}");
 
         var service = new UninstallService();
-        await service.Uninstall(_installPath, (percent, step) =>
+        try
         {
-            Invoke(() =>
+            await service.Uninstall(_installPath, (percent, step) =>
             {
-                _progressBar.Value = Math.Min(percent, 100);
-                _statusLabel.Text = step;
+                Invoke(() =>
+                {
+                    _progressBar.Value = Math.Min(percent, 100);
+                    _statusLabel.Text = step;
+                });
             });
-        });
+        }
+        catch (Exception ex)
+        {
+            UninstallSucceeded = false;
+            Log($"[UninstallForm] 卸载异常: {ex}");
+        }
 
         // 短暂展示完成状态后关闭（cmd.exe 会在 2 秒后删除安装目录）
         await Task.Delay(800);
+        _uninstallCompleted = true;
         Close();
     }
 }
