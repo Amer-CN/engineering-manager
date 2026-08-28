@@ -74,8 +74,6 @@ export interface CrashReporterOptions {
  *  旧官方地址 engineering-manager-crash.bb531285650.workers.dev 仍在线，可经设置页覆盖键切换 */
 export const DEFAULT_ENDPOINT =
   'https://crash.emcrash.dpdns.org/v1/report'
-/** localStorage 覆盖键：设置页「自定义上报地址」写入的键（清空或移除即恢复默认官方地址） */
-export const ENDPOINT_OVERRIDE_KEY = 'crash-report-endpoint-override'
 const DEDUP_MS = 5000 // 5 秒去重
 const MAX_BREADCRUMBS = 50
 /** 线上 Worker zod schema：breadcrumbs 最多 30 条 */
@@ -638,29 +636,12 @@ export function resolveUserDecision(send: boolean): void {
 }
 
 // ── 发送 ──
-/**
- * 解析实际上报地址：优先读本地覆盖值（仅当非空且能被 new URL() 解析、协议为 http(s) 时采用），
- * 否则返回 fallback（默认官方 Worker）。发送时实时解析，设置页修改后立即生效；无 window 环境安全。
- */
-export function resolveEndpoint(fallback: string): string {
-  try {
-    if (typeof window === 'undefined') return fallback
-    const override = localStorage.getItem(ENDPOINT_OVERRIDE_KEY)
-    if (!override) return fallback
-    const url = new URL(override)
-    if (url.protocol === 'https:' || url.protocol === 'http:') return override
-    return fallback
-  } catch {
-    return fallback
-  }
-}
-
 /** 真正 POST 一次。保留 reporting 防自递归（上报请求本身不得再触弹层）。 */
 async function deliver(wire: CrashPayload): Promise<boolean> {
   if (!opts) return false
   reporting = true
   try {
-    const response = await fetch(resolveEndpoint(opts.endpoint), {
+    const response = await fetch(opts.endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(wire),
