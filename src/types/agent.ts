@@ -104,6 +104,8 @@ export interface LlmProviderConfig {
   useBuiltIn: boolean
   temperature: number
   maxTokens: number
+  /** 「获取模型列表」拉到的可选模型清单（保存时随配置持久化） */
+  availableModels?: string[]
   updatedAt?: string
   updatedBy?: string
 }
