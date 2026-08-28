@@ -70,8 +70,10 @@ export interface CrashReporterOptions {
 }
 
 // ── 常量 ──
+/** 默认上报地址：自有域名 crash.emcrash.dpdns.org（Cloudflare 自定义域，国内可直连）；
+ *  旧官方地址 engineering-manager-crash.bb531285650.workers.dev 仍在线，可经设置页覆盖键切换 */
 export const DEFAULT_ENDPOINT =
-  'https://engineering-manager-crash.bb531285650.workers.dev/v1/report'
+  'https://crash.emcrash.dpdns.org/v1/report'
 /** localStorage 覆盖键：设置页「自定义上报地址」写入的键（清空或移除即恢复默认官方地址） */
 export const ENDPOINT_OVERRIDE_KEY = 'crash-report-endpoint-override'
 const DEDUP_MS = 5000 // 5 秒去重
