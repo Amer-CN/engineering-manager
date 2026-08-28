@@ -8,8 +8,7 @@
 **工程管家**：面向工程公司的本地桌面管理系统（人事/工人/发票/合同/项目/结算/成本台账等 11 个业务模块）。
 
 - 架构：React 18 + TS 5 + Vite + Tailwind（前端）→ HTTP → ASP.NET Core Minimal API (.NET 8, localhost:5048) → Dapper → SQLite；WinForms + WebView2 桌面壳
-- 协作：AI 双引擎（GPT-5.6 规划审查 + 本地 IDE AI 执行），push 即审、完成后停下等审 → [docs/COLLABORATION.md](docs/COLLABORATION.md)
-- 输出语言：默认中文；代码/命令/路径/commit message 保持英文 → 同上
+- 输出语言：默认中文；代码/命令/路径/commit message 保持英文
 
 ## 🗺️ 目录路由（改哪里，先读哪份指引）
 
@@ -64,7 +63,6 @@ npx vite build                                   # dist/ 会被 dotnet build/run
 
 | 主题 | 文档 |
 |------|------|
-| 协作模式 + 输出语言 | [docs/COLLABORATION.md](docs/COLLABORATION.md) |
 | 技术栈 / 架构 / 关键文件 / 打包 / 数据铁律 / 权限 / 模块地图 / 文件存储 / UI 规范 / 审计日志 | [docs/STACK-AND-ARCHITECTURE.md](docs/STACK-AND-ARCHITECTURE.md) |
 | 红线 + 组件规则 + 后端质量规则 + 双 Checklist + Repository/React Query/迁移规范 | [docs/CONVENTIONS.md](docs/CONVENTIONS.md) |
 | SemVer bump / 版本引用 6 处 / tag 策略 / changelog 规范 / 红绿灯 | [docs/VERSIONING.md](docs/VERSIONING.md) |
@@ -82,4 +80,3 @@ npx vite build                                   # dist/ 会被 dotnet build/run
 
 - 新组件放 `src/components/features/<模块>/`，禁止在 `src/features/` 下建文件；新建前确认无同名组件
 - commit 遵循 conventional commits；feat→minor、fix/perf→patch、refactor/docs/chore→不 bump → [docs/VERSIONING.md](docs/VERSIONING.md)
-- 每个里程碑完成后 push + 说明就绪即停下等审，不自行启动下一个里程碑
