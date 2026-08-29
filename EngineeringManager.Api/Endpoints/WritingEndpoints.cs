@@ -425,6 +425,7 @@ public static class WritingEndpoints
             WritingDraftRequest dto) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            var isAdmin = CurrentUser.IsAdmin(ctx);
             if (!CurrentUser.HasPermission(ctx, db, "writing:create"))
             {
                 ctx.Response.StatusCode = 403;
@@ -464,7 +465,7 @@ public static class WritingEndpoints
                 cts.CancelAfter(TimeSpan.FromMinutes(5));
 
                 var full = new System.Text.StringBuilder();
-                await foreach (var token in skill.StreamDraftAsync(dto))
+                await foreach (var token in skill.StreamDraftAsync(dto, uid, isAdmin, cts.Token))
                 {
                     if (cts.Token.IsCancellationRequested) break;
                     full.Append(token);
