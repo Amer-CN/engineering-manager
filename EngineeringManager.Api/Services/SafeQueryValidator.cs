@@ -841,16 +841,17 @@ public static class SafeQueryValidator
         try
         {
             db.Execute(@"
-                INSERT INTO audit_logs (action, level, user_id, resource, details, description, created_at)
-                VALUES (@Action, @Level, @UserId, @Resource, @Details, @Description, @CreatedAt)",
+                INSERT INTO audit_logs (action, level, user_id, resource, details, created_at)
+                VALUES (@Action, @Level, @UserId, @Resource, @Details, @CreatedAt)",
                 new
                 {
                     Action = "safe_query",
                     Level = success ? "info" : "warning",
                     UserId = uid,
                     Resource = "agent_tool",
-                    Details = $"Original: {originalSql}\nRewritten: {rewrittenSql}",
-                    Description = success ? "Safe query executed" : $"Safe query rejected: {error}",
+                    Details = success
+                        ? $"Safe query executed. Original: {originalSql}\nRewritten: {rewrittenSql}"
+                        : $"Safe query rejected: {error}. Original: {originalSql}\nRewritten: {rewrittenSql}",
                     CreatedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                 });
         }

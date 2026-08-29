@@ -72,14 +72,14 @@ export const KnowledgeCarouselStage: React.FC<KnowledgeCarouselStageProps> = ({
                   color: 'var(--fg)',
                 }}
               >
-                <span className="text-[color:var(--gc-active,#10b981)] text-base leading-none">+</span>
+                <span className="text-[color:var(--gc-active)] text-base leading-none">+</span>
                 <span>新建文件夹</span>
               </button>
             )}
             <button
               onClick={() => setViewMode('dashboard')}
-              className="px-4 py-2.5 rounded-2xl text-xs font-semibold transition-all flex items-center gap-2 border shadow-lg text-[color:var(--gc-active-ink,#fff)]"
-              style={{ background: 'var(--gc-active, #10b981)', borderColor: 'var(--gc-icon, #34d399)' }}
+              className="px-4 py-2.5 rounded-2xl text-xs font-semibold transition-all flex items-center gap-2 border shadow-lg text-[color:var(--gc-active-ink)]"
+              style={{ background: 'var(--gc-active)', borderColor: 'var(--gc-icon)' }}
             >
               切换至完整工作区 (看板)
             </button>
