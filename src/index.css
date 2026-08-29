@@ -31,6 +31,12 @@ input[type="password"]::-ms-clear {
   颜色调色板使用 RGB 格式（空格分隔），供 tailwind rgba() 使用。
   ═══════════════════════════════════════════════════════════════ */
 
+/* 品牌色 — 三角品牌标专用，全站唯一彩色例外。
+   刻意不随主题覆盖：一个 logo 认三主题底色（Paper 3.21 / Graphite 5.36 / Snow 3.23，均 ≥3:1）。 */
+:root {
+  --brand: oklch(65% 0.13 60);
+}
+
 /* ── White 主题（当前浅色模式 ── 保留现有配色）── */
 :root,
 [data-theme="white"] {
@@ -1475,18 +1481,49 @@ button:disabled {
 .tiptap:focus-visible { outline: none; }
 
 /* ═══ R5：A4 纸张模式 — 白纸黑字，不随深色主题 ═══
-   R12 三态分离：编辑态 = 连续单页无限延长（无假分页——页概念属预览/导出态）。
-   写作中心三态：编辑（tiptap 流式）/ 预览（打印分页，R13）/ 交付（docx 模板导出）。 */
+   R14：编辑态真分页——padding 改 0 120px，首尾页边距由 ::before/::after 96px 白垫片提供；
+   页缝装饰 .a4-page-seam 占位 216px（96 顶垫 + 24 灰桌缝 + 96 底垫）。
+   写作中心三态：编辑（tiptap 流式，R14 块级真分页）/ 预览（打印分页，R13）/ 交付（docx）。 */
 .a4-paper {
   width: 794px;
-  min-height: 1123px;
-  padding: 96px 120px;
+  min-height: 1027px; /* 931 内容 + 96 顶垫（::before） */
+  padding: 0 120px;
   background: #fff;
   border-radius: 2px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }
+/* 首页顶边距 / 末页底边距垫片（padding 顶底归零后由伪元素补回） */
+.a4-paper::before,
+.a4-paper::after {
+  content: "";
+  display: block;
+  height: 96px;
+}
 .a4-paper .tiptap { color: #1f2328; }
 .a4-paper .tiptap p.is-editor-empty:first-child::before { color: #9ca3af; }
+
+/* ═══ R14：页缝装饰 — 块级 widget，分隔多张 A4 ═══
+   视觉：白 96（上页下边距）→ 阴影线 → 灰 24（桌缝）→ 阴影线 → 白 96（下页上边距）。
+   上下 96px 白由上下 padding 区提供；中部用线性渐变分层：
+   0–96px 白 / 96px 阴影线 / 96–120px 灰桌缝 / 120px 阴影线 / 120–216px 白。 */
+.a4-page-seam {
+  height: 216px;
+  background:
+    linear-gradient(
+      to bottom,
+      #fff 0,
+      #fff 96px,
+      rgba(0, 0, 0, 0.1) 96px,
+      rgba(0, 0, 0, 0.1) 97px,
+      var(--panel-2) 97px,
+      var(--panel-2) 119px,
+      rgba(0, 0, 0, 0.1) 119px,
+      rgba(0, 0, 0, 0.1) 120px,
+      #fff 120px,
+      #fff 216px
+    );
+  position: relative;
+}
 
 /* ═══ R3：写作中心顶部工具栏 ═══ */
 .em-toolbar {
@@ -1653,7 +1690,10 @@ button:disabled {
  * 暖白纸（white）/石墨黑（graphite）暂保持 emerald 原版绿色（后续按用户节奏逐主题定色）。
  * 注意：TW3 不支持 var() 任意值 + /透明度 修饰符（类会静默丢），
  * 需要透明度的位置一律用下方的 -a 系 color-mix 变量，类名不带修饰符。 */
-.gc-stage-iso {
+/* --gc-* 定义在全局（:root + [data-theme]）而非 .gc-stage-iso 容器作用域：
+ * 舞台容器之外的组件（弹窗等无 portal 的兄弟节点）同样能取到主题桥接值，
+ * 不会再静默退到 emerald 兜底色。块顺序 = 级联顺序，调整前先确认覆盖关系。 */
+:root {
   /* 回退层：emerald 原版绿（未桥接主题直接命中，视觉零变化） */
   --gc-active: #10b981;
   --gc-active-deep: #064e3b;
@@ -1661,7 +1701,7 @@ button:disabled {
   --gc-active-ink: #fff;
   --gc-on-paper: #059669;  /* 纸面墨（纸恒为浅色，纸上强调色取深阶；原 emerald-600）*/
 }
-[data-theme="sandstone"] .gc-stage-iso {
+[data-theme="sandstone"] {
   --gc-active: var(--accent);              /* active 卡主色（原 emerald-500/600/700 阶）*/
   /* 深端不接 accent-strong(22%)：该 token 为小控件校准，卡片是全页最大英雄面；
      且无彩灰比同亮度饱和色（emerald-950）感知更浅 → 舞台专用墨色炭黑（非纯黑：纸感主题防"洞"）*/
@@ -1670,7 +1710,7 @@ button:disabled {
   --gc-active-ink: var(--on-accent);       /* active 上文字（原 white）*/
 }
 /* 透明度层：color-mix 在使用点把变量混上透明度（TW3 修饰符的替代） */
-.gc-stage-iso {
+:root {
   --gc-active-a85: color-mix(in srgb, var(--gc-active) 85%, transparent);
   --gc-active-a90: color-mix(in srgb, var(--gc-active) 90%, transparent);
   --gc-active-deep-a95: color-mix(in srgb, var(--gc-active-deep) 95%, transparent);
@@ -1678,7 +1718,7 @@ button:disabled {
   --gc-active-border-a80: color-mix(in srgb, var(--gc-active-border) 80%, transparent);
   --gc-active-border-a40: color-mix(in srgb, var(--gc-active-border) 40%, transparent);
 }
-.gc-stage-iso {
+:root {
   /* 新增语义层 */
   --gc-icon: #34d399;   /* 常显小图标绿（Folder 图标等，原 emerald-400）*/
   --gc-soft: #d1fae5;   /* 淡色底（原 emerald-100 语义，纸面徽标底）*/
@@ -1688,13 +1728,13 @@ button:disabled {
   --gc-a30: color-mix(in srgb, var(--gc-active) 30%, transparent);
   --gc-icon-a50: color-mix(in srgb, var(--gc-icon) 50%, transparent); /* ping 圈 */
 }
-[data-theme="sandstone"] .gc-stage-iso {
+[data-theme="sandstone"] {
   --gc-icon: var(--accent-strong);      /* 灰阶图标（深，可读）*/
   --gc-on-paper: var(--accent);         /* 纸面墨：灰阶深墨 */
   --gc-soft: color-mix(in srgb, var(--accent) 10%, white);  /* 灰阶淡底 */
   --gc-soft-border: color-mix(in srgb, var(--accent) 22%, white);
 }
-[data-theme="white"] .gc-stage-iso {
+[data-theme="white"] {
   /* 暖白纸：焦糖琥珀（用户拍板 2026-08-22 第二轮，深暖褐与净白墨色趋同被否）。
      取主题 warning 暖色家族（hue 70 琥珀）——舞台特区不受应用"洗彩"约束 */
   --gc-active: var(--warning);                                        /* oklch(60% .11 70) 焦糖琥珀 */
@@ -1706,7 +1746,7 @@ button:disabled {
   --gc-soft: color-mix(in srgb, var(--warning) 14%, white);           /* 琥珀淡底 */
   --gc-soft-border: color-mix(in srgb, var(--warning) 28%, white);
 }
-[data-theme="graphite"] .gc-stage-iso {
+[data-theme="graphite"] {
   /* 石墨黑：奶油白反转强调（与侧边栏激活项/主按钮同语义；用户拍板 2026-08-22）。
      亮卡需深字——标题/副题走 --gc-active-ink；纸面元素走 --gc-on-paper（奶油白上纸会隐形）*/
   --gc-active: var(--accent);                                        /* oklch(92% .004 80) 奶油白 */

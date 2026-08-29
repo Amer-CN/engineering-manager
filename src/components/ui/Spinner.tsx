@@ -34,13 +34,9 @@ const Spinner: React.FC<SpinnerProps> = ({
       >
         <svg width={px} height={px} viewBox="0 0 18 18" fill="none">
           <defs>
-            <linearGradient id={`spinner-grad-${size}`} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="var(--accent)" />
-              <stop offset="100%" stopColor="var(--accent)" stopOpacity="0.6" />
-            </linearGradient>
             <mask id={`spinner-mask-${size}`}><rect width="18" height="18" fill="white" /><path d="M5 14 L9 6 L13 14 Z" fill="black" /></mask>
           </defs>
-          <path d="M2 15.5 L9 2.5 L16 15.5 Z" fill={`url(#spinner-grad-${size})`} mask={`url(#spinner-mask-${size})`} />
+          <path d="M2 15.5 L9 2.5 L16 15.5 Z" fill="var(--brand)" mask={`url(#spinner-mask-${size})`} />
         </svg>
       </motion.div>
       <div className="flex gap-1.5">

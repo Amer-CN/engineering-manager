@@ -11,13 +11,12 @@
     <NoWarn>MSB3277;AD0001</NoWarn>
     <!-- M-FIX8 T-1: 本地与 CI 编译参数对齐，CI 带 -warnaserror，本地不带 flag 同样把警告当错误 -->
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <Version>0.92.0</Version>
+    <Version>0.93.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.11" />
     <PackageReference Include="Dapper" Version="2.1.79" />
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.27" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.8" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3967.48" />
     <PackageReference Include="SqlParserCS" Version="0.6.5" />
@@ -25,7 +24,6 @@
     <PackageReference Include="org.k2fsa.sherpa.onnx" Version="1.13.4" />
     <PackageReference Include="org.k2fsa.sherpa.onnx.runtime.win-x64" Version="1.13.4" />
     <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.19.2" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
     <PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0" />
   </ItemGroup>
   <ItemGroup>

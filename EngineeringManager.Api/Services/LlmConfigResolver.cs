@@ -9,7 +9,34 @@ using Microsoft.Extensions.Logging;
 namespace EngineeringManager.Api.Services;
 
 /// <summary>
-/// 持久化用的配置 DTO — apiKey 以 DPAPI 加密存储
+/// 持久化用的服务商条目 — apiKey 以 DPAPI 加密存储（ApiKeyEnc）
+/// </summary>
+internal class PersistedProviderEntry
+{
+    public string Id { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string BaseUrl { get; set; } = "";
+    public string ApiKeyEnc { get; set; } = "";
+    public List<ProviderModelEntry> Models { get; set; } = new();
+    public string ActiveModelId { get; set; } = "";
+}
+
+/// <summary>
+/// 持久化用的多服务商配置 DTO — llm-config.dpapi.json 的新结构（含 providers 字段）
+/// </summary>
+internal class PersistedMultiConfig
+{
+    public string? ActiveProviderId { get; set; }
+    public bool UseBuiltIn { get; set; }
+    public List<PersistedProviderEntry> Providers { get; set; } = new();
+    public double Temperature { get; set; }
+    public int MaxTokens { get; set; }
+    public string? ProxyUrl { get; set; }
+    public string? UpdatedAt { get; set; }
+}
+
+/// <summary>
+/// 旧版单配置持久化 DTO（多服务商上线前的 llm-config.dpapi.json 结构），读取时自动迁移
 /// </summary>
 internal class PersistedLlmConfig
 {
@@ -21,6 +48,7 @@ internal class PersistedLlmConfig
     public double Temperature { get; set; }
     public int MaxTokens { get; set; }
     public List<string>? AvailableModels { get; set; }
+    public Dictionary<string, ModelCapability>? ModelCapabilities { get; set; }
     public string? UpdatedAt { get; set; }
 }
 
@@ -37,16 +65,17 @@ internal static class StringExtensions
 }
 
 /// <summary>
-/// LLM 配置解析器 — 三级兜底读配置（DPAPI → 环境变量 → 内置 Agnes）。
+/// LLM 配置解析器 — 多服务商并存管理 + 三级兜底（用户 DPAPI 文件 → 环境变量 → 内置 Agnes）。
+/// 对外统一通过 GetConfig()/GetConfigWithKey() 展开「当前生效配置」，
+/// 消费方（ChatAsync / 模型路由 / 端点）看到的仍是单配置形状，不感知多服务商结构。
 /// 不依赖 router，也不依赖 provider，纯配置解析逻辑。
-/// 用于打破 LlmProviderService ↔ ModelRoutingService 的循环依赖。
 /// </summary>
 public class LlmConfigResolver
 {
     private readonly object _lock = new();
     private readonly ILogger<LlmConfigResolver> _logger;
     private readonly IConfiguration _configuration;
-    private LlmProviderConfig _config;
+    private MultiProviderConfig _multi;
 
     // 内置 Agnes 兜底（出厂免费通道，开箱即用）
     // key 以「异或混淆分片」形式嵌入（方案4）：明文不出现在源码/程序集字符串表，
@@ -106,8 +135,138 @@ public class LlmConfigResolver
     {
         _logger = logger;
         _configuration = configuration;
-        _config = ResolveConfig();
+        _multi = ResolveMulti();
     }
+
+    /// <summary>
+    /// 持久化前的规范化：模型去重（大小写不敏感，保留首次出现）+ 过滤空白；
+    /// activeModelId 被去重移除时校正为第一个模型。所有写入路径统一走这里，
+    /// 前端漏防的重复条目在此兜底。
+    /// </summary>
+    internal static MultiProviderConfig NormalizeMulti(MultiProviderConfig multi)
+    {
+        var providers = multi.Providers.Select(p =>
+        {
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var models = new List<ProviderModelEntry>();
+            foreach (var m in p.Models)
+            {
+                if (string.IsNullOrWhiteSpace(m.Id)) continue;
+                if (!seen.Add(m.Id.Trim())) continue;
+                models.Add(m.Id == m.Id.Trim() ? m : m with { Id = m.Id.Trim() });
+            }
+            // activeModelId 归一到去重后实际保留的条目 ID（大小写变体指向规范 ID）
+            var active = p.ActiveModelId?.Trim() ?? "";
+            var activeEntry = models.FirstOrDefault(m =>
+                string.Equals(m.Id, active, StringComparison.OrdinalIgnoreCase));
+            active = activeEntry?.Id ?? models.FirstOrDefault()?.Id ?? "";
+            return p with { Models = models, ActiveModelId = active };
+        }).ToList();
+
+        return multi with { Providers = providers };
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // 纯函数：多服务商 → 当前生效单配置 展开（消费方兼容层）
+    // ═══════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// 把多服务商配置展开为「当前生效配置」：
+    /// UseBuiltIn 或 ActiveProviderId 无匹配 → 内置 Agnes；否则展开 active provider。
+    /// 消费方（路由/Chat/端点）只认这个形状。
+    /// </summary>
+    internal static LlmProviderConfig ExpandMulti(
+        MultiProviderConfig multi,
+        string builtinBaseUrl, string builtinApiKey, string builtinModel)
+    {
+        var active = multi.UseBuiltIn
+            ? null
+            : multi.Providers.FirstOrDefault(p => p.Id == multi.ActiveProviderId);
+
+        if (active == null)
+        {
+            return new LlmProviderConfig
+            {
+                ProviderName = "Agnes",
+                BaseUrl = builtinBaseUrl,
+                ApiKey = builtinApiKey,
+                Model = builtinModel,
+                UseBuiltIn = true,
+                Temperature = multi.Temperature,
+                MaxTokens = multi.MaxTokens,
+                AvailableModels = new List<string> { builtinModel },
+                ProxyUrl = multi.ProxyUrl,
+            };
+        }
+
+        var model = active.ActiveModelId ?? "";
+        if (string.IsNullOrEmpty(model))
+            model = active.Models.FirstOrDefault()?.Id ?? "";
+
+        var caps = new Dictionary<string, ModelCapability>(StringComparer.OrdinalIgnoreCase);
+        foreach (var m in active.Models)
+            caps[m.Id] = new ModelCapability { Input = m.Input, Output = m.Output };
+
+        return new LlmProviderConfig
+        {
+            ProviderName = active.Name,
+            BaseUrl = active.BaseUrl,
+            ApiKey = active.ApiKey,
+            Model = model,
+            UseBuiltIn = false,
+            Temperature = multi.Temperature,
+            MaxTokens = multi.MaxTokens,
+            AvailableModels = active.Models.Select(m => m.Id).ToList(),
+            ModelCapabilities = caps,
+            ProxyUrl = multi.ProxyUrl,
+        };
+    }
+
+    /// <summary>
+    /// 旧版单配置持久化结构 → 多服务商结构（纯迁移，ApiKeyEnc 原样搬运不解密）。
+    /// 旧单配置迁移为 providers[0]（id=default），可用模型清单合并进 models。
+    /// </summary>
+    internal static PersistedMultiConfig MigrateLegacyPersisted(PersistedLlmConfig legacy)
+    {
+        var models = new List<ProviderModelEntry>();
+        var ids = new List<string>();
+        if (legacy.AvailableModels is { Count: > 0 })
+            ids.AddRange(legacy.AvailableModels.Where(m => !string.IsNullOrWhiteSpace(m)));
+        var currentModel = legacy.Model ?? "";
+        if (!string.IsNullOrWhiteSpace(currentModel) && !ids.Contains(currentModel, StringComparer.OrdinalIgnoreCase))
+            ids.Insert(0, currentModel);
+
+        foreach (var id in ids)
+        {
+            var cap = legacy.ModelCapabilities?.GetValueOrDefault(id)
+                ?? new ModelCapability { Input = new List<string> { "text" }, Output = new List<string> { "text" } };
+            models.Add(new ProviderModelEntry { Id = id, Input = cap.Input, Output = cap.Output });
+        }
+
+        return new PersistedMultiConfig
+        {
+            ActiveProviderId = legacy.UseBuiltIn ? null : "default",
+            UseBuiltIn = legacy.UseBuiltIn,
+            Providers = new List<PersistedProviderEntry>
+            {
+                new()
+                {
+                    Id = "default",
+                    Name = legacy.ProviderName ?? "Custom",
+                    BaseUrl = legacy.BaseUrl ?? BuiltInBaseUrl,
+                    ApiKeyEnc = legacy.ApiKeyEnc ?? "",
+                    Models = models,
+                    ActiveModelId = currentModel,
+                },
+            },
+            Temperature = legacy.Temperature,
+            MaxTokens = legacy.MaxTokens,
+        };
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // 公开方法
+    // ═══════════════════════════════════════════════════════════
 
     /// <summary>
     /// 获取当前生效配置（不含 apiKey，安全返回给前端）
@@ -116,7 +275,7 @@ public class LlmConfigResolver
     {
         lock (_lock)
         {
-            return _config with { ApiKey = "" };
+            return ExpandMulti(_multi, BuiltInBaseUrl, "", BuiltInModel);
         }
     }
 
@@ -127,7 +286,18 @@ public class LlmConfigResolver
     {
         lock (_lock)
         {
-            return _config;
+            return ExpandMulti(_multi, BuiltInBaseUrl, BuiltInApiKey, BuiltInModel);
+        }
+    }
+
+    /// <summary>
+    /// 获取完整多服务商配置（含各 provider 明文 apiKey）— 仅供 /api/agent/config 投影返回
+    /// </summary>
+    public MultiProviderConfig GetMultiWithKey()
+    {
+        lock (_lock)
+        {
+            return _multi;
         }
     }
 
@@ -139,104 +309,112 @@ public class LlmConfigResolver
         Task.Yield();
         lock (_lock)
         {
-            _config = ResolveConfig();
-            _logger.LogInformation("[LlmConfigResolver] 配置已重新加载: Provider={Provider}, Model={Model}, UseBuiltIn={UseBuiltIn}",
-                _config.ProviderName, _config.Model, _config.UseBuiltIn);
+            _multi = ResolveMulti();
+            _logger.LogInformation("[LlmConfigResolver] 配置已重新加载: ActiveProvider={Active}, UseBuiltIn={UseBuiltIn}, Providers={Count}",
+                _multi.ActiveProviderId, _multi.UseBuiltIn, _multi.Providers.Count);
         }
         return Task.CompletedTask;
     }
 
     /// <summary>
-    /// 保存用户自定义配置（DPAPI 加密 apiKey，存到 llm-config.dpapi.json）
-    /// 如果 newConfig.ApiKey 为空，保留旧 key（避免前端只改 model 时把 key 清空）
+    /// 保存多服务商配置（DPAPI 逐 provider 加密 apiKey，存到 llm-config.dpapi.json）。
+    /// 请求中 ApiKey 为空的 provider 沿用旧 key（前端出于安全不回显密钥）。
     /// </summary>
-    public async Task SaveUserConfigAsync(LlmProviderConfig newConfig)
+    public async Task SaveMultiConfigAsync(MultiProviderConfig newMulti)
     {
+        // key 合并：空 key 的 provider 沿用内存里同 id 的旧 key
+        var merged = new List<ProviderEntry>();
+        lock (_lock)
+        {
+            foreach (var p in newMulti.Providers)
+            {
+                if (!string.IsNullOrEmpty(p.ApiKey))
+                {
+                    merged.Add(p);
+                    continue;
+                }
+                var old = _multi.Providers.FirstOrDefault(o => o.Id == p.Id);
+                merged.Add(old == null ? p : p with { ApiKey = old.ApiKey });
+            }
+        }
+        var effective = NormalizeMulti(newMulti with { Providers = merged });
+
         var dataPath = ApiConfig.ResolveDataPath();
         var filePath = Path.Combine(dataPath, "llm-config.dpapi.json");
 
-        // 如果前端没传 key（空字符串），保留旧 key
-        string apiKeyToSave = newConfig.ApiKey;
-        if (string.IsNullOrEmpty(apiKeyToSave))
+        var persisted = new PersistedMultiConfig
         {
-            var oldConfig = GetConfigWithKey();
-            apiKeyToSave = oldConfig.ApiKey;
-        }
-
-        var encryptedApiKey = string.IsNullOrEmpty(apiKeyToSave)
-            ? ""
-            : Convert.ToBase64String(
-                ProtectedData.Protect(
-                    Encoding.UTF8.GetBytes(apiKeyToSave),
-                    null,
-                    DataProtectionScope.CurrentUser));
-
-        var persisted = new PersistedLlmConfig
-        {
-            ProviderName = newConfig.ProviderName,
-            BaseUrl = newConfig.BaseUrl,
-            ApiKeyEnc = encryptedApiKey,
-            Model = newConfig.Model,
-            UseBuiltIn = newConfig.UseBuiltIn,
-            Temperature = newConfig.Temperature,
-            MaxTokens = newConfig.MaxTokens,
-            AvailableModels = newConfig.AvailableModels,
+            ActiveProviderId = effective.ActiveProviderId,
+            UseBuiltIn = effective.UseBuiltIn,
+            Temperature = effective.Temperature,
+            MaxTokens = effective.MaxTokens,
+            ProxyUrl = effective.ProxyUrl,
             UpdatedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+            Providers = effective.Providers.Select(p => new PersistedProviderEntry
+            {
+                Id = p.Id,
+                Name = p.Name,
+                BaseUrl = p.BaseUrl,
+                ApiKeyEnc = EncryptApiKey(p.ApiKey),
+                Models = p.Models,
+                ActiveModelId = p.ActiveModelId,
+            }).ToList(),
         };
 
         Directory.CreateDirectory(dataPath);
-        // 空清单兜底：前端没传清单时按当前模型生成单元素，避免把清单存成空
-        var modelsToSave = newConfig.AvailableModels is { Count: > 0 }
-            ? newConfig.AvailableModels
-            : BuildModelList(newConfig.Model);
-        persisted.AvailableModels = modelsToSave;
         var json = JsonSerializer.Serialize(persisted, new JsonSerializerOptions { WriteIndented = true });
         await File.WriteAllTextAsync(filePath, json);
 
         lock (_lock)
         {
-            // 用保留了旧 key 的配置更新内存
-            _config = new LlmProviderConfig
-            {
-                ProviderName = newConfig.ProviderName,
-                BaseUrl = newConfig.BaseUrl,
-                ApiKey = apiKeyToSave,
-                Model = newConfig.Model,
-                UseBuiltIn = newConfig.UseBuiltIn,
-                Temperature = newConfig.Temperature,
-                MaxTokens = newConfig.MaxTokens,
-                AvailableModels = modelsToSave,
-            };
+            _multi = effective;
         }
 
-        _logger.LogInformation("[LlmConfigResolver] 用户配置已保存: Provider={Provider}, Model={Model}",
-            newConfig.ProviderName, newConfig.Model);
+        _logger.LogInformation("[LlmConfigResolver] 多服务商配置已保存: Providers={Count}, Active={Active}, UseBuiltIn={UseBuiltIn}",
+            effective.Providers.Count, effective.ActiveProviderId, effective.UseBuiltIn);
     }
 
     // ═══════════════════════════════════════════════════════════
-    // 三级优先级解析配置
+    // 三级优先级解析（用户文件 → 环境变量 → 内置 Agnes）
     // ═══════════════════════════════════════════════════════════
 
     /// <summary>
-    /// 三级优先级解析配置：
-    ///   1. 用户 DPAPI 加密文件
-    ///   2. 环境变量
-    ///   3. 内置 Agnes 兜底
+    /// 持久化 DTO → 内存态多服务商配置（ApiKeyEnc 逐 provider 解密为明文 ApiKey）
     /// </summary>
-    private LlmProviderConfig ResolveConfig()
+    internal static MultiProviderConfig ToInMemory(PersistedMultiConfig persisted)
     {
-        // 1. 用户配置（DPAPI 加密文件）
-        var userConfig = LoadUserConfig();
-        if (userConfig != null && !userConfig.UseBuiltIn)
+        return new MultiProviderConfig
         {
-            _logger.LogInformation("[LlmConfigResolver] 使用用户自定义配置: Provider={Provider}, Model={Model}",
-                userConfig.ProviderName, userConfig.Model);
-            return userConfig;
+            ActiveProviderId = persisted.ActiveProviderId,
+            UseBuiltIn = persisted.UseBuiltIn,
+            Temperature = persisted.Temperature,
+            MaxTokens = persisted.MaxTokens,
+            Providers = persisted.Providers.Select(p => new ProviderEntry
+            {
+                Id = p.Id,
+                Name = p.Name,
+                BaseUrl = p.BaseUrl,
+                ApiKey = DecryptApiKey(p.ApiKeyEnc),
+                Models = p.Models,
+                ActiveModelId = p.ActiveModelId,
+            }).ToList(),
+        };
+    }
+
+    private MultiProviderConfig ResolveMulti()
+    {
+        // 1. 用户配置（DPAPI 加密文件；useBuiltIn=false 且有可用 provider 时生效）
+        var persisted = LoadPersistedMulti();
+        if (persisted != null && !persisted.UseBuiltIn && persisted.Providers.Count > 0)
+        {
+            _logger.LogInformation("[LlmConfigResolver] 使用用户多服务商配置: Providers={Count}, Active={Active}",
+                persisted.Providers.Count, persisted.ActiveProviderId);
+            return ToInMemory(persisted);
         }
 
-        // 温度/MaxTokens 覆盖：即使回落到内置或环境变量模型，也让用户在设置里保存的温度生效
-        double overrideTemp = userConfig?.Temperature ?? 0;
-        int overrideMax = userConfig?.MaxTokens ?? 0;
+        // 温度/MaxTokens 覆盖：即使回落到内置或环境变量模型，也让用户在设置里保存的参数生效
+        double overrideTemp = persisted?.Temperature ?? 0;
+        int overrideMax = persisted?.MaxTokens ?? 0;
 
         // 2. 环境变量
         var envBaseUrl = _configuration["LLM_BASE_URL"]
@@ -248,56 +426,78 @@ public class LlmConfigResolver
 
         if (!string.IsNullOrEmpty(envBaseUrl) && !string.IsNullOrEmpty(envApiKey))
         {
-            _logger.LogInformation("[LlmConfigResolver] 使用环境变量配置: BaseUrl={BaseUrl}, Model={Model}",
-                envBaseUrl, envModel ?? "default");
-            return new LlmProviderConfig
+            var model = envModel ?? "gpt-4o-mini";
+            _logger.LogInformation("[LlmConfigResolver] 使用环境变量配置: BaseUrl={BaseUrl}, Model={Model}", envBaseUrl, model);
+            return new MultiProviderConfig
             {
-                ProviderName = "env",
-                BaseUrl = envBaseUrl,
-                ApiKey = envApiKey,
-                Model = envModel ?? "gpt-4o-mini",
+                ActiveProviderId = "env",
                 UseBuiltIn = false,
                 Temperature = overrideTemp,
                 MaxTokens = overrideMax,
-                AvailableModels = BuildModelList(envModel ?? "gpt-4o-mini"),
+                ProxyUrl = persisted?.ProxyUrl,
+                Providers = new List<ProviderEntry>
+                {
+                    new()
+                    {
+                        Id = "env",
+                        Name = "env",
+                        BaseUrl = envBaseUrl,
+                        ApiKey = envApiKey,
+                        Models = new List<ProviderModelEntry> { new() { Id = model } },
+                        ActiveModelId = model,
+                    },
+                },
             };
         }
 
         // 3. 内置 Agnes 免费 API 兜底
         _logger.LogInformation("[LlmConfigResolver] 使用内置 Agnes 免费 API");
-        return new LlmProviderConfig
+        return new MultiProviderConfig
         {
-            ProviderName = "Agnes",
-            BaseUrl = BuiltInBaseUrl,
-            ApiKey = BuiltInApiKey,
-            Model = BuiltInModel,
+            ActiveProviderId = null,
             UseBuiltIn = true,
             Temperature = overrideTemp,
             MaxTokens = overrideMax,
-            AvailableModels = BuildModelList(BuiltInModel),
+            ProxyUrl = persisted?.ProxyUrl,
+            Providers = new List<ProviderEntry>(),
         };
     }
 
-    /// <summary>
-    /// 组装可选模型清单：Agnes 内置固定系列；其他 provider 返回当前模型单元素
-    /// （无公开 list-models 凭据约定，避免泄漏 key；前端拿到单模型时隐藏选择器）
-    /// </summary>
-    private static List<string> BuildModelList(string currentModel)
+    // ═══════════════════════════════════════════════════════════
+    // 文件读写 + DPAPI
+    // ═══════════════════════════════════════════════════════════
+
+    private static string EncryptApiKey(string apiKey)
     {
-        if (currentModel.StartsWith("agnes-", StringComparison.OrdinalIgnoreCase))
+        return string.IsNullOrEmpty(apiKey)
+            ? ""
+            : Convert.ToBase64String(
+                ProtectedData.Protect(
+                    Encoding.UTF8.GetBytes(apiKey),
+                    null,
+                    DataProtectionScope.CurrentUser));
+    }
+
+    private static string DecryptApiKey(string encrypted)
+    {
+        if (string.IsNullOrEmpty(encrypted)) return "";
+        try
         {
-            // 2026-08-22 官方 wiki 核实：仅 2.5-flash 免费（促销 $0，20RPM）；
-            // pro / pro-alpha 付费（$0.45/$0.90 每百万 token）——按用户拍板只保留免费款，
-            // 付费模型不进默认清单（用户自定义 provider 配置不受此限）
-            return new List<string> { "agnes-2.5-flash" };
+            var bytes = Convert.FromBase64String(encrypted);
+            return Encoding.UTF8.GetString(ProtectedData.Unprotect(bytes, null, DataProtectionScope.CurrentUser));
         }
-        return new List<string> { currentModel };
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[LlmConfigResolver] DPAPI 解密 apiKey 失败: {ex.Message}");
+            return "";
+        }
     }
 
     /// <summary>
-    /// 从 llm-config.dpapi.json 加载用户配置，apiKey 用 DPAPI 解密
+    /// 从 llm-config.dpapi.json 加载多服务商配置（兼容旧版单配置结构，自动迁移）；
+    /// 文件不存在或解析失败返回 null
     /// </summary>
-    private LlmProviderConfig? LoadUserConfig()
+    private PersistedMultiConfig? LoadPersistedMulti()
     {
         try
         {
@@ -308,48 +508,22 @@ public class LlmConfigResolver
                 return null;
 
             var json = File.ReadAllText(filePath);
-            var persisted = JsonSerializer.Deserialize<PersistedLlmConfig>(json);
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
 
-            if (persisted == null)
-                return null;
-
-            var apiKey = "";
-            if (!string.IsNullOrEmpty(persisted.ApiKeyEnc))
+            PersistedMultiConfig? persisted;
+            if (root.TryGetProperty("Providers", out _) || root.TryGetProperty("providers", out _))
             {
-                try
-                {
-                    var encrypted = Convert.FromBase64String(persisted.ApiKeyEnc);
-                    var decrypted = ProtectedData.Unprotect(encrypted, null, DataProtectionScope.CurrentUser);
-                    apiKey = Encoding.UTF8.GetString(decrypted);
-                }
-                catch (Exception ex)
-                {
-                    Console.Error.WriteLine($"[LlmConfigResolver] DPAPI 解密 apiKey 失败: {ex.Message}");
-                    apiKey = "";
-                }
+                persisted = JsonSerializer.Deserialize<PersistedMultiConfig>(json);
+            }
+            else
+            {
+                var legacy = JsonSerializer.Deserialize<PersistedLlmConfig>(json);
+                persisted = legacy == null ? null : MigrateLegacyPersisted(legacy);
+                _logger.LogInformation("[LlmConfigResolver] 检测到旧版单配置文件，已迁移为多服务商结构");
             }
 
-            // 模型清单：优先用保存时「获取模型列表」拉到的完整清单；
-            // 旧配置文件没有该字段时回退为当前模型单元素（前端隐藏选择器）。
-            // 当前模型必须始终在清单内（手填了列表外的模型名时补进去，否则前端选择器不显示它）
-            var model = persisted.Model ?? BuiltInModel;
-            var models = persisted.AvailableModels?
-                .Where(m => !string.IsNullOrWhiteSpace(m))
-                .ToList() ?? BuildModelList(model);
-            if (!models.Contains(model, StringComparer.OrdinalIgnoreCase))
-                models.Insert(0, model);
-
-            return new LlmProviderConfig
-            {
-                ProviderName = persisted.ProviderName ?? "Custom",
-                BaseUrl = persisted.BaseUrl ?? BuiltInBaseUrl,
-                ApiKey = apiKey,
-                Model = model,
-                UseBuiltIn = persisted.UseBuiltIn,
-                Temperature = persisted.Temperature,
-                MaxTokens = persisted.MaxTokens,
-                AvailableModels = models,
-            };
+            return persisted;
         }
         catch (Exception ex)
         {
