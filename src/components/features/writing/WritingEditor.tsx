@@ -20,7 +20,7 @@ import { usePermission } from "@/hooks/usePermission";
 import { ingestKnowledgeDocument } from "@/services/knowledge-client";
 import WritingDraftPanel from "./WritingDraftPanel";
 import WritingSlashMenu, { useSlashMenu } from "./WritingSlashMenu";
-import WritingCheckPanel from "./WritingCheckPanel";
+import WritingCheckPanel, { runWritingCheck } from "./WritingCheckPanel";
 import WritingPreviewModal from "./WritingPreviewModal";
 import WritingHistoryModal from "./WritingHistoryModal";
 import WritingAiMenu from "./WritingAiMenu";
@@ -123,7 +123,7 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
   });
 
   // ── 加载文档 ──
-  // editor ref：useEditor 的 onUpdate/handleKeyDown 闭包里拿不到 editor 变量本身，用 ref 镜像
+  // editor ref：useEditor 事件闭包拿不到 editor 变量，用 ref 镜像
   const editorRef = useRef<NonNullable<ReturnType<typeof useEditor>> | null>(null);
   useEffect(() => {
     editorRef.current = editor ?? null;
@@ -253,7 +253,6 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
       showToast(res.error || "AI 改写失败", "error");
     }
   };
-
   // 返回列表：先把挂起的防抖保存立即落盘（含标题），完成后再刷新列表——
   // 否则列表 GET 与落盘 PUT 竞速，会显示旧标题（验收反馈）
   const handleBack = async () => {
@@ -262,12 +261,24 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
     onBack();
   };
 
-  // R15：快照式预览——打开瞬间定格当前内容（编辑与预览是两个态，不做实时同步）；
-  // 顶栏「预览」按钮与导出菜单 PDF 项共用同一函数（PDF 经打印预览实现）
+  // R15：快照式预览（打开瞬间定格，不实时同步）；顶栏按钮与导出 PDF 项共用
   const openPreview = useCallback(() => {
     setPreviewSnapshot({ markdown: editor?.getMarkdown() ?? "", title });
     setPreviewOpen(true);
   }, [editor, title]);
+
+  // T3 自动体检：AI 初稿常带 [[残留]]/套话/层级跳号，生成完立即自检并弹体检面板
+  const handleDraftGenerated = (content: string) => {
+    if (!content.trim()) return showToast("AI 未返回内容", "error");
+    editor?.commands.setContent(content, { contentType: "markdown" } as never);
+    setDraftOpen(false);
+    void saveDoc();
+    const warnings = runWritingCheck(content).filter((r) => !r.ok);
+    if (warnings.length > 0) {
+      showToast(`初稿体检：${warnings.map((w) => w.label).join("、")} 有提醒，建议交稿前处理`, "warning");
+      setCheckOpen(true);
+    }
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -334,16 +345,7 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
           material={draftMaterial || undefined}
           autoStart={!!draftMaterial}
           title={title}
-          onGenerated={(content) => {
-            // R8 止血第二道防线：空/纯空白内容不得清空已有文档（后端 error 块、空产出已拦一道）
-            if (!content.trim()) {
-              showToast("AI 未返回内容", "error");
-              return;
-            }
-            editor?.commands.setContent(content, { contentType: "markdown" } as never);
-            setDraftOpen(false);
-            void saveDoc();
-          }}
+          onGenerated={handleDraftGenerated}
           onClose={() => setDraftOpen(false)}
         />
       )}
