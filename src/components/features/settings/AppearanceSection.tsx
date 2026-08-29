@@ -115,16 +115,15 @@ export function AppearanceSection() {
                 setExportFont(val)
                 localStorage.setItem('app-export-font', val)
               }}
-              className="w-full px-3 py-2.5 rounded-lg text-sm border border-[color:var(--border)] bg-[color:var(--card)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] appearance-none cursor-pointer"
-              style={{ color: 'var(--fg)' }}
+              className="w-full px-3 py-2.5 rounded-lg text-sm border border-[color:var(--border)] bg-[color:var(--card)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] appearance-none cursor-pointer text-foreground"
             >
               <option value="SimSun, serif">宋体（正式 · 推荐）</option>
               <option value="SimHei, sans-serif">黑体（清晰）</option>
               <option value="KaiTi, serif">楷体（美观）</option>
               <option value="Microsoft YaHei, sans-serif">微软雅黑（现代）</option>
             </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--muted)' }}>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M3 5 L6 8 L9 5" />
               </svg>
             </div>

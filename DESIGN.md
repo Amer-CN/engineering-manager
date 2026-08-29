@@ -180,6 +180,8 @@ Bedrock 把工程管家当成一台**专业驾驶舱级的精密仪器**来对�
 | `destructive` | `--danger` | 危险操作 |
 | `border` / `input` | `--border` | 边框 / 输入框描边 |
 | `ring` | `--accent` | 焦点环 |
+| `content-2` | `--fg-2` | 次级正文（= frontmatter `colors.content-2`，值逐字一致） |
+| `accent-soft` | `--accent-soft` | 选中 / hover 淡底；`accent` 已被 `--card-hover` 占用，故另起一名 |
 
 **The Bridge-Not-Overwrite Rule.** 绝不在 CSS 里用 shadcn 的语义重定义项目已有的 `--accent` / `--muted`（会破坏全站品牌色与文字色）。映射一律走 tailwind.config.js 的颜色名，CSS 变量层保持项目原义。新增的唯一 CSS 变量是每主题一份的 `--on-accent`（accent 上的文字色）。
 
@@ -250,9 +252,9 @@ Bedrock 默认是平的（Flat-By-Default）。但少数屏幕的任务本质是
 
 **The Glass Whitelist（决策 3）.** `backdrop-filter` 只允许出现在六类浮层：**CommandPalette**、**Modal / Dialog**、**Toast**、**Popover / 下拉**、**顶部浮动 ActivityBar**、**Sidebar 飞出层**；外加经 Stage-Surface 授权的舞台区（GlassCarousel 聚焦卡与其悬浮信息卡；旧 FolderStack3D 已于 M4 下线）。明确禁止：**DataTable 行**、**Dashboard KPI 卡**、**StatusBar**、**TitleBar**、**输入框**。非聚焦卡一律用「伪砂面」（半透渐变 + 1px 内高光描边），不开 `backdrop-filter`，否则帧率必塌。
 
-**GlassCarousel 舞台区授权（2026-08-06 决策 · 知识库首页 3D 玻璃文件夹轮播）.** `features/knowledge/glass/` 为第二个 Stage-Surface 授权区，视觉蓝本 = AI Studio 参考项目（3D Glass Folder Carousel）：
+**GlassCarousel 舞台区授权（2026-08-06 决策 · 知识库首页 3D 玻璃文件夹轮播）.** `features/knowledge/glass-integration/` 为第二个 Stage-Surface 授权区（早期契约写作 `features/knowledge/glass/`，仓库中无此目录），视觉蓝本 = AI Studio 参考项目（3D Glass Folder Carousel）：
 - **旧约束作废**：FolderStack3D Phase 2 的「紧密堆叠 / 禁止选中放大抽出 / 禁止 Cover Flow 展开 / 禁止 z-index 遮挡」等约束全部作废（旧设计失败后的过度矫正，见 docs/handoff/HANDOFF-knowledge-3d-carousel.md §〇）。选中卡允许 scale 1.03、上浮 36px、纸张扇形展开、emerald 玻璃前袋、z-index 排遮挡。
-- **颜色内聚**：舞台区内 emerald 系只经 `glassCarousel.css` 的 `--gc-*` 变量（或舞台容器内联 token）使用，不散落组件任意值；舞台外一切普通 UI（弹窗 / 按钮 / 表单）走 primary + slate，禁止 emerald 泄露出舞台。
+- **颜色内聚**：舞台区配色只经 `--gc-*` 变量使用，定义在 `src/index.css`（早期契约写作 `glassCarousel.css`，该文件不存在）。**变量定义在 `:root` + `[data-theme]` 全局层，不放 `.gc-stage-iso` 容器作用域** —— 舞台的「新建文件夹」弹窗是舞台容器的兄弟节点而非子节点，此前取不到容器内变量、静默退到 emerald 兜底，造成默认净白主题下轮播卡为中性灰而弹窗按钮为绿。使用点一律写 `var(--gc-x)`，**禁止带 hex 兜底**：兜底值曾出现同名三值（`--gc-active` 被写作 `#10b981` / `#065f46` / `#047857`），且一旦触发即说明主题桥接断裂，宁可见色块缺失也不要静默错色。舞台外一切普通 UI（弹窗 / 按钮 / 表单）走 primary + slate，禁止 emerald 泄露出舞台。
 - **玻璃授权**：前袋、悬浮信息卡、控制按钮属本授权区（不受 Glass Whitelist 常驻元素禁令约束，舞台区内可开 backdrop-blur）。
 - **验收门**（沿用旧 FolderStack3D 确立的标准）：≥55fps；低帧降级（关玻璃模糊 + 缩渲染窗口）；`prefers-reduced-motion` 降为横向扁平轨道；首尾释放滚动权，严禁 scroll trapping；每帧直写 style，聚焦索引变化才 setState 一次。
 
@@ -357,5 +359,7 @@ AI 主页中央的助手形象。当前为**扁平中性占位**（墨色圆形 
 - `src/**/*Colors.ts`（如 `costLedgerColors.ts` / `dashboardColors.ts` / `hrColors.ts` 等）：图表 / 状态 / 分类的配色映射表。
 - `src/**/printExport.ts`、`src/utils/wage-export.ts`、`invoicesPrintExportColors.ts` 等：Excel / 打印导出需要具体色值，非页面渲染。
 - `src/components/ui/SimpleBarChart.tsx`、`HoverScrollbar.tsx` 等：图表几何 / 滚动条需按数据动态计算的内联样式。
+- `src/App.tsx` 应用外壳根节点的 `boxShadow: 0 0 0 1px rgba(0,0,0,.08), 0 0 20px rgba(0,0,0,.08)`：它模拟的是**桌面窗口边框**而非内容表面层级，故三主题同值、不随主题走，也不并入 `--shadow-*` 标尺（Flat-By-Default 约束的是内容表面）。
+- `--muted-2`（`SettingsChangelog.tsx` 列表项目符号等，全站 12 处）：三主题均已定义，但 frontmatter 从未为这第四档文字色命名 → 无等价 Tailwind 类可替换，相关内联样式属**待决**而非违规。定名前不得当作例外长期固化，见下条 needs-design-decision。
 
 新增例外须在此登记并说明理由；未登记的硬编码颜色 / 内联样式一律视为设计债。
