@@ -14,7 +14,9 @@ import type {
   LlmProviderStatus,
   LlmProviderTestRequest,
   LlmProviderTestResponse,
-  LlmProviderConfig,
+  ModelCapability,
+  MultiProviderConfig,
+  ProviderEntry,
   ToolCallResult,
 } from '../types/agent'
 
@@ -203,11 +205,11 @@ export async function testLlmProviderConnection(
 }
 
 /**
- * 保存 LLM 配置（需 admin 权限，DPAPI 加密存储）
- * @param config LLM 配置
+ * 保存多服务商 LLM 配置（需 admin 权限，DPAPI 逐 provider 加密存储）
+ * apiKey 留空的 provider 由后端保留原密钥
  */
 export async function saveLlmProviderConfig(
-  config: LlmProviderConfig
+  config: MultiProviderConfig
 ): Promise<{ success: boolean; error?: string }> {
   const result = await apiClient.post<{ success: boolean; message?: string }>(
     '/api/agent/setup/save',
@@ -225,16 +227,25 @@ export async function saveLlmProviderConfig(
 /**
  * 获取当前生效的 LLM 配置（不含 apiKey）
  */
+/**
+ * 获取当前生效的 LLM 配置（不含 apiKey；含完整多服务商列表，密钥投影为 hasApiKey）
+ */
 export async function getLlmProviderConfig(): Promise<{
+  // ── 展开后的当前生效配置（旧消费方兼容字段）──
   providerName: string
   baseUrl: string
   model: string
   useBuiltIn: boolean
   temperature: number
   maxTokens: number
-  /** 可选模型清单（保存时「获取模型列表」的结果；单元素 = 前端隐藏选择器） */
   availableModels?: string[]
+  modelCapabilities?: Record<string, ModelCapability>
   hasApiKey: boolean
+  // ── 多服务商 ──
+  activeProviderId: string | null
+  providers: ProviderEntry[]
+  /** HTTP 代理地址（空 = 直连） */
+  proxyUrl?: string
 } | null> {
   const result = await apiClient.get<{
     providerName: string
@@ -244,7 +255,11 @@ export async function getLlmProviderConfig(): Promise<{
     temperature: number
     maxTokens: number
     availableModels?: string[]
+    modelCapabilities?: Record<string, ModelCapability>
     hasApiKey: boolean
+    activeProviderId: string | null
+    providers: ProviderEntry[]
+    proxyUrl?: string
   }>('/api/agent/config')
   if (!result.success || !result.data) {
     console.warn('[AgentClient] 获取 LLM 配置失败:', result.error)

@@ -95,7 +95,45 @@ export interface AgentMessageResponse {
 // LLM 配置
 // ═══════════════════════════════════════════════════════════════
 
-/** LLM Provider 配置 */
+/** 模型能力标记（参照 ZCode 编辑模型配置：输入 text/image/video，输出 text 锁定） */
+export interface ModelCapability {
+  input: string[]
+  output: string[]
+}
+
+/** 服务商下的单个模型条目 */
+export interface ProviderModelEntry {
+  id: string
+  input: string[]
+  output: string[]
+}
+
+/**
+ * 自定义服务商条目 — 多服务商并存，各自的 BaseUrl / Key / 模型列表
+ * apiKey 仅在保存请求中出现（留空 = 保留原密钥）；读取响应里只有 hasApiKey
+ */
+export interface ProviderEntry {
+  id: string
+  name: string
+  baseUrl: string
+  apiKey?: string
+  hasApiKey?: boolean
+  models: ProviderModelEntry[]
+  activeModelId: string
+}
+
+/** 多服务商配置 — AI 设置的完整状态（整份回传保存） */
+export interface MultiProviderConfig {
+  activeProviderId: string | null
+  useBuiltIn: boolean
+  providers: ProviderEntry[]
+  temperature: number
+  maxTokens: number
+  /** HTTP 代理地址（如 http://127.0.0.1:7890；空 = 直连） */
+  proxyUrl?: string
+}
+
+/** LLM Provider 配置（后端展开后的「当前生效配置」形状） */
 export interface LlmProviderConfig {
   providerName: string
   baseUrl: string
@@ -106,6 +144,8 @@ export interface LlmProviderConfig {
   maxTokens: number
   /** 「获取模型列表」拉到的可选模型清单（保存时随配置持久化） */
   availableModels?: string[]
+  /** 各模型能力标记（key = 模型 ID；缺失 = 纯文本） */
+  modelCapabilities?: Record<string, ModelCapability>
   updatedAt?: string
   updatedBy?: string
 }
@@ -123,6 +163,8 @@ export interface LlmProviderStatus {
 export interface LlmProviderTestRequest {
   baseUrl: string
   apiKey: string
+  /** HTTP 代理地址（可选；空 = 直连） */
+  proxyUrl?: string
 }
 
 /** 测试连接响应 */
