@@ -188,3 +188,5 @@ docs/repowiki-cross-agent-discussion.md
 
 # R9 安全审查工作简报（勿提交）
 .work/
+.work-dry/
+cloudflare-worker/dashboard-dist/
