@@ -278,7 +278,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
           `}
           title={isPlaying ? '暂停自动滚动' : '开启循环滚动'}
         >
-          {isPlaying ? <Pause className="w-4 h-4 text-[color:var(--gc-active-border,#34d399)]" /> : <Play className="w-4 h-4 text-[color:var(--gc-active-border,#34d399)]" />}
+          {isPlaying ? <Pause className="w-4 h-4 text-[color:var(--gc-active-border)]" /> : <Play className="w-4 h-4 text-[color:var(--gc-active-border)]" />}
           <span className="hidden sm:inline">{isPlaying ? '循环中' : '已暂停'}</span>
         </button>
 
@@ -288,7 +288,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
             p-3 rounded-full backdrop-blur-md transition-all duration-200 border shadow-lg
             ${
               showControls
-                ? 'bg-[color:var(--gc-active,#10b981)] text-[color:var(--gc-active-ink,#fff)] border-[color:var(--gc-active-border,#34d399)]'
+                ? 'bg-[color:var(--gc-active)] text-[color:var(--gc-active-ink)] border-[color:var(--gc-active-border)]'
                 : isDark
                 ? 'bg-zinc-900/70 border-white/20 text-white hover:bg-zinc-800'
                 : 'bg-white/80 border-white/80 text-zinc-900 hover:bg-white'
@@ -347,7 +347,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
                 setItemSpacing(90);
                 setScrollSpeed(1);
               }}
-              className="text-[color:var(--gc-icon,#34d399)] flex items-center gap-1 hover:underline"
+              className="text-[color:var(--gc-icon)] flex items-center gap-1 hover:underline"
             >
               <RotateCcw className="w-3 h-3" /> 重置
             </button>
@@ -365,7 +365,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
               step="0.1"
               value={scrollSpeed}
               onChange={(e) => setScrollSpeed(parseFloat(e.target.value))}
-              className="w-full accent-[color:var(--gc-active,#10b981)] cursor-pointer"
+              className="w-full accent-[color:var(--gc-active)] cursor-pointer"
             />
           </div>
 
@@ -380,7 +380,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
               max="60"
               value={rotateYAngle}
               onChange={(e) => setRotateYAngle(parseInt(e.target.value))}
-              className="w-full accent-[color:var(--gc-active,#10b981)] cursor-pointer"
+              className="w-full accent-[color:var(--gc-active)] cursor-pointer"
             />
           </div>
 
@@ -395,7 +395,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
               max="30"
               value={rotateXAngle}
               onChange={(e) => setRotateXAngle(parseInt(e.target.value))}
-              className="w-full accent-[color:var(--gc-active,#10b981)] cursor-pointer"
+              className="w-full accent-[color:var(--gc-active)] cursor-pointer"
             />
           </div>
 
@@ -410,7 +410,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
               max="140"
               value={itemSpacing}
               onChange={(e) => setItemSpacing(parseInt(e.target.value))}
-              className="w-full accent-[color:var(--gc-active,#10b981)] cursor-pointer"
+              className="w-full accent-[color:var(--gc-active)] cursor-pointer"
             />
           </div>
         </div>
@@ -530,7 +530,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
                 h-2 rounded-full transition-all duration-75
                 ${
                   isSelected
-                    ? 'w-7 bg-[color:var(--gc-active,#10b981)] shadow-[0_0_10px_var(--gc-active,#10b981)]'
+                    ? 'w-7 bg-[color:var(--gc-active)] shadow-[0_0_10px_var(--gc-active)]'
                     : isDark
                     ? 'w-2 bg-white/20 hover:bg-white/40'
                     : 'w-2 bg-black/20 hover:bg-black/40'

@@ -128,7 +128,7 @@ export default defineConfig({
         'src/components/features/**',
       ],
     },
-    exclude: ['node_modules/**', 'dist/**', 'src-tauri/**', 'e2e/**'],
+    exclude: ['**/node_modules/**', 'dist/**', 'src-tauri/**', 'e2e/**', '.work/**'],
     server: {
       deps: {
         inline: ['@testing-library/user-event']

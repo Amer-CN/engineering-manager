@@ -63,7 +63,9 @@ describe('AiProviderSection — 自定义模型卡死回归', () => {
     })
     render(<AiProviderSection />)
     await waitFor(() => expect(screen.getByText('AI 助手设置')).toBeTruthy())
-    fireEvent.click(screen.getByText('测试连接'))
+    // 「测试连接」住在「添加服务商」表单内（ProviderAddForm），必须先展开表单
+    fireEvent.click(screen.getByText('添加服务商'))
+    fireEvent.click(await screen.findByText('测试连接'))
     await waitFor(() =>
       expect(useToastStore.getState().toasts.some(t => t.message.includes('请先填写 Base URL'))).toBe(true),
     )

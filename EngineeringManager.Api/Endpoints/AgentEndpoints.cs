@@ -698,11 +698,14 @@ public static class AgentEndpoints
 
                 var baseUrl = root.GetProperty("baseUrl").GetString() ?? "";
                 var apiKey = root.GetProperty("apiKey").GetString() ?? "";
+                var proxyUrl = root.TryGetProperty("proxyUrl", out var proxyProp) && proxyProp.ValueKind == JsonValueKind.String
+                    ? proxyProp.GetString()
+                    : null;
 
                 if (string.IsNullOrEmpty(baseUrl) || string.IsNullOrEmpty(apiKey))
                     return Common.Fail("baseUrl 和 apiKey 不能为空");
 
-                var (success, models, error) = await llm.TestConnectionAsync(baseUrl, apiKey);
+                var (success, models, error) = await llm.TestConnectionAsync(baseUrl, apiKey, proxyUrl);
 
                 return Common.Ok(new
                 {
@@ -725,7 +728,8 @@ public static class AgentEndpoints
 
         app.MapPost("/api/agent/setup/save", async (
             HttpContext ctx,
-            LlmProviderService llm) =>
+            LlmProviderService llm,
+            MultiProviderConfig multi) =>
         {
             var uid = CurrentUser.GetUserId(ctx);
             if (string.IsNullOrEmpty(uid))
@@ -735,23 +739,11 @@ public static class AgentEndpoints
 
             try
             {
-                using var doc = await JsonDocument.ParseAsync(ctx.Request.Body);
-                var root = doc.RootElement;
+                if (multi == null)
+                    return Common.Fail("配置不能为空");
 
-                var config = new LlmProviderConfig
-                {
-                    ProviderName = GetStringProp(root, "providerName") ?? "Custom",
-                    BaseUrl = GetStringProp(root, "baseUrl") ?? "https://apihub.agnes-ai.com/v1",
-                    ApiKey = GetStringProp(root, "apiKey") ?? "",
-                    Model = GetStringProp(root, "model") ?? "agnes-2.5-flash",
-                    UseBuiltIn = GetBoolProp(root, "useBuiltIn"),
-                    Temperature = GetDoubleProp(root, "temperature"),
-                    MaxTokens = GetIntProp(root, "maxTokens"),
-                    // 「获取模型列表」拉到的清单随配置一起持久化（空 = 后端按当前模型兜底单元素）
-                    AvailableModels = GetStringListProp(root, "availableModels") ?? new List<string>(),
-                };
-
-                await llm.SaveUserConfigAsync(config);
+                // 任何响应不得携带明文 key：此处只接收并落盘（DPAPI），不走返回值
+                await llm.SaveMultiConfigAsync(multi);
                 return Common.Ok(new { message = "配置已保存" });
             }
             catch (Exception ex)
@@ -773,7 +765,11 @@ public static class AgentEndpoints
 
             try
             {
+                // 展开后的当前生效配置（AgentDashboard 等旧消费方兼容字段）
                 var config = llm.GetConfig();
+                // 完整多服务商列表（apiKey 投影为 hasApiKey，明文 key 不出后端）
+                var multi = llm.GetMultiConfig();
+
                 return Common.Ok(new
                 {
                     config.ProviderName,
@@ -783,7 +779,19 @@ public static class AgentEndpoints
                     config.Temperature,
                     config.MaxTokens,
                     config.AvailableModels,
+                    config.ModelCapabilities,
                     hasApiKey = !string.IsNullOrEmpty(config.ApiKey),
+                    multi.ActiveProviderId,
+                    multi.ProxyUrl,
+                    providers = multi.Providers.Select(p => new
+                    {
+                        p.Id,
+                        p.Name,
+                        p.BaseUrl,
+                        p.ActiveModelId,
+                        p.Models,
+                        hasApiKey = !string.IsNullOrEmpty(p.ApiKey),
+                    }).ToList(),
                 });
             }
             catch (Exception ex)
@@ -1028,6 +1036,42 @@ public static class AgentEndpoints
             return list;
         }
         return null;
+    }
+
+    private static List<string> GetStringArray(JsonElement obj, string name)
+    {
+        var list = new List<string>();
+        if (obj.TryGetProperty(name, out var arr) && arr.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in arr.EnumerateArray())
+            {
+                if (item.ValueKind == JsonValueKind.String)
+                {
+                    var s = item.GetString();
+                    if (!string.IsNullOrWhiteSpace(s)) list.Add(s);
+                }
+            }
+        }
+        return list;
+    }
+
+    /// <summary>解析各模型能力标记：{ "模型ID": { input: ["text","image"], output: ["text"] } }</summary>
+    private static Dictionary<string, ModelCapability>? GetModelCapabilitiesProp(JsonElement root, string name)
+    {
+        if (!root.TryGetProperty(name, out var prop) || prop.ValueKind != JsonValueKind.Object)
+            return null;
+
+        var dict = new Dictionary<string, ModelCapability>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in prop.EnumerateObject())
+        {
+            if (entry.Value.ValueKind != JsonValueKind.Object) continue;
+            dict[entry.Name] = new ModelCapability
+            {
+                Input = GetStringArray(entry.Value, "input"),
+                Output = GetStringArray(entry.Value, "output"),
+            };
+        }
+        return dict;
     }
 
     private static bool GetBoolProp(JsonElement root, string name)

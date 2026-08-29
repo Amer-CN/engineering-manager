@@ -98,11 +98,13 @@ public static class MigrationRunner
         }
     }
 
-    /// <summary>SQLite "良性 ALTER 错误"判定：列已存在/表已存在/索引已存在等。</summary>
+    /// <summary>SQLite "良性 ALTER 错误"判定：列已存在/表已存在/索引已存在等；
+    /// "no such column" 服务于 RENAME 类列对齐迁移的幂等（045：新库无 resource_type 旧列，改名无操作）。</summary>
     private static bool IsBenignAlterError(Microsoft.Data.Sqlite.SqliteException ex) =>
         ex.SqliteErrorCode == 1 && (
             ex.Message.Contains("duplicate column name", StringComparison.OrdinalIgnoreCase) ||
-            ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase)
+            ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase) ||
+            ex.Message.Contains("no such column", StringComparison.OrdinalIgnoreCase)
         );
 
     /// <summary>

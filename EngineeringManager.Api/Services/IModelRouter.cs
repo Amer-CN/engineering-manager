@@ -22,5 +22,7 @@ public record ModelRouteInfo(
     string ProviderName,
     bool UseBuiltIn,
     double Temperature = 0.7,
-    int MaxTokens = 4096
+    int MaxTokens = 4096,
+    /** HTTP 代理地址（null/空 = 直连） */
+    string? ProxyUrl = null
 );
