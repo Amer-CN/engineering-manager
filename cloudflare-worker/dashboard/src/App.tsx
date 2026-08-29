@@ -22,6 +22,8 @@ import { TrendChart } from "./components/TrendChart";
 const PAGE_SIZE = 20;
 const REFRESH_MS = 30_000;
 const AUTO_REFRESH_KEY = "ec-auto-refresh";
+/** tab 悬停预取最小间隔：300ms 内重复触发 no-op */
+const PREFETCH_THROTTLE_MS = 300;
 
 interface Route {
   name: "login" | "list" | "detail";
@@ -66,6 +68,13 @@ export default function App() {
 
   // 加载态
   const [loadingGroups, setLoadingGroups] = useState(false);
+  const [loadingSummary, setLoadingSummary] = useState(false);
+
+  // per-status 列表缓存：切 tab 时命中即瞬间呈现（后台 revalidate 原地更新）
+  const groupsCacheRef = useRef<Map<StatusFilter, GroupsResponse>>(new Map());
+  const groupsCacheKeyRef = useRef(`${severity}|${search}|${sort}|${page}`);
+  // 预取节流：status → 上次触发时间戳
+  const lastPrefetchRef = useRef<Map<StatusFilter, number>>(new Map());
 
   // toast
   const [toast, setToast] = useState<ToastItem | null>(null);
@@ -153,11 +162,14 @@ export default function App() {
     setEmail("");
     setSummary(null);
     setGroups(null);
+    groupsCacheRef.current.clear();
+    lastPrefetchRef.current.clear();
     navigate({ name: "login" });
   }
 
   // 拉取数据
   const loadSummary = useCallback(async () => {
+    setLoadingSummary(true);
     try {
       const s = await api.summary();
       setSummary(s);
@@ -168,6 +180,8 @@ export default function App() {
       } else {
         showToast(err instanceof ApiRequestError ? err.message : "加载概览失败");
       }
+    } finally {
+      setLoadingSummary(false);
     }
   }, [showToast]);
 
@@ -183,6 +197,7 @@ export default function App() {
         pageSize: PAGE_SIZE,
       });
       setGroups(g);
+      groupsCacheRef.current.set(status, g);
     } catch (err) {
       if (err instanceof ApiRequestError && err.status === 401) {
         setAuthed(false);
@@ -195,7 +210,35 @@ export default function App() {
     }
   }, [status, severity, search, sort, page, showToast]);
 
+  // tab 悬停/聚焦预取：不动当前 UI；已有缓存则跳过
+  // 竞态防护：预取响应回来时若用户已切到该 tab（主加载流程已接管）或筛选已变，丢弃结果
+  const handlePrefetch = useCallback(
+    (s: StatusFilter) => {
+      const now = Date.now();
+      const last = lastPrefetchRef.current.get(s) ?? 0;
+      if (now - last < PREFETCH_THROTTLE_MS) return;
+      lastPrefetchRef.current.set(s, now);
+      if (groupsCacheRef.current.has(s)) return;
+      if (groupsCacheKeyRef.current !== `${severity}|${search}|${sort}|${page}`) return;
+      void api
+        .groups({ status: s, severity, q: search, sort, page, pageSize: PAGE_SIZE })
+        .then((g) => {
+          if (groupsCacheKeyRef.current !== `${severity}|${search}|${sort}|${page}`) return;
+          groupsCacheRef.current.set(s, g);
+        })
+        .catch(() => {
+          /* 预取失败静默，主加载流程会重试 */
+        });
+    },
+    [severity, search, sort, page],
+  );
+
   // ===== 多选与批量操作 =====
+
+  // 批量操作/resolve-all 成功后数据已变：清全部缓存
+  const invalidateCache = useCallback(() => {
+    groupsCacheRef.current.clear();
+  }, []);
 
   const handleToggleSelect = useCallback((fp: string) => {
     setSelected((prev) => {
@@ -228,6 +271,7 @@ export default function App() {
         const res = await api.bulkStatus(fps, bulkStatus);
         showToast(`已更新 ${res.updated} 条`);
         setSelected(new Set());
+        invalidateCache();
         loadSummary();
         loadGroups();
       } catch (err) {
@@ -239,7 +283,7 @@ export default function App() {
         }
       }
     },
-    [selected, showToast, loadSummary, loadGroups],
+        [selected, showToast, loadSummary, loadGroups, invalidateCache],
   );
 
   const handleResolveAll = useCallback(async () => {
@@ -247,6 +291,7 @@ export default function App() {
       const res = await api.resolveAll();
       showToast(`已更新 ${res.updated} 条`);
       setSelected(new Set());
+      invalidateCache();
       loadSummary();
       loadGroups();
     } catch (err) {
@@ -257,7 +302,7 @@ export default function App() {
         showToast(err instanceof ApiRequestError ? err.message : "操作失败");
       }
     }
-  }, [showToast, loadSummary, loadGroups]);
+  }, [showToast, loadSummary, loadGroups, invalidateCache]);
 
   // 首次拉取 + 依赖变化时拉取（路由切换不触发）
   useEffect(() => {
@@ -294,6 +339,27 @@ export default function App() {
     setPage(1);
   }, [status, severity, search, sort]);
 
+  // 切 tab：命中缓存 → 立即 setGroups 瞬间呈现（loadGroups 仍会后台 revalidate，原地更新）
+  const handleStatus = useCallback(
+    (v: StatusFilter) => {
+      const cached = groupsCacheRef.current.get(v);
+      if (cached && groupsCacheKeyRef.current === `${severity}|${search}|${sort}|${page}`) {
+        setGroups(cached);
+      }
+      setStatus(v);
+    },
+    [severity, search, sort, page],
+  );
+
+  // 筛选/搜索/排序/页码变化：清掉全部 per-status 缓存（保守简单）
+  useEffect(() => {
+    const key = `${severity}|${search}|${sort}|${page}`;
+    if (groupsCacheKeyRef.current === key) return;
+    groupsCacheKeyRef.current = key;
+    groupsCacheRef.current.clear();
+    lastPrefetchRef.current.clear();
+  }, [severity, search, sort, page]);
+
   // 筛选/翻页变更清空选择集合（自动刷新不在此列，选择按 fingerprint 保留）
   useEffect(() => {
     setSelected(new Set());
@@ -320,6 +386,9 @@ export default function App() {
   }
 
   const rows: GroupRow[] = groups?.rows ?? [];
+  // 首次加载（无数据）才走骨架屏；已有数据时刷新走淡化（GroupsList 内部处理）
+  const initialLoading = loadingGroups && groups === null;
+  const refreshing = loadingGroups && groups !== null;
 
   return (
     <div className="min-h-screen">
@@ -380,9 +449,9 @@ export default function App() {
       </header>
 
       <main className="mx-auto max-w-[1200px] px-4 py-5 md:px-6">
-        {/* 概览：KPI + 趋势 */}
+        {/* 概览：KPI + 趋势（summary 刷新中保留旧值淡化，首载走骨架屏） */}
         <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch">
-          <div className="lg:flex-[1.4]">
+          <div className={`lg:flex-[1.4] transition-opacity duration-150 ${loadingSummary && summary ? "opacity-60" : ""}`}>
             {summary ? (
               <KpiCards summary={summary} />
             ) : (
@@ -396,7 +465,7 @@ export default function App() {
               </div>
             )}
           </div>
-          <div className="lg:flex-1">
+          <div className={`lg:flex-1 transition-opacity duration-150 ${loadingSummary && summary ? "opacity-60" : ""}`}>
             {summary ? (
               <TrendChart data={summary.trend} />
             ) : (
@@ -416,7 +485,8 @@ export default function App() {
             sort={sort}
             search={search}
             total={groups?.total ?? 0}
-            onStatus={setStatus}
+            onStatus={handleStatus}
+            onPrefetch={handlePrefetch}
             onSeverity={setSeverity}
             onSort={setSort}
             onSearch={setSearch}
@@ -475,7 +545,8 @@ export default function App() {
         <div className="mt-3">
           <GroupsList
             rows={rows}
-            loading={loadingGroups}
+            loading={initialLoading}
+            refreshing={refreshing}
             total={groups?.total ?? 0}
             page={page}
             onSelect={handleSelect}

@@ -10,6 +10,8 @@ interface Props {
   search: string;
   total: number;
   onStatus: (v: StatusFilter) => void;
+  /** tab 悬停/聚焦预取：后台拉取该 status 列表，不动当前 UI */
+  onPrefetch: (v: StatusFilter) => void;
   onSeverity: (v: SeverityFilter) => void;
   onSort: (v: SortKey) => void;
   onSearch: (v: string) => void;
@@ -65,6 +67,8 @@ export const GroupsToolbar = memo(function GroupsToolbar(props: Props) {
             <button
               key={t.key}
               onClick={() => props.onStatus(t.key)}
+              onMouseEnter={() => props.onPrefetch(t.key)}
+              onFocus={() => props.onPrefetch(t.key)}
               className="focus-ring relative h-9 px-3 text-sm transition-colors"
               style={{ color: active ? "var(--fg)" : "var(--fg-2)" }}
             >
