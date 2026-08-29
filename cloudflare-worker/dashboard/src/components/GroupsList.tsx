@@ -144,7 +144,10 @@ function ListRow({
 
 export interface GroupsListProps {
   rows: GroupRow[];
+  /** 首次加载（无数据）：骨架屏 */
   loading: boolean;
+  /** 刷新中（已有数据）：保留旧内容 + 淡化，不闪骨架 */
+  refreshing?: boolean;
   total: number;
   page: number;
   pageSize?: number;
@@ -158,6 +161,7 @@ export interface GroupsListProps {
 export const GroupsList = memo(function GroupsList({
   rows,
   loading,
+  refreshing = false,
   total,
   page,
   pageSize = PAGE_SIZE,
@@ -171,14 +175,17 @@ export const GroupsList = memo(function GroupsList({
   const selectedCount = selected.size;
   const allSelected = rows.length > 0 && rows.every((r) => selected.has(r.fingerprint));
   const someSelected = rows.some((r) => selected.has(r.fingerprint));
+  const showSkeleton = loading && rows.length === 0;
 
   return (
     <div
-      className="overflow-hidden rounded-lg border"
+      className={`overflow-hidden rounded-lg border transition-opacity duration-150 ${
+        refreshing && !showSkeleton ? "pointer-events-none opacity-60" : ""
+      }`}
       style={{ backgroundColor: "var(--card)", borderColor: "var(--border)" }}
     >
       {/* 选择条：工具栏下、第一行前；全选框 + mono 计数 */}
-      {!loading && rows.length > 0 && (
+      {!showSkeleton && rows.length > 0 && (
         <div
           className="flex items-center justify-between border-b px-4 py-2"
           style={{ borderColor: "var(--border)", backgroundColor: "var(--panel)" }}
@@ -197,7 +204,7 @@ export const GroupsList = memo(function GroupsList({
         </div>
       )}
 
-      {loading ? (
+      {showSkeleton ? (
         <div className="flex flex-col">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="border-b px-4 py-3.5" style={{ borderColor: "var(--border)" }}>
@@ -228,7 +235,7 @@ export const GroupsList = memo(function GroupsList({
       )}
 
       {/* 分页 */}
-      {!loading && rows.length > 0 && (
+      {!showSkeleton && rows.length > 0 && (
         <div
           className="flex items-center justify-between border-t px-4 py-2.5"
           style={{ borderColor: "var(--border)" }}
