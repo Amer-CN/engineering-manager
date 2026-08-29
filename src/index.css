@@ -1480,16 +1480,17 @@ button:disabled {
 /* 行内 AI 菜单浮层与编辑器间距 */
 .tiptap:focus-visible { outline: none; }
 
-/* ═══ R15：编辑态无限画布 — Notion/飞书式，限宽内容列居中、无纸张视觉 ═══
-   编辑态放弃 A4 纸伪装（R14 分页引擎整体退役，git 历史留档）：
-   无 background / 无 border / 无 box-shadow / 无 border-radius，
-   透明融入滚动区背景 var(--panel-2)；限宽 794px 居中、min-height 70vh、
-   padding 32px 48px。文字颜色跟随主题（删除纸张固定色 #1f2328，
-   深浅色自适应）；placeholder 色用 var(--muted) 替代硬编码 #9ca3af。 */
+/* ═══ R15：编辑态无限画布 — 飞书式内容大卡片，限宽居中、单卡无限延长 ═══
+   R16 边界感修正（用户反馈「找不到左右边界」）：透明列改为 var(--card) 白色大卡片
+   + 1px var(--border) 淡边框 + 8px 圆角——左右边界清晰，但卡片随内容无限延长、
+   无分页概念（页概念仍属打印预览/导出态）。文字颜色跟随主题，深浅色自适应。 */
 .editor-canvas {
-  width: 794px;
+  width: 820px;
   min-height: 70vh;
-  padding: 32px 48px;
+  padding: 40px 64px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
 }
 .editor-canvas .tiptap p.is-editor-empty:first-child::before { color: var(--muted); }
 
