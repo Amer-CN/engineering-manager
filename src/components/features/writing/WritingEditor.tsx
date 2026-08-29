@@ -12,6 +12,7 @@ import TaskItem from "@tiptap/extension-task-item";
 import Image from "@tiptap/extension-image";
 import Highlight from "@tiptap/extension-highlight";
 import { ProtectedSpan } from "./protectedSpan";
+import { A4Pagination } from "./a4Pagination";
 import { TextStyle, Color } from "@tiptap/extension-text-style";
 import { Icon } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/Button";
@@ -75,6 +76,7 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
       Color,
       Highlight,
       ProtectedSpan,
+      A4Pagination,
       Table.configure({ resizable: true }),
       TableRow,
       TableHeader,
@@ -256,10 +258,7 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
   // 返回列表：先把挂起的防抖保存立即落盘（含标题），完成后再刷新列表——
   // 否则列表 GET 与落盘 PUT 竞速，会显示旧标题（验收反馈）
   const handleBack = async () => {
-    if (saveTimer.current) {
-      window.clearTimeout(saveTimer.current);
-      saveTimer.current = null;
-    }
+    if (saveTimer.current) { window.clearTimeout(saveTimer.current); saveTimer.current = null; }
     await saveDoc();
     onBack();
   };
