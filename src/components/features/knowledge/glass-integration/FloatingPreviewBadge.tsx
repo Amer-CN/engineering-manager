@@ -44,7 +44,7 @@ export const FloatingPreviewBadge: React.FC<FloatingPreviewBadgeProps> = ({
       <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/50 to-transparent rounded-t-2xl" />
 
       {/* Internal Emerald Glow gradient patch */}
-      <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-[color:var(--gc-a20,#10b98133)] rounded-full blur-2xl pointer-events-none" />
+      <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-[color:var(--gc-a20)] rounded-full blur-2xl pointer-events-none" />
 
       {/* Title & Arrow */}
       <div className="flex items-center justify-between mb-1">
@@ -82,7 +82,7 @@ export const FloatingPreviewBadge: React.FC<FloatingPreviewBadgeProps> = ({
             <div
               className="absolute w-4 h-4 rounded-full"
               style={{
-                background: 'var(--gc-icon-a50, #34d39980)',
+                background: 'var(--gc-icon-a50)',
                 animation: 'gcLampBreathe 2.4s ease-in-out infinite',
               }}
             />
@@ -93,11 +93,11 @@ export const FloatingPreviewBadge: React.FC<FloatingPreviewBadgeProps> = ({
               background:
                 lampState === 'empty'
                   ? 'var(--muted, #71717a)'
-                  : 'var(--gc-icon, #34d399)',
+                  : 'var(--gc-icon)',
               boxShadow:
                 lampState === 'empty'
                   ? 'none'
-                  : '0 0 12px var(--gc-icon, #34d399)',
+                  : '0 0 12px var(--gc-icon)',
               opacity: lampState === 'idle' ? 0.75 : 1,
             }}
           />

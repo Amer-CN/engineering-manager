@@ -53,7 +53,8 @@ public class ModelRoutingService : IModelRouter
             ProviderName: config.ProviderName,
             UseBuiltIn: config.UseBuiltIn,
             Temperature: config.Temperature > 0 ? config.Temperature : 0.7,
-            MaxTokens: config.MaxTokens > 0 ? config.MaxTokens : 4096
+            MaxTokens: config.MaxTokens > 0 ? config.MaxTokens : 4096,
+            ProxyUrl: config.ProxyUrl
         );
     }
 }

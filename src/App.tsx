@@ -49,7 +49,7 @@ const Login = lazy(() => import('./components/Login'))
 
 // 加载占位 — 品牌化动画
 const PageLoader = () => (
-  <div className="flex flex-col items-center justify-center gap-4" style={{ background: 'var(--bg)', minHeight: '100vh' }}>
+  <div className="flex flex-col items-center justify-center gap-4 bg-background" style={{ minHeight: '100vh' }}>
     <motion.div
       animate={{
         scale: [1, 1.08, 1],
@@ -59,13 +59,9 @@ const PageLoader = () => (
     >
       <svg width="40" height="40" viewBox="0 0 18 18" fill="none">
         <defs>
-          <linearGradient id="loader-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="var(--accent)" />
-            <stop offset="100%" stopColor="var(--accent)" stopOpacity="0.6" />
-          </linearGradient>
           <mask id="loader-mask"><rect width="18" height="18" fill="white" /><path d="M5 14 L9 6 L13 14 Z" fill="black" /></mask>
         </defs>
-        <path d="M2 15.5 L9 2.5 L16 15.5 Z" fill="url(#loader-grad)" mask="url(#loader-mask)" />
+        <path d="M2 15.5 L9 2.5 L16 15.5 Z" fill="var(--brand)" mask="url(#loader-mask)" />
       </svg>
     </motion.div>
     <div className="flex gap-1.5">
@@ -74,8 +70,7 @@ const PageLoader = () => (
           key={i}
           animate={{ scale: [1, 1.3, 1], opacity: [0.3, 1, 0.3] }}
           transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
-          className="w-1.5 h-1.5 rounded-full"
-          style={{ background: 'var(--accent)' }}
+          className="w-1.5 h-1.5 rounded-full bg-primary"
         />
       ))}
     </div>
@@ -325,10 +320,11 @@ const AppContent: React.FC = () => {
   const shouldShowTitleBar = !isFullScreen || showTitleBarInFullScreen
 
   return (
-    <div className="h-screen relative overflow-hidden select-none flex flex-col bg-[color:var(--bg)]"
+    <div className="h-screen relative overflow-hidden select-none flex flex-col bg-background"
          style={{
+           // 桌面窗口边框描边：三主题同值，刻意不随主题走，已登记为 DESIGN.md 例外
            boxShadow: '0 0 0 1px rgba(0,0,0,0.08), 0 0 20px rgba(0,0,0,0.08)',
-         } as React.CSSProperties}>
+         }}>
       {/* 标题栏：正常模式始终显示，全屏模式鼠标靠近顶部时显示 */}
       <AnimatePresence>
         {shouldShowTitleBar && (
