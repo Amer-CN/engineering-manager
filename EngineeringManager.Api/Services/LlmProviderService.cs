@@ -1,4 +1,6 @@
+using System.Collections.Concurrent;
 using System.Data;
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -33,6 +35,44 @@ public class LlmProviderService : ILlmChatService
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
+
+    /// <summary>代理 HttpClient 缓存（按规范化代理地址复用，避免频繁建连耗尽端口）</summary>
+    private static readonly ConcurrentDictionary<string, HttpClient> ProxyClients = new();
+
+    /// <summary>
+    /// 规范化代理地址：空 = null（直连）；缺 scheme 补 http://；非法 = null + 告警
+    /// </summary>
+    internal static string? NormalizeProxyUrl(string? proxyUrl)
+    {
+        if (string.IsNullOrWhiteSpace(proxyUrl)) return null;
+        var p = proxyUrl.Trim();
+        if (!p.Contains("://", StringComparison.Ordinal)) p = "http://" + p;
+        if (!Uri.TryCreate(p, UriKind.Absolute, out var uri)
+            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            Console.Error.WriteLine($"[LlmProviderService] 代理地址无效，按直连处理: {proxyUrl.Truncate(100)}");
+            return null;
+        }
+        return p;
+    }
+
+    /// <summary>
+    /// 按代理地址取 HttpClient：无代理走工厂命名客户端；有代理走缓存的双缀客户端（HttpClientHandler.Proxy）
+    /// </summary>
+    private HttpClient BuildClient(string? proxyUrl, TimeSpan timeout)
+    {
+        var normalized = NormalizeProxyUrl(proxyUrl);
+        if (normalized == null)
+        {
+            var plain = _httpClientFactory.CreateClient("LlmProvider");
+            plain.Timeout = timeout;
+            return plain;
+        }
+        var proxied = ProxyClients.GetOrAdd(normalized, addr =>
+            new HttpClient(new HttpClientHandler { Proxy = new WebProxy(addr), UseProxy = true }));
+        proxied.Timeout = timeout;
+        return proxied;
+    }
 
     public LlmProviderService(
         ILogger<LlmProviderService> logger,
@@ -70,12 +110,12 @@ public class LlmProviderService : ILlmChatService
     /// 测试 LLM 连接 — 调用 /models 端点，返回可用模型列表
     /// </summary>
     public async Task<(bool success, string[] models, string? error)> TestConnectionAsync(
-        string baseUrl, string apiKey)
+        string baseUrl, string apiKey, string? proxyUrl = null)
     {
         try
         {
-            var client = _httpClientFactory.CreateClient("LlmProvider");
-            client.Timeout = TimeSpan.FromSeconds(30);
+            // 共享缓存的代理客户端不可 dispose；直连走工厂客户端（handler 由工厂管理）
+            var client = BuildClient(proxyUrl, TimeSpan.FromSeconds(30));
 
             using var request = new HttpRequestMessage(HttpMethod.Get,
                 $"{baseUrl.TrimEnd('/')}/models");
@@ -120,7 +160,8 @@ public class LlmProviderService : ILlmChatService
             var config = _configResolver.GetConfigWithKey();
             var (ok, _, _) = await TestConnectionAsync(
                 config.BaseUrl,
-                config.ApiKey);
+                config.ApiKey,
+                config.ProxyUrl);
             return ok;
         }
         catch
@@ -138,14 +179,22 @@ public class LlmProviderService : ILlmChatService
     }
 
     /// <summary>
-    /// 保存用户自定义配置（DPAPI 加密 apiKey，存到 llm-config.dpapi.json）
-    /// 如果 newConfig.ApiKey 为空，保留旧 key（避免前端只改 model 时把 key 清空）
+    /// 获取完整多服务商配置（含各 provider 明文 apiKey）— 仅供 /api/agent/config 投影返回
     /// </summary>
-    public async Task SaveUserConfigAsync(LlmProviderConfig newConfig)
+    public MultiProviderConfig GetMultiConfig()
     {
-        await _configResolver.SaveUserConfigAsync(newConfig);
-        _logger.LogInformation("[LlmProviderService] 用户配置已保存: Provider={Provider}, Model={Model}",
-            newConfig.ProviderName, newConfig.Model);
+        return _configResolver.GetMultiWithKey();
+    }
+
+    /// <summary>
+    /// 保存多服务商配置（DPAPI 逐 provider 加密 apiKey，存到 llm-config.dpapi.json）
+    /// ApiKey 为空的 provider 自动保留旧 key（前端出于安全不回显密钥）
+    /// </summary>
+    public async Task SaveMultiConfigAsync(MultiProviderConfig newMulti)
+    {
+        await _configResolver.SaveMultiConfigAsync(newMulti);
+        _logger.LogInformation("[LlmProviderService] 多服务商配置已保存: Providers={Count}, Active={Active}",
+            newMulti.Providers.Count, newMulti.ActiveProviderId);
     }
 
     /// <summary>
@@ -183,8 +232,7 @@ public class LlmProviderService : ILlmChatService
 
         try
         {
-            var client = _httpClientFactory.CreateClient("LlmProvider");
-            client.Timeout = TimeSpan.FromSeconds(120);
+            var client = BuildClient(route.ProxyUrl, TimeSpan.FromSeconds(120));
 
             var json = JsonSerializer.Serialize(payload, SerializerOptions);
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
@@ -193,7 +241,7 @@ public class LlmProviderService : ILlmChatService
             request.Headers.Add("Authorization", $"Bearer {route.ApiKey}");
             request.Content = content;
 
-            var response = await client.SendAsync(request);
+            using var response = await client.SendAsync(request);
             var responseBody = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
@@ -304,8 +352,7 @@ public class LlmProviderService : ILlmChatService
     {
         try
         {
-            var client = _httpClientFactory.CreateClient("LlmProvider");
-            client.Timeout = TimeSpan.FromSeconds(300);
+            var client = BuildClient(route.ProxyUrl, TimeSpan.FromSeconds(300));
 
             var json = JsonSerializer.Serialize(payload, SerializerOptions);
             using var content = new StringContent(json, Encoding.UTF8, "application/json");

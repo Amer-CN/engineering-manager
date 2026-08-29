@@ -21,9 +21,11 @@ export function AiCapabilitySection() {
           setOcrConfig={ocr.setOcrConfig}
           ocrStatus={ocr.ocrStatus}
           testingOCR={ocr.testingOCR}
+          savingOCR={ocr.savingOCR}
           ocrMessage={ocr.ocrMessage}
           onSave={ocr.handleSaveOCRConfig}
           onTest={ocr.handleTestOCR}
+          onClearKeys={ocr.handleClearOcrKeys}
         />
       </div>
     </div>
