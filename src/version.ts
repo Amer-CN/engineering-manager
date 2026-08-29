@@ -1,2 +1,2 @@
 // 此文件由 scripts/sync-version.mjs 自动生成，请勿手动修改
-export const APP_VERSION = '0.92.0'
+export const APP_VERSION = '0.93.0'
