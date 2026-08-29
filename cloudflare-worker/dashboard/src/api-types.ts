@@ -146,3 +146,21 @@ export interface ApiError {
 export type StatusFilter = "open" | "resolved" | "all";
 export type SeverityFilter = "" | "high" | "medium" | "low";
 export type SortKey = "recent" | "count";
+
+/** POST /api/groups/bulk-status 请求体：批量改状态（≤100 个 64 位 hex 指纹） */
+export interface BulkStatusRequest {
+  fingerprints: string[];
+  status: GroupStatus;
+}
+
+/** POST /api/groups/bulk-status 响应 */
+export interface BulkStatusResponse {
+  ok: true;
+  updated: number;
+}
+
+/** POST /api/groups/resolve-all 响应：把全部待处理改为已解决 */
+export interface ResolveAllResponse {
+  ok: true;
+  updated: number;
+}
