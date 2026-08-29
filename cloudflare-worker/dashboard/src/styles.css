@@ -1,0 +1,176 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Bedrock「精密仪器」token —— Graphite 暗色为默认（data-theme="dark"），
+ * 亮色为 data-theme="light"。所有颜色走 OKLCH 语义 token，零硬编码。
+ * 主色是墨色（明度对比承担强调），彩色只用于语义状态。
+ */
+
+:root,
+[data-theme="dark"] {
+  /* Graphite 石墨黑：底 → panel → card 逐级提亮，发丝边界 */
+  --bg: oklch(16% 0.008 80);
+  --panel: oklch(18.5% 0.008 80);
+  --panel-2: oklch(21% 0.008 80);
+  --card: oklch(20% 0.008 80);
+  --card-hover: oklch(23% 0.008 80);
+  --border: oklch(28% 0.01 80);
+  --border-strong: oklch(34% 0.01 80);
+  --shadow-color: oklch(0% 0 0 / 0.6);
+
+  /* 文字三级 + 品牌铜琥珀（不随主题覆盖，全站唯一携带彩色的标识） */
+  --fg: oklch(93% 0.004 80);
+  --fg-2: oklch(72% 0.006 80);
+  --muted: oklch(55% 0.005 80);
+  --brand: oklch(65% 0.13 60);
+
+  /* 墨色主色：暗色下翻转为近白 */
+  --accent: oklch(92% 0.004 80);
+  --accent-soft: oklch(28% 0.012 80);
+  --on-accent: oklch(16% 0.008 80);
+
+  /* 语义色（四主题统一，禁止位移） */
+  --state-ok: oklch(68% 0.13 155);
+  --state-warn: oklch(72% 0.13 75);
+  --state-danger: oklch(62% 0.19 25);
+}
+
+[data-theme="light"] {
+  /* Paper 暖白纸：默认旗舰亮色 */
+  --bg: oklch(98.6% 0.009 85);
+  --panel: oklch(99.4% 0.006 85);
+  --panel-2: oklch(97.5% 0.008 85);
+  --card: oklch(99.7% 0.005 85);
+  --card-hover: oklch(97% 0.008 85);
+  --border: oklch(90% 0.012 82);
+  --border-strong: oklch(82% 0.012 82);
+  --shadow-color: oklch(0% 0 0 / 0.18);
+
+  --fg: oklch(23% 0.014 70);
+  --fg-2: oklch(41% 0.012 72);
+  --muted: oklch(54% 0.01 76);
+  --brand: oklch(65% 0.13 60);
+
+  --accent: oklch(28% 0.02 74);
+  --accent-soft: oklch(94% 0.01 82);
+  --on-accent: oklch(98.5% 0.007 85);
+
+  --state-ok: oklch(50% 0.1 150);
+  --state-warn: oklch(60% 0.11 70);
+  --state-danger: oklch(52% 0.16 25);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    margin: 0;
+    background-color: var(--bg);
+    color: var(--fg);
+    font-family: Inter, "Noto Sans SC", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  ::selection {
+    background-color: var(--accent);
+    color: var(--on-accent);
+  }
+  /* 数字与等宽块强制 tabular figures，像仪表读数 */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+  .mono {
+    font-family: "JetBrains Mono", "Geist Mono", ui-monospace, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+    letter-spacing: -0.01em;
+  }
+  /* label 字样：大写 + 宽字距 */
+  .label-text {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  /* 滚动条：极细发丝，不抢视觉 */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--border-strong);
+    border-radius: 8px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--muted);
+    background-clip: content-box;
+  }
+}
+
+@layer utilities {
+  /* 发丝级焦点环：accent-soft，不做位移 */
+  .focus-ring {
+    outline: none;
+  }
+  .focus-ring:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px var(--accent-soft);
+    border-color: var(--accent);
+  }
+  /* 骨架脉动 */
+  @keyframes skeleton-pulse {
+    0%,
+    100% {
+      opacity: 0.55;
+    }
+    50% {
+      opacity: 0.85;
+    }
+  }
+  .skeleton {
+    background-color: var(--panel-2);
+    animation: skeleton-pulse 1.6s ease-in-out infinite;
+    border-radius: 9px;
+  }
+  /* toast 滑入 */
+  @keyframes toast-in {
+    from {
+      transform: translateY(-12px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  .toast-in {
+    animation: toast-in 0.22s ease-out;
+  }
+  /* 抽屉滑入 */
+  @keyframes drawer-in {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+  .drawer-in {
+    animation: drawer-in 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
