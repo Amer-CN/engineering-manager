@@ -22,6 +22,7 @@ import WritingDraftPanel from "./WritingDraftPanel";
 import WritingSlashMenu, { useSlashMenu } from "./WritingSlashMenu";
 import WritingCheckPanel from "./WritingCheckPanel";
 import WritingPreviewModal from "./WritingPreviewModal";
+import WritingHistoryModal from "./WritingHistoryModal";
 import WritingAiMenu from "./WritingAiMenu";
 import EditorToolbar from "./EditorToolbar";
 import WritingExportMenu from "./WritingExportMenu";
@@ -301,12 +302,7 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
             <Icon name="FileCheck" size={15} />
             体检
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={!editor}
-            onClick={openPreview}
-          >
+          <Button variant="ghost" size="sm" onClick={openPreview} disabled={!editor}>
             <Icon name="Eye" size={15} />
             预览
           </Button>
@@ -374,6 +370,8 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
         markdown={previewSnapshot.markdown}
         title={previewSnapshot.title}
       />
+      {/* 版本历史（T2 草稿找回）：入口按钮 + 弹窗在复合组件里；恢复成功复位保存状态 */}
+      <WritingHistoryModal docId={docId} editor={editor} onRestored={() => setSaveState("saved")} />
 
       {/* 斜杠菜单（R7：光标定位、焦点留编辑器、↑↓Enter 键盘导航） */}
       {editor && (
