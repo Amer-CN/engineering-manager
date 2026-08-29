@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { ChevronLeft, ChevronRight, Inbox } from "lucide-react";
 import type { GroupRow } from "../api-types";
 import { kindLabel, relativeTime } from "../utils";
@@ -74,7 +75,7 @@ export interface GroupsListProps {
   onPage: (page: number) => void;
 }
 
-export function GroupsList({
+export const GroupsList = memo(function GroupsList({
   rows,
   loading,
   total,
@@ -147,4 +148,4 @@ export function GroupsList({
       )}
     </div>
   );
-}
+});

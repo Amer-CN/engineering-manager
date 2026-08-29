@@ -81,6 +81,19 @@ export default function App() {
     setToast({ id: toastId.current, message });
   }, []);
 
+  // 传给 memo 组件的回调：稳定引用，避免路由切换触发全树重渲染时因内联箭头失效 memo
+  const handleSelect = useCallback((fp: string) => {
+    navigate({ name: "detail", fingerprint: fp });
+  }, []);
+
+  const handleToggleTheme = useCallback(() => {
+    setTheme((t) => (t === "dark" ? "light" : "dark"));
+  }, []);
+
+  const handleCloseToast = useCallback(() => {
+    setToast(null);
+  }, []);
+
   // 应用主题到 <html data-theme>
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -178,16 +191,16 @@ export default function App() {
     }
   }, [status, severity, search, sort, page, showToast]);
 
-  // 首次拉取 + 依赖变化时拉取
+  // 首次拉取 + 依赖变化时拉取（路由切换不触发）
   useEffect(() => {
-    if (!authed || route.name === "login") return;
+    if (!authed) return;
     loadSummary();
-  }, [authed, route.name, loadSummary]);
+  }, [authed, loadSummary]);
 
   useEffect(() => {
-    if (!authed || route.name === "login") return;
+    if (!authed) return;
     loadGroups();
-  }, [authed, route.name, loadGroups]);
+  }, [authed, loadGroups]);
 
   // 自动刷新 30s 轮询（抽屉打开时也刷新列表/概览）
   useEffect(() => {
@@ -228,7 +241,7 @@ export default function App() {
     return (
       <>
         <LoginPage onSuccess={handleLoginSuccess} />
-        <Toast toast={toast} onClose={() => setToast(null)} />
+        <Toast toast={toast} onClose={handleCloseToast} />
       </>
     );
   }
@@ -275,7 +288,7 @@ export default function App() {
             <span className="hidden sm:inline">{autoRefresh ? "自动" : "已停"}</span>
           </button>
 
-          <ThemeToggle theme={theme} onToggle={() => setTheme((t) => (t === "dark" ? "light" : "dark"))} />
+          <ThemeToggle theme={theme} onToggle={handleToggleTheme} />
 
           {email && (
             <span className="mono hidden text-xs md:inline" style={{ color: "var(--fg-2)" }}>
@@ -344,7 +357,7 @@ export default function App() {
             loading={loadingGroups}
             total={groups?.total ?? 0}
             page={page}
-            onSelect={(fp) => navigate({ name: "detail", fingerprint: fp })}
+            onSelect={handleSelect}
             onPage={setPage}
           />
         </div>

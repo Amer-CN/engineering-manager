@@ -1,3 +1,4 @@
+import { memo } from "react";
 import {
   Area,
   AreaChart,
@@ -28,7 +29,7 @@ function ChartTooltip({ active, payload }: {
   );
 }
 
-export function TrendChart({ data }: { data: TrendPoint[] }) {
+export const TrendChart = memo(function TrendChart({ data }: { data: TrendPoint[] }) {
   return (
     <div
       className="rounded-lg border p-4"
@@ -82,4 +83,4 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
       </div>
     </div>
   );
-}
+});
