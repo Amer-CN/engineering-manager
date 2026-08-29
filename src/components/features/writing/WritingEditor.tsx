@@ -12,7 +12,6 @@ import TaskItem from "@tiptap/extension-task-item";
 import Image from "@tiptap/extension-image";
 import Highlight from "@tiptap/extension-highlight";
 import { ProtectedSpan } from "./protectedSpan";
-import { A4Pagination } from "./a4Pagination";
 import { TextStyle, Color } from "@tiptap/extension-text-style";
 import { Icon } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/Button";
@@ -76,7 +75,6 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
       Color,
       Highlight,
       ProtectedSpan,
-      A4Pagination,
       Table.configure({ resizable: true }),
       TableRow,
       TableHeader,
@@ -263,6 +261,13 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
     onBack();
   };
 
+  // R15：快照式预览——打开瞬间定格当前内容（编辑与预览是两个态，不做实时同步）；
+  // 顶栏「预览」按钮与导出菜单 PDF 项共用同一函数（PDF 经打印预览实现）
+  const openPreview = useCallback(() => {
+    setPreviewSnapshot({ markdown: editor?.getMarkdown() ?? "", title });
+    setPreviewOpen(true);
+  }, [editor, title]);
+
   return (
     <div className="h-full flex flex-col">
       {/* 顶部条：返回 + 标题 + 保存状态 */}
@@ -300,16 +305,12 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
             variant="ghost"
             size="sm"
             disabled={!editor}
-            onClick={() => {
-              // 快照式预览：打开瞬间定格当前内容（编辑与预览是两个态，不做实时同步）
-              setPreviewSnapshot({ markdown: editor?.getMarkdown() ?? "", title });
-              setPreviewOpen(true);
-            }}
+            onClick={openPreview}
           >
             <Icon name="Eye" size={15} />
             预览
           </Button>
-          <WritingExportMenu editor={editor} title={title.trim() || "未命名文档"} />
+          <WritingExportMenu editor={editor} title={title.trim() || "未命名文档"} onOpenPreview={openPreview} />
         </div>
       </div>
 
@@ -320,7 +321,7 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
       >
         <button
           onDoubleClick={reset}
-          title="Ctrl+滚轮缩放 A4 纸张；双击此数字重置 100%"
+          title="Ctrl+滚轮缩放视图；双击此数字重置 100%"
           className="text-xs select-none cursor-default"
           style={{ color: "var(--muted)" }}
         >
@@ -355,7 +356,7 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
       <div ref={bindWheelRef} className="flex-1 flex flex-col min-h-0">
         <EditorToolbar editor={editor} />
         <div className="flex-1 overflow-y-auto flex justify-center bg-[color:var(--panel-2)] py-6">
-          <div className="a4-paper" ref={bindRef}>
+          <div className="editor-canvas" ref={bindRef}>
             <EditorContent editor={editor} />
           </div>
         </div>

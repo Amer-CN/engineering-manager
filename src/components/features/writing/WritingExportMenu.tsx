@@ -1,9 +1,18 @@
 /**
- * WritingExportMenu — 写作中心导出菜单（红头文件 R1）
+ * WritingExportMenu — 写作中心导出菜单（多格式中心 R15）
  *
- * 「导出」按钮点开下拉：普通 docx 导出 / 红头文件导出（GB/T 9704 模板）。
+ * 「导出」按钮点开下拉，7 项（含分隔线）：
+ *   ① Markdown（.md）        — contentMd 原文下载（text/markdown）
+ *   ② 纯文本（.txt）         — stripMarkdownSyntax(contentMd) 下载（text/plain）
+ *   ③ 网页 HTML（.html）     — buildPrintPreviewHtml(contentMd, title) 下载（text/html）
+ *   ─────────────
+ *   ⑤ Word 普通版式（.docx） — 现有 docxExport 公文样式链路
+ *   ⑥ Word 红头文件（.docx） — 现有红头表单链路（GB/T 9704 模板，保留表单）
+ *   ⑦ PDF                   — onOpenPreview() 打开打印预览，用户在预览里打印/另存 PDF
+ *
  * 红头需补元数据（机关标志 / 发文字号 / 主送 / 落款 / 成文日期 / 版记），
  * 成文日期默认今天。确认后 exportRedHeaderDocx 填充模板下载。
+ * 导出链路本体（printPreview / docxExport / redHeaderExport）不动，仅加调用。
  */
 
 import React, { useEffect, useRef, useState } from "react";
@@ -13,10 +22,14 @@ import { Button } from "@/components/ui/Button";
 import { useToastContext } from "@/components/ui/Toast/ToastProvider";
 import { exportMarkdownAsDocx } from "@/utils/docxExport";
 import { exportRedHeaderDocx } from "@/utils/redHeaderExport";
+import { downloadTextFile, stripMarkdownSyntax } from "@/utils/exportFormats";
+import { buildPrintPreviewHtml } from "@/utils/printPreview";
 
 interface WritingExportMenuProps {
   editor: Editor | null;
   title: string;
+  /** R15：PDF 导出入口——打开打印预览（用户在预览里打印/另存 PDF），与顶栏「预览」按钮同源 */
+  onOpenPreview: () => void;
 }
 
 /** 红头元数据表单（单对象 state，控制在 useState 数量上限内） */
@@ -45,7 +58,7 @@ const inputStyle = {
 
 const labelStyle = { color: "var(--fg-2)" } as const;
 
-const WritingExportMenu: React.FC<WritingExportMenuProps> = ({ editor, title }) => {
+const WritingExportMenu: React.FC<WritingExportMenuProps> = ({ editor, title, onOpenPreview }) => {
   const { showToast } = useToastContext();
   const [menuOpen, setMenuOpen] = useState(false);
   const [redOpen, setRedOpen] = useState(false);
@@ -123,6 +136,27 @@ const WritingExportMenu: React.FC<WritingExportMenuProps> = ({ editor, title }) 
     }
   };
 
+  // R15 多格式：md/txt/html 由 downloadTextFile 实现（busy 共用，防连点）
+  const handleTextExport = (ext: "md" | "txt" | "html") => {
+    if (!editor || busy) return;
+    const md = editor.getMarkdown();
+    setMenuOpen(false);
+    setBusy(true);
+    try {
+      if (ext === "md") {
+        downloadTextFile(`${title}.md`, md, "text/markdown");
+      } else if (ext === "txt") {
+        downloadTextFile(`${title}.txt`, stripMarkdownSyntax(md), "text/plain");
+      } else {
+        downloadTextFile(`${title}.html`, buildPrintPreviewHtml(md, title), "text/html");
+      }
+    } catch {
+      showToast("导出失败", "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const field = (
     label: string,
     key: keyof RedForm,
@@ -142,9 +176,13 @@ const WritingExportMenu: React.FC<WritingExportMenuProps> = ({ editor, title }) 
     </div>
   );
 
+  /** 菜单项样式（统一）：图标 + 主文案 + 可选副文案 */
+  const itemCls =
+    "w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[color:var(--panel-2)] disabled:opacity-50";
+
   return (
     <div className="relative" ref={rootRef}>
-      {/* 导出按钮：busy（普通/红头生成中）时禁用，防连点并发两次导出 */}
+      {/* 导出按钮：busy（生成中）时禁用，防连点并发两次导出 */}
       <Button variant="ghost" size="sm" onClick={() => setMenuOpen((v) => !v)} disabled={busy}>
         <Icon name="FileDown" size={15} />
         导出
@@ -152,26 +190,93 @@ const WritingExportMenu: React.FC<WritingExportMenuProps> = ({ editor, title }) 
 
       {menuOpen && (
         <div
-          className="absolute right-0 z-50 mt-1 w-44 rounded-xl border shadow-lg overflow-hidden bg-white py-1"
+          className="absolute right-0 z-50 mt-1 w-56 rounded-xl border shadow-lg overflow-hidden bg-white py-1"
           style={{ borderColor: "var(--border)" }}
         >
+          {/* ① Markdown 原文 */}
           <button
-            onClick={handlePlain}
+            onClick={() => handleTextExport("md")}
             disabled={busy}
-            className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[color:var(--panel-2)] disabled:opacity-50"
+            className={itemCls}
+            style={{ color: "var(--fg)" }}
+          >
+            <Icon name="Braces" size={15} />
+            <span className="flex flex-col items-start">
+              <span>Markdown</span>
+              <span className="text-xs" style={{ color: "var(--muted)" }}>.md 原文</span>
+            </span>
+          </button>
+          {/* ② 纯文本（剥 markdown 标记） */}
+          <button
+            onClick={() => handleTextExport("txt")}
+            disabled={busy}
+            className={itemCls}
             style={{ color: "var(--fg)" }}
           >
             <Icon name="FileText" size={15} />
-            普通文档
+            <span className="flex flex-col items-start">
+              <span>纯文本</span>
+              <span className="text-xs" style={{ color: "var(--muted)" }}>.txt</span>
+            </span>
           </button>
+          {/* ③ 网页 HTML（复用打印预览样式） */}
+          <button
+            onClick={() => handleTextExport("html")}
+            disabled={busy}
+            className={itemCls}
+            style={{ color: "var(--fg)" }}
+          >
+            <Icon name="Code" size={15} />
+            <span className="flex flex-col items-start">
+              <span>网页 HTML</span>
+              <span className="text-xs" style={{ color: "var(--muted)" }}>.html</span>
+            </span>
+          </button>
+
+          {/* ④ 分隔线 */}
+          <div className="my-1 border-t" style={{ borderColor: "var(--border)" }} />
+
+          {/* ⑤ Word 普通版式 */}
+          <button
+            onClick={handlePlain}
+            disabled={busy}
+            className={itemCls}
+            style={{ color: "var(--fg)" }}
+          >
+            <Icon name="FileDown" size={15} />
+            <span className="flex flex-col items-start">
+              <span>Word 普通版式</span>
+              <span className="text-xs" style={{ color: "var(--muted)" }}>.docx</span>
+            </span>
+          </button>
+          {/* ⑥ Word 红头文件（保留表单链路） */}
           <button
             onClick={() => setRedOpen(true)}
             disabled={busy}
-            className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[color:var(--panel-2)] disabled:opacity-50"
+            className={itemCls}
             style={{ color: "var(--fg)" }}
           >
             <Icon name="Landmark" size={15} />
-            红头文件
+            <span className="flex flex-col items-start">
+              <span>Word 红头文件</span>
+              <span className="text-xs" style={{ color: "var(--muted)" }}>.docx</span>
+            </span>
+          </button>
+          {/* ⑦ PDF：打开打印预览，用户在预览里打印/另存 PDF */}
+          <button
+            onClick={() => {
+              setMenuOpen(false);
+              onOpenPreview();
+            }}
+            disabled={busy}
+            className={itemCls}
+            style={{ color: "var(--fg)" }}
+          >
+            <Icon name="Printer" size={15} />
+            <span className="flex flex-col items-start">
+              <span>PDF</span>
+              <span className="text-xs" style={{ color: "var(--muted)" }}>通过打印预览</span>
+            </span>
           </button>
         </div>
       )}
