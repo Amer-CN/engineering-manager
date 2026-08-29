@@ -1486,7 +1486,7 @@ button:disabled {
    无分页概念（页概念仍属打印预览/导出态）。文字颜色跟随主题，深浅色自适应。 */
 .editor-canvas {
   width: 820px;
-  min-height: 70vh;
+  min-height: 1160px; /* 空文档默认高度 = A4 比例（宽 820 × 297/210 ≈ 1160） */
   padding: 40px 64px;
   background: var(--card);
   border: 1px solid var(--border);
