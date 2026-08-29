@@ -13,6 +13,7 @@ interface Props {
   onSeverity: (v: SeverityFilter) => void;
   onSort: (v: SortKey) => void;
   onSearch: (v: string) => void;
+  onResolveAll: () => void;
 }
 
 const STATUS_TABS: { key: StatusFilter; label: string }[] = [
@@ -31,6 +32,23 @@ export function GroupsToolbar(props: Props) {
     debounce((v: string) => props.onSearch(v), 300),
   );
   useEffect(() => emit.current(props.search), [props.search]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 全部解决：二次确认，3 秒未点自动恢复
+  const [confirming, setConfirming] = useState(false);
+  useEffect(() => {
+    if (!confirming) return;
+    const t = setTimeout(() => setConfirming(false), 3000);
+    return () => clearTimeout(t);
+  }, [confirming]);
+
+  function handleResolveAll() {
+    if (confirming) {
+      setConfirming(false);
+      props.onResolveAll();
+    } else {
+      setConfirming(true);
+    }
+  }
 
   function handleChange(v: string) {
     setLocal(v);
@@ -103,6 +121,19 @@ export function GroupsToolbar(props: Props) {
         <span className="mono ml-1 text-xs" style={{ color: "var(--muted)" }}>
           {props.total} 条
         </span>
+
+        {/* 全部解决：ghost 按钮，点击进入二次确认态，3 秒未点自动恢复 */}
+        <button
+          onClick={handleResolveAll}
+          className="focus-ring h-9 rounded-md border px-3 text-sm transition-colors hover:opacity-80"
+          style={{
+            backgroundColor: "transparent",
+            borderColor: confirming ? "var(--state-danger)" : "var(--border)",
+            color: confirming ? "var(--state-danger)" : "var(--fg-2)",
+          }}
+        >
+          {confirming ? "确认解决全部待处理？" : "全部解决"}
+        </button>
       </div>
     </div>
   );
