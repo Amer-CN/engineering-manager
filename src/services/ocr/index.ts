@@ -4,6 +4,7 @@
  */
 import type { OCRProvider } from './types'
 import { currentConfig } from './config'
+import { fetchOcrSetupStatus } from './config'
 import { checkNetwork } from './utils'
 
 // ─── 类型 re-export ───
@@ -16,6 +17,9 @@ export {
   setOCRConfig,
   saveOCRConfig,
   getOCRConfig,
+  fetchOcrSetupStatus,
+  saveOcrKeys,
+  clearOcrKeys,
 } from './config'
 
 // ─── 识别函数 re-export ───
@@ -31,11 +35,20 @@ export { queryCompanyInfo } from './companyQuery'
 
 /**
  * 检查OCR配置状态
+ * configured 以后端为准（/api/ocr/setup/status 与识别链路 LoadOcrConfig 同源，
+ * 含 env / DPAPI / 明文兼容三级）——前端内存不持有密钥，不能用内存判断。
+ * 后端不可达时回退内存判断（浏览器 dev mock 场景）。
  */
 export async function checkOCRStatus(): Promise<{ online: boolean; provider: OCRProvider; configured: boolean }> {
   const isOnline = await checkNetwork()
-  const configured = currentConfig.provider === 'offline' ||
-    !!(currentConfig.baidu?.apiKey && currentConfig.baidu?.secretKey)
+  let configured: boolean
+  try {
+    const status = await fetchOcrSetupStatus()
+    configured = !!status?.configured
+  } catch {
+    configured = currentConfig.provider === 'offline' ||
+      !!(currentConfig.baidu?.apiKey && currentConfig.baidu?.secretKey)
+  }
   return { online: isOnline, provider: currentConfig.provider, configured }
 }
 

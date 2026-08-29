@@ -93,7 +93,9 @@ module.exports = {
         popover: { DEFAULT: 'var(--panel)', foreground: 'var(--fg)' },
         secondary: { DEFAULT: 'var(--panel-2)', foreground: 'var(--fg)' },
         muted: { DEFAULT: 'var(--panel-2)', foreground: 'var(--muted)' },
-        accent: { DEFAULT: 'var(--card-hover)', foreground: 'var(--fg)' },
+        accent: { DEFAULT: 'var(--card-hover)', foreground: 'var(--fg)', soft: 'var(--accent-soft)' },
+        // DESIGN.md frontmatter 的 content-2 此前只在 CSS 变量层（var(--fg) 已由 foreground 暴露）
+        content: { 2: 'var(--fg-2)' },
         destructive: { DEFAULT: 'var(--danger)', foreground: 'oklch(98% 0.01 250)' },
         border: 'var(--border)',
         input: 'var(--border)',

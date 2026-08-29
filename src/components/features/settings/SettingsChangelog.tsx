@@ -19,12 +19,12 @@ function VersionContent({ ver }: { ver: ChangelogVersion }) {
       <div className="space-y-3">
         {ver.groups.map((group, gi) => (
           <div key={gi}>
-            <div className="text-xs font-semibold mb-1.5" style={{ color: 'var(--accent)' }}>
+            <div className="text-xs font-semibold mb-1.5 text-primary">
               {group.label}
             </div>
             <ul className="space-y-1.5">
               {group.items.map((item, i) => (
-                <li key={i} className="text-sm flex items-start gap-2" style={{ color: 'var(--fg-2)' }}>
+                <li key={i} className="text-sm flex items-start gap-2 text-content-2">
                   <span className="mt-0.5 flex-shrink-0" style={{ color: 'var(--muted-2)' }}>•</span>
                   <span>{renderMarkdownInline(item)}</span>
                 </li>
@@ -40,7 +40,7 @@ function VersionContent({ ver }: { ver: ChangelogVersion }) {
   return (
     <ul className="space-y-1.5">
       {ver.items?.map((item, i) => (
-        <li key={i} className="text-sm flex items-start gap-2" style={{ color: 'var(--fg-2)' }}>
+        <li key={i} className="text-sm flex items-start gap-2 text-content-2">
           <span className="mt-0.5 flex-shrink-0" style={{ color: 'var(--muted-2)' }}>•</span>
           <span>{renderMarkdownInline(item)}</span>
         </li>
@@ -57,8 +57,8 @@ const SettingsChangelog: React.FC<Props> = ({ onClose }) => (
       {versions.map(ver => (
         <div key={ver.v}>
           <div className="flex items-center gap-2 mb-2">
-            <span className="px-2 py-0.5 text-xs font-bold rounded-md" style={{ backgroundColor: 'var(--accent-soft)', color: 'var(--accent)' }}>{ver.v}</span>
-            <span className="text-xs" style={{ color: 'var(--muted)' }}>{ver.date}</span>
+            <span className="px-2 py-0.5 text-xs font-bold rounded-md bg-accent-soft text-primary">{ver.v}</span>
+            <span className="text-xs text-muted-foreground">{ver.date}</span>
           </div>
           <VersionContent ver={ver} />
         </div>
