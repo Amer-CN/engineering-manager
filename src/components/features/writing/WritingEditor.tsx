@@ -355,7 +355,7 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
       {/* R9：Ctrl+滚轮缩放监听范围 = 工具栏 + 纸张滚动区（wheel 监听挂此 wrapper） */}
       <div ref={bindWheelRef} className="flex-1 flex flex-col min-h-0">
         <EditorToolbar editor={editor} />
-        <div className="flex-1 overflow-y-auto flex justify-center bg-[color:var(--panel-2)] py-6">
+        <div className="flex-1 overflow-y-auto flex justify-center items-start bg-[color:var(--panel-2)] py-6">
           <div className="editor-canvas" ref={bindRef}>
             <EditorContent editor={editor} />
           </div>
