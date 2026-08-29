@@ -1,5 +1,7 @@
+import { memo } from "react";
 import { ChevronLeft, ChevronRight, Inbox } from "lucide-react";
 import type { GroupRow } from "../api-types";
+import { prefetchGroupDetail } from "../api";
 import { kindLabel, relativeTime } from "../utils";
 import { SeverityBadge } from "./SeverityBadge";
 
@@ -79,7 +81,10 @@ function ListRow({
       }}
       className="group flex w-full cursor-pointer items-center gap-3 border-b px-4 py-3 text-left transition-colors"
       style={{ borderColor: "var(--border)", backgroundColor: "transparent" }}
-      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--card-hover)")}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor = "var(--card-hover)";
+        prefetchGroupDetail(row.fingerprint);
+      }}
       onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
     >
       <Checkbox
@@ -150,7 +155,7 @@ export interface GroupsListProps {
   onToggleAll: () => void;
 }
 
-export function GroupsList({
+export const GroupsList = memo(function GroupsList({
   rows,
   loading,
   total,
@@ -255,4 +260,4 @@ export function GroupsList({
       )}
     </div>
   );
-}
+});
