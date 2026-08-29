@@ -377,5 +377,6 @@ AI 主页中央的助手形象。当前为**扁平中性占位**（墨色圆形 
 - `src/components/ui/SimpleBarChart.tsx`、`HoverScrollbar.tsx` 等：图表几何 / 滚动条需按数据动态计算的内联样式。
 - `src/App.tsx` 应用外壳根节点的 `boxShadow: 0 0 0 1px rgba(0,0,0,.08), 0 0 20px rgba(0,0,0,.08)`：它模拟的是**桌面窗口边框**而非内容表面层级，故三主题同值、不随主题走，也不并入 `--shadow-*` 标尺（Flat-By-Default 约束的是内容表面）。
 - `--muted-2`（`SettingsChangelog.tsx` 列表项目符号等，全站 12 处）：三主题均已定义，但 frontmatter 从未为这第四档文字色命名 → 无等价 Tailwind 类可替换，相关内联样式属**待决**而非违规。定名前不得当作例外长期固化，见下条 needs-design-decision。
+- 两处**早于 CSS bundle 渲染**的冷启动页：`index.html` 首帧占位（`--brand` + 三主题 `--bg`/`--fg`）与 `EngineeringManager.Api/MainWindow.cs` 的 `WarmingHtml` 常量（WebView 尚未导航，只能自带样式）。它们拿不到 `src/index.css` 的 token，写原始色值是物理约束而非选择。**约束**：这些色值必须是 token 的逐字镜像，改 token 时同处必须同步（`index.html` 里已就地注明"两处必须同步"），否则首帧会与页面撞色——那是回归，不是例外。`WarmingHtml` 恒定深色，故其色值取自 graphite 一档，不随主题走。
 
 新增例外须在此登记并说明理由；未登记的硬编码颜色 / 内联样式一律视为设计债。
