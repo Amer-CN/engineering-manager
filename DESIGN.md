@@ -140,6 +140,22 @@ Bedrock 把工程管家当成一台**专业驾驶舱级的精密仪器**来对�
 
 **The Color-For-Meaning-Only Rule.** 界面主色是**墨色**（非彩色），靠明度对比承担强调。真正的彩色（绿 / 琥珀 / 红）只允许表达**语义状态**，任意一屏彩色占比应极小。禁止把彩色当装饰底色，禁止电光蓝 / 霓虹等"信号色"式点缀。
 
+### 品牌色 `--brand`
+
+三角品牌标（登录页 / 启动屏 / 标题栏 / 关于页 / Spinner / `index.html` 首帧 / C# 冷启动页）是全站**唯一**允许携带彩色的元素，单值 `--brand: oklch(65% 0.13 60)` ≈ `#c87a30`（铜琥珀），**不随主题覆盖**，扁平填充、不用渐变。
+
+| 主题底色 | `--brand` 对比度 |
+|---|---|
+| Paper（`white`） | 3.21 |
+| Graphite | 5.36 |
+| Snow（`sandstone`，默认） | 3.23 |
+
+三主题均 ≥3:1（WCAG 非文本图形门槛），所以一个 logo 就够了。
+
+**The Brand-Is-Constant Rule.** 品牌是恒量，主题才是要适配的变量 —— 给三个主题配三种 logo 彩色，等于把品牌色降级成装饰色，也违反 *The Color-For-Meaning-Only Rule*。两条实测理由：Paper 与 Snow 都是浅色暖调，两个暖棕色必然撞车；标题栏的 mark 只有 18px，渐变在那里根本读不出来。
+
+**品牌标不吃 `--accent`。** 中性化改版后 `--accent` 是墨色，品牌标若继续用它，三主题下只剩明暗差、没有身份色（旧蓝色时代 `--accent` 能代表品牌，如今不能）。同理：不写死色值，也不引入第二套 logo 文件 —— 一份内联 SVG + 一个 `--brand`。
+
 ### Verdant / 苍绿（第四主题，展示型舞台专用）
 
 物理场景：**夜间的展示屏 / 投屏汇报**。它不是日常作业主题，不得设为默认，只在被 Stage-Surface 授权的屏上启用。
@@ -180,8 +196,10 @@ Bedrock 把工程管家当成一台**专业驾驶舱级的精密仪器**来对�
 | `destructive` | `--danger` | 危险操作 |
 | `border` / `input` | `--border` | 边框 / 输入框描边 |
 | `ring` | `--accent` | 焦点环 |
+| `content-2` | `--fg-2` | 次级正文（= frontmatter `colors.content-2`，值逐字一致） |
+| `accent-soft` | `--accent-soft` | 选中 / hover 淡底；`accent` 已被 `--card-hover` 占用，故另起一名 |
 
-**The Bridge-Not-Overwrite Rule.** 绝不在 CSS 里用 shadcn 的语义重定义项目已有的 `--accent` / `--muted`（会破坏全站品牌色与文字色）。映射一律走 tailwind.config.js 的颜色名，CSS 变量层保持项目原义。新增的唯一 CSS 变量是每主题一份的 `--on-accent`（accent 上的文字色）。
+**The Bridge-Not-Overwrite Rule.** 绝不在 CSS 里用 shadcn 的语义重定义项目已有的 `--accent` / `--muted`（会破坏全站品牌色与文字色）。映射一律走 tailwind.config.js 的颜色名，CSS 变量层保持项目原义。新增的 CSS 变量只有两类：每主题一份的 `--on-accent`（accent 上的文字色）与全局单值的 `--brand`（品牌色，见上节）。
 
 ## Typography
 
@@ -250,9 +268,9 @@ Bedrock 默认是平的（Flat-By-Default）。但少数屏幕的任务本质是
 
 **The Glass Whitelist（决策 3）.** `backdrop-filter` 只允许出现在六类浮层：**CommandPalette**、**Modal / Dialog**、**Toast**、**Popover / 下拉**、**顶部浮动 ActivityBar**、**Sidebar 飞出层**；外加经 Stage-Surface 授权的舞台区（GlassCarousel 聚焦卡与其悬浮信息卡；旧 FolderStack3D 已于 M4 下线）。明确禁止：**DataTable 行**、**Dashboard KPI 卡**、**StatusBar**、**TitleBar**、**输入框**。非聚焦卡一律用「伪砂面」（半透渐变 + 1px 内高光描边），不开 `backdrop-filter`，否则帧率必塌。
 
-**GlassCarousel 舞台区授权（2026-08-06 决策 · 知识库首页 3D 玻璃文件夹轮播）.** `features/knowledge/glass/` 为第二个 Stage-Surface 授权区，视觉蓝本 = AI Studio 参考项目（3D Glass Folder Carousel）：
+**GlassCarousel 舞台区授权（2026-08-06 决策 · 知识库首页 3D 玻璃文件夹轮播）.** `features/knowledge/glass-integration/` 为第二个 Stage-Surface 授权区（早期契约写作 `features/knowledge/glass/`，仓库中无此目录），视觉蓝本 = AI Studio 参考项目（3D Glass Folder Carousel）：
 - **旧约束作废**：FolderStack3D Phase 2 的「紧密堆叠 / 禁止选中放大抽出 / 禁止 Cover Flow 展开 / 禁止 z-index 遮挡」等约束全部作废（旧设计失败后的过度矫正，见 docs/handoff/HANDOFF-knowledge-3d-carousel.md §〇）。选中卡允许 scale 1.03、上浮 36px、纸张扇形展开、emerald 玻璃前袋、z-index 排遮挡。
-- **颜色内聚**：舞台区内 emerald 系只经 `glassCarousel.css` 的 `--gc-*` 变量（或舞台容器内联 token）使用，不散落组件任意值；舞台外一切普通 UI（弹窗 / 按钮 / 表单）走 primary + slate，禁止 emerald 泄露出舞台。
+- **颜色内聚**：舞台区配色只经 `--gc-*` 变量使用，定义在 `src/index.css`（早期契约写作 `glassCarousel.css`，该文件不存在）。**变量定义在 `:root` + `[data-theme]` 全局层，不放 `.gc-stage-iso` 容器作用域** —— 舞台的「新建文件夹」弹窗是舞台容器的兄弟节点而非子节点，此前取不到容器内变量、静默退到 emerald 兜底，造成默认净白主题下轮播卡为中性灰而弹窗按钮为绿。使用点一律写 `var(--gc-x)`，**禁止带 hex 兜底**：兜底值曾出现同名三值（`--gc-active` 被写作 `#10b981` / `#065f46` / `#047857`），且一旦触发即说明主题桥接断裂，宁可见色块缺失也不要静默错色。舞台外一切普通 UI（弹窗 / 按钮 / 表单）走 primary + slate，禁止 emerald 泄露出舞台。
 - **玻璃授权**：前袋、悬浮信息卡、控制按钮属本授权区（不受 Glass Whitelist 常驻元素禁令约束，舞台区内可开 backdrop-blur）。
 - **验收门**（沿用旧 FolderStack3D 确立的标准）：≥55fps；低帧降级（关玻璃模糊 + 缩渲染窗口）；`prefers-reduced-motion` 降为横向扁平轨道；首尾释放滚动权，严禁 scroll trapping；每帧直写 style，聚焦索引变化才 setState 一次。
 
@@ -335,7 +353,7 @@ AI 主页中央的助手形象。当前为**扁平中性占位**（墨色圆形 
 - `bg-white`：约 **249 处 / 119 个文件**。
 - 硬编码 hex 颜色：约 **150 处 / 21 个文件**（多集中在 `*Colors.ts` / `printExport.ts` 导出与图表配色，属可接受例外，应显式登记）。
 - Bedrock 的 OKLCH token 仅存在于 `src/index.css`（约 110 个 oklch 值），且 `tailwind.config.js` 只暴露 `primary/success/warning/danger/info`，**未暴露** `bg/panel/card/content/accent/hairline` 等语义名——组件目前无法书写 `bg-panel`/`text-content`，只能退回 `slate-*`。
-- White 主题的 `:root`（`src/index.css`）用 **hex** 定义（如 `--bg:#f8fafc`、`--accent:#2563eb`），与「零硬编码颜色 / OKLCH 体系」的表述不符。
+- ~~White 主题的 `:root`（`src/index.css`）用 hex 定义~~ 已消除：三主题现均为 OKLCH。**仍残留旧 hex + 蓝的是两处外围**：`index.html` 首帧占位页（早于 CSS bundle，现改为镜像三主题 token）与 `installer/src/installer.css` / `uninstaller/src/installer.css`（`white` 主题仍是 `--accent:#2563eb` + slate 一套，且两个小应用默认主题写死 `white`）。
 
 **与 AGENTS.md 的规则冲突（needs-design-decision）。** `AGENTS.md` 现行 UI 规范将 `slate-*` 列为许可中性色、禁止 `gray-*`；本文件却禁止 `slate-*`。同一仓库存在两套相互矛盾的颜色契约，Agent 无法据此可靠实现。需明确：Bedrock 是目标态（则应给出迁移路径并同步 AGENTS.md），还是现状（则应修订本文件表述）。
 
@@ -357,5 +375,8 @@ AI 主页中央的助手形象。当前为**扁平中性占位**（墨色圆形 
 - `src/**/*Colors.ts`（如 `costLedgerColors.ts` / `dashboardColors.ts` / `hrColors.ts` 等）：图表 / 状态 / 分类的配色映射表。
 - `src/**/printExport.ts`、`src/utils/wage-export.ts`、`invoicesPrintExportColors.ts` 等：Excel / 打印导出需要具体色值，非页面渲染。
 - `src/components/ui/SimpleBarChart.tsx`、`HoverScrollbar.tsx` 等：图表几何 / 滚动条需按数据动态计算的内联样式。
+- `src/App.tsx` 应用外壳根节点的 `boxShadow: 0 0 0 1px rgba(0,0,0,.08), 0 0 20px rgba(0,0,0,.08)`：它模拟的是**桌面窗口边框**而非内容表面层级，故三主题同值、不随主题走，也不并入 `--shadow-*` 标尺（Flat-By-Default 约束的是内容表面）。
+- `--muted-2`（`SettingsChangelog.tsx` 列表项目符号等，全站 12 处）：三主题均已定义，但 frontmatter 从未为这第四档文字色命名 → 无等价 Tailwind 类可替换，相关内联样式属**待决**而非违规。定名前不得当作例外长期固化，见下条 needs-design-decision。
+- 两处**早于 CSS bundle 渲染**的冷启动页：`index.html` 首帧占位（`--brand` + 三主题 `--bg`/`--fg`）与 `EngineeringManager.Api/MainWindow.cs` 的 `WarmingHtml` 常量（WebView 尚未导航，只能自带样式）。它们拿不到 `src/index.css` 的 token，写原始色值是物理约束而非选择。**约束**：这些色值必须是 token 的逐字镜像，改 token 时同处必须同步（`index.html` 里已就地注明"两处必须同步"），否则首帧会与页面撞色——那是回归，不是例外。`WarmingHtml` 恒定深色，故其色值取自 graphite 一档，不随主题走。
 
 新增例外须在此登记并说明理由；未登记的硬编码颜色 / 内联样式一律视为设计债。

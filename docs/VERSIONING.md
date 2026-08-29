@@ -30,15 +30,18 @@ v0.74.0 → v0.85.0 (已 rebase 整理) 期间, 项目曾把 **refactor-only spr
 | `EngineeringManager.Api/EngineeringManager.Api.csproj` `<Version>` | 后端程序集版本 |
 | `installer/package.json` | 安装器项目版本 |
 | `installer/src/App.tsx` | 安装器界面显示的版本号（`<WelcomeStep version="x.y.z" />`） |
+| `src/components/Login.tsx` | 登录页版本 fallback（`__APP_VERSION__` 未注入时的兜底值；v0.93.0 起纳入脚本，避免漏更） |
 
-**手动同步**（bump 版本时需人工修改，脚本不覆盖）：
+**手动同步**（脚本不覆盖，bump 时必须人工改）：
 
 | 位置 | 用途 |
 |------|------|
-| `src/components/Login.tsx` | 登录页版本 fallback（`__APP_VERSION__` 未注入时的兜底值） |
-| `index.html` | `window.__APP_VERSION__` 占位符（由 vite.config.ts 在构建时从 package.json 替换，无需手动改） |
+| `AGENTS.md` 抬头 | `> 项目状态：vX.Y.Z（以 package.json 为唯一真源） · 最后同步：<日期>` |
+| `src/components/AGENTS.md` 抬头 | 同上格式 |
 
-> **注意**：`index.html` 中的 `<APP_VERSION>` 占位符由 `vite.config.ts` 在每次构建时自动从 `package.json` 读取并替换，因此无需手动修改。实际需手动改的只有 Login.tsx 1 处。
+> **注意**：`index.html` 中的 `<APP_VERSION>` 占位符由 `vite.config.ts` 在每次构建时自动从 `package.json` 读取并替换，无需手动修改。
+>
+> **踩过的坑**：上面两处 AGENTS.md 抬头是 `check:version` 的严格比对项，但脚本不写它们 —— 只跑 `npm run sync-version` 就去跑 `npm run check:version` 必然 exit 1。bump 的标准动作是：改 package.json → `npm run sync-version` → 手改两份 AGENTS.md 抬头 → `npm run check:version`。
 
 ### 版本一致性校验（只读门禁）
 
