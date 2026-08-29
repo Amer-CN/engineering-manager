@@ -3,13 +3,18 @@ import { Icon } from './ui/Icon'
 import { OCRConfig, OCRProvider, getProviderName as gpName } from '../services/ocr'
 import { getAPI } from '@/services/api-adapter'
 import { Button } from './ui/Button'
+import { ConfirmDialog } from './ui/ConfirmDialog'
 
 interface Props {
   ocrConfig: OCRConfig; setOcrConfig: (c: OCRConfig) => void
   ocrStatus: { online: boolean; provider: OCRProvider; configured: boolean } | null
   testingOCR: boolean
+  /** 保存中（密钥落盘为异步请求） */
+  savingOCR: boolean
   ocrMessage: { type: 'success' | 'error' | 'info'; text: string } | null
   onSave: () => void; onTest: () => void
+  /** 清除后端已保存的密钥（组件内二次确认后调用） */
+  onClearKeys: () => void
 }
 
 // 支持的 OCR 功能列表
@@ -25,8 +30,9 @@ const OCR_FEATURES = [
   { name: '企业工商信息查询', icon: 'Search', description: '输入公司名称查询工商注册信息', status: 'beta' },
 ]
 
-export const SettingsOcrSection: React.FC<Props> = ({ ocrConfig, setOcrConfig, ocrStatus, testingOCR, ocrMessage, onSave, onTest }) => {
+export const SettingsOcrSection: React.FC<Props> = ({ ocrConfig, setOcrConfig, ocrStatus, testingOCR, savingOCR, ocrMessage, onSave, onTest, onClearKeys }) => {
   const [ocrStats, setOcrStats] = useState<{ idCard: number; invoice: number; bankCard: number; businessLicense: number; bankReceipt: number; permit: number; bankStatement: number; generalReceipt: number; companyQuery: number; lastReset: string } | null>(null)
+  const [confirmClear, setConfirmClear] = useState(false)
 
   useEffect(() => {
     (async () => {
@@ -167,11 +173,11 @@ export const SettingsOcrSection: React.FC<Props> = ({ ocrConfig, setOcrConfig, o
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <label className="label">API Key</label>
-              <input type="text" value={ocrConfig.baidu?.apiKey || ''} onChange={e => setOcrConfig({ ...ocrConfig, baidu: { ...ocrConfig.baidu, apiKey: e.target.value, secretKey: ocrConfig.baidu?.secretKey || '' } })} placeholder="例 LnTxxxxxxxxxxxxxx" className="input" />
+              <input type="text" value={ocrConfig.baidu?.apiKey || ''} onChange={e => setOcrConfig({ ...ocrConfig, baidu: { ...ocrConfig.baidu, apiKey: e.target.value, secretKey: ocrConfig.baidu?.secretKey || '' } })} placeholder={ocrStatus?.configured ? '已配置，留空则保留原密钥' : '例 LnTxxxxxxxxxxxxxx'} className="input" />
             </div>
             <div>
               <label className="label">Secret Key</label>
-              <input type="password" value={ocrConfig.baidu?.secretKey || ''} onChange={e => setOcrConfig({ ...ocrConfig, baidu: { ...ocrConfig.baidu, apiKey: ocrConfig.baidu?.apiKey || '', secretKey: e.target.value } })} placeholder="例 8xxxxxxxxxxxxxxxxxxxxxx" className="input" />
+              <input type="password" value={ocrConfig.baidu?.secretKey || ''} onChange={e => setOcrConfig({ ...ocrConfig, baidu: { ...ocrConfig.baidu, apiKey: ocrConfig.baidu?.apiKey || '', secretKey: e.target.value } })} placeholder={ocrStatus?.configured ? '已配置，留空则保留原密钥' : '例 8xxxxxxxxxxxxxxxxxxxxxx'} className="input" />
             </div>
           </div>
         </div>
@@ -179,8 +185,8 @@ export const SettingsOcrSection: React.FC<Props> = ({ ocrConfig, setOcrConfig, o
 
       {/* 操作按钮 */}
       <div className="flex flex-wrap gap-3">
-        <Button onClick={onSave}  variant="primary">
-          <Icon name="Save" size={16} /> 保存配置
+        <Button onClick={onSave} disabled={savingOCR} variant="primary">
+          <Icon name="Save" size={16} /> {savingOCR ? '保存中...' : '保存配置'}
         </Button>
         <Button onClick={onTest} disabled={testingOCR}  variant="secondary">
           {testingOCR ? (
@@ -189,7 +195,23 @@ export const SettingsOcrSection: React.FC<Props> = ({ ocrConfig, setOcrConfig, o
             <><Icon name="RefreshCw" size={16} /> 检测连接</>
           )}
         </Button>
+        {ocrStatus?.configured && (
+          <Button onClick={() => setConfirmClear(true)} disabled={savingOCR} variant="secondary">
+            <Icon name="Trash2" size={16} /> 清除已保存密钥
+          </Button>
+        )}
       </div>
+
+      {/* 清除密钥二次确认 */}
+      <ConfirmDialog
+        isOpen={confirmClear}
+        onClose={() => setConfirmClear(false)}
+        onConfirm={() => { setConfirmClear(false); onClearKeys() }}
+        title="清除密钥"
+        content="确定要清除已保存的百度 OCR 密钥吗？清除后 AI 识别将回退到本地离线模式，直到重新配置密钥。"
+        confirmText="清除"
+        confirmVariant="danger"
+      />
 
       {/* 消息提示 */}
       {ocrMessage && (

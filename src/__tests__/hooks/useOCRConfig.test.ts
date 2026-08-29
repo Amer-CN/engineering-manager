@@ -6,9 +6,8 @@ import { renderHook, act, waitFor } from '@testing-library/react'
 
 const mockInitialConfig = {
   provider: 'offline' as const,
-  baiduApiKey: '',
-  baiduSecretKey: '',
-  autoDetect: true,
+  enabled: true,
+  baidu: { apiKey: '', secretKey: '' },
 }
 
 // Import the mocked module for control
@@ -16,6 +15,8 @@ const mockCheckOCRStatus = vi.fn(() => Promise.resolve({ online: true, provider:
 const mockGetOCRConfig = vi.fn(() => mockInitialConfig)
 const mockSetOCRConfig = vi.fn()
 const mockSaveOCRConfig = vi.fn()
+const mockSaveOcrKeys = vi.fn(() => Promise.resolve({ success: true }))
+const mockClearOcrKeys = vi.fn(() => Promise.resolve({ success: true }))
 const mockInitializeBuiltInConfig = vi.fn(() => Promise.resolve())
 const mockGetProviderName = vi.fn((p: string) => p === 'baidu' ? '百度OCR' : '离线Tesseract.js')
 
@@ -25,6 +26,8 @@ vi.mock('@/services/ocr', () => ({
   checkOCRStatus: mockCheckOCRStatus,
   getProviderName: mockGetProviderName,
   saveOCRConfig: mockSaveOCRConfig,
+  saveOcrKeys: mockSaveOcrKeys,
+  clearOcrKeys: mockClearOcrKeys,
   initialConfig: mockInitialConfig,
   initializeBuiltInConfig: mockInitializeBuiltInConfig,
 } as any))
@@ -48,21 +51,50 @@ describe('useOCRConfig', () => {
     expect(result.current.ocrStatus?.online).toBe(true)
   })
 
-  it('handleSaveOCRConfig 保存配置', async () => {
+  it('handleSaveOCRConfig 填了密钥 → 调 saveOcrKeys 落盘并提示已加密保存', async () => {
     const { useOCRConfig } = await import('@/hooks/useOCRConfig')
     const { result } = renderHook(() => useOCRConfig())
     await waitFor(() => expect(result.current.ocrConfig).toBeDefined())
-    // hook returns setOcrConfig (mapped from setOcrConfigState)
     act(() => {
-      result.current.setOcrConfig({ ...result.current.ocrConfig!, baiduApiKey: 'new-key' } as any)
+      result.current.setOcrConfig({ ...result.current.ocrConfig!, baidu: { apiKey: 'new-key', secretKey: 'new-secret' } } as any)
     })
     await act(async () => {
-      result.current.handleSaveOCRConfig()
+      await result.current.handleSaveOCRConfig()
     })
+    expect(mockSaveOcrKeys).toHaveBeenCalledWith('new-key', 'new-secret')
     expect(mockSaveOCRConfig).toHaveBeenCalled()
-    expect(mockSetOCRConfig).toHaveBeenCalled()
     expect(result.current.ocrMessage?.type).toBe('success')
-    expect(result.current.ocrMessage?.text).toContain('已保存')
+    expect(result.current.ocrMessage?.text).toContain('已加密保存')
+    // 成功后清空输入框（密钥不回显）
+    expect(result.current.ocrConfig.baidu?.apiKey).toBe('')
+  })
+
+  it('handleSaveOCRConfig 留空 → 不调 saveOcrKeys，仅保存模式偏好', async () => {
+    const { useOCRConfig } = await import('@/hooks/useOCRConfig')
+    const { result } = renderHook(() => useOCRConfig())
+    await waitFor(() => expect(result.current.ocrConfig).toBeDefined())
+    await act(async () => {
+      await result.current.handleSaveOCRConfig()
+    })
+    expect(mockSaveOcrKeys).not.toHaveBeenCalled()
+    expect(mockSaveOCRConfig).toHaveBeenCalled()
+    expect(result.current.ocrMessage?.type).toBe('info')
+    expect(result.current.ocrMessage?.text).toContain('模式偏好')
+  })
+
+  it('handleSaveOCRConfig 半填（只填一个框）→ 拦截提示', async () => {
+    const { useOCRConfig } = await import('@/hooks/useOCRConfig')
+    const { result } = renderHook(() => useOCRConfig())
+    await waitFor(() => expect(result.current.ocrConfig).toBeDefined())
+    act(() => {
+      result.current.setOcrConfig({ ...result.current.ocrConfig!, baidu: { apiKey: 'only-key', secretKey: '' } } as any)
+    })
+    await act(async () => {
+      await result.current.handleSaveOCRConfig()
+    })
+    expect(mockSaveOcrKeys).not.toHaveBeenCalled()
+    expect(result.current.ocrMessage?.type).toBe('error')
+    expect(result.current.ocrMessage?.text).toContain('要么都填')
   })
 
   it('handleTestOCR 在线状态', async () => {
