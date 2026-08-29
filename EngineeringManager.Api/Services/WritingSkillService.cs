@@ -100,6 +100,7 @@ public sealed class WritingSkillService
     public const int AssistMaxContextChars = 4000;
 
     private readonly ILlmChatService _llm;
+    private readonly IKnowledgeDraftAugmenter? _kbAugmenter;
     private readonly string _skillMd;
     private readonly string _templatesMd;
     private readonly string _phraseLibraryMd;
@@ -107,9 +108,11 @@ public sealed class WritingSkillService
     private readonly IReadOnlyDictionary<string, DocType> _docTypeMap;
     private readonly IReadOnlyDictionary<string, StyleSpec> _styleMap;
 
-    public WritingSkillService(ILlmChatService llm)
+    /// <param name="kbAugmenter">知识库检索增强器（可选）：T1 起草联动知识库；null = 纯素材起草（现状）</param>
+    public WritingSkillService(ILlmChatService llm, IKnowledgeDraftAugmenter? kbAugmenter = null)
     {
         _llm = llm;
+        _kbAugmenter = kbAugmenter;
         _skillMd = LoadEmbedded("WritingSkill.SKILL.md");
         _templatesMd = LoadEmbedded("WritingSkill.templates.md");
         _phraseLibraryMd = LoadEmbedded("WritingSkill.phrase-library.md");
@@ -144,10 +147,32 @@ public sealed class WritingSkillService
     /// 依据文体 + 素材 + 风格流式起草整篇公文，逐条产出正文 token。
     /// 输入素材中的 [[…]] 为 Protected Spans；流式原文可能短暂含括号，
     /// 调用方在 done 事件后以 StripProtectedMarkers 落库。
+    /// T1：注入知识库增强器时，先用素材检索公司知识库，命中片段作为「公司知识库参考」
+    /// 区块注入 user prompt（增强失败静默降级，起草照常进行）。
     /// </summary>
-    public async IAsyncEnumerable<string> StreamDraftAsync(WritingDraftRequest request)
+    /// <param name="userId">当前用户（知识库检索数据范围，null = 无增强）</param>
+    /// <param name="isAdmin">当前用户是否 admin（知识库检索数据范围）</param>
+    public async IAsyncEnumerable<string> StreamDraftAsync(
+        WritingDraftRequest request,
+        string? userId = null,
+        bool isAdmin = false,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
     {
-        var (system, user) = BuildDraftPrompts(request);
+        // 知识库检索增强：try/catch 全吞——增强是加分项不是依赖项，任何失败降级为纯素材起草
+        string? kbAugment = null;
+        if (_kbAugmenter is not null)
+        {
+            try
+            {
+                kbAugment = await _kbAugmenter.BuildAugmentAsync(request.Material, userId, isAdmin, ct);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[WritingSkill] 知识库增强失败（已降级为纯素材起草）: {ex.Message}");
+            }
+        }
+
+        var (system, user) = BuildDraftPrompts(request, kbAugment);
         var messages = new List<AgentMessage>
         {
             new() { Role = MessageRole.System, Content = system },
@@ -209,7 +234,8 @@ public sealed class WritingSkillService
     // Prompt 组装（internal 供单测校验）
     // ─────────────────────────────────────────────────────────────
 
-    internal (string system, string user) BuildDraftPrompts(WritingDraftRequest req)
+    /// <param name="kbAugment">知识库参考区块文本（T1 检索增强产物）；null/空白 = 不输出该区块（与无增强现状逐字节一致）</param>
+    internal (string system, string user) BuildDraftPrompts(WritingDraftRequest req, string? kbAugment = null)
     {
         if (!TryGetDocType(req.DocType, out var docType))
             throw new ArgumentException($"未知文体: {req.DocType}");
@@ -253,6 +279,11 @@ public sealed class WritingSkillService
         user.AppendLine();
         user.AppendLine(Truncate(req.Material, DraftMaxChars));
         user.AppendLine();
+        if (!string.IsNullOrWhiteSpace(kbAugment))
+        {
+            user.AppendLine(kbAugment);
+            user.AppendLine();
+        }
         user.AppendLine("请按上述文体模板直接输出正文全文，不要输出额外解释或前导后语。");
 
         return (sb.ToString().Trim(), user.ToString());
