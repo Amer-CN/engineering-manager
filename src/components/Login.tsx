@@ -171,9 +171,10 @@ const Login: React.FC<LoginProps> = () => {
       ) : (
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 24px 20px' }}>
         {/* Logo */}
-        <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10, flexShrink: 0 }}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--on-accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" />
+        <div style={{ width: 48, height: 48, marginBottom: 10, flexShrink: 0 }}>
+          <svg width="48" height="48" viewBox="0 0 18 18" fill="none">
+            <defs><mask id="login-mark-mask"><rect width="18" height="18" fill="white" /><path d="M5 14 L9 6 L13 14 Z" fill="black" /></mask></defs>
+            <path d="M2 15.5 L9 2.5 L16 15.5 Z" fill="var(--brand)" strokeLinejoin="round" mask="url(#login-mark-mask)" />
           </svg>
         </div>
         <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--fg)', marginBottom: 2 }}>工程管家</h2>

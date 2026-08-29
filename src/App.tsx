@@ -59,13 +59,9 @@ const PageLoader = () => (
     >
       <svg width="40" height="40" viewBox="0 0 18 18" fill="none">
         <defs>
-          <linearGradient id="loader-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="var(--accent)" />
-            <stop offset="100%" stopColor="var(--accent)" stopOpacity="0.6" />
-          </linearGradient>
           <mask id="loader-mask"><rect width="18" height="18" fill="white" /><path d="M5 14 L9 6 L13 14 Z" fill="black" /></mask>
         </defs>
-        <path d="M2 15.5 L9 2.5 L16 15.5 Z" fill="url(#loader-grad)" mask="url(#loader-mask)" />
+        <path d="M2 15.5 L9 2.5 L16 15.5 Z" fill="var(--brand)" mask="url(#loader-mask)" />
       </svg>
     </motion.div>
     <div className="flex gap-1.5">
