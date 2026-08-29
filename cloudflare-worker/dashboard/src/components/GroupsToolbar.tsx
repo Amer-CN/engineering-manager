@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { Search } from "lucide-react";
 import type { SeverityFilter, SortKey, StatusFilter } from "../api-types";
 import { debounce } from "../utils";
@@ -24,7 +24,7 @@ const STATUS_TABS: { key: StatusFilter; label: string }[] = [
 const selectClass =
   "focus-ring h-9 rounded-md border px-2 text-sm transition-colors cursor-pointer";
 
-export function GroupsToolbar(props: Props) {
+export const GroupsToolbar = memo(function GroupsToolbar(props: Props) {
   // 本地受控搜索框 + 300ms 防抖上抛
   const [local, setLocal] = useState(props.search);
   const emit = useRef(
@@ -106,4 +106,4 @@ export function GroupsToolbar(props: Props) {
       </div>
     </div>
   );
-}
+});
