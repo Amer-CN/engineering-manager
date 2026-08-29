@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { AlertOctagon, AlertTriangle, RotateCcw, Inbox } from "lucide-react";
 import type { SummaryResponse } from "../api-types";
 import { formatNum } from "../utils";
@@ -31,7 +32,7 @@ function KpiCard({ label, value, icon, accent }: KpiCardProps) {
   );
 }
 
-export function KpiCards({ summary }: { summary: SummaryResponse }) {
+export const KpiCards = memo(function KpiCards({ summary }: { summary: SummaryResponse }) {
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
       <KpiCard
@@ -60,4 +61,4 @@ export function KpiCards({ summary }: { summary: SummaryResponse }) {
       />
     </div>
   );
-}
+});

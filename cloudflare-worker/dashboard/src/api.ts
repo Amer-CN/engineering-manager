@@ -58,6 +58,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return body;
 }
 
+/** 详情预取缓存：悬停行时预取，点击抽屉秒开。缓存 Promise 防并发重复请求；失败移除以便重试 */
+const detailCache = new Map<string, Promise<GroupDetailResponse>>();
+
 export const api = {
   login(email: string, password: string): Promise<AuthUser> {
     return request<AuthUser>("/api/login", {
@@ -91,9 +94,20 @@ export const api = {
     sp.set("pageSize", String(params.pageSize));
     return request<GroupsResponse>(`/api/groups?${sp.toString()}`);
   },
-  async groupDetail(fingerprint: string): Promise<GroupDetailResponse> {
-    const raw = await request<GroupDetailResponse>(`/api/groups/${fingerprint}`);
-    return { ...raw, samples: raw.samples.map(normalizeReport) };
+  groupDetail(fingerprint: string): Promise<GroupDetailResponse> {
+    const cached = detailCache.get(fingerprint);
+    if (cached) return cached;
+    const p = (async () => {
+      const raw = await request<GroupDetailResponse>(`/api/groups/${fingerprint}`);
+      return { ...raw, samples: raw.samples.map(normalizeReport) };
+    })();
+    detailCache.set(fingerprint, p);
+    p.catch(() => detailCache.delete(fingerprint));
+    if (detailCache.size > 50) {
+      const oldest = detailCache.keys().next().value;
+      if (oldest !== undefined) detailCache.delete(oldest);
+    }
+    return p;
   },
   setStatus(fingerprint: string, status: GroupStatus): Promise<{ ok: true }> {
     return request<{ ok: true }>(`/api/groups/${fingerprint}/status`, {
@@ -113,3 +127,9 @@ export const api = {
     });
   },
 };
+
+/** 列表行悬停时调用：后台预取详情（非法指纹与已缓存为 no-op） */
+export function prefetchGroupDetail(fingerprint: string): void {
+  if (!/^[a-f0-9]{64}$/.test(fingerprint) || detailCache.has(fingerprint)) return;
+  void api.groupDetail(fingerprint);
+}
