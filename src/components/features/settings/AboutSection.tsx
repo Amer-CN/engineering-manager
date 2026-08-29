@@ -141,16 +141,10 @@ export function AboutSection({ onShowChangelog }: AboutSectionProps) {
       <div className="card-body">
         <div className="text-sm text-[color:var(--fg-2)] space-y-3">
           <div className="flex items-center gap-3">
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: 'var(--panel-2)' }}>
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg bg-secondary">
               <svg width="40" height="40" viewBox="0 0 18 18" fill="none">
-                <defs>
-                  <linearGradient id="about-mark-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="var(--accent)" />
-                    <stop offset="100%" stopColor="var(--violet)" />
-                  </linearGradient>
-                  <mask id="about-mask"><rect width="18" height="18" fill="white" /><path d="M5 14 L9 6 L13 14 Z" fill="black" /></mask>
-                </defs>
-                <path d="M2 15.5 L9 2.5 L16 15.5 Z" fill="url(#about-mark-grad)" strokeLinejoin="round" mask="url(#about-mask)" />
+                <defs><mask id="about-mask"><rect width="18" height="18" fill="white" /><path d="M5 14 L9 6 L13 14 Z" fill="black" /></mask></defs>
+                <path d="M2 15.5 L9 2.5 L16 15.5 Z" fill="var(--brand)" strokeLinejoin="round" mask="url(#about-mask)" />
               </svg>
             </div>
             <div>
@@ -158,7 +152,7 @@ export function AboutSection({ onShowChangelog }: AboutSectionProps) {
               <p className="text-[color:var(--muted)]">
                 Version {APP_VERSION}
                 <span className="mx-1.5 text-[color:var(--border-strong)]">·</span>
-                <button onClick={onShowChangelog} className="hover:underline" style={{ color: 'var(--accent)' }}>更新日志</button>
+                <button onClick={onShowChangelog} className="hover:underline text-primary">更新日志</button>
               </p>
             </div>
           </div>

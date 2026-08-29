@@ -140,6 +140,22 @@ Bedrock 把工程管家当成一台**专业驾驶舱级的精密仪器**来对�
 
 **The Color-For-Meaning-Only Rule.** 界面主色是**墨色**（非彩色），靠明度对比承担强调。真正的彩色（绿 / 琥珀 / 红）只允许表达**语义状态**，任意一屏彩色占比应极小。禁止把彩色当装饰底色，禁止电光蓝 / 霓虹等"信号色"式点缀。
 
+### 品牌色 `--brand`
+
+三角品牌标（登录页 / 启动屏 / 标题栏 / 关于页 / Spinner / `index.html` 首帧 / C# 冷启动页）是全站**唯一**允许携带彩色的元素，单值 `--brand: oklch(65% 0.13 60)` ≈ `#c87a30`（铜琥珀），**不随主题覆盖**，扁平填充、不用渐变。
+
+| 主题底色 | `--brand` 对比度 |
+|---|---|
+| Paper（`white`） | 3.21 |
+| Graphite | 5.36 |
+| Snow（`sandstone`，默认） | 3.23 |
+
+三主题均 ≥3:1（WCAG 非文本图形门槛），所以一个 logo 就够了。
+
+**The Brand-Is-Constant Rule.** 品牌是恒量，主题才是要适配的变量 —— 给三个主题配三种 logo 彩色，等于把品牌色降级成装饰色，也违反 *The Color-For-Meaning-Only Rule*。两条实测理由：Paper 与 Snow 都是浅色暖调，两个暖棕色必然撞车；标题栏的 mark 只有 18px，渐变在那里根本读不出来。
+
+**品牌标不吃 `--accent`。** 中性化改版后 `--accent` 是墨色，品牌标若继续用它，三主题下只剩明暗差、没有身份色（旧蓝色时代 `--accent` 能代表品牌，如今不能）。同理：不写死色值，也不引入第二套 logo 文件 —— 一份内联 SVG + 一个 `--brand`。
+
 ### Verdant / 苍绿（第四主题，展示型舞台专用）
 
 物理场景：**夜间的展示屏 / 投屏汇报**。它不是日常作业主题，不得设为默认，只在被 Stage-Surface 授权的屏上启用。
@@ -183,7 +199,7 @@ Bedrock 把工程管家当成一台**专业驾驶舱级的精密仪器**来对�
 | `content-2` | `--fg-2` | 次级正文（= frontmatter `colors.content-2`，值逐字一致） |
 | `accent-soft` | `--accent-soft` | 选中 / hover 淡底；`accent` 已被 `--card-hover` 占用，故另起一名 |
 
-**The Bridge-Not-Overwrite Rule.** 绝不在 CSS 里用 shadcn 的语义重定义项目已有的 `--accent` / `--muted`（会破坏全站品牌色与文字色）。映射一律走 tailwind.config.js 的颜色名，CSS 变量层保持项目原义。新增的唯一 CSS 变量是每主题一份的 `--on-accent`（accent 上的文字色）。
+**The Bridge-Not-Overwrite Rule.** 绝不在 CSS 里用 shadcn 的语义重定义项目已有的 `--accent` / `--muted`（会破坏全站品牌色与文字色）。映射一律走 tailwind.config.js 的颜色名，CSS 变量层保持项目原义。新增的 CSS 变量只有两类：每主题一份的 `--on-accent`（accent 上的文字色）与全局单值的 `--brand`（品牌色，见上节）。
 
 ## Typography
 
@@ -337,7 +353,7 @@ AI 主页中央的助手形象。当前为**扁平中性占位**（墨色圆形 
 - `bg-white`：约 **249 处 / 119 个文件**。
 - 硬编码 hex 颜色：约 **150 处 / 21 个文件**（多集中在 `*Colors.ts` / `printExport.ts` 导出与图表配色，属可接受例外，应显式登记）。
 - Bedrock 的 OKLCH token 仅存在于 `src/index.css`（约 110 个 oklch 值），且 `tailwind.config.js` 只暴露 `primary/success/warning/danger/info`，**未暴露** `bg/panel/card/content/accent/hairline` 等语义名——组件目前无法书写 `bg-panel`/`text-content`，只能退回 `slate-*`。
-- White 主题的 `:root`（`src/index.css`）用 **hex** 定义（如 `--bg:#f8fafc`、`--accent:#2563eb`），与「零硬编码颜色 / OKLCH 体系」的表述不符。
+- ~~White 主题的 `:root`（`src/index.css`）用 hex 定义~~ 已消除：三主题现均为 OKLCH。**仍残留旧 hex + 蓝的是两处外围**：`index.html` 首帧占位页（早于 CSS bundle，现改为镜像三主题 token）与 `installer/src/installer.css` / `uninstaller/src/installer.css`（`white` 主题仍是 `--accent:#2563eb` + slate 一套，且两个小应用默认主题写死 `white`）。
 
 **与 AGENTS.md 的规则冲突（needs-design-decision）。** `AGENTS.md` 现行 UI 规范将 `slate-*` 列为许可中性色、禁止 `gray-*`；本文件却禁止 `slate-*`。同一仓库存在两套相互矛盾的颜色契约，Agent 无法据此可靠实现。需明确：Bedrock 是目标态（则应给出迁移路径并同步 AGENTS.md），还是现状（则应修订本文件表述）。
 

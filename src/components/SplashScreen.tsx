@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Icon } from './ui/Icon'
 
 interface SplashScreenProps {
   onComplete: () => void
@@ -34,7 +33,10 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
         className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5"
         style={{ background: 'var(--panel-2)', border: '1px solid var(--border)' }}
       >
-        <Icon name="Building2" size={28} className="text-[color:var(--fg)]" />
+        <svg width="28" height="28" viewBox="0 0 18 18" fill="none">
+          <defs><mask id="splash-mark-mask"><rect width="18" height="18" fill="white" /><path d="M5 14 L9 6 L13 14 Z" fill="black" /></mask></defs>
+          <path d="M2 15.5 L9 2.5 L16 15.5 Z" fill="var(--brand)" strokeLinejoin="round" mask="url(#splash-mark-mask)" />
+        </svg>
       </div>
 
       {/* Title */}

@@ -117,7 +117,7 @@ const TitleBar: React.FC<TitleBarProps> = ({ onToggleCollapse, collapsed = false
         <div className="flex items-center gap-2 ml-0.5">
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none" className="shrink-0" style={{ marginTop: 1 }}>
             <defs><mask id="mark-mask"><rect width="18" height="18" fill="white" /><path d="M5 14 L9 6 L13 14 Z" fill="black" /></mask></defs>
-            <path d="M2 15.5 L9 2.5 L16 15.5 Z" fill="var(--accent)" strokeLinejoin="round" mask="url(#mark-mask)" />
+            <path d="M2 15.5 L9 2.5 L16 15.5 Z" fill="var(--brand)" strokeLinejoin="round" mask="url(#mark-mask)" />
           </svg>
           <span className="text-sm font-semibold tracking-tight leading-none" style={{ color: 'var(--fg)', marginTop: 1 }}>工程管家</span>
         </div>
