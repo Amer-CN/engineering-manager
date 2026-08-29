@@ -4,6 +4,7 @@ import { api, ApiRequestError } from "./api";
 import type {
   GroupsResponse,
   GroupRow,
+  GroupStatus,
   SummaryResponse,
   SeverityFilter,
   SortKey,
@@ -59,6 +60,9 @@ export default function App() {
   const [sort, setSort] = useState<SortKey>("recent");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+
+  // 多选集合（按 fingerprint 保留；翻页/筛选变更时清空）
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   // 加载态
   const [loadingGroups, setLoadingGroups] = useState(false);
@@ -191,6 +195,70 @@ export default function App() {
     }
   }, [status, severity, search, sort, page, showToast]);
 
+  // ===== 多选与批量操作 =====
+
+  const handleToggleSelect = useCallback((fp: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(fp)) next.delete(fp);
+      else next.add(fp);
+      return next;
+    });
+  }, []);
+
+  const handleToggleAll = useCallback(() => {
+    setSelected((prev) => {
+      const pageFps = (groups?.rows ?? []).map((r) => r.fingerprint);
+      if (pageFps.length === 0) return prev;
+      const allOnPage = pageFps.every((fp) => prev.has(fp));
+      const next = new Set(prev);
+      for (const fp of pageFps) {
+        if (allOnPage) next.delete(fp);
+        else next.add(fp);
+      }
+      return next;
+    });
+  }, [groups]);
+
+  const handleBulkStatus = useCallback(
+    async (bulkStatus: GroupStatus) => {
+      const fps = [...selected];
+      if (fps.length === 0) return;
+      try {
+        const res = await api.bulkStatus(fps, bulkStatus);
+        showToast(`已更新 ${res.updated} 条`);
+        setSelected(new Set());
+        loadSummary();
+        loadGroups();
+      } catch (err) {
+        if (err instanceof ApiRequestError && err.status === 401) {
+          setAuthed(false);
+          navigate({ name: "login" });
+        } else {
+          showToast(err instanceof ApiRequestError ? err.message : "批量操作失败");
+        }
+      }
+    },
+    [selected, showToast, loadSummary, loadGroups],
+  );
+
+  const handleResolveAll = useCallback(async () => {
+    try {
+      const res = await api.resolveAll();
+      showToast(`已更新 ${res.updated} 条`);
+      setSelected(new Set());
+      loadSummary();
+      loadGroups();
+    } catch (err) {
+      if (err instanceof ApiRequestError && err.status === 401) {
+        setAuthed(false);
+        navigate({ name: "login" });
+      } else {
+        showToast(err instanceof ApiRequestError ? err.message : "操作失败");
+      }
+    }
+  }, [showToast, loadSummary, loadGroups]);
+
   // 首次拉取 + 依赖变化时拉取（路由切换不触发）
   useEffect(() => {
     if (!authed) return;
@@ -225,6 +293,11 @@ export default function App() {
   useEffect(() => {
     setPage(1);
   }, [status, severity, search, sort]);
+
+  // 筛选/翻页变更清空选择集合（自动刷新不在此列，选择按 fingerprint 保留）
+  useEffect(() => {
+    setSelected(new Set());
+  }, [status, severity, search, sort, page]);
 
   // ===== 渲染分支 =====
 
@@ -347,7 +420,55 @@ export default function App() {
             onSeverity={setSeverity}
             onSort={setSort}
             onSearch={setSearch}
+            onResolveAll={handleResolveAll}
           />
+
+          {/* 批量操作条：选中数 >0 时出现，sticky 于工具栏下 */}
+          {selected.size > 0 && (
+            <div
+              className="mt-2 flex flex-wrap items-center justify-between gap-3 border-t pt-2.5"
+              style={{ borderColor: "var(--border)" }}
+            >
+              <span className="mono text-xs" style={{ color: "var(--fg-2)" }}>
+                已选 {selected.size} 条
+              </span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => handleBulkStatus("resolved")}
+                  className="focus-ring flex h-8 items-center rounded-md border px-2.5 text-xs transition-colors hover:opacity-80"
+                  style={{
+                    backgroundColor: "transparent",
+                    borderColor: "var(--state-danger)",
+                    color: "var(--state-danger)",
+                  }}
+                >
+                  标记已解决
+                </button>
+                <button
+                  onClick={() => handleBulkStatus("open")}
+                  className="focus-ring flex h-8 items-center rounded-md border px-2.5 text-xs transition-colors hover:opacity-80"
+                  style={{
+                    backgroundColor: "transparent",
+                    borderColor: "var(--state-ok)",
+                    color: "var(--state-ok)",
+                  }}
+                >
+                  重新打开
+                </button>
+                <button
+                  onClick={() => setSelected(new Set())}
+                  className="focus-ring flex h-8 items-center rounded-md border px-2.5 text-xs transition-colors hover:opacity-80"
+                  style={{
+                    backgroundColor: "transparent",
+                    borderColor: "var(--border)",
+                    color: "var(--fg-2)",
+                  }}
+                >
+                  取消选择
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 列表 */}
@@ -359,6 +480,9 @@ export default function App() {
             page={page}
             onSelect={handleSelect}
             onPage={setPage}
+            selected={selected}
+            onToggleSelect={handleToggleSelect}
+            onToggleAll={handleToggleAll}
           />
         </div>
       </main>

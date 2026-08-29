@@ -5,10 +5,12 @@
 import type {
   ApiError,
   AuthUser,
+  BulkStatusResponse,
   GroupDetailResponse,
   GroupsResponse,
   GroupStatus,
   Report,
+  ResolveAllResponse,
   SummaryResponse,
 } from "./api-types";
 
@@ -111,6 +113,17 @@ export const api = {
     return request<{ ok: true }>(`/api/groups/${fingerprint}/status`, {
       method: "POST",
       body: JSON.stringify({ status }),
+    });
+  },
+  bulkStatus(fingerprints: string[], status: GroupStatus): Promise<BulkStatusResponse> {
+    return request<BulkStatusResponse>("/api/groups/bulk-status", {
+      method: "POST",
+      body: JSON.stringify({ fingerprints, status }),
+    });
+  },
+  resolveAll(): Promise<ResolveAllResponse> {
+    return request<ResolveAllResponse>("/api/groups/resolve-all", {
+      method: "POST",
     });
   },
 };

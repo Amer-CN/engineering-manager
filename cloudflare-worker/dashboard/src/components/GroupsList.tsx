@@ -7,11 +7,79 @@ import { SeverityBadge } from "./SeverityBadge";
 
 const PAGE_SIZE = 20;
 
-function ListRow({ row, onClick }: { row: GroupRow; onClick: () => void }) {
+/** 自绘多选框：hairline 16px 方框，选中 accent 填充 + on-accent 勾，半选态为横杠 */
+function Checkbox({
+  checked,
+  indeterminate = false,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  indeterminate?: boolean;
+  onChange: () => void;
+  label: string;
+}) {
+  const active = checked || indeterminate;
   return (
     <button
+      type="button"
+      role="checkbox"
+      aria-checked={indeterminate ? "mixed" : checked}
+      aria-label={label}
+      onClick={(e) => {
+        e.stopPropagation();
+        onChange();
+      }}
+      className="focus-ring flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border transition-colors"
+      style={{
+        borderColor: active ? "var(--accent)" : "var(--border-strong)",
+        backgroundColor: active ? "var(--accent)" : "transparent",
+        color: "var(--on-accent)",
+      }}
+    >
+      {indeterminate ? (
+        <span
+          className="block h-0.5 w-2 rounded-full"
+          style={{ backgroundColor: "var(--on-accent)" }}
+        />
+      ) : checked ? (
+        <svg viewBox="0 0 16 16" width="12" height="12" fill="none" aria-hidden className="shrink-0">
+          <path
+            d="M3 8.5 6.5 12 13 4.5"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      ) : null}
+    </button>
+  );
+}
+
+function ListRow({
+  row,
+  selected,
+  onToggle,
+  onClick,
+}: {
+  row: GroupRow;
+  selected: boolean;
+  onToggle: () => void;
+  onClick: () => void;
+}) {
+  return (
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
-      className="group flex w-full items-center gap-3 border-b px-4 py-3 text-left transition-colors"
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      className="group flex w-full cursor-pointer items-center gap-3 border-b px-4 py-3 text-left transition-colors"
       style={{ borderColor: "var(--border)", backgroundColor: "transparent" }}
       onMouseEnter={(e) => {
         e.currentTarget.style.backgroundColor = "var(--card-hover)";
@@ -19,6 +87,11 @@ function ListRow({ row, onClick }: { row: GroupRow; onClick: () => void }) {
       }}
       onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
     >
+      <Checkbox
+        checked={selected}
+        onChange={onToggle}
+        label={`选择 ${row.title || "此错误"}`}
+      />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2.5">
           <SeverityBadge severity={row.severity} />
@@ -65,7 +138,7 @@ function ListRow({ row, onClick }: { row: GroupRow; onClick: () => void }) {
           {relativeTime(row.last_seen)}
         </span>
       </div>
-    </button>
+    </div>
   );
 }
 
@@ -77,6 +150,9 @@ export interface GroupsListProps {
   pageSize?: number;
   onSelect: (fp: string) => void;
   onPage: (page: number) => void;
+  selected: Set<string>;
+  onToggleSelect: (fp: string) => void;
+  onToggleAll: () => void;
 }
 
 export const GroupsList = memo(function GroupsList({
@@ -87,14 +163,40 @@ export const GroupsList = memo(function GroupsList({
   pageSize = PAGE_SIZE,
   onSelect,
   onPage,
+  selected,
+  onToggleSelect,
+  onToggleAll,
 }: GroupsListProps) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const selectedCount = selected.size;
+  const allSelected = rows.length > 0 && rows.every((r) => selected.has(r.fingerprint));
+  const someSelected = rows.some((r) => selected.has(r.fingerprint));
 
   return (
     <div
       className="overflow-hidden rounded-lg border"
       style={{ backgroundColor: "var(--card)", borderColor: "var(--border)" }}
     >
+      {/* 选择条：工具栏下、第一行前；全选框 + mono 计数 */}
+      {!loading && rows.length > 0 && (
+        <div
+          className="flex items-center justify-between border-b px-4 py-2"
+          style={{ borderColor: "var(--border)", backgroundColor: "var(--panel)" }}
+        >
+          <div className="flex items-center gap-2.5">
+            <Checkbox
+              checked={allSelected}
+              indeterminate={someSelected && !allSelected}
+              onChange={onToggleAll}
+              label="全选当前页"
+            />
+            <span className="mono text-xs" style={{ color: "var(--muted)" }}>
+              已选 {selectedCount} / 共 {total}
+            </span>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="flex flex-col">
           {Array.from({ length: 8 }).map((_, i) => (
@@ -114,7 +216,13 @@ export const GroupsList = memo(function GroupsList({
       ) : (
         <div className="flex flex-col">
           {rows.map((row) => (
-            <ListRow key={row.fingerprint} row={row} onClick={() => onSelect(row.fingerprint)} />
+            <ListRow
+              key={row.fingerprint}
+              row={row}
+              selected={selected.has(row.fingerprint)}
+              onToggle={() => onToggleSelect(row.fingerprint)}
+              onClick={() => onSelect(row.fingerprint)}
+            />
           ))}
         </div>
       )}
