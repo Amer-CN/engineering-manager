@@ -6,7 +6,7 @@
  * passive 的，做法对齐 costLedger 的先例），zoom ∈ [0.5, 2]、步进 0.1。
  * 缩放实现用 style.zoom（Chromium / WebView2 支持，项目内 costLedger 已有先例），
  * 不破布局（无需 wrapper 抵消占位）；zoom 属性不可用时回落 transform: scale。
- * bindRef 仍指向 .a4-paper（只负责把 zoom 应用到 style）。
+ * bindRef 指向 .editor-canvas（R15 画布，只负责把 zoom 应用到 style）。
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -20,9 +20,9 @@ export interface UseA4Zoom {
   zoom: number;
   /** 重置为 100% */
   reset: () => void;
-  /** 绑到 .a4-paper 元素的 ref（应用 zoom 到 style） */
+  /** 绑到 .editor-canvas 元素的 ref（应用 zoom 到 style） */
   bindRef: React.RefObject<HTMLDivElement>;
-  /** 绑到「工具栏 + 纸张滚动区」包裹层的 ref（挂 wheel 监听，Ctrl+滚轮在该范围内均可缩放） */
+  /** 绑到「工具栏 + 画布滚动区」包裹层的 ref（挂 wheel 监听，Ctrl+滚轮在该范围内均可缩放） */
   bindWheelRef: React.RefObject<HTMLDivElement>;
 }
 
@@ -53,7 +53,7 @@ export function useA4Zoom(): UseA4Zoom {
   const bindWheelRef = useRef<HTMLDivElement>(null);
 
   // Ctrl+滚轮：preventDefault（阻止浏览器整页缩放）→ zoom ±0.1
-  // R9：监听从 .a4-paper 上提到 bindWheelRef 包裹层（工具栏 + 纸张滚动区），
+  // R9：监听从 .editor-canvas 上提到 bindWheelRef 包裹层（工具栏 + 画布滚动区），
   // 鼠标悬停在工具栏上 Ctrl+滚轮也能缩放，且编辑器视图内无浏览器整页缩放路径
   useEffect(() => {
     const el = bindWheelRef.current;
@@ -67,7 +67,7 @@ export function useA4Zoom(): UseA4Zoom {
     return () => el.removeEventListener("wheel", handler);
   }, []);
 
-  // zoom 变化 → 写到 .a4-paper 元素 style
+  // zoom 变化 → 写到 .editor-canvas 元素 style
   useEffect(() => {
     if (bindRef.current) applyZoom(bindRef.current, zoom);
   }, [zoom]);
