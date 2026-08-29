@@ -69,6 +69,10 @@
   html {
     -webkit-text-size-adjust: 100%;
     text-rendering: optimizeLegibility;
+    /* 滚动条常驻占位：切 tab 行数变化跨过视口高度时，滚动条出现/消失
+       不再改变视口宽度，居中布局不再左右横移 */
+    scrollbar-gutter: stable;
+    overflow-y: scroll; /* 老浏览器兜底：恒显示轨道 */
   }
   body {
     margin: 0;
