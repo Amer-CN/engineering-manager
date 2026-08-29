@@ -1475,18 +1475,49 @@ button:disabled {
 .tiptap:focus-visible { outline: none; }
 
 /* ═══ R5：A4 纸张模式 — 白纸黑字，不随深色主题 ═══
-   R12 三态分离：编辑态 = 连续单页无限延长（无假分页——页概念属预览/导出态）。
-   写作中心三态：编辑（tiptap 流式）/ 预览（打印分页，R13）/ 交付（docx 模板导出）。 */
+   R14：编辑态真分页——padding 改 0 120px，首尾页边距由 ::before/::after 96px 白垫片提供；
+   页缝装饰 .a4-page-seam 占位 216px（96 顶垫 + 24 灰桌缝 + 96 底垫）。
+   写作中心三态：编辑（tiptap 流式，R14 块级真分页）/ 预览（打印分页，R13）/ 交付（docx）。 */
 .a4-paper {
   width: 794px;
-  min-height: 1123px;
-  padding: 96px 120px;
+  min-height: 1027px; /* 931 内容 + 96 顶垫（::before） */
+  padding: 0 120px;
   background: #fff;
   border-radius: 2px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }
+/* 首页顶边距 / 末页底边距垫片（padding 顶底归零后由伪元素补回） */
+.a4-paper::before,
+.a4-paper::after {
+  content: "";
+  display: block;
+  height: 96px;
+}
 .a4-paper .tiptap { color: #1f2328; }
 .a4-paper .tiptap p.is-editor-empty:first-child::before { color: #9ca3af; }
+
+/* ═══ R14：页缝装饰 — 块级 widget，分隔多张 A4 ═══
+   视觉：白 96（上页下边距）→ 阴影线 → 灰 24（桌缝）→ 阴影线 → 白 96（下页上边距）。
+   上下 96px 白由上下 padding 区提供；中部用线性渐变分层：
+   0–96px 白 / 96px 阴影线 / 96–120px 灰桌缝 / 120px 阴影线 / 120–216px 白。 */
+.a4-page-seam {
+  height: 216px;
+  background:
+    linear-gradient(
+      to bottom,
+      #fff 0,
+      #fff 96px,
+      rgba(0, 0, 0, 0.1) 96px,
+      rgba(0, 0, 0, 0.1) 97px,
+      var(--panel-2) 97px,
+      var(--panel-2) 119px,
+      rgba(0, 0, 0, 0.1) 119px,
+      rgba(0, 0, 0, 0.1) 120px,
+      #fff 120px,
+      #fff 216px
+    );
+  position: relative;
+}
 
 /* ═══ R3：写作中心顶部工具栏 ═══ */
 .em-toolbar {
