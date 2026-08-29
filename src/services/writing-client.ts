@@ -124,6 +124,49 @@ export function deleteWritingDoc(id: number): Promise<{ success: boolean; error?
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// 版本历史（T2）
+// ═══════════════════════════════════════════════════════════════════
+
+/** 单条版本快照（contentMd 全文返回，前端截前 80 字做预览） */
+export interface WritingVersion {
+  id: number
+  title: string
+  contentMd: string
+  createdBy: string
+  createdAt: string
+}
+
+export interface WritingVersionListResponse {
+  total: number
+  page: number
+  size: number
+  items: WritingVersion[]
+}
+
+/** 版本列表（created_at 倒序，size 上限 50） */
+export function fetchWritingVersions(
+  docId: number,
+  params: { page?: number; size?: number } = {},
+): Promise<{ success: boolean; data?: WritingVersionListResponse; error?: string }> {
+  const q = new URLSearchParams()
+  if (params.page) q.set('page', String(params.page))
+  if (params.size) q.set('size', String(params.size))
+  const suffix = q.toString() ? `?${q.toString()}` : ''
+  return apiClient.get<WritingVersionListResponse>(`/api/writing/documents/${docId}/versions${suffix}`)
+}
+
+/** 回滚到指定版本（后端先把当前内容留档再写回版本值） */
+export function restoreWritingVersion(
+  docId: number,
+  versionId: number,
+): Promise<{ success: boolean; data?: { title: string; contentMd: string }; error?: string }> {
+  return apiClient.post<{ title: string; contentMd: string }>(
+    `/api/writing/documents/${docId}/versions/${versionId}/restore`,
+    {},
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // 文件夹（R3）
 // ═══════════════════════════════════════════════════════════════════
 

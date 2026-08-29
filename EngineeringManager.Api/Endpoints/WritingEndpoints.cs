@@ -371,8 +371,24 @@ public static class WritingEndpoints
                     p.Add("ProjectId", dto.ProjectId.Value);
                 }
 
-                await db.ExecuteAsync(
-                    $"UPDATE writing_documents SET {string.Join(", ", sets)} WHERE id = @Id", p);
+                // T2 版本快照：更新前把库里旧内容留档（仅 ContentMd 非空的保存触发），
+                // 与 UPDATE 同事务，失败一起回滚；5min 节流 + 上限 50 由帮助方法处理
+                using (var tx = db.BeginTransaction())
+                {
+                    if (dto.ContentMd is not null)
+                    {
+                        var current = await db.QueryFirstOrDefaultAsync<dynamic>(
+                            "SELECT title, content_md FROM writing_documents WHERE id = @Id",
+                            new { Id = id }, transaction: tx);
+                        if (current is not null && ShouldSnapshot(db, id))
+                            await WritingVersionEndpoints.InsertSnapshotAsync(db, tx, id,
+                                (string)current.title, (string)current.content_md, uid, Common.NowString());
+                    }
+
+                    await db.ExecuteAsync(
+                        $"UPDATE writing_documents SET {string.Join(", ", sets)} WHERE id = @Id", p, transaction: tx);
+                    tx.Commit();
+                }
 
                 await WriteAuditAsync(db, ctx, uid, "update", id, "{\"event\":\"update\"}");
 
@@ -529,6 +545,18 @@ public static class WritingEndpoints
     // ─────────────────────────────────────────────────────────────
     // 私有帮助
     // ─────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// T2 快照节流：取该文档最新一条快照的 created_at，交给
+    /// WritingVersionEndpoints.ShouldSnapshot 判断是否落在 5min 窗口内。
+    /// </summary>
+    private static bool ShouldSnapshot(IDbConnection db, long documentId)
+    {
+        var lastCreatedAt = db.ExecuteScalar<string?>(
+            "SELECT created_at FROM writing_document_versions WHERE document_id = @Id ORDER BY id DESC LIMIT 1",
+            new { Id = documentId });
+        return WritingVersionEndpoints.ShouldSnapshot(lastCreatedAt);
+    }
 
     private static async Task WriteSseAsync(HttpContext ctx, object data)
     {
