@@ -146,6 +146,20 @@ public static class ApiConfig
         builder.Services.AddSingleton<EngineeringManager.Api.Services.AgentToolService>();
         builder.Services.AddSingleton<EngineeringManager.Api.Services.AgentConversationService>();
         builder.Services.AddSingleton<EngineeringManager.Api.Services.ReportGenerationService>();
+        // T1 写作中心知识库检索增强：检索委托每次调用创建 scope 取 Scoped IDbConnection，
+        // 使 Singleton 的 WritingSkillService 不捕获被 dispose 的请求级连接；
+        // async + using：await 完成（含异常/超时后台收尾）后 scope 必被 Dispose，全路径无泄漏
+        builder.Services.AddSingleton<EngineeringManager.Api.Services.IKnowledgeDraftAugmenter>(sp =>
+        {
+            return new EngineeringManager.Api.Services.KnowledgeDraftAugmenter(async (query, topK, userId, isAdmin) =>
+            {
+                using var scope = sp.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<IDbConnection>();
+                var embedding = scope.ServiceProvider.GetRequiredService<EngineeringManager.Api.Services.IEmbeddingService>();
+                var kb = new EngineeringManager.Api.Services.KnowledgeBaseService(db, embedding);
+                return await kb.SearchAsync(query, topK, null, userId, isAdmin);
+            });
+        });
         builder.Services.AddSingleton<EngineeringManager.Api.Services.WritingSkillService>();
         builder.Services.AddSingleton<EngineeringManager.Api.Services.UpdateService>();
 
