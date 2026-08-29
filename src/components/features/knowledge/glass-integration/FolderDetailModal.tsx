@@ -102,7 +102,7 @@ export const FolderDetailModal: React.FC<FolderDetailModalProps> = ({
         <div className="flex items-start justify-between pb-6 border-b border-white/10">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-[color:var(--gc-a20,#10b98133)] text-[color:var(--gc-icon,#34d399)] border border-[color:var(--gc-a30,#10b9814d)]">
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-[color:var(--gc-a20)] text-[color:var(--gc-icon)] border border-[color:var(--gc-a30)]">
                 {folder.category}
               </span>
               <span className="text-xs font-mono text-zinc-400 flex items-center gap-1">
@@ -134,9 +134,9 @@ export const FolderDetailModal: React.FC<FolderDetailModalProps> = ({
         <div className="grid grid-cols-3 gap-3 my-6">
           <div className={`p-4 rounded-2xl border ${isDark ? 'bg-zinc-800/50 border-white/10' : 'bg-zinc-50 border-zinc-200'}`}>
             <div className="text-xs text-zinc-400 mb-1">当前完成度</div>
-            <div className="text-2xl font-bold font-mono text-[color:var(--gc-icon,#34d399)]">{folder.progress}%</div>
+            <div className="text-2xl font-bold font-mono text-[color:var(--gc-icon)]">{folder.progress}%</div>
             <div className="w-full bg-zinc-700/50 h-1.5 rounded-full mt-2 overflow-hidden">
-              <div className="bg-[color:var(--gc-icon,#34d399)] h-full rounded-full transition-all duration-500" style={{ width: `${folder.progress}%` }} />
+              <div className="bg-[color:var(--gc-icon)] h-full rounded-full transition-all duration-500" style={{ width: `${folder.progress}%` }} />
             </div>
           </div>
 
@@ -149,7 +149,7 @@ export const FolderDetailModal: React.FC<FolderDetailModalProps> = ({
           <div className={`p-4 rounded-2xl border ${isDark ? 'bg-zinc-800/50 border-white/10' : 'bg-zinc-50 border-zinc-200'}`}>
             <div className="text-xs text-zinc-400 mb-1">协作成员</div>
             <div className="text-2xl font-bold font-mono flex items-center gap-1">
-              <Users className="w-5 h-5 text-[color:var(--gc-icon,#34d399)]" />
+              <Users className="w-5 h-5 text-[color:var(--gc-icon)]" />
               <span>{folder.memberCount}</span>
             </div>
             <div className="text-[10px] text-zinc-500 mt-1">项目组成员</div>
@@ -159,7 +159,7 @@ export const FolderDetailModal: React.FC<FolderDetailModalProps> = ({
         {/* Document List Header & Add Button */}
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-semibold flex items-center gap-2">
-            <FileText className="w-4 h-4 text-[color:var(--gc-icon,#34d399)]" />
+            <FileText className="w-4 h-4 text-[color:var(--gc-icon)]" />
             <span>项目关键文件 / 任务 (Documents)</span>
           </h3>
 
@@ -248,7 +248,7 @@ export const FolderDetailModal: React.FC<FolderDetailModalProps> = ({
                 <div className="flex items-center gap-3">
                   {isReadonly ? (
                     <CheckCircle2
-                      className={`w-5 h-5 ${isCompleted ? 'text-[color:var(--gc-icon,#34d399)]' : 'text-zinc-500'}`}
+                      className={`w-5 h-5 ${isCompleted ? 'text-[color:var(--gc-icon)]' : 'text-zinc-500'}`}
                     />
                   ) : (
                     <button

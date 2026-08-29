@@ -49,8 +49,7 @@ export function PreferencesSection() {
             <select
               value={startPage}
               onChange={e => handleStartPageChange(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-lg text-sm border border-[color:var(--border)] bg-[color:var(--card)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] appearance-none cursor-pointer"
-              style={{ color: 'var(--fg)' }}
+              className="w-full px-3 py-2.5 rounded-lg text-sm border border-[color:var(--border)] bg-[color:var(--card)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] appearance-none cursor-pointer text-foreground"
             >
               {NAV_ITEMS.map(item => (
                 <option key={item.id} value={item.id}>{item.label}</option>

@@ -49,7 +49,7 @@ const Login = lazy(() => import('./components/Login'))
 
 // 加载占位 — 品牌化动画
 const PageLoader = () => (
-  <div className="flex flex-col items-center justify-center gap-4" style={{ background: 'var(--bg)', minHeight: '100vh' }}>
+  <div className="flex flex-col items-center justify-center gap-4 bg-background" style={{ minHeight: '100vh' }}>
     <motion.div
       animate={{
         scale: [1, 1.08, 1],
@@ -74,8 +74,7 @@ const PageLoader = () => (
           key={i}
           animate={{ scale: [1, 1.3, 1], opacity: [0.3, 1, 0.3] }}
           transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
-          className="w-1.5 h-1.5 rounded-full"
-          style={{ background: 'var(--accent)' }}
+          className="w-1.5 h-1.5 rounded-full bg-primary"
         />
       ))}
     </div>
@@ -325,10 +324,11 @@ const AppContent: React.FC = () => {
   const shouldShowTitleBar = !isFullScreen || showTitleBarInFullScreen
 
   return (
-    <div className="h-screen relative overflow-hidden select-none flex flex-col bg-[color:var(--bg)]"
+    <div className="h-screen relative overflow-hidden select-none flex flex-col bg-background"
          style={{
+           // 桌面窗口边框描边：三主题同值，刻意不随主题走，已登记为 DESIGN.md 例外
            boxShadow: '0 0 0 1px rgba(0,0,0,0.08), 0 0 20px rgba(0,0,0,0.08)',
-         } as React.CSSProperties}>
+         }}>
       {/* 标题栏：正常模式始终显示，全屏模式鼠标靠近顶部时显示 */}
       <AnimatePresence>
         {shouldShowTitleBar && (
