@@ -56,6 +56,9 @@ const WritingDraftPanel: React.FC<WritingDraftPanelProps> = ({ docId, docType, s
   const abortRef = useRef<AbortController | null>(null);
   const discardedRef = useRef(false);
 
+  // 流式预览容器 ref（自动滚底用）
+  const streamRef = useRef<HTMLDivElement>(null);
+
   // 卸载清理：中止进行中的流并置丢弃标志（emitGenerated 据此拒写）
   useEffect(() => {
     return () => {
@@ -87,6 +90,13 @@ const WritingDraftPanel: React.FC<WritingDraftPanelProps> = ({ docId, docType, s
     if (label) showToast(`本周风格：${label}`, "success");
     onGenerated(label ? `> 本周风格：${label}\n\n${content}` : content);
   };
+
+  // 流式输出自动滚底：仅生成中跟随（生成完成后不强制滚，方便用户回看）
+  useEffect(() => {
+    if (generating && streamRef.current) {
+      streamRef.current.scrollTop = streamRef.current.scrollHeight;
+    }
+  }, [streamText, generating]);
 
   // 关闭面板：先中止流 + 置丢弃标志，再走外层 onClose
   const handleClose = () => {
@@ -183,10 +193,10 @@ const WritingDraftPanel: React.FC<WritingDraftPanelProps> = ({ docId, docType, s
     >
       <div className="space-y-4" style={{ padding: "20px 24px" }}>
 
-        {/* 高级选项：文体/风格/详略度（预填时收起） */}
+        {/* 高级选项：文体/风格/详略度（预填时收起）；py-1.5 扩热区，-mt/mb 等量抵消保持视觉不变 */}
         <button
           onClick={() => setAdvanced((v) => !v)}
-          className="flex items-center gap-1 text-xs font-medium mb-2"
+          className="flex items-center gap-1 text-xs font-medium py-1.5 -mt-1.5 mb-0.5"
           style={{ color: "var(--muted)" }}
         >
           <Icon name={advanced ? "ChevronUp" : "ChevronDown"} size={13} />
@@ -274,6 +284,7 @@ const WritingDraftPanel: React.FC<WritingDraftPanelProps> = ({ docId, docType, s
         {/* 流式输出预览 */}
         {(generating || streamText) && (
           <div
+            ref={streamRef}
             className="p-3 rounded-lg border text-sm whitespace-pre-wrap max-h-64 overflow-y-auto"
             style={{ borderColor: "var(--border)", background: "var(--panel-2)", color: "var(--fg)" }}
           >
