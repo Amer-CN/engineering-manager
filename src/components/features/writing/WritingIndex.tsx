@@ -13,6 +13,7 @@ import { useWritingPrefill, type WritingPrefill } from "@/hooks/useWritingPrefil
 import WritingEditor from "./WritingEditor";
 import WritingWizard from "./WritingWizard";
 import WritingFolderFilter from "./WritingFolderFilter";
+import WritingDocRow from "./WritingDocRow";
 import {
   fetchWritingDocs,
   fetchWritingDocTypes,
@@ -25,7 +26,6 @@ import {
   type WritingDoc,
   type WritingFolder,
 } from "@/services/writing-client";
-import { DropdownMenu } from "@/components/ui/DropdownMenu";
 
 interface DocTypeOption {
   code: string;
@@ -50,6 +50,7 @@ function flattenDocTypes(
 const WritingIndex: React.FC = () => {
   const { can } = usePermission();
   const { showToast } = useToastContext();
+  const canDelete = can("writing:delete");
   const [docs, setDocs] = useState<WritingDoc[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -62,6 +63,9 @@ const WritingIndex: React.FC = () => {
   const [deleteTarget, setDeleteTarget] = useState<WritingDoc | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
+  // P3 批量删除：当前页选中集合 + 批量删除确认开关（与单篇 deleteTarget 并存）
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [batchConfirm, setBatchConfirm] = useState<boolean>(false);
 
   const loadDocs = useCallback(() => {
     setLoading(true);
@@ -80,6 +84,8 @@ const WritingIndex: React.FC = () => {
   useEffect(() => {
     loadDocs();
   }, [loadDocs]);
+  // P3：翻页/筛选变化清空选中（跨页选中语义复杂，不做）
+  useEffect(() => { setSelectedIds(new Set()); }, [page, docType, folderFilter]);
 
   // 文体选项（单一真源）
   useEffect(() => {
@@ -208,6 +214,28 @@ const WritingIndex: React.FC = () => {
     });
   };
 
+  // P3 批量选中：全选/清空当前页 + 单行勾选
+  const allChecked = docs.length > 0 && docs.every((d) => selectedIds.has(d.id));
+  const toggleSelectAll = () => setSelectedIds(allChecked ? new Set() : new Set(docs.map((d) => d.id)));
+  const toggleRowChecked = (id: number) => setSelectedIds((prev) => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+
+  // P3 批量删除：逐篇调既有单个 DELETE，Promise.allSettled 统计成败；部分成功也刷新列表
+  const handleBatchDelete = () => {
+    const ids = Array.from(selectedIds);
+    void Promise.allSettled(ids.map((id) => deleteWritingDoc(id))).then((results) => {
+      const failed = results.filter((r) => r.status === "rejected" || !r.value.success).length;
+      const ok = ids.length - failed;
+      setBatchConfirm(false); setSelectedIds(new Set());
+      if (ok > 0) showToast(`已删除 ${ok} 篇`, "success");
+      if (failed > 0) showToast(`${failed} 篇删除失败`, "error");
+      loadDocs();
+    });
+  };
+
   if (editingId != null) {
     return (
       <RequirePermission permission="writing:update" fallback={<NoAccessState />}>
@@ -290,71 +318,38 @@ const WritingIndex: React.FC = () => {
                 }
               />
             ) : (
-              docs.map((d) => {
-                const folderName = folders.find((f) => f.id === d.folderId)?.name;
-                return (
-                  <div
-                    key={d.id}
-                    className="flex items-center justify-between px-5 py-4 border-b cursor-pointer hover:bg-[color:var(--panel-2)]"
-                    style={{ borderColor: "var(--border)" }}
-                    onClick={() => setEditingId(d.id)}
-                  >
-                    <div>
-                      <div className="text-sm font-medium" style={{ color: "var(--fg)" }}>
-                        {d.title}
-                      </div>
-                      <div className="text-xs" style={{ color: "var(--muted)" }}>
-                        {d.docType} · {formatTime(d.updatedAt)}
-                        {folderName && ` · ${folderName}`}
-                      </div>
-                    </div>
-                    {/* 容器拦住冒泡：点击「移入/删除」不触发行点击进编辑器；
-                        DropdownMenu 的开关 toggle div 在本容器内层，先于此拦截收到冒泡，菜单可正常打开 */}
-                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                      {/* R3：移入/移出文件夹 */}
-                      {can("writing:update") && folders.length > 0 && (
-                        <DropdownMenu
-                          align="end"
-                          trigger={
-                            <Button variant="ghost" size="sm">
-                              <Icon name="FolderOpen" size={15} />
-                              移入
-                            </Button>
-                          }
-                          items={[
-                            ...folders.map((f) => ({
-                              key: `f-${f.id}`,
-                              label: f.name,
-                              disabled: d.folderId === f.id,
-                              onClick: () => handleMoveDoc(d, f.id),
-                            })),
-                            {
-                              key: "move-out",
-                              label: "移出文件夹",
-                              divider: true,
-                              disabled: d.folderId == null,
-                              onClick: () => handleMoveDoc(d, null),
-                            },
-                          ]}
-                        />
-                      )}
-                      {can("writing:delete") && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleteTarget(d);
-                          }}
-                        >
-                          <Icon name="Trash2" size={15} />
-                          删除
-                        </Button>
-                      )}
-                    </div>
+              <>
+                {canDelete && (
+                  <div className="flex items-center justify-between px-5 py-2.5 border-b" style={{ borderColor: "var(--border)" }}>
+                    <label className="flex items-center gap-2 text-xs cursor-pointer" style={{ color: "var(--muted)" }}>
+                      <input type="checkbox" aria-label="全选" checked={allChecked} onChange={toggleSelectAll}
+                        className="rounded border-[color:var(--border)] text-[color:var(--accent)] focus:ring-[color:var(--accent-soft)]" />
+                      全选
+                    </label>
+                    {selectedIds.size > 0 && (
+                      <Button variant="danger" size="sm" onClick={() => setBatchConfirm(true)}>
+                        <Icon name="Trash2" size={15} />
+                        删除选中（{selectedIds.size}）
+                      </Button>
+                    )}
                   </div>
-                );
-              })
+                )}
+                {docs.map((d) => (
+                  <WritingDocRow
+                    key={d.id}
+                    doc={d}
+                    folderName={folders.find((f) => f.id === d.folderId)?.name}
+                    showCheckbox={canDelete}
+                    checked={selectedIds.has(d.id)}
+                    onToggleCheckbox={toggleRowChecked}
+                    canUpdate={can("writing:update")}
+                    folders={folders}
+                    onMoveDoc={handleMoveDoc}
+                    onDelete={setDeleteTarget}
+                    onOpen={(doc) => setEditingId(doc.id)}
+                  />
+                ))}
+              </>
             )}
           </div>
           {/* 底部固定分页条：total 换算为总页数（Pagination.total 语义是页数不是条数） */}
@@ -379,6 +374,13 @@ const WritingIndex: React.FC = () => {
           confirmVariant="danger"
         />
 
+        {/* P3 批量删除确认：与单篇 deleteTarget 并存的独立确认开关 */}
+        <ConfirmDialog
+          isOpen={batchConfirm} onClose={() => setBatchConfirm(false)} onConfirm={handleBatchDelete}
+          title="批量删除" content={`将永久删除选中的 ${selectedIds.size} 篇文档，不可恢复`}
+          confirmText="删除选中" confirmVariant="danger"
+        />
+
         {/* R1 新建向导：文体 → 素材 → 风格 → AI 起草 / 空白手写 */}
         <WritingWizard
           open={wizardOpen}
@@ -390,10 +392,5 @@ const WritingIndex: React.FC = () => {
     </RequirePermission>
   );
 };
-
-function formatTime(s: string): string {
-  if (!s) return "";
-  return s.slice(0, 16).replace("T", " ");
-}
 
 export default WritingIndex;
