@@ -266,6 +266,10 @@ const WritingDraftPanel: React.FC<WritingDraftPanelProps> = ({ docId, docType, s
           className="w-full min-h-[140px] p-3 text-sm rounded-lg border resize-y"
           style={{ borderColor: "var(--border)", background: "var(--panel)", color: "var(--fg)" }}
         />
+        {/* 知识库联动能力提示：让用户知道素材之外还有公司资料自动参考这回事 */}
+        <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
+          生成时会自动检索公司知识库补充参考资料；知识库暂无内容时仅用以上素材。
+        </p>
 
         {/* 流式输出预览 */}
         {(generating || streamText) && (

@@ -113,6 +113,7 @@ SQLite (engineering.db) ← 数据存储路径由用户配置
 | 成本台账 | `/cost-ledger` | `CostLedger.tsx` | `CostLedgerEndpoints.cs` | 真实资金流追踪，双入口角色分离 |
 | 仓库管理 | `/inventory` | `Inventory.tsx` | `InventoryEndpoints.cs` | 物料库/出入库/项目材料 |
 | 单位管理 | `/partners` | `Partners.tsx` | `PartnerEndpoints.cs` | 合作单位+监管单位 |
+| 写作中心 | `/writing` | `WritingIndex.tsx` | `WritingEndpoints.cs` + `WritingFolderEndpoints.cs` + `WritingVersionEndpoints.cs` | 公文生产：AI 起草/编辑器/多格式导出/版本历史，详见 MODULES.md 写作中心章节 |
 
 ## 📁 文件存储系统
 
