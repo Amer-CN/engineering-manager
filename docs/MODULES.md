@@ -175,6 +175,21 @@
 - **单位管理**：合作单位 + 监管单位（Tab切换），表头支持排序+筛选（filterable select/text），不再需要顶部的搜索/类型/项目筛选框
 - **营业执照 PDF 支持**：PDF 上传后由 `useBusinessLicenseOCR` 逐页转图片识别，找到即停
 
+### 写作中心（v0.92.0 — v1+二期+三期+富文本三底线，共 31 PR）
+- **模块位置**：侧边栏「资产」分组，路由 `/writing`，图标 PenLine，权限码 `writing:read/create/update/delete`（042 迁移追加）
+- **产品定位**：公文生产工具（参考 WPS/Word 的交付结果，编辑器不装 Word 引擎）。**三态架构**：编辑态（tiptap 无限画布：白色卡片 820px 限宽居中、A4 比例默认高度 1160px、Ctrl+滚轮缩放）→ 预览态（浏览器 @page A4 打印分页 + GB/T 9704 版式，可另存 PDF）→ 交付态（导出中心 7 格式：MD/TXT/HTML/Word 普通/Word 红头/PDF）
+- **编辑器**：tiptap v3 + Markdown 存储（content_md TEXT）；斜杠菜单（跟光标/打字过滤/↑↓Enter）；行内 AI 改写（选区浮动菜单，陈旧位置守卫）；Protected Spans `[[...]]` 黄色高亮（事实保护，导出时剥标记）；粘贴净化管道（Word/网页 HTML 白名单重建：结构保留、class/style/mso-* 全剥、URL 协议白名单）
+- **AI 起草**：SSE 流式；文体 30 种（super-official-writer skill：SKILL.md/templates.md/phrase-library.md/format-spec.md EmbeddedResource）+ 风格 S1-S6；**起草联动知识库**（KnowledgeDraftAugmenter：素材自动检索公司知识库 top-3 注入 prompt 参考区，3 秒预算静默降级）；风格轮换记忆（next-style 端点：同文体上次风格 +1 回绕，周报类向导默认「自动轮换」档）；初稿自动体检（生成完跑 runWritingCheck：[[残留]]/套话/层级跳号警告 + 自动开面板）
+- **版本历史**：保存自动快照旧版本（5 分钟节流、每文档上限 50、046 迁移 writing_document_versions）；「历史」按钮列表 + 一键回滚（当前内容入档）
+- **文件夹**：writing_folders（043 迁移）+ 文档 folder_id 筛选/移入；删除仅限创建者（admin 豁免）
+- **列表批量操作**：行复选框/当前页全选/批量删除（allSettled 逐篇 + 成败 toast）
+- **交稿体检**：WritingCheckPanel 四项（标记残留/层级跳号/字数/套话黑名单）
+- **安全**：LLM error 块抛异常（不再静默空 done 清空文档）；关闭面板 AbortController 中止流 + 迟到内容不写入；空产出不发 done；SSE linked-CTS（RequestAborted + 5min 上限）
+- **核心文件**：`src/components/features/writing/`（WritingIndex/Editor/Wizard/DraftPanel/DocRow/HistoryModal/PreviewModal/ExportMenu/CheckPanel/SlashMenu/AiMenu/protectedSpan.ts + EditorToolbar），`src/utils/`（docxExport/redHeaderExport/printPreview/pasteSanitizer/exportFormats），`src/services/writing-client.ts`，`src/hooks/useA4Zoom.ts`
+- **C# 端点**：`WritingEndpoints.cs`（CRUD/draft SSE/assist/next-style）+ `WritingFolderEndpoints.cs` + `WritingVersionEndpoints.cs`，`WritingSkillService.cs`（prompt 组装 + KnowledgeDraftAugmenter）
+- **设计文档**：`docs/superpowers/specs/2026-08-16-writing-center-design.md`（v1）+ `2026-08-30-writing-center-phase2-3-addendum.md`（二期/三期/富文本三底线增量纪要）
+- **性能基线**：`src/__tests__/utils/writingPerf.test.ts`（6 万字施组量级：打开 162ms/序列化 8ms/单次编辑 5ms，数据层非瓶颈）
+
 ---
 
 ## 📁 文件存储系统
