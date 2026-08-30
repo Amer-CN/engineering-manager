@@ -122,7 +122,11 @@ export const GroupsToolbar = memo(function GroupsToolbar(props: Props) {
           <option value="count">次数</option>
         </select>
 
-        <span className="mono ml-1 text-xs" style={{ color: "var(--muted)" }}>
+        {/* 计数固定宽度 + 等宽数字 + 右对齐：1→10→100 位数增长不推挤右侧按钮 */}
+        <span
+          className="mono ml-1 text-xs"
+          style={{ color: "var(--muted)", minWidth: "4.5em", textAlign: "right", fontVariantNumeric: "tabular-nums" }}
+        >
           {props.total} 条
         </span>
 
