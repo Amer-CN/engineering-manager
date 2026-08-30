@@ -24,7 +24,7 @@ const variantStyles: Record<ButtonVariant, string> = {
   danger:
   'bg-danger-500 text-white hover:bg-danger-600 active:bg-danger-700 shadow-sm hover:shadow-md',
   ghost:
-  'bg-transparent text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)]',
+  'bg-transparent text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)] active:bg-[color:var(--panel-2)]',
   link:
       'bg-transparent text-[color:var(--accent)] hover:opacity-80 hover:underline shadow-none',
   outline:

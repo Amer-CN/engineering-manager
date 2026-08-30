@@ -7,7 +7,7 @@
  * 网络层全部 mock，只验真实组件交互链路。
  */
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import WritingDraftPanel from "@/components/features/writing/WritingDraftPanel";
 import * as writingClient from "@/services/writing-client";
 
@@ -127,5 +127,76 @@ describe("WritingDraftPanel 生成点击链路", () => {
     pendingDone?.();
     await waitFor(() => expect(capturedSignal!.aborted).toBe(true));
     expect(onGenerated).not.toHaveBeenCalled();
+  });
+});
+
+// ── P4 交互打磨：流式预览自动滚底（仅生成中跟随） ──────────────────────────────
+// jsdom 无布局引擎，scrollTop/scrollHeight 恒为 0；用实例属性覆盖原生访问器，
+// 观测组件对 scrollTop 的赋值行为（赋值来源唯一：自动滚底 effect）。
+type StreamEvent = { type: string; text?: string; content?: string; error?: string };
+
+function findPreviewContainer(): HTMLElement {
+  const el = document.querySelector(".max-h-64") as HTMLElement | null;
+  if (!el) throw new Error("流式预览容器未挂载");
+  return el;
+}
+
+function captureScrollAssignments(container: HTMLElement): { sets: number[] } {
+  const sets: number[] = [];
+  Object.defineProperty(container, "scrollHeight", { configurable: true, value: 800 });
+  Object.defineProperty(container, "scrollTop", {
+    configurable: true,
+    get: () => 0,
+    set: (v: number) => { sets.push(v); },
+  });
+  return { sets };
+}
+
+describe("WritingDraftPanel 流式预览自动滚底", () => {
+  it("生成中收到 content → 预览容器 scrollTop 跟随 scrollHeight（自动滚底）", async () => {
+    let emit: ((e: StreamEvent) => void) | undefined;
+    mockedStream.mockImplementation(async (_body, onEvent) => {
+      emit = onEvent;
+      await new Promise<void>(() => {}); // 流挂起：保持 generating=true
+      return undefined;
+    });
+
+    const { generateBtn } = setup();
+    fireEvent.click(generateBtn());
+
+    const container = await waitFor(findPreviewContainer);
+    const { sets } = captureScrollAssignments(container);
+
+    act(() => emit?.({ type: "content", text: "第二段内容" }));
+    await waitFor(() => expect(sets).toEqual([800]));
+  });
+
+  it("生成完成（done 后 generating=false）→ 不再强制滚底", async () => {
+    let emit: ((e: StreamEvent) => void) | undefined;
+    let pendingDone: (() => void) | null = null;
+    mockedStream.mockImplementation(async (_body, onEvent) => {
+      emit = onEvent;
+      await new Promise<void>((resolve) => { pendingDone = resolve; }); // 流挂起
+      return undefined;
+    });
+
+    const { generateBtn, onGenerated } = setup();
+    fireEvent.click(generateBtn());
+
+    const container = await waitFor(findPreviewContainer);
+    const { sets } = captureScrollAssignments(container);
+
+    // 生成中：content 事件触发一次滚底
+    act(() => emit?.({ type: "content", text: "第二段内容" }));
+    await waitFor(() => expect(sets.length).toBe(1));
+
+    // done → generating 复位 → 不应有新的 scrollTop 赋值
+    act(() => {
+      emit?.({ type: "done", content: "第一段第二段内容" });
+      pendingDone?.();
+    });
+    await waitFor(() => expect(screen.getByRole("button", { name: /应用内容/ })).toBeTruthy());
+    expect(onGenerated).toHaveBeenCalledWith("第一段第二段内容");
+    expect(sets.length).toBe(1);
   });
 });

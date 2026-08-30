@@ -76,7 +76,7 @@ const WritingExportMenu: React.FC<WritingExportMenuProps> = ({ editor, title, on
   const setField = (key: keyof RedForm, value: string) =>
     setForm((f) => ({ ...f, [key]: value }));
 
-  // 点外部 / Esc 关闭
+  // 点外部 / Esc 关闭；表单开着时 Esc 先关表单（redOpen 变化重挂监听以读到最新层级）
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
       if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
@@ -84,7 +84,10 @@ const WritingExportMenu: React.FC<WritingExportMenuProps> = ({ editor, title, on
       }
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMenuOpen(false);
+      if (e.key === "Escape") {
+        if (redOpen) setRedOpen(false);
+        else setMenuOpen(false);
+      }
     };
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onKey);
@@ -92,7 +95,7 @@ const WritingExportMenu: React.FC<WritingExportMenuProps> = ({ editor, title, on
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onKey);
     };
-  }, []);
+  }, [redOpen]);
 
   // 普通导出（沿用 docxExport 公文样式）；busy 防连点（生成中禁用，双击不会并发两次）
   const handlePlain = () => {
@@ -288,7 +291,7 @@ const WritingExportMenu: React.FC<WritingExportMenuProps> = ({ editor, title, on
           onClick={() => setRedOpen(false)}
         >
           <div
-            className="w-full max-w-md rounded-xl border shadow-xl bg-white"
+            className="w-full max-w-md max-h-[85vh] flex flex-col rounded-xl border shadow-xl bg-white"
             style={{ borderColor: "var(--border)" }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -300,7 +303,7 @@ const WritingExportMenu: React.FC<WritingExportMenuProps> = ({ editor, title, on
                 GB/T 9704 公文格式：{title}
               </p>
             </div>
-            <div className="space-y-3 p-4">
+            <div className="space-y-3 p-4 flex-1 overflow-y-auto">
               {field("机关标志名 *", "orgName", "如：某某建设工程有限公司")}
               {field("发文字号", "docNumber", "如：某建司发〔2026〕12号")}
               {field("主送机关", "recipient", "如：各项目部、各部门：")}
