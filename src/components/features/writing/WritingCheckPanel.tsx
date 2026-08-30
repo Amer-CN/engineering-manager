@@ -8,7 +8,7 @@
  *   4. 空洞套话检测（黑名单：高度重视/积极推进/切实抓好/认真部署/迅速行动/全面落实）
  */
 
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import type { Editor, JSONContent } from "@tiptap/core";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
@@ -161,13 +161,24 @@ const WritingCheckPanel: React.FC<WritingCheckPanelProps> = ({ editor, open, onC
     () => (open ? runWritingCheck(editor.getJSON()) : []),
     [open, editor],
   );
+
+  // Esc 关闭（模式同 WritingExportMenu：document keydown）
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
   if (!open) return null;
   const warnCount = results.filter((r) => !r.ok).length;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
       <div
-        className="w-full max-w-md rounded-xl border shadow-xl bg-white"
+        className="w-full max-w-md max-h-[85vh] flex flex-col rounded-xl border shadow-xl bg-white"
         style={{ borderColor: "var(--border)" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -181,7 +192,7 @@ const WritingCheckPanel: React.FC<WritingCheckPanelProps> = ({ editor, open, onC
           </Button>
         </div>
 
-        <div className="space-y-2 p-4">
+        <div className="space-y-2 p-4 flex-1 overflow-y-auto">
           {results.map((r) => (
             <div key={r.id} className="rounded-lg border p-3" style={{ borderColor: "var(--border)" }}>
               <div className="flex items-center gap-2 text-sm" style={{ color: "var(--fg)" }}>

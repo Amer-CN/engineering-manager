@@ -149,7 +149,7 @@ const WritingWizard: React.FC<WritingWizardProps> = ({ open, onClose, onDraft, o
           </div>
           <button
             onClick={() => setShowMore((v) => !v)}
-            className="mt-2 text-xs flex items-center gap-1"
+            className="mt-0.5 text-xs flex items-center gap-1 py-1.5 -mb-1.5"
             style={{ color: "var(--muted)" }}
           >
             <Icon name={showMore ? "ChevronUp" : "ChevronDown"} size={13} />

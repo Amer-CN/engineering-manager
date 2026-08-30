@@ -44,18 +44,32 @@ const WritingDocRow: React.FC<WritingDocRowProps> = ({
       className="flex items-center justify-between px-5 py-4 border-b cursor-pointer hover:bg-[color:var(--panel-2)]"
       style={{ borderColor: "var(--border)" }}
       onClick={() => onOpen(doc)}
+      tabIndex={0}
+      role="button"
+      onKeyDown={(e) => {
+        // 仅行自身聚焦时响应 Enter/Space；行内按钮/复选框的键盘事件（e.target≠行）不受影响
+        if ((e.key === "Enter" || e.key === " ") && e.target === e.currentTarget) {
+          e.preventDefault(); // Space 防页面滚动
+          onOpen(doc);
+        }
+      }}
     >
       {/* 左组：复选框 + 标题/元信息（保持原有 justify-between 两栏布局不变） */}
       <div className="flex items-center">
         {showCheckbox && (
-          <input
-            type="checkbox"
-            checked={checked}
-            onChange={() => onToggleCheckbox(doc.id)}
+          <label
+            className="p-2 -m-2 mr-3 flex items-center cursor-pointer"
             onClick={(e) => e.stopPropagation()}
-            aria-label={`选中 ${doc.title}`}
-            className="mr-3 rounded border-[color:var(--border)] text-[color:var(--accent)] focus:ring-[color:var(--accent-soft)]"
-          />
+          >
+            <input
+              type="checkbox"
+              checked={checked}
+              onChange={() => onToggleCheckbox(doc.id)}
+              onClick={(e) => e.stopPropagation()}
+              aria-label={`选中 ${doc.title}`}
+              className="rounded border-[color:var(--border)] text-[color:var(--accent)] focus:ring-[color:var(--accent-soft)]"
+            />
+          </label>
         )}
         <div>
           <div className="text-sm font-medium" style={{ color: "var(--fg)" }}>
