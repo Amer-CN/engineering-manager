@@ -33,6 +33,7 @@ import {
   writingAssist,
   type WritingDoc,
 } from "@/services/writing-client";
+import { sanitizePastedHtml } from "@/utils/pasteSanitizer";
 
 /** 粘贴图片体积上限：超过则拒绝插入（base64 内嵌会直接撑大 contentMd，防止数据库膨胀） */
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
@@ -86,6 +87,7 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
     content: "",
     editorProps: {
       attributes: { class: "prose focus:outline-none" },
+      transformPastedHTML: (html) => sanitizePastedHtml(html),
       handleKeyDown: (_view, event) => {
         // Ctrl+S 手动保存
         if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
@@ -187,10 +189,7 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
     }
   };
 
-  // 卸载前：若还有未触发的防抖保存，立即落盘（避免最后一击丢失）
-  // saveDoc 存 ref + 空依赖：卸载 effect 只在真卸载时跑一次，
-  // 不随 saveDoc 变化（title 每键都变）反复重挂——否则每次重挂的 cleanup
-  // 会在防抖窗口内提前触发 PUT，造成每键一次请求。
+  // 卸载前：未触发的防抖保存立即落盘；saveDoc 存 ref（空依赖，卸载 effect 只在真卸载时跑一次，避免 title 每键变化反复重挂触发提前 PUT）
   const saveDocRef = useRef(saveDoc);
   useEffect(() => {
     saveDocRef.current = saveDoc;
