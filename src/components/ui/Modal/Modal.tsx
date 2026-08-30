@@ -40,6 +40,10 @@ const modalVariants = {
   visible: { opacity: 1, scale: 1 },
 }
 
+// 模块级打开实例栈：open 时入栈 / 关闭出栈；keydown 只响应栈顶（最后打开），
+// 修复嵌套弹层（如 HistoryModal 内 ConfirmDialog）按一次 Esc 连关两层的问题
+const openStack: symbol[] = []
+
 export function Modal({
   isOpen,
   onClose,
@@ -55,15 +59,26 @@ export function Modal({
   className = '',
   bodyClassName,
 }: ModalProps) {
+  // 打开入栈 / 关闭出栈（卸载同样出栈），保证栈顶始终是最后打开的实例
+  const instanceIdRef = React.useRef<symbol>(Symbol('modal-instance'))
+  useEffect(() => {
+    if (!isOpen) return
+    openStack.push(instanceIdRef.current)
+    return () => {
+      const idx = openStack.indexOf(instanceIdRef.current)
+      if (idx >= 0) openStack.splice(idx, 1)
+    }
+  }, [isOpen])
+
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-  if (e.key === 'Escape' && isOpen) {
-  onClose()
-  }
+    if (e.key === 'Escape' && isOpen && openStack[openStack.length - 1] === instanceIdRef.current) {
+      onClose()
+    }
   }, [isOpen, onClose])
 
   useEffect(() => {
-  document.addEventListener('keydown', handleKeyDown)
-  return () => document.removeEventListener('keydown', handleKeyDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
   }, [handleKeyDown])
 
   useEffect(() => {
