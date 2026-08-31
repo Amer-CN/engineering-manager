@@ -530,7 +530,7 @@ public static class WritingEndpoints
                 if (instruction == "custom" && string.IsNullOrWhiteSpace(dto.CustomInstruction))
                     return Common.Fail("自定义指令需提供 customInstruction");
 
-                var (ok, text, error) = await skill.AssistAsync(dto);
+                var (ok, text, error) = await skill.AssistAsync(dto, ctx.RequestAborted);
                 if (!ok)
                     return Common.Fail(error ?? "AI 改写失败");
                 return Results.Ok(new { success = true, data = new { text } });

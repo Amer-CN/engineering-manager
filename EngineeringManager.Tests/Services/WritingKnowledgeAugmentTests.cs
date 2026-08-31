@@ -46,13 +46,13 @@ public class WritingKnowledgeAugmentTests
 
         public StubLlmChatService(params string[] chunks) => _chunks = chunks;
 
-        public Task<ChatCompletionResponse?> ChatAsync(List<AgentMessage> messages, List<object>? tools = null, string? model = null, string? reasoningEffort = null)
+        public Task<ChatCompletionResponse?> ChatAsync(List<AgentMessage> messages, List<object>? tools = null, string? model = null, string? reasoningEffort = null, CancellationToken ct = default)
             => Task.FromResult<ChatCompletionResponse?>(null);
 
         public Task<ChatCompletionResponse?> ChatAsync(List<AgentMessage> messages, List<object>? tools = null)
             => ChatAsync(messages, tools, null, null);
 
-        public async IAsyncEnumerable<string> ChatStreamAsync(List<AgentMessage> messages, List<object>? tools = null, string? model = null, string? reasoningEffort = null)
+        public async IAsyncEnumerable<string> ChatStreamAsync(List<AgentMessage> messages, List<object>? tools = null, string? model = null, string? reasoningEffort = null, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
         {
             LastMessages = messages;
             foreach (var c in _chunks)

@@ -179,7 +179,7 @@ public sealed class WritingSkillService
             new() { Role = MessageRole.User, Content = user },
         };
 
-        await foreach (var chunk in _llm.ChatStreamAsync(messages))
+        await foreach (var chunk in _llm.ChatStreamAsync(messages, null, null, null, ct))
         {
             var text = TryExtractContentDelta(chunk);
             if (!string.IsNullOrWhiteSpace(text))
@@ -206,7 +206,7 @@ public sealed class WritingSkillService
 
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             cts.CancelAfter(TimeSpan.FromSeconds(45));
-            var task = _llm.ChatAsync(messages);
+            var task = _llm.ChatAsync(messages, null, null, null, cts.Token);
             var completed = await Task.WhenAny(task, Task.Delay(Timeout.InfiniteTimeSpan, cts.Token));
             if (completed != task)
                 return (false, null, "AI 改写超时（45s），请重试或缩短所选文字");
