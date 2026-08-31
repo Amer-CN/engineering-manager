@@ -1,16 +1,16 @@
 {
-  "latest": "0.82.1",
+  "latest": "0.94.0",
   "minForced": "0.0.0",
-  "releasedAt": "2026-07-04T19:30:35+08:00",
+  "releasedAt": "2026-08-31T18:10:00+08:00",
   "notesUrl": "",
   "package": {
-    "url": "https://github.com/Amer-CN/engineering-manager/releases/download/v0.82.1/EngineeringManager-Setup-0.82.1.exe",
+    "url": "https://github.com/Amer-CN/engineering-manager/releases/download/v0.94.0/EngineeringManager-Setup-0.94.0.exe",
     "proxies": [
       "https://gh-proxy.com/",
       "https://ghfast.top/"
     ],
-    "size": 232322068,
-    "sha256": "4762A46A9967EDFCDB06E8AC3312703B35F0280623A2296CB338DC34B8D81A5A",
+    "size": 243440846,
+    "sha256": "68E055735711FB04D4B1EE1348D1BF7CA286FF845B2C782E92D216FE3A444793",
     "signature": ""
   }
 }
