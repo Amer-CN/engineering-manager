@@ -98,7 +98,7 @@ public static class WageEndpoints
             using var tx = db.BeginTransaction();
             var affected = await db.ExecuteAsync(@"UPDATE attendances SET work_days=@WorkDays,days_off=@DaysOff,
                 is_full_attendance=@IsFullAttendance,daily_status=@DailyStatus,file_url=@FileUrl,
-                file_name=@FileName,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id",
+                file_name=@FileName,manually_edited=1,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id",
                 new { dto.Id, dto.WorkDays, dto.DaysOff, dto.IsFullAttendance, dto.DailyStatus,
                       dto.FileUrl, dto.FileName, Now = now() }, tx);
             if (access == RowWriteOutcome.AllowedViaAuthorization)
