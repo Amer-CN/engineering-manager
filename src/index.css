@@ -1746,3 +1746,23 @@ button:disabled {
 .gc-stage-iso .bg-white\/80 { background-color: rgb(255 255 255 / 0.80) !important; }
 .gc-stage-iso .bg-white\/90 { background-color: rgb(255 255 255 / 0.90) !important; }
 .gc-stage-iso .bg-white\/95 { background-color: rgb(255 255 255 / 0.95) !important; }
+
+/* ═══ P5 批次 B：可访问性 — prefers-reduced-motion + focus-visible 统一 ═══
+ * 1) 系统开启「减弱动态效果」时，CSS 过渡/动画时长归零（framer-motion 弹簧另由
+ *    main.tsx 的 MotionConfig reducedMotion="user" 处理）。
+ * 2) 无自定义 focus 样式的 button 统一键盘焦点环（--accent 描边）；
+ *    ui/Button 已有 focus-visible:ring（box-shadow）+ focus-visible:outline-none，
+ *    Tailwind 类优先级高于本规则，二者不会双重显示。 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

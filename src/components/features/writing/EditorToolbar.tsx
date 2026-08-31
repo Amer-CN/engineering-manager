@@ -32,8 +32,17 @@ import {
   Shield,
 } from "lucide-react";
 
-/** 文字颜色预设（CSS 命名色，避免硬编码 hex、跟随主题感知） */
-const COLOR_PRESETS = ["red", "orange", "gold", "green", "skyblue", "blue", "purple", "gray"];
+/** 文字颜色预设（CSS 命名色，避免硬编码 hex、跟随主题感知；title 用中文，后续加色只改本表） */
+const COLOR_PRESETS: { en: string; zh: string }[] = [
+  { en: "red", zh: "红色" },
+  { en: "orange", zh: "橙色" },
+  { en: "gold", zh: "金黄色" },
+  { en: "green", zh: "绿色" },
+  { en: "skyblue", zh: "天蓝色" },
+  { en: "blue", zh: "蓝色" },
+  { en: "purple", zh: "紫色" },
+  { en: "gray", zh: "灰色" },
+];
 
 interface EditorToolbarProps {
   editor: Editor | null;
@@ -145,13 +154,13 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
             <div className="em-color-grid">
               {COLOR_PRESETS.map((c) => (
                 <button
-                  key={c}
+                  key={c.en}
                   type="button"
-                  title={c}
+                  title={c.zh}
                   className="em-color-swatch"
-                  style={{ background: c }}
+                  style={{ background: c.en }}
                   onClick={() => {
-                    editor.chain().focus().setColor(c).run();
+                    editor.chain().focus().setColor(c.en).run();
                     setColorOpen(false);
                   }}
                 />

@@ -31,6 +31,30 @@ export function DropdownMenu({
   const [position, setPosition] = useState({ top: 0, left: 0, width: 0 })
   const triggerRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+  const wasOpenRef = useRef(false)
+
+  // Open: auto-focus first enabled menu item
+  useEffect(() => {
+    if (!isOpen) return
+    menuRef.current
+      ?.querySelector<HTMLButtonElement>('button:not(:disabled)')
+      ?.focus()
+  }, [isOpen])
+
+  // Close (Esc / selection / click outside): return focus to the trigger button
+  useEffect(() => {
+    if (isOpen) {
+      wasOpenRef.current = true
+      return
+    }
+    if (!wasOpenRef.current) return
+    wasOpenRef.current = false
+    const triggerEl =
+      triggerRef.current?.querySelector<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      ) ?? triggerRef.current
+    triggerEl?.focus()
+  }, [isOpen])
 
   // Calculate position when menu opens
   useEffect(() => {
@@ -82,13 +106,31 @@ export function DropdownMenu({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Close on Escape
+  // Close on Escape + ArrowUp/ArrowDown focus navigation among enabled items
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
+    const handleKeydown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setIsOpen(false)
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        const buttons = menuRef.current?.querySelectorAll<HTMLButtonElement>(
+          'button:not(:disabled)',
+        )
+        if (!buttons || buttons.length === 0) return
+        e.preventDefault()
+        const list = Array.from(buttons)
+        const idx = list.indexOf(document.activeElement as HTMLButtonElement)
+        const next =
+          idx === -1
+            ? e.key === 'ArrowDown'
+              ? 0
+              : list.length - 1
+            : e.key === 'ArrowDown'
+              ? (idx + 1) % list.length
+              : (idx - 1 + list.length) % list.length
+        list[next].focus()
+      }
     }
-    if (isOpen) document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
+    if (isOpen) document.addEventListener('keydown', handleKeydown)
+    return () => document.removeEventListener('keydown', handleKeydown)
   }, [isOpen])
 
   // Update position on scroll/resize
@@ -134,6 +176,7 @@ export function DropdownMenu({
                   {item.divider && <div className="my-1 border-t" style={{ borderColor: 'var(--border)' }} />}
                   <button
                     type="button"
+                    role="menuitem"
                     onClick={() => {
                       if (!item.disabled) {
                         item.onClick?.()
