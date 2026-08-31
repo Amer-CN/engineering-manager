@@ -45,7 +45,8 @@ public class FakeLlmChatService : ILlmChatService
         List<AgentMessage> messages,
         List<object>? tools = null,
         string? model = null,
-        string? reasoningEffort = null)
+        string? reasoningEffort = null,
+        CancellationToken ct = default)
     {
         // 深拷贝记录请求
         var recorded = new List<AgentMessage>(messages.Count);
@@ -116,10 +117,15 @@ public class FakeLlmChatService : ILlmChatService
         List<AgentMessage> messages,
         List<object>? tools = null,
         string? model = null,
-        string? reasoningEffort = null)
+        string? reasoningEffort = null,
+        [EnumeratorCancellation] CancellationToken ct = default)
     {
         // 记录请求
         _recordedRequests.Add(new List<AgentMessage>(messages));
+
+        // 预取消的令牌：迭代立即结束，不产出任何 chunk
+        if (ct.IsCancellationRequested)
+            yield break;
 
         // 返回最终文本作为一个 chunk
         var chunk = new

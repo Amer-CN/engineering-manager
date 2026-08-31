@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Data;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -200,11 +201,13 @@ public class LlmProviderService : ILlmChatService
     /// <summary>
     /// 非流式 Chat API 调用 — 支持 function calling
     /// </summary>
+    /// <param name="ct">取消令牌 — 触发时中止底层 HTTP 请求（HttpClient 层取消）</param>
     public async Task<ChatCompletionResponse?> ChatAsync(
         List<AgentMessage> messages,
         List<object>? tools = null,
         string? model = null,
-        string? reasoningEffort = null)
+        string? reasoningEffort = null,
+        CancellationToken ct = default)
     {
         var route = _router.GetRoute("chat");
 
@@ -241,7 +244,7 @@ public class LlmProviderService : ILlmChatService
             request.Headers.Add("Authorization", $"Bearer {route.ApiKey}");
             request.Content = content;
 
-            using var response = await client.SendAsync(request);
+            using var response = await client.SendAsync(request, ct);
             var responseBody = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
@@ -260,13 +263,15 @@ public class LlmProviderService : ILlmChatService
     }
 
     /// <summary>
-    /// 流式 Chat API 调用 — 返回 SSE 字符串流
+    /// 流式 Chat API 调用 — 返回 SSE 字符串流；取消令牌触发时流静默结束（正常取消不是错误）
     /// </summary>
+    /// <param name="ct">取消令牌 — 触发时中止连接与 SSE 读取，流静默结束</param>
     public async IAsyncEnumerable<string> ChatStreamAsync(
         List<AgentMessage> messages,
         List<object>? tools = null,
         string? model = null,
-        string? reasoningEffort = null)
+        string? reasoningEffort = null,
+        [EnumeratorCancellation] CancellationToken ct = default)
     {
         var route = _router.GetRoute("chat-stream");
 
@@ -293,21 +298,29 @@ public class LlmProviderService : ILlmChatService
 
         AddAgnesThinkingParameters(route, payload);
 
-        // 分离连接与 yield：try/catch 内不能 yield return
-        var connectResult = await ConnectStreamAsync(route, payload);
-        if (connectResult.Error != null)
+        // 分离连接与 yield：错误/取消经 ConnectStreamAsync 返回值传递（try/catch 内不能 yield return）
+        var (reader, connectError) = await ConnectStreamAsync(route, payload, ct);
+        if (reader == null)
         {
-            yield return connectResult.Error;
+            // Reader 为 null：connectError 非 null = 连接失败（下发错误块）；
+            // 均为 null = 正常取消（客户端断开/超时取消）→ 静默结束流，不产出错误块
+            if (connectError != null)
+                yield return connectError;
             yield break;
         }
 
-        var reader = connectResult.Reader!;
         while (true)
         {
             string? line;
             try
             {
-                line = await reader.ReadLineAsync();
+                line = await reader!.ReadLineAsync(ct);
+            }
+            catch (OperationCanceledException)
+            {
+                // 正常取消不是错误（客户端断开/超时取消）：仅 Debug 级留痕，静默结束流
+                _logger.LogDebug("[LlmProviderService] SSE 读取被取消（客户端断开/超时），静默结束流");
+                yield break;
             }
             catch (Exception ex)
             {
@@ -348,7 +361,8 @@ public class LlmProviderService : ILlmChatService
 
     private async Task<(StreamReader? Reader, string? Error)> ConnectStreamAsync(
         ModelRouteInfo route,
-        Dictionary<string, object> payload)
+        Dictionary<string, object> payload,
+        CancellationToken ct)
     {
         try
         {
@@ -361,7 +375,7 @@ public class LlmProviderService : ILlmChatService
             request.Headers.Add("Authorization", $"Bearer {route.ApiKey}");
             request.Content = content;
 
-            var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+            var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -375,6 +389,11 @@ public class LlmProviderService : ILlmChatService
         }
         catch (Exception ex)
         {
+            // 客户端断开/超时触发的取消是正常流程，不是错误：以取消语义返回 (null, null)，
+            // 由 ChatStreamAsync 静默结束流（不记错误日志、不产出错误块）。
+            // 仅用户取消走静默；HttpClient 自身 300s 超时（OCE 但 ct 未触发）仍按连接失败返回错误块。
+            if (ex is OperationCanceledException && ct.IsCancellationRequested)
+                return (null, null);
             Console.Error.WriteLine($"[LlmProviderService] ChatStreamAsync 连接失败: {ex.Message}");
             return (null, JsonSerializer.Serialize(new { error = $"连接 LLM 失败: {ex.Message}" }));
         }

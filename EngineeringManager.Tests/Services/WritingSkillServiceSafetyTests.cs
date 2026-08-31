@@ -9,6 +9,7 @@ namespace EngineeringManager.Tests.Services;
 ///   · LLM 流含 {"error":"..."} 块 → StreamDraftAsync 抛 InvalidOperationException（消息含 error 文本）
 ///   · 正常 token 序列 → 拼接输出正确
 ///   · finish 块（choices[0] 无 delta）→ 静默跳过不误报
+/// T18 取消贯通补充：预取消令牌传入 ChatStreamAsync → 迭代立即结束不产出 chunk（stub 与共享 FakeLlmChatService 各一条）
 /// </summary>
 public class WritingSkillServiceSafetyTests
 {
@@ -25,15 +26,17 @@ public class WritingSkillServiceSafetyTests
 
         public StubLlmChatService(params string[] chunks) => _chunks = chunks;
 
-        public Task<ChatCompletionResponse?> ChatAsync(List<AgentMessage> messages, List<object>? tools = null, string? model = null, string? reasoningEffort = null)
+        public Task<ChatCompletionResponse?> ChatAsync(List<AgentMessage> messages, List<object>? tools = null, string? model = null, string? reasoningEffort = null, CancellationToken ct = default)
             => Task.FromResult<ChatCompletionResponse?>(null);
 
         public Task<ChatCompletionResponse?> ChatAsync(List<AgentMessage> messages, List<object>? tools = null)
             => ChatAsync(messages, tools, null, null);
 
-        public async IAsyncEnumerable<string> ChatStreamAsync(List<AgentMessage> messages, List<object>? tools = null, string? model = null, string? reasoningEffort = null)
+        public async IAsyncEnumerable<string> ChatStreamAsync(List<AgentMessage> messages, List<object>? tools = null, string? model = null, string? reasoningEffort = null, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
         {
             LastMessages = messages;
+            if (ct.IsCancellationRequested)
+                yield break;
             foreach (var c in _chunks)
             {
                 await Task.Yield();
@@ -105,6 +108,44 @@ public class WritingSkillServiceSafetyTests
         var parts = new List<string>();
         await foreach (var token in svc.StreamDraftAsync(Draft()))
             parts.Add(token);
+
+        Assert.Empty(parts);
+    }
+
+    // ═══════════ T18 取消贯通：预取消令牌 → 迭代立即结束，不产出任何 chunk ═══════════
+
+    [Fact]
+    public async Task 预取消令牌传入ChatStreamAsync_迭代立即结束不产出任何chunk()
+    {
+        var stub = new StubLlmChatService(Delta("不应出现"));
+        using var cts = new System.Threading.CancellationTokenSource();
+        cts.Cancel();
+
+        var parts = new List<string>();
+        await foreach (var chunk in stub.ChatStreamAsync(
+            new List<AgentMessage> { new() { Role = MessageRole.System, Content = "s" } },
+            null, null, null, cts.Token))
+        {
+            parts.Add(chunk);
+        }
+
+        Assert.Empty(parts);
+    }
+
+    [Fact]
+    public async Task 共享FakeLlmChatService_预取消令牌_流立即结束不产出任何chunk()
+    {
+        var fake = new EngineeringManager.Tests.Common.FakeLlmChatService(finalAnswer: "不应出现");
+        using var cts = new System.Threading.CancellationTokenSource();
+        cts.Cancel();
+
+        var parts = new List<string>();
+        await foreach (var chunk in fake.ChatStreamAsync(
+            new List<AgentMessage> { new() { Role = MessageRole.System, Content = "s" } },
+            null, null, null, cts.Token))
+        {
+            parts.Add(chunk);
+        }
 
         Assert.Empty(parts);
     }
