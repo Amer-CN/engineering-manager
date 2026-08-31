@@ -65,6 +65,7 @@ public class LedgerExcelBoundaryFieldsMigrationTests : IDisposable
         Assert.Equal(1, Columns(conn, "project_workers").Count(c => c == "contract_signer"));
         Assert.Equal(1, Columns(conn, "project_workers").Count(c => c == "safety_training"));
         Assert.Equal(1, Columns(conn, "workers").Count(c => c == "current_address"));
+        Assert.Equal(1, Columns(conn, "workers").Count(c => c == "current_address_enc"));
         Assert.Equal(1, Columns(conn, "wages").Count(c => c == "paid_channel"));
     }
 }
