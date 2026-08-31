@@ -6,7 +6,7 @@
   "scripts": {
     "sync-version": "node scripts/sync-version.mjs",
     "dev": "vite",
-    "check": "node scripts/check-rules.cjs && node scripts/check-permission-matrix.cjs && node scripts/check-migration-naming.cjs && node scripts/check-write-permission.cjs",
+    "check": "node scripts/check-rules.cjs && node scripts/check-permission-matrix.cjs && node scripts/check-migration-naming.cjs && node scripts/check-write-permission.cjs && node scripts/check-icon-refs.cjs",
     "check:backend": "node scripts/check-backend-rules.cjs",
     "check:version": "node scripts/check-version-consistency.cjs",
     "report:bridge": "node .llm-matrix/gates/scripts/gate3-bridge-orphan.mjs",
