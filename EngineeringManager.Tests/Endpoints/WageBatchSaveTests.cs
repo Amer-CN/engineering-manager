@@ -504,6 +504,92 @@ public class WageBatchSaveTests : ApiTestBase
         Assert.Equal(445000L, (long)after.paid_amount);
     }
 
+    // ── T8 评审修补：paid_channel 行为断言 ───────────────────
+
+    /// <summary>seed 一行并预置 paid_channel='bank' 初值，返回 wages.id。</summary>
+    private async Task<long> SeedWageRowWithChannelAsync()
+    {
+        var id = await SeedWageRowAsync();
+        using var conn = new SqliteConnection(ConnectionString);
+        conn.Execute("UPDATE wages SET paid_channel='bank' WHERE id=@Id", new { Id = id });
+        return id;
+    }
+
+    [Fact]
+    public async Task BatchPayment_PaidChannel_Cash_Persisted()
+    {
+        var id = await SeedWageRowWithChannelAsync();
+        var token = await LoginAsync();
+        SetAuth(token);
+
+        var resp = await Client.PostAsJsonAsync("/api/wages/batch-payment",
+            new[] { new { id, paidAmount = 4450, paidDate = "2026-08-05", paidChannel = "cash" } });
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var data = await GetDataAsync(resp);
+        Assert.Equal(1, data.GetProperty("saved").GetInt32());
+
+        using var conn = new SqliteConnection(ConnectionString);
+        Assert.Equal("cash", conn.ExecuteScalar<string>("SELECT paid_channel FROM wages WHERE id=@Id", new { Id = id }));
+    }
+
+    [Fact]
+    public async Task BatchPayment_PaidChannel_EmptyString_Clears()
+    {
+        var id = await SeedWageRowWithChannelAsync();
+        var token = await LoginAsync();
+        SetAuth(token);
+
+        // '' = 清除语义：COALESCE 只挡 null 不挡空串，落库空串而非 NULL
+        var resp = await Client.PostAsJsonAsync("/api/wages/batch-payment",
+            new[] { new { id, paidAmount = 4450, paidDate = "2026-08-05", paidChannel = "" } });
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var data = await GetDataAsync(resp);
+        Assert.Equal(1, data.GetProperty("saved").GetInt32());
+
+        using var conn = new SqliteConnection(ConnectionString);
+        var channel = conn.ExecuteScalar<string>("SELECT paid_channel FROM wages WHERE id=@Id", new { Id = id });
+        Assert.NotNull(channel);              // 不是 NULL
+        Assert.Equal(string.Empty, channel);  // 是空串
+    }
+
+    [Fact]
+    public async Task BatchPayment_PaidChannel_Null_KeepsExisting()
+    {
+        var id = await SeedWageRowWithChannelAsync();
+        var token = await LoginAsync();
+        SetAuth(token);
+
+        // 不传 paidChannel → 反序列化为 null → COALESCE 保持既有 'bank'（回归锁）
+        var resp = await Client.PostAsJsonAsync("/api/wages/batch-payment",
+            new[] { new { id, paidAmount = 4450, paidDate = "2026-08-05" } });
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var data = await GetDataAsync(resp);
+        Assert.Equal(1, data.GetProperty("saved").GetInt32());
+
+        using var conn = new SqliteConnection(ConnectionString);
+        Assert.Equal("bank", conn.ExecuteScalar<string>("SELECT paid_channel FROM wages WHERE id=@Id", new { Id = id }));
+    }
+
+    /// <summary>confirm-matches（对账确认）固定写 paid_channel='bank'（照 ReceiptMatchTests 确认区脚手架）。</summary>
+    [Fact]
+    public async Task ConfirmMatches_WritesPaidChannel_Bank()
+    {
+        var id = await SeedWageRowWithChannelAsync();
+        var token = await LoginAsync();
+        SetAuth(token);
+
+        var resp = await Client.PostAsJsonAsync("/api/wages/confirm-matches", new[]
+        {
+            new { wageId = id, paidAmount = 4450.0, paidDate = "2026-08-05", bankReceiptPath = @"C:\receipts\r1.jpg" },
+        });
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var data = await GetDataAsync(resp);
+        Assert.Equal(1, data.GetProperty("saved").GetInt32());
+
+        using var conn = new SqliteConnection(ConnectionString);
+        Assert.Equal("bank", conn.ExecuteScalar<string>("SELECT paid_channel FROM wages WHERE id=@Id", new { Id = id }));
+    }
+
     // ── 窗口 H-2（D-9 落地）：PUT /api/wages 收窄为工资列 only ──────────
 
     /// <summary>PUT /api/wages：未发款行 → 200 且付款列不被改动（SET 已无付款列）。</summary>
