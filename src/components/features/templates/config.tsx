@@ -79,6 +79,9 @@ export const categoryConfig: Record<TemplateCategory, CategoryConfig> = {
       { key: 'content',         label: '函件内容',           type: 'text',    defaultValue: '', required: false },
     ],
   },
+  collection:         { label: '采集表',      icon: 'ClipboardList',   fileType: 'xlsx', description: '考勤/工程量采集空表（下发班组，回传解析）',
+    defaultVariables: [],
+  },
   other:              { label: '其他',        icon: 'File',            fileType: 'both', description: '其他通用文档模板',
     defaultVariables: [],
   },
@@ -91,5 +94,6 @@ export const categoryColors: Record<TemplateCategory, string> = {
   fund_application:   'text-[color:var(--muted)] bg-[color:var(--panel-2)] border-[color:var(--border)]',
   official_document:  'text-danger-600 bg-danger-50 border-danger-200',
   letter:             'text-[color:var(--muted)] bg-[color:var(--panel-2)] border-[color:var(--border)]',
+  collection:         'text-teal-600 bg-teal-50 border-teal-200',
   other:              'text-[color:var(--muted)] bg-[color:var(--panel-2)] border-[color:var(--border)]',
 }

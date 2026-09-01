@@ -402,6 +402,8 @@ export const tauriAPI = {
     apiClient.put<void>('/api/templates', template),
   deleteTemplate: (id: number) =>
     apiClient.del<void>(`/api/templates/${id}`),
+  issueCollectionTemplate: (templateId: number, values: { projectName: string; yearMonth: string; teamName: string }) =>
+    apiClient.post<{ dataUrl: string }>(`/api/templates/${templateId}/issue-collection`, values),
 
   // ────────── 合同模板 ──────────
   // 字段桥接：前端 description/variables[] ↔ 后端 content/variables(JSON 字符串)

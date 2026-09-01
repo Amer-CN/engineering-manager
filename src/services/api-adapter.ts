@@ -248,6 +248,8 @@ function createMockAPI() {
     createContractTemplate: async () => ({ success: true, data: { id: 1 } }),
     updateContractTemplate: async () => ({ success: true }),
     deleteContractTemplate: async () => ({ success: true }),
+    getTemplates: async () => ({ success: true, data: [] }),
+    issueCollectionTemplate: async () => ({ success: false, error: 'Mock 环境不支持采集表下发（需连接后端 API）' }),
     // 工资扩展
     getWagePaymentRecords: async () => ({ success: true, data: [] }),
     getWageOverdueStats: async () => ({ success: true, data: { count: 0, amount: 0 } }),

@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import type { Project, WorkerTeam, AttendanceRecord } from '@/types'
+import { CollectionIssueModal } from './CollectionIssueModal'
 type AttendanceRow = AttendanceRecord & { teamName?: string; projectWorkerId?: number }
 import { summaryDot, summaryLabel } from '../../../constants/attendance'
 import type { DayStatus } from '../../../types/electron'
@@ -32,6 +34,7 @@ export default function AttendanceTab({
   selectedIds, toggleSelect, toggleAll, onGenerateAttendance, onOpenDetail,
   onDelete, onBatchDelete, loading,
   onOpenHistory, onOpenImport,}: AttendanceTabProps) {
+  const [showIssueModal, setShowIssueModal] = useState(false)
   const filteredAttendances = attendances
 
   if (!selectedProject) {
@@ -144,6 +147,7 @@ export default function AttendanceTab({
           {onOpenImport && (
             <Button onClick={onOpenImport} variant="primary" size="sm">导入考勤</Button>
           )}
+          <Button onClick={() => setShowIssueModal(true)} variant="secondary" size="sm">发采集表</Button>
           <Button onClick={onGenerateAttendance} disabled={loading}
              variant="warning" size="sm">
             生成默认考勤
@@ -161,6 +165,15 @@ export default function AttendanceTab({
         emptyText="暂无考勤记录"
         emptyIcon="ClipboardFile"
       />
+
+      {showIssueModal && (
+        <CollectionIssueModal
+          project={selectedProject}
+          yearMonth={selectedMonth}
+          workerTeams={workerTeams}
+          onClose={() => setShowIssueModal(false)}
+        />
+      )}
     </div>
   )
 }

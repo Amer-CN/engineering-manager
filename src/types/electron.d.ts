@@ -588,7 +588,7 @@ export interface ContractTemplate {
 }
 
 // ============ 模板管理（新版，通用模板系统） ============
-export type TemplateCategory = 'contract' | 'settlement' | 'seal_application' | 'fund_application' | 'official_document' | 'letter' | 'other'
+export type TemplateCategory = 'contract' | 'settlement' | 'seal_application' | 'fund_application' | 'official_document' | 'letter' | 'collection' | 'other'
 
 export interface Template {
   id: number
@@ -1118,6 +1118,7 @@ export interface ElectronAPI {
   getTemplateStats: () => Promise<{ success: boolean; data?: Record<string, number>; error?: string }>
   fillTemplateDocx: (storedFileName: string, values: Record<string, string>) => Promise<{ success: boolean; data?: { dataUrl: string }; error?: string }>
   convertTemplateDocxToHtml: (storedFileName: string, category?: string) => Promise<{ success: boolean; data?: string; error?: string }>
+  issueCollectionTemplate: (templateId: number, values: { projectName: string; yearMonth: string; teamName: string }) => Promise<{ success: boolean; data?: { dataUrl: string }; error?: string }>
 
   // ============ 进销存 ============
   getInventoryItems: () => Promise<{ success: boolean; data?: InventoryItem[]; error?: string }>
