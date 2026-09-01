@@ -804,10 +804,6 @@ input::-webkit-outer-spin-button {
 [data-theme="sandstone"] * {
   scrollbar-color: rgba(180, 150, 120, 0.45) rgba(180, 150, 120, 0.06);
 }
-[data-theme="graphite"] .animate-float-slow,
-[data-theme="graphite"] .animate-float-slower {
-  opacity: 0.15;
-}
 [data-theme="graphite"] button:disabled {
   opacity: 0.3;
 }
@@ -1241,36 +1237,13 @@ button:disabled {
   CSS @keyframes run on GPU compositor thread
   — far smoother than JS-driven animations
   ═══════════════════════════════════════════ */
-@keyframes float-slow {
-  0%, 100% { transform: translate(-100px, -40px); }
-  50% { transform: translate(100px, 60px); }
-}
-@keyframes float-slower {
-  0%, 100% { transform: translate(80px, 20px); }
-  50% { transform: translate(-60px, -80px); }
-}
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
 }
-@keyframes pulse-glow {
-  0%, 100% { opacity: 0; transform: scale(0.5); }
-  50% { opacity: 1; transform: scale(2); }
-}
 
-.animate-float-slow {
-  animation: float-slow 12s ease-in-out infinite;
-  will-change: transform;
-}
-.animate-float-slower {
-  animation: float-slower 15s ease-in-out infinite;
-  will-change: transform;
-}
 .animate-fade-in {
   animation: fade-in 1s ease-out forwards;
-}
-.animate-pulse-glow {
-  animation: pulse-glow 2.5s ease-in-out infinite;
 }
 
 /* GPU compositing hint for large animated elements */
