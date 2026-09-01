@@ -239,48 +239,59 @@ public static class WageEndpoints
         //   （不动手工 daily_status / days_off），updated++；不存在 → 新建行，created++
         // UPDATE 分支归属守卫（R9-1 G73 修复，对齐 PUT /api/attendances）。
         // 响应 = { success, data: { created, updated, skipped } }
-        app.MapPost("/api/attendances/batch-import", (HttpContext ctx, AttendanceImportDto dto, IDbConnection db) =>
+    app.MapPost("/api/attendances/batch-import", (HttpContext ctx, AttendanceImportDto dto, IDbConnection db) =>
+    {
+        var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+        // G2 B2: 考勤导入 → wages:create
+        if (!CurrentUser.HasPermission(ctx, db, "wages:create")) return Results.Forbid();
+        var scope = CurrentUser.GetDataScope(ctx);
+        var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+        if (dto is null || !dto.ProjectId.HasValue || string.IsNullOrEmpty(dto.YearMonth))
+            return Results.BadRequest(new { success = false, error = "batch-import: projectId / yearMonth 必填" });
+        var projectId = dto.ProjectId.Value;
+        // R9-3 G75 项目级写入门（循环之前；UPDATE 行级守卫语义在下方预读判断中原地保留）
+        if (!CurrentUser.CanWriteProject(ctx, db, projectId)) return Results.Forbid();
+        var created = 0;
+        var updated = 0;
+        var skipped = new List<long>();
+        // 带提醒覆盖（spec §6.1 #21）：手改过且与导入值不同的行 → conflicts，前端逐条裁决
+        var conflicts = new List<object>();
+        var index = 0;
+        foreach (var item in dto.Records ?? new List<AttendanceImportItem>())
         {
-            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            // G2 B2: 考勤导入 → wages:create
-            if (!CurrentUser.HasPermission(ctx, db, "wages:create")) return Results.Forbid();
-            var scope = CurrentUser.GetDataScope(ctx);
-            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
-            if (dto is null || !dto.ProjectId.HasValue || string.IsNullOrEmpty(dto.YearMonth))
-                return Results.BadRequest(new { success = false, error = "batch-import: projectId / yearMonth 必填" });
-            var projectId = dto.ProjectId.Value;
-            // R9-3 G75 项目级写入门（循环之前；UPDATE 行级守卫 R9-1 第二层防线原地保留）
-            if (!CurrentUser.CanWriteProject(ctx, db, projectId)) return Results.Forbid();
-            var created = 0;
-            var updated = 0;
-            var skipped = new List<long>();
-            var index = 0;
-            foreach (var item in dto.Records ?? new List<AttendanceImportItem>())
+            index++;
+            if (!item.ProjectWorkerId.HasValue || !item.WorkDays.HasValue)
+                return Results.BadRequest(new { success = false, error = $"batch-import: 第 {index} 条缺失 projectWorkerId / workDays" });
+            var row = db.QueryFirstOrDefault(
+                "SELECT id, created_by, COALESCE(work_days,0) AS work_days, COALESCE(manually_edited,0) AS manually_edited FROM attendances WHERE project_id=@ProjectId AND year_month=@YearMonth AND project_worker_id=@PwId",
+                new { ProjectId = projectId, YearMonth = dto.YearMonth, PwId = item.ProjectWorkerId });
+            if (row != null)
             {
-                index++;
-                if (!item.ProjectWorkerId.HasValue || !item.WorkDays.HasValue)
-                    return Results.BadRequest(new { success = false, error = $"batch-import: 第 {index} 条缺失 projectWorkerId / workDays" });
-                var existingId = db.ExecuteScalar<long?>("SELECT id FROM attendances WHERE project_id=@ProjectId AND year_month=@YearMonth AND project_worker_id=@PwId",
-                    new { ProjectId = projectId, YearMonth = dto.YearMonth, PwId = item.ProjectWorkerId });
-                if (existingId.HasValue)
+                // 归属守卫优先（R9-1 G73 语义不变）：非 admin 只能刷新自己创建的行；未命中 → skipped
+                var owned = isAdmin == 1 || (row.created_by as string) == uid;
+                if (!owned) { skipped.Add(item.ProjectWorkerId.Value); continue; }
+                var currentDays = Convert.ToDouble(row.work_days);
+                if (Convert.ToInt64(row.manually_edited) != 0 && Math.Abs(currentDays - item.WorkDays.Value) > 0.0001)
                 {
-                    // 归属守卫：非 admin 只能刷新自己创建的行（对齐 PUT /api/attendances）；未命中 → skipped
-                    var affected = db.Execute(@"UPDATE attendances SET work_days=@WorkDays,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
-                        new { WorkDays = item.WorkDays.Value, Id = existingId.Value, Uid = uid, IsAdmin = isAdmin, Now = now() });
-                    if (affected > 0) updated++;
-                    else skipped.Add(item.ProjectWorkerId.Value);
+                    conflicts.Add(new { projectWorkerId = item.ProjectWorkerId.Value, currentWorkDays = currentDays, importWorkDays = item.WorkDays.Value });
+                    continue;
                 }
-                else
-                {
-                    db.Execute(@"INSERT INTO attendances (member_id,project_id,project_worker_id,year_month,work_days,created_by,created_at,updated_at,last_modified_at)
-                        VALUES (NULL,@ProjectId,@PwId,@YearMonth,@WorkDays,@CreatedBy,@Now,@Now,@Now)",
-                        new { ProjectId = projectId, PwId = item.ProjectWorkerId, YearMonth = dto.YearMonth,
-                              WorkDays = item.WorkDays.Value, CreatedBy = uid, Now = now() });
-                    created++;
-                }
+                // ① 未改过 → 静默覆盖；② 改过但值与库内相同 → 静默覆盖 + 清标记
+                db.Execute(@"UPDATE attendances SET work_days=@WorkDays,manually_edited=0,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id",
+                    new { WorkDays = item.WorkDays.Value, Id = (long)row.id, Now = now() });
+                updated++;
             }
-            return Common.Ok(new { created, updated, skipped });
-        });
+            else
+            {
+                db.Execute(@"INSERT INTO attendances (member_id,project_id,project_worker_id,year_month,work_days,created_by,created_at,updated_at,last_modified_at)
+                    VALUES (NULL,@ProjectId,@PwId,@YearMonth,@WorkDays,@CreatedBy,@Now,@Now,@Now)",
+                    new { ProjectId = projectId, PwId = item.ProjectWorkerId, YearMonth = dto.YearMonth,
+                          WorkDays = item.WorkDays.Value, CreatedBy = uid, Now = now() });
+                created++;
+            }
+        }
+        return Common.Ok(new { created, updated, skipped, conflicts });
+    });
 
         // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         // 宸ヨ祫

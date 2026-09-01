@@ -92,4 +92,55 @@ public class AttendanceConflictTests : ApiTestBase
         Assert.Equal(18.0, Convert.ToDouble(row.work_days));
         Assert.Equal(1L, Convert.ToInt64(row.manually_edited));
     }
+
+    // ── 用例 2：未改过的行（flag=0）→ 静默覆盖，不进冲突 ──
+    [Fact]
+    public async Task BatchImport_UnmodifiedRow_SilentOverwrite()
+    {
+        SetAuth(await LoginAdminAsync());
+        var pw = SeedProjectWorker("李四");
+        SeedAttendance(pw, 10, manuallyEdited: 0);
+
+        var json = await PostBatchImportAsync(new[] { new { projectWorkerId = pw, workDays = 20.0 } });
+        Assert.Equal(1, json.GetProperty("data").GetProperty("updated").GetInt32());
+        Assert.Equal(0, json.GetProperty("data").GetProperty("conflicts").GetArrayLength());
+    }
+
+    // ── 用例 3：改过且值不同 → 进 conflicts，不写库，标记保留 ──
+    [Fact]
+    public async Task BatchImport_ModifiedDifferentValue_Conflict()
+    {
+        SetAuth(await LoginAdminAsync());
+        var pw = SeedProjectWorker("王五");
+        var attId = SeedAttendance(pw, 20, manuallyEdited: 1);
+
+        var json = await PostBatchImportAsync(new[] { new { projectWorkerId = pw, workDays = 25.0 } });
+        Assert.Equal(0, json.GetProperty("data").GetProperty("updated").GetInt32());
+        var conflicts = json.GetProperty("data").GetProperty("conflicts");
+        Assert.Equal(1, conflicts.GetArrayLength());
+        var c = conflicts[0];
+        Assert.Equal(pw, c.GetProperty("projectWorkerId").GetInt64());
+        Assert.Equal(20.0, c.GetProperty("currentWorkDays").GetDouble());
+        Assert.Equal(25.0, c.GetProperty("importWorkDays").GetDouble());
+
+        var row = QueryAttendance(attId)!;
+        Assert.Equal(20.0, Convert.ToDouble(row.work_days));   // 未被覆盖
+        Assert.Equal(1L, Convert.ToInt64(row.manually_edited)); // 标记保留
+    }
+
+    // ── 用例 4：改过但导入值与库内相同 → 静默覆盖 + 清标记 ──
+    [Fact]
+    public async Task BatchImport_ModifiedEqualValue_SilentOverwrite_ClearsFlag()
+    {
+        SetAuth(await LoginAdminAsync());
+        var pw = SeedProjectWorker("赵六");
+        var attId = SeedAttendance(pw, 20, manuallyEdited: 1);
+
+        var json = await PostBatchImportAsync(new[] { new { projectWorkerId = pw, workDays = 20.0 } });
+        Assert.Equal(1, json.GetProperty("data").GetProperty("updated").GetInt32());
+        Assert.Equal(0, json.GetProperty("data").GetProperty("conflicts").GetArrayLength());
+
+        var row = QueryAttendance(attId)!;
+        Assert.Equal(0L, Convert.ToInt64(row.manually_edited));
+    }
 }
