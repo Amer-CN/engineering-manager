@@ -278,6 +278,7 @@ const MODAL_ALLOWED_FILES = new Set([
   'src/components/features/templates/TemplatePreview.tsx',
   'src/components/features/templates/TemplateSelectorModal.tsx',
   'src/components/features/users/ProjectAuthorizationsTab.tsx',
+  'src/components/features/wages/AttendanceConflictDialog.tsx',
   'src/components/features/writing/WritingPreviewModal.tsx',
   'src/components/features/writing/WritingHistoryModal.tsx',
   'src/components/ui/ConfirmDialog/ConfirmDialog.tsx',
