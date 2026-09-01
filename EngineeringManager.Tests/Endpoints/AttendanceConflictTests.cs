@@ -187,4 +187,44 @@ public class AttendanceConflictTests : ApiTestBase
         Assert.Equal(20.0, Convert.ToDouble(row.work_days));
         Assert.Equal(1L, Convert.ToInt64(row.manually_edited));
     }
+
+    // ── 用例 7：批内缺字段 → 400 整批拒绝，前段不落库（校验前置 + 整批事务）──
+    [Fact]
+    public async Task BatchImport_InvalidRecordMidBatch_NoPartialWrite()
+    {
+        SetAuth(await LoginAdminAsync());
+        var pw = SeedProjectWorker("吴九");
+        var attId = SeedAttendance(pw, 10, manuallyEdited: 0);
+
+        var resp = await Client.PostAsJsonAsync("/api/attendances/batch-import", new
+        {
+            projectId = TestProjectId, yearMonth = TestYearMonth,
+            records = new object[] { new { projectWorkerId = pw, workDays = 25.0 }, new { projectWorkerId = pw } },
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+
+        var row = QueryAttendance(attId)!;
+        Assert.Equal(10.0, Convert.ToDouble(row.work_days));    // 前段未被覆盖
+        Assert.Equal(0L, Convert.ToInt64(row.manually_edited));
+    }
+
+    // ── 用例 8：裁决批内非法 action → 400 整批拒绝，前段不落库 ──
+    [Fact]
+    public async Task Resolve_InvalidActionMidBatch_NoPartialWrite()
+    {
+        SetAuth(await LoginAdminAsync());
+        var pw = SeedProjectWorker("郑十");
+        var attId = SeedAttendance(pw, 20, manuallyEdited: 1);
+
+        var resp = await Client.PostAsJsonAsync("/api/attendances/batch-import-resolve", new
+        {
+            projectId = TestProjectId, yearMonth = TestYearMonth,
+            resolutions = new object[] { new { projectWorkerId = pw, action = "overwrite", workDays = 25.0 }, new { projectWorkerId = pw, action = "bogus" } },
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+
+        var row = QueryAttendance(attId)!;
+        Assert.Equal(20.0, Convert.ToDouble(row.work_days));    // 前段未被覆盖
+        Assert.Equal(1L, Convert.ToInt64(row.manually_edited)); // 标记保留
+    }
 }
