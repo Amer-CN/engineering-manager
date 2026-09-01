@@ -71,7 +71,7 @@ public static class CurrentUser
 
     /// <summary>PII 列全集(以 DB 列名为准)</summary>
     public static readonly string[] AllPiiColumns =
-        { "id_card", "phone", "bank_account", "address", "id_card_address" };
+        { "id_card", "phone", "bank_account", "address", "id_card_address", "current_address" };
 
     public enum PiiRole { Admin, Accountant, Manager, Worker, None }
 
@@ -80,9 +80,9 @@ public static class CurrentUser
     private static readonly IReadOnlyDictionary<PiiRole, HashSet<string>> PiiReadable =
         new Dictionary<PiiRole, HashSet<string>>
         {
-            [PiiRole.Admin]      = new(StringComparer.OrdinalIgnoreCase) { "id_card", "idCard", "phone", "bank_account", "bankAccount", "address", "id_card_address", "idCardAddress", "taxNumber", "creditCode" },
-            [PiiRole.Accountant] = new(StringComparer.OrdinalIgnoreCase) { "id_card", "idCard", "phone", "bank_account", "bankAccount", "address", "id_card_address", "idCardAddress", "taxNumber", "creditCode" },
-            [PiiRole.Manager]    = new(StringComparer.OrdinalIgnoreCase) { "id_card", "idCard", "phone", "bank_account", "bankAccount", "address", "id_card_address", "idCardAddress", "taxNumber", "creditCode" },
+            [PiiRole.Admin]      = new(StringComparer.OrdinalIgnoreCase) { "id_card", "idCard", "phone", "bank_account", "bankAccount", "address", "current_address", "currentAddress", "id_card_address", "idCardAddress", "taxNumber", "creditCode" },
+            [PiiRole.Accountant] = new(StringComparer.OrdinalIgnoreCase) { "id_card", "idCard", "phone", "bank_account", "bankAccount", "address", "current_address", "currentAddress", "id_card_address", "idCardAddress", "taxNumber", "creditCode" },
+            [PiiRole.Manager]    = new(StringComparer.OrdinalIgnoreCase) { "id_card", "idCard", "phone", "bank_account", "bankAccount", "address", "current_address", "currentAddress", "id_card_address", "idCardAddress", "taxNumber", "creditCode" },
             [PiiRole.Worker]     = new(StringComparer.OrdinalIgnoreCase) { },
             [PiiRole.None]       = new(StringComparer.OrdinalIgnoreCase) { },
         };
