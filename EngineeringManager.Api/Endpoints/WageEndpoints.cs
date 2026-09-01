@@ -548,7 +548,7 @@ public static class WageEndpoints
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var count = 0;
             foreach (var id in ids)
-                count += await db.ExecuteAsync("UPDATE wages SET paid_amount=NULL,paid_date=NULL,bank_receipt_path=NULL,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1) AND (payment_locked=0 OR payment_locked IS NULL)",
+                count += await db.ExecuteAsync("UPDATE wages SET paid_amount=NULL,paid_date=NULL,bank_receipt_path=NULL,paid_channel=NULL,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1) AND (payment_locked=0 OR payment_locked IS NULL)",
                     new { Id = id, Uid = uid, IsAdmin = isAdmin, Now = now() });
             return Common.Ok(new { cleared = count });
         });
@@ -706,6 +706,7 @@ public static class WageEndpoints
                 using var tx = db.BeginTransaction();
                 var affected = await db.ExecuteAsync(@"UPDATE wages SET
                         paid_amount=@PaidAmount, paid_date=@PaidDate, bank_receipt_path=@BankReceiptPath,
+                        paid_channel='bank',
                         updated_at=@Now, version=version+1, last_modified_at=@Now
                     WHERE id=@Id AND deleted_at IS NULL
                       AND COALESCE(payment_locked, 0) = 0",
@@ -931,6 +932,7 @@ public static class WageEndpoints
                 using var tx = db.BeginTransaction();
                 var affected = await db.ExecuteAsync(@"UPDATE wages SET
                         paid_amount=@PaidAmount, paid_date=@PaidDate, bank_receipt_path=COALESCE(@BankReceiptPath, bank_receipt_path),
+                        paid_channel=COALESCE(@PaidChannel, paid_channel),
                         updated_at=@Now, version=version+1, last_modified_at=@Now
                     WHERE id=@Id AND deleted_at IS NULL
                       AND COALESCE(payment_locked, 0) = 0",
@@ -939,6 +941,7 @@ public static class WageEndpoints
                         PaidAmount = ToFen(item.PaidAmount!.Value),
                         PaidDate = item.PaidDate,
                         BankReceiptPath = item.BankReceiptPath,
+                        PaidChannel = item.PaidChannel,
                         Now = now()
                     }, tx);
                 if (access == RowWriteOutcome.AllowedViaAuthorization)
@@ -1247,7 +1250,7 @@ record AttendanceBatchItem(long? MemberId, long? ProjectId, long? ProjectWorkerI
 
 // batch-payment 入参：按 id 定位（行必然已存在），只写付款列；
 // paidAmount 单位为元（ToFen 落库），用可空类型区分「缺省」与 0
-record WagePaymentItem(long? Id, double? PaidAmount, string? PaidDate, string? BankReceiptPath);
+record WagePaymentItem(long? Id, double? PaidAmount, string? PaidDate, string? BankReceiptPath, string? PaidChannel = null);
 
 // generate 入参：projectId + yearMonth（camelCase 由 Web 默认反序列化绑定）
 record WageGenerateDto(long? ProjectId, string? YearMonth);
