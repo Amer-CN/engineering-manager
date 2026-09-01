@@ -139,7 +139,8 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
                 id_card = Common.MaskPiiField("idCard", w.id_card as string, piiAccess),
                 phone = Common.MaskPiiField("phone", w.phone as string, piiAccess),
                 bank_account = Common.MaskPiiField("bankAccount", w.bank_account as string, piiAccess),
-                bank_name = w.bank_name, bank_line_no = w.bank_line_no
+                bank_name = w.bank_name, bank_line_no = w.bank_line_no,
+                current_address = Common.MaskPiiField("currentAddress", w.current_address as string, piiAccess)
             });
             return Common.Ok(masked);
         });
@@ -164,14 +165,16 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
             if (!CurrentUser.HasPermission(ctx, db, "members:create")) return Results.Forbid();
             // v1.2.0: PII 字段加密 (PiiProtector 注入)
             var pii = ctx.RequestServices.GetRequiredService<EngineeringManager.Api.Security.PiiProtector>();
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO workers (name,id_card,gender,phone,address,bank_account,bank_name,worker_type,daily_wage,
-                 id_card_enc,phone_enc,address_enc,bank_account_enc,created_by,created_at, last_modified_at) VALUES (@Name,@IdCard,@Gender,@Phone,@Address,@BankAccount,@BankName,@WorkerType,@DailyWage,
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO workers (name,id_card,gender,phone,address,bank_account,bank_name,worker_type,daily_wage,current_address,current_address_enc,
+                 id_card_enc,phone_enc,address_enc,bank_account_enc,created_by,created_at, last_modified_at) VALUES (@Name,@IdCard,@Gender,@Phone,@Address,@BankAccount,@BankName,@WorkerType,@DailyWage,@CurrentAddress,@CurrentAddressEnc,
                         @IdCardEnc,@PhoneEnc,@AddressEnc,@BankAccountEnc,@CreatedBy,@Now, @Now);
                 SELECT last_insert_rowid();",
                 new { dto.Name, dto.IdCard, dto.Gender, dto.Phone, dto.Address, dto.BankAccount,
                       dto.BankName, dto.WorkerType, dto.DailyWage,
+                      CurrentAddress = dto.CurrentAddress ?? "",
                       IdCardEnc = pii.Encrypt(dto.IdCard ?? ""), PhoneEnc = pii.Encrypt(dto.Phone ?? ""),
                       AddressEnc = pii.Encrypt(dto.Address ?? ""), BankAccountEnc = pii.Encrypt(dto.BankAccount ?? ""),
+                      CurrentAddressEnc = pii.Encrypt(dto.CurrentAddress ?? ""),
                       CreatedBy = uid, Now = now() });
             return Common.Ok(id);
         });
@@ -186,13 +189,15 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
             var pii = ctx.RequestServices.GetRequiredService<EngineeringManager.Api.Security.PiiProtector>();
             var affected = await db.ExecuteAsync(@"UPDATE workers SET name=@Name,id_card=@IdCard,gender=@Gender,
                 phone=@Phone,address=@Address,bank_account=@BankAccount,bank_name=@BankName,
-                worker_type=@WorkerType,daily_wage=@DailyWage,
-                id_card_enc=@IdCardEnc,phone_enc=@PhoneEnc,address_enc=@AddressEnc,bank_account_enc=@BankAccountEnc, version=version+1, last_modified_at=@Now
+                worker_type=@WorkerType,daily_wage=@DailyWage,current_address=@CurrentAddress,
+                id_card_enc=@IdCardEnc,phone_enc=@PhoneEnc,address_enc=@AddressEnc,bank_account_enc=@BankAccountEnc,current_address_enc=@CurrentAddressEnc, version=version+1, last_modified_at=@Now
                 WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
                 new { dto.Id, dto.Name, dto.IdCard, dto.Gender, dto.Phone, dto.Address, dto.BankAccount,
                       dto.BankName, dto.WorkerType, dto.DailyWage, Uid = uid, IsAdmin = isAdmin,
+                      CurrentAddress = dto.CurrentAddress ?? "",
                       IdCardEnc = pii.Encrypt(dto.IdCard ?? ""), PhoneEnc = pii.Encrypt(dto.Phone ?? ""),
-                      AddressEnc = pii.Encrypt(dto.Address ?? ""), BankAccountEnc = pii.Encrypt(dto.BankAccount ?? ""), Now = now() });
+                      AddressEnc = pii.Encrypt(dto.Address ?? ""), BankAccountEnc = pii.Encrypt(dto.BankAccount ?? ""),
+                      CurrentAddressEnc = pii.Encrypt(dto.CurrentAddress ?? ""), Now = now() });
             return affected > 0 ? Common.Ok() : Results.Forbid();
         });
         app.MapDelete("/api/workers/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
@@ -240,6 +245,12 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
                 id_card = Common.MaskPiiField("idCard", pw.id_card as string, piiAccess),
                 phone = Common.MaskPiiField("phone", pw.phone as string, piiAccess),
                 bank_account = Common.MaskPiiField("bankAccount", pw.bank_account as string, piiAccess),
+                contract_signer = pw.contract_signer,
+                contract_start = pw.contract_start,
+                contract_end = pw.contract_end,
+                safety_training = pw.safety_training,
+                work_section = pw.work_section,
+                exit_date = pw.exit_date,
             });
             return Common.Ok(masked);
         });
@@ -250,10 +261,14 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
             // G2 B5: 项目工人写操作 → members:create
             if (!CurrentUser.HasPermission(ctx, db, "members:create")) return Results.Forbid();
             // v1.2.0: project-workers 不直接存 PII (JOIN workers 表), 加密仍加 0 _enc 列
-            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO project_workers (worker_id,project_id,team_id,daily_wage,worker_type,entry_date,status,created_by,created_at, last_modified_at) VALUES (@WorkerId,@ProjectId,@TeamId,@DailyWage,@WorkerType,@EntryDate,@Status,@CreatedBy,@Now, @Now);
+            var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO project_workers (worker_id,project_id,team_id,daily_wage,worker_type,entry_date,status,created_by,created_at, last_modified_at, contract_signer,contract_start,contract_end,safety_training,work_section,exit_date) VALUES (@WorkerId,@ProjectId,@TeamId,@DailyWage,@WorkerType,@EntryDate,@Status,@CreatedBy,@Now, @Now, @ContractSigner,@ContractStart,@ContractEnd,@SafetyTraining,@WorkSection,@ExitDate);
                 SELECT last_insert_rowid();",
                 new { dto.WorkerId, dto.ProjectId, dto.TeamId, dto.DailyWage, dto.WorkerType,
-                      dto.EntryDate, Status = dto.Status ?? "active", CreatedBy = uid, Now = now() });
+                      dto.EntryDate, Status = dto.Status ?? "active", CreatedBy = uid, Now = now(),
+                      dto.ContractSigner, dto.ContractStart, dto.ContractEnd,
+                      SafetyTraining = dto.SafetyTraining == true ? 1 : 0,
+                      dto.WorkSection, dto.ExitDate,
+                });
             return Common.Ok(id);
         });
         app.MapDelete("/api/project-workers/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
