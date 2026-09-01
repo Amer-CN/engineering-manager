@@ -167,6 +167,7 @@ function createMockAPI() {
     // （与 OCR 同型：`Mock 环境不支持 X`，浏览器开发态点「生成考勤」会得到真实报错而非假 toast）
     generateDefaultAttendancesV2: async () => ({ success: false, error: 'Mock 环境不支持生成考勤（需连接后端 API）' }),
     batchImportAttendances: async () => ({ success: false, error: 'Mock 环境不支持导入考勤（需连接后端 API）' }),
+    resolveAttendanceConflicts: async () => ({ success: false, error: 'Mock 环境不支持冲突仲裁（需连接后端 API）' }),
     // 工资
     getWages: async () => ({ success: true, data: [] }),
     generateProjectWages: async () => ({ success: true, data: [], newCount: 0, archivedSkipped: 0 }),

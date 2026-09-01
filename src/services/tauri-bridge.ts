@@ -250,7 +250,9 @@ export const tauriAPI = {
   generateDefaultAttendancesV2: (projectId: number, yearMonth: string, projectWorkerIds: number[]) =>
     apiClient.post<{ count: number }>('/api/attendances/generate-v2', { projectId, yearMonth, projectWorkerIds }),
   batchImportAttendances: (projectId: number, yearMonth: string, records: { projectWorkerId: number; workDays: number }[]) =>
-    apiClient.post<{ created: number; updated: number }>('/api/attendances/batch-import', { projectId, yearMonth, records }),
+    apiClient.post<{ created: number; updated: number; skipped: number[]; conflicts: { projectWorkerId: number; currentWorkDays: number; importWorkDays: number }[] }>('/api/attendances/batch-import', { projectId, yearMonth, records }),
+  resolveAttendanceConflicts: (projectId: number, yearMonth: string, resolutions: { projectWorkerId: number; action: string; workDays?: number }[]) =>
+    apiClient.post<{ overwritten: number; kept: number; skipped: number[] }>('/api/attendances/batch-import-resolve', { projectId, yearMonth, resolutions }),
 
   // ────────── 工资 ──────────
   getWages: (projectId?: number, yearMonth?: string) =>

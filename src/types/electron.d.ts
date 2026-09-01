@@ -1146,7 +1146,8 @@ export interface ElectronAPI {
   createAttendance: (record: Partial<AttendanceRecord>) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
   updateAttendance: (record: AttendanceRecord) => Promise<{ success: boolean; error?: string }>
   generateDefaultAttendancesV2: (projectId: number, yearMonth: string, projectWorkerIds: number[]) => Promise<{ success: boolean; data?: { count: number }; error?: string }>
-  batchImportAttendances: (projectId: number, yearMonth: string, records: { projectWorkerId: number; workDays: number }[]) => Promise<{ success: boolean; data?: { created: number; updated: number }; error?: string }>
+  batchImportAttendances: (projectId: number, yearMonth: string, records: { projectWorkerId: number; workDays: number }[]) => Promise<{ success: boolean; data?: { created: number; updated: number; skipped?: number[]; conflicts?: { projectWorkerId: number; currentWorkDays: number; importWorkDays: number }[] }; error?: string }>
+  resolveAttendanceConflicts: (projectId: number, yearMonth: string, resolutions: { projectWorkerId: number; action: 'overwrite' | 'keep'; workDays?: number }[]) => Promise<{ success: boolean; data?: { overwritten: number; kept: number; skipped: number[] }; error?: string }>
   deleteAttendance: (id: number) => Promise<{ success: boolean; data?: any; error?: string }>
   batchDeleteAttendances: (ids: number[]) => Promise<{ success: boolean; data?: { deleted: number }; error?: string }>
 
