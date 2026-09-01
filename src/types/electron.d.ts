@@ -92,6 +92,7 @@ export interface Worker {
   ethnicity?: string               // 民族
   phone?: string
   address?: string
+  currentAddress?: string          // 现住址
   bankAccount?: string             // 工资卡号
   bankName?: string                // 开户行
   bankLineNo?: string              // 联行号
@@ -110,6 +111,12 @@ export interface ProjectWorker {
   workerType: WorkerType | string  // 工种
   entryDate: string                // 进场日期
   status: WorkerStatus             // 'active' | 'left'
+  contractSigner?: string
+  contractStart?: string
+  contractEnd?: string
+  safetyTraining?: boolean | number
+  workSection?: string
+  exitDate?: string
   remarks?: string
   createdAt: string
   // 关联查询附加
@@ -777,6 +784,7 @@ export interface WageRecord {
   paidAmount?: number              // 实发金额（可能不同于应发）
   paidDate?: string                // 发放日期 "YYYY-MM-DD"
   bankReceiptPath?: string        // 银行回单凭证文件路径
+  paidChannel?: string             // 发放渠道：bank/cash/wechat/other
   paymentLocked?: boolean          // 是否已归档（锁定实发金额/日期）
   memberName?: string
   memberType?: 'worker'
@@ -1170,7 +1178,7 @@ export interface ElectronAPI {
   createWage: (record: Partial<WageRecord>) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
   updateWage: (record: WageRecord) => Promise<{ success: boolean; error?: string }>
   batchSaveWages: (records: WageRecord[]) => Promise<{ success: boolean; data?: any; error?: string }>
-  batchSavePayments: (records: { id: number; paidAmount: number; paidDate: string; bankReceiptPath?: string }[]) => Promise<{ success: boolean; data?: { saved: number; skipped: number; skippedItems: { id: number }[] }; error?: string }>
+  batchSavePayments: (records: { id: number; paidAmount: number; paidDate: string; bankReceiptPath?: string; paidChannel?: string }[]) => Promise<{ success: boolean; data?: { saved: number; skipped: number; skippedItems: { id: number }[] }; error?: string }>
   deleteWage: (id: number) => Promise<{ success: boolean; error?: string }>
   batchDeleteWages: (ids: number[]) => Promise<{ success: boolean; data?: { deleted: number }; error?: string }>
   batchClearPayments: (ids: number[]) => Promise<{ success: boolean; data?: { cleared: number }; error?: string }>
