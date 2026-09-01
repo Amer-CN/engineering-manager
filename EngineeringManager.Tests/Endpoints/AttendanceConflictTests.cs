@@ -143,4 +143,48 @@ public class AttendanceConflictTests : ApiTestBase
         var row = QueryAttendance(attId)!;
         Assert.Equal(0L, Convert.ToInt64(row.manually_edited));
     }
+
+    // ── 用例 5：裁决 overwrite → 用表里的值覆盖 + 清标记 ──
+    [Fact]
+    public async Task Resolve_Overwrite_UpdatesAndClearsFlag()
+    {
+        SetAuth(await LoginAdminAsync());
+        var pw = SeedProjectWorker("孙七");
+        var attId = SeedAttendance(pw, 20, manuallyEdited: 1);
+
+        var resp = await Client.PostAsJsonAsync("/api/attendances/batch-import-resolve", new
+        {
+            projectId = TestProjectId, yearMonth = TestYearMonth,
+            resolutions = new[] { new { projectWorkerId = pw, action = "overwrite", workDays = 25.0 } },
+        });
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(1, json.GetProperty("data").GetProperty("overwritten").GetInt32());
+
+        var row = QueryAttendance(attId)!;
+        Assert.Equal(25.0, Convert.ToDouble(row.work_days));
+        Assert.Equal(0L, Convert.ToInt64(row.manually_edited));
+    }
+
+    // ── 用例 6：裁决 keep（留我的）→ 库内不动，标记保留 ──
+    [Fact]
+    public async Task Resolve_Keep_NoChange()
+    {
+        SetAuth(await LoginAdminAsync());
+        var pw = SeedProjectWorker("周八");
+        var attId = SeedAttendance(pw, 20, manuallyEdited: 1);
+
+        var resp = await Client.PostAsJsonAsync("/api/attendances/batch-import-resolve", new
+        {
+            projectId = TestProjectId, yearMonth = TestYearMonth,
+            resolutions = new[] { new { projectWorkerId = pw, action = "keep", workDays = 25.0 } },
+        });
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(1, json.GetProperty("data").GetProperty("kept").GetInt32());
+
+        var row = QueryAttendance(attId)!;
+        Assert.Equal(20.0, Convert.ToDouble(row.work_days));
+        Assert.Equal(1L, Convert.ToInt64(row.manually_edited));
+    }
 }

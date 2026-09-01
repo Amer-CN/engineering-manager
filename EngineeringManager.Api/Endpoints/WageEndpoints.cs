@@ -293,6 +293,53 @@ public static class WageEndpoints
         return Common.Ok(new { created, updated, skipped, conflicts });
     });
 
+    // ── 考勤导入冲突裁决：逐条「留我的(keep)/用表里的(overwrite)」──
+    app.MapPost("/api/attendances/batch-import-resolve", (HttpContext ctx, AttendanceResolveDto dto, IDbConnection db) =>
+    {
+        var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+        // 与 batch-import 同权：wages:create
+        if (!CurrentUser.HasPermission(ctx, db, "wages:create")) return Results.Forbid();
+        if (dto is null || !dto.ProjectId.HasValue || string.IsNullOrEmpty(dto.YearMonth))
+            return Results.BadRequest(new { success = false, error = "batch-import-resolve: projectId / yearMonth 必填" });
+        var projectId = dto.ProjectId.Value;
+        if (!CurrentUser.CanWriteProject(ctx, db, projectId)) return Results.Forbid();
+        var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+        var overwritten = 0;
+        var kept = 0;
+        var skipped = new List<long>();
+        foreach (var item in dto.Resolutions ?? new List<AttendanceResolveItem>())
+        {
+            if (!item.ProjectWorkerId.HasValue || string.IsNullOrEmpty(item.Action)
+                || (item.Action != "overwrite" && item.Action != "keep"))
+                return Results.BadRequest(new { success = false, error = "batch-import-resolve: 每条需 projectWorkerId + action(overwrite/keep)" });
+            if (item.Action == "keep") { kept++; continue; }
+            if (!item.WorkDays.HasValue)
+                return Results.BadRequest(new { success = false, error = "batch-import-resolve: overwrite 需带 workDays" });
+            var row = db.QueryFirstOrDefault(
+                "SELECT id, created_by FROM attendances WHERE project_id=@ProjectId AND year_month=@YearMonth AND project_worker_id=@PwId",
+                new { ProjectId = projectId, YearMonth = dto.YearMonth, PwId = item.ProjectWorkerId });
+            // 行不存在或非本人创建（非 admin）→ skipped，与 batch-import 归属语义一致
+            if (row != null)
+            {
+                if (isAdmin == 1 || (row.created_by as string) == uid)
+                {
+                    db.Execute(@"UPDATE attendances SET work_days=@WorkDays,manually_edited=0,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id",
+                        new { WorkDays = item.WorkDays.Value, Id = (long)row.id, Now = now() });
+                    overwritten++;
+                }
+                else
+                {
+                    skipped.Add(item.ProjectWorkerId.Value);
+                }
+            }
+            else
+            {
+                skipped.Add(item.ProjectWorkerId.Value);
+            }
+        }
+        return Common.Ok(new { overwritten, kept, skipped });
+    });
+
         // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         // 宸ヨ祫
         // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
@@ -1202,6 +1249,8 @@ record AttendanceGenerateDto(long? ProjectId, string? YearMonth, List<long>? Mem
 record AttendanceGenerateV2Dto(long? ProjectId, string? YearMonth, List<long>? ProjectWorkerIds);
 record AttendanceImportDto(long? ProjectId, string? YearMonth, List<AttendanceImportItem>? Records);
 record AttendanceImportItem(long? ProjectWorkerId, double? WorkDays);
+record AttendanceResolveDto(long? ProjectId, string? YearMonth, List<AttendanceResolveItem>? Resolutions);
+record AttendanceResolveItem(long? ProjectWorkerId, string? Action, double? WorkDays);
 
 // I-2: 回单批量匹配入参（match-receipts）—— receipts 每项为一张 OCR 回单
 // （amount 单位为元，候选准入走 ToFen 后等值）；yearMonth 为契约兼容保留，
