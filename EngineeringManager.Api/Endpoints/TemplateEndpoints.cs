@@ -99,6 +99,7 @@ public static class TemplateEndpoints
             if (tpl == null) return Results.NotFound(new { success = false, error = "模板不存在" });
             if ((tpl.file_type as string) != "xlsx") return Results.BadRequest(new { success = false, error = "仅支持 xlsx 采集表模板" });
             var fileName = Path.GetFileName((tpl.stored_file_name as string) ?? "");
+            // 路径与前端 FILE_CATEGORIES.TEMPLATE_FILE（category='templates'，落盘 uploads/templates/）绑定，改动需两处同步
             var path = Path.Combine(ApiConfig.ResolveDataPath(), "uploads", "templates", fileName);
             if (!File.Exists(path)) return Results.NotFound(new { success = false, error = "模板文件不存在，请重新上传" });
             var values = new Dictionary<string, string>
