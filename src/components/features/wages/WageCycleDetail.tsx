@@ -46,8 +46,8 @@ interface WageCycleDetailProps {
   toggleAllWageTable: () => void
   // Payment records
   allWageRecords: WageRecord[]
-  paymentEdits: Map<number, { paidAmount: string; paidDate: string; bankReceiptPath?: string }>
-  onPaymentChange: (recordId: number, field: 'paidAmount' | 'paidDate', value: string | number) => void
+  paymentEdits: Map<number, { paidAmount: string; paidDate: string; bankReceiptPath?: string; paidChannel?: string }>
+  onPaymentChange: (recordId: number, field: 'paidAmount' | 'paidDate' | 'paidChannel', value: string | number) => void
   onSavePayments: () => void
   onBatchDeleteWages: () => void
   onBatchArchivePayments: () => void

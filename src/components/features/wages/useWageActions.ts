@@ -36,7 +36,7 @@ export function useWageActions({
   const [editingWages, setEditingWages] = useState<Map<number, { bonus: number; deduction: number }>>(new Map())
 
   // 发放编辑
-  const [paymentEdits, setPaymentEdits] = useState<Map<number, { paidAmount: string; paidDate: string; bankReceiptPath?: string }>>(new Map())
+  const [paymentEdits, setPaymentEdits] = useState<Map<number, { paidAmount: string; paidDate: string; bankReceiptPath?: string; paidChannel?: string }>>(new Map())
 
   // 银行回单
   const [receiptParsing, setReceiptParsing] = useState(false)
@@ -130,7 +130,7 @@ export function useWageActions({
 
   // ── 发放记录操作 ──
 
-  const handlePaymentChange = useCallback((recordId: number, field: 'paidAmount' | 'paidDate', value: string | number) => {
+  const handlePaymentChange = useCallback((recordId: number, field: 'paidAmount' | 'paidDate' | 'paidChannel', value: string | number) => {
     setPaymentEdits(prev => {
       const next = new Map(prev)
       const record = wages.find(w => w.id === recordId)

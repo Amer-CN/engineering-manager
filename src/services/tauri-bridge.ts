@@ -347,7 +347,7 @@ export const tauriAPI = {
   batchSaveWages: (records: WageRecord[]) =>
     apiClient.post<{ saved: number; skipped: number; skippedItems: { projectWorkerId: number; yearMonth: string }[] }>('/api/wages/batch-save', records),
   // D-9: 批量付款写入——按 id 定位，只写付款列（paidAmount 单位为元，后端 ToFen 存分）
-  batchSavePayments: (records: { id: number; paidAmount: number; paidDate: string; bankReceiptPath?: string }[]) =>
+  batchSavePayments: (records: { id: number; paidAmount: number; paidDate: string; bankReceiptPath?: string; paidChannel?: string }[]) =>
     apiClient.post<{ saved: number; skipped: number; skippedItems: { id: number }[] }>('/api/wages/batch-payment', records),
 
   // ────────── 薪资历史 ──────────

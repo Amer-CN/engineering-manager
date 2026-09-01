@@ -16,8 +16,8 @@ export interface SavePaymentsCoreOptions {
   can: (permission: PermissionCode) => boolean
   showToast: (message: string, type: 'success' | 'error' | 'info' | 'warning') => void
   records: WageRecord[]
-  paymentEdits: Map<number, { paidAmount: string; paidDate: string; bankReceiptPath?: string }>
-  setPaymentEdits: React.Dispatch<React.SetStateAction<Map<number, { paidAmount: string; paidDate: string; bankReceiptPath?: string }>>>
+  paymentEdits: Map<number, { paidAmount: string; paidDate: string; bankReceiptPath?: string; paidChannel?: string }>
+  setPaymentEdits: React.Dispatch<React.SetStateAction<Map<number, { paidAmount: string; paidDate: string; bankReceiptPath?: string; paidChannel?: string }>>>
   refresh: () => Promise<void>
   setLoading?: (b: boolean) => void
 }
@@ -36,8 +36,8 @@ export async function savePaymentsCore(options: SavePaymentsCoreOptions): Promis
       const paidAmount = parseFloat(edit.paidAmount)
       if (!Number.isFinite(paidAmount)) { skippedEmpty++; return null }  // 空串/非法 → 跳过该行，不发 0
       // 只发付款四字段，不整行展开（batch-payment 端点只看这四列）
-      return { id: w.id, paidAmount, paidDate: edit.paidDate, bankReceiptPath: edit.bankReceiptPath ?? w.bankReceiptPath }
-    }).filter((x): x is { id: number; paidAmount: number; paidDate: string; bankReceiptPath: string | undefined } => x !== null)
+      return { id: w.id, paidAmount, paidDate: edit.paidDate, bankReceiptPath: edit.bankReceiptPath ?? w.bankReceiptPath, paidChannel: edit.paidChannel ?? w.paidChannel }
+    }).filter((x): x is { id: number; paidAmount: number; paidDate: string; bankReceiptPath: string | undefined; paidChannel: string | undefined } => x !== null)
     if (skippedEmpty > 0) showToast(`实发金额为空的行已跳过（${skippedEmpty} 条），如需清除请用「清除发放记录」`, 'warning')
     const result = await (await getAPI()).batchSavePayments(updated)
     if (result.success) { showToast('发放记录已保存', 'success'); setPaymentEdits(new Map()); await refresh() }
@@ -97,7 +97,7 @@ export function useWagePaymentOps(deps: {
     } catch (error: unknown) { showToast(error instanceof Error ? error.message : '归档失败', 'error') }
   }
 
-  const handlePaymentChange = (recordId: number, field: 'paidAmount' | 'paidDate', value: string | number) => {
+  const handlePaymentChange = (recordId: number, field: 'paidAmount' | 'paidDate' | 'paidChannel', value: string | number) => {
     setPaymentEdits(prev => {
       const next = new Map(prev)
       const record = allWageRecords.find(w => w.id === recordId)
