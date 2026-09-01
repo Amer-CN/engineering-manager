@@ -87,17 +87,6 @@ export function useWageActions({
     else showToast(r.error || '批量删除失败', 'error')
   }, [selectedAttendanceIds, confirm, loadData, showToast])
 
-  const handleImportAttendance = useCallback(async (data: { projectWorkerId: number; workDays: number; workerName: string }[]) => {
-    // G2 B2: 导入考勤 → wages:create
-    if (!can('wages:create')) { showToast('您没有导入考勤的权限', 'error'); return }
-    if (!selectedProject) return
-    try {
-      const r = await (await getAPI()).batchImportAttendances(selectedProject.id, selectedMonth, data)
-      if (r.success) { showToast(`已导入 ${data.length} 条考勤`, 'success'); await loadData() }
-      else showToast(r.error || '导入失败', 'error')
-    } catch (e: unknown) { showToast((e instanceof Error ? e.message : '导入失败'), 'error') }
-  }, [selectedProject, selectedMonth, loadData, showToast])
-
   // ── 工资表操作 ──
 
   const handleGenerateWages = useCallback(async () => {
@@ -232,7 +221,7 @@ export function useWageActions({
     // 考勤
     selectedAttendanceIds, toggleAttendanceSelect, toggleAllAttendance,
     handleGenerateAttendance, handleOpenAttendanceDetail, handleDeleteAttendance,
-    handleBatchDeleteAttendance, handleImportAttendance,
+    handleBatchDeleteAttendance,
     // 工资表
     editingWages, selectedWageTableIds, toggleWageTableSelect, toggleAllWageTable,
     handleGenerateWages, handleSaveWages, handleBonusDeductionChange, handleBatchDeleteWages,

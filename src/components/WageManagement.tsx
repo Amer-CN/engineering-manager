@@ -13,20 +13,18 @@ import WageCycleDetail from './features/wages/WageCycleDetail'
 import WageStatsTab from './features/wages/WageStatsTab'
 import WageProjectList from './features/wages/WageProjectList'
 import { useWageBatchViews } from './features/wages/WageBatchViews'
-import { getAPI } from '@/services/api-adapter'
 import useWageManagement from '../hooks/useWageManagement'
-import { usePermission } from '@/hooks/usePermission'
+import { useAttendanceImport } from './features/wages/useAttendanceImport'
 
 export default function WageManagement() {
   const { showToast } = useToastContext()
   const { confirm, ConfirmDialog } = useConfirm()
-  const { can } = usePermission()
 
   const hook = useWageManagement({ showToast, confirm })
   const {
     projects, workerTeams,
     view, setView, selectedProject, setSelectedProject,
-    selectedMonth, setSelectedMonth, loading, setLoading,
+    selectedMonth, setSelectedMonth, loading,
     attendances, attendanceDetailRecord, setAttendanceDetailRecord,
     wageRecords, editingWages, paymentEdits,
     allWageRecords, wageStats, filterMemberName, setFilterMemberName,
@@ -53,6 +51,9 @@ export default function WageManagement() {
     onViewChange: setView,
   })
 
+  // S2 带提醒覆盖：考勤导入统一走 useAttendanceImport（batch-import 三分 + 冲突裁决）
+  const attImport = useAttendanceImport({ projectId: selectedProject?.id ?? null, yearMonth: selectedMonth, loadData: loadAttendances })
+
   if (view === 'batch' && selectedProject) {
     return (
       <PageContainer className="space-y-6">
@@ -65,6 +66,7 @@ export default function WageManagement() {
 
   if (view === 'cycle' && selectedProject) {
     return (
+      <>
       <WageCycleDetail
         selectedProject={selectedProject} selectedMonth={selectedMonth}
         workerTeams={workerTeams}
@@ -98,23 +100,10 @@ export default function WageManagement() {
         onChangeMonth={setSelectedMonth}
         onBack={() => { setView('dashboard'); setAttendanceDetailRecord(null); loadStats() }}
         projectWorkerList={projectWorkerList.map(p => ({ id: p.pwId, name: p.name, teamName: p.teamName, idCard: p.idCard }))}
-        onImportAttendance={async (data) => {
-          // G2 B2: 导入考勤 → wages:create
-          if (!can('wages:create')) { showToast('您没有导入考勤的权限', 'error'); return }
-          if (!selectedProject) return
-          setLoading(true)
-          try {
-            const result = await (await getAPI()).batchImportAttendances(selectedProject.id, selectedMonth, data)
-            if (result.success && result.data) {
-              showToast(`导入成功！新增 ${result.data.created} 条，更新 ${result.data.updated} 条`, 'success')
-              await loadAttendances()
-            } else {
-              showToast(result.error || '导入失败', 'error')
-            }
-          } catch (e: any) { showToast(e?.message || '导入失败', 'error') }
-          finally { setLoading(false) }
-        }}
+        onImportAttendance={attImport.importAttendance}
       />
+      {attImport.ConflictDialog}
+      </>
     )
   }
 
