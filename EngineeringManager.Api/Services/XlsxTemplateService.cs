@@ -17,6 +17,8 @@ public static class XlsxTemplateService
             {
                 var text = cell.GetString();
                 if (string.IsNullOrEmpty(text)) continue;
+                // 公式单元格不动（评审修补）：缓存结果恰含占位符时，禁止把活公式冻结为字面量
+                if (cell.HasFormula) continue;
                 var replaced = text;
                 foreach (var kv in values)
                     replaced = replaced.Replace(kv.Key, kv.Value);
