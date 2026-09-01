@@ -157,7 +157,7 @@ export default function WageCycleDetail(props: WageCycleDetailProps) {
               onOpenDetail={setAttendanceDetailRecord} onDelete={onDeleteAttendance}
               onBatchDelete={onBatchDeleteAttendances}
               loading={loading}
-              onImportAttendance={() => setShowImportModal(true)}
+              onOpenImport={() => setShowImportModal(true)}
             />
           )}
           {activeTab === 'wagetable' && (
