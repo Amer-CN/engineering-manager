@@ -16,7 +16,7 @@ export function PresetButton({ label, active, onClick }: { label: string; active
     <button
       type="button"
       onClick={onClick}
-      className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all ${active ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]' : 'border-[color:var(--border)] text-[color:var(--fg-2)] hover:border-[color:var(--border)]'}`}
+      className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors ${active ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]' : 'border-[color:var(--border)] text-[color:var(--fg-2)] hover:border-[color:var(--border)]'}`}
     >
       {label}
     </button>

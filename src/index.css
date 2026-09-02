@@ -41,6 +41,9 @@ input[type="password"]::-ms-clear {
   --brand: oklch(65% 0.13 60);
   --boot-bg: oklch(20.5% 0.003 75);
   --boot-ink: oklch(58% 0.005 78);
+  /* 动效 token（批次二 #8）——入场/退场/反馈用 ease-out，卡片悬浮抬升族用 ease-emphasis */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-emphasis: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* 浅色主题的启动画布：bg 作底、muted-2 作点（浅底上过 4:1），跟随用户主题 */

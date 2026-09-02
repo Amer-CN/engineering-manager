@@ -72,7 +72,7 @@ export const PaymentFileUpload: React.FC<Props> = ({ fileUrl, fileType, typeLabe
   </div>
   </div>
   ) : (
-  <div className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all"
+  <div className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-[border-color,background-color]"
   style={dragOverFile ? { borderColor: 'var(--accent)', background: 'var(--accent-soft)' } : { borderColor: 'var(--border-strong)' }}
   onClick={() => fileInputRef.current?.click()} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
   <div style={{ color: 'var(--muted)' }}>

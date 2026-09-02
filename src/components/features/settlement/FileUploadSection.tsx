@@ -80,7 +80,7 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({ files, onF
           ))}
         </div>
       )}
-      <div className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-all ${
+      <div className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
         dragOverFile ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)]' : 'border-[color:var(--border-strong)] hover:border-[color:var(--accent)] hover:bg-[color:var(--panel-2)]'
       }`}
         onClick={() => fileInputRef.current?.click()}

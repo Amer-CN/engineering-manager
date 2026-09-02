@@ -207,7 +207,7 @@ const AttendanceTimeline: React.FC<Props> = ({ member, attendances, deptName, on
                           const month = parseInt(a.yearMonth.split('-')[1])
                           return (
                             <button key={a.id} onClick={() => handleMonthClick(a)}
-                              className="p-2.5 border border-[color:var(--border)] rounded-lg hover:border-[color:var(--accent)] hover:shadow-sm transition-all text-left">
+                              className="p-2.5 border border-[color:var(--border)] rounded-lg hover:border-[color:var(--accent)] hover:shadow-sm transition-[box-shadow,border-color] text-left">
                               <div className="text-xs font-medium text-[color:var(--fg-2)]">{month}月</div>
                               <div className="text-xs text-[color:var(--muted)] mt-0.5">
                                 {a.workDays || 0}天出勤

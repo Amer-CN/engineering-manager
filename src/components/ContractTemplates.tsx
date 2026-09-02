@@ -220,7 +220,7 @@ const ContractTemplates: React.FC<ContractTemplatesProps> = ({ refresh, onBack }
   {templates.length > 0 ? (
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
   {templates.map(template => (
-  <Card key={template.id} bordered={false} hoverable className="hover:shadow-md transition-all">
+  <Card key={template.id} bordered={false} hoverable className="hover:shadow-md transition-shadow">
   <div className="p-5">
   <div className="flex items-start justify-between mb-4">
   <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>

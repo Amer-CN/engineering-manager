@@ -327,8 +327,8 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
                   </div>
                   <div className="h-2 bg-[color:var(--panel-2)] rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-[color:var(--accent)] rounded-full transition-all duration-500"
-                      style={{ width: `${currentJob.progress || 0}%` }}
+                      className="h-full bg-[color:var(--accent)] rounded-full transition-transform duration-500"
+                      style={{ transformOrigin: 'left', width: '100%', transform: `scaleX(${(currentJob.progress || 0) / 100})` }}
                     />
                   </div>
                   <div className="text-xs text-[color:var(--muted)] text-right">{currentJob.progress || 0}%</div>

@@ -84,7 +84,7 @@ const LockScreen: React.FC = () => {
               type="text"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className={`w-full pl-10 pr-12 py-3 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 ${showPassword ? '' : 'password-mask'}`}
+              className={`w-full pl-10 pr-12 py-3 rounded-xl transition-[box-shadow,border-color] duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 ${showPassword ? '' : 'password-mask'}`}
               style={{
                 background: 'var(--panel)',
                 border: '1px solid var(--border)',
@@ -105,7 +105,7 @@ const LockScreen: React.FC = () => {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 transition-all duration-200 hover:scale-110"
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 transition-transform duration-200 hover:scale-110"
               style={{ color: 'var(--muted)' }}
             >
               <Icon name={showPassword ? 'EyeOff' : 'Eye'} size={18} />
@@ -133,7 +133,7 @@ const LockScreen: React.FC = () => {
             disabled={loading}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.97 }}
-            className="w-full py-3 font-medium rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-[var(--accent)]/20"
+            className="w-full py-3 font-medium rounded-xl transition-[opacity,box-shadow] duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-[var(--accent)]/20"
             style={{
               background: 'var(--accent)',
               color: 'var(--bg)',

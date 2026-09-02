@@ -109,7 +109,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
             <div className="mt-0.5">
               <div className="h-1 rounded-full overflow-hidden" style={{ background: 'var(--panel-2)' }}>
                 <div
-                  className="h-full rounded-full transition-all"
+                  className="h-full rounded-full transition-[width,background-color]"
                   style={{ width: `${Math.min(item.receivedAmount / item.amount * 100, 100)}%`, background: item.receivedAmount >= item.amount ? 'var(--success)' : 'var(--warning)' }}
                 />
               </div>

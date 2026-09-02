@@ -53,7 +53,7 @@ function TabsTrigger({
       disabled={tab.disabled}
       onClick={onClick}
       className={`
-      relative ${isHero ? 'rounded-md' : ''} ${isSegmented ? 'rounded-[7px]' : ''} font-medium transition-all duration-200
+      relative ${isHero ? 'rounded-md' : ''} ${isSegmented ? 'rounded-[7px]' : ''} font-medium transition-[color,background-color,border-color,box-shadow] duration-200
       focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-soft)]
       ${tabPadding[size]}
       ${fullWidth ? 'flex-1' : ''}

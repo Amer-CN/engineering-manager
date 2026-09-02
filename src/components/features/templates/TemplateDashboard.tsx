@@ -20,7 +20,7 @@ export default function TemplateDashboard({ templates, onCategoryClick }: Templa
           <button
             key={key}
             onClick={() => onCategoryClick(key)}
-            className="bg-[color:var(--card)] border border-[color:var(--border)] rounded-xl p-5 text-left shadow-sm hover:shadow-lift hover:-translate-y-0.5 hover:border-[color:var(--accent)] transition-all duration-200 group"
+            className="bg-[color:var(--card)] border border-[color:var(--border)] rounded-xl p-5 text-left shadow-sm hover:shadow-lift hover:-translate-y-0.5 hover:border-[color:var(--accent)] transition-[transform,opacity,box-shadow,background-color,border-color] duration-200 group"
           >
             <div className="flex items-center justify-between">
               <div className="h-10 w-10 rounded-lg bg-[color:var(--panel-2)] border border-[color:var(--border)] flex items-center justify-center">

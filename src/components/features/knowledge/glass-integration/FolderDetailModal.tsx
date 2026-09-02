@@ -90,7 +90,7 @@ export const FolderDetailModal: React.FC<FolderDetailModalProps> = ({
       <div
         className={`
           relative z-10 w-full max-w-xl h-full max-h-[90vh] rounded-3xl p-6 md:p-8
-          flex flex-col shadow-2xl overflow-y-auto border backdrop-blur-2xl transition-all duration-300
+          flex flex-col shadow-2xl overflow-y-auto border backdrop-blur-2xl transition-colors duration-300
           ${
             isDark
               ? 'bg-zinc-900/90 border-white/20 text-white'
@@ -136,7 +136,7 @@ export const FolderDetailModal: React.FC<FolderDetailModalProps> = ({
             <div className="text-xs text-zinc-400 mb-1">当前完成度</div>
             <div className="text-2xl font-bold font-mono text-[color:var(--gc-icon)]">{folder.progress}%</div>
             <div className="w-full bg-zinc-700/50 h-1.5 rounded-full mt-2 overflow-hidden">
-              <div className="bg-[color:var(--gc-icon)] h-full rounded-full transition-all duration-500" style={{ width: `${folder.progress}%` }} />
+              <div className="bg-[color:var(--gc-icon)] h-full rounded-full transition-transform duration-500" style={{ transformOrigin: 'left', width: '100%', transform: `scaleX(${folder.progress / 100})` }} />
             </div>
           </div>
 
@@ -166,7 +166,7 @@ export const FolderDetailModal: React.FC<FolderDetailModalProps> = ({
           {!isReadonly && (
             <button
               onClick={() => setIsAddingDoc(!isAddingDoc)}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-500 text-white hover:bg-emerald-600 transition-all flex items-center gap-1.5"
+              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-500 text-white hover:bg-emerald-600 transition-colors flex items-center gap-1.5"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>新建文件</span>
@@ -237,7 +237,7 @@ export const FolderDetailModal: React.FC<FolderDetailModalProps> = ({
               <div
                 key={doc.id}
                 className={`
-                  p-3.5 rounded-2xl border flex items-center justify-between transition-all group
+                  p-3.5 rounded-2xl border flex items-center justify-between transition-colors group
                   ${
                     isDark
                       ? 'bg-zinc-800/40 hover:bg-zinc-800/80 border-white/10'
