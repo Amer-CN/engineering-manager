@@ -9,7 +9,7 @@ interface TemplateDashboardProps {
 }
 
 // 看板 = 分类卡片墙：每个分类一张卡（含空分类，数量显示 0），点击一律进该分类列表页
-export default function TemplateDashboard({ templates, stats, onCategoryClick }: TemplateDashboardProps) {
+export default function TemplateDashboard({ templates, onCategoryClick }: TemplateDashboardProps) {
   const categories = Object.entries(categoryConfig) as [TemplateCategory, typeof categoryConfig[TemplateCategory]][]
 
   return (
