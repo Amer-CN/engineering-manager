@@ -35,29 +35,28 @@ describe('TemplateDashboard', () => {
 
   afterEach(cleanup)
 
-  test('应渲染分类筛选 pill-tabs（S28 Stitch）', async () => {
+  test('不渲染旧版「全部模板」筛选 pill，所有分类卡 label 渲染', async () => {
     const { default: TemplateDashboard } = await importModule()
     render(React.createElement(TemplateDashboard, baseProps as any))
-    expect(screen.getByText('全部模板')).toBeTruthy()
-    // 合同模板 appears as both pill-tab and badge on cards
-    expect(screen.getAllByText('合同模板').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('结算模板').length).toBeGreaterThan(0)
+    // 卡片墙重构后，旧 pill-tabs 筛选语义（「全部模板」按钮）已移除
+    expect(screen.queryByText('全部模板')).toBeNull()
+    expect(screen.getByText('合同模板')).toBeTruthy()
+    expect(screen.getByText('结算模板')).toBeTruthy()
+    expect(screen.getByText('其他')).toBeTruthy()
   })
 
-  test('应渲染模板卡片名称', async () => {
+  test('分类卡标题为分类 label（非模板名）', async () => {
     const { default: TemplateDashboard } = await importModule()
     const { container } = render(React.createElement(TemplateDashboard, baseProps as any))
     const headings = container.querySelectorAll('h3')
     const names = Array.from(headings).map(h => h.textContent)
-    expect(names).toContain('合同A')
-    expect(names).toContain('结算A')
-    expect(names).toContain('合同B')
+    expect(names).toEqual(['合同模板', '结算模板', '其他'])
   })
 
-  test('应渲染 3 个模板卡片', async () => {
+  test('每个分类一张卡', async () => {
     const { default: TemplateDashboard } = await importModule()
     const { container } = render(React.createElement(TemplateDashboard, baseProps as any))
-    // Each template renders as a button card
+    // 每个分类渲染一张 button 卡（mock 3 个分类，无「全部模板」聚合卡）
     const cards = container.querySelectorAll('.grid > button')
     expect(cards.length).toBe(3)
   })
