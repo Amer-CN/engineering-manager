@@ -93,13 +93,6 @@ export function Tooltip({
   }[position]
 
 
-  // 把 content (string 时) 复制到 child 的 title 属性, 让原生 title 和无障碍工具能识别
-  const contentAsString = typeof content === 'string' ? content : undefined
-  const childWithTitle = React.isValidElement(children)
-    ? React.cloneElement(children as React.ReactElement<{ title?: string }>, {
-        title: (children as React.ReactElement<{ title?: string }>).props.title ?? contentAsString,
-      })
-    : children
   return (
   <div
   ref={triggerRef}
@@ -109,7 +102,7 @@ export function Tooltip({
   onFocus={show}
   onBlur={hide}
   >
-  {childWithTitle}
+  {children}
   {typeof window !== 'undefined' &&
   createPortal(
   <AnimatePresence>

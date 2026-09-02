@@ -21,7 +21,6 @@ describe('TemplateCard', () => {
   const mockOnEdit = vi.fn()
   const mockOnDelete = vi.fn()
   const mockOnPreview = vi.fn()
-  const mockOnGenerate = vi.fn()
 
   const baseTemplate: import('@/types').Template = {
     id: 1,
@@ -49,7 +48,6 @@ describe('TemplateCard', () => {
       onEdit: mockOnEdit,
       onDelete: mockOnDelete,
       onPreview: mockOnPreview,
-      onGenerate: mockOnGenerate,
     }))
     expect(screen.getByText('收入合同模板')).toBeTruthy()
     expect(screen.getByText('合同模板')).toBeTruthy()
@@ -64,7 +62,6 @@ describe('TemplateCard', () => {
       onEdit: mockOnEdit,
       onDelete: mockOnDelete,
       onPreview: mockOnPreview,
-      onGenerate: mockOnGenerate,
     }))
     expect(screen.getByText('XLSX')).toBeTruthy()
   })
@@ -76,7 +73,6 @@ describe('TemplateCard', () => {
       onEdit: mockOnEdit,
       onDelete: mockOnDelete,
       onPreview: mockOnPreview,
-      onGenerate: mockOnGenerate,
     }))
     expect(screen.getByText('标准收入合同模板')).toBeTruthy()
   })
@@ -88,7 +84,6 @@ describe('TemplateCard', () => {
       onEdit: mockOnEdit,
       onDelete: mockOnDelete,
       onPreview: mockOnPreview,
-      onGenerate: mockOnGenerate,
     }))
     expect(screen.getByText('甲方')).toBeTruthy()
     expect(screen.getByText('乙方')).toBeTruthy()
@@ -107,7 +102,6 @@ describe('TemplateCard', () => {
       onEdit: mockOnEdit,
       onDelete: mockOnDelete,
       onPreview: mockOnPreview,
-      onGenerate: mockOnGenerate,
     }))
     expect(screen.getByText('+2')).toBeTruthy()
   })
@@ -119,23 +113,10 @@ describe('TemplateCard', () => {
       onEdit: mockOnEdit,
       onDelete: mockOnDelete,
       onPreview: mockOnPreview,
-      onGenerate: mockOnGenerate,
     }))
-    fireEvent.click(screen.getByTitle('预览'))
+    // Tooltip 不再注入原生 title，改按按钮文案定位
+    fireEvent.click(screen.getByText('预览'))
     expect(mockOnPreview).toHaveBeenCalledWith(baseTemplate)
-  })
-
-  test('点击生成按钮应触发 onGenerate', async () => {
-    const { default: TemplateCard } = await importModule()
-    render(React.createElement(TemplateCard, {
-      template: baseTemplate,
-      onEdit: mockOnEdit,
-      onDelete: mockOnDelete,
-      onPreview: mockOnPreview,
-      onGenerate: mockOnGenerate,
-    }))
-    fireEvent.click(screen.getByTitle('生成文档'))
-    expect(mockOnGenerate).toHaveBeenCalledWith(baseTemplate)
   })
 
   test('点击编辑按钮应触发 onEdit', async () => {
@@ -145,9 +126,8 @@ describe('TemplateCard', () => {
       onEdit: mockOnEdit,
       onDelete: mockOnDelete,
       onPreview: mockOnPreview,
-      onGenerate: mockOnGenerate,
     }))
-    fireEvent.click(screen.getByTitle('编辑'))
+    fireEvent.click(screen.getByTestId('icon-Edit3'))
     expect(mockOnEdit).toHaveBeenCalledWith(baseTemplate)
   })
 })

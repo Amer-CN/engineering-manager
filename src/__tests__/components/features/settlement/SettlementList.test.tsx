@@ -100,23 +100,24 @@ describe('SettlementList', () => {
   test('应渲染操作按钮', async () => {
     const { SettlementList } = await importModule()
     render(React.createElement(SettlementList, baseProps))
-    expect(screen.getByTitle('编辑')).toBeTruthy()
-    expect(screen.getByTitle('打印')).toBeTruthy()
-    expect(screen.getByTitle('办理')).toBeTruthy()
-    expect(screen.getByTitle('删除')).toBeTruthy()
+    // Tooltip 不再注入原生 title，改按 mock Icon 的 testid 定位按钮内图标
+    expect(screen.getByTestId('icon-Edit3').closest('button')).toBeTruthy()
+    expect(screen.getByTestId('icon-Printer').closest('button')).toBeTruthy()
+    expect(screen.getByTestId('icon-Check').closest('button')).toBeTruthy()
+    expect(screen.getByTestId('icon-Trash2').closest('button')).toBeTruthy()
   })
 
   test('点击编辑应触发 onEdit', async () => {
     const { SettlementList } = await importModule()
     render(React.createElement(SettlementList, baseProps))
-    fireEvent.click(screen.getByTitle('编辑'))
+    fireEvent.click(screen.getByTestId('icon-Edit3'))
     expect(mockOnEdit).toHaveBeenCalledWith(baseSettlement)
   })
 
   test('点击删除应触发 onDelete', async () => {
     const { SettlementList } = await importModule()
     render(React.createElement(SettlementList, baseProps))
-    fireEvent.click(screen.getByTitle('删除'))
+    fireEvent.click(screen.getByTestId('icon-Trash2'))
     expect(mockOnDelete).toHaveBeenCalledWith(1)
   })
 })
