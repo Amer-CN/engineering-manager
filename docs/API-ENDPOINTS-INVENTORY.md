@@ -1,6 +1,6 @@
 # API 端点全量盘点（工程管家后端）
 
-> 生成基线：`bbddc22f` · 日期：2026-08-22
+> 最后增量同步：dbee34de · 2026-09-02（新增 2 端点：batch-import-resolve / issue-collection；batch-import 行为更新为三分冲突）
 > 数据源：`EngineeringManager.Api/Endpoints/*.cs`（24 个文件，约 200+ 端点）
 > 本文档为只读扫描产物，不修改任何业务代码。
 
@@ -552,24 +552,25 @@ R9 系列改造引入的行级写权限裁决机制，用于处理「授权项�
 | 6 | POST | `/api/attendances/batch-create` | `wages:create` | 批量创建（G75） |
 | 7 | POST | `/api/attendances/generate` | `wages:create` | 生成默认考勤（staff 路径，全勤预填） |
 | 8 | POST | `/api/attendances/generate-v2` | `wages:create` | 生成默认考勤（worker 路径） |
-| 9 | POST | `/api/attendances/batch-import` | `wages:create` | Excel 导入（G75 + 行级守卫） |
-| 10 | GET | `/api/wages` | 登录 | 工资列表（分→元转换） |
-| 11 | GET | `/api/wages/stats` | 登录 | 工资统计 |
-| 12 | POST | `/api/wages` | `wages:create` | 新增工资（G76 项目门） |
-| 13 | PUT | `/api/wages` | `wages:update` | 更新工资（锁检查 409 + RowWriteGate） |
-| 14 | DELETE | `/api/wages/{id}` | `wages:delete` | 软删工资 |
-| 15 | POST | `/api/wages/batch-delete` | `wages:delete` | 批量软删 |
-| 16 | POST | `/api/wages/batch-clear-payments` | `wages:update` | 批量清除付款记录 |
-| 17 | POST | `/api/wages/archive` | `wages:update` | 批量归档（payment_locked=1） |
-| 18 | POST | `/api/wages/batch-unarchive` | `wages:update` | 批量解锁归档 |
-| 19 | POST | `/api/wages/match-receipts` | `wages:read` | 回单批量匹配（纯读打分） |
-| 20 | POST | `/api/wages/confirm-matches` | `wages:update` | 回单确认（显式配对写库） |
-| 21 | GET | `/api/wages/payment-records` | 登录 | 已发款记录 |
-| 22 | GET | `/api/wages/overdue-stats` | 登录 | 欠薪统计 |
-| 23 | GET | `/api/wages/overdue-list` | 登录 | 欠薪列表 |
-| 24 | POST | `/api/wages/batch-save` | `wages:update` | 批量保存（upsert + RowWriteGate + 锁检查） |
-| 25 | POST | `/api/wages/batch-payment` | `wages:update` | 批量付款写入（RowWriteGate + 锁检查） |
-| 26 | POST | `/api/wages/generate` | `wages:create` | 生成工资表（从考勤行 upsert） |
+| 9 | POST | `/api/attendances/batch-import` | `wages:create` | Excel 导入（G75 + 行级守卫 + 三分冲突：未改覆盖/同值清标/不同列冲突） |
+| 10 | POST | `/api/attendances/batch-import-resolve` | `wages:create` | 考勤导入冲突逐条裁决（v0.95.0） |
+| 11 | GET | `/api/wages` | 登录 | 工资列表（分→元转换） |
+| 12 | GET | `/api/wages/stats` | 登录 | 工资统计 |
+| 13 | POST | `/api/wages` | `wages:create` | 新增工资（G76 项目门） |
+| 14 | PUT | `/api/wages` | `wages:update` | 更新工资（锁检查 409 + RowWriteGate） |
+| 15 | DELETE | `/api/wages/{id}` | `wages:delete` | 软删工资 |
+| 16 | POST | `/api/wages/batch-delete` | `wages:delete` | 批量软删 |
+| 17 | POST | `/api/wages/batch-clear-payments` | `wages:update` | 批量清除付款记录 |
+| 18 | POST | `/api/wages/archive` | `wages:update` | 批量归档（payment_locked=1） |
+| 19 | POST | `/api/wages/batch-unarchive` | `wages:update` | 批量解锁归档 |
+| 20 | POST | `/api/wages/match-receipts` | `wages:read` | 回单批量匹配（纯读打分） |
+| 21 | POST | `/api/wages/confirm-matches` | `wages:update` | 回单确认（显式配对写库） |
+| 22 | GET | `/api/wages/payment-records` | 登录 | 已发款记录 |
+| 23 | GET | `/api/wages/overdue-stats` | 登录 | 欠薪统计 |
+| 24 | GET | `/api/wages/overdue-list` | 登录 | 欠薪列表 |
+| 25 | POST | `/api/wages/batch-save` | `wages:update` | 批量保存（upsert + RowWriteGate + 锁检查） |
+| 26 | POST | `/api/wages/batch-payment` | `wages:update` | 批量付款写入（RowWriteGate + 锁检查） |
+| 27 | POST | `/api/wages/generate` | `wages:create` | 生成工资表（从考勤行 upsert） |
 
 **金额单位契约**（v0.92.0 起强制）：库内一律「分」（INTEGER），API 对外一律「元」。换算只在 `ToFen` / `ToYuan` 两个 helper 内发生。`work_days` 是天数（REAL），不参与换算。
 
@@ -603,6 +604,7 @@ R9 系列改造引入的行级写权限裁决机制，用于处理「授权项�
 | 3 | GET | `/api/templates/stats` | 登录 | 模板统计（按分类） |
 | 4 | POST | `/api/templates` | `settings:update` | 新建模板 |
 | 5 | PUT | `/api/templates` | `settings:update` | 更新模板 |
+| 6 | POST | `/api/templates/{id}/issue-collection` | `wages:create` | 采集表下发（填标题占位符回 dataUrl，v0.95.0） |
 
 ---
 
