@@ -22,54 +22,53 @@ describe('TemplatePreview', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    ;(window.electronAPI as any).convertTemplateDocxToHtml = vi.fn()
     ;(window.electronAPI as any).readFile = vi.fn()
   })
   afterEach(cleanup)
 
-  test('应渲染模板名称', async () => {
-    ;(window.electronAPI as any).convertTemplateDocxToHtml.mockResolvedValue({
-      success: true, data: '<h1>合同内容</h1>',
+  const mockReadFileSuccess = () => {
+    ;(window.electronAPI as any).readFile.mockResolvedValue({
+      success: true, data: { dataUrl: 'data:application/octet-stream;base64,test' },
     })
+  }
+
+  test('应渲染模板名称', async () => {
+    mockReadFileSuccess()
     const { default: TemplatePreview } = await importModule()
     render(React.createElement(TemplatePreview, { template: baseTemplate, onClose: mockOnClose }))
     // 等待异步状态更新完成（消除 Act 警告）
     await waitFor(() => {
       expect(screen.getByText('合同模板预览')).toBeTruthy()
-      expect(screen.getByText('合同内容')).toBeTruthy()
+      expect(screen.getByText('Word 文档暂不支持在线预览')).toBeTruthy()
     })
   })
 
-  test('docx 类型应调用 convertTemplateDocxToHtml', async () => {
-    ;(window.electronAPI as any).convertTemplateDocxToHtml.mockResolvedValue({
-      success: true, data: '<h1>合同内容</h1>',
-    })
+  test('docx 类型应调用 readFile 并提供下载链接', async () => {
+    mockReadFileSuccess()
     const { default: TemplatePreview } = await importModule()
     render(React.createElement(TemplatePreview, { template: baseTemplate, onClose: mockOnClose }))
     await waitFor(() => {
-      expect((window.electronAPI as any).convertTemplateDocxToHtml).toHaveBeenCalledWith('uuid-contract.docx')
+      expect((window.electronAPI as any).readFile).toHaveBeenCalled()
+      expect(screen.getByText('下载查看')).toBeTruthy()
     })
   })
 
   test('xlsx 类型应调用 readFile', async () => {
-    ;(window.electronAPI as any).readFile.mockResolvedValue({
-      success: true, data: { dataUrl: 'data:application/octet-stream;base64,test' },
-    })
+    mockReadFileSuccess()
     const { default: TemplatePreview } = await importModule()
     const xlsxTemplate = { ...baseTemplate, fileType: 'xlsx' }
     render(React.createElement(TemplatePreview, { template: xlsxTemplate, onClose: mockOnClose }))
     await waitFor(() => {
       expect((window.electronAPI as any).readFile).toHaveBeenCalled()
+      expect(screen.getByText('Excel 模板无法在线预览')).toBeTruthy()
     })
   })
 
   test('关闭按钮应触发 onClose', async () => {
-    ;(window.electronAPI as any).convertTemplateDocxToHtml.mockResolvedValue({
-      success: true, data: '<h1>合同内容</h1>',
-    })
+    mockReadFileSuccess()
     const { default: TemplatePreview } = await importModule()
-    const { container } = render(React.createElement(TemplatePreview, { template: baseTemplate, onClose: mockOnClose }))
-    await waitFor(() => expect(screen.getByText('合同内容')).toBeTruthy())
+    render(React.createElement(TemplatePreview, { template: baseTemplate, onClose: mockOnClose }))
+    await waitFor(() => expect(screen.getByText('Word 文档暂不支持在线预览')).toBeTruthy())
     // 点击关闭按钮 (aria-label="关闭", Modal 用 createPortal 渲染到 document.body)
     const closeBtn = screen.getByRole('button', { name: "关闭" })
     fireEvent.click(closeBtn)
