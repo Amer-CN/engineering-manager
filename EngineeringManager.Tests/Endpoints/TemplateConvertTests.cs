@@ -87,6 +87,32 @@ public class TemplateConvertTests : ApiTestBase
             new { storedFileName = $"missing-{Guid.NewGuid():N}.docx" });
         Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
     }
+
+    // ── 用例 3：contracts 分支——真实落盘布局 uploads/{项目名}/合同/{收入|支出}/{文件}（评审返工 C1）──
+    [Fact]
+    public async Task Convert_ContractAttachmentUnderProjectDir_ReturnsHtml()
+    {
+        SetAuth(await LoginAdminAsync());
+        var fileName = $"contract-{Guid.NewGuid():N}.docx";
+        try
+        {
+            await WriteDataFile("uploads", "某项目", "合同", "支出", fileName);
+
+            var resp = await Client.PostAsJsonAsync("/api/templates/convert-docx",
+                new { storedFileName = fileName, category = "contracts" });
+            Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+
+            var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
+            var html = json.GetProperty("data").GetProperty("html").GetString();
+            Assert.NotNull(html);
+            Assert.Contains("测试内容", html);
+        }
+        finally
+        {
+            var path = Path.Combine(ApiConfig.ResolveDataPath(), "uploads", "某项目", "合同", "支出", fileName);
+            try { if (File.Exists(path)) File.Delete(path); } catch { }
+        }
+    }
 }
 
 internal static class ZipArchiveEntryExtensions

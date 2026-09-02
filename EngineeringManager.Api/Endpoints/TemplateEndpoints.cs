@@ -127,15 +127,14 @@ public static class TemplateEndpoints
                 string? path = null;
                 if (category == "contracts")
                 {
-                    // 合同附件落盘布局与 /api/contracts/read-file 同源（uploads/{项目}/合同/{收入|支出} 与 未分类 兜底）；
-                    // 本端点契约无 projectName/subCategory 入参，递归两根目录按文件名精确匹配
-                    var roots = new[] { Path.Combine(baseDir, "合同"), Path.Combine(baseDir, "未分类", "合同") };
-                    foreach (var root in roots)
+                    // 合同附件落盘布局与 /api/contracts/read-file 同源：uploads/{项目名}/合同/{收入|支出}/{文件}（未分类兜底）；
+                    // 本端点契约无 projectName/subCategory 入参——评审返工 C1：根改 uploads 整树递归按文件名精确匹配，
+                    // 匹配到第一个即返回（控全树遍历开销；storedFileName 为 guid 名，全局唯一）
+                    if (Directory.Exists(baseDir))
                     {
-                        if (!Directory.Exists(root)) continue;
-                        var hit = Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
-                            .FirstOrDefault(p => string.Equals(Path.GetFileName(p), rawName, StringComparison.OrdinalIgnoreCase));
-                        if (hit != null) { path = hit; break; }
+                        path = Directory.EnumerateFiles(baseDir, "*", SearchOption.AllDirectories)
+                            .FirstOrDefault(p => string.Equals(Path.GetFileName(p), rawName, StringComparison.OrdinalIgnoreCase)
+                                                 && IsPathSafe(p, baseDir));
                     }
                 }
                 else
