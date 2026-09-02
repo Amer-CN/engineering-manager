@@ -12,11 +12,12 @@ interface TemplateListProps {
   onEdit: (t: Template) => void
   onDelete: (id: number) => void
   onPreview: (t: Template) => void
+  onGenerate: (t: Template) => void
   onCreate: () => void
 }
 
 export default function TemplateList({
-  category, templates, onBack, onEdit, onDelete, onPreview, onCreate,
+  category, templates, onBack, onEdit, onDelete, onPreview, onGenerate, onCreate,
 }: TemplateListProps) {
   const config = categoryConfig[category]
   const docxCount = templates.filter(t => t.fileType === 'docx').length
@@ -73,6 +74,7 @@ export default function TemplateList({
               onEdit={onEdit}
               onDelete={onDelete}
               onPreview={onPreview}
+              onGenerate={onGenerate}
             />
           ))}
         </div>

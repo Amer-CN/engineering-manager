@@ -70,7 +70,7 @@ h1{text-align:center;font-size:18pt;margin-bottom:24px}
 .signature{margin-top:60px;display:flex;justify-content:space-between}
 .signature div{width:45%}
 .signature p{border-top:1px solid #000;padding-top:4px;text-align:center}
-@media print{body{padding:20px 30px}}</style></head><body>${previewHtml}</body></html>`)
+@media print{body{padding:20px 30px}}</style></head><body>${DOMPurify.sanitize(previewHtml)}</body></html>`)
     w.document.close()
     setTimeout(() => { w.print() }, 500)
   }

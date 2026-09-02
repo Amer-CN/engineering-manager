@@ -404,6 +404,12 @@ export const tauriAPI = {
     apiClient.del<void>(`/api/templates/${id}`),
   issueCollectionTemplate: (templateId: number, values: { projectName: string; yearMonth: string; teamName: string }) =>
     apiClient.post<{ dataUrl: string }>(`/api/templates/${templateId}/issue-collection`, values),
+  // d.ts 契约 data 是 HTML 字符串本体，端点包的 { html } 在此拆包
+  convertTemplateDocxToHtml: async (storedFileName: string, category?: string) => {
+    const res = await apiClient.post<{ html: string }>('/api/templates/convert-docx', { storedFileName, category });
+    if (!res.success || res.data === undefined) return { success: false, error: res.error };
+    return { success: true, data: res.data.html };
+  },
 
   // ────────── 合同模板 ──────────
   // 字段桥接：前端 description/variables[] ↔ 后端 content/variables(JSON 字符串)
