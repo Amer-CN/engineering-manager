@@ -1,6 +1,7 @@
 import { ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Icon } from '../Icon'
+import { EASE_OUT } from '../../../constants/animations'
 
 export interface TabItem {
   key: string
@@ -144,7 +145,7 @@ export function Tabs({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.15, ease: 'easeOut' }}
+                transition={{ duration: 0.15, ease: EASE_OUT }}
                 className={hasFlexLayout ? 'flex-1 flex flex-col min-h-0' : ''}
               >
                 {children}

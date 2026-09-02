@@ -3,6 +3,9 @@
  * Import these instead of defining local duplicates.
  */
 
+/** Emil ease-out 曲线（= CSS token var(--ease-out)）的 framer-motion cubic-bezier 形式，全库统一曲线源头 */
+export const EASE_OUT: [number, number, number, number] = [0.23, 1, 0.32, 1]
+
 /** Stagger container — wrap a group of sections so they animate in sequence */
 export const staggerContainer = {
   hidden: { opacity: 0 },

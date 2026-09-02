@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../hooks/useAuth'
 import { Icon } from './ui/Icon'
+import { EASE_OUT } from '../constants/animations'
 
 const LockScreen: React.FC = () => {
   const { currentUser, unlock } = useAuth()
@@ -39,7 +40,7 @@ const LockScreen: React.FC = () => {
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        transition={{ duration: 0.3, ease: 'easeOut' }}
+        transition={{ duration: 0.3, ease: EASE_OUT }}
         className="w-full max-w-sm mx-4 relative z-10"
       >
         {/* Avatar + Name */}
