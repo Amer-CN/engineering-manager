@@ -13,6 +13,7 @@ import { DataStorageSection } from '@/components/features/settings/DataStorageSe
 import { PreferencesSection } from '@/components/features/settings/PreferencesSection'
 import { AboutHelpSection } from '@/components/features/settings/AboutHelpSection'
 import { Icon } from '@/components/ui/Icon'
+import { EASE_OUT } from '@/constants/animations'
 
 /**
  * 系统设置 (v0.83.0 重构)
@@ -103,7 +104,7 @@ const Settings: React.FC<SettingsProps> = ({ refresh }) => {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.18, ease: 'easeOut' }}
+              transition={{ duration: 0.18, ease: EASE_OUT }}
             >
               {renderPanel()}
             </motion.div>

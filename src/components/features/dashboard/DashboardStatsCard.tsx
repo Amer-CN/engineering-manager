@@ -2,7 +2,7 @@ import React from 'react'
 import { motion } from 'framer-motion'
 import { DashboardStats } from '../../../types/electron'
 import { Icon } from '@/components/ui/Icon'
-import { sectionVariant } from '@/constants/animations'
+import { sectionVariant, EASE_OUT } from '@/constants/animations'
 import CountUp from './CountUp'
 import { statCards, cardHover, formatCurrency } from './dashboardConstants'
 
@@ -57,7 +57,7 @@ const DashboardStatsCard: React.FC<DashboardStatsCardProps> = ({ stats }) => {
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: val.progress / 100 }}
                   style={{ transformOrigin: 'left', width: '100%' }}
-                  transition={{ duration: 1, delay: 0.5 + i * 0.1, ease: 'easeOut' }}
+                  transition={{ duration: 1, delay: 0.5 + i * 0.1, ease: EASE_OUT }}
                 />
               </div>
             )}

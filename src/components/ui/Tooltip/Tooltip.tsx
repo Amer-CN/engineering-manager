@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
+import { EASE_OUT } from '../../../constants/animations'
 
 export type TooltipPosition = 'top' | 'bottom' | 'left' | 'right'
 
@@ -115,7 +116,7 @@ export function Tooltip({
   initial={{ opacity: 0, scale: 0.95 }}
   animate={{ opacity: 1, scale: 1 }}
   exit={{ opacity: 0, scale: 0.95 }}
-  transition={{ duration: 0.15, ease: 'easeOut' }}
+  transition={{ duration: 0.15, ease: EASE_OUT }}
   >
   {content}
   <div className={arrowClass} />

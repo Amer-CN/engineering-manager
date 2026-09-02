@@ -6,6 +6,7 @@ import {
   WORKER_IMPORT_FIELDS, type ImportState, type ImportProgress, type ImportResult,
 } from './useWorkerImport'
 import { getConfidenceClass, getConfidenceIcon, validateRow } from './workerImportHelpers'
+import { EASE_OUT } from '../../../constants/animations'
 
 interface MappingPhaseProps {
   importState: ImportState
@@ -130,7 +131,7 @@ export function ImportingPhase({ progress }: { progress: ImportProgress }) {
             initial={{ scaleX: 0 }}
             animate={{ scaleX: progress.percent / 100 }}
             style={{ transformOrigin: 'left', width: '100%' }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
+            transition={{ duration: 0.3, ease: EASE_OUT }}
           />
         </div>
       </div>

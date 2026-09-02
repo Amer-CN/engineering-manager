@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { motion, useMotionValue, useSpring } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
+import { EASE_OUT } from '../../../constants/animations'
 
 interface ProjectsHeroBannerProps {
   icon: string
@@ -15,7 +16,7 @@ export function ProjectsHeroBanner({ icon, title, subtitle, metrics }: ProjectsH
     <motion.section
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: 'easeOut' }}
+      transition={{ duration: 0.3, ease: EASE_OUT }}
       className="relative rounded-xl mb-6 p-6"
       style={{ background: 'var(--panel)', border: '1px solid var(--border)', color: 'var(--fg)' }}
     >
