@@ -9,7 +9,7 @@ import { Spinner } from './ui/Loading/Loading'
 import PageHeader from './ui/PageHeader'
 import PageContainer from './ui/PageContainer'
 import { Button } from './ui/Button'
-import { TemplateDashboard, TemplateList, TemplateForm, TemplatePreview } from './features/templates'
+import { TemplateDashboard, TemplateList, TemplateForm, TemplatePreview, TemplateGenerate } from './features/templates'
 import { logCreate, logUpdate, logDelete } from '../utils/audit'
 import { Drawer } from './ui/Drawer'
 import { getAPI } from '@/services/api-adapter'
@@ -31,6 +31,7 @@ const Templates: React.FC = () => {
   // 子表单用户编辑过即 dirty（误触关闭先弹确认），关闭时重置
   const [formDirty, setFormDirty] = useState(false)
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null)
+  const [generateTemplate, setGenerateTemplate] = useState<Template | null>(null)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -149,6 +150,7 @@ const Templates: React.FC = () => {
           onEdit={handleEdit}
           onDelete={handleDelete}
           onPreview={setPreviewTemplate}
+          onGenerate={setGenerateTemplate}
           onCreate={handleCreate}
         />
 
@@ -157,6 +159,11 @@ const Templates: React.FC = () => {
         {/* Preview modal */}
         {previewTemplate && (
           <TemplatePreview template={previewTemplate} onClose={() => setPreviewTemplate(null)} />
+        )}
+
+        {/* Generate modal */}
+        {generateTemplate && (
+          <TemplateGenerate template={generateTemplate} onClose={() => setGenerateTemplate(null)} />
         )}
       </PageContainer>
     )
