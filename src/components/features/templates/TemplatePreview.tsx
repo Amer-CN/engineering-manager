@@ -13,6 +13,7 @@ interface TemplatePreviewProps {
 
 export default function TemplatePreview({ template, onClose }: TemplatePreviewProps) {
   const [htmlContent, setHtmlContent] = useState('')
+  const [fileUrl, setFileUrl] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -36,7 +37,9 @@ export default function TemplatePreview({ template, onClose }: TemplatePreviewPr
         const tip = template.fileType === 'docx'
           ? 'Word 文档暂不支持在线预览'
           : 'Excel 模板无法在线预览'
-        setHtmlContent(`<div style="text-align:center;padding:40px;"><p style="color:${COLORS.textSubtle};margin-bottom:12px;">${tip}</p><a href="${dataUrl}" download="${template.fileName}" style="display:inline-block;padding:8px 16px;background:${COLORS.primary};color:${COLORS.white};border-radius:8px;text-decoration:none;">下载查看</a></div>`)
+        // 下载链接走受控 JSX（DOMPurify 默认策略会剥掉 data: 协议的 href）
+        setFileUrl(dataUrl)
+        setHtmlContent(`<div style="text-align:center;padding:40px;"><p style="color:${COLORS.textSubtle};margin-bottom:12px;">${tip}</p></div>`)
       } else {
         setError(result.error || '文件读取失败')
       }
@@ -62,7 +65,20 @@ export default function TemplatePreview({ template, onClose }: TemplatePreviewPr
             <p>{error}</p>
           </div>
         ) : (
-          <div className="border border-[color:var(--border)] rounded-lg p-6 bg-[color:var(--card)]" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(htmlContent) }} />
+          <div className="border border-[color:var(--border)] rounded-lg p-6 bg-[color:var(--card)]">
+            <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(htmlContent) }} />
+            {fileUrl && (
+              <div style={{ textAlign: 'center' }}>
+                <a
+                  href={fileUrl}
+                  download={template.fileName}
+                  style={{ display: 'inline-block', padding: '8px 16px', background: COLORS.primary, color: COLORS.white, borderRadius: 8, textDecoration: 'none' }}
+                >
+                  下载查看
+                </a>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </Modal>

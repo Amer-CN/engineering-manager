@@ -51,6 +51,9 @@ describe('TemplatePreview', () => {
       expect((window.electronAPI as any).readFile).toHaveBeenCalled()
       expect(screen.getByText('下载查看')).toBeTruthy()
     })
+    // 评审点名断言：下载链接必须保留 data: 协议 href（防 DOMPurify 剥协议渲染成死链导致假绿）。
+    // Modal 用 createPortal 渲染到 document.body，锚点不在 render 返回的 container 内，故查 document.body
+    expect(document.body.querySelector('a')?.getAttribute('href')).toContain('data:')
   })
 
   test('xlsx 类型应调用 readFile', async () => {
