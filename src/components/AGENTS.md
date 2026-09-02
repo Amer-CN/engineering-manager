@@ -1,6 +1,6 @@
 # src/components/ - 前端组件域
 
-> 项目状态：v0.94.0（以 package.json 为唯一真源） · 最后同步：2026-08-31
+> 项目状态：v0.95.0（以 package.json 为唯一真源） · 最后同步：2026-09-02
 
 > 本目录职责：全部 React 页面与组件。基础组件在 `ui/`，业务组件在 `features/<模块>/`，页面级组件在根层（如 `Projects.tsx`、`InvoicePage.tsx`）。
 
