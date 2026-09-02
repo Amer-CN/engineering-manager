@@ -16,7 +16,7 @@ vi.mock('@/components/features/templates/config', () => ({
 
 // Mock TemplateCard
 vi.mock('@/components/features/templates/TemplateCard', () => ({
-  TemplateCard: ({ template, onEdit, onDelete, onPreview, onGenerate }: any) => (
+  TemplateCard: ({ template, onEdit, onDelete, onPreview }: any) => (
     <div data-testid="template-card">{template.name}</div>
   ),
 }))
@@ -28,7 +28,6 @@ describe('TemplateList', () => {
   const mockOnEdit = vi.fn()
   const mockOnDelete = vi.fn()
   const mockOnPreview = vi.fn()
-  const mockOnGenerate = vi.fn()
   const mockOnCreate = vi.fn()
 
   const templates = [
@@ -43,7 +42,6 @@ describe('TemplateList', () => {
     onEdit: mockOnEdit,
     onDelete: mockOnDelete,
     onPreview: mockOnPreview,
-    onGenerate: mockOnGenerate,
     onCreate: mockOnCreate,
   }
 
