@@ -29,7 +29,7 @@ export const TemplateCard = React.memo(function TemplateCard({ template, onEdit,
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-xs text-[color:var(--muted)]">{config.label}</span>
               <span className="text-xs px-1.5 py-0.5 rounded bg-[color:var(--panel-2)] text-[color:var(--muted)] font-medium">
-                {template.fileType.toUpperCase()}
+                {(template.fileType || '').toUpperCase()}
               </span>
             </div>
           </div>
