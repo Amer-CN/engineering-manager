@@ -318,6 +318,22 @@ Bedrock 默认是平的（Flat-By-Default）。但少数屏幕的任务本质是
 ### Assistant Mark（AI 管家形象，签名组件）
 AI 主页中央的助手形象。当前为**扁平中性占位**（墨色圆形 + 会跟随鼠标转动的眼睛，无发光、无霓虹、无旋转环），是角色 IP 的过渡形态。正式形象由 miora 出稿（首选 **Rive** 交互动画：眼睛跟随鼠标 + 待机 / 思考 / 聆听 / 完成状态；兜底**分层 SVG** 由前端自行驱动），届时无缝替换此占位。**绝不做发光能量球。**
 
+## Motion（动效曲线契约）
+
+**两条 token 曲线**（定义在 src/index.css `:root`，单一真源）：
+- **`--ease-out: cubic-bezier(0.23, 1, 0.32, 1)`** — 入场 / 退场 / 反馈。framer-motion 侧唯一导入源 **`EASE_OUT`**（src/constants/animations.ts），**禁止手写同值数组、禁止使用内置 easeOut 字符串**。
+- **`--ease-emphasis: cubic-bezier(0.16, 1, 0.3, 1)`** — 卡片悬浮抬升族与 tailwind.config.js 六个 animation 工具类。
+
+**弹簧族**：可中断 UI（Modal / Drawer / Toast / 侧栏）用 framer-motion spring，**不换算**成 duration 曲线。
+
+**硬纪律**：UI 动画 **≤300ms**（模态 / 抽屉 200–500ms）；只动 **transform / opacity**；stagger **30–80ms**；**禁 scale(0)**（从 0.94–0.97 起步）；入场动画不得阻塞交互。
+
+**频率门槛**：高频操作（100+ 次/天）**永不加动画**；惊喜预算只给登录 / 启动等首次时刻。
+
+**reduced-motion**：CSS 侧 index.css 全局归零 + framer-motion 侧 main.tsx `MotionConfig reducedMotion="user"`，**新增动效必须两者兼容**。
+
+> 尾注：本章节与批次一~三（666f76c6 / 55d1afc8 / 11268ece）配套，是对既有实践的成文化，不引入新行为。
+
 ## Do's and Don'ts
 
 ### Do:

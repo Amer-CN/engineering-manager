@@ -170,7 +170,7 @@ export function DropdownMenu({
               transformOrigin: position.origin,
               background: 'var(--card)', border: '1px solid var(--border)',
               opacity: 1, transform: 'translateY(0) scale(1)',
-              animation: 'dropdown-in 0.15s ease-out',
+              animation: 'dropdown-in 0.15s var(--ease-out)',
             }}
           >
             <style>{`@keyframes dropdown-in { from { opacity: 0; transform: translateY(-4px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }`}</style>

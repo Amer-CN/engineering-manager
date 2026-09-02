@@ -113,7 +113,14 @@ module.exports = {
         'lift': 'var(--shadow-lift)',
         'lifted': '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
       },
+      transitionTimingFunction: {
+        // 入场/退场/反馈：Emil 强缓出，与 index.css --ease-out 同源
+        'out-strong': 'var(--ease-out)',
+        // 卡片悬浮抬升族：与 index.css --ease-emphasis 同源
+        emphasis: 'var(--ease-emphasis)',
+      },
       animation: {
+        // 以下 6 处 cubic-bezier(0.16, 1, 0.3, 1) = CSS token var(--ease-emphasis)（Emil emphasis 曲线），语义正确，保持不动
         'fade-in': 'fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         'slide-up': 'slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         'scale-in': 'scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',

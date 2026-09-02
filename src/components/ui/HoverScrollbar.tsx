@@ -255,7 +255,7 @@ export function HoverScrollbar({ children, className = '', threshold = 15, scrol
           right: 0,
           width: '6px',
           cursor: 'pointer',
-          transition: 'width 0.15s ease-out',
+          transition: 'width 0.15s var(--ease-out)',
           display: 'none',
           zIndex: 50,
         }}
@@ -271,7 +271,7 @@ export function HoverScrollbar({ children, className = '', threshold = 15, scrol
             borderRadius: '2px',
             cursor: 'pointer',
             opacity: 0.5,
-            transition: 'width 0.15s ease-out, opacity 0.15s ease-out, background 0.15s ease-out, border-radius 0.15s ease-out',
+            transition: 'width 0.15s var(--ease-out), opacity 0.15s var(--ease-out), background 0.15s var(--ease-out), border-radius 0.15s var(--ease-out)',
             right: 1,
             willChange: 'top, width, opacity',
           }}
