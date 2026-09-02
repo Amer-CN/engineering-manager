@@ -1,10 +1,11 @@
 import React, { useReducer, useCallback, useEffect, useRef, useMemo } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
 import { Icon } from './ui/Icon'
 import { getAPI } from '@/services/api-adapter'
 import LoginSettingsPage from './LoginSettingsModal'
+import { chapterEntrance, itemRise, logoRise, EASE_OUT } from '../constants/animations'
 
 /** 不同主题的交互参数 — 差异化设计 */
 const THEME_INTERACTION = {
@@ -165,23 +166,23 @@ const Login: React.FC<LoginProps> = () => {
         </div>
       </div>
 
-      {/* ── 内容 ── */}
+      {/* ── 内容 ──（首次链条入场编排：容器只淡入不位移，内容块错峰上移） */}
       {state.showSettings ? (
         <LoginSettingsPage onBack={() => dispatch({ type: 'TOGGLE_SETTINGS' })} />
       ) : (
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 24px 20px' }}>
+      <motion.div variants={chapterEntrance} initial="hidden" animate="visible" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 24px 20px' }}>
         {/* Logo */}
-        <div style={{ width: 48, height: 48, marginBottom: 10, flexShrink: 0 }}>
+        <motion.div variants={logoRise} style={{ width: 48, height: 48, marginBottom: 10, flexShrink: 0 }}>
           <svg width="48" height="48" viewBox="0 0 18 18" fill="none">
             <defs><mask id="login-mark-mask"><rect width="18" height="18" fill="white" /><path d="M5 14 L9 6 L13 14 Z" fill="black" /></mask></defs>
             <path d="M2 15.5 L9 2.5 L16 15.5 Z" fill="var(--brand)" strokeLinejoin="round" mask="url(#login-mark-mask)" />
           </svg>
-        </div>
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--fg)', marginBottom: 2 }}>工程管家</h2>
-        <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 24 }}>工程项目管理系统</p>
+        </motion.div>
+        <motion.h2 variants={itemRise} style={{ fontSize: 20, fontWeight: 700, color: 'var(--fg)', marginBottom: 2 }}>工程管家</motion.h2>
+        <motion.p variants={itemRise} style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 24 }}>工程项目管理系统</motion.p>
 
         {/* 表单 */}
-        <form onSubmit={handleSubmit} style={{ width: '100%', flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <motion.form variants={itemRise} onSubmit={handleSubmit} style={{ width: '100%', flex: 1, display: 'flex', flexDirection: 'column' }}>
           <input type="text" value={state.username} onChange={e => dispatch({ type: 'SET_CREDENTIALS', field: 'username', value: e.target.value })} placeholder="用户名" required autoFocus
             style={{ width: '100%', padding: '7px 10px', fontSize: 13, borderRadius: 8, outline: 'none', marginBottom: 6, boxSizing: 'border-box', background: 'var(--panel)', border: '1px solid var(--border)', color: 'var(--fg)' }}
             onFocus={e => { e.currentTarget.style.borderColor = 'var(--accent)' }}
@@ -205,11 +206,19 @@ const Login: React.FC<LoginProps> = () => {
             </label>
           </div>
 
-          {state.error && (
-            <div style={{ padding: '5px 8px', borderRadius: 6, fontSize: 11, marginBottom: 10, background: 'var(--danger-soft)', color: 'var(--danger)' }}>
-              {state.error}
-            </div>
-          )}
+          <AnimatePresence>
+            {state.error && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15, ease: EASE_OUT }}
+                style={{ padding: '5px 8px', borderRadius: 6, fontSize: 11, marginBottom: 10, background: 'var(--danger-soft)', color: 'var(--danger)' }}
+              >
+                {state.error}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <div style={{ marginTop: 'auto' }}>
             <button type="submit" disabled={state.loading}
@@ -217,12 +226,12 @@ const Login: React.FC<LoginProps> = () => {
               {state.loading ? '登录中...' : '登 录'}
             </button>
           </div>
-        </form>
+        </motion.form>
 
         <div style={{ fontSize: 10, color: 'var(--muted-2)', marginTop: 8, flexShrink: 0 }}>
           v{__APP_VERSION__ || '0.95.0'}
         </div>
-      </div>
+      </motion.div>
       )}
 
     </div>
