@@ -76,7 +76,8 @@ export function Button({
 
   const baseClasses = `
   inline-flex items-center justify-center font-medium rounded-lg
-  transition-all duration-150 ease-out
+  transition-[transform,opacity,box-shadow,background-color] duration-150 ease-out
+  active:scale-[0.97]
   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[color:var(--accent-soft)]
   disabled:opacity-50 disabled:cursor-not-allowed select-none
   ${variantStyles[variant]}

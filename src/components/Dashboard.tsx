@@ -222,9 +222,10 @@ const Dashboard: React.FC = () => {
                           <div className="flex-1 h-1.5 bg-[color:var(--panel-2)] rounded-full overflow-hidden">
                             <motion.div
                               className="h-full bg-[color:var(--accent)] rounded-full"
-                              initial={{ width: 0 }}
-                              animate={{ width: `${inv.amount > 0 ? Math.round(inv.receivedAmount / inv.amount * 100) : 0}%` }}
-                              transition={{ duration: 0.8, delay: 0.3 + index * 0.1, ease: 'easeOut' }}
+                              style={{ transformOrigin: 'left', width: '100%' }}
+                              initial={{ scaleX: 0 }}
+                              animate={{ scaleX: (inv.amount > 0 ? Math.round(inv.receivedAmount / inv.amount * 100) : 0) / 100 }}
+                              transition={{ duration: 0.55, delay: 0.15 + index * 0.07, ease: 'easeOut' }}
                             />
                           </div>
                           <span className="text-xs text-[color:var(--muted)] font-medium w-8 text-right">{inv.amount > 0 ? Math.round(inv.receivedAmount / inv.amount * 100) : 0}%</span>
