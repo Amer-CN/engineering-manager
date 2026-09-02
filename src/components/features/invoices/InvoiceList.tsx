@@ -163,6 +163,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
             <Tooltip content="预览" position="top" delay={300}>
               <button
                 onClick={() => onPreview(item.fileUrl!, item.fileType === 'pdf' ? 'pdf' : 'image', `${item.invoiceNo} - 发票附件`, 'invoices', item.type === 'invoice_out' ? 'invoice_out' : 'invoice_in', item.projectName, item.projectId ?? undefined)}
+                aria-label="预览"
                 className="p-1.5 rounded transition-colors text-[color:var(--muted)] hover:bg-[color:var(--panel-2)] hover:text-[color:var(--fg-2)]"
               >
                 <Icon name="Eye" size={14} />
@@ -172,6 +173,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
           <Tooltip content="打印" position="top" delay={300}>
             <button
               onClick={() => onPrint(item)}
+              aria-label="打印"
               className="p-1.5 rounded transition-colors text-[color:var(--muted)] hover:bg-[color:var(--panel-2)] hover:text-[color:var(--fg-2)]"
             >
               <Icon name="Printer" size={14} />
@@ -182,7 +184,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
               <Button
                 onClick={() => onEdit(item)}
 
-               variant="ghost" size="sm">
+               aria-label="编辑" variant="ghost" size="sm">
                 <Icon name="Edit" size={14} />
               </Button>
             </Tooltip>
@@ -190,7 +192,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
           <Tooltip content="删除" position="top" delay={300}>
             <Button
               onClick={() => onDelete(item.id)}
-              
+              aria-label="删除"
              variant="danger" size="sm">
               <Icon name="Trash2" size={14} />
             </Button>

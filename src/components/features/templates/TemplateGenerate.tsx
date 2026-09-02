@@ -17,6 +17,8 @@ export default function TemplateGenerate({ template, onClose }: TemplateGenerate
   const showToast = useToastStore(state => state.showToast)
   const [values, setValues] = useState<Record<string, string>>({})
   const [previewHtml, setPreviewHtml] = useState('')
+  // 缓存的 mammoth 转换结果：与变量值无关，只在 template 变化时转换一次，避免每次击键重新 POST
+  const [docxHtml, setDocxHtml] = useState('')
   const [loading, setLoading] = useState(false)
   const printRef = useRef<HTMLDivElement>(null)
 
@@ -30,11 +32,22 @@ export default function TemplateGenerate({ template, onClose }: TemplateGenerate
   }, [template])
 
   useEffect(() => {
-    loadAndRender()
-  }, [values, template])
+    loadDocxHtml()
+  }, [template])
 
-  const loadAndRender = async () => {
+  useEffect(() => {
+    if (!docxHtml) return
+    let html = docxHtml
+    for (const [key, val] of Object.entries(values)) {
+      // split/join 字面量全替换：key 含正则元字符时 new RegExp 会抛异常或误匹配
+      html = html.split(`{{${key}}}`).join(val || `【${key}】`)
+    }
+    setPreviewHtml(html)
+  }, [docxHtml, values])
+
+  const loadDocxHtml = async () => {
     if (template.fileType !== 'docx') {
+      setDocxHtml('')
       setPreviewHtml(`<p style="text-align:center;color:${COLORS.textMuted};padding:40px;">Excel 模板请下载后填写变量值</p>`)
       return
     }
@@ -44,17 +57,14 @@ export default function TemplateGenerate({ template, onClose }: TemplateGenerate
       // 调用主进程用 mammoth 转换 docx → HTML
       const result = await (await getAPI()).convertTemplateDocxToHtml(template.storedFileName)
       if (result.success && result.data) {
-        let html = result.data
-        for (const [key, val] of Object.entries(values)) {
-          // split/join 字面量全替换：key 含正则元字符时 new RegExp 会抛异常或误匹配
-          html = html.split(`{{${key}}}`).join(val || `【${key}】`)
-        }
-        setPreviewHtml(html)
+        setDocxHtml(result.data)
       } else {
+        setDocxHtml('')
         setPreviewHtml(`<p style="text-align:center;color:${COLORS.danger};padding:40px;">转换模板失败：${result.error || '未知错误'}</p>`)
       }
     } catch (e) {
       console.error('Template render failed:', e)
+      setDocxHtml('')
       setPreviewHtml(`<p style="text-align:center;color:${COLORS.danger};padding:40px;">加载模板失败</p>`)
     } finally {
       setLoading(false)
