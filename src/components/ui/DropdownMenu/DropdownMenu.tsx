@@ -28,7 +28,7 @@ export function DropdownMenu({
   sideOffset = 4,
 }: DropdownMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const [position, setPosition] = useState({ top: 0, left: 0, width: 0 })
+  const [position, setPosition] = useState({ top: 0, left: 0, width: 0, origin: 'top left' })
   const triggerRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const wasOpenRef = useRef(false)
@@ -86,7 +86,9 @@ export function DropdownMenu({
         top = rect.top - sideOffset - (menuRef.current?.offsetHeight || 0)
       }
 
-      setPosition({ top, left, width: rect.width })
+      // Expand from the trigger side: below trigger → top origin, above trigger → bottom origin
+      const origin = top >= rect.bottom ? 'top left' : 'bottom left'
+      setPosition({ top, left, width: rect.width, origin })
     }
   }, [isOpen, side, align, sideOffset])
 
@@ -142,7 +144,8 @@ export function DropdownMenu({
         const menuWidth = menuRef.current?.offsetWidth || 160
         let top = side === 'bottom' ? rect.bottom + sideOffset : rect.top - sideOffset
         let left = align === 'start' ? rect.left : rect.right - menuWidth
-        setPosition({ top, left, width: rect.width })
+        const origin = top >= rect.bottom ? 'top left' : 'bottom left'
+        setPosition({ top, left, width: rect.width, origin })
       }
     }
     window.addEventListener('scroll', handleUpdate, true)
@@ -164,6 +167,7 @@ export function DropdownMenu({
             className="fixed z-[9999] min-w-[160px] rounded-lg shadow-lg overflow-hidden"
             style={{
               top: position.top, left: position.left,
+              transformOrigin: position.origin,
               background: 'var(--card)', border: '1px solid var(--border)',
               opacity: 1, transform: 'translateY(0) scale(1)',
               animation: 'dropdown-in 0.15s ease-out',
