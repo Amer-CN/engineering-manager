@@ -21,7 +21,7 @@ export function ProjectsHeroBanner({ icon, title, subtitle, metrics }: ProjectsH
     >
       <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
         <div className="flex items-center gap-4">
-          <motion.div whileHover={{ rotate: 6, scale: 1.05 }} transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+          <motion.div whileHover={{ rotate: 6, scale: 1.05 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }}
             className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0"
             style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
             <Icon name={icon} size={28} />

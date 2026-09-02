@@ -61,7 +61,7 @@ export default function CarouselDemoPage() {
         <div className="fixed bottom-6 right-6 z-40 flex items-center gap-2 p-1.5 rounded-full bg-zinc-900/90 text-white border border-white/20 shadow-2xl backdrop-blur-xl text-xs font-semibold">
           <button
             onClick={() => setViewMode('ambient')}
-            className="px-4 py-2 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-md transition-all flex items-center gap-1.5"
+            className="px-4 py-2 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-md transition-colors flex items-center gap-1.5"
           >
             <span>返回 3D 沉浸海报视角</span>
           </button>

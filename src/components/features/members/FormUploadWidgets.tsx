@@ -15,7 +15,7 @@ export function IdCardUploadArea({ label, image, field, dragOverField, onDragOve
   return (
     <div>
       <p className="text-xs text-[color:var(--muted)] mb-2">{label}</p>
-      <div className={`border-2 border-dashed rounded-lg p-3 text-center cursor-pointer transition-all relative ${
+      <div className={`border-2 border-dashed rounded-lg p-3 text-center cursor-pointer transition-colors relative ${
         image ? 'border-success-500 bg-success-50' : dragOverField === field ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)]' : 'border-[color:var(--border)] hover:border-[color:var(--accent)]'}`}
         onClick={() => image ? onDelete() : inputRef.current?.click()}
         onDragOver={(e) => onDragOver(e, field)} onDragLeave={onDragLeave} onDrop={(e) => onDrop(e, field, null, true)}>
@@ -45,7 +45,7 @@ interface FileUploadAreaProps {
 
 export function FileUploadArea({ file, fileType, field, dragOverField, onDragOver, onDragLeave, onDrop, onDelete, inputRef, onInputChange, placeholder = '点击上传、拖拽文件或 Ctrl+V 粘贴' }: FileUploadAreaProps) {
   return (
-    <div className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-all relative ${
+    <div className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors relative ${
       file ? 'border-success-500 bg-success-50' : dragOverField === field ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)]' : 'border-[color:var(--border)] hover:border-[color:var(--accent)]'}`}
       onClick={() => file ? onDelete() : inputRef.current?.click()}
       onDragOver={(e) => onDragOver(e, field)} onDragLeave={onDragLeave} onDrop={(e) => onDrop(e, field, null)}>
@@ -74,7 +74,7 @@ export function SmallFileUpload({ label, file, field, dragOverField, onDragOver,
   return (
     <div>
       <label className="block text-xs text-[color:var(--fg-2)] mb-1">{label}</label>
-      <div className={`border-2 border-dashed rounded-lg p-2 text-center cursor-pointer transition-all relative ${
+      <div className={`border-2 border-dashed rounded-lg p-2 text-center cursor-pointer transition-colors relative ${
         file ? 'border-success-500 bg-success-50' : dragOverField === field ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)]' : 'border-[color:var(--border)] hover:border-[color:var(--accent)]'}`}
         onClick={() => file ? onDelete() : inputRef.current?.click()}
         onDragOver={(e) => onDragOver(e, field)} onDragLeave={onDragLeave} onDrop={(e) => onDrop(e, field, null)}>

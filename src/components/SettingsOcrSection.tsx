@@ -70,7 +70,7 @@ export const SettingsOcrSection: React.FC<Props> = ({ ocrConfig, setOcrConfig, o
         <label className="label">支持的智能识别功能</label>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {OCR_FEATURES.map((feature) => (
-            <div key={feature.name} className={`p-3 rounded-xl border transition-all ${
+            <div key={feature.name} className={`p-3 rounded-xl border transition-colors ${
               feature.status === 'ready' ? 'border-success-200 bg-success-50' :
               feature.status === 'beta' ? 'border-warning-200 bg-warning-50' :
               'border-[color:var(--border)] bg-[color:var(--panel-2)]'
@@ -102,7 +102,7 @@ export const SettingsOcrSection: React.FC<Props> = ({ ocrConfig, setOcrConfig, o
       <div>
         <label className="label">选择识别模式</label>
         <div className="grid grid-cols-2 gap-4">
-          <button onClick={() => setOcrConfig({ ...ocrConfig, provider: 'offline' })} className={`p-5 rounded-xl border-2 transition-all ${ocrConfig.provider === 'offline' ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] shadow-md' : 'border-[color:var(--border)] hover:border-[color:var(--border)] bg-[color:var(--card)]'}`}>
+          <button onClick={() => setOcrConfig({ ...ocrConfig, provider: 'offline' })} className={`p-5 rounded-xl border-2 transition-[border-color,background-color,box-shadow] ${ocrConfig.provider === 'offline' ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] shadow-md' : 'border-[color:var(--border)] hover:border-[color:var(--border)] bg-[color:var(--card)]'}`}>
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-[color:var(--panel-2)] flex items-center justify-center text-2xl">
                 <Icon name="WifiOff" size={24} />
@@ -113,7 +113,7 @@ export const SettingsOcrSection: React.FC<Props> = ({ ocrConfig, setOcrConfig, o
               </div>
             </div>
           </button>
-          <button onClick={() => setOcrConfig({ ...ocrConfig, provider: 'baidu' })} className={`p-5 rounded-xl border-2 transition-all ${ocrConfig.provider === 'baidu' ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] shadow-md' : 'border-[color:var(--border)] hover:border-[color:var(--border)] bg-[color:var(--card)]'}`}>
+          <button onClick={() => setOcrConfig({ ...ocrConfig, provider: 'baidu' })} className={`p-5 rounded-xl border-2 transition-[border-color,background-color,box-shadow] ${ocrConfig.provider === 'baidu' ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] shadow-md' : 'border-[color:var(--border)] hover:border-[color:var(--border)] bg-[color:var(--card)]'}`}>
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-[color:var(--accent)] flex items-center justify-center text-[color:var(--on-accent)] text-xl">
                 <Icon name="Sparkles" size={22} />

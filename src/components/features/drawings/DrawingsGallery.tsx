@@ -54,7 +54,7 @@ export function DrawingsGallery({ drawings, getProjectName, onOpen, onEdit, onDe
         <div
           key={d.id}
           onClick={() => onOpen(d)}
-          className="group bg-[color:var(--card)] border border-[color:var(--border)] rounded-2xl overflow-hidden cursor-pointer transition-all duration-200 hover:shadow-lift hover:-translate-y-0.5 hover:border-[color:var(--border-strong)]"
+          className="group bg-[color:var(--card)] border border-[color:var(--border)] rounded-2xl overflow-hidden cursor-pointer transition-[transform,opacity,box-shadow,background-color,border-color] duration-200 hover:shadow-lift hover:-translate-y-0.5 hover:border-[color:var(--border-strong)]"
         >
           {/* 等比缩略图区 */}
           <div className="aspect-[4/3] bg-[color:var(--panel-2)] border-b border-[color:var(--border)] overflow-hidden">

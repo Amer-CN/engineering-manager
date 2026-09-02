@@ -55,7 +55,7 @@ const StatCard: React.FC<StatCardProps> = ({
 
   return (
     <div
-      className={`rounded-xl shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 min-w-0 ${padding} ${className}`}
+      className={`rounded-xl shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-[transform,box-shadow] duration-200 min-w-0 ${padding} ${className}`}
       style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
     >
       {icon ? (

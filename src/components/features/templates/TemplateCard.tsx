@@ -16,7 +16,7 @@ export const TemplateCard = React.memo(function TemplateCard({ template, onEdit,
   const config = categoryConfig[template.category]
 
   return (
-    <div className="bg-[color:var(--card)] border border-[color:var(--border)] rounded-xl p-5 shadow-sm hover:shadow-md hover:border-[color:var(--border)] transition-all duration-200">
+    <div className="bg-[color:var(--card)] border border-[color:var(--border)] rounded-xl p-5 shadow-sm hover:shadow-md hover:border-[color:var(--border)] transition-[box-shadow,border-color] duration-200">
       {/* Header: icon + type + filename */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3 min-w-0">

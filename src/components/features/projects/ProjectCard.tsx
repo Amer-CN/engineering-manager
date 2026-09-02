@@ -43,7 +43,7 @@ export const ProjectCard = React.memo(function ProjectCard({ project, members, o
   return (
     <div
       onClick={() => onClick(project)}
-      className="relative rounded-xl p-4 h-full flex flex-col cursor-pointer transition-all duration-200 hover:shadow-lift hover:-translate-y-0.5"
+      className="relative rounded-xl p-4 h-full flex flex-col cursor-pointer transition-[transform,box-shadow,border-color] duration-200 hover:shadow-lift hover:-translate-y-0.5"
       style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
       onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-strong)' }}
       onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)' }}
@@ -78,7 +78,7 @@ export const ProjectCard = React.memo(function ProjectCard({ project, members, o
           <span className="text-xs font-semibold tabular-nums" style={{ color: accentColor }}>{progress}%</span>
         </div>
         <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--panel-2)' }}>
-          <div className="h-full rounded-full transition-all duration-700" style={{ width: `${progress}%`, background: accentColor }} />
+          <div className="h-full rounded-full transition-transform duration-700" style={{ transformOrigin: 'left', width: '100%', transform: `scaleX(${progress / 100})`, background: accentColor }} />
         </div>
 
         <div className="flex items-center gap-2 mt-4 pt-4 border-t" style={{ borderColor: 'var(--border)' }}>

@@ -34,8 +34,9 @@ export default function BankReceiptParseStatus({
           <div className="w-full bg-[color:var(--border-strong)] rounded-full h-2">
             <motion.div
               className="bg-[color:var(--accent)] h-2 rounded-full"
-              initial={{ width: 0 }}
-              animate={{ width: `${(progress.current / progress.total) * 100}%` }}
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: progress.current / progress.total }}
+              style={{ transformOrigin: 'left', width: '100%' }}
               transition={{ duration: 0.3 }}
             />
           </div>

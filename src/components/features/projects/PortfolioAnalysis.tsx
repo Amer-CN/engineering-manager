@@ -51,8 +51,8 @@ export function PortfolioAnalysis({ projects }: PortfolioAnalysisProps) {
               </div>
               <div className="h-2.5 bg-[color:var(--panel-2)] rounded-full overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all duration-700 ${statusColors[key]}`}
-                  style={{ width: `${(count / total) * 100}%` }}
+                  className={`h-full rounded-full transition-transform duration-700 ${statusColors[key]}`}
+                  style={{ transformOrigin: 'left', width: '100%', transform: `scaleX(${count / total})` }}
                 />
               </div>
             </div>
