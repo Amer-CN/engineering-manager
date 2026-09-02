@@ -8,6 +8,12 @@ export interface PickEntry {
   teamId: number | null
   dailyWage: number
   workerType: string
+  contractSigner: string
+  contractStart: string
+  contractEnd: string
+  safetyTraining: boolean
+  workSection: string
+  exitDate: string
 }
 
 export interface UseWorkerPickerParams {
@@ -108,7 +114,9 @@ export function useWorkerPicker({
           worker,
           teamId: defaultTeamId ?? null,
           dailyWage: worker.dailyWage ?? bulkDailyWage,
-          workerType: (workerTypeToCode(worker.workerType!) ?? bulkWorkerType) as string
+          workerType: (workerTypeToCode(worker.workerType!) ?? bulkWorkerType) as string,
+          contractSigner: '', contractStart: '', contractEnd: '',
+          safetyTraining: false, workSection: '', exitDate: ''
         })
       }
       return next
@@ -126,7 +134,9 @@ export function useWorkerPicker({
             worker: w,
             teamId: defaultTeamId ?? null,
             dailyWage: w.dailyWage ?? bulkDailyWage,
-            workerType: (workerTypeToCode(w.workerType!) ?? bulkWorkerType) as string
+            workerType: (workerTypeToCode(w.workerType!) ?? bulkWorkerType) as string,
+            contractSigner: '', contractStart: '', contractEnd: '',
+            safetyTraining: false, workSection: '', exitDate: ''
           })
         }
       }
@@ -153,7 +163,13 @@ export function useWorkerPicker({
         dailyWage: entry.dailyWage,
         workerType: entry.workerType,
         entryDate: new Date().toISOString().split('T')[0],
-        status: 'active' as const
+        status: 'active' as const,
+        contractSigner: entry.contractSigner || undefined,
+        contractStart: entry.contractStart || undefined,
+        contractEnd: entry.contractEnd || undefined,
+        safetyTraining: entry.safetyTraining ? true : undefined,
+        workSection: entry.workSection || undefined,
+        exitDate: entry.exitDate || undefined,
       })
     }
     await onConfirm(entries)

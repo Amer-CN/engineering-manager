@@ -250,7 +250,9 @@ export const tauriAPI = {
   generateDefaultAttendancesV2: (projectId: number, yearMonth: string, projectWorkerIds: number[]) =>
     apiClient.post<{ count: number }>('/api/attendances/generate-v2', { projectId, yearMonth, projectWorkerIds }),
   batchImportAttendances: (projectId: number, yearMonth: string, records: { projectWorkerId: number; workDays: number }[]) =>
-    apiClient.post<{ created: number; updated: number }>('/api/attendances/batch-import', { projectId, yearMonth, records }),
+    apiClient.post<{ created: number; updated: number; skipped: number[]; conflicts: { projectWorkerId: number; currentWorkDays: number; importWorkDays: number }[] }>('/api/attendances/batch-import', { projectId, yearMonth, records }),
+  resolveAttendanceConflicts: (projectId: number, yearMonth: string, resolutions: { projectWorkerId: number; action: string; workDays?: number }[]) =>
+    apiClient.post<{ overwritten: number; kept: number; skipped: number[] }>('/api/attendances/batch-import-resolve', { projectId, yearMonth, resolutions }),
 
   // ────────── 工资 ──────────
   getWages: (projectId?: number, yearMonth?: string) =>
@@ -345,7 +347,7 @@ export const tauriAPI = {
   batchSaveWages: (records: WageRecord[]) =>
     apiClient.post<{ saved: number; skipped: number; skippedItems: { projectWorkerId: number; yearMonth: string }[] }>('/api/wages/batch-save', records),
   // D-9: 批量付款写入——按 id 定位，只写付款列（paidAmount 单位为元，后端 ToFen 存分）
-  batchSavePayments: (records: { id: number; paidAmount: number; paidDate: string; bankReceiptPath?: string }[]) =>
+  batchSavePayments: (records: { id: number; paidAmount: number; paidDate: string; bankReceiptPath?: string; paidChannel?: string }[]) =>
     apiClient.post<{ saved: number; skipped: number; skippedItems: { id: number }[] }>('/api/wages/batch-payment', records),
 
   // ────────── 薪资历史 ──────────
@@ -400,6 +402,8 @@ export const tauriAPI = {
     apiClient.put<void>('/api/templates', template),
   deleteTemplate: (id: number) =>
     apiClient.del<void>(`/api/templates/${id}`),
+  issueCollectionTemplate: (templateId: number, values: { projectName: string; yearMonth: string; teamName: string }) =>
+    apiClient.post<{ dataUrl: string }>(`/api/templates/${templateId}/issue-collection`, values),
 
   // ────────── 合同模板 ──────────
   // 字段桥接：前端 description/variables[] ↔ 后端 content/variables(JSON 字符串)

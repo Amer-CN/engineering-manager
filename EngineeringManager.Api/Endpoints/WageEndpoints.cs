@@ -98,7 +98,7 @@ public static class WageEndpoints
             using var tx = db.BeginTransaction();
             var affected = await db.ExecuteAsync(@"UPDATE attendances SET work_days=@WorkDays,days_off=@DaysOff,
                 is_full_attendance=@IsFullAttendance,daily_status=@DailyStatus,file_url=@FileUrl,
-                file_name=@FileName,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id",
+                file_name=@FileName,manually_edited=1,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id",
                 new { dto.Id, dto.WorkDays, dto.DaysOff, dto.IsFullAttendance, dto.DailyStatus,
                       dto.FileUrl, dto.FileName, Now = now() }, tx);
             if (access == RowWriteOutcome.AllowedViaAuthorization)
@@ -237,50 +237,117 @@ public static class WageEndpoints
         // POST /api/attendances/batch-import — 按出勤天数批量导入（Excel 导入路径）
         // 语义：按 (projectId, yearMonth, projectWorkerId) 定位；存在 → 只刷新 work_days
         //   （不动手工 daily_status / days_off），updated++；不存在 → 新建行，created++
-        // UPDATE 分支归属守卫（R9-1 G73 修复，对齐 PUT /api/attendances）。
-        // 响应 = { success, data: { created, updated, skipped } }
-        app.MapPost("/api/attendances/batch-import", (HttpContext ctx, AttendanceImportDto dto, IDbConnection db) =>
+        // 归属守卫（R9-1 G73 修复，对齐 PUT /api/attendances）：循环内预读后判断，
+        //   非 admin 只能刷新自己创建的行；未命中 → skipped。
+        // 响应 = { success, data: { created, updated, skipped, conflicts } }
+    app.MapPost("/api/attendances/batch-import", (HttpContext ctx, AttendanceImportDto dto, IDbConnection db) =>
+    {
+        var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+        // G2 B2: 考勤导入 → wages:create
+        if (!CurrentUser.HasPermission(ctx, db, "wages:create")) return Results.Forbid();
+        var scope = CurrentUser.GetDataScope(ctx);
+        var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+        if (dto is null || !dto.ProjectId.HasValue || string.IsNullOrEmpty(dto.YearMonth))
+            return Results.BadRequest(new { success = false, error = "batch-import: projectId / yearMonth 必填" });
+        var projectId = dto.ProjectId.Value;
+        // R9-3 G75 项目级写入门（循环之前；UPDATE 行级守卫语义在下方预读判断中原地保留）
+        if (!CurrentUser.CanWriteProject(ctx, db, projectId)) return Results.Forbid();
+        var created = 0;
+        var updated = 0;
+        var skipped = new List<long>();
+        // 带提醒覆盖（spec §6.1 #21）：手改过且与导入值不同的行 → conflicts，前端逐条裁决
+        var conflicts = new List<object>();
+        // 校验前置（评审修补）：任何一条缺字段 → 整批 400，杜绝"前段已落库又报错"的部分提交
+        var records = new List<(long PwId, double WorkDays)>();
+        var index = 0;
+        foreach (var item in dto.Records ?? new List<AttendanceImportItem>())
         {
-            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
-            // G2 B2: 考勤导入 → wages:create
-            if (!CurrentUser.HasPermission(ctx, db, "wages:create")) return Results.Forbid();
-            var scope = CurrentUser.GetDataScope(ctx);
-            var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
-            if (dto is null || !dto.ProjectId.HasValue || string.IsNullOrEmpty(dto.YearMonth))
-                return Results.BadRequest(new { success = false, error = "batch-import: projectId / yearMonth 必填" });
-            var projectId = dto.ProjectId.Value;
-            // R9-3 G75 项目级写入门（循环之前；UPDATE 行级守卫 R9-1 第二层防线原地保留）
-            if (!CurrentUser.CanWriteProject(ctx, db, projectId)) return Results.Forbid();
-            var created = 0;
-            var updated = 0;
-            var skipped = new List<long>();
-            var index = 0;
-            foreach (var item in dto.Records ?? new List<AttendanceImportItem>())
+            index++;
+            if (!item.ProjectWorkerId.HasValue || !item.WorkDays.HasValue)
+                return Results.BadRequest(new { success = false, error = $"batch-import: 第 {index} 条缺失 projectWorkerId / workDays" });
+            records.Add((item.ProjectWorkerId.Value, item.WorkDays.Value));
+        }
+        // 整批事务（与 PUT /api/attendances 同模式）：任一行失败整体回滚
+        using var tx = db.BeginTransaction();
+        foreach (var (pwId, workDays) in records)
+        {
+            var row = db.QueryFirstOrDefault(
+                "SELECT id, created_by, COALESCE(work_days,0) AS work_days, COALESCE(manually_edited,0) AS manually_edited FROM attendances WHERE project_id=@ProjectId AND year_month=@YearMonth AND project_worker_id=@PwId",
+                new { ProjectId = projectId, YearMonth = dto.YearMonth, PwId = pwId }, tx);
+            if (row != null)
             {
-                index++;
-                if (!item.ProjectWorkerId.HasValue || !item.WorkDays.HasValue)
-                    return Results.BadRequest(new { success = false, error = $"batch-import: 第 {index} 条缺失 projectWorkerId / workDays" });
-                var existingId = db.ExecuteScalar<long?>("SELECT id FROM attendances WHERE project_id=@ProjectId AND year_month=@YearMonth AND project_worker_id=@PwId",
-                    new { ProjectId = projectId, YearMonth = dto.YearMonth, PwId = item.ProjectWorkerId });
-                if (existingId.HasValue)
+                // 归属守卫优先（R9-1 G73 语义不变）：非 admin 只能刷新自己创建的行；未命中 → skipped
+                var owned = isAdmin == 1 || (row.created_by as string) == uid;
+                if (!owned) { skipped.Add(pwId); continue; }
+                var currentDays = Convert.ToDouble(row.work_days);
+                if (Convert.ToInt64(row.manually_edited) != 0 && Math.Abs(currentDays - workDays) > 0.0001)
                 {
-                    // 归属守卫：非 admin 只能刷新自己创建的行（对齐 PUT /api/attendances）；未命中 → skipped
-                    var affected = db.Execute(@"UPDATE attendances SET work_days=@WorkDays,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
-                        new { WorkDays = item.WorkDays.Value, Id = existingId.Value, Uid = uid, IsAdmin = isAdmin, Now = now() });
-                    if (affected > 0) updated++;
-                    else skipped.Add(item.ProjectWorkerId.Value);
+                    conflicts.Add(new { projectWorkerId = pwId, currentWorkDays = currentDays, importWorkDays = workDays });
+                    continue;
                 }
-                else
-                {
-                    db.Execute(@"INSERT INTO attendances (member_id,project_id,project_worker_id,year_month,work_days,created_by,created_at,updated_at,last_modified_at)
-                        VALUES (NULL,@ProjectId,@PwId,@YearMonth,@WorkDays,@CreatedBy,@Now,@Now,@Now)",
-                        new { ProjectId = projectId, PwId = item.ProjectWorkerId, YearMonth = dto.YearMonth,
-                              WorkDays = item.WorkDays.Value, CreatedBy = uid, Now = now() });
-                    created++;
-                }
+                // ① 未改过 → 静默覆盖；② 改过但值与库内相同 → 静默覆盖 + 清标记
+                db.Execute(@"UPDATE attendances SET work_days=@WorkDays,manually_edited=0,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id",
+                    new { WorkDays = workDays, Id = (long)row.id, Now = now() }, tx);
+                updated++;
             }
-            return Common.Ok(new { created, updated, skipped });
-        });
+            else
+            {
+                db.Execute(@"INSERT INTO attendances (member_id,project_id,project_worker_id,year_month,work_days,created_by,created_at,updated_at,last_modified_at)
+                    VALUES (NULL,@ProjectId,@PwId,@YearMonth,@WorkDays,@CreatedBy,@Now,@Now,@Now)",
+                    new { ProjectId = projectId, PwId = pwId, YearMonth = dto.YearMonth,
+                          WorkDays = workDays, CreatedBy = uid, Now = now() }, tx);
+                created++;
+            }
+        }
+        tx.Commit();
+        return Common.Ok(new { created, updated, skipped, conflicts });
+    });
+
+    // ── 考勤导入冲突裁决：逐条「留我的(keep)/用表里的(overwrite)」──
+    app.MapPost("/api/attendances/batch-import-resolve", (HttpContext ctx, AttendanceResolveDto dto, IDbConnection db) =>
+    {
+        var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+        // 与 batch-import 同权：wages:create
+        if (!CurrentUser.HasPermission(ctx, db, "wages:create")) return Results.Forbid();
+        if (dto is null || !dto.ProjectId.HasValue || string.IsNullOrEmpty(dto.YearMonth))
+            return Results.BadRequest(new { success = false, error = "batch-import-resolve: projectId / yearMonth 必填" });
+        var projectId = dto.ProjectId.Value;
+        if (!CurrentUser.CanWriteProject(ctx, db, projectId)) return Results.Forbid();
+        var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
+        var overwritten = 0;
+        var kept = 0;
+        var skipped = new List<long>();
+        // 校验前置（评审修补）：任何一条非法 → 整批 400，杜绝"前段已覆盖又报错"的部分提交
+        var resolutions = new List<(long PwId, string Action, double WorkDays)>();
+        foreach (var item in dto.Resolutions ?? new List<AttendanceResolveItem>())
+        {
+            if (!item.ProjectWorkerId.HasValue || string.IsNullOrEmpty(item.Action)
+                || (item.Action != "overwrite" && item.Action != "keep"))
+                return Results.BadRequest(new { success = false, error = "batch-import-resolve: 每条需 projectWorkerId + action(overwrite/keep)" });
+            if (item.Action == "overwrite" && !item.WorkDays.HasValue)
+                return Results.BadRequest(new { success = false, error = "batch-import-resolve: overwrite 需带 workDays" });
+            resolutions.Add((item.ProjectWorkerId.Value, item.Action, item.WorkDays ?? 0));
+        }
+        // 整批事务（与 batch-import 同模式）：任一行失败整体回滚
+        using var tx = db.BeginTransaction();
+        foreach (var (pwId, action, workDays) in resolutions)
+        {
+            if (action == "keep") { kept++; continue; }
+            var row = db.QueryFirstOrDefault(
+                "SELECT id, created_by FROM attendances WHERE project_id=@ProjectId AND year_month=@YearMonth AND project_worker_id=@PwId",
+                new { ProjectId = projectId, YearMonth = dto.YearMonth, PwId = pwId }, tx);
+            // 行不存在或非本人创建（非 admin）→ skipped，与 batch-import 归属语义一致
+            var owned = false;
+            if (row != null)
+                owned = isAdmin == 1 || (row.created_by as string) == uid;
+            if (!owned) { skipped.Add(pwId); continue; }
+            db.Execute(@"UPDATE attendances SET work_days=@WorkDays,manually_edited=0,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id",
+                new { WorkDays = workDays, Id = (long)row!.id, Now = now() }, tx);
+            overwritten++;
+        }
+        tx.Commit();
+        return Common.Ok(new { overwritten, kept, skipped });
+    });
 
         // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         // 宸ヨ祫
@@ -481,7 +548,7 @@ public static class WageEndpoints
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             var count = 0;
             foreach (var id in ids)
-                count += await db.ExecuteAsync("UPDATE wages SET paid_amount=NULL,paid_date=NULL,bank_receipt_path=NULL,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1) AND (payment_locked=0 OR payment_locked IS NULL)",
+                count += await db.ExecuteAsync("UPDATE wages SET paid_amount=NULL,paid_date=NULL,bank_receipt_path=NULL,paid_channel=NULL,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1) AND (payment_locked=0 OR payment_locked IS NULL)",
                     new { Id = id, Uid = uid, IsAdmin = isAdmin, Now = now() });
             return Common.Ok(new { cleared = count });
         });
@@ -639,6 +706,7 @@ public static class WageEndpoints
                 using var tx = db.BeginTransaction();
                 var affected = await db.ExecuteAsync(@"UPDATE wages SET
                         paid_amount=@PaidAmount, paid_date=@PaidDate, bank_receipt_path=@BankReceiptPath,
+                        paid_channel='bank',
                         updated_at=@Now, version=version+1, last_modified_at=@Now
                     WHERE id=@Id AND deleted_at IS NULL
                       AND COALESCE(payment_locked, 0) = 0",
@@ -864,6 +932,7 @@ public static class WageEndpoints
                 using var tx = db.BeginTransaction();
                 var affected = await db.ExecuteAsync(@"UPDATE wages SET
                         paid_amount=@PaidAmount, paid_date=@PaidDate, bank_receipt_path=COALESCE(@BankReceiptPath, bank_receipt_path),
+                        paid_channel=COALESCE(@PaidChannel, paid_channel),
                         updated_at=@Now, version=version+1, last_modified_at=@Now
                     WHERE id=@Id AND deleted_at IS NULL
                       AND COALESCE(payment_locked, 0) = 0",
@@ -872,6 +941,7 @@ public static class WageEndpoints
                         PaidAmount = ToFen(item.PaidAmount!.Value),
                         PaidDate = item.PaidDate,
                         BankReceiptPath = item.BankReceiptPath,
+                        PaidChannel = item.PaidChannel,
                         Now = now()
                     }, tx);
                 if (access == RowWriteOutcome.AllowedViaAuthorization)
@@ -1180,7 +1250,7 @@ record AttendanceBatchItem(long? MemberId, long? ProjectId, long? ProjectWorkerI
 
 // batch-payment 入参：按 id 定位（行必然已存在），只写付款列；
 // paidAmount 单位为元（ToFen 落库），用可空类型区分「缺省」与 0
-record WagePaymentItem(long? Id, double? PaidAmount, string? PaidDate, string? BankReceiptPath);
+record WagePaymentItem(long? Id, double? PaidAmount, string? PaidDate, string? BankReceiptPath, string? PaidChannel = null);
 
 // generate 入参：projectId + yearMonth（camelCase 由 Web 默认反序列化绑定）
 record WageGenerateDto(long? ProjectId, string? YearMonth);
@@ -1191,6 +1261,8 @@ record AttendanceGenerateDto(long? ProjectId, string? YearMonth, List<long>? Mem
 record AttendanceGenerateV2Dto(long? ProjectId, string? YearMonth, List<long>? ProjectWorkerIds);
 record AttendanceImportDto(long? ProjectId, string? YearMonth, List<AttendanceImportItem>? Records);
 record AttendanceImportItem(long? ProjectWorkerId, double? WorkDays);
+record AttendanceResolveDto(long? ProjectId, string? YearMonth, List<AttendanceResolveItem>? Resolutions);
+record AttendanceResolveItem(long? ProjectWorkerId, string? Action, double? WorkDays);
 
 // I-2: 回单批量匹配入参（match-receipts）—— receipts 每项为一张 OCR 回单
 // （amount 单位为元，候选准入走 ToFen 后等值）；yearMonth 为契约兼容保留，

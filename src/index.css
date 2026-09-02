@@ -32,9 +32,22 @@ input[type="password"]::-ms-clear {
   ═══════════════════════════════════════════════════════════════ */
 
 /* 品牌色 — 三角品牌标专用，全站唯一彩色例外。
-   刻意不随主题覆盖：一个 logo 认三主题底色（Paper 3.21 / Graphite 5.36 / Snow 3.23，均 ≥3:1）。 */
+   刻意不随主题覆盖：一个 logo 认三主题底色（Paper 3.21 / Graphite 5.36 / Snow 3.23，均 ≥3:1）。
+
+   启动画布 --boot-bg / --boot-ink — 原生壳占位页、index.html 占位、SplashScreen 三帧共用同一构图。
+   原生壳那帧读不到用户主题，墨底（graphite 的 --bg / --muted：#181716 / #7c7a77）作统一兜底；
+   white / sandstone 在下方覆盖为各自 --bg / --muted-2，web 两帧随主题走。 */
 :root {
   --brand: oklch(65% 0.13 60);
+  --boot-bg: oklch(20.5% 0.003 75);
+  --boot-ink: oklch(58% 0.005 78);
+}
+
+/* 浅色主题的启动画布：bg 作底、muted-2 作点（浅底上过 4:1），跟随用户主题 */
+[data-theme="white"],
+[data-theme="sandstone"] {
+  --boot-bg: var(--bg);
+  --boot-ink: var(--muted-2);
 }
 
 /* ── White 主题（当前浅色模式 ── 保留现有配色）── */
@@ -791,10 +804,6 @@ input::-webkit-outer-spin-button {
 [data-theme="sandstone"] * {
   scrollbar-color: rgba(180, 150, 120, 0.45) rgba(180, 150, 120, 0.06);
 }
-[data-theme="graphite"] .animate-float-slow,
-[data-theme="graphite"] .animate-float-slower {
-  opacity: 0.15;
-}
 [data-theme="graphite"] button:disabled {
   opacity: 0.3;
 }
@@ -1228,36 +1237,13 @@ button:disabled {
   CSS @keyframes run on GPU compositor thread
   — far smoother than JS-driven animations
   ═══════════════════════════════════════════ */
-@keyframes float-slow {
-  0%, 100% { transform: translate(-100px, -40px); }
-  50% { transform: translate(100px, 60px); }
-}
-@keyframes float-slower {
-  0%, 100% { transform: translate(80px, 20px); }
-  50% { transform: translate(-60px, -80px); }
-}
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
 }
-@keyframes pulse-glow {
-  0%, 100% { opacity: 0; transform: scale(0.5); }
-  50% { opacity: 1; transform: scale(2); }
-}
 
-.animate-float-slow {
-  animation: float-slow 12s ease-in-out infinite;
-  will-change: transform;
-}
-.animate-float-slower {
-  animation: float-slower 15s ease-in-out infinite;
-  will-change: transform;
-}
 .animate-fade-in {
   animation: fade-in 1s ease-out forwards;
-}
-.animate-pulse-glow {
-  animation: pulse-glow 2.5s ease-in-out infinite;
 }
 
 /* GPU compositing hint for large animated elements */

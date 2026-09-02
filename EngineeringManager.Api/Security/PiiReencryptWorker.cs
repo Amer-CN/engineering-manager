@@ -22,7 +22,7 @@ public class PiiReencryptWorker
     private const int ChunkSize = 500;
     private const int BatchCommitSize = 50;
 
-    // 13 个 _enc 列: (table, column)
+    // 14 个 _enc 列: (table, column)
     private static readonly (string Table, string Column)[] PiiColumns = new[]
     {
         ("members", "id_card_enc"),
@@ -32,6 +32,7 @@ public class PiiReencryptWorker
         ("workers", "id_card_enc"),
         ("workers", "phone_enc"),
         ("workers", "address_enc"),
+        ("workers", "current_address_enc"),
         ("workers", "bank_account_enc"),
         ("partners", "phone_enc"),
         ("partners", "bank_account_enc"),

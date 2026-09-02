@@ -1,5 +1,6 @@
-import { useRef } from 'react'
+import { useState } from 'react'
 import type { Project, WorkerTeam, AttendanceRecord } from '@/types'
+import { CollectionIssueModal } from './CollectionIssueModal'
 type AttendanceRow = AttendanceRecord & { teamName?: string; projectWorkerId?: number }
 import { summaryDot, summaryLabel } from '../../../constants/attendance'
 import type { DayStatus } from '../../../types/electron'
@@ -24,7 +25,7 @@ interface AttendanceTabProps {
   onBatchDelete: () => void
   loading: boolean
   onOpenHistory?: (projectWorkerId: number, workerName: string, teamName: string) => void
-  onImportAttendance: (data: { projectWorkerId: number; workDays: number; workerName: string }[]) => void
+  onOpenImport?: () => void
 }
 
 export default function AttendanceTab({
@@ -32,8 +33,8 @@ export default function AttendanceTab({
   attendances, projectMemberCount,
   selectedIds, toggleSelect, toggleAll, onGenerateAttendance, onOpenDetail,
   onDelete, onBatchDelete, loading,
-  onOpenHistory, onImportAttendance,}: AttendanceTabProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  onOpenHistory, onOpenImport,}: AttendanceTabProps) {
+  const [showIssueModal, setShowIssueModal] = useState(false)
   const filteredAttendances = attendances
 
   if (!selectedProject) {
@@ -143,37 +144,10 @@ export default function AttendanceTab({
         </div>
         <div className="flex-1" />
         <div className="flex gap-2">
-          <input
-            type="file"
-            accept=".csv,.xlsx,.xls"
-            style={{ display: 'none' }}
-            ref={fileInputRef}
-            onChange={async (e) => {
-              const file = e.target.files?.[0]
-              if (!file) return
-              try {
-                const text = await file.text()
-                const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
-                const header = lines[0].split(',').map(h => h.trim())
-                const pIdx = header.findIndex(h => h.includes('pwId') || h.includes('projectWorkerId') || h.includes('id'))
-                const dIdx = header.findIndex(h => h.includes('workDays') || h.includes('days'))
-                const nameIdx = header.findIndex(h => h.includes('name') || h.includes('worker'))
-                const result: { projectWorkerId: number; workDays: number; workerName: string }[] = []
-                for (let i = 1; i < lines.length; i++) {
-                  const cols = lines[i].split(',').map(c => c.trim())
-                  result.push({
-                    projectWorkerId: pIdx >= 0 ? Number(cols[pIdx]) : 0,
-                    workDays: dIdx >= 0 ? Number(cols[dIdx]) : 0,
-                    workerName: nameIdx >= 0 ? cols[nameIdx] : '',
-                  })
-                }
-                onImportAttendance(result)
-              } catch (err) { console.error('解析考勤文件失败:', err) }
-            }}
-          />
-          <Button
-            onClick={() => { fileInputRef.current?.click() }}
-             variant="primary" size="sm">导入考勤</Button>
+          {onOpenImport && (
+            <Button onClick={onOpenImport} variant="primary" size="sm">导入考勤</Button>
+          )}
+          <Button onClick={() => setShowIssueModal(true)} variant="secondary" size="sm">发采集表</Button>
           <Button onClick={onGenerateAttendance} disabled={loading}
              variant="warning" size="sm">
             生成默认考勤
@@ -191,6 +165,15 @@ export default function AttendanceTab({
         emptyText="暂无考勤记录"
         emptyIcon="ClipboardFile"
       />
+
+      {showIssueModal && (
+        <CollectionIssueModal
+          project={selectedProject}
+          yearMonth={selectedMonth}
+          workerTeams={workerTeams}
+          onClose={() => setShowIssueModal(false)}
+        />
+      )}
     </div>
   )
 }

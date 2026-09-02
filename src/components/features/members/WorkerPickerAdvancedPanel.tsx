@@ -88,6 +88,29 @@ export function WorkerPickerAdvancedPanel({
                       />
                     </div>
                   </div>
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    <input type="text" placeholder="合同签字人" value={entry.contractSigner}
+                      onChange={e => updateEntry(id, 'contractSigner', e.target.value)}
+                      className="px-2 py-1 text-xs rounded border border-[color:var(--border)] bg-[color:var(--card)]" />
+                    <input type="text" placeholder="工作面" value={entry.workSection}
+                      onChange={e => updateEntry(id, 'workSection', e.target.value)}
+                      className="px-2 py-1 text-xs rounded border border-[color:var(--border)] bg-[color:var(--card)]" />
+                    <input type="date" value={entry.contractStart} title="合同开始日期"
+                      onChange={e => updateEntry(id, 'contractStart', e.target.value)}
+                      className="px-2 py-1 text-xs rounded border border-[color:var(--border)] bg-[color:var(--card)]" />
+                    <input type="date" value={entry.contractEnd} title="合同结束日期"
+                      onChange={e => updateEntry(id, 'contractEnd', e.target.value)}
+                      className="px-2 py-1 text-xs rounded border border-[color:var(--border)] bg-[color:var(--card)]" />
+                    <input type="date" value={entry.exitDate} title="离场日期"
+                      onChange={e => updateEntry(id, 'exitDate', e.target.value)}
+                      className="px-2 py-1 text-xs rounded border border-[color:var(--border)] bg-[color:var(--card)]" />
+                    <label className="flex items-center gap-1.5 text-xs text-[color:var(--muted)]">
+                      <input type="checkbox" checked={entry.safetyTraining}
+                        onChange={e => updateEntry(id, 'safetyTraining', e.target.checked)}
+                        className="rounded" />
+                      安全培训
+                    </label>
+                  </div>
                 </div>
               </div>
             ))}
