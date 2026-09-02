@@ -64,6 +64,7 @@ const EXEMPT = [
   { path: '/api/files/save', reason: '通用文件基础设施（IsPathSafe 防穿越）' },
   { path: '/api/files/delete', reason: '通用文件基础设施（IsPathSafe 防穿越）' },
   { path: '/api/files/open-external', reason: '文件查看基础设施（扩展名白名单）' },
+  { path: '/api/templates/convert-docx', reason: '只读文件转换（mammoth docx→HTML，无数据写，IsPathSafe 防路径穿越）' },
   { path: '/api/regions', reason: '基础字典（省市区静态数据）' },
   { path: '/api/regions/{id}', reason: '基础字典（省市区静态数据）' },
   { path: '/api/audit/logs', reason: '审计日志写入端点' },

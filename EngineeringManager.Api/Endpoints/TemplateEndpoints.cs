@@ -111,5 +111,55 @@ public static class TemplateEndpoints
             var filled = XlsxTemplateService.FillTitlePlaceholders(await File.ReadAllBytesAsync(path), values);
             return Common.Ok(new { dataUrl = "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64," + Convert.ToBase64String(filled) });
         });
+
+        // ── Word 转换：mammoth docx → HTML（模板生成弹窗 / 合同 Word 预览 / 结算从模板生成共用）──
+        // 权限与 GET /api/files/read 同级：登录即可（读文件不涉写门）
+        app.MapPost("/api/templates/convert-docx", async (HttpContext ctx) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            try
+            {
+                using var reader = new System.IO.StreamReader(ctx.Request.Body);
+                var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(await reader.ReadToEndAsync());
+                var rawName = body.TryGetProperty("storedFileName", out var sf) ? (sf.GetString() ?? "") : "";
+                var category = body.TryGetProperty("category", out var c) ? c.GetString() : null;
+                var baseDir = Path.Combine(ApiConfig.ResolveDataPath(), "uploads");
+                string? path = null;
+                if (category == "contracts")
+                {
+                    // 合同附件落盘布局与 /api/contracts/read-file 同源（uploads/{项目}/合同/{收入|支出} 与 未分类 兜底）；
+                    // 本端点契约无 projectName/subCategory 入参，递归两根目录按文件名精确匹配
+                    var roots = new[] { Path.Combine(baseDir, "合同"), Path.Combine(baseDir, "未分类", "合同") };
+                    foreach (var root in roots)
+                    {
+                        if (!Directory.Exists(root)) continue;
+                        var hit = Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
+                            .FirstOrDefault(p => string.Equals(Path.GetFileName(p), rawName, StringComparison.OrdinalIgnoreCase));
+                        if (hit != null) { path = hit; break; }
+                    }
+                }
+                else
+                {
+                    // 路径与前端 FILE_CATEGORIES.TEMPLATE_FILE（category='templates'，落盘 uploads/templates/）绑定，改动需两处同步
+                    var candidate = Path.Combine(baseDir, "templates", Path.GetFileName(rawName));
+                    if (File.Exists(candidate)) path = candidate;
+                }
+                if (path == null || !IsPathSafe(path, baseDir)) return Common.NotFound("文件不存在");
+                if (!string.Equals(Path.GetExtension(path), ".docx", StringComparison.OrdinalIgnoreCase))
+                    return Common.Fail("仅支持 docx 转换");
+                using var stream = File.OpenRead(path);
+                var result = new Mammoth.DocumentConverter().ConvertToHtml(stream);
+                return Common.Ok(new { html = result.Value });
+            }
+            catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
+        });
+    }
+
+    private static bool IsPathSafe(string fullPath, string allowedBase)
+    {
+        var resolved = Path.GetFullPath(fullPath);
+        var baseResolved = Path.GetFullPath(allowedBase);
+        if (!baseResolved.EndsWith(Path.DirectorySeparatorChar)) baseResolved += Path.DirectorySeparatorChar;
+        return resolved.StartsWith(baseResolved, StringComparison.OrdinalIgnoreCase);
     }
 }
