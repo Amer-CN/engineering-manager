@@ -150,7 +150,11 @@ public static class TemplateEndpoints
                 var result = new Mammoth.DocumentConverter().ConvertToHtml(stream);
                 return Common.Ok(new { html = result.Value });
             }
-            catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"convert-docx failed: {ex.Message}");
+                return Common.Fail(Common.Sanitize(ex.Message));
+            }
         });
     }
 
