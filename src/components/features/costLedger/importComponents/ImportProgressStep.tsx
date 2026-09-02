@@ -16,7 +16,7 @@ export function ImportProgressStep({ progress }: Props) {
   </p>
   <div className="w-full max-w-md mx-auto bg-[color:var(--panel-2)] rounded-full h-2">
   <div
-  className="bg-[color:var(--accent)] h-2 rounded-full transition-all duration-300"
+  className="bg-[color:var(--accent)] h-2 rounded-full transition-[width] duration-300"
   style={{ width: `${progress.total > 0 ? (progress.current / progress.total) * 100 : 0}%` }}
   />
   </div>

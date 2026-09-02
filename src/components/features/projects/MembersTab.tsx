@@ -18,7 +18,7 @@ interface ProjectMemberRecord extends ProjectMember {
 }
 
 const CARD = 'bg-[color:var(--card)] border border-[color:var(--border)] rounded-xl shadow-sm'
-const CARD_HOVER = 'hover:shadow-md transition-all duration-200'
+const CARD_HOVER = 'hover:shadow-md transition-shadow duration-200'
 
 function EmptyState({ text }: { text: string }) {
   return <div className="flex flex-col items-center justify-center py-12 text-[color:var(--muted)]"><Icon name="Inbox" size={32} className="mb-2 opacity-40" /><p className="text-sm">{text}</p></div>

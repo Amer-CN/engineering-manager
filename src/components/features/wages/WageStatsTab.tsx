@@ -36,7 +36,7 @@ export default function WageStatsTab({ wageStats, selectedMonth }: WageStatsTabP
                   <div key={p.projectId} className="flex items-center gap-3">
                     <span className="text-sm text-[color:var(--fg-2)] w-24 truncate">{p.projectName}</span>
                     <div className="flex-1 bg-[color:var(--panel-2)] rounded-full h-5 overflow-hidden">
-                      <div className="bg-[color:var(--accent)] h-full rounded-full transition-all"
+                      <div className="bg-[color:var(--accent)] h-full rounded-full transition-[width]"
                         style={{ width: `${Math.max(p.percentage, 2)}%` }} />
                     </div>
                     <span className="text-sm font-medium text-[color:var(--fg-2)] w-20 text-right font-mono tabular-nums">¥{p.total.toFixed(0)}</span>

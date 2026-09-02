@@ -45,7 +45,7 @@ export const PartnerFileUploadField: React.FC<Props> = ({
           })}
         </div>
       )}
-      <div className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-all ${dragOver ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)]' : 'border-[color:var(--border)] hover:border-[color:var(--accent)] hover:bg-[color:var(--panel-2)]'}`}
+      <div className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${dragOver ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)]' : 'border-[color:var(--border)] hover:border-[color:var(--accent)] hover:bg-[color:var(--panel-2)]'}`}
         onClick={onClick} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
         <Icon name="Paperclip" size={28} className="text-[color:var(--border-strong)] mb-1 mx-auto" />
         <p className="text-sm font-medium text-[color:var(--fg-2)]">{desc}</p>

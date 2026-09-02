@@ -213,7 +213,7 @@ export default function AttendanceDetail({
   <button
   key={s}
   onClick={() => setActiveStatus(s)}
-  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-[background-color,color,box-shadow] ${
   s === activeStatus
   ? 'bg-[color:var(--card)] shadow text-[color:var(--fg)] ring-1 ring-[color:var(--border-strong)]'
   : 'text-[color:var(--muted)] hover:text-[color:var(--fg-2)]'
@@ -226,7 +226,7 @@ export default function AttendanceDetail({
   <div className="w-px h-5 bg-[color:var(--panel-2)] mx-0.5" />
   <button
   onClick={() => setActiveStatus(null)}
-  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-[background-color,color,box-shadow] ${
   activeStatus === null
   ? 'bg-[color:var(--card)] shadow text-[color:var(--fg)] ring-1 ring-[color:var(--border-strong)]'
   : 'text-[color:var(--muted)] hover:text-[color:var(--fg-2)]'
@@ -283,7 +283,7 @@ export default function AttendanceDetail({
   onClick={e => handleDayClick(day, e)}
   onContextMenu={e => handleDayContextMenu(day, e)}
   disabled={isBeforeEntry}
-  className={`h-9 rounded-md text-sm font-medium transition-all border
+  className={`h-9 rounded-md text-sm font-medium transition-[transform,opacity,box-shadow,background-color,border-color] border
   ${isBeforeEntry ? 'bg-[color:var(--panel-2)] text-[color:var(--border-strong)] cursor-not-allowed border-[color:var(--border)]' : `cursor-pointer ${col.bg} ${col.text} ${isAnchor ? `ring-2 ${col.ring}` : 'border-transparent'} ${isWeekend ? 'bg-opacity-70' : ''} hover:scale-105 hover:shadow-sm`}
   ${isToday ? 'ring-1 ring-[color:var(--border-strong)] shadow-sm' : ''}`}
   title={isBeforeEntry ? '入职前，不计入考勤' : `${day}日 ${(status && LABEL[status as DayStatus]) || '未设'}${isToday ? ' (今天)' : ''}${isAnchor ? ' — Shift+点击其他日期批量涂色' : ''}\n右键: 循环切换`}

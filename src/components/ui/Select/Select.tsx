@@ -120,7 +120,7 @@ export function Select({
   className={`
   w-full px-4 py-2.5 bg-[color:var(--card)] text-left
   border rounded-lg
-  transition-all duration-200
+  transition-[box-shadow,border-color,background-color,color] duration-200
   focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] focus:border-[color:var(--accent)]
   hover:border-[color:var(--border)]
   disabled:bg-[color:var(--panel-2)] disabled:text-[color:var(--muted)] disabled:cursor-not-allowed

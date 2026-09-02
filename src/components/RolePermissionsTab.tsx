@@ -128,7 +128,7 @@ export const RolePermissionsTab: React.FC = () => {
   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
   {ConfirmDialog}
   {roles.map(role => (
-  <Card key={role.id} bordered={false} hoverable className="p-5 hover:shadow-md transition-all">
+  <Card key={role.id} bordered={false} hoverable className="p-5 hover:shadow-md transition-shadow">
   <div className="flex items-start justify-between mb-3"><div><h4 className="font-semibold text-[color:var(--fg)]">{role.name}</h4><p className="text-xs text-[color:var(--muted)] mt-0.5">{role.description}</p></div>{role.isSystem && <span className="px-2 py-0.5 bg-[color:var(--panel-2)] text-[color:var(--muted)] text-xs rounded-full">系统</span>}</div>
   <div className="flex flex-wrap gap-1 mb-4">{role.permissions.slice(0, 8).map(p => <span key={p} className="px-2 py-0.5 bg-[color:var(--accent-soft)] text-[color:var(--accent)] text-xs rounded">{getPermissionLabel(p as PermissionCode)}</span>)}{role.permissions.length > 8 && <span className="px-2 py-0.5 bg-[color:var(--panel-2)] text-[color:var(--muted)] text-xs rounded">+{role.permissions.length - 8}</span>}</div>
   <div className="flex items-center gap-2 pt-3 border-t border-[color:var(--border)]"><button onClick={() => startEditRole(role.id)} className="flex-1 px-3 py-1.5 text-xs font-medium bg-[color:var(--fg)] text-[color:var(--bg)] rounded-lg hover:opacity-90">编辑权限</button>{role.isSystem && <button onClick={() => handleResetRole(role.id)} className="px-3 py-1.5 text-xs text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)] rounded-lg">重置</button>}</div>

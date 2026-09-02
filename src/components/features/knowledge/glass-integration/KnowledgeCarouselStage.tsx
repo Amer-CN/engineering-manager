@@ -66,7 +66,7 @@ export const KnowledgeCarouselStage: React.FC<KnowledgeCarouselStageProps> = ({
             {onAddFolder && (
               <button
                 onClick={onAddFolder}
-                className="px-4 py-2.5 rounded-2xl text-xs font-semibold backdrop-blur-md transition-all flex items-center gap-2 border shadow-lg"
+                className="px-4 py-2.5 rounded-2xl text-xs font-semibold backdrop-blur-md transition-colors flex items-center gap-2 border shadow-lg"
                 style={{
                   background: 'var(--card)',
                   color: 'var(--fg)',
@@ -78,7 +78,7 @@ export const KnowledgeCarouselStage: React.FC<KnowledgeCarouselStageProps> = ({
             )}
             <button
               onClick={() => setViewMode('dashboard')}
-              className="px-4 py-2.5 rounded-2xl text-xs font-semibold transition-all flex items-center gap-2 border shadow-lg text-[color:var(--gc-active-ink)]"
+              className="px-4 py-2.5 rounded-2xl text-xs font-semibold transition-colors flex items-center gap-2 border shadow-lg text-[color:var(--gc-active-ink)]"
               style={{ background: 'var(--gc-active)', borderColor: 'var(--gc-icon)' }}
             >
               切换至完整工作区 (看板)

@@ -31,7 +31,7 @@ export function AppearanceSection() {
             { id: 'graphite' as ThemeScheme, name: 'Graphite', desc: '深灰 · 暗夜', icon: '🌙', style: 'from-slate-700 via-slate-800 to-slate-900 border-[color:var(--border-strong)]' },
           ]).map(s => (
             <button key={s.id} onClick={() => setScheme(s.id)}
-              className={`p-3 rounded-xl border-2 transition-all text-left ${scheme === s.id ? 'border-[color:var(--accent)] shadow-md ring-2 ring-[color:var(--accent-soft)]' : 'border-[color:var(--border)] hover:border-[color:var(--border)] bg-[color:var(--card)]'}`}>
+              className={`p-3 rounded-xl border-2 transition-[border-color,background-color,box-shadow] text-left ${scheme === s.id ? 'border-[color:var(--accent)] shadow-md ring-2 ring-[color:var(--accent-soft)]' : 'border-[color:var(--border)] hover:border-[color:var(--border)] bg-[color:var(--card)]'}`}>
               <div className={`h-10 rounded-lg mb-2 flex items-center justify-center bg-gradient-to-br ${s.style}`}>
                 <span className="text-lg">{s.icon}</span>
               </div>
@@ -69,7 +69,7 @@ export function AppearanceSection() {
               { id: 'large' as FontSizeOption, label: '较大' },
             ]).map(s => (
               <button key={s.id} onClick={() => setFontSize(s.id)}
-                className={`flex-1 px-4 py-1.5 text-sm font-medium rounded-md transition-all ${
+                className={`flex-1 px-4 py-1.5 text-sm font-medium rounded-md transition-[background-color,color,box-shadow,border-color] ${
                   fontSize === s.id
                     ? 'bg-[color:var(--card)] text-[color:var(--fg)] shadow-sm border border-[color:var(--border)]'
                     : 'text-[color:var(--fg-2)] hover:text-[color:var(--fg)]'
@@ -91,7 +91,7 @@ export function AppearanceSection() {
               { id: false as const, label: '关' },
             ]).map(s => (
               <button key={String(s.id)} onClick={() => { setSfxOn(s.id); setSfxEnabled(s.id) }}
-                className={`flex-1 px-4 py-1.5 text-sm font-medium rounded-md transition-all ${
+                className={`flex-1 px-4 py-1.5 text-sm font-medium rounded-md transition-[background-color,color,box-shadow,border-color] ${
                   sfxOn === s.id
                     ? 'bg-[color:var(--card)] text-[color:var(--fg)] shadow-sm border border-[color:var(--border)]'
                     : 'text-[color:var(--fg-2)] hover:text-[color:var(--fg)]'

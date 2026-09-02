@@ -63,10 +63,10 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
   </div>
 
   <div className="flex items-center gap-1 p-1 rounded-xl w-fit mb-4" style={{ background: 'var(--panel-2)' }}>
-  <button onClick={() => h.setActiveTab('invoices')} className="px-4 py-2 rounded-lg text-sm font-medium transition-all" style={h.activeTab === 'invoices' ? { background: 'var(--card)', color: 'var(--fg)', boxShadow: 'var(--shadow-card)' } : { background: 'transparent', color: 'var(--muted)' }}>
+  <button onClick={() => h.setActiveTab('invoices')} className="px-4 py-2 rounded-lg text-sm font-medium transition-[background-color,color,box-shadow]" style={h.activeTab === 'invoices' ? { background: 'var(--card)', color: 'var(--fg)', boxShadow: 'var(--shadow-card)' } : { background: 'transparent', color: 'var(--muted)' }}>
   发票列表
   </button>
-  <button onClick={() => h.setActiveTab('payments')} className="px-4 py-2 rounded-lg text-sm font-medium transition-all" style={h.activeTab === 'payments' ? { background: 'var(--card)', color: 'var(--fg)', boxShadow: 'var(--shadow-card)' } : { background: 'transparent', color: 'var(--muted)' }}>
+  <button onClick={() => h.setActiveTab('payments')} className="px-4 py-2 rounded-lg text-sm font-medium transition-[background-color,color,box-shadow]" style={h.activeTab === 'payments' ? { background: 'var(--card)', color: 'var(--fg)', boxShadow: 'var(--shadow-card)' } : { background: 'transparent', color: 'var(--muted)' }}>
   回款/付款记录
   </button>
   </div>

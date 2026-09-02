@@ -24,7 +24,7 @@ export function SettlementProjectCard({ data, onClick }: SettlementProjectCardPr
   return (
     <div
       onClick={() => onClick(data.projectId)}
-      className="flex items-center gap-6 rounded-xl px-5 py-4 transition-all duration-200 cursor-pointer group hover:shadow-lift hover:-translate-y-0.5"
+      className="flex items-center gap-6 rounded-xl px-5 py-4 transition-[transform,box-shadow,border-color] duration-200 cursor-pointer group hover:shadow-lift hover:-translate-y-0.5"
       style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
       onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)' }}
       onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)' }}

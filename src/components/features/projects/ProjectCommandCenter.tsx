@@ -32,7 +32,7 @@ const statusConfig: Record<string, { text: string; color: string }> = {
 
 function StatCard({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-xl p-3 transition-all" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+    <div className="rounded-xl p-3 transition-colors" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
       <div className="flex items-center gap-2 mb-1"><span className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>{icon}</span><span className="text-xs" style={{ color: 'var(--muted)' }}>{label}</span></div>
       <p className="text-lg font-bold font-mono tabular-nums tracking-tight" style={{ color: 'var(--fg)' }}>{value}</p>
       {sub && <p className="text-xs" style={{ color: 'var(--muted)' }}>{sub}</p>}
@@ -190,7 +190,7 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
             {incP.length > 0 ? <div className="space-y-2">{incP.slice(0, 4).map(c => (
               <div key={c.id} className="p-2.5 rounded-lg bg-[color:var(--panel-2)] border border-[color:var(--border)]">
                 <div className="flex justify-between mb-1"><span className="text-xs font-medium text-[color:var(--fg-2)] truncate max-w-[120px]">{c.name}</span><span className="text-xs font-bold text-success-600 font-mono tabular-nums">¥{formatMoney(c.amount)}</span></div>
-                <div className="flex items-center gap-2"><div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: 'var(--panel-2)' }}><div className="h-full rounded-full transition-all" style={{ width: `${c.progress}%`, background: 'var(--accent)' }} /></div><span className="text-caption w-12 text-right font-mono tabular-nums" style={{ color: 'var(--muted)' }}>已回款 ¥{formatMoney(c.received)}</span></div>
+                <div className="flex items-center gap-2"><div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: 'var(--panel-2)' }}><div className="h-full rounded-full transition-transform duration-500" style={{ transformOrigin: 'left', width: '100%', transform: `scaleX(${c.progress / 100})`, background: 'var(--accent)' }} /></div><span className="text-caption w-12 text-right font-mono tabular-nums" style={{ color: 'var(--muted)' }}>已回款 ¥{formatMoney(c.received)}</span></div>
               </div>
             ))}</div> : <EmptyState text="暂无" />}
           </Card>
@@ -200,7 +200,7 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
             {expP.length > 0 ? <div className="space-y-2">{expP.slice(0, 4).map(c => (
               <div key={c.id} className="p-2.5 rounded-lg bg-[color:var(--panel-2)] border border-[color:var(--border)]">
                 <div className="flex justify-between mb-1"><span className="text-xs font-medium text-[color:var(--fg-2)] truncate max-w-[120px]">{c.name}</span><span className="text-xs font-bold text-danger-500 font-mono tabular-nums">¥{formatMoney(c.amount)}</span></div>
-                <div className="flex items-center gap-2"><div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: 'var(--panel-2)' }}><div className="h-full rounded-full transition-all" style={{ width: `${c.progress}%`, background: 'var(--accent)' }} /></div><span className="text-caption w-12 text-right font-mono tabular-nums" style={{ color: 'var(--muted)' }}>已付款 ¥{formatMoney(c.received)}</span></div>
+                <div className="flex items-center gap-2"><div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: 'var(--panel-2)' }}><div className="h-full rounded-full transition-transform duration-500" style={{ transformOrigin: 'left', width: '100%', transform: `scaleX(${c.progress / 100})`, background: 'var(--accent)' }} /></div><span className="text-caption w-12 text-right font-mono tabular-nums" style={{ color: 'var(--muted)' }}>已付款 ¥{formatMoney(c.received)}</span></div>
               </div>
             ))}</div> : <EmptyState text="暂无" />}
           </Card>

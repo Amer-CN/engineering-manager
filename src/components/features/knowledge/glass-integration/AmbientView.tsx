@@ -65,7 +65,7 @@ export const AmbientView: React.FC<AmbientViewProps> = ({
           <button
             onClick={onAddFolder}
             className={`
-              px-4 py-2.5 rounded-2xl text-xs font-semibold backdrop-blur-md transition-all flex items-center gap-2 border shadow-lg
+              px-4 py-2.5 rounded-2xl text-xs font-semibold backdrop-blur-md transition-colors flex items-center gap-2 border shadow-lg
               ${
                 isDark
                   ? 'bg-zinc-900/80 border-white/20 text-white hover:bg-zinc-800'
@@ -79,7 +79,7 @@ export const AmbientView: React.FC<AmbientViewProps> = ({
 
           <button
             onClick={onSwitchToDashboard}
-            className="px-4 py-2.5 rounded-2xl text-xs font-semibold bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/30 transition-all flex items-center gap-2"
+            className="px-4 py-2.5 rounded-2xl text-xs font-semibold bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/30 transition-colors flex items-center gap-2"
           >
             <Monitor className="w-4 h-4" />
             <span>切换至完整工作区 (看板)</span>
@@ -89,7 +89,7 @@ export const AmbientView: React.FC<AmbientViewProps> = ({
           <button
             onClick={onToggleTheme}
             className={`
-              p-2.5 rounded-2xl border backdrop-blur-md transition-all shadow-lg
+              p-2.5 rounded-2xl border backdrop-blur-md transition-colors shadow-lg
               ${isDark ? 'bg-zinc-900/80 border-white/20 text-white' : 'bg-white/90 border-white text-zinc-900'}
             `}
             title="切换高对比黑夜 / 白昼模式"
@@ -127,7 +127,7 @@ export const AmbientView: React.FC<AmbientViewProps> = ({
           <button
             onClick={onOpenFolderDetail}
             className={`
-              px-5 py-2.5 rounded-2xl text-xs font-semibold backdrop-blur-md transition-all flex items-center gap-2 border shadow-lg
+              px-5 py-2.5 rounded-2xl text-xs font-semibold backdrop-blur-md transition-colors flex items-center gap-2 border shadow-lg
               ${
                 isDark
                   ? 'bg-zinc-900/90 border-white/20 text-white hover:bg-zinc-800'

@@ -279,7 +279,7 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
         onDragOver={(e) => { e.preventDefault(); if (!disabled) setDragOver(true) }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
-        className={`flex flex-col gap-2 pt-2.5 pb-2 px-2.5 rounded-[22px] border bg-[color:var(--card)] border-[color:var(--border)] focus-within:ring-2 focus-within:ring-[color:var(--accent-soft)] focus-within:border-[color:var(--accent)] transition-all ${dragOver ? 'ring-2 ring-[color:var(--accent)] border-[color:var(--accent)]' : ''}`}
+        className={`flex flex-col gap-2 pt-2.5 pb-2 px-2.5 rounded-[22px] border bg-[color:var(--card)] border-[color:var(--border)] focus-within:ring-2 focus-within:ring-[color:var(--accent-soft)] focus-within:border-[color:var(--accent)] transition-[box-shadow,border-color] ${dragOver ? 'ring-2 ring-[color:var(--accent)] border-[color:var(--accent)]' : ''}`}
       >
         <input
           ref={fileInputRef}

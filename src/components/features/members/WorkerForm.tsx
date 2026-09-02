@@ -162,7 +162,7 @@ export default function WorkerForm({ formData, setFormData, projects, workerTeam
           type="button"
           onClick={() => bankCardInputRef.current?.click()}
           disabled={bankCardLoading}
-          className={`w-full flex items-center justify-center gap-2 transition-all duration-300 ${
+          className={`w-full flex items-center justify-center gap-2 transition-colors duration-300 ${
             bankCardLoading
               ? 'bg-[color:var(--accent)] text-[color:var(--on-accent)] border-0'
               : 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)] rounded-lg font-medium'
