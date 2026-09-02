@@ -72,20 +72,21 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       <div className="fixed top-14 right-5 z-[9999] flex flex-col items-end gap-2 pointer-events-none" aria-live="polite">
         <AnimatePresence>
           {toasts.map((toast, _i) => (
-            <motion.div
-              key={toast.id}
-              initial={{ opacity: 0, x: 24, scale: 0.96 }}
-              animate={{ opacity: 1, x: 0, scale: 1 }}
-              exit={{ opacity: 0, x: 24, scale: 0.96 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 25, delay: _i * 0.05 }}
-              className="bg-[color:var(--card)] border border-[color:var(--border)] text-[color:var(--fg)] px-4 py-3 rounded-xl shadow-lift pointer-events-auto min-w-[240px] max-w-[360px]"
-              role="alert"
-              onClick={() => removeToast(toast.id)}
-            >
-              <div className="flex items-center gap-2.5">
-                <Icon name={iconMap[toast.type]} size={18} className={`${iconColorMap[toast.type]} shrink-0`} />
-                <span className="font-medium text-sm">{toast.message}</span>
-              </div>
+            <motion.div key={toast.id} layout>
+              <motion.div
+                initial={{ opacity: 0, x: 24, scale: 0.96 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: 24, scale: 0.96 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 25, delay: _i * 0.05 }}
+                className="bg-[color:var(--card)] border border-[color:var(--border)] text-[color:var(--fg)] px-4 py-3 rounded-xl shadow-lift pointer-events-auto min-w-[240px] max-w-[360px]"
+                role="alert"
+                onClick={() => removeToast(toast.id)}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Icon name={iconMap[toast.type]} size={18} className={`${iconColorMap[toast.type]} shrink-0`} />
+                  <span className="font-medium text-sm">{toast.message}</span>
+                </div>
+              </motion.div>
             </motion.div>
           ))}
         </AnimatePresence>
