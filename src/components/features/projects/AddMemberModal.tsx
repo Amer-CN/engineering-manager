@@ -20,7 +20,7 @@ export function AddMemberModal({ members, onAdd, onClose }: {
       <div className="bg-[color:var(--card)] rounded-xl shadow-xl w-full max-w-md mx-4 max-h-[70vh] flex flex-col" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b border-[color:var(--border)]"><h3 className="font-semibold text-[color:var(--fg)]">添加项目成员</h3><button onClick={onClose} className="p-1 hover:bg-[color:var(--panel-2)] rounded-lg transition-colors"><Icon name="X" size={18} /></button></div>
         <div className="p-4 border-b border-[color:var(--border)]">
-          <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索姓名、职位、电话.." className="w-full px-3 py-2 bg-[color:var(--panel-2)] border border-[color:var(--border)] rounded-xl text-sm focus:ring-2 focus:ring-[color:var(--accent)] focus:border-[color:var(--accent)] transition-all" />
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索姓名、职位、电话.." className="w-full px-3 py-2 bg-[color:var(--panel-2)] border border-[color:var(--border)] rounded-xl text-sm focus:ring-2 focus:ring-[color:var(--accent)] focus:border-[color:var(--accent)] transition-[box-shadow,border-color]" />
         </div>
         <div className="flex-1 overflow-y-auto p-2">
           {error && <p className="text-danger-500 text-sm px-2 mb-2">{error}</p>}

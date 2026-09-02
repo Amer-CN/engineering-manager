@@ -256,7 +256,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
   return (
     <div className={`relative w-full flex flex-col items-center select-none overflow-hidden py-2 ${fillHeight ? 'flex-1 min-h-0 justify-center' : ''}`}>
       {/* Floating Preview Badge (Positioned at top-left / center of carousel) */}
-      <div className="absolute top-4 left-6 md:left-12 z-40 transition-all duration-300">
+      <div className="absolute top-4 left-6 md:left-12 z-40 transition-colors duration-300">
         <FloatingPreviewBadge
           folder={activeFolder}
           theme={theme}
@@ -269,7 +269,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
         <button
           onClick={() => setIsPlaying(!isPlaying)}
           className={`
-            p-3 rounded-full backdrop-blur-md transition-all duration-200 border shadow-lg flex items-center gap-2 text-xs font-medium
+            p-3 rounded-full backdrop-blur-md transition-colors duration-200 border shadow-lg flex items-center gap-2 text-xs font-medium
             ${
               isDark
                 ? 'bg-zinc-900/70 border-white/20 text-white hover:bg-zinc-800'
@@ -285,7 +285,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
         <button
           onClick={() => setShowControls(!showControls)}
           className={`
-            p-3 rounded-full backdrop-blur-md transition-all duration-200 border shadow-lg
+            p-3 rounded-full backdrop-blur-md transition-colors duration-200 border shadow-lg
             ${
               showControls
                 ? 'bg-[color:var(--gc-active)] text-[color:var(--gc-active-ink)] border-[color:var(--gc-active-border)]'
@@ -302,7 +302,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
         <button
           onClick={stepPrev}
           className={`
-            p-3 rounded-full backdrop-blur-md transition-all duration-200 border shadow-lg
+            p-3 rounded-full backdrop-blur-md transition-colors duration-200 border shadow-lg
             ${
               isDark
                 ? 'bg-zinc-900/70 border-white/20 text-white hover:bg-zinc-800'
@@ -317,7 +317,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
         <button
           onClick={stepNext}
           className={`
-            p-3 rounded-full backdrop-blur-md transition-all duration-200 border shadow-lg
+            p-3 rounded-full backdrop-blur-md transition-colors duration-200 border shadow-lg
             ${
               isDark
                 ? 'bg-zinc-900/70 border-white/20 text-white hover:bg-zinc-800'
@@ -527,7 +527,7 @@ export const FolderCarousel: React.FC<FolderCarouselProps> = ({
               key={f.id}
               onClick={() => handleDotClick(i)}
               className={`
-                h-2 rounded-full transition-all duration-75
+                h-2 rounded-full transition-[width,background-color,box-shadow] duration-75
                 ${
                   isSelected
                     ? 'w-7 bg-[color:var(--gc-active)] shadow-[0_0_10px_var(--gc-active)]'

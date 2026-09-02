@@ -106,7 +106,7 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
             <button
               key={c.view}
               onClick={() => onNavigate?.(c.view)}
-              className={`${CARD} p-6 text-left cursor-pointer transition-all duration-200 group hover:-translate-y-0.5`}
+              className={`${CARD} p-6 text-left cursor-pointer transition-[transform,border-color] duration-200 group hover:-translate-y-0.5`}
               onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-strong)' }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)' }}
             >

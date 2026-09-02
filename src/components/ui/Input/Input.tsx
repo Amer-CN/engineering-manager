@@ -91,7 +91,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
   bg-[color:var(--card)] text-[color:var(--fg)]
   border rounded-lg
   placeholder-[color:var(--muted)]
-  transition-all duration-200
+  transition-[box-shadow,border-color,background-color,color] duration-200
   focus:outline-none focus:ring-2
   disabled:bg-[color:var(--panel-2)] disabled:text-[color:var(--muted)] disabled:cursor-not-allowed
   ${sizeStyles[size]}

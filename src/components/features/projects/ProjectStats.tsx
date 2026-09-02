@@ -21,7 +21,7 @@ function StatCard({ icon, label, value, accent, valueColor }: {
   icon: React.ReactNode; label: string; value: string; accent?: string; valueColor?: string
 }) {
   return (
-    <div className="bg-[color:var(--card)] border border-[color:var(--border)] rounded-xl p-4 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 min-w-0">
+    <div className="bg-[color:var(--card)] border border-[color:var(--border)] rounded-xl p-4 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-[transform,box-shadow] duration-200 min-w-0">
       <div className="flex items-center gap-3">
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${accent || 'bg-[color:var(--panel-2)]'} shrink-0`}>{icon}</div>
         <div className="min-w-0 flex-1">

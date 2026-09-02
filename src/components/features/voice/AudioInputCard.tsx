@@ -104,7 +104,7 @@ const AudioInputCard: React.FC<AudioInputCardProps> = ({
               </div>
               <div className="h-2 bg-[color:var(--panel-2)] rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-[color:var(--accent)] rounded-full transition-all duration-200"
+                  className="h-full bg-[color:var(--accent)] rounded-full transition-[width] duration-200"
                   style={{ width: `${uploadProgress}%` }}
                 />
               </div>

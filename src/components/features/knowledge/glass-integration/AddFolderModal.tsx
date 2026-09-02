@@ -64,7 +64,7 @@ export const AddFolderModal: React.FC<AddFolderModalProps> = ({
       <div
         className={`
           relative z-10 w-full max-w-md rounded-3xl p-6 md:p-8
-          shadow-2xl border backdrop-blur-2xl transition-all duration-300 space-y-5
+          shadow-2xl border backdrop-blur-2xl transition-colors duration-300 space-y-5
           ${isDark ? 'bg-zinc-900/90 border-white/20 text-white' : 'bg-white/95 border-white/80 text-zinc-900'}
         `}
       >

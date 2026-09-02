@@ -119,7 +119,7 @@ export const SettingsSqliteSection: React.FC<Props> = ({
                   key={mode}
                   onClick={() => onSetReadMode(mode)}
                   disabled={switching}
-                  className={`p-4 rounded-xl border-2 transition-all text-left ${
+                  className={`p-4 rounded-xl border-2 transition-[border-color,background-color,box-shadow] text-left ${
                     currentMode === mode ? activeColor : 'border-[color:var(--border)] hover:border-[color:var(--border)] bg-[color:var(--card)]'
                   }`}
                 >
@@ -163,7 +163,7 @@ export const SettingsSqliteSection: React.FC<Props> = ({
                 </ButtonLoader>
               </Button>
               {/* 悬停浮窗 */}
-              <div className="absolute left-0 bottom-full mb-2 w-80 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none group-hover:pointer-events-auto">
+              <div className="absolute left-0 bottom-full mb-2 w-80 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-[opacity,visibility] duration-200 z-50 pointer-events-none group-hover:pointer-events-auto">
                 <div className="bg-[color:var(--card)] border border-[color:var(--border)] rounded-xl shadow-xl p-4 space-y-2 text-xs">
                   <p className="font-semibold text-[color:var(--fg-2)]">什么时候需要点这个按钮？</p>
                   <p><span className="text-success-600 font-medium">可以点：</span><span className="text-[color:var(--fg-2)]">软件提示"数据不完整"时，说明部分数据没有迁移到新引擎，点击此按钮可以补全。</span></p>

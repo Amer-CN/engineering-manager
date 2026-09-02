@@ -127,8 +127,9 @@ export function ImportingPhase({ progress }: { progress: ImportProgress }) {
         <div className="bg-[color:var(--panel-2)] rounded-full h-3 overflow-hidden">
           <motion.div
             className="bg-[color:var(--accent)] h-full rounded-full"
-            initial={{ width: 0 }}
-            animate={{ width: `${progress.percent}%` }}
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: progress.percent / 100 }}
+            style={{ transformOrigin: 'left', width: '100%' }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
           />
         </div>

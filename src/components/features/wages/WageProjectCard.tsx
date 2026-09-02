@@ -22,7 +22,7 @@ export const WageProjectCard = React.memo(function WageProjectCard({ data, selec
   return (
     <div
       onClick={() => onClick(data.projectId)}
-      className="flex items-center gap-6 bg-[color:var(--card)] border border-[color:var(--border)] rounded-xl px-5 py-4 shadow-sm hover:border-[color:var(--accent)] hover:shadow-lift hover:-translate-y-0.5 transition-all duration-200 cursor-pointer group"
+      className="flex items-center gap-6 bg-[color:var(--card)] border border-[color:var(--border)] rounded-xl px-5 py-4 shadow-sm hover:border-[color:var(--accent)] hover:shadow-lift hover:-translate-y-0.5 transition-[transform,opacity,box-shadow,background-color,border-color] duration-200 cursor-pointer group"
     >
       {/* Project name */}
       <div className="flex-1 min-w-0">
