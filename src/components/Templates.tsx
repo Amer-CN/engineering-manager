@@ -8,6 +8,7 @@ import { useConfirm } from '@/hooks/useConfirm'
 import { Spinner } from './ui/Loading/Loading'
 import PageHeader from './ui/PageHeader'
 import PageContainer from './ui/PageContainer'
+import { Button } from './ui/Button'
 import { TemplateDashboard, TemplateList, TemplateForm, TemplatePreview, TemplateGenerate } from './features/templates'
 import { logCreate, logUpdate, logDelete } from '../utils/audit'
 import { Drawer } from './ui/Drawer'
@@ -118,6 +119,16 @@ const Templates: React.FC = () => {
     }
   }
 
+  // 新建/编辑模板抽屉：看板与详情视图共用（看板页头「新建模板」也走它）
+  const templateDrawer = (
+    <Drawer open={showModal} onClose={() => { setShowModal(false); setEditingTemplate(null); setFormDirty(false) }} dirty={formDirty}
+      icon="FileText" title={editingTemplate ? '编辑模板' : '新建模板'} width={560}>
+      <TemplateForm template={editingTemplate} onSubmit={handleSubmit}
+        onDirtyChange={() => setFormDirty(true)}
+        onCancel={() => { setShowModal(false); setEditingTemplate(null); setFormDirty(false) }} />
+    </Drawer>
+  )
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -143,12 +154,7 @@ const Templates: React.FC = () => {
           onCreate={handleCreate}
         />
 
-        <Drawer open={showModal} onClose={() => { setShowModal(false); setEditingTemplate(null); setFormDirty(false) }} dirty={formDirty}
-          icon="FileText" title={editingTemplate ? '编辑模板' : '新建模板'} width={560}>
-          <TemplateForm template={editingTemplate} onSubmit={handleSubmit}
-            onDirtyChange={() => setFormDirty(true)}
-            onCancel={() => { setShowModal(false); setEditingTemplate(null); setFormDirty(false) }} />
-        </Drawer>
+        {templateDrawer}
 
         {/* Preview modal */}
         {previewTemplate && (
@@ -167,12 +173,17 @@ const Templates: React.FC = () => {
   return (
     <PageContainer>
       {ConfirmDialog}
-      <PageHeader title="模板管理" subtitle="Word/Excel 文件模板：上传文件、识别 {{变量}}、填值生成文档（在线编辑的合同文本模板请用「合同管理 → 合同模板库」）" />
+      <PageHeader title="模板管理" subtitle="Word/Excel 文件模板：上传文件、识别 {{变量}}、填值生成文档（在线编辑的合同文本模板请用「合同管理 → 合同模板库」）"
+        actions={
+          <Button variant="primary" leftIcon="Plus" onClick={handleCreate}>新建模板</Button>
+        }
+      />
       <TemplateDashboard
         templates={templates}
         stats={stats}
         onCategoryClick={handleCategoryClick}
       />
+      {templateDrawer}
     </PageContainer>
   )
 }
