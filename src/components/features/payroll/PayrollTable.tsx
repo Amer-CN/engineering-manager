@@ -26,11 +26,13 @@ interface PayrollTableProps {
   filterYearMonth: string
   setFilterYearMonth: (v: string) => void
   confirm: (options: { title?: string; content: React.ReactNode; confirmVariant?: "primary" | "danger" }) => Promise<boolean>
+  onOpenAttendanceImport?: () => void
 }
 
 export function PayrollTable({
   mode, activeTab, data, selectedProject, projectAttendances, projectWages,
   daysInMonth, wageActions, paymentFilteredWages, filterYearMonth, setFilterYearMonth, confirm,
+  onOpenAttendanceImport,
 }: PayrollTableProps) {
   const { can } = usePermission()
   const showToast = useToastStore(state => state.showToast)
@@ -116,7 +118,7 @@ export function PayrollTable({
                 onOpenDetail={wageActions.handleOpenAttendanceDetail}
                 onDelete={wageActions.handleDeleteAttendance}
                 onBatchDelete={wageActions.handleBatchDeleteAttendance}
-                loading={false} onImportAttendance={wageActions.handleImportAttendance}
+                loading={false} onOpenImport={onOpenAttendanceImport}
               />
             ) : <div className="flex items-center justify-center h-full"><EmptyState icon="Calendar" title="请先选择项目" description="在工具栏的项目下拉框中选择一个项目" /></div>
           )}

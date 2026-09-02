@@ -92,6 +92,7 @@ export interface Worker {
   ethnicity?: string               // 民族
   phone?: string
   address?: string
+  currentAddress?: string          // 现住址
   bankAccount?: string             // 工资卡号
   bankName?: string                // 开户行
   bankLineNo?: string              // 联行号
@@ -110,6 +111,12 @@ export interface ProjectWorker {
   workerType: WorkerType | string  // 工种
   entryDate: string                // 进场日期
   status: WorkerStatus             // 'active' | 'left'
+  contractSigner?: string
+  contractStart?: string
+  contractEnd?: string
+  safetyTraining?: boolean | number
+  workSection?: string
+  exitDate?: string
   remarks?: string
   createdAt: string
   // 关联查询附加
@@ -588,7 +595,7 @@ export interface ContractTemplate {
 }
 
 // ============ 模板管理（新版，通用模板系统） ============
-export type TemplateCategory = 'contract' | 'settlement' | 'seal_application' | 'fund_application' | 'official_document' | 'letter' | 'other'
+export type TemplateCategory = 'contract' | 'settlement' | 'seal_application' | 'fund_application' | 'official_document' | 'letter' | 'collection' | 'other'
 
 export interface Template {
   id: number
@@ -777,6 +784,7 @@ export interface WageRecord {
   paidAmount?: number              // 实发金额（可能不同于应发）
   paidDate?: string                // 发放日期 "YYYY-MM-DD"
   bankReceiptPath?: string        // 银行回单凭证文件路径
+  paidChannel?: string             // 发放渠道：bank/cash/wechat/other
   paymentLocked?: boolean          // 是否已归档（锁定实发金额/日期）
   memberName?: string
   memberType?: 'worker'
@@ -1118,6 +1126,7 @@ export interface ElectronAPI {
   getTemplateStats: () => Promise<{ success: boolean; data?: Record<string, number>; error?: string }>
   fillTemplateDocx: (storedFileName: string, values: Record<string, string>) => Promise<{ success: boolean; data?: { dataUrl: string }; error?: string }>
   convertTemplateDocxToHtml: (storedFileName: string, category?: string) => Promise<{ success: boolean; data?: string; error?: string }>
+  issueCollectionTemplate: (templateId: number, values: { projectName: string; yearMonth: string; teamName: string }) => Promise<{ success: boolean; data?: { dataUrl: string }; error?: string }>
 
   // ============ 进销存 ============
   getInventoryItems: () => Promise<{ success: boolean; data?: InventoryItem[]; error?: string }>
@@ -1146,7 +1155,8 @@ export interface ElectronAPI {
   createAttendance: (record: Partial<AttendanceRecord>) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
   updateAttendance: (record: AttendanceRecord) => Promise<{ success: boolean; error?: string }>
   generateDefaultAttendancesV2: (projectId: number, yearMonth: string, projectWorkerIds: number[]) => Promise<{ success: boolean; data?: { count: number }; error?: string }>
-  batchImportAttendances: (projectId: number, yearMonth: string, records: { projectWorkerId: number; workDays: number }[]) => Promise<{ success: boolean; data?: { created: number; updated: number }; error?: string }>
+  batchImportAttendances: (projectId: number, yearMonth: string, records: { projectWorkerId: number; workDays: number }[]) => Promise<{ success: boolean; data?: { created: number; updated: number; skipped?: number[]; conflicts?: { projectWorkerId: number; currentWorkDays: number; importWorkDays: number }[] }; error?: string }>
+  resolveAttendanceConflicts: (projectId: number, yearMonth: string, resolutions: { projectWorkerId: number; action: 'overwrite' | 'keep'; workDays?: number }[]) => Promise<{ success: boolean; data?: { overwritten: number; kept: number; skipped: number[] }; error?: string }>
   deleteAttendance: (id: number) => Promise<{ success: boolean; data?: any; error?: string }>
   batchDeleteAttendances: (ids: number[]) => Promise<{ success: boolean; data?: { deleted: number }; error?: string }>
 
@@ -1168,7 +1178,7 @@ export interface ElectronAPI {
   createWage: (record: Partial<WageRecord>) => Promise<{ success: boolean; data?: { id: number }; error?: string }>
   updateWage: (record: WageRecord) => Promise<{ success: boolean; error?: string }>
   batchSaveWages: (records: WageRecord[]) => Promise<{ success: boolean; data?: any; error?: string }>
-  batchSavePayments: (records: { id: number; paidAmount: number; paidDate: string; bankReceiptPath?: string }[]) => Promise<{ success: boolean; data?: { saved: number; skipped: number; skippedItems: { id: number }[] }; error?: string }>
+  batchSavePayments: (records: { id: number; paidAmount: number; paidDate: string; bankReceiptPath?: string; paidChannel?: string }[]) => Promise<{ success: boolean; data?: { saved: number; skipped: number; skippedItems: { id: number }[] }; error?: string }>
   deleteWage: (id: number) => Promise<{ success: boolean; error?: string }>
   batchDeleteWages: (ids: number[]) => Promise<{ success: boolean; data?: { deleted: number }; error?: string }>
   batchClearPayments: (ids: number[]) => Promise<{ success: boolean; data?: { cleared: number }; error?: string }>

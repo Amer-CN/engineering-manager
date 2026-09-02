@@ -1,6 +1,7 @@
 using System.Data;
 using Dapper;
 using EngineeringManager.Api.Security;
+using EngineeringManager.Api.Services;
 
 namespace EngineeringManager.Api;
 
@@ -81,6 +82,34 @@ public static class TemplateEndpoints
                     Now = Common.NowString()
                 });
             return await Common.WriteResult(affected, db, "templates", recordId);
+        });
+
+        // ── 采集表下发：模板分类 collection 的空表，填 {项目}/{月份}/{班组} 后回 dataUrl（spec S2）──
+        app.MapPost("/api/templates/{id}/issue-collection", async (HttpContext ctx, long id, IDbConnection db) =>
+        {
+            // 与考勤导入同权：下发采集表是考勤流程的起点
+            if (!CurrentUser.HasPermission(ctx, db, "wages:create")) return Results.Forbid();
+            using var reader = new System.IO.StreamReader(ctx.Request.Body);
+            var bodyText = await reader.ReadToEndAsync();
+            var body = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(bodyText);
+            string? projectName = body.TryGetProperty("projectName", out var pn) ? pn.GetString() : null;
+            string? yearMonth = body.TryGetProperty("yearMonth", out var ym) ? ym.GetString() : null;
+            string? teamName = body.TryGetProperty("teamName", out var tn) ? tn.GetString() : null;
+            var tpl = db.QueryFirstOrDefault("SELECT stored_file_name, file_type FROM templates WHERE id=@Id", new { Id = id });
+            if (tpl == null) return Results.NotFound(new { success = false, error = "模板不存在" });
+            if ((tpl.file_type as string) != "xlsx") return Results.BadRequest(new { success = false, error = "仅支持 xlsx 采集表模板" });
+            var fileName = Path.GetFileName((tpl.stored_file_name as string) ?? "");
+            // 路径与前端 FILE_CATEGORIES.TEMPLATE_FILE（category='templates'，落盘 uploads/templates/）绑定，改动需两处同步
+            var path = Path.Combine(ApiConfig.ResolveDataPath(), "uploads", "templates", fileName);
+            if (!File.Exists(path)) return Results.NotFound(new { success = false, error = "模板文件不存在，请重新上传" });
+            var values = new Dictionary<string, string>
+            {
+                ["{项目}"] = projectName ?? "",
+                ["{月份}"] = yearMonth ?? "",
+                ["{班组}"] = string.IsNullOrEmpty(teamName) ? "全部班组" : teamName,
+            };
+            var filled = XlsxTemplateService.FillTitlePlaceholders(await File.ReadAllBytesAsync(path), values);
+            return Common.Ok(new { dataUrl = "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64," + Convert.ToBase64String(filled) });
         });
     }
 }

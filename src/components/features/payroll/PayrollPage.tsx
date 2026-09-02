@@ -14,6 +14,8 @@ import { usePermission } from '@/hooks/usePermission'
 
 // worker 模式操作
 import { useWageActions } from '../wages/useWageActions'
+import { useAttendanceImport } from '../wages/useAttendanceImport'
+import { AttendanceImportModal } from '../wages/AttendanceImportModal'
 import { PayrollTable } from './PayrollTable'
 import { Button } from '../../ui/Button'
 
@@ -57,6 +59,21 @@ export default function PayrollPage({ mode }: PayrollPageProps) {
     wages: projectWages, loadData: data.loadData,
     setLoading: data.setLoading, // J-2: 保存发放 loading 指示（handleSavePayments 核心注入）
   })
+
+  // S2 带提醒覆盖：worker 模式导入入口（与工资管理共用 useAttendanceImport）
+  const attImport = useAttendanceImport({
+    projectId: selectedProject?.id ?? null,
+    yearMonth: data.selectedMonth,
+    loadData: data.loadData,
+  })
+  const [showAttImport, setShowAttImport] = useState(false)
+
+  const importWorkerList = useMemo(() => {
+    if (!selectedProject) return []
+    return (data.people as { id: number; name: string; teamName?: string; idCard: string; projectId: number }[])
+      .filter((p) => p.projectId === selectedProject.id)
+      .map((p) => ({ id: p.id, name: p.name, teamName: p.teamName, idCard: p.idCard }))
+  }, [selectedProject, data.people])
 
   // staff: 生成薪酬
   const handleGeneratePayroll = useCallback(async () => {
@@ -230,7 +247,20 @@ export default function PayrollPage({ mode }: PayrollPageProps) {
         paymentFilteredWages={paymentFilteredWages}
         filterYearMonth={filterYearMonth} setFilterYearMonth={setFilterYearMonth}
         confirm={confirm}
+        onOpenAttendanceImport={() => setShowAttImport(true)}
       />
+
+      {mode === 'worker' && selectedProject && (
+        <AttendanceImportModal
+          show={showAttImport}
+          projectId={selectedProject.id}
+          yearMonth={data.selectedMonth}
+          workerList={importWorkerList}
+          onClose={() => setShowAttImport(false)}
+          onImport={attImport.importAttendance}
+        />
+      )}
+      {attImport.ConflictDialog}
 
       {ConfirmDialog}
     </div>

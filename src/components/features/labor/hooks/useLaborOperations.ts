@@ -117,6 +117,7 @@ export function useLaborOperations({
       ethnicity: formData.ethnicity || undefined,
       birthDate: formData.birthDate || undefined,
       address: formData.idCardAddress || undefined,
+      currentAddress: formData.currentAddress || undefined,
       bankAccount: formData.bankAccount || undefined,
       bankName: formData.bankName || undefined,
       bankLineNo: formData.bankLineNo || undefined,

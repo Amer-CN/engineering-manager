@@ -5,8 +5,8 @@ import { getAPI } from '@/services/api-adapter'
 interface UseBankReceiptOptions {
   allWageRecords: WageRecord[]
   selectedProject: { name?: string } | null
-  paymentEdits: Map<number, { paidAmount: string; paidDate: string; bankReceiptPath?: string }>
-  setPaymentEdits: React.Dispatch<React.SetStateAction<Map<number, { paidAmount: string; paidDate: string; bankReceiptPath?: string }>>>
+  paymentEdits: Map<number, { paidAmount: string; paidDate: string; bankReceiptPath?: string; paidChannel?: string }>
+  setPaymentEdits: React.Dispatch<React.SetStateAction<Map<number, { paidAmount: string; paidDate: string; bankReceiptPath?: string; paidChannel?: string }>>>
   showToast: (message: string, type: 'success' | 'error' | 'info' | 'warning') => void
 }
 

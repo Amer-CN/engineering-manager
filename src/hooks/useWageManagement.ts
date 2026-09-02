@@ -28,7 +28,7 @@ export default function useWageManagement({ showToast, confirm }: UseWageManagem
   const [attendanceDetailRecord, setAttendanceDetailRecord] = useState<AttendanceRecord | null>(null)
   const [wageRecords, setWageRecords] = useState<WageRecord[]>([])
   const [editingWages, setEditingWages] = useState<Map<number, { bonus: number; deduction: number }>>(new Map())
-  const [paymentEdits, setPaymentEdits] = useState<Map<number, { paidAmount: string; paidDate: string; bankReceiptPath?: string }>>(new Map())
+  const [paymentEdits, setPaymentEdits] = useState<Map<number, { paidAmount: string; paidDate: string; bankReceiptPath?: string; paidChannel?: string }>>(new Map())
   const [allWageRecords, setAllWageRecords] = useState<WageRecord[]>([])
   const [wageStats, setWageStats] = useState<WageStats | null>(null)
   const [filterMemberName, setFilterMemberName] = useState('')

@@ -11,10 +11,10 @@ interface WageRecordsTabProps {
   filterYearMonth: string
   filterMemberName: string
   selectedIds: Set<number>
-  paymentEdits: Map<number, { paidAmount: string; paidDate: string; bankReceiptPath?: string }>
+  paymentEdits: Map<number, { paidAmount: string; paidDate: string; bankReceiptPath?: string; paidChannel?: string }>
   onFilterYearMonthChange: (val: string) => void
   onFilterNameChange: (val: string) => void
-  onPaymentChange: (recordId: number, field: 'paidAmount' | 'paidDate', value: string | number) => void
+  onPaymentChange: (recordId: number, field: 'paidAmount' | 'paidDate' | 'paidChannel', value: string | number) => void
   onSavePayments: () => void
   onBankReceiptUpload: (pdfPath: string) => void
   onOpenBatchReceipt: () => void
@@ -130,6 +130,25 @@ export default function WageRecordsTab({
               <span className="text-success-500 text-xs" title={`凭证: ${item.bankReceiptPath}`}>📎</span>
             )}
           </div>
+        )
+      }
+    },
+    {
+      key: 'paidChannel',
+      title: '发放渠道',
+      render: (item) => {
+        const edit = paymentEdits.get(item.id)
+        const channel = edit?.paidChannel ?? item.paidChannel ?? ''
+        return (
+          <select value={channel} disabled={!!item.paymentLocked}
+            onChange={e => onPaymentChange(item.id, 'paidChannel', e.target.value)}
+            className={`w-24 px-1.5 py-1 border rounded text-sm ${item.paymentLocked ? 'bg-[color:var(--panel-2)] border-[color:var(--border)] text-[color:var(--muted)] cursor-not-allowed' : 'border-[color:var(--border)]'}`}>
+            <option value="">-</option>
+            <option value="bank">银行</option>
+            <option value="cash">现金</option>
+            <option value="wechat">微信/支付宝</option>
+            <option value="other">其他</option>
+          </select>
         )
       }
     },

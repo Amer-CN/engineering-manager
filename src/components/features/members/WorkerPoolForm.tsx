@@ -9,7 +9,7 @@ import { Button } from '../../ui/Button'
 export interface WorkerPoolFormData {
   name: string; phone: string; idCard: string
   idCardFront: string; idCardBack: string
-  gender: string; ethnicity: string; birthDate: string; idCardAddress: string
+  gender: string; ethnicity: string; birthDate: string; idCardAddress: string; currentAddress: string
   bankAccount: string; bankName: string; bankLineNo: string
   workerType: string; dailyWage: string
 }
@@ -17,7 +17,7 @@ export interface WorkerPoolFormData {
 export const defaultWorkerPoolForm: WorkerPoolFormData = {
   name: '', phone: '', idCard: '',
   idCardFront: '', idCardBack: '',
-  gender: '', ethnicity: '', birthDate: '', idCardAddress: '',
+  gender: '', ethnicity: '', birthDate: '', idCardAddress: '', currentAddress: '',
   bankAccount: '', bankName: '', bankLineNo: '',
   workerType: '', dailyWage: ''
 }
@@ -46,6 +46,7 @@ export function WorkerPoolForm({ visible, editing, onClose, onSubmit, onSwitchTo
   idCard: editing.idCard || '', idCardFront: '', idCardBack: '',
   gender: editing.gender || '', ethnicity: editing.ethnicity || '',
   birthDate: editing.birthDate || '', idCardAddress: editing.address || '',
+  currentAddress: editing.currentAddress || '',
   bankAccount: editing.bankAccount || '', bankName: editing.bankName || '', bankLineNo: editing.bankLineNo || '',
   workerType: workerTypeToCode(editing.workerType), dailyWage: editing.dailyWage ? String(editing.dailyWage) : ''
   }
@@ -178,6 +179,9 @@ export function WorkerPoolForm({ visible, editing, onClose, onSubmit, onSwitchTo
   </div>
   <div>
   <Input label="身份证住址" type="text" value={form.idCardAddress} onChange={e => update({ idCardAddress: e.target.value })} size="sm" />
+  </div>
+  <div>
+  <Input label="现住址" type="text" value={form.currentAddress} onChange={e => update({ currentAddress: e.target.value })} size="sm" placeholder="现居住地" />
   </div>
 
   {/* Bank info */}
