@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'framer-motion'
+import { EASE_OUT } from './constants/animations'
 import { getAPI } from './services/api-adapter'
 import Sidebar from './components/Sidebar'
 import TitleBar from './components/TitleBar'
@@ -332,7 +333,7 @@ const AppContent: React.FC = () => {
             initial={isFullScreen ? { y: -36, opacity: 0 } : false}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -36, opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            transition={{ duration: 0.2, ease: EASE_OUT }}
             onMouseEnter={handleTitleBarMouseEnter}
             onMouseLeave={handleTitleBarMouseLeave}
             className={isFullScreen ? 'absolute top-0 left-0 right-0 z-50' : ''}
@@ -378,7 +379,7 @@ const AppContent: React.FC = () => {
           <AnimatePresence mode="wait">
             <motion.div key={currentPage} className="h-full"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              transition={{ duration: 0.15, ease: 'easeOut' }}>
+              transition={{ duration: 0.15, ease: EASE_OUT }}>
               <Suspense fallback={<PageLoader />}>
                 {renderPage()}
               </Suspense>
