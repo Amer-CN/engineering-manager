@@ -41,7 +41,7 @@ const ContractPreviewModal: React.FC<ContractPreviewModalProps> = ({ previewFile
             <iframe src={previewFile.previewUrl || previewFile.data} className="w-full h-full border-0" title={previewFile.title} />
           )}
           {previewFile.type === 'word' && previewFile.html && (
-            <iframe srcDoc={previewFile.html} className="w-full h-full border-0 bg-[color:var(--card)]" title={previewFile.title} />
+            <iframe srcDoc={previewFile.html} sandbox="" className="w-full h-full border-0 bg-[color:var(--card)]" title={previewFile.title} />
           )}
           {previewFile.type === 'word' && !previewFile.html && (
             <div className="flex flex-col items-center justify-center h-full" style={{ color: 'var(--muted)' }}>
