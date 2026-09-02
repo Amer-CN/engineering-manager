@@ -148,6 +148,8 @@ erDiagram
         TEXT gender
         TEXT phone
         TEXT address
+        TEXT current_address
+        TEXT current_address_enc
         TEXT bank_account
         TEXT bank_name
         TEXT worker_type
@@ -171,6 +173,12 @@ erDiagram
         INTEGER daily_wage
         TEXT worker_type
         TEXT entry_date
+        TEXT contract_signer
+        TEXT contract_start
+        TEXT contract_end
+        INTEGER safety_training
+        TEXT work_section
+        TEXT exit_date
         TEXT status
         TEXT created_at
         TEXT updated_at
@@ -287,6 +295,7 @@ erDiagram
         INTEGER actual_wage
         INTEGER paid_amount
         TEXT paid_date
+        TEXT paid_channel
         TEXT status
         TEXT created_at
         TEXT updated_at
@@ -302,6 +311,7 @@ erDiagram
         INTEGER days_off
         INTEGER is_full_attendance
         TEXT daily_status
+        INTEGER manually_edited
         TEXT file_url
         TEXT created_at
         TEXT updated_at
@@ -554,6 +564,10 @@ stateDiagram-v2
 | inventory_transactions | unit_price |
 | expenses | amount |
 | salary_history | base_salary, subsidy |
+
+### 增量迁移记录
+
+- **047_LedgerExcelBoundaryFields.sql（2026-09-02）**：attendances.manually_edited；project_workers 入库五项（contract_signer/contract_start/contract_end/safety_training/work_section）+ exit_date；workers.current_address + current_address_enc（PII 孪生列）；wages.paid_channel
 
 ### 审计字段
 

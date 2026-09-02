@@ -128,29 +128,32 @@
 - **C# 端点**：`EngineeringManager.Api/Endpoints/SystemEndpoints.cs`
 
 ### 模板管理（独立顶级模块）
-- **架构**：Dashboard（4统计+7分类入口）→ 分类详情（返回+统计+卡片网格）→ 新建/编辑/预览/生成
-- **7 种分类**：contract(合同)/settlement(结算)/seal_application(用印)/fund_application(用款)/official_document(红头)/letter(函件)/other
+- **架构**：Dashboard（4统计+分类卡片墙：8 分类各一张卡，图标+名称+数量，点击一律进分类列表页）→ 分类详情（返回+统计+卡片网格）→ 新建/编辑/预览；「新建模板」常驻看板页头右上+各分类列表页右上
+- **8 种分类**：contract(合同)/settlement(结算)/seal_application(用印)/fund_application(用款)/official_document(红头)/letter(函件)/collection(采集表)/other
+- **采集表下发**（v0.95.0）：考勤页「发采集表」按钮 → CollectionIssueModal（选模板/班组）→ `POST /api/templates/{id}/issue-collection` → ClosedXML 填 {项目}/{月份}/{班组} 标题占位符保版式 → base64 dataUrl 下载
+- **预览**：Word/Excel 统一为"提示+下载查看"（readFile + dataUrl）；模板卡无「生成」按钮（后端 convertTemplateDocxToHtml 未实现，半成品链路已移除）
 - **变量系统**：text/number/date/select 四种类型；上传 .docx 时 C# 后端用 mammoth 自动检测 `{{变量名}}`
 - **TemplateSelectorModal**：按分类加载+搜索+选中回调，合同/结算模块共用（ContractPage + SettlementProjectDetail 集成"从模板生成"入口）
 - **编辑模式**：下载→编辑→上传；文件走统一文件服务 `uploads/模板/文件/`
-- 核心文件：`Templates.tsx`, `TemplateDashboard.tsx`, `TemplateList.tsx`, `TemplateForm.tsx`, `TemplateCard.tsx`, `TemplatePreview.tsx`, `TemplateGenerate.tsx`, `TemplateSelectorModal.tsx`, `config.tsx`
-- **C# 端点**：`EngineeringManager.Api/Endpoints/SystemEndpoints.cs`
+- 核心文件：`Templates.tsx`, `TemplateDashboard.tsx`, `TemplateList.tsx`, `TemplateForm.tsx`, `TemplateCard.tsx`, `TemplatePreview.tsx`, `TemplateSelectorModal.tsx`, `config.tsx`
+- **C# 端点**：`EngineeringManager.Api/Endpoints/TemplateEndpoints.cs`
 
-### 工资管理（v3.3 — 月份选择器统一到父级）
+### 工资管理（v0.95.0 — 考勤冲突裁决+采集表+发放渠道）
 - **侧边栏**：隐藏（showInSidebar: false），通过工人管理模块「工资管理」Tab 直接访问，或直接 URL `/wages`
 - **职能范围**：仅工人日薪制工资/考勤，管理人员薪资逻辑已彻底移除（v3.0 代码级清理）
 - **架构**：Dashboard（2 KPI 统计+项目卡片）→ WageCycleDetail（考勤管理/项目工资表/工资发放记录 3 Tab）
 - **月份选择器**：统一使用 `MonthPicker` 组件（年份快速切换+3×4 月份网格，createPortal 渲染避免溢出），位于 WageCycleDetail 顶部 Tabs 上方，所有 Tab 共享同一个月份
 - **列头筛选**：考勤/工资表/发放记录均支持表头漏斗筛选（filterable 属性，createPortal+搜索+checkbox 多选）
-- **考勤系统**：按月生成，5 种日状态，AttendanceDetail 画笔模式日历，支持 Excel 导入（出勤天数），走 `generateDefaultAttendancesV2` / `batchImportAttendances` 两条路径
+- **考勤系统**：按月生成，5 种日状态，AttendanceDetail 画笔模式日历，走 `generateDefaultAttendancesV2` / `batchImportAttendances` 两条路径
+- **考勤导入**：Excel 导入（AttendanceImportModal，身份证号优先匹配），入口归一为共用 `useAttendanceImport` hook（工资管理 + Payroll 两入口）；带提醒覆盖——手改过的考勤（manually_edited=1）再导入不覆盖：未改静默覆盖 / 改而同值清标 / 改而不同弹 `AttendanceConflictDialog` 逐条裁决（留我的/用表里的，`POST /api/attendances/batch-import-resolve`）
+- **采集表下发**：考勤页「发采集表」按钮 → 模板采集表填 {项目}/{月份}/{班组} 标题下载（详见模板管理节）
 - **计算规则**：`日薪 × 出勤天数 + 奖金 - 扣款`（`calculateActualWage(dailyWage, workDays, bonus, deduction)`）
-- **工资发放记录**：应发工资(只读) + 实发金额/发放日期(手动，`type="text" inputMode="decimal"` 支持精确小数输入) + 差额(自动)
+- **工资发放记录**：应发工资(只读) + 实发金额/发放日期(手动，`type="text" inputMode="decimal"` 支持精确小数输入) + 差额(自动) + 发放渠道列（paid_channel：''=清除 / 不传=保持 / 对账确认自动记 'bank'）
 - **银行回单解析**：上传 PDF → Python pypdf 提取文字 → 正则解析（兼容多银行格式）→ 姓名+银行卡号双重匹配 → 填入实发金额/日期
 - **归档功能**：发放记录 Tab「归档」按钮锁定实发金额/日期，useConfirm 确认对话框
 - **提交级操作**：项目工资表「删除选中」→ `batchDeleteWages` 彻底删除；发放记录「删除选中」→ `batchClearPayments` 仅清空发放字段
 - 数据表：`db.wages`（projectWorkerId 路径）/ `db.attendances` / `db.projectWorkers`
 - 核心文件：`WageManagement.tsx`, `WageCycleDetail.tsx`, `WageRecordsTab.tsx`, `AttendanceTab.tsx`（含月份选择器）, `WageTableTab.tsx`（含月份选择器）
-- **旧 IPC 拆分**【已迁移到 C#】：`attendance.ts` + `attendance-utils.ts` + `attendance-batch-import.ts` → 合入 `WageEndpoints.cs`
 - **C# 端点**：`EngineeringManager.Api/Endpoints/WageEndpoints.cs`（考勤+工资+发放）
 
 ### 成本台账（独立顶级模块）
