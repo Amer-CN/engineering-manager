@@ -78,37 +78,37 @@ export const SettlementList: React.FC<SettlementListProps> = ({
       <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
         {((item.files?.length ?? 0) > 0 || item.fileUrl) && (
           <Tooltip content={`查看凭证 (${item.files?.length || 1}个文件)`} position="top" delay={300}>
-            <button onClick={() => onPreviewFile(item)} className="p-1.5 rounded text-[color:var(--accent)] hover:bg-[color:var(--accent-soft)]">
+            <button onClick={() => onPreviewFile(item)} aria-label={`查看凭证 (${item.files?.length || 1}个文件)`} className="p-1.5 rounded text-[color:var(--accent)] hover:bg-[color:var(--accent-soft)]">
               <Icon name="Eye" size={14} />
             </button>
           </Tooltip>
         )}
         <Tooltip content="打印" position="top" delay={300}>
-          <button onClick={() => onPrint(item)} className="p-1.5 rounded text-[color:var(--muted)] hover:text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)]">
+          <button onClick={() => onPrint(item)} aria-label="打印" className="p-1.5 rounded text-[color:var(--muted)] hover:text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)]">
             <Icon name="Printer" size={14} />
           </button>
         </Tooltip>
         {item.status !== 'archived' && (
           <Tooltip content="办理" position="top" delay={300}>
-            <button onClick={() => onProcess(item.id)} className="p-1.5 rounded text-[color:var(--success)] hover:bg-[color:var(--success-soft)]">
+            <button onClick={() => onProcess(item.id)} aria-label="办理" className="p-1.5 rounded text-[color:var(--success)] hover:bg-[color:var(--success-soft)]">
               <Icon name="Check" size={14} />
             </button>
           </Tooltip>
         )}
         {item.status === 'archived' && (
           <Tooltip content="取消归档" position="top" delay={300}>
-            <button onClick={() => onUnarchive(item.id)} className="p-1.5 rounded text-[color:var(--warning)] hover:bg-[color:var(--warning-soft)]">
+            <button onClick={() => onUnarchive(item.id)} aria-label="取消归档" className="p-1.5 rounded text-[color:var(--warning)] hover:bg-[color:var(--warning-soft)]">
               <Icon name="Undo" size={14} />
             </button>
           </Tooltip>
         )}
         <Tooltip content="编辑" position="top" delay={300}>
-          <button onClick={() => onEdit(item)} className="p-1.5 rounded text-[color:var(--accent)] hover:bg-[color:var(--accent-soft)]">
+          <button onClick={() => onEdit(item)} aria-label="编辑" className="p-1.5 rounded text-[color:var(--accent)] hover:bg-[color:var(--accent-soft)]">
             <Icon name="Edit3" size={14} />
           </button>
         </Tooltip>
         <Tooltip content="删除" position="top" delay={300}>
-          <Button onClick={() => onDelete(item.id)}  variant="danger" size="sm">
+          <Button onClick={() => onDelete(item.id)}  aria-label="删除" variant="danger" size="sm">
             <Icon name="Trash2" size={14} />
           </Button>
         </Tooltip>

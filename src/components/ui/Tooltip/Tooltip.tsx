@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useId } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { EASE_OUT } from '../../../constants/animations'
@@ -24,6 +24,8 @@ export function Tooltip({
 }: TooltipProps) {
   const [visible, setVisible] = useState(false)
   const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 })
+  // W3C tooltip 模式：触发器经 aria-describedby 指向浮层（role=tooltip），屏幕阅读器可读浮层文案
+  const tooltipId = useId()
   const triggerRef = useRef<HTMLDivElement>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -98,6 +100,7 @@ export function Tooltip({
   <div
   ref={triggerRef}
   className={`inline-flex ${className}`}
+  aria-describedby={visible ? tooltipId : undefined}
   onMouseEnter={show}
   onMouseLeave={hide}
   onFocus={show}
@@ -110,6 +113,7 @@ export function Tooltip({
   {visible && (
   <motion.div
   ref={tooltipRef}
+  id={tooltipId}
   role="tooltip"
   className="fixed z-[9999] px-2 py-1 text-xs text-[color:var(--bg)] bg-[color:var(--fg)] rounded shadow-lg whitespace-normal pointer-events-none"
   style={{ top: tooltipPos.top, left: tooltipPos.left, maxWidth }}
