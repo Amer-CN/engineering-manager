@@ -13,6 +13,7 @@ import type { AgentMessage, AgentMessageResponse, ToolCallResult } from '@/types
 import MessageActions from './MessageActions'
 import RichToolResult from './RichToolResult'
 import MarkdownRenderer from './MarkdownRenderer'
+import { EASE_OUT } from '../../../constants/animations'
 
 interface MessageBubbleProps {
   /** 消息数据 */
@@ -92,7 +93,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend
     <motion.div
       initial={{ opacity: 0, y: 12, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.25, ease: 'easeOut' }}
+      transition={{ duration: 0.25, ease: EASE_OUT }}
       className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'} mb-4 group`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}

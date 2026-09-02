@@ -61,7 +61,7 @@ export const SimpleBarChart: React.FC<{
               <div className="w-full rounded-t-md"
                 style={{
                   height: mounted ? `${Math.max(pct, 1)}%` : '0%',
-                  transition: `height 0.6s cubic-bezier(0.16, 1, 0.3, 1) ${i * 0.06}s, opacity 0.15s ease`,
+                  transition: `height 0.6s var(--ease-emphasis) ${i * 0.06}s, opacity 0.15s ease`,
                   background: `linear-gradient(to top, ${(d.color || colors[i % colors.length])}cc, ${d.color || colors[i % colors.length]})`,
                   opacity: hovered !== null && !isHovered ? 0.4 : 1,
                   minHeight: mounted && d.amount > 0 ? 4 : 0,
@@ -143,7 +143,7 @@ export const SimpleGroupedBarChart: React.FC<{
                   <div className="w-full rounded-t-md"
                     style={{
                       height: mounted ? `${Math.max(pct, 1)}%` : '0%',
-                      transition: `height 0.6s cubic-bezier(0.16, 1, 0.3, 1) ${(ri * (data[0]?.values.length ?? 1) + ci) * 0.05}s, opacity 0.15s ease`,
+                      transition: `height 0.6s var(--ease-emphasis) ${(ri * (data[0]?.values.length ?? 1) + ci) * 0.05}s, opacity 0.15s ease`,
                       background: `linear-gradient(to top, ${v.color}cc, ${v.color})`,
                       opacity: hovered !== null && !isHovered ? 0.35 : 1,
                       minHeight: mounted && v.amount > 0 ? 3 : 0,

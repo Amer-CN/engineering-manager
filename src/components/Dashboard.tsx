@@ -7,7 +7,7 @@ import { Icon } from './ui/Icon'
 import HeroBanner from './ui/HeroBanner'
 import { formatMoney } from '@/utils/format'
 import { Card } from '@/components/ui/Card'
-import { staggerContainer, sectionVariant } from '@/constants/animations'
+import { staggerContainer, sectionVariant, EASE_OUT } from '@/constants/animations'
 import { getAPI } from '@/services/api-adapter'
 import { getLevel1ForCode, CATEGORY_HIERARCHY } from '@/components/features/costLedger/config'
 import { HoverScrollbar } from '@/components/ui/HoverScrollbar'
@@ -225,7 +225,7 @@ const Dashboard: React.FC = () => {
                               style={{ transformOrigin: 'left', width: '100%' }}
                               initial={{ scaleX: 0 }}
                               animate={{ scaleX: (inv.amount > 0 ? Math.round(inv.receivedAmount / inv.amount * 100) : 0) / 100 }}
-                              transition={{ duration: 0.55, delay: 0.15 + index * 0.07, ease: 'easeOut' }}
+                              transition={{ duration: 0.55, delay: 0.15 + index * 0.07, ease: EASE_OUT }}
                             />
                           </div>
                           <span className="text-xs text-[color:var(--muted)] font-medium w-8 text-right">{inv.amount > 0 ? Math.round(inv.receivedAmount / inv.amount * 100) : 0}%</span>
