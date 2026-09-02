@@ -89,7 +89,7 @@ export const BusinessLicenseOCRBlock: React.FC<BusinessLicenseOCRBlockProps> = (
         type="button"
         onClick={handleClick}
         disabled={loading}
-        className={`w-full flex items-center justify-center gap-2 transition-all duration-300 ${
+        className={`w-full flex items-center justify-center gap-2 transition-[opacity,background-color,border-color,box-shadow] duration-300 ${
           loading
             ? 'bg-[color:var(--accent)] text-[color:var(--on-accent)] border-0'
             : 'bg-[color:var(--accent)] text-[color:var(--on-accent)] hover:opacity-90 rounded-lg font-medium'

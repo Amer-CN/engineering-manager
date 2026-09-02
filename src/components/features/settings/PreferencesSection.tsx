@@ -72,7 +72,7 @@ export function PreferencesSection() {
           <div className="flex gap-2 max-w-md">
             {TOAST_DURATION_OPTIONS.map(opt => (
               <button key={opt.value} onClick={() => handleToastDurationChange(opt.value)}
-                className={`flex-1 py-2.5 rounded-lg text-sm font-medium border transition-all ${
+                className={`flex-1 py-2.5 rounded-lg text-sm font-medium border transition-colors ${
                   toastDuration === opt.value
                     ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]'
                     : 'border-[color:var(--border)] text-[color:var(--fg-2)] hover:border-[color:var(--border)]'

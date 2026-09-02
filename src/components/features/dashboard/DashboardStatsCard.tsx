@@ -54,8 +54,9 @@ const DashboardStatsCard: React.FC<DashboardStatsCardProps> = ({ stats }) => {
               <div className="mt-2 h-1 bg-[color:var(--panel-2)] rounded-full overflow-hidden">
                 <motion.div
                   className="h-full bg-[color:var(--accent)] rounded-full"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${val.progress}%` }}
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: val.progress / 100 }}
+                  style={{ transformOrigin: 'left', width: '100%' }}
                   transition={{ duration: 1, delay: 0.5 + i * 0.1, ease: 'easeOut' }}
                 />
               </div>

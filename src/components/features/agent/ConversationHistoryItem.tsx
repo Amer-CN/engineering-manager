@@ -117,7 +117,7 @@ export const ConversationHistoryItem: React.FC<ConversationHistoryItemProps> = (
           {showActions && variant === 'deleted' ? (
             <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center">
               <button onClick={(e) => { e.stopPropagation(); handleRestore(conv) }}
-                className="p-1.5 rounded-lg text-[color:var(--border-strong)] hover:text-[color:var(--accent)] hover:bg-[color:var(--accent-soft)] transition-all"
+                className="p-1.5 rounded-lg text-[color:var(--border-strong)] hover:text-[color:var(--accent)] hover:bg-[color:var(--accent-soft)] transition-colors"
                 title="恢复对话">
                 <Icon name="RotateCcw" size={14} />
               </button>
@@ -126,31 +126,31 @@ export const ConversationHistoryItem: React.FC<ConversationHistoryItemProps> = (
             <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               {variant === 'active' && onTogglePin && (
                 <button onClick={(e) => { e.stopPropagation(); onTogglePin(conv) }}
-                  className="p-1.5 rounded-lg text-[color:var(--border-strong)] hover:text-[color:var(--accent)] hover:bg-[color:var(--accent-soft)] transition-all"
+                  className="p-1.5 rounded-lg text-[color:var(--border-strong)] hover:text-[color:var(--accent)] hover:bg-[color:var(--accent-soft)] transition-colors"
                   title={pinned ? '取消置顶' : '置顶对话'}>
                   <Icon name={pinned ? 'PinOff' : 'Pin'} size={14} />
                 </button>
               )}
               <button onClick={(e) => { e.stopPropagation(); startRename(conv) }}
-                className="p-1.5 rounded-lg text-[color:var(--border-strong)] hover:text-[color:var(--accent)] hover:bg-[color:var(--accent-soft)] transition-all"
+                className="p-1.5 rounded-lg text-[color:var(--border-strong)] hover:text-[color:var(--accent)] hover:bg-[color:var(--accent-soft)] transition-colors"
                 title="重命名对话">
                 <Icon name="Edit3" size={14} />
               </button>
               {variant === 'archived' ? (
                 <button onClick={(e) => { e.stopPropagation(); handleUnarchive(conv) }}
-                  className="p-1.5 rounded-lg text-[color:var(--border-strong)] hover:text-[color:var(--accent)] hover:bg-[color:var(--accent-soft)] transition-all"
+                  className="p-1.5 rounded-lg text-[color:var(--border-strong)] hover:text-[color:var(--accent)] hover:bg-[color:var(--accent-soft)] transition-colors"
                   title="取消归档">
                   <Icon name="ArrowUpCircle" size={14} />
                 </button>
               ) : (
                 <button onClick={(e) => { e.stopPropagation(); handleArchive(conv) }}
-                  className="p-1.5 rounded-lg text-[color:var(--border-strong)] hover:text-[color:var(--accent)] hover:bg-[color:var(--accent-soft)] transition-all"
+                  className="p-1.5 rounded-lg text-[color:var(--border-strong)] hover:text-[color:var(--accent)] hover:bg-[color:var(--accent-soft)] transition-colors"
                   title="归档对话">
                   <Icon name="Package" size={14} />
                 </button>
               )}
               <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(conv) }}
-                className="p-1.5 rounded-lg text-[color:var(--border-strong)] hover:text-danger-500 hover:bg-danger-50 transition-all"
+                className="p-1.5 rounded-lg text-[color:var(--border-strong)] hover:text-danger-500 hover:bg-danger-50 transition-colors"
                 title="删除对话">
                 <Icon name="Trash2" size={14} />
               </button>

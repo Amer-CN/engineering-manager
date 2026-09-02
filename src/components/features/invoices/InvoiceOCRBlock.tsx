@@ -83,7 +83,7 @@ export const InvoiceOCRBlock: React.FC<InvoiceOCRBlockProps> = ({
         type="button"
         onClick={handleClick}
         disabled={loading}
-        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all duration-300 disabled:opacity-60"
+        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-[opacity,background-color,border-color,box-shadow] duration-300 disabled:opacity-60"
         style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
       >
         {loading ? (

@@ -77,7 +77,7 @@ export default function TemplateSelectorModal({ category, onSelect, onClose }: T
           <div className="space-y-2">
             {filtered.map(t => (
               <button key={t.id} type="button" onClick={() => onSelect(t)}
-                className="w-full text-left p-4 rounded-xl border border-[color:var(--border)] hover:border-[color:var(--accent)] hover:bg-[color:var(--accent-soft)] transition-all group">
+                className="w-full text-left p-4 rounded-xl border border-[color:var(--border)] hover:border-[color:var(--accent)] hover:bg-[color:var(--accent-soft)] transition-colors group">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <h3 className="font-medium text-[color:var(--fg)] text-sm group-hover:text-[color:var(--accent)]">{t.name}</h3>

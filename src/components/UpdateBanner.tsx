@@ -206,7 +206,7 @@ function renderProgress(progress: any, phase: string, pause?: () => void, cancel
         <>
           <div className="w-full bg-[color:var(--panel-2)] rounded-full h-2 overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all duration-300 ${indeterminate ? 'w-1/3 bg-[color:var(--accent)] animate-pulse' : 'bg-[color:var(--accent)]'}`}
+              className={`h-full rounded-full transition-[width,background-color] duration-300 ${indeterminate ? 'w-1/3 bg-[color:var(--accent)] animate-pulse' : 'bg-[color:var(--accent)]'}`}
               style={indeterminate ? {} : { width: `${Math.min(pct ?? 0, 100)}%` }}
             />
           </div>

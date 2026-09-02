@@ -14,8 +14,8 @@ const statusOptions = [
   { value: 'archived', label: '已归档' },
 ]
 
-const inputClass = 'bg-[color:var(--card)] border border-[color:var(--border)] rounded-xl px-4 py-2.5 text-sm text-[color:var(--fg)] placeholder-[color:var(--muted)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] focus:border-[color:var(--accent)] transition-all duration-200'
-const selectClass = 'bg-[color:var(--card)] border border-[color:var(--border)] rounded-xl px-3 py-2.5 text-sm text-[color:var(--fg-2)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] cursor-pointer transition-all duration-200'
+const inputClass = 'bg-[color:var(--card)] border border-[color:var(--border)] rounded-xl px-4 py-2.5 text-sm text-[color:var(--fg)] placeholder-[color:var(--muted)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] focus:border-[color:var(--accent)] transition-[box-shadow,border-color] duration-200'
+const selectClass = 'bg-[color:var(--card)] border border-[color:var(--border)] rounded-xl px-3 py-2.5 text-sm text-[color:var(--fg-2)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] cursor-pointer transition-shadow duration-200'
 
 export interface ProjectFiltersProps {
   searchTerm: string
