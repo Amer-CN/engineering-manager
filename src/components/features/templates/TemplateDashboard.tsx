@@ -34,7 +34,11 @@ export default function TemplateDashboard({ templates, stats, onCategoryClick }:
         {categories.map(([key, config]) => (
           <button
             key={key}
-            onClick={() => setFilterCategory(key)}
+            onClick={() => {
+              // 空分类无卡片可点，直接进详情页（那里有「新建模板」）；有模板保持本页筛选
+              if (templates.some(t => t.category === key)) setFilterCategory(key)
+              else onCategoryClick(key)
+            }}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
               filterCategory === key ? 'bg-[color:var(--accent)] text-[color:var(--on-accent)]' : 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)]'
             }`}
