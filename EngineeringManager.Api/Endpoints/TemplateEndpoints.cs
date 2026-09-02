@@ -129,12 +129,14 @@ public static class TemplateEndpoints
                 {
                     // 合同附件落盘布局与 /api/contracts/read-file 同源：uploads/{项目名}/合同/{收入|支出}/{文件}（未分类兜底）；
                     // 本端点契约无 projectName/subCategory 入参——评审返工 C1：根改 uploads 整树递归按文件名精确匹配，
-                    // 匹配到第一个即返回（控全树遍历开销；storedFileName 为 guid 名，全局唯一）
+                    // 匹配到第一个即返回（storedFileName 为 guid 名，全局唯一）。
+                    // M1：先试浅层常见位置（uploads/合同 与 uploads/未分类/合同 的直接文件与一层子目录）快路径，未命中再退全树递归兜底。
                     if (Directory.Exists(baseDir))
                     {
-                        path = Directory.EnumerateFiles(baseDir, "*", SearchOption.AllDirectories)
-                            .FirstOrDefault(p => string.Equals(Path.GetFileName(p), rawName, StringComparison.OrdinalIgnoreCase)
-                                                 && IsPathSafe(p, baseDir));
+                        path = ShallowFindContractFile(baseDir, rawName)
+                            ?? Directory.EnumerateFiles(baseDir, "*", SearchOption.AllDirectories)
+                                .FirstOrDefault(p => string.Equals(Path.GetFileName(p), rawName, StringComparison.OrdinalIgnoreCase)
+                                                     && IsPathSafe(p, baseDir));
                     }
                 }
                 else
@@ -156,6 +158,25 @@ public static class TemplateEndpoints
                 return Common.Fail(Common.Sanitize(ex.Message));
             }
         });
+    }
+
+    // M1：contracts 快路径——只扫 uploads/合同 与 uploads/未分类/合同 两目录的直接文件与一层子目录，命中即返回；未命中由调用方退全树递归
+    private static string? ShallowFindContractFile(string baseDir, string fileName)
+    {
+        foreach (var dir in new[] { Path.Combine(baseDir, "合同"), Path.Combine(baseDir, "未分类", "合同") })
+        {
+            if (!Directory.Exists(dir)) continue;
+            var hit = Directory.EnumerateFiles(dir, "*", SearchOption.TopDirectoryOnly)
+                .FirstOrDefault(p => string.Equals(Path.GetFileName(p), fileName, StringComparison.OrdinalIgnoreCase));
+            if (hit != null) return hit;
+            foreach (var sub in Directory.EnumerateDirectories(dir))
+            {
+                hit = Directory.EnumerateFiles(sub, "*", SearchOption.TopDirectoryOnly)
+                    .FirstOrDefault(p => string.Equals(Path.GetFileName(p), fileName, StringComparison.OrdinalIgnoreCase));
+                if (hit != null) return hit;
+            }
+        }
+        return null;
     }
 
     private static bool IsPathSafe(string fullPath, string allowedBase)

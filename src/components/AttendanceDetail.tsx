@@ -193,7 +193,7 @@ export default function AttendanceDetail({
   if (result.success) { showToast('已删除', 'success'); onSaved(); onBack() }
   else showToast(result.error || '删除失败', 'error')
   } catch (e: any) { showToast(e?.message || '删除失败', 'error') }
-  }}  variant="danger" size="sm">
+  }}  aria-label="删除此考勤记录" variant="danger" size="sm">
   <Icon name="Trash2" size={16} />
   </Button>
   </Tooltip>
