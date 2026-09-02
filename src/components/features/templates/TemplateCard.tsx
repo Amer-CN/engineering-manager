@@ -10,10 +10,9 @@ interface TemplateCardProps {
   onEdit: (t: Template) => void
   onDelete: (id: number) => void
   onPreview: (t: Template) => void
-  onGenerate: (t: Template) => void
 }
 
-export const TemplateCard = React.memo(function TemplateCard({ template, onEdit, onDelete, onPreview, onGenerate }: TemplateCardProps) {
+export const TemplateCard = React.memo(function TemplateCard({ template, onEdit, onDelete, onPreview }: TemplateCardProps) {
   const config = categoryConfig[template.category]
 
   return (
@@ -60,11 +59,6 @@ export const TemplateCard = React.memo(function TemplateCard({ template, onEdit,
         <Tooltip content="预览" position="top" delay={300}>
           <Button onClick={() => onPreview(template)}  variant="secondary" size="sm">
             <Icon name="Eye" size={14} /> 预览
-          </Button>
-        </Tooltip>
-        <Tooltip content="生成文档" position="top" delay={300}>
-          <Button onClick={() => onGenerate(template)}  variant="ghost" size="sm" className="text-[color:var(--accent)]">
-            <Icon name="FileText" size={14} /> 生成
           </Button>
         </Tooltip>
         <div className="flex-1" />

@@ -63,9 +63,9 @@ describe('CostLedgerBatchBar', () => {
   })
 
   test('非初始版应显示删除按钮', () => {
-    render(React.createElement(CostLedgerBatchBar, { ...baseProps, currentBatchId: 1 }))
-    // 应该有删除SVG按钮（title="删除此版本及数据"）
-    const deleteBtn = screen.getByTitle('删除此版本及数据')
+    const { container } = render(React.createElement(CostLedgerBatchBar, { ...baseProps, currentBatchId: 1 }))
+    // 应该有删除按钮（Tooltip 不再注入原生 title，改按按钮类名定位）
+    const deleteBtn = container.querySelector('button.text-danger-500')
     expect(deleteBtn).toBeTruthy()
   })
 })
