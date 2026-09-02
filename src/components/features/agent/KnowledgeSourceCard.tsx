@@ -101,7 +101,7 @@ const KnowledgeSourceCard: React.FC<KnowledgeSourceCardProps> = ({ result }) => 
           return (
             <div
               key={hit.chunkId || i}
-              className={`p-2.5 rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] hover:border-[color:var(--accent)] hover:shadow-sm transition-all ${
+              className={`p-2.5 rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] hover:border-[color:var(--accent)] hover:shadow-sm transition-[box-shadow,border-color] ${
                 docId ? 'cursor-pointer' : ''
               }`}
               onClick={() => docId && handleOpenDocument(docId)}

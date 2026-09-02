@@ -116,7 +116,7 @@ export const MemberCard = React.memo(function MemberCard({
 
   return (
   <Card
-    className={`p-5 hover:shadow-md transition-all cursor-pointer ${
+    className={`p-5 hover:shadow-md transition-shadow cursor-pointer ${
       isLeft ? 'opacity-70' : ''
     }`}
     hoverable

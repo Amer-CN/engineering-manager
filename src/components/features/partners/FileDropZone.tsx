@@ -61,7 +61,7 @@ export const FileDropZone: React.FC<FileDropZoneProps> = ({
   </div>
   ) : (
   <div
-  className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all ${dragOver ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)]' : 'border-[color:var(--border)] hover:border-[color:var(--accent)] hover:bg-[color:var(--panel-2)]'}`}
+  className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${dragOver ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)]' : 'border-[color:var(--border)] hover:border-[color:var(--accent)] hover:bg-[color:var(--panel-2)]'}`}
   onClick={onClickUpload}
   onDragOver={onDragOver}
   onDragLeave={onDragLeave}

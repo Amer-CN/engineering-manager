@@ -191,7 +191,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ initialData, projects,
   type="button"
   onClick={() => bankReceiptInputRef.current?.click()}
   disabled={bankReceiptLoading}
-  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all duration-300 disabled:opacity-60"
+  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-[opacity,background-color,border-color,box-shadow] duration-300 disabled:opacity-60"
   style={bankReceiptLoading ? { background: 'var(--accent)', color: 'var(--on-accent)' } : { background: 'var(--panel-2)', color: 'var(--fg-2)' }}
   >
   {bankReceiptLoading ? (

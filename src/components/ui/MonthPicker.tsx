@@ -144,7 +144,7 @@ export function MonthPicker({ value, onChange, className = '' }: MonthPickerProp
                   type="button"
                   onClick={() => handleSelectMonth(m)}
                   className={[
-                    'h-9 rounded-lg text-sm font-medium transition-all',
+                    'h-9 rounded-lg text-sm font-medium transition-[background-color,color,border-color,box-shadow]',
                     isSelected
                       ? 'bg-[color:var(--accent)] text-[color:var(--on-accent)] shadow-sm'
                       : isToday

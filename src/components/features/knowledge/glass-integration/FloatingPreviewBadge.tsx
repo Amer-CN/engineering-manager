@@ -29,7 +29,7 @@ export const FloatingPreviewBadge: React.FC<FloatingPreviewBadgeProps> = ({
       className={`
         group relative cursor-pointer select-none
         w-[200px] md:w-[216px] p-4 rounded-2xl
-        transition-all duration-300 ease-out
+        transition-transform duration-300 ease-out
         hover:scale-105 hover:-translate-y-1
         ${
           isDark
@@ -54,7 +54,7 @@ export const FloatingPreviewBadge: React.FC<FloatingPreviewBadgeProps> = ({
             <span className="text-xs opacity-60 font-mono">({folder.englishTitle})</span>
           )}
         </div>
-        <div className="p-1.5 rounded-full bg-white/10 dark:bg-white/10 opacity-75 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all">
+        <div className="p-1.5 rounded-full bg-white/10 dark:bg-white/10 opacity-75 group-hover:opacity-100 group-hover:translate-x-0.5 transition-[opacity,transform]">
           <ArrowRight className="w-3.5 h-3.5" />
         </div>
       </div>
