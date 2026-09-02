@@ -47,7 +47,10 @@ export function CollectionIssueModal({ project, yearMonth, workerTeams, onClose 
       const a = document.createElement('a')
       a.href = res.data.dataUrl
       a.download = `${project.name} ${y}年${parseInt(m)}月考勤采集表${teamName ? `（${teamName}）` : ''}.xlsx`
+      // 桌面壳（WebView2）只响应已挂载节点的程序化点击——游离 <a> 会被静默吞掉（冒烟实测），对齐 exportFormats 下载写法
+      document.body.appendChild(a)
       a.click()
+      document.body.removeChild(a)
       onClose()
     } finally {
       setIssuing(false)
