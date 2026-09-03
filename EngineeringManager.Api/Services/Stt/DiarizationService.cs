@@ -355,10 +355,13 @@ public class DiarizationService
             using var process = Process.Start(psi);
             if (process != null)
             {
+                // 先启动 stderr 排水再等退出：否则 stderr 写满管道缓冲区（约 4KB）
+                // 后 ffmpeg 阻塞在写入上永不退出 → 父进程 WaitForExitAsync 死锁
+                var errTask = process.StandardError.ReadToEndAsync(ct);
                 await process.WaitForExitAsync(ct);
+                var stderr = await errTask;
                 if (process.ExitCode != 0)
                 {
-                    var stderr = await process.StandardError.ReadToEndAsync(ct);
                     Console.Error.WriteLine($"[DiarizationService] 切分段 {i} 失败: {Common.Sanitize(stderr)}");
                     continue;
                 }
