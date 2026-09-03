@@ -1,5 +1,8 @@
+using System.Diagnostics;
 using System.Text;
+using Dapper;
 using EngineeringManager.Api.Services.Stt;
+using Microsoft.Data.Sqlite;
 using Xunit;
 
 namespace EngineeringManager.Tests.Security;
@@ -701,5 +704,104 @@ offloaded 29/29 layers to GPU";
         }
 
         Assert.Equal(mixedText, reassembled.ToString());
+    }
+
+    // ═════════════════════════════════════════════════════════
+    // 回归 8: ffmpeg 管道排水死锁（10.30 进度卡 5%）
+    // 修复前 PreprocessAsync 在 WaitForExitAsync 之前不读 stdout/stderr，
+    // 子进程写满管道缓冲区（~4KB）后阻塞在写入上永不退出 → 父进程永不返回。
+    // ═════════════════════════════════════════════════════════
+
+    [Fact]
+    public async Task RunProcessAsync_ChildWritesHugeStderr_CompletesWithoutDeadlock()
+    {
+        // cmd 向 stderr 写 ~31KB（远超管道缓冲区）后退出；
+        // 修复前该调用会死锁挂起——本测试以 30s 时限保护，死锁回归时失败而非挂死套件
+        var psi = new ProcessStartInfo
+        {
+            FileName = "cmd.exe",
+            Arguments = "/c for /l %i in (1,1,500) do @echo " + new string('x', 60) + " 1>&2",
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardError = true,
+            RedirectStandardOutput = true,
+        };
+
+        using var cancelCts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        var runTask = AudioPreprocessor.RunProcessAsync(psi, cancelCts.Token);
+
+        var winner = await Task.WhenAny(runTask, Task.Delay(TimeSpan.FromSeconds(30)));
+        Assert.True(winner == runTask, "RunProcessAsync 30s 内未完成：stderr 管道排水死锁回归");
+
+        var result = await runTask;
+        Assert.Equal(0, result.ExitCode);
+        Assert.True(result.StdError.Length >= 30 * 1024,
+            $"stderr 应 ≥30KB 才能证明越过管道缓冲区，实际 {result.StdError.Length} 字符");
+    }
+
+    [Fact]
+    public async Task RunProcessAsync_NonZeroExit_ReturnsStderrFromDrainedTask()
+    {
+        // 回归"退出码非 0 时 stderr 从排水任务结果取"（不得在 WaitForExit 后再读
+        // StandardError，大输出场景会二次死锁）；同时覆盖 stdout 未重定向的调用形态
+        var psi = new ProcessStartInfo
+        {
+            FileName = "cmd.exe",
+            Arguments = "/c echo boom 1>&2 & exit /b 3",
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardError = true,
+        };
+
+        var result = await AudioPreprocessor.RunProcessAsync(psi);
+
+        Assert.Equal(3, result.ExitCode);
+        Assert.Contains("boom", result.StdError);
+    }
+
+    // ═════════════════════════════════════════════════════════
+    // 回归 9: 启动时孤儿 'processing' STT 任务恢复为 'pending'
+    // 修复前 Poll 只取 'pending'，死锁卡在 'processing' 的任务重启后永远显示"处理中"
+    // ═════════════════════════════════════════════════════════
+
+    [Fact]
+    public void RecoverOrphanJobs_OnlyProcessingResetToPending_OthersUntouched()
+    {
+        // 表结构与 Migrations/Scripts/028_AddSpeechToText.sql 一致
+        using var conn = new SqliteConnection("Data Source=:memory:");
+        conn.Open();
+        conn.Execute(@"
+            CREATE TABLE stt_jobs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                source_file TEXT NOT NULL,
+                source_path TEXT NOT NULL,
+                source_type TEXT NOT NULL DEFAULT 'audio',
+                engine TEXT NOT NULL DEFAULT 'qwen3-asr-1.7b-gguf',
+                status TEXT NOT NULL DEFAULT 'pending',
+                progress INTEGER NOT NULL DEFAULT 0,
+                is_multi_speaker INTEGER NOT NULL DEFAULT 0,
+                num_speakers INTEGER,
+                hotwords TEXT,
+                result_text TEXT,
+                result_json TEXT,
+                duration_sec REAL,
+                elapsed_sec REAL,
+                error TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                created_by TEXT NOT NULL
+            );");
+        conn.Execute(@"
+            INSERT INTO stt_jobs (source_file, source_path, status, created_at, updated_at, created_by) VALUES
+            ('a.m4a', 'C:\t\a.m4a', 'processing', '2026-09-02 10:00:00', '2026-09-02 10:00:00', '1'),
+            ('b.m4a', 'C:\t\b.m4a', 'pending',    '2026-09-02 10:05:00', '2026-09-02 10:05:00', '1'),
+            ('c.m4a', 'C:\t\c.m4a', 'completed',  '2026-09-02 09:00:00', '2026-09-02 09:10:00', '1'),
+            ('d.m4a', 'C:\t\d.m4a', 'failed',     '2026-09-02 09:20:00', '2026-09-02 09:25:00', '1');");
+
+        var recovered = SttWorker.RecoverOrphanJobs(conn);
+
+        Assert.Equal(1, recovered);
+        var statuses = conn.Query<string>("SELECT status FROM stt_jobs ORDER BY id").ToList();
+        Assert.Equal(new[] { "pending", "pending", "completed", "failed" }, statuses);
     }
 }
