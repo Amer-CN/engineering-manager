@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from 'react'
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
-import { SimpleGroupedBarChart } from '../../ui/SimpleBarChart'
+import { EditorialDonut } from '@/components/ui/charts/EditorialDonut'
+import { DotCascade } from '@/components/ui/charts/DotCascade'
 import Spinner from '../../ui/Spinner'
 import { formatMoney } from '@/utils/format'
 import { getCategoryLabel, getCategoryColor } from './config'
-import { ANALYTICS_FALLBACK_PALETTE, ANALYTICS_BAR_COLORS } from './costLedgerColors'
+import { ANALYTICS_FALLBACK_PALETTE } from './costLedgerColors'
 import type { CostLedgerEntry, CostLedgerCategory } from '@/types'
 import { getAPI } from '@/services/api-adapter'
 
@@ -66,12 +66,19 @@ export function CostLedgerAnalytics({ projectId, projectName, categories }: Cost
       .slice(-12)
       .map(([m, v]) => ({ month: m.slice(5) + '月', 支出: v.expense, 收入: v.income }))
 
+    // 支出最高月（结论式标题用，可从数据直接验证）
+    let topExpense: { month: string; value: number } | null = null
+    for (const t of trendData) {
+      const v = t['支出'] || 0
+      if (!topExpense || v > topExpense.value) topExpense = { month: t.month, value: v }
+    }
+
     // Top counterparties
     const topCounterparties = Object.entries(byCounterparty)
       .sort(([, a], [, b]) => b - a)
       .slice(0, 10)
 
-    return { totalExpense, totalIncome, pieData, trendData, topCounterparties, count: entries.length }
+    return { totalExpense, totalIncome, pieData, trendData, topExpense, topCounterparties, count: entries.length }
   }, [entries])
 
   if (loading) {
@@ -114,55 +121,37 @@ export function CostLedgerAnalytics({ projectId, projectName, categories }: Cost
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Category Pie */}
+        {/* Category Donut — 编辑风多段圆环（手写 SVG，无 recharts） */}
         <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] p-5">
           <h3 className="text-sm font-semibold text-[color:var(--fg-2)] mb-4">支出分类占比</h3>
           {stats.pieData.length > 0 ? (
-            <div className="flex items-start gap-4">
-              <div style={{ width: 180, height: 180 }} className="shrink-0">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={stats.pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={2} dataKey="value">
-                      {stats.pieData.map((d: { code: string; name: string; value: number }, i) => (
-                        <Cell key={i} fill={getCategoryColor(d.code, categories as Parameters<typeof getCategoryColor>[1]) || ANALYTICS_FALLBACK_PALETTE[i % ANALYTICS_FALLBACK_PALETTE.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, boxShadow: 'var(--shadow-md)', color: 'var(--fg)' }} formatter={((v: number) => formatMoney(v ?? 0)) as never} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex-1 space-y-1 min-w-0">
-                {stats.pieData.map((d: { code: string; name: string; value: number }, i) => (
-                  <div key={d.code} className="flex items-start justify-between text-xs">
-                    <div className="flex items-start gap-1.5 min-w-0">
-                      <span className="h-2 w-2 shrink-0 rounded-full mt-1" style={{ backgroundColor: getCategoryColor(d.code, categories as Parameters<typeof getCategoryColor>[1]) || ANALYTICS_FALLBACK_PALETTE[i % ANALYTICS_FALLBACK_PALETTE.length] }} />
-                      <span className="flex-1 min-w-0">
-                        <span className="text-[color:var(--fg-2)] line-clamp-2 leading-tight">{d.name}</span>
-                      </span>
-                    </div>
-                    <span className="font-mono text-[color:var(--muted)] ml-2 shrink-0">{formatMoney(d.value)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <EditorialDonut
+              data={stats.pieData.map((d: { code: string; name: string; value: number }, i) => ({
+                name: d.name,
+                value: d.value,
+                color: getCategoryColor(d.code, categories as Parameters<typeof getCategoryColor>[1]) || ANALYTICS_FALLBACK_PALETTE[i % ANALYTICS_FALLBACK_PALETTE.length],
+              }))}
+              formatValue={(v) => formatMoney(v)}
+              formatTotal={(v) => formatMoney(v).replace('元', '')}
+              centerLabel="支出合计"
+              size={180}
+            />
           ) : (
             <p className="text-sm text-[color:var(--muted)]">无支出数据</p>
           )}
         </div>
 
-        {/* Monthly Trend */}
+        {/* Monthly Trend — 点阵级联（一列 = 一个月，点串按支出升序攀升，一点 = 固定金额；收入序列本期不上图） */}
         <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] p-5">
-          <h3 className="text-sm font-semibold text-[color:var(--fg-2)] mb-4">月度收支趋势</h3>
+          <h3 className="text-sm font-semibold text-[color:var(--fg-2)] mb-4">
+            {stats.topExpense && stats.topExpense.value > 0
+              ? `${stats.topExpense.month}支出最高 · 达 ¥${formatMoney(stats.topExpense.value)}`
+              : '月度支出趋势'}
+          </h3>
           {stats.trendData.length > 0 ? (
-            <SimpleGroupedBarChart
-              data={stats.trendData.map((d: Record<string, number | string>) => ({
-                name: String(d.month),
-                values: [
-                  { label: '支出', amount: Number(d['支出']) || 0, color: ANALYTICS_BAR_COLORS.expense },
-                  { label: '收入', amount: Number(d['收入']) || 0, color: ANALYTICS_BAR_COLORS.income },
-                ],
-              }))}
-              formatValue={(v) => formatMoney(v)}
+            <DotCascade
+              data={stats.trendData.map((d) => ({ name: d.month, value: d['支出'] || 0 }))}
+              formatValue={(v) => (v >= 10000 ? `¥${parseFloat((v / 10000).toFixed(1))}万` : `¥${formatMoney(v)}`)}
             />
           ) : (
             <p className="text-sm text-[color:var(--muted)]">无月度数据</p>

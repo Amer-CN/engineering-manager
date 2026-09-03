@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { DataTable } from '@/components/DataTable'
 import FilterBar from '../../ui/FilterBar'
 import { Button } from '../../ui/Button'
@@ -7,8 +7,11 @@ import ButtonLoader from '../../ui/ButtonLoader'
 import Spinner from '../../ui/Spinner'
 import { STATUS_META } from '../../../constants/attendance'
 import type { Column } from '@/components/DataTable'
-import type { Member, Department } from '@/types/electron'
+import type { AttendanceRecord, Member, Department } from '@/types/electron'
 import { Card } from '@/components/ui/Card'
+import { Icon } from '@/components/ui/Icon'
+import { BarcodeCalendar } from '@/components/ui/charts/BarcodeCalendar'
+import { getAPI } from '@/services/api-adapter'
 
 interface StaffAttendanceDashboardProps {
   loading: boolean
@@ -51,6 +54,49 @@ export function StaffAttendanceDashboard({
   ConfirmDialog,
   staff,
 }: StaffAttendanceDashboardProps) {
+  // 条码日历数据：当月每日出勤人数（getAttendances(undefined, 当月) → dailyStatus==='work' 去重成员数，全月补天）
+  const [monthBarcode, setMonthBarcode] = useState<{ label: string; value: number; weekend?: boolean }[] | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    setMonthBarcode(null)
+    ;(async () => {
+      try {
+        const api = await getAPI()
+        const res = await api.getAttendances(undefined, yearMonth)
+        if (cancelled) return
+        const records: AttendanceRecord[] = res?.success && res.data ? res.data : []
+        if (records.length === 0) return // 当月无任何考勤数据 → 整卡不渲染
+        const [y, m] = yearMonth.split('-').map(Number)
+        const total = daysInMonth
+        // 每日出勤成员集合（memberId 去重；同成员多项目记录只计一次）
+        const workSets = new Map<number, Set<number>>()
+        for (const rec of records) {
+          const ds = rec.dailyStatus
+          if (!ds) continue
+          for (const key of Object.keys(ds)) {
+            const d = Number(key)
+            if (d >= 1 && d <= total && ds[d] === 'work') {
+              if (!workSets.has(d)) workSets.set(d, new Set())
+              workSets.get(d)!.add(rec.memberId)
+            }
+          }
+        }
+        const barData = Array.from({ length: total }, (_, idx) => {
+          const d = idx + 1
+          const wd = new Date(y, (m || 1) - 1, d).getDay()
+          return { label: String(d), value: workSets.get(d)?.size ?? 0, weekend: wd === 0 || wd === 6 }
+        })
+        if (!cancelled) setMonthBarcode(barData)
+      } catch (err) {
+        console.error('[StaffAttendanceDashboard] 条码日历加载失败:', err)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [yearMonth, daysInMonth])
+
   if (loading) {
     return <Spinner size="md" text="加载考勤数据..." />
   }
@@ -86,6 +132,25 @@ export function StaffAttendanceDashboard({
           </ButtonLoader>
         </Button>
       </FilterBar>
+
+      {/* 条码日历卡：当月每日出勤人数（无考勤数据不渲染；shrink-0 保持自然高，表格区 flex-1 吸收挤压滚动） */}
+      {monthBarcode && (
+        <Card
+          title={
+            <span className="text-sm font-semibold uppercase tracking-wider text-[color:var(--muted)] flex items-center gap-2">
+              <Icon name="Calendar" size={14} /> 当月出勤 · 条码日历
+            </span>
+          }
+          headerDivider
+          className="mb-6 shrink-0"
+        >
+          <BarcodeCalendar
+            data={monthBarcode}
+            formatValue={(n) => `${n} 人`}
+            caption="一根线 = 一天 · 点高 = 当日出勤人数 · 空心 = 周末"
+          />
+        </Card>
+      )}
 
       {filteredStaff.length === 0 ? (
         <Card bordered={false} className="flex-1 py-12">

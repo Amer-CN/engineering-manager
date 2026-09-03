@@ -229,7 +229,7 @@ const Login: React.FC<LoginProps> = () => {
         </motion.form>
 
         <div style={{ fontSize: 10, color: 'var(--muted-2)', marginTop: 8, flexShrink: 0 }}>
-          v{__APP_VERSION__ || '0.95.0'}
+          v{__APP_VERSION__ || '0.96.0'}
         </div>
       </motion.div>
       )}
