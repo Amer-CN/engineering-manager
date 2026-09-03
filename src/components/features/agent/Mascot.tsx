@@ -1,53 +1,68 @@
 /**
- * Mascot — AI 管家圆球（SVG 渲染 + 自研弹簧引擎 + Grok 官方形象数据）
- * -------------------------------------------------------------------
- * 形象数据（眼部轮廓 48 点 / 身体 blob / 画布尺寸）来自
- * zhulin025/LaoA-GrokBot（MIT）的 Grok 官方客户端提取数据，
- * 数据文件：src/components/features/agent/grok-eyes-data.ts（MIT 署名保留不变）。
- * 弹簧引擎、状态映射、表情驱动、特效与 DOM 接线均为本项目实现。
- * -------------------------------------------------------------------
- * 架构分层：
- *   1. 自研弹簧引擎（Engine）：每眼 48 个控制点 × x/y 两轴共 192 个弹簧，
- *      加上 lid（眨眼开合）/ gx / gy（注视整体平移）。
- *   2. 官方表情数据驱动：状态配置表按 cycle 轮换表情，控制点弹簧逐点
- *      插值出丝滑形变；48 点 Catmull-Rom 平滑闭合成眼环 path。
- *   3. rAF 渲染层（ref + setAttribute 直写 path 的 d / transform，
- *      不 setState、不触发 React 重渲染）
- * 无障碍：prefers-reduced-motion 时停 rAF，表情切换直接跳变。
- * -------------------------------------------------------------------
- * 文件拆分（CI 行数门禁）：引擎/常量/类型/状态配置与纯函数 → mascot-engine.ts；
- * 交互调度与渲染/特效/点击拖拽 helpers → mascot-interactions.ts；
- * 本文件仅保留 React 组件本体（hooks、rAF 循环、JSX 渲染）。
+ * Mascot — AI 管家吉祥物（bloub 引擎 React 薄壳适配器）
+ * -------------------------------------------------------------
+ * 引擎整体 vendor 自 jeremy-prt/bloub @ b4bb3c1（MIT，逐帧实测数值），
+ * 位置 ./bloub/：bot/ 纯 TS 引擎逐字复刻，gaze.ts 仅相对化 import。
+ * 本文件只做适配：MascotState → bloub StateId 的映射、paper 衬底随主题、
+ * follow 指针跟随与冷启动入场（tourLook），渲染结构忠实上游 BloubBot.vue。
+ * 不搬上游：cycle 播放器/时间轴、点击拖拽、i18n、自定义表情轮换。
+ * -------------------------------------------------------------
+ * Props 契约与旧自研实现保持一致（调用方 AgentDashboard /
+ * useAgentConversationFlow 不动）：size / state / follow / className，
+ * MascotState 仍从本文件导出（listening 归一为 idle）。
  */
 
-import { useEffect, useMemo, useRef } from 'react'
-import { GROK_BODY_PATH, GROK_CANVAS } from './grok-eyes-data'
-import {
-  Engine,
-  SPRING_NAMES,
-  STATE_CONFIG,
-  CX,
-  CY,
-  BALL_R,
-  ZERO_OFF,
-  aimExpr,
-  currentExpr,
-  restBody,
-  type MascotState,
-  type Particle,
-  type ResolvedState,
-  type TickData,
-} from './mascot-engine'
-import {
-  type DragState,
-  type MascotDom,
-  handleBallMouseDown,
-  paintMascot,
-  spawnSuccessParticles,
-  stepMascot,
-} from './mascot-interactions'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { NOTIF_BLUE } from './bloub/bot/decor'
+import { DEFAULT_EXPRESSION, EXPRESSION_BY_ID } from './bloub/bot/expressions'
+import { BotEngine, type BotFrame } from './bloub/bot/engine'
+import { clamp, easings } from './bloub/bot/math'
+import { DEMI_VIEWBOX, RAYON } from './bloub/bot/repere'
+import { COLOR_BY_ID, SHAPE_BY_ID, mixHex } from './bloub/bot/skins'
+import { STATE_BY_ID, type StateId } from './bloub/bot/states'
+import { TOUR_TIME, TURN_TIME, lookTarget, tourLook } from './bloub/gaze'
 
-export type { MascotState } from './mascot-engine'
+export type MascotState =
+  | 'idle'
+  | 'thinking'
+  | 'searching'
+  | 'replying'
+  | 'success'
+  | 'error'
+  | 'listening'
+
+/** listening 归一为 idle 后参与映射的六态 */
+type ResolvedMascotState = Exclude<MascotState, 'listening'>
+
+/** MascotState → bloub StateId（简报拍板的映射表） */
+const STATE_MAP: Record<ResolvedMascotState, StateId> = {
+  idle: 'idle',
+  thinking: 'thinking',
+  searching: 'orbit',
+  replying: 'notify',
+  success: 'play',
+  error: 'alert',
+}
+
+const R = RAYON
+const VB = DEMI_VIEWBOX
+/** 默认三角形象（配软件图标），颜色 encre；后续颜色适配单独做 */
+const TRIANGLE_RADII = SHAPE_BY_ID.get('triangle')?.radii ?? null
+const EXPRESSION = EXPRESSION_BY_ID.get(DEFAULT_EXPRESSION) ?? null
+const INK = COLOR_BY_ID.get('encre')?.hex ?? '#0a0a0c'
+/** skins.mixHex 需要真 hex：--bg 解析不出 # 开头时退回上游默认衬底 */
+const DEFAULT_PAPER = '#f9f9f9'
+/** 入场脚本用短 rattrapage（照上游 SCRIPT_MORPH）：0 会除零出 NaN */
+const SCRIPT_MORPH = 1 / 60
+/** 入场收尾：tourLook 本体（TOUR_TIME）+ 0.2s 后松开视线 */
+const SCRIPT_RELEASE = TOUR_TIME + 0.2
+
+/**
+ * 入场每冷启动只播一次（模块级 once；Dashboard 40px/32px 双实例仅首个挂载播）。
+ * StrictMode 双挂载的丢弃首跑由实例侧 ownsIntro/ticked 记账在 cleanup 回退，
+ * 让存活挂载重新认领（见主 effect cleanup）。
+ */
+let introPlayed = false
 
 interface MascotProps {
   /** 渲染尺寸（正方形，px），默认 96 */
@@ -59,246 +74,297 @@ interface MascotProps {
   className?: string
 }
 
-/* ══════════════ 组件 ══════════════ */
-
 const Mascot = ({ size = 96, state = 'idle', follow = true, className }: MascotProps) => {
-  const resolved: ResolvedState = state === 'listening' ? 'idle' : state
-
-  const svgRef = useRef<SVGSVGElement>(null)
-  const bodyRef = useRef<SVGGElement>(null)
-  const eyeLRef = useRef<SVGPathElement>(null)
-  const eyeRRef = useRef<SVGPathElement>(null)
-  const flashRef = useRef<SVGCircleElement>(null)
-  const mouthRef = useRef<SVGEllipseElement>(null)
-  const particlesRef = useRef<SVGGElement>(null)
-  const engineRef = useRef<Engine | null>(null)
-  const metaRef = useRef<TickData>({ state: 'idle', t0: 0, now: 0, last: 0, blinkAt: 0, blinkOn: false, blinkEnd: 0, flashAt: 0, nextGlanceAt: 0, glanceExpr: null, glanceUntil: 0, funExpr: null, funUntil: 0, funAt: 0, baseState: 'idle', lastInteractAt: 0, sleeping: false, drowsy: false, drowsyAt: 0, lastClickAt: 0, dblJumpExpr: null, dblJumpAt: 0, dblJumpUntil: 0, dragging: false })
-  const particlesListRef = useRef<Particle[]>([])
-  const pulseOffRef = useRef(ZERO_OFF)
-  const followRef = useRef(follow)
-  followRef.current = follow
-  const dragRef = useRef<DragState | null>(null)
-
+  const resolved: ResolvedMascotState = state === 'listening' ? 'idle' : state
   const reduced = useMemo(
-    () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
+    () =>
+      typeof window !== 'undefined' &&
+      !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
     [],
   )
 
-  /** DOM 接线上下文：字段与上方 ref 一一对应，供 mascot-interactions 直写 */
-  const dom = useMemo<MascotDom>(
-    () => ({
-      svg: svgRef,
-      body: bodyRef,
-      eyeL: eyeLRef,
-      eyeR: eyeRRef,
-      flash: flashRef,
-      mouth: mouthRef,
-      particles: particlesRef,
-      particleList: particlesListRef,
-      engine: engineRef,
-      meta: metaRef,
-      pulseOff: pulseOffRef,
-      follow: followRef,
-      drag: dragRef,
-      reduced,
-    }),
-    [reduced],
+  // 引擎构造照上游：new BotEngine(RAYON, mappedState, shapeRadii, expression)
+  const engine = useMemo(
+    () => new BotEngine(R, STATE_MAP[resolved], TRIANGLE_RADII, EXPRESSION),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 引擎只建一次，状态变化走 setState
+    [],
   )
+  const [frame, setFrame] = useState<BotFrame>(() => engine.sample(0))
+  const [paper, setPaper] = useState(DEFAULT_PAPER)
 
-  /* ── 状态切换：重置调度 / 触发一次性事件；reduced 时直接静态快照 ── */
+  const svgRef = useRef<SVGSVGElement>(null)
+  /** 指针位置（进 ref 供 rAF 消费），null = 无指针（回自动 wander） */
+  const pointerRef = useRef<{ x: number; y: number } | null>(null)
+  /** 当前映射后的 bloub 状态（aim 的 baseFace 判定用） */
+  const stateRef = useRef<StateId>(STATE_MAP[resolved])
+  /** rAF 场景时钟（引擎是纯时间函数，setState/重采样都要日期） */
+  const clockRef = useRef(0)
+  const followRef = useRef(follow)
+  followRef.current = follow
+  /** 本实例认领了入场（模块级 once 旗标的实例侧记账，StrictMode 回退用） */
+  const ownsIntroRef = useRef(false)
+  /** 本实例 rAF 是否真渲染过一帧（StrictMode 丢弃挂载 = false） */
+  const tickedRef = useRef(false)
+
+  const uid = useId()
+  const maskId = `bot-mask${uid}`
+
+  /* ── paper 衬底：眼洞显色随主题。挂载读一次 --bg，data-theme 变化重读 ── */
   useEffect(() => {
-    const eng = dom.engine.current ?? (dom.engine.current = new Engine(SPRING_NAMES))
-    const m = dom.meta.current
-    const now = performance.now()
-    m.state = resolved
-    m.t0 = now
-    m.now = now
-    m.last = 0
-    m.blinkOn = false
-    m.blinkAt = now + 1600 + Math.random() * 2000
-    m.flashAt = 0
-    // 打盹/连点蹦跳随状态切换重置：阶段优先，避免残留覆盖新阶段
-    m.baseState = resolved
-    m.lastInteractAt = now
-    m.sleeping = false
-    // 犯困随状态切换重置：阶段优先，避免残留覆盖新阶段表情/动素
-    m.drowsy = false
-    m.drowsyAt = 0
-    m.lastClickAt = 0
-    m.dblJumpExpr = null
-    m.dblJumpAt = 0
-    m.dblJumpUntil = 0
-    // idle glance 调度每次重置：切入状态先正视，首个瞟眼约 4-7s 后发生
-    m.glanceExpr = null
-    m.glanceUntil = 0
-    m.nextGlanceAt = now + 4000 + Math.random() * 3000
-    // 点击俏皮表情随状态切换被清掉（阶段优先，避免残留覆盖新阶段表情）
-    m.funExpr = null
-    m.funUntil = 0
-    m.funAt = 0
-    // 拖拽随状态切换终止：清掉激活态并恢复光标（回弹交给弹簧，bx/by 目标已回中性）
-    m.dragging = false
-    dom.drag.current = null
-    if (dom.body.current) dom.body.current.style.cursor = 'grab'
-
-    // 表情目标：reduced 下取首表情跳变；动画下首帧同步绘制确保加载间隙可见
-    const exprId = currentExpr(m, STATE_CONFIG[resolved])
-    aimExpr(eng, exprId)
-    restBody(eng)
-    eng.snapAll()
-    paintMascot(dom, eng, m, 0)
-
-    if (!reduced) {
-      if (resolved === 'success') spawnSuccessParticles(dom, now)
-      if (resolved === 'error') m.flashAt = now
+    const read = () => {
+      const v = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()
+      // mixHex 只吃真 hex：oklch 等颜色函数解析不出 # 时退回上游默认，不阻断渲染
+      setPaper(v.startsWith('#') ? v : DEFAULT_PAPER)
     }
-  }, [resolved, reduced])
-
-  /* ── 眼睛跟随鼠标（坐标进 ref，由 rAF 循环消费；范围跟随） ── */
-  useEffect(() => {
-    if (reduced || !follow) return
-    const onMove = (evt: MouseEvent) => {
-      const el = dom.svg.current
-      if (!el) return
-      const r = el.getBoundingClientRect()
-      const cx = r.left + r.width / 2
-      const cy = r.top + r.height / 2
-      const dx = evt.clientX - cx
-      const dy = evt.clientY - cy
-      const dist = Math.hypot(dx, dy)
-      // 范围跟随：鼠标进入球周围 10×半径内才跟随，超出则偏移归零（球回自己
-      // 的表情状态）；范围内幅度随距离增长，52px 封顶。
-      // 10×（原 6×，用户拍板 2026-08-22）：覆盖整个对话区——鼠标移到输入框
-      // 打字时眼睛保持看向用户方向（"正在看你输入"的注视感）
-      const ballRpx = BALL_R * (r.height / GROK_CANVAS.h)
-      if (dist > ballRpx * 10) {
-        dom.pulseOff.current = ZERO_OFF
-        return
-      }
-      const mag = Math.min(52, 12 + dist * 0.06)
-      const u = dist > 0 ? 1 / dist : 0
-      dom.pulseOff.current = { x: dx * u * mag, y: dy * u * mag }
-    }
-    window.addEventListener('mousemove', onMove)
-    return () => window.removeEventListener('mousemove', onMove)
-  }, [reduced, follow])
-
-  /* ── 交互计时与睡眠唤醒：mousemove/click 刷新 lastInteractAt；打盹中一动/一点即醒 ── */
-  useEffect(() => {
-    const m = dom.meta.current
-    const onInteract = () => {
-      m.lastInteractAt = performance.now()
-      if (m.sleeping) {
-        // 唤醒：立即恢复 props 状态（idle 正视），下一帧弹簧贴回常态眼
-        m.sleeping = false
-        m.state = m.baseState
-      }
-      // 犯困阶段鼠标一动直接从任一阶段回正视（无需等入 sleep）
-      m.drowsy = false
-      m.drowsyAt = 0
-    }
-    window.addEventListener('mousemove', onInteract)
-    window.addEventListener('click', onInteract)
-    return () => {
-      window.removeEventListener('mousemove', onInteract)
-      window.removeEventListener('click', onInteract)
-    }
+    read()
+    const obs = new MutationObserver(read)
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+    return () => obs.disconnect()
   }, [])
 
-  /* ── 引擎初始化 + 主循环（rAF：每帧直写 DOM，不 setState） ── */
+  /* ── props.state 变化 → 引擎日期化换态；reduced 无时钟，reset 重放新态
+        首帧（setState 在 0 点重采样会取到上一态姿态，见 engine.reset 注释） ── */
   useEffect(() => {
-    if (!dom.engine.current) dom.engine.current = new Engine(SPRING_NAMES)
+    const mapped = STATE_MAP[resolved]
+    stateRef.current = mapped
+    if (reduced) {
+      engine.reset(mapped, 0)
+      setFrame(engine.sample(0))
+    } else {
+      engine.setState(mapped, clockRef.current)
+    }
+  }, [engine, reduced, resolved])
+
+  /* ── 指针监听：window pointermove（触屏跳过）+ document pointerleave ── */
+  useEffect(() => {
+    if (reduced || !follow) return
+    const onMove = (e: PointerEvent) => {
+      // 触屏没有悬停光标：手指抬起会把视线冻在最后一点，读作 bug（上游同款）
+      if (e.pointerType === 'touch') return
+      pointerRef.current = { x: e.clientX, y: e.clientY }
+    }
+    const onLeave = () => {
+      pointerRef.current = null
+    }
+    window.addEventListener('pointermove', onMove)
+    document.addEventListener('pointerleave', onLeave)
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerleave', onLeave)
+    }
+  }, [follow, reduced])
+
+  /* ── 主循环：clock 有界增量 + follow/入场脚本互斥（follow 优先，上游同款） ── */
+  useEffect(() => {
     if (reduced) return
     let raf = 0
-    const tick = (now: number) => {
-      raf = requestAnimationFrame(tick)
-      const m = dom.meta.current
-      m.now = now
-      if (!m.last) {
-        m.last = now
+    let last = 0
+    /** true = 视线目标已压在引擎上，松开才有意义（照上游 aiming） */
+    let aiming = false
+    /** 半转开始时的时钟（进面板时转一圈看过来） */
+    let turnSince = 0
+    /** 入场脚本起播时刻与在播标志 */
+    let gazeSince = 0
+    let scripted = false
+
+    /** 归还视线：与去程同速（TURN_TIME）半转回去，照抄上游 release() */
+    const release = () => {
+      if (!aiming) return
+      engine.setLook(null, clockRef.current, TURN_TIME)
+      aiming = false
+    }
+
+    /** 跟随照抄上游 aim()：DOM 侧只测位置，注视规则在 ./bloub/gaze */
+    const aim = () => {
+      // 只在 baseFace 状态跟随：其余状态的视线就是动画本身，叠跟会糊
+      if (!STATE_BY_ID.get(stateRef.current)?.baseFace) {
+        release()
         return
       }
-      const dt = Math.min(0.05, (now - m.last) / 1000)
-      m.last = now
-      stepMascot(dom, dt)
+      const box = svgRef.current?.getBoundingClientRect()
+      // 尺寸为 0 的盒子（面板隐藏）会让归一化变 0/0=NaN，引擎会永久保留坏目标
+      if (!box || box.width === 0 || box.height === 0) return
+      if (!aiming) turnSince = clockRef.current
+      // 归一化按半窗宽高：视线在指针抵达屏幕边缘时饱和，与头像占位无关
+      const halfW = Math.max(1, window.innerWidth / 2)
+      const halfH = Math.max(1, window.innerHeight / 2)
+      engine.setLook(
+        lookTarget({
+          nx: pointerRef.current
+            ? clamp((pointerRef.current.x - (box.left + box.width / 2)) / halfW, -1, 1)
+            : 0,
+          ny: pointerRef.current
+            ? clamp((pointerRef.current.y - (box.top + box.height / 2)) / halfH, -1, 1)
+            : 0,
+          tour: easings.easeOutQuint(clamp((clockRef.current - turnSince) / TURN_TIME)),
+          pointer: pointerRef.current !== null,
+        }),
+        clockRef.current,
+      )
+      aiming = true
+    }
+
+    const tick = (ms: number) => {
+      raf = requestAnimationFrame(tick)
+      // 首帧真渲染打点：区分 StrictMode 丢弃挂载与真实挂载
+      tickedRef.current = true
+      // 场景时钟按帧增量有界：标签页隐藏再回来不跳帧（上游同款）
+      const dt = last ? Math.min((ms - last) / 1000, 0.064) : 0
+      last = ms
+      clockRef.current += dt
+
+      // 入场收尾：脚本播满 TOUR_TIME + 0.2s 后松开，交还状态自带视线
+      if (scripted && clockRef.current - gazeSince >= SCRIPT_RELEASE) {
+        engine.setLook(null, clockRef.current)
+        scripted = false
+      }
+      // follow 优先（上游 tick 同款互斥）；follow 关闭时归还视线、脚本续跑
+      if (followRef.current) {
+        aim()
+      } else {
+        release()
+        if (scripted) {
+          engine.setLook(tourLook(clockRef.current - gazeSince), clockRef.current, SCRIPT_MORPH)
+        }
+      }
+      setFrame(engine.sample(clockRef.current))
     }
     raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [reduced])
 
-  /* ══════════════ 渲染（全部动效走 rAF 直写，JSX 只建骨架） ══════════════ */
+    // 入场（模块级 once，非 reduced）：gaze 脚本 = tourLook（上游 arrival）。
+    // 预热目标提前 SCRIPT_MORPH 落位，首帧即全量应用，避免第二帧眼睛跳变
+    // （照抄上游 watch(gaze) 写法）。
+    if (!introPlayed) {
+      introPlayed = true
+      ownsIntroRef.current = true
+      gazeSince = clockRef.current
+      scripted = true
+      engine.setLook(tourLook(0), clockRef.current - SCRIPT_MORPH, SCRIPT_MORPH)
+    }
+
+    return () => {
+      cancelAnimationFrame(raf)
+      release()
+      // StrictMode 双挂载：丢弃的首跑（认领过入场但 rAF 一帧都没渲染）回退
+      // once 旗标，让存活的第二次挂载重新认领；真实卸载（已渲染过）不回退，
+      // 保持「每冷启动只播一次」语义。
+      if (ownsIntroRef.current && !tickedRef.current) introPlayed = false
+    }
+  }, [engine, reduced])
+
+  /* ── 渲染：结构忠实上游 BloubBot.vue（mask 洞眼 + paper 衬底 + 弧线前后半） ── */
+
+  /** 粒子着色：显式色优先；depth 混 paper（离得越远越融进背景） */
+  const dotAttrs = (dot: BotFrame['dots'][number]) => {
+    const fill = dot.color ?? (dot.depth === undefined ? INK : mixHex(paper, INK, dot.depth))
+    const common = { fill, opacity: dot.opacity }
+    return dot.d
+      ? {
+          ...common,
+          d: dot.d,
+          transform: `translate(${dot.x} ${dot.y}) rotate(${dot.rot ?? 0}) scale(${R})`,
+        }
+      : { ...common, cx: dot.x, cy: dot.y, r: dot.r }
+  }
+
+  const renderDot = (dot: BotFrame['dots'][number], key: string) =>
+    dot.d ? <path key={key} {...dotAttrs(dot)} /> : <circle key={key} {...dotAttrs(dot)} />
 
   return (
     <div
       className={className}
       style={{ width: size, height: size, display: 'grid', placeItems: 'center', overflow: 'visible' }}
-      aria-label="AI 管家"
-      role="img"
     >
       <svg
-        ref={dom.svg}
+        ref={svgRef}
         width={size}
         height={size}
-        viewBox={`0 0 ${GROK_CANVAS.w} ${GROK_CANVAS.h}`}
-        style={{ overflow: 'visible', display: 'block' }}
-        aria-hidden="true"
+        viewBox={`${-VB} ${-VB} ${VB * 2} ${VB * 2}`}
+        role="img"
+        aria-label="AI 管家"
+        style={{ display: 'block', overflow: 'visible' }}
       >
         <defs>
-          <radialGradient id="mascot-ball" cx="0.5" cy="0.05" r="0.98">
-            <stop offset="0.6" stopColor="rgba(0,0,0,0)" />
-            <stop offset="1" stopColor="rgba(0,0,0,0.22)" />
-          </radialGradient>
-          {/* 顶部轮廓光（rim light）：深色主题下把球从背景里"切"出来 */}
-          <radialGradient id="mascot-rim" cx="0.5" cy="0.12" r="0.75">
-            <stop offset="0" stopColor="rgba(255,255,255,0.14)" />
-            <stop offset="0.55" stopColor="rgba(255,255,255,0.05)" />
-            <stop offset="1" stopColor="rgba(255,255,255,0)" />
-          </radialGradient>
-          {/* 落影羽化 filter（扩散范围放宽，避免模糊结果被裁剪） */}
-          <filter id="mascot-ball-shadow" x="-80%" y="-80%" width="260%" height="260%">
-            <feGaussianBlur stdDeviation="7" />
-          </filter>
-          {/* 身体剪裁：渐变覆盖层 / 红晕 / 双眼只允许画在 blob 轮廓内 */}
-          <clipPath id="mascot-clip">
-            <path d={GROK_BODY_PATH} />
-          </clipPath>
+          {/* 眼睛是身体上的真洞（mask 抠洞）：视线滑向边缘时被轮廓自动裁掉 */}
+          <mask
+            id={maskId}
+            maskUnits="userSpaceOnUse"
+            x={-VB}
+            y={-VB}
+            width={VB * 2}
+            height={VB * 2}
+          >
+            <path d={frame.bodyPath} fill="#fff" />
+            {frame.eyes.map((eye, i) => (
+              <path key={i} d={eye.d} transform={eye.matrix} opacity={eye.alpha} fill="#000" />
+            ))}
+            {frame.notch && (
+              <circle cx={frame.notch.x} cy={frame.notch.y} r={frame.notch.r} fill="#000" />
+            )}
+          </mask>
+
+          {/* 轨道渐变：每条弧一个 linearGradient（沿迹取色） */}
+          {frame.arcs.map((arc) => (
+            <linearGradient
+              key={arc.id}
+              id={`${uid}-${arc.id}`}
+              gradientUnits="userSpaceOnUse"
+              x1={arc.grad.x1}
+              y1={arc.grad.y1}
+              x2={arc.grad.x2}
+              y2={arc.grad.y2}
+            >
+              {arc.grad.stops.map((c, i) => (
+                <stop key={i} offset={i / (arc.grad.stops.length - 1)} stopColor={c} />
+              ))}
+            </linearGradient>
+          ))}
         </defs>
 
-        {/* 身体：translate/rotate/scale 由 rAF 直写 transform；cursor 提示可抓；onMouseDown 接管点击/拖拽判定 */}
-        <g ref={dom.body} onMouseDown={(evt) => handleBallMouseDown(dom, evt)} style={{ cursor: 'grab' }}>
-          {/* 保底分离层：球底地面落影（黑色低透明 ≤0.2），随 body 一起动 */}
-          <ellipse
-            cx={CX}
-            cy={GROK_CANVAS.h - 8}
-            rx={90}
-            ry={12}
-            fill="rgba(0,0,0,0.18)"
-            filter="url(#mascot-ball-shadow)"
-            pointerEvents="none"
-          />
-          {/* blob 身体（Grok 官方提取），填充/描边与圆形版一致 */}
-          <path
-            d={GROK_BODY_PATH}
-            fill="oklch(94.5% 0.012 86)"
-            stroke={resolved === 'error' ? 'rgb(228,87,74)' : 'oklch(80% 0.015 85)'}
-            strokeWidth="2"
-          />
-          <g clipPath="url(#mascot-clip)">
-            <circle cx={CX} cy={CY} r={BALL_R} fill="url(#mascot-ball)" />
-            <circle cx={CX} cy={CY} r={BALL_R} fill="url(#mascot-rim)" />
-            {/* error 红晕：0.5s 内由 0.35 衰减到常亮 0.18，离开 error 归 0（rAF 直写 opacity） */}
-            <circle ref={dom.flash} cx={CX} cy={CY} r={BALL_R} fill="rgb(228,87,74)" opacity="0" pointerEvents="none" />
-          </g>
-          {/* 双眼：移出 clipPath 容器（不裁剪），避免 gx/gy 平移后被 blob 轮廓裁掉 */}
-          <path ref={dom.eyeL} fill="oklch(26% 0.015 70)" />
-          <path ref={dom.eyeR} fill="oklch(26% 0.015 70)" />
+        {/* 轨道后半：先画，被身体遮住（真深度排序，弧线才读作环绕） */}
+        <g fill="none" strokeLinecap="round">
+          {frame.arcs.map((arc) => (
+            <path
+              key={`b${arc.id}`}
+              d={arc.back}
+              stroke={`url(#${uid}-${arc.id})`}
+              strokeWidth={arc.width}
+              opacity={arc.opacity}
+            />
+          ))}
         </g>
 
-        {/* replying 嘴：开口椭圆（正在说话，paint 直写 opacity），画布下部 */}
-        <ellipse ref={dom.mouth} cx={CX} cy={170} rx="5" ry="6.5" fill="oklch(26% 0.015 70)" opacity="0" />
+        {/* 爆散粒子从核后飞出 */}
+        {frame.dotsBehind && frame.dots.map((dot, i) => renderDot(dot, `pb${i}`))}
 
-        {/* success 撒花粒子容器（成功时按需挂载 ≤14 个） */}
-        <g ref={dom.particles} />
+        <g opacity={frame.bodyAlpha}>
+          {/* paper 衬底：眼洞透出的是页面底色而非纯白；洞是 mask 抠的，衬底
+              挡住身后元素从洞里漏出（后弧/粒子正好画在身体后面） */}
+          <path d={frame.bodyPath} fill={paper} />
+          <g mask={`url(#${maskId})`}>
+            <rect x={-VB} y={-VB} width={VB * 2} height={VB * 2} fill={INK} />
+          </g>
+        </g>
+
+        {!frame.dotsBehind && frame.dots.map((dot, i) => renderDot(dot, `pf${i}`))}
+
+        {/* notify 通知圆点 */}
+        {frame.notif && (
+          <circle cx={frame.notif.x} cy={frame.notif.y} r={frame.notif.r} fill={NOTIF_BLUE} />
+        )}
+
+        {/* 轨道前半 */}
+        <g fill="none" strokeLinecap="round">
+          {frame.arcs.map((arc) => (
+            <path
+              key={`f${arc.id}`}
+              d={arc.front}
+              stroke={`url(#${uid}-${arc.id})`}
+              strokeWidth={arc.width}
+              opacity={arc.opacity}
+            />
+          ))}
+        </g>
       </svg>
     </div>
   )
