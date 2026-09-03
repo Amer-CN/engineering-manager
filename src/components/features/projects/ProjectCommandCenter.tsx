@@ -10,9 +10,14 @@ import { calculateHealthScore, getHealthLevel } from '@/utils/projectHealth'
 import { motion } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
 import { Card } from '../../ui/Card'
-import { ResponsiveContainer, PieChart, Pie, Cell, RadialBarChart, RadialBar } from 'recharts'
-import { SimpleBarChart } from '../../ui/SimpleBarChart'
+import { ResponsiveContainer, RadialBarChart, RadialBar } from 'recharts'
+import { EditorialBars } from '@/components/ui/charts/EditorialBars'
+import { DotMatrix } from '@/components/ui/charts/DotMatrix'
+import { RungBars } from '@/components/ui/charts/RungBars'
+import { TickRing } from '@/components/ui/charts/TickRing'
 import { formatMoney } from '@/utils/format'
+import { formatDateTime } from '@/utils/date'
+import { getCategoryLabel } from '@/components/features/costLedger/config'
 import { staggerContainer, sectionVariant } from '@/constants/animations'
 import { ProjectCommandCenterDetail } from './ProjectCommandCenterDetail'
 import { ProjectInsights, ProjectMilestoneTimeline, type InsightItem } from './ProjectInsights'
@@ -49,22 +54,31 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
   const healthLevel = getHealthLevel(healthScore)
   const status = statusConfig[project.status] || statusConfig.planning
 
-  const laborCats = ['人工费', '工资', '劳务费', '管理人员薪酬', '社保', '公积金']
-  const materialCats = ['材料费', '材料采购', '建材', '石材', '钢材', '水泥', '混凝土']
-  const machineryCats = ['机械费', '设备租赁', '机械租赁', '台班费']
-  const laborT = Object.entries(expenseByCategory).filter(([c]) => laborCats.some(l => c.includes(l))).reduce((s, [, v]) => s + v, 0)
-  const materialCT = Object.entries(expenseByCategory).filter(([c]) => materialCats.some(l => c.includes(l))).reduce((s, [, v]) => s + v, 0)
-  const machineryT = Object.entries(expenseByCategory).filter(([c]) => machineryCats.some(l => c.includes(l))).reduce((s, [, v]) => s + v, 0)
-  const allCats = [...laborCats, ...materialCats, ...machineryCats]
-  const otherT = Object.entries(expenseByCategory).filter(([c]) => !allCats.some(k => c.includes(k))).reduce((s, [, v]) => s + v, 0)
-  const costTotal = laborT + materialCT + machineryT + otherT
   const collectionRate = stats.incomeTotal > 0 ? Math.round(stats.receivedOutTotal / stats.incomeTotal * 100) : 0
 
   const incP = incomeContracts.map(c => { const rec = invoices.filter(i => i.contractId === c.id && i.type === 'invoice_out').reduce((s, i) => s + i.receivedAmount, 0); return { ...c, received: rec, progress: c.amount > 0 ? Math.round(rec / c.amount * 100) : 0 } })
   const expP = expenseContracts.map(c => { const rec = invoices.filter(i => i.contractId === c.id && i.type === 'invoice_in').reduce((s, i) => s + i.receivedAmount, 0); return { ...c, received: rec, progress: c.amount > 0 ? Math.round(rec / c.amount * 100) : 0 } })
 
-  const costDonut = [{ name: '人工', value: laborT, color: 'var(--accent)' }, { name: '材料', value: materialCT, color: 'var(--fg-2)' }, { name: '机械', value: machineryT, color: 'var(--muted)' }, { name: '其他', value: otherT, color: 'var(--border-strong)' }].filter(d => d.value > 0)
-  const financeBar = [{ name: '收入合同', value: stats.incomeTotal, color: 'var(--accent)' }, { name: '已回款', value: stats.receivedOutTotal, color: 'var(--fg-2)' }, { name: '支出合同', value: stats.expenseTotal, color: 'var(--muted)' }, { name: '已付款', value: stats.receivedInTotal, color: 'var(--border-strong)' }]
+  // 编辑风成本卡（深色反色卡）：结论式标题 + 梯级柱 + 来源行，全部由 expenseByCategory 真实数据推导
+  const costEntries = Object.entries(expenseByCategory)
+    .map(([code, amount]) => ({ name: getCategoryLabel(code), amount }))
+    .filter((d) => d.amount > 0)
+    .sort((a, b) => b.amount - a.amount)
+  const costTotal = Object.values(expenseByCategory).reduce((s, v) => s + v, 0)
+  // 口径展示：类目数用全量条目数（含 0 值/负值冲销类目）；负值存在时来源行诚实注记冲销金额
+  const costCategoryCount = Object.keys(expenseByCategory).length
+  const costWriteoffTotal = Object.values(expenseByCategory).filter(v => v < 0).reduce((s, v) => s + v, 0)
+  const costTop = costEntries.slice(0, 6)
+  const costRest = costEntries.slice(6)
+  const costBars = costRest.length > 0
+    ? [...costTop, { name: '其他', amount: costRest.reduce((s, d) => s + d.amount, 0) }]
+    : costTop
+  const costTop1 = costEntries[0]
+  const costHeadline = costTop1 && costTotal > 0
+    ? `${costTop1.name}是最大成本项 · 占 ${Math.round(costTop1.amount / costTotal * 100)}%`
+    : ''
+  // 墨阶横向条形数据（不再传彩虹色）：冠军 var(--fg)，其余 var(--fg-2)；EditorialBars 契约要求降序传入
+  const financeBar = [{ name: '收入合同', value: stats.incomeTotal }, { name: '已回款', value: stats.receivedOutTotal }, { name: '支出合同', value: stats.expenseTotal }, { name: '已付款', value: stats.receivedInTotal }]
   const healthGauge = [{ name: '健康度', value: healthScore, fill: healthScore >= 80 ? 'var(--success)' : healthScore >= 60 ? 'var(--accent)' : healthScore >= 40 ? 'var(--warning)' : 'var(--danger)' }]
   const materialTotalAmt = materials.reduce((s, m) => s + m.price * m.quantity, 0)
   const partnerStats = partners.map(p => ({ ...p, incAmt: incomeContracts.filter(c => c.partnerId === p.id).reduce((s, c) => s + c.amount, 0), expAmt: expenseContracts.filter(c => c.partnerId === p.id).reduce((s, c) => s + c.amount, 0) }))
@@ -141,6 +155,8 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
             <div className="p-3 rounded-lg bg-[color:var(--panel-2)]">
               <p className="text-caption text-[color:var(--muted)] mb-0.5">待处理</p>
               <p className="text-base font-bold text-[color:var(--fg)]">{unpaidInvoices}项</p>
+              {/* 编辑风点阵：1 点 = 1 张待处理发票 */}
+              <div className="mt-1.5"><DotMatrix count={unpaidInvoices} unitLabel="张" dotSize={6} /></div>
               <p className="text-caption text-[color:var(--muted)]">发票待付/待收</p>
             </div>
             <div className="p-3 rounded-lg bg-[color:var(--panel-2)]">
@@ -159,25 +175,56 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
       {/* ═══ 3. Finance + Cost ═══ */}
       <motion.section variants={sectionVariant} className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
         <Card bordered={false} className="border border-[color:var(--border)] p-5" padding="none">
-          <p className={`text-xl font-bold mb-2 font-mono tabular-nums tracking-tight ${stats.netProfit >= 0 ? 'text-success-500' : 'text-danger-500'}`}>{stats.netProfit >= 0 ? '盈利' : '亏损'} ¥{formatMoney(Math.abs(stats.netProfit))}</p>
-          <SimpleBarChart
-            data={financeBar.map(d => ({ name: d.name, amount: d.value }))}
-            colors={financeBar.map(d => d.color)}
-            formatValue={(v) => `¥${formatMoney(v)}`}
-          />
-        </Card>
-        <Card bordered={false} className="border border-[color:var(--border)] p-5" padding="none">
-          {costDonut.length > 0 ? (
-            <div className="flex items-center gap-4">
-              <div className="w-[160px] h-[160px] flex-shrink-0"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={costDonut} cx="50%" cy="50%" innerRadius={48} outerRadius={72} paddingAngle={3} dataKey="value" strokeWidth={0} animationDuration={1200} animationEasing="ease-out">{costDonut.map((d, i) => <Cell key={i} fill={d.color} />)}</Pie></PieChart></ResponsiveContainer></div>
-              <div className="flex-1 space-y-2 text-sm">
-                {costDonut.map((d, i) => (
-                  <div key={i} className="flex items-center justify-between"><div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} /><span className="text-[color:var(--fg-2)]">{d.name}</span></div><span className="font-medium text-[color:var(--fg)] font-mono tabular-nums">¥{(d.value / 10000).toFixed(1)}万 <span className="text-xs text-[color:var(--muted)]">{costTotal > 0 ? Math.round(d.value / costTotal * 100) : 0}%</span></span></div>
-                ))}
-                <div className="pt-2 border-t border-[color:var(--border)] flex justify-between"><span className="text-[color:var(--muted)]">总成本</span><span className="font-bold text-[color:var(--fg)] font-mono tabular-nums">¥{(costTotal / 10000).toFixed(1)}万</span></div>
-              </div>
+          {/* 卡首：净利润大数字（文字层语义色保留）+ 事实性结论句（数据直接可验证，无形容词） */}
+          <p className={`text-xl font-bold font-mono tabular-nums tracking-tight ${stats.netProfit >= 0 ? 'text-success-500' : 'text-danger-500'}`}>{stats.netProfit >= 0 ? '盈利' : '亏损'} ¥{formatMoney(Math.abs(stats.netProfit))}</p>
+          <p className="text-caption mt-1" style={{ color: 'var(--muted)' }}>
+            已回款 {collectionRate}% · 未回款 ¥{(Math.max(stats.incomeTotal - stats.receivedOutTotal, 0) / 10000).toFixed(1)}万
+          </p>
+          {/* 主体：左墨阶条形（冠军 var(--fg)，其余 var(--fg-2)，不传彩虹色）+ 右回款率刻度环 */}
+          <div className="mt-4 flex items-center gap-4">
+            <div className="flex-1 min-w-0">
+              <EditorialBars
+                data={[...financeBar].sort((a, b) => b.value - a.value).map((d, i) => ({ name: d.name, value: d.value, ...(i === 0 ? { color: 'var(--fg)' } : {}) }))}
+                formatValue={(v) => `¥${formatMoney(v)}`}
+              />
             </div>
-          ) : <EmptyState text="暂无费用数据" />}
+            <TickRing percent={collectionRate} label="回款率" size={96} />
+          </div>
+          {/* 卡底：图例注记 */}
+          <p className="mt-4 text-caption tracking-widest" style={{ color: 'var(--muted)' }}>条尾 = 金额 · 环 = 回款率 · 一格 = 1%</p>
+        </Card>
+        {/* 深色大圆角卡：var(--fg)/var(--bg) 互换的反色技巧（亮色主题=深卡，暗色主题=浅卡），禁写死 hex；
+            圆角用 v3 important 前缀覆盖 Card 基类 rounded-xl（同级类名字母序 rounded-xl 在产物中更靠后会胜出） */}
+        <Card bordered={false} className="!rounded-2xl bg-[color:var(--fg)] p-5" padding="none">
+          {costEntries.length > 0 ? (
+            <div className="flex flex-col">
+              {/* 卡首：白墨结论标题（真实数据推导）+ 总成本大数字 */}
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="text-sm font-semibold leading-snug" style={{ color: 'var(--bg)' }}>{costHeadline}</h3>
+                <span className="text-numeric-xl font-mono tabular-nums shrink-0" style={{ color: 'var(--bg)' }}>¥{(costTotal / 10000).toFixed(1)}万</span>
+              </div>
+              {/* 主体：梯级柱（TOP6 + 其余合并「其他」，降序传入；dark 墨色 = var(--bg)，不用 accent） */}
+              <div className="mt-4">
+                <RungBars
+                  data={costBars.map(d => ({ name: d.name, value: d.amount }))}
+                  formatValue={(v) => `¥${(v / 10000).toFixed(1)}万`}
+                  tone="dark"
+                />
+              </div>
+              {/* 卡底：来源行（反色 60% 透明度，含冲销口径沿用） */}
+              <p className="mt-4 text-caption" style={{ color: 'var(--bg)', opacity: 0.6 }}>
+                来源：成本台账 · 共 {costCategoryCount} 类 · 取数 {formatDateTime(new Date())}
+                {costWriteoffTotal < 0 ? ` · 含冲销 ¥${formatMoney(Math.abs(costWriteoffTotal))}` : ''}
+                {costRest.length > 0 ? ` · 其余 ${costRest.length} 类并入其他` : ''}
+              </p>
+            </div>
+          ) : (
+            // 深色卡内联空态：共享 EmptyState 的 var(--muted) 文字压在 var(--fg) 底上对比度不足
+            <div className="flex flex-col items-center justify-center py-12" style={{ color: 'var(--bg)', opacity: 0.6 }}>
+              <Icon name="Inbox" size={32} className="mb-2 opacity-40" />
+              <p className="text-sm">暂无费用数据</p>
+            </div>
+          )}
         </Card>
       </motion.section>
 

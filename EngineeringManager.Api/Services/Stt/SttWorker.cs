@@ -25,8 +25,37 @@ public class SttWorker : IHostedService, IDisposable
     public Task StartAsync(CancellationToken ct)
     {
         _logger?.LogInformation("[SttWorker] 后台任务服务启动，轮询间隔 {Interval}s", PollInterval.TotalSeconds);
+
+        // 孤儿恢复：只在启动路径执行一次（migrations 在 InitializeDatabaseOrExit 中先于
+        // hosted service 启动跑完；try-catch 兜底表不存在等启动期问题，不得让启动崩）。
+        // 禁止放进 Poll——轮询中反复执行会把正在处理的活任务误恢复成 pending。
+        try
+        {
+            using var scope = _services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<IDbConnection>();
+            var recovered = RecoverOrphanJobs(db);
+            if (recovered > 0)
+                _logger?.LogInformation("[SttWorker] 启动时恢复孤儿 processing 任务 {Count} 条 → pending", recovered);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "[SttWorker] 孤儿任务恢复失败（跳过，不影响启动）");
+        }
+
         _timer = new System.Threading.Timer(Poll, null, TimeSpan.FromSeconds(10), PollInterval);
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// 把孤儿 'processing' 任务恢复为 'pending'：应用上次运行因崩溃/管道死锁卡在
+    /// 'processing'，而 Poll 只取 'pending'，不恢复则重启后永远显示"处理中"。
+    /// 只在启动路径调用一次；completed/failed/cancelled/pending 均不受影响。
+    /// </summary>
+    internal static int RecoverOrphanJobs(IDbConnection db)
+    {
+        return db.Execute(
+            "UPDATE stt_jobs SET status = 'pending', updated_at = @Now WHERE status = 'processing'",
+            new { Now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") });
     }
 
     public Task StopAsync(CancellationToken ct)
