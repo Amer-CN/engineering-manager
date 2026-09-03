@@ -208,6 +208,58 @@ offloaded 29/29 layers to GPU";
     }
 
     // ═══════════════════════════════════════════════════════════
+    // 2026-09-03 job 21 真实日志回归：29/29 + block_count=28 曾被误判 fail-closed
+    // （llama.cpp 总层数 = block_count + 1 输出层，29/29 是成功的全量 offload）
+    // ═══════════════════════════════════════════════════════════
+
+    [Fact]
+    public void GpuLogParser_ParseAll_RealJob21Log_IsFullyConfirmed()
+    {
+        // 复刻 job 21 真实引擎日志（asr-engine/logs/latest.log 2026-09-03 20:45）
+        var output = @"load_backend: loaded Vulkan backend from ggml-vulkan.dll
+ggml_vulkan: 0 = AMD Radeon RX 580 2048SP (AMD proprietary driver)
+GPU offload: n_gpu_layers=-1 (全部层)
+using device Vulkan0 (AMD Radeon RX 580 2048SP) - 7402 MiB free
+qwen3vl.block_count u32 = 28
+load_tensors: offloaded 29/29 layers to GPU";
+        var status = GpuLogParser.ParseAll(output);
+
+        Assert.True(status.OffloadLayersConfirmed);
+        Assert.Equal(29, status.OffloadLayers);
+        Assert.Equal(29, status.OffloadTotal);
+        Assert.True(status.BlockCountParsed);
+        Assert.Equal(28, status.BlockCount);
+        Assert.True(status.IsFullyOffloaded);
+        Assert.True(status.IsFullyConfirmed);
+    }
+
+    [Fact]
+    public void CheckGpuFailClosed_RealJob21Log_29of29WithBlockCount28_Pass()
+    {
+        // 走 SttMonitorLoop.FinalGpuVerification 全链路（FakeTelemetryProvider 注入，不调真实 Detect）
+        var output = @"load_backend: loaded Vulkan backend from ggml-vulkan.dll
+ggml_vulkan: 0 = AMD Radeon RX 580 2048SP (AMD proprietary driver)
+GPU offload: n_gpu_layers=-1 (全部层)
+using device Vulkan0 (AMD Radeon RX 580 2048SP) - 7402 MiB free
+qwen3vl.block_count u32 = 28
+load_tensors: offloaded 29/29 layers to GPU";
+        var telemetry = new SttMonitorLoopTests.FakeTelemetryProvider { FakeOutput = output };
+        var loop = new SttMonitorLoop(telemetry);
+        var gpuInfo = new GpuInfo
+        {
+            HasDiscreteGpu = true,
+            GpuName = "AMD Radeon RX 580 2048SP",
+            VramMb = 8192,
+            VramDetectionMethod = "registry",
+            SupportsVulkan = true,
+        };
+
+        var result = loop.FinalGpuVerification(gpuInfo);
+
+        Assert.True(result.IsOk);
+    }
+
+    // ═══════════════════════════════════════════════════════════
     // 回归 3: SttEngineSelector.IsGpuNameMatch 名称匹配
     // ═══════════════════════════════════════════════════════════
 

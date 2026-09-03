@@ -61,11 +61,11 @@ public class SttSafetyChecker10_12Tests
     }
 
     // ═══════════════════════════════════════════════════════════
-    // 28/28 显式 N/N + block_count=28 通过
+    // 28/28 显式 N/N + block_count=28：总层数应为 29（28+1 输出层），28 层缺输出层 → 拒绝
     // ═══════════════════════════════════════════════════════════
 
     [Fact]
-    public void CheckGpuFailClosed_28of28_WithBlockCount28_Pass()
+    public void CheckGpuFailClosed_28of28_WithBlockCount28_Fail_MissingOutputLayer()
     {
         var result = SttSafetyChecker.CheckGpuFailClosed(
             hasDiscreteGpu: true, supportsVulkan: true, vramMb: 8192,
@@ -74,7 +74,9 @@ public class SttSafetyChecker10_12Tests
             confirmedDeviceName: "AMD Radeon RX 580", expectedDeviceName: "RX 580",
             blockCount: 28);
 
-        Assert.True(result.IsOk);
+        Assert.True(result.ShouldFail);
+        Assert.Contains("28", result.Message);
+        Assert.Contains("29", result.Message);
     }
 
     [Fact]
@@ -91,9 +93,9 @@ public class SttSafetyChecker10_12Tests
     }
 
     [Fact]
-    public void CheckGpuFailClosed_29of28_WithBlockCount28_Fail()
+    public void CheckGpuFailClosed_29of29_WithBlockCount28_Pass()
     {
-        // offload 29 但 block_count=28 → 不匹配 → fail
+        // 29/29 = block_count 28 + 1 输出层全部 offload（job 21 真实日志语义）→ 通过
         var result = SttSafetyChecker.CheckGpuFailClosed(
             hasDiscreteGpu: true, supportsVulkan: true, vramMb: 8192,
             vramDetectionMethod: "registry", vulkanBackendConfirmed: true,
@@ -101,9 +103,7 @@ public class SttSafetyChecker10_12Tests
             confirmedDeviceName: "AMD Radeon RX 580", expectedDeviceName: "RX 580",
             blockCount: 28);
 
-        Assert.True(result.ShouldFail);
-        Assert.Contains("29", result.Message);
-        Assert.Contains("28", result.Message);
+        Assert.True(result.IsOk);
     }
 
     // ═══════════════════════════════════════════════════════════

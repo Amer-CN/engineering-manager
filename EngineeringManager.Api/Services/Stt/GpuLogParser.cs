@@ -256,8 +256,8 @@ public class GpuLogStatus
     {
         get
         {
-            // 确定要求的层数
-            int required = BlockCountParsed && BlockCount > 0 ? BlockCount : SttSafetyChecker.RequiredOffloadLayers;
+            // 确定要求的层数（总层数 = block_count + 1 输出层，与 SttSafetyChecker.CheckGpuFailClosed 一致）
+            int required = BlockCountParsed && BlockCount > 0 ? BlockCount + 1 : SttSafetyChecker.RequiredOffloadLayers;
 
             // 路径1：显式 N/N layers，N > 0 且 N == Total 且 N == required
             if (OffloadLayersConfirmed && OffloadLayers > 0 && OffloadLayers == OffloadTotal && OffloadLayers == required)

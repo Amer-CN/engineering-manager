@@ -29,7 +29,7 @@ public static class SttSafetyChecker
     /// <summary>最小显存要求：2048MB</summary>
     public const int MinVramMb = 2048;
 
-    /// <summary>要求的 GPU offload 层数：29（全部层）</summary>
+    /// <summary>要求的 GPU offload 总层数：29（= block_count 28 + 1 输出层；仅在日志未解析到 block_count 时作为回退）</summary>
     public const int RequiredOffloadLayers = 29;
 
     /// <summary>GPU 正向确认超时：30 秒</summary>
@@ -217,14 +217,14 @@ public static class SttSafetyChecker
         // 7. 10.12 修正：基于运行时总层数验证全量 offload
         // 两种通过路径：
         // a) 显式 N/N layers（N > 0 且 N == Total），且：
-        //    - BlockCount 已知 → N == BlockCount
+        //    - BlockCount 已知 → N == BlockCount + 1（llama.cpp 总层数 = 块数 + 输出层）
         //    - BlockCount 未知 → N == RequiredOffloadLayers（旧版 29 回退）
         // b) n_gpu_layers=-1 + "全部层"标记 + BlockCount 已知 + 无 CPU fallback
         bool isFullyOffloaded = false;
         string offloadDetail = "";
 
-        // 确定要求的层数（BlockCount 优先，否则回退旧版 29）
-        int requiredLayers = blockCount is int bc && bc > 0 ? bc : RequiredOffloadLayers;
+        // 确定要求的层数（BlockCount+1 优先，否则回退旧版 29）
+        int requiredLayers = blockCount is int bc && bc > 0 ? bc + 1 : RequiredOffloadLayers;
 
         // 路径 a：显式 N/N
         if (offloadLayers is int ol && offloadTotal is int ot && ol > 0 && ol == ot)
@@ -233,7 +233,7 @@ public static class SttSafetyChecker
             {
                 return SttSafetyResult.Fail(
                     $"offload 层数 {ol}/{ot} 不等于要求层数 {requiredLayers}" +
-                    (blockCount is int bc2 && bc2 > 0 ? $" (block_count={bc2})" : " (旧版 29 回退)") +
+                    (blockCount is int bc2 && bc2 > 0 ? $" (block_count={bc2}+1 输出层，实际 {ol}/{bc2 + 1})" : " (旧版 29 回退)") +
                     "，fail-closed");
             }
             isFullyOffloaded = true;
