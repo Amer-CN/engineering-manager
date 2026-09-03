@@ -26,13 +26,9 @@ import WritingHistoryModal from "./WritingHistoryModal";
 import WritingAiMenu from "./WritingAiMenu";
 import EditorToolbar from "./EditorToolbar";
 import WritingExportMenu from "./WritingExportMenu";
+import ChartPickerModal from "./ChartPickerModal";
 import { useA4Zoom } from "@/hooks/useA4Zoom";
-import {
-  fetchWritingDoc,
-  updateWritingDoc,
-  writingAssist,
-  type WritingDoc,
-} from "@/services/writing-client";
+import { fetchWritingDoc, updateWritingDoc, writingAssist, type WritingDoc } from "@/services/writing-client";
 import { sanitizePastedHtml } from "@/utils/pasteSanitizer";
 
 /** 粘贴图片体积上限：超过则拒绝插入（base64 内嵌会直接撑大 contentMd，防止数据库膨胀） */
@@ -387,6 +383,7 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
         />
       )}
 
+      <ChartPickerModal open={slash.chartOpen} onClose={slash.closeChartPicker} onInsert={(dataUrl) => editor?.chain().focus().setImage({ src: dataUrl, alt: "图表" }).run()} />
       {/* 行内 AI 菜单（选中文字后浮出，R13 抽成 WritingAiMenu） */}
       {aiMenu && editor && (
         <WritingAiMenu position={aiMenu} busy={aiBusy} onAction={(id) => void runAiAction(id)} />
