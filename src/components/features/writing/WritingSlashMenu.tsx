@@ -14,10 +14,15 @@ interface SlashItem {
   label: string;
   hint: string;
   icon: string;
-  run: (editor: Editor) => void;
+  run: (editor: Editor, ctx?: SlashRunContext) => void;
 }
 
-/** 插入块（与原 slashItems 一致） */
+/** 菜单项运行上下文：由 useSlashMenu 注入（图表项需要触发编辑器外的弹窗） */
+interface SlashRunContext {
+  openChartPicker: () => void;
+}
+
+/** 插入块（既有 12 项契约：src/__tests__/components/writingSlashMenu.test.ts 断言其长度/唯一性） */
 export const slashItems: SlashItem[] = [
   { label: "一级标题", hint: "Heading 1", icon: "Heading1", run: (e) => e.chain().focus().toggleHeading({ level: 1 }).run() },
   { label: "二级标题", hint: "Heading 2", icon: "Heading2", run: (e) => e.chain().focus().toggleHeading({ level: 2 }).run() },
@@ -33,12 +38,36 @@ export const slashItems: SlashItem[] = [
   { label: "分割线", hint: "Horizontal Rule", icon: "Minus", run: (e) => e.chain().focus().setHorizontalRule().run() },
 ];
 
-/** 按过滤词筛选项（label 包含或 hint 不区分大小写包含） */
-export function filterSlashItems(query: string): SlashItem[] {
+/**
+ * 图表项（阶段三）：不进 slashItems 基表（基表 12 项为既有测试契约），
+ * 经 allSlashItems 参与真实菜单的过滤与键盘导航；run 经 ctx 触发 ChartPickerModal。
+ */
+const chartSlashItem: SlashItem = {
+  label: "图表",
+  hint: "Data Chart",
+  icon: "PieChart",
+  run: (_e, ctx) => ctx?.openChartPicker(),
+};
+
+/** 真实菜单全量项 = 既有 12 项 + 图表 */
+const allSlashItems: SlashItem[] = [...slashItems, chartSlashItem];
+
+/** 按过滤词筛选（label 包含或 hint 不区分大小写包含） */
+function filterItems(items: SlashItem[], query: string): SlashItem[] {
   const q = query.trim();
-  if (!q) return slashItems;
+  if (!q) return items;
   const lower = q.toLowerCase();
-  return slashItems.filter((s) => s.label.includes(q) || s.hint.toLowerCase().includes(lower));
+  return items.filter((s) => s.label.includes(q) || s.hint.toLowerCase().includes(lower));
+}
+
+/** 按过滤词筛选基表 12 项（导出契约，测试依赖；真实菜单用 filterMenuItems） */
+export function filterSlashItems(query: string): SlashItem[] {
+  return filterItems(slashItems, query);
+}
+
+/** 真实菜单过滤（含图表项）：键盘导航与列表渲染共用同一函数，保证高亮索引一致 */
+function filterMenuItems(query: string): SlashItem[] {
+  return filterItems(allSlashItems, query);
 }
 
 /**
@@ -51,6 +80,8 @@ export function useSlashMenu() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [index, setIndex] = useState(0);
+  // 阶段三：图表选择器开关（「图表」菜单项经 ctx 触发；Modal 挂在 WritingEditor）
+  const [chartOpen, setChartOpen] = useState(false);
   const editorRef = useRef<Editor | null>(null);
   // handleKeyDown / onDocUpdate 在编辑器事件回调里执行，闭包读不到最新 state，用 ref 镜像
   const openRef = useRef(false);
@@ -83,17 +114,19 @@ export function useSlashMenu() {
           ed.chain().focus().deleteRange({ from: absSlash, to: from }).run();
         }
       }
-      item.run(ed);
+      item.run(ed, { openChartPicker: () => setChartOpen(true) });
       close();
     },
     [close],
   );
 
+  const closeChartPicker = useCallback(() => setChartOpen(false), []);
+
   /** 挂进 editorProps.handleKeyDown；返回 true 表示已消费该键 */
   const handleKeyDown = useCallback(
     (event: KeyboardEvent): boolean => {
       if (openRef.current && !event.isComposing) {
-        const filtered = filterSlashItems(queryRef.current);
+        const filtered = filterMenuItems(queryRef.current);
         if (filtered.length > 0 && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
           event.preventDefault();
           setIndex((i) =>
@@ -148,7 +181,7 @@ export function useSlashMenu() {
     [close],
   );
 
-  return { open, query, index, setIndex, attach, handleKeyDown, onDocUpdate, execute, close };
+  return { open, query, index, setIndex, attach, handleKeyDown, onDocUpdate, execute, close, chartOpen, closeChartPicker };
 }
 
 interface WritingSlashMenuProps {
@@ -167,7 +200,7 @@ const MENU_MAX_HEIGHT = 320;
 const WritingSlashMenu: React.FC<WritingSlashMenuProps> = ({ editor, open, query, index, onHoverIndex, onSelect, onClose }) => {
   const rootRef = useRef<HTMLDivElement>(null);
 
-  const filtered = useMemo(() => filterSlashItems(query), [query]);
+  const filtered = useMemo(() => filterMenuItems(query), [query]);
 
   // 定位到光标处（fixed 坐标）；打开时计算一次，跟随 "/" 的锚点不随打字抖动
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);

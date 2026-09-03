@@ -20,7 +20,7 @@ const FONT_H1 = "黑体";
 const FONT_H2 = "楷体_GB2312";
 const FONT_BODY = "仿宋_GB2312";
 
-/** 行内标记转 HTML：**粗** *斜* ~~删~~ ==高亮== `[code]`（markdown 语义子集，与编辑器能力对齐） */
+/** 行内标记转 HTML：**粗** *斜* ~~删~~ ==高亮== `[code]` ![图片]（markdown 语义子集，与编辑器能力对齐） */
 function inlineToHtml(text: string): string {
   const esc = (s: string) =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -31,6 +31,12 @@ function inlineToHtml(text: string): string {
   out = out.replace(/==([^=]+)==/g, '<mark style="background:#fef3c7">$1</mark>');
   out = out.replace(/`([^`]+)`/g, '<code style="font-family:Consolas,monospace;font-size:.9em">$1</code>');
   out = out.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, "$1<em>$2</em>");
+  // 图片（阶段三）：![alt](src)——仅接受 base64 dataUrl 或 http(s) URL，其余写法原样保留不误伤。
+  // 放在其余标记之后：base64 字符集不含 * ~ ` 等标记字符，src 不会被上面的替换破坏。
+  out = out.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (all, alt: string, src: string) => {
+    if (!/^data:image\//.test(src) && !/^https?:\/\//.test(src)) return all;
+    return `<img src="${src}" alt="${alt}" style="max-width:100%">`;
+  });
   return out;
 }
 
@@ -135,6 +141,12 @@ function markdownToBodyHtml(markdown: string): string {
           "</table>";
         blocks.push(html);
       }
+      continue;
+    }
+    // 独立成行的图片（阶段三）：居中展示；行内混排的图片由 inlineToHtml 处理
+    if (/^!\[[^\]]*\]\([^)\s]+\)$/.test(t)) {
+      blocks.push(`<p style="margin:6pt 0;text-align:center">${inlineToHtml(t)}</p>`);
+      i++;
       continue;
     }
     // 普通段落
