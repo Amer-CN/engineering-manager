@@ -506,6 +506,108 @@ public static class SttEndpoints
                 return Common.ServerError("转写入库", ex);
             }
         });
+
+        // ═══════════════════════════════════════════════════════════
+        // POST /api/stt/jobs/{id}/cancel — 取消任务
+        // 只接受 pending/running/processing；completed/failed/cancelled 拒绝
+        // ═══════════════════════════════════════════════════════════
+        app.MapPost("/api/stt/jobs/{id}/cancel", (HttpContext ctx, IDbConnection db, long id) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // 权限检查：voice 页面路由本身要求 voice:read（App.tsx RequirePermission）
+            if (!CurrentUser.HasPermission(ctx, db, "voice:read"))
+                return Results.Json(new { success = false, error = "无权限：需要 voice:read" }, statusCode: 403);
+            try
+            {
+                var status = db.ExecuteScalar<string?>(
+                    "SELECT status FROM stt_jobs WHERE id = @Id AND created_by = @Uid",
+                    new { Id = id, Uid = uid });
+
+                if (status == null)
+                    return Common.NotFound("转写任务不存在");
+
+                if (status != "pending" && status != "running" && status != "processing")
+                    return Common.Fail($"任务当前状态为 {status}，无法取消");
+
+                db.Execute(
+                    "UPDATE stt_jobs SET status = 'cancelled', updated_at = @Now WHERE id = @Id AND created_by = @Uid",
+                    new { Now = Common.NowString(), Id = id, Uid = uid });
+
+                return Results.Ok(new { success = true, data = new { id, status = "cancelled" } });
+            }
+            catch (Exception ex)
+            {
+                return Common.ServerError("取消转写任务", ex);
+            }
+        });
+
+        // ═══════════════════════════════════════════════════════════
+        // POST /api/stt/jobs/{id}/retry — 重试失败任务
+        // 只接受 failed；重置为 pending 交回 SttWorker 重新排队
+        // ═══════════════════════════════════════════════════════════
+        app.MapPost("/api/stt/jobs/{id}/retry", (HttpContext ctx, IDbConnection db, long id) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // 权限检查：voice 页面路由本身要求 voice:read（App.tsx RequirePermission）
+            if (!CurrentUser.HasPermission(ctx, db, "voice:read"))
+                return Results.Json(new { success = false, error = "无权限：需要 voice:read" }, statusCode: 403);
+            try
+            {
+                var status = db.ExecuteScalar<string?>(
+                    "SELECT status FROM stt_jobs WHERE id = @Id AND created_by = @Uid",
+                    new { Id = id, Uid = uid });
+
+                if (status == null)
+                    return Common.NotFound("转写任务不存在");
+
+                if (status != "failed")
+                    return Common.Fail($"任务当前状态为 {status}，只有失败的任务可以重试");
+
+                db.Execute(
+                    "UPDATE stt_jobs SET status = 'pending', progress = 0, error = NULL, updated_at = @Now WHERE id = @Id AND created_by = @Uid",
+                    new { Now = Common.NowString(), Id = id, Uid = uid });
+
+                return Results.Ok(new { success = true, data = new { id, status = "pending" } });
+            }
+            catch (Exception ex)
+            {
+                return Common.ServerError("重试转写任务", ex);
+            }
+        });
+
+        // ═══════════════════════════════════════════════════════════
+        // DELETE /api/stt/jobs/{id} — 删除任务记录
+        // 只接受 completed/failed/cancelled；进行中的任务先取消再删除
+        // ═══════════════════════════════════════════════════════════
+        app.MapDelete("/api/stt/jobs/{id}", (HttpContext ctx, IDbConnection db, long id) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // 权限检查：voice 页面路由本身要求 voice:read（App.tsx RequirePermission）
+            if (!CurrentUser.HasPermission(ctx, db, "voice:read"))
+                return Results.Json(new { success = false, error = "无权限：需要 voice:read" }, statusCode: 403);
+            try
+            {
+                var status = db.ExecuteScalar<string?>(
+                    "SELECT status FROM stt_jobs WHERE id = @Id AND created_by = @Uid",
+                    new { Id = id, Uid = uid });
+
+                if (status == null)
+                    return Common.NotFound("转写任务不存在");
+
+                if (status != "completed" && status != "failed" && status != "cancelled")
+                    return Common.Fail($"任务当前状态为 {status}，进行中的任务不能删除");
+
+                db.Execute(
+                    "DELETE FROM stt_jobs WHERE id = @Id AND created_by = @Uid",
+                    new { Id = id, Uid = uid });
+
+                return Results.Ok(new { success = true, data = new { id } });
+            }
+            catch (Exception ex)
+            {
+                return Common.ServerError("删除转写任务", ex);
+            }
+        });
     }
 
     // ═══════════════════════════════════════════════════════════

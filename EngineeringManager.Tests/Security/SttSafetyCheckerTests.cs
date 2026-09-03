@@ -1309,29 +1309,29 @@ load_tensors: offloaded 29/29 layers to GPU";
     }
 
     [Fact]
-    public void CheckPreJobResources_AvailableMemoryBelow4GB_Fail()
+    public void CheckPreJobResources_AvailableMemoryBelow2_5GB_Fail()
     {
-        // 可用内存 3GB < 4GB → 拒绝
+        // 可用内存 2GB < 2.5GB → 拒绝（门控从 4GB 降至 2.5GB）
+        var result = SttSafetyChecker.CheckPreJobResources(
+            ramUsagePercent: 50.0,
+            commitBytes: 8 * GB,
+            commitLimitBytes: 32 * GB,
+            availableMemoryBytes: 2 * GB);
+
+        Assert.True(result.ShouldFail);
+        Assert.Contains("可用内存", result.Message);
+        Assert.Contains("2560MB", result.Message);
+    }
+
+    [Fact]
+    public void CheckPreJobResources_AvailableMemory3GB_Pass()
+    {
+        // 门控降至 2.5GB 后 3GB 已足够（原 4GB 阈值下会被误拒）
         var result = SttSafetyChecker.CheckPreJobResources(
             ramUsagePercent: 50.0,
             commitBytes: 8 * GB,
             commitLimitBytes: 32 * GB,
             availableMemoryBytes: 3 * GB);
-
-        Assert.True(result.ShouldFail);
-        Assert.Contains("可用内存", result.Message);
-        Assert.Contains("4096MB", result.Message);
-    }
-
-    [Fact]
-    public void CheckPreJobResources_AvailableMemoryExactly4GB_Pass()
-    {
-        // 可用内存恰好 4GB → 通过
-        var result = SttSafetyChecker.CheckPreJobResources(
-            ramUsagePercent: 50.0,
-            commitBytes: 8 * GB,
-            commitLimitBytes: 32 * GB,
-            availableMemoryBytes: 4 * GB);
 
         Assert.True(result.IsOk);
     }

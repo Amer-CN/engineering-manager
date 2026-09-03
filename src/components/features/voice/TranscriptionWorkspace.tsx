@@ -36,6 +36,7 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
   const [hotwords, setHotwords] = useState('')
 
   const [creating, setCreating] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
   const [currentJob, setCurrentJob] = useState<SttJobDetail | null>(null)
   const [jobLoading, setJobLoading] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
@@ -64,12 +65,14 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
     const res = await sttClient.getSttJob(jobId)
     if (res.success && res.data) {
       setCurrentJob(res.data)
-      if (res.data.status === 'completed' || res.data.status === 'failed') {
+      if (res.data.status === 'completed' || res.data.status === 'failed' || res.data.status === 'cancelled') {
         if (pollRef.current) {
           clearInterval(pollRef.current)
           pollRef.current = null
         }
         setRefreshTrigger(t => t + 1)
+        // 任务已取消：详情面板没有对应的展示区，关闭详情回到列表看状态
+        if (res.data.status === 'cancelled') setCurrentJob(null)
       }
     }
   }, [])
@@ -207,6 +210,22 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
     }
   }, [showToast, startPolling, setAudio])
 
+  // 取消进行中的转写任务
+  const handleCancelJob = useCallback(async () => {
+    if (!currentJob) return
+    setCancelling(true)
+    const res = await sttClient.cancelSttJob(currentJob.id)
+    setCancelling(false)
+    if (res.success) {
+      showToast('已取消转写任务', 'success')
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
+      setCurrentJob(null)
+      setRefreshTrigger(t => t + 1)
+    } else {
+      showToast(res.error || '取消失败', 'error')
+    }
+  }, [currentJob, showToast])
+
   // 入库
   const handleIngest = useCallback(async (correctedText: string, segments: SttSegment[], title: string, projectId?: number, occurredAt?: string, folderId?: number | null) => {
     if (!currentJob) return
@@ -302,7 +321,7 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
       {currentJob && (
         <Card title="转写结果" padding="md" shadow="sm"
           extra={
-            <Button variant="ghost" size="xs" onClick={() => { setCurrentJob(null); setAudio(null); if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null } }}>
+            <Button variant="ghost" size="xs" title="关闭详情" onClick={() => { setCurrentJob(null); setAudio(null); if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null } }}>
               <Icon name="X" size={14} />
             </Button>
           }
@@ -321,9 +340,14 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
                     <span className="text-[color:var(--fg-2)]">
                       {currentJob.status === 'pending' ? '等待处理' : '正在转写'}
                     </span>
-                    <span className="text-[color:var(--muted)] text-xs">
-                      {currentJob.elapsedSec ? `已耗时 ${currentJob.elapsedSec}s` : ''}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[color:var(--muted)] text-xs">
+                        {currentJob.elapsedSec ? `已耗时 ${currentJob.elapsedSec}s` : ''}
+                      </span>
+                      <Button variant="outline" size="xs" leftIcon="Ban" loading={cancelling} onClick={handleCancelJob}>
+                        取消任务
+                      </Button>
+                    </div>
                   </div>
                   <div className="h-2 bg-[color:var(--panel-2)] rounded-full overflow-hidden">
                     <div

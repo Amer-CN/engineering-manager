@@ -1,7 +1,11 @@
 using EngineeringManager.Api.Services.Stt;
 using EngineeringManager.Tests.Common;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
+using Dapper;
+using Microsoft.Data.Sqlite;
 using Xunit;
 
 namespace EngineeringManager.Tests.Endpoints;
@@ -264,5 +268,185 @@ public class SttEndpointsTests : ApiTestBase
             isMultiSpeaker = false
         });
         Assert.Equal(HttpStatusCode.Unauthorized, resp.StatusCode);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // cancel / retry / delete 端点测试
+    // ═══════════════════════════════════════════════════════════
+
+    private static string ExtractTokenFromJson(string json)
+    {
+        var marker = "\"token\":\"";
+        var i = json.IndexOf(marker);
+        if (i < 0) throw new Exception("token 字段未找到: " + json);
+        i += marker.Length;
+        var j = json.IndexOf('"', i);
+        if (j < 0) throw new Exception("token 字段格式错");
+        return json.Substring(i, j - i);
+    }
+
+    private async Task<string> LoginAdminAsync()
+    {
+        var login = await Client.PostAsJsonAsync("/api/auth/login",
+            new { username = "admin", password = "admin123" });
+        login.EnsureSuccessStatusCode();
+        var body = await login.Content.ReadAsStringAsync();
+        return ExtractTokenFromJson(body);
+    }
+
+    private void SetAuth(string token)
+    {
+        Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+    }
+
+    /// <summary>直接插入指定状态的 STT job（不经过 transcribe 端点）</summary>
+    private long CreateJobWithStatus(string status)
+    {
+        using var conn = new SqliteConnection(ConnectionString);
+        conn.Open();
+        var now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        return conn.QuerySingle<long>(@"
+            INSERT INTO stt_jobs
+                (source_file, source_path, source_type, engine, status, progress,
+                 is_multi_speaker, num_speakers, error, created_at, updated_at, created_by)
+            VALUES
+                ('test.mp3', 'stt/1/test.mp3', 'audio', 'test', @Status,
+                 @Progress, 0, NULL, @Error, @Now, @Now, '1');
+            SELECT last_insert_rowid();",
+            new
+            {
+                Status = status,
+                Progress = status == "failed" ? 50 : 0,
+                Error = status == "failed" ? "转写失败：模型崩溃" : (string?)null,
+                Now = now,
+            });
+    }
+
+    private (string? Status, int Progress, string? Error) GetJobRow(long jobId)
+    {
+        using var conn = new SqliteConnection(ConnectionString);
+        conn.Open();
+        return conn.QuerySingle<(string?, int, string?)>(
+            "SELECT status, progress, error FROM stt_jobs WHERE id = @Id",
+            new { Id = jobId });
+    }
+
+    [Fact]
+    public async Task Cancel_PendingJob_SetsCancelled()
+    {
+        var token = await LoginAdminAsync();
+        SetAuth(token);
+        var jobId = CreateJobWithStatus("pending");
+
+        var resp = await Client.PostAsync($"/api/stt/jobs/{jobId}/cancel", null);
+        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+
+        var body = await resp.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(body);
+        Assert.True(doc.RootElement.GetProperty("success").GetBoolean());
+        Assert.Equal("cancelled", doc.RootElement.GetProperty("data").GetProperty("status").GetString());
+
+        var (status, _, _) = GetJobRow(jobId);
+        Assert.Equal("cancelled", status);
+    }
+
+    [Fact]
+    public async Task Cancel_CompletedJob_Rejected()
+    {
+        var token = await LoginAdminAsync();
+        SetAuth(token);
+        var jobId = CreateJobWithStatus("completed");
+
+        var resp = await Client.PostAsync($"/api/stt/jobs/{jobId}/cancel", null);
+        Assert.False(resp.IsSuccessStatusCode);
+
+        var body = await resp.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(body);
+        Assert.False(doc.RootElement.GetProperty("success").GetBoolean());
+
+        // 状态不应被改动
+        var (status, _, _) = GetJobRow(jobId);
+        Assert.Equal("completed", status);
+    }
+
+    [Fact]
+    public async Task Retry_FailedJob_ResetsToPending()
+    {
+        var token = await LoginAdminAsync();
+        SetAuth(token);
+        var jobId = CreateJobWithStatus("failed");
+
+        var resp = await Client.PostAsync($"/api/stt/jobs/{jobId}/retry", null);
+        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+
+        var body = await resp.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(body);
+        Assert.True(doc.RootElement.GetProperty("success").GetBoolean());
+        Assert.Equal("pending", doc.RootElement.GetProperty("data").GetProperty("status").GetString());
+
+        // 重试应清掉旧的失败状态：status=pending、progress=0、error 清空
+        var (status, progress, error) = GetJobRow(jobId);
+        Assert.Equal("pending", status);
+        Assert.Equal(0, progress);
+        Assert.Null(error);
+    }
+
+    [Fact]
+    public async Task Retry_PendingJob_Rejected()
+    {
+        var token = await LoginAdminAsync();
+        SetAuth(token);
+        var jobId = CreateJobWithStatus("pending");
+
+        var resp = await Client.PostAsync($"/api/stt/jobs/{jobId}/retry", null);
+        Assert.False(resp.IsSuccessStatusCode);
+
+        var body = await resp.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(body);
+        Assert.False(doc.RootElement.GetProperty("success").GetBoolean());
+
+        var (status, _, _) = GetJobRow(jobId);
+        Assert.Equal("pending", status);
+    }
+
+    [Fact]
+    public async Task Delete_CompletedJob_RemovesRow()
+    {
+        var token = await LoginAdminAsync();
+        SetAuth(token);
+        var jobId = CreateJobWithStatus("completed");
+
+        var resp = await Client.DeleteAsync($"/api/stt/jobs/{jobId}");
+        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+
+        var body = await resp.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(body);
+        Assert.True(doc.RootElement.GetProperty("success").GetBoolean());
+
+        // 行应已被删除
+        using var conn = new SqliteConnection(ConnectionString);
+        conn.Open();
+        var count = conn.ExecuteScalar<int>(
+            "SELECT COUNT(*) FROM stt_jobs WHERE id = @Id", new { Id = jobId });
+        Assert.Equal(0, count);
+    }
+
+    [Fact]
+    public async Task Delete_ProcessingJob_Rejected()
+    {
+        var token = await LoginAdminAsync();
+        SetAuth(token);
+        var jobId = CreateJobWithStatus("processing");
+
+        var resp = await Client.DeleteAsync($"/api/stt/jobs/{jobId}");
+        Assert.False(resp.IsSuccessStatusCode);
+
+        var body = await resp.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(body);
+        Assert.False(doc.RootElement.GetProperty("success").GetBoolean());
+
+        // 进行中的任务不能删，行应仍在
+        var (status, _, _) = GetJobRow(jobId);
+        Assert.Equal("processing", status);
     }
 }

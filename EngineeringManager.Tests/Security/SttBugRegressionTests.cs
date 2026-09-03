@@ -462,29 +462,29 @@ offloaded 29/29 layers to GPU";
     }
 
     [Fact]
-    public void CheckPreJobResources_AvailableMemoryUnder4GB_Fail()
+    public void CheckPreJobResources_AvailableMemoryUnder2_5GB_Fail()
     {
-        // 10.6: 可用内存门从 2GB 提高到 4GB
+        // 门控从 4GB 降至 2.5GB：Qwen3-ASR-1.7B q4 实测加载峰值约 1.1GB 系统内存，4GB 会在常规后台应用运行时误拒
         var result = SttSafetyChecker.CheckPreJobResources(
             ramUsagePercent: 50.0,
             commitBytes: 8L * 1024 * 1024 * 1024,
             commitLimitBytes: 32L * 1024 * 1024 * 1024,
-            availableMemoryBytes: 3L * 1024 * 1024 * 1024); // 3GB < 4GB
+            availableMemoryBytes: 2L * 1024 * 1024 * 1024); // 2GB < 2.5GB
 
         Assert.True(result.ShouldFail);
         Assert.Contains("可用内存", result.Message);
-        Assert.Contains("4096MB", result.Message);
+        Assert.Contains("2560MB", result.Message);
     }
 
     [Fact]
-    public void CheckPreJobResources_AvailableMemoryExactly4GB_Pass()
+    public void CheckPreJobResources_AvailableMemoryExactly2_5GB_Pass()
     {
-        // 10.6: 可用内存恰好 4GB → 通过
+        // 可用内存恰好 2.5GB → 通过
         var result = SttSafetyChecker.CheckPreJobResources(
             ramUsagePercent: 50.0,
             commitBytes: 8L * 1024 * 1024 * 1024,
             commitLimitBytes: 32L * 1024 * 1024 * 1024,
-            availableMemoryBytes: 4L * 1024 * 1024 * 1024); // exactly 4GB
+            availableMemoryBytes: 2560L * 1024 * 1024); // exactly 2.5GB
 
         Assert.True(result.IsOk);
     }

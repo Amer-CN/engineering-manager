@@ -45,12 +45,12 @@ public static class SttSafetyChecker
     /// <summary>Pre-job Commit 门控阈值：启动子进程前检查</summary>
     public const double PreJobMaxCommitPercent = 85.0;
 
-    /// <summary>Pre-job 最小可用物理内存：4GB（模型加载需要足够空间）</summary>
-    public const long PreJobMinAvailableBytes = 4L * 1024 * 1024 * 1024;
+    /// <summary>Pre-job 最小可用物理内存：2.5GB（Qwen3-ASR-1.7B q4 加载实测峰值约 1.1GB 系统内存；4GB 会在 16GB 内存、常规后台应用运行的机器上频繁误拒）</summary>
+    public const long PreJobMinAvailableBytes = 2560L * 1024 * 1024;
 
     /// <summary>
     /// 启动子进程前的资源门控检查（绝对资源门控版）。
-    /// RAM 百分比仅记录，不硬拒绝；Commit ≤ 85%；可用物理内存 ≥ 4GB。
+    /// RAM 百分比仅记录，不硬拒绝；Commit ≤ 85%；可用物理内存 ≥ 2.5GB。
     /// RAM、CommitLimit 或可用内存读取失败必须 fail closed，子进程启动数=0。
     /// 所有值必须实时读取，不得缓存。
     /// </summary>

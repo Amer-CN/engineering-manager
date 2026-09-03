@@ -64,7 +64,7 @@ export interface SttJobSummary {
   id: number
   sourceFile: string
   engine: string
-  status: 'pending' | 'running' | 'processing' | 'completed' | 'failed'
+  status: 'pending' | 'running' | 'processing' | 'completed' | 'failed' | 'cancelled'
   progress: number
   isMultiSpeaker: boolean
   durationSec?: number
@@ -316,6 +316,84 @@ export async function ingestSttJob(
   }
 }
 
+/** POST /api/stt/jobs/{id}/cancel — 取消任务（仅 pending/running/processing） */
+export async function cancelSttJob(id: number): Promise<ApiResponse<{ id: number; status: string }>> {
+  try {
+    const token = getToken()
+    const resp = await fetch(`${API_BASE}/api/stt/jobs/${id}/cancel`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    if (resp.status === 401) {
+      try { localStorage.removeItem(TOKEN_KEY) } catch { /* */ }
+    }
+    if (!resp.ok) {
+      try {
+        const errBody = await resp.json()
+        if (errBody?.error) return { success: false, error: errBody.error }
+      } catch { /* */ }
+      return { success: false, error: `HTTP ${resp.status}: ${resp.statusText}` }
+    }
+    const raw = await resp.json()
+    return convertKeysToCamelCase(raw)
+  } catch (err) {
+    console.error('[STT] cancelSttJob 失败:', err)
+    return { success: false, error: String(err) }
+  }
+}
+
+/** POST /api/stt/jobs/{id}/retry — 重试失败任务（仅 failed） */
+export async function retrySttJob(id: number): Promise<ApiResponse<{ id: number; status: string }>> {
+  try {
+    const token = getToken()
+    const resp = await fetch(`${API_BASE}/api/stt/jobs/${id}/retry`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    if (resp.status === 401) {
+      try { localStorage.removeItem(TOKEN_KEY) } catch { /* */ }
+    }
+    if (!resp.ok) {
+      try {
+        const errBody = await resp.json()
+        if (errBody?.error) return { success: false, error: errBody.error }
+      } catch { /* */ }
+      return { success: false, error: `HTTP ${resp.status}: ${resp.statusText}` }
+    }
+    const raw = await resp.json()
+    return convertKeysToCamelCase(raw)
+  } catch (err) {
+    console.error('[STT] retrySttJob 失败:', err)
+    return { success: false, error: String(err) }
+  }
+}
+
+/** DELETE /api/stt/jobs/{id} — 删除任务（仅 completed/failed/cancelled） */
+export async function deleteSttJob(id: number): Promise<ApiResponse<{ id: number }>> {
+  try {
+    const token = getToken()
+    const resp = await fetch(`${API_BASE}/api/stt/jobs/${id}`, {
+      method: 'DELETE',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    if (resp.status === 401) {
+      try { localStorage.removeItem(TOKEN_KEY) } catch { /* */ }
+    }
+    if (!resp.ok) {
+      try {
+        const errBody = await resp.json()
+        if (errBody?.error) return { success: false, error: errBody.error }
+      } catch { /* */ }
+      return { success: false, error: `HTTP ${resp.status}: ${resp.statusText}` }
+    }
+    const raw = await resp.json()
+    return convertKeysToCamelCase(raw)
+  } catch (err) {
+    console.error('[STT] deleteSttJob 失败:', err)
+    return { success: false, error: String(err) }
+  }
+}
+
 /** 导出统一的 sttClient */
 export const sttClient = {
   getSttStatus,
@@ -324,4 +402,7 @@ export const sttClient = {
   getSttJob,
   getSttJobs,
   ingestSttJob,
+  cancelSttJob,
+  retrySttJob,
+  deleteSttJob,
 }
