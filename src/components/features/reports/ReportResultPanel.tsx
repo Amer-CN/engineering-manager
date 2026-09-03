@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react'
 import { Icon } from '@/components/ui/Icon'
 import { parseMarkup, templateMarkupToPrintHtml } from '@/utils/templateMarkup'
+import { ReportCharts } from './ReportCharts'
 
 interface ReportResultPanelProps {
   markdown: string
@@ -126,7 +127,8 @@ const ReportResultPanel: React.FC<ReportResultPanelProps> = ({ markdown, onUpdat
             }}
           />
         ) : (
-          <div className="prose prose-sm max-w-none text-xs" style={{ color: 'var(--fg)' }}>
+          <>
+            <div className="prose prose-sm max-w-none text-xs" style={{ color: 'var(--fg)' }}>
             {parsedLines.map((line, i) => {
               if (line.heading) {
                 return (
@@ -177,7 +179,10 @@ const ReportResultPanel: React.FC<ReportResultPanelProps> = ({ markdown, onUpdat
                 </p>
               )
             })}
-          </div>
+            </div>
+            {/* 数据图表：仅预览态展示真实数据快照（编辑态/打印/复制不涉及） */}
+            <ReportCharts />
+          </>
         )}
       </div>
     </div>
