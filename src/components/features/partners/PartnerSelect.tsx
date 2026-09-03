@@ -105,7 +105,8 @@ export function PartnerSelect({
 
   {/* 下拉面板 */}
   {isOpen && (
-  <div className="absolute z-50 w-full mt-2 bg-[color:var(--card)] border border-[color:var(--border)] rounded-xl shadow-lg max-h-96 overflow-hidden">
+  <div className="absolute z-50 w-full mt-2 bg-[color:var(--card)] border border-[color:var(--border)] rounded-xl shadow-lg max-h-96 overflow-hidden popover-entry--tall"
+    style={{ transformOrigin: 'top' }}>
   {/* 搜索框 */}
   <div className="p-3 border-b border-[color:var(--border)]">
   <input
