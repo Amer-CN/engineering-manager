@@ -234,8 +234,8 @@ export function ColumnFilter(props: ColumnFilterProps) {
         <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M0 0h10L6 4.5V9L4 10V4.5L0 0z" /></svg>
       </button>
       {open && createPortal(
-        <div ref={popRef} className="fixed z-[100] min-w-[180px] rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] shadow-xl"
-          style={{ top: pos.top, left: pos.left }}>
+        <div ref={popRef} className="fixed z-[100] min-w-[180px] rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] shadow-xl popover-entry"
+          style={{ top: pos.top, left: pos.left, transformOrigin: 'top left' }}>
           {renderContent()}
         </div>,
         document.body
