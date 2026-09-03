@@ -7,12 +7,15 @@
  */
 
 import React, { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { Icon } from '@/components/ui/Icon'
 import type { AgentMessage, AgentMessageResponse, ToolCallResult } from '@/types/agent'
 import MessageActions from './MessageActions'
 import RichToolResult from './RichToolResult'
 import MarkdownRenderer from './MarkdownRenderer'
+import ThinkingTrace from './ThinkingTrace'
+import Mascot, { type MascotState } from './Mascot'
+import { useMascotAppearance } from '@/hooks/useMascotAppearance'
 import { EASE_OUT } from '../../../constants/animations'
 
 interface MessageBubbleProps {
@@ -38,6 +41,10 @@ interface MessageBubbleProps {
   onEdit?: () => void
   /** assistant 消息：分叉（以该消息为起点派生新对话） */
   onFork?: () => void
+  /** AI 头像表情状态（缺省 idle；仅 live 时生效） */
+  mascotState?: MascotState
+  /** AI 头像活体开关：最新一条 assistant 消息传 true，其余 frozen 静态 */
+  live?: boolean
 }
 
 /** 解析 toolCalls — 支持 ToolCall[] 和 ToolCallResult[] 两种形态 */
@@ -60,9 +67,10 @@ function extractToolResults(
   }))
 }
 
-const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend, onEdit, onFork, at, durationSec, reasoning, versions, activeVersion, onSwitchVersion }) => {
+const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend, onEdit, onFork, at, durationSec, reasoning, versions, activeVersion, onSwitchVersion, mascotState = 'idle', live = false }) => {
   const [hovered, setHovered] = useState(false)
-  const [reasoningOpen, setReasoningOpen] = useState(false)
+  /** 吉祥物形象：模块级 store 直订（与设置页/欢迎页共享同一份 shape/color） */
+  const { shape, color } = useMascotAppearance()
   const content = message.content || ''
   /** 展示正文（branchPicker）：activeVersion>=0 取历史版本，否则最新流 */
   const displayBody = (activeVersion != null && activeVersion >= 0 && versions?.length)
@@ -98,14 +106,15 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* 头像（仅助手侧；对齐 Stitch：用户消息不显头像，墨底气泡靠右） */}
+      {/* 头像（仅助手侧）：最新一条 live 活体（随 AI 状态变表情），其余 frozen 静态；
+          对齐 Stitch：用户消息不显头像，墨底气泡靠右 */}
       {!isUser && (
-        <motion.div
-          whileHover={{ scale: 1.08 }}
-          className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center"
-          style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
-        >
-          <Icon name="Bot" size={18} />
+        <motion.div whileHover={{ scale: 1.08 }} className="flex-shrink-0 w-12 h-12 flex items-center justify-center">
+          {live ? (
+            <Mascot size={48} state={mascotState} follow={false} shape={shape} color={color} />
+          ) : (
+            <Mascot size={48} state="idle" frozen follow={false} shape={shape} color={color} />
+          )}
         </motion.div>
       )}
 
@@ -125,7 +134,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend
           </span>
         )}
 
-        {/* 文字内容：用户消息纯文本，AI 消息走 Markdown 渲染 */}
+        {/* 文字内容：用户消息纯文本，AI 消息走 Markdown 渲染（流式期间新块带进场动画 + 末尾光标） */}
         {content && (
           <div
             className={`px-4 py-2.5 text-sm leading-relaxed break-words ${
@@ -137,44 +146,13 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend
                 : { background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg)' }
             }
           >
-            {isUser ? displayBody : <MarkdownRenderer content={displayBody} />}
+            {isUser ? displayBody : <MarkdownRenderer content={displayBody} streaming={isSending} />}
           </div>
         )}
 
-        {/* ReasoningRow（DSH 风格）：思考过程折叠行——reasoning 模型才有，默认收起 */}
+        {/* ThinkingTrace：思考过程折叠块（reasoning 模型流式聚合；流式中自动展开 + shimmer「思考中」） */}
         {!isUser && reasoning && reasoning.trim().length > 0 && (
-          <div className="w-full">
-            <button
-              type="button"
-              onClick={() => setReasoningOpen(v => !v)}
-              className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs transition-colors hover:bg-[color:var(--panel-2)]"
-              style={{ color: 'var(--muted)' }}
-            >
-              <Icon name="Brain" size={12} />
-              <span>{reasoningOpen ? '收起思考过程' : '思考过程'}</span>
-              <motion.span animate={{ rotate: reasoningOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
-                <Icon name="ChevronDown" size={12} />
-              </motion.span>
-            </button>
-            <AnimatePresence>
-              {reasoningOpen && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="overflow-hidden"
-                >
-                  <div
-                    className="mt-1 px-3 py-2.5 rounded-xl text-xs leading-relaxed whitespace-pre-wrap max-h-64 overflow-y-auto"
-                    style={{ background: 'var(--panel-2)', color: 'var(--muted)', border: '1px solid var(--border)' }}
-                  >
-                    {reasoning}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+          <ThinkingTrace reasoning={reasoning} working={isSending} />
         )}
 
         {/* Tool Call 结果（富卡片） */}

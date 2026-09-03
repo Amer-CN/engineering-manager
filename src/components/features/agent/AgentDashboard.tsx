@@ -16,12 +16,15 @@ import { Icon } from '@/components/ui/Icon'
 import { HoverScrollbar } from '@/components/ui/HoverScrollbar'
 import { useAuth } from '@/hooks/useAuth'
 import { usePermission } from '@/hooks/usePermission'
+import { useMascotAppearance } from '@/hooks/useMascotAppearance'
 import { getLlmProviderConfig } from '@/services/agent-client'
 
 import AgentComposer from './AgentComposer'
 import AgentOverlays, { HistorySidebar } from './AgentOverlays'
 import AgentTopBar from './AgentTopBar'
+import AgentStreamTail from './AgentStreamTail'
 import MessageBubble from './MessageBubble'
+import RecoveryCard, { findRecoveryContext } from './RecoveryCard'
 import { getFilteredSuggestions } from './suggestions'
 import { useAgentPrefill } from './useAgentPrefill'
 import { useAgentConversationFlow } from './useAgentConversationFlow'
@@ -38,6 +41,8 @@ const LAYOUT_TRANSITION = { duration: 0.4, ease: EASE } as const
 const AgentDashboard: React.FC = () => {
   const { currentUser } = useAuth()
   const { can } = usePermission()
+  /** 吉祥物形象：设置页选择经模块级 store 同步到本页所有 Mascot 实例 */
+  const { shape, color } = useMascotAppearance()
   const username = currentUser?.displayName || currentUser?.username || '用户'
 
   const [inputValue, setInputValue] = useState('')
@@ -60,6 +65,7 @@ const AgentDashboard: React.FC = () => {
     refreshTrigger,
     mascotState,
     contextTokens,
+    inFlightTools,
     handleSend,
     handleSelectConversation,
     handleNewConversation,
@@ -147,6 +153,18 @@ const AgentDashboard: React.FC = () => {
       lastMsg.role !== 'assistant' ||
       (!!lastMsg.sending && !lastMsg.content))
 
+  /** 最新一条 assistant 消息（尾部向前找，-1 兜底）：仅它挂活体头像，其余 frozen */
+  let lastAssistantIdx = -1
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i]?.role === 'assistant') {
+      lastAssistantIdx = i
+      break
+    }
+  }
+
+  /** 错误恢复：最后一轮 assistant 消息以 ❌ 开头（启发式）→ 尾部渲染 RecoveryCard */
+  const recovery = findRecoveryContext(messages)
+
   const messageList = (
     <div className="max-w-3xl mx-auto py-4">
       <AnimatePresence>
@@ -164,27 +182,26 @@ const AgentDashboard: React.FC = () => {
             versions={msg.versions}
             activeVersion={msg.activeVersion}
             onSwitchVersion={msg.versions && msg.versions.length > 0 ? (dir) => handleSwitchVersion(msg.clientId, dir) : undefined}
+            mascotState={mascotState}
+            live={idx === lastAssistantIdx}
           />
         ))}
       </AnimatePresence>
 
-      {/* 思考中 */}
-      {showThinking && (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-3 ml-12 mb-4"
-        >
-          <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl rounded-bl-md" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
-            >
-              <Icon name="Loader2" size={16} className="text-[color:var(--accent)]" />
-            </motion.div>
-            <span className="text-sm" style={{ color: 'var(--muted)' }}>思考中...</span>
-          </div>
-        </motion.div>
+      {/* 流式尾部（AgentStreamTail = PixelLoader + ToolCallChips 组合件）：
+          思考占位 + 工具调用行；完成后 chips 保留终态摘要，下一轮 send 重置 */}
+      <AgentStreamTail showLoader={showThinking} tools={inFlightTools} />
+
+      {/* 错误恢复卡片（❌ 收尾时出现；编辑复用 handleEditMessage 的回填+聚焦） */}
+      {recovery && (
+        <div className="ml-12 mb-4">
+          <RecoveryCard
+            errorText={recovery.errorText}
+            onRetry={() => handleResend(recovery.assistantClientId)}
+            onEdit={() => handleEditMessage(recovery.userContent)}
+            onNewTopic={handleNewConversation}
+          />
+        </div>
       )}
     </div>
   )
@@ -214,21 +231,6 @@ const AgentDashboard: React.FC = () => {
               </motion.div>
             )}
           </AnimatePresence>
-
-          {/* Mascot 状态头像（K3 审查改版）：不再占据欢迎页中心——缩为 32px，
-              欢迎态嵌在输入框左侧（随 AI 状态变表情），对话态在 TopBar 下常驻。
-              等比缩放过渡（scale 补间，球不变形） */}
-          {chatMode && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ type: 'spring', stiffness: 260, damping: 30 }}
-              className="flex justify-center flex-shrink-0 pt-2"
-              style={{ overflow: 'visible' }}
-            >
-              <Mascot size={40} state={mascotState} />
-            </motion.div>
-          )}
 
           {/* 欢迎形态：窄屏历史入口（TopBar 仅对话形态显示，此处补欢迎态的入口） */}
           {!chatMode && (
@@ -273,7 +275,7 @@ const AgentDashboard: React.FC = () => {
                     inputRef={inputRef}
                     placeholder={composerPlaceholder}
                     centered={false}
-                    mascot={<Mascot size={32} state={mascotState} />}
+                    mascot={<Mascot size={48} state={mascotState} shape={shape} color={color} />}
                     toolbarSlot={
                       <>
                         <ModelPicker

@@ -14,6 +14,63 @@ import { PreferencesSection } from '@/components/features/settings/PreferencesSe
 import { AboutHelpSection } from '@/components/features/settings/AboutHelpSection'
 import { Icon } from '@/components/ui/Icon'
 import { EASE_OUT } from '@/constants/animations'
+import Mascot from '@/components/features/agent/Mascot'
+import { useMascotAppearance } from '@/hooks/useMascotAppearance'
+
+/**
+ * 吉祥物形象设置（挂在「外观」面板之下）：2 形 3 色精选池，
+ * 选择经 useMascotAppearance 持久化并同步到全应用 Mascot 实例。
+ */
+const SHAPE_OPTIONS = [
+  { id: 'cercle', label: '圆形' },
+  { id: 'triangle', label: '三角' },
+]
+const COLOR_OPTIONS = [
+  { id: 'encre', label: '墨黑' },
+  { id: 'creme', label: '米白' },
+  { id: 'ambre', label: '琥珀' },
+]
+
+function MascotAppearanceSection() {
+  const { shape, color, setShape, setColor } = useMascotAppearance()
+  const itemClass = (sel: boolean) =>
+    `p-3 rounded-xl border-2 flex flex-col items-center gap-2 transition-[border-color,box-shadow] ${
+      sel
+        ? 'border-[color:var(--accent)] shadow-md ring-2 ring-[color:var(--accent-soft)]'
+        : 'border-[color:var(--border)] hover:border-[color:var(--border-strong)] bg-[color:var(--card)]'
+    }`
+  return (
+    <div className="card mt-6">
+      <div className="card-header">
+        <h2 className="text-lg font-semibold text-[color:var(--fg)] flex items-center gap-2"><Icon name="Bot" size={20} /> 吉祥物形象</h2>
+      </div>
+      <div className="card-body">
+        <p className="text-sm text-[color:var(--fg-2)] mb-3">形状</p>
+        <div className="grid grid-cols-2 gap-3 mb-5">
+          {SHAPE_OPTIONS.map(s => (
+            <button key={s.id} onClick={() => setShape(s.id)} className={itemClass(shape === s.id)}>
+              <div style={{ pointerEvents: 'none' }}>
+                <Mascot size={72} state="idle" follow={false} shape={s.id} color={color} />
+              </div>
+              <span className="text-sm font-semibold text-[color:var(--fg)]">{s.label}</span>
+            </button>
+          ))}
+        </div>
+        <p className="text-sm text-[color:var(--fg-2)] mb-3">颜色</p>
+        <div className="grid grid-cols-3 gap-3">
+          {COLOR_OPTIONS.map(c => (
+            <button key={c.id} onClick={() => setColor(c.id)} className={itemClass(color === c.id)}>
+              <div style={{ pointerEvents: 'none' }}>
+                <Mascot size={72} state="idle" follow={false} shape={shape} color={c.id} />
+              </div>
+              <span className="text-sm font-semibold text-[color:var(--fg)]">{c.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 /**
  * 系统设置 (v0.83.0 重构)
@@ -64,7 +121,7 @@ const Settings: React.FC<SettingsProps> = ({ refresh }) => {
   const renderPanel = () => {
     switch (active) {
       case 'account': return <AccountSection />
-      case 'appearance': return <AppearanceSection />
+      case 'appearance': return (<><AppearanceSection /><MascotAppearanceSection /></>)
       case 'ai': return <AiCapabilitySection />
       case 'data': return <DataStorageSection refresh={refresh} />
       case 'preferences': return <PreferencesSection />

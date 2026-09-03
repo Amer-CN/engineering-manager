@@ -13,11 +13,7 @@ interface AgentTopBarProps {
 const AgentTopBar: React.FC<AgentTopBarProps> = ({
   modelName, onNewConversation, onSearchOpen, onHistoryOpen,
 }) => (
-  <div className="flex items-center justify-between gap-3 px-6 pt-4 pb-2 flex-shrink-0">
-    <div className="flex items-center gap-2.5 min-w-0">
-      <div className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
-        <Icon name="Bot" size={16} />
-      </div>
+    <div className="flex items-center justify-between gap-3 px-6 pt-4 pb-2 flex-shrink-0">
       <div className="min-w-0 flex items-center gap-3">
         <p className="text-sm font-semibold flex-shrink-0" style={{ color: 'var(--fg)' }}>AI 管家</p>
         {modelName && (
@@ -27,7 +23,6 @@ const AgentTopBar: React.FC<AgentTopBarProps> = ({
           </>
         )}
       </div>
-    </div>
     <div className="flex items-center gap-2 flex-shrink-0">
       <button
         onClick={onNewConversation}
