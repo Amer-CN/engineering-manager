@@ -137,8 +137,8 @@ export function ColFilterDropdown({
       {open && createPortal(
         <div
           ref={popRef}
-          className="fixed z-[100] w-52 rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] shadow-xl"
-          style={{ top: pos.top, left: pos.left }}
+          className="fixed z-[100] w-52 rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] shadow-xl popover-entry"
+          style={{ top: pos.top, left: pos.left, transformOrigin: 'top left' }}
         >
           {/* 搜索框 */}
           <div className="p-1.5 border-b border-[color:var(--border)]">
