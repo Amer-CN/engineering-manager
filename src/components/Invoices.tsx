@@ -63,10 +63,10 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
   </div>
 
   <div className="flex items-center gap-1 p-1 rounded-xl w-fit mb-4" style={{ background: 'var(--panel-2)' }}>
-  <button onClick={() => h.setActiveTab('invoices')} className="px-4 py-2 rounded-lg text-sm font-medium transition-[background-color,color,box-shadow]" style={h.activeTab === 'invoices' ? { background: 'var(--card)', color: 'var(--fg)', boxShadow: 'var(--shadow-card)' } : { background: 'transparent', color: 'var(--muted)' }}>
+  <button onClick={() => h.setActiveTab('invoices')} className="px-4 py-2 rounded-lg text-sm font-medium transition-[background-color,color,box-shadow,transform] duration-150 ease-out active:scale-[0.97]" style={h.activeTab === 'invoices' ? { background: 'var(--card)', color: 'var(--fg)', boxShadow: 'var(--shadow-card)' } : { background: 'transparent', color: 'var(--muted)' }}>
   发票列表
   </button>
-  <button onClick={() => h.setActiveTab('payments')} className="px-4 py-2 rounded-lg text-sm font-medium transition-[background-color,color,box-shadow]" style={h.activeTab === 'payments' ? { background: 'var(--card)', color: 'var(--fg)', boxShadow: 'var(--shadow-card)' } : { background: 'transparent', color: 'var(--muted)' }}>
+  <button onClick={() => h.setActiveTab('payments')} className="px-4 py-2 rounded-lg text-sm font-medium transition-[background-color,color,box-shadow,transform] duration-150 ease-out active:scale-[0.97]" style={h.activeTab === 'payments' ? { background: 'var(--card)', color: 'var(--fg)', boxShadow: 'var(--shadow-card)' } : { background: 'transparent', color: 'var(--muted)' }}>
   回款/付款记录
   </button>
   </div>
@@ -124,7 +124,7 @@ const Invoices: React.FC<InvoicesProps> = ({ refresh }) => {
   <Icon name="AlertTriangle" size={20} className="text-[color:var(--warning)]" />
   重复发票检测
   </h2>
-  <button onClick={() => setShowDuplicates(false)} className="text-[color:var(--muted)] hover:text-[color:var(--fg-2)]">✕</button>
+  <button onClick={() => setShowDuplicates(false)} className="text-[color:var(--muted)] hover:text-[color:var(--fg-2)] active:text-[color:var(--fg)] active:scale-[0.97] transition-[color,transform] duration-150 ease-out">✕</button>
   </div>
   <div className="p-6 overflow-y-auto max-h-[calc(80vh-140px)]">
   {duplicateInvoices.length === 0 ? (
