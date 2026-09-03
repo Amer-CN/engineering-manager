@@ -110,7 +110,8 @@ public class AudioPreprocessor
 
         await using var ctReg = ct.Register(() =>
         {
-            try { process.Kill(entireProcessTree: true); } catch { }
+            // 竞态：ct 触发时进程可能恰好已退出，kill 失败属正常，记日志即可
+            try { process.Kill(entireProcessTree: true); } catch (Exception ex) { Console.Error.WriteLine($"[AudioPreprocessor] kill 进程树失败（进程可能已退出）: {Common.Sanitize(ex.Message)}"); }
         });
 
         try
@@ -120,14 +121,14 @@ public class AudioPreprocessor
         catch (OperationCanceledException)
         {
             // kill 已由注册回调触发；限时等排水任务收尾（随进程退出流关闭自然完成），再向上抛
-            try { await Task.WhenAll(stdoutTask, stderrTask).WaitAsync(TimeSpan.FromSeconds(5)); } catch { }
+            try { await Task.WhenAll(stdoutTask, stderrTask).WaitAsync(TimeSpan.FromSeconds(5)); } catch (Exception ex) { Console.Error.WriteLine($"[AudioPreprocessor] 取消后排水收尾中断: {Common.Sanitize(ex.Message)}"); }
             throw;
         }
 
         // 进程已退出 → 管道必然 EOF，此处 await 排水任务不会死锁
         var stderr = string.Empty;
-        try { stderr = await stderrTask; } catch { }
-        try { await stdoutTask; } catch { }
+        try { stderr = await stderrTask; } catch (Exception ex) { Console.Error.WriteLine($"[AudioPreprocessor] stderr 排水收尾失败: {Common.Sanitize(ex.Message)}"); }
+        try { await stdoutTask; } catch (Exception ex) { Console.Error.WriteLine($"[AudioPreprocessor] stdout 排水收尾失败: {Common.Sanitize(ex.Message)}"); }
 
         return new SttProcessRunResult(process.ExitCode, stderr);
     }
