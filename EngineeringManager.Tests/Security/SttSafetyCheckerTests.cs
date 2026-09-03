@@ -1200,9 +1200,9 @@ load_tensors: offloaded 29/29 layers to GPU";
     // ═══════════════════════════════════════════════════════════
 
     [Fact]
-    public void CheckResources_AvailableMemoryBelow2GB_ReturnsKill()
+    public void CheckResources_AvailableMemoryBelow1_5GB_ReturnsKill()
     {
-        // 可用内存 1GB < 2GB → 杀进程
+        // 可用内存 1GB < 1.5GB → 杀进程（运行时保险丝从 2GB 降至 1.5GB）
         var result = SttSafetyChecker.CheckResources(
             privateBytes: 1 * GB,
             ramUsagePercent: 50.0,
@@ -1216,9 +1216,24 @@ load_tensors: offloaded 29/29 layers to GPU";
     }
 
     [Fact]
-    public void CheckResources_AvailableMemoryExactly2GB_ReturnsContinue()
+    public void CheckResources_AvailableMemoryExactly1_5GB_ReturnsContinue()
     {
-        // 可用内存恰好 2GB → 不杀（边界值，< 2GB 才杀）
+        // 可用内存恰好 1.5GB → 不杀（边界值，< 1.5GB 才杀）
+        var result = SttSafetyChecker.CheckResources(
+            privateBytes: 1 * GB,
+            ramUsagePercent: 50.0,
+            commitBytes: 4 * GB,
+            commitLimitBytes: 16 * GB,
+            availableMemoryBytes: 1536L * 1024 * 1024);
+
+        Assert.False(result.ShouldKill);
+        Assert.True(result.IsOk);
+    }
+
+    [Fact]
+    public void CheckResources_AvailableMemory2GB_ReturnsContinue()
+    {
+        // 保险丝降至 1.5GB 后 2GB 已足够（原 2047MB 边界会被误杀——实测转写中后台波动到 1.9-2.0GB）
         var result = SttSafetyChecker.CheckResources(
             privateBytes: 1 * GB,
             ramUsagePercent: 50.0,
@@ -1231,15 +1246,15 @@ load_tensors: offloaded 29/29 layers to GPU";
     }
 
     [Fact]
-    public void CheckResources_AvailableMemoryJustBelow2GB_ReturnsKill()
+    public void CheckResources_AvailableMemoryJustBelow1_5GB_ReturnsKill()
     {
-        // 可用内存 2047MB < 2048MB → 杀进程
+        // 可用内存 1535MB < 1536MB → 杀进程
         var result = SttSafetyChecker.CheckResources(
             privateBytes: 1 * GB,
             ramUsagePercent: 50.0,
             commitBytes: 4 * GB,
             commitLimitBytes: 16 * GB,
-            availableMemoryBytes: 2 * GB - 1); // 2047MB
+            availableMemoryBytes: 1536L * 1024 * 1024 - 1); // 1535MB
 
         Assert.True(result.ShouldKill);
         Assert.Contains("可用物理内存", result.Message);

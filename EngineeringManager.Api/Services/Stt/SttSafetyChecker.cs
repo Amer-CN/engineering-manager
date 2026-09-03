@@ -19,8 +19,8 @@ public static class SttSafetyChecker
     /// <summary>Commit 使用率上限：90%（硬熔断，杀进程）</summary>
     public const double MaxCommitPercent = 90.0;
 
-    /// <summary>运行时最小可用物理内存：2GB（低于此值杀进程树）</summary>
-    public const long RuntimeMinAvailableBytes = 2L * 1024 * 1024 * 1024;
+    /// <summary>运行时最小可用物理内存：1.5GB（低于此值杀进程树；模型权重在显存，系统侧仅推理运行时占用约数百 MB，2GB 在 16GB 内存机器转写长音频时被后台波动反复误杀——实测 2035/1928MB 均差几十 MB）</summary>
+    public const long RuntimeMinAvailableBytes = 1536L * 1024 * 1024;
 
     // ═══════════════════════════════════════════════════════════
     // GPU fail-closed 阈值
