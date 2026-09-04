@@ -95,6 +95,16 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
     setHasChanges(true)
   }, [])
 
+  // A3 归属修正下拉：选项 = 当前出现的全部说话人编号；「新建」= 最大编号 + 1
+  const speakerOptions = useMemo(
+    () => [...new Set(segments.map(s => s.speaker))].sort((a, b) => a - b),
+    [segments]
+  )
+  const nextSpeakerNum = useMemo(
+    () => (speakerOptions.length ? Math.max(...speakerOptions) : 0) + 1,
+    [speakerOptions]
+  )
+
   // 恢复原始
   const handleRestore = useCallback(() => {
     if (originalSegments.length > 0) {
@@ -197,6 +207,21 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
               <div key={i} className="flex gap-2 items-start p-2 rounded-lg border border-[color:var(--border)] bg-[color:var(--card)]">
                 <div className="flex-shrink-0 w-20">
                   <div className="text-xs font-medium text-[color:var(--accent)]">说话人{seg.speaker}</div>
+                  {/* A3 归属修正：把该段改挂到正确的人（rebuildFullText 前缀自动跟随） */}
+                  <select
+                    value={seg.speaker}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      handleSegmentChange(i, 'speaker', v === 'new' ? nextSpeakerNum : Number(v))
+                    }}
+                    title="修正此段说话人归属"
+                    className="mt-1 w-full text-xs bg-[color:var(--panel-2)] border border-[color:var(--border)] rounded px-1 py-0.5 text-[color:var(--fg-2)] outline-none focus:border-[color:var(--accent)]"
+                  >
+                    {speakerOptions.map(n => (
+                      <option key={n} value={n}>{n}</option>
+                    ))}
+                    <option value="new">新建 {nextSpeakerNum}</option>
+                  </select>
                   <button
                     type="button"
                     onClick={() => jumpTo(seg.start)}

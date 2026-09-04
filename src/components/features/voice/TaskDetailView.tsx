@@ -19,6 +19,7 @@ import type { SttJobDetail, SttSegment } from '@/services/stt-client'
 import TranscriptEditor from './TranscriptEditor'
 import TranscriptNotePanel, { copyTextToClipboard } from './TranscriptNotePanel'
 import SttInsightsCard from './SttInsightsCard'
+import SpeakerNameEditor from './SpeakerNameEditor'
 import type { TranscriptNotePanelHandle } from './TranscriptNotePanel'
 
 interface TaskDetailViewProps {
@@ -65,14 +66,16 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
   const segments = (job.segments ?? []).filter(s => s.speaker > 0)
   const { showToast } = useToastContext()
 
-  const [audioUrl, setAudioUrl] = useState<string | null>(null)
-  const [playing, setPlaying] = useState(false)
-  const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(job.durationSec ?? 0)
+  // 媒体信息（objectURL + 时长）与播放态各并为单 state（useState 门禁 ≤8）
+  const [media, setMedia] = useState<{ url: string | null; duration: number }>({ url: null, duration: job.durationSec ?? 0 })
+  const [playState, setPlayState] = useState<{ playing: boolean; time: number }>({ playing: false, time: 0 })
   const [speed, setSpeed] = useState(1)
   const [activeIdx, setActiveIdx] = useState(-1)
   const [editing, setEditing] = useState(false)
   const [menuOpen, setMenuOpen] = useState<'extract' | 'export' | null>(null)
+  // A1/A2：说话人显示名（会话内不落库）；B2：章节联动高亮区间 [start, nextStart)
+  const [speakerNames, setSpeakerNames] = useState<Record<number, string>>({})
+  const [chapterRange, setChapterRange] = useState<{ start: number; end: number } | null>(null)
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const segRefs = useRef<(HTMLElement | null)[]>([])
@@ -87,7 +90,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
       if (cancelled) return
       if (res.success && res.data) {
         url = URL.createObjectURL(res.data)
-        setAudioUrl(url)
+        setMedia(m => ({ ...m, url }))
       }
     })
     return () => {
@@ -108,7 +111,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
     const a = audioRef.current
     if (!a) return
     a.currentTime = sec
-    setCurrentTime(sec)
+    setPlayState(p => ({ ...p, time: sec }))
     a.play().catch(() => { /* 自动播放可能被浏览器拦截 */ })
   }, [])
 
@@ -117,7 +120,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
     const a = audioRef.current
     if (!a) return
     const t = a.currentTime
-    setCurrentTime(t)
+    setPlayState(p => ({ ...p, time: t }))
     if (segments.length === 0) return
     let i = curIdxRef.current
     if (i >= segments.length) i = segments.length - 1
@@ -147,7 +150,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
   // 倍速（audio 元素挂载后也要重新应用）
   useEffect(() => {
     if (audioRef.current) audioRef.current.playbackRate = speed
-  }, [speed, audioUrl])
+  }, [speed, media.url])
 
   // 下拉菜单：点击菜单外部关闭
   useEffect(() => {
@@ -159,13 +162,22 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
     return () => document.removeEventListener('mousedown', onDown)
   }, [menuOpen])
 
-  // 摘取原文纯文本行：「【说话人N】mm:ss 文本」；无分段（单人）时回退 job.text 按行
+  // A1/A2：说话人显示名（未改名回退「说话人N」）与改名回调
+  const speakerNameOf = useCallback(
+    (sp: number) => speakerNames[sp] ?? `说话人${sp}`,
+    [speakerNames]
+  )
+  const handleRename = useCallback((sp: number, name: string) => {
+    setSpeakerNames(prev => ({ ...prev, [sp]: name }))
+  }, [])
+
+  // 摘取原文纯文本行：「【显示名】mm:ss 文本」（未改名即【说话人N】）；无分段（单人）时回退 job.text 按行
   const noteLines = useMemo<string[]>(() => {
     if (segments.length > 0) {
-      return segments.map(s => `【说话人${s.speaker}】${formatTime(s.start)} ${s.text}`)
+      return segments.map(s => `【${speakerNameOf(s.speaker)}】${formatTime(s.start)} ${s.text}`)
     }
     return (job.text ?? '').split('\n').filter(l => l.trim() !== '')
-  }, [segments, job.text])
+  }, [segments, job.text, speakerNameOf])
 
   // 批量摘取 → 摘取原文：填充右栏笔记
   const handleExtract = useCallback(() => {
@@ -210,34 +222,48 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
     showToast(ok ? '笔记已复制到剪贴板' : '复制失败，请手动复制', ok ? 'success' : 'error')
   }, [showToast])
 
-  const totalDuration = duration || job.durationSec || 0
+  const totalDuration = media.duration || job.durationSec || 0
 
-  // 左栏主体：段落流（阅读模式） / 编辑器（编辑模式或单人纯文本）
+  // 左栏主体：段落流（阅读模式，含头像/改名/章节联动高亮） / 编辑器（编辑模式或单人纯文本）
   const body = segments.length > 0 && !editing ? (
     <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-2">
-      {segments.map((seg, i) => (
-        <div
-          key={i} ref={(el) => { segRefs.current[i] = el }}
-          className={`p-3 rounded-lg border transition-colors ${i === activeIdx ? 'bg-[color:var(--accent-soft)] border-[color:var(--accent)]' : 'border-transparent hover:bg-[color:var(--panel-2)]'}`}
-        >
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-medium text-[color:var(--accent)]">说话人{seg.speaker}</span>
-            <button
-              type="button" onClick={() => seekTo(seg.start)} disabled={!audioUrl}
-              title={audioUrl ? '跳转到此段播放' : undefined}
-              className="text-xs text-[color:var(--muted)] hover:text-[color:var(--accent)] disabled:hover:text-[color:var(--muted)] disabled:cursor-default flex items-center gap-0.5 font-mono tabular-nums"
-            >
-              {audioUrl && <Icon name="Play" size={9} />}
-              {formatTime(seg.start)}
-            </button>
+      {segments.map((seg, i) => {
+        const name = speakerNameOf(seg.speaker)
+        // 章节联动：段落起点落在所选章节 [startSec, nextStartSec) 内；播放跟随优先
+        const inChapter = chapterRange !== null && seg.start >= chapterRange.start && seg.start < chapterRange.end
+        return (
+          <div
+            key={i} ref={(el) => { segRefs.current[i] = el }}
+            className={`p-3 rounded-lg border transition-colors ${
+              i === activeIdx
+                ? 'bg-[color:var(--accent-soft)] border-[color:var(--accent)]'
+                : inChapter
+                  ? 'bg-[color:var(--accent-soft)] border-transparent border-l-4 border-l-[color:var(--accent)]'
+                  : 'border-transparent hover:bg-[color:var(--panel-2)]'
+            }`}
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <SpeakerNameEditor
+                speaker={seg.speaker} name={name}
+                onRename={newName => handleRename(seg.speaker, newName)}
+              />
+              <button
+                type="button" onClick={() => seekTo(seg.start)} disabled={!media.url}
+                title={media.url ? '跳转到此段播放' : undefined}
+                className="text-xs text-[color:var(--muted)] hover:text-[color:var(--accent)] disabled:hover:text-[color:var(--muted)] disabled:cursor-default flex items-center gap-0.5 font-mono tabular-nums"
+              >
+                {media.url && <Icon name="Play" size={9} />}
+                {formatTime(seg.start)}
+              </button>
+            </div>
+            <p className="text-sm text-[color:var(--fg-2)] whitespace-pre-wrap break-words">{seg.text}</p>
           </div>
-          <p className="text-sm text-[color:var(--fg-2)] whitespace-pre-wrap break-words">{seg.text}</p>
-        </div>
-      ))}
+        )
+      })}
     </div>
   ) : (
     <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
-      <TranscriptEditor job={job} masked={masked} audioUrl={audioUrl} audioRef={audioRef} seekTo={seekTo} onIngest={onIngest} />
+      <TranscriptEditor job={job} masked={masked} audioUrl={media.url} audioRef={audioRef} seekTo={seekTo} onIngest={onIngest} />
     </div>
   )
 
@@ -298,40 +324,42 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
         <div className="flex-1 min-h-0 flex flex-col min-[900px]:flex-row">
           {/* 左栏 ≈60%：智能速览卡 + 段落流 / 编辑器 + 底部播放器 */}
           <section className="flex flex-col min-h-0 flex-1 min-[900px]:flex-initial min-[900px]:basis-[60%] min-[900px]:min-w-0">
-            <SttInsightsCard jobId={job.id} onSeek={seekTo} />
+            <SttInsightsCard jobId={job.id} onSeek={seekTo} onChapterSelect={setChapterRange} />
 
             {body}
 
             {/* 唯一的 audio 元素（隐藏），TranscriptEditor 通过 audioRef 复用 */}
             <audio
-              ref={audioRef} src={audioUrl ?? undefined} preload="metadata" className="hidden"
-              onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onTimeUpdate={handleTimeUpdate}
+              ref={audioRef} src={media.url ?? undefined} preload="metadata" className="hidden"
+              onPlay={() => setPlayState(p => ({ ...p, playing: true }))}
+              onPause={() => setPlayState(p => ({ ...p, playing: false }))}
+              onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={() => {
                 const a = audioRef.current
                 if (!a) return
                 const d = a.duration
-                setDuration(Number.isFinite(d) && d > 0 ? d : (job.durationSec ?? 0))
+                setMedia(m => ({ ...m, duration: Number.isFinite(d) && d > 0 ? d : (job.durationSec ?? 0) }))
               }}
             />
 
             {/* 底部固定播放器 */}
-            {audioUrl && (
+            {media.url && (
               <div className="flex items-center gap-3 px-6 h-16 border-t border-[color:var(--border)] bg-[color:var(--panel)] flex-shrink-0">
                 <button
                   type="button" onClick={togglePlay}
                   className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
                   style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
-                  title={playing ? '暂停 (Shift+Space)' : '播放 (Shift+Space)'}
+                  title={playState.playing ? '暂停 (Shift+Space)' : '播放 (Shift+Space)'}
                 >
-                  <Icon name={playing ? 'Pause' : 'Play'} size={16} />
+                  <Icon name={playState.playing ? 'Pause' : 'Play'} size={16} />
                 </button>
-                <span className="text-xs text-[color:var(--muted)] font-mono tabular-nums flex-shrink-0">{formatTime(currentTime)}</span>
+                <span className="text-xs text-[color:var(--muted)] font-mono tabular-nums flex-shrink-0">{formatTime(playState.time)}</span>
                 <input
                   type="range" min={0} max={totalDuration || 0} step={0.1}
-                  value={Math.min(currentTime, totalDuration || 0)} disabled={!totalDuration}
+                  value={Math.min(playState.time, totalDuration || 0)} disabled={!totalDuration}
                   onChange={(e) => {
                     const sec = Number(e.target.value)
-                    setCurrentTime(sec)
+                    setPlayState(p => ({ ...p, time: sec }))
                     if (audioRef.current) audioRef.current.currentTime = sec
                   }}
                   className="flex-1 accent-[color:var(--accent)]"
