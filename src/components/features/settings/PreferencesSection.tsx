@@ -10,6 +10,15 @@ const TOAST_DURATION_OPTIONS = [
   { value: '5000', label: '长', desc: '5 秒' },
 ]
 
+/** 删除保留天数选项 */
+const RETENTION_DAYS_OPTIONS = [
+  { value: '3', label: '3 天', desc: '3 天后永久删除' },
+  { value: '7', label: '7 天', desc: '1 周后永久删除（推荐）' },
+  { value: '14', label: '14 天', desc: '2 周后永久删除' },
+  { value: '30', label: '30 天', desc: '1 个月后永久删除' },
+  { value: '90', label: '90 天', desc: '3 个月后永久删除' },
+]
+
 /**
  * 通知与偏好面板 (v0.83.0 设置页重构)
  * 子区: 默认起始页 / 提示停留时长
@@ -18,11 +27,13 @@ const TOAST_DURATION_OPTIONS = [
 export function PreferencesSection() {
   const [startPage, setStartPage] = useState('dashboard')
   const [toastDuration, setToastDuration] = useState('3000')
+  const [retentionDays, setRetentionDays] = useState('7')
 
   useEffect(() => {
     let alive = true
     loadPref(PREF_KEYS.defaultStartPage, 'dashboard').then(v => { if (alive) setStartPage(v) })
     loadPref(PREF_KEYS.toastDuration, '3000').then(v => { if (alive) setToastDuration(v) })
+    loadPref(PREF_KEYS.retentionDays, '7').then(v => { if (alive) setRetentionDays(v) })
     return () => { alive = false }
   }, [])
 
@@ -34,6 +45,11 @@ export function PreferencesSection() {
   const handleToastDurationChange = (value: string) => {
     setToastDuration(value)
     void savePref(PREF_KEYS.toastDuration, value)
+  }
+
+  const handleRetentionDaysChange = (value: string) => {
+    setRetentionDays(value)
+    void savePref(PREF_KEYS.retentionDays, value)
   }
 
   return (
@@ -80,6 +96,31 @@ export function PreferencesSection() {
               >
                 {opt.label}
                 <span className="block text-caption font-normal opacity-60 mt-0.5">{opt.desc}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── 删除保留天数 ── */}
+      <div id="agent-retention-days" data-setting-anchor className="card">
+        <div className="card-header">
+          <h2 className="text-lg font-semibold text-[color:var(--fg)] flex items-center gap-2"><Icon name="Trash" size={20} /> 对话删除保留天数</h2>
+        </div>
+        <div className="card-body">
+          <p className="text-sm text-[color:var(--fg-2)] mb-3">
+            删除对话后，保留多长时间后永久清理。设置后下次应用启动时生效。
+          </p>
+          <div className="flex gap-2 max-w-md flex-wrap">
+            {RETENTION_DAYS_OPTIONS.map(opt => (
+              <button key={opt.value} onClick={() => handleRetentionDaysChange(opt.value)}
+                className={`px-4 py-2.5 rounded-lg text-sm font-medium border transition-colors ${
+                  retentionDays === opt.value
+                    ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]'
+                    : 'border-[color:var(--border)] text-[color:var(--fg-2)] hover:border-[color:var(--border)]'
+                }`}
+              >
+                {opt.label}
               </button>
             ))}
           </div>

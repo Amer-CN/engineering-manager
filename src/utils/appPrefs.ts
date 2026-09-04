@@ -15,6 +15,7 @@ export const PREF_KEYS = {
   autoLockMinutes: 'auto_lock_minutes',
   defaultStartPage: 'default_start_page',
   toastDuration: 'toast_duration',
+  retentionDays: 'retention_days',
 } as const
 
 const LS_PREFIX = 'app_pref_'

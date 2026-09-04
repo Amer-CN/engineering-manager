@@ -82,6 +82,7 @@ public static class UserPreferencesEndpoints
                 value = key switch
                 {
                     "pii_mask_enabled" => DefaultPiiMask,
+                    "retention_days"    => "7",
                     _ => null
                 };
             }

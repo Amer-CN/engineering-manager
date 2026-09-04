@@ -767,7 +767,16 @@ public static class AgentEndpoints
                 using var scope = app.Services.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<IDbConnection>();
                 var conversations = scope.ServiceProvider.GetRequiredService<AgentConversationService>();
-                await conversations.PurgeExpiredDeletedAsync(db);
+                // 读当前用户的 retention_days 偏好；未设置或未解析时回退到默认值 7
+                var days = (await db.QueryFirstOrDefaultAsync<string?>(
+                    "SELECT value FROM user_preferences WHERE user_id=@Uid AND key=@Key",
+                    new { Uid = (object?)null, Key = "retention_days" })) != null
+                    && int.TryParse(db.QueryFirstOrDefault<string>(
+                        "SELECT value FROM user_preferences WHERE user_id=@Uid AND key=@Key",
+                        new { Uid = (object?)null, Key = "retention_days" }), out var parsed)
+                        && parsed >= 1 && parsed <= 90
+                    ? parsed : 7;
+                await conversations.PurgeExpiredDeletedAsync(db, days);
             }
             catch (Exception ex)
             {

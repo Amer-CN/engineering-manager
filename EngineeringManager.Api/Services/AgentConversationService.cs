@@ -292,9 +292,9 @@ public class AgentConversationService
 
     /// <summary>
     /// 永久清理软删除超过 retentionDays 天的会话（连带 agent_messages）。
-    /// 应用启动时 fire-and-forget 调用，用户不可见 — 防误删数据只保留 7 天。
+    /// 应用启动时 fire-and-forget 调用，天数由前端用户偏好决定。
     /// </summary>
-    public async Task PurgeExpiredDeletedAsync(IDbConnection db, int retentionDays = 7)
+    public async Task PurgeExpiredDeletedAsync(IDbConnection db, int retentionDays)
     {
         // deleted_at 由 Common.NowString() 写入（本地时间 yyyy-MM-dd HH:mm:ss），字符串比较即时间比较
         var cutoff = DateTime.Now.AddDays(-retentionDays).ToString("yyyy-MM-dd HH:mm:ss");
