@@ -32,13 +32,13 @@ public static class SafeQueryValidator
         ["projects"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "id", "name", "description", "address", "start_date", "end_date",
-            "status", "budget", "created_by", "created_at", "updated_at"
+            "status", "budget", "project_manager_id", "created_by", "created_at", "updated_at"
         },
         ["members"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "id", "name", "phone", "email", "member_type", "role", "gender",
             "ethnicity", "birth_date", "base_salary", "daily_wage",
-            "entry_date", "status", "department_id", "position", "created_by", "created_at"
+            "entry_date", "wage_bank_account", "status", "department_id", "position", "created_by", "created_at"
         },
         ["workers"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -54,8 +54,10 @@ public static class SafeQueryValidator
         },
         ["settlements"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "id", "project_id", "partner_id", "contract_id", "type",
-            "amount", "settlement_date", "status", "remarks", "created_by", "created_at"
+            "id", "project_id", "partner_id", "contract_id", "type", "sub_type",
+            "name", "settlement_no", "settlement_date", "period_start", "period_end",
+            "amount", "status", "approved_by", "approved_at", "paid_at",
+            "remarks", "created_by", "created_at"
         },
         ["cost_ledger"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -64,18 +66,21 @@ public static class SafeQueryValidator
         },
         ["income_contracts"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "id", "project_id", "partner_id", "name", "type", "amount",
-            "sign_date", "status", "remarks", "created_by", "created_at"
+            "id", "project_id", "partner_id", "contract_no", "name", "amount",
+            "signed_date", "start_date", "end_date", "payment_method",
+            "final_amount", "settlement_id", "status", "remarks", "created_by", "created_at"
         },
         ["expense_contracts"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "id", "project_id", "partner_id", "name", "type", "amount",
-            "sign_date", "status", "remarks", "created_by", "created_at"
+            "id", "project_id", "partner_id", "contract_no", "name", "amount",
+            "signed_date", "start_date", "end_date", "payment_method",
+            "final_amount", "settlement_id", "status", "remarks", "created_by", "created_at"
         },
         ["inventory_items"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "id", "name", "category", "unit", "quantity", "min_quantity",
-            "location", "notes", "created_by", "created_at"
+            "id", "code", "name", "category", "unit", "specifications",
+            "purchase_price", "sale_price", "current_stock", "min_stock", "max_stock",
+            "supplier_id", "remarks", "created_by", "created_at"
         },
         ["partners"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {

@@ -187,4 +187,69 @@ public class SafeQueryValidatorTests
         // 改写结果去掉字符串字面量后必须仍含 created_by 过滤（无论 WHERE 是追加还是插入形式）
         Assert.Contains("created_by", StripStringLiterals(result.RewrittenSql), StringComparison.OrdinalIgnoreCase);
     }
+
+    // ════════ 白名单与真实库对齐（列名漂移修复） ════════
+    // 真实库 PRAGMA 实测：合同表是 signed_date（无 sign_date/counterparty），
+    // 库存表是 current_stock/min_stock/max_stock（无 quantity/min_quantity/location/notes）。
+
+    [Fact]
+    public void Whitelist_Contracts_ContainsSignedDate_NotSignDate()
+    {
+        foreach (var table in new[] { "income_contracts", "expense_contracts" })
+        {
+            var cols = SafeQueryValidator.TableWhitelist[table];
+            Assert.Contains("signed_date", cols);
+            Assert.DoesNotContain("sign_date", cols);
+        }
+    }
+
+    [Fact]
+    public void Whitelist_Inventory_ContainsRealStockColumns_NotDeadColumns()
+    {
+        var cols = SafeQueryValidator.TableWhitelist["inventory_items"];
+        Assert.Contains("current_stock", cols);
+        Assert.Contains("min_stock", cols);
+        Assert.Contains("max_stock", cols);
+        Assert.Contains("code", cols);
+        Assert.Contains("specifications", cols);
+        Assert.DoesNotContain("quantity", cols);
+        Assert.DoesNotContain("min_quantity", cols);
+        Assert.DoesNotContain("location", cols);
+        Assert.DoesNotContain("notes", cols); // 真实库库存表是 remarks，不是 notes
+    }
+
+    [Fact]
+    public void Whitelist_Settlements_ContainsRealColumns()
+    {
+        var cols = SafeQueryValidator.TableWhitelist["settlements"];
+        foreach (var col in new[] { "name", "settlement_no", "sub_type", "settlement_date",
+                 "period_start", "period_end", "approved_by", "approved_at", "paid_at" })
+            Assert.Contains(col, cols);
+    }
+
+    [Fact]
+    public void Whitelist_Members_ContainsWageBankAccount()
+    {
+        var cols = SafeQueryValidator.TableWhitelist["members"];
+        Assert.Contains("wage_bank_account", cols);
+        Assert.DoesNotContain("bank_account", cols); // 真实 members 表无明文 bank_account 列
+    }
+
+    [Fact]
+    public void ValidateAndRewrite_ContractsSignedDateQuery_Passes()
+    {
+        var result = SafeQueryValidator.ValidateAndRewrite(
+            "SELECT ic.name, ic.signed_date, ic.contract_no FROM income_contracts ic", TestUid, TestScope);
+
+        Assert.True(result.IsValid, $"signed_date 查询应该通过: {result.Error}");
+    }
+
+    [Fact]
+    public void ValidateAndRewrite_InventoryDeadColumn_Rejected()
+    {
+        var result = SafeQueryValidator.ValidateAndRewrite(
+            "SELECT quantity FROM inventory_items", TestUid, TestScope);
+
+        Assert.False(result.IsValid, "quantity 已不是库存表真实列，应被拒绝");
+    }
 }

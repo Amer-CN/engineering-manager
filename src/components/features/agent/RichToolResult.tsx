@@ -75,12 +75,43 @@ const RenderValue: React.FC<{ value: unknown }> = ({ value }) => {
   )
 }
 
+/** runSafeQuery 成功结果专用渲染：主体只展示 data（对象数组 → DataTable，非数组回退
+ *  RenderValue）；success/rowCount/rewrittenSql 内部字段折叠进卡底「调试信息」<details>
+ *  （样式参考 KnowledgeSourceCard：小字 muted、summary 可点），展开才可见。 */
+const RunSafeQueryCard: React.FC<{ payload: Record<string, unknown> }> = ({ payload }) => {
+  const data = payload.data
+  return (
+    <div className="space-y-2">
+      {isObjectArray(data) ? <DataTable rows={data} /> : <RenderValue value={data} />}
+      <details className="text-xs text-[color:var(--muted)]">
+        <summary className="cursor-pointer hover:text-[color:var(--muted)]">调试信息</summary>
+        <div className="mt-1 space-y-0.5">
+          {payload.success !== undefined && (
+            <div>成功: {formatValue('success', payload.success)}</div>
+          )}
+          {payload.rowCount !== undefined && (
+            <div>行数: {formatValue('rowCount', payload.rowCount)}</div>
+          )}
+          {payload.rewrittenSql != null && payload.rewrittenSql !== '' && (
+            <div className="break-all">实际执行 SQL: {String(payload.rewrittenSql)}</div>
+          )}
+        </div>
+      </details>
+    </div>
+  )
+}
+
 /** 单个工具结果卡片 */
 const ToolResultCard: React.FC<{ result: ToolCallResult }> = ({ result }) => {
   const [open, setOpen] = useState(true)
   const count = Array.isArray(result.result) ? result.result.length : null
   // S9 Stitch: 数据来源对应模块→底部“打开 XX →”链接
   const nav = result.success ? toolNav(result.toolName) : null
+  // runSafeQuery 成功载荷（success=true 的对象）走专用渲染；失败载荷走现有展示路径不变
+  const runSafePayload = (result.toolName === 'runSafeQuery' &&
+    result.result !== null && typeof result.result === 'object' && !Array.isArray(result.result))
+    ? (result.result as Record<string, unknown>)
+    : null
 
   return (
     <div
@@ -111,6 +142,8 @@ const ToolResultCard: React.FC<{ result: ToolCallResult }> = ({ result }) => {
             <span style={{ color: 'var(--danger)' }}>{result.error}</span>
           ) : result.toolName === 'searchKnowledgeBase' ? (
             <KnowledgeSourceCard result={result.result} />
+          ) : runSafePayload && runSafePayload.success === true ? (
+            <RunSafeQueryCard payload={runSafePayload} />
           ) : (
             <RenderValue value={result.result} />
           )}
