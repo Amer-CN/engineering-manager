@@ -19,57 +19,7 @@ import {
 } from './richToolResult.utils'
 import { navigateTo } from './types'
 import KnowledgeSourceCard from './KnowledgeSourceCard'
-
-const MAX_ROWS = 8
-
-/** 对象数组 → 表格 */
-const DataTable: React.FC<{ rows: Record<string, unknown>[] }> = ({ rows }) => {
-  const [expanded, setExpanded] = useState(false)
-  const columns = Array.from(
-    rows.reduce((set, r) => {
-      Object.keys(r).forEach((k) => set.add(k))
-      return set
-    }, new Set<string>()),
-  )
-  const shown = expanded ? rows : rows.slice(0, MAX_ROWS)
-
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-xs border-collapse">
-        <thead>
-          <tr className="text-left border-b" style={{ color: 'var(--muted)', borderColor: 'var(--border)' }}>
-            {columns.map((c) => (
-              <th key={c} className="py-1.5 px-2 font-medium whitespace-nowrap">
-                {fieldLabel(c)}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {shown.map((row, i) => (
-            <tr key={i} className="border-b last:border-0" style={{ borderColor: 'var(--border)' }}>
-              {columns.map((c) => (
-                <td key={c} className="py-1.5 px-2 whitespace-nowrap" style={{ color: 'var(--fg-2)' }}>
-                  {formatValue(c, row[c])}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {rows.length > MAX_ROWS && (
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          className="mt-1.5 text-xs font-medium"
-          style={{ color: 'var(--accent)' }}
-        >
-          {expanded ? '收起' : `展开全部（共 ${rows.length} 条）`}
-        </button>
-      )}
-    </div>
-  )
-}
+import DataTable from './DataTable'
 
 /** 标量对象 → 键值网格 */
 const KeyValueGrid: React.FC<{ obj: Record<string, unknown> }> = ({ obj }) => (

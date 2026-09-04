@@ -77,13 +77,38 @@ export function fieldLabel(key: string): string {
 /** 状态/枚举值 → 中文（找不到原样返回） */
 const STATUS_LABELS: Record<string, string> = {
   active: '进行中', completed: '已完成', pending: '待处理',
-  received: '已收', sent: '已开', left: '离职',
+  received: '已收齐', sent: '已开', left: '离职',
   income: '收入', expense: '支出', staff: '管理人员', worker: '工人',
   labor: '劳务分包', material: '材料供应', equipment: '设备租赁',
+  // 发票状态（真源 invoiceConfig.ts statusConfigMap）
+  issued: '已开具', partially_paid: '部分收款', cancelled: '已作废', red_flushed: '已红冲',
+  // 项目状态
+  planning: '规划中', in_progress: '进行中', archived: '已归档',
+  // 结算状态
+  draft: '草稿', processed: '已处理',
 }
 
-/** 金额型字段（加 ¥ 与千分位） */
-const MONEY_KEYS = /(amount|total|totalincome|totalexpense|nettotal|budget|wage)/i
+/**
+ * 状态值 → 色调（Beautiful UI A1：表格状态彩色小标签用）。
+ * 成功类→success；风险类→danger/warning；进行类→info；未知→null（不着色）。
+ */
+export function statusTone(
+  value: unknown,
+): 'success' | 'warning' | 'danger' | 'info' | null {
+  const s = typeof value === 'string' ? value.trim().toLowerCase() : ''
+  if (!s) return null
+  if (s === 'completed' || s === 'received' || s === 'issued') return 'success'
+  if (s === 'cancelled' || s === 'red_flushed') return 'danger'
+  if (s === 'pending') return 'warning'
+  if (
+    s === 'active' || s === 'in_progress' || s === 'planning' ||
+    s === 'sent' || s === 'draft' || s === 'processed' || s === 'archived'
+  ) return 'info'
+  return null
+}
+
+/** 金额型字段（加 ¥ 与千分位；导出供 DataTable 表尾求和判断） */
+export const MONEY_KEYS = /(amount|total|totalincome|totalexpense|nettotal|budget|wage)/i
 
 /** 格式化标量值 */
 export function formatValue(key: string, value: unknown): string {

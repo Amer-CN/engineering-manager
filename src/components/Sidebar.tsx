@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useLayoutEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from './ui/Icon'
 import { DropdownMenu } from './ui/DropdownMenu'
@@ -44,6 +44,26 @@ const Sidebar: React.FC<SidebarProps> = ({
   const sidebarW = collapsed ? 56 : 256
   const hasUserManagement = useHasFeature('userManagement')
 
+  // A3 滑动高亮胶囊（参考 TurboKach/ai-native-react-components sidebar-nav.tsx 的 box 写法，MIT，裁剪）：
+  // hover 导航项时胶囊滑到该项（hover 离开 nav 区清 box 隐藏兜底）；active 项实底样式并存。
+  const navRef = useRef<HTMLElement>(null)
+  const itemRefs = useRef<Record<string, HTMLButtonElement | null>>({})
+  const [hovered, setHovered] = useState<string | null>(null)
+  const [capsule, setCapsule] = useState<{ top: number; height: number } | null>(null)
+
+  useLayoutEffect(() => {
+    if (collapsed || !hovered) { setCapsule(null); return }
+    const container = navRef.current
+    const target = itemRefs.current[hovered]
+    if (!container || !target) { setCapsule(null); return }
+    const containerRect = container.getBoundingClientRect()
+    const targetRect = target.getBoundingClientRect()
+    setCapsule({
+      top: targetRect.top - containerRect.top,
+      height: targetRect.height,
+    })
+  }, [hovered, collapsed])
+
   return (
   <motion.aside
   initial={false}
@@ -58,7 +78,25 @@ const Sidebar: React.FC<SidebarProps> = ({
   {/* ── Logo 区域已合并到 TitleBar ── */}
 
   {/* ── 导航区域 ── */}
-  <HoverScrollbar className="flex-1"><nav className={`flex-1 py-3 ${collapsed ? 'overflow-hidden' : ''}`}>
+  <HoverScrollbar className="flex-1"><nav
+  ref={navRef}
+  onMouseLeave={() => setHovered(null)}
+  className={`relative flex-1 py-3 ${collapsed ? 'overflow-hidden' : ''}`}
+  >
+  {/* A3 滑动高亮胶囊：hover 色胶囊层，active 项实底样式并存（位置由 useLayoutEffect 测量） */}
+  {!collapsed && (
+  <span
+  aria-hidden
+  className="pointer-events-none absolute inset-x-0 rounded-full bg-[color:var(--sidebar-item-hover)]"
+  style={{
+  top: capsule?.top ?? 0,
+  height: capsule?.height ?? 0,
+  opacity: capsule ? 1 : 0,
+  transition:
+  'top 220ms cubic-bezier(0.23,1,0.32,1), height 220ms cubic-bezier(0.23,1,0.32,1), opacity 150ms ease',
+  }}
+  />
+  )}
   {navItems.map((item) => {
   const isActive = currentPage === item.id
 
@@ -82,17 +120,17 @@ const Sidebar: React.FC<SidebarProps> = ({
   )
   }
 
-  // 展开态
+  // 展开态（A3：hover 效果改由滑动胶囊承担，active 项维持实底 inline style）
   return (
   <div key={item.id} className="px-3">
   <motion.button
+  ref={(el) => { itemRefs.current[item.id] = el }}
   onClick={() => onNavigate(item.id)}
   whileHover={{ x: 4 }}
   whileTap={{ scale: 0.97 }}
+  onMouseEnter={() => setHovered(item.id)}
   className="w-full flex items-center px-3 py-2.5 rounded-full text-xs font-bold tracking-wide transition-colors duration-200 group relative mb-0.5"
   style={{ background: isActive ? 'var(--fg)' : 'transparent', color: isActive ? 'var(--bg)' : 'var(--fg-2)' }}
-  onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--sidebar-item-hover)' }}
-  onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent' }}
   >
   <motion.div
   animate={{ scale: isActive ? 1.1 : 1 }}

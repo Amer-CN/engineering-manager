@@ -12,6 +12,8 @@
  */
 
 import React, { useMemo, useRef } from 'react'
+import CodeBlockCard from './CodeBlockCard'
+import SelectionAiBar from './SelectionAiBar'
 
 // ═══════════════════════════════════════════════════════════════
 // 行内解析
@@ -173,17 +175,19 @@ export function parseBlocks(input: string): React.ReactNode[] {
     // 空行
     if (line.trim() === '') { i++; continue }
 
-    // 围栏代码块
+    // 围栏代码块（B2：CodeBlockCard 卡片——语言标签 + 复制 + 行号；未闭合围栏流式兼容）
     const fence = /^```(.*)$/.exec(line)
     if (fence) {
       const codeLines: string[] = []
+      let closed = false
       i++
-      while (i < lines.length && !/^```\s*$/.test(lines[i])) { codeLines.push(lines[i]); i++ }
-      i++ // 跳过结束围栏
+      while (i < lines.length) {
+        if (/^```\s*$/.test(lines[i])) { closed = true; i++; break }
+        codeLines.push(lines[i])
+        i++
+      }
       blocks.push(
-        <pre key={`b${key++}`} className="my-2 p-3 rounded-lg bg-[color:var(--panel-2)] text-[color:var(--fg)] text-xs font-mono overflow-x-auto border border-[color:var(--border)]">
-          <code>{codeLines.join('\n')}</code>
-        </pre>,
+        <CodeBlockCard key={`b${key++}`} language={fence[1].trim()} lines={codeLines} closed={closed} />,
       )
       continue
     }
@@ -321,25 +325,46 @@ const STREAM_IN_STYLE: React.CSSProperties = {
   animation: 'stream-in 420ms cubic-bezier(0.22, 0.61, 0.25, 1) both',
 }
 
+/** 流式期间旧块退后样式（Beautiful UI chat.tsx resolving 同款）。
+ *  直写 style 不用 animation——markdown-streaming.test 锁死旧块 style.animation === ''。 */
+const RESOLVING_STYLE: React.CSSProperties = {
+  opacity: 0.55,
+  filter: 'blur(0.5px)',
+  transform: 'scale(0.985)',
+  transformOrigin: 'top left',
+  transition: 'opacity .4s, filter .4s, transform .4s',
+}
+
 const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className, streaming }) => {
   /** 已见过（已播过进场动画）的块 key 集合：content 每个分片全量重算，key 是位置序号 */
   const seenRef = useRef<Set<string>>(new Set())
+  /** B1 选中文字 AI 操作条：本组件只被 assistant 气泡使用，容器即选区作用域 */
+  const containerRef = useRef<HTMLDivElement>(null)
   const blocks = useMemo(() => {
     const parsed = parseBlocks(content)
     if (!streaming) return parsed
-    return parsed.map((node) => {
+    return parsed.map((node, idx) => {
       const el = node as React.ReactElement
       const key = typeof el?.key === 'string' ? el.key : null
-      if (key === null || seenRef.current.has(key)) return node
-      seenRef.current.add(key)
-      return React.cloneElement(el, {
-        style: { ...((el.props as { style?: React.CSSProperties }).style ?? {}), ...STREAM_IN_STYLE },
-      })
+      if (key === null) return node
+      if (!seenRef.current.has(key)) {
+        seenRef.current.add(key)
+        return React.cloneElement(el, {
+          style: { ...((el.props as { style?: React.CSSProperties }).style ?? {}), ...STREAM_IN_STYLE },
+        })
+      }
+      // 已见过的旧块（最新块之前）→ 退后；最新块保持全清晰
+      if (idx < parsed.length - 1) {
+        return React.cloneElement(el, {
+          style: { ...((el.props as { style?: React.CSSProperties }).style ?? {}), ...RESOLVING_STYLE },
+        })
+      }
+      return node
     })
   }, [content, streaming])
 
   return (
-    <div className={`space-y-1 ${className ?? ''}`}>
+    <div ref={containerRef} className={`space-y-1 ${className ?? ''}`}>
       {blocks}
       {/* 流式期间末尾闪烁光标；完成后（streaming 翻 false）光标消失 */}
       {streaming && (
@@ -349,6 +374,8 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className,
           style={{ background: 'var(--fg)', animation: 'caret-blink 1s ease-in-out infinite' }}
         />
       )}
+      {/* B1 选中文字 AI 操作条（仅在 assistant 气泡渲染区域内生效） */}
+      <SelectionAiBar containerRef={containerRef} />
     </div>
   )
 }
