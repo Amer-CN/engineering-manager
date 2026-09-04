@@ -156,27 +156,64 @@ public class AgentConversationService
             ORDER BY created_at ASC, id ASC
         ", new { ConversationId = conversationId });
 
-        var messageList = messages.Select(m =>
-        {
-            List<ToolCallResult>? toolCalls = null;
-            if (!string.IsNullOrEmpty(m.tool_calls))
-            {
-                try
-                {
-                    toolCalls = JsonSerializer.Deserialize<List<ToolCallResult>>(m.tool_calls);
-                }
-                catch { /* ignore deserialization errors */ }
-            }
+        var rows = messages.ToList();
 
-            return new
+        // 预处理：role='tool' 消息的 content 存的是单个 ToolCallResult JSON
+        // （写库见 AgentEndpoints.cs：Content = JsonSerializer.Serialize(result)）。
+        // 解析失败 / content 为空 → 跳过该条（不产生空壳条目），不抛错。
+        var parsedToolResults = new List<ToolCallResult?>(rows.Count);
+        foreach (var row in rows)
+        {
+            if ((string)row.role != MessageRole.Tool || string.IsNullOrEmpty((string?)row.content))
             {
-                id = (long)m.id,
-                role = (string)m.role,
-                content = (string?)m.content,
-                toolCalls,
-                createdAt = (string)m.created_at,
-            };
-        });
+                parsedToolResults.Add(null);
+                continue;
+            }
+            try
+            {
+                parsedToolResults.Add(JsonSerializer.Deserialize<ToolCallResult>((string)row.content));
+            }
+            catch
+            {
+                parsedToolResults.Add(null); /* 坏 JSON：跳过 */
+            }
+        }
+
+        // 装配：单次顺序遍历（查询已按 created_at ASC, id ASC 排序，按 id 顺序归属，不用时间差）。
+        // 每条 tool 消息的解析结果归属它前面最近的一条 assistant；
+        // 遇到新 assistant 即切换归属（一轮内多次工具调用的多条 tool 消息全部归入同一条 assistant，
+        // 与 live 路径 done 事件 toolCalls 数组形状一致）。
+        // assistant 行 tool_calls 列存的是 LLM 描述符 JSON（id/type/function 形状），对前端无用，
+        // 不再参与 toolCalls 反序列化；user/system 消息不受影响。
+        var toolCallsByRow = new List<ToolCallResult>?[rows.Count];
+        var currentAssistantIndex = -1;
+        for (var i = 0; i < rows.Count; i++)
+        {
+            var role = (string)rows[i].role;
+            if (role == MessageRole.Assistant)
+            {
+                currentAssistantIndex = i;
+            }
+            else if (role == MessageRole.Tool && currentAssistantIndex >= 0 && parsedToolResults[i] != null)
+            {
+                var list = toolCallsByRow[currentAssistantIndex] ??= new List<ToolCallResult>();
+                list.Add(parsedToolResults[i]!);
+            }
+        }
+
+        var messageList = new List<object>(rows.Count);
+        for (var i = 0; i < rows.Count; i++)
+        {
+            var row = rows[i];
+            messageList.Add(new
+            {
+                id = (long)row.id,
+                role = (string)row.role,
+                content = (string?)row.content,
+                toolCalls = toolCallsByRow[i],
+                createdAt = (string)row.created_at,
+            });
+        }
 
         return new
         {
