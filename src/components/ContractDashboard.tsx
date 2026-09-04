@@ -6,15 +6,16 @@ import { Icon } from './ui/Icon'
 import PageContainer from './ui/PageContainer'
 import HeroBanner from './ui/HeroBanner'
 import { motion } from 'framer-motion'
-import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
-import { SimpleBarChart } from './ui/SimpleBarChart'
+import { EditorialBars } from './ui/charts/EditorialBars'
+import { SquareHundred } from './ui/charts/SquareHundred'
+import { PRESETS } from './ui/charts/colorPresets'
 import { staggerContainer, sectionVariant } from '@/constants/animations'
 import { getAPI } from '@/services/api-adapter'
 
 // Bedrock 卡面：card 表面 + 1px 发丝边，静止无重阴影
 const CARD = 'rounded-xl bg-[color:var(--card)] border border-[color:var(--border)]'
-// 图表中性墨阶（非彩色墙）
-const INK = ['var(--accent)', 'var(--fg-2)', 'var(--muted)', 'var(--border-strong)']
+/** Palm SER 前 3（无序类目 2-3 个，类目色钉在固定语义顺序上，0 值过滤不改变归属） */
+const PALM_SER: string[] = PRESETS.palm.ser ?? []
 
 interface ContractDashboardProps {
   refresh?: () => void
@@ -65,13 +66,20 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
     { name: '支出合同', amount: stats?.expenseTotal || 0 },
     { name: '已回款', amount: stats?.incomeReceived || 0 },
     { name: '已付款', amount: stats?.expensePaid || 0 },
-  ]
+  ].sort((a, b) => b.amount - a.amount)
 
-  const pieData = [
-    { name: '收入合同', value: stats?.incomeCount || 0, color: INK[0] },
-    { name: '支出合同', value: stats?.expenseCount || 0, color: INK[1] },
-    { name: '其他协议', value: stats?.agreementCount || 0, color: INK[2] },
+  const typeData = [
+    { name: '收入合同', value: stats?.incomeCount || 0, color: PALM_SER[0] },
+    { name: '支出合同', value: stats?.expenseCount || 0, color: PALM_SER[1] },
+    { name: '其他协议', value: stats?.agreementCount || 0, color: PALM_SER[2] },
   ].filter(d => d.value > 0)
+  const typeTotal = (stats?.incomeCount || 0) + (stats?.expenseCount || 0) + (stats?.agreementCount || 0)
+  // 合同类型分布 → 编辑风 100 点方阵：份数转百分比（Σ 偏差由组件兜底），0 值类目过滤照旧
+  const typePct = typeData.map(d => ({
+    name: d.name,
+    value: typeTotal > 0 ? Math.round((d.value / typeTotal) * 100) : 0,
+    color: d.color,
+  }))
 
   // 导航入口卡片配置（统一中性皮，图标墨色）
   const navCards = [
@@ -150,9 +158,9 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
           <div className={`${CARD} p-6`}>
             <h3 className="text-sm font-semibold uppercase tracking-wider mb-4" style={{ color: 'var(--muted)' }}>收支对比</h3>
             {stats ? (
-              <SimpleBarChart
-                data={barData.map(d => ({ name: d.name, amount: d.amount }))}
-                colors={INK}
+              /* 编辑风横向条形：4 条固定语义类目按金额降序，默认墨阶（accentFirst 默认，冠军 var(--accent)） */
+              <EditorialBars
+                data={barData.map(d => ({ name: d.name, value: d.amount }))}
                 formatValue={(v) => `¥${formatMoney(v)}`}
               />
             ) : (
@@ -162,29 +170,11 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
 
           <div className={`${CARD} p-6`}>
             <h3 className="text-sm font-semibold uppercase tracking-wider mb-4" style={{ color: 'var(--muted)' }}>合同类型分布</h3>
-            {pieData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={70} outerRadius={110} paddingAngle={4} dataKey="value">
-                    {pieData.map((entry, idx) => (
-                      <Cell key={idx} fill={entry.color} stroke="none" />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, color: 'var(--fg)' }} formatter={((value: number) => [`${value ?? 0} 份`, ''] as [string, string]) as any} />
-                </PieChart>
-              </ResponsiveContainer>
+            {typePct.length > 0 ? (
+              /* 编辑风 100 点方阵：每点 1%，图例侧特大百分比为组件自带（原手写图例移除） */
+              <SquareHundred data={typePct} />
             ) : (
               <div className="flex items-center justify-center h-[280px]" style={{ color: 'var(--muted)' }}>暂无数据</div>
-            )}
-            {pieData.length > 0 && (
-              <div className="flex items-center justify-center gap-6 mt-2">
-                {pieData.map((d) => (
-                  <div key={d.name} className="flex items-center gap-2 text-sm" style={{ color: 'var(--fg-2)' }}>
-                    <span className="w-3 h-3 rounded-full" style={{ backgroundColor: d.color }} />
-                    {d.name} ({d.value})
-                  </div>
-                ))}
-              </div>
             )}
           </div>
         </motion.div>

@@ -733,13 +733,6 @@ input::-webkit-outer-spin-button {
   color: var(--fg);
 }
 
-/* Recharts Tooltip 文字全面覆盖（内联 style 不继承 contentStyle 的 color） */
-[data-theme="graphite"] .recharts-tooltip-wrapper .recharts-tooltip-item-value,
-[data-theme="graphite"] .recharts-tooltip-wrapper .recharts-tooltip-item-name,
-[data-theme="graphite"] .recharts-tooltip-wrapper .recharts-tooltip-label,
-[data-theme="graphite"] .recharts-tooltip-wrapper .recharts-tooltip-item-separator {
-  color: var(--fg) !important;
-}
 
 /* 侧边栏活跃项 — sidebar 专属变量覆盖（比全局 .bg-slate-100 更精确） */
 [data-theme="graphite"] aside nav button.bg-slate-100 { background-color: var(--sidebar-item-active); }
@@ -811,13 +804,6 @@ input::-webkit-outer-spin-button {
   opacity: 0.3;
 }
 
-/* Recharts Tooltip 文字覆盖 — Sandstone */
-[data-theme="sandstone"] .recharts-tooltip-wrapper .recharts-tooltip-item-value,
-[data-theme="sandstone"] .recharts-tooltip-wrapper .recharts-tooltip-item-name,
-[data-theme="sandstone"] .recharts-tooltip-wrapper .recharts-tooltip-label,
-[data-theme="sandstone"] .recharts-tooltip-wrapper .recharts-tooltip-item-separator {
-  color: var(--fg) !important;
-}
 
 [data-theme="sandstone"] .card,
 [data-theme="sandstone"] .modal-content { background-color: var(--card); }

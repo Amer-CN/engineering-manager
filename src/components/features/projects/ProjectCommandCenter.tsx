@@ -10,7 +10,6 @@ import { calculateHealthScore, getHealthLevel } from '@/utils/projectHealth'
 import { motion } from 'framer-motion'
 import { Icon } from '../../ui/Icon'
 import { Card } from '../../ui/Card'
-import { ResponsiveContainer, RadialBarChart, RadialBar } from 'recharts'
 import { EditorialBars } from '@/components/ui/charts/EditorialBars'
 import { DotMatrix } from '@/components/ui/charts/DotMatrix'
 import { RungBars } from '@/components/ui/charts/RungBars'
@@ -79,7 +78,6 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
     : ''
   // 墨阶横向条形数据（不再传彩虹色）：冠军 var(--fg)，其余 var(--fg-2)；EditorialBars 契约要求降序传入
   const financeBar = [{ name: '收入合同', value: stats.incomeTotal }, { name: '已回款', value: stats.receivedOutTotal }, { name: '支出合同', value: stats.expenseTotal }, { name: '已付款', value: stats.receivedInTotal }]
-  const healthGauge = [{ name: '健康度', value: healthScore, fill: healthScore >= 80 ? 'var(--success)' : healthScore >= 60 ? 'var(--accent)' : healthScore >= 40 ? 'var(--warning)' : 'var(--danger)' }]
   const materialTotalAmt = materials.reduce((s, m) => s + m.price * m.quantity, 0)
   const partnerStats = partners.map(p => ({ ...p, incAmt: incomeContracts.filter(c => c.partnerId === p.id).reduce((s, c) => s + c.amount, 0), expAmt: expenseContracts.filter(c => c.partnerId === p.id).reduce((s, c) => s + c.amount, 0) }))
   const unpaidInvoices = invoices.filter(i => i.status === 'partially_paid' || i.status === 'issued').length
@@ -132,13 +130,8 @@ export function ProjectCommandCenter({ project, stats, expenseByCategory, materi
                 <p className="text-numeric-xl font-mono tabular-nums tracking-tight text-success-600">{healthScore}<span className="text-sm font-normal text-[color:var(--muted)]">分</span></p>
                 <p className="text-caption text-[color:var(--muted)]">{healthLevel.label}</p>
               </div>
-              <div className="w-10 h-10 relative">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadialBarChart cx="50%" cy="50%" innerRadius="70%" outerRadius="100%" barSize={6} data={healthGauge} startAngle={180} endAngle={0}>
-                    <RadialBar dataKey="value" cornerRadius={3} animationDuration={1200} animationEasing="ease-out" />
-                  </RadialBarChart>
-                </ResponsiveContainer>
-              </div>
+              {/* 编辑风刻度环替换健康度半环：单色墨阶；健康度分段语义色只保留在文字层（分数 text-success-600 例外惯例） */}
+              <TickRing percent={healthScore} label="健康度" size={96} />
             </div>
           </div>
           {/* 关键指标 */}

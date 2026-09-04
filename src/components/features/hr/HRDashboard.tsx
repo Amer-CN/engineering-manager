@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { Icon } from '../../ui/Icon'
 import { Spinner } from '../../ui/Loading/Loading'
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { getAPI } from '@/services/api-adapter'
-import { CHART_PALETTE } from './hrColors'
+import { EditorialBars } from '@/components/ui/charts/EditorialBars'
 import type { Member, Department, WageRecord, AttendanceRecord } from '@/types'
 import { Card } from '@/components/ui/Card'
 
@@ -136,24 +135,15 @@ const HRDashboard: React.FC = () => {
         <Card bordered={false} className="p-6">
           <h3 className="text-sm font-semibold text-[color:var(--fg-2)] mb-4">部门人数分布</h3>
           {data.deptDistribution.length > 0 ? (
-            <ResponsiveContainer width="100%" height={240}>
-              <PieChart>
-                <Pie data={data.deptDistribution} cx="50%" cy="50%" innerRadius={55} outerRadius={95} paddingAngle={3} dataKey="value">
-                  {data.deptDistribution.map((_, i) => <Cell key={i} fill={CHART_PALETTE[i % CHART_PALETTE.length]} />)}
-                </Pie>
-                <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, boxShadow: 'var(--shadow-md)', color: 'var(--fg)' }} />
-              </PieChart>
-            </ResponsiveContainer>
+            /* 编辑风横向条形：部门人数降序（冠军=人数最多部门，默认墨阶不传彩虹色），
+               类目名超宽由组件 truncate；每行自带名称+人数，原手写图例移除 */
+            <EditorialBars
+              data={[...data.deptDistribution].sort((a, b) => b.value - a.value)}
+              formatValue={(n) => `${n} 人`}
+            />
           ) : (
             <div className="flex items-center justify-center h-60 text-sm text-[color:var(--muted)]">暂无部门数据</div>
           )}
-          <div className="flex flex-wrap gap-3 mt-3 justify-center">
-            {data.deptDistribution.map((d, i) => (
-              <span key={d.name} className="flex items-center gap-1 text-xs text-[color:var(--fg-2)]">
-                <span className="w-2.5 h-2.5 rounded-full" style={{ background: CHART_PALETTE[i % CHART_PALETTE.length] }} />{d.name}
-              </span>
-            ))}
-          </div>
         </Card>
 
         <Card bordered={false} className="p-6">

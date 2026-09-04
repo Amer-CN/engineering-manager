@@ -36,9 +36,6 @@ export type { ProjectStatsData } from './ProjectStats'
 export { ProjectCommandCenter } from './ProjectCommandCenter'
 export type { ProjectCommandCenterProps } from './ProjectCommandCenter'
 
-// 项目时间线
-export { ProjectTimeline } from './ProjectTimeline'
-
 // 告警条
 export { AlertBar } from './AlertBar'
 export type { AlertItem } from './AlertBar'

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { EditorialDonut } from '@/components/ui/charts/EditorialDonut'
+import { EditorialBars } from '@/components/ui/charts/EditorialBars'
 import { DotCascade } from '@/components/ui/charts/DotCascade'
 import Spinner from '../../ui/Spinner'
 import { formatMoney } from '@/utils/format'
@@ -163,21 +164,15 @@ export function CostLedgerAnalytics({ projectId, projectName, categories }: Cost
       {stats.topCounterparties.length > 0 && (
         <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] p-5">
           <h3 className="text-sm font-semibold text-[color:var(--fg-2)] mb-3">支出 TOP 10 往来方</h3>
-          <div className="space-y-1.5">
-            {stats.topCounterparties.map(([name, amt], i) => {
-              const pct = stats.totalExpense > 0 ? (amt / stats.totalExpense) * 100 : 0
-              return (
-                <div key={name} className="flex items-center gap-3">
-                  <span className="w-5 text-right text-xs font-medium text-[color:var(--muted)]">#{i + 1}</span>
-                  <span className="flex-1 text-sm text-[color:var(--fg-2)] truncate">{name}</span>
-                  <span className="font-mono text-sm font-medium text-[color:var(--fg-2)]">{formatMoney(amt)}</span>
-                  <div className="w-16 h-1.5 rounded-full bg-[color:var(--panel-2)] overflow-hidden">
-                    <div className="h-full rounded-full bg-danger-400" style={{ width: `${Math.min(pct, 100)}%` }} />
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+          {/* 编辑风横向条形：TOP10 全量保留（组件行高自适应，不截断）；原迷你条编码的
+              「占总支出比」并入条尾文本诚实保留；条长基准 = TOP1 满条（EditorialBars 契约） */}
+          <EditorialBars
+            data={stats.topCounterparties.map(([name, amt]) => ({ name, value: amt }))}
+            formatValue={(v) => {
+              const pct = stats.totalExpense > 0 ? Math.round((v / stats.totalExpense) * 100) : 0
+              return `¥${formatMoney(v)} · ${pct}%`
+            }}
+          />
         </div>
       )}
     </div>

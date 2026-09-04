@@ -1,5 +1,7 @@
 import type { WageStats } from '@/types'
 import { Icon } from '../../ui/Icon'
+import { EditorialBars } from '@/components/ui/charts/EditorialBars'
+import { formatMoney } from '@/utils/format'
 
 interface WageStatsTabProps {
   wageStats: WageStats | null
@@ -7,6 +9,12 @@ interface WageStatsTabProps {
 }
 
 export default function WageStatsTab({ wageStats, selectedMonth }: WageStatsTabProps) {
+  // 条尾并入占比注记：percentage 为后端权威字段，按 total 映射还原
+  // （占比是 total 的函数，同额同占比，映射无歧义）；原 2% 最小宽保底随 CSS 条移除
+  const pctByTotal = new Map<number, number>(
+    wageStats ? wageStats.projectBreakdown.map((p) => [p.total, p.percentage] as [number, number]) : [],
+  )
+
   return (
     <div>
       {!wageStats || wageStats.count === 0 ? (
@@ -31,19 +39,14 @@ export default function WageStatsTab({ wageStats, selectedMonth }: WageStatsTabP
           {wageStats.projectBreakdown.length > 0 && (
             <div className="bg-[color:var(--card)] rounded-xl border border-[color:var(--border)] p-5 shadow-sm">
               <h3 className="font-medium text-[color:var(--fg-2)] mb-4">项目工资分布</h3>
-              <div className="space-y-3">
-                {wageStats.projectBreakdown.map(p => (
-                  <div key={p.projectId} className="flex items-center gap-3">
-                    <span className="text-sm text-[color:var(--fg-2)] w-24 truncate">{p.projectName}</span>
-                    <div className="flex-1 bg-[color:var(--panel-2)] rounded-full h-5 overflow-hidden">
-                      <div className="bg-[color:var(--accent)] h-full rounded-full transition-[width]"
-                        style={{ width: `${Math.max(p.percentage, 2)}%` }} />
-                    </div>
-                    <span className="text-sm font-medium text-[color:var(--fg-2)] w-20 text-right font-mono tabular-nums">¥{p.total.toFixed(0)}</span>
-                    <span className="text-xs text-[color:var(--muted)] w-12 text-right">{p.percentage}%</span>
-                  </div>
-                ))}
-              </div>
+              {/* 编辑风横向条形：项目工资额降序（冠军=工资最高项目，默认墨阶）；
+                  占比注记并入条尾文本（原右侧百分比列信息保留） */}
+              <EditorialBars
+                data={[...wageStats.projectBreakdown]
+                  .sort((a, b) => b.total - a.total)
+                  .map((p) => ({ name: p.projectName, value: p.total }))}
+                formatValue={(v) => `¥${formatMoney(v)} · ${pctByTotal.get(v) ?? 0}%`}
+              />
             </div>
           )}
         </div>

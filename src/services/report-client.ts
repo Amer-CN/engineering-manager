@@ -13,6 +13,8 @@ export interface ReportRequest {
   scope: 'all' | 'project' | 'user'
   scopeId?: number
   actionFilter?: string[]
+  /** 报告形式：text=文本版（缺省）；chart=图形版（每节一图+大数字，例会投影用） */
+  format?: 'text' | 'chart'
 }
 
 export interface ReportResponse {

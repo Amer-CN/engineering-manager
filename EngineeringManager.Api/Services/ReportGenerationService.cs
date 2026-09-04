@@ -63,7 +63,7 @@ public class ReportGenerationService
             // ③ 聚合业务 KPI（按 scope 过滤）
             var kpiData = await AggregateKpiAsync(db, request, userId, isAdmin);
 
-            // ④ 组织 prompt
+            // ④ 组织 prompt（format=chart 走图形版结构化数据节提示词，缺省 text 文本版一字不动）
             var periodLabel = request.Period switch
             {
                 "day" => "日报",
@@ -72,7 +72,9 @@ public class ReportGenerationService
                 _ => "报告"
             };
 
-            var systemPrompt = $"你是工程管家报告助手，根据以下操作记录和业务数据生成{periodLabel}。" +
+            var systemPrompt = string.Equals(request.Format, "chart", StringComparison.OrdinalIgnoreCase)
+                ? BuildChartSystemPrompt(periodLabel)
+                : $"你是工程管家报告助手，根据以下操作记录和业务数据生成{periodLabel}。" +
                 "要求：使用 Markdown 格式，包含摘要、关键指标、操作明细、总结建议四个部分。" +
                 "语言简洁专业，数据优先，避免空泛描述。";
 
@@ -244,6 +246,27 @@ public class ReportGenerationService
         return (filter, param);
     }
 
+    /// <summary>
+    /// 图形版（format=chart）systemPrompt：要求 AI 产出结构化数据节
+    /// （结论句标题 + 要点 + ```chart-* JSON 数据块），前端按块类型渲染整页图形版。
+    /// </summary>
+    private static string BuildChartSystemPrompt(string periodLabel)
+    {
+        return string.Join('\n',
+            $"你是工程管家报告助手，根据操作记录和业务数据生成{periodLabel}（图形版）。",
+            "输出 Markdown，结构规则：",
+            $"1. 首行 `# {periodLabel}标题`，次行 `> 期间：{{起}}~{{止}}`；",
+            "2. 3-4 个小节，每节：`## 结论句标题`（一句可从数据验证的判断，禁止中性名词）→ 2-4 行 `- 要点`；",
+            "3. 每节末尾放一个图表数据块（三选一，按数据形状选）：",
+            "```chart-trend\n{\"label\":\"...\",\"points\":[{\"x\":\"9/1\",\"y\":18},...]}\n```（时间序列 ≥5 点）",
+            "```chart-waffle\n{\"title\":\"...\",\"rows\":[{\"name\":\"...\",\"value\":33},...]}\n```（占比 ≤6 类，value 为百分比）",
+            "```chart-bars\n{\"title\":\"...\",\"rows\":[{\"name\":\"...\",\"value\":12345},...]}\n```（类目金额比较 ≤8 条）",
+            "x 用短日期、y/value 用真实数字（金额单位元、计数不带单位），禁止编造数据；",
+            "4. 结尾 `## 值得记住的数字` 节：3-4 行 `- {数字}｜{一行说明}`。",
+            "语言简洁专业，数据优先。"
+        );
+    }
+
     private static string BuildUserPrompt(
         ReportRequest request, AuditAggregate audit, KpiAggregate kpi, string periodLabel)
     {
@@ -408,4 +431,6 @@ public record ReportRequest
     public string Scope { get; init; } = "user"; // all | project | user
     public int? ScopeId { get; init; }
     public string[]? ActionFilter { get; init; }
+    /// <summary>报告形式：text=文本版（缺省，旧调用方零影响）；chart=图形版（结构化数据节）</summary>
+    public string Format { get; init; } = "text"; // text | chart
 }

@@ -41,7 +41,8 @@ describe('WageStatsTab', () => {
     }))
     expect(screen.getByText('安岳项目')).toBeTruthy()
     expect(screen.getByText('简阳项目')).toBeTruthy()
-    expect(screen.getByText('60%')).toBeTruthy()
-    expect(screen.getByText('40%')).toBeTruthy()
+    // 换装 EditorialBars 后占比并入条尾文本（¥金额 · 占比%）
+    expect(screen.getByText('¥120,000 · 60%')).toBeTruthy()
+    expect(screen.getByText('¥80,000 · 40%')).toBeTruthy()
   })
 })

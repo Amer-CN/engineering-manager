@@ -6,9 +6,8 @@ import { Icon } from '../../ui/Icon'
 import { HoverScrollbar } from '../../ui/HoverScrollbar'
 import type { Project } from '@/types/electron'
 import type { Member, WorkerTeam } from '../../../types/electron'
-import { CHART_PALETTE } from './laborColors'
 import { calcAge } from '../../../utils/member'
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
+import { EditorialBars } from '@/components/ui/charts/EditorialBars'
 
 interface LaborDashboardProps {
   members: Member[]
@@ -39,6 +38,13 @@ const LaborDashboard: React.FC<LaborDashboardProps> = ({ members, projects, work
   if (unassignedCount > 0) {
     projectDistribution.push({ name: '未分配', value: unassignedCount })
   }
+
+  // 工人分布条形数据：EditorialBars 契约要求降序；>8 条截断取 TOP8，
+  // 其余条目以底注「其余 N 项合计 M 人」诚实注记（不藏数据）
+  const distributionSorted = [...projectDistribution].sort((a, b) => b.value - a.value)
+  const projectBars = distributionSorted.slice(0, 8)
+  const distributionRest = distributionSorted.slice(8)
+  const distributionRestSum = distributionRest.reduce((s, d) => s + d.value, 0)
 
   // KPI cards config
   const kpiCards = [
@@ -116,42 +122,20 @@ const LaborDashboard: React.FC<LaborDashboardProps> = ({ members, projects, work
           className="bg-[color:var(--card)] rounded-xl border border-[color:var(--border)] shadow-sm p-6"
         >
           <h3 className="text-lg font-semibold text-[color:var(--fg)] mb-4">工人分布</h3>
-          {projectDistribution.length > 0 ? (
-            <div className="flex flex-col items-center">
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie
-                    data={projectDistribution}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={55}
-                    outerRadius={95}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {projectDistribution.map((_, index) => (
-                      <Cell key={index} fill={CHART_PALETTE[index % CHART_PALETTE.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={((value: number, name: string) => [`${value ?? 0} 人`, name ?? '']) as never}
-                    contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--fg)' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="flex flex-wrap justify-center gap-3 mt-4">
-                {projectDistribution.map((item, index) => (
-                  <div key={item.name} className="flex items-center gap-2">
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: CHART_PALETTE[index % CHART_PALETTE.length] }}
-                    />
-                    <span className="text-sm text-[color:var(--fg-2)]">{item.name}</span>
-                    <span className="text-sm text-[color:var(--muted)]">({item.value})</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+          {projectBars.length > 0 ? (
+            /* 编辑风横向条形：工人按项目分布降序（冠军=人数最多项目，默认墨阶），
+               每行自带名称+人数，原饼图手写图例移除；>8 条截断 + 底注诚实注记 */
+            <>
+              <EditorialBars
+                data={projectBars}
+                formatValue={(n) => `${n} 人`}
+              />
+              {distributionRest.length > 0 && (
+                <p className="mt-3 text-caption" style={{ color: 'var(--muted)' }}>
+                  其余 {distributionRest.length} 项合计 {distributionRestSum} 人
+                </p>
+              )}
+            </>
           ) : (
             <div className="flex items-center justify-center h-64 text-[color:var(--muted)]">
               暂无数据

@@ -12,6 +12,13 @@ interface ReportGeneratorModalProps {
 
 type PeriodPreset = 'day' | 'week' | 'month' | 'custom'
 type ScopeType = 'all' | 'project' | 'user'
+type ReportFormat = 'text' | 'chart'
+
+/** 报告形式二选一（默认文本版，零惊讶） */
+const FORMAT_OPTIONS: { value: ReportFormat; label: string; desc: string }[] = [
+  { value: 'text', label: '文本版', desc: '全文+表格+附图，适合存档细读' },
+  { value: 'chart', label: '图形版', desc: '每节一图+大数字，适合例会投影' },
+]
 
 const ACTION_OPTIONS = [
   { value: 'create', label: '新增' },
@@ -37,6 +44,9 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
   const [scope, setScope] = useState<ScopeType>('user')
   const [scopeId, setScopeId] = useState('')
   const [selectedActions, setSelectedActions] = useState<string[]>([])
+  const [format, setFormat] = useState<ReportFormat>('text')
+  // 结果面板的 format 取生成时快照（结果出来后改表单不影响已生成报告的呈现）
+  const [resultFormat, setResultFormat] = useState<ReportFormat>('text')
 
   // 生成状态
   const [loading, setLoading] = useState(false)
@@ -49,6 +59,7 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
     const req: ReportRequest = {
       period: periodPreset === 'custom' ? 'week' : periodPreset,
       scope,
+      format,
     }
 
     if (periodPreset === 'custom' && customStart && customEnd) {
@@ -65,7 +76,7 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
     }
 
     return req
-  }, [periodPreset, customStart, customEnd, scope, scopeId, selectedActions])
+  }, [periodPreset, customStart, customEnd, scope, scopeId, selectedActions, format])
 
   // 生成报告
   const handleGenerate = useCallback(async () => {
@@ -80,6 +91,7 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
     if (result.success && result.data) {
       setMarkdown(result.data.markdown)
       setTimestamp(result.data.timestamp)
+      setResultFormat(request.format ?? 'text')
     } else {
       setError(result.error ?? '生成失败，请重试')
     }
@@ -296,6 +308,37 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
               </div>
             </div>
 
+            {/* ── 报告形式 ── */}
+            <div>
+              <label className="text-xs font-medium mb-2 block" style={{ color: 'var(--fg-2)' }}>
+                报告形式
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {FORMAT_OPTIONS.map((o) => {
+                  const active = format === o.value
+                  return (
+                    <button
+                      key={o.value}
+                      type="button"
+                      onClick={() => setFormat(o.value)}
+                      className="rounded-lg border px-3 py-2.5 text-left transition-colors"
+                      style={{
+                        borderColor: active ? 'var(--accent)' : 'var(--border)',
+                        background: active ? 'var(--accent-soft, var(--bg))' : 'transparent',
+                      }}
+                    >
+                      <div className="text-xs font-bold" style={{ color: active ? 'var(--fg)' : 'var(--fg-2)' }}>
+                        {o.label}
+                      </div>
+                      <div className="text-caption mt-1" style={{ color: 'var(--muted)' }}>
+                        {o.desc}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
             {/* ── 错误信息 ── */}
             {error && (
               <div
@@ -325,7 +368,7 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
 
             {/* ── 生成结果 ── */}
             {hasResult && (
-              <ReportResultPanel markdown={markdown} onUpdateMarkdown={setMarkdown} />
+              <ReportResultPanel markdown={markdown} onUpdateMarkdown={setMarkdown} format={resultFormat} />
             )}
           </div>
         </motion.div>

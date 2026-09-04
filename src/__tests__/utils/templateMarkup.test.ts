@@ -158,4 +158,81 @@ describe('templateMarkup', () => {
       expect(html).toContain('</ol>')
     })
   })
+
+  describe('parseMarkup 表格', () => {
+    test('markdown 表格块 → table 结构（分隔行跳过）', () => {
+      const lines = parseMarkup('| 项目 | 金额 |\n|---|---|\n| A | 100 |')
+      expect(lines).toHaveLength(1)
+      expect(lines[0].table).toEqual({ headers: ['项目', '金额'], rows: [['A', '100']] })
+    })
+
+    test('多行表格 + 对齐冒号分隔行', () => {
+      const lines = parseMarkup('| 列一 | 列二 |\n|:---|:---:|\n| a | b |\n| c | d |')
+      expect(lines[0].table).toEqual({ headers: ['列一', '列二'], rows: [['a', 'b'], ['c', 'd']] })
+    })
+
+    test('孤行 | 不成表（按普通文本行落下）', () => {
+      const lines = parseMarkup('前言\n| 单独一行')
+      expect(lines[1].table).toBeUndefined()
+      expect(lines[1].tokens[0].content).toBe('| 单独一行')
+    })
+
+    test('表格行 tokens 保留原始文本（未渲染 table 的调用方不丢内容）', () => {
+      const lines = parseMarkup('| a | b |\n|---|---|\n| c | d |')
+      expect(lines[0].tokens).toEqual([{ type: 'text', content: '| a | b |\n|---|---|\n| c | d |' }])
+    })
+
+    test('单元格内 **bold** 标记保留并可拆为 bold token', () => {
+      const lines = parseMarkup('| 项目 | 金额 |\n|---|---|\n| 合计 | **100** |')
+      expect(lines[0].table?.rows[0][1]).toBe('**100**')
+      expect(tokenizeInline(lines[0].table!.rows[0][1])).toEqual([{ type: 'bold', content: '100' }])
+    })
+
+    test('表格与段落/列表混排：既有类型零回归', () => {
+      const lines = parseMarkup('## 小节\n正文段落\n| a | b |\n|---|---|\n| 1 | 2 |\n- 列表项')
+      expect(lines[0].heading).toBe(true)
+      expect(lines[0].tokens[0].content).toBe('小节')
+      expect(lines[1].listType).toBeFalsy()
+      expect(lines[1].tokens[0].content).toBe('正文段落')
+      expect(lines[2].table).toEqual({ headers: ['a', 'b'], rows: [['1', '2']] })
+      expect(lines[3].listType).toBe('ul')
+      expect(lines[3].listContent).toBe('列表项')
+    })
+  })
+
+  describe('parseMarkup 井号全层级', () => {
+    test('### / #### 归入 heading（不裸露井号字面量）', () => {
+      const lines = parseMarkup('### 三级标题\n#### 四级标题')
+      expect(lines[0].heading).toBe(true)
+      expect(lines[0].tokens[0].content).toBe('三级标题')
+      expect(lines[1].heading).toBe(true)
+      expect(lines[1].tokens[0].content).toBe('四级标题')
+    })
+
+    test('# 单井号也归 heading', () => {
+      const lines = parseMarkup('# 报告大标题')
+      expect(lines[0].heading).toBe(true)
+      expect(lines[0].tokens[0].content).toBe('报告大标题')
+    })
+
+    test('井号行内 **粗体** 照常拆分', () => {
+      const lines = parseMarkup('### **重点** 小节')
+      expect(lines[0].heading).toBe(true)
+      expect(lines[0].tokens).toContainEqual({ type: 'bold', content: '重点' })
+    })
+  })
+
+  describe('合同打印链契约（templateMarkupToPrintHtml 不受影响）', () => {
+    test('| 行仍按段落渲染（不产 <table>，行为与合同打印链一致）', () => {
+      const html = templateMarkupToPrintHtml('| a | b |\n|---|---|\n| c | d |')
+      expect(html).not.toContain('<table')
+      expect((html.match(/<p /g) ?? []).length).toBe(3)
+    })
+
+    test('### 行仍按普通段落渲染（合同链不识别多级井号）', () => {
+      const html = templateMarkupToPrintHtml('### 三级条款')
+      expect(html).toContain('### 三级条款')
+      expect(html).not.toContain('font-weight: bold')
+    })
+  })
 })
