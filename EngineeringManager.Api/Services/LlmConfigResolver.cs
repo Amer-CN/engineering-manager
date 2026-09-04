@@ -389,6 +389,7 @@ public class LlmConfigResolver
             UseBuiltIn = persisted.UseBuiltIn,
             Temperature = persisted.Temperature,
             MaxTokens = persisted.MaxTokens,
+            ProxyUrl = persisted.ProxyUrl,
             Providers = persisted.Providers.Select(p => new ProviderEntry
             {
                 Id = p.Id,
