@@ -2,7 +2,7 @@
  * MessageBubble.test.tsx — 气泡组件视觉 bug 回归测试
  *
  * 覆盖两个场景：
- *  (a) 空的「发送中」助手占位不渲染（防与「思考中」重叠）
+ *  (a) 空的「发送中」助手占位只渲染头像行（无空气泡/兜底文案；thinking 动画在头像上可见）
  *  (b) 已完成但无内容 → 渲染兜底文案（防空气泡）
  */
 
@@ -29,7 +29,7 @@ vi.mock('../MessageActions', () => ({
 }))
 
 describe('MessageBubble', () => {
-  it('空的「发送中」助手占位 → 不渲染（返回 null）', () => {
+  it('空的「发送中」助手占位 → 只渲染头像行（无空气泡/兜底文案）', () => {
     const msg: LocalMessage = {
       clientId: 'test_1',
       role: 'assistant',
@@ -37,12 +37,11 @@ describe('MessageBubble', () => {
       sending: true,
     }
 
-    const { container } = render(
-      <MessageBubble message={msg} isUser={false} />,
-    )
+    render(<MessageBubble message={msg} isUser={false} />)
 
-    // 不应该渲染任何头像或气泡
-    expect(container.innerHTML).toBe('')
+    // 头像行照常渲染（Mascot svg），但无空气泡、无兜底文案
+    expect(screen.getByRole('img', { name: 'AI 管家' })).toBeTruthy()
+    expect(screen.queryByText('本次没有返回内容，请重试或换个问法。')).toBeNull()
   })
 
   it('已完成但无内容且无 toolCalls → 渲染兜底文案', () => {

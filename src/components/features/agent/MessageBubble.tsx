@@ -83,10 +83,9 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend
 
   const isSending = 'sending' in message && (message as { sending?: boolean }).sending === true
 
-  // 空的「发送中」助手占位：思考指示器由 AgentDashboard 统一渲染，此处不渲染孤立头像，避免与「思考中」重叠
-  if (!isUser && isSending && !content && toolResults.length === 0) {
-    return null
-  }
+  /** 空的「发送中」助手占位：仍渲染完整消息行（live 头像照常，thinking/searching 动画全程可见），
+      但气泡主体/兜底文案/底部行均不渲染（不留空气泡）；AgentStreamTail 指示条由 Dashboard 另行渲染，互不替代 */
+  const emptySending = !isUser && isSending && !content && toolResults.length === 0
 
   /** 时间戳（HH:MM；无则隐藏） */
   const timeText = at
@@ -106,12 +105,12 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* 头像（仅助手侧）：最新一条 live 活体（随 AI 状态变表情），其余 frozen 静态；
+      {/* 头像（仅助手侧）：最新一条 live 活体（随 AI 状态变表情且眼睛跟鼠标），其余 frozen 静态；
           对齐 Stitch：用户消息不显头像，墨底气泡靠右 */}
       {!isUser && (
         <motion.div whileHover={{ scale: 1.08 }} className="flex-shrink-0 w-12 h-12 flex items-center justify-center">
           {live ? (
-            <Mascot size={48} state={mascotState} follow={false} shape={shape} color={color} />
+            <Mascot size={48} state={mascotState} shape={shape} color={color} />
           ) : (
             <Mascot size={48} state="idle" frozen follow={false} shape={shape} color={color} />
           )}
@@ -119,7 +118,9 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend
       )}
 
       {/* 气泡主体（DSH MessageItem 布局：气泡列 + 操作/统计行在下方，gap 6px。
-          用户列右对齐 max-width min(525px,82%)；AI 列左对齐 75%） */}
+          用户列右对齐 max-width min(525px,82%)；AI 列左对齐 75%）。
+          空的「发送中」占位（emptySending）整列不渲染：无空气泡/兜底文案/底部行 */}
+      {!emptySending && (
       <div
         className={`flex flex-col gap-1.5 min-w-[120px] ${isUser ? 'items-end' : 'items-start'}`}
         style={isUser ? { maxWidth: 'min(525px, 82%)' } : { maxWidth: '75%' }}
@@ -207,6 +208,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend
           {timeText && <span>{timeText}</span>}
         </div>
       </div>
+      )}
     </motion.div>
   )
 }

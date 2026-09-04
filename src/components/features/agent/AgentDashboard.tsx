@@ -275,7 +275,7 @@ const AgentDashboard: React.FC = () => {
                     inputRef={inputRef}
                     placeholder={composerPlaceholder}
                     centered={false}
-                    mascot={<Mascot size={48} state={mascotState} shape={shape} color={color} />}
+                    mascot={<Mascot size={72} state={mascotState} shape={shape} color={color} />}
                     toolbarSlot={
                       <>
                         <ModelPicker
