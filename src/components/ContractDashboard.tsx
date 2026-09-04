@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { ContractStats } from '../types/electron'
+import { ContractStats, IncomeContract, Invoice } from '../types/electron'
 import { formatMoney } from '../utils/format'
 import { formatContractCurrency } from './features/contracts/formatContractCurrency'
 import { Icon } from './ui/Icon'
@@ -8,6 +8,7 @@ import HeroBanner from './ui/HeroBanner'
 import { motion } from 'framer-motion'
 import { EditorialBars } from './ui/charts/EditorialBars'
 import { SquareHundred } from './ui/charts/SquareHundred'
+import { RangeCapsules, type RangeCapsuleDatum } from './ui/charts/RangeCapsules'
 import { PRESETS } from './ui/charts/colorPresets'
 import { staggerContainer, sectionVariant } from '@/constants/animations'
 import { getAPI } from '@/services/api-adapter'
@@ -24,10 +25,12 @@ interface ContractDashboardProps {
 
 const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNavigate }) => {
   const [stats, setStats] = useState<ContractStats | null>(null)
+  const [capsuleData, setCapsuleData] = useState<RangeCapsuleDatum[] | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     loadStats()
+    loadCapsules()
   }, [refresh])
 
   const loadStats = async () => {
@@ -38,6 +41,29 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
       console.error('加载统计数据失败:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  // 回款胶囊数据：与 ProjectCommandCenter 同口径（filled = 该合同 invoice_out 发票 receivedAmount 求和），
+  // total = finalAmount ?? amount（结算后按结算额）；0 合同额剔除、按 total 降序；失败静默（整卡不渲染）
+  const loadCapsules = async () => {
+    try {
+      const api = await getAPI()
+      const [contractsRes, invoicesRes] = await Promise.all([api.getIncomeContracts(), api.getInvoices()])
+      if (!contractsRes.success || !invoicesRes.success || !contractsRes.data || !invoicesRes.data) return
+      const invoices: Invoice[] = invoicesRes.data as Invoice[]
+      const rows = (contractsRes.data as IncomeContract[])
+        .map(c => {
+          const filled = invoices
+            .filter(i => i.contractId === c.id && i.type === 'invoice_out')
+            .reduce((s, i) => s + i.receivedAmount, 0)
+          return { name: c.name, total: c.finalAmount ?? c.amount, filled }
+        })
+        .filter(d => d.total > 0)
+        .sort((a, b) => b.total - a.total)
+      setCapsuleData(rows)
+    } catch (error) {
+      console.error('加载回款胶囊数据失败:', error)
     }
   }
 
@@ -178,6 +204,18 @@ const ContractDashboard: React.FC<ContractDashboardProps> = ({ refresh, onNaviga
             )}
           </div>
         </motion.div>
+
+        {/* 回款胶囊：全宽第三卡（grid 外单独一行）；编辑风范围胶囊，每份收入合同一根（全长=合同额、实心段=已回款） */}
+        {capsuleData && capsuleData.length > 0 && (
+          <motion.div variants={sectionVariant} className={`${CARD} p-6 mb-8`}>
+            <h3 className="text-sm font-semibold uppercase tracking-wider mb-4" style={{ color: 'var(--muted)' }}>合同回款胶囊</h3>
+            <RangeCapsules
+              data={capsuleData}
+              formatValue={(v) => `¥${formatMoney(v)}`}
+              maxItems={8}
+            />
+          </motion.div>
+        )}
 
         {/* 即将到期合同 + 快捷创建 */}
         <motion.div variants={sectionVariant} className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">

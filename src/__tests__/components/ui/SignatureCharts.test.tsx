@@ -4,6 +4,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { BarcodeCalendar } from '@/components/ui/charts/BarcodeCalendar'
 import { DotCascade, pickCascadeUnit, formatCascadeUnitNote } from '@/components/ui/charts/DotCascade'
 import { SquareHundred } from '@/components/ui/charts/SquareHundred'
+import { RangeCapsules } from '@/components/ui/charts/RangeCapsules'
 
 // rAF mounted 触发整体 opacity 0→1 入场：等元素到位后再读 DOM 断言（同 EditorialCharts.test 风格）
 async function mountedRoot(container: HTMLElement, selector: string): Promise<HTMLElement> {
@@ -310,5 +311,96 @@ describe('SquareHundred（编辑风 100 点方阵）', () => {
     await mountedFade(container)
     expect(screen.getByLabelText('共 100 点，每点 1%')).toBeTruthy()
     expect(screen.getByText('100个点')).toBeTruthy()
+  })
+})
+
+describe('RangeCapsules（编辑风范围胶囊）', () => {
+  const capData = [
+    { name: '合同甲', total: 200, filled: 100 },
+    { name: '合同乙', total: 100, filled: 25 },
+    { name: '合同丙', total: 50, filled: 0 },
+  ]
+
+  // 从内联 style 读 height 数值（胶囊轨道与实心段都以 px 输出）
+  const heightOf = (el: HTMLElement | null): number => {
+    const m = el?.getAttribute('style')?.match(/height: (\d+)px/)
+    return m ? Number(m[1]) : -1
+  }
+
+  test('胶囊数 = min(data.length, maxItems)；截断时图例句追加「其余 N 份未列出」', async () => {
+    const { container } = render(<RangeCapsules data={capData} formatValue={(n) => String(n)} />)
+    await mountedFade(container)
+    expect(container.querySelectorAll('[data-capsule]').length).toBe(3)
+    expect(screen.getByText('胶囊全长 = 合同额 · 实心段 = 已回款 · 一眼见欠款')).toBeTruthy()
+    expect(screen.getByLabelText('合同回款胶囊 · 共 3 份合同')).toBeTruthy()
+
+    const { container: c2 } = render(
+      <RangeCapsules data={capData} formatValue={(n) => String(n)} maxItems={2} />
+    )
+    await mountedFade(c2)
+    expect(c2.querySelectorAll('[data-capsule]').length).toBe(2)
+    expect(screen.getByText(/其余 1 份未列出/)).toBeTruthy()
+  })
+
+  test('实心段高度/胶囊高度 ≈ filled/total（读 style 比例断言，容差 0.01）；全长 = round(total/max × height)', async () => {
+    const { container } = render(<RangeCapsules data={capData} formatValue={(n) => String(n)} />)
+    await mountedFade(container)
+    const caps = container.querySelectorAll<HTMLElement>('[data-capsule]')
+    const fills = container.querySelectorAll<HTMLElement>('[data-capsule-fill]')
+    // max=200、height=200：全长 200/100/50 → 200/100/50
+    expect(heightOf(caps[0])).toBe(200)
+    expect(heightOf(caps[1])).toBe(100)
+    expect(heightOf(caps[2])).toBe(50)
+    // 实心段：甲 100/200、乙 25/100（丙 filled=0 无实心段）
+    expect(fills.length).toBe(2)
+    expect(Math.abs(heightOf(fills[0]) / heightOf(caps[0]) - 0.5)).toBeLessThan(0.01)
+    expect(Math.abs(heightOf(fills[1]) / heightOf(caps[1]) - 0.25)).toBeLessThan(0.01)
+  })
+
+  test('filled=0 纯轨道；filled=total 满胶囊（实心段高 = 胶囊高）两边界', async () => {
+    const { container } = render(
+      <RangeCapsules
+        data={[
+          { name: '未回款', total: 50, filled: 0 },
+          { name: '已收齐', total: 80, filled: 80 },
+        ]}
+        formatValue={(n) => String(n)}
+      />
+    )
+    await mountedFade(container)
+    const caps = container.querySelectorAll<HTMLElement>('[data-capsule]')
+    expect(container.querySelectorAll('[data-capsule-fill="0"]').length).toBe(0)
+    const full = container.querySelector<HTMLElement>('[data-capsule-fill="1"]')
+    expect(heightOf(full)).toBe(heightOf(caps[1]))
+    expect(heightOf(caps[1])).toBe(200) // max=80、height=200：total=80 → round(80/80×200)
+  })
+
+  test('filled 超 total clamp 不爆版：实心段不超胶囊高', async () => {
+    const { container } = render(
+      <RangeCapsules data={[{ name: '异常', total: 100, filled: 500 }]} formatValue={(n) => String(n)} />
+    )
+    await mountedFade(container)
+    const caps = container.querySelectorAll<HTMLElement>('[data-capsule]')
+    const fill = container.querySelector<HTMLElement>('[data-capsule-fill="0"]')
+    expect(heightOf(fill!)).toBe(heightOf(caps[0]))
+  })
+
+  test('name 转义：含 <script> 的合同名不产生 script 元素，按文本渲染', async () => {
+    const { container } = render(
+      <RangeCapsules data={[{ name: '<script>alert(1)</script>', total: 100, filled: 0 }]} formatValue={(n) => String(n)} />
+    )
+    await mountedFade(container)
+    expect(container.querySelectorAll('script').length).toBe(0)
+    expect(container.textContent).toContain('<script>alert(1)</script>')
+  })
+
+  test('确定性输出（无随机）：同数据两次渲染，胶囊高与实心段高完全一致', async () => {
+    const { container } = render(<RangeCapsules data={capData} formatValue={(n) => String(n)} />)
+    const { container: c2 } = render(<RangeCapsules data={capData} formatValue={(n) => String(n)} />)
+    await mountedFade(container)
+    await mountedFade(c2)
+    const read = (root: HTMLElement) =>
+      Array.from(root.querySelectorAll<HTMLElement>('[data-capsule], [data-capsule-fill]')).map(heightOf)
+    expect(read(c2)).toEqual(read(container))
   })
 })
