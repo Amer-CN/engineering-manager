@@ -76,6 +76,12 @@ const Mascot = ({ size = 96, state = 'idle', follow = true, frozen = false, shap
   // 引擎构造照上游：new BotEngine(RAYON, mappedState, shapeRadii, expression)
   // eslint-disable-next-line react-hooks/exhaustive-deps -- 引擎只建一次，状态/形状变化走带日期的 setter
   const engine = useMemo(() => new BotEngine(R, STATE_MAP[resolved], shapeOf(shape), NEUTRE), [])
+  /* ── still（frozen/reduced）压平视线：idle pose 自带 REST_GAZE（yaw28/pitch28/roll-13，
+        冻结帧会斜眼看右上）；活体由 aim 每帧 mix=1 压平，静态实例无 rAF 需手动回填——
+        look 日期 -1、morph 1s → sample(0) 时 mix 恰为 1，与活体静止姿态完全一致。
+        roll 为 pose 字段、Look 无此通道，13° 签名歪头保留（与活体观感一致）。
+        setLook 同参幂等，渲染期重复调用无害 ── */
+  if (still) engine.setLook({ yaw: 0, pitch: 0, mix: 1, spin: 0, wander: 0 }, -1, 1)
   const [frame, setFrame] = useState<BotFrame>(() => engine.sample(0))
   const [paper, setPaper] = useState(DEFAULT_PAPER)
 
@@ -124,7 +130,7 @@ const Mascot = ({ size = 96, state = 'idle', follow = true, frozen = false, shap
     lastInteractRef.current = clockRef.current
     drowsyRef.current = false
     engine.setExpression(NEUTRE, clockRef.current)
-    if (still) { engine.reset(mapped, 0); setFrame(engine.sample(0)) } else { engine.setState(mapped, clockRef.current) }
+    if (still) { engine.reset(mapped, 0); setFrame(engine.sample(0)) } else { engine.setState(mapped, clockRef.current) } // reset 不动 look，压平持续有效
   }, [engine, still, resolved])
 
   /* ── shape 变化 → morph 换形；still 传 -1 使 0 点即新形（k≥1 全量应用） ── */
