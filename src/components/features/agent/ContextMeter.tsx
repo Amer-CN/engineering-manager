@@ -43,8 +43,8 @@ const ContextMeter: React.FC<ContextMeterProps> = ({ contextTokens, lastCompleti
         {/* 容量微条 */}
         <span className="relative w-10 h-1 rounded-full overflow-hidden" style={{ background: 'var(--panel-2)' }}>
           <span
-            className="absolute left-0 top-0 h-full rounded-full transition-[width,background-color]"
-            style={{ width: `${pct}%`, background: tone }}
+            className="absolute left-0 top-0 h-full rounded-full transition-[transform,background-color] duration-300"
+            style={{ transformOrigin: 'left', width: '100%', transform: `scaleX(${pct / 100})`, background: tone }}
           />
         </span>
         <span>{fmt(remaining)} 余</span>

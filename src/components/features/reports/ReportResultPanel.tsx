@@ -1,4 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react'
+import { motion } from 'framer-motion'
+import { EASE_OUT } from '@/constants/animations'
 import { Icon } from '@/components/ui/Icon'
 import { parseMarkup, templateMarkupToPrintHtml } from '@/utils/templateMarkup'
 import { ReportCharts } from './ReportCharts'
@@ -50,7 +52,10 @@ const ReportResultPanel: React.FC<ReportResultPanelProps> = ({ markdown, onUpdat
   }, [markdown])
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, y: 8, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.3, ease: EASE_OUT }}
       className="rounded-xl border overflow-hidden"
       style={{ borderColor: 'var(--border)' }}
     >
@@ -185,7 +190,7 @@ const ReportResultPanel: React.FC<ReportResultPanelProps> = ({ markdown, onUpdat
           </>
         )}
       </div>
-    </div>
+    </motion.div>
   )
 }
 
