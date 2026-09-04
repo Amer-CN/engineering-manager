@@ -277,11 +277,19 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
 
       <DocAttachmentChips items={docAttachments} onRemove={removeDocAttachment} />
 
-      {/* 胶囊输入卡（DSH 布局：textarea 上 / 操作行下；整卡拖拽目标） */}
+      {/* 胶囊输入卡（DSH 布局：textarea 上 / 操作行下；整卡拖拽目标。
+          点卡片任意空白处聚焦 textarea——auto-grow 的 textarea 只有一行高，
+          卡片下方大片区域原生点不到；按钮/输入控件/mascot 槽由守卫排除） */}
       <div
         onDragOver={(e) => { e.preventDefault(); if (!disabled) setDragOver(true) }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
+        onClick={(e) => {
+          if (disabled) return
+          const t = e.target as HTMLElement
+          if (t.closest('button, textarea, input, [role="menu"], .mascot-slot')) return
+          textareaRef.current?.focus()
+        }}
         className={`flex flex-col gap-2 pt-2.5 pb-2 px-2.5 rounded-[22px] border bg-[color:var(--card)] border-[color:var(--border)] focus-within:ring-2 focus-within:ring-[color:var(--accent-soft)] focus-within:border-[color:var(--accent)] transition-[box-shadow,border-color] ${dragOver ? 'ring-2 ring-[color:var(--accent)] border-[color:var(--accent)]' : ''}`}
       >
         <input
@@ -297,7 +305,7 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
         {/* 文本行：Mascot 状态头像（可选） + textarea 横向排布 */}
         <div className="flex items-start gap-2">
           {mascot && (
-            <div className="flex-shrink-0 pt-1" style={{ overflow: 'visible' }}>
+            <div className="mascot-slot flex-shrink-0 pt-1" style={{ overflow: 'visible' }}>
               {mascot}
             </div>
           )}
