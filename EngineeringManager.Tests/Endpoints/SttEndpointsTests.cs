@@ -521,3 +521,102 @@ public class SttEndpointsTests : ApiTestBase
         Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
     }
 }
+
+/// <summary>
+/// POST /api/stt/jobs/{id}/insights 端点测试（智能速览）。
+/// 只覆盖不依赖 LLM 的防御路径：归属校验 404 / 不存在 404 / 权限 403。
+/// 成功路径需要可编排的 LLM 替身（现有 FakeLlmChatService 首轮固定返回 tool_call，
+/// 无法构造合法速览 JSON），按简报回退到这三条。
+/// </summary>
+public class SttEndpointsInsightsTests : ApiTestBase
+{
+    private async Task<string> LoginAdminAsync()
+    {
+        var login = await Client.PostAsJsonAsync("/api/auth/login",
+            new { username = "admin", password = "admin123" });
+        login.EnsureSuccessStatusCode();
+        var json = await login.Content.ReadFromJsonAsync<JsonElement>();
+        return json.GetProperty("data").GetProperty("token").GetString()!;
+    }
+
+    private async Task<string> LoginWorkerAsync()
+    {
+        var login = await Client.PostAsJsonAsync("/api/auth/login",
+            new { username = "stt-ins-worker", password = "admin123" });
+        login.EnsureSuccessStatusCode();
+        var json = await login.Content.ReadFromJsonAsync<JsonElement>();
+        return json.GetProperty("data").GetProperty("token").GetString()!;
+    }
+
+    private void SetAuth(string token)
+    {
+        Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+    }
+
+    /// <summary>插入指定 created_by 的 job（不动 LLM，insights 的 404 防御路径不触达 LLM）</summary>
+    private long CreateJob(string uid)
+    {
+        using var conn = new SqliteConnection(ConnectionString);
+        conn.Open();
+        var now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        return conn.QuerySingle<long>(@"
+            INSERT INTO stt_jobs
+                (source_file, source_path, source_type, engine, status, progress,
+                 is_multi_speaker, num_speakers, error, created_at, updated_at, created_by)
+            VALUES
+                ('test.mp3', 'stt/' || @Uid || '/test.mp3', 'audio', 'test', 'completed', 100,
+                 0, NULL, NULL, @Now, @Now, @Uid);
+            SELECT last_insert_rowid();",
+            new { Uid = uid, Now = now });
+    }
+
+    /// <summary>seed 一个 worker 角色用户（GetDefaultPermissions("worker") 不含 voice:read）</summary>
+    private void SeedWorkerUser()
+    {
+        using var conn = new SqliteConnection(ConnectionString);
+        conn.Open();
+        var salt = "stt-ins-worker-salt-12";
+        var hash = EngineeringManager.Api.Common.HashPassword("admin123", salt, 2);
+        conn.Execute(@"
+            INSERT OR IGNORE INTO users
+                (id, username, password, password_hash, password_salt, password_hash_version,
+                 display_name, role_id, status, created_at)
+            VALUES ('stt-ins-worker', 'stt-ins-worker', 'admin123', @Hash, @Salt, 2,
+                    '速览无权限用户', 'worker', 'active', @Now)",
+            new { Hash = hash, Salt = salt, Now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") });
+    }
+
+    [Fact]
+    public async Task Insights_JobOfOtherUser_Returns404()
+    {
+        var token = await LoginAdminAsync();
+        SetAuth(token);
+        // job 归属 uid=999，admin(uid=1) 请求 → 归属校验不过 → 404
+        var jobId = CreateJob("999");
+
+        var resp = await Client.PostAsync($"/api/stt/jobs/{jobId}/insights", null);
+        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Insights_NotFound_Returns404()
+    {
+        var token = await LoginAdminAsync();
+        SetAuth(token);
+
+        var resp = await Client.PostAsync("/api/stt/jobs/999999/insights", null);
+        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Insights_NoPermission_Returns403()
+    {
+        SeedWorkerUser();
+        var token = await LoginWorkerAsync();
+        SetAuth(token);
+
+        // worker 角色无 voice:read → 权限检查先于存在性校验，直接 403
+        var resp = await Client.PostAsync("/api/stt/jobs/999999/insights", null);
+        Assert.Equal(HttpStatusCode.Forbidden, resp.StatusCode);
+    }
+}

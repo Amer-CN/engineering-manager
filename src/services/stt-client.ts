@@ -104,6 +104,19 @@ export interface SttIngestResult {
   message?: string
 }
 
+/** 智能速览章节项（startSec = 该章第一段的 start 秒数） */
+export interface SttInsightChapter {
+  startSec: number
+  title: string
+}
+
+/** 智能速览三件套：关键词 / 全文概要 / 章节速览 */
+export interface SttInsights {
+  keywords: string[]
+  summary: string
+  chapters: SttInsightChapter[]
+}
+
 interface ApiResponse<T> {
   success: boolean
   data?: T
@@ -342,6 +355,32 @@ export async function ingestSttJob(
   }
 }
 
+/** POST /api/stt/jobs/{id}/insights — 智能速览（关键词/概要/章节，LLM 现算，最长约 30s） */
+export async function getSttInsights(id: number): Promise<ApiResponse<SttInsights>> {
+  try {
+    const token = getToken()
+    const resp = await fetch(`${API_BASE}/api/stt/jobs/${id}/insights`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    if (resp.status === 401) {
+      try { localStorage.removeItem(TOKEN_KEY) } catch { /* */ }
+    }
+    if (!resp.ok) {
+      try {
+        const errBody = await resp.json()
+        if (errBody?.error) return { success: false, error: errBody.error }
+      } catch { /* */ }
+      return { success: false, error: `HTTP ${resp.status}: ${resp.statusText}` }
+    }
+    const raw = await resp.json()
+    return convertKeysToCamelCase(raw)
+  } catch (err) {
+    console.error('[STT] getSttInsights 失败:', err)
+    return { success: false, error: String(err) }
+  }
+}
+
 /** POST /api/stt/jobs/{id}/cancel — 取消任务（仅 pending/running/processing） */
 export async function cancelSttJob(id: number): Promise<ApiResponse<{ id: number; status: string }>> {
   try {
@@ -428,6 +467,7 @@ export const sttClient = {
   getSttJob,
   getSttJobAudio,
   getSttJobs,
+  getSttInsights,
   ingestSttJob,
   cancelSttJob,
   retrySttJob,

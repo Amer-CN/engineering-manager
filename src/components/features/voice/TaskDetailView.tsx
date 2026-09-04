@@ -18,6 +18,7 @@ import { sttClient } from '@/services/stt-client'
 import type { SttJobDetail, SttSegment } from '@/services/stt-client'
 import TranscriptEditor from './TranscriptEditor'
 import TranscriptNotePanel, { copyTextToClipboard } from './TranscriptNotePanel'
+import SttInsightsCard from './SttInsightsCard'
 import type { TranscriptNotePanelHandle } from './TranscriptNotePanel'
 
 interface TaskDetailViewProps {
@@ -295,8 +296,10 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
 
         {/* 双栏主体：<900px 上下堆叠，≥900px 左右 60/40 */}
         <div className="flex-1 min-h-0 flex flex-col min-[900px]:flex-row">
-          {/* 左栏 ≈60%：段落流 / 编辑器 + 底部播放器 */}
+          {/* 左栏 ≈60%：智能速览卡 + 段落流 / 编辑器 + 底部播放器 */}
           <section className="flex flex-col min-h-0 flex-1 min-[900px]:flex-initial min-[900px]:basis-[60%] min-[900px]:min-w-0">
+            <SttInsightsCard jobId={job.id} onSeek={seekTo} />
+
             {body}
 
             {/* 唯一的 audio 元素（隐藏），TranscriptEditor 通过 audioRef 复用 */}

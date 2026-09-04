@@ -3,6 +3,7 @@ using Dapper;
 using EngineeringManager.Api.Security;
 using EngineeringManager.Api.Services;
 using EngineeringManager.Api.Services.Stt;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace EngineeringManager.Api;
 
@@ -551,6 +552,68 @@ public static class SttEndpoints
             {
                 Console.Error.WriteLine($"[SttEndpoints] 入库失败: {ex.Message}");
                 return Common.ServerError("转写入库", ex);
+            }
+        });
+
+        // ═══════════════════════════════════════════════════════════
+        // POST /api/stt/jobs/{id}/insights — 智能速览（关键词/全文概要/章节速览）
+        // 一次 LLM 调用生成三件套，现算不持久化；提示词组装与 JSON 防御解析在 SttInsightsService
+        // ═══════════════════════════════════════════════════════════
+        app.MapPost("/api/stt/jobs/{id}/insights", async (HttpContext ctx, IDbConnection db, long id) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // 权限检查：voice 页面路由本身要求 voice:read（App.tsx RequirePermission）
+            if (!CurrentUser.HasPermission(ctx, db, "voice:read"))
+                return Results.Json(new { success = false, error = "无权限：需要 voice:read" }, statusCode: 403);
+            try
+            {
+                var job = db.QueryFirstOrDefault<dynamic>(
+                    @"SELECT result_text, result_json, duration_sec
+                      FROM stt_jobs WHERE id = @Id AND created_by = @Uid",
+                    new { Id = id, Uid = uid });
+
+                if (job == null)
+                    return Common.NotFound("转写任务不存在");
+                if (string.IsNullOrWhiteSpace((string?)job.result_text))
+                    return Common.Fail("转写结果为空，无法生成速览");
+
+                // 解析 result_json 为 segments（章节 startSec 需要各段 start 秒数）
+                List<JsonSegment>? segments = null;
+                if (job.result_json != null)
+                {
+                    try
+                    {
+                        segments = System.Text.Json.JsonSerializer.Deserialize<List<JsonSegment>>((string)job.result_json);
+                    }
+                    catch { /* 解析失败退回纯文本，不阻断速览 */ }
+                }
+
+                // LLM 服务从 RequestServices 解析；SttInsightsService 不注册 DI（避免改 Program.cs）
+                // 注意：(string) 先把 dynamic 转成静态 string —— dynamic 实参会把整个调用
+                // 变成运行时绑定，导致返回元组无法 var 解构（CS8130）
+                var resultText = (string)job.result_text;
+                var llm = ctx.RequestServices.GetRequiredService<ILlmChatService>();
+                var service = new SttInsightsService(llm);
+                double durationSec = job.duration_sec == null ? 0 : Convert.ToDouble(job.duration_sec);
+                var (ok, result, error) = await service.GenerateAsync(resultText, segments, durationSec);
+                if (!ok || result == null)
+                    return Results.Json(new { success = false, error = error ?? "速览生成失败" }, statusCode: 502);
+
+                return Results.Ok(new
+                {
+                    success = true,
+                    data = new
+                    {
+                        keywords = result.Keywords,
+                        summary = result.Summary,
+                        chapters = result.Chapters.Select(c => new { startSec = c.StartSec, title = c.Title }),
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[SttEndpoints] 生成速览失败: {ex.Message}");
+                return Common.ServerError("生成速览", ex);
             }
         });
 
