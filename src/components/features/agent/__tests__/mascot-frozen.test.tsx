@@ -17,14 +17,14 @@ import { COLOR_BY_ID } from '../bloub/bot/skins'
 
 afterEach(cleanup)
 
-/** 身体 path 选择器：身体是唯一以形象主色填充的 path（眼/notch 是 paper 色块，弧线走 stroke）。
-    用 rouge 而非默认 encre，避开与深色描边类的潜在撞色 */
-const INK_HEX = COLOR_BY_ID.get('rouge')?.hex ?? '#e8483f'
+/** 身体 path 选择器：身体是唯一以变体 body 色填充的 path（眼/notch 是独立色块，弧线走 stroke）。
+    用 ambre 而非默认 encre：body=#f0b429 在 light/dark 两组一致，避开与深色眼色/描边的潜在撞色 */
+const INK_HEX = COLOR_BY_ID.get('ambre')?.hex ?? '#f0b429'
 
 /** 渲染一个 frozen Mascot 并取回身体 path 的 d */
 function renderBody(shape: string): string {
   const { container } = render(
-    <Mascot size={96} frozen state="idle" shape={shape} color="rouge" />,
+    <Mascot size={96} frozen state="idle" shape={shape} color="ambre" />,
   )
   const body = container.querySelector(`path[fill="${INK_HEX}"]`)
   expect(body).not.toBeNull()

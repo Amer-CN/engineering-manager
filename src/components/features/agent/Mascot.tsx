@@ -2,7 +2,8 @@
  * Mascot — AI 管家吉祥物（bloub 引擎 React 薄壳适配器）。
  * 引擎 vendor 自 jeremy-prt/bloub @ b4bb3c1（MIT），./bloub/ 逐字；本文件只做适配层：
  * 状态映射、follow 跟随、入场、点击/wink、打盹、拖拽回弹、shape/color、frozen 静态。
- * 渲染 = 实心 ink 身体 + paper 色眼块（clipPath 裁轮廓，替换上游 mask 抠洞——深色主题渗白圈）。
+ * 渲染 = 实心 body 身体（与页面低对比的主题组加描边）+ 变体眼色 + paper 色 notch
+ * （clipPath 裁轮廓，替换上游 mask 抠洞——深色主题渗白圈）；矩阵见 ./mascot-themes.ts。
  */
 
 import { useEffect, useId, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
@@ -11,9 +12,10 @@ import { DEFAULT_EXPRESSION, EXPRESSIONS, EXPRESSION_BY_ID, type BotExpression }
 import { BotEngine, type BotFrame, type Look } from './bloub/bot/engine'
 import { clamp, easings } from './bloub/bot/math'
 import { DEMI_VIEWBOX, RAYON } from './bloub/bot/repere'
-import { COLOR_BY_ID, SHAPE_BY_ID, mixHex } from './bloub/bot/skins'
+import { SHAPE_BY_ID, mixHex } from './bloub/bot/skins'
 import { STATE_BY_ID, type StateId } from './bloub/bot/states'
 import { HUMEURS, SPIN, TOUR_TIME, TURN_TIME, tourLook, type Aim } from './bloub/gaze'
+import { resolvePaper, resolveThemeGroup, resolveVariant, type MascotThemeGroup } from './mascot-themes'
 
 export type MascotState =
   | 'idle' | 'thinking' | 'searching' | 'replying' | 'success' | 'error' | 'listening'
@@ -33,7 +35,6 @@ const NEUTRAL = EXPRESSION_BY_ID.get(DEFAULT_EXPRESSION)!
 /** 默认表情正视：保留抬头 yaw/pitch 签名、roll 归零；id 不变——eyefit 按 id 查表、setExpression 按引用早退 */
 const NEUTRE: BotExpression = { ...NEUTRAL, gaze: { ...NEUTRAL.gaze, roll: 0 } }
 const DROWSY = EXPRESSION_BY_ID.get('somnolent') ?? null, SURPRIS = EXPRESSION_BY_ID.get('surpris')!, HEUREUX = EXPRESSION_BY_ID.get('heureux')!
-const DEFAULT_PAPER = '#f9f9f9' // mixHex 需真 hex：--bg 非 # 开头时退回上游默认衬底
 const SCRIPT_MORPH = 1 / 60, SCRIPT_RELEASE = TOUR_TIME + 0.2 // 入场短 rattrapage（0 会除零出 NaN）
 const DOUBLE_CLICK_MS = 350, WINK_MS = 1600, EXPR_MS = 1200
 const DROWSY_S = 15, SLEEP_S = 30 // 打盹两级阈值（clock 秒）
@@ -71,7 +72,6 @@ const Mascot = ({ size = 96, state = 'idle', follow = true, frozen = false, shap
   const resolved: ResolvedMascotState = state === 'listening' ? 'idle' : state
   /** still = reduced || frozen：动画 effect、onClick、指针/拖拽监听全走它 */
   const still = useMemo(() => frozen || (typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches), [frozen])
-  const ink = COLOR_BY_ID.get(color)?.hex ?? COLOR_BY_ID.get(DEFAULT_COLOR_ID)!.hex
 
   // 引擎构造照上游：new BotEngine(RAYON, mappedState, shapeRadii, expression)
   // eslint-disable-next-line react-hooks/exhaustive-deps -- 引擎只建一次，状态/形状变化走带日期的 setter
@@ -83,7 +83,10 @@ const Mascot = ({ size = 96, state = 'idle', follow = true, frozen = false, shap
         setLook 同参幂等，渲染期重复调用无害 ── */
   if (still) engine.setLook({ yaw: 0, pitch: 0, mix: 1, spin: 0, wander: 0 }, -1, 1)
   const [frame, setFrame] = useState<BotFrame>(() => engine.sample(0))
-  const [paper, setPaper] = useState(DEFAULT_PAPER)
+  /** 主题适配：paperHex=notch 衬底（页面底色近似）、themeGroup=light/dark 变体分组；初值=未知主题回退 */
+  const [paperHex, setPaperHex] = useState('#f9f9f9')
+  const [themeGroup, setThemeGroup] = useState<MascotThemeGroup>('light')
+  const variant = resolveVariant(color, themeGroup)
 
   const svgRef = useRef<SVGSVGElement>(null)
   const pointerRef = useRef<{ x: number; y: number } | null>(null)
@@ -103,11 +106,12 @@ const Mascot = ({ size = 96, state = 'idle', follow = true, frozen = false, shap
   const uid = useId()
   const clipId = `bot-clip${uid}`
 
-  /* ── paper 衬底：眼洞显色随主题。挂载读一次 --bg，data-theme 变化重读 ── */
+  /* ── 主题适配：data-theme 变化 → paperHex + themeGroup 两个 state 同步换装（挂载读一次） ── */
   useEffect(() => {
     const read = () => {
-      const v = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()
-      setPaper(v.startsWith('#') ? v : DEFAULT_PAPER)
+      const t = document.documentElement.getAttribute('data-theme')
+      setPaperHex(resolvePaper(t))
+      setThemeGroup(resolveThemeGroup(t))
     }
     read()
     const obs = new MutationObserver(read)
@@ -310,11 +314,11 @@ const Mascot = ({ size = 96, state = 'idle', follow = true, frozen = false, shap
     }
   }, [engine, still])
 
-  /* ── 渲染：实心 ink 身体 + paper 色眼/notch 叠画进 clipPath；wrapper 拖拽位移 + 松手回弹 ── */
+  /* ── 渲染：实心 body 身体（低对比主题组加描边）+ 变体眼色/paper notch；wrapper 拖拽位移 + 松手回弹 ── */
 
-  /** 粒子渲染：显式色优先；depth 混 paper（离得越远越融进背景） */
+  /** 粒子渲染：显式色优先；depth 混 paperHex（离得越远越融进背景） */
   const renderDot = (dot: BotFrame['dots'][number], key: string) => {
-    const fill = dot.color ?? (dot.depth === undefined ? ink : mixHex(paper, ink, dot.depth))
+    const fill = dot.color ?? (dot.depth === undefined ? variant.body : mixHex(paperHex, variant.body, dot.depth))
     const attrs = dot.d
       ? { fill, opacity: dot.opacity, d: dot.d, transform: `translate(${dot.x} ${dot.y}) rotate(${dot.rot ?? 0}) scale(${R})` }
       : { fill, opacity: dot.opacity, cx: dot.x, cy: dot.y, r: dot.r }
@@ -341,7 +345,7 @@ const Mascot = ({ size = 96, state = 'idle', follow = true, frozen = false, shap
         style={{ display: 'block', overflow: 'visible' }}
       >
         <defs>
-          {/* 眼/notch 是叠画的 paper 色块，clip 到身体轮廓：视线滑向边缘时被裁掉 */}
+          {/* 眼/notch 是叠画的色块，clip 到身体轮廓：视线滑向边缘时被裁掉 */}
           <clipPath id={clipId}>
             <path d={frame.bodyPath} />
           </clipPath>
@@ -362,11 +366,12 @@ const Mascot = ({ size = 96, state = 'idle', follow = true, frozen = false, shap
         {frame.dotsBehind && frame.dots.map((dot, i) => renderDot(dot, `pb${i}`))}
 
         <g opacity={frame.bodyAlpha}>
-          <path d={frame.bodyPath} fill={ink} />
-          {/* 眼/notch：paper = 页面底色 → 读作身体上的真洞，clip 防出轮廓 */}
+          {/* 描边只在与页面低对比的组合上启用（stroke=null → none） */}
+          <path d={frame.bodyPath} fill={variant.body} stroke={variant.stroke ?? 'none'} strokeWidth={8} />
+          {/* 眼=变体眼色（对比身体）；notch=paperHex（透页面底色的真洞）；clip 防出轮廓 */}
           <g clipPath={`url(#${clipId})`}>
-            {frame.eyes.map((eye, i) => (<path key={i} d={eye.d} transform={eye.matrix} opacity={eye.alpha} fill={paper} />))}
-            {frame.notch && <circle cx={frame.notch.x} cy={frame.notch.y} r={frame.notch.r} fill={paper} />}
+            {frame.eyes.map((eye, i) => (<path key={i} d={eye.d} transform={eye.matrix} opacity={eye.alpha} fill={variant.eyes} />))}
+            {frame.notch && <circle cx={frame.notch.x} cy={frame.notch.y} r={frame.notch.r} fill={paperHex} />}
           </g>
         </g>
         {!frame.dotsBehind && frame.dots.map((dot, i) => renderDot(dot, `pf${i}`))}

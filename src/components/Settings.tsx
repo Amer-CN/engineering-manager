@@ -67,6 +67,7 @@ function MascotAppearanceSection() {
             </button>
           ))}
         </div>
+        <p className="text-caption text-[color:var(--muted)] mt-3">颜色会随浅色/深色主题自动适配对比度</p>
       </div>
     </div>
   )
