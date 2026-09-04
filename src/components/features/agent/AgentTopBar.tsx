@@ -46,7 +46,7 @@ const AgentTopBar: React.FC<AgentTopBarProps> = ({
       </button>
       <button
         onClick={onHistoryOpen}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-[color:var(--panel-2)]"
+        className="lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-[color:var(--panel-2)]"
         style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}
         title="对话历史"
       >
