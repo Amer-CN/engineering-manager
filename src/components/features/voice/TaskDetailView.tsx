@@ -21,7 +21,7 @@ import TranscriptEditor from './TranscriptEditor'
 import TranscriptNotePanel, { copyTextToClipboard } from './TranscriptNotePanel'
 import SttInsightsCard from './SttInsightsCard'
 import TranscriptSegmentList from './TranscriptSegmentList'
-import { detectSpeakerBase } from './segmentUtils'
+import { detectSpeakerBase, normalizeSegments, groupIntoParagraphs } from './segmentUtils'
 import { DEFAULT_COLORS } from './SpeakerNameEditor'
 import type { SpeakerInfo } from './SpeakerNameEditor'
 import type { TranscriptNotePanelHandle } from './TranscriptNotePanel'
@@ -71,8 +71,10 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
   // 媒体信息（objectURL + 时长 + 保存后本地 job 覆盖）与播放态各并为单 state（useState 门禁 ≤8）
   const [media, setMedia] = useState<{ url: string | null; duration: number; jobOverride: SttJobDetail | null }>({ url: null, duration: job.durationSec ?? 0, jobOverride: null })
   const curJob = media.jobOverride ?? job // 七期：保存成功后 getSttJob 拉新写 override，覆盖父组件 prop 渲染（不动 TranscriptionWorkspace）
-  // 过滤 speaker 0（与 TranscriptEditor 同规则）；无有效段落 = 单人纯文本视图
-  const segments = (curJob.segments ?? []).filter(s => s.speaker > 0)
+  const { flat, paragraphs } = useMemo(() => {
+    const f = normalizeSegments((curJob.segments ?? []).filter(s => s.speaker > 0)) // 过滤 speaker 0（同 TranscriptEditor）后按行归一化；无有效段落 = 单人纯文本视图
+    return { flat: f, paragraphs: groupIntoParagraphs(f) } // flat 与 paragraphs 同源（均归一化）：播放扫描索引与段落 segStartIdx 对齐
+  }, [curJob.segments])
   const [playState, setPlayState] = useState<{ playing: boolean; time: number }>({ playing: false, time: 0 })
   const [speed, setSpeed] = useState(1)
   const [activeIdx, setActiveIdx] = useState(-1)
@@ -138,17 +140,17 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
     if (!a) return
     const t = a.currentTime
     setPlayState(p => ({ ...p, time: t }))
-    if (segments.length === 0) return
+    if (flat.length === 0) return
     let i = curIdxRef.current
-    if (i >= segments.length) i = segments.length - 1
-    while (i < segments.length - 1 && t >= segments[i].end) i++
-    while (i > 0 && t < segments[i].start) i--
+    if (i >= flat.length) i = flat.length - 1
+    while (i < flat.length - 1 && t >= flat[i].end) i++
+    while (i > 0 && t < flat[i].start) i--
     curIdxRef.current = i
     // 落在段间空隙时不高亮（active = -1），两个 while 各自收敛不会来回振荡
-    const active = t >= segments[i].start && t < segments[i].end ? i : -1
+    const active = t >= flat[i].start && t < flat[i].end ? i : -1
     setActiveIdx(active)
     if (active >= 0) segRefs.current[active]?.scrollIntoView({ block: 'nearest' })
-  }, [segments])
+  }, [flat])
 
   // Shift+Space 全局播放/暂停（输入框/contentEditable 聚焦时不触发）
   useEffect(() => {
@@ -191,13 +193,13 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
       : [...prev, { id: sp, name, color: DEFAULT_COLORS[((sp % DEFAULT_COLORS.length) + DEFAULT_COLORS.length) % DEFAULT_COLORS.length] }])
   }, [])
 
-  // 摘取原文纯文本行：「【显示名】mm:ss 文本」（speakers 表名字；无分段（单人）时回退 job.text 按行）
+  // 摘取原文纯文本行：「【显示名】mm:ss 段落全文」（speakers 表名字；无分段（单人）时回退 job.text 按行）
   const noteLines = useMemo<string[]>(() => {
-    if (segments.length > 0) {
-      return segments.map(s => `【${speakerNameOf(s.speaker)}】${formatTime(s.start)} ${s.text}`)
+    if (paragraphs.length > 0) {
+      return paragraphs.map(p => `【${speakerNameOf(p.speaker)}】${formatTime(p.start)} ${p.segs.map(s => s.text).join('')}`)
     }
     return (curJob.text ?? '').split('\n').filter(l => l.trim() !== '')
-  }, [segments, curJob.text, speakerNameOf])
+  }, [paragraphs, curJob.text, speakerNameOf])
 
   // 批量摘取 → 摘取原文：填充右栏笔记
   const handleExtract = useCallback(() => {
@@ -259,9 +261,9 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
   const totalDuration = media.duration || job.durationSec || 0
 
   // 左栏主体：段落流（阅读模式）/ 编辑器（编辑模式或单人纯文本）
-  const body = segments.length > 0 && !editing ? (
+  const body = paragraphs.length > 0 && !editing ? (
     <TranscriptSegmentList
-      segments={segments} activeIdx={activeIdx} chapterRange={chapterRange}
+      paragraphs={paragraphs} activeIdx={activeIdx} chapterRange={chapterRange}
       canSeek={!!media.url} segRefs={segRefs} seekTo={seekTo}
       speakers={speakers} onRename={handleRename}
     />
@@ -298,7 +300,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
           <span className="text-sm font-medium text-[color:var(--fg)] truncate flex-1">
             {curJob.sourceFile || `任务 #${curJob.id}`}
           </span>
-          {segments.length > 0 && (
+          {paragraphs.length > 0 && (
             <div className="relative flex-shrink-0" data-menu-root>
               <Button
                 variant={menuOpen === 'extract' ? 'primary' : 'outline'} size="sm" leftIcon="ClipboardPen"
@@ -314,7 +316,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
               )}
             </div>
           )}
-          {segments.length > 0 && (
+          {paragraphs.length > 0 && (
             <Button
               variant={editing ? 'primary' : 'outline'} size="sm" leftIcon={editing ? 'Eye' : 'Pencil'}
               onClick={() => setEditing(v => !v)} className="flex-shrink-0"
