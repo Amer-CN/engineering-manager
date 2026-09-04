@@ -4,6 +4,7 @@ import { Icon } from '@/components/ui/Icon'
 import ButtonLoader from '@/components/ui/ButtonLoader'
 import { generateReport, type ReportRequest } from '@/services/report-client'
 import ReportResultPanel from './ReportResultPanel'
+import ReportPurposeSection, { type ReportPurpose } from './ReportPurposeSection'
 import { useAuth } from '@/hooks/useAuth'
 
 interface ReportGeneratorModalProps {
@@ -84,6 +85,7 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
   const [selectedActions, setSelectedActions] = useState<string[]>([])
   const [format, setFormat] = useState<ReportFormat>('text')
   const [theme, setTheme] = useState<ReportTheme>('general')
+  const [purpose, setPurpose] = useState<ReportPurpose>('review')
   // 结果面板的 format 取生成时快照（结果出来后改表单不影响已生成报告的呈现）
   const [resultFormat, setResultFormat] = useState<ReportFormat>('text')
 
@@ -100,6 +102,7 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
       scope,
       format,
       theme,
+      purpose,
     }
 
     if (periodPreset === 'custom' && customStart && customEnd) {
@@ -116,7 +119,7 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
     }
 
     return req
-  }, [periodPreset, customStart, customEnd, scope, scopeId, selectedActions, format, theme])
+  }, [periodPreset, customStart, customEnd, scope, scopeId, selectedActions, format, theme, purpose])
 
   // 生成报告
   const handleGenerate = useCallback(async () => {
@@ -205,6 +208,7 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
           </div>
 
           <div className="px-6 py-4 space-y-4">
+            <ReportPurposeSection purpose={purpose} scope={scope} isAdmin={isAdmin} onPick={setPurpose} onScopePick={setScope} />
             {/* ── 时间范围 ── */}
             <div>
               <label className="text-xs font-medium mb-2 block" style={{ color: 'var(--fg-2)' }}>
@@ -270,8 +274,8 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
               <div className="flex gap-2">
                 {isAdmin && (
                   <button
-                    onClick={() => setScope('all')}
-                    className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                    onClick={() => setScope('all')} disabled={purpose === 'work'}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{
                       background: scope === 'all' ? 'var(--accent)' : 'transparent',
                       color: scope === 'all' ? 'var(--on-accent)' : 'var(--fg-2)',
@@ -282,8 +286,8 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
                   </button>
                 )}
                 <button
-                  onClick={() => setScope('project')}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                  onClick={() => setScope('project')} disabled={purpose === 'work'}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
                     background: scope === 'project' ? 'var(--accent)' : 'transparent',
                     color: scope === 'project' ? 'var(--on-accent)' : 'var(--fg-2)',
@@ -293,8 +297,8 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
                   按项目
                 </button>
                 <button
-                  onClick={() => setScope('user')}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                  onClick={() => setScope('user')} disabled={purpose === 'work'}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed${purpose === 'evidence' ? ' hidden' : ''}`}
                   style={{
                     background: scope === 'user' ? 'var(--accent)' : 'transparent',
                     color: scope === 'user' ? 'var(--on-accent)' : 'var(--fg-2)',
@@ -348,8 +352,8 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
               </div>
             </div>
 
-            {/* ── 报告主题 ── */}
-            {renderPickSection('报告主题', THEME_OPTIONS, theme, setTheme)}
+            {/* ── 报告主题（仅经营复盘：用途三分后主题降级为 review 子选择） ── */}
+            {purpose === 'review' && renderPickSection('报告主题', THEME_OPTIONS, theme, setTheme)}
 
             {/* ── 报告形式 ── */}
             {renderPickSection('报告形式', FORMAT_OPTIONS, format, setFormat)}

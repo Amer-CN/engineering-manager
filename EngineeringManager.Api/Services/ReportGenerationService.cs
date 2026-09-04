@@ -9,6 +9,12 @@ namespace EngineeringManager.Api.Services;
 /// <summary>
 /// 报告生成服务 — 聚合 audit_logs + 业务 KPI，调用 LLM 生成 Markdown 报告
 /// </summary>
+/// <remarks>
+/// 企业版接缝（注释式声明，不新建接口/枚举/常量）：
+/// ①能力开关单一收口 = CurrentUser.IsAdmin / CurrentUser.GetDataScope（已有，企业版能力差异只改这一处）；
+/// ②审计记录操作者 = audit_logs 已有 user_id 字段（审计写入时已落操作者，操作天然可归因到人）；
+/// ③取数/措辞解耦 = purpose（用途→措辞分支）/ theme（主题→数据集）/ format（形式→版式）三层字段正交，互不耦合。
+/// </remarks>
 public class ReportGenerationService
 {
     private readonly ILlmChatService _llm;
@@ -30,6 +36,13 @@ public class ReportGenerationService
     {
         try
         {
+            // ⓪⁺ 用途分支准备：purpose=work 后端强制 scope=user（前端 UI 已锁定，此处二次兜底，
+            //    前端误传/被篡改的 scope 一律收敛到本人数据）；evidence/review 沿用既有 scope 逻辑
+            var isWorkPurpose = string.Equals(request.Purpose, "work", StringComparison.OrdinalIgnoreCase);
+            var isEvidencePurpose = string.Equals(request.Purpose, "evidence", StringComparison.OrdinalIgnoreCase);
+            if (isWorkPurpose)
+                request = request with { Scope = "user" };
+
             // ⓪ Scope/Period 白名单校验（防拼写错误导致非预期分支）
             var validScopes = new[] { "all", "project", "user" };
             var validPeriods = new[] { "day", "week", "month" };
@@ -58,7 +71,9 @@ public class ReportGenerationService
             }
 
             // ②③ 聚合：theme=wage 走工资台账专项聚合（替代审计+KPI 注入）；general 主题原逻辑逐字不动
-            var isWageTheme = string.Equals(request.Theme, "wage", StringComparison.OrdinalIgnoreCase);
+            //    （purpose=work/evidence 固定走审计+KPI 通用聚合，theme 仅在经营复盘点位生效）
+            var isWageTheme = !isWorkPurpose && !isEvidencePurpose &&
+                string.Equals(request.Theme, "wage", StringComparison.OrdinalIgnoreCase);
             AuditAggregate auditData;
             KpiAggregate kpiData;
             WageAggregate wageData;
@@ -90,7 +105,27 @@ public class ReportGenerationService
 
             string systemPrompt;
             string userPrompt;
-            if (isWageTheme)
+            if (isWorkPurpose)
+            {
+                // 工作汇报：第一人称措辞；额外注入当前用户 displayName；
+                // format=chart 时叠加图形版 chart-* 数据块规则（否则图形版无图可渲染）
+                var workDisplayName = await db.ExecuteScalarAsync<string?>(
+                    "SELECT COALESCE(NULLIF([display_name], ''), [username]) FROM [users] WHERE [id]=@UserId",
+                    new { UserId = userId });
+                systemPrompt = BuildWorkReportSystemPrompt();
+                if (string.Equals(request.Format, "chart", StringComparison.OrdinalIgnoreCase))
+                    systemPrompt += ChartBlocksAppendix;
+                userPrompt = BuildWorkUserPrompt(request, workDisplayName, auditData, kpiData, periodLabel);
+            }
+            else if (isEvidencePurpose)
+            {
+                // 对外举证：中立正式措辞；数据与 general 同源（审计汇总 + KPI）
+                systemPrompt = BuildEvidenceSystemPrompt();
+                if (string.Equals(request.Format, "chart", StringComparison.OrdinalIgnoreCase))
+                    systemPrompt += ChartBlocksAppendix;
+                userPrompt = BuildEvidenceUserPrompt(request, auditData, kpiData, periodLabel);
+            }
+            else if (isWageTheme)
             {
                 systemPrompt = string.Equals(request.Format, "chart", StringComparison.OrdinalIgnoreCase)
                     ? BuildWageChartSystemPrompt(periodLabel)
@@ -518,6 +553,172 @@ public class ReportGenerationService
     }
 
     /// <summary>
+    /// work/evidence + format=chart 的图形版附加规则：在用途措辞之上叠加 chart-* 数据块契约
+    /// （与 BuildChartSystemPrompt 同款三图型语法，前端 chartReport.parseChartReport 解析；
+    /// 无此附加规则图形版无图可渲染，只会降级纯文本）。
+    /// </summary>
+    private const string ChartBlocksAppendix =
+        "\n\n本次为图形版（format=chart），请在保持上述结构与措辞约束的前提下，叠加以下图形版输出规则：\n" +
+        "1. 首行 `# 标题`，次行 `> 期间：{起}~{止}`；各节标题用 `## `；\n" +
+        "2. 在有数据形状的节末尾放一个图表数据块（三选一，按数据形状选）：\n" +
+        "```chart-trend\n{\"label\":\"...\",\"points\":[{\"x\":\"9/1\",\"y\":18},...]}\n```（时间序列 ≥5 点）\n" +
+        "```chart-waffle\n{\"title\":\"...\",\"rows\":[{\"name\":\"...\",\"value\":33},...]}\n```（占比 ≤6 类，value 为百分比）\n" +
+        "```chart-bars\n{\"title\":\"...\",\"rows\":[{\"name\":\"...\",\"value\":12345},...]}\n```（类目比较 ≤8 条，金额单位元）\n" +
+        "3. 结尾 `## 值得记住的数字` 节：3-4 行 `- {数字}｜{一行说明}`。\n" +
+        "x 用短日期、y/value 用真实数字（金额单位元、计数不带单位），禁止编造数据。";
+
+    /// <summary>
+    /// 工作汇报（purpose=work）systemPrompt：第一人称工作汇报措辞。
+    /// </summary>
+    private static string BuildWorkReportSystemPrompt()
+    {
+        return "你是工程管家助手，为当前用户生成第一人称工作汇报" +
+            "（用于员工向领导交代自己的工作）。用「我」的口吻叙述。" +
+            "把每条操作记录翻译成具体工作成果。每个数字必须来自给定数据，绝对禁止编造、推测、美化。" +
+            "Markdown 四段式：一、本周工作概览（1-2 句）；二、主要工作明细（列表，每项说明做了什么、用了什么数据）；" +
+            "三、关键数据小结（表格）；四、下周计划（基于未完成项）。语气务实朴素。";
+    }
+
+    /// <summary>
+    /// 对外举证（purpose=evidence）systemPrompt：正式凭证措辞。
+    /// </summary>
+    private static string BuildEvidenceSystemPrompt()
+    {
+        return "你是工程管家报告助手，生成对外举证用途的正式凭证报告" +
+            "（可用于结算争议、银行授信、资质申报等场景）。要求：①只陈述数据事实，零修辞、零推测、零形容词；" +
+            "②每项数据标注来源模块与统计口径；③金额精确到分；" +
+            "④结构：报告说明（取数范围与统计口径）/合同情况/收支情况/工资发放情况/附注（统计时间与数据来源）。" +
+            "禁止包含操作行为分析或主观评价。";
+    }
+
+    /// <summary>
+    /// 工作汇报（purpose=work）userPrompt：数据节与 BuildUserPrompt 同构（字段名与数值不变），
+    /// 仅改文案包装为第一人称口径；额外注入当前用户 displayName。
+    /// </summary>
+    private static string BuildWorkUserPrompt(
+        ReportRequest request, string? displayName, AuditAggregate audit, KpiAggregate kpi, string periodLabel)
+    {
+        var who = string.IsNullOrWhiteSpace(displayName) ? "我" : displayName.Trim();
+        var sb = new StringBuilder();
+        sb.AppendLine($"我是「{who}」，以下是我在 {request.StartDate} ~ {request.EndDate} 的操作记录与业务数据，" +
+            $"请据此生成我的{periodLabel}工作汇报。");
+        sb.AppendLine("要求：用「我」的口吻叙述；把操作记录翻译成具体工作成果；只使用下列数据，不编造、不推测、不美化。");
+        sb.AppendLine();
+
+        // 审计汇总（与 BuildUserPrompt 同构，字段名与数值不变）
+        sb.AppendLine("## 操作日志汇总");
+        sb.AppendLine($"总操作数: {audit.TotalCount}");
+        sb.AppendLine();
+
+        if (audit.ActionCounts.Count > 0)
+        {
+            sb.AppendLine("按操作类型:");
+            foreach (var row in audit.ActionCounts)
+                sb.AppendLine($"- {row.action}: {row.count} 次");
+            sb.AppendLine();
+        }
+
+        if (audit.ResourceCounts.Count > 0)
+        {
+            sb.AppendLine("按资源类型:");
+            foreach (var row in audit.ResourceCounts)
+                sb.AppendLine($"- {row.resource}: {row.count} 次");
+            sb.AppendLine();
+        }
+
+        if (audit.UserCounts.Count > 0)
+        {
+            sb.AppendLine("按用户:");
+            foreach (var row in audit.UserCounts)
+                sb.AppendLine($"- {row.user_name ?? row.user_id}: {row.count} 次");
+            sb.AppendLine();
+        }
+
+        // 业务 KPI（与 BuildUserPrompt 同构，字段名与数值不变）
+        sb.AppendLine("## 业务指标");
+        sb.AppendLine($"新签收入合同: {kpi.ContractCount} 份，金额 {kpi.ContractAmount:F2} 元");
+        sb.AppendLine($"发票: {kpi.InvoiceCount} 张，金额 {kpi.InvoiceAmount:F2} 元");
+        sb.AppendLine($"结算: {kpi.SettlementCount} 笔，金额 {kpi.SettlementAmount:F2} 元");
+        sb.AppendLine($"工资: {kpi.WageCount} 条，实发 {kpi.WageAmount:F2} 元");
+        sb.AppendLine();
+
+        // 操作明细（与 BuildUserPrompt 同构，字段名与数值不变）
+        if (audit.Details.Count > 0)
+        {
+            sb.AppendLine("## 最近操作明细（最多 50 条）");
+            foreach (var d in audit.Details)
+            {
+                sb.AppendLine($"- [{d.created_at}] {d.user_name} {d.action} {d.resource}({d.resource_id}) {d.details}");
+            }
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// 对外举证（purpose=evidence）userPrompt：数据节与 BuildUserPrompt 同构（字段名与数值不变），
+    /// 仅改文案包装为正式凭证口径（零修辞、可溯源）。
+    /// </summary>
+    private static string BuildEvidenceUserPrompt(
+        ReportRequest request, AuditAggregate audit, KpiAggregate kpi, string periodLabel)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"请根据以下数据生成{periodLabel}正式数据凭证（{request.StartDate} ~ {request.EndDate}）。");
+        sb.AppendLine("要求：只陈述下列数据事实；每项数值注明来源模块与统计口径；金额精确到分；" +
+            "禁止修辞、推测与主观评价，禁止分析操作行为。");
+        sb.AppendLine();
+
+        // 审计汇总（与 BuildUserPrompt 同构，字段名与数值不变）
+        sb.AppendLine("## 操作日志汇总");
+        sb.AppendLine($"总操作数: {audit.TotalCount}");
+        sb.AppendLine();
+
+        if (audit.ActionCounts.Count > 0)
+        {
+            sb.AppendLine("按操作类型:");
+            foreach (var row in audit.ActionCounts)
+                sb.AppendLine($"- {row.action}: {row.count} 次");
+            sb.AppendLine();
+        }
+
+        if (audit.ResourceCounts.Count > 0)
+        {
+            sb.AppendLine("按资源类型:");
+            foreach (var row in audit.ResourceCounts)
+                sb.AppendLine($"- {row.resource}: {row.count} 次");
+            sb.AppendLine();
+        }
+
+        if (audit.UserCounts.Count > 0)
+        {
+            sb.AppendLine("按用户:");
+            foreach (var row in audit.UserCounts)
+                sb.AppendLine($"- {row.user_name ?? row.user_id}: {row.count} 次");
+            sb.AppendLine();
+        }
+
+        // 业务 KPI（与 BuildUserPrompt 同构，字段名与数值不变）
+        sb.AppendLine("## 业务指标");
+        sb.AppendLine($"新签收入合同: {kpi.ContractCount} 份，金额 {kpi.ContractAmount:F2} 元");
+        sb.AppendLine($"发票: {kpi.InvoiceCount} 张，金额 {kpi.InvoiceAmount:F2} 元");
+        sb.AppendLine($"结算: {kpi.SettlementCount} 笔，金额 {kpi.SettlementAmount:F2} 元");
+        sb.AppendLine($"工资: {kpi.WageCount} 条，实发 {kpi.WageAmount:F2} 元");
+        sb.AppendLine();
+
+        // 操作明细（与 BuildUserPrompt 同构，字段名与数值不变）
+        if (audit.Details.Count > 0)
+        {
+            sb.AppendLine("## 最近操作明细（最多 50 条）");
+            foreach (var d in audit.Details)
+            {
+                sb.AppendLine($"- [{d.created_at}] {d.user_name} {d.action} {d.resource}({d.resource_id}) {d.details}");
+            }
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>
     /// 构建 audit_logs 查询的 WHERE 子句 + 参数
     /// </summary>
     private static (string sql, DynamicParameters param) BuildAuditWhere(
@@ -640,4 +841,6 @@ public record ReportRequest
     public string Format { get; init; } = "text"; // text | chart
     /// <summary>报告主题：general=综合经营（缺省，全链路零改动）；wage=工资专项（工资台账聚合注入）</summary>
     public string Theme { get; init; } = "general"; // general | wage
+    /// <summary>报告用途：review=经营复盘（缺省，旧调用方零影响，走既有 general/wage 逻辑）；evidence=对外举证（正式凭证措辞）；work=工作汇报（第一人称措辞，后端强制 scope=当前用户）</summary>
+    public string Purpose { get; init; } = "review"; // review | evidence | work
 }
