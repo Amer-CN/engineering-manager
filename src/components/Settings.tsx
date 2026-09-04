@@ -18,17 +18,32 @@ import Mascot from '@/components/features/agent/Mascot'
 import { useMascotAppearance } from '@/hooks/useMascotAppearance'
 
 /**
- * 吉祥物形象设置（挂在「外观」面板之下）：2 形 3 色精选池，
+ * 吉祥物形象设置（挂在「外观」面板之下）：官方全形 8 种 / 全色 12 种，
  * 选择经 useMascotAppearance 持久化并同步到全应用 Mascot 实例。
  */
 const SHAPE_OPTIONS = [
   { id: 'cercle', label: '圆形' },
+  { id: 'galet', label: '鹅卵石' },
+  { id: 'squircle', label: '方圆' },
+  { id: 'capsule', label: '胶囊' },
   { id: 'triangle', label: '三角' },
+  { id: 'hexagone', label: '六边形' },
+  { id: 'nuage', label: '云朵' },
+  { id: 'goutte', label: '水滴' },
 ]
 const COLOR_OPTIONS = [
   { id: 'encre', label: '墨黑' },
   { id: 'creme', label: '米白' },
+  { id: 'brun', label: '棕' },
+  { id: 'rouge', label: '红' },
+  { id: 'orange', label: '橙' },
   { id: 'ambre', label: '琥珀' },
+  { id: 'vert', label: '绿' },
+  { id: 'turquoise', label: '青' },
+  { id: 'bleu', label: '蓝' },
+  { id: 'violet', label: '紫' },
+  { id: 'rose', label: '粉' },
+  { id: 'gris', label: '灰' },
 ]
 
 function MascotAppearanceSection() {
@@ -46,7 +61,7 @@ function MascotAppearanceSection() {
       </div>
       <div className="card-body">
         <p className="text-sm text-[color:var(--fg-2)] mb-3">形状</p>
-        <div className="grid grid-cols-2 gap-3 mb-5">
+        <div className="grid grid-cols-4 gap-3 mb-5">
           {SHAPE_OPTIONS.map(s => (
             <button key={s.id} onClick={() => setShape(s.id)} className={itemClass(shape === s.id)}>
               <div style={{ pointerEvents: 'none' }}>
@@ -57,7 +72,7 @@ function MascotAppearanceSection() {
           ))}
         </div>
         <p className="text-sm text-[color:var(--fg-2)] mb-3">颜色</p>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-4 gap-3">
           {COLOR_OPTIONS.map(c => (
             <button key={c.id} onClick={() => setColor(c.id)} className={itemClass(color === c.id)}>
               <div style={{ pointerEvents: 'none' }}>
@@ -67,7 +82,7 @@ function MascotAppearanceSection() {
             </button>
           ))}
         </div>
-        <p className="text-caption text-[color:var(--muted)] mt-3">颜色会随浅色/深色主题自动适配对比度</p>
+        <p className="text-caption text-[color:var(--muted)] mt-3">官方全色/全形均可选，颜色随浅色/深色主题自动适配对比度</p>
       </div>
     </div>
   )
