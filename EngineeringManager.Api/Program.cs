@@ -161,6 +161,7 @@ public static class ApiConfig
             });
         });
         builder.Services.AddSingleton<EngineeringManager.Api.Services.WritingSkillService>();
+        builder.Services.AddSingleton<EngineeringManager.Api.Services.WritingSkillUpdateService>();
         builder.Services.AddSingleton<EngineeringManager.Api.Services.UpdateService>();
 
         // v0.83 STT 语音转文字后台 worker（单并发）
@@ -380,6 +381,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
             var pii = app.Services.GetRequiredService<EngineeringManager.Api.Security.PiiProtector>();
             pii.Initialize(db);
         }
+
+        // 写作中心 skill 热更：启动后台检查远端版本（内部全静默，任何失败不影响启动与写作）
+        app.Services.GetRequiredService<EngineeringManager.Api.Services.WritingSkillUpdateService>().StartBackgroundCheck();
 
         if (IsProduction)
         {

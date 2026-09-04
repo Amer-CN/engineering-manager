@@ -13,6 +13,9 @@ namespace EngineeringManager.Api.Services;
 ///   · templates.md      18 种文体框架模板速查
 ///   · phrase-library.md 机关公文常用词语素材库
 ///
+/// 运行期优先读数据目录 <data>/writing-skill/ 的同名 4 份文件（热更产物，缺失即回退内嵌）；
+/// 快照可被 WritingSkillUpdateService 校验后原子热切换（TryReplaceResources）。
+///
 /// 设计见 docs/superpowers/specs/2026-08-16-writing-center-design.md §4。
 /// </summary>
 public sealed class WritingSkillService
@@ -89,6 +92,14 @@ public sealed class WritingSkillService
         new("S6", "精要速报型", "极限压缩，每项工作控制在 2-3 句话，只保留核心动作+关键结果，适合日报/快报。"),
     };
 
+    /// <summary>
+    /// skill 资源不可变快照：4 份 md + 版本锚点 + 来源。
+    /// Source = "data-dir"（数据目录，热更产物）或 "embedded"（EmbeddedResource 内嵌）。
+    /// </summary>
+    public sealed record SkillResources(
+        string SkillMd, string TemplatesMd, string PhraseLibraryMd, string FormatSpecMd,
+        string? Version, string Source);
+
     public static IReadOnlyList<string> AssistInstructions { get; } =
         new[] { "rewrite", "polish", "expand", "shorten", "custom" };
 
@@ -101,24 +112,90 @@ public sealed class WritingSkillService
 
     private readonly ILlmChatService _llm;
     private readonly IKnowledgeDraftAugmenter? _kbAugmenter;
-    private readonly string _skillMd;
-    private readonly string _templatesMd;
-    private readonly string _phraseLibraryMd;
-    private readonly string _formatSpecMd;
+    /// <summary>当前生效的资源快照；volatile 供热更后原子交换（旧 prompt 组装读旧快照，读后即止）</summary>
+    private volatile SkillResources _resources;
     private readonly IReadOnlyDictionary<string, DocType> _docTypeMap;
     private readonly IReadOnlyDictionary<string, StyleSpec> _styleMap;
 
     /// <param name="kbAugmenter">知识库检索增强器（可选）：T1 起草联动知识库；null = 纯素材起草（现状）</param>
-    public WritingSkillService(ILlmChatService llm, IKnowledgeDraftAugmenter? kbAugmenter = null)
+    /// <param name="skillDir">skill 数据目录（测试注入临时目录用）；null = &lt;ResolveDataPath()&gt;/writing-skill</param>
+    public WritingSkillService(ILlmChatService llm, IKnowledgeDraftAugmenter? kbAugmenter = null, string? skillDir = null)
     {
         _llm = llm;
         _kbAugmenter = kbAugmenter;
-        _skillMd = LoadEmbedded("WritingSkill.SKILL.md");
-        _templatesMd = LoadEmbedded("WritingSkill.templates.md");
-        _phraseLibraryMd = LoadEmbedded("WritingSkill.phrase-library.md");
-        _formatSpecMd = LoadEmbedded("WritingSkill.format-spec.md");
+        _resources = LoadInitialResources(skillDir);
         _docTypeMap = DocTypes.ToDictionary(d => d.Code, StringComparer.OrdinalIgnoreCase);
         _styleMap = Styles.ToDictionary(s => s.Id, StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>初始资源：优先数据目录 &lt;data&gt;/writing-skill/ 的 4 份文件（全部存在才用），
+    /// 任何缺失/读取异常回退内嵌，绝不抛错（红线：数据目录优先但不阻断写作功能）</summary>
+    private static SkillResources LoadInitialResources(string? skillDir)
+    {
+        var skillMd = LoadEmbedded("WritingSkill.SKILL.md");
+        var embedded = new SkillResources(
+            skillMd,
+            LoadEmbedded("WritingSkill.templates.md"),
+            LoadEmbedded("WritingSkill.phrase-library.md"),
+            LoadEmbedded("WritingSkill.format-spec.md"),
+            WritingSkillUpdateService.ParseVersionAnchor(skillMd),
+            "embedded");
+
+        try
+        {
+            var dir = skillDir ?? Path.Combine(ApiConfig.ResolveDataPath(), "writing-skill");
+            var paths = new[] { "SKILL.md", "templates.md", "phrase-library.md", "format-spec.md" }
+                .Select(n => Path.Combine(dir, n)).ToArray();
+            if (paths.Any(p => !File.Exists(p)))
+                return embedded;
+
+            var texts = paths.Select(File.ReadAllText).ToArray();
+            return new SkillResources(
+                texts[0], texts[1], texts[2], texts[3],
+                WritingSkillUpdateService.ParseVersionAnchor(texts[0]),
+                "data-dir");
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[WritingSkill] 数据目录 skill 资源加载失败，回退内嵌: {ex.Message}");
+            return embedded;
+        }
+    }
+
+    /// <summary>当前 skill 资源版本（SKILL.md 版本锚点，如 v0.12）；无锚点为 null</summary>
+    public string? CurrentVersion => _resources.Version;
+
+    /// <summary>当前资源来源："data-dir"（热更后的数据目录）或 "embedded"（内嵌）</summary>
+    public string Source => _resources.Source;
+
+    /// <summary>当前资源快照（internal 供单测组装候选快照）</summary>
+    internal SkillResources CurrentResources => _resources;
+
+    /// <summary>热更候选资源替换：ValidateResources 校验通过才原子交换快照引用</summary>
+    public bool TryReplaceResources(SkillResources candidate)
+    {
+        if (!ValidateResources(candidate)) return false;
+        _resources = candidate;
+        return true;
+    }
+
+    /// <summary>
+    /// 候选资源结构校验（热更写盘/换内存前必过）：
+    /// ① SKILL.md 能解析出 skill-version 锚点；
+    /// ② 一/三/五/六 4 个 H2 区块全部可解析（区块抽取失败会静默注入「缺失」占位，故必须先校验）；
+    /// ③ 全部文体逐一 ExtractTemplateBody 结果不含「缺失」占位。
+    /// </summary>
+    internal bool ValidateResources(SkillResources r)
+    {
+        if (WritingSkillUpdateService.ParseVersionAnchor(r.SkillMd) is null)
+            return false;
+        foreach (var prefix in new[] { "一、", "三、", "五、", "六、" })
+            if (ExtractSkillBlock(r.SkillMd, prefix) is null)
+                return false;
+        foreach (var dt in DocTypes)
+            if (ExtractTemplateBody(r, dt).Contains("缺失"))
+                return false;
+        return true;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -243,28 +320,29 @@ public sealed class WritingSkillService
             throw new ArgumentException($"未知风格: {req.StyleId}");
 
         var detail = Math.Clamp(req.DetailLevel, 1, 5);
+        var res = _resources;
 
         var sb = new StringBuilder();
-        sb.AppendLine(ExtractSkillSection("一、"));       // 角色与规则
+        sb.AppendLine(ExtractSkillSection(res, "一、"));       // 角色与规则
         sb.AppendLine();
-        sb.AppendLine(ExtractSkillSection("三、"));       // 六层技能矩阵
+        sb.AppendLine(ExtractSkillSection(res, "三、"));       // 六层技能矩阵
         sb.AppendLine();
         sb.AppendLine("## 本次撰写风格要求");
         sb.AppendLine($"风格：{style.Id} {style.Name}。{style.Description}");
         sb.AppendLine($"详略度：{detail}（1=只写关键词和结果；5=展开背景、过程、分析）");
         sb.AppendLine();
-        sb.AppendLine(ExtractSkillSection("五、"));       // Protected Spans 事实保护
+        sb.AppendLine(ExtractSkillSection(res, "五、"));       // Protected Spans 事实保护
         sb.AppendLine();
-        sb.AppendLine(ExtractSkillSection("六、"));       // 输出规范
+        sb.AppendLine(ExtractSkillSection(res, "六、"));       // 输出规范
         sb.AppendLine();
         sb.AppendLine("## GB/T 9704 格式规范（全文，起草结构的版式依据）");
-        sb.AppendLine(_formatSpecMd);
+        sb.AppendLine(res.FormatSpecMd);
         sb.AppendLine();
         sb.AppendLine("## 本次文体框架模板");
-        sb.AppendLine(ExtractTemplateBody(docType));
+        sb.AppendLine(ExtractTemplateBody(res, docType));
         sb.AppendLine();
         sb.AppendLine("## 可用公文素材库（合理选用，不必逐条照抄）");
-        sb.AppendLine(_phraseLibraryMd);
+        sb.AppendLine(res.PhraseLibraryMd);
 
         var user = new StringBuilder();
         if (!string.IsNullOrWhiteSpace(req.Title))
@@ -291,12 +369,13 @@ public sealed class WritingSkillService
 
     internal (string system, string user) BuildAssistPrompts(WritingAssistRequest req)
     {
+        var res = _resources;
         var sb = new StringBuilder();
-        sb.AppendLine(ExtractSkillSection("三、"));       // 六层技能矩阵
+        sb.AppendLine(ExtractSkillSection(res, "三、"));   // 六层技能矩阵
         sb.AppendLine();
-        sb.AppendLine(ExtractSkillSection("五、"));       // Protected Spans
+        sb.AppendLine(ExtractSkillSection(res, "五、"));   // Protected Spans
         sb.AppendLine();
-        sb.AppendLine(ExtractSkillSection("六、"));       // 输出规范
+        sb.AppendLine(ExtractSkillSection(res, "六、"));   // 输出规范
         if (TryGetStyle(req.StyleId, out var style))
         {
             sb.AppendLine();
@@ -393,19 +472,23 @@ public sealed class WritingSkillService
     }
 
     /// <summary>取技能正文中的 H2 区块（如 "## 三、六层技能矩阵"），missing 时给出占位</summary>
-    private string ExtractSkillSection(string h2Prefix) =>
-        ExtractBlock(_skillMd,
-            line => line.TrimStart().StartsWith($"## {h2Prefix}", StringComparison.Ordinal),
-            line => line.StartsWith("## ", StringComparison.Ordinal))
+    private static string ExtractSkillSection(SkillResources res, string h2Prefix) =>
+        ExtractSkillBlock(res.SkillMd, h2Prefix)
         ?? $"（技能区块「## {h2Prefix}」缺失，请检查内置 skill 资源）";
 
+    /// <summary>H2 区块原始抽取（不注入占位）：命中返回区块文本，未命中返回 null（ValidateResources 依据）</summary>
+    private static string? ExtractSkillBlock(string skillMd, string h2Prefix) =>
+        ExtractBlock(skillMd,
+            line => line.TrimStart().StartsWith($"## {h2Prefix}", StringComparison.Ordinal),
+            line => line.StartsWith("## ", StringComparison.Ordinal));
+
     /// <summary>按文体解析出对应模板正文（含子形态），missing 时给出占位</summary>
-    private string ExtractTemplateBody(DocType dt)
+    private static string ExtractTemplateBody(SkillResources res, DocType dt)
     {
         if (dt.TemplateRef.StartsWith("S", StringComparison.Ordinal))
         {
             // SKILL.md 第七节常用模板："### 7.1 周报模板"
-            var section = ExtractBlock(_skillMd,
+            var section = ExtractBlock(res.SkillMd,
                 line => line.TrimStart().StartsWith("## 七、", StringComparison.Ordinal),
                 line => line.StartsWith("## ", StringComparison.Ordinal));
             if (section is not null)
@@ -419,7 +502,7 @@ public sealed class WritingSkillService
             return $"（文体模板 {dt.TemplateRef} 缺失）";
         }
 
-        var chapter = ExtractBlock(_templatesMd,
+        var chapter = ExtractBlock(res.TemplatesMd,
             line => line.TrimStart().StartsWith($"## {dt.TemplateRef}.", StringComparison.Ordinal),
             line => line.StartsWith("## ", StringComparison.Ordinal));
         if (chapter is null)
