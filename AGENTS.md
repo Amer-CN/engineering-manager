@@ -80,3 +80,8 @@ npx vite build                                   # dist/ 会被 dotnet build/run
 
 - 新组件放 `src/components/features/<模块>/`，禁止在 `src/features/` 下建文件；新建前确认无同名组件
 - commit 遵循 conventional commits；feat→minor、fix/perf→patch、refactor/docs/chore→不 bump → [docs/VERSIONING.md](docs/VERSIONING.md)
+- **并行会话纪律**（2026-09-04 事故规约：多会话共用单工作区，未提交改动被并行会话
+  reset/checkout 整体清空，三轮成果全丢）：多会话并行时各自在专用分支上工作
+  （`git checkout -b feat/<关键词>`）并**每完成一轮验收即 commit**；禁止在 master
+  工作区裸放跨会话共享的未提交改动；执行 `git reset/checkout/stash` 前必须先
+  `git status` 确认工作区没有其他会话的在途文件（M/?? 状态的陌生文件一律先问，不许连带丢弃）
