@@ -69,7 +69,7 @@ export const SquareHundred: React.FC<SquareHundredProps> = ({ data, formatValue 
   }
 
   return (
-    <div className="flex flex-col" style={{ opacity: mounted ? 1 : 0, transition: 'opacity 0.5s ease' }}>
+    <div className="flex flex-col" style={{ opacity: mounted ? 1 : 0, transition: 'opacity 0.5s var(--ease-out)' }}>
       <div className="flex items-start gap-5">
         <div
           role="img"

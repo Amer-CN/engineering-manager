@@ -48,7 +48,7 @@ export const TickRing: React.FC<TickRingProps> = ({
         viewBox={`0 0 ${size} ${size}`}
         role="img"
         aria-label={ariaLabel}
-        style={{ opacity: mounted ? 1 : 0, transition: 'opacity 0.5s ease' }}
+        style={{ opacity: mounted ? 1 : 0, transition: 'opacity 0.5s var(--ease-out)' }}
       >
         {Array.from({ length: TICKS }).map((_, i) => (
           <line
