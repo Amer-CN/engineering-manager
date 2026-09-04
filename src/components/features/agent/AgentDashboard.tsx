@@ -232,12 +232,12 @@ const AgentDashboard: React.FC = () => {
             )}
           </AnimatePresence>
 
-          {/* 欢迎形态：窄屏历史入口（TopBar 仅对话形态显示，此处补欢迎态的入口） */}
+          {/* 欢迎形态：历史入口（欢迎态无右栏，桌面也显示；抽屉复用 historyOpen） */}
           {!chatMode && (
             <div className="flex items-center justify-end px-6 pt-4 flex-shrink-0">
               <button
                 onClick={() => setHistoryOpen(true)}
-                className="lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
                 style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}
               >
                 <Icon name="Inbox" size={14} />
@@ -360,14 +360,16 @@ const AgentDashboard: React.FC = () => {
           )}
         </div>
 
-        {/* 右栏：对话历史 */}
-        <HistorySidebar
-          conversationId={conversationId}
-          onSelectConversation={handleSelectConversation}
-          onNewConversation={handleNewConversation}
-          onCurrentConversationDeleted={handleNewConversation}
-          refreshTrigger={refreshTrigger}
-        />
+        {/* 右栏：对话历史（仅对话态渲染；欢迎态隐藏，主区吃满宽度自动居中） */}
+        {chatMode && (
+          <HistorySidebar
+            conversationId={conversationId}
+            onSelectConversation={handleSelectConversation}
+            onNewConversation={handleNewConversation}
+            onCurrentConversationDeleted={handleNewConversation}
+            refreshTrigger={refreshTrigger}
+          />
+        )}
       </div>
 
       <AgentOverlays

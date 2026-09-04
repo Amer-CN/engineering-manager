@@ -1,4 +1,4 @@
-/** AgentTopBar — AI 助手对话态顶部工具栏（助手标识 + 新对话 + 搜索 + 移动端历史） */
+/** AgentTopBar — AI 助手对话态顶部工具栏（助手标识 + 新对话 + 搜索 + 历史） */
 
 import React from 'react'
 import { Icon } from '@/components/ui/Icon'
@@ -46,7 +46,7 @@ const AgentTopBar: React.FC<AgentTopBarProps> = ({
       </button>
       <button
         onClick={onHistoryOpen}
-        className="lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-[color:var(--panel-2)]"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-[color:var(--panel-2)]"
         style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}
         title="对话历史"
       >
