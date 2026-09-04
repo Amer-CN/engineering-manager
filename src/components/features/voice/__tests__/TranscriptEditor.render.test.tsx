@@ -201,8 +201,9 @@ describe('TranscriptEditor — 多人模式 onIngest payload', () => {
     )
 
     // 确认渲染了说话人分段编辑器
-    expect(screen.getByText('说话人1')).toBeInTheDocument()
-    expect(screen.getByText('说话人2')).toBeInTheDocument()
+    // 编辑段徽标与归属下拉 option 均渲染「说话人N」→ 用 getAllByText 断言存在
+    expect(screen.getAllByText('说话人1').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('说话人2').length).toBeGreaterThan(0)
 
     // 点击入库
     act(() => { fireEvent.click(screen.getByText('存入知识库')) })
@@ -272,8 +273,9 @@ describe('TranscriptEditor — 多人模式 onIngest payload', () => {
 
     // speaker=0 不应在 UI 中显示
     expect(screen.queryByText('说话人0')).not.toBeInTheDocument()
-    expect(screen.getByText('说话人1')).toBeInTheDocument()
-    expect(screen.getByText('说话人2')).toBeInTheDocument()
+    // 编辑段徽标与归属下拉 option 均渲染「说话人N」→ 用 getAllByText 断言存在
+    expect(screen.getAllByText('说话人1').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('说话人2').length).toBeGreaterThan(0)
 
     // 点击入库
     act(() => { fireEvent.click(screen.getByText('存入知识库')) })

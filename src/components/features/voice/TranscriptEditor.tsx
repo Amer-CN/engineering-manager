@@ -14,6 +14,7 @@ import { useToastContext } from '@/hooks/useToast'
 import { useKnowledgeFolders } from '@/hooks/data/useKnowledgeFolders'
 import { maskKnowledgeText } from '@/utils/knowledgeTextMask'
 import { writeWritingPrefill } from '@/hooks/useWritingPrefill'
+import SpeakerNameEditor from './SpeakerNameEditor'
 import type { SttJobDetail, SttSegment } from '@/services/stt-client'
 
 interface TranscriptEditorProps {
@@ -25,6 +26,10 @@ interface TranscriptEditorProps {
   audioRef?: React.RefObject<HTMLAudioElement | null>
   /** 外部跳播函数（提供 audioRef 时由父组件传入；缺省用内部 audio 元素）*/
   seekTo?: (sec: number) => void
+  /** 发言人显示名映射（TaskDetailView 持有；未改名的编号不在此表）*/
+  speakerNames?: Record<number, string>
+  /** 发言人改名回调（与阅读态同一状态源，编辑态改名全局同步）*/
+  onRenameSpeaker?: (speaker: number, name: string) => void
   onIngest: (correctedText: string, segments: SttSegment[], title: string, projectId?: number, occurredAt?: string, folderId?: number | null) => void
 }
 
@@ -42,8 +47,14 @@ function rebuildFullText(segments: SttSegment[]): string {
     .join('\n')
 }
 
-const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioUrl, audioRef, seekTo, onIngest }) => {
+const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioUrl, audioRef, seekTo, speakerNames, onRenameSpeaker, onIngest }) => {
   const { showToast } = useToastContext()
+
+  // 发言人显示名（未改名回退「说话人N」；编辑态与阅读态共用 TaskDetailView 的同一状态源）
+  const speakerNameOf = useCallback(
+    (sp: number) => speakerNames?.[sp] ?? `说话人${sp}`,
+    [speakerNames]
+  )
 
   // 音频播放 + 分段跳转（外部传入 audioRef 时复用父组件的唯一 audio 元素）
   const internalAudioRef = useRef<HTMLAudioElement | null>(null)
@@ -206,8 +217,13 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
             {segments.map((seg, i) => (
               <div key={i} className="flex gap-2 items-start p-2 rounded-lg border border-[color:var(--border)] bg-[color:var(--card)]">
                 <div className="flex-shrink-0 w-20">
-                  <div className="text-xs font-medium text-[color:var(--accent)]">说话人{seg.speaker}</div>
-                  {/* A3 归属修正：把该段改挂到正确的人（rebuildFullText 前缀自动跟随） */}
+                  {/* 发言人徽标：头像+显示名，点击改名（与阅读态同一状态源，全局同步） */}
+                  <SpeakerNameEditor
+                    speaker={seg.speaker}
+                    name={speakerNameOf(seg.speaker)}
+                    onRename={newName => onRenameSpeaker?.(seg.speaker, newName)}
+                  />
+                  {/* 归属修正：把该段改挂到正确的人（选项显示名，value 为编号；rebuildFullText 前缀自动跟随） */}
                   <select
                     value={seg.speaker}
                     onChange={(e) => {
@@ -218,9 +234,9 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
                     className="mt-1 w-full text-xs bg-[color:var(--panel-2)] border border-[color:var(--border)] rounded px-1 py-0.5 text-[color:var(--fg-2)] outline-none focus:border-[color:var(--accent)]"
                   >
                     {speakerOptions.map(n => (
-                      <option key={n} value={n}>{n}</option>
+                      <option key={n} value={n}>{speakerNameOf(n)}</option>
                     ))}
-                    <option value="new">新建 {nextSpeakerNum}</option>
+                    <option value="new">新建（说话人{nextSpeakerNum}）</option>
                   </select>
                   <button
                     type="button"

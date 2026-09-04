@@ -263,7 +263,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
     </div>
   ) : (
     <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
-      <TranscriptEditor job={job} masked={masked} audioUrl={media.url} audioRef={audioRef} seekTo={seekTo} onIngest={onIngest} />
+      <TranscriptEditor job={job} masked={masked} audioUrl={media.url} audioRef={audioRef} seekTo={seekTo} speakerNames={speakerNames} onRenameSpeaker={handleRename} onIngest={onIngest} />
     </div>
   )
 
