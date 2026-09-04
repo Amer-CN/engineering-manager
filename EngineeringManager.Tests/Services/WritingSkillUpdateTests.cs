@@ -10,6 +10,7 @@ namespace EngineeringManager.Tests.Services;
 ///   · ValidateResources 结构校验（锚点 + 一/三/五/六区块 + 全文体模板无「缺失」占位）
 ///   · 数据目录 4 份齐全优先加载（含标记贯通 BuildDraftPrompts）/ 缺 1 份回退内嵌
 ///   · TryReplaceResources 原子热切换（坏快照拒绝且当前快照不变）
+///   · v0.12 扩展：style-params/corpus 辅助校验、corpus 清单解析、数据目录两种布局装载
 /// </summary>
 public class WritingSkillUpdateTests
 {
@@ -162,6 +163,112 @@ public class WritingSkillUpdateTests
         Assert.Equal("v0.99", svc.CurrentVersion);
         Assert.Equal("data-dir", svc.Source);
         Assert.NotSame(before, svc.CurrentResources);
+    }
+
+    // ═══════════ 6. corpus / style-params 热更扩展（v0.12） ═══════════
+
+    [Fact]
+    public void 辅助资源校验_styleParams与corpus非空才通过()
+    {
+        var baseRes = CreateEmbeddedService().CurrentResources;
+        // 均缺失（旧版热更产物布局）→ 容忍
+        Assert.True(WritingSkillUpdateService.ValidateAuxiliaryResources(
+            baseRes with { StyleParamsMd = null, CorpusFiles = new Dictionary<string, string>() }));
+        // style-params 太短（≤100 字符）→ 拒绝
+        Assert.False(WritingSkillUpdateService.ValidateAuxiliaryResources(
+            baseRes with { StyleParamsMd = "太短" }));
+        // corpus 某文件太短 → 拒绝
+        Assert.False(WritingSkillUpdateService.ValidateAuxiliaryResources(
+            baseRes with { CorpusFiles = new Dictionary<string, string> { ["stub.md"] = "短" } }));
+        // 正常长度 → 通过
+        Assert.True(WritingSkillUpdateService.ValidateAuxiliaryResources(
+            baseRes with
+            {
+                StyleParamsMd = new string('参', 200),
+                CorpusFiles = new Dictionary<string, string> { ["layer.md"] = new string('条', 200) },
+            }));
+    }
+
+    [Fact]
+    public void corpus清单解析_只取文件型md且带downloadUrl()
+    {
+        var json = """
+            [
+              {"name":"INDEX.md","type":"file","download_url":"https://raw/x/INDEX.md"},
+              {"name":"lingyun-huishui.md","type":"file","download_url":"https://raw/x/lingyun-huishui.md"},
+              {"name":"adir.md","type":"dir","download_url":null},
+              {"name":"notes.txt","type":"file","download_url":"https://raw/x/notes.txt"},
+              {"name":"no-url.md","type":"file","download_url":null}
+            ]
+            """;
+        var listing = WritingSkillUpdateService.ParseCorpusListing(json);
+        Assert.Equal(2, listing.Count);
+        Assert.Equal(("INDEX.md", "https://raw/x/INDEX.md"), listing[0]);
+        Assert.Equal(("lingyun-huishui.md", "https://raw/x/lingyun-huishui.md"), listing[1]);
+    }
+
+    [Fact]
+    public void 数据目录styleParams与corpus存在时一并装入并贯通prompt()
+    {
+        var embedded = CreateEmbeddedService().CurrentResources;
+        var dir = TempDir("wskill-corpus");
+        try
+        {
+            File.WriteAllText(Path.Combine(dir, "SKILL.md"), embedded.SkillMd);
+            File.WriteAllText(Path.Combine(dir, "templates.md"), embedded.TemplatesMd);
+            File.WriteAllText(Path.Combine(dir, "phrase-library.md"), embedded.PhraseLibraryMd);
+            File.WriteAllText(Path.Combine(dir, "format-spec.md"), embedded.FormatSpecMd);
+            File.WriteAllText(Path.Combine(dir, "style-params.md"), "# 参数表\n" + new string('参', 200));
+            Directory.CreateDirectory(Path.Combine(dir, "corpus"));
+            File.WriteAllText(Path.Combine(dir, "corpus", "lingyun-huishui.md"),
+                "## 总结写法\n\n- **总结技巧**：写总结的实战方法论条目，内容长度足够。\n");
+
+            var sut = new WritingSkillService(new FakeLlm(), null, dir);
+            Assert.Equal("data-dir", sut.Source);
+            Assert.NotNull(sut.CurrentResources.StyleParamsMd);
+            Assert.Single(sut.CurrentResources.CorpusFiles!);
+            Assert.Contains("lingyun-huishui.md", sut.CurrentResources.CorpusFiles!.Keys);
+
+            // summary 的 hints（总结/汇报/成绩）命中「总结技巧」→ 蒸馏区块注入
+            var (system, _) = sut.BuildDraftPrompts(Draft());
+            Assert.Contains("蒸馏知识库参考", system);
+            Assert.Contains("总结技巧", system);
+        }
+        finally
+        {
+            try { Directory.Delete(dir, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public void 数据目录只有core四份时corpus为空且prompt不含蒸馏区块()
+    {
+        // 向后兼容硬要求：旧版热更产物（无 style-params / corpus）照样可用
+        var embedded = CreateEmbeddedService().CurrentResources;
+        var dir = TempDir("wskill-coreonly");
+        try
+        {
+            File.WriteAllText(Path.Combine(dir, "SKILL.md"), embedded.SkillMd);
+            File.WriteAllText(Path.Combine(dir, "templates.md"), embedded.TemplatesMd);
+            File.WriteAllText(Path.Combine(dir, "phrase-library.md"), embedded.PhraseLibraryMd);
+            File.WriteAllText(Path.Combine(dir, "format-spec.md"), embedded.FormatSpecMd);
+
+            var sut = new WritingSkillService(new FakeLlm(), null, dir);
+            Assert.Equal("data-dir", sut.Source);
+            Assert.Null(sut.CurrentResources.StyleParamsMd);
+            Assert.Empty(sut.CurrentResources.CorpusFiles!);
+
+            var (system, _) = sut.BuildDraftPrompts(Draft());
+            Assert.DoesNotContain("蒸馏知识库", system);
+            // prompt 结构与无 corpus 现状一致：模板区块之后直接衔接素材库区块
+            var idxTemplate = system.IndexOf("## 本次文体框架模板", StringComparison.Ordinal);
+            var idxPhrase = system.IndexOf("## 可用公文素材库", StringComparison.Ordinal);
+            Assert.True(idxTemplate >= 0 && idxPhrase > idxTemplate);
+        }
+        finally
+        {
+            try { Directory.Delete(dir, recursive: true); } catch { }
+        }
     }
 
     // ═══════════ 私有 Fake ═══════════

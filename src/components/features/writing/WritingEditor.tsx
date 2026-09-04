@@ -357,7 +357,7 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
 
       {/* 交稿体检面板（R6） */}
       {editor && (
-        <WritingCheckPanel editor={editor} open={checkOpen} onClose={() => setCheckOpen(false)} />
+        <WritingCheckPanel editor={editor} open={checkOpen} onClose={() => setCheckOpen(false)} docType={doc?.docType} />
       )}
 
       {/* 打印预览（R13 三态之「预览态」：浏览器真实 A4 分页） */}

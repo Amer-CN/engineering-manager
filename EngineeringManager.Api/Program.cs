@@ -162,6 +162,8 @@ public static class ApiConfig
         });
         builder.Services.AddSingleton<EngineeringManager.Api.Services.WritingSkillService>();
         builder.Services.AddSingleton<EngineeringManager.Api.Services.WritingSkillUpdateService>();
+        // v0.12 写作中心量化风格体检（依赖 WritingSkillService 的 style-params 快照）
+        builder.Services.AddSingleton<EngineeringManager.Api.Services.WritingStyleCheckService>();
         builder.Services.AddSingleton<EngineeringManager.Api.Services.UpdateService>();
 
         // v0.83 STT 语音转文字后台 worker（单并发）

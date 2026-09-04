@@ -8,12 +8,16 @@ namespace EngineeringManager.Api.Services;
 /// 写作中心 skill 服务 — 载入内置 super-official-writer 公文写作方法论资源，
 /// 按文体组装 LLM prompt，提供整篇起草（draft，流式）与行内改写（assist）能力。
 ///
-/// 资源以 EmbeddedResource 打包（Resources/WritingSkill/*.md）：
-///   · SKILL.md          方法论（流程骨架 + 六层文本规则矩阵，出处见其第十节）
-///   · templates.md      18 种文体框架模板速查
-///   · phrase-library.md 机关公文常用词语素材库
+/// 资源以 EmbeddedResource 打包（Resources/WritingSkill/）：
+///   · SKILL.md            方法论（流程骨架 + 六层文本规则矩阵，出处见其第十节）
+///   · templates.md         21 种文体框架模板速查
+///   · phrase-library.md    机关公文常用词语素材库
+///   · format-spec.md       GB/T 9704 格式规范
+///   · style-params.md      量化风格参数表（corpus 接入后，热更范围含它）
+///   · corpus/*.md          蒸馏知识库分层文件（INDEX.md + 各层，起草时按文体检索注入）
 ///
-/// 运行期优先读数据目录 <data>/writing-skill/ 的同名 4 份文件（热更产物，缺失即回退内嵌）；
+/// 运行期优先读数据目录 <data>/writing-skill/（热更产物，core 4 份齐全即用；
+/// style-params.md 与 corpus/ 子目录存在则一并装入，缺失容忍回退），缺失即回退内嵌；
 /// 快照可被 WritingSkillUpdateService 校验后原子热切换（TryReplaceResources）。
 ///
 /// 设计见 docs/superpowers/specs/2026-08-16-writing-center-design.md §4。
@@ -37,6 +41,7 @@ public sealed class WritingSkillService
         new("report_government", "工作报告（政府级）", "简报总结", "T4", null),
         new("reflection", "心得体会", "简报总结", "T5", null),
         new("work_report", "述职报告", "简报总结", "T17", null),
+        new("report_gov_full", "政府工作报告（大材料）", "简报总结", "T19", null),
 
         // 计划与方案
         new("plan", "工作计划", "计划方案", "T2", null),
@@ -80,6 +85,10 @@ public sealed class WritingSkillService
         // 周报与汇报材料（出自 SKILL.md 第七节常用模板）
         new("weekly_report", "周报", "周报汇报", "S7.1", null),
         new("briefing_material", "汇报材料", "周报汇报", "S7.2", null),
+
+        // T19/T20/T21（templates.md v0.12 新增章：政府工作报告大材料 / 个人周报成稿 / 月度总结）
+        new("weekly_full", "个人周报（成稿级）", "周报汇报", "T20", null),
+        new("monthly_summary", "月度总结（月结）", "周报汇报", "T21", null),
     };
 
     private static readonly StyleSpec[] Styles =
@@ -93,12 +102,16 @@ public sealed class WritingSkillService
     };
 
     /// <summary>
-    /// skill 资源不可变快照：4 份 md + 版本锚点 + 来源。
+    /// skill 资源不可变快照：core 4 份 md + 可选 style-params / corpus 蒸馏库 + 版本锚点 + 来源。
     /// Source = "data-dir"（数据目录，热更产物）或 "embedded"（EmbeddedResource 内嵌）。
+    /// StyleParamsMd / CorpusFiles 为 v0.12 扩展：旧快照/旧数据目录缺失时为 null / 空，
+    /// 起草与体检均按缺失降级，不影响 core 功能。
     /// </summary>
     public sealed record SkillResources(
         string SkillMd, string TemplatesMd, string PhraseLibraryMd, string FormatSpecMd,
-        string? Version, string Source);
+        string? Version, string Source,
+        string? StyleParamsMd = null,
+        IReadOnlyDictionary<string, string>? CorpusFiles = null);
 
     public static IReadOnlyList<string> AssistInstructions { get; } =
         new[] { "rewrite", "polish", "expand", "shorten", "custom" };
@@ -128,8 +141,9 @@ public sealed class WritingSkillService
         _styleMap = Styles.ToDictionary(s => s.Id, StringComparer.OrdinalIgnoreCase);
     }
 
-    /// <summary>初始资源：优先数据目录 &lt;data&gt;/writing-skill/ 的 4 份文件（全部存在才用），
-    /// 任何缺失/读取异常回退内嵌，绝不抛错（红线：数据目录优先但不阻断写作功能）</summary>
+    /// <summary>初始资源：优先数据目录 &lt;data&gt;/writing-skill/（core 4 份齐全即用；
+    /// style-params.md 与 corpus/ 子目录存在则一并装入，缺失容忍），
+    /// core 4 份任何缺失/读取异常回退内嵌，绝不抛错（红线：数据目录优先但不阻断写作功能）</summary>
     private static SkillResources LoadInitialResources(string? skillDir)
     {
         var skillMd = LoadEmbedded("WritingSkill.SKILL.md");
@@ -139,7 +153,9 @@ public sealed class WritingSkillService
             LoadEmbedded("WritingSkill.phrase-library.md"),
             LoadEmbedded("WritingSkill.format-spec.md"),
             WritingSkillUpdateService.ParseVersionAnchor(skillMd),
-            "embedded");
+            "embedded",
+            LoadEmbeddedOptional("WritingSkill.style-params.md"),
+            LoadEmbeddedCorpusFiles());
 
         try
         {
@@ -150,10 +166,20 @@ public sealed class WritingSkillService
                 return embedded;
 
             var texts = paths.Select(File.ReadAllText).ToArray();
+
+            // 向后兼容：旧版热更产物只有 core 4 份，style-params / corpus 缺失不阻断
+            var styleParamsPath = Path.Combine(dir, "style-params.md");
+            var styleParams = File.Exists(styleParamsPath) ? File.ReadAllText(styleParamsPath) : null;
+            var corpus = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var corpusDir = Path.Combine(dir, "corpus");
+            if (Directory.Exists(corpusDir))
+                foreach (var f in Directory.EnumerateFiles(corpusDir, "*.md"))
+                    corpus[Path.GetFileName(f)] = File.ReadAllText(f);
+
             return new SkillResources(
                 texts[0], texts[1], texts[2], texts[3],
                 WritingSkillUpdateService.ParseVersionAnchor(texts[0]),
-                "data-dir");
+                "data-dir", styleParams, corpus);
         }
         catch (Exception ex)
         {
@@ -341,6 +367,13 @@ public sealed class WritingSkillService
         sb.AppendLine("## 本次文体框架模板");
         sb.AppendLine(ExtractTemplateBody(res, docType));
         sb.AppendLine();
+        // corpus 蒸馏库注入：空 corpus / 无命中 → 不输出该区块（与无 corpus 现状逐字节一致）
+        var corpusAugment = BuildCorpusAugment(docType);
+        if (corpusAugment is not null)
+        {
+            sb.AppendLine(corpusAugment);
+            sb.AppendLine();
+        }
         sb.AppendLine("## 可用公文素材库（合理选用，不必逐条照抄）");
         sb.AppendLine(res.PhraseLibraryMd);
 
@@ -469,6 +502,147 @@ public sealed class WritingSkillService
         using var stream = asm.GetManifestResourceStream(name)!;
         using var reader = new StreamReader(stream);
         return reader.ReadToEnd();
+    }
+
+    /// <summary>可选嵌入资源：命中后缀返回全文，未打包返回 null（style-params.md 等 v0.12 扩展，容忍缺失）</summary>
+    private static string? LoadEmbeddedOptional(string suffix)
+    {
+        var asm = typeof(WritingSkillService).Assembly;
+        var name = asm.GetManifestResourceNames()
+            .FirstOrDefault(n => n.EndsWith(suffix, StringComparison.OrdinalIgnoreCase));
+        if (name is null) return null;
+        using var stream = asm.GetManifestResourceStream(name)!;
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
+    }
+
+    /// <summary>装入全部 corpus 分层嵌入资源（manifest 名含 WritingSkill.corpus.），
+    /// key = 文件名（含 INDEX.md）；未打包（旧构建/未跑 sync）返回空字典</summary>
+    private static IReadOnlyDictionary<string, string> LoadEmbeddedCorpusFiles()
+    {
+        const string prefix = "WritingSkill.corpus.";
+        var asm = typeof(WritingSkillService).Assembly;
+        var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var name in asm.GetManifestResourceNames())
+        {
+            var idx = name.IndexOf(prefix, StringComparison.Ordinal);
+            if (idx < 0) continue;
+            using var stream = asm.GetManifestResourceStream(name)!;
+            using var reader = new StreamReader(stream);
+            dict[name[(idx + prefix.Length)..]] = reader.ReadToEnd();
+        }
+        return dict;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // corpus 蒸馏库起草注入（v0.12：按文体检索 Top 4 条注入 system prompt）
+    // ─────────────────────────────────────────────────────────────
+
+    /// <summary>corpus 检索关键词（DocType.Code → 2-4 个）；未命中走 Label 实词兜底</summary>
+    private static readonly Dictionary<string, string[]> CorpusHints = new()
+    {
+        // 简报与总结
+        ["brief"] = new[] { "简报", "信息", "快报" },
+        ["summary"] = new[] { "总结", "汇报", "成绩" },
+        ["report_government"] = new[] { "报告", "总结", "成绩" },
+        ["report_gov_full"] = new[] { "政府工作报告", "回顾", "任务" },
+        ["reflection"] = new[] { "体会", "心得", "感悟" },
+        ["work_report"] = new[] { "述职", "报告", "成绩" },
+        // 计划与方案
+        ["plan"] = new[] { "方案", "计划", "部署" },
+        ["plan_full"] = new[] { "方案", "计划", "部署" },
+        ["plan_direct"] = new[] { "方案", "计划", "部署" },
+        // 通知
+        ["notice_general"] = new[] { "通知", "公文格式" },
+        ["notice_meeting"] = new[] { "通知", "会议", "公文格式" },
+        ["notice_issue"] = new[] { "通知", "印发", "公文格式" },
+        // 讲话与党课
+        ["lecture_pre"] = new[] { "讲话", "发言", "开场", "收尾" },
+        ["lecture_mid"] = new[] { "讲话", "发言", "调度", "推进" },
+        ["lecture_post"] = new[] { "讲话", "发言", "总结", "表彰" },
+        ["lecture_special"] = new[] { "讲话", "发言", "培训", "授课" },
+        ["party_lecture"] = new[] { "党课", "宣讲", "讲话" },
+        ["mini_classic"] = new[] { "党课", "宣讲", "讲稿" },
+        ["mini_novel"] = new[] { "党课", "互动", "宣讲" },
+        ["mini_golden"] = new[] { "党课", "要点", "提炼" },
+        // 会议纪要
+        ["minutes_items"] = new[] { "纪要", "会议", "决议" },
+        ["minutes_news"] = new[] { "纪要", "会议", "新闻" },
+        // 调研报告
+        ["survey_experience"] = new[] { "调研", "报告", "问题" },
+        ["survey_problem"] = new[] { "调研", "报告", "问题" },
+        ["inspection"] = new[] { "检查", "对照", "剖析" },
+        ["theory_article"] = new[] { "理论", "文章", "评论" },
+        // 新闻宣传
+        ["news_meeting"] = new[] { "新闻", "会议", "宣传" },
+        ["news_activity"] = new[] { "新闻", "活动", "宣传" },
+        ["news_survey"] = new[] { "新闻", "调研", "宣传" },
+        ["feature_story"] = new[] { "通讯", "报道", "典型" },
+        ["deed_brief"] = new[] { "事迹", "先进", "典型" },
+        ["deed_feature"] = new[] { "事迹", "通讯", "典型" },
+        // 周报与汇报
+        ["weekly_report"] = new[] { "周报", "汇报", "进度" },
+        ["briefing_material"] = new[] { "汇报", "材料", "要点" },
+        ["weekly_full"] = new[] { "周报", "总结", "成果" },
+        ["monthly_summary"] = new[] { "总结", "汇报", "成绩" },
+    };
+
+    /// <summary>Label 实词兜底：主名（去括号段）+ 各括号内实词，最多 4 个</summary>
+    private static string[] FallbackHintsFromLabel(string label)
+    {
+        var hints = new List<string>();
+        var main = System.Text.RegularExpressions.Regex.Replace(label, @"（[^）]*）", "").Trim();
+        if (main.Length >= 2) hints.Add(main);
+        foreach (System.Text.RegularExpressions.Match m in
+                     System.Text.RegularExpressions.Regex.Matches(label, @"（([^）]{2,8})）"))
+            hints.Add(m.Groups[1].Value);
+        if (hints.Count == 0) hints.Add(label);
+        return hints.Take(4).ToArray();
+    }
+
+    /// <summary>
+    /// 按文体检索 corpus 蒸馏库（958 条方法论条目）组装起草增强区块：
+    /// 条目按行首「- **」切分（INDEX.md 只是目录不参与），hint 词命中条目名 +3 分、
+    /// 正文 +1 分（每个 hint 只计一次），0 分不取；取 Top 4 条、每条截断 500 字符。
+    /// corpus 为空或无命中 → 返回 null（降级不输出该区块，prompt 与无 corpus 现状一致）。
+    /// </summary>
+    private string? BuildCorpusAugment(DocType dt)
+    {
+        var corpus = _resources.CorpusFiles;
+        if (corpus is not { Count: > 0 }) return null;
+
+        var hints = CorpusHints.TryGetValue(dt.Code, out var h) ? h : FallbackHintsFromLabel(dt.Label);
+
+        var scored = new List<(int Score, int Order, string Line)>();
+        var order = 0;
+        foreach (var (fileName, text) in corpus)
+        {
+            if (fileName.Equals("INDEX.md", StringComparison.OrdinalIgnoreCase)) continue;
+            foreach (var rawLine in text.Split('\n'))
+            {
+                var line = rawLine.TrimEnd('\r');
+                if (!line.StartsWith("- **", StringComparison.Ordinal)) continue;
+                var nameStart = line.IndexOf("**", StringComparison.Ordinal);
+                var nameEnd = nameStart >= 0 ? line.IndexOf("**", nameStart + 2, StringComparison.Ordinal) : -1;
+                var name = nameStart >= 0 && nameEnd > nameStart ? line[(nameStart + 2)..nameEnd] : "";
+                var body = nameEnd >= 0 ? line[(nameEnd + 2)..] : line;
+
+                var score = 0;
+                foreach (var hint in hints)
+                {
+                    if (name.Contains(hint, StringComparison.Ordinal)) score += 3;
+                    else if (body.Contains(hint, StringComparison.Ordinal)) score += 1;
+                }
+                if (score > 0) scored.Add((score, order++, line)); // 保留条目原文与溯源尾
+            }
+        }
+        if (scored.Count == 0) return null;
+
+        var sb = new StringBuilder();
+        sb.Append("## 蒸馏知识库参考（同类文体的实战方法，吸收思路不必照抄）");
+        foreach (var entry in scored.OrderByDescending(e => e.Score).ThenBy(e => e.Order).Take(4))
+            sb.Append('\n').Append(Truncate(entry.Line, 500));
+        return sb.ToString();
     }
 
     /// <summary>取技能正文中的 H2 区块（如 "## 三、六层技能矩阵"），missing 时给出占位</summary>

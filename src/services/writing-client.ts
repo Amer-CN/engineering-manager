@@ -208,6 +208,44 @@ export function writingAssist(body: {
   return apiClient.post<{ text: string }>('/api/writing/assist', body)
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// 量化风格体检（第 5 项检查，后端 WritingStyleCheckService）
+// ═══════════════════════════════════════════════════════════════════
+
+/** 体检请求（content 后端截断 10 万字符） */
+export interface WritingStyleCheckRequest {
+  docType: string
+  content: string
+}
+
+/** 单项体检结果：verdict ok=区间内 / hint=单项区间外（不理会）/ warn=硬冲突或同向偏离 */
+export interface WritingStyleCheckItem {
+  id: string
+  label: string
+  actual: number
+  unit: string
+  median: number | null
+  low: number | null
+  high: number | null
+  verdict: 'ok' | 'hint' | 'warn'
+}
+
+/** 体检报告（无参数文种 hasParams=false，仅标点纪律与元评论检测） */
+export interface WritingStyleCheckResponse {
+  genre: string
+  hasParams: boolean
+  items: WritingStyleCheckItem[]
+  hardWarnings: string[]
+  notes: string[]
+}
+
+/** 量化风格体检：未知/无参数文体降级为标点纪律 */
+export function styleCheckWriting(
+  req: WritingStyleCheckRequest,
+): Promise<{ success: boolean; data?: WritingStyleCheckResponse; error?: string }> {
+  return apiClient.post<WritingStyleCheckResponse>('/api/writing/style-check', req)
+}
+
 // 同源相对路径，与 api-client.ts 同源定义一致（API_BASE 未从那边导出，此处同样声明）
 const API_BASE = import.meta.env.VITE_API_BASE ?? ''
 

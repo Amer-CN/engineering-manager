@@ -57,6 +57,131 @@ public class WritingSkillServiceTests
     }
 
     [Fact]
+    public void T19T20T21三个新文种已注册且模板可解析()
+    {
+        // T19 政府工作报告（大材料）/ T20 个人周报（成稿级）/ T21 月度总结（月结）
+        var expected = new (string code, string label, string group)[]
+        {
+            ("report_gov_full", "政府工作报告（大材料）", "简报总结"),
+            ("weekly_full", "个人周报（成稿级）", "周报汇报"),
+            ("monthly_summary", "月度总结（月结）", "周报汇报"),
+        };
+        foreach (var (code, label, group) in expected)
+        {
+            Assert.True(_skill.TryGetDocType(code, out var dt), $"文体 {code} 未注册");
+            Assert.Equal(label, dt.Label);
+            Assert.Equal(group, dt.Group);
+            var (system, _) = _skill.BuildDraftPrompts(Draft(docType: code));
+            Assert.DoesNotContain("缺失", system);
+            Assert.DoesNotContain("（文体模板", system);
+        }
+        // 模板正文各自命中 T19/T20/T21 章的特征内容
+        var (gov, _) = _skill.BuildDraftPrompts(Draft(docType: "report_gov_full"));
+        Assert.Contains("工作回顾", gov);
+        var (weekly, _) = _skill.BuildDraftPrompts(Draft(docType: "weekly_full"));
+        Assert.Contains("本周核心成果", weekly);
+        var (monthly, _) = _skill.BuildDraftPrompts(Draft(docType: "monthly_summary"));
+        Assert.Contains("下月安排", monthly);
+    }
+
+    // ═══════════ corpus 蒸馏库注入（v0.12） ═══════════
+
+    /// <summary>构造必然回退内嵌资源的服务（skillDir 指向不存在目录）</summary>
+    private static WritingSkillService CreateEmbeddedService()
+        => new(new FakeLlm(), null, Path.Combine(Path.GetTempPath(), "wskill-absent-" + Guid.NewGuid().ToString("N")));
+
+    [Fact]
+    public void 内嵌corpus已打包且起草prompt注入蒸馏区块()
+    {
+        // sync-writing-skill.bat 之后 Resources/WritingSkill/corpus/*.md 打包进程序集（INDEX + 13 层文件）
+        var svc = CreateEmbeddedService();
+        Assert.True(svc.CurrentResources.CorpusFiles?.Count >= 13);
+        Assert.Contains("INDEX.md", svc.CurrentResources.CorpusFiles!.Keys);
+
+        var (system, _) = svc.BuildDraftPrompts(Draft(docType: "summary"));
+        Assert.Contains("## 蒸馏知识库参考（同类文体的实战方法，吸收思路不必照抄）", system);
+        // 区块位置：文体框架模板之后、素材库之前
+        var idxTemplate = system.IndexOf("## 本次文体框架模板", StringComparison.Ordinal);
+        var idxCorpus = system.IndexOf("## 蒸馏知识库参考", StringComparison.Ordinal);
+        var idxPhrase = system.IndexOf("## 可用公文素材库", StringComparison.Ordinal);
+        Assert.True(idxTemplate >= 0 && idxTemplate < idxCorpus && idxCorpus < idxPhrase);
+        // Top 4：区块内条目（行首 - **）最多 4 条
+        var entries = system[idxCorpus..idxPhrase]
+            .Split('\n')
+            .Select(l => l.TrimEnd('\r'))
+            .Where(l => l.StartsWith("- **", StringComparison.Ordinal))
+            .ToList();
+        Assert.InRange(entries.Count, 1, 4);
+    }
+
+    [Fact]
+    public void 空corpus降级不输出蒸馏区块且结构不变()
+    {
+        var svc = CreateEmbeddedService();
+        Assert.True(svc.TryReplaceResources(svc.CurrentResources with
+        {
+            StyleParamsMd = null,
+            CorpusFiles = new Dictionary<string, string>(),
+        }));
+        var (system, _) = svc.BuildDraftPrompts(Draft());
+        Assert.DoesNotContain("蒸馏知识库", system);
+        var idxTemplate = system.IndexOf("## 本次文体框架模板", StringComparison.Ordinal);
+        var idxPhrase = system.IndexOf("## 可用公文素材库", StringComparison.Ordinal);
+        Assert.True(idxTemplate >= 0 && idxPhrase > idxTemplate);
+    }
+
+    [Fact]
+    public void corpus增强取Top4且长条目截断500字符()
+    {
+        var svc = CreateEmbeddedService();
+        var layer = new List<string> { "- **总结高分配**：" + new string('甲', 600) };
+        layer.AddRange(Enumerable.Range(1, 5).Select(i => $"- **总结条目{i}**：第 {i} 条总结方法论内容。"));
+        Assert.True(svc.TryReplaceResources(svc.CurrentResources with
+        {
+            CorpusFiles = new Dictionary<string, string> { ["layer.md"] = string.Join("\n", layer) },
+        }));
+
+        var (system, _) = svc.BuildDraftPrompts(Draft(docType: "summary")); // hints: 总结/汇报/成绩
+        var start = system.IndexOf("## 蒸馏知识库参考", StringComparison.Ordinal);
+        var end = system.IndexOf("## 可用公文素材库", StringComparison.Ordinal);
+        Assert.True(start >= 0 && end > start);
+        var entries = system[start..end]
+            .Split('\n')
+            .Select(l => l.TrimEnd('\r'))
+            .Where(l => l.StartsWith("- **", StringComparison.Ordinal))
+            .ToList();
+        Assert.Equal(4, entries.Count); // 6 条全命中也只取 Top 4
+        // 长条目截断 500 字符：整行 = 前缀「- **总结高分配**：」12 字符 + 甲×488
+        Assert.DoesNotContain(new string('甲', 489), system);
+        Assert.Contains(new string('甲', 488), system);
+    }
+
+    [Fact]
+    public void corpus打分条目名命中优先于正文命中()
+    {
+        var svc = CreateEmbeddedService();
+        Assert.True(svc.TryReplaceResources(svc.CurrentResources with
+        {
+            CorpusFiles = new Dictionary<string, string>
+            {
+                ["layer.md"] =
+                    "- **素材汇集**：这一条正文里出现总结这个词，但名字不含。\n" +
+                    "- **总结经验**：正文完全没有关键词。\n",
+            },
+        }));
+
+        var (system, _) = svc.BuildDraftPrompts(Draft(docType: "summary")); // hints: 总结/汇报/成绩
+        var start = system.IndexOf("## 蒸馏知识库参考", StringComparison.Ordinal);
+        var end = system.IndexOf("## 可用公文素材库", StringComparison.Ordinal);
+        var first = system[start..end]
+            .Split('\n')
+            .Select(l => l.TrimEnd('\r'))
+            .First(l => l.StartsWith("- **", StringComparison.Ordinal));
+        // 名字命中 +3 分 > 正文命中 +1 分 →「总结经验」排第一
+        Assert.StartsWith("- **总结经验**", first);
+    }
+
+    [Fact]
     public void 未知文体被拒绝()
     {
         Assert.False(_skill.TryGetDocType("not-a-type", out _));
