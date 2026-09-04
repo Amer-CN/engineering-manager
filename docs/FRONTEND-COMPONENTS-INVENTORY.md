@@ -171,7 +171,7 @@ src/components/
 | univerEngine | Univer 引擎集成 |
 | importComponents/ | 导入子组件 |
 
-### 仪表盘（3 个）
+### 仪表盘（2 个非组件文件）
 
 > 原有 DashboardCharts / DashboardStatsCard / CountUp 组件家族已于 #123 删除（AI 首页改版后零引用死代码）。目录现存两个非组件文件：
 
