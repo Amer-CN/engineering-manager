@@ -122,7 +122,7 @@ export function ContractDetailModal({
                   <span className="font-mono tabular-nums text-[color:var(--fg-2)]">{paidPercent}%</span>
                 </div>
                 <div className="h-1.5 rounded-full bg-[color:var(--panel-2)] overflow-hidden">
-                  <div className="h-full rounded-full bg-[color:var(--accent)] transition-[width]" style={{ width: `${paidPercent}%` }} />
+                  <div className="h-full rounded-full bg-[color:var(--accent)] transition-transform duration-300" style={{ transformOrigin: 'left', width: '100%', transform: `scaleX(${paidPercent / 100})` }} />
                 </div>
               </div>
               {contractPayments.length > 0 ? (

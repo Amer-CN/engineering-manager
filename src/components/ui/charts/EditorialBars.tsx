@@ -61,7 +61,7 @@ export const EditorialBars: React.FC<EditorialBarsProps> = ({
                   borderRadius: 2,
                   transform: `scaleX(${mounted ? scaleX : 0})`,
                   transformOrigin: 'left',
-                  transition: 'transform 0.6s ease-out',
+                  transition: 'transform 0.6s var(--ease-out)',
                   background: isFirst ? d.color ?? 'var(--accent)' : 'var(--fg-2)',
                 }}
               />

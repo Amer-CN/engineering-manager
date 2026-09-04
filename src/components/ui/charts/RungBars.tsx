@@ -90,7 +90,7 @@ export const RungBars: React.FC<RungBarsProps> = ({
               key={`${d.name}-${i}`}
               data-rung-bar={i}
               className="flex flex-col items-center"
-              style={{ width: BAR_WIDTH, opacity: mounted ? 1 : 0, transition: 'opacity 0.5s ease' }}
+              style={{ width: BAR_WIDTH, opacity: mounted ? 1 : 0, transition: 'opacity 0.5s var(--ease-out)' }}
             >
               {/* 柱顶数值 */}
               <span className="font-mono font-bold text-sm tabular-nums" style={{ color: ink }}>
