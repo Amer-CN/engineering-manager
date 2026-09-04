@@ -75,6 +75,9 @@ export const RungBars: React.FC<RungBarsProps> = ({
   const max = data.length > 0 ? Math.max(...data.map((d) => d.value)) : 0
   const unit = rungUnit ?? pickRungUnit(max, maxRungs)
   const ink = tone === 'dark' ? 'var(--bg)' : 'var(--fg)'
+  // 非冠军梯级透明度地板（InkBoost 精神：淡色要加墨）：light 卡 var(--fg) 压 var(--card) 0.5，
+  // dark 反色卡 var(--bg) 压 var(--fg) 0.55——旧地板在两主题下均低于 3:1 可辨阈值（深色主题下更是全隐形）
+  const rungOpacity = tone === 'dark' ? 0.55 : 0.5
   // dark 卡上 muted 变量属于外层主题（对比度不足），反色卡内次级墨用主墨 60% 透明度
   const mutedInk = tone === 'dark' ? 'var(--bg)' : 'var(--muted)'
   const mutedOpacity = tone === 'dark' ? 0.6 : 1
@@ -96,21 +99,22 @@ export const RungBars: React.FC<RungBarsProps> = ({
               <span className="font-mono font-bold text-sm tabular-nums" style={{ color: ink }}>
                 {formatValue(d.value)}
               </span>
-              {/* 梯级：冠军柱实心，其余 35% 透明度 */}
-              <div className="flex flex-col items-center" style={{ rowGap: RUNG_GAP, marginTop: 6 }}>
+              {/* 梯级：冠军柱实心，非冠军按 tone 透明度地板（dark 0.55 / light 0.5）。
+                  容器必须显式 width:100%——父级 align-items:center 使其按内容收缩，
+                 子级 width:100% 会循环解出 0 宽（梯级隐形根因，勿删） */}
+              <div className="flex flex-col items-center" style={{ rowGap: RUNG_GAP, marginTop: 6, width: '100%' }}>
                 {Array.from({ length: rungs }).map((_, j) => (
                   <span
                     key={j}
                     data-rung={j}
                     className="shrink-0"
-                    style={{ width: '100%', height: RUNG_HEIGHT, background: ink, opacity: isChampion ? 1 : 0.35 }}
+                    style={{ width: '100%', height: RUNG_HEIGHT, background: ink, opacity: isChampion ? 1 : rungOpacity }}
                   />
                 ))}
               </div>
-              {/* 柱底类目名 */}
+              {/* 柱底类目名：不截断（换行），列数 >5 时 break-all 防长名/混排溢出 */}
               <span
-                className="text-caption truncate w-full text-center"
-                title={d.name}
+                className={`text-caption w-full text-center leading-tight${data.length > 5 ? ' break-all' : ''}`}
                 style={{ color: mutedInk, opacity: mutedOpacity, marginTop: 6 }}
               >
                 {d.name}

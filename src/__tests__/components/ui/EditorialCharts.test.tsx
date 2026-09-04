@@ -141,7 +141,7 @@ describe('RungBars（编辑风梯级柱）', () => {
     expect(cols[1].querySelectorAll('[data-rung]').length).toBe(5) // round(50/10)
   })
 
-  test('冠军柱梯级实心（opacity 1，light 墨色 var(--fg)），其余柱同色 35% 透明度', async () => {
+  test('冠军柱梯级实心（opacity 1，light 墨色 var(--fg)），其余柱同色 50% 透明度', async () => {
     const { container } = render(<RungBars data={rungData} formatValue={(n) => String(n)} rungUnit={10} />)
     const cols = await mountedColumns(container)
     const firstRung = cols[0].querySelector<HTMLElement>('[data-rung]')
@@ -149,13 +149,20 @@ describe('RungBars（编辑风梯级柱）', () => {
     expect(firstRung?.getAttribute('style')).toContain('background: var(--fg)')
     expect(firstRung?.getAttribute('style')).toContain('opacity: 1')
     expect(secondRung?.getAttribute('style')).toContain('background: var(--fg)')
-    expect(secondRung?.getAttribute('style')).toContain('opacity: 0.35')
+    expect(secondRung?.getAttribute('style')).toContain('opacity: 0.5')
   })
 
   test('dark 反色：墨色取 var(--bg)', async () => {
     const { container } = render(<RungBars data={rungData} formatValue={(n) => String(n)} rungUnit={10} tone="dark" />)
     const cols = await mountedColumns(container)
     expect(cols[0].querySelector<HTMLElement>('[data-rung]')?.getAttribute('style')).toContain('background: var(--bg)')
+  })
+
+  test('dark 非冠军梯级回归：透明度 ≥0.5（0.55），深色反色卡上可辨', async () => {
+    const { container } = render(<RungBars data={rungData} formatValue={(n) => String(n)} rungUnit={10} tone="dark" />)
+    const cols = await mountedColumns(container)
+    const secondRung = cols[1].querySelector<HTMLElement>('[data-rung]')
+    expect(secondRung?.getAttribute('style')).toContain('opacity: 0.55')
   })
 
   test('显式单位：底部注记含「一梯级」', () => {
