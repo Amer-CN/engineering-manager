@@ -376,9 +376,10 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }} onClick={onClose}
             className="fixed inset-0 bg-black/20 z-40" />
-          <motion.aside initial={{ x: -320, opacity: 0 }} animate={{ x: 0, opacity: 1 }}
-            exit={{ x: -320, opacity: 0 }} transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-            className="fixed top-0 left-0 bottom-0 w-80 bg-[color:var(--card)] border-r border-[color:var(--border)] z-50 flex flex-col shadow-xl">
+          {/* 右侧滑入：与对话态右栏历史、ui/Drawer 规范族方向一致（入口按钮也在右侧） */}
+          <motion.aside initial={{ x: 320, opacity: 0 }} animate={{ x: 0, opacity: 1 }}
+            exit={{ x: 320, opacity: 0 }} transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+            className="fixed top-0 right-0 bottom-0 w-80 bg-[color:var(--card)] border-l border-[color:var(--border)] z-50 flex flex-col shadow-xl">
             <div className="flex items-center justify-between px-4 py-3 border-b border-[color:var(--border)]">
               <h3 className="text-sm font-semibold text-[color:var(--fg-2)] flex items-center gap-2">
                 <Icon name="Inbox" size={16} />对话历史
