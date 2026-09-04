@@ -9,6 +9,7 @@ import { sttClient, type SttCapability, type SttJobDetail, type SttSegment } fro
 import AudioInputCard from './AudioInputCard'
 import SttJobList from './SttJobList'
 import TranscriptEditor from './TranscriptEditor'
+import TaskDetailView from './TaskDetailView'
 import TranscriptionParams, { type RecordingType } from './TranscriptionParams'
 
 const ACCEPTED_EXTS = '.wav,.mp3,.m4a,.aac,.flac,.ogg,.wma,.amr,.opus,.webm'
@@ -38,6 +39,7 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
   const [creating, setCreating] = useState(false)
   const [cancelling, setCancelling] = useState(false)
   const [currentJob, setCurrentJob] = useState<SttJobDetail | null>(null)
+  const [detailJob, setDetailJob] = useState<SttJobDetail | null>(null) // 详情子页面（仿通义听悟）当前任务
   const [jobLoading, setJobLoading] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -73,6 +75,7 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
         setRefreshTrigger(t => t + 1)
         // 任务已取消：详情面板没有对应的展示区，关闭详情回到列表看状态
         if (res.data.status === 'cancelled') setCurrentJob(null)
+        else if (res.data.status === 'completed') setDetailJob(res.data) // 刚创建的任务完成 → 进详情子页面
       }
     }
   }, [])
@@ -109,9 +112,7 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
 
   // 取消正在进行的上传
   const handleCancelUpload = useCallback(() => {
-    if (uploadAbortRef.current) {
-      uploadAbortRef.current.abort()
-    }
+    uploadAbortRef.current?.abort()
   }, [])
 
   // 选择文件 / 录音完成 → 校验后立即自动上传
@@ -186,9 +187,7 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
       }
       setRefreshTrigger(t => t + 1)
       // 清理上传状态
-      setSelectedFile(null)
-      setUploadedPath(null)
-      setUploadProgress(0)
+      setSelectedFile(null); setUploadedPath(null); setUploadProgress(0)
     } else {
       showToast(res.error || '创建任务失败', 'error')
     }
@@ -201,6 +200,7 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
     const res = await sttClient.getSttJob(jobId)
     setJobLoading(false)
     if (res.success && res.data) {
+      if (res.data.status === 'completed') { setDetailJob(res.data); return } // 历史完成任务 → 详情子页面
       setCurrentJob(res.data)
       if (res.data.status === 'pending' || res.data.status === 'running' || res.data.status === 'processing') {
         startPolling(jobId)
@@ -388,8 +388,10 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
       <SttJobList
         refreshTrigger={refreshTrigger}
         onSelectJob={handleSelectJob}
-        selectedJobId={currentJob?.id}
+        selectedJobId={detailJob?.id ?? currentJob?.id}
       />
+
+      {detailJob && <TaskDetailView job={detailJob} masked={masked} onBack={() => setDetailJob(null)} onIngest={handleIngest} />}
     </div>
   )
 }

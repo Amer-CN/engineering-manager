@@ -252,6 +252,53 @@ public static class SttEndpoints
         });
 
         // ═══════════════════════════════════════════════════════════
+        // GET /api/stt/jobs/{id}/audio — 流式返回任务源音频（历史任务可回放）
+        // 归属校验（created_by）+ IsPathSafe 路径穿越防护 + 按扩展名映射 Content-Type
+        // ═══════════════════════════════════════════════════════════
+        app.MapGet("/api/stt/jobs/{id}/audio", (HttpContext ctx, IDbConnection db, long id) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            try
+            {
+                var sourcePath = db.ExecuteScalar<string?>(
+                    "SELECT source_path FROM stt_jobs WHERE id = @Id AND created_by = @Uid",
+                    new { Id = id, Uid = uid });
+
+                if (sourcePath == null)
+                    return Common.NotFound("转写任务不存在");
+
+                var uploadsBase = Path.Combine(ApiConfig.ResolveDataPath(), "uploads");
+                var userSttDir = Path.GetFullPath(Path.Combine(uploadsBase, "stt", uid));
+                var fullPath = Path.Combine(uploadsBase, sourcePath.Replace('\\', '/').TrimStart('/'));
+                var resolvedFull = Path.GetFullPath(fullPath);
+
+                // 路径穿越防护：解析后的完整路径必须仍在当前用户的 stt/<uid>/ 内
+                if (!IsPathSafe(resolvedFull, userSttDir))
+                    return Common.Fail("非法路径");
+
+                if (!File.Exists(resolvedFull))
+                    return Common.NotFound("音频文件不存在");
+
+                var contentType = Path.GetExtension(resolvedFull).ToLowerInvariant() switch
+                {
+                    ".m4a" => "audio/mp4",
+                    ".mp3" => "audio/mpeg",
+                    ".wav" => "audio/wav",
+                    ".webm" => "audio/webm",
+                    _ => "application/octet-stream",
+                };
+
+                // 流式返回（Results.Stream 会在响应完成后释放流，不要 using 包裹）
+                var fs = new FileStream(resolvedFull, FileMode.Open, FileAccess.Read, FileShare.Read);
+                return Results.Stream(fs, contentType);
+            }
+            catch (Exception ex)
+            {
+                return Common.ServerError("获取任务音频", ex);
+            }
+        });
+
+        // ═══════════════════════════════════════════════════════════
         // GET /api/stt/jobs — 当前用户任务列表
         // ═══════════════════════════════════════════════════════════
         app.MapGet("/api/stt/jobs", (HttpContext ctx, IDbConnection db, int page = 1, int size = 20) =>

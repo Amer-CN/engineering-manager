@@ -21,6 +21,10 @@ interface TranscriptEditorProps {
   masked: boolean
   /** 本地音频播放 URL（录音/上传当次可用，历史任务为空）*/
   audioUrl?: string | null
+  /** 外部共享 audio 元素 ref（TaskDetailView 持有唯一 audio，避免双 audio 元素）*/
+  audioRef?: React.RefObject<HTMLAudioElement | null>
+  /** 外部跳播函数（提供 audioRef 时由父组件传入；缺省用内部 audio 元素）*/
+  seekTo?: (sec: number) => void
   onIngest: (correctedText: string, segments: SttSegment[], title: string, projectId?: number, occurredAt?: string, folderId?: number | null) => void
 }
 
@@ -38,17 +42,19 @@ function rebuildFullText(segments: SttSegment[]): string {
     .join('\n')
 }
 
-const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioUrl, onIngest }) => {
+const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioUrl, audioRef, seekTo, onIngest }) => {
   const { showToast } = useToastContext()
 
-  // 音频播放 + 分段跳转
-  const audioRef = useRef<HTMLAudioElement>(null)
-  const seekTo = useCallback((sec: number) => {
-    const a = audioRef.current
+  // 音频播放 + 分段跳转（外部传入 audioRef 时复用父组件的唯一 audio 元素）
+  const internalAudioRef = useRef<HTMLAudioElement | null>(null)
+  const aRef = audioRef ?? internalAudioRef
+  const internalSeek = useCallback((sec: number) => {
+    const a = aRef.current
     if (!a) return
     a.currentTime = sec
     a.play().catch(() => { /* 自动播放可能被浏览器拦截，忽略 */ })
-  }, [])
+  }, [aRef])
+  const jumpTo = seekTo ?? internalSeek
 
   // 编辑状态
   const [segments, setSegments] = useState<SttSegment[]>([])
@@ -169,11 +175,11 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
         />
       </div>
 
-      {/* 音频播放器 — 边听边改 */}
-      {audioUrl && (
+      {/* 音频播放器 — 边听边改（父组件持有 audio 时由父组件渲染播放器） */}
+      {audioUrl && !audioRef && (
         <div>
           <label className="text-xs font-medium text-[color:var(--fg-2)] mb-1 block">原始录音</label>
-          <audio ref={audioRef} src={audioUrl} controls preload="metadata" className="w-full h-10" />
+          <audio ref={internalAudioRef} src={audioUrl} controls preload="metadata" className="w-full h-10" />
         </div>
       )}
 
@@ -193,7 +199,7 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
                   <div className="text-xs font-medium text-[color:var(--accent)]">说话人{seg.speaker}</div>
                   <button
                     type="button"
-                    onClick={() => seekTo(seg.start)}
+                    onClick={() => jumpTo(seg.start)}
                     disabled={!audioUrl}
                     className="text-xs text-[color:var(--muted)] hover:text-[color:var(--accent)] disabled:hover:text-[color:var(--muted)] disabled:cursor-default flex items-center gap-0.5 mt-0.5 font-mono tabular-nums"
                     title={audioUrl ? '跳转到此段播放' : undefined}

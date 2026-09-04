@@ -255,6 +255,32 @@ export async function getSttJob(id: number): Promise<ApiResponse<SttJobDetail>> 
   }
 }
 
+/** GET /api/stt/jobs/{id}/audio — 拉取任务源音频（Blob，供 <audio> 播放） */
+export async function getSttJobAudio(id: number): Promise<ApiResponse<Blob>> {
+  try {
+    const token = getToken()
+    const resp = await fetch(`${API_BASE}/api/stt/jobs/${id}/audio`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    if (resp.status === 401) {
+      try { localStorage.removeItem(TOKEN_KEY) } catch { /* */ }
+    }
+    if (!resp.ok) {
+      // 错误响应是 JSON，不能当 blob 吞掉
+      try {
+        const errBody = await resp.json()
+        if (errBody?.error) return { success: false, error: errBody.error }
+      } catch { /* */ }
+      return { success: false, error: `HTTP ${resp.status}: ${resp.statusText}` }
+    }
+    const blob = await resp.blob()
+    return { success: true, data: blob }
+  } catch (err) {
+    console.error('[STT] getSttJobAudio 失败:', err)
+    return { success: false, error: String(err) }
+  }
+}
+
 /** GET /api/stt/jobs — 任务列表 */
 export async function getSttJobs(
   page: number = 1,
@@ -400,6 +426,7 @@ export const sttClient = {
   uploadSttAudio,
   createSttJob,
   getSttJob,
+  getSttJobAudio,
   getSttJobs,
   ingestSttJob,
   cancelSttJob,

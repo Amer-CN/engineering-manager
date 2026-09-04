@@ -1,3 +1,4 @@
+using EngineeringManager.Api;
 using EngineeringManager.Api.Services.Stt;
 using EngineeringManager.Tests.Common;
 using System.Net;
@@ -448,5 +449,75 @@ public class SttEndpointsTests : ApiTestBase
         // 进行中的任务不能删，行应仍在
         var (status, _, _) = GetJobRow(jobId);
         Assert.Equal("processing", status);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // GET /api/stt/jobs/{id}/audio 端点测试（历史任务回放音频）
+    // ═══════════════════════════════════════════════════════════
+
+    /// <summary>插入指定 source_path / created_by 的 job（audio 端点测试用）</summary>
+    private long CreateJobWithSourcePath(string sourcePath, string uid = "1")
+    {
+        using var conn = new SqliteConnection(ConnectionString);
+        conn.Open();
+        var now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        return conn.QuerySingle<long>(@"
+            INSERT INTO stt_jobs
+                (source_file, source_path, source_type, engine, status, progress,
+                 is_multi_speaker, num_speakers, error, created_at, updated_at, created_by)
+            VALUES
+                ('test.m4a', @SourcePath, 'audio', 'test', 'completed', 100,
+                 0, NULL, NULL, @Now, @Now, @Uid);
+            SELECT last_insert_rowid();",
+            new { SourcePath = sourcePath, Now = now, Uid = uid });
+    }
+
+    [Fact]
+    public async Task GetAudio_WithValidJob_ReturnsAudio()
+    {
+        var token = await LoginAdminAsync();
+        SetAuth(token);
+
+        // 2 字节假文件 + .m4a 扩展名（端点只按扩展名映射 content-type，不校验音频内容）
+        var fileName = $"audio-test-{Guid.NewGuid():N}.m4a";
+        var sttDir = Path.Combine(ApiConfig.ResolveDataPath(), "uploads", "stt", "1");
+        Directory.CreateDirectory(sttDir);
+        var filePath = Path.Combine(sttDir, fileName);
+        File.WriteAllBytes(filePath, new byte[] { 0x00, 0x01 });
+        try
+        {
+            var jobId = CreateJobWithSourcePath($"stt/1/{fileName}");
+
+            var resp = await Client.GetAsync($"/api/stt/jobs/{jobId}/audio");
+            Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+            Assert.Equal("audio/mp4", resp.Content.Headers.ContentType?.MediaType);
+            Assert.Equal(2, (await resp.Content.ReadAsByteArrayAsync()).Length);
+        }
+        finally
+        {
+            try { if (File.Exists(filePath)) File.Delete(filePath); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task GetAudio_JobOfOtherUser_Returns404()
+    {
+        var token = await LoginAdminAsync();
+        SetAuth(token);
+        // job 归属 uid=999，admin(uid=1) 请求 → 归属校验不过 → 404
+        var jobId = CreateJobWithSourcePath("stt/999/other-user.m4a", uid: "999");
+
+        var resp = await Client.GetAsync($"/api/stt/jobs/{jobId}/audio");
+        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetAudio_NotFound_Returns404()
+    {
+        var token = await LoginAdminAsync();
+        SetAuth(token);
+
+        var resp = await Client.GetAsync("/api/stt/jobs/999999/audio");
+        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
     }
 }
