@@ -236,10 +236,11 @@ describe('TranscriptEditor — 多人模式 onIngest payload', () => {
       <TranscriptEditor job={job} masked={false} onIngest={onIngest} />
     )
 
-    // 修改第一段文本
-    const textareas = screen.getAllByRole('textbox')
-    // 第一个 textarea 是标题，后续是 segments
-    act(() => { fireEvent.change(textareas[1], { target: { value: '修改后的第一段' } }) })
+    // 修改第一段文本（六期行内编辑：点击段落 → contentEditable 就地编辑 → 失焦提交）
+    act(() => { fireEvent.click(screen.getByText('原文第一段')) })
+    const editable = screen.getByText('原文第一段') // 已切换为 contentEditable
+    act(() => { editable.textContent = '修改后的第一段' })
+    fireEvent.blur(editable)
 
     // 点击入库
     act(() => { fireEvent.click(screen.getByText('存入知识库')) })

@@ -6,7 +6,8 @@
  * - 左栏约 60%：顶栏（标题 + 批量摘取下拉 + 编辑）；段落流（播放高亮跟随、点时间戳跳播）；底部固定播放器
  * - 右栏约 40%：笔记浮层卡（TranscriptNotePanel，contentEditable，会话内编辑）
  * - <900px 降级为上下堆叠（笔记收到底部）；Shift+Space 全局播放/暂停（输入框/contentEditable 聚焦时不触发）
- * 编辑模式嵌入 TranscriptEditor，共享同一个 audioRef（全局只保留一个 audio 元素）。
+ * 编辑模式嵌入 TranscriptEditor（行内编辑 + 词级搬移），共享同一个 audioRef（全局只保留一个 audio 元素）。
+ * 说话人用 speakers 实体表（AutoSubs 模式：{id,name,color}，会话内不落库）。
  */
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
@@ -19,7 +20,10 @@ import type { SttJobDetail, SttSegment } from '@/services/stt-client'
 import TranscriptEditor from './TranscriptEditor'
 import TranscriptNotePanel, { copyTextToClipboard } from './TranscriptNotePanel'
 import SttInsightsCard from './SttInsightsCard'
-import SpeakerNameEditor from './SpeakerNameEditor'
+import TranscriptSegmentList from './TranscriptSegmentList'
+import { detectSpeakerBase } from './segmentUtils'
+import { DEFAULT_COLORS } from './SpeakerNameEditor'
+import type { SpeakerInfo } from './SpeakerNameEditor'
 import type { TranscriptNotePanelHandle } from './TranscriptNotePanel'
 
 interface TaskDetailViewProps {
@@ -73,8 +77,9 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
   const [activeIdx, setActiveIdx] = useState(-1)
   const [editing, setEditing] = useState(false)
   const [menuOpen, setMenuOpen] = useState<'extract' | 'export' | null>(null)
-  // A1/A2：说话人显示名（会话内不落库）；B2：章节联动高亮区间 [start, nextStart)
-  const [speakerNames, setSpeakerNames] = useState<Record<number, string>>({})
+  // 六期：speakers 实体表（AutoSubs 模式 {id,name,color}，会话内不落库）
+  const [speakers, setSpeakers] = useState<SpeakerInfo[]>([])
+  // A2：章节联动高亮区间 [start, nextStart)
   const [chapterRange, setChapterRange] = useState<{ start: number; end: number } | null>(null)
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -98,6 +103,16 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
       if (url && typeof URL !== 'undefined' && URL.revokeObjectURL) URL.revokeObjectURL(url)
     }
   }, [job.id])
+
+  // speakers 表推导：每个出现过的说话人编号一条（名字默认「说话人N」，色板按编号轮换）。
+  // 编号基检测（防御，照 AutoSubs）：当前引擎 1 基且 0 号为噪声簇（UI 列表仍按 >0 过滤）；
+  // 未来换 0 基引擎时由 detectSpeakerBase 归一放行 0 号，不炸。显示编号恒为原始编号。
+  useEffect(() => {
+    const raw = job.segments ?? []
+    const base = detectSpeakerBase(raw)
+    const ids = [...new Set(raw.filter(s => s.speaker > 0 || (base === 0 && s.speaker === 0)).map(s => s.speaker))]
+    setSpeakers(ids.map(id => ({ id, name: `说话人${id}`, color: DEFAULT_COLORS[((id % DEFAULT_COLORS.length) + DEFAULT_COLORS.length) % DEFAULT_COLORS.length] })))
+  }, [job])
 
   const togglePlay = useCallback(() => {
     const a = audioRef.current
@@ -162,16 +177,19 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
     return () => document.removeEventListener('mousedown', onDown)
   }, [menuOpen])
 
-  // A1/A2：说话人显示名（未改名回退「说话人N」）与改名回调
+  // speakers 表显示名查询（未改名回退「说话人N」）；摘取/导出/复制统一走这里
   const speakerNameOf = useCallback(
-    (sp: number) => speakerNames[sp] ?? `说话人${sp}`,
-    [speakerNames]
+    (sp: number) => speakers.find(s => s.id === sp)?.name ?? `说话人${sp}`,
+    [speakers]
   )
+  // 改名 = 改 speakers[i].name（未入库编号——如归属下拉新建——追加一条）
   const handleRename = useCallback((sp: number, name: string) => {
-    setSpeakerNames(prev => ({ ...prev, [sp]: name }))
+    setSpeakers(prev => prev.some(p => p.id === sp)
+      ? prev.map(p => (p.id === sp ? { ...p, name } : p))
+      : [...prev, { id: sp, name, color: DEFAULT_COLORS[((sp % DEFAULT_COLORS.length) + DEFAULT_COLORS.length) % DEFAULT_COLORS.length] }])
   }, [])
 
-  // 摘取原文纯文本行：「【显示名】mm:ss 文本」（未改名即【说话人N】）；无分段（单人）时回退 job.text 按行
+  // 摘取原文纯文本行：「【显示名】mm:ss 文本」（speakers 表名字；无分段（单人）时回退 job.text 按行）
   const noteLines = useMemo<string[]>(() => {
     if (segments.length > 0) {
       return segments.map(s => `【${speakerNameOf(s.speaker)}】${formatTime(s.start)} ${s.text}`)
@@ -224,46 +242,16 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
 
   const totalDuration = media.duration || job.durationSec || 0
 
-  // 左栏主体：段落流（阅读模式，含头像/改名/章节联动高亮） / 编辑器（编辑模式或单人纯文本）
+  // 左栏主体：段落流（阅读模式）/ 编辑器（编辑模式或单人纯文本）
   const body = segments.length > 0 && !editing ? (
-    <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-2">
-      {segments.map((seg, i) => {
-        const name = speakerNameOf(seg.speaker)
-        // 章节联动：段落起点落在所选章节 [startSec, nextStartSec) 内；播放跟随优先
-        const inChapter = chapterRange !== null && seg.start >= chapterRange.start && seg.start < chapterRange.end
-        return (
-          <div
-            key={i} ref={(el) => { segRefs.current[i] = el }}
-            className={`p-3 rounded-lg border transition-colors ${
-              i === activeIdx
-                ? 'bg-[color:var(--accent-soft)] border-[color:var(--accent)]'
-                : inChapter
-                  ? 'bg-[color:var(--accent-soft)] border-transparent border-l-4 border-l-[color:var(--accent)]'
-                  : 'border-transparent hover:bg-[color:var(--panel-2)]'
-            }`}
-          >
-            <div className="flex items-center gap-2 mb-1">
-              <SpeakerNameEditor
-                speaker={seg.speaker} name={name}
-                onRename={newName => handleRename(seg.speaker, newName)}
-              />
-              <button
-                type="button" onClick={() => seekTo(seg.start)} disabled={!media.url}
-                title={media.url ? '跳转到此段播放' : undefined}
-                className="text-xs text-[color:var(--muted)] hover:text-[color:var(--accent)] disabled:hover:text-[color:var(--muted)] disabled:cursor-default flex items-center gap-0.5 font-mono tabular-nums"
-              >
-                {media.url && <Icon name="Play" size={9} />}
-                {formatTime(seg.start)}
-              </button>
-            </div>
-            <p className="text-sm text-[color:var(--fg-2)] whitespace-pre-wrap break-words">{seg.text}</p>
-          </div>
-        )
-      })}
-    </div>
+    <TranscriptSegmentList
+      segments={segments} activeIdx={activeIdx} chapterRange={chapterRange}
+      canSeek={!!media.url} segRefs={segRefs} seekTo={seekTo}
+      speakers={speakers} onRename={handleRename}
+    />
   ) : (
     <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
-      <TranscriptEditor job={job} masked={masked} audioUrl={media.url} audioRef={audioRef} seekTo={seekTo} speakerNames={speakerNames} onRenameSpeaker={handleRename} onIngest={onIngest} />
+      <TranscriptEditor job={job} masked={masked} audioUrl={media.url} audioRef={audioRef} seekTo={seekTo} speakers={speakers} onRenameSpeaker={handleRename} onIngest={onIngest} />
     </div>
   )
 

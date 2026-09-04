@@ -1,20 +1,23 @@
 /**
- * TranscriptEditor — 转写结果校对编辑器
+ * TranscriptEditor — 转写结果校对编辑器（六期：行内编辑 + 词级搬移，AutoSubs 模式）
  *
- * 多人：按 segments 顺序展示，每段可编辑
+ * 多人：段落默认纯展示，点击段落进入行内编辑（TranscriptRow：contentEditable 就地编辑
+ * + 操作按钮组「首词→上一段 / 末词→下一段 / 插入 / 删除」，时间按字符比例重算）
  * 单人：显示完整可编辑文本区
  */
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { Icon } from '@/components/ui/Icon'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { useToastContext } from '@/hooks/useToast'
 import { useKnowledgeFolders } from '@/hooks/data/useKnowledgeFolders'
 import { maskKnowledgeText } from '@/utils/knowledgeTextMask'
 import { writeWritingPrefill } from '@/hooks/useWritingPrefill'
-import SpeakerNameEditor from './SpeakerNameEditor'
+import TranscriptRow from './TranscriptRow'
+import { speakerOf } from './SpeakerNameEditor'
+import type { SpeakerInfo } from './SpeakerNameEditor'
+import { moveFirstWordToPrev, moveLastWordToNext, insertSegmentAfter } from './segmentUtils'
 import type { SttJobDetail, SttSegment } from '@/services/stt-client'
 
 interface TranscriptEditorProps {
@@ -26,20 +29,16 @@ interface TranscriptEditorProps {
   audioRef?: React.RefObject<HTMLAudioElement | null>
   /** 外部跳播函数（提供 audioRef 时由父组件传入；缺省用内部 audio 元素）*/
   seekTo?: (sec: number) => void
-  /** 发言人显示名映射（TaskDetailView 持有；未改名的编号不在此表）*/
-  speakerNames?: Record<number, string>
-  /** 发言人改名回调（与阅读态同一状态源，编辑态改名全局同步）*/
+  /** 说话人实体表（AutoSubs speakers 模型，TaskDetailView 持有；未入库编号按色板兜底）*/
+  speakers?: SpeakerInfo[]
+  /** 发言人改名回调（改 speakers[i].name，编辑态与阅读态全局同步）*/
   onRenameSpeaker?: (speaker: number, name: string) => void
   onIngest: (correctedText: string, segments: SttSegment[], title: string, projectId?: number, occurredAt?: string, folderId?: number | null) => void
 }
 
-function formatTimestamp(seconds: number): string {
-  const m = Math.floor(seconds / 60)
-  const s = Math.floor(seconds % 60)
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-}
-
-/** 从 segments 重新组合 fullText */
+/** 从 segments 重新组合 fullText。
+ *  入库契约：后端 SttEndpoints 强校验重组文本 = 「【说话人N】原文」逐段一致 + 编号 1..N 连续，
+ *  因此前缀必须保持原始编号（显示名的统一只作用于摘取/导出/复制，见 TaskDetailView.noteLines）。 */
 function rebuildFullText(segments: SttSegment[]): string {
   return segments
     .filter(s => s.text.trim())
@@ -47,13 +46,13 @@ function rebuildFullText(segments: SttSegment[]): string {
     .join('\n')
 }
 
-const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioUrl, audioRef, seekTo, speakerNames, onRenameSpeaker, onIngest }) => {
+const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioUrl, audioRef, seekTo, speakers, onRenameSpeaker, onIngest }) => {
   const { showToast } = useToastContext()
 
-  // 发言人显示名（未改名回退「说话人N」；编辑态与阅读态共用 TaskDetailView 的同一状态源）
+  // speakers 表查询：显示名/头像色（未入库编号兜底「说话人N」+ 色板轮换；编辑态与阅读态共用同一状态源）
   const speakerNameOf = useCallback(
-    (sp: number) => speakerNames?.[sp] ?? `说话人${sp}`,
-    [speakerNames]
+    (sp: number) => speakerOf(speakers, sp).name,
+    [speakers]
   )
 
   // 音频播放 + 分段跳转（外部传入 audioRef 时复用父组件的唯一 audio 元素）
@@ -67,22 +66,23 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
   }, [aRef])
   const jumpTo = seekTo ?? internalSeek
 
-  // 编辑状态
+  // 编辑状态（useState 门禁 ≤8：folderPick 合并对象态，activeIdx = 行内编辑激活段）
   const [segments, setSegments] = useState<SttSegment[]>([])
   const [singleText, setSingleText] = useState('')
   const [title, setTitle] = useState('')
   const [hasChanges, setHasChanges] = useState(false)
   const [ingesting, setIngesting] = useState(false)
+  const [activeIdx, setActiveIdx] = useState(-1)
   // M3：入库前文件夹选择（voice → 选文件夹 → 建文档）
-  const [showFolderPicker, setShowFolderPicker] = useState(false)
-  const [pickFolderId, setPickFolderId] = useState<number | null>(null)
+  const [folderPick, setFolderPick] = useState<{ open: boolean; id: number | null }>({ open: false, id: null })
   const { data: folders } = useKnowledgeFolders()
   const [originalSegments, setOriginalSegments] = useState<SttSegment[]>([])
 
   // 初始化
   useEffect(() => {
     if (job.segments && job.segments.length > 0) {
-      // 过滤掉 speaker 0（原始簇号不应出现在 UI）
+      // 过滤掉 speaker 0（原始簇号不应出现在 UI）。编号基检测（防御）：当前引擎 1 基、
+      // 0 号为噪声簇故过滤；未来换 0 基引擎时按 segmentUtils.detectSpeakerBase 归一放行
       const validSegs = job.segments.filter(s => s.speaker > 0)
       setSegments(validSegs)
       setOriginalSegments(validSegs.map(s => ({ ...s })))
@@ -94,15 +94,43 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
     }
     setTitle(job.sourceFile || `任务 #${job.id}`)
     setHasChanges(false)
+    setActiveIdx(-1)
   }, [job])
 
-  // 编辑 segment
-  const handleSegmentChange = useCallback((index: number, field: keyof SttSegment, value: string | number) => {
-    setSegments(prev => {
-      const next = [...prev]
-      next[index] = { ...next[index], [field]: value }
-      return next
-    })
+  // 行内编辑提交（TranscriptRow 失焦/Enter/Esc 回传；Esc 还原 = 提交回原文）
+  const handleTextCommit = useCallback((index: number, text: string) => {
+    setSegments(prev => prev.map((s, i) => (i === index ? { ...s, text } : s)))
+    setHasChanges(true)
+  }, [])
+
+  // A3 归属修正下拉：把该段改挂到正确的人（搬移/插删不改归属，归属仍由下拉负责）
+  const handleSpeakerChange = useCallback((index: number, speaker: number) => {
+    setSegments(prev => prev.map((s, i) => (i === index ? { ...s, speaker } : s)))
+    setHasChanges(true)
+  }, [])
+
+  // 词级搬移：纯函数改 segments，时间按字符比例重算；结构变化后退出行内编辑
+  const handleMoveFirstWord = useCallback((index: number) => {
+    setSegments(prev => moveFirstWordToPrev(prev, index))
+    setActiveIdx(-1)
+    setHasChanges(true)
+  }, [])
+  const handleMoveLastWord = useCallback((index: number) => {
+    setSegments(prev => moveLastWordToNext(prev, index))
+    setActiveIdx(-1)
+    setHasChanges(true)
+  }, [])
+
+  // 在此段后插入新段（继承 speaker，文本为空；激活段文本未变，保持行内编辑）
+  const handleInsertAfter = useCallback((index: number) => {
+    setSegments(prev => insertSegmentAfter(prev, index))
+    setHasChanges(true)
+  }, [])
+
+  // 删除此段（单段守卫；删除后索引位移，退出行内编辑）
+  const handleDeleteSegment = useCallback((index: number) => {
+    setSegments(prev => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== index)))
+    setActiveIdx(-1)
     setHasChanges(true)
   }, [])
 
@@ -115,6 +143,10 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
     () => (speakerOptions.length ? Math.max(...speakerOptions) : 0) + 1,
     [speakerOptions]
   )
+  const speakerChoices = useMemo(
+    () => speakerOptions.map(n => ({ value: n, label: speakerNameOf(n) })),
+    [speakerOptions, speakerNameOf]
+  )
 
   // 恢复原始
   const handleRestore = useCallback(() => {
@@ -123,6 +155,7 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
     } else if (job.text) {
       setSingleText(job.text)
     }
+    setActiveIdx(-1)
     setHasChanges(false)
     showToast('已恢复原始转写', 'info')
   }, [originalSegments, job.text, showToast])
@@ -149,15 +182,14 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
       return
     }
 
-    await onIngest(correctedText, correctedSegments, title.trim() || job.sourceFile || `任务 #${job.id}`, undefined, undefined, pickFolderId)
+    await onIngest(correctedText, correctedSegments, title.trim() || job.sourceFile || `任务 #${job.id}`, undefined, undefined, folderPick.id)
     setIngesting(false)
     setHasChanges(false)
-  }, [segments, singleText, job, title, onIngest, showToast, pickFolderId])
+  }, [segments, singleText, job, title, onIngest, showToast, folderPick.id])
 
   // M3：入库前先弹文件夹选择（可选；不选 = 不放入文件夹）
   const handleIngestClick = () => {
-    setPickFolderId(null)
-    setShowFolderPicker(true)
+    setFolderPick({ open: true, id: null })
   }
 
   // W3：生成会议纪要 → 跳写作中心，预填素材/文体/source_ref
@@ -208,54 +240,36 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
       {segments.length > 0 ? (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-medium text-[color:var(--fg-2)]">说话人分段</label>
+            <label className="text-xs font-medium text-[color:var(--fg-2)]">说话人分段（点击段落编辑；激活段可搬词/插删/改归属）</label>
             <Button variant="ghost" size="xs" onClick={handleRestore} leftIcon="RotateCcw">
               恢复原始
             </Button>
           </div>
           <div className="max-h-96 overflow-y-auto space-y-2 p-1">
             {segments.map((seg, i) => (
-              <div key={i} className="flex gap-2 items-start p-2 rounded-lg border border-[color:var(--border)] bg-[color:var(--card)]">
-                <div className="flex-shrink-0 w-20">
-                  {/* 发言人徽标：头像+显示名，点击改名（与阅读态同一状态源，全局同步） */}
-                  <SpeakerNameEditor
-                    speaker={seg.speaker}
-                    name={speakerNameOf(seg.speaker)}
-                    onRename={newName => onRenameSpeaker?.(seg.speaker, newName)}
-                  />
-                  {/* 归属修正：把该段改挂到正确的人（选项显示名，value 为编号；rebuildFullText 前缀自动跟随） */}
-                  <select
-                    value={seg.speaker}
-                    onChange={(e) => {
-                      const v = e.target.value
-                      handleSegmentChange(i, 'speaker', v === 'new' ? nextSpeakerNum : Number(v))
-                    }}
-                    title="修正此段说话人归属"
-                    className="mt-1 w-full text-xs bg-[color:var(--panel-2)] border border-[color:var(--border)] rounded px-1 py-0.5 text-[color:var(--fg-2)] outline-none focus:border-[color:var(--accent)]"
-                  >
-                    {speakerOptions.map(n => (
-                      <option key={n} value={n}>{speakerNameOf(n)}</option>
-                    ))}
-                    <option value="new">新建（说话人{nextSpeakerNum}）</option>
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => jumpTo(seg.start)}
-                    disabled={!audioUrl}
-                    className="text-xs text-[color:var(--muted)] hover:text-[color:var(--accent)] disabled:hover:text-[color:var(--muted)] disabled:cursor-default flex items-center gap-0.5 mt-0.5 font-mono tabular-nums"
-                    title={audioUrl ? '跳转到此段播放' : undefined}
-                  >
-                    {audioUrl && <Icon name="Play" size={9} />}
-                    {formatTimestamp(seg.start)} - {formatTimestamp(seg.end)}
-                  </button>
-                </div>
-                <textarea
-                  value={seg.text}
-                  onChange={(e) => handleSegmentChange(i, 'text', e.target.value)}
-                  className="flex-1 min-h-[40px] text-sm text-[color:var(--fg-2)] bg-transparent border-0 outline-none resize-y p-1 rounded focus:bg-[color:var(--panel-2)]"
-                  rows={2}
-                />
-              </div>
+              <TranscriptRow
+                key={i}
+                seg={seg}
+                index={i}
+                active={activeIdx === i}
+                isFirst={i === 0}
+                isLast={i === segments.length - 1}
+                isOnly={segments.length === 1}
+                name={speakerNameOf(seg.speaker)}
+                color={speakerOf(speakers, seg.speaker).color}
+                speakerChoices={speakerChoices}
+                nextSpeakerNum={nextSpeakerNum}
+                canPlay={!!audioUrl}
+                onActivate={setActiveIdx}
+                onSeekStart={(idx) => jumpTo(segments[idx].start)}
+                onTextCommit={handleTextCommit}
+                onSpeakerChange={handleSpeakerChange}
+                onMoveFirstWord={handleMoveFirstWord}
+                onMoveLastWord={handleMoveLastWord}
+                onInsertAfter={handleInsertAfter}
+                onDelete={handleDeleteSegment}
+                onRenameSpeaker={onRenameSpeaker}
+              />
             ))}
           </div>
         </div>
@@ -309,15 +323,15 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
       </div>
 
       {/* M3：文件夹选择弹窗（存入知识库前） */}
-      <Dialog open={showFolderPicker} onOpenChange={setShowFolderPicker}>
+      <Dialog open={folderPick.open} onOpenChange={(v) => setFolderPick(p => ({ ...p, open: v }))}>
         <DialogContent className="sm:max-w-md">
           <DialogTitle>存入知识库</DialogTitle>
           <DialogDescription>选择目标文件夹（可选；不选则作为未分类文档）</DialogDescription>
           <div className="space-y-2 pt-2 max-h-64 overflow-auto">
             <button
-              onClick={() => setPickFolderId(null)}
+              onClick={() => setFolderPick(p => ({ ...p, id: null }))}
               className={`w-full flex items-center gap-2 p-2.5 rounded-lg border text-left text-sm transition-colors ${
-                pickFolderId === null
+                folderPick.id === null
                   ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)]'
                   : 'border-[color:var(--border)] bg-[color:var(--card)] hover:bg-[color:var(--panel-2)]'
               }`}
@@ -327,9 +341,9 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
             {(folders ?? []).map((f) => (
               <button
                 key={f.id}
-                onClick={() => setPickFolderId(f.id)}
+                onClick={() => setFolderPick(p => ({ ...p, id: f.id }))}
                 className={`w-full flex items-center gap-2 p-2.5 rounded-lg border text-left text-sm transition-colors ${
-                  pickFolderId === f.id
+                  folderPick.id === f.id
                     ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)]'
                     : 'border-[color:var(--border)] bg-[color:var(--card)] hover:bg-[color:var(--panel-2)]'
                 }`}
@@ -340,13 +354,13 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
             ))}
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" size="md" onClick={() => setShowFolderPicker(false)}>取消</Button>
+            <Button variant="ghost" size="md" onClick={() => setFolderPick(p => ({ ...p, open: false }))}>取消</Button>
             <Button
               variant="success"
               size="md"
               loading={ingesting}
               disabled={ingesting}
-              onClick={() => { setShowFolderPicker(false); handleIngestConfirm() }}
+              onClick={() => { setFolderPick(p => ({ ...p, open: false })); handleIngestConfirm() }}
             >
               确认入库
             </Button>
