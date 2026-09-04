@@ -335,6 +335,24 @@ const RESOLVING_STYLE: React.CSSProperties = {
   transition: 'opacity .4s, filter .4s, transform .4s',
 }
 
+/** 所有块（含非流式路径）统一注入的过渡定义：streaming 翻 false 移除 RESOLVING_STYLE
+ *  时浏览器已有 transition 定义，退后→恢复平滑过渡而非硬跳。 */
+const BASE_TRANSITION_STYLE: React.CSSProperties = {
+  transition: 'opacity .4s ease, filter .4s ease, transform .4s ease',
+}
+
+/** cloneElement 合并注入 style（保留块自身已有 style） */
+const withStyle = (
+  node: React.ReactNode,
+  extra: React.CSSProperties,
+): React.ReactNode => {
+  const el = node as React.ReactElement
+  if (!el || typeof el !== 'object' || typeof (el as { props?: unknown }).props !== 'object') return node
+  return React.cloneElement(el, {
+    style: { ...((el.props as { style?: React.CSSProperties }).style ?? {}), ...extra },
+  })
+}
+
 const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className, streaming }) => {
   /** 已见过（已播过进场动画）的块 key 集合：content 每个分片全量重算，key 是位置序号 */
   const seenRef = useRef<Set<string>>(new Set())
@@ -342,24 +360,22 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className,
   const containerRef = useRef<HTMLDivElement>(null)
   const blocks = useMemo(() => {
     const parsed = parseBlocks(content)
-    if (!streaming) return parsed
     return parsed.map((node, idx) => {
       const el = node as React.ReactElement
       const key = typeof el?.key === 'string' ? el.key : null
       if (key === null) return node
+      // 所有块统一带 transition 定义（非流式也过 map）：退后样式移除时可平滑恢复
+      const base = withStyle(node, BASE_TRANSITION_STYLE)
+      if (!streaming) return base
       if (!seenRef.current.has(key)) {
         seenRef.current.add(key)
-        return React.cloneElement(el, {
-          style: { ...((el.props as { style?: React.CSSProperties }).style ?? {}), ...STREAM_IN_STYLE },
-        })
+        return withStyle(base, STREAM_IN_STYLE)
       }
       // 已见过的旧块（最新块之前）→ 退后；最新块保持全清晰
       if (idx < parsed.length - 1) {
-        return React.cloneElement(el, {
-          style: { ...((el.props as { style?: React.CSSProperties }).style ?? {}), ...RESOLVING_STYLE },
-        })
+        return withStyle(base, RESOLVING_STYLE)
       }
-      return node
+      return base
     })
   }, [content, streaming])
 

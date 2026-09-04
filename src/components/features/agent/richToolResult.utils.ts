@@ -99,7 +99,7 @@ export function statusTone(
   if (!s) return null
   if (s === 'completed' || s === 'received' || s === 'issued') return 'success'
   if (s === 'cancelled' || s === 'red_flushed') return 'danger'
-  if (s === 'pending') return 'warning'
+  if (s === 'pending' || s === 'partially_paid') return 'warning'
   if (
     s === 'active' || s === 'in_progress' || s === 'planning' ||
     s === 'sent' || s === 'draft' || s === 'processed' || s === 'archived'

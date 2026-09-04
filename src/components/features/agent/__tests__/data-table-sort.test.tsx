@@ -75,6 +75,27 @@ describe('DataTable 排序（A1）', () => {
     expect(screen.getByText(/共 2 条/)).toBeTruthy()
     expect(screen.queryByText(/金额合计/)).toBeNull()
   })
+
+  it('原生 table 结构：thead/tbody 由同一 table 承载（列宽浏览器自动同步）', () => {
+    const { container } = render(<DataTable rows={rows} />)
+    const table = container.querySelector('table')
+    expect(table).not.toBeNull()
+    expect(container.querySelectorAll('thead th').length).toBe(4) // id/name/status/amount
+    expect(container.querySelectorAll('tbody tr').length).toBe(3)
+  })
+
+  it('首列粘性：th/td 均为 sticky + var(--card) 底色 + box-shadow 内嵌列线', () => {
+    const { container } = render(<DataTable rows={rows} />)
+    const firstTh = container.querySelector('thead th') as HTMLElement
+    const firstTd = container.querySelector('tbody td') as HTMLElement
+    for (const cell of [firstTh, firstTd]) {
+      expect(cell.style.position).toBe('sticky')
+      expect(cell.style.left).toBe('0px')
+      expect(cell.style.background).toContain('var(--card)')
+      expect(cell.style.boxShadow).toContain('inset -1px')
+    }
+    expect(firstTh.style.zIndex).toBe('1')
+  })
 })
 
 describe('statusTone 映射（A1，A2 依赖）', () => {
@@ -87,6 +108,7 @@ describe('statusTone 映射（A1，A2 依赖）', () => {
     expect(statusTone('cancelled')).toBe('danger')
     expect(statusTone('red_flushed')).toBe('danger')
     expect(statusTone('pending')).toBe('warning')
+    expect(statusTone('partially_paid')).toBe('warning')
   })
   it('进行类 → info', () => {
     expect(statusTone('active')).toBe('info')

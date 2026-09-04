@@ -21,9 +21,11 @@ interface CodeBlockCardProps {
   lines: string[]
   /** 围栏是否闭合（流式未闭合时复制禁用） */
   closed: boolean
+  /** 外部注入样式（MarkdownRenderer cloneElement 注入 transition/animation），内部布局样式不受影响 */
+  style?: React.CSSProperties
 }
 
-const CodeBlockCard: React.FC<CodeBlockCardProps> = ({ language, lines, closed }) => {
+const CodeBlockCard: React.FC<CodeBlockCardProps> = ({ language, lines, closed, style }) => {
   const [copied, setCopied] = useState(false)
   const showToast = useToastStore((s) => s.showToast)
 
@@ -39,7 +41,7 @@ const CodeBlockCard: React.FC<CodeBlockCardProps> = ({ language, lines, closed }
   }, [lines, showToast])
 
   return (
-    <div className="my-2 rounded-lg border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
+    <div className="my-2 rounded-lg border overflow-hidden" style={{ ...style, borderColor: 'var(--border)' }}>
       {/* 头栏：语言标签 + 复制 */}
       <div
         className="flex items-center justify-between gap-2 px-3 py-1.5 border-b"

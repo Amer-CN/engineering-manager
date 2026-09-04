@@ -1,14 +1,18 @@
 /**
- * DataTable — RichToolResult 对象数组表格（Beautiful UI A1 + A2 升级版）
+ * DataTable — RichToolResult 对象数组表格（Beautiful UI A1 + A2，原生 <table> 版）
  *
  * 来源：TurboKach/ai-native-react-components（MIT），视觉基准 .work/reference/beautifului/
- * 的 records-table.tsx / filter-table.tsx 裁剪移植（token 全部映射到现有 CSS 变量，
- * 未抄 TAG_COLORS 十六进制色板）：
+ * 的 records-table.tsx / filter-table.tsx 裁剪移植（token 全部映射到现有 CSS 变量）：
  *  - 表头点击排序（升/降循环；字符串 localeCompare('zh')、数字列数值比较，用原始值）
  *  - 首列粘性（sticky left-0 + var(--card) 底色，横向滚动时首列不动）
  *  - 状态列值渲染彩色小标签（dot + 文字，statusTone → 主题变量色）
  *  - 表尾统计行（共 N 条 · 金额列合计 ¥X）
- *  - 状态筛选芯片（计数固定不随筛选变；行以 grid-template-rows 1fr↔0fr + opacity 收起）
+ *  - 状态筛选芯片（计数固定不随筛选变）+ 真实过滤（不匹配行直接不渲染）
+ *
+ * 为什么用原生 <table>：表头/数据若各自独立 grid 容器，minmax(max-content,1fr) 会按
+ * 各自内容分列宽 → 列线锯齿错位、横向滚动表头不跟随；<table> 列宽由浏览器跨
+ * thead/tbody 自动同步。粘性首列在 border-separate(spacing-0) 下由单元格自持边框，
+ * 列分隔线用 box-shadow 内嵌线（粘性位移时仍跟随单元格）。
  */
 
 import React, { useMemo, useState } from 'react'
@@ -27,8 +31,18 @@ const TONE_COLORS: Record<string, string> = {
   info: 'rgb(var(--color-info-500))',
 }
 
-/** 行收起缓动（filter-table 同款） */
-const EASE = 'cubic-bezier(0.23, 1, 0.32, 1)'
+/** 首列粘性单元格（th/td 同款）：sticky + 底色盖住滚动内容 + 右缘 box-shadow 内嵌线
+ *  （粘性位移下自带 border 会脱离单元格，内嵌线不随横向滚动消失） */
+const STICKY_FIRST: React.CSSProperties = {
+  position: 'sticky',
+  left: 0,
+  zIndex: 1,
+  background: 'var(--card)',
+  boxShadow: 'inset -1px 0 0 var(--border)',
+}
+
+/** 行一次性进场（替代旧 grid 0fr 收起动画：table 行无法做收起，真实过滤直接增删行） */
+const ROW_ENTER: React.CSSProperties = { animation: 'fade-in 240ms ease both' }
 
 interface SortState { key: string; dir: 1 | -1 }
 
@@ -91,7 +105,7 @@ export const DataTable: React.FC<{ rows: Record<string, unknown>[] }> = ({ rows 
   }, [rows, statusCol])
   const showChips = statusCol !== null && statusValues.length >= 2
 
-  /** 全量排序结果（行渲染用它，筛选行只收起不删除） */
+  /** 全量排序结果 */
   const sortedAll = useMemo(() => {
     if (!sort) return rows
     const dir = sort.dir
@@ -110,13 +124,13 @@ export const DataTable: React.FC<{ rows: Record<string, unknown>[] }> = ({ rows 
     })
   }, [rows, sort])
 
-  /** 筛选后集合（表尾统计 / 合计用；行收起时 DOM 仍在） */
+  /** 筛选后集合（表尾统计 / 合计 / 行渲染都用它：真实过滤，不匹配行不渲染） */
   const sortedFiltered = useMemo(() => {
     if (filter === null || !showChips) return sortedAll
     return sortedAll.filter((r) => String(r[statusCol!]) === filter)
   }, [sortedAll, filter, showChips, statusCol])
 
-  const shown = expanded ? sortedAll : sortedAll.slice(0, MAX_ROWS)
+  const shown = expanded ? sortedFiltered : sortedFiltered.slice(0, MAX_ROWS)
 
   /** 可求和金额列（MONEY_KEYS 判断；全部行均为有限数字才算） */
   const sums = useMemo(() => {
@@ -144,13 +158,9 @@ export const DataTable: React.FC<{ rows: Record<string, unknown>[] }> = ({ rows 
     minimumFractionDigits: 2, maximumFractionDigits: 2,
   })
 
-  const colTemplate = `repeat(${columns.length}, minmax(max-content, 1fr))`
-  const stickyFirst = (i: number) =>
-    i === 0 ? 'sticky left-0 z-10' : ''
-
   return (
     <div>
-      {/* A2 状态筛选芯片（无状态列 / 值域 <2 不渲染；计数固定） */}
+      {/* A2 状态筛选芯片（无状态列 / 值域 <2 不渲染；计数固定用全量 rows） */}
       {showChips && (
         <div className="mb-1.5 flex items-center gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
           <Chip
@@ -173,88 +183,82 @@ export const DataTable: React.FC<{ rows: Record<string, unknown>[] }> = ({ rows 
       )}
 
       <div className="overflow-x-auto">
-        {/* 表头（可点击排序，箭头随升降旋转） */}
-        <div
-          className="grid border-b text-left text-xs"
-          style={{ gridTemplateColumns: colTemplate, color: 'var(--muted)', borderColor: 'var(--border)' }}
-        >
-          {columns.map((c, i) => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => toggleSort(c)}
-              className={`flex items-center gap-0.5 py-1.5 px-2 font-medium whitespace-nowrap transition-opacity hover:opacity-80 ${stickyFirst(i)}`}
-              style={i === 0 ? { background: 'var(--card)' } : undefined}
-            >
-              {fieldLabel(c)}
-              {sort?.key === c && (
-                <span
-                  className="inline-flex"
-                  style={{ transform: sort.dir === -1 ? 'rotate(180deg)' : undefined }}
+        {/* 原生 table：列宽由浏览器跨 thead/tbody 自动同步；border-separate(spacing-0)
+            让每个单元格自持边框（粘性首列位移时边线不掉） */}
+        <table className="w-full text-xs" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+          <thead>
+            <tr>
+              {columns.map((c, i) => (
+                <th
+                  key={c}
+                  scope="col"
+                  className="py-1.5 px-2 text-left font-medium whitespace-nowrap"
+                  style={{
+                    color: 'var(--muted)',
+                    borderBottom: '1px solid var(--border)',
+                    ...(i === 0 ? STICKY_FIRST : null),
+                  }}
                 >
-                  <Icon name="ChevronUp" size={12} />
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-
-        {/* 数据行：隐藏行 DOM 保留，grid-template-rows 0fr + opacity 收起（filter-table 写法） */}
-        {shown.map((row, i) => {
-          const visible =
-            filter === null || !showChips || String(row[statusCol!]) === filter
-          return (
-            <div
-              key={i}
-              className="grid"
-              style={{
-                gridTemplateRows: visible ? '1fr' : '0fr',
-                opacity: visible ? 1 : 0,
-                transition: `grid-template-rows 300ms ${EASE}, opacity 300ms ${EASE}`,
-                borderBottom: i === shown.length - 1 ? 'none' : '1px solid var(--border)',
-              }}
-            >
-              <div style={{ overflow: 'hidden' }}>
-                <div className="grid items-center" style={{ gridTemplateColumns: colTemplate }}>
-                  {columns.map((c, ci) => {
-                    const v = row[c]
-                    const tone = c === statusCol ? statusTone(v) : null
-                    return (
-                      <div
-                        key={c}
-                        className={`py-1.5 px-2 whitespace-nowrap text-xs ${stickyFirst(ci)}`}
-                        style={ci === 0
-                          ? { color: 'var(--fg-2)', background: 'var(--card)' }
-                          : { color: 'var(--fg-2)' }}
+                  <button
+                    type="button"
+                    onClick={() => toggleSort(c)}
+                    className="flex items-center gap-0.5 transition-opacity hover:opacity-80"
+                  >
+                    {fieldLabel(c)}
+                    {sort?.key === c && (
+                      <span
+                        className="inline-flex"
+                        style={{ transform: sort.dir === -1 ? 'rotate(180deg)' : undefined }}
                       >
-                        {tone ? (
+                        <Icon name="ChevronUp" size={12} />
+                      </span>
+                    )}
+                  </button>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {shown.map((row, i) => (
+              <tr key={i} style={ROW_ENTER}>
+                {columns.map((c, ci) => {
+                  const v = row[c]
+                  const tone = c === statusCol ? statusTone(v) : null
+                  return (
+                    <td
+                      key={c}
+                      className="py-1.5 px-2 whitespace-nowrap"
+                      style={{
+                        color: 'var(--fg-2)',
+                        borderBottom: '1px solid var(--border)',
+                        ...(ci === 0 ? STICKY_FIRST : null),
+                      }}
+                    >
+                      {tone ? (
+                        <span
+                          className="inline-flex items-center gap-1"
+                          style={{ color: TONE_COLORS[tone] }}
+                        >
                           <span
-                            className="inline-flex items-center gap-1"
-                            style={{ color: TONE_COLORS[tone] }}
-                          >
-                            <span
-                              className="h-1.5 w-1.5 rounded-full"
-                              style={{ background: TONE_COLORS[tone] }}
-                            />
-                            {formatValue(c, v)}
-                          </span>
-                        ) : (
-                          formatValue(c, v)
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
-          )
-        })}
+                            className="h-1.5 w-1.5 rounded-full"
+                            style={{ background: TONE_COLORS[tone] }}
+                          />
+                          {formatValue(c, v)}
+                        </span>
+                      ) : (
+                        formatValue(c, v)
+                      )}
+                    </td>
+                  )
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
 
-        {/* 表尾统计行：共 N 条 · 金额列合计（金额列可求和时） */}
-        <div
-          className="flex items-center gap-2 py-1.5 px-2 text-xs"
-          style={{ color: 'var(--muted)', borderTop: '1px solid var(--border)' }}
-        >
+        {/* 表尾统计行：共 N 条 · 金额列合计（金额列可求和时）。
+            最后一行数据自带 border-bottom，此处不再加 borderTop（只留其一）。 */}
+        <div className="flex items-center gap-2 py-1.5 px-2 text-xs" style={{ color: 'var(--muted)' }}>
           <span>共 {sortedFiltered.length} 条</span>
           {sums.map(([c, s]) => (
             <span key={c}>· {fieldLabel(c)}合计 {money(s)}</span>
@@ -262,14 +266,15 @@ export const DataTable: React.FC<{ rows: Record<string, unknown>[] }> = ({ rows 
         </div>
       </div>
 
-      {rows.length > MAX_ROWS && (
+      {/* 展开按钮文案用筛选后计数（与表尾一致）；筛选后 ≤MAX_ROWS 隐藏 */}
+      {sortedFiltered.length > MAX_ROWS && (
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
           className="mt-1.5 text-xs font-medium"
           style={{ color: 'var(--accent)' }}
         >
-          {expanded ? '收起' : `展开全部（共 ${rows.length} 条）`}
+          {expanded ? '收起' : `展开全部（共 ${sortedFiltered.length} 条）`}
         </button>
       )}
     </div>

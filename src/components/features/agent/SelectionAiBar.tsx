@@ -8,10 +8,10 @@
  * 接口：复用现成 POST /api/writing/assist（writing-client.writingAssist），指令映射
  * 改进→polish / 缩短→shorten / 自定义输入→custom；「解释」不调接口，直接把
  * 「请解释：{原文}」送回输入框（解释型回答长，放输入框合理）。
- * 回流：走 useAgentPrefill 同款通道——sessionStorage('agent:prefill') + window
- * 'agent:prefill' 事件，把文本送进 agent 输入框。
- * 权限：端点要求 writing:create，失败（success:false / 异常）时 toast
- * 「当前账号无此权限」，操作条不隐藏但按钮置灰。
+ * 回流：走 useAgentPrefill 同款通道——CustomEvent('agent:prefill') 携 { text, append: true }
+ * 对象 detail（不覆盖已有草稿，追加到草稿之后）。
+ * 权限：端点要求 writing:create；403/权限类错误 → toast「当前账号无此权限」并置灰
+ * 接口类按钮（denied）；其他失败 → toast 后端 error 文案，不置灰。
  */
 
 import React, { useEffect, useRef, useState } from 'react'
@@ -30,6 +30,10 @@ type Phase = 'idle' | 'busy' | 'done' | 'denied'
 const actionBtnCls =
   'flex items-center gap-1 rounded-lg px-2 py-1 text-xs transition-colors hover:bg-[color:var(--panel-2)] disabled:cursor-not-allowed disabled:opacity-50'
 
+/** 403/权限类错误：后端 403 返回「无权限：需要 writing:create」，非 JSON 兜底为「HTTP 403: …」 */
+const isPermissionError = (error?: string) =>
+  !!error && /403|无权限|forbidden/i.test(error)
+
 const SelectionAiBar: React.FC<SelectionAiBarProps> = ({ containerRef }) => {
   const info = useTextSelection(containerRef)
   const [phase, setPhase] = useState<Phase>('idle')
@@ -47,12 +51,9 @@ const SelectionAiBar: React.FC<SelectionAiBarProps> = ({ containerRef }) => {
     }
   }, [info?.text])
 
-  /** useAgentPrefill 同款回流通道 */
+  /** useAgentPrefill 追加通道：对象 detail（append:true）→ 不覆盖输入框已有草稿 */
   const prefill = (text: string) => {
-    try {
-      sessionStorage.setItem('agent:prefill', text)
-    } catch { /* ignore */ }
-    window.dispatchEvent(new Event('agent:prefill'))
+    window.dispatchEvent(new CustomEvent('agent:prefill', { detail: { text, append: true } }))
   }
 
   const finishByAssist = async (
@@ -65,13 +66,17 @@ const SelectionAiBar: React.FC<SelectionAiBarProps> = ({ containerRef }) => {
       if (res.success && res.data?.text) {
         prefill(res.data.text)
         setPhase('done')
-      } else {
+      } else if (isPermissionError(res.error)) {
         showToast('当前账号无此权限', 'error')
         setPhase('denied')
+      } else {
+        showToast(res.error || 'AI 处理失败', 'error')
+        setPhase('idle')
       }
     } catch {
-      showToast('当前账号无此权限', 'error')
-      setPhase('denied')
+      // writingAssist（apiClient）内部已 catch 不抛，理论不可达；兜底按普通失败（不进 denied）
+      showToast('AI 处理失败', 'error')
+      setPhase('idle')
     }
   }
 
@@ -106,9 +111,15 @@ const SelectionAiBar: React.FC<SelectionAiBarProps> = ({ containerRef }) => {
         transform: 'translateX(-50%)',
         background: 'var(--card)',
         borderColor: 'var(--border)',
-        animation: 'pop-in 220ms cubic-bezier(0.23,1,0.32,1) both',
+        animation: info.anchorVisible ? 'pop-in 220ms cubic-bezier(0.23,1,0.32,1) both' : 'none',
+        opacity: info.anchorVisible ? 1 : 0,
+        pointerEvents: info.anchorVisible ? undefined : 'none',
       }}
-      onMouseDown={(e) => e.preventDefault()}
+      onMouseDown={(e) => {
+        // 输入框正常聚焦（不禁默认），其余位置拦截默认行为以保住文字选区
+        if ((e.target as HTMLElement).closest?.('input,textarea')) return
+        e.preventDefault()
+      }}
     >
       {phase === 'busy' ? (
         <span className="flex items-center gap-1.5 px-1 text-xs" style={{ color: 'var(--fg-2)' }}>
@@ -122,7 +133,7 @@ const SelectionAiBar: React.FC<SelectionAiBarProps> = ({ containerRef }) => {
         </span>
       ) : (
         <>
-          <button type="button" className={actionBtnCls} style={{ color: 'var(--fg)' }} disabled={denied} onClick={explain}>
+          <button type="button" className={actionBtnCls} style={{ color: 'var(--fg)' }} onClick={explain}>
             <Icon name="MessageSquare" size={13} />
             解释
           </button>

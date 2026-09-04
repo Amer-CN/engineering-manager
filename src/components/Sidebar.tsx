@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef, useState } from 'react'
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Icon } from './ui/Icon'
 import { DropdownMenu } from './ui/DropdownMenu'
@@ -50,6 +50,11 @@ const Sidebar: React.FC<SidebarProps> = ({
   const itemRefs = useRef<Record<string, HTMLButtonElement | null>>({})
   const [hovered, setHovered] = useState<string | null>(null)
   const [capsule, setCapsule] = useState<{ top: number; height: number } | null>(null)
+
+  // 折叠时清 hovered：防止再展开瞬间胶囊闪现在旧项上（useLayoutEffect 会按 hovered 重测量）
+  useEffect(() => {
+    if (collapsed) setHovered(null)
+  }, [collapsed])
 
   useLayoutEffect(() => {
     if (collapsed || !hovered) { setCapsule(null); return }

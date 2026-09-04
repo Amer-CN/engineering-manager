@@ -45,4 +45,37 @@ describe('MarkdownRenderer 流式旧块退后（A4）', () => {
     expect(p.style.opacity).toBe('')
     expect(p.style.animation).toContain('stream-in')
   })
+
+  it('非流式路径（未传 streaming）→ 所有块也带 transition 内联定义', () => {
+    const { container } = render(<MarkdownRenderer content={'第一段\n\n第二段'} />)
+    const ps = container.querySelectorAll('p')
+    expect(ps.length).toBe(2)
+    ps.forEach((p) => {
+      expect((p as HTMLElement).style.transition).toContain('opacity')
+      expect((p as HTMLElement).style.animation).toBe('')
+    })
+  })
+
+  it('streaming 翻 false → 退后样式清空，但 transition 定义保留（平滑恢复不硬跳）', () => {
+    const { container, rerender } = render(<MarkdownRenderer content={'第一段\n\n第二段'} streaming />)
+    rerender(<MarkdownRenderer content={'第一段\n\n第二段'} streaming={false} />)
+    const ps = container.querySelectorAll('p')
+    expect(ps.length).toBe(2)
+    ps.forEach((p) => {
+      expect((p as HTMLElement).style.transition).toContain('opacity')
+      expect((p as HTMLElement).style.filter).toBe('')
+      expect((p as HTMLElement).style.animation).toBe('')
+    })
+  })
+
+  it('代码块卡片：注入 style 穿透 CodeBlockCard（非流式带 transition；流式首现带 stream-in）', () => {
+    const { container, rerender } = render(<MarkdownRenderer content={'```ts\nconst a = 1\n```'} />)
+    const card = container.querySelector('div.rounded-lg') as HTMLElement
+    expect(card.style.transition).toContain('opacity')
+
+    rerender(<MarkdownRenderer content={'```ts\nconst a = 1\n```'} streaming />)
+    const card2 = container.querySelector('div.rounded-lg') as HTMLElement
+    expect(card2.style.animation).toContain('stream-in')
+    expect(card2.style.transition).toContain('opacity')
+  })
 })
