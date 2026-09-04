@@ -13,6 +13,13 @@ interface ReportGeneratorModalProps {
 type PeriodPreset = 'day' | 'week' | 'month' | 'custom'
 type ScopeType = 'all' | 'project' | 'user'
 type ReportFormat = 'text' | 'chart'
+type ReportTheme = 'general' | 'wage'
+
+/** 报告主题二选一（默认综合经营） */
+const THEME_OPTIONS: { value: ReportTheme; label: string; desc: string }[] = [
+  { value: 'general', label: '综合经营', desc: '操作记录+业务 KPI，全局经营视角' },
+  { value: 'wage', label: '工资专项', desc: '工资总额/项目分布/走势/用工构成，老板视角' },
+]
 
 /** 报告形式二选一（默认文本版，零惊讶） */
 const FORMAT_OPTIONS: { value: ReportFormat; label: string; desc: string }[] = [
@@ -30,6 +37,37 @@ const ACTION_OPTIONS = [
   { value: 'logout', label: '登出' },
 ]
 
+/** 「报告主题」「报告形式」共用的二选一卡片节（DOM 与原内联版一致，控制文件行数在铁律上限内） */
+function renderPickSection<T extends string>(
+  title: string, options: { value: T; label: string; desc: string }[], active: T, onPick: (value: T) => void
+) {
+  return (
+    <div>
+      <label className="text-xs font-medium mb-2 block" style={{ color: 'var(--fg-2)' }}>{title}</label>
+      <div className="grid grid-cols-2 gap-2">
+        {options.map((o) => {
+          const isActive = active === o.value
+          return (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => onPick(o.value)}
+              className="rounded-lg border px-3 py-2.5 text-left transition-colors"
+              style={{
+                borderColor: isActive ? 'var(--accent)' : 'var(--border)',
+                background: isActive ? 'var(--accent-soft, var(--bg))' : 'transparent',
+              }}
+            >
+              <div className="text-xs font-bold" style={{ color: isActive ? 'var(--fg)' : 'var(--fg-2)' }}>{o.label}</div>
+              <div className="text-caption mt-1" style={{ color: 'var(--muted)' }}>{o.desc}</div>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 /**
  * 报告生成弹窗 — 选周期/范围 → 一键生成 → 富文本预览编辑 → 导出
  */
@@ -45,6 +83,7 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
   const [scopeId, setScopeId] = useState('')
   const [selectedActions, setSelectedActions] = useState<string[]>([])
   const [format, setFormat] = useState<ReportFormat>('text')
+  const [theme, setTheme] = useState<ReportTheme>('general')
   // 结果面板的 format 取生成时快照（结果出来后改表单不影响已生成报告的呈现）
   const [resultFormat, setResultFormat] = useState<ReportFormat>('text')
 
@@ -60,6 +99,7 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
       period: periodPreset === 'custom' ? 'week' : periodPreset,
       scope,
       format,
+      theme,
     }
 
     if (periodPreset === 'custom' && customStart && customEnd) {
@@ -76,7 +116,7 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
     }
 
     return req
-  }, [periodPreset, customStart, customEnd, scope, scopeId, selectedActions, format])
+  }, [periodPreset, customStart, customEnd, scope, scopeId, selectedActions, format, theme])
 
   // 生成报告
   const handleGenerate = useCallback(async () => {
@@ -308,36 +348,11 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
               </div>
             </div>
 
+            {/* ── 报告主题 ── */}
+            {renderPickSection('报告主题', THEME_OPTIONS, theme, setTheme)}
+
             {/* ── 报告形式 ── */}
-            <div>
-              <label className="text-xs font-medium mb-2 block" style={{ color: 'var(--fg-2)' }}>
-                报告形式
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {FORMAT_OPTIONS.map((o) => {
-                  const active = format === o.value
-                  return (
-                    <button
-                      key={o.value}
-                      type="button"
-                      onClick={() => setFormat(o.value)}
-                      className="rounded-lg border px-3 py-2.5 text-left transition-colors"
-                      style={{
-                        borderColor: active ? 'var(--accent)' : 'var(--border)',
-                        background: active ? 'var(--accent-soft, var(--bg))' : 'transparent',
-                      }}
-                    >
-                      <div className="text-xs font-bold" style={{ color: active ? 'var(--fg)' : 'var(--fg-2)' }}>
-                        {o.label}
-                      </div>
-                      <div className="text-caption mt-1" style={{ color: 'var(--muted)' }}>
-                        {o.desc}
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
+            {renderPickSection('报告形式', FORMAT_OPTIONS, format, setFormat)}
 
             {/* ── 错误信息 ── */}
             {error && (

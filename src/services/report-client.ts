@@ -15,6 +15,8 @@ export interface ReportRequest {
   actionFilter?: string[]
   /** 报告形式：text=文本版（缺省）；chart=图形版（每节一图+大数字，例会投影用） */
   format?: 'text' | 'chart'
+  /** 报告主题：general=综合经营（缺省）；wage=工资专项（工资台账聚合，老板视角工资月报） */
+  theme?: 'general' | 'wage'
 }
 
 export interface ReportResponse {

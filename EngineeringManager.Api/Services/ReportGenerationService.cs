@@ -57,13 +57,29 @@ public class ReportGenerationService
                     return (false, null, "无权访问该项目的报告数据");
             }
 
-            // ② 聚合审计日志
-            var auditData = await AggregateAuditLogsAsync(db, request, userId, isAdmin);
+            // ②③ 聚合：theme=wage 走工资台账专项聚合（替代审计+KPI 注入）；general 主题原逻辑逐字不动
+            var isWageTheme = string.Equals(request.Theme, "wage", StringComparison.OrdinalIgnoreCase);
+            AuditAggregate auditData;
+            KpiAggregate kpiData;
+            WageAggregate wageData;
+            if (isWageTheme)
+            {
+                auditData = null!;
+                kpiData = null!;
+                wageData = await AggregateWageAsync(db, request, userId);
+            }
+            else
+            {
+                wageData = null!;
+                // ② 聚合审计日志
+                auditData = await AggregateAuditLogsAsync(db, request, userId, isAdmin);
 
-            // ③ 聚合业务 KPI（按 scope 过滤）
-            var kpiData = await AggregateKpiAsync(db, request, userId, isAdmin);
+                // ③ 聚合业务 KPI（按 scope 过滤）
+                kpiData = await AggregateKpiAsync(db, request, userId, isAdmin);
+            }
 
-            // ④ 组织 prompt（format=chart 走图形版结构化数据节提示词，缺省 text 文本版一字不动）
+            // ④ 组织 prompt（format=chart 走图形版结构化数据节提示词，缺省 text 文本版一字不动；
+            //    theme=wage 切工资专项提示词：标题带「（工资专项）」后缀，聚焦薪酬与用工成本）
             var periodLabel = request.Period switch
             {
                 "day" => "日报",
@@ -72,13 +88,27 @@ public class ReportGenerationService
                 _ => "报告"
             };
 
-            var systemPrompt = string.Equals(request.Format, "chart", StringComparison.OrdinalIgnoreCase)
-                ? BuildChartSystemPrompt(periodLabel)
-                : $"你是工程管家报告助手，根据以下操作记录和业务数据生成{periodLabel}。" +
-                "要求：使用 Markdown 格式，包含摘要、关键指标、操作明细、总结建议四个部分。" +
-                "语言简洁专业，数据优先，避免空泛描述。";
-
-            var userPrompt = BuildUserPrompt(request, auditData, kpiData, periodLabel);
+            string systemPrompt;
+            string userPrompt;
+            if (isWageTheme)
+            {
+                systemPrompt = string.Equals(request.Format, "chart", StringComparison.OrdinalIgnoreCase)
+                    ? BuildWageChartSystemPrompt(periodLabel)
+                    : $"你是工程管家工资分析助手，基于以下工资台账聚合数据生成{periodLabel}。" +
+                    "聚焦薪酬总额、项目分布、走势与用工构成；数据优先，禁止编造；" +
+                    "要求：使用 Markdown 格式，包含摘要、关键指标、明细构成、总结建议四个部分（四部分结构照旧），" +
+                    "标题需带「（工资专项）」后缀。语言简洁专业，避免空泛描述。";
+                userPrompt = BuildWageUserPrompt(request, wageData, periodLabel);
+            }
+            else
+            {
+                systemPrompt = string.Equals(request.Format, "chart", StringComparison.OrdinalIgnoreCase)
+                    ? BuildChartSystemPrompt(periodLabel)
+                    : $"你是工程管家报告助手，根据以下操作记录和业务数据生成{periodLabel}。" +
+                    "要求：使用 Markdown 格式，包含摘要、关键指标、操作明细、总结建议四个部分。" +
+                    "语言简洁专业，数据优先，避免空泛描述。";
+                userPrompt = BuildUserPrompt(request, auditData, kpiData, periodLabel);
+            }
 
             // ⑤ 调用 LLM
             var messages = new List<AgentMessage>
@@ -212,6 +242,93 @@ public class ReportGenerationService
     }
 
     /// <summary>
+    /// 工资专项聚合（theme=wage）：当期总额笔数 / 按项目 TOP8 / 近 6 期走势 / 用工构成 TOP6。
+    /// 权限：沿用 CurrentUser.UserFilterWithAuthorizedProjects（照抄 WageEndpoints /api/wages/stats 的 where 组装模式）+ deleted_at IS NULL。
+    /// 期间口径：照抄 ResolveDateRange（KPI 同款）映射到 wages.year_month（yyyy-MM）。
+    /// 单位契约：库内分、出参元（ToYuan 换算）。
+    /// </summary>
+    private async Task<WageAggregate> AggregateWageAsync(IDbConnection db, ReportRequest request, string userId)
+    {
+        var aggregate = new WageAggregate();
+
+        // 权限过滤：scope=all 仅 admin（入口已校验）→ 全量；其余按「本人创建 OR 授权项目」过滤
+        var dataScope = request.Scope == "all"
+            ? CurrentUser.DataScope.All
+            : CurrentUser.DataScope.AuthorizedProjects;
+        // 第三参必须带表前缀：查询②④ JOIN projects/members，裸 created_by 会二义性报错（对照 WageEndpoints.cs:372）
+        var permFilter = CurrentUser.UserFilterWithAuthorizedProjects(dataScope, "w.project_id", "w.created_by");
+        var param = new DynamicParameters();
+        param.Add("Uid", userId);
+
+        // 期间：request 起止日期 / Period → year_month 区间（照抄 ResolveDateRange 口径）
+        var (startYm, endYm) = ResolveWageMonthRange(request);
+        aggregate.StartYm = startYm;
+        aggregate.EndYm = endYm;
+        param.Add("StartYm", startYm);
+        param.Add("EndYm", endYm);
+
+        var baseWhere = $" WHERE {permFilter} AND [w].[deleted_at] IS NULL";
+        var currentWhere = $"{baseWhere} AND [w].[year_month] BETWEEN @StartYm AND @EndYm";
+
+        // ① 当期总额与笔数
+        aggregate.TotalWageYuan = ToYuan(await db.ExecuteScalarAsync<long>(
+            $"SELECT COALESCE(SUM([w].[actual_wage]), 0) FROM [wages] w{currentWhere}", param));
+        aggregate.TotalCount = await db.ExecuteScalarAsync<int>(
+            $"SELECT COUNT(*) FROM [wages] w{currentWhere}", param);
+
+        // ② 按项目分布 TOP8（金额降序）
+        aggregate.ProjectRows = (await db.QueryAsync(
+            "SELECT [w].[project_id] AS [project_id], [p].[name] AS [project_name], " +
+            "SUM([w].[actual_wage]) AS [total_fen], COUNT(*) AS [count] " +
+            "FROM [wages] w LEFT JOIN [projects] p ON [w].[project_id] = [p].[id]" +
+            $"{currentWhere} GROUP BY [w].[project_id], [p].[name] ORDER BY [total_fen] DESC LIMIT 8",
+            param)).ToList();
+
+        // ③ 近 6 期走势（期间止月向前取 6 期，升序输出）
+        var trendRows = (await db.QueryAsync(
+            "SELECT [w].[year_month] AS [ym], SUM([w].[actual_wage]) AS [total_fen], COUNT(*) AS [count] " +
+            $"FROM [wages] w{baseWhere} AND [w].[year_month] <= @EndYm " +
+            "GROUP BY [w].[year_month] ORDER BY [w].[year_month] DESC LIMIT 6",
+            param)).ToList();
+        trendRows.Reverse();
+        aggregate.TrendRows = trendRows;
+
+        // ④ 用工构成 TOP6：members.role（管理人员=职位 / 农民工=工种，见 003 迁移与 Member 类型定义）
+        aggregate.CompositionRows = (await db.QueryAsync(
+            "SELECT COALESCE(NULLIF([m].[role], ''), '未标注') AS [role_name], " +
+            "SUM([w].[actual_wage]) AS [total_fen], COUNT(*) AS [count] " +
+            "FROM [wages] w LEFT JOIN [members] m ON [w].[member_id] = [m].[id]" +
+            $"{currentWhere} GROUP BY COALESCE(NULLIF([m].[role], ''), '未标注') " +
+            "ORDER BY [total_fen] DESC LIMIT 6",
+            param)).ToList();
+
+        return aggregate;
+    }
+
+    /// <summary>
+    /// 工资专项（theme=wage）期间换算：照抄 ResolveDateRange 口径，映射到 wages.year_month（yyyy-MM）。
+    /// </summary>
+    private static (string startYm, string endYm) ResolveWageMonthRange(ReportRequest request)
+    {
+        if (!string.IsNullOrEmpty(request.StartDate) && !string.IsNullOrEmpty(request.EndDate))
+            return (ToYearMonth(request.StartDate), ToYearMonth(request.EndDate));
+
+        var now = DateTime.Now;
+        return request.Period switch
+        {
+            "day" => (YearMonthOf(now), YearMonthOf(now)),
+            "week" => (YearMonthOf(now.AddDays(-7)), YearMonthOf(now)),
+            "month" => (YearMonthOf(now.AddMonths(-1)), YearMonthOf(now)),
+            _ => (YearMonthOf(now.AddDays(-7)), YearMonthOf(now)),
+        };
+    }
+
+    private static string YearMonthOf(DateTime date) => date.ToString("yyyy-MM");
+
+    /// <summary>日期字符串（yyyy-MM-dd）取前 7 位年月；不足 7 位原样返回。</summary>
+    private static string ToYearMonth(string date) => date.Length >= 7 ? date.Substring(0, 7) : date;
+
+    /// <summary>
     /// 构建 KPI 聚合过滤子句：参数化 conditions + string.Join 组装，仅插值本地构造的 filter，
     /// 所有值经 Dapper @参数传递（B1：不插值用户输入 / 字段名 / 排序名 / scope 原文）。
     /// internal 暴露以供单测校验各 scope/日期组合口径一致。
@@ -266,6 +383,82 @@ public class ReportGenerationService
             "语言简洁专业，数据优先。"
         );
     }
+
+    /// <summary>
+    /// 工资专项（theme=wage）图形版 systemPrompt：结构规则沿 BuildChartSystemPrompt（结论句小节 + chart 块），
+    /// 形状固定映射：trend=月度工资走势（近 6 期，y=金额元）、bars=按项目工资 TOP（y=金额元）、
+    /// waffle=用工/项目构成占比（value=百分比）；某形状数据不足可不产该块。
+    /// </summary>
+    private static string BuildWageChartSystemPrompt(string periodLabel)
+    {
+        return string.Join('\n',
+            $"你是工程管家工资分析助手，根据工资台账聚合数据生成{periodLabel}（工资专项，图形版）。",
+            "聚焦薪酬总额、按项目分布、逐月走势与用工构成。输出 Markdown，结构规则：",
+            $"1. 首行 `# {periodLabel}标题（工资专项）`，次行 `> 期间：{{起}}~{{止}}`；",
+            "2. 3-4 个小节，每节：`## 结论句标题`（一句可从数据验证的判断，禁止中性名词）→ 2-4 行 `- 要点`；",
+            "3. 每节末尾放一个图表数据块（三选一，按数据形状选）：",
+            "```chart-trend\n{\"label\":\"月度工资走势（近 6 期）\",\"points\":[{\"x\":\"2026-04\",\"y\":123456},...]}\n```（时间序列近 6 期，y=金额元，数据不足 5 期可不产该块）",
+            "```chart-waffle\n{\"title\":\"用工构成\",\"rows\":[{\"name\":\"工种\",\"value\":33},...]}\n```（用工/项目构成占比，value 为百分比，≤6 类）",
+            "```chart-bars\n{\"title\":\"按项目工资 TOP\",\"rows\":[{\"name\":\"项目名\",\"value\":12345},...]}\n```（按项目工资比较 ≤8 条，金额单位元）",
+            "x 用月份或短日期、y/value 用真实数字（金额单位元、百分比不带 % 号），禁止编造数据；某形状数据不足时可不产该块；",
+            "4. 结尾 `## 值得记住的数字` 节：3-4 行 `- {数字}｜{一行说明}`。",
+            "语言简洁专业，数据优先。"
+        );
+    }
+
+    /// <summary>
+    /// 工资专项（theme=wage）userPrompt：只注入工资台账四组聚合（替代审计日志 + 综合 KPI），
+    /// 风格与现有 KPI 注入一致：字段名 + 数值 + 单位元。
+    /// </summary>
+    private static string BuildWageUserPrompt(
+        ReportRequest request, WageAggregate wage, string periodLabel)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"请根据以下工资台账聚合数据生成{periodLabel}（工资专项）" +
+            $"（{request.StartDate} ~ {request.EndDate}，工资月份 {wage.StartYm} ~ {wage.EndYm}）：");
+        sb.AppendLine();
+
+        // 当期总额与笔数
+        sb.AppendLine("## 工资总额");
+        sb.AppendLine($"当期实发工资: {wage.TotalWageYuan:F2} 元，工资条数: {wage.TotalCount} 笔");
+        sb.AppendLine();
+
+        // 按项目分布 TOP8
+        if (wage.ProjectRows.Count > 0)
+        {
+            sb.AppendLine("## 按项目分布 TOP8（金额降序）");
+            foreach (var r in wage.ProjectRows)
+            {
+                var name = (string?)r.project_name;
+                sb.AppendLine($"- {(string.IsNullOrWhiteSpace(name) ? $"项目 #{(long)r.project_id}" : name)}" +
+                    $": {ToYuan(Convert.ToInt64(r.total_fen)):F2} 元（{r.count} 笔）");
+            }
+            sb.AppendLine();
+        }
+
+        // 近 6 期走势
+        if (wage.TrendRows.Count > 0)
+        {
+            sb.AppendLine("## 近 6 期工资走势（按月升序）");
+            foreach (var r in wage.TrendRows)
+                sb.AppendLine($"- {r.ym}: {ToYuan(Convert.ToInt64(r.total_fen)):F2} 元（{r.count} 笔）");
+            sb.AppendLine();
+        }
+
+        // 用工构成 TOP6
+        if (wage.CompositionRows.Count > 0)
+        {
+            sb.AppendLine("## 用工构成 TOP6（按工种/岗位）");
+            foreach (var r in wage.CompositionRows)
+                sb.AppendLine($"- {r.role_name}: {ToYuan(Convert.ToInt64(r.total_fen)):F2} 元（{r.count} 笔）");
+            sb.AppendLine();
+        }
+
+        return sb.ToString();
+    }
+
+    // 单位契约：库内分、出参元（与 WageEndpoints.ToYuan 同口径）
+    private static decimal ToYuan(long fen) => fen / 100m;
 
     private static string BuildUserPrompt(
         ReportRequest request, AuditAggregate audit, KpiAggregate kpi, string periodLabel)
@@ -418,6 +611,18 @@ public class ReportGenerationService
         public int WageCount { get; set; }
         public double WageAmount { get; set; }
     }
+
+    /// <summary>工资专项聚合结果（金额一律元，聚合查询内为分、出参前经 ToYuan 换算）</summary>
+    internal class WageAggregate
+    {
+        public decimal TotalWageYuan { get; set; }
+        public int TotalCount { get; set; }
+        public string StartYm { get; set; } = string.Empty;
+        public string EndYm { get; set; } = string.Empty;
+        public List<dynamic> ProjectRows { get; set; } = new();
+        public List<dynamic> TrendRows { get; set; } = new();
+        public List<dynamic> CompositionRows { get; set; } = new();
+    }
 }
 
 /// <summary>
@@ -433,4 +638,6 @@ public record ReportRequest
     public string[]? ActionFilter { get; init; }
     /// <summary>报告形式：text=文本版（缺省，旧调用方零影响）；chart=图形版（结构化数据节）</summary>
     public string Format { get; init; } = "text"; // text | chart
+    /// <summary>报告主题：general=综合经营（缺省，全链路零改动）；wage=工资专项（工资台账聚合注入）</summary>
+    public string Theme { get; init; } = "general"; // general | wage
 }
