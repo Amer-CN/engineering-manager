@@ -67,10 +67,6 @@ export interface AgentConversation {
   updatedAt: string
   messageCount: number
   lastMessage?: string
-  /** 归档时间（非空 = 已归档，与软删除语义分离） */
-  archivedAt?: string | null
-  /** 软删除时间（仅「最近删除」列表返回，非空 = 已软删除） */
-  deletedAt?: string | null
 }
 
 /** 对话详情（含消息列表） */

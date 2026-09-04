@@ -453,11 +453,8 @@ public static class AgentEndpoints
 
             try
             {
-                // scope=deleted 返回"最近删除"（软删除）列表供恢复；默认返回未删除列表（含 archivedAt）
-                var scope = ctx.Request.Query["scope"].ToString();
-                var list = scope == "deleted"
-                    ? await conversations.GetDeletedConversationsAsync(db, uid)
-                    : await conversations.GetConversationsAsync(db, uid);
+                // 只返回未删除列表（软删除超过 7 天由启动清理永久清除）
+                var list = await conversations.GetConversationsAsync(db, uid);
                 return Common.Ok(list);
             }
             catch (Exception ex)
@@ -559,76 +556,6 @@ public static class AgentEndpoints
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"[AgentEndpoints] /api/agent/conversations/{id} PUT 失败: {ex.Message}");
-                return Common.Fail(Common.Sanitize(ex.Message));
-            }
-        });
-
-        // ═══════════════════════════════════════════════════════════
-        // 归档 / 取消归档 / 恢复（软删除）
-        // ═══════════════════════════════════════════════════════════
-
-        app.MapPatch("/api/agent/conversations/{id}/archive", async (
-            HttpContext ctx,
-            long id,
-            IDbConnection db,
-            AgentConversationService conversations) =>
-        {
-            var uid = CurrentUser.GetUserId(ctx);
-            if (string.IsNullOrEmpty(uid))
-                return Common.Fail("未登录", 401);
-
-            try
-            {
-                var ok = await conversations.ArchiveConversationAsync(db, id, uid);
-                return ok ? Common.Ok() : Common.NotFound("对话不存在或无权操作");
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"[AgentEndpoints] /api/agent/conversations/{id}/archive 失败: {ex.Message}");
-                return Common.Fail(Common.Sanitize(ex.Message));
-            }
-        });
-
-        app.MapPatch("/api/agent/conversations/{id}/unarchive", async (
-            HttpContext ctx,
-            long id,
-            IDbConnection db,
-            AgentConversationService conversations) =>
-        {
-            var uid = CurrentUser.GetUserId(ctx);
-            if (string.IsNullOrEmpty(uid))
-                return Common.Fail("未登录", 401);
-
-            try
-            {
-                var ok = await conversations.UnarchiveConversationAsync(db, id, uid);
-                return ok ? Common.Ok() : Common.NotFound("对话不存在或无权操作");
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"[AgentEndpoints] /api/agent/conversations/{id}/unarchive 失败: {ex.Message}");
-                return Common.Fail(Common.Sanitize(ex.Message));
-            }
-        });
-
-        app.MapPatch("/api/agent/conversations/{id}/restore", async (
-            HttpContext ctx,
-            long id,
-            IDbConnection db,
-            AgentConversationService conversations) =>
-        {
-            var uid = CurrentUser.GetUserId(ctx);
-            if (string.IsNullOrEmpty(uid))
-                return Common.Fail("未登录", 401);
-
-            try
-            {
-                var ok = await conversations.RestoreConversationAsync(db, id, uid);
-                return ok ? Common.Ok() : Common.NotFound("对话不存在或无权操作");
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"[AgentEndpoints] /api/agent/conversations/{id}/restore 失败: {ex.Message}");
                 return Common.Fail(Common.Sanitize(ex.Message));
             }
         });
@@ -824,6 +751,27 @@ public static class AgentEndpoints
             {
                 Console.Error.WriteLine($"[AgentEndpoints] /api/agent/config/reload 失败: {ex.Message}");
                 return Common.Fail(Common.Sanitize(ex.Message));
+            }
+        });
+
+        // ═══════════════════════════════════════════════════════════
+        // 启动清理：永久清除软删除超过 7 天的会话（连带消息），用户不可见。
+        // fire-and-forget，失败只记日志（沿用现有 Console.Error 风格）。
+        // ═══════════════════════════════════════════════════════════
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                // IDbConnection 为 Scoped，启动期无请求上下文，需自建 scope 取连接
+                using var scope = app.Services.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<IDbConnection>();
+                var conversations = scope.ServiceProvider.GetRequiredService<AgentConversationService>();
+                await conversations.PurgeExpiredDeletedAsync(db);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[AgentEndpoints] 启动清理过期已删除会话失败: {ex.Message}");
             }
         });
     }

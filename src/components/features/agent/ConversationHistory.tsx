@@ -1,4 +1,4 @@
-/** ConversationHistory — 对话历史（右栏常驻/抽屉 + 搜索 + 重命名 + 归档/取消归档 + 删除/恢复 + 置顶 + 批量管理）
+/** ConversationHistory — 对话历史（右栏常驻/抽屉 + 搜索 + 重命名 + 删除（确认后软删除）+ 置顶 + 批量管理）
  *  分组纯逻辑在 conversationGrouping.ts（CI 行数门禁拆分） */
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -8,20 +8,15 @@ import { HoverScrollbar } from '@/components/ui/HoverScrollbar'
 import { useToastStore } from '@/store/toastStore'
 import {
   getAgentConversations,
-  getDeletedAgentConversations,
   deleteAgentConversation,
   renameAgentConversation,
-  archiveConversation,
-  unarchiveConversation,
-  restoreConversation,
 } from '@/services/agent-client'
 import type { AgentConversation } from '@/types/agent'
 import { getPinnedConversationIds, setPinnedConversationIds } from '@/utils/conversationPins'
-import { buildConversationGroups, isArchived } from './conversationGrouping'
+import { buildConversationGroups } from './conversationGrouping'
 import { ConversationHistoryItem } from './ConversationHistoryItem'
 import ConversationListBody from './ConversationListBody'
 import BatchActionBar from './BatchActionBar'
-import type { ItemVariant } from './ConversationHistoryItem'
 
 interface ConversationHistoryProps {
   currentConversationId?: number | null
@@ -40,7 +35,6 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
   open = false, onClose, inline = false, refreshTrigger = 0,
 }) => {
   const [conversations, setConversations] = useState<AgentConversation[]>([])
-  const [deletedConversations, setDeletedConversations] = useState<AgentConversation[]>([])
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -49,8 +43,6 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
   const [deleting, setDeleting] = useState(false)
   const [renamingId, setRenamingId] = useState<number | null>(null)
   const [renameValue, setRenameValue] = useState('')
-  const [archivedOpen, setArchivedOpen] = useState(false)
-  const [deletedOpen, setDeletedOpen] = useState(false)
   const [batchMode, setBatchMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [pinnedIds, setPinnedIds] = useState<number[]>(() => getPinnedConversationIds())
@@ -62,12 +54,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
     setLoading(true)
     setLoadError(false)
     try {
-      const [active, deleted] = await Promise.all([
-        getAgentConversations(),
-        getDeletedAgentConversations(),
-      ])
-      setConversations(active)
-      setDeletedConversations(deleted)
+      setConversations(await getAgentConversations())
     } catch {
       setLoadError(true)
     } finally { setLoading(false) }
@@ -75,7 +62,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
 
   useEffect(() => { loadConversations() }, [loadConversations, refreshTrigger])
 
-  // ── 删除（软删除）：从进行中/已归档移除，乐观放入「最近删除」 ──
+  // ── 删除（ConfirmDialog 确认后软删除）：从列表乐观移除 ──
   const handleDelete = useCallback(async () => {
     const targets = batchDeleteTargets ?? (deleteTarget ? [deleteTarget] : [])
     if (targets.length === 0) return
@@ -84,10 +71,6 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
     setConversations(prev => prev.filter(c => !ids.has(c.id)))
     try {
       await Promise.all(targets.map(t => deleteAgentConversation(t.id)))
-      setDeletedConversations(prev => [
-        ...targets.map(t => ({ ...t, deletedAt: new Date().toISOString() })),
-        ...prev,
-      ])
       showToast(`已删除 ${targets.length} 个对话`, 'success')
       // 删除的正是当前打开的会话 → 重置会话流，避免继续发送写入已删除会话（黑洞）
       if (currentConversationId != null && ids.has(currentConversationId)) onCurrentConversationDeleted?.()
@@ -101,61 +84,6 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
       setSelectedIds(new Set())
     }
   }, [deleteTarget, batchDeleteTargets, showToast, currentConversationId, onCurrentConversationDeleted])
-
-  // ── 归档 ──
-  const handleArchive = useCallback(async (conv: AgentConversation) => {
-    const now = new Date().toISOString()
-    setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, archivedAt: now } : c))
-    try {
-      const ok = await archiveConversation(conv.id)
-      if (ok) { showToast('已归档', 'success') }
-      else {
-        setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, archivedAt: null } : c))
-        showToast('归档失败', 'error')
-      }
-    } catch {
-      setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, archivedAt: null } : c))
-      showToast('归档失败', 'error')
-    }
-  }, [showToast])
-
-  // ── 取消归档 ──
-  const handleUnarchive = useCallback(async (conv: AgentConversation) => {
-    const prevArchivedAt = conv.archivedAt
-    setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, archivedAt: null } : c))
-    try {
-      const ok = await unarchiveConversation(conv.id)
-      if (ok) { showToast('已取消归档', 'success') }
-      else {
-        setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, archivedAt: prevArchivedAt } : c))
-        showToast('操作失败', 'error')
-      }
-    } catch {
-      setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, archivedAt: prevArchivedAt } : c))
-      showToast('操作失败', 'error')
-    }
-  }, [showToast])
-
-  // ── 恢复（从最近删除还原） ──
-  const handleRestore = useCallback(async (conv: AgentConversation) => {
-    setDeletedConversations(prev => prev.filter(c => c.id !== conv.id))
-    const restored: AgentConversation = { ...conv, deletedAt: null }
-    setConversations(prev => [...prev, restored].sort((a, b) =>
-      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()))
-    try {
-      const ok = await restoreConversation(conv.id)
-      if (ok) { showToast('对话已恢复', 'success') }
-      else {
-        setConversations(prev => prev.filter(c => c.id !== conv.id))
-        setDeletedConversations(prev => [conv, ...prev])
-        showToast('恢复失败', 'error')
-      }
-    } catch {
-      setConversations(prev => prev.filter(c => c.id !== conv.id))
-      setDeletedConversations(prev => [conv, ...prev])
-      showToast('恢复失败', 'error')
-    }
-  }, [showToast])
 
   // ── 置顶/取消置顶（localStorage 持久化） ──
   const handleTogglePin = useCallback((conv: AgentConversation) => {
@@ -204,10 +132,10 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
 
   const pinnedSet = useMemo(() => new Set(pinnedIds), [pinnedIds])
 
-  // 四组数据（置顶 / 进行中按日期分档 / 已归档 / 最近删除）——纯逻辑在 conversationGrouping.ts
-  const { pinnedItems, groupedOngoing, archivedItems, deletedItems, isAllEmpty } = useMemo(
-    () => buildConversationGroups(conversations, deletedConversations, pinnedSet, matchesQuery),
-    [conversations, deletedConversations, pinnedSet, matchesQuery],
+  // 两组数据（置顶 / 进行中按日期分档）——纯逻辑在 conversationGrouping.ts
+  const { pinnedItems, groupedOngoing, isAllEmpty } = useMemo(
+    () => buildConversationGroups(conversations, pinnedSet, matchesQuery),
+    [conversations, pinnedSet, matchesQuery],
   )
 
   // ── 批量模式 ──
@@ -230,32 +158,17 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
     })
   }, [])
 
-  // 批量归档：逐条调用现有 archiveConversation，失败静默（toast 已有提示）
-  const handleBatchArchive = useCallback(async () => {
-    const targets = conversations.filter(c => !isArchived(c) && selectedIds.has(c.id))
-    if (targets.length === 0) return
-    await Promise.all(targets.map(conv => archiveConversation(conv.id)))
-    setConversations(prev => {
-      const now = new Date().toISOString()
-      const ids = new Set(targets.map(t => t.id))
-      return prev.map(c => ids.has(c.id) ? { ...c, archivedAt: now } : c)
-    })
-    showToast(`已归档 ${targets.length} 个对话`, 'success')
-    exitBatchMode()
-  }, [conversations, selectedIds, showToast, exitBatchMode])
-
   const handleBatchDelete = useCallback(() => {
-    const targets = conversations.filter(c => !isArchived(c) && selectedIds.has(c.id))
+    const targets = conversations.filter(c => selectedIds.has(c.id))
     if (targets.length === 0) return
     setBatchDeleteTargets(targets)
   }, [conversations, selectedIds])
 
-  /** 渲染单条会话行（传给 CollapsibleSection 的回调） */
-  const renderItem = (conv: AgentConversation, variant: ItemVariant) => (
+  /** 渲染单条会话行（传给分组的回调） */
+  const renderItem = (conv: AgentConversation) => (
     <ConversationHistoryItem
       key={conv.id}
       conv={conv}
-      variant={variant}
       currentConversationId={currentConversationId}
       renamingId={renamingId}
       renameValue={renameValue}
@@ -267,15 +180,12 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
       onClose={onClose}
       inline={inline}
       startRename={startRename}
-      handleArchive={handleArchive}
-      handleUnarchive={handleUnarchive}
-      handleRestore={handleRestore}
       setDeleteTarget={setDeleteTarget}
-      batchMode={batchMode && variant !== 'deleted'}
+      batchMode={batchMode}
       checked={selectedIds.has(conv.id)}
       onToggleCheck={toggleCheck}
-      pinned={variant === 'active' && pinnedSet.has(conv.id)}
-      onTogglePin={variant === 'active' ? handleTogglePin : undefined}
+      pinned={pinnedSet.has(conv.id)}
+      onTogglePin={handleTogglePin}
     />
   )
 
@@ -316,14 +226,10 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
       <HoverScrollbar className="flex-1">
         <div className="px-2 pb-4">
           <ConversationListBody
-            groups={{ pinnedItems, groupedOngoing, archivedItems, deletedItems, isAllEmpty }}
+            groups={{ pinnedItems, groupedOngoing, isAllEmpty }}
             loading={loading}
             loadError={loadError}
             searchQuery={searchQuery}
-            archivedOpen={archivedOpen}
-            deletedOpen={deletedOpen}
-            onToggleArchived={() => setArchivedOpen(o => !o)}
-            onToggleDeleted={() => setDeletedOpen(o => !o)}
             onRetry={loadConversations}
             renderItem={renderItem}
           />
@@ -335,7 +241,6 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
         <BatchActionBar
           selectedCount={selectedIds.size}
           onBatchDelete={handleBatchDelete}
-          onBatchArchive={handleBatchArchive}
           onExit={exitBatchMode}
         />
       )}
@@ -345,12 +250,12 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
   const confirmDialog = batchDeleteTargets ? (
     <ConfirmDialog isOpen onClose={() => setBatchDeleteTargets(null)} onConfirm={handleDelete}
       title="批量删除对话"
-      content={`确定要删除所选的 ${batchDeleteTargets.length} 个对话吗？删除后可在「最近删除」中恢复。`}
+      content={`确定要删除所选的 ${batchDeleteTargets.length} 个对话吗？删除后 ${batchDeleteTargets.length} 个对话及其消息将无法恢复。`}
       confirmText="删除" confirmVariant="danger" loading={deleting} />
   ) : (
     <ConfirmDialog isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={handleDelete}
       title="删除对话"
-      content={`确定要删除「${deleteTarget?.title || `对话 ${deleteTarget?.id}`}」吗？删除后可在「最近删除」中恢复。`}
+      content={`确定要删除「${deleteTarget?.title || `对话 ${deleteTarget?.id}`}」吗？删除后该对话及其消息将无法恢复。`}
       confirmText="删除" confirmVariant="danger" loading={deleting} />
   )
 
