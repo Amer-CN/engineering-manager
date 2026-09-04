@@ -49,7 +49,11 @@ export function useDictation({ onText }: UseDictationOptions) {
     let cancelled = false
     getSttStatus()
       .then((resp) => {
-        if (!cancelled) setAvailable(!!resp.success && !!resp.data?.canTranscribe)
+        if (!cancelled) {
+          // 浏览器录音 API 缺失（非 WebView2/旧浏览器）时同样视为不可用，按钮由上层隐藏
+          const micApiReady = !!navigator.mediaDevices?.getUserMedia
+          setAvailable(!!resp.success && !!resp.data?.canTranscribe && micApiReady)
+        }
       })
       .catch(() => {
         if (!cancelled) setAvailable(false)
@@ -111,6 +115,14 @@ export function useDictation({ onText }: UseDictationOptions) {
             return
           }
         }
+        if (Date.now() - startedAt > POLL_LIMIT_MS) {
+          finish(gen, null)
+          return
+        }
+        pollTimerRef.current = window.setTimeout(() => pollJob(gen, jobId, startedAt), POLL_INTERVAL_MS)
+      }).catch(() => {
+        // 网络抖动：单次查询失败不中断轮询，继续按 1.5s 间隔重试；连续失败直至 90s 总超时兜底
+        if (genRef.current !== gen) return
         if (Date.now() - startedAt > POLL_LIMIT_MS) {
           finish(gen, null)
           return
@@ -196,17 +208,18 @@ export function useDictation({ onText }: UseDictationOptions) {
     }
   }, [])
 
-  /** 点击切换：idle→录音、录音→结束转写；转写中不响应 */
-  const toggle = useCallback(() => {
-    if (phase === 'idle') void start()
-    else if (phase === 'recording') stop()
-  }, [phase, start, stop])
-
   /** 取消：清理流与定时器，丢弃结果 */
   const cancel = useCallback(() => {
     cleanup()
     setPhase('idle')
   }, [cleanup])
+
+  /** 点击切换：idle→录音、录音→结束转写、转写中→取消（终止轮询，作废在途响应） */
+  const toggle = useCallback(() => {
+    if (phase === 'idle') void start()
+    else if (phase === 'recording') stop()
+    else if (phase === 'transcribing') cancel()
+  }, [phase, start, stop, cancel])
 
   return { phase, recording: phase === 'recording', transcribing: phase === 'transcribing', available, toggle, cancel }
 }

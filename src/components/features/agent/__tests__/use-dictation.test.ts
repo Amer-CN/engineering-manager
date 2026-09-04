@@ -3,7 +3,8 @@
  *
  * mock：@/services/stt-client 全部导出 + getUserMedia + MediaRecorder。
  * 覆盖：录音→上传→建任务→轮询→文本回调；轮询 running→completed（1.5s 间隔）；
- * 取消清理（停流、不上传）；STT 不可用 → available=false。
+ * 轮询单次 reject 抖动兜底重试；转写中 toggle 取消；取消清理（停流、不上传）；
+ * STT 不可用 / getUserMedia 缺失 → available=false。
  */
 
 import { act, renderHook, waitFor, cleanup } from '@testing-library/react'
@@ -97,6 +98,14 @@ describe('useDictation', () => {
     await waitFor(() => expect(result.current.available).toBe(false))
   })
 
+  it('STT 可用但 getUserMedia 缺失 → available=false（浏览器 API 归并）', async () => {
+    // mediaDevices 存在但没有 getUserMedia（旧浏览器 / 非安全上下文）
+    Object.defineProperty(navigator, 'mediaDevices', { value: {}, configurable: true, writable: true })
+    const { result } = renderHook(() => useDictation({ onText: vi.fn() }))
+    await waitFor(() => expect(result.current.available).toBe(false))
+    expect(getSttStatus).toHaveBeenCalledTimes(1) // STT 本身可用，是录音 API 缺失导致不可用
+  })
+
   it('录音 → 停止 → 上传 → 建任务 → 轮询 completed → text 回调（trim）', async () => {
     const { result, onText } = await startRecording()
     const rec = MockMediaRecorder.instances[0]
@@ -160,5 +169,55 @@ describe('useDictation', () => {
     await waitFor(() => expect(result.current.recording).toBe(true))
     expect(() => unmount()).not.toThrow()
     expect(trackStop).toHaveBeenCalled()
+  })
+
+  it('轮询单次 reject（网络抖动）→ 1.5s 后重试直至 completed，不 unhandled rejection', async () => {
+    vi.mocked(getSttJob)
+      .mockRejectedValueOnce(new Error('network blip'))
+      .mockResolvedValueOnce({ success: true, data: { status: 'completed', text: '抖动后重试' } } as any)
+
+    const { result, onText } = await startRecording()
+    act(() => {
+      MockMediaRecorder.instances[0].ondataavailable?.({ data: new Blob(['x']) })
+    })
+    await act(async () => {
+      result.current.toggle()
+    })
+
+    // 第一次查询 reject → 兜底 catch → 1.5s 后第二次查询 completed
+    await waitFor(() => expect(onText).toHaveBeenCalledWith('抖动后重试'), { timeout: 4000 })
+    expect(getSttJob).toHaveBeenCalledTimes(2)
+    await waitFor(() => expect(result.current.phase).toBe('idle'))
+  }, 10_000)
+
+  it('转写中 toggle → 取消：回 idle，作废在途上传（不建任务、不回调）', async () => {
+    // 上传挂起，模拟转写中（上传在途）
+    let resolveUpload: (v: any) => void = () => {}
+    vi.mocked(uploadSttAudio).mockImplementation(
+      () => new Promise((resolve) => { resolveUpload = resolve }),
+    )
+
+    const { result, onText } = await startRecording()
+    act(() => {
+      MockMediaRecorder.instances[0].ondataavailable?.({ data: new Blob(['x']) })
+    })
+    await act(async () => {
+      result.current.toggle() // 停止录音 → 进入转写（上传在途）
+    })
+    await waitFor(() => expect(result.current.transcribing).toBe(true))
+
+    act(() => {
+      result.current.toggle() // 转写中点击 = 取消
+    })
+    expect(result.current.phase).toBe('idle')
+
+    // 事后放行在途上传：会话已作废 → 不建任务、不轮询、不回调
+    await act(async () => {
+      resolveUpload({ success: true, data: { filePath: '/tmp/a.webm', originalName: 'a.webm', size: 1, extension: 'webm' } })
+    })
+    expect(createSttJob).not.toHaveBeenCalled()
+    expect(getSttJob).not.toHaveBeenCalled()
+    expect(onText).not.toHaveBeenCalled()
+    expect(result.current.phase).toBe('idle')
   })
 })

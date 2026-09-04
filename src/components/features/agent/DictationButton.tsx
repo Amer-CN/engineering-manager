@@ -19,13 +19,16 @@ const DictationButton: React.FC<DictationButtonProps> = ({ phase, onToggle, disa
   const recording = phase === 'recording'
   const transcribing = phase === 'transcribing'
   return (
-    <Tooltip content={recording ? '点击麦克风结束听写' : '语音听写（自动转文字）'} position="top">
+    <Tooltip
+      content={recording ? '点击麦克风结束听写' : transcribing ? '转写中，点击取消' : '语音听写（自动转文字）'}
+      position="top"
+    >
       <button
         type="button"
         onClick={onToggle}
         disabled={disabled}
         aria-pressed={recording}
-        aria-label={recording ? '结束听写' : '开始听写'}
+        aria-label={recording ? '结束听写' : transcribing ? '取消听写' : '开始听写'}
         className={`flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
           recording
             ? 'text-[color:var(--danger)] bg-[color:var(--danger-soft)]'
