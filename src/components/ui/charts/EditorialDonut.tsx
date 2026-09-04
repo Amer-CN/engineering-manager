@@ -145,14 +145,14 @@ export const EditorialDonut: React.FC<EditorialDonutProps> = ({
     <div className="flex items-center gap-5">
       <div ref={boxRef} className="relative shrink-0" style={{ width: size, height: size }}>
         <svg viewBox="0 0 100 100" width={size} height={size} role="img"
-          style={{ opacity: mounted ? 1 : 0, transition: 'opacity 0.5s ease' }}
+          style={{ opacity: mounted ? 1 : 0, transition: 'opacity 0.5s var(--ease-out)' }}
           onMouseLeave={() => setHover(null)}>
           {segments.length === 0 && (
             <path d={ringPath(R_OUTER, rInner)} fill="var(--border)" fillRule="evenodd" />
           )}
           {segments.map((seg, i) => (
             <path key={`${seg.name}-${i}`} data-segment={i} d={seg.path} fill={seg.color} fillRule="evenodd"
-              style={{ opacity: hover === null || hover.i === i ? 1 : 0.35, transition: 'opacity 0.15s ease' }}
+              style={{ opacity: hover === null || hover.i === i ? 1 : 0.35, transition: 'opacity 0.15s var(--ease-out)' }}
               onMouseEnter={segHover(i)} onMouseMove={segHover(i)} />
           ))}
         </svg>

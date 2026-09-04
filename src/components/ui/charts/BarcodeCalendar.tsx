@@ -71,7 +71,7 @@ export const BarcodeCalendar: React.FC<BarcodeCalendarProps> = ({
     <div
       role="img"
       aria-label={`条码日历 · 共 ${data.length} 天`}
-      style={{ opacity: mounted ? 1 : 0, transition: 'opacity 0.5s ease' }}
+      style={{ opacity: mounted ? 1 : 0, transition: 'opacity 0.5s var(--ease-out)' }}
     >
       <div className="flex items-end" style={{ height }}>
         {data.map((d, i) => (

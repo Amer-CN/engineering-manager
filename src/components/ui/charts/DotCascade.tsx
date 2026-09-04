@@ -88,7 +88,7 @@ export const DotCascade: React.FC<DotCascadeProps> = ({
       role="img"
       aria-label={`点阵级联 · ${formatCascadeUnitNote(unit)}`}
       className="flex flex-col"
-      style={{ opacity: mounted ? 1 : 0, transition: 'opacity 0.5s ease' }}
+      style={{ opacity: mounted ? 1 : 0, transition: 'opacity 0.5s var(--ease-out)' }}
     >
       <div className="flex items-end">
         {sorted.map((d, i) => {
