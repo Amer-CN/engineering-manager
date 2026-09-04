@@ -68,10 +68,19 @@ export const FIELD_LABELS: Record<string, string> = {
   incomeContracts: '收入合同', expenseContracts: '支出合同',
   success: '成功', data: '数据', rowCount: '行数', rewrittenSql: '实际执行 SQL',
   error: '错误',
+  // runSafeQuery 动态列常见字段（下划线原样，驼峰拼法由 fieldLabel 双拼写互查覆盖）
+  created_by: '创建人', created_at: '创建时间', updated_by: '更新人', updated_at: '更新时间',
+  invoice_kind: '发票类型', invoice_code: '发票代码', received_amount: '已收金额',
 }
 
 export function fieldLabel(key: string): string {
-  return FIELD_LABELS[key] || key
+  if (FIELD_LABELS[key]) return FIELD_LABELS[key]
+  // 驼峰↔下划线双拼写互查：后端 JSON 序列化为驼峰（invoiceNo），runSafeQuery
+  // 返回数据库原始列名（invoice_no），两边的多单词字段都要能命中同一标签
+  const alt = key.includes('_')
+    ? key.toLowerCase().replace(/_([a-z])/g, (_, c: string) => c.toUpperCase())
+    : key.replace(/[A-Z]/g, (c) => '_' + c.toLowerCase())
+  return FIELD_LABELS[alt] || key
 }
 
 /** 状态/枚举值 → 中文（找不到原样返回） */

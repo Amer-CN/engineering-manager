@@ -69,4 +69,25 @@ describe('RichToolResult', () => {
     render(<RichToolResult results={results} />)
     expect(screen.queryByText('打开发票管理')).toBeNull()
   })
+
+  it('驼峰键（后端 JSON 序列化）→ 命中下划线字段的中文标签', () => {
+    const results: ToolCallResult[] = [{
+      toolName: 'getInvoices', toolCallId: 't7', success: true,
+      result: [{ id: 1, invoiceNo: 'INV-001', issueDate: '2026-01-01', projectName: 'A项目' }],
+    }]
+    render(<RichToolResult results={results} />)
+    expect(screen.getByText('发票号')).toBeTruthy()
+    expect(screen.getByText('开票日期')).toBeTruthy()
+    expect(screen.getByText('所属项目')).toBeTruthy()
+  })
+
+  it('runSafeQuery 动态列（created_by/created_at）→ 中文标签', () => {
+    const results: ToolCallResult[] = [{
+      toolName: 'runSafeQuery', toolCallId: 't8', success: true,
+      result: { success: true, rowCount: 1, data: [{ id: 1, created_by: '张三', created_at: '2026-01-01' }] },
+    }]
+    render(<RichToolResult results={results} />)
+    expect(screen.getByText('创建人')).toBeTruthy()
+    expect(screen.getByText('创建时间')).toBeTruthy()
+  })
 })
