@@ -1778,3 +1778,53 @@ button:focus-visible {
     transform: translateY(-4px) scale(0.97);
   }
 }
+
+/* ═══ Beautiful UI 移植动画（PixelLoader / ToolCallChips / ThinkingTrace 共用）═══
+ * 来源：TurboKach/ai-native-react-components（MIT），视觉基准 .work/reference/beautifului/。
+ * 说明：
+ *  - fade-in 已存在于上方「Performance-optimized compositor animations」分节（opacity 0→1），
+ *    语义一致直接复用，不重复定义；
+ *  - spin 用 Tailwind 内置 animate-spin；
+ *  - prefers-reduced-motion 由 index.css 既有全局规则统一承接：动画时长归零 →
+ *    像素网格冻结为暗态、shimmer 静止；计时器为 JS interval 继续走。 */
+@keyframes pixel-on {
+  0%, 100% { opacity: 0.15; }
+  40% { opacity: 1; }
+  60% { opacity: 0.55; }
+}
+
+@keyframes shimmer-text {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ═══ Beautiful UI 移植动画 · 第二批（MarkdownRenderer 流式 / ToolCallChips 状态 / 听写）═══
+ * 来源：TurboKach/ai-native-react-components（MIT），视觉基准 .work/reference/beautifului/。
+ *  - stream-in：流式正文新块进场（blur + opacity，420ms ease）；
+ *  - caret-blink：流式期间末尾闪烁光标；
+ *  - eq-bounce：听写录音中的声波跳动（DictationButton 三条竖条错峰）。
+ * 既有 keyframes（pixel-on/shimmer-text/fade-up/pop-in/fade-in）不重复定义。 */
+@keyframes stream-in {
+  from { opacity: 0; filter: blur(4px); }
+  to { opacity: 1; filter: blur(0); }
+}
+
+@keyframes caret-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes eq-bounce {
+  0%, 100% { transform: scaleY(0.35); }
+  50% { transform: scaleY(1); }
+}

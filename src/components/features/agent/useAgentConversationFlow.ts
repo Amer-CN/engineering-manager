@@ -14,9 +14,10 @@ import {
   getAgentConversationDetail,
 } from '@/services/agent-client'
 import type { AgentStreamCallbacks } from '@/services/agent-client'
-import type { AgentConversation } from '@/types/agent'
+import type { AgentConversation, ToolCallResult } from '@/types/agent'
 import type { LocalMessage } from './types'
 import { genClientId } from './types'
+import type { InFlightTool } from './ToolCallChips'
 import type { MascotState } from './Mascot'
 
 export interface UseAgentConversationFlowOptions {
@@ -44,6 +45,8 @@ export interface UseAgentConversationFlowResult {
   handleSwitchVersion: (clientId: string, dir: -1 | 1) => void
   /** 上下文用量（最近一轮 prompt tokens；null = 未知） */
   contextTokens: number | null
+  /** 本轮工具调用条目（running → onDone/onError 翻转终态；完成后保留为摘要，下一轮 send 重置） */
+  inFlightTools: InFlightTool[]
   /** 分叉：截断消息列表到指定下标（含）并置空会话 */
   handleForkTo: (idx: number) => void
 }
@@ -62,6 +65,28 @@ export function useAgentConversationFlow({
   const [conversationId, setConversationId] = useState<number | null>(null)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [mascotState, setMascotState] = useState<MascotState>('idle')
+  /** 本轮工具调用条目（Beautiful UI 第二批：ToolCallChips 数据源） */
+  const [inFlightTools, setInFlightTools] = useState<InFlightTool[]>([])
+  /** 工具条目自增序号（一轮内同名工具可能多次调用，用序号去重） */
+  const toolSeqRef = useRef(0)
+
+  /** 终态翻转：按 onDone.toolCalls 顺序对齐（success→done / !success→failed）；
+      数量不齐时按序消费，inFlightTools 多出的条目标 done */
+  const settleTools = useCallback((results?: ToolCallResult[]) => {
+    setInFlightTools((prev) => {
+      if (prev.length === 0) return prev
+      if (!results || results.length === 0) return prev.map((t) => ({ ...t, status: 'done' as const }))
+      return prev.map((t, i) => ({
+        ...t,
+        status: (results[i] ? (results[i].success ? 'done' : 'failed') : 'done') as InFlightTool['status'],
+      }))
+    })
+  }, [])
+
+  /** 全部标 failed（流式 onError / 流中断时兜底） */
+  const failAllTools = useCallback(() => {
+    setInFlightTools((prev) => prev.map((t) => ({ ...t, status: 'failed' as const })))
+  }, [])
 
   /** 当前会话 id 的 ref 镜像：流式回调比对「流所属会话 == 当前会话」用 */
   const conversationIdRef = useRef<number | null>(null)
@@ -127,6 +152,7 @@ export function useAgentConversationFlow({
       ])
       if (overrideContent === undefined) setInputValue('')
       setLoading(true)
+      setInFlightTools([]) // 新一轮 send：清掉上一轮的工具摘要
 
       // 局部工具：按 clientId 更新助手占位（收尾自动带上本轮耗时）
       const patchAssistant = (patch: Partial<LocalMessage>) => {
@@ -170,7 +196,10 @@ export function useAgentConversationFlow({
           },
           onTool: (name) => {
             if (isStale()) return
-            patchAssistant({ content: `🔧 正在查询：${name}…` })
+            toolSeqRef.current += 1
+            // id 在 setState 外同步取值：updater 会被批处理延迟执行，闭包内读 ref 会拿到同一值
+            const id = `tool_${toolSeqRef.current}`
+            setInFlightTools((prev) => [...prev, { id, name, status: 'running' }])
             setMascotState('searching')
           },
           onContent: (text) => {
@@ -179,13 +208,13 @@ export function useAgentConversationFlow({
               repliedOnce = true
               setMascotState('replying')
             }
-            // 第一段正文到达时，清掉「正在查询」提示
+            // 正文分片追加（工具行保持 running 展示，等 onDone/onError 翻转终态）
             setMessages((prev) =>
-              prev.map((m) => {
-                if (m.clientId !== assistantClientId) return m
-                const base = m.content?.startsWith('🔧') ? '' : (m.content ?? '')
-                return { ...m, content: base + text }
-              }),
+              prev.map((m) =>
+                m.clientId === assistantClientId
+                  ? { ...m, content: (m.content ?? '') + text }
+                  : m,
+              ),
             )
           },
           onReasoning: (text) => {
@@ -202,12 +231,11 @@ export function useAgentConversationFlow({
           onDone: ({ toolCalls, message, usage }) => {
             if (isStale()) return
             if (usage) setContextTokens(usage.prompt_tokens)
+            settleTools(toolCalls) // 工具行按 toolCalls.success 翻转终态，完成后保留为摘要
             setMessages((prev) =>
               prev.map((m) => {
                 if (m.clientId !== assistantClientId) return m
-                // 若正文仍是「🔧 正在查询」占位（工具跑完但模型没产出正文），视为无正文
-                const streamed = m.content && !m.content.startsWith('🔧') ? m.content : ''
-                return { ...m, sending: false, toolCalls, content: streamed || message || '', durationSec: Math.round((Date.now() - sentAt) / 1000) }
+                return { ...m, sending: false, toolCalls, content: m.content || message || '', durationSec: Math.round((Date.now() - sentAt) / 1000) }
               }),
             )
             setRefreshTrigger((v) => v + 1) // 刷新洞察/统计
@@ -215,6 +243,7 @@ export function useAgentConversationFlow({
           },
           onError: (err) => {
             if (isStale()) return
+            failAllTools() // 全部标 failed
             patchAssistant({ sending: false, content: `❌ 出错了：${err}` })
             finishRound(false, 1600)        // 主流程出错
           },
@@ -223,7 +252,9 @@ export function useAgentConversationFlow({
         await sendAgentMessageStream(request, callbacks, controller.signal)
       } catch {
         // 流被 abort（用户切换/新建会话）：放弃本轮，不回退、不落地状态
+        // （工具行由切换/新建/分叉的 inFlightTools 重置兜底）
         if (controller.signal.aborted) return
+        failAllTools() // 流式连接断掉：在途工具全部标 failed
         // P2-7：已收到 conversationId = user 消息已入库，重发非流式会造成重复入库；
         // 以已收到的内容收尾（有正文则保留，无正文则提示中断）。
         if (receivedId) {
@@ -246,6 +277,7 @@ export function useAgentConversationFlow({
               conversationIdRef.current = resp.conversationId
               setConversationId(resp.conversationId)
             }
+            settleTools(resp.toolCalls) // 非流式结果回填工具终态
             patchAssistant({
               sending: false,
               content: resp.message?.content ?? '',
@@ -272,7 +304,7 @@ export function useAgentConversationFlow({
         }
       }
     },
-    [inputValue, loading, conversationId, finishRound],
+    [inputValue, loading, conversationId, finishRound, settleTools, failAllTools],
   )
 
   /** 加载历史对话 */
@@ -284,6 +316,7 @@ export function useAgentConversationFlow({
       conversationIdRef.current = conv.id
       setLoading(true)
       setConversationId(conv.id)
+      setInFlightTools([]) // 切换会话：清掉旧会话的工具行
       try {
         const detail = await getAgentConversationDetail(conv.id)
         if (detail && detail.messages) {
@@ -325,6 +358,7 @@ export function useAgentConversationFlow({
     setConversationId(null)
     setInputValue('')
     setLoading(false)
+    setInFlightTools([]) // 新建会话：清掉工具行
     // 重置「首次响应」标记与 mascot，回到欢迎区
     firstDoneRef.current = false
     setFirstDone(false)
@@ -383,6 +417,7 @@ export function useAgentConversationFlow({
     mascotState,
     firstDone,
     contextTokens,
+    inFlightTools,
     handleSend,
     handleSelectConversation,
     handleNewConversation,
@@ -396,6 +431,7 @@ export function useAgentConversationFlow({
       conversationIdRef.current = null
       setConversationId(null)
       setLoading(false)
+      setInFlightTools([]) // 分叉：清掉工具行
       firstDoneRef.current = true
       setFirstDone(true)
       pendingFirstDoneRef.current = false

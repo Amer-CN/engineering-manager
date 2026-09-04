@@ -1,11 +1,17 @@
-/** AgentComposer — 输入框（自适应 textarea + 斜杠命令 + 附件 + 拖拽 + ModelPicker 插槽） */
+/** AgentComposer — 输入框（自适应 textarea + 斜杠命令 + @ 数据来源菜单 + 听写 + 附件 + 拖拽 + ModelPicker 插槽） */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { Icon } from '@/components/ui/Icon'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { recognizeReceiptText } from '@/services/agent-client'
 import { SLASH_COMMANDS } from './types'
+import AtSourceMenu from './AtSourceMenu'
+import DictationButton from './DictationButton'
+import DocAttachmentChips from './DocAttachmentChips'
+import SlashMenu from './SlashMenu'
+import { useAtSource } from './useAtSource'
+import { useDictation } from './useDictation'
 import type { ReactNode } from 'react'
 
 interface AgentComposerProps {
@@ -70,6 +76,21 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
       setSlashFilter('')
     }
   }, [value])
+
+  // ── 听写：STT 可用时显示麦克风；转写文本追加到草稿（上层 setInputValue）──
+  const valueRef = useRef(value)
+  valueRef.current = value
+  const appendDictation = useCallback(
+    (text: string) => {
+      const base = valueRef.current
+      onChange(base ? `${base}${/\s$/.test(base) ? '' : ' '}${text}` : text)
+    },
+    [onChange],
+  )
+  const { phase: dictationPhase, available: dictationAvailable, toggle: toggleDictation } = useDictation({ onText: appendDictation })
+
+  // ── @ 数据来源菜单（词头检测 + ↑↓/Enter/Esc 键盘选择；斜杠菜单开启时让位）──
+  const at = useAtSource({ value, onChange, textareaRef, suspended: showSlashMenu })
 
   const canSend =
     (value.trim().length > 0 || !!attachment || docAttachments.length > 0) && !disabled && !ocrLoading
@@ -175,15 +196,16 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
     onSend()
   }, [canSend, value, attachment, docAttachments, onChange, onSend])
 
-  // ── 键盘事件 ──
+  // ── 键盘事件（@ 菜单开启时 ↑↓/Enter/Esc 由菜单消费）──
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (at.handleKeyDown(e)) return
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault()
         void doSend()
       }
     },
-    [doSend],
+    [at, doSend],
   )
 
   // ── 选择斜杠命令 ──
@@ -209,34 +231,15 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
 
   return (
     <div className={`relative ${centered ? 'max-w-2xl mx-auto' : ''}`}>
-      <AnimatePresence>
-        {showSlashMenu && filteredCommands.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 4 }}
-            transition={{ duration: 0.15 }}
-            className="absolute bottom-full left-0 right-0 mb-2 rounded-xl border border-[color:var(--border)] bg-[color:var(--panel)] shadow-lg overflow-hidden z-20"
-          >
-            <div className="px-3 py-2 border-b border-[color:var(--border)] text-xs font-medium text-[color:var(--muted)]">快捷命令</div>
-            <div className="max-h-48 overflow-y-auto py-1">
-              {filteredCommands.map(cmd => (
-                <button
-                  key={cmd.key}
-                  onClick={() => selectSlashCommand(cmd.prompt)}
-                  className="w-full flex items-center gap-3 px-3 py-2 hover:bg-[color:var(--panel-2)] transition-colors text-left"
-                >
-                  <span className="px-1.5 py-0.5 rounded text-xs font-mono font-medium flex-shrink-0" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
-                    {cmd.key}
-                  </span>
-                  <span className="text-sm text-[color:var(--fg-2)]">{cmd.label}</span>
-                  <span className="text-xs text-[color:var(--muted)] truncate flex-1">{cmd.prompt}</span>
-                </button>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <SlashMenu open={showSlashMenu} commands={filteredCommands} onSelect={selectSlashCommand} />
+
+      <AtSourceMenu
+        open={at.open}
+        items={at.items}
+        activeIndex={at.activeIndex}
+        onSelect={at.select}
+        onHover={at.setIndex}
+      />
 
       {attachment && (
         <div className="mb-2 flex items-center gap-2 px-3 py-2 rounded-xl border border-[color:var(--border)] bg-[color:var(--panel-2)]">
@@ -304,7 +307,7 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={disabled}
-            placeholder={placeholder}
+            placeholder={dictationPhase === 'recording' ? '正在聆听，点击麦克风结束…' : placeholder}
             rows={1}
             className="flex-1 px-2 py-1.5 text-sm text-[color:var(--fg)] placeholder-[color:var(--muted)] bg-transparent border-0 outline-none resize-none disabled:opacity-50"
             style={{ minHeight: '36px', maxHeight: '120px' }}
@@ -324,6 +327,11 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
               <Icon name="Paperclip" size={16} />
             </button>
           </Tooltip>
+
+          {/* 听写麦克风（STT / getUserMedia 不可用时隐藏） */}
+          {dictationAvailable && (
+            <DictationButton phase={dictationPhase} onToggle={toggleDictation} disabled={disabled || ocrLoading} />
+          )}
 
           {/* 工具区插槽（ModelPicker：模型选择 + 思考等级） */}
           {toolbarSlot}
@@ -366,32 +374,6 @@ const AgentComposer: React.FC<AgentComposerProps> = ({
           </motion.button>
         </div>
       </div>
-    </div>
-  )
-}
-
-/** 文档附件 chips（文件内私有，主组件行数门禁拆分） */
-function DocAttachmentChips({ items, onRemove }: {
-  items: { name: string; text: string }[]
-  onRemove: (name: string) => void
-}) {
-  if (items.length === 0) return null
-  return (
-    <div className="mb-2 flex flex-wrap gap-2">
-      {items.map(d => (
-        <div key={d.name} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[color:var(--border)] bg-[color:var(--panel-2)]">
-          <Icon name="FileText" size={13} className="text-[color:var(--muted)]" />
-          <span className="text-xs text-[color:var(--fg-2)] max-w-40 truncate">{d.name}</span>
-          <button
-            type="button"
-            onClick={() => onRemove(d.name)}
-            aria-label={`移除 ${d.name}`}
-            className="w-5 h-5 rounded flex items-center justify-center text-[color:var(--muted)] hover:text-[color:var(--fg-2)] hover:bg-[color:var(--card)] transition-colors"
-          >
-            <Icon name="X" size={11} />
-          </button>
-        </div>
-      ))}
     </div>
   )
 }

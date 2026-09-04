@@ -11,7 +11,7 @@
  * 链接：仅放行 http(s)/mailto，点击拦截默认导航（避免 WebView2 内整页跳转）。
  */
 
-import React, { useMemo } from 'react'
+import React, { useMemo, useRef } from 'react'
 
 // ═══════════════════════════════════════════════════════════════
 // 行内解析
@@ -310,11 +310,47 @@ export function parseBlocks(input: string): React.ReactNode[] {
 interface MarkdownRendererProps {
   content: string
   className?: string
+  /** 流式模式：新出现的块带 stream-in 进场动画（blur+opacity 420ms）+ 末尾闪烁光标；
+      已见过的块绝不重放动画（key 为位置序号，靠 ref Set 防重放）。
+      false/未传时渲染行为与非流式完全一致。 */
+  streaming?: boolean
 }
 
-const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className }) => {
-  const blocks = useMemo(() => parseBlocks(content), [content])
-  return <div className={`space-y-1 ${className ?? ''}`}>{blocks}</div>
+/** 新块进场动画（Beautiful UI streaming-text：blur + opacity，420ms ease） */
+const STREAM_IN_STYLE: React.CSSProperties = {
+  animation: 'stream-in 420ms cubic-bezier(0.22, 0.61, 0.25, 1) both',
+}
+
+const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className, streaming }) => {
+  /** 已见过（已播过进场动画）的块 key 集合：content 每个分片全量重算，key 是位置序号 */
+  const seenRef = useRef<Set<string>>(new Set())
+  const blocks = useMemo(() => {
+    const parsed = parseBlocks(content)
+    if (!streaming) return parsed
+    return parsed.map((node) => {
+      const el = node as React.ReactElement
+      const key = typeof el?.key === 'string' ? el.key : null
+      if (key === null || seenRef.current.has(key)) return node
+      seenRef.current.add(key)
+      return React.cloneElement(el, {
+        style: { ...((el.props as { style?: React.CSSProperties }).style ?? {}), ...STREAM_IN_STYLE },
+      })
+    })
+  }, [content, streaming])
+
+  return (
+    <div className={`space-y-1 ${className ?? ''}`}>
+      {blocks}
+      {/* 流式期间末尾闪烁光标；完成后（streaming 翻 false）光标消失 */}
+      {streaming && (
+        <span
+          aria-hidden
+          className="ml-0.5 inline-block h-3 w-0.5 rounded-full align-baseline"
+          style={{ background: 'var(--fg)', animation: 'caret-blink 1s ease-in-out infinite' }}
+        />
+      )}
+    </div>
+  )
 }
 
 export default MarkdownRenderer
