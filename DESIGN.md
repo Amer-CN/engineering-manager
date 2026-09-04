@@ -332,7 +332,9 @@ AI 主页中央的助手形象。当前为**扁平中性占位**（墨色圆形 
 
 **reduced-motion**：CSS 侧 index.css 全局归零 + framer-motion 侧 main.tsx `MotionConfig reducedMotion="user"`，**新增动效必须两者兼容**。
 
-> 尾注：本章节与批次一~三（666f76c6 / 55d1afc8 / 11268ece）配套，是对既有实践的成文化，不引入新行为。
+**条件渲染弹层入场**（批次五 #124 起）：portal / `{open && ...}` 弹层统一挂 `.popover-entry`（150ms）或 `.popover-entry--tall`（180ms，高面板）工具类 + inline `transformOrigin` 对齐触发器方位——纯 `@starting-style` 方案，无需 JS / AnimatePresence；关闭瞬撤属预期。
+
+> 尾注：本章节与批次一~三（666f76c6 / 55d1afc8 / 11268ece）配套，是对既有实践的成文化，不引入新行为。批次五/六（#124 / #125）补充：弹层入场工具类与圆桌裁决豁免清单（豁免明细见 PR #125 描述）。
 
 ## Do's and Don'ts
 
