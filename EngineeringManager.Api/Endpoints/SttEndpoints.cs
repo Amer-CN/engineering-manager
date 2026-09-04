@@ -205,8 +205,8 @@ public static class SttEndpoints
             {
                 var job = db.QueryFirstOrDefault<dynamic>(
                     @"SELECT id, source_file, engine, status, progress, is_multi_speaker,
-                             num_speakers, result_text, result_json, duration_sec, elapsed_sec,
-                             error, created_at, updated_at
+                             num_speakers, result_text, result_json, speaker_names,
+                             duration_sec, elapsed_sec, error, created_at, updated_at
                       FROM stt_jobs WHERE id = @Id AND created_by = @Uid",
                     new { Id = id, Uid = uid });
 
@@ -220,6 +220,17 @@ public static class SttEndpoints
                     try
                     {
                         segments = System.Text.Json.JsonSerializer.Deserialize<List<object>>(job.result_json);
+                    }
+                    catch { }
+                }
+
+                // 解析 speaker_names 为对象（{"1":"张蓉"}；解析失败给 null，不阻断详情）
+                Dictionary<string, string>? speakerNames = null;
+                if (job.speaker_names != null)
+                {
+                    try
+                    {
+                        speakerNames = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>((string)job.speaker_names);
                     }
                     catch { }
                 }
@@ -238,6 +249,7 @@ public static class SttEndpoints
                         numSpeakers = job.num_speakers,
                         text = job.result_text,
                         segments,
+                        speakerNames,
                         durationSec = job.duration_sec,
                         elapsedSec = job.elapsed_sec,
                         error = job.error,
@@ -686,6 +698,87 @@ public static class SttEndpoints
         });
 
         // ═══════════════════════════════════════════════════════════
+        // PATCH /api/stt/jobs/{id} — 保存编辑结果（校对后的分段/说话人名/全文）
+        // 多人任务传 segments（可同时带 speakerNames）；单人任务传 text；都缺省 400
+        // 只接受 completed；result_text 存【说话人N】编号文本（与 ingest 强校验契约一致，
+        // 显示名只进 speaker_names，读取态由前端渲染）
+        // ═══════════════════════════════════════════════════════════
+        app.MapPatch("/api/stt/jobs/{id}", (HttpContext ctx, IDbConnection db, long id, SttJobSaveDto? dto) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            // 权限检查：voice 页面路由本身要求 voice:read（App.tsx RequirePermission）
+            if (!CurrentUser.HasPermission(ctx, db, "voice:read"))
+                return Results.Json(new { success = false, error = "无权限：需要 voice:read" }, statusCode: 403);
+            try
+            {
+                var status = db.ExecuteScalar<string?>(
+                    "SELECT status FROM stt_jobs WHERE id = @Id AND created_by = @Uid",
+                    new { Id = id, Uid = uid });
+
+                if (status == null)
+                    return Common.NotFound("转写任务不存在");
+
+                if (status != "completed")
+                    return Common.Fail($"任务当前状态为 {status}，只有已完成的任务可以保存");
+
+                if (dto == null || (dto.Segments == null && dto.SpeakerNames == null && dto.Text == null))
+                    return Common.Fail("请提供要保存的内容（segments / speakerNames / text）");
+
+                // segments 校验（null 项 = 反序列化出的列表含空元素 → 格式无效）
+                string? resultJson = null;
+                string? resultText = null;
+                if (dto.Segments != null)
+                {
+                    if (dto.Segments.Any(s => s == null))
+                        return Common.Fail("segments 格式无效");
+
+                    // 与 SttWorker 落库格式一致：camelCase 匿名对象 [{speaker,start,end,text}]
+                    resultJson = System.Text.Json.JsonSerializer.Serialize(
+                        dto.Segments.Select(s => new { speaker = s!.Speaker, start = s.Start, end = s.End, text = s.Text }));
+                    // 按【说话人{speaker}】重建编号文本（跳过纯空白段，与 ingest 重组规则一致）
+                    resultText = string.Join("\n",
+                        dto.Segments
+                           .Where(s => !string.IsNullOrWhiteSpace(s!.Text))
+                           .Select(s => $"【说话人{s!.Speaker}】{s.Text!.Trim()}"));
+                }
+
+                // speakerNames 校验（值必须全为字符串）→ 序列化为 {"1":"张蓉"} JSON 对象
+                string? speakerNamesJson = null;
+                if (dto.SpeakerNames != null)
+                {
+                    var names = new Dictionary<string, string>();
+                    foreach (var kv in dto.SpeakerNames)
+                    {
+                        if (kv.Value.ValueKind != System.Text.Json.JsonValueKind.String)
+                            return Common.Fail("speakerNames 的值必须为字符串");
+                        names[kv.Key] = kv.Value.GetString() ?? "";
+                    }
+                    speakerNamesJson = System.Text.Json.JsonSerializer.Serialize(names);
+                }
+
+                // 单人任务：text 直接覆盖 result_text（segments 提供时以重建文本为准）
+                if (dto.Text != null && resultText == null)
+                    resultText = dto.Text;
+
+                // 动态 SET 只更新本次提供的字段（固定列名白名单拼接，值全部参数化）
+                var sets = new List<string> { "updated_at = @Now" };
+                if (resultJson != null) sets.Add("result_json = @ResultJson");
+                if (resultText != null) sets.Add("result_text = @ResultText");
+                if (speakerNamesJson != null) sets.Add("speaker_names = @SpeakerNames");
+
+                db.Execute(
+                    $"UPDATE stt_jobs SET {string.Join(", ", sets)} WHERE id = @Id AND created_by = @Uid",
+                    new { Now = Common.NowString(), ResultJson = resultJson, ResultText = resultText, SpeakerNames = speakerNamesJson, Id = id, Uid = uid });
+
+                return Results.Ok(new { success = true, data = new { id, savedAt = Common.NowString() } });
+            }
+            catch (Exception ex)
+            {
+                return Common.ServerError("保存转写结果", ex);
+            }
+        });
+
+        // ═══════════════════════════════════════════════════════════
         // DELETE /api/stt/jobs/{id} — 删除任务记录
         // 只接受 completed/failed/cancelled；进行中的任务先取消再删除
         // ═══════════════════════════════════════════════════════════
@@ -749,6 +842,16 @@ public class SttIngestDto
     public int? ProjectId { get; set; }
     public long? FolderId { get; set; }
     public string? OccurredAt { get; set; }
+}
+
+/// <summary>STT 保存 DTO — 编辑结果落库（PATCH /api/stt/jobs/{id}）。
+/// 多人任务传 Segments（可同时带 SpeakerNames）；单人任务传 Text；都缺省 400。
+/// SpeakerNames 用 JsonElement 以便服务端校验值必须为字符串。</summary>
+public class SttJobSaveDto
+{
+    public List<SttSegmentDto>? Segments { get; set; }
+    public Dictionary<string, System.Text.Json.JsonElement>? SpeakerNames { get; set; }
+    public string? Text { get; set; }
 }
 
 /// <summary>STT segment DTO（前端校对后传回）</summary>
