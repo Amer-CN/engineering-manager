@@ -228,7 +228,7 @@ describe('AiProviderSection（多服务商管理）', () => {
     fireEvent.click(screen.getByText('保存模型'))
     await waitFor(() => expect(screen.getByText('glm-4-flash')).toBeTruthy())
     await waitFor(() => expect(mockSaveLlmProviderConfig).toHaveBeenCalledTimes(2))
-    // 成功后先短暂显示 ✓ 再回落（1.5s 真实定时器，waitFor 轮询可等到回落）
+    // 成功后弹 Toast 并回落常态字（行内无 ✓，反馈走 Toast）
     await waitFor(() => expect(screen.getByText('改动自动保存')).toBeTruthy(), { timeout: 3000 })
 
     fireEvent.click(screen.getByText('设为默认'))
