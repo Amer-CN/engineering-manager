@@ -430,6 +430,13 @@ var telemetry = new SttTelemetryProvider(process, outputLock, outputBuilder, err
 
             return (stdout, stderr, process.ExitCode, hasCompletionMarker);
             }
+            catch
+            {
+                // 任何阶段抛异常（监控保险丝/GPU 验证/解码失败）都不能让已启动的
+                // 转写进程存活 —— 否则它锁着 latest.log 继续跑，下一个任务也会被拖垮
+                try { if (process != null) KillProcessTree(process); } catch { }
+                throw;
+            }
             finally
             {
                 process?.Dispose();
