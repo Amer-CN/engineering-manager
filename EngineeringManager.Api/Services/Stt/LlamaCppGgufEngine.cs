@@ -202,9 +202,10 @@ public class LlamaCppGgufEngine : ISttEngine
             args.Append(" --vulkan");
         else
             args.Append(" --no-vulkan");
-        // DML 开启：编码器 ONNX 经 DirectML 走显卡（能用显存就用显存；若某显卡 DML
-        // 驱动异常导致转写失败，改回 " --no-dml" 即可回退 CPU）
-        args.Append(" --dml");
+        // DML 回退：2026-09-05 实测开 DML 后转写阶段系统可用内存掉到 1295MB
+        // 触发资源保险丝（任务 24）。DML 在内存/显存间搬运特征张量，峰值内存
+        // 反而高于纯 CPU。编码器暂回 CPU，待内存曲线实测定位真凶后再议。
+        args.Append(" --no-dml");
         if (!string.IsNullOrWhiteSpace(fullContext))
             args.Append(" --context \"").Append(fullContext.Replace("\"", "\\\"")).Append('"');
         args.Append(" --language Chinese");
