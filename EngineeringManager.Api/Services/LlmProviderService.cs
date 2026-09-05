@@ -58,21 +58,22 @@ public class LlmProviderService : ILlmChatService
     }
 
     /// <summary>
-    /// 按代理地址取 HttpClient：无代理走工厂命名客户端；有代理走缓存的双缀客户端（HttpClientHandler.Proxy）
+    /// 按代理地址取 HttpClient：无代理走工厂命名客户端；有代理走缓存的双缀客户端（HttpClientHandler.Proxy）。
+    /// 实例 Timeout 统一为 Infinite——缓存实例发出首个请求后属性不可再改（复改抛
+    /// "Properties can only be modified before sending the first request"），超时由调用处每请求 CTS 控制。
     /// </summary>
-    private HttpClient BuildClient(string? proxyUrl, TimeSpan timeout)
+    private HttpClient BuildClient(string? proxyUrl)
     {
         var normalized = NormalizeProxyUrl(proxyUrl);
         if (normalized == null)
         {
             var plain = _httpClientFactory.CreateClient("LlmProvider");
-            plain.Timeout = timeout;
+            plain.Timeout = Timeout.InfiniteTimeSpan;
             return plain;
         }
-        var proxied = ProxyClients.GetOrAdd(normalized, addr =>
-            new HttpClient(new HttpClientHandler { Proxy = new WebProxy(addr), UseProxy = true }));
-        proxied.Timeout = timeout;
-        return proxied;
+        return ProxyClients.GetOrAdd(normalized, addr => new HttpClient(
+            new HttpClientHandler { Proxy = new WebProxy(addr), UseProxy = true })
+        { Timeout = Timeout.InfiniteTimeSpan });
     }
 
     public LlmProviderService(
@@ -116,13 +117,14 @@ public class LlmProviderService : ILlmChatService
         try
         {
             // 共享缓存的代理客户端不可 dispose；直连走工厂客户端（handler 由工厂管理）
-            var client = BuildClient(proxyUrl, TimeSpan.FromSeconds(30));
+            var client = BuildClient(proxyUrl);
+            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
             using var request = new HttpRequestMessage(HttpMethod.Get,
                 $"{baseUrl.TrimEnd('/')}/models");
             request.Headers.Add("Authorization", $"Bearer {apiKey}");
 
-            var response = await client.SendAsync(request);
+            var response = await client.SendAsync(request, timeoutCts.Token);
             if (!response.IsSuccessStatusCode)
             {
                 var body = await response.Content.ReadAsStringAsync();
@@ -235,7 +237,9 @@ public class LlmProviderService : ILlmChatService
 
         try
         {
-            var client = BuildClient(route.ProxyUrl, TimeSpan.FromSeconds(120));
+            var client = BuildClient(route.ProxyUrl);
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(120));
 
             var json = JsonSerializer.Serialize(payload, SerializerOptions);
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
@@ -244,7 +248,7 @@ public class LlmProviderService : ILlmChatService
             request.Headers.Add("Authorization", $"Bearer {route.ApiKey}");
             request.Content = content;
 
-            using var response = await client.SendAsync(request, ct);
+            using var response = await client.SendAsync(request, timeoutCts.Token);
             var responseBody = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
@@ -298,43 +302,52 @@ public class LlmProviderService : ILlmChatService
 
         AddAgnesThinkingParameters(route, payload);
 
-        // 分离连接与 yield：错误/取消经 ConnectStreamAsync 返回值传递（try/catch 内不能 yield return）
-        var (reader, connectError) = await ConnectStreamAsync(route, payload, ct);
-        if (reader == null)
+        // 分离连接与 yield：错误/取消经 ConnectStreamAsync 返回值传递（try/catch 内不能 yield return）；
+        // timeoutCts 非空时由本方法持有（using），SSE 总超时 300s 覆盖到读取结束
+        var (reader, connectError, timeoutCts) = await ConnectStreamAsync(route, payload, ct);
+        if (timeoutCts != null)
         {
-            // Reader 为 null：connectError 非 null = 连接失败（下发错误块）；
-            // 均为 null = 正常取消（客户端断开/超时取消）→ 静默结束流，不产出错误块
-            if (connectError != null)
-                yield return connectError;
-            yield break;
+            using var _ = timeoutCts;
+            if (reader == null)
+            {
+                // Reader 为 null：connectError 非 null = 连接失败（下发错误块）；
+                // 均为 null = 正常取消（客户端断开/超时取消）→ 静默结束流，不产出错误块
+                if (connectError != null)
+                    yield return connectError;
+                yield break;
+            }
+
+            while (true)
+            {
+                string? line;
+                try
+                {
+                    line = await reader!.ReadLineAsync(timeoutCts.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    // 正常取消不是错误（客户端断开/超时取消）：仅 Debug 级留痕，静默结束流
+                    _logger.LogDebug("[LlmProviderService] SSE 读取被取消（客户端断开/超时），静默结束流");
+                    yield break;
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"[LlmProviderService] SSE 读取失败: {ex.Message}");
+                    yield break;
+                }
+
+                if (line == null) break;
+                if (line.StartsWith("data: "))
+                {
+                    var data = line.Substring(6).Trim();
+                    if (data == "[DONE]") break;
+                    yield return data;
+                }
+            }
         }
-
-        while (true)
+        else if (connectError != null)
         {
-            string? line;
-            try
-            {
-                line = await reader!.ReadLineAsync(ct);
-            }
-            catch (OperationCanceledException)
-            {
-                // 正常取消不是错误（客户端断开/超时取消）：仅 Debug 级留痕，静默结束流
-                _logger.LogDebug("[LlmProviderService] SSE 读取被取消（客户端断开/超时），静默结束流");
-                yield break;
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"[LlmProviderService] SSE 读取失败: {ex.Message}");
-                yield break;
-            }
-
-            if (line == null) break;
-            if (line.StartsWith("data: "))
-            {
-                var data = line.Substring(6).Trim();
-                if (data == "[DONE]") break;
-                yield return data;
-            }
+            yield return connectError;
         }
     }
 
@@ -359,14 +372,16 @@ public class LlmProviderService : ILlmChatService
         };
     }
 
-    private async Task<(StreamReader? Reader, string? Error)> ConnectStreamAsync(
+    private async Task<(StreamReader? Reader, string? Error, CancellationTokenSource? TimeoutCts)> ConnectStreamAsync(
         ModelRouteInfo route,
         Dictionary<string, object> payload,
         CancellationToken ct)
     {
         try
         {
-            var client = BuildClient(route.ProxyUrl, TimeSpan.FromSeconds(300));
+            var client = BuildClient(route.ProxyUrl);
+            var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(300));
 
             var json = JsonSerializer.Serialize(payload, SerializerOptions);
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
@@ -375,27 +390,28 @@ public class LlmProviderService : ILlmChatService
             request.Headers.Add("Authorization", $"Bearer {route.ApiKey}");
             request.Content = content;
 
-            var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+            var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeoutCts.Token);
 
             if (!response.IsSuccessStatusCode)
             {
                 var errorBody = await response.Content.ReadAsStringAsync();
+                timeoutCts.Dispose();
                 Console.Error.WriteLine($"[LlmProviderService] ChatStream API 错误 ({response.StatusCode}): {errorBody.Truncate(500)}");
-                return (null, JsonSerializer.Serialize(new { error = $"LLM 调用失败: {response.StatusCode}" }));
+                return (null, JsonSerializer.Serialize(new { error = $"LLM 调用失败: {response.StatusCode}" }), null);
             }
 
             var reader = new StreamReader(await response.Content.ReadAsStreamAsync());
-            return (reader, null);
+            return (reader, null, timeoutCts);
         }
         catch (Exception ex)
         {
-            // 客户端断开/超时触发的取消是正常流程，不是错误：以取消语义返回 (null, null)，
+            // 客户端断开/超时触发的取消是正常流程，不是错误：以取消语义返回 (null, null, null)，
             // 由 ChatStreamAsync 静默结束流（不记错误日志、不产出错误块）。
-            // 仅用户取消走静默；HttpClient 自身 300s 超时（OCE 但 ct 未触发）仍按连接失败返回错误块。
+            // 仅用户取消走静默；300s 超时（OCE 但 ct 未触发）仍按连接失败返回错误块。
             if (ex is OperationCanceledException && ct.IsCancellationRequested)
-                return (null, null);
+                return (null, null, null);
             Console.Error.WriteLine($"[LlmProviderService] ChatStreamAsync 连接失败: {ex.Message}");
-            return (null, JsonSerializer.Serialize(new { error = $"连接 LLM 失败: {ex.Message}" }));
+            return (null, JsonSerializer.Serialize(new { error = $"连接 LLM 失败: {ex.Message}" }), null);
         }
     }
 
