@@ -202,7 +202,9 @@ public class LlamaCppGgufEngine : ISttEngine
             args.Append(" --vulkan");
         else
             args.Append(" --no-vulkan");
-        args.Append(" --no-dml");
+        // DML 开启：编码器 ONNX 经 DirectML 走显卡（能用显存就用显存；若某显卡 DML
+        // 驱动异常导致转写失败，改回 " --no-dml" 即可回退 CPU）
+        args.Append(" --dml");
         if (!string.IsNullOrWhiteSpace(fullContext))
             args.Append(" --context \"").Append(fullContext.Replace("\"", "\\\"")).Append('"');
         args.Append(" --language Chinese");
