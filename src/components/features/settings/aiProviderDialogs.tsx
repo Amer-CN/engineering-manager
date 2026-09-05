@@ -13,6 +13,9 @@ import { testLlmProviderConnection } from '@/services/agent-client'
 import type { ProviderModelEntry } from '@/types/agent'
 import { CapabilityEditor, ModelMultiSelect } from './aiProviderSettingsParts'
 
+/** 更换密钥弹窗已移入 aiProviderSettingsParts（主文件行数门禁 ≤400）；此处重导出保持调用方兼容 */
+export { KeyReplaceDialog } from './aiProviderSettingsParts'
+
 const INPUT_CLS = 'w-full px-3 py-2.5 rounded-lg text-sm border border-[color:var(--border)] bg-[color:var(--card)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] disabled:bg-[color:var(--panel-2)] disabled:text-[color:var(--muted)] disabled:cursor-not-allowed'
 
 /** 添加服务商表单（内联卡片）— 保存时通过 onSaved 回传条目与明文 key */

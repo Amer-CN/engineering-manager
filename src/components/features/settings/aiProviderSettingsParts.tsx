@@ -1,11 +1,15 @@
 /**
  * AiProviderSection 的拆分件 — 行数门禁（主文件 ≤400 行）
- * 快捷档位按钮 + 模型能力编辑器 + 获取列表多选
+ * 快捷档位按钮 + 模型能力编辑器 + 获取列表多选 + 服务商行/更换密钥
  */
 
 import { useState } from 'react'
 import { Icon } from '@/components/ui/Icon'
-import type { ModelCapability } from '@/types/agent'
+import { Button } from '../../ui/Button'
+import { Drawer } from '../../ui/Drawer'
+import type { ModelCapability, ProviderEntry } from '@/types/agent'
+
+const INPUT_CLS = 'w-full px-3 py-2.5 rounded-lg text-sm border border-[color:var(--border)] bg-[color:var(--card)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] disabled:bg-[color:var(--panel-2)] disabled:text-[color:var(--muted)] disabled:cursor-not-allowed'
 
 /** maxTokens 快捷档位 */
 export const MAX_TOKEN_PRESETS = [2048, 4096, 8192, 16384]
@@ -173,6 +177,143 @@ export function CapBadge({ label, title }: { label: string; title: string }) {
     >
       {label}
     </span>
+  )
+}
+
+/** 当前生效徽章（服务商行用） */
+export function KeyActiveBadge() {
+  return (
+    <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-micro font-medium bg-accent-soft text-primary">
+      当前生效
+    </span>
+  )
+}
+
+/**
+ * 服务商行 — 名称/副标题 + 按钮区（启用/更换密钥/删除）
+ * 从 AiProviderSection 拆出以消化主文件行数门禁（≤400 行）
+ */
+export function ProviderRow({
+  provider, isActive, disabled, onActivate, onOpenKeyDialog, onDelete,
+}: {
+  provider: ProviderEntry
+  isActive: boolean
+  disabled: boolean
+  onActivate: () => void
+  onOpenKeyDialog: () => void
+  onDelete: () => void
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-[color:var(--border)] bg-[color:var(--card)]">
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium truncate text-foreground">{provider.name}</span>
+          {isActive && <KeyActiveBadge />}
+        </div>
+        <p className="text-xs text-[color:var(--muted)] truncate mt-0.5">{provider.baseUrl} · {provider.models.length} 个模型</p>
+      </div>
+      <div className="flex items-center gap-1 flex-shrink-0">
+        {!isActive && (
+          <button
+            type="button"
+            onClick={onActivate}
+            disabled={disabled}
+            className="px-2 py-1 rounded-lg text-xs font-medium hover:bg-[color:var(--panel-2)] disabled:opacity-50 text-primary"
+          >
+            启用
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onOpenKeyDialog}
+          disabled={disabled}
+          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium hover:bg-[color:var(--panel-2)] disabled:opacity-50 text-primary"
+        >
+          <Icon name="KeyRound" size={13} /> 更换密钥
+        </button>
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={disabled}
+          className="p-1.5 rounded-lg hover:bg-[color:var(--panel-2)] disabled:opacity-50 text-muted-foreground"
+          aria-label={`删除服务商 ${provider.name}`}
+        >
+          <Icon name="Trash2" size={14} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/** 更换密钥弹窗 — 单个 password 输入框；空输入时保存禁用（已保存的密钥出于安全不会回填） */
+export function KeyReplaceDialog({
+  isOpen, providerName, onCancel, onSave,
+}: {
+  isOpen: boolean
+  /** 服务商名称（拼标题用） */
+  providerName: string
+  onCancel: () => void
+  /** 回传用户填写的新 key（已 trim，非空） */
+  onSave: (apiKey: string) => void
+}) {
+  const [key, setKey] = useState('')
+  const trimmed = key.trim()
+
+  return (
+    <Drawer
+      open={isOpen}
+      onClose={onCancel}
+      icon="KeyRound"
+      title={`更换 ${providerName} 的密钥`}
+      width={360}   // 与 ModelEditDialog 同宽：单输入框小表单
+      footer={
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" size="sm" onClick={onCancel}>取消</Button>
+          <Button variant="primary" size="sm" onClick={() => onSave(trimmed)} disabled={!trimmed}>保存密钥</Button>
+        </div>
+      }
+    >
+      <div className="px-6 py-5 space-y-3">
+        <div>
+          <label className="label">新 API Key</label>
+          <input
+            type="password"
+            value={key}
+            onChange={e => setKey(e.target.value)}
+            placeholder="请输入新的 API Key"
+            className={INPUT_CLS}
+            autoFocus
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          密钥加密存储，不会回显。保存后立即生效。
+        </p>
+      </div>
+    </Drawer>
+  )
+}
+
+/**
+ * 更换密钥弹窗宿主 — keyDialog 非空时渲染 KeyReplaceDialog
+ * 从 AiProviderSection 拆出以消化主文件行数门禁（≤400 行）
+ */
+export function KeyReplaceHost({
+  target, onCancel, onSave,
+}: {
+  /** 弹窗目标（providerId + 名称；null = 关闭） */
+  target: { providerId: string; label: string } | null
+  onCancel: () => void
+  onSave: (providerId: string, apiKey: string) => void
+}) {
+  if (!target) return null
+  return (
+    <KeyReplaceDialog
+      key={target.providerId}
+      isOpen
+      providerName={target.label}
+      onCancel={onCancel}
+      onSave={apiKey => onSave(target.providerId, apiKey)}
+    />
   )
 }
 

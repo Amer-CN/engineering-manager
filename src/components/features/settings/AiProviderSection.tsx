@@ -8,22 +8,13 @@ import {
   reloadLlmProviderConfig,
 } from '@/services/agent-client'
 import type { MultiProviderConfig, ProviderModelEntry } from '@/types/agent'
-import { GenerationParamsSection, CapBadge } from './aiProviderSettingsParts'
+import { GenerationParamsSection, CapBadge, ProviderRow, KeyReplaceHost } from './aiProviderSettingsParts'
 import { ProviderAddForm, ModelEditDialog } from './aiProviderDialogs'
 
 /** 删除确认目标 */
 type DelTarget =
   | { kind: 'provider'; id: string; label: string }
   | { kind: 'model'; providerId: string; modelId: string; label: string }
-
-/** 当前生效徽章 */
-function ActiveBadge() {
-  return (
-    <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-micro font-medium bg-accent-soft text-primary">
-      当前生效
-    </span>
-  )
-}
 
 /**
  * AI 助手设置卡片 — 多服务商管理（对齐成熟 Agent 使用逻辑）
@@ -38,6 +29,8 @@ export function AiProviderSection() {
   const [addingProvider, setAddingProvider] = useState(false)
   const [modelDialog, setModelDialog] = useState<{ providerId: string; entry: ProviderModelEntry | null } | null>(null)
   const [delTarget, setDelTarget] = useState<DelTarget | null>(null)
+  /** 更换密钥弹窗目标（providerId + 名称） */
+  const [keyDialog, setKeyDialog] = useState<{ providerId: string; label: string } | null>(null)
   const [status, setStatus] = useState<'loading' | 'idle' | 'saving'>('loading')
   // 按 selector 订阅：全 store 订阅会在 toast 弹出/消失时重建 loadConfig → useEffect 无限重跑（自定义模型卡死根因）
   const showToast = useToastStore(s => s.showToast)
@@ -169,6 +162,15 @@ export function AiProviderSection() {
     setModelDialog(null)
   }
 
+  /** 更换密钥：只改目标 provider 的 ref 项后立即保存，其他 provider 仍发空串走「沿用旧值」 */
+  const handleReplaceKey = (providerId: string, apiKey: string) => {
+    const nextInputs = { ...apiKeyInputsRef.current, [providerId]: apiKey }
+    apiKeyInputsRef.current = nextInputs   // 同步 ref：saveNow 立即读时不受 setState 异步影响
+    setApiKeyInputs(nextInputs)
+    applyUpdate(m => m, true)
+    setKeyDialog(null)
+  }
+
   const handleConfirmDelete = () => {
     if (!delTarget) return
     applyUpdate(m => {
@@ -243,41 +245,17 @@ export function AiProviderSection() {
           )}
 
           <div className="space-y-2">
-            {multi.providers.map(p => {
-              const isActive = p.id === multi.activeProviderId && !multi.useBuiltIn
-              return (
-                <div key={p.id} className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-[color:var(--border)] bg-[color:var(--card)]">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium truncate text-foreground">{p.name}</span>
-                      {isActive && <ActiveBadge />}
-                    </div>
-                    <p className="text-xs text-[color:var(--muted)] truncate mt-0.5">{p.baseUrl} · {p.models.length} 个模型</p>
-                  </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    {!isActive && (
-                      <button
-                        type="button"
-                        onClick={() => applyUpdate(m => ({ ...m, activeProviderId: p.id, useBuiltIn: false }), true)}
-                        disabled={status === 'saving'}
-                        className="px-2 py-1 rounded-lg text-xs font-medium hover:bg-[color:var(--panel-2)] disabled:opacity-50 text-primary"
-                      >
-                        启用
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setDelTarget({ kind: 'provider', id: p.id, label: p.name })}
-                      disabled={status === 'saving'}
-                      className="p-1.5 rounded-lg hover:bg-[color:var(--panel-2)] disabled:opacity-50 text-muted-foreground"
-                      aria-label={`删除服务商 ${p.name}`}
-                    >
-                      <Icon name="Trash2" size={14} />
-                    </button>
-                  </div>
-                </div>
-              )
-            })}
+            {multi.providers.map(p => (
+              <ProviderRow
+                key={p.id}
+                provider={p}
+                isActive={p.id === multi.activeProviderId && !multi.useBuiltIn}
+                disabled={status === 'saving'}
+                onActivate={() => applyUpdate(m => ({ ...m, activeProviderId: p.id, useBuiltIn: false }), true)}
+                onOpenKeyDialog={() => setKeyDialog({ providerId: p.id, label: p.name })}
+                onDelete={() => setDelTarget({ kind: 'provider', id: p.id, label: p.name })}
+              />
+            ))}
             {multi.providers.length === 0 && !addingProvider && (
               <p className="text-xs text-[color:var(--muted)] py-2">还没有自定义服务商，点右上角「添加服务商」开始。</p>
             )}
@@ -396,6 +374,13 @@ export function AiProviderSection() {
           onSave={entry => handleSaveModel(modelDialog.providerId, entry)}
         />
       )}
+
+      {/* ── 更换密钥弹窗 ── */}
+      <KeyReplaceHost
+        target={keyDialog}
+        onCancel={() => setKeyDialog(null)}
+        onSave={handleReplaceKey}
+      />
 
       {/* ── 删除确认 ── */}
       <ConfirmDialog

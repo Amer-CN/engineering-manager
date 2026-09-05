@@ -324,8 +324,10 @@ public class LlmConfigResolver
     /// </summary>
     public async Task SaveMultiConfigAsync(MultiProviderConfig newMulti)
     {
-        // key 合并：空 key 的 provider 沿用内存里同 id 的旧 key
+        // key 合并：空 key 的 provider 沿用内存里同 id 的旧 key；
+        // 无旧条目（新建）又没填 key → 拒绝整单落盘（空壳服务商防线）
         var merged = new List<ProviderEntry>();
+        var missingKey = new List<string>();
         lock (_lock)
         {
             foreach (var p in newMulti.Providers)
@@ -336,9 +338,17 @@ public class LlmConfigResolver
                     continue;
                 }
                 var old = _multi.Providers.FirstOrDefault(o => o.Id == p.Id);
-                merged.Add(old == null ? p : p with { ApiKey = old.ApiKey });
+                if (old == null)
+                {
+                    missingKey.Add(p.Name);
+                    continue;
+                }
+                merged.Add(p with { ApiKey = old.ApiKey });
             }
         }
+        if (missingKey.Count > 0)
+            throw new InvalidOperationException(
+                $"新建服务商 {string.Join("、", missingKey)} 未填写 API Key，已拒绝保存");
         var effective = NormalizeMulti(newMulti with { Providers = merged });
 
         var dataPath = ApiConfig.ResolveDataPath();

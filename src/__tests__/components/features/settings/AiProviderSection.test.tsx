@@ -2,6 +2,7 @@ import { describe, test, expect, vi, beforeEach } from 'vitest'
 import React from 'react'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { AiProviderSection } from '@/components/features/settings/AiProviderSection'
+import { saveLlmProviderConfig } from '@/services/agent-client'
 import { useToastStore } from '@/store/toastStore'
 
 // ─── agent-client mock ─────────────────────────────
@@ -69,5 +70,41 @@ describe('AiProviderSection — 自定义模型卡死回归', () => {
     await waitFor(() =>
       expect(useToastStore.getState().toasts.some(t => t.message.includes('请先填写 Base URL'))).toBe(true),
     )
+  })
+})
+
+describe('AiProviderSection — 更换密钥', () => {
+  beforeEach(() => {
+    mockGetConfig.mockReset()
+    mockGetConfig.mockResolvedValue({
+      useBuiltIn: false, providerName: 'Custom', baseUrl: 'https://api.example.com/v1',
+      model: 'my-model', hasApiKey: false, temperature: 0.7, maxTokens: 4096,
+      activeProviderId: 'p1',
+      providers: [
+        { id: 'p1', name: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1', models: [], activeModelId: '' },
+      ],
+    })
+  })
+
+  test('服务商卡片有点「更换密钥」按钮；空输入时保存禁用', async () => {
+    render(<AiProviderSection />)
+    fireEvent.click(await screen.findByText('更换密钥'))
+    // 弹窗标题含服务商名
+    await screen.findByText('更换 DeepSeek 的密钥')
+    // 空输入 → 保存密钥禁用（Button 文本包在 span 里，按 role 取按钮本身）
+    expect(screen.getByRole('button', { name: '保存密钥' })).toBeDisabled()
+  })
+
+  test('填写新 key 保存后走保存链路（目标 provider 带新 key）', async () => {
+    render(<AiProviderSection />)
+    fireEvent.click(await screen.findByText('更换密钥'))
+    await screen.findByText('更换 DeepSeek 的密钥')
+    fireEvent.change(screen.getByPlaceholderText('请输入新的 API Key'), { target: { value: 'sk-new-key' } })
+    const saveBtn = screen.getByRole('button', { name: '保存密钥' })
+    expect(saveBtn).not.toBeDisabled()
+    fireEvent.click(saveBtn)
+    await waitFor(() => expect(saveLlmProviderConfig).toHaveBeenCalled())
+    const payload = (saveLlmProviderConfig as any).mock.calls.at(-1)[0]
+    expect(payload.providers.find((p: any) => p.id === 'p1').apiKey).toBe('sk-new-key')
   })
 })
