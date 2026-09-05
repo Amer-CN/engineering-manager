@@ -43,6 +43,9 @@ export function AiProviderSection() {
   const showToast = useToastStore(s => s.showToast)
   /** 最近一次自动保存的错误信息（成功时清空） */
   const [saveError, setSaveError] = useState<string | null>(null)
+  /** 刚保存成功的时间戳（1.5s 内显示「✓ 已保存」，之后回落为常态字） */
+  const [justSaved, setJustSaved] = useState(false)
+  const justSavedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)   // 与 saveTimerRef 共用 unmount 冲刷清理
   // ref 镜像：自动保存读最新 state，避免闭包吃到旧值
   const multiRef = useRef<MultiProviderConfig | null>(null)
   multiRef.current = multi
@@ -58,6 +61,7 @@ export function AiProviderSection() {
       saveTimerRef.current = null
       void saveNowRef.current()
     }
+    if (justSavedTimerRef.current) clearTimeout(justSavedTimerRef.current)
   }, [])
 
   const loadConfig = useCallback(async () => {
@@ -94,6 +98,10 @@ export function AiProviderSection() {
       setSaveError(err)
       if (err) { showToast(err, 'error'); return }
       await reloadLlmProviderConfig()   // 立即生效，无需重启
+      // 成功反馈：✓ 已保存 持续 1.5s 后回落「改动即时保存」（连续保存时刷新计时）
+      if (justSavedTimerRef.current) clearTimeout(justSavedTimerRef.current)
+      setJustSaved(true)
+      justSavedTimerRef.current = setTimeout(() => { justSavedTimerRef.current = null; setJustSaved(false) }, 1500)
     } finally {
       setStatus('idle')
     }
@@ -379,7 +387,7 @@ export function AiProviderSection() {
 
         {/* ── 自动保存状态 ── */}
         <div className="pt-2 flex items-center gap-2 text-xs">
-          {saveError ? <span className="text-[color:var(--danger)]">保存失败：{saveError}</span> : status === 'saving' ? <span className="text-[color:var(--muted)]">保存中...</span> : <span className="text-[color:var(--muted)]">改动即时保存</span>}
+          {saveError ? <span className="text-[color:var(--danger)]">保存失败：{saveError}</span> : status === 'saving' ? <span className="text-[color:var(--muted)]">保存中...</span> : justSaved ? <span className="text-[color:var(--success)] font-medium">✓ 已保存</span> : <span className="text-[color:var(--muted)]">改动即时保存</span>}
         </div>
       </div>
 

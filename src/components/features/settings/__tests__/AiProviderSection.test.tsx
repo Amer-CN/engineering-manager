@@ -214,8 +214,9 @@ describe('AiProviderSection（多服务商管理）', () => {
     // 切换启用智谱（自动保存）
     fireEvent.click(screen.getByText('启用'))
     await waitFor(() => expect(screen.getByText('glm-5.3')).toBeTruthy())
-    // 等本次自动保存结束（保存中按钮 disabled）
-    await waitFor(() => expect(screen.getByText('改动即时保存')).toBeTruthy())
+    // 等本次自动保存结束（保存中按钮 disabled）；成功后短暂显示 ✓ 再回落（真实 1.5s 计时）
+    await waitFor(() => expect(screen.getByText('✓ 已保存')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('改动即时保存')).toBeTruthy(), { timeout: 3000 })
 
     // deepseek-chat 当前非激活服务商的模型不可见；智谱的模型列表出现
     expect(screen.queryByText('deepseek-chat')).toBeNull()
@@ -227,7 +228,8 @@ describe('AiProviderSection（多服务商管理）', () => {
     fireEvent.click(screen.getByText('保存模型'))
     await waitFor(() => expect(screen.getByText('glm-4-flash')).toBeTruthy())
     await waitFor(() => expect(mockSaveLlmProviderConfig).toHaveBeenCalledTimes(2))
-    await waitFor(() => expect(screen.getByText('改动即时保存')).toBeTruthy())
+    // 成功后先短暂显示 ✓ 再回落（1.5s 真实定时器，waitFor 轮询可等到回落）
+    await waitFor(() => expect(screen.getByText('改动即时保存')).toBeTruthy(), { timeout: 3000 })
 
     fireEvent.click(screen.getByText('设为默认'))
     // glm-4-flash 行出现「默认」徽章，自动保存第 3 次
@@ -371,5 +373,57 @@ describe('AiProviderSection（多服务商管理）', () => {
     unmount()
     expect(mockSaveLlmProviderConfig).toHaveBeenCalledTimes(1)
     expect(mockSaveLlmProviderConfig.mock.calls[0][0].proxyUrl).toBe('127.0.0.1:7897')
+  })
+
+  test('保存成功反馈：显示「✓ 已保存」，1.5s 后回落为「改动即时保存」', async () => {
+    render(<AiProviderSection />)
+    await waitFor(() => expect(screen.getByRole('switch')).toBeTruthy())
+    expect(screen.getByText('改动即时保存')).toBeTruthy()
+
+    vi.useFakeTimers()
+    fireEvent.click(screen.getByRole('switch'))
+    // mock 同步 resolve：推进 timer flush promise 链 → 保存中 → 成功置 justSaved
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    // reload mock 也同步 resolve，再 flush 一轮让 finally 落地
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    expect(screen.getByText('✓ 已保存')).toBeTruthy()
+
+    // 1.5s 内仍显示
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000) })
+    expect(screen.getByText('✓ 已保存')).toBeTruthy()
+
+    // 1.5s 到：回落常态字
+    await act(async () => { await vi.advanceTimersByTimeAsync(600) })
+    expect(screen.queryByText('✓ 已保存')).toBeNull()
+    expect(screen.getByText('改动即时保存')).toBeTruthy()
+  })
+
+  test('保存成功反馈：连续两次保存刷新 1.5s 计时，中间不回落', async () => {
+    render(<AiProviderSection />)
+    await waitFor(() => expect(screen.getByRole('switch')).toBeTruthy())
+
+    vi.useFakeTimers()
+    fireEvent.click(screen.getByRole('switch'))
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    expect(screen.getByText('✓ 已保存')).toBeTruthy()
+    expect(mockSaveLlmProviderConfig).toHaveBeenCalledTimes(1)
+
+    // 1s 后第二次保存（重置计时）
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000) })
+    fireEvent.click(screen.getByRole('switch'))
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    expect(mockSaveLlmProviderConfig).toHaveBeenCalledTimes(2)
+    // 距第二次保存不到 1.5s（刚发生）：仍显示（若没刷新计时此时已回落）
+    expect(screen.getByText('✓ 已保存')).toBeTruthy()
+
+    // 距第二次保存 1s：仍显示
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000) })
+    expect(screen.getByText('✓ 已保存')).toBeTruthy()
+
+    // 距第二次保存 1.6s：回落
+    await act(async () => { await vi.advanceTimersByTimeAsync(600) })
+    expect(screen.queryByText('✓ 已保存')).toBeNull()
   })
 })
