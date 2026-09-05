@@ -201,6 +201,7 @@ export function ModelEditDialog({
       onClose={onCancel}
       icon="Cpu"
       title={title}
+      width={360}   // 小表单配窄抽屉：内容只有模型 ID + 能力两行，480px 默认宽留白过多
       footer={
         <div className="flex justify-end gap-2">
           <Button variant="secondary" size="sm" onClick={onCancel}>取消</Button>
@@ -208,7 +209,7 @@ export function ModelEditDialog({
         </div>
       }
     >
-      <div className="space-y-4">
+      <div className="px-6 py-5 space-y-4">
         <div>
           <label className="label">模型 ID</label>
           <input
