@@ -763,20 +763,14 @@ public static class AgentEndpoints
         {
             try
             {
-                // IDbConnection 为 Scoped，启动期无请求上下文，需自建 scope 取连接
+                // IDbConnection 为 Scoped，启动期无请求上下文，需自建 scope 取连接。
+                // 保留天数是 per-user 偏好（user_preferences.retention_days），
+                // PurgeExpiredDeletedAsync 在 SQL 内按每用户各自的偏好计算 cutoff，
+                // 这里只传「未设置偏好用户的默认值」。
                 using var scope = app.Services.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<IDbConnection>();
                 var conversations = scope.ServiceProvider.GetRequiredService<AgentConversationService>();
-                // 读当前用户的 retention_days 偏好；未设置或未解析时回退到默认值 7
-                var days = (await db.QueryFirstOrDefaultAsync<string?>(
-                    "SELECT value FROM user_preferences WHERE user_id=@Uid AND key=@Key",
-                    new { Uid = (object?)null, Key = "retention_days" })) != null
-                    && int.TryParse(db.QueryFirstOrDefault<string>(
-                        "SELECT value FROM user_preferences WHERE user_id=@Uid AND key=@Key",
-                        new { Uid = (object?)null, Key = "retention_days" }), out var parsed)
-                        && parsed >= 1 && parsed <= 90
-                    ? parsed : 7;
-                await conversations.PurgeExpiredDeletedAsync(db, days);
+                await conversations.PurgeExpiredDeletedAsync(db, defaultRetentionDays: 7);
             }
             catch (Exception ex)
             {

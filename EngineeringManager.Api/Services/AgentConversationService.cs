@@ -291,21 +291,34 @@ public class AgentConversationService
     }
 
     /// <summary>
-    /// 永久清理软删除超过 retentionDays 天的会话（连带 agent_messages）。
-    /// 应用启动时 fire-and-forget 调用，天数由前端用户偏好决定。
+    /// 永久清理软删除超过各自保留天数的会话（连带 agent_messages）。
+    /// 应用启动时 fire-and-forget 调用。保留天数按用户偏好（user_preferences.retention_days）：
+    /// 每个用户按自己的偏好清理自己的会话；未设置偏好的用户用默认天数。
     /// </summary>
-    public async Task PurgeExpiredDeletedAsync(IDbConnection db, int retentionDays)
+    public async Task PurgeExpiredDeletedAsync(IDbConnection db, int defaultRetentionDays = 7)
     {
-        // deleted_at 由 Common.NowString() 写入（本地时间 yyyy-MM-dd HH:mm:ss），字符串比较即时间比较
-        var cutoff = DateTime.Now.AddDays(-retentionDays).ToString("yyyy-MM-dd HH:mm:ss");
+        // deleted_at 由 Common.NowString() 写入（本地时间 yyyy-MM-dd HH:mm:ss），字符串比较即时间比较。
+        // 单条 SQL 完成整体清理：每用户的 cutoff = now - COALESCE(该用户偏好, 默认值) 天。
+        // datetime('localtime','-7 day') 这类动态天数不能直接参数化进修饰符，
+        // 故用 date 算术：cutoff = strftime('%Y-%m-%d %H:%M:%S','now','localtime','-' || days || ' day')。
         await db.ExecuteAsync(@"
             DELETE FROM [agent_messages]
             WHERE conversation_id IN (
-                SELECT id FROM [agent_conversations]
-                WHERE deleted_at IS NOT NULL AND deleted_at < @Cutoff
+                SELECT c.id FROM [agent_conversations] c
+                WHERE c.deleted_at IS NOT NULL
+                  AND c.deleted_at < strftime('%Y-%m-%d %H:%M:%S','now','localtime',
+                        '-' || COALESCE(
+                            (SELECT CAST(value AS INTEGER) FROM [user_preferences]
+                             WHERE user_id = c.user_id AND key = 'retention_days'),
+                            @DefaultDays) || ' day')
             );
             DELETE FROM [agent_conversations]
-            WHERE deleted_at IS NOT NULL AND deleted_at < @Cutoff;
-        ", new { Cutoff = cutoff });
+            WHERE deleted_at IS NOT NULL
+              AND deleted_at < strftime('%Y-%m-%d %H:%M:%S','now','localtime',
+                    '-' || COALESCE(
+                        (SELECT CAST(value AS INTEGER) FROM [user_preferences]
+                         WHERE user_id = agent_conversations.user_id AND key = 'retention_days'),
+                        @DefaultDays) || ' day');
+        ", new { DefaultDays = defaultRetentionDays });
     }
 }
