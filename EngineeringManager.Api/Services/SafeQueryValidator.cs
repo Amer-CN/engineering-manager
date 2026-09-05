@@ -172,7 +172,7 @@ public static class SafeQueryValidator
             return new ValidationResult(false, null, null, "不允许多条语句");
 
         var stmt = statements[0];
-        Query query;
+        Query? query;
         try
         {
             query = stmt.AsQuery()!;
@@ -180,6 +180,18 @@ public static class SafeQueryValidator
         catch
         {
             return new ValidationResult(false, null, null, "只允许 SELECT 查询");
+        }
+
+        // 非 SELECT 语句（INSERT/REPLACE/PRAGMA 等）AsQuery() 返回 null 而非抛异常，
+        // 旧实现靠下方 Body.AsSelect() 的 catch 兜住 NRE——CTE 检查前移后须显式拦截
+        if (query == null)
+            return new ValidationResult(false, null, null, "只允许 SELECT 查询");
+
+        // A2(审计): WITH (CTE) 整体拒绝 —— CTE 体内的表/列引用完全绕过本文件的
+        // 白名单与过滤注入（外层再借白名单表名当 CTE 名即可越权），先于一切校验整体拒绝
+        if (query.With != null)
+        {
+            return new ValidationResult(false, null, null, "不支持 WITH (CTE) 查询");
         }
 
         // 4. Body 必须是 Select（拒绝 SetOperation 如 UNION）
@@ -699,12 +711,18 @@ public static class SafeQueryValidator
         var whereIdx = FindTopLevelKeyword(sql, "WHERE");
         if (whereIdx >= 0)
         {
-            // 在顶层 WHERE 后插入
+            // A1(审计): 旧实现裸拼 " {filter} AND"，用户原 WHERE 的顶层 OR（如 OR 1=1）
+            // 会短路注入的过滤器造成越权 —— 先定位原 WHERE 表达式结束位置
+            //（从 insertAt 起第一个顶层 GROUP/HAVING/ORDER/LIMIT/WINDOW 或串尾），
+            // 把过滤器与原表达式各自包进括号
             var insertAt = whereIdx + "WHERE".Length;
-            return sql.Substring(0, insertAt) + $" {filterClause} AND" + sql.Substring(insertAt);
+            var endIdx = FindTopLevelKeywordFrom(sql, insertAt, "GROUP", "HAVING", "ORDER", "LIMIT", "WINDOW");
+            var whereExpr = endIdx >= 0 ? sql.Substring(insertAt, endIdx - insertAt) : sql.Substring(insertAt);
+            var tail = endIdx >= 0 ? sql.Substring(endIdx) : "";
+            return sql.Substring(0, insertAt) + " (" + filterClause + ") AND (" + whereExpr + ")" + tail;
         }
 
-        // 无顶层 WHERE：在顶层 GROUP BY / ORDER BY / LIMIT 之前插入
+        // 无顶层 WHERE：在顶层 GROUP BY / ORDER BY / LIMIT 之前插入（filterClause 包括号，与 A1 同口径）
         var groupIdx = FindTopLevelKeyword(sql, "GROUP");
         var orderIdx = FindTopLevelKeyword(sql, "ORDER");
         var limitIdx = FindTopLevelKeyword(sql, "LIMIT");
@@ -712,8 +730,61 @@ public static class SafeQueryValidator
         var pos = candidates.Length > 0 ? candidates.Min() : -1;
 
         if (pos >= 0)
-            return sql.Substring(0, pos) + $"WHERE {filterClause} " + sql.Substring(pos);
-        return sql + $" WHERE {filterClause}";
+            return sql.Substring(0, pos) + $"WHERE ({filterClause}) " + sql.Substring(pos);
+        return sql + $" WHERE ({filterClause})";
+    }
+
+    /// <summary>
+    /// 从指定位置向后扫描，返回最早出现的顶层（depth-0、引号外）关键字位置，没有则 -1。
+    /// A1: 用于定位顶层 WHERE 表达式的结束（下一个 GROUP/HAVING/ORDER/LIMIT/WINDOW）。
+    /// 引号/括号状态机与 FindTopLevelKeyword 一致（'' 与 "" 转义跳过）。
+    /// </summary>
+    private static int FindTopLevelKeywordFrom(string sql, int startPos, params string[] keywords)
+    {
+        int depth = 0;
+        bool inSingleQuote = false;
+        bool inDoubleQuote = false;
+        for (int i = startPos; i < sql.Length; i++)
+        {
+            var c = sql[i];
+
+            if (inSingleQuote)
+            {
+                if (c == '\'')
+                {
+                    if (i + 1 < sql.Length && sql[i + 1] == '\'') i++;
+                    else inSingleQuote = false;
+                }
+                continue;
+            }
+            if (inDoubleQuote)
+            {
+                if (c == '"')
+                {
+                    if (i + 1 < sql.Length && sql[i + 1] == '"') i++;
+                    else inDoubleQuote = false;
+                }
+                continue;
+            }
+
+            if (c == '\'') { inSingleQuote = true; continue; }
+            if (c == '"') { inDoubleQuote = true; continue; }
+            if (c == '(') { depth++; continue; }
+            if (c == ')') { depth--; continue; }
+            if (depth != 0) continue;
+
+            foreach (var keyword in keywords)
+            {
+                if (i + keyword.Length > sql.Length) continue;
+                if (string.Compare(sql, i, keyword, 0, keyword.Length, StringComparison.OrdinalIgnoreCase) == 0
+                    && (i == 0 || !char.IsLetterOrDigit(sql[i - 1]))
+                    && (i + keyword.Length == sql.Length || !char.IsLetterOrDigit(sql[i + keyword.Length])))
+                {
+                    return i;
+                }
+            }
+        }
+        return -1;
     }
 
     /// <summary>

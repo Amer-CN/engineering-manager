@@ -335,6 +335,12 @@ public class LlmProviderService : ILlmChatService
                     Console.Error.WriteLine($"[LlmProviderService] SSE 读取失败: {ex.Message}");
                     yield break;
                 }
+                finally
+                {
+                    // F6(审计): 无论正常结束/取消/错误，reader 与底层响应流必须释放——
+                    // ResponseHeadersRead 模式下 response 流持有连接直到 dispose，泄漏的 socket 只能等 GC 终结器
+                    reader?.Dispose();
+                }
 
                 if (line == null) break;
                 if (line.StartsWith("data: "))

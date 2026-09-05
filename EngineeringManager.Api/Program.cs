@@ -274,6 +274,16 @@ builder.Services.ConfigureHttpJsonOptions(options =>
         var distPath = Path.Combine(AppContext.BaseDirectory, "dist");
         IsProduction = Directory.Exists(distPath);
 
+        // F2(审计): 桌面 WinExe 无控制台，全库海量 Console.* 日志原本直接蒸发——
+        // 生产模式启动早期把 Console.Out/Console.Error 重定向到按天滚动日志文件；
+        // 开发/测试模式不动（保留控制台输出）。写失败由 ConsoleFileLog 内部吞掉，不阻塞启动
+        if (IsProduction)
+        {
+            var fileLog = new EngineeringManager.Api.Services.ConsoleFileLog();
+            Console.SetOut(fileLog);
+            Console.SetError(fileLog);
+        }
+
         if (IsProduction)
         {
             Console.WriteLine($"[App] 生产模式：托管前端静态文件 {distPath}");
@@ -361,7 +371,10 @@ builder.Services.ConfigureHttpJsonOptions(options =>
                 var error = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
                 if (error != null)
                 {
-                    Console.Error.WriteLine($"[Global] 未处理异常: {error.Error.Message}");
+                    // F2(审计): 只记 Message 曾导致生产无堆栈可查——记完整堆栈 + 请求路径 + TraceId；
+                    // 响应体保持脱敏（"服务器内部错误"），堆栈不泄漏给客户端
+                    Console.Error.WriteLine(
+                        $"[Global] 未处理异常 path={context.Request.Path} traceId={context.TraceIdentifier}\n{error.Error.ToString()}");
                     await context.Response.WriteAsJsonAsync(new { success = false, error = "服务器内部错误" });
                 }
             });
@@ -382,6 +395,15 @@ builder.Services.ConfigureHttpJsonOptions(options =>
             var db = scope.ServiceProvider.GetRequiredService<IDbConnection>();
             var pii = app.Services.GetRequiredService<EngineeringManager.Api.Security.PiiProtector>();
             pii.Initialize(db);
+
+            // F3(审计): 上次进程中途退出会把 pii_reencrypt_status 卡在 running，此后每次触发都抛
+            // "PII re-encrypt 已在运行中"，功能永久锁死——启动时复位为 interrupted（游标续传保证可恢复）
+            try
+            {
+                db.Execute("UPDATE pii_reencrypt_status SET status='interrupted', updated_at=@Now WHERE id=1 AND status='running'",
+                    new { Now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") });
+            }
+            catch { /* 表不存在等启动期问题不阻塞启动 */ }
         }
 
         // 写作中心 skill 热更：启动后台检查远端版本（内部全静默，任何失败不影响启动与写作）

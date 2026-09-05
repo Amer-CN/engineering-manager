@@ -655,6 +655,10 @@ public static class SttEndpoints
                     "UPDATE stt_jobs SET status = 'cancelled', updated_at = @Now WHERE id = @Id AND created_by = @Uid",
                     new { Now = Common.NowString(), Id = id, Uid = uid });
 
+                // F4(审计): 库内状态之外，同时触发在途转写的真实取消（引擎/预处理收到令牌即中止），
+                // worker 完成后的写回也带 processing 守卫，不会再把 cancelled 覆盖回 completed
+                EngineeringManager.Api.Services.Stt.SttWorker.TryCancel(id);
+
                 return Results.Ok(new { success = true, data = new { id, status = "cancelled" } });
             }
             catch (Exception ex)

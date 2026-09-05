@@ -234,33 +234,35 @@ public class ReportGenerationService
         var (filter, param) = BuildKpiFilter(request, userId, isAdmin);
 
         int contractCount = 0, invoiceCount = 0, settlementCount = 0, wageCount = 0;
-        double contractAmount = 0, invoiceAmount = 0, settlementAmount = 0, wageAmount = 0;
+        // D-04(审计): 库内金额一律 INTEGER 分（003 迁移），聚合按分读出、出参前统一 ToYuan——
+        // 原直接 ExecuteScalarAsync<double> 按元输出，报告 KPI 金额 100 倍虚高
+        double contractAmountYuan = 0, invoiceAmountYuan = 0, settlementAmountYuan = 0, wageAmountYuan = 0;
 
         try
         {
             // 收入合同
             contractCount = await db.ExecuteScalarAsync<int>(
                 $"SELECT COUNT(*) FROM [income_contracts]{filter}", param);
-            contractAmount = await db.ExecuteScalarAsync<double>(
-                $"SELECT COALESCE(SUM([amount]), 0) FROM [income_contracts]{filter}", param);
+            contractAmountYuan = (double)ToYuan(await db.ExecuteScalarAsync<long>(
+                $"SELECT COALESCE(SUM([amount]), 0) FROM [income_contracts]{filter}", param));
 
             // 发票
             invoiceCount = await db.ExecuteScalarAsync<int>(
                 $"SELECT COUNT(*) FROM [invoices]{filter}", param);
-            invoiceAmount = await db.ExecuteScalarAsync<double>(
-                $"SELECT COALESCE(SUM([amount]), 0) FROM [invoices]{filter}", param);
+            invoiceAmountYuan = (double)ToYuan(await db.ExecuteScalarAsync<long>(
+                $"SELECT COALESCE(SUM([amount]), 0) FROM [invoices]{filter}", param));
 
             // 结算
             settlementCount = await db.ExecuteScalarAsync<int>(
                 $"SELECT COUNT(*) FROM [settlements]{filter}", param);
-            settlementAmount = await db.ExecuteScalarAsync<double>(
-                $"SELECT COALESCE(SUM([amount]), 0) FROM [settlements]{filter}", param);
+            settlementAmountYuan = (double)ToYuan(await db.ExecuteScalarAsync<long>(
+                $"SELECT COALESCE(SUM([amount]), 0) FROM [settlements]{filter}", param));
 
             // 工资
             wageCount = await db.ExecuteScalarAsync<int>(
                 $"SELECT COUNT(*) FROM [wages]{filter}", param);
-            wageAmount = await db.ExecuteScalarAsync<double>(
-                $"SELECT COALESCE(SUM([actual_wage]), 0) FROM [wages]{filter}", param);
+            wageAmountYuan = (double)ToYuan(await db.ExecuteScalarAsync<long>(
+                $"SELECT COALESCE(SUM([actual_wage]), 0) FROM [wages]{filter}", param));
         }
         catch (Exception ex)
         {
@@ -269,10 +271,10 @@ public class ReportGenerationService
 
         return new KpiAggregate
         {
-            ContractCount = contractCount, ContractAmount = contractAmount,
-            InvoiceCount = invoiceCount, InvoiceAmount = invoiceAmount,
-            SettlementCount = settlementCount, SettlementAmount = settlementAmount,
-            WageCount = wageCount, WageAmount = wageAmount,
+            ContractCount = contractCount, ContractAmount = contractAmountYuan,
+            InvoiceCount = invoiceCount, InvoiceAmount = invoiceAmountYuan,
+            SettlementCount = settlementCount, SettlementAmount = settlementAmountYuan,
+            WageCount = wageCount, WageAmount = wageAmountYuan,
         };
     }
 

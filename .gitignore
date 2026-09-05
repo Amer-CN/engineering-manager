@@ -190,3 +190,17 @@ docs/repowiki-cross-agent-discussion.md
 .work/
 .work-dry/
 cloudflare-worker/dashboard-dist/
+
+# 大体积/第三方资产不入库（深审处置建议）
+vendor/
+asr-engine/funasr-nano/
+asr-engine/transcribe.exe.broken_rebuild_*
+
+# #5(审计): ASR 对比测试残留（已从 git 历史清除，规则防将来误入库）
+asr-engine/*.broken_rebuild_*
+/hotwords.txt
+/asr_compare.csv
+/results_06b.json
+/asr-report.md
+asr-engine/hotwords.txt
+asr-test/hotwords.txt

@@ -1,4 +1,5 @@
 using Xunit;
+using Dapper;
 using EngineeringManager.Api.Services;
 
 namespace EngineeringManager.Tests.Endpoints;
@@ -251,5 +252,43 @@ public class SafeQueryValidatorTests
             "SELECT quantity FROM inventory_items", TestUid, TestScope);
 
         Assert.False(result.IsValid, "quantity 已不是库存表真实列，应被拒绝");
+    }
+
+    // ════════ A1/A2（审计 2026-09-04）：CTE 拒绝 + OR 短路防护 ════════
+
+    [Fact]
+    public void ValidateAndRewrite_WithCteQuery_Rejected()
+    {
+        // A2 PoC：CTE 借白名单表名 projects 做别名，体内引用越权表 users——
+        // 旧实现只校验外层 FROM，CTE 体内的表/列完全绕过白名单与过滤注入
+        var result = SafeQueryValidator.ValidateAndRewrite(
+            "WITH projects AS (SELECT id, name FROM users) SELECT id, name FROM projects",
+            TestUid, TestScope);
+
+        Assert.False(result.IsValid, "WITH (CTE) 查询应该被整体拒绝");
+        Assert.NotNull(result.Error);
+        Assert.Contains("CTE", result.Error, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ValidateAndRewrite_OrAlwaysTrueWhere_UserFilterNotShortCircuited()
+    {
+        // A1 PoC：顶层 OR 1=1 曾短路裸拼注入的行级过滤器（旧实现 " {filter} AND"）→ 越权
+        var sql = "SELECT name FROM projects WHERE 1 = 1 OR 1 = 1";
+        var result = SafeQueryValidator.ValidateAndRewrite(sql, TestUid, RestrictedScope);
+
+        Assert.True(result.IsValid, $"查询应该通过: {result.Error}");
+        Assert.NotNull(result.RewrittenSql);
+        // 括号结构断言：过滤器与用户原 WHERE 各自包进括号
+        Assert.Contains("AND (", result.RewrittenSql, StringComparison.OrdinalIgnoreCase);
+
+        // 内存库实测两用户数据隔离：改写后的 SQL 以 u1 身份执行只能看到 u1 的行
+        using var conn = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=:memory:");
+        conn.Open();
+        conn.Execute("CREATE TABLE projects (id INTEGER PRIMARY KEY, name TEXT, created_by TEXT)");
+        conn.Execute("INSERT INTO projects (name, created_by) VALUES ('mine', 'u1'), ('theirs', 'u2')");
+        var rows = conn.Query<string>(result.RewrittenSql, new { Uid = "u1" }).ToList();
+        Assert.Single(rows);
+        Assert.Equal("mine", rows[0]);
     }
 }

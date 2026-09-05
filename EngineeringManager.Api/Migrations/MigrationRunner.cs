@@ -92,7 +92,10 @@ public static class MigrationRunner
             }
             catch (Microsoft.Data.Sqlite.SqliteException ex)
             {
-                if (IsBenignAlterError(ex)) continue;  // 列已存在等，幂等跳过
+                // D-01(审计): 吞错仅放行 schema 类语句；INSERT/UPDATE/DELETE 引用不存在的列必须中止——
+                // 否则 003 式重建迁移（CREATE _new → INSERT SELECT → DROP 旧表）在源表缺列时静默跳过
+                // INSERT 后照常 DROP，全表数据无声清空且迁移记为已应用
+                if (IsBenignAlterError(ex) && IsBenignSchemaStatement(trimmed)) continue;  // 列已存在等，幂等跳过
                 throw;
             }
         }
@@ -106,6 +109,17 @@ public static class MigrationRunner
             ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase) ||
             ex.Message.Contains("no such column", StringComparison.OrdinalIgnoreCase)
         );
+
+    /// <summary>D-01: 判定语句是否 schema 类（吞错仅对这类语句生效）。
+    /// "duplicate column name"只来自 ALTER ADD；"already exists"只来自 CREATE；
+    /// "no such column"来自 ALTER RENAME（045 的幂等依赖此吞错）。</summary>
+    private static bool IsBenignSchemaStatement(string stmt)
+    {
+        var s = stmt.TrimStart();
+        return s.StartsWith("ALTER", StringComparison.OrdinalIgnoreCase)
+            || s.StartsWith("CREATE", StringComparison.OrdinalIgnoreCase)
+            || s.StartsWith("RENAME", StringComparison.OrdinalIgnoreCase);
+    }
 
     /// <summary>
     /// SQL 语句切分器：按 ; 切，跳过字符串/注释内的 ;

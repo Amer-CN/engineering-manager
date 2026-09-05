@@ -25,6 +25,7 @@ public static class AgentEndpoints
 
         app.MapPost("/api/agent/chat", async (
             HttpContext ctx,
+            CancellationToken ct,
             IDbConnection db,
             AgentChatRequest request,
             ILlmChatService llm,
@@ -82,8 +83,11 @@ public static class AgentEndpoints
 
                 for (int round = 0; round < maxRounds; round++)
                 {
+                    // F5(审计): 透传 RequestAborted——客户端断开后 LLM 轮次/工具执行/落库立即停止，
+                    // 不再把用户已放弃的中间消息写进会话、白烧 LLM token
+                    ct.ThrowIfCancellationRequested();
                     var response = await llm.ChatAsync(llmMessages, availableTools, request.Model,
-                        request.ReasoningLevel == "off" ? null : request.ReasoningLevel);
+                        request.ReasoningLevel == "off" ? null : request.ReasoningLevel, ct);
 
                     if (response == null)
                     {
@@ -199,6 +203,7 @@ public static class AgentEndpoints
 
         app.MapPost("/api/agent/chat/stream", async (
             HttpContext ctx,
+            CancellationToken ct,
             IDbConnection db,
             AgentChatRequest request,
             ILlmChatService llm,
@@ -272,8 +277,10 @@ public static class AgentEndpoints
 
                 for (int round = 0; round < maxRounds; round++)
                 {
+                    // F5(审计): 透传 RequestAborted，断连即停（同 /api/agent/chat）
+                    ct.ThrowIfCancellationRequested();
                     var response = await llm.ChatAsync(llmMessages, availableTools, request.Model,
-                        request.ReasoningLevel == "off" ? null : request.ReasoningLevel);
+                        request.ReasoningLevel == "off" ? null : request.ReasoningLevel, ct);
 
                     if (response == null)
                     {
@@ -347,8 +354,9 @@ public static class AgentEndpoints
 
                     // 使用流式 API 输出最终回复
                     ChatUsage? lastUsage = null;
+                    // F5(审计): 流式输出同样透传 ct，客户端断开即静默结束（ChatStreamAsync 对取消不产出错误块）
                     await foreach (var chunk in llm.ChatStreamAsync(llmMessages, null, request.Model,
-                        request.ReasoningLevel == "off" ? null : request.ReasoningLevel))
+                        request.ReasoningLevel == "off" ? null : request.ReasoningLevel, ct))
                     {
                         try
                         {
