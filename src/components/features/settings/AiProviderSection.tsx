@@ -48,8 +48,17 @@ export function AiProviderSection() {
   multiRef.current = multi
   const apiKeyInputsRef = useRef<Record<string, string>>({})
   apiKeyInputsRef.current = apiKeyInputs
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)   // 防抖 timer（800ms 合并保存），unmount 时清理
-  useEffect(() => () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current) }, [])
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)   // 防抖 timer（800ms 合并保存），unmount 时冲刷
+  // unmount 冲刷：防抖窗口内切走页面时把挂起的改动立即落库，不丢最后一次输入。
+  // saveNow 经 ref 转发（saveNowRef），unmount 闭包拿到的是最新实现，避免闭包过期。
+  const saveNowRef = useRef<() => Promise<void>>(async () => {})
+  useEffect(() => () => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current)
+      saveTimerRef.current = null
+      void saveNowRef.current()
+    }
+  }, [])
 
   const loadConfig = useCallback(async () => {
     const cfg = await getLlmProviderConfig()
@@ -89,6 +98,7 @@ export function AiProviderSection() {
       setStatus('idle')
     }
   }
+  saveNowRef.current = saveNow   // unmount 冲刷经 ref 调最新实现
 
   /** 更新 multi（同步刷 ref 镜像）并自动保存：immediate=true 立即保存，false 防抖 800ms 合并连续改动 */
   const applyUpdate = (updater: (m: MultiProviderConfig) => MultiProviderConfig, immediate: boolean) => {
@@ -97,7 +107,11 @@ export function AiProviderSection() {
     const next = updater(cur)
     multiRef.current = next
     setMulti(next)
-    if (immediate) { void saveNow(); return }
+    if (immediate) {
+      // 立即保存时取消挂起的防抖 timer：同一次改动不连发两次请求
+      if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null }
+      void saveNow(); return
+    }
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(() => { saveTimerRef.current = null; void saveNow() }, 800)
   }
@@ -194,7 +208,9 @@ export function AiProviderSection() {
             role="switch"
             aria-checked={multi.useBuiltIn}
             onClick={() => applyUpdate(m => ({ ...m, useBuiltIn: !m.useBuiltIn }), true)}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${multi.useBuiltIn ? 'bg-[color:var(--accent)]' : 'bg-[color:var(--panel-2)]'}`}
+            disabled={status === 'saving'}
+            aria-label="使用内置免费模型"
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${multi.useBuiltIn ? 'bg-[color:var(--accent)]' : 'bg-[color:var(--panel-2)]'}`}
           >
             <span className={`inline-block h-4 w-4 transform rounded-full bg-[color:var(--card)] shadow transition-transform ${multi.useBuiltIn ? 'translate-x-6' : 'translate-x-1'}`} />
           </button>

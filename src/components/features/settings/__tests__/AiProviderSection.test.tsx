@@ -318,4 +318,58 @@ describe('AiProviderSection（多服务商管理）', () => {
     expect(mockSaveLlmProviderConfig.mock.calls[0][0].useBuiltIn).toBe(false)
     await waitFor(() => expect(mockReloadLlmProviderConfig).toHaveBeenCalledTimes(1))
   })
+
+  test('加固：保存进行中开关禁用，防止并发保存竞态', async () => {
+    let resolveSave: ((v: { success: boolean }) => void) | null = null
+    mockSaveLlmProviderConfig.mockImplementation(() => new Promise(resolve => { resolveSave = resolve }))
+
+    render(<AiProviderSection />)
+    await waitFor(() => expect(screen.getByRole('switch')).toBeTruthy())
+
+    fireEvent.click(screen.getByRole('switch'))
+    expect(screen.getByRole('switch')).toBeDisabled()   // 保存未完成期间禁用
+    expect(screen.getByText('保存中...')).toBeTruthy()
+
+    await act(async () => { resolveSave?.({ success: true }) })
+    await waitFor(() => expect(screen.getByRole('switch')).not.toBeDisabled())
+  })
+
+  test('加固：防抖挂起期间点开关（immediate）→ 取消挂起 timer，只发一次保存请求', async () => {
+    render(<AiProviderSection />)
+    await waitFor(() => expect(screen.getByRole('switch')).toBeTruthy())
+
+    vi.useFakeTimers()
+    // 防抖改动挂起（800ms 未到）
+    fireEvent.change(screen.getByPlaceholderText('http://127.0.0.1:7890（留空 = 直连）'), {
+      target: { value: '127.0.0.1:7890' },
+    })
+    expect(mockSaveLlmProviderConfig).not.toHaveBeenCalled()
+
+    // immediate 保存触发：挂起的防抖被取消，合并为一次请求
+    fireEvent.click(screen.getByRole('switch'))
+    expect(mockSaveLlmProviderConfig).toHaveBeenCalledTimes(1)
+
+    // 原 800ms 窗口到期后不再补发第二次
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000) })
+    expect(mockSaveLlmProviderConfig).toHaveBeenCalledTimes(1)
+    const payload = mockSaveLlmProviderConfig.mock.calls[0][0]
+    expect(payload.proxyUrl).toBe('127.0.0.1:7890')   // 防抖改动也随本次请求带上
+    expect(payload.useBuiltIn).toBe(false)
+  })
+
+  test('加固：防抖窗口内卸载组件 → 冲刷保存挂起的改动（不丢最后一次输入）', async () => {
+    const { unmount } = render(<AiProviderSection />)
+    await waitFor(() => expect(screen.getByText(/温度 0\.7/)).toBeTruthy())
+
+    vi.useFakeTimers()
+    fireEvent.change(screen.getByPlaceholderText('http://127.0.0.1:7890（留空 = 直连）'), {
+      target: { value: '127.0.0.1:7897' },
+    })
+    expect(mockSaveLlmProviderConfig).not.toHaveBeenCalled()   // 还在防抖窗口内
+
+    // unmount：冲刷立即保存，无需等 800ms
+    unmount()
+    expect(mockSaveLlmProviderConfig).toHaveBeenCalledTimes(1)
+    expect(mockSaveLlmProviderConfig.mock.calls[0][0].proxyUrl).toBe('127.0.0.1:7897')
+  })
 })
