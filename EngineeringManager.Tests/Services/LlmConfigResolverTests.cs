@@ -52,4 +52,26 @@ public class LlmConfigResolverTests
         Assert.Equal(0.3, result.Temperature);
         Assert.Equal(2048, result.MaxTokens);
     }
+
+    /// <summary>
+    /// 回归：旧版单配置迁移时温度/MaxTokens 零值补推荐默认（0.7/4096）。
+    /// 旧结构没有这两个字段（C# 默认 0），不补默认会让设置页回显 0.0。
+    /// </summary>
+    [Fact]
+    public void MigrateLegacyPersisted_零值温度和MaxTokens_补默认()
+    {
+        var legacy = new PersistedLlmConfig { ProviderName = "OpenAI" };
+        var migrated = LlmConfigResolver.MigrateLegacyPersisted(legacy);
+        Assert.Equal(0.7, migrated.Temperature);
+        Assert.Equal(4096, migrated.MaxTokens);
+    }
+
+    [Fact]
+    public void MigrateLegacyPersisted_显式温度和MaxTokens_原样保留()
+    {
+        var legacy = new PersistedLlmConfig { Temperature = 0.2, MaxTokens = 8192 };
+        var migrated = LlmConfigResolver.MigrateLegacyPersisted(legacy);
+        Assert.Equal(0.2, migrated.Temperature);
+        Assert.Equal(8192, migrated.MaxTokens);
+    }
 }
