@@ -944,7 +944,7 @@ body {
    ~232 处存量引用将逐步迁移，check-rules.cjs 阻断新增 btn-* 使用。 */
 @layer components {
   .btn {
-  @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2;
+  @apply px-4 py-2 rounded-lg font-medium transition-[transform,opacity,box-shadow,border-color,background-color] duration-200 flex items-center justify-center gap-2;
   }
 
   .btn-primary {
@@ -983,7 +983,7 @@ body {
 /* 卡片样式 */
 @layer components {
   .card {
-  @apply bg-[color:var(--card)] rounded-xl shadow-card hover:shadow-card-hover transition-all duration-200;
+  @apply bg-[color:var(--card)] rounded-xl shadow-card hover:shadow-card-hover transition-shadow duration-200;
   }
 
   .card-header {
@@ -999,7 +999,7 @@ body {
 @layer components {
   .input {
   @apply w-full px-4 py-2.5 border border-[color:var(--border)] rounded-lg bg-[color:var(--card)] text-[color:var(--fg)]
-  placeholder-[color:var(--muted)] transition-all duration-200
+  placeholder-[color:var(--muted)] transition-[box-shadow,border-color,background-color,color] duration-200
   focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] focus:border-[color:var(--accent)]
   hover:border-[color:var(--border)];
   }
@@ -1010,7 +1010,7 @@ body {
 
   .select {
   @apply w-full px-4 py-2.5 border border-[color:var(--border)] rounded-lg bg-[color:var(--card)] text-[color:var(--fg)]
-  transition-all duration-200 cursor-pointer
+  transition-[box-shadow,border-color,background-color,color] duration-200 cursor-pointer
   focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] focus:border-[color:var(--accent)]
   hover:border-[color:var(--border)];
   }
@@ -1049,7 +1049,7 @@ table tbody tr {
   transition: background-color 200ms;
 }
 table tbody tr:hover {
-  background-color: var(--card-hover);
+  background-color: color-mix(in srgb, var(--card-hover) calc(var(--row-hover-opacity, 0.6) * 100%), transparent);
 }
 /* 行分隔线：border-separate 模式下 <tr> 边框不绘制，须加在 <td> 上（s16 清晰分隔观感） */
 table.border-separate tbody tr:not(:first-child) > td {
@@ -1139,21 +1139,21 @@ button:disabled {
 /* 现代化表单增强（兼容现有页面使用） */
 .input-modern {
   @apply w-full px-4 py-3 bg-[color:var(--panel-2)] border border-[color:var(--border)] rounded-xl text-[color:var(--fg)]
-  placeholder-[color:var(--muted)] transition-all duration-300
+  placeholder-[color:var(--muted)] transition-[box-shadow,border-color,background-color,color] duration-300
   focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] focus:border-[color:var(--accent)] focus:bg-[color:var(--card)]
   hover:border-[color:var(--border)];
 }
 
 .input-modern-lg {
   @apply w-full px-5 py-4 bg-[color:var(--panel-2)] border-2 border-[color:var(--border)] rounded-2xl text-[color:var(--fg)] text-lg
-  placeholder-[color:var(--muted)] transition-all duration-300
+  placeholder-[color:var(--muted)] transition-[box-shadow,border-color,background-color,color] duration-300
   focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] focus:border-[color:var(--accent)] focus:bg-[color:var(--card)]
   hover:border-[color:var(--border)];
 }
 
 .select-modern {
   @apply w-full px-4 py-3 bg-[color:var(--panel-2)] border border-[color:var(--border)] rounded-xl text-[color:var(--fg)]
-  transition-all duration-300 cursor-pointer appearance-none
+  transition-[box-shadow,border-color,background-color,color] duration-300 cursor-pointer appearance-none
   focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] focus:border-[color:var(--accent)] focus:bg-[color:var(--card)]
   hover:border-[color:var(--border)];
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
@@ -1229,10 +1229,6 @@ button:disabled {
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
-}
-
-.animate-fade-in {
-  animation: fade-in 1s ease-out forwards;
 }
 
 /* GPU compositing hint for large animated elements */
