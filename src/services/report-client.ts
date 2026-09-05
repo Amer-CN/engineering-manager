@@ -17,8 +17,8 @@ export interface ReportRequest {
   format?: 'text' | 'chart'
   /** 报告主题：general=综合经营（缺省）；wage=工资专项（工资台账聚合，老板视角工资月报） */
   theme?: 'general' | 'wage'
-  /** 报告用途：review=经营复盘（缺省）；evidence=对外举证（正式凭证措辞）；work=工作汇报（第一人称，后端强制 scope=当前用户） */
-  purpose?: 'review' | 'evidence' | 'work'
+  /** 报告用途：review=经营复盘（缺省）；evidence=对外举证；work=工作汇报（后端强制 scope=当前用户）；weekly=周报速览（前端 R12 模板，后端按通用 review 分支出数据） */
+  purpose?: 'review' | 'evidence' | 'work' | 'weekly'
 }
 
 export interface ReportResponse {

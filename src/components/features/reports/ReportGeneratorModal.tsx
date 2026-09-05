@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Icon } from '@/components/ui/Icon'
 import ButtonLoader from '@/components/ui/ButtonLoader'
 import { generateReport, type ReportRequest } from '@/services/report-client'
+import { getTemplateId } from '@/utils/reportTemplates/index'
 import ReportResultPanel from './ReportResultPanel'
 import ReportPurposeSection, { type ReportPurpose } from './ReportPurposeSection'
 import { useAuth } from '@/hooks/useAuth'
@@ -17,26 +18,12 @@ type ReportFormat = 'text' | 'chart'
 type ReportTheme = 'general' | 'wage'
 
 /** 报告主题二选一（默认综合经营） */
-const THEME_OPTIONS: { value: ReportTheme; label: string; desc: string }[] = [
-  { value: 'general', label: '综合经营', desc: '操作记录+业务 KPI，全局经营视角' },
-  { value: 'wage', label: '工资专项', desc: '工资总额/项目分布/走势/用工构成，老板视角' },
-]
+const THEME_OPTIONS: { value: ReportTheme; label: string; desc: string }[] = [{ value: 'general', label: '综合经营', desc: '操作记录+业务 KPI，全局经营视角' }, { value: 'wage', label: '工资专项', desc: '工资总额/项目分布/走势/用工构成，老板视角' }]
 
 /** 报告形式二选一（默认文本版，零惊讶） */
-const FORMAT_OPTIONS: { value: ReportFormat; label: string; desc: string }[] = [
-  { value: 'text', label: '文本版', desc: '全文+表格+附图，适合存档细读' },
-  { value: 'chart', label: '图形版', desc: '每节一图+大数字，适合例会投影' },
-]
+const FORMAT_OPTIONS: { value: ReportFormat; label: string; desc: string }[] = [{ value: 'text', label: '文本版', desc: '全文+表格+附图，适合存档细读' }, { value: 'chart', label: '图形版', desc: '每节一图+大数字，适合例会投影' }]
 
-const ACTION_OPTIONS = [
-  { value: 'create', label: '新增' },
-  { value: 'update', label: '修改' },
-  { value: 'delete', label: '删除' },
-  { value: 'export', label: '导出' },
-  { value: 'import', label: '导入' },
-  { value: 'login', label: '登录' },
-  { value: 'logout', label: '登出' },
-]
+const ACTION_OPTIONS = [{ value: 'create', label: '新增' }, { value: 'update', label: '修改' }, { value: 'delete', label: '删除' }, { value: 'export', label: '导出' }, { value: 'import', label: '导入' }, { value: 'login', label: '登录' }, { value: 'logout', label: '登出' }]
 
 /** 「报告主题」「报告形式」共用的二选一卡片节（DOM 与原内联版一致，控制文件行数在铁律上限内） */
 function renderPickSection<T extends string>(
@@ -86,8 +73,9 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
   const [format, setFormat] = useState<ReportFormat>('text')
   const [theme, setTheme] = useState<ReportTheme>('general')
   const [purpose, setPurpose] = useState<ReportPurpose>('review')
-  // 结果面板的 format 取生成时快照（结果出来后改表单不影响已生成报告的呈现）
+  // 结果面板的 format/template 取生成时快照（结果出来后改表单不影响已生成报告的呈现）
   const [resultFormat, setResultFormat] = useState<ReportFormat>('text')
+  const [resultTemplateId, setResultTemplateId] = useState<string>('r04')
 
   // 生成状态
   const [loading, setLoading] = useState(false)
@@ -135,6 +123,7 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
       setMarkdown(result.data.markdown)
       setTimestamp(result.data.timestamp)
       setResultFormat(request.format ?? 'text')
+      setResultTemplateId(getTemplateId(request.purpose ?? 'review'))
     } else {
       setError(result.error ?? '生成失败，请重试')
     }
@@ -387,7 +376,7 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
 
             {/* ── 生成结果 ── */}
             {hasResult && (
-              <ReportResultPanel markdown={markdown} onUpdateMarkdown={setMarkdown} format={resultFormat} />
+              <ReportResultPanel markdown={markdown} onUpdateMarkdown={setMarkdown} format={resultFormat} templateId={resultTemplateId} />
             )}
           </div>
         </motion.div>
