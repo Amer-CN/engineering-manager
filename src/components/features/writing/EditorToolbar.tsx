@@ -1,58 +1,37 @@
+/* 工具栏组织结构 adapted from NiazMorshed2007/shadcn-tiptap (MIT) registry/toolbars */
 /**
- * EditorToolbar — 写作中心顶部固定工具栏（R3）
- *
- * 分组：撤销/重做 | 粗体/斜体/下划线/删除线/高亮/保护标记/文字颜色 |
- *       字号/字体/对齐（左中右两端） | H1-3 |
- *       有序/无序/任务清单 | 引用/代码块/分割线/图片(URL) | 表格（插入+行列增删） | 清除格式
- *       右侧独立：公文版式皮肤 toggle（状态由父组件 usePaperStyle 持有）
- * 激活态用 editor.isActive() 经 useEditorState 订阅；样式走 var(--accent) 等现有 token。
- * 悬停提示走项目自有 Tooltip（content=原中文 title 文案，delay=400，原生 title 已删避免双提示）；
- * 浮层内部按钮（色板/字号/字体/URL 插入）保留原生 title（属菜单项，不接 Tooltip）。
- * 粘贴截图由 WritingEditor 的 handlePaste 处理（base64 内嵌，>2MB 拒绝）。
+ * EditorToolbar — 写作中心顶部固定工具栏（R3；2026-09-05 按 shadcn-tiptap 结构重构）
+ * 分组：撤销/重做 | 粗斜下删高保 | A颜色▾（文字色+背景高亮两栏弹层） | 字号▾/字体▾/对齐▾
+ * （触发器显示当前值） | H1-3 | 列表 | 引用/代码/分割线/图片(URL) | 表格▾ | 清除格式 | 公文皮肤 toggle。
+ * 约束：命令逻辑与 props 零改动；基础按钮用项目 Button ghost（不引 radix）；弹层项走原生
+ * button+title；公文 toggle 的 title 不许删（writingPaperStyle.test 断言）；高亮色读取前先判
+ * isActive("highlight")（未注册 Highlight 的精简编辑器上 getAttributes 会 throw）；Highlight
+ * 未开 multicolor（WritingEditor 禁改），多色高亮按命令链路与选中态结构实现。
  */
-
 import React, { useEffect, useState } from "react";
 import type { Editor } from "@tiptap/core";
 import { useEditorState } from "@tiptap/react";
 import { Icon } from "@/components/ui/Icon";
+import { Button } from "@/components/ui/Button";
 import { DropdownMenu } from "@/components/ui/DropdownMenu";
 import { Tooltip } from "@/components/ui/Tooltip/Tooltip";
 import {
-  Bold,
-  Italic,
-  Underline,
-  Strikethrough,
-  Undo2,
-  Redo2,
-  List,
-  ListOrdered,
-  Square,
-  Quote,
-  Code2,
-  Minus,
-  Image as ImageIcon,
-  Table2,
-  RemoveFormatting,
-  Highlighter,
-  Shield,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  AlignJustify,
-  ChevronDown,
-  LayoutTemplate,
+  Bold, Italic, Underline, Strikethrough, Undo2, Redo2, List, ListOrdered, Square, Quote,
+  Code2, Minus, Image as ImageIcon, Table2, RemoveFormatting, Highlighter, Shield,
+  AlignLeft, AlignCenter, AlignRight, AlignJustify, ChevronDown, LayoutTemplate, Check,
+  type LucideIcon,
 } from "lucide-react";
 
-/** 文字颜色预设（CSS 命名色，避免硬编码 hex、跟随主题感知；title 用中文，后续加色只改本表） */
-const COLOR_PRESETS: { en: string; zh: string }[] = [
-  { en: "red", zh: "红色" },
-  { en: "orange", zh: "橙色" },
-  { en: "gold", zh: "金黄色" },
-  { en: "green", zh: "绿色" },
-  { en: "skyblue", zh: "天蓝色" },
-  { en: "blue", zh: "蓝色" },
-  { en: "purple", zh: "紫色" },
-  { en: "gray", zh: "灰色" },
+/** 文字颜色预设（CSS 命名色，跟随主题感知；后续加色只改本表） */
+const COLOR_PRESETS: { key: string; zh: string }[] = [
+  { key: "red", zh: "红色" }, { key: "orange", zh: "橙色" }, { key: "gold", zh: "金黄色" }, { key: "green", zh: "绿色" },
+  { key: "skyblue", zh: "天蓝色" }, { key: "blue", zh: "蓝色" }, { key: "purple", zh: "紫色" }, { key: "gray", zh: "灰色" },
+];
+
+/** 背景高亮色预设（搬多色高亮能力，黄/绿/蓝/粉 4 个常用色） */
+const HIGHLIGHT_PRESETS: { key: string; zh: string }[] = [
+  { key: "lightyellow", zh: "黄色高亮" }, { key: "lightgreen", zh: "绿色高亮" },
+  { key: "lightblue", zh: "蓝色高亮" }, { key: "pink", zh: "粉色高亮" },
 ];
 
 /** 字号预设（pt 单位，与 printPreview / docxExport 的 GB/T 9704 版式一致） */
@@ -60,6 +39,28 @@ const FONT_SIZE_PRESETS = [8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36,
 
 /** 字体预设（公文常用五件套 + 常见系统字体；值为 CSS font-family 名） */
 const FONT_PRESETS = ["宋体", "黑体", "楷体_GB2312", "仿宋_GB2312", "思源宋体 CN", "微软雅黑", "苹方"];
+
+/** 对齐四项（alignment.tsx 模式：图标 + 中文名，触发器显示当前值） */
+const ALIGN_PRESETS: { key: "left" | "center" | "right" | "justify"; zh: string; Icon: LucideIcon }[] = [
+  { key: "left", zh: "左对齐", Icon: AlignLeft },
+  { key: "center", zh: "居中对齐", Icon: AlignCenter },
+  { key: "right", zh: "右对齐", Icon: AlignRight },
+  { key: "justify", zh: "两端对齐", Icon: AlignJustify },
+];
+
+/** 字体名触发器截断：>6 字符截断 + … */
+const truncateFont = (name: string) => (name.length > 6 ? `${name.slice(0, 6)}…` : name);
+
+/** 颜色弹层单栏配置（文字色 / 背景高亮两栏共用结构与交互：选色 + 清除） */
+interface ColorSection {
+  label: string;
+  presets: { key: string; zh: string }[];
+  current: string | null;
+  onPick: (key: string) => void;
+  clearZh: string;
+  onClear: () => void;
+  swatch: (key: string) => React.ReactNode;
+}
 
 interface EditorToolbarProps {
   editor: Editor | null;
@@ -80,6 +81,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onTogglePaperStyl
     editor,
     selector: ({ editor }) => {
       if (!editor) return null;
+      const highlightOn = editor.isActive("highlight");
       return {
         canUndo: editor.can().undo(),
         canRedo: editor.can().redo(),
@@ -87,13 +89,14 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onTogglePaperStyl
         italic: editor.isActive("italic"),
         underline: editor.isActive("underline"),
         strike: editor.isActive("strike"),
-        highlight: editor.isActive("highlight"),
+        highlight: highlightOn,
+        highlightColor: highlightOn ? ((editor.getAttributes("highlight").color as string | null) ?? null) : null,
         protectedSpan: editor.isActive("protectedSpan"),
         color: (editor.getAttributes("textStyle").color as string | null) ?? null,
         // 字号：自写 FontSizeMark（mark 名 fontSize）；字体：官方 FontFamily 挂在 textStyle 上
         fontSize: (editor.getAttributes("fontSize").fontSize as string | null) ?? null,
         fontFamily: (editor.getAttributes("textStyle").fontFamily as string | null) ?? null,
-        // 当前对齐：显式居中/右/两端之外一律视为左（默认态点亮左对齐键）
+        // 当前对齐：显式居中/右/两端之外一律视为左（TextAlign 默认语义，默认态点亮左对齐）
         align: editor.isActive({ textAlign: "center" })
           ? "center"
           : editor.isActive({ textAlign: "right" })
@@ -110,21 +113,15 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onTogglePaperStyl
         blockquote: editor.isActive("blockquote"),
         codeBlock: editor.isActive("codeBlock"),
         inTable: editor.isActive("table"),
+        imageActive: editor.isActive("image"),
       };
     },
   });
 
   // 关闭颜色 / 图片 URL / 字号 / 字体 浮层（点击外部或 Esc）
   useEffect(() => {
-    const close = () => {
-      setColorOpen(false);
-      setUrlOpen(false);
-      setFontSizeOpen(false);
-      setFontFamilyOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
-    };
+    const close = () => { setColorOpen(false); setUrlOpen(false); setFontSizeOpen(false); setFontFamilyOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") close(); };
     const onDown = (e: MouseEvent) => {
       if ((colorOpen || urlOpen || fontSizeOpen || fontFamilyOpen) && !(e.target as HTMLElement).closest(".em-toolbar")) close();
     };
@@ -138,20 +135,53 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onTogglePaperStyl
 
   if (!editor || !state) return null;
 
-  // 全部按钮包 Tooltip（content 用原中文 title 文案）；原生 title 已删，aria-label 保留供读屏与测试。
-  // Tooltip 内部包一层 inline-flex div，点击事件经冒泡到达按钮，onClick 不受影响。
-  const btn = (active: boolean, title: string, onClick: () => void, node: React.ReactNode, disabled?: boolean) => (
-    <Tooltip content={title} delay={400}>
-      <button
+  const currentAlign = ALIGN_PRESETS.find((a) => a.key === state.align) ?? ALIGN_PRESETS[0];
+
+  // 工具栏按钮：Button ghost + em-toolbar-btn 覆写尺寸与 is-active（accent 底色）；
+  // Tooltip 包一层 inline-flex div，点击事件经冒泡到达按钮，onClick 不受影响。
+  const btn = (active: boolean, label: string, onClick: () => void, node: React.ReactNode, disabled?: boolean) => (
+    <Tooltip content={label} delay={400}>
+      <Button
         type="button"
-        aria-label={title}
+        variant="ghost"
+        aria-label={label}
         disabled={disabled}
         onClick={onClick}
         className={`em-toolbar-btn${active ? " is-active" : ""}`}
       >
         {node}
-      </button>
+      </Button>
     </Tooltip>
+  );
+
+  // 弹层菜单项：可选色块预览 + 名称 + 当前项对勾（title 供悬停与测试定位）
+  const popItem = (active: boolean, name: string, onClick: () => void, preview?: React.ReactNode, style?: React.CSSProperties) => (
+    <button
+      type="button"
+      title={name}
+      aria-label={name}
+      style={style}
+      onClick={onClick}
+      className={`em-pop-item${active ? " is-active" : ""}`}
+    >
+      {preview}
+      <span className="em-pop-name">{name}</span>
+      {active && <Check size={13} className="em-check" />}
+    </button>
+  );
+
+  // 颜色弹层单栏渲染（color-and-highlight.tsx 模式：色块 A + 名称 + 对勾，清除项兜底）
+  const colorSection = (s: ColorSection) => (
+    <>
+      <div className="em-pop-label">{s.label}</div>
+      <div className="em-color-list">
+        {s.presets.map((p) =>
+          popItem(s.current === p.key, p.zh, () => { s.onPick(p.key); setColorOpen(false); }, s.swatch(p.key)),
+        )}
+        {popItem(s.current === null, s.clearZh, () => { s.onClear(); setColorOpen(false); },
+          <span className="em-swatch em-swatch-none">A</span>)}
+      </div>
+    </>
   );
 
   const insertImageByUrl = () => {
@@ -175,121 +205,114 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onTogglePaperStyl
       {btn(state.highlight, "高亮", () => editor.chain().focus().toggleHighlight().run(), <Highlighter size={15} />)}
       {btn(state.protectedSpan, "保护标记（Protected Span）：选中文字后包裹 [[ ]]", () => editor.chain().focus().toggleProtectedSpan().run(), <Shield size={15} />)}
 
-      <span className="em-toolbar-sep" />
-
-      {/* 文字颜色 */}
+      {/* A 颜色▾：两栏弹层——文字色 8 项 + 无 / 背景高亮 4 项 + 清除高亮 */}
       <div className="relative">
         {btn(
-          !!state.color,
+          !!state.color || !!state.highlightColor,
           "文字颜色",
           () => setColorOpen((v) => !v),
           <span className="em-color-btn">
-            <span className="em-color-underline" style={{ background: state.color ?? "currentColor" }} />
-            A
+            <span className="em-color-a">
+              A
+              <span className="em-color-underline" style={{ background: state.color ?? "currentColor" }} />
+            </span>
+            <ChevronDown size={11} />
           </span>,
         )}
         {colorOpen && (
-          <div className="em-toolbar-pop">
-            <div className="em-color-grid">
-              {COLOR_PRESETS.map((c) => (
-                <button
-                  key={c.en}
-                  type="button"
-                  title={c.zh}
-                  className="em-color-swatch"
-                  style={{ background: c.en }}
-                  onClick={() => {
-                    editor.chain().focus().setColor(c.en).run();
-                    setColorOpen(false);
-                  }}
-                />
-              ))}
-              <button
-                type="button"
-                title="清除文字颜色"
-                className="em-color-swatch em-color-clear"
-                onClick={() => {
-                  editor.chain().focus().unsetColor().run();
-                  setColorOpen(false);
-                }}
-              >
-                无
-              </button>
-            </div>
+          <div className="em-toolbar-pop em-color-pop">
+            {colorSection({
+              label: "文字颜色", presets: COLOR_PRESETS, current: state.color,
+              onPick: (en) => editor.chain().focus().setColor(en).run(),
+              clearZh: "无", onClear: () => editor.chain().focus().unsetColor().run(),
+              swatch: (en) => <span className="em-swatch" style={{ color: en }}>A</span>,
+            })}
+            <div className="em-pop-divider" />
+            {colorSection({
+              label: "背景高亮", presets: HIGHLIGHT_PRESETS, current: state.highlightColor,
+              onPick: (color) => editor.chain().focus().setHighlight({ color }).run(),
+              clearZh: "清除高亮", onClear: () => editor.chain().focus().unsetHighlight().run(),
+              swatch: (color) => <span className="em-swatch" style={{ background: color }}>A</span>,
+            })}
           </div>
         )}
       </div>
 
       <span className="em-toolbar-sep" />
 
-      {/* 字号下拉（pt 单位；当前选中显示字号 + 向下箭头，选中态高亮） */}
+      {/* 字号▾：触发器显示当前值（如 16），弹层 16 档网格 + 恢复默认（unsetFontSize） */}
       <div className="relative">
         {btn(
           !!state.fontSize,
           "字号",
           () => setFontSizeOpen((v) => !v),
           <span className="em-h">
-            {state.fontSize ? state.fontSize.replace(/pt$/, "") : "字号"}
-            <ChevronDown size={12} />
+            <span className="em-toolbar-current">{state.fontSize ? state.fontSize.replace(/pt$/, "") : "字号"}</span>
+            <ChevronDown size={11} />
           </span>,
         )}
         {fontSizeOpen && (
           <div className="em-toolbar-pop em-size-grid">
-            {FONT_SIZE_PRESETS.map((n) => (
-              <button
-                key={n}
-                type="button"
-                title={`${n}pt`}
-                className={`em-toolbar-btn${state.fontSize === `${n}pt` ? " is-active" : ""}`}
-                onClick={() => {
-                  editor.chain().focus().setFontSize(`${n}pt`).run();
-                  setFontSizeOpen(false);
-                }}
-              >
-                {n} pt
-              </button>
-            ))}
+            {FONT_SIZE_PRESETS.map((n) =>
+              popItem(state.fontSize === `${n}pt`, `${n}pt`, () => {
+                editor.chain().focus().setFontSize(`${n}pt`).run();
+                setFontSizeOpen(false);
+              }),
+            )}
+            {popItem(false, "恢复默认", () => {
+              editor.chain().focus().unsetFontSize().run();
+              setFontSizeOpen(false);
+            }, undefined, { gridColumn: "1 / -1" })}
           </div>
         )}
       </div>
 
-      {/* 字体下拉（当前选中显示字体名 + 向下箭头，选中态高亮） */}
+      {/* 字体▾：触发器显示当前字体名（截断 6 字符 + …），弹层纵向列表 + 恢复默认 */}
       <div className="relative">
         {btn(
           !!state.fontFamily,
           "字体",
           () => setFontFamilyOpen((v) => !v),
           <span className="em-h">
-            {state.fontFamily ?? "字体"}
-            <ChevronDown size={12} />
+            <span className="em-toolbar-current">{state.fontFamily ? truncateFont(state.fontFamily) : "字体"}</span>
+            <ChevronDown size={11} />
           </span>,
         )}
         {fontFamilyOpen && (
           <div className="em-toolbar-pop em-pop-list">
-            {FONT_PRESETS.map((name) => (
-              <button
-                key={name}
-                type="button"
-                title={name}
-                style={{ fontFamily: name }}
-                className={`em-toolbar-btn${state.fontFamily === name ? " is-active" : ""}`}
-                onClick={() => {
-                  editor.chain().focus().setFontFamily(name).run();
-                  setFontFamilyOpen(false);
-                }}
-              >
-                {name}
-              </button>
-            ))}
+            {FONT_PRESETS.map((name) =>
+              popItem(state.fontFamily === name, name, () => {
+                editor.chain().focus().setFontFamily(name).run();
+                setFontFamilyOpen(false);
+              }, undefined, { fontFamily: name }),
+            )}
+            {popItem(false, "恢复默认", () => {
+              editor.chain().focus().unsetFontFamily().run();
+              setFontFamilyOpen(false);
+            })}
           </div>
         )}
       </div>
 
-      {/* 对齐四键：左 / 中 / 右 / 两端（TextAlign，作用于段落） */}
-      {btn(state.align === "left", "左对齐", () => editor.chain().focus().setTextAlign("left").run(), <AlignLeft size={15} />)}
-      {btn(state.align === "center", "居中对齐", () => editor.chain().focus().setTextAlign("center").run(), <AlignCenter size={15} />)}
-      {btn(state.align === "right", "右对齐", () => editor.chain().focus().setTextAlign("right").run(), <AlignRight size={15} />)}
-      {btn(state.align === "justify", "两端对齐", () => editor.chain().focus().setTextAlign("justify").run(), <AlignJustify size={15} />)}
+      {/* 对齐▾：触发器显示当前对齐（图标+名+▾）；image 激活时禁用；菜单项 ✓ 前缀标当前项 */}
+      <DropdownMenu
+        trigger={btn(
+          false,
+          currentAlign.zh,
+          () => {},
+          <span className="em-h">
+            <currentAlign.Icon size={14} />
+            <span className="em-toolbar-current">{currentAlign.zh}</span>
+            <ChevronDown size={11} />
+          </span>,
+          state.imageActive,
+        )}
+        items={ALIGN_PRESETS.map((a) => ({
+          key: a.key,
+          label: `${state.align === a.key ? "✓ " : ""}${a.zh}`,
+          onClick: () => editor.chain().focus().setTextAlign(a.key).run(),
+        }))}
+      />
 
       <span className="em-toolbar-sep" />
 
@@ -319,9 +342,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onTogglePaperStyl
                 autoFocus
                 value={imageUrl}
                 onChange={(e) => setImageUrl(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") insertImageByUrl();
-                }}
+                onKeyDown={(e) => { if (e.key === "Enter") insertImageByUrl(); }}
                 placeholder="图片 URL，回车插入"
                 className="em-url-input"
               />
@@ -355,7 +376,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onTogglePaperStyl
       {btn(false, "清除格式", () => editor.chain().focus().unsetAllMarks().clearNodes().run(), <RemoveFormatting size={15} />)}
 
       {/* 公文版式皮肤 toggle：右侧独立；状态由父组件 usePaperStyle 持有并持久化
-          title 与 Tooltip 并存（Tooltip 悬停展示、title 供读屏与既有测试断言） */}
+          title 与 Tooltip 并存（Tooltip 悬停展示、title 供读屏与既有测试断言——不许删） */}
       <Tooltip content="切换公文版式（仿宋/黑体/楷体，所见即所得）" delay={400}>
         <button
           type="button"

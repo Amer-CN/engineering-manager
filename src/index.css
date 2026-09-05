@@ -1483,26 +1483,23 @@ button:disabled {
   top: 0;
   z-index: 20;
 }
+/* Button ghost 覆写：尺寸收紧（28px 紧凑档）、字号回归工具栏 13px、去 press 缩放（顶栏不跟手缩）；
+ * hover/active 色由 Button ghost 的 token（--panel-2）与下方 is-active（--accent-soft）承担。 */
 .em-toolbar-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  min-width: 28px;
   height: 28px;
+  min-width: 28px;
   padding: 0 6px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--fg-2);
+  gap: 4px;
   font-size: 13px;
+  font-weight: 400;
   line-height: 1;
-  cursor: pointer;
-  transition: background-color 0.12s ease, color 0.12s ease;
+  border-radius: 6px;
+  box-shadow: none;
 }
+.em-toolbar-btn:active { transform: none; }
 .em-toolbar-btn:hover { background: var(--accent-soft); }
 .em-toolbar-btn:disabled { opacity: 0.35; cursor: not-allowed; }
-.em-toolbar-btn.is-active { color: var(--accent); background: var(--accent-soft); }
+.em-toolbar-btn.is-active { color: var(--accent); background: var(--accent-soft); font-weight: 600; }
 /* 视觉精修（对齐 shadcn）：hover 用 accent-soft 底；分隔符高度对齐 28px 按钮 */
 .em-toolbar-sep {
   width: 1px;
@@ -1519,40 +1516,51 @@ button:disabled {
   border-radius: 2px;
   padding: 0 2px;
 }
-/* 文字颜色按钮（A + 当前色条） */
+/* 文字颜色触发器（A + 当前色下划线 + ▾，column 内 A 与色条叠一行） */
 .em-color-btn {
   display: inline-flex;
-  flex-direction: column;
   align-items: center;
+  gap: 1px;
   line-height: 1;
   font-size: 13px;
   font-weight: 600;
 }
+.em-color-a {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 3px;
+}
 .em-color-underline {
-  width: 14px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
   height: 2px;
   border-radius: 1px;
-  margin-bottom: 2px;
 }
-.em-color-grid {
+/* 颜色弹层两栏列表（文字色 / 背景高亮）：项 = 色块 A 预览 + 对勾 */
+.em-color-list {
   display: grid;
-  grid-template-columns: repeat(4, 22px);
-  gap: 6px;
+  grid-template-columns: repeat(3, minmax(64px, 1fr));
+  gap: 2px;
+  margin: 4px 0;
 }
-.em-color-swatch {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
+.em-swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
   border: 1px solid var(--border);
-  padding: 0;
-  cursor: pointer;
-}
-.em-color-swatch:hover { outline: 2px solid var(--accent-soft); }
-.em-color-clear {
   font-size: 11px;
+  font-weight: 700;
   color: var(--fg-2);
-  background: var(--panel-2);
+  flex-shrink: 0;
 }
+.em-swatch-none { background: var(--panel-2); }
 .em-toolbar-pop {
   position: absolute;
   top: calc(100% + 4px);
@@ -1590,6 +1598,34 @@ button:disabled {
 }
 .em-url-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .em-h { font-weight: 700; font-size: 13px; letter-spacing: 0.02em; }
+/* 触发器当前值文字（字号/字体/对齐，shadcn-tiptap 触发器显示当前值模式） */
+.em-toolbar-current { font-size: 13px; font-weight: 600; letter-spacing: 0; }
+/* 弹层菜单项（色块/字号/字体/「恢复默认」）：复用旧 em-toolbar-btn 的底色逻辑但更宽（带对勾槽） */
+.em-pop-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  height: 26px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fg-2);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+.em-pop-item:hover { background: var(--accent-soft); }
+.em-pop-item.is-active { color: var(--accent); font-weight: 600; }
+.em-pop-name { flex-shrink: 0; }
+/* 当前项对勾（em-check）靠右；非 active 时由组件不渲染（保持槽位由 flex 填充） */
+.em-pop-item .em-check { margin-left: auto; color: var(--accent); }
+.em-pop-restore { color: var(--muted); font-size: 12px; }
+/* 弹层分组标签与分隔（颜色弹层两栏的栏头） */
+.em-pop-label { font-size: 12px; color: var(--muted); padding: 2px 4px; }
+.em-pop-divider { height: 1px; margin: 6px -8px; background: var(--border); }
 
 /* ═══ R3：任务清单 / 图片 / 高亮 ═══ */
 .tiptap ul[data-type="taskList"] { list-style: none; padding-left: 0; }
@@ -1873,7 +1909,7 @@ button:focus-visible {
   font-size: 14pt;
 }
 
-/* 工具栏新增控件：字号/字体下拉菜单（复用 em-toolbar-pop + em-toolbar-btn 既有类）
+/* 工具栏新增控件：字号/字体下拉菜单（复用 em-toolbar-pop + em-pop-item 既有类）
  * 字号 16 项过多 → 网格 4 列（参考 em-color-grid 做法）；字体 7 项纵向列表即可 */
 .em-size-grid {
   display: grid;
@@ -1886,12 +1922,14 @@ button:focus-visible {
   flex-direction: column;
   min-width: 104px;
 }
-.em-size-grid .em-toolbar-btn,
-.em-pop-list .em-toolbar-btn {
+.em-size-grid .em-pop-item,
+.em-pop-list .em-pop-item {
   width: 100%;
   justify-content: flex-start;
   padding-left: 10px;
 }
+/* 颜色弹层：两栏列表更宽（色块 + 名称 + 对勾），覆写 em-color-list 的 3 列铺满 pop 宽度 */
+.em-color-pop { min-width: 220px; }
 /* 公文皮肤 toggle：右侧独立（em-toolbar 为 flex，margin-left:auto 推到最右） */
 .em-paper-toggle { margin-left: auto; }
 
