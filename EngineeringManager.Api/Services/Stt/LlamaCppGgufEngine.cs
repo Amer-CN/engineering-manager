@@ -267,6 +267,17 @@ public class LlamaCppGgufEngine : ISttEngine
             psi.Environment["PYTHONIOENCODING"] = "utf-8";
             psi.Environment["GGML_VULKAN_DEVICE"] = "0";
 
+// 启动前准备日志文件：重命名旧文件，杜绝陈旧日志误放行。
+// 必须在 process.Start() 之前 —— 否则日志被残留进程锁定时异常抛出、
+// 任务标失败，但已启动的转写进程无人回收，在后台空跑（任务 23 事故）。
+var logFilePath = Path.Combine(_engineDir, "logs", "latest.log");
+if (!LogFileIncrementalReader.PrepareForNewRun(logFilePath))
+{
+    throw new Exception(
+                        "日志文件被占用（可能有残留的转写进程）。请重启应用后重试；" +
+                        "若仍失败，请在任务管理器结束所有 transcribe.exe 进程。");
+}
+
             process = new Process { StartInfo = psi };
             var tcs = new TaskCompletionSource<bool>();
 
@@ -315,12 +326,7 @@ public class LlamaCppGgufEngine : ISttEngine
             }, ct);
 
 // GPU fail-closed + 资源保险丝：使用 SttMonitorLoop（可注入 ISttTelemetryProvider）
-var logFilePath = Path.Combine(_engineDir, "logs", "latest.log");
-// 启动前准备日志文件：重命名旧文件，杜绝陈旧日志误放行
-if (!LogFileIncrementalReader.PrepareForNewRun(logFilePath))
-{
-    throw new Exception("日志文件准备失败（重命名/删除均失败），fail closed，不启动模型");
-}
+// （日志准备已在 process.Start() 之前完成，logFilePath 供 telemetry 增量读取）
 var telemetry = new SttTelemetryProvider(process, outputLock, outputBuilder, errorBuilder, logFilePath);
             var monitorLoop = new SttMonitorLoop(telemetry);
             var startTime = DateTime.UtcNow;
