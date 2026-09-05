@@ -23,6 +23,11 @@ public class DiarizationService
     private static OfflineSpeakerDiarization? _diarization;
     private static readonly object _initLock = new();
 
+    // 指定人数管线缓存：_numClustersValue 记录当前缓存管线对应的 numSpeakers 值，
+    // 避免每次 DiarizeAsync 都 new 一个 OfflineSpeakerDiarization（泄漏）
+    private static OfflineSpeakerDiarization? _numClustersPipeline;
+    private static int? _numClustersValue;
+
     // Win32 API: 获取 8.3 短路径名（可能仍含中文，不如复制可靠）
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern int GetShortPathName(string lpszLongPath, char[] lpszShortPath, int cchBuffer);
@@ -37,6 +42,12 @@ public class DiarizationService
             // 如果指定了说话人数，需要创建带 NumClusters 的管线
             // 如果没指定，用默认的 Threshold 管线
             if (_diarization != null && !numSpeakers.HasValue) return _diarization;
+
+            // 指定人数模式：值与缓存相同且实例存在 → 复用（判定逻辑抽成纯函数便于测试）
+            if (numSpeakers.HasValue && ShouldReusePipeline(numSpeakers, _numClustersValue, _numClustersPipeline != null))
+            {
+                return _numClustersPipeline!;
+            }
 
             if (!SttModelManager.IsDiarizationModelAvailable())
                 throw new InvalidOperationException("说话人分离模型未就绪");
@@ -75,10 +86,46 @@ public class DiarizationService
             {
                 _diarization = pipeline;
             }
+            else
+            {
+                // 替换指定人数管线缓存。旧实例无法安全 Dispose（可能仍被并发使用），
+                // 交给 GC 回收——与 _diarization 单例的进程生命周期语义一致
+                _numClustersPipeline = pipeline;
+                _numClustersValue = numSpeakers.Value;
+            }
 
             Console.WriteLine($"[DiarizationService] 分离管线初始化完成 (numSpeakers={numSpeakers?.ToString() ?? "auto"})");
             return pipeline;
         }
+    }
+
+    /// <summary>
+    /// 爆簇保险丝判定（纯函数，便于单元测试）：自动模式下聚类簇数异常多时返回错误消息，正常返回 null。
+    /// 背景：重口音/混响录音实测自动模式爆出 54 簇（指定人数路径健康），随后 MergeRareSpeakers
+    /// 会把垃圾归属吞并成 2 人。阈值为 8：正常会议很少超过 8 人，超过即为聚类失败信号。
+    /// </summary>
+    /// <returns>null=正常；非 null=应抛出的异常消息</returns>
+    internal static string? CheckClusterExplosion(int? numSpeakers, int distinctSpeakers)
+    {
+        // 指定人数路径：用户已明确声纹簇数，信任输入（该路径实测质量良好）
+        if (numSpeakers.HasValue) return null;
+
+        // 自动模式：0（空音频等）与 ≤8 均视为正常
+        if (distinctSpeakers <= 8) return null;
+
+        return $"说话人自动估计失败（识别到 {distinctSpeakers} 个声纹簇，明显异常）。" +
+               "请在创建任务时选择录音类型为多人会议并填写实际说话人数后重试。";
+    }
+
+    /// <summary>
+    /// 管线复用判定（纯函数，便于单元测试）：是否可复用缓存的 OfflineSpeakerDiarization 实例。
+    /// 自动模式：缓存实例存在即复用；指定人数模式：缓存实例存在且记录值与请求值相同才复用。
+    /// </summary>
+    internal static bool ShouldReusePipeline(int? requested, int? cachedValue, bool cachedExists)
+    {
+        if (!cachedExists) return false;
+        if (!requested.HasValue) return true;   // 自动管线：无值概念，缓存存在即复用
+        return cachedValue == requested;         // 指定人数：值不同必须换管线（NumClusters 不可变）
     }
 
     /// <summary>
@@ -129,7 +176,15 @@ public class DiarizationService
             });
         }
 
-        Console.WriteLine($"[DiarizationService] 原始段数: {segments.Count}, 说话人数: {segments.Select(s => s.Speaker).Distinct().Count()}");
+        var rawSpeakerCount = segments.Select(s => s.Speaker).Distinct().Count();
+        Console.WriteLine($"[DiarizationService] 原始段数: {segments.Count}, 说话人数: {rawSpeakerCount}");
+
+        // 爆簇保险丝：自动模式下聚类爆出异常多簇（实测 54 簇）时，后续 MergeRareSpeakers
+        // 会把垃圾归属粗暴吞并成 2 人 → 直接失败，提示用户改用指定人数（SttWorker 已有
+        // failed 状态写回路径，此消息会展示给用户）
+        var explosion = CheckClusterExplosion(numSpeakers, rawSpeakerCount);
+        if (explosion != null)
+            throw new InvalidOperationException(explosion);
 
         // 4. 段合并
         var merged = MergeSegments(segments);

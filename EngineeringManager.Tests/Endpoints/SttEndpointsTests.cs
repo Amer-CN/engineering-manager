@@ -245,6 +245,59 @@ public class DiarizationServiceTests
         var speakers = merged.Select(s => s.Speaker).Distinct().ToList();
         Assert.Equal(2, speakers.Count);
     }
+
+    // ═══════════════════════════════════════════════════════════
+    // 爆簇保险丝：CheckClusterExplosion 纯函数判定
+    // （Process 需要真实模型文件无法在单测中运行，故只测判定逻辑本身）
+    // ═══════════════════════════════════════════════════════════
+
+    [Fact]
+    public void CheckClusterExplosion_AutoMode_AtThreshold8_ReturnsNull()
+    {
+        // 自动模式 8 个簇：处于阈值内，正常放行
+        Assert.Null(DiarizationService.CheckClusterExplosion(numSpeakers: null, distinctSpeakers: 8));
+    }
+
+    [Fact]
+    public void CheckClusterExplosion_AutoMode_Over8_ReturnsMessageWithGuidance()
+    {
+        // 自动模式 9 个簇：超阈值 → 返回错误消息，且必须含"多人会议"引导词
+        var message = DiarizationService.CheckClusterExplosion(numSpeakers: null, distinctSpeakers: 9);
+        Assert.NotNull(message);
+        Assert.Contains("多人会议", message);
+    }
+
+    [Fact]
+    public void CheckClusterExplosion_SpecifiedCount_NeverFails_EvenWith54Clusters()
+    {
+        // 指定人数路径（实测 54 簇背景数据）：信任用户输入，不触发保险丝
+        Assert.Null(DiarizationService.CheckClusterExplosion(numSpeakers: 5, distinctSpeakers: 54));
+    }
+
+    [Fact]
+    public void CheckClusterExplosion_AutoMode_ZeroSpeakers_ReturnsNull()
+    {
+        // 自动模式 0 个说话人（空音频等边界）：不触发保险丝
+        Assert.Null(DiarizationService.CheckClusterExplosion(numSpeakers: null, distinctSpeakers: 0));
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // 双管线缓存：ShouldReusePipeline 纯函数判定
+    // （OfflineSpeakerDiarization 需真实模型才能 new，故只测缓存决策逻辑）
+    // ═══════════════════════════════════════════════════════════
+
+    [Fact]
+    public void ShouldReusePipeline_FourDecisionGroups()
+    {
+        // 自动模式：缓存存在即复用
+        Assert.True(DiarizationService.ShouldReusePipeline(requested: null, cachedValue: null, cachedExists: true));
+        // 无缓存：一律不复用（新建）
+        Assert.False(DiarizationService.ShouldReusePipeline(requested: null, cachedValue: null, cachedExists: false));
+        // 指定人数：值与缓存相同 → 复用
+        Assert.True(DiarizationService.ShouldReusePipeline(requested: 5, cachedValue: 5, cachedExists: true));
+        // 指定人数：值不同 → 必须换管线（NumClusters 不可变）
+        Assert.False(DiarizationService.ShouldReusePipeline(requested: 5, cachedValue: 2, cachedExists: true));
+    }
 }
 
 /// <summary>

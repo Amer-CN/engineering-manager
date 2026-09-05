@@ -33,7 +33,7 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
 
   const [recordingType, setRecordingType] = useState<RecordingType>('single')
-  const [numSpeakers, setNumSpeakers] = useState<number>(2)
+  const [numSpeakers, setNumSpeakers] = useState<number>(0) // 0=自动估计，不硬指定人数
   const [hotwords, setHotwords] = useState('')
 
   const [creating, setCreating] = useState(false)
@@ -167,7 +167,7 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
     }
     setCreating(true)
     const isMulti = recordingType !== 'single'
-    const ns = recordingType === 'dual' ? 2 : (recordingType === 'multi' ? numSpeakers : undefined)
+    const ns = recordingType === 'dual' ? 2 : (recordingType === 'multi' ? (numSpeakers >= 2 ? numSpeakers : undefined) : undefined)
     const res = await sttClient.createSttJob({
       filePath: uploadedPath,
       isMultiSpeaker: isMulti,
