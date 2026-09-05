@@ -2,8 +2,8 @@
  * AiProviderSection.test.tsx — AI 助手设置（多服务商管理）测试
  */
 
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { vi, describe, test, expect, beforeEach } from 'vitest'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest'
 
 // ── Mock agent-client ──
 const mockGetLlmProviderConfig = vi.hoisted(() => vi.fn())
@@ -71,6 +71,10 @@ describe('AiProviderSection（多服务商管理）', () => {
     mockReloadLlmProviderConfig.mockResolvedValue(true)
   })
 
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   test('加载后渲染服务商区块（无服务商时显示空态提示）', async () => {
     render(<AiProviderSection />)
     await waitFor(() => {
@@ -94,7 +98,7 @@ describe('AiProviderSection（多服务商管理）', () => {
     await waitFor(() => expect(screen.getByText('DeepSeek')).toBeTruthy())
     expect(screen.getByText('当前生效')).toBeTruthy()
 
-    fireEvent.click(screen.getByText('保存'))
+    // 改动即时自动保存：添加服务商后 saveLlmProviderConfig 被自动调用
     await waitFor(() => expect(mockSaveLlmProviderConfig).toHaveBeenCalledTimes(1))
 
     const payload = mockSaveLlmProviderConfig.mock.calls[0][0]
@@ -127,7 +131,6 @@ describe('AiProviderSection（多服务商管理）', () => {
     fireEvent.click(screen.getByText('保存服务商'))
     await waitFor(() => expect(screen.getByText(/2 个模型/)).toBeTruthy())
 
-    fireEvent.click(screen.getByText('保存'))
     await waitFor(() => expect(mockSaveLlmProviderConfig).toHaveBeenCalledTimes(1))
     const payload = mockSaveLlmProviderConfig.mock.calls[0][0]
     expect(payload.providers[0].models.map((m: { id: string }) => m.id)).toEqual(['deepseek-chat', 'deepseek-reasoner'])
@@ -152,7 +155,6 @@ describe('AiProviderSection（多服务商管理）', () => {
 
     await waitFor(() => expect(screen.getByText('glm-5.3v')).toBeTruthy())
 
-    fireEvent.click(screen.getByText('保存'))
     await waitFor(() => expect(mockSaveLlmProviderConfig).toHaveBeenCalledTimes(1))
     const payload = mockSaveLlmProviderConfig.mock.calls[0][0]
     const added = payload.providers[0].models.find((m: { id: string }) => m.id === 'glm-5.3v')
@@ -187,6 +189,8 @@ describe('AiProviderSection（多服务商管理）', () => {
     await waitFor(() => {
       expect(screen.getByText('还没有自定义服务商，点右上角「添加服务商」开始。')).toBeTruthy()
     })
+    // 删除确认后自动保存
+    await waitFor(() => expect(mockSaveLlmProviderConfig).toHaveBeenCalledTimes(1))
   })
 
   test('多服务商切换启用 + 模型「设为默认」', async () => {
@@ -207,9 +211,11 @@ describe('AiProviderSection（多服务商管理）', () => {
     render(<AiProviderSection />)
 
     await waitFor(() => expect(screen.getByText('智谱')).toBeTruthy())
-    // 切换启用智谱
+    // 切换启用智谱（自动保存）
     fireEvent.click(screen.getByText('启用'))
     await waitFor(() => expect(screen.getByText('glm-5.3')).toBeTruthy())
+    // 等本次自动保存结束（保存中按钮 disabled）
+    await waitFor(() => expect(screen.getByText('改动即时保存')).toBeTruthy())
 
     // deepseek-chat 当前非激活服务商的模型不可见；智谱的模型列表出现
     expect(screen.queryByText('deepseek-chat')).toBeNull()
@@ -220,13 +226,16 @@ describe('AiProviderSection（多服务商管理）', () => {
     fireEvent.change(screen.getByPlaceholderText('如 deepseek-chat / glm-5.3'), { target: { value: 'glm-4-flash' } })
     fireEvent.click(screen.getByText('保存模型'))
     await waitFor(() => expect(screen.getByText('glm-4-flash')).toBeTruthy())
+    await waitFor(() => expect(mockSaveLlmProviderConfig).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(screen.getByText('改动即时保存')).toBeTruthy())
 
     fireEvent.click(screen.getByText('设为默认'))
-    // glm-4-flash 行出现「默认」徽章
+    // glm-4-flash 行出现「默认」徽章，自动保存第 3 次
     await waitFor(() => {
       const row = screen.getByText('glm-4-flash').closest('div')!
       expect(row.textContent).toContain('默认')
     })
+    await waitFor(() => expect(mockSaveLlmProviderConfig).toHaveBeenCalledTimes(3))
   })
 
   test('获取模型列表返回重复/大小写变体 → 去重后保存，不出现重复模型', async () => {
@@ -248,7 +257,6 @@ describe('AiProviderSection（多服务商管理）', () => {
     await waitFor(() => expect(mockToast.showToast).toHaveBeenCalledWith('获取成功，共 2 个模型', 'success'))
     fireEvent.click(screen.getByText('保存服务商'))
 
-    fireEvent.click(screen.getByText('保存'))
     await waitFor(() => expect(mockSaveLlmProviderConfig).toHaveBeenCalledTimes(1))
     const payload = mockSaveLlmProviderConfig.mock.calls[0][0]
     const ids = payload.providers[0].models.map((m: { id: string }) => m.id)
@@ -257,21 +265,57 @@ describe('AiProviderSection（多服务商管理）', () => {
     expect(ids.filter((i: string) => i.toLowerCase() === 'deepseek-chat')).toHaveLength(1)
   })
 
-  test('温度/maxTokens/代理地址随 payload 保存（代理留空 = 直连）', async () => {
+  test('温度滑块/档位/代理输入 → 防抖 800ms 合并为一次保存，payload 正确', async () => {
     render(<AiProviderSection />)
     await waitFor(() => expect(screen.getByText(/温度 0\.7/)).toBeTruthy())
 
-    fireEvent.click(screen.getByText('发散 1.0'))
+    vi.useFakeTimers()
+    // 连续拖两次温度滑块：防抖合并，只在停顿 800ms 后保存一次
+    const slider = document.querySelector('input[type="range"]') as HTMLInputElement
+    fireEvent.change(slider, { target: { value: '0.3' } })
+    fireEvent.change(slider, { target: { value: '0.9' } })
+    expect(mockSaveLlmProviderConfig).not.toHaveBeenCalled()
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(800) })
+    expect(mockSaveLlmProviderConfig).toHaveBeenCalledTimes(1)
+    expect(mockSaveLlmProviderConfig.mock.calls[0][0].temperature).toBe(0.9)
+
+    // 第二轮：maxTokens 档位 + 代理输入，同样合并为一次
     fireEvent.click(screen.getByText('8K'))
     fireEvent.change(screen.getByPlaceholderText('http://127.0.0.1:7890（留空 = 直连）'), {
       target: { value: '127.0.0.1:7890' },
     })
-    fireEvent.click(screen.getByText('保存'))
-
-    await waitFor(() => expect(mockSaveLlmProviderConfig).toHaveBeenCalledTimes(1))
-    const payload = mockSaveLlmProviderConfig.mock.calls[0][0]
-    expect(payload.temperature).toBe(1.0)
+    await act(async () => { await vi.advanceTimersByTimeAsync(800) })
+    expect(mockSaveLlmProviderConfig).toHaveBeenCalledTimes(2)
+    const payload = mockSaveLlmProviderConfig.mock.calls[1][0]
+    expect(payload.temperature).toBe(0.9)
     expect(payload.maxTokens).toBe(8192)
     expect(payload.proxyUrl).toBe('127.0.0.1:7890')
+  })
+
+  test('界面无「保存」主按钮；弹窗内「保存模型」保留；显示「改动即时保存」', async () => {
+    mockGetLlmProviderConfig.mockResolvedValue(oneProviderConfig)
+    render(<AiProviderSection />)
+    await waitFor(() => expect(screen.getByText('deepseek-chat')).toBeTruthy())
+
+    expect(screen.queryByRole('button', { name: '保存' })).toBeNull()
+    expect(screen.getByText('改动即时保存')).toBeTruthy()
+
+    // 弹窗表单确认按钮（表单语义）不受影响
+    fireEvent.click(screen.getByText('添加模型'))
+    await waitFor(() => expect(screen.getByText('保存模型')).toBeTruthy())
+    expect(screen.queryByRole('button', { name: '保存' })).toBeNull()
+  })
+
+  test('切换 useBuiltIn 开关 → 立即自动保存（无防抖），payload.useBuiltIn 取反', async () => {
+    render(<AiProviderSection />)
+    await waitFor(() => expect(screen.getByRole('switch')).toBeTruthy())
+    expect(screen.getByRole('switch').getAttribute('aria-checked')).toBe('true')
+
+    fireEvent.click(screen.getByRole('switch'))
+    // 同步立即调用：未推进任何定时器即已保存
+    expect(mockSaveLlmProviderConfig).toHaveBeenCalledTimes(1)
+    expect(mockSaveLlmProviderConfig.mock.calls[0][0].useBuiltIn).toBe(false)
+    await waitFor(() => expect(mockReloadLlmProviderConfig).toHaveBeenCalledTimes(1))
   })
 })
