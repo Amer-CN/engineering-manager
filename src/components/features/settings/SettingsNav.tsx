@@ -16,8 +16,8 @@ export function SettingsNav({ active, onSelect }: Props) {
   const pill = useSlidePill(active)
 
   return (
-    <nav className="relative flex flex-col gap-1" ref={pill.containerRef}>
-      {/* 滑动胶囊层 — hover 优先，离开回落 active */}
+    <nav className="relative flex flex-col gap-1" ref={pill.containerRef} onMouseLeave={pill.leaveContainer}>
+      {/* 滑动胶囊层 — hover 优先，整组离开回落 active（按钮间间隙不清 hover 防抖动） */}
       <span
         aria-hidden
         className="pointer-events-none absolute rounded-lg"
@@ -31,7 +31,7 @@ export function SettingsNav({ active, onSelect }: Props) {
             ref={pill.registerItem(cat.id)}
             onClick={() => onSelect(cat.id)}
             onMouseEnter={() => pill.setHovered(cat.id)}
-            onMouseLeave={() => pill.setHovered(null)}
+            onMouseLeave={pill.leaveItem}
             className={`relative z-10 w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
               isActive
                 ? 'text-[color:var(--fg)]'

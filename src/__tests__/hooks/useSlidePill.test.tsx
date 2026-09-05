@@ -7,17 +7,18 @@ import { render, fireEvent } from '@testing-library/react'
 import React from 'react'
 import { useSlidePill } from '@/hooks/useSlidePill'
 
-/** 简易测试容器：两项按钮 + 胶囊层，模拟真实用法 */
+/** 简易测试容器：两项按钮 + 胶囊层，模拟真实用法（容器级 mouseleave 清 hover） */
 function Harness({ active, onPick }: { active: string; onPick?: (k: string) => void }) {
   const pill = useSlidePill(active)
   return (
-    <div ref={pill.containerRef} data-testid="container" style={{ position: 'relative' }}>
+    <div ref={pill.containerRef} data-testid="container" style={{ position: 'relative' }}
+      onMouseLeave={pill.leaveContainer}>
       <span aria-hidden data-testid="pill" style={{ ...pill.pillStyle, background: 'var(--panel-2)' }} />
       <button ref={pill.registerItem('a')} data-testid="btn-a"
-        onMouseEnter={() => pill.setHovered('a')} onMouseLeave={() => pill.setHovered(null)}
+        onMouseEnter={() => pill.setHovered('a')} onMouseLeave={pill.leaveItem}
         onClick={() => onPick?.('a')}>A</button>
       <button ref={pill.registerItem('b')} data-testid="btn-b"
-        onMouseEnter={() => pill.setHovered('b')} onMouseLeave={() => pill.setHovered(null)}
+        onMouseEnter={() => pill.setHovered('b')} onMouseLeave={pill.leaveItem}
         onClick={() => onPick?.('b')}>B</button>
     </div>
   )
@@ -64,7 +65,13 @@ describe('useSlidePill', () => {
     expect(pill.style.left).toBe('160px')
     expect(pill.style.width).toBe('140px')
     expect(pill.style.top).toBe('10px')
-    fireEvent.mouseLeave(getByTestId('btn-b'))
+    // 按钮间 gap（按钮 mouseleave）不清 hover——胶囊停在目标上不跳回。
+    // relatedTarget 须显式给容器：jsdom 对缺省 relatedTarget 塞的是 window（非 Node），
+    // 会骗过 React 的祖先 leave 合成；真实浏览器里移入 gap 时 relatedTarget 就是容器。
+    fireEvent.mouseLeave(getByTestId('btn-b'), { relatedTarget: getByTestId('container') })
+    expect(pill.style.left).toBe('160px')
+    // 整组离开（容器 mouseleave）才回落 active；relatedTarget=容器外（document.body）
+    fireEvent.mouseLeave(getByTestId('container'), { relatedTarget: document.body })
     expect(pill.style.left).toBe('0px')
   })
 

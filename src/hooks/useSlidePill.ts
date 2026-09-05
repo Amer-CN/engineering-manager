@@ -34,6 +34,10 @@ export interface UseSlidePillResult {
   /** hover 某项（null = 离开，回落 active） */
   setHovered: (key: string | null) => void
   hovered: string | null
+  /** 按钮级 mouseleave 接到这（no-op：间隙不清 hover，防抖动） */
+  leaveItem: () => void
+  /** 容器级 mouseleave 接到这（整组离开时回落 active；带 relatedTarget 守卫） */
+  leaveContainer: (e: React.MouseEvent) => void
 }
 
 // 过渡曲线：只对位移类属性（top/left）做平滑——尺寸类（width/height）瞬间取值。
@@ -54,6 +58,20 @@ export function useSlidePill(activeKey: string): UseSlidePillResult {
     (key: string) => (el: HTMLButtonElement | null) => { itemRefs.current[key] = el },
     [],
   )
+
+  /** 按钮间 gap 内不清 hover——鼠标在两颗按钮的间隙（flex gap 空旷地带）时
+   * 胶囊保持停驻，避免"离开左按钮→跳回 active→进入右按钮→又滑过来"的抖动。 */
+  const leaveItem = useCallback(() => { /* intentional no-op：间隙不清 hover，由容器 mouseleave 统一清 */ }, [])
+  /** 容器级 mouseleave：鼠标整组离开时清 hover，胶囊回落 active 项。
+   * relatedTarget 仍在本组内（正移往另一颗按钮）时不清——兼容事件冒泡
+   * 的模拟环境与真实浏览器的 mouseover/mouseout 序列。
+   * 注意：React 合成 leave 在 relatedTarget 非 React 管辖节点（如移向 body/
+   * 页面背景）时给 window（非 Node），须一并视为已离组，否则 contains 抛 TypeError。 */
+  const leaveContainer = useCallback((e: React.MouseEvent) => {
+    const related = e.relatedTarget
+    if (related instanceof Node && containerRef.current?.contains(related)) return
+    setHovered(null)
+  }, [])
 
   useLayoutEffect(() => {
     const container = containerRef.current
@@ -87,5 +105,5 @@ export function useSlidePill(activeKey: string): UseSlidePillResult {
     transition: PILL_TRANSITION,
   }
 
-  return { containerRef, registerItem, pillStyle, setHovered, hovered }
+  return { containerRef, registerItem, pillStyle, setHovered, hovered, leaveItem, leaveContainer }
 }

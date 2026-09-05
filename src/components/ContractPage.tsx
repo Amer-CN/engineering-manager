@@ -230,13 +230,13 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           {/* 视图切换：列表 / 看板（S13；动效批 1：滑动胶囊高亮） */}
-          <div className="relative flex items-center rounded-lg p-1" style={{ background: 'var(--panel-2)' }} ref={viewPill.containerRef}>
+          <div className="relative flex items-center rounded-lg p-1" style={{ background: 'var(--panel-2)' }} ref={viewPill.containerRef} onMouseLeave={viewPill.leaveContainer}>
             <span aria-hidden className="pointer-events-none absolute rounded-md"
               style={{ ...viewPill.pillStyle, background: 'var(--card)', boxShadow: 'var(--shadow-card)' }} />
             <button onClick={() => setViewMode('list')} title="列表视图"
               ref={viewPill.registerItem('list')}
               onMouseEnter={() => viewPill.setHovered('list')}
-              onMouseLeave={() => viewPill.setHovered(null)}
+              onMouseLeave={viewPill.leaveItem}
               className="relative z-10 px-3 py-1.5 text-sm rounded-md transition-colors flex items-center gap-1.5"
               style={viewMode === 'list' ? { color: 'var(--fg)' } : { color: 'var(--muted)' }}>
               <Icon name="List" size={14} /> 列表
@@ -244,7 +244,7 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
             <button onClick={() => setViewMode('kanban')} title="看板视图"
               ref={viewPill.registerItem('kanban')}
               onMouseEnter={() => viewPill.setHovered('kanban')}
-              onMouseLeave={() => viewPill.setHovered(null)}
+              onMouseLeave={viewPill.leaveItem}
               className="relative z-10 px-3 py-1.5 text-sm rounded-md transition-colors flex items-center gap-1.5"
               style={viewMode === 'kanban' ? { color: 'var(--fg)' } : { color: 'var(--muted)' }}>
               <Icon name="LayoutDashboard" size={14} /> 看板
