@@ -29,6 +29,7 @@ import WritingPreviewModal from "./WritingPreviewModal";
 import WritingHistoryModal from "./WritingHistoryModal";
 import WritingAiMenu from "./WritingAiMenu";
 import EditorToolbar from "./EditorToolbar";
+import BubbleToolbar from "./BubbleToolbar";
 import WritingExportMenu from "./WritingExportMenu";
 import ChartPickerModal from "./ChartPickerModal";
 import { useA4Zoom } from "@/hooks/useA4Zoom";
@@ -361,6 +362,8 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
         <div className="flex-1 overflow-y-auto flex justify-center items-start bg-[color:var(--panel-2)] py-6">
           <div className="editor-canvas" ref={bindRef}>
             <EditorContent editor={editor} />
+            {/* 选中文本格式浮条（AI 改写按钮复用 runAiAction——与 WritingAiMenu 同一入口） */}
+            {editor && <BubbleToolbar editor={editor} onAiRewrite={() => void runAiAction("rewrite")} />}
           </div>
         </div>
       </div>

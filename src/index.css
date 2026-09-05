@@ -1500,12 +1500,13 @@ button:disabled {
   cursor: pointer;
   transition: background-color 0.12s ease, color 0.12s ease;
 }
-.em-toolbar-btn:hover { background: var(--panel-2); }
+.em-toolbar-btn:hover { background: var(--accent-soft); }
 .em-toolbar-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 .em-toolbar-btn.is-active { color: var(--accent); background: var(--accent-soft); }
+/* 视觉精修（对齐 shadcn）：hover 用 accent-soft 底；分隔符高度对齐 28px 按钮 */
 .em-toolbar-sep {
   width: 1px;
-  height: 18px;
+  height: 28px;
   margin: 0 5px;
   background: var(--border);
   flex-shrink: 0;
@@ -2081,3 +2082,55 @@ button:focus-visible {
   0%, 100% { transform: scaleY(0.35); }
   50% { transform: scaleY(1); }
 }
+
+/* ═══ 写作中心选中文本浮条（BubbleToolbar）═══
+ * 独立于 em-toolbar 系列，不共用避免耦合；入场动画复用 popover-entry（@starting-style）。
+ * z-index 30 高于 em-toolbar 的 20；定位由 tiptap BubbleMenu 的 floating-ui 内行注入。 */
+.em-bubble {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  z-index: 30;
+}
+.em-bubble-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fg-2);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+.em-bubble-btn:hover { background: var(--accent-soft); }
+.em-bubble-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.em-bubble-btn.is-active { color: var(--accent); background: var(--accent-soft); }
+.em-bubble-sep {
+  width: 1px;
+  height: 18px;
+  margin: 0 3px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+/* 8 色文字颜色色点（内联展开，无二级浮层）；当前颜色以 accent 描边点亮 */
+.em-bubble-color {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+.em-bubble-color:hover { outline: 2px solid var(--accent-soft); }
+.em-bubble-color.is-active { outline: 2px solid var(--accent); }

@@ -6,6 +6,8 @@
  *       有序/无序/任务清单 | 引用/代码块/分割线/图片(URL) | 表格（插入+行列增删） | 清除格式
  *       右侧独立：公文版式皮肤 toggle（状态由父组件 usePaperStyle 持有）
  * 激活态用 editor.isActive() 经 useEditorState 订阅；样式走 var(--accent) 等现有 token。
+ * 悬停提示走项目自有 Tooltip（content=原中文 title 文案，delay=400，原生 title 已删避免双提示）；
+ * 浮层内部按钮（色板/字号/字体/URL 插入）保留原生 title（属菜单项，不接 Tooltip）。
  * 粘贴截图由 WritingEditor 的 handlePaste 处理（base64 内嵌，>2MB 拒绝）。
  */
 
@@ -14,6 +16,7 @@ import type { Editor } from "@tiptap/core";
 import { useEditorState } from "@tiptap/react";
 import { Icon } from "@/components/ui/Icon";
 import { DropdownMenu } from "@/components/ui/DropdownMenu";
+import { Tooltip } from "@/components/ui/Tooltip/Tooltip";
 import {
   Bold,
   Italic,
@@ -135,17 +138,20 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onTogglePaperStyl
 
   if (!editor || !state) return null;
 
+  // 全部按钮包 Tooltip（content 用原中文 title 文案）；原生 title 已删，aria-label 保留供读屏与测试。
+  // Tooltip 内部包一层 inline-flex div，点击事件经冒泡到达按钮，onClick 不受影响。
   const btn = (active: boolean, title: string, onClick: () => void, node: React.ReactNode, disabled?: boolean) => (
-    <button
-      type="button"
-      title={title}
-      aria-label={title}
-      disabled={disabled}
-      onClick={onClick}
-      className={`em-toolbar-btn${active ? " is-active" : ""}`}
-    >
-      {node}
-    </button>
+    <Tooltip content={title} delay={400}>
+      <button
+        type="button"
+        aria-label={title}
+        disabled={disabled}
+        onClick={onClick}
+        className={`em-toolbar-btn${active ? " is-active" : ""}`}
+      >
+        {node}
+      </button>
+    </Tooltip>
   );
 
   const insertImageByUrl = () => {
@@ -348,16 +354,19 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onTogglePaperStyl
 
       {btn(false, "清除格式", () => editor.chain().focus().unsetAllMarks().clearNodes().run(), <RemoveFormatting size={15} />)}
 
-      {/* 公文版式皮肤 toggle：右侧独立；状态由父组件 usePaperStyle 持有并持久化 */}
-      <button
-        type="button"
-        title="切换公文版式（仿宋/黑体/楷体，所见即所得）"
-        aria-label="切换公文版式（仿宋/黑体/楷体，所见即所得）"
-        className={`em-toolbar-btn em-paper-toggle${paperStyleOn ? " is-active" : ""}`}
-        onClick={() => onTogglePaperStyle?.()}
-      >
-        <LayoutTemplate size={15} />
-      </button>
+      {/* 公文版式皮肤 toggle：右侧独立；状态由父组件 usePaperStyle 持有并持久化
+          title 与 Tooltip 并存（Tooltip 悬停展示、title 供读屏与既有测试断言） */}
+      <Tooltip content="切换公文版式（仿宋/黑体/楷体，所见即所得）" delay={400}>
+        <button
+          type="button"
+          title="切换公文版式（仿宋/黑体/楷体，所见即所得）"
+          aria-label="切换公文版式（仿宋/黑体/楷体，所见即所得）"
+          className={`em-toolbar-btn em-paper-toggle${paperStyleOn ? " is-active" : ""}`}
+          onClick={() => onTogglePaperStyle?.()}
+        >
+          <LayoutTemplate size={15} />
+        </button>
+      </Tooltip>
     </div>
   );
 };
