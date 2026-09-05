@@ -6,7 +6,8 @@
  *    codeBlock 内选中不弹 / 节点选择（isNodeSelection，选中图片）不弹
  *  - 浮条结构：4 分组 3 个分隔 + 8 色色点内联展开 + 全部按钮
  *  - 命令生效：粗体 / 文字颜色 / 标题
- *  - AI 改写入口：注入回调时点击触发（WritingEditor 经此复用 runAiAction）；未注入时置灰占位
+ *  - AI 四动作入口：注入 onAiAction 时点击改写/润色触发对应 actionId
+ *    （WritingEditor 经此复用 runAiAction）；未注入或 aiBusy 时置灰占位
  *
  * 说明：BubbleMenu 由 tiptap v3 的 floating-ui 定位（show 时挂载到编辑器父容器，
  * hide 时整体移出 DOM），故「不弹」断言用 .em-bubble 不在文档内（null）表达。
@@ -57,6 +58,9 @@ const POS_PARAGRAPH_TEXT = { from: 1, to: 6 }; // 选中 "Hello"
 const POS_CODEBLOCK_TEXT = { from: 15, to: 20 }; // 选中代码块内 "const"
 const POS_IMAGE_NODE = 13;
 
+/** AI 四动作按钮的 title/aria-label（与 BubbleToolbar 的 AI_ACTIONS 对齐） */
+const AI_TITLES = ["改写", "润色", "扩写", "缩写"] as const;
+
 const editors: Editor[] = [];
 
 function makeEditor(): Editor {
@@ -74,12 +78,12 @@ function makeEditor(): Editor {
   return editor;
 }
 
-function setup(onAiRewrite?: () => void) {
+function setup(onAiAction?: (actionId: string) => void, aiBusy?: boolean) {
   const editor = makeEditor();
   const utils = render(
     <>
       <EditorContent editor={editor} />
-      <BubbleToolbar editor={editor} onAiRewrite={onAiRewrite} />
+      <BubbleToolbar editor={editor} onAiAction={onAiAction} aiBusy={aiBusy} />
     </>,
   );
   return { editor, ...utils };
@@ -109,7 +113,7 @@ describe("BubbleToolbar shouldShow 判定（adapted from novel）", () => {
     await selectAndWait(editor);
 
     expect(bubble()).toBeVisible();
-    for (const name of ["粗体", "斜体", "下划线", "删除线", "高亮", "一级标题", "二级标题", "三级标题", "AI 改写所选文字"]) {
+    for (const name of ["粗体", "斜体", "下划线", "删除线", "高亮", "一级标题", "二级标题", "三级标题", "改写", "润色", "扩写", "缩写"]) {
       expect(screen.getByRole("button", { name })).toBeTruthy();
     }
   });
@@ -142,15 +146,15 @@ describe("BubbleToolbar shouldShow 判定（adapted from novel）", () => {
 });
 
 describe("BubbleToolbar 浮条结构与命令", () => {
-  it("结构：4 分组共 3 个分隔符 + 8 色色点内联展开 + 9 个功能按钮", async () => {
+  it("结构：4 分组共 3 个分隔符 + 8 色色点内联展开 + 12 个功能按钮", async () => {
     const { editor } = setup();
     await selectAndWait(editor);
 
     const el = bubble()!;
     expect(el.querySelectorAll(".em-bubble-sep")).toHaveLength(3);
     expect(el.querySelectorAll(".em-bubble-color")).toHaveLength(8);
-    // 9 = 粗体/斜体/下划线/删除线/高亮/H1/H2/H3/AI 改写（未注入回调时 AI 为置灰占位按钮）
-    expect(el.querySelectorAll(".em-bubble-btn")).toHaveLength(9);
+    // 12 = 粗体/斜体/下划线/删除线/高亮/H1/H2/H3 + AI 改写/润色/扩写/缩写（未注入回调时 AI 为置灰占位按钮）
+    expect(el.querySelectorAll(".em-bubble-btn")).toHaveLength(12);
   });
 
   it("点击粗体按钮 → editor.isActive(\"bold\") 为 true", async () => {
@@ -177,26 +181,34 @@ describe("BubbleToolbar 浮条结构与命令", () => {
     expect(editor.isActive("heading", { level: 1 })).toBe(true);
   });
 
-  it("AI 改写按钮：注入 onAiRewrite 时点击触发一次；未注入时置灰占位不响应", async () => {
-    const onAiRewrite = vi.fn();
-    const { editor, unmount } = setup(onAiRewrite);
+  it("AI 四动作按钮：注入 onAiAction 时 4 按钮齐全，点击改写/润色触发对应 actionId", async () => {
+    const onAiAction = vi.fn();
+    const { editor } = setup(onAiAction);
     await selectAndWait(editor);
 
-    fireEvent.click(screen.getByRole("button", { name: "AI 改写所选文字" }));
-    expect(onAiRewrite).toHaveBeenCalledTimes(1);
+    for (const name of AI_TITLES) {
+      expect(screen.getByRole("button", { name })).toBeTruthy();
+    }
+    fireEvent.click(screen.getByRole("button", { name: "改写" }));
+    expect(onAiAction).toHaveBeenCalledWith("rewrite");
+    fireEvent.click(screen.getByRole("button", { name: "润色" }));
+    expect(onAiAction).toHaveBeenCalledWith("polish");
+  });
+
+  it("AI 四动作按钮：未注入 onAiAction 或 aiBusy=true 时 4 按钮全部置灰", async () => {
+    // 未注入回调（WritingEditor 之外暂无现成 AI 入口）：按钮 disabled 占位
+    const { editor, unmount } = setup();
+    await selectAndWait(editor);
+    for (const name of AI_TITLES) {
+      expect((screen.getByRole("button", { name }) as HTMLButtonElement).disabled).toBe(true);
+    }
     unmount();
 
-    // 未注入回调（WritingEditor 之外暂无现成 AI 改写入口）：按钮 disabled 占位
-    const editor2 = makeEditor();
-    render(
-      <>
-        <EditorContent editor={editor2} />
-        <BubbleToolbar editor={editor2} />
-      </>,
-    );
-    editor2.commands.setTextSelection(POS_PARAGRAPH_TEXT);
-    await waitFor(() => expect(bubble()).not.toBeNull(), { timeout: 2000 });
-    const aiBtn = screen.getByRole("button", { name: "AI 改写所选文字" }) as HTMLButtonElement;
-    expect(aiBtn.disabled).toBe(true);
+    // 注入回调但 aiBusy=true（请求进行中）：同样置灰防重入
+    const r2 = setup(vi.fn(), true);
+    await selectAndWait(r2.editor);
+    for (const name of AI_TITLES) {
+      expect((screen.getByRole("button", { name }) as HTMLButtonElement).disabled).toBe(true);
+    }
   });
 });

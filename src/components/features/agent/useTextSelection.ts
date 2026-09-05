@@ -5,7 +5,7 @@
  * 不用 requestAnimationFrame 优化，不做宽度动画）。监听 document selectionchange + mouseup，
  * 只在 container 范围内、长度 > minLen 的选区生效；返回 null 表示无可操作选区（浮条隐藏）。
  *
- * 定位（fixed 视口坐标，WritingAiMenu 防溢出写法简化版）：
+ * 定位（fixed 视口坐标，行内浮条防溢出写法简化版）：
  *  - top = 选区最后一行 bottom + 8（getClientRects 末行，无 rects 时退回 range 包围盒）；
  *    越过视口下界（放不下浮条）时改放选区上方（首行 top - 48），仍不足 8 则钳到 8
  *  - left = 选区水平中心（按浮条半宽 178px 在视口内钳制，渲染端 translateX(-50%) 居中）

@@ -27,7 +27,6 @@ import WritingSlashMenu, { useSlashMenu } from "./WritingSlashMenu";
 import WritingCheckPanel, { runWritingCheck } from "./WritingCheckPanel";
 import WritingPreviewModal from "./WritingPreviewModal";
 import WritingHistoryModal from "./WritingHistoryModal";
-import WritingAiMenu from "./WritingAiMenu";
 import EditorToolbar from "./EditorToolbar";
 import BubbleToolbar from "./BubbleToolbar";
 import WritingExportMenu from "./WritingExportMenu";
@@ -51,7 +50,6 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
   const [title, setTitle] = useState("");
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const [aiBusy, setAiBusy] = useState(false);
-  const [aiMenu, setAiMenu] = useState<{ top: number; left: number } | null>(null);
   const [draftOpen, setDraftOpen] = useState(false);
   const [draftMaterial, setDraftMaterial] = useState("");
   const [checkOpen, setCheckOpen] = useState(false);
@@ -211,33 +209,13 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
     };
   }, []);
 
-  // ── 行内 AI：选中文字 → 浮出菜单 → 调 /api/writing/assist ──
-  const handleSelectionChange = useCallback(() => {
-    if (!editor) return;
-    const { from, to } = editor.state.selection;
-    if (from === to) {
-      setAiMenu(null);
-      return;
-    }
-    const sel = editor.state.selection;
-    const coords = editor.view.coordsAtPos(sel.to);
-    setAiMenu({ top: coords.top, left: coords.left });
-  }, [editor]);
-
-  useEffect(() => {
-    editor?.on("selectionUpdate", handleSelectionChange);
-    return () => {
-      editor?.off("selectionUpdate", handleSelectionChange);
-    };
-  }, [editor, handleSelectionChange]);
-
+  // ── 行内 AI：选中文字 → 浮条 AI 四动作按钮（BubbleToolbar）→ 调 /api/writing/assist ──
   const runAiAction = async (actionId: string) => {
     if (!editor) return;
     const { from, to } = editor.state.selection;
     if (from === to) return;
     const selected = editor.state.doc.textBetween(from, to, " ");
     setAiBusy(true);
-    setAiMenu(null);
     const res = await writingAssist({
       instruction: actionId,
       selectedText: selected,
@@ -362,8 +340,8 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
         <div className="flex-1 overflow-y-auto flex justify-center items-start bg-[color:var(--panel-2)] py-6">
           <div className="editor-canvas" ref={bindRef}>
             <EditorContent editor={editor} />
-            {/* 选中文本格式浮条（AI 改写按钮复用 runAiAction——与 WritingAiMenu 同一入口） */}
-            {editor && <BubbleToolbar editor={editor} onAiRewrite={() => void runAiAction("rewrite")} />}
+            {/* 选中文本格式浮条（AI 四动作按钮复用 runAiAction 入口） */}
+            {editor && <BubbleToolbar editor={editor} onAiAction={(id) => void runAiAction(id)} aiBusy={aiBusy} />}
           </div>
         </div>
       </div>
@@ -397,10 +375,6 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
       )}
 
       <ChartPickerModal open={slash.chartOpen} onClose={slash.closeChartPicker} onInsert={(dataUrl) => editor?.chain().focus().setImage({ src: dataUrl, alt: "图表" }).run()} />
-      {/* 行内 AI 菜单（选中文字后浮出，R13 抽成 WritingAiMenu） */}
-      {aiMenu && editor && (
-        <WritingAiMenu position={aiMenu} busy={aiBusy} onAction={(id) => void runAiAction(id)} />
-      )}
     </div>
   );
 };
