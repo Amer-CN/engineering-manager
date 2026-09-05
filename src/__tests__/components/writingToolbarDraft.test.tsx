@@ -72,4 +72,19 @@ describe("编辑器顶栏起草按钮", () => {
       expect(screen.getByText("AI 起草")).toBeTruthy();
     });
   });
+
+  it("工具栏渲染新增控件：字号/字体下拉、对齐四键、公文皮肤 toggle（共 7 个，title 防翻译丢失）", async () => {
+    render(<WritingEditor docId={1} onBack={vi.fn()} />);
+
+    // 等编辑器就绪、工具栏渲染（不依赖 fetchWritingDoc：上一用例把 mock 换成了永不 resolve，
+    // mockClear 只清调用记录不清实现，文档不会加载完成）
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "切换公文版式（仿宋/黑体/楷体，所见即所得）" })).toBeTruthy();
+    });
+
+    // 新增 7 控件 = 字号下拉 1 + 字体下拉 1 + 对齐四键 4 + 皮肤 toggle 1（aria-label 与 title 一致）
+    for (const name of ["字号", "字体", "左对齐", "居中对齐", "右对齐", "两端对齐"]) {
+      expect(screen.getByRole("button", { name })).toBeTruthy();
+    }
+  });
 });

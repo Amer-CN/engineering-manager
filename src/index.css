@@ -1814,3 +1814,270 @@ button:focus-visible {
   0%, 100% { transform: scaleY(0.35); }
   50% { transform: scaleY(1); }
 }
+/* ═══ 写作中心：公文版式皮肤（.writing-paper-gongwen）═══
+ * 仅当编辑区容器带 .writing-paper-gongwen 类时生效（工具栏皮肤 toggle 控制，状态由
+ * usePaperStyle 持久化）。版式常量与 src/utils/printPreview.ts 同源（GB/T 9704）：
+ *   h1=文档标题 宋体 22pt(2 号)加粗居中；h2=黑体 16pt(3 号)；h3=楷体_GB2312 16pt；
+ *   p=正文 仿宋_GB2312 16pt、行距固定 28 磅、首行缩进 2 字符；表格=仿宋 12pt。
+ * 目的：编辑态所见即预览态。类切换即时生效；无此类的普通编辑区不受影响，
+ * 打印预览/导出仍走 printPreview / docxExport 模板，互不干扰。 */
+.writing-paper-gongwen {
+  font-family: 仿宋_GB2312; /* printPreview FONT_BODY */
+  font-size: 16pt;
+  line-height: 28pt;
+}
+.writing-paper-gongwen h1 {
+  font-family: 宋体; /* printPreview FONT_TITLE */
+  font-size: 22pt;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 12pt;
+  line-height: 32pt;
+}
+.writing-paper-gongwen h2 {
+  font-family: 黑体; /* printPreview FONT_H1 */
+  font-size: 16pt;
+  font-weight: 700;
+  margin-top: 12pt;
+  margin-bottom: 6pt;
+  line-height: 28pt;
+}
+.writing-paper-gongwen h3 {
+  font-family: 楷体_GB2312; /* printPreview FONT_H2 */
+  font-size: 16pt;
+  font-weight: 400;
+  margin: 6pt 0;
+  line-height: 28pt;
+}
+.writing-paper-gongwen p {
+  font-family: 仿宋_GB2312; /* printPreview FONT_BODY */
+  font-size: 16pt;
+  line-height: 28pt;
+  text-indent: 2em;
+  margin: 0;
+}
+.writing-paper-gongwen td,
+.writing-paper-gongwen th {
+  font-family: 仿宋_GB2312; /* printPreview 表格单元格同源 */
+  font-size: 12pt;
+}
+/* 辅助块适度缩小：引用/列表 仿宋 14pt；代码块仅缩字号、等宽字体保留原样 */
+.writing-paper-gongwen blockquote,
+.writing-paper-gongwen ul,
+.writing-paper-gongwen ol {
+  font-family: 仿宋_GB2312;
+  font-size: 14pt;
+}
+.writing-paper-gongwen pre {
+  font-size: 14pt;
+}
+
+/* 工具栏新增控件：字号/字体下拉菜单（复用 em-toolbar-pop + em-toolbar-btn 既有类）
+ * 字号 16 项过多 → 网格 4 列（参考 em-color-grid 做法）；字体 7 项纵向列表即可 */
+.em-size-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+  min-width: 148px;
+}
+.em-pop-list {
+  display: flex;
+  flex-direction: column;
+  min-width: 104px;
+}
+.em-size-grid .em-toolbar-btn,
+.em-pop-list .em-toolbar-btn {
+  width: 100%;
+  justify-content: flex-start;
+  padding-left: 10px;
+}
+/* 公文皮肤 toggle：右侧独立（em-toolbar 为 flex，margin-left:auto 推到最右） */
+.em-paper-toggle { margin-left: auto; }
+
+/* ═══ 知识库 3D 轮播主题桥接（--gc-* → 主题 token）═══
+ * DESIGN.md 颜色内聚：舞台区 emerald 系经 --gc-* 变量使用。
+ * 主题标签映射（StatusBar.tsx）：white=暖白纸、graphite=石墨黑、sandstone=净白。
+ * 净白（sandstone）为主题色灰阶（accent 零彩度）→ active 卡走灰阶（用户拍板 2026-08-21）；
+ * 暖白纸（white）/石墨黑（graphite）暂保持 emerald 原版绿色（后续按用户节奏逐主题定色）。
+ * 注意：TW3 不支持 var() 任意值 + /透明度 修饰符（类会静默丢），
+ * 需要透明度的位置一律用下方的 -a 系 color-mix 变量，类名不带修饰符。 */
+/* --gc-* 定义在全局（:root + [data-theme]）而非 .gc-stage-iso 容器作用域：
+ * 舞台容器之外的组件（弹窗等无 portal 的兄弟节点）同样能取到主题桥接值，
+ * 不会再静默退到 emerald 兜底色。块顺序 = 级联顺序，调整前先确认覆盖关系。 */
+:root {
+  /* 回退层：emerald 原版绿（未桥接主题直接命中，视觉零变化） */
+  --gc-active: #10b981;
+  --gc-active-deep: #064e3b;
+  --gc-active-border: #34d399;
+  --gc-active-ink: #fff;
+  --gc-on-paper: #059669;  /* 纸面墨（纸恒为浅色，纸上强调色取深阶；原 emerald-600）*/
+}
+[data-theme="sandstone"] {
+  --gc-active: var(--accent);              /* active 卡主色（原 emerald-500/600/700 阶）*/
+  /* 深端不接 accent-strong(22%)：该 token 为小控件校准，卡片是全页最大英雄面；
+     且无彩灰比同亮度饱和色（emerald-950）感知更浅 → 舞台专用墨色炭黑（非纯黑：纸感主题防"洞"）*/
+  --gc-active-deep: oklch(13% 0 0);
+  --gc-active-border: var(--accent);       /* active 边框/描边（原 emerald-300/400 阶）*/
+  --gc-active-ink: var(--on-accent);       /* active 上文字（原 white）*/
+}
+/* 透明度层：color-mix 在使用点把变量混上透明度（TW3 修饰符的替代） */
+:root {
+  --gc-active-a85: color-mix(in srgb, var(--gc-active) 85%, transparent);
+  --gc-active-a90: color-mix(in srgb, var(--gc-active) 90%, transparent);
+  --gc-active-deep-a95: color-mix(in srgb, var(--gc-active-deep) 95%, transparent);
+  --gc-active-deep-a60: color-mix(in srgb, var(--gc-active-deep) 60%, transparent);
+  --gc-active-border-a80: color-mix(in srgb, var(--gc-active-border) 80%, transparent);
+  --gc-active-border-a40: color-mix(in srgb, var(--gc-active-border) 40%, transparent);
+}
+:root {
+  /* 新增语义层 */
+  --gc-icon: #34d399;   /* 常显小图标绿（Folder 图标等，原 emerald-400）*/
+  --gc-soft: #d1fae5;   /* 淡色底（原 emerald-100 语义，纸面徽标底）*/
+  --gc-soft-border: #a7f3d0; /* 淡边框（原 emerald-200）*/
+  --gc-a10: color-mix(in srgb, var(--gc-active) 10%, transparent);
+  --gc-a20: color-mix(in srgb, var(--gc-active) 20%, transparent);  /* 辉光/淡底 20% */
+  --gc-a30: color-mix(in srgb, var(--gc-active) 30%, transparent);
+  --gc-icon-a50: color-mix(in srgb, var(--gc-icon) 50%, transparent); /* ping 圈 */
+}
+[data-theme="sandstone"] {
+  --gc-icon: var(--accent-strong);      /* 灰阶图标（深，可读）*/
+  --gc-on-paper: var(--accent);         /* 纸面墨：灰阶深墨 */
+  --gc-soft: color-mix(in srgb, var(--accent) 10%, white);  /* 灰阶淡底 */
+  --gc-soft-border: color-mix(in srgb, var(--accent) 22%, white);
+}
+[data-theme="white"] {
+  /* 暖白纸：焦糖琥珀（用户拍板 2026-08-22 第二轮，深暖褐与净白墨色趋同被否）。
+     取主题 warning 暖色家族（hue 70 琥珀）——舞台特区不受应用"洗彩"约束 */
+  --gc-active: var(--warning);                                        /* oklch(60% .11 70) 焦糖琥珀 */
+  --gc-active-deep: oklch(36% 0.08 55);                               /* 深咖啡 */
+  --gc-active-border: color-mix(in srgb, var(--warning) 40%, white);  /* 淡金描边 */
+  --gc-active-ink: var(--on-accent);
+  --gc-on-paper: color-mix(in srgb, var(--warning) 70%, black);       /* 纸面墨：中深焦糖（纸上元素加深保对比）*/
+  --gc-icon: color-mix(in srgb, var(--warning) 80%, black);           /* 中焦糖小图标 */
+  --gc-soft: color-mix(in srgb, var(--warning) 14%, white);           /* 琥珀淡底 */
+  --gc-soft-border: color-mix(in srgb, var(--warning) 28%, white);
+}
+[data-theme="graphite"] {
+  /* 石墨黑：奶油白反转强调（与侧边栏激活项/主按钮同语义；用户拍板 2026-08-22）。
+     亮卡需深字——标题/副题走 --gc-active-ink；纸面元素走 --gc-on-paper（奶油白上纸会隐形）*/
+  --gc-active: var(--accent);                                        /* oklch(92% .004 80) 奶油白 */
+  --gc-active-deep: oklch(74% 0.008 80);                             /* 暖石暗端 */
+  --gc-active-border: var(--accent-strong);                          /* 近白描边 */
+  --gc-active-ink: var(--on-accent);                                 /* 深字（浅卡）*/
+  --gc-on-paper: var(--on-accent);                                   /* 纸面墨：暖深灰 */
+  --gc-icon: var(--accent);                                          /* 奶油白图标（暗色 chrome 上）*/
+  --gc-soft: color-mix(in srgb, var(--accent) 14%, white);
+  --gc-soft-border: color-mix(in srgb, var(--accent) 28%, white);
+}
+
+/* ═══ 知识库 3D 轮播舞台样式隔离（.gc-stage-iso）═══
+ * 背景：下方各主题的「Tailwind 通用类覆盖」（[data-theme=…] .bg-white/.card → var(--card)）
+ * 会把原版组件的纸面（bg-white/bg-zinc-100/bg-zinc-200…）染成主题卡色——石墨黑下纸变黑根因。
+ * 方案：舞台容器挂 .gc-stage-iso，容器内将原版组件实际用到的 bg 类重置回原值（!important
+ * 对抗主题覆盖）。类清单按原版 GlassFolderCard/FolderCarousel/FloatingPreviewBadge 实扫，
+ * 只重置实际出现的类，不无脑全量重置。 */
+.gc-stage-iso .bg-white { background-color: #fff !important; }
+.gc-stage-iso .bg-zinc-50 { background-color: #fafafa !important; }
+.gc-stage-iso .bg-zinc-100 { background-color: #f4f4f5 !important; }
+.gc-stage-iso .bg-zinc-200 { background-color: #e4e4e7 !important; }
+.gc-stage-iso .bg-zinc-300 { background-color: #d4d4d8 !important; }
+.gc-stage-iso .bg-zinc-400 { background-color: #a1a1aa !important; }
+.gc-stage-iso .bg-white\/10 { background-color: rgb(255 255 255 / 0.10) !important; }
+.gc-stage-iso .bg-white\/20 { background-color: rgb(255 255 255 / 0.20) !important; }
+.gc-stage-iso .bg-white\/30 { background-color: rgb(255 255 255 / 0.30) !important; }
+.gc-stage-iso .bg-white\/80 { background-color: rgb(255 255 255 / 0.80) !important; }
+.gc-stage-iso .bg-white\/90 { background-color: rgb(255 255 255 / 0.90) !important; }
+.gc-stage-iso .bg-white\/95 { background-color: rgb(255 255 255 / 0.95) !important; }
+
+/* ═══ P5 批次 B：可访问性 — prefers-reduced-motion + focus-visible 统一 ═══
+ * 1) 系统开启「减弱动态效果」时，CSS 过渡/动画时长归零（framer-motion 弹簧另由
+ *    main.tsx 的 MotionConfig reducedMotion="user" 处理）。
+ * 2) 无自定义 focus 样式的 button 统一键盘焦点环（--accent 描边）；
+ *    ui/Button 已有 focus-visible:ring（box-shadow）+ focus-visible:outline-none，
+ *    Tailwind 类优先级高于本规则，二者不会双重显示。 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── 弹层条件渲染入场（批次五）──
+   @starting-style 定义挂载初始帧，条件渲染打开时浏览器自动从该帧过渡到终态。
+   无需 JS、无需 AnimatePresence；关闭时元素卸载不触发退场（瞬撤属预期）。
+   reduced-motion 由 index.css:1761 的全局覆盖统一承接。 */
+.popover-entry {
+  transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out);
+}
+@starting-style {
+  .popover-entry {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+.popover-entry--tall {
+  transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out);
+}
+@starting-style {
+  .popover-entry--tall {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+}
+
+/* ═══ Beautiful UI 移植动画（PixelLoader / ToolCallChips / ThinkingTrace 共用）═══
+ * 来源：TurboKach/ai-native-react-components（MIT），视觉基准 .work/reference/beautifului/。
+ * 说明：
+ *  - fade-in 已存在于上方「Performance-optimized compositor animations」分节（opacity 0→1），
+ *    语义一致直接复用，不重复定义；
+ *  - spin 用 Tailwind 内置 animate-spin；
+ *  - prefers-reduced-motion 由 index.css 既有全局规则统一承接：动画时长归零 →
+ *    像素网格冻结为暗态、shimmer 静止；计时器为 JS interval 继续走。 */
+@keyframes pixel-on {
+  0%, 100% { opacity: 0.15; }
+  40% { opacity: 1; }
+  60% { opacity: 0.55; }
+}
+
+@keyframes shimmer-text {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ═══ Beautiful UI 移植动画 · 第二批（MarkdownRenderer 流式 / ToolCallChips 状态 / 听写）═══
+ * 来源：TurboKach/ai-native-react-components（MIT），视觉基准 .work/reference/beautifului/。
+ *  - stream-in：流式正文新块进场（blur + opacity，420ms ease）；
+ *  - caret-blink：流式期间末尾闪烁光标；
+ *  - eq-bounce：听写录音中的声波跳动（DictationButton 三条竖条错峰）。
+ * 既有 keyframes（pixel-on/shimmer-text/fade-up/pop-in/fade-in）不重复定义。 */
+@keyframes stream-in {
+  from { opacity: 0; filter: blur(4px); }
+  to { opacity: 1; filter: blur(0); }
+}
+
+@keyframes caret-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes eq-bounce {
+  0%, 100% { transform: scaleY(0.35); }
+  50% { transform: scaleY(1); }
+}

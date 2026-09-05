@@ -13,10 +13,14 @@ import Image from "@tiptap/extension-image";
 import Highlight from "@tiptap/extension-highlight";
 import { ProtectedSpan } from "./protectedSpan";
 import { TextStyle, Color } from "@tiptap/extension-text-style";
+import FontFamily from "@tiptap/extension-font-family";
+import TextAlign from "@tiptap/extension-text-align";
+import FontSizeMark from "./FontSizeMark";
 import { Icon } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/Button";
 import { useToastContext } from "@/components/ui/Toast/ToastProvider";
 import { usePermission } from "@/hooks/usePermission";
+import { usePaperStyle } from "@/hooks/usePaperStyle";
 import { ingestKnowledgeDocument } from "@/services/knowledge-client";
 import WritingDraftPanel from "./WritingDraftPanel";
 import WritingSlashMenu, { useSlashMenu } from "./WritingSlashMenu";
@@ -53,6 +57,8 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
   // R13 预览态：打印预览弹窗（打开时对当前 markdown 做快照，非实时同步）
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewSnapshot, setPreviewSnapshot] = useState({ markdown: "", title: "" });
+  // 公文版式皮肤开关（usePaperStyle 封装 localStorage 读写，刷新后自动恢复）
+  const [paperGongwen, togglePaperStyle] = usePaperStyle();
   const saveTimer = useRef<number | null>(null);
   const { zoom, reset, bindRef, bindWheelRef } = useA4Zoom();
   // R7：斜杠菜单状态机（焦点不离开编辑器，详见 WritingSlashMenu 注释）
@@ -71,6 +77,9 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
       Image.configure({ allowBase64: true }),
       TextStyle,
       Color,
+      FontFamily,
+      FontSizeMark,
+      TextAlign.configure({ types: ["paragraph"] }),
       Highlight,
       ProtectedSpan,
       Table.configure({ resizable: true }),
@@ -82,7 +91,8 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
     ],
     content: "",
     editorProps: {
-      attributes: { class: "prose focus:outline-none" },
+      // 公文皮肤开启时编辑区追加 writing-paper-gongwen 类（版式规则见 index.css，与 printPreview 常量同源）
+      attributes: { class: `prose focus:outline-none${paperGongwen ? " writing-paper-gongwen" : ""}` },
       transformPastedHTML: (html) => sanitizePastedHtml(html),
       handleKeyDown: (_view, event) => {
         // Ctrl+S 手动保存
@@ -347,7 +357,7 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
 
       {/* R9：Ctrl+滚轮缩放监听范围 = 工具栏 + 纸张滚动区（wheel 监听挂此 wrapper） */}
       <div ref={bindWheelRef} className="flex-1 flex flex-col min-h-0">
-        <EditorToolbar editor={editor} />
+        <EditorToolbar editor={editor} onTogglePaperStyle={togglePaperStyle} paperStyleOn={paperGongwen} />
         <div className="flex-1 overflow-y-auto flex justify-center items-start bg-[color:var(--panel-2)] py-6">
           <div className="editor-canvas" ref={bindRef}>
             <EditorContent editor={editor} />
