@@ -152,9 +152,11 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
 
   return (
     <div className="flex flex-col max-h-[calc(100vh-200px)]">
-      {/* S24 Stitch: 班组 pill-tabs（动效批 1：滑动胶囊高亮） */}
+      {/* S24 Stitch: 班组 pill-tabs（动效批 1：滑动胶囊高亮）
+          胶囊在按钮下层（z-0，无 z 提升避免盖住文字），按钮背景透明，
+          底色全部由胶囊承载——文字永远在胶囊之上，三主题可读。 */}
       <div className="relative flex items-center gap-2 mb-5 flex-wrap" ref={teamPill.containerRef}>
-        <span aria-hidden className="pointer-events-none absolute z-20 rounded-full"
+        <span aria-hidden className="pointer-events-none absolute rounded-full"
           style={{ ...teamPill.pillStyle, background: 'var(--accent)' }} />
         <button
           onClick={() => { setFilterTeam(null); setFilterProject(null) }}
@@ -163,8 +165,8 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
           onMouseLeave={() => teamPill.setHovered(null)}
           className={`relative z-10 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
             !filterTeam || teamPill.hovered === 'all'
-              ? 'text-[color:var(--on-accent)] bg-transparent'
-              : 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)]'
+              ? 'text-[color:var(--on-accent)]'
+              : 'text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)]'
           }`}
         >
           全部班组 ({members.length})
@@ -178,11 +180,11 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
             onMouseLeave={() => teamPill.setHovered(null)}
             className={`relative z-10 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
               filterTeam === t.id || teamPill.hovered === String(t.id)
-                ? 'text-[color:var(--on-accent)] bg-transparent'
-                : 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)]'
+                ? 'text-[color:var(--on-accent)]'
+                : 'text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)]'
             }`}
           >
-            {t.name} ({teamCounts[t.id] || 0})
+            {t.name} ({teamCounts[t.id] || 0})}
           </button>
         ))}
         <div className="flex-1" />

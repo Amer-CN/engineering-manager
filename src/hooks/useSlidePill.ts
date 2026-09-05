@@ -36,9 +36,13 @@ export interface UseSlidePillResult {
   hovered: string | null
 }
 
+// 过渡曲线：只对位移类属性（top/left）做平滑——尺寸类（width/height）瞬间取值。
+// 原因：胶囊两端同时以不同速度运动会产生"挤压/膨胀"观感（用户反馈的弹跳感）；
+// 只平移、不变形，最接近 Beautiful UI 原版滑动胶囊的手感。
+// 起步用强 ease-out（0.2,0.9）消除顿挫，180ms 短促不粘滞。
 const PILL_TRANSITION =
-  'top 220ms cubic-bezier(0.23,1,0.32,1), height 220ms cubic-bezier(0.23,1,0.32,1), ' +
-  'left 220ms cubic-bezier(0.23,1,0.32,1), width 220ms cubic-bezier(0.23,1,0.32,1), opacity 150ms ease'
+  'top 180ms cubic-bezier(0.2, 0.9, 0.25, 1), ' +
+  'left 180ms cubic-bezier(0.2, 0.9, 0.25, 1), opacity 150ms ease'
 
 export function useSlidePill(activeKey: string): UseSlidePillResult {
   const containerRef = useRef<HTMLDivElement>(null)

@@ -50,7 +50,9 @@ describe('useSlidePill', () => {
     expect(pill.style.height).toBe('32px')
     expect(pill.style.left).toBe('0px')
     expect(pill.style.width).toBe('120px')
-    expect(pill.style.transition).toContain('220ms')
+    expect(pill.style.transition).toContain('180ms')
+    // 尺寸类属性不过渡（防挤压弹跳）：transition 只含 top/left 位移
+    expect(pill.style.transition).not.toContain('width')
   })
 
   it('横向切换器语义：hover 右侧按钮时胶囊横向滑过去（left/width 变化，top 不变）', () => {
