@@ -206,6 +206,10 @@ public static class SystemEndpoints
             if (!File.Exists(dbPath)) return Common.Fail("数据库文件不存在");
             var snapshotName = $"snapshot-{DateTime.Now:yyyyMMdd-HHmmss}.db";
             var snapshotPath = Path.Combine(snapshotDir, snapshotName);
+            // 审查补充: 文件名为秒级时间戳，同秒连点第二次目标已存在 → VACUUM INTO 报
+            // output file already exists（走 Fail）。预删实现"最新覆盖"语义（同路径内容近乎
+            // 相同，删除无害）；删除失败则 VACUUM 自然报错，走既有 Fail 路径
+            if (File.Exists(snapshotPath)) try { File.Delete(snapshotPath); } catch { }
             // F1: VACUUM INTO 替代裸 File.Copy —— SQLite 官方热备份，含 WAL 内容、防页撕裂
             db.Execute("VACUUM INTO @Path", new { Path = snapshotPath });
             // I-1：创建成功后按 snapshotMaxCount 修剪最旧快照（文件名倒序 = 时间戳新→旧，
@@ -558,6 +562,10 @@ public static class SystemEndpoints
                 var desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
                 var backupName = $"工程管家-备份-{DateTime.Now:yyyyMMdd-HHmmss}.db";
                 var backupPath = Path.Combine(desktopPath, backupName);
+                // 审查补充: 文件名为秒级时间戳，同秒连点第二次目标已存在 → VACUUM INTO 报
+                // output file already exists（走 Fail）。预删实现"最新覆盖"语义（同路径内容近乎
+                // 相同，删除无害）；删除失败则 VACUUM 自然报错，走既有 Fail 路径
+                if (File.Exists(backupPath)) try { File.Delete(backupPath); } catch { }
                 // F1: VACUUM INTO 替代裸 File.Copy —— SQLite 官方热备份，含 WAL 内容、防页撕裂
                 db.Execute("VACUUM INTO @Path", new { Path = backupPath });
                 return Common.Ok(new { path = backupPath });

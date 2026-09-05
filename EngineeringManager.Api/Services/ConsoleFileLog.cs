@@ -34,9 +34,25 @@ public class ConsoleFileLog : TextWriter
 
     public override void WriteLine(string? value) => WriteCore((value ?? string.Empty) + Environment.NewLine);
 
+    private bool _disposed;
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            lock (_lock)
+            {
+                _disposed = true;
+                _writer?.Dispose();
+                _writer = null;
+            }
+        }
+        base.Dispose(disposing);
+    }
+
     private void WriteCore(string text)
     {
-        if (string.IsNullOrEmpty(text)) return;
+        if (string.IsNullOrEmpty(text) || _disposed) return;
         try
         {
             lock (_lock)

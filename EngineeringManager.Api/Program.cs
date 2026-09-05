@@ -276,8 +276,14 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
         // F2(审计): 桌面 WinExe 无控制台，全库海量 Console.* 日志原本直接蒸发——
         // 生产模式启动早期把 Console.Out/Console.Error 重定向到按天滚动日志文件；
-        // 开发/测试模式不动（保留控制台输出）。写失败由 ConsoleFileLog 内部吞掉，不阻塞启动
-        if (IsProduction)
+        // 开发/测试模式不动（保留控制台输出）。写失败由 ConsoleFileLog 内部吞掉，不阻塞启动。
+        // 审查补充：IsProduction 只看 dist/ 存在与否，测试进程（ApiTestBase 会同步 dist）
+        // 可能误判为 true → SetOut/SetError 挂进测试进程无法解挂。逃逸依据：
+        // 测试基建必设 ASPNETCORE_ENVIRONMENT="Development"（ApiTestBase.cs:26，另见
+        // NormalizeFinanceRoleIntegrationTests），E2E harness 不构建 WebApplication（到不了本挂接点），
+        // 生产桌面从不设该变量（全仓 SetEnvironmentVariable 仅上述两处测试文件）——
+        // 与 L119 既有 testMode 判定同源，双保险
+        if (IsProduction && Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == null)
         {
             var fileLog = new EngineeringManager.Api.Services.ConsoleFileLog();
             Console.SetOut(fileLog);

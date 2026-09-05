@@ -291,4 +291,38 @@ public class SafeQueryValidatorTests
         Assert.Single(rows);
         Assert.Equal("mine", rows[0]);
     }
+
+    // ════════ P-04（审查补充）：无 WHERE 分支的 HAVING / WINDOW 识别 ════════
+
+    [Fact]
+    public void ValidateAndRewrite_NoWhereWithHavingClause_FilterInjectedBeforeHaving()
+    {
+        // PoC：无顶层 WHERE 且带 HAVING 的聚合查询——旧实现无 WHERE 分支的 candidates
+        // 只有 GROUP/ORDER/LIMIT，找不到插入点后把过滤器追加到串尾：
+        // "... HAVING COUNT(*) > 0 WHERE ..." 语法非法，合法查询被 DryRun 误杀
+        var sql = "SELECT COUNT(*) FROM projects HAVING COUNT(*) > 0";
+        var result = SafeQueryValidator.ValidateAndRewrite(sql, TestUid, RestrictedScope);
+
+        Assert.True(result.IsValid, $"无 WHERE + HAVING 查询应该通过: {result.Error}");
+        Assert.NotNull(result.RewrittenSql);
+        var rewritten = result.RewrittenSql;
+
+        // ② WHERE 必须位于 HAVING 之前（旧实现追加在 HAVING 之后）
+        var whereIdx = rewritten.IndexOf("WHERE", StringComparison.OrdinalIgnoreCase);
+        var havingIdx = rewritten.IndexOf("HAVING", StringComparison.OrdinalIgnoreCase);
+        Assert.True(whereIdx >= 0, $"改写后必须含注入的 WHERE，实际: {rewritten}");
+        Assert.True(havingIdx >= 0, $"改写后必须保留 HAVING，实际: {rewritten}");
+        Assert.True(whereIdx < havingIdx, $"WHERE 必须位于 HAVING 之前，实际: {rewritten}");
+
+        // ③ 用户过滤仍在（与既有用例同口径：剥掉字符串字面量后断言）
+        Assert.Contains("created_by", StripStringLiterals(rewritten), StringComparison.OrdinalIgnoreCase);
+
+        // ① 语法合法性内存库实证：改写后的 SQL 可执行，且过滤真实生效（u1 只能看到自己的行）
+        using var conn = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=:memory:");
+        conn.Open();
+        conn.Execute("CREATE TABLE projects (id INTEGER PRIMARY KEY, name TEXT, created_by TEXT)");
+        conn.Execute("INSERT INTO projects (name, created_by) VALUES ('mine', 'u1'), ('theirs', 'u2')");
+        var count = conn.QuerySingle<int>(rewritten, new { Uid = "u1" });
+        Assert.Equal(1, count); // 过滤生效 → COUNT(*)=1；过滤器丢失则为 2
+    }
 }

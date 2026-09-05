@@ -722,11 +722,16 @@ public static class SafeQueryValidator
             return sql.Substring(0, insertAt) + " (" + filterClause + ") AND (" + whereExpr + ")" + tail;
         }
 
-        // 无顶层 WHERE：在顶层 GROUP BY / ORDER BY / LIMIT 之前插入（filterClause 包括号，与 A1 同口径）
+        // 无顶层 WHERE：在顶层 GROUP BY / HAVING / ORDER BY / LIMIT / WINDOW 之前插入
+        //（filterClause 包括号，与 A1 同口径）。审查补充: HAVING/WINDOW 也是 SQL 语法上
+        // 必须位于 WHERE 之后的顶层子句——漏识别会把过滤条件插到 HAVING/WINDOW 之后
+        //（"...HAVING ... WHERE ..." 语法非法，合法查询被 DryRun 误杀）
         var groupIdx = FindTopLevelKeyword(sql, "GROUP");
+        var havingIdx = FindTopLevelKeyword(sql, "HAVING");
         var orderIdx = FindTopLevelKeyword(sql, "ORDER");
         var limitIdx = FindTopLevelKeyword(sql, "LIMIT");
-        var candidates = new[] { groupIdx, orderIdx, limitIdx }.Where(x => x >= 0).ToArray();
+        var windowIdx = FindTopLevelKeyword(sql, "WINDOW");
+        var candidates = new[] { groupIdx, havingIdx, orderIdx, limitIdx, windowIdx }.Where(x => x >= 0).ToArray();
         var pos = candidates.Length > 0 ? candidates.Min() : -1;
 
         if (pos >= 0)
