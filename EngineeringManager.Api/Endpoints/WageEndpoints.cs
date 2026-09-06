@@ -1166,9 +1166,9 @@ public static class WageEndpoints
             var rows = details.Select(d => new
             {
                 worker_name = (string)d.worker_name,
-                // project_workers.daily_wage 仍为元直通（ProjectWorkerMiscEndpoints 写入侧
-                // 未走 ToFen），库内是元；不做 ÷100，属全仓单位问题，不在 wages 收口范围
-                daily_wage = d.daily_wage,
+                // project_workers.daily_wage：2026-09 分制契约起写入侧 MoneyUnit.ToFen、
+                // 读出侧 ToYuan（迁移 051 已把历史元值 ×100），按契约换算输出元
+                daily_wage = MoneyUnit.ToYuanFromDb(d.daily_wage),
                 months = d.months,
                 work_days = d.work_days,
                 total_wage = ToYuan((decimal)(d.total_wage ?? 0)),

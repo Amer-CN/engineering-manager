@@ -82,11 +82,12 @@ public static class ProjectEndpoints
             // v1.1.0 P0-4 Phase 2: 项目级表过滤 (UserFilterWithAuthorizedProjects + p.created_by 表别名)
             // projects 表主键是 id (不是 project_id), project_authorizations.project_id 引用 projects.id
             var filter = CurrentUser.UserFilterWithAuthorizedProjects(scope, "p.id", "p.created_by");
-            return Common.Ok(db.Query($@"SELECT p.*, m.name as project_manager_name FROM projects p
+            // projects.budget 库内为分（2026-09 契约），MoneyUnit 单点换算输出元
+            return Common.Ok(MoneyUnit.ToYuanRows(db.Query($@"SELECT p.*, m.name as project_manager_name FROM projects p
                           LEFT JOIN members m ON p.project_manager_id=m.id
                           WHERE {filter}
                           ORDER BY p.created_at DESC",
-                          new { Uid = uid, IsAdmin = isAdmin }));
+                          new { Uid = uid, IsAdmin = isAdmin }), "budget"));
         });
 
         app.MapGet("/api/projects/{id}", (HttpContext ctx, long id, IDbConnection db) =>
@@ -100,7 +101,12 @@ public static class ProjectEndpoints
                 LEFT JOIN members m ON p.project_manager_id=m.id
                 WHERE p.id=@Id AND ({filter})",
                 new { Id = id, Uid = uid, IsAdmin = isAdmin });
-            return p is not null ? Common.Ok(p) : Common.NotFound("项目不存在");
+            if (p is null) return Common.NotFound("项目不存在");
+            // projects.budget 库内为分（2026-09 契约），MoneyUnit 单点换算输出元（NULL 安全）
+            var row = (IDictionary<string, object?>)p;
+            if (row.TryGetValue("budget", out var budget) && budget is not null && budget is not DBNull)
+                row["budget"] = Convert.ToDouble(budget) / 100.0;
+            return Common.Ok(row);
         });
 
         app.MapPost("/api/projects", async (HttpContext ctx, ProjectDto dto, IDbConnection db) =>

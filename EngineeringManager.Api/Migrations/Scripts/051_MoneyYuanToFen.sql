@@ -9,7 +9,7 @@
 -- 防丢分：ROUND(x*100) 而非 CAST 截断（003 的 CAST 教训，审计 D-13：
 -- 0.29*100=28.999… CAST→28 丢 1 分；ROUND→29）。
 --
--- 守卫：wages / wage_history 两表用日薪量级判别（真实日薪 100~2000 元，
+-- 守卫：wages 表用日薪量级判别（真实日薪 100~2000 元，
 -- ToFen 分制日薪 10000+；阈值 5000 两侧不交集）——保护升级前用旧版
 -- （v0.93+ 含 ToFen）录工资产生的分制行不被二次 ×100。
 --
@@ -18,8 +18,12 @@
 -- snapshots.size（字节）、JSON 块（invoice_details / items / files——
 -- 前端直读块恒为元，契约见 MoneyUnit）。
 --
--- wage_history 不在本迁移内：开发者库无该表（列缺失实测），全库亦无
--- 写路径（休眠），其分制残留无实际影响。
+-- wage_history 不在本迁移内：生产库为旧 schema（daily_wage REAL 元值
+-- 28 行）与 014 产物列（base_daily_wage/actual_wage/paid_amount）不
+-- 相交，无法安全覆盖；其 28 行保持元值，读出端点（休眠）直读直出自洽。
+--
+-- payment_invoices / settlement_invoices 不在本迁移内：生产库无此二表
+-- （005 回填未实跑），全新库中恒空且全后端零读写路径。
 -- ═══════════════════════════════════════════════════════════════
 
 CREATE TABLE IF NOT EXISTS [app_meta] ([key] TEXT PRIMARY KEY, [value] TEXT NOT NULL);

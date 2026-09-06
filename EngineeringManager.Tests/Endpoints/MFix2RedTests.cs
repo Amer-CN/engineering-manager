@@ -42,16 +42,16 @@ public class MFix2RedTests : ApiTestBase
         conn.Execute("INSERT INTO project_authorizations (project_id, user_id) VALUES (1, @Mgr)", new { Mgr = MgrUid });
         conn.Execute("INSERT INTO cost_ledger_batches (id, project_id, name, created_by, created_at, last_modified_at) VALUES (10, 1, 'B1', '1', @Now, @Now)", new { Now = now });
         conn.Execute(@"INSERT INTO cost_ledger (id, project_id, batch_id, voucher_no, date, direction, category, amount, summary, created_by, created_at, updated_at)
-            VALUES (1, 1, 10, 'V1', '2026-08-06', 'out', '测试', 100, 'F2', '1', @Now, @Now)", new { Now = now });
+            VALUES (1, 1, 10, 'V1', '2026-08-06', 'out', '测试', 10000, 'F2', '1', @Now, @Now)", new { Now = now });
         // Z2(a): P1 授权数据（invoices/settlements 各一行）
         // Z2(c) + M-FIX5 W1(G53): P1 expense 行（direction='expense'，供 getCostSummary 的 expense 统计——
         // 这两行是为迎合 Agent 查询词汇而造，与写侧曾传 direction='out' 不一致，见 DIRECTION-VOCAB-DEFECT.md）
         // V2(b) M-FIX6: 缺陷锁定——写侧能存 direction='out'（无 CHECK 约束），读侧按 expense/income 统计不到。
         // 此行不被计入 totalExpense，正是「存得进、统计不到」缺陷被测试锁住（不是 bug 复现失败）。
         conn.Execute(@"INSERT INTO cost_ledger (id, project_id, batch_id, voucher_no, date, direction, category, amount, summary, created_by, created_at, updated_at)
-            VALUES (5, 1, 10, 'V5', '2026-08-06', 'out', '测试', 777, 'P1-out-locked', '1', @Now, @Now)", new { Now = now });
+            VALUES (5, 1, 10, 'V5', '2026-08-06', 'out', '测试', 77700, 'P1-out-locked', '1', @Now, @Now)", new { Now = now });
         conn.Execute(@"INSERT INTO cost_ledger (id, project_id, batch_id, voucher_no, date, direction, category, amount, summary, created_by, created_at, updated_at)
-            VALUES (3, 1, 10, 'V3', '2026-08-06', 'expense', '测试', 100, 'P1-expense', '1', @Now, @Now)", new { Now = now });
+            VALUES (3, 1, 10, 'V3', '2026-08-06', 'expense', '测试', 10000, 'P1-expense', '1', @Now, @Now)", new { Now = now });
         conn.Execute(@"INSERT INTO invoices (id, project_id, name, amount, status, created_by, created_at, updated_at)
             VALUES (1, 1, 'inv-P1', 1000, 'pending', '1', @Now, @Now)", new { Now = now });
         conn.Execute(@"INSERT INTO settlements (id, project_id, name, amount, status, created_by, created_at, updated_at)
@@ -59,11 +59,11 @@ public class MFix2RedTests : ApiTestBase
         // Z2(a): P2 越权行（created_by='other'，不该被 manager 看到）——覆盖 getDashboardStats 查的每张表
         conn.Execute("INSERT INTO cost_ledger_batches (id, project_id, name, created_by, created_at, last_modified_at) VALUES (11, 2, 'B2-P2', 'other', @Now, @Now)", new { Now = now });
         conn.Execute(@"INSERT INTO cost_ledger (id, project_id, batch_id, voucher_no, date, direction, category, amount, summary, created_by, created_at, updated_at)
-            VALUES (2, 2, 11, 'V2', '2026-08-06', 'out', '测试', 200, 'P2-other', 'other', @Now, @Now)", new { Now = now });
+            VALUES (2, 2, 11, 'V2', '2026-08-06', 'out', '测试', 20000, 'P2-other', 'other', @Now, @Now)", new { Now = now });
         conn.Execute(@"INSERT INTO cost_ledger (id, project_id, batch_id, voucher_no, date, direction, category, amount, summary, created_by, created_at, updated_at)
-            VALUES (4, 2, 11, 'V4', '2026-08-06', 'expense', '测试', 200, 'P2-expense', 'other', @Now, @Now)", new { Now = now });
+            VALUES (4, 2, 11, 'V4', '2026-08-06', 'expense', '测试', 20000, 'P2-expense', 'other', @Now, @Now)", new { Now = now });
         conn.Execute(@"INSERT INTO invoices (id, project_id, name, amount, status, created_by, created_at, updated_at)
-            VALUES (2, 2, 'inv-P2', 2000, 'pending', 'other', @Now, @Now)", new { Now = now });
+            VALUES (2, 2, 'inv-P2', 200000, 'pending', 'other', @Now, @Now)", new { Now = now });
         conn.Execute(@"INSERT INTO settlements (id, project_id, name, amount, status, created_by, created_at, updated_at)
             VALUES (2, 2, 'sett-P2', 2000, 'pending', 'other', @Now, @Now)", new { Now = now });
         // manager 用户（roles 表需 manager 行有 dashboard:read/costLedger:read）
@@ -163,10 +163,10 @@ public class MFix2RedTests : ApiTestBase
         var data = System.Text.Json.Nodes.JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(result.Result))!;
         var text = data.ToJsonString();
         // Z2(c) 偏差：getCostSummary 返回 {totalIncome,totalExpense,netTotal,...} 汇总，无 projectId 字段。
-        // 改断金额：P1 cost_ledger expense=100（方向 out）在、P2 越权 expense=200 不在。
+        // 改断金额：P1 cost_ledger expense=100（方向 out）在、P2 越权 expense=20000（200 元）不在。
         var csNode = System.Text.Json.Nodes.JsonNode.Parse(text)!;
-        Assert.Equal(100, csNode["totalExpense"]!.GetValue<int>()); // V2(b) 缺陷锁定：direction='out' 的 777 不被计入（写侧能存、读侧统计不到，G53 锁定）。
-        // P2 越权 expense=200 不在：由 Equal 钉死 100 隐含（P2 若被计入 totalExpense 必≠100）；
+        Assert.Equal(100, csNode["totalExpense"]!.GetValue<int>()); // V2(b) 缺陷锁定：direction='out' 的 77700 不被计入（写侧能存、读侧统计不到，G53 锁定）。
+        // P2 越权 expense=20000（200 元）不在：由 Equal 钉死 100 隐含（P2 若被计入 totalExpense 必≠100）；
         // 越权隔离的独立证明见 F1d/F1b（P2 行被拒/不可见）。M-FIX7 U4 补删。
     }
 }

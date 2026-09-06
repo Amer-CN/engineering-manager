@@ -158,8 +158,9 @@ public class AgentToolService
         var invoicesCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM invoices WHERE {projectFilterInvoices}", p);
         var settlementsCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM settlements WHERE {projectFilterSettlements}", p);
         var inProgressProjects = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM projects WHERE status='active' AND {companyFilter}", p);
-        var totalIncome = db.ExecuteScalar<double>($"SELECT COALESCE(SUM(amount), 0) FROM cost_ledger WHERE direction='income' AND {projectFilterCostLedger}", p);
-        var totalExpense = db.ExecuteScalar<double>($"SELECT COALESCE(SUM(amount), 0) FROM cost_ledger WHERE direction='expense' AND {projectFilterCostLedger}", p);
+        // cost_ledger.amount 库内为分，MoneyUnit 单点换算输出元
+        var totalIncome = MoneyUnit.ToYuanFromDb(db.ExecuteScalar<double>($"SELECT COALESCE(SUM(amount), 0) FROM cost_ledger WHERE direction='income' AND {projectFilterCostLedger}", p));
+        var totalExpense = MoneyUnit.ToYuanFromDb(db.ExecuteScalar<double>($"SELECT COALESCE(SUM(amount), 0) FROM cost_ledger WHERE direction='expense' AND {projectFilterCostLedger}", p));
 
         var recentProjects = db.Query($@"
             SELECT id, name, status FROM projects
@@ -188,7 +189,8 @@ public class AgentToolService
             LIMIT 20
         ", new { Uid = uid, IsAdmin = 0 }).ToList();
 
-        return Task.FromResult<object>(projects);
+        // projects.budget 库内为分，MoneyUnit 单点换算输出元
+        return Task.FromResult<object>(MoneyUnit.ToYuanRows(projects, "budget"));
     }
 
     private static Task<object> ExecuteGetProjectDetail(IDbConnection db, JsonElement args, string uid, CurrentUser.DataScope scope)
@@ -196,14 +198,15 @@ public class AgentToolService
         var projectId = GetIntArg(args, "projectId");
         var filter = CurrentUser.UserFilterWithAuthorizedProjects(scope, "p.id", "p.created_by");
 
-        var project = db.QueryFirstOrDefault($@"
+        // p.budget 库内为分，MoneyUnit 单点换算输出元
+        var project = MoneyUnit.ToYuanRows(db.Query($@"
             SELECT p.*, m.name as project_manager_name
             FROM projects p
             LEFT JOIN members m ON p.project_manager_id = m.id
             WHERE p.id = @Id AND ({filter})
-        ", new { Id = projectId, Uid = uid, IsAdmin = 0 });
+        ", new { Id = projectId, Uid = uid, IsAdmin = 0 }).ToList(), "budget").FirstOrDefault();
 
-        return Task.FromResult<object>(project ?? new { error = "项目不存在" });
+        return Task.FromResult<object>(project ?? (object)new { error = "项目不存在" });
     }
 
     private static Task<object> ExecuteGetInvoices(IDbConnection db, JsonElement args, string uid, CurrentUser.DataScope scope)
@@ -227,7 +230,8 @@ public class AgentToolService
         var invoices = db.Query(sql,
             new { Uid = uid, IsAdmin = 0, ProjectId = projectId }).ToList();
 
-        return Task.FromResult<object>(invoices);
+        // invoices.amount 库内为分，MoneyUnit 单点换算输出元
+        return Task.FromResult<object>(MoneyUnit.ToYuanRows(invoices, "amount"));
     }
 
     private static Task<object> ExecuteGetPendingInvoices(IDbConnection db, string uid, CurrentUser.DataScope scope)
@@ -243,7 +247,8 @@ public class AgentToolService
             LIMIT 30
         ", new { Uid = uid, IsAdmin = 0 }).ToList();
 
-        return Task.FromResult<object>(invoices);
+        // invoices.amount 库内为分，MoneyUnit 单点换算输出元
+        return Task.FromResult<object>(MoneyUnit.ToYuanRows(invoices, "amount"));
     }
 
     private static Task<object> ExecuteGetSettlements(IDbConnection db, JsonElement args, string uid, CurrentUser.DataScope scope)
@@ -267,7 +272,8 @@ public class AgentToolService
         var settlements = db.Query(sql,
             new { Uid = uid, IsAdmin = 0, ProjectId = projectId }).ToList();
 
-        return Task.FromResult<object>(settlements);
+        // settlements.amount 库内为分，MoneyUnit 单点换算输出元
+        return Task.FromResult<object>(MoneyUnit.ToYuanRows(settlements, "amount"));
     }
 
     private static Task<object> ExecuteGetPendingSettlements(IDbConnection db, string uid, CurrentUser.DataScope scope)
@@ -283,7 +289,8 @@ public class AgentToolService
             LIMIT 30
         ", new { Uid = uid, IsAdmin = 0 }).ToList();
 
-        return Task.FromResult<object>(settlements);
+        // settlements.amount 库内为分，MoneyUnit 单点换算输出元
+        return Task.FromResult<object>(MoneyUnit.ToYuanRows(settlements, "amount"));
     }
 
     private static Task<object> ExecuteGetMembers(IDbConnection db, string uid, CurrentUser.DataScope scope)
@@ -352,7 +359,12 @@ public class AgentToolService
             LIMIT 15
         ", new { Uid = uid, IsAdmin = 0, ProjectId = projectId }).ToList();
 
-        return Task.FromResult<object>(new { incomeContracts = income, expenseContracts = expense });
+        // income_contracts / expense_contracts 的 amount 库内为分，MoneyUnit 单点换算输出元
+        return Task.FromResult<object>(new
+        {
+            incomeContracts = MoneyUnit.ToYuanRows(income, "amount"),
+            expenseContracts = MoneyUnit.ToYuanRows(expense, "amount"),
+        });
     }
 
     private static Task<object> ExecuteGetInventory(IDbConnection db, string uid, CurrentUser.DataScope scope)
@@ -367,7 +379,8 @@ public class AgentToolService
             LIMIT 30
         ", new { Uid = uid, IsAdmin = 0 }).ToList();
 
-        return Task.FromResult<object>(items);
+        // inventory_items 两个价格列库内为分，MoneyUnit 单点换算输出元
+        return Task.FromResult<object>(MoneyUnit.ToYuanRows(items, "purchase_price", "sale_price"));
     }
 
     private static Task<object> ExecuteGetCostSummary(IDbConnection db, JsonElement args, string uid, CurrentUser.DataScope scope)
@@ -388,22 +401,25 @@ public class AgentToolService
             LIMIT 20
         ", p).ToList();
 
-        var totalIncome = db.ExecuteScalar<double>($@"
+        // cost_ledger.amount 库内为分：先按 MoneyUnit 单点各自换算成元，再相减得 netTotal
+        // （与「分域先相减再除 100」数学等价，此处按元直出实现最清晰）
+        var totalIncome = MoneyUnit.ToYuanFromDb(db.ExecuteScalar<double>($@"
             SELECT COALESCE(SUM(amount), 0) FROM cost_ledger
             WHERE direction = 'income' AND {projectFilter}
-        ", p);
+        ", p));
 
-        var totalExpense = db.ExecuteScalar<double>($@"
+        var totalExpense = MoneyUnit.ToYuanFromDb(db.ExecuteScalar<double>($@"
             SELECT COALESCE(SUM(amount), 0) FROM cost_ledger
             WHERE direction = 'expense' AND {projectFilter}
-        ", p);
+        ", p));
 
         return Task.FromResult<object>(new
         {
             totalIncome,
             totalExpense,
             netTotal = totalIncome - totalExpense,
-            byCategory,
+            // SUM(amount) 库内为分，MoneyUnit 单点换算输出元
+            byCategory = MoneyUnit.ToYuanRows(byCategory, "total"),
             projectId,
         });
     }

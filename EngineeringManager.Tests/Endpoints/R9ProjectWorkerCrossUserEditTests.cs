@@ -15,7 +15,7 @@ namespace EngineeringManager.Tests.Endpoints;
 /// 现状：WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)——授权跨人 403（B 桶形态）。
 /// 目标：预读 → Classify 单点 → 授权跨人可改 + ViaAuthz 同事务 audit。
 /// 权限码 members:update；body 走 ProjectWorkerDto；收尾 affected>0?Ok:Forbid → 不存在 403（Pin4 是 403）。
-/// daily_wage 沿用工资域惯例「分」，原样直传不换算。
+/// 2026-09 分制契约：API 元 → MoneyUnit.ToFen 落库分。
 /// 行为人：自定义角色 r9-22-b4（同批次 4 共用）。项目 9123，created_by='1'。
 /// project_workers 列：001 worker_id/project_id/team_id/daily_wage/worker_type/entry_date/status
 /// + 009 created_by + 024 version/last_modified_at。种子 worker_id 用 999001。
@@ -102,10 +102,10 @@ public class R9ProjectWorkerCrossUserEditTests : ApiTestBase
         return conn.ExecuteScalar<long>("SELECT daily_wage FROM project_workers WHERE id=@Id", new { Id = rowId });
     }
 
-    private async Task<HttpResponseMessage> PutWorkerAsync(long rowId, long dailyWageFen) =>
+    private async Task<HttpResponseMessage> PutWorkerAsync(long rowId, long dailyWageYuan) =>
         await Client.PutAsJsonAsync("/api/project-workers", new
         {
-            id = rowId, projectId = TestProjectId, dailyWage = dailyWageFen,
+            id = rowId, projectId = TestProjectId, dailyWage = dailyWageYuan,
             workerType = "瓦工", entryDate = "2026-01-01", status = "active",
         });
 
@@ -167,7 +167,7 @@ public class R9ProjectWorkerCrossUserEditTests : ApiTestBase
 
         var resp = await Client.PutAsJsonAsync("/api/project-workers", new
         {
-            id = 999999, projectId = TestProjectId, dailyWage = 35000L,
+            id = 999999, projectId = TestProjectId, dailyWage = 350L,
             workerType = "瓦工", entryDate = "2026-01-01", status = "active",
         });
         Assert.Equal(HttpStatusCode.Forbidden, resp.StatusCode);
