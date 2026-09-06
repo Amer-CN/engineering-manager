@@ -178,11 +178,11 @@ export function AiProviderSection() {
     applyUpdate(m => {
       if (delTarget.kind === 'provider') {
         const providers = m.providers.filter(p => p.id !== delTarget.id)
-        return {
-          ...m,
-          providers,
-          activeProviderId: m.activeProviderId === delTarget.id ? (providers[0]?.id ?? null) : m.activeProviderId,
+        // 删除的是当前激活条目 → 自动切回内置（useBuiltIn=true），避免悬空态导致 LLM 调用 401
+        if (m.activeProviderId === delTarget.id) {
+          return { ...m, providers, activeProviderId: providers[0]?.id ?? null, useBuiltIn: providers.length === 0 ? true : m.useBuiltIn }
         }
+        return { ...m, providers }
       }
       return {
         ...m,
