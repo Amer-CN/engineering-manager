@@ -409,7 +409,11 @@ builder.Services.ConfigureHttpJsonOptions(options =>
                 db.Execute("UPDATE pii_reencrypt_status SET status='interrupted', updated_at=@Now WHERE id=1 AND status='running'",
                     new { Now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") });
             }
-            catch { /* 表不存在等启动期问题不阻塞启动 */ }
+            catch (Exception ex)
+            {
+                // 表不存在等启动期问题不阻塞启动，但必须留痕
+                Console.Error.WriteLine($"[Startup] pii_reencrypt_status 复位失败（不阻塞）: {ex.Message}");
+            }
         }
 
         // 写作中心 skill 热更：启动后台检查远端版本（内部全静默，任何失败不影响启动与写作）

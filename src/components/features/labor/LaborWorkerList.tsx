@@ -184,7 +184,7 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
                 : 'text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)]'
             }`}
           >
-            {t.name} ({teamCounts[t.id] || 0})}
+            {t.name} ({teamCounts[t.id] || 0})
           </button>
         ))}
         <div className="flex-1" />

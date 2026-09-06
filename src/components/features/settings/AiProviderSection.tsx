@@ -9,21 +9,7 @@ import {
 } from '@/services/agent-client'
 import type { MultiProviderConfig, ProviderModelEntry } from '@/types/agent'
 import { GenerationParamsSection, CapBadge } from './aiProviderSettingsParts'
-import { ProviderAddForm, ModelEditDialog } from './aiProviderDialogs'
-
-/** 删除确认目标 */
-type DelTarget =
-  | { kind: 'provider'; id: string; label: string }
-  | { kind: 'model'; providerId: string; modelId: string; label: string }
-
-/** 当前生效徽章 */
-function ActiveBadge() {
-  return (
-    <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-micro font-medium bg-accent-soft text-primary">
-      当前生效
-    </span>
-  )
-}
+import { ProviderAddForm, ModelEditDialog, ActiveBadge, type DelTarget } from './aiProviderDialogs'
 
 /**
  * AI 助手设置卡片 — 多服务商管理（对齐成熟 Agent 使用逻辑）
