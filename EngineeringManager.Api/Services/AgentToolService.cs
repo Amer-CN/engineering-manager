@@ -310,14 +310,14 @@ public class AgentToolService
     private static Task<object> ExecuteGetWorkers(IDbConnection db, string uid, CurrentUser.DataScope scope)
     {
         var filter = CurrentUser.UserFilterCompany(scope, "w.created_by");
-        var workers = db.Query($@"
+        var workers = MoneyUnit.ToYuanRows(db.Query($@"
             SELECT w.id, w.name, w.phone, w.worker_type, w.daily_wage,
                    w.id_card, w.bank_account, w.address
             FROM workers w
             WHERE {filter}
             ORDER BY w.created_at DESC
             LIMIT 30
-        ", new { Uid = uid, IsAdmin = 0 }).ToList();
+        ", new { Uid = uid, IsAdmin = 0 }).ToList(), "daily_wage");
 
         return Task.FromResult<object>(workers);
     }

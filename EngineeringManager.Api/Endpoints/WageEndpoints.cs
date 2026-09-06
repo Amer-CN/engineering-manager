@@ -15,7 +15,8 @@ using Microsoft.Extensions.DependencyInjection;
 //   · 换算只允许发生在 MoneyUnit.ToFen / MoneyUnit.ToYuan 单点内
 //     （本文件 helper 为其委托），禁止在别处散写 ×100 / ÷100（含 SQL 表达式）
 //   · work_days 是天数（REAL），不是金额，不参与换算
-//   · salary_history / wage_history 同为分制（wage_history 由 051 带守卫修复）
+//   · salary_history 同为分制；wage_history 保持元值（生产库旧 schema 与 014 产物列
+//     不相交，无法安全迁移，051 明确不含），其休眠读端点直读直出自洽
 //   · 新增端点若涉及金额列，必须走 MoneyUnit.ToFen / ToYuan
 // ═══════════════════════════════════════════════════════════════
 
