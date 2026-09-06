@@ -98,11 +98,15 @@ function MascotAppearanceSection() {
  *
  * 亮点: 设置内搜索 (SettingsSearch) — 关键词即时过滤 + 跳转定位高亮。
  */
-interface SettingsProps { refresh?: () => void }
+interface SettingsProps {
+  refresh?: () => void
+  /** 「返回」按钮回调：App 传入，恢复进入 settings 前的页面 */
+  onExit?: () => void
+}
 
 const ACTIVE_KEY = 'settings_active_category'
 
-const Settings: React.FC<SettingsProps> = ({ refresh }) => {
+const Settings: React.FC<SettingsProps> = ({ refresh, onExit }) => {
   const { isAdmin } = usePermission()
   const { currentUser } = useAuth()
   const [active, setActive] = useState<SettingCategory>(() => {
@@ -147,12 +151,20 @@ const Settings: React.FC<SettingsProps> = ({ refresh }) => {
   }
 
   return (
-    <motion.div className="max-w-[1400px] mx-auto p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
-      <PageHeader title="系统设置" subtitle="管理应用程序设置" />
-
-      <div className="flex gap-6 items-start">
-        {/* 左栏：用户片段 + 搜索 + 分类导航 */}
-        <div className="w-60 flex-shrink-0">
+    <motion.div className="h-full flex" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+      {/* 左栏：设置专属侧边栏（settings 为独立界面，主 Sidebar 已由 App 隐藏） */}
+      <aside className="w-64 flex-shrink-0 h-full flex flex-col bg-[color:var(--panel)] border-r border-[color:var(--border)]">
+        {/* 顶部返回按钮：恢复进入 settings 前的页面 */}
+        <div className="p-3">
+          <button
+            type="button"
+            onClick={() => onExit?.()}
+            className="inline-flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm font-medium transition-colors hover:bg-[color:var(--panel-2)] text-content-2"
+          >
+            <Icon name="ArrowLeft" size={16} /> 返回
+          </button>
+        </div>
+        <div className="px-4 pb-4">
           {/* S33 Stitch: user profile snippet */}
           {currentUser && (
             <div className="flex items-center gap-3 mb-5 px-1">
@@ -168,9 +180,12 @@ const Settings: React.FC<SettingsProps> = ({ refresh }) => {
           <SettingsSearch query={query} onQueryChange={setQuery} results={results} onSelect={navigateToItem} />
           {!query.trim() && <SettingsNav active={active} onSelect={setActive} />}
         </div>
+      </aside>
 
-        {/* 右栏：当前面板 (按需挂载) */}
-        <div className="flex-1 min-w-0">
+      {/* 右栏：当前面板 (按需挂载，右栏内滚动) */}
+      <div className="flex-1 min-w-0 h-full overflow-y-auto">
+        <div className="max-w-[1400px] mx-auto p-6">
+          <PageHeader title="系统设置" subtitle="管理应用程序设置" />
           <AnimatePresence mode="wait">
             <motion.div
               key={active}

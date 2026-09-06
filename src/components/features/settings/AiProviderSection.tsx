@@ -17,12 +17,12 @@ type DelTarget = { kind: 'provider'; id: string; label: string }
 
 /**
  * AI 助手设置卡片 — 多服务商管理（对齐成熟 Agent 使用逻辑）
- * - 内置/自定义切换；列表态：服务商列表（添加/启用/管理进入子页/删除）
- * - detail 态（服务商子页）：可编辑设置（名称/BaseUrl/协议/更换密钥）+ 模型管理
- *   （多选批量删、免确认单删、弹窗添加/编辑、能力标注、设默认）
- * - 温度 + maxTokens；所有改动即时自动保存（生成参数/代理输入防抖 800ms 合并）
+ * - 列表态：服务商列表（添加/启用/管理进入子页/删除）+ 生成参数（温度/maxTokens）+ 网络代理
+ * - detail 态（服务商子页）纯净化：只渲染返回 + 服务商设置 + 模型管理（生成参数/代理仅 list 态）
+ * - 所有改动即时自动保存（生成参数/代理输入防抖 800ms 合并）
+ * - onDetailChange：上报 detail 态变化，父级 AiCapabilitySection 据此隐藏 OCR 区块
  */
-export function AiProviderSection() {
+export function AiProviderSection({ onDetailChange }: { onDetailChange?: (isDetail: boolean) => void }) {
   const [multi, setMulti] = useState<MultiProviderConfig | null>(null)
   /** 本次填写的新 API Key（providerId → key；留空 = 保留原密钥） */
   const [apiKeyInputs, setApiKeyInputs] = useState<Record<string, string>>({})
@@ -81,6 +81,8 @@ export function AiProviderSection() {
   useEffect(() => {
     loadConfig()
   }, [loadConfig])
+
+  useEffect(() => { onDetailChange?.(view.mode === 'detail') }, [view.mode, onDetailChange])
 
   /** 立即保存整份配置（空 key = 保留原密钥）；成功静默生效，失败 toast + 行内红字 */
   const saveNow = async () => {
@@ -329,12 +331,10 @@ export function AiProviderSection() {
             onShowHidden={() => setShowHiddenAgnes(true)}
           />
         </div>
-          </>
-        )}
 
+        {/* ── 生成参数 + 网络代理：仅 list 态显示（detail 态子页纯净化） ── */}
         <GenerationParamsSection
-          temperature={multi.temperature}
-          maxTokens={multi.maxTokens}
+          temperature={multi.temperature} maxTokens={multi.maxTokens}
           disabled={status === 'saving'}
           onChange={next => applyUpdate(m => ({ ...m, ...next }), false)}
         />
@@ -354,6 +354,8 @@ export function AiProviderSection() {
             访问 OpenAI、OpenRouter 等需代理的服务商时填写，对所有自定义服务商的请求生效；DeepSeek、智谱等国内厂商建议留空直连。
           </p>
         </div>
+          </>
+        )}
 
         {/* ── 自动保存状态 ── */}
         <div className="pt-2 flex items-center gap-2 text-xs">

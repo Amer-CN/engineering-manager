@@ -88,6 +88,12 @@ describe('AiProviderSection — 更换密钥', () => {
 
   test('服务商卡片有点「更换密钥」按钮；空输入时保存禁用', async () => {
     render(<AiProviderSection />)
+    // 更换密钥已挪进服务商子页（detail 态）：先点「管理」进入
+    fireEvent.click(await screen.findByText('管理'))
+    // detail 态纯净化：温度/最大输出长度/网络代理区块不出现
+    expect(screen.queryByText('温度')).toBeNull()
+    expect(screen.queryByText('最大输出长度（maxTokens）')).toBeNull()
+    expect(screen.queryByText('网络代理（可选）')).toBeNull()
     fireEvent.click(await screen.findByText('更换密钥'))
     // 弹窗标题含服务商名
     await screen.findByText('更换 DeepSeek 的密钥')
@@ -97,6 +103,8 @@ describe('AiProviderSection — 更换密钥', () => {
 
   test('填写新 key 保存后走保存链路（目标 provider 带新 key）', async () => {
     render(<AiProviderSection />)
+    // 更换密钥已挪进服务商子页（detail 态）：先点「管理」进入
+    fireEvent.click(await screen.findByText('管理'))
     fireEvent.click(await screen.findByText('更换密钥'))
     await screen.findByText('更换 DeepSeek 的密钥')
     fireEvent.change(screen.getByPlaceholderText('请输入新的 API Key'), { target: { value: 'sk-new-key' } })

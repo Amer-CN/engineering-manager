@@ -187,6 +187,11 @@ const AppContent: React.FC = () => {
     } catch { /* ignore */ }
     return 'dashboard'
   })
+  // settings「返回」键的落点：记住最后一个非 settings 页面（默认起始页为 settings 时兜底 dashboard）
+  const lastNonSettingsPageRef = useRef<Page>('dashboard')
+  useEffect(() => {
+    if (currentPage !== 'settings') lastNonSettingsPageRef.current = currentPage
+  }, [currentPage])
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true
@@ -303,7 +308,7 @@ const AppContent: React.FC = () => {
       case 'writing': return <RequirePermission permission="writing:read" fallback={<NoAccessState />}><WritingIndex /></RequirePermission>
       case 'reports': return <RequirePermission permission="reports:create" fallback={<NoAccessState />}><ReportsPage /></RequirePermission>
       case 'users': return <RequireAdmin fallback={<NoAccessState description="用户管理仅限管理员访问。" />}><Users /></RequireAdmin>
-      case 'settings': return <RequirePermission permission="settings:read" fallback={<NoAccessState />}><Settings /></RequirePermission>
+      case 'settings': return <RequirePermission permission="settings:read" fallback={<NoAccessState />}><Settings onExit={() => setCurrentPage(lastNonSettingsPageRef.current)} /></RequirePermission>
       default: return <Dashboard />
     }
   }
@@ -344,8 +349,8 @@ const AppContent: React.FC = () => {
       </AnimatePresence>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* 全屏时隐藏侧边栏 */}
-        {!isFullScreen && (
+        {/* 全屏 / settings 独立界面时隐藏主侧边栏（settings 自带专属侧边栏） */}
+        {!isFullScreen && currentPage !== 'settings' && (
           <Sidebar currentPage={currentPage} onNavigate={setCurrentPage}
             onSettings={() => setCurrentPage('settings')}
             onUsers={() => setCurrentPage('users')}
