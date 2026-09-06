@@ -49,7 +49,7 @@ describe('maskIdCard', () => {
 
 describe('maskPhone', () => {
   it('11 位手机: 保留前 3 + 后 4, 中间 4 个 *', () => {
-    expect(maskPhone('[已脱敏]')).toBe('138****8000')
+    expect(maskPhone('13800138000')).toBe('138****8000')
   })
 
   it('11 位但不是 1 开头也会脱敏 (前 3 + 后 4)', () => {
@@ -138,7 +138,7 @@ describe('maskPII (type dispatch)', () => {
   })
 
   it('phone 类型分派到 maskPhone', () => {
-    expect(maskPII('phone', '[已脱敏]')).toBe('138****8000')
+    expect(maskPII('phone', '13800138000')).toBe('138****8000')
   })
 
   it('bankAccount 类型分派到 maskBankAccount', () => {
