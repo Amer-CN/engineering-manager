@@ -1566,11 +1566,11 @@ button:disabled {
   top: calc(100% + 4px);
   left: 0;
   z-index: 60;
-  padding: 8px;
-  border-radius: 10px;
+  padding: 10px;
+  border-radius: 12px;
   border: 1px solid var(--border);
   background: var(--card);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 0.18);
 }
 .em-toolbar-url { display: flex; align-items: center; gap: 6px; }
 .em-url-input {
@@ -1625,7 +1625,7 @@ button:disabled {
 .em-pop-restore { color: var(--muted); font-size: 12px; }
 /* 弹层分组标签与分隔（颜色弹层两栏的栏头） */
 .em-pop-label { font-size: 12px; color: var(--muted); padding: 2px 4px; }
-.em-pop-divider { height: 1px; margin: 6px -8px; background: var(--border); }
+.em-pop-divider { height: 1px; margin: 6px -10px; background: var(--border); }
 
 /* ═══ R3：任务清单 / 图片 / 高亮 ═══ */
 .tiptap ul[data-type="taskList"] { list-style: none; padding-left: 0; }
@@ -1913,24 +1913,44 @@ button:focus-visible {
 }
 
 /* 工具栏新增控件：字号/字体下拉菜单（复用 em-toolbar-pop + em-pop-item 既有类）
- * 字号 16 项过多 → 网格 4 列（参考 em-color-grid 做法）；字体 7 项纵向列表即可 */
+ * 字号：4 列网格 gap 4，格子 32×30 居中纯数字，当前项 accent 底色白字（对勾隐藏，底色即指示）；
+ * 字体：每项以该字体本身渲染（行内 fontFamily 由组件注入），行高 32，长名 CSS ellipsis 截断 */
 .em-size-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 2px;
-  min-width: 148px;
+  grid-template-columns: repeat(4, minmax(32px, 1fr));
+  gap: 4px;
+  min-width: 172px;
 }
+.em-size-grid .em-pop-item {
+  width: 100%;
+  height: 30px;
+  justify-content: center;
+  padding: 0;
+}
+.em-size-grid .em-pop-item.is-active {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.em-size-grid .em-check { display: none; }
 .em-pop-list {
   display: flex;
   flex-direction: column;
-  min-width: 104px;
+  min-width: 200px;
 }
-.em-size-grid .em-pop-item,
-.em-pop-list .em-pop-item {
-  width: 100%;
-  justify-content: flex-start;
-  padding-left: 10px;
+.em-pop-list .em-pop-item { width: 100%; }
+/* 字体项：本体渲染由行内样式承担；这里管行高与长名截断（title 悬停全名由组件 title 提供） */
+.em-font-item { height: 32px; }
+.em-font-item .em-pop-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
 }
+/* 触发器防跳变：字号/字体触发器定最小宽（Button 自带 justify-center，内容居中） */
+.em-size-trigger { min-width: 40px; }
+.em-font-trigger { min-width: 64px; }
 /* 颜色弹层：两栏列表更宽（色块 + 名称 + 对勾），覆写 em-color-list 的 3 列铺满 pop 宽度 */
 .em-color-pop { min-width: 220px; }
 /* 公文皮肤 toggle：右侧独立（em-toolbar 为 flex，margin-left:auto 推到最右） */

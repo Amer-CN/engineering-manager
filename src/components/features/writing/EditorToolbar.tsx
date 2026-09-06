@@ -6,7 +6,7 @@
  * 约束：命令逻辑与 props 零改动；基础按钮用项目 Button ghost（不引 radix）；弹层项走原生
  * button+title；公文 toggle 的 title 不许删（writingPaperStyle.test 断言）；高亮色读取前先判
  * isActive("highlight")（未注册 Highlight 的精简编辑器上 getAttributes 会 throw）；Highlight
- * 未开 multicolor（WritingEditor 禁改），多色高亮按命令链路与选中态结构实现。
+ * 已开 multicolor（WritingEditor.configure），多色高亮按命令链路与选中态结构实现。
  */
 import React, { useEffect, useState } from "react";
 import type { Editor } from "@tiptap/core";
@@ -139,7 +139,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onTogglePaperStyl
 
   // 工具栏按钮：Button ghost + em-toolbar-btn 覆写尺寸与 is-active（accent 底色）；
   // Tooltip 包一层 inline-flex div，点击事件经冒泡到达按钮，onClick 不受影响。
-  const btn = (active: boolean, label: string, onClick: () => void, node: React.ReactNode, disabled?: boolean) => (
+  const btn = (active: boolean, label: string, onClick: () => void, node: React.ReactNode, disabled?: boolean, extraClass?: string) => (
     <Tooltip content={label} delay={400}>
       <Button
         type="button"
@@ -147,7 +147,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onTogglePaperStyl
         aria-label={label}
         disabled={disabled}
         onClick={onClick}
-        className={`em-toolbar-btn${active ? " is-active" : ""}`}
+        className={`em-toolbar-btn${active ? " is-active" : ""}${extraClass ? ` ${extraClass}` : ""}`}
       >
         {node}
       </Button>
@@ -155,14 +155,14 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onTogglePaperStyl
   );
 
   // 弹层菜单项：可选色块预览 + 名称 + 当前项对勾（title 供悬停与测试定位）
-  const popItem = (active: boolean, name: string, onClick: () => void, preview?: React.ReactNode, style?: React.CSSProperties) => (
+  const popItem = (active: boolean, name: string, onClick: () => void, preview?: React.ReactNode, style?: React.CSSProperties, extraClass?: string) => (
     <button
       type="button"
       title={name}
       aria-label={name}
       style={style}
       onClick={onClick}
-      className={`em-pop-item${active ? " is-active" : ""}`}
+      className={`em-pop-item${active ? " is-active" : ""}${extraClass ? ` ${extraClass}` : ""}`}
     >
       {preview}
       <span className="em-pop-name">{name}</span>
@@ -220,7 +220,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onTogglePaperStyl
           </span>,
         )}
         {colorOpen && (
-          <div className="em-toolbar-pop em-color-pop">
+          <div className="em-toolbar-pop em-color-pop popover-entry">
             {colorSection({
               label: "文字颜色", presets: COLOR_PRESETS, current: state.color,
               onPick: (en) => editor.chain().focus().setColor(en).run(),
@@ -250,11 +250,13 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onTogglePaperStyl
             <span className="em-toolbar-current">{state.fontSize ? state.fontSize.replace(/pt$/, "") : "字号"}</span>
             <ChevronDown size={11} />
           </span>,
+          undefined,
+          "em-size-trigger",
         )}
         {fontSizeOpen && (
-          <div className="em-toolbar-pop em-size-grid">
+          <div className="em-toolbar-pop em-size-grid popover-entry">
             {FONT_SIZE_PRESETS.map((n) =>
-              popItem(state.fontSize === `${n}pt`, `${n}pt`, () => {
+              popItem(state.fontSize === `${n}pt`, String(n), () => {
                 editor.chain().focus().setFontSize(`${n}pt`).run();
                 setFontSizeOpen(false);
               }),
@@ -277,14 +279,16 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onTogglePaperStyl
             <span className="em-toolbar-current">{state.fontFamily ? truncateFont(state.fontFamily) : "字体"}</span>
             <ChevronDown size={11} />
           </span>,
+          undefined,
+          "em-font-trigger",
         )}
         {fontFamilyOpen && (
-          <div className="em-toolbar-pop em-pop-list">
+          <div className="em-toolbar-pop em-pop-list popover-entry">
             {FONT_PRESETS.map((name) =>
               popItem(state.fontFamily === name, name, () => {
                 editor.chain().focus().setFontFamily(name).run();
                 setFontFamilyOpen(false);
-              }, undefined, { fontFamily: name }),
+              }, undefined, { fontFamily: name }, "em-font-item"),
             )}
             {popItem(false, "恢复默认", () => {
               editor.chain().focus().unsetFontFamily().run();
@@ -336,7 +340,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onTogglePaperStyl
       <div className="relative">
         {btn(false, "插入图片（URL）", () => setUrlOpen((v) => !v), <ImageIcon size={15} />)}
         {urlOpen && (
-          <div className="em-toolbar-pop">
+          <div className="em-toolbar-pop popover-entry">
             <div className="em-toolbar-url">
               <input
                 autoFocus

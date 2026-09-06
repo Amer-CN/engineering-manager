@@ -129,7 +129,7 @@ describe("EditorToolbar 触发器显示当前值（shadcn-tiptap 结构）", () 
   // EditorContent 必须挂载：命令链 chain().focus() 依赖真实 view（未挂载编辑器 focus 会静默失败）
   const setup = () => {
     const editor = new Editor({
-      extensions: [StarterKit, TextStyle, FontFamily, FontSizeMark, TextAlign.configure({ types: ["paragraph", "heading"] }), Highlight],
+      extensions: [StarterKit, TextStyle, FontFamily, FontSizeMark, TextAlign.configure({ types: ["paragraph", "heading"] }), Highlight.configure({ multicolor: true })],
       content: "abc",
     });
     render(
@@ -196,6 +196,18 @@ describe("EditorToolbar 触发器显示当前值（shadcn-tiptap 结构）", () 
                       "黄色高亮", "绿色高亮", "蓝色高亮", "粉色高亮", "清除高亮"]) {
       expect(screen.getByTitle(zh)).toBeTruthy();
     }
+
+    editor.destroy();
+  });
+
+  it("Highlight multicolor：setHighlight({color}) 后 getAttributes 取回该色", () => {
+    const editor = setup();
+
+    // 选中 "abc" 后设指定色高亮（multicolor 未开时 color 属性会被丢弃）
+    editor.chain().focus().setTextSelection({ from: 1, to: 4 }).run();
+    editor.chain().focus().setHighlight({ color: "#fde047" }).run();
+
+    expect(editor.getAttributes("highlight").color).toBe("#fde047");
 
     editor.destroy();
   });
