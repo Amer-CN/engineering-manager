@@ -8,7 +8,7 @@ namespace EngineeringManager.Api.Migrations;
 
 public static class MigrationRunner
 {
-    public static void Run(string connectionString)
+    public static void Run(string connectionString, string? stopBeforeScriptName = null)
     {
         using var conn = new SqliteConnection(connectionString);
         conn.Open();
@@ -37,6 +37,8 @@ public static class MigrationRunner
         foreach (var name in scriptNames)
         {
             if (applied.Contains(name)) continue;
+            // 测试基建：允许在指定脚本前停下（构造"某迁移之前"的历史库状态）
+            if (stopBeforeScriptName != null && name.EndsWith(stopBeforeScriptName, StringComparison.OrdinalIgnoreCase)) break;
 
             using var stream = assembly.GetManifestResourceStream(name)!;
             using var reader = new StreamReader(stream);

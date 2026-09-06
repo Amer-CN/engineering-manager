@@ -28,7 +28,7 @@ public static class ProjectEndpoints
                 var invoicesCount = db.ExecuteScalar<int>("SELECT COUNT(*) FROM invoices");
                 var settlementsCount = db.ExecuteScalar<int>("SELECT COUNT(*) FROM settlements");
                 var inProgressProjects = db.ExecuteScalar<int>("SELECT COUNT(*) FROM projects WHERE status='active'");
-                var totalExpenses = db.ExecuteScalar<double>("SELECT COALESCE(SUM(amount), 0) FROM cost_ledger WHERE direction='expense'");
+                var totalExpenses = MoneyUnit.ToYuanFromDb(db.ExecuteScalar<double>("SELECT COALESCE(SUM(amount), 0) FROM cost_ledger WHERE direction='expense'"));
                 var inventoryItemsCount = db.ExecuteScalar<int>("SELECT COUNT(*) FROM inventory_items");
 
                 // 最近项目
@@ -44,7 +44,7 @@ public static class ProjectEndpoints
                         WHERE cl.direction = 'expense'
                         GROUP BY cl.category
                         ORDER BY amount DESC
-                    ").ToDictionary(r => (string)r.name, r => (double)r.amount);
+                    ").ToDictionary(r => (string)r.name, r => (double)r.amount / 100.0);
                 }
                 catch (Exception ex)
                 {
@@ -111,7 +111,7 @@ public static class ProjectEndpoints
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO projects (name,description,address,start_date,end_date,status,budget,project_manager_id,created_by,created_at,updated_at, last_modified_at) VALUES (@Name,@Description,@Address,@StartDate,@EndDate,@Status,@Budget,@ProjectManagerId,@CreatedBy,@Now,@Now, @Now);
                 SELECT last_insert_rowid();",
                 new { dto.Name, dto.Description, dto.Address, dto.StartDate, dto.EndDate,
-                      Status = dto.Status ?? "planning", dto.Budget, dto.ProjectManagerId, CreatedBy = uid, Now = now() });
+                      Status = dto.Status ?? "planning", Budget = MoneyUnit.ToFen(dto.Budget), dto.ProjectManagerId, CreatedBy = uid, Now = now() });
             return Common.Ok(id);
         });
 
@@ -125,7 +125,7 @@ public static class ProjectEndpoints
                 address=@Address,start_date=@StartDate,end_date=@EndDate,status=@Status,budget=@Budget,
                 project_manager_id=@ProjectManagerId,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
                 new { dto.Name, dto.Description, dto.Address, dto.StartDate, dto.EndDate,
-                      dto.Status, dto.Budget, dto.ProjectManagerId, Now = now(), Id = id,
+                      dto.Status, Budget = MoneyUnit.ToFen(dto.Budget), dto.ProjectManagerId, Now = now(), Id = id,
                       Uid = uid, IsAdmin = isAdmin });
             return affected > 0 ? Common.Ok() : Results.Forbid();
         });

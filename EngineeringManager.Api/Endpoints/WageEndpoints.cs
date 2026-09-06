@@ -7,16 +7,16 @@ using EngineeringManager.Api.Services.Stt;
 using Microsoft.Extensions.DependencyInjection;
 
 // ═══════════════════════════════════════════════════════════════
-// wages 单位契约（v0.92.0 起强制执行）：
-//   · 库内一律「分」：金额列 INTEGER 整数（迁移 003），含 wages 表金额列
-//     （daily_wage / bonus / deduction / actual_wage / paid_amount）与
-//     project_workers.daily_wage
+// wages 单位契约（2026-09 分制贯彻后全库统一，迁移 051 起历史元数据已转换）：
+//   · 库内一律「分」：金额列整数值（开发者历史库列亲和性可能仍为 REAL，
+//     但值已全部为分），含 wages 表金额列（daily_wage / bonus / deduction /
+//     actual_wage / paid_amount）与 project_workers.daily_wage
 //   · API 对外一律「元」：请求体接收元，响应返回元
-//   · 换算只允许发生在 ToFen（元→分）/ ToYuan（分→元）两个 helper 内，
-//     禁止在别处散写 ×100 / ÷100（含 SQL 表达式）
+//   · 换算只允许发生在 MoneyUnit.ToFen / MoneyUnit.ToYuan 单点内
+//     （本文件 helper 为其委托），禁止在别处散写 ×100 / ÷100（含 SQL 表达式）
 //   · work_days 是天数（REAL），不是金额，不参与换算
-//   · salary_history / wage_history 是独立表，本契约不覆盖（各自保持现状）
-//   · 新增端点若涉及 wages / project_workers 金额列，必须走 ToFen / ToYuan
+//   · salary_history / wage_history 同为分制（wage_history 由 051 带守卫修复）
+//   · 新增端点若涉及金额列，必须走 MoneyUnit.ToFen / ToYuan
 // ═══════════════════════════════════════════════════════════════
 
 namespace EngineeringManager.Api;
@@ -1064,8 +1064,9 @@ public static class WageEndpoints
             var scope = CurrentUser.GetDataScope(ctx);
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             // v1.1.0 P0-4 Phase 2: salary_history 鐜板湪鏈?created_by (migration 014)
-            return Common.Ok(db.Query($"SELECT * FROM salary_history WHERE member_id=@MemberId AND {CurrentUser.UserFilterCompany(scope)} ORDER BY effective_date DESC",
-                new { MemberId = memberId, Uid = uid, IsAdmin = isAdmin }));
+            // 金额列分→元（2026-09 分制契约）
+            return Common.Ok(MoneyUnit.ToYuanRows(db.Query($"SELECT * FROM salary_history WHERE member_id=@MemberId AND {CurrentUser.UserFilterCompany(scope)} ORDER BY effective_date DESC",
+                new { MemberId = memberId, Uid = uid, IsAdmin = isAdmin }), "base_salary", "subsidy"));
         });
 
         app.MapDelete("/api/salary-history/{id}", async (HttpContext ctx, long id, IDbConnection db) =>
@@ -1086,7 +1087,7 @@ public static class WageEndpoints
             var scope = CurrentUser.GetDataScope(ctx);
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO salary_history (member_id,effective_date,base_salary,subsidy,subsidy_note,note,created_by,created_at, last_modified_at) VALUES (@MemberId,@EffectiveDate,@BaseSalary,@Subsidy,@SubsidyNote,@Note,@CreatedBy,@Now, @Now);
                 SELECT last_insert_rowid();",
-                new { dto.MemberId, dto.EffectiveDate, dto.BaseSalary, dto.Subsidy, dto.SubsidyNote, dto.Note, CreatedBy = uid, Now = now() });
+                new { dto.MemberId, dto.EffectiveDate, BaseSalary = MoneyUnit.ToFen(dto.BaseSalary), Subsidy = MoneyUnit.ToFen(dto.Subsidy), dto.SubsidyNote, dto.Note, CreatedBy = uid, Now = now() });
             return Common.Ok(id);
         });
         app.MapGet("/api/salary-history/{memberId}/effective", (HttpContext ctx, long memberId, string yearMonth, IDbConnection db) =>
@@ -1095,10 +1096,17 @@ public static class WageEndpoints
             var scope = CurrentUser.GetDataScope(ctx);
             var isAdmin = CurrentUser.IsAdmin(ctx) ? 1 : 0;
             // v1.1.0 P0-4 Phase 2: salary_history 鐜板湪鏈?created_by
+            // 生效薪资取值：金额列分→元（2026-09 分制契约）
             var entry = db.QueryFirstOrDefault($@"SELECT * FROM salary_history
                 WHERE member_id=@MemberId AND effective_date<=@Cutoff AND {CurrentUser.UserFilterCompany(scope)}
                 ORDER BY effective_date DESC LIMIT 1",
                 new { MemberId = memberId, Cutoff = $"{yearMonth}-01", Uid = uid, IsAdmin = isAdmin });
+            if (entry != null)
+            {
+                var e = (IDictionary<string, object?>)entry;
+                e["base_salary"] = MoneyUnit.ToYuanFromDb(e.ContainsKey("base_salary") ? e["base_salary"] : null);
+                e["subsidy"] = MoneyUnit.ToYuanFromDb(e.ContainsKey("subsidy") ? e["subsidy"] : null);
+            }
             return Common.Ok(entry);
         });
 
@@ -1169,8 +1177,8 @@ public static class WageEndpoints
         });
     }
 
-    // 前端金额单位为元；表列为 INTEGER（分，迁移 003）→ ×100 转分
-    private static long ToFen(double yuan) => (long)Math.Round(yuan * 100);
+    // 前端金额单位为元；表列为分 → MoneyUnit 单点换算（委托，全项目唯一实现）
+    private static long ToFen(double yuan) => MoneyUnit.ToFen(yuan);
 
     // actualWage 缺省推算：任一推算字段缺失 → 显式 400（不许静默归零：
     // 曾因 ?? 0 兜底导致前端少传 bonus 时落库 actual_wage=0，显示「实发 0 元」）
@@ -1188,8 +1196,8 @@ public static class WageEndpoints
         return (true, dto.DailyWage!.Value * dto.WorkDays!.Value + dto.Bonus!.Value - dto.Deduction!.Value, null);
     }
 
-    // 分→元（API 响应侧，与 ToFen 配对；单位契约见文件头部）
-    private static decimal ToYuan(long fen) => fen / 100m;
+    // 分→元（API 响应侧，与 ToFen 配对；委托 MoneyUnit 单点）
+    private static decimal ToYuan(long fen) => MoneyUnit.ToYuanDecimal(fen);
     private static decimal ToYuan(decimal fen) => fen / 100m;
 
     // 批量查询行：把 wages 金额列（分）转成元后输出；work_days 为天数不转。

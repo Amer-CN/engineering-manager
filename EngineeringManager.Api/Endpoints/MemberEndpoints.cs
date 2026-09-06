@@ -33,7 +33,7 @@ public static class MemberEndpoints
             var masked = rows.Select(m => new
             {
                 id = m.id, name = m.name, member_type = m.member_type, role = m.role, gender = m.gender,
-                ethnicity = m.ethnicity, birth_date = m.birth_date, base_salary = m.base_salary, daily_wage = m.daily_wage,
+                ethnicity = m.ethnicity, birth_date = m.birth_date, base_salary = MoneyUnit.ToYuanFromDb(m.base_salary), daily_wage = MoneyUnit.ToYuanFromDb(m.daily_wage),
                 entry_date = m.entry_date, status = m.status, department_id = m.department_id, position = m.position,
                 department_name = m.department_name, created_at = m.created_at, updated_at = m.updated_at,
                 id_card = Common.MaskPiiField("idCard", m.id_card as string, piiAccess),
@@ -60,8 +60,11 @@ public static class MemberEndpoints
             result["id_card"] = Common.MaskPiiField("idCard", (string?)m.id_card, piiAccess);
             result["phone"] = Common.MaskPiiField("phone", (string?)m.phone, piiAccess);
             result["id_card_address"] = Common.MaskPiiField("idCardAddress", (string?)m.id_card_address, piiAccess);
-            result["bank_account"] = Common.MaskPiiField("bankAccount", (string?)m.bank_account, piiAccess);
-            return Common.Ok(result);
+                result["bank_account"] = Common.MaskPiiField("bankAccount", (string?)m.bank_account, piiAccess);
+                // 金额列分→元（2026-09 分制契约）
+                result["base_salary"] = MoneyUnit.ToYuanFromDb(result.ContainsKey("base_salary") ? result["base_salary"] : null);
+                result["daily_wage"] = MoneyUnit.ToYuanFromDb(result.ContainsKey("daily_wage") ? result["daily_wage"] : null);
+                return Common.Ok(result);
                         });
 
 app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection db) =>
@@ -79,7 +82,7 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
                 SELECT last_insert_rowid();",
                 new { dto.Name, dto.Phone, dto.Email, MemberType = dto.MemberType ?? "staff",
                       dto.Role, dto.IdCard, dto.Gender, dto.Ethnicity, dto.BirthDate, dto.IdCardAddress,
-                      dto.BaseSalary, dto.DailyWage, dto.EntryDate, Status = dto.Status ?? "active",
+                      BaseSalary = MoneyUnit.ToFen(dto.BaseSalary), DailyWage = MoneyUnit.ToFen(dto.DailyWage), dto.EntryDate, Status = dto.Status ?? "active",
                       dto.DepartmentId, dto.Position, CreatedBy = uid, Now = now(),
                       IdCardEnc = pii.Encrypt(dto.IdCard ?? ""), IdCardAddressEnc = pii.Encrypt(dto.IdCardAddress ?? ""),
                       PhoneEnc = pii.Encrypt(dto.Phone ?? ""), BankAccountEnc = pii.Encrypt("") });
@@ -101,8 +104,9 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
                 id_card_enc=@IdCardEnc,id_card_address_enc=@IdCardAddressEnc,phone_enc=@PhoneEnc,bank_account_enc=@BankAccountEnc, version=version+1, last_modified_at=@Now
                 WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
                 new { dto.Id, dto.Name, dto.Phone, dto.Email, dto.MemberType, dto.Role, dto.IdCard,
-                      Uid = uid, IsAdmin = isAdmin, dto.Gender, dto.Ethnicity, dto.BirthDate, dto.IdCardAddress, dto.BaseSalary,
-                      dto.DailyWage, dto.EntryDate, dto.Status, dto.DepartmentId, dto.Position,
+                      Uid = uid, IsAdmin = isAdmin, dto.Gender, dto.Ethnicity, dto.BirthDate, dto.IdCardAddress,
+                      BaseSalary = MoneyUnit.ToFen(dto.BaseSalary), DailyWage = MoneyUnit.ToFen(dto.DailyWage),
+                      dto.EntryDate, dto.Status, dto.DepartmentId, dto.Position,
                       IdCardEnc = pii.Encrypt(dto.IdCard ?? ""), IdCardAddressEnc = pii.Encrypt(dto.IdCardAddress ?? ""),
                       PhoneEnc = pii.Encrypt(dto.Phone ?? ""), BankAccountEnc = pii.Encrypt(""), Now = now() });
             return affected > 0 ? Common.Ok() : Results.Forbid();
@@ -133,7 +137,7 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
             var piiAccess = CurrentUser.GetPiiAccess(ctx);
             var masked = rows.Select(w => new
             {
-                id = w.id, name = w.name, gender = w.gender, worker_type = w.worker_type, daily_wage = w.daily_wage,
+                id = w.id, name = w.name, gender = w.gender, worker_type = w.worker_type, daily_wage = MoneyUnit.ToYuanFromDb(w.daily_wage),
                 address = Common.MaskPiiField("address", w.address as string, piiAccess),
                 created_at = w.created_at,
                 id_card = Common.MaskPiiField("idCard", w.id_card as string, piiAccess),
@@ -170,7 +174,7 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
                         @IdCardEnc,@PhoneEnc,@AddressEnc,@BankAccountEnc,@CreatedBy,@Now, @Now);
                 SELECT last_insert_rowid();",
                 new { dto.Name, dto.IdCard, dto.Gender, dto.Phone, dto.Address, dto.BankAccount,
-                      dto.BankName, dto.WorkerType, dto.DailyWage,
+                      dto.BankName, dto.WorkerType, DailyWage = MoneyUnit.ToFen(dto.DailyWage),
                       CurrentAddress = dto.CurrentAddress ?? "",
                       IdCardEnc = pii.Encrypt(dto.IdCard ?? ""), PhoneEnc = pii.Encrypt(dto.Phone ?? ""),
                       AddressEnc = pii.Encrypt(dto.Address ?? ""), BankAccountEnc = pii.Encrypt(dto.BankAccount ?? ""),
@@ -193,7 +197,7 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
                 id_card_enc=@IdCardEnc,phone_enc=@PhoneEnc,address_enc=@AddressEnc,bank_account_enc=@BankAccountEnc,current_address_enc=@CurrentAddressEnc, version=version+1, last_modified_at=@Now
                 WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
                 new { dto.Id, dto.Name, dto.IdCard, dto.Gender, dto.Phone, dto.Address, dto.BankAccount,
-                      dto.BankName, dto.WorkerType, dto.DailyWage, Uid = uid, IsAdmin = isAdmin,
+                      dto.BankName, dto.WorkerType, DailyWage = MoneyUnit.ToFen(dto.DailyWage), Uid = uid, IsAdmin = isAdmin,
                       CurrentAddress = dto.CurrentAddress ?? "",
                       IdCardEnc = pii.Encrypt(dto.IdCard ?? ""), PhoneEnc = pii.Encrypt(dto.Phone ?? ""),
                       AddressEnc = pii.Encrypt(dto.Address ?? ""), BankAccountEnc = pii.Encrypt(dto.BankAccount ?? ""),
@@ -237,7 +241,7 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
             var masked = rows.Select(pw => new
             {
                 id = pw.id, worker_id = pw.worker_id, project_id = pw.project_id, team_id = pw.team_id,
-                daily_wage = pw.daily_wage, worker_type = pw.worker_type, entry_date = pw.entry_date, status = pw.status,
+                daily_wage = MoneyUnit.ToYuanFromDb(pw.daily_wage), worker_type = pw.worker_type, entry_date = pw.entry_date, status = pw.status,
                 created_at = pw.created_at, updated_at = pw.updated_at,
                 worker_name = pw.worker_name, gender = pw.gender, address = Common.MaskPiiField("address", pw.address as string, piiAccess),
                 bank_name = pw.bank_name,
@@ -263,7 +267,7 @@ app.MapPost("/api/members", async (HttpContext ctx, MemberDto dto, IDbConnection
             // v1.2.0: project-workers 不直接存 PII (JOIN workers 表), 加密仍加 0 _enc 列
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO project_workers (worker_id,project_id,team_id,daily_wage,worker_type,entry_date,status,created_by,created_at, last_modified_at, contract_signer,contract_start,contract_end,safety_training,work_section,exit_date) VALUES (@WorkerId,@ProjectId,@TeamId,@DailyWage,@WorkerType,@EntryDate,@Status,@CreatedBy,@Now, @Now, @ContractSigner,@ContractStart,@ContractEnd,@SafetyTraining,@WorkSection,@ExitDate);
                 SELECT last_insert_rowid();",
-                new { dto.WorkerId, dto.ProjectId, dto.TeamId, dto.DailyWage, dto.WorkerType,
+                new { dto.WorkerId, dto.ProjectId, dto.TeamId, DailyWage = MoneyUnit.ToFen(dto.DailyWage), dto.WorkerType,
                       dto.EntryDate, Status = dto.Status ?? "active", CreatedBy = uid, Now = now(),
                       dto.ContractSigner, dto.ContractStart, dto.ContractEnd,
                       SafetyTraining = dto.SafetyTraining == true ? 1 : 0,

@@ -35,7 +35,7 @@ public static class InvoiceEndpoints
                         WHERE (i.created_by=@Uid OR @IsAdmin=1 OR EXISTS(SELECT 1 FROM project_authorizations WHERE project_id=i.project_id AND user_id=@Uid)) AND i.deleted_at IS NULL";
             if (projectId.HasValue) sql += " AND i.project_id=@ProjectId";
             sql += " ORDER BY i.created_at DESC";
-            return Common.Ok(db.Query(sql, new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }));
+            return Common.Ok(MoneyUnit.ToYuanRows(db.Query(sql, new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }), "amount", "price_amount", "tax_amount", "received_amount"));
         });
 
         app.MapPost("/api/invoices", async (HttpContext ctx, InvoiceDto dto, IDbConnection db) =>
@@ -48,7 +48,7 @@ public static class InvoiceEndpoints
                         @Amount,@PriceAmount,@TaxRate,@TaxAmount,@ReceivedAmount,@IssueDate,@Status,@Remarks,@FileUrl,@FileType,@CreatedBy,@Now,@Now, @Now);
                 SELECT last_insert_rowid();",
                 new { dto.ProjectId, dto.SellerId, dto.BuyerId, dto.ContractId, dto.SettlementId, dto.Type, dto.InvoiceKind, dto.InvoiceNo, dto.InvoiceCode,
-                      dto.Name, dto.Amount, dto.PriceAmount, dto.TaxRate, dto.TaxAmount, dto.ReceivedAmount, dto.IssueDate,
+                      dto.Name, Amount = MoneyUnit.ToFen(dto.Amount), PriceAmount = MoneyUnit.ToFen(dto.PriceAmount), dto.TaxRate, TaxAmount = MoneyUnit.ToFen(dto.TaxAmount), ReceivedAmount = MoneyUnit.ToFen(dto.ReceivedAmount), dto.IssueDate,
                       Status = dto.Status ?? "pending", dto.Remarks, dto.FileUrl, dto.FileType, CreatedBy = uid, Now = now() });
             // fire-and-forget: upsert 实体到知识库种子表
             var invCapturedId = id;
@@ -99,7 +99,7 @@ public static class InvoiceEndpoints
                 tax_rate=@TaxRate,tax_amount=@TaxAmount,received_amount=@ReceivedAmount,issue_date=@IssueDate,
                 status=@Status,remarks=@Remarks,file_url=@FileUrl,file_type=@FileType,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id",
                 new { dto.Id, dto.ProjectId, dto.SellerId, dto.BuyerId, dto.ContractId, dto.SettlementId, dto.Type, dto.InvoiceKind, dto.InvoiceNo,
-                      dto.InvoiceCode, dto.Name, dto.Amount, dto.PriceAmount, dto.TaxRate, dto.TaxAmount, dto.ReceivedAmount, dto.IssueDate,
+                      dto.InvoiceCode, dto.Name, Amount = MoneyUnit.ToFen(dto.Amount), PriceAmount = MoneyUnit.ToFen(dto.PriceAmount), dto.TaxRate, TaxAmount = MoneyUnit.ToFen(dto.TaxAmount), ReceivedAmount = MoneyUnit.ToFen(dto.ReceivedAmount), dto.IssueDate,
                       dto.Status, dto.Remarks, dto.FileUrl, dto.FileType, Now = now() }, tx);
             if (access == RowWriteOutcome.AllowedViaAuthorization)
             {
@@ -168,6 +168,9 @@ public static class InvoiceEndpoints
             foreach (var record in records)
             {
                 var dict = (IDictionary<string, object>)record;
+                // 金额列分→元（amount）；invoice_details JSON 豁免分制恒为元（契约见 MoneyUnit）
+                if (dict.TryGetValue("amount", out var amtObj) && amtObj != null && !(amtObj is DBNull))
+                    dict["amount"] = Convert.ToDouble(amtObj) / 100.0;
                 var invoiceDetailsStr = dict.ContainsKey("invoice_details") ? dict["invoice_details"]?.ToString() : "[]";
                 var invoiceInfos = new List<object>();
                 try
@@ -184,7 +187,7 @@ public static class InvoiceEndpoints
                             {
                                 invoiceId,
                                 invoiceNo = invoice?.invoice_no ?? "",
-                                invoiceAmount = invoice?.amount ?? 0,
+                                invoiceAmount = MoneyUnit.ToYuanFromDb(invoice?.amount),
                                 paymentAmount
                             });
                         }
@@ -213,7 +216,7 @@ public static class InvoiceEndpoints
                 SELECT last_insert_rowid();",
                 new {
                     Type = body.TryGetProperty("type", out var ty) ? ty.GetString() : null,
-                    Amount = body.TryGetProperty("amount", out var a) && a.ValueKind == System.Text.Json.JsonValueKind.Number ? (decimal?)a.GetDouble() : null,
+                    Amount = MoneyUnit.ToFen(body.TryGetProperty("amount", out var a) && a.ValueKind == System.Text.Json.JsonValueKind.Number ? (decimal?)a.GetDouble() : null),
                     RecordDate = body.TryGetProperty("recordDate", out var rd) ? rd.GetString() : null,
                     ProjectId = body.TryGetProperty("projectId", out var p) && p.ValueKind == System.Text.Json.JsonValueKind.Number ? (long?)p.GetInt64() : null,
                     PartnerId = body.TryGetProperty("partnerId", out var pi) && pi.ValueKind == System.Text.Json.JsonValueKind.Number ? (long?)pi.GetInt64() : null,
@@ -260,7 +263,7 @@ public static class InvoiceEndpoints
                 new { Now = now(),
                     Id = recordId,
                     Type = body.TryGetProperty("type", out var ty) ? ty.GetString() : null,
-                    Amount = body.TryGetProperty("amount", out var a) && a.ValueKind == System.Text.Json.JsonValueKind.Number ? (decimal?)a.GetDouble() : null,
+                    Amount = MoneyUnit.ToFen(body.TryGetProperty("amount", out var a) && a.ValueKind == System.Text.Json.JsonValueKind.Number ? (decimal?)a.GetDouble() : null),
                     RecordDate = body.TryGetProperty("recordDate", out var rd) ? rd.GetString() : null,
                     ProjectId = body.TryGetProperty("projectId", out var p) && p.ValueKind == System.Text.Json.JsonValueKind.Number ? (long?)p.GetInt64() : null,
                     PartnerId = body.TryGetProperty("partnerId", out var pi) && pi.ValueKind == System.Text.Json.JsonValueKind.Number ? (long?)pi.GetInt64() : null,

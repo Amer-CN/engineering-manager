@@ -568,6 +568,8 @@ stateDiagram-v2
 ### 增量迁移记录
 
 - **047_LedgerExcelBoundaryFields.sql（2026-09-02）**：attendances.manually_edited；project_workers 入库五项（contract_signer/contract_start/contract_end/safety_training/work_section）+ exit_date；workers.current_address + current_address_enc（PII 孪生列）；wages.paid_channel
+- **050_AddMissingIndexes.sql（2026-09-05）**：15 条 IF NOT EXISTS 索引——project_members(project_id)、audit_logs(created_at / user_id+created_at)、invoices(contract_id/seller_id/buyer_id)、payment_records(partner_id/contract_id)、settlements(partner_id/contract_id)、cost_ledger(batch_id/linked_invoice_id)、inventory_transactions(item_id)、attendances(member_id/project_worker_id)（审计 D-08/D-09/D-10）
+- **051_MoneyYuanToFen.sql（2026-09-06）**：金额分制贯彻——17 表 30 列历史元数据 ×100（ROUND 防丢分）；wages 带日薪 >5000 守卫（保护 v0.93+ ToFen 时代行）；app_meta 标记 money_unit=fen-051；JSON 块/税率/天数豁免；wage_history 不在列（休眠表）。此后全库金额列=分、API=元（契约见 MoneyUnit 与 CONVENTIONS 坑清单首条）
 
 ### 审计字段
 

@@ -128,8 +128,9 @@ export function useProjects() {
 
 ## 已踩坑清单（写入文档，勿再犯）
 
-- **单位换算的边界是「写入路径的集合」，不是「表或列的集合」**。判据：该列的所有写入路径是否已统一走换算（如 `project_workers.daily_wage` 写入侧仍元直通，则读出侧不得 ÷100；`wages` 写入侧已走 ToFen，读出侧才 ToYuan）。
-- **唯一没有测试覆盖的分支，就是唯一错的分支**。team-wages 的 `pw.daily_wage` 曾因「003 声明该列为分」而反向 ÷100（日薪 200 显示成 2），而 D-4/D-5 的测试恰好都没覆盖它。
+- **【2026-09 分制贯彻：历史单位撕裂已终结】**全库金额列=分（整数值）、API=元，换算只允许 `MoneyUnit.ToFen/ToYuan` 单点（`Services/MoneyUnit.cs`）；历史元数据由迁移 051 一次性 ×100（`ROUND` 防丢分——003 的 CAST 截断教训；wages/wage_history 带日薪 >5000 量级守卫，保护 v0.93+ ToFen 时代行不被二次转换；执行时序=启动早期、端点监听前，故不存在"新分制行被再 ×100"窗口）。**JSON 块（payment_records.invoice_details / settlements.items / files）为前端直读块，豁免分制恒为元**；税率/天数/数量列豁免。此前「规范声明分、22/23 模块元直通、仅 wages 走 ToFen」的双轨是报表 KPI 100 倍虚高与 team-wages 日薪 100 倍（下条）的共同根因。
+- **单位换算的边界是「写入路径的集合」，不是「表或列的集合」**。判据：该列的所有写入路径是否已统一走换算（如 `project_workers.daily_wage` 写入侧仍元直通，则读出侧不得 ÷100；`wages` 写入侧已走 ToFen，读出侧才 ToYuan）。**2026-09 起：所有金额列写入路径已统一走 MoneyUnit.ToFen，读出侧统一 ToYuan——此判据成为"新增端点必须走 MoneyUnit"的硬约束。**
+- **唯一没有测试覆盖的分支，就是唯一错的分支**。team-wages 的 `pw.daily_wage` 曾因「003 声明该列为分」而反向 ÷100（日薪 200 显示成 2），而 D-4/D-5 的测试恰好都没覆盖它。（2026-09 起双表同为分制，此矛盾消解。）
 - **校验必须直接 `return Results.BadRequest(...)`，不能抛异常**。`Program.cs:330` 的全局 `UseExceptionHandler` 会把一切未处理异常包成 500 + 通用消息「服务器内部错误」，异常里的 400 状态码与字段名全部丢失。
 - **`schema_versions` 表存的是嵌入资源全名**（如 `EngineeringManager.Api.Migrations.Scripts.003_MoneyRealToInteger.sql`），不是文件名；查迁移应用状态时按此匹配。
 - **Dapper dynamic + LEFT JOIN 未命中 = DBNull，不是 null，`?? 0` 兜不住**。`Convert.ToDouble(row.col)` 对 DBNull 抛 InvalidCastException → 500；`?? 0` 只在值是 null 时兜底。兜底必须在 SQL 侧 `COALESCE(col, 0)`（窗口 D generate 端点实测复现）。

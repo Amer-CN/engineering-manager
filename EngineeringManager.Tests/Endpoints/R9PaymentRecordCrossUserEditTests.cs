@@ -6,6 +6,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Xunit;
+using EngineeringManager.Api;
 
 namespace EngineeringManager.Tests.Endpoints;
 
@@ -137,7 +138,7 @@ public class R9PaymentRecordCrossUserEditTests : ApiTestBase
         var resp = await PutPaymentRecordAsync(recId, 800);
         // 目标态：授权项目跨人可改 → 200 且库值已改（500 → 800）
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
-        Assert.Equal(800.0, GetAmount(recId));
+        Assert.Equal(MoneyUnit.ToFen(800.0), GetAmount(recId));
         // 且 audit_logs 增一行（cross_user_edit、resource=payment_records、resource_id=该行、user_id=B）
         Assert.Equal(1L, CountAuditForPaymentRecord(recId, AccUid));
     }
@@ -166,7 +167,7 @@ public class R9PaymentRecordCrossUserEditTests : ApiTestBase
 
         var resp = await PutPaymentRecordAsync(recId, 800);
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
-        Assert.Equal(800.0, GetAmount(recId));    // 库值改写
+        Assert.Equal(MoneyUnit.ToFen(800.0), GetAmount(recId));    // 库值改写
         Assert.Equal(0L, CountAuditForPaymentRecord(recId, AccUid)); // 本人修改不落审计
     }
 
@@ -179,7 +180,7 @@ public class R9PaymentRecordCrossUserEditTests : ApiTestBase
 
         var resp = await PutPaymentRecordAsync(recId, 800);
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
-        Assert.Equal(800.0, GetAmount(recId));
+        Assert.Equal(MoneyUnit.ToFen(800.0), GetAmount(recId));
     }
 
     // ── Pin4：B + 双种子 PUT 不存在的 id → 404（WriteResult 语义钉住，不要预期 403）──

@@ -30,7 +30,7 @@ public static class ContractEndpoints
             var sql = $@"SELECT * FROM income_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope, "income_contracts.project_id")}";
             if (projectId.HasValue) sql += " AND project_id=@ProjectId";
             sql += " ORDER BY created_at DESC";
-            return Common.Ok(db.Query(sql, new { ProjectId = projectId, Uid = uid, IsAdmin = isAdmin }));
+            return Common.Ok(MoneyUnit.ToYuanRows(db.Query(sql, new { ProjectId = projectId, Uid = uid, IsAdmin = isAdmin }), "amount"));
         });
 
         app.MapGet("/api/contracts/expense", (HttpContext ctx, IDbConnection db, long? projectId) =>
@@ -42,7 +42,7 @@ public static class ContractEndpoints
             var sql = $@"SELECT * FROM expense_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope, "expense_contracts.project_id")}";
             if (projectId.HasValue) sql += " AND project_id=@ProjectId";
             sql += " ORDER BY created_at DESC";
-            return Common.Ok(db.Query(sql, new { ProjectId = projectId, Uid = uid, IsAdmin = isAdmin }));
+            return Common.Ok(MoneyUnit.ToYuanRows(db.Query(sql, new { ProjectId = projectId, Uid = uid, IsAdmin = isAdmin }), "amount"));
         });
 
         app.MapGet("/api/contracts/agreement", (HttpContext ctx, IDbConnection db, long? projectId) =>
@@ -54,7 +54,7 @@ public static class ContractEndpoints
             var sql = $@"SELECT * FROM agreement_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope, "agreement_contracts.project_id")}";
             if (projectId.HasValue) sql += " AND project_id=@ProjectId";
             sql += " ORDER BY created_at DESC";
-            return Common.Ok(db.Query(sql, new { ProjectId = projectId, Uid = uid, IsAdmin = isAdmin }));
+            return Common.Ok(MoneyUnit.ToYuanRows(db.Query(sql, new { ProjectId = projectId, Uid = uid, IsAdmin = isAdmin }), "amount"));
         });
 
         app.MapGet("/api/contracts/stats", (HttpContext ctx, IDbConnection db) =>
@@ -67,8 +67,8 @@ public static class ContractEndpoints
             {
                 incomeCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM income_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope, "income_contracts.project_id")}", new { Uid = uid, IsAdmin = isAdmin }),
                 expenseCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM expense_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope, "expense_contracts.project_id")}", new { Uid = uid, IsAdmin = isAdmin }),
-                incomeTotal = db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(amount),0) FROM income_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope, "income_contracts.project_id")}", new { Uid = uid, IsAdmin = isAdmin }),
-                expenseTotal = db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(amount),0) FROM expense_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope, "expense_contracts.project_id")}", new { Uid = uid, IsAdmin = isAdmin }),
+                incomeTotal = MoneyUnit.ToYuanFromDb(db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(amount),0) FROM income_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope, "income_contracts.project_id")}", new { Uid = uid, IsAdmin = isAdmin })),
+                expenseTotal = MoneyUnit.ToYuanFromDb(db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(amount),0) FROM expense_contracts WHERE {CurrentUser.UserFilterWithAuthorizedProjects(scope, "expense_contracts.project_id")}", new { Uid = uid, IsAdmin = isAdmin })),
             });
         });
 
@@ -88,7 +88,7 @@ public static class ContractEndpoints
                     PartnerId = body.TryGetProperty("partnerId", out var pp) ? (long?)pp.GetInt64() : null,
                     ContractNo = body.TryGetProperty("contractNo", out var c) ? c.GetString() : null,
                     Name = body.TryGetProperty("name", out var n) ? n.GetString() : null,
-                    Amount = body.TryGetProperty("amount", out var a) ? (decimal?)a.GetDouble() : null,
+                    Amount = MoneyUnit.ToFen(body.TryGetProperty("amount", out var a) ? (decimal?)a.GetDouble() : null),
                     SignedDate = body.TryGetProperty("signedDate", out var sd) ? sd.GetString() : null,
                     StartDate = body.TryGetProperty("startDate", out var sdt) ? sdt.GetString() : null,
                     EndDate = body.TryGetProperty("endDate", out var ed) ? ed.GetString() : null,
@@ -133,7 +133,7 @@ public static class ContractEndpoints
                     PartnerId = body.TryGetProperty("partnerId", out var pp) ? (long?)pp.GetInt64() : null,
                     ContractNo = body.TryGetProperty("contractNo", out var c) ? c.GetString() : null,
                     Name = body.TryGetProperty("name", out var n) ? n.GetString() : null,
-                    Amount = body.TryGetProperty("amount", out var a) ? (decimal?)a.GetDouble() : null,
+                    Amount = MoneyUnit.ToFen(body.TryGetProperty("amount", out var a) ? (decimal?)a.GetDouble() : null),
                     SignedDate = body.TryGetProperty("signedDate", out var sd) ? sd.GetString() : null,
                     StartDate = body.TryGetProperty("startDate", out var sdt) ? sdt.GetString() : null,
                     EndDate = body.TryGetProperty("endDate", out var ed) ? ed.GetString() : null,
@@ -178,7 +178,7 @@ public static class ContractEndpoints
                     PartnerId = body.TryGetProperty("partnerId", out var pp) ? (long?)pp.GetInt64() : null,
                     ContractNo = body.TryGetProperty("contractNo", out var c) ? c.GetString() : null,
                     Name = body.TryGetProperty("name", out var n) ? n.GetString() : null,
-                    Amount = body.TryGetProperty("amount", out var a) ? (decimal?)a.GetDouble() : null,
+                    Amount = MoneyUnit.ToFen(body.TryGetProperty("amount", out var a) ? (decimal?)a.GetDouble() : null),
                     SignedDate = body.TryGetProperty("signedDate", out var sd) ? sd.GetString() : null,
                     StartDate = body.TryGetProperty("startDate", out var sdt) ? sdt.GetString() : null,
                     EndDate = body.TryGetProperty("endDate", out var ed) ? ed.GetString() : null,
@@ -221,7 +221,7 @@ public static class ContractEndpoints
                 new { Now = now(),
                     Id = recordId,
                     Name = body.TryGetProperty("name", out var n) ? n.GetString() : null,
-                    Amount = body.TryGetProperty("amount", out var a) ? (decimal?)a.GetDouble() : null,
+                    Amount = MoneyUnit.ToFen(body.TryGetProperty("amount", out var a) ? (decimal?)a.GetDouble() : null),
                     Status = body.TryGetProperty("status", out var st) ? st.GetString() : null,
                     Remarks = body.TryGetProperty("remarks", out var rm) ? rm.GetString() : null
                 }, tx);
@@ -287,7 +287,7 @@ public static class ContractEndpoints
                 new { Now = now(),
                     Id = recordId,
                     Name = body.TryGetProperty("name", out var n) ? n.GetString() : null,
-                    Amount = body.TryGetProperty("amount", out var a) ? (decimal?)a.GetDouble() : null,
+                    Amount = MoneyUnit.ToFen(body.TryGetProperty("amount", out var a) ? (decimal?)a.GetDouble() : null),
                     Status = body.TryGetProperty("status", out var st) ? st.GetString() : null,
                     Remarks = body.TryGetProperty("remarks", out var rm) ? rm.GetString() : null
                 }, tx);
@@ -353,7 +353,7 @@ public static class ContractEndpoints
                 new { Now = now(),
                     Id = recordId,
                     Name = body.TryGetProperty("name", out var n) ? n.GetString() : null,
-                    Amount = body.TryGetProperty("amount", out var a) ? (decimal?)a.GetDouble() : null,
+                    Amount = MoneyUnit.ToFen(body.TryGetProperty("amount", out var a) ? (decimal?)a.GetDouble() : null),
                     Status = body.TryGetProperty("status", out var st) ? st.GetString() : null,
                     Remarks = body.TryGetProperty("remarks", out var rm) ? rm.GetString() : null
                 }, tx);
@@ -457,7 +457,8 @@ public static class ContractEndpoints
                         WHERE (s.created_by=@Uid OR @IsAdmin=1 OR EXISTS(SELECT 1 FROM project_authorizations WHERE project_id=s.project_id AND user_id=@Uid)) AND s.deleted_at IS NULL";
             if (projectId.HasValue) sql += " AND s.project_id=@ProjectId";
             sql += " ORDER BY s.created_at DESC";
-            return Common.Ok(db.Query(sql, new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }));
+            // items JSON 为前端直读块，豁免分制恒为元（契约见 MoneyUnit）；amount 列分→元
+            return Common.Ok(MoneyUnit.ToYuanRows(db.Query(sql, new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }), "amount"));
         });
 
         app.MapPost("/api/settlements", async (HttpContext ctx, IDbConnection db) =>
@@ -479,7 +480,7 @@ public static class ContractEndpoints
                     SubType = body.TryGetProperty("subType", out var sub) ? sub.GetString() : null,
                     SettlementNo = body.TryGetProperty("settlementNo", out var sn) ? sn.GetString() : null,
                     Name = body.TryGetProperty("name", out var n) ? n.GetString() : null,
-                    Amount = body.TryGetProperty("amount", out var a) && a.ValueKind == System.Text.Json.JsonValueKind.Number ? (decimal?)a.GetDouble() : null,
+                    Amount = MoneyUnit.ToFen(body.TryGetProperty("amount", out var a) && a.ValueKind == System.Text.Json.JsonValueKind.Number ? (decimal?)a.GetDouble() : null),
                     SettlementDate = body.TryGetProperty("settlementDate", out var sd) ? sd.GetString() : null,
                     Remarks = body.TryGetProperty("remarks", out var rm) ? rm.GetString() : null,
                     Items = body.TryGetProperty("items", out var it) ? it.GetRawText() : "[]",
@@ -541,7 +542,7 @@ public static class ContractEndpoints
                     Id = recordId,
                     Name = body.TryGetProperty("name", out var n) ? n.GetString() : null,
                     SubType = body.TryGetProperty("subType", out var sub) ? sub.GetString() : null,
-                    Amount = body.TryGetProperty("amount", out var a) && a.ValueKind == System.Text.Json.JsonValueKind.Number ? (decimal?)a.GetDouble() : null,
+                    Amount = MoneyUnit.ToFen(body.TryGetProperty("amount", out var a) && a.ValueKind == System.Text.Json.JsonValueKind.Number ? (decimal?)a.GetDouble() : null),
                     SettlementDate = body.TryGetProperty("settlementDate", out var sd) ? sd.GetString() : null,
                     Remarks = body.TryGetProperty("remarks", out var rm) ? rm.GetString() : null,
                     Items = body.TryGetProperty("items", out var it) ? it.GetRawText() : "[]",

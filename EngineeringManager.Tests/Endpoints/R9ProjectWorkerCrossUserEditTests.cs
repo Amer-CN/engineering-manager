@@ -116,7 +116,7 @@ public class R9ProjectWorkerCrossUserEditTests : ApiTestBase
         var rowId = SeedProjectWorker(AdminUid, 30000);
         SetAuth(await LoginAsync(B4Uid));
 
-        var resp = await PutWorkerAsync(rowId, 35000);
+        var resp = await PutWorkerAsync(rowId, 350);
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
         Assert.Equal(35000L, GetDailyWage(rowId));
         Assert.Equal(1L, CountAudit(rowId, B4Uid));
@@ -129,7 +129,7 @@ public class R9ProjectWorkerCrossUserEditTests : ApiTestBase
         var rowId = SeedProjectWorker(AdminUid, 30000);
         SetAuth(await LoginAsync(B4Uid));
 
-        var resp = await PutWorkerAsync(rowId, 35000);
+        var resp = await PutWorkerAsync(rowId, 350);
         Assert.Equal(HttpStatusCode.Forbidden, resp.StatusCode);
         Assert.Equal(30000L, GetDailyWage(rowId));
         Assert.Equal(0L, CountAudit(rowId, B4Uid));
@@ -142,7 +142,7 @@ public class R9ProjectWorkerCrossUserEditTests : ApiTestBase
         var rowId = SeedProjectWorker(B4Uid, 30000);
         SetAuth(await LoginAsync(B4Uid));
 
-        var resp = await PutWorkerAsync(rowId, 35000);
+        var resp = await PutWorkerAsync(rowId, 350);
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
         Assert.Equal(35000L, GetDailyWage(rowId));
         Assert.Equal(0L, CountAudit(rowId, B4Uid));
@@ -154,7 +154,7 @@ public class R9ProjectWorkerCrossUserEditTests : ApiTestBase
         var rowId = SeedProjectWorker(AdminUid, 30000);
         SetAuth(await LoginAsync("admin"));
 
-        var resp = await PutWorkerAsync(rowId, 35000);
+        var resp = await PutWorkerAsync(rowId, 350);
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
         Assert.Equal(35000L, GetDailyWage(rowId));
     }
@@ -180,7 +180,7 @@ public class R9ProjectWorkerCrossUserEditTests : ApiTestBase
         var rowId = SeedProjectWorker(AdminUid, 30000);
         SetAuth(await LoginAsync(B4Uid));
 
-        var resp = await PutWorkerAsync(rowId, 35000);
+        var resp = await PutWorkerAsync(rowId, 350);
         Assert.Equal(HttpStatusCode.Forbidden, resp.StatusCode);
         Assert.Equal(30000L, GetDailyWage(rowId));
         Assert.Equal(0L, CountAudit(rowId, B4Uid));
