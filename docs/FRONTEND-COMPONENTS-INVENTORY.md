@@ -171,13 +171,14 @@ src/components/
 | univerEngine | Univer 引擎集成 |
 | importComponents/ | 导入子组件 |
 
-### 仪表盘（3 个）
+### 仪表盘（2 个非组件文件）
 
-| 组件 | 说明 |
+> 原有 DashboardCharts / DashboardStatsCard / CountUp 组件家族已于 #123 删除（AI 首页改版后零引用死代码）。目录现存两个非组件文件：
+
+| 文件 | 说明 |
 |------|------|
-| DashboardCharts | 图表 |
-| DashboardStatsCard | 统计卡片 |
-| CountUp | 数字滚动 |
+| dashboardColors.ts | 图表配色常量（ReportCharts 等在用） |
+| dashboardConstants.ts | 图表文案常量（ReportCharts 等在用） |
 
 ### 图纸管理（3 个）
 
