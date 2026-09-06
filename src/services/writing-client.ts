@@ -36,6 +36,8 @@ export interface WritingDoc {
   sourceType: string
   sourceRef: string | null
   contentMd: string
+  /** 样式载体（editor.getHTML() 双写）；空串/缺失 = 无样式，前端回退 markdown 渲染 */
+  contentHtml?: string
   folderId: number | null
   createdBy: string
   createdAt: string
@@ -109,8 +111,8 @@ export function createWritingDoc(body: {
   return apiClient.post<{ id: number; createdAt: string }>('/api/writing/documents', body)
 }
 
-/** 保存编辑 */
-export function updateWritingDoc(id: number, body: { title?: string; contentMd?: string; projectId?: number }): Promise<{
+/** 保存编辑（contentHtml 可选：编辑器双写传 getHTML()，老调用不传不影响） */
+export function updateWritingDoc(id: number, body: { title?: string; contentMd?: string; contentHtml?: string; projectId?: number }): Promise<{
   success: boolean
   data?: unknown
   error?: string
@@ -132,6 +134,7 @@ export interface WritingVersion {
   id: number
   title: string
   contentMd: string
+  contentHtml?: string
   createdBy: string
   createdAt: string
 }
@@ -159,8 +162,8 @@ export function fetchWritingVersions(
 export function restoreWritingVersion(
   docId: number,
   versionId: number,
-): Promise<{ success: boolean; data?: { title: string; contentMd: string }; error?: string }> {
-  return apiClient.post<{ title: string; contentMd: string }>(
+): Promise<{ success: boolean; data?: { title: string; contentMd: string; contentHtml?: string }; error?: string }> {
+  return apiClient.post<{ title: string; contentMd: string; contentHtml?: string }>(
     `/api/writing/documents/${docId}/versions/${versionId}/restore`,
     {},
   )
