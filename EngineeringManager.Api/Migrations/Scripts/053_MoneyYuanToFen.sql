@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════
--- 051_MoneyYuanToFen — 金额分制贯彻：历史元数据一次性 ×100 转换
+-- 053_MoneyYuanToFen — 金额分制贯彻：历史元数据一次性 ×100 转换
 --
 -- 契约终点（2026-09 用户拍板）：全库金额列 = 分（整数值），API = 元，
 -- 换算只允许 MoneyUnit.ToFen / ToYuan 单点。本迁移执行时（启动早期、
@@ -69,5 +69,5 @@ UPDATE [salary_history] SET [base_salary] = CAST(ROUND([base_salary] * 100) AS I
 UPDATE [wages] SET [daily_wage] = CAST(ROUND([daily_wage] * 100) AS INTEGER), [bonus] = CAST(ROUND([bonus] * 100) AS INTEGER), [deduction] = CAST(ROUND([deduction] * 100) AS INTEGER), [actual_wage] = CAST(ROUND([actual_wage] * 100) AS INTEGER), [paid_amount] = CAST(ROUND([paid_amount] * 100) AS INTEGER) WHERE [daily_wage] IS NULL OR [daily_wage] <= 5000;
 
 -- 标记（审计追踪：确认转换已执行及时间）
-INSERT OR REPLACE INTO [app_meta] ([key], [value]) VALUES ('money_unit', 'fen-051');
+INSERT OR REPLACE INTO [app_meta] ([key], [value]) VALUES ('money_unit', 'fen-053');
 INSERT OR REPLACE INTO [app_meta] ([key], [value]) VALUES ('money_unit_converted_at', datetime('now', 'localtime'));
