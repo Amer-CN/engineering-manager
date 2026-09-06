@@ -22,7 +22,7 @@ public class MoneyYuanToFenMigrationTests : IDisposable
 
     public MoneyYuanToFenMigrationTests()
     {
-        _dbPath = Path.Combine(Path.GetTempPath(), $"money-fen-051-{Guid.NewGuid()}.db");
+        _dbPath = Path.Combine(Path.GetTempPath(), $"money-fen-053-{Guid.NewGuid()}.db");
         _connStr = $"Data Source={_dbPath};Pooling=False";
     }
 
@@ -36,7 +36,7 @@ public class MoneyYuanToFenMigrationTests : IDisposable
     {
         // 先建一个"051 之前"的库：跑 001-050，再手动把金额列写回元制值
         // （模拟开发者历史库：迁移账本回填、数据从未真正 ×100 的状态）
-        MigrationRunner.Run(_connStr, stopBeforeScriptName: "051_MoneyYuanToFen.sql");
+        MigrationRunner.Run(_connStr, stopBeforeScriptName: "053_MoneyYuanToFen.sql");
 
         using (var conn = new SqliteConnection(_connStr))
         {
@@ -78,13 +78,13 @@ public class MoneyYuanToFenMigrationTests : IDisposable
 
         // app_meta 标记
         var marker = check.ExecuteScalar<string>("SELECT [value] FROM [app_meta] WHERE [key]='money_unit'");
-        Assert.Equal("fen-051", marker);
+        Assert.Equal("fen-053", marker);
     }
 
     [Fact]
     public void RunTwice_GuardedRows_NotDoubleConverted()
     {
-        MigrationRunner.Run(_connStr, stopBeforeScriptName: "051_MoneyYuanToFen.sql");
+        MigrationRunner.Run(_connStr, stopBeforeScriptName: "053_MoneyYuanToFen.sql");
         using (var conn = new SqliteConnection(_connStr))
         {
             conn.Open();
@@ -103,7 +103,7 @@ public class MoneyYuanToFenMigrationTests : IDisposable
     [Fact]
     public void CostLedger_And_OtherTables_Converted()
     {
-        MigrationRunner.Run(_connStr, stopBeforeScriptName: "051_MoneyYuanToFen.sql");
+        MigrationRunner.Run(_connStr, stopBeforeScriptName: "053_MoneyYuanToFen.sql");
         using (var conn = new SqliteConnection(_connStr))
         {
             conn.Open();
@@ -132,8 +132,8 @@ public class MoneyYuanToFenMigrationTests : IDisposable
         using var check = new SqliteConnection(_connStr);
         check.Open();
         var marker = check.ExecuteScalar<string>("SELECT [value] FROM [app_meta] WHERE [key]='money_unit'");
-        Assert.Equal("fen-051", marker);
-        var applied = check.ExecuteScalar<int>("SELECT COUNT(*) FROM [schema_versions] WHERE [script_name] LIKE '%051%'");
+        Assert.Equal("fen-053", marker);
+        var applied = check.ExecuteScalar<int>("SELECT COUNT(*) FROM [schema_versions] WHERE [script_name] LIKE '%053%'");
         Assert.Equal(1, applied);
     }
 }
