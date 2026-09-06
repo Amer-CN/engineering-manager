@@ -10,6 +10,9 @@ public record ProviderModelEntry
     public string Id { get; init; } = "";
     public List<string> Input { get; init; } = new() { "text" };
     public List<string> Output { get; init; } = new() { "text" };
+
+    /// <summary>上下文长度（tokens 数；null = 未标注，旧数据自动兼容）</summary>
+    public long? ContextWindow { get; init; }
 }
 
 /// <summary>

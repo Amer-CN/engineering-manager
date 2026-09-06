@@ -76,6 +76,22 @@ export function ProviderSettingsForm({
 }
 
 /**
+ * 上下文长度徽章文案（就地格式化）：≥1M → xM/x.xM，≥1000 → xK/x.xK，<1000 原样。
+ * 与图/视能力徽章同风格，只作短标签展示，未标注不渲染。
+ */
+function formatContextBadge(tokens: number): string {
+  if (tokens >= 1_000_000) {
+    const v = tokens / 1_000_000
+    return `${Number.isInteger(v) ? v : parseFloat(v.toFixed(1))}M`
+  }
+  if (tokens >= 1000) {
+    const v = tokens / 1000
+    return `${Number.isInteger(v) ? v : parseFloat(v.toFixed(1))}K`
+  }
+  return String(tokens)
+}
+
+/**
  * detail 态区块二：模型管理列表（多选 checkbox + 批量删 + 添加/设默认/编辑/单删）
  * 单删与批量删均免确认直接删（删服务商才保留确认）
  */
@@ -139,6 +155,9 @@ export function ProviderModelList({
                 <span className="text-sm truncate text-foreground">{m.id}</span>
                 {m.input.includes('image') && <CapBadge label="图" title="支持图片输入" />}
                 {m.input.includes('video') && <CapBadge label="视" title="支持视频输入" />}
+                {m.contextWindow != null && (
+                  <CapBadge label={formatContextBadge(m.contextWindow)} title={`上下文长度 ${m.contextWindow} tokens`} />
+                )}
                 {isDefault && (
                   <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-micro font-medium bg-[color:var(--success-soft)] text-primary">
                     默认

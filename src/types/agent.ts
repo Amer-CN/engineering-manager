@@ -104,6 +104,8 @@ export interface ProviderModelEntry {
   id: string
   input: string[]
   output: string[]
+  /** 上下文长度（tokens 数；null/缺失 = 未标注，旧数据自动兼容） */
+  contextWindow?: number | null
 }
 
 /**

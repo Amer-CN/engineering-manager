@@ -129,3 +129,89 @@ describe('协议三选一 + Agnes 隐藏', () => {
     expect(isAgnes('gmi')).toBe(false)
   })
 })
+
+describe('AiProviderSection — 模型上下文长度（对齐 ZCode）', () => {
+  /** 单服务商配置基底：详情态测试共用（每次调用产新对象，防跨测试串改） */
+  const baseCtxCfg = () => ({
+    useBuiltIn: false, providerName: 'Custom', baseUrl: 'https://api.example.com/v1',
+    model: 'my-model', hasApiKey: false, temperature: 0.7, maxTokens: 4096,
+    activeProviderId: 'p1',
+    providers: [
+      { id: 'p1', name: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1', models: [], activeModelId: '' },
+    ],
+  })
+
+  beforeEach(() => {
+    mockGetConfig.mockReset()
+    mockGetConfig.mockResolvedValue(baseCtxCfg())
+  })
+
+  test('添加模型填上下文长度 1M → 保存链路收到 contextWindow=1000000', async () => {
+    render(<AiProviderSection />)
+    fireEvent.click(await screen.findByText('管理'))
+    fireEvent.click(await screen.findByText('添加模型'))
+    fireEvent.change(screen.getByPlaceholderText('如 deepseek-chat / glm-5.3'), { target: { value: 'glm-5.3' } })
+    fireEvent.change(screen.getByPlaceholderText('如 200K / 1M / 256000'), { target: { value: '1M' } })
+    fireEvent.click(screen.getByText('保存模型'))
+    await waitFor(() => expect(saveLlmProviderConfig).toHaveBeenCalled())
+    const payload = (saveLlmProviderConfig as any).mock.calls.at(-1)[0]
+    const saved = payload.providers.find((p: any) => p.id === 'p1').models.find((m: any) => m.id === 'glm-5.3')
+    expect(saved.contextWindow).toBe(1000000)
+  })
+
+  test('简写解析边界：200K → 200000', async () => {
+    render(<AiProviderSection />)
+    fireEvent.click(await screen.findByText('管理'))
+    fireEvent.click(await screen.findByText('添加模型'))
+    fireEvent.change(screen.getByPlaceholderText('如 deepseek-chat / glm-5.3'), { target: { value: 'model-a' } })
+    fireEvent.change(screen.getByPlaceholderText('如 200K / 1M / 256000'), { target: { value: '200K' } })
+    fireEvent.click(screen.getByText('保存模型'))
+    await waitFor(() => expect(saveLlmProviderConfig).toHaveBeenCalled())
+    const payload = (saveLlmProviderConfig as any).mock.calls.at(-1)[0]
+    const saved = payload.providers.find((p: any) => p.id === 'p1').models.find((m: any) => m.id === 'model-a')
+    expect(saved.contextWindow).toBe(200000)
+  })
+
+  test('简写解析边界：小写单位 25k → 25000', async () => {
+    render(<AiProviderSection />)
+    fireEvent.click(await screen.findByText('管理'))
+    fireEvent.click(await screen.findByText('添加模型'))
+    fireEvent.change(screen.getByPlaceholderText('如 deepseek-chat / glm-5.3'), { target: { value: 'model-b' } })
+    fireEvent.change(screen.getByPlaceholderText('如 200K / 1M / 256000'), { target: { value: '25k' } })
+    fireEvent.click(screen.getByText('保存模型'))
+    await waitFor(() => expect(saveLlmProviderConfig).toHaveBeenCalled())
+    const payload = (saveLlmProviderConfig as any).mock.calls.at(-1)[0]
+    const saved = payload.providers.find((p: any) => p.id === 'p1').models.find((m: any) => m.id === 'model-b')
+    expect(saved.contextWindow).toBe(25000)
+  })
+
+  test('非法输入（abc）→ 弹警告「上下文长度格式无效」且不保存、弹窗不关闭', async () => {
+    render(<AiProviderSection />)
+    fireEvent.click(await screen.findByText('管理'))
+    fireEvent.click(await screen.findByText('添加模型'))
+    fireEvent.change(screen.getByPlaceholderText('如 deepseek-chat / glm-5.3'), { target: { value: 'model-bad' } })
+    fireEvent.change(screen.getByPlaceholderText('如 200K / 1M / 256000'), { target: { value: 'abc' } })
+    const callsBefore = (saveLlmProviderConfig as any).mock.calls.length
+    fireEvent.click(screen.getByText('保存模型'))
+    await waitFor(() =>
+      expect(useToastStore.getState().toasts.some(t => t.message.includes('上下文长度格式无效'))).toBe(true),
+    )
+    // 弹窗保持打开（保存按钮仍在），保存链路未被触发
+    expect(screen.getByText('保存模型')).toBeTruthy()
+    expect((saveLlmProviderConfig as any).mock.calls.length).toBe(callsBefore)
+  })
+
+  test('模型列表徽章：contextWindow=200000 的模型行显示 200K', async () => {
+    mockGetConfig.mockResolvedValue({
+      ...baseCtxCfg(),
+      providers: [{
+        id: 'p1', name: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1', activeModelId: 'm-ctx',
+        models: [{ id: 'm-ctx', input: ['text'], output: ['text'], contextWindow: 200000 }],
+      }],
+    })
+    render(<AiProviderSection />)
+    fireEvent.click(await screen.findByText('管理'))
+    await waitFor(() => expect(screen.getByText('m-ctx')).toBeTruthy())
+    expect(screen.getByText('200K')).toBeTruthy()
+  })
+})
