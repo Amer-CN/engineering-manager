@@ -15,6 +15,20 @@ public class SttWorker : IHostedService, IDisposable
     private static readonly object _runLock = new();
     private static bool _isRunning = false;
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(5);
+    // F4(审计): 在途任务的取消令牌登记——取消端点在改库状态之外同时触发真实取消（引擎/预处理收到令牌即中止）
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<long, CancellationTokenSource> _activeJobs = new();
+
+    /// <summary>触发在途任务的真实取消；任务不在途（已写回/未开始）时返回 false，仅库内状态生效。</summary>
+    internal static bool TryCancel(long jobId)
+    {
+        if (_activeJobs.TryRemove(jobId, out var cts))
+        {
+            cts.Cancel();
+            cts.Dispose();
+            return true;
+        }
+        return false;
+    }
 
     public SttWorker(IServiceProvider services, ILogger<SttWorker>? logger = null)
     {
@@ -109,11 +123,18 @@ public class SttWorker : IHostedService, IDisposable
         var db = scope.ServiceProvider.GetRequiredService<IDbConnection>();
         var now = () => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
+        CancellationTokenSource? jobCts = null;
         try
         {
-            // 标记为 processing
-            db.Execute("UPDATE stt_jobs SET status = 'processing', updated_at = @Now WHERE id = @Id",
+            // 标记为 processing——带 pending 守卫：取消端点已把 pending→cancelled 时不再占用 worker（F4）
+            var claimed = db.Execute(
+                "UPDATE stt_jobs SET status = 'processing', updated_at = @Now WHERE id = @Id AND status = 'pending'",
                 new { Now = now(), job.Id });
+            if (claimed == 0) return;
+
+            jobCts = new CancellationTokenSource();
+            _activeJobs[job.Id] = jobCts;
+            var ct = jobCts.Token;
 
             // 检查环境
             if (!SttEngineSelector.CanUseLocalStt())
@@ -134,7 +155,7 @@ public class SttWorker : IHostedService, IDisposable
                     throw new FileNotFoundException($"音频文件不存在: {job.Source_Path}");
             }
 
-            var processedWav = await AudioPreprocessor.PreprocessAsync(sourcePath, ct: default);
+            var processedWav = await AudioPreprocessor.PreprocessAsync(sourcePath, ct: ct);
             var duration = await AudioPreprocessor.GetDurationAsync(processedWav);
             db.Execute("UPDATE stt_jobs SET duration_sec = @Dur, updated_at = @Now WHERE id = @Id",
                 new { Dur = duration, Now = now(), job.Id });
@@ -153,7 +174,7 @@ public class SttWorker : IHostedService, IDisposable
                 var segments = await diarization.DiarizeAsync(
                     processedWav,
                     job.Num_Speakers,
-                    ct: default);
+                    ct: ct);
 
                 if (segments.Count == 0)
                     throw new Exception("说话人分离未检测到任何语音段");
@@ -169,7 +190,7 @@ public class SttWorker : IHostedService, IDisposable
                 var sw = System.Diagnostics.Stopwatch.StartNew();
 
                 var wavPaths = splitFiles.Select(s => s.wavPath).ToList();
-                var texts = await engine.TranscribeBatchAsync(wavPaths, job.Hotwords, default);
+                var texts = await engine.TranscribeBatchAsync(wavPaths, job.Hotwords, ct);
 
                 sw.Stop();
                 Console.WriteLine($"[SttWorker] 批量转写 {splitFiles.Count} 段完成，耗时 {sw.Elapsed.TotalSeconds:F1}s");
@@ -208,7 +229,7 @@ public class SttWorker : IHostedService, IDisposable
             {
                 // 单人：直接转写，跳过分离
                 UpdateProgress(db, job.Id, 10, "转写中...");
-                result = await engine.TranscribeAsync(processedWav, job.Hotwords, null, default);
+                result = await engine.TranscribeAsync(processedWav, job.Hotwords, null, ct);
                 result.DurationSec = duration;
 
                 // 单人：segments 只有一段，Speaker = 1（归一化后 1-based）
@@ -229,13 +250,14 @@ public class SttWorker : IHostedService, IDisposable
             var resultJson = System.Text.Json.JsonSerializer.Serialize(
                 result.Segments.Select(s => new { speaker = s.Speaker, start = s.Start, end = s.End, text = s.Text }));
 
-            db.Execute(@"
+            // F4: 写回带 processing 守卫——转写期间被取消的任务不得覆盖回 completed（原取消是幻觉）
+            var written = db.Execute(@"
                 UPDATE stt_jobs SET
                     status = 'completed', progress = 100,
                     result_text = @Text, result_json = @Json,
                     elapsed_sec = @Elapsed, error = NULL,
                     updated_at = @Now
-                WHERE id = @Id",
+                WHERE id = @Id AND status = 'processing'",
                 new
                 {
                     Text = result.Text,
@@ -244,6 +266,8 @@ public class SttWorker : IHostedService, IDisposable
                     Now = now(),
                     job.Id,
                 });
+            if (written == 0)
+                _logger?.LogInformation("[SttWorker] Job {Id} 在写回前已被取消，保留 cancelled 状态", job.Id);
 
             _logger?.LogInformation("[SttWorker] Job {Id} 完成: {Chars} 字, {Duration:F1}s 音频",
                 job.Id, result.Text.Length, duration);
@@ -258,6 +282,10 @@ public class SttWorker : IHostedService, IDisposable
             Console.Error.WriteLine($"[SttWorker] Job {job.Id} 失败: {ex.Message}");
             db.Execute("UPDATE stt_jobs SET status = 'failed', error = @Err, updated_at = @Now WHERE id = @Id",
                 new { Err = Common.Sanitize(ex.Message), Now = now(), job.Id });
+        }
+        finally
+        {
+            if (jobCts != null) { _activeJobs.TryRemove(job.Id, out _); jobCts.Dispose(); }
         }
     }
 

@@ -28,7 +28,7 @@ public static class ProjectEndpoints
                 var invoicesCount = db.ExecuteScalar<int>("SELECT COUNT(*) FROM invoices");
                 var settlementsCount = db.ExecuteScalar<int>("SELECT COUNT(*) FROM settlements");
                 var inProgressProjects = db.ExecuteScalar<int>("SELECT COUNT(*) FROM projects WHERE status='active'");
-                var totalExpenses = db.ExecuteScalar<double>("SELECT COALESCE(SUM(amount), 0) FROM cost_ledger WHERE direction='expense'");
+                var totalExpenses = MoneyUnit.ToYuanFromDb(db.ExecuteScalar<double>("SELECT COALESCE(SUM(amount), 0) FROM cost_ledger WHERE direction='expense'"));
                 var inventoryItemsCount = db.ExecuteScalar<int>("SELECT COUNT(*) FROM inventory_items");
 
                 // 最近项目
@@ -44,7 +44,7 @@ public static class ProjectEndpoints
                         WHERE cl.direction = 'expense'
                         GROUP BY cl.category
                         ORDER BY amount DESC
-                    ").ToDictionary(r => (string)r.name, r => (double)r.amount);
+                    ").ToDictionary(r => (string)r.name, r => (double)r.amount / 100.0);
                 }
                 catch (Exception ex)
                 {
@@ -82,11 +82,12 @@ public static class ProjectEndpoints
             // v1.1.0 P0-4 Phase 2: 项目级表过滤 (UserFilterWithAuthorizedProjects + p.created_by 表别名)
             // projects 表主键是 id (不是 project_id), project_authorizations.project_id 引用 projects.id
             var filter = CurrentUser.UserFilterWithAuthorizedProjects(scope, "p.id", "p.created_by");
-            return Common.Ok(db.Query($@"SELECT p.*, m.name as project_manager_name FROM projects p
+            // projects.budget 库内为分（2026-09 契约），MoneyUnit 单点换算输出元
+            return Common.Ok(MoneyUnit.ToYuanRows(db.Query($@"SELECT p.*, m.name as project_manager_name FROM projects p
                           LEFT JOIN members m ON p.project_manager_id=m.id
                           WHERE {filter}
                           ORDER BY p.created_at DESC",
-                          new { Uid = uid, IsAdmin = isAdmin }));
+                          new { Uid = uid, IsAdmin = isAdmin }), "budget"));
         });
 
         app.MapGet("/api/projects/{id}", (HttpContext ctx, long id, IDbConnection db) =>
@@ -100,7 +101,12 @@ public static class ProjectEndpoints
                 LEFT JOIN members m ON p.project_manager_id=m.id
                 WHERE p.id=@Id AND ({filter})",
                 new { Id = id, Uid = uid, IsAdmin = isAdmin });
-            return p is not null ? Common.Ok(p) : Common.NotFound("项目不存在");
+            if (p is null) return Common.NotFound("项目不存在");
+            // projects.budget 库内为分（2026-09 契约），MoneyUnit 单点换算输出元（NULL 安全）
+            var row = (IDictionary<string, object?>)p;
+            if (row.TryGetValue("budget", out var budget) && budget is not null && budget is not DBNull)
+                row["budget"] = Convert.ToDouble(budget) / 100.0;
+            return Common.Ok(row);
         });
 
         app.MapPost("/api/projects", async (HttpContext ctx, ProjectDto dto, IDbConnection db) =>
@@ -111,7 +117,7 @@ public static class ProjectEndpoints
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO projects (name,description,address,start_date,end_date,status,budget,project_manager_id,created_by,created_at,updated_at, last_modified_at) VALUES (@Name,@Description,@Address,@StartDate,@EndDate,@Status,@Budget,@ProjectManagerId,@CreatedBy,@Now,@Now, @Now);
                 SELECT last_insert_rowid();",
                 new { dto.Name, dto.Description, dto.Address, dto.StartDate, dto.EndDate,
-                      Status = dto.Status ?? "planning", dto.Budget, dto.ProjectManagerId, CreatedBy = uid, Now = now() });
+                      Status = dto.Status ?? "planning", Budget = MoneyUnit.ToFen(dto.Budget), dto.ProjectManagerId, CreatedBy = uid, Now = now() });
             return Common.Ok(id);
         });
 
@@ -125,7 +131,7 @@ public static class ProjectEndpoints
                 address=@Address,start_date=@StartDate,end_date=@EndDate,status=@Status,budget=@Budget,
                 project_manager_id=@ProjectManagerId,updated_at=@Now, version=version+1, last_modified_at=@Now WHERE id=@Id AND (created_by=@Uid OR @IsAdmin=1)",
                 new { dto.Name, dto.Description, dto.Address, dto.StartDate, dto.EndDate,
-                      dto.Status, dto.Budget, dto.ProjectManagerId, Now = now(), Id = id,
+                      dto.Status, Budget = MoneyUnit.ToFen(dto.Budget), dto.ProjectManagerId, Now = now(), Id = id,
                       Uid = uid, IsAdmin = isAdmin });
             return affected > 0 ? Common.Ok() : Results.Forbid();
         });

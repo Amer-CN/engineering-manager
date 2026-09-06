@@ -19,6 +19,7 @@ namespace EngineeringManager.Api;
 /// - DELETE /api/writing/documents/{id}    软删
 /// - POST   /api/writing/draft             AI 整篇起草（SSE 流式）
 /// - POST   /api/writing/assist            AI 行内改写（一次返回）
+/// - POST   /api/writing/style-check       量化风格体检（纯统计，参考 check_params.py）
 ///
 /// 鉴权沿用 GlobalAuthMiddleware；其余端点各自做 CurrentUser.HasPermission 检查。
 /// 写操作一律 Dapper 参数化 + 写审计。
@@ -540,6 +541,31 @@ public static class WritingEndpoints
                 return Common.ServerError("写作中心行内改写", ex);
             }
         });
+
+        // ─────────────────────────────────────────────────────────
+        // POST /api/writing/style-check — 量化风格体检（第 5 项检查，纯统计无 LLM）
+        // body { docType, content }；content 上限 10 万字符（服务端截断）；
+        // 未知/无参数文种降级为仅标点纪律与元评论检测
+        // ─────────────────────────────────────────────────────────
+        app.MapPost("/api/writing/style-check", async (
+            HttpContext ctx,
+            IDbConnection db,
+            WritingStyleCheckService styleCheck,
+            WritingStyleCheckDto dto) =>
+        {
+            var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
+            if (!CurrentUser.HasPermission(ctx, db, "writing:read"))
+                return Results.Json(new { success = false, error = "无权限：需要 writing:read" }, statusCode: 403);
+            try
+            {
+                var report = await styleCheck.CheckAsync(dto.DocType ?? "", dto.Content ?? "", ctx.RequestAborted);
+                return Results.Ok(new { success = true, data = report });
+            }
+            catch (Exception ex)
+            {
+                return Common.ServerError("写作中心量化体检", ex);
+            }
+        });
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -612,3 +638,6 @@ public sealed record WritingUpdateDto(
     string? Title,
     string? ContentMd,
     int? ProjectId);
+
+/// <summary>量化风格体检请求（POST /api/writing/style-check）</summary>
+public sealed record WritingStyleCheckDto(string DocType, string Content);

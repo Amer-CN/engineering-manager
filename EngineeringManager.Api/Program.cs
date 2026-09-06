@@ -161,6 +161,9 @@ public static class ApiConfig
             });
         });
         builder.Services.AddSingleton<EngineeringManager.Api.Services.WritingSkillService>();
+        builder.Services.AddSingleton<EngineeringManager.Api.Services.WritingSkillUpdateService>();
+        // v0.12 写作中心量化风格体检（依赖 WritingSkillService 的 style-params 快照）
+        builder.Services.AddSingleton<EngineeringManager.Api.Services.WritingStyleCheckService>();
         builder.Services.AddSingleton<EngineeringManager.Api.Services.UpdateService>();
 
         // v0.83 STT 语音转文字后台 worker（单并发）
@@ -271,6 +274,22 @@ builder.Services.ConfigureHttpJsonOptions(options =>
         var distPath = Path.Combine(AppContext.BaseDirectory, "dist");
         IsProduction = Directory.Exists(distPath);
 
+        // F2(审计): 桌面 WinExe 无控制台，全库海量 Console.* 日志原本直接蒸发——
+        // 生产模式启动早期把 Console.Out/Console.Error 重定向到按天滚动日志文件；
+        // 开发/测试模式不动（保留控制台输出）。写失败由 ConsoleFileLog 内部吞掉，不阻塞启动。
+        // 审查补充：IsProduction 只看 dist/ 存在与否，测试进程（ApiTestBase 会同步 dist）
+        // 可能误判为 true → SetOut/SetError 挂进测试进程无法解挂。逃逸依据：
+        // 测试基建必设 ASPNETCORE_ENVIRONMENT="Development"（ApiTestBase.cs:26，另见
+        // NormalizeFinanceRoleIntegrationTests），E2E harness 不构建 WebApplication（到不了本挂接点），
+        // 生产桌面从不设该变量（全仓 SetEnvironmentVariable 仅上述两处测试文件）——
+        // 与 L119 既有 testMode 判定同源，双保险
+        if (IsProduction && Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == null)
+        {
+            var fileLog = new EngineeringManager.Api.Services.ConsoleFileLog();
+            Console.SetOut(fileLog);
+            Console.SetError(fileLog);
+        }
+
         if (IsProduction)
         {
             Console.WriteLine($"[App] 生产模式：托管前端静态文件 {distPath}");
@@ -358,7 +377,10 @@ builder.Services.ConfigureHttpJsonOptions(options =>
                 var error = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
                 if (error != null)
                 {
-                    Console.Error.WriteLine($"[Global] 未处理异常: {error.Error.Message}");
+                    // F2(审计): 只记 Message 曾导致生产无堆栈可查——记完整堆栈 + 请求路径 + TraceId；
+                    // 响应体保持脱敏（"服务器内部错误"），堆栈不泄漏给客户端
+                    Console.Error.WriteLine(
+                        $"[Global] 未处理异常 path={context.Request.Path} traceId={context.TraceIdentifier}\n{error.Error.ToString()}");
                     await context.Response.WriteAsJsonAsync(new { success = false, error = "服务器内部错误" });
                 }
             });
@@ -379,7 +401,23 @@ builder.Services.ConfigureHttpJsonOptions(options =>
             var db = scope.ServiceProvider.GetRequiredService<IDbConnection>();
             var pii = app.Services.GetRequiredService<EngineeringManager.Api.Security.PiiProtector>();
             pii.Initialize(db);
+
+            // F3(审计): 上次进程中途退出会把 pii_reencrypt_status 卡在 running，此后每次触发都抛
+            // "PII re-encrypt 已在运行中"，功能永久锁死——启动时复位为 interrupted（游标续传保证可恢复）
+            try
+            {
+                db.Execute("UPDATE pii_reencrypt_status SET status='interrupted', updated_at=@Now WHERE id=1 AND status='running'",
+                    new { Now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") });
+            }
+            catch (Exception ex)
+            {
+                // 表不存在等启动期问题不阻塞启动，但必须留痕
+                Console.Error.WriteLine($"[Startup] pii_reencrypt_status 复位失败（不阻塞）: {ex.Message}");
+            }
         }
+
+        // 写作中心 skill 热更：启动后台检查远端版本（内部全静默，任何失败不影响启动与写作）
+        app.Services.GetRequiredService<EngineeringManager.Api.Services.WritingSkillUpdateService>().StartBackgroundCheck();
 
         if (IsProduction)
         {
@@ -558,13 +596,13 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     private static void EnsureTables(IDbConnection db)
     {
         db.Execute(@"
-CREATE TABLE IF NOT EXISTS projects (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, description TEXT, address TEXT, start_date TEXT, end_date TEXT, status TEXT DEFAULT 'active', budget REAL DEFAULT 0, created_at TEXT, updated_at TEXT);
-CREATE TABLE IF NOT EXISTS members (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, phone TEXT, email TEXT, member_type TEXT DEFAULT 'staff', role TEXT, id_card TEXT, gender TEXT, ethnicity TEXT, birth_date TEXT, id_card_address TEXT, base_salary REAL, daily_wage REAL, entry_date TEXT, status TEXT DEFAULT 'active', department_id INTEGER, position TEXT, bank_account TEXT, bank_name TEXT, bank_line_no TEXT, photo TEXT, created_at TEXT, updated_at TEXT);
-CREATE TABLE IF NOT EXISTS workers (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, id_card TEXT, gender TEXT, phone TEXT, address TEXT, bank_account TEXT, bank_name TEXT, bank_line_no TEXT, worker_type TEXT, daily_wage REAL, created_at TEXT, updated_at TEXT);
-CREATE TABLE IF NOT EXISTS project_workers (id INTEGER PRIMARY KEY AUTOINCREMENT, worker_id INTEGER, project_id INTEGER, team_id INTEGER, daily_wage REAL, worker_type TEXT, entry_date TEXT, status TEXT DEFAULT 'active', created_at TEXT, updated_at TEXT);
-CREATE TABLE IF NOT EXISTS income_contracts (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, name TEXT NOT NULL, amount REAL, counterparty TEXT, sign_date TEXT, status TEXT DEFAULT 'draft', remark TEXT, files TEXT, created_at TEXT, updated_at TEXT);
-CREATE TABLE IF NOT EXISTS expense_contracts (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, name TEXT NOT NULL, amount REAL, counterparty TEXT, sign_date TEXT, status TEXT DEFAULT 'draft', remark TEXT, files TEXT, created_at TEXT, updated_at TEXT);
-CREATE TABLE IF NOT EXISTS agreement_contracts (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, name TEXT NOT NULL, amount REAL, counterparty TEXT, sign_date TEXT, agreement_type TEXT, status TEXT DEFAULT 'draft', remark TEXT, files TEXT, created_at TEXT, updated_at TEXT);
+CREATE TABLE IF NOT EXISTS projects (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, description TEXT, address TEXT, start_date TEXT, end_date TEXT, status TEXT DEFAULT 'active', budget INTEGER DEFAULT 0, created_at TEXT, updated_at TEXT);
+CREATE TABLE IF NOT EXISTS members (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, phone TEXT, email TEXT, member_type TEXT DEFAULT 'staff', role TEXT, id_card TEXT, gender TEXT, ethnicity TEXT, birth_date TEXT, id_card_address TEXT, base_salary INTEGER, daily_wage INTEGER, entry_date TEXT, status TEXT DEFAULT 'active', department_id INTEGER, position TEXT, bank_account TEXT, bank_name TEXT, bank_line_no TEXT, photo TEXT, created_at TEXT, updated_at TEXT);
+CREATE TABLE IF NOT EXISTS workers (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, id_card TEXT, gender TEXT, phone TEXT, address TEXT, bank_account TEXT, bank_name TEXT, bank_line_no TEXT, worker_type TEXT, daily_wage INTEGER, created_at TEXT, updated_at TEXT);
+CREATE TABLE IF NOT EXISTS project_workers (id INTEGER PRIMARY KEY AUTOINCREMENT, worker_id INTEGER, project_id INTEGER, team_id INTEGER, daily_wage INTEGER, worker_type TEXT, entry_date TEXT, status TEXT DEFAULT 'active', created_at TEXT, updated_at TEXT);
+CREATE TABLE IF NOT EXISTS income_contracts (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, name TEXT NOT NULL, amount INTEGER, counterparty TEXT, sign_date TEXT, status TEXT DEFAULT 'draft', remark TEXT, files TEXT, created_at TEXT, updated_at TEXT);
+CREATE TABLE IF NOT EXISTS expense_contracts (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, name TEXT NOT NULL, amount INTEGER, counterparty TEXT, sign_date TEXT, status TEXT DEFAULT 'draft', remark TEXT, files TEXT, created_at TEXT, updated_at TEXT);
+CREATE TABLE IF NOT EXISTS agreement_contracts (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, name TEXT NOT NULL, amount INTEGER, counterparty TEXT, sign_date TEXT, agreement_type TEXT, status TEXT DEFAULT 'draft', remark TEXT, files TEXT, created_at TEXT, updated_at TEXT);
 CREATE TABLE IF NOT EXISTS invoices (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id INTEGER,
@@ -576,11 +614,11 @@ CREATE TABLE IF NOT EXISTS invoices (
     invoice_no TEXT,
     invoice_code TEXT,
     name TEXT,
-    amount REAL DEFAULT 0,
-    price_amount REAL DEFAULT 0,
-    tax_amount REAL DEFAULT 0,
+    amount INTEGER DEFAULT 0,
+    price_amount INTEGER DEFAULT 0,
+    tax_amount INTEGER DEFAULT 0,
     tax_rate REAL DEFAULT 0,
-    received_amount REAL DEFAULT 0,
+    received_amount INTEGER DEFAULT 0,
     settlement_id INTEGER,
     issue_date TEXT DEFAULT '',
     status TEXT DEFAULT 'pending',
@@ -593,7 +631,7 @@ CREATE TABLE IF NOT EXISTS invoices (
 CREATE TABLE IF NOT EXISTS payment_records (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     type TEXT NOT NULL,
-    amount REAL DEFAULT 0,
+    amount INTEGER DEFAULT 0,
     record_date TEXT DEFAULT '',
     project_id INTEGER,
     partner_id INTEGER,
@@ -606,14 +644,14 @@ CREATE TABLE IF NOT EXISTS payment_records (
 );
 CREATE TABLE IF NOT EXISTS partners (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, category TEXT, contact TEXT, phone TEXT, email TEXT, address TEXT, bank_account TEXT, bank_name TEXT, credit_code TEXT, registered_address TEXT, business_scope TEXT, tax_type TEXT, license_file TEXT, license_file_type TEXT, other_files TEXT, other_files_type TEXT, project_ids TEXT, remarks TEXT, created_at TEXT, updated_at TEXT);
 CREATE TABLE IF NOT EXISTS supervisors (id INTEGER PRIMARY KEY AUTOINCREMENT, region_id INTEGER, name TEXT NOT NULL, category TEXT, contact TEXT, phone TEXT, address TEXT, project_ids TEXT, remarks TEXT, created_at TEXT, updated_at TEXT);
-CREATE TABLE IF NOT EXISTS wages (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, member_id INTEGER, project_worker_id INTEGER, year_month TEXT, daily_wage REAL, work_days REAL, bonus REAL DEFAULT 0, deduction REAL DEFAULT 0, actual_wage REAL, paid_amount REAL, paid_date TEXT, status TEXT DEFAULT 'pending', created_at TEXT, updated_at TEXT);
+CREATE TABLE IF NOT EXISTS wages (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, member_id INTEGER, project_worker_id INTEGER, year_month TEXT, daily_wage INTEGER, work_days REAL, bonus INTEGER DEFAULT 0, deduction INTEGER DEFAULT 0, actual_wage INTEGER, paid_amount INTEGER, paid_date TEXT, status TEXT DEFAULT 'pending', created_at TEXT, updated_at TEXT);
 CREATE TABLE IF NOT EXISTS attendances (id INTEGER PRIMARY KEY AUTOINCREMENT, member_id INTEGER, project_id INTEGER, project_worker_id INTEGER, year_month TEXT, work_days REAL, days_off INTEGER, is_full_attendance INTEGER, daily_status TEXT, file_url TEXT, file_name TEXT, created_at TEXT, updated_at TEXT);
-CREATE TABLE IF NOT EXISTS settlements (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, contract_id INTEGER, partner_id INTEGER, type TEXT, sub_type TEXT, name TEXT, category TEXT, settlement_no TEXT, amount REAL, status TEXT DEFAULT 'pending', settlement_date TEXT, date TEXT, remark TEXT, remarks TEXT, files TEXT, items TEXT, invoice_details TEXT, created_by TEXT, created_at TEXT, updated_at TEXT);
-CREATE TABLE IF NOT EXISTS cost_ledger (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, batch_id INTEGER, voucher_no TEXT, date TEXT, direction TEXT, category TEXT, amount REAL, counterparty TEXT, channel TEXT, summary TEXT, notes TEXT, attachments TEXT, linked_invoice_id INTEGER, created_at TEXT, updated_at TEXT);
+CREATE TABLE IF NOT EXISTS settlements (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, contract_id INTEGER, partner_id INTEGER, type TEXT, sub_type TEXT, name TEXT, category TEXT, settlement_no TEXT, amount INTEGER, status TEXT DEFAULT 'pending', settlement_date TEXT, date TEXT, remark TEXT, remarks TEXT, files TEXT, items TEXT, invoice_details TEXT, created_by TEXT, created_at TEXT, updated_at TEXT);
+CREATE TABLE IF NOT EXISTS cost_ledger (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, batch_id INTEGER, voucher_no TEXT, date TEXT, direction TEXT, category TEXT, amount INTEGER, counterparty TEXT, channel TEXT, summary TEXT, notes TEXT, attachments TEXT, linked_invoice_id INTEGER, created_at TEXT, updated_at TEXT);
 CREATE TABLE IF NOT EXISTS cost_ledger_categories (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, direction TEXT, level1 TEXT, color TEXT, created_at TEXT);
 CREATE TABLE IF NOT EXISTS cost_ledger_match_rules (id INTEGER PRIMARY KEY AUTOINCREMENT, pattern TEXT, category TEXT, direction TEXT, priority INTEGER, created_at TEXT);
 CREATE TABLE IF NOT EXISTS inventory_items (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, category TEXT, unit TEXT, quantity REAL DEFAULT 0, min_quantity REAL, location TEXT, notes TEXT, created_at TEXT, updated_at TEXT);
-CREATE TABLE IF NOT EXISTS inventory_transactions (id INTEGER PRIMARY KEY AUTOINCREMENT, item_id INTEGER, project_id INTEGER, type TEXT, quantity REAL, unit_price REAL, date TEXT, notes TEXT, operator TEXT, remark TEXT, created_by TEXT, created_at TEXT);
+CREATE TABLE IF NOT EXISTS inventory_transactions (id INTEGER PRIMARY KEY AUTOINCREMENT, item_id INTEGER, project_id INTEGER, type TEXT, quantity REAL, unit_price INTEGER, date TEXT, notes TEXT, operator TEXT, remark TEXT, created_by TEXT, created_at TEXT);
 CREATE TABLE IF NOT EXISTS materials (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, category TEXT, unit TEXT, specifications TEXT, supplier TEXT, notes TEXT, created_at TEXT, updated_at TEXT);
 CREATE TABLE IF NOT EXISTS templates (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, type TEXT, category TEXT, content TEXT, description TEXT, file_name TEXT, stored_file_name TEXT, file_type TEXT, variables TEXT, created_at TEXT, updated_at TEXT);
 CREATE TABLE IF NOT EXISTS audit_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, action TEXT, level TEXT, user_id TEXT, user_name TEXT, resource TEXT, resource_id TEXT, details TEXT, ip_address TEXT, created_at TEXT);
@@ -621,7 +659,7 @@ CREATE TABLE IF NOT EXISTS roles (id TEXT PRIMARY KEY, name TEXT NOT NULL, permi
 CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, username TEXT UNIQUE NOT NULL, password TEXT, password_hash TEXT NOT NULL, password_salt TEXT, password_hash_version INTEGER DEFAULT 1, salt TEXT, display_name TEXT, role_id TEXT, status TEXT DEFAULT 'active', avatar TEXT, is_default_password INTEGER DEFAULT 0, created_at TEXT, updated_at TEXT);
 CREATE TABLE IF NOT EXISTS snapshots (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, size INTEGER, created_at TEXT);
 CREATE TABLE IF NOT EXISTS departments (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, manager_id INTEGER, positions TEXT, created_at TEXT);
-CREATE TABLE IF NOT EXISTS salary_history (id INTEGER PRIMARY KEY AUTOINCREMENT, member_id INTEGER, effective_date TEXT, base_salary REAL, subsidy REAL, subsidy_note TEXT, note TEXT, created_at TEXT);
+CREATE TABLE IF NOT EXISTS salary_history (id INTEGER PRIMARY KEY AUTOINCREMENT, member_id INTEGER, effective_date TEXT, base_salary INTEGER, subsidy INTEGER, subsidy_note TEXT, note TEXT, created_at TEXT);
 CREATE TABLE IF NOT EXISTS worker_teams (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, project_id INTEGER, leader_id INTEGER, remark TEXT, created_at TEXT, updated_at TEXT);
 CREATE TABLE IF NOT EXISTS project_members (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER, member_id INTEGER, joined_at TEXT);
 CREATE TABLE IF NOT EXISTS regions (id INTEGER PRIMARY KEY AUTOINCREMENT, province TEXT, city TEXT, district TEXT);
@@ -632,7 +670,7 @@ CREATE TABLE IF NOT EXISTS contract_templates (id INTEGER PRIMARY KEY AUTOINCREM
             // invoices 表迁移：添加缺失列
             try { db.Execute(@"ALTER TABLE invoices ADD COLUMN seller_id INTEGER"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] invoices seller_id: {ex.Message}"); }
             try { db.Execute(@"ALTER TABLE invoices ADD COLUMN buyer_id INTEGER"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] invoices buyer_id: {ex.Message}"); }
-            try { db.Execute(@"ALTER TABLE invoices ADD COLUMN received_amount REAL DEFAULT 0"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] invoices received_amount: {ex.Message}"); }
+            try { db.Execute(@"ALTER TABLE invoices ADD COLUMN received_amount INTEGER DEFAULT 0"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] invoices received_amount: {ex.Message}"); }
             try { db.Execute(@"ALTER TABLE invoices ADD COLUMN settlement_id INTEGER"); } catch (Exception ex) { Console.Error.WriteLine($"[EnsureTables] invoices settlement_id: {ex.Message}"); }
 
             // contract_templates 表迁移：旧库（早期版本建表）缺 content/variables 等列，自愈补齐（重复列报错属预期，记录即可）
@@ -654,7 +692,7 @@ CREATE TABLE IF NOT EXISTS contract_templates (id INTEGER PRIMARY KEY AUTOINCREM
                         CREATE TABLE IF NOT EXISTS payment_records_new (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
                             type TEXT NOT NULL DEFAULT 'payment_out',
-                            amount REAL DEFAULT 0,
+                            amount INTEGER DEFAULT 0,
                             record_date TEXT DEFAULT '',
                             project_id INTEGER,
                             partner_id INTEGER,

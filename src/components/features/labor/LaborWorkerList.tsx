@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react'
 import { DataTable, type Column } from '@/components/DataTable'
 import { useMaskedFn } from "@/hooks/useMaskedValue";
+import { useSlidePill } from '@/hooks/useSlidePill'
 import { Icon } from '../../ui/Icon'
 import type { Member, WorkerTeam } from '../../../types/electron'
 import { WorkerWageModal } from './WorkerWageModal'
@@ -35,6 +36,7 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
   const masked = useMaskedFn()
   const [filterProject, setFilterProject] = useState<number | null>(null)
   const [filterTeam, setFilterTeam] = useState<number | null>(null)
+  const teamPill = useSlidePill(filterTeam === null ? 'all' : String(filterTeam))
 
   // 工资统计弹窗
   const [wageModalWorker, setWageModalWorker] = useState<{ id: number; name: string } | null>(null)
@@ -150,12 +152,21 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
 
   return (
     <div className="flex flex-col max-h-[calc(100vh-200px)]">
-      {/* S24 Stitch: 班组 pill-tabs */}
-      <div className="flex items-center gap-2 mb-5 flex-wrap">
+      {/* S24 Stitch: 班组 pill-tabs（动效批 1：滑动胶囊高亮）
+          胶囊在按钮下层（z-0，无 z 提升避免盖住文字），按钮背景透明，
+          底色全部由胶囊承载——文字永远在胶囊之上，三主题可读。 */}
+      <div className="relative flex items-center gap-2 mb-5 flex-wrap" ref={teamPill.containerRef}>
+        <span aria-hidden className="pointer-events-none absolute rounded-full"
+          style={{ ...teamPill.pillStyle, background: 'var(--accent)' }} />
         <button
           onClick={() => { setFilterTeam(null); setFilterProject(null) }}
-          className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-            !filterTeam ? 'bg-[color:var(--accent)] text-[color:var(--on-accent)]' : 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)]'
+          ref={teamPill.registerItem('all')}
+          onMouseEnter={() => teamPill.setHovered('all')}
+          onMouseLeave={() => teamPill.setHovered(null)}
+          className={`relative z-10 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+            !filterTeam || teamPill.hovered === 'all'
+              ? 'text-[color:var(--on-accent)]'
+              : 'text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)]'
           }`}
         >
           全部班组 ({members.length})
@@ -164,8 +175,13 @@ const LaborWorkerList: React.FC<LaborWorkerListProps> = ({
           <button
             key={t.id}
             onClick={() => { setFilterTeam(t.id); setFilterProject(t.projectId) }}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-              filterTeam === t.id ? 'bg-[color:var(--accent)] text-[color:var(--on-accent)]' : 'bg-[color:var(--panel-2)] text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)]'
+            ref={teamPill.registerItem(String(t.id))}
+            onMouseEnter={() => teamPill.setHovered(String(t.id))}
+            onMouseLeave={() => teamPill.setHovered(null)}
+            className={`relative z-10 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              filterTeam === t.id || teamPill.hovered === String(t.id)
+                ? 'text-[color:var(--on-accent)]'
+                : 'text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)]'
             }`}
           >
             {t.name} ({teamCounts[t.id] || 0})

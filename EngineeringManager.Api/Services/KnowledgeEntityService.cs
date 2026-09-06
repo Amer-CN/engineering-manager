@@ -437,7 +437,7 @@ public class KnowledgeEntityService
             "SELECT [name], [description], [address], [start_date], [end_date], [status], [budget] FROM [projects] WHERE [id]=@Id",
             new { Id = entityId });
         if (row == null) return $"项目: {entityName}";
-        return $"项目: {row.name}\n描述: {row.description ?? "无"}\n地址: {row.address ?? "未指定"}\n开始日期: {row.start_date ?? "未指定"}\n结束日期: {row.end_date ?? "未指定"}\n状态: {row.status ?? "active"}\n预算: {(row.budget != null ? $"{row.budget}元" : "未设定")}";
+        return $"项目: {row.name}\n描述: {row.description ?? "无"}\n地址: {row.address ?? "未指定"}\n开始日期: {row.start_date ?? "未指定"}\n结束日期: {row.end_date ?? "未指定"}\n状态: {row.status ?? "active"}\n预算: {(row.budget != null ? $"{MoneyUnit.ToYuanFromDb(row.budget)}元" : "未设定")}";
     }
 
     private string BuildContractCard(string table, long entityId, string entityName, string label)
@@ -446,7 +446,7 @@ public class KnowledgeEntityService
             $"SELECT [name], [amount], [counterparty], [sign_date], [status], [remark] FROM [{table}] WHERE [id]=@Id",
             new { Id = entityId });
         if (row == null) return $"{label}: {entityName}";
-        return $"{label}: {row.name}\n金额: {(row.amount != null ? $"{row.amount}元" : "未设定")}\n对方: {row.counterparty ?? "未指定"}\n签订日期: {row.sign_date ?? "未指定"}\n状态: {row.status ?? "draft"}\n备注: {row.remark ?? "无"}";
+        return $"{label}: {row.name}\n金额: {(row.amount != null ? $"{MoneyUnit.ToYuanFromDb(row.amount)}元" : "未设定")}\n对方: {row.counterparty ?? "未指定"}\n签订日期: {row.sign_date ?? "未指定"}\n状态: {row.status ?? "draft"}\n备注: {row.remark ?? "无"}";
     }
 
     private string BuildPartnerCard(long entityId, string entityName)
@@ -466,7 +466,7 @@ public class KnowledgeEntityService
             new { Id = entityId });
         if (row == null) return $"发票: {entityName}";
         var typeLabel = (string?)row.type == "invoice_in" ? "进项发票" : "销项发票";
-        return $"{typeLabel}: {row.name}\n发票号: {row.invoice_no ?? "无"}\n金额: {(row.amount != null ? $"{row.amount}元" : "0")}\n税额: {(row.tax_amount != null ? $"{row.tax_amount}元" : "0")}\n开票日期: {row.issue_date ?? "未指定"}\n状态: {row.status ?? "pending"}";
+        return $"{typeLabel}: {row.name}\n发票号: {row.invoice_no ?? "无"}\n金额: {(row.amount != null ? $"{MoneyUnit.ToYuanFromDb(row.amount)}元" : "0")}\n税额: {(row.tax_amount != null ? $"{MoneyUnit.ToYuanFromDb(row.tax_amount)}元" : "0")}\n开票日期: {row.issue_date ?? "未指定"}\n状态: {row.status ?? "pending"}";
     }
 
     private string BuildSettlementCard(long entityId, string entityName)
@@ -475,7 +475,7 @@ public class KnowledgeEntityService
             "SELECT [name], [type], [sub_type], [amount], [settlement_no], [settlement_date], [status] FROM [settlements] WHERE [id]=@Id",
             new { Id = entityId });
         if (row == null) return $"结算: {entityName}";
-        return $"结算: {row.name}\n结算编号: {row.settlement_no ?? "无"}\n类型: {row.type ?? "未指定"}\n子类型: {row.sub_type ?? "未指定"}\n金额: {(row.amount != null ? $"{row.amount}元" : "未设定")}\n结算日期: {row.settlement_date ?? "未指定"}\n状态: {row.status ?? "pending"}";
+        return $"结算: {row.name}\n结算编号: {row.settlement_no ?? "无"}\n类型: {row.type ?? "未指定"}\n子类型: {row.sub_type ?? "未指定"}\n金额: {(row.amount != null ? $"{MoneyUnit.ToYuanFromDb(row.amount)}元" : "未设定")}\n结算日期: {row.settlement_date ?? "未指定"}\n状态: {row.status ?? "pending"}";
     }
 
     private string BuildWageCard(long entityId, string entityName)
@@ -489,7 +489,8 @@ public class KnowledgeEntityService
             new { Id = entityId });
         if (row == null) return $"工资: {entityName}";
         // 注意：bank_account 等 PII 字段不写入卡片
-        return $"工资单: {(string)row.worker_name}\n月份: {row.year_month ?? "未指定"}\n日薪: {(row.daily_wage != null ? $"{row.daily_wage}元" : "未设定")}\n工时: {(row.work_days != null ? $"{row.work_days}天" : "未记录")}\n奖金: {(row.bonus != null ? $"{row.bonus}元" : "0")}\n扣款: {(row.deduction != null ? $"{row.deduction}元" : "0")}\n实发: {(row.actual_wage != null ? $"{row.actual_wage}元" : "未计算")}\n状态: {row.status ?? "pending"}";
+        // 金额列（daily_wage/bonus/deduction/actual_wage）库内为分，MoneyUnit 单点换算输出元；work_days 为天数不转
+        return $"工资单: {(string)row.worker_name}\n月份: {row.year_month ?? "未指定"}\n日薪: {(row.daily_wage != null ? $"{MoneyUnit.ToYuanFromDb(row.daily_wage)}元" : "未设定")}\n工时: {(row.work_days != null ? $"{row.work_days}天" : "未记录")}\n奖金: {(row.bonus != null ? $"{MoneyUnit.ToYuanFromDb(row.bonus)}元" : "0")}\n扣款: {(row.deduction != null ? $"{MoneyUnit.ToYuanFromDb(row.deduction)}元" : "0")}\n实发: {(row.actual_wage != null ? $"{MoneyUnit.ToYuanFromDb(row.actual_wage)}元" : "未计算")}\n状态: {row.status ?? "pending"}";
     }
 
     private string BuildCostLedgerCard(long entityId, string entityName)
@@ -498,7 +499,7 @@ public class KnowledgeEntityService
             "SELECT [voucher_no], [date], [direction], [category], [amount], [counterparty], [summary], [notes] FROM [cost_ledger] WHERE [id]=@Id",
             new { Id = entityId });
         if (row == null) return $"成本台账: {entityName}";
-        return $"成本台账: {row.summary ?? row.voucher_no ?? "无摘要"}\n凭证号: {row.voucher_no ?? "无"}\n日期: {row.date ?? "未指定"}\n方向: {row.direction ?? "未指定"}\n类别: {row.category ?? "未分类"}\n金额: {(row.amount != null ? $"{row.amount}元" : "0")}\n对方: {row.counterparty ?? "未指定"}\n备注: {row.notes ?? "无"}";
+        return $"成本台账: {row.summary ?? row.voucher_no ?? "无摘要"}\n凭证号: {row.voucher_no ?? "无"}\n日期: {row.date ?? "未指定"}\n方向: {row.direction ?? "未指定"}\n类别: {row.category ?? "未分类"}\n金额: {(row.amount != null ? $"{MoneyUnit.ToYuanFromDb(row.amount)}元" : "0")}\n对方: {row.counterparty ?? "未指定"}\n备注: {row.notes ?? "无"}";
     }
 
     private string BuildMaterialCard(long entityId, string entityName)

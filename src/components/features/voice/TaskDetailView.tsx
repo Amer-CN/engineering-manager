@@ -2,12 +2,12 @@
  * TaskDetailView — 转写详情子页面（仿通义听悟双栏布局）
  *
  * 全屏覆盖层（portal 到 body，避开页面过渡容器的 transform 影响）：
- * - 最左竖排操作栏：返回 / 保存笔记（sessionStorage 暂存）/ 导出（笔记 txt/html、原文 txt）/ 分享（复制笔记全文）
+ * - 最左竖排操作栏：返回 / 保存（笔记 sessionStorage 暂存 + 七期转写修改/说话人名落库）/ 导出（笔记 txt/html、原文 txt）/ 分享（复制笔记全文）
  * - 左栏约 60%：顶栏（标题 + 批量摘取下拉 + 编辑）；段落流（播放高亮跟随、点时间戳跳播）；底部固定播放器
  * - 右栏约 40%：笔记浮层卡（TranscriptNotePanel，contentEditable，会话内编辑）
  * - <900px 降级为上下堆叠（笔记收到底部）；Shift+Space 全局播放/暂停（输入框/contentEditable 聚焦时不触发）
  * 编辑模式嵌入 TranscriptEditor（行内编辑 + 词级搬移），共享同一个 audioRef（全局只保留一个 audio 元素）。
- * 说话人用 speakers 实体表（AutoSubs 模式：{id,name,color}，会话内不落库）。
+ * 说话人用 speakers 实体表（AutoSubs 模式：{id,name,color}；七期保存时经 speaker_names 落库，加载时回填）。
  */
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
@@ -15,13 +15,13 @@ import { createPortal } from 'react-dom'
 import { Button } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
 import { useToastContext } from '@/hooks/useToast'
-import { sttClient } from '@/services/stt-client'
+import { sttClient, saveSttJob } from '@/services/stt-client'
 import type { SttJobDetail, SttSegment } from '@/services/stt-client'
 import TranscriptEditor from './TranscriptEditor'
 import TranscriptNotePanel, { copyTextToClipboard } from './TranscriptNotePanel'
 import SttInsightsCard from './SttInsightsCard'
 import TranscriptSegmentList from './TranscriptSegmentList'
-import { detectSpeakerBase } from './segmentUtils'
+import { detectSpeakerBase, normalizeSegments, groupIntoParagraphs } from './segmentUtils'
 import { DEFAULT_COLORS } from './SpeakerNameEditor'
 import type { SpeakerInfo } from './SpeakerNameEditor'
 import type { TranscriptNotePanelHandle } from './TranscriptNotePanel'
@@ -66,12 +66,15 @@ const MenuItem: React.FC<{ icon?: string; label: string; disabled?: boolean; onC
 )
 
 const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, onIngest }) => {
-  // 过滤 speaker 0（与 TranscriptEditor 同规则）；无有效段落 = 单人纯文本视图
-  const segments = (job.segments ?? []).filter(s => s.speaker > 0)
   const { showToast } = useToastContext()
 
-  // 媒体信息（objectURL + 时长）与播放态各并为单 state（useState 门禁 ≤8）
-  const [media, setMedia] = useState<{ url: string | null; duration: number }>({ url: null, duration: job.durationSec ?? 0 })
+  // 媒体信息（objectURL + 时长 + 保存后本地 job 覆盖）与播放态各并为单 state（useState 门禁 ≤8）
+  const [media, setMedia] = useState<{ url: string | null; duration: number; jobOverride: SttJobDetail | null }>({ url: null, duration: job.durationSec ?? 0, jobOverride: null })
+  const curJob = media.jobOverride ?? job // 七期：保存成功后 getSttJob 拉新写 override，覆盖父组件 prop 渲染（不动 TranscriptionWorkspace）
+  const { flat, paragraphs } = useMemo(() => {
+    const f = normalizeSegments((curJob.segments ?? []).filter(s => s.speaker > 0)) // 过滤 speaker 0（同 TranscriptEditor）后按行归一化；无有效段落 = 单人纯文本视图
+    return { flat: f, paragraphs: groupIntoParagraphs(f) } // flat 与 paragraphs 同源（均归一化）：播放扫描索引与段落 segStartIdx 对齐
+  }, [curJob.segments])
   const [playState, setPlayState] = useState<{ playing: boolean; time: number }>({ playing: false, time: 0 })
   const [speed, setSpeed] = useState(1)
   const [activeIdx, setActiveIdx] = useState(-1)
@@ -86,6 +89,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
   const segRefs = useRef<(HTMLElement | null)[]>([])
   const curIdxRef = useRef(0)
   const noteRef = useRef<TranscriptNotePanelHandle | null>(null)
+  const editorSaveRef = useRef<(() => void) | null>(null) // TranscriptEditor 注册的保存函数（挂载时非空）
 
   // 进入子页面：带鉴权拉取源音频 blob → objectURL；离开时释放
   useEffect(() => {
@@ -104,15 +108,15 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
     }
   }, [job.id])
 
-  // speakers 表推导：每个出现过的说话人编号一条（名字默认「说话人N」，色板按编号轮换）。
+  // speakers 表推导：每个出现过的说话人编号一条（七期：job.speakerNames 回填已存名字，缺省「说话人N」，色板按编号轮换）。
   // 编号基检测（防御，照 AutoSubs）：当前引擎 1 基且 0 号为噪声簇（UI 列表仍按 >0 过滤）；
   // 未来换 0 基引擎时由 detectSpeakerBase 归一放行 0 号，不炸。显示编号恒为原始编号。
   useEffect(() => {
-    const raw = job.segments ?? []
+    const raw = curJob.segments ?? []
     const base = detectSpeakerBase(raw)
     const ids = [...new Set(raw.filter(s => s.speaker > 0 || (base === 0 && s.speaker === 0)).map(s => s.speaker))]
-    setSpeakers(ids.map(id => ({ id, name: `说话人${id}`, color: DEFAULT_COLORS[((id % DEFAULT_COLORS.length) + DEFAULT_COLORS.length) % DEFAULT_COLORS.length] })))
-  }, [job])
+    setSpeakers(ids.map(id => ({ id, name: curJob.speakerNames?.[String(id)] ?? `说话人${id}`, color: DEFAULT_COLORS[((id % DEFAULT_COLORS.length) + DEFAULT_COLORS.length) % DEFAULT_COLORS.length] })))
+  }, [curJob])
 
   const togglePlay = useCallback(() => {
     const a = audioRef.current
@@ -136,17 +140,17 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
     if (!a) return
     const t = a.currentTime
     setPlayState(p => ({ ...p, time: t }))
-    if (segments.length === 0) return
+    if (flat.length === 0) return
     let i = curIdxRef.current
-    if (i >= segments.length) i = segments.length - 1
-    while (i < segments.length - 1 && t >= segments[i].end) i++
-    while (i > 0 && t < segments[i].start) i--
+    if (i >= flat.length) i = flat.length - 1
+    while (i < flat.length - 1 && t >= flat[i].end) i++
+    while (i > 0 && t < flat[i].start) i--
     curIdxRef.current = i
     // 落在段间空隙时不高亮（active = -1），两个 while 各自收敛不会来回振荡
-    const active = t >= segments[i].start && t < segments[i].end ? i : -1
+    const active = t >= flat[i].start && t < flat[i].end ? i : -1
     setActiveIdx(active)
     if (active >= 0) segRefs.current[active]?.scrollIntoView({ block: 'nearest' })
-  }, [segments])
+  }, [flat])
 
   // Shift+Space 全局播放/暂停（输入框/contentEditable 聚焦时不触发）
   useEffect(() => {
@@ -189,13 +193,13 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
       : [...prev, { id: sp, name, color: DEFAULT_COLORS[((sp % DEFAULT_COLORS.length) + DEFAULT_COLORS.length) % DEFAULT_COLORS.length] }])
   }, [])
 
-  // 摘取原文纯文本行：「【显示名】mm:ss 文本」（speakers 表名字；无分段（单人）时回退 job.text 按行）
+  // 摘取原文纯文本行：「【显示名】mm:ss 段落全文」（speakers 表名字；无分段（单人）时回退 job.text 按行）
   const noteLines = useMemo<string[]>(() => {
-    if (segments.length > 0) {
-      return segments.map(s => `【${speakerNameOf(s.speaker)}】${formatTime(s.start)} ${s.text}`)
+    if (paragraphs.length > 0) {
+      return paragraphs.map(p => `【${speakerNameOf(p.speaker)}】${formatTime(p.start)} ${p.segs.map(s => s.text).join('')}`)
     }
-    return (job.text ?? '').split('\n').filter(l => l.trim() !== '')
-  }, [segments, job.text, speakerNameOf])
+    return (curJob.text ?? '').split('\n').filter(l => l.trim() !== '')
+  }, [paragraphs, curJob.text, speakerNameOf])
 
   // 批量摘取 → 摘取原文：填充右栏笔记
   const handleExtract = useCallback(() => {
@@ -210,6 +214,20 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
     sessionStorage.setItem(`${NOTE_KEY_PREFIX}${job.id}`, JSON.stringify({ title: p.getTitle(), html: p.getHtml() }))
     showToast('已保存到本地会话', 'success')
   }, [job.id, showToast])
+
+  // 保存成功后重拉详情写本地 override（阅读态/编辑器同步刷新，不经父组件）
+  const refreshJob = useCallback(() => { sttClient.getSttJob(job.id).then(r => { const fresh = r.data; if (r.success && fresh) setMedia(m => ({ ...m, jobOverride: fresh })) }) }, [job.id])
+  const registerEditorSave = useCallback((fn: (() => void) | null) => { editorSaveRef.current = fn }, [])
+  // 七期保存：a) 笔记暂存（现有逻辑）b) 编辑器在挂载态 → 由其保存分段+说话人名；阅读态（无编辑器）只改了名 → 仅存 speakerNames
+  const handleSaveAll = useCallback(async () => {
+    handleSaveNote()
+    if (editorSaveRef.current) { editorSaveRef.current(); return }
+    const names = Object.fromEntries(speakers.filter(s => s.name !== `说话人${s.id}`).map(s => [String(s.id), s.name]))
+    if (JSON.stringify(names) === JSON.stringify(curJob.speakerNames ?? {})) return
+    const res = await saveSttJob(curJob.id, { speakerNames: names })
+    if (res.success) { showToast('已保存到任务', 'success'); refreshJob() }
+    else showToast(res.error ?? '保存失败', 'error')
+  }, [handleSaveNote, speakers, curJob, showToast, refreshJob])
 
   // Blob 下载：createObjectURL → a[download] → 下一轮事件循环 revoke
   const downloadText = useCallback((filename: string, content: string, type: string) => {
@@ -243,15 +261,15 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
   const totalDuration = media.duration || job.durationSec || 0
 
   // 左栏主体：段落流（阅读模式）/ 编辑器（编辑模式或单人纯文本）
-  const body = segments.length > 0 && !editing ? (
+  const body = paragraphs.length > 0 && !editing ? (
     <TranscriptSegmentList
-      segments={segments} activeIdx={activeIdx} chapterRange={chapterRange}
+      paragraphs={paragraphs} activeIdx={activeIdx} chapterRange={chapterRange}
       canSeek={!!media.url} segRefs={segRefs} seekTo={seekTo}
       speakers={speakers} onRename={handleRename}
     />
   ) : (
     <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
-      <TranscriptEditor job={job} masked={masked} audioUrl={media.url} audioRef={audioRef} seekTo={seekTo} speakers={speakers} onRenameSpeaker={handleRename} onIngest={onIngest} />
+      <TranscriptEditor job={curJob} masked={masked} audioUrl={media.url} audioRef={audioRef} seekTo={seekTo} speakers={speakers} onRenameSpeaker={handleRename} onSaved={refreshJob} onRegisterSave={registerEditorSave} onIngest={onIngest} />
     </div>
   )
 
@@ -261,7 +279,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
       <div className="w-11 flex flex-col items-center py-3 gap-1.5 border-r border-[color:var(--border)] bg-[color:var(--panel)] flex-shrink-0">
         <RailButton icon="ArrowLeft" title="返回列表" onClick={onBack} />
         <div className="flex-1" />
-        <RailButton icon="Save" title="保存笔记（暂存本地会话）" onClick={handleSaveNote} />
+        <RailButton icon="Save" title="保存（笔记暂存 + 转写修改/说话人名落库）" onClick={handleSaveAll} />
         <div className="relative" data-menu-root>
           <RailButton icon="Download" title="导出" active={menuOpen === 'export'} onClick={() => setMenuOpen(m => (m === 'export' ? null : 'export'))} />
           {menuOpen === 'export' && (
@@ -280,9 +298,9 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
         {/* 顶栏：标题 + 批量摘取 + 编辑 */}
         <div className="flex items-center gap-3 px-4 h-14 border-b border-[color:var(--border)] flex-shrink-0">
           <span className="text-sm font-medium text-[color:var(--fg)] truncate flex-1">
-            {job.sourceFile || `任务 #${job.id}`}
+            {curJob.sourceFile || `任务 #${curJob.id}`}
           </span>
-          {segments.length > 0 && (
+          {paragraphs.length > 0 && (
             <div className="relative flex-shrink-0" data-menu-root>
               <Button
                 variant={menuOpen === 'extract' ? 'primary' : 'outline'} size="sm" leftIcon="ClipboardPen"
@@ -298,7 +316,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
               )}
             </div>
           )}
-          {segments.length > 0 && (
+          {paragraphs.length > 0 && (
             <Button
               variant={editing ? 'primary' : 'outline'} size="sm" leftIcon={editing ? 'Eye' : 'Pencil'}
               onClick={() => setEditing(v => !v)} className="flex-shrink-0"
@@ -367,7 +385,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
           <aside className="flex flex-col min-h-0 flex-shrink-0 h-[45%] p-2 min-[900px]:h-auto min-[900px]:flex-initial min-[900px]:basis-[40%] min-[900px]:min-w-0">
             <TranscriptNotePanel
               ref={noteRef}
-              defaultTitle={`${job.sourceFile || `任务 #${job.id}`}笔记`}
+              defaultTitle={`${curJob.sourceFile || `任务 #${curJob.id}`}笔记`}
               className="flex-1 min-h-[280px]"
             />
           </aside>

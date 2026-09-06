@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Icon } from '@/components/ui/Icon'
-import { Button } from '../../ui/Button'
 import { ConfirmDialog } from '../../ui/ConfirmDialog'
 import { useToastStore } from '@/store/toastStore'
 import {
@@ -10,27 +9,13 @@ import {
 } from '@/services/agent-client'
 import type { MultiProviderConfig, ProviderModelEntry } from '@/types/agent'
 import { GenerationParamsSection, CapBadge } from './aiProviderSettingsParts'
-import { ProviderAddForm, ModelEditDialog } from './aiProviderDialogs'
-
-/** 删除确认目标 */
-type DelTarget =
-  | { kind: 'provider'; id: string; label: string }
-  | { kind: 'model'; providerId: string; modelId: string; label: string }
-
-/** 当前生效徽章 */
-function ActiveBadge() {
-  return (
-    <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-micro font-medium bg-accent-soft text-primary">
-      当前生效
-    </span>
-  )
-}
+import { ProviderAddForm, ModelEditDialog, ActiveBadge, type DelTarget } from './aiProviderDialogs'
 
 /**
  * AI 助手设置卡片 — 多服务商管理（对齐成熟 Agent 使用逻辑）
  * - 内置/自定义切换；服务商列表（添加/启用/删除）
  * - 当前服务商的模型列表（弹窗添加/编辑、能力标注、设默认、删除）
- * - 温度 + maxTokens；所有改动点「保存」整份落库
+ * - 温度 + maxTokens；所有改动即时自动保存（生成参数/代理输入防抖 800ms 合并）
  */
 export function AiProviderSection() {
   const [multi, setMulti] = useState<MultiProviderConfig | null>(null)
@@ -42,6 +27,24 @@ export function AiProviderSection() {
   const [status, setStatus] = useState<'loading' | 'idle' | 'saving'>('loading')
   // 按 selector 订阅：全 store 订阅会在 toast 弹出/消失时重建 loadConfig → useEffect 无限重跑（自定义模型卡死根因）
   const showToast = useToastStore(s => s.showToast)
+  /** 最近一次自动保存的错误信息（成功时清空） */
+  const [saveError, setSaveError] = useState<string | null>(null)
+  // ref 镜像：自动保存读最新 state，避免闭包吃到旧值
+  const multiRef = useRef<MultiProviderConfig | null>(null)
+  multiRef.current = multi
+  const apiKeyInputsRef = useRef<Record<string, string>>({})
+  apiKeyInputsRef.current = apiKeyInputs
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)   // 防抖 timer（800ms 合并保存），unmount 时冲刷
+  // unmount 冲刷：防抖窗口内切走页面时把挂起的改动立即落库，不丢最后一次输入。
+  // saveNow 经 ref 转发（saveNowRef），unmount 闭包拿到的是最新实现，避免闭包过期。
+  const saveNowRef = useRef<() => Promise<void>>(async () => {})
+  useEffect(() => () => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current)
+      saveTimerRef.current = null
+      void saveNowRef.current()
+    }
+  }, [])
 
   const loadConfig = useCallback(async () => {
     const cfg = await getLlmProviderConfig()
@@ -66,6 +69,40 @@ export function AiProviderSection() {
     loadConfig()
   }, [loadConfig])
 
+  /** 立即保存整份配置（空 key = 保留原密钥）；成功静默生效，失败 toast + 行内红字 */
+  const saveNow = async () => {
+    const cur = multiRef.current
+    if (!cur) return
+    setStatus('saving')
+    try {
+      const res = await saveLlmProviderConfig({ ...cur, providers: cur.providers.map(p => ({ ...p, apiKey: apiKeyInputsRef.current[p.id] ?? '' })) })
+      const err = res.success ? null : res.error || '保存失败'
+      setSaveError(err)
+      if (err) { showToast(err, 'error'); return }
+      await reloadLlmProviderConfig()   // 立即生效，无需重启
+      showToast('AI 设置已保存', 'success')
+    } finally {
+      setStatus('idle')
+    }
+  }
+  saveNowRef.current = saveNow   // unmount 冲刷经 ref 调最新实现
+
+  /** 更新 multi（同步刷 ref 镜像）并自动保存：immediate=true 立即保存，false 防抖 800ms 合并连续改动 */
+  const applyUpdate = (updater: (m: MultiProviderConfig) => MultiProviderConfig, immediate: boolean) => {
+    const cur = multiRef.current
+    if (!cur) return
+    const next = updater(cur)
+    multiRef.current = next
+    setMulti(next)
+    if (immediate) {
+      // 立即保存时取消挂起的防抖 timer：同一次改动不连发两次请求
+      if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null }
+      void saveNow(); return
+    }
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = setTimeout(() => { saveTimerRef.current = null; void saveNow() }, 800)
+  }
+
   if (status === 'loading' || !multi) {
     return (
       <div className="card">
@@ -83,15 +120,17 @@ export function AiProviderSection() {
   const active = multi.providers.find(p => p.id === multi.activeProviderId) ?? null
   const dialogProvider = modelDialog ? multi.providers.find(p => p.id === modelDialog.providerId) : null
 
-  /** 添加服务商：进列表并立即启用（切到自定义） */
+  /** 添加服务商：进列表并立即启用（切到自定义），自动保存 */
   const handleAddProvider = (entry: { id: string; name: string; baseUrl: string; models: ProviderModelEntry[]; activeModelId: string }, apiKey: string) => {
-    setMulti(m => m && ({
+    const nextInputs = apiKey ? { ...apiKeyInputsRef.current, [entry.id]: apiKey } : apiKeyInputsRef.current
+    apiKeyInputsRef.current = nextInputs   // 同步 ref：saveNow 立即读时不受 setState 异步影响
+    setApiKeyInputs(nextInputs)
+    applyUpdate(m => ({
       ...m,
       providers: [...m.providers, { ...entry, apiKey }],
       activeProviderId: entry.id,
       useBuiltIn: false,
-    }))
-    if (apiKey) setApiKeyInputs(prev => ({ ...prev, [entry.id]: apiKey }))
+    }), true)
     setAddingProvider(false)
   }
 
@@ -100,7 +139,7 @@ export function AiProviderSection() {
     models.some(m => m.id === activeModelId) ? activeModelId : (models[0]?.id ?? '')
 
   const handleSaveModel = (providerId: string, entry: ProviderModelEntry) => {
-    setMulti(m => m && ({
+    applyUpdate(m => ({
       ...m,
       providers: m.providers.map(p => {
         if (p.id !== providerId) return p
@@ -112,14 +151,13 @@ export function AiProviderSection() {
           : [...p.models, entry]
         return { ...p, models, activeModelId: normalizeActiveModel(models, p.activeModelId) }
       }),
-    }))
+    }), true)
     setModelDialog(null)
   }
 
   const handleConfirmDelete = () => {
     if (!delTarget) return
-    setMulti(m => {
-      if (!m) return m
+    applyUpdate(m => {
       if (delTarget.kind === 'provider') {
         const providers = m.providers.filter(p => p.id !== delTarget.id)
         return {
@@ -136,27 +174,8 @@ export function AiProviderSection() {
           return { ...p, models, activeModelId: normalizeActiveModel(models, p.activeModelId) }
         }),
       }
-    })
+    }, true)
     setDelTarget(null)
-  }
-
-  /** 保存整份多服务商配置（空 key = 保留原密钥） */
-  const handleSave = async () => {
-    if (!multi) return
-    setStatus('saving')
-    try {
-      const payload: MultiProviderConfig = {
-        ...multi,
-        providers: multi.providers.map(p => ({ ...p, apiKey: apiKeyInputs[p.id] ?? '' })),
-      }
-      const res = await saveLlmProviderConfig(payload)
-      if (!res.success) { showToast(res.error || '保存失败', 'error'); return }
-      await reloadLlmProviderConfig()   // 立即生效，无需重启
-      showToast('AI 设置已保存', 'success')
-      await loadConfig()
-    } finally {
-      setStatus('idle')
-    }
   }
 
   return (
@@ -175,8 +194,10 @@ export function AiProviderSection() {
             type="button"
             role="switch"
             aria-checked={multi.useBuiltIn}
-            onClick={() => setMulti(m => m && ({ ...m, useBuiltIn: !m.useBuiltIn }))}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${multi.useBuiltIn ? 'bg-[color:var(--accent)]' : 'bg-[color:var(--panel-2)]'}`}
+            onClick={() => applyUpdate(m => ({ ...m, useBuiltIn: !m.useBuiltIn }), true)}
+            disabled={status === 'saving'}
+            aria-label="使用内置免费模型"
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${multi.useBuiltIn ? 'bg-[color:var(--accent)]' : 'bg-[color:var(--panel-2)]'}`}
           >
             <span className={`inline-block h-4 w-4 transform rounded-full bg-[color:var(--card)] shadow transition-transform ${multi.useBuiltIn ? 'translate-x-6' : 'translate-x-1'}`} />
           </button>
@@ -223,7 +244,7 @@ export function AiProviderSection() {
                     {!isActive && (
                       <button
                         type="button"
-                        onClick={() => setMulti(m => m && ({ ...m, activeProviderId: p.id, useBuiltIn: false }))}
+                        onClick={() => applyUpdate(m => ({ ...m, activeProviderId: p.id, useBuiltIn: false }), true)}
                         disabled={status === 'saving'}
                         className="px-2 py-1 rounded-lg text-xs font-medium hover:bg-[color:var(--panel-2)] disabled:opacity-50 text-primary"
                       >
@@ -282,10 +303,10 @@ export function AiProviderSection() {
                       {!isDefault && (
                         <button
                           type="button"
-                          onClick={() => setMulti(prev => prev && ({
+                          onClick={() => applyUpdate(prev => ({
                             ...prev,
                             providers: prev.providers.map(p => p.id === active.id ? { ...p, activeModelId: m.id } : p),
-                          }))}
+                          }), true)}
                           disabled={status === 'saving'}
                           className="px-2 py-1 rounded-lg text-xs hover:bg-[color:var(--panel-2)] disabled:opacity-50 text-content-2"
                         >
@@ -324,7 +345,7 @@ export function AiProviderSection() {
           temperature={multi.temperature}
           maxTokens={multi.maxTokens}
           disabled={status === 'saving'}
-          onChange={next => setMulti(m => m && ({ ...m, ...next }))}
+          onChange={next => applyUpdate(m => ({ ...m, ...next }), false)}
         />
 
         {/* ── 网络代理 ── */}
@@ -333,7 +354,7 @@ export function AiProviderSection() {
           <input
             type="text"
             value={multi.proxyUrl ?? ''}
-            onChange={e => setMulti(m => m && ({ ...m, proxyUrl: e.target.value }))}
+            onChange={e => applyUpdate(m => ({ ...m, proxyUrl: e.target.value }), false)}
             disabled={status === 'saving'}
             placeholder="http://127.0.0.1:7890（留空 = 直连）"
             className="w-full px-3 py-2.5 rounded-lg text-sm border border-[color:var(--border)] bg-[color:var(--card)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-soft)] disabled:bg-[color:var(--panel-2)] disabled:text-[color:var(--muted)] disabled:cursor-not-allowed"
@@ -343,12 +364,9 @@ export function AiProviderSection() {
           </p>
         </div>
 
-        {/* ── 保存 ── */}
-        <div className="pt-2 flex items-center gap-3">
-          <Button variant="primary" size="md" onClick={handleSave} disabled={status === 'saving'}>
-            <Icon name="Save" size={16} /> {status === 'saving' ? '保存中...' : '保存'}
-          </Button>
-          <span className="text-xs text-[color:var(--muted)]">以上改动点「保存」后生效（密钥留空 = 保留原密钥）</span>
+        {/* ── 自动保存状态 ── */}
+        <div className="pt-2 flex items-center gap-2 text-xs">
+          {saveError ? <span className="text-[color:var(--danger)]">保存失败：{saveError}</span> : status === 'saving' ? <span className="text-[color:var(--muted)]">保存中...</span> : <span className="text-[color:var(--muted)]">改动自动保存</span>}
         </div>
       </div>
 
@@ -371,7 +389,7 @@ export function AiProviderSection() {
         onClose={() => setDelTarget(null)}
         onConfirm={handleConfirmDelete}
         title="确认删除"
-        content={`确定要删除「${delTarget?.label ?? ''}」吗？点「保存」后生效。`}
+        content={`确定要删除「${delTarget?.label ?? ''}」吗？`}
         confirmText="删除"
         confirmVariant="danger"
       />

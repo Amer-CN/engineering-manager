@@ -13,14 +13,8 @@ const mockDeleteAgentConversation = vi.hoisted(() => vi.fn())
 const mockRenameAgentConversation = vi.hoisted(() => vi.fn())
 vi.mock('@/services/agent-client', () => ({
   getAgentConversations: mockGetAgentConversations,
-  // 软删除特性新增：loadConversations 会 Promise.all 拉取已删除列表，缺失会导致整批加载抛错被静默吞掉
-  getDeletedAgentConversations: vi.fn().mockResolvedValue([]),
   deleteAgentConversation: mockDeleteAgentConversation,
   renameAgentConversation: mockRenameAgentConversation,
-  // 组件已导入的归档/恢复方法，补齐以保持 mock 与产品契约一致
-  archiveConversation: vi.fn().mockResolvedValue(true),
-  unarchiveConversation: vi.fn().mockResolvedValue(true),
-  restoreConversation: vi.fn().mockResolvedValue(true),
 }))
 
 vi.mock('@/hooks/usePermission', () => ({
@@ -118,6 +112,71 @@ describe('ConversationHistory', () => {
 
     await waitFor(() => {
       expect(mockDeleteAgentConversation).toHaveBeenCalledWith(1)
+    })
+  })
+
+  test('删除确认框点取消 → 不调用 deleteAgentConversation 且条目保留', async () => {
+    const { container } = renderWithProviders(
+      <ConversationHistory
+        inline
+        onSelectConversation={vi.fn()}
+        onNewConversation={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('今天的对话')).toBeTruthy()
+    })
+
+    fireEvent.click(container.querySelectorAll('button[title="删除对话"]')[0])
+
+    // 确认框出现，含不可恢复文案
+    await waitFor(() => {
+      expect(screen.getByText(/无法恢复/)).toBeTruthy()
+    })
+
+    // 点取消
+    fireEvent.click(screen.getByText('取消'))
+
+    await waitFor(() => {
+      expect(screen.queryByText('删除对话')).toBeNull()
+    })
+
+    expect(mockDeleteAgentConversation).not.toHaveBeenCalled()
+    expect(screen.getByText('今天的对话')).toBeTruthy()
+  })
+
+  test('批量删除 → 弹确认框（含数量）；确认后逐条调用 deleteAgentConversation', async () => {
+    renderWithProviders(
+      <ConversationHistory
+        inline
+        onSelectConversation={vi.fn()}
+        onNewConversation={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('今天的对话')).toBeTruthy()
+    })
+
+    // 进入多选模式并勾选两条
+    fireEvent.click(screen.getByText('多选'))
+    fireEvent.click(screen.getByText('今天的对话'))
+    fireEvent.click(screen.getByText('昨天的对话'))
+
+    // 点「删除所选」→ 弹批量确认框
+    fireEvent.click(screen.getByText('删除所选'))
+    await waitFor(() => {
+      expect(screen.getByText('批量删除对话')).toBeTruthy()
+    })
+    expect(screen.getByText(/删除后 2 个对话及其消息将无法恢复/)).toBeTruthy()
+
+    // 确认
+    fireEvent.click(screen.getByText('删除'))
+
+    await waitFor(() => {
+      expect(mockDeleteAgentConversation).toHaveBeenCalledWith(1)
+      expect(mockDeleteAgentConversation).toHaveBeenCalledWith(2)
     })
   })
 

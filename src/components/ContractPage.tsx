@@ -9,6 +9,7 @@ import type { Partner, Project, PaymentRecord, Template } from '../types/electro
 import { partnerCategories, contractStatuses } from '../data/regions'
 import { logDelete, logExport } from '../utils/audit'
 import { usePermission } from '../hooks/usePermission'
+import { useSlidePill } from '../hooks/useSlidePill'
 import { exportContracts } from '../utils/export-import'
 import { formatMoney } from '../utils/format'
 import { useToastStore } from '@/store/toastStore'
@@ -55,6 +56,7 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
   const [showTemplateSelector, setShowTemplateSelector] = useState(false)
   const [generatingTemplate, setGeneratingTemplate] = useState<Template | null>(null)
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list')
+  const viewPill = useSlidePill(viewMode)
 
   useEffect(() => {
     getApi(type).then(setApi)
@@ -227,14 +229,24 @@ const ContractPage: React.FC<ContractPageProps> = ({ refresh, groupBy = 'project
       {/* 工具栏 */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          {/* 视图切换：列表 / 看板（S13） */}
-          <div className="flex items-center rounded-lg p-1" style={{ background: 'var(--panel-2)' }}>
+          {/* 视图切换：列表 / 看板（S13；动效批 1：滑动胶囊高亮） */}
+          <div className="relative flex items-center rounded-lg p-1" style={{ background: 'var(--panel-2)' }} ref={viewPill.containerRef}>
+            <span aria-hidden className="pointer-events-none absolute rounded-md"
+              style={{ ...viewPill.pillStyle, background: 'var(--card)', boxShadow: 'var(--shadow-card)' }} />
             <button onClick={() => setViewMode('list')} title="列表视图"
-              className="px-3 py-1.5 text-sm rounded-md transition-colors flex items-center gap-1.5" style={viewMode === 'list' ? { background: 'var(--card)', color: 'var(--fg)', boxShadow: 'var(--shadow-card)' } : { background: 'transparent', color: 'var(--muted)' }}>
+              ref={viewPill.registerItem('list')}
+              onMouseEnter={() => viewPill.setHovered('list')}
+              onMouseLeave={() => viewPill.setHovered(null)}
+              className="relative z-10 px-3 py-1.5 text-sm rounded-md transition-colors flex items-center gap-1.5"
+              style={viewMode === 'list' ? { color: 'var(--fg)' } : { color: 'var(--muted)' }}>
               <Icon name="List" size={14} /> 列表
             </button>
             <button onClick={() => setViewMode('kanban')} title="看板视图"
-              className="px-3 py-1.5 text-sm rounded-md transition-colors flex items-center gap-1.5" style={viewMode === 'kanban' ? { background: 'var(--card)', color: 'var(--fg)', boxShadow: 'var(--shadow-card)' } : { background: 'transparent', color: 'var(--muted)' }}>
+              ref={viewPill.registerItem('kanban')}
+              onMouseEnter={() => viewPill.setHovered('kanban')}
+              onMouseLeave={() => viewPill.setHovered(null)}
+              className="relative z-10 px-3 py-1.5 text-sm rounded-md transition-colors flex items-center gap-1.5"
+              style={viewMode === 'kanban' ? { color: 'var(--fg)' } : { color: 'var(--muted)' }}>
               <Icon name="LayoutDashboard" size={14} /> 看板
             </button>
           </div>

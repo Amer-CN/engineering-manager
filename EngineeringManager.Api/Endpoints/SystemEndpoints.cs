@@ -203,9 +203,15 @@ public static class SystemEndpoints
             var snapshotDir = Path.Combine(ApiConfig.ResolveDataPath(), "db-snapshots");
             Directory.CreateDirectory(snapshotDir);
             var dbPath = Path.Combine(ApiConfig.ResolveDataPath(), "engineering.db");
+            if (!File.Exists(dbPath)) return Common.Fail("数据库文件不存在");
             var snapshotName = $"snapshot-{DateTime.Now:yyyyMMdd-HHmmss}.db";
             var snapshotPath = Path.Combine(snapshotDir, snapshotName);
-            File.Copy(dbPath, snapshotPath);
+            // 审查补充: 文件名为秒级时间戳，同秒连点第二次目标已存在 → VACUUM INTO 报
+            // output file already exists（走 Fail）。预删实现"最新覆盖"语义（同路径内容近乎
+            // 相同，删除无害）；删除失败则 VACUUM 自然报错，走既有 Fail 路径
+            if (File.Exists(snapshotPath)) try { File.Delete(snapshotPath); } catch (Exception ex) { Console.Error.WriteLine($"[Snapshots] 快照目标预删失败: {ex.Message}"); }
+            // F1: VACUUM INTO 替代裸 File.Copy —— SQLite 官方热备份，含 WAL 内容、防页撕裂
+            db.Execute("VACUUM INTO @Path", new { Path = snapshotPath });
             // I-1：创建成功后按 snapshotMaxCount 修剪最旧快照（文件名倒序 = 时间戳新→旧，
             // 超出上限的最旧快照删除）；修剪失败只记日志，不影响创建结果
             try
@@ -239,7 +245,7 @@ public static class SystemEndpoints
             return Common.Ok(new { maxCount = ReadSnapshotMaxCount() });
         });
 
-        app.MapPost("/api/snapshots/{id}/restore", (HttpContext ctx, string id) =>
+        app.MapPost("/api/snapshots/{id}/restore", (HttpContext ctx, string id, IDbConnection db) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             if (!CurrentUser.IsAdmin(ctx)) return Common.Fail("仅管理员可恢复快照");
@@ -250,6 +256,8 @@ public static class SystemEndpoints
             var path = Path.Combine(snapshotDir, $"{id}.db");
             if (!File.Exists(path)) return Results.Forbid();
             var dbPath = Path.Combine(ApiConfig.ResolveDataPath(), "engineering.db");
+            // F1: 复制前 checkpoint，把 WAL 内容回写主库，保证待恢复文件与备份完整一致
+            db.Execute("PRAGMA wal_checkpoint(TRUNCATE)");
             // 恢复前先备份当前数据库，防止误操作导致数据丢失
             if (File.Exists(dbPath))
             {
@@ -257,7 +265,9 @@ public static class SystemEndpoints
                 File.Copy(dbPath, backupPath);
             }
             File.Copy(path, dbPath, true);
-            return Common.Ok();
+            // F1: 复制后再 checkpoint 一次，确保 -wal 文件清空，不残留旧库页
+            db.Execute("PRAGMA wal_checkpoint(TRUNCATE)");
+            return Common.Ok(new { restartRequired = true, message = "恢复完成后请重启应用以加载恢复后的数据库" });
         });
 
         app.MapPut("/api/snapshots/max-count", (HttpContext ctx, System.Text.Json.JsonElement body, IDbConnection db) =>
@@ -552,7 +562,12 @@ public static class SystemEndpoints
                 var desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
                 var backupName = $"工程管家-备份-{DateTime.Now:yyyyMMdd-HHmmss}.db";
                 var backupPath = Path.Combine(desktopPath, backupName);
-                File.Copy(dbFile, backupPath);
+                // 审查补充: 文件名为秒级时间戳，同秒连点第二次目标已存在 → VACUUM INTO 报
+                // output file already exists（走 Fail）。预删实现"最新覆盖"语义（同路径内容近乎
+                // 相同，删除无害）；删除失败则 VACUUM 自然报错，走既有 Fail 路径
+                if (File.Exists(backupPath)) try { File.Delete(backupPath); } catch (Exception ex) { Console.Error.WriteLine($"[Backup] 备份目标预删失败: {ex.Message}"); }
+                // F1: VACUUM INTO 替代裸 File.Copy —— SQLite 官方热备份，含 WAL 内容、防页撕裂
+                db.Execute("VACUUM INTO @Path", new { Path = backupPath });
                 return Common.Ok(new { path = backupPath });
             }
             catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
@@ -571,13 +586,17 @@ public static class SystemEndpoints
                 var backupFile = backups[0];
                 var dbPath = ApiConfig.ResolveDataPath();
                 var dbFile = Path.Combine(dbPath, "engineering.db");
+                // F1: 复制前 checkpoint，把 WAL 内容回写主库，保证覆盖目标完整
+                db.Execute("PRAGMA wal_checkpoint(TRUNCATE)");
                 if (File.Exists(dbFile))
                 {
                     File.Copy(dbFile, dbFile + $".bak-{DateTime.Now:yyyyMMdd-HHmmss}");
                 }
                 Directory.CreateDirectory(dbPath);
                 File.Copy(backupFile, dbFile, true);
-                return Common.Ok();
+                // F1: 复制后再 checkpoint 一次，确保 -wal 文件清空，不残留旧库页
+                db.Execute("PRAGMA wal_checkpoint(TRUNCATE)");
+                return Common.Ok(new { restartRequired = true, message = "恢复完成后请重启应用以加载恢复后的数据库" });
             }
             catch (Exception ex) { return Common.Fail(Common.Sanitize(ex.Message)); }
         });

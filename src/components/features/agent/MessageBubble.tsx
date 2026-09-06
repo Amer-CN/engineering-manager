@@ -13,6 +13,7 @@ import type { AgentMessage, AgentMessageResponse, ToolCallResult } from '@/types
 import MessageActions from './MessageActions'
 import RichToolResult from './RichToolResult'
 import MarkdownRenderer from './MarkdownRenderer'
+import ApprovalCard, { type ApprovalOption } from './ApprovalCard'
 import ThinkingTrace from './ThinkingTrace'
 import Mascot, { type MascotState } from './Mascot'
 import { useMascotAppearance } from '@/hooks/useMascotAppearance'
@@ -83,6 +84,25 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend
 
   const isSending = 'sending' in message && (message as { sending?: boolean }).sending === true
 
+  /** 行动确认卡数据（assistant 消息挂点；契约见 src/types/agent.ts ApprovalRequest） */
+  const approval = !isUser ? ((message as AgentMessage).approval ?? null) : null
+  /** 本地已决态（消息级 state）：onResolve 只做本地展示 + console 对接点提示，后端协议未接、不发明网络调用 */
+  const [localResolution, setLocalResolution] = useState<{ option: ApprovalOption; at?: string } | null>(null)
+  /** 已决态来源：本地刚点选 > 消息自带 resolution（历史恢复回放）；都没有 → 保持可交互（回放语义由后端定） */
+  let resolvedApproval: { option: ApprovalOption; at?: string } | null = null
+  if (localResolution) {
+    resolvedApproval = localResolution
+  } else if (approval?.resolution) {
+    const { resolution } = approval
+    const resolvedOption = approval.options.find((o) => o.key === resolution.optionKey)
+    if (resolvedOption) resolvedApproval = { option: resolvedOption, at: resolution.resolvedAt }
+  }
+  const handleApprovalResolve = (requestId: string, option: ApprovalOption) => {
+    setLocalResolution({ option, at: new Date().toISOString() })
+    // 用户接后端时的对接点：在此按 ApprovalResolution 协议回传（requestId + option.key）
+    console.info(`[approval] resolve ${requestId} -> ${option.key}`)
+  }
+
   /** 空的「发送中」助手占位：仍渲染完整消息行（live 头像照常，thinking/searching 动画全程可见），
       但气泡主体/兜底文案/底部行均不渲染（不留空气泡）；AgentStreamTail 指示条由 Dashboard 另行渲染，互不替代 */
   const emptySending = !isUser && isSending && !content && toolResults.length === 0
@@ -149,6 +169,18 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isUser, onResend
           >
             {isUser ? displayBody : <MarkdownRenderer content={displayBody} streaming={isSending} />}
           </div>
+        )}
+
+        {/* 行动确认卡（建议 → 用户确认 → 执行；正文之后、工具结果之前） */}
+        {!isUser && approval && approval.options.length > 0 && (
+          <ApprovalCard
+            requestId={approval.requestId}
+            title={approval.title}
+            body={approval.body ? <MarkdownRenderer content={approval.body} /> : undefined}
+            options={approval.options}
+            onResolve={handleApprovalResolve}
+            resolved={resolvedApproval}
+          />
         )}
 
         {/* ThinkingTrace：思考过程折叠块（reasoning 模型流式聚合；流式中自动展开 + shimmer「思考中」） */}

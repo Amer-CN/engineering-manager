@@ -78,6 +78,8 @@ export interface SttJobDetail extends SttJobSummary {
   numSpeakers?: number
   text?: string
   segments?: SttSegment[]
+  /** 说话人显示名映射（{"1":"张蓉"}，键为编号字符串；null=未改名）*/
+  speakerNames?: Record<string, string> | null
 }
 
 export interface SttUploadResult {
@@ -94,6 +96,13 @@ export interface SttIngestPayload {
   projectId?: number
   folderId?: number | null
   occurredAt?: string
+}
+
+/** PATCH /api/stt/jobs/{id} 保存 payload — 多人传 segments+speakerNames，单人传 text */
+export interface SttSavePayload {
+  segments?: SttSegment[]
+  speakerNames?: Record<string, string>
+  text?: string
 }
 
 export interface SttIngestResult {
@@ -433,6 +442,33 @@ export async function retrySttJob(id: number): Promise<ApiResponse<{ id: number;
   }
 }
 
+/** PATCH /api/stt/jobs/{id} — 保存编辑结果（分段/说话人名/全文，仅 completed 任务） */
+export async function saveSttJob(id: number, payload: SttSavePayload): Promise<ApiResponse<{ id: number; savedAt: string }>> {
+  try {
+    const token = getToken()
+    const resp = await fetch(`${API_BASE}/api/stt/jobs/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify(payload),
+    })
+    if (resp.status === 401) {
+      try { localStorage.removeItem(TOKEN_KEY) } catch { /* */ }
+    }
+    if (!resp.ok) {
+      try {
+        const errBody = await resp.json()
+        if (errBody?.error) return { success: false, error: errBody.error }
+      } catch { /* */ }
+      return { success: false, error: `HTTP ${resp.status}: ${resp.statusText}` }
+    }
+    const raw = await resp.json()
+    return convertKeysToCamelCase(raw)
+  } catch (err) {
+    console.error('[STT] saveSttJob 失败:', err)
+    return { success: false, error: String(err) }
+  }
+}
+
 /** DELETE /api/stt/jobs/{id} — 删除任务（仅 completed/failed/cancelled） */
 export async function deleteSttJob(id: number): Promise<ApiResponse<{ id: number }>> {
   try {
@@ -469,6 +505,7 @@ export const sttClient = {
   getSttJobs,
   getSttInsights,
   ingestSttJob,
+  saveSttJob,
   cancelSttJob,
   retrySttJob,
   deleteSttJob,

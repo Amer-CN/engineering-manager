@@ -202,7 +202,10 @@ public class LlamaCppGgufEngine : ISttEngine
             args.Append(" --vulkan");
         else
             args.Append(" --no-vulkan");
-        args.Append(" --no-dml");
+        // DML 开启（2026-09-05 用户决策：能用显存就用显存）：编码器 ONNX 经
+        // DirectML 走显卡。注：2f1034b2 曾以"开 DML 致任务 24 内存熔断"为由回退，
+        // 后经时间线核对证伪（任务 24 跑于 DML 生效前，DML 不可能是凶手），故恢复。
+        args.Append(" --dml");
         if (!string.IsNullOrWhiteSpace(fullContext))
             args.Append(" --context \"").Append(fullContext.Replace("\"", "\\\"")).Append('"');
         args.Append(" --language Chinese");
@@ -267,6 +270,17 @@ public class LlamaCppGgufEngine : ISttEngine
             psi.Environment["PYTHONIOENCODING"] = "utf-8";
             psi.Environment["GGML_VULKAN_DEVICE"] = "0";
 
+// 启动前准备日志文件：重命名旧文件，杜绝陈旧日志误放行。
+// 必须在 process.Start() 之前 —— 否则日志被残留进程锁定时异常抛出、
+// 任务标失败，但已启动的转写进程无人回收，在后台空跑（任务 23 事故）。
+var logFilePath = Path.Combine(_engineDir, "logs", "latest.log");
+if (!LogFileIncrementalReader.PrepareForNewRun(logFilePath))
+{
+    throw new Exception(
+                        "日志文件被占用（可能有残留的转写进程）。请重启应用后重试；" +
+                        "若仍失败，请在任务管理器结束所有 transcribe.exe 进程。");
+}
+
             process = new Process { StartInfo = psi };
             var tcs = new TaskCompletionSource<bool>();
 
@@ -315,12 +329,7 @@ public class LlamaCppGgufEngine : ISttEngine
             }, ct);
 
 // GPU fail-closed + 资源保险丝：使用 SttMonitorLoop（可注入 ISttTelemetryProvider）
-var logFilePath = Path.Combine(_engineDir, "logs", "latest.log");
-// 启动前准备日志文件：重命名旧文件，杜绝陈旧日志误放行
-if (!LogFileIncrementalReader.PrepareForNewRun(logFilePath))
-{
-    throw new Exception("日志文件准备失败（重命名/删除均失败），fail closed，不启动模型");
-}
+// （日志准备已在 process.Start() 之前完成，logFilePath 供 telemetry 增量读取）
 var telemetry = new SttTelemetryProvider(process, outputLock, outputBuilder, errorBuilder, logFilePath);
             var monitorLoop = new SttMonitorLoop(telemetry);
             var startTime = DateTime.UtcNow;
@@ -423,6 +432,13 @@ var telemetry = new SttTelemetryProvider(process, outputLock, outputBuilder, err
             Console.WriteLine($"[SttEngine] stdout len={stdout.Length}, stderr len={stderr.Length}, exit={process.ExitCode}");
 
             return (stdout, stderr, process.ExitCode, hasCompletionMarker);
+            }
+            catch
+            {
+                // 任何阶段抛异常（监控保险丝/GPU 验证/解码失败）都不能让已启动的
+                // 转写进程存活 —— 否则它锁着 latest.log 继续跑，下一个任务也会被拖垮
+                try { if (process != null) KillProcessTree(process); } catch { }
+                throw;
             }
             finally
             {

@@ -105,60 +105,6 @@ export async function renameAgentConversation(
   return result.success
 }
 
-/**
- * 获取“最近删除”（软删除）对话列表，供恢复入口使用
- */
-export async function getDeletedAgentConversations(): Promise<AgentConversation[]> {
-  const result = await apiClient.get<AgentConversation[]>(
-    '/api/agent/conversations',
-    { scope: 'deleted' }
-  )
-  if (!result.success || !result.data) {
-    console.warn('[AgentClient] 获取最近删除列表失败:', result.error)
-    return []
-  }
-  return result.data
-}
-
-/**
- * 归档对话（archived_at = now，归档 ≠ 删除）
- * @param conversationId 对话 ID
- */
-export async function archiveConversation(
-  conversationId: number
-): Promise<boolean> {
-  const result = await apiClient.patch<{ success: boolean }>(
-    `/api/agent/conversations/${conversationId}/archive`
-  )
-  return result.success
-}
-
-/**
- * 取消归档（archived_at = NULL）
- * @param conversationId 对话 ID
- */
-export async function unarchiveConversation(
-  conversationId: number
-): Promise<boolean> {
-  const result = await apiClient.patch<{ success: boolean }>(
-    `/api/agent/conversations/${conversationId}/unarchive`
-  )
-  return result.success
-}
-
-/**
- * 恢复软删除的对话（deleted_at = NULL）
- * @param conversationId 对话 ID
- */
-export async function restoreConversation(
-  conversationId: number
-): Promise<boolean> {
-  const result = await apiClient.patch<{ success: boolean }>(
-    `/api/agent/conversations/${conversationId}/restore`
-  )
-  return result.success
-}
-
 // ═══════════════════════════════════════════════════════════════
 // LLM 配置管理
 // ═══════════════════════════════════════════════════════════════

@@ -1,4 +1,5 @@
 using Xunit;
+using Dapper;
 using EngineeringManager.Api.Services;
 
 namespace EngineeringManager.Tests.Endpoints;
@@ -186,5 +187,142 @@ public class SafeQueryValidatorTests
         Assert.NotNull(result.RewrittenSql);
         // 改写结果去掉字符串字面量后必须仍含 created_by 过滤（无论 WHERE 是追加还是插入形式）
         Assert.Contains("created_by", StripStringLiterals(result.RewrittenSql), StringComparison.OrdinalIgnoreCase);
+    }
+
+    // ════════ 白名单与真实库对齐（列名漂移修复） ════════
+    // 真实库 PRAGMA 实测：合同表是 signed_date（无 sign_date/counterparty），
+    // 库存表是 current_stock/min_stock/max_stock（无 quantity/min_quantity/location/notes）。
+
+    [Fact]
+    public void Whitelist_Contracts_ContainsSignedDate_NotSignDate()
+    {
+        foreach (var table in new[] { "income_contracts", "expense_contracts" })
+        {
+            var cols = SafeQueryValidator.TableWhitelist[table];
+            Assert.Contains("signed_date", cols);
+            Assert.DoesNotContain("sign_date", cols);
+        }
+    }
+
+    [Fact]
+    public void Whitelist_Inventory_ContainsRealStockColumns_NotDeadColumns()
+    {
+        var cols = SafeQueryValidator.TableWhitelist["inventory_items"];
+        Assert.Contains("current_stock", cols);
+        Assert.Contains("min_stock", cols);
+        Assert.Contains("max_stock", cols);
+        Assert.Contains("code", cols);
+        Assert.Contains("specifications", cols);
+        Assert.DoesNotContain("quantity", cols);
+        Assert.DoesNotContain("min_quantity", cols);
+        Assert.DoesNotContain("location", cols);
+        Assert.DoesNotContain("notes", cols); // 真实库库存表是 remarks，不是 notes
+    }
+
+    [Fact]
+    public void Whitelist_Settlements_ContainsRealColumns()
+    {
+        var cols = SafeQueryValidator.TableWhitelist["settlements"];
+        foreach (var col in new[] { "name", "settlement_no", "sub_type", "settlement_date",
+                 "period_start", "period_end", "approved_by", "approved_at", "paid_at" })
+            Assert.Contains(col, cols);
+    }
+
+    [Fact]
+    public void Whitelist_Members_ContainsWageBankAccount()
+    {
+        var cols = SafeQueryValidator.TableWhitelist["members"];
+        Assert.Contains("wage_bank_account", cols);
+        Assert.DoesNotContain("bank_account", cols); // 真实 members 表无明文 bank_account 列
+    }
+
+    [Fact]
+    public void ValidateAndRewrite_ContractsSignedDateQuery_Passes()
+    {
+        var result = SafeQueryValidator.ValidateAndRewrite(
+            "SELECT ic.name, ic.signed_date, ic.contract_no FROM income_contracts ic", TestUid, TestScope);
+
+        Assert.True(result.IsValid, $"signed_date 查询应该通过: {result.Error}");
+    }
+
+    [Fact]
+    public void ValidateAndRewrite_InventoryDeadColumn_Rejected()
+    {
+        var result = SafeQueryValidator.ValidateAndRewrite(
+            "SELECT quantity FROM inventory_items", TestUid, TestScope);
+
+        Assert.False(result.IsValid, "quantity 已不是库存表真实列，应被拒绝");
+    }
+
+    // ════════ A1/A2（审计 2026-09-04）：CTE 拒绝 + OR 短路防护 ════════
+
+    [Fact]
+    public void ValidateAndRewrite_WithCteQuery_Rejected()
+    {
+        // A2 PoC：CTE 借白名单表名 projects 做别名，体内引用越权表 users——
+        // 旧实现只校验外层 FROM，CTE 体内的表/列完全绕过白名单与过滤注入
+        var result = SafeQueryValidator.ValidateAndRewrite(
+            "WITH projects AS (SELECT id, name FROM users) SELECT id, name FROM projects",
+            TestUid, TestScope);
+
+        Assert.False(result.IsValid, "WITH (CTE) 查询应该被整体拒绝");
+        Assert.NotNull(result.Error);
+        Assert.Contains("CTE", result.Error, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ValidateAndRewrite_OrAlwaysTrueWhere_UserFilterNotShortCircuited()
+    {
+        // A1 PoC：顶层 OR 1=1 曾短路裸拼注入的行级过滤器（旧实现 " {filter} AND"）→ 越权
+        var sql = "SELECT name FROM projects WHERE 1 = 1 OR 1 = 1";
+        var result = SafeQueryValidator.ValidateAndRewrite(sql, TestUid, RestrictedScope);
+
+        Assert.True(result.IsValid, $"查询应该通过: {result.Error}");
+        Assert.NotNull(result.RewrittenSql);
+        // 括号结构断言：过滤器与用户原 WHERE 各自包进括号
+        Assert.Contains("AND (", result.RewrittenSql, StringComparison.OrdinalIgnoreCase);
+
+        // 内存库实测两用户数据隔离：改写后的 SQL 以 u1 身份执行只能看到 u1 的行
+        using var conn = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=:memory:");
+        conn.Open();
+        conn.Execute("CREATE TABLE projects (id INTEGER PRIMARY KEY, name TEXT, created_by TEXT)");
+        conn.Execute("INSERT INTO projects (name, created_by) VALUES ('mine', 'u1'), ('theirs', 'u2')");
+        var rows = conn.Query<string>(result.RewrittenSql, new { Uid = "u1" }).ToList();
+        Assert.Single(rows);
+        Assert.Equal("mine", rows[0]);
+    }
+
+    // ════════ P-04（审查补充）：无 WHERE 分支的 HAVING / WINDOW 识别 ════════
+
+    [Fact]
+    public void ValidateAndRewrite_NoWhereWithHavingClause_FilterInjectedBeforeHaving()
+    {
+        // PoC：无顶层 WHERE 且带 HAVING 的聚合查询——旧实现无 WHERE 分支的 candidates
+        // 只有 GROUP/ORDER/LIMIT，找不到插入点后把过滤器追加到串尾：
+        // "... HAVING COUNT(*) > 0 WHERE ..." 语法非法，合法查询被 DryRun 误杀
+        var sql = "SELECT COUNT(*) FROM projects HAVING COUNT(*) > 0";
+        var result = SafeQueryValidator.ValidateAndRewrite(sql, TestUid, RestrictedScope);
+
+        Assert.True(result.IsValid, $"无 WHERE + HAVING 查询应该通过: {result.Error}");
+        Assert.NotNull(result.RewrittenSql);
+        var rewritten = result.RewrittenSql;
+
+        // ② WHERE 必须位于 HAVING 之前（旧实现追加在 HAVING 之后）
+        var whereIdx = rewritten.IndexOf("WHERE", StringComparison.OrdinalIgnoreCase);
+        var havingIdx = rewritten.IndexOf("HAVING", StringComparison.OrdinalIgnoreCase);
+        Assert.True(whereIdx >= 0, $"改写后必须含注入的 WHERE，实际: {rewritten}");
+        Assert.True(havingIdx >= 0, $"改写后必须保留 HAVING，实际: {rewritten}");
+        Assert.True(whereIdx < havingIdx, $"WHERE 必须位于 HAVING 之前，实际: {rewritten}");
+
+        // ③ 用户过滤仍在（与既有用例同口径：剥掉字符串字面量后断言）
+        Assert.Contains("created_by", StripStringLiterals(rewritten), StringComparison.OrdinalIgnoreCase);
+
+        // ① 语法合法性内存库实证：改写后的 SQL 可执行，且过滤真实生效（u1 只能看到自己的行）
+        using var conn = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=:memory:");
+        conn.Open();
+        conn.Execute("CREATE TABLE projects (id INTEGER PRIMARY KEY, name TEXT, created_by TEXT)");
+        conn.Execute("INSERT INTO projects (name, created_by) VALUES ('mine', 'u1'), ('theirs', 'u2')");
+        var count = conn.QuerySingle<int>(rewritten, new { Uid = "u1" });
+        Assert.Equal(1, count); // 过滤生效 → COUNT(*)=1；过滤器丢失则为 2
     }
 }

@@ -1,6 +1,5 @@
 /**
- * TranscriptEditor — 转写结果校对编辑器（六期：行内编辑 + 词级搬移，AutoSubs 模式）
- *
+ * TranscriptEditor — 转写结果校对编辑器（六期：行内编辑 + 词级搬移，AutoSubs 模式；七期：保存到任务）
  * 多人：段落默认纯展示，点击段落进入行内编辑（TranscriptRow：contentEditable 就地编辑
  * + 操作按钮组「首词→上一段 / 末词→下一段 / 插入 / 删除」，时间按字符比例重算）
  * 单人：显示完整可编辑文本区
@@ -18,7 +17,7 @@ import TranscriptRow from './TranscriptRow'
 import { speakerOf } from './SpeakerNameEditor'
 import type { SpeakerInfo } from './SpeakerNameEditor'
 import { moveFirstWordToPrev, moveLastWordToNext, insertSegmentAfter } from './segmentUtils'
-import type { SttJobDetail, SttSegment } from '@/services/stt-client'
+import { saveSttJob, type SttJobDetail, type SttSegment, type SttSavePayload } from '@/services/stt-client'
 
 interface TranscriptEditorProps {
   job: SttJobDetail
@@ -33,6 +32,8 @@ interface TranscriptEditorProps {
   speakers?: SpeakerInfo[]
   /** 发言人改名回调（改 speakers[i].name，编辑态与阅读态全局同步）*/
   onRenameSpeaker?: (speaker: number, name: string) => void
+  onSaved?: () => void // 保存成功回调（父组件重拉 job 详情刷新阅读态）
+  onRegisterSave?: (fn: (() => void) | null) => void // 注册保存函数（父组件操作栏「保存」复用；卸载置 null）
   onIngest: (correctedText: string, segments: SttSegment[], title: string, projectId?: number, occurredAt?: string, folderId?: number | null) => void
 }
 
@@ -46,7 +47,7 @@ function rebuildFullText(segments: SttSegment[]): string {
     .join('\n')
 }
 
-const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioUrl, audioRef, seekTo, speakers, onRenameSpeaker, onIngest }) => {
+const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioUrl, audioRef, seekTo, speakers, onRenameSpeaker, onSaved, onRegisterSave, onIngest }) => {
   const { showToast } = useToastContext()
 
   // speakers 表查询：显示名/头像色（未入库编号兜底「说话人N」+ 色板轮换；编辑态与阅读态共用同一状态源）
@@ -71,7 +72,7 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
   const [singleText, setSingleText] = useState('')
   const [title, setTitle] = useState('')
   const [hasChanges, setHasChanges] = useState(false)
-  const [ingesting, setIngesting] = useState(false)
+  const [busy, setBusy] = useState(false) // 入库/保存共用 loading（useState 门禁 ≤8）
   const [activeIdx, setActiveIdx] = useState(-1)
   // M3：入库前文件夹选择（voice → 选文件夹 → 建文档）
   const [folderPick, setFolderPick] = useState<{ open: boolean; id: number | null }>({ open: false, id: null })
@@ -160,9 +161,31 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
     showToast('已恢复原始转写', 'info')
   }, [originalSegments, job.text, showToast])
 
-
+  // 七期：保存到任务（多任务 segments+speakerNames——props speakers 表导出只含非默认名；单人 text）。
+  // 改名不改段（hasChanges=false）时由 speakerNames 差异兜底触发
+  const handleSave = useCallback(async () => {
+    const names = Object.fromEntries((speakers ?? []).filter(s => s.name !== `说话人${s.id}`).map(s => [String(s.id), s.name]))
+    if (busy || (!hasChanges && JSON.stringify(names) === JSON.stringify(job.speakerNames ?? {}))) return
+    const payload: SttSavePayload = segments.length > 0 ? { segments, speakerNames: names } : { text: singleText }
+    setBusy(true)
+    const res = await saveSttJob(job.id, payload)
+    setBusy(false)
+    if (!res.success) { showToast(res.error ?? '保存失败', 'error'); return }
+    setHasChanges(false)
+    showToast('已保存到任务', 'success')
+    onSaved?.()
+  }, [busy, hasChanges, speakers, job, segments, singleText, showToast, onSaved])
+  // Ctrl+S 保存（preventDefault 防浏览器保存对话框；contentEditable 聚焦也生效，不设守卫）+ 注册给父组件操作栏
+  useEffect(() => {
+    onRegisterSave?.(handleSave)
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); handleSave() }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => { window.removeEventListener('keydown', onKey); onRegisterSave?.(null) }
+  }, [handleSave, onRegisterSave])
   const handleIngestConfirm = useCallback(async () => {
-    setIngesting(true)
+    setBusy(true)
 
     let correctedText = ''
     let correctedSegments: SttSegment[] = []
@@ -178,12 +201,12 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
 
     if (!correctedText.trim()) {
       showToast('文本内容不能为空', 'error')
-      setIngesting(false)
+      setBusy(false)
       return
     }
 
     await onIngest(correctedText, correctedSegments, title.trim() || job.sourceFile || `任务 #${job.id}`, undefined, undefined, folderPick.id)
-    setIngesting(false)
+    setBusy(false)
     setHasChanges(false)
   }, [segments, singleText, job, title, onIngest, showToast, folderPick.id])
 
@@ -241,9 +264,10 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <label className="text-xs font-medium text-[color:var(--fg-2)]">说话人分段（点击段落编辑；激活段可搬词/插删/改归属）</label>
-            <Button variant="ghost" size="xs" onClick={handleRestore} leftIcon="RotateCcw">
-              恢复原始
-            </Button>
+            <div className="flex items-center gap-1.5">
+              <Button variant="outline" size="xs" onClick={handleSave} loading={busy} disabled={!hasChanges || busy} leftIcon="Save">保存修改</Button>
+              <Button variant="ghost" size="xs" onClick={handleRestore} leftIcon="RotateCcw">恢复原始</Button>
+            </div>
           </div>
           <div className="max-h-96 overflow-y-auto space-y-2 p-1">
             {segments.map((seg, i) => (
@@ -277,9 +301,10 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <label className="text-xs font-medium text-[color:var(--fg-2)]">转写文本</label>
-            <Button variant="ghost" size="xs" onClick={handleRestore} leftIcon="RotateCcw">
-              恢复原始
-            </Button>
+            <div className="flex items-center gap-1.5">
+              <Button variant="outline" size="xs" onClick={handleSave} loading={busy} disabled={!hasChanges || busy} leftIcon="Save">保存修改</Button>
+              <Button variant="ghost" size="xs" onClick={handleRestore} leftIcon="RotateCcw">恢复原始</Button>
+            </div>
           </div>
           <textarea
             value={singleText}
@@ -302,8 +327,8 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
         <Button
           variant="success"
           size="md"
-          loading={ingesting}
-          disabled={ingesting}
+          loading={busy}
+          disabled={busy}
           onClick={handleIngestClick}
           leftIcon="Database"
         >
@@ -358,8 +383,8 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
             <Button
               variant="success"
               size="md"
-              loading={ingesting}
-              disabled={ingesting}
+              loading={busy}
+              disabled={busy}
               onClick={() => { setFolderPick(p => ({ ...p, open: false })); handleIngestConfirm() }}
             >
               确认入库

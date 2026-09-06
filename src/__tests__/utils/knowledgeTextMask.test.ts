@@ -12,12 +12,12 @@ import {
 
 describe('maskKnowledgeText', () => {
   it('masked=false 时原样返回', () => {
-    const text = '电话 [已脱敏]'
+    const text = '电话 13812345678'
     expect(maskKnowledgeText(text, false)).toBe(text)
   })
 
   it('11 位手机号 → 138****5678', () => {
-    expect(maskKnowledgeText('电话 [已脱敏]', true)).toBe('电话 138****5678')
+    expect(maskKnowledgeText('电话 13812345678', true)).toBe('电话 138****5678')
   })
 
   it('身份证号 → 保留前 4 后 4', () => {

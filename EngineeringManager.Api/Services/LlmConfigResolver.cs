@@ -259,8 +259,10 @@ public class LlmConfigResolver
                     ActiveModelId = currentModel,
                 },
             },
-            Temperature = legacy.Temperature,
-            MaxTokens = legacy.MaxTokens,
+            // 旧结构没有温度/MaxTokens 字段，迁移时零值补推荐默认（0.7/4096），
+            // 否则设置页回显 0.0 且用户不点保存就会把 0 再次写死
+            Temperature = legacy.Temperature > 0 ? legacy.Temperature : 0.7,
+            MaxTokens = legacy.MaxTokens > 0 ? legacy.MaxTokens : 4096,
         };
     }
 
@@ -389,6 +391,7 @@ public class LlmConfigResolver
             UseBuiltIn = persisted.UseBuiltIn,
             Temperature = persisted.Temperature,
             MaxTokens = persisted.MaxTokens,
+            ProxyUrl = persisted.ProxyUrl,
             Providers = persisted.Providers.Select(p => new ProviderEntry
             {
                 Id = p.Id,

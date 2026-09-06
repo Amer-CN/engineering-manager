@@ -216,19 +216,19 @@ public class WageBatchSaveTests : ApiTestBase
     // ── D-7 回归 ─────────────────────────────────────────────
 
     [Fact]
-    public async Task TeamWages_DailyWage_ReturnsYuanDirect()
+    public async Task TeamWages_DailyWage_ReturnsYuan()
     {
         var token = await LoginAsync();
         SetAuth(token);
 
         // project_workers.daily_wage 为元直通（ProjectWorkerMiscEndpoints 写入侧未走 ToFen），
-        // 写入 200 元后 team-wages 必须原样返回 200，不得 ÷100 成 2
+        // 分制契约：种子 20000 分（=200 元，直插 DB 模拟 051 后状态），team-wages 读出 ToYuan 返回 200
         long pwId;
         using (var conn = new SqliteConnection(ConnectionString))
         {
             var workerId = conn.ExecuteScalar<long>("INSERT INTO workers (name) VALUES ('D7测试工人'); SELECT last_insert_rowid();");
             conn.Execute(@"INSERT INTO project_workers (worker_id,project_id,team_id,daily_wage,status)
-                VALUES (@W,@P,@T,200,'active')",
+                VALUES (@W,@P,@T,20000,'active')",
                 new { W = workerId, P = TestProjectId, T = 9003L });
             pwId = conn.ExecuteScalar<long>("SELECT last_insert_rowid();");
         }
@@ -242,7 +242,7 @@ public class WageBatchSaveTests : ApiTestBase
         var data = await GetDataAsync(resp);
         var details = data.GetProperty("details");
         var row = details.EnumerateArray().First();
-        Assert.Equal(200.0, row.GetProperty("daily_wage").GetDouble());   // 元直通，不是 2
+        Assert.Equal(200.0, row.GetProperty("daily_wage").GetDouble());   // 种子 20000 分 → ToYuan 200 元
         Assert.Equal(4450.0, row.GetProperty("total_wage").GetDouble());  // wages 分 → 元
     }
 

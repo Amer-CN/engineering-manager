@@ -189,6 +189,9 @@ const ALLOWED_SQL_INTERPOLATIONS = new Set([
   'companyFilter',
   'incomeFilter',
   'expenseFilter',
+  // 051 分制批次：AggregateWageAsync 的租户过滤 + 期间区间组装（baseWhere = UserFilter helper + 常量）
+  'baseWhere',
+  'currentWhere',
   'scope.Filter',
   'scopeFilter.Filter',
   'CurrentUser.UserFilterCompany(scope)',

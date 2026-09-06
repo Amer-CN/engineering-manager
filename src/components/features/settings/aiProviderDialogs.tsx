@@ -5,6 +5,20 @@
  */
 
 import { useState } from 'react'
+
+/** 删除确认目标（主文件与弹窗共用） */
+export type DelTarget =
+  | { kind: 'provider'; id: string; label: string }
+  | { kind: 'model'; providerId: string; modelId: string; label: string }
+
+/** 当前生效徽章 */
+export function ActiveBadge() {
+  return (
+    <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-micro font-medium bg-accent-soft text-primary">
+      当前生效
+    </span>
+  )
+}
 import { Icon } from '@/components/ui/Icon'
 import { Button } from '../../ui/Button'
 import { Drawer } from '../../ui/Drawer'
@@ -201,6 +215,7 @@ export function ModelEditDialog({
       onClose={onCancel}
       icon="Cpu"
       title={title}
+      width={360}   // 小表单配窄抽屉：内容只有模型 ID + 能力两行，480px 默认宽留白过多
       footer={
         <div className="flex justify-end gap-2">
           <Button variant="secondary" size="sm" onClick={onCancel}>取消</Button>
@@ -208,7 +223,7 @@ export function ModelEditDialog({
         </div>
       }
     >
-      <div className="space-y-4">
+      <div className="px-6 py-5 space-y-4">
         <div>
           <label className="label">模型 ID</label>
           <input

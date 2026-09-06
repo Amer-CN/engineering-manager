@@ -245,6 +245,59 @@ public class DiarizationServiceTests
         var speakers = merged.Select(s => s.Speaker).Distinct().ToList();
         Assert.Equal(2, speakers.Count);
     }
+
+    // ═══════════════════════════════════════════════════════════
+    // 爆簇保险丝：CheckClusterExplosion 纯函数判定
+    // （Process 需要真实模型文件无法在单测中运行，故只测判定逻辑本身）
+    // ═══════════════════════════════════════════════════════════
+
+    [Fact]
+    public void CheckClusterExplosion_AutoMode_AtThreshold8_ReturnsNull()
+    {
+        // 自动模式 8 个簇：处于阈值内，正常放行
+        Assert.Null(DiarizationService.CheckClusterExplosion(numSpeakers: null, distinctSpeakers: 8));
+    }
+
+    [Fact]
+    public void CheckClusterExplosion_AutoMode_Over8_ReturnsMessageWithGuidance()
+    {
+        // 自动模式 9 个簇：超阈值 → 返回错误消息，且必须含"多人会议"引导词
+        var message = DiarizationService.CheckClusterExplosion(numSpeakers: null, distinctSpeakers: 9);
+        Assert.NotNull(message);
+        Assert.Contains("多人会议", message);
+    }
+
+    [Fact]
+    public void CheckClusterExplosion_SpecifiedCount_NeverFails_EvenWith54Clusters()
+    {
+        // 指定人数路径（实测 54 簇背景数据）：信任用户输入，不触发保险丝
+        Assert.Null(DiarizationService.CheckClusterExplosion(numSpeakers: 5, distinctSpeakers: 54));
+    }
+
+    [Fact]
+    public void CheckClusterExplosion_AutoMode_ZeroSpeakers_ReturnsNull()
+    {
+        // 自动模式 0 个说话人（空音频等边界）：不触发保险丝
+        Assert.Null(DiarizationService.CheckClusterExplosion(numSpeakers: null, distinctSpeakers: 0));
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // 双管线缓存：ShouldReusePipeline 纯函数判定
+    // （OfflineSpeakerDiarization 需真实模型才能 new，故只测缓存决策逻辑）
+    // ═══════════════════════════════════════════════════════════
+
+    [Fact]
+    public void ShouldReusePipeline_FourDecisionGroups()
+    {
+        // 自动模式：缓存存在即复用
+        Assert.True(DiarizationService.ShouldReusePipeline(requested: null, cachedValue: null, cachedExists: true));
+        // 无缓存：一律不复用（新建）
+        Assert.False(DiarizationService.ShouldReusePipeline(requested: null, cachedValue: null, cachedExists: false));
+        // 指定人数：值与缓存相同 → 复用
+        Assert.True(DiarizationService.ShouldReusePipeline(requested: 5, cachedValue: 5, cachedExists: true));
+        // 指定人数：值不同 → 必须换管线（NumClusters 不可变）
+        Assert.False(DiarizationService.ShouldReusePipeline(requested: 5, cachedValue: 2, cachedExists: true));
+    }
 }
 
 /// <summary>
@@ -449,6 +502,154 @@ public class SttEndpointsTests : ApiTestBase
         // 进行中的任务不能删，行应仍在
         var (status, _, _) = GetJobRow(jobId);
         Assert.Equal("processing", status);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // PATCH /api/stt/jobs/{id} 保存端点测试（七期：编辑结果落库）
+    // ═══════════════════════════════════════════════════════════
+
+    private static StringContent JsonContent(string json) =>
+        new(json, System.Text.Encoding.UTF8, "application/json");
+
+    /// <summary>插入带转写结果的 completed job（保存端点测试用，可指定归属 uid）</summary>
+    private long CreateCompletedJobWithResult(string uid = "1")
+    {
+        using var conn = new SqliteConnection(ConnectionString);
+        conn.Open();
+        var now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        return conn.QuerySingle<long>(@"
+            INSERT INTO stt_jobs
+                (source_file, source_path, source_type, engine, status, progress,
+                 is_multi_speaker, num_speakers, result_text, result_json, error,
+                 created_at, updated_at, created_by)
+            VALUES
+                ('test.mp3', 'stt/' || @Uid || '/test.mp3', 'audio', 'test', 'completed', 100,
+                 1, NULL, @ResultText, @ResultJson, NULL, @Now, @Now, @Uid);
+            SELECT last_insert_rowid();",
+            new
+            {
+                Uid = uid,
+                ResultText = "【说话人1】原始第一段\n【说话人2】原始第二段",
+                ResultJson = "[{\"speaker\":1,\"start\":0,\"end\":5,\"text\":\"原始第一段\"},{\"speaker\":2,\"start\":5,\"end\":10,\"text\":\"原始第二段\"}]",
+                Now = now,
+            });
+    }
+
+    [Fact]
+    public async Task Save_CompletedJob_UpdatesResultAndNames()
+    {
+        var token = await LoginAdminAsync();
+        SetAuth(token);
+        var jobId = CreateCompletedJobWithResult();
+
+        var resp = await Client.PatchAsync($"/api/stt/jobs/{jobId}", JsonContent(JsonSerializer.Serialize(new
+        {
+            segments = new[]
+            {
+                new { speaker = 1, start = 0, end = 5, text = "修改后的第一段" },
+                new { speaker = 2, start = 5, end = 10, text = "修改后的第二段" },
+            },
+            speakerNames = new Dictionary<string, string> { ["1"] = "张蓉", ["2"] = "李四" },
+        })));
+        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+
+        var body = await resp.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(body);
+        Assert.True(doc.RootElement.GetProperty("success").GetBoolean());
+        Assert.Equal(jobId, doc.RootElement.GetProperty("data").GetProperty("id").GetInt64());
+        Assert.False(string.IsNullOrEmpty(doc.RootElement.GetProperty("data").GetProperty("savedAt").GetString()));
+
+        // 断言 DB 行内容：result_json=新 segments、result_text=重建的【说话人N】编号文本、speaker_names=JSON 对象
+        using (var conn = new SqliteConnection(ConnectionString))
+        {
+            conn.Open();
+            var row = conn.QuerySingle<(string?, string?, string?)>(
+                "SELECT result_text, result_json, speaker_names FROM stt_jobs WHERE id = @Id",
+                new { Id = jobId });
+            Assert.Equal("【说话人1】修改后的第一段\n【说话人2】修改后的第二段", row.Item1);
+            using var segDoc = JsonDocument.Parse(row.Item2!);
+            Assert.Equal(2, segDoc.RootElement.GetArrayLength());
+            Assert.Equal("修改后的第一段", segDoc.RootElement[0].GetProperty("text").GetString());
+            using var namesDoc = JsonDocument.Parse(row.Item3!);
+            Assert.Equal("张蓉", namesDoc.RootElement.GetProperty("1").GetString());
+            Assert.Equal("李四", namesDoc.RootElement.GetProperty("2").GetString());
+        }
+
+        // GET /api/stt/jobs/{id} 返回 speakerNames（解析为对象）+ 更新后的 segments/text
+        var getResp = await Client.GetAsync($"/api/stt/jobs/{jobId}");
+        Assert.True(getResp.IsSuccessStatusCode, await getResp.Content.ReadAsStringAsync());
+        using var getDoc = JsonDocument.Parse(await getResp.Content.ReadAsStringAsync());
+        var data = getDoc.RootElement.GetProperty("data");
+        Assert.Equal("张蓉", data.GetProperty("speakerNames").GetProperty("1").GetString());
+        Assert.Equal("李四", data.GetProperty("speakerNames").GetProperty("2").GetString());
+        Assert.Equal(2, data.GetProperty("segments").GetArrayLength());
+        Assert.Equal("【说话人1】修改后的第一段\n【说话人2】修改后的第二段", data.GetProperty("text").GetString());
+    }
+
+    [Fact]
+    public async Task Save_JobOfOtherUser_Returns404()
+    {
+        var token = await LoginAdminAsync();
+        SetAuth(token);
+        // job 归属 uid=999，admin(uid=1) 请求 → 归属校验不过 → 404
+        var jobId = CreateCompletedJobWithResult(uid: "999");
+
+        var resp = await Client.PatchAsync($"/api/stt/jobs/{jobId}",
+            JsonContent("{\"segments\":[{\"speaker\":1,\"start\":0,\"end\":1,\"text\":\"x\"}]}"));
+        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Save_NotCompleted_Returns400()
+    {
+        var token = await LoginAdminAsync();
+        SetAuth(token);
+        var jobId = CreateJobWithStatus("pending");
+
+        var resp = await Client.PatchAsync($"/api/stt/jobs/{jobId}", JsonContent("{\"text\":\"改后文本\"}"));
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+
+        var body = await resp.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(body);
+        Assert.False(doc.RootElement.GetProperty("success").GetBoolean());
+
+        // 状态与结果不应被改动
+        var (status, _, _) = GetJobRow(jobId);
+        Assert.Equal("pending", status);
+    }
+
+    [Fact]
+    public async Task Save_MissingBody_Returns400()
+    {
+        var token = await LoginAdminAsync();
+        SetAuth(token);
+        var jobId = CreateCompletedJobWithResult();
+
+        // body 无任何字段（segments/speakerNames/text 全缺省）→ 400
+        var resp = await Client.PatchAsync($"/api/stt/jobs/{jobId}", JsonContent("{}"));
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+
+        var body = await resp.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(body);
+        Assert.False(doc.RootElement.GetProperty("success").GetBoolean());
+    }
+
+    [Fact]
+    public async Task Save_SpeakerNamesNonStringValue_Returns400()
+    {
+        var token = await LoginAdminAsync();
+        SetAuth(token);
+        var jobId = CreateCompletedJobWithResult();
+
+        // speakerNames 值非字符串（数字）→ 400
+        var resp = await Client.PatchAsync($"/api/stt/jobs/{jobId}", JsonContent("{\"speakerNames\":{\"1\":123}}"));
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+
+        // 库中 speaker_names 不应被写入
+        using var conn = new SqliteConnection(ConnectionString);
+        conn.Open();
+        Assert.Null(conn.ExecuteScalar<string?>(
+            "SELECT speaker_names FROM stt_jobs WHERE id = @Id", new { Id = jobId }));
     }
 
     // ═══════════════════════════════════════════════════════════

@@ -28,7 +28,7 @@ public static class CostLedgerEndpoints
             conditions.Add(CurrentUser.UserFilterCompany(scope));
             conditions.Add("deleted_at IS NULL");
             var sql = "SELECT * FROM cost_ledger WHERE " + string.Join(" AND ", conditions) + " ORDER BY date DESC";
-            return Common.Ok(db.Query(sql, new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }));
+            return Common.Ok(MoneyUnit.ToYuanRows(db.Query(sql, new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }), "amount"));
         });
 
         app.MapGet("/api/cost-ledger/summary", (HttpContext ctx, IDbConnection db, long? projectId) =>
@@ -42,8 +42,8 @@ public static class CostLedgerEndpoints
             return Common.Ok(new
             {
                 totalCount = db.ExecuteScalar<int>($"SELECT COUNT(*) FROM cost_ledger WHERE 1=1{projectFilter}{userFilter} AND deleted_at IS NULL", new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }),
-                totalExpense = db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(amount),0) FROM cost_ledger WHERE direction='expense'{projectFilter}{userFilter} AND deleted_at IS NULL", new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }),
-                totalIncome = db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(amount),0) FROM cost_ledger WHERE direction='income'{projectFilter}{userFilter} AND deleted_at IS NULL", new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId }),
+                totalExpense = MoneyUnit.ToYuanFromDb(db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(amount),0) FROM cost_ledger WHERE direction='expense'{projectFilter}{userFilter} AND deleted_at IS NULL", new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId })),
+                totalIncome = MoneyUnit.ToYuanFromDb(db.ExecuteScalar<decimal>($"SELECT COALESCE(SUM(amount),0) FROM cost_ledger WHERE direction='income'{projectFilter}{userFilter} AND deleted_at IS NULL", new { Uid = uid, IsAdmin = isAdmin, ProjectId = projectId })),
             });
         });
         app.MapPost("/api/cost-ledger", async (HttpContext ctx, CostLedgerEntryDto dto, IDbConnection db) =>
@@ -55,7 +55,7 @@ public static class CostLedgerEndpoints
             var id = await db.ExecuteScalarAsync<long>(@"INSERT INTO cost_ledger (project_id,batch_id,voucher_no,date,direction,category,amount,counterparty,channel,summary,notes,created_by,created_at,updated_at, last_modified_at) VALUES (@ProjectId,@BatchId,@VoucherNo,@Date,@Direction,@Category,@Amount,@Counterparty,@Channel,@Summary,@Notes,@CreatedBy,@Now,@Now, @Now);
                 SELECT last_insert_rowid();",
                 new { dto.ProjectId, dto.BatchId, dto.VoucherNo, dto.Date, dto.Direction, dto.Category,
-                      dto.Amount, dto.Counterparty, dto.Channel, dto.Summary, dto.Notes, CreatedBy = uid, Now = now() });
+                      Amount = MoneyUnit.ToFen(dto.Amount), dto.Counterparty, dto.Channel, dto.Summary, dto.Notes, CreatedBy = uid, Now = now() });
             return Common.Ok(id);
         });
 
@@ -86,7 +86,7 @@ public static class CostLedgerEndpoints
             var affected = await db.ExecuteAsync($@"UPDATE cost_ledger SET voucher_no=@VoucherNo,date=@Date,direction=@Direction,category=@Category,
                 amount=@Amount,counterparty=@Counterparty,channel=@Channel,summary=@Summary,notes=@Notes,updated_at=@Now, version=version+1, last_modified_at=@Now
                 WHERE id=@Id",
-                new { dto.VoucherNo, dto.Date, dto.Direction, dto.Category, dto.Amount,
+                new { dto.VoucherNo, dto.Date, dto.Direction, dto.Category, Amount = MoneyUnit.ToFen(dto.Amount),
                       dto.Counterparty, dto.Channel, dto.Summary, dto.Notes, Now = now(), dto.Id }, tx);
             if (access == RowWriteOutcome.AllowedViaAuthorization)
             {
@@ -119,7 +119,7 @@ public static class CostLedgerEndpoints
             {
                 await db.ExecuteAsync(@"INSERT INTO cost_ledger (project_id,voucher_no,date,direction,category,amount,counterparty,channel,summary,notes,created_by,created_at,updated_at, last_modified_at) VALUES (@ProjectId,@VoucherNo,@Date,@Direction,@Category,@Amount,@Counterparty,@Channel,@Summary,@Notes,@CreatedBy,@Now,@Now, @Now)",
                     new { dto.ProjectId, dto.VoucherNo, dto.Date, dto.Direction, dto.Category,
-                          dto.Amount, dto.Counterparty, dto.Channel, dto.Summary, dto.Notes, CreatedBy = uid, Now = now() });
+                          Amount = MoneyUnit.ToFen(dto.Amount), dto.Counterparty, dto.Channel, dto.Summary, dto.Notes, CreatedBy = uid, Now = now() });
                 count++;
             }
             return Common.Ok(new { count });
@@ -301,7 +301,8 @@ public static class CostLedgerEndpoints
             var scope = CurrentUser.GetDataScope(ctx);
             var sql = $"SELECT * FROM [cost_ledger] WHERE [batch_id]=@BatchId AND {CurrentUser.UserFilterCompany(scope)} AND [deleted_at] IS NULL ORDER BY [date] DESC, [id] DESC";
             var rows = db.Query(sql, new { Uid = uid, IsAdmin = isAdmin, BatchId = batchId });
-            return Common.Ok(rows);
+            // 金额列分→元；前端电子表格直读块（列值经 API 往返恒为元）
+            return Common.Ok(MoneyUnit.ToYuanRows(rows, "amount"));
         });
 
         // POST /api/cost-ledger/{batchId}/sheet — 批量 upsert 电子表格编辑结果
@@ -334,8 +335,8 @@ public static class CostLedgerEndpoints
             {
                 foreach (var row in dto.Entries)
                 {
-                    // M-FIX1 F6: 金额 REAL（元）——直接存 double，不做 (long) 取整（此前撒谎注释「INTEGER 分」+ 强制取整丢小数）
-                    var amountCents = row.Amount ?? 0;
+                    // 2026-09 分制契约：前端表格金额为元，落库前 MoneyUnit.ToFen 转分
+                    var amountFen = MoneyUnit.ToFen(row.Amount);
 
                     if (row.Id.HasValue && row.Id.Value > 0)
                     {
@@ -355,7 +356,7 @@ public static class CostLedgerEndpoints
                             [summary]=@Summary,[notes]=@Notes,[updated_at]=@Now,[version]=[version]+1,[last_modified_at]=@Now
                             WHERE [id]=@Id AND [batch_id]=@BatchId AND " + CurrentUser.UserFilterWithAuthorizedProjects(scope, "cost_ledger.project_id"),
                             new { row.Id, row.VoucherNo, row.Date, row.Direction, row.Category,
-                                  Amount = amountCents, row.Counterparty, row.Channel, row.Summary, row.Notes,
+                                  Amount = amountFen, row.Counterparty, row.Channel, row.Summary, row.Notes,
                                   BatchId = batchId, Uid = uid, IsAdmin = isAdmin, Now = now() }, tx);
                         if (affected > 0)
                         {
@@ -372,7 +373,7 @@ public static class CostLedgerEndpoints
                             ([project_id],[batch_id],[voucher_no],[date],[direction],[category],[amount],[counterparty],[channel],[summary],[notes],[created_by],[created_at],[updated_at],[last_modified_at])
                             VALUES (@ProjectId,@BatchId,@VoucherNo,@Date,@Direction,@Category,@Amount,@Counterparty,@Channel,@Summary,@Notes,@CreatedBy,@Now,@Now,@Now)",
                             new { ProjectId = batchProjectId!.Value, BatchId = batchId, row.VoucherNo, row.Date, row.Direction, row.Category,
-                                  Amount = amountCents, row.Counterparty, row.Channel, row.Summary, row.Notes,
+                                  Amount = amountFen, row.Counterparty, row.Channel, row.Summary, row.Notes,
                                   CreatedBy = uid, Now = now() }, tx);
                         inserted++;
                     }
