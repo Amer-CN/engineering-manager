@@ -715,6 +715,7 @@ public static class AgentEndpoints
                         p.Id,
                         p.Name,
                         p.BaseUrl,
+                        p.Protocol,
                         p.ActiveModelId,
                         p.Models,
                         hasApiKey = !string.IsNullOrEmpty(p.ApiKey),

@@ -19,6 +19,9 @@ internal class PersistedProviderEntry
     public string ApiKeyEnc { get; set; } = "";
     public List<ProviderModelEntry> Models { get; set; } = new();
     public string ActiveModelId { get; set; } = "";
+
+    /// <summary>接口协议：chat（缺省）| responses | anthropic；旧条目无此字段时反序列化落缺省 "chat"</summary>
+    public string Protocol { get; set; } = "chat";
 }
 
 /// <summary>
@@ -196,6 +199,7 @@ public class LlmConfigResolver
                 MaxTokens = multi.MaxTokens,
                 AvailableModels = new List<string> { builtinModel },
                 ProxyUrl = multi.ProxyUrl,
+                Protocol = "chat",
             };
         }
 
@@ -219,6 +223,7 @@ public class LlmConfigResolver
             AvailableModels = active.Models.Select(m => m.Id).ToList(),
             ModelCapabilities = caps,
             ProxyUrl = multi.ProxyUrl,
+            Protocol = string.IsNullOrEmpty(active.Protocol) ? "chat" : active.Protocol,
         };
     }
 
@@ -257,6 +262,7 @@ public class LlmConfigResolver
                     ApiKeyEnc = legacy.ApiKeyEnc ?? "",
                     Models = models,
                     ActiveModelId = currentModel,
+                    Protocol = "chat",
                 },
             },
             // 旧结构没有温度/MaxTokens 字段，迁移时零值补推荐默认（0.7/4096），
@@ -300,6 +306,21 @@ public class LlmConfigResolver
         lock (_lock)
         {
             return _multi;
+        }
+    }
+
+    /// <summary>
+    /// 当前生效服务商的接口协议（chat/responses/anthropic）。
+    /// 激活判定与 ExpandMulti 一致：UseBuiltIn 或无匹配条目 → 内置 Agnes → "chat"；
+    /// 条目 Protocol 为空视为 "chat"（未知值的回退在调用侧处理）。
+    /// </summary>
+    public string GetActiveProtocol()
+    {
+        lock (_lock)
+        {
+            if (_multi.UseBuiltIn) return "chat";
+            var active = _multi.Providers.FirstOrDefault(p => p.Id == _multi.ActiveProviderId);
+            return string.IsNullOrEmpty(active?.Protocol) ? "chat" : active.Protocol;
         }
     }
 
@@ -370,6 +391,7 @@ public class LlmConfigResolver
                 ApiKeyEnc = EncryptApiKey(p.ApiKey),
                 Models = p.Models,
                 ActiveModelId = p.ActiveModelId,
+                Protocol = p.Protocol,
             }).ToList(),
         };
 
@@ -410,6 +432,8 @@ public class LlmConfigResolver
                 ApiKey = DecryptApiKey(p.ApiKeyEnc),
                 Models = p.Models,
                 ActiveModelId = p.ActiveModelId,
+                // 旧条目（无 Protocol 字段）缺省迁移为 "chat"
+                Protocol = string.IsNullOrEmpty(p.Protocol) ? "chat" : p.Protocol,
             }).ToList(),
         };
     }

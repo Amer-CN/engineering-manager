@@ -118,6 +118,8 @@ export interface ProviderEntry {
   hasApiKey?: boolean
   models: ProviderModelEntry[]
   activeModelId: string
+  /** 接口协议：chat=Chat Completions（缺省）| responses=OpenAI Responses | anthropic=Anthropic Messages；读取缺省视为 chat */
+  protocol?: 'chat' | 'responses' | 'anthropic'
 }
 
 /** 多服务商配置 — AI 设置的完整状态（整份回传保存） */

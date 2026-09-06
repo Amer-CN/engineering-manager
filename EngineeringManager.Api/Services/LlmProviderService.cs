@@ -201,7 +201,9 @@ public class LlmProviderService : ILlmChatService
     }
 
     /// <summary>
-    /// 非流式 Chat API 调用 — 支持 function calling
+    /// 非流式 Chat API 调用 — 支持 function calling。
+    /// 协议分支：chat（OpenAI Chat Completions）/ responses（OpenAI Responses）
+    /// / anthropic（Anthropic Messages）。未知 protocol 按 chat 回退（fail-safe）。
     /// </summary>
     /// <param name="ct">取消令牌 — 触发时中止底层 HTTP 请求（HttpClient 层取消）</param>
     public async Task<ChatCompletionResponse?> ChatAsync(
@@ -212,21 +214,51 @@ public class LlmProviderService : ILlmChatService
         CancellationToken ct = default)
     {
         var route = _router.GetRoute("chat");
+        var protocol = NormalizeProtocol(route.Protocol);
 
         var payload = new Dictionary<string, object>
         {
             ["model"] = model ?? route.Model,
-            ["messages"] = messages,
         };
+        string endpoint;
+        Dictionary<string, string>? extraHeaders = null;
+        if (protocol == "anthropic")
+        {
+            endpoint = $"{route.BaseUrl.TrimEnd('/')}/v1/messages";
+            BuildAnthropicPayload(payload, messages, tools, route);
+            extraHeaders = new Dictionary<string, string>
+            {
+                ["x-api-key"] = route.ApiKey,
+                ["anthropic-version"] = "2023-06-01",
+            };
+        }
+        else if (protocol == "responses")
+        {
+            endpoint = $"{route.BaseUrl.TrimEnd('/')}/responses";
+            BuildResponsesPayload(payload, messages, route);
+        }
+        else
+        {
+            endpoint = $"{route.BaseUrl.TrimEnd('/')}/chat/completions";
+            payload["messages"] = messages;
+        }
 
-        if (tools != null && tools.Count > 0)
+        if (tools != null && tools.Count > 0 && protocol == "chat")
             payload["tools"] = tools;
 
         if (route.Temperature > 0)
             payload["temperature"] = route.Temperature;
 
-        if (route.MaxTokens > 0)
+        if (protocol == "anthropic")
+        {
+            // Anthropic 的 max_tokens 必填（chat 的 max_tokens 已在 BuildAnthropicPayload 处理）
+        }
+        else if (route.MaxTokens > 0)
+        {
             payload["max_tokens"] = route.MaxTokens;
+            if (protocol == "responses")
+                payload["max_output_tokens"] = route.MaxTokens;
+        }
 
         // 推理档位（仅显式传入时携带；2026-08-22 实测 Agnes 合法值：
         // none/low/medium/high/max——非法值 400 拒。前端 off 档此处置空不发 = none 行为）
@@ -243,9 +275,12 @@ public class LlmProviderService : ILlmChatService
 
             var json = JsonSerializer.Serialize(payload, SerializerOptions);
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
-            using var request = new HttpRequestMessage(HttpMethod.Post,
-                $"{route.BaseUrl.TrimEnd('/')}/chat/completions");
-            request.Headers.Add("Authorization", $"Bearer {route.ApiKey}");
+            using var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
+            if (extraHeaders != null)
+                foreach (var h in extraHeaders)
+                    request.Headers.Add(h.Key, h.Value);
+            else
+                request.Headers.Add("Authorization", $"Bearer {route.ApiKey}");
             request.Content = content;
 
             using var response = await client.SendAsync(request, timeoutCts.Token);
@@ -257,11 +292,152 @@ public class LlmProviderService : ILlmChatService
                 return null;
             }
 
-            return JsonSerializer.Deserialize<ChatCompletionResponse>(responseBody, SerializerOptions);
+            return ParseChatResponse(responseBody, protocol, model ?? route.Model);
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine($"[LlmProviderService] ChatAsync 失败: {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>protocol 归一化：anthropic/responses/chat 三取值，未知按 chat 回退</summary>
+    internal static string NormalizeProtocol(string? protocol)
+    {
+        if (string.Equals(protocol, "anthropic", StringComparison.OrdinalIgnoreCase)) return "anthropic";
+        if (string.Equals(protocol, "responses", StringComparison.OrdinalIgnoreCase)) return "responses";
+        return "chat";
+    }
+
+    /// <summary>
+    /// Anthropic Messages 请求体：system 剥离为独立字段（首条 system），messages 只含
+    /// user/assistant；max_tokens 必填。tools 本批不支持 Anthropic tool_use（调用方勿传）。
+    /// </summary>
+    internal static void BuildAnthropicPayload(
+        Dictionary<string, object> payload,
+        List<AgentMessage> messages,
+        List<object>? tools,
+        ModelRouteInfo route)
+    {
+        string? system = null;
+        var rest = new List<object>();
+        foreach (var m in messages)
+        {
+            if (m.Role == MessageRole.System && system == null)
+            {
+                system = m.Content ?? "";
+                continue;
+            }
+            rest.Add(new Dictionary<string, object>
+            {
+                ["role"] = m.Role == MessageRole.Tool ? "user" : m.Role,
+                ["content"] = m.Content ?? "",
+            });
+        }
+        if (!string.IsNullOrEmpty(system))
+            payload["system"] = system;
+        payload["messages"] = rest;
+        payload["max_tokens"] = route.MaxTokens > 0 ? route.MaxTokens : 4096;
+    }
+
+    /// <summary>
+    /// OpenAI Responses 请求体：system 首条作 instructions，其余 role/content 拼成 input 数组
+    /// </summary>
+    internal static void BuildResponsesPayload(
+        Dictionary<string, object> payload,
+        List<AgentMessage> messages,
+        ModelRouteInfo route)
+    {
+        string? instructions = null;
+        var input = new List<object>();
+        foreach (var m in messages)
+        {
+            if (m.Role == MessageRole.System && instructions == null)
+            {
+                instructions = m.Content ?? "";
+                continue;
+            }
+            input.Add(new Dictionary<string, object>
+            {
+                ["role"] = m.Role,
+                ["content"] = m.Content ?? "",
+            });
+        }
+        if (!string.IsNullOrEmpty(instructions))
+            payload["instructions"] = instructions;
+        payload["input"] = input;
+    }
+
+    /// <summary>
+    /// 响应解析：chat 走标准反序列化；responses 从 output 数组首个 message 提取；
+    /// anthropic 从 content 数组首个 text 块提取。解析失败返回 null（调用方按失败处理）
+    /// </summary>
+    internal static ChatCompletionResponse? ParseChatResponse(string body, string protocol, string model)
+    {
+        try
+        {
+            if (protocol == "responses")
+            {
+                using var doc = JsonDocument.Parse(body);
+                var root = doc.RootElement;
+                if (root.TryGetProperty("output", out var output))
+                {
+                    foreach (var item in output.EnumerateArray())
+                    {
+                        if (item.TryGetProperty("type", out var t) && t.GetString() == "message"
+                            && item.TryGetProperty("content", out var content))
+                        {
+                            foreach (var part in content.EnumerateArray())
+                            {
+                                if (part.TryGetProperty("type", out var pt) && pt.GetString() == "output_text"
+                                    && part.TryGetProperty("text", out var text))
+                                {
+                                    return new ChatCompletionResponse
+                                    {
+                                        Model = model,
+                                        Choices = new List<ChatChoice>
+                                        {
+                                            new() { Message = new ChatResponseMessage { Content = text.GetString() } }
+                                        },
+                                    };
+                                }
+                            }
+                        }
+                    }
+                }
+                Console.Error.WriteLine($"[LlmProviderService] Responses 解析失败: {body.Truncate(300)}");
+                return null;
+            }
+            if (protocol == "anthropic")
+            {
+                using var doc = JsonDocument.Parse(body);
+                var root = doc.RootElement;
+                if (root.TryGetProperty("content", out var content))
+                {
+                    foreach (var part in content.EnumerateArray())
+                    {
+                        if (part.TryGetProperty("type", out var pt) && pt.GetString() == "text"
+                            && part.TryGetProperty("text", out var text))
+                        {
+                            return new ChatCompletionResponse
+                            {
+                                Model = model,
+                                Choices = new List<ChatChoice>
+                                {
+                                    new() { Message = new ChatResponseMessage { Content = text.GetString() } }
+                                },
+                            };
+                        }
+                    }
+                }
+                Console.Error.WriteLine($"[LlmProviderService] Anthropic 解析失败: {body.Truncate(300)}");
+                return null;
+            }
+            return JsonSerializer.Deserialize<ChatCompletionResponse>(body, SerializerOptions);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[LlmProviderService] 响应解析失败: {ex.Message}");
             return null;
         }
     }
@@ -278,22 +454,38 @@ public class LlmProviderService : ILlmChatService
         [EnumeratorCancellation] CancellationToken ct = default)
     {
         var route = _router.GetRoute("chat-stream");
+        var protocol = NormalizeProtocol(route.Protocol);
 
         var payload = new Dictionary<string, object>
         {
             ["model"] = model ?? route.Model,
-            ["messages"] = messages,
             ["stream"] = true,
         };
+        if (protocol == "anthropic")
+        {
+            BuildAnthropicPayload(payload, messages, tools, route);
+        }
+        else if (protocol == "responses")
+        {
+            BuildResponsesPayload(payload, messages, route);
+        }
+        else
+        {
+            payload["messages"] = messages;
+        }
 
-        if (tools != null && tools.Count > 0)
+        if (tools != null && tools.Count > 0 && protocol == "chat")
             payload["tools"] = tools;
 
         if (route.Temperature > 0)
             payload["temperature"] = route.Temperature;
 
-        if (route.MaxTokens > 0)
+        if (protocol != "anthropic" && route.MaxTokens > 0)
+        {
             payload["max_tokens"] = route.MaxTokens;
+            if (protocol == "responses")
+                payload["max_output_tokens"] = route.MaxTokens;
+        }
 
         // 推理档位（仅显式传入时携带；2026-08-22 实测 Agnes 合法值：
         // none/low/medium/high/max——非法值 400 拒。前端 off 档此处置空不发 = none 行为）
@@ -379,15 +571,29 @@ public class LlmProviderService : ILlmChatService
     {
         try
         {
+            var protocol = NormalizeProtocol(route.Protocol);
+            var endpoint = protocol switch
+            {
+                "anthropic" => $"{route.BaseUrl.TrimEnd('/')}/v1/messages",
+                "responses" => $"{route.BaseUrl.TrimEnd('/')}/responses",
+                _ => $"{route.BaseUrl.TrimEnd('/')}/chat/completions",
+            };
             var client = BuildClient(route.ProxyUrl);
             var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             timeoutCts.CancelAfter(TimeSpan.FromSeconds(300));
 
             var json = JsonSerializer.Serialize(payload, SerializerOptions);
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
-            using var request = new HttpRequestMessage(HttpMethod.Post,
-                $"{route.BaseUrl.TrimEnd('/')}/chat/completions");
-            request.Headers.Add("Authorization", $"Bearer {route.ApiKey}");
+            using var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
+            if (protocol == "anthropic")
+            {
+                request.Headers.Add("x-api-key", route.ApiKey);
+                request.Headers.Add("anthropic-version", "2023-06-01");
+            }
+            else
+            {
+                request.Headers.Add("Authorization", $"Bearer {route.ApiKey}");
+            }
             request.Content = content;
 
             var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeoutCts.Token);

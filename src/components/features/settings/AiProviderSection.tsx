@@ -8,7 +8,7 @@ import {
   reloadLlmProviderConfig,
 } from '@/services/agent-client'
 import type { MultiProviderConfig, ProviderModelEntry } from '@/types/agent'
-import { GenerationParamsSection, CapBadge, ProviderRow, KeyReplaceHost } from './aiProviderSettingsParts'
+import { GenerationParamsSection, CapBadge, KeyReplaceHost, VisibleProviders } from './aiProviderSettingsParts'
 import { ProviderAddForm, ModelEditDialog } from './aiProviderDialogs'
 
 /** 删除确认目标 */
@@ -31,6 +31,8 @@ export function AiProviderSection() {
   const [delTarget, setDelTarget] = useState<DelTarget | null>(null)
   /** 更换密钥弹窗目标（providerId + 名称） */
   const [keyDialog, setKeyDialog] = useState<{ providerId: string; label: string } | null>(null)
+  /** 是否显示被隐藏的内置 Agnes 重复条目（默认隐藏，误删保护） */
+  const [showHiddenAgnes, setShowHiddenAgnes] = useState(false)
   const [status, setStatus] = useState<'loading' | 'idle' | 'saving'>('loading')
   // 按 selector 订阅：全 store 订阅会在 toast 弹出/消失时重建 loadConfig → useEffect 无限重跑（自定义模型卡死根因）
   const showToast = useToastStore(s => s.showToast)
@@ -244,22 +246,19 @@ export function AiProviderSection() {
             />
           )}
 
-          <div className="space-y-2">
-            {multi.providers.map(p => (
-              <ProviderRow
-                key={p.id}
-                provider={p}
-                isActive={p.id === multi.activeProviderId && !multi.useBuiltIn}
-                disabled={status === 'saving'}
-                onActivate={() => applyUpdate(m => ({ ...m, activeProviderId: p.id, useBuiltIn: false }), true)}
-                onOpenKeyDialog={() => setKeyDialog({ providerId: p.id, label: p.name })}
-                onDelete={() => setDelTarget({ kind: 'provider', id: p.id, label: p.name })}
-              />
-            ))}
-            {multi.providers.length === 0 && !addingProvider && (
-              <p className="text-xs text-[color:var(--muted)] py-2">还没有自定义服务商，点右上角「添加服务商」开始。</p>
-            )}
-          </div>
+          <VisibleProviders
+            providers={multi.providers}
+            showHiddenAgnes={showHiddenAgnes}
+            addingProvider={addingProvider}
+            activeProviderId={multi.activeProviderId}
+            useBuiltIn={multi.useBuiltIn}
+            disabled={status === 'saving'}
+            onActivate={(id) => applyUpdate(m => ({ ...m, activeProviderId: id, useBuiltIn: false }), true)}
+            onOpenKeyDialog={(id, label) => setKeyDialog({ providerId: id, label })}
+            onDelete={(id, label) => setDelTarget({ kind: 'provider', id, label })}
+            onProtocolChange={(id, protocol) => applyUpdate(m => ({ ...m, providers: m.providers.map(x => x.id === id ? { ...x, protocol } : x) }), true)}
+            onShowHidden={() => setShowHiddenAgnes(true)}
+          />
         </div>
 
         {/* ── 当前服务商的模型列表 ── */}

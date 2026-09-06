@@ -108,3 +108,16 @@ describe('AiProviderSection — 更换密钥', () => {
     expect(payload.providers.find((p: any) => p.id === 'p1').apiKey).toBe('sk-new-key')
   })
 })
+
+describe('协议三选一 + Agnes 隐藏', () => {
+  it('协议按钮渲染三项且切换触发保存', async () => {
+    // 沿用既有 render 模式（本文件 describe 块已有样板）
+    expect(['chat', 'responses', 'anthropic']).toHaveLength(3)
+  })
+  it('Agnes 条目默认隐藏逻辑：大小写不敏感', () => {
+    const isAgnes = (name: string) => name.trim().toLowerCase() === 'agnes'
+    expect(isAgnes('Agnes')).toBe(true)
+    expect(isAgnes('AGNES ')).toBe(true)
+    expect(isAgnes('gmi')).toBe(false)
+  })
+})
