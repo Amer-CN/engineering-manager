@@ -7,6 +7,7 @@ import { getTemplateId } from '@/utils/reportTemplates/index'
 import ReportResultPanel from './ReportResultPanel'
 import ReportPurposeSection, { type ReportPurpose } from './ReportPurposeSection'
 import { useAuth } from '@/hooks/useAuth'
+import ActiveModelNote from '@/components/features/agent/ActiveModelNote'
 
 interface ReportGeneratorModalProps {
   onClose: () => void
@@ -373,6 +374,9 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
                 </>
               )}
             </button>
+
+            {/* ── 当前生效模型 ── */}
+            <ActiveModelNote />
 
             {/* ── 生成结果 ── */}
             {hasResult && (

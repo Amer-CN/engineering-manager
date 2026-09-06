@@ -18,6 +18,7 @@ import type { Editor } from "@tiptap/core";
 import { isNodeSelection } from "@tiptap/core";
 import { useEditorState } from "@tiptap/react";
 import { BubbleMenu, type BubbleMenuProps } from "@tiptap/react/menus";
+import { useActiveLlmModel } from "@/hooks/data/useActiveLlmModel";
 import {
   Bold,
   Italic,
@@ -70,6 +71,10 @@ interface BubbleToolbarProps {
 }
 
 const BubbleToolbar: React.FC<BubbleToolbarProps> = ({ editor, onAiAction, aiBusy }) => {
+  // 当前生效模型：AI 四动作 title 悬停提示追加模型名（取不到时保持原 title）
+  const { data: llmConfig } = useActiveLlmModel();
+  const aiModel = llmConfig?.model;
+
   const state = useEditorState({
     editor,
     selector: ({ editor }) => {
@@ -145,7 +150,7 @@ const BubbleToolbar: React.FC<BubbleToolbarProps> = ({ editor, onAiAction, aiBus
 
       {/* 分组4：行内 AI 四动作（改写/润色/扩写/缩写），复用 WritingEditor 的 runAiAction 入口；
           TODO: 未注入 onAiAction（WritingEditor 之外暂无现成 AI 入口）或 aiBusy 请求进行中时置灰占位，不实现点击行为 */}
-      {AI_ACTIONS.map((a) => btn(false, a.label, () => onAiAction?.(a.id), <a.icon size={15} />, !onAiAction || aiBusy))}
+      {AI_ACTIONS.map((a) => btn(false, aiModel ? `${a.label}（当前模型：${aiModel}）` : a.label, () => onAiAction?.(a.id), <a.icon size={15} />, !onAiAction || aiBusy))}
     </BubbleMenu>
   );
 };

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { Drawer } from "@/components/ui/Drawer";
 import { useToastContext } from "@/components/ui/Toast/ToastProvider";
+import ActiveModelNote from "@/components/features/agent/ActiveModelNote";
 import { fetchWritingDocTypes, streamingDraft, type WritingDocTypesResponse } from "@/services/writing-client";
 
 interface WritingDraftPanelProps {
@@ -188,6 +189,7 @@ const WritingDraftPanel: React.FC<WritingDraftPanelProps> = ({ docId, docType, s
               应用内容
             </Button>
           )}
+          <ActiveModelNote />
         </div>
       }
     >
