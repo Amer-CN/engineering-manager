@@ -251,13 +251,16 @@ public class LlmProviderService : ILlmChatService
 
         if (protocol == "anthropic")
         {
-            // Anthropic 的 max_tokens 必填（chat 的 max_tokens 已在 BuildAnthropicPayload 处理）
+            // Anthropic 的 max_tokens 必填（已在 BuildAnthropicPayload 处理）
         }
         else if (route.MaxTokens > 0)
         {
-            payload["max_tokens"] = route.MaxTokens;
+            // Responses 协议只认 max_output_tokens：同时携带 max_tokens 会被严格校验的
+            // 上游直接 400 拒（2026-09-06 实测 Zen/muse-spark-1.3-contributor-free）
             if (protocol == "responses")
                 payload["max_output_tokens"] = route.MaxTokens;
+            else
+                payload["max_tokens"] = route.MaxTokens;
         }
 
         // 推理档位（仅显式传入时携带；2026-08-22 实测 Agnes 合法值：
@@ -482,9 +485,11 @@ public class LlmProviderService : ILlmChatService
 
         if (protocol != "anthropic" && route.MaxTokens > 0)
         {
-            payload["max_tokens"] = route.MaxTokens;
+            // 同 ChatAsync：responses 只发 max_output_tokens，禁止混入 max_tokens
             if (protocol == "responses")
                 payload["max_output_tokens"] = route.MaxTokens;
+            else
+                payload["max_tokens"] = route.MaxTokens;
         }
 
         // 推理档位（仅显式传入时携带；2026-08-22 实测 Agnes 合法值：
