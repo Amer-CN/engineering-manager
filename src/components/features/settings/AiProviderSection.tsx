@@ -8,18 +8,18 @@ import {
   reloadLlmProviderConfig,
 } from '@/services/agent-client'
 import type { MultiProviderConfig, ProviderModelEntry } from '@/types/agent'
-import { GenerationParamsSection, CapBadge, KeyReplaceHost, VisibleProviders } from './aiProviderSettingsParts'
+import { GenerationParamsSection, KeyReplaceHost, VisibleProviders } from './aiProviderSettingsParts'
+import { ProviderSettingsForm, ProviderModelList } from './aiProviderDetailParts'
 import { ProviderAddForm, ModelEditDialog } from './aiProviderDialogs'
 
-/** 删除确认目标 */
-type DelTarget =
-  | { kind: 'provider'; id: string; label: string }
-  | { kind: 'model'; providerId: string; modelId: string; label: string }
+/** 删除确认目标（仅服务商：影响面大保留确认；模型删除免确认直接删） */
+type DelTarget = { kind: 'provider'; id: string; label: string }
 
 /**
  * AI 助手设置卡片 — 多服务商管理（对齐成熟 Agent 使用逻辑）
- * - 内置/自定义切换；服务商列表（添加/启用/删除）
- * - 当前服务商的模型列表（弹窗添加/编辑、能力标注、设默认、删除）
+ * - 内置/自定义切换；列表态：服务商列表（添加/启用/管理进入子页/删除）
+ * - detail 态（服务商子页）：可编辑设置（名称/BaseUrl/协议/更换密钥）+ 模型管理
+ *   （多选批量删、免确认单删、弹窗添加/编辑、能力标注、设默认）
  * - 温度 + maxTokens；所有改动即时自动保存（生成参数/代理输入防抖 800ms 合并）
  */
 export function AiProviderSection() {
@@ -33,6 +33,10 @@ export function AiProviderSection() {
   const [keyDialog, setKeyDialog] = useState<{ providerId: string; label: string } | null>(null)
   /** 是否显示被隐藏的内置 Agnes 重复条目（默认隐藏，误删保护） */
   const [showHiddenAgnes, setShowHiddenAgnes] = useState(false)
+  /** 服务商子页视图：列表态 / 详情态（沿 Projects 的 view 先例） */
+  const [view, setView] = useState<{ mode: 'list' } | { mode: 'detail'; providerId: string }>({ mode: 'list' })
+  /** detail 态模型多选勾选集合（批量删除用） */
+  const [selectedModelIds, setSelectedModelIds] = useState<Set<string>>(new Set())
   const [status, setStatus] = useState<'loading' | 'idle' | 'saving'>('loading')
   // 按 selector 订阅：全 store 订阅会在 toast 弹出/消失时重建 loadConfig → useEffect 无限重跑（自定义模型卡死根因）
   const showToast = useToastStore(s => s.showToast)
@@ -126,7 +130,8 @@ export function AiProviderSection() {
     )
   }
 
-  const active = multi.providers.find(p => p.id === multi.activeProviderId) ?? null
+  /** detail 态目标服务商（找不到时回退列表态） */
+  const detailProvider = view.mode === 'detail' ? multi.providers.find(p => p.id === view.providerId) ?? null : null
   const dialogProvider = modelDialog ? multi.providers.find(p => p.id === modelDialog.providerId) : null
 
   /** 添加服务商：进列表并立即启用（切到自定义），自动保存 */
@@ -176,24 +181,52 @@ export function AiProviderSection() {
   const handleConfirmDelete = () => {
     if (!delTarget) return
     applyUpdate(m => {
-      if (delTarget.kind === 'provider') {
-        const providers = m.providers.filter(p => p.id !== delTarget.id)
-        // 删除的是当前激活条目 → 自动切回内置（useBuiltIn=true），避免悬空态导致 LLM 调用 401
-        if (m.activeProviderId === delTarget.id) {
-          return { ...m, providers, activeProviderId: providers[0]?.id ?? null, useBuiltIn: providers.length === 0 ? true : m.useBuiltIn }
-        }
-        return { ...m, providers }
+      const providers = m.providers.filter(p => p.id !== delTarget.id)
+      // 删除的是当前激活条目 → 自动切回内置（useBuiltIn=true），避免悬空态导致 LLM 调用 401
+      if (m.activeProviderId === delTarget.id) {
+        return { ...m, providers, activeProviderId: providers[0]?.id ?? null, useBuiltIn: providers.length === 0 ? true : m.useBuiltIn }
       }
-      return {
-        ...m,
-        providers: m.providers.map(p => {
-          if (p.id !== delTarget.providerId) return p
-          const models = p.models.filter(x => x.id !== delTarget.modelId)
-          return { ...p, models, activeModelId: normalizeActiveModel(models, p.activeModelId) }
-        }),
-      }
+      return { ...m, providers }
     }, true)
     setDelTarget(null)
+  }
+
+  /** 删除模型（detail 态免确认直接删；ids 支持多个走批量），随后清空多选 */
+  const deleteModels = (providerId: string, ids: string[]) => {
+    const idSet = new Set(ids)
+    applyUpdate(m => ({
+      ...m,
+      providers: m.providers.map(p => {
+        if (p.id !== providerId) return p
+        const models = p.models.filter(x => !idSet.has(x.id))
+        return { ...p, models, activeModelId: normalizeActiveModel(models, p.activeModelId) }
+      }),
+    }), true)
+    setSelectedModelIds(new Set())
+  }
+
+  /** 多选勾选 / 全选（仅 detail 态使用） */
+  const toggleModelSelect = (modelId: string) => {
+    setSelectedModelIds(prev => {
+      const next = new Set(prev)
+      if (next.has(modelId)) next.delete(modelId)
+      else next.add(modelId)
+      return next
+    })
+  }
+  const toggleAllModels = (providerId: string, select: boolean) => {
+    const p = multiRef.current?.providers.find(x => x.id === providerId)
+    setSelectedModelIds(select ? new Set((p?.models ?? []).map(m => m.id)) : new Set())
+  }
+
+  /** 进 detail 态 / 回列表态（切换时清空多选残留） */
+  const openDetail = (providerId: string) => {
+    setSelectedModelIds(new Set())
+    setView({ mode: 'detail', providerId })
+  }
+  const backToList = () => {
+    setSelectedModelIds(new Set())
+    setView({ mode: 'list' })
   }
 
   return (
@@ -202,6 +235,43 @@ export function AiProviderSection() {
         <h2 className="text-lg font-semibold text-[color:var(--fg)] flex items-center gap-2"><Icon name="Bot" size={20} /> AI 助手设置</h2>
       </div>
       <div className="card-body space-y-5">
+        {detailProvider ? (
+          <>
+            {/* ── detail 态：返回 + 服务商设置 + 模型管理 ── */}
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={backToList}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-colors hover:bg-[color:var(--panel-2)] text-content-2 flex-shrink-0"
+              >
+                <Icon name="ArrowLeft" size={13} /> 返回服务商列表
+              </button>
+              <h3 className="text-sm font-semibold text-[color:var(--fg)] truncate">{detailProvider.name}</h3>
+            </div>
+            <ProviderSettingsForm
+              provider={detailProvider}
+              isActive={detailProvider.id === multi.activeProviderId && !multi.useBuiltIn}
+              disabled={status === 'saving'}
+              onPatch={patch => applyUpdate(m => ({ ...m, providers: m.providers.map(x => x.id === detailProvider.id ? { ...x, ...patch } : x) }), false)}
+              onProtocolChange={protocol => applyUpdate(m => ({ ...m, providers: m.providers.map(x => x.id === detailProvider.id ? { ...x, protocol } : x) }), true)}
+              onOpenKeyDialog={() => setKeyDialog({ providerId: detailProvider.id, label: detailProvider.name })}
+              onActivate={() => applyUpdate(m => ({ ...m, activeProviderId: detailProvider.id, useBuiltIn: false }), true)}
+            />
+            <ProviderModelList
+              provider={detailProvider}
+              disabled={status === 'saving'}
+              selectedIds={selectedModelIds}
+              onToggleSelect={toggleModelSelect}
+              onToggleAll={select => toggleAllModels(detailProvider.id, select)}
+              onAddModel={() => setModelDialog({ providerId: detailProvider.id, entry: null })}
+              onEditModel={entry => setModelDialog({ providerId: detailProvider.id, entry })}
+              onSetDefault={modelId => applyUpdate(m => ({ ...m, providers: m.providers.map(p => p.id === detailProvider.id ? { ...p, activeModelId: modelId } : p) }), true)}
+              onDeleteModel={modelId => deleteModels(detailProvider.id, [modelId])}
+              onDeleteSelected={() => deleteModels(detailProvider.id, [...selectedModelIds])}
+            />
+          </>
+        ) : (
+          <>
         {/* ── 内置模型开关 ── */}
         <div className="flex items-center justify-between">
           <div>
@@ -254,82 +324,12 @@ export function AiProviderSection() {
             useBuiltIn={multi.useBuiltIn}
             disabled={status === 'saving'}
             onActivate={(id) => applyUpdate(m => ({ ...m, activeProviderId: id, useBuiltIn: false }), true)}
-            onOpenKeyDialog={(id, label) => setKeyDialog({ providerId: id, label })}
+            onManage={openDetail}
             onDelete={(id, label) => setDelTarget({ kind: 'provider', id, label })}
-            onProtocolChange={(id, protocol) => applyUpdate(m => ({ ...m, providers: m.providers.map(x => x.id === id ? { ...x, protocol } : x) }), true)}
             onShowHidden={() => setShowHiddenAgnes(true)}
           />
         </div>
-
-        {/* ── 当前服务商的模型列表 ── */}
-        {active && !multi.useBuiltIn && (
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="label mb-0">{active.name} 的模型（默认模型供首页对话使用）</label>
-              <button
-                type="button"
-                onClick={() => setModelDialog({ providerId: active.id, entry: null })}
-                disabled={status === 'saving'}
-                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-colors hover:bg-[color:var(--panel-2)] disabled:opacity-50 text-primary"
-              >
-                <Icon name="Plus" size={13} /> 添加模型
-              </button>
-            </div>
-            <div className="space-y-1.5">
-              {active.models.map(m => {
-                const isDefault = m.id === active.activeModelId
-                return (
-                  <div key={m.id} className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-[color:var(--border)] bg-[color:var(--card)]">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-sm truncate text-foreground">{m.id}</span>
-                      {m.input.includes('image') && <CapBadge label="图" title="支持图片输入" />}
-                      {m.input.includes('video') && <CapBadge label="视" title="支持视频输入" />}
-                      {isDefault && (
-                        <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-micro font-medium bg-[color:var(--success-soft)] text-primary">
-                          默认
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      {!isDefault && (
-                        <button
-                          type="button"
-                          onClick={() => applyUpdate(prev => ({
-                            ...prev,
-                            providers: prev.providers.map(p => p.id === active.id ? { ...p, activeModelId: m.id } : p),
-                          }), true)}
-                          disabled={status === 'saving'}
-                          className="px-2 py-1 rounded-lg text-xs hover:bg-[color:var(--panel-2)] disabled:opacity-50 text-content-2"
-                        >
-                          设为默认
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => setModelDialog({ providerId: active.id, entry: m })}
-                        disabled={status === 'saving'}
-                        className="px-2 py-1 rounded-lg text-xs hover:bg-[color:var(--panel-2)] disabled:opacity-50 text-content-2"
-                      >
-                        编辑
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDelTarget({ kind: 'model', providerId: active.id, modelId: m.id, label: m.id })}
-                        disabled={status === 'saving'}
-                        className="p-1.5 rounded-lg hover:bg-[color:var(--panel-2)] disabled:opacity-50 text-muted-foreground"
-                        aria-label={`删除模型 ${m.id}`}
-                      >
-                        <Icon name="Trash2" size={14} />
-                      </button>
-                    </div>
-                  </div>
-                )
-              })}
-              {active.models.length === 0 && (
-                <p className="text-xs text-[color:var(--muted)] py-2">该服务商还没有模型，点右上角「添加模型」。</p>
-              )}
-            </div>
-          </div>
+          </>
         )}
 
         <GenerationParamsSection
