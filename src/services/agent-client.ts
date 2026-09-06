@@ -11,6 +11,8 @@ import type {
   AgentChatResponse,
   AgentConversation,
   AgentConversationDetail,
+  ApprovalRequest,
+  ApprovalResolution,
   LlmProviderStatus,
   LlmProviderTestRequest,
   LlmProviderTestResponse,
@@ -106,6 +108,35 @@ export async function renameAgentConversation(
 }
 
 // ═══════════════════════════════════════════════════════════════
+// 行动确认（approval 确认卡 resolve 回传）
+// ═══════════════════════════════════════════════════════════════
+
+/** resolve 响应：alreadyResolved=true 表示该 requestId 早已决（幂等防重放，不重复执行） */
+export interface AgentApprovalResolveResult {
+  success: boolean
+  alreadyResolved?: boolean
+  error?: string
+}
+
+/**
+ * 确认卡 resolve 回传：用户在确认卡上点选后调用（建议 → 确认 → 执行闭环）。
+ * 后端按 requestId 对账、校验 optionKey 并只执行用户确认的那个选项。
+ */
+export async function resolveAgentApproval(
+  conversationId: number,
+  resolution: ApprovalResolution
+): Promise<AgentApprovalResolveResult> {
+  const result = await apiClient.post<{ alreadyResolved?: boolean }>(
+    `/api/agent/conversations/${conversationId}/approval/resolve`,
+    resolution
+  )
+  if (!result.success) {
+    return { success: false, error: result.error || '确认操作失败' }
+  }
+  return { success: true, alreadyResolved: result.data?.alreadyResolved }
+}
+
+// ═══════════════════════════════════════════════════════════════
 // LLM 配置管理
 // ═══════════════════════════════════════════════════════════════
 
@@ -148,6 +179,24 @@ export async function testLlmProviderConnection(
     }
   }
   return result.data
+}
+
+/**
+ * 拉取已存服务商的全部模型列表（需登录）
+ * 前端无明文 key（DPAPI 加密存储），由后端用已存密钥代查 /models
+ * @param providerId 服务商 ID
+ */
+export async function fetchProviderModels(
+  providerId: string
+): Promise<{ success: boolean; models?: string[]; error?: string }> {
+  const result = await apiClient.post<{ models: string[] }>(
+    '/api/agent/setup/provider-models',
+    { providerId }
+  )
+  if (!result.success || !result.data) {
+    return { success: false, error: result.error || '获取模型列表失败' }
+  }
+  return { success: true, models: result.data.models || [] }
 }
 
 /**
@@ -237,6 +286,8 @@ export interface AgentStreamCallbacks {
     conversationId: number
     toolCalls?: ToolCallResult[]
     message?: string
+    /** 本轮生成的行动确认卡（写工具被拦截时随 done 载荷捎带，挂到最终 assistant 消息） */
+    approval?: ApprovalRequest | null
     /** 本轮 token 用量（后端末 chunk 采集；缺省不显示） */
     usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number }
   }) => void
@@ -318,6 +369,7 @@ function dispatchSseEvent(
       text?: string
       toolCalls?: ToolCallResult[]
       message?: string
+      approval?: ApprovalRequest | null
       error?: string
       usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number }
     }
@@ -346,6 +398,7 @@ function dispatchSseEvent(
           conversationId: evt.conversationId ?? 0,
           toolCalls: evt.toolCalls,
           message: evt.message,
+          approval: evt.approval ?? null,
           usage: evt.usage,
         })
         break

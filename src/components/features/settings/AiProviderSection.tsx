@@ -9,7 +9,7 @@ import {
 } from '@/services/agent-client'
 import type { MultiProviderConfig, ProviderModelEntry } from '@/types/agent'
 import { GenerationParamsSection, KeyReplaceHost, VisibleProviders } from './aiProviderSettingsParts'
-import { ProviderSettingsForm, ProviderModelList } from './aiProviderDetailParts'
+import { ProviderSettingsForm, ProviderModelList, ProviderModelFetch } from './aiProviderDetailParts'
 import { ProviderAddForm, ModelEditDialog } from './aiProviderDialogs'
 
 /** 删除确认目标（仅服务商：影响面大保留确认；模型删除免确认直接删） */
@@ -259,6 +259,7 @@ export function AiProviderSection({ onDetailChange }: { onDetailChange?: (isDeta
               onOpenKeyDialog={() => setKeyDialog({ providerId: detailProvider.id, label: detailProvider.name })}
               onActivate={() => applyUpdate(m => ({ ...m, activeProviderId: detailProvider.id, useBuiltIn: false }), true)}
             />
+            <ProviderModelFetch provider={detailProvider} disabled={status === 'saving'} onApply={entries => applyUpdate(m => ({ ...m, providers: m.providers.map(p => p.id === detailProvider.id ? { ...p, models: [...p.models, ...entries.filter(e => !p.models.some(x => x.id.toLowerCase() === e.id.toLowerCase()))] } : p) }), true)} />
             <ProviderModelList
               provider={detailProvider}
               disabled={status === 'saving'}

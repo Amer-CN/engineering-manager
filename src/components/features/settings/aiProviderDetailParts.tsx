@@ -2,8 +2,11 @@
  * AiProviderSection detail 态拆分件（服务商子页：设置表单 + 模型管理列表）
  * 从主文件抽出以消化行数门禁（主文件 ≤400 行、aiProviderSettingsParts 已贴近上限，故新建本文件）
  */
+import { useState } from 'react'
 import { Icon } from '@/components/ui/Icon'
-import { CapBadge, INPUT_CLS, PROTOCOL_LABELS } from './aiProviderSettingsParts'
+import { CapBadge, INPUT_CLS, PROTOCOL_LABELS, ModelMultiSelect } from './aiProviderSettingsParts'
+import { useToastStore } from '@/store/toastStore'
+import { fetchProviderModels } from '@/services/agent-client'
 import type { ProviderEntry, ProviderModelEntry } from '@/types/agent'
 
 /**
@@ -189,6 +192,112 @@ export function ProviderModelList({
           <p className="text-xs text-[color:var(--muted)] py-2">该服务商还没有模型，点右上角「添加模型」。</p>
         )}
       </div>
+    </div>
+  )
+}
+
+/**
+ * detail 态区块三：批量获取模型列表 — 用已存密钥由后端代查 /models，
+ * 弹多选（默认只勾尚未添加的模型），确认后追加（大小写不敏感去重、只增不减）
+ */
+export function ProviderModelFetch({
+  provider, disabled, onApply,
+}: {
+  provider: ProviderEntry
+  disabled: boolean
+  /** 确认追加：把勾选项 map 成模型条目回传给调用方落库 */
+  onApply: (models: ProviderModelEntry[]) => void
+}) {
+  const showToast = useToastStore(s => s.showToast)
+  const [busy, setBusy] = useState<null | 'fetching' | 'applying'>(null)
+  const [fetched, setFetched] = useState<string[]>([])
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [open, setOpen] = useState(false)
+
+  /** 拉取列表：成功去重后只预选新增项（已存在的跳过） */
+  const handleFetch = async () => {
+    setBusy('fetching')
+    try {
+      const res = await fetchProviderModels(provider.id)
+      if (!res.success || !res.models?.length) {
+        showToast(res.error || '获取模型列表失败', 'error')
+        return
+      }
+      const existing = new Set(provider.models.map(m => m.id.toLowerCase()))
+      const seen = new Set<string>()
+      const models = res.models
+        .map(m => m.trim())
+        .filter(m => {
+          const k = m.toLowerCase()
+          if (!m || seen.has(k) || existing.has(k)) return false
+          seen.add(k)
+          return true
+        })
+      setFetched(models)
+      setSelected(new Set(models))
+      setOpen(true)
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  /** 确认追加：勾选项 map 成条目回传；空选由按钮禁用态拦截 */
+  const handleApply = () => {
+    setBusy('applying')
+    try {
+      onApply([...selected].map<ProviderModelEntry>(m => ({ id: m, input: ['text'], output: ['text'] })))
+      setOpen(false)
+      setFetched([])
+      setSelected(new Set())
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={handleFetch}
+        disabled={disabled || busy !== null}
+        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-colors hover:bg-[color:var(--panel-2)] disabled:opacity-50 text-primary"
+      >
+        <Icon name="RefreshCw" size={13} className={busy === 'fetching' ? 'animate-spin' : ''} />
+        {busy === 'fetching' ? '获取中...' : '获取模型列表'}
+      </button>
+
+      {open && fetched.length > 0 && (
+        <div className="mt-2 space-y-2">
+          <ModelMultiSelect
+            models={fetched}
+            selected={selected}
+            onToggle={m => setSelected(prev => {
+              const next = new Set(prev)
+              if (next.has(m)) next.delete(m); else next.add(m)
+              return next
+            })}
+            onToggleAll={select => setSelected(select ? new Set(fetched) : new Set())}
+          />
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => { setOpen(false); setFetched([]); setSelected(new Set()) }}
+              disabled={disabled || busy !== null}
+              className="px-2 py-1 rounded-lg text-xs font-medium hover:bg-[color:var(--panel-2)] disabled:opacity-50 text-content-2"
+            >
+              取消
+            </button>
+            <button
+              type="button"
+              onClick={handleApply}
+              disabled={disabled || busy !== null || selected.size === 0}
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium hover:bg-[color:var(--panel-2)] disabled:opacity-50 text-primary"
+            >
+              <Icon name="Plus" size={13} /> 添加所选（{selected.size}）
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
