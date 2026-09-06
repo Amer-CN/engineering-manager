@@ -1863,11 +1863,14 @@ button:focus-visible {
   font-size: 16pt;
   line-height: 28pt;
 }
+/* 有显式 text-align（工具栏设置）时跟随，无时保持公文默认居中 */
+.writing-paper-gongwen h1:not([style*="text-align"]) {
+  text-align: center;
+}
 .writing-paper-gongwen h1 {
   font-family: 宋体; /* printPreview FONT_TITLE */
   font-size: 22pt;
   font-weight: 700;
-  text-align: center;
   margin-bottom: 12pt;
   line-height: 32pt;
 }

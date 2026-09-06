@@ -78,7 +78,7 @@ const WritingEditor: React.FC<WritingEditorProps> = ({ docId, onBack }) => {
       Color,
       FontFamily,
       FontSizeMark,
-      TextAlign.configure({ types: ["paragraph"] }),
+      TextAlign.configure({ types: ["paragraph", "heading"] }),
       Highlight,
       ProtectedSpan,
       Table.configure({ resizable: true }),

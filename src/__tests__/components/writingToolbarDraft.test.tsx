@@ -129,7 +129,7 @@ describe("EditorToolbar 触发器显示当前值（shadcn-tiptap 结构）", () 
   // EditorContent 必须挂载：命令链 chain().focus() 依赖真实 view（未挂载编辑器 focus 会静默失败）
   const setup = () => {
     const editor = new Editor({
-      extensions: [StarterKit, TextStyle, FontFamily, FontSizeMark, TextAlign.configure({ types: ["paragraph"] }), Highlight],
+      extensions: [StarterKit, TextStyle, FontFamily, FontSizeMark, TextAlign.configure({ types: ["paragraph", "heading"] }), Highlight],
       content: "abc",
     });
     render(
@@ -140,6 +140,21 @@ describe("EditorToolbar 触发器显示当前值（shadcn-tiptap 结构）", () 
     );
     return editor;
   };
+
+  it("标题（H1）可对齐：toggleHeading 后 setTextAlign 生效（types 含 heading）", () => {
+    const editor = setup();
+
+    editor.chain().focus().toggleHeading({ level: 1 }).run();
+    editor.chain().focus().setTextAlign("center").run();
+
+    expect(editor.isActive("heading", { level: 1 })).toBe(true);
+    expect(editor.isActive({ textAlign: "center" })).toBe(true);
+    // undo 后对齐回到默认（heading 仍在）
+    editor.chain().focus().undo().run();
+    expect(editor.isActive({ textAlign: "center" })).toBe(false);
+
+    editor.destroy();
+  });
 
   it("对齐下拉：触发器初始显示「左对齐」，点菜单「居中对齐」后触发器文案变「居中对齐」", async () => {
     const editor = setup();
