@@ -681,15 +681,16 @@ public static class AgentEndpoints
                     return Common.Fail($"非法的选项: {optionKey}");
 
                 // 6. 执行动作的参数从服务端持久化的 approval JSON 自身取（建卡时绑定的 action 字段：
-                //    { tool, args }——工具名 + 原样参数），不从请求 body 取，也不做位置邻近回退。
+                //    { tool, args }——工具名 + 原样参数对象），不从请求 body 取，也不做位置邻近回退。
                 //    （标记对账：确认卡与待执行参数在同一份持久化 JSON 里，后续轮次再调写工具不会错位。）
                 string? executeToolName = null;
-                string? executeArgs = null;
+                JsonElement? executeArgs = null;
                 try
                 {
                     var action = approvalNode["action"];
                     executeToolName = action?["tool"]?.GetValue<string>();
-                    executeArgs = action?["args"]?.GetValue<string>();
+                    if (action?["args"] != null)
+                        executeArgs = JsonDocument.Parse(action["args"]!.ToJsonString()).RootElement;
                 }
                 catch { /* 坏结构按“缺少绑定动作”处理 */ }
                 if (executeToolName == null || executeArgs == null)
@@ -721,8 +722,7 @@ public static class AgentEndpoints
                     AgentToolService.AgentApprovalExecutionResult exec;
                     try
                     {
-                        using var argsDoc = JsonDocument.Parse(executeArgs);
-                        exec = await tools.MarkInvoicesReceivedAsync(argsDoc.RootElement, ctx, db);
+                        exec = await tools.MarkInvoicesReceivedAsync(executeArgs.Value, ctx, db);
                     }
                     catch (UnauthorizedAccessException)
                     {
@@ -755,7 +755,7 @@ public static class AgentEndpoints
                     // 回滚审计并幂等返回（写操作已发生，但 resolution 已被并发请求写入，协议结果一致）
                     approvalNode["resolution"] = JsonSerializer.SerializeToNode(resolution);
                     var backfilled = await conversations.UpdateMessageApprovalIfUnresolvedAsync(
-                        db, targetMessageId, approvalNode.ToJsonString(), (SqliteConnection)db);
+                        db, targetMessageId, approvalNode.ToJsonString());
                     if (!backfilled)
                     {
                         auditTx.Rollback();
@@ -791,7 +791,7 @@ public static class AgentEndpoints
                     // cancel（及确认卡上其他非执行类选项）：不执行动作，不追加执行结果消息，仅条件回填已决态
                     approvalNode["resolution"] = JsonSerializer.SerializeToNode(resolution);
                     if (!await conversations.UpdateMessageApprovalIfUnresolvedAsync(
-                            db, targetMessageId, approvalNode.ToJsonString(), (SqliteConnection)db))
+                            db, targetMessageId, approvalNode.ToJsonString()))
                         return Common.Ok(new { alreadyResolved = true, resolution = (object?)null });
                 }
 
@@ -1204,7 +1204,8 @@ public static class AgentEndpoints
             action = new
             {
                 tool = tc.Function.Name,
-                args = tc.Function.Arguments,
+                // args 用原始 JSON 结构（不是字符串）——JsonElement 原样嵌入，resolve 端直接反序列化执行
+                args = JsonDocument.Parse(tc.Function.Arguments).RootElement.Clone(),
             },
         };
     }

@@ -35,10 +35,14 @@ public class AgentConversationService
     /// <summary>
     /// 保存消息到对话
     /// </summary>
+    /// <param name="approvalJson">
+    /// 行动确认请求（ApprovalRequest）JSON；仅 assistant 消息携带确认卡时传入，存 approval 列。
+    /// </param>
     public async Task SaveMessageAsync(
         IDbConnection db,
         long conversationId,
-        AgentMessage message)
+        AgentMessage message,
+        string? approvalJson = null)
     {
         var now = Common.NowString();
         var toolCallsJson = message.ToolCalls != null && message.ToolCalls.Count > 0
@@ -46,8 +50,8 @@ public class AgentConversationService
             : null;
 
         await db.ExecuteAsync(@"
-            INSERT INTO agent_messages (conversation_id, role, content, tool_calls, tool_call_id, name, created_at)
-            VALUES (@ConversationId, @Role, @Content, @ToolCalls, @ToolCallId, @Name, @Now)
+            INSERT INTO agent_messages (conversation_id, role, content, tool_calls, tool_call_id, name, approval, created_at)
+            VALUES (@ConversationId, @Role, @Content, @ToolCalls, @ToolCallId, @Name, @Approval, @Now)
         ", new
         {
             ConversationId = conversationId,
@@ -56,6 +60,7 @@ public class AgentConversationService
             ToolCalls = toolCallsJson,
             message.ToolCallId,
             message.Name,
+            Approval = approvalJson,
             Now = now,
         });
 
@@ -64,6 +69,35 @@ public class AgentConversationService
             UPDATE agent_conversations SET updated_at = @Now
             WHERE id = @Id
         ", new { Now = now, Id = conversationId });
+    }
+
+    /// <summary>
+    /// 回填消息上的确认卡 resolution（用户点选后调用）。
+    /// approvalJson 须为已合入 resolution 的完整 ApprovalRequest JSON。
+    /// </summary>
+    public async Task<bool> UpdateMessageApprovalAsync(
+        IDbConnection db, long messageId, string approvalJson)
+    {
+        var affected = await db.ExecuteAsync(@"
+            UPDATE agent_messages SET approval = @Approval WHERE id = @Id
+        ", new { Approval = approvalJson, Id = messageId });
+        return affected > 0;
+    }
+
+    /// <summary>
+    /// 条件回填 resolution（resolve 幂等原子化）：仅当 approval 尚无 resolution 时写入。
+    /// WHERE 用 SQLite JSON1 json_extract 精确判 '$.resolution'（不用 LIKE 模糊匹配），
+    /// affected=0 = 并发已决 → 调用方据此幂等返回、不重复执行。
+    /// </summary>
+    public async Task<bool> UpdateMessageApprovalIfUnresolvedAsync(
+        IDbConnection db, long messageId, string approvalJson)
+    {
+        var affected = await db.ExecuteAsync(@"
+            UPDATE agent_messages SET approval = @Approval
+            WHERE id = @Id
+              AND (approval IS NULL OR json_extract(approval, '$.resolution') IS NULL)
+        ", new { Approval = approvalJson, Id = messageId });
+        return affected > 0;
     }
 
     /// <summary>
@@ -115,13 +149,35 @@ public class AgentConversationService
         if (conv == null) return null;
 
         var messages = await db.QueryAsync<dynamic>(@"
-            SELECT id, role, content, tool_calls, tool_call_id, name, created_at
+            SELECT id, role, content, tool_calls, tool_call_id, name, approval, created_at
             FROM agent_messages
             WHERE conversation_id = @ConversationId
             ORDER BY created_at ASC, id ASC
         ", new { ConversationId = conversationId });
 
         var rows = messages.ToList();
+
+        // 预处理：approval 列存的是完整 ApprovalRequest JSON（含回填后的 resolution）。
+        // 解析失败 / 为空 → null（前端按无确认卡处理），不抛错。
+        var parsedApprovals = new List<JsonElement?>(rows.Count);
+        foreach (var row in rows)
+        {
+            var approvalText = (string?)row.approval;
+            if (string.IsNullOrEmpty(approvalText))
+            {
+                parsedApprovals.Add(null);
+                continue;
+            }
+            try
+            {
+                using var doc = JsonDocument.Parse(approvalText);
+                parsedApprovals.Add(doc.RootElement.Clone());
+            }
+            catch
+            {
+                parsedApprovals.Add(null); /* 坏 JSON：跳过 */
+            }
+        }
 
         // 预处理：role='tool' 消息的 content 存的是单个 ToolCallResult JSON
         // （写库见 AgentEndpoints.cs：Content = JsonSerializer.Serialize(result)）。
@@ -176,6 +232,7 @@ public class AgentConversationService
                 role = (string)row.role,
                 content = (string?)row.content,
                 toolCalls = toolCallsByRow[i],
+                approval = parsedApprovals[i],
                 createdAt = (string)row.created_at,
             });
         }

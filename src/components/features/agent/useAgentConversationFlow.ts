@@ -14,7 +14,7 @@ import {
   getAgentConversationDetail,
 } from '@/services/agent-client'
 import type { AgentStreamCallbacks } from '@/services/agent-client'
-import type { AgentConversation, ToolCallResult } from '@/types/agent'
+import type { AgentConversation, AgentMessageResponse, ApprovalRequest, ToolCallResult } from '@/types/agent'
 import type { LocalMessage } from './types'
 import { genClientId } from './types'
 import type { InFlightTool } from './ToolCallChips'
@@ -228,14 +228,20 @@ export function useAgentConversationFlow({
               ),
             )
           },
-          onDone: ({ toolCalls, message, usage }) => {
+          onDone: ({ conversationId: doneConvId, toolCalls, message, usage, approval }) => {
             if (isStale()) return
             if (usage) setContextTokens(usage.prompt_tokens)
             settleTools(toolCalls) // 工具行按 toolCalls.success 翻转终态，完成后保留为摘要
             setMessages((prev) =>
               prev.map((m) => {
                 if (m.clientId !== assistantClientId) return m
-                return { ...m, sending: false, toolCalls, content: m.content || message || '', durationSec: Math.round((Date.now() - sentAt) / 1000) }
+                return {
+                  ...m, sending: false, toolCalls, content: m.content || message || '',
+                  durationSec: Math.round((Date.now() - sentAt) / 1000),
+                  // 行动确认卡：随 done 载荷捎带，挂到最终 assistant 消息（MessageBubble 渲染确认卡）；
+                  // conversationId 一并挂上，resolve 回传时用（经 spread 附加，不进 LocalMessage 类型声明）
+                  ...(approval ? { approval, conversationId: doneConvId } : {}),
+                }
               }),
             )
             setRefreshTrigger((v) => v + 1) // 刷新洞察/统计
@@ -282,6 +288,10 @@ export function useAgentConversationFlow({
               sending: false,
               content: resp.message?.content ?? '',
               toolCalls: resp.toolCalls,
+              // 行动确认卡：非流式响应 message.approval 透传挂载（含 conversationId，resolve 回传用）
+              ...(resp.message?.approval
+                ? { approval: resp.message.approval, conversationId: resp.conversationId }
+                : {}),
             })
             setRefreshTrigger((v) => v + 1)
             finishRound(true, 1200)
@@ -321,14 +331,20 @@ export function useAgentConversationFlow({
         const detail = await getAgentConversationDetail(conv.id)
         if (detail && detail.messages) {
           // tool 行是给 LLM 的工具结果 JSON，不渲染为消息气泡
+          // approval / conversationId 经 spread 附加（AgentMessageResponse 未声明 approval，
+          // MessageBubble 侧按 AgentMessage.approval 读取；conversationId 供 resolve 回传用）
           const mapped: LocalMessage[] = detail.messages
             .filter(m => m.role !== 'tool')
-            .map(m => ({
-              clientId: genClientId(),
-              role: m.role as LocalMessage['role'],
-              content: m.content,
-              toolCalls: m.toolCalls,
-            }))
+            .map(m => {
+              const approval = (m as AgentMessageResponse & { approval?: ApprovalRequest }).approval
+              return {
+                clientId: genClientId(),
+                role: m.role as LocalMessage['role'],
+                content: m.content,
+                toolCalls: m.toolCalls,
+                ...(approval ? { approval, conversationId: detail.id } : {}),
+              }
+            })
           setMessages(mapped)
           if (mapped.length > 0) {
             // 有历史消息 → 直接以对话视图呈现，跳过首次欢迎区
