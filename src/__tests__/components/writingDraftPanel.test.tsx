@@ -11,6 +11,11 @@ import { render, screen, fireEvent, waitFor, act } from "@testing-library/react"
 import WritingDraftPanel from "@/components/features/writing/WritingDraftPanel";
 import * as writingClient from "@/services/writing-client";
 
+// WritingDraftPanel 链上挂了 useActiveLlmModel（react-query）——本文件不测模型显示，mock 掉免 QueryClientProvider
+vi.mock("@/hooks/data/useActiveLlmModel", () => ({
+  useActiveLlmModel: () => ({ data: null, isLoading: false }),
+}));
+
 vi.mock("@/services/writing-client", () => ({
   fetchWritingDocTypes: vi.fn().mockResolvedValue({
     success: true,

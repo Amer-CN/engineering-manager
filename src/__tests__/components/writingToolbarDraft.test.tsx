@@ -6,6 +6,11 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import WritingEditor from "@/components/features/writing/WritingEditor";
 
+// WritingEditor 链上挂了 useActiveLlmModel（react-query）——本文件不测模型显示，mock 掉免 QueryClientProvider
+vi.mock("@/hooks/data/useActiveLlmModel", () => ({
+  useActiveLlmModel: () => ({ data: null, isLoading: false }),
+}));
+
 vi.mock("@/services/writing-client", () => ({
   fetchWritingDoc: vi.fn().mockResolvedValue({
     success: true,
@@ -162,10 +167,10 @@ describe("EditorToolbar 触发器显示当前值（shadcn-tiptap 结构）", () 
     // 初始触发器显示当前值：左对齐（TextAlign 默认语义）
     expect(screen.getByRole("button", { name: "左对齐" })).toBeTruthy();
 
-    // 打开下拉：当前项「左对齐」带 ✓ 前缀，「居中对齐」无前缀 → 点居中
+    // 打开弹层：当前项「✓ 左对齐」（pop-item button，与其他弹层统一互斥模式）→ 点居中
     fireEvent.click(screen.getByRole("button", { name: "左对齐" }));
-    expect(await screen.findByRole("menuitem", { name: "✓ 左对齐" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("menuitem", { name: "居中对齐" }));
+    expect(await screen.findByRole("button", { name: "✓ 左对齐" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "居中对齐" }));
 
     // 对齐命令生效 → 触发器 aria-label 与可见文案更新为「居中对齐」
     expect(editor.isActive({ textAlign: "center" })).toBe(true);
@@ -174,9 +179,9 @@ describe("EditorToolbar 触发器显示当前值（shadcn-tiptap 结构）", () 
       expect(screen.queryByRole("button", { name: "左对齐" })).toBeNull();
     });
 
-    // 重开菜单：当前项已换成「居中对齐」（✓ 前缀跟随）
+    // 重开弹层：当前项已换成「居中对齐」（✓ 前缀跟随）
     fireEvent.click(screen.getByRole("button", { name: "居中对齐" }));
-    expect(await screen.findByRole("menuitem", { name: "✓ 居中对齐" })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "✓ 居中对齐" })).toBeTruthy();
 
     editor.destroy();
   });

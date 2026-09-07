@@ -37,8 +37,16 @@ const HIGHLIGHT_PRESETS: { key: string; zh: string }[] = [
 /** 字号预设（pt 单位，与 printPreview / docxExport 的 GB/T 9704 版式一致） */
 const FONT_SIZE_PRESETS = [8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 48, 72];
 
-/** 字体预设（公文常用五件套 + 常见系统字体；值为 CSS font-family 名） */
-const FONT_PRESETS = ["宋体", "黑体", "楷体_GB2312", "仿宋_GB2312", "思源宋体 CN", "微软雅黑", "苹方"];
+/** 字体预设：value 传给 setFontFamily（CSS font-family 全名）；display 列表短名（楷体_GB2312 全名太长，截断难看） */
+const FONT_PRESETS: { value: string; display: string }[] = [
+  { value: "宋体", display: "宋体" },
+  { value: "黑体", display: "黑体" },
+  { value: "楷体_GB2312", display: "楷体" },
+  { value: "仿宋_GB2312", display: "仿宋" },
+  { value: "思源宋体 CN", display: "思源宋体" },
+  { value: "微软雅黑", display: "微软雅黑" },
+  { value: "苹方", display: "苹方" },
+];
 
 /** 对齐四项（alignment.tsx 模式：图标 + 中文名，触发器显示当前值） */
 const ALIGN_PRESETS: { key: "left" | "center" | "right" | "justify"; zh: string; Icon: LucideIcon }[] = [
@@ -71,10 +79,10 @@ interface EditorToolbarProps {
 }
 
 const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onTogglePaperStyle, paperStyleOn }) => {
-  const [colorOpen, setColorOpen] = useState(false);
-  const [urlOpen, setUrlOpen] = useState(false);
-  const [fontSizeOpen, setFontSizeOpen] = useState(false);
-  const [fontFamilyOpen, setFontFamilyOpen] = useState(false);
+  // 弹层互斥：同一时刻至多一个弹层展开（点任一触发器自动关旧的——修复多弹层叠加）
+  type PopKind = "color" | "fontSize" | "fontFamily" | "align" | "url" | null;
+  const [openPop, setOpenPop] = useState<PopKind>(null);
+  const togglePop = (k: Exclude<PopKind, null>) => setOpenPop((v) => (v === k ? null : k));
   const [imageUrl, setImageUrl] = useState("");
 
   const state = useEditorState({
@@ -120,10 +128,10 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onTogglePaperStyl
 
   // 关闭颜色 / 图片 URL / 字号 / 字体 浮层（点击外部或 Esc）
   useEffect(() => {
-    const close = () => { setColorOpen(false); setUrlOpen(false); setFontSizeOpen(false); setFontFamilyOpen(false); };
+    const close = () => setOpenPop(null);
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") close(); };
     const onDown = (e: MouseEvent) => {
-      if ((colorOpen || urlOpen || fontSizeOpen || fontFamilyOpen) && !(e.target as HTMLElement).closest(".em-toolbar")) close();
+      if (openPop && !(e.target as HTMLElement).closest(".em-toolbar")) close();
     };
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onKey);
@@ -131,7 +139,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onTogglePaperStyl
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onKey);
     };
-  }, [colorOpen, urlOpen, fontSizeOpen, fontFamilyOpen]);
+  }, [openPop]);
 
   if (!editor || !state) return null;
 
@@ -176,9 +184,9 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onTogglePaperStyl
       <div className="em-pop-label">{s.label}</div>
       <div className="em-color-list">
         {s.presets.map((p) =>
-          popItem(s.current === p.key, p.zh, () => { s.onPick(p.key); setColorOpen(false); }, s.swatch(p.key)),
+          popItem(s.current === p.key, p.zh, () => { s.onPick(p.key); setOpenPop(null); }, s.swatch(p.key)),
         )}
-        {popItem(s.current === null, s.clearZh, () => { s.onClear(); setColorOpen(false); },
+        {popItem(s.current === null, s.clearZh, () => { s.onClear(); setOpenPop(null); },
           <span className="em-swatch em-swatch-none">A</span>)}
       </div>
     </>
@@ -188,7 +196,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onTogglePaperStyl
     if (!imageUrl.trim()) return;
     editor.chain().focus().setImage({ src: imageUrl.trim() }).run();
     setImageUrl("");
-    setUrlOpen(false);
+    setOpenPop(null);
   };
 
   return (
@@ -210,7 +218,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onTogglePaperStyl
         {btn(
           !!state.color || !!state.highlightColor,
           "文字颜色",
-          () => setColorOpen((v) => !v),
+          () => togglePop("color"),
           <span className="em-color-btn">
             <span className="em-color-a">
               A
@@ -219,7 +227,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onTogglePaperStyl
             <ChevronDown size={11} />
           </span>,
         )}
-        {colorOpen && (
+        {openPop === "color" && (
           <div className="em-toolbar-pop em-color-pop popover-entry">
             {colorSection({
               label: "文字颜色", presets: COLOR_PRESETS, current: state.color,
@@ -245,7 +253,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onTogglePaperStyl
         {btn(
           !!state.fontSize,
           "字号",
-          () => setFontSizeOpen((v) => !v),
+          () => togglePop("fontSize"),
           <span className="em-h">
             <span className="em-toolbar-current">{state.fontSize ? state.fontSize.replace(/pt$/, "") : "字号"}</span>
             <ChevronDown size={11} />
@@ -253,28 +261,28 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onTogglePaperStyl
           undefined,
           "em-size-trigger",
         )}
-        {fontSizeOpen && (
+        {openPop === "fontSize" && (
           <div className="em-toolbar-pop em-size-grid popover-entry">
             {FONT_SIZE_PRESETS.map((n) =>
               popItem(state.fontSize === `${n}pt`, String(n), () => {
                 editor.chain().focus().setFontSize(`${n}pt`).run();
-                setFontSizeOpen(false);
+                setOpenPop(null);
               }),
             )}
             {popItem(false, "恢复默认", () => {
               editor.chain().focus().unsetFontSize().run();
-              setFontSizeOpen(false);
+              setOpenPop(null);
             }, undefined, { gridColumn: "1 / -1" })}
           </div>
         )}
       </div>
 
-      {/* 字体▾：触发器显示当前字体名（截断 6 字符 + …），弹层纵向列表 + 恢复默认 */}
+      {/* 字体▾：触发器显示当前字体名（截断 6 字符 + …），弹层列表用短名渲染（本体预览）、value 传全名 */}
       <div className="relative">
         {btn(
           !!state.fontFamily,
           "字体",
-          () => setFontFamilyOpen((v) => !v),
+          () => togglePop("fontFamily"),
           <span className="em-h">
             <span className="em-toolbar-current">{state.fontFamily ? truncateFont(state.fontFamily) : "字体"}</span>
             <ChevronDown size={11} />
@@ -282,28 +290,28 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onTogglePaperStyl
           undefined,
           "em-font-trigger",
         )}
-        {fontFamilyOpen && (
+        {openPop === "fontFamily" && (
           <div className="em-toolbar-pop em-pop-list popover-entry">
-            {FONT_PRESETS.map((name) =>
-              popItem(state.fontFamily === name, name, () => {
-                editor.chain().focus().setFontFamily(name).run();
-                setFontFamilyOpen(false);
-              }, undefined, { fontFamily: name }, "em-font-item"),
+            {FONT_PRESETS.map((f) =>
+              popItem(state.fontFamily === f.value, f.display, () => {
+                editor.chain().focus().setFontFamily(f.value).run();
+                setOpenPop(null);
+              }, undefined, { fontFamily: f.value }, "em-font-item"),
             )}
             {popItem(false, "恢复默认", () => {
               editor.chain().focus().unsetFontFamily().run();
-              setFontFamilyOpen(false);
+              setOpenPop(null);
             })}
           </div>
         )}
       </div>
 
-      {/* 对齐▾：触发器显示当前对齐（图标+名+▾）；image 激活时禁用；菜单项 ✓ 前缀标当前项 */}
-      <DropdownMenu
-        trigger={btn(
+      {/* 对齐▾：触发器显示当前对齐（图标+名+▾）；image 激活时禁用；弹层项 ✓ 前缀标当前项（与其他弹层统一互斥） */}
+      <div className="relative">
+        {btn(
           false,
           currentAlign.zh,
-          () => {},
+          () => togglePop("align"),
           <span className="em-h">
             <currentAlign.Icon size={14} />
             <span className="em-toolbar-current">{currentAlign.zh}</span>
@@ -311,12 +319,17 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onTogglePaperStyl
           </span>,
           state.imageActive,
         )}
-        items={ALIGN_PRESETS.map((a) => ({
-          key: a.key,
-          label: `${state.align === a.key ? "✓ " : ""}${a.zh}`,
-          onClick: () => editor.chain().focus().setTextAlign(a.key).run(),
-        }))}
-      />
+        {openPop === "align" && (
+          <div className="em-toolbar-pop em-pop-list popover-entry">
+            {ALIGN_PRESETS.map((a) =>
+              popItem(state.align === a.key, `${state.align === a.key ? "✓ " : ""}${a.zh}`, () => {
+                editor.chain().focus().setTextAlign(a.key).run();
+                setOpenPop(null);
+              }, <a.Icon size={14} />),
+            )}
+          </div>
+        )}
+      </div>
 
       <span className="em-toolbar-sep" />
 
@@ -338,8 +351,8 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onTogglePaperStyl
 
       {/* 图片：URL 插入（粘贴截图走编辑器 handlePaste） */}
       <div className="relative">
-        {btn(false, "插入图片（URL）", () => setUrlOpen((v) => !v), <ImageIcon size={15} />)}
-        {urlOpen && (
+        {btn(false, "插入图片（URL）", () => togglePop("url"), <ImageIcon size={15} />)}
+        {openPop === "url" && (
           <div className="em-toolbar-pop popover-entry">
             <div className="em-toolbar-url">
               <input

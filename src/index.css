@@ -1543,22 +1543,26 @@ button:disabled {
 /* 颜色弹层两栏列表（文字色 / 背景高亮）：项 = 色块 A 预览 + 对勾 */
 .em-color-list {
   display: grid;
-  grid-template-columns: repeat(3, minmax(64px, 1fr));
+  grid-template-columns: repeat(2, minmax(96px, 1fr));
   gap: 2px;
   margin: 4px 0;
 }
+/* 颜色弹层行高加大（26→30）：色点 + 名称呼吸感 */
+.em-color-list .em-pop-item { height: 30px; }
+.em-color-list .em-pop-name { font-size: 13px; }
 .em-swatch {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 20px;
   height: 20px;
-  border-radius: 4px;
+  border-radius: 50%;
   border: 1px solid var(--border);
   font-size: 11px;
   font-weight: 700;
   color: var(--fg-2);
   flex-shrink: 0;
+  box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / 0.55);
 }
 .em-swatch-none { background: var(--panel-2); }
 .em-toolbar-pop {
