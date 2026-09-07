@@ -152,11 +152,12 @@ public class ReportGenerationService
                 new() { Role = MessageRole.User, Content = userPrompt }
             };
 
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            // 180s：图形版结构化输出量大，Agnes 等思考型模型 30s 内出不了完整报告（2026-09-07 实测全通道超时）
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(180));
             var chatTask = _llm.ChatAsync(messages);
             var completed = await Task.WhenAny(chatTask, Task.Delay(Timeout.InfiniteTimeSpan, cts.Token));
             if (completed != chatTask)
-                return (false, null, "报告生成超时（30s），请缩小时间范围或筛选条件后重试");
+                return (false, null, "报告生成超时（180s），请缩小时间范围或筛选条件后重试");
             var response = await chatTask;
 
             if (response?.Choices == null || response.Choices.Count == 0)
@@ -170,8 +171,8 @@ public class ReportGenerationService
         }
         catch (OperationCanceledException)
         {
-            Console.Error.WriteLine("[ReportGeneration] 报告生成超时（30s，已取消）");
-            return (false, null, "报告生成超时（30s），请缩小时间范围或筛选条件后重试");
+            Console.Error.WriteLine("[ReportGeneration] 报告生成超时（180s，已取消）");
+            return (false, null, "报告生成超时（180s），请缩小时间范围或筛选条件后重试");
         }
         catch (Exception ex)
         {

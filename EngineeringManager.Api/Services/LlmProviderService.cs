@@ -281,7 +281,8 @@ public class LlmProviderService : ILlmChatService
         {
             var client = BuildClient(route.ProxyUrl);
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            timeoutCts.CancelAfter(TimeSpan.FromSeconds(120));
+            // 300s：与流式路径一致；须大于报告生成的 180s 预算，否则内部先掐、用户看不到友好超时提示
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(300));
 
             var json = JsonSerializer.Serialize(payload, SerializerOptions);
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
