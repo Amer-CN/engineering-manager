@@ -124,7 +124,7 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
       setMarkdown(result.data.markdown)
       setTimestamp(result.data.timestamp)
       setResultFormat(request.format ?? 'text')
-      setResultTemplateId(getTemplateId(request.purpose ?? 'review'))
+      setResultTemplateId(getTemplateId(request.purpose ?? 'review', request.theme))
     } else {
       setError(result.error ?? '生成失败，请重试')
     }

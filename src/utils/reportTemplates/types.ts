@@ -10,7 +10,13 @@ export const PURPOSE_TEMPLATE: Record<string, ReportTemplateId> = {
   weekly: 'r12',
 }
 
-export function getTemplateId(purpose: string | undefined): ReportTemplateId {
+/**
+ * 用途 + 主题 → templateId。经营复盘（review）带主题维度：
+ * 综合经营 → r04 图表版、工资专项 → r12 工资海报版（用户契约：一个用途两种模板）；
+ * 其余用途不看主题。未知 → r04。
+ */
+export function getTemplateId(purpose: string | undefined, theme?: string): ReportTemplateId {
+  if (purpose === 'review' && theme === 'wage') return 'r12'
   return PURPOSE_TEMPLATE[purpose ?? 'review'] ?? 'r04'
 }
 
