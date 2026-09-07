@@ -56,27 +56,28 @@ export function buildR01PrintHtml(data: TemplateReportData): string {
 body{background:var(--bg);color:var(--txt);font-family:var(--sans);-webkit-font-smoothing:antialiased;
 font-variant-numeric:tabular-nums lining-nums;display:block}
 .sheet{width:auto;max-width:794px;margin:0 auto;background:var(--bg);padding-right:58mm}
-h1{font-family:var(--serif);font-size:32px;font-weight:400;letter-spacing:.01em;line-height:1.2;margin-bottom:8px;break-after:avoid}
+/* 字号体系与预览(R01EvidenceView)完全一致——R04 一致性经验：打印不缩放字号 */
+h1{font-family:var(--serif);font-size:50px;font-weight:400;letter-spacing:.01em;line-height:1.2;margin-bottom:8px;break-after:avoid}
 h1 b{font-weight:700}
-.dek{font-family:var(--serif);font-size:17px;font-weight:400;line-height:1.45;margin:44px 0 6px;max-width:520px}
-.kick{font-size:8px;font-weight:700;letter-spacing:.16em;color:var(--mut);margin-bottom:14px;break-after:avoid}
+.dek{font-family:var(--serif);font-size:25px;font-weight:400;line-height:1.45;margin:44px 0 6px}
+.kick{font-size:10px;font-weight:700;letter-spacing:.16em;color:var(--mut);margin-bottom:14px;break-after:avoid}
 .kick .n{color:var(--data)}
-.claim{font-size:11.5px;font-weight:700;margin:34px 0 4px;break-after:avoid}
-.body{font-size:10.5px;line-height:1.8;color:var(--lab);margin-top:8px}
-.srcline{font-size:8px;font-weight:600;letter-spacing:.11em;color:var(--faint);margin-top:10px}
+.claim{font-size:14px;font-weight:700;margin:34px 0 4px;break-after:avoid}
+.body{font-size:12.5px;line-height:1.8;color:var(--lab);margin-top:8px}
+.srcline{font-size:9px;font-weight:600;letter-spacing:.11em;color:var(--faint);margin-top:10px}
 .fig{margin-top:14px;break-inside:avoid}.fig svg{width:100%;height:auto;display:block}
-.traits{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:44px;border-top:1px solid var(--txt);padding-top:24px;break-inside:avoid}
-.traits .t .big{font-size:22px;font-weight:800;letter-spacing:-.03em;color:var(--data)}
-.traits .t .nm{font-size:10px;font-weight:700;margin-top:8px}
-.traits .t .ds{font-size:9.5px;line-height:1.7;color:var(--mut);margin-top:5px}
+.traits{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;margin-top:44px;border-top:1px solid var(--txt);padding-top:24px;break-inside:avoid}
+.traits .t .big{font-size:30px;font-weight:800;letter-spacing:-.03em;color:var(--data)}
+.traits .t .nm{font-size:11.5px;font-weight:700;margin-top:8px}
+.traits .t .ds{font-size:10.5px;line-height:1.7;color:var(--mut);margin-top:5px}
 /* 固定右栏：Chromium 打印对 position:fixed 逐页重复，实现正本的每页彩栏 */
 .rail{position:fixed;top:0;right:0;width:52mm;height:100vh;background:var(--railbg);color:var(--bg);display:flex;flex-direction:column}
-.rail .top{padding:30px 22px 20px;flex:1}
-.rail .bot{background:var(--raildark);padding:20px 22px 26px;margin-top:auto}
-.rail h3{font-size:14px;font-weight:700;line-height:1.5;margin-bottom:14px}
-.rail p{font-size:10px;line-height:1.9;opacity:.88}.rail p+p{margin-top:10px}
-.rail .lbl{font-size:8px;font-weight:700;letter-spacing:.16em;opacity:.6;margin-bottom:10px}
-.rail .link{font-size:10px;font-weight:700;margin-top:16px;text-decoration:underline;text-underline-offset:3px}
+.rail .top{padding:36px 19px 30px;flex:1}
+.rail .bot{background:var(--raildark);padding:24px 19px 30px;margin-top:auto}
+.rail h3{font-size:16.5px;font-weight:700;line-height:1.5;margin-bottom:18px}
+.rail p{font-size:11.5px;line-height:1.9;opacity:.88}.rail p+p{margin-top:12px}
+.rail .lbl{font-size:9px;font-weight:700;letter-spacing:.16em;opacity:.6;margin-bottom:12px}
+.rail .link{font-size:11px;font-weight:700;margin-top:20px;text-decoration:underline;text-underline-offset:3px}
 @media print{@page{size:A4;margin:14mm 13mm}}
 </style></head><body>
 <div class="sheet">
