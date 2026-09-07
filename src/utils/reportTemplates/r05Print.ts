@@ -48,7 +48,7 @@ export function buildR05PrintHtml(data: TemplateReportData): string {
 :root{--bg:${MONO.bg};--ink:${MONO.ink};--muted:${MONO.mut};--faint:${MONO.faint};--grid:${MONO.grid}}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{background:var(--bg);color:var(--ink);font-family:'Inter','Noto Sans SC',sans-serif;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums lining-nums;display:block}
-.sheet{width:auto;max-width:794px;margin:0 auto}
+.sheet{width:auto;max-width:794px;margin:0 auto;padding:14mm 13mm}
 h1{font-size:28px;font-weight:900;letter-spacing:.01em;line-height:1.3;max-width:560px;break-after:avoid}
 h1 .hl{background:var(--ink);color:var(--bg);padding:0 12px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
 .lede{font-size:11px;line-height:1.95;color:#4A4944;max-width:520px;margin-top:26px}
@@ -66,7 +66,7 @@ h1 .hl{background:var(--ink);color:var(--bg);padding:0 12px;box-decoration-break
 .cta{margin-top:22px;font-size:11.5px;font-weight:700}
 .cta .hl{background:var(--ink);color:var(--bg);padding:3px 14px 4px}
 .foot{margin-top:64px;padding-top:14px;border-top:1px solid var(--grid);display:flex;justify-content:space-between;font-size:8px;font-weight:600;letter-spacing:.12em;color:var(--faint);break-inside:avoid}
-@media print{@page{size:A4;margin:14mm 13mm}}
+@media print{@page{size:A4;margin:0}}
 </style></head><body>
 <div class="sheet">
 <h1>${t}</h1>
