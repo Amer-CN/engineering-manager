@@ -11,7 +11,7 @@ import { Drawer } from '../../ui/Drawer'
 import { useToastStore } from '@/store/toastStore'
 import { testLlmProviderConnection } from '@/services/agent-client'
 import type { ProviderModelEntry } from '@/types/agent'
-import { CapabilityEditor, ModelMultiSelect } from './aiProviderSettingsParts'
+import { CapabilityEditor, ModelMultiSelect, PROTOCOL_LABELS } from './aiProviderSettingsParts'
 
 /** 更换密钥弹窗已移入 aiProviderSettingsParts（主文件行数门禁 ≤400）；此处重导出保持调用方兼容 */
 export { KeyReplaceDialog } from './aiProviderSettingsParts'
@@ -26,7 +26,7 @@ export function ProviderAddForm({
   /** 当前已保存的全局代理（获取列表/测试连接时随请求携带） */
   currentProxy?: string
   onCancel: () => void
-  onSaved: (entry: { id: string; name: string; baseUrl: string; models: ProviderModelEntry[]; activeModelId: string }, apiKey: string) => void
+  onSaved: (entry: { id: string; name: string; baseUrl: string; models: ProviderModelEntry[]; activeModelId: string; protocol: 'chat' | 'responses' | 'anthropic' }, apiKey: string) => void
 }) {
   const showToast = useToastStore(s => s.showToast)
   const [name, setName] = useState('')
@@ -35,6 +35,8 @@ export function ProviderAddForm({
   const [fetched, setFetched] = useState<string[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [busy, setBusy] = useState<null | 'testing' | 'fetching'>(null)
+  // 协议为供应商级（一个供应商一个协议）：新增时即可选定，免得保存后还要进子页补改
+  const [protocol, setProtocol] = useState<'chat' | 'responses' | 'anthropic'>('chat')
 
   /** 获取模型列表（OpenAI 兼容 /models 端点），默认全选 */
   const handleFetch = async () => {
@@ -99,6 +101,7 @@ export function ProviderAddForm({
         baseUrl: baseUrl.trim(),
         models,
         activeModelId: models[0]?.id ?? '',
+        protocol,
       },
       apiKey.trim(),
     )
@@ -123,6 +126,19 @@ export function ProviderAddForm({
           <label className="label">Base URL</label>
           <input type="text" value={baseUrl} onChange={e => setBaseUrl(e.target.value)} disabled={disabled}
             placeholder="https://api.openai.com/v1" className={INPUT_CLS} />
+        </div>
+      </div>
+
+      {/* 接口协议三选一：样式对齐子页 ProviderSettingsForm（供应商级，新增即选定） */}
+      <div>
+        <label className="label">接口协议</label>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {(['chat', 'responses', 'anthropic'] as const).map(v => (
+            <button key={v} type="button" disabled={disabled} onClick={() => setProtocol(v)}
+              className={`px-2 py-0.5 rounded-lg text-caption font-medium border transition-colors disabled:opacity-50 ${protocol === v ? 'border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent)]' : 'border-[color:var(--border)] text-[color:var(--fg-2)]'}`}>
+              {PROTOCOL_LABELS[v]}
+            </button>
+          ))}
         </div>
       </div>
 

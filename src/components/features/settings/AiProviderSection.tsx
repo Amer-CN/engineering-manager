@@ -137,7 +137,7 @@ export function AiProviderSection({ onDetailChange }: { onDetailChange?: (isDeta
   const dialogProvider = modelDialog ? multi.providers.find(p => p.id === modelDialog.providerId) : null
 
   /** 添加服务商：进列表并立即启用（切到自定义），自动保存 */
-  const handleAddProvider = (entry: { id: string; name: string; baseUrl: string; models: ProviderModelEntry[]; activeModelId: string }, apiKey: string) => {
+  const handleAddProvider = (entry: { id: string; name: string; baseUrl: string; models: ProviderModelEntry[]; activeModelId: string; protocol: 'chat' | 'responses' | 'anthropic' }, apiKey: string) => {
     const nextInputs = apiKey ? { ...apiKeyInputsRef.current, [entry.id]: apiKey } : apiKeyInputsRef.current
     apiKeyInputsRef.current = nextInputs   // 同步 ref：saveNow 立即读时不受 setState 异步影响
     setApiKeyInputs(nextInputs)

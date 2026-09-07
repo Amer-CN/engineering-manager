@@ -215,3 +215,47 @@ describe('AiProviderSection — 模型上下文长度（对齐 ZCode）', () => 
     expect(screen.getByText('200K')).toBeTruthy()
   })
 })
+
+describe('AiProviderSection — 添加表单协议三选一', () => {
+  /** 单服务商配置基底：列表态添加表单测试共用（每次调用产新对象，防跨测试串改） */
+  const baseAddCfg = () => ({
+    useBuiltIn: false, providerName: 'Custom', baseUrl: 'https://api.example.com/v1',
+    model: 'my-model', hasApiKey: false, temperature: 0.7, maxTokens: 4096,
+    activeProviderId: 'p1',
+    providers: [
+      { id: 'p1', name: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1', models: [], activeModelId: '' },
+    ],
+  })
+
+  beforeEach(() => {
+    mockGetConfig.mockReset()
+    mockGetConfig.mockResolvedValue(baseAddCfg())
+  })
+
+  test('添加服务商点「Anthropic Messages」→ 保存链路 payload protocol=anthropic', async () => {
+    render(<AiProviderSection />)
+    fireEvent.click(await screen.findByText('添加服务商'))
+    fireEvent.change(screen.getByPlaceholderText('如 DeepSeek / 智谱 / 自己起的名字'), { target: { value: 'Anthropic 官方' } })
+    fireEvent.change(screen.getByPlaceholderText('https://api.openai.com/v1'), { target: { value: 'https://api.anthropic.com' } })
+    fireEvent.change(screen.getByPlaceholderText('请输入 API Key'), { target: { value: 'sk-ant-test' } })
+    fireEvent.click(screen.getByText('Anthropic Messages'))
+    fireEvent.click(screen.getByRole('button', { name: '保存服务商' }))
+    await waitFor(() => expect(saveLlmProviderConfig).toHaveBeenCalled())
+    const payload = (saveLlmProviderConfig as any).mock.calls.at(-1)[0]
+    const added = payload.providers.find((p: any) => p.name === 'Anthropic 官方')
+    expect(added.protocol).toBe('anthropic')
+  })
+
+  test('不点协议直接保存 → 默认 protocol=chat', async () => {
+    render(<AiProviderSection />)
+    fireEvent.click(await screen.findByText('添加服务商'))
+    fireEvent.change(screen.getByPlaceholderText('如 DeepSeek / 智谱 / 自己起的名字'), { target: { value: '默认协议商' } })
+    fireEvent.change(screen.getByPlaceholderText('https://api.openai.com/v1'), { target: { value: 'https://api.example.com/v1' } })
+    fireEvent.change(screen.getByPlaceholderText('请输入 API Key'), { target: { value: 'sk-test' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存服务商' }))
+    await waitFor(() => expect(saveLlmProviderConfig).toHaveBeenCalled())
+    const payload = (saveLlmProviderConfig as any).mock.calls.at(-1)[0]
+    const added = payload.providers.find((p: any) => p.name === '默认协议商')
+    expect(added.protocol).toBe('chat')
+  })
+})
