@@ -14,8 +14,9 @@ const R01EvidenceView: React.FC<Props> = ({ data }) => {
 
   return (
     <div className="grid w-full mx-auto max-w-[1080px]" style={{ gridTemplateColumns: '1fr 300px', background: PORCELAIN.bg }}>
-      {/* 主栏 */}
-      <div style={{ padding: '56px 48px 44px 8px' }}>
+      {/* 主栏：minWidth:0 允许收缩——长 ASCII 词（agent_approval_executed 等）会把 1fr 的
+          min-content 撑爆容器，导致侧栏被挤出可视区（2026-09-07 实测预览裁切根因） */}
+      <div style={{ padding: '56px 48px 44px 8px', minWidth: 0 }}>
         <h1 style={{ fontFamily: PORCELAIN.serif, fontSize: 50, fontWeight: 400, letterSpacing: '.01em', lineHeight: 1.2, color: PORCELAIN.txt }}>
           {data.title}
         </h1>
@@ -50,7 +51,7 @@ const R01EvidenceView: React.FC<Props> = ({ data }) => {
             {s.heading && (
               <div style={{ fontSize: 14, fontWeight: 700, margin: '34px 0 4px', color: PORCELAIN.txt }}>{s.heading}</div>
             )}
-            <div style={{ fontSize: 12.5, lineHeight: 1.8, color: PORCELAIN.lab, maxWidth: 520, marginTop: 8 }}>
+            <div style={{ fontSize: 12.5, lineHeight: 1.8, color: PORCELAIN.lab, maxWidth: 520, marginTop: 8, overflowWrap: 'anywhere' }}>
               {s.lines.filter((l) => l.trim()).map((l, j) => (
                 <div key={j} style={{ marginTop: j > 0 ? 8 : 0 }}>
                   {/^[-*]\s/.test(l.trim()) ? `• ${l.trim().replace(/^[-*]\s/, '')}` : l}

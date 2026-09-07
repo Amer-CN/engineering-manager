@@ -55,7 +55,7 @@ export function buildR01PrintHtml(data: TemplateReportData): string {
 *{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{background:var(--bg);color:var(--txt);font-family:var(--sans);-webkit-font-smoothing:antialiased;
 font-variant-numeric:tabular-nums lining-nums;display:block}
-.sheet{width:auto;max-width:794px;margin:0 auto;background:var(--bg);padding-right:58mm}
+.sheet{width:auto;max-width:794px;margin:0 auto;background:var(--bg);padding:14mm 58mm 14mm 13mm}
 /* 字号体系与预览(R01EvidenceView)完全一致——R04 一致性经验：打印不缩放字号 */
 h1{font-family:var(--serif);font-size:50px;font-weight:400;letter-spacing:.01em;line-height:1.2;margin-bottom:8px;break-after:avoid}
 h1 b{font-weight:700}
@@ -78,7 +78,9 @@ h1 b{font-weight:700}
 .rail p{font-size:11.5px;line-height:1.9;opacity:.88}.rail p+p{margin-top:12px}
 .rail .lbl{font-size:9px;font-weight:700;letter-spacing:.16em;opacity:.6;margin-bottom:12px}
 .rail .link{font-size:11px;font-weight:700;margin-top:20px;text-decoration:underline;text-underline-offset:3px}
-@media print{@page{size:A4;margin:14mm 13mm}}
+/* 左右满版出血：@page 左右边距为 0（背景色铺到纸边，与预览通铺一致；白框根因即页边距区），
+   上下保留 10mm 纸边防文字顶边；页内留白由 .sheet padding 承担 */
+@media print{@page{size:A4;margin:10mm 0}}
 </style></head><body>
 <div class="sheet">
 <h1>${t}</h1>
