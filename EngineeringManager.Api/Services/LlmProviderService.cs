@@ -41,6 +41,12 @@ public class LlmProviderService : ILlmChatService
     private static readonly ConcurrentDictionary<string, HttpClient> ProxyClients = new();
 
     /// <summary>
+    /// OpenCode 稳定会话标识（x-opencode-session 头的值）。进程内复用同一值——
+    /// 官方要求 stable session（opencode.ai/docs/go），按请求随机会被视为滥用。
+    /// </summary>
+    private static readonly string OpenCodeSessionId = Guid.NewGuid().ToString();
+
+    /// <summary>
     /// 规范化代理地址：空 = null（直连）；缺 scheme 补 http://；非法 = null + 告警
     /// </summary>
     internal static string? NormalizeProxyUrl(string? proxyUrl)
@@ -123,6 +129,7 @@ public class LlmProviderService : ILlmChatService
             using var request = new HttpRequestMessage(HttpMethod.Get,
                 $"{baseUrl.TrimEnd('/')}/models");
             request.Headers.Add("Authorization", $"Bearer {apiKey}");
+            ApplyOpenCodeSession(request, baseUrl);
 
             var response = await client.SendAsync(request, timeoutCts.Token);
             if (!response.IsSuccessStatusCode)
@@ -284,6 +291,7 @@ public class LlmProviderService : ILlmChatService
                     request.Headers.Add(h.Key, h.Value);
             else
                 request.Headers.Add("Authorization", $"Bearer {route.ApiKey}");
+            ApplyOpenCodeSession(request, route.BaseUrl);
             request.Content = content;
 
             using var response = await client.SendAsync(request, timeoutCts.Token);
@@ -310,6 +318,21 @@ public class LlmProviderService : ILlmChatService
         if (string.Equals(protocol, "anthropic", StringComparison.OrdinalIgnoreCase)) return "anthropic";
         if (string.Equals(protocol, "responses", StringComparison.OrdinalIgnoreCase)) return "responses";
         return "chat";
+    }
+
+    /// <summary>
+    /// OpenCode（opencode.ai）文档化契约：出站必须携带稳定会话头 x-opencode-session，
+    /// 缺头 400 MissingSessionID（"free tier can only be used in OpenCode" 文案即此门槛）。
+    /// 三条协议路径（chat/responses/anthropic）与 /models 均需；非 opencode.ai 服务商不带。
+    /// 2026-09-07 实测：带头后同一请求由 400 变 429（身份门已过，仅免费层限速）。
+    /// </summary>
+    private static void ApplyOpenCodeSession(HttpRequestMessage req, string baseUrl)
+    {
+        if (!string.IsNullOrEmpty(baseUrl) &&
+            baseUrl.Contains("opencode.ai", StringComparison.OrdinalIgnoreCase))
+        {
+            req.Headers.TryAddWithoutValidation("x-opencode-session", OpenCodeSessionId);
+        }
     }
 
     /// <summary>
@@ -599,6 +622,7 @@ public class LlmProviderService : ILlmChatService
             {
                 request.Headers.Add("Authorization", $"Bearer {route.ApiKey}");
             }
+            ApplyOpenCodeSession(request, route.BaseUrl);
             request.Content = content;
 
             var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeoutCts.Token);
