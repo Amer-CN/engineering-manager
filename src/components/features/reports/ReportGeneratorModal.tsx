@@ -147,11 +147,11 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
       >
-        {/* 背景遮罩 */}
+        {/* 背景遮罩：生成中禁点——误触关闭会丢弃已等待数分钟的生成结果 */}
         <div
           className="absolute inset-0"
-          style={{ background: 'rgba(0,0,0,0.5)' }}
-          onClick={onClose}
+          style={{ background: 'rgba(0,0,0,0.5)', cursor: loading ? 'wait' : 'default' }}
+          onClick={loading ? undefined : onClose}
         />
 
         {/* 弹窗 */}
@@ -183,8 +183,10 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
               )}
             </div>
             <button
-              onClick={onClose}
-              className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
+              onClick={loading ? undefined : onClose}
+              disabled={loading}
+              aria-label={loading ? '生成中，暂不可关闭' : '关闭'}
+              className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors disabled:opacity-40"
               style={{ color: 'var(--muted)' }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'var(--sidebar-item-hover)'
