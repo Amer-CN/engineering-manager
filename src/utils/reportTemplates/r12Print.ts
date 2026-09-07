@@ -1,7 +1,8 @@
 /**
  * R12 周报速览——Glance 系三秒快读 + Palm 色系 + 手写静态 SVG 双图
  * 版式正本：vendor/lieflat-charts/templates/reports/report-12.zh.html
- * 版心 1080 + 顶部速览条两数 + 两张图区 + 三栏页脚
+ * 打印版心 max-width 794px 单栏文档流 + 顶部速览条两数 + 两张图区（原双列改上下排）+ 三栏页脚
+ * （原版心 1080 双列图区跨打印分页塌架，2026-09-07 改打印安全版式）
  * 图表：图A 象形点阵（手写静态 SVG，100 点方阵）+ 图B 粗柱（手写静态 SVG）
  * 色板正本：color-presets.js PALM（与模板 02 共用，深绿主墨 + 琥珀强调 + 浓咖衬底）
  */
@@ -55,31 +56,31 @@ export function buildR12PrintHtml(data: TemplateReportData): string {
 --faintdata:${PALM.faintData};--bead:${PALM.bead};--mat:${PALM.data2};
 --dmid:rgba(240,239,235,.62);--dq:rgba(240,239,235,.24);
 --sans:'Inter','Noto Sans SC',sans-serif}
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--mat);font-family:var(--sans);color:var(--txt);-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums lining-nums;display:flex;justify-content:center;padding:64px 32px}
-.sheet{width:1080px;max-width:1080px;background:var(--paper);padding:60px 68px 64px}
-.sect{font-size:14px;font-weight:800;letter-spacing:.2em;padding-bottom:10px;border-bottom:2px solid var(--txt);margin-bottom:22px}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{background:var(--mat);font-family:var(--sans);color:var(--txt);-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums lining-nums;display:block}
+.sheet{width:auto;max-width:794px;margin:0 auto;background:var(--paper)}
+.sect{font-size:11px;font-weight:800;letter-spacing:.2em;padding-bottom:10px;border-bottom:2px solid var(--txt);margin-bottom:22px;break-after:avoid}
 .sect .yr{float:right;font-weight:600;color:var(--mut);letter-spacing:.1em}
 .miles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:44px}
-.miles .m{padding:18px 16px 16px;position:relative}
+.miles .m{padding:18px 16px 16px;position:relative;break-inside:avoid}
 .miles .m.hero{background:var(--hero);color:var(--paper)}
 .miles .m.frame{border:1px solid var(--faint)}
 .miles .m.green{background:var(--data);color:var(--paper)}
-.miles .m .tag{font-size:8.5px;font-weight:700;letter-spacing:.14em;opacity:.7}
-.miles .m .v{font-size:26px;font-weight:800;letter-spacing:-.03em;line-height:1;margin-top:6px}
-.miles .m .l{font-size:10px;line-height:1.65;margin-top:8px;opacity:.85}
-.duo{display:grid;grid-template-columns:1fr 1fr;gap:40px}
+.miles .m .tag{font-size:8px;font-weight:700;letter-spacing:.14em;opacity:.7}
+.miles .m .v{font-size:20px;font-weight:800;letter-spacing:-.03em;line-height:1;margin-top:6px}
+.miles .m .l{font-size:9px;line-height:1.65;margin-top:8px;opacity:.85}
+.duo{display:grid;grid-template-columns:1fr;gap:32px}
 .duo+.duo{margin-top:40px}
-.gcard{padding:24px 26px 22px;border:1px solid var(--faint)}
-.sub{font-size:11px;color:var(--mut);margin-bottom:14px;line-height:1.75}
-.claim{font-size:13.5px;font-weight:700;margin-bottom:10px;line-height:1.6}
+.gcard{padding:24px 26px 22px;border:1px solid var(--faint);break-inside:avoid}
+.sub{font-size:10px;color:var(--mut);margin-bottom:14px;line-height:1.75}
+.claim{font-size:11px;font-weight:700;margin-bottom:10px;line-height:1.6;break-after:avoid}
 .wrap{position:relative;height:280px}.ch{height:280px}
 svg text{font-family:var(--sans)}
-.srcline{font-size:9px;font-weight:600;letter-spacing:.1em;color:var(--faint);margin-top:10px;line-height:1.6}
-.foot{margin-top:52px;padding-top:16px;border-top:2px solid var(--txt);display:grid;grid-template-columns:1fr 1.55fr .85fr;gap:26px;font-size:9px;font-weight:600;letter-spacing:.08em;color:var(--mut)}
+.srcline{font-size:8px;font-weight:600;letter-spacing:.1em;color:var(--faint);margin-top:10px;line-height:1.6}
+.foot{margin-top:52px;padding-top:16px;border-top:2px solid var(--txt);display:grid;grid-template-columns:1fr 1.55fr .85fr;gap:26px;font-size:8px;font-weight:600;letter-spacing:.08em;color:var(--mut);break-inside:avoid}
 .foot .warn{color:var(--data);font-weight:700;line-height:1.75}
 .foot .end{text-align:right;line-height:1.75}
-@media print{@page{size:A4;margin:0}body{padding:0}}
+@media print{@page{size:A4;margin:14mm 13mm}}
 </style></head><body>
 <div class="sheet">
 <div class="sect">${t}<span class="yr">${period}</span></div>

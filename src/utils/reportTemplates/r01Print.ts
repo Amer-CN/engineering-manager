@@ -1,7 +1,8 @@
 /**
  * R01 调研一页纸——对外举证正式凭证风格
  * 版式正本：vendor/lieflat-charts/templates/reports/report-01.zh.html
- * 主栏 1fr + 彩色侧栏 300px；衬线大标题 + Porcelain 色系；纯 SVG 零脚本
+ * 打印版单栏 A4 文档流；衬线大标题 + Porcelain 色系；纯 SVG 零脚本
+ * （原主栏 1fr + 彩色侧栏 300px 双栏栅格跨打印分页塌架，2026-09-07 改打印安全版式）
  * 色值转写自 color-presets.js PORCELAIN 正本（参数层事实，代码自写）
  */
 import type { TemplateReportData } from './types'
@@ -49,46 +50,39 @@ export function buildR01PrintHtml(data: TemplateReportData): string {
 <style>
 :root{--bg:${PORCELAIN.bg};--txt:${PORCELAIN.txt};--mut:${PORCELAIN.mut};--lab:${PORCELAIN.lab};
 --faint:${PORCELAIN.faint};--data:${PORCELAIN.data};--hero:${PORCELAIN.hero};--faintdata:${PORCELAIN.faintData};
---grid:${PORCELAIN.grid};--railbg:${PORCELAIN.railBg};--raildark:${PORCELAIN.railDark};
+--grid:${PORCELAIN.grid};--raildark:${PORCELAIN.railDark};
 --serif:${PORCELAIN.serif};--sans:${PORCELAIN.sans}}
-*{margin:0;padding:0;box-sizing:border-box}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{background:var(--bg);color:var(--txt);font-family:var(--sans);-webkit-font-smoothing:antialiased;
-font-variant-numeric:tabular-nums lining-nums;display:flex;justify-content:center;padding:48px 24px}
-.sheet{width:1080px;max-width:1080px;background:var(--bg);display:grid;grid-template-columns:1fr 300px}
-.main{padding:56px 48px 44px 8px}
-h1{font-family:var(--serif);font-size:50px;font-weight:400;letter-spacing:.01em;line-height:1.2;margin-bottom:8px}
+font-variant-numeric:tabular-nums lining-nums;display:block}
+.sheet{width:auto;max-width:794px;margin:0 auto;background:var(--bg)}
+h1{font-family:var(--serif);font-size:32px;font-weight:400;letter-spacing:.01em;line-height:1.2;margin-bottom:8px;break-after:avoid}
 h1 b{font-weight:700}
-.dek{font-family:var(--serif);font-size:25px;font-weight:400;line-height:1.45;margin:44px 0 6px;max-width:520px}
-.kick{font-size:10px;font-weight:700;letter-spacing:.16em;color:var(--mut);margin-bottom:14px}
+.meta{border-top:1px solid var(--grid);margin-top:14px;padding-top:10px;font-size:9px;font-weight:600;letter-spacing:.11em;line-height:2;color:var(--mut);break-inside:avoid}
+.dek{font-family:var(--serif);font-size:17px;font-weight:400;line-height:1.45;margin:44px 0 6px;max-width:520px}
+.kick{font-size:8px;font-weight:700;letter-spacing:.16em;color:var(--mut);margin-bottom:14px;break-after:avoid}
 .kick .n{color:var(--data)}
-.claim{font-size:14px;font-weight:700;margin:34px 0 4px}
-.body{font-size:12.5px;line-height:1.8;color:var(--lab);max-width:520px;margin-top:8px}
-.srcline{font-size:9px;font-weight:600;letter-spacing:.11em;color:var(--faint);margin-top:10px}
-.fig{margin-top:14px}.fig svg{width:100%;height:auto;display:block}
-.traits{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;margin-top:44px;border-top:1px solid var(--txt);padding-top:24px}
-.traits .t .big{font-size:30px;font-weight:800;letter-spacing:-.03em;color:var(--data)}
-.traits .t .nm{font-size:11.5px;font-weight:700;margin-top:8px}
-.traits .t .ds{font-size:10.5px;line-height:1.7;color:var(--mut);margin-top:5px}
-.rail{display:flex;flex-direction:column}
-.rail .top{background:var(--railbg);color:var(--bg);padding:56px 30px 48px;flex:1}
-.rail .bot{background:var(--raildark);color:var(--bg);padding:44px 30px 52px}
-.rail h3{font-size:16.5px;font-weight:700;line-height:1.5;margin-bottom:18px}
-.rail p{font-size:11.5px;line-height:1.9;opacity:.88}.rail p+p{margin-top:12px}
-.rail .lbl{font-size:9px;font-weight:700;letter-spacing:.16em;opacity:.6;margin-bottom:12px}
-.rail .link{font-size:11px;font-weight:700;margin-top:20px;text-decoration:underline;text-underline-offset:3px}
-@media print{@page{size:A4;margin:0}body{padding:0}}
+.claim{font-size:11.5px;font-weight:700;margin:34px 0 4px;break-after:avoid}
+.body{font-size:10.5px;line-height:1.8;color:var(--lab);max-width:520px;margin-top:8px}
+.srcline{font-size:8px;font-weight:600;letter-spacing:.11em;color:var(--faint);margin-top:10px}
+.fig{margin-top:14px;break-inside:avoid}.fig svg{width:100%;height:auto;display:block}
+.traits{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;margin-top:44px;border-top:1px solid var(--txt);padding-top:24px;break-inside:avoid}
+.traits .t .big{font-size:22px;font-weight:800;letter-spacing:-.03em;color:var(--data)}
+.traits .t .nm{font-size:10px;font-weight:700;margin-top:8px}
+.traits .t .ds{font-size:9.5px;line-height:1.7;color:var(--mut);margin-top:5px}
+.colophon{background:var(--raildark);color:var(--bg);border-radius:6px;padding:18px 22px;margin-top:44px;break-inside:avoid}
+.colophon p{font-size:10.5px;line-height:1.9;opacity:.88}
+.colophon .lbl{font-size:8.5px;font-weight:700;letter-spacing:.16em;opacity:.6;margin-bottom:12px}
+.colophon .link{font-size:10.5px;font-weight:700;margin-top:20px;text-decoration:underline;text-underline-offset:3px}
+@media print{@page{size:A4;margin:14mm 13mm}}
 </style></head><body>
 <div class="sheet">
-<div class="main">
 <h1>${t}</h1>
+<div class="meta">数据来源：${source}<br>统计期间：${period}<br>取数日期：${date}</div>
 <div class="dek">${period}</div>
 ${chartSvg}
 ${bodyHtml}
-</div>
-<div class="rail">
-<div class="top"><div class="lbl">关于这份报告</div><h3>${t}</h3><p>数据来源：${source}。</p><p>统计期间：${period}。取数日期：${date}。</p></div>
-<div class="bot"><div class="lbl">口径说明</div><p>本报告数据全部来自工程管家本地台账，可溯源至原始操作记录。</p><div class="link">${esc(data.meta.product)}</div></div>
-</div>
+<div class="colophon"><div class="lbl">口径说明</div><p>本报告数据全部来自工程管家本地台账，可溯源至原始操作记录。</p><div class="link">${esc(data.meta.product)}</div></div>
 </div>
 </body></html>`
 }

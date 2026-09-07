@@ -1,7 +1,8 @@
 /**
  * R05 影响力故事——工作汇报叙事风格
  * 版式正本：vendor/lieflat-charts/templates/reports/report-05.zh.html
- * 760px 窄版心 + Mono 墨阶 + 标题关键词反色高亮 + 叙事故事线
+ * 打印版心 max-width:794px 单栏文档流 + Mono 墨阶 + 标题关键词反色高亮 + 叙事故事线
+ * （原 760px 窄版心，2026-09-07 改打印安全版式）
  */
 import type { TemplateReportData } from './types'
 import { MONO, tplEscapeHtml as esc, tplEscapeXml as xml } from './types'
@@ -45,27 +46,27 @@ export function buildR05PrintHtml(data: TemplateReportData): string {
 <title>${t}</title>${fonts}
 <style>
 :root{--bg:${MONO.bg};--ink:${MONO.ink};--muted:${MONO.mut};--faint:${MONO.faint};--grid:${MONO.grid}}
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--ink);font-family:'Inter','Noto Sans SC',sans-serif;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums lining-nums;display:flex;justify-content:center;padding:64px 24px}
-.sheet{width:760px;max-width:760px}
-h1{font-size:42px;font-weight:900;letter-spacing:.01em;line-height:1.3;max-width:560px}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{background:var(--bg);color:var(--ink);font-family:'Inter','Noto Sans SC',sans-serif;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums lining-nums;display:block}
+.sheet{width:auto;max-width:794px;margin:0 auto}
+h1{font-size:28px;font-weight:900;letter-spacing:.01em;line-height:1.3;max-width:560px;break-after:avoid}
 h1 .hl{background:var(--ink);color:var(--bg);padding:0 12px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
-.lede{font-size:13.5px;line-height:1.95;color:#4A4944;max-width:520px;margin-top:26px}
+.lede{font-size:11px;line-height:1.95;color:#4A4944;max-width:520px;margin-top:26px}
 .lede b{font-weight:700;color:var(--ink)}
-.bignum{display:flex;align-items:baseline;gap:14px;margin-top:52px}
-.bignum .v{font-size:54px;font-weight:800;letter-spacing:-.04em;line-height:1}
-.bignum .l{font-size:12px;color:var(--muted);font-weight:500}
-.fig{margin-top:10px}.fig svg{width:100%;height:auto;display:block}
-.srcline{font-size:9px;font-weight:600;letter-spacing:.1em;color:var(--faint);margin-top:8px}
-.storyline{font-size:22px;font-weight:700;letter-spacing:.01em;line-height:1.6;margin-top:68px;max-width:600px}
+.bignum{display:flex;align-items:baseline;gap:14px;margin-top:52px;break-inside:avoid}
+.bignum .v{font-size:38px;font-weight:800;letter-spacing:-.04em;line-height:1}
+.bignum .l{font-size:10.5px;color:var(--muted);font-weight:500}
+.fig{margin-top:10px;break-inside:avoid}.fig svg{width:100%;height:auto;display:block}
+.srcline{font-size:8px;font-weight:600;letter-spacing:.1em;color:var(--faint);margin-top:8px}
+.storyline{font-size:16px;font-weight:700;letter-spacing:.01em;line-height:1.6;margin-top:68px;max-width:600px;break-after:avoid}
 .storyline .hl{background:var(--ink);color:var(--bg);padding:1px 12px 2px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
-.sidenote{font-size:11.5px;line-height:1.85;color:var(--muted);max-width:260px;margin-top:20px}
-.close{font-size:13px;line-height:1.95;color:#4A4944;max-width:560px;margin-top:56px}
+.sidenote{font-size:10px;line-height:1.85;color:var(--muted);max-width:260px;margin-top:20px}
+.close{font-size:11px;line-height:1.95;color:#4A4944;max-width:560px;margin-top:56px}
 .close b{color:var(--ink)}
-.cta{margin-top:22px;font-size:13.5px;font-weight:700}
+.cta{margin-top:22px;font-size:11.5px;font-weight:700}
 .cta .hl{background:var(--ink);color:var(--bg);padding:3px 14px 4px}
-.foot{margin-top:64px;padding-top:14px;border-top:1px solid var(--grid);display:flex;justify-content:space-between;font-size:9px;font-weight:600;letter-spacing:.12em;color:var(--faint)}
-@media print{@page{size:A4;margin:0}body{padding:0}}
+.foot{margin-top:64px;padding-top:14px;border-top:1px solid var(--grid);display:flex;justify-content:space-between;font-size:8px;font-weight:600;letter-spacing:.12em;color:var(--faint);break-inside:avoid}
+@media print{@page{size:A4;margin:14mm 13mm}}
 </style></head><body>
 <div class="sheet">
 <h1>${t}</h1>
