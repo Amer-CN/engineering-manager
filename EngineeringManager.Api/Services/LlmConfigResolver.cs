@@ -396,6 +396,10 @@ public class LlmConfigResolver
         };
 
         Directory.CreateDirectory(dataPath);
+        // 单代备份：覆盖前保留上一版——llm-config 是服务商数据的唯一载体，曾因加载缺陷
+        // 被整份清空且无从恢复（2026-09-07），此后同类事故至少可回滚一步。
+        if (File.Exists(filePath))
+            File.Copy(filePath, filePath + ".bak", overwrite: true);
         var json = JsonSerializer.Serialize(persisted, new JsonSerializerOptions { WriteIndented = true });
         await File.WriteAllTextAsync(filePath, json);
 
@@ -440,9 +444,12 @@ public class LlmConfigResolver
 
     private MultiProviderConfig ResolveMulti()
     {
-        // 1. 用户配置（DPAPI 加密文件；useBuiltIn=false 且有可用 provider 时生效）
+        // 1. 用户配置（DPAPI 加密文件；有自定义服务商即完整加载）
+        //    不得按 UseBuiltIn 弃用持久化配置：否则切内置后 reload/重启会让内存 providers
+        //    清空，前端整态自动保存把空列表写回磁盘（2026-09-07 服务商整体丢失事故根因）。
+        //    内置模式只影响 ExpandMulti 的展开生效方，加载必须忠实于文件。
         var persisted = LoadPersistedMulti();
-        if (persisted != null && !persisted.UseBuiltIn && persisted.Providers.Count > 0)
+        if (persisted != null && persisted.Providers.Count > 0)
         {
             _logger.LogInformation("[LlmConfigResolver] 使用用户多服务商配置: Providers={Count}, Active={Active}",
                 persisted.Providers.Count, persisted.ActiveProviderId);
