@@ -160,8 +160,11 @@ export function parseChartReport(markdown: string): ChartReportData {
       cur = { headline: '', bullets: [], lines: [] }
       sections.push(cur)
     }
-    if (fenceKind.startsWith('chart-')) {
-      const blk = parseChartBlock(fenceKind.slice('chart-'.length), fenceLines.join('\n'))
+    // AI 不稳定：提示词教的是 chart-bars（连字符），实测会输出 chart:bars / chart_bars，
+    // 归一化后再判型，否则整块按普通文本漏进正文（2026-09-07 实测 leak）
+    const norm = fenceKind.trim().toLowerCase().replace(/[:_]/g, '-')
+    if (norm.startsWith('chart-')) {
+      const blk = parseChartBlock(norm.slice('chart-'.length), fenceLines.join('\n'))
       if (blk) {
         cur.chart = blk
       } else {
