@@ -158,6 +158,9 @@ asr-engine/diarization/sherpa-onnx-*/
 asr-engine/qwen_asr_gguf/inference/bin/
 *.gguf
 *.onnx
+docs/knowledge/blogger6/audio/
+docs/knowledge/blogger6/batches/
+docs/knowledge/blogger6/post/
 # E2E 构建产物
 EngineeringManager.E2E/bin/
 EngineeringManager.E2E/obj/

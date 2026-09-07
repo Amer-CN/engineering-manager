@@ -109,3 +109,18 @@ export function maxLength(value: string, max: number): boolean {
 export function inRange(value: number, min: number, max: number): boolean {
   return value >= min && value <= max
 }
+
+/**
+ * 发票号码校验（非阻塞提示）
+ * 规则：新版数电票号码为 20 位纯数字；旧版 8 位号码需配合发票代码使用。
+ * @returns null = 通过（无需提示）；否则返回提示文案
+ */
+export function validateInvoiceNumber(invoiceNo: string, invoiceCode: string): string | null {
+  // 旧版票：填了发票代码 → 不校验号码位数
+  if (invoiceCode && invoiceCode.trim().length > 0) return null
+  // 号码为空 → 不提示
+  if (!invoiceNo || invoiceNo.trim().length === 0) return null
+  // 20 位纯数字 = 新版数电票，通过
+  if (/^\d{20}$/.test(invoiceNo)) return null
+  return '新版数电票发票号码为20位数字；旧版8位号码请一并填写发票代码'
+}

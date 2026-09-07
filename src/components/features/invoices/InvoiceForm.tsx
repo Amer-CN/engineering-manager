@@ -9,6 +9,7 @@ import { InvoiceOCRBlock } from './InvoiceOCRBlock'
 import { InvoiceFormFields } from './InvoiceFormFields'
 import { Button } from '../../ui/Button'
 import { Drawer } from '../../ui/Drawer'
+import { validateInvoiceNumber } from '@/utils/validate'
 
 export interface InvoiceFormData {
   type: InvoiceType
@@ -119,6 +120,9 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
   // dirty 判定：表单与初值任一字段有差异（误触 Esc/遮罩关闭时 Drawer 先弹确认，防丢填写中的数据）
   const isDirty = JSON.stringify(formData) !== JSON.stringify(initialData)
 
+  // 数电票号码位数校验（非阻塞 warning，不挡提交）
+  const invoiceNoWarning = validateInvoiceNumber(formData.invoiceNo, formData.invoiceCode)
+
   return (
   <>
   {/* S17 发票智能录入 — 右侧抽屉模式 */}
@@ -149,6 +153,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
       handleUntaxedAmountChange={handleUntaxedAmountChange}
       handleTaxAmountChange={handleTaxAmountChange}
       duplicateInvoice={duplicateInvoice}
+      invoiceNoWarning={invoiceNoWarning}
     />
 
     {/* 文件上传 */}
