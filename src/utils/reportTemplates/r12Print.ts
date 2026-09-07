@@ -58,8 +58,10 @@ export function buildR12PrintHtml(data: TemplateReportData): string {
 --dmid:rgba(240,239,235,.62);--dq:rgba(240,239,235,.24);
 --sans:'Inter','Noto Sans SC',sans-serif}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-body{background:var(--mat);font-family:var(--sans);color:var(--txt);-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums lining-nums;display:block}
-.sheet{width:auto;max-width:794px;margin:0 auto;background:var(--paper);padding:14mm 13mm}
+body{background:var(--paper);font-family:var(--sans);color:var(--txt);-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums lining-nums;display:block}
+/* body 底色=纸色：满版出血下末页内容不足一页时不再露出成片 mat 底（2026-09-08 实测"棕色空底"根因）；
+   mat 转为 sheet 上下色带（对齐预览的顶部/底部衬底），分页切片时首末页各呈现一次 */
+.sheet{width:auto;max-width:794px;margin:0 auto;background:var(--paper);padding:14mm 13mm;border-top:10mm solid var(--mat);border-bottom:10mm solid var(--mat);box-decoration-break:slice;-webkit-box-decoration-break:slice}
 .sect{font-size:11px;font-weight:800;letter-spacing:.2em;padding-bottom:10px;border-bottom:2px solid var(--txt);margin-bottom:22px;break-after:avoid}
 .sect .yr{float:right;font-weight:600;color:var(--mut);letter-spacing:.1em}
 .miles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:44px}
@@ -70,7 +72,8 @@ body{background:var(--mat);font-family:var(--sans);color:var(--txt);-webkit-font
 .miles .m .tag{font-size:8px;font-weight:700;letter-spacing:.14em;opacity:.7}
 .miles .m .v{font-size:20px;font-weight:800;letter-spacing:-.03em;line-height:1;margin-top:6px}
 .miles .m .l{font-size:9px;line-height:1.65;margin-top:8px;opacity:.85}
-.duo{display:grid;grid-template-columns:1fr;gap:32px}
+/* 双图卡并排（对齐预览：占比速览 + 排行速览一行两卡）；整组防跨页拆散 */
+.duo{display:grid;grid-template-columns:repeat(2,1fr);gap:24px;break-inside:avoid}
 .duo+.duo{margin-top:40px}
 .gcard{padding:24px 26px 22px;border:1px solid var(--faint);break-inside:avoid}
 .sub{font-size:10px;color:var(--mut);margin-bottom:14px;line-height:1.75}
