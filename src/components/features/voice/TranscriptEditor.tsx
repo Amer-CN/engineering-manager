@@ -16,7 +16,7 @@ import { writeWritingPrefill } from '@/hooks/useWritingPrefill'
 import TranscriptRow from './TranscriptRow'
 import { speakerOf } from './SpeakerNameEditor'
 import type { SpeakerInfo } from './SpeakerNameEditor'
-import { moveFirstWordToPrev, moveLastWordToNext, insertSegmentAfter } from './segmentUtils'
+import { detectSpeakerBase, moveFirstWordToPrev, moveLastWordToNext, insertSegmentAfter } from './segmentUtils'
 import { saveSttJob, type SttJobDetail, type SttSegment, type SttSavePayload } from '@/services/stt-client'
 
 interface TranscriptEditorProps {
@@ -82,9 +82,11 @@ const TranscriptEditor: React.FC<TranscriptEditorProps> = ({ job, masked, audioU
   // 初始化
   useEffect(() => {
     if (job.segments && job.segments.length > 0) {
-      // 过滤掉 speaker 0（原始簇号不应出现在 UI）。编号基检测（防御）：当前引擎 1 基、
-      // 0 号为噪声簇故过滤；未来换 0 基引擎时按 segmentUtils.detectSpeakerBase 归一放行
-      const validSegs = job.segments.filter(s => s.speaker > 0)
+      // 说话人编号基（照 TaskDetailView 语义）：存在 speaker===0 → sherpa 管线 0 基输出，
+      // speaker 0 是真人，必须放行（#24 实测 96 段中 spk0 占 46 段）；仅历史 1 基数据
+      // 的噪声簇 0 被过滤——无 0 号时该过滤本就是 no-op，两种数据均安全。
+      const base = detectSpeakerBase(job.segments)
+      const validSegs = job.segments.filter(s => s.speaker > 0 || (base === 0 && s.speaker === 0))
       setSegments(validSegs)
       setOriginalSegments(validSegs.map(s => ({ ...s })))
       setSingleText('')
