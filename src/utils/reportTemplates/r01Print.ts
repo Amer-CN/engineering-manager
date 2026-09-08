@@ -4,7 +4,7 @@
  * 打印版双栏：正文文档流 + 每页固定右侧彩栏——position:fixed 在 Chromium 打印下
  * 逐页重复（100vh=每页内容高），规避双栏 grid 跨页碎片化塌架（2026-09-07 两轮迭代定案）
  * 色值转写自 color-presets.js PORCELAIN 正本（参数层事实，代码自写）
- * 2026-09-08 四边满版出血（用户指令：打印零白边）
+ * 2026-09-08 上下 10mm 纸边防跨页文字贴顶，左右仍满版出血（@page margin:10mm 0）
  */
 import type { TemplateReportData } from './types'
 import { PORCELAIN, tplEscapeHtml as esc, tplEscapeXml as xml } from './types'
@@ -79,9 +79,8 @@ h1 b{font-weight:700}
 .rail p{font-size:11.5px;line-height:1.9;opacity:.88}.rail p+p{margin-top:12px}
 .rail .lbl{font-size:9px;font-weight:700;letter-spacing:.16em;opacity:.6;margin-bottom:12px}
 .rail .link{font-size:11px;font-weight:700;margin-top:20px;text-decoration:underline;text-underline-offset:3px}
-/* 四边满版出血：@page margin 全 0（背景色铺满纸面，白框根因即页边距区），
-   页内留白由 .sheet padding 承担 */
-@media print{@page{size:A4;margin:0}}
+/* 上下 10mm 纸边防跨页文字贴顶，左右仍满版出血（页内左右留白由 .sheet padding 承担） */
+@media print{@page{size:A4;margin:10mm 0}}
 </style></head><body>
 <div class="sheet">
 <h1>${t}</h1>

@@ -1,5 +1,5 @@
 /** R01 对外举证——React 预览组件（R04 ChartReportView 同风格） */
-import React from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import type { TemplateReportData } from '@/utils/reportTemplates/types'
 import { PORCELAIN } from '@/utils/reportTemplates/types'
 
@@ -8,12 +8,27 @@ interface Props {
 }
 
 const R01EvidenceView: React.FC<Props> = ({ data }) => {
+  // 窄容器等比缩放适配：整张 1080px 设计稿按容器宽度 zoom 缩放，任何宽度下比例完整正确
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const [zoom, setZoom] = useState(1)
+  useEffect(() => {
+    const el = wrapRef.current
+    if (!el) return
+    const update = () => { const w = el.clientWidth; if (w > 0) setZoom(Math.min(1, w / 1080)) }
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
   // 证据带与打印 buildEvidenceSvg 同口径：数据源 = bigNumbers、前 5 条
   const bigNums = data.charts?.bigNumbers ?? []
   const rows = bigNums.slice(0, 5)
 
   return (
-    <div className="grid w-full mx-auto max-w-[1080px]" style={{ gridTemplateColumns: '1fr 300px', background: PORCELAIN.bg }}>
+    <div ref={wrapRef}>
+      <div style={{ zoom }}>
+        <div className="grid w-full mx-auto max-w-[1080px]" style={{ gridTemplateColumns: '1fr 300px', background: PORCELAIN.bg }}>
       {/* 主栏：minWidth:0 允许收缩——长 ASCII 词（agent_approval_executed 等）会把 1fr 的
           min-content 撑爆容器，导致侧栏被挤出可视区（2026-09-07 实测预览裁切根因） */}
       <div style={{ padding: '56px 48px 44px 8px', minWidth: 0 }}>
@@ -90,6 +105,8 @@ const R01EvidenceView: React.FC<Props> = ({ data }) => {
           <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.16em', opacity: 0.6, marginBottom: 12 }}>口径说明</div>
           <p style={{ fontSize: 11.5, lineHeight: 1.9, opacity: 0.88 }}>本报告数据全部来自工程管家本地台账，可溯源至原始操作记录。</p>
           <div style={{ fontSize: 11, fontWeight: 700, marginTop: 20, textDecoration: 'underline', textUnderlineOffset: 3 }}>{data.meta.product}</div>
+        </div>
+      </div>
         </div>
       </div>
     </div>

@@ -66,7 +66,7 @@ h1 .hl{background:var(--ink);color:var(--bg);padding:0 12px;box-decoration-break
 .cta{margin-top:22px;font-size:11.5px;font-weight:700}
 .cta .hl{background:var(--ink);color:var(--bg);padding:3px 14px 4px}
 .foot{margin-top:64px;padding-top:14px;border-top:1px solid var(--grid);display:flex;justify-content:space-between;font-size:8px;font-weight:600;letter-spacing:.12em;color:var(--faint);break-inside:avoid}
-@media print{@page{size:A4;margin:0}}
+@media print{@page{size:A4;margin:10mm 0}}
 </style></head><body>
 <div class="sheet">
 <h1>${t}</h1>

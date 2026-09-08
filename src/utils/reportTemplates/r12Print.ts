@@ -5,7 +5,7 @@
  * （原版心 1080 双列图区跨打印分页塌架，2026-09-07 改打印安全版式）
  * 图表：图A 象形点阵（手写静态 SVG，100 点方阵）+ 图B 粗柱（手写静态 SVG）
  * 色板正本：color-presets.js PALM（与模板 02 共用，深绿主墨 + 琥珀强调 + 浓咖衬底）
- * 2026-09-08 四边满版出血：@page margin 归 0，纸面留白由 .sheet padding 承担（用户指令：打印零白边）
+ * 2026-09-08 上下 10mm 纸边防跨页文字贴顶，左右仍满版出血（@page margin:10mm 0）
  */
 import type { TemplateReportData } from './types'
 import { PALM, tplEscapeHtml as esc } from './types'
@@ -59,9 +59,9 @@ export function buildR12PrintHtml(data: TemplateReportData): string {
 --sans:'Inter','Noto Sans SC',sans-serif}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{background:var(--paper);font-family:var(--sans);color:var(--txt);-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums lining-nums;display:block}
-/* body 底色=纸色：满版出血下末页内容不足一页时不再露出成片 mat 底（2026-09-08 实测"棕色空底"根因）；
-   mat 转为 sheet 上下色带（对齐预览的顶部/底部衬底），分页切片时首末页各呈现一次 */
-.sheet{width:auto;max-width:794px;margin:0 auto;background:var(--paper);padding:14mm 13mm;border-top:10mm solid var(--mat);border-bottom:10mm solid var(--mat);box-decoration-break:slice;-webkit-box-decoration-break:slice}
+/* body 底色=纸色：末页内容不足一页时不再露出成片 mat 底（2026-09-08 实测"棕色空底"根因）；
+   mat 色带已回退：@page 上下 10mm 纸边 + 色带双重堆叠会导致顶部白边叠加（2026-09-08） */
+.sheet{width:auto;max-width:794px;margin:0 auto;background:var(--paper);padding:14mm 13mm}
 .sect{font-size:11px;font-weight:800;letter-spacing:.2em;padding-bottom:10px;border-bottom:2px solid var(--txt);margin-bottom:22px;break-after:avoid}
 .sect .yr{float:right;font-weight:600;color:var(--mut);letter-spacing:.1em}
 .miles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:44px}
@@ -84,7 +84,7 @@ svg text{font-family:var(--sans)}
 .foot{margin-top:52px;padding-top:16px;border-top:2px solid var(--txt);display:grid;grid-template-columns:1fr 1.55fr .85fr;gap:26px;font-size:8px;font-weight:600;letter-spacing:.08em;color:var(--mut);break-inside:avoid}
 .foot .warn{color:var(--data);font-weight:700;line-height:1.75}
 .foot .end{text-align:right;line-height:1.75}
-@media print{@page{size:A4;margin:0}}
+@media print{@page{size:A4;margin:10mm 0}}
 </style></head><body>
 <div class="sheet">
 <div class="sect">${t}<span class="yr">${period}</span></div>
