@@ -17,10 +17,18 @@ interface TranscriptionParamsProps {
   onNumSpeakersChange: (n: number) => void
   hotwords: string
   onHotwordsChange: (s: string) => void
+  engine: string
+  onEngineChange: (e: string) => void
   creating: boolean
   uploadedPath: string | null
   onCreateJob: () => void
 }
+
+/** 引擎选项（与后端 AllowedEngines 白名单一致） */
+const ENGINE_OPTIONS = [
+  { value: 'qwen3-asr-1.7b-gguf', label: 'Qwen3 · 快（GPU）' },
+  { value: 'moss-transcribe-0.9b', label: 'MOSS · 方言优先（CPU）' },
+] as const
 
 const RECORDING_OPTIONS = [
   { value: 'single', label: '单人录音' },
@@ -35,6 +43,8 @@ const TranscriptionParams: React.FC<TranscriptionParamsProps> = ({
   onNumSpeakersChange,
   hotwords,
   onHotwordsChange,
+  engine,
+  onEngineChange,
   creating,
   uploadedPath,
   onCreateJob,
@@ -74,6 +84,31 @@ const TranscriptionParams: React.FC<TranscriptionParamsProps> = ({
           />
         </div>
       )}
+
+      <div>
+        <label className="text-xs font-medium text-[color:var(--fg-2)] mb-2 block">转写引擎</label>
+        <div className="flex gap-2">
+          {ENGINE_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => onEngineChange(opt.value)}
+              className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
+                engine === opt.value
+                  ? 'bg-[color:var(--accent-soft)] border-[color:var(--accent)] text-[color:var(--accent)]'
+                  : 'bg-[color:var(--card)] border-[color:var(--border)] text-[color:var(--fg-2)] hover:bg-[color:var(--panel-2)]'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        {engine === 'moss-transcribe-0.9b' && (
+          <p className="text-micro text-[color:var(--fg-3)] mt-1.5">
+            MOSS 一步完成转写+说话人分离（2026-09-09 实测方言地名全对）；CPU 较慢，长音频按 10 分钟切块、跨块说话人编号暂不保证全局一致。
+          </p>
+        )}
+      </div>
 
       <div>
         <label className="text-xs font-medium text-[color:var(--fg-2)] mb-2 block">热词 / 上下文（可选）</label>

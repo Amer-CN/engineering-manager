@@ -35,6 +35,7 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
   const [recordingType, setRecordingType] = useState<RecordingType>('single')
   const [numSpeakers, setNumSpeakers] = useState<number>(0) // 0=自动估计，不硬指定人数
   const [hotwords, setHotwords] = useState('')
+  const [engine, setEngine] = useState('qwen3-asr-1.7b-gguf') // 转写引擎：qwen3=GPU 快；MOSS=方言优先 CPU
 
   const [creating, setCreating] = useState(false)
   const [cancelling, setCancelling] = useState(false)
@@ -173,6 +174,7 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
       isMultiSpeaker: isMulti,
       numSpeakers: ns,
       context: hotwords.trim() || undefined,
+      engine,
     })
     setCreating(false)
     if (res.success && res.data) {
@@ -191,7 +193,7 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
     } else {
       showToast(res.error || '创建任务失败', 'error')
     }
-  }, [uploadedPath, capability, recordingType, numSpeakers, hotwords, showToast, startPolling])
+  }, [uploadedPath, capability, recordingType, numSpeakers, hotwords, engine, showToast, startPolling])
 
   // 选择已有任务（历史任务无本地音频，清掉播放 URL）
   const handleSelectJob = useCallback(async (jobId: number) => {
@@ -309,6 +311,8 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
             numSpeakers={numSpeakers}
             onNumSpeakersChange={setNumSpeakers}
             hotwords={hotwords}
+            engine={engine}
+            onEngineChange={setEngine}
             onHotwordsChange={setHotwords}
             creating={creating}
             uploadedPath={uploadedPath}

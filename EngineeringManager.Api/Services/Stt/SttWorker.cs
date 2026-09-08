@@ -119,8 +119,10 @@ public class SttWorker : IHostedService, IDisposable
             if (!SttEngineSelector.CanUseLocalStt())
                 throw new InvalidOperationException($"本地转写不可用: {SttEngineSelector.GetUnavailableReason()}");
 
+            // 引擎选择：MOSS 一步成段（文本+说话人+时间戳，跳过分离）；其余走 Qwen3 两段式管线
+            var useMoss = job.Engine == MossTranscribeEngine.EngineId;
             var engine = new LlamaCppGgufEngine();
-            if (!await engine.IsAvailableAsync())
+            if (!useMoss && !await engine.IsAvailableAsync())
                 throw new InvalidOperationException("ASR 模型文件缺失，请检查 asr-engine/model/ 目录");
 
             // 1. 音频预处理
@@ -141,8 +143,25 @@ public class SttWorker : IHostedService, IDisposable
 
             SttResult result;
 
+            if (useMoss)
+            {
+                // ═══ MOSS：一步成段（文本+说话人+时间戳），跳过 sherpa 分离阶段 ═══
+                // 长音频（>600s）由引擎内部切块顺序推理；跨块说话人编号暂不保证全局一致
+                //（块内 [S01] 按出现顺序分配，跨块声纹对齐留待后续迭代）。
+                UpdateProgress(db, job.Id, 15, "MOSS 转写中（含说话人分离）...");
+                var mossEngine = new MossTranscribeEngine();
+                var progressRelay = new Progress<int>(p =>
+                    UpdateProgress(db, job.Id, Math.Max(15, Math.Min(90, 15 + p * 75 / 100)), null));
+                result = await mossEngine.TranscribeAsync(processedWav, job.Hotwords, progressRelay, ct: default);
+                result.DurationSec = duration;
+
+                // 说话人归一化：MOSS 输出块内连续 1 基编号，跨块由归一器按首现顺序重排
+                SpeakerLabelNormalizer.Normalize(result.Segments);
+                result.Text = string.Join("\n",
+                    result.Segments.Select(s => $"【说话人{s.Speaker}】{s.Text}"));
+            }
             // 2. 判断是否多人录音
-            if (job.Is_Multi_Speaker == 1)
+            else if (job.Is_Multi_Speaker == 1)
             {
                 // 多人：先分离 → 逐段转写 → 拼回
                 UpdateProgress(db, job.Id, 10, "加载说话人分离模型...");

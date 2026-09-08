@@ -23,6 +23,13 @@ public static class SttEndpoints
     // 音频大小上限：500MB
     private const long MaxAudioSize = 500 * 1024 * 1024;
 
+    // 转写引擎白名单（engine 列落库前校验；空值回退现役引擎）
+    private static readonly HashSet<string> AllowedEngines = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "qwen3-asr-1.7b-gguf",
+        MossTranscribeEngine.EngineId,
+    };
+
     public static void RegisterSttEndpoints(this WebApplication app)
     {
         // ═══════════════════════════════════════════════════════════
@@ -123,7 +130,7 @@ public static class SttEndpoints
         // ═══════════════════════════════════════════════════════════
         // POST /api/stt/transcribe — 创建转写任务
         // ═══════════════════════════════════════════════════════════
-        app.MapPost("/api/stt/transcribe", (HttpContext ctx, IDbConnection db, SttTranscribeDto dto) =>
+        app.MapPost("/api/stt/transcribe", async (HttpContext ctx, IDbConnection db, SttTranscribeDto dto) =>
         {
             var uid = CurrentUser.GetUserId(ctx) ?? throw new UnauthorizedAccessException();
             try
@@ -162,6 +169,13 @@ public static class SttEndpoints
                     return Results.Json(new { success = false, error = $"本地语音转文字不可用: {SttEngineSelector.GetUnavailableReason()}。可使用云端转写（即将推出）。" }, statusCode: 503);
                 }
 
+                // 引擎选择：白名单校验，空/缺省回退现役引擎
+                var engineId = string.IsNullOrWhiteSpace(dto.Engine) ? "qwen3-asr-1.7b-gguf" : dto.Engine!;
+                if (!AllowedEngines.Contains(engineId))
+                    return Common.Fail($"不支持的转写引擎: {engineId}，可选: {string.Join(", ", AllowedEngines)}");
+                if (engineId == MossTranscribeEngine.EngineId && !await new MossTranscribeEngine().IsAvailableAsync())
+                    return Common.Fail("MOSS 引擎未就绪：asr-engine/moss/ 缺少 moss-transcribe.exe 或 moss-transcribe-q8_0.gguf");
+
                 var now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
                 // 创建 job
@@ -171,7 +185,7 @@ public static class SttEndpoints
                          is_multi_speaker, num_speakers, hotwords,
                          created_at, updated_at, created_by)
                     VALUES
-                        (@SourceFile, @SourcePath, 'audio', 'qwen3-asr-1.7b-gguf', 'pending', 0,
+                        (@SourceFile, @SourcePath, 'audio', @Engine, 'pending', 0,
                          @IsMulti, @NumSpeakers, @Hotwords,
                          @Now, @Now, @Uid);
                     SELECT last_insert_rowid();",
@@ -179,6 +193,7 @@ public static class SttEndpoints
                     {
                         SourceFile = Path.GetFileName(dto.FilePath),
                         SourcePath = dto.FilePath, // 存相对路径，worker 用 ResolveDataPath 拼完整路径
+                        Engine = engineId,
                         IsMulti = dto.IsMultiSpeaker ? 1 : 0,
                         NumSpeakers = dto.NumSpeakers,
                         Hotwords = dto.Context,
@@ -831,6 +846,9 @@ public class SttTranscribeDto
     public bool IsMultiSpeaker { get; set; } = false;
     public int? NumSpeakers { get; set; }
     public string? Context { get; set; }
+
+    /// <summary>转写引擎（白名单见 AllowedEngines；空值回退 qwen3-asr-1.7b-gguf）</summary>
+    public string? Engine { get; set; }
 }
 
 /// <summary>STT 入库 DTO — 校对后文本/segments/标题/项目/时间</summary>
