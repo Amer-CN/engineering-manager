@@ -323,7 +323,7 @@ export function buildTrendSvg(points: ChartTrendPoint[]): string {
     }
     if (big) {
       parts.push(
-        `<text x="${cx}" y="${r2(cy - 11)}" font-size="9.5" font-weight="800" fill="${HERO}" text-anchor="middle">${fmtThousands(p.y)}</text>`,
+        `<text x="${cx}" y="${r2(cy - 11)}" font-size="11" font-weight="800" fill="${HERO}" text-anchor="middle">${fmtThousands(p.y)}</text>`,
       )
     }
   })
@@ -332,7 +332,7 @@ export function buildTrendSvg(points: ChartTrendPoint[]): string {
     const anchors = [...new Set(N >= 3 ? [0, Math.floor((N - 1) / 2), N - 1] : N === 2 ? [0, 1] : [0])]
     for (const d of anchors) {
       parts.push(
-        `<text x="${r2(xAt(d))}" y="${BASE + 18}" font-size="7.5" font-weight="600" fill="${PORCELAIN_INK.mut}" text-anchor="middle" letter-spacing=".1em">${escapeHtml(points[d].x)}</text>`,
+        `<text x="${r2(xAt(d))}" y="${BASE + 18}" font-size="10" font-weight="600" fill="${PORCELAIN_INK.mut}" text-anchor="middle" letter-spacing=".1em">${escapeHtml(points[d].x)}</text>`,
       )
     }
   }
@@ -403,7 +403,7 @@ export function buildChartWaffleSvg(rows: ChartNamedRow[]): string {
 
   if (overflow) {
     parts.push(
-      `<text x="${X0}" y="${Y0 + 10 * CELL + 14}" font-size="7" font-weight="600" letter-spacing=".12em" fill="${PORCELAIN_INK.faint}">占比四舍五入</text>`,
+      `<text x="${X0}" y="${Y0 + 10 * CELL + 14}" font-size="11" font-weight="600" letter-spacing=".12em" fill="${PORCELAIN_INK.faint}">占比四舍五入</text>`,
     )
   }
   parts.push('</svg>')
@@ -436,7 +436,7 @@ export function buildChartBarsSvg(rows: ChartNamedRow[]): string {
   rows.forEach((r, i) => {
     const y = 12 + i * PITCH
     parts.push(
-      `<text x="118" y="${y + 9}" text-anchor="end" font-size="10" font-weight="600" letter-spacing=".06em" fill="${PORCELAIN_INK.lab}">${escapeHtml(r.name)}</text>`,
+      `<text x="118" y="${y + 9}" text-anchor="end" font-size="11" font-weight="600" letter-spacing=".06em" fill="${PORCELAIN_INK.lab}">${escapeHtml(r.name)}</text>`,
     )
     parts.push(
       `<line x1="${X0}" y1="${y + 5}" x2="${X0 + BARMAX}" y2="${y + 5}" stroke="${PORCELAIN_INK.grid}" stroke-width="1"/>`,
@@ -445,7 +445,7 @@ export function buildChartBarsSvg(rows: ChartNamedRow[]): string {
     const color = rampColor('porcelain', rank.get(i) ?? 0, rows.length)
     parts.push(`<rect x="${X0}" y="${y}" width="${w}" height="${BH}" rx="2" fill="${color}"/>`)
     parts.push(
-      `<text x="${X0 + w + 10}" y="${y + 9}" font-size="11" font-weight="700" fill="${HERO}">${fmtThousands(r.value)}</text>`,
+      `<text x="${X0 + w + 10}" y="${y + 9}" font-size="12" font-weight="700" fill="${HERO}">${fmtThousands(r.value)}</text>`,
     )
   })
   parts.push('</svg>')

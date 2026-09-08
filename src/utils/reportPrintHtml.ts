@@ -340,7 +340,7 @@ export function buildWaffleSvg(rows: ReportPrintWaffleRow[]): string {
 
   if (overflow) {
     parts.push(
-      `<text x="${X0}" y="${Y0 + 10 * CELL + 14}" font-size="7" font-weight="600" letter-spacing=".12em" fill="#B0AFA9">占比四舍五入</text>`,
+      `<text x="${X0}" y="${Y0 + 10 * CELL + 14}" font-size="11" font-weight="600" letter-spacing=".12em" fill="#B0AFA9">占比四舍五入</text>`,
     )
   }
   parts.push('</svg>')
@@ -369,7 +369,7 @@ export function buildTopBarsSvg(rows: { name: string; value: number }[], unit: s
   rows.forEach((r, i) => {
     const y = 12 + i * PITCH
     parts.push(
-      `<text x="118" y="${y + 9}" text-anchor="end" font-size="10" font-weight="600" letter-spacing=".06em" fill="#6A6963">${escapeHtml(r.name)}</text>`,
+      `<text x="118" y="${y + 9}" text-anchor="end" font-size="11" font-weight="600" letter-spacing=".06em" fill="#6A6963">${escapeHtml(r.name)}</text>`,
     )
     parts.push(
       `<line x1="${X0}" y1="${y + 5}" x2="${X0 + BARMAX}" y2="${y + 5}" stroke="${GRID}" stroke-width="1"/>`,
@@ -379,7 +379,7 @@ export function buildTopBarsSvg(rows: { name: string; value: number }[], unit: s
       `<rect x="${X0}" y="${y}" width="${w}" height="${BH}" rx="2" fill="${PALM_SER[i % PALM_SER.length]}"/>`,
     )
     parts.push(
-      `<text x="${X0 + w + 10}" y="${y + 9}" font-size="11" font-weight="700" fill="${INK}">${escapeHtml(unit)}${escapeHtml(fmtThousands(r.value))}</text>`,
+      `<text x="${X0 + w + 10}" y="${y + 9}" font-size="12" font-weight="700" fill="${INK}">${escapeHtml(unit)}${escapeHtml(fmtThousands(r.value))}</text>`,
     )
   })
   parts.push('</svg>')
@@ -535,38 +535,38 @@ export function buildReportPrintHtml(
   .spine .t{position:absolute;top:0;left:14px;writing-mode:vertical-rl;
     font-weight:900;font-size:56px;line-height:1.1;letter-spacing:.06em;white-space:nowrap}
   .spine .b{position:absolute;bottom:0;left:48px;writing-mode:vertical-rl;
-    font-size:9px;font-weight:700;letter-spacing:.26em;color:var(--muted)}
+    font-size:12px;font-weight:700;letter-spacing:.26em;color:var(--muted)}
 
   .content{padding-left:40px}
 
   /* ── 顶部页眉：左产品名 | 右数据说明 ── */
   .tophead{display:flex;gap:18px;align-items:baseline;border-bottom:1px solid var(--ink);
     padding-bottom:10px;margin-bottom:40px}
-  .tophead .site{font-family:var(--num);font-weight:600;font-size:13px;
+  .tophead .site{font-family:var(--num);font-weight:600;font-size:12px;
     letter-spacing:.08em;text-transform:uppercase}
   .tophead .sep{color:var(--faint)}
-  .tophead .tag{font-size:10px;font-weight:600;letter-spacing:.12em;color:var(--muted)}
+  .tophead .tag{font-size:12px;font-weight:600;letter-spacing:.12em;color:var(--muted)}
 
   /* ── 小节：右对齐小节名（宽字距）+ 发丝线；结论句标题；正文 ── */
   .secthead{display:flex;align-items:baseline;gap:14px;margin:44px 0 8px}
   .secthead .line{flex:1;border-top:1px solid var(--ink)}
-  .secthead .t{font-weight:700;font-size:15px;letter-spacing:.2em;text-align:right}
+  .secthead .t{font-weight:700;font-size:19px;letter-spacing:.2em;text-align:right}
   .secthead.first{margin-top:0}
 
-  .claim{font-size:13px;font-weight:700;color:var(--ink);margin:4px 0 2px}
-  .section p{font-size:12.5px;line-height:1.8;margin:8px 0;color:var(--ink)}
+  .claim{font-size:16px;font-weight:700;color:var(--ink);margin:4px 0 2px}
+  .section p{font-size:14px;line-height:1.8;margin:8px 0;color:var(--ink)}
   .section ul{margin:8px 0;padding-left:1.6em}
-  .section li{font-size:12.5px;line-height:1.8;margin:3px 0;color:var(--ink)}
+  .section li{font-size:14px;line-height:1.8;margin:3px 0;color:var(--ink)}
 
   /* ── 正文表格：官方细线表（表头小写字距 · 发丝行线 · 无竖线 · 无背景色块） ── */
   .tablewrap{margin:10px 0}
   table.tb{width:100%;border-collapse:collapse}
-  .tb th{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  .tb th{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
     color:var(--muted);text-align:left;padding:6px 10px 5px;border-bottom:1px solid var(--ink)}
-  .tb td{font-size:11.5px;line-height:1.6;padding:6px 10px;border-bottom:1px solid var(--grid)}
+  .tb td{font-size:14px;line-height:1.6;padding:6px 10px;border-bottom:1px solid var(--grid)}
 
   /* ── 大写来源行：SECTION · 来源 · 日期 ── */
-  .srcline{font-size:9px;font-weight:600;letter-spacing:.1em;
+  .srcline{font-size:10px;font-weight:600;letter-spacing:.1em;
     color:var(--faint);margin-top:8px;text-transform:uppercase}
 
   /* ── 值得记住的数字：大数字块（特大等宽数字 + 双行小注）── */
@@ -575,19 +575,19 @@ export function buildReportPrintHtml(
   .stats>div:first-child{padding-left:0}
   .stats>div:last-child{border-right:0;padding-right:0}
   .kpi .v{font-family:var(--num);font-weight:800;font-size:38px;line-height:1}
-  .kpi .r{font-size:10px;font-weight:700;color:var(--muted);margin-top:4px}
-  .kpi .l{font-size:9.5px;font-weight:600;letter-spacing:.12em;
+  .kpi .r{font-size:12px;font-weight:700;color:var(--muted);margin-top:4px}
+  .kpi .l{font-size:12px;font-weight:600;letter-spacing:.12em;
     color:var(--faint);margin-top:3px}
 
   /* ── 报告附图：官方正本参数的静态 SVG（方阵 + 横条）── */
   .chartblk{margin:24px 0 4px}
-  .chartname{font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--muted);
+  .chartname{font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--muted);
     margin-bottom:2px;text-transform:uppercase}
   .chartblk svg{width:100%;height:auto;display:block}
 
   /* ── 页脚：左文案 · 右数据来源行 ── */
   .foot{margin-top:48px;border-top:1px solid var(--ink);padding-top:12px;
-    display:flex;justify-content:space-between;font-size:9px;font-weight:600;
+    display:flex;justify-content:space-between;font-size:12px;font-weight:600;
     letter-spacing:.12em;color:var(--muted)}
 
   /* ── A4 打印适配：页边距 + 分页避免 ── */
@@ -722,39 +722,39 @@ export function buildChartReportPrintHtml(data: ChartReportData, meta: ReportPri
   .spine .t{position:absolute;top:0;left:14px;writing-mode:vertical-rl;
     font-weight:900;font-size:56px;line-height:1.1;letter-spacing:.06em;white-space:nowrap}
   .spine .b{position:absolute;bottom:0;left:48px;writing-mode:vertical-rl;
-    font-size:9px;font-weight:700;letter-spacing:.26em;color:var(--mut)}
+    font-size:12px;font-weight:700;letter-spacing:.26em;color:var(--mut)}
 
   .content{padding-left:40px}
 
   /* ── 顶部页眉 ── */
   .tophead{display:flex;gap:18px;align-items:baseline;border-bottom:1px solid var(--ink);
     padding-bottom:10px;margin-bottom:36px}
-  .tophead .site{font-family:var(--num);font-weight:600;font-size:13px;
+  .tophead .site{font-family:var(--num);font-weight:600;font-size:12px;
     letter-spacing:.08em;text-transform:uppercase}
   .tophead .sep{color:var(--faint)}
-  .tophead .tag{font-size:10px;font-weight:600;letter-spacing:.12em;color:var(--mut)}
+  .tophead .tag{font-size:12px;font-weight:600;letter-spacing:.12em;color:var(--mut)}
 
   /* ── 小节：右对齐小节名（宽字距）+ 发丝线；结论句标题；要点 ── */
   .secthead{display:flex;align-items:baseline;gap:14px;margin:44px 0 8px}
   .secthead .line{flex:1;border-top:1px solid var(--ink)}
-  .secthead .t{font-weight:700;font-size:15px;letter-spacing:.2em;text-align:right}
+  .secthead .t{font-weight:700;font-size:19px;letter-spacing:.2em;text-align:right}
   .secthead.first{margin-top:0}
 
-  .claim{font-size:13px;font-weight:700;color:var(--ink);margin:4px 0 2px}
-  .section p{font-size:12.5px;line-height:1.8;margin:8px 0;color:var(--ink)}
+  .claim{font-size:16px;font-weight:700;color:var(--ink);margin:4px 0 2px}
+  .section p{font-size:14px;line-height:1.8;margin:8px 0;color:var(--ink)}
   .section ul{margin:8px 0;padding-left:1.6em}
-  .section li{font-size:12.5px;line-height:1.8;margin:3px 0;color:var(--ink)}
+  .section li{font-size:14px;line-height:1.8;margin:3px 0;color:var(--ink)}
 
   /* ── 大写来源行 ── */
-  .srcline{font-size:9px;font-weight:600;letter-spacing:.1em;
+  .srcline{font-size:10px;font-weight:600;letter-spacing:.1em;
     color:var(--faint);margin-top:8px;text-transform:uppercase}
 
   /* ── 图块：图名小字 + SVG（宽 100%）+ 图例句 ── */
   .chartblk{margin:18px 0 4px}
-  .chartname{font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--mut);
+  .chartname{font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--mut);
     margin-bottom:2px;text-transform:uppercase}
   .chartblk svg{width:100%;height:auto;display:block}
-  .caption{font-size:9px;font-weight:600;letter-spacing:.12em;color:var(--mut);margin-top:4px}
+  .caption{font-size:11px;font-weight:600;letter-spacing:.12em;color:var(--mut);margin-top:4px}
 
   /* ── 值得记住的数字：大数字块 ── */
   .stats{display:grid;gap:0;margin-top:14px;border-top:1px solid var(--ink)}
@@ -762,11 +762,11 @@ export function buildChartReportPrintHtml(data: ChartReportData, meta: ReportPri
   .stats>div:first-child{padding-left:0}
   .stats>div:last-child{border-right:0;padding-right:0}
   .kpi .v{font-family:var(--num);font-weight:800;font-size:38px;line-height:1}
-  .kpi .l{font-size:9.5px;font-weight:600;letter-spacing:.12em;color:var(--mut);margin-top:3px}
+  .kpi .l{font-size:12px;font-weight:600;letter-spacing:.12em;color:var(--mut);margin-top:3px}
 
   /* ── 页脚 ── */
   .foot{margin-top:48px;border-top:1px solid var(--ink);padding-top:12px;
-    display:flex;justify-content:space-between;font-size:9px;font-weight:600;
+    display:flex;justify-content:space-between;font-size:12px;font-weight:600;
     letter-spacing:.12em;color:var(--mut)}
 
   /* ── A4 打印适配：书脊每页贯穿（fixed 逐页重复） ── */

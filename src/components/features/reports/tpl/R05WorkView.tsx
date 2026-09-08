@@ -47,7 +47,7 @@ const R05WorkView: React.FC<Props> = ({ data }) => {
             i === 1 ? <span key={i} style={{ background: MONO.ink, color: MONO.paper, padding: '0 12px' }}>{seg}</span> : seg,
           )}
         </h1>
-        <p style={{ fontSize: 13.5, lineHeight: 1.95, color: '#4A4944', maxWidth: 520, marginTop: 26 }}>
+        <p style={{ fontSize: 14, lineHeight: 1.95, color: '#4A4944', maxWidth: 520, marginTop: 26 }}>
           <b>{data.period}</b> · {intro}
         </p>
         {/* 大数 + 条带 */}
@@ -65,7 +65,7 @@ const R05WorkView: React.FC<Props> = ({ data }) => {
                 <span key={k} style={{ flex: 1, height: 8, background: tickColorAt(k), opacity: 0.85 }} />
               ))}
             </div>
-            <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: '.1em', color: MONO.faint, marginTop: 8 }}>
+            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.1em', color: MONO.faint, marginTop: 8 }}>
               TICK STRIP · 一格 = 1% · 深墨 = 最大占比
             </div>
           </div>
@@ -91,7 +91,7 @@ const R05WorkView: React.FC<Props> = ({ data }) => {
           </div>
         )}
         {waffleRows.length > 0 && (
-          <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: '.1em', color: MONO.faint, marginTop: 8 }}>
+          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.1em', color: MONO.faint, marginTop: 8 }}>
             HUNDRED FIELD · 一点 = 一人
           </div>
         )}
@@ -99,19 +99,19 @@ const R05WorkView: React.FC<Props> = ({ data }) => {
         {stories.map((s, i) => (
           <div key={i} style={{ marginTop: i > 0 ? 48 : 0 }}>
             {s.heading && (
-              <div style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.6, maxWidth: 600, marginTop: i === 0 ? 24 : 68, color: MONO.ink }}>
+              <div style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.6, maxWidth: 600, marginTop: i === 0 ? 24 : 68, color: MONO.ink }}>
                 {i === 0 && <span style={{ background: MONO.ink, color: MONO.paper, padding: '1px 12px 2px' }}>{s.heading}</span>}
                 {i > 0 && s.heading}
               </div>
             )}
             {s.lines.filter((l) => l.trim()).slice(0, 4).map((l, j) => (
-              <p key={j} style={{ fontSize: 11.5, lineHeight: 1.85, color: MONO.mut, maxWidth: 260, marginTop: 20, marginLeft: i % 2 === 1 ? 'auto' : 0 }}>
+              <p key={j} style={{ fontSize: 12, lineHeight: 1.85, color: MONO.mut, maxWidth: 260, marginTop: 20, marginLeft: i % 2 === 1 ? 'auto' : 0 }}>
                 {l.replace(/^[-*]\s/, '')}
               </p>
             ))}
           </div>
         ))}
-        <div style={{ marginTop: 64, paddingTop: 14, borderTop: `1px solid ${MONO.grid}`, display: 'flex', justifyContent: 'space-between', fontSize: 9, fontWeight: 600, letterSpacing: '.12em', color: MONO.faint }}>
+        <div style={{ marginTop: 64, paddingTop: 14, borderTop: `1px solid ${MONO.grid}`, display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 600, letterSpacing: '.12em', color: MONO.faint }}>
           <span>{data.title} · {data.period}</span>
           <span>来源 · {data.meta.dataSource}</span>
         </div>

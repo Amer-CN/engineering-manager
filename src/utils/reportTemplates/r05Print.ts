@@ -51,21 +51,21 @@ body{background:var(--bg);color:var(--ink);font-family:'Inter','Noto Sans SC',sa
 .sheet{width:auto;max-width:794px;margin:0 auto;padding:14mm 13mm}
 h1{font-size:28px;font-weight:900;letter-spacing:.01em;line-height:1.3;max-width:560px;break-after:avoid}
 h1 .hl{background:var(--ink);color:var(--bg);padding:0 12px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
-.lede{font-size:11px;line-height:1.95;color:#4A4944;max-width:520px;margin-top:26px}
+.lede{font-size:14px;line-height:1.95;color:#4A4944;max-width:520px;margin-top:26px}
 .lede b{font-weight:700;color:var(--ink)}
 .bignum{display:flex;align-items:baseline;gap:14px;margin-top:52px;break-inside:avoid}
 .bignum .v{font-size:38px;font-weight:800;letter-spacing:-.04em;line-height:1}
-.bignum .l{font-size:10.5px;color:var(--muted);font-weight:500}
+.bignum .l{font-size:12px;color:var(--muted);font-weight:500}
 .fig{margin-top:10px;break-inside:avoid}.fig svg{width:100%;height:auto;display:block}
-.srcline{font-size:8px;font-weight:600;letter-spacing:.1em;color:var(--faint);margin-top:8px}
+.srcline{font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--faint);margin-top:8px}
 .storyline{font-size:16px;font-weight:700;letter-spacing:.01em;line-height:1.6;margin-top:68px;max-width:600px;break-after:avoid}
 .storyline .hl{background:var(--ink);color:var(--bg);padding:1px 12px 2px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
-.sidenote{font-size:10px;line-height:1.85;color:var(--muted);max-width:260px;margin-top:20px}
-.close{font-size:11px;line-height:1.95;color:#4A4944;max-width:560px;margin-top:56px}
+.sidenote{font-size:12px;line-height:1.85;color:var(--muted);max-width:260px;margin-top:20px}
+.close{font-size:14px;line-height:1.95;color:#4A4944;max-width:560px;margin-top:56px}
 .close b{color:var(--ink)}
-.cta{margin-top:22px;font-size:11.5px;font-weight:700}
+.cta{margin-top:22px;font-size:14px;font-weight:700}
 .cta .hl{background:var(--ink);color:var(--bg);padding:3px 14px 4px}
-.foot{margin-top:64px;padding-top:14px;border-top:1px solid var(--grid);display:flex;justify-content:space-between;font-size:8px;font-weight:600;letter-spacing:.12em;color:var(--faint);break-inside:avoid}
+.foot{margin-top:64px;padding-top:14px;border-top:1px solid var(--grid);display:flex;justify-content:space-between;font-size:12px;font-weight:600;letter-spacing:.12em;color:var(--faint);break-inside:avoid}
 @media print{@page{size:A4;margin:10mm 0}}
 </style></head><body>
 <div class="sheet">
@@ -103,7 +103,7 @@ function buildTickStripSvg(data: TemplateReportData): string {
     }
     x0 += v * tickW
   })
-  svg += `<text x="${w / 2}" y="64" font-size="7" font-weight="600" fill="#B0AFA9" text-anchor="middle" letter-spacing=".1em">每格 = 1% · ${shares.map((v, i) => `${xml(bars[i]?.name ?? '')} ${v}%`).join(' + ')}</text>`
+  svg += `<text x="${w / 2}" y="64" font-size="11" font-weight="600" fill="#B0AFA9" text-anchor="middle" letter-spacing=".1em">每格 = 1% · ${shares.map((v, i) => `${xml(bars[i]?.name ?? '')} ${v}%`).join(' + ')}</text>`
   svg += '</svg>'
   return `<div class="fig">${svg}</div><div class="srcline">TICK STRIP · 一格 = 1% · 深墨 = 最大占比</div>`
 }

@@ -33,25 +33,25 @@ function Section({ section, index }: { section: ChartReportSection; index: numbe
         <div className="flex-1" style={{ borderTop: `1px solid ${PORCELAIN_INK.lab}` }} />
         <span
           className="font-bold"
-          style={{ fontSize: 13, letterSpacing: '.2em', color: HERO, whiteSpace: 'nowrap' }}
+          style={{ fontSize: 19, letterSpacing: '.2em', color: HERO, whiteSpace: 'nowrap' }}
         >
           {String(index + 1).padStart(2, '0')}
         </span>
       </div>
       {headline && (
-        <div className="text-sm font-bold mt-2" style={{ color: HERO, lineHeight: 1.6 }}>
+        <div className="font-bold mt-2" style={{ fontSize: 16, color: HERO, lineHeight: 1.6 }}>
           {headline}
         </div>
       )}
       {lines.map((l, j) => (
-        <p key={j} className="text-micro mt-1" style={{ color: PORCELAIN_INK.lab, lineHeight: 1.8 }}>
+        <p key={j} className="mt-1" style={{ fontSize: 14, color: PORCELAIN_INK.lab, lineHeight: 1.8 }}>
           {l}
         </p>
       ))}
       {bullets.length > 0 && (
         <ul className="mt-1 space-y-0.5 list-disc ml-4">
           {bullets.map((b, j) => (
-            <li key={j} className="text-micro" style={{ color: PORCELAIN_INK.lab, lineHeight: 1.7 }}>
+            <li key={j} style={{ fontSize: 14, color: PORCELAIN_INK.lab, lineHeight: 1.7 }}>
               {b}
             </li>
           ))}
@@ -61,16 +61,16 @@ function Section({ section, index }: { section: ChartReportSection; index: numbe
         <figure className="mt-3">
           {chart.title && (
             <div
-              className="text-caption font-semibold uppercase"
-              style={{ color: PORCELAIN_INK.mut, letterSpacing: '.14em' }}
+              className="font-semibold uppercase"
+              style={{ fontSize: 12, color: PORCELAIN_INK.mut, letterSpacing: '.14em' }}
             >
               {chart.title}
             </div>
           )}
           {chart.kind === 'trend' && chart.label && (
             <div
-              className="text-caption font-semibold uppercase"
-              style={{ color: PORCELAIN_INK.mut, letterSpacing: '.14em' }}
+              className="font-semibold uppercase"
+              style={{ fontSize: 12, color: PORCELAIN_INK.mut, letterSpacing: '.14em' }}
             >
               {chart.label}
             </div>
@@ -78,8 +78,8 @@ function Section({ section, index }: { section: ChartReportSection; index: numbe
           {/* SVG 产物由 chartReport 生成器输出：静态无 script、内容全转义 */}
           <div className="mt-1" dangerouslySetInnerHTML={{ __html: svg }} />
           <figcaption
-            className="text-caption mt-1"
-            style={{ color: PORCELAIN_INK.mut, letterSpacing: '.12em' }}
+            className="mt-1"
+            style={{ fontSize: 11, color: PORCELAIN_INK.mut, letterSpacing: '.12em' }}
           >
             {chartCaption(chart)}
           </figcaption>
@@ -118,7 +118,7 @@ const ChartReportView: React.FC<{ markdown: string }> = ({ markdown }) => {
               style={{
                 writingMode: 'vertical-rl',
                 left: 40,
-                fontSize: 9,
+                fontSize: 12,
                 fontWeight: 700,
                 letterSpacing: '.26em',
                 color: PORCELAIN_INK.mut,
@@ -145,7 +145,7 @@ const ChartReportView: React.FC<{ markdown: string }> = ({ markdown }) => {
             <span style={{ color: PORCELAIN_INK.faint }}>|</span>
             <span
               className="uppercase"
-              style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.12em', color: PORCELAIN_INK.mut }}
+              style={{ fontSize: 12, fontWeight: 600, letterSpacing: '.12em', color: PORCELAIN_INK.mut }}
             >
               AI 生成 · 图形版
             </span>
@@ -167,7 +167,7 @@ const ChartReportView: React.FC<{ markdown: string }> = ({ markdown }) => {
                 <div className="flex-1" style={{ borderTop: `1px solid ${PORCELAIN_INK.lab}` }} />
                 <span
                   className="font-bold"
-                  style={{ fontSize: 13, letterSpacing: '.2em', color: HERO, whiteSpace: 'nowrap' }}
+                  style={{ fontSize: 19, letterSpacing: '.2em', color: HERO, whiteSpace: 'nowrap' }}
                 >
                   值得记住的数字
                 </span>
@@ -196,8 +196,8 @@ const ChartReportView: React.FC<{ markdown: string }> = ({ markdown }) => {
                     </div>
                     {b.label && (
                       <div
-                        className="text-caption mt-1.5"
-                        style={{ color: PORCELAIN_INK.mut, letterSpacing: '.1em', fontWeight: 600 }}
+                        className="mt-1.5"
+                        style={{ fontSize: 12, color: PORCELAIN_INK.mut, letterSpacing: '.1em', fontWeight: 600 }}
                       >
                         {b.label}
                       </div>
@@ -214,15 +214,14 @@ const ChartReportView: React.FC<{ markdown: string }> = ({ markdown }) => {
             style={{ borderTop: `1px solid ${PORCELAIN_INK.lab}`, paddingTop: 12 }}
           >
             <span
-              className="text-caption"
-              style={{ color: PORCELAIN_INK.mut, letterSpacing: '.12em', fontWeight: 600 }}
+              style={{ fontSize: 12, color: PORCELAIN_INK.mut, letterSpacing: '.12em', fontWeight: 600 }}
             >
               {title || '运营报告'}
               {period ? ` · ${period}` : ''}
             </span>
             <span
-              className="text-caption uppercase"
-              style={{ color: PORCELAIN_INK.mut, letterSpacing: '.12em', fontWeight: 600 }}
+              className="uppercase"
+              style={{ fontSize: 12, color: PORCELAIN_INK.mut, letterSpacing: '.12em', fontWeight: 600 }}
             >
               AI 生成 · 数据优先
             </span>

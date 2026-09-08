@@ -67,12 +67,12 @@ export function buildR12PrintHtml(data: TemplateReportData): string {
   const maxV = Math.max(...rowsB.map((r) => r.value), 1)
   let bars = ''
   rowsB.forEach((r, i) => {
-    const y = 10 + i * 46
+    const y = 18 + i * 46
     const w = Math.max(4, Math.round((r.value / maxV) * 300))
     const col = i === 0 ? PALM.data : PALM.ramp[Math.min(3, Math.max(0, 3 - Math.round((i / Math.max(1, rowsB.length - 2)) * 3)))]
     bars += `<rect x="10" y="${y}" width="${w}" height="26" rx="13" fill="${col}"/>`
-    bars += `<text x="${10 + w + 8}" y="${y + 18}" font-size="11" font-weight="700" fill="${PALM.txt}">¥${r.value.toLocaleString()}</text>`
-    bars += `<text x="10" y="${y - 2}" font-size="9" fill="${PALM.faint}">${xml(r.name)}</text>`
+    bars += `<text x="${10 + w + 8}" y="${y + 18}" font-size="18" font-weight="700" fill="${PALM.txt}">¥${r.value.toLocaleString()}</text>`
+    bars += `<text x="10" y="${y - 2}" font-size="17" fill="${PALM.faint}">${xml(r.name)}</text>`
   })
   const barsSvg = `<svg viewBox="0 0 460 300" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg">${bars}</svg>`
 
@@ -91,28 +91,28 @@ body{background:var(--paper);font-family:var(--sans);color:var(--txt);-webkit-fo
    mat 色带已回退：@page 上下 10mm 纸边 + 色带双重堆叠会导致顶部白边叠加（2026-09-08） */
 .sheet{width:auto;max-width:794px;margin:0 auto;background:var(--paper);padding:14mm 13mm}
 /* 节标题 flex 两端对齐（与预览同款修复）：float:right 不撑开父高度，长标题换行时期间文字压线 */
-.sect{display:flex;justify-content:space-between;align-items:baseline;gap:16px;font-size:11px;font-weight:800;letter-spacing:.2em;padding-bottom:10px;border-bottom:2px solid var(--txt);margin-bottom:22px;break-after:avoid}
-.sect .yr{font-weight:600;color:var(--mut);letter-spacing:.1em;flex-shrink:0}
+.sect{display:flex;justify-content:space-between;align-items:baseline;gap:16px;font-size:14px;font-weight:800;letter-spacing:.2em;padding-bottom:10px;border-bottom:2px solid var(--txt);margin-bottom:22px;break-after:avoid}
+.sect .yr{font-weight:600;color:var(--mut);letter-spacing:.1em;flex-shrink:0;font-size:12px}
 .miles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:44px}
 .miles .m{padding:18px 16px 16px;position:relative;break-inside:avoid}
 .miles .m.hero{background:var(--hero);color:var(--paper)}
 .miles .m.frame{border:1px solid var(--faint)}
 .miles .m.green{background:var(--data);color:var(--paper)}
-.miles .m .tag{font-size:8px;font-weight:700;letter-spacing:.14em;opacity:.7}
+.miles .m .tag{font-size:12px;font-weight:700;letter-spacing:.14em;opacity:.7}
 .miles .m .v{font-size:20px;font-weight:800;letter-spacing:-.03em;line-height:1;margin-top:6px}
-.miles .m .l{font-size:9px;line-height:1.65;margin-top:8px;opacity:.85}
+.miles .m .l{font-size:12px;line-height:1.65;margin-top:8px;opacity:.85}
 /* 双图卡并排（对齐预览：占比速览 + 排行速览一行两卡）；整组防跨页拆散 */
 .duo{display:grid;grid-template-columns:repeat(2,1fr);gap:24px;break-inside:avoid}
 .duo+.duo{margin-top:40px}
 .gcard{padding:24px 26px 22px;border:1px solid var(--faint);break-inside:avoid}
-.sub{font-size:10px;color:var(--mut);margin-bottom:14px;line-height:1.75}
-.claim{font-size:11px;font-weight:700;margin-bottom:10px;line-height:1.6;break-after:avoid}
+.sub{font-size:12px;color:var(--mut);margin-bottom:14px;line-height:1.75}
+.claim{font-size:14px;font-weight:700;margin-bottom:10px;line-height:1.6;break-after:avoid}
 /* 图区自然高：svg width:100%+height:auto 自适应（与预览一致）；
    写死 280px 会在短图/空数据时留出成片卡片底部空白（2026-09-08 实测） */
 .ch{min-height:40px}
 svg text{font-family:var(--sans)}
-.srcline{font-size:8px;font-weight:600;letter-spacing:.1em;color:var(--faint);margin-top:10px;line-height:1.6}
-.foot{margin-top:52px;padding-top:16px;border-top:2px solid var(--txt);display:grid;grid-template-columns:1fr 1.55fr .85fr;gap:26px;font-size:8px;font-weight:600;letter-spacing:.08em;color:var(--mut);break-inside:avoid}
+.srcline{font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--faint);margin-top:10px;line-height:1.6}
+.foot{margin-top:52px;padding-top:16px;border-top:2px solid var(--txt);display:grid;grid-template-columns:1fr 1.55fr .85fr;gap:26px;font-size:12px;font-weight:600;letter-spacing:.08em;color:var(--mut);break-inside:avoid}
 .foot .warn{color:var(--data);font-weight:700;line-height:1.75}
 .foot .end{text-align:right;line-height:1.75}
 @media print{@page{size:A4;margin:10mm 0}}

@@ -61,24 +61,24 @@ font-variant-numeric:tabular-nums lining-nums;display:block}
 h1{font-family:var(--serif);font-size:50px;font-weight:400;letter-spacing:.01em;line-height:1.2;margin-bottom:8px;break-after:avoid}
 h1 b{font-weight:700}
 .dek{font-family:var(--serif);font-size:25px;font-weight:400;line-height:1.45;margin:44px 0 6px}
-.kick{font-size:10px;font-weight:700;letter-spacing:.16em;color:var(--mut);margin-bottom:14px;break-after:avoid}
+.kick{font-size:12px;font-weight:700;letter-spacing:.16em;color:var(--mut);margin-bottom:14px;break-after:avoid}
 .kick .n{color:var(--data)}
-.claim{font-size:14px;font-weight:700;margin:34px 0 4px;break-after:avoid}
-.body{font-size:12.5px;line-height:1.8;color:var(--lab);margin-top:8px}
-.srcline{font-size:9px;font-weight:600;letter-spacing:.11em;color:var(--faint);margin-top:10px}
+.claim{font-size:16px;font-weight:700;margin:34px 0 4px;break-after:avoid}
+.body{font-size:14px;line-height:1.8;color:var(--lab);margin-top:8px}
+.srcline{font-size:10px;font-weight:600;letter-spacing:.11em;color:var(--faint);margin-top:10px}
 .fig{margin-top:14px;break-inside:avoid}.fig svg{width:100%;height:auto;display:block}
 .traits{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;margin-top:44px;border-top:1px solid var(--txt);padding-top:24px;break-inside:avoid}
 .traits .t .big{font-size:30px;font-weight:800;letter-spacing:-.03em;color:var(--data)}
-.traits .t .nm{font-size:11.5px;font-weight:700;margin-top:8px}
-.traits .t .ds{font-size:10.5px;line-height:1.7;color:var(--mut);margin-top:5px}
+.traits .t .nm{font-size:12px;font-weight:700;margin-top:8px}
+.traits .t .ds{font-size:12px;line-height:1.7;color:var(--mut);margin-top:5px}
 /* 固定右栏：Chromium 打印对 position:fixed 逐页重复，实现正本的每页彩栏 */
 .rail{position:fixed;top:0;right:0;width:52mm;height:100vh;background:var(--railbg);color:var(--bg);display:flex;flex-direction:column}
 .rail .top{padding:36px 19px 30px;flex:1}
 .rail .bot{background:var(--raildark);padding:24px 19px 30px;margin-top:auto}
-.rail h3{font-size:16.5px;font-weight:700;line-height:1.5;margin-bottom:18px}
-.rail p{font-size:11.5px;line-height:1.9;opacity:.88}.rail p+p{margin-top:12px}
-.rail .lbl{font-size:9px;font-weight:700;letter-spacing:.16em;opacity:.6;margin-bottom:12px}
-.rail .link{font-size:11px;font-weight:700;margin-top:20px;text-decoration:underline;text-underline-offset:3px}
+.rail h3{font-size:19px;font-weight:700;line-height:1.5;margin-bottom:18px}
+.rail p{font-size:12px;line-height:1.9;opacity:.88}.rail p+p{margin-top:12px}
+.rail .lbl{font-size:12px;font-weight:700;letter-spacing:.16em;opacity:.6;margin-bottom:12px}
+.rail .link{font-size:12px;font-weight:700;margin-top:20px;text-decoration:underline;text-underline-offset:3px}
 /* 上下 10mm 纸边防跨页文字贴顶，左右仍满版出血（页内左右留白由 .sheet padding 承担） */
 @media print{@page{size:A4;margin:10mm 0}}
 </style></head><body>
@@ -108,13 +108,13 @@ function buildEvidenceSvg(data: TemplateReportData): string {
     const y = 24 + i * barH
     const label = xml(bn.label)
     const value = xml(bn.value)
-    svg += `<text x="8" y="${y + 8}" font-size="8" font-weight="700" fill="${PORCELAIN.mut}" letter-spacing=".06em">${label}</text>`
+    svg += `<text x="8" y="${y + 8}" font-size="10" font-weight="700" fill="${PORCELAIN.mut}" letter-spacing=".06em">${label}</text>`
     svg += `<line x1="8" y1="${y + 18}" x2="${w - 8}" y2="${y + 18}" stroke="${PORCELAIN.grid}" stroke-width=".8"/>`
     const numW = 54
     svg += `<rect x="${w - 8 - numW}" y="${y - 4}" width="${numW}" height="18" rx="4" fill="${PORCELAIN.data}" opacity="${i === 0 ? 1 : 0.15 + i * 0.2}"/>`
-    svg += `<text x="${w - 8 - numW / 2}" y="${y + 9}" font-size="10" font-weight="800" fill="${PORCELAIN.bg}" text-anchor="middle">${value}</text>`
+    svg += `<text x="${w - 8 - numW / 2}" y="${y + 9}" font-size="11" font-weight="800" fill="${PORCELAIN.bg}" text-anchor="middle">${value}</text>`
   })
-  svg += `<text x="${w / 2}" y="${h - 4}" font-size="7.5" font-weight="600" fill="${PORCELAIN.faint}" text-anchor="middle" letter-spacing=".1em">一格 = 一条记录 · 来源可溯源</text>`
+  svg += `<text x="${w / 2}" y="${h - 4}" font-size="11" font-weight="600" fill="${PORCELAIN.faint}" text-anchor="middle" letter-spacing=".1em">一格 = 一条记录 · 来源可溯源</text>`
   svg += '</svg>'
   return `<div class="fig">${svg}</div><div class="srcline">EVIDENCE LEDGER · 数据可溯源至操作记录</div>`
 }

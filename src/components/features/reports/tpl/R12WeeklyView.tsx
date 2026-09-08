@@ -36,21 +36,21 @@ const R12WeeklyView: React.FC<Props> = ({ data }) => {
         {/* 顶部速览条：两个数 */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 10, marginBottom: 44 }}>
           <div style={{ padding: '18px 16px 16px', border: `1px solid ${PALM.faint}` }}>
-            <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '.14em', opacity: 0.7, color: PALM.txt }}>{bigNums[0]?.label ?? '合计'}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.14em', opacity: 0.7, color: PALM.txt }}>{bigNums[0]?.label ?? '合计'}</div>
             <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-.03em', lineHeight: 1, marginTop: 6, color: PALM.txt }}>{bigNums[0]?.value ?? data.period}</div>
-            <div style={{ fontSize: 10, lineHeight: 1.65, marginTop: 8, opacity: 0.85, color: PALM.txt }}>{bigNums[0]?.sub ?? data.period}</div>
+            <div style={{ fontSize: 12, lineHeight: 1.65, marginTop: 8, opacity: 0.85, color: PALM.txt }}>{bigNums[0]?.sub ?? data.period}</div>
           </div>
           <div style={{ padding: '18px 16px 16px', background: PALM.data, color: PALM.bg }}>
-            <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '.14em', opacity: 0.7 }}>{bigNums[1]?.label ?? '数据来源'}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.14em', opacity: 0.7 }}>{bigNums[1]?.label ?? '数据来源'}</div>
             <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-.03em', lineHeight: 1, marginTop: 6 }}>{bigNums[1]?.value ?? data.meta.date}</div>
-            <div style={{ fontSize: 10, lineHeight: 1.65, marginTop: 8, opacity: 0.85 }}>{bigNums[1]?.sub ?? data.meta.dataSource}</div>
+            <div style={{ fontSize: 12, lineHeight: 1.65, marginTop: 8, opacity: 0.85 }}>{bigNums[1]?.sub ?? data.meta.dataSource}</div>
           </div>
         </div>
         {/* 图区：左右双卡 */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40 }}>
           {/* 方阵卡 */}
           <div style={{ padding: '24px 26px 22px', border: `1px solid ${PALM.faint}` }}>
-            <div style={{ fontSize: 11, color: PALM.mut, marginBottom: 14 }}>占比速览</div>
+            <div style={{ fontSize: 14, color: PALM.mut, marginBottom: 14 }}>占比速览</div>
             <div data-testid="r12-waffle-dots" style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 6 }}>
               {rowsA.map((r, ri) =>
                 Array.from({ length: countsA[ri] }).map((_, k) => (
@@ -68,18 +68,18 @@ const R12WeeklyView: React.FC<Props> = ({ data }) => {
                 <div key={r.name} style={{ fontSize: 10, fontWeight: 600, color: PALM.mut, marginTop: 4 }}>{r.name} · {Math.round(r.pct)}%</div>
               ))}
             </div>
-            <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: '.1em', color: PALM.faint, marginTop: 10, lineHeight: 1.6 }}>
+            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.1em', color: PALM.faint, marginTop: 10, lineHeight: 1.6 }}>
               WAFFLE 100 · 一点 = 1%
             </div>
           </div>
           {/* 条形卡 */}
           <div style={{ padding: '24px 26px 22px', border: `1px solid ${PALM.faint}` }}>
-            <div style={{ fontSize: 11, color: PALM.mut, marginBottom: 14 }}>排行速览</div>
+            <div style={{ fontSize: 14, color: PALM.mut, marginBottom: 14 }}>排行速览</div>
             {rowsB.map((r, i) => {
               const col = i === 0 ? PALM.data : PALM.ramp[Math.min(3, Math.max(0, 3 - Math.round((i - 1) / Math.max(1, rowsB.length - 2) * 3)))]
               return (
                 <div key={r.name} style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 9, color: PALM.faint, marginBottom: 2 }}>{r.name}</div>
+                  <div style={{ fontSize: 10, color: PALM.faint, marginBottom: 2 }}>{r.name}</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ flex: 1, height: 26, borderRadius: 13, background: PALM.bg, border: `1px solid ${PALM.faint}`, position: 'relative' }}>
                       <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 13, width: `${Math.round((r.value / maxB) * 100)}%`, background: col }} />
@@ -91,13 +91,13 @@ const R12WeeklyView: React.FC<Props> = ({ data }) => {
                 </div>
               )
             })}
-            <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: '.1em', color: PALM.faint, marginTop: 10, lineHeight: 1.6 }}>
+            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.1em', color: PALM.faint, marginTop: 10, lineHeight: 1.6 }}>
               CHUNKY BARS · 深绿 = 最大 · 依次转浅
             </div>
           </div>
         </div>
         {/* 页脚 */}
-        <div style={{ marginTop: 52, paddingTop: 16, borderTop: `2px solid ${PALM.txt}`, display: 'grid', gridTemplateColumns: '1fr 1.55fr .85fr', gap: 26, fontSize: 9, fontWeight: 600, letterSpacing: '.08em', color: PALM.mut }}>
+        <div style={{ marginTop: 52, paddingTop: 16, borderTop: `2px solid ${PALM.txt}`, display: 'grid', gridTemplateColumns: '1fr 1.55fr .85fr', gap: 26, fontSize: 12, fontWeight: 600, letterSpacing: '.08em', color: PALM.mut }}>
           <div>数据 · {data.meta.dataSource}</div>
           <div>取数 · {data.meta.date}</div>
           <div style={{ textAlign: 'right' }}>{data.meta.product}</div>
