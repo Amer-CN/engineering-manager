@@ -19,7 +19,7 @@ const config = {
 } as any
 
 const projects = [{ id: 1, name: '天府智造中心二期' }] as any
-const partners = [{ id: 2, name: '四川建工集团', contact: '张建国', phone: '[已脱敏]' }] as any
+const partners = [{ id: 2, name: '四川建工集团', contact: '张建国', phone: '13800000000' }] as any
 
 const baseContract = {
   id: 9, projectId: 1, partnerId: 2, contractNo: 'CN-2024-TF-0892', name: '主体施工总承包合同',

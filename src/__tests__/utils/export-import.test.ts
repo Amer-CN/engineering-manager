@@ -288,7 +288,7 @@ describe('export-import.ts', () => {
 
     it('importMembers 应使用正确映射', async () => {
       mockSheetToJson.mockReturnValue([
-        { '姓名': '张三', '电话': '[已脱敏]' },
+        { '姓名': '张三', '电话': '13800138000' },
       ])
 
       const mockFile = new File([''], 'test.xlsx')

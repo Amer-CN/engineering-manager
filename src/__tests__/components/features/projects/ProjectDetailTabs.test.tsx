@@ -87,7 +87,7 @@ const mockStats: ProjectStatsData = {
 
 const mockMembers: Member[] = [
   {
-    id: 1, name: '张三', role: '项目经理', phone: '[已脱敏]',
+    id: 1, name: '张三', role: '项目经理', phone: '13800138000',
     memberType: 'staff', status: 'active', entryDate: '2024-01-01',
     createdAt: '2024-01-01', email: '', idCard: '', idCardFront: '', idCardBack: '',
     contractFile: '', contractFileType: '', isTeamLeader: false,
@@ -95,7 +95,7 @@ const mockMembers: Member[] = [
     threeLevelEducation: false,
   },
   {
-    id: 2, name: '李四', role: '施工员', phone: '[已脱敏]',
+    id: 2, name: '李四', role: '施工员', phone: '13800138001',
     memberType: 'staff', status: 'active', entryDate: '2024-02-01',
     createdAt: '2024-02-01', email: '', idCard: '', idCardFront: '', idCardBack: '',
     contractFile: '', contractFileType: '', isTeamLeader: false,
@@ -116,7 +116,7 @@ const mockInvoices: Invoice[] = [
 ]
 
 const mockPartners: Partner[] = [
-  { id: 1, name: '甲方公司', category: 'owner', contact: '王总', phone: '[已脱敏]', createdAt: '' },
+  { id: 1, name: '甲方公司', category: 'owner', contact: '王总', phone: '13900000000', createdAt: '' },
 ]
 
 const mockWorkerTeams: WorkerTeam[] = [

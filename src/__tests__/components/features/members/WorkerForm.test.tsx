@@ -151,7 +151,7 @@ describe('WorkerForm', () => {
     const phoneInput = document.querySelector('input[type="tel"]') as HTMLInputElement
     expect(phoneInput).toBeInTheDocument()
 
-    fireEvent.change(phoneInput, { target: { value: '[已脱敏]' } })
+    fireEvent.change(phoneInput, { target: { value: '13800138000' } })
     expect(setFormData).toHaveBeenCalled()
   })
 
@@ -352,7 +352,7 @@ describe('WorkerForm', () => {
     const { WorkerForm } = await importModule()
     const formData = createFormData({
       name: '李四',
-      phone: '[已脱敏]',
+      phone: '13900139000',
       workerType: '木工',
       projectId: 1,
       teamId: 10

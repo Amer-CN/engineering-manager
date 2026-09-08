@@ -605,13 +605,13 @@ public class M2FourthRoundTests : IDisposable
 /// 真实 BGE 端到端验收测试（第五轮重做）
 ///
 /// 数据来源：
-/// - [已脱敏]文档：从 asr_compare.csv 读取 56f5549ff1672a5b130190f61c865da7.wav 的
+/// - 陈泽伟文档：从 asr_compare.csv 读取 56f5549ff1672a5b130190f61c865da7.wav 的
 ///   Qwen3-1.7B 纠正文本（真实录音转写，非硬编码）。该录音讨论合同付款条款，
 ///   包含"每个月百分之八十"但不包含"付款方式"。
 /// - 竞争文档：从 results_06b.json 读取其他真实录音的 Qwen3-0.6B 原始转写文本。
 ///
 /// 使用真实 Xenova/BAAI bge-small-zh-v1.5 ONNX 模型，
-/// 搜索"付款方式"验证语义命中[已脱敏]文档中含"每个月百分之八十"的目标块。
+/// 搜索"付款方式"验证语义命中陈泽伟文档中含"每个月百分之八十"的目标块。
 ///
 /// 不可跳过：模型缺失时 Assert.Fail，不允许 return 跳过。
 /// </summary>
@@ -624,7 +624,7 @@ public class BgeE2ETestsV2
     /// <summary>ASR 对比 CSV 文件路径（含纠正文本）</summary>
     private const string CsvPath = @"e:\测试\asr_compare.csv";
 
-    /// <summary>[已脱敏]文档对应的录音文件名（56f5...wav 讨论合同付款条款，hotwords 含"[已脱敏]"）</summary>
+    /// <summary>陈泽伟文档对应的录音文件名（56f5...wav 讨论合同付款条款，hotwords 含"陈泽伟"）</summary>
     private const string ChenZeweiFile = "56f5549ff1672a5b130190f61c865da7.wav";
 
     private static (SqliteConnection conn, KnowledgeBaseService service) CreateServiceWithRealBge()
@@ -748,11 +748,11 @@ public class BgeE2ETestsV2
         Console.WriteLine($"[E2E] 模型状态: {bgeSvc.Status}");
 
         // ═══════════════════════════════════════════════════════════
-        // 2. 读取[已脱敏]文档的真实纠正文本
+        // 2. 读取陈泽伟文档的真实纠正文本
         // ═══════════════════════════════════════════════════════════
         var chenZeweiText = LoadCorrectedText(ChenZeweiFile);
 
-        Console.WriteLine($"\n[E2E] === [已脱敏]文档（真实录音纠正文本）===");
+        Console.WriteLine($"\n[E2E] === 陈泽伟文档（真实录音纠正文本）===");
         Console.WriteLine($"[E2E] 录音文件: {ChenZeweiFile}");
         Console.WriteLine($"[E2E] 全文 SHA-256: {Sha256(chenZeweiText)}");
         Console.WriteLine($"[E2E] 全文长度: {chenZeweiText.Length} 字");
@@ -760,7 +760,7 @@ public class BgeE2ETestsV2
         Console.WriteLine($"[E2E] 全文是否含'付款方式': {chenZeweiText.Contains("付款方式")}");
 
         // ═══════════════════════════════════════════════════════════
-        // 3. 前置断言：[已脱敏]文本包含目标短语，不含搜索词
+        // 3. 前置断言：陈泽伟文本包含目标短语，不含搜索词
         // ═══════════════════════════════════════════════════════════
         Assert.Contains("每个月百分之八十", chenZeweiText);
         Assert.DoesNotContain("付款方式", chenZeweiText);
@@ -768,24 +768,24 @@ public class BgeE2ETestsV2
         // ═══════════════════════════════════════════════════════════
         // 4. 读取竞争文档（其他真实录音转写文本）
         // ═══════════════════════════════════════════════════════════
-        var tanJunText = LoadTranscriptText("[已脱敏]@137 3593 8788_20260615115801.wav");
-        var chenZeweiCallText = LoadTranscriptText("通话-[已脱敏]-202606101153(1).wav");
-        var wageDisputeText = LoadTranscriptText("[已脱敏]-2605211530(1).wav");
+        var tanJunText = LoadTranscriptText("谭俊@137 3593 8788_20260615115801.wav");
+        var chenZeweiCallText = LoadTranscriptText("通话-陈泽伟-202606101153(1).wav");
+        var wageDisputeText = LoadTranscriptText("13692205318-2605211530(1).wav");
 
         Console.WriteLine($"\n[E2E] === 竞争文档 ===");
-        Console.WriteLine($"[E2E] [已脱敏]录音: {tanJunText.Length} 字");
-        Console.WriteLine($"[E2E] [已脱敏]通话录音: {chenZeweiCallText.Length} 字");
+        Console.WriteLine($"[E2E] 谭俊录音: {tanJunText.Length} 字");
+        Console.WriteLine($"[E2E] 陈泽伟通话录音: {chenZeweiCallText.Length} 字");
         Console.WriteLine($"[E2E] 工资纠纷录音: {wageDisputeText.Length} 字");
 
         // ═══════════════════════════════════════════════════════════
-        // 5. 入库：[已脱敏]文档为 r1，其他为竞争候选
+        // 5. 入库：陈泽伟文档为 r1，其他为竞争候选
         // ═══════════════════════════════════════════════════════════
         var (conn, service) = CreateServiceWithRealBge();
         using var _ = conn;
 
-        var r1 = await service.IngestAsync(chenZeweiText, "合同付款条款-[已脱敏]", "call", "real-stt-001", null, "admin");
-        var r2 = await service.IngestAsync(tanJunText, "通话-[已脱敏]-进度款", "call", "real-stt-002", null, "admin");
-        var r3 = await service.IngestAsync(chenZeweiCallText, "通话-[已脱敏]-税务", "call", "real-stt-003", null, "admin");
+        var r1 = await service.IngestAsync(chenZeweiText, "合同付款条款-陈泽伟", "call", "real-stt-001", null, "admin");
+        var r2 = await service.IngestAsync(tanJunText, "通话-谭俊-进度款", "call", "real-stt-002", null, "admin");
+        var r3 = await service.IngestAsync(chenZeweiCallText, "通话-陈泽伟-税务", "call", "real-stt-003", null, "admin");
         var r4 = await service.IngestAsync(wageDisputeText, "通话-工资纠纷", "call", "real-stt-004", null, "admin");
 
         // 验证入库结果
@@ -858,14 +858,14 @@ public class BgeE2ETestsV2
         }
 
         // ═══════════════════════════════════════════════════════════
-        // 10. 锁定目标块：[已脱敏]文档中含"每个月百分之八十"的块
+        // 10. 锁定目标块：陈泽伟文档中含"每个月百分之八十"的块
         // ═══════════════════════════════════════════════════════════
         var targetHit = searchResult.Hits.SingleOrDefault(h =>
             h.DocumentId == r1.DocumentId
             && h.Text.Contains("每个月百分之八十"));
 
         Console.WriteLine($"\n[E2E] === 验收输出 ===");
-        Console.WriteLine($"[E2E] [已脱敏] documentId = {r1.DocumentId}");
+        Console.WriteLine($"[E2E] 陈泽伟 documentId = {r1.DocumentId}");
         Console.WriteLine($"[E2E] 目标块 documentId = {targetHit?.DocumentId}");
         Console.WriteLine($"[E2E] 两者是否相等: {targetHit != null && r1.DocumentId == targetHit.DocumentId}");
 
@@ -892,7 +892,7 @@ public class BgeE2ETestsV2
         // 11. 最终验收结论
         // ═══════════════════════════════════════════════════════════
         Console.WriteLine($"\n[E2E] === 验收结论 ===");
-        Console.WriteLine($"[E2E] 搜索'付款方式' → 语义命中[已脱敏]文档中含'每个月百分之八十'的块");
+        Console.WriteLine($"[E2E] 搜索'付款方式' → 语义命中陈泽伟文档中含'每个月百分之八十'的块");
         Console.WriteLine($"[E2E] 目标块不含'付款方式'原词 → 证明是语义命中，非 FTS 原词匹配");
         Console.WriteLine($"[E2E] FTS rank = null → FTS 未命中此块");
         Console.WriteLine($"[E2E] Semantic rank = {targetHit.SemanticRank} → 语义检索命中");

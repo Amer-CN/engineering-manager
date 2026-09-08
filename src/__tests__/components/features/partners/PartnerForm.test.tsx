@@ -85,7 +85,7 @@ describe('PartnerForm', () => {
       name: '测试单位',
       category: 'material',
       contact: '测试人',
-      phone: '[已脱敏]',
+      phone: '13800138000',
       email: 'test@example.com',
       address: '测试地址',
       bankAccount: '6222021234567890',

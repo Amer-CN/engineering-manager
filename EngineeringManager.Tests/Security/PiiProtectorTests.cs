@@ -51,7 +51,7 @@ public class PiiProtectorTests : IDisposable
     public void Encrypt_Decrypt_Roundtrip()
     {
         _pii.Initialize(_db);
-        var plain = "[已脱敏]"; // 11 位手机号
+        var plain = "13800138000"; // 11 位手机号
         var cipher = _pii.Encrypt(plain);
         var back = _pii.Decrypt(cipher);
         Assert.Equal(plain, back);
@@ -184,7 +184,7 @@ public class PiiProtectorTests : IDisposable
         // AES-GCM 每次加密使用随机 nonce → 同明文两次加密密文必须不同
         // （若 nonce 变成固定值/复用，GCM 会泄露明文相关性，本测试变红）
         _pii.Initialize(_db);
-        var plain = "[已脱敏]";
+        var plain = "13911112222";
         var c1 = _pii.Encrypt(plain);
         var c2 = _pii.Encrypt(plain);
 
@@ -202,7 +202,7 @@ public class PiiProtectorTests : IDisposable
     {
         // 篡改密文最后 1 字节（GCM 认证标签校验必须失败 → AesGcm.Decrypt 抛 CryptographicException）
         _pii.Initialize(_db);
-        var plain = "tamper-test-[已脱敏]";
+        var plain = "tamper-test-13800138000";
         var cipher = _pii.Encrypt(plain);
 
         var data = Convert.FromBase64String(cipher);

@@ -65,7 +65,7 @@ public class CommonTests
         // admin/manager/accountant 看明文
         var canRead = new CurrentUser.PiiAccess(new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "idCard", "phone", "bankAccount", "idCardAddress" });
         Assert.Equal("110101199001011234", EngineeringManager.Api.Common.MaskPiiField("idCard", "110101199001011234", canRead));
-        Assert.Equal("[已脱敏]", EngineeringManager.Api.Common.MaskPiiField("phone", "[已脱敏]", canRead));
+        Assert.Equal("13800138000", EngineeringManager.Api.Common.MaskPiiField("phone", "13800138000", canRead));
         Assert.Equal("6228480012345678", EngineeringManager.Api.Common.MaskPiiField("bankAccount", "6228480012345678", canRead));
         Assert.Equal("北京市朝阳区", EngineeringManager.Api.Common.MaskPiiField("idCardAddress", "北京市朝阳区", canRead));
     }
@@ -76,7 +76,7 @@ public class CommonTests
         // worker 看脱敏
         var masked = new CurrentUser.PiiAccess(new HashSet<string>(StringComparer.OrdinalIgnoreCase));
         Assert.Equal("1101****1234", EngineeringManager.Api.Common.MaskPiiField("idCard", "110101199001011234", masked));
-        Assert.Equal("138****8000", EngineeringManager.Api.Common.MaskPiiField("phone", "[已脱敏]", masked));
+        Assert.Equal("138****8000", EngineeringManager.Api.Common.MaskPiiField("phone", "13800138000", masked));
         Assert.Equal("6228****5678", EngineeringManager.Api.Common.MaskPiiField("bankAccount", "6228480012345678", masked));
     }
 
@@ -107,7 +107,7 @@ public class CommonTests
         var adminAccess = new CurrentUser.PiiAccess(new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             { "id_card", "phone", "bank_account", "address", "id_card_address" });
         Assert.Equal("110101199001011234", EngineeringManager.Api.Common.MaskPiiField("id_card", "110101199001011234", adminAccess));
-        Assert.Equal("[已脱敏]", EngineeringManager.Api.Common.MaskPiiField("phone", "[已脱敏]", adminAccess));
+        Assert.Equal("13800138000", EngineeringManager.Api.Common.MaskPiiField("phone", "13800138000", adminAccess));
         Assert.Equal("6228480012345678", EngineeringManager.Api.Common.MaskPiiField("bank_account", "6228480012345678", adminAccess));
         Assert.Equal("北京市朝阳区", EngineeringManager.Api.Common.MaskPiiField("address", "北京市朝阳区", adminAccess));
         Assert.Equal("北京市朝阳区某街道", EngineeringManager.Api.Common.MaskPiiField("id_card_address", "北京市朝阳区某街道", adminAccess));
@@ -129,7 +129,7 @@ public class CommonTests
         // worker 全部脱敏
         var workerAccess = new CurrentUser.PiiAccess(new HashSet<string>(StringComparer.OrdinalIgnoreCase));
         Assert.Equal("1101****1234", EngineeringManager.Api.Common.MaskPiiField("id_card", "110101199001011234", workerAccess));
-        Assert.Equal("138****8000", EngineeringManager.Api.Common.MaskPiiField("phone", "[已脱敏]", workerAccess));
+        Assert.Equal("138****8000", EngineeringManager.Api.Common.MaskPiiField("phone", "13800138000", workerAccess));
         Assert.Equal("6228****5678", EngineeringManager.Api.Common.MaskPiiField("bank_account", "6228480012345678", workerAccess));
         Assert.Equal("北***区", EngineeringManager.Api.Common.MaskPiiField("address", "北京市朝阳区", workerAccess));
         Assert.Equal("北***区", EngineeringManager.Api.Common.MaskPiiField("id_card_address", "北京市朝阳区", workerAccess));

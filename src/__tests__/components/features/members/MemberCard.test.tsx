@@ -39,7 +39,7 @@ describe('MemberCard', () => {
     id: 1,
     name: '张三',
     role: '项目经理',
-    phone: '[已脱敏]',
+    phone: '13800138000',
     idCard: '510101199001011234',
     idCardFront: '',
     idCardBack: '',
@@ -84,7 +84,7 @@ describe('MemberCard', () => {
         onDelete={mockOnDelete}
       />
     )
-    expect(screen.getByText('[已脱敏]')).toBeInTheDocument()
+    expect(screen.getByText('13800138000')).toBeInTheDocument()
   })
 
   it('shows active status badge', async () => {

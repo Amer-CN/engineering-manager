@@ -32,7 +32,7 @@ const importModule = () => import('@/components/features/projects/ProjectForm')
 describe('ProjectForm', () => {
   const mockMembers: Member[] = [
     {
-      id: 1, name: '张三', role: '项目经理', phone: '[已脱敏]',
+      id: 1, name: '张三', role: '项目经理', phone: '13800138000',
       memberType: 'staff', status: 'active', entryDate: '2024-01-01',
       createdAt: '2024-01-01', email: '', idCard: '', idCardFront: '', idCardBack: '',
       contractFile: '', contractFileType: '', isTeamLeader: false,
@@ -40,7 +40,7 @@ describe('ProjectForm', () => {
       threeLevelEducation: false,
     } as Member,
     {
-      id: 2, name: '李四', role: '施工员', phone: '[已脱敏]',
+      id: 2, name: '李四', role: '施工员', phone: '13800138001',
       memberType: 'staff', status: 'active', entryDate: '2024-02-01',
       createdAt: '2024-02-01', email: '', idCard: '', idCardFront: '', idCardBack: '',
       contractFile: '', contractFileType: '', isTeamLeader: false,
@@ -48,7 +48,7 @@ describe('ProjectForm', () => {
       threeLevelEducation: false,
     } as Member,
     {
-      id: 3, name: '王五', role: '焊工', phone: '[已脱敏]',
+      id: 3, name: '王五', role: '焊工', phone: '13800138002',
       memberType: 'worker', status: 'active', entryDate: '2024-03-01',
       createdAt: '2024-03-01', email: '', idCard: '', idCardFront: '', idCardBack: '',
       contractFile: '', contractFileType: '', isTeamLeader: false,

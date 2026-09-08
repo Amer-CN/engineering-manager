@@ -31,8 +31,8 @@ public class Fts5TrigramTests
         conn.Execute("INSERT INTO test_fts (content) VALUES (@c1), (@c2), (@c3)",
             new
             {
-                c1 = "[已脱敏]结账付款进度款",
-                c2 = "[已脱敏]说的二十七万有点高",
+                c1 = "浙江中联结账付款进度款",
+                c2 = "谭总说的二十七万有点高",
                 c3 = "钢筋脚手架模板工期"
             });
 
@@ -41,7 +41,7 @@ public class Fts5TrigramTests
             "SELECT content FROM test_fts WHERE test_fts MATCH @q ORDER BY rank",
             new { q = "结账付款" }).ToList();
         Assert.Single(results1);
-        Assert.Contains("[已脱敏]结账付款", results1[0]);
+        Assert.Contains("浙江中联结账付款", results1[0]);
 
         // 5. trigram 搜索部分词（"二十七万" → 应匹配第二条）
         var results2 = conn.Query<string>(

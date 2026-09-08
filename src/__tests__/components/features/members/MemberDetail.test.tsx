@@ -27,7 +27,7 @@ const baseStaff: Member = {
   id: 1,
   name: '张三',
   role: '项目经理',
-  phone: '[已脱敏]',
+  phone: '13800138000',
   idCard: '510101199001011234',
   idCardFront: '',
   idCardBack: '',

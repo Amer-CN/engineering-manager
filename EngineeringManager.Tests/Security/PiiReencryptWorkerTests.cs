@@ -44,7 +44,7 @@ public class PiiReencryptWorkerTests : IDisposable
     public async Task Worker_StartAsync_RunsAllColumns()
     {
         // Insert encrypted data
-        var cipher1 = _pii.Encrypt("[已脱敏]");
+        var cipher1 = _pii.Encrypt("13800138000");
         var cipher2 = _pii.Encrypt("110101199001011234");
         InsertTestMember(cipher1, cipher2);
 
@@ -64,7 +64,7 @@ public class PiiReencryptWorkerTests : IDisposable
     [Fact]
     public async Task Worker_SkipsAlreadyReencrypted()
     {
-        var cipher1 = _pii.Encrypt("[已脱敏]");
+        var cipher1 = _pii.Encrypt("13800138000");
         InsertTestMember(cipher1);
 
         // No rotation - same key, so re-encrypt should be idempotent
@@ -78,7 +78,7 @@ public class PiiReencryptWorkerTests : IDisposable
     public async Task Worker_ContinuesOnRowFailure()
     {
         // Insert valid encrypted data
-        var cipher1 = _pii.Encrypt("[已脱敏]");
+        var cipher1 = _pii.Encrypt("13800138000");
         InsertTestMember(cipher1);
 
         // Insert invalid ciphertext that will fail to decrypt
@@ -108,7 +108,7 @@ public class PiiReencryptWorkerTests : IDisposable
     public async Task Worker_StartAsync_ThrowsIfAlreadyRunning()
     {
         // Start a worker that will block
-        var cipher1 = _pii.Encrypt("[已脱敏]");
+        var cipher1 = _pii.Encrypt("13800138000");
         InsertTestMember(cipher1);
 
         // Mark status as running manually

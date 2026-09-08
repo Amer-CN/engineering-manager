@@ -191,7 +191,7 @@ public class UserDimPhase2Tests : ApiTestBase
         var post = await Client.PostAsJsonAsync("/api/members", new
         {
             name = "PII-Test-" + Guid.NewGuid().ToString("N").Substring(0, 4),
-            phone = "[已脱敏]",
+            phone = "13800001234",
             email = "test@example.com",
             memberType = "staff",
             role = "engineer",
@@ -268,7 +268,7 @@ public class UserDimPhase2Tests : ApiTestBase
             name = "PII-Partner-" + Guid.NewGuid().ToString("N").Substring(0, 4),
             category = "supplier",
             contact = "张三",
-            phone = "[已脱敏]",
+            phone = "13800005678",
             email = "partner@example.com",
             address = "Test",
             bankAccount = "6222021234567890123",
@@ -336,7 +336,7 @@ public class UserDimPhase2Tests : ApiTestBase
             name = "PII-Supervisor-" + Guid.NewGuid().ToString("N").Substring(0, 4),
             category = "general",
             contact = "张三",
-            phone = "[已脱敏]",
+            phone = "13800007777",
             address = "Test Address",
             projectIds = "[]",
             remarks = "sup-test"
@@ -378,7 +378,7 @@ public class UserDimPhase2Tests : ApiTestBase
         }
         Assert.NotNull(unmaskedRow);
         var unmaskedPhone = unmaskedRow.Value.GetProperty("phone").GetString() ?? "";
-        Assert.Equal("[已脱敏]", unmaskedPhone);
+        Assert.Equal("13800007777", unmaskedPhone);
     }
 
     // v0.75.0: User Preferences API (替代 localStorage toggle 状态)

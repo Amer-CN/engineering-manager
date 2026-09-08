@@ -100,7 +100,7 @@ if (semanticTestMode)
     var kb = new KnowledgeBaseService(conn, emb);
     var docId = await kb.IngestAsync(
         fullText: testFullText,
-        title: "语义搜索测试-[已脱敏]通话",
+        title: "语义搜索测试-陈泽伟通话",
         sourceType: "call",
         sourceRef: "999",
         projectId: null,
@@ -176,13 +176,13 @@ foreach (var job in existingJobs)
         Console.WriteLine($"    text: {job.text_preview}");
 }
 
-dynamic? chenJob = existingJobs.FirstOrDefault(j => ((string?)j.text_preview ?? "").Contains("[已脱敏]"));
+dynamic? chenJob = existingJobs.FirstOrDefault(j => ((string?)j.text_preview ?? "").Contains("陈泽伟"));
 
 if (chenJob == null)
 {
     // 尝试在 result_text 全文搜索
     chenJob = conn.QueryFirstOrDefault<dynamic>(
-        "SELECT id, source_file, status, is_multi_speaker, duration_sec, result_text, result_json, created_by, created_at FROM stt_jobs WHERE status = 'completed' AND result_text LIKE '%[已脱敏]%' ORDER BY id LIMIT 1");
+        "SELECT id, source_file, status, is_multi_speaker, duration_sec, result_text, result_json, created_by, created_at FROM stt_jobs WHERE status = 'completed' AND result_text LIKE '%陈泽伟%' ORDER BY id LIMIT 1");
 }
 
 if (chenJob == null)
@@ -198,10 +198,10 @@ if (chenJob == null)
     Console.WriteLine("\n[E2E] 未找到任何已完成的 stt_job，需要创建并运行 STT 转写...");
 
     // 先把音频文件复制到 uploads 目录
-    var audioSourcePath = @"e:\测试\asr-test\audios\通话-[已脱敏]-202606101153(1).m4a";
+    var audioSourcePath = @"e:\测试\asr-test\audios\通话-陈泽伟-202606101153(1).m4a";
     var uploadsDir = Path.Combine("F:\\Company Database", "uploads");
     if (!Directory.Exists(uploadsDir)) Directory.CreateDirectory(uploadsDir);
-    var audioDestPath = Path.Combine(uploadsDir, "通话-[已脱敏]-202606101153(1).m4a");
+    var audioDestPath = Path.Combine(uploadsDir, "通话-陈泽伟-202606101153(1).m4a");
 
     if (!File.Exists(audioDestPath))
     {
@@ -223,9 +223,9 @@ if (chenJob == null)
         SELECT last_insert_rowid();",
         new
         {
-            SourceFile = "通话-[已脱敏]-202606101153(1).m4a",
-            SourcePath = "通话-[已脱敏]-202606101153(1).m4a",
-            Hotwords = "[已脱敏],进度款,结算,付款方式,百分之八十,[已脱敏],[已脱敏]",
+            SourceFile = "通话-陈泽伟-202606101153(1).m4a",
+            SourcePath = "通话-陈泽伟-202606101153(1).m4a",
+            Hotwords = "陈泽伟,进度款,结算,付款方式,百分之八十,叶有亮,温总",
             Now = now,
         });
 

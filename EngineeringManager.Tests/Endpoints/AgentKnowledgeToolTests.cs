@@ -401,10 +401,10 @@ public class AgentKnowledgeToolTests
         var ctx = CreateHttpContext("manager", "user1");
         using var db = CreateDb();
 
-        await IngestDocument(db, "[已脱敏]说这个项目大概搞三十万", "user1的文档", "user1");
-        await IngestDocument(db, "[已脱敏]说这个项目大概搞三十万", "user2的文档", "user2");
+        await IngestDocument(db, "温总说这个项目大概搞三十万", "user1的文档", "user1");
+        await IngestDocument(db, "温总说这个项目大概搞三十万", "user2的文档", "user2");
 
-        var args = JsonDocument.Parse("""{"query":"[已脱敏] 项目"}""").RootElement;
+        var args = JsonDocument.Parse("""{"query":"温总 项目"}""").RootElement;
         var result = await tools.ExecuteToolAsync("searchKnowledgeBase", args, ctx, db);
 
         var resultObj = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
@@ -578,12 +578,12 @@ public class AgentKnowledgeToolTests
         using var db = CreateDb();
 
         await IngestDocument(db,
-            "[已脱敏]说这个项目大概搞三十万，材料和人工都算在里面。",
-            "[已脱敏]项目沟通录音",
+            "温总说这个项目大概搞三十万，材料和人工都算在里面。",
+            "温总项目沟通录音",
             "admin-user",
             occurredAt: "2026-06-15 10:30:00");
 
-        var args = JsonDocument.Parse("""{"query":"上次跟[已脱敏]说的预算是多少","topK":5}""").RootElement;
+        var args = JsonDocument.Parse("""{"query":"上次跟温总说的预算是多少","topK":5}""").RootElement;
         var result = await tools.ExecuteToolAsync("searchKnowledgeBase", args, ctx, db);
 
         var resultObj = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
@@ -603,7 +603,7 @@ public class AgentKnowledgeToolTests
         var relevance = firstHit.GetProperty("relevance");
         Assert.True(relevance.GetProperty("semanticRank").ValueKind != JsonValueKind.Null);
 
-        Assert.Equal("[已脱敏]项目沟通录音", firstHit.GetProperty("title").GetString());
+        Assert.Equal("温总项目沟通录音", firstHit.GetProperty("title").GetString());
         Assert.Equal("2026-06-15 10:30:00", firstHit.GetProperty("occurredAt").GetString());
 
         Assert.True(firstHit.TryGetProperty("sourceRef", out _));
@@ -735,7 +735,7 @@ public class AgentKnowledgeToolTests
 /// 流程：
 ///   1. 入库知识库文档（原文不含"预算"）
 ///   2. 登录 admin
-///   3. POST /api/agent/chat 提问"上次跟[已脱敏]说的预算是多少？"
+///   3. POST /api/agent/chat 提问"上次跟温总说的预算是多少？"
 ///   4. Fake LLM 第一轮返回 searchKnowledgeBase tool_call
 ///   5. AgentEndpoints 真实执行 tool loop（ExecuteToolAsync → KnowledgeBaseService.SearchAsync）
 ///   6. Fake LLM 第二轮检查 tool result 并返回最终答案
@@ -746,9 +746,9 @@ public class AgentChatIntegrationTests : AgentIntegrationTestBase
     protected override FakeLlmChatService CreateFakeLlm()
     {
         return new FakeLlmChatService(
-            firstRoundToolCallQuery: "上次跟[已脱敏]说的预算是多少",
+            firstRoundToolCallQuery: "上次跟温总说的预算是多少",
             firstRoundToolCallTopK: "5",
-            finalAnswer: "上次沟通中，[已脱敏]提到项目大概三十万。来源：[已脱敏]项目沟通录音；原文：[已脱敏]说这个项目大概搞三十万，材料和人工都算在里面。");
+            finalAnswer: "上次沟通中，温总提到项目大概三十万。来源：温总项目沟通录音；原文：温总说这个项目大概搞三十万，材料和人工都算在里面。");
     }
 
     [Fact]
@@ -756,8 +756,8 @@ public class AgentChatIntegrationTests : AgentIntegrationTestBase
     {
         // 1. 入库知识库文档
         await IngestKnowledgeDocument(
-            "[已脱敏]说这个项目大概搞三十万，材料和人工都算在里面。",
-            "[已脱敏]项目沟通录音",
+            "温总说这个项目大概搞三十万，材料和人工都算在里面。",
+            "温总项目沟通录音",
             createdBy: "1",
             sourceType: "transcription",
             sourceRef: "recording-001",
@@ -769,7 +769,7 @@ public class AgentChatIntegrationTests : AgentIntegrationTestBase
         // 3. POST /api/agent/chat
         var resp = await Client.PostAsJsonAsync("/api/agent/chat", new
         {
-            message = "上次跟[已脱敏]说的预算是多少？",
+            message = "上次跟温总说的预算是多少？",
         });
 
         // 断言 HTTP 成功
@@ -794,7 +794,7 @@ public class AgentChatIntegrationTests : AgentIntegrationTestBase
         Assert.Contains("三十万", content);
 
         // 最终答案包含来源标题
-        Assert.Contains("[已脱敏]项目沟通录音", content);
+        Assert.Contains("温总项目沟通录音", content);
 
         // 不包含其他虚构金额
         Assert.DoesNotContain("五十万", content);
@@ -813,7 +813,7 @@ public class AgentChatIntegrationTests : AgentIntegrationTestBase
         // tool 消息 name=searchKnowledgeBase
         Assert.Equal("searchKnowledgeBase", (string)messages[2].name);
 
-        // tool 消息内容包含"三十万"和"[已脱敏]项目沟通录音"（反序列化检查，因 JSON 序列化会转义中文）
+        // tool 消息内容包含"三十万"和"温总项目沟通录音"（反序列化检查，因 JSON 序列化会转义中文）
         var toolContent = (string)messages[2].content;
         var toolJson = JsonDocument.Parse(toolContent).RootElement;
         var toolResultObj = toolJson.GetProperty("result");
@@ -821,7 +821,7 @@ public class AgentChatIntegrationTests : AgentIntegrationTestBase
         var toolHits = toolResultObj.GetProperty("hits").Deserialize<JsonElement[]>()!;
         Assert.True(toolHits.Length >= 1);
         Assert.Contains("三十万", toolHits[0].GetProperty("text").GetString()!);
-        Assert.Contains("[已脱敏]项目沟通录音", toolHits[0].GetProperty("title").GetString()!);
+        Assert.Contains("温总项目沟通录音", toolHits[0].GetProperty("title").GetString()!);
         // 不包含 embedding
         Assert.False(toolHits[0].TryGetProperty("embedding", out _));
         var hitRaw = toolHits[0].GetRawText().ToLower();
@@ -839,7 +839,7 @@ public class AgentChatIntegrationTests : AgentIntegrationTestBase
         var fakeHits = fakeToolResult.GetProperty("hits").Deserialize<JsonElement[]>()!;
         Assert.True(fakeHits.Length >= 1);
         Assert.Contains("三十万", fakeHits[0].GetProperty("text").GetString()!);
-        Assert.Contains("[已脱敏]项目沟通录音", fakeHits[0].GetProperty("title").GetString()!);
+        Assert.Contains("温总项目沟通录音", fakeHits[0].GetProperty("title").GetString()!);
     }
 
     /// <summary>
@@ -933,10 +933,10 @@ public class AgentSseIntegrationTests : AgentIntegrationTestBase
     protected override FakeLlmChatService CreateFakeLlm()
     {
         return new FakeLlmChatService(
-            firstRoundToolCallQuery: "上次跟[已脱敏]说的预算是多少",
+            firstRoundToolCallQuery: "上次跟温总说的预算是多少",
             firstRoundToolCallTopK: "5",
             finalAnswer: "", // ChatAsync 第二轮返回空（触发流式）
-            streamFinalAnswer: "上次沟通中，[已脱敏]提到项目大概三十万。来源：[已脱敏]项目沟通录音。");
+            streamFinalAnswer: "上次沟通中，温总提到项目大概三十万。来源：温总项目沟通录音。");
     }
 
     [Fact]
@@ -944,8 +944,8 @@ public class AgentSseIntegrationTests : AgentIntegrationTestBase
     {
         // 1. 入库知识库文档
         await IngestKnowledgeDocument(
-            "[已脱敏]说这个项目大概搞三十万，材料和人工都算在里面。",
-            "[已脱敏]项目沟通录音",
+            "温总说这个项目大概搞三十万，材料和人工都算在里面。",
+            "温总项目沟通录音",
             createdBy: "1",
             occurredAt: "2026-06-15 10:30:00");
 
@@ -955,7 +955,7 @@ public class AgentSseIntegrationTests : AgentIntegrationTestBase
         // 3. POST /api/agent/chat/stream
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/agent/chat/stream")
         {
-            Content = JsonContent.Create(new { message = "上次跟[已脱敏]说的预算是多少？" }),
+            Content = JsonContent.Create(new { message = "上次跟温总说的预算是多少？" }),
         };
 
         var resp = await Client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);

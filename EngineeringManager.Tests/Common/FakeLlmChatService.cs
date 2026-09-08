@@ -30,9 +30,9 @@ public class FakeLlmChatService : ILlmChatService
     public IReadOnlyList<List<AgentMessage>> RecordedRequests => _recordedRequests;
 
     public FakeLlmChatService(
-        string firstRoundToolCallQuery = "上次跟[已脱敏]说的预算是多少",
+        string firstRoundToolCallQuery = "上次跟温总说的预算是多少",
         string firstRoundToolCallTopK = "5",
-        string finalAnswer = "上次沟通中，[已脱敏]提到项目大概三十万。来源：[已脱敏]项目沟通录音；原文：[已脱敏]说这个项目大概搞三十万，材料和人工都算在里面。",
+        string finalAnswer = "上次沟通中，温总提到项目大概三十万。来源：温总项目沟通录音；原文：温总说这个项目大概搞三十万，材料和人工都算在里面。",
         string? streamFinalAnswer = null)
     {
         _firstRoundToolCallQuery = firstRoundToolCallQuery;

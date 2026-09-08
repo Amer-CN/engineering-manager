@@ -44,7 +44,7 @@ public class SttE2ETests
         }
 
         // 选一个通话录音（多人对话）
-        var audioFile = Path.Combine(AudioDir, "通话-[已脱敏]-202606101153(1).m4a");
+        var audioFile = Path.Combine(AudioDir, "通话-陈泽伟-202606101153(1).m4a");
         if (!File.Exists(audioFile))
         {
             // 找第一个可用的音频

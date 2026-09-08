@@ -5,9 +5,9 @@
 import { renderHook, act, waitFor } from '@testing-library/react'
 
 const mockMembers: any[] = [
-  { id: 1, name: '张三', memberType: 'staff', workerType: 'management', status: 'active', phone: '[已脱敏]', idCard: '510000199001011234', projectId: 10, teamId: 100, createdAt: '2024-01-01' },
-  { id: 2, name: '李四', memberType: 'worker', workerType: 'electrician', status: 'active', phone: '[已脱敏]', idCard: '510000199002021234', projectId: 20, teamId: 200, createdAt: '2024-01-02' },
-  { id: 3, name: '王五', memberType: 'worker', workerType: 'plumber', status: 'left', phone: '[已脱敏]', idCard: '510000199003031234', projectId: 10, teamId: 100, createdAt: '2024-01-03' },
+  { id: 1, name: '张三', memberType: 'staff', workerType: 'management', status: 'active', phone: '13800000001', idCard: '510000199001011234', projectId: 10, teamId: 100, createdAt: '2024-01-01' },
+  { id: 2, name: '李四', memberType: 'worker', workerType: 'electrician', status: 'active', phone: '13800000002', idCard: '510000199002021234', projectId: 20, teamId: 200, createdAt: '2024-01-02' },
+  { id: 3, name: '王五', memberType: 'worker', workerType: 'plumber', status: 'left', phone: '13800000003', idCard: '510000199003031234', projectId: 10, teamId: 100, createdAt: '2024-01-03' },
 ]
 
 describe('useMembers', () => {
@@ -43,7 +43,7 @@ describe('useMembers', () => {
     const { result } = renderHook(() => useMembers())
     await waitFor(() => expect(result.current.loading).toBe(false))
     await act(async () => {
-      const res = await result.current.create({ name: '赵六', memberType: 'staff', workerType: 'management', status: 'active', phone: '[已脱敏]', idCard: '510000199004041234' } as any)
+      const res = await result.current.create({ name: '赵六', memberType: 'staff', workerType: 'management', status: 'active', phone: '13800000004', idCard: '510000199004041234' } as any)
       expect(res.success).toBe(true)
     })
     expect(ea.createMember).toHaveBeenCalled()
@@ -55,7 +55,7 @@ describe('useMembers', () => {
     const { result } = renderHook(() => useMembers())
     await waitFor(() => expect(result.current.loading).toBe(false))
     await act(async () => {
-      const res = await result.current.create({ name: '赵六', memberType: 'staff', workerType: 'management', status: 'active', phone: '[已脱敏]', idCard: '510000199004041234' } as any)
+      const res = await result.current.create({ name: '赵六', memberType: 'staff', workerType: 'management', status: 'active', phone: '13800000004', idCard: '510000199004041234' } as any)
       expect(res.success).toBe(false)
     })
     expect(result.current.error).toBe('创建失败')

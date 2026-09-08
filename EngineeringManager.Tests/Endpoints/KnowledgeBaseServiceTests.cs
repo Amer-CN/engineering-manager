@@ -201,7 +201,7 @@ public class KnowledgeBaseServiceTests
         using var _ = conn;
 
         await service.IngestAsync(
-            fullText: "今天讨论[已脱敏]结账付款进度款的问题。[已脱敏]说的二十七万有点高。",
+            fullText: "今天讨论浙江中联结账付款进度款的问题。谭总说的二十七万有点高。",
             title: "会议记录",
             sourceType: "meeting",
             sourceRef: null,

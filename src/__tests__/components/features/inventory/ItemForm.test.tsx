@@ -26,7 +26,7 @@ const mockPartner = {
   name: '测试供应商',
   category: 'material' as const,
   contact: '张三',
-  phone: '[已脱敏]',
+  phone: '13800138000',
   email: 'test@example.com',
   address: '测试地址',
   bankAccount: '6222021234567890123',

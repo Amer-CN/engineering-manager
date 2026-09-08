@@ -33,7 +33,7 @@ const mockSupervisor = {
   name: '测试监管单位',
   category: 'quality' as const,
   contact: '李四',
-  phone: '[已脱敏]',
+  phone: '13900139000',
   address: '测试地址',
   regionName: '广东省 / 广州市 / 天河区',
   projectIds: [1],
@@ -203,8 +203,8 @@ describe('SupervisorForm', () => {
 
     // 输入电话
     const phoneInput = textInputs[2] as HTMLInputElement
-    fireEvent.change(phoneInput, { target: { value: '[已脱敏]' } })
-    expect(phoneInput.value).toBe('[已脱敏]')
+    fireEvent.change(phoneInput, { target: { value: '13600136000' } })
+    expect(phoneInput.value).toBe('13600136000')
   })
 
   it('输入地址', async () => {

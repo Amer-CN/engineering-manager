@@ -327,7 +327,7 @@ public class KnowledgeBaseM2Tests
         // 原始 segments: speaker 0, 3, 7, 0 (不连续)
         var segments = new List<SttSegment>
         {
-            new() { Speaker = 0, Start = 0, End = 5, Text = "你好我是[已脱敏]" },
+            new() { Speaker = 0, Start = 0, End = 5, Text = "你好我是陈泽伟" },
             new() { Speaker = 3, Start = 5, End = 10, Text = "你好陈总" },
             new() { Speaker = 7, Start = 10, End = 15, Text = "今天讨论付款方式" },
             new() { Speaker = 0, Start = 15, End = 20, Text = "每个月百分之八十" },

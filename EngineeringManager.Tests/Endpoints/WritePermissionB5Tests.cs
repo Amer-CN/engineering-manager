@@ -53,7 +53,7 @@ public class WritePermissionB5Tests : ApiTestBase
         return await Client.SendAsync(req);
     }
 
-    private static object MemberBody(string name) => new { name, phone = "[已脱敏]", memberType = "staff", status = "active" };
+    private static object MemberBody(string name) => new { name, phone = "13800000000", memberType = "staff", status = "active" };
     private static object WorkerBody(string name) => new { name, idCard = "510000199001010000", gender = "男", workerType = "other", dailyWage = 200 };
     private static object ProjectWorkerBody() => new { workerId = 1, projectId = 1, dailyWage = 200, workerType = "other", status = "active" };
     private static object DepartmentBody() => new { name = "工程部", positions = new string[] { "经理" } };

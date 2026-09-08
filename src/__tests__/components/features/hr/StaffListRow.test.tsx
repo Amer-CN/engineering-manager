@@ -14,7 +14,7 @@ describe('StaffListRow.tsx', () => {
   afterEach(() => cleanup())
 
   const baseProps = {
-    m: { name: '张三', position: '班组长', phone: '[已脱敏]', status: 'active', entryDate: '2025-03-01', leaveDate: null },
+    m: { name: '张三', position: '班组长', phone: '13800001111', status: 'active', entryDate: '2025-03-01', leaveDate: null },
     deptName: '施工一组',
     onEdit: () => {},
     onStatusChange: () => {},
@@ -38,7 +38,7 @@ describe('StaffListRow.tsx', () => {
 
   test('应显示手机号', () => {
     render(React.createElement(StaffListRow, baseProps))
-    expect(screen.getByText('[已脱敏]')).toBeTruthy()
+    expect(screen.getByText('13800001111')).toBeTruthy()
   }, 15000)
 
   test('应显示入职日期', () => {
