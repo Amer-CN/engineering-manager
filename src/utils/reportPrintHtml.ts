@@ -149,26 +149,51 @@ function renderTable(t: ReportPrintTable): string {
  * AI 报告 markdown → 结构化 sections（纯解析，不改写任何文字）。
  * 规则：
  * - "# " 行（首个）= 报告大标题（进书脊竖排，不进正文）；
+ * - "> " 引用行剥前缀（不裸露 >）：匹配「期间：…」的提取为 period（首个生效，
+ *   进书脊底部小字，不进正文）；其余照旧作普通内容行；
  * - "## " / "### " 行 = 小节标题，其后续非井号行归该节；
  * - "#### " 行 = 子条，井号不裸露，并入节内容作加粗行（**子条**）；
  * - 首个 ## 之前的行 = 引言节（name = null，无小节名）；
  * - "- "/"* " 开头行 = 列表项（保留记号原样，渲染时并入 <ul>）；
  * - 行首 | 的连续行块 = 表格（渲染时整块转细线表；孤行不成表）；
+ * - 节名「值得记住的数字」：lines 中匹配「- 值｜标签｜小注」的行解析为该节
+ *   bigNumbers（大数字块；小注缺省 ''，全 trim）并从 lines 移除；不匹配行保持普通行；
  * - 每节首个非列表/非表格行提为结论句 heading（内容不丢，仍渲染为标题）；
  * - 空行剔除；无任何 ## 时自然兜底为单节（全部行进该节，不丢内容）。
  */
 export function parseReportMarkdown(markdown: string): {
   title: string | null
+  /** 引用行「期间：…」提取的报告期间（多个取首个；无则 null）→ 书脊底部小字 */
+  period: string | null
   sections: ReportPrintSection[]
 } {
+  const QUOTE_RE = /^> /
+  const PERIOD_RE = /^期间：(.*)$/
+  const BIG_NUMBER_RE = /^- (.+?)｜(.+?)(?:｜(.*))?$/
+
   const lines = (markdown || '').split('\n')
   let title: string | null = null
+  let period: string | null = null
   const raw: { name: string | null; lines: string[] }[] = []
   let current: { name: string | null; lines: string[] } | null = null
 
   for (const rawLine of lines) {
     const line = rawLine.trim()
     if (!line) continue // 空行剔除
+    if (QUOTE_RE.test(line)) {
+      const quoted = line.replace(QUOTE_RE, '').trim()
+      const pm = PERIOD_RE.exec(quoted)
+      if (pm) {
+        if (period === null) period = pm[1].trim() // 期间行 → period（首个生效），不进正文
+        continue
+      }
+      if (!current) {
+        current = { name: null, lines: [] } // 引言节
+        raw.push(current)
+      }
+      current.lines.push(quoted) // 非期间引用行：剥前缀照旧作普通内容行
+      continue
+    }
     const h = /^(#{1,4})\s*(.*)$/.exec(line)
     if (h) {
       const level = h[1].length
@@ -204,18 +229,30 @@ export function parseReportMarkdown(markdown: string): {
     let heading = ''
     const rest: string[] = []
     let headingTaken = false
+    const isNumbersSection = rs.name === '值得记住的数字'
+    const bigNumbers: ReportPrintBigNumber[] = []
     for (const line of rs.lines) {
       if (!headingTaken && !UL_RE.test(line) && !TABLE_LINE_RE.test(line)) {
         heading = line // 首个非列表/非表格行 → 结论句标题
         headingTaken = true
         continue
       }
+      const bn = isNumbersSection ? BIG_NUMBER_RE.exec(line) : null
+      if (bn) {
+        bigNumbers.push({ value: bn[1].trim(), label: bn[2].trim(), sub: (bn[3] ?? '').trim() })
+        continue // 从 lines 移除（改由大数字块渲染）
+      }
       rest.push(line)
     }
-    return { name: rs.name, heading, lines: rest }
+    return {
+      name: rs.name,
+      heading,
+      lines: rest,
+      ...(isNumbersSection ? { bigNumbers } : {}),
+    }
   })
 
-  return { title, sections }
+  return { title, period, sections }
 }
 
 /** 正文行 → HTML："- " 连续行并入 <ul>；行首 | 连续块（≥2 行）转细线表，孤行按段落；每行全转义 */

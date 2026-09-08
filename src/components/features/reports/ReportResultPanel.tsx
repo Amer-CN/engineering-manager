@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { EASE_OUT } from '@/constants/animations'
 import { Icon } from '@/components/ui/Icon'
-import { parseMarkup, tokenizeInline } from '@/utils/templateMarkup'
+import { parseMarkup, tokenizeInline, type MarkupLine } from '@/utils/templateMarkup'
 import {
   parseReportMarkdown,
   buildReportPrintHtml,
@@ -71,8 +71,22 @@ const ReportResultPanel: React.FC<ReportResultPanelProps> = ({ markdown, onUpdat
   const [isEditing, setIsEditing] = useState(false)
   const [copied, setCopied] = useState(false)
   const isChart = format === 'chart'
-  // 图形版数据桥：parseChartReport(AI 数据段) → TemplateReportData（三新模板共用；与打印 collectTplCharts 同口径）
+  // 图形版数据桥：parseChartReport(AI 数据段) → TemplateReportData（三新模板共用；与打印 collectTplCharts 同口径）。
+  // 文本格式不消费 tplData：跳过 parseChartReport（白算且每次渲染打 chart 数据块缺失警告）
   const tplData = useMemo<TemplateReportData>(() => {
+    if (!isChart) {
+      return {
+        title: '运营报告',
+        period: '',
+        meta: {
+          product: '工程管家',
+          generatedBy: 'AI 生成',
+          dataSource: '本地数据台账',
+          date: '',
+        },
+        sections: [],
+      }
+    }
     const data = parseChartReport(markdown)
     return {
       title: data.title || '运营报告',
@@ -86,9 +100,26 @@ const ReportResultPanel: React.FC<ReportResultPanelProps> = ({ markdown, onUpdat
       sections: data.sections.map((sec) => ({ name: null, heading: sec.headline, lines: [...sec.bullets, ...sec.lines] })),
       charts: collectTplCharts(data),
     }
-  }, [markdown])
+  }, [markdown, isChart])
 
-  const parsedLines = useMemo(() => parseMarkup(markdown), [markdown])
+  // 文本分支渲染单元：blockquote 引用行按弱化元信息行识别；连续同类型列表行合并为
+  // list 块（镜像打印链 renderLines 的 closeList 口径：类型切换或非列表行时闭合）
+  const parsedBlocks = useMemo(() => {
+    const blocks: (
+      | { kind: 'line'; line: MarkupLine }
+      | { kind: 'list'; type: 'ul' | 'ol'; items: MarkupLine[] }
+    )[] = []
+    for (const line of parseMarkup(markdown, { blockquote: true })) {
+      const last = blocks[blocks.length - 1]
+      if (line.listType === 'ul' || line.listType === 'ol') {
+        if (last?.kind === 'list' && last.type === line.listType) last.items.push(line)
+        else blocks.push({ kind: 'list', type: line.listType, items: [line] })
+      } else {
+        blocks.push({ kind: 'line', line })
+      }
+    }
+    return blocks
+  }, [markdown])
   const handleCopy = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(markdown)
@@ -154,9 +185,9 @@ const ReportResultPanel: React.FC<ReportResultPanelProps> = ({ markdown, onUpdat
       return
     }
 
-    // markdown → 结构（##/### 分节；#/#### 井号处理；表格块；首段引言；无 ## 兜底单节），
+    // markdown → 结构（##/### 分节；#/#### 井号处理；> 引用行；表格块；首段引言；无 ## 兜底单节），
     // 不改写 AI 内容
-    const { title, sections } = parseReportMarkdown(markdown)
+    const { title, period, sections } = parseReportMarkdown(markdown)
     // 附图数据：与预览 ReportCharts 同口径拉取（发票状态计数 / 支出分类 TOP）；
     // 失败则跳过图表区，打印页正文照常
     let charts: ReportPrintCharts | undefined
@@ -184,7 +215,7 @@ const ReportResultPanel: React.FC<ReportResultPanelProps> = ({ markdown, onUpdat
     }
     const html = buildReportPrintHtml(
       title ?? '运营报告',
-      `AI 生成 · ${now.getFullYear()}`,
+      period ?? `AI 生成 · ${now.getFullYear()}`, // 书脊底部小字：解析出的真实期间，无则回退
       sections,
       {
         productName: '工程管家',
@@ -293,7 +324,31 @@ const ReportResultPanel: React.FC<ReportResultPanelProps> = ({ markdown, onUpdat
         ) : (
           <>
             <div className="prose prose-sm max-w-none text-xs" style={{ color: 'var(--fg)' }}>
-            {parsedLines.map((line, i) => {
+            {parsedBlocks.map((block, i) => {
+              // 连续同类型列表块：<ul>/<ol> 包裹；行内标记经 tokenizeInline（bold/italic/text 三态，与段落分支同规则）
+              if (block.kind === 'list') {
+                return (
+                  <block.type
+                    key={i}
+                    className={block.type === 'ul' ? 'list-disc ml-4 my-1' : 'list-decimal ml-4 my-1'}
+                  >
+                    {block.items.map((item, j) => (
+                      <li key={j} style={{ color: 'var(--fg-2)' }}>
+                        {tokenizeInline(item.listContent ?? '').map((t, k) =>
+                          t.type === 'bold' ? (
+                            <strong key={k} style={{ color: 'var(--fg)' }}>{t.content}</strong>
+                          ) : t.type === 'italic' ? (
+                            <em key={k}>{t.content}</em>
+                          ) : (
+                            <span key={k}>{t.content}</span>
+                          )
+                        )}
+                      </li>
+                    ))}
+                  </block.type>
+                )
+              }
+              const line = block.line
               // 表格行：React 版细线表（表头小写字距 · 发丝行线 · 无竖线无色块，与打印链同观感）
               if (line.table) {
                 return (
@@ -337,13 +392,10 @@ const ReportResultPanel: React.FC<ReportResultPanelProps> = ({ markdown, onUpdat
                   </table>
                 )
               }
-              if (line.heading) {
+              // 引用行（"> " 已剥前缀）：弱化元信息行，不占结论句位
+              if (line.quote) {
                 return (
-                  <h3
-                    key={i}
-                    className="text-sm font-bold mt-4 mb-2"
-                    style={{ color: 'var(--fg)' }}
-                  >
+                  <p key={i} className="mb-1 text-xs" style={{ color: 'var(--muted)' }}>
                     {line.tokens.map((t, j) =>
                       t.type === 'bold' ? (
                         <strong key={j}>{t.content}</strong>
@@ -353,21 +405,42 @@ const ReportResultPanel: React.FC<ReportResultPanelProps> = ({ markdown, onUpdat
                         <span key={j}>{t.content}</span>
                       )
                     )}
+                  </p>
+                )
+              }
+              if (line.heading) {
+                const headingTokens = line.tokens.map((t, j) =>
+                  t.type === 'bold' ? (
+                    <strong key={j}>{t.content}</strong>
+                  ) : t.type === 'italic' ? (
+                    <em key={j}>{t.content}</em>
+                  ) : (
+                    <span key={j}>{t.content}</span>
+                  )
+                )
+                // 标题分层（与打印侧书脊/secthead/claim 三级对应）：1=报告大标题；2/3=节标题（既有样式）；4=子条小标题
+                if (line.level === 1) {
+                  return (
+                    <h1 key={i} className="text-2xl font-black mt-1 mb-3" style={{ color: 'var(--fg)' }}>
+                      {headingTokens}
+                    </h1>
+                  )
+                }
+                if (line.level === 4) {
+                  return (
+                    <h4 key={i} className="text-xs font-bold mt-3 mb-1" style={{ color: 'var(--fg)' }}>
+                      {headingTokens}
+                    </h4>
+                  )
+                }
+                return (
+                  <h3
+                    key={i}
+                    className="text-sm font-bold mt-4 mb-2"
+                    style={{ color: 'var(--fg)' }}
+                  >
+                    {headingTokens}
                   </h3>
-                )
-              }
-              if (line.listType === 'ul') {
-                return (
-                  <li key={i} className="ml-4 list-disc" style={{ color: 'var(--fg-2)' }}>
-                    {line.listContent}
-                  </li>
-                )
-              }
-              if (line.listType === 'ol') {
-                return (
-                  <li key={i} className="ml-4 list-decimal" style={{ color: 'var(--fg-2)' }}>
-                    {line.listContent}
-                  </li>
                 )
               }
               return (
