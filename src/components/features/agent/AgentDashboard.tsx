@@ -10,7 +10,7 @@
  * ⌘K 唤起 AgentSearch；会话流逻辑在 useAgentConversationFlow.ts
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Icon } from '@/components/ui/Icon'
 import { HoverScrollbar } from '@/components/ui/HoverScrollbar'
@@ -18,6 +18,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { usePermission } from '@/hooks/usePermission'
 import { useMascotAppearance } from '@/hooks/useMascotAppearance'
 import { getLlmProviderConfig } from '@/services/agent-client'
+import type { AgentConversation } from '@/types/agent'
 
 import AgentComposer from './AgentComposer'
 import AgentOverlays, { HistorySidebar } from './AgentOverlays'
@@ -72,6 +73,7 @@ const AgentDashboard: React.FC = () => {
     handleResend,
     handleSwitchVersion,
     handleForkTo,
+    handleConversationsDeleted: killDeletedStreams,
   } = useAgentConversationFlow({
     inputValue, setInputValue, inputRef,
     model: pickModel, reasoningLevel,
@@ -98,6 +100,18 @@ const AgentDashboard: React.FC = () => {
   const handleForkMessage = (idx: number) => {
     handleForkTo(idx)
   }
+
+  /** 会话删除联动：掐被删会话的后台在途流；删的是当前会话 → 跳相邻幸存会话，删光才回欢迎页 */
+  const handleConversationsDeleted = useCallback(
+    (ids: number[], next: AgentConversation | null) => {
+      killDeletedStreams(ids)
+      if (conversationId != null && ids.includes(conversationId)) {
+        if (next) void handleSelectConversation(next)
+        else handleNewConversation()
+      }
+    },
+    [conversationId, killDeletedStreams, handleSelectConversation, handleNewConversation],
+  )
 
   // ── 自动滚动（用户上滚时暂停跟随）──
   useEffect(() => {
@@ -366,7 +380,7 @@ const AgentDashboard: React.FC = () => {
             conversationId={conversationId}
             onSelectConversation={handleSelectConversation}
             onNewConversation={handleNewConversation}
-            onCurrentConversationDeleted={handleNewConversation}
+            onConversationsDeleted={handleConversationsDeleted}
             refreshTrigger={refreshTrigger}
           />
         )}
@@ -376,7 +390,7 @@ const AgentDashboard: React.FC = () => {
         conversationId={conversationId}
         onSelectConversation={handleSelectConversation}
         onNewConversation={handleNewConversation}
-        onCurrentConversationDeleted={handleNewConversation}
+        onConversationsDeleted={handleConversationsDeleted}
         refreshTrigger={refreshTrigger}
         historyOpen={historyOpen}
         onHistoryClose={() => setHistoryOpen(false)}

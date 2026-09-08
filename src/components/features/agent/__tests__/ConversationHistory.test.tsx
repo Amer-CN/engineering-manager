@@ -299,4 +299,90 @@ describe('ConversationHistory', () => {
       expect(screen.getByText('今天的对话')).toBeTruthy()
     })
   })
+
+  test('删除当前会话 → onConversationsDeleted(被删id, 相邻幸存会话顶替其位置)', async () => {
+    const onConversationsDeleted = vi.fn()
+    const { container } = renderWithProviders(
+      <ConversationHistory
+        inline
+        currentConversationId={2}
+        onSelectConversation={vi.fn()}
+        onNewConversation={vi.fn()}
+        onConversationsDeleted={onConversationsDeleted}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('昨天的对话')).toBeTruthy()
+    })
+
+    // 删除当前会话（列表第 2 条，id 2）
+    fireEvent.click(container.querySelectorAll('button[title="删除对话"]')[1])
+    await waitFor(() => {
+      expect(screen.getByText('删除对话')).toBeTruthy()
+    })
+    fireEvent.click(screen.getByText('删除'))
+
+    await waitFor(() => {
+      expect(onConversationsDeleted).toHaveBeenCalled()
+    })
+    // 相邻选位：id 2 的位置由紧随其后的幸存会话 id 3 顶替
+    expect(onConversationsDeleted).toHaveBeenCalledWith([2], expect.objectContaining({ id: 3 }))
+  })
+
+  test('删除非当前会话 → onConversationsDeleted(ids, null)，不动当前视图', async () => {
+    const onConversationsDeleted = vi.fn()
+    const { container } = renderWithProviders(
+      <ConversationHistory
+        inline
+        currentConversationId={2}
+        onSelectConversation={vi.fn()}
+        onNewConversation={vi.fn()}
+        onConversationsDeleted={onConversationsDeleted}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('今天的对话')).toBeTruthy()
+    })
+
+    // 删除的是第 1 条（id 1），不是当前会话（id 2）
+    fireEvent.click(container.querySelectorAll('button[title="删除对话"]')[0])
+    await waitFor(() => {
+      expect(screen.getByText('删除对话')).toBeTruthy()
+    })
+    fireEvent.click(screen.getByText('删除'))
+
+    await waitFor(() => {
+      expect(onConversationsDeleted).toHaveBeenCalledWith([1], null)
+    })
+  })
+
+  test('列表只剩当前会话且被删 → 删光，onConversationsDeleted(ids, null)', async () => {
+    mockGetAgentConversations.mockResolvedValue([mockConversations[0]])
+    const onConversationsDeleted = vi.fn()
+    const { container } = renderWithProviders(
+      <ConversationHistory
+        inline
+        currentConversationId={1}
+        onSelectConversation={vi.fn()}
+        onNewConversation={vi.fn()}
+        onConversationsDeleted={onConversationsDeleted}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('今天的对话')).toBeTruthy()
+    })
+
+    fireEvent.click(container.querySelectorAll('button[title="删除对话"]')[0])
+    await waitFor(() => {
+      expect(screen.getByText('删除对话')).toBeTruthy()
+    })
+    fireEvent.click(screen.getByText('删除'))
+
+    await waitFor(() => {
+      expect(onConversationsDeleted).toHaveBeenCalledWith([1], null)
+    })
+  })
 })

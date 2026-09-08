@@ -271,11 +271,12 @@ public class LlmProviderService : ILlmChatService
         }
 
         // 推理档位（仅显式传入时携带；2026-08-22 实测 Agnes 合法值：
-        // none/low/medium/high/max——非法值 400 拒。前端 off 档此处置空不发 = none 行为）
+        // none/low/medium/high/max——非法值 400 拒。off 档交由 ApplyBuiltInAgnesThinkingControl
+        // 对内置通道映射为 "none"；自定义服务商 off = 不发字段（维持原状））
         if (!string.IsNullOrWhiteSpace(reasoningEffort) && reasoningEffort != "off")
             payload["reasoning_effort"] = reasoningEffort;
 
-        AddAgnesThinkingParameters(route, payload);
+        ApplyBuiltInAgnesThinkingControl(route, reasoningEffort, payload);
 
         try
         {
@@ -517,11 +518,12 @@ public class LlmProviderService : ILlmChatService
         }
 
         // 推理档位（仅显式传入时携带；2026-08-22 实测 Agnes 合法值：
-        // none/low/medium/high/max——非法值 400 拒。前端 off 档此处置空不发 = none 行为）
+        // none/low/medium/high/max——非法值 400 拒。off 档交由 ApplyBuiltInAgnesThinkingControl
+        // 对内置通道映射为 "none"；自定义服务商 off = 不发字段（维持原状））
         if (!string.IsNullOrWhiteSpace(reasoningEffort) && reasoningEffort != "off")
             payload["reasoning_effort"] = reasoningEffort;
 
-        AddAgnesThinkingParameters(route, payload);
+        ApplyBuiltInAgnesThinkingControl(route, reasoningEffort, payload);
 
         // 分离连接与 yield：错误/取消经 ConnectStreamAsync 返回值传递（try/catch 内不能 yield return）；
         // timeoutCts 非空时由本方法持有（using），SSE 总超时 300s 覆盖到读取结束
@@ -573,24 +575,22 @@ public class LlmProviderService : ILlmChatService
     }
 
     /// <summary>
-    /// 为内置 Agnes OpenAI 兼容请求启用 Thinking。
-    /// Agnes 官方在 Chat Completions 格式中仅声明 chat_template_kwargs.enable_thinking；
-    /// thinking.type / budget_tokens 属于 Anthropic 兼容格式，不能直接混入该请求。
+    /// 内置 Agnes 通道的思考档位控制。
+    /// 3.0 flash 默认深度思考，且 2.5 时代的模板级思考开关参数
+    /// 对 3.0 无效（2026-09-08 实测 true/false 均思考）；真正的开关是 reasoning_effort。
+    /// 用户选「off」时前端显式传 "off"，此处映射为 "none" 才能真正关思考；
+    /// medium/high 已由通用透传写入 payload，无需处理；null（报表/公文/语音洞察等
+    /// 无档位调用方）不干预 = 沿用 3.0 默认思考。
     /// </summary>
-    internal static void AddAgnesThinkingParameters(
+    internal static void ApplyBuiltInAgnesThinkingControl(
         ModelRouteInfo route,
+        string? reasoningEffort,
         Dictionary<string, object> payload)
     {
-        if (!route.UseBuiltIn ||
-            !route.Model.Equals("agnes-2.5-flash", StringComparison.OrdinalIgnoreCase))
-        {
+        if (!route.UseBuiltIn || reasoningEffort != "off")
             return;
-        }
 
-        payload["chat_template_kwargs"] = new Dictionary<string, object>
-        {
-            ["enable_thinking"] = true,
-        };
+        payload["reasoning_effort"] = "none";
     }
 
     private async Task<(StreamReader? Reader, string? Error, CancellationTokenSource? TimeoutCts)> ConnectStreamAsync(

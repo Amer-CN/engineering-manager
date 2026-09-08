@@ -86,7 +86,7 @@ public static class AgentEndpoints
                 for (int round = 0; round < maxRounds; round++)
                 {
                     var response = await llm.ChatAsync(llmMessages, availableTools, request.Model,
-                        request.ReasoningLevel == "off" ? null : request.ReasoningLevel);
+                        request.ReasoningLevel);
 
                     if (response == null)
                     {
@@ -231,6 +231,9 @@ public static class AgentEndpoints
                 return;
             }
 
+            // 客户端断开令牌：透传到 LLM 调用与 SSE 写出（断开即停生成，半截回复仍落库）
+            var ct = ctx.RequestAborted;
+
             // 设置 SSE 响应头
             ctx.Response.ContentType = "text/event-stream";
             ctx.Response.Headers.Append("Cache-Control", "no-cache");
@@ -246,7 +249,7 @@ public static class AgentEndpoints
                     conversationId = request.ConversationId.Value;
                     if (!await conversations.IsConversationOwnedAsync(db, conversationId, uid))
                     {
-                        await WriteSSE(ctx, new { type = "error", error = "对话不存在" });
+                        await WriteSSE(ctx, new { type = "error", error = "对话不存在" }, ct);
                         return;
                     }
                 }
@@ -257,7 +260,7 @@ public static class AgentEndpoints
                 }
 
                 // 发送对话 ID
-                await WriteSSE(ctx, new { type = "conversation_id", conversationId });
+                await WriteSSE(ctx, new { type = "conversation_id", conversationId }, ct);
 
                 // 2. 保存用户消息
                 var userMsg = new AgentMessage
@@ -293,7 +296,7 @@ public static class AgentEndpoints
                 for (int round = 0; round < maxRounds; round++)
                 {
                     var response = await llm.ChatAsync(llmMessages, availableTools, request.Model,
-                        request.ReasoningLevel == "off" ? null : request.ReasoningLevel);
+                        request.ReasoningLevel, ct);
 
                     if (response == null)
                     {
@@ -304,7 +307,7 @@ public static class AgentEndpoints
                             Success = false,
                             Error = "LLM 调用失败，请检查配置",
                         });
-                        await WriteSSE(ctx, new { type = "error", error = "LLM 调用失败，请检查配置" });
+                        await WriteSSE(ctx, new { type = "error", error = "LLM 调用失败，请检查配置" }, ct);
                         break;
                     }
 
@@ -328,7 +331,7 @@ public static class AgentEndpoints
                         foreach (var tc in choice.Message.ToolCalls)
                         {
                             // 发送工具执行进度
-                            await WriteSSE(ctx, new { type = "tool", name = tc.Function.Name });
+                            await WriteSSE(ctx, new { type = "tool", name = tc.Function.Name }, ct);
 
                             JsonElement args;
                             try
@@ -367,58 +370,69 @@ public static class AgentEndpoints
 
                     // 使用流式 API 输出最终回复
                     ChatUsage? lastUsage = null;
-                    await foreach (var chunk in llm.ChatStreamAsync(llmMessages, null, request.Model,
-                        request.ReasoningLevel == "off" ? null : request.ReasoningLevel))
+                    // 客户端断开（切页/关窗/断网）：上游生成随 ct 停止；已累积的半截回复仍在下方落库
+                    var clientGone = false;
+                    try
                     {
-                        try
+                        await foreach (var chunk in llm.ChatStreamAsync(llmMessages, null, request.Model,
+                            request.ReasoningLevel, ct))
                         {
-                            var chunkDoc = JsonDocument.Parse(chunk);
-                            var root = chunkDoc.RootElement;
-
-                            // 末 chunk 携带 usage（OpenAI 兼容流：仅最后一个 chunk 带）
-                            if (root.TryGetProperty("usage", out var usageProp) && usageProp.ValueKind == JsonValueKind.Object)
+                            try
                             {
-                                try
+                                var chunkDoc = JsonDocument.Parse(chunk);
+                                var root = chunkDoc.RootElement;
+
+                                // 末 chunk 携带 usage（OpenAI 兼容流：仅最后一个 chunk 带）
+                                if (root.TryGetProperty("usage", out var usageProp) && usageProp.ValueKind == JsonValueKind.Object)
                                 {
-                                    lastUsage = JsonSerializer.Deserialize<ChatUsage>(usageProp.GetRawText());
+                                    try
+                                    {
+                                        lastUsage = JsonSerializer.Deserialize<ChatUsage>(usageProp.GetRawText());
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        Console.Error.WriteLine($"[AgentEndpoints] usage 解析失败（不影响正文）: {ex.Message}");
+                                    }
                                 }
-                                catch (Exception ex)
+
+                                var delta = root
+                                    .GetProperty("choices")[0]
+                                    .GetProperty("delta");
+
+                                if (delta.TryGetProperty("reasoning_content", out var reasoningProp))
                                 {
-                                    Console.Error.WriteLine($"[AgentEndpoints] usage 解析失败（不影响正文）: {ex.Message}");
+                                    // 思考过程分流：单独事件类型，前端折叠展示（不混入正文）
+                                    var reasoning = reasoningProp.GetString();
+                                    if (!string.IsNullOrEmpty(reasoning))
+                                    {
+                                        await WriteSSE(ctx, new { type = "reasoning", text = reasoning }, ct);
+                                    }
+                                }
+
+                                if (delta.TryGetProperty("content", out var contentProp))
+                                {
+                                    var text = contentProp.GetString();
+                                    if (!string.IsNullOrEmpty(text))
+                                    {
+                                        finalContentBuilder.Append(text);
+                                        await WriteSSE(ctx, new { type = "content", text }, ct);
+                                    }
                                 }
                             }
-
-                            var delta = root
-                                .GetProperty("choices")[0]
-                                .GetProperty("delta");
-
-                            if (delta.TryGetProperty("reasoning_content", out var reasoningProp))
+                            catch
                             {
-                                // 思考过程分流：单独事件类型，前端折叠展示（不混入正文）
-                                var reasoning = reasoningProp.GetString();
-                                if (!string.IsNullOrEmpty(reasoning))
-                                {
-                                    await WriteSSE(ctx, new { type = "reasoning", text = reasoning });
-                                }
+                                // 忽略解析错误的 chunk
                             }
-
-                            if (delta.TryGetProperty("content", out var contentProp))
-                            {
-                                var text = contentProp.GetString();
-                                if (!string.IsNullOrEmpty(text))
-                                {
-                                    finalContentBuilder.Append(text);
-                                    await WriteSSE(ctx, new { type = "content", text });
-                                }
-                            }
-                        }
-                        catch
-                        {
-                            // 忽略解析错误的 chunk
                         }
                     }
+                    catch (Exception) when (ctx.RequestAborted.IsCancellationRequested)
+                    {
+                        // 客户端断开：SSE 写出抛出取消——半截正文仍要在下方落库，不再随断开丢弃
+                        clientGone = true;
+                    }
 
-                    // 保存最终消息（确认卡随最终 assistant 消息持久化；有确认卡时正文为空也要落库）
+                    // 保存最终消息（正常完成或客户端断开都保存——半截正文也落库；
+                    // 确认卡随最终 assistant 消息持久化；有确认卡时正文为空也要落库）
                     var finalContent = finalContentBuilder.ToString();
                     if (!string.IsNullOrEmpty(finalContent) || pendingApproval != null)
                     {
@@ -432,15 +446,18 @@ public static class AgentEndpoints
                     }
 
                     // 发送完成信号（approval 随 done 载荷捎带，前端挂到最终 assistant 消息；
-                    // 本轮 token 用量：上下文余量/缓存统计的 ContextMeter 用）
-                    await WriteSSE(ctx, new
+                    // 本轮 token 用量：上下文余量/缓存统计的 ContextMeter 用）——客户端已断开时跳过
+                    if (!clientGone)
                     {
-                        type = "done",
-                        conversationId,
-                        toolCalls = toolResults,
-                        usage = lastUsage,
-                        approval = pendingApproval,
-                    });
+                        await WriteSSE(ctx, new
+                        {
+                            type = "done",
+                            conversationId,
+                            toolCalls = toolResults,
+                            usage = lastUsage,
+                            approval = pendingApproval,
+                        }, ct);
+                    }
 
                     return;
                 }
@@ -464,12 +481,16 @@ public static class AgentEndpoints
                     message = streamMaxRoundsContent,
                     toolCalls = toolResults,
                     approval = pendingApproval,
-                });
+                }, ct);
+            }
+            catch (Exception) when (ctx.RequestAborted.IsCancellationRequested)
+            {
+                // 客户端断开（工具轮/早期阶段）：静默结束——错误流写不出去；半截正文已在流式段落库
             }
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"[AgentEndpoints] /api/agent/chat/stream 失败: {ex.Message}");
-                await WriteSSE(ctx, new { type = "error", error = Common.Sanitize(ex.Message) });
+                await WriteSSE(ctx, new { type = "error", error = Common.Sanitize(ex.Message) }, ct);
             }
         });
 
@@ -1526,10 +1547,10 @@ public static class AgentEndpoints
     /// <summary>
     /// 写入 SSE 事件并刷新响应流
     /// </summary>
-    private static async Task WriteSSE(HttpContext ctx, object data)
+    private static async Task WriteSSE(HttpContext ctx, object data, CancellationToken ct = default)
     {
         var json = JsonSerializer.Serialize(data);
-        await ctx.Response.WriteAsync($"data: {json}\n\n");
-        await ctx.Response.Body.FlushAsync();
+        await ctx.Response.WriteAsync($"data: {json}\n\n", ct);
+        await ctx.Response.Body.FlushAsync(ct);
     }
 }

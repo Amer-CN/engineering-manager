@@ -11,7 +11,7 @@ public class MultiProviderConfigTests
 {
     private const string BuiltinBaseUrl = "https://apihub.agnes-ai.com/v1";
     private const string BuiltinKey = "builtin-key";
-    private const string BuiltinModel = "agnes-2.5-flash";
+    private const string BuiltinModel = "agnes-3.0-flash";
 
     private static ProviderEntry MakeProvider(string id = "p1", string name = "DeepSeek") => new()
     {
@@ -256,7 +256,7 @@ public class MultiProviderConfigTests
         {
             ProviderName = "Agnes",
             UseBuiltIn = true,
-            Model = "agnes-2.5-flash",
+            Model = "agnes-3.0-flash",
         };
 
         var migrated = LlmConfigResolver.MigrateLegacyPersisted(legacy);

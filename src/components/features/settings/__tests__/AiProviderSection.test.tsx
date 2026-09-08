@@ -27,11 +27,11 @@ import { AiProviderSection } from '../AiProviderSection'
 const emptyConfig = {
   providerName: 'Agnes',
   baseUrl: 'https://apihub.agnes-ai.com/v1',
-  model: 'agnes-2.5-flash',
+  model: 'agnes-3.0-flash',
   useBuiltIn: true,
   temperature: 0.7,
   maxTokens: 4096,
-  availableModels: ['agnes-2.5-flash'],
+  availableModels: ['agnes-3.0-flash'],
   modelCapabilities: {},
   hasApiKey: false,
   activeProviderId: null,

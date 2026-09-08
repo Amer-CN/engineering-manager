@@ -85,7 +85,7 @@ public class LlmConfigResolver
     // 运行时重组。环境变量 AGNES_BUILTIN_API_KEY / appsettings Agnes:ApiKey 可覆盖
     // （高级用户换自己的通道，留空 = 用出厂 key）。
     private const string BuiltInBaseUrl = "https://apihub.agnes-ai.com/v1";
-    private const string BuiltInModel = "agnes-2.5-flash";
+    private const string BuiltInModel = "agnes-3.0-flash";
     // 分片与掩码（Base64）：enc = key XOR mask，A/B 为 enc 前后两段
     private const string KeyPartA = "NgYOBjkBAhl7Ti9MOCA2EnlLMDhiIGlfMRhYIRJg";
     private const string KeyPartB = "JiwDRHwDIXEODmtyMWhUIVUTbwkB";

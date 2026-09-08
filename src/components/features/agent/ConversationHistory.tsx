@@ -22,8 +22,9 @@ interface ConversationHistoryProps {
   currentConversationId?: number | null
   onSelectConversation: (conversation: AgentConversation) => void
   onNewConversation: () => void
-  /** 删除的会话正是当前打开的会话时触发（父组件据此重置会话流，避免继续发送写入已删除会话） */
-  onCurrentConversationDeleted?: () => void
+  /** 删除完成（含批量）：deletedIds = 全部被删 id；nextToShow = 当前会话被删时顶替其位置的幸存会话
+      （列表删光 → null，父级回欢迎页）。每次删除成功都上报——掐后台在途流需要全部被删 id。 */
+  onConversationsDeleted?: (deletedIds: number[], nextToShow: AgentConversation | null) => void
   open?: boolean
   onClose?: () => void
   inline?: boolean
@@ -31,7 +32,7 @@ interface ConversationHistoryProps {
 }
 
 const ConversationHistory: React.FC<ConversationHistoryProps> = ({
-  currentConversationId, onSelectConversation, onNewConversation, onCurrentConversationDeleted,
+  currentConversationId, onSelectConversation, onNewConversation, onConversationsDeleted,
   open = false, onClose, inline = false, refreshTrigger = 0,
 }) => {
   const [conversations, setConversations] = useState<AgentConversation[]>([])
@@ -72,8 +73,15 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
     try {
       await Promise.all(targets.map(t => deleteAgentConversation(t.id)))
       showToast(`已删除 ${targets.length} 个对话`, 'success')
-      // 删除的正是当前打开的会话 → 重置会话流，避免继续发送写入已删除会话（黑洞）
-      if (currentConversationId != null && ids.has(currentConversationId)) onCurrentConversationDeleted?.()
+      // 相邻选位：被删含当前会话时，由紧随其位置的幸存会话顶替（删光 → null → 父级回欢迎页）；
+      // ids 无条件上报（掐后台在途流需要全部被删 id，不只当前会话）
+      const idx = conversations.findIndex(c => c.id === currentConversationId)
+      const remaining = conversations.filter(c => !ids.has(c.id))
+      const currentDeleted = currentConversationId != null && ids.has(currentConversationId)
+      const nextToShow = currentDeleted && remaining.length > 0
+        ? remaining[Math.min(Math.max(idx, 0), remaining.length - 1)]
+        : null
+      onConversationsDeleted?.([...ids], nextToShow)
     } catch {
       setConversations(prev => [...prev, ...targets])
       showToast('删除失败', 'error')
@@ -83,7 +91,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
       setBatchDeleteTargets(null)
       setSelectedIds(new Set())
     }
-  }, [deleteTarget, batchDeleteTargets, showToast, currentConversationId, onCurrentConversationDeleted])
+  }, [deleteTarget, batchDeleteTargets, showToast, currentConversationId, onConversationsDeleted, conversations])
 
   // ── 置顶/取消置顶（localStorage 持久化） ──
   const handleTogglePin = useCallback((conv: AgentConversation) => {

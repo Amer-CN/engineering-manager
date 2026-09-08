@@ -14,7 +14,7 @@ export interface AgentChatRequest {
   conversationId?: number
   /** 本次调用覆盖默认模型（空 = 跟随配置） */
   model?: string
-  /** 推理档位 off/low/medium/high（off/空 = 不传） */
+  /** 推理档位 off/medium/high（off 显式传：内置 Agnes 映射为 reasoning_effort:none；空 = 不传） */
   reasoningLevel?: string
 }
 
