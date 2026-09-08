@@ -110,7 +110,9 @@ function buildEvidenceSvg(data: TemplateReportData): string {
     const value = xml(bn.value)
     svg += `<text x="8" y="${y + 8}" font-size="10" font-weight="700" fill="${PORCELAIN.mut}" letter-spacing=".06em">${label}</text>`
     svg += `<line x1="8" y1="${y + 18}" x2="${w - 8}" y2="${y + 18}" stroke="${PORCELAIN.grid}" stroke-width=".8"/>`
-    const numW = 54
+    // 徽章宽随值自适应：按字符估宽（CJK 全角≈11 / 其余≈6.2，font-size 11 基准）+ 左右余量 16，
+    // 基于转义前原始值——长数值（如 "999999.00 元"）不再溢出徽章被 viewBox 右缘硬裁
+    const numW = Math.max(54, Math.round([...bn.value].reduce((s, ch) => s + (/[\u2E80-\u9FFF\uF900-\uFAFF\uFF00-\uFFEF]/.test(ch) ? 11 : 6.2), 0) + 16))
     svg += `<rect x="${w - 8 - numW}" y="${y - 4}" width="${numW}" height="18" rx="4" fill="${PORCELAIN.data}" opacity="${i === 0 ? 1 : 0.15 + i * 0.2}"/>`
     svg += `<text x="${w - 8 - numW / 2}" y="${y + 9}" font-size="11" font-weight="800" fill="${PORCELAIN.bg}" text-anchor="middle">${value}</text>`
   })

@@ -67,14 +67,15 @@ export function buildR12PrintHtml(data: TemplateReportData): string {
   const maxV = Math.max(...rowsB.map((r) => r.value), 1)
   let bars = ''
   rowsB.forEach((r, i) => {
-    const y = 18 + i * 46
+    const y = 18 + i * 56
     const w = Math.max(4, Math.round((r.value / maxV) * 300))
     const col = i === 0 ? PALM.data : PALM.ramp[Math.min(3, Math.max(0, 3 - Math.round((i / Math.max(1, rowsB.length - 2)) * 3)))]
     bars += `<rect x="10" y="${y}" width="${w}" height="26" rx="13" fill="${col}"/>`
     bars += `<text x="${10 + w + 8}" y="${y + 18}" font-size="18" font-weight="700" fill="${PALM.txt}">¥${r.value.toLocaleString()}</text>`
     bars += `<text x="10" y="${y - 2}" font-size="17" fill="${PALM.faint}">${xml(r.name)}</text>`
   })
-  const barsSvg = `<svg viewBox="0 0 460 300" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg">${bars}</svg>`
+  // viewBox 高度按行数计算：末行条形底 18+(n-1)*56+26，加 14 底部余量——3 行数据不再半空卡
+  const barsSvg = `<svg viewBox="0 0 460 ${58 + (rowsB.length - 1) * 56}" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg">${bars}</svg>`
 
   return `<!DOCTYPE html>
 <html lang="zh-Hans"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
