@@ -108,7 +108,7 @@ function parseChartBlock(kind: string, jsonText: string): ChartBlock | null {
         typeof q.weekend === 'boolean' ? { x: q.x, y: q.y, weekend: q.weekend } : { x: q.x, y: q.y },
       )
     }
-    return { kind, points, label: typeof o.label === 'string' ? o.label : undefined }
+    return { kind, points, label: typeof o.label === 'string' ? stripEmphasis(o.label) : undefined }
   }
   if (!Array.isArray(o.rows) || o.rows.length === 0) return null
   const rows: ChartNamedRow[] = []
@@ -116,10 +116,13 @@ function parseChartBlock(kind: string, jsonText: string): ChartBlock | null {
     if (!r || typeof r !== 'object' || Array.isArray(r)) return null
     const q = r as Record<string, unknown>
     if (typeof q.name !== 'string' || !isFiniteNum(q.value)) return null
-    rows.push({ name: q.name, value: q.value })
+    rows.push({ name: stripEmphasis(q.name), value: q.value })
   }
-  return { kind: kind as 'waffle' | 'bars', rows, title: typeof o.title === 'string' ? o.title : undefined }
+  return { kind: kind as 'waffle' | 'bars', rows, title: typeof o.title === 'string' ? stripEmphasis(o.title) : undefined }
 }
+
+/** 剥离 AI 输出的 Markdown 加粗标记（**）：模板以自有字重渲染，星号露出即泄漏（2026-09-08 实测 R12 大数字卡） */
+const stripEmphasis = (s: string): string => s.replace(/\*\*/g, '')
 
 /**
  * 图形版 markdown → ChartReportData。
@@ -200,12 +203,12 @@ export function parseChartReport(markdown: string): ChartReportData {
     }
     const h1 = HEAD1_RE.exec(line)
     if (h1) {
-      if (!title) title = h1[1].trim()
+      if (!title) title = stripEmphasis(h1[1].trim())
       continue // 非首个 # 行按普通内容落下（维持解析宽容性）
     }
     const h2 = HEAD2_RE.exec(line)
     if (h2) {
-      const name = h2[1].trim()
+      const name = stripEmphasis(h2[1].trim())
       if (name === NUMBERS_HEADING) {
         flushFence() // 保险：节边界前清空未闭合块
         inNumbers = true
@@ -219,14 +222,14 @@ export function parseChartReport(markdown: string): ChartReportData {
     }
     const qp = QUOTE_PERIOD_RE.exec(line)
     if (qp && !period) {
-      period = qp[1].trim()
+      period = stripEmphasis(qp[1].trim())
       continue
     }
     if (inNumbers) {
       const m = UL_RE.exec(line)
       if (m) {
         const [v, ...rest] = m[1].split(BIG_SEP)
-        bigNumbers.push({ value: v.trim(), label: rest.join(BIG_SEP).trim() })
+        bigNumbers.push({ value: stripEmphasis(v.trim()), label: stripEmphasis(rest.join(BIG_SEP).trim()) })
       }
       continue // 数字节非 list 行属 AI 偏离格式，不渲染
     }
@@ -236,9 +239,9 @@ export function parseChartReport(markdown: string): ChartReportData {
     }
     const m = UL_RE.exec(line)
     if (m) {
-      cur.bullets.push(m[1].trim())
+      cur.bullets.push(stripEmphasis(m[1].trim()))
     } else {
-      cur.lines.push(line)
+      cur.lines.push(stripEmphasis(line))
     }
   }
   flushFence() // 未闭合 fence 按已收内容处理
