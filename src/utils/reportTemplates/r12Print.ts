@@ -8,7 +8,7 @@
  * 2026-09-08 上下 10mm 纸边防跨页文字贴顶，左右仍满版出血（@page margin:10mm 0）
  */
 import type { TemplateReportData } from './types'
-import { PALM, tplEscapeHtml as esc } from './types'
+import { PALM, tplEscapeHtml as esc, tplEscapeXml as xml } from './types'
 
 /** 生成 R12 版式打印 HTML（图表为手写静态 SVG，零外部依赖，离线可用） */
 export function buildR12PrintHtml(data: TemplateReportData): string {
@@ -42,11 +42,39 @@ export function buildR12PrintHtml(data: TemplateReportData): string {
     assignedA.push(n)
     cumA += n
   }
-  // 内嵌 <script type="application/json">：不能走 esc() HTML 实体转义——script 数据态不解码 &quot;，
-  // JSON.parse 拿到 &quot; 必挂。改用 `\u003c` 方案：仅转义 < >（阻断 </script> 逃逸），JSON.parse 可原样还原。
-  const jsonForScript = (v: unknown) => JSON.stringify(v).replace(/</g, '\\u003c').replace(/>/g, '\\u003e')
-  const jsonA = jsonForScript(rowsA)
-  const jsonB = jsonForScript(rowsB.map((r) => ({ name: r.name, value: r.value })))
+  // 图卡静态 SVG：构建时内联。原实现为打印窗口内联脚本现场渲染——页头 Google Fonts 样式表
+  // 会阻塞内联脚本执行，慢网下 win.print() 先于脚本跑完，双图卡整体丢失（2026-09-08 实测）。
+  // 改静态内联后与 R01/R05 同架构，页脚印"零外部依赖"名副其实。
+  // 图A：象形点阵（100 点方阵；点位分配复用上方 assignedA 累计封顶口径）
+  const COLS = 20, CELL = 22, R = 7
+  const W = COLS * CELL
+  const H = Math.ceil(100 / COLS) * CELL
+  let dots = ''
+  let pos = 0
+  rowsA.forEach((r, i) => {
+    const col = PALM.ser[i % PALM.ser.length]
+    for (let k = 0; k < assignedA[i]; k++) {
+      const p = pos++
+      if (p >= 100) break
+      dots += `<circle cx="${(p % COLS) * CELL + CELL / 2}" cy="${Math.floor(p / COLS) * CELL + CELL / 2}" r="${R}" fill="${col}"/>`
+    }
+  })
+  for (; pos < 100; pos++) {
+    dots += `<circle cx="${(pos % COLS) * CELL + CELL / 2}" cy="${Math.floor(pos / COLS) * CELL + CELL / 2}" r="${R}" fill="${PALM.faint}" opacity=".5"/>`
+  }
+  const pictorSvg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg">${dots}</svg>`
+  // 图B：粗柱（条长与金额成正比 · 深绿 = 最大）
+  const maxV = Math.max(...rowsB.map((r) => r.value), 1)
+  let bars = ''
+  rowsB.forEach((r, i) => {
+    const y = 10 + i * 46
+    const w = Math.max(4, Math.round((r.value / maxV) * 300))
+    const col = i === 0 ? PALM.data : PALM.ramp[Math.min(3, Math.max(0, 3 - Math.round((i / Math.max(1, rowsB.length - 2)) * 3)))]
+    bars += `<rect x="10" y="${y}" width="${w}" height="26" rx="13" fill="${col}"/>`
+    bars += `<text x="${10 + w + 8}" y="${y + 18}" font-size="11" font-weight="700" fill="${PALM.txt}">¥${r.value.toLocaleString()}</text>`
+    bars += `<text x="10" y="${y - 2}" font-size="9" fill="${PALM.faint}">${xml(r.name)}</text>`
+  })
+  const barsSvg = `<svg viewBox="0 0 460 300" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg">${bars}</svg>`
 
   return `<!DOCTYPE html>
 <html lang="zh-Hans"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -97,14 +125,14 @@ svg text{font-family:var(--sans)}
 <div class="sect" style="border-bottom-width:1px">${esc(waffle?.title || '构成速览')}</div>
 <div class="sub">占比 · 共 ${rowsA.length} 类</div>
 <div class="claim">${rowsA[0] ? esc(rowsA[0].name + ' ' + assignedA[0] + '%') : ''}</div>
-<div class="ch" id="r12a"></div>
+<div class="ch" id="r12a">${pictorSvg}</div>
 <div class="srcline">PICTORIAL ROWS · 一点 = 1% · 深绿到麦黄按序</div>
 </div>
 <div class="gcard">
 <div class="sect" style="border-bottom-width:1px">${esc(topBars?.title || '排行速览')}</div>
 <div class="sub">金额 · 共 ${rowsB.length} 条</div>
 <div class="claim">${esc(rowsB[0] ? `${rowsB[0].name} ¥${rowsB[0].value.toLocaleString()}` : '')}</div>
-<div class="ch" id="r12b"></div>
+<div class="ch" id="r12b">${barsSvg}</div>
 <div class="srcline">CHUNKY BARS · 条长与金额成正比 · 深绿 = 最大</div>
 </div>
 </div>
@@ -114,57 +142,5 @@ svg text{font-family:var(--sans)}
 <div class="end">${t}<br>${product}</div>
 </div>
 </div>
-<script type="application/json" id="r12adata">${jsonA}</script>
-<script type="application/json" id="r12bdata">${jsonB}</script>
-<script>
-	(function(){
-	// SVG name 转义：与 tplEscapeXml 同口径（打印窗口自包含，内联实现）
-	function xml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-	var A=JSON.parse(document.getElementById('r12adata').textContent);
-var B=JSON.parse(document.getElementById('r12bdata').textContent);
-var RAMP=${JSON.stringify(PALM.ramp)};
-var SER=${JSON.stringify(PALM.ser)};
-var PALM_TXT='${PALM.txt}', PALM_DATA='${PALM.data}', PALM_FAINT='${PALM.faint}';
-// 图A：象形点阵（手写静态 SVG，100 点方阵；点位分配累计封顶 100，与 r05Print 同口径）
-function waffleRows(rows){
-  var out='',x=0,cum=0,assigned=[];
-  rows.forEach(function(r,i){var n=Math.max(0,Math.min(Math.round(r.pct),100-cum));assigned[i]=n;cum+=n;});
-  var rest=100-cum;
-  var COLS=20,CELL=22,R=7,W=COLS*CELL,H=Math.ceil(100/COLS)*CELL;
-  out+='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg">';
-  rows.forEach(function(r,i){
-    var col=SER[i%SER.length];
-    for(var k=0;k<assigned[i];k++){
-      var pos=x++;
-      if(pos>=100)break;
-      var cx=(pos%COLS)*CELL+CELL/2,cy=Math.floor(pos/COLS)*CELL+CELL/2;
-      out+='<circle cx="'+cx+'" cy="'+cy+'" r="'+R+'" fill="'+col+'"/>';
-    }
-  });
-  for(;x<100;x++){
-    var cx2=(x%COLS)*CELL+CELL/2,cy2=Math.floor(x/COLS)*CELL+CELL/2;
-    out+='<circle cx="'+cx2+'" cy="'+cy2+'" r="'+R+'" fill="'+PALM_FAINT+'" opacity=".5"/>';
-  }
-  out+='</svg>';
-  return out;
-}
-// 图B：粗柱（CHUNKY 手写静态版）
-function barsRows(rows){
-  var max=Math.max.apply(null,rows.map(function(r){return r.value}).concat([1]));
-  var out='<svg viewBox="0 0 460 300" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg">';
-  rows.forEach(function(r,i){
-    var y=10+i*46,w=Math.max(4,Math.round(r.value/max*300));
-    var col=i===0?PALM_DATA:RAMP[Math.min(3,Math.max(0,3-Math.round(i/Math.max(1,rows.length-2)*3)))];
-    out+='<rect x="10" y="'+y+'" width="'+w+'" height="26" rx="13" fill="'+col+'"/>';
-    out+='<text x="'+(10+w+8)+'" y="'+(y+18)+'" font-size="11" font-weight="700" fill="'+PALM_TXT+'">¥'+r.value.toLocaleString()+'</text>';
-    out+='<text x="10" y="'+(y-2)+'" font-size="9" fill="'+PALM_FAINT+'">'+xml(r.name)+'</text>';
-  });
-  out+='</svg>';
-  return out;
-}
-document.getElementById('r12a').innerHTML=waffleRows(A);
-document.getElementById('r12b').innerHTML=barsRows(B);
-})();
-</script>
 </body></html>`
 }
