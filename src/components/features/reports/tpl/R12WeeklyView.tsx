@@ -54,7 +54,9 @@ const R12WeeklyView: React.FC<Props> = ({ data }) => {
             <div data-testid="r12-waffle-dots" style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 6 }}>
               {rowsA.map((r, ri) =>
                 Array.from({ length: countsA[ri] }).map((_, k) => (
-                  <span key={`${r.name}-${k}`} style={{ width: 10, height: 10, borderRadius: '50%', background: r.color ?? PALM.data, display: 'inline-block' }} />
+                  // 点色按行取 PALM.ser 色序——与打印 pictorSvg 逐行赋色同口径；
+                  // 不用 r.color（上层传入的是 R04 瓷蓝板，会让预览与打印异色）
+                  <span key={`${r.name}-${k}`} style={{ width: 10, height: 10, borderRadius: '50%', background: PALM.ser[ri % PALM.ser.length], display: 'inline-block' }} />
                 )),
               )}
               {restA > 0 && Array.from({ length: restA }).map((_, k) => (

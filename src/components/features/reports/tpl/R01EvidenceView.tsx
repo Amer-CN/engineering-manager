@@ -27,7 +27,8 @@ const R01EvidenceView: React.FC<Props> = ({ data }) => {
 
   return (
     <div ref={wrapRef}>
-      <div style={{ zoom }}>
+      {/* 内层必须固定 1080 设计宽：w-full 在 zoom 语境里仍是容器宽，只缩不换版等于把挤压稿再缩小 */}
+      <div style={{ zoom, width: 1080, margin: '0 auto' }}>
         <div className="grid w-full mx-auto max-w-[1080px]" style={{ gridTemplateColumns: '1fr 300px', background: PORCELAIN.bg }}>
       {/* 主栏：minWidth:0 允许收缩——长 ASCII 词（agent_approval_executed 等）会把 1fr 的
           min-content 撑爆容器，导致侧栏被挤出可视区（2026-09-07 实测预览裁切根因） */}
