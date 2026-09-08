@@ -62,8 +62,9 @@ body{background:var(--paper);font-family:var(--sans);color:var(--txt);-webkit-fo
 /* body 底色=纸色：末页内容不足一页时不再露出成片 mat 底（2026-09-08 实测"棕色空底"根因）；
    mat 色带已回退：@page 上下 10mm 纸边 + 色带双重堆叠会导致顶部白边叠加（2026-09-08） */
 .sheet{width:auto;max-width:794px;margin:0 auto;background:var(--paper);padding:14mm 13mm}
-.sect{font-size:11px;font-weight:800;letter-spacing:.2em;padding-bottom:10px;border-bottom:2px solid var(--txt);margin-bottom:22px;break-after:avoid}
-.sect .yr{float:right;font-weight:600;color:var(--mut);letter-spacing:.1em}
+/* 节标题 flex 两端对齐（与预览同款修复）：float:right 不撑开父高度，长标题换行时期间文字压线 */
+.sect{display:flex;justify-content:space-between;align-items:baseline;gap:16px;font-size:11px;font-weight:800;letter-spacing:.2em;padding-bottom:10px;border-bottom:2px solid var(--txt);margin-bottom:22px;break-after:avoid}
+.sect .yr{font-weight:600;color:var(--mut);letter-spacing:.1em;flex-shrink:0}
 .miles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:44px}
 .miles .m{padding:18px 16px 16px;position:relative;break-inside:avoid}
 .miles .m.hero{background:var(--hero);color:var(--paper)}
@@ -78,7 +79,9 @@ body{background:var(--paper);font-family:var(--sans);color:var(--txt);-webkit-fo
 .gcard{padding:24px 26px 22px;border:1px solid var(--faint);break-inside:avoid}
 .sub{font-size:10px;color:var(--mut);margin-bottom:14px;line-height:1.75}
 .claim{font-size:11px;font-weight:700;margin-bottom:10px;line-height:1.6;break-after:avoid}
-.wrap{position:relative;height:280px}.ch{height:280px}
+/* 图区自然高：svg width:100%+height:auto 自适应（与预览一致）；
+   写死 280px 会在短图/空数据时留出成片卡片底部空白（2026-09-08 实测） */
+.ch{min-height:40px}
 svg text{font-family:var(--sans)}
 .srcline{font-size:8px;font-weight:600;letter-spacing:.1em;color:var(--faint);margin-top:10px;line-height:1.6}
 .foot{margin-top:52px;padding-top:16px;border-top:2px solid var(--txt);display:grid;grid-template-columns:1fr 1.55fr .85fr;gap:26px;font-size:8px;font-weight:600;letter-spacing:.08em;color:var(--mut);break-inside:avoid}

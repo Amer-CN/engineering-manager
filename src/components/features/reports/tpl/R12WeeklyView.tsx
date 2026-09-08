@@ -28,10 +28,10 @@ const R12WeeklyView: React.FC<Props> = ({ data }) => {
   return (
     <div className="w-full" style={{ background: PALM.data2, padding: '40px 0' }}>
       <div style={{ maxWidth: 1080, margin: '0 auto', background: PALM.bg, padding: '60px 68px 64px' }}>
-        {/* 节标题 */}
-        <div style={{ fontSize: 14, fontWeight: 800, letterSpacing: '.2em', paddingBottom: 10, borderBottom: `2px solid ${PALM.txt}`, marginBottom: 22, color: PALM.txt }}>
-          {data.title}
-          <span style={{ float: 'right', fontWeight: 600, color: PALM.mut, letterSpacing: '.1em', fontSize: 12 }}>{data.period}</span>
+        {/* 节标题：flex 两端对齐——float:right 不撑开父高度，标题换行时期间文字会压到下划线上（2026-09-08 实测） */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 16, fontSize: 14, fontWeight: 800, letterSpacing: '.2em', paddingBottom: 10, borderBottom: `2px solid ${PALM.txt}`, marginBottom: 22, color: PALM.txt }}>
+          <span>{data.title}</span>
+          <span style={{ fontWeight: 600, color: PALM.mut, letterSpacing: '.1em', fontSize: 12, flexShrink: 0 }}>{data.period}</span>
         </div>
         {/* 顶部速览条：两个数 */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 10, marginBottom: 44 }}>
