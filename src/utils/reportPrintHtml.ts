@@ -65,7 +65,7 @@ export interface ReportPrintCharts {
 export interface ReportPrintSection {
   /** 小节名（来自 "## "/"### " 行，右对齐宽字距）；引言节为 null（无小节名） */
   name: string | null
-  /** 结论句标题（该节首个非列表/非表格段落行；无则为空串，不渲染） */
+  /** 结论句标题（该节列表/表格出现之前的首个散文行；无则为空串，不渲染） */
   heading: string
   /** 正文行：段落原样；"- "/"* " 开头 = 列表项；行首 | 连续块 = 表格（渲染时分组） */
   lines: string[]
@@ -98,6 +98,7 @@ const MONO_LAD = ['#1C1C1A', '#4A4944', '#8F8E88', '#B0AFA9', '#D8D7D1']
 const PALM_SER = ['#43593B', '#D4A017', '#77835A', '#F2D17E', '#ACAD79', '#58402E']
 
 const UL_RE = /^[-*]\s+(.*)/
+const OL_RE = /^(\d+)\.\s+(.*)$/
 const TABLE_LINE_RE = /^\|/
 
 /** 行内标记 → HTML（输入须已转义）：**粗体** / *斜体*，与 templateMarkup 打印路径同规则 */
@@ -154,11 +155,12 @@ function renderTable(t: ReportPrintTable): string {
  * - "## " / "### " 行 = 小节标题，其后续非井号行归该节；
  * - "#### " 行 = 子条，井号不裸露，并入节内容作加粗行（**子条**）；
  * - 首个 ## 之前的行 = 引言节（name = null，无小节名）；
- * - "- "/"* " 开头行 = 列表项（保留记号原样，渲染时并入 <ul>）；
+ * - "- "/"* " 开头行 = 列表项、"1. " 编号行 = 有序列表项（保留记号原样，渲染时并入
+ *   <ul>/<ol>；编号行属列表，不提升为结论句）；
  * - 行首 | 的连续行块 = 表格（渲染时整块转细线表；孤行不成表）；
  * - 节名「值得记住的数字」：lines 中匹配「- 值｜标签｜小注」的行解析为该节
  *   bigNumbers（大数字块；小注缺省 ''，全 trim）并从 lines 移除；不匹配行保持普通行；
- * - 每节首个非列表/非表格行提为结论句 heading（内容不丢，仍渲染为标题）；
+ * - 每节「列表/表格出现之前的首个散文行」提为结论句 heading（纯列表/表格节无 claim，内容不丢）；
  * - 空行剔除；无任何 ## 时自然兜底为单节（全部行进该节，不丢内容）。
  */
 export function parseReportMarkdown(markdown: string): {
@@ -231,12 +233,16 @@ export function parseReportMarkdown(markdown: string): {
     let headingTaken = false
     const isNumbersSection = rs.name === '值得记住的数字'
     const bigNumbers: ReportPrintBigNumber[] = []
+    let sawBlock = false // 列表/表格已出现：其后散文不再提升（claim 仅认先行散文）
     for (const line of rs.lines) {
-      if (!headingTaken && !UL_RE.test(line) && !TABLE_LINE_RE.test(line)) {
-        heading = line // 首个非列表/非表格行 → 结论句标题
+      const isList = UL_RE.test(line) || OL_RE.test(line)
+      const isTable = TABLE_LINE_RE.test(line)
+      if (!headingTaken && !sawBlock && !isList && !isTable) {
+        heading = line // 列表/表格出现之前的首个散文行 → 结论句标题
         headingTaken = true
         continue
       }
+      if (isList || isTable) sawBlock = true
       const bn = isNumbersSection ? BIG_NUMBER_RE.exec(line) : null
       if (bn) {
         bigNumbers.push({ value: bn[1].trim(), label: bn[2].trim(), sub: (bn[3] ?? '').trim() })
@@ -255,14 +261,15 @@ export function parseReportMarkdown(markdown: string): {
   return { title, period, sections }
 }
 
-/** 正文行 → HTML："- " 连续行并入 <ul>；行首 | 连续块（≥2 行）转细线表，孤行按段落；每行全转义 */
+/** 正文行 → HTML："- "/"* " 连续行并入 <ul>、"1. " 编号行并入 <ol>（start 取首条原始编号保真；
+ *  类型切换时闭合重开，顺序保持）；行首 | 连续块（≥2 行）转细线表，孤行按段落；每行全转义 */
 function renderLines(lines: string[]): string {
   const out: string[] = []
-  let inList = false
+  let listTag: 'ul' | 'ol' | null = null
   const closeList = () => {
-    if (inList) {
-      out.push('</ul>')
-      inList = false
+    if (listTag) {
+      out.push(`</${listTag}>`)
+      listTag = null
     }
   }
   let i = 0
@@ -282,13 +289,22 @@ function renderLines(lines: string[]): string {
       }
       continue
     }
-    const m = UL_RE.exec(line)
-    if (m) {
-      if (!inList) {
+    const ul = UL_RE.exec(line)
+    const ol = ul ? null : OL_RE.exec(line)
+    if (ul) {
+      if (listTag !== 'ul') {
+        closeList()
         out.push('<ul>')
-        inList = true
+        listTag = 'ul'
       }
-      out.push(`<li>${inlineToHtml(escapeHtml(m[1]))}</li>`)
+      out.push(`<li>${inlineToHtml(escapeHtml(ul[1]))}</li>`)
+    } else if (ol) {
+      if (listTag !== 'ol') {
+        closeList()
+        out.push(`<ol start="${ol[1]}">`) // 编号保真：start 取 AI 原始编号，后续同列项由浏览器递增
+        listTag = 'ol'
+      }
+      out.push(`<li>${inlineToHtml(escapeHtml(ol[2]))}</li>`)
     } else {
       closeList()
       out.push(`<p>${inlineToHtml(escapeHtml(line))}</p>`)
@@ -496,6 +512,11 @@ export function buildReportPrintHtml(
   const at = escapeHtml(meta.takenAt)
   const footL = escapeHtml(meta.footerLeft)
 
+  /* 书脊字号自适应（P2）：固定 56px 时长标题竖排超 A4 页高（~1123px），尾字被页底
+     裁掉且与 .b 底部标签同列叠印（fixed 书脊逐页重复）。900 = 页高减 .b 标签区预算；
+     按转义前 title 长度算；短标题（≤16 字）floor(900/16)=56 仍 56px，零回归。 */
+  const spineFs = Math.max(24, Math.min(56, Math.floor(900 / Math.max(title.length, 1))))
+
   const body = sections
     .map((s, i) => {
       const first = i === 0 ? ' first' : ''
@@ -580,10 +601,10 @@ export function buildReportPrintHtml(
     display:flex;justify-content:center;padding:56px 24px}
   .sheet{width:1080px;max-width:1080px;display:grid;grid-template-columns:110px 1fr}
 
-  /* ── 书脊：竖排大标题 + 底部竖排小字 ── */
+  /* ── 书脊：竖排大标题 + 底部竖排小字（字号按标题长度自适应，见 spineFs）── */
   .spine{position:relative;border-right:1px solid var(--ink)}
   .spine .t{position:absolute;top:0;left:14px;writing-mode:vertical-rl;
-    font-weight:900;font-size:56px;line-height:1.1;letter-spacing:.06em;white-space:nowrap}
+    font-weight:900;font-size:${spineFs}px;line-height:1.1;letter-spacing:.06em;white-space:nowrap}
   .spine .b{position:absolute;bottom:0;left:48px;writing-mode:vertical-rl;
     font-size:12px;font-weight:700;letter-spacing:.26em;color:var(--muted)}
 
@@ -650,7 +671,10 @@ export function buildReportPrintHtml(
        @page 左边距 12mm + 书脊 24mm + 空隙 6mm，正文 .content 让位 30mm。 */
     .spine{position:fixed;left:0;top:0;bottom:0;width:24mm;border-right:1px solid var(--ink)}
     .content{padding-left:30mm}
-    .tophead,.section,.stats,.foot,.chartblk{break-inside:avoid;page-break-inside:avoid}
+    /* 分页：.section 整节禁拆会让大节推下页、前一页大片空白（半空页），故可拆；
+       表格 .tablewrap 保持原子（行线不从中间断）；.secthead/.claim 后紧跟内容防孤儿标题 */
+    .tophead,.stats,.foot,.chartblk,.tablewrap{break-inside:avoid;page-break-inside:avoid}
+    .secthead,.claim{break-after:avoid;page-break-after:avoid}
   }
 </style>
 </head>
@@ -692,6 +716,11 @@ export function buildChartReportPrintHtml(data: ChartReportData, meta: ReportPri
   const src = escapeHtml(meta.source)
   const at = escapeHtml(meta.takenAt)
   const footL = escapeHtml(meta.footerLeft)
+
+  /* 书脊字号自适应（P2 镜像，同 buildReportPrintHtml 公式）：固定 56px 时长标题竖排超
+     A4 页高（~1123px），尾字被页底裁掉且与 .b 底部标签同列叠印（fixed 书脊逐页重复）。
+     900 = 页高减 .b 标签区预算；按转义前 title 长度算；短标题（≤16 字）仍 56px 零回归。 */
+  const spineFs = Math.max(24, Math.min(56, Math.floor(900 / Math.max((data.title || '运营报告').length, 1))))
 
   const body = data.sections
     .map((s, i) => {
@@ -767,10 +796,10 @@ export function buildChartReportPrintHtml(data: ChartReportData, meta: ReportPri
     display:flex;justify-content:center;padding:56px 24px}
   .sheet{width:1080px;max-width:1080px;display:grid;grid-template-columns:110px 1fr}
 
-  /* ── 书脊：竖排大标题 + 底部竖排小字 ── */
+  /* ── 书脊：竖排大标题 + 底部竖排小字（字号按标题长度自适应，见 spineFs）── */
   .spine{position:relative;border-right:1px solid var(--ink)}
   .spine .t{position:absolute;top:0;left:14px;writing-mode:vertical-rl;
-    font-weight:900;font-size:56px;line-height:1.1;letter-spacing:.06em;white-space:nowrap}
+    font-weight:900;font-size:${spineFs}px;line-height:1.1;letter-spacing:.06em;white-space:nowrap}
   .spine .b{position:absolute;bottom:0;left:48px;writing-mode:vertical-rl;
     font-size:12px;font-weight:700;letter-spacing:.26em;color:var(--mut)}
 
@@ -826,7 +855,10 @@ export function buildChartReportPrintHtml(data: ChartReportData, meta: ReportPri
     .sheet{width:100%;max-width:none;display:block}
     .spine{position:fixed;left:0;top:0;bottom:0;width:24mm;border-right:1px solid var(--ink)}
     .content{padding-left:30mm}
-    .tophead,.section,.stats,.foot,.chartblk{break-inside:avoid;page-break-inside:avoid}
+    /* 分页：.section 整节禁拆会让大节推下页、前一页大片空白（半空页），故可拆；
+       表格 .tablewrap 保持原子（行线不从中间断）；.secthead/.claim 后紧跟内容防孤儿标题 */
+    .tophead,.stats,.foot,.chartblk,.tablewrap{break-inside:avoid;page-break-inside:avoid}
+    .secthead,.claim{break-after:avoid;page-break-after:avoid}
   }
 </style>
 </head>
