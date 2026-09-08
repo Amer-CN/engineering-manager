@@ -105,7 +105,7 @@ const TranscriptionParams: React.FC<TranscriptionParamsProps> = ({
         </div>
         {engine === 'moss-transcribe-0.9b' && (
           <p className="text-micro text-[color:var(--fg-3)] mt-1.5">
-            MOSS 一步完成转写+说话人分离（2026-09-09 实测方言地名全对）；CPU 较慢，长音频按 10 分钟切块、跨块说话人编号暂不保证全局一致。
+            MOSS 一步完成转写+说话人分离，方言地名实测更稳（2026-09-09 真实川话会议 A/B）。注意：走 CPU 较慢（10 分钟音频约 1 小时），适合短音频或方言精校；超 10 分钟自动切块，跨块说话人编号暂不保证全局一致。
           </p>
         )}
       </div>

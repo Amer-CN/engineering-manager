@@ -139,7 +139,10 @@ public class MossTranscribeEngine : ISttEngine
     {
         var engineDir = GetEngineDir() ?? throw new InvalidOperationException("asr-engine/moss 未找到");
         var exePath = Path.Combine(engineDir, "moss-transcribe.exe");
-        var ggufPath = Path.Combine(engineDir, "moss-transcribe-q8_0.gguf");
+        // GGUF 参数必须走 ASCII 安全路径：moss-transcribe.exe 的窄字符 fopen 在中文路径下打不开
+        // （2026-09-09 冒烟实测：E:\测试\... 传参 → gguf_init_from_file 失败）。
+        // exe 路径本身由 Process.Start 宽字符 API 启动，不受影响；wav 路径在 %TEMP%（ASCII）下天然安全。
+        var ggufPath = Path.Combine(GetAsciiEngineDir(), "moss-transcribe-q8_0.gguf");
 
         return await SttMutexGuard.WithMutexAsync(
             _osMutex, _instanceLock, () => _isRunning, v => _isRunning = v,
@@ -284,6 +287,43 @@ public class MossTranscribeEngine : ISttEngine
             dir = Path.GetDirectoryName(dir);
         }
         return null;
+    }
+
+    private static string? _asciiDirCache;
+
+    /// <summary>
+    /// 引擎目录的 ASCII 安全视图：%TEMP% 下的 junction（mklink /J，免管理员）。
+    /// 子进程参数里出现非 ASCII 路径时，窄字符 CRT 按代码页解析会得到乱码路径——
+    /// GGUF 参数一律经此 junction 传给 moss-transcribe.exe。
+    /// </summary>
+    public static string GetAsciiEngineDir()
+    {
+        if (_asciiDirCache != null) return _asciiDirCache;
+        var engineDir = GetEngineDir() ?? throw new InvalidOperationException("asr-engine/moss 未找到");
+
+        var link = Path.Combine(Path.GetTempPath(), "moss-engine-ascii");
+        try
+        {
+            if (!Directory.Exists(link))
+            {
+                var psi = new ProcessStartInfo("cmd", $"/c mklink /J \"{link}\" \"{engineDir}\"")
+                {
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                };
+                using var p = Process.Start(psi);
+                p?.WaitForExit(5000);
+            }
+            // 验证 junction 确实能看到模型文件（junction 创建失败/目标移动时回退原路径）
+            if (File.Exists(Path.Combine(link, "moss-transcribe-q8_0.gguf")))
+            {
+                _asciiDirCache = link;
+                return link;
+            }
+        }
+        catch { /* junction 失败回退原路径 */ }
+        _asciiDirCache = engineDir;
+        return engineDir;
     }
 
     private static async Task CutWavAsync(string src, double startSec, int lenSec, string dst, CancellationToken ct)
