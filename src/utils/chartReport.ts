@@ -341,6 +341,19 @@ export function buildTrendSvg(points: ChartTrendPoint[]): string {
 }
 
 /**
+ * SVG text 无自动换行，超出 viewBox 的部分被画布硬裁（2026-09-08 压力实测：
+ * 30 字符类目名在图例与条形图两侧丢字）。按字符宽度估算（CJK 全角 = cjk 单位，
+ * 其余 = ascii 单位），超宽截断补 …。仅用于画布内单行标签。
+ */
+function fitSvgText(name: string, maxUnits: number, cjk: number, ascii: number): string {
+  const width = (s: string) => [...s].reduce((n, ch) => n + (ch.charCodeAt(0) > 0x2e7f ? cjk : ascii), 0)
+  if (width(name) <= maxUnits) return name
+  let s = name
+  while (s.length > 1 && width(s) + ascii > maxUnits) s = s.slice(0, -1)
+  return s + '…'
+}
+
+/**
  * 方阵（官方 glance dot waffle 参数：COLS=10 / CELL=21 / R=7.5 / X0=8 / Y0=10），
  * 每点 = 1%；点位分配与 reportPrintHtml.buildWaffleSvg 同口径（round + 封顶 100 +
  * 余量补「其他」+ 超量底注）；图例 = 色点 + 名称 + 特大百分比。
@@ -394,7 +407,7 @@ export function buildChartWaffleSvg(rows: ChartNamedRow[]): string {
     const y = 32 + g * PITCH
     parts.push(`<circle cx="246" cy="${y}" r="5" fill="${r.color}"/>`)
     parts.push(
-      `<text x="258" y="${y - 8}" font-size="10" font-weight="600" letter-spacing=".08em" fill="${PORCELAIN_INK.lab}">${escapeHtml(r.name)}</text>`,
+      `<text x="258" y="${y - 8}" font-size="10" font-weight="600" letter-spacing=".08em" fill="${PORCELAIN_INK.lab}">${escapeHtml(fitSvgText(r.name, 116, 10, 5.5))}</text>`,
     )
     parts.push(
       `<text x="258" y="${y + 22}" font-size="30" font-weight="800" fill="${HERO}">${r.pct}%</text>`,
@@ -412,13 +425,14 @@ export function buildChartWaffleSvg(rows: ChartNamedRow[]): string {
 
 /**
  * 横向条形（basics C1 tick rows 骨架，参数同 reportPrintHtml.buildTopBarsSvg：
- * X0=126 / BARMAX=380 / PITCH=36 / BH=10，viewBox 620）。
+ * X0=198 / BARMAX=330 / 标签区 190 / PITCH=36 / BH=10，viewBox 620）。
+ * 标签区 190 = 118 旧值在 11px 字号下容不下真实类目名（压力实测左侧丢字）后加宽。
  * 色板 porcelain 且明度=数值（值越大色越深，按值排名取 rampColor）；
  * 条长严格正比（max 守卫：0/负值条宽 0 但名称数值仍显）。纯静态、name 全转义。
  */
 export function buildChartBarsSvg(rows: ChartNamedRow[]): string {
-  const X0 = 126
-  const BARMAX = 380
+  const X0 = 198
+  const BARMAX = 330
   const PITCH = 36
   const BH = 10
   const max = rows.length > 0 ? Math.max(...rows.map((r) => r.value)) : 0
@@ -436,7 +450,7 @@ export function buildChartBarsSvg(rows: ChartNamedRow[]): string {
   rows.forEach((r, i) => {
     const y = 12 + i * PITCH
     parts.push(
-      `<text x="118" y="${y + 9}" text-anchor="end" font-size="11" font-weight="600" letter-spacing=".06em" fill="${PORCELAIN_INK.lab}">${escapeHtml(r.name)}</text>`,
+      `<text x="190" y="${y + 9}" text-anchor="end" font-size="11" font-weight="600" letter-spacing=".06em" fill="${PORCELAIN_INK.lab}">${escapeHtml(fitSvgText(r.name, 186, 11, 6))}</text>`,
     )
     parts.push(
       `<line x1="${X0}" y1="${y + 5}" x2="${X0 + BARMAX}" y2="${y + 5}" stroke="${PORCELAIN_INK.grid}" stroke-width="1"/>`,

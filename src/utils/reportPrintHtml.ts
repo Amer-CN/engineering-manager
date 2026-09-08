@@ -276,6 +276,19 @@ function renderStats(nums: ReportPrintBigNumber[]): string {
 }
 
 /**
+ * SVG text 无自动换行，超出 viewBox 的部分被画布硬裁（2026-09-08 压力实测：
+ * 30 字符类目名在图例与条形图两侧丢字）。按字符宽度估算（CJK 全角 = cjk 单位，
+ * 其余 = ascii 单位），超宽截断补 …。仅用于画布内单行标签。与 chartReport 同名助手同口径。
+ */
+function fitSvgText(name: string, maxUnits: number, cjk: number, ascii: number): string {
+  const width = (s: string) => [...s].reduce((n, ch) => n + (ch.charCodeAt(0) > 0x2e7f ? cjk : ascii), 0)
+  if (width(name) <= maxUnits) return name
+  let s = name
+  while (s.length > 1 && width(s) + ascii > maxUnits) s = s.slice(0, -1)
+  return s + '…'
+}
+
+/**
  * 发票状态方阵（报告附图）：100 点方阵（10×10，每点 = 1%）静态 SVG 字符串。
  * 版式参数转写自官方 glance-gallery dot waffle（COLS=10 / CELL=21 / R=7.5 / X0=8 / Y0=10）；
  * 图例 = 色点 + 名称小字（宽字距）+ 特大百分比（report-04 排版层级：30px 等宽）。
@@ -331,7 +344,7 @@ export function buildWaffleSvg(rows: ReportPrintWaffleRow[]): string {
     const y = 32 + g * PITCH
     parts.push(`<circle cx="246" cy="${y}" r="5" fill="${r.color}"/>`)
     parts.push(
-      `<text x="258" y="${y - 8}" font-size="10" font-weight="600" letter-spacing=".08em" fill="${MUTED}">${escapeHtml(r.name)}</text>`,
+      `<text x="258" y="${y - 8}" font-size="10" font-weight="600" letter-spacing=".08em" fill="${MUTED}">${escapeHtml(fitSvgText(r.name, 116, 10, 5.5))}</text>`,
     )
     parts.push(
       `<text x="258" y="${y + 22}" font-size="30" font-weight="800" fill="${INK}">${r.pct}%</text>`,
@@ -355,8 +368,8 @@ export function buildWaffleSvg(rows: ReportPrintWaffleRow[]): string {
  * 色板 = palm.ser 正本（与预览同系统，逐条按序取色）；纯静态：无 <script>、无动画、无随机数。
  */
 export function buildTopBarsSvg(rows: { name: string; value: number }[], unit: string): string {
-  const X0 = 126
-  const BARMAX = 380
+  const X0 = 198
+  const BARMAX = 330
   const PITCH = 36
   const BH = 10
   const max = rows.length > 0 ? Math.max(...rows.map((r) => r.value)) : 0
@@ -369,7 +382,7 @@ export function buildTopBarsSvg(rows: { name: string; value: number }[], unit: s
   rows.forEach((r, i) => {
     const y = 12 + i * PITCH
     parts.push(
-      `<text x="118" y="${y + 9}" text-anchor="end" font-size="11" font-weight="600" letter-spacing=".06em" fill="#6A6963">${escapeHtml(r.name)}</text>`,
+      `<text x="190" y="${y + 9}" text-anchor="end" font-size="11" font-weight="600" letter-spacing=".06em" fill="#6A6963">${escapeHtml(fitSvgText(r.name, 186, 11, 6))}</text>`,
     )
     parts.push(
       `<line x1="${X0}" y1="${y + 5}" x2="${X0 + BARMAX}" y2="${y + 5}" stroke="${GRID}" stroke-width="1"/>`,
