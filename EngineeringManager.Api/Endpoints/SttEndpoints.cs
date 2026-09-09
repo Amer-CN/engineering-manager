@@ -173,7 +173,7 @@ public static class SttEndpoints
                 var engineId = string.IsNullOrWhiteSpace(dto.Engine) ? "qwen3-asr-1.7b-gguf" : dto.Engine!;
                 if (!AllowedEngines.Contains(engineId))
                     return Common.Fail($"不支持的转写引擎: {engineId}，可选: {string.Join(", ", AllowedEngines)}");
-                if (engineId == MossTranscribeEngine.EngineId && !await new MossTranscribeEngine().IsAvailableAsync())
+                if (string.Equals(engineId, MossTranscribeEngine.EngineId, StringComparison.OrdinalIgnoreCase) && !await new MossTranscribeEngine().IsAvailableAsync())
                     return Common.Fail("MOSS 引擎未就绪：asr-engine/moss/ 缺少 moss-transcribe.exe 或 moss-transcribe-q8_0.gguf");
 
                 var now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");

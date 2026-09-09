@@ -120,7 +120,7 @@ public class SttWorker : IHostedService, IDisposable
                 throw new InvalidOperationException($"本地转写不可用: {SttEngineSelector.GetUnavailableReason()}");
 
             // 引擎选择：MOSS 一步成段（文本+说话人+时间戳，跳过分离）；其余走 Qwen3 两段式管线
-            var useMoss = job.Engine == MossTranscribeEngine.EngineId;
+            var useMoss = string.Equals(job.Engine, MossTranscribeEngine.EngineId, StringComparison.OrdinalIgnoreCase);
             var engine = new LlamaCppGgufEngine();
             if (!useMoss && !await engine.IsAvailableAsync())
                 throw new InvalidOperationException("ASR 模型文件缺失，请检查 asr-engine/model/ 目录");

@@ -72,7 +72,10 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ job, masked, onBack, on
   const [media, setMedia] = useState<{ url: string | null; duration: number; jobOverride: SttJobDetail | null }>({ url: null, duration: job.durationSec ?? 0, jobOverride: null })
   const curJob = media.jobOverride ?? job // 七期：保存成功后 getSttJob 拉新写 override，覆盖父组件 prop 渲染（不动 TranscriptionWorkspace）
   const { flat, paragraphs } = useMemo(() => {
-    const f = normalizeSegments((curJob.segments ?? []).filter(s => s.speaker > 0)) // 过滤 speaker 0（同 TranscriptEditor）后按行归一化；无有效段落 = 单人纯文本视图
+    // 过滤规则与 TranscriptEditor 一致（base 感知）：0 基数据 speaker 0 是真人放行；1 基历史数据的噪声簇 0 过滤
+    const segs = curJob.segments ?? []
+    const base = detectSpeakerBase(segs)
+    const f = normalizeSegments(segs.filter(s => s.speaker > 0 || (base === 0 && s.speaker === 0)))
     return { flat: f, paragraphs: groupIntoParagraphs(f) } // flat 与 paragraphs 同源（均归一化）：播放扫描索引与段落 segStartIdx 对齐
   }, [curJob.segments])
   const [playState, setPlayState] = useState<{ playing: boolean; time: number }>({ playing: false, time: 0 })

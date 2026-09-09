@@ -69,7 +69,6 @@ public class MossTranscribeEngine : ISttEngine
         if (!string.IsNullOrWhiteSpace(context))
             Console.WriteLine("[MossTranscribeEngine] 热词提示暂不支持（cpp CLI 无 --prompt 参数），本次忽略");
 
-        var sw = Stopwatch.StartNew();
         var durationSec = await AudioPreprocessor.GetDurationAsync(wavPath);
 
         // ≤CHUNK_SEC 单次直跑；超长切块（临时文件放 Path.GetTempPath 下的独立目录）
