@@ -12,16 +12,18 @@ namespace EngineeringManager.Api.Services.Stt;
 /// 同时输出文本、说话人标签（[S01]…，1 基）与时间戳，因此**跳过 sherpa 分离阶段**，
 /// 也不存在两段式管线的重叠巨段缺陷（2026-09-09 实测 #24 重叠率 35.8%）。
 ///
-/// 运行形态：asr-engine/moss/moss-transcribe.exe + moss-transcribe-q8_0.gguf（941MB，
-/// 官方参考实现逐字节一致）。安全机制沿用现役引擎纪律：
+/// 运行形态：asr-engine/moss/moss-transcribe.exe（CPU 基线）+ moss-transcribe-q8_0.gguf（941MB，
+/// 官方参考实现逐字节一致）；目录下若另有 moss-transcribe-vk.exe（Vulkan 后端，RX 580 实测
+/// 1.44×）则优先使用，Vulkan 失败自动回退 CPU。安全机制沿用现役引擎纪律：
 /// - 单实例：与 LlamaCppGgufEngine 共享同一 OS Mutex，整机同时只跑一个重推理
 /// - PreJob 资源门：启动子进程前实时检查 RAM/Commit/可用内存
 /// - 运行时保险丝：进程 RSS ≥8GB 或系统可用内存低于 SttSafetyChecker 运行时阈值 → 杀进程树
 /// - 取消/异常路径一律杀进程树（任务 23 僵尸进程事故教训）
 ///
-/// 长音频：解码器上下文 40960 token，单次最多 ~25 分钟音频；超过 CHUNK_SEC(600s)
-/// 即切块顺序推理（600s 块在 16GB 机实测峰值 RSS 5.6GB）。**跨块说话人编号暂不保证
-/// 全局一致**（[S01] 按块内出现顺序分配）——跨块对齐需声纹嵌入，留待后续。
+/// 长音频：切块顺序推理，CHUNK_SEC(120s)（2026-09-09 细分块实测：600s 块 CPU RTF 恶化到 6.6，
+/// 120s 块 RTF 1.24（Vulkan）/约 1.8（CPU），31.6 分钟会议 16 块可跑完）。
+/// **跨块说话人编号暂不保证全局一致**（[S01] 按块内出现顺序分配）——跨块对齐需声纹嵌入，
+/// 设计见 .work/moss/speaker-align-design.md，待拍板后实装。
 ///
 /// 热词：cpp CLI 暂无 --prompt 参数，context 参数目前被忽略（记录日志）。
 /// 2026-09-09 方言试金石（南充/富顺/自贡）：MOSS 无热词全对，Qwen3 把自贡写成「资贡」。
@@ -30,18 +32,34 @@ public class MossTranscribeEngine : ISttEngine
 {
     public const string EngineId = "moss-transcribe-0.9b";
 
-    /// <summary>切块长度（秒）。600s 块 ≈ 15k 音频 token + ~8k 输出，余量充足且峰值 RSS 实测 5.6GB。</summary>
-    private const int ChunkSec = 600;
+    /// <summary>CPU 版 exe 名（基线，必存在）。</summary>
+    public const string CpuExeName = "moss-transcribe.exe";
 
-    /// <summary>单块推理超时（分钟）。CPU RTF 实测 ~1.75，600s 块最坏 ~20 分钟，留 45 分钟余量。</summary>
+    /// <summary>
+    /// Vulkan 版 exe 名（可选加速后端）。部署：把 E:\moss-build\moss-transcribe.cpp\build-vulkan\
+    /// moss-transcribe.exe 复制为 asr-engine/moss/moss-transcribe-vk.exe（51.6MB，不入库）；
+    /// 运行时加载系统 vulkan-1.dll（RX 580 实测 1.44× CPU）。缺失即回退 CPU 版。
+    /// </summary>
+    public const string VulkanExeName = "moss-transcribe-vk.exe";
+
+    /// <summary>后端选择纯函数：有 Vulkan 版用 Vulkan，否则回退 CPU（单元测试覆盖）。</summary>
+    public static string SelectExeName(bool vkPresent) =>
+        vkPresent ? VulkanExeName : CpuExeName;
+
+    /// <summary>切块长度（秒）。120s 块实测 RTF 1.24（Vulkan）/约 1.8（CPU），600s 块超线性恶化到 6.6。</summary>
+    private const int ChunkSec = 120;
+
+    /// <summary>单块推理超时（分钟）。120s 块 CPU RTF ~1.8 最坏 ~4 分钟，45 分钟为超保守余量（沿用原值）。</summary>
     private const int PerChunkTimeoutMin = 45;
 
-    /// <summary>运行时进程 RSS 保险丝（字节）。q8_0 + 600s 上下文实测峰值 5.6GB，8GB 熔断留余量。</summary>
+    /// <summary>运行时进程 RSS 保险丝（字节）。q8_0 大上下文实测峰值 5.6GB（600s 块时代），8GB 熔断留余量。</summary>
     private const long ProcessRssFuseBytes = 8L * 1024 * 1024 * 1024;
 
     private const string MutexName = "Global\\EngineeringManagerSttEngine"; // 与 LlamaCppGgufEngine 共用：整机单重推理
     private static readonly Mutex _osMutex = new(false, MutexName);
     private static readonly object _instanceLock = new();
+    /// <summary>本次 RunSingleAsync 是否触发过运行时保险丝（供回退过滤器排除熔断重试）</summary>
+    private static volatile bool _lastFuseTripped;
     private static bool _isRunning;
 
     private static string? _engineDirCache;
@@ -133,20 +151,40 @@ public class MossTranscribeEngine : ISttEngine
         };
     }
 
-    /// <summary>单块推理：OS Mutex + PreJob 门 + 运行时保险丝（共享单实例纪律）。</summary>
+    /// <summary>单块推理：OS Mutex + PreJob 门 + 运行时保险丝（共享单实例纪律）。
+    /// Vulkan 版存在则优先；Vulkan 失败（起不来/非零退出）时回退 CPU 版重试一次。</summary>
     private async Task<string> RunSingleAsync(string chunkPath, CancellationToken ct)
     {
         var engineDir = GetEngineDir() ?? throw new InvalidOperationException("asr-engine/moss 未找到");
-        var exePath = Path.Combine(engineDir, "moss-transcribe.exe");
         // GGUF 参数必须走 ASCII 安全路径：moss-transcribe.exe 的窄字符 fopen 在中文路径下打不开
         // （2026-09-09 冒烟实测：E:\测试\... 传参 → gguf_init_from_file 失败）。
         // exe 路径本身由 Process.Start 宽字符 API 启动，不受影响；wav 路径在 %TEMP%（ASCII）下天然安全。
         var ggufPath = Path.Combine(GetAsciiEngineDir(), "moss-transcribe-q8_0.gguf");
 
+        var vkExe = Path.Combine(engineDir, VulkanExeName);
+        var useVk = File.Exists(vkExe);
+        var exePath = Path.Combine(engineDir, SelectExeName(useVk));
+
         return await SttMutexGuard.WithMutexAsync(
             _osMutex, _instanceLock, () => _isRunning, v => _isRunning = v,
             async () =>
             {
+                try
+                {
+                    return await RunChunkProcessAsync(exePath, ggufPath, chunkPath, ct);
+                }
+                catch (Exception ex) when (useVk && ShouldFallbackToCpu(ex, ct))
+                {
+                    // Vulkan 起不来（驱动/DLL 问题）或非零退出 → 兜底回退 CPU 版
+                    Console.WriteLine($"[MossTranscribeEngine] Vulkan 版失败（{ex.Message}），回退 CPU 版重试");
+                    return await RunChunkProcessAsync(Path.Combine(engineDir, CpuExeName), ggufPath, chunkPath, ct);
+                }
+            });
+    }
+
+    /// <summary>拉起单块子进程并等待完成（保险丝 + 超时）。失败抛 InvalidOperationException。</summary>
+    private static async Task<string> RunChunkProcessAsync(string exePath, string ggufPath, string chunkPath, CancellationToken ct)
+    {
                 var preJobRam = SttEngineSelector.GetRamUsagePercent();
                 var (preJobCommit, preJobCommitLimit) = SttEngineSelector.GetCommitInfo();
                 var preJobAvail = SttEngineSelector.GetAvailableMemoryBytes();
@@ -164,7 +202,7 @@ public class MossTranscribeEngine : ISttEngine
                     RedirectStandardError = true,
                     StandardOutputEncoding = Encoding.UTF8,
                     StandardErrorEncoding = Encoding.UTF8,
-                    WorkingDirectory = engineDir,
+                    WorkingDirectory = Path.GetDirectoryName(exePath) ?? ".",
                 };
 
                 using var process = new Process { StartInfo = psi };
@@ -181,6 +219,7 @@ public class MossTranscribeEngine : ISttEngine
                 }, ct);
 
                 // 运行时保险丝：RSS / 系统可用内存双检（5s 周期）
+                _lastFuseTripped = false;
                 using var fuseTimer = new System.Threading.Timer(_ =>
                 {
                     try
@@ -190,6 +229,7 @@ public class MossTranscribeEngine : ISttEngine
                         if (process.PrivateMemorySize64 >= ProcessRssFuseBytes
                             || SttEngineSelector.GetAvailableMemoryBytes() < SttSafetyChecker.RuntimeMinAvailableBytes)
                         {
+                            _lastFuseTripped = true;
                             KillProcessTree(process);
                         }
                     }
@@ -208,17 +248,23 @@ public class MossTranscribeEngine : ISttEngine
                 {
                     KillProcessTree(process);
                     if (!ct.IsCancellationRequested)
-                        throw new InvalidOperationException(
+                        throw new MossFuseException(
                             $"MOSS 单块推理超过 {PerChunkTimeoutMin} 分钟被保险丝终止（音频块 {ChunkSec}s 内）");
                     throw;
                 }
 
                 if (process.ExitCode != 0)
+                {
+                    // 运行时保险丝触发的 kill（非零退出且可用内存曾低于阈值）不进 CPU 回退——
+                    // CPU 版内存只会更高，重跑属纯浪费；同样标记为熔断
+                    if (_lastFuseTripped)
+                        throw new MossFuseException(
+                            $"moss-transcribe.exe 被资源保险丝终止后异常退出 (exit={process.ExitCode})");
                     throw new InvalidOperationException(
                         $"moss-transcribe.exe 失败 (exit={process.ExitCode}): {Truncate(stderrSb.ToString(), 500)}");
+                }
 
                 return Encoding.UTF8.GetString(stdoutMs.ToArray());
-            });
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -361,6 +407,28 @@ public class MossTranscribeEngine : ISttEngine
         }
         catch { /* 尽力而为 */ }
     }
+
+    /// <summary>
+    /// 资源保险丝熔断（超时 / RSS / 可用内存 kill）。与普通启动失败区分：
+    /// 熔断不进 Vulkan→CPU 回退（CPU 版内存只会更高，重跑纯浪费）。
+    /// </summary>
+    private sealed class MossFuseException(string message) : InvalidOperationException(message)
+    {
+    }
+
+    /// <summary>
+    /// 回退判定（回退过滤器的唯一真源，测试同源）：熔断异常、取消请求均不回退。
+    /// </summary>
+    internal static bool ShouldFallbackToCpu(Exception ex, CancellationToken ct) =>
+        ex is not MossFuseException
+        && ex is InvalidOperationException or System.ComponentModel.Win32Exception
+        && !ct.IsCancellationRequested;
+
+    internal static Exception CreateFuseExceptionForTest(string message) =>
+        new MossFuseException(message);
+
+    internal static bool IsFallbackExcluded(Exception ex) =>
+        !ShouldFallbackToCpu(ex, CancellationToken.None);
 
     private static string Truncate(string s, int max) =>
         string.IsNullOrWhiteSpace(s) ? "" : (s.Length <= max ? s : s[..max] + "…");

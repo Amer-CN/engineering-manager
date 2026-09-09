@@ -35,7 +35,7 @@ public class MossTranscribeEngineTests
     [Fact]
     public void ParseSegmentsJson_ChunkOffset_AddsOffsetToAllTimestamps()
     {
-        // 600s 切块：块内相对时间 0.28s → 全局 600.28s
+        // 切块偏移换算：块内相对时间 0.28s → 全局 600.28s
         var segs = MossTranscribeEngine.ParseSegmentsJson(RealSample, offsetSec: 600);
 
         Assert.Equal(600.28, segs[0].Start, 3);
@@ -84,5 +84,31 @@ public class MossTranscribeEngineTests
         // engine 列白名单依赖此常量字符串，改了会破坏存量任务/白名单
         Assert.Equal("moss-transcribe-0.9b", MossTranscribeEngine.EngineId);
         Assert.Equal(MossTranscribeEngine.EngineId, new MossTranscribeEngine().Name);
+    }
+
+    [Fact]
+    public void SelectExeName_VkPresent_UsesVulkanExe()
+    {
+        // 后端选择：asr-engine/moss/ 下存在 moss-transcribe-vk.exe → 优先 Vulkan
+        Assert.Equal("moss-transcribe-vk.exe", MossTranscribeEngine.SelectExeName(vkPresent: true));
+    }
+
+    [Fact]
+    public void SelectExeName_VkMissing_FallsBackToCpuExe()
+    {
+        // 无 Vulkan 版 → 回退 CPU 版（存量部署只有 moss-transcribe.exe，行为不变）
+        Assert.Equal("moss-transcribe.exe", MossTranscribeEngine.SelectExeName(vkPresent: false));
+    }
+
+    [Fact]
+    public void MossFuseException_IsInvalidOperationException_ButExcludedFromFallback()
+    {
+        // 熔断异常继承 InvalidOperationException（调用方现有 catch 不会漏），
+        // 但回退过滤器用 `ex is not MossFuseException` 把它排除在 Vulkan→CPU 重试之外——
+        // 超时/保险丝 kill 后 CPU 重跑必再熔断（内存只会更高），属纯浪费
+        Exception ex = MossTranscribeEngine.CreateFuseExceptionForTest("fuse");
+        Assert.True(ex is System.InvalidOperationException);
+        Assert.True(MossTranscribeEngine.IsFallbackExcluded(ex));
+        Assert.False(MossTranscribeEngine.IsFallbackExcluded(new System.InvalidOperationException("plain")));
     }
 }
