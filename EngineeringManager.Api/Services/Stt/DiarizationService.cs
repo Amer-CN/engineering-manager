@@ -16,7 +16,8 @@ namespace EngineeringManager.Api.Services.Stt;
 /// 管线（参数与沙箱原型 E:\moss-build\sandbox_ort_diar.py 一致）：
 /// 1. pyannote 分割：输入原始波形 (1,1,T) fp32（模型内部自带 mel），输出 (F,7) logits，
 ///    argmax 后查 powerset 映射（class0=静音，1..3=单人，4..6=两人组合）。
-///    帧数公式 F(T)=((T-251)/10-2)/3/3-8)/3+1（receptive_field_shift=270 样本/帧）。
+///    帧数公式 F(T) = floor(floor(floor(floor(T/10 - 251/10)/3 - 2/3)/3)/3 - 8/3) + 1
+///    （对应 ONNX 输出维度的四层下采样，receptive_field_shift=270 样本/帧；代码实现在 FrameCount）。
 ///    长音频按 ≤1800s 分块直喂，块间 10s 重叠，重叠帧取均值 ≥0.5 二值化拼接（无边界断裂）。
 /// 2. campplus 声纹：滑窗子段（1.5s 窗 / 1.0s 步长（0.5s 实测窗数过多，1.0s 归属精度等效且声纹耗时减半））逐窗 embedding（不支持整段一个
 ///    embedding——长段混多人会导致簇塌缩）。输入为 kaldi fbank 80 维（povey 窗 25ms/10ms、
