@@ -36,7 +36,7 @@ const ENGINE_OPTIONS = [
  * 引擎引导（分界线来自 2026-09-09 真实录音实测）：
  * - ≤10 分钟：MOSS 甜点区（质量最优：同音消歧零错、说话人轮次最细），约 1× 音频时长出结果
  * - 10-20 分钟：MOSS 速度超线性恶化开始明显，Qwen3 更稳
- * - >20 分钟：MOSS 实测不可用（31.6 分钟实测约 2.8 小时），Qwen3 是唯一可靠选项（GPU，约 0.45× 音频时长）
+ * - >20 分钟：MOSS 实测不可用（31.6 分钟实测约 2.8 小时），可用的选择是 Qwen3（GPU，约 0.45× 时长，质量稳）或 Para+sherpa（纯 CPU，约 0.15× 时长最快，但人名地名偶有丢失、同音词消歧弱于 Qwen3）——未实装，见下
  */
 const LONG_AUDIO_SEC = 10 * 60
 const VERY_LONG_AUDIO_SEC = 20 * 60
@@ -53,7 +53,7 @@ function engineGuidance(engine: string, durationSec: number | null): { tone: 'in
     if (engine === 'moss-transcribe-0.9b') {
       return { tone: 'warn', text: `本音频约 ${minutes} 分钟，属于长会议：MOSS 在此长度实测不可用（31 分钟音频约需 2.8 小时），请改用 Qwen3（实测 31 分钟约 14 分钟完成）。` }
     }
-    return { tone: 'info', text: `本音频约 ${minutes} 分钟（长会议）。Qwen3 是长录音唯一可靠引擎：GPU 加速约 0.45× 时长完成，热词可提升专有名词识别。` }
+    return { tone: 'info', text: `本音频约 ${minutes} 分钟（长会议）。Qwen3 走 GPU 约 0.45× 时长完成、热词提升专有名词识别，是长录音的稳妥默认选择。` }
   }
   if (durationSec > LONG_AUDIO_SEC) {
     if (engine === 'moss-transcribe-0.9b') {
