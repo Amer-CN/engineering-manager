@@ -36,6 +36,21 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
   const [numSpeakers, setNumSpeakers] = useState<number>(0) // 0=自动估计，不硬指定人数
   const [hotwords, setHotwords] = useState('')
   const [engine, setEngine] = useState('qwen3-asr-1.7b-gguf') // 转写引擎：qwen3=GPU 快；MOSS=方言优先 CPU
+  const [audioDurationSec, setAudioDurationSec] = useState<number | null>(null) // 已选音频时长（秒），用于引擎选择引导
+
+  // 读取已选音频时长（Audio 元素 metadata，不依赖后端）
+  const probeDuration = useCallback((file: File) => {
+    if (typeof URL === 'undefined' || !URL.createObjectURL) { setAudioDurationSec(null); return }
+    const url = URL.createObjectURL(file)
+    const el = new Audio()
+    el.preload = 'metadata'
+    el.onloadedmetadata = () => {
+      setAudioDurationSec(Number.isFinite(el.duration) && el.duration > 0 ? el.duration : null)
+      URL.revokeObjectURL(url)
+    }
+    el.onerror = () => { setAudioDurationSec(null); URL.revokeObjectURL(url) }
+    el.src = url
+  }, [])
 
   const [creating, setCreating] = useState(false)
   const [cancelling, setCancelling] = useState(false)
@@ -106,6 +121,7 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
   // 清除已选音频
   const handleClearInput = useCallback(() => {
     setSelectedFile(null)
+    setAudioDurationSec(null)
     setUploadedPath(null)
     setUploadProgress(0)
     setAudio(null)
@@ -135,6 +151,7 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
     const objectUrl = (typeof URL !== 'undefined' && URL.createObjectURL) ? URL.createObjectURL(file) : null
     setAudio(objectUrl)
     setSelectedFile(file)
+    probeDuration(file)
     setUploadedPath(null)
     setUploadProgress(0)
 
@@ -313,6 +330,7 @@ const TranscriptionWorkspace: React.FC<TranscriptionWorkspaceProps> = ({ onInges
             hotwords={hotwords}
             engine={engine}
             onEngineChange={setEngine}
+            audioDurationSec={audioDurationSec}
             onHotwordsChange={setHotwords}
             creating={creating}
             uploadedPath={uploadedPath}
