@@ -149,7 +149,8 @@ public class SttWorker : IHostedService, IDisposable
                 // MOSS 块内 [S01] 编号跨块不可信（#28 实测 63 块首段编号全同），多人任务先用
                 // DiarizationService 分离定说话人（与 Qwen 多人分支同款、用 job.Num_Speakers），
                 // 转写完成后按时间重叠回填。先分离后转写：分离失败能尽早暴露，不必先花 25 分钟转写。
-                // 单人任务（Is_Multi_Speaker != 1）本次不改，仍用 MOSS 原始标签（已知遗留）。
+                // 单人任务（Is_Multi_Speaker != 1）不跑分离：MOSS 仍会给出块内假说话人，
+                // 由下方统一归为说话人 1（与 Qwen 单人分支口径一致）。
                 List<SttSegment>? diaSegs = null;
                 if (job.Is_Multi_Speaker == 1)
                 {
@@ -187,6 +188,12 @@ public class SttWorker : IHostedService, IDisposable
                 // 分离段非空 → 按时间重叠回填说话人（纯函数，只改 Speaker，文本与时间戳不动）
                 if (diaSegs is { Count: > 0 })
                     SpeakerOverlapMapper.AssignByOverlap(result.Segments, diaSegs);
+                else if (job.Is_Multi_Speaker != 1)
+                {
+                    // 单人任务：MOSS 仍会按块内顺序给出 S01/S02… 的假说话人（#28 实测一块内可分出 4 个），
+                    // 用户已声明单人，一律归为说话人 1 —— 与 Qwen 单人分支的 Speaker = 1 口径一致。
+                    foreach (var seg in result.Segments) seg.Speaker = 1;
+                }
 
                 // 说话人归一化：回填/原始编号 → 全局连续 1 基（按首次出现顺序）——现有逻辑保持不变
                 SpeakerLabelNormalizer.Normalize(result.Segments);
