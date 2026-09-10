@@ -44,7 +44,7 @@ const VERY_LONG_AUDIO_SEC = 20 * 60
 function engineGuidance(engine: string, durationSec: number | null): { tone: 'info' | 'warn'; text: string } | null {
   if (durationSec == null) {
     if (engine === 'moss-transcribe-0.9b') {
-      return { tone: 'info', text: 'MOSS 一步完成转写+说话人分离，真实川话实测方言语音最稳（同音词消歧零错、说话人轮次最细）。细分块推理后长会议也可用（31.6 分钟会议实测约 24.7 分钟完成、约 0.78 倍时长，Vulkan）；追求速度请用 Qwen3。' }
+      return { tone: 'info', text: 'MOSS 真实川话实测方言语音最稳（同音词消歧零错、说话人轮次最细）；多人任务的说话人由分离管线先分离、MOSS 转写后按时间重叠回填（较纯转写略增耗时）。细分块推理后长会议也可用（31.6 分钟会议实测约 24.7 分钟完成、约 0.78 倍时长，Vulkan）；追求速度请用 Qwen3。' }
     }
     return { tone: 'info', text: 'Qwen3 走 GPU，速度最快（31 分钟会议约 14 分钟完成），长录音/长会议首选；支持热词提升人名地名准确率。10 分钟以内的川话短音频想要更高质量的说话人分离，可切换 MOSS。' }
   }

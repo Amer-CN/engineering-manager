@@ -145,17 +145,50 @@ public class SttWorker : IHostedService, IDisposable
 
             if (useMoss)
             {
-                // ═══ MOSS：一步成段（文本+说话人+时间戳），跳过 sherpa 分离阶段 ═══
-                // 长音频（>600s）由引擎内部切块顺序推理；跨块说话人编号暂不保证全局一致
-                //（块内 [S01] 按出现顺序分配，跨块声纹对齐留待后续迭代）。
-                UpdateProgress(db, job.Id, 15, "MOSS 转写中（含说话人分离）...");
+                // ═══ MOSS：文本与时间戳由 MOSS 一步产出；多人任务的说话人改由现役分离管线提供 ═══
+                // MOSS 块内 [S01] 编号跨块不可信（#28 实测 63 块首段编号全同），多人任务先用
+                // DiarizationService 分离定说话人（与 Qwen 多人分支同款、用 job.Num_Speakers），
+                // 转写完成后按时间重叠回填。先分离后转写：分离失败能尽早暴露，不必先花 25 分钟转写。
+                // 单人任务（Is_Multi_Speaker != 1）本次不改，仍用 MOSS 原始标签（已知遗留）。
+                List<SttSegment>? diaSegs = null;
+                if (job.Is_Multi_Speaker == 1)
+                {
+                    UpdateProgress(db, job.Id, 10, "加载说话人分离模型...");
+                    try
+                    {
+                        await SttModelManager.EnsureDiarizationModelsAsync();
+                        UpdateProgress(db, job.Id, 15, "说话人分离...");
+                        diaSegs = await new DiarizationService().DiarizeAsync(
+                            processedWav,
+                            job.Num_Speakers,
+                            ct: default);
+                        if (diaSegs.Count == 0)
+                        {
+                            Console.WriteLine("[SttWorker] MOSS 多人任务：说话人分离返回 0 段，保留 MOSS 原始标签继续转写");
+                            diaSegs = null;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // fail-soft：转写文本是主交付物，不因说话人分离失败丢掉整条任务；
+                        // 但绝不静默吞掉——日志必须含异常信息
+                        diaSegs = null;
+                        Console.WriteLine($"[SttWorker] MOSS 多人任务：说话人分离失败（{ex.GetType().Name}: {ex.Message}），保留 MOSS 原始标签继续转写");
+                    }
+                }
+
+                UpdateProgress(db, job.Id, 15, "MOSS 转写中...");
                 var mossEngine = new MossTranscribeEngine();
                 var progressRelay = new Progress<int>(p =>
                     UpdateProgress(db, job.Id, Math.Max(15, Math.Min(90, 15 + p * 75 / 100)), null));
                 result = await mossEngine.TranscribeAsync(processedWav, job.Hotwords, progressRelay, ct: default);
                 result.DurationSec = duration;
 
-                // 说话人归一化：MOSS 输出块内连续 1 基编号，跨块由归一器按首现顺序重排
+                // 分离段非空 → 按时间重叠回填说话人（纯函数，只改 Speaker，文本与时间戳不动）
+                if (diaSegs is { Count: > 0 })
+                    SpeakerOverlapMapper.AssignByOverlap(result.Segments, diaSegs);
+
+                // 说话人归一化：回填/原始编号 → 全局连续 1 基（按首次出现顺序）——现有逻辑保持不变
                 SpeakerLabelNormalizer.Normalize(result.Segments);
                 result.Text = string.Join("\n",
                     result.Segments.Select(s => $"【说话人{s.Speaker}】{s.Text}"));
