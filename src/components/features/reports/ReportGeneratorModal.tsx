@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Icon } from '@/components/ui/Icon'
 import ButtonLoader from '@/components/ui/ButtonLoader'
@@ -83,6 +83,16 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
   const [error, setError] = useState<string | null>(null)
   const [markdown, setMarkdown] = useState('')
   const [timestamp, setTimestamp] = useState('')
+  // 当前在途请求的控制器（用于用户主动取消生成）
+  const abortRef = useRef<AbortController | null>(null)
+
+  // 组件卸载时中止在途请求，避免弹窗关闭后后台继续生成
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort()
+      abortRef.current = null
+    }
+  }, [])
 
   // 构建请求
   const buildRequest = useCallback((): ReportRequest => {
@@ -112,13 +122,20 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
 
   // 生成报告
   const handleGenerate = useCallback(async () => {
+    const controller = new AbortController()
+    abortRef.current = controller
+
     setLoading(true)
     setError(null)
     setMarkdown('')
 
     const request = buildRequest()
-    const result = await generateReport(request)
+    const result = await generateReport(request, controller.signal)
 
+    // 用户已主动取消：丢弃本次结果，不设错误、不设 markdown（弹窗已由 handleCancel 处理状态）
+    if (controller.signal.aborted) return
+
+    abortRef.current = null
     setLoading(false)
     if (result.success && result.data) {
       setMarkdown(result.data.markdown)
@@ -129,6 +146,14 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
       setError(result.error ?? '生成失败，请重试')
     }
   }, [buildRequest])
+
+  // 用户主动取消生成：中止在途请求并回到待生成状态；thenClose 为真时同时关闭弹窗
+  const handleCancel = useCallback((thenClose: boolean) => {
+    abortRef.current?.abort()
+    abortRef.current = null
+    setLoading(false)
+    if (thenClose) onClose()
+  }, [onClose])
 
   // 构建请求
   const toggleAction = (action: string) => {
@@ -182,11 +207,11 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
                 </span>
               )}
             </div>
+            {/* 生成中点 X = 取消生成并关闭（中止在途请求）；非生成中直接关闭 */}
             <button
-              onClick={loading ? undefined : onClose}
-              disabled={loading}
-              aria-label={loading ? '生成中，暂不可关闭' : '关闭'}
-              className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors disabled:opacity-40"
+              onClick={loading ? () => handleCancel(true) : onClose}
+              aria-label={loading ? '取消生成并关闭' : '关闭'}
+              className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
               style={{ color: 'var(--muted)' }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'var(--sidebar-item-hover)'
@@ -360,22 +385,33 @@ const ReportGeneratorModal: React.FC<ReportGeneratorModalProps> = ({ onClose }) 
               </div>
             )}
 
-            {/* ── 生成按钮 ── */}
-            <button
-              onClick={handleGenerate}
-              disabled={loading}
-              className="w-full py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-opacity hover:opacity-90 disabled:opacity-50"
-              style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
-            >
-              {loading ? (
-                <ButtonLoader loading={true} loadingText="正在生成...">生成报告</ButtonLoader>
-              ) : (
-                <>
-                  <Icon name="Sparkles" size={16} />
-                  生成报告
-                </>
+            {/* ── 生成按钮（生成中旁附「取消生成」：中止请求并回到待生成状态，不关窗） ── */}
+            <div className="flex gap-2">
+              <button
+                onClick={handleGenerate}
+                disabled={loading}
+                className="w-full py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-opacity hover:opacity-90 disabled:opacity-50"
+                style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}
+              >
+                {loading ? (
+                  <ButtonLoader loading={true} loadingText="正在生成...">生成报告</ButtonLoader>
+                ) : (
+                  <>
+                    <Icon name="Sparkles" size={16} />
+                    生成报告
+                  </>
+                )}
+              </button>
+              {loading && (
+                <button
+                  onClick={() => handleCancel(false)}
+                  className="px-4 py-2.5 rounded-lg text-sm font-medium border transition-opacity hover:opacity-80"
+                  style={{ borderColor: 'var(--border)', color: 'var(--fg-2)' }}
+                >
+                  取消生成
+                </button>
               )}
-            </button>
+            </div>
 
             {/* ── 当前生效模型 ── */}
             <ActiveModelNote />

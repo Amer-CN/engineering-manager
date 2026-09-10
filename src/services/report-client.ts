@@ -28,11 +28,13 @@ export interface ReportResponse {
 
 /**
  * 生成报告
+ *
+ * signal：可选中止信号，用户取消生成时由弹窗层传入以中止在途请求
  */
-export function generateReport(request: ReportRequest): Promise<{
+export function generateReport(request: ReportRequest, signal?: AbortSignal): Promise<{
   success: boolean
   data?: ReportResponse
   error?: string
 }> {
-  return apiClient.post<ReportResponse>('/api/reports/generate', request)
+  return apiClient.post<ReportResponse>('/api/reports/generate', request, signal)
 }

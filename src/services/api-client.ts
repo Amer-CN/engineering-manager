@@ -86,12 +86,13 @@ async function get<T>(path: string, params?: Record<string, unknown>): Promise<A
 /**
  * POST 请求
  */
-async function post<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
+async function post<T>(path: string, body?: unknown, signal?: AbortSignal): Promise<ApiResponse<T>> {
   try {
     const resp = await fetch(`${API_BASE}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: body ? JSON.stringify(body) : undefined,
+      signal,
     });
     if (resp.status === 401) setToken(null);
     if (!resp.ok) {
