@@ -25,7 +25,11 @@ namespace EngineeringManager.Api.Services.Stt;
 /// **跨块说话人编号暂不保证全局一致**（[S01] 按块内出现顺序分配）——跨块对齐需声纹嵌入，
 /// 设计见 .work/moss/speaker-align-design.md，待拍板后实装。
 ///
-/// 热词：cpp CLI 暂无 --prompt 参数，context 参数目前被忽略（记录日志）。
+/// 热词（2026-09-10 接线）：context 非空 → 选用热词版 exe（--hotwords，cpp 补丁把值按
+/// 系统代码页→UTF-8 重编码后拼进解码 prompt「热词提示：…」）；热词版 exe 缺失或 context
+/// 为空 → 走无热词基线路径（与历史行为逐字节一致）。编码链路（探针实测，勿改）：
+/// C# 经 ProcessStartInfo.Arguments 传中文 → .NET/系统按 ACP(GBK) 编码窄 argv →
+/// exe 侧 argv_acp_to_utf8 转回 UTF-8，链路闭合；**C# 侧禁止预转 UTF-8**（双转乱码）。
 /// 2026-09-09 方言试金石（南充/富顺/自贡）：MOSS 无热词全对，Qwen3 把自贡写成「资贡」。
 /// </summary>
 public class MossTranscribeEngine : ISttEngine
@@ -42,9 +46,49 @@ public class MossTranscribeEngine : ISttEngine
     /// </summary>
     public const string VulkanExeName = "moss-transcribe-vk.exe";
 
-    /// <summary>后端选择纯函数：有 Vulkan 版用 Vulkan，否则回退 CPU（单元测试覆盖）。</summary>
-    public static string SelectExeName(bool vkPresent) =>
-        vkPresent ? VulkanExeName : CpuExeName;
+    /// <summary>
+    /// 热词版 exe 名（CPU 构建；cpp 补丁：--hotwords 值 ACP→UTF-8 + 拼 prompt）。
+    /// Vulkan 热词版尚未构建（待办：同补丁 -DMT_GGML_VULKAN=ON 重编），当前热词路径固定走 CPU 版。
+    /// </summary>
+    public const string HotwordsExeName = "moss-transcribe-hotwords.exe";
+
+    /// <summary>热词长度上限（字符）。超长截断并日志，防止挤占解码上下文窗口。</summary>
+    public const int HotwordsMaxChars = 500;
+
+    /// <summary>
+    /// 后端选择纯函数（单元测试覆盖）：热词 → 热词版 exe（基线 vk 版无 --hotwords，选它会静默丢热词）；
+    /// 否则有 Vulkan 版用 Vulkan，无则回退 CPU。
+    /// </summary>
+    public static string SelectExeName(bool vkPresent, bool hotwords = false) =>
+        hotwords ? HotwordsExeName : (vkPresent ? VulkanExeName : CpuExeName);
+
+    /// <summary>
+    /// 热词归一化纯函数（单元测试覆盖）：去首尾空白；空白/空 → null（走无热词路径）；
+    /// 超 HotwordsMaxChars 截断（truncated=true 供调用方日志）。
+    /// </summary>
+    public static string? NormalizeHotwords(string? context, out bool truncated)
+    {
+        truncated = false;
+        var s = context?.Trim();
+        if (string.IsNullOrEmpty(s)) return null;
+        if (s.Length > HotwordsMaxChars)
+        {
+            truncated = true;
+            s = s[..HotwordsMaxChars];
+        }
+        return s;
+    }
+
+    /// <summary>
+    /// 子进程命令行组装纯函数（单元测试覆盖）。热词非空时追加 --hotwords（引号包裹 + 内嵌引号转义）；
+    /// 空/null 时不带该参数，与历史命令行逐字节一致。热词值**原样传**（.NET 按系统 ACP 编码，
+    /// exe 侧转 UTF-8），此处禁止预转 UTF-8。
+    /// </summary>
+    public static string BuildArguments(string ggufPath, string chunkPath, string? hotwords) =>
+        $"transcribe \"{ggufPath}\" \"{chunkPath}\" --format json"
+        + (string.IsNullOrEmpty(hotwords)
+            ? ""
+            : $" --hotwords \"{hotwords.Replace("\"", "\\\"")}\"");
 
     /// <summary>切块长度（秒）。120s 块实测 RTF 1.24（Vulkan）/约 1.8（CPU），600s 块超线性恶化到 6.6。</summary>
     private const int ChunkSec = 120;
@@ -84,8 +128,19 @@ public class MossTranscribeEngine : ISttEngine
         if (!await IsAvailableAsync())
             throw new InvalidOperationException($"MOSS 模型文件缺失，请检查 {EngineId} 所需的 asr-engine/moss/ 目录");
 
-        if (!string.IsNullOrWhiteSpace(context))
-            Console.WriteLine("[MossTranscribeEngine] 热词提示暂不支持（cpp CLI 无 --prompt 参数），本次忽略");
+        // 热词归一化（整段一次）：截断日志 + 热词版 exe 缺失降级，避免逐块重复日志
+        var hotwords = NormalizeHotwords(context, out var truncated);
+        if (hotwords != null)
+        {
+            if (truncated)
+                Console.WriteLine($"[MossTranscribeEngine] 热词超过 {HotwordsMaxChars} 字，已截断（防挤占解码窗口）");
+            var engineDir = GetEngineDir();
+            if (engineDir == null || !File.Exists(Path.Combine(engineDir, HotwordsExeName)))
+            {
+                Console.WriteLine("[MossTranscribeEngine] 热词版 exe 缺失，本次回退无热词基线路径");
+                hotwords = null;
+            }
+        }
 
         var durationSec = await AudioPreprocessor.GetDurationAsync(wavPath);
 
@@ -110,7 +165,7 @@ public class MossTranscribeEngine : ISttEngine
                     chunks.Add((chunkPath, offset));
                 }
 
-                var all = await RunChunksAsync(chunks, durationSec, progress, ct);
+                var all = await RunChunksAsync(chunks, durationSec, hotwords, progress, ct);
                 return all;
             }
             finally
@@ -119,12 +174,13 @@ public class MossTranscribeEngine : ISttEngine
             }
         }
 
-        return await RunChunksAsync(chunks, durationSec, progress, ct);
+        return await RunChunksAsync(chunks, durationSec, hotwords, progress, ct);
     }
 
     private async Task<SttResult> RunChunksAsync(
         List<(string path, double offsetSec)> chunks,
         double durationSec,
+        string? hotwords,
         IProgress<int>? progress,
         CancellationToken ct)
     {
@@ -135,7 +191,7 @@ public class MossTranscribeEngine : ISttEngine
         {
             ct.ThrowIfCancellationRequested();
             var (path, offset) = chunks[i];
-            var json = await RunSingleAsync(path, ct);
+            var json = await RunSingleAsync(path, hotwords, ct);
             foreach (var seg in ParseSegmentsJson(json, offset))
                 allSegments.Add(seg);
             progress?.Report((i + 1) * 100 / chunks.Count);
@@ -153,7 +209,7 @@ public class MossTranscribeEngine : ISttEngine
 
     /// <summary>单块推理：OS Mutex + PreJob 门 + 运行时保险丝（共享单实例纪律）。
     /// Vulkan 版存在则优先；Vulkan 失败（起不来/非零退出）时回退 CPU 版重试一次。</summary>
-    private async Task<string> RunSingleAsync(string chunkPath, CancellationToken ct)
+    private async Task<string> RunSingleAsync(string chunkPath, string? hotwords, CancellationToken ct)
     {
         var engineDir = GetEngineDir() ?? throw new InvalidOperationException("asr-engine/moss 未找到");
         // GGUF 参数必须走 ASCII 安全路径：moss-transcribe.exe 的窄字符 fopen 在中文路径下打不开
@@ -162,8 +218,10 @@ public class MossTranscribeEngine : ISttEngine
         var ggufPath = Path.Combine(GetAsciiEngineDir(), "moss-transcribe-q8_0.gguf");
 
         var vkExe = Path.Combine(engineDir, VulkanExeName);
-        var useVk = File.Exists(vkExe);
-        var exePath = Path.Combine(engineDir, SelectExeName(useVk));
+        // 热词路径禁用 Vulkan：现只有 CPU 版热词 exe（见 HotwordsExeName 注释），
+        // 否则回退分支会用无 --hotwords 补丁的原版 exe 重试 → 静默丢热词
+        var useVk = hotwords == null && File.Exists(vkExe);
+        var exePath = Path.Combine(engineDir, SelectExeName(useVk, hotwords != null));
 
         return await SttMutexGuard.WithMutexAsync(
             _osMutex, _instanceLock, () => _isRunning, v => _isRunning = v,
@@ -171,19 +229,20 @@ public class MossTranscribeEngine : ISttEngine
             {
                 try
                 {
-                    return await RunChunkProcessAsync(exePath, ggufPath, chunkPath, ct);
+                    return await RunChunkProcessAsync(exePath, ggufPath, chunkPath, hotwords, ct);
                 }
                 catch (Exception ex) when (useVk && ShouldFallbackToCpu(ex, ct))
                 {
                     // Vulkan 起不来（驱动/DLL 问题）或非零退出 → 兜底回退 CPU 版
+                    // （热词路径不走 Vulkan：基线 vk 版无 --hotwords，useVk 恒 false，此 catch 不触发）
                     Console.WriteLine($"[MossTranscribeEngine] Vulkan 版失败（{ex.Message}），回退 CPU 版重试");
-                    return await RunChunkProcessAsync(Path.Combine(engineDir, CpuExeName), ggufPath, chunkPath, ct);
+                    return await RunChunkProcessAsync(Path.Combine(engineDir, CpuExeName), ggufPath, chunkPath, hotwords, ct);
                 }
             });
     }
 
     /// <summary>拉起单块子进程并等待完成（保险丝 + 超时）。失败抛 InvalidOperationException。</summary>
-    private static async Task<string> RunChunkProcessAsync(string exePath, string ggufPath, string chunkPath, CancellationToken ct)
+    private static async Task<string> RunChunkProcessAsync(string exePath, string ggufPath, string chunkPath, string? hotwords, CancellationToken ct)
     {
                 var preJobRam = SttEngineSelector.GetRamUsagePercent();
                 var (preJobCommit, preJobCommitLimit) = SttEngineSelector.GetCommitInfo();
@@ -195,7 +254,7 @@ public class MossTranscribeEngine : ISttEngine
                 var psi = new ProcessStartInfo
                 {
                     FileName = exePath,
-                    Arguments = $"transcribe \"{ggufPath}\" \"{chunkPath}\" --format json",
+                    Arguments = BuildArguments(ggufPath, chunkPath, hotwords),
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardOutput = true,

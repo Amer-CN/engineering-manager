@@ -100,6 +100,77 @@ public class MossTranscribeEngineTests
         Assert.Equal("moss-transcribe.exe", MossTranscribeEngine.SelectExeName(vkPresent: false));
     }
 
+    // ═══════════ 热词接线（2026-09-10，任务书 task-moss-hotwords-wire）═══════════
+
+    [Theory]
+    [InlineData(true, false, "moss-transcribe-vk.exe")]         // 无热词：有 vk → Vulkan（存量行为）
+    [InlineData(true, true, "moss-transcribe-hotwords.exe")]    // 热词路径固定走热词版（基线 vk 版无 --hotwords）
+    [InlineData(false, false, "moss-transcribe.exe")]           // 无热词：无 vk → CPU 基线（存量行为）
+    [InlineData(false, true, "moss-transcribe-hotwords.exe")]   // 无 vk 但有热词 → 热词版
+    public void SelectExeName_WithHotwords_PicksHotwordsExeOverVulkan(bool vkPresent, bool hotwords, string expected)
+    {
+        Assert.Equal(expected, MossTranscribeEngine.SelectExeName(vkPresent, hotwords));
+    }
+
+    [Fact]
+    public void NormalizeHotwords_EmptyOrNull_ReturnsNull()
+    {
+        // 空热词 → null → 不传 --hotwords，走无热词基线路径（与历史行为逐字节一致）
+        Assert.Null(MossTranscribeEngine.NormalizeHotwords(null, out _));
+        Assert.Null(MossTranscribeEngine.NormalizeHotwords("", out _));
+        Assert.Null(MossTranscribeEngine.NormalizeHotwords("   \t ", out _));
+    }
+
+    [Fact]
+    public void NormalizeHotwords_TrimsWhitespace()
+    {
+        var hw = MossTranscribeEngine.NormalizeHotwords("  谭俊、陈泽伟  ", out var truncated);
+        Assert.Equal("谭俊、陈泽伟", hw);
+        Assert.False(truncated);
+    }
+
+    [Fact]
+    public void NormalizeHotwords_OverLimit_TruncatesAndFlags()
+    {
+        var long500 = new string('词', MossTranscribeEngine.HotwordsMaxChars);
+        var hw500 = MossTranscribeEngine.NormalizeHotwords(long500, out var t500);
+        Assert.Equal(long500, hw500);
+        Assert.False(t500);                                     // 恰好 500 不截
+
+        var long501 = long500 + "超";
+        var hw501 = MossTranscribeEngine.NormalizeHotwords(long501, out var t501);
+        Assert.Equal(long500, hw501);
+        Assert.True(t501);                                      // 501 → 截到 500 + 标记
+    }
+
+    [Fact]
+    public void BuildArguments_WithoutHotwords_ByteIdenticalToLegacy()
+    {
+        // 空热词命令行与历史逐字节一致（任务书技术要点 3）
+        Assert.Equal(
+            "transcribe \"C:\\m\\a.gguf\" \"C:\\t\\0.wav\" --format json",
+            MossTranscribeEngine.BuildArguments("C:\\m\\a.gguf", "C:\\t\\0.wav", null));
+        Assert.Equal(
+            "transcribe \"C:\\m\\a.gguf\" \"C:\\t\\0.wav\" --format json",
+            MossTranscribeEngine.BuildArguments("C:\\m\\a.gguf", "C:\\t\\0.wav", ""));
+    }
+
+    [Fact]
+    public void BuildArguments_WithHotwords_AppendsFlag()
+    {
+        var args = MossTranscribeEngine.BuildArguments("C:\\m\\a.gguf", "C:\\t\\0.wav", "谭俊、陈泽伟");
+        Assert.EndsWith(" --hotwords \"谭俊、陈泽伟\"", args);
+        // 值原样传（.NET 按系统 ACP 编码，exe 侧 argv_acp_to_utf8 转回 UTF-8），禁止预转 UTF-8
+        Assert.StartsWith("transcribe \"C:\\m\\a.gguf\" \"C:\\t\\0.wav\" --format json --hotwords", args);
+    }
+
+    [Fact]
+    public void BuildArguments_WithEmbeddedQuote_EscapesIt()
+    {
+        var args = MossTranscribeEngine.BuildArguments("C:\\m\\a.gguf", "C:\\t\\0.wav", "甲\"乙方");
+        Assert.Contains("--hotwords \"甲\\\"乙方\"", args);
+    }
+
     [Fact]
     public void MossFuseException_IsInvalidOperationException_ButExcludedFromFallback()
     {
