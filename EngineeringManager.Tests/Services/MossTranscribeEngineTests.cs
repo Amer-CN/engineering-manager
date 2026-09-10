@@ -182,4 +182,161 @@ public class MossTranscribeEngineTests
         Assert.True(MossTranscribeEngine.IsFallbackExcluded(ex));
         Assert.False(MossTranscribeEngine.IsFallbackExcluded(new System.InvalidOperationException("plain")));
     }
+
+    // ═══════════ 分块改造（2026-09-10，任务书 task-moss-chunk-overlap：30s 块 + 切口对齐静音点）═══════════
+
+    [Fact]
+    public void FindSilenceCut_LoudSilenceLoud_ReturnsSilenceCenter()
+    {
+        // 合成 10s PCM（1kHz 采样，帧 50ms）：[0,4) 响 8000，[4,6) 静音 0，[6,10) 响 8000
+        const int rate = 1000;
+        var samples = new short[10 * rate];
+        for (var i = 0; i < samples.Length; i++)
+            samples[i] = (i < 4 * rate || i >= 6 * rate) ? (short)8000 : (short)0;
+
+        var cut = MossTranscribeEngine.FindSilenceCut(samples, rate, nominalOffsetInWindow: 5.0, searchSec: 3.0, frameSec: 0.05);
+
+        // 最低能量帧中心落在静音段中心（5s）±1 帧内
+        Assert.InRange(cut, 5.0 - 0.05, 5.0 + 0.05);
+    }
+
+    [Fact]
+    public void FindSilenceCut_NoSilenceConstantLoud_FallsBackToNominal()
+    {
+        // 全程等幅响：窗口内没有任何能量差 → 回退 nominal（不引入无意义的偏移）
+        const int rate = 1000;
+        var samples = new short[10 * rate];
+        Array.Fill(samples, (short)8000);
+
+        var cut = MossTranscribeEngine.FindSilenceCut(samples, rate, nominalOffsetInWindow: 5.0, searchSec: 3.0, frameSec: 0.05);
+
+        Assert.Equal(5.0, cut);
+    }
+
+    [Fact]
+    public void FindSilenceCut_ClippedWindow_StaysInRangeAndFindsSilence()
+    {
+        // 窗口越界裁剪：样本仅 1.2s，nominal=1.5、searchSec=3 → 搜索范围裁剪到 [0, 1.2]
+        const int rate = 1000;
+        var samples = new short[(int)(1.2 * rate)];
+        for (var i = 0; i < samples.Length; i++)
+            samples[i] = (i >= 400 && i < 600) ? (short)0 : (short)8000;   // 静音 [0.4, 0.6)
+
+        var cut = MossTranscribeEngine.FindSilenceCut(samples, rate, nominalOffsetInWindow: 1.5, searchSec: 3.0, frameSec: 0.05);
+
+        Assert.InRange(cut, 0, 1.2);                    // 裁剪后仍返回合法值：不超出实际样本范围
+        Assert.InRange(cut, 0.5 - 0.05, 0.5 + 0.05);    // 且仍找到静音中心 0.5 ±1 帧
+    }
+
+    [Fact]
+    public void BuildChunkPlan_ChunksAreSeamlessAndNonOverlapping()
+    {
+        // 抖动 snapFn：切口在 nominal ±3s 内乱跳，仍必须首尾相接、无缝且不重叠
+        static double Jitter(double nominal) => nominal + nominal % 7 - 3;
+        foreach (var dur in new[] { 240.0, 100.0, 62.0, 99.0, 1897.0 })
+        {
+            var plan = MossTranscribeEngine.BuildChunkPlan(dur, Jitter);
+
+            Assert.Equal(0, plan[0].offsetSec, 9);                                          // 首块从 0 起
+            for (var i = 0; i + 1 < plan.Count; i++)
+                Assert.Equal(plan[i + 1].offsetSec, plan[i].offsetSec + plan[i].lenSec, 9); // 块 i 末尾 == 块 i+1 起点
+            Assert.Equal(dur, plan[^1].offsetSec + plan[^1].lenSec, 9);                    // 末块收在音频末尾
+        }
+    }
+
+    [Fact]
+    public void BuildChunkPlan_EveryChunkLengthWithinLegalBounds()
+    {
+        // 每块长度 ∈ [MinChunkSec, ChunkSec + SnapSearchSec] = [10, 33]：
+        // 恒等 / 偏 +3s / 偏 -3s 三种 snap × 多种时长（含真机 1897s 与易碎尾的 35/62/64/99s）全部必须满足
+        foreach (var dur in new[] { 240.0, 100.0, 62.0, 99.0, 1897.0, 35.0, 64.0 })
+        {
+            foreach (var snap in new Func<double, double>[] { n => n, n => n + 3, n => n - 3 })
+            {
+                var plan = MossTranscribeEngine.BuildChunkPlan(dur, snap);
+                Assert.All(plan, c => Assert.InRange(c.lenSec, 10.0, 33.0));
+            }
+        }
+    }
+
+    [Fact]
+    public void BuildChunkPlan_IdentitySnap_DegeneratesToStrict30sSplit()
+    {
+        // 注入「强制返回 nominal」的假 snapFn：240s 退化为严格 30s 等分（8 块）
+        var plan = MossTranscribeEngine.BuildChunkPlan(240.0, n => n);
+
+        Assert.Equal(8, plan.Count);
+        Assert.Equal(new[] { 0, 30, 60, 90, 120, 150, 180, 210 }, plan.Select(c => (int)c.offsetSec));
+        Assert.All(plan, c => Assert.Equal(30.0, c.lenSec, 9));
+    }
+
+    [Fact]
+    public void SnapCutToSilence_SeeksToAudioWindow_FindsTargetSilenceNotFileOpening()
+    {
+        // 生产接线回归（2026-09-10 驳回修复）：窗口必须先 seek 到 nominal 附近再读——
+        // ReadWavHeader 返回时流停在 dataOffset（文件开头），若不 seek，每次读到的都是
+        // 文件头 6 秒，切口与真实静音点毫无关系，且不崩不越界、纯函数单测全测不出来。
+        // 布局：开头 [0,6) 全零强静音；目标静音 [28.5,29.5)；其余随机人声样噪声。
+        const int rate = 16000;
+        var samples = new short[40 * rate];
+        var openEnd = 6 * rate;
+        var silStart = (int)(28.5 * rate);
+        var silEnd = (int)(29.5 * rate);
+        var rnd = new Random(42);
+        for (var i = 0; i < samples.Length; i++)
+            samples[i] = (i < openEnd || (i >= silStart && i < silEnd)) ? (short)0 : (short)rnd.Next(2000, 12000);
+
+        var wav = Path.Combine(Path.GetTempPath(), $"moss_snap_regression_{Guid.NewGuid():N}.wav");
+        try
+        {
+            WriteTestWav(wav, samples, rate);
+
+            var cut = MossTranscribeEngine.SnapCutToSilence(wav, nominalSec: 30.0);
+
+            // 正向：命中 nominal≈30s 附近的静音点 [28.5, 29.5)（中点 29.0 ±0.5s）
+            Assert.True(Math.Abs(cut - 29.0) <= 0.5, $"切口应落在目标静音点 29.0s 附近，实际 {cut}");
+            // 负向约束：显式排除「读到文件开头」的失效形态——不 seek 时读到开头 6s 全零，
+            // FindSilenceCut 会回退 nominal（30.0）或返回开头静音的窗口映射值，都远离目标
+            Assert.True(cut > 20.0, $"切口落在文件开头说明窗口 seek 失效，实际 {cut}");
+            Assert.True(cut < 29.75, $"切口 ≈nominal 且远离目标静音：读到的是文件开头 0-6s（窗口 seek 失效），实际 {cut}");
+        }
+        finally
+        {
+            try { File.Delete(wav); } catch { /* 临时文件清理失败不致命 */ }
+        }
+    }
+
+    /// <summary>手写规范 16k 单声道 s16 WAV（ReadWavHeader 可解析的最小 44 字节头），供生产接线回归测试用。</summary>
+    private static void WriteTestWav(string path, short[] samples, int sampleRate)
+    {
+        using var bw = new BinaryWriter(new FileStream(path, FileMode.Create, FileAccess.Write));
+        bw.Write("RIFF"u8);
+        bw.Write(36 + samples.Length * 2);
+        bw.Write("WAVE"u8);
+        bw.Write("fmt "u8);
+        bw.Write(16);
+        bw.Write((short)1);          // PCM
+        bw.Write((short)1);          // 单声道
+        bw.Write(sampleRate);
+        bw.Write(sampleRate * 2);    // byteRate
+        bw.Write((short)2);          // blockAlign
+        bw.Write((short)16);         // bitsPerSample
+        bw.Write("data"u8);
+        bw.Write(samples.Length * 2);
+        var bytes = new byte[samples.Length * 2];
+        Buffer.BlockCopy(samples, 0, bytes, 0, bytes.Length);
+        bw.Write(bytes);
+    }
+
+    [Fact]
+    public void IsSingleChunk_ThresholdIsChunkSecPlusOne_SameSemanticsAsLegacy()
+    {
+        // 短音频（≤31s = ChunkSec+1）单块直跑：原始 wav 整段直传、不切块——
+        // 分支语义与旧版一致（旧版为 ≤121s），仅阈值数字随块长变小
+        Assert.True(MossTranscribeEngine.IsSingleChunk(31));
+        Assert.True(MossTranscribeEngine.IsSingleChunk(20.5));
+        Assert.True(MossTranscribeEngine.IsSingleChunk(0));
+        Assert.False(MossTranscribeEngine.IsSingleChunk(31.01));
+        Assert.False(MossTranscribeEngine.IsSingleChunk(32));
+    }
 }
