@@ -90,6 +90,54 @@ describe('EditorialBars（编辑风横向条形）', () => {
     expect(screen.getByText('¥20')).toBeTruthy()
     expect(screen.getByText('¥0')).toBeTruthy()
   })
+
+  test('matchPrint：逐条取传入色、无轨道（panel-2 零命中）、数值 span 紧跟百分比宽填充 div', async () => {
+    const printData = [
+      { name: '材料费', value: 40, color: 'rgb(10, 125, 67)' },
+      { name: '劳务费', value: 20, color: 'rgb(63, 157, 107)' },
+      { name: '机械费', value: 10, color: 'rgb(123, 191, 154)' },
+    ]
+    const { container } = render(
+      <EditorialBars data={printData} formatValue={(n) => `¥${n}`} matchPrint />,
+    )
+    // mounted 触发 width 动画：等最大条到位（width: 75%）后再读内联样式断言
+    await waitFor(() => {
+      const done = Array.from(container.querySelectorAll<HTMLElement>('[data-bar]'))
+        .some((el) => el.getAttribute('style')?.includes('width: 75%'))
+      expect(done).toBe(true)
+    })
+    const bars = Array.from(container.querySelectorAll<HTMLElement>('[data-bar]'))
+    expect(bars.length).toBe(3)
+
+    // ① 逐条色：background 各等于传入色（不走 accentFirst，非 var(--fg-2)）
+    expect(bars[0].getAttribute('style')).toContain('background: rgb(10, 125, 67)')
+    expect(bars[1].getAttribute('style')).toContain('background: rgb(63, 157, 107)')
+    expect(bars[2].getAttribute('style')).toContain('background: rgb(123, 191, 154)')
+    bars.forEach((el) => expect(el.getAttribute('style')).not.toContain('var(--fg-2)'))
+
+    // ② 无轨道：容器内 var(--panel-2) 零命中
+    expect(container.innerHTML).not.toContain('var(--panel-2)')
+
+    // ③ 严格正比：width = scaleX*75%（40/20/10 → 75%/37.5%/18.75%），flexShrink: 0 防压缩失真
+    expect(bars[0].getAttribute('style')).toContain('width: 75%')
+    expect(bars[1].getAttribute('style')).toContain('width: 37.5%')
+    expect(bars[2].getAttribute('style')).toContain('width: 18.75%')
+    bars.forEach((el) => expect(el.getAttribute('style')).toContain('flex-shrink: 0'))
+
+    // ④ 数值贴条尾：数值 span 紧跟填充 div（条形区内），且对齐打印观感 font-weight: 700
+    bars.forEach((el) => {
+      const row = el.parentElement
+      expect(row?.className).toContain('flex items-center')
+      const valueSpan = el.nextElementSibling
+      expect(valueSpan?.tagName).toBe('SPAN')
+      expect(valueSpan?.className).toContain('font-mono')
+      expect(valueSpan?.getAttribute('style')).toContain('font-weight: 700')
+      expect(valueSpan?.getAttribute('style')).toContain('color: var(--fg)')
+    })
+    expect(screen.getByText('¥40')).toBeTruthy()
+    expect(screen.getByText('¥20')).toBeTruthy()
+    expect(screen.getByText('¥10')).toBeTruthy()
+  })
 })
 
 describe('DotMatrix（编辑风点阵）', () => {
